@@ -263,7 +263,7 @@ nav {
 .manifesto-closing { font-weight: 600; color: var(--accent) !important; font-size: 1.1rem; }
 
 /* --- DECENTRALIZATION --- */
-.decentral-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(480px, 1fr)); gap: 32px; margin-bottom: 48px; }
+.decentral-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(480px, 100%), 1fr)); gap: 32px; margin-bottom: 48px; }
 .decentral-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: transform .3s, box-shadow .3s; }
 .decentral-card:hover { transform: translateY(-6px); box-shadow: var(--glow); }
 .decentral-visual { position: relative; }
@@ -833,7 +833,7 @@ nav {
 /* --- CREATORS --- */
 
 /* Build Code Showcase */
-.build-code-showcase { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 20px; margin-bottom: 48px; }
+.build-code-showcase { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(400px, 100%), 1fr)); gap: 20px; margin-bottom: 48px; }
 .build-terminal { background: #0d1117; border: 1px solid rgba(109,159,255,.15); border-radius: var(--radius); overflow: hidden; }
 .terminal-bar { display: flex; align-items: center; gap: 6px; padding: 10px 14px; background: #161b22; border-bottom: 1px solid rgba(109,159,255,.1); }
 .terminal-dot { width: 10px; height: 10px; border-radius: 50%; }
@@ -1043,32 +1043,12 @@ nav {
   .wd-ql-grid { grid-template-columns: repeat(3, 1fr); }
 }
 @media (max-width: 768px) {
-  .hero-stats { gap: 16px; }
-  .stat-divider { display: none; }
-  .charts-row, .features-grid, .citizen-grid, .creators-grid, .offline-grid, .verify-grid, .scenario-grid, .decentral-grid, .sell-grid, .build-code-showcase { grid-template-columns: 1fr; }
+  .charts-row, .citizen-grid, .offline-grid, .verify-grid, .scenario-grid, .sell-grid { grid-template-columns: 1fr; }
   .pa-row, .pa-steps { grid-template-columns: 1fr; }
   .calc-row { flex-direction: column; }
   .calc-arrow { transform: rotate(90deg); }
   .transfer-visual { flex-direction: column; align-items: center; }
   .transfer-node { max-width: 100%; }
-  .footer-bottom { flex-direction: column; text-align: center; }
-  .wd-create-grid { grid-template-columns: 1fr; }
-  .wd-balances { grid-template-columns: 1fr; }
-  .wd-actions { flex-wrap: wrap; }
-  .bridge-grid { grid-template-columns: 1fr; }
-  .bridge-steps { grid-template-columns: 1fr 1fr; }
-  .fiat-grid-full { grid-template-columns: repeat(3, 1fr); }
-  .wd-ql-grid { grid-template-columns: repeat(2, 1fr); }
-  .wd-profile { flex-wrap: wrap; }
-}
-@media (max-width: 480px) {
-  .hero h1 { font-size: 1.8rem; }
-  .hero-actions { flex-direction: column; }
-  .store-products { grid-template-columns: 1fr; }
-  .pay-demo { padding: 24px 16px; }
-  .fiat-grid-full { grid-template-columns: repeat(2, 1fr); }
-  .bridge-steps { grid-template-columns: 1fr; }
-  .wd-ql-grid { grid-template-columns: 1fr; }
 }
 
 /* ==================================================================
@@ -1749,21 +1729,6 @@ select.sim-input { cursor: pointer; }
   padding: 16px 32px; border-top: 1px solid var(--border);
 }
 
-@media (max-width: 768px) {
-  .ct-body { grid-template-columns: 1fr; }
-  .ct-from { border-right: none; border-bottom: 1px solid var(--border); border-radius: var(--radius-sm) var(--radius-sm) 0 0; }
-  .ct-to { border-left: none; border-top: 1px solid var(--border); border-radius: 0 0 var(--radius-sm) var(--radius-sm); }
-  .ct-middle { flex-direction: row; gap: 16px; padding: 16px; }
-  .ct-flow { margin-bottom: 0; }
-  .ct-flow-line { display: none; }
-  .ct-flow-steps { flex-direction: row; }
-  .pa-pipeline { gap: 8px; }
-  .pa-pipe-node { min-width: 70px; padding: 10px 12px; }
-  .pa-pipe-arrow { display: none; }
-  .ind-roadmap { flex-direction: column; }
-  .ind-arrow { transform: rotate(90deg); }
-}
-
 /* ==================================================================
    PAY ANY LINK — Universal Checkout Terminal
    ================================================================== */
@@ -1839,12 +1804,6 @@ select.sim-input { cursor: pointer; }
 }
 .sx-quote-attr { display: block; margin-top: 12px; font-size: .78rem; color: var(--accent); }
 
-@media (max-width: 768px) {
-  .sx-analogue-grid { grid-template-columns: 1fr; }
-  .sx-timeline { padding-left: 20px; }
-  .sx-phase-dot { left: -18px; width: 10px; height: 10px; }
-}
-
 /* ==================================================================
    SCANNING & AUTO-DETECT UI — Browser Mockup Price Detection
    ================================================================== */
@@ -1901,12 +1860,6 @@ select.sim-input { cursor: pointer; }
   border-radius: 8px; color: var(--text); font-size: .9rem; transition: border-color .2s;
 }
 .sim-manual-input:focus, .sim-manual-select:focus { outline: none; border-color: var(--accent); }
-
-@media (max-width: 768px) {
-  .sim-detected-product { flex-direction: column; }
-  .sim-manual-row { flex-direction: column; }
-  .sim-manual-field { max-width: 100% !important; }
-}
 
 /* ==================================================================
    GROW VAULTS — Multi-Generational Family Accounts
@@ -2011,26 +1964,363 @@ select.sim-input { cursor: pointer; }
 .depin-claim-status { margin-top: 12px; font-size: .85rem; color: var(--text-muted); min-height: 24px; }
 .depin-claim-note { font-size: .72rem; color: var(--text-muted); margin-top: 12px; }
 
-@media (max-width: 768px) {
-  .gv-timeline { flex-wrap: wrap; gap: 16px; }
-  .gv-timeline::before { display: none; }
-  .depin-rewards-grid { grid-template-columns: repeat(2, 1fr); }
-}
-
 /* ==================================================================
    RESPONSIVE ADDITIONS
    ================================================================== */
 @media (max-width: 960px) {
   .censorship-grid { grid-template-columns: 1fr 1fr; }
 }
+
+/* ---- TABLET ---- */
 @media (max-width: 768px) {
+  /* Global sizing */
+  .section { padding: 56px 0; }
+  .container { padding: 0 16px; }
+  .section-title { font-size: clamp(1.4rem, 5vw, 1.8rem); }
+  .section-subtitle { font-size: .92rem; margin-bottom: 32px; }
+  .btn { padding: 12px 20px; font-size: .88rem; }
+
+  /* Hero */
+  .hero { min-height: auto; }
+  .hero-content { padding: 80px 16px 40px; }
+  .hero h1 { font-size: clamp(1.6rem, 6vw, 2.4rem); }
+  .hero-sub { font-size: .95rem; }
+  .hero-badge-row { flex-direction: column; align-items: center; }
+  .hero-stats { gap: 12px; }
+  .stat-num { font-size: 1.2rem; }
+  .knowledge-banner { gap: 12px; }
+  .knowledge-num { font-size: .95rem; }
+
+  /* Nav */
+  .nav-inner { height: 56px; padding: 0 12px; }
+
+  /* Grids – collapse to 1 column */
   .censorship-grid { grid-template-columns: 1fr; }
-  .browser-chrome { flex-wrap: wrap; }
+  .decentral-grid { grid-template-columns: 1fr; }
+  .build-code-showcase { grid-template-columns: 1fr; }
+  .features-grid { grid-template-columns: 1fr; }
+  .creators-grid { grid-template-columns: 1fr; }
+  .bridge-grid { grid-template-columns: 1fr 1fr; }
+  .bridge-steps { grid-template-columns: 1fr 1fr; }
+  .connector-grid { grid-template-columns: 1fr; }
+
+  /* Cards – tighter padding */
+  .feature-card { padding: 24px 18px; }
+  .offline-card { padding: 24px 18px; }
+  .scenario-card { padding: 18px; }
+  .citizen-body { padding: 16px 18px 20px; }
+  .decentral-card h3 { padding: 18px 18px 6px; }
+  .decentral-lead { padding: 0 18px; }
+  .decentral-timeline-mini { padding: 14px 18px; }
+  .decentral-stats { padding: 0 18px 14px; }
+  .decentral-quote { margin: 0 18px; }
+  .decentral-manifesto { padding: 32px 18px; }
+
+  /* Pay demo & pay anywhere */
+  .pay-demo { padding: 24px 16px; }
+  .pay-demo h3 { font-size: 1.2rem; }
+  .pay-anywhere { padding: 24px 16px; margin-top: 40px; }
+  .pay-anywhere h3 { font-size: 1.2rem; }
+
+  /* Browser mockup */
+  .browser-chrome { flex-wrap: wrap; gap: 8px; padding: 8px 12px; }
   .browser-ost-badge { display: none; }
+  .browser-dots span { width: 10px; height: 10px; }
+  .browser-viewport { padding: 20px 14px; min-height: 280px; }
+  .browser-placeholder-icon { font-size: 2.8rem; }
+  .browser-placeholder h4 { font-size: 1.05rem; }
   .browser-checkout { position: static; width: 100%; margin-top: 16px; }
   .browser-how-it-works { flex-direction: column; }
-  .hero-badge-row { flex-direction: column; align-items: center; }
+  .browser-quick { padding: 7px 12px; font-size: .8rem; }
+
+  /* Simulated stores */
+  .sim-store { padding: 14px; }
+  .sim-store-header h4 { font-size: 1.05rem; }
+  .sim-product { padding: 8px 10px; gap: 8px; }
+  .sim-product-img { font-size: 1.4rem; }
+  .sim-product-name { font-size: .82rem; }
+  .sim-product-price { font-size: .82rem; }
+  .sim-detected-product { flex-direction: column; }
+  .sim-manual-row { flex-direction: column; }
+  .sim-manual-field { max-width: 100% !important; }
+
+  /* Pipeline */
+  .pa-pipeline { gap: 6px; }
+  .pa-pipe-node { min-width: 60px; padding: 8px 10px; }
+  .pa-pipe-icon { font-size: 1.1rem; }
+  .pa-pipe-node span:last-child { font-size: .65rem; }
+  .pa-pipe-arrow { display: none; }
+
+  /* Convert terminal */
+  .ct-header { padding: 24px 16px 16px; }
+  .ct-header h3 { font-size: 1.2rem; }
+  .ct-body { grid-template-columns: 1fr; padding: 20px 16px; }
+  .ct-from { border-right: none; border-bottom: 1px solid var(--border); border-radius: var(--radius-sm) var(--radius-sm) 0 0; }
+  .ct-to { border-left: none; border-top: 1px solid var(--border); border-radius: 0 0 var(--radius-sm) var(--radius-sm); }
+  .ct-middle { flex-direction: row; gap: 12px; padding: 12px; }
+  .ct-flow { margin-bottom: 0; }
+  .ct-flow-line { display: none; }
+  .ct-flow-steps { flex-direction: row; }
+  .ct-providers { padding: 12px 16px; }
+  .ct-note { padding: 12px 16px; }
+
+  /* Exchange calc */
+  .exchange-calc { padding: 24px 16px; }
+  .exchange-calc h3 { font-size: 1.15rem; }
+  .calc-input { width: 110px; font-size: 1rem; padding: 10px 12px; }
+  .calc-ost-amount { font-size: 1.5rem; }
+
+  /* Transfer widget */
+  .transfer-widget { padding: 28px 16px; }
+
+  /* Independence banner */
+  .ost-independence-banner { padding: 32px 16px; }
+  .ost-independence-banner h3 { font-size: 1.2rem; }
+  .ind-roadmap { flex-direction: column; }
+  .ind-arrow { transform: rotate(90deg); }
+
+  /* CTA box */
+  .cta-box { padding: 32px 18px; }
+  .cta-box h3 { font-size: 1.2rem; }
+
+  /* Fiat grid */
+  .fiat-grid-full { grid-template-columns: repeat(3, 1fr); }
+
+  /* Wallet dashboard */
+  .wd-create-grid { grid-template-columns: 1fr; }
+  .wd-balances { grid-template-columns: 1fr; }
+  .wd-actions { flex-wrap: wrap; justify-content: center; }
+  .wd-profile { flex-wrap: wrap; }
+  .wd-ql-grid { grid-template-columns: repeat(2, 1fr); }
+
+  /* Checklist */
+  .checklist-item { padding: 14px 16px; }
+
+  /* Footer */
+  .footer { padding: 40px 0 24px; }
+  .footer-bottom { flex-direction: column; text-align: center; }
+
+  /* Wallet modal */
+  .wallet-modal-content { padding: 28px 20px; width: 94%; }
+
+  /* Toast */
+  .toast-container { bottom: 12px; right: 12px; left: 12px; }
+  .toast { min-width: auto; font-size: .85rem; padding: 12px 16px; }
+
+  /* Scenario animations */
+  .scenario-anim { height: 100px; }
+
+  /* Grow vaults */
+  .gv-timeline { flex-wrap: wrap; gap: 12px; }
+  .gv-timeline::before { display: none; }
+  .gv-create-form { padding: 20px 16px; }
+
+  /* DePIN */
+  .depin-rewards-grid { grid-template-columns: repeat(2, 1fr); }
+
+  /* SpaceX */
+  .sx-analogue-grid { grid-template-columns: 1fr; }
+  .sx-timeline { padding-left: 20px; }
+  .sx-phase-dot { left: -18px; width: 10px; height: 10px; }
+  .sx-header h3 { font-size: 1.2rem; }
+
+  /* Bot panel */
+  .bot-connector-panel { padding: 20px 16px; }
+
+  /* AI section */
+  .ai-orb { width: 100px; height: 100px; }
+  .ai-core { font-size: 2rem; }
+  .ai-ring-2 { inset: -10px; }
+  .ai-ring-3 { inset: -20px; }
+
+  /* Manifesto */
+  .manifesto { padding: 24px 16px; }
+  .manifesto-lead { font-size: 1.1rem; }
+
+  /* Growth section */
+  .growth-section { padding: 24px 16px; }
+  .growth-metric { min-width: 100px; padding: 12px 8px; }
+  .growth-metric-num { font-size: 1.1rem; }
+
+  /* Price card */
+  .ost-price-card { padding: 18px 16px; flex-direction: column; text-align: center; }
+  .price-card-right { text-align: center; }
+  .price-card-value { font-size: 1.4rem; }
+
+  /* Jupiter */
+  .jupiter-widget { padding: 24px 16px; }
+
+  /* Faucet */
+  .faucet-machine { transform: scale(.85); }
+
+  /* Pay overlay steps */
+  .pay-progress { gap: 0; }
+  .step-ring { width: 44px; height: 44px; font-size: 1.1rem; }
+  .pay-connector { width: 20px; }
+  .pay-step span:last-child { font-size: .68rem; }
+  .receipt-details { font-size: .72rem; padding: 10px 14px; }
 }
+
+/* ---- SMALL PHONE ---- */
 @media (max-width: 480px) {
+  .section { padding: 40px 0; }
+  .container { padding: 0 12px; }
+  .hero-content { padding: 72px 12px 32px; }
+  .hero h1 { font-size: 1.5rem; }
+  .hero-sub { font-size: .88rem; }
+  .hero-actions { flex-direction: column; gap: 10px; }
+  .hero-actions .btn { width: 100%; justify-content: center; }
+  .hero-stats { flex-direction: column; gap: 10px; }
+  .stat-divider { display: none; }
+  .hero-ticker { font-size: .8rem; flex-wrap: wrap; justify-content: center; }
+  .knowledge-banner { flex-direction: column; align-items: center; }
+  .knowledge-divider { display: none; }
+
+  /* Section titles */
+  .section-title { font-size: 1.3rem; }
+  .section-subtitle { font-size: .85rem; }
+
+  /* Nav */
+  .nav-inner { height: 50px; }
+  .logo { font-size: 1.1rem; }
+
+  /* Grids – single column */
+  .bridge-grid { grid-template-columns: 1fr; }
+  .bridge-steps { grid-template-columns: 1fr; }
+  .store-products { grid-template-columns: 1fr; }
+  .fiat-grid-full { grid-template-columns: repeat(2, 1fr); }
+  .wd-ql-grid { grid-template-columns: 1fr; }
+  .depin-rewards-grid { grid-template-columns: 1fr; }
+
+  /* Pay demo */
+  .pay-demo { padding: 18px 12px; }
+  .pay-anywhere { padding: 18px 12px; margin-top: 32px; }
+
+  /* Browser mockup */
+  .browser-chrome { padding: 6px 10px; gap: 6px; }
+  .browser-dots span { width: 8px; height: 8px; }
+  .browser-bar { padding: 5px 8px; }
+  .browser-url-input { font-size: .78rem; }
+  .browser-go { padding: 3px 8px; font-size: .72rem; }
+  .browser-viewport { padding: 14px 10px; min-height: 240px; }
+  .browser-placeholder-icon { font-size: 2.2rem; }
+  .browser-placeholder h4 { font-size: .95rem; }
   .browser-quick-links { flex-direction: column; }
+  .browser-quick { font-size: .78rem; padding: 6px 10px; }
+
+  /* Simulated stores */
+  .sim-store { padding: 10px; }
+  .sim-store-header h4 { font-size: .95rem; }
+  .sim-product { padding: 6px 8px; }
+  .sim-product-img { font-size: 1.2rem; }
+  .sim-product-name, .sim-product-price { font-size: .78rem; }
+  .sim-detected { padding: 14px 10px; }
+  .sim-detected-title { font-size: .9rem; }
+  .sim-detected-price { font-size: 1.1rem; }
+  .sim-manual { padding: 14px 10px; }
+
+  /* Pipeline */
+  .pa-pipeline { gap: 4px; }
+  .pa-pipe-node { min-width: 50px; padding: 6px 6px; font-size: .65rem; }
+  .pa-pipe-icon { font-size: .9rem; }
+
+  /* Convert terminal */
+  .ct-header { padding: 18px 12px 12px; }
+  .ct-header h3 { font-size: 1.05rem; }
+  .ct-body { padding: 14px 12px; }
+  .ct-side { padding: 14px; }
+  .ct-amount { font-size: 1.1rem; }
+  .ct-convert-btn { padding: 12px 20px; font-size: .85rem; }
+
+  /* Exchange calc */
+  .exchange-calc { padding: 20px 12px; }
+  .calc-row { gap: 12px; }
+  .calc-input { width: 90px; font-size: .9rem; padding: 10px; }
+  .calc-ost-amount { font-size: 1.2rem; }
+
+  /* Various cards */
+  .feature-card { padding: 20px 14px; }
+  .offline-card { padding: 20px 14px; }
+  .scenario-card { padding: 14px; }
+  .cta-box { padding: 24px 14px; }
+  .cta-box h3 { font-size: 1.05rem; }
+  .cta-actions { flex-direction: column; }
+  .cta-actions .btn { width: 100%; justify-content: center; }
+
+  /* Transfer widget */
+  .transfer-widget { padding: 20px 12px; }
+  .transfer-node { padding: 16px 12px; min-width: 0; }
+  .node-icon { font-size: 1.5rem; }
+
+  /* OST Independence banner */
+  .ost-independence-banner { padding: 24px 12px; }
+  .ost-independence-banner h3 { font-size: 1.05rem; }
+  .ind-phase { padding: 8px 12px; font-size: .75rem; }
+
+  /* Faucet */
+  .faucet-machine { transform: scale(.75); }
+  .faucet-amount { font-size: 1.4rem; }
+
+  /* Pay overlay */
+  .pay-overlay { padding: 24px 12px; }
+  .step-ring { width: 36px; height: 36px; font-size: .9rem; }
+  .pay-connector { width: 12px; margin-bottom: 16px; }
+  .pay-step span:last-child { font-size: .6rem; }
+  .step-detail { font-size: .55rem; max-width: 80px; }
+
+  /* Wallet modal */
+  .wallet-modal-content { padding: 24px 16px; }
+  .wallet-option { padding: 10px 14px; font-size: .88rem; }
+
+  /* Bot connector */
+  .bot-connector-panel { padding: 16px 12px; }
+  .log-body { font-size: .72rem; }
+
+  /* Footer */
+  .footer { padding: 32px 0 16px; }
+  .footer-links { gap: 12px; flex-wrap: wrap; }
+  .footer-links a { font-size: .78rem; }
+
+  /* Scrollbar / code blocks */
+  .terminal-body { padding: 12px 14px; font-size: .72rem; }
+
+  /* SpaceX */
+  .sx-header h3 { font-size: 1.05rem; }
+  .sx-icon-ring { width: 52px; height: 52px; font-size: 1.4rem; }
+  .sx-phase-content li { font-size: .78rem; }
+  .sx-quote blockquote { font-size: .82rem; }
+  .sx-quote { padding: 16px; }
+
+  /* Grow vaults */
+  .gv-create-form { padding: 16px 12px; }
+  .gv-icon-ring { width: 52px; height: 52px; font-size: 1.4rem; }
+
+  /* DePIN */
+  .depin-icon-ring { width: 52px; height: 52px; font-size: 1.4rem; }
+  .depin-claim-box { padding: 18px 14px; }
+
+  /* Manifesto */
+  .manifesto { padding: 20px 12px; }
+  .manifesto p { font-size: .9rem; }
+  .manifesto-lead { font-size: 1rem; }
+
+  /* Growth */
+  .growth-section { padding: 20px 12px; }
+  .growth-metrics { gap: 10px; }
+  .growth-metric { min-width: 80px; }
+
+  /* Price card */
+  .ost-price-card { padding: 14px 12px; }
+  .price-card-value { font-size: 1.2rem; }
+
+  /* AI */
+  .ai-orb { width: 80px; height: 80px; }
+  .ai-core { font-size: 1.6rem; }
+  .ai-ring-2 { inset: -8px; }
+  .ai-ring-3 { inset: -16px; }
+
+  /* Checklist */
+  .checklist-item { padding: 12px; gap: 10px; }
+  .checklist-item h4 { font-size: .9rem; }
+  .checklist-item p { font-size: .78rem; }
 }
