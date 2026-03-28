@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
 
@@ -194,7 +194,7 @@
                 <div class="tstat"><span class="tstat-num">22</span><span class="tstat-label">On-chain instructions</span></div>
                 <div class="tstat"><span class="tstat-num">0</span><span class="tstat-label">Pre-mine or team allocation</span></div>
               </div>
-              <p class="timeline-detail"><strong>The real numbers:</strong> OST was built by a single developer from Mexico, incorporated as a legal entity in Panama. No venture capital. No pre-mine. No insider allocations. The program was written in Rust using the Anchor framework &mdash; 22 instructions covering confidential_mint, confidential_transfer, dao_propose, dao_vote, satellite_fund, zk_tax_proof, auto_delegate, and more. The program binary is 572KB. Every instruction is open source. The 0.1% DAO fee is hardcoded and immutable &mdash; funding satellite infrastructure voted on by stakers. Program ID: <code>J2jiS296YWVie1Sopb4SxcM3aJnP9aAwe6aLDhCqvGXY</code>. Mint: <code>44R8tYQYza1EEuiAriYs5NHnbGBeX8tLPTdu3zH7wLsz</code>. Everything is verifiable on-chain right now.</p>
+              <p class="timeline-detail"><strong>The real numbers:</strong> OST was built by a single developer from Mexico, incorporated as a legal entity in Panama. No venture capital. No pre-mine. No insider allocations. The program was written in Rust using the Anchor framework &mdash; 25 instructions covering confidential_mint, confidential_transfer, dao_propose, dao_vote, satellite_fund, zk_tax_proof, auto_delegate, and more. The program binary is 572KB. Every instruction is open source. The 0.1% DAO fee is hardcoded and immutable &mdash; funding satellite infrastructure voted on by stakers. Program ID: <code>J2jiS296YWVie1Sopb4SxcM3aJnP9aAwe6aLDhCqvGXY</code>. Mint: <code>44R8tYQYza1EEuiAriYs5NHnbGBeX8tLPTdu3zH7wLsz</code>. Everything is verifiable on-chain right now.</p>
             </div>
           </div>
         </div>
@@ -714,6 +714,129 @@
   </section>
 
   <!-- ================================================================== -->
+  <!-- 4B. PAY ANY LINK — Universal OST Checkout for Any Website -->
+  <!-- ================================================================== -->
+  <section id="payAnyLink" class="section section-space">
+    <div class="container">
+      <div class="pal-hero">
+        <div class="pal-hero-glow"></div>
+        <div class="pal-hero-icon">&#127760;</div>
+        <h2 class="section-title">Pay Any Link with OST</h2>
+        <p class="section-subtitle">Amazon. Apple. eBay. Car dealerships. Real estate. Paste any product link or enter a price &mdash; OST handles everything. The final step of every purchase, intercepted.</p>
+      </div>
+
+      <div class="pal-terminal">
+        <div class="pal-terminal-glow"></div>
+        <div class="pal-terminal-header">
+          <div class="pal-status"><span class="pal-status-dot"></span> OST Universal Checkout</div>
+          <div class="pal-badges">
+            <span class="pal-badge-item">&#128274; ZK-Private</span>
+            <span class="pal-badge-item">&#9889; Sub-Second</span>
+            <span class="pal-badge-item">&#127757; Any Currency</span>
+          </div>
+        </div>
+
+        <div class="pal-body">
+          <!-- Step 1: Paste Link or Enter Price -->
+          <div class="pal-step pal-step-active" id="palStep1">
+            <div class="pal-step-num">1</div>
+            <div class="pal-step-content">
+              <h4>Paste any product link or enter price</h4>
+              <div class="pal-input-group">
+                <input type="text" class="pal-input" id="palUrlInput" placeholder="https://amazon.com/dp/B0... or enter price manually">
+                <button class="pal-scan-btn" id="palScanBtn" title="Scan product">&#128269;</button>
+              </div>
+              <div class="pal-or">or enter manually</div>
+              <div class="pal-manual-row">
+                <input type="number" class="pal-input pal-price-input" id="palPriceInput" placeholder="Price" step="0.01" min="0">
+                <select class="pal-currency-select" id="palCurrencySelect">
+                  <option value="USD">USD</option>
+                  <option value="EUR">EUR</option>
+                  <option value="GBP">GBP</option>
+                  <option value="JPY">JPY</option>
+                  <option value="BTC">BTC</option>
+                  <option value="ETH">ETH</option>
+                  <option value="SOL">SOL</option>
+                  <option value="USDC">USDC</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 2: Product Preview -->
+          <div class="pal-step" id="palStep2">
+            <div class="pal-step-num">2</div>
+            <div class="pal-step-content">
+              <h4>Product Detected</h4>
+              <div class="pal-preview" id="palPreview">
+                <div class="pal-preview-placeholder">
+                  <span>&#128722;</span>
+                  <p>Enter a link or price above to see the conversion</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 3: OST Conversion -->
+          <div class="pal-step" id="palStep3">
+            <div class="pal-step-num">3</div>
+            <div class="pal-step-content">
+              <h4>OST Takes Over</h4>
+              <div class="pal-conversion-display" id="palConversionDisplay">
+                <div class="pal-conv-row">
+                  <span class="pal-conv-label">You Pay:</span>
+                  <span class="pal-conv-value" id="palOstCost">-- OST</span>
+                </div>
+                <div class="pal-conv-row pal-conv-sub">
+                  <span class="pal-conv-label">Live Rate:</span>
+                  <span class="pal-conv-value" id="palLiveRate">--</span>
+                </div>
+                <div class="pal-conv-row pal-conv-sub">
+                  <span class="pal-conv-label">Route:</span>
+                  <span class="pal-conv-value" id="palRoute">OST &rarr; Jupiter &rarr; Merchant</span>
+                </div>
+              </div>
+
+              <div class="pal-flow-visual">
+                <div class="pal-flow-node pal-flow-you"><span>&#128100;</span> You</div>
+                <div class="pal-flow-arrow">&#10230;</div>
+                <div class="pal-flow-node pal-flow-ost"><span>&#9673;</span> OST</div>
+                <div class="pal-flow-arrow">&#10230;</div>
+                <div class="pal-flow-node pal-flow-convert"><span>&#128256;</span> Convert</div>
+                <div class="pal-flow-arrow">&#10230;</div>
+                <div class="pal-flow-node pal-flow-merchant"><span>&#127978;</span> Merchant</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pay Button -->
+          <button class="pal-pay-btn" id="palPayBtn" disabled>
+            <span class="pal-pay-icon">&#9673;</span>
+            <span>Let OST Handle Checkout</span>
+          </button>
+          <p class="pal-note">Confidential transfer. No merchant ever sees your wallet or balance. ZK-proven conversion.</p>
+        </div>
+
+        <div class="pal-footer">
+          <div class="pal-works-with">
+            <span>Works with:</span>
+            <span class="pal-ww-item">&#128722; Amazon</span>
+            <span class="pal-ww-item">&#127822; Apple</span>
+            <span class="pal-ww-item">&#128230; eBay</span>
+            <span class="pal-ww-item">&#128663; Car Dealers</span>
+            <span class="pal-ww-item">&#127968; Property</span>
+            <span class="pal-ww-item">&#127757; Any Website</span>
+          </div>
+          <div class="pal-method-note">
+            <span class="pal-method-icon">&#128161;</span>
+            <span><strong>How?</strong> Crypto-friendly sites &rarr; direct confidential transfer. Closed platforms (Amazon, Apple) &rarr; OST converts to gift card or P2P intermediary. Physical assets &rarr; OST escrow + manual confirmation.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================== -->
   <!-- 5. TRANSFER - Live Charts + Exchange Calculator -->
   <!-- ================================================================== -->
   <section id="transfer" class="section section-alt section-space">
@@ -1026,7 +1149,7 @@
           <div class="roadmap-phase roadmap-done">
             <div class="roadmap-phase-header"><span class="roadmap-status-dot done"></span><strong>Phase 1 &mdash; Foundation</strong> <span class="roadmap-date">Q1&ndash;Q2 2025</span></div>
             <ul class="roadmap-items">
-              <li class="done">&#9989; Anchor smart contract: 22 instructions written &amp; compiled (572KB)</li>
+              <li class="done">&#9989; Anchor smart contract: 25 instructions written &amp; compiled (572KB)</li>
               <li class="done">&#9989; Token-2022 mint with confidential transfer extension created</li>
               <li class="done">&#9989; TypeScript SDK: all 22 instruction builders + PDA helpers</li>
               <li class="done">&#9989; Website: 3D globe, live prices, 11 languages, wallet connect, pay demo</li>
@@ -1190,6 +1313,144 @@
         <div class="faucet-status" id="faucetStatus"></div>
       </div>
 
+      <!-- ============================================================ -->
+      <!-- GROW VAULTS — Multi-Generational Family Accounts -->
+      <!-- ============================================================ -->
+      <div class="grow-vaults-section" id="growVaults" style="margin-top:64px;">
+        <div class="gv-header">
+          <div class="gv-icon-ring"><span>&#128118;</span></div>
+          <h3>Family Grow Vaults</h3>
+          <p class="text-muted">The first coin born in space with every new generation. Create a custodial vault for your child &mdash; they grow up with real private digital cash.</p>
+        </div>
+
+        <div class="gv-timeline">
+          <div class="gv-milestone gv-milestone-active">
+            <div class="gv-ms-dot"></div>
+            <div class="gv-ms-content">
+              <span class="gv-ms-age">Birth</span>
+              <span class="gv-ms-reward">1.0 OST</span>
+              <span class="gv-ms-label">&ldquo;Born in space&rdquo;</span>
+            </div>
+          </div>
+          <div class="gv-milestone">
+            <div class="gv-ms-dot"></div>
+            <div class="gv-ms-content">
+              <span class="gv-ms-age">Age 1</span>
+              <span class="gv-ms-reward">0.5 OST</span>
+              <span class="gv-ms-label">&ldquo;First orbit&rdquo;</span>
+            </div>
+          </div>
+          <div class="gv-milestone">
+            <div class="gv-ms-dot"></div>
+            <div class="gv-ms-content">
+              <span class="gv-ms-age">Age 5</span>
+              <span class="gv-ms-reward">1.0 OST</span>
+              <span class="gv-ms-label">&ldquo;Kindergarten explorer&rdquo;</span>
+            </div>
+          </div>
+          <div class="gv-milestone">
+            <div class="gv-ms-dot"></div>
+            <div class="gv-ms-content">
+              <span class="gv-ms-age">Age 10</span>
+              <span class="gv-ms-reward">2.0 OST</span>
+              <span class="gv-ms-label">&ldquo;Junior astronaut&rdquo;</span>
+            </div>
+          </div>
+          <div class="gv-milestone">
+            <div class="gv-ms-dot"></div>
+            <div class="gv-ms-content">
+              <span class="gv-ms-age">Age 13</span>
+              <span class="gv-ms-reward">3.0 OST</span>
+              <span class="gv-ms-label">&ldquo;Teen pioneer&rdquo;</span>
+            </div>
+          </div>
+          <div class="gv-milestone">
+            <div class="gv-ms-dot"></div>
+            <div class="gv-ms-content">
+              <span class="gv-ms-age">Age 16</span>
+              <span class="gv-ms-reward">5.0 OST</span>
+              <span class="gv-ms-label">&ldquo;Cadet&rdquo;</span>
+            </div>
+          </div>
+          <div class="gv-milestone gv-milestone-grad">
+            <div class="gv-ms-dot gv-ms-dot-grad"></div>
+            <div class="gv-ms-content">
+              <span class="gv-ms-age">Age 18</span>
+              <span class="gv-ms-reward">10.0 OST</span>
+              <span class="gv-ms-label">&ldquo;Full citizen of the OST universe&rdquo;</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="gv-create-form" id="gvCreateForm">
+          <h4>Create a Grow Vault</h4>
+          <div class="gv-form-row">
+            <label class="gv-form-label">Child&rsquo;s Birth Year</label>
+            <input type="number" class="gv-form-input" id="gvBirthYear" placeholder="2024" min="2000" max="2026">
+          </div>
+          <button class="btn btn-primary btn-glow gv-create-btn" id="gvCreateBtn">
+            <span class="pay-icon">&#128118;</span> Create Grow Vault
+          </button>
+          <div class="gv-status" id="gvStatus"></div>
+        </div>
+
+        <div class="gv-disclaimer">
+          <span>&#9888;&#65039;</span>
+          <p><strong>Educational use only.</strong> Parents/guardians are responsible for all tax, custody, and local laws regarding gifts to minors. OST is not investment advice. Parental consent required for all child accounts.</p>
+        </div>
+      </div>
+
+      <!-- DePIN Faucet — Reward for Building Infrastructure -->
+      <div class="depin-faucet-section" id="depinFaucet" style="margin-top:64px;">
+        <div class="depin-header">
+          <div class="depin-icon-ring"><span>&#128752;</span></div>
+          <h3>DePIN Data-Center Faucet</h3>
+          <p class="text-muted">Share bandwidth, GPU, CPU, or satellite capacity &mdash; earn OST for building the decentralized data centers and satellite internet.</p>
+        </div>
+
+        <div class="depin-rewards-grid">
+          <div class="depin-reward-card">
+            <span class="depin-r-icon">&#128246;</span>
+            <span class="depin-r-type">Bandwidth</span>
+            <span class="depin-r-amount">0.5 OST/day</span>
+          </div>
+          <div class="depin-reward-card depin-reward-highlight">
+            <span class="depin-r-icon">&#127918;</span>
+            <span class="depin-r-type">GPU</span>
+            <span class="depin-r-amount">2.0 OST/day</span>
+          </div>
+          <div class="depin-reward-card">
+            <span class="depin-r-icon">&#128187;</span>
+            <span class="depin-r-type">CPU</span>
+            <span class="depin-r-amount">1.0 OST/day</span>
+          </div>
+          <div class="depin-reward-card">
+            <span class="depin-r-icon">&#128190;</span>
+            <span class="depin-r-type">Storage</span>
+            <span class="depin-r-amount">0.5 OST/day</span>
+          </div>
+          <div class="depin-reward-card">
+            <span class="depin-r-icon">&#128225;</span>
+            <span class="depin-r-type">LoRa/5G</span>
+            <span class="depin-r-amount">1.5 OST/day</span>
+          </div>
+          <div class="depin-reward-card depin-reward-highlight">
+            <span class="depin-r-icon">&#128752;</span>
+            <span class="depin-r-type">Satellite</span>
+            <span class="depin-r-amount">3.0 OST/day</span>
+          </div>
+        </div>
+
+        <div class="depin-claim-box" id="depinClaimBox">
+          <p class="depin-claim-label">Active DePIN contributors: claim your daily reward</p>
+          <button class="btn btn-primary btn-glow depin-claim-btn" id="depinClaimBtn">
+            <span class="pay-icon">&#128752;</span> Claim DePIN Reward
+          </button>
+          <div class="depin-claim-status" id="depinClaimStatus"></div>
+          <p class="depin-claim-note">Requires active AI Reward Stake registration. 24-hour cooldown between claims.</p>
+        </div>
+      </div>
+
       <!-- Mainnet Launch Checklist -->
       <div class="launch-checklist" id="launchChecklist" style="margin-top:64px;">
         <h3 data-i18n="launch.title">&#128640; Mainnet Launch Checklist</h3>
@@ -1200,7 +1461,7 @@
             <div class="check-icon">&#9989;</div>
             <div class="check-body">
               <h4>Anchor Smart Contract</h4>
-              <p>22 on-chain instructions: mint, transfer, confidential deposit/withdraw, DAO governance, satellite funding, auto-delegation, ZK tax compliance.</p>
+              <p>25 on-chain instructions: mint, transfer, confidential deposit/withdraw, DAO governance, satellite funding, auto-delegation, ZK tax compliance, family grow vaults, DePIN faucet.</p>
               <span class="check-status status-done">Complete</span>
             </div>
           </div>
@@ -1232,7 +1493,7 @@
             <div class="check-icon">&#9989;</div>
             <div class="check-body">
               <h4>Program Compiled</h4>
-              <p>Anchor program built successfully (572KB BPF binary). 22 instructions verified. Program ID: J2ji...vGXY. Ready for devnet deployment.</p>
+              <p>Anchor program built successfully (572KB BPF binary). 25 instructions verified. Program ID: J2ji...vGXY. Ready for devnet deployment.</p>
               <span class="check-status status-done">Built &amp; Ready</span>
             </div>
           </div>
@@ -1496,7 +1757,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
           <pre class="terminal-body"><code><span class="code-kw">use</span> anchor_lang::prelude::*;
 <span class="code-kw">use</span> ost_program::{<span class="code-fn">confidential_mint</span>, <span class="code-fn">private_transfer</span>};
 
-<span class="code-comment">// 22 on-chain instructions, fully auditable</span>
+<span class="code-comment">// 25 on-chain instructions, fully auditable</span>
 <span class="code-kw">pub fn</span> <span class="code-fn">handle_payment</span>(
     ctx: <span class="code-fn">Context</span>&lt;PaymentAccounts&gt;,
     amount: <span class="code-num">u64</span>,
@@ -1515,8 +1776,8 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
           <img src="https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=180&fit=crop" alt="Developer coding" class="creator-img" loading="lazy">
           <div class="creator-body">
             <h3>&#128187; Developers</h3>
-            <p>Open-source Anchor SDK, TypeScript client, 22 on-chain instructions. Build payment apps, DeFi protocols, or privacy tools.</p>
-            <div class="creator-stats"><span>&#9733; 22 instructions</span><span>&#128218; Full docs</span><span>&#127942; Bounties</span></div>
+            <p>Open-source Anchor SDK, TypeScript client, 25 on-chain instructions. Build payment apps, DeFi protocols, or privacy tools.</p>
+            <div class="creator-stats"><span>&#9733; 25 instructions</span><span>&#128218; Full docs</span><span>&#127942; Bounties</span></div>
             <div class="creator-tags"><span class="tag">Rust</span><span class="tag">TypeScript</span><span class="tag">Anchor</span><span class="tag">Solana</span></div>
           </div>
         </div>
@@ -2034,6 +2295,6 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
-  <script src="app.js?v=5"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>

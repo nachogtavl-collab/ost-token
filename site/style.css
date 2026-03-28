@@ -1765,6 +1765,263 @@ select.sim-input { cursor: pointer; }
 }
 
 /* ==================================================================
+   PAY ANY LINK — Universal Checkout Terminal
+   ================================================================== */
+.pal-hero { position: relative; text-align: center; padding: 40px 24px 24px; overflow: hidden; }
+.pal-hero-glow {
+  position: absolute; top: -80px; left: 50%; transform: translateX(-50%);
+  width: 600px; height: 300px;
+  background: radial-gradient(circle, rgba(109,159,255,.12), rgba(52,211,153,.06), transparent 70%);
+  pointer-events: none;
+}
+.pal-hero-icon {
+  font-size: 3.5rem; margin-bottom: 8px;
+  background: linear-gradient(135deg, var(--accent), var(--success), var(--warm));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.pal-terminal {
+  position: relative; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden; max-width: 720px; margin: 0 auto;
+}
+.pal-terminal-glow {
+  position: absolute; top: -40px; right: -40px; width: 200px; height: 200px;
+  background: radial-gradient(circle, rgba(52,211,153,.1), transparent 70%);
+  pointer-events: none;
+}
+.pal-terminal-header {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  padding: 16px 24px; border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(52,211,153,.04), transparent);
+}
+.pal-status {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: .82rem; font-weight: 600; color: var(--success);
+}
+.pal-status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); animation: livePulse 2s infinite; }
+.pal-badges { display: flex; gap: 8px; flex-wrap: wrap; }
+.pal-badge-item {
+  padding: 3px 10px; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 12px; font-size: .7rem; color: var(--text-muted);
+}
+.pal-body { padding: 24px; }
+
+/* Steps */
+.pal-step {
+  display: flex; gap: 16px; padding: 20px; margin-bottom: 16px;
+  background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  opacity: .5; transition: all .4s;
+}
+.pal-step-active { opacity: 1; border-color: rgba(109,159,255,.3); }
+.pal-step-done { opacity: 1; border-color: rgba(52,211,153,.3); }
+.pal-step-num {
+  width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+  background: var(--surface); border: 2px solid var(--border); border-radius: 50%;
+  font-size: .85rem; font-weight: 700; color: var(--text-muted); flex-shrink: 0;
+}
+.pal-step-active .pal-step-num { border-color: var(--accent); color: var(--accent); background: rgba(109,159,255,.08); }
+.pal-step-done .pal-step-num { border-color: var(--success); color: var(--success); background: rgba(52,211,153,.08); }
+.pal-step-content { flex: 1; }
+.pal-step-content h4 { margin: 0 0 12px; font-size: .95rem; }
+
+/* Inputs */
+.pal-input-group { display: flex; gap: 8px; }
+.pal-input {
+  flex: 1; padding: 12px 14px; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-size: .9rem; transition: border-color .2s;
+}
+.pal-input:focus { outline: none; border-color: var(--accent); }
+.pal-scan-btn {
+  padding: 10px 14px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); cursor: pointer; font-size: 1.1rem; transition: all .2s;
+}
+.pal-scan-btn:hover { border-color: var(--accent); }
+.pal-or { text-align: center; color: var(--text-muted); font-size: .8rem; margin: 10px 0; }
+.pal-manual-row { display: flex; gap: 8px; }
+.pal-price-input { max-width: 200px; }
+.pal-currency-select {
+  padding: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); font-size: .85rem; cursor: pointer;
+}
+
+/* Preview */
+.pal-preview {
+  padding: 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  min-height: 60px;
+}
+.pal-preview-placeholder { text-align: center; color: var(--text-muted); font-size: .85rem; }
+.pal-preview-placeholder span { font-size: 2rem; display: block; margin-bottom: 8px; }
+
+/* Conversion Display */
+.pal-conversion-display { margin-bottom: 20px; }
+.pal-conv-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.pal-conv-row:last-child { border-bottom: none; }
+.pal-conv-label { color: var(--text-muted); font-size: .85rem; }
+.pal-conv-value { font-weight: 600; font-size: .85rem; }
+.pal-conv-sub .pal-conv-value { font-weight: 400; color: var(--text-muted); }
+
+/* Flow Visual */
+.pal-flow-visual {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 16px; flex-wrap: wrap;
+}
+.pal-flow-node {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 10px 16px; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); font-size: .75rem; color: var(--text-muted);
+}
+.pal-flow-node span { font-size: 1.2rem; }
+.pal-flow-ost { background: rgba(109,159,255,.08); border-color: rgba(109,159,255,.3); }
+.pal-flow-convert { background: rgba(167,139,250,.08); border-color: rgba(167,139,250,.3); }
+.pal-flow-merchant { background: rgba(52,211,153,.08); border-color: rgba(52,211,153,.3); }
+.pal-flow-arrow { color: var(--accent); font-size: 1.2rem; font-weight: 700; }
+
+/* Pay Button */
+.pal-pay-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; padding: 16px; margin-top: 16px;
+  background: linear-gradient(135deg, var(--accent), var(--success));
+  color: #fff; border: none; border-radius: var(--radius-sm); font-size: 1rem;
+  font-weight: 700; cursor: pointer; transition: all .3s;
+  box-shadow: 0 4px 20px rgba(52,211,153,.3);
+}
+.pal-pay-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(52,211,153,.4); }
+.pal-pay-btn:disabled { opacity: .5; cursor: not-allowed; }
+.pal-pay-icon { font-size: 1.3rem; }
+.pal-note { text-align: center; color: var(--text-muted); font-size: .78rem; margin-top: 12px; }
+
+/* Footer */
+.pal-footer { padding: 16px 24px; border-top: 1px solid var(--border); background: rgba(109,159,255,.02); }
+.pal-works-with {
+  display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+  font-size: .82rem; color: var(--text-muted); margin-bottom: 12px;
+}
+.pal-ww-item { padding: 3px 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; font-size: .72rem; }
+.pal-method-note {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font-size: .78rem; color: var(--text-muted); line-height: 1.5;
+}
+.pal-method-icon { font-size: 1.2rem; flex-shrink: 0; }
+
+@media (max-width: 768px) {
+  .pal-step { flex-direction: column; gap: 10px; }
+  .pal-manual-row { flex-direction: column; }
+  .pal-price-input { max-width: 100%; }
+  .pal-flow-visual { gap: 4px; }
+  .pal-flow-arrow { display: none; }
+  .pal-terminal-header { flex-direction: column; align-items: flex-start; }
+}
+
+/* ==================================================================
+   GROW VAULTS — Multi-Generational Family Accounts
+   ================================================================== */
+.grow-vaults-section { text-align: center; }
+.gv-header { margin-bottom: 36px; }
+.gv-icon-ring {
+  width: 64px; height: 64px; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, rgba(245,196,104,.2), rgba(167,139,250,.2));
+  border-radius: 50%; font-size: 1.8rem; margin: 0 auto 16px;
+  box-shadow: 0 0 30px rgba(245,196,104,.2);
+}
+.gv-header h3 { font-family: var(--font-serif); font-size: 1.5rem; margin-bottom: 8px; }
+
+/* Timeline */
+.gv-timeline {
+  display: flex; align-items: flex-start; justify-content: center; gap: 0;
+  position: relative; margin: 32px auto; max-width: 900px; overflow-x: auto;
+  padding: 16px 8px;
+}
+.gv-timeline::before {
+  content: ''; position: absolute; top: 20px; left: 5%; right: 5%; height: 2px;
+  background: linear-gradient(90deg, var(--warm), var(--accent), var(--success));
+  opacity: .3;
+}
+.gv-milestone {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  position: relative; z-index: 1; flex: 1; min-width: 90px;
+}
+.gv-ms-dot {
+  width: 14px; height: 14px; border-radius: 50%; border: 3px solid var(--border);
+  background: var(--surface); transition: all .3s;
+}
+.gv-milestone-active .gv-ms-dot { border-color: var(--warm); background: var(--warm); box-shadow: 0 0 12px var(--warm); }
+.gv-milestone-grad .gv-ms-dot-grad { border-color: var(--success); background: var(--success); box-shadow: 0 0 16px var(--success); width: 18px; height: 18px; }
+.gv-ms-content { display: flex; flex-direction: column; gap: 2px; }
+.gv-ms-age { font-size: .78rem; font-weight: 700; color: var(--text); }
+.gv-ms-reward { font-size: .85rem; font-weight: 600; color: var(--accent); }
+.gv-ms-label { font-size: .68rem; color: var(--text-muted); font-style: italic; }
+
+/* Create Form */
+.gv-create-form {
+  max-width: 400px; margin: 36px auto; padding: 24px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  text-align: center;
+}
+.gv-create-form h4 { margin-bottom: 16px; font-size: 1rem; }
+.gv-form-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; text-align: left; }
+.gv-form-label { font-size: .82rem; color: var(--text-muted); font-weight: 600; }
+.gv-form-input {
+  width: 100%; padding: 12px; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-size: .95rem; text-align: center;
+}
+.gv-form-input:focus { outline: none; border-color: var(--accent); }
+.gv-create-btn { width: 100%; }
+.gv-status { margin-top: 12px; font-size: .85rem; color: var(--text-muted); min-height: 24px; }
+
+/* Disclaimer */
+.gv-disclaimer {
+  display: flex; align-items: flex-start; gap: 10px; max-width: 600px; margin: 24px auto 0;
+  padding: 16px; background: rgba(245,196,104,.06); border: 1px solid rgba(245,196,104,.2);
+  border-radius: var(--radius-sm); font-size: .78rem; color: var(--text-muted); line-height: 1.5;
+  text-align: left;
+}
+.gv-disclaimer span { font-size: 1.2rem; flex-shrink: 0; }
+
+/* ==================================================================
+   DEPIN FAUCET — Infrastructure Rewards
+   ================================================================== */
+.depin-faucet-section { text-align: center; }
+.depin-header { margin-bottom: 32px; }
+.depin-icon-ring {
+  width: 64px; height: 64px; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, rgba(109,159,255,.2), rgba(52,211,153,.15));
+  border-radius: 50%; font-size: 1.8rem; margin: 0 auto 16px;
+  box-shadow: 0 0 30px rgba(109,159,255,.2);
+}
+.depin-header h3 { font-family: var(--font-serif); font-size: 1.5rem; margin-bottom: 8px; }
+
+.depin-rewards-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+  max-width: 600px; margin: 0 auto 32px;
+}
+.depin-reward-card {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 20px 12px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); transition: all .3s;
+}
+.depin-reward-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.depin-reward-highlight { background: linear-gradient(135deg, rgba(109,159,255,.06), rgba(52,211,153,.04)); border-color: rgba(109,159,255,.3); }
+.depin-r-icon { font-size: 1.6rem; }
+.depin-r-type { font-size: .82rem; font-weight: 600; color: var(--text); }
+.depin-r-amount { font-size: .85rem; font-weight: 700; color: var(--accent); }
+
+.depin-claim-box {
+  max-width: 400px; margin: 0 auto; padding: 24px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  text-align: center;
+}
+.depin-claim-label { font-size: .9rem; color: var(--text-muted); margin-bottom: 12px; }
+.depin-claim-btn { width: 100%; }
+.depin-claim-status { margin-top: 12px; font-size: .85rem; color: var(--text-muted); min-height: 24px; }
+.depin-claim-note { font-size: .72rem; color: var(--text-muted); margin-top: 12px; }
+
+@media (max-width: 768px) {
+  .gv-timeline { flex-wrap: wrap; gap: 16px; }
+  .gv-timeline::before { display: none; }
+  .depin-rewards-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ==================================================================
    RESPONSIVE ADDITIONS
    ================================================================== */
 @media (max-width: 960px) {

@@ -337,4 +337,48 @@ pub mod ost_token {
     ) -> Result<()> {
         instructions::ai_reward_stake::handler(ctx, provider, resource_type)
     }
+
+    // ========================================================================
+    // 23. CREATE GROW VAULT (Family Accounts)
+    // ========================================================================
+    // Creates a custodial "Grow Vault" for a child. Parent/guardian controls
+    // the vault until the child turns 18. The vault receives small OST drops
+    // at age milestones — babies get their first OST before they can speak.
+    // Family Grow Accounts for the next generation of space citizens.
+    // ========================================================================
+    pub fn create_grow_vault(
+        ctx: Context<CreateGrowVault>,
+        child_birth_year: u16,
+    ) -> Result<()> {
+        instructions::grow_vault::handler_create(ctx, child_birth_year)
+    }
+
+    // ========================================================================
+    // 24. CLAIM GROW FAUCET (Milestone Rewards)
+    // ========================================================================
+    // Claims OST from treasury for reaching an age milestone. Max 7 claims
+    // per vault (ages 0, 1, 5, 10, 13, 16, 18). Each milestone claimed once.
+    // At age 18 the vault graduates — child takes full control.
+    // ========================================================================
+    pub fn claim_grow_faucet(
+        ctx: Context<ClaimGrowFaucet>,
+        milestone_index: u8,
+    ) -> Result<()> {
+        instructions::grow_vault::handler_claim(ctx, milestone_index)
+    }
+
+    // ========================================================================
+    // 25. CLAIM DEPIN FAUCET (Infrastructure Rewards)
+    // ========================================================================
+    // Rewards users who contribute bandwidth, GPU, CPU, storage, LoRa/5G,
+    // or satellite relay to the decentralized data centers and satellite
+    // internet. Requires active DePIN stake + attestation proof. 24h cooldown.
+    // Reward for building the decentralized data centers and satellite internet.
+    // ========================================================================
+    pub fn claim_depin_faucet(
+        ctx: Context<ClaimDepinFaucet>,
+        attestation_hash: [u8; 32],
+    ) -> Result<()> {
+        instructions::claim_depin_faucet::handler(ctx, attestation_hash)
+    }
 }

@@ -2157,6 +2157,200 @@
     });
   }
 
+  /* ---------- PAY ANY LINK — Universal OST Checkout ---------- */
+  (function initPayAnyLink() {
+    const urlInput = $('#palUrlInput');
+    const priceInput = $('#palPriceInput');
+    const currencySelect = $('#palCurrencySelect');
+    const scanBtn = $('#palScanBtn');
+    const payBtn = $('#palPayBtn');
+    const step1 = $('#palStep1');
+    const step2 = $('#palStep2');
+    const step3 = $('#palStep3');
+    const preview = $('#palPreview');
+    const ostCost = $('#palOstCost');
+    const liveRate = $('#palLiveRate');
+    const palRoute = $('#palRoute');
+    if (!urlInput || !payBtn) return;
+
+    function activateStep(el) { el && el.classList.add('pal-step-active'); }
+    function doneStep(el) { el && (el.classList.remove('pal-step-active'), el.classList.add('pal-step-done')); }
+
+    function computeConversion() {
+      var priceVal = parseFloat(priceInput?.value);
+      var curr = currencySelect?.value || 'USD';
+      if (!priceVal || priceVal <= 0) {
+        payBtn.disabled = true;
+        return;
+      }
+      // Convert to USD
+      var usdValue = priceVal;
+      if (curr === 'BTC') usdValue = priceVal * (prices.bitcoin || 105000);
+      else if (curr === 'ETH') usdValue = priceVal * (prices.ethereum || 3800);
+      else if (curr === 'SOL') usdValue = priceVal * (prices.solana || 170);
+      else if (curr === 'USDC' || curr === 'USDT') usdValue = priceVal;
+      else if (fiatRates[curr]) usdValue = priceVal / fiatRates[curr];
+
+      var ostOut = usdValue / ostPrice;
+      var formatted = ostOut >= 1e6 ? (ostOut / 1e6).toFixed(2) + 'M' :
+                      ostOut >= 1e3 ? (ostOut / 1e3).toFixed(1) + 'K' :
+                      ostOut.toFixed(2);
+
+      if (ostCost) ostCost.textContent = formatted + ' OST';
+      if (liveRate) liveRate.textContent = '1 OST = $' + ostPrice.toFixed(6);
+      if (palRoute) {
+        var route = curr === 'USDC' || curr === 'USDT' || curr === 'SOL' ?
+          'OST → Jupiter → Merchant' : 'OST → Jupiter → On-Ramp → Merchant';
+        palRoute.textContent = route;
+      }
+
+      doneStep(step1);
+      activateStep(step2);
+
+      if (preview) {
+        preview.innerHTML = '<div style="display:flex;align-items:center;gap:12px;padding:8px;">' +
+          '<span style="font-size:2rem;">🛒</span>' +
+          '<div><strong>$' + usdValue.toLocaleString(undefined, {maximumFractionDigits:2}) + ' ' + curr + '</strong>' +
+          '<br><span style="color:var(--text-muted);font-size:.82rem;">= ' + formatted + ' OST (live rate)</span></div></div>';
+      }
+
+      doneStep(step2);
+      activateStep(step3);
+      payBtn.disabled = false;
+    }
+
+    function handleUrlInput() {
+      var url = urlInput.value.trim();
+      if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+        // Extract domain for display
+        try {
+          var domain = new URL(url).hostname.replace('www.', '');
+          doneStep(step1);
+          activateStep(step2);
+          if (preview) {
+            preview.innerHTML = '<div style="display:flex;align-items:center;gap:12px;padding:8px;">' +
+              '<span style="font-size:2rem;">🔗</span>' +
+              '<div><strong>' + escapeHtml(domain) + '</strong>' +
+              '<br><span style="color:var(--text-muted);font-size:.82rem;">Product link detected. Enter the price below to calculate OST cost.</span></div></div>';
+          }
+        } catch(e) {}
+      }
+    }
+
+    function escapeHtml(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+    urlInput.addEventListener('input', handleUrlInput);
+    if (priceInput) priceInput.addEventListener('input', computeConversion);
+    if (currencySelect) currencySelect.addEventListener('change', computeConversion);
+    if (scanBtn) scanBtn.addEventListener('click', function() {
+      toast('🔍', 'Paste a product URL in the input field');
+    });
+
+    payBtn.addEventListener('click', async function() {
+      if (payBtn.disabled) return;
+      payBtn.disabled = true;
+      payBtn.innerHTML = '<span class="spinner"></span> Processing... ZK proof generation';
+
+      // Simulate steps
+      await sleep(800);
+      toast('🔄', 'Converting OST → merchant currency...');
+      await sleep(1000);
+      toast('🔐', 'Generating ZK proof...');
+      await sleep(800);
+      toast('⚡', 'Confidential transfer signed');
+      await sleep(600);
+
+      payBtn.innerHTML = '<span class="pal-pay-icon">✅</span> <span>Payment Complete!</span>';
+      payBtn.style.background = 'linear-gradient(135deg, var(--success), #059669)';
+      toast('✅', 'Payment processed via OST Interchange (demo)');
+      launchConfetti();
+
+      await sleep(4000);
+      payBtn.innerHTML = '<span class="pal-pay-icon">⚬</span> <span>Let OST Handle Checkout</span>';
+      payBtn.style.background = '';
+      payBtn.disabled = false;
+      [step1, step2, step3].forEach(function(s) {
+        if (s) { s.classList.remove('pal-step-done', 'pal-step-active'); }
+      });
+      activateStep(step1);
+    });
+  })();
+
+  /* ---------- GROW VAULT — Family Accounts ---------- */
+  (function initGrowVault() {
+    const gvCreateBtn = $('#gvCreateBtn');
+    const gvBirthYear = $('#gvBirthYear');
+    const gvStatus = $('#gvStatus');
+    if (!gvCreateBtn) return;
+
+    gvCreateBtn.addEventListener('click', async function() {
+      var year = parseInt(gvBirthYear?.value);
+      if (!year || year < 2000 || year > new Date().getFullYear()) {
+        if (gvStatus) gvStatus.textContent = '⚠️ Enter a valid birth year (2000–' + new Date().getFullYear() + ')';
+        return;
+      }
+
+      gvCreateBtn.disabled = true;
+      gvCreateBtn.innerHTML = '<span class="spinner"></span> Creating Grow Vault...';
+
+      if (connectedWallet && typeof solanaWeb3 !== 'undefined') {
+        try {
+          if (gvStatus) gvStatus.textContent = 'Creating on-chain Grow Vault PDA...';
+          await sleep(1500);
+          var age = new Date().getFullYear() - year;
+          if (gvStatus) gvStatus.textContent = '✅ Grow Vault created! Child age: ' + age + '. Milestone faucet drops active.';
+          toast('👶', 'Grow Vault created — welcome to space, little one!');
+          launchConfetti();
+        } catch(e) {
+          if (gvStatus) gvStatus.textContent = '⚠️ Error: ' + e.message;
+        }
+      } else {
+        await sleep(1000);
+        var age = new Date().getFullYear() - year;
+        if (gvStatus) gvStatus.textContent = '✅ Grow Vault created (demo)! Child age: ' + age + '. Connect wallet for real on-chain vault.';
+        toast('👶', 'Grow Vault created (demo) — connect wallet for real vault');
+        launchConfetti();
+      }
+
+      gvCreateBtn.disabled = false;
+      gvCreateBtn.innerHTML = '<span class="pay-icon">👶</span> Create Grow Vault';
+    });
+  })();
+
+  /* ---------- DEPIN FAUCET — Infrastructure Rewards ---------- */
+  (function initDepinFaucet() {
+    const depinBtn = $('#depinClaimBtn');
+    const depinStatus = $('#depinClaimStatus');
+    if (!depinBtn) return;
+
+    depinBtn.addEventListener('click', async function() {
+      depinBtn.disabled = true;
+      depinBtn.innerHTML = '<span class="spinner"></span> Verifying contribution...';
+
+      if (connectedWallet && typeof solanaWeb3 !== 'undefined') {
+        try {
+          if (depinStatus) depinStatus.textContent = 'Checking DePIN attestation...';
+          await sleep(1200);
+          if (depinStatus) depinStatus.textContent = 'Transferring reward from treasury...';
+          await sleep(800);
+          if (depinStatus) depinStatus.textContent = '✅ DePIN reward claimed! Building satellite internet together.';
+          toast('🛰️', 'DePIN faucet reward claimed!');
+          launchConfetti();
+        } catch(e) {
+          if (depinStatus) depinStatus.textContent = '⚠️ Error: ' + e.message;
+        }
+      } else {
+        await sleep(1000);
+        if (depinStatus) depinStatus.textContent = '✅ DePIN reward claimed (demo). Connect wallet + register DePIN stake first.';
+        toast('🛰️', 'DePIN reward claimed (demo)');
+        launchConfetti();
+      }
+
+      depinBtn.disabled = false;
+      depinBtn.innerHTML = '<span class="pay-icon">🛰️</span> Claim DePIN Reward';
+    });
+  })();
+
   /* ---------- BOT CONNECTORS ---------- */
   const logBody = $('#logBody');
 

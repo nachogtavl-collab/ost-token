@@ -80,4 +80,28 @@ pub enum OstError {
 
     #[msg("Invalid resource type code")]
     InvalidResourceType,
+
+    #[msg("Invalid birth year")]
+    InvalidBirthYear,
+
+    #[msg("Milestone not yet reached (child too young)")]
+    MilestoneNotReached,
+
+    #[msg("This milestone has already been claimed")]
+    MilestoneAlreadyClaimed,
+
+    #[msg("Invalid milestone index")]
+    InvalidMilestone,
+
+    #[msg("Grow vault has already graduated")]
+    VaultAlreadyGraduated,
+
+    #[msg("DePIN stake is not active")]
+    DepinNotActive,
+
+    #[msg("DePIN faucet cooldown period active (24h)")]
+    DepinCooldownActive,
+
+    #[msg("Duplicate attestation hash — already claimed")]
+    DepinDuplicateAttestation,
 }

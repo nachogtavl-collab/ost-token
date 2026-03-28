@@ -355,3 +355,65 @@ impl ZkTaxReport {
         + 1   // bump
         + 64; // reserved
 }
+
+// ============================================================================
+// GROW VAULT — Family Grow Accounts for the next generation of space citizens
+// ============================================================================
+#[account]
+pub struct GrowVault {
+    /// Parent/guardian wallet
+    pub parent: Pubkey,
+    /// Child's birth year (e.g. 2024) — no real KYC, just an age flag
+    pub child_birth_year: u16,
+    /// Bitmask of claimed milestones (bit 0 = age 0, bit 1 = age 1, etc.)
+    pub milestones_claimed: u8,
+    /// Total OST received from milestone faucet drops
+    pub total_received: u64,
+    /// When the vault was created
+    pub created_at: i64,
+    /// Whether the child has "graduated" (turned 18)
+    pub graduated: bool,
+    /// Bump
+    pub bump: u8,
+}
+
+impl GrowVault {
+    pub const LEN: usize = 8   // discriminator
+        + 32  // parent
+        + 2   // child_birth_year
+        + 1   // milestones_claimed
+        + 8   // total_received
+        + 8   // created_at
+        + 1   // graduated
+        + 1;  // bump
+}
+
+// ============================================================================
+// DEPIN CLAIM — Tracks DePIN faucet claims and cooldown
+// ============================================================================
+#[account]
+#[derive(Default)]
+pub struct DepinClaim {
+    /// The contributor
+    pub contributor: Pubkey,
+    /// Last claim timestamp (for 24h cooldown)
+    pub last_claim_at: i64,
+    /// Total OST claimed from DePIN faucet
+    pub total_claimed: u64,
+    /// Number of claims made
+    pub claim_count: u32,
+    /// Hash of last attestation (prevents replay)
+    pub last_attestation_hash: [u8; 32],
+    /// Bump
+    pub bump: u8,
+}
+
+impl DepinClaim {
+    pub const LEN: usize = 8   // discriminator
+        + 32  // contributor
+        + 8   // last_claim_at
+        + 8   // total_claimed
+        + 4   // claim_count
+        + 32  // last_attestation_hash
+        + 1;  // bump
+}

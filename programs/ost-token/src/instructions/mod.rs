@@ -24,6 +24,8 @@ pub mod redeem_bearer_note;
 pub mod claim_faucet;
 pub mod seedless_onboard;
 pub mod ai_reward_stake;
+pub mod grow_vault;
+pub mod claim_depin_faucet;
 
 pub use initialize_mint::*;
 pub use configure_confidential::*;
@@ -47,3 +49,5 @@ pub use redeem_bearer_note::*;
 pub use claim_faucet::*;
 pub use seedless_onboard::*;
 pub use ai_reward_stake::*;
+pub use grow_vault::*;
+pub use claim_depin_faucet::*;
