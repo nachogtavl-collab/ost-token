@@ -3080,13 +3080,13 @@
           nextP.classList.add('ost-compact-hidden');
       }
       var bar = document.createElement('div');
-      bar.className = 'ost-compact-bar collapsed';
+      bar.className = 'ost-compact-bar expanded';
       var inner = '<span class="ost-compact-label">' + esc(label) + '</span>';
       if (countText) inner += '<span class="ost-compact-count">' + esc(countText) + '</span>';
-      inner += '<span class="ost-compact-chevron">▸</span>';
+      inner += '<span class="ost-compact-chevron">▾</span>';
       bar.innerHTML = inner;
       el.parentNode.insertBefore(bar, el);
-      el.style.display = 'none';
+      // Start expanded so content is visible; users click to collapse
       bar.addEventListener('click', function() {
         var hidden = el.style.display === 'none';
         el.style.display = hidden ? '' : 'none';
