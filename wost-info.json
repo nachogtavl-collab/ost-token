@@ -1,0 +1,11 @@
+{
+  "wostMint": "Ac8RTG9R15HDXkjJDphRNpEgawEh1o5wLFaWPGFjiHoS",
+  "ostMint": "383pTzoZ8Gp83dzk23ZnvLcfX2Sq32TAGN48CMQu2pAJ",
+  "adminAta": "EhnDWQFFeowPJPrVXibYvHaxWt2s7aDngbu43rk9SPBv",
+  "decimals": 9,
+  "supply": "1000000000",
+  "tokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+  "cluster": "devnet",
+  "createdAt": "2026-03-28T19:28:33.170Z",
+  "description": "wOST (Wrapped OST) is a standard SPL token for DEX trading. 1 wOST = 1 OST."
+}

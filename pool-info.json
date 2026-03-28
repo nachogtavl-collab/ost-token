@@ -1,0 +1,24 @@
+{
+  "poolId": "iich99ppBqpBTgitrfHSKoET3fqEGJHcPWGvA4u35Te",
+  "txId": "4pEwmhYdEjj3U8ezmfwUw6R4UtCAem9cUpwq9bXqAShmeiMAfSQuAyd9VRx1gdffRw1cZvtXR1K1xbhAhz17Li8",
+  "mintA": "Ac8RTG9R15HDXkjJDphRNpEgawEh1o5wLFaWPGFjiHoS",
+  "mintB": "So11111111111111111111111111111111111111112",
+  "amountA": 100000,
+  "amountB": 1,
+  "cluster": "devnet",
+  "createdAt": "2026-03-28T19:29:14.392Z",
+  "poolKeys": {
+    "poolId": "iich99ppBqpBTgitrfHSKoET3fqEGJHcPWGvA4u35Te",
+    "configId": "5MxLgy9oPdTC3YgkiePHqr3EoCRD9uLVYRQS2ANAs7wy",
+    "authority": "CXniRufdq5xL8t8jZAPxsPZDpuudwuJSPWnbcD5Y5Nxq",
+    "lpMint": "6u8kS6ENd9W8NLc2W4xEkN7qe8Es5RRUdhjEjiH6k2qV",
+    "vaultA": "hEBE9eXkP79kju1p4pAr2AGKHUqwZ5StiX9tqEwA1Ct",
+    "vaultB": "Dqkt1Qz77WZx77K64NgL577co3mALDpMC28sYLKXGyNd",
+    "observationId": "9UnjsWKkNoocLQCcKBpPNSrTMtnceiNKebja4crWnUYk",
+    "mintA": "[object Object]",
+    "mintB": "[object Object]",
+    "programId": "DRaycpLY18LhpbydsBWbVJtxpNv9oXPgjRSfpF2bWpYb",
+    "poolFeeAccount": "3oE58BKVt8KuYkGxx8zBojugnymWmBiyafWgMrnb6eYy",
+    "feeConfig": "[object Object]"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "name": "Wrapped OST",
+  "symbol": "wOST",
+  "description": "wOST is the DEX-tradable wrapper for OST (One Step Token). 1 wOST = 1 OST. OST is a privacy-first Solana token built on Token-2022 with confidential transfers. wOST enables transparent trading on Raydium, Jupiter, and other aggregators.",
+  "image": "https://nachogtavl-collab.github.io/ost-token/ost-logo.svg",
+  "external_url": "https://nachogtavl-collab.github.io/ost-token/",
+  "properties": {
+    "category": "currency"
+  },
+  "attributes": [
+    { "trait_type": "Wrapper", "value": "1:1 with OST" },
+    { "trait_type": "Standard", "value": "SPL Token" },
+    { "trait_type": "Blockchain", "value": "Solana" }
+  ]
+}

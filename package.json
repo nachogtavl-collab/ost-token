@@ -10,16 +10,23 @@
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.0",
+    "@metaplex-foundation/mpl-token-metadata": "^3.4.0",
+    "@metaplex-foundation/umi": "^1.5.1",
+    "@metaplex-foundation/umi-bundle-defaults": "^1.5.1",
+    "@raydium-io/raydium-sdk-v2": "^0.2.36-alpha",
+    "@solana/spl-token": "^0.4.12",
     "@solana/web3.js": "^1.98.0",
-    "@solana/spl-token": "^0.4.12"
+    "bn.js": "^5.2.3",
+    "bs58": "^6.0.0"
   },
   "devDependencies": {
+    "@types/bn.js": "^5.2.0",
     "@types/chai": "^4.3.0",
     "@types/mocha": "^10.0.0",
+    "@types/node": "^22.0.0",
     "chai": "^4.4.0",
     "mocha": "^10.7.0",
     "ts-mocha": "^10.0.0",
-    "typescript": "^5.7.0",
-    "@types/node": "^22.0.0"
+    "typescript": "^5.7.0"
   }
 }
