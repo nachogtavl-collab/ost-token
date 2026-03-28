@@ -3063,5 +3063,81 @@
     };
   })();
 
+  /* ================================================================== */
+  /* COMPACT MODE — collapse verbose sections, keep site clickable      */
+  /* ================================================================== */
+  (function initCompactMode() {
+    function makeCompact(el, fallbackLabel, countText) {
+      if (!el) return;
+      // Try to absorb child h3 into the bar to avoid duplication
+      var h3 = el.querySelector(':scope > h3');
+      var label = fallbackLabel;
+      if (h3) {
+        label = h3.textContent.trim();
+        h3.classList.add('ost-compact-hidden');
+        var nextP = h3.nextElementSibling;
+        if (nextP && nextP.tagName === 'P' && (nextP.classList.contains('text-muted') || nextP.className === ''))
+          nextP.classList.add('ost-compact-hidden');
+      }
+      var bar = document.createElement('div');
+      bar.className = 'ost-compact-bar collapsed';
+      var inner = '<span class="ost-compact-label">' + esc(label) + '</span>';
+      if (countText) inner += '<span class="ost-compact-count">' + esc(countText) + '</span>';
+      inner += '<span class="ost-compact-chevron">▸</span>';
+      bar.innerHTML = inner;
+      el.parentNode.insertBefore(bar, el);
+      el.style.display = 'none';
+      bar.addEventListener('click', function() {
+        var hidden = el.style.display === 'none';
+        el.style.display = hidden ? '' : 'none';
+        bar.classList.toggle('collapsed', !hidden);
+        bar.classList.toggle('expanded', hidden);
+        bar.querySelector('.ost-compact-chevron').textContent = hidden ? '▾' : '▸';
+      });
+    }
+
+    // --- Story ---
+    makeCompact(document.querySelector('.story-timeline'), '📖 Our Full Story', '5 milestones · 2009–2030+');
+
+    // --- Decentralization ---
+    makeCompact(document.querySelector('.censorship-real'), '🚫 Internet Censorship — Real Examples', '6 countries');
+    makeCompact(document.querySelector('.decentral-manifesto'), '🏛️ The Three Pillars of OST');
+
+    // --- Features / Revolution ---
+    makeCompact(document.querySelector('#pay-demo'), '🛒 Interactive Shop Demo', '8 products');
+    makeCompact(document.querySelector('#payAnywhere'), '🌐 Pay Anywhere — Universal Browser');
+
+    // --- Offline ---
+    // Hide the heading + subtitle before the grid, grid itself becomes compact
+    var scHeading = document.querySelector('h3.scenario-heading');
+    if (scHeading) {
+      scHeading.classList.add('ost-compact-hidden');
+      var scSub = scHeading.nextElementSibling;
+      if (scSub && scSub.tagName === 'P') scSub.classList.add('ost-compact-hidden');
+    }
+    makeCompact(document.querySelector('.scenario-grid'), '🌍 Real-World Scenarios', '6 verified stories');
+
+    // --- Get OST ---
+    makeCompact(document.querySelector('#growthSection'), '🗺️ Roadmap & Milestones', '5 phases');
+    makeCompact(document.querySelector('#sellOstSection'), '💰 Sell or Trade OST', '3 options');
+    makeCompact(document.querySelector('.fiat-section'), '💵 Buy with Local Currency', '24 currencies');
+    makeCompact(document.querySelector('#launchChecklist'), '🚀 Mainnet Launch Checklist', '11 items');
+
+    // --- AI ---
+    makeCompact(document.querySelector('#botConnectorPanel'), '🔌 Connect Your Bot or AI', '11 providers');
+
+    // --- Creators ---
+    makeCompact(document.querySelector('.build-code-showcase'), '💻 SDK Code Examples', 'TypeScript + Rust');
+    makeCompact(document.querySelector('.creators-grid'), '👥 Builder Roles', '6 categories');
+    makeCompact(document.querySelector('.cta-box'), '🏆 Bounties & Contributing');
+
+    // --- Bridges — each sub-hub ---
+    document.querySelectorAll('#bridges .bridge-hub').forEach(function(hub) {
+      var cnt = hub.querySelectorAll('.bridge-card').length;
+      makeCompact(hub, null, cnt ? cnt + ' options' : '');
+    });
+    makeCompact(document.querySelector('#bridges .bridge-how'), '📝 How to Buy OST — Step by Step', '4 steps');
+  })();
+
 })();
 
