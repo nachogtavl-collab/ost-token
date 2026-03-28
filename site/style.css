@@ -1431,43 +1431,7 @@ nav {
   .ost-popup { width: 100vw; height: 100vh; max-width: 100%; border-radius: 0; }
 }
 
-/* ================================================================== */
-/* COMPACT MODE — collapsible section system                          */
-/* ================================================================== */
-.ost-compact-bar {
-  display: flex; align-items: center; gap: 12px;
-  padding: 14px 20px; margin: 12px 0;
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); cursor: pointer;
-  transition: background .2s, border-color .2s, box-shadow .2s;
-  user-select: none;
-}
-.ost-compact-bar:hover {
-  border-color: var(--accent);
-  background: rgba(109,159,255,.06);
-  box-shadow: 0 0 20px rgba(109,159,255,.08);
-}
-.ost-compact-bar:active { transform: scale(.995); }
-.ost-compact-label {
-  flex: 1; font-weight: 600; font-size: .95rem; color: var(--text);
-}
-.ost-compact-count {
-  font-size: .75rem; color: var(--accent);
-  background: rgba(109,159,255,.1);
-  padding: 3px 10px; border-radius: 12px;
-  white-space: nowrap;
-}
-.ost-compact-chevron {
-  font-size: .85rem; color: var(--accent);
-  transition: transform .3s ease; width: 16px; text-align: center;
-}
-.ost-compact-bar.expanded { margin-bottom: 0; }
-.ost-compact-bar.expanded .ost-compact-chevron { transform: rotate(90deg); }
-.ost-compact-hidden { display: none !important; }
-@media (max-width: 600px) {
-  .ost-compact-bar { padding: 12px 14px; gap: 8px; }
-  .ost-compact-label { font-size: .85rem; }
-}
+
 
 /* ==================================================================
    SIMULATED STORE (Browser Mockup)
