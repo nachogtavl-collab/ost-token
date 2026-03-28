@@ -20,7 +20,7 @@ Set-Location $ProjectRoot
 # Set environment vars for Solana build tools
 $env:SBF_SDK_PATH = "C:\sbf"
 $env:RUSTC = "C:\spt\rust\bin\rustc.exe"
-$env:PATH = "$env:USERPROFILE\.local\share\solana\install\active_release\solana-release\bin;$env:USERPROFILE\.cargo\bin;$env:PATH"
+$env:PATH = "C:\Program Files\GitHub CLI;C:\Program Files\Git\cmd;$env:USERPROFILE\.local\share\solana\install\active_release\bin;$env:USERPROFILE\.cargo\bin;$env:PATH"
 
 $ProgramId = "J2jiS296YWVie1Sopb4SxcM3aJnP9aAwe6aLDhCqvGXY"
 
@@ -88,12 +88,12 @@ Write-Host "`n[3/7] Checking balance..." -ForegroundColor Yellow
 
 $balStr = solana balance 2>$null
 $balNum = [double]($balStr -replace ' SOL','')
-Write-Host "  Balance: $balStr" -ForegroundColor $(if ($balNum -ge 8) { "Green" } else { "Red" })
+Write-Host "  Balance: $balStr" -ForegroundColor $(if ($balNum -ge 4) { "Green" } else { "Red" })
 
-if ($balNum -lt 8) {
+if ($balNum -lt 4) {
     Write-Host ""
     Write-Host "  ╔══════════════════════════════════════════════╗" -ForegroundColor Yellow
-    Write-Host "  ║  INSUFFICIENT SOL — Need at least 8 SOL     ║" -ForegroundColor Yellow
+    Write-Host "  ║  INSUFFICIENT SOL — Need at least 4 SOL     ║" -ForegroundColor Yellow
     Write-Host "  ║                                              ║" -ForegroundColor Yellow
     Write-Host "  ║  For devnet:                                 ║" -ForegroundColor Yellow
     Write-Host "  ║  1. Go to https://faucet.solana.com          ║" -ForegroundColor Cyan
@@ -117,12 +117,12 @@ if ($balNum -lt 8) {
         }
     }
 
-    if ($balNum -lt 8) {
+    if ($balNum -lt 4) {
         Write-Host "  Waiting for funding... Press Enter when ready, or Ctrl+C to abort." -ForegroundColor Yellow
         Read-Host
         $balStr = solana balance
         $balNum = [double]($balStr -replace ' SOL','')
-        if ($balNum -lt 8) {
+        if ($balNum -lt 4) {
             Write-Host "  Still insufficient: $balStr. Aborting." -ForegroundColor Red
             exit 1
         }
