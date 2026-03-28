@@ -1392,8 +1392,24 @@
     RUB: 92, MXN: 17.2, JPY: 155, NGN: 1550, KRW: 1340, TRY: 32.5,
     ARS: 875, EGP: 48, PKR: 278, IDR: 15800, PHP: 56, THB: 35,
     VND: 25000, PLN: 4.0, SAR: 3.75, COP: 3950, KES: 155, IRR: 42000,
+    CHF: 0.88, AUD: 1.55, CAD: 1.37, NZD: 1.68, SEK: 10.5, NOK: 10.7,
+    DKK: 6.88, ZAR: 18.6, HKD: 7.82, SGD: 1.34, TWD: 31.5, CZK: 23.5,
+    HUF: 365, RON: 4.6, BGN: 1.8, ISK: 138, UAH: 41.5, CLP: 930,
+    PEN: 3.72, UYU: 39, DOP: 57, PAB: 1, ILS: 3.6,
     BTC: 0, ETH: 0, SOL: 0, // Filled dynamically
   };
+
+  // Currency symbol map for international display
+  var currSymbols = {
+    USD:'$',EUR:'€',GBP:'£',JPY:'¥',CNY:'¥',INR:'₹',BRL:'R$',KRW:'₩',
+    TRY:'₺',RUB:'₽',PLN:'zł',THB:'฿',NGN:'₦',MXN:'$',AUD:'A$',CAD:'C$',
+    NZD:'NZ$',CHF:'CHF',SEK:'kr',NOK:'kr',DKK:'kr',ZAR:'R',HKD:'HK$',
+    SGD:'S$',TWD:'NT$',CZK:'Kč',HUF:'Ft',RON:'lei',BGN:'лв',ISK:'kr',
+    UAH:'₴',CLP:'$',PEN:'S/',UYU:'$U',DOP:'RD$',PAB:'B/.',ILS:'₪',
+    ARS:'$',EGP:'E£',PKR:'₨',IDR:'Rp',PHP:'₱',VND:'₫',SAR:'﷼',
+    COP:'$',KES:'KSh',IRR:'﷼',USDC:'$',USDT:'$',BTC:'₿',ETH:'Ξ',SOL:'◎',BNB:'BNB'
+  };
+  function getCurrSym(c) { return currSymbols[c] || c + ' '; }
 
   async function fetchFiatRates() {
     try {
@@ -2724,8 +2740,22 @@
       }
     });
 
-    function sanitizeUrl(raw) {
-      return raw.replace(/^https?:\/\//, '').replace(/\/.*/, '').replace(/[^a-zA-Z0-9.\-]/g, '');
+    function getHostname(raw) {
+      try {
+        var u = raw.trim();
+        if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+        return new URL(u).hostname.replace(/^www\./, '');
+      } catch (_) {
+        return raw.replace(/^https?:\/\//i, '').replace(/\/.*/, '').replace(/[^a-zA-Z0-9.\-]/g, '');
+      }
+    }
+    function hasPath(raw) {
+      try {
+        var u = raw.trim();
+        if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+        var p = new URL(u).pathname;
+        return p && p !== '/' && p.length > 1;
+      } catch (_) { return raw.includes('/'); }
     }
 
     // Simulated store data for quick-link demos
@@ -2767,17 +2797,29 @@
         { name: 'Phone Case', price: 3.99, img: '&#128241;' },
         { name: 'LED Strip 5m', price: 8.99, img: '&#128161;' },
       ], currency: 'USD' },
+      'mercadolibre.com': { name: 'Mercado Libre', icon: '&#128722;', color: '#FFE600', items: [
+        { name: 'Auriculares Bluetooth', price: 15999, img: '&#127911;' },
+        { name: 'Cargador USB-C', price: 4999, img: '&#128268;' },
+      ], currency: 'ARS' },
+      'rakuten.co.jp': { name: 'Rakuten', icon: '&#127988;', color: '#bf0000', items: [
+        { name: 'Nintendo Switch Game', price: 5980, img: '&#127918;' },
+        { name: 'Rice Cooker', price: 12800, img: '&#127834;' },
+      ], currency: 'JPY' },
+      'flipkart.com': { name: 'Flipkart', icon: '&#128722;', color: '#2874F0', items: [
+        { name: 'Smartphone', price: 14999, img: '&#128241;' },
+        { name: 'Earphones', price: 999, img: '&#127911;' },
+      ], currency: 'INR' },
     };
 
     var currentStore = null;
 
     function loadStore(rawUrl) {
-      const hostname = sanitizeUrl(rawUrl);
+      const hostname = getHostname(rawUrl);
       if (!hostname) return;
       if (checkout) checkout.style.display = 'none';
 
       const store = stores[hostname];
-      if (store && !rawUrl.includes('/')) {
+      if (store && !hasPath(rawUrl)) {
         // Known quick-link store (just domain, no path) — use simulated catalog
         browserUrl.value = hostname;
         currentStore = Object.assign({}, store, {
@@ -2922,21 +2964,62 @@
 
       // Fallback: generic price regex patterns (last resort)
       if (!result.price) {
-        // Look for common price patterns like $29.99, €14.50, £99.00
-        var priceRegex = /["'>]\s*[\$€£]\s*(\d{1,6}(?:[.,]\d{2})?)[\s<"']/;
-        var priceGeneric = html.match(priceRegex);
-        if (priceGeneric) {
-          result.price = parseFloat(priceGeneric[1].replace(/,/g, '')) || 0;
-          // Detect currency from symbol
-          var symMatch = html.match(/([\$€£])\s*\d/);
-          if (symMatch) {
-            if (symMatch[1] === '€') result.currency = 'EUR';
-            else if (symMatch[1] === '£') result.currency = 'GBP';
+        // International price patterns: $29.99, €14,50, £99.00, ¥1200, ₹999, R$150, ₩15000, ₺450, kr299
+        var intlPatterns = [
+          { re: /["'>]\s*\$\s*(\d{1,7}(?:[.,]\d{1,2})?)\s*[\s<"']/,             cur: 'USD' },
+          { re: /["'>]\s*€\s*(\d{1,7}(?:[.,]\d{1,2})?)\s*[\s<"']/,             cur: 'EUR' },
+          { re: /["'>]\s*£\s*(\d{1,7}(?:[.,]\d{1,2})?)\s*[\s<"']/,             cur: 'GBP' },
+          { re: /["'>]\s*[¥￥]\s*(\d{1,9}(?:[.,]\d{1,2})?)\s*[\s<"']/,          cur: 'JPY' },
+          { re: /["'>]\s*₹\s*(\d{1,9}(?:[.,]\d{1,2})?)\s*[\s<"']/,             cur: 'INR' },
+          { re: /["'>]\s*R\$\s*(\d{1,7}(?:[.,]\d{1,2})?)\s*[\s<"']/,           cur: 'BRL' },
+          { re: /["'>]\s*₩\s*(\d{1,9}(?:[.,]\d{0,2})?)\s*[\s<"']/,             cur: 'KRW' },
+          { re: /["'>]\s*₺\s*(\d{1,7}(?:[.,]\d{1,2})?)\s*[\s<"']/,             cur: 'TRY' },
+          { re: /["'>]\s*₽\s*(\d{1,9}(?:[.,]\d{1,2})?)\s*[\s<"']/,             cur: 'RUB' },
+          { re: /["'>]\s*zł\s*(\d{1,7}(?:[.,]\d{1,2})?)\s*[\s<"']/i,           cur: 'PLN' },
+          { re: /["'>]\s*CHF\s*(\d{1,7}(?:[.,]\d{1,2})?)\s*[\s<"']/,           cur: 'CHF' },
+          { re: /["'>]\s*A\$\s*(\d{1,7}(?:[.,]\d{1,2})?)\s*[\s<"']/,           cur: 'AUD' },
+          { re: /["'>]\s*C\$\s*(\d{1,7}(?:[.,]\d{1,2})?)\s*[\s<"']/,           cur: 'CAD' },
+          { re: /["'>]\s*₱\s*(\d{1,7}(?:[.,]\d{1,2})?)\s*[\s<"']/,             cur: 'PHP' },
+          { re: /["'>]\s*₫\s*(\d{1,9}(?:[.,]\d{0,2})?)\s*[\s<"']/,             cur: 'VND' },
+          { re: /["'>]\s*kr\.?\s*(\d{1,7}(?:[.,]\d{1,2})?)\s*[\s<"']/i,        cur: 'SEK' },
+          { re: /["'>]\s*₪\s*(\d{1,7}(?:[.,]\d{1,2})?)\s*[\s<"']/,             cur: 'ILS' },
+        ];
+        for (var p = 0; p < intlPatterns.length; p++) {
+          var m = html.match(intlPatterns[p].re);
+          if (m) {
+            result.price = parseIntlPrice(m[1]);
+            result.currency = intlPatterns[p].cur;
+            break;
           }
         }
       }
 
+      // European comma-as-decimal: detect from priceCurrency meta if present
+      if (result.price && result.currency && ['EUR','BRL','PLN','TRY','CZK','HUF','RON','RUB','UAH'].indexOf(result.currency) >= 0) {
+        // Re-check if price string used comma as decimal (e.g. "14,99")
+        var rawPriceStr = (ogPrice && ogPrice[1]) || '';
+        if (rawPriceStr && rawPriceStr.indexOf(',') > rawPriceStr.indexOf('.')) {
+          result.price = parseIntlPrice(rawPriceStr);
+        }
+      }
+
       return result;
+    }
+
+    function parseIntlPrice(s) {
+      // Handle European format: 1.234,56 or 1234,56 → 1234.56
+      // Handle US format: 1,234.56 → 1234.56
+      s = s.replace(/\s/g, '');
+      if (/\d+\.\d{3},\d{1,2}$/.test(s)) {
+        // European: 1.234,56 → 1234.56
+        return parseFloat(s.replace(/\./g, '').replace(',', '.')) || 0;
+      } else if (/\d+,\d{1,2}$/.test(s) && s.indexOf('.') < 0) {
+        // Simple comma decimal: 14,99 → 14.99
+        return parseFloat(s.replace(',', '.')) || 0;
+      } else {
+        // US format or plain number
+        return parseFloat(s.replace(/,/g, '')) || 0;
+      }
     }
 
     function findProductLD(data) {
@@ -2962,9 +3045,17 @@
 
     /* ---- Render: auto-detected product ---- */
     function renderDetectedProduct(store, hostname, parsed) {
-      var sym = store.currency === 'EUR' ? '&euro;' : (store.currency === 'GBP' ? '&pound;' : '$');
+      var sym = getCurrSym(store.currency);
       var rate = ostPrice || 0.0001;
-      var ostAmount = store.total / rate;
+      // Convert to USD for proper OST calculation
+      var usdTotal = store.total;
+      var c = store.currency;
+      if (c === 'BTC') usdTotal = store.total * (prices.bitcoin || 105000);
+      else if (c === 'ETH') usdTotal = store.total * (prices.ethereum || 3800);
+      else if (c === 'SOL') usdTotal = store.total * (prices.solana || 170);
+      else if (c === 'USDC' || c === 'USDT') usdTotal = store.total;
+      else if (fiatRates[c] && fiatRates[c] > 0) usdTotal = store.total / fiatRates[c];
+      var ostAmount = usdTotal / rate;
       var ostFormatted = ostAmount >= 1e6 ? (ostAmount / 1e6).toFixed(2) + 'M' :
                          ostAmount >= 1e3 ? (ostAmount / 1e3).toFixed(1) + 'K' :
                          ostAmount.toFixed(2);
@@ -2975,6 +3066,7 @@
 
       viewport.innerHTML =
         '<div class="sim-detected">' +
+          '<button class="sim-back-btn" title="Back to home">&larr; Back</button>' +
           '<div class="sim-detected-badge">&#9989; Price detected from <strong>' + esc(hostname) + '</strong></div>' +
           '<div class="sim-detected-product">' +
             '<div class="sim-detected-img">' + imageHtml + '</div>' +
@@ -3000,12 +3092,16 @@
       // Wire checkout button
       var btn = viewport.querySelector('.sim-checkout-btn');
       if (btn) btn.addEventListener('click', function() { showCheckout(store); });
+      // Wire back button
+      var back = viewport.querySelector('.sim-back-btn');
+      if (back) back.addEventListener('click', resetViewport);
     }
 
     /* ---- Render: manual entry (price not auto-detected) ---- */
     function renderManualEntry(hostname) {
       viewport.innerHTML =
         '<div class="sim-manual">' +
+          '<button class="sim-back-btn" title="Back to home">&larr; Back</button>' +
           '<div class="sim-manual-header">' +
             '<span style="font-size:2rem;">&#128270;</span>' +
             '<div>' +
@@ -3022,10 +3118,16 @@
               '<div class="sim-manual-field" style="max-width:140px;">' +
                 '<label style="color:var(--text-muted);font-size:.8rem;margin-bottom:4px;display:block;">Currency</label>' +
                 '<select id="manualCurrency" class="sim-manual-select">' +
-                  '<option value="USD">USD</option><option value="EUR">EUR</option><option value="GBP">GBP</option>' +
-                  '<option value="JPY">JPY</option><option value="CAD">CAD</option><option value="AUD">AUD</option>' +
-                  '<option value="MXN">MXN</option><option value="BRL">BRL</option><option value="INR">INR</option>' +
-                  '<option value="BTC">BTC</option><option value="ETH">ETH</option><option value="SOL">SOL</option>' +
+                  '<option value="USD">USD $</option><option value="EUR">EUR \u20ac</option><option value="GBP">GBP \u00a3</option>' +
+                  '<option value="JPY">JPY \u00a5</option><option value="CNY">CNY \u00a5</option><option value="INR">INR \u20b9</option>' +
+                  '<option value="BRL">BRL R$</option><option value="KRW">KRW \u20a9</option><option value="MXN">MXN $</option>' +
+                  '<option value="CAD">CAD C$</option><option value="AUD">AUD A$</option><option value="CHF">CHF</option>' +
+                  '<option value="SEK">SEK kr</option><option value="NOK">NOK kr</option><option value="DKK">DKK kr</option>' +
+                  '<option value="PLN">PLN z\u0142</option><option value="TRY">TRY \u20ba</option><option value="RUB">RUB \u20bd</option>' +
+                  '<option value="ZAR">ZAR R</option><option value="HKD">HKD HK$</option><option value="SGD">SGD S$</option>' +
+                  '<option value="TWD">TWD NT$</option><option value="THB">THB \u0e3f</option><option value="PHP">PHP \u20b1</option>' +
+                  '<option value="NGN">NGN \u20a6</option><option value="ILS">ILS \u20aa</option><option value="COP">COP $</option>' +
+                  '<option value="BTC">BTC \u20bf</option><option value="ETH">ETH \u039e</option><option value="SOL">SOL \u25ce</option>' +
                 '</select>' +
               '</div>' +
             '</div>' +
@@ -3087,10 +3189,13 @@
       if (payBtn) payBtn.addEventListener('click', function() {
         if (currentStore) showCheckout(currentStore);
       });
+      // Wire back button
+      var backBtn = viewport.querySelector('.sim-back-btn');
+      if (backBtn) backBtn.addEventListener('click', resetViewport);
     }
 
     function renderStore(store, hostname) {
-      var sym = store.currency === 'EUR' ? '&euro;' : '$';
+      var sym = getCurrSym(store.currency);
       var itemsHtml = store.items.map(function(item, i) {
         var checked = store.selected ? store.selected[i] : true;
         return '<label class="sim-product' + (checked ? ' sim-product-selected' : '') + '" data-idx="' + i + '">' +
@@ -3104,20 +3209,13 @@
       viewport.innerHTML =
         '<div class="sim-store">' +
           '<div class="sim-store-header" style="border-bottom:3px solid ' + (store.color || '#6d9fff') + ';">' +
+            '<button class="sim-back-btn" title="Back to home">&larr;</button>' +
             '<span class="sim-store-icon">' + store.icon + '</span><h4>' + esc(store.name) + '</h4>' +
             '<span class="sim-ost-badge">&#9673; OST Pay Active</span>' +
           '</div>' +
           '<div class="sim-products">' + itemsHtml + '</div>' +
           '<div class="sim-cart">' +
             '<div class="sim-cart-total">Cart: <strong id="simCartTotal">' + sym + store.total.toFixed(2) + ' ' + store.currency + '</strong></div>' +
-          '</div>' +
-          '<div class="sim-address"><h5>&#128666; Shipping</h5>' +
-            '<div class="sim-addr-fields">' +
-              '<input type="text" placeholder="Full Name" class="sim-input">' +
-              '<input type="text" placeholder="Street Address" class="sim-input">' +
-              '<div class="sim-addr-row"><input type="text" placeholder="City" class="sim-input"><input type="text" placeholder="ZIP" class="sim-input"></div>' +
-              '<select class="sim-input"><option>United States</option><option>Mexico</option><option>Canada</option><option>United Kingdom</option><option>Germany</option><option>Japan</option><option>Brazil</option><option>Nigeria</option><option>India</option><option>Australia</option></select>' +
-            '</div>' +
           '</div>' +
           '<button class="btn btn-primary btn-glow sim-checkout-btn" style="width:100%;justify-content:center;margin-top:16px;">&#9673; Proceed to Pay with OST</button>' +
         '</div>';
@@ -3141,6 +3239,43 @@
       if (simCheckout) {
         simCheckout.addEventListener('click', function() { showCheckout(store); });
       }
+      // Wire back button
+      var backBtn = viewport.querySelector('.sim-back-btn');
+      if (backBtn) backBtn.addEventListener('click', resetViewport);
+    }
+
+    function resetViewport() {
+      browserUrl.value = '';
+      if (checkout) checkout.style.display = 'none';
+      viewport.innerHTML =
+        '<div class="browser-placeholder">' +
+          '<div class="browser-placeholder-icon">&#127760;</div>' +
+          '<h4>Paste Any Product Link &mdash; OST Detects The Price</h4>' +
+          '<p>Paste a real product URL from any website. OST scans the page, detects the price, converts it to OST, and handles checkout. Or pick a store below to browse.</p>' +
+          '<div class="browser-quick-links">' +
+            '<button class="browser-quick" data-url="amazon.com">&#128230; Amazon</button>' +
+            '<button class="browser-quick" data-url="nike.com">&#128095; Nike</button>' +
+            '<button class="browser-quick" data-url="apple.com">&#127822; Apple</button>' +
+            '<button class="browser-quick" data-url="booking.com">&#127968; Booking</button>' +
+            '<button class="browser-quick" data-url="ebay.com">&#128717; eBay</button>' +
+            '<button class="browser-quick" data-url="walmart.com">&#128722; Walmart</button>' +
+            '<button class="browser-quick" data-url="airbnb.com">&#127969; Airbnb</button>' +
+            '<button class="browser-quick" data-url="aliexpress.com">&#128230; AliExpress</button>' +
+            '<button class="browser-quick" data-url="mercadolibre.com">&#128722; Mercado Libre</button>' +
+            '<button class="browser-quick" data-url="rakuten.co.jp">&#127988; Rakuten</button>' +
+            '<button class="browser-quick" data-url="flipkart.com">&#128722; Flipkart</button>' +
+          '</div>' +
+        '</div>';
+      viewport.style.background = '';
+      viewport.style.color = '';
+      // Re-wire quick link buttons
+      viewport.querySelectorAll('.browser-quick').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var url = btn.getAttribute('data-url');
+          browserUrl.value = url;
+          loadStore(url);
+        });
+      });
     }
 
     function recalcTotal(store) {
@@ -3149,7 +3284,7 @@
         if (store.selected && store.selected[i]) total += item.price;
       });
       store.total = total;
-      var sym = store.currency === 'EUR' ? '€' : '$';
+      var sym = store.currency === 'EUR' ? '€' : (store.currency === 'GBP' ? '£' : getCurrSym(store.currency));
       var el = viewport.querySelector('#simCartTotal');
       if (el) el.innerHTML = sym + total.toFixed(2) + ' ' + store.currency;
     }
@@ -3158,10 +3293,18 @@
       if (!checkout) return;
       checkout.style.display = '';
       if (checkoutStore) checkoutStore.textContent = store.name;
-      const symbol = store.currency === 'EUR' ? '€' : (store.currency === 'GBP' ? '£' : '$');
+      const symbol = getCurrSym(store.currency);
       if (checkoutTotal) checkoutTotal.textContent = symbol + store.total.toFixed(2) + ' ' + store.currency;
       const rate = ostPrice || 0.0001;
-      const ostAmount = store.total / rate;
+      // Convert store total to USD first for proper OST conversion
+      var usdTotal = store.total;
+      var c = store.currency;
+      if (c === 'BTC') usdTotal = store.total * (prices.bitcoin || 105000);
+      else if (c === 'ETH') usdTotal = store.total * (prices.ethereum || 3800);
+      else if (c === 'SOL') usdTotal = store.total * (prices.solana || 170);
+      else if (c === 'USDC' || c === 'USDT') usdTotal = store.total;
+      else if (fiatRates[c] && fiatRates[c] > 0) usdTotal = store.total / fiatRates[c];
+      const ostAmount = usdTotal / rate;
       if (checkoutRate) checkoutRate.textContent = '1 OST = ' + symbol + rate.toFixed(6);
       if (checkoutOst) checkoutOst.textContent = ostAmount.toFixed(2) + ' OST';
 

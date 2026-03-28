@@ -1768,6 +1768,84 @@ select.sim-input { cursor: pointer; }
    PAY ANY LINK — Universal Checkout Terminal
    ================================================================== */
 /* ==================================================================
+   BACK BUTTON — Browser Mockup Navigation
+   ================================================================== */
+.sim-back-btn {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text-muted); padding: 6px 14px; font-size: .82rem; cursor: pointer;
+  transition: all .2s; margin-bottom: 12px; display: inline-flex; align-items: center; gap: 4px;
+}
+.sim-back-btn:hover { border-color: var(--accent); color: var(--accent); }
+.sim-store .sim-back-btn { position: absolute; top: 12px; left: 12px; z-index: 2; margin: 0;
+  background: rgba(255,255,255,.9); color: #333; border-color: #ddd; }
+.sim-store .sim-back-btn:hover { color: var(--accent); border-color: var(--accent); }
+.sim-store { position: relative; }
+
+/* ==================================================================
+   SPACEX / STARLINK DePIN PARTNERSHIP STRATEGY
+   ================================================================== */
+.spacex-strategy { text-align: center; }
+.sx-header { margin-bottom: 36px; }
+.sx-icon-ring {
+  width: 64px; height: 64px; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, rgba(109,159,255,.2), rgba(52,211,153,.15));
+  border-radius: 50%; font-size: 1.8rem; margin: 0 auto 16px;
+  box-shadow: 0 0 30px rgba(109,159,255,.2);
+}
+.sx-header h3 { font-family: var(--font-serif); font-size: 1.5rem; margin-bottom: 8px; }
+
+/* Timeline */
+.sx-timeline {
+  position: relative; max-width: 680px; margin: 0 auto 40px;
+  padding-left: 28px; text-align: left;
+}
+.sx-timeline::before {
+  content: ''; position: absolute; left: 8px; top: 0; bottom: 0; width: 2px;
+  background: linear-gradient(180deg, var(--accent), var(--success), var(--warm));
+  opacity: .3;
+}
+.sx-phase { position: relative; padding: 16px 0 24px 24px; }
+.sx-phase-dot {
+  position: absolute; left: -24px; top: 22px; width: 14px; height: 14px;
+  border-radius: 50%; background: var(--surface2); border: 2px solid var(--border);
+}
+.sx-dot-active { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 12px rgba(109,159,255,.5); }
+.sx-phase-content h4 { margin: 0 0 10px; font-size: .95rem; }
+.sx-phase-content ul { list-style: none; padding: 0; margin: 0; }
+.sx-phase-content li { padding: 5px 0; font-size: .85rem; color: var(--text-muted); line-height: 1.5; }
+.sx-phase-now .sx-phase-content h4 { color: var(--accent); }
+.sx-phase-future .sx-phase-content h4 { color: var(--warm); }
+
+/* Analogue Cards */
+.sx-analogues { margin-bottom: 32px; }
+.sx-analogue-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+.sx-analogue-card {
+  padding: 20px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); text-align: center;
+}
+.sx-a-icon { font-size: 1.8rem; display: block; margin-bottom: 8px; }
+.sx-analogue-card strong { display: block; margin-bottom: 6px; font-size: .9rem; }
+.sx-analogue-card p { margin: 0; font-size: .78rem; color: var(--text-muted); line-height: 1.4; }
+
+/* Quote */
+.sx-quote {
+  max-width: 700px; margin: 0 auto; padding: 24px; text-align: center;
+  background: linear-gradient(135deg, rgba(109,159,255,.05), rgba(52,211,153,.05));
+  border: 1px solid var(--border); border-radius: var(--radius);
+}
+.sx-quote blockquote {
+  margin: 0; padding: 0; font-style: italic; font-size: .9rem; color: var(--text);
+  line-height: 1.6;
+}
+.sx-quote-attr { display: block; margin-top: 12px; font-size: .78rem; color: var(--accent); }
+
+@media (max-width: 768px) {
+  .sx-analogue-grid { grid-template-columns: 1fr; }
+  .sx-timeline { padding-left: 20px; }
+  .sx-phase-dot { left: -18px; width: 10px; height: 10px; }
+}
+
+/* ==================================================================
    SCANNING & AUTO-DETECT UI — Browser Mockup Price Detection
    ================================================================== */
 .sim-scanning { text-align: center; padding: 40px 24px; }
