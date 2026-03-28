@@ -2823,6 +2823,8 @@
   /* ================================================================== */
   /* UNIVERSAL IN-PAGE POPUP — smart URL rewriting for embeddable views */
   /* ================================================================== */
+  // Save original window.open before anything patches it
+  window._origOpen = window.open;
   (function initInPagePopup() {
     const overlay = $('#ostPopupOverlay');
     const frame   = $('#ostPopupFrame');
@@ -2958,9 +2960,34 @@
       return false;
     }
 
+    // Fiat ramp domains — these must open in a new tab because they block sandboxed iframes
+    var fiatRampDomains = [
+      'buy.onramper.com','widget.onramper.com','onramper.com',
+      'moonpay.com','buy.moonpay.com','buy.sandbox.moonpay.com',
+      'global.transak.com','ramp.network','app.ramp.network',
+      'pay.coinbase.com'
+    ];
+
+    function isFiatRamp(testUrl) {
+      try {
+        var fHost = new URL(testUrl).hostname.replace(/^www\./, '');
+        for (var i = 0; i < fiatRampDomains.length; i++) {
+          if (fHost === fiatRampDomains[i] || fHost.endsWith('.' + fiatRampDomains[i])) return true;
+        }
+      } catch(e) {}
+      return false;
+    }
+
     function openPopup(url, label) {
       // Rewrite URL to embeddable version
       var embedUrl = rewriteUrl(url);
+
+      // Fiat ramp links → open directly in new tab (they block sandboxed iframes)
+      if (isFiatRamp(embedUrl)) {
+        window._origOpen(embedUrl, '_blank', 'noopener');
+        if (typeof toast === 'function') toast('💳', 'Opening ' + (label || 'payment provider') + ' in a new tab...');
+        return;
+      }
 
       titleEl.textContent = label || embedUrl.replace(/^https?:\/\//, '').split('/')[0];
 
@@ -3038,7 +3065,7 @@
   /* PATCH window.open — keep users on-site for wallet installs etc     */
   /* ================================================================== */
   (function patchWindowOpen() {
-    var _origOpen = window.open;
+    var _origOpen = window._origOpen;
     // Domains that must open natively (wallet adapters, auth flows)
     var nativeOpenDomains = ['phantom.app','solflare.com','backpack.app',
       'sollet.io','slope.finance','glow.app','accounts.google.com',
