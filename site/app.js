@@ -2009,9 +2009,9 @@
       const onr = $('#cpOnramper');
       const mp = $('#cpMoonPay');
       const tr = $('#cpTransak');
-      if (onr) onr.href = 'https://buy.onramper.com?apiKey=pk_prod_01HETEQF46GSK6BS5JWKDF31BT&defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=' + encodeURIComponent(curr);
-      if (mp) mp.href = 'https://buy.onramper.com?apiKey=pk_prod_01HETEQF46GSK6BS5JWKDF31BT&defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&onlyOnramps=moonpay&defaultFiat=' + encodeURIComponent(curr);
-      if (tr) tr.href = 'https://buy.onramper.com?apiKey=pk_prod_01HETEQF46GSK6BS5JWKDF31BT&defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&onlyOnramps=transak&defaultFiat=' + encodeURIComponent(curr);
+      if (onr) onr.href = 'https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=' + encodeURIComponent(curr);
+      if (mp) mp.href = 'https://www.moonpay.com/buy/sol';
+      if (tr) tr.href = 'https://global.transak.com/?cryptoCurrencyCode=SOL&fiatCurrency=' + encodeURIComponent(curr);
     } else {
       convertProviders.style.display = 'none';
     }
@@ -2832,15 +2832,13 @@
     const closeBtn = $('#ostPopupClose');
     if (!overlay || !frame) return;
 
-    // Onramper API key (public demo key from Onramper docs)
-    var OR_KEY = 'pk_prod_01HETEQF46GSK6BS5JWKDF31BT';
-    var OR_BASE = 'https://buy.onramper.com';
+    // Consumer-facing buy page URLs (no partner API key needed)
+    var OR_BASE = 'https://buy.onramper.com/';
 
-    // Build an Onramper URL with sensible defaults
+    // Build an Onramper consumer URL
     function onrampUrl(fiat, mode) {
-      var p = '?apiKey=' + OR_KEY + '&defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=' + (mode || 'buy');
+      var p = '?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=' + (mode || 'buy');
       if (fiat) p += '&defaultFiat=' + fiat;
-      p += '&redirectAtCheckout=true';
       return OR_BASE + p;
     }
 
@@ -2858,21 +2856,21 @@
         }
         if (h === 'docs.onramper.com') return onrampUrl('', 'buy');
 
-        // --- MoonPay → route through Onramper (it aggregates MoonPay) ---
+        // --- MoonPay → consumer buy page ---
         if (h === 'moonpay.com' || h === 'buy.moonpay.com' || h === 'buy.sandbox.moonpay.com')
-          return onrampUrl('', 'buy');
+          return 'https://www.moonpay.com/buy/sol';
 
-        // --- Transak → route through Onramper ---
-        if (h === 'global.transak.com') return onrampUrl('', 'buy');
+        // --- Transak → consumer buy page ---
+        if (h === 'global.transak.com') return 'https://global.transak.com/?cryptoCurrencyCode=SOL';
 
-        // --- Ramp Network → route through Onramper ---
-        if (h === 'ramp.network' || h === 'app.ramp.network') return onrampUrl('', 'buy');
+        // --- Ramp Network → consumer buy page ---
+        if (h === 'ramp.network' || h === 'app.ramp.network') return 'https://ramp.network/buy/sol-solana';
 
-        // --- Coinbase Pay → route through Onramper ---
-        if (h === 'pay.coinbase.com') return onrampUrl('', 'buy');
+        // --- Coinbase → consumer how-to-buy page ---
+        if (h === 'pay.coinbase.com') return 'https://www.coinbase.com/how-to-buy/solana';
 
-        // --- Binance → route through Onramper ---
-        if (h === 'binance.com') return onrampUrl('', 'buy');
+        // --- Binance → consumer buy page ---
+        if (h === 'binance.com') return 'https://www.binance.com/en/price/solana';
 
         // --- Jupiter DEX → use embeddable Terminal with wOST ---
         if (h === 'jup.ag') return 'https://terminal.jup.ag/swap?outputMint=Ac8RTG9R15HDXkjJDphRNpEgawEh1o5wLFaWPGFjiHoS';
