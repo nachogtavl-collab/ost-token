@@ -1059,7 +1059,8 @@
   /* ---------- 3D EARTH — Realistic Day/Night ---------- */
   function initGlobe() {
     const canvas = $('#globeCanvas');
-    if (!canvas || typeof THREE === 'undefined') return;
+    if (!canvas) { console.warn('Globe: canvas #globeCanvas not found'); return; }
+    if (typeof THREE === 'undefined') { console.warn('Globe: THREE.js not loaded'); return; }
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -1068,6 +1069,9 @@
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // Ensure canvas fills its container after Three.js sets inline px dimensions
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
 
     // Earth sphere
     const earthGeo = new THREE.SphereGeometry(1, 64, 64);
@@ -1315,6 +1319,8 @@
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
+      canvas.style.width = '100%';
+      canvas.style.height = '100%';
     });
   }
 
@@ -1347,6 +1353,8 @@
     });
   }, { threshold: 0.15 });
   $$('.sr').forEach(el => srObserver.observe(el));
+  // Fallback: make all .sr visible after 3s in case observer doesn't fire
+  setTimeout(() => { $$('.sr').forEach(el => el.classList.add('visible')); }, 3000);
 
   /* ---------- ANIMATED COUNTERS ---------- */
   function formatBigNum(n) {
