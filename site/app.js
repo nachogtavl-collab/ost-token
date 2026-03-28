@@ -2157,124 +2157,7 @@
     });
   }
 
-  /* ---------- PAY ANY LINK — Universal OST Checkout ---------- */
-  (function initPayAnyLink() {
-    const urlInput = $('#palUrlInput');
-    const priceInput = $('#palPriceInput');
-    const currencySelect = $('#palCurrencySelect');
-    const scanBtn = $('#palScanBtn');
-    const payBtn = $('#palPayBtn');
-    const step1 = $('#palStep1');
-    const step2 = $('#palStep2');
-    const step3 = $('#palStep3');
-    const preview = $('#palPreview');
-    const ostCost = $('#palOstCost');
-    const liveRate = $('#palLiveRate');
-    const palRoute = $('#palRoute');
-    if (!urlInput || !payBtn) return;
-
-    function activateStep(el) { el && el.classList.add('pal-step-active'); }
-    function doneStep(el) { el && (el.classList.remove('pal-step-active'), el.classList.add('pal-step-done')); }
-
-    function computeConversion() {
-      var priceVal = parseFloat(priceInput?.value);
-      var curr = currencySelect?.value || 'USD';
-      if (!priceVal || priceVal <= 0) {
-        payBtn.disabled = true;
-        return;
-      }
-      // Convert to USD
-      var usdValue = priceVal;
-      if (curr === 'BTC') usdValue = priceVal * (prices.bitcoin || 105000);
-      else if (curr === 'ETH') usdValue = priceVal * (prices.ethereum || 3800);
-      else if (curr === 'SOL') usdValue = priceVal * (prices.solana || 170);
-      else if (curr === 'USDC' || curr === 'USDT') usdValue = priceVal;
-      else if (fiatRates[curr]) usdValue = priceVal / fiatRates[curr];
-
-      var ostOut = usdValue / ostPrice;
-      var formatted = ostOut >= 1e6 ? (ostOut / 1e6).toFixed(2) + 'M' :
-                      ostOut >= 1e3 ? (ostOut / 1e3).toFixed(1) + 'K' :
-                      ostOut.toFixed(2);
-
-      if (ostCost) ostCost.textContent = formatted + ' OST';
-      if (liveRate) liveRate.textContent = '1 OST = $' + ostPrice.toFixed(6);
-      if (palRoute) {
-        var route = curr === 'USDC' || curr === 'USDT' || curr === 'SOL' ?
-          'OST → Jupiter → Merchant' : 'OST → Jupiter → On-Ramp → Merchant';
-        palRoute.textContent = route;
-      }
-
-      doneStep(step1);
-      activateStep(step2);
-
-      if (preview) {
-        preview.innerHTML = '<div style="display:flex;align-items:center;gap:12px;padding:8px;">' +
-          '<span style="font-size:2rem;">🛒</span>' +
-          '<div><strong>$' + usdValue.toLocaleString(undefined, {maximumFractionDigits:2}) + ' ' + curr + '</strong>' +
-          '<br><span style="color:var(--text-muted);font-size:.82rem;">= ' + formatted + ' OST (live rate)</span></div></div>';
-      }
-
-      doneStep(step2);
-      activateStep(step3);
-      payBtn.disabled = false;
-    }
-
-    function handleUrlInput() {
-      var url = urlInput.value.trim();
-      if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
-        // Extract domain for display
-        try {
-          var domain = new URL(url).hostname.replace('www.', '');
-          doneStep(step1);
-          activateStep(step2);
-          if (preview) {
-            preview.innerHTML = '<div style="display:flex;align-items:center;gap:12px;padding:8px;">' +
-              '<span style="font-size:2rem;">🔗</span>' +
-              '<div><strong>' + escapeHtml(domain) + '</strong>' +
-              '<br><span style="color:var(--text-muted);font-size:.82rem;">Product link detected. Enter the price below to calculate OST cost.</span></div></div>';
-          }
-        } catch(e) {}
-      }
-    }
-
-    function escapeHtml(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
-
-    urlInput.addEventListener('input', handleUrlInput);
-    if (priceInput) priceInput.addEventListener('input', computeConversion);
-    if (currencySelect) currencySelect.addEventListener('change', computeConversion);
-    if (scanBtn) scanBtn.addEventListener('click', function() {
-      toast('🔍', 'Paste a product URL in the input field');
-    });
-
-    payBtn.addEventListener('click', async function() {
-      if (payBtn.disabled) return;
-      payBtn.disabled = true;
-      payBtn.innerHTML = '<span class="spinner"></span> Processing... ZK proof generation';
-
-      // Simulate steps
-      await sleep(800);
-      toast('🔄', 'Converting OST → merchant currency...');
-      await sleep(1000);
-      toast('🔐', 'Generating ZK proof...');
-      await sleep(800);
-      toast('⚡', 'Confidential transfer signed');
-      await sleep(600);
-
-      payBtn.innerHTML = '<span class="pal-pay-icon">✅</span> <span>Payment Complete!</span>';
-      payBtn.style.background = 'linear-gradient(135deg, var(--success), #059669)';
-      toast('✅', 'Payment processed via OST Interchange (demo)');
-      launchConfetti();
-
-      await sleep(4000);
-      payBtn.innerHTML = '<span class="pal-pay-icon">⚬</span> <span>Let OST Handle Checkout</span>';
-      payBtn.style.background = '';
-      payBtn.disabled = false;
-      [step1, step2, step3].forEach(function(s) {
-        if (s) { s.classList.remove('pal-step-done', 'pal-step-active'); }
-      });
-      activateStep(step1);
-    });
-  })();
+  /* ---------- PAY ANY LINK — removed, merged into Browser Mockup above ---------- */
 
   /* ---------- GROW VAULT — Family Accounts ---------- */
   (function initGrowVault() {
@@ -2806,7 +2689,7 @@
   })();
 
   /* ================================================================== */
-  /* BROWSER MOCKUP — Pay Anywhere with OST                             */
+  /* BROWSER MOCKUP — Pay Anywhere with OST (Unified with Price Detection) */
   /* ================================================================== */
   (function initBrowserMockup() {
     const browserUrl = $('#browserUrl');
@@ -2845,7 +2728,7 @@
       return raw.replace(/^https?:\/\//, '').replace(/\/.*/, '').replace(/[^a-zA-Z0-9.\-]/g, '');
     }
 
-    // Simulated store data — detailed product pages
+    // Simulated store data for quick-link demos
     const stores = {
       'amazon.com': { name: 'Amazon', icon: '&#128230;', color: '#ff9900', items: [
         { name: 'Echo Dot 5th Gen', price: 49.99, img: '&#128266;' },
@@ -2891,33 +2774,319 @@
     function loadStore(rawUrl) {
       const hostname = sanitizeUrl(rawUrl);
       if (!hostname) return;
-      browserUrl.value = hostname;
       if (checkout) checkout.style.display = 'none';
 
       const store = stores[hostname];
-      if (store) {
+      if (store && !rawUrl.includes('/')) {
+        // Known quick-link store (just domain, no path) — use simulated catalog
+        browserUrl.value = hostname;
         currentStore = Object.assign({}, store, {
           total: store.items.reduce(function(s, i) { return s + i.price; }, 0),
           selected: store.items.map(function() { return true; })
         });
         renderStore(currentStore, hostname);
       } else {
-        // Unknown URL — render a simulated storefront with OST Pay
-        // Real iframes fail for virtually all sites (X-Frame-Options / CSP),
-        // so we go directly to a branded demo checkout experience.
-        currentStore = {
-          name: hostname.charAt(0).toUpperCase() + hostname.slice(1).replace(/\.\w+$/, ''),
-          icon: '&#127760;', color: '#555',
-          items: [
-            { name: 'Selected Product', price: 50.00, img: '&#127760;' },
-            { name: 'Premium Add-on', price: 29.99, img: '&#11088;' }
-          ],
-          currency: 'USD',
-          total: 79.99,
-          selected: [true, true]
-        };
-        renderStore(currentStore, hostname);
+        // Real URL or unknown domain — auto-detect price from the page
+        autoDetectPrice(rawUrl, hostname);
       }
+    }
+
+    /* ---- Real URL Price Auto-Detection ---- */
+    async function autoDetectPrice(rawUrl, hostname) {
+      // Show scanning animation
+      viewport.innerHTML =
+        '<div class="sim-scanning">' +
+          '<div class="sim-scan-anim"><div class="sim-scan-ring"></div><span style="font-size:2.5rem;position:relative;z-index:1;">&#128269;</span></div>' +
+          '<h4 style="margin:16px 0 8px;">Scanning <strong>' + esc(hostname) + '</strong></h4>' +
+          '<p style="color:var(--text-muted);font-size:.85rem;margin-bottom:20px;">Detecting product prices from the page...</p>' +
+          '<div class="sim-scan-steps">' +
+            '<div class="sim-scan-step sim-scan-active" id="scanStep1">&#128269; Fetching page data...</div>' +
+            '<div class="sim-scan-step" id="scanStep2">&#128202; Parsing product metadata...</div>' +
+            '<div class="sim-scan-step" id="scanStep3">&#128176; Extracting price &amp; currency...</div>' +
+          '</div>' +
+        '</div>';
+      viewport.style.background = '#0d111b';
+      viewport.style.color = '';
+
+      // Normalize URL
+      var fetchUrl = rawUrl.trim();
+      if (!/^https?:\/\//i.test(fetchUrl)) fetchUrl = 'https://' + fetchUrl;
+
+      try {
+        var controller = new AbortController();
+        var timeout = setTimeout(function() { controller.abort(); }, 10000);
+        var proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(fetchUrl);
+        var resp = await fetch(proxyUrl, { signal: controller.signal });
+        clearTimeout(timeout);
+        var data = await resp.json();
+
+        if (data && data.contents) {
+          var s2 = document.getElementById('scanStep2');
+          if (s2) s2.classList.add('sim-scan-active');
+
+          var parsed = parseProductData(data.contents);
+
+          var s3 = document.getElementById('scanStep3');
+          if (s3) s3.classList.add('sim-scan-active');
+
+          await sleep(600); // Brief pause so user sees the steps
+
+          if (parsed.price > 0) {
+            // Price detected!
+            currentStore = {
+              name: parsed.title || hostname,
+              icon: '&#128722;', color: '#6d9fff',
+              items: [{ name: parsed.title || 'Product', price: parsed.price, img: parsed.image ? '<img src="' + esc(parsed.image) + '" style="width:48px;height:48px;object-fit:cover;border-radius:8px;" onerror="this.outerHTML=\'&#128722;\'">' : '&#128722;' }],
+              currency: parsed.currency || 'USD',
+              total: parsed.price,
+              selected: [true],
+              autoDetected: true,
+              description: parsed.description
+            };
+            renderDetectedProduct(currentStore, hostname, parsed);
+            return;
+          }
+        }
+      } catch (_) { /* fetch failed — fall through to manual */ }
+
+      // Could not detect — show manual entry
+      renderManualEntry(hostname);
+    }
+
+    /* ---- Parse price from HTML (OpenGraph, JSON-LD, Microdata) ---- */
+    function parseProductData(html) {
+      var result = { title: '', price: 0, currency: 'USD', image: '', description: '' };
+
+      // <title>
+      var titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+      if (titleMatch) result.title = decodeEntities(titleMatch[1].trim()).substring(0, 120);
+
+      // OpenGraph meta tags (both property=... content=... and content=... property=... orders)
+      var ogPrice = html.match(/<meta[^>]+(?:property|name)=["'](?:og:price:amount|product:price:amount|product:price)["'][^>]+content=["']([^"']+)["']/i)
+        || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](?:og:price:amount|product:price:amount|product:price)["']/i);
+      if (ogPrice) result.price = parseFloat(ogPrice[1].replace(/[^0-9.]/g, '')) || 0;
+
+      var ogCurrency = html.match(/<meta[^>]+(?:property|name)=["'](?:og:price:currency|product:price:currency|priceCurrency)["'][^>]+content=["']([^"']+)["']/i)
+        || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](?:og:price:currency|product:price:currency|priceCurrency)["']/i);
+      if (ogCurrency) result.currency = ogCurrency[1].toUpperCase().substring(0, 3);
+
+      var ogTitle = html.match(/<meta[^>]+(?:property|name)=["']og:title["'][^>]+content=["']([^"']+)["']/i)
+        || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']og:title["']/i);
+      if (ogTitle && ogTitle[1].length > 3) result.title = decodeEntities(ogTitle[1].trim()).substring(0, 120);
+
+      var ogImage = html.match(/<meta[^>]+(?:property|name)=["']og:image["'][^>]+content=["']([^"']+)["']/i)
+        || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']og:image["']/i);
+      if (ogImage) result.image = ogImage[1];
+
+      var ogDesc = html.match(/<meta[^>]+(?:property|name)=["'](?:og:description|description)["'][^>]+content=["']([^"']+)["']/i)
+        || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](?:og:description|description)["']/i);
+      if (ogDesc) result.description = decodeEntities(ogDesc[1].trim()).substring(0, 250);
+
+      // JSON-LD structured data (schema.org/Product)
+      var jsonLdBlocks = html.match(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi);
+      if (jsonLdBlocks) {
+        for (var i = 0; i < jsonLdBlocks.length; i++) {
+          var jsonContent = jsonLdBlocks[i].replace(/<script[^>]*>/i, '').replace(/<\/script>/i, '').trim();
+          try {
+            var ld = JSON.parse(jsonContent);
+            var product = findProductLD(ld);
+            if (product) {
+              if (product.name) result.title = product.name.substring(0, 120);
+              if (product.description && !result.description) result.description = product.description.substring(0, 250);
+              if (product.offers) {
+                var offer = Array.isArray(product.offers) ? product.offers[0] : product.offers;
+                if (offer.price && parseFloat(offer.price)) {
+                  result.price = parseFloat(offer.price);
+                  if (offer.priceCurrency) result.currency = offer.priceCurrency.toUpperCase().substring(0, 3);
+                }
+                // Check lowPrice for aggregate offers
+                if (!result.price && offer.lowPrice) result.price = parseFloat(offer.lowPrice) || 0;
+              }
+              if (product.image) {
+                var img = typeof product.image === 'string' ? product.image :
+                  (Array.isArray(product.image) ? product.image[0] : (product.image && product.image.url ? product.image.url : ''));
+                if (img && typeof img === 'string') result.image = img;
+              }
+              if (result.price > 0) break; // Found what we need
+            }
+          } catch (_) {}
+        }
+      }
+
+      // Microdata itemprop="price"
+      if (!result.price) {
+        var mp = html.match(/itemprop=["']price["'][^>]*content=["']([^"']+)["']/i)
+          || html.match(/itemprop=["']price["'][^>]*>[\s$€£¥]*([0-9][0-9,]*\.?\d*)/i);
+        if (mp) result.price = parseFloat(mp[1].replace(/,/g, '')) || 0;
+      }
+
+      // Fallback: generic price regex patterns (last resort)
+      if (!result.price) {
+        // Look for common price patterns like $29.99, €14.50, £99.00
+        var priceRegex = /["'>]\s*[\$€£]\s*(\d{1,6}(?:[.,]\d{2})?)[\s<"']/;
+        var priceGeneric = html.match(priceRegex);
+        if (priceGeneric) {
+          result.price = parseFloat(priceGeneric[1].replace(/,/g, '')) || 0;
+          // Detect currency from symbol
+          var symMatch = html.match(/([\$€£])\s*\d/);
+          if (symMatch) {
+            if (symMatch[1] === '€') result.currency = 'EUR';
+            else if (symMatch[1] === '£') result.currency = 'GBP';
+          }
+        }
+      }
+
+      return result;
+    }
+
+    function findProductLD(data) {
+      if (!data) return null;
+      if (typeof data !== 'object') return null;
+      var t = data['@type'];
+      if (t === 'Product' || t === 'IndividualProduct' || (Array.isArray(t) && t.indexOf('Product') !== -1)) return data;
+      if (Array.isArray(data)) {
+        for (var i = 0; i < data.length; i++) {
+          var found = findProductLD(data[i]);
+          if (found) return found;
+        }
+      }
+      if (data['@graph'] && Array.isArray(data['@graph'])) return findProductLD(data['@graph']);
+      return null;
+    }
+
+    function decodeEntities(str) {
+      var el = document.createElement('textarea');
+      el.innerHTML = str;
+      return el.value;
+    }
+
+    /* ---- Render: auto-detected product ---- */
+    function renderDetectedProduct(store, hostname, parsed) {
+      var sym = store.currency === 'EUR' ? '&euro;' : (store.currency === 'GBP' ? '&pound;' : '$');
+      var rate = ostPrice || 0.0001;
+      var ostAmount = store.total / rate;
+      var ostFormatted = ostAmount >= 1e6 ? (ostAmount / 1e6).toFixed(2) + 'M' :
+                         ostAmount >= 1e3 ? (ostAmount / 1e3).toFixed(1) + 'K' :
+                         ostAmount.toFixed(2);
+
+      var imageHtml = parsed.image ?
+        '<img src="' + esc(parsed.image) + '" style="width:80px;height:80px;object-fit:cover;border-radius:12px;border:1px solid var(--border);" onerror="this.outerHTML=\'<span style=font-size:3rem>&#128722;</span>\'">' :
+        '<span style="font-size:3rem;">&#128722;</span>';
+
+      viewport.innerHTML =
+        '<div class="sim-detected">' +
+          '<div class="sim-detected-badge">&#9989; Price detected from <strong>' + esc(hostname) + '</strong></div>' +
+          '<div class="sim-detected-product">' +
+            '<div class="sim-detected-img">' + imageHtml + '</div>' +
+            '<div class="sim-detected-info">' +
+              '<h4 class="sim-detected-title">' + esc(store.name) + '</h4>' +
+              (parsed.description ? '<p class="sim-detected-desc">' + esc(parsed.description).substring(0, 150) + '</p>' : '') +
+              '<div class="sim-detected-price">' + sym + store.total.toFixed(2) + ' ' + store.currency + '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="sim-detected-conversion">' +
+            '<div class="sim-conv-row"><span>You Pay:</span><strong style="color:var(--accent);font-size:1.1rem;">' + ostFormatted + ' OST</strong></div>' +
+            '<div class="sim-conv-row"><span>Rate:</span><span>1 OST = ' + sym + rate.toFixed(6) + '</span></div>' +
+            '<div class="sim-conv-row"><span>Route:</span><span>OST &#8594; Jupiter &#8594; ' + store.currency + ' &#8594; Merchant</span></div>' +
+            '<div class="sim-conv-row" style="border:none;"><span>Fee:</span><span>~$0.0025 (0.000005 SOL)</span></div>' +
+          '</div>' +
+          '<button class="btn btn-primary btn-glow sim-checkout-btn" style="width:100%;justify-content:center;margin-top:16px;">&#9673; Pay ' + ostFormatted + ' OST to ' + esc(hostname) + '</button>' +
+          '<p style="text-align:center;color:var(--text-muted);font-size:.75rem;margin-top:8px;">&#128274; Private via ZK proofs &mdash; merchant never sees your wallet</p>' +
+        '</div>';
+
+      viewport.style.background = '#0d111b';
+      viewport.style.color = '';
+
+      // Wire checkout button
+      var btn = viewport.querySelector('.sim-checkout-btn');
+      if (btn) btn.addEventListener('click', function() { showCheckout(store); });
+    }
+
+    /* ---- Render: manual entry (price not auto-detected) ---- */
+    function renderManualEntry(hostname) {
+      viewport.innerHTML =
+        '<div class="sim-manual">' +
+          '<div class="sim-manual-header">' +
+            '<span style="font-size:2rem;">&#128270;</span>' +
+            '<div>' +
+              '<h4 style="margin:0;">Could not auto-detect price</h4>' +
+              '<p style="color:var(--text-muted);font-size:.82rem;margin:4px 0 0;">Some sites block price scanning. Enter the product price manually below.</p>' +
+            '</div>' +
+          '</div>' +
+          '<div class="sim-manual-form">' +
+            '<div class="sim-manual-row">' +
+              '<div class="sim-manual-field">' +
+                '<label style="color:var(--text-muted);font-size:.8rem;margin-bottom:4px;display:block;">Product price</label>' +
+                '<input type="number" id="manualPrice" class="sim-manual-input" placeholder="0.00" step="0.01" min="0">' +
+              '</div>' +
+              '<div class="sim-manual-field" style="max-width:140px;">' +
+                '<label style="color:var(--text-muted);font-size:.8rem;margin-bottom:4px;display:block;">Currency</label>' +
+                '<select id="manualCurrency" class="sim-manual-select">' +
+                  '<option value="USD">USD</option><option value="EUR">EUR</option><option value="GBP">GBP</option>' +
+                  '<option value="JPY">JPY</option><option value="CAD">CAD</option><option value="AUD">AUD</option>' +
+                  '<option value="MXN">MXN</option><option value="BRL">BRL</option><option value="INR">INR</option>' +
+                  '<option value="BTC">BTC</option><option value="ETH">ETH</option><option value="SOL">SOL</option>' +
+                '</select>' +
+              '</div>' +
+            '</div>' +
+            '<div class="sim-manual-conversion" id="manualConversion" style="display:none;">' +
+              '<div class="sim-conv-row"><span>You Pay:</span><strong id="manualOstAmount" style="color:var(--accent);">-- OST</strong></div>' +
+              '<div class="sim-conv-row"><span>Rate:</span><span id="manualRate">--</span></div>' +
+              '<div class="sim-conv-row" style="border:none;"><span>Fee:</span><span>~$0.0025</span></div>' +
+            '</div>' +
+            '<button class="btn btn-primary btn-glow sim-checkout-btn" id="manualPayBtn" style="width:100%;justify-content:center;margin-top:12px;" disabled>&#9673; Pay with OST</button>' +
+          '</div>' +
+        '</div>';
+
+      viewport.style.background = '#0d111b';
+      viewport.style.color = '';
+
+      // Wire manual price form
+      var priceInput = viewport.querySelector('#manualPrice');
+      var currSelect = viewport.querySelector('#manualCurrency');
+      var convDisplay = viewport.querySelector('#manualConversion');
+      var ostAmountEl = viewport.querySelector('#manualOstAmount');
+      var rateEl = viewport.querySelector('#manualRate');
+      var payBtn = viewport.querySelector('#manualPayBtn');
+
+      function updateManualConversion() {
+        var priceVal = parseFloat(priceInput.value) || 0;
+        var curr = currSelect.value;
+        if (priceVal <= 0) {
+          if (convDisplay) convDisplay.style.display = 'none';
+          if (payBtn) payBtn.disabled = true;
+          return;
+        }
+        var usdValue = priceVal;
+        if (curr === 'BTC') usdValue = priceVal * (prices.bitcoin || 105000);
+        else if (curr === 'ETH') usdValue = priceVal * (prices.ethereum || 3800);
+        else if (curr === 'SOL') usdValue = priceVal * (prices.solana || 170);
+        else if (curr === 'USDC' || curr === 'USDT') usdValue = priceVal;
+        else if (fiatRates[curr]) usdValue = priceVal / fiatRates[curr];
+
+        var ostOut = usdValue / ostPrice;
+        var formatted = ostOut >= 1e6 ? (ostOut / 1e6).toFixed(2) + 'M' :
+                        ostOut >= 1e3 ? (ostOut / 1e3).toFixed(1) + 'K' :
+                        ostOut.toFixed(2);
+
+        if (convDisplay) convDisplay.style.display = '';
+        if (ostAmountEl) ostAmountEl.textContent = formatted + ' OST';
+        if (rateEl) rateEl.textContent = '1 OST = $' + ostPrice.toFixed(6);
+        if (payBtn) { payBtn.disabled = false; payBtn.innerHTML = '&#9673; Pay ' + formatted + ' OST to ' + esc(hostname); }
+
+        // Also set up currentStore for checkout
+        currentStore = {
+          name: hostname, icon: '&#127760;', color: '#555',
+          items: [{ name: 'Product from ' + hostname, price: priceVal, img: '&#127760;' }],
+          currency: curr, total: priceVal, selected: [true]
+        };
+      }
+
+      priceInput.addEventListener('input', updateManualConversion);
+      currSelect.addEventListener('change', updateManualConversion);
+      if (payBtn) payBtn.addEventListener('click', function() {
+        if (currentStore) showCheckout(currentStore);
+      });
     }
 
     function renderStore(store, hostname) {
@@ -2989,7 +3158,7 @@
       if (!checkout) return;
       checkout.style.display = '';
       if (checkoutStore) checkoutStore.textContent = store.name;
-      const symbol = store.currency === 'EUR' ? '€' : '$';
+      const symbol = store.currency === 'EUR' ? '€' : (store.currency === 'GBP' ? '£' : '$');
       if (checkoutTotal) checkoutTotal.textContent = symbol + store.total.toFixed(2) + ' ' + store.currency;
       const rate = ostPrice || 0.0001;
       const ostAmount = store.total / rate;
@@ -3014,8 +3183,9 @@
           checkoutPayBtn.disabled = true;
           checkoutPayBtn.innerHTML = '<span class="spinner"></span> Processing... ZK proof generation';
           setTimeout(() => {
-            checkout.innerHTML = '<div style="text-align:center;padding:20px;"><div style="font-size:3rem;margin-bottom:12px;">&#127881;</div><h4 style="color:#34d399;">Payment Complete!</h4><p style="color:#8b92ad;font-size:.85rem;margin-top:8px;">' + esc(store.name) + ' received ' + (store.currency === 'EUR' ? '€' : '$') + store.total.toFixed(2) + ' ' + store.currency + '</p><p style="color:#6d9fff;font-size:.9rem;margin-top:4px;">You paid ' + ostAmount.toFixed(2) + ' OST</p><p style="color:#8b92ad;font-size:.75rem;margin-top:8px;">&#128274; Private via ZK proofs &mdash; no one saw this transaction.</p><p style="color:#555;font-size:.7rem;margin-top:12px;">OST automatically detected ' + store.currency + ', converted via Jupiter, and settled on Solana in 400ms.</p></div>';
+            checkout.innerHTML = '<div style="text-align:center;padding:20px;"><div style="font-size:3rem;margin-bottom:12px;">&#127881;</div><h4 style="color:#34d399;">Payment Complete!</h4><p style="color:#8b92ad;font-size:.85rem;margin-top:8px;">' + esc(store.name) + ' received ' + symbol + store.total.toFixed(2) + ' ' + store.currency + '</p><p style="color:#6d9fff;font-size:.9rem;margin-top:4px;">You paid ' + ostAmount.toFixed(2) + ' OST</p><p style="color:#8b92ad;font-size:.75rem;margin-top:8px;">&#128274; Private via ZK proofs &mdash; no one saw this transaction.</p><p style="color:#555;font-size:.7rem;margin-top:12px;">OST automatically detected ' + store.currency + ', converted via Jupiter, and settled on Solana in 400ms.</p></div>';
             toast('&#127881;', 'Payment to ' + store.name + ' complete!');
+            launchConfetti();
           }, 2500);
         };
       }

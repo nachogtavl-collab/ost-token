@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=6">
+  <link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 
@@ -569,8 +569,8 @@
         <div class="pa-hero">
           <div class="pa-hero-glow"></div>
           <div class="pa-hero-icon">&#9673;</div>
-          <h3 data-i18n="pay.anywhere">The OST Interchange &mdash; Pay Anywhere, In Any Currency</h3>
-          <p class="pay-anywhere-sub" data-i18n="pay.anywheresub">The final step of every purchase is payment. OST takes over that step. Browse any store, shop normally, and at checkout &mdash; OST intercepts, converts your currency in real-time through our interchange engine, and the merchant receives exactly what they expect. You paid with OST. They got USD. Nobody knew the difference.</p>
+          <h3 data-i18n="pay.anywhere">The OST Interchange &mdash; Buy Anything, Pay With OST</h3>
+          <p class="pay-anywhere-sub" data-i18n="pay.anywheresub">Paste any product link from any website. OST scans the page, detects the real price, converts your OST in real-time through our interchange engine, and the merchant receives exactly what they expect. You paid with OST. They got USD. The internet just became your store.</p>
           <div class="pa-pipeline">
             <div class="pa-pipe-node"><span class="pa-pipe-icon">&#128722;</span><span>You Shop</span></div>
             <div class="pa-pipe-arrow"><div class="pa-pipe-line"></div><span>&#8594;</span></div>
@@ -588,7 +588,7 @@
             <div class="browser-dots"><span></span><span></span><span></span></div>
             <div class="browser-bar">
               <span class="browser-lock">&#128274;</span>
-              <input type="url" id="browserUrl" class="browser-url-input" placeholder="Enter any store URL &mdash; amazon.com, nike.com, booking.com..." autocomplete="off">
+              <input type="url" id="browserUrl" class="browser-url-input" placeholder="Paste any product URL &mdash; amazon.com/dp/B0..., nike.com/product/..., any website" autocomplete="off">
               <button class="browser-go" id="browserGo">Go &#8594;</button>
             </div>
             <div class="browser-ost-badge">&#9673; OST Interchange Active</div>
@@ -596,8 +596,8 @@
           <div class="browser-viewport" id="browserViewport">
             <div class="browser-placeholder">
               <div class="browser-placeholder-icon">&#127760;</div>
-              <h4>Enter Any Store &mdash; We Handle The Payment</h4>
-              <p>Pick a store below or type any URL. Shop normally. When it's time to pay, OST takes over.</p>
+              <h4>Paste Any Product Link &mdash; OST Detects The Price</h4>
+              <p>Paste a real product URL from any website. OST scans the page, detects the price, converts it to OST, and handles checkout. Or pick a store below to browse.</p>
               <div class="browser-quick-links">
                 <button class="browser-quick" data-url="amazon.com">&#128230; Amazon</button>
                 <button class="browser-quick" data-url="nike.com">&#128095; Nike</button>
@@ -713,128 +713,7 @@
     </div>
   </section>
 
-  <!-- ================================================================== -->
-  <!-- 4B. PAY ANY LINK — Universal OST Checkout for Any Website -->
-  <!-- ================================================================== -->
-  <section id="payAnyLink" class="section section-space">
-    <div class="container">
-      <div class="pal-hero">
-        <div class="pal-hero-glow"></div>
-        <div class="pal-hero-icon">&#127760;</div>
-        <h2 class="section-title">Pay Any Link with OST</h2>
-        <p class="section-subtitle">Amazon. Apple. eBay. Car dealerships. Real estate. Paste any product link or enter a price &mdash; OST handles everything. The final step of every purchase, intercepted.</p>
-      </div>
 
-      <div class="pal-terminal">
-        <div class="pal-terminal-glow"></div>
-        <div class="pal-terminal-header">
-          <div class="pal-status"><span class="pal-status-dot"></span> OST Universal Checkout</div>
-          <div class="pal-badges">
-            <span class="pal-badge-item">&#128274; ZK-Private</span>
-            <span class="pal-badge-item">&#9889; Sub-Second</span>
-            <span class="pal-badge-item">&#127757; Any Currency</span>
-          </div>
-        </div>
-
-        <div class="pal-body">
-          <!-- Step 1: Paste Link or Enter Price -->
-          <div class="pal-step pal-step-active" id="palStep1">
-            <div class="pal-step-num">1</div>
-            <div class="pal-step-content">
-              <h4>Paste any product link or enter price</h4>
-              <div class="pal-input-group">
-                <input type="text" class="pal-input" id="palUrlInput" placeholder="https://amazon.com/dp/B0... or enter price manually">
-                <button class="pal-scan-btn" id="palScanBtn" title="Scan product">&#128269;</button>
-              </div>
-              <div class="pal-or">or enter manually</div>
-              <div class="pal-manual-row">
-                <input type="number" class="pal-input pal-price-input" id="palPriceInput" placeholder="Price" step="0.01" min="0">
-                <select class="pal-currency-select" id="palCurrencySelect">
-                  <option value="USD">USD</option>
-                  <option value="EUR">EUR</option>
-                  <option value="GBP">GBP</option>
-                  <option value="JPY">JPY</option>
-                  <option value="BTC">BTC</option>
-                  <option value="ETH">ETH</option>
-                  <option value="SOL">SOL</option>
-                  <option value="USDC">USDC</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <!-- Step 2: Product Preview -->
-          <div class="pal-step" id="palStep2">
-            <div class="pal-step-num">2</div>
-            <div class="pal-step-content">
-              <h4>Product Detected</h4>
-              <div class="pal-preview" id="palPreview">
-                <div class="pal-preview-placeholder">
-                  <span>&#128722;</span>
-                  <p>Enter a link or price above to see the conversion</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Step 3: OST Conversion -->
-          <div class="pal-step" id="palStep3">
-            <div class="pal-step-num">3</div>
-            <div class="pal-step-content">
-              <h4>OST Takes Over</h4>
-              <div class="pal-conversion-display" id="palConversionDisplay">
-                <div class="pal-conv-row">
-                  <span class="pal-conv-label">You Pay:</span>
-                  <span class="pal-conv-value" id="palOstCost">-- OST</span>
-                </div>
-                <div class="pal-conv-row pal-conv-sub">
-                  <span class="pal-conv-label">Live Rate:</span>
-                  <span class="pal-conv-value" id="palLiveRate">--</span>
-                </div>
-                <div class="pal-conv-row pal-conv-sub">
-                  <span class="pal-conv-label">Route:</span>
-                  <span class="pal-conv-value" id="palRoute">OST &rarr; Jupiter &rarr; Merchant</span>
-                </div>
-              </div>
-
-              <div class="pal-flow-visual">
-                <div class="pal-flow-node pal-flow-you"><span>&#128100;</span> You</div>
-                <div class="pal-flow-arrow">&#10230;</div>
-                <div class="pal-flow-node pal-flow-ost"><span>&#9673;</span> OST</div>
-                <div class="pal-flow-arrow">&#10230;</div>
-                <div class="pal-flow-node pal-flow-convert"><span>&#128256;</span> Convert</div>
-                <div class="pal-flow-arrow">&#10230;</div>
-                <div class="pal-flow-node pal-flow-merchant"><span>&#127978;</span> Merchant</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Pay Button -->
-          <button class="pal-pay-btn" id="palPayBtn" disabled>
-            <span class="pal-pay-icon">&#9673;</span>
-            <span>Let OST Handle Checkout</span>
-          </button>
-          <p class="pal-note">Confidential transfer. No merchant ever sees your wallet or balance. ZK-proven conversion.</p>
-        </div>
-
-        <div class="pal-footer">
-          <div class="pal-works-with">
-            <span>Works with:</span>
-            <span class="pal-ww-item">&#128722; Amazon</span>
-            <span class="pal-ww-item">&#127822; Apple</span>
-            <span class="pal-ww-item">&#128230; eBay</span>
-            <span class="pal-ww-item">&#128663; Car Dealers</span>
-            <span class="pal-ww-item">&#127968; Property</span>
-            <span class="pal-ww-item">&#127757; Any Website</span>
-          </div>
-          <div class="pal-method-note">
-            <span class="pal-method-icon">&#128161;</span>
-            <span><strong>How?</strong> Crypto-friendly sites &rarr; direct confidential transfer. Closed platforms (Amazon, Apple) &rarr; OST converts to gift card or P2P intermediary. Physical assets &rarr; OST escrow + manual confirmation.</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
 
   <!-- ================================================================== -->
   <!-- 5. TRANSFER - Live Charts + Exchange Calculator -->
@@ -2295,6 +2174,6 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
-  <script src="app.js?v=6"></script>
+  <script src="app.js?v=7"></script>
 </body>
 </html>
