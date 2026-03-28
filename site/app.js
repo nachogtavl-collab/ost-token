@@ -2928,7 +2928,6 @@
         '</div>';
       fb.style.display = 'flex';
     }
-    }
 
     // Fiat ramp domains — these must open in a new tab because they block sandboxed iframes
     var fiatRampDomains = [
