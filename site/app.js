@@ -2922,42 +2922,6 @@
         '</div>';
       fb.style.display = 'flex';
     }
-
-    // Comprehensive non-embeddable domains list
-    // These sites set X-Frame-Options: DENY/SAMEORIGIN or CSP frame-ancestors 'self'
-    var nonEmbeddable = [
-      // Social / community
-      'github.com','twitter.com','x.com','reddit.com','discord.com','discord.gg',
-      't.me','telegram.org','youtube.com','linkedin.com','facebook.com','instagram.com','tiktok.com',
-      // App stores
-      'apps.apple.com','play.google.com','chrome.google.com','addons.mozilla.org',
-      // Wallets
-      'phantom.app','solflare.com','backpack.app','sollet.io','slope.finance','glow.app',
-      // Block explorers
-      'explorer.solana.com','solscan.io','solana.fm','solanabeach.io',
-      // DEX / DeFi (non-embeddable)
-      'raydium.io','orca.so','meteora.ag','marinade.finance','stake.solblaze.org',
-      'app.tor.us','app.step.finance',
-      // Exchanges
-      'binance.com','coinbase.com','kraken.com','bybit.com','okx.com','kucoin.com','gate.io',
-      // Merchant / shopping
-      'amazon.com','nike.com','apple.com','starbucks.com','netflix.com','booking.com',
-      'ebay.com','walmart.com','airbnb.com','aliexpress.com','tacobell.com',
-      'delta.com','direct.playstation.com',
-      // News / info
-      'coindesk.com','coingecko.com','coinmarketcap.com','medium.com','notion.so','substack.com',
-      // General
-      'google.com','wikipedia.org','microsoft.com','stackoverflow.com'
-    ];
-
-    function isNonEmbeddable(testUrl) {
-      try {
-        var fHost = new URL(testUrl).hostname.replace(/^www\./, '');
-        for (var i = 0; i < nonEmbeddable.length; i++) {
-          if (fHost === nonEmbeddable[i] || fHost.endsWith('.' + nonEmbeddable[i])) return true;
-        }
-      } catch(e) {}
-      return false;
     }
 
     // Fiat ramp domains — these must open in a new tab because they block sandboxed iframes
@@ -2978,43 +2942,54 @@
       return false;
     }
 
+    // Embeddable allowlist — ONLY these domains load inside our popup iframe.
+    // Everything else opens in a new tab. Almost no website allows iframe embedding.
+    var embeddableDomains = [
+      'terminal.jup.ag',           // Jupiter swap widget
+      'openstreetmap.org',         // Maps embed
+      'app.debridge.finance',      // deBridge widget
+      'app.allbridge.io',          // Allbridge widget
+      'mayan.finance',             // Mayan bridge widget
+      'portalbridge.com'           // Portal Bridge widget
+    ];
+
+    function isEmbeddable(testUrl) {
+      try {
+        var fHost = new URL(testUrl).hostname.replace(/^www\./, '');
+        for (var i = 0; i < embeddableDomains.length; i++) {
+          if (fHost === embeddableDomains[i] || fHost.endsWith('.' + embeddableDomains[i])) return true;
+        }
+      } catch(e) {}
+      return false;
+    }
+
     function openPopup(url, label) {
       // Rewrite URL to embeddable version
       var embedUrl = rewriteUrl(url);
 
-      // Fiat ramp links → open directly in new tab (they block sandboxed iframes)
-      if (isFiatRamp(embedUrl)) {
-        window._origOpen(embedUrl, '_blank', 'noopener');
-        if (typeof toast === 'function') toast('💳', 'Opening ' + (label || 'payment provider') + ' in a new tab...');
-        return;
-      }
-
-      titleEl.textContent = label || embedUrl.replace(/^https?:\/\//, '').split('/')[0];
-
-      // Reset fallback
-      var fb = overlay.querySelector('.ost-popup-fallback');
-      if (fb) fb.style.display = 'none';
-      frame.style.display = '';
-
-      // If known non-embeddable, show fallback immediately (no blank iframe)
-      // Check both original and rewritten URL
-      if (isNonEmbeddable(url) || (embedUrl !== url && isNonEmbeddable(embedUrl))) {
+      // If the rewritten URL is embeddable → load in popup iframe
+      if (isEmbeddable(embedUrl)) {
+        titleEl.textContent = label || embedUrl.replace(/^https?:\/\//, '').split('/')[0];
+        var fb = overlay.querySelector('.ost-popup-fallback');
+        if (fb) fb.style.display = 'none';
+        frame.style.display = '';
+        frame.src = embedUrl;
         overlay.classList.add('open');
         document.body.style.overflow = 'hidden';
-        showFallbackCard(url, label);
+        // Safety fallback in case even these fail
+        var loadTimer = setTimeout(function() { showFallbackCard(url, label); }, 5000);
+        frame.onload = function() { clearTimeout(loadTimer); };
         return;
       }
 
-      frame.src = embedUrl;
-      overlay.classList.add('open');
-      document.body.style.overflow = 'hidden';
+      // Everything else → open directly in a new tab
+      var openUrl = embedUrl;
+      // For fiat ramps, use the rewritten Onramper URL
+      // For others, use the original URL (more useful than a rewritten version)
+      if (!isFiatRamp(embedUrl)) openUrl = url;
 
-      // Safety timeout — if iframe fails to load after 3s, show fallback
-      var loadTimer = setTimeout(function() {
-        showFallbackCard(url, label);
-      }, 3000);
-
-      frame.onload = function() { clearTimeout(loadTimer); };
+      window._origOpen(openUrl, '_blank', 'noopener');
+      toast('🔗', 'Opening ' + (label || 'link') + ' in a new tab…');
     }
 
     function closePopup() {
