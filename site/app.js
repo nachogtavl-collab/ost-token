@@ -877,9 +877,11 @@
   const OST_CONFIG = {
     programId: 'J2jiS296YWVie1Sopb4SxcM3aJnP9aAwe6aLDhCqvGXY',
     mint: '383pTzoZ8Gp83dzk23ZnvLcfX2Sq32TAGN48CMQu2pAJ',
+    wostMint: 'Ac8RTG9R15HDXkjJDphRNpEgawEh1o5wLFaWPGFjiHoS',
     network: 'devnet',
     rpcUrl: 'https://api.devnet.solana.com'
   };
+  window.OST_CONFIG = OST_CONFIG;
 
   // Initialize Solana connection
   function getSolanaConnection() {
@@ -2321,11 +2323,12 @@
         return;
       }
 
-      // Embed Jupiter Terminal as an iframe
+      // Embed Jupiter Terminal as an iframe — swap SOL → wOST
       if (jupiterEmbed) {
+        var wostMint = (window.OST_CONFIG && window.OST_CONFIG.wostMint) || 'Ac8RTG9R15HDXkjJDphRNpEgawEh1o5wLFaWPGFjiHoS';
         jupiterEmbed.innerHTML = `
           <iframe
-            src="https://terminal.jup.ag/swap?inputMint=So11111111111111111111111111111111111111112&outputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+            src="https://terminal.jup.ag/swap?inputMint=So11111111111111111111111111111111111111112&outputMint=${wostMint}"
             style="width:100%;height:520px;border:none;border-radius:16px;background:#131823;"
             allow="clipboard-write"
             sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
@@ -2697,53 +2700,21 @@
         });
         renderStore(currentStore, hostname);
       } else {
-        // Unknown URL — try loading real site in iframe, show OST pay bar on top
-        currentStore = null;
-        var fullUrl = 'https://' + hostname;
-        viewport.innerHTML =
-          '<div class="sim-real-bar">' +
-            '<span class="sim-real-dot"></span> Loading <strong>' + esc(hostname) + '</strong> through OST Pay Layer...' +
-            '<button class="sim-real-fallback-btn" id="simFallbackBtn">Use Demo Mode</button>' +
-          '</div>' +
-          '<iframe src="' + esc(fullUrl) + '" class="sim-real-iframe" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" loading="lazy"></iframe>';
-        viewport.style.background = '#fff';
-        viewport.style.color = '#111';
-
-        var fallbackBtn = viewport.querySelector('#simFallbackBtn');
-        if (fallbackBtn) {
-          fallbackBtn.addEventListener('click', function() {
-            currentStore = { name: hostname, icon: '&#127760;', color: '#555', items: [
-              { name: 'Selected Product', price: 50.00, img: '&#127760;' }
-            ], currency: 'USD', total: 50.00, selected: [true] };
-            renderStore(currentStore, hostname);
-          });
-        }
-
-        // Auto-show fallback after 4s if iframe doesn't visibly load
-        setTimeout(function() {
-          var iframe = viewport.querySelector('.sim-real-iframe');
-          if (iframe) {
-            // Add a "Site loaded" indicator + OST pay button
-            var bar = viewport.querySelector('.sim-real-bar');
-            if (bar) {
-              bar.innerHTML =
-                '<span class="sim-real-dot sim-real-dot-ok"></span> Browsing <strong>' + esc(hostname) + '</strong> — ' +
-                '<button class="btn btn-primary btn-sm sim-pay-overlay-btn" id="simPayNowBtn">&#9673; Pay with OST</button>' +
-                '<button class="sim-real-fallback-btn" id="simFallbackBtn2">Demo Mode</button>';
-              var payBtn = viewport.querySelector('#simPayNowBtn');
-              if (payBtn) payBtn.addEventListener('click', function() {
-                showCheckout({ name: hostname, icon: '&#127760;', total: 50.00, currency: 'USD' });
-              });
-              var fb2 = viewport.querySelector('#simFallbackBtn2');
-              if (fb2) fb2.addEventListener('click', function() {
-                currentStore = { name: hostname, icon: '&#127760;', color: '#555', items: [
-                  { name: 'Selected Product', price: 50.00, img: '&#127760;' }
-                ], currency: 'USD', total: 50.00, selected: [true] };
-                renderStore(currentStore, hostname);
-              });
-            }
-          }
-        }, 4000);
+        // Unknown URL — render a simulated storefront with OST Pay
+        // Real iframes fail for virtually all sites (X-Frame-Options / CSP),
+        // so we go directly to a branded demo checkout experience.
+        currentStore = {
+          name: hostname.charAt(0).toUpperCase() + hostname.slice(1).replace(/\.\w+$/, ''),
+          icon: '&#127760;', color: '#555',
+          items: [
+            { name: 'Selected Product', price: 50.00, img: '&#127760;' },
+            { name: 'Premium Add-on', price: 29.99, img: '&#11088;' }
+          ],
+          currency: 'USD',
+          total: 79.99,
+          selected: [true, true]
+        };
+        renderStore(currentStore, hostname);
       }
     }
 
@@ -2901,12 +2872,12 @@
         // --- Binance → route through Onramper ---
         if (h === 'binance.com') return onrampUrl('', 'buy');
 
-        // --- Jupiter DEX → use embeddable Terminal ---
-        if (h === 'jup.ag') return 'https://terminal.jup.ag/';
+        // --- Jupiter DEX → use embeddable Terminal with wOST ---
+        if (h === 'jup.ag') return 'https://terminal.jup.ag/swap?outputMint=Ac8RTG9R15HDXkjJDphRNpEgawEh1o5wLFaWPGFjiHoS';
         if (h === 'terminal.jup.ag') return raw; // already embeddable
 
         // --- Orca → route through Jupiter Terminal (aggregates Orca liquidity) ---
-        if (h === 'orca.so') return 'https://terminal.jup.ag/';
+        if (h === 'orca.so') return 'https://terminal.jup.ag/swap?outputMint=Ac8RTG9R15HDXkjJDphRNpEgawEh1o5wLFaWPGFjiHoS';
 
         // --- Portal Bridge (uses iframe-friendly checkout) ---
         if (h === 'portalbridge.com') return raw;
@@ -2950,6 +2921,43 @@
       fb.style.display = 'flex';
     }
 
+    // Comprehensive non-embeddable domains list
+    // These sites set X-Frame-Options: DENY/SAMEORIGIN or CSP frame-ancestors 'self'
+    var nonEmbeddable = [
+      // Social / community
+      'github.com','twitter.com','x.com','reddit.com','discord.com','discord.gg',
+      't.me','telegram.org','youtube.com','linkedin.com','facebook.com','instagram.com','tiktok.com',
+      // App stores
+      'apps.apple.com','play.google.com','chrome.google.com','addons.mozilla.org',
+      // Wallets
+      'phantom.app','solflare.com','backpack.app','sollet.io','slope.finance','glow.app',
+      // Block explorers
+      'explorer.solana.com','solscan.io','solana.fm','solanabeach.io',
+      // DEX / DeFi (non-embeddable)
+      'raydium.io','orca.so','meteora.ag','marinade.finance','stake.solblaze.org',
+      'app.tor.us','app.step.finance',
+      // Exchanges
+      'binance.com','coinbase.com','kraken.com','bybit.com','okx.com','kucoin.com','gate.io',
+      // Merchant / shopping
+      'amazon.com','nike.com','apple.com','starbucks.com','netflix.com','booking.com',
+      'ebay.com','walmart.com','airbnb.com','aliexpress.com','tacobell.com',
+      'delta.com','direct.playstation.com',
+      // News / info
+      'coindesk.com','coingecko.com','coinmarketcap.com','medium.com','notion.so','substack.com',
+      // General
+      'google.com','wikipedia.org','microsoft.com','stackoverflow.com'
+    ];
+
+    function isNonEmbeddable(testUrl) {
+      try {
+        var fHost = new URL(testUrl).hostname.replace(/^www\./, '');
+        for (var i = 0; i < nonEmbeddable.length; i++) {
+          if (fHost === nonEmbeddable[i] || fHost.endsWith('.' + nonEmbeddable[i])) return true;
+        }
+      } catch(e) {}
+      return false;
+    }
+
     function openPopup(url, label) {
       // Rewrite URL to embeddable version
       var embedUrl = rewriteUrl(url);
@@ -2961,25 +2969,23 @@
       if (fb) fb.style.display = 'none';
       frame.style.display = '';
 
+      // If known non-embeddable, show fallback immediately (no blank iframe)
+      // Check both original and rewritten URL
+      if (isNonEmbeddable(url) || (embedUrl !== url && isNonEmbeddable(embedUrl))) {
+        overlay.classList.add('open');
+        document.body.style.overflow = 'hidden';
+        showFallbackCard(url, label);
+        return;
+      }
+
       frame.src = embedUrl;
       overlay.classList.add('open');
       document.body.style.overflow = 'hidden';
 
-      // Detect iframe load failure (timeout-based)
+      // Safety timeout — if iframe fails to load after 3s, show fallback
       var loadTimer = setTimeout(function() {
-        // If frame loaded cross-origin content, it's fine.
-        // Only show fallback for known non-embeddable domains
-        var nonEmbeddable = ['github.com','twitter.com','x.com','reddit.com','discord.com','t.me','telegram.org','apps.apple.com','play.google.com','chrome.google.com'];
-        try {
-          var fHost = new URL(embedUrl).hostname.replace(/^www\./, '');
-          for (var i = 0; i < nonEmbeddable.length; i++) {
-            if (fHost === nonEmbeddable[i] || fHost.endsWith('.' + nonEmbeddable[i])) {
-              showFallbackCard(embedUrl, label);
-              return;
-            }
-          }
-        } catch(e) {}
-      }, 2000);
+        showFallbackCard(url, label);
+      }, 3000);
 
       frame.onload = function() { clearTimeout(loadTimer); };
     }
@@ -3033,11 +3039,25 @@
   /* ================================================================== */
   (function patchWindowOpen() {
     var _origOpen = window.open;
+    // Domains that must open natively (wallet adapters, auth flows)
+    var nativeOpenDomains = ['phantom.app','solflare.com','backpack.app',
+      'sollet.io','slope.finance','glow.app','accounts.google.com',
+      'auth.tor.us','app.tor.us'];
     window.open = function(url, target, features) {
-      if (typeof url === 'string' && window.openOstPopup) {
-        // Route ALL window.open calls through our popup
-        window.openOstPopup(url, url.replace(/^https?:\/\//, '').split('/')[0]);
-        return null;
+      if (typeof url === 'string') {
+        // Let wallet downloads and auth flows open natively
+        try {
+          var h = new URL(url).hostname.replace(/^www\./, '');
+          for (var i = 0; i < nativeOpenDomains.length; i++) {
+            if (h === nativeOpenDomains[i] || h.endsWith('.' + nativeOpenDomains[i])) {
+              return _origOpen.call(window, url, target, features);
+            }
+          }
+        } catch(e) {}
+        if (window.openOstPopup) {
+          window.openOstPopup(url, url.replace(/^https?:\/\//, '').split('/')[0]);
+          return null;
+        }
       }
       return _origOpen.call(window, url, target, features);
     };
