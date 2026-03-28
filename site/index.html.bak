@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OST — The Next Step After Bitcoin</title>
+  <meta name="description" content="Private digital cash for every brother and sister on Earth. Seamless transfers from any crypto or real currency. Built to empower humanity, together.">
+  <meta property="og:title" content="OST — The Next Step After Bitcoin">
+  <meta property="og:description" content="Private, instant, borderless digital cash the internet always deserved. For every citizen of Earth.">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ================================================================== -->
+  <!-- NAV -->
+  <!-- ================================================================== -->
+  <nav id="nav">
+    <div class="nav-inner">
+      <a href="#home" class="logo">
+        <span class="logo-icon">◉</span> OST
+      </a>
+      <div class="nav-links" id="navLinks">
+        <a href="#home">Home</a>
+        <a href="#story">Our Story</a>
+        <a href="#citizens">For Every Citizen</a>
+        <a href="#revolution">The Next Step</a>
+        <a href="#transfer">Transfer</a>
+        <a href="#offline">Offline Cash</a>
+        <a href="#get-ost">Get OST</a>
+        <a href="#transparency">Transparency</a>
+      </div>
+      <button class="nav-toggle" id="navToggle" aria-label="Menu">☰</button>
+    </div>
+  </nav>
+
+  <!-- ================================================================== -->
+  <!-- 1. HOME -->
+  <!-- ================================================================== -->
+  <section id="home" class="hero">
+    <div class="hero-bg">
+      <!-- Procedural Earth glow via CSS -->
+      <div class="earth-glow"></div>
+      <div class="stars"></div>
+    </div>
+    <div class="hero-content">
+      <p class="hero-tag">The Next Step After Bitcoin</p>
+      <h1>We are all one family.</h1>
+      <p class="hero-sub">
+        OST is the digital cash made for every citizen of the world — 
+        private, instant, and connected to any currency you already have.
+      </p>
+      <div class="hero-actions">
+        <a href="#pay-demo" class="btn btn-primary">Try the Pay Button</a>
+        <a href="https://github.com/" class="btn btn-outline" target="_blank" rel="noopener">View Source on GitHub</a>
+      </div>
+      <p class="hero-tagline">
+        Private digital cash for every brother and sister on Earth.<br>
+        Seamless transfers from any crypto or real currency. Built to empower humanity, together.
+      </p>
+    </div>
+    <div class="scroll-hint">↓</div>
+  </section>
+
+  <!-- ================================================================== -->
+  <!-- 2. OUR STORY -->
+  <!-- ================================================================== -->
+  <section id="story" class="section">
+    <div class="container">
+      <h2 class="section-title">Our Story</h2>
+      <div class="manifesto">
+
+        <p class="manifesto-lead">
+          Bitcoin showed us that when money belongs to the people, it becomes unstoppable.
+        </p>
+
+        <p>
+          For the first time in human history, ordinary citizens — not governments, 
+          not banks, not any single institution — created a currency that works across every 
+          border, every timezone, every language. That was the spark. That spark changed everything.
+        </p>
+
+        <p>
+          But Bitcoin was the beginning, not the destination. Sending it is slow and expensive 
+          for daily shopping. Your balance is visible to anyone who looks. And billions of people 
+          still can't use it easily for the simple things that matter most — paying rent, 
+          buying groceries, sending money to a parent in another country.
+        </p>
+
+        <p>
+          <strong>OST is the next chapter of that revolution.</strong>
+        </p>
+
+        <p>
+          We took the unstoppable heart of Bitcoin and gave it everything a real global citizen 
+          needs: transactions that settle in under a second, privacy that hides your balance and 
+          amounts the way physical cash always did, and a shopping experience so simple you just 
+          browse a store and click "Pay." No forms. No delays. No questions.
+        </p>
+
+        <p>
+          OST connects to every currency you already have — Bitcoin, Ethereum, stablecoins, even 
+          your local bank account — through trusted open bridges. Your money flows freely into 
+          OST and back out whenever you want. No middlemen standing between you and your family.
+        </p>
+
+        <p>
+          And here is the part that makes us smile every day: a tiny fraction of every 
+          transaction — so small you'll never notice it — quietly flows into an open fund 
+          that builds decentralized satellite infrastructure. Fast, free internet for every 
+          village, every island, every forgotten corner of our shared planet. And someday, 
+          for the space communities our children will build together.
+        </p>
+
+        <p>
+          We are brothers and sisters. The lines on maps are drawn by power; 
+          they don't exist in our hearts. OST is simply a tool that lets us 
+          trade freely and privately, the way humans were always meant to.
+        </p>
+
+        <p class="manifesto-closing">
+          This is not about rebellion. It's about remembering that we belong to each other.<br>
+          <strong>Welcome to the next step. Welcome home.</strong>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================== -->
+  <!-- 3. FOR EVERY CITIZEN -->
+  <!-- ================================================================== -->
+  <section id="citizens" class="section section-alt">
+    <div class="container">
+      <h2 class="section-title">For Every Citizen</h2>
+      <p class="section-subtitle">
+        Whether you send money to family abroad, buy online without extra forms, 
+        or simply want privacy like physical cash — OST works for you and your loved ones.
+      </p>
+
+      <div class="citizen-grid">
+
+        <div class="citizen-card">
+          <div class="citizen-flag">🌏</div>
+          <h3>China &amp; East Asia</h3>
+          <p>
+            Send money to relatives overseas without long delays or paperwork. 
+            Shop international stores privately. Your balance, your business — 
+            as simple as handing cash to a friend.
+          </p>
+        </div>
+
+        <div class="citizen-card">
+          <div class="citizen-flag">🌍</div>
+          <h3>Russia &amp; Central Asia</h3>
+          <p>
+            Access the global economy freely. Pay freelancers, receive payments, 
+            or move savings across borders instantly — no intermediary needed. 
+            Your financial life stays yours alone.
+          </p>
+        </div>
+
+        <div class="citizen-card">
+          <div class="citizen-flag">🌏</div>
+          <h3>India &amp; South Asia</h3>
+          <p>
+            A family in Mumbai receives remittances privately in seconds, not days. 
+            A small business owner accepts global payments without extra fees. 
+            Financial dignity for 1.4 billion people.
+          </p>
+        </div>
+
+        <div class="citizen-card">
+          <div class="citizen-flag">🌎</div>
+          <h3>Brazil &amp; Latin America</h3>
+          <p>
+            A mother pays for school supplies instantly. A freelancer gets paid from 
+            anywhere without currency conversion headaches. Your hard-earned money 
+            stays whole, private, and in your control.
+          </p>
+        </div>
+
+        <div class="citizen-card">
+          <div class="citizen-flag">🌍</div>
+          <h3>Arab States &amp; Middle East</h3>
+          <p>
+            A shop owner gets paid without delays. A family sends support across borders 
+            in one tap. Trade freely with the world while keeping your financial life 
+            exactly as private as a handshake.
+          </p>
+        </div>
+
+        <div class="citizen-card">
+          <div class="citizen-flag">🌍</div>
+          <h3>European Union</h3>
+          <p>
+            Pay anywhere in Europe and beyond with no IBAN forms, no SEPA delays, 
+            no surveillance of every coffee you buy. The financial privacy that 
+            physical cash always gave you — now digital and instant.
+          </p>
+        </div>
+
+        <div class="citizen-card">
+          <div class="citizen-flag">🌎</div>
+          <h3>United States</h3>
+          <p>
+            The privacy of cash meets the speed of the internet. Send money to anyone 
+            on Earth in under a second. Your transactions are your business — not your 
+            bank's, not an algorithm's, not anyone's but yours.
+          </p>
+        </div>
+
+        <div class="citizen-card">
+          <div class="citizen-flag">🌐</div>
+          <h3>Everywhere Else</h3>
+          <p>
+            Wherever you call home — whether it's on a map or not yet — OST is 
+            built for you. No country is excluded, no person left behind. 
+            One human family, one open currency.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================== -->
+  <!-- 4. THE REVOLUTIONARY NEXT STEP -->
+  <!-- ================================================================== -->
+  <section id="revolution" class="section">
+    <div class="container">
+      <h2 class="section-title">The Revolutionary Next Step</h2>
+      <p class="section-subtitle">
+        Everything you wish Bitcoin could do for daily life — OST already does.
+      </p>
+
+      <div class="features-grid">
+
+        <div class="feature-card">
+          <div class="feature-icon">⚡</div>
+          <h3>Faster &amp; Cheaper</h3>
+          <p>
+            Transactions settle in under 400 milliseconds on Solana. 
+            Fees are fractions of a cent. Send $10 or $10,000 — same speed, same cost.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🔒</div>
+          <h3>Private by Default</h3>
+          <p>
+            Token-2022 Confidential Transfers hide your balance and every amount 
+            using zero-knowledge proofs. No one sees what you have or where it goes — 
+            like handing cash in an envelope.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🛒</div>
+          <h3>One-Click Shopping</h3>
+          <p>
+            Browse any store with the OST Pay button. Click "Pay" → confirm in your 
+            wallet → done. Shopify-simple. The merchant gets OST instantly, 
+            no visible trail, no waiting.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🛡️</div>
+          <h3>Quantum-Safe</h3>
+          <p>
+            Governance stakers can vote to upgrade OST's encryption to lattice-based 
+            post-quantum algorithms the moment standards are finalized. 
+            Your money stays safe for decades.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🗳️</div>
+          <h3>You Govern It</h3>
+          <p>
+            Stake OST to vote on every protocol change. No company, no CEO, no single 
+            nation decides what happens. The community — every brother and sister — decides together.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🛰️</div>
+          <h3>Space for Everyone</h3>
+          <p>
+            A tiny 0.1% of every fee flows to an open fund building decentralized satellite 
+            internet. Fast, free connectivity for every village on Earth — and someday, 
+            for humanity among the stars.
+          </p>
+        </div>
+      </div>
+
+      <!-- PAY DEMO -->
+      <div class="pay-demo" id="pay-demo">
+        <h3>Try the Confidential Pay Button</h3>
+        <p>This is what shopping with OST feels like. Click below to simulate a private payment.</p>
+        <div class="demo-product">
+          <div class="demo-product-img">🧥</div>
+          <div class="demo-product-info">
+            <span class="demo-product-name">Cosmic Explorer Jacket</span>
+            <span class="demo-product-price">42.00 OST</span>
+          </div>
+          <button class="btn btn-primary btn-pay" id="payBtn">
+            <span class="pay-icon">◉</span> Pay with OST
+          </button>
+        </div>
+        <div class="demo-status" id="demoStatus"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================== -->
+  <!-- 5. TRANSFER FROM ANY CURRENCY -->
+  <!-- ================================================================== -->
+  <section id="transfer" class="section section-alt">
+    <div class="container">
+      <h2 class="section-title">Bring Your Money From Anywhere</h2>
+      <p class="section-subtitle">
+        Already hold Bitcoin? Ethereum? Any other crypto? Or even local money? 
+        Bring it into OST in one click. True interoperability — your existing 
+        money becomes OST privately, spendable anywhere.
+      </p>
+
+      <div class="transfer-steps">
+
+        <div class="transfer-step">
+          <div class="step-number">1</div>
+          <h3>Bridge Your Crypto</h3>
+          <p>
+            Use <strong>Wormhole (Portal)</strong> or <strong>deBridge</strong> — the most 
+            trusted bridges connecting Solana to Bitcoin, Ethereum, and 30+ other chains. 
+            Lock your BTC or ETH on its home chain → receive a wrapped version on Solana 
+            in minutes. Fully decentralized, fully audited.
+          </p>
+          <div class="step-logos">
+            <span class="logo-pill">Wormhole</span>
+            <span class="logo-pill">deBridge</span>
+            <span class="logo-pill">Portal</span>
+          </div>
+        </div>
+
+        <div class="transfer-step">
+          <div class="step-number">2</div>
+          <h3>Swap to OST</h3>
+          <p>
+            Once your tokens are on Solana, open <strong>Jupiter Aggregator</strong> — the 
+            best DEX router on Solana. It finds the cheapest route across all liquidity pools 
+            and swaps your wrapped BTC/ETH/USDC/anything into OST in seconds. Lowest fees, 
+            best price, one click.
+          </p>
+          <div class="step-logos">
+            <span class="logo-pill">Jupiter</span>
+            <span class="logo-pill">Raydium</span>
+            <span class="logo-pill">Orca</span>
+          </div>
+        </div>
+
+        <div class="transfer-step">
+          <div class="step-number">3</div>
+          <h3>Deposit to Confidential</h3>
+          <p>
+            Your OST arrives in your public balance. Tap <strong>"Deposit to Private"</strong> 
+            in the wallet → your tokens move into your encrypted confidential balance. 
+            From this moment, no one on Earth can see your balance or trace your payments. 
+            You're ready to spend, save, or send — privately and instantly.
+          </p>
+          <div class="step-logos">
+            <span class="logo-pill">Confidential Transfers</span>
+            <span class="logo-pill">Zero-Knowledge Proofs</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- FIAT ON-RAMP -->
+      <div class="fiat-ramp">
+        <h3>Coming from Fiat (Bank / Card)?</h3>
+        <p>
+          Use any Solana-compatible on-ramp — <strong>MoonPay</strong>, <strong>Transak</strong>, 
+          or <strong>Ramp Network</strong> — available in 100+ countries. Buy SOL or USDC 
+          with your card or bank transfer, then swap to OST via Jupiter. The whole process: 
+          under 5 minutes from zero to private digital cash.
+        </p>
+      </div>
+
+      <!-- CONVERT DEMO -->
+      <div class="convert-demo">
+        <h3>How It Looks</h3>
+        <div class="convert-flow">
+          <div class="convert-box">
+            <span class="convert-label">You Have</span>
+            <select class="convert-select" id="convertFrom">
+              <option>Bitcoin (BTC)</option>
+              <option>Ethereum (ETH)</option>
+              <option>USDC</option>
+              <option>SOL</option>
+              <option>USDT</option>
+              <option>Bank / Card (USD)</option>
+              <option>Bank / Card (EUR)</option>
+              <option>Bank / Card (Other)</option>
+            </select>
+          </div>
+          <div class="convert-arrow">→</div>
+          <div class="convert-box">
+            <span class="convert-label">You Get</span>
+            <div class="convert-result">
+              <span class="convert-ost">◉ OST</span>
+              <span class="convert-note">Private &amp; Instant</span>
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-primary" id="convertBtn">Convert Now →</button>
+        <p class="convert-disclaimer">
+          Demo only — connects to real bridges and DEXs when wallet is installed.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================== -->
+  <!-- 6. OFFLINE CASH ANYWHERE -->
+  <!-- ================================================================== -->
+  <section id="offline" class="section">
+    <div class="container">
+      <h2 class="section-title">Offline Cash Anywhere</h2>
+      <p class="section-subtitle">
+        The internet isn't everywhere yet. But your money should be.
+        OST works without WiFi, cell signal, or satellites &mdash; right now,
+        in your pocket, ready for the person standing in front of you.
+      </p>
+
+      <div class="manifesto">
+        <p class="manifesto-lead">
+          Transactions at the speed of light &mdash; even when the lights are off.
+        </p>
+
+        <p>
+          Imagine handing someone a banknote. No bank involved. No internet needed.
+          Just two people and a piece of value changing hands. That's what cash has
+          always been. OST brings that exact feeling to the digital world &mdash;
+          and it works offline.
+        </p>
+
+        <p>
+          <strong>How it works:</strong> Your OST wallet generates a complete,
+          cryptographically signed payment on your device. No server call, no RPC,
+          no data connection. The signed payment &mdash; with its zero-knowledge proof
+          that your balance is sufficient &mdash; is shared to the receiver's device
+          through whatever is available:
+        </p>
+      </div>
+
+      <div class="features-grid" style="margin-top:40px;">
+        <div class="feature-card">
+          <div class="feature-icon">📱</div>
+          <h3>NFC Tap-to-Pay</h3>
+          <p>
+            Hold your phone near theirs. One tap. Payment transferred.
+            Like Apple Pay &mdash; but private, borderless, and without a bank
+            or card network between you. Works in airplane mode.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">📷</div>
+          <h3>QR Code Scan</h3>
+          <p>
+            The signed payment fits in a single QR code (~2 KB). Show it on your
+            screen, print it on paper, etch it on a metal plate &mdash; the receiver
+            scans it and has a verified, valid OST payment. No internet.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">📡</div>
+          <h3>Bluetooth Nearby</h3>
+          <p>
+            For slightly longer range: Bluetooth Low Energy beams the signed
+            transaction to any device within 30 feet. Perfect for market stalls,
+            classrooms, or a payment across the dinner table.
+          </p>
+        </div>
+      </div>
+
+      <div class="manifesto" style="margin-top:48px;">
+        <h3 style="color:#fff;font-size:1.3rem;margin-bottom:16px;">Cash In / Cash Out &mdash; No Internet Required</h3>
+        <p>
+          <strong>Cash in (buy OST with USD):</strong> Walk up to any OST cash agent
+          &mdash; a corner store, a street vendor, a friend. Hand them physical money.
+          They tap your phone with a pre-minted bearer note (a digital banknote stored
+          on an NFC sticker or QR slip). You now hold OST. Redeem it on-chain whenever
+          you get online &mdash; minutes later or months later.
+        </p>
+        <p>
+          <strong>Cash out (sell OST for USD):</strong> Open your wallet, tap
+          &ldquo;Create Bearer Note,&rdquo; enter the amount. Your OST is locked in a
+          vault. Show the QR code to a cash agent. Agent scans it, hands you bills.
+          Agent redeems the note later. No bank, no form, no delay.
+        </p>
+        <p>
+          <strong>Crypto-to-crypto exchange:</strong> You have BTC on Lightning.
+          Your friend has OST bearer notes. You send Lightning sats; they tap you
+          an NFC note. Both walk away with value in a different currency. No exchange,
+          no order book, no KYC. Peer-to-peer, the way it was always meant to be.
+        </p>
+      </div>
+
+      <div class="fiat-ramp" style="margin-top:48px;">
+        <h3>We're Already in the Future</h3>
+        <p>
+          When the DePIN satellite constellation launches, even the broadcast step
+          bypasses terrestrial internet. Your phone beams the signed transaction to
+          a passing satellite via UHF/LoRa. The satellite relays it to a Solana RPC
+          ground station. Settlement happens &mdash; even if neither party ever touches
+          WiFi or 5G. <strong>True financial sovereignty, from the ground to orbit.</strong>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================== -->
+  <!-- 7. GET OST — Jupiter Swap + Fiat Buy -->
+  <!-- ================================================================== -->
+  <section id="get-ost" class="section section-alt">
+    <div class="container">
+      <h2 class="section-title">Get OST</h2>
+      <p class="section-subtitle">
+        Instant private entry from any crypto or local money &mdash; no KYC for swaps.
+      </p>
+
+      <!-- Jupiter Terminal Embed -->
+      <div class="jupiter-widget" id="jupiterWidget">
+        <h3>Swap Any Crypto &rarr; OST</h3>
+        <p>
+          Jupiter Aggregator finds the best route across all Solana liquidity pools.
+          Swap BTC, ETH, SOL, USDC, or any token into OST in seconds.
+        </p>
+        <div class="jupiter-embed-area" id="jupiterEmbed">
+          <div class="jupiter-placeholder">
+            <span style="font-size:2rem;">⚡</span>
+            <p><strong>Jupiter Terminal</strong></p>
+            <p style="color:var(--text-muted);font-size:.9rem;">
+              Connect your wallet to load the live swap widget.<br>
+              Powered by Jupiter Aggregator &mdash; best price, lowest fees.
+            </p>
+            <button class="btn btn-primary" id="loadJupiterBtn">Load Swap Widget</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fiat On-Ramp Links -->
+      <div class="fiat-grid">
+        <h3 style="text-align:center;color:#fff;margin-bottom:8px;">Buy with Local Money</h3>
+        <p style="text-align:center;color:var(--text-muted);margin-bottom:32px;">
+          Buy SOL or USDC with your local currency, then swap to OST above.
+          No KYC required for the swap step.
+        </p>
+        <div class="citizen-grid">
+          <div class="citizen-card">
+            <div class="citizen-flag">🇨🇳</div>
+            <h3>China (CNY)</h3>
+            <p>Buy USDC via <strong>Onramper</strong> or P2P services. Swap to OST in one click.</p>
+            <a href="#" class="btn btn-outline fiat-link" data-currency="CNY">Buy with CNY &rarr;</a>
+          </div>
+          <div class="citizen-card">
+            <div class="citizen-flag">🇷🇺</div>
+            <h3>Russia (RUB)</h3>
+            <p>Buy USDC via <strong>Onramper</strong> or P2P exchanges. Instant swap to OST.</p>
+            <a href="#" class="btn btn-outline fiat-link" data-currency="RUB">Buy with RUB &rarr;</a>
+          </div>
+          <div class="citizen-card">
+            <div class="citizen-flag">🇮🇷</div>
+            <h3>Iran (IRR)</h3>
+            <p>Use P2P crypto markets to acquire USDC or SOL. Swap to OST permissionlessly.</p>
+            <a href="#" class="btn btn-outline fiat-link" data-currency="IRR">Buy with IRR &rarr;</a>
+          </div>
+          <div class="citizen-card">
+            <div class="citizen-flag">🇧🇷</div>
+            <h3>Brazil (BRL)</h3>
+            <p>Buy via <strong>Onramper</strong>, <strong>Transak</strong>, or Pix-enabled exchanges. Swap to OST.</p>
+            <a href="#" class="btn btn-outline fiat-link" data-currency="BRL">Buy with BRL &rarr;</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Faucet CTA -->
+      <div class="fiat-ramp" style="margin-top:48px;">
+        <h3>New Here? Claim Your Free OST</h3>
+        <p>
+          Every new wallet gets a one-time drop of <strong>1 OST</strong> from the community
+          treasury. Create your wallet, claim the faucet, and send your first private payment.
+          That's it &mdash; you're part of the future.
+        </p>
+        <button class="btn btn-primary" id="claimFaucetBtn" style="margin-top:16px;">
+          <span class="pay-icon">◉</span> Claim 1 OST Faucet
+        </button>
+        <div class="demo-status" id="faucetStatus" style="margin-top:12px;"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================== -->
+  <!-- 8. WHY OST IS NOT A SCAM — FULL TRANSPARENCY -->
+  <!-- ================================================================== -->
+  <section id="transparency" class="section">
+    <div class="container">
+      <h2 class="section-title">Why OST Is Not a Scam &mdash; Full Transparency</h2>
+      <p class="section-subtitle">
+        You've been lied to by too many projects. We understand.
+        Here is everything about us, laid bare. Verify it all yourself.
+      </p>
+
+      <div class="manifesto">
+        <p class="manifesto-lead">
+          Trust is earned with facts, not promises.
+        </p>
+
+        <p>
+          <strong>No pre-mine. No hidden allocations. No &ldquo;team tokens.&rdquo;</strong><br>
+          The OST mint starts at zero. Every single token in existence was minted
+          through the public, auditable <code>confidential_mint</code> instruction.
+          There are no secret wallets, no locked vesting schedules benefiting insiders,
+          and no tokens set aside for a "team" that disappears. The supply grows only
+          through transparent, community-visible operations.
+        </p>
+
+        <p>
+          <strong>Open source from day one.</strong><br>
+          Every line of Rust, every TypeScript function, every deploy script &mdash;
+          it's all on GitHub. The Anchor program, the client SDK, this website &mdash;
+          all public. Read the code yourself. If you find a flaw, open a PR. If you
+          find something shady, tell the world. We have nothing to hide because there
+          is nothing to hide.
+        </p>
+
+        <p>
+          <strong>Real company, real founder, real jurisdiction.</strong><br>
+          OST is operated through a Panama S.A. (Sociedad An&oacute;nima), a legal
+          entity chosen for its neutrality and crypto-friendly regulation. The founder
+          is a builder from Mexico &mdash; not anonymous, not hiding behind a pseudonym.
+          The Panama company documents are available for public inspection. We chose
+          transparency over mystery because this project belongs to everyone, not to
+          a shadowy founding team.
+        </p>
+
+        <p>
+          <strong>Why Panama? Why not &ldquo;no country&rdquo;?</strong><br>
+          Because today, in 2026, a legal entity is still needed to sign contracts,
+          hold domain names, and interact with the non-crypto world. Panama provides
+          a neutral, internationally recognized framework. But OST the <em>token</em>
+          is nationless by design. It doesn't belong to Panama, Mexico, or any flag.
+          It belongs to the people who use it &mdash; all of them, everywhere.
+        </p>
+
+        <p>
+          <strong>The space story is real.</strong><br>
+          The 0.1% DAO fee isn't a marketing gimmick. It flows into a transparent,
+          on-chain treasury governed by staked OST holders. The treasury's mandate
+          is to fund decentralized physical infrastructure: satellite relays, mesh
+          networks, orbital compute nodes. Every disbursement is voted on publicly
+          and executed on-chain. You can verify every SOL, every vote, every proposal
+          in the block explorer. The satellites aren't a metaphor. They're a budget line.
+        </p>
+
+        <p>
+          <strong>What we believe:</strong><br>
+          We are all brothers and sisters. Borders are lines on maps drawn by power;
+          they don't exist in our hearts. OST is simply a tool that lets us trade
+          freely and privately, the way humans were always meant to. This is not
+          about rebellion. It's about remembering that we belong to each other.
+        </p>
+
+        <p class="manifesto-closing">
+          Read the code. Check the company. Verify the treasury.<br>
+          <strong>Then decide for yourself.</strong>
+        </p>
+      </div>
+
+      <!-- Verify Links -->
+      <div class="features-grid" style="margin-top:48px;">
+        <div class="feature-card">
+          <div class="feature-icon">📂</div>
+          <h3>GitHub Repository</h3>
+          <p>Full source code: Anchor program, client SDK, website, deploy scripts. MIT licensed.</p>
+          <a href="https://github.com/" target="_blank" rel="noopener" class="btn btn-outline" style="margin-top:12px;">View on GitHub &rarr;</a>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🏛️</div>
+          <h3>Panama Company Docs</h3>
+          <p>S.A. registration, articles of incorporation, and public filings. All verifiable.</p>
+          <a href="#" class="btn btn-outline" style="margin-top:12px;">View Docs &rarr;</a>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🔍</div>
+          <h3>On-Chain Treasury</h3>
+          <p>Every fee collected, every vote cast, every disbursement &mdash; transparent on Solana Explorer.</p>
+          <a href="#" class="btn btn-outline" style="margin-top:12px;">View Treasury &rarr;</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================== -->
+  <!-- SPACE FOOTER -->
+  <!-- ================================================================== -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-space">
+        <p>
+          Every tiny transaction quietly helps fund open satellite infrastructure 
+          that brings fast, free internet to every corner of our shared planet — 
+          and one day to space communities for all humanity. 
+          <strong>A gift we build together.</strong>
+        </p>
+      </div>
+      <div class="footer-bottom">
+        <div class="footer-logo">
+          <span class="logo-icon">◉</span> OST
+        </div>
+        <p class="footer-copy">
+          Open source. No company. No CEO. Just us.<br>
+          Built with love for every human on Earth.
+        </p>
+        <div class="footer-links">
+          <a href="https://github.com/" target="_blank" rel="noopener">GitHub</a>
+          <a href="#story">Manifesto</a>
+          <a href="#transfer">Get OST</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ================================================================== -->
+  <!-- LANGUAGE SELECTOR (Floating) -->
+  <!-- ================================================================== -->
+  <div class="lang-fab" id="langFab">
+    <button class="lang-btn" id="langBtn" aria-label="Language">🌐</button>
+    <div class="lang-menu" id="langMenu">
+      <a href="#" data-lang="en">English</a>
+      <a href="#" data-lang="zh">中文</a>
+      <a href="#" data-lang="ru">Русский</a>
+      <a href="#" data-lang="hi">हिन्दी</a>
+      <a href="#" data-lang="ar">العربية</a>
+      <a href="#" data-lang="pt">Português</a>
+      <a href="#" data-lang="es">Español</a>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

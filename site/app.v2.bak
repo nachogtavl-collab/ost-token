@@ -1,0 +1,535 @@
+/* ================================================================== */
+/*  OST — Site Interactions v2                                       */
+/*  3D Globe, Mini Store, Animated Faucet, Particles                 */
+/* ================================================================== */
+
+document.addEventListener('DOMContentLoaded', () => {
+
+  /* ================================================================ */
+  /*  MOBILE NAV                                                      */
+  /* ================================================================ */
+  const toggle = document.getElementById('navToggle');
+  const links  = document.getElementById('navLinks');
+  if (toggle && links) {
+    toggle.addEventListener('click', () => links.classList.toggle('open'));
+    links.querySelectorAll('a').forEach(a =>
+      a.addEventListener('click', () => links.classList.remove('open'))
+    );
+  }
+
+  /* ================================================================ */
+  /*  ACTIVE NAV HIGHLIGHT ON SCROLL                                  */
+  /* ================================================================ */
+  const sections   = document.querySelectorAll('section[id]');
+  const navAnchors = document.querySelectorAll('.nav-links a');
+  const secObserver = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        navAnchors.forEach(a =>
+          a.classList.toggle('active', a.getAttribute('href') === '#' + id)
+        );
+      }
+    });
+  }, { rootMargin: '-40% 0px -55% 0px' });
+  sections.forEach(s => secObserver.observe(s));
+
+  /* ================================================================ */
+  /*  LANGUAGE DROPDOWN                                               */
+  /* ================================================================ */
+  const langTrigger = document.getElementById('langTrigger');
+  const langList    = document.getElementById('langList');
+  const langCode    = document.getElementById('langCode');
+
+  if (langTrigger && langList) {
+    langTrigger.addEventListener('click', e => {
+      e.stopPropagation();
+      langList.classList.toggle('open');
+    });
+    document.addEventListener('click', () => langList.classList.remove('open'));
+
+    langList.querySelectorAll('a').forEach(a => {
+      a.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        const lang = a.dataset.lang;
+        langList.querySelectorAll('a').forEach(l => l.classList.remove('active'));
+        a.classList.add('active');
+        if (langCode) langCode.textContent = lang.toUpperCase();
+        langList.classList.remove('open');
+        if (lang !== 'en') {
+          showToast(`${a.textContent.trim()} translation coming soon. Community translators welcome!`);
+        }
+      });
+    });
+  }
+
+  /* ================================================================ */
+  /*  3D INTERACTIVE GLOBE (Three.js)                                 */
+  /* ================================================================ */
+  function initGlobe() {
+    if (typeof THREE === 'undefined') return;
+    const canvas = document.getElementById('globeCanvas');
+    if (!canvas) return;
+
+    const scene    = new THREE.Scene();
+    const camera   = new THREE.PerspectiveCamera(45, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
+    camera.position.z = 14;
+
+    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    /* --- Globe wireframe --- */
+    const globeGroup = new THREE.Group();
+    scene.add(globeGroup);
+
+    const wireGeo = new THREE.SphereGeometry(4.5, 48, 48);
+    const wireMat = new THREE.MeshBasicMaterial({
+      color: 0x6d9fff,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.1
+    });
+    globeGroup.add(new THREE.Mesh(wireGeo, wireMat));
+
+    /* --- Inner dark sphere --- */
+    const innerGeo = new THREE.SphereGeometry(4.45, 48, 48);
+    const innerMat = new THREE.MeshBasicMaterial({
+      color: 0x0b0e17,
+      transparent: true,
+      opacity: 0.85
+    });
+    globeGroup.add(new THREE.Mesh(innerGeo, innerMat));
+
+    /* --- Atmosphere glow --- */
+    const atmoGeo = new THREE.SphereGeometry(5.0, 48, 48);
+    const atmoMat = new THREE.MeshBasicMaterial({
+      color: 0x6d9fff,
+      transparent: true,
+      opacity: 0.04,
+      side: THREE.BackSide
+    });
+    globeGroup.add(new THREE.Mesh(atmoGeo, atmoMat));
+
+    /* --- Second atmosphere layer --- */
+    const atmo2Geo = new THREE.SphereGeometry(5.5, 48, 48);
+    const atmo2Mat = new THREE.MeshBasicMaterial({
+      color: 0xa78bfa,
+      transparent: true,
+      opacity: 0.02,
+      side: THREE.BackSide
+    });
+    globeGroup.add(new THREE.Mesh(atmo2Geo, atmo2Mat));
+
+    /* --- City dots --- */
+    const cities = [
+      [40.7,-74.0],[51.5,-0.1],[35.7,139.7],[31.2,121.5],[-23.5,-46.6],
+      [19.4,-99.1],[28.6,77.2],[55.8,37.6],[35.7,51.4],[-33.9,18.4],
+      [30.0,31.2],[6.5,3.4],[-1.3,36.8],[-34.6,-58.4],[48.9,2.3],
+      [52.5,13.4],[37.6,127.0],[1.3,103.8],[-6.2,106.8],[41.0,29.0],
+      [22.3,114.2],[13.8,100.5],[14.6,121.0],[33.9,-118.2],[43.7,-79.4],
+      [59.3,18.1],[-37.8,144.9],[39.9,116.4],[25.0,55.3],[-22.9,-43.2]
+    ];
+    const dotGeo = new THREE.SphereGeometry(0.06, 8, 8);
+    const dotMat = new THREE.MeshBasicMaterial({ color: 0xf5c468 });
+
+    cities.forEach(([lat, lng]) => {
+      const phi   = (90 - lat) * Math.PI / 180;
+      const theta = (lng + 180) * Math.PI / 180;
+      const r = 4.52;
+      const dot = new THREE.Mesh(dotGeo, dotMat);
+      dot.position.set(
+        -r * Math.sin(phi) * Math.cos(theta),
+         r * Math.cos(phi),
+         r * Math.sin(phi) * Math.sin(theta)
+      );
+      globeGroup.add(dot);
+    });
+
+    /* --- Connection arcs between city pairs --- */
+    const arcPairs = [[0,1],[1,14],[2,3],[4,5],[6,7],[8,9],[10,11],[12,13],[15,16],[17,18]];
+    const arcMat = new THREE.LineBasicMaterial({ color: 0xa78bfa, transparent: true, opacity: 0.25 });
+
+    arcPairs.forEach(([i, j]) => {
+      const [lat1, lng1] = cities[i];
+      const [lat2, lng2] = cities[j];
+      const points = [];
+      const steps = 32;
+      for (let s = 0; s <= steps; s++) {
+        const t = s / steps;
+        const lat = lat1 + (lat2 - lat1) * t;
+        const lng = lng1 + (lng2 - lng1) * t;
+        const phi   = (90 - lat) * Math.PI / 180;
+        const theta = (lng + 180) * Math.PI / 180;
+        const lift = 1 + 0.15 * Math.sin(t * Math.PI);
+        const r = 4.52 * lift;
+        points.push(new THREE.Vector3(
+          -r * Math.sin(phi) * Math.cos(theta),
+           r * Math.cos(phi),
+           r * Math.sin(phi) * Math.sin(theta)
+        ));
+      }
+      const geo = new THREE.BufferGeometry().setFromPoints(points);
+      globeGroup.add(new THREE.Line(geo, arcMat));
+    });
+
+    /* --- Stars --- */
+    const starCount = 3000;
+    const starPositions = new Float32Array(starCount * 3);
+    for (let i = 0; i < starCount; i++) {
+      starPositions[i * 3]     = (Math.random() - 0.5) * 120;
+      starPositions[i * 3 + 1] = (Math.random() - 0.5) * 120;
+      starPositions[i * 3 + 2] = (Math.random() - 0.5) * 120;
+    }
+    const starGeo = new THREE.BufferGeometry();
+    starGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+    const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.12, transparent: true, opacity: 0.5 });
+    const stars = new THREE.Points(starGeo, starMat);
+    scene.add(stars);
+
+    /* --- Interaction (mouse drag) --- */
+    let isDragging = false;
+    let prevMouse  = { x: 0, y: 0 };
+    let rotVel     = { x: 0, y: 0.003 };
+
+    canvas.addEventListener('mousedown',  e => { isDragging = true; prevMouse = { x: e.clientX, y: e.clientY }; });
+    canvas.addEventListener('mousemove',  e => {
+      if (!isDragging) return;
+      rotVel.y = (e.clientX - prevMouse.x) * 0.004;
+      rotVel.x = (e.clientY - prevMouse.y) * 0.004;
+      prevMouse = { x: e.clientX, y: e.clientY };
+    });
+    canvas.addEventListener('mouseup',    () => { isDragging = false; });
+    canvas.addEventListener('mouseleave', () => { isDragging = false; });
+
+    canvas.addEventListener('touchstart', e => {
+      isDragging = true;
+      prevMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }, { passive: true });
+    canvas.addEventListener('touchmove', e => {
+      if (!isDragging) return;
+      rotVel.y = (e.touches[0].clientX - prevMouse.x) * 0.004;
+      rotVel.x = (e.touches[0].clientY - prevMouse.y) * 0.004;
+      prevMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }, { passive: true });
+    canvas.addEventListener('touchend', () => { isDragging = false; });
+
+    /* --- Animate --- */
+    function animate() {
+      requestAnimationFrame(animate);
+      globeGroup.rotation.y += rotVel.y;
+      globeGroup.rotation.x += rotVel.x;
+      if (!isDragging) {
+        rotVel.y += (0.002 - rotVel.y) * 0.015;
+        rotVel.x *= 0.96;
+      }
+      stars.rotation.y += 0.00008;
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    /* --- Resize --- */
+    window.addEventListener('resize', () => {
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    });
+  }
+  initGlobe();
+
+  /* ================================================================ */
+  /*  BACKGROUND FLOATING PARTICLES                                   */
+  /* ================================================================ */
+  function initParticles() {
+    const container = document.getElementById('bgParticles');
+    if (!container) return;
+    const count = 30;
+    for (let i = 0; i < count; i++) {
+      const p = document.createElement('div');
+      p.className = 'bg-particle';
+      p.style.left = Math.random() * 100 + '%';
+      p.style.top  = Math.random() * 100 + 'vh';
+      p.style.animationDuration = (15 + Math.random() * 25) + 's';
+      p.style.animationDelay    = -(Math.random() * 30) + 's';
+      p.style.width = p.style.height = (2 + Math.random() * 3) + 'px';
+      container.appendChild(p);
+    }
+  }
+  initParticles();
+
+  /* ================================================================ */
+  /*  SCROLL REVEAL                                                   */
+  /* ================================================================ */
+  const revealEls = document.querySelectorAll(
+    '.citizen-card, .feature-card, .offline-card, .creator-card, .transfer-widget, ' +
+    '.pay-demo, .jupiter-widget, .fiat-section, .faucet-section, .cta-box, .fiat-ramp, .verify-grid .feature-card'
+  );
+  const revealObs = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('revealed');
+        revealObs.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1 });
+  revealEls.forEach((el, i) => {
+    el.classList.add('reveal-ready');
+    el.style.transitionDelay = (i % 6) * 0.07 + 's';
+    revealObs.observe(el);
+  });
+
+  /* ================================================================ */
+  /*  MINI STORE — PAY DEMO                                           */
+  /* ================================================================ */
+  const cart = [];
+
+  document.querySelectorAll('.store-item .btn-add').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const item = btn.closest('.store-item');
+      const name  = item.dataset.name;
+      const price = parseFloat(item.dataset.price);
+      const emoji = item.dataset.emoji;
+      cart.push({ name, price, emoji });
+      btn.classList.add('added');
+      btn.textContent = '✓';
+      setTimeout(() => { btn.classList.remove('added'); btn.textContent = '+'; }, 600);
+      renderCart();
+    });
+  });
+
+  function renderCart() {
+    const itemsEl = document.getElementById('cartItems');
+    const totalEl = document.getElementById('cartTotal');
+    const badgeEl = document.getElementById('cartBadge');
+    const payBtn  = document.getElementById('payBtn');
+    if (!itemsEl) return;
+
+    if (cart.length === 0) {
+      itemsEl.innerHTML = '<p class="cart-empty">Tap + to add items</p>';
+      totalEl.textContent = '0.00 OST';
+      badgeEl.textContent = '0';
+      payBtn.disabled = true;
+      return;
+    }
+
+    itemsEl.innerHTML = cart.map((c, i) => `
+      <div class="cart-line">
+        <span class="cart-line-name">${c.emoji} ${sanitize(c.name)}</span>
+        <span class="cart-line-price">${c.price.toFixed(2)} OST</span>
+        <button class="cart-line-remove" data-idx="${i}" aria-label="Remove">✕</button>
+      </div>
+    `).join('');
+
+    const total = cart.reduce((s, c) => s + c.price, 0);
+    totalEl.textContent = total.toFixed(2) + ' OST';
+    badgeEl.textContent = cart.length;
+    badgeEl.classList.add('bump');
+    setTimeout(() => badgeEl.classList.remove('bump'), 300);
+    payBtn.disabled = false;
+
+    itemsEl.querySelectorAll('.cart-line-remove').forEach(btn => {
+      btn.addEventListener('click', () => {
+        cart.splice(parseInt(btn.dataset.idx), 1);
+        renderCart();
+      });
+    });
+  }
+
+  /* Pay button */
+  const payBtn = document.getElementById('payBtn');
+  if (payBtn) {
+    payBtn.addEventListener('click', async () => {
+      if (cart.length === 0) return;
+      payBtn.disabled = true;
+      const overlay = document.getElementById('payOverlay');
+      const receipt = document.getElementById('payReceipt');
+      if (!overlay) return;
+
+      overlay.classList.add('active');
+      const steps      = overlay.querySelectorAll('.pay-step');
+      const connectors = overlay.querySelectorAll('.pay-connector');
+
+      for (let i = 0; i < steps.length; i++) {
+        steps[i].classList.add('active');
+        await sleep(900);
+        steps[i].classList.remove('active');
+        steps[i].classList.add('done');
+        if (connectors[i]) connectors[i].classList.add('filled');
+        await sleep(200);
+      }
+
+      receipt.classList.add('show');
+      launchConfetti();
+      await sleep(3500);
+
+      // Reset
+      overlay.classList.remove('active');
+      receipt.classList.remove('show');
+      steps.forEach(s => { s.classList.remove('active', 'done'); });
+      connectors.forEach(c => c.classList.remove('filled'));
+      cart.length = 0;
+      renderCart();
+    });
+  }
+
+  /* ================================================================ */
+  /*  TRANSFER WIDGET                                                 */
+  /* ================================================================ */
+  const transferBtn = document.getElementById('transferBtn');
+  if (transferBtn) {
+    transferBtn.addEventListener('click', async () => {
+      transferBtn.disabled = true;
+      const pSteps = [
+        document.getElementById('pStep1'),
+        document.getElementById('pStep2'),
+        document.getElementById('pStep3')
+      ];
+      for (const step of pSteps) {
+        if (!step) continue;
+        step.classList.add('active');
+        await sleep(800);
+        step.classList.remove('active');
+        step.classList.add('done');
+      }
+      showToast('Conversion complete! Your OST is now in your confidential balance.');
+      await sleep(2000);
+      pSteps.forEach(s => { if (s) s.classList.remove('active', 'done'); });
+      transferBtn.disabled = false;
+    });
+  }
+
+  /* ================================================================ */
+  /*  ANIMATED FAUCET                                                 */
+  /* ================================================================ */
+  const faucetBtn   = document.getElementById('claimFaucetBtn');
+  const faucetDrop  = document.getElementById('faucetDropZone');
+  const faucetAmt   = document.getElementById('faucetAmount');
+  const faucetStat  = document.getElementById('faucetStatus');
+  let faucetTotal = 0;
+
+  if (faucetBtn && faucetDrop) {
+    faucetBtn.addEventListener('click', async () => {
+      faucetBtn.disabled = true;
+      if (faucetStat) {
+        faucetStat.textContent = 'Opening faucet...';
+        faucetStat.style.color = '#6d9fff';
+      }
+
+      // Drop coins
+      for (let i = 0; i < 8; i++) {
+        const coin = document.createElement('div');
+        coin.className = 'faucet-coin';
+        coin.textContent = '◉';
+        coin.style.animationDelay = (i * 0.1) + 's';
+        coin.style.left = `calc(50% + ${(Math.random() - 0.5) * 20}px)`;
+        faucetDrop.appendChild(coin);
+        setTimeout(() => coin.remove(), 1200);
+        await sleep(100);
+      }
+
+      await sleep(600);
+
+      // Update amount
+      faucetTotal += 1;
+      if (faucetAmt) {
+        faucetAmt.textContent = faucetTotal.toFixed(2);
+        faucetAmt.classList.add('bump');
+        setTimeout(() => faucetAmt.classList.remove('bump'), 300);
+      }
+
+      if (faucetStat) {
+        faucetStat.textContent = 'Faucet claimed! Welcome to private cash. 🌟';
+        faucetStat.style.color = '#34d399';
+      }
+
+      launchConfetti();
+      await sleep(3000);
+
+      if (faucetStat) faucetStat.textContent = '';
+      faucetBtn.disabled = false;
+    });
+  }
+
+  /* ================================================================ */
+  /*  JUPITER WIDGET PLACEHOLDER                                      */
+  /* ================================================================ */
+  const jupiterBtn = document.getElementById('loadJupiterBtn');
+  if (jupiterBtn) {
+    jupiterBtn.addEventListener('click', () => {
+      showToast('Jupiter Terminal loads with a connected Solana wallet. Install Phantom or Backpack to continue.');
+    });
+  }
+
+  /* ================================================================ */
+  /*  FIAT PILL CLICKS                                                */
+  /* ================================================================ */
+  document.querySelectorAll('.fiat-pill').forEach(pill => {
+    pill.addEventListener('click', e => {
+      e.preventDefault();
+      const currency = pill.dataset.currency;
+      showToast(`Buy SOL or USDC with ${currency}, then swap to OST via Jupiter. No KYC for the swap step.`);
+    });
+  });
+
+  /* ================================================================ */
+  /*  CONFETTI                                                        */
+  /* ================================================================ */
+  function launchConfetti() {
+    const colors = ['#6d9fff', '#a78bfa', '#f5c468', '#34d399', '#f87171', '#fff'];
+    for (let i = 0; i < 40; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDuration = (1.5 + Math.random() * 2) + 's';
+      c.style.animationDelay = Math.random() * 0.5 + 's';
+      c.style.width  = (6 + Math.random() * 8) + 'px';
+      c.style.height = (6 + Math.random() * 8) + 'px';
+      c.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 4000);
+    }
+  }
+
+  /* ================================================================ */
+  /*  TOAST NOTIFICATIONS                                             */
+  /* ================================================================ */
+  function showToast(message) {
+    let container = document.getElementById('toastContainer');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'toastContainer';
+      container.style.cssText =
+        'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;';
+      document.body.appendChild(container);
+    }
+    const toast = document.createElement('div');
+    toast.style.cssText =
+      'background:#161b2a;border:1px solid #1f2640;color:#e4e6ef;padding:14px 24px;border-radius:12px;' +
+      'font-size:.9rem;max-width:420px;text-align:center;box-shadow:0 4px 32px rgba(0,0,0,.5);' +
+      'opacity:0;transform:translateY(16px);transition:opacity .3s,transform .3s;pointer-events:auto;';
+    toast.textContent = message;
+    container.appendChild(toast);
+    requestAnimationFrame(() => { toast.style.opacity = '1'; toast.style.transform = 'translateY(0)'; });
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(16px)';
+      setTimeout(() => toast.remove(), 300);
+    }, 4000);
+  }
+
+  /* ================================================================ */
+  /*  UTILITIES                                                       */
+  /* ================================================================ */
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  function sanitize(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+});

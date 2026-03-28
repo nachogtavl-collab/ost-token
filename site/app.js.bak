@@ -1,0 +1,183 @@
+/* ================================================================== */
+/*  OST — Site Interactions                                           */
+/* ================================================================== */
+
+document.addEventListener('DOMContentLoaded', () => {
+  /* ---------- Mobile nav toggle ---------- */
+  const toggle = document.getElementById('navToggle');
+  const links  = document.getElementById('navLinks');
+  if (toggle && links) {
+    toggle.addEventListener('click', () => links.classList.toggle('open'));
+    links.querySelectorAll('a').forEach(a =>
+      a.addEventListener('click', () => links.classList.remove('open'))
+    );
+  }
+
+  /* ---------- Active nav highlight on scroll ---------- */
+  const sections = document.querySelectorAll('section[id]');
+  const navAnchors = document.querySelectorAll('.nav-links a');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        navAnchors.forEach(a => {
+          a.classList.toggle(
+            'active',
+            a.getAttribute('href') === '#' + id
+          );
+        });
+      }
+    });
+  }, { rootMargin: '-40% 0px -55% 0px' });
+  sections.forEach(s => observer.observe(s));
+
+  /* ---------- Pay button demo ---------- */
+  const payBtn    = document.getElementById('payBtn');
+  const demoStatus = document.getElementById('demoStatus');
+
+  if (payBtn && demoStatus) {
+    payBtn.addEventListener('click', async () => {
+      payBtn.disabled = true;
+      const steps = [
+        { text: 'Connecting to wallet...', color: '#6d9fff', ms: 800 },
+        { text: 'Generating zero-knowledge proof...', color: '#a78bfa', ms: 1200 },
+        { text: 'Broadcasting confidential transfer...', color: '#f5c468', ms: 900 },
+        { text: 'Confirmed in 0.4 s — Payment complete! 🎉', color: '#34d399', ms: 0 },
+      ];
+
+      for (const step of steps) {
+        demoStatus.textContent = step.text;
+        demoStatus.style.color = step.color;
+        demoStatus.classList.add('show');
+        if (step.ms > 0) await sleep(step.ms);
+      }
+
+      await sleep(3000);
+      demoStatus.textContent = '';
+      demoStatus.classList.remove('show');
+      payBtn.disabled = false;
+    });
+  }
+
+  /* ---------- Convert button (demo) ---------- */
+  const convertBtn = document.getElementById('convertBtn');
+  if (convertBtn) {
+    convertBtn.addEventListener('click', () => {
+      const from = document.getElementById('convertFrom');
+      const selected = from ? from.value : 'your currency';
+      alert(
+        `Demo: In a live wallet, this would open the bridge/DEX flow to convert ${selected} → OST.\n\n` +
+        'Install a Solana wallet (Phantom, Backpack) and connect to complete real conversions.'
+      );
+    });
+  }
+
+  /* ---------- Language FAB ---------- */
+  const langBtn  = document.getElementById('langBtn');
+  const langMenu = document.getElementById('langMenu');
+  if (langBtn && langMenu) {
+    langBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      langMenu.classList.toggle('open');
+    });
+    document.addEventListener('click', () => langMenu.classList.remove('open'));
+    langMenu.querySelectorAll('a').forEach(a => {
+      a.addEventListener('click', e => {
+        e.preventDefault();
+        const lang = a.dataset.lang;
+        langMenu.classList.remove('open');
+        if (lang !== 'en') {
+          alert(
+            `Translation to ${a.textContent} is coming soon.\n` +
+            'Community translators welcome — see our GitHub for contribution guidelines.'
+          );
+        }
+      });
+    });
+  }
+
+  /* ---------- Smooth reveal on scroll ---------- */
+  const reveals = document.querySelectorAll(
+    '.citizen-card, .feature-card, .transfer-step, .fiat-ramp, .pay-demo, .convert-demo, .jupiter-widget'
+  );
+  const revealObs = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('revealed');
+        revealObs.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.15 });
+
+  reveals.forEach(el => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(24px)';
+    el.style.transition = 'opacity .6s ease, transform .6s ease';
+    revealObs.observe(el);
+  });
+
+  /* ---------- Faucet button demo ---------- */
+  const faucetBtn = document.getElementById('claimFaucetBtn');
+  const faucetStatus = document.getElementById('faucetStatus');
+  if (faucetBtn && faucetStatus) {
+    faucetBtn.addEventListener('click', async () => {
+      faucetBtn.disabled = true;
+      const steps = [
+        { text: 'Connecting to wallet...', color: '#6d9fff', ms: 600 },
+        { text: 'Checking faucet eligibility...', color: '#a78bfa', ms: 800 },
+        { text: 'Transferring 1 OST from treasury...', color: '#f5c468', ms: 900 },
+        { text: 'Faucet claimed! Welcome to private cash. \ud83c\udf1f', color: '#34d399', ms: 0 },
+      ];
+      for (const step of steps) {
+        faucetStatus.textContent = step.text;
+        faucetStatus.style.color = step.color;
+        faucetStatus.classList.add('show');
+        if (step.ms > 0) await sleep(step.ms);
+      }
+      await sleep(3000);
+      faucetStatus.textContent = '';
+      faucetStatus.classList.remove('show');
+      faucetBtn.disabled = false;
+    });
+  }
+
+  /* ---------- Jupiter swap widget loader ---------- */
+  const jupiterBtn = document.getElementById('loadJupiterBtn');
+  if (jupiterBtn) {
+    jupiterBtn.addEventListener('click', () => {
+      alert(
+        'Jupiter Terminal will load here when integrated with a live Solana wallet.\n\n' +
+        'To integrate:\n' +
+        '1. Install @jup-ag/terminal\n' +
+        '2. Call Jupiter.init({ displayMode: "integrated", integratedTargetId: "jupiterEmbed" })\n' +
+        '3. Set outputMint to the OST mint address after deploy.\n\n' +
+        'No KYC required for swaps.'
+      );
+    });
+  }
+
+  /* ---------- Fiat buy links ---------- */
+  document.querySelectorAll('.fiat-link').forEach(link => {
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      const currency = link.dataset.currency;
+      const url = `https://widget.onramper.com?defaultCrypto=SOL&onlyCryptos=SOL,USDC&defaultFiat=${currency}`;
+      alert(
+        `This will open the Onramper widget for ${currency} \u2192 SOL/USDC.\n\n` +
+        `URL: ${url}\n\n` +
+        'After buying SOL/USDC, return here and swap to OST via Jupiter.\n' +
+        'No KYC required for the swap step.'
+      );
+    });
+  });
+});
+
+/* Utility */
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+/* Reveal class */
+document.head.insertAdjacentHTML('beforeend', `
+  <style>
+    .revealed { opacity: 1 !important; transform: translateY(0) !important; }
+  </style>
+`);

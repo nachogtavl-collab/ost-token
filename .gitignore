@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Build artifacts
+target/
+dist/
+
+# IDE
+.vs/
+.vscode/
+*.swp
+*.swo
+
+# Solana
+test-ledger/
+temp-funder.json
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.local

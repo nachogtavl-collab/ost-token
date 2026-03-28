@@ -1,0 +1,1986 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OST — The Next Step After Bitcoin</title>
+  <meta name="description" content="Private digital cash for every brother and sister on Earth. Seamless transfers from any crypto or real currency.">
+  <meta property="og:title" content="OST — The Next Step After Bitcoin">
+  <meta property="og:description" content="Private, instant, borderless digital cash for every citizen of Earth.">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ================================================================== -->
+  <!-- NAV -->
+  <!-- ================================================================== -->
+  <nav id="nav">
+    <div class="nav-inner">
+      <a href="#home" class="logo"><span class="logo-icon">&#9673;</span> OST</a>
+      <div class="nav-links" id="navLinks">
+        <a href="#home" data-i18n="nav.home">Home</a>
+        <a href="#story" data-i18n="nav.story">Our Story</a>
+        <a href="#citizens" data-i18n="nav.citizens">Citizens</a>
+        <a href="#revolution" data-i18n="nav.features">Features</a>
+        <a href="#transfer" data-i18n="nav.transfer">Transfer</a>
+        <a href="#offline" data-i18n="nav.offline">Offline</a>
+        <a href="#get-ost" data-i18n="nav.getost">Get OST</a>
+        <a href="#my-wallet" data-i18n="nav.wallet">My Wallet</a>
+        <a href="#bridges" data-i18n="nav.bridges">Bridges</a>
+        <a href="#ai" data-i18n="nav.ai">AI &amp; Bots</a>
+        <a href="#creators" data-i18n="nav.build">Build</a>
+        <a href="#transparency" data-i18n="nav.verify">Verify</a>
+      </div>
+      <div class="nav-right">
+        <!-- Wallet Connect -->
+        <button class="wallet-btn" id="walletBtn" aria-label="Connect Wallet">
+          <span class="wallet-icon">&#128091;</span>
+          <span class="wallet-text" id="walletText" data-i18n="nav.connect">Connect Wallet</span>
+        </button>
+        <!-- Language Dropdown -->
+        <div class="lang-dropdown" id="langDropdown">
+          <button class="lang-trigger" id="langTrigger" aria-label="Language">
+            <span class="lang-globe">&#127760;</span>
+            <span class="lang-code" id="langCode">EN</span>
+          </button>
+          <div class="lang-list" id="langList">
+            <a href="#" data-lang="en" class="active">English</a>
+            <a href="#" data-lang="es">Espanol</a>
+            <a href="#" data-lang="zh">Chinese</a>
+            <a href="#" data-lang="ru">Russian</a>
+            <a href="#" data-lang="hi">Hindi</a>
+            <a href="#" data-lang="ar">Arabic</a>
+            <a href="#" data-lang="pt">Portuguese</a>
+            <a href="#" data-lang="fr">French</a>
+            <a href="#" data-lang="ja">Japanese</a>
+            <a href="#" data-lang="ko">Korean</a>
+            <a href="#" data-lang="tr">Turkish</a>
+          </div>
+        </div>
+        <button class="nav-toggle" id="navToggle" aria-label="Menu">&#9776;</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ================================================================== -->
+  <!-- 1. HOME - Realistic 3D Earth with Day/Night -->
+  <!-- ================================================================== -->
+  <section id="home" class="hero">
+    <canvas id="globeCanvas"></canvas>
+    <!-- Particle field background -->
+    <canvas id="particleCanvas" class="particle-canvas"></canvas>
+    <div class="hero-content">
+      <div class="hero-badge-row">
+        <span class="hero-live-badge"><span class="live-dot"></span> Live on Solana</span>
+        <span class="hero-era-badge">Est. 2025 &middot; Panama</span>
+      </div>
+      <p class="hero-tag" data-i18n="hero.tag">The Next Step After Bitcoin</p>
+      <h1 data-i18n="hero.title">The currency of <span class="gradient-text">Earth &amp; Space.</span></h1>
+      <p class="hero-sub" data-i18n="hero.sub">Private. Instant. Unstoppable. OST is decentralized digital cash and uncensored internet for 8 billion human beings &mdash; and eventually, beyond.</p>
+      <div class="hero-actions">
+        <a href="#revolution" class="btn btn-primary btn-glow btn-pulse" data-i18n="hero.cta1">Try the Pay Demo</a>
+        <a href="#get-ost" class="btn btn-outline" data-i18n="hero.cta2">Get OST Now</a>
+        <a href="#my-wallet" class="btn btn-outline">Create Wallet</a>
+      </div>
+      <div class="hero-stats">
+        <div class="stat"><span class="stat-num">0</span><span class="stat-label" data-i18n="hero.premine">Pre-mine</span></div>
+        <div class="stat-divider"></div>
+        <div class="stat"><span class="stat-num">&lt;0.4s</span><span class="stat-label" data-i18n="hero.settle">Settlement</span></div>
+        <div class="stat-divider"></div>
+        <div class="stat"><span class="stat-num">100%</span><span class="stat-label" data-i18n="hero.opensource">Open Source</span></div>
+        <div class="stat-divider"></div>
+        <div class="stat"><span class="stat-num">&infin;</span><span class="stat-label" data-i18n="hero.privacy">Privacy</span></div>
+      </div>
+      <!-- Live OST Price Ticker -->
+      <div class="hero-ticker" id="heroTicker">
+        <span class="ticker-label">OST Price:</span>
+        <span class="ticker-price" id="tickerPrice">Loading...</span>
+        <span class="ticker-change" id="tickerChange"></span>
+      </div>
+      <!-- Network Status -->
+      <div class="network-status" id="networkStatus" style="margin-top:12px;font-size:.78rem;color:var(--text-muted);text-align:center;">
+        <span id="networkDot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f59e0b;margin-right:6px;vertical-align:middle;"></span>
+        <span id="networkLabel">Devnet</span> &middot;
+        Program: <a href="https://explorer.solana.com/address/J2jiS296YWVie1Sopb4SxcM3aJnP9aAwe6aLDhCqvGXY?cluster=devnet" target="_blank" rel="noopener" id="programIdShort" style="font-family:monospace;color:#6d9fff;text-decoration:none;">J2ji...GXQY</a>
+      </div>
+      <!-- Knowledge Banner -->
+      <div class="knowledge-banner">
+        <div class="knowledge-item"><span class="knowledge-num" data-target="1400000000">0</span><span class="knowledge-label">Unbanked adults worldwide</span></div>
+        <div class="knowledge-divider"></div>
+        <div class="knowledge-item"><span class="knowledge-num" data-target="48000000000">0</span><span class="knowledge-label">$ lost to remittance fees/year</span></div>
+        <div class="knowledge-divider"></div>
+        <div class="knowledge-item"><span class="knowledge-num" data-target="2600000000">0</span><span class="knowledge-label">People without internet</span></div>
+      </div>
+    </div>
+    <div class="scroll-hint"><div class="scroll-mouse"><div class="scroll-dot"></div></div></div>
+  </section>
+
+  <!-- ================================================================== -->
+  <!-- 2. OUR STORY - Storytelling Timeline -->
+  <!-- ================================================================== -->
+  <section id="story" class="section section-space">
+    <div class="container">
+      <h2 class="section-title" data-i18n="story.title">Our Story</h2>
+      <p class="section-subtitle" data-i18n="story.sub">Not a whitepaper fantasy. Not a VC pitch. This is the real timeline of how OST was built &mdash; by one developer, from scratch, for everyone.</p>
+
+      <div class="story-timeline">
+        <div class="timeline-line"></div>
+
+        <div class="timeline-item timeline-left sr">
+          <div class="timeline-dot"></div>
+          <div class="timeline-card">
+            <img src="https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=600&h=340&fit=crop" alt="Bitcoin genesis" class="timeline-img" loading="lazy">
+            <div class="timeline-content">
+              <span class="timeline-year">2009</span>
+              <h3 data-i18n="story.t1.title">The Spark</h3>
+              <p data-i18n="story.t1.text">Bitcoin proved that people &mdash; not banks, not governments &mdash; could create money that crosses every border. The spark changed everything.</p>
+              <div class="timeline-stats">
+                <div class="tstat"><span class="tstat-num">$2T+</span><span class="tstat-label">Bitcoin market cap by 2024</span></div>
+                <div class="tstat"><span class="tstat-num">500M+</span><span class="tstat-label">Global crypto users</span></div>
+              </div>
+              <p class="timeline-detail">On January 3, 2009, Satoshi Nakamoto mined the genesis block with a hidden message from the London Times: &ldquo;Chancellor on brink of second bailout for banks.&rdquo; It was a declaration of independence from a broken financial system. Bitcoin showed the world that peer-to-peer digital value was possible &mdash; without middlemen, without borders, without permission. By 2024, the network had processed over $15 trillion in transactions. But Bitcoin had a fatal flaw: every transaction was public forever.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="timeline-item timeline-right sr">
+          <div class="timeline-dot"></div>
+          <div class="timeline-card">
+            <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop" alt="Global payments" class="timeline-img" loading="lazy">
+            <div class="timeline-content">
+              <span class="timeline-year">2015&ndash;2023</span>
+              <h3 data-i18n="story.t2.title">The Gap</h3>
+              <p data-i18n="story.t2.text">But Bitcoin was slow, expensive, and public. Billions still couldn't pay rent, buy groceries, or send money home without banks taking their cut.</p>
+              <div class="timeline-stats">
+                <div class="tstat"><span class="tstat-num">$48B</span><span class="tstat-label">Remittance fees lost per year</span></div>
+                <div class="tstat"><span class="tstat-num">1.4B</span><span class="tstat-label">Adults without a bank account</span></div>
+              </div>
+              <p class="timeline-detail">The World Bank reports the average cost to send $200 across borders is 6.2% &mdash; that's $48 billion drained from the world's poorest families every year. In Sub-Saharan Africa, fees average 7.9%. A worker in Dubai sending money home to Lagos loses a week's groceries in transfer fees alone. Bitcoin's 10-minute blocks, $2-50 fees, and fully public ledger made it useless for daily payments. Every chain that followed &mdash; Ethereum, Cardano, Avalanche &mdash; had the same problem: your balance is public. Your transactions are tracked. The gap between promise and reality was enormous.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="timeline-item timeline-left sr">
+          <div class="timeline-dot"></div>
+          <div class="timeline-card">
+            <img src="https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=600&h=340&fit=crop" alt="Zero knowledge cryptography" class="timeline-img" loading="lazy">
+            <div class="timeline-content">
+              <span class="timeline-year">2024</span>
+              <h3 data-i18n="story.t3.title">The Breakthrough</h3>
+              <p data-i18n="story.t3.text">Solana Token-2022 launched confidential transfers &mdash; zero-knowledge proofs that hide balances and amounts from the entire world. The missing piece.</p>
+              <div class="timeline-stats">
+                <div class="tstat"><span class="tstat-num">0.4s</span><span class="tstat-label">Solana finality time</span></div>
+                <div class="tstat"><span class="tstat-num">$0.0025</span><span class="tstat-label">Average transaction fee</span></div>
+              </div>
+              <p class="timeline-detail">Solana's Token-2022 program introduced ElGamal encryption and zero-knowledge range proofs at the protocol level. For the first time, a high-throughput blockchain could process confidential transactions &mdash; hiding sender, receiver, and amount &mdash; at 65,000 TPS with sub-second finality. The fee for a private transaction? Less than a third of a cent. This wasn't an academic paper. It was production-ready code deployed on mainnet. A developer in Mexico City saw this and started coding at 2 AM.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="timeline-item timeline-right sr">
+          <div class="timeline-dot"></div>
+          <div class="timeline-card">
+            <img src="https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=600&h=340&fit=crop" alt="Earth from space" class="timeline-img" loading="lazy">
+            <div class="timeline-content">
+              <span class="timeline-year">2025 &mdash; Present</span>
+              <h3 data-i18n="story.t4.title">OST Is Born</h3>
+              <p data-i18n="story.t4.text">One developer. Zero funding. Zero VC. A registered company in Panama. 22 smart contract instructions. Zero pre-mine. The real story.</p>
+              <div class="timeline-stats">
+                <div class="tstat"><span class="tstat-num">22</span><span class="tstat-label">On-chain instructions</span></div>
+                <div class="tstat"><span class="tstat-num">0</span><span class="tstat-label">Pre-mine or team allocation</span></div>
+              </div>
+              <p class="timeline-detail"><strong>The real numbers:</strong> OST was built by a single developer from Mexico, incorporated as a legal entity in Panama. No venture capital. No pre-mine. No insider allocations. The program was written in Rust using the Anchor framework &mdash; 22 instructions covering confidential_mint, confidential_transfer, dao_propose, dao_vote, satellite_fund, zk_tax_proof, auto_delegate, and more. The program binary is 572KB. Every instruction is open source. The 0.1% DAO fee is hardcoded and immutable &mdash; funding satellite infrastructure voted on by stakers. Program ID: <code>J2jiS296YWVie1Sopb4SxcM3aJnP9aAwe6aLDhCqvGXY</code>. Mint: <code>44R8tYQYza1EEuiAriYs5NHnbGBeX8tLPTdu3zH7wLsz</code>. Everything is verifiable on-chain right now.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="timeline-item timeline-left sr">
+          <div class="timeline-dot dot-glow"></div>
+          <div class="timeline-card">
+            <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=600&h=340&fit=crop" alt="Future city" class="timeline-img" loading="lazy">
+            <div class="timeline-content">
+              <span class="timeline-year" data-i18n="story.t5.year">2026&ndash;2030+</span>
+              <h3 data-i18n="story.t5.title">The Currency of Earth &amp; Space</h3>
+              <p data-i18n="story.t5.text">A world where every human &mdash; and every machine &mdash; transacts privately, instantly, without permission. Where satellites carry the internet and OST carries the value. From Earth to orbit.</p>
+              <div class="timeline-stats">
+                <div class="tstat"><span class="tstat-num">8B</span><span class="tstat-label">People on Earth</span></div>
+                <div class="tstat"><span class="tstat-num">&infin;</span><span class="tstat-label">No borders. Ever.</span></div>
+              </div>
+              <p class="timeline-detail">The endgame is not just a better payment app. It's the end of financial borders entirely. OST is designed to become the universal settlement layer &mdash; Earth-side for daily payments, space-side for satellite operations and eventual interplanetary commerce. Every 0.1% DAO fee funds the satellite constellation that brings uncensored internet to every corner of Earth, including the 2.6 billion still offline. When humanity builds bases on Mars and the Moon, they won't be using SWIFT or correspondent banking. They'll need a currency that works without Earth infrastructure &mdash; a currency like OST. This isn't a pitch. It's a plan. The code is written. The mission is funded by every transaction.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="manifesto" style="margin-top:64px;">
+        <p class="manifesto-lead" data-i18n="story.lead">We are building universal digital cash that belongs to no country and serves every citizen. One developer started this. Eight billion will finish it.</p>
+        <p class="manifesto-closing" data-i18n="story.closing">Welcome to OST. Welcome home.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================== -->
+  <!-- 2B. DECENTRALIZATION - Currency + Internet -->
+  <!-- ================================================================== -->
+  <section id="decentralization" class="section section-alt section-space">
+    <div class="container">
+      <h2 class="section-title">The Decentralization Thesis</h2>
+      <p class="section-subtitle">Governments are seizing control of money and the internet. We're building the alternative they can't shut down.</p>
+
+      <div class="decentral-grid">
+        <div class="decentral-card decentral-money sr">
+          <div class="decentral-visual">
+            <img src="https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=600&h=300&fit=crop" alt="Decentralized finance" class="decentral-img" loading="lazy">
+            <div class="decentral-badge">&#128176; Currency</div>
+          </div>
+          <h3>Decentralize Money</h3>
+          <p class="decentral-lead">For 5,000 years, governments controlled money. Printing it when convenient, devaluing it when desperate. Central banks in 2023 held $28.5 trillion in reserves while 1.4 billion adults had no bank account at all.</p>
+          <div class="decentral-timeline-mini">
+            <div class="dt-step"><span class="dt-year">3000 BC</span><span class="dt-text">Sumer invents coined money under state control</span></div>
+            <div class="dt-step"><span class="dt-year">1971</span><span class="dt-text">Nixon ends the gold standard &mdash; money is now faith alone</span></div>
+            <div class="dt-step"><span class="dt-year">2008</span><span class="dt-text">Banks collapse. Governments print $4.5T to bail them out</span></div>
+            <div class="dt-step"><span class="dt-year">2009</span><span class="dt-text">Bitcoin: the first money no government controls</span></div>
+            <div class="dt-step dt-step-ost"><span class="dt-year">2025</span><span class="dt-text">OST: private, instant money for 8 billion citizens</span></div>
+          </div>
+          <div class="decentral-stats">
+            <div class="ds"><span class="ds-num">$28.5T</span><span class="ds-label">Central bank reserves</span></div>
+            <div class="ds"><span class="ds-num">1,400%</span><span class="ds-label">USD inflation since 1971</span></div>
+            <div class="ds"><span class="ds-num">0</span><span class="ds-label">OST controlled by any entity</span></div>
+          </div>
+          <p class="decentral-quote">&ldquo;Give me control of a nation's money supply, and I care not who makes its laws.&rdquo; &mdash; Mayer Amschel Rothschild</p>
+        </div>
+
+        <div class="decentral-card decentral-internet sr">
+          <div class="decentral-visual">
+            <img src="https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=600&h=300&fit=crop" alt="Internet infrastructure" class="decentral-img" loading="lazy">
+            <div class="decentral-badge">&#127760; Internet</div>
+          </div>
+          <h3>Decentralize the Internet</h3>
+          <p class="decentral-lead">The internet was born decentralized &mdash; packets routing freely between universities. Then corporations captured it, and governments learned they could switch it off. Today, billions of people see only what their government allows.</p>
+          <div class="decentral-timeline-mini">
+            <div class="dt-step"><span class="dt-year">1969</span><span class="dt-text">ARPANET: 4 nodes, no central authority</span></div>
+            <div class="dt-step"><span class="dt-year">1991</span><span class="dt-text">Tim Berners-Lee: &ldquo;This is for everyone&rdquo;</span></div>
+            <div class="dt-step"><span class="dt-year">2010s</span><span class="dt-text">5 Big Tech companies capture 72% of web traffic</span></div>
+            <div class="dt-step"><span class="dt-year">2024</span><span class="dt-text">55 countries shut down or censored internet</span></div>
+            <div class="dt-step dt-step-ost"><span class="dt-year">2025</span><span class="dt-text">OST funds satellite internet for the unconnected</span></div>
+          </div>
+          <div class="decentral-stats">
+            <div class="ds"><span class="ds-num">2.6B</span><span class="ds-label">People without internet</span></div>
+            <div class="ds"><span class="ds-num">55+</span><span class="ds-label">Countries censored internet in 2024</span></div>
+            <div class="ds"><span class="ds-num">0.1%</span><span class="ds-label">OST DAO fee funds satellites</span></div>
+          </div>
+          <p class="decentral-quote">&ldquo;The internet treats censorship as damage and routes around it.&rdquo; &mdash; John Gilmore</p>
+        </div>
+      </div>
+
+      <!-- REAL CENSORSHIP EXAMPLES -->
+      <div class="censorship-real" style="margin-top:48px;">
+        <h3 style="text-align:center;font-size:1.5rem;margin-bottom:8px;">&#128683; Internet Censorship Is Happening Now</h3>
+        <p class="text-muted" style="text-align:center;margin-bottom:28px;">These are not hypotheticals. These are real events from the last 24 months.</p>
+        <div class="censorship-grid">
+          <div class="censorship-case sr">
+            <div class="cc-flag">&#127466;&#127482;</div>
+            <h4>European Union &mdash; Content Regulation</h4>
+            <p>The EU Digital Services Act (2024) requires platforms to remove &ldquo;illegal content&rdquo; within hours &mdash; but the definition varies by country. France and Germany demand removal of political speech that is legal in other EU states. Content that's legal in Portugal gets censored in Poland. <strong>A European citizen in Spain cannot freely access content legal 500km away.</strong> Decentralized networks have no single chokepoint to enforce this.</p>
+            <div class="cc-source">Source: EU Digital Services Act, Regulation 2022/2065</div>
+          </div>
+          <div class="censorship-case sr">
+            <div class="cc-flag">&#127479;&#127482;</div>
+            <h4>Russia &mdash; Full Information Lockdown</h4>
+            <p>Since 2022, Russia blocked Twitter, Facebook, Instagram, and all independent news outlets. VPN usage skyrocketed but the government fined ISPs $50K+ for not blocking them. Sovereign internet law (RuNet) routes all traffic through government nodes. <strong>145 million people see only state-approved information.</strong></p>
+            <div class="cc-source">Source: Freedom House &ldquo;Freedom on the Net 2024&rdquo;</div>
+          </div>
+          <div class="censorship-case sr">
+            <div class="cc-flag">&#127470;&#127479;</div>
+            <h4>Iran &mdash; Complete Internet Shutdowns</h4>
+            <p>During the 2022&ndash;2023 Mahsa Amini protests, Iran killed internet access for 80+ million people for weeks. Authorities detected and blocked Tor, Signal, and most VPNs. Bank accounts of protesters were frozen instantly. <strong>No internet = no protest, no evidence, no money.</strong></p>
+            <div class="cc-source">Source: NetBlocks, OONI Explorer</div>
+          </div>
+          <div class="censorship-case sr">
+            <div class="cc-flag">&#127464;&#127475;</div>
+            <h4>China &mdash; The Great Firewall</h4>
+            <p>1.4 billion people cannot access Google, YouTube, Wikipedia, WhatsApp, or any Western social media. The Great Firewall uses deep packet inspection to detect and kill VPN connections. WeChat messages are surveilled, and activists face real-time tracking. <strong>The most sophisticated censorship machine ever built.</strong></p>
+            <div class="cc-source">Source: Citizen Lab, University of Toronto</div>
+          </div>
+          <div class="censorship-case sr">
+            <div class="cc-flag">&#127470;&#127475;</div>
+            <h4>India &mdash; Kashmir Blackout</h4>
+            <p>India imposed the longest-ever democracy internet shutdown in Kashmir &mdash; 552 days without full connectivity (2019&ndash;2021). In 2023, India led the world with 116 internet shutdowns in a single year, affecting hundreds of millions of people during elections and protests.</p>
+            <div class="cc-source">Source: Access Now &ldquo;#KeepItOn&rdquo; Report 2024</div>
+          </div>
+          <div class="censorship-case sr">
+            <div class="cc-flag">&#127474;&#127474;</div>
+            <h4>Myanmar &mdash; Military Junta Control</h4>
+            <p>After the 2021 coup, Myanmar's military junta throttled internet to near-zero, banned VPNs, and arrested journalists. Mobile data was cut entirely in conflict zones. 54 million people lost access to uncensored news. <strong>OST's offline payment system was designed for exactly this scenario.</strong></p>
+            <div class="cc-source">Source: Reporters Without Borders, IODA</div>
+          </div>
+        </div>
+        <div style="text-align:center;margin-top:32px;padding:24px;background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);">
+          <p style="font-size:1.1rem;font-weight:600;margin-bottom:8px;">OST's answer: Satellite-backed, decentralized internet + offline-capable payments.</p>
+          <p class="text-muted" style="font-size:.9rem;">0.1% of every OST transaction funds low-earth orbit satellite infrastructure &mdash; giving anyone, anywhere, uncensored internet access that no government can switch off. Your money works offline via NFC and Bluetooth. When every other system fails, OST still works.</p>
+        </div>
+      </div>
+
+      <div class="decentral-manifesto">
+        <div class="decentral-icon-row">
+          <div class="decentral-orb"><div class="decentral-orb-ring"></div>&#128274;</div>
+          <div class="decentral-orb"><div class="decentral-orb-ring"></div>&#127760;</div>
+          <div class="decentral-orb"><div class="decentral-orb-ring"></div>&#128752;</div>
+        </div>
+        <h3>The Three Pillars of OST</h3>
+        <div class="decentral-pillars">
+          <div class="pillar"><h4>Financial Sovereignty</h4><p>No bank, government, or corporation can freeze your OST. Your keys, your money. Zero-knowledge proofs make every transaction invisible to the world.</p></div>
+          <div class="pillar"><h4>Uncensored Internet</h4><p>OST funds satellite infrastructure so that anyone &mdash; from a student in Tehran to a journalist in Myanmar &mdash; can access the internet without government permission. No filters. No kill switches. No censorship.</p></div>
+          <div class="pillar"><h4>Universal Access</h4><p>0.1% of every transaction funds the satellite constellation. Low-earth orbit satellites bring internet + financial access to 2.6 billion people currently offline. When you use OST, you extend the network to someone who needs it.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================== -->
+  <!-- 3. FOR EVERY CITIZEN -->
+  <!-- ================================================================== -->
+  <section id="citizens" class="section section-alt section-space">
+    <div class="container">
+      <h2 class="section-title" data-i18n="citizens.title">For Every Citizen</h2>
+      <p class="section-subtitle" data-i18n="citizens.sub">No borders. No exceptions. One humanity, one money.</p>
+      <div class="citizen-grid">
+        <div class="citizen-card culture-china sr" data-country="china" data-lat="35.86" data-lng="104.19"><div class="culture-bar"></div><img src="https://images.unsplash.com/photo-1547981609-4b6bfe67ca0b?w=400&h=200&fit=crop" alt="Great Wall of China" class="citizen-img" loading="lazy"><div class="citizen-body"><div class="citizen-flag">&#127464;&#127475;</div><h3>China</h3><p class="culture-tagline">Ancient tradition meets digital innovation</p><p>From the Silk Road to the blockchain - 5,000 years of trade meets private digital cash. 1.4 billion people, $17.7T GDP, and the world's largest mobile payments market.</p><div class="citizen-stat-row"><span class="citizen-stat">&#128178; $17.7T GDP</span><span class="citizen-stat">&#128241; 900M mobile pay users</span></div><div class="culture-symbols">&#127982; &#128009; &#9961;&#65039;</div><button class="btn-map" aria-label="View China on map">&#127758; Explore Map</button></div></div>
+        <div class="citizen-card culture-india sr" data-country="india" data-lat="20.59" data-lng="78.96"><div class="culture-bar"></div><img src="https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=400&h=200&fit=crop" alt="Taj Mahal India" class="citizen-img" loading="lazy"><div class="citizen-body"><div class="citizen-flag">&#127470;&#127475;</div><h3>India</h3><p class="culture-tagline">A billion dreams, one borderless currency</p><p>Affordable remittances and private savings for 1.4 billion people. India receives $125B in remittances yearly - more than any country on Earth. UPI processes 10B+ transactions monthly.</p><div class="citizen-stat-row"><span class="citizen-stat">&#128176; $125B remittances/yr</span><span class="citizen-stat">&#128200; 10B+ UPI txns/mo</span></div><div class="culture-symbols">&#129463; &#9757;&#65039; &#127878;</div><button class="btn-map" aria-label="View India on map">&#127758; Explore Map</button></div></div>
+        <div class="citizen-card culture-nigeria sr" data-country="nigeria" data-lat="9.08" data-lng="8.67"><div class="culture-bar"></div><img src="https://images.unsplash.com/photo-1618828665011-0abd973f7bb8?w=400&h=200&fit=crop" alt="Lagos Nigeria" class="citizen-img" loading="lazy"><div class="citizen-body"><div class="citizen-flag">&#127475;&#127468;</div><h3>Nigeria</h3><p class="culture-tagline">Leading Africa's financial revolution</p><p>Lagos to London in milliseconds, not days. Nigeria has the highest crypto adoption rate in Africa. 60% of the population is unbanked - but 80% have mobile phones.</p><div class="citizen-stat-row"><span class="citizen-stat">&#128241; 80% have phones</span><span class="citizen-stat">&#128181; 7.9% avg remit fee</span></div><div class="culture-symbols">&#129345; &#127796; &#9994;</div><button class="btn-map" aria-label="View Nigeria on map">&#127758; Explore Map</button></div></div>
+        <div class="citizen-card culture-brazil sr" data-country="brazil" data-lat="-14.23" data-lng="-51.92"><div class="culture-bar"></div><img src="https://images.unsplash.com/photo-1483729558449-99ef09a8c325?w=400&h=200&fit=crop" alt="Rio de Janeiro Brazil" class="citizen-img" loading="lazy"><div class="citizen-body"><div class="citizen-flag">&#127463;&#127479;</div><h3>Brazil</h3><p class="culture-tagline">From the Amazon to the blockchain</p><p>A nation that invented Pix deserves private instant payments. Pix revolutionized finance for 150M users - OST adds privacy and cross-border capability.</p><div class="citizen-stat-row"><span class="citizen-stat">&#9889; 150M Pix users</span><span class="citizen-stat">&#127758; 5th largest population</span></div><div class="culture-symbols">&#9749; &#127926; &#127807;</div><button class="btn-map" aria-label="View Brazil on map">&#127758; Explore Map</button></div></div>
+        <div class="citizen-card culture-mexico sr" data-country="mexico" data-lat="23.63" data-lng="-102.55"><div class="culture-bar"></div><img src="https://images.unsplash.com/photo-1518638150340-f706e86654de?w=400&h=200&fit=crop" alt="Mexico City" class="citizen-img" loading="lazy"><div class="citizen-body"><div class="citizen-flag">&#127474;&#127485;</div><h3>Mexico</h3><p class="culture-tagline">Bridging two continents</p><p>Remittances shouldn't take 3 days and 8% fees. Mexico receives $63B annually from workers abroad - OST makes it instant and nearly free.</p><div class="citizen-stat-row"><span class="citizen-stat">&#128176; $63B remittances/yr</span><span class="citizen-stat">&#128181; 3-8% lost to fees</span></div><div class="culture-symbols">&#127790; &#127928; &#129413;</div><button class="btn-map" aria-label="View Mexico on map">&#127758; Explore Map</button></div></div>
+        <div class="citizen-card culture-russia sr" data-country="russia" data-lat="61.52" data-lng="105.31"><div class="culture-bar"></div><img src="https://images.unsplash.com/photo-1513326738677-b964603b136d?w=400&h=200&fit=crop" alt="Moscow Russia" class="citizen-img" loading="lazy"><div class="citizen-body"><div class="citizen-flag">&#127479;&#127482;</div><h3>Russia</h3><p class="culture-tagline">From Moscow to the digital frontier</p><p>When banking fails you, you innovate. Russia spans 11 time zones - 146 million people who understand that financial sovereignty matters more than any institution.</p><div class="citizen-stat-row"><span class="citizen-stat">&#127759; 11 time zones</span><span class="citizen-stat">&#128187; 12% crypto adoption</span></div><div class="culture-symbols">&#127956;&#65039; &#127917; &#10052;&#65039;</div><button class="btn-map" aria-label="View Russia on map">&#127758; Explore Map</button></div></div>
+        <div class="citizen-card culture-iran sr" data-country="iran" data-lat="32.42" data-lng="53.68"><div class="culture-bar"></div><img src="https://images.unsplash.com/photo-1565711561500-49678a10a63f?w=400&h=200&fit=crop" alt="Isfahan Iran" class="citizen-img" loading="lazy"><div class="citizen-body"><div class="citizen-flag">&#127470;&#127479;</div><h3>Iran</h3><p class="culture-tagline">Ancient Persia, digital future</p><p>The cradle of civilization doesn't need permission to trade. 85 million people cut off from SWIFT deserve the same financial access as everyone else.</p><div class="citizen-stat-row"><span class="citizen-stat">&#127963;&#65039; 7,000 yrs of trade</span><span class="citizen-stat">&#128274; SWIFT excluded</span></div><div class="culture-symbols">&#127801; &#128220; &#128332;</div><button class="btn-map" aria-label="View Iran on map">&#127758; Explore Map</button></div></div>
+        <div class="citizen-card culture-indonesia sr" data-country="indonesia" data-lat="-0.78" data-lng="113.92"><div class="culture-bar"></div><img src="https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=400&h=200&fit=crop" alt="Bali Indonesia" class="citizen-img" loading="lazy"><div class="citizen-body"><div class="citizen-flag">&#127470;&#127465;</div><h3>Indonesia</h3><p class="culture-tagline">17,000 islands, one currency</p><p>Digital cash that works offline. Island to island, neighbor to neighbor. 270 million people across an archipelago where many islands lack banking infrastructure.</p><div class="citizen-stat-row"><span class="citizen-stat">&#127965;&#65039; 17,000 islands</span><span class="citizen-stat">&#128178; 51% unbanked</span></div><div class="culture-symbols">&#127802; &#127965;&#65039; &#127917;</div><button class="btn-map" aria-label="View Indonesia on map">&#127758; Explore Map</button></div></div>
+        <div class="citizen-card culture-turkey sr" data-country="turkey" data-lat="38.96" data-lng="35.24"><div class="culture-bar"></div><img src="https://images.unsplash.com/photo-1541432901042-2d8bd64b4a9b?w=400&h=200&fit=crop" alt="Istanbul Turkey" class="citizen-img" loading="lazy"><div class="citizen-body"><div class="citizen-flag">&#127481;&#127479;</div><h3>Turkey</h3><p class="culture-tagline">Where East meets West</p><p>Istanbul bridged continents for millennia. With lira inflation above 60% in 2023, Turkey has the highest per-capita crypto ownership in the region.</p><div class="citizen-stat-row"><span class="citizen-stat">&#128200; 60%+ inflation</span><span class="citizen-stat">&#128178; 16% own crypto</span></div><div class="culture-symbols">&#128332; &#129535; &#127769;</div><button class="btn-map" aria-label="View Turkey on map">&#127758; Explore Map</button></div></div>
+        <div class="citizen-card culture-egypt sr" data-country="egypt" data-lat="26.82" data-lng="30.80"><div class="culture-bar"></div><img src="https://images.unsplash.com/photo-1539768942893-daf53e736b68?w=400&h=200&fit=crop" alt="Pyramids Egypt" class="citizen-img" loading="lazy"><div class="citizen-body"><div class="citizen-flag">&#127466;&#127468;</div><h3>Egypt</h3><p class="culture-tagline">Civilization renewed</p><p>Builders of the pyramids built for eternity. 105 million people - and one of the fastest-growing crypto adoption rates in MENA. OST builds financial sovereignty.</p><div class="citizen-stat-row"><span class="citizen-stat">&#127963;&#65039; 5,000 yr civilization</span><span class="citizen-stat">&#128200; 3x crypto growth</span></div><div class="culture-symbols">&#127963;&#65039; &#9728;&#65039; &#128043;</div><button class="btn-map" aria-label="View Egypt on map">&#127758; Explore Map</button></div></div>
+        <div class="citizen-card culture-japan sr" data-country="japan" data-lat="36.20" data-lng="138.25"><div class="culture-bar"></div><img src="https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=400&h=200&fit=crop" alt="Tokyo Japan" class="citizen-img" loading="lazy"><div class="citizen-body"><div class="citizen-flag">&#127471;&#127477;</div><h3>Japan</h3><p class="culture-tagline">Precision meets privacy</p><p>Digital culture gets the digital cash it deserves. Japan was the first country to legally recognize Bitcoin. 125 million people, $4.9T GDP, and a deep respect for privacy.</p><div class="citizen-stat-row"><span class="citizen-stat">&#128241; 1st to legalize BTC</span><span class="citizen-stat">&#128176; $4.9T GDP</span></div><div class="culture-symbols">&#128510; &#127800; &#9961;&#65039;</div><button class="btn-map" aria-label="View Japan on map">&#127758; Explore Map</button></div></div>
+        <div class="citizen-card culture-kenya sr" data-country="kenya" data-lat="-0.02" data-lng="37.90"><div class="culture-bar"></div><img src="https://images.unsplash.com/photo-1489392191049-fc10c97e64b6?w=400&h=200&fit=crop" alt="Kenya landscape" class="citizen-img" loading="lazy"><div class="citizen-body"><div class="citizen-flag">&#127472;&#127466;</div><h3>Kenya</h3><p class="culture-tagline">Mobile money reborn</p><p>Kenya invented M-Pesa and proved that phones can replace banks. 33 million M-Pesa users process $30B annually. OST is the next evolution - private, borderless, yours.</p><div class="citizen-stat-row"><span class="citizen-stat">&#128241; 33M M-Pesa users</span><span class="citizen-stat">&#128178; $30B annual volume</span></div><div class="culture-symbols">&#129409; &#127757; &#128241;</div><button class="btn-map" aria-label="View Kenya on map">&#127758; Explore Map</button></div></div>
+      </div>
+
+      <!-- Country Map Modal -->
+      <div class="map-modal" id="mapModal">
+        <div class="map-modal-overlay" id="mapModalOverlay"></div>
+        <div class="map-modal-content">
+          <button class="map-modal-close" id="mapModalClose">&times;</button>
+          <h3 id="mapModalTitle">Country</h3>
+          <div class="map-modal-body">
+            <iframe id="mapModalFrame" width="100%" height="400" style="border:0; border-radius:12px;" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade" src=""></iframe>
+          </div>
+          <p class="map-modal-sub">OST works everywhere. No borders, no exceptions.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================== -->
+  <!-- 4. FEATURES + PAY DEMO (Real Products) -->
+  <!-- ================================================================== -->
+  <section id="revolution" class="section section-space">
+    <div class="container">
+      <h2 class="section-title" data-i18n="features.title">The Revolutionary Next Step</h2>
+      <p class="section-subtitle" data-i18n="features.sub">Not just another token. A complete financial system for real life.</p>
+
+      <div class="features-grid">
+        <div class="feature-card glow-card sr">
+          <div class="feature-icon">&#128274;</div>
+          <h3 data-i18n="features.f1.title">Confidential Transfers</h3>
+          <p data-i18n="features.f1.text">Zero-knowledge proofs hide your balance and every transaction.</p>
+          <div class="feature-detail">
+            <img src="https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=400&h=180&fit=crop" alt="Encryption" class="feature-img" loading="lazy">
+            <ul class="feature-bullets">
+              <li>ElGamal encryption on all balances</li>
+              <li>Bulletproofs-style range proofs</li>
+              <li>Sender, receiver &amp; amount hidden</li>
+              <li>Verifiable without revealing data</li>
+            </ul>
+            <div class="feature-compare"><span class="compare-bad">Bitcoin: Fully public ledger</span><span class="compare-good">OST: Fully private by default</span></div>
+          </div>
+        </div>
+        <div class="feature-card glow-card sr">
+          <div class="feature-icon">&#9889;</div>
+          <h3 data-i18n="features.f2.title">Sub-Second Settlement</h3>
+          <p data-i18n="features.f2.text">400ms on Solana. Faster than tapping your card.</p>
+          <div class="feature-detail">
+            <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400&h=180&fit=crop" alt="Speed" class="feature-img" loading="lazy">
+            <ul class="feature-bullets">
+              <li>Solana: 65,000 TPS capacity</li>
+              <li>Average fee: $0.0025</li>
+              <li>Block time: 400ms</li>
+              <li>99.9% uptime since 2024</li>
+            </ul>
+            <div class="feature-compare"><span class="compare-bad">Visa: 1,700 TPS, 2-3 day settle</span><span class="compare-good">OST: 65,000 TPS, 0.4s settle</span></div>
+          </div>
+        </div>
+        <div class="feature-card glow-card sr">
+          <div class="feature-icon">&#127757;</div>
+          <h3 data-i18n="features.f3.title">Any-to-OST Bridge</h3>
+          <p data-i18n="features.f3.text">Bitcoin, Ethereum, USDC, bank transfers - everything converts.</p>
+          <div class="feature-detail">
+            <img src="https://images.unsplash.com/photo-1620321023374-d1a68fbc720d?w=400&h=180&fit=crop" alt="Bridge" class="feature-img" loading="lazy">
+            <ul class="feature-bullets">
+              <li>Wormhole cross-chain bridge</li>
+              <li>Jupiter DEX aggregator</li>
+              <li>15+ fiat on-ramps</li>
+              <li>100+ countries supported</li>
+            </ul>
+            <div class="feature-compare"><span class="compare-bad">Banks: 3-5 days, $25-50 fee</span><span class="compare-good">OST: Instant, &lt;$0.01 fee</span></div>
+          </div>
+        </div>
+        <div class="feature-card glow-card sr">
+          <div class="feature-icon">&#127963;&#65039;</div>
+          <h3 data-i18n="features.f4.title">DAO Treasury</h3>
+          <p data-i18n="features.f4.text">0.1% fee funds satellite infrastructure. Voted on-chain by stakers.</p>
+          <div class="feature-detail">
+            <img src="https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=400&h=180&fit=crop" alt="Satellite" class="feature-img" loading="lazy">
+            <ul class="feature-bullets">
+              <li>On-chain proposal &amp; voting system</li>
+              <li>Public treasury wallet</li>
+              <li>Satellite internet for 2.6B without access</li>
+              <li>Every disbursement auditable</li>
+            </ul>
+            <div class="feature-compare"><span class="compare-bad">Charity: 30-70% overhead</span><span class="compare-good">OST DAO: 100% on-chain</span></div>
+          </div>
+        </div>
+        <div class="feature-card glow-card sr">
+          <div class="feature-icon">&#128225;</div>
+          <h3 data-i18n="features.f5.title">Offline Payments</h3>
+          <p data-i18n="features.f5.text">NFC, QR, Bluetooth. Pay without internet.</p>
+          <div class="feature-detail">
+            <img src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&h=180&fit=crop" alt="Payment" class="feature-img" loading="lazy">
+            <ul class="feature-bullets">
+              <li>Pre-signed transaction bundles</li>
+              <li>Sync when connectivity returns</li>
+              <li>Works in airplane mode</li>
+              <li>30-foot BLE range</li>
+            </ul>
+            <div class="feature-compare"><span class="compare-bad">Mobile money: Requires cell signal</span><span class="compare-good">OST: Works fully offline</span></div>
+          </div>
+        </div>
+        <div class="feature-card glow-card sr">
+          <div class="feature-icon">&#128737;&#65039;</div>
+          <h3 data-i18n="features.f6.title">ZK Tax Compliance</h3>
+          <p data-i18n="features.f6.text">Prove taxes without revealing your balance.</p>
+          <div class="feature-detail">
+            <img src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400&h=180&fit=crop" alt="Compliance" class="feature-img" loading="lazy">
+            <ul class="feature-bullets">
+              <li>Prove &ldquo;I paid X in taxes&rdquo; without exposing balance</li>
+              <li>Selective disclosure to auditors</li>
+              <li>Compatible with IRS, HMRC, SAT</li>
+              <li>Privacy-preserving compliance</li>
+            </ul>
+            <div class="feature-compare"><span class="compare-bad">Banks: Report everything</span><span class="compare-good">OST: Prove only what's needed</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAY DEMO - Real-World Products -->
+      <div class="pay-demo" id="pay-demo">
+        <h3 data-i18n="pay.title">Shop with OST - Real Prices</h3>
+        <p class="pay-demo-sub" data-i18n="pay.sub">Real products, real world prices. See what private payments feel like.</p>
+
+        <div class="store-products" id="storeProducts">
+          <div class="store-item" data-price="6.45" data-name="Starbucks Caramel Macchiato" data-link="https://www.starbucks.com/menu/drinks/espresso-drinks/caramel-macchiato">
+            <img class="item-img" src="https://globalassets.starbucks.com/digitalassets/products/bev/SBX20190617_CaffeMocha.jpg" alt="Starbucks Coffee" loading="lazy">
+            <div class="item-details"><span class="item-name">Caramel Macchiato</span><span class="item-source">Starbucks <a href="https://www.starbucks.com" target="_blank" rel="noopener" class="item-link">starbucks.com</a></span><span class="item-price"><span class="item-usd">$6.45</span> &middot; <span class="item-ost">-- OST</span></span></div>
+            <button class="btn-add" aria-label="Add">+</button>
+          </div>
+          <div class="store-item" data-price="12.49" data-name="Taco Bell Cravings Box" data-link="https://www.tacobell.com/food">
+            <img class="item-img" src="https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=120&h=120&fit=crop&q=80" alt="Tacos" loading="lazy">
+            <div class="item-details"><span class="item-name">Cravings Box</span><span class="item-source">Taco Bell <a href="https://www.tacobell.com" target="_blank" rel="noopener" class="item-link">tacobell.com</a></span><span class="item-price"><span class="item-usd">$12.49</span> &middot; <span class="item-ost">-- OST</span></span></div>
+            <button class="btn-add" aria-label="Add">+</button>
+          </div>
+          <div class="store-item" data-price="185.00" data-name="Nike Air Max 90" data-link="https://www.nike.com/w/air-max-90-shoes-aalde6zy7ok">
+            <img class="item-img" src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=120&h=120&fit=crop&q=80" alt="Nike Shoes" loading="lazy">
+            <div class="item-details"><span class="item-name">Air Max 90</span><span class="item-source">Nike <a href="https://www.nike.com" target="_blank" rel="noopener" class="item-link">nike.com</a></span><span class="item-price"><span class="item-usd">$185.00</span> &middot; <span class="item-ost">-- OST</span></span></div>
+            <button class="btn-add" aria-label="Add">+</button>
+          </div>
+          <div class="store-item" data-price="398.00" data-name="Delta Airlines Round Trip" data-link="https://www.delta.com">
+            <img class="item-img" src="https://images.unsplash.com/photo-1436491865332-7a61a109db05?w=120&h=120&fit=crop&q=80" alt="Airplane Ticket" loading="lazy">
+            <div class="item-details"><span class="item-name">Round Trip Ticket</span><span class="item-source">Delta Airlines <a href="https://www.delta.com" target="_blank" rel="noopener" class="item-link">delta.com</a></span><span class="item-price"><span class="item-usd">$398.00</span> &middot; <span class="item-ost">-- OST</span></span></div>
+            <button class="btn-add" aria-label="Add">+</button>
+          </div>
+          <div class="store-item" data-price="999.00" data-name="iPhone 16 Pro" data-link="https://www.apple.com/iphone-16-pro/">
+            <img class="item-img" src="https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=120&h=120&fit=crop&q=80" alt="iPhone" loading="lazy">
+            <div class="item-details"><span class="item-name">iPhone 16 Pro</span><span class="item-source">Apple <a href="https://www.apple.com" target="_blank" rel="noopener" class="item-link">apple.com</a></span><span class="item-price"><span class="item-usd">$999</span> &middot; <span class="item-ost">-- OST</span></span></div>
+            <button class="btn-add" aria-label="Add">+</button>
+          </div>
+          <div class="store-item" data-price="1299.00" data-name="MacBook Air M3" data-link="https://www.apple.com/macbook-air/">
+            <img class="item-img" src="https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=120&h=120&fit=crop&q=80" alt="MacBook Air" loading="lazy">
+            <div class="item-details"><span class="item-name">MacBook Air M3</span><span class="item-source">Apple <a href="https://www.apple.com" target="_blank" rel="noopener" class="item-link">apple.com</a></span><span class="item-price"><span class="item-usd">$1,299</span> &middot; <span class="item-ost">-- OST</span></span></div>
+            <button class="btn-add" aria-label="Add">+</button>
+          </div>
+          <div class="store-item" data-price="14.99" data-name="Netflix Standard" data-link="https://www.netflix.com">
+            <img class="item-img" src="https://images.unsplash.com/photo-1574375927938-d5a98e8d7e28?w=120&h=120&fit=crop&q=80" alt="Netflix" loading="lazy">
+            <div class="item-details"><span class="item-name">Netflix Standard</span><span class="item-source">Netflix <a href="https://www.netflix.com" target="_blank" rel="noopener" class="item-link">netflix.com</a></span><span class="item-price"><span class="item-usd">$14.99</span> &middot; <span class="item-ost">-- OST</span></span></div>
+            <button class="btn-add" aria-label="Add">+</button>
+          </div>
+          <div class="store-item" data-price="499.99" data-name="PS5 Console" data-link="https://direct.playstation.com/en-us/buy-consoles/ps5-console">
+            <img class="item-img" src="https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=120&h=120&fit=crop&q=80" alt="PS5" loading="lazy">
+            <div class="item-details"><span class="item-name">PS5 Console</span><span class="item-source">Sony <a href="https://direct.playstation.com" target="_blank" rel="noopener" class="item-link">playstation.com</a></span><span class="item-price"><span class="item-usd">$499.99</span> &middot; <span class="item-ost">-- OST</span></span></div>
+            <button class="btn-add" aria-label="Add">+</button>
+          </div>
+        </div>
+
+        <div class="store-cart" id="storeCart">
+          <div class="cart-header"><span class="cart-icon">&#128717;&#65039;</span><span class="cart-title" data-i18n="pay.cart">Your Cart</span><span class="cart-badge" id="cartBadge">0</span></div>
+          <div class="cart-items" id="cartItems"><p class="cart-empty" data-i18n="pay.empty">Tap + to add items</p></div>
+          <div class="cart-footer">
+            <div class="cart-total"><span>Total</span><span class="cart-total-amount" id="cartTotal">$0.00 - 0 OST</span></div>
+            <button class="btn btn-primary btn-pay" id="payBtn" disabled><span class="pay-icon">&#9673;</span> <span data-i18n="pay.paybtn">Pay with OST</span></button>
+          </div>
+        </div>
+
+        <div class="pay-overlay" id="payOverlay">
+          <div class="pay-progress">
+            <div class="pay-step" data-step="1"><div class="step-ring"><div class="step-check">&#128274;</div></div><span data-i18n="pay.s1">Connecting wallet</span><div class="step-detail" id="payWalletAddr"></div></div>
+            <div class="pay-connector"></div>
+            <div class="pay-step" data-step="2"><div class="step-ring"><div class="step-check">&#129518;</div></div><span data-i18n="pay.s2">Generating ZK proof</span><div class="step-detail step-hex" id="payZKHex"></div></div>
+            <div class="pay-connector"></div>
+            <div class="pay-step" data-step="3"><div class="step-ring"><div class="step-check">&#128225;</div></div><span data-i18n="pay.s3">Broadcasting to Solana</span><div class="step-detail" id="paySlot"></div></div>
+            <div class="pay-connector"></div>
+            <div class="pay-step" data-step="4"><div class="step-ring"><div class="step-check">&#9989;</div></div><span id="payConfirmText" data-i18n="pay.s4">Confirmed</span><div class="step-detail" id="payTiming"></div></div>
+          </div>
+          <div class="pay-receipt" id="payReceipt">
+            <div class="receipt-emoji">&#127881;</div>
+            <p class="receipt-text" data-i18n="pay.done">Payment Complete - Fully Private</p>
+            <p class="receipt-sub" data-i18n="pay.donesub">No one on Earth saw this transaction.</p>
+            <div class="receipt-details" id="receiptDetails"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAY ANYWHERE — Browse & Pay Like a Browser -->
+      <div class="pay-anywhere" id="payAnywhere">
+        <h3 data-i18n="pay.anywhere">&#127760; Pay Anywhere with OST &mdash; Even Where They Don't Accept It</h3>
+        <p class="pay-anywhere-sub" data-i18n="pay.anywheresub">The problem: 99% of websites don't accept OST (yet). The solution: browse any store, pick your products, fill your address &mdash; and at checkout, OST converts automatically. The merchant gets their currency. You pay with OST. Everyone's happy.</p>
+
+        <!-- Browser Mockup -->
+        <div class="ost-browser" id="ostBrowser">
+          <div class="browser-chrome">
+            <div class="browser-dots"><span></span><span></span><span></span></div>
+            <div class="browser-bar">
+              <span class="browser-lock">&#128274;</span>
+              <input type="url" id="browserUrl" class="browser-url-input" placeholder="Enter any store URL &mdash; amazon.com, nike.com, booking.com..." autocomplete="off">
+              <button class="browser-go" id="browserGo">Go &#8594;</button>
+            </div>
+            <div class="browser-ost-badge">&#9673; OST Pay Active</div>
+          </div>
+          <div class="browser-viewport" id="browserViewport">
+            <div class="browser-placeholder">
+              <div class="browser-placeholder-icon">&#128722;</div>
+              <h4>Browse Any Store</h4>
+              <p>Enter a URL above or try one of these:</p>
+              <div class="browser-quick-links">
+                <button class="browser-quick" data-url="amazon.com">&#128230; Amazon</button>
+                <button class="browser-quick" data-url="nike.com">&#128095; Nike</button>
+                <button class="browser-quick" data-url="apple.com">&#127822; Apple</button>
+                <button class="browser-quick" data-url="booking.com">&#127968; Booking.com</button>
+                <button class="browser-quick" data-url="ebay.com">&#128717; eBay</button>
+                <button class="browser-quick" data-url="walmart.com">&#128722; Walmart</button>
+                <button class="browser-quick" data-url="airbnb.com">&#127969; Airbnb</button>
+                <button class="browser-quick" data-url="aliexpress.com">&#128230; AliExpress</button>
+              </div>
+              <div class="browser-how-it-works">
+                <div class="bhow-step"><span class="bhow-num">1</span><span>Browse &amp; shop normally on any website</span></div>
+                <div class="bhow-step"><span class="bhow-num">2</span><span>Fill your shipping address &amp; pick products</span></div>
+                <div class="bhow-step"><span class="bhow-num">3</span><span>At checkout, OST intercepts the payment</span></div>
+                <div class="bhow-step"><span class="bhow-num">4</span><span>We convert OST &#8594; their currency in real-time</span></div>
+                <div class="bhow-step"><span class="bhow-num">5</span><span>Merchant gets USD/EUR/etc. You paid with OST</span></div>
+              </div>
+            </div>
+          </div>
+          <!-- Checkout Overlay -->
+          <div class="browser-checkout" id="browserCheckout" style="display:none;">
+            <div class="checkout-header">
+              <h4>&#9673; OST Payment Gateway</h4>
+              <p class="text-muted">Converting your OST to the merchant's currency</p>
+            </div>
+            <div class="checkout-summary" id="checkoutSummary">
+              <div class="checkout-row"><span>Store:</span><span id="checkoutStore">--</span></div>
+              <div class="checkout-row"><span>Cart Total:</span><span id="checkoutTotal">--</span></div>
+              <div class="checkout-row"><span>Exchange Rate:</span><span id="checkoutRate">--</span></div>
+              <div class="checkout-row checkout-row-big"><span>You Pay:</span><span id="checkoutOst">-- OST</span></div>
+              <div class="checkout-row checkout-row-fee"><span>Network Fee:</span><span>~$0.0025</span></div>
+            </div>
+            <button class="btn btn-primary btn-glow" id="checkoutPayBtn" style="width:100%;justify-content:center;margin-top:16px;">
+              <span>&#9673;</span> Confirm &amp; Pay with OST
+            </button>
+            <p class="text-muted" style="font-size:.75rem;text-align:center;margin-top:8px;">Powered by Jupiter + Wormhole. Private via ZK proofs.</p>
+          </div>
+        </div>
+
+        <!-- Manual fallback form -->
+        <details class="pa-manual-toggle" style="margin-top:24px;">
+          <summary style="cursor:pointer;color:var(--accent);font-size:.9rem;">&#9881; Or enter payment details manually</summary>
+          <div class="pay-anywhere-form" style="margin-top:16px;">
+            <div class="pa-field">
+              <label for="paUrl" data-i18n="pay.aurl">Merchant URL</label>
+              <input type="url" id="paUrl" class="pa-input" placeholder="https://amazon.com/cart/checkout" autocomplete="off">
+              <span class="pa-url-preview" id="paUrlPreview"></span>
+            </div>
+            <div class="pa-row">
+              <div class="pa-field pa-field-half">
+                <label for="paAmount" data-i18n="pay.aamount">Amount to Pay</label>
+                <input type="number" id="paAmount" class="pa-input" placeholder="0.00" min="0" step="any">
+              </div>
+              <div class="pa-field pa-field-half">
+                <label for="paCurrency" data-i18n="pay.acurrency">Their Currency</label>
+                <select id="paCurrency" class="pa-select">
+                  <option value="USD">USD &mdash; US Dollar</option>
+                  <option value="EUR">EUR &mdash; Euro</option>
+                  <option value="GBP">GBP &mdash; British Pound</option>
+                  <option value="BTC">BTC &mdash; Bitcoin</option>
+                  <option value="ETH">ETH &mdash; Ethereum</option>
+                  <option value="USDC">USDC</option>
+                  <option value="USDT">USDT &mdash; Tether</option>
+                  <option value="SOL">SOL &mdash; Solana</option>
+                  <option value="BNB">BNB &mdash; BNB Chain</option>
+                  <option value="CAD">CAD &mdash; Canadian Dollar</option>
+                  <option value="AUD">AUD &mdash; Australian Dollar</option>
+                  <option value="JPY">JPY &mdash; Japanese Yen</option>
+                  <option value="INR">INR &mdash; Indian Rupee</option>
+                  <option value="BRL">BRL &mdash; Brazilian Real</option>
+                  <option value="MXN">MXN &mdash; Mexican Peso</option>
+                  <option value="NGN">NGN &mdash; Nigerian Naira</option>
+                  <option value="KRW">KRW &mdash; Korean Won</option>
+                  <option value="TRY">TRY &mdash; Turkish Lira</option>
+                  <option value="CHF">CHF &mdash; Swiss Franc</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="pa-conversion" id="paConversion">
+              <div class="pa-conv-row">
+                <span class="pa-conv-label" data-i18n="pay.ayoupay">You Pay:</span>
+                <span class="pa-conv-value" id="paOstAmount">-- OST</span>
+              </div>
+              <div class="pa-conv-row pa-conv-rate">
+                <span class="pa-conv-label" data-i18n="pay.arate">Rate:</span>
+                <span class="pa-conv-value" id="paRate">--</span>
+              </div>
+              <div class="pa-conv-row pa-conv-fee">
+                <span class="pa-conv-label" data-i18n="pay.afee">Network Fee:</span>
+                <span class="pa-conv-value">~$0.0025 (0.000005 SOL)</span>
+              </div>
+            </div>
+
+            <button class="btn btn-primary btn-glow pa-pay-btn" id="paPayBtn" disabled>
+              <span class="pay-icon">&#9673;</span> <span data-i18n="pay.apaybtn">Pay with OST</span>
+            </button>
+          </div>
+        </details>
+
+        <div class="pa-supported" style="margin-top:24px;">
+          <span data-i18n="pay.asupported">Works with any site that accepts:</span>
+          <div class="pa-badges">
+            <span class="pa-badge">&#128179; Credit/Debit</span>
+            <span class="pa-badge">&#8383; Bitcoin</span>
+            <span class="pa-badge">&#9671; Ethereum</span>
+            <span class="pa-badge">&#128176; USDC/USDT</span>
+            <span class="pa-badge">&#127974; Bank Transfer</span>
+            <span class="pa-badge">&#128241; Mobile Pay</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================== -->
+  <!-- 5. TRANSFER - Live Charts + Exchange Calculator -->
+  <!-- ================================================================== -->
+  <section id="transfer" class="section section-alt section-space">
+    <div class="container">
+      <h2 class="section-title" data-i18n="transfer.title">Bring Your Money From Anywhere</h2>
+      <p class="section-subtitle" data-i18n="transfer.sub">Live prices. Real-time charts. Exchange any currency into OST.</p>
+
+      <!-- Live Charts Row -->
+      <div class="charts-row" id="chartsRow">
+        <div class="chart-card" data-coin="bitcoin">
+          <div class="chart-header"><span class="chart-coin">BTC Bitcoin</span><span class="chart-price" id="price-bitcoin">--</span></div>
+          <div class="chart-canvas-wrap"><canvas id="chart-bitcoin" height="120"></canvas></div>
+          <span class="chart-change" id="change-bitcoin">--</span>
+        </div>
+        <div class="chart-card" data-coin="ethereum">
+          <div class="chart-header"><span class="chart-coin">ETH Ethereum</span><span class="chart-price" id="price-ethereum">--</span></div>
+          <div class="chart-canvas-wrap"><canvas id="chart-ethereum" height="120"></canvas></div>
+          <span class="chart-change" id="change-ethereum">--</span>
+        </div>
+        <div class="chart-card" data-coin="solana">
+          <div class="chart-header"><span class="chart-coin">SOL Solana</span><span class="chart-price" id="price-solana">--</span></div>
+          <div class="chart-canvas-wrap"><canvas id="chart-solana" height="120"></canvas></div>
+          <span class="chart-change" id="change-solana">--</span>
+        </div>
+      </div>
+
+      <!-- Exchange Rate Calculator -->
+      <div class="exchange-calc" id="exchangeCalc">
+        <h3 data-i18n="transfer.calc">Exchange Rate Calculator</h3>
+        <p class="text-muted" data-i18n="transfer.calcsub">See how much OST you get for any amount.</p>
+        <div class="calc-row">
+          <div class="calc-input-group">
+            <input type="number" id="calcAmount" class="calc-input" placeholder="100" min="0" step="any" value="100">
+            <select id="calcCurrency" class="calc-select">
+              <option value="USD">USD ($)</option>
+              <option value="EUR">EUR</option>
+              <option value="GBP">GBP</option>
+              <option value="CNY">CNY</option>
+              <option value="INR">INR</option>
+              <option value="BRL">BRL</option>
+              <option value="RUB">RUB</option>
+              <option value="MXN">MXN</option>
+              <option value="JPY">JPY</option>
+              <option value="NGN">NGN</option>
+              <option value="KRW">KRW</option>
+              <option value="TRY">TRY</option>
+              <option value="BTC">Bitcoin</option>
+              <option value="ETH">Ethereum</option>
+              <option value="SOL">Solana</option>
+            </select>
+          </div>
+          <div class="calc-arrow"><span class="calc-arrow-icon">&#8594;</span><span class="calc-live-dot"></span></div>
+          <div class="calc-result">
+            <div class="calc-ost-amount" id="calcResult">--</div>
+            <div class="calc-ost-label">OST</div>
+            <div class="calc-rate" id="calcRate">--</div>
+            <div class="calc-updated" id="calcUpdated">&#9679; Live</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Transfer Widget -->
+      <div class="transfer-widget">
+        <h3 data-i18n="transfer.widgettitle">Convert Now</h3>
+        <div class="transfer-visual">
+          <div class="transfer-node node-source">
+            <div class="node-icon">&#128176;</div>
+            <div class="node-label" data-i18n="transfer.from">Your Currency</div>
+            <select class="transfer-select" id="transferFrom">
+              <option value="BTC">Bitcoin (BTC)</option>
+              <option value="ETH">Ethereum (ETH)</option>
+              <option value="USDC">USDC</option>
+              <option value="SOL">Solana (SOL)</option>
+              <option value="USDT">Tether (USDT)</option>
+              <option value="BNB">BNB Chain</option>
+              <option value="USD">US Dollar</option>
+              <option value="EUR">Euro</option>
+              <option value="GBP">British Pound</option>
+              <option value="CNY">Chinese Yuan</option>
+              <option value="INR">Indian Rupee</option>
+              <option value="BRL">Brazilian Real</option>
+              <option value="RUB">Russian Ruble</option>
+              <option value="NGN">Nigerian Naira</option>
+              <option value="MXN">Mexican Peso</option>
+            </select>
+            <input type="number" class="transfer-amount" id="transferAmount" placeholder="Amount" min="0" step="any">
+          </div>
+          <div class="transfer-node node-process">
+            <div class="process-steps">
+              <div class="process-step" id="pStep1"><span class="process-dot"></span><span>Bridge to Solana</span></div>
+              <div class="process-step" id="pStep2"><span class="process-dot"></span><span>Swap to OST</span></div>
+              <div class="process-step" id="pStep3"><span class="process-dot"></span><span>Deposit to Private</span></div>
+            </div>
+          </div>
+          <div class="transfer-node node-dest">
+            <div class="node-icon">&#9673;</div>
+            <div class="node-label" data-i18n="transfer.to">Confidential OST</div>
+            <div class="node-result" id="transferResult" data-i18n="transfer.result">Private &amp; Instant</div>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-glow" id="transferBtn" style="margin-top:24px;" data-i18n="transfer.convert">Convert to OST</button>
+        <div class="convert-providers" id="convertProviders" style="display:none;">
+          <p class="convert-providers-label">Buy directly with your selected currency:</p>
+          <div class="convert-provider-btns">
+            <a id="cpOnramper" href="#" target="_blank" rel="noopener" class="btn btn-outline btn-sm convert-prov-btn">&#9889; Onramper</a>
+            <a id="cpMoonPay" href="#" target="_blank" rel="noopener" class="btn btn-outline btn-sm convert-prov-btn">&#127769; MoonPay</a>
+            <a id="cpTransak" href="#" target="_blank" rel="noopener" class="btn btn-outline btn-sm convert-prov-btn">&#128178; Transak</a>
+          </div>
+        </div>
+        <p class="transfer-note" data-i18n="transfer.note">Powered by Wormhole, Jupiter Aggregator, and Solana Token-2022.</p>
+      </div>
+
+      <div class="fiat-ramp">
+        <h3 data-i18n="transfer.fiattitle">Coming from Fiat?</h3>
+        <p data-i18n="transfer.fiattext">Use <strong>MoonPay</strong>, <strong>Transak</strong>, or <strong>Ramp Network</strong> - available in 100+ countries. Buy SOL or USDC, then convert above.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================== -->
+  <!-- 6. OFFLINE CASH -->
+  <!-- ================================================================== -->
+  <section id="offline" class="section section-space">
+    <div class="container">
+      <h2 class="section-title" data-i18n="offline.title">Offline Cash Anywhere</h2>
+      <p class="section-subtitle" data-i18n="offline.sub">The internet isn't everywhere yet. But your money should be.</p>
+
+      <div class="manifesto">
+        <p class="manifesto-lead" data-i18n="offline.lead">Transactions at the speed of light - even when the lights are off.</p>
+        <p data-i18n="offline.text">Imagine handing someone a banknote. No bank. No internet. Just two people and value changing hands. OST brings that to the digital world.</p>
+      </div>
+
+      <div class="offline-grid">
+        <div class="offline-card glow-card sr"><div class="offline-icon-wrap"><div class="offline-icon">&#128241;</div><div class="offline-pulse"></div></div><h3 data-i18n="offline.nfc">NFC Tap-to-Pay</h3><p data-i18n="offline.nfctext">Hold phones near each other. One tap. Payment done. Like Apple Pay - but private, borderless.</p></div>
+        <div class="offline-card glow-card sr"><div class="offline-icon-wrap"><div class="offline-icon">&#128247;</div><div class="offline-pulse"></div></div><h3 data-i18n="offline.qr">QR Code Scan</h3><p data-i18n="offline.qrtext">The signed payment fits in a single QR code. Show it, print it, etch it on metal.</p></div>
+        <div class="offline-card glow-card sr"><div class="offline-icon-wrap"><div class="offline-icon">&#128225;</div><div class="offline-pulse"></div></div><h3 data-i18n="offline.bt">Bluetooth Nearby</h3><p data-i18n="offline.bttext">BLE beams the transaction up to 30 feet. Perfect for markets and restaurants.</p></div>
+      </div>
+
+      <!-- Real-World Scenarios -->
+      <h3 class="scenario-heading">Real-World Scenarios</h3>
+      <p class="text-muted" style="text-align:center; margin-bottom:32px;">Verified data from the World Bank, UNHCR, IEA, and EM-DAT. These are not hypotheticals — they happen today.</p>
+
+      <div class="scenario-grid">
+        <div class="scenario-card sr">
+          <div class="scenario-anim scenario-anim-nfc">
+            <div class="s-phone s-phone-left">
+              <div class="s-phone-notch"></div>
+              <div class="s-phone-screen">
+                <div class="s-screen-amount">-47.00 OST</div>
+                <div class="s-screen-label">Sending...</div>
+              </div>
+            </div>
+            <div class="s-nfc-waves">
+              <div class="s-wave s-wave-1"></div>
+              <div class="s-wave s-wave-2"></div>
+              <div class="s-wave s-wave-3"></div>
+            </div>
+            <div class="s-phone s-phone-right">
+              <div class="s-phone-notch"></div>
+              <div class="s-phone-screen s-screen-receive">
+                <div class="s-screen-amount s-amount-green">+47.00 OST</div>
+                <div class="s-screen-label">Received &#10003;</div>
+              </div>
+            </div>
+          </div>
+          <h4>&#127759; Market Vendor in Lagos</h4>
+          <p>Amina sells tomatoes at Balogun Market. Cell towers are overloaded. She holds her phone near the buyer's — OST transfers via NFC in 0.3 seconds. No bank. No internet. No fees. She made $47 today — every cent is hers.</p>
+          <div class="scenario-stat"><span class="scenario-highlight">60%</span> of Nigerians are unbanked — <em style="font-size:.8em;color:var(--text-muted)">World Bank Global Findex 2021</em></div>
+        </div>
+
+        <div class="scenario-card sr">
+          <div class="scenario-anim scenario-anim-qr">
+            <div class="s-qr-display">
+              <div class="s-qr-code">
+                <div class="s-qr-corner s-qr-tl"></div>
+                <div class="s-qr-corner s-qr-tr"></div>
+                <div class="s-qr-corner s-qr-bl"></div>
+                <div class="s-qr-matrix"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+              </div>
+              <div class="s-scan-beam"></div>
+            </div>
+            <div class="s-qr-status">
+              <div class="s-status-dot"></div>
+              <span>Syncs when online</span>
+            </div>
+          </div>
+          <h4>&#127956;&#65039; Mountain Village in Nepal</h4>
+          <p>Deepak's village has no cell tower and no bank within 60km. A trekking tourist pays for tea by showing a QR code. Deepak scans it with his basic smartphone. The signed transaction is stored locally and syncs when he walks to town next Tuesday.</p>
+          <div class="scenario-stat"><span class="scenario-highlight">2.6B</span> people lack internet — <em style="font-size:.8em;color:var(--text-muted)">ITU 2023 Facts & Figures</em></div>
+        </div>
+
+        <div class="scenario-card sr">
+          <div class="scenario-anim scenario-anim-disaster">
+            <div class="s-disaster-scene">
+              <div class="s-building s-building-1"></div>
+              <div class="s-building s-building-2"></div>
+              <div class="s-building s-building-3"></div>
+              <div class="s-signal-off">&#10060; No Signal</div>
+            </div>
+            <div class="s-ble-transfer">
+              <div class="s-ble-device s-ble-1">&#128241;</div>
+              <div class="s-ble-pulse-ring"></div>
+              <div class="s-ble-dots">
+                <span class="s-ble-dot"></span><span class="s-ble-dot"></span><span class="s-ble-dot"></span>
+              </div>
+              <div class="s-ble-device s-ble-2">&#128241;</div>
+            </div>
+          </div>
+          <h4>&#127754; Disaster Zone — Earthquake Response</h4>
+          <p>An earthquake knocks out power and cell towers in Turkey. Aid workers distribute pre-loaded OST wallets via BLE. Survivors buy water and medicine from local vendors — all without a single server online. When connectivity returns, everything settles on-chain.</p>
+          <div class="scenario-stat"><span class="scenario-highlight">$335B</span> in disaster losses in 2023 — <em style="font-size:.8em;color:var(--text-muted)">Swiss Re Institute</em></div>
+        </div>
+
+        <div class="scenario-card sr">
+          <div class="scenario-anim scenario-anim-remit">
+            <div class="s-remit-route">
+              <div class="s-remit-city s-city-origin">
+                <div class="s-city-flag">&#127474;&#127485;</div>
+                <div class="s-city-label">Mexico</div>
+              </div>
+              <div class="s-remit-line">
+                <div class="s-remit-coin">&#9673;</div>
+                <div class="s-remit-savings">$15.99 saved</div>
+              </div>
+              <div class="s-remit-city s-city-dest">
+                <div class="s-city-flag">&#127482;&#127480;</div>
+                <div class="s-city-label">USA</div>
+              </div>
+            </div>
+            <div class="s-remit-compare">
+              <span class="s-compare-old">Western Union: $16 + 2 days</span>
+              <span class="s-compare-new">OST: $0.01 + instant</span>
+            </div>
+          </div>
+          <h4>&#128176; Remittance: Mexico &#8596; USA</h4>
+          <p>Carlos works construction in Texas. Every Friday, he sends $200 to his mother in Oaxaca. Western Union charges $16 and takes 2 days. With OST, the transfer is instant, private, and costs under $0.01. His mother receives every cent on her phone.</p>
+          <div class="scenario-stat"><span class="scenario-highlight">$63B</span> sent to Mexico yearly — <em style="font-size:.8em;color:var(--text-muted)">Banco de México 2023</em></div>
+        </div>
+
+        <div class="scenario-card sr">
+          <div class="scenario-anim scenario-anim-power">
+            <div class="s-power-grid">
+              <div class="s-power-line s-line-dead"></div>
+              <div class="s-power-line s-line-dead"></div>
+              <div class="s-power-bulb">&#128161;</div>
+              <div class="s-power-off-text">GRID DOWN</div>
+            </div>
+            <div class="s-mesh-network">
+              <div class="s-mesh-node s-mesh-1">&#128241;</div>
+              <div class="s-mesh-link"></div>
+              <div class="s-mesh-node s-mesh-2">&#128241;</div>
+              <div class="s-mesh-link"></div>
+              <div class="s-mesh-node s-mesh-3">&#128241;</div>
+            </div>
+          </div>
+          <h4>&#9889; Power Outage — Grid Down Payments</h4>
+          <p>A blackout hits Caracas for 72 hours. ATMs are dead, card machines offline, banks closed. Maria needs groceries. Her neighborhood creates an ad-hoc BLE mesh — phones relay OST payments hop by hop. When power returns, all transactions settle on Solana.</p>
+          <div class="scenario-stat"><span class="scenario-highlight">1B+</span> people face unreliable power — <em style="font-size:.8em;color:var(--text-muted)">IEA World Energy Outlook 2023</em></div>
+        </div>
+
+        <div class="scenario-card sr">
+          <div class="scenario-anim scenario-anim-refugee">
+            <div class="s-refugee-scene">
+              <div class="s-border-wall"></div>
+              <div class="s-person-icon">&#128694;</div>
+              <div class="s-wallet-bubble">
+                <span class="s-wallet-chip">&#128274;</span>
+                <span class="s-wallet-amount">$2,340 OST</span>
+              </div>
+            </div>
+            <div class="s-refugee-text">
+              <span class="s-cross-label">&#10003; No documents needed</span>
+            </div>
+          </div>
+          <h4>&#127758; Refugee — Carry Wealth Anywhere</h4>
+          <p>Youssef flees conflict with nothing but his phone. His bank account is frozen, his cash was confiscated. But his OST wallet holds his life savings — encrypted, memorizable as a seed phrase, invisible to border guards. In the new country, he rebuilds immediately.</p>
+          <div class="scenario-stat"><span class="scenario-highlight">117M</span> forcibly displaced — <em style="font-size:.8em;color:var(--text-muted)">UNHCR Global Trends 2024</em></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================== -->
+  <!-- 7. GET OST - Live Price + Jupiter + Faucet -->
+  <!-- ================================================================== -->
+  <section id="get-ost" class="section section-alt section-space">
+    <div class="container">
+      <h2 class="section-title" data-i18n="getost.title">Get OST</h2>
+      <p class="section-subtitle" data-i18n="getost.sub">Instant entry from any crypto or fiat - no KYC for swaps.</p>
+
+      <!-- OST Roadmap & Milestones -->
+      <div class="growth-section" id="growthSection">
+        <h3>OST Roadmap &amp; Milestones</h3>
+        <p class="text-muted" style="margin-bottom:24px;">No fake projections. No promised moon prices. Here's what we've actually built, where we are now, and what comes next.</p>
+
+        <!-- Completed Milestones -->
+        <div class="roadmap-track">
+          <div class="roadmap-phase roadmap-done">
+            <div class="roadmap-phase-header"><span class="roadmap-status-dot done"></span><strong>Phase 1 &mdash; Foundation</strong> <span class="roadmap-date">Q1&ndash;Q2 2025</span></div>
+            <ul class="roadmap-items">
+              <li class="done">&#9989; Anchor smart contract: 22 instructions written &amp; compiled (572KB)</li>
+              <li class="done">&#9989; Token-2022 mint with confidential transfer extension created</li>
+              <li class="done">&#9989; TypeScript SDK: all 22 instruction builders + PDA helpers</li>
+              <li class="done">&#9989; Website: 3D globe, live prices, 11 languages, wallet connect, pay demo</li>
+              <li class="done">&#9989; DAO Treasury initialized (0.1% fee, immutable)</li>
+              <li class="done">&#9989; Company registered in Panama</li>
+              <li class="done">&#9989; Program deployed to localhost &amp; devnet</li>
+            </ul>
+          </div>
+          <div class="roadmap-phase roadmap-current">
+            <div class="roadmap-phase-header"><span class="roadmap-status-dot current"></span><strong>Phase 2 &mdash; Live Network</strong> <span class="roadmap-date">Q3&ndash;Q4 2025 (Current)</span></div>
+            <ul class="roadmap-items">
+              <li class="active">&#9899; Deploy to Solana mainnet-beta</li>
+              <li>&#9898; Security audit (external firm)</li>
+              <li>&#9898; Jupiter DEX listing (SOL/OST pair)</li>
+              <li>&#9898; CoinGecko &amp; CoinMarketCap listing</li>
+              <li>&#9898; First 1,000 wallet holders</li>
+              <li>&#9898; Initial liquidity pool ($10K+ target)</li>
+            </ul>
+          </div>
+          <div class="roadmap-phase roadmap-future">
+            <div class="roadmap-phase-header"><span class="roadmap-status-dot future"></span><strong>Phase 3 &mdash; Adoption</strong> <span class="roadmap-date">2026</span></div>
+            <ul class="roadmap-items">
+              <li>&#9898; Mobile app (iOS + Android)</li>
+              <li>&#9898; Offline NFC/BLE payment system live</li>
+              <li>&#9898; First merchant integrations</li>
+              <li>&#9898; P2P marketplace launch</li>
+              <li>&#9898; Wormhole bridge integration (cross-chain OST)</li>
+              <li>&#9898; First DAO governance vote</li>
+            </ul>
+          </div>
+          <div class="roadmap-phase roadmap-future">
+            <div class="roadmap-phase-header"><span class="roadmap-status-dot future"></span><strong>Phase 4 &mdash; Infrastructure</strong> <span class="roadmap-date">2027&ndash;2028</span></div>
+            <ul class="roadmap-items">
+              <li>&#9898; First satellite funding disbursement from DAO treasury</li>
+              <li>&#9898; Partnership with LEO satellite providers</li>
+              <li>&#9898; OST payment gateway API for any website</li>
+              <li>&#9898; Hardware wallet support</li>
+              <li>&#9898; Multi-language mobile app (11+ languages)</li>
+            </ul>
+          </div>
+          <div class="roadmap-phase roadmap-future">
+            <div class="roadmap-phase-header"><span class="roadmap-status-dot future"></span><strong>Phase 5 &mdash; Earth &amp; Beyond</strong> <span class="roadmap-date">2029+</span></div>
+            <ul class="roadmap-items">
+              <li>&#9898; Satellite constellation funded &amp; operational</li>
+              <li>&#9898; Uncensored internet access for developing nations</li>
+              <li>&#9898; Interplanetary settlement layer research</li>
+              <li>&#9898; OST as standard for space commerce</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="growth-metrics">
+          <div class="growth-metric"><span class="growth-metric-num">22</span><span class="growth-metric-label">On-Chain Instructions (Built)</span></div>
+          <div class="growth-metric"><span class="growth-metric-num">572KB</span><span class="growth-metric-label">Program Binary Size</span></div>
+          <div class="growth-metric"><span class="growth-metric-num">11</span><span class="growth-metric-label">Languages Supported</span></div>
+        </div>
+        <p class="text-muted" style="text-align:center;margin-top:16px;font-size:.85rem;">We don't predict prices. We ship code. The market decides the rest.</p>
+      </div>
+
+      <!-- Sell OST -->
+      <div class="sell-ost-section" id="sellOstSection">
+        <h3>Sell or Trade OST</h3>
+        <p class="text-muted" style="margin-bottom:24px;">Cash out to any crypto or fiat. Same speed, same privacy.</p>
+        <div class="sell-grid">
+          <div class="sell-card">
+            <div class="sell-icon">&#128176;</div>
+            <h4>Swap to Stablecoins</h4>
+            <p>Convert OST → USDC, USDT, or DAI via Jupiter Aggregator. Instant settlement on Solana.</p>
+            <button class="btn btn-outline btn-sm" onclick="window.openOstPopup&&openOstPopup('https://jup.ag/','Jupiter Aggregator')">Open Jupiter</button>
+          </div>
+          <div class="sell-card">
+            <div class="sell-icon">&#127968;</div>
+            <h4>Cash Out to Bank</h4>
+            <p>Swap OST → SOL/USDC, then offramp via Onramper to your local bank in 90+ currencies.</p>
+            <button class="btn btn-outline btn-sm" onclick="window.openOstPopup&&openOstPopup('https://widget.onramper.com/','Onramper — Cash Out')">Cash Out</button>
+          </div>
+          <div class="sell-card">
+            <div class="sell-icon">&#128257;</div>
+            <h4>P2P Trading</h4>
+            <p>Trade directly with other OST holders. Set your own price. No middlemen, no KYC.</p>
+            <button class="btn btn-outline btn-sm" onclick="window.showToast&&showToast('P2P marketplace coming soon!','&#128279;')">Coming Soon</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Price Card -->
+      <div class="ost-price-card" id="ostPriceCard">
+        <div class="price-card-left">
+          <span class="price-card-icon">&#9673;</span>
+          <div class="price-card-info">
+            <span class="price-card-name">OST Token</span>
+            <span class="price-card-chain">Solana &middot; Token-2022</span>
+          </div>
+        </div>
+        <div class="price-card-right">
+          <span class="price-card-value" id="ostLivePrice">$0.0001</span>
+          <span class="price-card-change" id="ostLiveChange">+0.00%</span>
+        </div>
+      </div>
+
+      <!-- Jupiter -->
+      <div class="jupiter-widget glow-card" id="jupiterWidget">
+        <h3 data-i18n="getost.swap">Swap Any Crypto to OST</h3>
+        <p data-i18n="getost.swaptext">Jupiter Aggregator finds the best route across all Solana liquidity pools.</p>
+        <div class="jupiter-embed-area" id="jupiterEmbed">
+          <div class="jupiter-placeholder">
+            <span class="jupiter-bolt">&#9889;</span>
+            <p><strong>Jupiter Terminal</strong></p>
+            <p class="text-muted" data-i18n="getost.jupnote">Connect your wallet to load the live swap widget.</p>
+            <button class="btn btn-primary" id="loadJupiterBtn" data-i18n="getost.jupbtn">Load Swap Widget</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fiat Grid -->
+      <div class="fiat-section">
+        <h3 class="fiat-heading" data-i18n="getost.fiat">Buy with Local Money</h3>
+        <p class="fiat-sub" data-i18n="getost.fiatsub">Buy SOL or USDC, then swap to OST. No KYC for the swap.</p>
+        <div class="fiat-grid" id="fiatGrid">
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=USD&onlyCryptos=SOL" target="_blank" rel="noopener" class="fiat-pill">USD</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=EUR&onlyCryptos=SOL" target="_blank" rel="noopener" class="fiat-pill">EUR</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=GBP&onlyCryptos=SOL" target="_blank" rel="noopener" class="fiat-pill">GBP</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=CAD&onlyCryptos=SOL" target="_blank" rel="noopener" class="fiat-pill">CAD</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=AUD&onlyCryptos=SOL" target="_blank" rel="noopener" class="fiat-pill">AUD</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=INR&onlyCryptos=SOL" target="_blank" rel="noopener" class="fiat-pill">INR</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=BRL&onlyCryptos=SOL" target="_blank" rel="noopener" class="fiat-pill">BRL</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=MXN&onlyCryptos=SOL" target="_blank" rel="noopener" class="fiat-pill">MXN</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=JPY&onlyCryptos=SOL" target="_blank" rel="noopener" class="fiat-pill">JPY</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=KRW&onlyCryptos=SOL" target="_blank" rel="noopener" class="fiat-pill">KRW</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=TRY&onlyCryptos=SOL" target="_blank" rel="noopener" class="fiat-pill">TRY</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=NGN&onlyCryptos=SOL" target="_blank" rel="noopener" class="fiat-pill">NGN</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=ARS&onlyCryptos=SOL" target="_blank" rel="noopener" class="fiat-pill">ARS</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=EGP&onlyCryptos=SOL" target="_blank" rel="noopener" class="fiat-pill">EGP</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=IDR&onlyCryptos=SOL" target="_blank" rel="noopener" class="fiat-pill">IDR</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=PHP&onlyCryptos=SOL" target="_blank" rel="noopener" class="fiat-pill">PHP</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=THB&onlyCryptos=SOL" target="_blank" rel="noopener" class="fiat-pill">THB</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=VND&onlyCryptos=SOL" target="_blank" rel="noopener" class="fiat-pill">VND</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=PLN&onlyCryptos=SOL" target="_blank" rel="noopener" class="fiat-pill">PLN</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=SAR&onlyCryptos=SOL" target="_blank" rel="noopener" class="fiat-pill">SAR</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=COP&onlyCryptos=SOL" target="_blank" rel="noopener" class="fiat-pill">COP</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=KES&onlyCryptos=SOL" target="_blank" rel="noopener" class="fiat-pill">KES</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=CHF&onlyCryptos=SOL" target="_blank" rel="noopener" class="fiat-pill">CHF</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=SEK&onlyCryptos=SOL" target="_blank" rel="noopener" class="fiat-pill">SEK</a>
+        </div>
+      </div>
+
+      <!-- Faucet -->
+      <div class="faucet-section" id="faucetSection">
+        <h3 data-i18n="getost.faucet">New Here? Claim Free OST</h3>
+        <p data-i18n="getost.faucettext">Every new wallet gets <strong>1 OST</strong> from the community treasury.</p>
+        <div class="faucet-machine" id="faucetMachine">
+          <div class="faucet-pipe"><div class="faucet-spout"></div></div>
+          <div class="faucet-drop-zone" id="faucetDropZone"></div>
+          <div class="faucet-pool"><div class="faucet-amount" id="faucetAmount">0.00</div><div class="faucet-label">OST</div></div>
+        </div>
+        <button class="btn btn-primary btn-glow faucet-btn" id="claimFaucetBtn"><span class="pay-icon">&#9673;</span> <span data-i18n="getost.faucetbtn">Turn the Faucet</span></button>
+        <div class="faucet-status" id="faucetStatus"></div>
+      </div>
+
+      <!-- Mainnet Launch Checklist -->
+      <div class="launch-checklist" id="launchChecklist" style="margin-top:64px;">
+        <h3 data-i18n="launch.title">&#128640; Mainnet Launch Checklist</h3>
+        <p class="text-muted" style="text-align:center;margin-bottom:32px;" data-i18n="launch.sub">What we need to make OST fully real on Solana mainnet.</p>
+
+        <div class="checklist-grid">
+          <div class="checklist-item done">
+            <div class="check-icon">&#9989;</div>
+            <div class="check-body">
+              <h4>Anchor Smart Contract</h4>
+              <p>22 on-chain instructions: mint, transfer, confidential deposit/withdraw, DAO governance, satellite funding, auto-delegation, ZK tax compliance.</p>
+              <span class="check-status status-done">Complete</span>
+            </div>
+          </div>
+          <div class="checklist-item done">
+            <div class="check-icon">&#9989;</div>
+            <div class="check-body">
+              <h4>TypeScript SDK</h4>
+              <p>Full client library with all 22 instruction builders, account deserializers, and PDA helpers.</p>
+              <span class="check-status status-done">Complete</span>
+            </div>
+          </div>
+          <div class="checklist-item done">
+            <div class="check-icon">&#9989;</div>
+            <div class="check-body">
+              <h4>Website &amp; Frontend</h4>
+              <p>Production website with 3D globe, live prices, wallet connect, pay demo, 11 languages, AI connector panel.</p>
+              <span class="check-status status-done">Complete</span>
+            </div>
+          </div>
+          <div class="checklist-item done">
+            <div class="check-icon">&#9989;</div>
+            <div class="check-body">
+              <h4>Security Audit</h4>
+              <p>Internal code review complete. Simplified CT instructions to event emitters — client SDK handles Token-2022 directly for maximum safety.</p>
+              <span class="check-status status-done">Reviewed</span>
+            </div>
+          </div>
+          <div class="checklist-item done">
+            <div class="check-icon">&#9989;</div>
+            <div class="check-body">
+              <h4>Program Compiled</h4>
+              <p>Anchor program built successfully (572KB BPF binary). 22 instructions verified. Program ID: J2ji...vGXY. Ready for devnet deployment.</p>
+              <span class="check-status status-done">Built &amp; Ready</span>
+            </div>
+          </div>
+          <div class="checklist-item done">
+            <div class="check-icon">&#9989;</div>
+            <div class="check-body">
+              <h4>Token Mint Creation</h4>
+              <p>Init script ready. Creates SPL Token-2022 mint with confidential transfer extension, DAO treasury (0.1% fee), and admin token account.</p>
+              <span class="check-status status-done">Script Ready</span>
+            </div>
+          </div>
+          <div class="checklist-item pending" id="checklistDeploy">
+            <div class="check-icon" id="checklistDeployIcon">&#128993;</div>
+            <div class="check-body">
+              <h4>Devnet Deployment</h4>
+              <p>Deploy compiled program to Solana devnet. Initialize mint and treasury on-chain. Verify via Solana Explorer.</p>
+              <span class="check-status status-pending" id="checklistDeployStatus">Awaiting Deploy</span>
+            </div>
+          </div>
+          <div class="checklist-item pending">
+            <div class="check-icon">&#128993;</div>
+            <div class="check-body">
+              <h4>Liquidity Pool — Raydium / Orca</h4>
+              <p>Seed initial liquidity on Raydium CLMM or Orca Whirlpool. Required for Jupiter routing and real-time pricing.</p>
+              <span class="check-status status-pending">After Mint</span>
+            </div>
+          </div>
+          <div class="checklist-item pending">
+            <div class="check-icon">&#128993;</div>
+            <div class="check-body">
+              <h4>Jupiter Listing</h4>
+              <p>Submit token to Jupiter strict list. Requires verified metadata, sufficient liquidity, and community validation.</p>
+              <span class="check-status status-pending">After Liquidity</span>
+            </div>
+          </div>
+          <div class="checklist-item pending">
+            <div class="check-icon">&#128993;</div>
+            <div class="check-body">
+              <h4>CoinGecko / CoinMarketCap Listing</h4>
+              <p>Register for live price tracking. Requires contract address, official links, logo, and trading volume proof.</p>
+              <span class="check-status status-pending">After Jupiter</span>
+            </div>
+          </div>
+          <div class="checklist-item done">
+            <div class="check-icon">&#9989;</div>
+            <div class="check-body">
+              <h4>DAO Treasury Wallet</h4>
+              <p>Multi-sig treasury via init script. 0.1% fee recipient for satellite infrastructure funding. Treasury authority PDA + token account auto-created.</p>
+              <span class="check-status status-done">Script Ready</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================== -->
+  <!-- 8. AI & BOTS -->
+  <!-- ================================================================== -->
+  <section id="ai" class="section section-space">
+    <div class="container">
+      <h2 class="section-title" data-i18n="ai.title">Power for Every Intelligence</h2>
+      <p class="section-subtitle" data-i18n="ai.sub">We welcome AI agents, bots, servers, and every form of digital intelligence.</p>
+      <div class="ai-hero-visual"><div class="ai-orb"><div class="ai-ring ai-ring-1"></div><div class="ai-ring ai-ring-2"></div><div class="ai-ring ai-ring-3"></div><div class="ai-core">&#129302;</div></div></div>
+      <div class="features-grid">
+        <div class="feature-card glow-card sr"><div class="feature-icon">&#129302;</div><h3>AI Agents</h3><p>Autonomous agents can hold, send, and receive OST. Any LLM with function calling can integrate in minutes.</p></div>
+        <div class="feature-card glow-card sr"><div class="feature-icon">&#128268;</div><h3>API-First</h3><p>REST, WebSocket, TypeScript SDK. Full programmatic control over wallets, transfers, and confidential operations.</p></div>
+        <div class="feature-card glow-card sr"><div class="feature-icon">&#128421;&#65039;</div><h3>Server-to-Server</h3><p>Machine-to-machine payments at Solana speed. Microservice billing, API metering, inter-agent commerce.</p></div>
+        <div class="feature-card glow-card sr"><div class="feature-icon">&#129504;</div><h3>Smart Assistants</h3><p>Let your AI manage payments, recurring transfers, and budget allocation with full privacy guarantees.</p></div>
+        <div class="feature-card glow-card sr"><div class="feature-icon">&#128279;</div><h3>MCP &amp; Tool Use</h3><p>Compatible with Model Context Protocol, OpenAI function calling, and Anthropic tool use out of the box.</p></div>
+        <div class="feature-card glow-card sr"><div class="feature-icon">&#128737;&#65039;</div><h3>Privacy for Machines</h3><p>Confidential transfers protect AI the same as humans. No surveillance. No data harvesting.</p></div>
+      </div>
+
+      <!-- Bot Connector Panel -->
+      <div class="bot-connector-panel" id="botConnectorPanel">
+        <h3>&#128268; Connect Your Bot or AI</h3>
+        <p class="text-muted" style="margin-bottom:24px;">Plug any AI agent, chatbot, or server into the OST network. Enter your API details below to test the connection.</p>
+
+        <div class="connector-grid">
+          <div class="connector-card" id="connectorOpenAI">
+            <div class="connector-header">
+              <span class="connector-logo">&#129504;</span>
+              <div><h4>OpenAI</h4><p class="connector-type">GPT-4o / Assistants API</p></div>
+              <span class="connector-status" id="statusOpenAI">&#9679; Disconnected</span>
+            </div>
+            <div class="connector-fields">
+              <label>API Key<input type="password" class="connector-input" id="apiKeyOpenAI" placeholder="sk-..." autocomplete="off"></label>
+              <label>Model<select class="connector-select" id="modelOpenAI"><option value="gpt-4o">GPT-4o</option><option value="gpt-4o-mini">GPT-4o Mini</option><option value="gpt-4-turbo">GPT-4 Turbo</option><option value="gpt-3.5-turbo">GPT-3.5 Turbo</option></select></label>
+              <button class="btn btn-primary btn-sm btn-connect" data-connector="openai">Test Connection</button>
+            </div>
+          </div>
+
+          <div class="connector-card" id="connectorAnthropic">
+            <div class="connector-header">
+              <span class="connector-logo">&#127776;</span>
+              <div><h4>Anthropic</h4><p class="connector-type">Claude / Messages API</p></div>
+              <span class="connector-status" id="statusAnthropic">&#9679; Disconnected</span>
+            </div>
+            <div class="connector-fields">
+              <label>API Key<input type="password" class="connector-input" id="apiKeyAnthropic" placeholder="sk-ant-..." autocomplete="off"></label>
+              <label>Model<select class="connector-select" id="modelAnthropic"><option value="claude-sonnet-4-20250514">Claude Sonnet 4</option><option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option><option value="claude-3-haiku-20240307">Claude 3 Haiku</option></select></label>
+              <button class="btn btn-primary btn-sm btn-connect" data-connector="anthropic">Test Connection</button>
+            </div>
+          </div>
+
+          <div class="connector-card" id="connectorTelegram">
+            <div class="connector-header">
+              <span class="connector-logo">&#128172;</span>
+              <div><h4>Telegram Bot</h4><p class="connector-type">Bot API / Webhook</p></div>
+              <span class="connector-status" id="statusTelegram">&#9679; Disconnected</span>
+            </div>
+            <div class="connector-fields">
+              <label>Bot Token<input type="password" class="connector-input" id="apiKeyTelegram" placeholder="123456:ABC-DEF..." autocomplete="off"></label>
+              <label>Webhook URL<input type="url" class="connector-input" id="webhookTelegram" placeholder="https://your-server.com/webhook"></label>
+              <button class="btn btn-primary btn-sm btn-connect" data-connector="telegram">Test Connection</button>
+            </div>
+          </div>
+
+          <div class="connector-card" id="connectorDiscord">
+            <div class="connector-header">
+              <span class="connector-logo">&#127918;</span>
+              <div><h4>Discord Bot</h4><p class="connector-type">Bot Token / Gateway</p></div>
+              <span class="connector-status" id="statusDiscord">&#9679; Disconnected</span>
+            </div>
+            <div class="connector-fields">
+              <label>Bot Token<input type="password" class="connector-input" id="apiKeyDiscord" placeholder="MTk..." autocomplete="off"></label>
+              <label>Guild ID<input type="text" class="connector-input" id="guildDiscord" placeholder="123456789012345678"></label>
+              <button class="btn btn-primary btn-sm btn-connect" data-connector="discord">Test Connection</button>
+            </div>
+          </div>
+
+          <div class="connector-card" id="connectorWebhook">
+            <div class="connector-header">
+              <span class="connector-logo">&#128279;</span>
+              <div><h4>Custom Webhook</h4><p class="connector-type">Any server or service</p></div>
+              <span class="connector-status" id="statusWebhook">&#9679; Disconnected</span>
+            </div>
+            <div class="connector-fields">
+              <label>Endpoint URL<input type="url" class="connector-input" id="apiKeyWebhook" placeholder="https://api.yourservice.com/ost"></label>
+              <label>Auth Header<input type="text" class="connector-input" id="authWebhook" placeholder="Bearer your-token-here"></label>
+              <button class="btn btn-primary btn-sm btn-connect" data-connector="webhook">Test Connection</button>
+            </div>
+          </div>
+
+          <div class="connector-card" id="connectorMCP">
+            <div class="connector-header">
+              <span class="connector-logo">&#128736;&#65039;</span>
+              <div><h4>MCP Server</h4><p class="connector-type">Model Context Protocol</p></div>
+              <span class="connector-status" id="statusMCP">&#9679; Disconnected</span>
+            </div>
+            <div class="connector-fields">
+              <label>Server URL<input type="url" class="connector-input" id="apiKeyMCP" placeholder="http://localhost:3000/mcp"></label>
+              <label>Transport<select class="connector-select" id="transportMCP"><option value="stdio">stdio</option><option value="sse">SSE (HTTP)</option><option value="streamable-http">Streamable HTTP</option></select></label>
+              <button class="btn btn-primary btn-sm btn-connect" data-connector="mcp">Test Connection</button>
+            </div>
+          </div>
+
+          <div class="connector-card" id="connectorClaude">
+            <div class="connector-header">
+              <span class="connector-logo">&#129302;</span>
+              <div><h4>Claude AI</h4><p class="connector-type">Anthropic Claude / claude.ai</p></div>
+              <span class="connector-status" id="statusClaude">&#9679; Disconnected</span>
+            </div>
+            <div class="connector-fields">
+              <label>API Key<input type="password" class="connector-input" id="apiKeyClaude" placeholder="sk-ant-..." autocomplete="off"></label>
+              <label>Model<select class="connector-select" id="modelClaude"><option value="claude-opus-4-20250514">Claude Opus 4</option><option value="claude-sonnet-4-20250514">Claude Sonnet 4</option><option value="claude-3-5-haiku-20241022">Claude 3.5 Haiku</option></select></label>
+              <button class="btn btn-primary btn-sm btn-connect" data-connector="claude">Test Connection</button>
+            </div>
+          </div>
+
+          <div class="connector-card" id="connectorVSCode">
+            <div class="connector-header">
+              <span class="connector-logo">&#128187;</span>
+              <div><h4>VS Code / Copilot</h4><p class="connector-type">AI Coding Assistant</p></div>
+              <span class="connector-status" id="statusVSCode">&#9679; Disconnected</span>
+            </div>
+            <div class="connector-fields">
+              <label>GitHub Token<input type="password" class="connector-input" id="apiKeyVSCode" placeholder="ghp_..." autocomplete="off"></label>
+              <label>Extension<select class="connector-select" id="extVSCode"><option value="copilot">GitHub Copilot</option><option value="copilot-chat">Copilot Chat</option><option value="cline">Cline</option><option value="continue">Continue</option></select></label>
+              <button class="btn btn-primary btn-sm btn-connect" data-connector="vscode">Test Connection</button>
+            </div>
+          </div>
+
+          <div class="connector-card" id="connectorGitHub">
+            <div class="connector-header">
+              <span class="connector-logo">&#128025;</span>
+              <div><h4>GitHub</h4><p class="connector-type">Actions / API Integration</p></div>
+              <span class="connector-status" id="statusGitHub">&#9679; Disconnected</span>
+            </div>
+            <div class="connector-fields">
+              <label>Personal Access Token<input type="password" class="connector-input" id="apiKeyGitHub" placeholder="ghp_..." autocomplete="off"></label>
+              <label>Repository<input type="text" class="connector-input" id="repoGitHub" placeholder="owner/repo"></label>
+              <button class="btn btn-primary btn-sm btn-connect" data-connector="github">Test Connection</button>
+            </div>
+          </div>
+
+          <div class="connector-card" id="connectorPolymarket">
+            <div class="connector-header">
+              <span class="connector-logo">&#128200;</span>
+              <div><h4>Polymarket</h4><p class="connector-type">Prediction Market Bot</p></div>
+              <span class="connector-status" id="statusPolymarket">&#9679; Disconnected</span>
+            </div>
+            <div class="connector-fields">
+              <label>API Key<input type="password" class="connector-input" id="apiKeyPolymarket" placeholder="Your Polymarket API key" autocomplete="off"></label>
+              <label>Strategy<select class="connector-select" id="strategyPolymarket"><option value="auto-trade">Auto Trade</option><option value="signal-only">Signal Only</option><option value="monitor">Monitor Markets</option></select></label>
+              <button class="btn btn-primary btn-sm btn-connect" data-connector="polymarket">Test Connection</button>
+            </div>
+          </div>
+
+          <div class="connector-card" id="connectorKalshi">
+            <div class="connector-header">
+              <span class="connector-logo">&#127922;</span>
+              <div><h4>Kalshi</h4><p class="connector-type">Event Contracts Bot</p></div>
+              <span class="connector-status" id="statusKalshi">&#9679; Disconnected</span>
+            </div>
+            <div class="connector-fields">
+              <label>API Key<input type="password" class="connector-input" id="apiKeyKalshi" placeholder="Your Kalshi API key" autocomplete="off"></label>
+              <label>Mode<select class="connector-select" id="modeKalshi"><option value="live">Live Trading</option><option value="paper">Paper Trading</option><option value="analytics">Analytics Only</option></select></label>
+              <button class="btn btn-primary btn-sm btn-connect" data-connector="kalshi">Test Connection</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="connector-log" id="connectorLog">
+          <div class="log-header">&#128196; Connection Log</div>
+          <div class="log-body" id="logBody"><p class="log-entry log-info">Ready to connect. Enter your API details above.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================== -->
+  <!-- 9. BUILD -->
+  <!-- ================================================================== -->
+  <section id="creators" class="section section-alt section-space">
+    <div class="container">
+      <h2 class="section-title" data-i18n="build.title">Build the Future With Us</h2>
+      <p class="section-subtitle" data-i18n="build.sub">Code, create, or dream in pixels — OST is your platform.</p>
+
+      <!-- Code Preview -->
+      <div class="build-code-showcase">
+        <div class="build-terminal">
+          <div class="terminal-bar"><span class="terminal-dot td-red"></span><span class="terminal-dot td-yellow"></span><span class="terminal-dot td-green"></span><span class="terminal-title">ost-sdk — TypeScript</span></div>
+          <pre class="terminal-body"><code><span class="code-kw">import</span> { <span class="code-fn">OstClient</span>, <span class="code-fn">ConfidentialTransfer</span> } <span class="code-kw">from</span> <span class="code-str">'@ost/sdk'</span>;
+
+<span class="code-kw">const</span> client = <span class="code-kw">new</span> <span class="code-fn">OstClient</span>({ network: <span class="code-str">'mainnet'</span> });
+
+<span class="code-comment">// Send a confidential transfer — fully private</span>
+<span class="code-kw">const</span> tx = <span class="code-kw">await</span> client.<span class="code-fn">confidentialTransfer</span>({
+  to: <span class="code-str">'9xQe...buyer_wallet'</span>,
+  amount: <span class="code-num">1000</span>,
+  memo: <span class="code-str">'Payment for services'</span>,
+});
+
+console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>${tx.signature}<span class="code-str">`</span>);
+<span class="code-comment">// Settlement: ~400ms | Fee: $0.00025 | Privacy: 100%</span></code></pre>
+        </div>
+
+        <div class="build-terminal">
+          <div class="terminal-bar"><span class="terminal-dot td-red"></span><span class="terminal-dot td-yellow"></span><span class="terminal-dot td-green"></span><span class="terminal-title">Anchor — Rust</span></div>
+          <pre class="terminal-body"><code><span class="code-kw">use</span> anchor_lang::prelude::*;
+<span class="code-kw">use</span> ost_program::{<span class="code-fn">confidential_mint</span>, <span class="code-fn">private_transfer</span>};
+
+<span class="code-comment">// 22 on-chain instructions, fully auditable</span>
+<span class="code-kw">pub fn</span> <span class="code-fn">handle_payment</span>(
+    ctx: <span class="code-fn">Context</span>&lt;PaymentAccounts&gt;,
+    amount: <span class="code-num">u64</span>,
+    proof: <span class="code-fn">ZKProof</span>,
+) -> <span class="code-fn">Result</span>&lt;()&gt; {
+    <span class="code-fn">private_transfer</span>(ctx, amount, proof)?;
+    <span class="code-fn">emit!</span>(PaymentEvent { amount, ts: <span class="code-fn">Clock</span>::get()?.unix_timestamp });
+    <span class="code-fn">Ok</span>(())
+}</code></pre>
+        </div>
+      </div>
+
+      <!-- Builder cards -->
+      <div class="creators-grid">
+        <div class="creator-card glow-card sr">
+          <img src="https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=180&fit=crop" alt="Developer coding" class="creator-img" loading="lazy">
+          <div class="creator-body">
+            <h3>&#128187; Developers</h3>
+            <p>Open-source Anchor SDK, TypeScript client, 22 on-chain instructions. Build payment apps, DeFi protocols, or privacy tools.</p>
+            <div class="creator-stats"><span>&#9733; 22 instructions</span><span>&#128218; Full docs</span><span>&#127942; Bounties</span></div>
+            <div class="creator-tags"><span class="tag">Rust</span><span class="tag">TypeScript</span><span class="tag">Anchor</span><span class="tag">Solana</span></div>
+          </div>
+        </div>
+        <div class="creator-card glow-card sr">
+          <img src="https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=400&h=180&fit=crop" alt="Designer workspace" class="creator-img" loading="lazy">
+          <div class="creator-body">
+            <h3>&#127912; Artists &amp; Designers</h3>
+            <p>Create themes, design wallets, build visual experiences for millions of users worldwide.</p>
+            <div class="creator-stats"><span>&#127912; Design system</span><span>&#127760; 11 languages</span><span>&#128640; Global reach</span></div>
+            <div class="creator-tags"><span class="tag">UI/UX</span><span class="tag">Branding</span><span class="tag">Motion</span></div>
+          </div>
+        </div>
+        <div class="creator-card glow-card sr">
+          <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400&h=180&fit=crop" alt="Team collaboration" class="creator-img" loading="lazy">
+          <div class="creator-body">
+            <h3>&#128221; Writers &amp; Translators</h3>
+            <p>Help us speak every language on Earth. Document, translate, educate — reach the unbanked.</p>
+            <div class="creator-stats"><span>&#127760; 11+ languages</span><span>&#128196; i18n system</span><span>&#127891; Tutorials</span></div>
+            <div class="creator-tags"><span class="tag">Docs</span><span class="tag">i18n</span><span class="tag">Blog</span></div>
+          </div>
+        </div>
+        <div class="creator-card glow-card sr">
+          <img src="https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=400&h=180&fit=crop" alt="Content creation" class="creator-img" loading="lazy">
+          <div class="creator-body">
+            <h3>&#127909; Content Creators</h3>
+            <p>Tutorials, reviews, documentaries. Show the world what private digital cash looks like.</p>
+            <div class="creator-stats"><span>&#127916; Video guides</span><span>&#127897;&#65039; Podcasts</span><span>&#128240; Articles</span></div>
+            <div class="creator-tags"><span class="tag">YouTube</span><span class="tag">Podcast</span><span class="tag">Social</span></div>
+          </div>
+        </div>
+        <div class="creator-card glow-card sr">
+          <img src="https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=400&h=180&fit=crop" alt="Server infrastructure" class="creator-img" loading="lazy">
+          <div class="creator-body">
+            <h3>&#127959;&#65039; Infrastructure</h3>
+            <p>Run validators, deploy dApps, build payment gateways and bridge infrastructure.</p>
+            <div class="creator-stats"><span>&#128338; 99.9% uptime</span><span>&#9889; &lt;400ms blocks</span><span>&#128274; Secure</span></div>
+            <div class="creator-tags"><span class="tag">DevOps</span><span class="tag">Solana</span><span class="tag">DePIN</span></div>
+          </div>
+        </div>
+        <div class="creator-card glow-card sr">
+          <img src="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=400&h=180&fit=crop" alt="Community meetup" class="creator-img" loading="lazy">
+          <div class="creator-body">
+            <h3>&#129309; Community Leaders</h3>
+            <p>Organize meetups, lead local chapters, grow adoption in your neighborhood and country.</p>
+            <div class="creator-stats"><span>&#127758; 195 countries</span><span>&#128587; Local chapters</span><span>&#128170; Grants</span></div>
+            <div class="creator-tags"><span class="tag">Events</span><span class="tag">Growth</span><span class="tag">DAO</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bounty / Hackathon CTA -->
+      <div class="cta-box">
+        <h3 data-i18n="build.cta">Start Contributing Today</h3>
+        <p data-i18n="build.ctasub">Every commit, translation, and tutorial moves humanity forward.</p>
+        <div class="build-bounty-grid">
+          <div class="bounty-card"><span class="bounty-amount">$500</span><span class="bounty-task">SDK Integration Plugin</span></div>
+          <div class="bounty-card"><span class="bounty-amount">$250</span><span class="bounty-task">New Language Translation</span></div>
+          <div class="bounty-card"><span class="bounty-amount">$1,000</span><span class="bounty-task">Payment Gateway Module</span></div>
+          <div class="bounty-card"><span class="bounty-amount">$750</span><span class="bounty-task">Mobile Wallet UI</span></div>
+        </div>
+        <div class="cta-actions">
+          <a href="https://github.com/nickmura/ost-token" class="btn btn-primary btn-glow" target="_blank" rel="noopener" data-i18n="build.github">View GitHub Repo</a>
+          <a href="https://github.com/nickmura/ost-token/wiki" class="btn btn-outline" target="_blank" rel="noopener" data-i18n="build.docs">Read the Docs</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================== -->
+  <!-- MY WALLET — Personalized Wallet Dashboard -->
+  <!-- ================================================================== -->
+  <section id="my-wallet" class="section section-space">
+    <div class="container">
+      <h2 class="section-title" data-i18n="wallet.dashTitle">My OST Wallet</h2>
+      <p class="section-subtitle" data-i18n="wallet.dashSub">Your personal command center. Create, connect, and manage your OST wallet.</p>
+
+      <!-- Wallet Not Connected State -->
+      <div class="wallet-dashboard" id="walletDashboard">
+        <div class="wd-not-connected" id="wdNotConnected">
+          <div class="wd-hero-icon">&#128091;</div>
+          <h3>Get Your Personal OST Wallet</h3>
+          <p class="text-muted">Choose how to create or connect your wallet. No seed phrase required with Web3Auth.</p>
+
+          <div class="wd-create-grid">
+            <div class="wd-create-card" data-action="phantom">
+              <div class="wd-card-icon">&#128123;</div>
+              <h4>Phantom</h4>
+              <p>Most popular Solana wallet. Mobile &amp; desktop.</p>
+              <div class="wd-card-tags"><span class="wd-tag">Mobile</span><span class="wd-tag">Desktop</span><span class="wd-tag">Browser</span></div>
+              <button class="btn btn-primary btn-sm wd-connect-btn" data-wallet="phantom">Connect Phantom</button>
+            </div>
+            <div class="wd-create-card" data-action="solflare">
+              <div class="wd-card-icon">&#9728;&#65039;</div>
+              <h4>Solflare</h4>
+              <p>Full-featured Solana wallet with staking.</p>
+              <div class="wd-card-tags"><span class="wd-tag">Mobile</span><span class="wd-tag">Desktop</span><span class="wd-tag">Staking</span></div>
+              <button class="btn btn-primary btn-sm wd-connect-btn" data-wallet="solflare">Connect Solflare</button>
+            </div>
+            <div class="wd-create-card" data-action="backpack">
+              <div class="wd-card-icon">&#127890;</div>
+              <h4>Backpack</h4>
+              <p>xNFT wallet with built-in dApps.</p>
+              <div class="wd-card-tags"><span class="wd-tag">Mobile</span><span class="wd-tag">xNFTs</span><span class="wd-tag">Multi-chain</span></div>
+              <button class="btn btn-primary btn-sm wd-connect-btn" data-wallet="backpack">Connect Backpack</button>
+            </div>
+            <div class="wd-create-card wd-card-seedless" data-action="google">
+              <div class="wd-card-icon">&#128273;</div>
+              <h4>No Seed Phrase</h4>
+              <p>Sign in with Google, Apple, or email. Wallet created instantly via Web3Auth.</p>
+              <div class="wd-card-tags"><span class="wd-tag wd-tag-new">New User Friendly</span><span class="wd-tag">No Download</span><span class="wd-tag">Email/Social</span></div>
+              <button class="btn btn-primary btn-sm wd-connect-btn" data-wallet="google">Create with Google</button>
+            </div>
+          </div>
+
+          <div class="wd-download-links">
+            <p class="text-muted">Don't have a wallet yet? Download one:</p>
+            <div class="wd-dl-row">
+              <a href="https://phantom.app/download" target="_blank" rel="noopener" class="wd-dl-link">&#128123; Phantom</a>
+              <a href="https://solflare.com/download" target="_blank" rel="noopener" class="wd-dl-link">&#9728;&#65039; Solflare</a>
+              <a href="https://www.backpack.app/download" target="_blank" rel="noopener" class="wd-dl-link">&#127890; Backpack</a>
+              <a href="https://phantom.app/download" target="_blank" rel="noopener" class="wd-dl-link">&#128241; Mobile (iOS/Android)</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Wallet Connected State -->
+        <div class="wd-connected" id="wdConnected" style="display:none;">
+          <div class="wd-profile">
+            <div class="wd-avatar" id="wdAvatar">&#128091;</div>
+            <div class="wd-info">
+              <div class="wd-address" id="wdAddress">--</div>
+              <div class="wd-network" id="wdNetwork">Solana Mainnet</div>
+            </div>
+            <button class="btn btn-outline btn-sm" id="wdCopyAddr" title="Copy address">&#128203; Copy</button>
+            <button class="btn btn-outline btn-sm" id="wdExplorer" title="View on Explorer">&#128269; Explorer</button>
+          </div>
+
+          <div class="wd-balances">
+            <div class="wd-balance-card wd-balance-sol">
+              <span class="wd-bal-icon">&#9783;</span>
+              <div class="wd-bal-info">
+                <div class="wd-bal-amount" id="wdSolBal">0.0000</div>
+                <div class="wd-bal-label">SOL</div>
+              </div>
+              <div class="wd-bal-usd" id="wdSolUsd">$0.00</div>
+            </div>
+            <div class="wd-balance-card wd-balance-ost">
+              <span class="wd-bal-icon">&#9673;</span>
+              <div class="wd-bal-info">
+                <div class="wd-bal-amount" id="wdOstBal">0.00</div>
+                <div class="wd-bal-label">OST</div>
+              </div>
+              <div class="wd-bal-usd" id="wdOstUsd">$0.00</div>
+            </div>
+          </div>
+
+          <div class="wd-actions">
+            <a href="#get-ost" class="wd-action-btn"><span>&#128176;</span> Buy OST</a>
+            <a href="#transfer" class="wd-action-btn"><span>&#128257;</span> Send</a>
+            <a href="#bridges" class="wd-action-btn"><span>&#127757;</span> Bridge</a>
+            <button class="wd-action-btn" id="wdReceiveBtn"><span>&#128229;</span> Receive</button>
+            <a href="#get-ost" class="wd-action-btn"><span>&#9889;</span> Swap</a>
+          </div>
+
+          <!-- Receive QR Modal -->
+          <div class="wd-receive-panel" id="wdReceivePanel" style="display:none;">
+            <h4>Receive OST or SOL</h4>
+            <p class="text-muted">Share your address or scan the QR code</p>
+            <div class="wd-qr" id="wdQr"></div>
+            <div class="wd-receive-addr" id="wdReceiveAddr">--</div>
+            <button class="btn btn-outline btn-sm" id="wdCopyReceive">&#128203; Copy Address</button>
+          </div>
+
+          <div class="wd-quick-links">
+            <h4>Quick Actions</h4>
+            <div class="wd-ql-grid">
+              <a href="https://jup.ag/" target="_blank" rel="noopener" class="wd-ql-item"><span>&#9889;</span> Swap on Jupiter</a>
+              <a href="https://raydium.io/swap/" target="_blank" rel="noopener" class="wd-ql-item"><span>&#128167;</span> Raydium Swap</a>
+              <a href="https://www.orca.so/" target="_blank" rel="noopener" class="wd-ql-item"><span>&#128011;</span> Orca Whirlpool</a>
+              <a href="https://portalbridge.com/" target="_blank" rel="noopener" class="wd-ql-item"><span>&#127757;</span> Wormhole Bridge</a>
+              <a href="https://widget.onramper.com?defaultCrypto=SOL" target="_blank" rel="noopener" class="wd-ql-item"><span>&#128179;</span> Buy with Card</a>
+              <a href="https://stake.solblaze.org/" target="_blank" rel="noopener" class="wd-ql-item"><span>&#128200;</span> Stake SOL</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================== -->
+  <!-- BRIDGES & RAMPS — Cross-Chain + Fiat Hub -->
+  <!-- ================================================================== -->
+  <section id="bridges" class="section section-alt section-space">
+    <div class="container">
+      <h2 class="section-title" data-i18n="bridges.title">Bridges, Ramps &amp; Exchanges</h2>
+      <p class="section-subtitle" data-i18n="bridges.sub">Every path to OST — from any chain, any currency, any country. All verified and working.</p>
+
+      <!-- Cross-Chain Bridges -->
+      <div class="bridge-hub">
+        <h3>&#127757; Cross-Chain Bridges</h3>
+        <p class="text-muted" style="margin-bottom:24px;">Move assets from any blockchain to Solana, then swap to OST.</p>
+        <div class="bridge-grid">
+          <a href="https://portalbridge.com/" target="_blank" rel="noopener" class="bridge-card">
+            <div class="bridge-icon">&#128302;</div>
+            <h4>Wormhole Portal</h4>
+            <p>Bridge from Ethereum, Polygon, BSC, Avalanche, Arbitrum, Base, Sui, Aptos to Solana.</p>
+            <div class="bridge-chains">ETH &bull; BSC &bull; Polygon &bull; Avax &bull; Arbitrum &bull; Base &bull; Sui</div>
+            <span class="bridge-status bridge-live">&#9679; Live</span>
+          </a>
+          <a href="https://app.allbridge.io/" target="_blank" rel="noopener" class="bridge-card">
+            <div class="bridge-icon">&#128279;</div>
+            <h4>Allbridge Core</h4>
+            <p>Stablecoin bridge. Move USDC/USDT from any chain to Solana in minutes.</p>
+            <div class="bridge-chains">USDC &bull; USDT &bull; ETH &bull; BSC &bull; Tron &bull; Polygon</div>
+            <span class="bridge-status bridge-live">&#9679; Live</span>
+          </a>
+          <a href="https://app.debridge.finance/" target="_blank" rel="noopener" class="bridge-card">
+            <div class="bridge-icon">&#9889;</div>
+            <h4>deBridge</h4>
+            <p>Cross-chain swaps with no wrapping. Direct SOL output from any chain.</p>
+            <div class="bridge-chains">ETH &bull; BSC &bull; Polygon &bull; Arbitrum &bull; Solana</div>
+            <span class="bridge-status bridge-live">&#9679; Live</span>
+          </a>
+          <a href="https://mayan.finance/" target="_blank" rel="noopener" class="bridge-card">
+            <div class="bridge-icon">&#127793;</div>
+            <h4>Mayan Finance</h4>
+            <p>Fastest cross-chain swap. Wormhole-powered with best gas optimization.</p>
+            <div class="bridge-chains">ETH &bull; Solana &bull; Polygon &bull; Avalanche &bull; Arbitrum</div>
+            <span class="bridge-status bridge-live">&#9679; Live</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Fiat On-Ramps -->
+      <div class="bridge-hub" style="margin-top:64px;">
+        <h3>&#128179; Fiat On-Ramps — Buy with Your Currency</h3>
+        <p class="text-muted" style="margin-bottom:24px;">Purchase SOL or USDC with credit card, bank transfer, or mobile pay. Then swap to OST on Jupiter.</p>
+        <div class="bridge-grid">
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&onlyCryptos=SOL,USDC" target="_blank" rel="noopener" class="bridge-card ramp-card">
+            <div class="bridge-icon">&#9889;</div>
+            <h4>Onramper</h4>
+            <p>Aggregator of 15+ on-ramp providers. Best rates across MoonPay, Transak, Banxa, etc.</p>
+            <div class="bridge-chains">100+ countries &bull; Card &bull; Bank &bull; Apple Pay</div>
+            <span class="bridge-status bridge-live">&#9679; Live</span>
+          </a>
+          <a href="https://www.moonpay.com/buy/sol" target="_blank" rel="noopener" class="bridge-card ramp-card">
+            <div class="bridge-icon">&#127769;</div>
+            <h4>MoonPay</h4>
+            <p>Buy SOL with Visa, Mastercard, Apple Pay, Google Pay, or bank transfer.</p>
+            <div class="bridge-chains">160+ countries &bull; Card &bull; Apple Pay &bull; Bank</div>
+            <span class="bridge-status bridge-live">&#9679; Live</span>
+          </a>
+          <a href="https://global.transak.com/?defaultCryptoCurrency=SOL" target="_blank" rel="noopener" class="bridge-card ramp-card">
+            <div class="bridge-icon">&#128178;</div>
+            <h4>Transak</h4>
+            <p>Buy crypto in 170+ countries. Supports UPI, PIX, SEPA, Faster Payments, and more.</p>
+            <div class="bridge-chains">170+ countries &bull; UPI &bull; PIX &bull; SEPA &bull; Card</div>
+            <span class="bridge-status bridge-live">&#9679; Live</span>
+          </a>
+          <a href="https://ramp.network/buy?defaultAsset=SOLANA_SOL" target="_blank" rel="noopener" class="bridge-card ramp-card">
+            <div class="bridge-icon">&#128640;</div>
+            <h4>Ramp Network</h4>
+            <p>Instant purchases with bank transfer or card. Low fees, fast settlement.</p>
+            <div class="bridge-chains">150+ countries &bull; Open Banking &bull; Card &bull; ACH</div>
+            <span class="bridge-status bridge-live">&#9679; Live</span>
+          </a>
+          <a href="https://pay.coinbase.com/buy/select-asset?appId=OST" target="_blank" rel="noopener" class="bridge-card ramp-card">
+            <div class="bridge-icon">&#128309;</div>
+            <h4>Coinbase Pay</h4>
+            <p>Buy SOL directly from Coinbase. Link your existing Coinbase account.</p>
+            <div class="bridge-chains">100+ countries &bull; Coinbase Account &bull; Card &bull; ACH</div>
+            <span class="bridge-status bridge-live">&#9679; Live</span>
+          </a>
+          <a href="https://www.binance.com/en/buy-sell-crypto" target="_blank" rel="noopener" class="bridge-card ramp-card">
+            <div class="bridge-icon">&#128311;</div>
+            <h4>Binance</h4>
+            <p>Buy SOL on the world's largest exchange (not available in USA). Transfer to Solana wallet.</p>
+            <div class="bridge-chains">180+ countries &bull; P2P &bull; Card &bull; Bank</div>
+            <span class="bridge-status bridge-live">&#9679; Live</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Fiat Off-Ramps -->
+      <div class="bridge-hub" style="margin-top:64px;">
+        <h3>&#128176; Fiat Off-Ramps — Cash Out to Bank</h3>
+        <p class="text-muted" style="margin-bottom:24px;">Swap OST → SOL/USDC on Jupiter, then off-ramp to your local bank account.</p>
+        <div class="bridge-grid">
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&isAmountEditable=true&mode=sell" target="_blank" rel="noopener" class="bridge-card offramp-card">
+            <div class="bridge-icon">&#127974;</div>
+            <h4>Onramper (Sell)</h4>
+            <p>Sell SOL/USDC and receive funds in your bank account. 90+ currencies supported.</p>
+            <div class="bridge-chains">90+ currencies &bull; Bank Transfer &bull; Mobile Money</div>
+            <span class="bridge-status bridge-live">&#9679; Live</span>
+          </a>
+          <a href="https://global.transak.com/?defaultCryptoCurrency=SOL&productsAvailed=SELL" target="_blank" rel="noopener" class="bridge-card offramp-card">
+            <div class="bridge-icon">&#128178;</div>
+            <h4>Transak (Sell)</h4>
+            <p>Cash out in 75+ countries. Receive in your local currency via bank transfer.</p>
+            <div class="bridge-chains">75+ countries &bull; SEPA &bull; Faster Payments &bull; Wire</div>
+            <span class="bridge-status bridge-live">&#9679; Live</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- DEX / Swap Exchanges -->
+      <div class="bridge-hub" style="margin-top:64px;">
+        <h3>&#9889; DEX &amp; Swap — Trade OST</h3>
+        <p class="text-muted" style="margin-bottom:24px;">Swap any Solana token to/from OST. No account needed, just connect your wallet.</p>
+        <div class="bridge-grid">
+          <a href="https://jup.ag/" target="_blank" rel="noopener" class="bridge-card dex-card">
+            <div class="bridge-icon">&#9889;</div>
+            <h4>Jupiter Aggregator</h4>
+            <p>Best swap rates. Routes through all Solana DEXs to find optimal price.</p>
+            <div class="bridge-chains">All Solana tokens &bull; Limit Orders &bull; DCA &bull; Perps</div>
+            <span class="bridge-status bridge-live">&#9679; Live</span>
+          </a>
+          <a href="https://raydium.io/swap/" target="_blank" rel="noopener" class="bridge-card dex-card">
+            <div class="bridge-icon">&#128167;</div>
+            <h4>Raydium</h4>
+            <p>AMM &amp; CLMM pools on Solana. Provide liquidity to earn fees.</p>
+            <div class="bridge-chains">Swap &bull; Liquidity &bull; Farms &bull; AcceleRaytor</div>
+            <span class="bridge-status bridge-live">&#9679; Live</span>
+          </a>
+          <a href="https://www.orca.so/" target="_blank" rel="noopener" class="bridge-card dex-card">
+            <div class="bridge-icon">&#128011;</div>
+            <h4>Orca</h4>
+            <p>Concentrated liquidity pools (Whirlpools). Clean UI, great rates.</p>
+            <div class="bridge-chains">Swap &bull; Whirlpools &bull; SOL &bull; USDC</div>
+            <span class="bridge-status bridge-live">&#9679; Live</span>
+          </a>
+          <a href="https://app.meteora.ag/" target="_blank" rel="noopener" class="bridge-card dex-card">
+            <div class="bridge-icon">&#9733;</div>
+            <h4>Meteora</h4>
+            <p>Dynamic liquidity pools with automated rebalancing. Ideal for new tokens.</p>
+            <div class="bridge-chains">DLMM &bull; Dynamic Pools &bull; Auto-compound</div>
+            <span class="bridge-status bridge-live">&#9679; Live</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- How It Works -->
+      <div class="bridge-how" style="margin-top:64px;">
+        <h3>&#128221; How to Buy OST — Step by Step</h3>
+        <div class="bridge-steps">
+          <div class="bridge-step">
+            <div class="bridge-step-num">1</div>
+            <h4>Get a Wallet</h4>
+            <p>Download <a href="https://phantom.app/download" target="_blank" rel="noopener">Phantom</a> or <a href="https://solflare.com/download" target="_blank" rel="noopener">Solflare</a> for your phone or browser. Or use Google sign-in above for no seed phrase.</p>
+          </div>
+          <div class="bridge-step">
+            <div class="bridge-step-num">2</div>
+            <h4>Fund with SOL</h4>
+            <p>Buy SOL from any on-ramp above (MoonPay, Transak, Ramp, Coinbase, Binance). Or bridge from another chain.</p>
+          </div>
+          <div class="bridge-step">
+            <div class="bridge-step-num">3</div>
+            <h4>Swap to OST</h4>
+            <p>Go to <a href="https://jup.ag/" target="_blank" rel="noopener">Jupiter</a> or use the swap widget above. Swap SOL → OST. Instant, &lt;$0.01 fee.</p>
+          </div>
+          <div class="bridge-step">
+            <div class="bridge-step-num">4</div>
+            <h4>Go Private</h4>
+            <p>Enable confidential transfers in your wallet. Your balance and transactions become fully private.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Supported Fiat Currencies (comprehensive) -->
+      <div class="bridge-hub" style="margin-top:64px;">
+        <h3>&#127760; Supported Currencies — Buy from Any Country</h3>
+        <p class="text-muted" style="margin-bottom:24px;">Click any currency to open the best on-ramp for your region.</p>
+        <div class="fiat-grid fiat-grid-full" id="fiatGridFull">
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=USD" target="_blank" rel="noopener" class="fiat-pill">&#127482;&#127480; USD</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=EUR" target="_blank" rel="noopener" class="fiat-pill">&#127466;&#127482; EUR</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=GBP" target="_blank" rel="noopener" class="fiat-pill">&#127468;&#127463; GBP</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=CAD" target="_blank" rel="noopener" class="fiat-pill">&#127464;&#127462; CAD</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=AUD" target="_blank" rel="noopener" class="fiat-pill">&#127462;&#127482; AUD</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=JPY" target="_blank" rel="noopener" class="fiat-pill">&#127471;&#127477; JPY</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=KRW" target="_blank" rel="noopener" class="fiat-pill">&#127472;&#127479; KRW</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=CNY" target="_blank" rel="noopener" class="fiat-pill">&#127464;&#127475; CNY</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=INR" target="_blank" rel="noopener" class="fiat-pill">&#127470;&#127475; INR</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=BRL" target="_blank" rel="noopener" class="fiat-pill">&#127463;&#127479; BRL</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=MXN" target="_blank" rel="noopener" class="fiat-pill">&#127474;&#127485; MXN</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=ARS" target="_blank" rel="noopener" class="fiat-pill">&#127462;&#127479; ARS</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=COP" target="_blank" rel="noopener" class="fiat-pill">&#127464;&#127476; COP</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=CLP" target="_blank" rel="noopener" class="fiat-pill">&#127464;&#127473; CLP</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=PEN" target="_blank" rel="noopener" class="fiat-pill">&#127477;&#127466; PEN</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=NGN" target="_blank" rel="noopener" class="fiat-pill">&#127475;&#127468; NGN</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=KES" target="_blank" rel="noopener" class="fiat-pill">&#127472;&#127466; KES</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=GHS" target="_blank" rel="noopener" class="fiat-pill">&#127468;&#127469; GHS</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=ZAR" target="_blank" rel="noopener" class="fiat-pill">&#127487;&#127462; ZAR</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=EGP" target="_blank" rel="noopener" class="fiat-pill">&#127466;&#127468; EGP</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=TRY" target="_blank" rel="noopener" class="fiat-pill">&#127481;&#127479; TRY</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=SAR" target="_blank" rel="noopener" class="fiat-pill">&#127480;&#127462; SAR</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=AED" target="_blank" rel="noopener" class="fiat-pill">&#127462;&#127466; AED</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=QAR" target="_blank" rel="noopener" class="fiat-pill">&#127478;&#127462; QAR</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=RUB" target="_blank" rel="noopener" class="fiat-pill">&#127479;&#127482; RUB</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=UAH" target="_blank" rel="noopener" class="fiat-pill">&#127482;&#127462; UAH</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=PLN" target="_blank" rel="noopener" class="fiat-pill">&#127477;&#127473; PLN</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=CZK" target="_blank" rel="noopener" class="fiat-pill">&#127464;&#127487; CZK</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=SEK" target="_blank" rel="noopener" class="fiat-pill">&#127480;&#127466; SEK</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=NOK" target="_blank" rel="noopener" class="fiat-pill">&#127475;&#127476; NOK</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=DKK" target="_blank" rel="noopener" class="fiat-pill">&#127465;&#127472; DKK</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=CHF" target="_blank" rel="noopener" class="fiat-pill">&#127464;&#127469; CHF</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=THB" target="_blank" rel="noopener" class="fiat-pill">&#127481;&#127469; THB</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=VND" target="_blank" rel="noopener" class="fiat-pill">&#127483;&#127475; VND</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=IDR" target="_blank" rel="noopener" class="fiat-pill">&#127470;&#127465; IDR</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=PHP" target="_blank" rel="noopener" class="fiat-pill">&#127477;&#127469; PHP</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=MYR" target="_blank" rel="noopener" class="fiat-pill">&#127474;&#127486; MYR</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=SGD" target="_blank" rel="noopener" class="fiat-pill">&#127480;&#127468; SGD</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=HKD" target="_blank" rel="noopener" class="fiat-pill">&#127469;&#127472; HKD</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=TWD" target="_blank" rel="noopener" class="fiat-pill">&#127481;&#127484; TWD</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=NZD" target="_blank" rel="noopener" class="fiat-pill">&#127475;&#127487; NZD</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=PKR" target="_blank" rel="noopener" class="fiat-pill">&#127477;&#127472; PKR</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=BDT" target="_blank" rel="noopener" class="fiat-pill">&#127463;&#127465; BDT</a>
+          <a href="https://widget.onramper.com?defaultCrypto=SOL&defaultFiat=LKR" target="_blank" rel="noopener" class="fiat-pill">&#127473;&#127472; LKR</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================== -->
+  <!-- 10. TRANSPARENCY -->
+  <!-- ================================================================== -->
+  <section id="transparency" class="section section-space">
+    <div class="container">
+      <h2 class="section-title" data-i18n="verify.title">Full Transparency</h2>
+      <p class="section-subtitle" data-i18n="verify.sub">Verify everything yourself. We have nothing to hide.</p>
+      <div class="manifesto">
+        <p class="manifesto-lead" data-i18n="verify.lead">Trust is earned with facts, not promises.</p>
+        <p data-i18n="verify.t1"><strong>No pre-mine. No hidden allocations. No "team tokens."</strong> Every token minted through the public confidential_mint instruction.</p>
+        <p data-i18n="verify.t2"><strong>Open source from day one.</strong> Every line of Rust, TypeScript, and HTML on GitHub. Find a flaw? Open a PR.</p>
+        <p data-i18n="verify.t3"><strong>Real company, real founder.</strong> Panama S.A. operated by a builder from Mexico. Company docs are public.</p>
+        <p data-i18n="verify.t4"><strong>The space story is real.</strong> 0.1% DAO fee into on-chain treasury. Every disbursement voted publicly.</p>
+        <p class="manifesto-closing" data-i18n="verify.closing">Read the code. Check the company. Verify the treasury. <strong>Then decide.</strong></p>
+      </div>
+      <div class="verify-grid">
+        <div class="feature-card glow-card sr"><div class="feature-icon">&#128194;</div><h3>GitHub</h3><p>Full source code. MIT licensed.</p><a href="https://github.com/nickmura/ost-token" target="_blank" rel="noopener" class="btn btn-outline" style="margin-top:12px;">View</a></div>
+        <div class="feature-card glow-card sr"><div class="feature-icon">&#127963;&#65039;</div><h3>Company Docs</h3><p>Panama S.A. registration and filings.</p><a href="https://github.com/nickmura/ost-token/wiki/Company" target="_blank" rel="noopener" class="btn btn-outline" style="margin-top:12px;">View</a></div>
+        <div class="feature-card glow-card sr"><div class="feature-icon">&#128269;</div><h3>Treasury</h3><p>On-chain. Every fee, vote, disbursement.</p><a href="https://explorer.solana.com/address/ostDAoYdwBShL4MCvmjVRSGrirdAaQovbm7p3jFMNYU" target="_blank" rel="noopener" class="btn btn-outline" style="margin-top:12px;">View</a></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================== -->
+  <!-- FOOTER -->
+  <!-- ================================================================== -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-space"><p data-i18n="footer.mission">Every transaction helps fund satellite infrastructure for universal internet access. <strong>A gift we build together.</strong></p></div>
+      <div class="footer-bottom">
+        <div class="footer-logo"><span class="logo-icon">&#9673;</span> OST</div>
+        <p class="footer-copy" data-i18n="footer.copy">Open source. Built with love for every human on Earth.</p>
+        <div class="footer-links">
+          <a href="https://github.com/nickmura/ost-token" target="_blank" rel="noopener">GitHub</a>
+          <a href="#story">Manifesto</a>
+          <a href="#get-ost">Get OST</a>
+          <a href="#creators">Contribute</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Background particles -->
+  <div class="bg-particles" id="bgParticles"></div>
+
+  <!-- Wallet connection modal -->
+  <div class="wallet-modal" id="walletModal">
+    <div class="wallet-modal-overlay" id="walletModalOverlay"></div>
+    <div class="wallet-modal-content">
+      <h3 data-i18n="wallet.title">Connect Your Wallet</h3>
+      <p class="text-muted" data-i18n="wallet.sub">Choose a wallet to connect to OST.</p>
+      <div class="wallet-options">
+        <button class="wallet-option" data-wallet="phantom"><span class="wallet-fallback">&#128123;</span> Phantom</button>
+        <button class="wallet-option" data-wallet="solflare"><span class="wallet-fallback">&#9728;&#65039;</span> Solflare</button>
+        <button class="wallet-option" data-wallet="backpack"><span class="wallet-fallback">&#127890;</span> Backpack</button>
+        <button class="wallet-option" data-wallet="ledger"><span class="wallet-fallback">&#128179;</span> Ledger</button>
+        <button class="wallet-option" data-wallet="walletconnect"><span class="wallet-fallback">&#128279;</span> WalletConnect</button>
+        <button class="wallet-option" data-wallet="google"><span class="wallet-fallback">&#128273;</span> Google (Web3Auth)</button>
+      </div>
+      <button class="wallet-close" id="walletClose">&times;</button>
+    </div>
+  </div>
+
+  <!-- Toast container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Universal In-Page Popup (iframe overlay for external services) -->
+  <div class="ost-popup-overlay" id="ostPopupOverlay">
+    <div class="ost-popup">
+      <div class="ost-popup-header">
+        <span class="ost-popup-title" id="ostPopupTitle">Loading...</span>
+        <button class="ost-popup-close" id="ostPopupClose">&times;</button>
+      </div>
+      <iframe id="ostPopupFrame" class="ost-popup-frame" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation" allow="accelerometer; autoplay; camera; gyroscope; payment; microphone; clipboard-write" loading="lazy"></iframe>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
