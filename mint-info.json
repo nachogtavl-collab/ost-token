@@ -1,7 +1,7 @@
 {
-  "mint": "CbWVWqHqpyAPJwHFnhaYEZhz361rgasLVCZtpqSsu4Bd",
+  "mint": "383pTzoZ8Gp83dzk23ZnvLcfX2Sq32TAGN48CMQu2pAJ",
   "admin": "6LvGarqaiQfaaZ8RsCd3NQE96UAhDYCz8MXvarw6bsfF",
   "programId": "J2jiS296YWVie1Sopb4SxcM3aJnP9aAwe6aLDhCqvGXY",
-  "cluster": "localnet",
-  "createdAt": "2026-03-28T00:23:17.449Z"
+  "cluster": "devnet",
+  "createdAt": "2026-03-28T19:13:05.917Z"
 }

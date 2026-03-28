@@ -876,9 +876,9 @@
   // OST Program & Network Config
   const OST_CONFIG = {
     programId: 'J2jiS296YWVie1Sopb4SxcM3aJnP9aAwe6aLDhCqvGXY',
-    mint: 'CbWVWqHqpyAPJwHFnhaYEZhz361rgasLVCZtpqSsu4Bd',
-    network: 'localnet',
-    rpcUrl: 'http://127.0.0.1:8899'
+    mint: '383pTzoZ8Gp83dzk23ZnvLcfX2Sq32TAGN48CMQu2pAJ',
+    network: 'devnet',
+    rpcUrl: 'https://api.devnet.solana.com'
   };
 
   // Initialize Solana connection
@@ -2474,7 +2474,7 @@
         }
         // Try fetching OST token balance (Token-2022)
         try {
-          const mintPk = new solanaWeb3.PublicKey('44R8tYQYza1EEuiAriYs5NHnbGBeX8tLPTdu3zH7wLsz');
+          const mintPk = new solanaWeb3.PublicKey('383pTzoZ8Gp83dzk23ZnvLcfX2Sq32TAGN48CMQu2pAJ');
           const TOKEN_2022_PID = new solanaWeb3.PublicKey('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb');
           const ataSeeds = [pk.toBuffer(), TOKEN_2022_PID.toBuffer(), mintPk.toBuffer()];
           const ATA_PID = new solanaWeb3.PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
