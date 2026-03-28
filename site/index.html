@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=4">
+  <link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
 
@@ -482,8 +482,16 @@
 
       <!-- PAY DEMO - Real-World Products -->
       <div class="pay-demo" id="pay-demo">
-        <h3 data-i18n="pay.title">Shop with OST - Real Prices</h3>
-        <p class="pay-demo-sub" data-i18n="pay.sub">Real products, real world prices. See what private payments feel like.</p>
+        <div class="pay-demo-header">
+          <div class="pay-demo-icon-ring"><span>&#9673;</span></div>
+          <h3 data-i18n="pay.title">Shop with OST &mdash; Real Prices</h3>
+          <p class="pay-demo-sub" data-i18n="pay.sub">Real products, real world prices. See what private payments feel like.</p>
+          <div class="pay-demo-trust">
+            <span class="pdt-item"><span class="pdt-dot pdt-green"></span>ZK-Private</span>
+            <span class="pdt-item"><span class="pdt-dot pdt-blue"></span>Sub-Second</span>
+            <span class="pdt-item"><span class="pdt-dot pdt-gold"></span>Live Prices</span>
+          </div>
+        </div>
 
         <div class="store-products" id="storeProducts">
           <div class="store-item" data-price="6.45" data-name="Starbucks Caramel Macchiato" data-link="https://www.starbucks.com/menu/drinks/espresso-drinks/caramel-macchiato">
@@ -556,10 +564,23 @@
         </div>
       </div>
 
-      <!-- PAY ANYWHERE — Browse & Pay Like a Browser -->
+      <!-- PAY ANYWHERE — Revolutionary Currency Interchange -->
       <div class="pay-anywhere" id="payAnywhere">
-        <h3 data-i18n="pay.anywhere">&#127760; Pay Anywhere with OST &mdash; Even Where They Don't Accept It</h3>
-        <p class="pay-anywhere-sub" data-i18n="pay.anywheresub">The problem: 99% of websites don't accept OST (yet). The solution: browse any store, pick your products, fill your address &mdash; and at checkout, OST converts automatically. The merchant gets their currency. You pay with OST. Everyone's happy.</p>
+        <div class="pa-hero">
+          <div class="pa-hero-glow"></div>
+          <div class="pa-hero-icon">&#9673;</div>
+          <h3 data-i18n="pay.anywhere">The OST Interchange &mdash; Pay Anywhere, In Any Currency</h3>
+          <p class="pay-anywhere-sub" data-i18n="pay.anywheresub">The final step of every purchase is payment. OST takes over that step. Browse any store, shop normally, and at checkout &mdash; OST intercepts, converts your currency in real-time through our interchange engine, and the merchant receives exactly what they expect. You paid with OST. They got USD. Nobody knew the difference.</p>
+          <div class="pa-pipeline">
+            <div class="pa-pipe-node"><span class="pa-pipe-icon">&#128722;</span><span>You Shop</span></div>
+            <div class="pa-pipe-arrow"><div class="pa-pipe-line"></div><span>&#8594;</span></div>
+            <div class="pa-pipe-node pa-pipe-ost"><span class="pa-pipe-icon">&#9673;</span><span>OST Intercepts</span></div>
+            <div class="pa-pipe-arrow"><div class="pa-pipe-line"></div><span>&#8594;</span></div>
+            <div class="pa-pipe-node"><span class="pa-pipe-icon">&#128176;</span><span>ZK Convert</span></div>
+            <div class="pa-pipe-arrow"><div class="pa-pipe-line"></div><span>&#8594;</span></div>
+            <div class="pa-pipe-node pa-pipe-done"><span class="pa-pipe-icon">&#9989;</span><span>Merchant Paid</span></div>
+          </div>
+        </div>
 
         <!-- Browser Mockup -->
         <div class="ost-browser" id="ostBrowser">
@@ -570,29 +591,29 @@
               <input type="url" id="browserUrl" class="browser-url-input" placeholder="Enter any store URL &mdash; amazon.com, nike.com, booking.com..." autocomplete="off">
               <button class="browser-go" id="browserGo">Go &#8594;</button>
             </div>
-            <div class="browser-ost-badge">&#9673; OST Pay Active</div>
+            <div class="browser-ost-badge">&#9673; OST Interchange Active</div>
           </div>
           <div class="browser-viewport" id="browserViewport">
             <div class="browser-placeholder">
-              <div class="browser-placeholder-icon">&#128722;</div>
-              <h4>Browse Any Store</h4>
-              <p>Enter a URL above or try one of these:</p>
+              <div class="browser-placeholder-icon">&#127760;</div>
+              <h4>Enter Any Store &mdash; We Handle The Payment</h4>
+              <p>Pick a store below or type any URL. Shop normally. When it's time to pay, OST takes over.</p>
               <div class="browser-quick-links">
                 <button class="browser-quick" data-url="amazon.com">&#128230; Amazon</button>
                 <button class="browser-quick" data-url="nike.com">&#128095; Nike</button>
                 <button class="browser-quick" data-url="apple.com">&#127822; Apple</button>
-                <button class="browser-quick" data-url="booking.com">&#127968; Booking.com</button>
+                <button class="browser-quick" data-url="booking.com">&#127968; Booking</button>
                 <button class="browser-quick" data-url="ebay.com">&#128717; eBay</button>
                 <button class="browser-quick" data-url="walmart.com">&#128722; Walmart</button>
                 <button class="browser-quick" data-url="airbnb.com">&#127969; Airbnb</button>
                 <button class="browser-quick" data-url="aliexpress.com">&#128230; AliExpress</button>
               </div>
               <div class="browser-how-it-works">
-                <div class="bhow-step"><span class="bhow-num">1</span><span>Browse &amp; shop normally on any website</span></div>
-                <div class="bhow-step"><span class="bhow-num">2</span><span>Fill your shipping address &amp; pick products</span></div>
-                <div class="bhow-step"><span class="bhow-num">3</span><span>At checkout, OST intercepts the payment</span></div>
-                <div class="bhow-step"><span class="bhow-num">4</span><span>We convert OST &#8594; their currency in real-time</span></div>
-                <div class="bhow-step"><span class="bhow-num">5</span><span>Merchant gets USD/EUR/etc. You paid with OST</span></div>
+                <div class="bhow-step"><span class="bhow-num">1</span><span>Browse &amp; shop normally</span></div>
+                <div class="bhow-step"><span class="bhow-num">2</span><span>Add products, fill address</span></div>
+                <div class="bhow-step bhow-highlight"><span class="bhow-num">&#9673;</span><span>At checkout, OST Interchange activates</span></div>
+                <div class="bhow-step"><span class="bhow-num">3</span><span>ZK proof generated, currency converted</span></div>
+                <div class="bhow-step"><span class="bhow-num">4</span><span>Merchant gets their currency. Done.</span></div>
               </div>
             </div>
           </div>
@@ -754,55 +775,67 @@
         </div>
       </div>
 
-      <!-- Transfer Widget -->
-      <div class="transfer-widget">
-        <h3 data-i18n="transfer.widgettitle">Convert Now</h3>
-        <div class="transfer-visual">
-          <div class="transfer-node node-source">
-            <div class="node-icon">&#128176;</div>
-            <div class="node-label" data-i18n="transfer.from">Your Currency</div>
-            <select class="transfer-select" id="transferFrom">
-              <option value="BTC">Bitcoin (BTC)</option>
-              <option value="ETH">Ethereum (ETH)</option>
-              <option value="USDC">USDC</option>
-              <option value="SOL">Solana (SOL)</option>
-              <option value="USDT">Tether (USDT)</option>
-              <option value="BNB">BNB Chain</option>
-              <option value="USD">US Dollar</option>
-              <option value="EUR">Euro</option>
-              <option value="GBP">British Pound</option>
-              <option value="CNY">Chinese Yuan</option>
-              <option value="INR">Indian Rupee</option>
-              <option value="BRL">Brazilian Real</option>
-              <option value="RUB">Russian Ruble</option>
-              <option value="NGN">Nigerian Naira</option>
-              <option value="MXN">Mexican Peso</option>
+      <!-- Convert Now — Premium Terminal -->
+      <div class="convert-terminal">
+        <div class="ct-glow"></div>
+        <div class="ct-header">
+          <div class="ct-status"><span class="ct-status-dot"></span>OST Interchange &mdash; Live</div>
+          <h3 data-i18n="transfer.widgettitle">Convert Now</h3>
+          <p class="ct-sub">Institutional-grade currency conversion. Your money enters one side; confidential OST comes out the other.</p>
+        </div>
+        <div class="ct-body">
+          <div class="ct-side ct-from">
+            <label class="ct-label">FROM</label>
+            <select class="ct-select" id="transferFrom">
+              <option value="BTC">&#8383; Bitcoin (BTC)</option>
+              <option value="ETH">&#9830; Ethereum (ETH)</option>
+              <option value="USDC">&#9675; USDC</option>
+              <option value="SOL">&#9788; Solana (SOL)</option>
+              <option value="USDT">&#9675; Tether (USDT)</option>
+              <option value="BNB">&#9830; BNB Chain</option>
+              <option value="USD">$ US Dollar</option>
+              <option value="EUR">&euro; Euro</option>
+              <option value="GBP">&pound; British Pound</option>
+              <option value="CNY">&yen; Chinese Yuan</option>
+              <option value="INR">&#8377; Indian Rupee</option>
+              <option value="BRL">R$ Brazilian Real</option>
+              <option value="RUB">&#8381; Russian Ruble</option>
+              <option value="NGN">&#8358; Nigerian Naira</option>
+              <option value="MXN">$ Mexican Peso</option>
             </select>
-            <input type="number" class="transfer-amount" id="transferAmount" placeholder="Amount" min="0" step="any">
+            <input type="number" class="ct-amount" id="transferAmount" placeholder="0.00" min="0" step="any">
           </div>
-          <div class="transfer-node node-process">
-            <div class="process-steps">
-              <div class="process-step" id="pStep1"><span class="process-dot"></span><span>Bridge to Solana</span></div>
-              <div class="process-step" id="pStep2"><span class="process-dot"></span><span>Swap to OST</span></div>
-              <div class="process-step" id="pStep3"><span class="process-dot"></span><span>Deposit to Private</span></div>
+          <div class="ct-middle">
+            <div class="ct-flow">
+              <div class="ct-flow-line"></div>
+              <div class="ct-flow-steps">
+                <div class="ct-step" id="pStep1"><span class="ct-step-dot"></span><span>Bridge</span></div>
+                <div class="ct-step" id="pStep2"><span class="ct-step-dot"></span><span>Swap</span></div>
+                <div class="ct-step" id="pStep3"><span class="ct-step-dot"></span><span>Encrypt</span></div>
+              </div>
+            </div>
+            <button class="ct-convert-btn" id="transferBtn" data-i18n="transfer.convert">
+              <span class="ct-btn-icon">&#9673;</span> Convert to OST
+            </button>
+          </div>
+          <div class="ct-side ct-to">
+            <label class="ct-label">TO</label>
+            <div class="ct-ost-output">
+              <div class="ct-ost-icon">&#9673;</div>
+              <div class="ct-ost-name">Confidential OST</div>
+              <div class="ct-ost-result" id="transferResult" data-i18n="transfer.result">Private &amp; Instant</div>
             </div>
           </div>
-          <div class="transfer-node node-dest">
-            <div class="node-icon">&#9673;</div>
-            <div class="node-label" data-i18n="transfer.to">Confidential OST</div>
-            <div class="node-result" id="transferResult" data-i18n="transfer.result">Private &amp; Instant</div>
+        </div>
+        <div class="ct-providers" id="convertProviders" style="display:none;">
+          <p class="ct-prov-label">Direct fiat on-ramps:</p>
+          <div class="ct-prov-btns">
+            <a id="cpOnramper" href="#" target="_blank" rel="noopener" class="ct-prov-btn">&#9889; Onramper</a>
+            <a id="cpMoonPay" href="#" target="_blank" rel="noopener" class="ct-prov-btn">&#127769; MoonPay</a>
+            <a id="cpTransak" href="#" target="_blank" rel="noopener" class="ct-prov-btn">&#128178; Transak</a>
           </div>
         </div>
-        <button class="btn btn-primary btn-glow" id="transferBtn" style="margin-top:24px;" data-i18n="transfer.convert">Convert to OST</button>
-        <div class="convert-providers" id="convertProviders" style="display:none;">
-          <p class="convert-providers-label">Buy directly with your selected currency:</p>
-          <div class="convert-provider-btns">
-            <a id="cpOnramper" href="#" target="_blank" rel="noopener" class="btn btn-outline btn-sm convert-prov-btn">&#9889; Onramper</a>
-            <a id="cpMoonPay" href="#" target="_blank" rel="noopener" class="btn btn-outline btn-sm convert-prov-btn">&#127769; MoonPay</a>
-            <a id="cpTransak" href="#" target="_blank" rel="noopener" class="btn btn-outline btn-sm convert-prov-btn">&#128178; Transak</a>
-          </div>
-        </div>
-        <p class="transfer-note" data-i18n="transfer.note">Powered by Wormhole, Jupiter Aggregator, and Solana Token-2022.</p>
+        <p class="ct-note">Currently powered by Jupiter + Wormhole on Solana. <strong>Temporary infrastructure</strong> &mdash; the OST native interchange engine is under development.</p>
       </div>
 
       <div class="fiat-ramp">
@@ -1014,33 +1047,37 @@
             </ul>
           </div>
           <div class="roadmap-phase roadmap-future">
-            <div class="roadmap-phase-header"><span class="roadmap-status-dot future"></span><strong>Phase 3 &mdash; Adoption</strong> <span class="roadmap-date">2026</span></div>
+            <div class="roadmap-phase-header"><span class="roadmap-status-dot future"></span><strong>Phase 3 &mdash; Adoption &amp; Interchange Engine</strong> <span class="roadmap-date">2026</span></div>
             <ul class="roadmap-items">
               <li>&#9898; Mobile app (iOS + Android)</li>
               <li>&#9898; Offline NFC/BLE payment system live</li>
               <li>&#9898; First merchant integrations</li>
               <li>&#9898; P2P marketplace launch</li>
-              <li>&#9898; Wormhole bridge integration (cross-chain OST)</li>
+              <li>&#9898; <strong>OST Interchange Protocol v1</strong> &mdash; own matching engine replacing Jupiter dependency</li>
+              <li>&#9898; <strong>OST Native Faucet</strong> &mdash; decentralized distribution, no third-party services</li>
               <li>&#9898; First DAO governance vote</li>
             </ul>
           </div>
           <div class="roadmap-phase roadmap-future">
-            <div class="roadmap-phase-header"><span class="roadmap-status-dot future"></span><strong>Phase 4 &mdash; Infrastructure</strong> <span class="roadmap-date">2027&ndash;2028</span></div>
+            <div class="roadmap-phase-header"><span class="roadmap-status-dot future"></span><strong>Phase 4 &mdash; Sovereign Infrastructure</strong> <span class="roadmap-date">2027&ndash;2028</span></div>
             <ul class="roadmap-items">
+              <li>&#9898; <strong>OST Decentralized Exchange</strong> &mdash; own order book, zero third-party trading engines</li>
+              <li>&#9898; <strong>OST Cross-Chain Bridge</strong> &mdash; replacing Wormhole, deBridge, Allbridge</li>
+              <li>&#9898; <strong>OST Pricing Algorithm</strong> &mdash; independent price discovery, no CoinGecko/CMC dependency</li>
               <li>&#9898; First satellite funding disbursement from DAO treasury</li>
-              <li>&#9898; Partnership with LEO satellite providers</li>
               <li>&#9898; OST payment gateway API for any website</li>
               <li>&#9898; Hardware wallet support</li>
-              <li>&#9898; Multi-language mobile app (11+ languages)</li>
             </ul>
           </div>
           <div class="roadmap-phase roadmap-future">
-            <div class="roadmap-phase-header"><span class="roadmap-status-dot future"></span><strong>Phase 5 &mdash; Earth &amp; Beyond</strong> <span class="roadmap-date">2029+</span></div>
+            <div class="roadmap-phase-header"><span class="roadmap-status-dot future"></span><strong>Phase 5 &mdash; Complete Independence</strong> <span class="roadmap-date">2029+</span></div>
             <ul class="roadmap-items">
+              <li>&#9898; <strong>OST Sovereign Network</strong> &mdash; fully independent from Solana, Ethereum, and all existing chains</li>
+              <li>&#9898; Own consensus mechanism optimized for privacy &amp; speed</li>
               <li>&#9898; Satellite constellation funded &amp; operational</li>
               <li>&#9898; Uncensored internet access for developing nations</li>
-              <li>&#9898; Interplanetary settlement layer research</li>
-              <li>&#9898; OST as standard for space commerce</li>
+              <li>&#9898; Zero external dependencies &mdash; own chain, own bridges, own market, own faucet</li>
+              <li>&#9898; Interplanetary settlement layer</li>
             </ul>
           </div>
         </div>
@@ -1659,7 +1696,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
               <a href="https://jup.ag/" target="_blank" rel="noopener" class="wd-ql-item"><span>&#9889;</span> Swap on Jupiter</a>
               <a href="https://raydium.io/swap/" target="_blank" rel="noopener" class="wd-ql-item"><span>&#128167;</span> Raydium Swap</a>
               <a href="https://www.orca.so/" target="_blank" rel="noopener" class="wd-ql-item"><span>&#128011;</span> Orca Whirlpool</a>
-              <a href="https://portalbridge.com/" target="_blank" rel="noopener" class="wd-ql-item"><span>&#127757;</span> Wormhole Bridge</a>
+              <a href="https://www.portalbridge.com/" target="_blank" rel="noopener" class="wd-ql-item"><span>&#127757;</span> Wormhole Bridge</a>
               <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy" target="_blank" rel="noopener" class="wd-ql-item"><span>&#128179;</span> Buy with Card</a>
               <a href="https://stake.solblaze.org/" target="_blank" rel="noopener" class="wd-ql-item"><span>&#128200;</span> Stake SOL</a>
             </div>
@@ -1677,23 +1714,39 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
       <h2 class="section-title" data-i18n="bridges.title">Bridges, Ramps &amp; Exchanges</h2>
       <p class="section-subtitle" data-i18n="bridges.sub">Every path to OST — from any chain, any currency, any country. All verified and working.</p>
 
+      <!-- OST Independence Vision -->
+      <div class="ost-independence-banner sr">
+        <div class="ind-glow"></div>
+        <div class="ind-icon">&#127760;</div>
+        <h3>The OST Vision: Complete Financial Independence</h3>
+        <p>We currently use Solana, Jupiter, and third-party bridges as <strong>temporary infrastructure</strong>. Our goal is to build the <strong>OST Sovereign Network</strong> — our own interchange protocol, trading algorithm, decentralized market, faucet system, and settlement layer. Completely separate from any existing system. Fully decentralized. No dependencies.</p>
+        <div class="ind-roadmap">
+          <div class="ind-phase ind-phase-now"><span class="ind-dot ind-dot-now"></span><strong>Now:</strong> Solana + Jupiter + Bridges (temporary scaffolding)</div>
+          <div class="ind-arrow">&#8594;</div>
+          <div class="ind-phase ind-phase-next"><span class="ind-dot ind-dot-next"></span><strong>Next:</strong> OST Interchange Protocol (own matching engine)</div>
+          <div class="ind-arrow">&#8594;</div>
+          <div class="ind-phase ind-phase-future"><span class="ind-dot ind-dot-future"></span><strong>Goal:</strong> OST Sovereign Network (zero third-party dependencies)</div>
+        </div>
+        <p class="ind-footnote">Every tool below is a stepping stone. We use them today so you can use OST now — while we build the infrastructure to replace them all.</p>
+      </div>
+
       <!-- Cross-Chain Bridges -->
       <div class="bridge-hub">
-        <h3>&#127757; Cross-Chain Bridges</h3>
-        <p class="text-muted" style="margin-bottom:24px;">Move assets from any blockchain to Solana, then swap to OST.</p>
+        <h3>&#127757; Cross-Chain Bridges <span class="bridge-temp-badge">Temporary — until OST Interchange launches</span></h3>
+        <p class="text-muted" style="margin-bottom:24px;">Move assets from any blockchain to Solana, then swap to OST. These bridges will be replaced by the OST native interchange.</p>
         <div class="bridge-grid">
-          <a href="https://portalbridge.com/" target="_blank" rel="noopener" class="bridge-card">
+          <a href="https://www.portalbridge.com/" target="_blank" rel="noopener" class="bridge-card">
             <div class="bridge-icon">&#128302;</div>
             <h4>Wormhole Portal</h4>
-            <p>Bridge from Ethereum, Polygon, BSC, Avalanche, Arbitrum, Base, Sui, Aptos to Solana.</p>
+            <p>Bridge from Ethereum, Polygon, BSC, Avalanche, Arbitrum, Base, Sui, Aptos to Solana. Full cross-chain asset transfers.</p>
             <div class="bridge-chains">ETH &bull; BSC &bull; Polygon &bull; Avax &bull; Arbitrum &bull; Base &bull; Sui</div>
             <span class="bridge-status bridge-live">&#9679; Live</span>
           </a>
-          <a href="https://app.allbridge.io/" target="_blank" rel="noopener" class="bridge-card">
+          <a href="https://core.allbridge.io/" target="_blank" rel="noopener" class="bridge-card">
             <div class="bridge-icon">&#128279;</div>
             <h4>Allbridge Core</h4>
-            <p>Stablecoin bridge. Move USDC/USDT from any chain to Solana in minutes.</p>
-            <div class="bridge-chains">USDC &bull; USDT &bull; ETH &bull; BSC &bull; Tron &bull; Polygon</div>
+            <p>Native stablecoin bridge. Transfer USDC, USDT, and DAI across chains to Solana with minimal slippage.</p>
+            <div class="bridge-chains">USDC &bull; USDT &bull; DAI &bull; ETH &bull; BSC &bull; Tron &bull; Polygon</div>
             <span class="bridge-status bridge-live">&#9679; Live</span>
           </a>
           <a href="https://app.debridge.finance/" target="_blank" rel="noopener" class="bridge-card">
@@ -1981,6 +2034,6 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
-  <script src="app.js?v=4"></script>
+  <script src="app.js?v=5"></script>
 </body>
 </html>

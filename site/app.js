@@ -2893,8 +2893,8 @@
         // --- deBridge (embeddable widget) ---
         if (h === 'app.debridge.finance') return raw;
 
-        // --- Allbridge (embeddable) ---
-        if (h === 'app.allbridge.io') return raw;
+        // --- Allbridge Core (embeddable) ---
+        if (h === 'core.allbridge.io' || h === 'app.allbridge.io') return raw;
 
         // --- Mayan Finance (embeddable) ---
         if (h === 'mayan.finance') return raw;
@@ -2953,7 +2953,8 @@
       'terminal.jup.ag',           // Jupiter swap widget
       'openstreetmap.org',         // Maps embed
       'app.debridge.finance',      // deBridge widget
-      'app.allbridge.io',          // Allbridge widget
+      'core.allbridge.io',         // Allbridge Core widget
+      'app.allbridge.io',          // Allbridge legacy
       'mayan.finance',             // Mayan bridge widget
       'portalbridge.com'           // Portal Bridge widget
     ];
