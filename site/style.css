@@ -2559,6 +2559,41 @@ select.sim-input { cursor: pointer; }
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
 }
 .vision-main > p { font-size: .95rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 16px; }
+
+/* Vision Sovereign Network Roadmap Flow */
+.vision-roadmap-flow {
+  display: flex; align-items: center; gap: 0; flex-wrap: wrap;
+  justify-content: center; margin: 20px 0 18px;
+}
+.vision-stage {
+  flex: 1; min-width: 160px; max-width: 220px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px 14px; text-align: center;
+  position: relative; transition: transform .2s, box-shadow .2s;
+}
+.vision-stage:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.15); }
+.vision-stage-label {
+  display: inline-block; font-size: .65rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .08em; padding: 2px 10px; border-radius: 10px; margin-bottom: 6px;
+}
+.vision-stage-now .vision-stage-label { background: rgba(251,191,36,.15); color: #f59e0b; border: 1px solid rgba(251,191,36,.3); }
+.vision-stage-next .vision-stage-label { background: rgba(96,165,250,.15); color: #60a5fa; border: 1px solid rgba(96,165,250,.3); }
+.vision-stage-goal .vision-stage-label { background: rgba(52,211,153,.15); color: #34d399; border: 1px solid rgba(52,211,153,.3); }
+.vision-stage-now { border-color: rgba(251,191,36,.3); }
+.vision-stage-next { border-color: rgba(96,165,250,.3); }
+.vision-stage-goal { border-color: rgba(52,211,153,.4); box-shadow: 0 0 20px rgba(52,211,153,.08); }
+.vision-stage-icon { font-size: 1.6rem; display: block; margin-bottom: 4px; }
+.vision-stage h4 { font-size: .88rem; font-weight: 700; margin-bottom: 4px; }
+.vision-stage p { font-size: .78rem; color: var(--text-muted); margin: 0; line-height: 1.4; }
+.vision-stage-arrow {
+  font-size: 1.4rem; color: var(--text-muted); padding: 0 6px; flex-shrink: 0;
+}
+@media (max-width: 660px) {
+  .vision-roadmap-flow { flex-direction: column; gap: 0; }
+  .vision-stage { max-width: 100%; }
+  .vision-stage-arrow { transform: rotate(90deg); padding: 2px 0; }
+}
+
 .vision-pills { display: flex; flex-wrap: wrap; gap: 8px; }
 .vision-pill {
   padding: 6px 14px; font-size: .78rem; font-weight: 600;
