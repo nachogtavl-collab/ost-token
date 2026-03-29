@@ -1983,6 +1983,12 @@ select.sim-input { cursor: pointer; }
 .depin-r-icon { font-size: 1.6rem; }
 .depin-r-type { font-size: .82rem; font-weight: 600; color: var(--text); }
 .depin-r-amount { font-size: .85rem; font-weight: 700; color: var(--accent); }
+.depin-r-minute {
+  font-size: .7rem; font-weight: 600; color: var(--success);
+  padding: 3px 8px; background: rgba(52,211,153,.1);
+  border: 1px solid rgba(52,211,153,.2); border-radius: 12px;
+  white-space: nowrap; margin-top: 2px;
+}
 
 .depin-claim-box {
   max-width: 400px; margin: 0 auto; padding: 24px;
