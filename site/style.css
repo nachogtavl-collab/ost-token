@@ -2623,6 +2623,52 @@ select.sim-input { cursor: pointer; }
 .bounty-premium .bounty-reward {
   color: var(--warm) !important; font-weight: 700;
 }
+.bounty-img {
+  width: 100%; height: 120px; object-fit: cover;
+  border-radius: 8px 8px 0 0; margin: -12px -16px 12px;
+  width: calc(100% + 32px);
+}
+.bounty-premium .bounty-img {
+  border-bottom: 2px solid rgba(245,196,104,.3);
+}
+
+/* Hero FREE Banner */
+.hero-free-banner {
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  margin: 16px auto 0; padding: 10px 20px;
+  background: linear-gradient(135deg, rgba(52,211,153,.1), rgba(109,159,255,.08));
+  border: 1px solid rgba(52,211,153,.25);
+  border-radius: 32px; max-width: 520px;
+  animation: fadeUp .8s 1.2s forwards; opacity: 0;
+}
+.hero-free-badge {
+  padding: 4px 12px; font-size: .8rem; font-weight: 700;
+  background: var(--success); color: #000; border-radius: 16px;
+  white-space: nowrap; letter-spacing: .5px;
+}
+.hero-free-text {
+  font-size: .82rem; color: var(--text-muted); line-height: 1.4;
+}
+
+/* Google Shopping highlight button */
+.browser-quick-google {
+  background: linear-gradient(135deg, #4285F4, #34A853, #FBBC05, #EA4335) !important;
+  color: #fff !important; font-weight: 700 !important;
+  border-color: rgba(66,133,244,.4) !important;
+  padding: 8px 16px !important;
+}
+.browser-quick-google:hover {
+  box-shadow: 0 0 16px rgba(66,133,244,.3);
+}
+.browser-google-tip {
+  margin-top: 16px; padding: 12px 16px;
+  background: rgba(66,133,244,.08);
+  border: 1px solid rgba(66,133,244,.2);
+  border-radius: var(--radius);
+  font-size: .82rem; color: var(--text-muted); line-height: 1.5;
+  display: flex; align-items: flex-start; gap: 8px;
+}
+.browser-google-tip span { font-size: 1.1rem; flex-shrink: 0; }
 
 @media (max-width: 768px) {
   .vision-inner { flex-direction: column; }
@@ -2630,6 +2676,8 @@ select.sim-input { cursor: pointer; }
   .roadmap-compact { padding: 0 8px; }
   .rc-header { padding: 12px 14px; }
   .rc-header h4 { font-size: .9rem; }
+  .hero-free-banner { flex-direction: column; text-align: center; gap: 6px; }
+  .bounty-img { height: 90px; }
 }
 .clf-source a { color: #6d9fff; text-decoration: none; }
 

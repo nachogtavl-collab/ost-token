@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=13">
+  <link rel="stylesheet" href="style.css?v=14">
 </head>
 <body>
 
@@ -75,6 +75,10 @@
       <p class="hero-tag" data-i18n="hero.tag">The Next Step After Bitcoin</p>
       <h1 data-i18n="hero.title">The currency of <span class="gradient-text">Earth &amp; Space.</span></h1>
       <p class="hero-sub" data-i18n="hero.sub">Private. Instant. Unstoppable. OST is decentralized digital cash and uncensored internet for 8 billion human beings &mdash; and eventually, beyond.</p>
+      <div class="hero-free-banner">
+        <span class="hero-free-badge">&#128176; FREE FOREVER</span>
+        <span class="hero-free-text">Zero transaction fees. No hidden costs. Funded by donations &amp; investors.</span>
+      </div>
       <div class="hero-actions">
         <a href="#revolution" class="btn btn-primary btn-glow btn-pulse" data-i18n="hero.cta1">Try the Pay Demo</a>
         <a href="#get-ost" class="btn btn-outline" data-i18n="hero.cta2">Get OST Now</a>
@@ -120,7 +124,7 @@
     </div>
 
     <!-- OST Vision: Complete Financial Independence + SpaceX -->
-    <div class="ost-vision-home">
+    <div class="ost-vision-home" style="position:relative;z-index:6;">
       <div class="vision-glow"></div>
       <div class="vision-inner">
         <div class="vision-main">
@@ -156,7 +160,7 @@
 
       <div class="faucet-section" id="faucetSection">
         <h3 data-i18n="getost.faucet">New Here? Claim Free OST</h3>
-        <p data-i18n="getost.faucettext">Every new wallet gets <strong>1 OST</strong> from the community treasury.</p>
+        <p data-i18n="getost.faucettext">Every new wallet gets <strong>10 OST</strong> from the community treasury &mdash; enough to start using OST right away.</p>
         <div class="faucet-machine" id="faucetMachine">
           <div class="faucet-pipe"><div class="faucet-spout"></div></div>
           <div class="faucet-drop-zone" id="faucetDropZone"></div>
@@ -178,7 +182,7 @@
             <div class="gv-ms-dot"></div>
             <div class="gv-ms-content">
               <span class="gv-ms-age">Birth</span>
-              <span class="gv-ms-reward">1.0 OST</span>
+              <span class="gv-ms-reward">10.0 OST</span>
               <span class="gv-ms-label">&ldquo;Born in space&rdquo;</span>
             </div>
           </div>
@@ -186,7 +190,7 @@
             <div class="gv-ms-dot"></div>
             <div class="gv-ms-content">
               <span class="gv-ms-age">Age 1</span>
-              <span class="gv-ms-reward">0.5 OST</span>
+              <span class="gv-ms-reward">5.0 OST</span>
               <span class="gv-ms-label">&ldquo;First orbit&rdquo;</span>
             </div>
           </div>
@@ -194,7 +198,7 @@
             <div class="gv-ms-dot"></div>
             <div class="gv-ms-content">
               <span class="gv-ms-age">Age 5</span>
-              <span class="gv-ms-reward">1.0 OST</span>
+              <span class="gv-ms-reward">15.0 OST</span>
               <span class="gv-ms-label">&ldquo;Kindergarten explorer&rdquo;</span>
             </div>
           </div>
@@ -202,7 +206,7 @@
             <div class="gv-ms-dot"></div>
             <div class="gv-ms-content">
               <span class="gv-ms-age">Age 10</span>
-              <span class="gv-ms-reward">2.0 OST</span>
+              <span class="gv-ms-reward">25.0 OST</span>
               <span class="gv-ms-label">&ldquo;Junior astronaut&rdquo;</span>
             </div>
           </div>
@@ -210,7 +214,7 @@
             <div class="gv-ms-dot"></div>
             <div class="gv-ms-content">
               <span class="gv-ms-age">Age 13</span>
-              <span class="gv-ms-reward">3.0 OST</span>
+              <span class="gv-ms-reward">50.0 OST</span>
               <span class="gv-ms-label">&ldquo;Teen pioneer&rdquo;</span>
             </div>
           </div>
@@ -218,7 +222,7 @@
             <div class="gv-ms-dot"></div>
             <div class="gv-ms-content">
               <span class="gv-ms-age">Age 16</span>
-              <span class="gv-ms-reward">5.0 OST</span>
+              <span class="gv-ms-reward">75.0 OST</span>
               <span class="gv-ms-label">&ldquo;Cadet&rdquo;</span>
             </div>
           </div>
@@ -226,7 +230,7 @@
             <div class="gv-ms-dot gv-ms-dot-grad"></div>
             <div class="gv-ms-content">
               <span class="gv-ms-age">Age 18</span>
-              <span class="gv-ms-reward">10.0 OST</span>
+              <span class="gv-ms-reward">100.0 OST</span>
               <span class="gv-ms-label">&ldquo;Full citizen of the OST universe&rdquo;</span>
             </div>
           </div>
@@ -254,39 +258,44 @@
         <div class="depin-header">
           <div class="depin-icon-ring"><span>&#128752;</span></div>
           <h3>DePIN Data-Center Faucet</h3>
-          <p class="text-muted">Share bandwidth, GPU, CPU, or satellite capacity &mdash; earn OST for building the decentralized data centers and satellite internet.</p>
+          <p class="text-muted">Share bandwidth, GPU, CPU, or satellite capacity &mdash; earn OST for building the decentralized data centers and satellite internet. Big rewards for real contributions.</p>
         </div>
 
         <div class="depin-rewards-grid">
           <div class="depin-reward-card">
             <span class="depin-r-icon">&#128246;</span>
             <span class="depin-r-type">Bandwidth</span>
-            <span class="depin-r-amount">0.5 OST/day</span>
+            <span class="depin-r-amount">5.0 OST/day</span>
           </div>
           <div class="depin-reward-card depin-reward-highlight">
             <span class="depin-r-icon">&#127918;</span>
             <span class="depin-r-type">GPU</span>
-            <span class="depin-r-amount">2.0 OST/day</span>
+            <span class="depin-r-amount">25.0 OST/day</span>
           </div>
           <div class="depin-reward-card">
             <span class="depin-r-icon">&#128187;</span>
             <span class="depin-r-type">CPU</span>
-            <span class="depin-r-amount">1.0 OST/day</span>
+            <span class="depin-r-amount">10.0 OST/day</span>
           </div>
           <div class="depin-reward-card">
             <span class="depin-r-icon">&#128190;</span>
             <span class="depin-r-type">Storage</span>
-            <span class="depin-r-amount">0.5 OST/day</span>
+            <span class="depin-r-amount">5.0 OST/day</span>
           </div>
           <div class="depin-reward-card">
             <span class="depin-r-icon">&#128225;</span>
             <span class="depin-r-type">LoRa/5G</span>
-            <span class="depin-r-amount">1.5 OST/day</span>
+            <span class="depin-r-amount">15.0 OST/day</span>
           </div>
           <div class="depin-reward-card depin-reward-highlight">
             <span class="depin-r-icon">&#128752;</span>
             <span class="depin-r-type">Satellite</span>
-            <span class="depin-r-amount">3.0 OST/day</span>
+            <span class="depin-r-amount">50.0 OST/day</span>
+          </div>
+          <div class="depin-reward-card depin-reward-highlight">
+            <span class="depin-r-icon">&#127981;</span>
+            <span class="depin-r-type">Data Center</span>
+            <span class="depin-r-amount">100.0 OST/day</span>
           </div>
         </div>
 
@@ -521,6 +530,7 @@
               <h4>Paste Any Product Link &mdash; OST Detects The Price</h4>
               <p>Paste a real product URL from any website. OST scans the page, detects the price, converts it to OST, and handles checkout. Or pick a store below to browse.</p>
               <div class="browser-quick-links">
+                <button class="browser-quick browser-quick-google" data-url="shopping.google.com">&#128269; Google Shopping</button>
                 <button class="browser-quick" data-url="amazon.com">&#128230; Amazon</button>
                 <button class="browser-quick" data-url="nike.com">&#128095; Nike</button>
                 <button class="browser-quick" data-url="apple.com">&#127822; Apple</button>
@@ -541,6 +551,9 @@
                 <button class="browser-quick" data-url="newegg.com">&#128187; Newegg</button>
                 <button class="browser-quick" data-url="zara.com">&#128087; Zara</button>
                 <button class="browser-quick" data-url="adidas.com">&#128095; Adidas</button>
+              </div>
+              <div class="browser-google-tip">
+                <span>&#128161;</span> <strong>Pro tip:</strong> Search any product on Google Shopping, paste the product link here, and OST auto-detects the price.
               </div>
               <div class="browser-how-it-works">
                 <div class="bhow-step"><span class="bhow-num">1</span><span>Browse &amp; shop normally</span></div>
@@ -1835,7 +1848,7 @@
               <div class="check-icon">&#9989;</div>
               <div class="check-body">
                 <h4>DePIN Faucet &amp; Community Rewards</h4>
-                <p>DePIN faucet live on devnet with 6 reward categories: Bandwidth, GPU, CPU, Storage, LoRa/5G, Satellite (up to 3.0 OST/day). Zero transaction fees &mdash; service is free forever.</p>
+                <p>DePIN faucet live on devnet with 7 reward categories: Bandwidth, GPU, CPU, Storage, LoRa/5G, Satellite, Data Center (up to 100.0 OST/day). Zero transaction fees &mdash; service is free forever.</p>
                 <span class="check-status status-done">On-chain</span>
               </div>
             </div>
@@ -2480,10 +2493,10 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
         <h3 data-i18n="build.cta">Start Contributing Today</h3>
         <p data-i18n="build.ctasub">Every commit, translation, and tutorial moves humanity forward.</p>
         <div class="build-bounty-grid">
-          <div class="bounty-card bounty-premium"><span class="bounty-amount">&#128187; RTX 5090</span><span class="bounty-task">Best DePIN Infrastructure Node</span></div>
-          <div class="bounty-card bounty-premium"><span class="bounty-amount">&#128241; Apple A19 Pro</span><span class="bounty-task">Best Mobile Wallet App</span></div>
-          <div class="bounty-card bounty-premium"><span class="bounty-amount">&#127942; 24K Gold Cylinder</span><span class="bounty-task">Most Impactful Community Leader</span></div>
-          <div class="bounty-card bounty-premium"><span class="bounty-amount">&#128663; 2026 Corvette ZR1</span><span class="bounty-task">Grand Prize &mdash; Best OST Integration</span></div>
+          <div class="bounty-card bounty-premium"><img class="bounty-img" src="https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=300&h=160&fit=crop" alt="RTX 5090" loading="lazy"><span class="bounty-amount">&#128187; RTX 5090</span><span class="bounty-task">Best DePIN Infrastructure Node</span></div>
+          <div class="bounty-card bounty-premium"><img class="bounty-img" src="https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=300&h=160&fit=crop" alt="Apple A19 Pro" loading="lazy"><span class="bounty-amount">&#128241; Apple A19 Pro</span><span class="bounty-task">Best Mobile Wallet App</span></div>
+          <div class="bounty-card bounty-premium"><img class="bounty-img" src="https://images.unsplash.com/photo-1610375461246-83df859d849d?w=300&h=160&fit=crop" alt="24K Gold" loading="lazy"><span class="bounty-amount">&#127942; 24K Gold Cylinder</span><span class="bounty-task">Most Impactful Community Leader</span></div>
+          <div class="bounty-card bounty-premium"><img class="bounty-img" src="https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=300&h=160&fit=crop" alt="Corvette ZR1" loading="lazy"><span class="bounty-amount">&#128663; 2026 Corvette ZR1</span><span class="bounty-task">Grand Prize &mdash; Best OST Integration</span></div>
           <div class="bounty-card"><span class="bounty-amount">$10,000</span><span class="bounty-task">Payment Gateway Module</span></div>
           <div class="bounty-card"><span class="bounty-amount">$5,000</span><span class="bounty-task">SDK Integration Plugin</span></div>
           <div class="bounty-card"><span class="bounty-amount">$3,000</span><span class="bounty-task">New Language Translation Pack</span></div>
@@ -2573,6 +2586,6 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
-  <script src="app.js?v=13"></script>
+  <script src="app.js?v=14"></script>
 </body>
 </html>

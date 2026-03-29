@@ -85,7 +85,7 @@
       'getost.swap': 'Swap Any Crypto to OST', 'getost.swaptext': 'Jupiter Aggregator finds the best route across all Solana liquidity pools.',
       'getost.jupnote': 'Connect your wallet to load the live swap widget.', 'getost.jupbtn': 'Load Swap Widget',
       'getost.fiat': 'Buy with Local Money', 'getost.fiatsub': 'Buy SOL or USDC, then swap to OST. No KYC for the swap.',
-      'getost.faucet': 'New Here? Claim Free OST', 'getost.faucettext': 'Every new wallet gets <strong>1 OST</strong> from the community treasury.',
+      'getost.faucet': 'New Here? Claim Free OST', 'getost.faucettext': 'Every new wallet gets <strong>10 OST</strong> from the community treasury &mdash; enough to start using OST right away.',
       'getost.faucetbtn': 'Turn the Faucet',
       'pay.anywhere': '🌐 Pay Anywhere with OST',
       'pay.anywheresub': 'Paste any website where you\'re buying something. We convert your OST into whatever currency they accept.',
@@ -157,7 +157,7 @@
       'getost.swap': 'Cambia Cualquier Cripto a OST', 'getost.swaptext': 'Jupiter encuentra la mejor ruta en todos los pools de liquidez de Solana.',
       'getost.jupnote': 'Conecta tu billetera para cargar el widget de intercambio.', 'getost.jupbtn': 'Cargar Widget',
       'getost.fiat': 'Compra con Moneda Local', 'getost.fiatsub': 'Compra SOL o USDC, luego cambia a OST. Sin KYC para el intercambio.',
-      'getost.faucet': 'Nuevo? Reclama OST Gratis', 'getost.faucettext': 'Cada nueva billetera recibe <strong>1 OST</strong> del tesoro comunitario.',
+      'getost.faucet': 'Nuevo? Reclama OST Gratis', 'getost.faucettext': 'Cada nueva billetera recibe <strong>10 OST</strong> del tesoro comunitario &mdash; suficiente para empezar a usar OST de inmediato.',
       'getost.faucetbtn': 'Abrir el Grifo',
       'pay.anywhere': '🌐 Paga en Cualquier Sitio con OST',
       'pay.anywheresub': 'Pega cualquier sitio web donde estes comprando. Convertimos tu OST a la moneda que acepten.',
@@ -229,7 +229,7 @@
       'getost.swap': '任何加密货币兑换OST', 'getost.swaptext': 'Jupiter聚合器在所有Solana流动性池中找到最佳路线。',
       'getost.jupnote': '连接您的钱包以加载实时兑换小部件。', 'getost.jupbtn': '加载兑换小部件',
       'getost.fiat': '用当地货币购买', 'getost.fiatsub': '购买SOL或USDC，然后兑换为OST。兑换无需KYC。',
-      'getost.faucet': '新人？领取免费OST', 'getost.faucettext': '每个新钱包从社区金库获得<strong>1 OST</strong>。',
+      'getost.faucet': '新人？领取免费OST', 'getost.faucettext': '每个新钱包从社区金库获得<strong>10 OST</strong>。',
       'getost.faucetbtn': '开启水龙头',
       'pay.anywhere': '🌐 用OST在任何网站支付',
       'pay.anywheresub': '粘贴你正在购物的任何网站。我们将你的OST转换为他们接受的货币。',
@@ -301,7 +301,7 @@
       'getost.swap': 'Обмен Любой Крипты на OST', 'getost.swaptext': 'Jupiter находит лучший маршрут по всем пулам ликвидности Solana.',
       'getost.jupnote': 'Подключите кошелёк для загрузки виджета обмена.', 'getost.jupbtn': 'Загрузить виджет',
       'getost.fiat': 'Купить за местную валюту', 'getost.fiatsub': 'Купите SOL или USDC, затем обменяйте на OST.',
-      'getost.faucet': 'Новичок? Получите Бесплатный OST', 'getost.faucettext': 'Каждый новый кошелёк получает <strong>1 OST</strong> из казны сообщества.',
+      'getost.faucet': 'Новичок? Получите Бесплатный OST', 'getost.faucettext': 'Каждый новый кошелёк получает <strong>10 OST</strong> из казны сообщества.',
       'getost.faucetbtn': 'Открыть кран',
       'pay.anywhere': '🌐 Платите OST на любом сайте',
       'pay.anywheresub': 'Вставьте ссылку на любой сайт, где вы покупаете. Мы конвертируем ваши OST в нужную валюту.',
@@ -373,7 +373,7 @@
       'getost.swap': 'किसी भी क्रिप्टो को OST में बदलें', 'getost.swaptext': 'Jupiter सभी Solana पूल में सबसे अच्छा रूट ढूंढता है।',
       'getost.jupnote': 'स्वैप विजेट लोड करने के लिए वॉलेट कनेक्ट करें।', 'getost.jupbtn': 'स्वैप विजेट लोड करें',
       'getost.fiat': 'स्थानीय मुद्रा से खरीदें', 'getost.fiatsub': 'SOL या USDC खरीदें, फिर OST में बदलें।',
-      'getost.faucet': 'नए हैं? मुफ्त OST प्राप्त करें', 'getost.faucettext': 'हर नए वॉलेट को समुदाय खजाने से <strong>1 OST</strong> मिलता है।',
+      'getost.faucet': 'नए हैं? मुफ्त OST प्राप्त करें', 'getost.faucettext': 'हर नए वॉलेट को समुदाय खजाने से <strong>10 OST</strong> मिलता है।',
       'getost.faucetbtn': 'नल खोलें',
       'pay.anywhere': '🌐 OST से किसी भी वेबसाइट पर भुगतान करें',
       'pay.anywheresub': 'जहाँ आप खरीदारी कर रहे हैं वह वेबसाइट पेस्ट करें। हम आपके OST को उनकी मुद्रा में बदल देंगे।',
@@ -445,7 +445,7 @@
       'getost.swap': 'بادل أي عملة رقمية بـ OST', 'getost.swaptext': 'Jupiter يجد أفضل مسار عبر جميع مجمعات السيولة.',
       'getost.jupnote': 'اربط محفظتك لتحميل أداة التبادل.', 'getost.jupbtn': 'تحميل أداة التبادل',
       'getost.fiat': 'اشترِ بالعملة المحلية', 'getost.fiatsub': 'اشترِ SOL أو USDC، ثم بادل إلى OST.',
-      'getost.faucet': 'جديد هنا؟ احصل على OST مجاني', 'getost.faucettext': 'كل محفظة جديدة تحصل على <strong>1 OST</strong> من خزينة المجتمع.',
+      'getost.faucet': 'جديد هنا؟ احصل على OST مجاني', 'getost.faucettext': 'كل محفظة جديدة تحصل على <strong>10 OST</strong> من خزينة المجتمع.',
       'getost.faucetbtn': 'افتح الصنبور',
       'pay.anywhere': '🌐 ادفع بـ OST في أي موقع',
       'pay.anywheresub': 'الصق رابط أي موقع تتسوق منه. سنحول OST الخاص بك إلى عملتهم.',
@@ -517,7 +517,7 @@
       'getost.swap': 'Troque Qualquer Cripto por OST', 'getost.swaptext': 'Jupiter encontra a melhor rota em todos os pools de liquidez Solana.',
       'getost.jupnote': 'Conecte sua carteira para carregar o widget de troca.', 'getost.jupbtn': 'Carregar Widget',
       'getost.fiat': 'Compre com Moeda Local', 'getost.fiatsub': 'Compre SOL ou USDC, depois troque por OST.',
-      'getost.faucet': 'Novo Aqui? Receba OST Gratis', 'getost.faucettext': 'Cada nova carteira recebe <strong>1 OST</strong> do tesouro comunitario.',
+      'getost.faucet': 'Novo Aqui? Receba OST Gratis', 'getost.faucettext': 'Cada nova carteira recebe <strong>10 OST</strong> do tesouro comunitario.',
       'getost.faucetbtn': 'Abrir a Torneira',
       'pay.anywhere': '🌐 Pague em Qualquer Site com OST',
       'pay.anywheresub': 'Cole qualquer site onde voce esta comprando. Convertemos seu OST na moeda que eles aceitam.',
@@ -589,7 +589,7 @@
       'getost.swap': 'Echangez N\'importe Quelle Crypto Contre OST', 'getost.swaptext': 'Jupiter trouve la meilleure route dans tous les pools de liquidite.',
       'getost.jupnote': 'Connectez votre portefeuille pour charger le widget d\'echange.', 'getost.jupbtn': 'Charger le Widget',
       'getost.fiat': 'Achetez avec Votre Monnaie Locale', 'getost.fiatsub': 'Achetez SOL ou USDC, puis echangez contre OST.',
-      'getost.faucet': 'Nouveau? Recevez OST Gratuit', 'getost.faucettext': 'Chaque nouveau portefeuille recoit <strong>1 OST</strong> du tresor communautaire.',
+      'getost.faucet': 'Nouveau? Recevez OST Gratuit', 'getost.faucettext': 'Chaque nouveau portefeuille recoit <strong>10 OST</strong> du tresor communautaire.',
       'getost.faucetbtn': 'Ouvrir le Robinet',
       'pay.anywhere': '🌐 Payez Partout avec OST',
       'pay.anywheresub': 'Collez le lien de n\'importe quel site ou vous achetez. Nous convertissons vos OST dans leur devise.',
@@ -661,7 +661,7 @@
       'getost.swap': 'あらゆる暗号通貨をOSTに交換', 'getost.swaptext': 'JupiterがすべてのSolana流動性プールで最適ルートを検索。',
       'getost.jupnote': 'ウォレットを接続してスワップウィジェットを読み込む。', 'getost.jupbtn': 'ウィジェットを読み込む',
       'getost.fiat': '現地通貨で購入', 'getost.fiatsub': 'SOLまたはUSDCを購入し、OSTに交換。',
-      'getost.faucet': '初めてですか？無料OSTを取得', 'getost.faucettext': '新しいウォレットにはコミュニティトレジャリーから<strong>1 OST</strong>が支給されます。',
+      'getost.faucet': '初めてですか？無料OSTを取得', 'getost.faucettext': '新しいウォレットにはコミュニティトレジャリーから<strong>10 OST</strong>が支給されます。',
       'getost.faucetbtn': '蛇口を開く',
       'pay.anywhere': '🌐 OSTでどこでも支払い',
       'pay.anywheresub': '購入中のウェブサイトのリンクを貼り付けてください。OSTを相手が受け入れる通貨に変換します。',
@@ -733,7 +733,7 @@
       'getost.swap': '모든 암호화폐를 OST로 교환', 'getost.swaptext': 'Jupiter가 모든 Solana 유동성 풀에서 최적 경로를 찾습니다.',
       'getost.jupnote': '스왑 위젯을 로드하려면 지갑을 연결하세요.', 'getost.jupbtn': '위젯 로드',
       'getost.fiat': '현지 화폐로 구매', 'getost.fiatsub': 'SOL 또는 USDC를 구매한 후 OST로 교환.',
-      'getost.faucet': '처음이신가요? 무료 OST를 받으세요', 'getost.faucettext': '모든 새 지갑은 커뮤니티 재무에서 <strong>1 OST</strong>를 받습니다.',
+      'getost.faucet': '처음이신가요? 무료 OST를 받으세요', 'getost.faucettext': '모든 새 지갑은 커뮤니티 재무에서 <strong>10 OST</strong>를 받습니다.',
       'getost.faucetbtn': '수도꼭지 열기',
       'pay.anywhere': '🌐 OST로 어디서나 결제',
       'pay.anywheresub': '구매 중인 웹사이트 링크를 붙여넣으세요. OST를 상대방이 받는 통화로 변환합니다.',
@@ -805,7 +805,7 @@
       'getost.swap': 'Herhangi Bir Kripto\'yu OST\'ye Donustür', 'getost.swaptext': 'Jupiter tüm Solana likidite havuzlarinda en iyi rotayi bulur.',
       'getost.jupnote': 'Takas widget\'ini yuklemek icin cuzdaninizi baglayiniz.', 'getost.jupbtn': 'Widget\'i Yükle',
       'getost.fiat': 'Yerel Para ile Satin Al', 'getost.fiatsub': 'SOL veya USDC satin alin, ardindan OST\'ye donustürun.',
-      'getost.faucet': 'Yeni misiniz? Ucretsiz OST Alin', 'getost.faucettext': 'Her yeni cuzdan topluluk hazinesinden <strong>1 OST</strong> alir.',
+      'getost.faucet': 'Yeni misiniz? Ucretsiz OST Alin', 'getost.faucettext': 'Her yeni cuzdan topluluk hazinesinden <strong>10 OST</strong> alir.',
       'getost.faucetbtn': 'Muslugu Ac',
       'pay.anywhere': '🌐 OST ile Her Yerde Ode',
       'pay.anywheresub': 'Alisveris yaptiginiz herhangi bir web sitesini yapisitirin. OST\'nizi kabul ettikleri para birimine donusturuyoruz.',
@@ -2822,6 +2822,50 @@
         { name: 'Smartphone', price: 14999, img: '&#128241;' },
         { name: 'Earphones', price: 999, img: '&#127911;' },
       ], currency: 'INR' },
+      'shopping.google.com': { name: 'Google Shopping', icon: '&#128269;', color: '#4285F4', items: [
+        { name: 'Sony WH-1000XM5 Headphones', price: 348.00, img: '&#127911;' },
+        { name: 'Samsung Galaxy S24 Ultra', price: 1199.99, img: '&#128241;' },
+        { name: 'Dyson V15 Detect', price: 749.99, img: '&#129529;' },
+        { name: 'Nintendo Switch OLED', price: 349.99, img: '&#127918;' },
+      ], currency: 'USD' },
+      'bestbuy.com': { name: 'Best Buy', icon: '&#128187;', color: '#0046BE', items: [
+        { name: 'LG C4 65" OLED TV', price: 1796.99, img: '&#128250;' },
+        { name: 'iPad Air M2', price: 599.00, img: '&#128241;' },
+        { name: 'Bose QC Ultra', price: 429.00, img: '&#127911;' },
+      ], currency: 'USD' },
+      'target.com': { name: 'Target', icon: '&#127919;', color: '#CC0000', items: [
+        { name: 'Nespresso Vertuo', price: 159.99, img: '&#9749;' },
+        { name: 'Lego Star Wars Set', price: 79.99, img: '&#129521;' },
+        { name: 'Casper Pillow', price: 65.00, img: '&#128716;' },
+      ], currency: 'USD' },
+      'costco.com': { name: 'Costco', icon: '&#128230;', color: '#E31837', items: [
+        { name: 'KitchenAid Mixer', price: 349.99, img: '&#127860;' },
+        { name: 'Bulk Protein Bars (48ct)', price: 39.99, img: '&#127855;' },
+      ], currency: 'USD' },
+      'homedepot.com': { name: 'Home Depot', icon: '&#128295;', color: '#F96302', items: [
+        { name: 'DeWalt Drill Kit', price: 179.00, img: '&#128295;' },
+        { name: 'Weber Gas Grill', price: 549.00, img: '&#128293;' },
+      ], currency: 'USD' },
+      'samsung.com': { name: 'Samsung', icon: '&#128241;', color: '#1428A0', items: [
+        { name: 'Galaxy Z Fold 6', price: 1899.99, img: '&#128241;' },
+        { name: 'Galaxy Watch Ultra', price: 649.99, img: '&#8986;' },
+      ], currency: 'USD' },
+      'tesla.com': { name: 'Tesla Shop', icon: '&#128664;', color: '#CC0000', items: [
+        { name: 'Tesla Wall Connector', price: 475.00, img: '&#9889;' },
+        { name: 'Model Y All-Weather Mats', price: 225.00, img: '&#128664;' },
+      ], currency: 'USD' },
+      'newegg.com': { name: 'Newegg', icon: '&#128187;', color: '#FF6600', items: [
+        { name: 'RTX 4070 Ti Super', price: 799.99, img: '&#127918;' },
+        { name: 'Corsair 32GB RAM Kit', price: 89.99, img: '&#128187;' },
+      ], currency: 'USD' },
+      'zara.com': { name: 'Zara', icon: '&#128087;', color: '#000', items: [
+        { name: 'Linen Blazer', price: 89.90, img: '&#128087;' },
+        { name: 'Leather Belt', price: 35.90, img: '&#128091;' },
+      ], currency: 'USD' },
+      'adidas.com': { name: 'Adidas', icon: '&#128095;', color: '#000', items: [
+        { name: 'Ultraboost 5', price: 190.00, img: '&#128095;' },
+        { name: 'Adicolor Hoodie', price: 65.00, img: '&#129509;' },
+      ], currency: 'USD' },
     };
 
     var currentStore = null;
@@ -3266,18 +3310,29 @@
           '<h4>Paste Any Product Link &mdash; OST Detects The Price</h4>' +
           '<p>Paste a real product URL from any website. OST scans the page, detects the price, converts it to OST, and handles checkout. Or pick a store below to browse.</p>' +
           '<div class="browser-quick-links">' +
+            '<button class="browser-quick browser-quick-google" data-url="shopping.google.com">&#128269; Google Shopping</button>' +
             '<button class="browser-quick" data-url="amazon.com">&#128230; Amazon</button>' +
             '<button class="browser-quick" data-url="nike.com">&#128095; Nike</button>' +
             '<button class="browser-quick" data-url="apple.com">&#127822; Apple</button>' +
+            '<button class="browser-quick" data-url="bestbuy.com">&#128187; Best Buy</button>' +
+            '<button class="browser-quick" data-url="walmart.com">&#128722; Walmart</button>' +
+            '<button class="browser-quick" data-url="target.com">&#127919; Target</button>' +
+            '<button class="browser-quick" data-url="costco.com">&#128230; Costco</button>' +
+            '<button class="browser-quick" data-url="homedepot.com">&#128295; Home Depot</button>' +
+            '<button class="browser-quick" data-url="samsung.com">&#128241; Samsung</button>' +
+            '<button class="browser-quick" data-url="tesla.com">&#128664; Tesla</button>' +
             '<button class="browser-quick" data-url="booking.com">&#127968; Booking</button>' +
             '<button class="browser-quick" data-url="ebay.com">&#128717; eBay</button>' +
-            '<button class="browser-quick" data-url="walmart.com">&#128722; Walmart</button>' +
             '<button class="browser-quick" data-url="airbnb.com">&#127969; Airbnb</button>' +
             '<button class="browser-quick" data-url="aliexpress.com">&#128230; AliExpress</button>' +
             '<button class="browser-quick" data-url="mercadolibre.com">&#128722; Mercado Libre</button>' +
             '<button class="browser-quick" data-url="rakuten.co.jp">&#127988; Rakuten</button>' +
             '<button class="browser-quick" data-url="flipkart.com">&#128722; Flipkart</button>' +
+            '<button class="browser-quick" data-url="newegg.com">&#128187; Newegg</button>' +
+            '<button class="browser-quick" data-url="zara.com">&#128087; Zara</button>' +
+            '<button class="browser-quick" data-url="adidas.com">&#128095; Adidas</button>' +
           '</div>' +
+          '<div class="browser-google-tip"><span>&#128161;</span> <strong>Pro tip:</strong> Search any product on Google Shopping, paste the product link here, and OST auto-detects the price.</div>' +
         '</div>';
       viewport.style.background = '';
       viewport.style.color = '';
