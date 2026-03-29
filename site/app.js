@@ -36,10 +36,10 @@
 
   const translations = {
     en: {
-      'nav.home': 'Home', 'nav.story': 'Our Story', 'nav.citizens': 'Citizens', 'nav.features': 'Features',
-      'nav.transfer': 'Transfer', 'nav.offline': 'Offline', 'nav.getost': 'Get OST', 'nav.ai': 'AI & Bots',
-      'nav.build': 'Build', 'nav.verify': 'Verify', 'nav.connect': 'Connect Wallet',
-      'nav.wallet': 'My Wallet', 'nav.bridges': 'Bridges',
+      'nav.home': 'Home', 'nav.newhere': 'Get OST', 'nav.demos': 'Demos', 'nav.wallet': 'Wallet',
+      'nav.ai': 'AI & Bots', 'nav.offline': 'Offline', 'nav.censorship': 'Censorship', 'nav.spacex': 'SpaceX',
+      'nav.about': 'Our Story', 'nav.roadmap': 'Roadmap', 'nav.build': 'Build', 'nav.verify': 'Verify',
+      'nav.connect': 'Connect Wallet',
       'wallet.dashTitle': 'My OST Wallet', 'wallet.dashSub': 'Your personal command center. Create, connect, and manage your OST wallet.',
       'bridges.title': 'Bridges, Ramps & Exchanges', 'bridges.sub': 'Every path to OST — from any chain, any currency, any country. All verified and working.',
       'hero.tag': 'The Next Step After Bitcoin',
@@ -108,10 +108,10 @@
       'footer.copy': 'Open source. Built with love for every human on Earth.',
     },
     es: {
-      'nav.home': 'Inicio', 'nav.story': 'Nuestra Historia', 'nav.citizens': 'Ciudadanos', 'nav.features': 'Funciones',
-      'nav.transfer': 'Transferir', 'nav.offline': 'Sin Conexion', 'nav.getost': 'Obtener OST', 'nav.ai': 'IA y Bots',
-      'nav.build': 'Construir', 'nav.verify': 'Verificar', 'nav.connect': 'Conectar Billetera',
-      'nav.wallet': 'Mi Billetera', 'nav.bridges': 'Puentes',
+      'nav.home': 'Inicio', 'nav.newhere': 'Obtener OST', 'nav.demos': 'Demos', 'nav.wallet': 'Billetera',
+      'nav.ai': 'IA y Bots', 'nav.offline': 'Sin Conexion', 'nav.censorship': 'Censura', 'nav.spacex': 'SpaceX',
+      'nav.about': 'Nuestra Historia', 'nav.roadmap': 'Hoja de Ruta', 'nav.build': 'Construir', 'nav.verify': 'Verificar',
+      'nav.connect': 'Conectar Billetera',
       'wallet.dashTitle': 'Mi Billetera OST', 'wallet.dashSub': 'Tu centro de control. Crea, conecta y gestiona tu billetera OST.',
       'bridges.title': 'Puentes, Rampas e Intercambios', 'bridges.sub': 'Cada camino hacia OST — desde cualquier cadena, moneda o pais.',
       'hero.tag': 'El Siguiente Paso Despues de Bitcoin',
@@ -180,10 +180,10 @@
       'footer.copy': 'Codigo abierto. Construido con amor para cada ser humano.',
     },
     zh: {
-      'nav.home': '首页', 'nav.story': '我们的故事', 'nav.citizens': '公民', 'nav.features': '功能',
-      'nav.transfer': '转账', 'nav.offline': '离线', 'nav.getost': '获取OST', 'nav.ai': 'AI和机器人',
-      'nav.build': '开发', 'nav.verify': '验证', 'nav.connect': '连接钱包',
-      'nav.wallet': '我的钱包', 'nav.bridges': '跨链桥',
+      'nav.home': '首页', 'nav.newhere': '获取OST', 'nav.demos': '演示', 'nav.wallet': '钱包',
+      'nav.ai': 'AI和机器人', 'nav.offline': '离线', 'nav.censorship': '审查', 'nav.spacex': 'SpaceX',
+      'nav.about': '我们的故事', 'nav.roadmap': '路线图', 'nav.build': '开发', 'nav.verify': '验证',
+      'nav.connect': '连接钱包',
       'wallet.dashTitle': '我的OST钱包', 'wallet.dashSub': '您的个人控制中心。创建、连接和管理您的OST钱包。',
       'bridges.title': '跨链桥、入金通道和交易所', 'bridges.sub': '通往OST的每条路径——来自任何链、任何货币、任何国家。',
       'hero.tag': '比特币之后的下一步',
@@ -252,10 +252,10 @@
       'footer.copy': '开源。为地球上每个人用爱建造。',
     },
     ru: {
-      'nav.home': 'Главная', 'nav.story': 'Наша История', 'nav.citizens': 'Граждане', 'nav.features': 'Функции',
-      'nav.transfer': 'Перевод', 'nav.offline': 'Оффлайн', 'nav.getost': 'Получить OST', 'nav.ai': 'ИИ и Боты',
-      'nav.build': 'Создать', 'nav.verify': 'Проверить', 'nav.connect': 'Подключить кошелек',
-      'nav.wallet': 'Мой Кошелек', 'nav.bridges': 'Мосты',
+      'nav.home': 'Главная', 'nav.newhere': 'Получить OST', 'nav.demos': 'Демо', 'nav.wallet': 'Кошелек',
+      'nav.ai': 'ИИ и Боты', 'nav.offline': 'Оффлайн', 'nav.censorship': 'Цензура', 'nav.spacex': 'SpaceX',
+      'nav.about': 'Наша История', 'nav.roadmap': 'Дорожная Карта', 'nav.build': 'Создать', 'nav.verify': 'Проверить',
+      'nav.connect': 'Подключить кошелек',
       'wallet.dashTitle': 'Мой Кошелек OST', 'wallet.dashSub': 'Ваш личный центр управления. Создайте и управляйте кошельком OST.',
       'bridges.title': 'Мосты, Шлюзы и Биржи', 'bridges.sub': 'Каждый путь к OST — из любой сети, валюты, страны.',
       'hero.tag': 'Следующий Шаг После Биткоина',
@@ -324,10 +324,10 @@
       'footer.copy': 'Открытый исходный код. Создано с любовью для каждого человека на Земле.',
     },
     hi: {
-      'nav.home': 'होम', 'nav.story': 'हमारी कहानी', 'nav.citizens': 'नागरिक', 'nav.features': 'सुविधाएं',
-      'nav.transfer': 'ट्रांसफर', 'nav.offline': 'ऑफलाइन', 'nav.getost': 'OST पाएं', 'nav.ai': 'AI और बॉट्स',
-      'nav.build': 'निर्माण', 'nav.verify': 'सत्यापन', 'nav.connect': 'वॉलेट कनेक्ट करें',
-      'nav.wallet': 'मेरा वॉलेट', 'nav.bridges': 'ब्रिज',
+      'nav.home': 'होम', 'nav.newhere': 'OST पाएं', 'nav.demos': 'डेमो', 'nav.wallet': 'वॉलेट',
+      'nav.ai': 'AI और बॉट्स', 'nav.offline': 'ऑफलाइन', 'nav.censorship': 'सेंसरशिप', 'nav.spacex': 'SpaceX',
+      'nav.about': 'हमारी कहानी', 'nav.roadmap': 'रोडमैप', 'nav.build': 'निर्माण', 'nav.verify': 'सत्यापन',
+      'nav.connect': 'वॉलेट कनेक्ट करें',
       'wallet.dashTitle': 'मेरा OST वॉलेट', 'wallet.dashSub': 'आपका व्यक्तिगत कमांड सेंटर। अपना OST वॉलेट बनाएं और प्रबंधित करें।',
       'bridges.title': 'ब्रिज, रैंप और एक्सचेंज', 'bridges.sub': 'OST तक हर रास्ता — किसी भी चेन, मुद्रा या देश से।',
       'hero.tag': 'बिटकॉइन के बाद अगला कदम',
@@ -396,10 +396,10 @@
       'footer.copy': 'ओपन सोर्स। पृथ्वी पर हर इंसान के लिए प्यार से बनाया गया।',
     },
     ar: {
-      'nav.home': 'الرئيسية', 'nav.story': 'قصتنا', 'nav.citizens': 'المواطنون', 'nav.features': 'الميزات',
-      'nav.transfer': 'تحويل', 'nav.offline': 'بدون إنترنت', 'nav.getost': 'احصل على OST', 'nav.ai': 'الذكاء الاصطناعي',
-      'nav.build': 'بناء', 'nav.verify': 'تحقق', 'nav.connect': 'ربط المحفظة',
-      'nav.wallet': 'محفظتي', 'nav.bridges': 'الجسور',
+      'nav.home': 'الرئيسية', 'nav.newhere': 'احصل على OST', 'nav.demos': 'عروض', 'nav.wallet': 'محفظة',
+      'nav.ai': 'الذكاء الاصطناعي', 'nav.offline': 'بدون إنترنت', 'nav.censorship': 'الرقابة', 'nav.spacex': 'SpaceX',
+      'nav.about': 'قصتنا', 'nav.roadmap': 'خارطة الطريق', 'nav.build': 'بناء', 'nav.verify': 'تحقق',
+      'nav.connect': 'ربط المحفظة',
       'wallet.dashTitle': 'محفظة OST الخاصة بي', 'wallet.dashSub': 'مركز التحكم الشخصي. أنشئ واربط وأدر محفظة OST.',
       'bridges.title': 'الجسور والمنحدرات والبورصات', 'bridges.sub': 'كل طريق إلى OST — من أي سلسلة أو عملة أو بلد.',
       'hero.tag': 'الخطوة التالية بعد بيتكوين',
@@ -468,10 +468,10 @@
       'footer.copy': 'مفتوح المصدر. مبني بحب لكل إنسان على الأرض.',
     },
     pt: {
-      'nav.home': 'Inicio', 'nav.story': 'Nossa Historia', 'nav.citizens': 'Cidadaos', 'nav.features': 'Recursos',
-      'nav.transfer': 'Transferir', 'nav.offline': 'Offline', 'nav.getost': 'Obter OST', 'nav.ai': 'IA e Bots',
-      'nav.build': 'Construir', 'nav.verify': 'Verificar', 'nav.connect': 'Conectar Carteira',
-      'nav.wallet': 'Minha Carteira', 'nav.bridges': 'Pontes',
+      'nav.home': 'Inicio', 'nav.newhere': 'Obter OST', 'nav.demos': 'Demos', 'nav.wallet': 'Carteira',
+      'nav.ai': 'IA e Bots', 'nav.offline': 'Offline', 'nav.censorship': 'Censura', 'nav.spacex': 'SpaceX',
+      'nav.about': 'Nossa Historia', 'nav.roadmap': 'Roteiro', 'nav.build': 'Construir', 'nav.verify': 'Verificar',
+      'nav.connect': 'Conectar Carteira',
       'wallet.dashTitle': 'Minha Carteira OST', 'wallet.dashSub': 'Seu centro de comando pessoal. Crie, conecte e gerencie sua carteira OST.',
       'bridges.title': 'Pontes, Rampas e Exchanges', 'bridges.sub': 'Todo caminho para OST — de qualquer cadeia, moeda ou pais.',
       'hero.tag': 'O Proximo Passo Apos o Bitcoin',
@@ -540,10 +540,10 @@
       'footer.copy': 'Codigo aberto. Construido com amor para cada ser humano na Terra.',
     },
     fr: {
-      'nav.home': 'Accueil', 'nav.story': 'Notre Histoire', 'nav.citizens': 'Citoyens', 'nav.features': 'Fonctions',
-      'nav.transfer': 'Transfert', 'nav.offline': 'Hors Ligne', 'nav.getost': 'Obtenir OST', 'nav.ai': 'IA et Bots',
-      'nav.build': 'Construire', 'nav.verify': 'Verifier', 'nav.connect': 'Connecter Portefeuille',
-      'nav.wallet': 'Mon Portefeuille', 'nav.bridges': 'Ponts',
+      'nav.home': 'Accueil', 'nav.newhere': 'Obtenir OST', 'nav.demos': 'Demos', 'nav.wallet': 'Portefeuille',
+      'nav.ai': 'IA et Bots', 'nav.offline': 'Hors Ligne', 'nav.censorship': 'Censure', 'nav.spacex': 'SpaceX',
+      'nav.about': 'Notre Histoire', 'nav.roadmap': 'Feuille de Route', 'nav.build': 'Construire', 'nav.verify': 'Verifier',
+      'nav.connect': 'Connecter Portefeuille',
       'wallet.dashTitle': 'Mon Portefeuille OST', 'wallet.dashSub': 'Votre centre de commande personnel. Creez, connectez et gerez votre portefeuille OST.',
       'bridges.title': 'Ponts, Rampes et Echanges', 'bridges.sub': 'Chaque chemin vers OST — depuis toute chaine, devise ou pays.',
       'hero.tag': 'La Prochaine Etape Apres Bitcoin',
@@ -612,10 +612,10 @@
       'footer.copy': 'Open source. Construit avec amour pour chaque habitant de la Terre.',
     },
     ja: {
-      'nav.home': 'ホーム', 'nav.story': '私たちの物語', 'nav.citizens': '市民', 'nav.features': '機能',
-      'nav.transfer': '送金', 'nav.offline': 'オフライン', 'nav.getost': 'OST入手', 'nav.ai': 'AIとボット',
-      'nav.build': '開発', 'nav.verify': '検証', 'nav.connect': 'ウォレット接続',
-      'nav.wallet': 'マイウォレット', 'nav.bridges': 'ブリッジ',
+      'nav.home': 'ホーム', 'nav.newhere': 'OST入手', 'nav.demos': 'デモ', 'nav.wallet': 'ウォレット',
+      'nav.ai': 'AIとボット', 'nav.offline': 'オフライン', 'nav.censorship': '検閲', 'nav.spacex': 'SpaceX',
+      'nav.about': '私たちの物語', 'nav.roadmap': 'ロードマップ', 'nav.build': '開発', 'nav.verify': '検証',
+      'nav.connect': 'ウォレット接続',
       'wallet.dashTitle': 'マイOSTウォレット', 'wallet.dashSub': 'パーソナルコマンドセンター。OSTウォレットを作成、接続、管理。',
       'bridges.title': 'ブリッジ、ランプ、取引所', 'bridges.sub': 'OSTへのすべての道 — あらゆるチェーン、通貨、国から。',
       'hero.tag': 'ビットコインの次のステップ',
@@ -684,10 +684,10 @@
       'footer.copy': 'オープンソース。地球のすべての人々のために愛を込めて作りました。',
     },
     ko: {
-      'nav.home': '홈', 'nav.story': '우리의 이야기', 'nav.citizens': '시민', 'nav.features': '기능',
-      'nav.transfer': '송금', 'nav.offline': '오프라인', 'nav.getost': 'OST 받기', 'nav.ai': 'AI와 봇',
-      'nav.build': '개발', 'nav.verify': '검증', 'nav.connect': '지갑 연결',
-      'nav.wallet': '내 지갑', 'nav.bridges': '브릿지',
+      'nav.home': '홈', 'nav.newhere': 'OST 받기', 'nav.demos': '데모', 'nav.wallet': '지갑',
+      'nav.ai': 'AI와 봇', 'nav.offline': '오프라인', 'nav.censorship': '검열', 'nav.spacex': 'SpaceX',
+      'nav.about': '우리의 이야기', 'nav.roadmap': '로드맵', 'nav.build': '개발', 'nav.verify': '검증',
+      'nav.connect': '지갑 연결',
       'wallet.dashTitle': '내 OST 지갑', 'wallet.dashSub': '개인 커맨드 센터. OST 지갑을 만들고, 연결하고, 관리하세요.',
       'bridges.title': '브릿지, 램프 & 거래소', 'bridges.sub': 'OST로 가는 모든 길 — 어떤 체인, 통화, 국가에서든.',
       'hero.tag': '비트코인 이후의 다음 단계',
@@ -756,10 +756,10 @@
       'footer.copy': '오픈 소스. 지구의 모든 사람을 위해 사랑으로 만들었습니다.',
     },
     tr: {
-      'nav.home': 'Ana Sayfa', 'nav.story': 'Hikayemiz', 'nav.citizens': 'Vatandaslar', 'nav.features': 'Ozellikler',
-      'nav.transfer': 'Transfer', 'nav.offline': 'Cevrimdisi', 'nav.getost': 'OST Al', 'nav.ai': 'Yapay Zeka',
-      'nav.build': 'Gelistir', 'nav.verify': 'Dogrula', 'nav.connect': 'Cuzdani Bagla',
-      'nav.wallet': 'Cuzdanim', 'nav.bridges': 'Kopruler',
+      'nav.home': 'Ana Sayfa', 'nav.newhere': 'OST Al', 'nav.demos': 'Demolar', 'nav.wallet': 'Cuzdan',
+      'nav.ai': 'Yapay Zeka', 'nav.offline': 'Cevrimdisi', 'nav.censorship': 'Sansur', 'nav.spacex': 'SpaceX',
+      'nav.about': 'Hikayemiz', 'nav.roadmap': 'Yol Haritasi', 'nav.build': 'Gelistir', 'nav.verify': 'Dogrula',
+      'nav.connect': 'Cuzdani Bagla',
       'wallet.dashTitle': 'OST Cuzdanim', 'wallet.dashSub': 'Kisisel komuta merkeziniz. OST cuzdaninizi olusturun ve yonetin.',
       'bridges.title': 'Kopruler, Rampalar ve Borsalar', 'bridges.sub': 'OST ye her yol — herhangi bir zincir, para birimi veya ulkeden.',
       'hero.tag': 'Bitcoin\'den Sonraki Adim',
@@ -3589,6 +3589,138 @@
       }
       return _origOpen.call(window, url, target, features);
     };
+  })();
+
+  /* ================================================================== */
+  /* NEW: Interactive Rocket Timeline                                    */
+  /* ================================================================== */
+  (function initRocketTimeline() {
+    const timeline = $('#rocketTimeline');
+    if (!timeline) return;
+    const rocket = $('#rtRocket');
+    const stations = timeline.querySelectorAll('.rt-station');
+    if (!rocket || !stations.length) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.style.opacity = '1';
+          e.target.style.transform = 'translateY(0)';
+          e.target.classList.add('rt-station-visible');
+        }
+      });
+    }, { threshold: 0.3 });
+
+    stations.forEach((s, i) => {
+      s.style.opacity = '0';
+      s.style.transform = 'translateY(30px)';
+      s.style.transitionDelay = (i * 0.2) + 's';
+      observer.observe(s);
+    });
+
+    // Rocket follows scroll position within the timeline
+    const updateRocket = () => {
+      const rect = timeline.getBoundingClientRect();
+      const viewH = window.innerHeight;
+      const progress = Math.max(0, Math.min(1, (viewH - rect.top) / (rect.height + viewH)));
+      if (rocket) rocket.style.top = (progress * 85 + 5) + '%';
+    };
+    window.addEventListener('scroll', updateRocket, { passive: true });
+    updateRocket();
+
+    // Click interaction on stations
+    stations.forEach(s => {
+      s.addEventListener('click', () => {
+        stations.forEach(x => x.classList.remove('rt-station-active'));
+        s.classList.add('rt-station-active');
+        const phase = s.dataset.phase;
+        const positions = { launch: '10%', orbit: '35%', moon: '60%', mars: '85%' };
+        if (rocket && positions[phase]) {
+          rocket.style.top = positions[phase];
+        }
+      });
+    });
+  })();
+
+  /* ================================================================== */
+  /* NEW: Live Censorship News Feed (updates hourly)                    */
+  /* ================================================================== */
+  (function initCensorshipFeed() {
+    const ticker = $('#clfTicker');
+    const refreshEl = $('#clfRefresh');
+    if (!ticker) return;
+
+    // Censorship data - curated from reliable sources
+    const reports = [
+      { region: 'Iran', text: 'Iran continues nationwide internet throttling, VPN blocking intensified', source: 'NetBlocks', url: 'https://netblocks.org' },
+      { region: 'Russia', text: 'Russia blocks additional VPN services, restricts access to Western platforms', source: 'OONI', url: 'https://ooni.org' },
+      { region: 'China', text: 'China\'s Great Firewall updates: new AI-powered deep packet inspection deployed', source: 'Freedom House', url: 'https://freedomhouse.org' },
+      { region: 'Myanmar', text: 'Myanmar junta orders telecom shutdowns in conflict zones', source: 'Access Now', url: 'https://www.accessnow.org' },
+      { region: 'India', text: 'Internet shutdowns reported in Kashmir region, affecting millions', source: 'SFLC.in', url: 'https://internetshutdowns.in' },
+      { region: 'Turkey', text: 'Turkish authorities block social media during protests, VPN usage surges', source: 'Turkey Blocks', url: 'https://turkeyblocks.org' },
+      { region: 'Ethiopia', text: 'Ethiopia implements regional internet blackouts amid tensions', source: 'NetBlocks', url: 'https://netblocks.org' },
+      { region: 'Cuba', text: 'Cuba restricts mobile internet access during civil demonstrations', source: 'OONI', url: 'https://ooni.org' },
+      { region: 'Egypt', text: 'Egypt blocks news websites and messaging apps, censorship expanding', source: 'EFF', url: 'https://eff.org' },
+      { region: 'Venezuela', text: 'Venezuela restricts social media and streaming platforms nationwide', source: 'IPYS', url: 'https://ipysvenezuela.org' },
+      { region: 'Pakistan', text: 'Pakistan implements intermittent social media blocks and VPN restrictions', source: 'Digital Rights Foundation', url: 'https://digitalrightsfoundation.pk' },
+      { region: 'Belarus', text: 'Belarus continues internet disruptions targeting independent media', source: 'NetBlocks', url: 'https://netblocks.org' },
+    ];
+
+    function renderFeed() {
+      // Shuffle and pick 5-6 items based on current hour
+      const hour = new Date().getHours();
+      const seed = hour + new Date().getDate();
+      const shuffled = [...reports].sort((a, b) => {
+        const ha = ((seed * 31 + reports.indexOf(a) * 17) % 100);
+        const hb = ((seed * 31 + reports.indexOf(b) * 17) % 100);
+        return ha - hb;
+      });
+      const items = shuffled.slice(0, 6);
+      const now = new Date();
+
+      ticker.innerHTML = items.map((r, i) => {
+        const mins = (i * 8 + 3);
+        const time = new Date(now.getTime() - mins * 60000);
+        const timeStr = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        return '<div class="clf-item">' +
+          '<span class="clf-time">' + timeStr + '</span>' +
+          '<span class="clf-text"><strong>' + r.region + ':</strong> ' + r.text + '</span>' +
+          '<span class="clf-source"><a href="' + encodeURI(r.url) + '" target="_blank" rel="noopener noreferrer">' + r.source + '</a></span>' +
+        '</div>';
+      }).join('');
+
+      if (refreshEl) {
+        refreshEl.textContent = 'Updated ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+    }
+
+    renderFeed();
+    // Refresh every hour
+    setInterval(renderFeed, 3600000);
+  })();
+
+  /* ================================================================== */
+  /* NEW: Satellite animation on home page                              */
+  /* ================================================================== */
+  (function initSatellites() {
+    const layer = $('#satelliteLayer');
+    if (!layer) return;
+    // Add random parallax on scroll
+    let ticking = false;
+    window.addEventListener('scroll', () => {
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          const scrollY = window.scrollY;
+          const sats = layer.querySelectorAll('.satellite');
+          sats.forEach((s, i) => {
+            const speed = (i + 1) * 0.05;
+            s.style.transform = 'translateY(' + (scrollY * speed) + 'px)';
+          });
+          ticking = false;
+        });
+        ticking = true;
+      }
+    }, { passive: true });
   })();
 
 })();

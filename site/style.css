@@ -2357,3 +2357,357 @@ select.sim-input { cursor: pointer; }
   .checklist-item h4 { font-size: .9rem; }
   .checklist-item p { font-size: .78rem; }
 }
+
+/* ================================================================== */
+/* NEW COMPONENTS — Satellites, Rocket Timeline, News Feed, AI Hook    */
+/* ================================================================== */
+
+/* Section spacing for new pages */
+.section-space { padding: 100px 0 80px; }
+
+/* ---------- 3D Satellites on Home ---------- */
+.satellite-layer {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none; overflow: hidden; z-index: 1;
+}
+.satellite {
+  position: absolute;
+  animation: orbit-satellite 20s linear infinite;
+}
+.sat-body {
+  font-size: 2rem;
+  filter: drop-shadow(0 0 12px rgba(100,200,255,.6));
+  animation: sat-pulse 3s ease-in-out infinite;
+}
+.sat-trail {
+  position: absolute; top: 50%; left: -60px;
+  width: 60px; height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(100,200,255,.4));
+  transform: translateY(-50%);
+}
+.sat-1 { top: 18%; animation-duration: 18s; animation-delay: 0s; }
+.sat-2 { top: 45%; animation-duration: 24s; animation-delay: -8s; }
+.sat-3 { top: 72%; animation-duration: 30s; animation-delay: -15s; }
+@keyframes orbit-satellite {
+  0%   { left: -80px; transform: rotate(0deg); }
+  50%  { left: 110%; transform: rotate(5deg); }
+  50.01% { left: 110%; transform: rotate(0deg) scaleX(-1); }
+  100% { left: -80px; transform: rotate(-5deg) scaleX(-1); }
+}
+@keyframes sat-pulse {
+  0%, 100% { opacity: .7; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+
+/* ---------- Revolution Preview Strip ---------- */
+.revolution-preview {
+  position: relative; z-index: 2;
+  margin-top: -20px; padding: 0 24px 40px;
+}
+.rev-strip {
+  display: flex; gap: 12px; overflow-x: auto;
+  justify-content: center; flex-wrap: wrap;
+  padding: 16px 0;
+}
+.rev-chip {
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-size: .82rem; font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  backdrop-filter: blur(8px);
+  transition: all .3s;
+}
+.rev-chip:hover {
+  background: rgba(109,159,255,.15);
+  border-color: rgba(109,159,255,.4);
+  transform: translateY(-2px);
+}
+.rev-chip-icon { margin-right: 6px; }
+
+/* ---------- AI Hook Banner ---------- */
+.ai-hook-banner {
+  position: relative;
+  background: linear-gradient(135deg, rgba(109,159,255,.08), rgba(139,92,246,.08));
+  border: 1px solid rgba(109,159,255,.2);
+  border-radius: 20px;
+  padding: 40px; margin: 32px 0 48px;
+  overflow: hidden;
+}
+.ai-hook-glow {
+  position: absolute; top: -50%; right: -20%;
+  width: 300px; height: 300px;
+  background: radial-gradient(circle, rgba(109,159,255,.15), transparent 70%);
+  border-radius: 50%;
+  animation: ai-glow-pulse 4s ease-in-out infinite;
+}
+@keyframes ai-glow-pulse {
+  0%, 100% { opacity: .5; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+.ai-hook-content { position: relative; z-index: 1; }
+.ai-hook-content h3 {
+  font-size: 1.5rem; margin-bottom: 12px;
+  background: linear-gradient(135deg, #6d9fff, #8b5cf6);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.ai-hook-content p {
+  color: var(--text-muted); line-height: 1.7;
+  max-width: 700px; margin-bottom: 24px;
+}
+.ai-hook-icon { font-size: 3rem; margin-bottom: 12px; }
+.ai-hook-stats {
+  display: flex; gap: 32px; flex-wrap: wrap; margin-bottom: 24px;
+}
+.ai-hook-stat {
+  display: flex; flex-direction: column; align-items: center;
+}
+.ai-hook-num {
+  font-size: 1.5rem; font-weight: 700;
+  color: #6d9fff;
+}
+.ai-hook-stat span:last-child {
+  font-size: .78rem; color: var(--text-muted); margin-top: 2px;
+}
+.ai-hook-use-cases {
+  display: flex; gap: 10px; flex-wrap: wrap;
+}
+.ai-hook-tag {
+  background: rgba(109,159,255,.1);
+  border: 1px solid rgba(109,159,255,.2);
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: .8rem; color: var(--text);
+}
+
+/* ---------- Live Censorship News Feed ---------- */
+.censorship-live-feed {
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(239,68,68,.2);
+  border-radius: 16px;
+  padding: 24px; margin-bottom: 40px;
+  overflow: hidden;
+}
+.clf-header {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
+}
+.clf-live-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: #ef4444;
+  animation: clf-blink 1.5s ease-in-out infinite;
+}
+@keyframes clf-blink {
+  0%, 100% { opacity: 1; } 50% { opacity: .3; }
+}
+.clf-header h4 { font-size: 1rem; margin: 0; color: #ef4444; }
+.clf-refresh {
+  margin-left: auto; font-size: .75rem;
+  color: var(--text-muted); opacity: .7;
+}
+.clf-ticker {
+  display: flex; flex-direction: column; gap: 12px;
+  max-height: 300px; overflow-y: auto;
+}
+.clf-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px;
+  background: rgba(239,68,68,.05);
+  border-radius: 10px; border-left: 3px solid #ef4444;
+}
+.clf-time {
+  font-size: .72rem; color: var(--text-muted);
+  white-space: nowrap; min-width: 60px;
+}
+.clf-text { font-size: .85rem; color: var(--text); flex: 1; }
+.clf-source {
+  font-size: .7rem; color: #6d9fff; white-space: nowrap;
+}
+.clf-source a { color: #6d9fff; text-decoration: none; }
+
+/* Censorship Citizen Banner */
+.censorship-citizen-banner {
+  position: relative;
+  background: linear-gradient(135deg, rgba(109,159,255,.06), rgba(16,185,129,.06));
+  border: 1px solid rgba(109,159,255,.15);
+  border-radius: 20px;
+  padding: 48px 40px;
+  text-align: center;
+  overflow: hidden;
+}
+.ccb-glow {
+  position: absolute; top: -40%; left: 50%; transform: translateX(-50%);
+  width: 400px; height: 200px;
+  background: radial-gradient(ellipse, rgba(109,159,255,.1), transparent 70%);
+}
+.censorship-citizen-banner h3 {
+  font-size: 1.4rem; margin-bottom: 12px;
+  position: relative;
+}
+.censorship-citizen-banner p {
+  color: var(--text-muted); max-width: 650px; margin: 0 auto 24px;
+  line-height: 1.7; position: relative;
+}
+.ccb-stats {
+  display: flex; justify-content: center; gap: 40px;
+  flex-wrap: wrap; position: relative;
+}
+.ccb-stat { display: flex; flex-direction: column; align-items: center; }
+.ccb-num { font-size: 1.5rem; font-weight: 700; color: #6d9fff; }
+.ccb-stat span:last-child { font-size: .78rem; color: var(--text-muted); }
+
+/* ---------- Interactive Rocket Timeline ---------- */
+.rocket-timeline {
+  position: relative;
+  padding: 60px 20px 40px;
+  margin: 40px 0;
+}
+.rt-track {
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 50%; transform: translateX(-50%);
+  width: 4px;
+  background: linear-gradient(180deg,
+    #10b981 0%, #10b981 25%,
+    rgba(109,159,255,.3) 25%, rgba(109,159,255,.3) 100%);
+  border-radius: 2px;
+}
+.rt-rocket {
+  position: absolute;
+  left: 50%; transform: translateX(-50%);
+  top: 10%;
+  z-index: 3;
+  transition: top 1s cubic-bezier(.4,0,.2,1);
+}
+.rt-rocket-body {
+  font-size: 2.5rem;
+  filter: drop-shadow(0 0 16px rgba(245,158,11,.6));
+  animation: rocket-hover 2s ease-in-out infinite;
+  transform: rotate(0deg);
+}
+@keyframes rocket-hover {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.rt-rocket-flame {
+  position: absolute;
+  bottom: -16px; left: 50%; transform: translateX(-50%);
+  width: 12px; height: 24px;
+  background: linear-gradient(180deg, #f59e0b, #ef4444, transparent);
+  border-radius: 50%;
+  opacity: .7;
+  animation: flame-flicker .3s ease-in-out infinite alternate;
+}
+@keyframes flame-flicker {
+  0% { height: 20px; opacity: .6; }
+  100% { height: 28px; opacity: .9; }
+}
+.rt-path {
+  position: absolute;
+  left: 50%; transform: translateX(-50%);
+  top: 0; bottom: 0;
+  width: 4px;
+}
+.rt-stations {
+  position: relative;
+  display: flex; flex-direction: column;
+  gap: 80px;
+}
+.rt-station {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  position: relative;
+  opacity: .5;
+  transition: opacity .5s, transform .5s;
+}
+.rt-station:nth-child(odd) {
+  flex-direction: row;
+  padding-left: calc(50% + 40px);
+}
+.rt-station:nth-child(even) {
+  flex-direction: row-reverse;
+  padding-right: calc(50% + 40px);
+  text-align: right;
+}
+.rt-station-active { opacity: 1; }
+.rt-station-icon {
+  font-size: 2.5rem;
+  position: absolute;
+  left: 50%; transform: translateX(-50%);
+  z-index: 2;
+  background: var(--bg);
+  padding: 8px;
+  border-radius: 50%;
+}
+.rt-station-ring {
+  position: absolute;
+  left: 50%; transform: translateX(-50%);
+  width: 64px; height: 64px;
+  border: 2px solid rgba(109,159,255,.3);
+  border-radius: 50%;
+  z-index: 1;
+}
+.rt-station-active .rt-station-ring {
+  border-color: #10b981;
+  box-shadow: 0 0 20px rgba(16,185,129,.3);
+}
+.rt-station-label h4 {
+  font-size: 1.1rem; margin: 0 0 4px;
+}
+.rt-station-label p {
+  font-size: .85rem; color: var(--text-muted); margin: 0 0 6px;
+}
+.rt-status {
+  font-size: .72rem; font-weight: 600;
+  padding: 3px 10px; border-radius: 999px;
+  display: inline-block;
+}
+.rt-status-done {
+  background: rgba(16,185,129,.15); color: #10b981;
+}
+.rt-status-pending {
+  background: rgba(245,158,11,.1); color: #f59e0b;
+}
+
+/* ---------- Responsive additions ---------- */
+@media (max-width: 768px) {
+  .section-space { padding: 80px 0 60px; }
+
+  /* Satellites */
+  .sat-body { font-size: 1.3rem; }
+  .sat-trail { width: 40px; }
+
+  /* Rev strip */
+  .rev-strip { justify-content: flex-start; }
+  .rev-chip { font-size: .75rem; padding: 6px 12px; }
+
+  /* AI hook */
+  .ai-hook-banner { padding: 24px 16px; }
+  .ai-hook-content h3 { font-size: 1.2rem; }
+  .ai-hook-stats { gap: 16px; }
+  .ai-hook-num { font-size: 1.2rem; }
+  .ai-hook-use-cases { gap: 6px; }
+  .ai-hook-tag { font-size: .72rem; padding: 4px 10px; }
+
+  /* News feed */
+  .censorship-live-feed { padding: 16px; }
+  .clf-item { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .clf-time { min-width: auto; }
+
+  /* Censorship banner */
+  .censorship-citizen-banner { padding: 32px 20px; }
+  .ccb-stats { gap: 20px; }
+
+  /* Rocket timeline */
+  .rocket-timeline { padding: 40px 8px 20px; }
+  .rt-stations { gap: 60px; }
+  .rt-station:nth-child(odd) { padding-left: 60px; }
+  .rt-station:nth-child(even) { padding-right: 0; padding-left: 60px; flex-direction: row; text-align: left; }
+  .rt-track { left: 24px; transform: none; }
+  .rt-station-icon { left: 24px; font-size: 1.8rem; }
+  .rt-station-ring { left: 24px; width: 48px; height: 48px; }
+  .rt-rocket { left: 24px; }
+  .rt-station-label h4 { font-size: .95rem; }
+}
