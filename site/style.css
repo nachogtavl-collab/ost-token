@@ -1804,6 +1804,36 @@ select.sim-input { cursor: pointer; }
 }
 .sx-quote-attr { display: block; margin-top: 12px; font-size: .78rem; color: var(--accent); }
 
+/* SpaceX Checklist Phases */
+.sx-checklist-phase { margin-bottom: 28px; }
+.sx-phase-banner {
+  display: flex; align-items: center; gap: 10px; padding: 14px 20px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  margin-bottom: 16px;
+}
+.sx-phase-banner.sx-phase-active { border-color: rgba(109,159,255,.4); background: rgba(109,159,255,.04); }
+.sx-phase-banner h4 { font-size: 1rem; margin: 0; flex: 1; text-align: left; }
+.sx-phase-label { font-size: .75rem; color: var(--text-muted); white-space: nowrap; }
+.sx-phase-status-dot {
+  width: 10px; height: 10px; border-radius: 50%; background: var(--text-muted);
+  flex-shrink: 0;
+}
+.sx-dot-live { background: var(--accent); animation: livePulse 2s infinite; }
+.sx-checklist-phase .checklist-grid { margin-left: 0; }
+
+/* Checklist Progress Bar */
+.checklist-progress-bar {
+  width: 100%; max-width: 500px; height: 8px; background: var(--surface2);
+  border-radius: 4px; margin: 0 auto 8px; overflow: hidden;
+  border: 1px solid var(--border);
+}
+.checklist-progress-fill {
+  height: 100%; border-radius: 4px;
+  background: linear-gradient(90deg, var(--accent), var(--success));
+  transition: width .6s ease;
+}
+.checklist-progress-text { font-size: .82rem; color: var(--text-muted); }
+
 /* ==================================================================
    SCANNING & AUTO-DETECT UI — Browser Mockup Price Detection
    ================================================================== */
@@ -2123,6 +2153,9 @@ select.sim-input { cursor: pointer; }
   .sx-timeline { padding-left: 20px; }
   .sx-phase-dot { left: -18px; width: 10px; height: 10px; }
   .sx-header h3 { font-size: 1.2rem; }
+  .sx-phase-banner { padding: 10px 14px; }
+  .sx-phase-banner h4 { font-size: .9rem; }
+  .sx-checklist-phase .checklist-item { padding: 12px 14px; }
 
   /* Bot panel */
   .bot-connector-panel { padding: 20px 16px; }

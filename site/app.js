@@ -2250,6 +2250,19 @@
     });
   })();
 
+  /* ---------- CHECKLIST PROGRESS BAR ---------- */
+  (function initChecklistProgress() {
+    const grid = document.querySelector('#launchChecklist .checklist-grid');
+    const fill = $('#checklistProgressFill');
+    const text = $('#checklistProgressText');
+    if (!grid || !fill || !text) return;
+    const total = grid.querySelectorAll('.checklist-item').length;
+    const done  = grid.querySelectorAll('.checklist-item.done').length;
+    const pct   = Math.round((done / total) * 100);
+    fill.style.width = pct + '%';
+    text.textContent  = done + ' of ' + total + ' complete (' + pct + '%)';
+  })();
+
   /* ---------- BOT CONNECTORS ---------- */
   const logBody = $('#logBody');
 

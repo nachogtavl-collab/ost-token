@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=9">
+  <link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
 
@@ -1341,54 +1341,163 @@
           <p class="text-muted">Our 0.1% treasury fee funds open satellite infrastructure. OST is designed to complement Starlink&rsquo;s coverage in censored or remote areas &mdash; nationless technology, coded for space.</p>
         </div>
 
-        <div class="sx-timeline">
-          <div class="sx-phase sx-phase-now">
-            <div class="sx-phase-dot sx-dot-active"></div>
-            <div class="sx-phase-content">
-              <h4>Week 1 &mdash; Entry Point</h4>
-              <ul>
-                <li>&#128196; Apply as SpaceX supplier &mdash; position OST as a DePIN funding partner</li>
-                <li>&#128038; Begin consistent X (Twitter) threads tagging @SpaceX @Starlink</li>
-                <li>&#127760; Attach live site, GitHub repo, and full manifesto</li>
-              </ul>
-            </div>
+        <!-- Phase 1: Entry Point — IN PROGRESS -->
+        <div class="sx-checklist-phase" id="sxPhase1">
+          <div class="sx-phase-banner sx-phase-active">
+            <span class="sx-phase-status-dot sx-dot-live"></span>
+            <h4>Phase 1 &mdash; Entry Point</h4>
+            <span class="sx-phase-label">Week 1 &bull; IN PROGRESS</span>
           </div>
-          <div class="sx-phase sx-phase-mid">
-            <div class="sx-phase-dot"></div>
-            <div class="sx-phase-content">
-              <h4>Month 0&ndash;3 &mdash; Prove It</h4>
-              <ul>
-                <li>&#128640; Mainnet launch + first 1,000 users + visible treasury activity</li>
-                <li>&#128752; DePIN faucet rewards flowing to bandwidth/GPU/satellite contributors</li>
-                <li>&#128038; Daily X visibility &mdash; value-first content, not &ldquo;please fund us&rdquo;</li>
-              </ul>
+          <div class="checklist-grid">
+            <div class="checklist-item done">
+              <div class="check-icon">&#9989;</div>
+              <div class="check-body">
+                <h4>Live Website &amp; GitHub Repo</h4>
+                <p>Production site deployed at <a href="https://nachogtavl-collab.github.io/ost-token/" target="_blank">nachogtavl-collab.github.io/ost-token</a>. Open-source repo with full manifesto, 25-instruction Anchor program, SDK, and deployment scripts.</p>
+                <span class="check-status status-done">Live</span>
+              </div>
             </div>
-          </div>
-          <div class="sx-phase sx-phase-mid">
-            <div class="sx-phase-dot"></div>
-            <div class="sx-phase-content">
-              <h4>Month 3&ndash;6 &mdash; Partnership</h4>
-              <ul>
-                <li>&#128225; SpaceX supplier team review (they respond to serious proposals)</li>
-                <li>&#127757; Starlink enterprise program &mdash; OST as payment layer or DePIN add-on</li>
-                <li>&#128176; X Corp payments angle &mdash; private, offline-ready payment layer for restricted regions</li>
-              </ul>
+            <div class="checklist-item done">
+              <div class="check-icon">&#9989;</div>
+              <div class="check-body">
+                <h4>DePIN Faucet &amp; Treasury Fee</h4>
+                <p>0.1% treasury fee instruction live on devnet. DePIN faucet section on website with 6 reward categories: Bandwidth, GPU, CPU, Storage, LoRa/5G, Satellite (up to 3.0 OST/day).</p>
+                <span class="check-status status-done">On-chain</span>
+              </div>
             </div>
-          </div>
-          <div class="sx-phase sx-phase-future">
-            <div class="sx-phase-dot"></div>
-            <div class="sx-phase-content">
-              <h4>Month 6&ndash;18 &mdash; Launch</h4>
-              <ul>
-                <li>&#128752; SpaceX rideshare nano-satellite launch (like Spacecoin &amp; WISeSat did)</li>
-                <li>&#127760; OST mesh network nodes extending uncensored internet</li>
-                <li>&#128640; Multi-planetary payment infrastructure for Mars settlements</li>
-              </ul>
+            <div class="checklist-item pending">
+              <div class="check-icon">&#128993;</div>
+              <div class="check-body">
+                <h4>SpaceX Supplier Application</h4>
+                <p>Submit formal application via SpaceX Supplier Portal. Position OST as a DePIN funding layer &mdash; satellite transit micropayments, bandwidth settlements, and open-source payment infrastructure.</p>
+                <span class="check-status status-pending">Ready to Submit</span>
+              </div>
+            </div>
+            <div class="checklist-item pending">
+              <div class="check-icon">&#128993;</div>
+              <div class="check-body">
+                <h4>X (Twitter) Visibility Campaign</h4>
+                <p>Begin daily threads tagging @SpaceX @Starlink @elonmusk with value-first content: DePIN architecture, treasury fee mechanics, satellite mesh design docs. No begging &mdash; show working code.</p>
+                <span class="check-status status-pending">Drafting</span>
+              </div>
+            </div>
+            <div class="checklist-item pending">
+              <div class="check-icon">&#128993;</div>
+              <div class="check-body">
+                <h4>One-Pager &amp; Pitch Deck</h4>
+                <p>Create PDF pitch showing OST &times; Starlink synergy: treasury-funded satellites, censorship-resistant payments in restricted zones, mesh network for disaster response.</p>
+                <span class="check-status status-pending">Not Started</span>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="sx-analogues">
+        <!-- Phase 2: Prove It -->
+        <div class="sx-checklist-phase" id="sxPhase2">
+          <div class="sx-phase-banner">
+            <span class="sx-phase-status-dot"></span>
+            <h4>Phase 2 &mdash; Prove It</h4>
+            <span class="sx-phase-label">Month 0&ndash;3</span>
+          </div>
+          <div class="checklist-grid">
+            <div class="checklist-item pending">
+              <div class="check-icon">&#128993;</div>
+              <div class="check-body">
+                <h4>Mainnet Launch &amp; First 1,000 Users</h4>
+                <p>Deploy to Solana mainnet, seed initial liquidity, onboard first 1,000 wallets holding OST. Visible on-chain treasury fee activity.</p>
+                <span class="check-status status-pending">After Mainnet</span>
+              </div>
+            </div>
+            <div class="checklist-item pending">
+              <div class="check-icon">&#128993;</div>
+              <div class="check-body">
+                <h4>DePIN Rewards Flowing</h4>
+                <p>Activate DePIN faucet on mainnet. First bandwidth/GPU/satellite contributors receiving real OST rewards from treasury.</p>
+                <span class="check-status status-pending">After Mainnet</span>
+              </div>
+            </div>
+            <div class="checklist-item pending">
+              <div class="check-icon">&#128993;</div>
+              <div class="check-body">
+                <h4>Daily X Content &amp; Community</h4>
+                <p>Consistent value-first posts: architecture updates, DePIN node stats, treasury transparency reports. Target: 10K+ impressions/week.</p>
+                <span class="check-status status-pending">Month 1</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase 3: Partnership -->
+        <div class="sx-checklist-phase" id="sxPhase3">
+          <div class="sx-phase-banner">
+            <span class="sx-phase-status-dot"></span>
+            <h4>Phase 3 &mdash; Partnership</h4>
+            <span class="sx-phase-label">Month 3&ndash;6</span>
+          </div>
+          <div class="checklist-grid">
+            <div class="checklist-item pending">
+              <div class="check-icon">&#128993;</div>
+              <div class="check-body">
+                <h4>SpaceX Supplier Review</h4>
+                <p>Follow up on supplier application. Present traction data: active users, treasury volume, DePIN node count. SpaceX responds to serious proposals with working products.</p>
+                <span class="check-status status-pending">Month 3</span>
+              </div>
+            </div>
+            <div class="checklist-item pending">
+              <div class="check-icon">&#128993;</div>
+              <div class="check-body">
+                <h4>Starlink Enterprise Program</h4>
+                <p>Apply for Starlink Business/Enterprise tier. Propose OST as a micropayment layer for bandwidth allocation, or a DePIN coordination add-on for ground stations.</p>
+                <span class="check-status status-pending">Month 4</span>
+              </div>
+            </div>
+            <div class="checklist-item pending">
+              <div class="check-icon">&#128993;</div>
+              <div class="check-body">
+                <h4>X Corp Payments Integration</h4>
+                <p>Pitch OST as a private, offline-ready payment rail for X (Twitter) in censored regions. Crypto P2P payments inside X for markets where traditional payment rails are blocked.</p>
+                <span class="check-status status-pending">Month 5</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase 4: Launch -->
+        <div class="sx-checklist-phase" id="sxPhase4">
+          <div class="sx-phase-banner">
+            <span class="sx-phase-status-dot"></span>
+            <h4>Phase 4 &mdash; Space Launch</h4>
+            <span class="sx-phase-label">Month 6&ndash;18</span>
+          </div>
+          <div class="checklist-grid">
+            <div class="checklist-item pending">
+              <div class="check-icon">&#128993;</div>
+              <div class="check-body">
+                <h4>SpaceX Rideshare Nano-Satellite</h4>
+                <p>Book a Transporter rideshare slot (~$275K for 50kg CubeSat). Deploy OST mesh node in LEO orbit &mdash; like Spacecoin &amp; WISeSat did in 2025&ndash;2026.</p>
+                <span class="check-status status-pending">Month 8+</span>
+              </div>
+            </div>
+            <div class="checklist-item pending">
+              <div class="check-icon">&#128993;</div>
+              <div class="check-body">
+                <h4>OST Mesh Network &mdash; Uncensored Internet</h4>
+                <p>Ground station + LEO satellite nodes form a mesh extending uncensored internet to censored zones. Treasury-funded. Open hardware specs.</p>
+                <span class="check-status status-pending">Month 12+</span>
+              </div>
+            </div>
+            <div class="checklist-item pending">
+              <div class="check-icon">&#128993;</div>
+              <div class="check-body">
+                <h4>Multi-Planetary Payment Infrastructure</h4>
+                <p>Mars-ready payment protocol with latency-tolerant consensus. Offline tap-to-pay, Grow Accounts for kids who will live on Mars. The final step.</p>
+                <span class="check-status status-pending">Month 18+</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sx-analogues" style="margin-top:32px;">
           <h4 style="text-align:center;margin-bottom:16px;color:var(--text-muted);font-size:.9rem;">Proven Path &mdash; Projects That Already Did This</h4>
           <div class="sx-analogue-grid">
             <div class="sx-analogue-card">
@@ -1418,9 +1527,16 @@
       <!-- Mainnet Launch Checklist -->
       <div class="launch-checklist" id="launchChecklist" style="margin-top:64px;">
         <h3 data-i18n="launch.title">&#128640; Mainnet Launch Checklist</h3>
-        <p class="text-muted" style="text-align:center;margin-bottom:32px;" data-i18n="launch.sub">What we need to make OST fully real on Solana mainnet.</p>
+        <p class="text-muted" style="text-align:center;margin-bottom:12px;" data-i18n="launch.sub">What we need to make OST fully real on Solana mainnet.</p>
+        <div class="checklist-progress" id="checklistProgress" style="text-align:center;margin-bottom:32px;">
+          <div class="checklist-progress-bar">
+            <div class="checklist-progress-fill" id="checklistProgressFill"></div>
+          </div>
+          <span class="checklist-progress-text" id="checklistProgressText"></span>
+        </div>
 
         <div class="checklist-grid">
+          <!-- === COMPLETED === -->
           <div class="checklist-item done">
             <div class="check-icon">&#9989;</div>
             <div class="check-body">
@@ -1441,7 +1557,7 @@
             <div class="check-icon">&#9989;</div>
             <div class="check-body">
               <h4>Website &amp; Frontend</h4>
-              <p>Production website with 3D globe, live prices, wallet connect, pay demo, 11 languages, AI connector panel.</p>
+              <p>Production website with 3D globe, live prices, wallet connect, interchange, 11 languages, AI connector panel, SpaceX partnership strategy.</p>
               <span class="check-status status-done">Complete</span>
             </div>
           </div>
@@ -1449,7 +1565,7 @@
             <div class="check-icon">&#9989;</div>
             <div class="check-body">
               <h4>Security Audit</h4>
-              <p>Internal code review complete. Simplified CT instructions to event emitters — client SDK handles Token-2022 directly for maximum safety.</p>
+              <p>Internal code review complete. Simplified CT instructions to event emitters &mdash; client SDK handles Token-2022 directly for maximum safety.</p>
               <span class="check-status status-done">Reviewed</span>
             </div>
           </div>
@@ -1457,7 +1573,7 @@
             <div class="check-icon">&#9989;</div>
             <div class="check-body">
               <h4>Program Compiled</h4>
-              <p>Anchor program built successfully (572KB BPF binary). 25 instructions verified. Program ID: J2ji...vGXY. Ready for devnet deployment.</p>
+              <p>Anchor program built successfully (572KB BPF binary). 25 instructions verified. Program ID: <code>J2ji...vGXY</code></p>
               <span class="check-status status-done">Built &amp; Ready</span>
             </div>
           </div>
@@ -1465,48 +1581,90 @@
             <div class="check-icon">&#9989;</div>
             <div class="check-body">
               <h4>Token Mint Creation</h4>
-              <p>Init script ready. Creates SPL Token-2022 mint with confidential transfer extension, DAO treasury (0.1% fee), and admin token account.</p>
-              <span class="check-status status-done">Script Ready</span>
+              <p>SPL Token-2022 mint with confidential transfer extension. Mint: <code>383p...2pAJ</code>. 1B supply, 9 decimals.</p>
+              <span class="check-status status-done">Created On-Chain</span>
             </div>
           </div>
-          <div class="checklist-item pending" id="checklistDeploy">
-            <div class="check-icon" id="checklistDeployIcon">&#128993;</div>
+          <div class="checklist-item done">
+            <div class="check-icon">&#9989;</div>
             <div class="check-body">
               <h4>Devnet Deployment</h4>
-              <p>Deploy compiled program to Solana devnet. Initialize mint and treasury on-chain. Verify via Solana Explorer.</p>
-              <span class="check-status status-pending" id="checklistDeployStatus">Awaiting Deploy</span>
+              <p>Program deployed to Solana devnet. Mint and treasury initialized on-chain. Verified on <a href="https://explorer.solana.com/address/J2jiS296YWVie1Sopb4SxcM3aJnP9aAwe6aLDhCqvGXY?cluster=devnet" target="_blank">Solana Explorer</a>.</p>
+              <span class="check-status status-done">Deployed</span>
             </div>
           </div>
-          <div class="checklist-item pending">
-            <div class="check-icon">&#128993;</div>
+          <div class="checklist-item done">
+            <div class="check-icon">&#9989;</div>
             <div class="check-body">
-              <h4>Liquidity Pool — Raydium / Orca</h4>
-              <p>Seed initial liquidity on Raydium CLMM or Orca Whirlpool. Required for Jupiter routing and real-time pricing.</p>
-              <span class="check-status status-pending">After Mint</span>
+              <h4>wOST Wrapper Token</h4>
+              <p>Standard SPL wrapper (<code>Ac8R...iHoS</code>) for AMM/DEX compatibility. Enables Raydium pools and Jupiter routing without Token-2022 friction.</p>
+              <span class="check-status status-done">Created</span>
             </div>
           </div>
-          <div class="checklist-item pending">
-            <div class="check-icon">&#128993;</div>
+          <div class="checklist-item done">
+            <div class="check-icon">&#9989;</div>
             <div class="check-body">
-              <h4>Jupiter Listing</h4>
-              <p>Submit token to Jupiter strict list. Requires verified metadata, sufficient liquidity, and community validation.</p>
-              <span class="check-status status-pending">After Liquidity</span>
+              <h4>Token Metadata On-Chain</h4>
+              <p>Metaplex metadata set: name, symbol, logo URI, and JSON metadata hosted on GitHub Pages. Renders correctly in wallets and explorers.</p>
+              <span class="check-status status-done">Set</span>
             </div>
           </div>
-          <div class="checklist-item pending">
-            <div class="check-icon">&#128993;</div>
+          <div class="checklist-item done">
+            <div class="check-icon">&#9989;</div>
             <div class="check-body">
-              <h4>CoinGecko / CoinMarketCap Listing</h4>
-              <p>Register for live price tracking. Requires contract address, official links, logo, and trading volume proof.</p>
-              <span class="check-status status-pending">After Jupiter</span>
+              <h4>Liquidity Pool &mdash; Raydium</h4>
+              <p>wOST/SOL pool seeded on Raydium (100K wOST + 1 SOL). AMM pool active on devnet. Enables price discovery and swap routing.</p>
+              <span class="check-status status-done">Pool Live</span>
             </div>
           </div>
           <div class="checklist-item done">
             <div class="check-icon">&#9989;</div>
             <div class="check-body">
               <h4>DAO Treasury Wallet</h4>
-              <p>Multi-sig treasury via init script. 0.1% fee recipient for satellite infrastructure funding. Treasury authority PDA + token account auto-created.</p>
-              <span class="check-status status-done">Script Ready</span>
+              <p>Treasury PDA + token account created on-chain. 0.1% fee recipient for satellite infrastructure funding.</p>
+              <span class="check-status status-done">Active</span>
+            </div>
+          </div>
+
+          <!-- === PENDING === -->
+          <div class="checklist-item pending">
+            <div class="check-icon">&#128993;</div>
+            <div class="check-body">
+              <h4>Mainnet Deployment</h4>
+              <p>Redeploy verified program to Solana mainnet-beta. Requires ~2.5 SOL for program rent. Initialize mainnet mint, treasury, and metadata.</p>
+              <span class="check-status status-pending">Next Step</span>
+            </div>
+          </div>
+          <div class="checklist-item pending">
+            <div class="check-icon">&#128993;</div>
+            <div class="check-body">
+              <h4>Mainnet Liquidity Seeding</h4>
+              <p>Create wOST/SOL Raydium CLMM pool on mainnet with initial liquidity. Required for Jupiter routing and real-time pricing.</p>
+              <span class="check-status status-pending">After Deploy</span>
+            </div>
+          </div>
+          <div class="checklist-item pending">
+            <div class="check-icon">&#128993;</div>
+            <div class="check-body">
+              <h4>Jupiter Strict List</h4>
+              <p>Submit wOST to Jupiter verified token list. Requires on-chain metadata, sufficient liquidity, and community validation via governance vote.</p>
+              <span class="check-status status-pending">After Liquidity</span>
+            </div>
+          </div>
+          <div class="checklist-item pending">
+            <div class="check-icon">&#128993;</div>
+            <div class="check-body">
+              <h4>CoinGecko / CoinMarketCap</h4>
+              <p>Register for live price tracking. Submit contract address, official links, logo, supply data, and 7-day trading volume proof.</p>
+              <span class="check-status status-pending">After Jupiter</span>
+            </div>
+          </div>
+          <div class="checklist-item pending">
+            <div class="check-icon">&#128993;</div>
+            <div class="check-body">
+              <h4>External Security Audit</h4>
+              <p>Commission third-party audit from a reputable firm (OtterSec, Neodyme, or Halborn). Required for institutional trust and exchange listings.</p>
+              <span class="check-status status-pending">Pre-Mainnet</span>
             </div>
           </div>
         </div>
@@ -2259,6 +2417,6 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
-  <script src="app.js?v=8"></script>
+  <script src="app.js?v=10"></script>
 </body>
 </html>
