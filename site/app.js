@@ -2830,100 +2830,105 @@
       } catch (_) { return raw.includes('/'); }
     }
 
-    // Simulated store data for quick-link demos
+    // Simulated store data for quick-link demos — real product images & descriptions
     const stores = {
       'amazon.com': { name: 'Amazon', icon: '&#128230;', color: '#ff9900', items: [
-        { name: 'Echo Dot 5th Gen', price: 49.99, img: '&#128266;' },
-        { name: 'USB-C Cable 3-Pack', price: 9.99, img: '&#128268;' },
-        { name: 'Fire TV Stick 4K', price: 39.99, img: '&#128250;' },
+        { name: 'Echo Dot 5th Gen', price: 49.99, img: 'https://images.unsplash.com/photo-1543512214-318c7553f230?w=200&h=200&fit=crop&q=80', desc: 'Smart speaker with Alexa, improved bass' },
+        { name: 'USB-C Cable 3-Pack', price: 9.99, img: 'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=200&h=200&fit=crop&q=80', desc: 'Fast charging, braided nylon, 6ft each' },
+        { name: 'Fire TV Stick 4K', price: 39.99, img: 'https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=200&h=200&fit=crop&q=80', desc: 'Stream in vibrant 4K Ultra HD with Alexa' },
       ], currency: 'USD' },
       'nike.com': { name: 'Nike', icon: '&#128095;', color: '#111', items: [
-        { name: 'Air Max 90', price: 185.00, img: '&#128095;' },
-        { name: 'Dri-FIT Running Tee', price: 35.00, img: '&#128085;' },
-        { name: 'ACG Mountain Fly', price: 180.00, img: '&#129406;' },
+        { name: 'Air Max 90', price: 185.00, img: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=200&h=200&fit=crop&q=80', desc: 'Iconic running silhouette with visible Air cushioning' },
+        { name: 'Dri-FIT Running Tee', price: 35.00, img: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=200&h=200&fit=crop&q=80', desc: 'Moisture-wicking tech, lightweight & breathable' },
+        { name: 'ACG Mountain Fly', price: 180.00, img: 'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=200&h=200&fit=crop&q=80', desc: 'All-terrain trail shoe with React foam' },
       ], currency: 'USD' },
       'apple.com': { name: 'Apple Store', icon: '&#127822;', color: '#333', items: [
-        { name: 'iPhone 16 Pro', price: 999.00, img: '&#128241;' },
-        { name: 'MagSafe Charger', price: 39.00, img: '&#128267;' },
-        { name: 'AirPods Pro 2', price: 249.00, img: '&#127911;' },
+        { name: 'iPhone 16 Pro', price: 999.00, img: 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=200&h=200&fit=crop&q=80', desc: 'A18 Pro chip, 48MP camera, titanium design' },
+        { name: 'MagSafe Charger', price: 39.00, img: 'https://images.unsplash.com/photo-1629131726692-1acfc0d42e05?w=200&h=200&fit=crop&q=80', desc: 'Wireless charging pad, perfectly aligned every time' },
+        { name: 'AirPods Pro 2', price: 249.00, img: 'https://images.unsplash.com/photo-1606841837239-c5a1a4a07af7?w=200&h=200&fit=crop&q=80', desc: 'Active noise cancellation, adaptive transparency' },
+      ], currency: 'USD' },
+      'tesla.com': { name: 'Tesla', icon: '&#128664;', color: '#CC0000', items: [
+        { name: 'Model Y Long Range', price: 52990.00, img: 'https://images.unsplash.com/photo-1560958089-b8a1929cea89?w=200&h=200&fit=crop&q=80', desc: 'AWD, 310mi range, 0-60 in 4.8s, autopilot' },
+        { name: 'Model 3 Highland', price: 38990.00, img: 'https://images.unsplash.com/photo-1536700503339-1e4b06520771?w=200&h=200&fit=crop&q=80', desc: 'RWD, 272mi range, 15" touchscreen, refreshed' },
+        { name: 'Cybertruck AWD', price: 79990.00, img: 'https://images.unsplash.com/photo-1571840546980-4bed46a14d0f?w=200&h=200&fit=crop&q=80', desc: 'Stainless steel exoskeleton, adaptive air suspension' },
       ], currency: 'USD' },
       'booking.com': { name: 'Booking.com', icon: '&#127968;', color: '#003580', items: [
-        { name: 'Hotel room 3 nights', price: 285.00, img: '&#127968;' },
-        { name: 'Airport transfer', price: 45.00, img: '&#128663;' },
+        { name: 'Hotel Room 3 Nights', price: 285.00, img: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=200&h=200&fit=crop&q=80', desc: 'Luxury suite, king bed, city center, breakfast included' },
+        { name: 'Airport Transfer', price: 45.00, img: 'https://images.unsplash.com/photo-1449965408869-ebd13bc9e5a8?w=200&h=200&fit=crop&q=80', desc: 'Private car, meet & greet, flight tracking' },
       ], currency: 'EUR' },
       'ebay.com': { name: 'eBay', icon: '&#128717;', color: '#e53238', items: [
-        { name: 'Vintage Record Player', price: 125.00, img: '&#127926;' },
-        { name: 'Vinyl Collection (10)', price: 45.00, img: '&#128191;' },
+        { name: 'Vintage Record Player', price: 125.00, img: 'https://images.unsplash.com/photo-1535992165-4af54da9c2b7?w=200&h=200&fit=crop&q=80', desc: 'Belt-driven turntable, built-in speakers, bluetooth' },
+        { name: 'Vinyl Collection (10)', price: 45.00, img: 'https://images.unsplash.com/photo-1483412033650-1015ddeb83d1?w=200&h=200&fit=crop&q=80', desc: 'Classic rock & jazz vinyl records, mint condition' },
       ], currency: 'USD' },
       'walmart.com': { name: 'Walmart', icon: '&#128722;', color: '#0071ce', items: [
-        { name: 'Groceries Bundle', price: 67.50, img: '&#127828;' },
-        { name: 'Kitchen Blender Pro', price: 29.99, img: '&#129379;' },
-        { name: 'Throw Blanket', price: 14.99, img: '&#128716;' },
+        { name: 'Groceries Bundle', price: 67.50, img: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=200&h=200&fit=crop&q=80', desc: 'Weekly essentials: produce, dairy, pantry staples' },
+        { name: 'Kitchen Blender Pro', price: 29.99, img: 'https://images.unsplash.com/photo-1570222094114-d054a817e56b?w=200&h=200&fit=crop&q=80', desc: '700W motor, 5 speeds, crush ice, BPA-free jar' },
+        { name: 'Throw Blanket', price: 14.99, img: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=200&h=200&fit=crop&q=80', desc: 'Ultra-soft fleece, 50x60 inches, machine washable' },
       ], currency: 'USD' },
       'airbnb.com': { name: 'Airbnb', icon: '&#127969;', color: '#FF5A5F', items: [
-        { name: 'Beach house 5 nights', price: 750.00, img: '&#127958;' },
-        { name: 'Cleaning fee', price: 75.00, img: '&#129529;' },
+        { name: 'Beach House 5 Nights', price: 750.00, img: 'https://images.unsplash.com/photo-1499793983394-12dec4df4400?w=200&h=200&fit=crop&q=80', desc: 'Oceanfront, 3BR/2BA, private deck, Wi-Fi' },
+        { name: 'Cleaning Fee', price: 75.00, img: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=200&h=200&fit=crop&q=80', desc: 'Professional deep clean after checkout' },
       ], currency: 'USD' },
       'aliexpress.com': { name: 'AliExpress', icon: '&#128230;', color: '#e62e04', items: [
-        { name: 'Wireless Earbuds', price: 12.99, img: '&#127911;' },
-        { name: 'Phone Case', price: 3.99, img: '&#128241;' },
-        { name: 'LED Strip 5m', price: 8.99, img: '&#128161;' },
+        { name: 'Wireless Earbuds', price: 12.99, img: 'https://images.unsplash.com/photo-1590658268037-6bf12f032f55?w=200&h=200&fit=crop&q=80', desc: 'TWS, Bluetooth 5.3, noise cancellation, 36hr battery' },
+        { name: 'Phone Case', price: 3.99, img: 'https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?w=200&h=200&fit=crop&q=80', desc: 'Clear TPU, shockproof, slim fit, anti-yellow' },
+        { name: 'LED Strip 5m', price: 8.99, img: 'https://images.unsplash.com/photo-1550985616-10810253b84d?w=200&h=200&fit=crop&q=80', desc: 'RGB color changing, remote control, adhesive back' },
       ], currency: 'USD' },
       'mercadolibre.com': { name: 'Mercado Libre', icon: '&#128722;', color: '#FFE600', items: [
-        { name: 'Auriculares Bluetooth', price: 15999, img: '&#127911;' },
-        { name: 'Cargador USB-C', price: 4999, img: '&#128268;' },
+        { name: 'Auriculares Bluetooth', price: 15999, img: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=200&h=200&fit=crop&q=80', desc: 'Inalámbricos, cancelación de ruido, 30hr batería' },
+        { name: 'Cargador USB-C', price: 4999, img: 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=200&h=200&fit=crop&q=80', desc: 'Carga rápida 65W, compatible con laptop y celular' },
       ], currency: 'ARS' },
       'rakuten.co.jp': { name: 'Rakuten', icon: '&#127988;', color: '#bf0000', items: [
-        { name: 'Nintendo Switch Game', price: 5980, img: '&#127918;' },
-        { name: 'Rice Cooker', price: 12800, img: '&#127834;' },
+        { name: 'Nintendo Switch Game', price: 5980, img: 'https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?w=200&h=200&fit=crop&q=80', desc: 'ゼルダの伝説, limited edition cartridge' },
+        { name: 'Rice Cooker', price: 12800, img: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=200&h=200&fit=crop&q=80', desc: '5.5合炊き, IH加熱, 保温機能付き' },
       ], currency: 'JPY' },
       'flipkart.com': { name: 'Flipkart', icon: '&#128722;', color: '#2874F0', items: [
-        { name: 'Smartphone', price: 14999, img: '&#128241;' },
-        { name: 'Earphones', price: 999, img: '&#127911;' },
+        { name: 'Smartphone', price: 14999, img: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=200&h=200&fit=crop&q=80', desc: '6.7" AMOLED, 128GB, 50MP camera, 5G enabled' },
+        { name: 'Earphones', price: 999, img: 'https://images.unsplash.com/photo-1572536147248-ac59a8abfa4b?w=200&h=200&fit=crop&q=80', desc: 'In-ear, deep bass, tangle-free cable, mic' },
       ], currency: 'INR' },
       'shopping.google.com': { name: 'Google Shopping', icon: '&#128269;', color: '#4285F4', items: [
-        { name: 'Sony WH-1000XM5 Headphones', price: 348.00, img: '&#127911;' },
-        { name: 'Samsung Galaxy S24 Ultra', price: 1199.99, img: '&#128241;' },
-        { name: 'Dyson V15 Detect', price: 749.99, img: '&#129529;' },
-        { name: 'Nintendo Switch OLED', price: 349.99, img: '&#127918;' },
+        { name: 'Sony WH-1000XM5', price: 348.00, img: 'https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?w=200&h=200&fit=crop&q=80', desc: 'Industry-leading noise cancellation, 30hr battery' },
+        { name: 'Galaxy S24 Ultra', price: 1199.99, img: 'https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?w=200&h=200&fit=crop&q=80', desc: '200MP camera, S Pen built-in, titanium frame' },
+        { name: 'Dyson V15 Detect', price: 749.99, img: 'https://images.unsplash.com/photo-1558317374-067fb5f30001?w=200&h=200&fit=crop&q=80', desc: 'Laser reveals microscopic dust, 60min battery' },
+        { name: 'Nintendo Switch OLED', price: 349.99, img: 'https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?w=200&h=200&fit=crop&q=80', desc: '7" OLED screen, 64GB storage, enhanced audio' },
       ], currency: 'USD' },
       'bestbuy.com': { name: 'Best Buy', icon: '&#128187;', color: '#0046BE', items: [
-        { name: 'LG C4 65" OLED TV', price: 1796.99, img: '&#128250;' },
-        { name: 'iPad Air M2', price: 599.00, img: '&#128241;' },
-        { name: 'Bose QC Ultra', price: 429.00, img: '&#127911;' },
+        { name: 'LG C4 65" OLED TV', price: 1796.99, img: 'https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=200&h=200&fit=crop&q=80', desc: '4K 120Hz, Dolby Vision & Atmos, webOS 24' },
+        { name: 'iPad Air M2', price: 599.00, img: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=200&h=200&fit=crop&q=80', desc: '11" Liquid Retina, Apple M2 chip, all-day battery' },
+        { name: 'Bose QC Ultra', price: 429.00, img: 'https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=200&h=200&fit=crop&q=80', desc: 'CustomTune sound, spatial audio, world-class ANC' },
       ], currency: 'USD' },
       'target.com': { name: 'Target', icon: '&#127919;', color: '#CC0000', items: [
-        { name: 'Nespresso Vertuo', price: 159.99, img: '&#9749;' },
-        { name: 'Lego Star Wars Set', price: 79.99, img: '&#129521;' },
-        { name: 'Casper Pillow', price: 65.00, img: '&#128716;' },
+        { name: 'Nespresso Vertuo', price: 159.99, img: 'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?w=200&h=200&fit=crop&q=80', desc: 'One-touch brew, 5oz-18oz cups, milk frother' },
+        { name: 'Lego Star Wars Set', price: 79.99, img: 'https://images.unsplash.com/photo-1587654780291-39c9404d7dd0?w=200&h=200&fit=crop&q=80', desc: '1,329 pieces, Millennium Falcon, ages 14+' },
+        { name: 'Casper Pillow', price: 65.00, img: 'https://images.unsplash.com/photo-1592789705501-f9ae4287c4a9?w=200&h=200&fit=crop&q=80', desc: 'Three-layer design, breathable, machine washable' },
       ], currency: 'USD' },
       'costco.com': { name: 'Costco', icon: '&#128230;', color: '#E31837', items: [
-        { name: 'KitchenAid Mixer', price: 349.99, img: '&#127860;' },
-        { name: 'Bulk Protein Bars (48ct)', price: 39.99, img: '&#127855;' },
+        { name: 'KitchenAid Mixer', price: 349.99, img: 'https://images.unsplash.com/photo-1594385208974-2f8bb07ba3a5?w=200&h=200&fit=crop&q=80', desc: 'Artisan 5qt, 10 speeds, tilt-head, stainless bowl' },
+        { name: 'Protein Bars 48ct', price: 39.99, img: 'https://images.unsplash.com/photo-1622484211148-971b73f46f57?w=200&h=200&fit=crop&q=80', desc: 'Kirkland Signature, 21g protein, variety pack' },
       ], currency: 'USD' },
       'homedepot.com': { name: 'Home Depot', icon: '&#128295;', color: '#F96302', items: [
-        { name: 'DeWalt Drill Kit', price: 179.00, img: '&#128295;' },
-        { name: 'Weber Gas Grill', price: 549.00, img: '&#128293;' },
+        { name: 'DeWalt Drill Kit', price: 179.00, img: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?w=200&h=200&fit=crop&q=80', desc: '20V MAX, brushless, 2 batteries, charger, bag' },
+        { name: 'Weber Gas Grill', price: 549.00, img: 'https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?w=200&h=200&fit=crop&q=80', desc: 'Spirit E-310, 3-burner, 529 sq in cooking area' },
       ], currency: 'USD' },
       'samsung.com': { name: 'Samsung', icon: '&#128241;', color: '#1428A0', items: [
-        { name: 'Galaxy Z Fold 6', price: 1899.99, img: '&#128241;' },
-        { name: 'Galaxy Watch Ultra', price: 649.99, img: '&#8986;' },
-      ], currency: 'USD' },
-      'tesla.com': { name: 'Tesla Shop', icon: '&#128664;', color: '#CC0000', items: [
-        { name: 'Tesla Wall Connector', price: 475.00, img: '&#9889;' },
-        { name: 'Model Y All-Weather Mats', price: 225.00, img: '&#128664;' },
+        { name: 'Galaxy Z Fold 6', price: 1899.99, img: 'https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?w=200&h=200&fit=crop&q=80', desc: '7.6" foldable, Snapdragon 8 Gen 3, S Pen support' },
+        { name: 'Galaxy Watch Ultra', price: 649.99, img: 'https://images.unsplash.com/photo-1579586337278-3befd40fd17a?w=200&h=200&fit=crop&q=80', desc: 'Titanium, 47mm, 100m water resistance, dual GPS' },
       ], currency: 'USD' },
       'newegg.com': { name: 'Newegg', icon: '&#128187;', color: '#FF6600', items: [
-        { name: 'RTX 4070 Ti Super', price: 799.99, img: '&#127918;' },
-        { name: 'Corsair 32GB RAM Kit', price: 89.99, img: '&#128187;' },
+        { name: 'RTX 4070 Ti Super', price: 799.99, img: 'https://images.unsplash.com/photo-1591488320449-011701bb6704?w=200&h=200&fit=crop&q=80', desc: '16GB GDDR6X, DLSS 3, ray tracing, 2610MHz boost' },
+        { name: 'Corsair 32GB RAM Kit', price: 89.99, img: 'https://images.unsplash.com/photo-1562976540-1502c2145186?w=200&h=200&fit=crop&q=80', desc: 'DDR5-6000, CL30, Vengeance RGB, Intel XMP 3.0' },
       ], currency: 'USD' },
       'zara.com': { name: 'Zara', icon: '&#128087;', color: '#000', items: [
-        { name: 'Linen Blazer', price: 89.90, img: '&#128087;' },
-        { name: 'Leather Belt', price: 35.90, img: '&#128091;' },
+        { name: 'Linen Blazer', price: 89.90, img: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=200&h=200&fit=crop&q=80', desc: 'Relaxed fit, notch lapel, natural linen blend' },
+        { name: 'Leather Belt', price: 35.90, img: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=200&h=200&fit=crop&q=80', desc: 'Full grain leather, brushed silver buckle' },
       ], currency: 'USD' },
       'adidas.com': { name: 'Adidas', icon: '&#128095;', color: '#000', items: [
-        { name: 'Ultraboost 5', price: 190.00, img: '&#128095;' },
-        { name: 'Adicolor Hoodie', price: 65.00, img: '&#129509;' },
+        { name: 'Ultraboost 5', price: 190.00, img: 'https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=200&h=200&fit=crop&q=80', desc: 'BOOST midsole, Primeknit+, Continental rubber outsole' },
+        { name: 'Adicolor Hoodie', price: 65.00, img: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=200&h=200&fit=crop&q=80', desc: 'French terry cotton, kangaroo pocket, trefoil logo' },
+      ], currency: 'USD' },
+      'zillow.com': { name: 'Zillow', icon: '&#127968;', color: '#006AFF', items: [
+        { name: 'Miami Beach Condo 2BR', price: 485000.00, img: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=200&h=200&fit=crop&q=80', desc: 'Ocean view, 1,200 sqft, pool, gym, parking' },
+        { name: 'Austin Modern Home 4BR', price: 725000.00, img: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=200&h=200&fit=crop&q=80', desc: '2,800 sqft, open plan, solar panels, 2-car garage' },
       ], currency: 'USD' },
     };
 
@@ -2933,10 +2938,15 @@
       const hostname = getHostname(rawUrl);
       if (!hostname) return;
       if (checkout) checkout.style.display = 'none';
+      // Stop auto-cycle and hide showcase elements
+      if (showcaseInterval) { clearInterval(showcaseInterval); showcaseInterval = null; }
+      var showcase = $('#browserAutoShowcase');
+      var quickLinks = $('#browserQuickLinks');
+      if (showcase) showcase.style.display = 'none';
+      if (quickLinks) quickLinks.style.display = 'none';
 
       const store = stores[hostname];
       if (store && !hasPath(rawUrl)) {
-        // Known quick-link store (just domain, no path) — use simulated catalog
         browserUrl.value = hostname;
         currentStore = Object.assign({}, store, {
           total: store.items.reduce(function(s, i) { return s + i.price; }, 0),
@@ -2944,7 +2954,6 @@
         });
         renderStore(currentStore, hostname);
       } else {
-        // Real URL or unknown domain — auto-detect price from the page
         autoDetectPrice(rawUrl, hostname);
       }
     }
@@ -3312,14 +3321,30 @@
 
     function renderStore(store, hostname) {
       var sym = getCurrSym(store.currency);
+      var ostRate = ostPrice || 0.0001;
       var itemsHtml = store.items.map(function(item, i) {
-        var checked = store.selected ? store.selected[i] : true;
-        return '<label class="sim-product' + (checked ? ' sim-product-selected' : '') + '" data-idx="' + i + '">' +
-          '<input type="checkbox"' + (checked ? ' checked' : '') + ' class="sim-product-check" data-idx="' + i + '">' +
-          '<span class="sim-product-img">' + item.img + '</span>' +
-          '<span class="sim-product-info"><span class="sim-product-name">' + esc(item.name) + '</span>' +
-          '<span class="sim-product-price">' + sym + item.price.toFixed(2) + '</span></span>' +
-        '</label>';
+        var usdVal = item.price;
+        if (store.currency === 'JPY' && fiatRates.JPY) usdVal = item.price / fiatRates.JPY;
+        else if (store.currency === 'INR' && fiatRates.INR) usdVal = item.price / fiatRates.INR;
+        else if (store.currency === 'ARS' && fiatRates.ARS) usdVal = item.price / fiatRates.ARS;
+        else if (store.currency === 'EUR' && fiatRates.EUR) usdVal = item.price / fiatRates.EUR;
+        else if (fiatRates[store.currency]) usdVal = item.price / fiatRates[store.currency];
+        var ostVal = usdVal / ostRate;
+        var fmtOst = ostVal >= 1e6 ? (ostVal / 1e6).toFixed(2) + 'M' : ostVal >= 1e3 ? (ostVal / 1e3).toFixed(1) + 'K' : ostVal.toFixed(2);
+        var isImg = item.img && item.img.startsWith('http');
+        var imgHtml = isImg
+          ? '<img class="sim-product-img" src="' + esc(item.img) + '" alt="' + esc(item.name) + '" loading="lazy">'
+          : '<span class="sim-product-img-emoji">' + item.img + '</span>';
+        return '<div class="sim-product-card" data-idx="' + i + '">' +
+          imgHtml +
+          '<div class="sim-product-body">' +
+            '<span class="sim-product-name">' + esc(item.name) + '</span>' +
+            (item.desc ? '<span class="sim-product-desc">' + esc(item.desc) + '</span>' : '') +
+            '<span class="sim-product-price">' + sym + (item.price >= 1000 ? item.price.toLocaleString('en-US') : item.price.toFixed(2)) + '</span>' +
+            '<span class="sim-product-ost">' + fmtOst + ' OST</span>' +
+          '</div>' +
+          '<button class="btn btn-primary sim-pay-item-btn" data-idx="' + i + '">Pay with OST</button>' +
+        '</div>';
       }).join('');
 
       viewport.innerHTML =
@@ -3327,71 +3352,137 @@
           '<div class="sim-store-header" style="border-bottom:3px solid ' + (store.color || '#6d9fff') + ';">' +
             '<button class="sim-back-btn" title="Back to home">&larr;</button>' +
             '<span class="sim-store-icon">' + store.icon + '</span><h4>' + esc(store.name) + '</h4>' +
-            '<span class="sim-ost-badge">&#9673; OST Pay Active</span>' +
+            '<span class="sim-ost-badge">&#9673; OST Extension Active</span>' +
           '</div>' +
-          '<div class="sim-products">' + itemsHtml + '</div>' +
-          '<div class="sim-cart">' +
-            '<div class="sim-cart-total">Cart: <strong id="simCartTotal">' + sym + store.total.toFixed(2) + ' ' + store.currency + '</strong></div>' +
-          '</div>' +
-          '<button class="btn btn-primary btn-glow sim-checkout-btn" style="width:100%;justify-content:center;margin-top:16px;">&#9673; Proceed to Pay with OST</button>' +
+          '<div class="sim-products-grid">' + itemsHtml + '</div>' +
         '</div>';
 
       viewport.style.background = '#f8f9fa';
       viewport.style.color = '#111';
 
-      // Wire product toggles
-      viewport.querySelectorAll('.sim-product-check').forEach(function(cb) {
-        cb.addEventListener('change', function() {
+      // Wire individual Pay buttons
+      viewport.querySelectorAll('.sim-pay-item-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
           var idx = parseInt(this.getAttribute('data-idx'));
-          if (store.selected) store.selected[idx] = this.checked;
-          var label = this.closest('.sim-product');
-          if (label) label.classList.toggle('sim-product-selected', this.checked);
-          recalcTotal(store);
+          var item = store.items[idx];
+          if (!item) return;
+          var singleStore = Object.assign({}, store, {
+            total: item.price,
+            items: [item],
+            selected: [true]
+          });
+          showCheckout(singleStore);
         });
       });
-
-      // Wire checkout
-      var simCheckout = viewport.querySelector('.sim-checkout-btn');
-      if (simCheckout) {
-        simCheckout.addEventListener('click', function() { showCheckout(store); });
-      }
       // Wire back button
       var backBtn = viewport.querySelector('.sim-back-btn');
       if (backBtn) backBtn.addEventListener('click', resetViewport);
     }
 
+    /* ---- Auto-cycling showcase that makes the browser feel alive ---- */
+    var showcaseInterval = null;
+    function startAutoShowcase() {
+      var showcase = $('#browserAutoShowcase');
+      if (!showcase) return;
+      var allProducts = [];
+      Object.keys(stores).forEach(function(domain) {
+        var s = stores[domain];
+        s.items.forEach(function(item) {
+          allProducts.push({ store: s.name, color: s.color, domain: domain, name: item.name, price: item.price, img: item.img, desc: item.desc || '', currency: s.currency });
+        });
+      });
+      // Shuffle
+      for (var i = allProducts.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var tmp = allProducts[i]; allProducts[i] = allProducts[j]; allProducts[j] = tmp;
+      }
+
+      var idx = 0;
+      function showNext() {
+        if (!showcase.offsetParent && !showcase.closest('[style*="display"]')) return;
+        var product = allProducts[idx % allProducts.length];
+        var ostRate = ostPrice || 0.0001;
+        var usdVal = product.price;
+        if (product.currency !== 'USD' && fiatRates[product.currency]) usdVal = product.price / fiatRates[product.currency];
+        var ostVal = usdVal / ostRate;
+        var fmtOst = ostVal >= 1e6 ? (ostVal / 1e6).toFixed(2) + 'M' : ostVal >= 1e3 ? (ostVal / 1e3).toFixed(1) + 'K' : ostVal.toFixed(2);
+        var sym = getCurrSym(product.currency);
+        var isImg = product.img && product.img.startsWith('http');
+        var imgHtml = isImg
+          ? '<img src="' + esc(product.img) + '" alt="' + esc(product.name) + '" loading="lazy">'
+          : '<span style="font-size:3rem;">' + product.img + '</span>';
+
+        showcase.classList.remove('showcase-fade-in');
+        void showcase.offsetWidth;
+        showcase.innerHTML =
+          '<div class="showcase-card">' +
+            '<div class="showcase-store-bar" style="color:' + product.color + ';">' +
+              '<span class="showcase-domain">' + esc(product.domain) + '</span>' +
+              '<span class="showcase-badge">&#9673; OST Detected</span>' +
+            '</div>' +
+            '<div class="showcase-body">' +
+              '<div class="showcase-img">' + imgHtml + '</div>' +
+              '<div class="showcase-info">' +
+                '<h4>' + esc(product.name) + '</h4>' +
+                (product.desc ? '<p>' + esc(product.desc) + '</p>' : '') +
+                '<div class="showcase-prices">' +
+                  '<span class="showcase-fiat">' + sym + (product.price >= 1000 ? product.price.toLocaleString('en-US') : product.price.toFixed(2)) + '</span>' +
+                  '<span class="showcase-arrow">&#8594;</span>' +
+                  '<span class="showcase-ost">' + fmtOst + ' OST</span>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="showcase-ext-cta">' +
+              '<button class="btn btn-primary btn-glow showcase-pay-btn" data-domain="' + esc(product.domain) + '">&#9673; Pay with OST</button>' +
+            '</div>' +
+          '</div>';
+        showcase.classList.add('showcase-fade-in');
+
+        // Wire pay button
+        var payBtn = showcase.querySelector('.showcase-pay-btn');
+        if (payBtn) payBtn.addEventListener('click', function() {
+          browserUrl.value = product.domain;
+          loadStore(product.domain);
+        });
+
+        idx++;
+      }
+
+      showNext();
+      if (showcaseInterval) clearInterval(showcaseInterval);
+      showcaseInterval = setInterval(showNext, 4000);
+
+      // Update URL bar to match current showcase product
+      var origInterval = showcaseInterval;
+      var checkExist = setInterval(function() {
+        if (showcaseInterval !== origInterval) { clearInterval(checkExist); return; }
+        var domainEl = showcase.querySelector('.showcase-domain');
+        if (domainEl && browserUrl && !browserUrl.matches(':focus')) {
+          browserUrl.value = domainEl.textContent;
+        }
+      }, 4050);
+    }
+
     function resetViewport() {
       browserUrl.value = '';
       if (checkout) checkout.style.display = 'none';
+      // Rebuild viewport with showcase + quick links
       viewport.innerHTML =
-        '<div class="browser-placeholder">' +
-          '<div class="browser-placeholder-icon">&#127760;</div>' +
-          '<h4>Paste Any Product Link &mdash; OST Detects The Price</h4>' +
-          '<p>Paste a real product URL from any website. OST scans the page, detects the price, converts it to OST, and handles checkout. Or pick a store below to browse.</p>' +
-          '<div class="browser-quick-links">' +
-            '<button class="browser-quick browser-quick-google" data-url="shopping.google.com">&#128269; Google Shopping</button>' +
-            '<button class="browser-quick" data-url="amazon.com">&#128230; Amazon</button>' +
-            '<button class="browser-quick" data-url="nike.com">&#128095; Nike</button>' +
-            '<button class="browser-quick" data-url="apple.com">&#127822; Apple</button>' +
-            '<button class="browser-quick" data-url="bestbuy.com">&#128187; Best Buy</button>' +
-            '<button class="browser-quick" data-url="walmart.com">&#128722; Walmart</button>' +
-            '<button class="browser-quick" data-url="target.com">&#127919; Target</button>' +
-            '<button class="browser-quick" data-url="costco.com">&#128230; Costco</button>' +
-            '<button class="browser-quick" data-url="homedepot.com">&#128295; Home Depot</button>' +
-            '<button class="browser-quick" data-url="samsung.com">&#128241; Samsung</button>' +
-            '<button class="browser-quick" data-url="tesla.com">&#128664; Tesla</button>' +
-            '<button class="browser-quick" data-url="booking.com">&#127968; Booking</button>' +
-            '<button class="browser-quick" data-url="ebay.com">&#128717; eBay</button>' +
-            '<button class="browser-quick" data-url="airbnb.com">&#127969; Airbnb</button>' +
-            '<button class="browser-quick" data-url="aliexpress.com">&#128230; AliExpress</button>' +
-            '<button class="browser-quick" data-url="mercadolibre.com">&#128722; Mercado Libre</button>' +
-            '<button class="browser-quick" data-url="rakuten.co.jp">&#127988; Rakuten</button>' +
-            '<button class="browser-quick" data-url="flipkart.com">&#128722; Flipkart</button>' +
-            '<button class="browser-quick" data-url="newegg.com">&#128187; Newegg</button>' +
-            '<button class="browser-quick" data-url="zara.com">&#128087; Zara</button>' +
-            '<button class="browser-quick" data-url="adidas.com">&#128095; Adidas</button>' +
-          '</div>' +
-          '<div class="browser-google-tip"><span>&#128161;</span> <strong>Pro tip:</strong> Search any product on Google Shopping, paste the product link here, and OST auto-detects the price.</div>' +
+        '<div class="browser-auto-showcase" id="browserAutoShowcase"></div>' +
+        '<div class="browser-quick-links" id="browserQuickLinks">' +
+          '<button class="browser-quick browser-quick-google" data-url="shopping.google.com">&#128269; Google Shopping</button>' +
+          '<button class="browser-quick" data-url="amazon.com">Amazon</button>' +
+          '<button class="browser-quick" data-url="nike.com">Nike</button>' +
+          '<button class="browser-quick" data-url="apple.com">Apple</button>' +
+          '<button class="browser-quick" data-url="tesla.com">Tesla</button>' +
+          '<button class="browser-quick" data-url="bestbuy.com">Best Buy</button>' +
+          '<button class="browser-quick" data-url="walmart.com">Walmart</button>' +
+          '<button class="browser-quick" data-url="booking.com">Booking</button>' +
+          '<button class="browser-quick" data-url="airbnb.com">Airbnb</button>' +
+          '<button class="browser-quick" data-url="samsung.com">Samsung</button>' +
+          '<button class="browser-quick" data-url="ebay.com">eBay</button>' +
+          '<button class="browser-quick" data-url="zara.com">Zara</button>' +
+          '<button class="browser-quick" data-url="adidas.com">Adidas</button>' +
         '</div>';
       viewport.style.background = '';
       viewport.style.color = '';
@@ -3403,7 +3494,11 @@
           loadStore(url);
         });
       });
+      startAutoShowcase();
     }
+
+    // Start the auto-cycling showcase on load
+    startAutoShowcase();
 
     function recalcTotal(store) {
       var total = 0;
