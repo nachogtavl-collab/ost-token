@@ -2242,6 +2242,16 @@
     const gvPbText = document.querySelector('.gv-pb-text');
     if (!gvCreateBtn) return;
 
+    // Modal open/close
+    var overlay = document.getElementById('gvModalOverlay');
+    var openBtn = document.getElementById('gvOpenModal');
+    var closeBtn = document.getElementById('gvModalClose');
+    function openModal() { if (overlay) { overlay.classList.add('ost-modal-open'); document.body.style.overflow = 'hidden'; } }
+    function closeModal() { if (overlay) { overlay.classList.remove('ost-modal-open'); document.body.style.overflow = ''; } }
+    if (openBtn) openBtn.addEventListener('click', openModal);
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (overlay) overlay.addEventListener('click', function(e) { if (e.target === overlay) closeModal(); });
+
     var curStep = 1;
     var steps = ['gvStep1','gvStep2','gvStep3'];
 
@@ -2371,6 +2381,16 @@
     const locSec = $('#depinLocationSection');
     const checklist = $('#depinChecklist');
     if (!depinBtn || !resSelect) return;
+
+    // Modal open/close
+    var overlay = document.getElementById('depinModalOverlay');
+    var openBtn = document.getElementById('depinOpenModal');
+    var closeBtn = document.getElementById('depinModalClose');
+    function openModal() { if (overlay) { overlay.classList.add('ost-modal-open'); document.body.style.overflow = 'hidden'; } }
+    function closeModal() { if (overlay) { overlay.classList.remove('ost-modal-open'); document.body.style.overflow = ''; } }
+    if (openBtn) openBtn.addEventListener('click', openModal);
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (overlay) overlay.addEventListener('click', function(e) { if (e.target === overlay) closeModal(); });
 
     var resourceSpecs = {
       bandwidth: {

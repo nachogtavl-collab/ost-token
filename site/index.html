@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=22">
+  <link rel="stylesheet" href="style.css?v=23">
 </head>
 <body>
 
@@ -271,9 +271,16 @@
           </div>
         </div>
 
-        <div class="gv-create-form" id="gvCreateForm">
-          <h4>&#128274; Create a Grow Vault</h4>
-          <p class="gv-form-subtitle">Identity verification required to protect against fraud. All data stays on your device.</p>
+        <button class="btn btn-primary btn-glow gv-open-modal-btn" id="gvOpenModal">
+          <span class="pay-icon">&#128274;</span> Create a Grow Vault
+        </button>
+
+        <!-- Grow Vault Modal Overlay -->
+        <div class="ost-modal-overlay" id="gvModalOverlay">
+          <div class="ost-modal">
+            <button class="ost-modal-close" id="gvModalClose" aria-label="Close">&times;</button>
+            <h4>&#128274; Create a Grow Vault</h4>
+            <p class="gv-form-subtitle">Identity verification required to protect against fraud. All data stays on your device.</p>
 
           <!-- Step 1: Guardian Info -->
           <div class="gv-form-step" id="gvStep1">
@@ -384,7 +391,8 @@
             <div class="gv-pb-fill" id="gvPbFill" style="width:33%"></div>
             <span class="gv-pb-text">Step 1 of 3</span>
           </div>
-        </div>
+          </div><!-- /.ost-modal -->
+        </div><!-- /.ost-modal-overlay -->
 
         <div class="gv-disclaimer">
           <span>&#9888;&#65039;</span>
@@ -445,9 +453,16 @@
           <p class="depin-note" style="grid-column:1/-1;text-align:center;color:var(--text-muted);font-size:.85rem;margin-top:8px;">&#128200; Rewards decrease as OST price appreciates &mdash; early contributors earn the most.</p>
         </div>
 
-        <div class="depin-claim-box" id="depinClaimBox">
-          <h4 class="depin-claim-title">&#128752; Claim DePIN Reward</h4>
-          <p class="depin-claim-label">Select your contribution type, provide proof, and we verify your resource is real.</p>
+        <button class="btn btn-primary btn-glow depin-open-modal-btn" id="depinOpenModal">
+          <span class="pay-icon">&#128752;</span> Claim DePIN Reward
+        </button>
+
+        <!-- DePIN Claim Modal Overlay -->
+        <div class="ost-modal-overlay" id="depinModalOverlay">
+          <div class="ost-modal ost-modal-lg">
+            <button class="ost-modal-close" id="depinModalClose" aria-label="Close">&times;</button>
+            <h4 class="depin-claim-title">&#128752; Claim DePIN Reward</h4>
+            <p class="depin-claim-label">Select your contribution type, provide proof, and we verify your resource is real.</p>
 
           <div class="depin-form-row">
             <label class="depin-form-label">Resource Type <span class="gv-req">*</span></label>
@@ -508,7 +523,8 @@
           </button>
           <div class="depin-claim-status" id="depinClaimStatus"></div>
           <p class="depin-claim-note">Real verification required. 24-hour cooldown. Fake claims are flagged and blocked.</p>
-        </div>
+          </div><!-- /.ost-modal -->
+        </div><!-- /.ost-modal-overlay -->
       </div>
     </div>
   </section>
@@ -2788,6 +2804,6 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
-  <script src="app.js?v=22"></script>
+  <script src="app.js?v=23"></script>
 </body>
 </html>

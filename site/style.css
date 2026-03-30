@@ -2039,6 +2039,40 @@ select.sim-input { cursor: pointer; }
 .gv-ms-reward { font-size: .85rem; font-weight: 600; color: var(--accent); }
 .gv-ms-label { font-size: .68rem; color: var(--text-muted); font-style: italic; }
 
+/* Modal Overlay — shared by Grow Vault & DePIN */
+.ost-modal-overlay {
+  display: none; position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,.65); backdrop-filter: blur(6px);
+  justify-content: center; align-items: center; padding: 24px;
+  overflow-y: auto;
+}
+.ost-modal-overlay.ost-modal-open {
+  display: flex;
+}
+.ost-modal {
+  position: relative; width: 100%; max-width: 460px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 28px 24px;
+  box-shadow: 0 24px 64px rgba(0,0,0,.5); text-align: center;
+  animation: modalSlideIn .3s ease;
+  max-height: 90vh; overflow-y: auto;
+}
+.ost-modal-lg { max-width: 540px; }
+@keyframes modalSlideIn {
+  from { opacity: 0; transform: translateY(24px) scale(.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.ost-modal-close {
+  position: absolute; top: 12px; right: 14px;
+  background: none; border: none; color: var(--text-muted);
+  font-size: 1.6rem; cursor: pointer; line-height: 1;
+  transition: color .2s;
+}
+.ost-modal-close:hover { color: var(--text); }
+.gv-open-modal-btn, .depin-open-modal-btn {
+  display: block; margin: 28px auto; font-size: 1rem; padding: 14px 32px;
+}
+
 /* Create Form */
 .gv-create-form {
   max-width: 400px; margin: 36px auto; padding: 24px;
@@ -3255,6 +3289,11 @@ select.sim-input { cursor: pointer; }
 
 /* ---------- Responsive additions ---------- */
 @media (max-width: 768px) {
+  .ost-modal-overlay { padding: 12px; }
+  .ost-modal { padding: 20px 16px; max-height: 85vh; }
+  .ost-modal-lg { max-width: 100%; }
+  .gv-open-modal-btn, .depin-open-modal-btn { padding: 12px 20px; font-size: .92rem; }
+
   .section-space { padding: 80px 0 60px; }
 
   /* Satellites */
