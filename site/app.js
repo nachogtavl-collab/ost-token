@@ -1906,7 +1906,7 @@
         <div><span class="rd-label">Block:</span> <span class="rd-value">#${solSlot.toLocaleString()}</span></div>
         <div><span class="rd-label">Items:</span> <span class="rd-value">${esc(itemNames)}</span></div>
         <div><span class="rd-label">Total:</span> <span class="rd-value">$${totalUSD.toFixed(2)} → ${totalOST >= 1e6 ? (totalOST / 1e6).toFixed(1) + 'M' : totalOST.toFixed(0)} OST</span></div>
-        <div><span class="rd-label">Fee:</span> <span class="rd-value">0.000005 SOL ($${(0.000005 * (prices.solana || 170)).toFixed(6)})</span></div>
+        <div><span class="rd-label">Fee:</span> <span class="rd-value">$0.00 (free forever)</span></div>
         <div><span class="rd-label">Time:</span> <span class="rd-value">${txDuration}s</span></div>
         <div><span class="rd-label">Privacy:</span> <span class="rd-value">ZK-SNARKs verified ✓</span></div>
       `;
@@ -3205,7 +3205,7 @@
             '<div class="sim-conv-row"><span>You Pay:</span><strong style="color:var(--accent);font-size:1.1rem;">' + ostFormatted + ' OST</strong></div>' +
             '<div class="sim-conv-row"><span>Rate:</span><span>1 OST = ' + sym + rate.toFixed(6) + '</span></div>' +
             '<div class="sim-conv-row"><span>Route:</span><span>OST &#8594; Jupiter &#8594; ' + store.currency + ' &#8594; Merchant</span></div>' +
-            '<div class="sim-conv-row" style="border:none;"><span>Fee:</span><span>~$0.0025 (0.000005 SOL)</span></div>' +
+            '<div class="sim-conv-row" style="border:none;"><span>Fee:</span><span>$0.00 (free)</span></div>' +
           '</div>' +
           '<button class="btn btn-primary btn-glow sim-checkout-btn" style="width:100%;justify-content:center;margin-top:16px;">&#9673; Pay ' + ostFormatted + ' OST to ' + esc(hostname) + '</button>' +
           '<p style="text-align:center;color:var(--text-muted);font-size:.75rem;margin-top:8px;">&#128274; Private via ZK proofs &mdash; merchant never sees your wallet</p>' +
@@ -3259,7 +3259,7 @@
             '<div class="sim-manual-conversion" id="manualConversion" style="display:none;">' +
               '<div class="sim-conv-row"><span>You Pay:</span><strong id="manualOstAmount" style="color:var(--accent);">-- OST</strong></div>' +
               '<div class="sim-conv-row"><span>Rate:</span><span id="manualRate">--</span></div>' +
-              '<div class="sim-conv-row" style="border:none;"><span>Fee:</span><span>~$0.0025</span></div>' +
+              '<div class="sim-conv-row" style="border:none;"><span>Fee:</span><span>$0.00 (free)</span></div>' +
             '</div>' +
             '<button class="btn btn-primary btn-glow sim-checkout-btn" id="manualPayBtn" style="width:100%;justify-content:center;margin-top:12px;" disabled>&#9673; Pay with OST</button>' +
           '</div>' +

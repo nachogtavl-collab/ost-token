@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=18">
+  <link rel="stylesheet" href="style.css?v=19">
 </head>
 <body>
 
@@ -387,7 +387,7 @@
             <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400&h=180&fit=crop" alt="Speed" class="feature-img" loading="lazy">
             <ul class="feature-bullets">
               <li>Solana: 65,000 TPS capacity</li>
-              <li>Average fee: $0.0025</li>
+              <li>Zero transaction fees</li>
               <li>Block time: 400ms</li>
               <li>99.9% uptime since 2024</li>
             </ul>
@@ -406,7 +406,7 @@
               <li>15+ fiat on-ramps</li>
               <li>100+ countries supported</li>
             </ul>
-            <div class="feature-compare"><span class="compare-bad">Banks: 3-5 days, $25-50 fee</span><span class="compare-good">OST: Instant, &lt;$0.01 fee</span></div>
+            <div class="feature-compare"><span class="compare-bad">Banks: 3-5 days, $25-50 fees</span><span class="compare-good">OST: Instant, zero fees</span></div>
           </div>
         </div>
         <div class="feature-card glow-card sr">
@@ -606,7 +606,7 @@
               <div class="checkout-row"><span>Cart Total:</span><span id="checkoutTotal">--</span></div>
               <div class="checkout-row"><span>Exchange Rate:</span><span id="checkoutRate">--</span></div>
               <div class="checkout-row checkout-row-big"><span>You Pay:</span><span id="checkoutOst">-- OST</span></div>
-              <div class="checkout-row checkout-row-fee"><span>Network Fee:</span><span>~$0.0025</span></div>
+              <div class="checkout-row checkout-row-fee"><span>Network Fee:</span><span>$0.00 (free)</span></div>
             </div>
             <button class="btn btn-primary btn-glow" id="checkoutPayBtn" style="width:100%;justify-content:center;margin-top:16px;">
               <span>&#9673;</span> Confirm &amp; Pay with OST
@@ -666,7 +666,7 @@
               </div>
               <div class="pa-conv-row pa-conv-fee">
                 <span class="pa-conv-label" data-i18n="pay.afee">Network Fee:</span>
-                <span class="pa-conv-value">~$0.0025 (0.000005 SOL)</span>
+                <span class="pa-conv-value">$0.00 (free forever)</span>
               </div>
             </div>
 
@@ -828,7 +828,7 @@
           <div class="bridge-step">
             <div class="bridge-step-num">3</div>
             <h4>Swap to OST</h4>
-            <p>Go to <a href="https://jup.ag/" target="_blank" rel="noopener">Jupiter</a> or use the swap widget above. Swap SOL → OST. Instant, &lt;$0.01 fee.</p>
+            <p>Go to <a href="https://jup.ag/" target="_blank" rel="noopener">Jupiter</a> or use the swap widget above. Swap SOL → OST. Instant, zero fees.</p>
           </div>
           <div class="bridge-step">
             <div class="bridge-step-num">4</div>
@@ -1137,7 +1137,7 @@
           <a href="https://ramp.network/buy?defaultAsset=SOLANA_SOL" target="_blank" rel="noopener" class="bridge-card ramp-card">
             <div class="bridge-icon">&#128640;</div>
             <h4>Ramp Network</h4>
-            <p>Instant purchases with bank transfer or card. Low fees, fast settlement.</p>
+            <p>Instant purchases with bank transfer or card. Zero fees, fast settlement.</p>
             <div class="bridge-chains">150+ countries &bull; Open Banking &bull; Card &bull; ACH</div>
             <span class="bridge-status bridge-live">&#9679; Live</span>
           </a>
@@ -1195,7 +1195,7 @@
           <a href="https://raydium.io/swap/" target="_blank" rel="noopener" class="bridge-card dex-card">
             <div class="bridge-icon">&#128167;</div>
             <h4>Raydium</h4>
-            <p>AMM &amp; CLMM pools on Solana. Provide liquidity to earn fees.</p>
+            <p>AMM &amp; CLMM pools on Solana. Provide liquidity to earn rewards.</p>
             <div class="bridge-chains">Swap &bull; Liquidity &bull; Farms &bull; AcceleRaytor</div>
             <span class="bridge-status bridge-live">&#9679; Live</span>
           </a>
@@ -1233,7 +1233,7 @@
           <div class="bridge-step">
             <div class="bridge-step-num">3</div>
             <h4>Swap to OST</h4>
-            <p>Go to <a href="https://jup.ag/" target="_blank" rel="noopener">Jupiter</a> or use the swap widget above. Swap SOL → OST. Instant, &lt;$0.01 fee.</p>
+            <p>Go to <a href="https://jup.ag/" target="_blank" rel="noopener">Jupiter</a> or use the swap widget above. Swap SOL → OST. Instant, zero fees.</p>
           </div>
           <div class="bridge-step">
             <div class="bridge-step-num">4</div>
@@ -1315,7 +1315,7 @@
           <div class="ai-hook-stats">
             <div class="ai-hook-stat"><span class="ai-hook-num">11</span><span>Connectors</span></div>
             <div class="ai-hook-stat"><span class="ai-hook-num">0.4s</span><span>Settlement</span></div>
-            <div class="ai-hook-stat"><span class="ai-hook-num">$0.0025</span><span>Per Transaction</span></div>
+            <div class="ai-hook-stat"><span class="ai-hook-num">$0</span><span>Per Transaction</span></div>
             <div class="ai-hook-stat"><span class="ai-hook-num">&infin;</span><span>Privacy</span></div>
           </div>
           <div class="ai-hook-use-cases">
@@ -2175,9 +2175,9 @@
               <p data-i18n="story.t3.text">Solana Token-2022 launched confidential transfers &mdash; zero-knowledge proofs that hide balances and amounts from the entire world. The missing piece.</p>
               <div class="timeline-stats">
                 <div class="tstat"><span class="tstat-num">0.4s</span><span class="tstat-label">Solana finality time</span></div>
-                <div class="tstat"><span class="tstat-num">$0.0025</span><span class="tstat-label">Average transaction fee</span></div>
+                <div class="tstat"><span class="tstat-num">$0</span><span class="tstat-label">Zero transaction fees</span></div>
               </div>
-              <p class="timeline-detail">Solana's Token-2022 program introduced ElGamal encryption and zero-knowledge range proofs at the protocol level. For the first time, a high-throughput blockchain could process confidential transactions &mdash; hiding sender, receiver, and amount &mdash; at 65,000 TPS with sub-second finality. The fee for a private transaction? Less than a third of a cent. This wasn't an academic paper. It was production-ready code deployed on mainnet. A developer in Mexico City saw this and started coding at 2 AM.</p>
+              <p class="timeline-detail">Solana's Token-2022 program introduced ElGamal encryption and zero-knowledge range proofs at the protocol level. For the first time, a high-throughput blockchain could process confidential transactions &mdash; hiding sender, receiver, and amount &mdash; at 65,000 TPS with sub-second finality. Zero fees, funded by donations and investors. This wasn't an academic paper. It was production-ready code deployed on mainnet. A developer in Mexico City saw this and started coding at 2 AM.</p>
             </div>
           </div>
         </div>
@@ -2440,7 +2440,7 @@
 });
 
 console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>${tx.signature}<span class="code-str">`</span>);
-<span class="code-comment">// Settlement: ~400ms | Fee: $0.00025 | Privacy: 100%</span></code></pre>
+<span class="code-comment">// Settlement: ~400ms | Fee: $0 (free) | Privacy: 100%</span></code></pre>
         </div>
 
         <div class="build-terminal">
@@ -2524,10 +2524,10 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
         <h3 data-i18n="build.cta">Start Contributing Today</h3>
         <p data-i18n="build.ctasub">Every commit, translation, and tutorial moves humanity forward.</p>
         <div class="build-bounty-grid">
-          <div class="bounty-card bounty-premium"><img class="bounty-img" src="https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=300&h=160&fit=crop" alt="RTX 5090" loading="lazy"><span class="bounty-amount">&#128187; RTX 5090</span><span class="bounty-task">Best DePIN Infrastructure Node</span></div>
-          <div class="bounty-card bounty-premium"><img class="bounty-img" src="https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=300&h=160&fit=crop" alt="Apple A19 Pro" loading="lazy"><span class="bounty-amount">&#128241; Apple A19 Pro</span><span class="bounty-task">Best Mobile Wallet App</span></div>
-          <div class="bounty-card bounty-premium"><img class="bounty-img" src="https://images.unsplash.com/photo-1610375461246-83df859d849d?w=300&h=160&fit=crop" alt="24K Gold" loading="lazy"><span class="bounty-amount">&#127942; 24K Gold Cylinder</span><span class="bounty-task">Most Impactful Community Leader</span></div>
-          <div class="bounty-card bounty-premium"><img class="bounty-img" src="https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=300&h=160&fit=crop" alt="Corvette ZR1" loading="lazy"><span class="bounty-amount">&#128663; 2026 Corvette ZR1</span><span class="bounty-task">Grand Prize &mdash; Best OST Integration</span></div>
+          <div class="bounty-card bounty-premium"><img class="bounty-img" src="https://images.unsplash.com/photo-1591488320449-011701bb6704?w=300&h=160&fit=crop&q=80" alt="NVIDIA RTX 5090 GPU" loading="lazy"><span class="bounty-amount">&#128187; NVIDIA RTX 5090 GPU</span><span class="bounty-task">Best DePIN Infrastructure Node &mdash; top-tier GPU to power your rig</span></div>
+          <div class="bounty-card bounty-premium"><img class="bounty-img" src="https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=300&h=160&fit=crop&q=80" alt="Apple A19 Pro Chip" loading="lazy"><span class="bounty-amount">&#128241; Apple A19 Pro Chip</span><span class="bounty-task">Best Mobile Wallet App &mdash; next-gen Apple silicon for development</span></div>
+          <div class="bounty-card bounty-premium"><img class="bounty-img" src="https://images.unsplash.com/photo-1610375461246-83df859d849d?w=300&h=160&fit=crop&q=80" alt="24K Gold Cylinder" loading="lazy"><span class="bounty-amount">&#127942; 24K Gold Cylinder</span><span class="bounty-task">Most Impactful Community Leader &mdash; solid gold collectible trophy</span></div>
+          <div class="bounty-card bounty-premium"><img class="bounty-img" src="https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=300&h=160&fit=crop&q=80" alt="2026 Corvette ZR1X" loading="lazy"><span class="bounty-amount">&#128663; 2026 Corvette ZR1X</span><span class="bounty-task">Grand Prize &mdash; Best OST Integration wins the supercar</span></div>
           <div class="bounty-card"><span class="bounty-amount">$10,000</span><span class="bounty-task">Payment Gateway Module</span></div>
           <div class="bounty-card"><span class="bounty-amount">$5,000</span><span class="bounty-task">SDK Integration Plugin</span></div>
           <div class="bounty-card"><span class="bounty-amount">$3,000</span><span class="bounty-task">New Language Translation Pack</span></div>
@@ -2617,6 +2617,6 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
-  <script src="app.js?v=18"></script>
+  <script src="app.js?v=19"></script>
 </body>
 </html>
