@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=16">
+  <link rel="stylesheet" href="style.css?v=17">
 </head>
 <body>
 
@@ -64,48 +64,65 @@
 
 <!-- ================================================================== -->
   <section id="home" class="hero">
-    <canvas id="globeCanvas"></canvas>
     <!-- Particle field background -->
     <canvas id="particleCanvas" class="particle-canvas"></canvas>
-    <div class="hero-content">
-      <div class="hero-badge-row">
-        <span class="hero-live-badge"><span class="live-dot"></span> Live on Solana</span>
-        <span class="hero-era-badge">Est. 2025 &middot; Panama</span>
+
+    <div class="hero-split">
+      <!-- Left: Text Content -->
+      <div class="hero-content">
+        <div class="hero-badge-row">
+          <span class="hero-live-badge"><span class="live-dot"></span> Live on Solana</span>
+          <span class="hero-era-badge">Est. 2025 &middot; Panama</span>
+        </div>
+        <p class="hero-tag" data-i18n="hero.tag">The Next Step After Bitcoin</p>
+        <h1 data-i18n="hero.title">The currency of <span class="gradient-text">Earth &amp; Space.</span></h1>
+        <p class="hero-sub" data-i18n="hero.sub">Private. Instant. Unstoppable. OST is decentralized digital cash and uncensored internet for 8 billion human beings &mdash; and eventually, beyond.</p>
+        <div class="hero-free-banner">
+          <span class="hero-free-badge">&#128176; FREE FOREVER</span>
+          <span class="hero-free-text">Zero transaction fees. No hidden costs. Funded by donations &amp; investors.</span>
+        </div>
+        <div class="hero-actions">
+          <a href="#revolution" class="btn btn-primary btn-glow btn-pulse" data-i18n="hero.cta1">Try the Pay Demo</a>
+          <a href="#get-ost" class="btn btn-outline" data-i18n="hero.cta2">Get OST Now</a>
+          <a href="#my-wallet" class="btn btn-outline">Create Wallet</a>
+        </div>
+        <div class="hero-stats">
+          <div class="stat"><span class="stat-num">0</span><span class="stat-label" data-i18n="hero.premine">Pre-mine</span></div>
+          <div class="stat-divider"></div>
+          <div class="stat"><span class="stat-num">&lt;0.4s</span><span class="stat-label" data-i18n="hero.settle">Settlement</span></div>
+          <div class="stat-divider"></div>
+          <div class="stat"><span class="stat-num">100%</span><span class="stat-label" data-i18n="hero.opensource">Open Source</span></div>
+          <div class="stat-divider"></div>
+          <div class="stat"><span class="stat-num">&infin;</span><span class="stat-label" data-i18n="hero.privacy">Privacy</span></div>
+        </div>
+        <!-- Live OST Price Ticker -->
+        <div class="hero-ticker" id="heroTicker">
+          <span class="ticker-label">OST Price:</span>
+          <span class="ticker-price" id="tickerPrice">Loading...</span>
+          <span class="ticker-change" id="tickerChange"></span>
+        </div>
+        <!-- Network Status -->
+        <div class="network-status" id="networkStatus" style="margin-top:12px;font-size:.78rem;color:var(--text-muted);">
+          <span id="networkDot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f59e0b;margin-right:6px;vertical-align:middle;"></span>
+          <span id="networkLabel">Devnet</span> &middot;
+          Program: <a href="https://explorer.solana.com/address/J2jiS296YWVie1Sopb4SxcM3aJnP9aAwe6aLDhCqvGXY?cluster=devnet" target="_blank" rel="noopener" id="programIdShort" style="font-family:monospace;color:#6d9fff;text-decoration:none;">J2ji...GXQY</a>
+        </div>
       </div>
-      <p class="hero-tag" data-i18n="hero.tag">The Next Step After Bitcoin</p>
-      <h1 data-i18n="hero.title">The currency of <span class="gradient-text">Earth &amp; Space.</span></h1>
-      <p class="hero-sub" data-i18n="hero.sub">Private. Instant. Unstoppable. OST is decentralized digital cash and uncensored internet for 8 billion human beings &mdash; and eventually, beyond.</p>
-      <div class="hero-free-banner">
-        <span class="hero-free-badge">&#128176; FREE FOREVER</span>
-        <span class="hero-free-text">Zero transaction fees. No hidden costs. Funded by donations &amp; investors.</span>
+
+      <!-- Right: 3D Globe -->
+      <div class="hero-globe-wrap" id="heroGlobeWrap">
+        <canvas id="globeCanvas"></canvas>
+        <!-- 3D Satellites -->
+        <div class="satellite-layer" id="satelliteLayer">
+          <div class="satellite sat-1"><div class="sat-body">&#128752;</div><div class="sat-trail"></div></div>
+          <div class="satellite sat-2"><div class="sat-body">&#128752;</div><div class="sat-trail"></div></div>
+          <div class="satellite sat-3"><div class="sat-body">&#128752;</div><div class="sat-trail"></div></div>
+        </div>
       </div>
-      <div class="hero-actions">
-        <a href="#revolution" class="btn btn-primary btn-glow btn-pulse" data-i18n="hero.cta1">Try the Pay Demo</a>
-        <a href="#get-ost" class="btn btn-outline" data-i18n="hero.cta2">Get OST Now</a>
-        <a href="#my-wallet" class="btn btn-outline">Create Wallet</a>
-      </div>
-      <div class="hero-stats">
-        <div class="stat"><span class="stat-num">0</span><span class="stat-label" data-i18n="hero.premine">Pre-mine</span></div>
-        <div class="stat-divider"></div>
-        <div class="stat"><span class="stat-num">&lt;0.4s</span><span class="stat-label" data-i18n="hero.settle">Settlement</span></div>
-        <div class="stat-divider"></div>
-        <div class="stat"><span class="stat-num">100%</span><span class="stat-label" data-i18n="hero.opensource">Open Source</span></div>
-        <div class="stat-divider"></div>
-        <div class="stat"><span class="stat-num">&infin;</span><span class="stat-label" data-i18n="hero.privacy">Privacy</span></div>
-      </div>
-      <!-- Live OST Price Ticker -->
-      <div class="hero-ticker" id="heroTicker">
-        <span class="ticker-label">OST Price:</span>
-        <span class="ticker-price" id="tickerPrice">Loading...</span>
-        <span class="ticker-change" id="tickerChange"></span>
-      </div>
-      <!-- Network Status -->
-      <div class="network-status" id="networkStatus" style="margin-top:12px;font-size:.78rem;color:var(--text-muted);text-align:center;">
-        <span id="networkDot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f59e0b;margin-right:6px;vertical-align:middle;"></span>
-        <span id="networkLabel">Devnet</span> &middot;
-        Program: <a href="https://explorer.solana.com/address/J2jiS296YWVie1Sopb4SxcM3aJnP9aAwe6aLDhCqvGXY?cluster=devnet" target="_blank" rel="noopener" id="programIdShort" style="font-family:monospace;color:#6d9fff;text-decoration:none;">J2ji...GXQY</a>
-      </div>
-      <!-- Knowledge Banner -->
+    </div>
+
+    <!-- Knowledge Banner (full width, below the split) -->
+    <div class="hero-knowledge-bar">
       <div class="knowledge-banner">
         <div class="knowledge-item"><span class="knowledge-num" data-target="1400000000">0</span><span class="knowledge-label">Unbanked adults worldwide</span></div>
         <div class="knowledge-divider"></div>
@@ -114,14 +131,8 @@
         <div class="knowledge-item"><span class="knowledge-num" data-target="2600000000">0</span><span class="knowledge-label">People without internet</span></div>
       </div>
     </div>
-    <div class="scroll-hint"><div class="scroll-mouse"><div class="scroll-dot"></div></div></div>
 
-    <!-- 3D Satellites Layer -->
-    <div class="satellite-layer" id="satelliteLayer">
-      <div class="satellite sat-1"><div class="sat-body">&#128752;</div><div class="sat-trail"></div></div>
-      <div class="satellite sat-2"><div class="sat-body">&#128752;</div><div class="sat-trail"></div></div>
-      <div class="satellite sat-3"><div class="sat-body">&#128752;</div><div class="sat-trail"></div></div>
-    </div>
+    <div class="scroll-hint"><div class="scroll-mouse"><div class="scroll-dot"></div></div></div>
 
     <!-- OST Vision: Complete Financial Independence + Sovereign Network -->
     <div class="ost-vision-home" style="position:relative;z-index:6;">
@@ -2618,6 +2629,6 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
-  <script src="app.js?v=16"></script>
+  <script src="app.js?v=17"></script>
 </body>
 </html>

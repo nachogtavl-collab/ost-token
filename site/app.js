@@ -1062,19 +1062,22 @@
     if (!canvas) { console.warn('Globe: canvas #globeCanvas not found'); return; }
     if (typeof THREE === 'undefined') { console.warn('Globe: THREE.js not loaded'); return; }
 
+    const wrap = $('#heroGlobeWrap') || canvas.parentElement;
+    const getSize = () => ({ w: wrap.clientWidth || 600, h: wrap.clientHeight || 600 });
+
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.z = 3;
+    let { w, h } = getSize();
+    const camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 1000);
+    camera.position.z = 2.6;
 
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setSize(w, h);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    // Ensure canvas fills its container after Three.js sets inline px dimensions
     canvas.style.width = '100%';
     canvas.style.height = '100%';
 
-    // Earth sphere
-    const earthGeo = new THREE.SphereGeometry(1, 64, 64);
+    // Earth sphere — higher resolution for crisp visuals
+    const earthGeo = new THREE.SphereGeometry(1, 96, 96);
 
     // Load textures from NASA public domain
     const texLoader = new THREE.TextureLoader();
@@ -1169,26 +1172,81 @@
       }
       scene.add(earthMesh);
 
-      // Atmosphere glow
-      const atmGeo = new THREE.SphereGeometry(1.06, 64, 64);
-      const atmMat = new THREE.MeshPhongMaterial({
-        color: 0x4488ff,
+      // Atmosphere glow — enhanced
+      const atmGeo = new THREE.SphereGeometry(1.05, 96, 96);
+      const atmMat = new THREE.ShaderMaterial({
+        uniforms: {
+          coeficient: { value: 0.8 },
+          power: { value: 3.0 },
+          glowColor: { value: new THREE.Color(0x4488ff) },
+        },
+        vertexShader: `
+          varying vec3 vNormal;
+          varying vec3 vPosition;
+          void main() {
+            vNormal = normalize(normalMatrix * normal);
+            vPosition = (modelViewMatrix * vec4(position, 1.0)).xyz;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `
+          uniform float coeficient;
+          uniform float power;
+          uniform vec3 glowColor;
+          varying vec3 vNormal;
+          varying vec3 vPosition;
+          void main() {
+            vec3 viewDir = normalize(-vPosition);
+            float intensity = pow(coeficient - dot(vNormal, viewDir), power);
+            gl_FragColor = vec4(glowColor, intensity * 0.6);
+          }
+        `,
         transparent: true,
-        opacity: 0.08,
-        side: THREE.BackSide,
+        side: THREE.FrontSide,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
       });
       atmMesh = new THREE.Mesh(atmGeo, atmMat);
       scene.add(atmMesh);
 
-      // Outer glow
-      const outerGeo = new THREE.SphereGeometry(1.12, 64, 64);
-      const outerMat = new THREE.MeshBasicMaterial({
-        color: 0x6699ff,
+      // Outer glow — larger halo
+      const outerGeo = new THREE.SphereGeometry(1.18, 64, 64);
+      const outerMat = new THREE.ShaderMaterial({
+        uniforms: {
+          glowColor: { value: new THREE.Color(0x6699ff) },
+        },
+        vertexShader: `
+          varying vec3 vNormal;
+          void main() {
+            vNormal = normalize(normalMatrix * normal);
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `
+          uniform vec3 glowColor;
+          varying vec3 vNormal;
+          void main() {
+            float intensity = pow(0.65 - dot(vNormal, vec3(0, 0, 1.0)), 4.0);
+            gl_FragColor = vec4(glowColor, intensity * 0.35);
+          }
+        `,
         transparent: true,
-        opacity: 0.04,
         side: THREE.BackSide,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
       });
       scene.add(new THREE.Mesh(outerGeo, outerMat));
+
+      // Orbital ring (accent detail)
+      const ringGeo = new THREE.RingGeometry(1.35, 1.37, 128);
+      const ringMat = new THREE.MeshBasicMaterial({
+        color: 0x6d9fff, transparent: true, opacity: 0.12,
+        side: THREE.DoubleSide,
+      });
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      ring.rotation.x = Math.PI * 0.42;
+      ring.rotation.y = Math.PI * 0.15;
+      scene.add(ring);
     }
 
     // Fallback: wireframe globe while textures load
@@ -1316,9 +1374,10 @@
     animate();
 
     window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
+      const sz = getSize();
+      camera.aspect = sz.w / sz.h;
       camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setSize(sz.w, sz.h);
       canvas.style.width = '100%';
       canvas.style.height = '100%';
     });
