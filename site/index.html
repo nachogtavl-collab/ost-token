@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=19">
+  <link rel="stylesheet" href="style.css?v=20">
 </head>
 <body>
 
@@ -1813,6 +1813,7 @@
             <div class="rt-station-icon">&#127759;</div>
             <div class="rt-station-ring"></div>
             <div class="rt-station-label">
+              <div class="rt-3d-wrap"><canvas class="rt-3d-canvas" id="sc3dLaunch"></canvas></div>
               <h4>&#128640; Launch</h4>
               <p>Earth &mdash; Supplier Application</p>
               <span class="rt-status rt-status-done">Phase 1 Complete &#10003;</span>
@@ -1823,6 +1824,7 @@
             <div class="rt-station-icon">&#128752;</div>
             <div class="rt-station-ring"></div>
             <div class="rt-station-label">
+              <div class="rt-3d-wrap"><canvas class="rt-3d-canvas" id="sc3dOrbit"></canvas></div>
               <h4>&#128752; Space Station</h4>
               <p>LEO Orbit &mdash; CubeSat Rideshare</p>
               <span class="rt-status rt-status-pending">Phase 2-3 &middot; Refueling</span>
@@ -1833,6 +1835,7 @@
             <div class="rt-station-icon">&#127769;</div>
             <div class="rt-station-ring"></div>
             <div class="rt-station-label">
+              <div class="rt-3d-wrap"><canvas class="rt-3d-canvas" id="sc3dMoon"></canvas></div>
               <h4>&#127769; Moon Landing</h4>
               <p>Mesh Network &mdash; Uncensored Internet</p>
               <span class="rt-status rt-status-pending">Phase 3 &middot; Refueling</span>
@@ -1843,6 +1846,7 @@
             <div class="rt-station-icon">&#127756;</div>
             <div class="rt-station-ring"></div>
             <div class="rt-station-label">
+              <div class="rt-3d-wrap"><canvas class="rt-3d-canvas" id="sc3dMars"></canvas></div>
               <h4>&#127756; Mars Landing</h4>
               <p>Multi-Planetary Payments</p>
               <span class="rt-status rt-status-pending">Phase 4 &middot; Final Destination</span>
@@ -2617,6 +2621,6 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
-  <script src="app.js?v=19"></script>
+  <script src="app.js?v=20"></script>
 </body>
 </html>

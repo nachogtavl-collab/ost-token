@@ -3852,6 +3852,509 @@
   })();
 
   /* ================================================================== */
+  /* Space Journey 3D Scenes (Three.js)                                 */
+  /* ================================================================== */
+  (function initSpace3D() {
+    if (typeof THREE === 'undefined') return;
+
+    function createSetup(canvas) {
+      var w = canvas.clientWidth || 340, h = canvas.clientHeight || 240;
+      var scene = new THREE.Scene();
+      var camera = new THREE.PerspectiveCamera(50, w / h, 0.1, 200);
+      var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+      renderer.setSize(w, h);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      return { scene: scene, camera: camera, renderer: renderer };
+    }
+
+    function addStars(scene, n) {
+      n = n || 400;
+      var geo = new THREE.BufferGeometry();
+      var p = [];
+      for (var i = 0; i < n; i++) {
+        var r = 40 + Math.random() * 80;
+        var t = Math.random() * Math.PI * 2;
+        var ph = Math.acos(2 * Math.random() - 1);
+        p.push(r * Math.sin(ph) * Math.cos(t), r * Math.sin(ph) * Math.sin(t), r * Math.cos(ph));
+      }
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
+      scene.add(new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.15 })));
+    }
+
+    function addLights(scene) {
+      scene.add(new THREE.AmbientLight(0x404060, 0.6));
+      var sun = new THREE.DirectionalLight(0xffffff, 1.2);
+      sun.position.set(5, 3, 5);
+      scene.add(sun);
+    }
+
+    function createRocket(s) {
+      s = s || 1;
+      var g = new THREE.Group();
+      g.add(new THREE.Mesh(
+        new THREE.CylinderGeometry(0.06 * s, 0.08 * s, 0.5 * s, 16),
+        new THREE.MeshStandardMaterial({ color: 0xe8e8e8, metalness: 0.4, roughness: 0.3 })
+      ));
+      var nose = new THREE.Mesh(
+        new THREE.ConeGeometry(0.06 * s, 0.18 * s, 16),
+        new THREE.MeshStandardMaterial({ color: 0xdd2222, metalness: 0.3, roughness: 0.4 })
+      );
+      nose.position.y = 0.34 * s;
+      g.add(nose);
+      var eng = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.07 * s, 0.04 * s, 0.08 * s, 12),
+        new THREE.MeshStandardMaterial({ color: 0x555555, metalness: 0.6 })
+      );
+      eng.position.y = -0.29 * s;
+      g.add(eng);
+      for (var i = 0; i < 4; i++) {
+        var fin = new THREE.Mesh(
+          new THREE.BoxGeometry(0.015 * s, 0.12 * s, 0.06 * s),
+          new THREE.MeshStandardMaterial({ color: 0xaaaaaa, metalness: 0.3 })
+        );
+        var a = (i / 4) * Math.PI * 2;
+        fin.position.set(Math.cos(a) * 0.08 * s, -0.2 * s, Math.sin(a) * 0.08 * s);
+        fin.rotation.y = a;
+        g.add(fin);
+      }
+      return g;
+    }
+
+    function createFlame(s) {
+      s = s || 1;
+      var cnt = 60;
+      var geo = new THREE.BufferGeometry();
+      var pos = new Float32Array(cnt * 3);
+      var vels = [];
+      for (var i = 0; i < cnt; i++) {
+        pos[i * 3] = (Math.random() - 0.5) * 0.04 * s;
+        pos[i * 3 + 1] = -0.3 * s - Math.random() * 0.3 * s;
+        pos[i * 3 + 2] = (Math.random() - 0.5) * 0.04 * s;
+        vels.push({ x: (Math.random() - 0.5) * 0.002 * s, y: -0.005 * s - Math.random() * 0.01 * s, z: (Math.random() - 0.5) * 0.002 * s, life: Math.random() });
+      }
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      var pts = new THREE.Points(geo, new THREE.PointsMaterial({
+        color: 0xff6600, size: 0.05 * s, transparent: true, opacity: 0.8,
+        blending: THREE.AdditiveBlending, depthWrite: false
+      }));
+      pts.userData = { vels: vels, s: s };
+      return pts;
+    }
+
+    function tickFlame(flame, baseY) {
+      var pos = flame.geometry.attributes.position.array;
+      var v = flame.userData.vels, s = flame.userData.s;
+      for (var i = 0; i < v.length; i++) {
+        v[i].life -= 0.02;
+        if (v[i].life <= 0) {
+          pos[i * 3] = (Math.random() - 0.5) * 0.04 * s;
+          pos[i * 3 + 1] = baseY - 0.33 * s;
+          pos[i * 3 + 2] = (Math.random() - 0.5) * 0.04 * s;
+          v[i].life = 1;
+        } else {
+          pos[i * 3] += v[i].x;
+          pos[i * 3 + 1] += v[i].y;
+          pos[i * 3 + 2] += v[i].z;
+        }
+      }
+      flame.geometry.attributes.position.needsUpdate = true;
+    }
+
+    // ===================== SCENE 1: ROCKET LAUNCH =====================
+    (function () {
+      var c = document.getElementById('sc3dLaunch');
+      if (!c) return;
+      var S = createSetup(c);
+      S.camera.position.set(0.8, 0.6, 2.2);
+      S.camera.lookAt(0, 0.5, 0);
+      addLights(S.scene);
+      addStars(S.scene);
+
+      var earth = new THREE.Mesh(
+        new THREE.SphereGeometry(8, 48, 48),
+        new THREE.MeshStandardMaterial({ color: 0x1a6b3f, roughness: 0.8 })
+      );
+      earth.position.y = -8.2;
+      S.scene.add(earth);
+      var atm = new THREE.Mesh(
+        new THREE.SphereGeometry(8.15, 48, 48),
+        new THREE.MeshBasicMaterial({ color: 0x4488ff, transparent: true, opacity: 0.1, side: THREE.BackSide })
+      );
+      atm.position.y = -8.2;
+      S.scene.add(atm);
+
+      var pad = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.25, 0.3, 0.05, 16),
+        new THREE.MeshStandardMaterial({ color: 0x666666, metalness: 0.5 })
+      );
+      pad.position.y = -0.2;
+      S.scene.add(pad);
+
+      var tower = new THREE.Mesh(
+        new THREE.BoxGeometry(0.04, 0.8, 0.04),
+        new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.4 })
+      );
+      tower.position.set(-0.3, 0.15, 0);
+      S.scene.add(tower);
+
+      var rocket = createRocket(1.4);
+      S.scene.add(rocket);
+      var flame = createFlame(1.4);
+      S.scene.add(flame);
+
+      var smokeCnt = 80;
+      var smokeGeo = new THREE.BufferGeometry();
+      var smokePos = new Float32Array(smokeCnt * 3);
+      var smokeVels = [];
+      for (var i = 0; i < smokeCnt; i++) {
+        smokePos[i * 3] = (Math.random() - 0.5) * 0.2;
+        smokePos[i * 3 + 1] = -0.2;
+        smokePos[i * 3 + 2] = (Math.random() - 0.5) * 0.2;
+        smokeVels.push({ x: (Math.random() - 0.5) * 0.008, y: -0.002 + Math.random() * 0.004, z: (Math.random() - 0.5) * 0.008, life: Math.random() });
+      }
+      smokeGeo.setAttribute('position', new THREE.Float32BufferAttribute(smokePos, 3));
+      var smoke = new THREE.Points(smokeGeo, new THREE.PointsMaterial({
+        color: 0xaaaaaa, size: 0.08, transparent: true, opacity: 0.35, depthWrite: false
+      }));
+      S.scene.add(smoke);
+
+      var t = 0, vis = false;
+      function anim() {
+        requestAnimationFrame(anim);
+        if (!vis) return;
+        t += 0.016;
+        var cyc = (t % 8) / 8;
+        var rY;
+        if (cyc < 0.25) { rY = 0; } else {
+          var p = (cyc - 0.25) / 0.75;
+          rY = p * p * 5;
+        }
+        rocket.position.y = rY;
+        rocket.rotation.z = Math.sin(t * 2) * 0.015;
+        flame.position.y = rY;
+        tickFlame(flame, rY);
+        var sp = smoke.geometry.attributes.position.array;
+        for (var i = 0; i < smokeCnt; i++) {
+          smokeVels[i].life -= 0.012;
+          if (smokeVels[i].life <= 0) {
+            sp[i * 3] = (Math.random() - 0.5) * 0.15;
+            sp[i * 3 + 1] = Math.min(rY - 0.3, -0.2);
+            sp[i * 3 + 2] = (Math.random() - 0.5) * 0.15;
+            smokeVels[i].life = 1;
+          } else {
+            sp[i * 3] += smokeVels[i].x;
+            sp[i * 3 + 1] += smokeVels[i].y;
+            sp[i * 3 + 2] += smokeVels[i].z;
+          }
+        }
+        smoke.geometry.attributes.position.needsUpdate = true;
+        S.camera.position.y = 0.6 + rY * 0.25;
+        S.camera.lookAt(0, rY * 0.4, 0);
+        S.renderer.render(S.scene, S.camera);
+      }
+      new IntersectionObserver(function (e) { e.forEach(function (en) { vis = en.isIntersecting; }); }, { threshold: 0.1 }).observe(c);
+      anim();
+    })();
+
+    // ===================== SCENE 2: SPACE STATION REFUELING =====================
+    (function () {
+      var c = document.getElementById('sc3dOrbit');
+      if (!c) return;
+      var S = createSetup(c);
+      S.camera.position.set(0, 0.5, 3.5);
+      S.camera.lookAt(0, 0, 0);
+      addLights(S.scene);
+      addStars(S.scene);
+
+      var earth = new THREE.Mesh(
+        new THREE.SphereGeometry(6, 48, 48),
+        new THREE.MeshStandardMaterial({ color: 0x2255aa, roughness: 0.7 })
+      );
+      earth.position.y = -7.5;
+      S.scene.add(earth);
+
+      var station = new THREE.Group();
+      station.add(new THREE.Mesh(
+        new THREE.CylinderGeometry(0.12, 0.12, 1, 16),
+        new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.6, roughness: 0.3 })
+      ));
+      var ring = new THREE.Mesh(
+        new THREE.TorusGeometry(0.55, 0.05, 8, 32),
+        new THREE.MeshStandardMaterial({ color: 0xdddddd, metalness: 0.5 })
+      );
+      ring.rotation.x = Math.PI / 2;
+      station.add(ring);
+      for (var i = 0; i < 4; i++) {
+        var panel = new THREE.Mesh(
+          new THREE.BoxGeometry(0.55, 0.015, 0.18),
+          new THREE.MeshStandardMaterial({ color: 0x112266, metalness: 0.3, roughness: 0.5 })
+        );
+        var arm = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.01, 0.01, 0.3, 6),
+          new THREE.MeshStandardMaterial({ color: 0x999999 })
+        );
+        var ang = (i / 4) * Math.PI * 2;
+        arm.position.set(Math.cos(ang) * 0.55, 0, Math.sin(ang) * 0.55);
+        arm.rotation.z = Math.PI / 2;
+        arm.rotation.y = ang;
+        station.add(arm);
+        panel.position.set(Math.cos(ang) * 0.85, 0, Math.sin(ang) * 0.85);
+        panel.rotation.y = ang;
+        station.add(panel);
+      }
+      S.scene.add(station);
+
+      var rocket = createRocket(0.5);
+      rocket.position.set(1, 0, 0);
+      rocket.rotation.z = -Math.PI / 2;
+      S.scene.add(rocket);
+
+      var fuelCnt = 40;
+      var fGeo = new THREE.BufferGeometry();
+      var fPos = new Float32Array(fuelCnt * 3);
+      var fData = [];
+      for (var i = 0; i < fuelCnt; i++) {
+        fData.push({ prog: i / fuelCnt });
+        fPos[i * 3] = 0.15 + (i / fuelCnt) * 0.7;
+        fPos[i * 3 + 1] = 0;
+        fPos[i * 3 + 2] = 0;
+      }
+      fGeo.setAttribute('position', new THREE.Float32BufferAttribute(fPos, 3));
+      var fuelPts = new THREE.Points(fGeo, new THREE.PointsMaterial({
+        color: 0x00ff88, size: 0.04, transparent: true, opacity: 0.7,
+        blending: THREE.AdditiveBlending, depthWrite: false
+      }));
+      S.scene.add(fuelPts);
+
+      var connGeo = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(0.15, 0, 0), new THREE.Vector3(0.85, 0, 0)
+      ]);
+      var connLine = new THREE.Line(connGeo, new THREE.LineBasicMaterial({
+        color: 0x00ff88, transparent: true, opacity: 0.3
+      }));
+      S.scene.add(connLine);
+
+      var t = 0, vis = false;
+      function anim() {
+        requestAnimationFrame(anim);
+        if (!vis) return;
+        t += 0.016;
+        station.rotation.y = t * 0.15;
+        station.rotation.x = Math.sin(t * 0.08) * 0.08;
+        rocket.position.y = Math.sin(t * 0.4) * 0.04;
+        var fp = fuelPts.geometry.attributes.position.array;
+        for (var i = 0; i < fuelCnt; i++) {
+          fData[i].prog = (fData[i].prog + 0.004) % 1;
+          fp[i * 3] = 0.15 + fData[i].prog * 0.7;
+          fp[i * 3 + 1] = Math.sin(fData[i].prog * Math.PI * 6) * 0.025;
+          fp[i * 3 + 2] = Math.cos(fData[i].prog * Math.PI * 6) * 0.025;
+        }
+        fuelPts.geometry.attributes.position.needsUpdate = true;
+        connLine.material.opacity = 0.2 + Math.sin(t * 3) * 0.15;
+        S.renderer.render(S.scene, S.camera);
+      }
+      new IntersectionObserver(function (e) { e.forEach(function (en) { vis = en.isIntersecting; }); }, { threshold: 0.1 }).observe(c);
+      anim();
+    })();
+
+    // ===================== SCENE 3: MOON LANDING REFUELING =====================
+    (function () {
+      var c = document.getElementById('sc3dMoon');
+      if (!c) return;
+      var S = createSetup(c);
+      S.camera.position.set(1.2, 0.9, 2.5);
+      S.camera.lookAt(0, 0.1, 0);
+      addLights(S.scene);
+      addStars(S.scene);
+
+      var moon = new THREE.Mesh(
+        new THREE.SphereGeometry(8, 48, 48),
+        new THREE.MeshStandardMaterial({ color: 0xb0b0a8, roughness: 0.95 })
+      );
+      moon.position.y = -8;
+      S.scene.add(moon);
+
+      for (var i = 0; i < 6; i++) {
+        var cr = new THREE.Mesh(
+          new THREE.RingGeometry(0.08 + Math.random() * 0.12, 0.1 + Math.random() * 0.15, 16),
+          new THREE.MeshBasicMaterial({ color: 0x888880, side: THREE.DoubleSide })
+        );
+        cr.rotation.x = -Math.PI / 2;
+        cr.position.set((Math.random() - 0.5) * 3, 0.01, (Math.random() - 0.5) * 2);
+        S.scene.add(cr);
+      }
+
+      var rocket = createRocket(1.1);
+      rocket.position.set(-0.4, 0.38, 0);
+      S.scene.add(rocket);
+
+      var base = new THREE.Group();
+      var dome = new THREE.Mesh(
+        new THREE.SphereGeometry(0.22, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2),
+        new THREE.MeshStandardMaterial({ color: 0xaaccff, transparent: true, opacity: 0.5, metalness: 0.3 })
+      );
+      base.add(dome);
+      var plat = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.28, 0.28, 0.035, 16),
+        new THREE.MeshStandardMaterial({ color: 0x777777, metalness: 0.5 })
+      );
+      base.add(plat);
+      var tank = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.05, 0.05, 0.25, 8),
+        new THREE.MeshStandardMaterial({ color: 0xff6600, metalness: 0.4, emissive: 0x331100, emissiveIntensity: 0.3 })
+      );
+      tank.position.set(0.18, 0.13, 0.08);
+      base.add(tank);
+      base.position.set(0.6, 0, 0.3);
+      S.scene.add(base);
+
+      var lineGeo = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(-0.4, 0.1, 0),
+        new THREE.Vector3(0.1, 0.08, 0.15),
+        new THREE.Vector3(0.6, 0.13, 0.3)
+      ]);
+      var fuelLine = new THREE.Line(lineGeo, new THREE.LineBasicMaterial({
+        color: 0x00ff88, transparent: true, opacity: 0.4
+      }));
+      S.scene.add(fuelLine);
+
+      var earthSky = new THREE.Mesh(
+        new THREE.SphereGeometry(0.12, 24, 24),
+        new THREE.MeshBasicMaterial({ color: 0x2244aa })
+      );
+      earthSky.position.set(-2, 3, -5);
+      S.scene.add(earthSky);
+      var earthGlow = new THREE.Mesh(
+        new THREE.SphereGeometry(0.16, 16, 16),
+        new THREE.MeshBasicMaterial({ color: 0x4488ff, transparent: true, opacity: 0.15 })
+      );
+      earthGlow.position.copy(earthSky.position);
+      S.scene.add(earthGlow);
+
+      var t = 0, vis = false;
+      function anim() {
+        requestAnimationFrame(anim);
+        if (!vis) return;
+        t += 0.016;
+        fuelLine.material.opacity = 0.25 + Math.sin(t * 3) * 0.25;
+        rocket.position.y = 0.38 + Math.sin(t * 0.4) * 0.008;
+        tank.material.emissiveIntensity = 0.3 + Math.sin(t * 2) * 0.2;
+        S.camera.position.x = 1.2 + Math.sin(t * 0.1) * 0.1;
+        S.camera.lookAt(0, 0.1, 0);
+        S.renderer.render(S.scene, S.camera);
+      }
+      new IntersectionObserver(function (e) { e.forEach(function (en) { vis = en.isIntersecting; }); }, { threshold: 0.1 }).observe(c);
+      anim();
+    })();
+
+    // ===================== SCENE 4: MARS LANDING =====================
+    (function () {
+      var c = document.getElementById('sc3dMars');
+      if (!c) return;
+      var S = createSetup(c);
+      S.camera.position.set(0.5, 1.5, 3);
+      S.camera.lookAt(0, 0.5, 0);
+      addLights(S.scene);
+      addStars(S.scene);
+
+      var sun = S.scene.children.find(function (x) { return x.isDirectionalLight; });
+      if (sun) sun.color.set(0xffccaa);
+
+      var mars = new THREE.Mesh(
+        new THREE.SphereGeometry(8, 48, 48),
+        new THREE.MeshStandardMaterial({ color: 0xc1440e, roughness: 0.92 })
+      );
+      mars.position.y = -7.8;
+      S.scene.add(mars);
+      var marsAtm = new THREE.Mesh(
+        new THREE.SphereGeometry(8.1, 32, 32),
+        new THREE.MeshBasicMaterial({ color: 0xff8844, transparent: true, opacity: 0.06, side: THREE.BackSide })
+      );
+      marsAtm.position.y = -7.8;
+      S.scene.add(marsAtm);
+
+      for (var i = 0; i < 5; i++) {
+        var rock = new THREE.Mesh(
+          new THREE.DodecahedronGeometry(0.05 + Math.random() * 0.08, 0),
+          new THREE.MeshStandardMaterial({ color: 0x994422, roughness: 0.95 })
+        );
+        rock.position.set((Math.random() - 0.5) * 2, 0.03, (Math.random() - 0.5) * 2);
+        rock.rotation.set(Math.random(), Math.random(), Math.random());
+        S.scene.add(rock);
+      }
+
+      var rocket = createRocket(1.3);
+      rocket.position.set(0, 3, 0);
+      S.scene.add(rocket);
+      var flame = createFlame(1.3);
+      S.scene.add(flame);
+
+      var dustCnt = 100;
+      var dGeo = new THREE.BufferGeometry();
+      var dPos = new Float32Array(dustCnt * 3);
+      var dVels = [];
+      for (var i = 0; i < dustCnt; i++) {
+        dPos[i * 3] = (Math.random() - 0.5) * 1.5;
+        dPos[i * 3 + 1] = 0.05 + Math.random() * 0.2;
+        dPos[i * 3 + 2] = (Math.random() - 0.5) * 1.5;
+        dVels.push({ x: (Math.random() - 0.5) * 0.015, y: Math.random() * 0.008, z: (Math.random() - 0.5) * 0.015, life: Math.random() });
+      }
+      dGeo.setAttribute('position', new THREE.Float32BufferAttribute(dPos, 3));
+      var dust = new THREE.Points(dGeo, new THREE.PointsMaterial({
+        color: 0xcc8855, size: 0.05, transparent: true, opacity: 0.3, depthWrite: false
+      }));
+      S.scene.add(dust);
+
+      var earthDot = new THREE.Mesh(
+        new THREE.SphereGeometry(0.04, 12, 12),
+        new THREE.MeshBasicMaterial({ color: 0x4488ff })
+      );
+      earthDot.position.set(3, 4, -8);
+      S.scene.add(earthDot);
+
+      var t = 0, vis = false;
+      function anim() {
+        requestAnimationFrame(anim);
+        if (!vis) return;
+        t += 0.016;
+        var cyc = (t % 10) / 10;
+        var rY;
+        if (cyc < 0.7) {
+          rY = 3 - (cyc / 0.7) * 2.5;
+        } else {
+          rY = 0.5;
+        }
+        rocket.position.y = rY;
+        rocket.rotation.z = Math.sin(t) * 0.012;
+        flame.position.y = rY;
+        tickFlame(flame, rY);
+        var closeness = Math.max(0, 1 - (rY - 0.5) / 2.5);
+        dust.material.opacity = closeness * 0.45;
+        var dp = dust.geometry.attributes.position.array;
+        for (var i = 0; i < dustCnt; i++) {
+          dVels[i].life -= 0.008;
+          if (dVels[i].life <= 0) {
+            dp[i * 3] = (Math.random() - 0.5) * 1;
+            dp[i * 3 + 1] = 0.05;
+            dp[i * 3 + 2] = (Math.random() - 0.5) * 1;
+            dVels[i].life = 1;
+          } else {
+            dp[i * 3] += dVels[i].x * closeness;
+            dp[i * 3 + 1] += dVels[i].y * closeness;
+            dp[i * 3 + 2] += dVels[i].z * closeness;
+          }
+        }
+        dust.geometry.attributes.position.needsUpdate = true;
+        S.camera.position.y = 1.5 - closeness * 0.5;
+        S.camera.lookAt(0, rY * 0.3, 0);
+        S.renderer.render(S.scene, S.camera);
+      }
+      new IntersectionObserver(function (e) { e.forEach(function (en) { vis = en.isIntersecting; }); }, { threshold: 0.1 }).observe(c);
+      anim();
+    })();
+  })();
+
+  /* ================================================================== */
   /* NEW: Live Censorship News Feed (updates hourly)                    */
   /* ================================================================== */
   (function initCensorshipFeed() {
