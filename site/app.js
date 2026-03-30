@@ -4274,28 +4274,56 @@
     var groups = [launchGrp, orbitGrp, moonGrp, marsGrp];
     var phaseLabels = [
       'Phase 1 \u2014 Rocket Launch from Earth',
-      'Phase 2 \u2014 Space Station Refueling in LEO',
-      'Phase 3 \u2014 Moon Landing & Refueling Base',
-      'Phase 4 \u2014 Mars Landing \u2014 Final Destination'
+      'Phase 2 \u2014 Docking & Refueling at Space Station',
+      'Phase 3 \u2014 Moon Descent & Refueling Base',
+      'Phase 4 \u2014 Mars Atmospheric Entry & Landing'
     ];
-    var curPhase = 0, phaseTime = 12;
+    var curPhase = 0, phaseTime = 14;
 
     camera.position.set(.8,.6,2.2);
     camera.lookAt(0,.5,0);
 
+    // Smooth easing: slow start & end, fast middle
+    function easeInOut(x) { return x < .5 ? 2*x*x : 1-Math.pow(-2*x+2,2)/2; }
+    function easeOut(x) { return 1-Math.pow(1-x,3); }
+
+    function resetPhaseObjects(idx) {
+      // Reset positions so every phase starts cleanly
+      if (idx === 0) {
+        rocket0.position.set(0, 0, 0);
+        flame0.position.set(0, 0, 0);
+        flame0.visible = true;
+      }
+      if (idx === 1) {
+        rocket1.position.set(3.5, 1.5, 1);
+        rocket1.rotation.set(0, 0, -Math.PI/2);
+        fuelPts.visible = false;
+        connLine.visible = false;
+      }
+      if (idx === 2) {
+        rocket2.position.set(-.4, 3, 0);
+        rocket2.rotation.set(0, 0, 0);
+      }
+      if (idx === 3) {
+        rocket3.position.set(0, 5, 0);
+        rocket3.rotation.set(0, 0, Math.PI); // nose-down for entry
+        flame3.position.set(0, 5, 0);
+        flame3.visible = true;
+        dust.material.opacity = 0;
+      }
+    }
+
     function setPhase(idx) {
       for (var i = 0; i < groups.length; i++) groups[i].visible = (i === idx);
       curPhase = idx;
+      resetPhaseObjects(idx);
       var btns = document.querySelectorAll('.sj-phase-btn');
       btns.forEach(function(b) { b.classList.remove('sj-phase-active'); });
       if (btns[idx]) btns[idx].classList.add('sj-phase-active');
       var lbl = document.getElementById('sjPhaseLabel');
       if (lbl) lbl.textContent = phaseLabels[idx];
-      if (idx === 0) { camera.position.set(.8,.6,2.2); }
-      if (idx === 1) { camera.position.set(0,.5,3.5); }
-      if (idx === 2) { camera.position.set(1.2,.9,2.5); }
-      if (idx === 3) { camera.position.set(.5,1.5,3); sunLight.color.set(0xffccaa); }
-      if (idx !== 3) { sunLight.color.set(0xffffff); }
+      // Reset sunlight
+      sunLight.color.set(idx === 3 ? 0xffccaa : 0xffffff);
     }
 
     document.querySelectorAll('.sj-phase-btn').forEach(function(btn) {
@@ -4316,70 +4344,190 @@
       t += dt;
       phaseTimer += dt;
 
-      if (phaseTimer >= phaseTime) {
+      // Linear progress 0 → 1 through current phase
+      var prog = Math.min(phaseTimer / phaseTime, 1);
+
+      if (prog >= 1) {
         phaseTimer = 0;
         setPhase((curPhase + 1) % 4);
+        prog = 0;
       }
 
       stars.rotation.y = t * 0.002;
 
-      // Phase 0: Launch
+      /* ===== Phase 0: LAUNCH — rocket sits on pad, ignites, lifts off ===== */
       if (curPhase === 0) {
-        var cyc = (phaseTimer % 8) / 8;
-        var rY = cyc < .25 ? 0 : Math.pow((cyc-.25)/.75, 2) * 5;
+        // 0-0.15: sitting on pad, engine ignite (flame grows)
+        // 0.15-1.0: smooth ascent, accelerating
+        var rY;
+        if (prog < 0.12) {
+          // Countdown / sitting on pad — small flame sputtering
+          rY = 0;
+          flame0.visible = true;
+          flame0.material.opacity = 0.3 + prog * 3;
+        } else if (prog < 0.18) {
+          // Slow liftoff start
+          var lp = (prog - 0.12) / 0.06;
+          rY = easeInOut(lp) * 0.15;
+          flame0.material.opacity = 0.8;
+        } else {
+          // Full ascent — accelerating curve
+          var ap = (prog - 0.18) / 0.82;
+          rY = 0.15 + easeInOut(ap) * 6;
+          flame0.material.opacity = 0.9;
+        }
         rocket0.position.y = rY;
-        rocket0.rotation.z = Math.sin(t*2)*.015;
+        rocket0.rotation.z = Math.sin(t * 3) * 0.008 * Math.min(1, prog * 5);
         flame0.position.y = rY;
         tickFlame(flame0, rY);
-        camera.position.y = .6 + rY * .25;
-        camera.lookAt(0, rY * .4, 0);
+
+        // Camera follows rocket, pulls back as it ascends
+        camera.position.set(0.8 + Math.sin(t * 0.15) * 0.05, 0.6 + rY * 0.3, 2.2 + rY * 0.08);
+        camera.lookAt(0, rY * 0.45, 0);
+
+        // Earth shrinks below and tower recedes — already happens via camera tracking
+        pad.visible = prog < 0.5;
+        tower.visible = prog < 0.5;
+        // Atmosphere glow fades as we leave
+        atm0.material.opacity = Math.max(0, 0.1 - prog * 0.1);
       }
 
-      // Phase 1: Station
+      /* ===== Phase 1: STATION — rocket approaches, docks, refuels ===== */
       if (curPhase === 1) {
-        station.rotation.y = t * .15;
-        station.rotation.x = Math.sin(t*.08)*.08;
-        rocket1.position.y = Math.sin(t*.4)*.04;
-        var fp = fuelPts.geometry.attributes.position.array;
-        for(var i=0;i<fuelCnt;i++){
-          fData[i].prog=(fData[i].prog+.004)%1;
-          fp[i*3]=.15+fData[i].prog*.7;
-          fp[i*3+1]=Math.sin(fData[i].prog*Math.PI*6)*.025;
-          fp[i*3+2]=Math.cos(fData[i].prog*Math.PI*6)*.025;
+        station.rotation.y = t * 0.12;
+        station.rotation.x = Math.sin(t * 0.06) * 0.05;
+
+        if (prog < 0.4) {
+          // Rocket approaches from far right — glides toward station
+          var ap = easeOut(prog / 0.4);
+          rocket1.position.set(3.5 - ap * 2.5, 1.5 - ap * 1.5, 1 - ap * 1);
+          fuelPts.visible = false;
+          connLine.visible = false;
+        } else if (prog < 0.5) {
+          // Final docking alignment
+          var dp = easeInOut((prog - 0.4) / 0.1);
+          rocket1.position.set(1 - dp * 0.15, dp * 0.02, dp * 0.02);
+          fuelPts.visible = false;
+          connLine.visible = false;
+        } else {
+          // Docked — refueling
+          rocket1.position.set(0.85, Math.sin(t * 0.5) * 0.01, 0);
+          fuelPts.visible = true;
+          connLine.visible = true;
+          // Animate fuel particles flowing from station to rocket
+          var fp = fuelPts.geometry.attributes.position.array;
+          var fuelProg = (prog - 0.5) / 0.5; // 0→1 of refueling portion
+          for (var i = 0; i < fuelCnt; i++) {
+            fData[i].prog = (fData[i].prog + 0.006) % 1;
+            fp[i * 3] = 0.15 + fData[i].prog * 0.7;
+            fp[i * 3 + 1] = Math.sin(fData[i].prog * Math.PI * 4) * 0.03;
+            fp[i * 3 + 2] = Math.cos(fData[i].prog * Math.PI * 4) * 0.03;
+          }
+          fuelPts.geometry.attributes.position.needsUpdate = true;
+          fuelPts.material.opacity = 0.5 + Math.sin(t * 2) * 0.2;
+          connLine.material.opacity = 0.25 + Math.sin(t * 3) * 0.15;
         }
-        fuelPts.geometry.attributes.position.needsUpdate=true;
-        connLine.material.opacity=.2+Math.sin(t*3)*.15;
-        camera.lookAt(0,0,0);
+
+        // Camera: starts far, moves closer as rocket approaches
+        var camZ = 3.5 + (1 - easeOut(Math.min(prog * 1.5, 1))) * 1.5;
+        camera.position.set(Math.sin(t * 0.05) * 0.3, 0.5 + Math.sin(t * 0.08) * 0.1, camZ);
+        camera.lookAt(0, 0, 0);
       }
 
-      // Phase 2: Moon
+      /* ===== Phase 2: MOON — rocket descends from orbit to lunar surface ===== */
       if (curPhase === 2) {
-        fuelLine.material.opacity=.25+Math.sin(t*3)*.25;
-        rocket2.position.y=.38+Math.sin(t*.4)*.008;
-        tank.material.emissiveIntensity=.3+Math.sin(t*2)*.2;
-        camera.position.x=1.2+Math.sin(t*.1)*.1;
-        camera.lookAt(0,.1,0);
+        var rY2;
+        if (prog < 0.6) {
+          // Descent — rocket comes down from high
+          var dp = easeInOut(prog / 0.6);
+          rY2 = 3 - dp * 2.62; // 3 → 0.38
+          rocket2.rotation.z = Math.sin(t * 1.5) * 0.01 * (1 - dp * 0.8);
+        } else if (prog < 0.75) {
+          // Touching down — gentle final approach
+          var tdp = easeOut((prog - 0.6) / 0.15);
+          rY2 = 0.38;
+          rocket2.rotation.z = 0;
+        } else {
+          // Landed — fuel line activates to base
+          rY2 = 0.38;
+          rocket2.rotation.z = 0;
+          var refuelProg = (prog - 0.75) / 0.25;
+          fuelLine.material.opacity = easeOut(refuelProg) * 0.6;
+          tank.material.emissiveIntensity = 0.3 + easeOut(refuelProg) * 0.4;
+        }
+        rocket2.position.y = rY2;
+
+        // Fuel line starts invisible during descent
+        if (prog < 0.75) {
+          fuelLine.material.opacity = 0;
+          tank.material.emissiveIntensity = 0.2;
+        }
+
+        // Earth in sky gentle sway
+        earthSky.position.x = -2 + Math.sin(t * 0.03) * 0.1;
+
+        // Camera: tracks descent from above-side, then settles
+        var camH = 0.9 + (1 - easeOut(Math.min(prog * 1.3, 1))) * 1.2;
+        camera.position.set(1.2 + Math.sin(t * 0.08) * 0.08, camH, 2.5);
+        camera.lookAt(0, rY2 * 0.3, 0);
       }
 
-      // Phase 3: Mars
+      /* ===== Phase 3: MARS — atmospheric entry, descent & landing ===== */
       if (curPhase === 3) {
-        var mcyc = (phaseTimer % 10) / 10;
-        var rY3 = mcyc < .7 ? 3-(mcyc/.7)*2.5 : .5;
+        var rY3;
+        if (prog < 0.15) {
+          // Atmospheric entry — nose down, high altitude
+          var ep = prog / 0.15;
+          rY3 = 5 - ep * 0.5;
+          rocket3.rotation.z = Math.PI - easeOut(ep) * (Math.PI - 0.04);
+          flame3.visible = true;
+          flame3.material.color.set(0xff4400); // re-entry glow
+          marsAtm.material.opacity = 0.06 + ep * 0.08;
+        } else if (prog < 0.7) {
+          // Main descent — flipping to tail-down, decelerating
+          var dp = (prog - 0.15) / 0.55;
+          rY3 = 4.5 - easeInOut(dp) * 3.8; // 4.5 → 0.7
+          rocket3.rotation.z = 0.04 - easeOut(dp) * 0.04; // straighten out
+          flame3.visible = true;
+          flame3.material.color.set(0xff6600);
+          marsAtm.material.opacity = 0.14 - dp * 0.08;
+        } else {
+          // Final landing — slow, dust kicks up
+          var lp = easeOut((prog - 0.7) / 0.3);
+          rY3 = 0.7 - lp * 0.4; // 0.7 → 0.3
+          rocket3.rotation.z = 0;
+          // Flame diminishes as we touch down
+          flame3.visible = prog < 0.92;
+          flame3.material.opacity = Math.max(0, 1 - lp * 2);
+        }
+
         rocket3.position.y = rY3;
-        rocket3.rotation.z = Math.sin(t)*.012;
         flame3.position.y = rY3;
         tickFlame(flame3, rY3);
-        var closeness = Math.max(0,1-(rY3-.5)/2.5);
-        dust.material.opacity = closeness * .45;
-        var dp = dust.geometry.attributes.position.array;
-        for(var i=0;i<dustCnt;i++){
-          dVels[i].life-=.008;
-          if(dVels[i].life<=0){dp[i*3]=(Math.random()-.5);dp[i*3+1]=.05;dp[i*3+2]=(Math.random()-.5);dVels[i].life=1;}
-          else{dp[i*3]+=dVels[i].x*closeness;dp[i*3+1]+=dVels[i].y*closeness;dp[i*3+2]+=dVels[i].z*closeness;}
+
+        // Dust increases as rocket gets closer to surface
+        var closeness = Math.max(0, 1 - (rY3 - 0.3) / 4.7);
+        var dustStrength = closeness * closeness; // quadratic for dramatic effect
+        dust.material.opacity = dustStrength * 0.5;
+        var dp2 = dust.geometry.attributes.position.array;
+        for (var i = 0; i < dustCnt; i++) {
+          dVels[i].life -= 0.01 * dustStrength;
+          if (dVels[i].life <= 0) {
+            dp2[i * 3] = (Math.random() - 0.5) * (0.5 + dustStrength);
+            dp2[i * 3 + 1] = 0.05;
+            dp2[i * 3 + 2] = (Math.random() - 0.5) * (0.5 + dustStrength);
+            dVels[i].life = 1;
+          } else {
+            dp2[i * 3] += dVels[i].x * dustStrength * 1.5;
+            dp2[i * 3 + 1] += dVels[i].y * dustStrength;
+            dp2[i * 3 + 2] += dVels[i].z * dustStrength * 1.5;
+          }
         }
-        dust.geometry.attributes.position.needsUpdate=true;
-        camera.position.y=1.5-closeness*.5;
-        camera.lookAt(0,rY3*.3,0);
+        dust.geometry.attributes.position.needsUpdate = true;
+
+        // Camera follows descent, gets lower with the rocket
+        camera.position.set(0.5 + Math.sin(t * 0.1) * 0.1, 1.5 - closeness * 0.6, 3 - closeness * 0.3);
+        camera.lookAt(0, rY3 * 0.35, 0);
       }
 
       renderer.render(scene, camera);
