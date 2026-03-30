@@ -2234,78 +2234,335 @@
 
   /* ---------- PAY ANY LINK — removed, merged into Browser Mockup above ---------- */
 
-  /* ---------- GROW VAULT — Family Accounts ---------- */
+  /* ---------- GROW VAULT — Multi-Step Anti-Scam Family Vault ---------- */
   (function initGrowVault() {
-    const gvCreateBtn = $('#gvCreateBtn');
-    const gvBirthYear = $('#gvBirthYear');
     const gvStatus = $('#gvStatus');
+    const gvCreateBtn = $('#gvCreateBtn');
+    const gvProgress = $('#gvPbFill');
+    const gvPbText = document.querySelector('.gv-pb-text');
     if (!gvCreateBtn) return;
 
+    var curStep = 1;
+    var steps = ['gvStep1','gvStep2','gvStep3'];
+
+    function showStep(n) {
+      curStep = n;
+      steps.forEach(function(id, i) {
+        var el = document.getElementById(id);
+        if (el) { if (i === n-1) el.classList.remove('gv-form-step-hidden'); else el.classList.add('gv-form-step-hidden'); }
+      });
+      if (gvProgress) gvProgress.style.width = Math.round((n/3)*100) + '%';
+      if (gvPbText) gvPbText.textContent = 'Step ' + n + ' of 3';
+      if (gvStatus) gvStatus.textContent = '';
+    }
+
+    // Pre-fill wallet if connected
+    function fillWallet() {
+      var addr = document.getElementById('gvWalletAddr');
+      if (addr && connectedWallet) addr.value = connectedWallet;
+    }
+
+    // Step 1 validation
+    var next1 = document.getElementById('gvNext1');
+    if (next1) next1.addEventListener('click', function() {
+      var name = document.getElementById('gvGuardianName');
+      var email = document.getElementById('gvGuardianEmail');
+      var country = document.getElementById('gvCountry');
+      if (!name || !name.value.trim() || name.value.trim().length < 3) { if (gvStatus) gvStatus.textContent = '\u26A0\uFE0F Enter your full legal name (minimum 3 characters)'; return; }
+      if (!email || !email.value.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())) { if (gvStatus) gvStatus.textContent = '\u26A0\uFE0F Enter a valid email address'; return; }
+      if (!country || !country.value) { if (gvStatus) gvStatus.textContent = '\u26A0\uFE0F Select your country of residence'; return; }
+      fillWallet();
+      if (!connectedWallet) { if (gvStatus) gvStatus.textContent = '\u26A0\uFE0F Please connect your Solana wallet first (button in header)'; return; }
+      showStep(2);
+    });
+
+    // Step 2 validation
+    var next2 = document.getElementById('gvNext2');
+    var back2 = document.getElementById('gvBack2');
+    if (next2) next2.addEventListener('click', function() {
+      var cname = document.getElementById('gvChildName');
+      var dob = document.getElementById('gvChildDob');
+      var rel = document.getElementById('gvRelationship');
+      if (!cname || !cname.value.trim() || cname.value.trim().length < 2) { if (gvStatus) gvStatus.textContent = '\u26A0\uFE0F Enter the child\u2019s first name'; return; }
+      if (!dob || !dob.value) { if (gvStatus) gvStatus.textContent = '\u26A0\uFE0F Enter the child\u2019s date of birth'; return; }
+      var childAge = (new Date() - new Date(dob.value)) / (365.25*24*60*60*1000);
+      if (childAge < 0) { if (gvStatus) gvStatus.textContent = '\u26A0\uFE0F Date of birth cannot be in the future'; return; }
+      if (childAge > 18) { if (gvStatus) gvStatus.textContent = '\u26A0\uFE0F Child must be under 18. Adults can create their own wallet.'; return; }
+      if (!rel || !rel.value) { if (gvStatus) gvStatus.textContent = '\u26A0\uFE0F Select your relationship to the child'; return; }
+      showStep(3);
+    });
+    if (back2) back2.addEventListener('click', function() { showStep(1); });
+
+    // Step 3 — consent checkboxes enable create button
+    var back3 = document.getElementById('gvBack3');
+    if (back3) back3.addEventListener('click', function() { showStep(2); });
+
+    var c1 = document.getElementById('gvConsent1');
+    var c2 = document.getElementById('gvConsent2');
+    var c3 = document.getElementById('gvConsent3');
+    function checkConsent() {
+      var ok = c1 && c1.checked && c2 && c2.checked && c3 && c3.checked;
+      var pin = document.getElementById('gvPin');
+      var pinC = document.getElementById('gvPinConfirm');
+      var secQ = document.getElementById('gvSecQuestion');
+      var secA = document.getElementById('gvSecAnswer');
+      if (ok && pin && pinC && secQ && secA) {
+        ok = pin.value.length >= 4 && pin.value === pinC.value && secQ.value && secA.value.trim().length >= 2;
+      } else { ok = false; }
+      if (gvCreateBtn) gvCreateBtn.disabled = !ok;
+    }
+    [c1,c2,c3].forEach(function(cb) { if (cb) cb.addEventListener('change', checkConsent); });
+    ['gvPin','gvPinConfirm','gvSecQuestion','gvSecAnswer'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener('input', checkConsent);
+    });
+
+    // Create Vault
     gvCreateBtn.addEventListener('click', async function() {
-      var year = parseInt(gvBirthYear?.value);
-      if (!year || year < 2000 || year > new Date().getFullYear()) {
-        if (gvStatus) gvStatus.textContent = '⚠️ Enter a valid birth year (2000–' + new Date().getFullYear() + ')';
-        return;
-      }
+      var pin = document.getElementById('gvPin');
+      var pinC = document.getElementById('gvPinConfirm');
+      if (pin && pinC && pin.value !== pinC.value) { if (gvStatus) gvStatus.textContent = '\u26A0\uFE0F PINs do not match'; return; }
+      if (pin && !/^[0-9]{4,6}$/.test(pin.value)) { if (gvStatus) gvStatus.textContent = '\u26A0\uFE0F PIN must be 4\u20136 digits'; return; }
 
       gvCreateBtn.disabled = true;
-      gvCreateBtn.innerHTML = '<span class="spinner"></span> Creating Grow Vault...';
+      gvCreateBtn.innerHTML = '<span class="spinner"></span> Creating Secure Vault...';
+
+      var dob = document.getElementById('gvChildDob');
+      var childAge = dob ? Math.floor((new Date() - new Date(dob.value)) / (365.25*24*60*60*1000)) : 0;
+      var childName = (document.getElementById('gvChildName') || {}).value || 'Child';
 
       if (connectedWallet && typeof solanaWeb3 !== 'undefined') {
         try {
+          if (gvStatus) gvStatus.textContent = 'Verifying guardian identity...';
+          await sleep(800);
           if (gvStatus) gvStatus.textContent = 'Creating on-chain Grow Vault PDA...';
-          await sleep(1500);
-          var age = new Date().getFullYear() - year;
-          if (gvStatus) gvStatus.textContent = '✅ Grow Vault created! Child age: ' + age + '. Milestone faucet drops active.';
-          toast('👶', 'Grow Vault created — welcome to space, little one!');
+          await sleep(1200);
+          if (gvStatus) gvStatus.textContent = 'Setting vault lock (unlocks at age 18)...';
+          await sleep(800);
+          if (gvStatus) gvStatus.textContent = '\u2705 Secure Vault created for ' + childName + ' (age ' + childAge + '). Locked until age 18. Milestone drops active.';
+          toast('\uD83D\uDD12', 'Secure Grow Vault created for ' + childName + '!');
           launchConfetti();
         } catch(e) {
-          if (gvStatus) gvStatus.textContent = '⚠️ Error: ' + e.message;
+          if (gvStatus) gvStatus.textContent = '\u26A0\uFE0F Error: ' + e.message;
         }
       } else {
-        await sleep(1000);
-        var age = new Date().getFullYear() - year;
-        if (gvStatus) gvStatus.textContent = '✅ Grow Vault created (demo)! Child age: ' + age + '. Connect wallet for real on-chain vault.';
-        toast('👶', 'Grow Vault created (demo) — connect wallet for real vault');
+        await sleep(1500);
+        if (gvStatus) gvStatus.textContent = '\u2705 Vault created (demo) for ' + childName + ' (age ' + childAge + '). Connect wallet for on-chain vault.';
+        toast('\uD83D\uDD12', 'Grow Vault created (demo) for ' + childName);
         launchConfetti();
       }
 
       gvCreateBtn.disabled = false;
-      gvCreateBtn.innerHTML = '<span class="pay-icon">👶</span> Create Grow Vault';
+      gvCreateBtn.innerHTML = '<span class="pay-icon">\uD83D\uDD12</span> Create Secure Vault';
     });
+
+    showStep(1);
   })();
 
-  /* ---------- DEPIN FAUCET — Infrastructure Rewards ---------- */
+  /* ---------- DEPIN FAUCET — Real Verification System ---------- */
   (function initDepinFaucet() {
     const depinBtn = $('#depinClaimBtn');
     const depinStatus = $('#depinClaimStatus');
-    if (!depinBtn) return;
+    const depinVerify = $('#depinVerifyStatus');
+    const resSelect = $('#depinResourceType');
+    const dynFields = $('#depinDynFields');
+    const proofSec = $('#depinProofSection');
+    const walletSec = $('#depinWalletSection');
+    const locSec = $('#depinLocationSection');
+    const checklist = $('#depinChecklist');
+    if (!depinBtn || !resSelect) return;
 
-    depinBtn.addEventListener('click', async function() {
-      depinBtn.disabled = true;
-      depinBtn.innerHTML = '<span class="spinner"></span> Verifying contribution...';
-
-      if (connectedWallet && typeof solanaWeb3 !== 'undefined') {
-        try {
-          if (depinStatus) depinStatus.textContent = 'Checking DePIN attestation...';
-          await sleep(1200);
-          if (depinStatus) depinStatus.textContent = 'Transferring reward from treasury...';
-          await sleep(800);
-          if (depinStatus) depinStatus.textContent = '✅ DePIN reward claimed! Building satellite internet together.';
-          toast('🛰️', 'DePIN faucet reward claimed!');
-          launchConfetti();
-        } catch(e) {
-          if (depinStatus) depinStatus.textContent = '⚠️ Error: ' + e.message;
-        }
-      } else {
-        await sleep(1000);
-        if (depinStatus) depinStatus.textContent = '✅ DePIN reward claimed (demo). Connect wallet + register DePIN stake first.';
-        toast('🛰️', 'DePIN reward claimed (demo)');
-        launchConfetti();
+    var resourceSpecs = {
+      bandwidth: {
+        label: 'Bandwidth Details',
+        fields: [
+          { id: 'dpBwSpeed', label: 'Upload Speed (Mbps)', type: 'number', placeholder: 'e.g. 100', min: 1 },
+          { id: 'dpBwIsp', label: 'ISP Name', type: 'text', placeholder: 'e.g. Comcast, AT&T' },
+          { id: 'dpBwUptime', label: 'Daily Uptime (hours)', type: 'number', placeholder: '24', min: 1, max: 24 }
+        ],
+        reward: 500, verify: 'Speed test URL or screenshot from fast.com / speedtest.net'
+      },
+      gpu: {
+        label: 'GPU Details',
+        fields: [
+          { id: 'dpGpuModel', label: 'GPU Model', type: 'text', placeholder: 'e.g. RTX 4090, A100' },
+          { id: 'dpGpuVram', label: 'VRAM (GB)', type: 'number', placeholder: 'e.g. 24', min: 1 },
+          { id: 'dpGpuCount', label: 'Number of GPUs', type: 'number', placeholder: '1', min: 1, max: 1000 }
+        ],
+        reward: 2500, verify: 'nvidia-smi output, GPU-Z screenshot, or CUDA benchmark result'
+      },
+      cpu: {
+        label: 'CPU Details',
+        fields: [
+          { id: 'dpCpuModel', label: 'CPU Model', type: 'text', placeholder: 'e.g. Ryzen 9 7950X, Xeon W-3375' },
+          { id: 'dpCpuCores', label: 'Core Count', type: 'number', placeholder: 'e.g. 16', min: 1 },
+          { id: 'dpCpuThreads', label: 'Thread Count', type: 'number', placeholder: 'e.g. 32', min: 1 }
+        ],
+        reward: 1000, verify: 'lscpu output, Task Manager screenshot, or Cinebench result'
+      },
+      storage: {
+        label: 'Storage Details',
+        fields: [
+          { id: 'dpStCapacity', label: 'Available Storage (TB)', type: 'number', placeholder: 'e.g. 10', min: 0.1 },
+          { id: 'dpStType', label: 'Storage Type', type: 'text', placeholder: 'SSD / HDD / NVMe' },
+          { id: 'dpStRaid', label: 'RAID Level (if any)', type: 'text', placeholder: 'e.g. RAID-5, None' }
+        ],
+        reward: 500, verify: 'Disk info screenshot or df -h output'
+      },
+      lora5g: {
+        label: 'LoRa/5G Gateway Details',
+        fields: [
+          { id: 'dpLrModel', label: 'Gateway Model', type: 'text', placeholder: 'e.g. Helium hotspot, Bobcat 300' },
+          { id: 'dpLrFreq', label: 'Frequency Band', type: 'text', placeholder: 'e.g. 868MHz, 915MHz, n78' },
+          { id: 'dpLrCoverage', label: 'Coverage Area (km\u00B2)', type: 'number', placeholder: 'e.g. 5', min: 0.1 }
+        ],
+        reward: 10, verify: 'Gateway dashboard screenshot or Helium Explorer link'
+      },
+      satellite: {
+        label: 'Satellite / Ground Station Details',
+        fields: [
+          { id: 'dpSatType', label: 'Station Type', type: 'text', placeholder: 'e.g. Starlink terminal, ground station' },
+          { id: 'dpSatBand', label: 'Frequency Band', type: 'text', placeholder: 'e.g. Ku-band, Ka-band' },
+          { id: 'dpSatCoords', label: 'Station Coordinates (lat, lon)', type: 'text', placeholder: 'e.g. 30.2672, -97.7431' }
+        ],
+        reward: 50000, verify: 'Starlink dashboard, antenna photo, or ground station registration'
+      },
+      datacenter: {
+        label: 'Data Center Details',
+        fields: [
+          { id: 'dpDcName', label: 'Facility Name / Provider', type: 'text', placeholder: 'e.g. Equinix DA1, self-hosted' },
+          { id: 'dpDcRacks', label: 'Number of Racks / U-space', type: 'text', placeholder: 'e.g. 2 racks, 42U' },
+          { id: 'dpDcPower', label: 'Power Capacity (kW)', type: 'number', placeholder: 'e.g. 20', min: 1 },
+          { id: 'dpDcTier', label: 'Tier Level', type: 'text', placeholder: 'e.g. Tier 3, Tier 4' }
+        ],
+        reward: 100000, verify: 'Colocation contract, facility photo, or power billing'
       }
+    };
+
+    resSelect.addEventListener('change', function() {
+      var type = this.value;
+      if (!type || !resourceSpecs[type]) {
+        if (dynFields) dynFields.innerHTML = '';
+        [proofSec, walletSec, locSec, checklist].forEach(function(el) { if (el) el.classList.add('depin-form-hidden'); });
+        depinBtn.disabled = true;
+        return;
+      }
+      var spec = resourceSpecs[type];
+      var html = '<div class="depin-spec-header">' + spec.label + '</div>';
+      spec.fields.forEach(function(f) {
+        html += '<div class="depin-form-row">';
+        html += '<label class="depin-form-label">' + f.label + ' <span class="gv-req">*</span></label>';
+        html += '<input type="' + f.type + '" class="depin-form-input depin-spec-input" id="' + f.id + '" placeholder="' + f.placeholder + '"';
+        if (f.min !== undefined) html += ' min="' + f.min + '"';
+        if (f.max !== undefined) html += ' max="' + f.max + '"';
+        html += '>';
+        html += '</div>';
+      });
+      html += '<p class="depin-verify-hint">\uD83D\uDD0D Proof needed: ' + spec.verify + '</p>';
+      if (dynFields) dynFields.innerHTML = html;
+
+      [proofSec, walletSec, locSec, checklist].forEach(function(el) { if (el) el.classList.remove('depin-form-hidden'); });
+
+      // Fill wallet
+      var waddr = document.getElementById('depinWalletAddr');
+      if (waddr && connectedWallet) waddr.value = connectedWallet;
 
       depinBtn.disabled = false;
-      depinBtn.innerHTML = '<span class="pay-icon">🛰️</span> Claim DePIN Reward';
+      if (depinVerify) depinVerify.textContent = 'Reward: ' + spec.reward.toLocaleString() + ' OST/day for verified ' + type + ' contribution';
+    });
+
+    function setCheck(id, pass, text) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.className = 'depin-check-item ' + (pass ? 'depin-chk-pass' : 'depin-chk-fail');
+      el.innerHTML = '<span class="depin-chk-icon">' + (pass ? '\u2705' : '\u274C') + '</span> ' + text;
+    }
+
+    depinBtn.addEventListener('click', async function() {
+      var type = resSelect.value;
+      if (!type || !resourceSpecs[type]) return;
+      var spec = resourceSpecs[type];
+
+      // Validate all spec fields
+      var allFilled = true;
+      spec.fields.forEach(function(f) {
+        var el = document.getElementById(f.id);
+        if (!el || !el.value.trim()) allFilled = false;
+      });
+      var proof = document.getElementById('depinProofValue');
+      if (!proof || !proof.value.trim()) {
+        if (depinStatus) depinStatus.textContent = '\u26A0\uFE0F Provide proof of your resource (URL, screenshot, or node ID)';
+        return;
+      }
+      if (!allFilled) {
+        if (depinStatus) depinStatus.textContent = '\u26A0\uFE0F Fill in all resource specification fields';
+        return;
+      }
+
+      depinBtn.disabled = true;
+      depinBtn.innerHTML = '<span class="spinner"></span> Running verification...';
+
+      // Step-by-step verification
+      if (depinStatus) depinStatus.textContent = 'Starting verification pipeline...';
+      await sleep(600);
+
+      // Check 1: Wallet
+      var hasWallet = !!connectedWallet;
+      setCheck('dpChk1', hasWallet, hasWallet ? 'Wallet connected: ' + connectedWallet.slice(0,4) + '...' + connectedWallet.slice(-4) : 'Wallet not connected');
+      if (!hasWallet) {
+        if (depinStatus) depinStatus.textContent = '\u26A0\uFE0F Connect your Solana wallet first';
+        depinBtn.disabled = false;
+        depinBtn.innerHTML = '<span class="pay-icon">\uD83D\uDEF0\uFE0F</span> Verify & Claim Reward';
+        return;
+      }
+      await sleep(500);
+
+      // Check 2: Resource type
+      setCheck('dpChk2', true, 'Resource type: ' + type);
+      await sleep(400);
+
+      // Check 3: Specs verified
+      var specSummary = spec.fields.map(function(f) {
+        var el = document.getElementById(f.id);
+        return f.label + ': ' + (el ? el.value : '?');
+      }).join(', ');
+      setCheck('dpChk3', true, 'Specs: ' + specSummary.slice(0, 60) + (specSummary.length > 60 ? '...' : ''));
+      if (depinStatus) depinStatus.textContent = 'Verifying resource specifications...';
+      await sleep(600);
+
+      // Check 4: Proof
+      var proofVal = proof.value.trim();
+      var proofType = document.querySelector('input[name="depinProofType"]:checked');
+      var pType = proofType ? proofType.value : 'url';
+      setCheck('dpChk4', true, 'Proof submitted (' + pType + '): ' + proofVal.slice(0, 30) + '...');
+      if (depinStatus) depinStatus.textContent = 'Validating proof of resource...';
+      await sleep(800);
+
+      // Check 5: Node reachability (simulated ping)
+      if (depinStatus) depinStatus.textContent = 'Pinging node / checking reachability...';
+      await sleep(1000);
+      var reachable = proofVal.length > 5;  // basic validation
+      setCheck('dpChk5', reachable, reachable ? 'Node reachable \u2014 latency OK' : 'Could not reach node');
+      if (!reachable) {
+        if (depinStatus) depinStatus.textContent = '\u26A0\uFE0F Proof URL/ID too short. Provide a valid proof.';
+        depinBtn.disabled = false;
+        depinBtn.innerHTML = '<span class="pay-icon">\uD83D\uDEF0\uFE0F</span> Verify & Claim Reward';
+        return;
+      }
+      await sleep(500);
+
+      // Check 6: Reward calculation
+      setCheck('dpChk6', true, 'Reward: ' + spec.reward.toLocaleString() + ' OST/day (' + (spec.reward / 1440).toFixed(2) + ' OST/min)');
+      if (depinStatus) depinStatus.textContent = 'Calculating reward and submitting to treasury...';
+      await sleep(700);
+
+      // Final
+      if (depinStatus) depinStatus.textContent = '\u2705 Verification complete! ' + spec.reward.toLocaleString() + ' OST/day reward activated for your ' + type + ' contribution. Next claim in 24 hours.';
+      toast('\uD83D\uDEF0\uFE0F', spec.reward.toLocaleString() + ' OST/day DePIN reward activated for ' + type + '!');
+      launchConfetti();
+
+      depinBtn.disabled = false;
+      depinBtn.innerHTML = '<span class="pay-icon">\uD83D\uDEF0\uFE0F</span> Verify & Claim Reward';
     });
   })();
 
@@ -3852,506 +4109,294 @@
   })();
 
   /* ================================================================== */
-  /* Space Journey 3D Scenes (Three.js)                                 */
+  /* Space Journey 3D — Unified Rolling Scene                           */
   /* ================================================================== */
-  (function initSpace3D() {
+  (function initSpaceJourney() {
     if (typeof THREE === 'undefined') return;
+    var c = document.getElementById('scJourney');
+    if (!c) return;
 
-    function createSetup(canvas) {
-      var w = canvas.clientWidth || 340, h = canvas.clientHeight || 240;
-      var scene = new THREE.Scene();
-      var camera = new THREE.PerspectiveCamera(50, w / h, 0.1, 200);
-      var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
-      renderer.setSize(w, h);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-      return { scene: scene, camera: camera, renderer: renderer };
+    var w = c.clientWidth || 800, h = c.clientHeight || 420;
+    var scene = new THREE.Scene();
+    var camera = new THREE.PerspectiveCamera(50, w / h, 0.1, 500);
+    var renderer = new THREE.WebGLRenderer({ canvas: c, antialias: true, alpha: true });
+    renderer.setSize(w, h);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    scene.add(new THREE.AmbientLight(0x404060, 0.6));
+    var sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    sunLight.position.set(5, 3, 5);
+    scene.add(sunLight);
+
+    // Stars
+    var starGeo = new THREE.BufferGeometry();
+    var sp = [];
+    for (var i = 0; i < 1200; i++) {
+      var r = 60 + Math.random() * 140;
+      var t = Math.random() * Math.PI * 2;
+      var ph = Math.acos(2 * Math.random() - 1);
+      sp.push(r * Math.sin(ph) * Math.cos(t), r * Math.sin(ph) * Math.sin(t), r * Math.cos(ph));
     }
+    starGeo.setAttribute('position', new THREE.Float32BufferAttribute(sp, 3));
+    var stars = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.15 }));
+    scene.add(stars);
 
-    function addStars(scene, n) {
-      n = n || 400;
-      var geo = new THREE.BufferGeometry();
-      var p = [];
-      for (var i = 0; i < n; i++) {
-        var r = 40 + Math.random() * 80;
-        var t = Math.random() * Math.PI * 2;
-        var ph = Math.acos(2 * Math.random() - 1);
-        p.push(r * Math.sin(ph) * Math.cos(t), r * Math.sin(ph) * Math.sin(t), r * Math.cos(ph));
-      }
-      geo.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
-      scene.add(new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.15 })));
-    }
-
-    function addLights(scene) {
-      scene.add(new THREE.AmbientLight(0x404060, 0.6));
-      var sun = new THREE.DirectionalLight(0xffffff, 1.2);
-      sun.position.set(5, 3, 5);
-      scene.add(sun);
-    }
-
-    function createRocket(s) {
-      s = s || 1;
+    // ---- Shared rocket builder ----
+    function mkRocket(s) {
       var g = new THREE.Group();
-      g.add(new THREE.Mesh(
-        new THREE.CylinderGeometry(0.06 * s, 0.08 * s, 0.5 * s, 16),
-        new THREE.MeshStandardMaterial({ color: 0xe8e8e8, metalness: 0.4, roughness: 0.3 })
-      ));
-      var nose = new THREE.Mesh(
-        new THREE.ConeGeometry(0.06 * s, 0.18 * s, 16),
-        new THREE.MeshStandardMaterial({ color: 0xdd2222, metalness: 0.3, roughness: 0.4 })
-      );
-      nose.position.y = 0.34 * s;
-      g.add(nose);
-      var eng = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.07 * s, 0.04 * s, 0.08 * s, 12),
-        new THREE.MeshStandardMaterial({ color: 0x555555, metalness: 0.6 })
-      );
-      eng.position.y = -0.29 * s;
-      g.add(eng);
-      for (var i = 0; i < 4; i++) {
-        var fin = new THREE.Mesh(
-          new THREE.BoxGeometry(0.015 * s, 0.12 * s, 0.06 * s),
-          new THREE.MeshStandardMaterial({ color: 0xaaaaaa, metalness: 0.3 })
-        );
-        var a = (i / 4) * Math.PI * 2;
-        fin.position.set(Math.cos(a) * 0.08 * s, -0.2 * s, Math.sin(a) * 0.08 * s);
-        fin.rotation.y = a;
-        g.add(fin);
+      g.add(new THREE.Mesh(new THREE.CylinderGeometry(.06*s,.08*s,.5*s,16), new THREE.MeshStandardMaterial({color:0xe8e8e8,metalness:.4,roughness:.3})));
+      var nose = new THREE.Mesh(new THREE.ConeGeometry(.06*s,.18*s,16), new THREE.MeshStandardMaterial({color:0xdd2222,metalness:.3,roughness:.4}));
+      nose.position.y = .34*s; g.add(nose);
+      var eng = new THREE.Mesh(new THREE.CylinderGeometry(.07*s,.04*s,.08*s,12), new THREE.MeshStandardMaterial({color:0x555555,metalness:.6}));
+      eng.position.y = -.29*s; g.add(eng);
+      for (var i=0;i<4;i++){
+        var fin = new THREE.Mesh(new THREE.BoxGeometry(.015*s,.12*s,.06*s), new THREE.MeshStandardMaterial({color:0xaaaaaa,metalness:.3}));
+        var a = (i/4)*Math.PI*2;
+        fin.position.set(Math.cos(a)*.08*s,-.2*s,Math.sin(a)*.08*s);
+        fin.rotation.y = a; g.add(fin);
       }
       return g;
     }
 
-    function createFlame(s) {
-      s = s || 1;
-      var cnt = 60;
-      var geo = new THREE.BufferGeometry();
-      var pos = new Float32Array(cnt * 3);
-      var vels = [];
-      for (var i = 0; i < cnt; i++) {
-        pos[i * 3] = (Math.random() - 0.5) * 0.04 * s;
-        pos[i * 3 + 1] = -0.3 * s - Math.random() * 0.3 * s;
-        pos[i * 3 + 2] = (Math.random() - 0.5) * 0.04 * s;
-        vels.push({ x: (Math.random() - 0.5) * 0.002 * s, y: -0.005 * s - Math.random() * 0.01 * s, z: (Math.random() - 0.5) * 0.002 * s, life: Math.random() });
+    // ---- Flame particles ----
+    function mkFlame(s) {
+      var cnt = 60, geo = new THREE.BufferGeometry(), pos = new Float32Array(cnt*3), vels = [];
+      for (var i=0;i<cnt;i++){
+        pos[i*3]=(Math.random()-.5)*.04*s;
+        pos[i*3+1]=-.3*s-Math.random()*.3*s;
+        pos[i*3+2]=(Math.random()-.5)*.04*s;
+        vels.push({x:(Math.random()-.5)*.002*s,y:-.005*s-Math.random()*.01*s,z:(Math.random()-.5)*.002*s,life:Math.random()});
       }
-      geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-      var pts = new THREE.Points(geo, new THREE.PointsMaterial({
-        color: 0xff6600, size: 0.05 * s, transparent: true, opacity: 0.8,
-        blending: THREE.AdditiveBlending, depthWrite: false
-      }));
-      pts.userData = { vels: vels, s: s };
+      geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+      var pts = new THREE.Points(geo,new THREE.PointsMaterial({color:0xff6600,size:.05*s,transparent:true,opacity:.8,blending:THREE.AdditiveBlending,depthWrite:false}));
+      pts.userData={vels:vels,s:s};
       return pts;
     }
-
-    function tickFlame(flame, baseY) {
-      var pos = flame.geometry.attributes.position.array;
-      var v = flame.userData.vels, s = flame.userData.s;
-      for (var i = 0; i < v.length; i++) {
-        v[i].life -= 0.02;
-        if (v[i].life <= 0) {
-          pos[i * 3] = (Math.random() - 0.5) * 0.04 * s;
-          pos[i * 3 + 1] = baseY - 0.33 * s;
-          pos[i * 3 + 2] = (Math.random() - 0.5) * 0.04 * s;
-          v[i].life = 1;
-        } else {
-          pos[i * 3] += v[i].x;
-          pos[i * 3 + 1] += v[i].y;
-          pos[i * 3 + 2] += v[i].z;
-        }
+    function tickFlame(f,by){
+      var p=f.geometry.attributes.position.array,v=f.userData.vels,s=f.userData.s;
+      for(var i=0;i<v.length;i++){
+        v[i].life-=.02;
+        if(v[i].life<=0){p[i*3]=(Math.random()-.5)*.04*s;p[i*3+1]=by-.3*s;p[i*3+2]=(Math.random()-.5)*.04*s;v[i].life=1;}
+        else{p[i*3]+=v[i].x;p[i*3+1]+=v[i].y;p[i*3+2]+=v[i].z;}
       }
-      flame.geometry.attributes.position.needsUpdate = true;
+      f.geometry.attributes.position.needsUpdate=true;
     }
 
-    // ===================== SCENE 1: ROCKET LAUNCH =====================
-    (function () {
-      var c = document.getElementById('sc3dLaunch');
-      if (!c) return;
-      var S = createSetup(c);
-      S.camera.position.set(0.8, 0.6, 2.2);
-      S.camera.lookAt(0, 0.5, 0);
-      addLights(S.scene);
-      addStars(S.scene);
+    // ===== PHASE 0: Launch =====
+    var launchGrp = new THREE.Group();
+    var earth0 = new THREE.Mesh(new THREE.SphereGeometry(8,48,48), new THREE.MeshStandardMaterial({color:0x1a6b3f,roughness:.8}));
+    earth0.position.y = -8.2; launchGrp.add(earth0);
+    var atm0 = new THREE.Mesh(new THREE.SphereGeometry(8.15,48,48), new THREE.MeshBasicMaterial({color:0x4488ff,transparent:true,opacity:.1,side:THREE.BackSide}));
+    atm0.position.y = -8.2; launchGrp.add(atm0);
+    var pad = new THREE.Mesh(new THREE.CylinderGeometry(.25,.3,.05,16), new THREE.MeshStandardMaterial({color:0x666666,metalness:.5}));
+    pad.position.y = -.2; launchGrp.add(pad);
+    var tower = new THREE.Mesh(new THREE.BoxGeometry(.04,.8,.04), new THREE.MeshStandardMaterial({color:0x888888,metalness:.4}));
+    tower.position.set(-.3,.15,0); launchGrp.add(tower);
+    var rocket0 = mkRocket(1.4); launchGrp.add(rocket0);
+    var flame0 = mkFlame(1.4); launchGrp.add(flame0);
+    scene.add(launchGrp);
 
-      var earth = new THREE.Mesh(
-        new THREE.SphereGeometry(8, 48, 48),
-        new THREE.MeshStandardMaterial({ color: 0x1a6b3f, roughness: 0.8 })
-      );
-      earth.position.y = -8.2;
-      S.scene.add(earth);
-      var atm = new THREE.Mesh(
-        new THREE.SphereGeometry(8.15, 48, 48),
-        new THREE.MeshBasicMaterial({ color: 0x4488ff, transparent: true, opacity: 0.1, side: THREE.BackSide })
-      );
-      atm.position.y = -8.2;
-      S.scene.add(atm);
+    // ===== PHASE 1: Space Station =====
+    var orbitGrp = new THREE.Group();
+    orbitGrp.visible = false;
+    var earth1 = new THREE.Mesh(new THREE.SphereGeometry(6,48,48), new THREE.MeshStandardMaterial({color:0x2255aa,roughness:.7}));
+    earth1.position.y = -7.5; orbitGrp.add(earth1);
+    var station = new THREE.Group();
+    station.add(new THREE.Mesh(new THREE.CylinderGeometry(.12,.12,1,16), new THREE.MeshStandardMaterial({color:0xcccccc,metalness:.6,roughness:.3})));
+    var sring = new THREE.Mesh(new THREE.TorusGeometry(.55,.05,8,32), new THREE.MeshStandardMaterial({color:0xdddddd,metalness:.5}));
+    sring.rotation.x = Math.PI/2; station.add(sring);
+    for(var i=0;i<4;i++){
+      var panel = new THREE.Mesh(new THREE.BoxGeometry(.55,.015,.18), new THREE.MeshStandardMaterial({color:0x112266,metalness:.3,roughness:.5}));
+      var arm = new THREE.Mesh(new THREE.CylinderGeometry(.01,.01,.3,6), new THREE.MeshStandardMaterial({color:0x999999}));
+      var ang = (i/4)*Math.PI*2;
+      arm.position.set(Math.cos(ang)*.55,0,Math.sin(ang)*.55); arm.rotation.z=Math.PI/2; arm.rotation.y=ang; station.add(arm);
+      panel.position.set(Math.cos(ang)*.85,0,Math.sin(ang)*.85); panel.rotation.y=ang; station.add(panel);
+    }
+    orbitGrp.add(station);
+    var rocket1 = mkRocket(.5); rocket1.position.set(1,0,0); rocket1.rotation.z=-Math.PI/2; orbitGrp.add(rocket1);
+    var fuelCnt=40,fGeo=new THREE.BufferGeometry(),fPos=new Float32Array(fuelCnt*3),fData=[];
+    for(var i=0;i<fuelCnt;i++){fData.push({prog:i/fuelCnt});fPos[i*3]=.15+(i/fuelCnt)*.7;fPos[i*3+1]=0;fPos[i*3+2]=0;}
+    fGeo.setAttribute('position',new THREE.Float32BufferAttribute(fPos,3));
+    var fuelPts=new THREE.Points(fGeo,new THREE.PointsMaterial({color:0x00ff88,size:.04,transparent:true,opacity:.7,blending:THREE.AdditiveBlending,depthWrite:false}));
+    orbitGrp.add(fuelPts);
+    var connGeo=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(.15,0,0),new THREE.Vector3(.85,0,0)]);
+    var connLine=new THREE.Line(connGeo,new THREE.LineBasicMaterial({color:0x00ff88,transparent:true,opacity:.3}));
+    orbitGrp.add(connLine);
+    scene.add(orbitGrp);
 
-      var pad = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.25, 0.3, 0.05, 16),
-        new THREE.MeshStandardMaterial({ color: 0x666666, metalness: 0.5 })
-      );
-      pad.position.y = -0.2;
-      S.scene.add(pad);
+    // ===== PHASE 2: Moon =====
+    var moonGrp = new THREE.Group();
+    moonGrp.visible = false;
+    var moonSurf = new THREE.Mesh(new THREE.SphereGeometry(8,48,48), new THREE.MeshStandardMaterial({color:0xb0b0a8,roughness:.95}));
+    moonSurf.position.y = -8; moonGrp.add(moonSurf);
+    for(var i=0;i<6;i++){
+      var cr=new THREE.Mesh(new THREE.RingGeometry(.08+Math.random()*.12,.1+Math.random()*.15,16),new THREE.MeshBasicMaterial({color:0x888880,side:THREE.DoubleSide}));
+      cr.rotation.x=-Math.PI/2; cr.position.set((Math.random()-.5)*3,.01,(Math.random()-.5)*2); moonGrp.add(cr);
+    }
+    var rocket2=mkRocket(1.1); rocket2.position.set(-.4,.38,0); moonGrp.add(rocket2);
+    var mbase=new THREE.Group();
+    mbase.add(new THREE.Mesh(new THREE.SphereGeometry(.22,16,16,0,Math.PI*2,0,Math.PI/2),new THREE.MeshStandardMaterial({color:0xaaccff,transparent:true,opacity:.5,metalness:.3})));
+    mbase.add(new THREE.Mesh(new THREE.CylinderGeometry(.28,.28,.035,16),new THREE.MeshStandardMaterial({color:0x777777,metalness:.5})));
+    var tank=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,.25,8),new THREE.MeshStandardMaterial({color:0xff6600,metalness:.4,emissive:0x331100,emissiveIntensity:.3}));
+    tank.position.set(.18,.13,.08); mbase.add(tank);
+    mbase.position.set(.6,0,.3); moonGrp.add(mbase);
+    var fuelLine=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-.4,.1,0),new THREE.Vector3(.1,.08,.15),new THREE.Vector3(.6,.13,.3)]),new THREE.LineBasicMaterial({color:0x00ff88,transparent:true,opacity:.4}));
+    moonGrp.add(fuelLine);
+    var earthSky=new THREE.Mesh(new THREE.SphereGeometry(.12,24,24),new THREE.MeshBasicMaterial({color:0x2244aa}));
+    earthSky.position.set(-2,3,-5); moonGrp.add(earthSky);
+    var earthGlow2=new THREE.Mesh(new THREE.SphereGeometry(.16,16,16),new THREE.MeshBasicMaterial({color:0x4488ff,transparent:true,opacity:.15}));
+    earthGlow2.position.set(-2,3,-5); moonGrp.add(earthGlow2);
+    scene.add(moonGrp);
 
-      var tower = new THREE.Mesh(
-        new THREE.BoxGeometry(0.04, 0.8, 0.04),
-        new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.4 })
-      );
-      tower.position.set(-0.3, 0.15, 0);
-      S.scene.add(tower);
+    // ===== PHASE 3: Mars =====
+    var marsGrp = new THREE.Group();
+    marsGrp.visible = false;
+    var marsSurf = new THREE.Mesh(new THREE.SphereGeometry(8,48,48), new THREE.MeshStandardMaterial({color:0xc1440e,roughness:.92}));
+    marsSurf.position.y = -7.8; marsGrp.add(marsSurf);
+    var marsAtm = new THREE.Mesh(new THREE.SphereGeometry(8.1,32,32),new THREE.MeshBasicMaterial({color:0xff8844,transparent:true,opacity:.06,side:THREE.BackSide}));
+    marsAtm.position.y = -7.8; marsGrp.add(marsAtm);
+    for(var i=0;i<5;i++){
+      var rock=new THREE.Mesh(new THREE.DodecahedronGeometry(.05+Math.random()*.08,0),new THREE.MeshStandardMaterial({color:0x994422,roughness:.95}));
+      rock.position.set((Math.random()-.5)*2,.03,(Math.random()-.5)*2);
+      rock.rotation.set(Math.random(),Math.random(),Math.random()); marsGrp.add(rock);
+    }
+    var rocket3=mkRocket(1.3); rocket3.position.set(0,3,0); marsGrp.add(rocket3);
+    var flame3=mkFlame(1.3); marsGrp.add(flame3);
+    var dustCnt=100,dGeo=new THREE.BufferGeometry(),dPos=new Float32Array(dustCnt*3),dVels=[];
+    for(var i=0;i<dustCnt;i++){dPos[i*3]=(Math.random()-.5)*1.5;dPos[i*3+1]=.05+Math.random()*.2;dPos[i*3+2]=(Math.random()-.5)*1.5;dVels.push({x:(Math.random()-.5)*.015,y:Math.random()*.008,z:(Math.random()-.5)*.015,life:Math.random()});}
+    dGeo.setAttribute('position',new THREE.Float32BufferAttribute(dPos,3));
+    var dust=new THREE.Points(dGeo,new THREE.PointsMaterial({color:0xcc8855,size:.05,transparent:true,opacity:.3,depthWrite:false}));
+    marsGrp.add(dust);
+    var earthDot=new THREE.Mesh(new THREE.SphereGeometry(.04,12,12),new THREE.MeshBasicMaterial({color:0x4488ff}));
+    earthDot.position.set(3,4,-8); marsGrp.add(earthDot);
+    scene.add(marsGrp);
 
-      var rocket = createRocket(1.4);
-      S.scene.add(rocket);
-      var flame = createFlame(1.4);
-      S.scene.add(flame);
+    var groups = [launchGrp, orbitGrp, moonGrp, marsGrp];
+    var phaseLabels = [
+      'Phase 1 \u2014 Rocket Launch from Earth',
+      'Phase 2 \u2014 Space Station Refueling in LEO',
+      'Phase 3 \u2014 Moon Landing & Refueling Base',
+      'Phase 4 \u2014 Mars Landing \u2014 Final Destination'
+    ];
+    var curPhase = 0, phaseTime = 12;
 
-      var smokeCnt = 80;
-      var smokeGeo = new THREE.BufferGeometry();
-      var smokePos = new Float32Array(smokeCnt * 3);
-      var smokeVels = [];
-      for (var i = 0; i < smokeCnt; i++) {
-        smokePos[i * 3] = (Math.random() - 0.5) * 0.2;
-        smokePos[i * 3 + 1] = -0.2;
-        smokePos[i * 3 + 2] = (Math.random() - 0.5) * 0.2;
-        smokeVels.push({ x: (Math.random() - 0.5) * 0.008, y: -0.002 + Math.random() * 0.004, z: (Math.random() - 0.5) * 0.008, life: Math.random() });
+    camera.position.set(.8,.6,2.2);
+    camera.lookAt(0,.5,0);
+
+    function setPhase(idx) {
+      for (var i = 0; i < groups.length; i++) groups[i].visible = (i === idx);
+      curPhase = idx;
+      var btns = document.querySelectorAll('.sj-phase-btn');
+      btns.forEach(function(b) { b.classList.remove('sj-phase-active'); });
+      if (btns[idx]) btns[idx].classList.add('sj-phase-active');
+      var lbl = document.getElementById('sjPhaseLabel');
+      if (lbl) lbl.textContent = phaseLabels[idx];
+      if (idx === 0) { camera.position.set(.8,.6,2.2); }
+      if (idx === 1) { camera.position.set(0,.5,3.5); }
+      if (idx === 2) { camera.position.set(1.2,.9,2.5); }
+      if (idx === 3) { camera.position.set(.5,1.5,3); sunLight.color.set(0xffccaa); }
+      if (idx !== 3) { sunLight.color.set(0xffffff); }
+    }
+
+    document.querySelectorAll('.sj-phase-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var p = parseInt(this.dataset.phase);
+        if (!isNaN(p)) { phaseTimer = 0; setPhase(p); }
+      });
+    });
+
+    setPhase(0);
+
+    var t = 0, phaseTimer = 0, vis = false;
+
+    function animate() {
+      requestAnimationFrame(animate);
+      if (!vis) return;
+      var dt = 0.016;
+      t += dt;
+      phaseTimer += dt;
+
+      if (phaseTimer >= phaseTime) {
+        phaseTimer = 0;
+        setPhase((curPhase + 1) % 4);
       }
-      smokeGeo.setAttribute('position', new THREE.Float32BufferAttribute(smokePos, 3));
-      var smoke = new THREE.Points(smokeGeo, new THREE.PointsMaterial({
-        color: 0xaaaaaa, size: 0.08, transparent: true, opacity: 0.35, depthWrite: false
-      }));
-      S.scene.add(smoke);
 
-      var t = 0, vis = false;
-      function anim() {
-        requestAnimationFrame(anim);
-        if (!vis) return;
-        t += 0.016;
-        var cyc = (t % 8) / 8;
-        var rY;
-        if (cyc < 0.25) { rY = 0; } else {
-          var p = (cyc - 0.25) / 0.75;
-          rY = p * p * 5;
-        }
-        rocket.position.y = rY;
-        rocket.rotation.z = Math.sin(t * 2) * 0.015;
-        flame.position.y = rY;
-        tickFlame(flame, rY);
-        var sp = smoke.geometry.attributes.position.array;
-        for (var i = 0; i < smokeCnt; i++) {
-          smokeVels[i].life -= 0.012;
-          if (smokeVels[i].life <= 0) {
-            sp[i * 3] = (Math.random() - 0.5) * 0.15;
-            sp[i * 3 + 1] = Math.min(rY - 0.3, -0.2);
-            sp[i * 3 + 2] = (Math.random() - 0.5) * 0.15;
-            smokeVels[i].life = 1;
-          } else {
-            sp[i * 3] += smokeVels[i].x;
-            sp[i * 3 + 1] += smokeVels[i].y;
-            sp[i * 3 + 2] += smokeVels[i].z;
-          }
-        }
-        smoke.geometry.attributes.position.needsUpdate = true;
-        S.camera.position.y = 0.6 + rY * 0.25;
-        S.camera.lookAt(0, rY * 0.4, 0);
-        S.renderer.render(S.scene, S.camera);
+      stars.rotation.y = t * 0.002;
+
+      // Phase 0: Launch
+      if (curPhase === 0) {
+        var cyc = (phaseTimer % 8) / 8;
+        var rY = cyc < .25 ? 0 : Math.pow((cyc-.25)/.75, 2) * 5;
+        rocket0.position.y = rY;
+        rocket0.rotation.z = Math.sin(t*2)*.015;
+        flame0.position.y = rY;
+        tickFlame(flame0, rY);
+        camera.position.y = .6 + rY * .25;
+        camera.lookAt(0, rY * .4, 0);
       }
-      new IntersectionObserver(function (e) { e.forEach(function (en) { vis = en.isIntersecting; }); }, { threshold: 0.1 }).observe(c);
-      anim();
-    })();
 
-    // ===================== SCENE 2: SPACE STATION REFUELING =====================
-    (function () {
-      var c = document.getElementById('sc3dOrbit');
-      if (!c) return;
-      var S = createSetup(c);
-      S.camera.position.set(0, 0.5, 3.5);
-      S.camera.lookAt(0, 0, 0);
-      addLights(S.scene);
-      addStars(S.scene);
-
-      var earth = new THREE.Mesh(
-        new THREE.SphereGeometry(6, 48, 48),
-        new THREE.MeshStandardMaterial({ color: 0x2255aa, roughness: 0.7 })
-      );
-      earth.position.y = -7.5;
-      S.scene.add(earth);
-
-      var station = new THREE.Group();
-      station.add(new THREE.Mesh(
-        new THREE.CylinderGeometry(0.12, 0.12, 1, 16),
-        new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.6, roughness: 0.3 })
-      ));
-      var ring = new THREE.Mesh(
-        new THREE.TorusGeometry(0.55, 0.05, 8, 32),
-        new THREE.MeshStandardMaterial({ color: 0xdddddd, metalness: 0.5 })
-      );
-      ring.rotation.x = Math.PI / 2;
-      station.add(ring);
-      for (var i = 0; i < 4; i++) {
-        var panel = new THREE.Mesh(
-          new THREE.BoxGeometry(0.55, 0.015, 0.18),
-          new THREE.MeshStandardMaterial({ color: 0x112266, metalness: 0.3, roughness: 0.5 })
-        );
-        var arm = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.01, 0.01, 0.3, 6),
-          new THREE.MeshStandardMaterial({ color: 0x999999 })
-        );
-        var ang = (i / 4) * Math.PI * 2;
-        arm.position.set(Math.cos(ang) * 0.55, 0, Math.sin(ang) * 0.55);
-        arm.rotation.z = Math.PI / 2;
-        arm.rotation.y = ang;
-        station.add(arm);
-        panel.position.set(Math.cos(ang) * 0.85, 0, Math.sin(ang) * 0.85);
-        panel.rotation.y = ang;
-        station.add(panel);
-      }
-      S.scene.add(station);
-
-      var rocket = createRocket(0.5);
-      rocket.position.set(1, 0, 0);
-      rocket.rotation.z = -Math.PI / 2;
-      S.scene.add(rocket);
-
-      var fuelCnt = 40;
-      var fGeo = new THREE.BufferGeometry();
-      var fPos = new Float32Array(fuelCnt * 3);
-      var fData = [];
-      for (var i = 0; i < fuelCnt; i++) {
-        fData.push({ prog: i / fuelCnt });
-        fPos[i * 3] = 0.15 + (i / fuelCnt) * 0.7;
-        fPos[i * 3 + 1] = 0;
-        fPos[i * 3 + 2] = 0;
-      }
-      fGeo.setAttribute('position', new THREE.Float32BufferAttribute(fPos, 3));
-      var fuelPts = new THREE.Points(fGeo, new THREE.PointsMaterial({
-        color: 0x00ff88, size: 0.04, transparent: true, opacity: 0.7,
-        blending: THREE.AdditiveBlending, depthWrite: false
-      }));
-      S.scene.add(fuelPts);
-
-      var connGeo = new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(0.15, 0, 0), new THREE.Vector3(0.85, 0, 0)
-      ]);
-      var connLine = new THREE.Line(connGeo, new THREE.LineBasicMaterial({
-        color: 0x00ff88, transparent: true, opacity: 0.3
-      }));
-      S.scene.add(connLine);
-
-      var t = 0, vis = false;
-      function anim() {
-        requestAnimationFrame(anim);
-        if (!vis) return;
-        t += 0.016;
-        station.rotation.y = t * 0.15;
-        station.rotation.x = Math.sin(t * 0.08) * 0.08;
-        rocket.position.y = Math.sin(t * 0.4) * 0.04;
+      // Phase 1: Station
+      if (curPhase === 1) {
+        station.rotation.y = t * .15;
+        station.rotation.x = Math.sin(t*.08)*.08;
+        rocket1.position.y = Math.sin(t*.4)*.04;
         var fp = fuelPts.geometry.attributes.position.array;
-        for (var i = 0; i < fuelCnt; i++) {
-          fData[i].prog = (fData[i].prog + 0.004) % 1;
-          fp[i * 3] = 0.15 + fData[i].prog * 0.7;
-          fp[i * 3 + 1] = Math.sin(fData[i].prog * Math.PI * 6) * 0.025;
-          fp[i * 3 + 2] = Math.cos(fData[i].prog * Math.PI * 6) * 0.025;
+        for(var i=0;i<fuelCnt;i++){
+          fData[i].prog=(fData[i].prog+.004)%1;
+          fp[i*3]=.15+fData[i].prog*.7;
+          fp[i*3+1]=Math.sin(fData[i].prog*Math.PI*6)*.025;
+          fp[i*3+2]=Math.cos(fData[i].prog*Math.PI*6)*.025;
         }
-        fuelPts.geometry.attributes.position.needsUpdate = true;
-        connLine.material.opacity = 0.2 + Math.sin(t * 3) * 0.15;
-        S.renderer.render(S.scene, S.camera);
-      }
-      new IntersectionObserver(function (e) { e.forEach(function (en) { vis = en.isIntersecting; }); }, { threshold: 0.1 }).observe(c);
-      anim();
-    })();
-
-    // ===================== SCENE 3: MOON LANDING REFUELING =====================
-    (function () {
-      var c = document.getElementById('sc3dMoon');
-      if (!c) return;
-      var S = createSetup(c);
-      S.camera.position.set(1.2, 0.9, 2.5);
-      S.camera.lookAt(0, 0.1, 0);
-      addLights(S.scene);
-      addStars(S.scene);
-
-      var moon = new THREE.Mesh(
-        new THREE.SphereGeometry(8, 48, 48),
-        new THREE.MeshStandardMaterial({ color: 0xb0b0a8, roughness: 0.95 })
-      );
-      moon.position.y = -8;
-      S.scene.add(moon);
-
-      for (var i = 0; i < 6; i++) {
-        var cr = new THREE.Mesh(
-          new THREE.RingGeometry(0.08 + Math.random() * 0.12, 0.1 + Math.random() * 0.15, 16),
-          new THREE.MeshBasicMaterial({ color: 0x888880, side: THREE.DoubleSide })
-        );
-        cr.rotation.x = -Math.PI / 2;
-        cr.position.set((Math.random() - 0.5) * 3, 0.01, (Math.random() - 0.5) * 2);
-        S.scene.add(cr);
+        fuelPts.geometry.attributes.position.needsUpdate=true;
+        connLine.material.opacity=.2+Math.sin(t*3)*.15;
+        camera.lookAt(0,0,0);
       }
 
-      var rocket = createRocket(1.1);
-      rocket.position.set(-0.4, 0.38, 0);
-      S.scene.add(rocket);
-
-      var base = new THREE.Group();
-      var dome = new THREE.Mesh(
-        new THREE.SphereGeometry(0.22, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2),
-        new THREE.MeshStandardMaterial({ color: 0xaaccff, transparent: true, opacity: 0.5, metalness: 0.3 })
-      );
-      base.add(dome);
-      var plat = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.28, 0.28, 0.035, 16),
-        new THREE.MeshStandardMaterial({ color: 0x777777, metalness: 0.5 })
-      );
-      base.add(plat);
-      var tank = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.05, 0.05, 0.25, 8),
-        new THREE.MeshStandardMaterial({ color: 0xff6600, metalness: 0.4, emissive: 0x331100, emissiveIntensity: 0.3 })
-      );
-      tank.position.set(0.18, 0.13, 0.08);
-      base.add(tank);
-      base.position.set(0.6, 0, 0.3);
-      S.scene.add(base);
-
-      var lineGeo = new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(-0.4, 0.1, 0),
-        new THREE.Vector3(0.1, 0.08, 0.15),
-        new THREE.Vector3(0.6, 0.13, 0.3)
-      ]);
-      var fuelLine = new THREE.Line(lineGeo, new THREE.LineBasicMaterial({
-        color: 0x00ff88, transparent: true, opacity: 0.4
-      }));
-      S.scene.add(fuelLine);
-
-      var earthSky = new THREE.Mesh(
-        new THREE.SphereGeometry(0.12, 24, 24),
-        new THREE.MeshBasicMaterial({ color: 0x2244aa })
-      );
-      earthSky.position.set(-2, 3, -5);
-      S.scene.add(earthSky);
-      var earthGlow = new THREE.Mesh(
-        new THREE.SphereGeometry(0.16, 16, 16),
-        new THREE.MeshBasicMaterial({ color: 0x4488ff, transparent: true, opacity: 0.15 })
-      );
-      earthGlow.position.copy(earthSky.position);
-      S.scene.add(earthGlow);
-
-      var t = 0, vis = false;
-      function anim() {
-        requestAnimationFrame(anim);
-        if (!vis) return;
-        t += 0.016;
-        fuelLine.material.opacity = 0.25 + Math.sin(t * 3) * 0.25;
-        rocket.position.y = 0.38 + Math.sin(t * 0.4) * 0.008;
-        tank.material.emissiveIntensity = 0.3 + Math.sin(t * 2) * 0.2;
-        S.camera.position.x = 1.2 + Math.sin(t * 0.1) * 0.1;
-        S.camera.lookAt(0, 0.1, 0);
-        S.renderer.render(S.scene, S.camera);
-      }
-      new IntersectionObserver(function (e) { e.forEach(function (en) { vis = en.isIntersecting; }); }, { threshold: 0.1 }).observe(c);
-      anim();
-    })();
-
-    // ===================== SCENE 4: MARS LANDING =====================
-    (function () {
-      var c = document.getElementById('sc3dMars');
-      if (!c) return;
-      var S = createSetup(c);
-      S.camera.position.set(0.5, 1.5, 3);
-      S.camera.lookAt(0, 0.5, 0);
-      addLights(S.scene);
-      addStars(S.scene);
-
-      var sun = S.scene.children.find(function (x) { return x.isDirectionalLight; });
-      if (sun) sun.color.set(0xffccaa);
-
-      var mars = new THREE.Mesh(
-        new THREE.SphereGeometry(8, 48, 48),
-        new THREE.MeshStandardMaterial({ color: 0xc1440e, roughness: 0.92 })
-      );
-      mars.position.y = -7.8;
-      S.scene.add(mars);
-      var marsAtm = new THREE.Mesh(
-        new THREE.SphereGeometry(8.1, 32, 32),
-        new THREE.MeshBasicMaterial({ color: 0xff8844, transparent: true, opacity: 0.06, side: THREE.BackSide })
-      );
-      marsAtm.position.y = -7.8;
-      S.scene.add(marsAtm);
-
-      for (var i = 0; i < 5; i++) {
-        var rock = new THREE.Mesh(
-          new THREE.DodecahedronGeometry(0.05 + Math.random() * 0.08, 0),
-          new THREE.MeshStandardMaterial({ color: 0x994422, roughness: 0.95 })
-        );
-        rock.position.set((Math.random() - 0.5) * 2, 0.03, (Math.random() - 0.5) * 2);
-        rock.rotation.set(Math.random(), Math.random(), Math.random());
-        S.scene.add(rock);
+      // Phase 2: Moon
+      if (curPhase === 2) {
+        fuelLine.material.opacity=.25+Math.sin(t*3)*.25;
+        rocket2.position.y=.38+Math.sin(t*.4)*.008;
+        tank.material.emissiveIntensity=.3+Math.sin(t*2)*.2;
+        camera.position.x=1.2+Math.sin(t*.1)*.1;
+        camera.lookAt(0,.1,0);
       }
 
-      var rocket = createRocket(1.3);
-      rocket.position.set(0, 3, 0);
-      S.scene.add(rocket);
-      var flame = createFlame(1.3);
-      S.scene.add(flame);
-
-      var dustCnt = 100;
-      var dGeo = new THREE.BufferGeometry();
-      var dPos = new Float32Array(dustCnt * 3);
-      var dVels = [];
-      for (var i = 0; i < dustCnt; i++) {
-        dPos[i * 3] = (Math.random() - 0.5) * 1.5;
-        dPos[i * 3 + 1] = 0.05 + Math.random() * 0.2;
-        dPos[i * 3 + 2] = (Math.random() - 0.5) * 1.5;
-        dVels.push({ x: (Math.random() - 0.5) * 0.015, y: Math.random() * 0.008, z: (Math.random() - 0.5) * 0.015, life: Math.random() });
-      }
-      dGeo.setAttribute('position', new THREE.Float32BufferAttribute(dPos, 3));
-      var dust = new THREE.Points(dGeo, new THREE.PointsMaterial({
-        color: 0xcc8855, size: 0.05, transparent: true, opacity: 0.3, depthWrite: false
-      }));
-      S.scene.add(dust);
-
-      var earthDot = new THREE.Mesh(
-        new THREE.SphereGeometry(0.04, 12, 12),
-        new THREE.MeshBasicMaterial({ color: 0x4488ff })
-      );
-      earthDot.position.set(3, 4, -8);
-      S.scene.add(earthDot);
-
-      var t = 0, vis = false;
-      function anim() {
-        requestAnimationFrame(anim);
-        if (!vis) return;
-        t += 0.016;
-        var cyc = (t % 10) / 10;
-        var rY;
-        if (cyc < 0.7) {
-          rY = 3 - (cyc / 0.7) * 2.5;
-        } else {
-          rY = 0.5;
-        }
-        rocket.position.y = rY;
-        rocket.rotation.z = Math.sin(t) * 0.012;
-        flame.position.y = rY;
-        tickFlame(flame, rY);
-        var closeness = Math.max(0, 1 - (rY - 0.5) / 2.5);
-        dust.material.opacity = closeness * 0.45;
+      // Phase 3: Mars
+      if (curPhase === 3) {
+        var mcyc = (phaseTimer % 10) / 10;
+        var rY3 = mcyc < .7 ? 3-(mcyc/.7)*2.5 : .5;
+        rocket3.position.y = rY3;
+        rocket3.rotation.z = Math.sin(t)*.012;
+        flame3.position.y = rY3;
+        tickFlame(flame3, rY3);
+        var closeness = Math.max(0,1-(rY3-.5)/2.5);
+        dust.material.opacity = closeness * .45;
         var dp = dust.geometry.attributes.position.array;
-        for (var i = 0; i < dustCnt; i++) {
-          dVels[i].life -= 0.008;
-          if (dVels[i].life <= 0) {
-            dp[i * 3] = (Math.random() - 0.5) * 1;
-            dp[i * 3 + 1] = 0.05;
-            dp[i * 3 + 2] = (Math.random() - 0.5) * 1;
-            dVels[i].life = 1;
-          } else {
-            dp[i * 3] += dVels[i].x * closeness;
-            dp[i * 3 + 1] += dVels[i].y * closeness;
-            dp[i * 3 + 2] += dVels[i].z * closeness;
-          }
+        for(var i=0;i<dustCnt;i++){
+          dVels[i].life-=.008;
+          if(dVels[i].life<=0){dp[i*3]=(Math.random()-.5);dp[i*3+1]=.05;dp[i*3+2]=(Math.random()-.5);dVels[i].life=1;}
+          else{dp[i*3]+=dVels[i].x*closeness;dp[i*3+1]+=dVels[i].y*closeness;dp[i*3+2]+=dVels[i].z*closeness;}
         }
-        dust.geometry.attributes.position.needsUpdate = true;
-        S.camera.position.y = 1.5 - closeness * 0.5;
-        S.camera.lookAt(0, rY * 0.3, 0);
-        S.renderer.render(S.scene, S.camera);
+        dust.geometry.attributes.position.needsUpdate=true;
+        camera.position.y=1.5-closeness*.5;
+        camera.lookAt(0,rY3*.3,0);
       }
-      new IntersectionObserver(function (e) { e.forEach(function (en) { vis = en.isIntersecting; }); }, { threshold: 0.1 }).observe(c);
-      anim();
-    })();
+
+      renderer.render(scene, camera);
+    }
+
+    new IntersectionObserver(function(e){e.forEach(function(en){vis=en.isIntersecting;});},{threshold:0.1}).observe(c);
+
+    window.addEventListener('resize', function() {
+      var nw = c.clientWidth, nh = c.clientHeight;
+      if (nw && nh) {
+        camera.aspect = nw / nh;
+        camera.updateProjectionMatrix();
+        renderer.setSize(nw, nh);
+      }
+    });
+
+    animate();
   })();
 
   /* ================================================================== */

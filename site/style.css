@@ -3021,6 +3021,238 @@ select.sim-input { cursor: pointer; }
   box-shadow: 0 0 30px rgba(16, 185, 129, 0.15), inset 0 0 30px rgba(0,0,0,0.3);
 }
 
+/* =================== UNIFIED SPACE JOURNEY 3D =================== */
+.space-journey-3d {
+  position: relative;
+  width: 100%;
+  max-width: 800px;
+  margin: 24px auto 40px;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid rgba(109,159,255,0.3);
+  box-shadow: 0 0 40px rgba(109,159,255,0.15), inset 0 0 60px rgba(0,0,0,0.4);
+  background: radial-gradient(ellipse at center, rgba(8,12,28,0.95), #000);
+}
+.sj-canvas {
+  width: 100%;
+  height: 420px;
+  display: block;
+}
+.sj-phase-indicators {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 16px;
+  background: rgba(0,0,0,0.6);
+  border-top: 1px solid rgba(109,159,255,0.15);
+}
+.sj-phase-btn {
+  padding: 8px 16px;
+  background: rgba(109,159,255,0.08);
+  border: 1px solid rgba(109,159,255,0.2);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: .78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .3s;
+}
+.sj-phase-btn:hover {
+  background: rgba(109,159,255,0.15);
+  color: var(--text);
+}
+.sj-phase-active {
+  background: rgba(16,185,129,0.15) !important;
+  border-color: rgba(16,185,129,0.4) !important;
+  color: #10b981 !important;
+  box-shadow: 0 0 12px rgba(16,185,129,0.2);
+}
+.sj-phase-label {
+  text-align: center;
+  padding: 10px;
+  font-size: .82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: rgba(0,0,0,0.5);
+  letter-spacing: 0.5px;
+}
+
+/* =================== FAMILY VAULT MULTI-STEP =================== */
+.gv-form-subtitle {
+  font-size: .82rem;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+.gv-form-step { animation: fadeSlideIn .4s ease; }
+.gv-form-step-hidden { display: none !important; }
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.gv-step-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: .95rem;
+  font-weight: 700;
+  margin-bottom: 18px;
+  color: var(--text);
+}
+.gv-step-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: .8rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.gv-req { color: #ef4444; }
+.gv-form-select {
+  appearance: auto;
+  -webkit-appearance: auto;
+  cursor: pointer;
+}
+.gv-form-row-inline {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+.gv-form-row-inline .btn { flex: 1; }
+.gv-next-btn, .gv-back-btn {
+  width: 100%;
+  margin-top: 16px;
+}
+.gv-consent-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 16px 0;
+  text-align: left;
+}
+.gv-consent-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: .8rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  line-height: 1.4;
+}
+.gv-consent-row input[type="checkbox"] {
+  margin-top: 2px;
+  flex-shrink: 0;
+  accent-color: var(--accent);
+}
+.gv-progress-bar {
+  margin-top: 16px;
+  height: 6px;
+  background: var(--border);
+  border-radius: 999px;
+  position: relative;
+  overflow: hidden;
+}
+.gv-pb-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--success));
+  border-radius: 999px;
+  transition: width .5s ease;
+}
+.gv-pb-text {
+  position: absolute;
+  top: 10px;
+  right: 0;
+  font-size: .7rem;
+  color: var(--text-muted);
+}
+
+/* =================== DEPIN VERIFICATION FORM =================== */
+.depin-claim-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.depin-form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+  text-align: left;
+}
+.depin-form-hidden { display: none !important; }
+.depin-form-label {
+  font-size: .82rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.depin-form-input {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: .88rem;
+}
+.depin-form-input:focus { outline: none; border-color: var(--accent); }
+.depin-proof-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.depin-proof-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: .8rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.depin-proof-option input {
+  accent-color: var(--accent);
+}
+.depin-verify-status {
+  min-height: 24px;
+  margin: 10px 0;
+  font-size: .85rem;
+  color: var(--text-muted);
+}
+.depin-verify-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 16px 0;
+  padding: 16px;
+  background: rgba(109,159,255,0.04);
+  border: 1px solid rgba(109,159,255,0.15);
+  border-radius: var(--radius-sm);
+  text-align: left;
+}
+.depin-check-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: .82rem;
+  color: var(--text-muted);
+  transition: color .3s;
+}
+.depin-check-item.depin-chk-pass {
+  color: #10b981;
+}
+.depin-check-item.depin-chk-fail {
+  color: #ef4444;
+}
+.depin-chk-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
 /* ---------- Responsive additions ---------- */
 @media (max-width: 768px) {
   .section-space { padding: 80px 0 60px; }
@@ -3059,6 +3291,11 @@ select.sim-input { cursor: pointer; }
   .rt-station-icon { left: 24px; font-size: 1.8rem; }
   .rt-station-ring { left: 24px; width: 48px; height: 48px; }
   .rt-3d-wrap { max-width: 280px; height: 200px; }
+  .sj-canvas { height: 280px; }
+  .sj-phase-btn { font-size: .68rem; padding: 6px 10px; }
+  .space-journey-3d { border-radius: 12px; }
+  .gv-create-form { padding: 16px; }
+  .depin-claim-box { padding: 16px; }
   .rt-rocket { left: 24px; }
   .rt-station-label h4 { font-size: .95rem; }
 }

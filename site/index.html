@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20">
+  <link rel="stylesheet" href="style.css?v=21">
 </head>
 <body>
 
@@ -272,15 +272,118 @@
         </div>
 
         <div class="gv-create-form" id="gvCreateForm">
-          <h4>Create a Grow Vault</h4>
-          <div class="gv-form-row">
-            <label class="gv-form-label">Child&rsquo;s Birth Year</label>
-            <input type="number" class="gv-form-input" id="gvBirthYear" placeholder="2024" min="2000" max="2026">
+          <h4>&#128274; Create a Grow Vault</h4>
+          <p class="gv-form-subtitle">Identity verification required to protect against fraud. All data stays on your device.</p>
+
+          <!-- Step 1: Guardian Info -->
+          <div class="gv-form-step" id="gvStep1">
+            <div class="gv-step-header"><span class="gv-step-num">1</span> Guardian Information</div>
+            <div class="gv-form-row">
+              <label class="gv-form-label">Guardian Full Legal Name <span class="gv-req">*</span></label>
+              <input type="text" class="gv-form-input" id="gvGuardianName" placeholder="As shown on government ID" maxlength="100" autocomplete="name">
+            </div>
+            <div class="gv-form-row">
+              <label class="gv-form-label">Guardian Email <span class="gv-req">*</span></label>
+              <input type="email" class="gv-form-input" id="gvGuardianEmail" placeholder="guardian@email.com" maxlength="120" autocomplete="email">
+            </div>
+            <div class="gv-form-row">
+              <label class="gv-form-label">Connected Wallet Address <span class="gv-req">*</span></label>
+              <input type="text" class="gv-form-input" id="gvWalletAddr" placeholder="Connect wallet above" readonly>
+            </div>
+            <div class="gv-form-row">
+              <label class="gv-form-label">Country of Residence <span class="gv-req">*</span></label>
+              <select class="gv-form-input gv-form-select" id="gvCountry">
+                <option value="">Select country...</option>
+                <option value="US">United States</option><option value="CA">Canada</option><option value="GB">United Kingdom</option>
+                <option value="DE">Germany</option><option value="FR">France</option><option value="AU">Australia</option>
+                <option value="JP">Japan</option><option value="KR">South Korea</option><option value="IN">India</option>
+                <option value="BR">Brazil</option><option value="MX">Mexico</option><option value="NG">Nigeria</option>
+                <option value="ZA">South Africa</option><option value="AE">UAE</option><option value="SG">Singapore</option>
+                <option value="OTHER">Other</option>
+              </select>
+            </div>
+            <button class="btn btn-secondary gv-next-btn" id="gvNext1">Continue &rarr;</button>
           </div>
-          <button class="btn btn-primary btn-glow gv-create-btn" id="gvCreateBtn">
-            <span class="pay-icon">&#128118;</span> Create Grow Vault
-          </button>
+
+          <!-- Step 2: Child Info -->
+          <div class="gv-form-step gv-form-step-hidden" id="gvStep2">
+            <div class="gv-step-header"><span class="gv-step-num">2</span> Child Information</div>
+            <div class="gv-form-row">
+              <label class="gv-form-label">Child&rsquo;s First Name <span class="gv-req">*</span></label>
+              <input type="text" class="gv-form-input" id="gvChildName" placeholder="First name only" maxlength="50">
+            </div>
+            <div class="gv-form-row">
+              <label class="gv-form-label">Child&rsquo;s Date of Birth <span class="gv-req">*</span></label>
+              <input type="date" class="gv-form-input" id="gvChildDob" max="2026-03-30">
+            </div>
+            <div class="gv-form-row">
+              <label class="gv-form-label">Relationship to Child <span class="gv-req">*</span></label>
+              <select class="gv-form-input gv-form-select" id="gvRelationship">
+                <option value="">Select relationship...</option>
+                <option value="parent">Parent</option>
+                <option value="grandparent">Grandparent</option>
+                <option value="legal_guardian">Legal Guardian</option>
+                <option value="godparent">Godparent</option>
+              </select>
+            </div>
+            <div class="gv-form-row-inline">
+              <button class="btn btn-secondary gv-back-btn" id="gvBack2">&larr; Back</button>
+              <button class="btn btn-secondary gv-next-btn" id="gvNext2">Continue &rarr;</button>
+            </div>
+          </div>
+
+          <!-- Step 3: Verification & Consent -->
+          <div class="gv-form-step gv-form-step-hidden" id="gvStep3">
+            <div class="gv-step-header"><span class="gv-step-num">3</span> Verification &amp; Consent</div>
+            <div class="gv-form-row">
+              <label class="gv-form-label">Security Question <span class="gv-req">*</span></label>
+              <select class="gv-form-input gv-form-select" id="gvSecQuestion">
+                <option value="">Select a security question...</option>
+                <option value="pet">What was the name of your first pet?</option>
+                <option value="school">What elementary school did you attend?</option>
+                <option value="city">In what city were you born?</option>
+                <option value="street">What street did you grow up on?</option>
+              </select>
+            </div>
+            <div class="gv-form-row">
+              <label class="gv-form-label">Security Answer <span class="gv-req">*</span></label>
+              <input type="text" class="gv-form-input" id="gvSecAnswer" placeholder="Your answer" maxlength="100">
+            </div>
+            <div class="gv-form-row">
+              <label class="gv-form-label">Set Vault PIN (4&ndash;6 digits) <span class="gv-req">*</span></label>
+              <input type="password" class="gv-form-input" id="gvPin" placeholder="&#8226;&#8226;&#8226;&#8226;" maxlength="6" pattern="[0-9]{4,6}" inputmode="numeric">
+            </div>
+            <div class="gv-form-row">
+              <label class="gv-form-label">Confirm Vault PIN <span class="gv-req">*</span></label>
+              <input type="password" class="gv-form-input" id="gvPinConfirm" placeholder="&#8226;&#8226;&#8226;&#8226;" maxlength="6" pattern="[0-9]{4,6}" inputmode="numeric">
+            </div>
+            <div class="gv-consent-checks">
+              <label class="gv-consent-row">
+                <input type="checkbox" id="gvConsent1">
+                <span>I confirm I am the legal guardian of this child and authorized to create this vault.</span>
+              </label>
+              <label class="gv-consent-row">
+                <input type="checkbox" id="gvConsent2">
+                <span>I understand this vault is locked until the child turns 18. Early withdrawal is not possible.</span>
+              </label>
+              <label class="gv-consent-row">
+                <input type="checkbox" id="gvConsent3">
+                <span>I acknowledge OST is not investment advice and I accept the <a href="#" style="color:var(--accent)">Terms of Service</a>.</span>
+              </label>
+            </div>
+            <div class="gv-form-row-inline">
+              <button class="btn btn-secondary gv-back-btn" id="gvBack3">&larr; Back</button>
+              <button class="btn btn-primary btn-glow gv-create-btn" id="gvCreateBtn" disabled>
+                <span class="pay-icon">&#128274;</span> Create Secure Vault
+              </button>
+            </div>
+          </div>
+
           <div class="gv-status" id="gvStatus"></div>
+          <div class="gv-progress-bar" id="gvProgress">
+            <div class="gv-pb-fill" id="gvPbFill" style="width:33%"></div>
+            <span class="gv-pb-text">Step 1 of 3</span>
+          </div>
         </div>
 
         <div class="gv-disclaimer">
@@ -343,12 +446,68 @@
         </div>
 
         <div class="depin-claim-box" id="depinClaimBox">
-          <p class="depin-claim-label">Active DePIN contributors: claim your daily reward</p>
-          <button class="btn btn-primary btn-glow depin-claim-btn" id="depinClaimBtn">
-            <span class="pay-icon">&#128752;</span> Claim DePIN Reward
+          <h4 class="depin-claim-title">&#128752; Claim DePIN Reward</h4>
+          <p class="depin-claim-label">Select your contribution type, provide proof, and we verify your resource is real.</p>
+
+          <div class="depin-form-row">
+            <label class="depin-form-label">Resource Type <span class="gv-req">*</span></label>
+            <select class="depin-form-input" id="depinResourceType">
+              <option value="">Select resource...</option>
+              <option value="bandwidth">&#128246; Bandwidth (ISP upload sharing)</option>
+              <option value="gpu">&#127918; GPU (CUDA/OpenCL compute)</option>
+              <option value="cpu">&#128187; CPU (processing power)</option>
+              <option value="storage">&#128190; Storage (disk space sharing)</option>
+              <option value="lora5g">&#128225; LoRa/5G (wireless gateway)</option>
+              <option value="satellite">&#128752; Satellite (ground station / LEO link)</option>
+              <option value="datacenter">&#127981; Data Center (rack/colocation)</option>
+            </select>
+          </div>
+
+          <!-- Dynamic fields rendered by JS based on resource type -->
+          <div id="depinDynFields"></div>
+
+          <div class="depin-form-row depin-form-hidden" id="depinProofSection">
+            <label class="depin-form-label">Proof of Resource <span class="gv-req">*</span></label>
+            <div class="depin-proof-options">
+              <label class="depin-proof-option">
+                <input type="radio" name="depinProofType" value="speedtest" checked> Speed Test / Benchmark URL
+              </label>
+              <label class="depin-proof-option">
+                <input type="radio" name="depinProofType" value="screenshot"> Screenshot Upload
+              </label>
+              <label class="depin-proof-option">
+                <input type="radio" name="depinProofType" value="api"> API Key / Node ID
+              </label>
+            </div>
+            <input type="text" class="depin-form-input" id="depinProofValue" placeholder="Paste URL, node ID, or upload path...">
+          </div>
+
+          <div class="depin-form-row depin-form-hidden" id="depinWalletSection">
+            <label class="depin-form-label">Your Solana Wallet <span class="gv-req">*</span></label>
+            <input type="text" class="depin-form-input" id="depinWalletAddr" placeholder="Connect wallet above" readonly>
+          </div>
+
+          <div class="depin-form-row depin-form-hidden" id="depinLocationSection">
+            <label class="depin-form-label">Node Location (city, country)</label>
+            <input type="text" class="depin-form-input" id="depinLocation" placeholder="e.g. Austin, TX, USA" maxlength="100">
+          </div>
+
+          <div class="depin-verify-status" id="depinVerifyStatus"></div>
+
+          <div class="depin-verify-checklist depin-form-hidden" id="depinChecklist">
+            <div class="depin-check-item" id="dpChk1"><span class="depin-chk-icon">&#9898;</span> Wallet connected</div>
+            <div class="depin-check-item" id="dpChk2"><span class="depin-chk-icon">&#9898;</span> Resource type selected</div>
+            <div class="depin-check-item" id="dpChk3"><span class="depin-chk-icon">&#9898;</span> Resource specs verified</div>
+            <div class="depin-check-item" id="dpChk4"><span class="depin-chk-icon">&#9898;</span> Proof submitted</div>
+            <div class="depin-check-item" id="dpChk5"><span class="depin-chk-icon">&#9898;</span> Node reachable</div>
+            <div class="depin-check-item" id="dpChk6"><span class="depin-chk-icon">&#9898;</span> Reward calculated</div>
+          </div>
+
+          <button class="btn btn-primary btn-glow depin-claim-btn" id="depinClaimBtn" disabled>
+            <span class="pay-icon">&#128752;</span> Verify &amp; Claim Reward
           </button>
           <div class="depin-claim-status" id="depinClaimStatus"></div>
-          <p class="depin-claim-note">Requires active AI Reward Stake registration. 24-hour cooldown between claims.</p>
+          <p class="depin-claim-note">Real verification required. 24-hour cooldown. Fake claims are flagged and blocked.</p>
         </div>
       </div>
     </div>
@@ -1798,6 +1957,18 @@
         <p class="section-subtitle">Follow our partnership roadmap from Earth to Mars. Every milestone is real, every goal is funded by donations and investors &mdash; never by taxing your transactions.</p>
       </div>
 
+      <!-- Unified 3D Space Journey Scene -->
+      <div class="space-journey-3d" id="spaceJourney3d">
+        <canvas id="scJourney" class="sj-canvas"></canvas>
+        <div class="sj-phase-indicators">
+          <button class="sj-phase-btn sj-phase-active" data-phase="0">&#128640; Launch</button>
+          <button class="sj-phase-btn" data-phase="1">&#128752; Space Station</button>
+          <button class="sj-phase-btn" data-phase="2">&#127769; Moon</button>
+          <button class="sj-phase-btn" data-phase="3">&#127756; Mars</button>
+        </div>
+        <div class="sj-phase-label" id="sjPhaseLabel">Phase 1 &mdash; Rocket Launch from Earth</div>
+      </div>
+
       <!-- Interactive Rocket Timeline -->
       <div class="rocket-timeline" id="rocketTimeline">
         <div class="rt-track">
@@ -1813,7 +1984,6 @@
             <div class="rt-station-icon">&#127759;</div>
             <div class="rt-station-ring"></div>
             <div class="rt-station-label">
-              <div class="rt-3d-wrap"><canvas class="rt-3d-canvas" id="sc3dLaunch"></canvas></div>
               <h4>&#128640; Launch</h4>
               <p>Earth &mdash; Supplier Application</p>
               <span class="rt-status rt-status-done">Phase 1 Complete &#10003;</span>
@@ -1824,7 +1994,6 @@
             <div class="rt-station-icon">&#128752;</div>
             <div class="rt-station-ring"></div>
             <div class="rt-station-label">
-              <div class="rt-3d-wrap"><canvas class="rt-3d-canvas" id="sc3dOrbit"></canvas></div>
               <h4>&#128752; Space Station</h4>
               <p>LEO Orbit &mdash; CubeSat Rideshare</p>
               <span class="rt-status rt-status-pending">Phase 2-3 &middot; Refueling</span>
@@ -1835,7 +2004,6 @@
             <div class="rt-station-icon">&#127769;</div>
             <div class="rt-station-ring"></div>
             <div class="rt-station-label">
-              <div class="rt-3d-wrap"><canvas class="rt-3d-canvas" id="sc3dMoon"></canvas></div>
               <h4>&#127769; Moon Landing</h4>
               <p>Mesh Network &mdash; Uncensored Internet</p>
               <span class="rt-status rt-status-pending">Phase 3 &middot; Refueling</span>
@@ -1846,7 +2014,6 @@
             <div class="rt-station-icon">&#127756;</div>
             <div class="rt-station-ring"></div>
             <div class="rt-station-label">
-              <div class="rt-3d-wrap"><canvas class="rt-3d-canvas" id="sc3dMars"></canvas></div>
               <h4>&#127756; Mars Landing</h4>
               <p>Multi-Planetary Payments</p>
               <span class="rt-status rt-status-pending">Phase 4 &middot; Final Destination</span>
@@ -2621,6 +2788,6 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
-  <script src="app.js?v=20"></script>
+  <script src="app.js?v=21"></script>
 </body>
 </html>
