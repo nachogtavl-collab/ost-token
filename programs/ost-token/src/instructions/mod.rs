@@ -26,6 +26,7 @@ pub mod seedless_onboard;
 pub mod ai_reward_stake;
 pub mod grow_vault;
 pub mod claim_depin_faucet;
+pub mod exchange_gift_card;
 
 pub use initialize_mint::*;
 pub use configure_confidential::*;
@@ -51,3 +52,4 @@ pub use seedless_onboard::*;
 pub use ai_reward_stake::*;
 pub use grow_vault::*;
 pub use claim_depin_faucet::*;
+pub use exchange_gift_card::*;

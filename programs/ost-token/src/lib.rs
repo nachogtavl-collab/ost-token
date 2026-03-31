@@ -381,4 +381,24 @@ pub mod ost_token {
     ) -> Result<()> {
         instructions::claim_depin_faucet::handler(ctx, attestation_hash)
     }
+
+    // ========================================================================
+    // 26. EXCHANGE GIFT CARD (Gift Card Interchange)
+    // ========================================================================
+    // Two-way gift-card interchange: sell any gift card for private OST,
+    // or buy any gift card by paying OST. 0.1 % fee to DAO treasury.
+    // Off-chain oracles verify card balance (Raise / CardCash / merchant API).
+    // Supports 15+ brands: Amazon, Apple, eBay, Starbucks, Walmart, etc.
+    // Facilitates the "pay anywhere" vision — any gift card <> OST.
+    // ========================================================================
+    pub fn exchange_gift_card(
+        ctx: Context<ExchangeGiftCard>,
+        nonce: u64,
+        merchant: String,
+        code_hash: [u8; 32],
+        amount_usd: u64,
+        is_buy: bool,
+    ) -> Result<()> {
+        instructions::exchange_gift_card::handler(ctx, nonce, merchant, code_hash, amount_usd, is_buy)
+    }
 }

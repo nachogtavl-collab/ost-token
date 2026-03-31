@@ -138,6 +138,30 @@
       'offline.scenarios': 'Real-World Scenarios', 'offline.scenariosub': 'Verified data from the World Bank, UNHCR, IEA, and EM-DAT. These are not hypotheticals \u2014 they happen today.',
       'ai.hook.title': 'Running a Server, Bot, or Localhost?',
       'ai.hook.text': 'If you have a server, a bot, a localhost dev environment, or any form of automated intelligence &mdash; <strong>OST is your payment layer</strong>. Connect any AI model, any webhook, any service. Machine-to-machine payments at Solana speed with full privacy.',
+      'gc.title': 'Gift Card Interchange &mdash; Sell or Buy Any Gift Card with OST',
+      'gc.sub': 'Turn any gift card into private OST, or pay with OST and receive instant digital gift cards. No bank, no KYC, no limits.',
+      'gc.tabSell': '&#128178; Sell Gift Card &rarr; Get OST',
+      'gc.tabBuy': '&#127873; Buy Gift Card with OST',
+      'gc.pipe.paste': 'Paste Code', 'gc.pipe.verify': 'Verify', 'gc.pipe.receive': 'Receive OST',
+      'gc.pipe.payOst': 'Pay OST', 'gc.pipe.convert': 'Convert', 'gc.pipe.getCard': 'Get Card',
+      'gc.merchant': 'Merchant / Brand', 'gc.merchantBuy': 'Choose Gift Card',
+      'gc.code': 'Gift Card Code', 'gc.balance': 'Card Balance (USD)',
+      'gc.youGet': 'You Receive', 'gc.youPay': 'You Pay', 'gc.amount': 'Amount (USD)',
+      'gc.email': 'Delivery Email (optional)',
+      'gc.rate': 'Rate:', 'gc.fee': 'Treasury Fee (0.1%):',
+      'gc.feeNote': '&#128752; Fee funds satellite infrastructure',
+      'gc.sellBtn': 'Verify &amp; Sell &rarr; Get OST',
+      'gc.buyBtn': 'Pay OST &rarr; Get Gift Card',
+      'gc.step.verify': 'Verifying gift card code&hellip;',
+      'gc.step.zk': 'Generating ZK proof&hellip;',
+      'gc.step.send': 'Sending OST via confidential transfer&hellip;',
+      'gc.step.done': 'Complete! OST received privately.',
+      'gc.step.debit': 'Debiting OST (confidential)&hellip;',
+      'gc.step.swap': 'Swapping OST &rarr; USDC via Jupiter&hellip;',
+      'gc.step.purchase': 'Purchasing gift card&hellip;',
+      'gc.step.delivered': 'Gift card delivered!',
+      'gc.supported': 'Supported brands:',
+      'gc.disclaimer': '&#9888; Users are responsible for verifying gift card validity. OST is not a gift card issuer. Gift card interchange is facilitated through third-party APIs (Raise, CardCash, merchant APIs). Gift card resale is subject to local laws &mdash; please verify in your jurisdiction.',
     },
     es: {
       'nav.home': 'Inicio', 'nav.newhere': 'Obtener OST', 'nav.demos': 'Demos', 'nav.wallet': 'Billetera',
@@ -242,6 +266,30 @@
       'offline.scenarios': 'Escenarios del Mundo Real', 'offline.scenariosub': 'Datos verificados del Banco Mundial, ACNUR, AIE y EM-DAT. No son hipot\u00e9ticos \u2014 ocurren hoy.',
       'ai.hook.title': '\u00bfTienes un Servidor, Bot o Localhost?',
       'ai.hook.text': 'Si tienes un servidor, un bot, un entorno localhost o cualquier forma de inteligencia automatizada &mdash; <strong>OST es tu capa de pagos</strong>. Conecta cualquier modelo de IA, cualquier webhook, cualquier servicio.',
+      'gc.title': 'Intercambio de Tarjetas de Regalo &mdash; Vende o Compra Cualquier Tarjeta con OST',
+      'gc.sub': 'Convierte cualquier tarjeta de regalo en OST privado, o paga con OST y recibe tarjetas digitales instant\u00e1neas. Sin banco, sin KYC, sin l\u00edmites.',
+      'gc.tabSell': '&#128178; Vender Tarjeta &rarr; Obtener OST',
+      'gc.tabBuy': '&#127873; Comprar Tarjeta con OST',
+      'gc.pipe.paste': 'Pegar C\u00f3digo', 'gc.pipe.verify': 'Verificar', 'gc.pipe.receive': 'Recibir OST',
+      'gc.pipe.payOst': 'Pagar OST', 'gc.pipe.convert': 'Convertir', 'gc.pipe.getCard': 'Obtener Tarjeta',
+      'gc.merchant': 'Comercio / Marca', 'gc.merchantBuy': 'Elegir Tarjeta de Regalo',
+      'gc.code': 'C\u00f3digo de Tarjeta', 'gc.balance': 'Saldo de la Tarjeta (USD)',
+      'gc.youGet': 'Recibes', 'gc.youPay': 'Pagas', 'gc.amount': 'Monto (USD)',
+      'gc.email': 'Email de entrega (opcional)',
+      'gc.rate': 'Tasa:', 'gc.fee': 'Comisi\u00f3n del tesoro (0.1%):',
+      'gc.feeNote': '&#128752; La comisi\u00f3n financia infraestructura satelital',
+      'gc.sellBtn': 'Verificar y Vender &rarr; Obtener OST',
+      'gc.buyBtn': 'Pagar OST &rarr; Obtener Tarjeta',
+      'gc.step.verify': 'Verificando c\u00f3digo de tarjeta&hellip;',
+      'gc.step.zk': 'Generando prueba ZK&hellip;',
+      'gc.step.send': 'Enviando OST v\u00eda transferencia confidencial&hellip;',
+      'gc.step.done': '\u00a1Completado! OST recibido de forma privada.',
+      'gc.step.debit': 'Debitando OST (confidencial)&hellip;',
+      'gc.step.swap': 'Intercambiando OST &rarr; USDC v\u00eda Jupiter&hellip;',
+      'gc.step.purchase': 'Comprando tarjeta de regalo&hellip;',
+      'gc.step.delivered': '\u00a1Tarjeta de regalo entregada!',
+      'gc.supported': 'Marcas disponibles:',
+      'gc.disclaimer': '&#9888; Los usuarios son responsables de verificar la validez de las tarjetas. OST no es un emisor de tarjetas de regalo. El intercambio se facilita a trav\u00e9s de APIs de terceros. Sujeto a leyes locales.',
     },
     zh: {
       'nav.home': '首页', 'nav.newhere': '获取OST', 'nav.demos': '演示', 'nav.wallet': '钱包',
@@ -346,6 +394,30 @@
       'offline.scenarios': '\u73b0\u5b9e\u4e16\u754c\u573a\u666f', 'offline.scenariosub': '\u6765\u81ea\u4e16\u754c\u94f6\u884c\u3001UNHCR\u3001IEA\u548cEM-DAT\u7684\u9a8c\u8bc1\u6570\u636e\u3002\u8fd9\u4e0d\u662f\u5047\u8bbe \u2014 \u5b83\u4eec\u4eca\u5929\u5c31\u5728\u53d1\u751f\u3002',
       'ai.hook.title': '\u8fd0\u884c\u670d\u52a1\u5668\u3001\u673a\u5668\u4eba\u6216\u672c\u5730\u4e3b\u673a\uff1f',
       'ai.hook.text': '\u5982\u679c\u4f60\u6709\u670d\u52a1\u5668\u3001\u673a\u5668\u4eba\u3001\u672c\u5730\u5f00\u53d1\u73af\u5883\u6216\u4efb\u4f55\u5f62\u5f0f\u7684\u81ea\u52a8\u5316\u667a\u80fd &mdash; <strong>OST\u662f\u4f60\u7684\u652f\u4ed8\u5c42</strong>\u3002\u8fde\u63a5\u4efb\u4f55AI\u6a21\u578b\u3001\u4efb\u4f55webhook\u3001\u4efb\u4f55\u670d\u52a1\u3002',
+      'gc.title': '\u793c\u54c1\u5361\u4ea4\u6362 &mdash; \u7528OST\u4e70\u5356\u4efb\u4f55\u793c\u54c1\u5361',
+      'gc.sub': '\u5c06\u4efb\u4f55\u793c\u54c1\u5361\u8f6c\u6362\u4e3a\u79c1\u5bc6OST\uff0c\u6216\u7528OST\u652f\u4ed8\u5e76\u83b7\u5f97\u5373\u65f6\u6570\u5b57\u793c\u54c1\u5361\u3002\u65e0\u94f6\u884c\uff0c\u65e0KYC\uff0c\u65e0\u9650\u5236\u3002',
+      'gc.tabSell': '&#128178; \u5356\u793c\u54c1\u5361 &rarr; \u83b7\u5f97OST',
+      'gc.tabBuy': '&#127873; \u7528OST\u4e70\u793c\u54c1\u5361',
+      'gc.pipe.paste': '\u7c98\u8d34\u4ee3\u7801', 'gc.pipe.verify': '\u9a8c\u8bc1', 'gc.pipe.receive': '\u6536\u5230OST',
+      'gc.pipe.payOst': '\u652f\u4ed8OST', 'gc.pipe.convert': '\u8f6c\u6362', 'gc.pipe.getCard': '\u83b7\u53d6\u5361',
+      'gc.merchant': '\u5546\u5bb6/\u54c1\u724c', 'gc.merchantBuy': '\u9009\u62e9\u793c\u54c1\u5361',
+      'gc.code': '\u793c\u54c1\u5361\u4ee3\u7801', 'gc.balance': '\u5361\u4f59\u989d(USD)',
+      'gc.youGet': '\u4f60\u6536\u5230', 'gc.youPay': '\u4f60\u652f\u4ed8', 'gc.amount': '\u91d1\u989d(USD)',
+      'gc.email': '\u90ae\u7bb1(\u53ef\u9009)',
+      'gc.rate': '\u6c47\u7387:', 'gc.fee': '\u56fd\u5e93\u8d39(0.1%):',
+      'gc.feeNote': '&#128752; \u8d39\u7528\u8d44\u52a9\u536b\u661f\u57fa\u7840\u8bbe\u65bd',
+      'gc.sellBtn': '\u9a8c\u8bc1\u5e76\u51fa\u552e &rarr; \u83b7\u5f97OST',
+      'gc.buyBtn': '\u652f\u4ed8OST &rarr; \u83b7\u53d6\u793c\u54c1\u5361',
+      'gc.step.verify': '\u6b63\u5728\u9a8c\u8bc1\u793c\u54c1\u5361\u4ee3\u7801&hellip;',
+      'gc.step.zk': '\u751f\u6210ZK\u8bc1\u660e&hellip;',
+      'gc.step.send': '\u901a\u8fc7\u673a\u5bc6\u8f6c\u8d26\u53d1\u9001OST&hellip;',
+      'gc.step.done': '\u5b8c\u6210\uff01OST\u5df2\u79c1\u5bc6\u6536\u5230\u3002',
+      'gc.step.debit': '\u6263\u9664OST(\u673a\u5bc6)&hellip;',
+      'gc.step.swap': '\u901a\u8fc7Jupiter\u5151\u6362OST&rarr;USDC&hellip;',
+      'gc.step.purchase': '\u8d2d\u4e70\u793c\u54c1\u5361&hellip;',
+      'gc.step.delivered': '\u793c\u54c1\u5361\u5df2\u9001\u8fbe\uff01',
+      'gc.supported': '\u652f\u6301\u7684\u54c1\u724c:',
+      'gc.disclaimer': '&#9888; \u7528\u6237\u8d1f\u8d23\u9a8c\u8bc1\u793c\u54c1\u5361\u7684\u6709\u6548\u6027\u3002OST\u4e0d\u662f\u793c\u54c1\u5361\u53d1\u884c\u5546\u3002\u4ea4\u6362\u901a\u8fc7\u7b2c\u4e09\u65b9API\u4fc3\u6210\u3002\u53d7\u5f53\u5730\u6cd5\u5f8b\u7ea6\u675f\u3002',
     },
     ru: {
       'nav.home': 'Главная', 'nav.newhere': 'Получить OST', 'nav.demos': 'Демо', 'nav.wallet': 'Кошелек',
@@ -450,6 +522,30 @@
       'offline.scenarios': '\u0420\u0435\u0430\u043b\u044c\u043d\u044b\u0435 \u0441\u0446\u0435\u043d\u0430\u0440\u0438\u0438', 'offline.scenariosub': '\u041f\u0440\u043e\u0432\u0435\u0440\u0435\u043d\u043d\u044b\u0435 \u0434\u0430\u043d\u043d\u044b\u0435 \u0412\u0441\u0435\u043c\u0438\u0440\u043d\u043e\u0433\u043e \u0431\u0430\u043d\u043a\u0430, \u041e\u041e\u041d \u0438 EM-DAT. \u042d\u0442\u043e \u043d\u0435 \u0433\u0438\u043f\u043e\u0442\u0435\u0437\u044b.',
       'ai.hook.title': '\u0415\u0441\u0442\u044c \u0441\u0435\u0440\u0432\u0435\u0440, \u0431\u043e\u0442 \u0438\u043b\u0438 localhost?',
       'ai.hook.text': '\u0415\u0441\u043b\u0438 \u0443 \u0432\u0430\u0441 \u0435\u0441\u0442\u044c \u0441\u0435\u0440\u0432\u0435\u0440, \u0431\u043e\u0442 \u0438\u043b\u0438 \u043b\u044e\u0431\u0430\u044f \u0444\u043e\u0440\u043c\u0430 \u0430\u0432\u0442\u043e\u043c\u0430\u0442\u0438\u0437\u0430\u0446\u0438\u0438 &mdash; <strong>OST \u0432\u0430\u0448 \u043f\u043b\u0430\u0442\u0451\u0436\u043d\u044b\u0439 \u0441\u043b\u043e\u0439</strong>.',
+      'gc.title': '\u041e\u0431\u043c\u0435\u043d \u043f\u043e\u0434\u0430\u0440\u043e\u0447\u043d\u044b\u0445 \u043a\u0430\u0440\u0442 &mdash; \u041f\u0440\u043e\u0434\u0430\u0439\u0442\u0435 \u0438\u043b\u0438 \u043a\u0443\u043f\u0438\u0442\u0435 \u043b\u044e\u0431\u0443\u044e \u043a\u0430\u0440\u0442\u0443 \u0437\u0430 OST',
+      'gc.sub': '\u041f\u0440\u0435\u0432\u0440\u0430\u0442\u0438\u0442\u0435 \u043b\u044e\u0431\u0443\u044e \u043f\u043e\u0434\u0430\u0440\u043e\u0447\u043d\u0443\u044e \u043a\u0430\u0440\u0442\u0443 \u0432 \u043f\u0440\u0438\u0432\u0430\u0442\u043d\u044b\u0435 OST \u0438\u043b\u0438 \u043e\u043f\u043b\u0430\u0442\u0438\u0442\u0435 OST \u0438 \u043f\u043e\u043b\u0443\u0447\u0438\u0442\u0435 \u043c\u0433\u043d\u043e\u0432\u0435\u043d\u043d\u044b\u0435 \u0446\u0438\u0444\u0440\u043e\u0432\u044b\u0435 \u043a\u0430\u0440\u0442\u044b.',
+      'gc.tabSell': '&#128178; \u041f\u0440\u043e\u0434\u0430\u0442\u044c \u043a\u0430\u0440\u0442\u0443 &rarr; \u041f\u043e\u043b\u0443\u0447\u0438\u0442\u044c OST',
+      'gc.tabBuy': '&#127873; \u041a\u0443\u043f\u0438\u0442\u044c \u043a\u0430\u0440\u0442\u0443 \u0437\u0430 OST',
+      'gc.pipe.paste': '\u0412\u0441\u0442\u0430\u0432\u0438\u0442\u044c \u043a\u043e\u0434', 'gc.pipe.verify': '\u041f\u0440\u043e\u0432\u0435\u0440\u0438\u0442\u044c', 'gc.pipe.receive': '\u041f\u043e\u043b\u0443\u0447\u0438\u0442\u044c OST',
+      'gc.pipe.payOst': '\u041e\u043f\u043b\u0430\u0442\u0438\u0442\u044c OST', 'gc.pipe.convert': '\u041a\u043e\u043d\u0432\u0435\u0440\u0442\u0438\u0440\u043e\u0432\u0430\u0442\u044c', 'gc.pipe.getCard': '\u041f\u043e\u043b\u0443\u0447\u0438\u0442\u044c \u043a\u0430\u0440\u0442\u0443',
+      'gc.merchant': '\u041c\u0430\u0433\u0430\u0437\u0438\u043d / \u0411\u0440\u0435\u043d\u0434', 'gc.merchantBuy': '\u0412\u044b\u0431\u0440\u0430\u0442\u044c \u043a\u0430\u0440\u0442\u0443',
+      'gc.code': '\u041a\u043e\u0434 \u043a\u0430\u0440\u0442\u044b', 'gc.balance': '\u0411\u0430\u043b\u0430\u043d\u0441 \u043a\u0430\u0440\u0442\u044b (USD)',
+      'gc.youGet': '\u0412\u044b \u043f\u043e\u043b\u0443\u0447\u0438\u0442\u0435', 'gc.youPay': '\u0412\u044b \u043f\u043b\u0430\u0442\u0438\u0442\u0435', 'gc.amount': '\u0421\u0443\u043c\u043c\u0430 (USD)',
+      'gc.email': 'Email \u0434\u043e\u0441\u0442\u0430\u0432\u043a\u0438 (\u043d\u0435\u043e\u0431\u044f\u0437\u0430\u0442\u0435\u043b\u044c\u043d\u043e)',
+      'gc.rate': '\u041a\u0443\u0440\u0441:', 'gc.fee': '\u041a\u043e\u043c\u0438\u0441\u0441\u0438\u044f (0.1%):',
+      'gc.feeNote': '&#128752; \u041a\u043e\u043c\u0438\u0441\u0441\u0438\u044f \u0444\u0438\u043d\u0430\u043d\u0441\u0438\u0440\u0443\u0435\u0442 \u0441\u043f\u0443\u0442\u043d\u0438\u043a\u043e\u0432\u0443\u044e \u0438\u043d\u0444\u0440\u0430\u0441\u0442\u0440\u0443\u043a\u0442\u0443\u0440\u0443',
+      'gc.sellBtn': '\u041f\u0440\u043e\u0432\u0435\u0440\u0438\u0442\u044c \u0438 \u043f\u0440\u043e\u0434\u0430\u0442\u044c &rarr; \u041f\u043e\u043b\u0443\u0447\u0438\u0442\u044c OST',
+      'gc.buyBtn': '\u041e\u043f\u043b\u0430\u0442\u0438\u0442\u044c OST &rarr; \u041f\u043e\u043b\u0443\u0447\u0438\u0442\u044c \u043a\u0430\u0440\u0442\u0443',
+      'gc.step.verify': '\u041f\u0440\u043e\u0432\u0435\u0440\u043a\u0430 \u043a\u043e\u0434\u0430 \u043a\u0430\u0440\u0442\u044b&hellip;',
+      'gc.step.zk': '\u0413\u0435\u043d\u0435\u0440\u0430\u0446\u0438\u044f ZK \u0434\u043e\u043a\u0430\u0437\u0430\u0442\u0435\u043b\u044c\u0441\u0442\u0432\u0430&hellip;',
+      'gc.step.send': '\u041e\u0442\u043f\u0440\u0430\u0432\u043a\u0430 OST \u0447\u0435\u0440\u0435\u0437 \u043a\u043e\u043d\u0444\u0438\u0434\u0435\u043d\u0446\u0438\u0430\u043b\u044c\u043d\u044b\u0439 \u043f\u0435\u0440\u0435\u0432\u043e\u0434&hellip;',
+      'gc.step.done': '\u0413\u043e\u0442\u043e\u0432\u043e! OST \u043f\u043e\u043b\u0443\u0447\u0435\u043d\u044b \u043f\u0440\u0438\u0432\u0430\u0442\u043d\u043e.',
+      'gc.step.debit': '\u0421\u043f\u0438\u0441\u0430\u043d\u0438\u0435 OST (\u043a\u043e\u043d\u0444\u0438\u0434\u0435\u043d\u0446\u0438\u0430\u043b\u044c\u043d\u043e)&hellip;',
+      'gc.step.swap': '\u041e\u0431\u043c\u0435\u043d OST &rarr; USDC \u0447\u0435\u0440\u0435\u0437 Jupiter&hellip;',
+      'gc.step.purchase': '\u041f\u043e\u043a\u0443\u043f\u043a\u0430 \u043f\u043e\u0434\u0430\u0440\u043e\u0447\u043d\u043e\u0439 \u043a\u0430\u0440\u0442\u044b&hellip;',
+      'gc.step.delivered': '\u041f\u043e\u0434\u0430\u0440\u043e\u0447\u043d\u0430\u044f \u043a\u0430\u0440\u0442\u0430 \u0434\u043e\u0441\u0442\u0430\u0432\u043b\u0435\u043d\u0430!',
+      'gc.supported': '\u041f\u043e\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u043c\u044b\u0435 \u0431\u0440\u0435\u043d\u0434\u044b:',
+      'gc.disclaimer': '&#9888; \u041f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u0438 \u043d\u0435\u0441\u0443\u0442 \u043e\u0442\u0432\u0435\u0442\u0441\u0442\u0432\u0435\u043d\u043d\u043e\u0441\u0442\u044c \u0437\u0430 \u043f\u0440\u043e\u0432\u0435\u0440\u043a\u0443 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0442\u0435\u043b\u044c\u043d\u043e\u0441\u0442\u0438 \u043a\u0430\u0440\u0442. OST \u043d\u0435 \u044f\u0432\u043b\u044f\u0435\u0442\u0441\u044f \u044d\u043c\u0438\u0442\u0435\u043d\u0442\u043e\u043c. \u041f\u043e\u0434\u0447\u0438\u043d\u044f\u0435\u0442\u0441\u044f \u043c\u0435\u0441\u0442\u043d\u043e\u043c\u0443 \u0437\u0430\u043a\u043e\u043d\u043e\u0434\u0430\u0442\u0435\u043b\u044c\u0441\u0442\u0432\u0443.',
     },
     hi: {
       'nav.home': 'होम', 'nav.newhere': 'OST पाएं', 'nav.demos': 'डेमो', 'nav.wallet': 'वॉलेट',
@@ -554,6 +650,30 @@
       'offline.scenarios': 'वास्तविक दुनिया के परिदृश्य', 'offline.scenariosub': 'विश्व बैंक, UNHCR और EM-DAT से सत्यापित डेटा। ये काल्पनिक नहीं हैं।',
       'ai.hook.title': 'सर्वर, बॉट या लोकलहोस्ट चला रहे हैं?',
       'ai.hook.text': 'यदि आपके पास सर्वर, बॉट या कोई स्वचालित बुद्धिमत्ता है &mdash; <strong>OST आपकी भुगतान परत है</strong>।',
+      'gc.title': 'गिफ्ट कार्ड इंटरचेंज &mdash; OST से कोई भी गिफ्ट कार्ड बेचें या खरीदें',
+      'gc.sub': 'किसी भी गिफ्ट कार्ड को प्राइवेट OST में बदलें, या OST से भुगतान करें और तुरंत डिजिटल गिफ्ट कार्ड प्राप्त करें।',
+      'gc.tabSell': '&#128178; कार्ड बेचें &rarr; OST पाएं',
+      'gc.tabBuy': '&#127873; OST से कार्ड खरीदें',
+      'gc.pipe.paste': 'कोड पेस्ट करें', 'gc.pipe.verify': 'सत्यापित करें', 'gc.pipe.receive': 'OST प्राप्त करें',
+      'gc.pipe.payOst': 'OST भुगतान करें', 'gc.pipe.convert': 'रूपांतरित करें', 'gc.pipe.getCard': 'कार्ड प्राप्त करें',
+      'gc.merchant': 'व्यापारी / ब्रांड', 'gc.merchantBuy': 'गिफ्ट कार्ड चुनें',
+      'gc.code': 'गिफ्ट कार्ड कोड', 'gc.balance': 'कार्ड शेष (USD)',
+      'gc.youGet': 'आप प्राप्त करेंगे', 'gc.youPay': 'आप भुगतान करेंगे', 'gc.amount': 'राशि (USD)',
+      'gc.email': 'डिलीवरी ईमेल (वैकल्पिक)',
+      'gc.rate': 'दर:', 'gc.fee': 'ट्रेजरी शुल्क (0.1%):',
+      'gc.feeNote': '&#128752; शुल्क उपग्रह बुनियादी ढांचे को वित्तपोषित करता है',
+      'gc.sellBtn': 'सत्यापित करें और बेचें &rarr; OST प्राप्त करें',
+      'gc.buyBtn': 'OST भुगतान करें &rarr; गिफ्ट कार्ड प्राप्त करें',
+      'gc.step.verify': 'गिफ्ट कार्ड कोड सत्यापित हो रहा है&hellip;',
+      'gc.step.zk': 'ZK प्रमाण उत्पन्न हो रहा है&hellip;',
+      'gc.step.send': 'गोपनीय हस्तांतरण से OST भेजा जा रहा है&hellip;',
+      'gc.step.done': 'पूर्ण! OST निजी रूप से प्राप्त हुआ।',
+      'gc.step.debit': 'OST डेबिट हो रहा है (गोपनीय)&hellip;',
+      'gc.step.swap': 'Jupiter के माध्यम से OST &rarr; USDC स्वैप&hellip;',
+      'gc.step.purchase': 'गिफ्ट कार्ड खरीदा जा रहा है&hellip;',
+      'gc.step.delivered': 'गिफ्ट कार्ड वितरित!',
+      'gc.supported': 'समर्थित ब्रांड:',
+      'gc.disclaimer': '&#9888; उपयोगकर्ता गिफ्ट कार्ड की वैधता सत्यापित करने के लिए जिम्मेदार हैं। OST गिफ्ट कार्ड जारीकर्ता नहीं है। स्थानीय कानूनों के अधीन।',
     },
     ar: {
       'nav.home': 'الرئيسية', 'nav.newhere': 'احصل على OST', 'nav.demos': 'عروض', 'nav.wallet': 'محفظة',
@@ -658,6 +778,30 @@
       'offline.scenarios': 'سيناريوهات العالم الحقيقي', 'offline.scenariosub': 'بيانات موثقة من البنك الدولي وUNHCR. ليست افتراضية.',
       'ai.hook.title': 'تشغل خادمًا أو بوت أو localhost؟',
       'ai.hook.text': 'إذا كان لديك خادم أو بوت أو أي شكل من أشكال الذكاء الآلي &mdash; <strong>OST هو طبقة الدفع الخاصة بك</strong>.',
+      'gc.title': 'تبادل بطاقات الهدايا &mdash; بع أو اشترِ أي بطاقة هدية بـ OST',
+      'gc.sub': 'حول أي بطاقة هدية إلى OST خاص، أو ادفع بـ OST واحصل على بطاقات هدايا رقمية فورية.',
+      'gc.tabSell': '&#128178; بيع بطاقة &rarr; الحصول على OST',
+      'gc.tabBuy': '&#127873; شراء بطاقة بـ OST',
+      'gc.pipe.paste': 'لصق الرمز', 'gc.pipe.verify': 'تحقق', 'gc.pipe.receive': 'استلم OST',
+      'gc.pipe.payOst': 'ادفع OST', 'gc.pipe.convert': 'تحويل', 'gc.pipe.getCard': 'احصل على البطاقة',
+      'gc.merchant': 'التاجر / العلامة التجارية', 'gc.merchantBuy': 'اختر بطاقة هدية',
+      'gc.code': 'رمز بطاقة الهدية', 'gc.balance': 'رصيد البطاقة (USD)',
+      'gc.youGet': 'تحصل على', 'gc.youPay': 'تدفع', 'gc.amount': 'المبلغ (USD)',
+      'gc.email': 'بريد التسليم (اختياري)',
+      'gc.rate': 'السعر:', 'gc.fee': 'رسوم الخزينة (0.1%):',
+      'gc.feeNote': '&#128752; الرسوم تمول البنية التحتية للأقمار الصناعية',
+      'gc.sellBtn': 'تحقق وبع &rarr; احصل على OST',
+      'gc.buyBtn': 'ادفع OST &rarr; احصل على بطاقة',
+      'gc.step.verify': 'جارٍ التحقق من رمز البطاقة&hellip;',
+      'gc.step.zk': 'إنشاء إثبات ZK&hellip;',
+      'gc.step.send': 'إرسال OST عبر تحويل سري&hellip;',
+      'gc.step.done': 'تم! OST مستلم بخصوصية.',
+      'gc.step.debit': 'خصم OST (سري)&hellip;',
+      'gc.step.swap': 'تبديل OST &rarr; USDC عبر Jupiter&hellip;',
+      'gc.step.purchase': 'شراء بطاقة الهدية&hellip;',
+      'gc.step.delivered': 'تم تسليم بطاقة الهدية!',
+      'gc.supported': 'العلامات التجارية المدعومة:',
+      'gc.disclaimer': '&#9888; المستخدمون مسؤولون عن التحقق من صلاحية البطاقات. OST ليس مصدر بطاقات هدايا. خاضع للقوانين المحلية.',
     },
     pt: {
       'nav.home': 'Inicio', 'nav.newhere': 'Obter OST', 'nav.demos': 'Demos', 'nav.wallet': 'Carteira',
@@ -762,6 +906,30 @@
       'offline.scenarios': 'Cenários do Mundo Real', 'offline.scenariosub': 'Dados verificados do Banco Mundial, ACNUR e EM-DAT. Não são hipóteses.',
       'ai.hook.title': 'Rodando um Servidor, Bot ou Localhost?',
       'ai.hook.text': 'Se você tem um servidor, bot ou qualquer inteligência automatizada &mdash; <strong>OST é sua camada de pagamento</strong>.',
+      'gc.title': 'Interchange de Cart\u00f5es Presente &mdash; Venda ou Compre Qualquer Cart\u00e3o com OST',
+      'gc.sub': 'Transforme qualquer cart\u00e3o presente em OST privado, ou pague com OST e receba cart\u00f5es digitais instant\u00e2neos.',
+      'gc.tabSell': '&#128178; Vender Cart\u00e3o &rarr; Receber OST',
+      'gc.tabBuy': '&#127873; Comprar Cart\u00e3o com OST',
+      'gc.pipe.paste': 'Colar C\u00f3digo', 'gc.pipe.verify': 'Verificar', 'gc.pipe.receive': 'Receber OST',
+      'gc.pipe.payOst': 'Pagar OST', 'gc.pipe.convert': 'Converter', 'gc.pipe.getCard': 'Receber Cart\u00e3o',
+      'gc.merchant': 'Loja / Marca', 'gc.merchantBuy': 'Escolher Cart\u00e3o',
+      'gc.code': 'C\u00f3digo do Cart\u00e3o', 'gc.balance': 'Saldo do Cart\u00e3o (USD)',
+      'gc.youGet': 'Voc\u00ea Recebe', 'gc.youPay': 'Voc\u00ea Paga', 'gc.amount': 'Valor (USD)',
+      'gc.email': 'Email de entrega (opcional)',
+      'gc.rate': 'Taxa:', 'gc.fee': 'Taxa do Tesouro (0.1%):',
+      'gc.feeNote': '&#128752; Taxa financia infraestrutura de sat\u00e9lites',
+      'gc.sellBtn': 'Verificar e Vender &rarr; Receber OST',
+      'gc.buyBtn': 'Pagar OST &rarr; Receber Cart\u00e3o',
+      'gc.step.verify': 'Verificando c\u00f3digo do cart\u00e3o&hellip;',
+      'gc.step.zk': 'Gerando prova ZK&hellip;',
+      'gc.step.send': 'Enviando OST via transfer\u00eancia confidencial&hellip;',
+      'gc.step.done': 'Completo! OST recebido com privacidade.',
+      'gc.step.debit': 'Debitando OST (confidencial)&hellip;',
+      'gc.step.swap': 'Trocando OST &rarr; USDC via Jupiter&hellip;',
+      'gc.step.purchase': 'Comprando cart\u00e3o presente&hellip;',
+      'gc.step.delivered': 'Cart\u00e3o presente entregue!',
+      'gc.supported': 'Marcas suportadas:',
+      'gc.disclaimer': '&#9888; Usu\u00e1rios s\u00e3o respons\u00e1veis por verificar a validade dos cart\u00f5es. OST n\u00e3o \u00e9 emissor de cart\u00f5es. Sujeito \u00e0s leis locais.',
     },
     fr: {
       'nav.home': 'Accueil', 'nav.newhere': 'Obtenir OST', 'nav.demos': 'Demos', 'nav.wallet': 'Portefeuille',
@@ -866,6 +1034,30 @@
       'offline.scenarios': 'Scénarios du Monde Réel', 'offline.scenariosub': 'Données vérifiées de la Banque Mondiale, du HCR et d\'EM-DAT.',
       'ai.hook.title': 'Vous avez un Serveur, Bot ou Localhost ?',
       'ai.hook.text': 'Si vous avez un serveur, un bot ou toute forme d\'intelligence automatisée &mdash; <strong>OST est votre couche de paiement</strong>.',
+      'gc.title': '\u00c9change de Cartes Cadeaux &mdash; Vendez ou Achetez N\'importe Quelle Carte avec OST',
+      'gc.sub': 'Transformez n\'importe quelle carte cadeau en OST priv\u00e9, ou payez avec OST et recevez des cartes num\u00e9riques instantan\u00e9es.',
+      'gc.tabSell': '&#128178; Vendre Carte &rarr; Recevoir OST',
+      'gc.tabBuy': '&#127873; Acheter Carte avec OST',
+      'gc.pipe.paste': 'Coller Code', 'gc.pipe.verify': 'V\u00e9rifier', 'gc.pipe.receive': 'Recevoir OST',
+      'gc.pipe.payOst': 'Payer OST', 'gc.pipe.convert': 'Convertir', 'gc.pipe.getCard': 'Recevoir Carte',
+      'gc.merchant': 'Marchand / Marque', 'gc.merchantBuy': 'Choisir Carte Cadeau',
+      'gc.code': 'Code de la Carte', 'gc.balance': 'Solde de la Carte (USD)',
+      'gc.youGet': 'Vous Recevez', 'gc.youPay': 'Vous Payez', 'gc.amount': 'Montant (USD)',
+      'gc.email': 'Email de livraison (optionnel)',
+      'gc.rate': 'Taux:', 'gc.fee': 'Frais du Tr\u00e9sor (0.1%):',
+      'gc.feeNote': '&#128752; Les frais financent l\'infrastructure satellite',
+      'gc.sellBtn': 'V\u00e9rifier et Vendre &rarr; Recevoir OST',
+      'gc.buyBtn': 'Payer OST &rarr; Recevoir Carte',
+      'gc.step.verify': 'V\u00e9rification du code carte&hellip;',
+      'gc.step.zk': 'G\u00e9n\u00e9ration de la preuve ZK&hellip;',
+      'gc.step.send': 'Envoi d\'OST par transfert confidentiel&hellip;',
+      'gc.step.done': 'Termin\u00e9 ! OST re\u00e7u en toute confidentialit\u00e9.',
+      'gc.step.debit': 'D\u00e9bit d\'OST (confidentiel)&hellip;',
+      'gc.step.swap': '\u00c9change OST &rarr; USDC via Jupiter&hellip;',
+      'gc.step.purchase': 'Achat de la carte cadeau&hellip;',
+      'gc.step.delivered': 'Carte cadeau livr\u00e9e !',
+      'gc.supported': 'Marques support\u00e9es :',
+      'gc.disclaimer': '&#9888; Les utilisateurs sont responsables de la validit\u00e9 des cartes. OST n\'est pas un \u00e9metteur de cartes. Soumis aux lois locales.',
     },
     ja: {
       'nav.home': 'ホーム', 'nav.newhere': 'OST入手', 'nav.demos': 'デモ', 'nav.wallet': 'ウォレット',
@@ -970,6 +1162,30 @@
       'offline.scenarios': '実世界のシナリオ', 'offline.scenariosub': '世界銀行、UNHCR、EM-DATの検証済みデータ。仮説ではありません。',
       'ai.hook.title': 'サーバー、ボット、ロカホストを運用中？',
       'ai.hook.text': 'サーバー、ボット、自動化されたインテリジェンスがあれば &mdash; <strong>OSTがあなたの決済レイヤー</strong>です。',
+      'gc.title': 'ギフトカード交換 &mdash; OSTでギフトカードを売買',
+      'gc.sub': 'ギフトカードをプライベートOSTに変換、またはOSTで支払い即座にデジタルギフトカードを受け取れます。',
+      'gc.tabSell': '&#128178; カードを売る &rarr; OST獲得',
+      'gc.tabBuy': '&#127873; OSTでカード購入',
+      'gc.pipe.paste': 'コード貼付', 'gc.pipe.verify': '検証', 'gc.pipe.receive': 'OST受取',
+      'gc.pipe.payOst': 'OST支払', 'gc.pipe.convert': '変換', 'gc.pipe.getCard': 'カード取得',
+      'gc.merchant': 'ブランド', 'gc.merchantBuy': 'ギフトカードを選択',
+      'gc.code': 'ギフトカードコード', 'gc.balance': 'カード残高(USD)',
+      'gc.youGet': '受取額', 'gc.youPay': '支払額', 'gc.amount': '金額(USD)',
+      'gc.email': '配信メール(任意)',
+      'gc.rate': 'レート:', 'gc.fee': '財務手数料(0.1%):',
+      'gc.feeNote': '&#128752; 手数料は衛星インフラに資金提供',
+      'gc.sellBtn': '検証して売却 &rarr; OST獲得',
+      'gc.buyBtn': 'OST支払い &rarr; ギフトカード取得',
+      'gc.step.verify': 'ギフトカードコード検証中&hellip;',
+      'gc.step.zk': 'ZK証明生成中&hellip;',
+      'gc.step.send': '機密転送でOST送信中&hellip;',
+      'gc.step.done': '完了！OSTをプライベートに受領。',
+      'gc.step.debit': 'OST引落(機密)&hellip;',
+      'gc.step.swap': 'Jupiter経由でOST&rarr;USDC交換&hellip;',
+      'gc.step.purchase': 'ギフトカード購入中&hellip;',
+      'gc.step.delivered': 'ギフトカード配信完了！',
+      'gc.supported': '対応ブランド:',
+      'gc.disclaimer': '&#9888; ユーザーはギフトカードの有効性を確認する責任があります。OSTはギフトカード発行者ではありません。現地法に従います。',
     },
     ko: {
       'nav.home': '홈', 'nav.newhere': 'OST 받기', 'nav.demos': '데모', 'nav.wallet': '지갑',
@@ -1074,6 +1290,30 @@
       'offline.scenarios': '현실 세계 시나리오', 'offline.scenariosub': '세계은행, UNHCR, EM-DAT의 검증된 데이터. 가설이 아닙니다.',
       'ai.hook.title': '서버, 봇 또는 로컬호스트를 운영 중이신가요?',
       'ai.hook.text': '서버, 봇 또는 자동화된 인텔리전스가 있다면 &mdash; <strong>OST가 결제 레이어</strong>입니다.',
+      'gc.title': '기프트카드 교환 &mdash; OST로 기프트카드 매매',
+      'gc.sub': '기프트카드를 프라이빗 OST로 전환하거나, OST로 결제하여 즉시 디지털 기프트카드를 받으세요.',
+      'gc.tabSell': '&#128178; 카드 판매 &rarr; OST 받기',
+      'gc.tabBuy': '&#127873; OST로 카드 구매',
+      'gc.pipe.paste': '코드 붙여넣기', 'gc.pipe.verify': '검증', 'gc.pipe.receive': 'OST 수령',
+      'gc.pipe.payOst': 'OST 결제', 'gc.pipe.convert': '변환', 'gc.pipe.getCard': '카드 받기',
+      'gc.merchant': '가맹점 / 브랜드', 'gc.merchantBuy': '기프트카드 선택',
+      'gc.code': '기프트카드 코드', 'gc.balance': '카드 잔액 (USD)',
+      'gc.youGet': '받는 금액', 'gc.youPay': '지불 금액', 'gc.amount': '금액 (USD)',
+      'gc.email': '배송 이메일 (선택)',
+      'gc.rate': '환율:', 'gc.fee': '재무 수수료 (0.1%):',
+      'gc.feeNote': '&#128752; 수수료는 위성 인프라에 자금 지원',
+      'gc.sellBtn': '검증 및 판매 &rarr; OST 받기',
+      'gc.buyBtn': 'OST 결제 &rarr; 기프트카드 받기',
+      'gc.step.verify': '기프트카드 코드 검증 중&hellip;',
+      'gc.step.zk': 'ZK 증명 생성 중&hellip;',
+      'gc.step.send': '기밀 전송으로 OST 전송 중&hellip;',
+      'gc.step.done': '완료! OST가 프라이빗하게 수령되었습니다.',
+      'gc.step.debit': 'OST 차감 (기밀)&hellip;',
+      'gc.step.swap': 'Jupiter 통해 OST &rarr; USDC 스왑&hellip;',
+      'gc.step.purchase': '기프트카드 구매 중&hellip;',
+      'gc.step.delivered': '기프트카드 배송 완료!',
+      'gc.supported': '지원 브랜드:',
+      'gc.disclaimer': '&#9888; 사용자는 기프트카드의 유효성을 확인할 책임이 있습니다. OST는 기프트카드 발행자가 아닙니다. 현지 법률의 적용을 받습니다.',
     },
     tr: {
       'nav.home': 'Ana Sayfa', 'nav.newhere': 'OST Al', 'nav.demos': 'Demolar', 'nav.wallet': 'Cuzdan',
@@ -1178,6 +1418,30 @@
       'offline.scenarios': 'Gerçek Dünya Senaryoları', 'offline.scenariosub': 'Dünya Bankası, BMMYK ve EM-DAT\'tan doğrulanmış veriler.',
       'ai.hook.title': 'Sunucu, Bot veya Localhost Çalıştırıyor musunuz?',
       'ai.hook.text': 'Sunucunuz, botunuz veya otomatik zekanız varsa &mdash; <strong>OST ödeme katmanınızdır</strong>.',
+      'gc.title': 'Hediye Kart\u0131 De\u011fi\u015fimi &mdash; OST ile Hediye Kart\u0131 Al veya Sat',
+      'gc.sub': 'Herhangi bir hediye kart\u0131n\u0131 \u00f6zel OST\'ye d\u00f6n\u00fc\u015ft\u00fcr\u00fcn veya OST ile \u00f6deyin ve an\u0131nda dijital hediye kart\u0131 al\u0131n.',
+      'gc.tabSell': '&#128178; Kart Sat &rarr; OST Al',
+      'gc.tabBuy': '&#127873; OST ile Kart Al',
+      'gc.pipe.paste': 'Kod Yap\u0131\u015ft\u0131r', 'gc.pipe.verify': 'Do\u011frula', 'gc.pipe.receive': 'OST Al',
+      'gc.pipe.payOst': 'OST \u00d6de', 'gc.pipe.convert': 'D\u00f6n\u00fc\u015ft\u00fcr', 'gc.pipe.getCard': 'Kart Al',
+      'gc.merchant': 'Ma\u011faza / Marka', 'gc.merchantBuy': 'Hediye Kart Se\u00e7',
+      'gc.code': 'Hediye Kart Kodu', 'gc.balance': 'Kart Bakiyesi (USD)',
+      'gc.youGet': 'Alacak\u0131n\u0131z', 'gc.youPay': '\u00d6deyece\u011finiz', 'gc.amount': 'Tutar (USD)',
+      'gc.email': 'Teslimat e-postas\u0131 (iste\u011fe ba\u011fl\u0131)',
+      'gc.rate': 'Kur:', 'gc.fee': 'Hazine \u00dccreti (0.1%):',
+      'gc.feeNote': '&#128752; \u00dccret uydu altyap\u0131s\u0131n\u0131 finanse eder',
+      'gc.sellBtn': 'Do\u011frula ve Sat &rarr; OST Al',
+      'gc.buyBtn': 'OST \u00d6de &rarr; Hediye Kart Al',
+      'gc.step.verify': 'Hediye kart kodu do\u011frulan\u0131yor&hellip;',
+      'gc.step.zk': 'ZK kan\u0131t\u0131 olu\u015fturuluyor&hellip;',
+      'gc.step.send': 'Gizli transfer ile OST g\u00f6nderiliyor&hellip;',
+      'gc.step.done': 'Tamamland\u0131! OST gizlice al\u0131nd\u0131.',
+      'gc.step.debit': 'OST bor\u00e7land\u0131r\u0131l\u0131yor (gizli)&hellip;',
+      'gc.step.swap': 'Jupiter ile OST &rarr; USDC takas\u0131&hellip;',
+      'gc.step.purchase': 'Hediye kart sat\u0131n al\u0131n\u0131yor&hellip;',
+      'gc.step.delivered': 'Hediye kart teslim edildi!',
+      'gc.supported': 'Desteklenen markalar:',
+      'gc.disclaimer': '&#9888; Kullan\u0131c\u0131lar hediye kartlar\u0131n\u0131n ge\u00e7erlili\u011fini do\u011frulamaktan sorumludur. OST hediye kart\u0131 ihrac\u00e7\u0131s\u0131 de\u011fildir. Yerel yasalara tabidir.',
     },
   };
 
@@ -4481,168 +4745,605 @@
   })();
 
   /* ================================================================== */
-  /* Space Journey 3D — Unified Rolling Scene                           */
+  /* Space Journey 3D — Full Immersive Cinematic Sequence              */
   /* ================================================================== */
   (function initSpaceJourney() {
     if (typeof THREE === 'undefined') return;
     var c = document.getElementById('scJourney');
     if (!c) return;
 
-    var w = c.clientWidth || 800, h = c.clientHeight || 420;
+    var w = c.clientWidth || 1200, h = c.clientHeight || 600;
     var scene = new THREE.Scene();
-    var camera = new THREE.PerspectiveCamera(50, w / h, 0.1, 500);
+    var camera = new THREE.PerspectiveCamera(55, w / h, 0.1, 2000);
     var renderer = new THREE.WebGLRenderer({ canvas: c, antialias: true, alpha: true });
     renderer.setSize(w, h);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.1;
 
-    scene.add(new THREE.AmbientLight(0x404060, 0.6));
-    var sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
-    sunLight.position.set(5, 3, 5);
+    // ---- Lighting ----
+    var ambient = new THREE.AmbientLight(0x303050, 0.4);
+    scene.add(ambient);
+    var sunLight = new THREE.DirectionalLight(0xffeedd, 1.6);
+    sunLight.position.set(8, 5, 8);
     scene.add(sunLight);
+    var rimLight = new THREE.DirectionalLight(0x4488ff, 0.3);
+    rimLight.position.set(-5, -2, -5);
+    scene.add(rimLight);
+    var pointLight = new THREE.PointLight(0xff6600, 0, 10);
+    scene.add(pointLight);
 
-    // Stars
+    // ---- STARFIELD: 8000 stars with size variation & twinkle ----
+    var starCnt = 8000;
     var starGeo = new THREE.BufferGeometry();
-    var sp = [];
-    for (var i = 0; i < 1200; i++) {
-      var r = 60 + Math.random() * 140;
-      var t = Math.random() * Math.PI * 2;
+    var starPos = new Float32Array(starCnt * 3);
+    var starSizes = new Float32Array(starCnt);
+    var starColors = new Float32Array(starCnt * 3);
+    for (var i = 0; i < starCnt; i++) {
+      var r = 80 + Math.random() * 400;
+      var th = Math.random() * Math.PI * 2;
       var ph = Math.acos(2 * Math.random() - 1);
-      sp.push(r * Math.sin(ph) * Math.cos(t), r * Math.sin(ph) * Math.sin(t), r * Math.cos(ph));
+      starPos[i*3] = r * Math.sin(ph) * Math.cos(th);
+      starPos[i*3+1] = r * Math.sin(ph) * Math.sin(th);
+      starPos[i*3+2] = r * Math.cos(ph);
+      starSizes[i] = 0.08 + Math.random() * 0.25;
+      // Color variety: mostly white, some blue, some warm
+      var temp = Math.random();
+      if (temp < 0.7) { starColors[i*3]=1; starColors[i*3+1]=1; starColors[i*3+2]=1; }
+      else if (temp < 0.85) { starColors[i*3]=0.7; starColors[i*3+1]=0.8; starColors[i*3+2]=1; }
+      else { starColors[i*3]=1; starColors[i*3+1]=0.9; starColors[i*3+2]=0.7; }
     }
-    starGeo.setAttribute('position', new THREE.Float32BufferAttribute(sp, 3));
-    var stars = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.15 }));
+    starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
+    starGeo.setAttribute('color', new THREE.Float32BufferAttribute(starColors, 3));
+    var stars = new THREE.Points(starGeo, new THREE.PointsMaterial({
+      size: 0.2, vertexColors: true, transparent: true, opacity: 0.9,
+      sizeAttenuation: true, depthWrite: false
+    }));
     scene.add(stars);
 
-    // ---- Shared rocket builder ----
+    // ---- NEBULA CLOUDS: 5 large sprite nebulae ----
+    var nebulaGroup = new THREE.Group();
+    var nebulaColors = [0x2244aa, 0x4422aa, 0x224466, 0x663366, 0x225588];
+    for (var i = 0; i < 5; i++) {
+      var nCanvas = document.createElement('canvas');
+      nCanvas.width = 256; nCanvas.height = 256;
+      var nCtx = nCanvas.getContext('2d');
+      var grad = nCtx.createRadialGradient(128, 128, 0, 128, 128, 128);
+      var nc = nebulaColors[i];
+      var nr = (nc>>16)&0xff, ng = (nc>>8)&0xff, nb = nc&0xff;
+      grad.addColorStop(0, 'rgba('+nr+','+ng+','+nb+',0.15)');
+      grad.addColorStop(0.5, 'rgba('+nr+','+ng+','+nb+',0.05)');
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      nCtx.fillStyle = grad;
+      nCtx.fillRect(0, 0, 256, 256);
+      var nTex = new THREE.CanvasTexture(nCanvas);
+      var nSprite = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: nTex, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false
+      }));
+      nSprite.scale.set(40 + Math.random() * 50, 40 + Math.random() * 50, 1);
+      nSprite.position.set(
+        (Math.random()-0.5) * 200,
+        (Math.random()-0.5) * 100,
+        -100 - Math.random() * 200
+      );
+      nebulaGroup.add(nSprite);
+    }
+    scene.add(nebulaGroup);
+
+    // ---- SHOOTING STARS ----
+    var shootStarCnt = 12;
+    var shootGeo = new THREE.BufferGeometry();
+    var shootPos = new Float32Array(shootStarCnt * 6); // line segments
+    var shootData = [];
+    for (var i = 0; i < shootStarCnt; i++) {
+      shootData.push({
+        x: (Math.random()-0.5)*60, y: 10+Math.random()*30, z: -20-Math.random()*60,
+        vx: -0.8-Math.random()*0.5, vy: -0.3-Math.random()*0.2, timer: Math.random()*200, interval: 80+Math.random()*200
+      });
+    }
+    shootGeo.setAttribute('position', new THREE.Float32BufferAttribute(shootPos, 3));
+    var shootStars = new THREE.LineSegments(shootGeo, new THREE.LineBasicMaterial({
+      color: 0xffffff, transparent: true, opacity: 0.6, depthWrite: false
+    }));
+    scene.add(shootStars);
+
+    // ---- DETAILED ROCKET BUILDER ----
     function mkRocket(s) {
       var g = new THREE.Group();
-      g.add(new THREE.Mesh(new THREE.CylinderGeometry(.06*s,.08*s,.5*s,16), new THREE.MeshStandardMaterial({color:0xe8e8e8,metalness:.4,roughness:.3})));
-      var nose = new THREE.Mesh(new THREE.ConeGeometry(.06*s,.18*s,16), new THREE.MeshStandardMaterial({color:0xdd2222,metalness:.3,roughness:.4}));
-      nose.position.y = .34*s; g.add(nose);
-      var eng = new THREE.Mesh(new THREE.CylinderGeometry(.07*s,.04*s,.08*s,12), new THREE.MeshStandardMaterial({color:0x555555,metalness:.6}));
-      eng.position.y = -.29*s; g.add(eng);
-      for (var i=0;i<4;i++){
-        var fin = new THREE.Mesh(new THREE.BoxGeometry(.015*s,.12*s,.06*s), new THREE.MeshStandardMaterial({color:0xaaaaaa,metalness:.3}));
-        var a = (i/4)*Math.PI*2;
-        fin.position.set(Math.cos(a)*.08*s,-.2*s,Math.sin(a)*.08*s);
+      // Body cylinder — metallic white with panel lines
+      var bodyMat = new THREE.MeshStandardMaterial({color:0xf0f0f0, metalness:0.5, roughness:0.25});
+      var body = new THREE.Mesh(new THREE.CylinderGeometry(0.06*s, 0.08*s, 0.5*s, 24), bodyMat);
+      g.add(body);
+      // Nose cone — red, smooth
+      var noseMat = new THREE.MeshStandardMaterial({color:0xdd2222, metalness:0.3, roughness:0.35});
+      var nose = new THREE.Mesh(new THREE.ConeGeometry(0.06*s, 0.20*s, 24), noseMat);
+      nose.position.y = 0.35*s; g.add(nose);
+      // Engine bell cluster — 3 nozzles
+      var engMat = new THREE.MeshStandardMaterial({color:0x444444, metalness:0.7, roughness:0.2});
+      for (var i = 0; i < 3; i++) {
+        var eng = new THREE.Mesh(new THREE.CylinderGeometry(0.035*s, 0.02*s, 0.08*s, 12), engMat);
+        var a = (i/3)*Math.PI*2;
+        eng.position.set(Math.cos(a)*0.035*s, -0.29*s, Math.sin(a)*0.035*s);
+        g.add(eng);
+      }
+      // Center nozzle
+      var cEng = new THREE.Mesh(new THREE.CylinderGeometry(0.045*s, 0.025*s, 0.10*s, 12), engMat);
+      cEng.position.y = -0.30*s; g.add(cEng);
+      // Grid fins — 4 fins
+      var finMat = new THREE.MeshStandardMaterial({color:0x888888, metalness:0.4, roughness:0.3});
+      for (var i = 0; i < 4; i++) {
+        var fin = new THREE.Mesh(new THREE.BoxGeometry(0.012*s, 0.14*s, 0.08*s), finMat);
+        var a = (i/4)*Math.PI*2 + Math.PI/4;
+        fin.position.set(Math.cos(a)*0.09*s, -0.18*s, Math.sin(a)*0.09*s);
         fin.rotation.y = a; g.add(fin);
       }
+      // Landing legs (folded)
+      var legMat = new THREE.MeshStandardMaterial({color:0x666666, metalness:0.3});
+      for (var i = 0; i < 4; i++) {
+        var leg = new THREE.Mesh(new THREE.CylinderGeometry(0.008*s, 0.005*s, 0.15*s, 6), legMat);
+        var a = (i/4)*Math.PI*2;
+        leg.position.set(Math.cos(a)*0.07*s, -0.32*s, Math.sin(a)*0.07*s);
+        leg.rotation.z = 0.3; leg.rotation.y = a; g.add(leg);
+      }
+      // OST logo stripe on body — green band
+      var stripe = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.082*s, 0.082*s, 0.025*s, 24, 1, true),
+        new THREE.MeshBasicMaterial({color:0x10b981, transparent:true, opacity:0.6, side:THREE.DoubleSide})
+      );
+      stripe.position.y = 0.12*s; g.add(stripe);
       return g;
     }
 
-    // ---- Flame particles ----
-    function mkFlame(s) {
-      var cnt = 60, geo = new THREE.BufferGeometry(), pos = new Float32Array(cnt*3), vels = [];
-      for (var i=0;i<cnt;i++){
-        pos[i*3]=(Math.random()-.5)*.04*s;
-        pos[i*3+1]=-.3*s-Math.random()*.3*s;
-        pos[i*3+2]=(Math.random()-.5)*.04*s;
-        vels.push({x:(Math.random()-.5)*.002*s,y:-.005*s-Math.random()*.01*s,z:(Math.random()-.5)*.002*s,life:Math.random()});
+    // ---- ADVANCED EXHAUST PLUME ----
+    function mkExhaust(s) {
+      var cnt = 150, geo = new THREE.BufferGeometry();
+      var pos = new Float32Array(cnt*3), sizes = new Float32Array(cnt), cols = new Float32Array(cnt*3);
+      var vels = [];
+      for (var i = 0; i < cnt; i++) {
+        pos[i*3] = (Math.random()-0.5)*0.04*s;
+        pos[i*3+1] = -0.32*s - Math.random()*0.5*s;
+        pos[i*3+2] = (Math.random()-0.5)*0.04*s;
+        sizes[i] = 0.02*s + Math.random()*0.06*s;
+        // Color gradient: white core → orange → red tail
+        var depth = Math.random();
+        cols[i*3] = 1; cols[i*3+1] = 0.5+depth*0.5; cols[i*3+2] = depth*0.3;
+        vels.push({
+          x:(Math.random()-0.5)*0.003*s, y:-0.01*s-Math.random()*0.02*s,
+          z:(Math.random()-0.5)*0.003*s, life:Math.random(), spread: 0.001*s + Math.random()*0.002*s
+        });
       }
-      geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
-      var pts = new THREE.Points(geo,new THREE.PointsMaterial({color:0xff6600,size:.05*s,transparent:true,opacity:.8,blending:THREE.AdditiveBlending,depthWrite:false}));
-      pts.userData={vels:vels,s:s};
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+      var pts = new THREE.Points(geo, new THREE.PointsMaterial({
+        size: 0.06*s, vertexColors: true, transparent: true, opacity: 0.8,
+        blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true
+      }));
+      pts.userData = {vels:vels, s:s};
       return pts;
     }
-    function tickFlame(f,by){
-      var p=f.geometry.attributes.position.array,v=f.userData.vels,s=f.userData.s;
-      for(var i=0;i<v.length;i++){
-        v[i].life-=.02;
-        if(v[i].life<=0){p[i*3]=(Math.random()-.5)*.04*s;p[i*3+1]=by-.3*s;p[i*3+2]=(Math.random()-.5)*.04*s;v[i].life=1;}
-        else{p[i*3]+=v[i].x;p[i*3+1]+=v[i].y;p[i*3+2]+=v[i].z;}
+
+    function tickExhaust(f, baseY, intensity) {
+      var p = f.geometry.attributes.position.array;
+      var c = f.geometry.attributes.color.array;
+      var v = f.userData.vels, s = f.userData.s;
+      var int = intensity || 1;
+      for (var i = 0; i < v.length; i++) {
+        v[i].life -= 0.018 * int;
+        if (v[i].life <= 0) {
+          p[i*3] = (Math.random()-0.5)*0.04*s;
+          p[i*3+1] = baseY - 0.32*s;
+          p[i*3+2] = (Math.random()-0.5)*0.04*s;
+          v[i].life = 1;
+          c[i*3] = 1; c[i*3+1] = 0.9; c[i*3+2] = 0.7;
+        } else {
+          p[i*3] += v[i].x + (Math.random()-0.5)*v[i].spread*int;
+          p[i*3+1] += v[i].y * int;
+          p[i*3+2] += v[i].z + (Math.random()-0.5)*v[i].spread*int;
+          c[i*3+1] = Math.max(0.2, v[i].life * 0.6);
+          c[i*3+2] = Math.max(0, v[i].life * 0.15);
+        }
       }
-      f.geometry.attributes.position.needsUpdate=true;
+      f.geometry.attributes.position.needsUpdate = true;
+      f.geometry.attributes.color.needsUpdate = true;
+      f.material.opacity = 0.7 * int;
     }
 
-    // ===== PHASE 0: Launch =====
+    // ---- procedural planet texture ----
+    function makePlanetTex(w, h, baseR, baseG, baseB, noiseScale, hasOcean) {
+      var cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+      var cx = cv.getContext('2d');
+      // Simple procedural noise
+      for (var y = 0; y < h; y += 2) {
+        for (var x = 0; x < w; x += 2) {
+          var nx = x/w*noiseScale, ny = y/h*noiseScale;
+          var n = (Math.sin(nx*12.9898+ny*78.233)*43758.5453) % 1;
+          n = Math.abs(n);
+          var n2 = (Math.sin(nx*5.34+ny*15.78+nx*ny*2.1)*28461.32) % 1;
+          n2 = Math.abs(n2);
+          var blend = (n+n2)*0.5;
+          var r, g, b;
+          if (hasOcean && blend < 0.45) {
+            r = 20+blend*60; g = 50+blend*80; b = 140+blend*80;
+          } else {
+            r = baseR + (blend-0.5)*80;
+            g = baseG + (blend-0.5)*60;
+            b = baseB + (blend-0.5)*40;
+          }
+          cx.fillStyle = 'rgb('+Math.min(255,Math.max(0,r|0))+','+Math.min(255,Math.max(0,g|0))+','+Math.min(255,Math.max(0,b|0))+')';
+          cx.fillRect(x, y, 2, 2);
+        }
+      }
+      return new THREE.CanvasTexture(cv);
+    }
+
+    // ---- glow sprite for planets ----
+    function makeGlow(radius, color, opacity) {
+      var cv = document.createElement('canvas'); cv.width = 128; cv.height = 128;
+      var cx = cv.getContext('2d');
+      var gr = cx.createRadialGradient(64, 64, 0, 64, 64, 64);
+      var cr = (color>>16)&0xff, cg = (color>>8)&0xff, cb = color&0xff;
+      gr.addColorStop(0, 'rgba('+cr+','+cg+','+cb+','+opacity+')');
+      gr.addColorStop(0.4, 'rgba('+cr+','+cg+','+cb+','+(opacity*0.4)+')');
+      gr.addColorStop(1, 'rgba(0,0,0,0)');
+      cx.fillStyle = gr; cx.fillRect(0, 0, 128, 128);
+      var sp = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: new THREE.CanvasTexture(cv), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false
+      }));
+      sp.scale.set(radius*2.5, radius*2.5, 1);
+      return sp;
+    }
+
+    // ---- orbital satellite constellation ----
+    function mkSatConstellation(count, radius, color) {
+      var grp = new THREE.Group();
+      for (var i = 0; i < count; i++) {
+        var satG = new THREE.Group();
+        // Tiny sat body
+        satG.add(new THREE.Mesh(
+          new THREE.BoxGeometry(0.02, 0.015, 0.01),
+          new THREE.MeshStandardMaterial({color: 0xcccccc, metalness:0.5})
+        ));
+        // Two solar panels
+        for (var s = -1; s <= 1; s += 2) {
+          var panel = new THREE.Mesh(
+            new THREE.BoxGeometry(0.04, 0.001, 0.015),
+            new THREE.MeshStandardMaterial({color:0x112266, metalness:0.2})
+          );
+          panel.position.x = s * 0.04;
+          satG.add(panel);
+        }
+        var a = (i/count)*Math.PI*2;
+        var inclination = (Math.random()-0.5)*0.6;
+        satG.position.set(Math.cos(a)*radius, Math.sin(inclination)*radius*0.15, Math.sin(a)*radius);
+        satG.userData = {angle: a, incl: inclination, speed: 0.08+Math.random()*0.04, radius: radius};
+        grp.add(satG);
+      }
+      // Orbital ring
+      var ring = new THREE.Mesh(
+        new THREE.RingGeometry(radius-0.01, radius+0.01, 128),
+        new THREE.MeshBasicMaterial({color: color, transparent:true, opacity:0.08, side: THREE.DoubleSide})
+      );
+      ring.rotation.x = Math.PI/2;
+      grp.add(ring);
+      return grp;
+    }
+
+    // ======================================================================
+    // PHASE 0: LAUNCH — Detailed Earth surface, launch pad, rocket ascent
+    // ======================================================================
     var launchGrp = new THREE.Group();
-    var earth0 = new THREE.Mesh(new THREE.SphereGeometry(8,48,48), new THREE.MeshStandardMaterial({color:0x1a6b3f,roughness:.8}));
-    earth0.position.y = -8.2; launchGrp.add(earth0);
-    var atm0 = new THREE.Mesh(new THREE.SphereGeometry(8.15,48,48), new THREE.MeshBasicMaterial({color:0x4488ff,transparent:true,opacity:.1,side:THREE.BackSide}));
-    atm0.position.y = -8.2; launchGrp.add(atm0);
-    var pad = new THREE.Mesh(new THREE.CylinderGeometry(.25,.3,.05,16), new THREE.MeshStandardMaterial({color:0x666666,metalness:.5}));
-    pad.position.y = -.2; launchGrp.add(pad);
-    var tower = new THREE.Mesh(new THREE.BoxGeometry(.04,.8,.04), new THREE.MeshStandardMaterial({color:0x888888,metalness:.4}));
-    tower.position.set(-.3,.15,0); launchGrp.add(tower);
-    var rocket0 = mkRocket(1.4); launchGrp.add(rocket0);
-    var flame0 = mkFlame(1.4); launchGrp.add(flame0);
+    // Earth with procedural texture
+    var earthTex = makePlanetTex(512, 256, 50, 120, 50, 6, true);
+    var earth0 = new THREE.Mesh(
+      new THREE.SphereGeometry(10, 64, 64),
+      new THREE.MeshStandardMaterial({map: earthTex, roughness:0.7})
+    );
+    earth0.position.y = -10.5;
+    launchGrp.add(earth0);
+    // Atmosphere shell
+    var atm0 = new THREE.Mesh(
+      new THREE.SphereGeometry(10.2, 64, 64),
+      new THREE.MeshBasicMaterial({color:0x4488ff, transparent:true, opacity:0.08, side:THREE.BackSide})
+    );
+    atm0.position.y = -10.5;
+    launchGrp.add(atm0);
+    // Atmosphere glow sprite
+    var earthGlow0 = makeGlow(10, 0x4488ff, 0.12);
+    earthGlow0.position.y = -10.5;
+    launchGrp.add(earthGlow0);
+    // Launch pad complex
+    var padBase = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.5, 0.6, 0.08, 24),
+      new THREE.MeshStandardMaterial({color:0x555555, metalness:0.5, roughness:0.4})
+    );
+    padBase.position.y = -0.45; launchGrp.add(padBase);
+    // Support tower
+    var towerMat = new THREE.MeshStandardMaterial({color:0x888888, metalness:0.5, roughness:0.3});
+    var tower = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.4, 0.06), towerMat);
+    tower.position.set(-0.45, 0.2, 0); launchGrp.add(tower);
+    // Tower arm
+    var tArm = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.03, 0.03), towerMat);
+    tArm.position.set(-0.25, 0.55, 0); launchGrp.add(tArm);
+    // Lightning towers (smaller)
+    for (var i = 0; i < 3; i++) {
+      var lt = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.015, 0.6, 6), towerMat);
+      var la = (i/3)*Math.PI*2 + 0.5;
+      lt.position.set(Math.cos(la)*0.7, -0.1, Math.sin(la)*0.7);
+      launchGrp.add(lt);
+    }
+    // Fuel tanks near pad
+    var fuelTankMat = new THREE.MeshStandardMaterial({color:0xeeeeee, metalness:0.3, roughness:0.4});
+    var ft1 = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.25, 12), fuelTankMat);
+    ft1.position.set(0.5, -0.3, 0.2); launchGrp.add(ft1);
+    var ft2 = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.25, 12), fuelTankMat);
+    ft2.position.set(0.5, -0.3, -0.15); launchGrp.add(ft2);
+    // Rocket
+    var rocket0 = mkRocket(1.8);
+    launchGrp.add(rocket0);
+    var exhaust0 = mkExhaust(1.8);
+    launchGrp.add(exhaust0);
+    // Launch smoke
+    var smokeCnt = 200;
+    var smokeGeo = new THREE.BufferGeometry();
+    var smokePos = new Float32Array(smokeCnt*3), smokeVels = [];
+    for (var i = 0; i < smokeCnt; i++) {
+      smokePos[i*3] = (Math.random()-0.5)*0.3;
+      smokePos[i*3+1] = -0.4;
+      smokePos[i*3+2] = (Math.random()-0.5)*0.3;
+      smokeVels.push({x:(Math.random()-0.5)*0.02, y:0.005+Math.random()*0.01, z:(Math.random()-0.5)*0.02, life:Math.random()});
+    }
+    smokeGeo.setAttribute('position', new THREE.Float32BufferAttribute(smokePos, 3));
+    var smoke = new THREE.Points(smokeGeo, new THREE.PointsMaterial({
+      color:0xcccccc, size:0.08, transparent:true, opacity:0.3, depthWrite:false
+    }));
+    launchGrp.add(smoke);
     scene.add(launchGrp);
 
-    // ===== PHASE 1: Space Station =====
+    // ======================================================================
+    // PHASE 1: SPACE STATION — Detailed ISS-like structure + docking
+    // ======================================================================
     var orbitGrp = new THREE.Group();
     orbitGrp.visible = false;
-    var earth1 = new THREE.Mesh(new THREE.SphereGeometry(6,48,48), new THREE.MeshStandardMaterial({color:0x2255aa,roughness:.7}));
-    earth1.position.y = -7.5; orbitGrp.add(earth1);
+    // Earth in background
+    var earth1 = new THREE.Mesh(
+      new THREE.SphereGeometry(8, 64, 64),
+      new THREE.MeshStandardMaterial({map: earthTex, roughness:0.7})
+    );
+    earth1.position.set(0, -10, -5);
+    orbitGrp.add(earth1);
+    var earthGlow1 = makeGlow(8, 0x4488ff, 0.1);
+    earthGlow1.position.set(0, -10, -5);
+    orbitGrp.add(earthGlow1);
+    // Station
     var station = new THREE.Group();
-    station.add(new THREE.Mesh(new THREE.CylinderGeometry(.12,.12,1,16), new THREE.MeshStandardMaterial({color:0xcccccc,metalness:.6,roughness:.3})));
-    var sring = new THREE.Mesh(new THREE.TorusGeometry(.55,.05,8,32), new THREE.MeshStandardMaterial({color:0xdddddd,metalness:.5}));
-    sring.rotation.x = Math.PI/2; station.add(sring);
-    for(var i=0;i<4;i++){
-      var panel = new THREE.Mesh(new THREE.BoxGeometry(.55,.015,.18), new THREE.MeshStandardMaterial({color:0x112266,metalness:.3,roughness:.5}));
-      var arm = new THREE.Mesh(new THREE.CylinderGeometry(.01,.01,.3,6), new THREE.MeshStandardMaterial({color:0x999999}));
-      var ang = (i/4)*Math.PI*2;
-      arm.position.set(Math.cos(ang)*.55,0,Math.sin(ang)*.55); arm.rotation.z=Math.PI/2; arm.rotation.y=ang; station.add(arm);
-      panel.position.set(Math.cos(ang)*.85,0,Math.sin(ang)*.85); panel.rotation.y=ang; station.add(panel);
+    // Main truss
+    var trussMat = new THREE.MeshStandardMaterial({color:0xcccccc, metalness:0.6, roughness:0.25});
+    station.add(new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 2.2, 8), trussMat));
+    // Habitat modules
+    var modMat = new THREE.MeshStandardMaterial({color:0xe8e8e8, metalness:0.4, roughness:0.3});
+    var hab1 = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.5, 16), modMat);
+    hab1.rotation.z = Math.PI/2; station.add(hab1);
+    var hab2 = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.4, 16), modMat);
+    hab2.rotation.z = Math.PI/2; hab2.position.set(0, 0, 0.2); station.add(hab2);
+    // Cupola (observation dome)
+    var cupola = new THREE.Mesh(
+      new THREE.SphereGeometry(0.08, 16, 16, 0, Math.PI*2, 0, Math.PI/2),
+      new THREE.MeshStandardMaterial({color:0xaaccff, transparent:true, opacity:0.4, metalness:0.3})
+    );
+    cupola.position.set(0, 0.15, 0); station.add(cupola);
+    // Docking ring
+    var dring = new THREE.Mesh(
+      new THREE.TorusGeometry(0.65, 0.02, 8, 48),
+      new THREE.MeshStandardMaterial({color:0xdddddd, metalness:0.5})
+    );
+    dring.rotation.x = Math.PI/2; station.add(dring);
+    // 8 Solar panels on long arms
+    var panelMat = new THREE.MeshStandardMaterial({color:0x0a1a4a, metalness:0.2, roughness:0.5, emissive:0x060e2a, emissiveIntensity:0.2});
+    for (var i = 0; i < 8; i++) {
+      var armLen = 0.45;
+      var arm = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, armLen, 6), trussMat);
+      var ang = (i/8)*Math.PI*2;
+      var dist = 1.1;
+      arm.position.set(Math.cos(ang)*dist*0.5, 0, Math.sin(ang)*dist*0.5);
+      arm.rotation.z = Math.PI/2; arm.rotation.y = ang;
+      station.add(arm);
+      var panel = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.005, 0.12), panelMat);
+      panel.position.set(Math.cos(ang)*dist, Math.sin(i*0.3)*0.02, Math.sin(ang)*dist);
+      panel.rotation.y = ang;
+      station.add(panel);
     }
+    // Satellite constellation around station
+    var stationSats = mkSatConstellation(16, 2.5, 0x10b981);
+    station.add(stationSats);
     orbitGrp.add(station);
-    var rocket1 = mkRocket(.5); rocket1.position.set(1,0,0); rocket1.rotation.z=-Math.PI/2; orbitGrp.add(rocket1);
-    var fuelCnt=40,fGeo=new THREE.BufferGeometry(),fPos=new Float32Array(fuelCnt*3),fData=[];
-    for(var i=0;i<fuelCnt;i++){fData.push({prog:i/fuelCnt});fPos[i*3]=.15+(i/fuelCnt)*.7;fPos[i*3+1]=0;fPos[i*3+2]=0;}
-    fGeo.setAttribute('position',new THREE.Float32BufferAttribute(fPos,3));
-    var fuelPts=new THREE.Points(fGeo,new THREE.PointsMaterial({color:0x00ff88,size:.04,transparent:true,opacity:.7,blending:THREE.AdditiveBlending,depthWrite:false}));
-    orbitGrp.add(fuelPts);
-    var connGeo=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(.15,0,0),new THREE.Vector3(.85,0,0)]);
-    var connLine=new THREE.Line(connGeo,new THREE.LineBasicMaterial({color:0x00ff88,transparent:true,opacity:.3}));
-    orbitGrp.add(connLine);
+    // Docking rocket
+    var rocket1 = mkRocket(0.6);
+    rocket1.position.set(4, 1.5, 1);
+    rocket1.rotation.z = -Math.PI/2;
+    orbitGrp.add(rocket1);
+    // RCS thruster particles
+    var rcsCnt = 30, rcsGeo = new THREE.BufferGeometry(), rcsPos = new Float32Array(rcsCnt*3), rcsVels = [];
+    for (var i = 0; i < rcsCnt; i++) { rcsPos[i*3]=4; rcsPos[i*3+1]=1.5; rcsPos[i*3+2]=1; rcsVels.push({life:Math.random()}); }
+    rcsGeo.setAttribute('position', new THREE.Float32BufferAttribute(rcsPos, 3));
+    var rcsPts = new THREE.Points(rcsGeo, new THREE.PointsMaterial({
+      color:0x88ccff, size:0.02, transparent:true, opacity:0.5, blending:THREE.AdditiveBlending, depthWrite:false
+    }));
+    orbitGrp.add(rcsPts);
+    // Data transfer beam (station to Earth)
+    var beamPts = [new THREE.Vector3(0,0,0), new THREE.Vector3(0,-5,-3)];
+    var beamLine = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(beamPts),
+      new THREE.LineBasicMaterial({color:0x10b981, transparent:true, opacity:0.15})
+    );
+    orbitGrp.add(beamLine);
     scene.add(orbitGrp);
 
-    // ===== PHASE 2: Moon =====
+    // ======================================================================
+    // PHASE 2: MOON — Textured lunar surface, craters, base, Earth in sky
+    // ======================================================================
     var moonGrp = new THREE.Group();
     moonGrp.visible = false;
-    var moonSurf = new THREE.Mesh(new THREE.SphereGeometry(8,48,48), new THREE.MeshStandardMaterial({color:0xb0b0a8,roughness:.95}));
-    moonSurf.position.y = -8; moonGrp.add(moonSurf);
-    for(var i=0;i<6;i++){
-      var cr=new THREE.Mesh(new THREE.RingGeometry(.08+Math.random()*.12,.1+Math.random()*.15,16),new THREE.MeshBasicMaterial({color:0x888880,side:THREE.DoubleSide}));
-      cr.rotation.x=-Math.PI/2; cr.position.set((Math.random()-.5)*3,.01,(Math.random()-.5)*2); moonGrp.add(cr);
+    var moonTex = makePlanetTex(512, 256, 170, 170, 165, 8, false);
+    var moonSurf = new THREE.Mesh(
+      new THREE.SphereGeometry(10, 64, 64),
+      new THREE.MeshStandardMaterial({map: moonTex, roughness:0.95})
+    );
+    moonSurf.position.y = -10; moonGrp.add(moonSurf);
+    // Craters — concave rings on surface
+    for (var i = 0; i < 10; i++) {
+      var cs = 0.1 + Math.random()*0.2;
+      var cr = new THREE.Mesh(
+        new THREE.TorusGeometry(cs, cs*0.15, 8, 24),
+        new THREE.MeshStandardMaterial({color:0x999990, roughness:0.9})
+      );
+      cr.rotation.x = -Math.PI/2;
+      cr.position.set((Math.random()-0.5)*3, 0.01, (Math.random()-0.5)*2.5);
+      moonGrp.add(cr);
     }
-    var rocket2=mkRocket(1.1); rocket2.position.set(-.4,.38,0); moonGrp.add(rocket2);
-    var mbase=new THREE.Group();
-    mbase.add(new THREE.Mesh(new THREE.SphereGeometry(.22,16,16,0,Math.PI*2,0,Math.PI/2),new THREE.MeshStandardMaterial({color:0xaaccff,transparent:true,opacity:.5,metalness:.3})));
-    mbase.add(new THREE.Mesh(new THREE.CylinderGeometry(.28,.28,.035,16),new THREE.MeshStandardMaterial({color:0x777777,metalness:.5})));
-    var tank=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,.25,8),new THREE.MeshStandardMaterial({color:0xff6600,metalness:.4,emissive:0x331100,emissiveIntensity:.3}));
-    tank.position.set(.18,.13,.08); mbase.add(tank);
-    mbase.position.set(.6,0,.3); moonGrp.add(mbase);
-    var fuelLine=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-.4,.1,0),new THREE.Vector3(.1,.08,.15),new THREE.Vector3(.6,.13,.3)]),new THREE.LineBasicMaterial({color:0x00ff88,transparent:true,opacity:.4}));
+    // Boulders
+    for (var i = 0; i < 12; i++) {
+      var bSize = 0.03+Math.random()*0.06;
+      var boulder = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(bSize, 0),
+        new THREE.MeshStandardMaterial({color:0x8a8a82, roughness:0.95})
+      );
+      boulder.position.set((Math.random()-0.5)*4, bSize*0.3, (Math.random()-0.5)*3);
+      boulder.rotation.set(Math.random()*2, Math.random()*2, Math.random()*2);
+      moonGrp.add(boulder);
+    }
+    // Lunar base dome
+    var mbase = new THREE.Group();
+    var dome = new THREE.Mesh(
+      new THREE.SphereGeometry(0.35, 24, 24, 0, Math.PI*2, 0, Math.PI/2),
+      new THREE.MeshStandardMaterial({color:0xaaddff, transparent:true, opacity:0.35, metalness:0.4})
+    );
+    mbase.add(dome);
+    var baseFloor = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.4, 0.4, 0.04, 24),
+      new THREE.MeshStandardMaterial({color:0x666666, metalness:0.5})
+    );
+    mbase.add(baseFloor);
+    // Base solar panels
+    for (var i = 0; i < 3; i++) {
+      var bPanel = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.002, 0.08), panelMat);
+      bPanel.position.set(0.5+i*0.2, 0.08, 0.3); bPanel.rotation.x = -0.3;
+      mbase.add(bPanel);
+    }
+    // Antenna
+    var ant = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, 0.3, 6), trussMat);
+    ant.position.set(-0.3, 0.15, 0.1); mbase.add(ant);
+    var dish = new THREE.Mesh(
+      new THREE.SphereGeometry(0.06, 12, 12, 0, Math.PI*2, 0, Math.PI/2),
+      new THREE.MeshStandardMaterial({color:0xcccccc, metalness:0.5, side:THREE.DoubleSide})
+    );
+    dish.position.set(-0.3, 0.3, 0.1); dish.rotation.x = Math.PI; mbase.add(dish);
+    mbase.position.set(0.8, 0, 0.5);
+    moonGrp.add(mbase);
+    // Fuel tank connected to rocket
+    var mTank = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.06, 0.06, 0.3, 8),
+      new THREE.MeshStandardMaterial({color:0xff6600, metalness:0.4, emissive:0x331100, emissiveIntensity:0.3})
+    );
+    mTank.position.set(0.3, 0.15, 0.3); moonGrp.add(mTank);
+    // Refueling line
+    var fuelLine = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(-0.4, 0.1, 0),
+        new THREE.Vector3(0.0, 0.08, 0.15),
+        new THREE.Vector3(0.3, 0.15, 0.3)
+      ]),
+      new THREE.LineBasicMaterial({color:0x10b981, transparent:true, opacity:0.0})
+    );
     moonGrp.add(fuelLine);
-    var earthSky=new THREE.Mesh(new THREE.SphereGeometry(.12,24,24),new THREE.MeshBasicMaterial({color:0x2244aa}));
-    earthSky.position.set(-2,3,-5); moonGrp.add(earthSky);
-    var earthGlow2=new THREE.Mesh(new THREE.SphereGeometry(.16,16,16),new THREE.MeshBasicMaterial({color:0x4488ff,transparent:true,opacity:.15}));
-    earthGlow2.position.set(-2,3,-5); moonGrp.add(earthGlow2);
+    // Rocket landing
+    var rocket2 = mkRocket(1.3);
+    rocket2.position.set(-0.4, 3, 0);
+    moonGrp.add(rocket2);
+    var exhaust2 = mkExhaust(1.3);
+    moonGrp.add(exhaust2);
+    // Earth in sky — beautiful blue marble
+    var earthSkyTex = makePlanetTex(128, 64, 40, 80, 160, 5, true);
+    var earthSky = new THREE.Mesh(
+      new THREE.SphereGeometry(0.18, 24, 24),
+      new THREE.MeshBasicMaterial({map: earthSkyTex})
+    );
+    earthSky.position.set(-3, 4, -8); moonGrp.add(earthSky);
+    var earthSkyGlow = makeGlow(0.18, 0x4488ff, 0.15);
+    earthSkyGlow.position.set(-3, 4, -8); moonGrp.add(earthSkyGlow);
     scene.add(moonGrp);
 
-    // ===== PHASE 3: Mars =====
+    // ======================================================================
+    // PHASE 3: MARS — Red planet, dust storms, atmospheric entry
+    // ======================================================================
     var marsGrp = new THREE.Group();
     marsGrp.visible = false;
-    var marsSurf = new THREE.Mesh(new THREE.SphereGeometry(8,48,48), new THREE.MeshStandardMaterial({color:0xc1440e,roughness:.92}));
-    marsSurf.position.y = -7.8; marsGrp.add(marsSurf);
-    var marsAtm = new THREE.Mesh(new THREE.SphereGeometry(8.1,32,32),new THREE.MeshBasicMaterial({color:0xff8844,transparent:true,opacity:.06,side:THREE.BackSide}));
-    marsAtm.position.y = -7.8; marsGrp.add(marsAtm);
-    for(var i=0;i<5;i++){
-      var rock=new THREE.Mesh(new THREE.DodecahedronGeometry(.05+Math.random()*.08,0),new THREE.MeshStandardMaterial({color:0x994422,roughness:.95}));
-      rock.position.set((Math.random()-.5)*2,.03,(Math.random()-.5)*2);
-      rock.rotation.set(Math.random(),Math.random(),Math.random()); marsGrp.add(rock);
+    var marsTex = makePlanetTex(512, 256, 190, 70, 20, 7, false);
+    var marsSurf = new THREE.Mesh(
+      new THREE.SphereGeometry(10, 64, 64),
+      new THREE.MeshStandardMaterial({map: marsTex, roughness:0.9})
+    );
+    marsSurf.position.y = -9.8; marsGrp.add(marsSurf);
+    // Mars atmosphere
+    var marsAtm = new THREE.Mesh(
+      new THREE.SphereGeometry(10.15, 48, 48),
+      new THREE.MeshBasicMaterial({color:0xff6633, transparent:true, opacity:0.05, side:THREE.BackSide})
+    );
+    marsAtm.position.y = -9.8; marsGrp.add(marsAtm);
+    var marsGlow = makeGlow(10, 0xff6633, 0.06);
+    marsGlow.position.y = -9.8; marsGrp.add(marsGlow);
+    // Olympus Mons silhouette (large bump)
+    var olympus = new THREE.Mesh(
+      new THREE.ConeGeometry(1.2, 0.4, 32),
+      new THREE.MeshStandardMaterial({color:0xaa4410, roughness:0.95})
+    );
+    olympus.position.set(2, 0.15, -1); marsGrp.add(olympus);
+    // Rocky terrain
+    for (var i = 0; i < 18; i++) {
+      var rs = 0.04 + Math.random()*0.1;
+      var rock = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(rs, 0),
+        new THREE.MeshStandardMaterial({color:0x993311+Math.floor(Math.random()*0x222200), roughness:0.95})
+      );
+      rock.position.set((Math.random()-0.5)*4, rs*0.3, (Math.random()-0.5)*3);
+      rock.rotation.set(Math.random()*2, Math.random()*2, Math.random()*2);
+      marsGrp.add(rock);
     }
-    var rocket3=mkRocket(1.3); rocket3.position.set(0,3,0); marsGrp.add(rocket3);
-    var flame3=mkFlame(1.3); marsGrp.add(flame3);
-    var dustCnt=100,dGeo=new THREE.BufferGeometry(),dPos=new Float32Array(dustCnt*3),dVels=[];
-    for(var i=0;i<dustCnt;i++){dPos[i*3]=(Math.random()-.5)*1.5;dPos[i*3+1]=.05+Math.random()*.2;dPos[i*3+2]=(Math.random()-.5)*1.5;dVels.push({x:(Math.random()-.5)*.015,y:Math.random()*.008,z:(Math.random()-.5)*.015,life:Math.random()});}
-    dGeo.setAttribute('position',new THREE.Float32BufferAttribute(dPos,3));
-    var dust=new THREE.Points(dGeo,new THREE.PointsMaterial({color:0xcc8855,size:.05,transparent:true,opacity:.3,depthWrite:false}));
+    // Rocket descending
+    var rocket3 = mkRocket(1.6);
+    rocket3.position.set(0, 6, 0);
+    rocket3.rotation.z = Math.PI; // nose down
+    marsGrp.add(rocket3);
+    var exhaust3 = mkExhaust(1.6);
+    marsGrp.add(exhaust3);
+    // Dust storm particles
+    var dustCnt = 250, dustGeo = new THREE.BufferGeometry();
+    var dustPos = new Float32Array(dustCnt*3), dustVels = [];
+    for (var i = 0; i < dustCnt; i++) {
+      dustPos[i*3] = (Math.random()-0.5)*3;
+      dustPos[i*3+1] = 0.05 + Math.random()*0.4;
+      dustPos[i*3+2] = (Math.random()-0.5)*3;
+      dustVels.push({
+        x:(Math.random()-0.5)*0.02, y:Math.random()*0.012,
+        z:(Math.random()-0.5)*0.02, life:Math.random()
+      });
+    }
+    dustGeo.setAttribute('position', new THREE.Float32BufferAttribute(dustPos, 3));
+    var dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({
+      color:0xcc7744, size:0.06, transparent:true, opacity:0, depthWrite:false
+    }));
     marsGrp.add(dust);
-    var earthDot=new THREE.Mesh(new THREE.SphereGeometry(.04,12,12),new THREE.MeshBasicMaterial({color:0x4488ff}));
-    earthDot.position.set(3,4,-8); marsGrp.add(earthDot);
+    // Re-entry heat shield glow
+    var heatGlow = makeGlow(0.3, 0xff4400, 0.4);
+    heatGlow.position.set(0, 6, 0);
+    marsGrp.add(heatGlow);
+    // Earth & Moon as tiny dots
+    var earthDot = new THREE.Mesh(new THREE.SphereGeometry(0.05, 12, 12), new THREE.MeshBasicMaterial({color:0x4488ff}));
+    earthDot.position.set(4, 5, -10); marsGrp.add(earthDot);
+    var moonDot = new THREE.Mesh(new THREE.SphereGeometry(0.015, 8, 8), new THREE.MeshBasicMaterial({color:0xbbbbbb}));
+    moonDot.position.set(4.15, 5.05, -10); marsGrp.add(moonDot);
     scene.add(marsGrp);
 
+    // ---- Phase management ----
     var groups = [launchGrp, orbitGrp, moonGrp, marsGrp];
     var phaseLabels = [
       'Phase 1 \u2014 Rocket Launch from Earth',
@@ -4650,37 +5351,51 @@
       'Phase 3 \u2014 Moon Descent & Refueling Base',
       'Phase 4 \u2014 Mars Atmospheric Entry & Landing'
     ];
-    var curPhase = 0, phaseTime = 14;
+    var phaseMissions = ['EARTH DEPARTURE', 'ORBITAL RENDEZVOUS', 'LUNAR DESCENT', 'MARS ENTRY'];
+    var phaseStatuses = ['IGNITION SEQUENCE', 'DOCKING APPROACH', 'TERRAIN SCANNING', 'HEAT SHIELD ACTIVE'];
+    var curPhase = 0, phaseTime = 16;
+    camera.position.set(1, 0.8, 3);
+    camera.lookAt(0, 0.5, 0);
 
-    camera.position.set(.8,.6,2.2);
-    camera.lookAt(0,.5,0);
-
-    // Smooth easing: slow start & end, fast middle
-    function easeInOut(x) { return x < .5 ? 2*x*x : 1-Math.pow(-2*x+2,2)/2; }
+    function easeInOut(x) { return x < 0.5 ? 2*x*x : 1-Math.pow(-2*x+2,2)/2; }
     function easeOut(x) { return 1-Math.pow(1-x,3); }
 
+    // HUD update
+    function updateHUD(alt, vel, fuel, dist) {
+      var ha = document.getElementById('sjHudAlt');
+      var hv = document.getElementById('sjHudVel');
+      var hf = document.getElementById('sjHudFuel');
+      var hd = document.getElementById('sjHudDist');
+      if (ha) ha.textContent = alt;
+      if (hv) hv.textContent = vel;
+      if (hf) hf.textContent = fuel;
+      if (hd) hd.textContent = dist;
+    }
+
     function resetPhaseObjects(idx) {
-      // Reset positions so every phase starts cleanly
       if (idx === 0) {
         rocket0.position.set(0, 0, 0);
-        flame0.position.set(0, 0, 0);
-        flame0.visible = true;
+        exhaust0.position.set(0, 0, 0);
+        exhaust0.visible = true;
+        smoke.material.opacity = 0;
       }
       if (idx === 1) {
-        rocket1.position.set(3.5, 1.5, 1);
+        rocket1.position.set(4, 1.5, 1);
         rocket1.rotation.set(0, 0, -Math.PI/2);
-        fuelPts.visible = false;
-        connLine.visible = false;
       }
       if (idx === 2) {
-        rocket2.position.set(-.4, 3, 0);
+        rocket2.position.set(-0.4, 3, 0);
         rocket2.rotation.set(0, 0, 0);
+        exhaust2.visible = true;
+        fuelLine.material.opacity = 0;
       }
       if (idx === 3) {
-        rocket3.position.set(0, 5, 0);
-        rocket3.rotation.set(0, 0, Math.PI); // nose-down for entry
-        flame3.position.set(0, 5, 0);
-        flame3.visible = true;
+        rocket3.position.set(0, 6, 0);
+        rocket3.rotation.set(0, 0, Math.PI);
+        exhaust3.visible = true;
+        exhaust3.position.set(0, 6, 0);
+        heatGlow.position.set(0, 6, 0);
+        heatGlow.material.opacity = 0.4;
         dust.material.opacity = 0;
       }
     }
@@ -4694,8 +5409,12 @@
       if (btns[idx]) btns[idx].classList.add('sj-phase-active');
       var lbl = document.getElementById('sjPhaseLabel');
       if (lbl) lbl.textContent = phaseLabels[idx];
-      // Reset sunlight
+      var mis = document.getElementById('sjHudMission');
+      if (mis) mis.textContent = 'MISSION: ' + phaseMissions[idx];
+      var sts = document.getElementById('sjHudStatus');
+      if (sts) sts.textContent = phaseStatuses[idx];
       sunLight.color.set(idx === 3 ? 0xffccaa : 0xffffff);
+      sunLight.intensity = idx === 2 ? 1.2 : 1.6;
     }
 
     document.querySelectorAll('.sj-phase-btn').forEach(function(btn) {
@@ -4704,6 +5423,15 @@
         if (!isNaN(p)) { phaseTimer = 0; setPhase(p); }
       });
     });
+
+    // Mouse parallax
+    var mouseX = 0, mouseY = 0;
+    c.addEventListener('mousemove', function(e) {
+      var rect = c.getBoundingClientRect();
+      mouseX = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
+      mouseY = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
+    });
+    c.addEventListener('mouseleave', function() { mouseX = 0; mouseY = 0; });
 
     setPhase(0);
 
@@ -4716,196 +5444,262 @@
       t += dt;
       phaseTimer += dt;
 
-      // Linear progress 0 → 1 through current phase
       var prog = Math.min(phaseTimer / phaseTime, 1);
-
       if (prog >= 1) {
         phaseTimer = 0;
         setPhase((curPhase + 1) % 4);
         prog = 0;
       }
 
-      stars.rotation.y = t * 0.002;
+      // Starfield slow rotation + mouse parallax
+      stars.rotation.y = t * 0.001;
+      stars.rotation.x = mouseY * 0.02;
+      nebulaGroup.rotation.y = t * 0.0005;
 
-      /* ===== Phase 0: LAUNCH — rocket sits on pad, ignites, lifts off ===== */
+      // Shooting stars
+      var sp = shootStars.geometry.attributes.position.array;
+      for (var i = 0; i < shootStarCnt; i++) {
+        var sd = shootData[i];
+        sd.timer += 1;
+        if (sd.timer > sd.interval && sd.timer < sd.interval + 30) {
+          var st = (sd.timer - sd.interval) / 30;
+          sp[i*6] = sd.x + sd.vx * st * 20;
+          sp[i*6+1] = sd.y + sd.vy * st * 20;
+          sp[i*6+2] = sd.z;
+          sp[i*6+3] = sp[i*6] + sd.vx * 3;
+          sp[i*6+4] = sp[i*6+1] + sd.vy * 3;
+          sp[i*6+5] = sd.z;
+        } else if (sd.timer > sd.interval + 30) {
+          sd.timer = 0;
+          sd.x = (Math.random()-0.5)*60;
+          sd.y = 10+Math.random()*30;
+          sd.z = -20-Math.random()*60;
+          sp[i*6]=sp[i*6+3]=0; sp[i*6+1]=sp[i*6+4]=1000; sp[i*6+2]=sp[i*6+5]=0;
+        }
+      }
+      shootStars.geometry.attributes.position.needsUpdate = true;
+
+      // Engine point light flicker
+      pointLight.intensity = 0.5 + Math.random() * 0.3;
+
+      /* ===== Phase 0: LAUNCH ===== */
       if (curPhase === 0) {
-        // 0-0.15: sitting on pad, engine ignite (flame grows)
-        // 0.15-1.0: smooth ascent, accelerating
         var rY;
-        if (prog < 0.12) {
-          // Countdown / sitting on pad — small flame sputtering
+        if (prog < 0.10) {
           rY = 0;
-          flame0.visible = true;
-          flame0.material.opacity = 0.3 + prog * 3;
+          exhaust0.visible = true;
+          exhaust0.material.opacity = 0.2 + prog * 5;
+          smoke.material.opacity = prog * 3;
+          updateHUD('0 km', '0 km/s', '100%', '0 AU');
         } else if (prog < 0.18) {
-          // Slow liftoff start
-          var lp = (prog - 0.12) / 0.06;
-          rY = easeInOut(lp) * 0.15;
-          flame0.material.opacity = 0.8;
+          var lp = (prog - 0.10) / 0.08;
+          rY = easeInOut(lp) * 0.2;
+          smoke.material.opacity = 0.3;
+          updateHUD((rY*50|0)+' km', (rY*2).toFixed(1)+' km/s', (100-lp*5|0)+'%', '0 AU');
         } else {
-          // Full ascent — accelerating curve
           var ap = (prog - 0.18) / 0.82;
-          rY = 0.15 + easeInOut(ap) * 6;
-          flame0.material.opacity = 0.9;
+          rY = 0.2 + easeInOut(ap) * 8;
+          smoke.material.opacity = Math.max(0, 0.3 - ap * 0.5);
+          var alt = (rY*50|0);
+          updateHUD(alt+' km', (rY*2.5).toFixed(1)+' km/s', (95-ap*40|0)+'%', '0 AU');
         }
         rocket0.position.y = rY;
-        rocket0.rotation.z = Math.sin(t * 3) * 0.008 * Math.min(1, prog * 5);
-        flame0.position.y = rY;
-        tickFlame(flame0, rY);
-
-        // Camera follows rocket, pulls back as it ascends
-        camera.position.set(0.8 + Math.sin(t * 0.15) * 0.05, 0.6 + rY * 0.3, 2.2 + rY * 0.08);
-        camera.lookAt(0, rY * 0.45, 0);
-
-        // Earth shrinks below and tower recedes — already happens via camera tracking
-        pad.visible = prog < 0.5;
-        tower.visible = prog < 0.5;
-        // Atmosphere glow fades as we leave
-        atm0.material.opacity = Math.max(0, 0.1 - prog * 0.1);
+        rocket0.rotation.z = Math.sin(t * 3) * 0.006 * Math.min(1, prog * 5);
+        exhaust0.position.y = rY;
+        tickExhaust(exhaust0, rY, 1);
+        pointLight.position.set(0, rY - 0.5, 0);
+        pointLight.color.set(0xff6600);
+        // Smoke billows
+        var smP = smoke.geometry.attributes.position.array;
+        for (var i = 0; i < smokeCnt; i++) {
+          smokeVels[i].life -= 0.008;
+          if (smokeVels[i].life <= 0) {
+            smP[i*3] = (Math.random()-0.5)*0.15;
+            smP[i*3+1] = -0.4;
+            smP[i*3+2] = (Math.random()-0.5)*0.15;
+            smokeVels[i].life = 1;
+          } else {
+            smP[i*3] += smokeVels[i].x;
+            smP[i*3+1] += smokeVels[i].y;
+            smP[i*3+2] += smokeVels[i].z;
+          }
+        }
+        smoke.geometry.attributes.position.needsUpdate = true;
+        // Camera
+        camera.position.set(
+          1.2 + Math.sin(t * 0.12) * 0.1 + mouseX * 0.15,
+          0.8 + rY * 0.2 + mouseY * 0.08,
+          3 + rY * 0.05
+        );
+        camera.lookAt(0, rY * 0.35, 0);
+        padBase.visible = prog < 0.4;
+        tower.visible = prog < 0.4;
+        tArm.visible = prog < 0.4;
+        atm0.material.opacity = Math.max(0, 0.08 - prog * 0.08);
       }
 
-      /* ===== Phase 1: STATION — rocket approaches, docks, refuels ===== */
+      /* ===== Phase 1: STATION ===== */
       if (curPhase === 1) {
-        station.rotation.y = t * 0.12;
-        station.rotation.x = Math.sin(t * 0.06) * 0.05;
-
-        if (prog < 0.4) {
-          // Rocket approaches from far right — glides toward station
-          var ap = easeOut(prog / 0.4);
-          rocket1.position.set(3.5 - ap * 2.5, 1.5 - ap * 1.5, 1 - ap * 1);
-          fuelPts.visible = false;
-          connLine.visible = false;
-        } else if (prog < 0.5) {
-          // Final docking alignment
-          var dp = easeInOut((prog - 0.4) / 0.1);
-          rocket1.position.set(1 - dp * 0.15, dp * 0.02, dp * 0.02);
-          fuelPts.visible = false;
-          connLine.visible = false;
-        } else {
-          // Docked — refueling
-          rocket1.position.set(0.85, Math.sin(t * 0.5) * 0.01, 0);
-          fuelPts.visible = true;
-          connLine.visible = true;
-          // Animate fuel particles flowing from station to rocket
-          var fp = fuelPts.geometry.attributes.position.array;
-          var fuelProg = (prog - 0.5) / 0.5; // 0→1 of refueling portion
-          for (var i = 0; i < fuelCnt; i++) {
-            fData[i].prog = (fData[i].prog + 0.006) % 1;
-            fp[i * 3] = 0.15 + fData[i].prog * 0.7;
-            fp[i * 3 + 1] = Math.sin(fData[i].prog * Math.PI * 4) * 0.03;
-            fp[i * 3 + 2] = Math.cos(fData[i].prog * Math.PI * 4) * 0.03;
+        station.rotation.y = t * 0.1;
+        station.rotation.x = Math.sin(t * 0.04) * 0.03;
+        earth1.rotation.y = t * 0.005;
+        // Satellite constellation orbits
+        stationSats.children.forEach(function(ch) {
+          if (ch.userData && ch.userData.angle !== undefined) {
+            ch.userData.angle += ch.userData.speed * dt;
+            var a = ch.userData.angle, rad = ch.userData.radius;
+            ch.position.set(Math.cos(a)*rad, Math.sin(ch.userData.incl)*rad*0.15, Math.sin(a)*rad);
           }
-          fuelPts.geometry.attributes.position.needsUpdate = true;
-          fuelPts.material.opacity = 0.5 + Math.sin(t * 2) * 0.2;
-          connLine.material.opacity = 0.25 + Math.sin(t * 3) * 0.15;
-        }
+        });
 
-        // Camera: starts far, moves closer as rocket approaches
-        var camZ = 3.5 + (1 - easeOut(Math.min(prog * 1.5, 1))) * 1.5;
-        camera.position.set(Math.sin(t * 0.05) * 0.3, 0.5 + Math.sin(t * 0.08) * 0.1, camZ);
+        if (prog < 0.35) {
+          var ap = easeOut(prog / 0.35);
+          rocket1.position.set(4 - ap * 3.2, 1.5 - ap * 1.5, 1 - ap * 1);
+          updateHUD('408 km', (7.7-ap*7).toFixed(1)+' km/s', (55-ap*5|0)+'%', '0 AU');
+          // RCS puffs
+          var rp = rcsPts.geometry.attributes.position.array;
+          for (var i = 0; i < rcsCnt; i++) {
+            rcsVels[i].life -= 0.03;
+            if (rcsVels[i].life <= 0) {
+              rp[i*3] = rocket1.position.x + 0.1;
+              rp[i*3+1] = rocket1.position.y + (Math.random()-0.5)*0.1;
+              rp[i*3+2] = rocket1.position.z;
+              rcsVels[i].life = 1;
+            } else {
+              rp[i*3] += 0.015;
+              rp[i*3+1] += (Math.random()-0.5)*0.003;
+              rp[i*3+2] += (Math.random()-0.5)*0.003;
+            }
+          }
+          rcsPts.geometry.attributes.position.needsUpdate = true;
+          rcsPts.material.opacity = 0.4;
+        } else if (prog < 0.45) {
+          rocket1.position.set(0.8, Math.sin(t*0.5)*0.01, 0.02);
+          rcsPts.material.opacity = 0;
+          updateHUD('408 km', '0.1 km/s', '50%', '0 AU');
+        } else {
+          rocket1.position.set(0.8, Math.sin(t*0.3)*0.005, 0);
+          rcsPts.material.opacity = 0;
+          var rp2 = (prog-0.45)/0.55;
+          beamLine.material.opacity = 0.1 + Math.sin(t*2)*0.05;
+          updateHUD('408 km', '0 km/s', (50+rp2*40|0)+'%', '0 AU');
+        }
+        var camZ = 4 + (1 - easeOut(Math.min(prog * 1.3, 1))) * 2;
+        camera.position.set(
+          Math.sin(t * 0.04) * 0.4 + mouseX * 0.2,
+          0.5 + Math.sin(t * 0.06) * 0.1 + mouseY * 0.1,
+          camZ
+        );
         camera.lookAt(0, 0, 0);
       }
 
-      /* ===== Phase 2: MOON — rocket descends from orbit to lunar surface ===== */
+      /* ===== Phase 2: MOON ===== */
       if (curPhase === 2) {
         var rY2;
-        if (prog < 0.6) {
-          // Descent — rocket comes down from high
-          var dp = easeInOut(prog / 0.6);
-          rY2 = 3 - dp * 2.62; // 3 → 0.38
-          rocket2.rotation.z = Math.sin(t * 1.5) * 0.01 * (1 - dp * 0.8);
-        } else if (prog < 0.75) {
-          // Touching down — gentle final approach
-          var tdp = easeOut((prog - 0.6) / 0.15);
+        if (prog < 0.55) {
+          var dp = easeInOut(prog / 0.55);
+          rY2 = 3 - dp * 2.62;
+          rocket2.rotation.z = Math.sin(t * 1.2) * 0.008 * (1 - dp * 0.8);
+          exhaust2.visible = true;
+          tickExhaust(exhaust2, rY2, 0.6 + (1-dp)*0.4);
+          updateHUD(((1-dp)*110|0)+' km', ((1-dp)*1.6).toFixed(1)+' km/s', (40-dp*10|0)+'%', '1.28 ls');
+        } else if (prog < 0.7) {
           rY2 = 0.38;
           rocket2.rotation.z = 0;
+          exhaust2.visible = prog < 0.65;
+          updateHUD('0 km', '0 km/s', '30%', '1.28 ls');
         } else {
-          // Landed — fuel line activates to base
           rY2 = 0.38;
           rocket2.rotation.z = 0;
-          var refuelProg = (prog - 0.75) / 0.25;
-          fuelLine.material.opacity = easeOut(refuelProg) * 0.6;
-          tank.material.emissiveIntensity = 0.3 + easeOut(refuelProg) * 0.4;
+          exhaust2.visible = false;
+          var rfp = (prog-0.7)/0.3;
+          fuelLine.material.opacity = easeOut(rfp) * 0.5;
+          mTank.material.emissiveIntensity = 0.3 + easeOut(rfp) * 0.5;
+          updateHUD('0 km', '0 km/s', (30+rfp*60|0)+'%', '1.28 ls');
         }
         rocket2.position.y = rY2;
-
-        // Fuel line starts invisible during descent
-        if (prog < 0.75) {
-          fuelLine.material.opacity = 0;
-          tank.material.emissiveIntensity = 0.2;
-        }
-
-        // Earth in sky gentle sway
-        earthSky.position.x = -2 + Math.sin(t * 0.03) * 0.1;
-
-        // Camera: tracks descent from above-side, then settles
-        var camH = 0.9 + (1 - easeOut(Math.min(prog * 1.3, 1))) * 1.2;
-        camera.position.set(1.2 + Math.sin(t * 0.08) * 0.08, camH, 2.5);
-        camera.lookAt(0, rY2 * 0.3, 0);
+        exhaust2.position.y = rY2;
+        pointLight.position.set(-0.4, rY2 - 0.4, 0);
+        pointLight.color.set(0xff6600);
+        earthSky.rotation.y = t * 0.01;
+        camera.position.set(
+          1.5 + Math.sin(t * 0.06) * 0.1 + mouseX * 0.15,
+          0.9 + (1 - easeOut(Math.min(prog * 1.3, 1))) * 1.5 + mouseY * 0.1,
+          3
+        );
+        camera.lookAt(0, rY2 * 0.25, 0);
       }
 
-      /* ===== Phase 3: MARS — atmospheric entry, descent & landing ===== */
+      /* ===== Phase 3: MARS ===== */
       if (curPhase === 3) {
         var rY3;
-        if (prog < 0.15) {
-          // Atmospheric entry — nose down, high altitude
-          var ep = prog / 0.15;
-          rY3 = 5 - ep * 0.5;
-          rocket3.rotation.z = Math.PI - easeOut(ep) * (Math.PI - 0.04);
-          flame3.visible = true;
-          flame3.material.color.set(0xff4400); // re-entry glow
-          marsAtm.material.opacity = 0.06 + ep * 0.08;
-        } else if (prog < 0.7) {
-          // Main descent — flipping to tail-down, decelerating
-          var dp = (prog - 0.15) / 0.55;
-          rY3 = 4.5 - easeInOut(dp) * 3.8; // 4.5 → 0.7
-          rocket3.rotation.z = 0.04 - easeOut(dp) * 0.04; // straighten out
-          flame3.visible = true;
-          flame3.material.color.set(0xff6600);
-          marsAtm.material.opacity = 0.14 - dp * 0.08;
+        if (prog < 0.12) {
+          var ep = prog / 0.12;
+          rY3 = 6 - ep * 0.5;
+          rocket3.rotation.z = Math.PI - easeOut(ep) * (Math.PI - 0.05);
+          exhaust3.visible = true;
+          exhaust3.material.opacity = 0.3;
+          heatGlow.material.opacity = 0.3 + ep * 0.4;
+          marsAtm.material.opacity = 0.05 + ep * 0.1;
+          updateHUD(((1-ep*0.1)*125|0)+' km', '5.4 km/s', '35%', '0.52 AU');
+        } else if (prog < 0.65) {
+          var dp = (prog - 0.12) / 0.53;
+          rY3 = 5.5 - easeInOut(dp) * 4.5;
+          rocket3.rotation.z = 0.05 - easeOut(dp) * 0.05;
+          exhaust3.visible = true;
+          tickExhaust(exhaust3, rY3, 0.8);
+          heatGlow.material.opacity = Math.max(0, 0.7 - dp * 0.7);
+          marsAtm.material.opacity = Math.max(0.05, 0.15 - dp * 0.1);
+          updateHUD(((1-dp)*120|0)+' km', ((1-dp)*5).toFixed(1)+' km/s', (35-dp*15|0)+'%', '0.52 AU');
         } else {
-          // Final landing — slow, dust kicks up
-          var lp = easeOut((prog - 0.7) / 0.3);
-          rY3 = 0.7 - lp * 0.4; // 0.7 → 0.3
+          var lp = easeOut((prog - 0.65) / 0.35);
+          rY3 = 1.0 - lp * 0.6;
           rocket3.rotation.z = 0;
-          // Flame diminishes as we touch down
-          flame3.visible = prog < 0.92;
-          flame3.material.opacity = Math.max(0, 1 - lp * 2);
+          exhaust3.visible = prog < 0.92;
+          exhaust3.material.opacity = Math.max(0, 1 - lp * 2.5);
+          heatGlow.material.opacity = 0;
+          updateHUD((rY3*20|0)+' km', ((1-lp)*0.8).toFixed(1)+' km/s', (20-lp*5|0)+'%', '0.52 AU');
         }
-
         rocket3.position.y = rY3;
-        flame3.position.y = rY3;
-        tickFlame(flame3, rY3);
-
-        // Dust increases as rocket gets closer to surface
-        var closeness = Math.max(0, 1 - (rY3 - 0.3) / 4.7);
-        var dustStrength = closeness * closeness; // quadratic for dramatic effect
-        dust.material.opacity = dustStrength * 0.5;
+        exhaust3.position.y = rY3;
+        heatGlow.position.y = rY3;
+        tickExhaust(exhaust3, rY3, Math.max(0.2, 1 - prog));
+        pointLight.position.set(0, rY3 - 0.5, 0);
+        pointLight.color.set(0xff4400);
+        // Dust storm
+        var closeness = Math.max(0, 1 - (rY3 - 0.4) / 5.6);
+        var dustStr = closeness * closeness;
+        dust.material.opacity = dustStr * 0.45;
         var dp2 = dust.geometry.attributes.position.array;
         for (var i = 0; i < dustCnt; i++) {
-          dVels[i].life -= 0.01 * dustStrength;
-          if (dVels[i].life <= 0) {
-            dp2[i * 3] = (Math.random() - 0.5) * (0.5 + dustStrength);
-            dp2[i * 3 + 1] = 0.05;
-            dp2[i * 3 + 2] = (Math.random() - 0.5) * (0.5 + dustStrength);
-            dVels[i].life = 1;
+          dustVels[i].life -= 0.008 * (dustStr + 0.1);
+          if (dustVels[i].life <= 0) {
+            dp2[i*3] = (Math.random()-0.5)*(0.8+dustStr*2);
+            dp2[i*3+1] = 0.05;
+            dp2[i*3+2] = (Math.random()-0.5)*(0.8+dustStr*2);
+            dustVels[i].life = 1;
           } else {
-            dp2[i * 3] += dVels[i].x * dustStrength * 1.5;
-            dp2[i * 3 + 1] += dVels[i].y * dustStrength;
-            dp2[i * 3 + 2] += dVels[i].z * dustStrength * 1.5;
+            dp2[i*3] += dustVels[i].x * (dustStr*2+0.3);
+            dp2[i*3+1] += dustVels[i].y * dustStr;
+            dp2[i*3+2] += dustVels[i].z * (dustStr*2+0.3);
           }
         }
         dust.geometry.attributes.position.needsUpdate = true;
-
-        // Camera follows descent, gets lower with the rocket
-        camera.position.set(0.5 + Math.sin(t * 0.1) * 0.1, 1.5 - closeness * 0.6, 3 - closeness * 0.3);
-        camera.lookAt(0, rY3 * 0.35, 0);
+        marsSurf.rotation.y = t * 0.003;
+        camera.position.set(
+          0.6 + Math.sin(t * 0.08) * 0.12 + mouseX * 0.2,
+          1.8 - closeness * 0.8 + mouseY * 0.1,
+          3.5 - closeness * 0.5
+        );
+        camera.lookAt(0, rY3 * 0.3, 0);
       }
 
       renderer.render(scene, camera);
     }
 
-    new IntersectionObserver(function(e){e.forEach(function(en){vis=en.isIntersecting;});},{threshold:0.1}).observe(c);
+    new IntersectionObserver(function(e) {
+      e.forEach(function(en) { vis = en.isIntersecting; });
+    }, {threshold: 0.05}).observe(c);
 
     window.addEventListener('resize', function() {
       var nw = c.clientWidth, nh = c.clientHeight;
@@ -4998,6 +5792,145 @@
         ticking = true;
       }
     }, { passive: true });
+  })();
+
+  // ========================================================================
+  // GIFT CARD INTERCHANGE
+  // ========================================================================
+  (function initGiftCardInterchange() {
+    const tabs = $$('.gc-tab');
+    const panelSell = document.getElementById('gcPanelSell');
+    const panelBuy = document.getElementById('gcPanelBuy');
+    if (!panelSell || !panelBuy) return;
+
+    // Tab switching
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('gc-tab-active'));
+        tab.classList.add('gc-tab-active');
+        const which = tab.getAttribute('data-gc-tab');
+        panelSell.classList.toggle('gc-panel-active', which === 'sell');
+        panelBuy.classList.toggle('gc-panel-active', which === 'buy');
+      });
+    });
+
+    // Sell form live conversion
+    const gcBalanceSell = document.getElementById('gcBalanceSell');
+    const gcSellResult = document.getElementById('gcSellResult');
+    const gcSellRate = document.getElementById('gcSellRate');
+    const gcSellFee = document.getElementById('gcSellFee');
+    const gcSellBtn = document.getElementById('gcSellBtn');
+    const gcCodeSell = document.getElementById('gcCodeSell');
+
+    function updateSellConversion() {
+      const bal = parseFloat(gcBalanceSell.value) || 0;
+      const code = (gcCodeSell.value || '').trim();
+      if (bal > 0 && window.ostPrice > 0) {
+        const ostAmount = bal / window.ostPrice;
+        const fee = ostAmount * 0.001;
+        const net = ostAmount - fee;
+        gcSellResult.textContent = net.toFixed(2) + ' OST';
+        gcSellRate.textContent = '1 OST = $' + window.ostPrice.toFixed(6);
+        gcSellFee.textContent = fee.toFixed(4) + ' OST';
+        gcSellBtn.disabled = !code;
+      } else {
+        gcSellResult.textContent = '-- OST';
+        gcSellRate.textContent = '--';
+        gcSellFee.textContent = '--';
+        gcSellBtn.disabled = true;
+      }
+    }
+    gcBalanceSell.addEventListener('input', updateSellConversion);
+    gcCodeSell.addEventListener('input', updateSellConversion);
+
+    // Buy form live conversion
+    const gcAmountBuy = document.getElementById('gcAmountBuy');
+    const gcBuyResult = document.getElementById('gcBuyResult');
+    const gcBuyRate = document.getElementById('gcBuyRate');
+    const gcBuyFee = document.getElementById('gcBuyFee');
+    const gcBuyBtn = document.getElementById('gcBuyBtn');
+
+    function updateBuyConversion() {
+      const amt = parseFloat(gcAmountBuy.value) || 0;
+      if (amt > 0 && window.ostPrice > 0) {
+        const ostAmount = amt / window.ostPrice;
+        const fee = ostAmount * 0.001;
+        const total = ostAmount + fee;
+        gcBuyResult.textContent = total.toFixed(2) + ' OST';
+        gcBuyRate.textContent = '1 OST = $' + window.ostPrice.toFixed(6);
+        gcBuyFee.textContent = fee.toFixed(4) + ' OST';
+        gcBuyBtn.disabled = false;
+      } else {
+        gcBuyResult.textContent = '-- OST';
+        gcBuyRate.textContent = '--';
+        gcBuyFee.textContent = '--';
+        gcBuyBtn.disabled = true;
+      }
+    }
+    gcAmountBuy.addEventListener('input', updateBuyConversion);
+
+    // Sell flow simulation
+    gcSellBtn.addEventListener('click', () => {
+      gcSellBtn.disabled = true;
+      const flow = document.getElementById('gcSellFlow');
+      flow.style.display = 'flex';
+      const steps = flow.querySelectorAll('.gc-step');
+      steps.forEach(s => { s.classList.remove('gc-step-active', 'gc-step-done'); });
+      let i = 0;
+      function nextStep() {
+        if (i > 0) steps[i - 1].classList.replace('gc-step-active', 'gc-step-done');
+        if (i < steps.length) {
+          steps[i].classList.add('gc-step-active');
+          i++;
+          setTimeout(nextStep, 1200 + Math.random() * 800);
+        } else {
+          showToast('Gift card sold! OST received privately.', '&#9989;');
+        }
+      }
+      nextStep();
+    });
+
+    // Buy flow simulation
+    gcBuyBtn.addEventListener('click', () => {
+      gcBuyBtn.disabled = true;
+      const flow = document.getElementById('gcBuyFlow');
+      const delivered = document.getElementById('gcDelivered');
+      flow.style.display = 'flex';
+      delivered.style.display = 'none';
+      const steps = flow.querySelectorAll('.gc-step');
+      steps.forEach(s => { s.classList.remove('gc-step-active', 'gc-step-done'); });
+      const merchant = document.getElementById('gcMerchantBuy').value;
+      let i = 0;
+      function nextStep() {
+        if (i > 0) steps[i - 1].classList.replace('gc-step-active', 'gc-step-done');
+        if (i < steps.length) {
+          steps[i].classList.add('gc-step-active');
+          i++;
+          setTimeout(nextStep, 1200 + Math.random() * 800);
+        } else {
+          // Show delivered card
+          delivered.style.display = 'block';
+          const brandMap = { amazon: '&#127873; Amazon', apple: '&#127822; Apple', google: '&#9654; Google Play', steam: '&#127918; Steam', walmart: 'Walmart', target: 'Target', ebay: 'eBay', starbucks: '&#9749; Starbucks', nike: '&#128095; Nike', netflix: '&#127916; Netflix', spotify: '&#127925; Spotify', uber: '&#128663; Uber', 'visa-gc': 'Visa', 'mastercard-gc': 'Mastercard' };
+          document.getElementById('gcCardBrand').innerHTML = brandMap[merchant] || '&#127873; Gift Card';
+          // Generate a fake code for demo
+          const seg = () => Math.random().toString(36).substring(2, 6).toUpperCase();
+          document.getElementById('gcCardCode').textContent = seg() + '-' + seg() + '-' + seg() + '-' + seg();
+          showToast('Gift card purchased! Code delivered.', '&#127873;');
+        }
+      }
+      nextStep();
+    });
+
+    // Copy code button
+    const copyBtn = document.getElementById('gcCopyCode');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', () => {
+        const code = document.getElementById('gcCardCode').textContent;
+        navigator.clipboard.writeText(code).then(() => {
+          showToast('Gift card code copied!', '&#128203;');
+        });
+      });
+    }
   })();
 
 })();

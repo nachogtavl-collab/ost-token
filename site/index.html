@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=24">
+  <link rel="stylesheet" href="style.css?v=26">
 </head>
 <body>
 
@@ -862,6 +862,181 @@
             <span class="pa-badge">&#128241; Mobile Pay</span>
           </div>
         </div>
+      </div>
+
+      <!-- Gift Card Interchange -->
+      <div class="gc-interchange" id="gcInterchange">
+        <div class="gc-header">
+          <div class="gc-header-glow"></div>
+          <div class="gc-header-icon">&#127873;</div>
+          <h3 data-i18n="gc.title">Gift Card Interchange &mdash; Sell or Buy Any Gift Card with OST</h3>
+          <p class="gc-header-sub" data-i18n="gc.sub">Turn any gift card into private OST, or pay with OST and receive instant digital gift cards. No bank, no KYC, no limits.</p>
+        </div>
+
+        <!-- Tabs -->
+        <div class="gc-tabs">
+          <button class="gc-tab gc-tab-active" data-gc-tab="sell" data-i18n="gc.tabSell">&#128178; Sell Gift Card &rarr; Get OST</button>
+          <button class="gc-tab" data-gc-tab="buy" data-i18n="gc.tabBuy">&#127873; Buy Gift Card with OST</button>
+        </div>
+
+        <!-- ==================== SELL GIFT CARD ==================== -->
+        <div class="gc-panel gc-panel-active" id="gcPanelSell">
+          <div class="gc-pipeline">
+            <div class="gc-pipe-node"><span class="gc-pipe-icon">&#127873;</span><span data-i18n="gc.pipe.paste">Paste Code</span></div>
+            <div class="gc-pipe-arrow">&#8594;</div>
+            <div class="gc-pipe-node gc-pipe-verify"><span class="gc-pipe-icon">&#128270;</span><span data-i18n="gc.pipe.verify">Verify</span></div>
+            <div class="gc-pipe-arrow">&#8594;</div>
+            <div class="gc-pipe-node gc-pipe-ost"><span class="gc-pipe-icon">&#9673;</span><span data-i18n="gc.pipe.receive">Receive OST</span></div>
+          </div>
+
+          <div class="gc-form">
+            <div class="gc-field">
+              <label for="gcMerchantSell" data-i18n="gc.merchant">Merchant / Brand</label>
+              <select id="gcMerchantSell" class="gc-select">
+                <option value="amazon">Amazon</option>
+                <option value="apple">Apple / iTunes</option>
+                <option value="google">Google Play</option>
+                <option value="steam">Steam</option>
+                <option value="walmart">Walmart</option>
+                <option value="target">Target</option>
+                <option value="ebay">eBay</option>
+                <option value="starbucks">Starbucks</option>
+                <option value="nike">Nike</option>
+                <option value="netflix">Netflix</option>
+                <option value="spotify">Spotify</option>
+                <option value="uber">Uber / Uber Eats</option>
+                <option value="visa-gc">Visa Gift Card</option>
+                <option value="mastercard-gc">Mastercard Gift Card</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="gc-field">
+              <label for="gcCodeSell" data-i18n="gc.code">Gift Card Code</label>
+              <input type="text" id="gcCodeSell" class="gc-input" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false">
+            </div>
+            <div class="gc-row">
+              <div class="gc-field gc-field-half">
+                <label for="gcBalanceSell" data-i18n="gc.balance">Card Balance (USD)</label>
+                <input type="number" id="gcBalanceSell" class="gc-input" placeholder="0.00" min="1" max="2000" step="any">
+              </div>
+              <div class="gc-field gc-field-half">
+                <label data-i18n="gc.youGet">You Receive</label>
+                <div class="gc-result-box" id="gcSellResult">-- OST</div>
+              </div>
+            </div>
+            <div class="gc-conversion" id="gcSellConversion">
+              <div class="gc-conv-row"><span data-i18n="gc.rate">Rate:</span> <span id="gcSellRate">--</span></div>
+              <div class="gc-conv-row"><span data-i18n="gc.fee">Treasury Fee (0.1%):</span> <span id="gcSellFee">--</span></div>
+              <div class="gc-conv-row gc-conv-note"><span data-i18n="gc.feeNote">&#128752; Fee funds satellite infrastructure</span></div>
+            </div>
+            <button class="btn btn-primary btn-glow gc-action-btn" id="gcSellBtn" disabled>
+              <span class="pay-icon">&#9673;</span> <span data-i18n="gc.sellBtn">Verify &amp; Sell &rarr; Get OST</span>
+            </button>
+          </div>
+
+          <!-- Sell flow simulation -->
+          <div class="gc-flow" id="gcSellFlow" style="display:none;">
+            <div class="gc-step" data-step="1"><div class="gc-step-ring"><div class="gc-step-check">&#128270;</div></div><span data-i18n="gc.step.verify">Verifying gift card code&hellip;</span></div>
+            <div class="gc-step" data-step="2"><div class="gc-step-ring"><div class="gc-step-check">&#129518;</div></div><span data-i18n="gc.step.zk">Generating ZK proof&hellip;</span></div>
+            <div class="gc-step" data-step="3"><div class="gc-step-ring"><div class="gc-step-check">&#9673;</div></div><span data-i18n="gc.step.send">Sending OST via confidential transfer&hellip;</span></div>
+            <div class="gc-step" data-step="4"><div class="gc-step-ring"><div class="gc-step-check">&#9989;</div></div><span data-i18n="gc.step.done">Complete! OST received privately.</span></div>
+          </div>
+        </div>
+
+        <!-- ==================== BUY GIFT CARD ==================== -->
+        <div class="gc-panel" id="gcPanelBuy">
+          <div class="gc-pipeline">
+            <div class="gc-pipe-node gc-pipe-ost"><span class="gc-pipe-icon">&#9673;</span><span data-i18n="gc.pipe.payOst">Pay OST</span></div>
+            <div class="gc-pipe-arrow">&#8594;</div>
+            <div class="gc-pipe-node gc-pipe-verify"><span class="gc-pipe-icon">&#128176;</span><span data-i18n="gc.pipe.convert">Convert</span></div>
+            <div class="gc-pipe-arrow">&#8594;</div>
+            <div class="gc-pipe-node"><span class="gc-pipe-icon">&#127873;</span><span data-i18n="gc.pipe.getCard">Get Card</span></div>
+          </div>
+
+          <div class="gc-form">
+            <div class="gc-field">
+              <label for="gcMerchantBuy" data-i18n="gc.merchantBuy">Choose Gift Card</label>
+              <select id="gcMerchantBuy" class="gc-select">
+                <option value="amazon">Amazon</option>
+                <option value="apple">Apple / iTunes</option>
+                <option value="google">Google Play</option>
+                <option value="steam">Steam</option>
+                <option value="walmart">Walmart</option>
+                <option value="target">Target</option>
+                <option value="ebay">eBay</option>
+                <option value="starbucks">Starbucks</option>
+                <option value="nike">Nike</option>
+                <option value="netflix">Netflix</option>
+                <option value="spotify">Spotify</option>
+                <option value="uber">Uber / Uber Eats</option>
+                <option value="visa-gc">Visa Gift Card</option>
+                <option value="mastercard-gc">Mastercard Gift Card</option>
+              </select>
+            </div>
+            <div class="gc-row">
+              <div class="gc-field gc-field-half">
+                <label for="gcAmountBuy" data-i18n="gc.amount">Amount (USD)</label>
+                <input type="number" id="gcAmountBuy" class="gc-input" placeholder="25" min="5" max="500" step="5">
+              </div>
+              <div class="gc-field gc-field-half">
+                <label data-i18n="gc.youPay">You Pay</label>
+                <div class="gc-result-box" id="gcBuyResult">-- OST</div>
+              </div>
+            </div>
+            <div class="gc-field">
+              <label for="gcEmailBuy" data-i18n="gc.email">Delivery Email (optional)</label>
+              <input type="email" id="gcEmailBuy" class="gc-input" placeholder="you@email.com (or receive in wallet)">
+            </div>
+            <div class="gc-conversion" id="gcBuyConversion">
+              <div class="gc-conv-row"><span data-i18n="gc.rate">Rate:</span> <span id="gcBuyRate">--</span></div>
+              <div class="gc-conv-row"><span data-i18n="gc.fee">Treasury Fee (0.1%):</span> <span id="gcBuyFee">--</span></div>
+            </div>
+            <button class="btn btn-primary btn-glow gc-action-btn" id="gcBuyBtn" disabled>
+              <span class="pay-icon">&#9673;</span> <span data-i18n="gc.buyBtn">Pay OST &rarr; Get Gift Card</span>
+            </button>
+          </div>
+
+          <!-- Buy flow simulation -->
+          <div class="gc-flow" id="gcBuyFlow" style="display:none;">
+            <div class="gc-step" data-step="1"><div class="gc-step-ring"><div class="gc-step-check">&#9673;</div></div><span data-i18n="gc.step.debit">Debiting OST (confidential)&hellip;</span></div>
+            <div class="gc-step" data-step="2"><div class="gc-step-ring"><div class="gc-step-check">&#128176;</div></div><span data-i18n="gc.step.swap">Swapping OST &rarr; USDC via Jupiter&hellip;</span></div>
+            <div class="gc-step" data-step="3"><div class="gc-step-ring"><div class="gc-step-check">&#127873;</div></div><span data-i18n="gc.step.purchase">Purchasing gift card&hellip;</span></div>
+            <div class="gc-step" data-step="4"><div class="gc-step-ring"><div class="gc-step-check">&#9989;</div></div><span data-i18n="gc.step.delivered">Gift card delivered!</span></div>
+          </div>
+
+          <!-- Delivered card reveal -->
+          <div class="gc-delivered" id="gcDelivered" style="display:none;">
+            <div class="gc-card-reveal">
+              <div class="gc-card-brand" id="gcCardBrand">&#127873;</div>
+              <div class="gc-card-code" id="gcCardCode">XXXX-XXXX-XXXX</div>
+              <button class="btn btn-outline btn-sm gc-copy-btn" id="gcCopyCode">&#128203; Copy Code</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Supported brands grid -->
+        <div class="gc-brands">
+          <span data-i18n="gc.supported">Supported brands:</span>
+          <div class="gc-brand-grid">
+            <span class="gc-brand-pill">Amazon</span>
+            <span class="gc-brand-pill">Apple</span>
+            <span class="gc-brand-pill">Google Play</span>
+            <span class="gc-brand-pill">Steam</span>
+            <span class="gc-brand-pill">Walmart</span>
+            <span class="gc-brand-pill">eBay</span>
+            <span class="gc-brand-pill">Starbucks</span>
+            <span class="gc-brand-pill">Nike</span>
+            <span class="gc-brand-pill">Netflix</span>
+            <span class="gc-brand-pill">Spotify</span>
+            <span class="gc-brand-pill">Uber</span>
+            <span class="gc-brand-pill">Visa</span>
+            <span class="gc-brand-pill">Mastercard</span>
+            <span class="gc-brand-pill">Target</span>
+            <span class="gc-brand-pill">+200 more</span>
+          </div>
+        </div>
+
+        <div class="gc-disclaimer" data-i18n="gc.disclaimer">&#9888; Users are responsible for verifying gift card validity. OST is not a gift card issuer. Gift card interchange is facilitated through third-party APIs (Raise, CardCash, merchant APIs). Gift card resale is subject to local laws &mdash; please verify in your jurisdiction.</div>
       </div>
     </div>
   </section>
@@ -1973,9 +2148,30 @@
         <p class="section-subtitle" data-i18n="spacex.sub">Follow our partnership roadmap from Earth to Mars. Every milestone is real, every goal is funded by donations and investors &mdash; never by taxing your transactions.</p>
       </div>
 
-      <!-- Unified 3D Space Journey Scene -->
+      <!-- Unified 3D Space Journey Scene — Full Immersive -->
       <div class="space-journey-3d" id="spaceJourney3d">
         <canvas id="scJourney" class="sj-canvas"></canvas>
+
+        <!-- Cinematic HUD Overlay -->
+        <div class="sj-hud">
+          <div class="sj-hud-left">
+            <div class="sj-hud-item"><span class="sj-hud-label">ALT</span><span class="sj-hud-val" id="sjHudAlt">0 km</span></div>
+            <div class="sj-hud-item"><span class="sj-hud-label">VEL</span><span class="sj-hud-val" id="sjHudVel">0 km/s</span></div>
+          </div>
+          <div class="sj-hud-center">
+            <div class="sj-hud-mission" id="sjHudMission">MISSION: EARTH DEPARTURE</div>
+            <div class="sj-hud-status" id="sjHudStatus">SYSTEMS NOMINAL</div>
+          </div>
+          <div class="sj-hud-right">
+            <div class="sj-hud-item"><span class="sj-hud-label">FUEL</span><span class="sj-hud-val" id="sjHudFuel">100%</span></div>
+            <div class="sj-hud-item"><span class="sj-hud-label">DIST</span><span class="sj-hud-val" id="sjHudDist">0 AU</span></div>
+          </div>
+        </div>
+
+        <!-- Crosshair -->
+        <div class="sj-crosshair"></div>
+
+        <!-- Phase Selector -->
         <div class="sj-phase-indicators">
           <button class="sj-phase-btn sj-phase-active" data-phase="0">&#128640; Launch</button>
           <button class="sj-phase-btn" data-phase="1">&#128752; Space Station</button>
@@ -2804,6 +3000,6 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
-  <script src="app.js?v=24"></script>
+  <script src="app.js?v=26"></script>
 </body>
 </html>

@@ -417,3 +417,42 @@ impl DepinClaim {
         + 32  // last_attestation_hash
         + 1;  // bump
 }
+
+// ============================================================================
+// Gift Card Exchange — two-way interchange record
+// ============================================================================
+
+#[account]
+pub struct GiftCardExchange {
+    /// User who initiated the exchange
+    pub user: Pubkey,
+    /// Unique nonce (prevents PDA collision)
+    pub nonce: u64,
+    /// true = buying a gift card with OST, false = selling a gift card for OST
+    pub is_buy: bool,
+    /// Merchant / brand name (max 32 chars)
+    pub merchant: String,
+    /// SHA-256 hash of original gift card code (never store raw codes on-chain)
+    pub code_hash: [u8; 32],
+    /// USD-equivalent amount (9-decimal precision)
+    pub amount_usd: u64,
+    /// Fee deducted (0.1 %)
+    pub fee: u64,
+    /// Unix timestamp of the exchange
+    pub timestamp: i64,
+    /// Bump
+    pub bump: u8,
+}
+
+impl GiftCardExchange {
+    pub const LEN: usize = 8   // discriminator
+        + 32  // user
+        + 8   // nonce
+        + 1   // is_buy
+        + 36  // merchant (4 bytes len + 32 bytes data)
+        + 32  // code_hash
+        + 8   // amount_usd
+        + 8   // fee
+        + 8   // timestamp
+        + 1;  // bump
+}
