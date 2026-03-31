@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=23">
+  <link rel="stylesheet" href="style.css?v=24">
 </head>
 <body>
 
@@ -78,13 +78,13 @@
         <h1 data-i18n="hero.title">The currency of <span class="gradient-text">Earth &amp; Space.</span></h1>
         <p class="hero-sub" data-i18n="hero.sub">Private. Instant. Unstoppable. OST is decentralized digital cash and uncensored internet for 8 billion human beings &mdash; and eventually, beyond.</p>
         <div class="hero-free-banner">
-          <span class="hero-free-badge">&#128176; FREE FOREVER</span>
-          <span class="hero-free-text">Zero transaction fees. No hidden costs. Funded by donations &amp; investors.</span>
+          <span class="hero-free-badge" data-i18n="hero.free">&#128176; FREE FOREVER</span>
+          <span class="hero-free-text" data-i18n="hero.freetext">Zero transaction fees. No hidden costs. Funded by donations &amp; investors.</span>
         </div>
         <div class="hero-actions">
           <a href="#revolution" class="btn btn-primary btn-glow btn-pulse" data-i18n="hero.cta1">Try the Pay Demo</a>
           <a href="#get-ost" class="btn btn-outline" data-i18n="hero.cta2">Get OST Now</a>
-          <a href="#my-wallet" class="btn btn-outline">Create Wallet</a>
+          <a href="#my-wallet" class="btn btn-outline" data-i18n="hero.createwallet">Create Wallet</a>
         </div>
         <div class="hero-stats">
           <div class="stat"><span class="stat-num">0</span><span class="stat-label" data-i18n="hero.premine">Pre-mine</span></div>
@@ -124,11 +124,11 @@
     <!-- Knowledge Banner (full width, below the split) -->
     <div class="hero-knowledge-bar">
       <div class="knowledge-banner">
-        <div class="knowledge-item"><span class="knowledge-num" data-target="1400000000">0</span><span class="knowledge-label">Unbanked adults worldwide</span></div>
+        <div class="knowledge-item"><span class="knowledge-num" data-target="1400000000">0</span><span class="knowledge-label" data-i18n="hero.stat.unbanked">Unbanked adults worldwide</span></div>
         <div class="knowledge-divider"></div>
-        <div class="knowledge-item"><span class="knowledge-num" data-target="48000000000">0</span><span class="knowledge-label">$ lost to remittance fees/year</span></div>
+        <div class="knowledge-item"><span class="knowledge-num" data-target="48000000000">0</span><span class="knowledge-label" data-i18n="hero.stat.remittance">$ lost to remittance fees/year</span></div>
         <div class="knowledge-divider"></div>
-        <div class="knowledge-item"><span class="knowledge-num" data-target="2600000000">0</span><span class="knowledge-label">People without internet</span></div>
+        <div class="knowledge-item"><span class="knowledge-num" data-target="2600000000">0</span><span class="knowledge-label" data-i18n="hero.stat.nointernet">People without internet</span></div>
       </div>
     </div>
 
@@ -139,46 +139,46 @@
       <div class="vision-glow"></div>
       <div class="vision-inner">
         <div class="vision-main">
-          <h3>The OST Vision: Complete Financial Independence</h3>
-          <p>We currently use Solana, Jupiter, and third-party bridges as <strong>temporary infrastructure</strong>. Our goal is to build the <strong>OST Sovereign Network</strong> &mdash; our own interchange protocol, trading algorithm, decentralized market, faucet system, and settlement layer. <em>Completely separate from any existing system. Fully decentralized. No dependencies.</em></p>
+          <h3 data-i18n="vision.title">The OST Vision: Complete Financial Independence</h3>
+          <p data-i18n="vision.sub">We currently use Solana, Jupiter, and third-party bridges as <strong>temporary infrastructure</strong>. Our goal is to build the <strong>OST Sovereign Network</strong> &mdash; our own interchange protocol, trading algorithm, decentralized market, faucet system, and settlement layer. <em>Completely separate from any existing system. Fully decentralized. No dependencies.</em></p>
 
           <div class="vision-roadmap-flow">
             <div class="vision-stage vision-stage-now">
               <span class="vision-stage-label">Now</span>
               <span class="vision-stage-icon">&#9881;&#65039;</span>
-              <h4>Temporary Scaffolding</h4>
-              <p>Solana + Jupiter + Bridges</p>
+              <h4 data-i18n="vision.s1.title">Temporary Scaffolding</h4>
+              <p data-i18n="vision.s1.sub">Solana + Jupiter + Bridges</p>
             </div>
             <div class="vision-stage-arrow">&#10132;</div>
             <div class="vision-stage vision-stage-next">
               <span class="vision-stage-label">Next</span>
               <span class="vision-stage-icon">&#128295;</span>
-              <h4>OST Interchange Protocol</h4>
-              <p>Own matching engine &amp; trading algorithm</p>
+              <h4 data-i18n="vision.s2.title">OST Interchange Protocol</h4>
+              <p data-i18n="vision.s2.sub">Own matching engine &amp; trading algorithm</p>
             </div>
             <div class="vision-stage-arrow">&#10132;</div>
             <div class="vision-stage vision-stage-goal">
               <span class="vision-stage-label">Goal</span>
               <span class="vision-stage-icon">&#127775;</span>
-              <h4>OST Sovereign Network</h4>
-              <p>Zero third-party dependencies</p>
+              <h4 data-i18n="vision.s3.title">OST Sovereign Network</h4>
+              <p data-i18n="vision.s3.sub">Zero third-party dependencies</p>
             </div>
           </div>
 
           <div class="vision-pills">
-            <span class="vision-pill">&#128274; ZK Private</span>
-            <span class="vision-pill">&#9889; 0.4s Settlement</span>
-            <span class="vision-pill">&#128176; Zero Fees Forever</span>
-            <span class="vision-pill">&#128295; Own Matching Engine</span>
-            <span class="vision-pill">&#127757; Own DEX &amp; Bridges</span>
-            <span class="vision-pill">&#128752; Satellite Internet</span>
+            <span class="vision-pill" data-i18n="vision.p1">&#128274; ZK Private</span>
+            <span class="vision-pill" data-i18n="vision.p2">&#9889; 0.4s Settlement</span>
+            <span class="vision-pill" data-i18n="vision.p3">&#128176; Zero Fees Forever</span>
+            <span class="vision-pill" data-i18n="vision.p4">&#128295; Own Matching Engine</span>
+            <span class="vision-pill" data-i18n="vision.p5">&#127757; Own DEX &amp; Bridges</span>
+            <span class="vision-pill" data-i18n="vision.p6">&#128752; Satellite Internet</span>
           </div>
         </div>
         <div class="vision-spacex">
           <div class="vision-sx-icon">&#128640;</div>
-          <h4>OST &times; SpaceX</h4>
-          <p>Partnering to bring uncensored internet and payments to 2.6 billion people without connectivity via low-earth orbit satellites.</p>
-          <a href="#spacex" class="btn btn-outline btn-sm" style="margin-top:8px;">Explore the Journey &#8594;</a>
+          <h4 data-i18n="vision.spacex.title">OST &times; SpaceX</h4>
+          <p data-i18n="vision.spacex.text">Partnering to bring uncensored internet and payments to 2.6 billion people without connectivity via low-earth orbit satellites.</p>
+          <a href="#spacex" class="btn btn-outline btn-sm" style="margin-top:8px;" data-i18n="vision.spacex.btn">Explore the Journey &#8594;</a>
         </div>
       </div>
     </div>
@@ -190,8 +190,8 @@
   <!-- ================================================================== -->
   <section id="new-here" class="section section-alt section-space">
     <div class="container">
-      <h2 class="section-title">&#127381; New Here? Start Your OST Journey</h2>
-      <p class="section-subtitle">Claim free OST, create family vaults, or earn rewards by contributing infrastructure.</p>
+      <h2 class="section-title" data-i18n="newhere.title">&#127381; New Here? Start Your OST Journey</h2>
+      <p class="section-subtitle" data-i18n="newhere.sub">Claim free OST, create family vaults, or earn rewards by contributing infrastructure.</p>
 
       <div class="faucet-section" id="faucetSection">
         <h3 data-i18n="getost.faucet">New Here? Claim Free OST</h3>
@@ -208,8 +208,8 @@
       <div class="grow-vaults-section" id="growVaults" style="margin-top:64px;">
         <div class="gv-header">
           <div class="gv-icon-ring"><span>&#128118;</span></div>
-          <h3>Family Grow Vaults</h3>
-          <p class="text-muted">The first coin born in space with every new generation. Create a custodial vault for your child &mdash; they grow up with real private digital cash.</p>
+          <h3 data-i18n="gv.title">Family Grow Vaults</h3>
+          <p class="text-muted" data-i18n="gv.sub">The first coin born in space with every new generation. Create a custodial vault for your child &mdash; they grow up with real private digital cash.</p>
         </div>
 
         <div class="gv-timeline">
@@ -396,15 +396,15 @@
 
         <div class="gv-disclaimer">
           <span>&#9888;&#65039;</span>
-          <p><strong>Educational use only.</strong> Parents/guardians are responsible for all tax, custody, and local laws regarding gifts to minors. OST is not investment advice. Parental consent required for all child accounts.</p>
+          <p><strong data-i18n="gv.disclaimer">Educational use only.</strong> Parents/guardians are responsible for all tax, custody, and local laws regarding gifts to minors. OST is not investment advice. Parental consent required for all child accounts.</p>
         </div>
       </div>
 
       <div class="depin-faucet-section" id="depinFaucet" style="margin-top:64px;">
         <div class="depin-header">
           <div class="depin-icon-ring"><span>&#128752;</span></div>
-          <h3>DePIN Data-Center Faucet</h3>
-          <p class="text-muted">Share bandwidth, GPU, CPU, or satellite capacity &mdash; earn OST for building the decentralized data centers and satellite internet. Big rewards for real contributions.</p>
+          <h3 data-i18n="depin.title">DePIN Data-Center Faucet</h3>
+          <p class="text-muted" data-i18n="depin.sub">Share bandwidth, GPU, CPU, or satellite capacity &mdash; earn OST for building the decentralized data centers and satellite internet. Big rewards for real contributions.</p>
         </div>
 
         <div class="depin-rewards-grid">
@@ -535,8 +535,8 @@
   <!-- ================================================================== -->
   <section id="demos" class="section section-space">
     <div class="container">
-      <h2 class="section-title">&#127916; Live Demos</h2>
-      <p class="section-subtitle">See what private, instant payments feel like. Real products, real prices. Zero fees.</p>
+      <h2 class="section-title" data-i18n="demos.title">&#127916; Live Demos</h2>
+      <p class="section-subtitle" data-i18n="demos.sub">See what private, instant payments feel like. Real products, real prices. Zero fees.</p>
 
       <div class="features-grid" style="display:none;">
         <div class="feature-card glow-card sr">
@@ -878,8 +878,8 @@
       <div class="wallet-dashboard" id="walletDashboard">
         <div class="wd-not-connected" id="wdNotConnected">
           <div class="wd-hero-icon">&#128091;</div>
-          <h3>Get Your Personal OST Wallet</h3>
-          <p class="text-muted">Choose how to create or connect your wallet. No seed phrase required with Web3Auth.</p>
+          <h3 data-i18n="wallet.getTitle">Get Your Personal OST Wallet</h3>
+          <p class="text-muted" data-i18n="wallet.getSub">Choose how to create or connect your wallet. No seed phrase required with Web3Auth.</p>
 
           <div class="wd-create-grid">
             <div class="wd-create-card" data-action="phantom">
@@ -1202,8 +1202,8 @@
 
       <!-- Sell OST -->
       <div class="sell-ost-section" id="sellOstSection">
-        <h3>Sell or Trade OST</h3>
-        <p class="text-muted" style="margin-bottom:24px;">Cash out to any crypto or fiat. Same speed, same privacy.</p>
+        <h3 data-i18n="sell.title">Sell or Trade OST</h3>
+        <p class="text-muted" style="margin-bottom:24px;" data-i18n="sell.sub">Cash out to any crypto or fiat. Same speed, same privacy.</p>
         <div class="sell-grid">
           <div class="sell-card">
             <div class="sell-icon">&#128176;</div>
@@ -1485,8 +1485,8 @@
         <div class="ai-hook-glow"></div>
         <div class="ai-hook-content">
           <div class="ai-hook-icon">&#128640;</div>
-          <h3>Running a Server, Bot, or Localhost?</h3>
-          <p>If you have a server, a bot, a localhost dev environment, or any form of automated intelligence &mdash; <strong>OST is your payment layer</strong>. Connect any AI model, any webhook, any service. Machine-to-machine payments at Solana speed with full privacy.</p>
+          <h3 data-i18n="ai.hook.title">Running a Server, Bot, or Localhost?</h3>
+          <p data-i18n="ai.hook.text">If you have a server, a bot, a localhost dev environment, or any form of automated intelligence &mdash; <strong>OST is your payment layer</strong>. Connect any AI model, any webhook, any service. Machine-to-machine payments at Solana speed with full privacy.</p>
           <div class="ai-hook-stats">
             <div class="ai-hook-stat"><span class="ai-hook-num">11</span><span>Connectors</span></div>
             <div class="ai-hook-stat"><span class="ai-hook-num">0.4s</span><span>Settlement</span></div>
@@ -1695,8 +1695,8 @@
       </div>
 
       <!-- Real-World Scenarios -->
-      <h3 class="scenario-heading">Real-World Scenarios</h3>
-      <p class="text-muted" style="text-align:center; margin-bottom:32px;">Verified data from the World Bank, UNHCR, IEA, and EM-DAT. These are not hypotheticals — they happen today.</p>
+      <h3 class="scenario-heading" data-i18n="offline.scenarios">Real-World Scenarios</h3>
+      <p class="text-muted" style="text-align:center; margin-bottom:32px;" data-i18n="offline.scenariosub">Verified data from the World Bank, UNHCR, IEA, and EM-DAT. These are not hypotheticals — they happen today.</p>
 
       <div class="scenario-grid">
         <div class="scenario-card sr">
@@ -1880,8 +1880,8 @@
   <!-- ================================================================== -->
   <section id="censorship" class="section section-alt section-space">
     <div class="container">
-      <h2 class="section-title">&#128683; Internet Censorship Is Happening Now</h2>
-      <p class="section-subtitle">Real events. Real people. OST is the answer to digital oppression.</p>
+      <h2 class="section-title" data-i18n="censor.title">&#128683; Internet Censorship Is Happening Now</h2>
+      <p class="section-subtitle" data-i18n="censor.sub">Real events. Real people. OST is the answer to digital oppression.</p>
 
       <!-- Live Censorship News Feed -->
       <div class="censorship-live-feed" id="censorshipNewsFeed">
@@ -1969,8 +1969,8 @@
     <div class="container">
       <div class="sx-header" style="text-align:center;">
         <div class="sx-icon-ring" style="margin:0 auto 16px;"><span>&#128640;</span></div>
-        <h2 class="section-title">OST &times; SpaceX &mdash; The Journey to Space</h2>
-        <p class="section-subtitle">Follow our partnership roadmap from Earth to Mars. Every milestone is real, every goal is funded by donations and investors &mdash; never by taxing your transactions.</p>
+        <h2 class="section-title" data-i18n="spacex.title">OST &times; SpaceX &mdash; The Journey to Space</h2>
+        <p class="section-subtitle" data-i18n="spacex.sub">Follow our partnership roadmap from Earth to Mars. Every milestone is real, every goal is funded by donations and investors &mdash; never by taxing your transactions.</p>
       </div>
 
       <!-- Unified 3D Space Journey Scene -->
@@ -2417,8 +2417,8 @@
   <!-- ================================================================== -->
   <section id="roadmap" class="section section-space">
     <div class="container">
-      <h2 class="section-title">&#128640; Roadmap &amp; Progress</h2>
-      <p class="section-subtitle">Where we are, what we've built, and what comes next.</p>
+      <h2 class="section-title" data-i18n="roadmap.title">&#128640; Roadmap &amp; Progress</h2>
+      <p class="section-subtitle" data-i18n="roadmap.sub">Where we are, what we've built, and what comes next.</p>
 
       <div class="growth-section" id="growthSection">
         <h3>OST Roadmap &amp; Milestones</h3>
@@ -2804,6 +2804,6 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
-  <script src="app.js?v=23"></script>
+  <script src="app.js?v=24"></script>
 </body>
 </html>
