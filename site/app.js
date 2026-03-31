@@ -6213,5 +6213,113 @@
     price.addEventListener('input', update);
   })();
 
+  // ========================================================================
+  // BRAND LOGOS — replace emoji placeholders with real logos
+  // ========================================================================
+  (function initBrandLogos() {
+    var gcDomains = {
+      Amazon: 'amazon.com', Apple: 'apple.com', Google: 'google.com',
+      Steam: 'steampowered.com', Walmart: 'walmart.com', Target: 'target.com',
+      eBay: 'ebay.com', Starbucks: 'starbucks.com', Nike: 'nike.com',
+      Netflix: 'netflix.com', Spotify: 'spotify.com', Uber: 'uber.com',
+      Visa: 'visa.com', Mastercard: 'mastercard.com'
+    };
+    var fuelDomains = {
+      Shell: 'shell.com', BP: 'bp.com', ExxonMobil: 'exxonmobil.com',
+      Chevron: 'chevron.com', TotalEnergies: 'totalenergies.com',
+      ADNOC: 'adnoc.ae', '7-Eleven': '7-eleven.com', OXXO: 'oxxo.com',
+      'Circle K': 'circlek.com', Stripes: 'stripesstores.com',
+      Ipiranga: 'ipiranga.com.br', Engen: 'engenoil.com',
+      'Easy Joy': 'sinopec.com', Petronas: 'petronas.com',
+      'Indian Oil': 'indianoil.co.in', PEMEX: 'pemex.com',
+      Repsol: 'repsol.com', Lukoil: 'lukoil.com',
+      Sinopec: 'sinopec.com', Aramco: 'aramco.com',
+      Petrobras: 'petrobras.com.br'
+    };
+
+    // Replace GC brand emojis with logo images
+    document.querySelectorAll('.gc-brand-card').forEach(function(card) {
+      var nameEl = card.querySelector('.gc-brand-name');
+      var emojiEl = card.querySelector('.gc-brand-emoji');
+      if (!nameEl) return;
+      var name = nameEl.textContent.trim();
+      var domain = gcDomains[name];
+      if (domain && emojiEl) {
+        var img = document.createElement('img');
+        img.className = 'gc-brand-logo';
+        img.src = 'https://logo.clearbit.com/' + domain;
+        img.alt = name;
+        img.loading = 'lazy';
+        img.onerror = function() { emojiEl.style.display = 'block'; img.remove(); };
+        emojiEl.parentNode.insertBefore(img, emojiEl);
+      }
+    });
+
+    // Replace Fuel partner emojis with logo images
+    document.querySelectorAll('.fuel-partner-card').forEach(function(card) {
+      var nameEl = card.querySelector('.fuel-partner-name');
+      var logoEl = card.querySelector('.fuel-partner-logo');
+      if (!nameEl) return;
+      var name = nameEl.textContent.trim();
+      var domain = fuelDomains[name];
+      if (domain && logoEl) {
+        var img = document.createElement('img');
+        img.className = 'fuel-partner-img';
+        img.src = 'https://logo.clearbit.com/' + domain;
+        img.alt = name;
+        img.loading = 'lazy';
+        img.onerror = function() { logoEl.style.display = 'flex'; img.remove(); };
+        logoEl.parentNode.insertBefore(img, logoEl);
+      }
+    });
+
+    // Swap preview update
+    var swapBrandImg = document.getElementById('gcSwapBrandImg');
+    var swapBrandName = document.getElementById('gcSwapBrandName');
+    var swapBrandVal = document.getElementById('gcSwapBrandVal');
+    var swapOstVal = document.getElementById('gcSwapOstVal');
+    var merchantSel = document.getElementById('gcMerchantSell');
+    var balInput = document.getElementById('gcBalanceSell');
+
+    var merchantDomains = {
+      amazon: 'amazon.com', apple: 'apple.com', google: 'google.com',
+      steam: 'steampowered.com', walmart: 'walmart.com', target: 'target.com',
+      ebay: 'ebay.com', starbucks: 'starbucks.com', nike: 'nike.com',
+      netflix: 'netflix.com', spotify: 'spotify.com', uber: 'uber.com',
+      'visa-gc': 'visa.com', 'mastercard-gc': 'mastercard.com', other: ''
+    };
+    var merchantNames = {
+      amazon: 'Amazon', apple: 'Apple', google: 'Google Play',
+      steam: 'Steam', walmart: 'Walmart', target: 'Target',
+      ebay: 'eBay', starbucks: 'Starbucks', nike: 'Nike',
+      netflix: 'Netflix', spotify: 'Spotify', uber: 'Uber',
+      'visa-gc': 'Visa', 'mastercard-gc': 'Mastercard', other: 'Gift Card'
+    };
+
+    function updateSwapPreview() {
+      if (!swapBrandImg || !merchantSel) return;
+      var val = merchantSel.value;
+      var domain = merchantDomains[val];
+      swapBrandName.textContent = merchantNames[val] || 'Gift Card';
+      if (domain) {
+        swapBrandImg.src = 'https://logo.clearbit.com/' + domain;
+        swapBrandImg.style.display = 'block';
+      } else {
+        swapBrandImg.style.display = 'none';
+      }
+      var bal = parseFloat(balInput.value) || 0;
+      swapBrandVal.textContent = '$' + bal.toFixed(2);
+      if (bal > 0 && window.ostPrice > 0) {
+        var ost = bal / window.ostPrice;
+        var net = ost - (ost * 0.001);
+        swapOstVal.textContent = net.toFixed(2) + ' OST';
+      } else {
+        swapOstVal.textContent = '0.00 OST';
+      }
+    }
+    if (merchantSel) merchantSel.addEventListener('change', updateSwapPreview);
+    if (balInput) balInput.addEventListener('input', updateSwapPreview);
+  })();
+
 })();
 

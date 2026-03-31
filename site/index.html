@@ -25,7 +25,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=28">
+  <link rel="stylesheet" href="style.css?v=29">
 </head>
 <body>
 
@@ -914,6 +914,25 @@
             <div class="gc-pipe-node gc-pipe-verify"><span class="gc-pipe-icon">&#128270;</span><span data-i18n="gc.pipe.verify">Verify</span></div>
             <div class="gc-pipe-arrow">&#8594;</div>
             <div class="gc-pipe-node gc-pipe-ost"><span class="gc-pipe-icon">&#9673;</span><span data-i18n="gc.pipe.receive">Receive OST</span></div>
+          </div>
+
+          <!-- Swap Preview -->
+          <div class="gc-swap-preview" id="gcSwapPreview">
+            <div class="gc-swap-card">
+              <img class="gc-swap-brand-img" id="gcSwapBrandImg" src="https://logo.clearbit.com/amazon.com" alt="">
+              <div class="gc-swap-card-info">
+                <span class="gc-swap-card-name" id="gcSwapBrandName">Amazon</span>
+                <span class="gc-swap-card-val" id="gcSwapBrandVal">$0.00</span>
+              </div>
+            </div>
+            <div class="gc-swap-arrow-wrap"><span class="gc-swap-arrow-icon">&#8644;</span></div>
+            <div class="gc-swap-card">
+              <div class="gc-swap-ost-circle">O</div>
+              <div class="gc-swap-card-info">
+                <span class="gc-swap-card-name">OST Token</span>
+                <span class="gc-swap-card-val gc-swap-ost-val" id="gcSwapOstVal">0.00 OST</span>
+              </div>
+            </div>
           </div>
 
           <div class="gc-form">
@@ -3316,6 +3335,6 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
-  <script src="app.js?v=28"></script>
+  <script src="app.js?v=29"></script>
 </body>
 </html>
