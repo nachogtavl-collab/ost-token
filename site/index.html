@@ -9,10 +9,23 @@
   <meta property="og:description" content="Private, instant, borderless digital cash for every citizen of Earth.">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="OST &mdash; The Next Step After Bitcoin">
+  <meta name="twitter:description" content="Private, instant, borderless digital cash for every citizen of Earth.">
+  <meta name="twitter:image" content="https://nachogtavl-collab.github.io/ost-token/favicon.svg">
+  <meta property="og:url" content="https://nachogtavl-collab.github.io/ost-token/">
+  <meta property="og:site_name" content="OST Token">
+  <meta property="og:image" content="https://nachogtavl-collab.github.io/ost-token/favicon.svg">
+  <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#0a0a0a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="canonical" href="https://nachogtavl-collab.github.io/ost-token/">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="apple-touch-icon" href="favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=26">
+  <link rel="stylesheet" href="style.css?v=27">
 </head>
 <body>
 
@@ -866,11 +879,25 @@
 
       <!-- Gift Card Interchange -->
       <div class="gc-interchange" id="gcInterchange">
-        <div class="gc-header">
-          <div class="gc-header-glow"></div>
-          <div class="gc-header-icon">&#127873;</div>
-          <h3 data-i18n="gc.title">Gift Card Interchange &mdash; Sell or Buy Any Gift Card with OST</h3>
-          <p class="gc-header-sub" data-i18n="gc.sub">Turn any gift card into private OST, or pay with OST and receive instant digital gift cards. No bank, no KYC, no limits.</p>
+        <div class="gc-hero">
+          <div class="gc-hero-cards">
+            <div class="gc-float-card gc-float-gold">
+              <div class="gc-fcard-hologram"></div>
+              <div class="gc-fcard-chip"></div>
+              <div class="gc-fcard-contactless">&#41;&#41;&#41;</div>
+              <div class="gc-fcard-number">&bull;&bull;&bull;&bull; &bull;&bull;&bull;&bull; &bull;&bull;&bull;&bull; OST</div>
+              <div class="gc-fcard-bottom"><span>GIFT CARD</span><span class="gc-fcard-logo">&#9673; OST</span></div>
+            </div>
+            <div class="gc-float-card gc-float-blue">
+              <div class="gc-fcard-hologram"></div>
+              <div class="gc-fcard-chip"></div>
+              <div class="gc-fcard-contactless">&#41;&#41;&#41;</div>
+              <div class="gc-fcard-number">&bull;&bull;&bull;&bull; &bull;&bull;&bull;&bull; &bull;&bull;&bull;&bull; OST</div>
+              <div class="gc-fcard-bottom"><span>DIGITAL</span><span class="gc-fcard-logo">&#9673; OST</span></div>
+            </div>
+          </div>
+          <h3 data-i18n="gc.title">Gift Card Interchange</h3>
+          <p class="gc-hero-sub" data-i18n="gc.sub">Welcome! Turn any gift card into private OST, or pay with OST and receive instant digital gift cards. No bank, no KYC, no limits.</p>
         </div>
 
         <!-- Tabs -->
@@ -1014,24 +1041,80 @@
           </div>
         </div>
 
-        <!-- Supported brands grid -->
+        <!-- Clickable brand cards -->
         <div class="gc-brands">
-          <span data-i18n="gc.supported">Supported brands:</span>
+          <h4 data-i18n="gc.supported">Shop Gift Cards Everywhere</h4>
           <div class="gc-brand-grid">
-            <span class="gc-brand-pill">Amazon</span>
-            <span class="gc-brand-pill">Apple</span>
-            <span class="gc-brand-pill">Google Play</span>
-            <span class="gc-brand-pill">Steam</span>
-            <span class="gc-brand-pill">Walmart</span>
-            <span class="gc-brand-pill">eBay</span>
-            <span class="gc-brand-pill">Starbucks</span>
-            <span class="gc-brand-pill">Nike</span>
-            <span class="gc-brand-pill">Netflix</span>
-            <span class="gc-brand-pill">Spotify</span>
-            <span class="gc-brand-pill">Uber</span>
-            <span class="gc-brand-pill">Visa</span>
-            <span class="gc-brand-pill">Mastercard</span>
-            <span class="gc-brand-pill">Target</span>
+            <a href="https://www.amazon.com/gift-cards" target="_blank" rel="noopener noreferrer" class="gc-brand-card">
+              <span class="gc-brand-emoji">&#128722;</span>
+              <span class="gc-brand-name">Amazon</span>
+              <span class="gc-brand-action">Shop &rarr;</span>
+            </a>
+            <a href="https://www.apple.com/shop/buy-gift-cards" target="_blank" rel="noopener noreferrer" class="gc-brand-card">
+              <span class="gc-brand-emoji">&#127822;</span>
+              <span class="gc-brand-name">Apple</span>
+              <span class="gc-brand-action">Shop &rarr;</span>
+            </a>
+            <a href="https://play.google.com/about/giftcards/" target="_blank" rel="noopener noreferrer" class="gc-brand-card">
+              <span class="gc-brand-emoji">&#9654;</span>
+              <span class="gc-brand-name">Google Play</span>
+              <span class="gc-brand-action">Shop &rarr;</span>
+            </a>
+            <a href="https://store.steampowered.com/digitalgiftcards/" target="_blank" rel="noopener noreferrer" class="gc-brand-card">
+              <span class="gc-brand-emoji">&#127918;</span>
+              <span class="gc-brand-name">Steam</span>
+              <span class="gc-brand-action">Shop &rarr;</span>
+            </a>
+            <a href="https://www.walmart.com/cp/gift-cards/96894" target="_blank" rel="noopener noreferrer" class="gc-brand-card">
+              <span class="gc-brand-emoji">&#127978;</span>
+              <span class="gc-brand-name">Walmart</span>
+              <span class="gc-brand-action">Shop &rarr;</span>
+            </a>
+            <a href="https://www.target.com/c/gift-cards/-/N-5xsxt" target="_blank" rel="noopener noreferrer" class="gc-brand-card">
+              <span class="gc-brand-emoji">&#127919;</span>
+              <span class="gc-brand-name">Target</span>
+              <span class="gc-brand-action">Shop &rarr;</span>
+            </a>
+            <a href="https://www.ebay.com/giftcards" target="_blank" rel="noopener noreferrer" class="gc-brand-card">
+              <span class="gc-brand-emoji">&#128176;</span>
+              <span class="gc-brand-name">eBay</span>
+              <span class="gc-brand-action">Shop &rarr;</span>
+            </a>
+            <a href="https://www.starbucks.com/gift" target="_blank" rel="noopener noreferrer" class="gc-brand-card">
+              <span class="gc-brand-emoji">&#9749;</span>
+              <span class="gc-brand-name">Starbucks</span>
+              <span class="gc-brand-action">Shop &rarr;</span>
+            </a>
+            <a href="https://www.nike.com/gift-cards" target="_blank" rel="noopener noreferrer" class="gc-brand-card">
+              <span class="gc-brand-emoji">&#128095;</span>
+              <span class="gc-brand-name">Nike</span>
+              <span class="gc-brand-action">Shop &rarr;</span>
+            </a>
+            <a href="https://www.netflix.com/gift-cards" target="_blank" rel="noopener noreferrer" class="gc-brand-card">
+              <span class="gc-brand-emoji">&#127916;</span>
+              <span class="gc-brand-name">Netflix</span>
+              <span class="gc-brand-action">Shop &rarr;</span>
+            </a>
+            <a href="https://www.spotify.com/us/purchase/gift-card/" target="_blank" rel="noopener noreferrer" class="gc-brand-card">
+              <span class="gc-brand-emoji">&#127925;</span>
+              <span class="gc-brand-name">Spotify</span>
+              <span class="gc-brand-action">Shop &rarr;</span>
+            </a>
+            <a href="https://www.uber.com/us/en/gift-cards/" target="_blank" rel="noopener noreferrer" class="gc-brand-card">
+              <span class="gc-brand-emoji">&#128663;</span>
+              <span class="gc-brand-name">Uber</span>
+              <span class="gc-brand-action">Shop &rarr;</span>
+            </a>
+            <a href="https://usa.visa.com/pay-with-visa/cards/gift-cards.html" target="_blank" rel="noopener noreferrer" class="gc-brand-card">
+              <span class="gc-brand-emoji">&#128179;</span>
+              <span class="gc-brand-name">Visa</span>
+              <span class="gc-brand-action">Shop &rarr;</span>
+            </a>
+            <a href="https://www.mastercard.us/en-us/personal/find-a-card/prepaid-gift-cards.html" target="_blank" rel="noopener noreferrer" class="gc-brand-card">
+              <span class="gc-brand-emoji">&#128179;</span>
+              <span class="gc-brand-name">Mastercard</span>
+              <span class="gc-brand-action">Shop &rarr;</span>
+            </a>
             <span class="gc-brand-pill">+200 more</span>
           </div>
         </div>
@@ -3000,6 +3083,6 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
-  <script src="app.js?v=26"></script>
+  <script src="app.js?v=27"></script>
 </body>
 </html>
