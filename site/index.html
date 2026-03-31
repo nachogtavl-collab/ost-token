@@ -25,7 +25,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=29">
+  <link rel="stylesheet" href="style.css?v=30">
 </head>
 <body>
 
@@ -900,20 +900,17 @@
           <p class="gc-hero-sub" data-i18n="gc.sub">Welcome! Turn any gift card into private OST, or pay with OST and receive instant digital gift cards. No bank, no KYC, no limits.</p>
         </div>
 
-        <!-- Tabs -->
         <div class="gc-tabs">
-          <button class="gc-tab gc-tab-active" data-gc-tab="sell" data-i18n="gc.tabSell">&#128178; Sell Gift Card &rarr; Get OST</button>
-          <button class="gc-tab" data-gc-tab="buy" data-i18n="gc.tabBuy">&#127873; Buy Gift Card with OST</button>
+          <button class="gc-tab gc-tab-active" data-gc-tab="sell">&#9673; Redeem &rarr; OST</button>
+          <button class="gc-tab" data-gc-tab="buy">&#127873; Buy with OST</button>
+          <button class="gc-tab" data-gc-tab="history">&#128203; History</button>
         </div>
 
-        <!-- ==================== SELL GIFT CARD ==================== -->
+        <!-- ==================== REDEEM GIFT CARD ==================== -->
         <div class="gc-panel gc-panel-active" id="gcPanelSell">
-          <div class="gc-pipeline">
-            <div class="gc-pipe-node"><span class="gc-pipe-icon">&#127873;</span><span data-i18n="gc.pipe.paste">Paste Code</span></div>
-            <div class="gc-pipe-arrow">&#8594;</div>
-            <div class="gc-pipe-node gc-pipe-verify"><span class="gc-pipe-icon">&#128270;</span><span data-i18n="gc.pipe.verify">Verify</span></div>
-            <div class="gc-pipe-arrow">&#8594;</div>
-            <div class="gc-pipe-node gc-pipe-ost"><span class="gc-pipe-icon">&#9673;</span><span data-i18n="gc.pipe.receive">Receive OST</span></div>
+          <div class="gc-brand-picker">
+            <div class="gc-bp-label">Select Brand</div>
+            <div class="gc-bp-grid" id="gcBrandGrid"></div>
           </div>
 
           <!-- Swap Preview -->
@@ -936,47 +933,51 @@
           </div>
 
           <div class="gc-form">
-            <div class="gc-field">
-              <label for="gcMerchantSell" data-i18n="gc.merchant">Merchant / Brand</label>
-              <select id="gcMerchantSell" class="gc-select">
-                <option value="amazon">Amazon</option>
-                <option value="apple">Apple / iTunes</option>
-                <option value="google">Google Play</option>
-                <option value="steam">Steam</option>
-                <option value="walmart">Walmart</option>
-                <option value="target">Target</option>
-                <option value="ebay">eBay</option>
-                <option value="starbucks">Starbucks</option>
-                <option value="nike">Nike</option>
-                <option value="netflix">Netflix</option>
-                <option value="spotify">Spotify</option>
-                <option value="uber">Uber / Uber Eats</option>
-                <option value="visa-gc">Visa Gift Card</option>
-                <option value="mastercard-gc">Mastercard Gift Card</option>
-                <option value="other">Other</option>
-              </select>
+            <div class="gc-row">
+              <div class="gc-field" style="flex:.4">
+                <label for="gcCurrencySell">Currency</label>
+                <select id="gcCurrencySell" class="gc-select">
+                  <option value="USD">&#127482;&#127480; USD</option>
+                  <option value="EUR">&#127466;&#127482; EUR</option>
+                  <option value="GBP">&#127468;&#127463; GBP</option>
+                  <option value="CAD">&#127464;&#127462; CAD</option>
+                  <option value="AUD">&#127462;&#127482; AUD</option>
+                  <option value="BRL">&#127463;&#127479; BRL</option>
+                  <option value="MXN">&#127474;&#127485; MXN</option>
+                  <option value="INR">&#127470;&#127475; INR</option>
+                  <option value="JPY">&#127471;&#127477; JPY</option>
+                  <option value="KRW">&#127472;&#127479; KRW</option>
+                  <option value="TRY">&#127481;&#127479; TRY</option>
+                  <option value="RUB">&#127479;&#127482; RUB</option>
+                  <option value="AED">&#127462;&#127466; AED</option>
+                </select>
+              </div>
+              <div class="gc-field" style="flex:.6">
+                <label for="gcBalanceSell">Card Balance</label>
+                <input type="number" id="gcBalanceSell" class="gc-input" placeholder="0.00" min="1" max="10000" step="any">
+              </div>
+            </div>
+            <div class="gc-quick-amounts">
+              <button class="gc-quick-btn" data-amt="25">$25</button>
+              <button class="gc-quick-btn" data-amt="50">$50</button>
+              <button class="gc-quick-btn" data-amt="100">$100</button>
+              <button class="gc-quick-btn" data-amt="200">$200</button>
+              <button class="gc-quick-btn" data-amt="500">$500</button>
             </div>
             <div class="gc-field">
-              <label for="gcCodeSell" data-i18n="gc.code">Gift Card Code</label>
+              <label for="gcCodeSell">Gift Card Code</label>
               <input type="text" id="gcCodeSell" class="gc-input" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false">
             </div>
-            <div class="gc-row">
-              <div class="gc-field gc-field-half">
-                <label for="gcBalanceSell" data-i18n="gc.balance">Card Balance (USD)</label>
-                <input type="number" id="gcBalanceSell" class="gc-input" placeholder="0.00" min="1" max="2000" step="any">
-              </div>
-              <div class="gc-field gc-field-half">
-                <label data-i18n="gc.youGet">You Receive</label>
-                <div class="gc-result-box" id="gcSellResult">-- OST</div>
-              </div>
+            <div class="gc-result-card">
+              <span class="gc-result-label">You Receive</span>
+              <div class="gc-result-box" id="gcSellResult">-- OST</div>
             </div>
             <div class="gc-conversion" id="gcSellConversion">
-              <div class="gc-conv-row"><span data-i18n="gc.rate">Rate:</span> <span id="gcSellRate">--</span></div>
-              <div class="gc-conv-row"><span data-i18n="gc.fee">Treasury Fee (0.1%):</span> <span id="gcSellFee">--</span></div>
-              <div class="gc-conv-row gc-conv-note"><span data-i18n="gc.feeNote">&#128752; Fee funds satellite infrastructure</span></div>
+              <div class="gc-conv-row"><span>Rate:</span> <span id="gcSellRate">--</span></div>
+              <div class="gc-conv-row"><span>Fee (0.1%):</span> <span id="gcSellFee">--</span></div>
             </div>
             <button class="btn btn-primary btn-glow gc-action-btn" id="gcSellBtn" disabled>
-              <span class="pay-icon">&#9673;</span> <span data-i18n="gc.sellBtn">Verify &amp; Sell &rarr; Get OST</span>
+              <span class="pay-icon">&#9673;</span> Redeem Gift Card &rarr; Get OST
             </button>
           </div>
 
@@ -991,54 +992,57 @@
 
         <!-- ==================== BUY GIFT CARD ==================== -->
         <div class="gc-panel" id="gcPanelBuy">
-          <div class="gc-pipeline">
-            <div class="gc-pipe-node gc-pipe-ost"><span class="gc-pipe-icon">&#9673;</span><span data-i18n="gc.pipe.payOst">Pay OST</span></div>
-            <div class="gc-pipe-arrow">&#8594;</div>
-            <div class="gc-pipe-node gc-pipe-verify"><span class="gc-pipe-icon">&#128176;</span><span data-i18n="gc.pipe.convert">Convert</span></div>
-            <div class="gc-pipe-arrow">&#8594;</div>
-            <div class="gc-pipe-node"><span class="gc-pipe-icon">&#127873;</span><span data-i18n="gc.pipe.getCard">Get Card</span></div>
+          <div class="gc-brand-picker">
+            <div class="gc-bp-label">Choose Gift Card</div>
+            <div class="gc-bp-grid" id="gcBrandGridBuy"></div>
           </div>
 
           <div class="gc-form">
-            <div class="gc-field">
-              <label for="gcMerchantBuy" data-i18n="gc.merchantBuy">Choose Gift Card</label>
-              <select id="gcMerchantBuy" class="gc-select">
-                <option value="amazon">Amazon</option>
-                <option value="apple">Apple / iTunes</option>
-                <option value="google">Google Play</option>
-                <option value="steam">Steam</option>
-                <option value="walmart">Walmart</option>
-                <option value="target">Target</option>
-                <option value="ebay">eBay</option>
-                <option value="starbucks">Starbucks</option>
-                <option value="nike">Nike</option>
-                <option value="netflix">Netflix</option>
-                <option value="spotify">Spotify</option>
-                <option value="uber">Uber / Uber Eats</option>
-                <option value="visa-gc">Visa Gift Card</option>
-                <option value="mastercard-gc">Mastercard Gift Card</option>
-              </select>
-            </div>
             <div class="gc-row">
-              <div class="gc-field gc-field-half">
-                <label for="gcAmountBuy" data-i18n="gc.amount">Amount (USD)</label>
+              <div class="gc-field" style="flex:.4">
+                <label for="gcCurrencyBuy">Currency</label>
+                <select id="gcCurrencyBuy" class="gc-select">
+                  <option value="USD">&#127482;&#127480; USD</option>
+                  <option value="EUR">&#127466;&#127482; EUR</option>
+                  <option value="GBP">&#127468;&#127463; GBP</option>
+                  <option value="CAD">&#127464;&#127462; CAD</option>
+                  <option value="AUD">&#127462;&#127482; AUD</option>
+                  <option value="BRL">&#127463;&#127479; BRL</option>
+                  <option value="MXN">&#127474;&#127485; MXN</option>
+                  <option value="INR">&#127470;&#127475; INR</option>
+                  <option value="JPY">&#127471;&#127477; JPY</option>
+                  <option value="KRW">&#127472;&#127479; KRW</option>
+                  <option value="TRY">&#127481;&#127479; TRY</option>
+                  <option value="RUB">&#127479;&#127482; RUB</option>
+                  <option value="AED">&#127462;&#127466; AED</option>
+                </select>
+              </div>
+              <div class="gc-field" style="flex:.6">
+                <label for="gcAmountBuy">Amount</label>
                 <input type="number" id="gcAmountBuy" class="gc-input" placeholder="25" min="5" max="500" step="5">
               </div>
-              <div class="gc-field gc-field-half">
-                <label data-i18n="gc.youPay">You Pay</label>
-                <div class="gc-result-box" id="gcBuyResult">-- OST</div>
-              </div>
+            </div>
+            <div class="gc-quick-amounts">
+              <button class="gc-quick-btn" data-amt="25">$25</button>
+              <button class="gc-quick-btn" data-amt="50">$50</button>
+              <button class="gc-quick-btn" data-amt="100">$100</button>
+              <button class="gc-quick-btn" data-amt="200">$200</button>
+              <button class="gc-quick-btn" data-amt="500">$500</button>
             </div>
             <div class="gc-field">
-              <label for="gcEmailBuy" data-i18n="gc.email">Delivery Email (optional)</label>
-              <input type="email" id="gcEmailBuy" class="gc-input" placeholder="you@email.com (or receive in wallet)">
+              <label for="gcEmailBuy">Delivery Email (optional)</label>
+              <input type="email" id="gcEmailBuy" class="gc-input" placeholder="you@email.com">
+            </div>
+            <div class="gc-result-card">
+              <span class="gc-result-label">You Pay</span>
+              <div class="gc-result-box" id="gcBuyResult">-- OST</div>
             </div>
             <div class="gc-conversion" id="gcBuyConversion">
-              <div class="gc-conv-row"><span data-i18n="gc.rate">Rate:</span> <span id="gcBuyRate">--</span></div>
-              <div class="gc-conv-row"><span data-i18n="gc.fee">Treasury Fee (0.1%):</span> <span id="gcBuyFee">--</span></div>
+              <div class="gc-conv-row"><span>Rate:</span> <span id="gcBuyRate">--</span></div>
+              <div class="gc-conv-row"><span>Fee (0.1%):</span> <span id="gcBuyFee">--</span></div>
             </div>
             <button class="btn btn-primary btn-glow gc-action-btn" id="gcBuyBtn" disabled>
-              <span class="pay-icon">&#9673;</span> <span data-i18n="gc.buyBtn">Pay OST &rarr; Get Gift Card</span>
+              <span class="pay-icon">&#9673;</span> Pay OST &rarr; Get Gift Card
             </button>
           </div>
 
@@ -1053,324 +1057,165 @@
           <!-- Delivered card reveal -->
           <div class="gc-delivered" id="gcDelivered" style="display:none;">
             <div class="gc-card-reveal">
-              <div class="gc-card-brand" id="gcCardBrand">&#127873;</div>
+              <img class="gc-delivered-logo" id="gcDeliveredLogo" src="" alt="">
               <div class="gc-card-code" id="gcCardCode">XXXX-XXXX-XXXX</div>
               <button class="btn btn-outline btn-sm gc-copy-btn" id="gcCopyCode">&#128203; Copy Code</button>
             </div>
           </div>
         </div>
 
-        <!-- Clickable brand cards -->
-        <div class="gc-brands">
-          <h4 data-i18n="gc.supported">Shop Gift Cards Everywhere</h4>
-          <div class="gc-brand-grid">
-            <a href="https://www.amazon.com/gift-cards" target="_blank" rel="noopener noreferrer" class="gc-brand-card">
-              <span class="gc-brand-emoji">&#128722;</span>
-              <span class="gc-brand-name">Amazon</span>
-              <span class="gc-brand-action">Shop &rarr;</span>
-            </a>
-            <a href="https://www.apple.com/shop/buy-gift-cards" target="_blank" rel="noopener noreferrer" class="gc-brand-card">
-              <span class="gc-brand-emoji">&#127822;</span>
-              <span class="gc-brand-name">Apple</span>
-              <span class="gc-brand-action">Shop &rarr;</span>
-            </a>
-            <a href="https://play.google.com/about/giftcards/" target="_blank" rel="noopener noreferrer" class="gc-brand-card">
-              <span class="gc-brand-emoji">&#9654;</span>
-              <span class="gc-brand-name">Google Play</span>
-              <span class="gc-brand-action">Shop &rarr;</span>
-            </a>
-            <a href="https://store.steampowered.com/digitalgiftcards/" target="_blank" rel="noopener noreferrer" class="gc-brand-card">
-              <span class="gc-brand-emoji">&#127918;</span>
-              <span class="gc-brand-name">Steam</span>
-              <span class="gc-brand-action">Shop &rarr;</span>
-            </a>
-            <a href="https://www.walmart.com/cp/gift-cards/96894" target="_blank" rel="noopener noreferrer" class="gc-brand-card">
-              <span class="gc-brand-emoji">&#127978;</span>
-              <span class="gc-brand-name">Walmart</span>
-              <span class="gc-brand-action">Shop &rarr;</span>
-            </a>
-            <a href="https://www.target.com/c/gift-cards/-/N-5xsxt" target="_blank" rel="noopener noreferrer" class="gc-brand-card">
-              <span class="gc-brand-emoji">&#127919;</span>
-              <span class="gc-brand-name">Target</span>
-              <span class="gc-brand-action">Shop &rarr;</span>
-            </a>
-            <a href="https://www.ebay.com/giftcards" target="_blank" rel="noopener noreferrer" class="gc-brand-card">
-              <span class="gc-brand-emoji">&#128176;</span>
-              <span class="gc-brand-name">eBay</span>
-              <span class="gc-brand-action">Shop &rarr;</span>
-            </a>
-            <a href="https://www.starbucks.com/gift" target="_blank" rel="noopener noreferrer" class="gc-brand-card">
-              <span class="gc-brand-emoji">&#9749;</span>
-              <span class="gc-brand-name">Starbucks</span>
-              <span class="gc-brand-action">Shop &rarr;</span>
-            </a>
-            <a href="https://www.nike.com/gift-cards" target="_blank" rel="noopener noreferrer" class="gc-brand-card">
-              <span class="gc-brand-emoji">&#128095;</span>
-              <span class="gc-brand-name">Nike</span>
-              <span class="gc-brand-action">Shop &rarr;</span>
-            </a>
-            <a href="https://www.netflix.com/gift-cards" target="_blank" rel="noopener noreferrer" class="gc-brand-card">
-              <span class="gc-brand-emoji">&#127916;</span>
-              <span class="gc-brand-name">Netflix</span>
-              <span class="gc-brand-action">Shop &rarr;</span>
-            </a>
-            <a href="https://www.spotify.com/us/purchase/gift-card/" target="_blank" rel="noopener noreferrer" class="gc-brand-card">
-              <span class="gc-brand-emoji">&#127925;</span>
-              <span class="gc-brand-name">Spotify</span>
-              <span class="gc-brand-action">Shop &rarr;</span>
-            </a>
-            <a href="https://www.uber.com/us/en/gift-cards/" target="_blank" rel="noopener noreferrer" class="gc-brand-card">
-              <span class="gc-brand-emoji">&#128663;</span>
-              <span class="gc-brand-name">Uber</span>
-              <span class="gc-brand-action">Shop &rarr;</span>
-            </a>
-            <a href="https://usa.visa.com/pay-with-visa/cards/gift-cards.html" target="_blank" rel="noopener noreferrer" class="gc-brand-card">
-              <span class="gc-brand-emoji">&#128179;</span>
-              <span class="gc-brand-name">Visa</span>
-              <span class="gc-brand-action">Shop &rarr;</span>
-            </a>
-            <a href="https://www.mastercard.us/en-us/personal/find-a-card/prepaid-gift-cards.html" target="_blank" rel="noopener noreferrer" class="gc-brand-card">
-              <span class="gc-brand-emoji">&#128179;</span>
-              <span class="gc-brand-name">Mastercard</span>
-              <span class="gc-brand-action">Shop &rarr;</span>
-            </a>
-            <span class="gc-brand-pill">+200 more</span>
+        <!-- ==================== HISTORY ==================== -->
+        <div class="gc-panel" id="gcPanelHistory">
+          <div class="gc-history">
+            <div class="gc-history-empty" id="gcHistoryEmpty">
+              <div class="gc-he-icon">&#128203;</div>
+              <div class="gc-he-title">No Transactions Yet</div>
+              <div class="gc-he-sub">Redeem or buy a gift card to see your history here.</div>
+            </div>
+            <div class="gc-history-list" id="gcHistoryList" style="display:none;"></div>
           </div>
         </div>
 
-        <div class="gc-disclaimer" data-i18n="gc.disclaimer">&#9888; Users are responsible for verifying gift card validity. OST is not a gift card issuer. Gift card interchange is facilitated through third-party APIs (Raise, CardCash, merchant APIs). Gift card resale is subject to local laws &mdash; please verify in your jurisdiction.</div>
+        <div class="gc-disclaimer">&#9888; Gift card interchange uses third-party APIs (Raise, CardCash). Users must verify card validity. Subject to local laws.</div>
       </div>
 
       <!-- ==================== FUEL & GAS STATIONS ==================== -->
       <div class="fuel-section" id="fuelSection">
-        <!-- Hero -->
+        <!-- Compact Hero -->
         <div class="fuel-hero">
-          <div class="fuel-pump-icon">
-            <div class="fuel-pump-body">
-              <div class="fuel-pump-screen">&#9673; OST</div>
-              <div class="fuel-pump-nozzle"></div>
-            </div>
+          <div class="fuel-hero-visual">
+            <svg viewBox="0 0 120 120" width="80" height="80">
+              <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="8"/>
+              <circle cx="60" cy="60" r="54" fill="none" stroke="#00e676" stroke-width="8" stroke-dasharray="260 80" stroke-linecap="round" transform="rotate(-90 60 60)"/>
+              <text x="60" y="56" text-anchor="middle" fill="#fff" font-size="18" font-weight="700">&#9981;</text>
+              <text x="60" y="74" text-anchor="middle" fill="rgba(255,255,255,.6)" font-size="10">OST Fuel</text>
+            </svg>
           </div>
-          <h3 data-i18n="fuel.title">Fuel &amp; Go &mdash; Pay at Any Gas Station with OST</h3>
-          <p class="fuel-hero-sub" data-i18n="fuel.sub">Pull up. Tap your phone. Drive away. OST works offline at every gas station, convenience store, and truck stop on Earth. Earn rewards on every fill-up.</p>
+          <h3>Fuel &amp; Go &mdash; Pay at Any Station with OST</h3>
+          <p class="fuel-hero-sub">Tap your phone. Fill up. Drive away. Offline NFC at 300,000+ stations.</p>
         </div>
 
-        <!-- How it works -->
-        <div class="fuel-how">
-          <h4 data-i18n="fuel.howTitle">How It Works</h4>
-          <div class="fuel-steps">
-            <div class="fuel-step">
-              <div class="fuel-step-icon">&#128661;</div>
-              <div class="fuel-step-label" data-i18n="fuel.step1">Pull Up to Pump</div>
-              <div class="fuel-step-desc" data-i18n="fuel.step1d">Drive to any partner gas station worldwide.</div>
-            </div>
-            <div class="fuel-step-arrow">&#8594;</div>
-            <div class="fuel-step">
-              <div class="fuel-step-icon">&#128241;</div>
-              <div class="fuel-step-label" data-i18n="fuel.step2">Tap &amp; Pay</div>
-              <div class="fuel-step-desc" data-i18n="fuel.step2d">NFC tap or scan QR. Works offline &mdash; no internet needed.</div>
-            </div>
-            <div class="fuel-step-arrow">&#8594;</div>
-            <div class="fuel-step">
-              <div class="fuel-step-icon">&#127942;</div>
-              <div class="fuel-step-label" data-i18n="fuel.step3">Earn Rewards</div>
-              <div class="fuel-step-desc" data-i18n="fuel.step3d">3% cashback in OST on every transaction. Stacks forever.</div>
-            </div>
-            <div class="fuel-step-arrow">&#8594;</div>
-            <div class="fuel-step">
-              <div class="fuel-step-icon">&#128640;</div>
-              <div class="fuel-step-label" data-i18n="fuel.step4">Drive Away</div>
-              <div class="fuel-step-desc" data-i18n="fuel.step4d">Settles on Solana in &lt;0.4s. Zero fees. Private.</div>
-            </div>
-          </div>
+        <!-- Fuel Tabs -->
+        <div class="fuel-tabs">
+          <button class="fuel-tab fuel-tab-active" data-fuel-tab="pay">&#9981; Pay &amp; Fuel</button>
+          <button class="fuel-tab" data-fuel-tab="txs">&#128203; Transactions</button>
+          <button class="fuel-tab" data-fuel-tab="rewards">&#127942; Rewards</button>
+          <button class="fuel-tab" data-fuel-tab="stations">&#128205; Stations</button>
         </div>
 
-        <!-- Rewards calculator -->
-        <div class="fuel-calc">
-          <h4 data-i18n="fuel.calcTitle">&#9981; Fuel Rewards Calculator</h4>
-          <div class="fuel-calc-body">
-            <div class="fuel-calc-row">
-              <div class="fuel-calc-field">
-                <label for="fuelGallons" data-i18n="fuel.gallons">Gallons / Liters</label>
-                <input type="number" id="fuelGallons" class="gc-input" placeholder="15" min="1" max="999" step="any">
-              </div>
-              <div class="fuel-calc-field">
-                <label for="fuelPrice" data-i18n="fuel.priceGal">Price per Gallon (USD)</label>
-                <input type="number" id="fuelPrice" class="gc-input" placeholder="3.50" min="0.01" max="20" step="0.01">
+        <!-- ===== PAY PANEL ===== -->
+        <div class="fuel-panel fuel-panel-active" id="fuelPanelPay">
+          <!-- Station Picker -->
+          <div class="fuel-station-picker">
+            <div class="fuel-sp-label">Select Station</div>
+            <div class="fuel-sp-grid" id="fuelStationGrid"></div>
+          </div>
+
+          <!-- Pump Card -->
+          <div class="fuel-pump-card" id="fuelPumpCard">
+            <div class="fuel-pump-header">
+              <img class="fuel-pump-logo" id="fuelPumpLogo" src="" alt="">
+              <div>
+                <div class="fuel-pump-name" id="fuelPumpName">Select a station</div>
+                <div class="fuel-pump-status">&#128994; Ready</div>
               </div>
             </div>
-            <div class="fuel-calc-results" id="fuelCalcResults">
-              <div class="fuel-calc-item">
-                <span data-i18n="fuel.total">Total Cost</span>
-                <span class="fuel-calc-val" id="fuelTotalUSD">$0.00</span>
+            <div class="fuel-pump-display">
+              <div class="fuel-pump-visual">
+                <div class="fuel-pv-meter">
+                  <div class="fuel-pv-fill" id="fuelPvFill" style="height:0%"></div>
+                </div>
+                <div class="fuel-pv-label" id="fuelPvLabel">0 gal</div>
               </div>
-              <div class="fuel-calc-item">
-                <span data-i18n="fuel.ostCost">Pay in OST</span>
-                <span class="fuel-calc-val fuel-calc-ost" id="fuelTotalOST">0 OST</span>
+              <div class="fuel-pump-inputs">
+                <div class="fuel-pump-field">
+                  <label>Gallons</label>
+                  <input type="number" id="fuelGallons" class="gc-input" placeholder="15" min="1" max="999" step="any">
+                </div>
+                <div class="fuel-pump-field">
+                  <label>Price / gal (USD)</label>
+                  <input type="number" id="fuelPrice" class="gc-input" placeholder="3.50" min="0.01" max="20" step="0.01">
+                </div>
               </div>
-              <div class="fuel-calc-item fuel-calc-reward">
-                <span data-i18n="fuel.reward">&#127942; 3% Cashback</span>
-                <span class="fuel-calc-val" id="fuelRewardOST">+0 OST</span>
-              </div>
+            </div>
+            <div class="fuel-pump-totals">
+              <div class="fuel-pt-row"><span>Total</span><span id="fuelTotalUSD">$0.00</span></div>
+              <div class="fuel-pt-row fuel-pt-ost"><span>Pay in OST</span><span id="fuelTotalOST">0 OST</span></div>
+              <div class="fuel-pt-row fuel-pt-reward"><span>&#127942; 3% Cashback</span><span id="fuelRewardOST">+0 OST</span></div>
+            </div>
+            <button class="fuel-pay-btn" id="fuelPayBtn" disabled>&#128225; Tap to Pay &mdash; NFC / BLE</button>
+            <div class="fuel-pay-flow" id="fuelPayFlow" style="display:none">
+              <div class="fuel-flow-step" data-fstep="1"><span class="fuel-fs-dot"></span>Detecting NFC&hellip;</div>
+              <div class="fuel-flow-step" data-fstep="2"><span class="fuel-fs-dot"></span>Authorising OST&hellip;</div>
+              <div class="fuel-flow-step" data-fstep="3"><span class="fuel-fs-dot"></span>Settling on Solana&hellip;</div>
+              <div class="fuel-flow-step" data-fstep="4"><span class="fuel-fs-dot"></span>Complete &#10003;</div>
+            </div>
+          </div>
+
+          <div class="fuel-offline-badge">
+            <div class="fuel-offline-icon">&#128225;</div>
+            <div class="fuel-offline-text">
+              <strong>Works 100% Offline</strong>
+              <span>NFC tap-to-pay and BLE mesh. Settles on Solana when back online.</span>
             </div>
           </div>
         </div>
 
-        <!-- Offline badge -->
-        <div class="fuel-offline-badge">
-          <div class="fuel-offline-icon">&#128225;</div>
-          <div class="fuel-offline-text">
-            <strong data-i18n="fuel.offlineTitle">Works 100% Offline</strong>
-            <span data-i18n="fuel.offlineDesc">NFC tap-to-pay and BLE mesh. No cell signal needed. Transaction syncs when you&rsquo;re back online.</span>
+        <!-- ===== TRANSACTIONS PANEL ===== -->
+        <div class="fuel-panel" id="fuelPanelTxs">
+          <div class="fuel-tx-stats">
+            <div class="fuel-tx-stat"><span class="fuel-ts-val" id="fuelTxCount">0</span><span class="fuel-ts-label">Fill-ups</span></div>
+            <div class="fuel-tx-stat"><span class="fuel-ts-val" id="fuelTxTotal">$0</span><span class="fuel-ts-label">Total Spent</span></div>
+            <div class="fuel-tx-stat"><span class="fuel-ts-val" id="fuelTxRewards">0 OST</span><span class="fuel-ts-label">Rewards Earned</span></div>
           </div>
-        </div>
-
-        <!-- Partner stations grid -->
-        <div class="fuel-partners">
-          <h4 data-i18n="fuel.partnersTitle">Partner Gas Stations &amp; Convenience Stores</h4>
-          <p class="fuel-partners-sub" data-i18n="fuel.partnersSub">Tap the logo to visit each partner. We&rsquo;re building the world&rsquo;s largest offline crypto fuel network.</p>
-          <div class="fuel-partner-grid">
-            <a href="https://www.shell.com/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card">
-              <div class="fuel-partner-logo">&#9981;</div>
-              <span class="fuel-partner-name">Shell</span>
-              <span class="fuel-partner-regions">Global &middot; 46,000+ stations</span>
-            </a>
-            <a href="https://www.bp.com/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card">
-              <div class="fuel-partner-logo">&#9981;</div>
-              <span class="fuel-partner-name">BP</span>
-              <span class="fuel-partner-regions">Global &middot; 21,000+ stations</span>
-            </a>
-            <a href="https://www.exxonmobil.com/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card">
-              <div class="fuel-partner-logo">&#9981;</div>
-              <span class="fuel-partner-name">ExxonMobil</span>
-              <span class="fuel-partner-regions">Americas &middot; 12,000+ stations</span>
-            </a>
-            <a href="https://www.chevron.com/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card">
-              <div class="fuel-partner-logo">&#9981;</div>
-              <span class="fuel-partner-name">Chevron</span>
-              <span class="fuel-partner-regions">Americas &middot; 8,000+ stations</span>
-            </a>
-            <a href="https://www.totalenergies.com/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card fuel-partner-featured">
-              <div class="fuel-partner-logo">&#9981;</div>
-              <span class="fuel-partner-name">TotalEnergies</span>
-              <span class="fuel-partner-regions">Africa, EU, Asia &middot; 16,000+</span>
-            </a>
-            <a href="https://www.adnoc.ae/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card fuel-partner-featured">
-              <div class="fuel-partner-logo">&#9981;</div>
-              <span class="fuel-partner-name">ADNOC</span>
-              <span class="fuel-partner-regions">UAE &amp; Middle East &middot; 500+</span>
-            </a>
-            <a href="https://www.7-eleven.com/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card">
-              <div class="fuel-partner-logo">&#127978;</div>
-              <span class="fuel-partner-name">7-Eleven</span>
-              <span class="fuel-partner-regions">Global &middot; 83,000+ stores</span>
-            </a>
-            <a href="https://www.oxxo.com/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card fuel-partner-featured">
-              <div class="fuel-partner-logo">&#127978;</div>
-              <span class="fuel-partner-name">OXXO</span>
-              <span class="fuel-partner-regions">Mexico &amp; LATAM &middot; 21,000+</span>
-            </a>
-            <a href="https://www.circlek.com/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card">
-              <div class="fuel-partner-logo">&#127978;</div>
-              <span class="fuel-partner-name">Circle K</span>
-              <span class="fuel-partner-regions">Global &middot; 14,000+ stores</span>
-            </a>
-            <a href="https://www.stripesstores.com/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card fuel-partner-featured">
-              <div class="fuel-partner-logo">&#9981;</div>
-              <span class="fuel-partner-name">Stripes</span>
-              <span class="fuel-partner-regions">Texas &amp; US South &middot; 600+</span>
-            </a>
-            <a href="https://www.ipiranga.com.br/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card fuel-partner-featured">
-              <div class="fuel-partner-logo">&#9981;</div>
-              <span class="fuel-partner-name">Ipiranga</span>
-              <span class="fuel-partner-regions">Brazil &middot; 7,600+ stations</span>
-            </a>
-            <a href="https://www.engenoil.com/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card fuel-partner-featured">
-              <div class="fuel-partner-logo">&#9981;</div>
-              <span class="fuel-partner-name">Engen</span>
-              <span class="fuel-partner-regions">South Africa &middot; 1,500+</span>
-            </a>
-            <a href="https://www.easyjoy.com/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card">
-              <div class="fuel-partner-logo">&#127978;</div>
-              <span class="fuel-partner-name">Easy Joy</span>
-              <span class="fuel-partner-regions">China &middot; Sinopec &middot; 30,000+</span>
-            </a>
-            <a href="https://www.petronas.com/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card">
-              <div class="fuel-partner-logo">&#9981;</div>
-              <span class="fuel-partner-name">Petronas</span>
-              <span class="fuel-partner-regions">Asia &middot; 2,500+ stations</span>
-            </a>
-            <a href="https://www.indianoil.in/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card">
-              <div class="fuel-partner-logo">&#9981;</div>
-              <span class="fuel-partner-name">Indian Oil</span>
-              <span class="fuel-partner-regions">India &middot; 34,000+ stations</span>
-            </a>
-            <a href="https://www.pemex.com/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card">
-              <div class="fuel-partner-logo">&#9981;</div>
-              <span class="fuel-partner-name">PEMEX</span>
-              <span class="fuel-partner-regions">Mexico &middot; 11,000+ stations</span>
-            </a>
-            <a href="https://www.repsol.com/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card">
-              <div class="fuel-partner-logo">&#9981;</div>
-              <span class="fuel-partner-name">Repsol</span>
-              <span class="fuel-partner-regions">Spain &amp; EU &middot; 4,700+</span>
-            </a>
-            <a href="https://www.lukoil.com/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card">
-              <div class="fuel-partner-logo">&#9981;</div>
-              <span class="fuel-partner-name">Lukoil</span>
-              <span class="fuel-partner-regions">Russia &amp; CIS &middot; 5,500+</span>
-            </a>
-            <a href="https://www.sinopec.com/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card">
-              <div class="fuel-partner-logo">&#9981;</div>
-              <span class="fuel-partner-name">Sinopec</span>
-              <span class="fuel-partner-regions">China &middot; 30,000+ stations</span>
-            </a>
-            <a href="https://www.aramco.com/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card">
-              <div class="fuel-partner-logo">&#9981;</div>
-              <span class="fuel-partner-name">Aramco</span>
-              <span class="fuel-partner-regions">Saudi Arabia &middot; Middle East</span>
-            </a>
-            <a href="https://www.petrobras.com.br/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card">
-              <div class="fuel-partner-logo">&#9981;</div>
-              <span class="fuel-partner-name">Petrobras</span>
-              <span class="fuel-partner-regions">Brazil &middot; 7,700+ stations</span>
-            </a>
-            <span class="gc-brand-pill">+300,000 stations worldwide</span>
-          </div>
-        </div>
-
-        <!-- Rewards tiers -->
-        <div class="fuel-rewards">
-          <h4 data-i18n="fuel.rewardsTitle">&#127942; Fuel Rewards Program</h4>
-          <div class="fuel-rewards-grid">
-            <div class="fuel-reward-tier">
-              <div class="fuel-tier-badge fuel-tier-bronze">&#9981;</div>
-              <h5>Bronze</h5>
-              <p class="fuel-tier-range">0 &ndash; 100 fill-ups</p>
-              <div class="fuel-tier-perk">3% cashback in OST</div>
-              <div class="fuel-tier-perk">Offline tap-to-pay</div>
-            </div>
-            <div class="fuel-reward-tier fuel-reward-tier-active">
-              <div class="fuel-tier-badge fuel-tier-silver">&#9981;</div>
-              <h5>Silver</h5>
-              <p class="fuel-tier-range">100 &ndash; 500 fill-ups</p>
-              <div class="fuel-tier-perk">5% cashback in OST</div>
-              <div class="fuel-tier-perk">Priority lane access</div>
-              <div class="fuel-tier-perk">Free car wash/month</div>
-            </div>
-            <div class="fuel-reward-tier">
-              <div class="fuel-tier-badge fuel-tier-gold">&#9981;</div>
-              <h5>Gold</h5>
-              <p class="fuel-tier-range">500+ fill-ups</p>
-              <div class="fuel-tier-perk">8% cashback in OST</div>
-              <div class="fuel-tier-perk">Partner store discounts</div>
-              <div class="fuel-tier-perk">Roadside assistance</div>
-              <div class="fuel-tier-perk">VIP lounge access</div>
+          <div class="fuel-tx-list" id="fuelTxList">
+            <div class="fuel-tx-empty" id="fuelTxEmpty">
+              <div class="gc-he-icon">&#9981;</div>
+              <div class="gc-he-title">No Fill-ups Yet</div>
+              <div class="gc-he-sub">Complete your first fuel payment to see it here.</div>
             </div>
           </div>
         </div>
 
-        <div class="fuel-disclaimer" data-i18n="fuel.disclaimer">&#9888; Gas station partnerships are in development. OST is building relationships with fuel retailers and convenience store operators worldwide. Rewards are estimated and subject to partner agreements. Offline payments use NFC/BLE and settle on Solana when connectivity resumes.</div>
+        <!-- ===== REWARDS PANEL ===== -->
+        <div class="fuel-panel" id="fuelPanelRewards">
+          <div class="fuel-rw-progress">
+            <div class="fuel-rw-tier-label">
+              <span id="fuelCurrentTier">Bronze</span>
+              <span id="fuelNextTier">Silver at 100 fill-ups</span>
+            </div>
+            <div class="fuel-rw-bar"><div class="fuel-rw-bar-fill" id="fuelRwBarFill" style="width:0%"></div></div>
+            <div class="fuel-rw-count"><span id="fuelFillCount">0</span> / <span id="fuelFillTarget">100</span> fill-ups</div>
+          </div>
+          <div class="fuel-rw-stats">
+            <div class="fuel-tx-stat"><span class="fuel-ts-val" id="fuelRwEarned">0 OST</span><span class="fuel-ts-label">Total Earned</span></div>
+            <div class="fuel-tx-stat"><span class="fuel-ts-val" id="fuelRwRate">3%</span><span class="fuel-ts-label">Current Rate</span></div>
+            <div class="fuel-tx-stat"><span class="fuel-ts-val" id="fuelRwSaved">$0</span><span class="fuel-ts-label">Money Saved</span></div>
+          </div>
+          <div class="fuel-rw-tiers">
+            <div class="fuel-rw-tier-card fuel-rw-tier-active">
+              <div class="fuel-rw-tc-badge" style="background:linear-gradient(135deg,#cd7f32,#a0522d)">&#9981;</div>
+              <strong>Bronze</strong><span>0 &ndash; 99</span><span>3% cashback</span>
+            </div>
+            <div class="fuel-rw-tier-card">
+              <div class="fuel-rw-tc-badge" style="background:linear-gradient(135deg,#c0c0c0,#808080)">&#9981;</div>
+              <strong>Silver</strong><span>100 &ndash; 499</span><span>5% cashback</span>
+            </div>
+            <div class="fuel-rw-tier-card">
+              <div class="fuel-rw-tc-badge" style="background:linear-gradient(135deg,#ffd700,#daa520)">&#9981;</div>
+              <strong>Gold</strong><span>500+</span><span>8% cashback</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== STATIONS PANEL ===== -->
+        <div class="fuel-panel" id="fuelPanelStations">
+          <input type="text" class="fuel-search" id="fuelStationSearch" placeholder="&#128269; Search stations&hellip;">
+          <div class="fuel-partner-grid" id="fuelPartnerGrid"></div>
+          <div class="fuel-station-count">300,000+ stations worldwide</div>
+        </div>
+
+        <div class="fuel-disclaimer">&#9888; Gas station partnerships are in development. Rewards subject to partner agreements. Offline payments use NFC/BLE and settle on Solana when connectivity resumes.</div>
       </div>
 
     </div>
@@ -3335,6 +3180,6 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
-  <script src="app.js?v=29"></script>
+  <script src="app.js?v=30"></script>
 </body>
 </html>
