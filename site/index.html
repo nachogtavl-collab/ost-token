@@ -25,7 +25,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=27">
+  <link rel="stylesheet" href="style.css?v=28">
 </head>
 <body>
 
@@ -1121,6 +1121,239 @@
 
         <div class="gc-disclaimer" data-i18n="gc.disclaimer">&#9888; Users are responsible for verifying gift card validity. OST is not a gift card issuer. Gift card interchange is facilitated through third-party APIs (Raise, CardCash, merchant APIs). Gift card resale is subject to local laws &mdash; please verify in your jurisdiction.</div>
       </div>
+
+      <!-- ==================== FUEL & GAS STATIONS ==================== -->
+      <div class="fuel-section" id="fuelSection">
+        <!-- Hero -->
+        <div class="fuel-hero">
+          <div class="fuel-pump-icon">
+            <div class="fuel-pump-body">
+              <div class="fuel-pump-screen">&#9673; OST</div>
+              <div class="fuel-pump-nozzle"></div>
+            </div>
+          </div>
+          <h3 data-i18n="fuel.title">Fuel &amp; Go &mdash; Pay at Any Gas Station with OST</h3>
+          <p class="fuel-hero-sub" data-i18n="fuel.sub">Pull up. Tap your phone. Drive away. OST works offline at every gas station, convenience store, and truck stop on Earth. Earn rewards on every fill-up.</p>
+        </div>
+
+        <!-- How it works -->
+        <div class="fuel-how">
+          <h4 data-i18n="fuel.howTitle">How It Works</h4>
+          <div class="fuel-steps">
+            <div class="fuel-step">
+              <div class="fuel-step-icon">&#128661;</div>
+              <div class="fuel-step-label" data-i18n="fuel.step1">Pull Up to Pump</div>
+              <div class="fuel-step-desc" data-i18n="fuel.step1d">Drive to any partner gas station worldwide.</div>
+            </div>
+            <div class="fuel-step-arrow">&#8594;</div>
+            <div class="fuel-step">
+              <div class="fuel-step-icon">&#128241;</div>
+              <div class="fuel-step-label" data-i18n="fuel.step2">Tap &amp; Pay</div>
+              <div class="fuel-step-desc" data-i18n="fuel.step2d">NFC tap or scan QR. Works offline &mdash; no internet needed.</div>
+            </div>
+            <div class="fuel-step-arrow">&#8594;</div>
+            <div class="fuel-step">
+              <div class="fuel-step-icon">&#127942;</div>
+              <div class="fuel-step-label" data-i18n="fuel.step3">Earn Rewards</div>
+              <div class="fuel-step-desc" data-i18n="fuel.step3d">3% cashback in OST on every transaction. Stacks forever.</div>
+            </div>
+            <div class="fuel-step-arrow">&#8594;</div>
+            <div class="fuel-step">
+              <div class="fuel-step-icon">&#128640;</div>
+              <div class="fuel-step-label" data-i18n="fuel.step4">Drive Away</div>
+              <div class="fuel-step-desc" data-i18n="fuel.step4d">Settles on Solana in &lt;0.4s. Zero fees. Private.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rewards calculator -->
+        <div class="fuel-calc">
+          <h4 data-i18n="fuel.calcTitle">&#9981; Fuel Rewards Calculator</h4>
+          <div class="fuel-calc-body">
+            <div class="fuel-calc-row">
+              <div class="fuel-calc-field">
+                <label for="fuelGallons" data-i18n="fuel.gallons">Gallons / Liters</label>
+                <input type="number" id="fuelGallons" class="gc-input" placeholder="15" min="1" max="999" step="any">
+              </div>
+              <div class="fuel-calc-field">
+                <label for="fuelPrice" data-i18n="fuel.priceGal">Price per Gallon (USD)</label>
+                <input type="number" id="fuelPrice" class="gc-input" placeholder="3.50" min="0.01" max="20" step="0.01">
+              </div>
+            </div>
+            <div class="fuel-calc-results" id="fuelCalcResults">
+              <div class="fuel-calc-item">
+                <span data-i18n="fuel.total">Total Cost</span>
+                <span class="fuel-calc-val" id="fuelTotalUSD">$0.00</span>
+              </div>
+              <div class="fuel-calc-item">
+                <span data-i18n="fuel.ostCost">Pay in OST</span>
+                <span class="fuel-calc-val fuel-calc-ost" id="fuelTotalOST">0 OST</span>
+              </div>
+              <div class="fuel-calc-item fuel-calc-reward">
+                <span data-i18n="fuel.reward">&#127942; 3% Cashback</span>
+                <span class="fuel-calc-val" id="fuelRewardOST">+0 OST</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Offline badge -->
+        <div class="fuel-offline-badge">
+          <div class="fuel-offline-icon">&#128225;</div>
+          <div class="fuel-offline-text">
+            <strong data-i18n="fuel.offlineTitle">Works 100% Offline</strong>
+            <span data-i18n="fuel.offlineDesc">NFC tap-to-pay and BLE mesh. No cell signal needed. Transaction syncs when you&rsquo;re back online.</span>
+          </div>
+        </div>
+
+        <!-- Partner stations grid -->
+        <div class="fuel-partners">
+          <h4 data-i18n="fuel.partnersTitle">Partner Gas Stations &amp; Convenience Stores</h4>
+          <p class="fuel-partners-sub" data-i18n="fuel.partnersSub">Tap the logo to visit each partner. We&rsquo;re building the world&rsquo;s largest offline crypto fuel network.</p>
+          <div class="fuel-partner-grid">
+            <a href="https://www.shell.com/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card">
+              <div class="fuel-partner-logo">&#9981;</div>
+              <span class="fuel-partner-name">Shell</span>
+              <span class="fuel-partner-regions">Global &middot; 46,000+ stations</span>
+            </a>
+            <a href="https://www.bp.com/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card">
+              <div class="fuel-partner-logo">&#9981;</div>
+              <span class="fuel-partner-name">BP</span>
+              <span class="fuel-partner-regions">Global &middot; 21,000+ stations</span>
+            </a>
+            <a href="https://www.exxonmobil.com/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card">
+              <div class="fuel-partner-logo">&#9981;</div>
+              <span class="fuel-partner-name">ExxonMobil</span>
+              <span class="fuel-partner-regions">Americas &middot; 12,000+ stations</span>
+            </a>
+            <a href="https://www.chevron.com/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card">
+              <div class="fuel-partner-logo">&#9981;</div>
+              <span class="fuel-partner-name">Chevron</span>
+              <span class="fuel-partner-regions">Americas &middot; 8,000+ stations</span>
+            </a>
+            <a href="https://www.totalenergies.com/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card fuel-partner-featured">
+              <div class="fuel-partner-logo">&#9981;</div>
+              <span class="fuel-partner-name">TotalEnergies</span>
+              <span class="fuel-partner-regions">Africa, EU, Asia &middot; 16,000+</span>
+            </a>
+            <a href="https://www.adnoc.ae/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card fuel-partner-featured">
+              <div class="fuel-partner-logo">&#9981;</div>
+              <span class="fuel-partner-name">ADNOC</span>
+              <span class="fuel-partner-regions">UAE &amp; Middle East &middot; 500+</span>
+            </a>
+            <a href="https://www.7-eleven.com/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card">
+              <div class="fuel-partner-logo">&#127978;</div>
+              <span class="fuel-partner-name">7-Eleven</span>
+              <span class="fuel-partner-regions">Global &middot; 83,000+ stores</span>
+            </a>
+            <a href="https://www.oxxo.com/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card fuel-partner-featured">
+              <div class="fuel-partner-logo">&#127978;</div>
+              <span class="fuel-partner-name">OXXO</span>
+              <span class="fuel-partner-regions">Mexico &amp; LATAM &middot; 21,000+</span>
+            </a>
+            <a href="https://www.circlek.com/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card">
+              <div class="fuel-partner-logo">&#127978;</div>
+              <span class="fuel-partner-name">Circle K</span>
+              <span class="fuel-partner-regions">Global &middot; 14,000+ stores</span>
+            </a>
+            <a href="https://www.stripesstores.com/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card fuel-partner-featured">
+              <div class="fuel-partner-logo">&#9981;</div>
+              <span class="fuel-partner-name">Stripes</span>
+              <span class="fuel-partner-regions">Texas &amp; US South &middot; 600+</span>
+            </a>
+            <a href="https://www.ipiranga.com.br/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card fuel-partner-featured">
+              <div class="fuel-partner-logo">&#9981;</div>
+              <span class="fuel-partner-name">Ipiranga</span>
+              <span class="fuel-partner-regions">Brazil &middot; 7,600+ stations</span>
+            </a>
+            <a href="https://www.engenoil.com/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card fuel-partner-featured">
+              <div class="fuel-partner-logo">&#9981;</div>
+              <span class="fuel-partner-name">Engen</span>
+              <span class="fuel-partner-regions">South Africa &middot; 1,500+</span>
+            </a>
+            <a href="https://www.easyjoy.com/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card">
+              <div class="fuel-partner-logo">&#127978;</div>
+              <span class="fuel-partner-name">Easy Joy</span>
+              <span class="fuel-partner-regions">China &middot; Sinopec &middot; 30,000+</span>
+            </a>
+            <a href="https://www.petronas.com/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card">
+              <div class="fuel-partner-logo">&#9981;</div>
+              <span class="fuel-partner-name">Petronas</span>
+              <span class="fuel-partner-regions">Asia &middot; 2,500+ stations</span>
+            </a>
+            <a href="https://www.indianoil.in/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card">
+              <div class="fuel-partner-logo">&#9981;</div>
+              <span class="fuel-partner-name">Indian Oil</span>
+              <span class="fuel-partner-regions">India &middot; 34,000+ stations</span>
+            </a>
+            <a href="https://www.pemex.com/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card">
+              <div class="fuel-partner-logo">&#9981;</div>
+              <span class="fuel-partner-name">PEMEX</span>
+              <span class="fuel-partner-regions">Mexico &middot; 11,000+ stations</span>
+            </a>
+            <a href="https://www.repsol.com/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card">
+              <div class="fuel-partner-logo">&#9981;</div>
+              <span class="fuel-partner-name">Repsol</span>
+              <span class="fuel-partner-regions">Spain &amp; EU &middot; 4,700+</span>
+            </a>
+            <a href="https://www.lukoil.com/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card">
+              <div class="fuel-partner-logo">&#9981;</div>
+              <span class="fuel-partner-name">Lukoil</span>
+              <span class="fuel-partner-regions">Russia &amp; CIS &middot; 5,500+</span>
+            </a>
+            <a href="https://www.sinopec.com/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card">
+              <div class="fuel-partner-logo">&#9981;</div>
+              <span class="fuel-partner-name">Sinopec</span>
+              <span class="fuel-partner-regions">China &middot; 30,000+ stations</span>
+            </a>
+            <a href="https://www.aramco.com/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card">
+              <div class="fuel-partner-logo">&#9981;</div>
+              <span class="fuel-partner-name">Aramco</span>
+              <span class="fuel-partner-regions">Saudi Arabia &middot; Middle East</span>
+            </a>
+            <a href="https://www.petrobras.com.br/" target="_blank" rel="noopener noreferrer" class="fuel-partner-card">
+              <div class="fuel-partner-logo">&#9981;</div>
+              <span class="fuel-partner-name">Petrobras</span>
+              <span class="fuel-partner-regions">Brazil &middot; 7,700+ stations</span>
+            </a>
+            <span class="gc-brand-pill">+300,000 stations worldwide</span>
+          </div>
+        </div>
+
+        <!-- Rewards tiers -->
+        <div class="fuel-rewards">
+          <h4 data-i18n="fuel.rewardsTitle">&#127942; Fuel Rewards Program</h4>
+          <div class="fuel-rewards-grid">
+            <div class="fuel-reward-tier">
+              <div class="fuel-tier-badge fuel-tier-bronze">&#9981;</div>
+              <h5>Bronze</h5>
+              <p class="fuel-tier-range">0 &ndash; 100 fill-ups</p>
+              <div class="fuel-tier-perk">3% cashback in OST</div>
+              <div class="fuel-tier-perk">Offline tap-to-pay</div>
+            </div>
+            <div class="fuel-reward-tier fuel-reward-tier-active">
+              <div class="fuel-tier-badge fuel-tier-silver">&#9981;</div>
+              <h5>Silver</h5>
+              <p class="fuel-tier-range">100 &ndash; 500 fill-ups</p>
+              <div class="fuel-tier-perk">5% cashback in OST</div>
+              <div class="fuel-tier-perk">Priority lane access</div>
+              <div class="fuel-tier-perk">Free car wash/month</div>
+            </div>
+            <div class="fuel-reward-tier">
+              <div class="fuel-tier-badge fuel-tier-gold">&#9981;</div>
+              <h5>Gold</h5>
+              <p class="fuel-tier-range">500+ fill-ups</p>
+              <div class="fuel-tier-perk">8% cashback in OST</div>
+              <div class="fuel-tier-perk">Partner store discounts</div>
+              <div class="fuel-tier-perk">Roadside assistance</div>
+              <div class="fuel-tier-perk">VIP lounge access</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="fuel-disclaimer" data-i18n="fuel.disclaimer">&#9888; Gas station partnerships are in development. OST is building relationships with fuel retailers and convenience store operators worldwide. Rewards are estimated and subject to partner agreements. Offline payments use NFC/BLE and settle on Solana when connectivity resumes.</div>
+      </div>
+
     </div>
   </section>
 
@@ -3083,6 +3316,6 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
-  <script src="app.js?v=27"></script>
+  <script src="app.js?v=28"></script>
 </body>
 </html>

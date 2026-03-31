@@ -3508,3 +3508,98 @@ select.sim-input { cursor: pointer; }
   .gc-brand-emoji { font-size: 1.2rem; }
   .gc-brand-name { font-size: .72rem; }
 }
+
+/* ==========================================================================
+   FUEL & GAS STATIONS
+   ========================================================================== */
+.fuel-section { margin-top: 80px; }
+
+/* Hero */
+.fuel-hero { text-align: center; margin-bottom: 40px; position: relative; }
+.fuel-hero h3 { font-size: 1.8rem; font-weight: 800; background: linear-gradient(135deg, #FF6B35, #FFD700, #FF6B35); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 10px; }
+.fuel-hero-sub { color: var(--muted); max-width: 640px; margin: 0 auto; font-size: 1rem; line-height: 1.6; }
+
+/* Fuel pump icon */
+.fuel-pump-icon { margin: 0 auto 20px; width: 80px; height: 100px; position: relative; }
+.fuel-pump-body { width: 56px; height: 72px; margin: 0 auto; border-radius: 10px 10px 4px 4px; background: linear-gradient(180deg, #333, #1a1a1a); border: 2px solid rgba(255,107,53,.3); position: relative; box-shadow: 0 8px 32px rgba(255,107,53,.15); }
+.fuel-pump-screen { position: absolute; top: 8px; left: 6px; right: 6px; height: 22px; border-radius: 4px; background: rgba(0,255,136,.1); border: 1px solid rgba(0,255,136,.25); display: flex; align-items: center; justify-content: center; font-size: .5rem; font-weight: 700; color: var(--accent); letter-spacing: .08em; }
+.fuel-pump-nozzle { position: absolute; top: 12px; right: -18px; width: 16px; height: 3px; background: #666; border-radius: 2px; }
+.fuel-pump-nozzle::after { content: ''; position: absolute; right: -6px; top: -3px; width: 4px; height: 10px; border-radius: 0 4px 4px 0; background: #888; }
+
+/* How it works steps */
+.fuel-how { margin-bottom: 36px; }
+.fuel-how h4 { text-align: center; font-size: 1.1rem; font-weight: 700; margin-bottom: 20px; color: var(--text); }
+.fuel-steps { display: flex; align-items: flex-start; justify-content: center; gap: 8px; flex-wrap: wrap; }
+.fuel-step { display: flex; flex-direction: column; align-items: center; text-align: center; max-width: 150px; gap: 6px; }
+.fuel-step-icon { font-size: 2rem; width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255,107,53,.06); border: 1px solid rgba(255,107,53,.15); }
+.fuel-step-label { font-size: .82rem; font-weight: 700; }
+.fuel-step-desc { font-size: .72rem; color: var(--muted); line-height: 1.4; }
+.fuel-step-arrow { font-size: 1.4rem; color: #FF6B35; font-weight: 700; margin-top: 18px; }
+
+/* Rewards calculator */
+.fuel-calc { max-width: 540px; margin: 0 auto 36px; padding: 28px; border-radius: 20px; background: linear-gradient(145deg, rgba(255,107,53,.04), rgba(255,215,0,.03)); border: 1px solid rgba(255,107,53,.12); }
+.fuel-calc h4 { text-align: center; font-size: 1.05rem; font-weight: 700; margin-bottom: 18px; }
+.fuel-calc-body { display: flex; flex-direction: column; gap: 16px; }
+.fuel-calc-row { display: flex; gap: 12px; }
+.fuel-calc-field { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.fuel-calc-field label { font-size: .78rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.fuel-calc-results { display: flex; flex-direction: column; gap: 8px; padding: 16px; border-radius: 14px; background: rgba(0,0,0,.2); border: 1px solid rgba(255,107,53,.08); }
+.fuel-calc-item { display: flex; justify-content: space-between; align-items: center; font-size: .88rem; }
+.fuel-calc-val { font-weight: 700; }
+.fuel-calc-ost { color: var(--accent); font-size: 1.05rem; }
+.fuel-calc-reward { color: #FFD700; }
+.fuel-calc-reward .fuel-calc-val { color: #FFD700; }
+
+/* Offline badge */
+.fuel-offline-badge { display: flex; align-items: center; gap: 16px; max-width: 540px; margin: 0 auto 36px; padding: 18px 22px; border-radius: 16px; background: linear-gradient(135deg, rgba(0,255,136,.04), rgba(0,200,255,.03)); border: 1px solid rgba(0,255,136,.15); }
+.fuel-offline-icon { font-size: 2rem; flex-shrink: 0; }
+.fuel-offline-text { display: flex; flex-direction: column; gap: 4px; }
+.fuel-offline-text strong { font-size: .9rem; color: var(--accent); }
+.fuel-offline-text span { font-size: .78rem; color: var(--muted); line-height: 1.5; }
+
+/* Partner grid */
+.fuel-partners { margin-bottom: 36px; text-align: center; }
+.fuel-partners h4 { font-size: 1.15rem; font-weight: 700; margin-bottom: 8px; }
+.fuel-partners-sub { font-size: .85rem; color: var(--muted); margin-bottom: 20px; }
+.fuel-partner-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; max-width: 780px; margin: 0 auto; }
+.fuel-partner-card { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 18px 10px; border-radius: 16px; background: rgba(255,107,53,.02); border: 1px solid rgba(255,107,53,.08); text-decoration: none; color: var(--text); transition: all .25s; cursor: pointer; }
+.fuel-partner-card:hover { border-color: #FF6B35; background: rgba(255,107,53,.07); transform: translateY(-4px); box-shadow: 0 8px 24px rgba(255,107,53,.1); }
+.fuel-partner-featured { border-color: rgba(255,215,0,.15); background: rgba(255,215,0,.03); }
+.fuel-partner-featured:hover { border-color: #FFD700; background: rgba(255,215,0,.08); box-shadow: 0 8px 24px rgba(255,215,0,.1); }
+.fuel-partner-logo { font-size: 1.8rem; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255,107,53,.08); border: 1px solid rgba(255,107,53,.12); }
+.fuel-partner-featured .fuel-partner-logo { background: rgba(255,215,0,.08); border-color: rgba(255,215,0,.15); }
+.fuel-partner-name { font-size: .82rem; font-weight: 700; }
+.fuel-partner-regions { font-size: .62rem; color: var(--muted); line-height: 1.3; }
+
+/* Reward tiers */
+.fuel-rewards { margin-bottom: 28px; text-align: center; }
+.fuel-rewards h4 { font-size: 1.1rem; font-weight: 700; margin-bottom: 18px; }
+.fuel-rewards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; max-width: 720px; margin: 0 auto; }
+.fuel-reward-tier { padding: 22px 16px; border-radius: 18px; background: rgba(255,107,53,.02); border: 1px solid rgba(255,107,53,.08); transition: all .25s; }
+.fuel-reward-tier h5 { font-size: 1rem; margin: 8px 0 4px; }
+.fuel-tier-range { font-size: .72rem; color: var(--muted); margin-bottom: 10px; }
+.fuel-tier-perk { font-size: .78rem; padding: 4px 0; color: var(--text); border-bottom: 1px solid rgba(255,255,255,.04); }
+.fuel-tier-perk:last-child { border-bottom: none; }
+.fuel-tier-badge { font-size: 1.8rem; width: 52px; height: 52px; margin: 0 auto; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+.fuel-tier-bronze { background: linear-gradient(135deg, rgba(205,127,50,.15), rgba(205,127,50,.05)); border: 2px solid rgba(205,127,50,.3); color: #CD7F32; }
+.fuel-tier-silver { background: linear-gradient(135deg, rgba(192,192,192,.2), rgba(192,192,192,.05)); border: 2px solid rgba(192,192,192,.4); color: #C0C0C0; }
+.fuel-tier-gold { background: linear-gradient(135deg, rgba(255,215,0,.2), rgba(255,215,0,.05)); border: 2px solid rgba(255,215,0,.4); color: #FFD700; }
+.fuel-reward-tier-active { border-color: rgba(255,107,53,.25); background: rgba(255,107,53,.05); box-shadow: 0 4px 20px rgba(255,107,53,.08); }
+
+/* Fuel disclaimer */
+.fuel-disclaimer { margin-top: 24px; padding: 14px 18px; border-radius: 12px; background: rgba(255,107,53,.03); border: 1px solid rgba(255,107,53,.08); font-size: .75rem; color: var(--muted); text-align: center; line-height: 1.5; }
+
+@media (max-width: 600px) {
+  .fuel-steps { flex-direction: column; align-items: center; }
+  .fuel-step { max-width: 260px; }
+  .fuel-step-arrow { transform: rotate(90deg); margin: 0; }
+  .fuel-calc-row { flex-direction: column; }
+  .fuel-partner-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; }
+  .fuel-partner-card { padding: 14px 8px; }
+  .fuel-partner-logo { font-size: 1.4rem; width: 40px; height: 40px; }
+  .fuel-partner-name { font-size: .72rem; }
+  .fuel-rewards-grid { grid-template-columns: 1fr; }
+  .fuel-offline-badge { flex-direction: column; text-align: center; }
+  .fuel-hero h3 { font-size: 1.4rem; }
+  .fuel-calc { padding: 18px; }
+}
