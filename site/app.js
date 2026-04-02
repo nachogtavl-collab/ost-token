@@ -6224,7 +6224,7 @@
         var usd = (bal * (fxToUSD[cur] || 1)).toFixed(2);
         var ost = gc2RedeemVal.textContent.replace(' OST', '');
         addToHistory('sell', selectedBrand ? selectedBrand.name : 'Gift Card', selectedBrand ? selectedBrand.domain : '', usd, ost);
-        showToast('Gift card redeemed! ' + ost + ' OST received.', '&#9989;');
+        toast('&#9989;', 'Gift card redeemed! ' + ost + ' OST received.');
       });
     });
 
@@ -6242,7 +6242,7 @@
         var usd = (amt * (fxToUSD[cur] || 1)).toFixed(2);
         var ost = gc2BuyVal.textContent.replace(' OST', '');
         addToHistory('buy', selectedBrand ? selectedBrand.name : 'Gift Card', selectedBrand ? selectedBrand.domain : '', usd, ost);
-        showToast('Gift card purchased! Code delivered.', '&#127873;');
+        toast('&#127873;', 'Gift card purchased! Code delivered.');
       });
     });
 
@@ -6250,7 +6250,7 @@
     if (copyBtn) {
       copyBtn.addEventListener('click', function() {
         var code = document.getElementById('gc2DelCode').textContent;
-        navigator.clipboard.writeText(code).then(function() { showToast('Code copied!', '&#128203;'); });
+        navigator.clipboard.writeText(code).then(function() { toast('&#128203;', 'Code copied!'); });
       });
     }
 
@@ -6484,10 +6484,10 @@
             }).addTo(map).bindPopup('You are here').openPopup();
           }
         }, function() {
-          showToast('Location access denied.', '&#128205;');
+          toast('&#128205;', 'Location access denied.');
         });
       } else {
-        showToast('Geolocation not supported.', '&#128205;');
+        toast('&#128205;', 'Geolocation not supported.');
       }
     });
 
@@ -6567,7 +6567,7 @@
           });
           localStorage.setItem('ost_fuel_history', JSON.stringify(fuelHistory));
           renderRewards();
-          showToast('Payment complete! +' + reward.toFixed(2) + ' OST cashback.', '&#9981;');
+          toast('&#9981;', 'Payment complete! +' + reward.toFixed(2) + ' OST cashback.');
         }
       }
       next();
