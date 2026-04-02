@@ -6048,205 +6048,246 @@
   })();
 
   // ========================================================================
-  // GIFT CARD INTERCHANGE — Complete Rebuild
+  // OST GIFT CARD HUB v2 — Interactive Brand Drawer
   // ========================================================================
-  (function initGiftCardInterchange() {
-    const tabs = $$('.gc-tab');
-    const panelSell = document.getElementById('gcPanelSell');
-    const panelBuy = document.getElementById('gcPanelBuy');
-    const panelHistory = document.getElementById('gcPanelHistory');
-    if (!panelSell || !panelBuy) return;
+  (function initGiftCardHub() {
+    var store = document.getElementById('gc2Store');
+    if (!store) return;
 
-    // FX rates to USD (static fallback)
-    const fxToUSD = { USD:1, EUR:1.08, GBP:1.27, CAD:.74, AUD:.65, BRL:.20, MXN:.058, INR:.012, JPY:.0067, KRW:.00075, TRY:.031, RUB:.011, AED:.27 };
+    var fxToUSD = { USD:1, EUR:1.08, GBP:1.27, CAD:.74, AUD:.65, BRL:.20, MXN:.058, INR:.012, JPY:.0067, KRW:.00075, TRY:.031, RUB:.011, AED:.27 };
 
-    // Brand data
-    const brands = [
-      { name:'Amazon',     val:'amazon',     domain:'amazon.com' },
-      { name:'Apple',      val:'apple',      domain:'apple.com' },
-      { name:'Google Play', val:'google',    domain:'google.com' },
-      { name:'Steam',      val:'steam',      domain:'steampowered.com' },
-      { name:'Walmart',    val:'walmart',    domain:'walmart.com' },
-      { name:'Target',     val:'target',     domain:'target.com' },
-      { name:'eBay',       val:'ebay',       domain:'ebay.com' },
-      { name:'Starbucks',  val:'starbucks',  domain:'starbucks.com' },
-      { name:'Nike',       val:'nike',       domain:'nike.com' },
-      { name:'Netflix',    val:'netflix',    domain:'netflix.com' },
-      { name:'Spotify',    val:'spotify',    domain:'spotify.com' },
-      { name:'Uber',       val:'uber',       domain:'uber.com' },
-      { name:'Visa',       val:'visa-gc',    domain:'visa.com' },
-      { name:'Mastercard', val:'mastercard-gc', domain:'mastercard.com' },
-      { name:'DoorDash',   val:'doordash',   domain:'doordash.com' },
-      { name:'PlayStation', val:'playstation', domain:'playstation.com' },
-      { name:'Xbox',       val:'xbox',       domain:'xbox.com' },
-      { name:'Best Buy',   val:'bestbuy',    domain:'bestbuy.com' },
-      { name:'Sephora',    val:'sephora',    domain:'sephora.com' },
-      { name:'Nordstrom',  val:'nordstrom',  domain:'nordstrom.com' }
+    var brands = [
+      { name:'Amazon',      domain:'amazon.com' },
+      { name:'Apple',       domain:'apple.com' },
+      { name:'Google Play', domain:'google.com' },
+      { name:'Steam',       domain:'steampowered.com' },
+      { name:'Walmart',     domain:'walmart.com' },
+      { name:'Target',      domain:'target.com' },
+      { name:'eBay',        domain:'ebay.com' },
+      { name:'Starbucks',   domain:'starbucks.com' },
+      { name:'Nike',        domain:'nike.com' },
+      { name:'Netflix',     domain:'netflix.com' },
+      { name:'Spotify',     domain:'spotify.com' },
+      { name:'Uber',        domain:'uber.com' },
+      { name:'Visa',        domain:'visa.com' },
+      { name:'Mastercard',  domain:'mastercard.com' },
+      { name:'DoorDash',    domain:'doordash.com' },
+      { name:'PlayStation', domain:'playstation.com' },
+      { name:'Xbox',        domain:'xbox.com' },
+      { name:'Best Buy',    domain:'bestbuy.com' },
+      { name:'Sephora',     domain:'sephora.com' },
+      { name:'Nordstrom',   domain:'nordstrom.com' }
     ];
 
-    // Build brand pickers
-    function buildBrandGrid(containerId, side) {
-      const grid = document.getElementById(containerId);
-      if (!grid) return;
-      brands.forEach(b => {
-        const card = document.createElement('div');
-        card.className = 'gc-bp-card';
-        card.dataset.brand = b.val;
-        card.dataset.domain = b.domain;
-        card.dataset.brandName = b.name;
-        card.innerHTML = '<img src="https://logo.clearbit.com/' + b.domain + '" alt="' + b.name + '" loading="lazy" onerror="this.src=\'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2236%22 height=%2236%22><rect fill=%22%23333%22 width=%2236%22 height=%2236%22 rx=%228%22/><text x=%2218%22 y=%2224%22 text-anchor=%22middle%22 fill=%22%23fff%22 font-size=%2214%22>' + b.name.charAt(0) + '</text></svg>\'"><span>' + b.name + '</span>';
-        card.addEventListener('click', () => {
-          grid.querySelectorAll('.gc-bp-card').forEach(c => c.classList.remove('gc-bp-card-active'));
-          card.classList.add('gc-bp-card-active');
-          if (side === 'sell') { selectedSellBrand = b; updateSwapPreview(); updateSellConversion(); }
-          else { selectedBuyBrand = b; updateBuyConversion(); }
-        });
-        grid.appendChild(card);
-      });
+    var selectedBrand = null;
+    var gcHistory = JSON.parse(localStorage.getItem('ost_gc_history') || '[]');
+
+    // Build brand store grid
+    brands.forEach(function(b) {
+      var card = document.createElement('div');
+      card.className = 'gc2-brand';
+      card.innerHTML = '<img src="https://logo.clearbit.com/' + b.domain + '" alt="' + b.name + '" loading="lazy" onerror="this.src=\'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2264%22 height=%2264%22><rect fill=%22%23222%22 width=%2264%22 height=%2264%22 rx=%2214%22/><text x=%2232%22 y=%2240%22 text-anchor=%22middle%22 fill=%22%23fff%22 font-size=%2220%22>' + b.name.charAt(0) + '</text></svg>\'"><span>' + b.name + '</span><span class="gc2-brand-tag">Gift Card</span>';
+      card.addEventListener('click', function() { openDrawer(b); });
+      store.appendChild(card);
+    });
+
+    // Drawer elements
+    var drawer = document.getElementById('gc2Drawer');
+    var drawerLogo = document.getElementById('gc2DrawerLogo');
+    var drawerBrand = document.getElementById('gc2DrawerBrand');
+    var drawerBody = document.getElementById('gc2DrawerBody');
+    var drawerLoader = document.getElementById('gc2DrawerLoader');
+    var closeBtn = document.getElementById('gc2DrawerClose');
+
+    function openDrawer(brand) {
+      selectedBrand = brand;
+      drawerLogo.src = 'https://logo.clearbit.com/' + brand.domain;
+      drawerLogo.alt = brand.name;
+      drawerBrand.textContent = brand.name;
+      drawerBody.style.display = 'none';
+      drawerLoader.querySelector('.gc2-loader-bar').style.animation = 'none';
+      void drawerLoader.querySelector('.gc2-loader-bar').offsetHeight;
+      drawerLoader.querySelector('.gc2-loader-bar').style.animation = 'gc2Load 1.8s ease-in-out forwards';
+      drawer.style.display = 'block';
+      drawer.style.animation = 'none';
+      void drawer.offsetHeight;
+      drawer.style.animation = 'gc2DrawerIn .5s cubic-bezier(.25,.46,.45,.94)';
+      // Reset panels
+      document.getElementById('gc2Flow').style.display = 'none';
+      document.getElementById('gc2Delivered').style.display = 'none';
+      resetFlowSteps();
+      updateRedeem();
+      updateBuy();
+      // Show body after "loading"
+      setTimeout(function() { drawerBody.style.display = 'block'; }, 1800);
+      drawer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
-    buildBrandGrid('gcBrandGrid', 'sell');
-    buildBrandGrid('gcBrandGridBuy', 'buy');
 
-    var selectedSellBrand = null;
-    var selectedBuyBrand = null;
+    closeBtn.addEventListener('click', function() { drawer.style.display = 'none'; selectedBrand = null; });
 
-    // Tab switching
-    tabs.forEach(tab => {
-      tab.addEventListener('click', () => {
-        tabs.forEach(t => t.classList.remove('gc-tab-active'));
-        tab.classList.add('gc-tab-active');
-        const which = tab.getAttribute('data-gc-tab');
-        panelSell.classList.toggle('gc-panel-active', which === 'sell');
-        panelBuy.classList.toggle('gc-panel-active', which === 'buy');
-        if (panelHistory) panelHistory.classList.toggle('gc-panel-active', which === 'history');
+    // Mode toggle (Redeem / Buy)
+    document.querySelectorAll('.gc2-mode').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.gc2-mode').forEach(function(b) { b.classList.remove('gc2-mode-active'); });
+        btn.classList.add('gc2-mode-active');
+        var mode = btn.dataset.mode;
+        document.getElementById('gc2PaneRedeem').classList.toggle('gc2-pane-active', mode === 'redeem');
+        document.getElementById('gc2PaneBuy').classList.toggle('gc2-pane-active', mode === 'buy');
+        document.getElementById('gc2Flow').style.display = 'none';
+        document.getElementById('gc2Delivered').style.display = 'none';
+        resetFlowSteps();
       });
     });
 
     // Quick amount buttons
-    document.querySelectorAll('.gc-quick-btn').forEach(btn => {
+    document.querySelectorAll('.gc2-q').forEach(function(btn) {
       btn.addEventListener('click', function() {
-        const amt = this.dataset.amt;
-        const panel = this.closest('.gc-panel');
-        if (!panel) return;
-        const input = panel.querySelector('#gcBalanceSell') || panel.querySelector('#gcAmountBuy');
+        var amt = btn.dataset.amt;
+        var pane = btn.closest('.gc2-pane');
+        if (!pane) return;
+        var input = pane.querySelector('.gc2-inp[type="number"]');
         if (input) { input.value = amt; input.dispatchEvent(new Event('input')); }
       });
     });
 
-    // Sell conversion
-    const gcBalanceSell = document.getElementById('gcBalanceSell');
-    const gcCurrencySell = document.getElementById('gcCurrencySell');
-    const gcSellResult = document.getElementById('gcSellResult');
-    const gcSellRate = document.getElementById('gcSellRate');
-    const gcSellFee = document.getElementById('gcSellFee');
-    const gcSellBtn = document.getElementById('gcSellBtn');
-    const gcCodeSell = document.getElementById('gcCodeSell');
+    // Redeem conversion
+    var gc2Balance = document.getElementById('gc2Balance');
+    var gc2Code = document.getElementById('gc2Code');
+    var gc2Currency = document.getElementById('gc2Currency');
+    var gc2RedeemVal = document.getElementById('gc2RedeemVal');
+    var gc2RedeemRate = document.getElementById('gc2RedeemRate');
+    var gc2RedeemFee = document.getElementById('gc2RedeemFee');
+    var gc2RedeemBtn = document.getElementById('gc2RedeemBtn');
 
-    function updateSellConversion() {
-      const bal = parseFloat(gcBalanceSell.value) || 0;
-      const code = (gcCodeSell.value || '').trim();
-      const cur = gcCurrencySell ? gcCurrencySell.value : 'USD';
-      const usd = bal * (fxToUSD[cur] || 1);
-      if (usd > 0 && window.ostPrice > 0) {
-        const ost = usd / window.ostPrice;
-        const fee = ost * 0.001;
-        const net = ost - fee;
-        gcSellResult.textContent = net.toFixed(2) + ' OST';
-        gcSellRate.textContent = '1 OST = $' + window.ostPrice.toFixed(6);
-        gcSellFee.textContent = fee.toFixed(4) + ' OST';
-        gcSellBtn.disabled = !(code && selectedSellBrand);
-      } else {
-        gcSellResult.textContent = '-- OST';
-        gcSellRate.textContent = '--';
-        gcSellFee.textContent = '--';
-        gcSellBtn.disabled = true;
-      }
-    }
-    gcBalanceSell.addEventListener('input', updateSellConversion);
-    gcCodeSell.addEventListener('input', updateSellConversion);
-    if (gcCurrencySell) gcCurrencySell.addEventListener('change', updateSellConversion);
-
-    // Swap preview update
-    var swapBrandImg = document.getElementById('gcSwapBrandImg');
-    var swapBrandName = document.getElementById('gcSwapBrandName');
-    var swapBrandVal = document.getElementById('gcSwapBrandVal');
-    var swapOstVal = document.getElementById('gcSwapOstVal');
-
-    function updateSwapPreview() {
-      if (!swapBrandImg) return;
-      if (selectedSellBrand) {
-        swapBrandImg.src = 'https://logo.clearbit.com/' + selectedSellBrand.domain;
-        swapBrandImg.style.display = 'block';
-        swapBrandName.textContent = selectedSellBrand.name;
-      } else {
-        swapBrandImg.style.display = 'none';
-        swapBrandName.textContent = 'Gift Card';
-      }
-      var bal = parseFloat(gcBalanceSell.value) || 0;
-      var cur = gcCurrencySell ? gcCurrencySell.value : 'USD';
+    function updateRedeem() {
+      var bal = parseFloat(gc2Balance.value) || 0;
+      var code = (gc2Code.value || '').trim();
+      var cur = gc2Currency.value;
       var usd = bal * (fxToUSD[cur] || 1);
-      swapBrandVal.textContent = '$' + usd.toFixed(2);
       if (usd > 0 && window.ostPrice > 0) {
         var ost = usd / window.ostPrice;
-        swapOstVal.textContent = (ost - ost * 0.001).toFixed(2) + ' OST';
+        var fee = ost * 0.001;
+        gc2RedeemVal.textContent = (ost - fee).toFixed(2) + ' OST';
+        gc2RedeemRate.textContent = '1 OST = $' + window.ostPrice.toFixed(6);
+        gc2RedeemFee.textContent = fee.toFixed(4) + ' OST';
+        gc2RedeemBtn.disabled = !(code && selectedBrand);
       } else {
-        swapOstVal.textContent = '0.00 OST';
+        gc2RedeemVal.textContent = '\u2014 OST';
+        gc2RedeemRate.textContent = '\u2014';
+        gc2RedeemFee.textContent = '\u2014';
+        gc2RedeemBtn.disabled = true;
       }
     }
-    gcBalanceSell.addEventListener('input', updateSwapPreview);
-    if (gcCurrencySell) gcCurrencySell.addEventListener('change', updateSwapPreview);
+    gc2Balance.addEventListener('input', updateRedeem);
+    gc2Code.addEventListener('input', updateRedeem);
+    gc2Currency.addEventListener('change', updateRedeem);
 
     // Buy conversion
-    const gcAmountBuy = document.getElementById('gcAmountBuy');
-    const gcCurrencyBuy = document.getElementById('gcCurrencyBuy');
-    const gcBuyResult = document.getElementById('gcBuyResult');
-    const gcBuyRate = document.getElementById('gcBuyRate');
-    const gcBuyFee = document.getElementById('gcBuyFee');
-    const gcBuyBtn = document.getElementById('gcBuyBtn');
+    var gc2BuyAmt = document.getElementById('gc2BuyAmt');
+    var gc2BuyCur = document.getElementById('gc2BuyCur');
+    var gc2BuyVal = document.getElementById('gc2BuyVal');
+    var gc2BuyRate = document.getElementById('gc2BuyRate');
+    var gc2BuyFee = document.getElementById('gc2BuyFee');
+    var gc2BuyBtn = document.getElementById('gc2BuyBtn');
 
-    function updateBuyConversion() {
-      const amt = parseFloat(gcAmountBuy.value) || 0;
-      const cur = gcCurrencyBuy ? gcCurrencyBuy.value : 'USD';
-      const usd = amt * (fxToUSD[cur] || 1);
+    function updateBuy() {
+      var amt = parseFloat(gc2BuyAmt.value) || 0;
+      var cur = gc2BuyCur.value;
+      var usd = amt * (fxToUSD[cur] || 1);
       if (usd > 0 && window.ostPrice > 0) {
-        const ost = usd / window.ostPrice;
-        const fee = ost * 0.001;
-        gcBuyResult.textContent = (ost + fee).toFixed(2) + ' OST';
-        gcBuyRate.textContent = '1 OST = $' + window.ostPrice.toFixed(6);
-        gcBuyFee.textContent = fee.toFixed(4) + ' OST';
-        gcBuyBtn.disabled = !selectedBuyBrand;
+        var ost = usd / window.ostPrice;
+        var fee = ost * 0.001;
+        gc2BuyVal.textContent = (ost + fee).toFixed(2) + ' OST';
+        gc2BuyRate.textContent = '1 OST = $' + window.ostPrice.toFixed(6);
+        gc2BuyFee.textContent = fee.toFixed(4) + ' OST';
+        gc2BuyBtn.disabled = !selectedBrand;
       } else {
-        gcBuyResult.textContent = '-- OST';
-        gcBuyRate.textContent = '--';
-        gcBuyFee.textContent = '--';
-        gcBuyBtn.disabled = true;
+        gc2BuyVal.textContent = '\u2014 OST';
+        gc2BuyRate.textContent = '\u2014';
+        gc2BuyFee.textContent = '\u2014';
+        gc2BuyBtn.disabled = true;
       }
     }
-    gcAmountBuy.addEventListener('input', updateBuyConversion);
-    if (gcCurrencyBuy) gcCurrencyBuy.addEventListener('change', updateBuyConversion);
+    gc2BuyAmt.addEventListener('input', updateBuy);
+    gc2BuyCur.addEventListener('change', updateBuy);
 
-    // History management
-    var gcHistory = JSON.parse(localStorage.getItem('ost_gc_history') || '[]');
-    function renderHistory() {
-      var list = document.getElementById('gcHistoryList');
-      var empty = document.getElementById('gcHistoryEmpty');
-      if (!list) return;
-      if (gcHistory.length === 0) {
-        list.style.display = 'none';
-        if (empty) empty.style.display = 'block';
-        return;
+    // Flow animation helper
+    function resetFlowSteps() {
+      document.querySelectorAll('.gc2-fstep').forEach(function(s) { s.classList.remove('gc2-fs-active', 'gc2-fs-done'); });
+    }
+    function runFlow(onDone) {
+      var flow = document.getElementById('gc2Flow');
+      flow.style.display = 'flex';
+      resetFlowSteps();
+      var steps = flow.querySelectorAll('.gc2-fstep');
+      var i = 0;
+      function next() {
+        if (i > 0) { steps[i - 1].classList.remove('gc2-fs-active'); steps[i - 1].classList.add('gc2-fs-done'); }
+        if (i < steps.length) { steps[i].classList.add('gc2-fs-active'); i++; setTimeout(next, 900 + Math.random() * 600); }
+        else { if (onDone) onDone(); }
       }
-      if (empty) empty.style.display = 'none';
-      list.style.display = 'flex';
+      next();
+    }
+
+    // Redeem flow
+    gc2RedeemBtn.addEventListener('click', function() {
+      gc2RedeemBtn.disabled = true;
+      runFlow(function() {
+        var bal = parseFloat(gc2Balance.value) || 0;
+        var cur = gc2Currency.value;
+        var usd = (bal * (fxToUSD[cur] || 1)).toFixed(2);
+        var ost = gc2RedeemVal.textContent.replace(' OST', '');
+        addToHistory('sell', selectedBrand ? selectedBrand.name : 'Gift Card', selectedBrand ? selectedBrand.domain : '', usd, ost);
+        showToast('Gift card redeemed! ' + ost + ' OST received.', '&#9989;');
+      });
+    });
+
+    // Buy flow
+    gc2BuyBtn.addEventListener('click', function() {
+      gc2BuyBtn.disabled = true;
+      runFlow(function() {
+        var delivered = document.getElementById('gc2Delivered');
+        delivered.style.display = 'block';
+        var logo = document.getElementById('gc2DelLogo');
+        if (logo && selectedBrand) { logo.src = 'https://logo.clearbit.com/' + selectedBrand.domain; logo.alt = selectedBrand.name; }
+        var seg = function() { return Math.random().toString(36).substring(2, 6).toUpperCase(); };
+        document.getElementById('gc2DelCode').textContent = seg() + '-' + seg() + '-' + seg() + '-' + seg();
+        var amt = parseFloat(gc2BuyAmt.value) || 0;
+        var cur = gc2BuyCur.value;
+        var usd = (amt * (fxToUSD[cur] || 1)).toFixed(2);
+        var ost = gc2BuyVal.textContent.replace(' OST', '');
+        addToHistory('buy', selectedBrand ? selectedBrand.name : 'Gift Card', selectedBrand ? selectedBrand.domain : '', usd, ost);
+        showToast('Gift card purchased! Code delivered.', '&#127873;');
+      });
+    });
+
+    // Copy code
+    var copyBtn = document.getElementById('gc2Copy');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', function() {
+        var code = document.getElementById('gc2DelCode').textContent;
+        navigator.clipboard.writeText(code).then(function() { showToast('Code copied!', '&#128203;'); });
+      });
+    }
+
+    // History
+    function renderHistory() {
+      var list = document.getElementById('gc2HistList');
+      var empty = document.getElementById('gc2HistEmpty');
+      var countEl = document.getElementById('gc2HistCount');
+      if (countEl) countEl.textContent = '(' + gcHistory.length + ')';
+      if (!list) return;
+      if (gcHistory.length === 0) { empty.style.display = 'block'; list.innerHTML = ''; return; }
+      empty.style.display = 'none';
       list.innerHTML = '';
       gcHistory.slice().reverse().forEach(function(tx) {
-        var item = document.createElement('div');
-        item.className = 'gc-hx-item';
-        item.innerHTML = '<img class="gc-hx-logo" src="https://logo.clearbit.com/' + (tx.domain || '') + '" alt="" onerror="this.style.display=\'none\'">' +
-          '<div class="gc-hx-info"><div class="gc-hx-title">' + tx.brand + '</div><div class="gc-hx-date">' + tx.date + '</div></div>' +
-          '<div class="gc-hx-amount"><div class="gc-hx-fiat">$' + tx.usd + '</div><div class="gc-hx-ost">' + tx.ost + ' OST</div></div>' +
-          '<span class="gc-hx-type ' + (tx.type === 'sell' ? 'gc-hx-type-sell' : 'gc-hx-type-buy') + '">' + tx.type + '</span>';
-        list.appendChild(item);
+        var el = document.createElement('div');
+        el.className = 'gc2-hx';
+        el.innerHTML = '<img class="gc2-hx-logo" src="https://logo.clearbit.com/' + (tx.domain || '') + '" alt="" onerror="this.style.display=\'none\'">' +
+          '<div class="gc2-hx-info"><div class="gc2-hx-name">' + tx.brand + '</div><div class="gc2-hx-date">' + tx.date + '</div></div>' +
+          '<div class="gc2-hx-amt"><div class="gc2-hx-fiat">$' + tx.usd + '</div><div class="gc2-hx-ost">' + tx.ost + ' OST</div></div>' +
+          '<span class="gc2-hx-type ' + (tx.type === 'sell' ? 'gc2-hx-sell' : 'gc2-hx-buy') + '">' + tx.type + '</span>';
+        list.appendChild(el);
       });
     }
     renderHistory();
@@ -6257,288 +6298,250 @@
       renderHistory();
     }
 
-    // Sell flow
-    gcSellBtn.addEventListener('click', function() {
-      gcSellBtn.disabled = true;
-      var flow = document.getElementById('gcSellFlow');
-      flow.style.display = 'flex';
-      var steps = flow.querySelectorAll('.gc-step');
-      steps.forEach(function(s) { s.classList.remove('gc-step-active', 'gc-step-done'); });
-      var i = 0;
-      function next() {
-        if (i > 0) steps[i - 1].classList.replace('gc-step-active', 'gc-step-done');
-        if (i < steps.length) { steps[i].classList.add('gc-step-active'); i++; setTimeout(next, 1200 + Math.random() * 800); }
-        else {
-          var bal = parseFloat(gcBalanceSell.value) || 0;
-          var cur = gcCurrencySell ? gcCurrencySell.value : 'USD';
-          var usd = (bal * (fxToUSD[cur] || 1)).toFixed(2);
-          var ost = gcSellResult.textContent.replace(' OST', '');
-          addToHistory('sell', selectedSellBrand ? selectedSellBrand.name : 'Gift Card', selectedSellBrand ? selectedSellBrand.domain : '', usd, ost);
-          showToast('Gift card redeemed! ' + ost + ' OST received.', '&#9989;');
-        }
-      }
-      next();
-    });
-
-    // Buy flow
-    gcBuyBtn.addEventListener('click', function() {
-      gcBuyBtn.disabled = true;
-      var flow = document.getElementById('gcBuyFlow');
-      var delivered = document.getElementById('gcDelivered');
-      flow.style.display = 'flex';
-      delivered.style.display = 'none';
-      var steps = flow.querySelectorAll('.gc-step');
-      steps.forEach(function(s) { s.classList.remove('gc-step-active', 'gc-step-done'); });
-      var i = 0;
-      function next() {
-        if (i > 0) steps[i - 1].classList.replace('gc-step-active', 'gc-step-done');
-        if (i < steps.length) { steps[i].classList.add('gc-step-active'); i++; setTimeout(next, 1200 + Math.random() * 800); }
-        else {
-          delivered.style.display = 'block';
-          var logo = document.getElementById('gcDeliveredLogo');
-          if (logo && selectedBuyBrand) {
-            logo.src = 'https://logo.clearbit.com/' + selectedBuyBrand.domain;
-            logo.alt = selectedBuyBrand.name;
-          }
-          var seg = function() { return Math.random().toString(36).substring(2, 6).toUpperCase(); };
-          document.getElementById('gcCardCode').textContent = seg() + '-' + seg() + '-' + seg() + '-' + seg();
-          var amt = parseFloat(gcAmountBuy.value) || 0;
-          var cur = gcCurrencyBuy ? gcCurrencyBuy.value : 'USD';
-          var usd = (amt * (fxToUSD[cur] || 1)).toFixed(2);
-          var ost = gcBuyResult.textContent.replace(' OST', '');
-          addToHistory('buy', selectedBuyBrand ? selectedBuyBrand.name : 'Gift Card', selectedBuyBrand ? selectedBuyBrand.domain : '', usd, ost);
-          showToast('Gift card purchased! Code delivered.', '&#127873;');
-        }
-      }
-      next();
-    });
-
-    // Copy code
-    var copyBtn = document.getElementById('gcCopyCode');
-    if (copyBtn) {
-      copyBtn.addEventListener('click', function() {
-        var code = document.getElementById('gcCardCode').textContent;
-        navigator.clipboard.writeText(code).then(function() { showToast('Code copied!', '&#128203;'); });
+    // History toggle
+    var histToggle = document.getElementById('gc2HistToggle');
+    var histPanel = document.getElementById('gc2Hist');
+    if (histToggle && histPanel) {
+      histToggle.addEventListener('click', function() {
+        var open = histPanel.style.display !== 'none';
+        histPanel.style.display = open ? 'none' : 'block';
       });
     }
   })();
 
   // ========================================================================
-  // FUEL & GAS STATIONS — Complete Rebuild
+  // OST FUEL & GO v2 — Interactive Map + Compact Pay
   // ========================================================================
   (function initFuelStation() {
-    var gal = document.getElementById('fuelGallons');
-    var price = document.getElementById('fuelPrice');
-    if (!gal || !price) return;
+    var mapEl = document.getElementById('fuel2Map');
+    if (!mapEl) return;
 
-    // Station data
     var stations = [
-      { name:'Shell', domain:'shell.com', count:'46,000+' },
-      { name:'BP', domain:'bp.com', count:'21,000+' },
-      { name:'ExxonMobil', domain:'exxonmobil.com', count:'12,000+' },
-      { name:'Chevron', domain:'chevron.com', count:'8,000+' },
-      { name:'TotalEnergies', domain:'totalenergies.com', count:'16,000+' },
-      { name:'ADNOC', domain:'adnoc.ae', count:'500+' },
-      { name:'7-Eleven', domain:'7-eleven.com', count:'83,000+' },
-      { name:'OXXO', domain:'oxxo.com', count:'21,000+' },
-      { name:'Circle K', domain:'circlek.com', count:'14,000+' },
-      { name:'Petronas', domain:'petronas.com', count:'2,500+' },
-      { name:'Indian Oil', domain:'indianoil.co.in', count:'34,000+' },
-      { name:'Ipiranga', domain:'ipiranga.com.br', count:'7,600+' },
-      { name:'PEMEX', domain:'pemex.com', count:'11,000+' },
-      { name:'Repsol', domain:'repsol.com', count:'4,700+' },
-      { name:'Lukoil', domain:'lukoil.com', count:'5,500+' },
-      { name:'Sinopec', domain:'sinopec.com', count:'30,000+' },
-      { name:'Aramco', domain:'aramco.com', count:'2,000+' },
-      { name:'Petrobras', domain:'petrobras.com.br', count:'7,700+' },
-      { name:'Engen', domain:'engenoil.com', count:'1,500+' },
-      { name:'Stripes', domain:'stripesstores.com', count:'600+' }
+      { name:'Shell',         domain:'shell.com',          count:'46,000+',  lat:29.76, lng:-95.37 },
+      { name:'BP',            domain:'bp.com',             count:'21,000+',  lat:51.51, lng:-0.13 },
+      { name:'ExxonMobil',    domain:'exxonmobil.com',     count:'12,000+',  lat:32.78, lng:-96.80 },
+      { name:'Chevron',       domain:'chevron.com',        count:'8,000+',   lat:37.77, lng:-122.42 },
+      { name:'TotalEnergies', domain:'totalenergies.com',  count:'16,000+',  lat:48.86, lng:2.35 },
+      { name:'ADNOC',         domain:'adnoc.ae',           count:'500+',     lat:24.45, lng:54.65 },
+      { name:'7-Eleven',      domain:'7-eleven.com',       count:'83,000+',  lat:35.68, lng:139.69 },
+      { name:'OXXO',          domain:'oxxo.com',           count:'21,000+',  lat:25.67, lng:-100.31 },
+      { name:'Circle K',      domain:'circlek.com',        count:'14,000+',  lat:33.45, lng:-112.07 },
+      { name:'Petronas',      domain:'petronas.com',       count:'2,500+',   lat:3.14, lng:101.69 },
+      { name:'Indian Oil',    domain:'indianoil.co.in',    count:'34,000+',  lat:28.61, lng:77.21 },
+      { name:'Ipiranga',      domain:'ipiranga.com.br',    count:'7,600+',   lat:-23.55, lng:-46.63 },
+      { name:'PEMEX',         domain:'pemex.com',          count:'11,000+',  lat:19.43, lng:-99.13 },
+      { name:'Repsol',        domain:'repsol.com',         count:'4,700+',   lat:40.42, lng:-3.70 },
+      { name:'Lukoil',        domain:'lukoil.com',         count:'5,500+',   lat:55.76, lng:37.62 },
+      { name:'Sinopec',       domain:'sinopec.com',        count:'30,000+',  lat:39.91, lng:116.40 },
+      { name:'Aramco',        domain:'aramco.com',         count:'2,000+',   lat:24.71, lng:46.67 },
+      { name:'Petrobras',     domain:'petrobras.com.br',   count:'7,700+',   lat:-22.91, lng:-43.17 },
+      { name:'Engen',         domain:'engenoil.com',       count:'1,500+',   lat:-33.93, lng:18.42 },
+      { name:'Stripes',       domain:'stripesstores.com',  count:'600+',     lat:27.80, lng:-97.40 }
     ];
 
     var selectedStation = null;
     var fuelHistory = JSON.parse(localStorage.getItem('ost_fuel_history') || '[]');
+    var map = null;
 
-    // Build station picker (pay panel)
-    var spGrid = document.getElementById('fuelStationGrid');
-    if (spGrid) {
-      stations.forEach(function(s) {
-        var card = document.createElement('div');
-        card.className = 'fuel-sp-card';
-        card.dataset.station = s.name;
-        card.innerHTML = '<img src="https://logo.clearbit.com/' + s.domain + '" alt="' + s.name + '" loading="lazy" onerror="this.src=\'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2236%22 height=%2236%22><rect fill=%22%23333%22 width=%2236%22 height=%2236%22 rx=%228%22/><text x=%2218%22 y=%2224%22 text-anchor=%22middle%22 fill=%22%23fff%22 font-size=%2210%22>%E2%9B%BD</text></svg>\'"><span>' + s.name + '</span>';
-        card.addEventListener('click', function() {
-          spGrid.querySelectorAll('.fuel-sp-card').forEach(function(c) { c.classList.remove('fuel-sp-card-active'); });
-          card.classList.add('fuel-sp-card-active');
-          selectedStation = s;
-          var logo = document.getElementById('fuelPumpLogo');
-          var nameEl = document.getElementById('fuelPumpName');
-          if (logo) { logo.src = 'https://logo.clearbit.com/' + s.domain; logo.alt = s.name; }
-          if (nameEl) nameEl.textContent = s.name;
-          updateFuelCalc();
-        });
-        spGrid.appendChild(card);
+    // Init Leaflet map
+    try {
+      map = L.map(mapEl, { scrollWheelZoom: false, zoomControl: true }).setView([20, 0], 2);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OSM &amp; CARTO',
+        subdomains: 'abcd',
+        maxZoom: 19
+      }).addTo(map);
+
+      // Custom icon
+      var stationIcon = L.divIcon({
+        className: 'fuel2-marker',
+        html: '<div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#FF6B35,#FF8F00);display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 3px 10px rgba(255,107,53,.4);border:2px solid rgba(255,255,255,.3);">&#9981;</div>',
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
+        popupAnchor: [0, -16]
       });
+
+      stations.forEach(function(s) {
+        var marker = L.marker([s.lat, s.lng], { icon: stationIcon }).addTo(map);
+        marker.bindPopup(
+          '<div style="text-align:center">' +
+          '<img src="https://logo.clearbit.com/' + s.domain + '" style="width:36px;height:36px;border-radius:8px;background:#fff;padding:3px;box-sizing:border-box;margin-bottom:6px" onerror="this.style.display=\'none\'">' +
+          '<div style="font-weight:700;font-size:.9rem;margin-bottom:2px">' + s.name + '</div>' +
+          '<div style="font-size:.72rem;color:rgba(255,255,255,.5);margin-bottom:8px">' + s.count + ' stations</div>' +
+          '<button class="fuel2-popup-btn" onclick="window._selectFuelStation(\'' + s.name + '\')">&#9981; Pay Here</button></div>'
+        );
+      });
+
+      // Invalidate size after animation
+      setTimeout(function() { map.invalidateSize(); }, 500);
+    } catch (e) {
+      mapEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:.9rem;">Map loading&hellip;</div>';
     }
 
-    // Build partner grid (stations panel)
-    var partnerGrid = document.getElementById('fuelPartnerGrid');
-    if (partnerGrid) {
-      stations.forEach(function(s) {
-        var card = document.createElement('div');
-        card.className = 'fuel-partner-card';
-        card.dataset.station = s.name;
-        card.innerHTML = '<img class="fuel-partner-img" src="https://logo.clearbit.com/' + s.domain + '" alt="' + s.name + '" loading="lazy" onerror="this.parentElement.style.display=\'none\'"><span class="fuel-partner-name">' + s.name + '</span><span class="fuel-partner-regions">' + s.count + ' stations</span>';
-        partnerGrid.appendChild(card);
-      });
+    // Global station select (called from popup)
+    window._selectFuelStation = function(name) {
+      var s = stations.find(function(st) { return st.name === name; });
+      if (s) selectStation(s);
+    };
+
+    function selectStation(s) {
+      selectedStation = s;
+      var pay = document.getElementById('fuel2Pay');
+      pay.style.display = 'block';
+      pay.style.animation = 'none';
+      void pay.offsetHeight;
+      pay.style.animation = 'gc2DrawerIn .4s ease';
+      document.getElementById('fuel2PayLogo').src = 'https://logo.clearbit.com/' + s.domain;
+      document.getElementById('fuel2PayLogo').alt = s.name;
+      document.getElementById('fuel2PayName').textContent = s.name;
+      document.getElementById('fuel2Flow').style.display = 'none';
+      document.querySelectorAll('.fuel2-fs').forEach(function(st) { st.classList.remove('f2-active', 'f2-done'); });
+      updateFuelCalc();
+      pay.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
-    // Fuel tabs
-    document.querySelectorAll('.fuel-tab').forEach(function(tab) {
-      tab.addEventListener('click', function() {
-        document.querySelectorAll('.fuel-tab').forEach(function(t) { t.classList.remove('fuel-tab-active'); });
-        tab.classList.add('fuel-tab-active');
-        var which = tab.dataset.fuelTab;
-        document.querySelectorAll('.fuel-panel').forEach(function(p) { p.classList.remove('fuel-panel-active'); });
-        var target = document.getElementById('fuelPanel' + which.charAt(0).toUpperCase() + which.slice(1));
-        if (target) target.classList.add('fuel-panel-active');
-      });
+    // Close pay card
+    document.getElementById('fuel2PayClose').addEventListener('click', function() {
+      document.getElementById('fuel2Pay').style.display = 'none';
+      selectedStation = null;
     });
 
+    // Near Me button
+    document.getElementById('fuel2NearMe').addEventListener('click', function() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(pos) {
+          if (map) {
+            map.setView([pos.coords.latitude, pos.coords.longitude], 8);
+            L.circleMarker([pos.coords.latitude, pos.coords.longitude], {
+              radius: 8, fillColor: '#00e676', fillOpacity: .8, color: '#fff', weight: 2
+            }).addTo(map).bindPopup('You are here').openPopup();
+          }
+        }, function() {
+          showToast('Location access denied.', '&#128205;');
+        });
+      } else {
+        showToast('Geolocation not supported.', '&#128205;');
+      }
+    });
+
+    // Search stations
+    var searchEl = document.getElementById('fuel2Search');
+    if (searchEl) {
+      searchEl.addEventListener('input', function() {
+        var q = this.value.toLowerCase();
+        // Filter partner grid
+        document.querySelectorAll('.fuel2-pc').forEach(function(c) {
+          c.style.display = (c.dataset.station || '').toLowerCase().indexOf(q) >= 0 ? '' : 'none';
+        });
+        // Zoom to matching station on map
+        if (q.length >= 2 && map) {
+          var match = stations.find(function(s) { return s.name.toLowerCase().indexOf(q) >= 0; });
+          if (match) map.setView([match.lat, match.lng], 6);
+        }
+      });
+    }
+
     // Fuel calculator
-    var totalUSD = document.getElementById('fuelTotalUSD');
-    var totalOST = document.getElementById('fuelTotalOST');
-    var rewardOST = document.getElementById('fuelRewardOST');
-    var fillEl = document.getElementById('fuelPvFill');
-    var labelEl = document.getElementById('fuelPvLabel');
-    var payBtn = document.getElementById('fuelPayBtn');
+    var galEl = document.getElementById('fuel2Gal');
+    var priceEl = document.getElementById('fuel2Price');
+    var usdEl = document.getElementById('fuel2USD');
+    var ostEl = document.getElementById('fuel2OST');
+    var rwEl = document.getElementById('fuel2Rw');
+    var payBtn = document.getElementById('fuel2PayBtn');
 
     function getRewardRate() {
-      var count = fuelHistory.length;
-      if (count >= 500) return 0.08;
-      if (count >= 100) return 0.05;
-      return 0.03;
+      var c = fuelHistory.length;
+      return c >= 500 ? 0.08 : c >= 100 ? 0.05 : 0.03;
     }
 
     function updateFuelCalc() {
-      var g = parseFloat(gal.value) || 0;
-      var p = parseFloat(price.value) || 0;
+      var g = parseFloat(galEl.value) || 0;
+      var p = parseFloat(priceEl.value) || 0;
       var cost = g * p;
-      totalUSD.textContent = '$' + cost.toFixed(2);
-      var pct = Math.min(100, (g / 30) * 100);
-      if (fillEl) fillEl.style.height = pct + '%';
-      if (labelEl) labelEl.textContent = g ? g + ' gal' : '0 gal';
+      usdEl.textContent = '$' + cost.toFixed(2);
       if (cost > 0 && window.ostPrice > 0) {
         var ost = cost / window.ostPrice;
         var rate = getRewardRate();
-        totalOST.textContent = ost.toFixed(2) + ' OST';
-        rewardOST.textContent = '+' + (ost * rate).toFixed(2) + ' OST';
-        if (payBtn) payBtn.disabled = !selectedStation;
+        ostEl.textContent = ost.toFixed(2) + ' OST';
+        rwEl.textContent = '+' + (ost * rate).toFixed(2) + ' OST';
+        payBtn.disabled = !selectedStation;
       } else {
-        totalOST.textContent = '0 OST';
-        rewardOST.textContent = '+0 OST';
-        if (payBtn) payBtn.disabled = true;
+        ostEl.textContent = '0 OST';
+        rwEl.textContent = '+0 OST';
+        payBtn.disabled = true;
       }
     }
-    gal.addEventListener('input', updateFuelCalc);
-    price.addEventListener('input', updateFuelCalc);
+    galEl.addEventListener('input', updateFuelCalc);
+    priceEl.addEventListener('input', updateFuelCalc);
 
     // Pay flow
-    if (payBtn) {
-      payBtn.addEventListener('click', function() {
-        payBtn.disabled = true;
-        var flow = document.getElementById('fuelPayFlow');
-        flow.style.display = 'flex';
-        var steps = flow.querySelectorAll('.fuel-flow-step');
-        steps.forEach(function(s) { s.classList.remove('fuel-fs-active', 'fuel-fs-done'); });
-        var i = 0;
-        function next() {
-          if (i > 0) { steps[i - 1].classList.remove('fuel-fs-active'); steps[i - 1].classList.add('fuel-fs-done'); }
-          if (i < steps.length) { steps[i].classList.add('fuel-fs-active'); i++; setTimeout(next, 1000 + Math.random() * 600); }
-          else {
-            var g = parseFloat(gal.value) || 0;
-            var p = parseFloat(price.value) || 0;
-            var cost = g * p;
-            var ost = window.ostPrice > 0 ? cost / window.ostPrice : 0;
-            var rate = getRewardRate();
-            var reward = ost * rate;
-            fuelHistory.push({
-              station: selectedStation ? selectedStation.name : 'Unknown',
-              domain: selectedStation ? selectedStation.domain : '',
-              gallons: g, pricePerGal: p, usd: cost.toFixed(2),
-              ost: ost.toFixed(2), reward: reward.toFixed(2),
-              date: new Date().toLocaleDateString()
-            });
-            localStorage.setItem('ost_fuel_history', JSON.stringify(fuelHistory));
-            renderFuelTxs();
-            renderFuelRewards();
-            showToast('Payment complete! +' + reward.toFixed(2) + ' OST cashback.', '&#9981;');
-          }
+    payBtn.addEventListener('click', function() {
+      payBtn.disabled = true;
+      var flow = document.getElementById('fuel2Flow');
+      flow.style.display = 'flex';
+      var steps = flow.querySelectorAll('.fuel2-fs');
+      steps.forEach(function(s) { s.classList.remove('f2-active', 'f2-done'); });
+      var i = 0;
+      function next() {
+        if (i > 0) { steps[i - 1].classList.remove('f2-active'); steps[i - 1].classList.add('f2-done'); }
+        if (i < steps.length) { steps[i].classList.add('f2-active'); i++; setTimeout(next, 900 + Math.random() * 500); }
+        else {
+          var g = parseFloat(galEl.value) || 0;
+          var p = parseFloat(priceEl.value) || 0;
+          var cost = g * p;
+          var ost = window.ostPrice > 0 ? cost / window.ostPrice : 0;
+          var rate = getRewardRate();
+          var reward = ost * rate;
+          fuelHistory.push({
+            station: selectedStation ? selectedStation.name : 'Unknown',
+            domain: selectedStation ? selectedStation.domain : '',
+            gallons: g, pricePerGal: p, usd: cost.toFixed(2),
+            ost: ost.toFixed(2), reward: reward.toFixed(2),
+            date: new Date().toLocaleDateString()
+          });
+          localStorage.setItem('ost_fuel_history', JSON.stringify(fuelHistory));
+          renderRewards();
+          showToast('Payment complete! +' + reward.toFixed(2) + ' OST cashback.', '&#9981;');
         }
-        next();
-      });
-    }
+      }
+      next();
+    });
 
-    // Render transactions
-    function renderFuelTxs() {
-      var list = document.getElementById('fuelTxList');
-      var empty = document.getElementById('fuelTxEmpty');
-      var countEl = document.getElementById('fuelTxCount');
-      var totalEl = document.getElementById('fuelTxTotal');
-      var rewardsEl = document.getElementById('fuelTxRewards');
-      if (!list) return;
-      var totalSpent = 0, totalRewards = 0;
-      fuelHistory.forEach(function(tx) { totalSpent += parseFloat(tx.usd) || 0; totalRewards += parseFloat(tx.reward) || 0; });
-      if (countEl) countEl.textContent = fuelHistory.length;
-      if (totalEl) totalEl.textContent = '$' + totalSpent.toFixed(0);
-      if (rewardsEl) rewardsEl.textContent = totalRewards.toFixed(2) + ' OST';
-      if (fuelHistory.length === 0) { if (empty) empty.style.display = 'block'; return; }
-      if (empty) empty.style.display = 'none';
-      var html = '';
-      fuelHistory.slice().reverse().forEach(function(tx) {
-        html += '<div class="fuel-tx-item"><img class="fuel-tx-logo" src="https://logo.clearbit.com/' + (tx.domain || '') + '" alt="" onerror="this.style.display=\'none\'">' +
-          '<div class="fuel-tx-info"><div class="fuel-tx-name">' + tx.station + ' &middot; ' + tx.gallons + ' gal</div><div class="fuel-tx-date">' + tx.date + '</div></div>' +
-          '<div class="fuel-tx-amt"><div class="fuel-tx-usd">$' + tx.usd + '</div><div class="fuel-tx-ost">' + tx.ost + ' OST</div></div></div>';
-      });
-      list.innerHTML = html;
-    }
-    renderFuelTxs();
-
-    // Render rewards
-    function renderFuelRewards() {
+    // Render rewards bar
+    function renderRewards() {
       var count = fuelHistory.length;
       var tier = count >= 500 ? 'Gold' : count >= 100 ? 'Silver' : 'Bronze';
+      var emoji = count >= 500 ? '\uD83E\uDD47' : count >= 100 ? '\uD83E\uDD48' : '\uD83E\uDD49';
       var rate = getRewardRate();
       var target = count >= 500 ? count : count >= 100 ? 500 : 100;
-      var prevTarget = count >= 500 ? 500 : count >= 100 ? 100 : 0;
-      var pct = target > prevTarget ? ((count - prevTarget) / (target - prevTarget)) * 100 : 100;
-      var el = function(id) { return document.getElementById(id); };
-      if (el('fuelCurrentTier')) el('fuelCurrentTier').textContent = tier;
-      if (el('fuelNextTier')) el('fuelNextTier').textContent = count >= 500 ? 'Max tier reached!' : (count >= 100 ? 'Gold at 500 fill-ups' : 'Silver at 100 fill-ups');
-      if (el('fuelRwBarFill')) el('fuelRwBarFill').style.width = Math.min(100, pct).toFixed(1) + '%';
-      if (el('fuelFillCount')) el('fuelFillCount').textContent = count;
-      if (el('fuelFillTarget')) el('fuelFillTarget').textContent = target;
-      if (el('fuelRwRate')) el('fuelRwRate').textContent = (rate * 100) + '%';
-      var totalRewards = 0;
-      fuelHistory.forEach(function(tx) { totalRewards += parseFloat(tx.reward) || 0; });
-      if (el('fuelRwEarned')) el('fuelRwEarned').textContent = totalRewards.toFixed(2) + ' OST';
-      if (el('fuelRwSaved')) el('fuelRwSaved').textContent = '$' + (totalRewards * (window.ostPrice || 0)).toFixed(2);
-      // Update active tier card
-      document.querySelectorAll('.fuel-rw-tier-card').forEach(function(c, idx) {
-        c.classList.remove('fuel-rw-tier-active');
-        if ((tier === 'Bronze' && idx === 0) || (tier === 'Silver' && idx === 1) || (tier === 'Gold' && idx === 2)) c.classList.add('fuel-rw-tier-active');
-      });
+      var prev = count >= 500 ? 500 : count >= 100 ? 100 : 0;
+      var pct = target > prev ? ((count - prev) / (target - prev)) * 100 : 100;
+      var totalRw = 0;
+      fuelHistory.forEach(function(tx) { totalRw += parseFloat(tx.reward) || 0; });
+      var fill = document.getElementById('fuel2RwFill');
+      if (fill) fill.style.width = Math.min(100, pct).toFixed(1) + '%';
+      var tierEl = document.getElementById('fuel2RwTier');
+      if (tierEl) tierEl.textContent = emoji + ' ' + tier + ' \u00B7 ' + (rate * 100) + '%';
+      var countEl = document.getElementById('fuel2RwCount');
+      if (countEl) countEl.textContent = count + ' fill-ups';
+      var earnedEl = document.getElementById('fuel2RwEarned');
+      if (earnedEl) earnedEl.textContent = totalRw.toFixed(2) + ' OST earned';
     }
-    renderFuelRewards();
+    renderRewards();
 
-    // Station search
-    var searchInput = document.getElementById('fuelStationSearch');
-    if (searchInput && partnerGrid) {
-      searchInput.addEventListener('input', function() {
-        var q = this.value.toLowerCase();
-        partnerGrid.querySelectorAll('.fuel-partner-card').forEach(function(card) {
-          var name = (card.dataset.station || '').toLowerCase();
-          card.style.display = name.indexOf(q) >= 0 ? '' : 'none';
+    // Build partner grid
+    var partnerGrid = document.getElementById('fuel2Partners');
+    if (partnerGrid) {
+      stations.forEach(function(s) {
+        var card = document.createElement('div');
+        card.className = 'fuel2-pc';
+        card.dataset.station = s.name;
+        card.innerHTML = '<img src="https://logo.clearbit.com/' + s.domain + '" alt="' + s.name + '" loading="lazy" onerror="this.parentElement.style.display=\'none\'"><span class="fuel2-pc-name">' + s.name + '</span><span class="fuel2-pc-cnt">' + s.count + '</span>';
+        card.addEventListener('click', function() {
+          selectStation(s);
+          if (map) map.setView([s.lat, s.lng], 10);
         });
+        partnerGrid.appendChild(card);
       });
     }
   })();
