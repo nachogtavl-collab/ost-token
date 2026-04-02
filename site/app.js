@@ -6048,7 +6048,7 @@
   })();
 
   // ========================================================================
-  // OST GIFT CARD HUB v2 — Interactive Brand Drawer
+  // OST GIFT CARD HUB v3 — Split Layout
   // ========================================================================
   (function initGiftCardHub() {
     var store = document.getElementById('gc2Store');
@@ -6082,50 +6082,37 @@
     var selectedBrand = null;
     var gcHistory = JSON.parse(localStorage.getItem('ost_gc_history') || '[]');
 
-    // Build brand store grid
+    // Build brand grid with logos side-by-side
     brands.forEach(function(b) {
       var card = document.createElement('div');
       card.className = 'gc2-brand';
-      card.innerHTML = '<img src="https://logo.clearbit.com/' + b.domain + '" alt="' + b.name + '" loading="lazy" onerror="this.src=\'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2264%22 height=%2264%22><rect fill=%22%23222%22 width=%2264%22 height=%2264%22 rx=%2214%22/><text x=%2232%22 y=%2240%22 text-anchor=%22middle%22 fill=%22%23fff%22 font-size=%2220%22>' + b.name.charAt(0) + '</text></svg>\'"><span>' + b.name + '</span><span class="gc2-brand-tag">Gift Card</span>';
-      card.addEventListener('click', function() { openDrawer(b); });
+      card.innerHTML = '<img src="https://logo.clearbit.com/' + b.domain + '" alt="' + b.name + '" loading="lazy" onerror="this.src=\'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2256%22 height=%2256%22><rect fill=%22%23222%22 width=%2256%22 height=%2256%22 rx=%2213%22/><text x=%2228%22 y=%2236%22 text-anchor=%22middle%22 fill=%22%23fff%22 font-size=%2218%22>' + b.name.charAt(0) + '</text></svg>\'"><span>' + b.name + '</span><span class="gc2-brand-tag">Gift Card</span>';
+      card.addEventListener('click', function() { selectBrand(b, card); });
       store.appendChild(card);
     });
 
-    // Drawer elements
-    var drawer = document.getElementById('gc2Drawer');
-    var drawerLogo = document.getElementById('gc2DrawerLogo');
-    var drawerBrand = document.getElementById('gc2DrawerBrand');
-    var drawerBody = document.getElementById('gc2DrawerBody');
-    var drawerLoader = document.getElementById('gc2DrawerLoader');
-    var closeBtn = document.getElementById('gc2DrawerClose');
+    var activeLogo = document.getElementById('gc2DrawerLogo');
+    var activeName = document.getElementById('gc2DrawerBrand');
 
-    function openDrawer(brand) {
+    function selectBrand(brand, el) {
       selectedBrand = brand;
-      drawerLogo.src = 'https://logo.clearbit.com/' + brand.domain;
-      drawerLogo.alt = brand.name;
-      drawerBrand.textContent = brand.name;
-      drawerBody.style.display = 'none';
-      drawerLoader.querySelector('.gc2-loader-bar').style.animation = 'none';
-      void drawerLoader.querySelector('.gc2-loader-bar').offsetHeight;
-      drawerLoader.querySelector('.gc2-loader-bar').style.animation = 'gc2Load 1.8s ease-in-out forwards';
-      drawer.style.display = 'block';
-      drawer.style.animation = 'none';
-      void drawer.offsetHeight;
-      drawer.style.animation = 'gc2DrawerIn .5s cubic-bezier(.25,.46,.45,.94)';
-      // Reset panels
+      document.querySelectorAll('.gc2-brand').forEach(function(c) { c.classList.remove('gc2-brand-selected'); });
+      if (el) el.classList.add('gc2-brand-selected');
+      activeLogo.src = 'https://logo.clearbit.com/' + brand.domain;
+      activeLogo.alt = brand.name;
+      activeName.textContent = brand.name;
       document.getElementById('gc2Flow').style.display = 'none';
       document.getElementById('gc2Delivered').style.display = 'none';
       resetFlowSteps();
       updateRedeem();
       updateBuy();
-      // Show body after "loading"
-      setTimeout(function() { drawerBody.style.display = 'block'; }, 1800);
-      drawer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      if (window.innerWidth <= 800) {
+        var actionCol = document.getElementById('gc2ActionCol');
+        if (actionCol) actionCol.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
     }
 
-    closeBtn.addEventListener('click', function() { drawer.style.display = 'none'; selectedBrand = null; });
-
-    // Mode toggle (Redeem / Buy)
+    // Mode toggle
     document.querySelectorAll('.gc2-mode').forEach(function(btn) {
       btn.addEventListener('click', function() {
         document.querySelectorAll('.gc2-mode').forEach(function(b) { b.classList.remove('gc2-mode-active'); });
@@ -6139,7 +6126,7 @@
       });
     });
 
-    // Quick amount buttons
+    // Quick amounts
     document.querySelectorAll('.gc2-q').forEach(function(btn) {
       btn.addEventListener('click', function() {
         var amt = btn.dataset.amt;
@@ -6150,7 +6137,7 @@
       });
     });
 
-    // Redeem conversion
+    // Redeem
     var gc2Balance = document.getElementById('gc2Balance');
     var gc2Code = document.getElementById('gc2Code');
     var gc2Currency = document.getElementById('gc2Currency');
@@ -6182,7 +6169,7 @@
     gc2Code.addEventListener('input', updateRedeem);
     gc2Currency.addEventListener('change', updateRedeem);
 
-    // Buy conversion
+    // Buy
     var gc2BuyAmt = document.getElementById('gc2BuyAmt');
     var gc2BuyCur = document.getElementById('gc2BuyCur');
     var gc2BuyVal = document.getElementById('gc2BuyVal');
@@ -6211,7 +6198,7 @@
     gc2BuyAmt.addEventListener('input', updateBuy);
     gc2BuyCur.addEventListener('change', updateBuy);
 
-    // Flow animation helper
+    // Flow
     function resetFlowSteps() {
       document.querySelectorAll('.gc2-fstep').forEach(function(s) { s.classList.remove('gc2-fs-active', 'gc2-fs-done'); });
     }
@@ -6229,7 +6216,6 @@
       next();
     }
 
-    // Redeem flow
     gc2RedeemBtn.addEventListener('click', function() {
       gc2RedeemBtn.disabled = true;
       runFlow(function() {
@@ -6242,7 +6228,6 @@
       });
     });
 
-    // Buy flow
     gc2BuyBtn.addEventListener('click', function() {
       gc2BuyBtn.disabled = true;
       runFlow(function() {
@@ -6261,7 +6246,6 @@
       });
     });
 
-    // Copy code
     var copyBtn = document.getElementById('gc2Copy');
     if (copyBtn) {
       copyBtn.addEventListener('click', function() {
@@ -6298,7 +6282,6 @@
       renderHistory();
     }
 
-    // History toggle
     var histToggle = document.getElementById('gc2HistToggle');
     var histPanel = document.getElementById('gc2Hist');
     if (histToggle && histPanel) {
@@ -6310,40 +6293,63 @@
   })();
 
   // ========================================================================
-  // OST FUEL & GO v2 — Interactive Map + Compact Pay
+  // OST FUEL & GO v3 — Tabs + World Map + Browse + Pay
   // ========================================================================
   (function initFuelStation() {
     var mapEl = document.getElementById('fuel2Map');
     if (!mapEl) return;
 
     var stations = [
-      { name:'Shell',         domain:'shell.com',          count:'46,000+',  lat:29.76, lng:-95.37 },
-      { name:'BP',            domain:'bp.com',             count:'21,000+',  lat:51.51, lng:-0.13 },
-      { name:'ExxonMobil',    domain:'exxonmobil.com',     count:'12,000+',  lat:32.78, lng:-96.80 },
-      { name:'Chevron',       domain:'chevron.com',        count:'8,000+',   lat:37.77, lng:-122.42 },
-      { name:'TotalEnergies', domain:'totalenergies.com',  count:'16,000+',  lat:48.86, lng:2.35 },
-      { name:'ADNOC',         domain:'adnoc.ae',           count:'500+',     lat:24.45, lng:54.65 },
-      { name:'7-Eleven',      domain:'7-eleven.com',       count:'83,000+',  lat:35.68, lng:139.69 },
-      { name:'OXXO',          domain:'oxxo.com',           count:'21,000+',  lat:25.67, lng:-100.31 },
-      { name:'Circle K',      domain:'circlek.com',        count:'14,000+',  lat:33.45, lng:-112.07 },
-      { name:'Petronas',      domain:'petronas.com',       count:'2,500+',   lat:3.14, lng:101.69 },
-      { name:'Indian Oil',    domain:'indianoil.co.in',    count:'34,000+',  lat:28.61, lng:77.21 },
-      { name:'Ipiranga',      domain:'ipiranga.com.br',    count:'7,600+',   lat:-23.55, lng:-46.63 },
-      { name:'PEMEX',         domain:'pemex.com',          count:'11,000+',  lat:19.43, lng:-99.13 },
-      { name:'Repsol',        domain:'repsol.com',         count:'4,700+',   lat:40.42, lng:-3.70 },
-      { name:'Lukoil',        domain:'lukoil.com',         count:'5,500+',   lat:55.76, lng:37.62 },
-      { name:'Sinopec',       domain:'sinopec.com',        count:'30,000+',  lat:39.91, lng:116.40 },
-      { name:'Aramco',        domain:'aramco.com',         count:'2,000+',   lat:24.71, lng:46.67 },
-      { name:'Petrobras',     domain:'petrobras.com.br',   count:'7,700+',   lat:-22.91, lng:-43.17 },
-      { name:'Engen',         domain:'engenoil.com',       count:'1,500+',   lat:-33.93, lng:18.42 },
-      { name:'Stripes',       domain:'stripesstores.com',  count:'600+',     lat:27.80, lng:-97.40 }
+      { name:'Shell',          domain:'shell.com',          count:'46,000+', region:'Global',          lat:29.76,  lng:-95.37 },
+      { name:'BP',             domain:'bp.com',             count:'21,000+', region:'Europe/Americas',  lat:51.51,  lng:-0.13 },
+      { name:'ExxonMobil',     domain:'exxonmobil.com',     count:'12,000+', region:'Americas',         lat:32.78,  lng:-96.80 },
+      { name:'Chevron',        domain:'chevron.com',        count:'8,000+',  region:'Americas',         lat:37.77,  lng:-122.42 },
+      { name:'TotalEnergies',  domain:'totalenergies.com',  count:'16,000+', region:'Europe/Africa',    lat:48.86,  lng:2.35 },
+      { name:'ADNOC',          domain:'adnoc.ae',           count:'500+',    region:'Middle East',      lat:24.45,  lng:54.65 },
+      { name:'7-Eleven',       domain:'7-eleven.com',       count:'83,000+', region:'Global',           lat:35.68,  lng:139.69 },
+      { name:'OXXO',           domain:'oxxo.com',           count:'21,000+', region:'Latin America',    lat:25.67,  lng:-100.31 },
+      { name:'Circle K',       domain:'circlek.com',        count:'14,000+', region:'Global',           lat:33.45,  lng:-112.07 },
+      { name:'Petronas',       domain:'petronas.com',       count:'2,500+',  region:'Asia',             lat:3.14,   lng:101.69 },
+      { name:'Indian Oil',     domain:'indianoil.co.in',    count:'34,000+', region:'India',            lat:28.61,  lng:77.21 },
+      { name:'Ipiranga',       domain:'ipiranga.com.br',    count:'7,600+',  region:'Brazil',           lat:-23.55, lng:-46.63 },
+      { name:'PEMEX',          domain:'pemex.com',          count:'11,000+', region:'Mexico',           lat:19.43,  lng:-99.13 },
+      { name:'Repsol',         domain:'repsol.com',         count:'4,700+',  region:'Europe',           lat:40.42,  lng:-3.70 },
+      { name:'Lukoil',         domain:'lukoil.com',         count:'5,500+',  region:'Russia/Europe',    lat:55.76,  lng:37.62 },
+      { name:'Sinopec',        domain:'sinopec.com',        count:'30,000+', region:'China',            lat:39.91,  lng:116.40 },
+      { name:'Aramco',         domain:'aramco.com',         count:'2,000+',  region:'Middle East',      lat:24.71,  lng:46.67 },
+      { name:'Petrobras',      domain:'petrobras.com.br',   count:'7,700+',  region:'Brazil',           lat:-22.91, lng:-43.17 },
+      { name:'Engen',          domain:'engenoil.com',       count:'1,500+',  region:'Africa',           lat:-33.93, lng:18.42 },
+      { name:'Caltex',         domain:'caltex.com',         count:'4,200+',  region:'Asia/Africa',      lat:1.35,   lng:103.82 },
+      { name:'Wawa',           domain:'wawa.com',           count:'950+',    region:'USA East',         lat:39.95,  lng:-75.17 },
+      { name:'Casey\'s',       domain:'caseys.com',         count:'2,500+',  region:'USA Midwest',      lat:41.59,  lng:-93.62 },
+      { name:'Eni/Agip',       domain:'eni.com',            count:'5,200+',  region:'Europe/Africa',    lat:41.90,  lng:12.50 },
+      { name:'OMV',            domain:'omv.com',            count:'2,100+',  region:'Central Europe',   lat:48.21,  lng:16.37 },
+      { name:'PKN Orlen',      domain:'orlen.pl',           count:'2,800+',  region:'Eastern Europe',   lat:52.23,  lng:21.01 },
+      { name:'PTT',            domain:'pttplc.com',         count:'2,100+',  region:'Thailand',         lat:13.76,  lng:100.50 },
+      { name:'GS Caltex',      domain:'gscaltex.com',       count:'6,000+',  region:'South Korea',      lat:37.57,  lng:126.98 },
+      { name:'ENEOS',          domain:'eneos.co.jp',        count:'12,500+', region:'Japan',            lat:35.69,  lng:139.70 },
+      { name:'Woolworths',     domain:'woolworths.com.au',  count:'1,200+',  region:'Australia',        lat:-33.87, lng:151.21 },
+      { name:'Puma Energy',    domain:'pumaenergy.com',     count:'3,100+',  region:'Africa/Americas',  lat:6.52,   lng:3.38 }
     ];
 
     var selectedStation = null;
     var fuelHistory = JSON.parse(localStorage.getItem('ost_fuel_history') || '[]');
     var map = null;
 
-    // Init Leaflet map
+    // Tab switching
+    document.querySelectorAll('.fuel2-tab').forEach(function(tab) {
+      tab.addEventListener('click', function() {
+        document.querySelectorAll('.fuel2-tab').forEach(function(t) { t.classList.remove('fuel2-tab-active'); });
+        tab.classList.add('fuel2-tab-active');
+        var target = tab.dataset.tab;
+        document.querySelectorAll('.fuel2-panel').forEach(function(p) { p.classList.remove('fuel2-panel-active'); });
+        var panelId = target === 'map' ? 'fuel2PanelMap' : target === 'stations' ? 'fuel2PanelStations' : 'fuel2PanelPay';
+        document.getElementById(panelId).classList.add('fuel2-panel-active');
+        if (target === 'map' && map) setTimeout(function() { map.invalidateSize(); }, 100);
+      });
+    });
+
+    // Init Leaflet map with RED markers
     try {
       map = L.map(mapEl, { scrollWheelZoom: false, zoomControl: true }).setView([20, 0], 2);
       L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
@@ -6352,41 +6358,96 @@
         maxZoom: 19
       }).addTo(map);
 
-      // Custom icon
       var stationIcon = L.divIcon({
         className: 'fuel2-marker',
-        html: '<div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#FF6B35,#FF8F00);display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 3px 10px rgba(255,107,53,.4);border:2px solid rgba(255,255,255,.3);">&#9981;</div>',
-        iconSize: [28, 28],
-        iconAnchor: [14, 14],
-        popupAnchor: [0, -16]
+        html: '<div style="width:14px;height:14px;border-radius:50%;background:#e63946;box-shadow:0 0 8px rgba(230,57,70,.6),0 0 16px rgba(230,57,70,.3);border:2px solid rgba(255,255,255,.4);"></div>',
+        iconSize: [14, 14],
+        iconAnchor: [7, 7],
+        popupAnchor: [0, -10]
       });
 
       stations.forEach(function(s) {
         var marker = L.marker([s.lat, s.lng], { icon: stationIcon }).addTo(map);
         marker.bindPopup(
           '<div style="text-align:center">' +
-          '<img src="https://logo.clearbit.com/' + s.domain + '" style="width:36px;height:36px;border-radius:8px;background:#fff;padding:3px;box-sizing:border-box;margin-bottom:6px" onerror="this.style.display=\'none\'">' +
-          '<div style="font-weight:700;font-size:.9rem;margin-bottom:2px">' + s.name + '</div>' +
-          '<div style="font-size:.72rem;color:rgba(255,255,255,.5);margin-bottom:8px">' + s.count + ' stations</div>' +
-          '<button class="fuel2-popup-btn" onclick="window._selectFuelStation(\'' + s.name + '\')">&#9981; Pay Here</button></div>'
+          '<img src="https://logo.clearbit.com/' + s.domain + '" style="width:40px;height:40px;border-radius:10px;background:#fff;padding:4px;box-sizing:border-box;margin-bottom:8px" onerror="this.style.display=\'none\'">' +
+          '<div style="font-weight:800;font-size:.95rem;margin-bottom:2px">' + s.name + '</div>' +
+          '<div style="font-size:.72rem;color:rgba(255,255,255,.5);margin-bottom:2px">' + s.region + '</div>' +
+          '<div style="font-size:.82rem;font-weight:700;color:#e63946;margin-bottom:8px">' + s.count + ' stations</div>' +
+          '<button class="fuel2-popup-btn" onclick="window._selectFuelStation(\'' + s.name.replace(/'/g, "\\'") + '\')">&#9981; Pay Here</button></div>'
         );
       });
 
-      // Invalidate size after animation
       setTimeout(function() { map.invalidateSize(); }, 500);
     } catch (e) {
       mapEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:.9rem;">Map loading&hellip;</div>';
     }
 
-    // Global station select (called from popup)
+    // Build legend below map
+    var legendEl = document.getElementById('fuel2Legend');
+    if (legendEl) {
+      stations.forEach(function(s) {
+        var item = document.createElement('div');
+        item.className = 'fuel2-legend-item';
+        item.innerHTML = '<span class="fuel2-legend-dot"></span>' +
+          '<img src="https://logo.clearbit.com/' + s.domain + '" alt="' + s.name + '" loading="lazy" onerror="this.style.display=\'none\'">' +
+          '<div><div class="fuel2-legend-name">' + s.name + '</div><div class="fuel2-legend-cnt">' + s.count + '</div></div>';
+        item.addEventListener('click', function() {
+          if (map) map.setView([s.lat, s.lng], 6);
+        });
+        legendEl.appendChild(item);
+      });
+    }
+
+    // Build browse grid (Tab 2)
+    var browseGrid = document.getElementById('fuel2BrowseGrid');
+    if (browseGrid) {
+      stations.forEach(function(s) {
+        var card = document.createElement('div');
+        card.className = 'fuel2-bcard';
+        card.dataset.station = s.name;
+        card.innerHTML = '<img src="https://logo.clearbit.com/' + s.domain + '" alt="' + s.name + '" loading="lazy" onerror="this.parentElement.style.display=\'none\'">' +
+          '<div class="fuel2-bcard-info"><div class="fuel2-bcard-name">' + s.name + '</div><div class="fuel2-bcard-cnt">' + s.count + '</div><div class="fuel2-bcard-region">' + s.region + '</div></div>';
+        card.addEventListener('click', function() {
+          selectStation(s);
+          document.querySelectorAll('.fuel2-tab').forEach(function(t) { t.classList.remove('fuel2-tab-active'); });
+          document.querySelector('[data-tab="pay"]').classList.add('fuel2-tab-active');
+          document.querySelectorAll('.fuel2-panel').forEach(function(p) { p.classList.remove('fuel2-panel-active'); });
+          document.getElementById('fuel2PanelPay').classList.add('fuel2-panel-active');
+        });
+        browseGrid.appendChild(card);
+      });
+    }
+
+    // Browse search
+    var browseSearch = document.getElementById('fuel2BrowseSearch');
+    if (browseSearch) {
+      browseSearch.addEventListener('input', function() {
+        var q = this.value.toLowerCase();
+        document.querySelectorAll('.fuel2-bcard').forEach(function(c) {
+          var name = (c.dataset.station || '').toLowerCase();
+          c.style.display = name.indexOf(q) >= 0 ? '' : 'none';
+        });
+      });
+    }
+
+    // Global station select
     window._selectFuelStation = function(name) {
       var s = stations.find(function(st) { return st.name === name; });
-      if (s) selectStation(s);
+      if (s) {
+        selectStation(s);
+        document.querySelectorAll('.fuel2-tab').forEach(function(t) { t.classList.remove('fuel2-tab-active'); });
+        document.querySelector('[data-tab="pay"]').classList.add('fuel2-tab-active');
+        document.querySelectorAll('.fuel2-panel').forEach(function(p) { p.classList.remove('fuel2-panel-active'); });
+        document.getElementById('fuel2PanelPay').classList.add('fuel2-panel-active');
+      }
     };
 
     function selectStation(s) {
       selectedStation = s;
       var pay = document.getElementById('fuel2Pay');
+      var prompt = document.getElementById('fuel2PayPrompt');
+      if (prompt) prompt.style.display = 'none';
       pay.style.display = 'block';
       pay.style.animation = 'none';
       void pay.offsetHeight;
@@ -6398,15 +6459,21 @@
       document.querySelectorAll('.fuel2-fs').forEach(function(st) { st.classList.remove('f2-active', 'f2-done'); });
       updateFuelCalc();
       pay.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      document.querySelectorAll('.fuel2-bcard').forEach(function(c) { c.classList.remove('fuel2-bcard-selected'); });
+      if (browseGrid) {
+        var match = browseGrid.querySelector('[data-station="' + s.name + '"]');
+        if (match) match.classList.add('fuel2-bcard-selected');
+      }
     }
 
-    // Close pay card
     document.getElementById('fuel2PayClose').addEventListener('click', function() {
       document.getElementById('fuel2Pay').style.display = 'none';
+      var prompt = document.getElementById('fuel2PayPrompt');
+      if (prompt) prompt.style.display = '';
       selectedStation = null;
     });
 
-    // Near Me button
+    // Near Me
     document.getElementById('fuel2NearMe').addEventListener('click', function() {
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(function(pos) {
@@ -6424,16 +6491,15 @@
       }
     });
 
-    // Search stations
+    // Map search
     var searchEl = document.getElementById('fuel2Search');
     if (searchEl) {
       searchEl.addEventListener('input', function() {
         var q = this.value.toLowerCase();
-        // Filter partner grid
-        document.querySelectorAll('.fuel2-pc').forEach(function(c) {
-          c.style.display = (c.dataset.station || '').toLowerCase().indexOf(q) >= 0 ? '' : 'none';
+        document.querySelectorAll('.fuel2-legend-item').forEach(function(item) {
+          var name = item.querySelector('.fuel2-legend-name');
+          item.style.display = !name || name.textContent.toLowerCase().indexOf(q) >= 0 ? '' : 'none';
         });
-        // Zoom to matching station on map
         if (q.length >= 2 && map) {
           var match = stations.find(function(s) { return s.name.toLowerCase().indexOf(q) >= 0; });
           if (match) map.setView([match.lat, match.lng], 6);
@@ -6507,7 +6573,6 @@
       next();
     });
 
-    // Render rewards bar
     function renderRewards() {
       var count = fuelHistory.length;
       var tier = count >= 500 ? 'Gold' : count >= 100 ? 'Silver' : 'Bronze';
@@ -6528,22 +6593,6 @@
       if (earnedEl) earnedEl.textContent = totalRw.toFixed(2) + ' OST earned';
     }
     renderRewards();
-
-    // Build partner grid
-    var partnerGrid = document.getElementById('fuel2Partners');
-    if (partnerGrid) {
-      stations.forEach(function(s) {
-        var card = document.createElement('div');
-        card.className = 'fuel2-pc';
-        card.dataset.station = s.name;
-        card.innerHTML = '<img src="https://logo.clearbit.com/' + s.domain + '" alt="' + s.name + '" loading="lazy" onerror="this.parentElement.style.display=\'none\'"><span class="fuel2-pc-name">' + s.name + '</span><span class="fuel2-pc-cnt">' + s.count + '</span>';
-        card.addEventListener('click', function() {
-          selectStation(s);
-          if (map) map.setView([s.lat, s.lng], 10);
-        });
-        partnerGrid.appendChild(card);
-      });
-    }
   })();
 
 })();
