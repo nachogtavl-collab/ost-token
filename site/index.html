@@ -26,7 +26,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="style.css?v=33">
+  <link rel="stylesheet" href="style.css?v=34">
 </head>
 <body>
 
@@ -45,6 +45,7 @@
         <a href="#about" data-i18n="nav.about">Our Story</a>
         <a href="#roadmap" data-i18n="nav.roadmap">Roadmap</a>
         <a href="#build" data-i18n="nav.build">Build</a>
+        <a href="#launchpad">Launchpad</a>
         <a href="#transparency" data-i18n="nav.verify">Verify</a>
       </div>
       <div class="nav-right">
@@ -2954,6 +2955,149 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   </section>
 
 <!-- ================================================================== -->
+  <!-- LAUNCHPAD — Launch Your Coin Inside OST -->
+<!-- ================================================================== -->
+  <section id="launchpad" class="section section-alt section-space">
+    <div class="container">
+      <div class="lp-header">
+        <div class="lp-icon-ring"><span>&#128640;</span></div>
+        <h2 class="section-title">Launch Your Coin <span class="gradient-text">Inside OST</span></h2>
+        <p class="section-subtitle">Pay with OST &bull; Mint instantly &bull; Cash out only through OST services</p>
+        <p class="text-muted" style="font-size:.82rem;margin-top:4px;">No external markets &bull; No regulations on your memecoin &bull; Everything stays in the OST ecosystem</p>
+      </div>
+
+      <!-- Live stats bar -->
+      <div class="lp-stats">
+        <div class="lp-stat"><span class="lp-stat-val" id="lpTotalLaunched">0</span><span class="lp-stat-lbl">Coins Launched</span></div>
+        <div class="lp-stat"><span class="lp-stat-val" id="lpTotalSupply">0B</span><span class="lp-stat-lbl">Tokens Minted</span></div>
+        <div class="lp-stat"><span class="lp-stat-val">25 OST</span><span class="lp-stat-lbl">Launch Fee</span></div>
+        <div class="lp-stat"><span class="lp-stat-val">$0</span><span class="lp-stat-lbl">Network Fee</span></div>
+      </div>
+
+      <div class="lp-split">
+        <!-- Left: Launch Form -->
+        <div class="lp-form-col">
+          <div class="lp-form-head">
+            <h3>&#9881;&#65039; Create Your Token</h3>
+            <p class="text-muted">Launches as a real Token-2022 SPL token on Solana. Takes seconds.</p>
+          </div>
+
+          <div class="lp-field">
+            <label class="lp-label">Coin Name <span class="lp-req">*</span></label>
+            <input type="text" id="lpName" class="lp-input" placeholder="MarsPuppy Token" maxlength="32" autocomplete="off">
+          </div>
+
+          <div class="lp-row">
+            <div class="lp-field lp-half">
+              <label class="lp-label">Symbol <span class="lp-req">*</span></label>
+              <input type="text" id="lpSymbol" class="lp-input" placeholder="MARS" maxlength="8" autocomplete="off" style="text-transform:uppercase;">
+            </div>
+            <div class="lp-field lp-half">
+              <label class="lp-label">Total Supply <span class="lp-req">*</span></label>
+              <input type="number" id="lpSupply" class="lp-input" value="1000000000" min="1000" max="1000000000000" step="1000">
+            </div>
+          </div>
+
+          <div class="lp-field">
+            <label class="lp-label">Decimals</label>
+            <select id="lpDecimals" class="lp-input lp-select">
+              <option value="9" selected>9 (standard)</option>
+              <option value="6">6</option>
+              <option value="4">4</option>
+              <option value="0">0 (whole numbers only)</option>
+            </select>
+          </div>
+
+          <div class="lp-field">
+            <label class="lp-label">Description</label>
+            <textarea id="lpDesc" class="lp-input lp-textarea" rows="3" placeholder="The first memecoin born in space..." maxlength="200"></textarea>
+            <span class="lp-char-count"><span id="lpDescCount">0</span>/200</span>
+          </div>
+
+          <!-- Supply presets -->
+          <div class="lp-presets">
+            <span class="lp-presets-label">Quick supply:</span>
+            <button class="lp-preset" data-supply="1000000">1M</button>
+            <button class="lp-preset" data-supply="100000000">100M</button>
+            <button class="lp-preset lp-preset-active" data-supply="1000000000">1B</button>
+            <button class="lp-preset" data-supply="10000000000">10B</button>
+            <button class="lp-preset" data-supply="1000000000000">1T</button>
+          </div>
+
+          <!-- Fee display -->
+          <div class="lp-fee-box">
+            <div class="lp-fee-row"><span>Launch Fee</span><span class="lp-fee-val">25 &#9673; OST</span></div>
+            <div class="lp-fee-row lp-fee-small"><span>Network Fee</span><span>$0.00 (free)</span></div>
+            <div class="lp-fee-row lp-fee-small"><span>Destination</span><span>&#128752; Satellite Treasury</span></div>
+          </div>
+
+          <button class="lp-launch-btn" id="lpLaunchBtn" disabled>
+            <span class="lp-btn-icon">&#9673;</span> Pay 25 OST &amp; Launch Now
+          </button>
+
+          <!-- Flow animation -->
+          <div class="lp-flow" id="lpFlow" style="display:none">
+            <div class="lp-fstep" data-s="1"><span class="lp-fdot"></span><span>Connecting wallet&hellip;</span></div>
+            <div class="lp-fstep" data-s="2"><span class="lp-fdot"></span><span>Paying 25 OST to treasury&hellip;</span></div>
+            <div class="lp-fstep" data-s="3"><span class="lp-fdot"></span><span>Creating Token-2022 mint&hellip;</span></div>
+            <div class="lp-fstep" data-s="4"><span class="lp-fdot"></span><span>Minting supply&hellip;</span></div>
+            <div class="lp-fstep" data-s="5"><span class="lp-fdot"></span><span>Complete &#10003;</span></div>
+          </div>
+
+          <!-- Success card -->
+          <div class="lp-success" id="lpSuccess" style="display:none">
+            <div class="lp-success-icon">&#127881;</div>
+            <h4>Your coin is live!</h4>
+            <div class="lp-success-details">
+              <div class="lp-sd-row"><span>Name</span><span id="lpSuccessName">--</span></div>
+              <div class="lp-sd-row"><span>Symbol</span><span id="lpSuccessSymbol">--</span></div>
+              <div class="lp-sd-row"><span>Supply</span><span id="lpSuccessSupply">--</span></div>
+              <div class="lp-sd-row"><span>Mint Address</span><span id="lpSuccessMint" class="lp-mint-addr">--</span></div>
+            </div>
+            <button class="lp-copy-mint" id="lpCopyMint">&#128203; Copy Mint Address</button>
+            <p class="lp-success-note">Sell your new coin for OST inside the platform, then use OST for gift cards, Pay-Any-Link, offline payments, and more.</p>
+          </div>
+        </div>
+
+        <!-- Right: Info Panel -->
+        <div class="lp-info-col">
+          <div class="lp-info-card">
+            <h3>How It Works &mdash; OST-Only Flow</h3>
+            <div class="lp-steps">
+              <div class="lp-step"><div class="lp-step-num">1</div><div class="lp-step-text"><strong>Pay launch fee in OST</strong><br>Goes to treasury &rarr; funds satellites &amp; infrastructure</div></div>
+              <div class="lp-step"><div class="lp-step-num">2</div><div class="lp-step-text"><strong>Token-2022 memecoin minted</strong><br>Real SPL token created on Solana, full supply to your wallet</div></div>
+              <div class="lp-step"><div class="lp-step-num">3</div><div class="lp-step-text"><strong>Trade inside OST</strong><br>Built-in private swap &mdash; your coin &#8596; OST</div></div>
+              <div class="lp-step"><div class="lp-step-num">4</div><div class="lp-step-text"><strong>Cash out through OST</strong><br>Gift cards, Pay-Any-Link, offline tap-to-pay, fuel &mdash; everything in the OST ecosystem</div></div>
+            </div>
+          </div>
+
+          <!-- Why OST-only -->
+          <div class="lp-info-card lp-why">
+            <h4>&#128274; Why Everything Stays in OST</h4>
+            <ul class="lp-why-list">
+              <li><span class="lp-why-icon">&#128176;</span> Every launch fee funds satellite internet for the unconnected</li>
+              <li><span class="lp-why-icon">&#128274;</span> Confidential transfers &mdash; your balance stays private</li>
+              <li><span class="lp-why-icon">&#9889;</span> 0.4s settlement, zero network fees, forever</li>
+              <li><span class="lp-why-icon">&#127758;</span> No external DEX dependency &mdash; no rug pull risk from outside liquidity</li>
+              <li><span class="lp-why-icon">&#128640;</span> Your coin lives on Solana as a real Token-2022 token</li>
+            </ul>
+          </div>
+
+          <!-- Recent launches -->
+          <div class="lp-info-card">
+            <h4>&#128293; Recent Launches</h4>
+            <div class="lp-recent" id="lpRecent">
+              <div class="lp-recent-empty">No launches yet. Be the first!</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lp-footer-note">&#9888; Memecoins are highly speculative. This is a demo of the OST launchpad. Real token minting requires a connected Solana wallet and OST balance. DYOR.</div>
+    </div>
+  </section>
+
+<!-- ================================================================== -->
   <section id="transparency" class="section section-space">
     <div class="container">
       <h2 class="section-title" data-i18n="verify.title">Full Transparency</h2>
@@ -3028,6 +3172,6 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=33"></script>
+  <script src="app.js?v=34"></script>
 </body>
 </html>

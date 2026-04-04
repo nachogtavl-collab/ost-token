@@ -6595,5 +6595,187 @@
     renderRewards();
   })();
 
+  // ========================================================================
+  // OST LAUNCHPAD — Launch Your Coin Inside OST
+  // ========================================================================
+  (function initLaunchpad() {
+    var nameEl = document.getElementById('lpName');
+    var symbolEl = document.getElementById('lpSymbol');
+    var supplyEl = document.getElementById('lpSupply');
+    var decimalsEl = document.getElementById('lpDecimals');
+    var descEl = document.getElementById('lpDesc');
+    var descCount = document.getElementById('lpDescCount');
+    var launchBtn = document.getElementById('lpLaunchBtn');
+    if (!nameEl || !launchBtn) return;
+
+    var LAUNCH_FEE_OST = 25;
+    var launches = JSON.parse(localStorage.getItem('ost_lp_history') || '[]');
+
+    // Character counter
+    if (descEl && descCount) {
+      descEl.addEventListener('input', function() {
+        descCount.textContent = descEl.value.length;
+      });
+    }
+
+    // Supply presets
+    document.querySelectorAll('.lp-preset').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        supplyEl.value = btn.dataset.supply;
+        document.querySelectorAll('.lp-preset').forEach(function(b) { b.classList.remove('lp-preset-active'); });
+        btn.classList.add('lp-preset-active');
+        validateForm();
+      });
+    });
+
+    // Validate form
+    function validateForm() {
+      var name = (nameEl.value || '').trim();
+      var symbol = (symbolEl.value || '').trim();
+      var supply = parseInt(supplyEl.value) || 0;
+      launchBtn.disabled = !(name.length >= 2 && symbol.length >= 1 && supply >= 1000);
+    }
+    nameEl.addEventListener('input', validateForm);
+    symbolEl.addEventListener('input', validateForm);
+    supplyEl.addEventListener('input', validateForm);
+
+    // Flow animation
+    function resetFlow() {
+      document.querySelectorAll('.lp-fstep').forEach(function(s) { s.classList.remove('lp-fs-active', 'lp-fs-done'); });
+    }
+    function runFlow(onDone) {
+      var flow = document.getElementById('lpFlow');
+      flow.style.display = 'flex';
+      resetFlow();
+      var steps = flow.querySelectorAll('.lp-fstep');
+      var i = 0;
+      function next() {
+        if (i > 0) { steps[i - 1].classList.remove('lp-fs-active'); steps[i - 1].classList.add('lp-fs-done'); }
+        if (i < steps.length) { steps[i].classList.add('lp-fs-active'); i++; setTimeout(next, 800 + Math.random() * 700); }
+        else { if (onDone) onDone(); }
+      }
+      next();
+    }
+
+    // Format supply
+    function formatSupply(n) {
+      if (n >= 1e12) return (n / 1e12).toFixed(1) + 'T';
+      if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
+      if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+      if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+      return n.toString();
+    }
+
+    // Generate fake mint address (demo)
+    function generateMint() {
+      var chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+      var out = '';
+      for (var i = 0; i < 44; i++) { out += chars.charAt(Math.floor(Math.random() * chars.length)); }
+      return out;
+    }
+
+    // Render recent launches
+    function renderRecent() {
+      var container = document.getElementById('lpRecent');
+      if (!container) return;
+      var totalEl = document.getElementById('lpTotalLaunched');
+      var totalSupplyEl = document.getElementById('lpTotalSupply');
+      if (totalEl) totalEl.textContent = launches.length;
+      if (totalSupplyEl) {
+        var total = 0;
+        launches.forEach(function(l) { total += (parseInt(l.supply) || 0); });
+        totalSupplyEl.textContent = formatSupply(total);
+      }
+      if (launches.length === 0) {
+        container.innerHTML = '<div class="lp-recent-empty">No launches yet. Be the first!</div>';
+        return;
+      }
+      container.innerHTML = '';
+      launches.slice().reverse().slice(0, 10).forEach(function(l) {
+        var el = document.createElement('div');
+        el.className = 'lp-rx';
+        el.innerHTML = '<div class="lp-rx-icon">' + (l.symbol ? l.symbol.charAt(0).toUpperCase() : '?') + '</div>' +
+          '<div class="lp-rx-info"><div class="lp-rx-name">' + (l.name || 'Unknown') + ' ($' + (l.symbol || '???') + ')</div><div class="lp-rx-meta">' + (l.date || '') + ' &middot; ' + (l.mint ? l.mint.slice(0, 4) + '...' + l.mint.slice(-4) : '') + '</div></div>' +
+          '<div class="lp-rx-supply">' + formatSupply(parseInt(l.supply) || 0) + '</div>';
+        container.appendChild(el);
+      });
+    }
+    renderRecent();
+
+    // Launch handler
+    launchBtn.addEventListener('click', function() {
+      if (launchBtn.disabled) return;
+
+      var name = nameEl.value.trim();
+      var symbol = symbolEl.value.trim().toUpperCase();
+      var supply = parseInt(supplyEl.value) || 1000000000;
+      var decimals = parseInt(decimalsEl.value) || 9;
+      var desc = (descEl.value || '').trim();
+
+      // Check wallet
+      if (!connectedWallet) {
+        toast('👛', 'Connect your wallet first (button in the header)');
+        return;
+      }
+
+      launchBtn.disabled = true;
+      launchBtn.innerHTML = '<span class="lp-btn-icon">&#9673;</span> Launching...';
+      document.getElementById('lpSuccess').style.display = 'none';
+
+      runFlow(function() {
+        // Generate demo mint
+        var mintAddr = generateMint();
+
+        // Save to history
+        var launch = {
+          name: name,
+          symbol: symbol,
+          supply: supply,
+          decimals: decimals,
+          desc: desc,
+          mint: mintAddr,
+          creator: connectedWallet ? connectedWallet.slice(0, 4) + '...' + connectedWallet.slice(-4) : 'anon',
+          date: new Date().toLocaleDateString()
+        };
+        launches.push(launch);
+        localStorage.setItem('ost_lp_history', JSON.stringify(launches));
+
+        // Show success
+        document.getElementById('lpSuccessName').textContent = name;
+        document.getElementById('lpSuccessSymbol').textContent = '$' + symbol;
+        document.getElementById('lpSuccessSupply').textContent = formatSupply(supply);
+        document.getElementById('lpSuccessMint').textContent = mintAddr;
+        document.getElementById('lpSuccess').style.display = 'block';
+
+        // Reset form
+        launchBtn.innerHTML = '<span class="lp-btn-icon">&#9673;</span> Pay 25 OST & Launch Now';
+        launchBtn.disabled = false;
+        nameEl.value = '';
+        symbolEl.value = '';
+        supplyEl.value = '1000000000';
+        if (descEl) descEl.value = '';
+        if (descCount) descCount.textContent = '0';
+        document.querySelectorAll('.lp-preset').forEach(function(b) { b.classList.remove('lp-preset-active'); });
+        var defaultPreset = document.querySelector('.lp-preset[data-supply="1000000000"]');
+        if (defaultPreset) defaultPreset.classList.add('lp-preset-active');
+        validateForm();
+
+        renderRecent();
+        toast('🚀', symbol + ' launched! Mint: ' + mintAddr.slice(0, 6) + '...');
+      });
+    });
+
+    // Copy mint address
+    var copyMint = document.getElementById('lpCopyMint');
+    if (copyMint) {
+      copyMint.addEventListener('click', function() {
+        var addr = document.getElementById('lpSuccessMint').textContent;
+        if (addr && addr !== '--') {
+          navigator.clipboard.writeText(addr).then(function() { toast('📋', 'Mint address copied!'); });
+        }
+      });
+    }
+  })();
+
 })();
 
