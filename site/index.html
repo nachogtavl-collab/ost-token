@@ -26,7 +26,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="style.css?v=37">
+  <link rel="stylesheet" href="style.css?v=38">
 </head>
 <body>
 
@@ -892,40 +892,61 @@
           </div>
         </div>
 
-        <div class="gc2-split">
-          <!-- Left: Brand Cards Side-by-Side -->
-          <div class="gc2-brands-col">
-            <div class="gc2-col-label">&#127380; Select a Brand</div>
-            <div class="gc2-cats" id="gc2Cats">
-              <button class="gc2-cat gc2-cat-active" data-cat="all">All</button>
-              <button class="gc2-cat" data-cat="shop">&#128722; Shopping</button>
-              <button class="gc2-cat" data-cat="food">&#127828; Food</button>
-              <button class="gc2-cat" data-cat="game">&#127918; Gaming</button>
-              <button class="gc2-cat" data-cat="media">&#127916; Media</button>
-              <button class="gc2-cat" data-cat="travel">&#128663; Travel</button>
+        <!-- Compact Brand Strip -->
+        <div class="gc2-cats" id="gc2Cats">
+          <button class="gc2-cat gc2-cat-active" data-cat="all">All</button>
+          <button class="gc2-cat" data-cat="shop">&#128722; Shopping</button>
+          <button class="gc2-cat" data-cat="food">&#127828; Food</button>
+          <button class="gc2-cat" data-cat="game">&#127918; Gaming</button>
+          <button class="gc2-cat" data-cat="media">&#127916; Media</button>
+          <button class="gc2-cat" data-cat="travel">&#128663; Travel</button>
+        </div>
+        <div class="gc2-strip-wrap">
+          <div class="gc2-store" id="gc2Store"></div>
+        </div>
+
+        <div class="gc2-main">
+          <!-- 3D Card Preview -->
+          <div class="gc2-card-col">
+            <div class="gc2-card-preview" id="gc2CardPreview">
+              <div class="gc2-card-scene">
+                <div class="gc2-card-mockup" id="gc2CardMockup">
+                  <div class="gc2-card-shine"></div>
+                  <div class="gc2-card-holo"></div>
+                  <div class="gc2-card-chip">
+                    <div class="gc2-chip-lines"></div>
+                  </div>
+                  <div class="gc2-card-contactless">&#8942;&#8942;&#8942;</div>
+                  <img class="gc2-card-logo" id="gc2CardLogo" src="" alt="">
+                  <div class="gc2-card-value" id="gc2CardValue">$0</div>
+                  <div class="gc2-card-label">DIGITAL GIFT CARD</div>
+                  <div class="gc2-card-number">&#9679;&#9679;&#9679;&#9679; &nbsp; &#9679;&#9679;&#9679;&#9679; &nbsp; &#9679;&#9679;&#9679;&#9679; &nbsp; <span id="gc2CardLast4">XXXX</span></div>
+                  <div class="gc2-card-bottom">
+                    <div class="gc2-card-holder">
+                      <div class="gc2-card-holder-lbl">CARD HOLDER</div>
+                      <div class="gc2-card-holder-name" id="gc2CardHolder">OST USER</div>
+                    </div>
+                    <div class="gc2-card-exp">
+                      <div class="gc2-card-exp-lbl">VALID THRU</div>
+                      <div class="gc2-card-exp-val">12/28</div>
+                    </div>
+                    <div class="gc2-card-network">
+                      <div class="gc2-card-net-logo">&#9673; OST</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div class="gc2-store" id="gc2Store"></div>
+            <div class="gc2-card-brand-name" id="gc2CardBrandName">Select a brand to preview</div>
           </div>
 
-          <!-- Right: Action Panel (always visible) -->
+          <!-- Action Panel -->
           <div class="gc2-action-col" id="gc2ActionCol">
             <div class="gc2-active-brand" id="gc2ActiveBrand">
               <img class="gc2-active-logo" id="gc2DrawerLogo" alt="">
               <div class="gc2-active-info">
                 <div class="gc2-active-name" id="gc2DrawerBrand">Select a brand &rarr;</div>
                 <div class="gc2-active-tag">Gift Card</div>
-              </div>
-            </div>
-
-            <!-- Visual Gift Card Preview -->
-            <div class="gc2-card-preview" id="gc2CardPreview">
-              <div class="gc2-card-mockup" id="gc2CardMockup">
-                <div class="gc2-card-chip"></div>
-                <img class="gc2-card-logo" id="gc2CardLogo" src="" alt="">
-                <div class="gc2-card-value" id="gc2CardValue">$0</div>
-                <div class="gc2-card-label">DIGITAL GIFT CARD</div>
-                <div class="gc2-card-number">&#9679;&#9679;&#9679;&#9679; &#9679;&#9679;&#9679;&#9679; &#9679;&#9679;&#9679;&#9679; XXXX</div>
-                <div class="gc2-card-network">&#9673; Powered by OST</div>
               </div>
             </div>
 
@@ -981,14 +1002,15 @@
 
             <!-- Flow -->
             <div class="gc2-flow" id="gc2Flow" style="display:none">
-              <div class="gc2-fstep" data-s="1"><span class="gc2-fdot"></span><span>Verifying&hellip;</span></div>
+              <div class="gc2-fstep" data-s="1"><span class="gc2-fdot"></span><span>Verifying card&hellip;</span></div>
               <div class="gc2-fstep" data-s="2"><span class="gc2-fdot"></span><span>ZK proof&hellip;</span></div>
-              <div class="gc2-fstep" data-s="3"><span class="gc2-fdot"></span><span>Processing&hellip;</span></div>
+              <div class="gc2-fstep" data-s="3"><span class="gc2-fdot"></span><span>Processing on Solana&hellip;</span></div>
               <div class="gc2-fstep" data-s="4"><span class="gc2-fdot"></span><span>Complete &#10003;</span></div>
             </div>
 
             <!-- Delivered -->
             <div class="gc2-delivered" id="gc2Delivered" style="display:none">
+              <div class="gc2-del-badge">&#127881; Card Delivered</div>
               <img class="gc2-del-logo" id="gc2DelLogo" src="" alt="">
               <div class="gc2-del-code" id="gc2DelCode">XXXX-XXXX-XXXX</div>
               <button class="gc2-copy" id="gc2Copy">&#128203; Copy Code</button>
@@ -3238,6 +3260,6 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=37"></script>
+  <script src="app.js?v=38"></script>
 </body>
 </html>

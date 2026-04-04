@@ -6136,6 +6136,30 @@
     var activeLogo = document.getElementById('gc2DrawerLogo');
     var activeName = document.getElementById('gc2DrawerBrand');
 
+    // Brand-specific card gradient patterns for realistic look
+    var brandGradients = {
+      'Amazon':     'linear-gradient(135deg, #232f3e, #131921, #FF9900)',
+      'Apple':      'linear-gradient(135deg, #1d1d1f, #333336, #555)',
+      'Google Play':'linear-gradient(135deg, #1a73e8, #34a853, #fbbc04)',
+      'Steam':      'linear-gradient(135deg, #1b2838, #171d25, #2a475e)',
+      'Walmart':    'linear-gradient(135deg, #004c91, #0071ce, #ffc220)',
+      'Target':     'linear-gradient(135deg, #cc0000, #990000, #333)',
+      'eBay':       'linear-gradient(135deg, #e53238, #0064d2, #f5af02)',
+      'Starbucks':  'linear-gradient(135deg, #00704A, #1E3932, #d4e9e2)',
+      'Nike':       'linear-gradient(135deg, #111, #333, #111)',
+      'Netflix':    'linear-gradient(135deg, #221f1f, #e50914, #b20710)',
+      'Spotify':    'linear-gradient(135deg, #191414, #1db954, #191414)',
+      'Uber':       'linear-gradient(135deg, #000, #276ef1, #06c167)',
+      'Visa':       'linear-gradient(135deg, #1a1f71, #2557d6, #f7b600)',
+      'Mastercard': 'linear-gradient(135deg, #1a1f36, #eb001b, #f79e1b)',
+      'DoorDash':   'linear-gradient(135deg, #ff3008, #c41200, #1a1a1a)',
+      'PlayStation':'linear-gradient(135deg, #003087, #0070d1, #00439c)',
+      'Xbox':       'linear-gradient(135deg, #107c10, #0e6b0e, #1a1a1a)',
+      'Best Buy':   'linear-gradient(135deg, #0046be, #003a9e, #fff200)',
+      'Sephora':    'linear-gradient(135deg, #000, #333, #e0c9a6)',
+      'Nordstrom':  'linear-gradient(135deg, #1a1a1a, #333, #8b7355)'
+    };
+
     function selectBrand(brand, el) {
       selectedBrand = brand;
       document.querySelectorAll('.gc2-brand').forEach(function(c) { c.classList.remove('gc2-brand-selected'); });
@@ -6145,19 +6169,25 @@
       activeLogo.alt = brand.name;
       activeName.textContent = brand.name;
 
-      // Update visual card preview
+      // Update 3D card preview with brand-specific look
       var cardPreview = document.getElementById('gc2CardPreview');
       var cardMockup = document.getElementById('gc2CardMockup');
       var cardLogo = document.getElementById('gc2CardLogo');
+      var cardBrandName = document.getElementById('gc2CardBrandName');
       if (cardPreview && cardMockup && cardLogo) {
         cardPreview.style.display = 'block';
         var c = brand.color || '#FFD700';
-        cardMockup.style.background = 'linear-gradient(135deg, ' + c + ', ' + c + '88, #1a1a2e)';
+        cardMockup.style.background = brandGradients[brand.name] || ('linear-gradient(135deg, ' + c + ', ' + c + '88, #1a1a2e)');
         cardMockup.style.setProperty('--card-glow', c + '33');
         cardLogo.src = logoSrc(brand.domain);
         cardLogo.onerror = function() { logoFallback(this, brand.domain, brand.name, brand.color); };
         cardLogo.alt = brand.name;
       }
+      if (cardBrandName) cardBrandName.textContent = brand.name + ' Gift Card';
+
+      // Generate random last 4 digits
+      var last4 = document.getElementById('gc2CardLast4');
+      if (last4) last4.textContent = (1000 + Math.floor(Math.random() * 9000)).toString();
 
       document.getElementById('gc2Flow').style.display = 'none';
       document.getElementById('gc2Delivered').style.display = 'none';
@@ -6184,16 +6214,36 @@
       });
     });
 
-    // Quick amounts
+    // Quick amounts (with active state)
     document.querySelectorAll('.gc2-q').forEach(function(btn) {
       btn.addEventListener('click', function() {
         var amt = btn.dataset.amt;
         var pane = btn.closest('.gc2-pane');
         if (!pane) return;
+        pane.querySelectorAll('.gc2-q').forEach(function(q) { q.classList.remove('gc2-q-active'); });
+        btn.classList.add('gc2-q-active');
         var input = pane.querySelector('.gc2-inp[type="number"]');
         if (input) { input.value = amt; input.dispatchEvent(new Event('input')); }
       });
     });
+
+    // 3D card tilt on mouse move
+    (function() {
+      var scene = document.querySelector('.gc2-card-scene');
+      var card = document.getElementById('gc2CardMockup');
+      if (!scene || !card) return;
+      scene.addEventListener('mousemove', function(e) {
+        var rect = scene.getBoundingClientRect();
+        var x = (e.clientX - rect.left) / rect.width;
+        var y = (e.clientY - rect.top) / rect.height;
+        var rotY = (x - 0.5) * 20;
+        var rotX = (0.5 - y) * 14;
+        card.style.transform = 'rotateY(' + rotY + 'deg) rotateX(' + rotX + 'deg) scale(1.02)';
+      });
+      scene.addEventListener('mouseleave', function() {
+        card.style.transform = '';
+      });
+    })();
 
     // Redeem
     var gc2Balance = document.getElementById('gc2Balance');
