@@ -3401,10 +3401,14 @@ select.sim-input { cursor: pointer; }
 /* ==========================================================================
    OST GIFT CARD HUB v3 — Side-by-Side Split Layout
    ========================================================================== */
-.gc2 { margin-top: 64px; }
-.gc2-head { text-align: center; margin-bottom: 28px; }
+.gc2 { margin-top: 64px; position: relative; padding: 40px 28px 28px; border-radius: 24px; background: linear-gradient(165deg, rgba(255,215,0,.03) 0%, rgba(8,10,20,.65) 40%, rgba(255,215,0,.015) 100%); border: 1px solid rgba(255,215,0,.07); overflow: hidden; }
+.gc2::before { content: ''; position: absolute; top: 0; left: 20%; right: 20%; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,215,0,.5), transparent); }
+.gc2::after { content: ''; position: absolute; top: -80px; right: -40px; width: 250px; height: 250px; border-radius: 50%; background: radial-gradient(circle, rgba(255,215,0,.04), transparent 65%); pointer-events: none; z-index: 0; }
+.gc2-head { text-align: center; margin-bottom: 28px; position: relative; z-index: 1; }
 .gc2-head h3 { font-size: 2rem; font-weight: 800; background: linear-gradient(135deg, #FFD700, #fff, #FFD700); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 8px; }
 .gc2-head p { color: var(--muted); max-width: 520px; margin: 0 auto; font-size: .92rem; line-height: 1.5; }
+.gc2-badges { display: flex; justify-content: center; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+.gc2-badge { padding: 5px 14px; border-radius: 20px; font-size: .72rem; font-weight: 700; color: #FFD700; background: rgba(255,215,0,.06); border: 1px solid rgba(255,215,0,.12); backdrop-filter: blur(6px); letter-spacing: .02em; }
 
 /* Category Filter Tabs */
 .gc2-cats { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
@@ -3548,10 +3552,16 @@ select.sim-input { cursor: pointer; }
 /* ==========================================================================
    OST FUEL & GO v3 — Tabs + World Map + Browse + Pay
    ========================================================================== */
-.fuel2 { margin-top: 72px; }
-.fuel2-head { text-align: center; margin-bottom: 20px; }
+.fuel2 { margin-top: 72px; position: relative; padding: 40px 28px 28px; border-radius: 24px; background: linear-gradient(165deg, rgba(255,107,53,.03) 0%, rgba(8,10,20,.65) 40%, rgba(255,143,0,.015) 100%); border: 1px solid rgba(255,107,53,.07); overflow: hidden; }
+.fuel2::before { content: ''; position: absolute; top: 0; left: 20%; right: 20%; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,107,53,.5), transparent); }
+.fuel2::after { content: ''; position: absolute; top: -80px; left: -40px; width: 250px; height: 250px; border-radius: 50%; background: radial-gradient(circle, rgba(255,107,53,.04), transparent 65%); pointer-events: none; z-index: 0; }
+.fuel2-head { text-align: center; margin-bottom: 20px; position: relative; z-index: 1; }
 .fuel2-head h3 { font-size: 1.8rem; font-weight: 800; background: linear-gradient(135deg, #FF6B35, #FFD700, #FF6B35); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 6px; }
 .fuel2-head p { color: var(--muted); max-width: 460px; margin: 0 auto; font-size: .9rem; line-height: 1.5; }
+
+/* Fuel badges */
+.fuel2-badges { display: flex; justify-content: center; gap: 10px; margin-top: 14px; margin-bottom: 4px; flex-wrap: wrap; }
+.fuel2-badge { padding: 5px 14px; border-radius: 20px; font-size: .72rem; font-weight: 700; color: #FF6B35; background: rgba(255,107,53,.06); border: 1px solid rgba(255,107,53,.12); backdrop-filter: blur(6px); letter-spacing: .02em; }
 
 /* Stats bar */
 .fuel2-stats { display: flex; justify-content: center; gap: 28px; margin-top: 16px; }
@@ -3694,8 +3704,18 @@ select.sim-input { cursor: pointer; }
 /* ==========================================================================
    OST LAUNCHPAD — Launch Your Coin Inside OST
    ========================================================================== */
-.lp-header { text-align: center; margin-bottom: 32px; }
-.lp-icon-ring { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, rgba(109,159,255,.12), rgba(167,139,250,.12)); display: flex; align-items: center; justify-content: center; font-size: 1.8rem; margin: 0 auto 12px; border: 1px solid rgba(109,159,255,.15); }
+.lp-header { text-align: center; margin-bottom: 32px; position: relative; }
+.lp-header::before { content: ''; position: absolute; top: -40px; left: 50%; transform: translateX(-50%); width: 400px; height: 200px; border-radius: 50%; background: radial-gradient(ellipse, rgba(109,159,255,.06), rgba(167,139,250,.03) 50%, transparent 70%); pointer-events: none; z-index: 0; }
+.lp-icon-ring { width: 72px; height: 72px; border-radius: 50%; background: linear-gradient(135deg, rgba(109,159,255,.15), rgba(167,139,250,.15)); display: flex; align-items: center; justify-content: center; font-size: 2rem; margin: 0 auto 14px; border: 1px solid rgba(109,159,255,.2); position: relative; z-index: 1; box-shadow: 0 0 30px rgba(109,159,255,.15), 0 0 60px rgba(167,139,250,.05); animation: lpRingPulse 4s ease-in-out infinite; }
+@keyframes lpRingPulse { 0%,100% { box-shadow: 0 0 30px rgba(109,159,255,.15), 0 0 60px rgba(167,139,250,.05); } 50% { box-shadow: 0 0 40px rgba(109,159,255,.25), 0 0 80px rgba(167,139,250,.1); } }
+
+/* Launchpad badges */
+.lp-badges { display: flex; justify-content: center; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+.lp-badge { padding: 5px 14px; border-radius: 20px; font-size: .72rem; font-weight: 700; color: var(--accent); background: rgba(109,159,255,.06); border: 1px solid rgba(109,159,255,.12); backdrop-filter: blur(6px); letter-spacing: .02em; }
+
+/* Launchpad container background */
+#launchpad .container { position: relative; }
+#launchpad .container::before { content: ''; position: absolute; top: -60px; right: -80px; width: 350px; height: 350px; border-radius: 50%; background: radial-gradient(circle, rgba(109,159,255,.03), rgba(167,139,250,.02) 50%, transparent 70%); pointer-events: none; }
 
 /* Stats bar */
 .lp-stats { display: flex; justify-content: center; gap: 32px; margin-bottom: 32px; flex-wrap: wrap; }

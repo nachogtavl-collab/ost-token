@@ -6054,6 +6054,20 @@
     var store = document.getElementById('gc2Store');
     if (!store) return;
 
+    // Colorful SVG fallback for when logo APIs fail
+    function brandSvg(name, color) {
+      var c = color || '#555';
+      var l = (name || '?').charAt(0).toUpperCase();
+      return 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="' + c + '"/><stop offset="100%" stop-color="' + c + '88"/></linearGradient></defs><rect fill="url(#g)" width="56" height="56" rx="13"/><text x="28" y="37" text-anchor="middle" fill="#fff" font-size="24" font-weight="bold" font-family="Inter,system-ui,sans-serif">' + l + '</text></svg>');
+    }
+
+    // Chain: Clearbit → Google favicon → SVG avatar
+    function logoSrc(domain) { return 'https://logo.clearbit.com/' + domain; }
+    function logoFallback(img, domain, name, color) {
+      img.onerror = function() { this.onerror = null; this.src = brandSvg(name, color); };
+      img.src = 'https://img.logo.dev/' + domain + '?token=pk_anonymous&size=64';
+    }
+
     var fxToUSD = { USD:1, EUR:1.08, GBP:1.27, CAD:.74, AUD:.65, BRL:.20, MXN:.058, INR:.012, JPY:.0067, KRW:.00075, TRY:.031, RUB:.011, AED:.27 };
 
     var brands = [
@@ -6088,7 +6102,19 @@
       card.className = 'gc2-brand';
       card.dataset.cat = b.cat || 'shop';
       card.style.setProperty('--brand-color', b.color || '#FFD700');
-      card.innerHTML = '<img src="https://logo.clearbit.com/' + b.domain + '" alt="' + b.name + '" loading="lazy" onerror="this.src=\'https://www.google.com/s2/favicons?domain=' + b.domain + '&sz=128\'"><span>' + b.name + '</span><span class="gc2-brand-tag">Gift Card</span>';
+      var img = document.createElement('img');
+      img.alt = b.name;
+      img.loading = 'lazy';
+      img.src = logoSrc(b.domain);
+      img.onerror = function() { logoFallback(this, b.domain, b.name, b.color); };
+      card.appendChild(img);
+      var nameSpan = document.createElement('span');
+      nameSpan.textContent = b.name;
+      card.appendChild(nameSpan);
+      var tag = document.createElement('span');
+      tag.className = 'gc2-brand-tag';
+      tag.textContent = 'Gift Card';
+      card.appendChild(tag);
       card.addEventListener('click', function() { selectBrand(b, card); });
       store.appendChild(card);
     });
@@ -6112,7 +6138,8 @@
       selectedBrand = brand;
       document.querySelectorAll('.gc2-brand').forEach(function(c) { c.classList.remove('gc2-brand-selected'); });
       if (el) el.classList.add('gc2-brand-selected');
-      activeLogo.src = 'https://logo.clearbit.com/' + brand.domain;
+      activeLogo.src = logoSrc(brand.domain);
+      activeLogo.onerror = function() { logoFallback(this, brand.domain, brand.name, brand.color); };
       activeLogo.alt = brand.name;
       activeName.textContent = brand.name;
 
@@ -6125,9 +6152,9 @@
         var c = brand.color || '#FFD700';
         cardMockup.style.background = 'linear-gradient(135deg, ' + c + ', ' + c + '88, #1a1a2e)';
         cardMockup.style.setProperty('--card-glow', c + '33');
-        cardLogo.src = 'https://logo.clearbit.com/' + brand.domain;
+        cardLogo.src = logoSrc(brand.domain);
+        cardLogo.onerror = function() { logoFallback(this, brand.domain, brand.name, brand.color); };
         cardLogo.alt = brand.name;
-        cardLogo.onerror = function() { this.src = 'https://www.google.com/s2/favicons?domain=' + brand.domain + '&sz=128'; };
       }
 
       document.getElementById('gc2Flow').style.display = 'none';
@@ -6274,7 +6301,7 @@
         var delivered = document.getElementById('gc2Delivered');
         delivered.style.display = 'block';
         var logo = document.getElementById('gc2DelLogo');
-        if (logo && selectedBrand) { logo.src = 'https://logo.clearbit.com/' + selectedBrand.domain; logo.alt = selectedBrand.name; }
+        if (logo && selectedBrand) { logo.src = logoSrc(selectedBrand.domain); logo.onerror = function() { logoFallback(this, selectedBrand.domain, selectedBrand.name, selectedBrand.color); }; logo.alt = selectedBrand.name; }
         var seg = function() { return Math.random().toString(36).substring(2, 6).toUpperCase(); };
         document.getElementById('gc2DelCode').textContent = seg() + '-' + seg() + '-' + seg() + '-' + seg();
         var amt = parseFloat(gc2BuyAmt.value) || 0;
@@ -6307,10 +6334,16 @@
       gcHistory.slice().reverse().forEach(function(tx) {
         var el = document.createElement('div');
         el.className = 'gc2-hx';
-        el.innerHTML = '<img class="gc2-hx-logo" src="https://logo.clearbit.com/' + (tx.domain || '') + '" alt="" onerror="this.style.display=\'none\'">' +
-          '<div class="gc2-hx-info"><div class="gc2-hx-name">' + tx.brand + '</div><div class="gc2-hx-date">' + tx.date + '</div></div>' +
+        var hxImg = document.createElement('img');
+        hxImg.className = 'gc2-hx-logo';
+        hxImg.src = logoSrc(tx.domain || '');
+        hxImg.onerror = function() { logoFallback(this, tx.domain || '', tx.brand || '?', '#FFD700'); };
+        el.appendChild(hxImg);
+        var hxRest = document.createElement('span');
+        hxRest.innerHTML = '<div class="gc2-hx-info"><div class="gc2-hx-name">' + tx.brand + '</div><div class="gc2-hx-date">' + tx.date + '</div></div>' +
           '<div class="gc2-hx-amt"><div class="gc2-hx-fiat">$' + tx.usd + '</div><div class="gc2-hx-ost">' + tx.ost + ' OST</div></div>' +
           '<span class="gc2-hx-type ' + (tx.type === 'sell' ? 'gc2-hx-sell' : 'gc2-hx-buy') + '">' + tx.type + '</span>';
+        while (hxRest.firstChild) el.appendChild(hxRest.firstChild);
         list.appendChild(el);
       });
     }
@@ -6408,9 +6441,10 @@
 
       stations.forEach(function(s) {
         var marker = L.marker([s.lat, s.lng], { icon: stationIcon }).addTo(map);
+        var popupSvg = brandSvg(s.name, s.color || '#e63946').replace(/'/g, '&apos;');
         marker.bindPopup(
           '<div style="text-align:center">' +
-          '<img src="https://logo.clearbit.com/' + s.domain + '" style="width:40px;height:40px;border-radius:10px;background:#fff;padding:4px;box-sizing:border-box;margin-bottom:8px" onerror="this.style.display=\'none\'">' +
+          '<img src="' + logoSrc(s.domain) + '" style="width:44px;height:44px;border-radius:10px;background:#fff;padding:4px;box-sizing:border-box;margin-bottom:8px;box-shadow:0 2px 8px rgba(0,0,0,.3)" onerror="this.onerror=null;this.style.background=\'transparent\';this.style.padding=\'0\';this.src=\'' + popupSvg + '\'">' +
           '<div style="font-weight:800;font-size:.95rem;margin-bottom:2px">' + s.name + '</div>' +
           '<div style="font-size:.72rem;color:rgba(255,255,255,.5);margin-bottom:2px">' + s.region + '</div>' +
           '<div style="font-size:.82rem;font-weight:700;color:#e63946;margin-bottom:8px">' + s.count + ' stations</div>' +
@@ -6429,9 +6463,17 @@
       stations.forEach(function(s) {
         var item = document.createElement('div');
         item.className = 'fuel2-legend-item';
-        item.innerHTML = '<span class="fuel2-legend-dot"></span>' +
-          '<img src="https://logo.clearbit.com/' + s.domain + '" alt="' + s.name + '" loading="lazy" onerror="this.style.display=\'none\'">' +
-          '<div><div class="fuel2-legend-name">' + s.name + '</div><div class="fuel2-legend-cnt">' + s.count + '</div></div>';
+        item.style.setProperty('--station-color', s.color || '#FF6B35');
+        var legImg = document.createElement('img');
+        legImg.alt = s.name;
+        legImg.loading = 'lazy';
+        legImg.src = logoSrc(s.domain);
+        legImg.onerror = function() { logoFallback(this, s.domain, s.name, s.color); };
+        item.innerHTML = '<span class="fuel2-legend-dot" style="background:' + (s.color || '#e63946') + ';box-shadow:0 0 6px ' + (s.color || '#e63946') + '80"></span>';
+        item.appendChild(legImg);
+        var infoDiv = document.createElement('div');
+        infoDiv.innerHTML = '<div class="fuel2-legend-name">' + s.name + '</div><div class="fuel2-legend-cnt">' + s.count + '</div>';
+        item.appendChild(infoDiv);
         item.addEventListener('click', function() {
           if (map) map.setView([s.lat, s.lng], 6);
         });
@@ -6447,9 +6489,17 @@
         card.className = 'fuel2-bcard';
         card.dataset.station = s.name;
         card.style.setProperty('--station-color', s.color || '#FF6B35');
-        card.innerHTML = '<img src="https://logo.clearbit.com/' + s.domain + '" alt="' + s.name + '" loading="lazy" onerror="this.src=\'https://www.google.com/s2/favicons?domain=' + s.domain + '&sz=128\'">' +
-          '<div class="fuel2-bcard-info"><div class="fuel2-bcard-name">' + s.name + '</div><div class="fuel2-bcard-cnt">' + s.count + '</div><div class="fuel2-bcard-region">' + s.region + '</div>' +
-          '<div class="fuel2-bcard-fuel">' + (s.fuel || 'Gas') + '</div></div>';
+        var bImg = document.createElement('img');
+        bImg.alt = s.name;
+        bImg.loading = 'lazy';
+        bImg.src = logoSrc(s.domain);
+        bImg.onerror = function() { logoFallback(this, s.domain, s.name, s.color); };
+        card.appendChild(bImg);
+        var infoDiv = document.createElement('div');
+        infoDiv.className = 'fuel2-bcard-info';
+        infoDiv.innerHTML = '<div class="fuel2-bcard-name">' + s.name + '</div><div class="fuel2-bcard-cnt">' + s.count + '</div><div class="fuel2-bcard-region">' + s.region + '</div>' +
+          '<div class="fuel2-bcard-fuel">' + (s.fuel || 'Gas') + '</div>';
+        card.appendChild(infoDiv);
         card.addEventListener('click', function() {
           selectStation(s);
           document.querySelectorAll('.fuel2-tab').forEach(function(t) { t.classList.remove('fuel2-tab-active'); });
@@ -6494,7 +6544,8 @@
       pay.style.animation = 'none';
       void pay.offsetHeight;
       pay.style.animation = 'gc2DrawerIn .4s ease';
-      document.getElementById('fuel2PayLogo').src = 'https://logo.clearbit.com/' + s.domain;
+      document.getElementById('fuel2PayLogo').src = logoSrc(s.domain);
+      document.getElementById('fuel2PayLogo').onerror = function() { logoFallback(this, s.domain, s.name, s.color); };
       document.getElementById('fuel2PayLogo').alt = s.name;
       document.getElementById('fuel2PayName').textContent = s.name;
       document.getElementById('fuel2Flow').style.display = 'none';
