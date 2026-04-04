@@ -2312,6 +2312,7 @@
   let prices = { bitcoin: 0, ethereum: 0, solana: 0 };
   let priceHistory = { bitcoin: [], ethereum: [], solana: [] };
   let ostPrice = 0.0001; // Default OST price
+  window.ostPrice = ostPrice;
   const OST_BASE_PRICE = 0.0001;
 
   // Fiat exchange rates — fetched live, defaults as fallback
@@ -2388,6 +2389,7 @@
 
       // Simulate OST price with slight variation
       ostPrice = OST_BASE_PRICE * (0.95 + Math.random() * 0.1);
+      window.ostPrice = ostPrice;
 
       // Update ticker
       const tickerPrice = $('#tickerPrice');
@@ -6048,25 +6050,25 @@
   })();
 
   // ========================================================================
+  // Shared Logo Helpers — used by Gift Card, Fuel, and Launchpad
+  // ========================================================================
+  function brandSvg(name, color) {
+    var c = color || '#555';
+    var l = (name || '?').charAt(0).toUpperCase();
+    return 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="' + c + '"/><stop offset="100%" stop-color="' + c + '88"/></linearGradient></defs><rect fill="url(#g)" width="56" height="56" rx="13"/><text x="28" y="37" text-anchor="middle" fill="#fff" font-size="24" font-weight="bold" font-family="Inter,system-ui,sans-serif">' + l + '</text></svg>');
+  }
+  function logoSrc(domain) { return 'https://logo.clearbit.com/' + domain; }
+  function logoFallback(img, domain, name, color) {
+    img.onerror = function() { this.onerror = null; this.src = brandSvg(name, color); };
+    img.src = 'https://img.logo.dev/' + domain + '?token=pk_anonymous&size=64';
+  }
+
+  // ========================================================================
   // OST GIFT CARD HUB v3 — Split Layout
   // ========================================================================
   (function initGiftCardHub() {
     var store = document.getElementById('gc2Store');
     if (!store) return;
-
-    // Colorful SVG fallback for when logo APIs fail
-    function brandSvg(name, color) {
-      var c = color || '#555';
-      var l = (name || '?').charAt(0).toUpperCase();
-      return 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="' + c + '"/><stop offset="100%" stop-color="' + c + '88"/></linearGradient></defs><rect fill="url(#g)" width="56" height="56" rx="13"/><text x="28" y="37" text-anchor="middle" fill="#fff" font-size="24" font-weight="bold" font-family="Inter,system-ui,sans-serif">' + l + '</text></svg>');
-    }
-
-    // Chain: Clearbit → Google favicon → SVG avatar
-    function logoSrc(domain) { return 'https://logo.clearbit.com/' + domain; }
-    function logoFallback(img, domain, name, color) {
-      img.onerror = function() { this.onerror = null; this.src = brandSvg(name, color); };
-      img.src = 'https://img.logo.dev/' + domain + '?token=pk_anonymous&size=64';
-    }
 
     var fxToUSD = { USD:1, EUR:1.08, GBP:1.27, CAD:.74, AUD:.65, BRL:.20, MXN:.058, INR:.012, JPY:.0067, KRW:.00075, TRY:.031, RUB:.011, AED:.27 };
 
