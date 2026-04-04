@@ -26,7 +26,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="style.css?v=34">
+  <link rel="stylesheet" href="style.css?v=35">
 </head>
 <body>
 
@@ -890,6 +890,14 @@
           <!-- Left: Brand Cards Side-by-Side -->
           <div class="gc2-brands-col">
             <div class="gc2-col-label">&#127380; Select a Brand</div>
+            <div class="gc2-cats" id="gc2Cats">
+              <button class="gc2-cat gc2-cat-active" data-cat="all">All</button>
+              <button class="gc2-cat" data-cat="shop">&#128722; Shopping</button>
+              <button class="gc2-cat" data-cat="food">&#127828; Food</button>
+              <button class="gc2-cat" data-cat="game">&#127918; Gaming</button>
+              <button class="gc2-cat" data-cat="media">&#127916; Media</button>
+              <button class="gc2-cat" data-cat="travel">&#128663; Travel</button>
+            </div>
             <div class="gc2-store" id="gc2Store"></div>
           </div>
 
@@ -900,6 +908,18 @@
               <div class="gc2-active-info">
                 <div class="gc2-active-name" id="gc2DrawerBrand">Select a brand &rarr;</div>
                 <div class="gc2-active-tag">Gift Card</div>
+              </div>
+            </div>
+
+            <!-- Visual Gift Card Preview -->
+            <div class="gc2-card-preview" id="gc2CardPreview">
+              <div class="gc2-card-mockup" id="gc2CardMockup">
+                <div class="gc2-card-chip"></div>
+                <img class="gc2-card-logo" id="gc2CardLogo" src="" alt="">
+                <div class="gc2-card-value" id="gc2CardValue">$0</div>
+                <div class="gc2-card-label">DIGITAL GIFT CARD</div>
+                <div class="gc2-card-number">&#9679;&#9679;&#9679;&#9679; &#9679;&#9679;&#9679;&#9679; &#9679;&#9679;&#9679;&#9679; XXXX</div>
+                <div class="gc2-card-network">&#9673; Powered by OST</div>
               </div>
             </div>
 
@@ -1023,8 +1043,19 @@
         <!-- Tab 3: Pay & Rewards -->
         <div class="fuel2-panel" id="fuel2PanelPay">
           <div class="fuel2-pay-prompt" id="fuel2PayPrompt">
-            <div class="fuel2-prompt-icon">&#9981;</div>
-            <p>Select a station from <b>World Map</b> or <b>Browse Stations</b>, then return here to pay.</p>
+            <div class="fuel2-pump-visual">
+              <div class="fuel2-pump">
+                <div class="fuel2-pump-body">
+                  <div class="fuel2-pump-screen">&#9981;</div>
+                  <div class="fuel2-pump-gauge">
+                    <div class="fuel2-pump-fill" id="fuel2PumpFill"></div>
+                  </div>
+                </div>
+                <div class="fuel2-pump-nozzle"></div>
+              </div>
+            </div>
+            <p style="font-size:1.05rem;font-weight:600;color:var(--text);margin-bottom:4px">Select a Station to Pay</p>
+            <p>Choose from <b>World Map</b> or <b>Browse Stations</b>, then return here.</p>
           </div>
           <div class="fuel2-pay" id="fuel2Pay" style="display:none">
             <div class="fuel2-pay-head">
@@ -3061,6 +3092,23 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
 
         <!-- Right: Info Panel -->
         <div class="lp-info-col">
+          <!-- Live Token Preview -->
+          <div class="lp-info-card lp-token-card" id="lpTokenCard">
+            <div class="lp-coin-wrap">
+              <div class="lp-coin" id="lpCoin">
+                <div class="lp-coin-letter" id="lpCoinLetter">?</div>
+              </div>
+            </div>
+            <div class="lp-token-name" id="lpTokenName">Your Token</div>
+            <div class="lp-token-symbol" id="lpTokenSymbol">$SYMBOL</div>
+            <div class="lp-token-meta">
+              <div class="lp-token-meta-row"><span>Supply</span><span id="lpTokenSupply">1,000,000,000</span></div>
+              <div class="lp-token-meta-row"><span>Decimals</span><span id="lpTokenDecimals">9</span></div>
+              <div class="lp-token-meta-row"><span>Standard</span><span>Token-2022</span></div>
+              <div class="lp-token-meta-row"><span>Network</span><span class="lp-chain-badge"><img src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png" alt="SOL" class="lp-sol-icon"> Solana</span></div>
+            </div>
+          </div>
+
           <div class="lp-info-card">
             <h3>How It Works &mdash; OST-Only Flow</h3>
             <div class="lp-steps">
@@ -3172,6 +3220,6 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=34"></script>
+  <script src="app.js?v=35"></script>
 </body>
 </html>

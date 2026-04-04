@@ -6057,26 +6057,26 @@
     var fxToUSD = { USD:1, EUR:1.08, GBP:1.27, CAD:.74, AUD:.65, BRL:.20, MXN:.058, INR:.012, JPY:.0067, KRW:.00075, TRY:.031, RUB:.011, AED:.27 };
 
     var brands = [
-      { name:'Amazon',      domain:'amazon.com' },
-      { name:'Apple',       domain:'apple.com' },
-      { name:'Google Play', domain:'google.com' },
-      { name:'Steam',       domain:'steampowered.com' },
-      { name:'Walmart',     domain:'walmart.com' },
-      { name:'Target',      domain:'target.com' },
-      { name:'eBay',        domain:'ebay.com' },
-      { name:'Starbucks',   domain:'starbucks.com' },
-      { name:'Nike',        domain:'nike.com' },
-      { name:'Netflix',     domain:'netflix.com' },
-      { name:'Spotify',     domain:'spotify.com' },
-      { name:'Uber',        domain:'uber.com' },
-      { name:'Visa',        domain:'visa.com' },
-      { name:'Mastercard',  domain:'mastercard.com' },
-      { name:'DoorDash',    domain:'doordash.com' },
-      { name:'PlayStation', domain:'playstation.com' },
-      { name:'Xbox',        domain:'xbox.com' },
-      { name:'Best Buy',    domain:'bestbuy.com' },
-      { name:'Sephora',     domain:'sephora.com' },
-      { name:'Nordstrom',   domain:'nordstrom.com' }
+      { name:'Amazon',      domain:'amazon.com',       color:'#FF9900', cat:'shop' },
+      { name:'Apple',       domain:'apple.com',        color:'#A2AAAD', cat:'shop' },
+      { name:'Google Play', domain:'google.com',       color:'#34A853', cat:'game' },
+      { name:'Steam',       domain:'steampowered.com', color:'#1b2838', cat:'game' },
+      { name:'Walmart',     domain:'walmart.com',      color:'#0071CE', cat:'shop' },
+      { name:'Target',      domain:'target.com',       color:'#CC0000', cat:'shop' },
+      { name:'eBay',        domain:'ebay.com',         color:'#E53238', cat:'shop' },
+      { name:'Starbucks',   domain:'starbucks.com',    color:'#00704A', cat:'food' },
+      { name:'Nike',        domain:'nike.com',         color:'#111111', cat:'shop' },
+      { name:'Netflix',     domain:'netflix.com',      color:'#E50914', cat:'media' },
+      { name:'Spotify',     domain:'spotify.com',      color:'#1DB954', cat:'media' },
+      { name:'Uber',        domain:'uber.com',         color:'#000000', cat:'travel' },
+      { name:'Visa',        domain:'visa.com',         color:'#1A1F71', cat:'shop' },
+      { name:'Mastercard',  domain:'mastercard.com',   color:'#EB001B', cat:'shop' },
+      { name:'DoorDash',    domain:'doordash.com',     color:'#FF3008', cat:'food' },
+      { name:'PlayStation', domain:'playstation.com',  color:'#003087', cat:'game' },
+      { name:'Xbox',        domain:'xbox.com',         color:'#107C10', cat:'game' },
+      { name:'Best Buy',    domain:'bestbuy.com',      color:'#0046BE', cat:'shop' },
+      { name:'Sephora',     domain:'sephora.com',      color:'#000000', cat:'shop' },
+      { name:'Nordstrom',   domain:'nordstrom.com',    color:'#000000', cat:'shop' }
     ];
 
     var selectedBrand = null;
@@ -6086,9 +6086,23 @@
     brands.forEach(function(b) {
       var card = document.createElement('div');
       card.className = 'gc2-brand';
-      card.innerHTML = '<img src="https://logo.clearbit.com/' + b.domain + '" alt="' + b.name + '" loading="lazy" onerror="this.src=\'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2256%22 height=%2256%22><rect fill=%22%23222%22 width=%2256%22 height=%2256%22 rx=%2213%22/><text x=%2228%22 y=%2236%22 text-anchor=%22middle%22 fill=%22%23fff%22 font-size=%2218%22>' + b.name.charAt(0) + '</text></svg>\'"><span>' + b.name + '</span><span class="gc2-brand-tag">Gift Card</span>';
+      card.dataset.cat = b.cat || 'shop';
+      card.style.setProperty('--brand-color', b.color || '#FFD700');
+      card.innerHTML = '<img src="https://logo.clearbit.com/' + b.domain + '" alt="' + b.name + '" loading="lazy" onerror="this.src=\'https://www.google.com/s2/favicons?domain=' + b.domain + '&sz=128\'"><span>' + b.name + '</span><span class="gc2-brand-tag">Gift Card</span>';
       card.addEventListener('click', function() { selectBrand(b, card); });
       store.appendChild(card);
+    });
+
+    // Category filter
+    document.querySelectorAll('.gc2-cat').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.gc2-cat').forEach(function(b) { b.classList.remove('gc2-cat-active'); });
+        btn.classList.add('gc2-cat-active');
+        var cat = btn.dataset.cat;
+        document.querySelectorAll('.gc2-brand').forEach(function(c) {
+          c.style.display = (cat === 'all' || c.dataset.cat === cat) ? '' : 'none';
+        });
+      });
     });
 
     var activeLogo = document.getElementById('gc2DrawerLogo');
@@ -6101,6 +6115,21 @@
       activeLogo.src = 'https://logo.clearbit.com/' + brand.domain;
       activeLogo.alt = brand.name;
       activeName.textContent = brand.name;
+
+      // Update visual card preview
+      var cardPreview = document.getElementById('gc2CardPreview');
+      var cardMockup = document.getElementById('gc2CardMockup');
+      var cardLogo = document.getElementById('gc2CardLogo');
+      if (cardPreview && cardMockup && cardLogo) {
+        cardPreview.style.display = 'block';
+        var c = brand.color || '#FFD700';
+        cardMockup.style.background = 'linear-gradient(135deg, ' + c + ', ' + c + '88, #1a1a2e)';
+        cardMockup.style.setProperty('--card-glow', c + '33');
+        cardLogo.src = 'https://logo.clearbit.com/' + brand.domain;
+        cardLogo.alt = brand.name;
+        cardLogo.onerror = function() { this.src = 'https://www.google.com/s2/favicons?domain=' + brand.domain + '&sz=128'; };
+      }
+
       document.getElementById('gc2Flow').style.display = 'none';
       document.getElementById('gc2Delivered').style.display = 'none';
       resetFlowSteps();
@@ -6146,6 +6175,17 @@
     var gc2RedeemFee = document.getElementById('gc2RedeemFee');
     var gc2RedeemBtn = document.getElementById('gc2RedeemBtn');
 
+    function updateCardValue() {
+      var el = document.getElementById('gc2CardValue');
+      if (!el) return;
+      var mode = document.querySelector('.gc2-mode-active');
+      var isRedeem = mode && mode.dataset.mode === 'redeem';
+      var amt = parseFloat((isRedeem ? gc2Balance.value : document.getElementById('gc2BuyAmt').value) || 0);
+      var cur = isRedeem ? gc2Currency.value : (document.getElementById('gc2BuyCur') || {}).value || 'USD';
+      var sym = { USD:'$', EUR:'€', GBP:'£', CAD:'C$', AUD:'A$', BRL:'R$', MXN:'MX$', INR:'₹', JPY:'¥', KRW:'₩', TRY:'₺', RUB:'₽', AED:'د.إ' };
+      el.textContent = (sym[cur] || '$') + (amt || 0);
+    }
+
     function updateRedeem() {
       var bal = parseFloat(gc2Balance.value) || 0;
       var code = (gc2Code.value || '').trim();
@@ -6165,9 +6205,9 @@
         gc2RedeemBtn.disabled = true;
       }
     }
-    gc2Balance.addEventListener('input', updateRedeem);
+    gc2Balance.addEventListener('input', function() { updateRedeem(); updateCardValue(); });
     gc2Code.addEventListener('input', updateRedeem);
-    gc2Currency.addEventListener('change', updateRedeem);
+    gc2Currency.addEventListener('change', function() { updateRedeem(); updateCardValue(); });
 
     // Buy
     var gc2BuyAmt = document.getElementById('gc2BuyAmt');
@@ -6195,8 +6235,8 @@
         gc2BuyBtn.disabled = true;
       }
     }
-    gc2BuyAmt.addEventListener('input', updateBuy);
-    gc2BuyCur.addEventListener('change', updateBuy);
+    gc2BuyAmt.addEventListener('input', function() { updateBuy(); updateCardValue(); });
+    gc2BuyCur.addEventListener('change', function() { updateBuy(); updateCardValue(); });
 
     // Flow
     function resetFlowSteps() {
@@ -6300,36 +6340,36 @@
     if (!mapEl) return;
 
     var stations = [
-      { name:'Shell',          domain:'shell.com',          count:'46,000+', region:'Global',          lat:29.76,  lng:-95.37 },
-      { name:'BP',             domain:'bp.com',             count:'21,000+', region:'Europe/Americas',  lat:51.51,  lng:-0.13 },
-      { name:'ExxonMobil',     domain:'exxonmobil.com',     count:'12,000+', region:'Americas',         lat:32.78,  lng:-96.80 },
-      { name:'Chevron',        domain:'chevron.com',        count:'8,000+',  region:'Americas',         lat:37.77,  lng:-122.42 },
-      { name:'TotalEnergies',  domain:'totalenergies.com',  count:'16,000+', region:'Europe/Africa',    lat:48.86,  lng:2.35 },
-      { name:'ADNOC',          domain:'adnoc.ae',           count:'500+',    region:'Middle East',      lat:24.45,  lng:54.65 },
-      { name:'7-Eleven',       domain:'7-eleven.com',       count:'83,000+', region:'Global',           lat:35.68,  lng:139.69 },
-      { name:'OXXO',           domain:'oxxo.com',           count:'21,000+', region:'Latin America',    lat:25.67,  lng:-100.31 },
-      { name:'Circle K',       domain:'circlek.com',        count:'14,000+', region:'Global',           lat:33.45,  lng:-112.07 },
-      { name:'Petronas',       domain:'petronas.com',       count:'2,500+',  region:'Asia',             lat:3.14,   lng:101.69 },
-      { name:'Indian Oil',     domain:'indianoil.co.in',    count:'34,000+', region:'India',            lat:28.61,  lng:77.21 },
-      { name:'Ipiranga',       domain:'ipiranga.com.br',    count:'7,600+',  region:'Brazil',           lat:-23.55, lng:-46.63 },
-      { name:'PEMEX',          domain:'pemex.com',          count:'11,000+', region:'Mexico',           lat:19.43,  lng:-99.13 },
-      { name:'Repsol',         domain:'repsol.com',         count:'4,700+',  region:'Europe',           lat:40.42,  lng:-3.70 },
-      { name:'Lukoil',         domain:'lukoil.com',         count:'5,500+',  region:'Russia/Europe',    lat:55.76,  lng:37.62 },
-      { name:'Sinopec',        domain:'sinopec.com',        count:'30,000+', region:'China',            lat:39.91,  lng:116.40 },
-      { name:'Aramco',         domain:'aramco.com',         count:'2,000+',  region:'Middle East',      lat:24.71,  lng:46.67 },
-      { name:'Petrobras',      domain:'petrobras.com.br',   count:'7,700+',  region:'Brazil',           lat:-22.91, lng:-43.17 },
-      { name:'Engen',          domain:'engenoil.com',       count:'1,500+',  region:'Africa',           lat:-33.93, lng:18.42 },
-      { name:'Caltex',         domain:'caltex.com',         count:'4,200+',  region:'Asia/Africa',      lat:1.35,   lng:103.82 },
-      { name:'Wawa',           domain:'wawa.com',           count:'950+',    region:'USA East',         lat:39.95,  lng:-75.17 },
-      { name:'Casey\'s',       domain:'caseys.com',         count:'2,500+',  region:'USA Midwest',      lat:41.59,  lng:-93.62 },
-      { name:'Eni/Agip',       domain:'eni.com',            count:'5,200+',  region:'Europe/Africa',    lat:41.90,  lng:12.50 },
-      { name:'OMV',            domain:'omv.com',            count:'2,100+',  region:'Central Europe',   lat:48.21,  lng:16.37 },
-      { name:'PKN Orlen',      domain:'orlen.pl',           count:'2,800+',  region:'Eastern Europe',   lat:52.23,  lng:21.01 },
-      { name:'PTT',            domain:'pttplc.com',         count:'2,100+',  region:'Thailand',         lat:13.76,  lng:100.50 },
-      { name:'GS Caltex',      domain:'gscaltex.com',       count:'6,000+',  region:'South Korea',      lat:37.57,  lng:126.98 },
-      { name:'ENEOS',          domain:'eneos.co.jp',        count:'12,500+', region:'Japan',            lat:35.69,  lng:139.70 },
-      { name:'Woolworths',     domain:'woolworths.com.au',  count:'1,200+',  region:'Australia',        lat:-33.87, lng:151.21 },
-      { name:'Puma Energy',    domain:'pumaenergy.com',     count:'3,100+',  region:'Africa/Americas',  lat:6.52,   lng:3.38 }
+      { name:'Shell',          domain:'shell.com',          count:'46,000+', region:'Global',          lat:29.76,  lng:-95.37,  color:'#FFD500', fuel:'Gas · Diesel · EV' },
+      { name:'BP',             domain:'bp.com',             count:'21,000+', region:'Europe/Americas',  lat:51.51,  lng:-0.13,   color:'#009900', fuel:'Gas · Diesel' },
+      { name:'ExxonMobil',     domain:'exxonmobil.com',     count:'12,000+', region:'Americas',         lat:32.78,  lng:-96.80,  color:'#E21836', fuel:'Gas · Diesel' },
+      { name:'Chevron',        domain:'chevron.com',        count:'8,000+',  region:'Americas',         lat:37.77,  lng:-122.42, color:'#0054A6', fuel:'Gas · Diesel' },
+      { name:'TotalEnergies',  domain:'totalenergies.com',  count:'16,000+', region:'Europe/Africa',    lat:48.86,  lng:2.35,    color:'#FF0000', fuel:'Gas · Diesel · EV' },
+      { name:'ADNOC',          domain:'adnoc.ae',           count:'500+',    region:'Middle East',      lat:24.45,  lng:54.65,   color:'#00A74A', fuel:'Gas · Diesel' },
+      { name:'7-Eleven',       domain:'7-eleven.com',       count:'83,000+', region:'Global',           lat:35.68,  lng:139.69,  color:'#F7941D', fuel:'Gas · Convenience' },
+      { name:'OXXO',           domain:'oxxo.com',           count:'21,000+', region:'Latin America',    lat:25.67,  lng:-100.31, color:'#ED1C24', fuel:'Gas · Convenience' },
+      { name:'Circle K',       domain:'circlek.com',        count:'14,000+', region:'Global',           lat:33.45,  lng:-112.07, color:'#ED1C24', fuel:'Gas · Diesel · EV' },
+      { name:'Petronas',       domain:'petronas.com',       count:'2,500+',  region:'Asia',             lat:3.14,   lng:101.69,  color:'#00A19C', fuel:'Gas · Diesel' },
+      { name:'Indian Oil',     domain:'indianoil.co.in',    count:'34,000+', region:'India',            lat:28.61,  lng:77.21,   color:'#FF6600', fuel:'Gas · Diesel · CNG' },
+      { name:'Ipiranga',       domain:'ipiranga.com.br',    count:'7,600+',  region:'Brazil',           lat:-23.55, lng:-46.63,  color:'#0057A7', fuel:'Gas · Ethanol' },
+      { name:'PEMEX',          domain:'pemex.com',          count:'11,000+', region:'Mexico',           lat:19.43,  lng:-99.13,  color:'#006847', fuel:'Gas · Diesel' },
+      { name:'Repsol',         domain:'repsol.com',         count:'4,700+',  region:'Europe',           lat:40.42,  lng:-3.70,   color:'#FF6600', fuel:'Gas · Diesel · EV' },
+      { name:'Lukoil',         domain:'lukoil.com',         count:'5,500+',  region:'Russia/Europe',    lat:55.76,  lng:37.62,   color:'#E21A1A', fuel:'Gas · Diesel' },
+      { name:'Sinopec',        domain:'sinopec.com',        count:'30,000+', region:'China',            lat:39.91,  lng:116.40,  color:'#D50032', fuel:'Gas · Diesel · CNG' },
+      { name:'Aramco',         domain:'aramco.com',         count:'2,000+',  region:'Middle East',      lat:24.71,  lng:46.67,   color:'#006B77', fuel:'Gas · Diesel' },
+      { name:'Petrobras',      domain:'petrobras.com.br',   count:'7,700+',  region:'Brazil',           lat:-22.91, lng:-43.17,  color:'#008542', fuel:'Gas · Ethanol' },
+      { name:'Engen',          domain:'engenoil.com',       count:'1,500+',  region:'Africa',           lat:-33.93, lng:18.42,   color:'#005CA9', fuel:'Gas · Diesel' },
+      { name:'Caltex',         domain:'caltex.com',         count:'4,200+',  region:'Asia/Africa',      lat:1.35,   lng:103.82,  color:'#E4002B', fuel:'Gas · Diesel' },
+      { name:'Wawa',           domain:'wawa.com',           count:'950+',    region:'USA East',         lat:39.95,  lng:-75.17,  color:'#B11A2B', fuel:'Gas · Convenience' },
+      { name:'Casey\'s',       domain:'caseys.com',         count:'2,500+',  region:'USA Midwest',      lat:41.59,  lng:-93.62,  color:'#D71920', fuel:'Gas · Food' },
+      { name:'Eni/Agip',       domain:'eni.com',            count:'5,200+',  region:'Europe/Africa',    lat:41.90,  lng:12.50,   color:'#FFD700', fuel:'Gas · Diesel' },
+      { name:'OMV',            domain:'omv.com',            count:'2,100+',  region:'Central Europe',   lat:48.21,  lng:16.37,   color:'#003D7C', fuel:'Gas · Diesel · EV' },
+      { name:'PKN Orlen',      domain:'orlen.pl',           count:'2,800+',  region:'Eastern Europe',   lat:52.23,  lng:21.01,   color:'#E30613', fuel:'Gas · Diesel' },
+      { name:'PTT',            domain:'pttplc.com',         count:'2,100+',  region:'Thailand',         lat:13.76,  lng:100.50,  color:'#2D5DA1', fuel:'Gas · Diesel · CNG' },
+      { name:'GS Caltex',      domain:'gscaltex.com',       count:'6,000+',  region:'South Korea',      lat:37.57,  lng:126.98,  color:'#E4002B', fuel:'Gas · Diesel' },
+      { name:'ENEOS',          domain:'eneos.co.jp',        count:'12,500+', region:'Japan',            lat:35.69,  lng:139.70,  color:'#FF6600', fuel:'Gas · Diesel · EV' },
+      { name:'Woolworths',     domain:'woolworths.com.au',  count:'1,200+',  region:'Australia',        lat:-33.87, lng:151.21,  color:'#009B4D', fuel:'Gas · Diesel' },
+      { name:'Puma Energy',    domain:'pumaenergy.com',     count:'3,100+',  region:'Africa/Americas',  lat:6.52,   lng:3.38,    color:'#009640', fuel:'Gas · Diesel' }
     ];
 
     var selectedStation = null;
@@ -6406,8 +6446,10 @@
         var card = document.createElement('div');
         card.className = 'fuel2-bcard';
         card.dataset.station = s.name;
-        card.innerHTML = '<img src="https://logo.clearbit.com/' + s.domain + '" alt="' + s.name + '" loading="lazy" onerror="this.parentElement.style.display=\'none\'">' +
-          '<div class="fuel2-bcard-info"><div class="fuel2-bcard-name">' + s.name + '</div><div class="fuel2-bcard-cnt">' + s.count + '</div><div class="fuel2-bcard-region">' + s.region + '</div></div>';
+        card.style.setProperty('--station-color', s.color || '#FF6B35');
+        card.innerHTML = '<img src="https://logo.clearbit.com/' + s.domain + '" alt="' + s.name + '" loading="lazy" onerror="this.src=\'https://www.google.com/s2/favicons?domain=' + s.domain + '&sz=128\'">' +
+          '<div class="fuel2-bcard-info"><div class="fuel2-bcard-name">' + s.name + '</div><div class="fuel2-bcard-cnt">' + s.count + '</div><div class="fuel2-bcard-region">' + s.region + '</div>' +
+          '<div class="fuel2-bcard-fuel">' + (s.fuel || 'Gas') + '</div></div>';
         card.addEventListener('click', function() {
           selectStation(s);
           document.querySelectorAll('.fuel2-tab').forEach(function(t) { t.classList.remove('fuel2-tab-active'); });
@@ -6635,9 +6677,39 @@
       var supply = parseInt(supplyEl.value) || 0;
       launchBtn.disabled = !(name.length >= 2 && symbol.length >= 1 && supply >= 1000);
     }
-    nameEl.addEventListener('input', validateForm);
-    symbolEl.addEventListener('input', validateForm);
-    supplyEl.addEventListener('input', validateForm);
+
+    // Live token preview
+    function updateTokenPreview() {
+      var name = (nameEl.value || '').trim();
+      var symbol = (symbolEl.value || '').trim().toUpperCase();
+      var supply = parseInt(supplyEl.value) || 1000000000;
+      var decimals = parseInt(decimalsEl.value) || 9;
+
+      var coinLetter = document.getElementById('lpCoinLetter');
+      var tokenName2 = document.getElementById('lpTokenName');
+      var tokenSymbol2 = document.getElementById('lpTokenSymbol');
+      var tokenSupply2 = document.getElementById('lpTokenSupply');
+      var tokenDecimals2 = document.getElementById('lpTokenDecimals');
+
+      if (coinLetter) coinLetter.textContent = symbol ? symbol.charAt(0) : (name ? name.charAt(0).toUpperCase() : '?');
+      if (tokenName2) tokenName2.textContent = name || 'Your Token';
+      if (tokenSymbol2) tokenSymbol2.textContent = symbol ? ('$' + symbol) : '$SYMBOL';
+      if (tokenSupply2) tokenSupply2.textContent = formatSupply(supply);
+      if (tokenDecimals2) tokenDecimals2.textContent = decimals;
+
+      // Dynamic coin color based on name
+      var coin = document.getElementById('lpCoin');
+      if (coin && name.length > 0) {
+        var hue = 0;
+        for (var i = 0; i < name.length; i++) hue = (hue + name.charCodeAt(i) * 37) % 360;
+        coin.style.background = 'linear-gradient(135deg, hsl(' + hue + ',70%,55%), hsl(' + ((hue + 60) % 360) + ',70%,45%))';
+      }
+    }
+
+    nameEl.addEventListener('input', function() { validateForm(); updateTokenPreview(); });
+    symbolEl.addEventListener('input', function() { validateForm(); updateTokenPreview(); });
+    supplyEl.addEventListener('input', function() { validateForm(); updateTokenPreview(); });
+    decimalsEl.addEventListener('change', updateTokenPreview);
 
     // Flow animation
     function resetFlow() {
