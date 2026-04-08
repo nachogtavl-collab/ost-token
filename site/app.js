@@ -6758,231 +6758,561 @@
   })();
 
   // ========================================================================
-  // OST LAUNCHPAD — Launch Your Coin Inside OST
+  // OST LAUNCHPAD — pump.fun style with bonding curve & trenches
   // ========================================================================
   (function initLaunchpad() {
-    var nameEl = document.getElementById('lpName');
-    var symbolEl = document.getElementById('lpSymbol');
-    var supplyEl = document.getElementById('lpSupply');
-    var decimalsEl = document.getElementById('lpDecimals');
-    var descEl = document.getElementById('lpDesc');
+    var nameEl    = document.getElementById('lpName');
+    var symbolEl  = document.getElementById('lpSymbol');
+    var descEl    = document.getElementById('lpDesc');
     var descCount = document.getElementById('lpDescCount');
     var launchBtn = document.getElementById('lpLaunchBtn');
     if (!nameEl || !launchBtn) return;
 
-    var LAUNCH_FEE_OST = 25;
-    var launches = JSON.parse(localStorage.getItem('ost_lp_history') || '[]');
+    /* ── State ── */
+    var launches = JSON.parse(localStorage.getItem('ost_lp_history2') || '[]');
+    var uploadedImage = null; // data URL
 
-    // Seed demo launches so section never looks empty
+    /* ── Demo seed ── */
+    var DEMO_IMAGES = [
+      'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect fill="%23191b2a" width="200" height="200"/><text x="100" y="115" text-anchor="middle" font-size="80" fill="%2300ff88">🐕</text></svg>'),
+      'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect fill="%23191b2a" width="200" height="200"/><text x="100" y="115" text-anchor="middle" font-size="80" fill="%236d9fff">🛰️</text></svg>'),
+      'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect fill="%23191b2a" width="200" height="200"/><text x="100" y="115" text-anchor="middle" font-size="80" fill="%23a78bfa">🌙</text></svg>'),
+      'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect fill="%23191b2a" width="200" height="200"/><text x="100" y="115" text-anchor="middle" font-size="80" fill="%23FF6B35">🔥</text></svg>'),
+      'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect fill="%23191b2a" width="200" height="200"/><text x="100" y="115" text-anchor="middle" font-size="80" fill="%23ffd700">👑</text></svg>'),
+      'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect fill="%23191b2a" width="200" height="200"/><text x="100" y="115" text-anchor="middle" font-size="80" fill="%23ff69b4">🐱</text></svg>'),
+      'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect fill="%23191b2a" width="200" height="200"/><text x="100" y="115" text-anchor="middle" font-size="80" fill="%2300bfff">🐸</text></svg>'),
+      'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect fill="%23191b2a" width="200" height="200"/><text x="100" y="115" text-anchor="middle" font-size="80" fill="%23ff4500">🚀</text></svg>')
+    ];
+
     if (launches.length === 0) {
-      var demoLaunches = [
-        { name:'MarsPuppy', symbol:'MARS', supply:1000000000, decimals:9, desc:'The first memecoin for space dogs', mint:'MPup' + 'aBcDeFgHiJkLmNoPqRsTuVwXyZ123456789Ab', creator:'7xKq...b2Fp', date:'4/5/2026' },
-        { name:'Starlink Inu', symbol:'SINU', supply:100000000000, decimals:9, desc:'Decentralized satellite meme power', mint:'SINu' + 'XyZaBcDeFgHiJkLmNoPqRsTuVwXyZ12345678', creator:'4pRx...mN3q', date:'4/6/2026' },
-        { name:'ZeroGravity', symbol:'0GRV', supply:500000000, decimals:6, desc:'No gravity no limits', mint:'0GRV' + 'aBcDeFgHiJkLmNoPqRsTuVwXyZ123456789Cd', creator:'9aWz...hJ7k', date:'4/7/2026' },
-        { name:'OrbitalCash', symbol:'ORBT', supply:10000000000, decimals:9, desc:'Cash for the orbital economy', mint:'ORBT' + 'eFgHiJkLmNoPqRsTuVwXyZ123456789AbCdEf', creator:'2bTr...pQ5s', date:'4/7/2026' },
-        { name:'LunarDAO', symbol:'LUNA', supply:1000000000, decimals:9, desc:'Governance token for Moon settlers', mint:'LUNA' + 'HiJkLmNoPqRsTuVwXyZ123456789AbCdEfGhI', creator:'6cDx...wM8n', date:'4/8/2026' }
+      var now = Date.now();
+      var demoData = [
+        { name:'SpaceDoge', symbol:'SDOGE', desc:'First dog in decentralized orbit. Much wow, very satellite.', mcap: 42000, curve: 61, img: DEMO_IMAGES[0], twitter:'https://twitter.com/spacedoge', telegram:'', website:'', creator:'7xK...b2F', date: now - 120000, comments:[{user:'anon42',text:'to the moon 🚀'},{user:'degen99',text:'aping in'}], holders:[{addr:'7xK...b2F',pct:18},{addr:'3mP...nQ9',pct:12},{addr:'9aW...kL5',pct:8},{addr:'2bT...pQ5',pct:5}] },
+        { name:'Starlink Inu', symbol:'SINU', desc:'Decentralized satellite meme power. Beaming gains from LEO.', mcap: 31500, curve: 46, img: DEMO_IMAGES[1], twitter:'', telegram:'https://t.me/starlinkinu', website:'', creator:'4pR...mN3', date: now - 300000, comments:[{user:'satfan',text:'this one is different'}], holders:[{addr:'4pR...mN3',pct:22},{addr:'8kL...wR7',pct:9},{addr:'5nG...hT2',pct:6}] },
+        { name:'LunarDAO', symbol:'LUNA2', desc:'Governance for moon settlers. Vote on crater allocation.', mcap: 58200, curve: 84, img: DEMO_IMAGES[2], twitter:'https://twitter.com/lunardao', telegram:'', website:'https://lunardao.space', creator:'6cD...wM8', date: now - 60000, comments:[{user:'moonboy',text:'KOTH incoming!'},{user:'whale1',text:'just bought 50k'},{user:'skeptic',text:'careful guys'}], holders:[{addr:'6cD...wM8',pct:15},{addr:'1xY...aB3',pct:11},{addr:'7wQ...eF9',pct:7},{addr:'3mP...nQ9',pct:4},{addr:'9kL...rT6',pct:3}] },
+        { name:'OrbitalCash', symbol:'ORBT', desc:'Cash for the orbital economy. Zero-G settlement layer.', mcap: 8900, curve: 13, img: DEMO_IMAGES[3], twitter:'', telegram:'', website:'', creator:'2bT...pQ5', date: now - 900000, comments:[], holders:[{addr:'2bT...pQ5',pct:35},{addr:'8kL...wR7',pct:8}] },
+        { name:'ZeroGravity', symbol:'0GRV', desc:'No gravity, no limits. The weightless memecoin.', mcap: 22100, curve: 32, img: DEMO_IMAGES[4], twitter:'', telegram:'https://t.me/zerograv', website:'', creator:'9aW...hJ7', date: now - 600000, comments:[{user:'trader1',text:'nice chart setup'}], holders:[{addr:'9aW...hJ7',pct:20},{addr:'4pR...mN3',pct:6},{addr:'1xY...aB3',pct:5}] },
+        { name:'CatOnSolana', symbol:'MEOW', desc:'Every blockchain needs a cat. This is ours. Purr.', mcap: 15600, curve: 23, img: DEMO_IMAGES[5], twitter:'https://twitter.com/catonsol', telegram:'', website:'', creator:'5nG...hT2', date: now - 450000, comments:[{user:'catfan',text:'finally a cat coin on OST'}], holders:[{addr:'5nG...hT2',pct:25},{addr:'7xK...b2F',pct:7}] },
+        { name:'PepeOST', symbol:'POST', desc:'Pepe but make it interplanetary. Rare. Encrypted. Unstoppable.', mcap: 37800, curve: 55, img: DEMO_IMAGES[6], twitter:'', telegram:'https://t.me/pepeost', website:'https://pepeost.meme', creator:'3mP...nQ9', date: now - 180000, comments:[{user:'pepelord',text:'rarest pepe ever'},{user:'anon42',text:'chart looks bullish'}], holders:[{addr:'3mP...nQ9',pct:16},{addr:'9aW...hJ7',pct:10},{addr:'6cD...wM8',pct:6},{addr:'8kL...wR7',pct:4}] },
+        { name:'RocketFuel', symbol:'FUEL', desc:'Powering the next generation of meme launches. High octane.', mcap: 5200, curve: 8, img: DEMO_IMAGES[7], twitter:'', telegram:'', website:'', creator:'8kL...wR7', date: now - 1200000, comments:[], holders:[{addr:'8kL...wR7',pct:40},{addr:'2bT...pQ5',pct:5}] }
       ];
-      launches = demoLaunches;
-      localStorage.setItem('ost_lp_history', JSON.stringify(launches));
-    }
-
-    // Character counter
-    if (descEl && descCount) {
-      descEl.addEventListener('input', function() {
-        descCount.textContent = descEl.value.length;
+      demoData.forEach(function(d) {
+        d.mint = generateMint();
+        d.supply = 1000000000;
       });
+      launches = demoData;
+      localStorage.setItem('ost_lp_history2', JSON.stringify(launches));
     }
 
-    // Supply presets
-    document.querySelectorAll('.lp-preset').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        supplyEl.value = btn.dataset.supply;
-        document.querySelectorAll('.lp-preset').forEach(function(b) { b.classList.remove('lp-preset-active'); });
-        btn.classList.add('lp-preset-active');
-        validateForm();
+    /* ── Utility ── */
+    function generateMint() {
+      var chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+      var out = '';
+      for (var i = 0; i < 44; i++) out += chars.charAt(Math.floor(Math.random() * chars.length));
+      return out;
+    }
+    function fmtMcap(n) {
+      if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+      if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+      return n.toString();
+    }
+    function timeAgo(ts) {
+      var diff = (Date.now() - ts) / 1000;
+      if (diff < 60) return Math.floor(diff) + 's ago';
+      if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+      if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+      return Math.floor(diff / 86400) + 'd ago';
+    }
+    function escHtml(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+    /* ── Tab switching ── */
+    var tabs = document.querySelectorAll('.lp-tab');
+    var panels = {
+      create: document.getElementById('lpPanelCreate'),
+      feed:   document.getElementById('lpPanelFeed'),
+      board:  document.getElementById('lpPanelBoard')
+    };
+    tabs.forEach(function(tab) {
+      tab.addEventListener('click', function() {
+        var t = tab.getAttribute('data-tab');
+        tabs.forEach(function(tt) { tt.classList.remove('lp-tab-active'); });
+        tab.classList.add('lp-tab-active');
+        Object.keys(panels).forEach(function(k) { if (panels[k]) panels[k].style.display = k === t ? '' : 'none'; });
+        if (t === 'feed') renderFeed();
+        if (t === 'board') renderBoard();
       });
     });
 
-    // Validate form
+    /* ── Image Upload ── */
+    var uploadArea  = document.getElementById('lpUploadArea');
+    var imageInput  = document.getElementById('lpImageInput');
+    var uploadPH    = document.getElementById('lpUploadPlaceholder');
+    var uploadPrev  = document.getElementById('lpUploadPreview');
+    var uploadClear = document.getElementById('lpUploadClear');
+
+    if (uploadArea) {
+      uploadArea.addEventListener('click', function(e) {
+        if (e.target === uploadClear) return;
+        imageInput.click();
+      });
+      uploadArea.addEventListener('dragover', function(e) { e.preventDefault(); uploadArea.classList.add('lp-drag-over'); });
+      uploadArea.addEventListener('dragleave', function() { uploadArea.classList.remove('lp-drag-over'); });
+      uploadArea.addEventListener('drop', function(e) {
+        e.preventDefault(); uploadArea.classList.remove('lp-drag-over');
+        if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+      });
+      imageInput.addEventListener('change', function() { if (imageInput.files.length) handleFile(imageInput.files[0]); });
+      uploadClear.addEventListener('click', function(e) {
+        e.stopPropagation();
+        uploadedImage = null;
+        uploadPrev.style.display = 'none';
+        uploadClear.style.display = 'none';
+        uploadPH.style.display = '';
+        imageInput.value = '';
+      });
+    }
+    function handleFile(file) {
+      if (!file.type.match(/^image\//)) { if (typeof toast === 'function') toast('⚠️', 'Please upload an image file'); return; }
+      if (file.size > 5 * 1024 * 1024) { if (typeof toast === 'function') toast('⚠️', 'Image too large (max 5MB)'); return; }
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        uploadedImage = e.target.result;
+        uploadPrev.src = uploadedImage;
+        uploadPrev.style.display = 'block';
+        uploadClear.style.display = 'flex';
+        uploadPH.style.display = 'none';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    /* ── Show more options toggle ── */
+    var moreToggle = document.getElementById('lpMoreToggle');
+    var moreFields = document.getElementById('lpMoreFields');
+    if (moreToggle) {
+      moreToggle.addEventListener('click', function() {
+        var open = moreFields.style.display !== 'none';
+        moreFields.style.display = open ? 'none' : '';
+        moreToggle.innerHTML = open ? 'show more options &darr;' : 'show less options &uarr;';
+      });
+    }
+
+    /* ── Char counter ── */
+    if (descEl && descCount) {
+      descEl.addEventListener('input', function() { descCount.textContent = descEl.value.length; });
+    }
+
+    /* ── Validate ── */
     function validateForm() {
       var name = (nameEl.value || '').trim();
       var symbol = (symbolEl.value || '').trim();
-      var supply = parseInt(supplyEl.value) || 0;
-      launchBtn.disabled = !(name.length >= 2 && symbol.length >= 1 && supply >= 1000);
+      launchBtn.disabled = !(name.length >= 2 && symbol.length >= 1);
     }
+    nameEl.addEventListener('input', validateForm);
+    symbolEl.addEventListener('input', validateForm);
 
-    // Live token preview
-    function updateTokenPreview() {
-      var name = (nameEl.value || '').trim();
-      var symbol = (symbolEl.value || '').trim().toUpperCase();
-      var supply = parseInt(supplyEl.value) || 1000000000;
-      var decimals = parseInt(decimalsEl.value) || 9;
-
-      var coinLetter = document.getElementById('lpCoinLetter');
-      var tokenName2 = document.getElementById('lpTokenName');
-      var tokenSymbol2 = document.getElementById('lpTokenSymbol');
-      var tokenSupply2 = document.getElementById('lpTokenSupply');
-      var tokenDecimals2 = document.getElementById('lpTokenDecimals');
-
-      if (coinLetter) coinLetter.textContent = symbol ? symbol.charAt(0) : (name ? name.charAt(0).toUpperCase() : '?');
-      if (tokenName2) tokenName2.textContent = name || 'Your Token';
-      if (tokenSymbol2) tokenSymbol2.textContent = symbol ? ('$' + symbol) : '$SYMBOL';
-      if (tokenSupply2) tokenSupply2.textContent = formatSupply(supply);
-      if (tokenDecimals2) tokenDecimals2.textContent = decimals;
-
-      // Dynamic coin color based on name
-      var coin = document.getElementById('lpCoin');
-      if (coin && name.length > 0) {
-        var hue = 0;
-        for (var i = 0; i < name.length; i++) hue = (hue + name.charCodeAt(i) * 37) % 360;
-        coin.style.background = 'linear-gradient(135deg, hsl(' + hue + ',70%,55%), hsl(' + ((hue + 60) % 360) + ',70%,45%))';
-      }
-    }
-
-    nameEl.addEventListener('input', function() { validateForm(); updateTokenPreview(); });
-    symbolEl.addEventListener('input', function() { validateForm(); updateTokenPreview(); });
-    supplyEl.addEventListener('input', function() { validateForm(); updateTokenPreview(); });
-    decimalsEl.addEventListener('change', updateTokenPreview);
-
-    // Flow animation
-    function resetFlow() {
-      document.querySelectorAll('.lp-fstep').forEach(function(s) { s.classList.remove('lp-fs-active', 'lp-fs-done'); });
-    }
+    /* ── Flow animation ── */
     function runFlow(onDone) {
       var flow = document.getElementById('lpFlow');
       flow.style.display = 'flex';
-      resetFlow();
       var steps = flow.querySelectorAll('.lp-fstep');
+      steps.forEach(function(s) { s.classList.remove('lp-fs-active', 'lp-fs-done'); });
       var i = 0;
       function next() {
         if (i > 0) { steps[i - 1].classList.remove('lp-fs-active'); steps[i - 1].classList.add('lp-fs-done'); }
-        if (i < steps.length) { steps[i].classList.add('lp-fs-active'); i++; setTimeout(next, 800 + Math.random() * 700); }
+        if (i < steps.length) { steps[i].classList.add('lp-fs-active'); i++; setTimeout(next, 700 + Math.random() * 600); }
         else { if (onDone) onDone(); }
       }
       next();
     }
 
-    // Format supply
-    function formatSupply(n) {
-      if (n >= 1e12) return (n / 1e12).toFixed(1) + 'T';
-      if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
-      if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
-      if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
-      return n.toString();
-    }
-
-    // Generate fake mint address (demo)
-    function generateMint() {
-      var chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-      var out = '';
-      for (var i = 0; i < 44; i++) { out += chars.charAt(Math.floor(Math.random() * chars.length)); }
-      return out;
-    }
-
-    // Render recent launches
-    function renderRecent() {
-      var container = document.getElementById('lpRecent');
-      if (!container) return;
-      var totalEl = document.getElementById('lpTotalLaunched');
-      var totalSupplyEl = document.getElementById('lpTotalSupply');
-      if (totalEl) totalEl.textContent = launches.length;
-      if (totalSupplyEl) {
-        var total = 0;
-        launches.forEach(function(l) { total += (parseInt(l.supply) || 0); });
-        totalSupplyEl.textContent = formatSupply(total);
-      }
-      if (launches.length === 0) {
-        container.innerHTML = '<div class="lp-recent-empty">No launches yet. Be the first!</div>';
-        return;
-      }
-      container.innerHTML = '';
-      launches.slice().reverse().slice(0, 10).forEach(function(l) {
-        var el = document.createElement('div');
-        el.className = 'lp-rx';
-        el.innerHTML = '<div class="lp-rx-icon">' + (l.symbol ? l.symbol.charAt(0).toUpperCase() : '?') + '</div>' +
-          '<div class="lp-rx-info"><div class="lp-rx-name">' + (l.name || 'Unknown') + ' ($' + (l.symbol || '???') + ')</div><div class="lp-rx-meta">' + (l.date || '') + ' &middot; ' + (l.mint ? l.mint.slice(0, 4) + '...' + l.mint.slice(-4) : '') + '</div></div>' +
-          '<div class="lp-rx-supply">' + formatSupply(parseInt(l.supply) || 0) + '</div>';
-        container.appendChild(el);
-      });
-    }
-    renderRecent();
-
-    // Launch handler
+    /* ── Create / Launch ── */
     launchBtn.addEventListener('click', function() {
       if (launchBtn.disabled) return;
-
-      var name = nameEl.value.trim();
+      var name   = nameEl.value.trim();
       var symbol = symbolEl.value.trim().toUpperCase();
-      var supply = parseInt(supplyEl.value) || 1000000000;
-      var decimals = parseInt(decimalsEl.value) || 9;
-      var desc = (descEl.value || '').trim();
+      var desc   = (descEl ? descEl.value.trim() : '');
+      var twitter  = (document.getElementById('lpTwitter') || {}).value || '';
+      var telegram = (document.getElementById('lpTelegram') || {}).value || '';
+      var website  = (document.getElementById('lpWebsite') || {}).value || '';
+      var initialBuy = parseFloat((document.getElementById('lpInitialBuy') || {}).value) || 0;
 
-      // Demo mode — works without wallet, shows toast
       var isDemoMode = !connectedWallet;
-      if (isDemoMode) {
-        toast('&#128640;', 'Demo mode — connect wallet for real launches');
-      }
+      if (isDemoMode) toast('🚀', 'Demo mode — connect wallet for real launches');
 
       launchBtn.disabled = true;
-      launchBtn.innerHTML = '<span class="lp-btn-icon">&#9673;</span> Launching...';
+      launchBtn.textContent = 'creating...';
       document.getElementById('lpSuccess').style.display = 'none';
 
       runFlow(function() {
-        // Generate demo mint
         var mintAddr = generateMint();
-
-        // Save to history
+        var startMcap = initialBuy > 0 ? Math.floor(initialBuy * 10) : Math.floor(Math.random() * 2000) + 100;
         var launch = {
-          name: name,
-          symbol: symbol,
-          supply: supply,
-          decimals: decimals,
-          desc: desc,
-          mint: mintAddr,
+          name: name, symbol: symbol, desc: desc,
+          mcap: startMcap, curve: Math.min(Math.floor(startMcap / 690), 100),
+          img: uploadedImage || DEMO_IMAGES[Math.floor(Math.random() * DEMO_IMAGES.length)],
+          twitter: twitter, telegram: telegram, website: website,
+          mint: mintAddr, supply: 1000000000,
           creator: connectedWallet ? connectedWallet.slice(0, 4) + '...' + connectedWallet.slice(-4) : 'anon',
-          date: new Date().toLocaleDateString()
+          date: Date.now(),
+          comments: [],
+          holders: [{ addr: connectedWallet ? connectedWallet.slice(0,4)+'...'+connectedWallet.slice(-4) : 'anon', pct: 100 }]
         };
         launches.push(launch);
-        localStorage.setItem('ost_lp_history', JSON.stringify(launches));
+        localStorage.setItem('ost_lp_history2', JSON.stringify(launches));
 
-        // Show success
         document.getElementById('lpSuccessName').textContent = name;
         document.getElementById('lpSuccessSymbol').textContent = '$' + symbol;
-        document.getElementById('lpSuccessSupply').textContent = formatSupply(supply);
         document.getElementById('lpSuccessMint').textContent = mintAddr;
         document.getElementById('lpSuccess').style.display = 'block';
 
-        // Reset form
-        launchBtn.innerHTML = '<span class="lp-btn-icon">&#9673;</span> Pay 25 OST & Launch Now';
+        launchBtn.textContent = 'Create coin';
         launchBtn.disabled = false;
-        nameEl.value = '';
-        symbolEl.value = '';
-        supplyEl.value = '1000000000';
+        nameEl.value = ''; symbolEl.value = '';
         if (descEl) descEl.value = '';
         if (descCount) descCount.textContent = '0';
-        document.querySelectorAll('.lp-preset').forEach(function(b) { b.classList.remove('lp-preset-active'); });
-        var defaultPreset = document.querySelector('.lp-preset[data-supply="1000000000"]');
-        if (defaultPreset) defaultPreset.classList.add('lp-preset-active');
+        uploadedImage = null;
+        if (uploadPrev) { uploadPrev.style.display = 'none'; uploadClear.style.display = 'none'; uploadPH.style.display = ''; }
+        if (imageInput) imageInput.value = '';
+        var twEl = document.getElementById('lpTwitter'); if (twEl) twEl.value = '';
+        var tgEl = document.getElementById('lpTelegram'); if (tgEl) tgEl.value = '';
+        var wsEl = document.getElementById('lpWebsite'); if (wsEl) wsEl.value = '';
+        var ibEl = document.getElementById('lpInitialBuy'); if (ibEl) ibEl.value = '';
         validateForm();
 
-        renderRecent();
-        toast('🚀', symbol + ' launched! Mint: ' + mintAddr.slice(0, 6) + '...');
+        updateTotalCount();
+        toast('🚀', symbol + ' is live! Mint: ' + mintAddr.slice(0, 6) + '...');
       });
     });
 
-    // Copy mint address
+    /* ── Copy mint ── */
     var copyMint = document.getElementById('lpCopyMint');
     if (copyMint) {
       copyMint.addEventListener('click', function() {
         var addr = document.getElementById('lpSuccessMint').textContent;
         if (addr && addr !== '--') {
-          navigator.clipboard.writeText(addr).then(function() { toast('📋', 'Mint address copied!'); });
+          if (navigator.clipboard) navigator.clipboard.writeText(addr);
+          toast('📋', 'Mint address copied!');
         }
       });
     }
 
-    // Initialize preview with default values
-    updateTokenPreview();
+    /* ── View token after launch ── */
+    var viewToken = document.getElementById('lpViewToken');
+    if (viewToken) {
+      viewToken.addEventListener('click', function() {
+        var mint = document.getElementById('lpSuccessMint').textContent;
+        var found = launches.find(function(l) { return l.mint === mint; });
+        if (found) openDetail(found);
+      });
+    }
+
+    /* ── Total count ── */
+    function updateTotalCount() {
+      var el = document.getElementById('lpTotalLaunched');
+      if (el) el.textContent = launches.length;
+    }
+    updateTotalCount();
+
+    /* ══════════════════════════════════════════════════
+       FEED — Token card grid
+       ══════════════════════════════════════════════════ */
+    var currentSort = 'trending';
+    var feedGrid = document.getElementById('lpFeedGrid');
+    var searchIn = document.getElementById('lpSearchInput');
+
+    /* Sort buttons */
+    document.querySelectorAll('.lp-sort').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.lp-sort').forEach(function(b) { b.classList.remove('lp-sort-active'); });
+        btn.classList.add('lp-sort-active');
+        currentSort = btn.getAttribute('data-sort');
+        renderFeed();
+      });
+    });
+
+    /* Search */
+    if (searchIn) searchIn.addEventListener('input', renderFeed);
+
+    function getSorted() {
+      var list = launches.slice();
+      var q = searchIn ? searchIn.value.toLowerCase().trim() : '';
+      if (q) list = list.filter(function(l) { return l.name.toLowerCase().indexOf(q) !== -1 || l.symbol.toLowerCase().indexOf(q) !== -1; });
+      switch (currentSort) {
+        case 'new':        list.sort(function(a, b) { return b.date - a.date; }); break;
+        case 'top':        list.sort(function(a, b) { return b.mcap - a.mcap; }); break;
+        case 'graduating': list.sort(function(a, b) { return b.curve - a.curve; }); break;
+        default:           list.sort(function(a, b) { return (b.mcap * 0.6 + b.curve * 400) - (a.mcap * 0.6 + a.curve * 400); }); break;
+      }
+      return list;
+    }
+
+    /* Find KOTH */
+    function getKoth() {
+      var best = null;
+      launches.forEach(function(l) { if (!best || l.curve > best.curve) best = l; });
+      return best;
+    }
+
+    function renderFeed() {
+      if (!feedGrid) return;
+      var sorted = getSorted();
+      var koth = getKoth();
+      feedGrid.innerHTML = '';
+      if (sorted.length === 0) {
+        feedGrid.innerHTML = '<p class="text-muted" style="text-align:center;grid-column:1/-1;padding:40px;">No tokens found. Be the first to create one!</p>';
+        return;
+      }
+      sorted.forEach(function(l) {
+        var card = document.createElement('div');
+        card.className = 'lp-card';
+        var isKoth = koth && l.mint === koth.mint;
+        var imgHtml = l.img
+          ? '<img class="lp-card-img" src="' + escHtml(l.img) + '" alt="' + escHtml(l.name) + '">'
+          : '<div class="lp-card-img-placeholder">' + (l.symbol ? l.symbol.charAt(0) : '?') + '</div>';
+        card.innerHTML = imgHtml +
+          '<div class="lp-card-body">' +
+            '<div class="lp-card-top">' +
+              '<span class="lp-card-name">' + escHtml(l.name) + '</span>' +
+              '<span class="lp-card-ticker">$' + escHtml(l.symbol) + '</span>' +
+              (isKoth ? '<span class="lp-card-koth" title="King of the Hill">👑</span>' : '') +
+            '</div>' +
+            '<div class="lp-card-desc">' + escHtml(l.desc || '') + '</div>' +
+            '<div class="lp-card-meta">' +
+              '<span class="lp-card-mcap">' + fmtMcap(l.mcap) + ' OST</span>' +
+              '<span class="lp-card-creator">by <span>' + escHtml(l.creator) + '</span></span>' +
+              '<span class="lp-card-time">' + timeAgo(l.date) + '</span>' +
+            '</div>' +
+            '<div class="lp-card-curve">' +
+              '<div class="lp-card-curve-track"><div class="lp-card-curve-fill" style="width:' + Math.min(l.curve, 100) + '%"></div></div>' +
+              '<div class="lp-card-curve-lbl"><span>bonding curve</span><span>' + Math.min(l.curve, 100) + '%</span></div>' +
+            '</div>' +
+          '</div>';
+        card.addEventListener('click', function() { openDetail(l); });
+        feedGrid.appendChild(card);
+      });
+    }
+
+    /* ══════════════════════════════════════════════════
+       LEADERBOARD
+       ══════════════════════════════════════════════════ */
+    function renderBoard() {
+      var list = document.getElementById('lpBoardList');
+      if (!list) return;
+      var sorted = launches.slice().sort(function(a, b) { return b.curve - a.curve; });
+      list.innerHTML = '';
+      sorted.forEach(function(l, i) {
+        var row = document.createElement('div');
+        row.className = 'lp-board-row';
+        row.innerHTML =
+          '<span class="lp-board-rank">' + (i === 0 ? '👑' : (i + 1)) + '</span>' +
+          (l.img ? '<img class="lp-board-img" src="' + escHtml(l.img) + '" alt="">' : '<div class="lp-board-img" style="font-size:1.2rem;color:rgba(255,255,255,.2)">' + (l.symbol ? l.symbol.charAt(0) : '?') + '</div>') +
+          '<div class="lp-board-info"><div class="lp-board-name">' + escHtml(l.name) + ' <span style="color:#00ff88;font-size:.78rem">$' + escHtml(l.symbol) + '</span></div><div class="lp-board-sub">by ' + escHtml(l.creator) + '</div></div>' +
+          '<div class="lp-board-mcap"><span class="lp-board-mcap-val">' + fmtMcap(l.mcap) + ' OST</span><span class="lp-board-mcap-lbl">market cap</span></div>' +
+          '<div class="lp-board-curve"><div class="lp-board-curve-track"><div class="lp-board-curve-fill" style="width:' + Math.min(l.curve, 100) + '%"></div></div></div>';
+        row.addEventListener('click', function() { openDetail(l); });
+        list.appendChild(row);
+      });
+    }
+
+    /* ══════════════════════════════════════════════════
+       TOKEN DETAIL MODAL
+       ══════════════════════════════════════════════════ */
+    var overlay   = document.getElementById('lpDetailOverlay');
+    var modal     = document.getElementById('lpDetailModal');
+    var closeBtn  = document.getElementById('lpDetailClose');
+    var currentToken = null;
+    var tradeSide = 'buy';
+
+    function openDetail(token) {
+      currentToken = token;
+      document.getElementById('lpDetailName').textContent = token.name;
+      document.getElementById('lpDetailTicker').textContent = '$' + token.symbol;
+      document.getElementById('lpDetailCreator').textContent = 'by ' + token.creator;
+      document.getElementById('lpDetailMcap').textContent = fmtMcap(token.mcap) + ' OST';
+      document.getElementById('lpDetailDesc').textContent = token.desc || '';
+
+      var imgEl = document.getElementById('lpDetailImg');
+      if (token.img) imgEl.innerHTML = '<img src="' + escHtml(token.img) + '">';
+      else imgEl.innerHTML = '<span style="font-size:2rem;color:rgba(255,255,255,.15)">' + (token.symbol ? token.symbol.charAt(0) : '?') + '</span>';
+
+      /* Socials */
+      var socialsEl = document.getElementById('lpDetailSocials');
+      socialsEl.innerHTML = '';
+      if (token.twitter) socialsEl.innerHTML += '<a href="' + escHtml(token.twitter) + '" target="_blank" rel="noopener">twitter</a>';
+      if (token.telegram) socialsEl.innerHTML += '<a href="' + escHtml(token.telegram) + '" target="_blank" rel="noopener">telegram</a>';
+      if (token.website) socialsEl.innerHTML += '<a href="' + escHtml(token.website) + '" target="_blank" rel="noopener">website</a>';
+
+      /* Curve */
+      document.getElementById('lpDetailCurveVal').textContent = Math.min(token.curve, 100) + '%';
+      document.getElementById('lpDetailCurveFill').style.width = Math.min(token.curve, 100) + '%';
+
+      /* Reset trade side */
+      tradeSide = 'buy';
+      document.querySelectorAll('.lp-trade-tab').forEach(function(t) { t.classList.remove('lp-trade-tab-active'); });
+      document.querySelector('.lp-trade-tab[data-side="buy"]').classList.add('lp-trade-tab-active');
+      var tradeBtn = document.getElementById('lpTradeBtn');
+      tradeBtn.textContent = 'place trade';
+      tradeBtn.className = 'lp-trade-btn lp-trade-buy';
+      document.getElementById('lpTradeDenom').textContent = 'OST';
+      document.getElementById('lpTradeAmount').value = '';
+
+      /* Holders */
+      renderHolders(token);
+
+      /* Comments */
+      renderComments(token);
+
+      /* Show sub-tab: holders */
+      document.querySelectorAll('.lp-det-tab').forEach(function(t) { t.classList.remove('lp-det-tab-active'); });
+      document.querySelector('.lp-det-tab[data-dtab="holders"]').classList.add('lp-det-tab-active');
+      document.getElementById('lpDetailHolders').style.display = '';
+      document.getElementById('lpDetailComments').style.display = 'none';
+
+      overlay.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeDetail() {
+      overlay.style.display = 'none';
+      document.body.style.overflow = '';
+      currentToken = null;
+    }
+    if (closeBtn) closeBtn.addEventListener('click', closeDetail);
+    if (overlay) overlay.addEventListener('click', function(e) { if (e.target === overlay) closeDetail(); });
+
+    /* Buy/Sell tabs */
+    document.querySelectorAll('.lp-trade-tab').forEach(function(tab) {
+      tab.addEventListener('click', function() {
+        tradeSide = tab.getAttribute('data-side');
+        document.querySelectorAll('.lp-trade-tab').forEach(function(t) { t.classList.remove('lp-trade-tab-active'); });
+        tab.classList.add('lp-trade-tab-active');
+        var tradeBtn = document.getElementById('lpTradeBtn');
+        tradeBtn.className = 'lp-trade-btn ' + (tradeSide === 'buy' ? 'lp-trade-buy' : 'lp-trade-sell');
+        tradeBtn.textContent = 'place trade';
+        document.getElementById('lpTradeDenom').textContent = tradeSide === 'buy' ? 'OST' : currentToken.symbol;
+      });
+    });
+
+    /* Trade presets */
+    document.querySelectorAll('.lp-tp').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var v = parseFloat(btn.getAttribute('data-v'));
+        document.getElementById('lpTradeAmount').value = v || '';
+      });
+    });
+
+    /* Place trade (demo) */
+    var tradeBtn = document.getElementById('lpTradeBtn');
+    if (tradeBtn) {
+      tradeBtn.addEventListener('click', function() {
+        if (!currentToken) return;
+        var amt = parseFloat(document.getElementById('lpTradeAmount').value) || 0;
+        if (amt <= 0) { toast('⚠️', 'Enter an amount'); return; }
+
+        // Simulate market impact
+        if (tradeSide === 'buy') {
+          currentToken.mcap += Math.floor(amt * 8);
+          currentToken.curve = Math.min(Math.floor(currentToken.mcap / 690), 100);
+          toast('✅', 'Bought ' + amt + ' OST of $' + currentToken.symbol);
+        } else {
+          currentToken.mcap = Math.max(100, currentToken.mcap - Math.floor(amt * 5));
+          currentToken.curve = Math.min(Math.floor(currentToken.mcap / 690), 100);
+          toast('✅', 'Sold ' + amt + ' ' + currentToken.symbol);
+        }
+
+        // Check graduation
+        if (currentToken.curve >= 100) {
+          toast('🎓', '$' + currentToken.symbol + ' graduated! Liquidity deposited & burned!');
+          currentToken.curve = 100;
+        }
+
+        // Update UI
+        document.getElementById('lpDetailMcap').textContent = fmtMcap(currentToken.mcap) + ' OST';
+        document.getElementById('lpDetailCurveVal').textContent = Math.min(currentToken.curve, 100) + '%';
+        document.getElementById('lpDetailCurveFill').style.width = Math.min(currentToken.curve, 100) + '%';
+        document.getElementById('lpTradeAmount').value = '';
+        localStorage.setItem('ost_lp_history2', JSON.stringify(launches));
+      });
+    }
+
+    /* Detail sub-tabs (holders / comments) */
+    document.querySelectorAll('.lp-det-tab').forEach(function(tab) {
+      tab.addEventListener('click', function() {
+        var dtab = tab.getAttribute('data-dtab');
+        document.querySelectorAll('.lp-det-tab').forEach(function(t) { t.classList.remove('lp-det-tab-active'); });
+        tab.classList.add('lp-det-tab-active');
+        document.getElementById('lpDetailHolders').style.display = dtab === 'holders' ? '' : 'none';
+        document.getElementById('lpDetailComments').style.display = dtab === 'comments' ? '' : 'none';
+      });
+    });
+
+    /* Render holders */
+    function renderHolders(token) {
+      var list = document.getElementById('lpHoldersList');
+      if (!list) return;
+      list.innerHTML = '';
+      (token.holders || []).forEach(function(h) {
+        var row = document.createElement('div');
+        row.className = 'lp-holder-row';
+        row.innerHTML = '<span class="lp-holder-addr">' + escHtml(h.addr) + '</span><span class="lp-holder-pct">' + h.pct + '%</span>';
+        list.appendChild(row);
+      });
+      if (!token.holders || token.holders.length === 0) {
+        list.innerHTML = '<p class="text-muted" style="text-align:center;padding:16px;font-size:.82rem;">No holder data</p>';
+      }
+    }
+
+    /* Render comments */
+    function renderComments(token) {
+      var list = document.getElementById('lpCommentsList');
+      if (!list) return;
+      list.innerHTML = '';
+      (token.comments || []).forEach(function(c) {
+        var div = document.createElement('div');
+        div.className = 'lp-comment';
+        div.innerHTML = '<div class="lp-comment-user">' + escHtml(c.user) + '</div><div class="lp-comment-text">' + escHtml(c.text) + '</div>';
+        list.appendChild(div);
+      });
+      if (!token.comments || token.comments.length === 0) {
+        list.innerHTML = '<p class="text-muted" style="text-align:center;padding:16px;font-size:.82rem;">No comments yet</p>';
+      }
+    }
+
+    /* Post comment */
+    var commentSend = document.getElementById('lpCommentSend');
+    var commentText = document.getElementById('lpCommentText');
+    if (commentSend && commentText) {
+      commentSend.addEventListener('click', function() {
+        if (!currentToken) return;
+        var text = commentText.value.trim();
+        if (!text) return;
+        var user = connectedWallet ? connectedWallet.slice(0, 4) + '...' + connectedWallet.slice(-4) : 'anon';
+        if (!currentToken.comments) currentToken.comments = [];
+        currentToken.comments.push({ user: user, text: text });
+        localStorage.setItem('ost_lp_history2', JSON.stringify(launches));
+        renderComments(currentToken);
+        commentText.value = '';
+        toast('💬', 'Comment posted!');
+      });
+    }
+
+    /* ── Simulate live market cap fluctuations ── */
+    setInterval(function() {
+      launches.forEach(function(l) {
+        if (l.curve >= 100) return;
+        var change = Math.floor((Math.random() - 0.45) * l.mcap * 0.03);
+        l.mcap = Math.max(100, l.mcap + change);
+        l.curve = Math.min(Math.floor(l.mcap / 690), 100);
+      });
+      localStorage.setItem('ost_lp_history2', JSON.stringify(launches));
+      // Update detail view if open
+      if (currentToken && overlay.style.display !== 'none') {
+        document.getElementById('lpDetailMcap').textContent = fmtMcap(currentToken.mcap) + ' OST';
+        document.getElementById('lpDetailCurveVal').textContent = Math.min(currentToken.curve, 100) + '%';
+        document.getElementById('lpDetailCurveFill').style.width = Math.min(currentToken.curve, 100) + '%';
+      }
+    }, 5000);
+
   })();
 
   // ========================================================================

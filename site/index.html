@@ -26,7 +26,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="style.css?v=40">
+  <link rel="stylesheet" href="style.css?v=41">
 </head>
 <body>
 
@@ -3025,158 +3025,222 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
 <!-- ================================================================== -->
   <section id="launchpad" class="section section-alt section-space">
     <div class="container">
-      <div class="lp-header">
-        <div class="lp-icon-ring"><span>&#128640;</span></div>
-        <h2 class="section-title">Launch Your Coin <span class="gradient-text">Inside OST</span></h2>
-        <p class="section-subtitle">Pay with OST &bull; Mint instantly &bull; Cash out only through OST services</p>
-        <p class="text-muted" style="font-size:.82rem;margin-top:4px;">No external markets &bull; No regulations on your memecoin &bull; Everything stays in the OST ecosystem</p>
-        <div class="lp-badges">
-          <span class="lp-badge">&#9673; Solana-Powered</span>
-          <span class="lp-badge">&#128274; Token-2022</span>
-          <span class="lp-badge">&#9889; 0.4s Mint</span>
-          <span class="lp-badge">&#128176; 25 OST Fee</span>
+
+      <!-- ── Top bar ── -->
+      <div class="lp-topbar">
+        <div class="lp-topbar-left">
+          <span class="lp-logo">&#9673; OST <span class="lp-logo-sub">pump</span></span>
+        </div>
+        <div class="lp-topbar-tabs">
+          <button class="lp-tab lp-tab-active" data-tab="create">Create</button>
+          <button class="lp-tab" data-tab="feed">Trending</button>
+          <button class="lp-tab" data-tab="board">Leaderboard</button>
+        </div>
+        <div class="lp-topbar-stat">
+          <span id="lpTotalLaunched">0</span> coins launched
         </div>
       </div>
 
-      <!-- Live stats bar -->
-      <div class="lp-stats">
-        <div class="lp-stat"><span class="lp-stat-val" id="lpTotalLaunched">0</span><span class="lp-stat-lbl">Coins Launched</span></div>
-        <div class="lp-stat"><span class="lp-stat-val" id="lpTotalSupply">0B</span><span class="lp-stat-lbl">Tokens Minted</span></div>
-        <div class="lp-stat"><span class="lp-stat-val">25 OST</span><span class="lp-stat-lbl">Launch Fee</span></div>
-        <div class="lp-stat"><span class="lp-stat-val">$0</span><span class="lp-stat-lbl">Network Fee</span></div>
-      </div>
+      <!-- ===== TAB: CREATE ===== -->
+      <div class="lp-panel lp-panel-create" id="lpPanelCreate">
+        <div class="lp-create-wrap">
+          <div class="lp-create-card">
+            <h2 class="lp-create-title">&#128640; start a new coin</h2>
+            <p class="lp-create-sub text-muted">Launch a token on Solana instantly. It costs 0 OST. Powered by bonding curve.</p>
 
-      <div class="lp-split">
-        <!-- Left: Launch Form -->
-        <div class="lp-form-col">
-          <div class="lp-form-head">
-            <h3>&#9881;&#65039; Create Your Token</h3>
-            <p class="text-muted">Launches as a real Token-2022 SPL token on Solana. Takes seconds.</p>
-          </div>
-
-          <div class="lp-field">
-            <label class="lp-label">Coin Name <span class="lp-req">*</span></label>
-            <input type="text" id="lpName" class="lp-input" placeholder="MarsPuppy Token" maxlength="32" autocomplete="off">
-          </div>
-
-          <div class="lp-row">
-            <div class="lp-field lp-half">
-              <label class="lp-label">Symbol <span class="lp-req">*</span></label>
-              <input type="text" id="lpSymbol" class="lp-input" placeholder="MARS" maxlength="8" autocomplete="off" style="text-transform:uppercase;">
+            <!-- Image upload -->
+            <div class="lp-upload-area" id="lpUploadArea">
+              <input type="file" id="lpImageInput" accept="image/*,video/mp4,video/webm" hidden>
+              <div class="lp-upload-placeholder" id="lpUploadPlaceholder">
+                <div class="lp-upload-icon">&#128247;</div>
+                <span>drag and drop an image or video</span>
+                <span class="lp-upload-hint">or click to browse</span>
+              </div>
+              <img id="lpUploadPreview" class="lp-upload-preview" style="display:none" alt="token image">
+              <button class="lp-upload-clear" id="lpUploadClear" style="display:none">&times;</button>
             </div>
-            <div class="lp-field lp-half">
-              <label class="lp-label">Total Supply <span class="lp-req">*</span></label>
-              <input type="number" id="lpSupply" class="lp-input" value="1000000000" min="1000" max="1000000000000" step="1000">
+
+            <!-- Name -->
+            <div class="lp-field">
+              <label class="lp-label">name</label>
+              <input type="text" id="lpName" class="lp-input" placeholder="e.g. SpaceDoge" maxlength="32" autocomplete="off">
             </div>
-          </div>
 
-          <div class="lp-field">
-            <label class="lp-label">Decimals</label>
-            <select id="lpDecimals" class="lp-input lp-select">
-              <option value="9" selected>9 (standard)</option>
-              <option value="6">6</option>
-              <option value="4">4</option>
-              <option value="0">0 (whole numbers only)</option>
-            </select>
-          </div>
-
-          <div class="lp-field">
-            <label class="lp-label">Description</label>
-            <textarea id="lpDesc" class="lp-input lp-textarea" rows="3" placeholder="The first memecoin born in space..." maxlength="200"></textarea>
-            <span class="lp-char-count"><span id="lpDescCount">0</span>/200</span>
-          </div>
-
-          <!-- Supply presets -->
-          <div class="lp-presets">
-            <span class="lp-presets-label">Quick supply:</span>
-            <button class="lp-preset" data-supply="1000000">1M</button>
-            <button class="lp-preset" data-supply="100000000">100M</button>
-            <button class="lp-preset lp-preset-active" data-supply="1000000000">1B</button>
-            <button class="lp-preset" data-supply="10000000000">10B</button>
-            <button class="lp-preset" data-supply="1000000000000">1T</button>
-          </div>
-
-          <!-- Fee display -->
-          <div class="lp-fee-box">
-            <div class="lp-fee-row"><span>Launch Fee</span><span class="lp-fee-val">25 &#9673; OST</span></div>
-            <div class="lp-fee-row lp-fee-small"><span>Network Fee</span><span>$0.00 (free)</span></div>
-            <div class="lp-fee-row lp-fee-small"><span>Destination</span><span>&#128752; Satellite Treasury</span></div>
-          </div>
-
-          <button class="lp-launch-btn" id="lpLaunchBtn" disabled>
-            <span class="lp-btn-icon">&#9673;</span> Pay 25 OST &amp; Launch Now
-          </button>
-
-          <!-- Flow animation -->
-          <div class="lp-flow" id="lpFlow" style="display:none">
-            <div class="lp-fstep" data-s="1"><span class="lp-fdot"></span><span>Connecting wallet&hellip;</span></div>
-            <div class="lp-fstep" data-s="2"><span class="lp-fdot"></span><span>Paying 25 OST to treasury&hellip;</span></div>
-            <div class="lp-fstep" data-s="3"><span class="lp-fdot"></span><span>Creating Token-2022 mint&hellip;</span></div>
-            <div class="lp-fstep" data-s="4"><span class="lp-fdot"></span><span>Minting supply&hellip;</span></div>
-            <div class="lp-fstep" data-s="5"><span class="lp-fdot"></span><span>Complete &#10003;</span></div>
-          </div>
-
-          <!-- Success card -->
-          <div class="lp-success" id="lpSuccess" style="display:none">
-            <div class="lp-success-icon">&#127881;</div>
-            <h4>Your coin is live!</h4>
-            <div class="lp-success-details">
-              <div class="lp-sd-row"><span>Name</span><span id="lpSuccessName">--</span></div>
-              <div class="lp-sd-row"><span>Symbol</span><span id="lpSuccessSymbol">--</span></div>
-              <div class="lp-sd-row"><span>Supply</span><span id="lpSuccessSupply">--</span></div>
-              <div class="lp-sd-row"><span>Mint Address</span><span id="lpSuccessMint" class="lp-mint-addr">--</span></div>
+            <!-- Ticker -->
+            <div class="lp-field">
+              <label class="lp-label">ticker</label>
+              <input type="text" id="lpSymbol" class="lp-input" placeholder="e.g. SDOGE" maxlength="10" autocomplete="off" style="text-transform:uppercase;">
             </div>
-            <button class="lp-copy-mint" id="lpCopyMint">&#128203; Copy Mint Address</button>
-            <p class="lp-success-note">Sell your new coin for OST inside the platform, then use OST for gift cards, Pay-Any-Link, offline payments, and more.</p>
-          </div>
-        </div>
 
-        <!-- Right: Info Panel -->
-        <div class="lp-info-col">
-          <!-- Live Token Preview -->
-          <div class="lp-info-card lp-token-card" id="lpTokenCard">
-            <div class="lp-coin-wrap">
-              <div class="lp-coin" id="lpCoin">
-                <div class="lp-coin-letter" id="lpCoinLetter">?</div>
+            <!-- Description -->
+            <div class="lp-field">
+              <label class="lp-label">description</label>
+              <textarea id="lpDesc" class="lp-input lp-textarea" rows="3" placeholder="Tell people what your coin is about..." maxlength="500"></textarea>
+              <span class="lp-char-count"><span id="lpDescCount">0</span>/500</span>
+            </div>
+
+            <!-- Show more options -->
+            <button class="lp-more-toggle" id="lpMoreToggle">show more options &darr;</button>
+            <div class="lp-more-fields" id="lpMoreFields" style="display:none">
+              <div class="lp-field">
+                <label class="lp-label">twitter link</label>
+                <input type="url" id="lpTwitter" class="lp-input" placeholder="https://twitter.com/..." autocomplete="off">
+              </div>
+              <div class="lp-field">
+                <label class="lp-label">telegram link</label>
+                <input type="url" id="lpTelegram" class="lp-input" placeholder="https://t.me/..." autocomplete="off">
+              </div>
+              <div class="lp-field">
+                <label class="lp-label">website</label>
+                <input type="url" id="lpWebsite" class="lp-input" placeholder="https://..." autocomplete="off">
               </div>
             </div>
-            <div class="lp-token-name" id="lpTokenName">Your Token</div>
-            <div class="lp-token-symbol" id="lpTokenSymbol">$SYMBOL</div>
-            <div class="lp-token-meta">
-              <div class="lp-token-meta-row"><span>Supply</span><span id="lpTokenSupply">1,000,000,000</span></div>
-              <div class="lp-token-meta-row"><span>Decimals</span><span id="lpTokenDecimals">9</span></div>
-              <div class="lp-token-meta-row"><span>Standard</span><span>Token-2022</span></div>
-              <div class="lp-token-meta-row"><span>Network</span><span class="lp-chain-badge"><img src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png" alt="SOL" class="lp-sol-icon"> Solana</span></div>
+
+            <!-- Initial buy (optional) -->
+            <div class="lp-field lp-initial-buy">
+              <label class="lp-label">initial buy (optional)</label>
+              <p class="lp-field-hint text-muted">Tip: buying a small amount helps prevent snipers</p>
+              <div class="lp-buy-row">
+                <input type="number" id="lpInitialBuy" class="lp-input" placeholder="0.0" min="0" step="0.01">
+                <span class="lp-buy-denom">OST</span>
+              </div>
+            </div>
+
+            <!-- Create button -->
+            <button class="lp-create-btn" id="lpLaunchBtn" disabled>
+              Create coin
+            </button>
+            <p class="lp-create-cost text-muted">Cost: Free &bull; Bonding curve auto-created</p>
+
+            <!-- Flow animation -->
+            <div class="lp-flow" id="lpFlow" style="display:none">
+              <div class="lp-fstep" data-s="1"><span class="lp-fdot"></span><span>Connecting wallet&hellip;</span></div>
+              <div class="lp-fstep" data-s="2"><span class="lp-fdot"></span><span>Deploying token&hellip;</span></div>
+              <div class="lp-fstep" data-s="3"><span class="lp-fdot"></span><span>Creating bonding curve&hellip;</span></div>
+              <div class="lp-fstep" data-s="4"><span class="lp-fdot"></span><span>Adding initial liquidity&hellip;</span></div>
+              <div class="lp-fstep" data-s="5"><span class="lp-fdot"></span><span>Live &#10003;</span></div>
+            </div>
+
+            <!-- Success card -->
+            <div class="lp-success" id="lpSuccess" style="display:none">
+              <div class="lp-success-icon">&#127881;</div>
+              <h4>Coin is live on the bonding curve!</h4>
+              <div class="lp-success-details">
+                <div class="lp-sd-row"><span>Name</span><span id="lpSuccessName">--</span></div>
+                <div class="lp-sd-row"><span>Ticker</span><span id="lpSuccessSymbol">--</span></div>
+                <div class="lp-sd-row"><span>Mint</span><span id="lpSuccessMint" class="lp-mint-addr">--</span></div>
+              </div>
+              <div class="lp-success-actions">
+                <button class="lp-copy-mint" id="lpCopyMint">&#128203; Copy mint</button>
+                <button class="lp-view-token" id="lpViewToken">&#128065; View token</button>
+              </div>
             </div>
           </div>
 
-          <div class="lp-info-card">
-            <h3>How It Works &mdash; OST-Only Flow</h3>
-            <div class="lp-steps">
-              <div class="lp-step"><div class="lp-step-num">1</div><div class="lp-step-text"><strong>Pay launch fee in OST</strong><br>Goes to treasury &rarr; funds satellites &amp; infrastructure</div></div>
-              <div class="lp-step"><div class="lp-step-num">2</div><div class="lp-step-text"><strong>Token-2022 memecoin minted</strong><br>Real SPL token created on Solana, full supply to your wallet</div></div>
-              <div class="lp-step"><div class="lp-step-num">3</div><div class="lp-step-text"><strong>Trade inside OST</strong><br>Built-in private swap &mdash; your coin &#8596; OST</div></div>
-              <div class="lp-step"><div class="lp-step-num">4</div><div class="lp-step-text"><strong>Cash out through OST</strong><br>Gift cards, Pay-Any-Link, offline tap-to-pay, fuel &mdash; everything in the OST ecosystem</div></div>
+          <!-- How bonding curve works -->
+          <div class="lp-curve-info">
+            <h4>&#128200; how it works</h4>
+            <div class="lp-curve-steps">
+              <div class="lp-cs"><span class="lp-cs-num">1</span><span>Pick a coin you like</span></div>
+              <div class="lp-cs"><span class="lp-cs-num">2</span><span>Buy on the bonding curve</span></div>
+              <div class="lp-cs"><span class="lp-cs-num">3</span><span>Sell anytime to lock in profits or losses</span></div>
+              <div class="lp-cs"><span class="lp-cs-num">4</span><span>When market cap hits <strong>69K OST</strong>, liquidity deposited &amp; burned</span></div>
             </div>
+            <p class="lp-safe-note">&#128274; All tokens are safe &mdash; no presale, no team allocation, fair launch.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== TAB: FEED (Trending) ===== -->
+      <div class="lp-panel lp-panel-feed" id="lpPanelFeed" style="display:none">
+        <!-- Feed top bar -->
+        <div class="lp-feed-bar">
+          <div class="lp-feed-sorts">
+            <button class="lp-sort lp-sort-active" data-sort="trending">&#128293; Trending</button>
+            <button class="lp-sort" data-sort="new">&#9889; New</button>
+            <button class="lp-sort" data-sort="top">&#128081; Top</button>
+            <button class="lp-sort" data-sort="graduating">&#127891; Graduating</button>
+          </div>
+          <div class="lp-feed-search">
+            <input type="text" id="lpSearchInput" class="lp-input lp-search-in" placeholder="Search tokens...">
+          </div>
+        </div>
+        <!-- Token card grid -->
+        <div class="lp-feed-grid" id="lpFeedGrid">
+          <!-- populated by JS -->
+        </div>
+      </div>
+
+      <!-- ===== TAB: LEADERBOARD ===== -->
+      <div class="lp-panel lp-panel-board" id="lpPanelBoard" style="display:none">
+        <div class="lp-board-head">
+          <h3>&#128081; King of the Hill</h3>
+          <p class="text-muted">The token with the highest bonding curve progress becomes King. First to graduate wins.</p>
+        </div>
+        <div class="lp-board-list" id="lpBoardList">
+          <!-- populated by JS -->
+        </div>
+      </div>
+
+      <!-- ===== TOKEN DETAIL MODAL ===== -->
+      <div class="lp-detail-overlay" id="lpDetailOverlay" style="display:none">
+        <div class="lp-detail-modal" id="lpDetailModal">
+          <button class="lp-detail-close" id="lpDetailClose">&times;</button>
+          <div class="lp-detail-top">
+            <div class="lp-detail-img" id="lpDetailImg"></div>
+            <div class="lp-detail-info">
+              <h3 id="lpDetailName">Token</h3>
+              <span class="lp-detail-ticker" id="lpDetailTicker">$TICK</span>
+              <span class="lp-detail-creator" id="lpDetailCreator">by anon</span>
+            </div>
+            <div class="lp-detail-mcap" id="lpDetailMcap">0 OST</div>
+          </div>
+          <p class="lp-detail-desc" id="lpDetailDesc"></p>
+          <div class="lp-detail-socials" id="lpDetailSocials"></div>
+
+          <!-- Bonding curve progress -->
+          <div class="lp-curve-box">
+            <div class="lp-curve-label">
+              <span>bonding curve progress</span>
+              <span id="lpDetailCurveVal">0%</span>
+            </div>
+            <div class="lp-curve-track"><div class="lp-curve-fill" id="lpDetailCurveFill" style="width:0%"></div></div>
+            <p class="lp-curve-note text-muted">When the market cap reaches <strong>69,000 OST</strong>, all the liquidity from the bonding curve will be deposited and burned. Progression increases as the price goes up.</p>
           </div>
 
-          <!-- Why OST-only -->
-          <div class="lp-info-card lp-why">
-            <h4>&#128274; Why Everything Stays in OST</h4>
-            <ul class="lp-why-list">
-              <li><span class="lp-why-icon">&#128176;</span> Every launch fee funds satellite internet for the unconnected</li>
-              <li><span class="lp-why-icon">&#128274;</span> Confidential transfers &mdash; your balance stays private</li>
-              <li><span class="lp-why-icon">&#9889;</span> 0.4s settlement, zero network fees, forever</li>
-              <li><span class="lp-why-icon">&#127758;</span> No external DEX dependency &mdash; no rug pull risk from outside liquidity</li>
-              <li><span class="lp-why-icon">&#128640;</span> Your coin lives on Solana as a real Token-2022 token</li>
-            </ul>
+          <!-- Buy / Sell tabs -->
+          <div class="lp-trade-tabs">
+            <button class="lp-trade-tab lp-trade-tab-active" data-side="buy">Buy</button>
+            <button class="lp-trade-tab" data-side="sell">Sell</button>
+          </div>
+          <div class="lp-trade-form">
+            <div class="lp-trade-row">
+              <input type="number" id="lpTradeAmount" class="lp-input" placeholder="0.0" min="0" step="0.01">
+              <span class="lp-trade-denom" id="lpTradeDenom">OST</span>
+            </div>
+            <div class="lp-trade-presets">
+              <button class="lp-tp" data-v="0">reset</button>
+              <button class="lp-tp" data-v="10">10 OST</button>
+              <button class="lp-tp" data-v="50">50 OST</button>
+              <button class="lp-tp" data-v="100">100 OST</button>
+              <button class="lp-tp" data-v="500">500 OST</button>
+            </div>
+            <button class="lp-trade-btn lp-trade-buy" id="lpTradeBtn">place trade</button>
           </div>
 
-          <!-- Recent launches -->
-          <div class="lp-info-card">
-            <h4>&#128293; Recent Launches</h4>
-            <div class="lp-recent" id="lpRecent">
-              <div class="lp-recent-empty">No launches yet. Be the first!</div>
+          <!-- Holders / Comments placeholder -->
+          <div class="lp-detail-tabs-sec">
+            <button class="lp-det-tab lp-det-tab-active" data-dtab="holders">Holders</button>
+            <button class="lp-det-tab" data-dtab="comments">Thread</button>
+          </div>
+          <div class="lp-detail-section" id="lpDetailHolders">
+            <div class="lp-holders-list" id="lpHoldersList"></div>
+          </div>
+          <div class="lp-detail-section" id="lpDetailComments" style="display:none">
+            <div class="lp-comments-list" id="lpCommentsList"></div>
+            <div class="lp-comment-input">
+              <input type="text" id="lpCommentText" class="lp-input" placeholder="post a reply..." maxlength="280">
+              <button class="lp-comment-send" id="lpCommentSend">post</button>
             </div>
           </div>
         </div>
@@ -3507,6 +3571,6 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=40"></script>
+  <script src="app.js?v=41"></script>
 </body>
 </html>
