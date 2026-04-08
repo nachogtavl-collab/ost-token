@@ -6055,12 +6055,23 @@
   function brandSvg(name, color) {
     var c = color || '#555';
     var l = (name || '?').charAt(0).toUpperCase();
-    return 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="' + c + '"/><stop offset="100%" stop-color="' + c + '88"/></linearGradient></defs><rect fill="url(#g)" width="56" height="56" rx="13"/><text x="28" y="37" text-anchor="middle" fill="#fff" font-size="24" font-weight="bold" font-family="Inter,system-ui,sans-serif">' + l + '</text></svg>');
+    return 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="' + c + '"/><stop offset="100%" stop-color="' + c + 'cc"/></linearGradient><filter id="s"><feDropShadow dx="0" dy="1" stdDeviation="1" flood-opacity=".3"/></filter></defs><rect fill="url(#bg)" width="80" height="80" rx="18"/><rect x="2" y="2" width="76" height="76" rx="16" fill="none" stroke="rgba(255,255,255,.15)" stroke-width="1"/><text x="40" y="52" text-anchor="middle" fill="#fff" font-size="36" font-weight="800" font-family="Inter,system-ui,sans-serif" filter="url(#s)">' + l + '</text></svg>');
   }
+  // Multi-layer logo fallback: Clearbit → icon.horse → Google Favicon → SVG
   function logoSrc(domain) { return 'https://logo.clearbit.com/' + domain; }
   function logoFallback(img, domain, name, color) {
-    img.onerror = function() { this.onerror = null; this.src = brandSvg(name, color); };
-    img.src = 'https://img.logo.dev/' + domain + '?token=pk_anonymous&size=64';
+    // Already in fallback chain — go to next layer
+    if (img._logoTry >= 3) { img.onerror = null; img.src = brandSvg(name, color); return; }
+    img._logoTry = (img._logoTry || 0) + 1;
+    img.onerror = function() { logoFallback(this, domain, name, color); };
+    if (img._logoTry === 1) { img.src = 'https://icon.horse/icon/' + domain; }
+    else if (img._logoTry === 2) { img.src = 'https://www.google.com/s2/favicons?domain=' + domain + '&sz=128'; }
+    else { img.onerror = null; img.src = brandSvg(name, color); }
+  }
+  // Safe OST price getter with fallback
+  function safeOstPrice() {
+    if (window.ostPrice && window.ostPrice > 0) return window.ostPrice;
+    return 0.00041;
   }
 
   // ========================================================================
@@ -6073,26 +6084,38 @@
     var fxToUSD = { USD:1, EUR:1.08, GBP:1.27, CAD:.74, AUD:.65, BRL:.20, MXN:.058, INR:.012, JPY:.0067, KRW:.00075, TRY:.031, RUB:.011, AED:.27 };
 
     var brands = [
-      { name:'Amazon',      domain:'amazon.com',       color:'#FF9900', cat:'shop',  rate:88 },
-      { name:'Apple',       domain:'apple.com',        color:'#A2AAAD', cat:'shop',  rate:85 },
-      { name:'Google Play', domain:'google.com',       color:'#34A853', cat:'game',  rate:80 },
-      { name:'Steam',       domain:'steampowered.com', color:'#1b2838', cat:'game',  rate:78 },
-      { name:'Walmart',     domain:'walmart.com',      color:'#0071CE', cat:'shop',  rate:90 },
-      { name:'Target',      domain:'target.com',       color:'#CC0000', cat:'shop',  rate:89 },
-      { name:'eBay',        domain:'ebay.com',         color:'#E53238', cat:'shop',  rate:84 },
-      { name:'Starbucks',   domain:'starbucks.com',    color:'#00704A', cat:'food',  rate:82 },
-      { name:'Nike',        domain:'nike.com',         color:'#111111', cat:'shop',  rate:83 },
-      { name:'Netflix',     domain:'netflix.com',      color:'#E50914', cat:'media', rate:76 },
-      { name:'Spotify',     domain:'spotify.com',      color:'#1DB954', cat:'media', rate:74 },
-      { name:'Uber',        domain:'uber.com',         color:'#000000', cat:'travel', rate:85 },
-      { name:'DoorDash',    domain:'doordash.com',     color:'#FF3008', cat:'food',  rate:80 },
-      { name:'PlayStation', domain:'playstation.com',  color:'#003087', cat:'game',  rate:79 },
-      { name:'Xbox',        domain:'xbox.com',         color:'#107C10', cat:'game',  rate:81 },
-      { name:'Best Buy',    domain:'bestbuy.com',      color:'#0046BE', cat:'shop',  rate:87 },
-      { name:'Sephora',     domain:'sephora.com',      color:'#000000', cat:'shop',  rate:82 },
-      { name:'Nordstrom',   domain:'nordstrom.com',    color:'#000000', cat:'shop',  rate:84 },
-      { name:'Delta',       domain:'delta.com',        color:'#003366', cat:'travel', rate:77 },
-      { name:'Airbnb',      domain:'airbnb.com',       color:'#FF5A5F', cat:'travel', rate:75 }
+      { name:'Amazon',       domain:'amazon.com',        color:'#FF9900', cat:'shop',   rate:88 },
+      { name:'Apple',        domain:'apple.com',         color:'#555555', cat:'shop',   rate:90 },
+      { name:'Google Play',  domain:'play.google.com',   color:'#34A853', cat:'game',   rate:80 },
+      { name:'Steam',        domain:'store.steampowered.com', color:'#1b2838', cat:'game', rate:78 },
+      { name:'Walmart',      domain:'walmart.com',       color:'#0071CE', cat:'shop',   rate:90 },
+      { name:'Target',       domain:'target.com',        color:'#CC0000', cat:'shop',   rate:89 },
+      { name:'eBay',         domain:'ebay.com',          color:'#E53238', cat:'shop',   rate:84 },
+      { name:'Starbucks',    domain:'starbucks.com',     color:'#00704A', cat:'food',   rate:82 },
+      { name:'Nike',         domain:'nike.com',          color:'#111111', cat:'shop',   rate:83 },
+      { name:'Netflix',      domain:'netflix.com',       color:'#E50914', cat:'media',  rate:76 },
+      { name:'Spotify',      domain:'spotify.com',       color:'#1DB954', cat:'media',  rate:74 },
+      { name:'Uber',         domain:'uber.com',          color:'#000000', cat:'travel', rate:85 },
+      { name:'DoorDash',     domain:'doordash.com',      color:'#FF3008', cat:'food',   rate:80 },
+      { name:'PlayStation',  domain:'playstation.com',   color:'#003087', cat:'game',   rate:79 },
+      { name:'Xbox',         domain:'xbox.com',          color:'#107C10', cat:'game',   rate:81 },
+      { name:'Best Buy',     domain:'bestbuy.com',       color:'#0046BE', cat:'shop',   rate:87 },
+      { name:'Sephora',      domain:'sephora.com',       color:'#000000', cat:'shop',   rate:82 },
+      { name:'Nordstrom',    domain:'nordstrom.com',     color:'#000000', cat:'shop',   rate:84 },
+      { name:'Delta',        domain:'delta.com',         color:'#003366', cat:'travel', rate:77 },
+      { name:'Airbnb',       domain:'airbnb.com',        color:'#FF5A5F', cat:'travel', rate:75 },
+      { name:'Visa Gift Card', domain:'visa.com',        color:'#1A1F71', cat:'shop',   rate:92 },
+      { name:'Mastercard',   domain:'mastercard.com',    color:'#EB001B', cat:'shop',   rate:91 },
+      { name:'Home Depot',   domain:'homedepot.com',     color:'#F96302', cat:'shop',   rate:80 },
+      { name:'Costco',       domain:'costco.com',        color:'#E31837', cat:'shop',   rate:88 },
+      { name:'Adidas',       domain:'adidas.com',        color:'#000000', cat:'shop',   rate:78 },
+      { name:'Chipotle',     domain:'chipotle.com',      color:'#A81612', cat:'food',   rate:80 },
+      { name:"McDonald's",   domain:'mcdonalds.com',     color:'#FFC72C', cat:'food',   rate:82 },
+      { name:'Uber Eats',    domain:'ubereats.com',      color:'#06C167', cat:'food',   rate:78 },
+      { name:'Disney+',      domain:'disneyplus.com',    color:'#113CCF', cat:'media',  rate:76 },
+      { name:'Hulu',         domain:'hulu.com',          color:'#1CE783', cat:'media',  rate:74 },
+      { name:'Southwest',    domain:'southwest.com',     color:'#304CB2', cat:'travel', rate:77 },
+      { name:'Marriott',     domain:'marriott.com',      color:'#1C1C1C', cat:'travel', rate:79 }
     ];
 
     var selectedBrand = null;
@@ -6235,7 +6258,7 @@
       var usd = bal * (fxToUSD[cur] || 1);
       var rate = selectedBrand.rate / 100;
       var payout = usd * rate;
-      var ost = window.ostPrice > 0 ? payout / window.ostPrice : 0;
+      var ost = safeOstPrice() > 0 ? payout / safeOstPrice() : 0;
       cart.push({
         brand: selectedBrand.name,
         domain: selectedBrand.domain,
@@ -6305,7 +6328,7 @@
       var fee = totalOst * 0.001;
       var net = totalOst - fee;
       offerTotal.textContent = net.toFixed(2) + ' OST';
-      offerRate.textContent = '1 OST = $' + (window.ostPrice || 0).toFixed(6);
+      offerRate.textContent = '1 OST = $' + safeOstPrice().toFixed(6);
       offerFee.textContent = fee.toFixed(4) + ' OST (0.1%)';
       setStep(2);
     });
@@ -6646,8 +6669,8 @@
       var p = parseFloat(priceDetEl.value) || 0;
       var cost = g * p;
       usdOut.textContent = '$' + cost.toFixed(2);
-      if (cost > 0 && window.ostPrice > 0) {
-        var ost = cost / window.ostPrice;
+      if (cost > 0 && safeOstPrice() > 0) {
+        var ost = cost / safeOstPrice();
         var rate = getRewardRate();
         ostOut.textContent = ost.toFixed(2) + ' OST';
         rwOut.textContent = '+' + (ost * rate).toFixed(2) + ' OST';
@@ -6676,7 +6699,7 @@
           var g = parseFloat(galEl.value) || 0;
           var p = parseFloat(priceDetEl.value) || 0;
           var cost = g * p;
-          var ost = window.ostPrice > 0 ? cost / window.ostPrice : 0;
+          var ost = safeOstPrice() > 0 ? cost / safeOstPrice() : 0;
           var rate = getRewardRate();
           var reward = ost * rate;
           fuelHistory.push({
