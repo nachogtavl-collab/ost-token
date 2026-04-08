@@ -26,7 +26,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="style.css?v=43">
+  <link rel="stylesheet" href="style.css?v=44">
 </head>
 <body>
 
@@ -1052,6 +1052,8 @@
         </div>
 
         <!-- Station List -->
+        <div class="fuel2-brand-tabs" id="fuel2BrandTabs"></div>
+
         <div class="fuel2-list-head">
           <div class="fuel2-list-title">
             <span id="fuel2ResultCount">0</span> Stations Near You
@@ -1087,6 +1089,18 @@
             <div class="fuel2-det-section">
               <div class="fuel2-det-section-title">Amenities</div>
               <div class="fuel2-det-amenities" id="fuel2DetAmenities"></div>
+            </div>
+
+            <!-- Gallery -->
+            <div class="fuel2-det-section">
+              <div class="fuel2-det-section-title">Photos</div>
+              <div class="fuel2-det-gallery" id="fuel2DetGallery"></div>
+            </div>
+
+            <!-- External Links: Yelp, Google, Maps -->
+            <div class="fuel2-det-section fuel2-yelp-section">
+              <div class="fuel2-det-section-title">Explore &amp; Reviews</div>
+              <div class="fuel2-ext-links" id="fuel2ExtLinks"></div>
             </div>
 
             <!-- Pay with OST -->
@@ -3063,6 +3077,19 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
         </div>
       </div>
 
+      <!-- Live ticker -->
+      <div class="lp-ticker-wrap" id="lpTickerWrap">
+        <div class="lp-ticker" id="lpTicker"></div>
+      </div>
+
+      <!-- Stats row -->
+      <div class="lp-stats-row" id="lpStatsRow">
+        <div class="lp-stat-box"><div class="lp-stat-val" id="lpStatCoins">0</div><div class="lp-stat-label">Coins</div></div>
+        <div class="lp-stat-box"><div class="lp-stat-val" id="lpStatKoth">--</div><div class="lp-stat-label">KOTH</div></div>
+        <div class="lp-stat-box"><div class="lp-stat-val" id="lpStatTvl">0</div><div class="lp-stat-label">Total TVL</div></div>
+        <div class="lp-stat-box"><div class="lp-stat-val" id="lpStatGrads">0</div><div class="lp-stat-label">Graduated</div></div>
+      </div>
+
       <!-- ===== TAB: CREATE ===== -->
       <div class="lp-panel lp-panel-create" id="lpPanelCreate">
         <div class="lp-create-wrap">
@@ -3175,6 +3202,9 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
 
       <!-- ===== TAB: FEED (Trending) ===== -->
       <div class="lp-panel lp-panel-feed" id="lpPanelFeed" style="display:none">
+        <!-- Activity feed -->
+        <div class="lp-activity" id="lpActivityFeed"></div>
+
         <!-- Feed top bar -->
         <div class="lp-feed-bar">
           <div class="lp-feed-sorts">
@@ -3219,6 +3249,13 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
           </div>
           <p class="lp-detail-desc" id="lpDetailDesc"></p>
           <div class="lp-detail-socials" id="lpDetailSocials"></div>
+
+          <!-- Action buttons -->
+          <div class="lp-detail-actions">
+            <button class="lp-detail-action" id="lpActionShare">&#128279; Share</button>
+            <button class="lp-detail-action" id="lpActionWatch">&#9734; Watchlist</button>
+            <button class="lp-detail-action" id="lpActionCopy">&#128203; Copy CA</button>
+          </div>
 
           <!-- Bonding curve progress -->
           <div class="lp-curve-box">
@@ -3593,6 +3630,6 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=43"></script>
+  <script src="app.js?v=44"></script>
 </body>
 </html>

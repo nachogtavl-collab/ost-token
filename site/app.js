@@ -6499,6 +6499,7 @@
 
     var activeFuelType = 'regular';
     var activeSort = 'price';
+    var activeBrandFilter = 'all';
     var fuelHistory = JSON.parse(localStorage.getItem('ost_fuel_history') || '[]');
     var selectedStation = null;
 
@@ -6509,6 +6510,39 @@
     var detailOverlay = document.getElementById('fuel2DetailOverlay');
     var detailModal = document.getElementById('fuel2DetailModal');
     var closeDetail = document.getElementById('fuel2DetailClose');
+    var brandTabsWrap = document.getElementById('fuel2BrandTabs');
+
+    // Build brand tabs from stations
+    function renderBrandTabs() {
+      if (!brandTabsWrap) return;
+      var seen = {};
+      var allTab = document.createElement('button');
+      allTab.className = 'fuel2-brand-tab fuel2-brand-tab-active';
+      allTab.textContent = 'All Stations';
+      allTab.dataset.brand = 'all';
+      allTab.addEventListener('click', function() { activeBrandFilter = 'all'; highlightBrandTab('all'); renderStations(); });
+      brandTabsWrap.appendChild(allTab);
+      stations.forEach(function(s) {
+        if (seen[s.name]) return;
+        seen[s.name] = true;
+        var tab = document.createElement('button');
+        tab.className = 'fuel2-brand-tab';
+        tab.dataset.brand = s.name;
+        var img = document.createElement('img');
+        img.src = logoSrc(s.domain);
+        img.onerror = function() { logoFallback(this, s.domain, s.name, '#0071CE'); };
+        tab.appendChild(img);
+        tab.appendChild(document.createTextNode(s.name));
+        tab.addEventListener('click', function() { activeBrandFilter = s.name; highlightBrandTab(s.name); renderStations(); });
+        brandTabsWrap.appendChild(tab);
+      });
+    }
+    function highlightBrandTab(name) {
+      brandTabsWrap.querySelectorAll('.fuel2-brand-tab').forEach(function(t) {
+        t.classList.toggle('fuel2-brand-tab-active', t.dataset.brand === name);
+      });
+    }
+    renderBrandTabs();
 
     // Fuel type tabs
     document.querySelectorAll('.fuel2-ft').forEach(function(tab) {
@@ -6541,6 +6575,7 @@
     function sortedStations() {
       var q = (locInput.value || '').toLowerCase();
       var filtered = stations.filter(function(s) {
+        if (activeBrandFilter !== 'all' && s.name !== activeBrandFilter) return false;
         if (!q) return true;
         return s.name.toLowerCase().indexOf(q) >= 0 || s.addr.toLowerCase().indexOf(q) >= 0 || s.city.toLowerCase().indexOf(q) >= 0;
       });
@@ -6624,6 +6659,32 @@
         span.textContent = a;
         amenEl.appendChild(span);
       });
+
+      // Gallery — generate placeholder station images
+      var gallery = document.getElementById('fuel2DetGallery');
+      if (gallery) {
+        gallery.innerHTML = '';
+        var colors = ['#1a237e','#004d40','#b71c1c','#e65100','#1b5e20'];
+        var labels = ['Pumps','Store','Car Wash','Entrance','Night'];
+        for (var gi = 0; gi < 5; gi++) {
+          var gimg = document.createElement('img');
+          gimg.src = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160"><rect fill="' + colors[gi % colors.length] + '" width="240" height="160" rx="8"/><text x="120" y="70" text-anchor="middle" fill="rgba(255,255,255,.7)" font-size="14" font-weight="700" font-family="Inter,sans-serif">' + s.name + '</text><text x="120" y="100" text-anchor="middle" fill="rgba(255,255,255,.35)" font-size="12" font-family="Inter,sans-serif">' + labels[gi] + '</text></svg>');
+          gimg.alt = s.name + ' ' + labels[gi];
+          gallery.appendChild(gimg);
+        }
+      }
+
+      // External links — Yelp, Google, Maps
+      var extLinks = document.getElementById('fuel2ExtLinks');
+      if (extLinks) {
+        var yelpQ = encodeURIComponent(s.name + ' ' + s.addr + ' ' + s.city);
+        var gQ = encodeURIComponent(s.name + ' ' + s.addr + ' ' + s.city);
+        var mapsQ = encodeURIComponent(s.addr + ', ' + s.city);
+        extLinks.innerHTML =
+          '<a class="fuel2-yelp-link" href="https://www.yelp.com/search?find_desc=' + yelpQ + '" target="_blank" rel="noopener">&#11088; Yelp Reviews</a>' +
+          '<a class="fuel2-google-link" href="https://www.google.com/search?q=' + gQ + '+reviews" target="_blank" rel="noopener">&#128270; Google</a>' +
+          '<a class="fuel2-maps-link" href="https://www.google.com/maps/search/' + mapsQ + '" target="_blank" rel="noopener">&#128205; Directions</a>';
+      }
 
       // Pre-fill pay
       var priceField = document.getElementById('fuel2DetPrice');
@@ -7068,6 +7129,87 @@
     }
     updateTotalCount();
 
+    /* ── Stats bar ── */
+    function updateStats() {
+      var coinEl = document.getElementById('lpStatCoins');
+      var kothEl = document.getElementById('lpStatKoth');
+      var tvlEl = document.getElementById('lpStatTvl');
+      var gradEl = document.getElementById('lpStatGrads');
+      if (coinEl) coinEl.textContent = launches.length;
+      var koth = getKoth();
+      if (kothEl) kothEl.textContent = koth ? '$' + koth.symbol : '--';
+      var totalMcap = 0; var grads = 0;
+      launches.forEach(function(l) { totalMcap += l.mcap; if (l.curve >= 100) grads++; });
+      if (tvlEl) tvlEl.textContent = fmtMcap(totalMcap);
+      if (gradEl) gradEl.textContent = grads;
+    }
+
+    /* ── Live ticker ── */
+    function renderTicker() {
+      var ticker = document.getElementById('lpTicker');
+      if (!ticker) return;
+      var items = '';
+      var sorted = launches.slice().sort(function(a,b) { return b.mcap - a.mcap; });
+      // Double the items for infinite scroll
+      for (var rep = 0; rep < 2; rep++) {
+        sorted.forEach(function(l) {
+          var change = ((Math.random() - 0.4) * 15).toFixed(1);
+          var up = parseFloat(change) >= 0;
+          items += '<span class="lp-ticker-item" data-mint="' + escHtml(l.mint) + '">' +
+            (l.img ? '<img class="lp-ticker-img" src="' + escHtml(l.img) + '">' : '') +
+            '<span class="lp-ticker-name">$' + escHtml(l.symbol) + '</span>' +
+            '<span class="lp-ticker-price">' + fmtMcap(l.mcap) + '</span>' +
+            '<span class="' + (up ? 'lp-ticker-change-up' : 'lp-ticker-change-down') + '">' + (up ? '+' : '') + change + '%</span>' +
+            '</span>';
+        });
+      }
+      ticker.innerHTML = items;
+      // Click on ticker item opens detail
+      ticker.querySelectorAll('.lp-ticker-item').forEach(function(item) {
+        item.addEventListener('click', function() {
+          var mint = item.dataset.mint;
+          var found = launches.find(function(l) { return l.mint === mint; });
+          if (found) openDetail(found);
+        });
+      });
+    }
+    renderTicker();
+
+    /* ── Activity feed ── */
+    var activities = [];
+    function seedActivities() {
+      var verbs = ['bought','sold','launched','aped into'];
+      var names = ['anon','degen42','whale.sol','trader99','ser_pump','moonboy'];
+      launches.forEach(function(l) {
+        for (var ai = 0; ai < 2; ai++) {
+          var verb = verbs[Math.floor(Math.random() * verbs.length)];
+          var user = names[Math.floor(Math.random() * names.length)];
+          var amt = (Math.random() * 500 + 10).toFixed(0);
+          var type = verb === 'sold' ? 'sell' : verb === 'launched' ? 'launch' : 'buy';
+          activities.push({ user: user, verb: verb, token: '$' + l.symbol, amount: amt, type: type, time: Date.now() - Math.floor(Math.random() * 600000) });
+        }
+      });
+      activities.sort(function(a,b) { return b.time - a.time; });
+    }
+    seedActivities();
+
+    function renderActivity() {
+      var feed = document.getElementById('lpActivityFeed');
+      if (!feed) return;
+      feed.innerHTML = '';
+      activities.slice(0, 15).forEach(function(a) {
+        var el = document.createElement('div');
+        el.className = 'lp-activity-item';
+        el.innerHTML =
+          '<span class="lp-activity-dot lp-activity-dot-' + a.type + '"></span>' +
+          '<span class="lp-activity-text"><b>' + escHtml(a.user) + '</b> ' + a.verb + ' ' + a.amount + ' OST of <b>' + escHtml(a.token) + '</b></span>' +
+          '<span class="lp-activity-time">' + timeAgo(a.time) + '</span>';
+        feed.appendChild(el);
+      });
+    }
+
+    updateStats();
+
     /* ══════════════════════════════════════════════════
        FEED — Token card grid
        ══════════════════════════════════════════════════ */
@@ -7141,10 +7283,30 @@
               '<div class="lp-card-curve-track"><div class="lp-card-curve-fill" style="width:' + Math.min(l.curve, 100) + '%"></div></div>' +
               '<div class="lp-card-curve-lbl"><span>bonding curve</span><span>' + Math.min(l.curve, 100) + '%</span></div>' +
             '</div>' +
+            '<div class="lp-card-actions">' +
+              '<button class="lp-card-quick" data-mint="' + escHtml(l.mint) + '">&#9889; Quick Buy</button>' +
+              '<button class="lp-card-view" data-mint="' + escHtml(l.mint) + '">&#128065; View</button>' +
+            '</div>' +
           '</div>';
+        // Quick buy handler
+        card.querySelector('.lp-card-quick').addEventListener('click', function(e) {
+          e.stopPropagation();
+          l.mcap += Math.floor(10 * 8);
+          l.curve = Math.min(Math.floor(l.mcap / 690), 100);
+          localStorage.setItem('ost_lp_history2', JSON.stringify(launches));
+          activities.unshift({ user: connectedWallet ? connectedWallet.slice(0,4)+'...' : 'anon', verb: 'bought', token: '$' + l.symbol, amount: '10', type: 'buy', time: Date.now() });
+          toast('✅', 'Quick bought 10 OST of $' + l.symbol);
+          renderFeed();
+          updateStats();
+        });
+        card.querySelector('.lp-card-view').addEventListener('click', function(e) {
+          e.stopPropagation();
+          openDetail(l);
+        });
         card.addEventListener('click', function() { openDetail(l); });
         feedGrid.appendChild(card);
       });
+      renderActivity();
     }
 
     /* ══════════════════════════════════════════════════
@@ -7225,6 +7387,13 @@
 
       overlay.style.display = 'flex';
       document.body.style.overflow = 'hidden';
+      // Update watchlist button state
+      var watchlist = JSON.parse(localStorage.getItem('ost_lp_watchlist') || '[]');
+      var wBtn = document.getElementById('lpActionWatch');
+      if (wBtn) {
+        if (watchlist.indexOf(token.mint) >= 0) { wBtn.classList.add('lp-action-active'); wBtn.innerHTML = '&#9733; Watching'; }
+        else { wBtn.classList.remove('lp-action-active'); wBtn.innerHTML = '&#9734; Watchlist'; }
+      }
     }
 
     function closeDetail() {
@@ -7234,6 +7403,45 @@
     }
     if (closeBtn) closeBtn.addEventListener('click', closeDetail);
     if (overlay) overlay.addEventListener('click', function(e) { if (e.target === overlay) closeDetail(); });
+
+    /* Action buttons: Share, Watchlist, Copy CA */
+    var shareBtn = document.getElementById('lpActionShare');
+    var watchBtn = document.getElementById('lpActionWatch');
+    var copyCABtn = document.getElementById('lpActionCopy');
+    if (shareBtn) {
+      shareBtn.addEventListener('click', function() {
+        if (!currentToken) return;
+        var text = 'Check out $' + currentToken.symbol + ' on OST Launchpad! MC: ' + fmtMcap(currentToken.mcap) + ' OST';
+        if (navigator.clipboard) navigator.clipboard.writeText(text);
+        toast('📋', 'Share text copied!');
+      });
+    }
+    if (watchBtn) {
+      watchBtn.addEventListener('click', function() {
+        if (!currentToken) return;
+        var watchlist = JSON.parse(localStorage.getItem('ost_lp_watchlist') || '[]');
+        var idx = watchlist.indexOf(currentToken.mint);
+        if (idx >= 0) {
+          watchlist.splice(idx, 1);
+          watchBtn.classList.remove('lp-action-active');
+          watchBtn.innerHTML = '&#9734; Watchlist';
+          toast('💔', 'Removed from watchlist');
+        } else {
+          watchlist.push(currentToken.mint);
+          watchBtn.classList.add('lp-action-active');
+          watchBtn.innerHTML = '&#9733; Watching';
+          toast('⭐', 'Added to watchlist!');
+        }
+        localStorage.setItem('ost_lp_watchlist', JSON.stringify(watchlist));
+      });
+    }
+    if (copyCABtn) {
+      copyCABtn.addEventListener('click', function() {
+        if (!currentToken) return;
+        if (navigator.clipboard) navigator.clipboard.writeText(currentToken.mint);
+        toast('📋', 'Contract address copied!');
+      });
+    }
 
     /* Buy/Sell tabs */
     document.querySelectorAll('.lp-trade-tab').forEach(function(tab) {
@@ -7268,10 +7476,12 @@
         if (tradeSide === 'buy') {
           currentToken.mcap += Math.floor(amt * 8);
           currentToken.curve = Math.min(Math.floor(currentToken.mcap / 690), 100);
+          activities.unshift({ user: connectedWallet ? connectedWallet.slice(0,4)+'...' : 'You', verb: 'bought', token: '$' + currentToken.symbol, amount: amt.toString(), type: 'buy', time: Date.now() });
           toast('✅', 'Bought ' + amt + ' OST of $' + currentToken.symbol);
         } else {
           currentToken.mcap = Math.max(100, currentToken.mcap - Math.floor(amt * 5));
           currentToken.curve = Math.min(Math.floor(currentToken.mcap / 690), 100);
+          activities.unshift({ user: connectedWallet ? connectedWallet.slice(0,4)+'...' : 'You', verb: 'sold', token: '$' + currentToken.symbol, amount: amt.toString(), type: 'sell', time: Date.now() });
           toast('✅', 'Sold ' + amt + ' ' + currentToken.symbol);
         }
 
@@ -7360,6 +7570,16 @@
         l.curve = Math.min(Math.floor(l.mcap / 690), 100);
       });
       localStorage.setItem('ost_lp_history2', JSON.stringify(launches));
+      // Add random activity
+      var verbs = ['bought','sold','aped into'];
+      var users = ['anon','degen42','whale.sol','trader99','ser'];
+      var rndL = launches[Math.floor(Math.random() * launches.length)];
+      if (rndL) {
+        var v = verbs[Math.floor(Math.random() * verbs.length)];
+        activities.unshift({ user: users[Math.floor(Math.random() * users.length)], verb: v, token: '$' + rndL.symbol, amount: (Math.random() * 200 + 5).toFixed(0), type: v === 'sold' ? 'sell' : 'buy', time: Date.now() });
+        if (activities.length > 50) activities.length = 50;
+      }
+      updateStats();
       // Update detail view if open
       if (currentToken && overlay.style.display !== 'none') {
         document.getElementById('lpDetailMcap').textContent = fmtMcap(currentToken.mcap) + ' OST';
