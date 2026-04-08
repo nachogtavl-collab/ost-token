@@ -26,7 +26,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="style.css?v=45">
+  <link rel="stylesheet" href="style.css?v=46">
 </head>
 <body>
 
@@ -78,6 +78,13 @@
       </div>
     </div>
   </nav>
+
+  <!-- Cursor glow follower -->
+  <div class="cursor-glow" id="cursorGlow"></div>
+
+  <!-- XP Progress Bar -->
+  <div class="ost-xp-bar" id="ostXpBar"><div class="ost-xp-fill" id="ostXpFill"></div></div>
+  <div class="ost-xp-tooltip" id="ostXpTooltip">Level 1 &middot; 0 / 100 XP</div>
 
 <!-- ================================================================== -->
   <section id="home" class="hero">
@@ -2283,6 +2290,18 @@
       <div class="space-journey-3d" id="spaceJourney3d">
         <canvas id="scJourney" class="sj-canvas"></canvas>
 
+        <!-- Cinematic Letterbox Bars -->
+        <div class="sj-letterbox-top"></div>
+        <div class="sj-letterbox-bot"></div>
+
+        <!-- Phase Transition Overlay -->
+        <div class="sj-phase-overlay" id="sjPhaseOverlay">
+          <div class="sj-phase-overlay-text" id="sjPhaseOverlayText"></div>
+        </div>
+
+        <!-- Expand/Fullscreen Button -->
+        <button class="sj-expand-btn" id="sjExpandBtn">&#9974; Cinematic Mode</button>
+
         <!-- Cinematic HUD Overlay -->
         <div class="sj-hud">
           <div class="sj-hud-left">
@@ -3774,6 +3793,6 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=45"></script>
+  <script src="app.js?v=46"></script>
 </body>
 </html>

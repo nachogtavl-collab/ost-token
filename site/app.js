@@ -3867,7 +3867,7 @@
   })();
 
   /* ================================================================== */
-  /* PARTICLE FIELD — Hero Background                                   */
+  /* PARTICLE FIELD — Interactive Hero Background (cursor-reactive)     */
   /* ================================================================== */
   (function initParticles() {
     const canvas = $('#particleCanvas');
@@ -3875,6 +3875,9 @@
     const ctx = canvas.getContext('2d');
     let w, h, particles = [];
     const COUNT = 80;
+    let mouseX = -9999, mouseY = -9999;
+    const ATTRACT_RADIUS = 150;
+    const ATTRACT_FORCE = 0.02;
 
     function resize() {
       w = canvas.width = window.innerWidth;
@@ -3882,6 +3885,13 @@
     }
     resize();
     window.addEventListener('resize', resize);
+
+    canvas.addEventListener('mousemove', function(e) {
+      mouseX = e.clientX; mouseY = e.clientY;
+    });
+    canvas.addEventListener('mouseleave', function() {
+      mouseX = -9999; mouseY = -9999;
+    });
 
     for (let i = 0; i < COUNT; i++) {
       particles.push({
@@ -3891,6 +3901,7 @@
         dx: (Math.random() - 0.5) * 0.4,
         dy: (Math.random() - 0.5) * 0.4,
         alpha: Math.random() * 0.5 + 0.2,
+        baseAlpha: Math.random() * 0.5 + 0.2,
       });
     }
 
@@ -3898,6 +3909,24 @@
       ctx.clearRect(0, 0, w, h);
       for (let i = 0; i < particles.length; i++) {
         const p = particles[i];
+
+        // Cursor attraction
+        const dxM = mouseX - p.x;
+        const dyM = mouseY - p.y;
+        const distM = Math.sqrt(dxM * dxM + dyM * dyM);
+        if (distM < ATTRACT_RADIUS && distM > 1) {
+          const force = (1 - distM / ATTRACT_RADIUS) * ATTRACT_FORCE;
+          p.dx += (dxM / distM) * force;
+          p.dy += (dyM / distM) * force;
+          p.alpha = Math.min(0.9, p.baseAlpha + (1 - distM / ATTRACT_RADIUS) * 0.5);
+        } else {
+          p.alpha += (p.baseAlpha - p.alpha) * 0.05;
+        }
+
+        // Dampen velocity
+        p.dx *= 0.99;
+        p.dy *= 0.99;
+
         p.x += p.dx; p.y += p.dy;
         if (p.x < 0) p.x = w; if (p.x > w) p.x = 0;
         if (p.y < 0) p.y = h; if (p.y > h) p.y = 0;
@@ -5670,6 +5699,27 @@
       if (sts) sts.textContent = phaseStatuses[idx];
       sunLight.color.set(idx === 3 ? 0xffccaa : 0xffffff);
       sunLight.intensity = idx === 2 ? 1.2 : 1.6;
+
+      // Phase overlay transition
+      var overlay = document.getElementById('sjPhaseOverlay');
+      if (overlay) {
+        var overlayText = overlay.querySelector('.sj-phase-overlay-text');
+        if (overlayText) overlayText.textContent = phaseMissions[idx];
+        overlay.classList.add('active');
+        setTimeout(function() { overlay.classList.remove('active'); }, 1800);
+      }
+
+      // HUD flash effect
+      var hud = document.querySelector('.sj-hud');
+      if (hud) {
+        hud.classList.add('hud-warning');
+        setTimeout(function() { hud.classList.remove('hud-warning'); }, 1200);
+      }
+
+      // Award XP for phase change
+      if (typeof window.__ostXP !== 'undefined') {
+        window.__ostXP.award(15, 'Phase ' + (idx + 1) + ' Entered');
+      }
     }
 
     document.querySelectorAll('.sj-phase-btn').forEach(function(btn) {
@@ -5964,6 +6014,27 @@
         renderer.setSize(nw, nh);
       }
     });
+
+    // Cinematic Mode Toggle
+    var expandBtn = document.getElementById('sjExpandBtn');
+    var sjContainer = document.getElementById('spaceJourney3d');
+    if (expandBtn && sjContainer) {
+      expandBtn.addEventListener('click', function() {
+        sjContainer.classList.toggle('cinematic');
+        var isCine = sjContainer.classList.contains('cinematic');
+        expandBtn.textContent = isCine ? '✕ Exit Cinematic' : '⛶ Cinematic Mode';
+        if (isCine) {
+          camera.fov = 45;
+          camera.updateProjectionMatrix();
+          if (typeof window.__ostXP !== 'undefined') {
+            window.__ostXP.award(20, 'Cinematic Mode Activated');
+          }
+        } else {
+          camera.fov = 55;
+          camera.updateProjectionMatrix();
+        }
+      });
+    }
 
     animate();
   })();
@@ -8131,6 +8202,230 @@
       updateQrStats();
     }, 4000);
 
+  })();
+
+  /* ================================================================== */
+  /* v46: CURSOR GLOW FOLLOWER                                          */
+  /* ================================================================== */
+  (function initCursorGlow() {
+    var glow = document.getElementById('cursorGlow');
+    if (!glow || window.innerWidth < 768) return;
+    var gx = -100, gy = -100, cx = -100, cy = -100;
+
+    document.addEventListener('mousemove', function(e) {
+      gx = e.clientX; gy = e.clientY;
+    });
+
+    function tick() {
+      cx += (gx - cx) * 0.15;
+      cy += (gy - cy) * 0.15;
+      glow.style.transform = 'translate(' + (cx - 200) + 'px,' + (cy - 200) + 'px)';
+      requestAnimationFrame(tick);
+    }
+    tick();
+  })();
+
+  /* ================================================================== */
+  /* v46: BUTTON RIPPLE EFFECT                                          */
+  /* ================================================================== */
+  (function initRipple() {
+    document.addEventListener('click', function(e) {
+      var btn = e.target.closest('.btn, .sj-phase-btn, .qr-btn');
+      if (!btn) return;
+      var rect = btn.getBoundingClientRect();
+      btn.style.setProperty('--ripple-x', (e.clientX - rect.left) + 'px');
+      btn.style.setProperty('--ripple-y', (e.clientY - rect.top) + 'px');
+      btn.classList.remove('btn-rippling');
+      void btn.offsetWidth; // force reflow
+      btn.classList.add('btn-rippling');
+      setTimeout(function() { btn.classList.remove('btn-rippling'); }, 600);
+    });
+  })();
+
+  /* ================================================================== */
+  /* v46: 3D TILT CARD SYSTEM                                           */
+  /* ================================================================== */
+  (function initTiltCards() {
+    if (window.innerWidth < 768) return;
+    var cards = document.querySelectorAll('.feature-card, .qr-card, .sell-card, .gc-card, .sv-card, .pl-card, .glow-card-animated');
+    cards.forEach(function(card) {
+      card.addEventListener('mousemove', function(e) {
+        var rect = card.getBoundingClientRect();
+        var x = (e.clientX - rect.left) / rect.width - 0.5;
+        var y = (e.clientY - rect.top) / rect.height - 0.5;
+        var rotY = x * 12;
+        var rotX = -y * 12;
+        card.style.transform = 'perspective(800px) rotateX(' + rotX + 'deg) rotateY(' + rotY + 'deg) translateZ(8px)';
+      });
+      card.addEventListener('mouseleave', function() {
+        card.style.transform = '';
+        card.style.transition = 'transform 0.5s cubic-bezier(.22,1,.36,1)';
+        setTimeout(function() { card.style.transition = ''; }, 500);
+      });
+    });
+  })();
+
+  /* ================================================================== */
+  /* v46: XP / ACHIEVEMENT GAME SYSTEM                                  */
+  /* ================================================================== */
+  (function initXPSystem() {
+    var xpBar = document.getElementById('ostXpBar');
+    var xpFill = document.querySelector('.ost-xp-fill');
+    var xpTooltip = document.querySelector('.ost-xp-tooltip');
+    if (!xpBar || !xpFill) return;
+
+    var saved = {};
+    try { saved = JSON.parse(localStorage.getItem('ost_xp') || '{}'); } catch(e) {}
+
+    var totalXP = saved.totalXP || 0;
+    var level = saved.level || 1;
+    var achievements = saved.achievements || [];
+    var visitedSections = saved.visitedSections || [];
+    var xpPerLevel = 100;
+
+    function calcLevel(xp) { return Math.floor(xp / xpPerLevel) + 1; }
+    function xpInLevel(xp) { return xp % xpPerLevel; }
+
+    function save() {
+      try {
+        localStorage.setItem('ost_xp', JSON.stringify({
+          totalXP: totalXP, level: level,
+          achievements: achievements, visitedSections: visitedSections
+        }));
+      } catch(e) {}
+    }
+
+    function updateBar() {
+      var pct = (xpInLevel(totalXP) / xpPerLevel) * 100;
+      xpFill.style.width = pct + '%';
+      if (xpTooltip) xpTooltip.textContent = 'Level ' + level + ' — ' + xpInLevel(totalXP) + '/' + xpPerLevel + ' XP';
+    }
+
+    function showAchievement(title) {
+      var toast = document.createElement('div');
+      toast.className = 'achievement-toast';
+      toast.innerHTML = '<strong>🏆 Achievement Unlocked!</strong><br>' + title;
+      document.body.appendChild(toast);
+      setTimeout(function() { toast.classList.add('active'); }, 50);
+      setTimeout(function() {
+        toast.classList.remove('active');
+        setTimeout(function() { toast.remove(); }, 400);
+      }, 3500);
+    }
+
+    function checkAchievements() {
+      var checks = [
+        { id: 'first_scroll', cond: visitedSections.length >= 1, title: 'Explorer — Visited first section' },
+        { id: 'five_sections', cond: visitedSections.length >= 5, title: 'Navigator — Visited 5 sections' },
+        { id: 'all_sections', cond: visitedSections.length >= 12, title: 'Completionist — Visited all sections' },
+        { id: 'level_2', cond: level >= 2, title: 'Rank Up — Reached Level 2' },
+        { id: 'level_5', cond: level >= 5, title: 'Veteran — Reached Level 5' },
+        { id: 'level_10', cond: level >= 10, title: 'Legend — Reached Level 10' },
+      ];
+      checks.forEach(function(a) {
+        if (a.cond && achievements.indexOf(a.id) === -1) {
+          achievements.push(a.id);
+          showAchievement(a.title);
+        }
+      });
+    }
+
+    function award(xp, reason) {
+      totalXP += xp;
+      var newLevel = calcLevel(totalXP);
+      if (newLevel > level) {
+        level = newLevel;
+        showAchievement('Level ' + level + ' Reached!');
+      }
+      level = newLevel;
+      updateBar();
+      checkAchievements();
+      save();
+    }
+
+    // Expose globally for other modules
+    window.__ostXP = { award: award, getLevel: function() { return level; }, getXP: function() { return totalXP; } };
+
+    // Section visit tracking — award XP when scrolling into a section
+    var sections = document.querySelectorAll('.section, [id*="section"]');
+    if (sections.length) {
+      var sectionObs = new IntersectionObserver(function(entries) {
+        entries.forEach(function(en) {
+          if (en.isIntersecting) {
+            var id = en.target.id || en.target.className;
+            if (visitedSections.indexOf(id) === -1) {
+              visitedSections.push(id);
+              award(10, 'Visited ' + id);
+            }
+          }
+        });
+      }, { threshold: 0.3 });
+      sections.forEach(function(s) { sectionObs.observe(s); });
+    }
+
+    // Award XP for button clicks (except nav links)
+    document.addEventListener('click', function(e) {
+      var btn = e.target.closest('.btn, button');
+      if (btn && !btn.closest('nav')) {
+        award(5, 'Button click');
+      }
+    });
+
+    // Show XP bar on hover
+    xpBar.addEventListener('mouseenter', function() {
+      if (xpTooltip) xpTooltip.style.opacity = '1';
+    });
+    xpBar.addEventListener('mouseleave', function() {
+      if (xpTooltip) xpTooltip.style.opacity = '0';
+    });
+
+    updateBar();
+    checkAchievements();
+  })();
+
+  /* ================================================================== */
+  /* v46: ENHANCED SCROLL REVEAL with stagger + parallax                */
+  /* ================================================================== */
+  (function initEnhancedScroll() {
+    var srEls = document.querySelectorAll('.sr');
+    if (!srEls.length) return;
+
+    var idx = 0;
+    var obs = new IntersectionObserver(function(entries) {
+      entries.forEach(function(en) {
+        if (en.isIntersecting) {
+          var delay = (idx % 4) * 80;
+          en.target.style.transitionDelay = delay + 'ms';
+          en.target.classList.add('visible');
+          idx++;
+          obs.unobserve(en.target);
+        }
+      });
+    }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+
+    srEls.forEach(function(el) { obs.observe(el); });
+
+    // Parallax for section backgrounds
+    var parallaxEls = document.querySelectorAll('.section-space, .section-dark');
+    if (parallaxEls.length) {
+      var ticking = false;
+      window.addEventListener('scroll', function() {
+        if (!ticking) {
+          requestAnimationFrame(function() {
+            var scrollY = window.pageYOffset;
+            parallaxEls.forEach(function(el) {
+              var rect = el.getBoundingClientRect();
+              if (rect.bottom > 0 && rect.top < window.innerHeight) {
+                var offset = (rect.top / window.innerHeight) * 30;
+                el.style.backgroundPositionY = offset + 'px';
+              }
+            });
+            ticking = false;
+          });
+          ticking = true;
+        }
+      }, { passive: true });
+    }
   })();
 
 })();
