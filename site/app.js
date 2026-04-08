@@ -7901,5 +7901,237 @@
 
   })();
 
+  // ========================================================================
+  // QUANTUM REALM — Interactive visualizations & demos
+  // ========================================================================
+  (function initQuantumRealm() {
+    /* ── Particle Canvas ── */
+    var canvas = document.getElementById('qrParticleCanvas');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    var particles = [];
+    var PARTICLE_COUNT = 60;
+
+    function resizeCanvas() {
+      var section = document.getElementById('quantum-realm');
+      if (!section) return;
+      canvas.width = section.offsetWidth;
+      canvas.height = section.offsetHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    function Particle() {
+      this.x = Math.random() * canvas.width;
+      this.y = Math.random() * canvas.height;
+      this.vx = (Math.random() - 0.5) * 0.4;
+      this.vy = (Math.random() - 0.5) * 0.4;
+      this.r = Math.random() * 2 + 0.5;
+      this.cyan = Math.random() > 0.4;
+    }
+
+    for (var i = 0; i < PARTICLE_COUNT; i++) particles.push(new Particle());
+
+    function drawParticles() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (var i = 0; i < particles.length; i++) {
+        var p = particles[i];
+        p.x += p.vx; p.y += p.vy;
+        if (p.x < 0) p.x = canvas.width;
+        if (p.x > canvas.width) p.x = 0;
+        if (p.y < 0) p.y = canvas.height;
+        if (p.y > canvas.height) p.y = 0;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = p.cyan ? 'rgba(0,229,255,.35)' : 'rgba(167,139,250,.3)';
+        ctx.fill();
+        // Draw connections
+        for (var j = i + 1; j < particles.length; j++) {
+          var q = particles[j];
+          var dx = p.x - q.x, dy = p.y - q.y;
+          var dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 120) {
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(q.x, q.y);
+            ctx.strokeStyle = 'rgba(0,229,255,' + (0.08 * (1 - dist / 120)) + ')';
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+        }
+      }
+      requestAnimationFrame(drawParticles);
+    }
+
+    // Only animate when section is visible
+    var qrSection = document.getElementById('quantum-realm');
+    var qrAnimating = false;
+    var qrObserver = new IntersectionObserver(function(entries) {
+      if (entries[0].isIntersecting && !qrAnimating) {
+        qrAnimating = true;
+        drawParticles();
+      }
+    }, { threshold: 0.05 });
+    if (qrSection) qrObserver.observe(qrSection);
+
+    /* ── Build Hash Chain visual (Card 1) ── */
+    var hashChain = document.getElementById('qrHashChain');
+    if (hashChain) {
+      for (var h = 0; h < 16; h++) {
+        var block = document.createElement('div');
+        block.className = 'qr-hash-block';
+        block.dataset.idx = h;
+        hashChain.appendChild(block);
+      }
+    }
+
+    /* ── Build Lattice Grid visual (Card 1) ── */
+    var latticeGrid = document.getElementById('qrLatticeGrid');
+    if (latticeGrid) {
+      for (var l = 0; l < 16; l++) {
+        var dot = document.createElement('div');
+        dot.className = 'qr-lattice-dot';
+        dot.dataset.idx = l;
+        latticeGrid.appendChild(dot);
+      }
+    }
+
+    /* ── Animate signature chain on hover ── */
+    var card1 = document.getElementById('qrCard1');
+    if (card1) {
+      var sigInterval = null;
+      card1.addEventListener('mouseenter', function() {
+        var step = 0;
+        sigInterval = setInterval(function() {
+          var blocks = hashChain ? hashChain.querySelectorAll('.qr-hash-block') : [];
+          var dots = latticeGrid ? latticeGrid.querySelectorAll('.qr-lattice-dot') : [];
+          blocks.forEach(function(b) { b.classList.remove('active'); });
+          dots.forEach(function(d) { d.classList.remove('active'); });
+          if (step < blocks.length) blocks[step].classList.add('active');
+          if (step < dots.length) dots[step].classList.add('active');
+          // Light up previous ones too
+          for (var k = 0; k <= step; k++) {
+            if (k < blocks.length) blocks[k].classList.add('active');
+            if (k < dots.length) dots[k].classList.add('active');
+          }
+          step++;
+          if (step > 16) step = 0;
+        }, 150);
+      });
+      card1.addEventListener('mouseleave', function() {
+        clearInterval(sigInterval);
+      });
+    }
+
+    /* ── Entangle Wallets button ── */
+    var entangleBtn = document.getElementById('qrEntangleBtn');
+    var walletAState = document.getElementById('qrWalletAState');
+    var walletBState = document.getElementById('qrWalletBState');
+    var entangleLink = document.getElementById('qrEntangleLink');
+    var entangledCount = 0;
+
+    if (entangleBtn) {
+      entangleBtn.addEventListener('click', function() {
+        entangleBtn.disabled = true;
+        entangleBtn.textContent = '⟡ Entangling...';
+        if (entangleLink) entangleLink.classList.add('active');
+        if (walletAState) { walletAState.textContent = '⟡ linking...'; walletAState.className = 'qr-wallet-state'; }
+        if (walletBState) { walletBState.textContent = '⟡ linking...'; walletBState.className = 'qr-wallet-state'; }
+
+        setTimeout(function() {
+          if (walletAState) { walletAState.textContent = '⟡ entangled'; walletAState.className = 'qr-wallet-state entangled'; }
+          if (walletBState) { walletBState.textContent = '⟡ entangled'; walletBState.className = 'qr-wallet-state entangled'; }
+          entangleBtn.textContent = '✓ Wallets Entangled';
+          entangledCount++;
+          updateQrStats();
+          if (typeof toast === 'function') toast('⟡', 'Wallets entangled! Non-local link established.');
+
+          setTimeout(function() {
+            entangleBtn.disabled = false;
+            entangleBtn.innerHTML = '&#9878; Entangle Wallets';
+            if (walletAState) { walletAState.innerHTML = '&#8593; ready'; walletAState.className = 'qr-wallet-state'; }
+            if (walletBState) { walletBState.innerHTML = '&#8595; ready'; walletBState.className = 'qr-wallet-state'; }
+            if (entangleLink) entangleLink.classList.remove('active');
+          }, 3000);
+        }, 1800);
+      });
+    }
+
+    /* ── Collapse State button ── */
+    var collapseBtn = document.getElementById('qrCollapseBtn');
+    var qubit = document.getElementById('qrQubit');
+    var yieldFill = document.getElementById('qrYieldFill');
+    var yieldLabel = document.getElementById('qrYieldLabel');
+    var collapseCount = 0;
+    var yieldSum = 0;
+
+    if (collapseBtn) {
+      collapseBtn.addEventListener('click', function() {
+        collapseBtn.disabled = true;
+        collapseBtn.textContent = '⟡ Collapsing...';
+        if (qubit) qubit.classList.add('collapsed');
+
+        setTimeout(function() {
+          var yieldPct = (Math.random() * 9 + 3).toFixed(1); // 3-12% APY
+          collapseCount++;
+          yieldSum += parseFloat(yieldPct);
+          if (yieldFill) yieldFill.style.width = yieldPct + '%';
+          if (yieldLabel) yieldLabel.textContent = 'Yield: ' + yieldPct + '% APY (collapsed)';
+          collapseBtn.textContent = '✓ State Collapsed: ' + yieldPct + '% APY';
+          updateQrStats();
+          if (typeof toast === 'function') toast('🔬', 'Quantum state collapsed! Yield: ' + yieldPct + '% APY');
+
+          setTimeout(function() {
+            collapseBtn.disabled = false;
+            collapseBtn.innerHTML = '&#128269; Collapse State';
+            if (qubit) qubit.classList.remove('collapsed');
+            if (yieldFill) yieldFill.style.width = '0%';
+            if (yieldLabel) yieldLabel.textContent = 'Yield: superposed';
+          }, 3500);
+        }, 1200);
+      });
+    }
+
+    /* ── Enter the Quantum Realm CTA ── */
+    var enterBtn = document.getElementById('qrEnterBtn');
+    if (enterBtn) {
+      enterBtn.addEventListener('click', function() {
+        if (typeof toast === 'function') toast('⚛', 'Welcome to the Quantum Realm. You are now operating beyond classical limits.');
+        // Pulse effect on all cards
+        var cards = document.querySelectorAll('.qr-card');
+        cards.forEach(function(c) {
+          c.style.boxShadow = '0 0 60px rgba(0,229,255,.2)';
+          setTimeout(function() { c.style.boxShadow = ''; }, 1500);
+        });
+        // Increment signature count
+        sigCount += Math.floor(Math.random() * 50 + 20);
+        updateQrStats();
+      });
+    }
+
+    /* ── Stats counter ── */
+    var sigCount = 0;
+    function updateQrStats() {
+      var elSigs = document.getElementById('qrStatSigs');
+      var elEnt = document.getElementById('qrStatEntangled');
+      var elYield = document.getElementById('qrStatYield');
+      var elCoh = document.getElementById('qrStatCoherence');
+      if (elSigs) elSigs.textContent = sigCount.toLocaleString();
+      if (elEnt) elEnt.textContent = entangledCount.toLocaleString();
+      if (elYield) elYield.textContent = collapseCount > 0 ? (yieldSum / collapseCount).toFixed(1) + '%' : '0%';
+      if (elCoh) {
+        var coh = Math.max(0, 100 - collapseCount * 2.5);
+        elCoh.textContent = coh.toFixed(0) + '%';
+      }
+    }
+
+    /* ── Ambient stat growth ── */
+    setInterval(function() {
+      sigCount += Math.floor(Math.random() * 5 + 1);
+      updateQrStats();
+    }, 4000);
+
+  })();
+
 })();
 

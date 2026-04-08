@@ -104,4 +104,19 @@ pub enum OstError {
 
     #[msg("Duplicate attestation hash — already claimed")]
     DepinDuplicateAttestation,
+
+    #[msg("Invalid quantum security level (must be 1-5)")]
+    InvalidQuantumSecurityLevel,
+
+    #[msg("Quantum bearer token has already been redeemed")]
+    QuantumTokenAlreadyRedeemed,
+
+    #[msg("Quantum bearer token has expired")]
+    QuantumTokenExpired,
+
+    #[msg("Entangled pair is not active")]
+    EntanglementNotActive,
+
+    #[msg("Quantum yield vault already collapsed")]
+    YieldAlreadyCollapsed,
 }

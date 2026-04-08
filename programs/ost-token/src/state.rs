@@ -456,3 +456,59 @@ impl GiftCardExchange {
         + 8   // timestamp
         + 1;  // bump
 }
+
+// ============================================================================
+// QUANTUM BEARER TOKEN — Post-quantum protected bearer instrument
+// ============================================================================
+#[account]
+pub struct QuantumBearerToken {
+    pub wots_root: [u8; 32],
+    pub lattice_commitment: [u8; 32],
+    pub amount: u64,
+    pub minter: Pubkey,
+    pub redeemed: bool,
+    pub created_at: i64,
+    pub expires_at: i64,
+    pub security_level: u8,
+    pub bump: u8,
+}
+
+impl QuantumBearerToken {
+    pub const LEN: usize = 8 + 32 + 32 + 8 + 32 + 1 + 8 + 8 + 1 + 1;
+}
+
+// ============================================================================
+// ENTANGLED PAIR — Quantum-linked wallet pair
+// ============================================================================
+#[account]
+pub struct EntangledPair {
+    pub wallet_a: Pubkey,
+    pub wallet_b: Pubkey,
+    pub kyber_shared_hash: [u8; 32],
+    pub entangled_at: i64,
+    pub active: bool,
+    pub transfer_count: u32,
+    pub bump: u8,
+}
+
+impl EntangledPair {
+    pub const LEN: usize = 8 + 32 + 32 + 32 + 8 + 1 + 4 + 1;
+}
+
+// ============================================================================
+// QUANTUM YIELD VAULT — Superposition staking vault
+// ============================================================================
+#[account]
+pub struct QuantumYieldVault {
+    pub staker: Pubkey,
+    pub amount: u64,
+    pub staked_at: i64,
+    pub collapsed: bool,
+    pub yield_bps: u16,
+    pub vrf_seed: [u8; 32],
+    pub bump: u8,
+}
+
+impl QuantumYieldVault {
+    pub const LEN: usize = 8 + 32 + 8 + 8 + 1 + 2 + 32 + 1;
+}

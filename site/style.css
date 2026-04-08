@@ -4517,3 +4517,296 @@ select.sim-input { cursor: pointer; }
   .sv-bearer-footer { flex-direction: column; gap: 4px; }
   .sv-result-actions { flex-direction: column; align-items: center; }
 }
+
+/* ================================================================== */
+/* QUANTUM REALM — Pre-Quantum Currency                                */
+/* ================================================================== */
+
+.qr-section {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 50% 0%, rgba(0,229,255,.04) 0%, transparent 60%),
+              radial-gradient(ellipse at 80% 100%, rgba(167,139,250,.04) 0%, transparent 50%);
+}
+
+.qr-particle-canvas {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: 0;
+}
+
+/* Hero */
+.qr-hero { text-align: center; margin-bottom: 56px; }
+.qr-badge {
+  display: inline-block; padding: 6px 18px; border-radius: 999px;
+  font-size: .72rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase;
+  color: #00e5ff;
+  background: rgba(0,229,255,.08);
+  border: 1px solid rgba(0,229,255,.2);
+  margin-bottom: 20px;
+}
+.qr-title { font-size: clamp(1.8rem, 4vw, 2.8rem); }
+.qr-gradient-text {
+  background: linear-gradient(135deg, #00e5ff, #a78bfa, #00e5ff);
+  background-size: 200% 200%;
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: qrGradientShift 4s ease infinite;
+}
+@keyframes qrGradientShift {
+  0%,100% { background-position: 0% 50%; }
+  50%     { background-position: 100% 50%; }
+}
+.qr-subtitle { max-width: 700px; margin: 0 auto; color: var(--text-muted); font-size: 1.05rem; line-height: 1.7; }
+
+/* Pillars Grid */
+.qr-pillars {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px;
+  margin-bottom: 56px;
+}
+
+/* Cards */
+.qr-card {
+  position: relative;
+  background: rgba(255,255,255,.025);
+  border: 1px solid rgba(0,229,255,.12);
+  border-radius: 18px;
+  padding: 32px 24px;
+  overflow: hidden;
+  transition: border-color .3s, transform .3s, box-shadow .3s;
+}
+.qr-card:hover {
+  border-color: rgba(0,229,255,.35);
+  transform: translateY(-4px);
+  box-shadow: 0 0 40px rgba(0,229,255,.08);
+}
+.qr-card-glow {
+  position: absolute; top: -60px; right: -60px;
+  width: 160px; height: 160px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,229,255,.08), transparent 70%);
+  pointer-events: none;
+}
+.qr-card-icon {
+  font-size: 2.2rem; margin-bottom: 12px;
+  filter: drop-shadow(0 0 8px rgba(0,229,255,.3));
+}
+.qr-card-title {
+  font-family: var(--font-serif); font-size: 1.2rem; margin-bottom: 10px;
+  color: #fff;
+}
+.qr-card-desc {
+  font-size: .88rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 20px;
+}
+.qr-card-detail { margin-top: 12px; }
+
+/* Feature list */
+.qr-feature-list {
+  list-style: none; padding: 0; margin: 16px 0 0;
+}
+.qr-feature-list li {
+  font-size: .78rem; color: var(--text-muted); padding: 5px 0;
+  border-bottom: 1px solid rgba(255,255,255,.04);
+}
+.qr-feature-list li:last-child { border-bottom: none; }
+
+/* Signature Visual (Card 1) */
+.qr-sig-visual {
+  display: flex; align-items: center; gap: 12px; justify-content: center;
+  padding: 16px; border-radius: 12px;
+  background: rgba(0,229,255,.03); border: 1px solid rgba(0,229,255,.08);
+}
+.qr-sig-layer { text-align: center; flex: 1; }
+.qr-sig-label {
+  display: block; font-size: .68rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .1em; color: #00e5ff; margin-bottom: 8px;
+}
+.qr-hash-chain {
+  display: flex; gap: 3px; justify-content: center; flex-wrap: wrap;
+}
+.qr-hash-block {
+  width: 10px; height: 10px; border-radius: 2px;
+  background: rgba(0,229,255,.25);
+  transition: background .3s, box-shadow .3s;
+}
+.qr-hash-block.active {
+  background: #00e5ff;
+  box-shadow: 0 0 6px rgba(0,229,255,.5);
+}
+.qr-sig-divider {
+  font-size: 1.2rem; color: rgba(0,229,255,.3); font-weight: 700;
+}
+.qr-lattice-grid {
+  display: grid; grid-template-columns: repeat(4,1fr); gap: 3px;
+  max-width: 60px; margin: 0 auto;
+}
+.qr-lattice-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: rgba(167,139,250,.2);
+  transition: background .3s, box-shadow .3s;
+}
+.qr-lattice-dot.active {
+  background: #a78bfa;
+  box-shadow: 0 0 6px rgba(167,139,250,.5);
+}
+
+/* Entangle Visual (Card 2) */
+.qr-entangle-visual {
+  display: flex; align-items: center; justify-content: center; gap: 0;
+  padding: 20px 12px; border-radius: 12px;
+  background: rgba(0,229,255,.03); border: 1px solid rgba(0,229,255,.08);
+  margin-bottom: 12px;
+}
+.qr-wallet {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  min-width: 80px;
+}
+.qr-wallet-icon { font-size: 1.6rem; }
+.qr-wallet-label { font-size: .7rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .08em; }
+.qr-wallet-state { font-size: .68rem; color: rgba(0,229,255,.6); }
+.qr-wallet-state.entangled { color: #a78bfa; font-weight: 600; }
+
+.qr-entangle-link {
+  flex: 1; height: 3px; position: relative;
+  background: rgba(0,229,255,.1);
+  min-width: 80px; margin: 0 8px;
+  border-radius: 999px;
+  overflow: visible;
+}
+.qr-entangle-link.active { background: rgba(167,139,250,.3); }
+.qr-photon {
+  position: absolute; top: 50%; width: 8px; height: 8px; border-radius: 50%;
+  background: #00e5ff; transform: translate(-50%, -50%);
+  box-shadow: 0 0 8px rgba(0,229,255,.6);
+  animation: qrPhotonTravel 2s ease-in-out infinite;
+  opacity: 0;
+}
+.qr-photon-2 { animation-delay: .66s; background: #7c6cf0; box-shadow: 0 0 8px rgba(167,139,250,.6); }
+.qr-photon-3 { animation-delay: 1.33s; }
+
+@keyframes qrPhotonTravel {
+  0%   { left: 0;   opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { left: 100%; opacity: 0; }
+}
+
+.qr-entangle-btn, .qr-collapse-btn {
+  width: 100%; margin-top: 8px; font-size: .82rem; padding: 10px;
+  background: linear-gradient(135deg, rgba(0,229,255,.12), rgba(167,139,250,.12));
+  border: 1px solid rgba(0,229,255,.2);
+  color: #00e5ff; border-radius: 10px; cursor: pointer;
+  transition: background .3s, border-color .3s, box-shadow .3s;
+}
+.qr-entangle-btn:hover, .qr-collapse-btn:hover {
+  background: linear-gradient(135deg, rgba(0,229,255,.2), rgba(167,139,250,.2));
+  border-color: rgba(0,229,255,.4);
+  box-shadow: 0 0 20px rgba(0,229,255,.1);
+}
+
+/* Superposition Visual (Card 3) */
+.qr-superposition {
+  padding: 20px 12px; border-radius: 12px;
+  background: rgba(167,139,250,.03); border: 1px solid rgba(167,139,250,.08);
+  margin-bottom: 12px; text-align: center;
+}
+.qr-state-visual { margin-bottom: 16px; }
+.qr-qubit {
+  width: 80px; height: 80px; margin: 0 auto 12px; border-radius: 50%;
+  background: conic-gradient(from 0deg, rgba(0,229,255,.15), rgba(167,139,250,.15), rgba(0,229,255,.15));
+  display: flex; align-items: center; justify-content: center;
+  animation: qrQubitSpin 6s linear infinite;
+  position: relative;
+}
+.qr-qubit::before {
+  content: ''; position: absolute; inset: 3px; border-radius: 50%;
+  background: var(--bg);
+}
+.qr-qubit-inner {
+  position: relative; z-index: 1;
+}
+.qr-ket {
+  font-size: 1.4rem; font-weight: 700;
+  background: linear-gradient(135deg, #00e5ff, #a78bfa);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+@keyframes qrQubitSpin {
+  to { transform: rotate(360deg); }
+}
+.qr-qubit.collapsed {
+  animation: none;
+  background: rgba(0,229,255,.3);
+}
+.qr-state-eq {
+  font-size: .82rem; color: var(--text-muted); font-family: 'Courier New', monospace;
+}
+.qr-alpha { color: #00e5ff; font-weight: 700; }
+.qr-beta  { color: #a78bfa; font-weight: 700; }
+
+.qr-yield-bar {
+  height: 8px; border-radius: 999px; background: rgba(255,255,255,.06);
+  position: relative; overflow: hidden; margin-top: 12px;
+}
+.qr-yield-fill {
+  height: 100%; border-radius: 999px; width: 0%;
+  background: linear-gradient(90deg, #00e5ff, #a78bfa);
+  transition: width 1s ease;
+}
+.qr-yield-label {
+  display: block; text-align: center; font-size: .7rem; color: var(--text-muted);
+  margin-top: 6px;
+}
+
+/* Stats Row */
+.qr-stats {
+  display: flex; justify-content: center; gap: 40px; flex-wrap: wrap;
+  margin-bottom: 48px; padding: 24px 0;
+  border-top: 1px solid rgba(0,229,255,.08);
+  border-bottom: 1px solid rgba(0,229,255,.08);
+}
+.qr-stat { text-align: center; }
+.qr-stat-value {
+  display: block; font-size: 1.6rem; font-weight: 700;
+  background: linear-gradient(135deg, #00e5ff, #a78bfa);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.qr-stat-label { font-size: .72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .08em; }
+
+/* CTA */
+.qr-cta { text-align: center; margin-bottom: 32px; }
+.qr-cta-text { color: var(--text-muted); font-size: .95rem; line-height: 1.7; margin-bottom: 20px; }
+.qr-enter-btn {
+  padding: 14px 36px; font-size: 1rem; font-weight: 600;
+  background: linear-gradient(135deg, #00e5ff, #7c6cf0);
+  color: #fff; border: none; border-radius: 12px; cursor: pointer;
+  box-shadow: 0 0 30px rgba(0,229,255,.15);
+  transition: transform .2s, box-shadow .3s;
+}
+.qr-enter-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 50px rgba(0,229,255,.25);
+}
+
+/* Note */
+.qr-note {
+  text-align: center; font-size: .72rem; color: var(--text-muted); opacity: .7;
+  max-width: 700px; margin: 0 auto; line-height: 1.5;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .qr-pillars { grid-template-columns: 1fr; }
+  .qr-stats { gap: 24px; }
+}
+@media (max-width: 600px) {
+  .qr-entangle-visual { flex-direction: column; }
+  .qr-entangle-link { width: 3px; height: 40px; min-width: unset; margin: 8px 0; }
+  .qr-photon { animation-name: qrPhotonTravelV; }
+  @keyframes qrPhotonTravelV {
+    0%   { top: 0;   left: 50%; opacity: 0; transform: translate(-50%, -50%); }
+    10%  { opacity: 1; }
+    90%  { opacity: 1; }
+    100% { top: 100%; left: 50%; opacity: 0; transform: translate(-50%, -50%); }
+  }
+  .qr-sig-visual { flex-direction: column; }
+}

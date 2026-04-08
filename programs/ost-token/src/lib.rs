@@ -401,4 +401,45 @@ pub mod ost_token {
     ) -> Result<()> {
         instructions::exchange_gift_card::handler(ctx, nonce, merchant, code_hash, amount_usd, is_buy)
     }
+
+    // ========================================================================
+    // 27. MINT QUANTUM BEARER TOKEN (Post-Quantum Protected)
+    // ========================================================================
+    pub fn mint_quantum_bearer_token(
+        ctx: Context<MintQuantumBearerToken>,
+        wots_root: [u8; 32],
+        lattice_commitment: [u8; 32],
+        amount: u64,
+        expires_at: i64,
+        security_level: u8,
+    ) -> Result<()> {
+        instructions::quantum_realm::handler_mint_quantum(
+            ctx,
+            wots_root,
+            lattice_commitment,
+            amount,
+            expires_at,
+            security_level,
+        )
+    }
+
+    // ========================================================================
+    // 28. ENTANGLE WALLETS (Quantum-Linked Pair)
+    // ========================================================================
+    pub fn entangle_wallets(
+        ctx: Context<EntangleWallets>,
+        kyber_shared_hash: [u8; 32],
+    ) -> Result<()> {
+        instructions::quantum_realm::handler_entangle(ctx, kyber_shared_hash)
+    }
+
+    // ========================================================================
+    // 29. QUANTUM YIELD STAKE (Superposition Staking)
+    // ========================================================================
+    pub fn quantum_yield_stake(
+        ctx: Context<QuantumYieldStake>,
+        amount: u64,
+    ) -> Result<()> {
+        instructions::quantum_realm::handler_quantum_stake(ctx, amount)
+    }
 }

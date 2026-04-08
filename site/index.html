@@ -26,7 +26,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="style.css?v=44">
+  <link rel="stylesheet" href="style.css?v=45">
 </head>
 <body>
 
@@ -47,6 +47,7 @@
         <a href="#build" data-i18n="nav.build">Build</a>
         <a href="#launchpad">Launchpad</a>
         <a href="#survival">Survival</a>
+        <a href="#quantum-realm">Quantum</a>
         <a href="#transparency" data-i18n="nav.verify">Verify</a>
       </div>
       <div class="nav-right">
@@ -3556,6 +3557,149 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   </section>
 
 <!-- ================================================================== -->
+<!-- QUANTUM REALM — The First Pre-Quantum Currency                    -->
+<!-- ================================================================== -->
+  <section id="quantum-realm" class="section section-space qr-section">
+    <canvas id="qrParticleCanvas" class="qr-particle-canvas"></canvas>
+    <div class="container" style="position:relative;z-index:1;">
+
+      <!-- Hero -->
+      <div class="qr-hero">
+        <div class="qr-badge">&#9883; PRE-QUANTUM CURRENCY</div>
+        <h2 class="section-title qr-title">Welcome to the <span class="qr-gradient-text">Quantum Realm</span></h2>
+        <p class="section-subtitle qr-subtitle">OST isn&rsquo;t just quantum-<em>resistant</em>. It&rsquo;s <strong>native to the quantum world</strong> from day one &mdash; the first currency designed for a post-classical universe.</p>
+      </div>
+
+      <!-- Three Pillars -->
+      <div class="qr-pillars">
+
+        <!-- Pillar 1: Quantum-Resistant Signatures -->
+        <div class="qr-card" id="qrCard1">
+          <div class="qr-card-glow"></div>
+          <div class="qr-card-icon">&#128272;</div>
+          <h3 class="qr-card-title">Quantum-Proof Signatures</h3>
+          <p class="qr-card-desc">Every OST transaction is shielded by <strong>Winternitz One-Time Signatures</strong> and <strong>lattice-based Dilithium</strong> &mdash; unbreakable by any quantum computer, present or future.</p>
+          <div class="qr-card-detail">
+            <div class="qr-sig-visual">
+              <div class="qr-sig-layer" id="qrSigWots">
+                <span class="qr-sig-label">WOTS+</span>
+                <div class="qr-hash-chain" id="qrHashChain"></div>
+              </div>
+              <div class="qr-sig-divider">+</div>
+              <div class="qr-sig-layer" id="qrSigLattice">
+                <span class="qr-sig-label">Dilithium</span>
+                <div class="qr-lattice-grid" id="qrLatticeGrid"></div>
+              </div>
+            </div>
+            <ul class="qr-feature-list">
+              <li>&#10003; Hash-based OTS &mdash; zero algebraic assumptions</li>
+              <li>&#10003; NIST PQC Round 3 finalist (CRYSTALS-Dilithium)</li>
+              <li>&#10003; Hybrid mode: classical + post-quantum layered</li>
+              <li>&#10003; Forward-secure: past transactions stay safe forever</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Pillar 2: Entangled Transfers -->
+        <div class="qr-card" id="qrCard2">
+          <div class="qr-card-glow"></div>
+          <div class="qr-card-icon">&#9878;</div>
+          <h3 class="qr-card-title">Entangled Transfers</h3>
+          <p class="qr-card-desc">Two wallets, instantly linked &mdash; like quantum entanglement. Send OST that settles <strong>simultaneously on both ends</strong>, with non-local finality and zero round-trips.</p>
+          <div class="qr-card-detail">
+            <div class="qr-entangle-visual" id="qrEntangleVisual">
+              <div class="qr-wallet qr-wallet-a">
+                <div class="qr-wallet-icon">&#128091;</div>
+                <span class="qr-wallet-label">Wallet A</span>
+                <span class="qr-wallet-state" id="qrWalletAState">&#8593; ready</span>
+              </div>
+              <div class="qr-entangle-link" id="qrEntangleLink">
+                <div class="qr-photon qr-photon-1"></div>
+                <div class="qr-photon qr-photon-2"></div>
+                <div class="qr-photon qr-photon-3"></div>
+              </div>
+              <div class="qr-wallet qr-wallet-b">
+                <div class="qr-wallet-icon">&#128091;</div>
+                <span class="qr-wallet-label">Wallet B</span>
+                <span class="qr-wallet-state" id="qrWalletBState">&#8595; ready</span>
+              </div>
+            </div>
+            <button class="btn btn-accent qr-entangle-btn" id="qrEntangleBtn">&#9878; Entangle Wallets</button>
+            <ul class="qr-feature-list">
+              <li>&#10003; Non-local settlement &mdash; no sequential confirmations</li>
+              <li>&#10003; Entangled key pairs via Kyber key encapsulation</li>
+              <li>&#10003; Atomic swap guarantee: both settle or neither does</li>
+              <li>&#10003; Perfect for cross-chain &amp; cross-planet transfers</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Pillar 3: Non-Linear Money -->
+        <div class="qr-card" id="qrCard3">
+          <div class="qr-card-glow"></div>
+          <div class="qr-card-icon">&#8734;</div>
+          <h3 class="qr-card-title">Non-Linear Money</h3>
+          <p class="qr-card-desc">Your balance exists in <strong>superposition</strong> &mdash; unresolved until observed. Probabilistic yields. Collapsed privacy. Money that behaves like quantum matter.</p>
+          <div class="qr-card-detail">
+            <div class="qr-superposition" id="qrSuperposition">
+              <div class="qr-state-visual">
+                <div class="qr-qubit" id="qrQubit">
+                  <div class="qr-qubit-inner">
+                    <span class="qr-ket">|&#968;&#10217;</span>
+                  </div>
+                </div>
+                <div class="qr-state-eq">
+                  <span class="qr-alpha">&alpha;</span>|0&#10217; + <span class="qr-beta">&beta;</span>|1&#10217;
+                </div>
+              </div>
+              <div class="qr-yield-bar">
+                <div class="qr-yield-fill" id="qrYieldFill"></div>
+                <span class="qr-yield-label" id="qrYieldLabel">Yield: superposed</span>
+              </div>
+            </div>
+            <button class="btn btn-accent qr-collapse-btn" id="qrCollapseBtn">&#128269; Collapse State</button>
+            <ul class="qr-feature-list">
+              <li>&#10003; Superposition privacy &mdash; balances unresolvable until measured</li>
+              <li>&#10003; Probabilistic yield: 3&ndash;12% APY based on quantum entropy</li>
+              <li>&#10003; Non-linear fee curves &mdash; no fixed gas, quantum-adaptive</li>
+              <li>&#10003; Observer effect: mere inspection changes the state</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quantum Stats -->
+      <div class="qr-stats">
+        <div class="qr-stat">
+          <span class="qr-stat-value" id="qrStatSigs">0</span>
+          <span class="qr-stat-label">Quantum Signatures</span>
+        </div>
+        <div class="qr-stat">
+          <span class="qr-stat-value" id="qrStatEntangled">0</span>
+          <span class="qr-stat-label">Entangled Pairs</span>
+        </div>
+        <div class="qr-stat">
+          <span class="qr-stat-value" id="qrStatYield">0%</span>
+          <span class="qr-stat-label">Mean Yield (APY)</span>
+        </div>
+        <div class="qr-stat">
+          <span class="qr-stat-value" id="qrStatCoherence">100%</span>
+          <span class="qr-stat-label">Coherence</span>
+        </div>
+      </div>
+
+      <!-- CTA -->
+      <div class="qr-cta">
+        <p class="qr-cta-text">Classical money was built for a classical world.<br>OST is built for what comes next.</p>
+        <button class="btn btn-accent qr-enter-btn" id="qrEnterBtn">&#9883; Enter the Quantum Realm</button>
+      </div>
+
+      <!-- Footer note -->
+      <div class="qr-note">&#9878; Quantum realm features are forward-looking innovations. Winternitz OTS and lattice-based cryptography are real post-quantum standards (NIST SP 800-208). &ldquo;Entangled transfers&rdquo; and &ldquo;superposition privacy&rdquo; are metaphorical descriptions of novel cryptographic protocols under active R&amp;D.</div>
+    </div>
+  </section>
+
+<!-- ================================================================== -->
   <section id="transparency" class="section section-space">
     <div class="container">
       <h2 class="section-title" data-i18n="verify.title">Full Transparency</h2>
@@ -3630,6 +3774,6 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=44"></script>
+  <script src="app.js?v=45"></script>
 </body>
 </html>
