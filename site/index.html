@@ -26,7 +26,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="style.css?v=39">
+  <link rel="stylesheet" href="style.css?v=40">
 </head>
 <body>
 
@@ -46,6 +46,7 @@
         <a href="#roadmap" data-i18n="nav.roadmap">Roadmap</a>
         <a href="#build" data-i18n="nav.build">Build</a>
         <a href="#launchpad">Launchpad</a>
+        <a href="#survival">Survival</a>
         <a href="#transparency" data-i18n="nav.verify">Verify</a>
       </div>
       <div class="nav-right">
@@ -3185,6 +3186,252 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
     </div>
   </section>
 
+  <!-- ================================================================== -->
+  <!-- SURVIVAL MODE — Catastrophe-Resilient Offline Cash                -->
+  <!-- ================================================================== -->
+  <section id="survival" class="section section-space">
+    <div class="container">
+      <div class="sv-header">
+        <div class="sv-icon-ring"><span>&#9888;&#65039;</span></div>
+        <h2 class="section-title">Survive the Fall</h2>
+        <p class="section-subtitle">The only coin engineered to function when the internet dies, electronics fail, and civilization reboots. OST becomes physical, untraceable, bearer cash.</p>
+        <div class="sv-badges">
+          <span class="sv-badge sv-badge-red">&#128680; Catastrophe-Ready</span>
+          <span class="sv-badge">&#128196; Paper Bearer Notes</span>
+          <span class="sv-badge">&#128179; Air-Gapped NFC</span>
+          <span class="sv-badge">&#128752; Satellite Redemption</span>
+          <span class="sv-badge">&#9889; LoRa Mesh Relay</span>
+        </div>
+      </div>
+
+      <!-- Threat Scenarios -->
+      <div class="sv-threat-strip">
+        <div class="sv-threat"><span class="sv-threat-icon">&#9889;</span><span>EMP / Solar Flare</span></div>
+        <div class="sv-threat"><span class="sv-threat-icon">&#127760;</span><span>Global Internet Kill</span></div>
+        <div class="sv-threat"><span class="sv-threat-icon">&#128161;</span><span>Grid Collapse</span></div>
+        <div class="sv-threat"><span class="sv-threat-icon">&#128165;</span><span>Cyber-War</span></div>
+        <div class="sv-threat"><span class="sv-threat-icon">&#127756;</span><span>Mars Colony Init</span></div>
+      </div>
+
+      <!-- Three Pillars of Survival -->
+      <div class="sv-pillars">
+        <div class="sv-pillar" id="svPillarPaper">
+          <div class="sv-pillar-glow"></div>
+          <div class="sv-pillar-icon">&#128196;</div>
+          <h3>Paper Bearer Notes</h3>
+          <p>Mint QR-coded bearer tokens you can print, hand off, and trade like physical cash. No phone, no battery, no internet. Each note carries encrypted proof of value + a one-time redemption hash.</p>
+          <ul class="sv-pillar-list">
+            <li>&#10004; Transferable by hand &mdash; like real banknotes</li>
+            <li>&#10004; Print on any home printer or copy by hand</li>
+            <li>&#10004; Encrypted: useless without the secret key</li>
+            <li>&#10004; Denominated in OST &mdash; any amount</li>
+          </ul>
+        </div>
+
+        <div class="sv-pillar" id="svPillarNFC">
+          <div class="sv-pillar-glow"></div>
+          <div class="sv-pillar-icon">&#128179;</div>
+          <h3>Air-Gapped NFC Cards</h3>
+          <p>Store OST on passive NFC tags or cold-storage smart cards. Tap-to-verify with any NFC reader. No internet needed &mdash; the value lives on the physical card.</p>
+          <ul class="sv-pillar-list">
+            <li>&#10004; Works without power (passive NFC)</li>
+            <li>&#10004; Tamper-evident seal with hash verification</li>
+            <li>&#10004; Stackable: load multiple denominations</li>
+            <li>&#10004; Survives water, fire (metal NFC tags)</li>
+          </ul>
+        </div>
+
+        <div class="sv-pillar" id="svPillarSat">
+          <div class="sv-pillar-glow"></div>
+          <div class="sv-pillar-icon">&#128752;</div>
+          <h3>Satellite Redemption</h3>
+          <p>When any node &mdash; Solana, OST mesh, or LEO satellite &mdash; comes back online, bearer tokens auto-settle on-chain. The 0.1% fee funds satellite rebuilding.</p>
+          <ul class="sv-pillar-list">
+            <li>&#10004; Redemption queued locally until network returns</li>
+            <li>&#10004; LoRa/Bluetooth mesh bridges gaps</li>
+            <li>&#10004; Satellite constellation provides last-resort uplink</li>
+            <li>&#10004; Zero-knowledge proof preserves privacy on redemption</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- How It Works — Technical Flow -->
+      <div class="sv-how">
+        <h3>&#128274; How Survival Tokens Work</h3>
+        <div class="sv-flow-steps">
+          <div class="sv-flow-step">
+            <div class="sv-flow-num">1</div>
+            <div class="sv-flow-text">
+              <strong>Lock OST into bearer vault</strong>
+              <p>Debit your wallet balance into an on-chain escrow. A unique hash is generated. The tokens are now &ldquo;burned&rdquo; from the public ledger.</p>
+            </div>
+          </div>
+          <div class="sv-flow-step">
+            <div class="sv-flow-num">2</div>
+            <div class="sv-flow-text">
+              <strong>Generate offline bearer token</strong>
+              <p>A QR code (or NFC payload) containing the encrypted hash + amount + one-time secret is created. This is your physical money.</p>
+            </div>
+          </div>
+          <div class="sv-flow-step">
+            <div class="sv-flow-num">3</div>
+            <div class="sv-flow-text">
+              <strong>Transfer freely &mdash; no network needed</strong>
+              <p>Hand the paper note to someone. Show the QR. Tap the NFC card. The recipient now holds the value. No internet, no phone, no verification step required.</p>
+            </div>
+          </div>
+          <div class="sv-flow-step">
+            <div class="sv-flow-num">4</div>
+            <div class="sv-flow-text">
+              <strong>Redeem when civilization reboots</strong>
+              <p>Scan the bearer token into any OST client. The vault unlocks, the hash is burned, and the OST credits your wallet. 0.1% fee funds satellite infrastructure rebuilding.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mint Survival Token — Interactive Tool -->
+      <div class="sv-mint-panel" id="svMintPanel">
+        <div class="sv-mint-head">
+          <h3>&#9888;&#65039; Mint Survival Bearer Token</h3>
+          <p class="text-muted">Create offline-ready bearer notes from your OST balance. Print them, store them, hand them out.</p>
+        </div>
+
+        <div class="sv-mint-form">
+          <div class="sv-mint-row">
+            <div class="sv-mint-field">
+              <label class="sv-label">Amount (OST)</label>
+              <input type="number" id="svAmount" class="sv-input" placeholder="100" min="1" max="1000000" step="1">
+              <div class="sv-quicks">
+                <button class="sv-q" data-amt="10">10</button>
+                <button class="sv-q" data-amt="50">50</button>
+                <button class="sv-q" data-amt="100">100</button>
+                <button class="sv-q" data-amt="500">500</button>
+                <button class="sv-q" data-amt="1000">1K</button>
+                <button class="sv-q" data-amt="10000">10K</button>
+              </div>
+            </div>
+            <div class="sv-mint-field">
+              <label class="sv-label">Output Format</label>
+              <div class="sv-format-opts">
+                <button class="sv-fmt sv-fmt-active" data-fmt="paper">&#128196; Paper QR</button>
+                <button class="sv-fmt" data-fmt="nfc">&#128179; NFC Card</button>
+                <button class="sv-fmt" data-fmt="digital">&#128241; Digital File</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="sv-mint-field">
+            <label class="sv-label">Secret Passphrase (optional &mdash; adds encryption layer)</label>
+            <input type="password" id="svPassphrase" class="sv-input" placeholder="Leave blank for standard bearer note" autocomplete="off">
+          </div>
+
+          <div class="sv-fee-box">
+            <div class="sv-fee-row"><span>Bearer Amount</span><span id="svFeeAmt">0 OST</span></div>
+            <div class="sv-fee-row sv-fee-sm"><span>Vault Lock Fee</span><span>0.1%</span></div>
+            <div class="sv-fee-row sv-fee-sm"><span>Redemption Fee (later)</span><span>0.1% &rarr; &#128752; Satellite Fund</span></div>
+            <div class="sv-fee-row"><span>Total Debit</span><span id="svFeeTotal">0 OST</span></div>
+          </div>
+
+          <button class="sv-mint-btn" id="svMintBtn" disabled>
+            <span class="sv-btn-icon">&#9888;&#65039;</span> Mint Survival Token
+          </button>
+        </div>
+
+        <!-- Flow animation -->
+        <div class="sv-flow" id="svFlow" style="display:none">
+          <div class="sv-fstep" data-s="1"><span class="sv-fdot"></span><span>Locking OST in bearer vault&hellip;</span></div>
+          <div class="sv-fstep" data-s="2"><span class="sv-fdot"></span><span>Generating cryptographic hash&hellip;</span></div>
+          <div class="sv-fstep" data-s="3"><span class="sv-fdot"></span><span>Encrypting bearer payload&hellip;</span></div>
+          <div class="sv-fstep" data-s="4"><span class="sv-fdot"></span><span>Creating offline token&hellip;</span></div>
+          <div class="sv-fstep" data-s="5"><span class="sv-fdot"></span><span>Complete &#10003;</span></div>
+        </div>
+
+        <!-- Success / Bearer Token Output -->
+        <div class="sv-result" id="svResult" style="display:none">
+          <div class="sv-result-head">
+            <div class="sv-result-icon">&#127881;</div>
+            <h4>Survival Bearer Token Minted</h4>
+            <p class="text-muted">This token is now offline-ready. Print it, store it, hand it off.</p>
+          </div>
+
+          <div class="sv-bearer-card" id="svBearerCard">
+            <div class="sv-bearer-top">
+              <span class="sv-bearer-logo">&#9673; OST</span>
+              <span class="sv-bearer-type" id="svBearerType">PAPER BEARER NOTE</span>
+            </div>
+            <div class="sv-bearer-qr" id="svBearerQR">
+              <!-- ASCII QR placeholder rendered by JS -->
+            </div>
+            <div class="sv-bearer-amount" id="svBearerAmt">100 OST</div>
+            <div class="sv-bearer-hash" id="svBearerHash">HASH: xxxxxxxx...xxxxxxxx</div>
+            <div class="sv-bearer-footer">
+              <span>&#128274; Encrypted &middot; One-time redemption</span>
+              <span>&#128752; Satellite-redeemable</span>
+            </div>
+          </div>
+
+          <div class="sv-result-actions">
+            <button class="sv-action-btn" id="svPrint">&#128424; Print Bearer Note</button>
+            <button class="sv-action-btn" id="svCopyHash">&#128203; Copy Hash</button>
+            <button class="sv-action-btn" id="svDownload">&#128190; Download Digital File</button>
+          </div>
+
+          <button class="sv-mint-another" id="svMintAnother">&#10010; Mint Another Token</button>
+        </div>
+      </div>
+
+      <!-- Survival Stats -->
+      <div class="sv-stats">
+        <div class="sv-stat"><span class="sv-stat-val" id="svTotalMinted">0</span><span class="sv-stat-lbl">Tokens Minted</span></div>
+        <div class="sv-stat"><span class="sv-stat-val" id="svTotalValue">0 OST</span><span class="sv-stat-lbl">Total Value Locked</span></div>
+        <div class="sv-stat"><span class="sv-stat-val">0.1%</span><span class="sv-stat-lbl">Vault Fee</span></div>
+        <div class="sv-stat"><span class="sv-stat-val">&#8734;</span><span class="sv-stat-lbl">Offline Lifetime</span></div>
+      </div>
+
+      <!-- LoRa Mesh Diagram -->
+      <div class="sv-mesh">
+        <h3>&#128225; LoRa / Bluetooth Mesh Recovery Network</h3>
+        <p class="text-muted" style="text-align:center;max-width:600px;margin:0 auto 24px;">Even during a total internet blackout, OST bearer tokens can propagate via short-range radio mesh. LoRa gateways relay transactions hop-by-hop until a satellite uplink is found.</p>
+        <div class="sv-mesh-visual">
+          <div class="sv-mesh-node sv-mesh-phone"><span>&#128241;</span><div>Phone</div></div>
+          <div class="sv-mesh-link">&mdash; LoRa &mdash;</div>
+          <div class="sv-mesh-node sv-mesh-gateway"><span>&#128225;</span><div>Gateway</div></div>
+          <div class="sv-mesh-link">&mdash; LoRa &mdash;</div>
+          <div class="sv-mesh-node sv-mesh-gateway"><span>&#128225;</span><div>Relay</div></div>
+          <div class="sv-mesh-link">&mdash; &#128752; &mdash;</div>
+          <div class="sv-mesh-node sv-mesh-sat"><span>&#128752;</span><div>Satellite</div></div>
+          <div class="sv-mesh-link">&mdash; &#127758; &mdash;</div>
+          <div class="sv-mesh-node sv-mesh-solana"><span>&#9673;</span><div>Solana</div></div>
+        </div>
+      </div>
+
+      <!-- Why This Matters -->
+      <div class="sv-why">
+        <h4>&#127760; Why This Matters</h4>
+        <div class="sv-why-grid">
+          <div class="sv-why-card">
+            <div class="sv-why-icon">&#128176;</div>
+            <strong>Real Physical Cash</strong>
+            <p>For the first time, a cryptocurrency can be held as a physical bearer instrument &mdash; like a gold coin, but digital, encrypted, and redeemable on any future network.</p>
+          </div>
+          <div class="sv-why-card">
+            <div class="sv-why-icon">&#127757;</div>
+            <strong>2.6B Offline People</strong>
+            <p>Right now, 2.6 billion people have zero internet. Survival tokens + LoRa mesh mean they can use OST today &mdash; not &ldquo;someday when Starlink reaches them.&rdquo;</p>
+          </div>
+          <div class="sv-why-card">
+            <div class="sv-why-icon">&#128640;</div>
+            <strong>Mars-Ready Currency</strong>
+            <p>A Mars colony can&rsquo;t wait 20 minutes for a blockchain confirmation from Earth. Bearer tokens settle locally and sync on the next available uplink.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="sv-note">&#9888; Survival bearer tokens are experimental. This demo generates representative tokens locally. Real on-chain vault locking is under development. Bearer tokens are irreversible once transferred &mdash; treat them like cash.</div>
+    </div>
+  </section>
+
 <!-- ================================================================== -->
   <section id="transparency" class="section section-space">
     <div class="container">
@@ -3260,6 +3507,6 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=39"></script>
+  <script src="app.js?v=40"></script>
 </body>
 </html>

@@ -7041,5 +7041,260 @@
     }, { passive: true });
   })();
 
+  // ========================================================================
+  // SURVIVAL MODE — Interactive bearer token minting
+  // ========================================================================
+  (function initSurvivalMode() {
+    var panel   = document.getElementById('svMintPanel');
+    if (!panel) return;
+
+    var amtIn   = document.getElementById('svAmount');
+    var passIn  = document.getElementById('svPassphrase');
+    var mintBtn = document.getElementById('svMintBtn');
+    var feeAmt  = document.getElementById('svFeeAmt');
+    var feeTotal= document.getElementById('svFeeTotal');
+    var flowBox = document.getElementById('svFlow');
+    var result  = document.getElementById('svResult');
+    var qrBox   = document.getElementById('svBearerQR');
+    var bAmt    = document.getElementById('svBearerAmt');
+    var bHash   = document.getElementById('svBearerHash');
+    var bType   = document.getElementById('svBearerType');
+    var statMinted = document.getElementById('svTotalMinted');
+    var statValue  = document.getElementById('svTotalValue');
+
+    var selectedFmt = 'paper';
+    var mintCount   = 0;
+    var mintValue   = 0;
+
+    /* Quick amount buttons */
+    panel.querySelectorAll('.sv-q').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        amtIn.value = btn.getAttribute('data-amt');
+        panel.querySelectorAll('.sv-q').forEach(function(b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        updateFees();
+      });
+    });
+
+    /* Format selector */
+    panel.querySelectorAll('.sv-fmt').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        panel.querySelectorAll('.sv-fmt').forEach(function(b) { b.classList.remove('sv-fmt-active'); });
+        btn.classList.add('sv-fmt-active');
+        selectedFmt = btn.getAttribute('data-fmt');
+      });
+    });
+
+    /* Amount input → fees */
+    amtIn.addEventListener('input', updateFees);
+
+    function updateFees() {
+      var v = parseFloat(amtIn.value) || 0;
+      feeAmt.textContent = v.toLocaleString() + ' OST';
+      var total = v + v * 0.001;
+      feeTotal.textContent = total.toLocaleString() + ' OST';
+      mintBtn.disabled = v <= 0;
+    }
+
+    /* Mint button */
+    mintBtn.addEventListener('click', function() {
+      var amount = parseFloat(amtIn.value) || 0;
+      if (amount <= 0) return;
+
+      mintBtn.disabled = true;
+      result.style.display = 'none';
+      flowBox.style.display = 'block';
+
+      var steps = flowBox.querySelectorAll('.sv-fstep');
+      steps.forEach(function(s) { s.classList.remove('sv-factive', 'sv-fdone'); });
+
+      var idx = 0;
+      function advance() {
+        if (idx > 0) steps[idx - 1].classList.replace('sv-factive', 'sv-fdone');
+        if (idx < steps.length) {
+          steps[idx].classList.add('sv-factive');
+          idx++;
+          setTimeout(advance, 700 + Math.random() * 500);
+        } else {
+          setTimeout(function() { showResult(amount); }, 400);
+        }
+      }
+      advance();
+    });
+
+    function showResult(amount) {
+      flowBox.style.display = 'none';
+      result.style.display = 'block';
+
+      /* Generate bearer hash */
+      var hash = generateHash(32);
+      bAmt.textContent = amount.toLocaleString() + ' OST';
+      bHash.textContent = 'HASH: ' + hash;
+
+      var labels = { paper: 'PAPER BEARER NOTE', nfc: 'NFC CARD TOKEN', digital: 'DIGITAL FILE' };
+      bType.textContent = labels[selectedFmt] || 'BEARER NOTE';
+
+      /* Draw QR-like pattern on canvas */
+      drawQR(qrBox, hash);
+
+      /* Update stats */
+      mintCount++;
+      mintValue += amount;
+      statMinted.textContent = mintCount;
+      statValue.textContent = mintValue.toLocaleString() + ' OST';
+
+      /* Re-enable mint */
+      mintBtn.disabled = false;
+
+      if (typeof toast === 'function') toast('\u2705', 'Survival bearer token minted — ' + amount.toLocaleString() + ' OST');
+    }
+
+    /* Pseudo hash generator */
+    function generateHash(len) {
+      var chars = 'abcdef0123456789';
+      var h = '';
+      for (var i = 0; i < len; i++) h += chars[Math.floor(Math.random() * chars.length)];
+      return h.substring(0, 8) + '...' + h.substring(h.length - 8);
+    }
+
+    /* Draw a QR-like grid on a canvas inside the target div */
+    function drawQR(container, seed) {
+      container.innerHTML = '';
+      var canvas = document.createElement('canvas');
+      var size = 160;
+      canvas.width = size; canvas.height = size;
+      canvas.style.width = size + 'px'; canvas.style.height = size + 'px';
+      container.appendChild(canvas);
+
+      var ctx = canvas.getContext('2d');
+      var grid = 21; // QR v1 is 21x21
+      var cell = Math.floor(size / grid);
+      var offset = Math.floor((size - cell * grid) / 2);
+
+      // Seed-based pseudo-random
+      var seedNum = 0;
+      for (var i = 0; i < seed.length; i++) seedNum += seed.charCodeAt(i);
+      function rand() { seedNum = (seedNum * 16807 + 7) % 2147483647; return seedNum / 2147483647; }
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, size, size);
+
+      ctx.fillStyle = '#1a1a2e';
+
+      // Draw finder patterns (three corners)
+      drawFinder(ctx, offset, offset, cell);
+      drawFinder(ctx, offset + (grid - 7) * cell, offset, cell);
+      drawFinder(ctx, offset, offset + (grid - 7) * cell, cell);
+
+      // Fill data cells
+      for (var r = 0; r < grid; r++) {
+        for (var c = 0; c < grid; c++) {
+          if (isFinderArea(r, c, grid)) continue;
+          if (rand() > 0.5) {
+            ctx.fillRect(offset + c * cell, offset + r * cell, cell - 1, cell - 1);
+          }
+        }
+      }
+
+      // OST logo in center
+      ctx.fillStyle = '#FF6B35';
+      var cx = Math.floor(size / 2);
+      ctx.beginPath();
+      ctx.arc(cx, cx, cell * 1.8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold ' + (cell * 2) + 'px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('O', cx, cx);
+    }
+
+    function drawFinder(ctx, x, y, cell) {
+      // Outer 7x7 black
+      ctx.fillRect(x, y, cell * 7, cell * 7);
+      // Inner white 5x5
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(x + cell, y + cell, cell * 5, cell * 5);
+      // Inner black 3x3
+      ctx.fillStyle = '#1a1a2e';
+      ctx.fillRect(x + cell * 2, y + cell * 2, cell * 3, cell * 3);
+    }
+
+    function isFinderArea(r, c, grid) {
+      if (r < 8 && c < 8) return true;
+      if (r < 8 && c >= grid - 8) return true;
+      if (r >= grid - 8 && c < 8) return true;
+      return false;
+    }
+
+    /* Mint Another */
+    var mintAnother = document.getElementById('svMintAnother');
+    if (mintAnother) {
+      mintAnother.addEventListener('click', function() {
+        result.style.display = 'none';
+        amtIn.value = '';
+        amtIn.focus();
+        updateFees();
+        panel.querySelectorAll('.sv-q').forEach(function(b) { b.classList.remove('active'); });
+      });
+    }
+
+    /* Print */
+    var printBtn = document.getElementById('svPrint');
+    if (printBtn) {
+      printBtn.addEventListener('click', function() {
+        var cardEl = document.getElementById('svBearerCard');
+        if (!cardEl) return;
+        var w = window.open('', '_blank', 'width=420,height=600');
+        w.document.write('<html><head><title>OST Bearer Note</title><style>body{display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#fff;font-family:sans-serif;color:#222;}.card{text-align:center;padding:32px;border:2px solid #333;border-radius:16px;max-width:340px;}.amount{font-size:2rem;font-weight:900;margin:12px 0;}.hash{font-family:monospace;font-size:.7rem;word-break:break-all;color:#555;}</style></head><body><div class="card">');
+        w.document.write('<div style="font-weight:900;font-size:1.2rem;">&#9673; OST SURVIVAL BEARER NOTE</div>');
+        w.document.write('<div class="amount">' + bAmt.textContent + '</div>');
+        w.document.write('<canvas id="qr"></canvas>');
+        w.document.write('<div class="hash">' + bHash.textContent + '</div>');
+        w.document.write('<div style="margin-top:12px;font-size:.7rem;color:#888;">Encrypted · One-time redemption · Satellite-redeemable</div>');
+        w.document.write('</div></body></html>');
+        w.document.close();
+        setTimeout(function() { w.print(); }, 300);
+      });
+    }
+
+    /* Copy hash */
+    var copyBtn = document.getElementById('svCopyHash');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', function() {
+        var text = bHash.textContent.replace('HASH: ', '');
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(text);
+        } else {
+          var ta = document.createElement('textarea');
+          ta.value = text; document.body.appendChild(ta);
+          ta.select(); document.execCommand('copy');
+          document.body.removeChild(ta);
+        }
+        if (typeof toast === 'function') toast('\u{1F4CB}', 'Bearer hash copied to clipboard');
+      });
+    }
+
+    /* Download as text file */
+    var dlBtn = document.getElementById('svDownload');
+    if (dlBtn) {
+      dlBtn.addEventListener('click', function() {
+        var content = 'OST SURVIVAL BEARER TOKEN\n';
+        content += '========================\n';
+        content += 'Amount: ' + bAmt.textContent + '\n';
+        content += bHash.textContent + '\n';
+        content += 'Type: ' + bType.textContent + '\n';
+        content += 'Encrypted · One-time redemption · Satellite-redeemable\n';
+        content += '\nWARNING: This is a bearer instrument. Whoever holds this note controls the value.\n';
+        var blob = new Blob([content], { type: 'text/plain' });
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'ost-bearer-token.txt';
+        a.click();
+        URL.revokeObjectURL(a.href);
+      });
+    }
+
+  })();
+
 })();
 
