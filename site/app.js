@@ -6064,353 +6064,380 @@
   }
 
   // ========================================================================
-  // OST GIFT CARD HUB v3 — Split Layout
+  // OST GIFT CARD EXCHANGE — giftcash.com style (3-step sell flow)
   // ========================================================================
   (function initGiftCardHub() {
-    var store = document.getElementById('gc2Store');
-    if (!store) return;
+    var searchEl = document.getElementById('gc2BrandSearch');
+    if (!searchEl) return;
 
     var fxToUSD = { USD:1, EUR:1.08, GBP:1.27, CAD:.74, AUD:.65, BRL:.20, MXN:.058, INR:.012, JPY:.0067, KRW:.00075, TRY:.031, RUB:.011, AED:.27 };
 
     var brands = [
-      { name:'Amazon',      domain:'amazon.com',       color:'#FF9900', cat:'shop' },
-      { name:'Apple',       domain:'apple.com',        color:'#A2AAAD', cat:'shop' },
-      { name:'Google Play', domain:'google.com',       color:'#34A853', cat:'game' },
-      { name:'Steam',       domain:'steampowered.com', color:'#1b2838', cat:'game' },
-      { name:'Walmart',     domain:'walmart.com',      color:'#0071CE', cat:'shop' },
-      { name:'Target',      domain:'target.com',       color:'#CC0000', cat:'shop' },
-      { name:'eBay',        domain:'ebay.com',         color:'#E53238', cat:'shop' },
-      { name:'Starbucks',   domain:'starbucks.com',    color:'#00704A', cat:'food' },
-      { name:'Nike',        domain:'nike.com',         color:'#111111', cat:'shop' },
-      { name:'Netflix',     domain:'netflix.com',      color:'#E50914', cat:'media' },
-      { name:'Spotify',     domain:'spotify.com',      color:'#1DB954', cat:'media' },
-      { name:'Uber',        domain:'uber.com',         color:'#000000', cat:'travel' },
-      { name:'Visa',        domain:'visa.com',         color:'#1A1F71', cat:'shop' },
-      { name:'Mastercard',  domain:'mastercard.com',   color:'#EB001B', cat:'shop' },
-      { name:'DoorDash',    domain:'doordash.com',     color:'#FF3008', cat:'food' },
-      { name:'PlayStation', domain:'playstation.com',  color:'#003087', cat:'game' },
-      { name:'Xbox',        domain:'xbox.com',         color:'#107C10', cat:'game' },
-      { name:'Best Buy',    domain:'bestbuy.com',      color:'#0046BE', cat:'shop' },
-      { name:'Sephora',     domain:'sephora.com',      color:'#000000', cat:'shop' },
-      { name:'Nordstrom',   domain:'nordstrom.com',    color:'#000000', cat:'shop' }
+      { name:'Amazon',      domain:'amazon.com',       color:'#FF9900', cat:'shop',  rate:88 },
+      { name:'Apple',       domain:'apple.com',        color:'#A2AAAD', cat:'shop',  rate:85 },
+      { name:'Google Play', domain:'google.com',       color:'#34A853', cat:'game',  rate:80 },
+      { name:'Steam',       domain:'steampowered.com', color:'#1b2838', cat:'game',  rate:78 },
+      { name:'Walmart',     domain:'walmart.com',      color:'#0071CE', cat:'shop',  rate:90 },
+      { name:'Target',      domain:'target.com',       color:'#CC0000', cat:'shop',  rate:89 },
+      { name:'eBay',        domain:'ebay.com',         color:'#E53238', cat:'shop',  rate:84 },
+      { name:'Starbucks',   domain:'starbucks.com',    color:'#00704A', cat:'food',  rate:82 },
+      { name:'Nike',        domain:'nike.com',         color:'#111111', cat:'shop',  rate:83 },
+      { name:'Netflix',     domain:'netflix.com',      color:'#E50914', cat:'media', rate:76 },
+      { name:'Spotify',     domain:'spotify.com',      color:'#1DB954', cat:'media', rate:74 },
+      { name:'Uber',        domain:'uber.com',         color:'#000000', cat:'travel', rate:85 },
+      { name:'DoorDash',    domain:'doordash.com',     color:'#FF3008', cat:'food',  rate:80 },
+      { name:'PlayStation', domain:'playstation.com',  color:'#003087', cat:'game',  rate:79 },
+      { name:'Xbox',        domain:'xbox.com',         color:'#107C10', cat:'game',  rate:81 },
+      { name:'Best Buy',    domain:'bestbuy.com',      color:'#0046BE', cat:'shop',  rate:87 },
+      { name:'Sephora',     domain:'sephora.com',      color:'#000000', cat:'shop',  rate:82 },
+      { name:'Nordstrom',   domain:'nordstrom.com',    color:'#000000', cat:'shop',  rate:84 },
+      { name:'Delta',       domain:'delta.com',        color:'#003366', cat:'travel', rate:77 },
+      { name:'Airbnb',      domain:'airbnb.com',       color:'#FF5A5F', cat:'travel', rate:75 }
     ];
 
     var selectedBrand = null;
+    var cart = [];
     var gcHistory = JSON.parse(localStorage.getItem('ost_gc_history') || '[]');
+    var chosenPayout = 'OST';
 
-    // Build brand grid with logos side-by-side
-    brands.forEach(function(b) {
-      var card = document.createElement('div');
-      card.className = 'gc2-brand';
-      card.dataset.cat = b.cat || 'shop';
-      card.style.setProperty('--brand-color', b.color || '#FFD700');
-      var img = document.createElement('img');
-      img.alt = b.name;
-      img.loading = 'lazy';
-      img.src = logoSrc(b.domain);
-      img.onerror = function() { logoFallback(this, b.domain, b.name, b.color); };
-      card.appendChild(img);
-      var nameSpan = document.createElement('span');
-      nameSpan.textContent = b.name;
-      card.appendChild(nameSpan);
-      var tag = document.createElement('span');
-      tag.className = 'gc2-brand-tag';
-      tag.textContent = 'Gift Card';
-      card.appendChild(tag);
-      card.addEventListener('click', function() { selectBrand(b, card); });
-      store.appendChild(card);
+    // DOM refs — Step 1
+    var dropdown = document.getElementById('gc2BrandDropdown');
+    var selBrandWrap = document.getElementById('gc2SelectedBrand');
+    var selLogo = document.getElementById('gc2SelLogo');
+    var selName = document.getElementById('gc2SelName');
+    var clearBrand = document.getElementById('gc2SelClear');
+    var currencySel = document.getElementById('gc2Currency');
+    var balanceInp = document.getElementById('gc2Balance');
+    var codeInp = document.getElementById('gc2Code');
+    var offerBtn = document.getElementById('gc2GetOffer');
+    var cartWrap = document.getElementById('gc2Cart');
+    var cartList = document.getElementById('gc2CartList');
+    var cartTotalEl = document.getElementById('gc2CartTotal');
+    var checkoutBtn = document.getElementById('gc2Checkout');
+    // Steps
+    var step1 = document.getElementById('gc2Step1');
+    var step2 = document.getElementById('gc2Step2');
+    var step3 = document.getElementById('gc2Step3');
+    // Step 2
+    var offerDetails = document.getElementById('gc2OfferDetails');
+    var offerTotal = document.getElementById('gc2OfferTotal');
+    var offerRate = document.getElementById('gc2OfferRate');
+    var offerFee = document.getElementById('gc2OfferFee');
+    var acceptBtn = document.getElementById('gc2Accept');
+    var backBtn = document.getElementById('gc2BackTo1');
+    // Step 3
+    var doneAmount = document.getElementById('gc2DoneAmount');
+    var doneTx = document.getElementById('gc2DoneTx');
+    var copyTx = document.getElementById('gc2CopyTx');
+    var newSell = document.getElementById('gc2NewSell');
+    // Flow
+    var flowEl = document.getElementById('gc2Flow');
+    // Brands grid
+    var brandsGrid = document.getElementById('gc2BrandsGrid');
+    // History
+    var histToggle = document.getElementById('gc2HistToggle');
+    var histPanel = document.getElementById('gc2Hist');
+    var histList = document.getElementById('gc2HistList');
+    var histEmpty = document.getElementById('gc2HistEmpty');
+    var histCount = document.getElementById('gc2HistCount');
+
+    // Step pills
+    var pills = document.querySelectorAll('.gc2-step-pill');
+    function setStep(n) {
+      pills.forEach(function(p, i) {
+        p.classList.remove('gc2-step-active', 'gc2-step-done');
+        if (i + 1 < n) p.classList.add('gc2-step-done');
+        if (i + 1 === n) p.classList.add('gc2-step-active');
+      });
+      step1.classList.toggle('gc2-panel-active', n === 1);
+      step2.classList.toggle('gc2-panel-active', n === 2);
+      step3.classList.toggle('gc2-panel-active', n === 3);
+      step1.style.display = n === 1 ? 'block' : 'none';
+      step2.style.display = n === 2 ? 'block' : 'none';
+      step3.style.display = n === 3 ? 'block' : 'none';
+    }
+
+    // Brand search dropdown
+    searchEl.addEventListener('focus', function() { filterDropdown(); dropdown.classList.add('gc2-dd-open'); });
+    searchEl.addEventListener('input', function() { filterDropdown(); });
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.gc2-brand-search-wrap')) dropdown.classList.remove('gc2-dd-open');
     });
 
-    // Category filter
+    function filterDropdown() {
+      var q = searchEl.value.toLowerCase();
+      dropdown.innerHTML = '';
+      brands.filter(function(b) { return b.name.toLowerCase().indexOf(q) >= 0; }).forEach(function(b) {
+        var opt = document.createElement('div');
+        opt.className = 'gc2-brand-opt';
+        var img = document.createElement('img');
+        img.src = logoSrc(b.domain);
+        img.onerror = function() { logoFallback(this, b.domain, b.name, b.color); };
+        img.alt = b.name;
+        opt.appendChild(img);
+        var nameSpan = document.createElement('span');
+        nameSpan.className = 'gc2-brand-opt-name';
+        nameSpan.textContent = b.name;
+        opt.appendChild(nameSpan);
+        var rateSpan = document.createElement('span');
+        rateSpan.className = 'gc2-brand-opt-rate';
+        rateSpan.textContent = b.rate + '%';
+        opt.appendChild(rateSpan);
+        opt.addEventListener('click', function() { pickBrand(b); });
+        dropdown.appendChild(opt);
+      });
+      if (!dropdown.classList.contains('gc2-dd-open')) dropdown.classList.add('gc2-dd-open');
+    }
+
+    function pickBrand(b) {
+      selectedBrand = b;
+      dropdown.classList.remove('gc2-dd-open');
+      searchEl.style.display = 'none';
+      selBrandWrap.style.display = 'flex';
+      selLogo.src = logoSrc(b.domain);
+      selLogo.onerror = function() { logoFallback(this, b.domain, b.name, b.color); };
+      selName.textContent = b.name + ' (' + b.rate + '%)';
+      updateOfferBtn();
+    }
+
+    clearBrand.addEventListener('click', function() {
+      selectedBrand = null;
+      searchEl.style.display = '';
+      selBrandWrap.style.display = 'none';
+      searchEl.value = '';
+      updateOfferBtn();
+    });
+
+    // Quick amounts
+    document.querySelectorAll('.gc2-q').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.gc2-q').forEach(function(q) { q.classList.remove('gc2-q-active'); });
+        btn.classList.add('gc2-q-active');
+        balanceInp.value = btn.dataset.amt;
+        updateOfferBtn();
+      });
+    });
+
+    balanceInp.addEventListener('input', updateOfferBtn);
+    codeInp.addEventListener('input', updateOfferBtn);
+
+    function updateOfferBtn() {
+      var bal = parseFloat(balanceInp.value) || 0;
+      offerBtn.disabled = !(selectedBrand && bal > 0);
+    }
+
+    // Get Offer => add to cart
+    offerBtn.addEventListener('click', function() {
+      if (!selectedBrand) return;
+      var bal = parseFloat(balanceInp.value) || 0;
+      if (bal <= 0) return;
+      var cur = currencySel.value;
+      var usd = bal * (fxToUSD[cur] || 1);
+      var rate = selectedBrand.rate / 100;
+      var payout = usd * rate;
+      var ost = window.ostPrice > 0 ? payout / window.ostPrice : 0;
+      cart.push({
+        brand: selectedBrand.name,
+        domain: selectedBrand.domain,
+        color: selectedBrand.color,
+        rate: selectedBrand.rate,
+        balance: bal,
+        currency: cur,
+        usd: usd,
+        payout: payout,
+        ost: ost,
+        code: codeInp.value.trim() || 'N/A'
+      });
+      renderCart();
+      // Reset fields
+      balanceInp.value = '';
+      codeInp.value = '';
+      document.querySelectorAll('.gc2-q').forEach(function(q) { q.classList.remove('gc2-q-active'); });
+      clearBrand.click();
+    });
+
+    function renderCart() {
+      if (cart.length === 0) { cartWrap.style.display = 'none'; return; }
+      cartWrap.style.display = 'block';
+      cartList.innerHTML = '';
+      var total = 0;
+      cart.forEach(function(item, idx) {
+        total += item.ost;
+        var el = document.createElement('div');
+        el.className = 'gc2-cart-item';
+        var img = document.createElement('img');
+        img.src = logoSrc(item.domain);
+        img.onerror = function() { logoFallback(this, item.domain, item.brand, item.color); };
+        el.appendChild(img);
+        var info = document.createElement('div');
+        info.className = 'gc2-cart-item-info';
+        info.textContent = item.brand + ' · $' + item.usd.toFixed(2);
+        el.appendChild(info);
+        var val = document.createElement('div');
+        val.className = 'gc2-cart-item-val';
+        val.innerHTML = '<div class="gc2-cart-item-fiat">' + item.rate + '% rate</div><div class="gc2-cart-item-ost">' + item.ost.toFixed(2) + ' OST</div>';
+        el.appendChild(val);
+        var xBtn = document.createElement('button');
+        xBtn.className = 'gc2-cart-item-x';
+        xBtn.innerHTML = '&times;';
+        xBtn.addEventListener('click', function() { cart.splice(idx, 1); renderCart(); });
+        el.appendChild(xBtn);
+        cartList.appendChild(el);
+      });
+      cartTotalEl.textContent = total.toFixed(2) + ' OST';
+    }
+
+    // Checkout — go to step 2
+    checkoutBtn.addEventListener('click', function() {
+      if (cart.length === 0) return;
+      // Build offer details
+      offerDetails.innerHTML = '';
+      var totalUsd = 0;
+      var totalOst = 0;
+      cart.forEach(function(item) {
+        totalUsd += item.payout;
+        totalOst += item.ost;
+        var row = document.createElement('div');
+        row.className = 'gc2-offer-det-row';
+        row.innerHTML = '<span>' + item.brand + ' ($' + item.usd.toFixed(2) + ')</span><span style="color:#00c853;font-weight:700">' + item.ost.toFixed(2) + ' OST</span>';
+        offerDetails.appendChild(row);
+      });
+      var fee = totalOst * 0.001;
+      var net = totalOst - fee;
+      offerTotal.textContent = net.toFixed(2) + ' OST';
+      offerRate.textContent = '1 OST = $' + (window.ostPrice || 0).toFixed(6);
+      offerFee.textContent = fee.toFixed(4) + ' OST (0.1%)';
+      setStep(2);
+    });
+
+    // Payout method
+    document.querySelectorAll('.gc2-payout-opt').forEach(function(opt) {
+      opt.addEventListener('click', function() {
+        document.querySelectorAll('.gc2-payout-opt').forEach(function(o) { o.classList.remove('gc2-payout-active'); });
+        opt.classList.add('gc2-payout-active');
+        chosenPayout = opt.dataset.payout || 'OST';
+      });
+    });
+
+    // Back
+    backBtn.addEventListener('click', function() { setStep(1); });
+
+    // Accept
+    acceptBtn.addEventListener('click', function() {
+      acceptBtn.disabled = true;
+      flowEl.style.display = 'flex';
+      var steps = flowEl.querySelectorAll('.gc2-fstep');
+      steps.forEach(function(s) { s.classList.remove('gc2-fs-active', 'gc2-fs-done'); });
+      var i = 0;
+      function next() {
+        if (i > 0) { steps[i - 1].classList.remove('gc2-fs-active'); steps[i - 1].classList.add('gc2-fs-done'); }
+        if (i < steps.length) { steps[i].classList.add('gc2-fs-active'); i++; setTimeout(next, 800 + Math.random() * 600); }
+        else { finishSell(); }
+      }
+      next();
+    });
+
+    function finishSell() {
+      var totalOst = 0;
+      cart.forEach(function(item) { totalOst += item.ost; });
+      var fee = totalOst * 0.001;
+      var net = totalOst - fee;
+      var txHash = '';
+      for (var h = 0; h < 32; h++) txHash += Math.floor(Math.random() * 16).toString(16);
+      doneAmount.textContent = net.toFixed(2) + ' ' + chosenPayout;
+      doneTx.textContent = txHash;
+
+      // Save to history
+      cart.forEach(function(item) {
+        gcHistory.push({
+          type: 'sell',
+          brand: item.brand,
+          domain: item.domain,
+          usd: item.usd.toFixed(2),
+          ost: item.ost.toFixed(2),
+          payout: chosenPayout,
+          date: new Date().toLocaleDateString()
+        });
+      });
+      localStorage.setItem('ost_gc_history', JSON.stringify(gcHistory));
+      renderHistory();
+
+      setStep(3);
+      toast('&#9989;', 'Gift cards sold! ' + net.toFixed(2) + ' ' + chosenPayout + ' received.');
+    }
+
+    // Copy TX
+    copyTx.addEventListener('click', function() {
+      navigator.clipboard.writeText(doneTx.textContent).then(function() { toast('&#128203;', 'TX hash copied!'); });
+    });
+
+    // Sell another
+    newSell.addEventListener('click', function() {
+      cart = [];
+      renderCart();
+      acceptBtn.disabled = false;
+      flowEl.style.display = 'none';
+      setStep(1);
+    });
+
+    // Brands grid
+    function renderBrandsGrid(filter) {
+      brandsGrid.innerHTML = '';
+      brands.forEach(function(b) {
+        if (filter && filter !== 'all' && b.cat !== filter) return;
+        var card = document.createElement('div');
+        card.className = 'gc2-brand-card';
+        var img = document.createElement('img');
+        img.src = logoSrc(b.domain);
+        img.onerror = function() { logoFallback(this, b.domain, b.name, b.color); };
+        img.alt = b.name;
+        card.appendChild(img);
+        var nameEl = document.createElement('div');
+        nameEl.className = 'gc2-brand-card-name';
+        nameEl.textContent = b.name;
+        card.appendChild(nameEl);
+        var rateEl = document.createElement('div');
+        rateEl.className = 'gc2-brand-card-rate';
+        rateEl.textContent = b.rate + '%';
+        card.appendChild(rateEl);
+        card.addEventListener('click', function() {
+          pickBrand(b);
+          step1.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+        brandsGrid.appendChild(card);
+      });
+    }
+    renderBrandsGrid('all');
+
     document.querySelectorAll('.gc2-cat').forEach(function(btn) {
       btn.addEventListener('click', function() {
         document.querySelectorAll('.gc2-cat').forEach(function(b) { b.classList.remove('gc2-cat-active'); });
         btn.classList.add('gc2-cat-active');
-        var cat = btn.dataset.cat;
-        document.querySelectorAll('.gc2-brand').forEach(function(c) {
-          c.style.display = (cat === 'all' || c.dataset.cat === cat) ? '' : 'none';
-        });
+        renderBrandsGrid(btn.dataset.cat);
       });
     });
-
-    var activeLogo = document.getElementById('gc2DrawerLogo');
-    var activeName = document.getElementById('gc2DrawerBrand');
-
-    // Brand-specific card gradient patterns for realistic look
-    var brandGradients = {
-      'Amazon':     'linear-gradient(135deg, #232f3e, #131921, #FF9900)',
-      'Apple':      'linear-gradient(135deg, #1d1d1f, #333336, #555)',
-      'Google Play':'linear-gradient(135deg, #1a73e8, #34a853, #fbbc04)',
-      'Steam':      'linear-gradient(135deg, #1b2838, #171d25, #2a475e)',
-      'Walmart':    'linear-gradient(135deg, #004c91, #0071ce, #ffc220)',
-      'Target':     'linear-gradient(135deg, #cc0000, #990000, #333)',
-      'eBay':       'linear-gradient(135deg, #e53238, #0064d2, #f5af02)',
-      'Starbucks':  'linear-gradient(135deg, #00704A, #1E3932, #d4e9e2)',
-      'Nike':       'linear-gradient(135deg, #111, #333, #111)',
-      'Netflix':    'linear-gradient(135deg, #221f1f, #e50914, #b20710)',
-      'Spotify':    'linear-gradient(135deg, #191414, #1db954, #191414)',
-      'Uber':       'linear-gradient(135deg, #000, #276ef1, #06c167)',
-      'Visa':       'linear-gradient(135deg, #1a1f71, #2557d6, #f7b600)',
-      'Mastercard': 'linear-gradient(135deg, #1a1f36, #eb001b, #f79e1b)',
-      'DoorDash':   'linear-gradient(135deg, #ff3008, #c41200, #1a1a1a)',
-      'PlayStation':'linear-gradient(135deg, #003087, #0070d1, #00439c)',
-      'Xbox':       'linear-gradient(135deg, #107c10, #0e6b0e, #1a1a1a)',
-      'Best Buy':   'linear-gradient(135deg, #0046be, #003a9e, #fff200)',
-      'Sephora':    'linear-gradient(135deg, #000, #333, #e0c9a6)',
-      'Nordstrom':  'linear-gradient(135deg, #1a1a1a, #333, #8b7355)'
-    };
-
-    function selectBrand(brand, el) {
-      selectedBrand = brand;
-      document.querySelectorAll('.gc2-brand').forEach(function(c) { c.classList.remove('gc2-brand-selected'); });
-      if (el) el.classList.add('gc2-brand-selected');
-      activeLogo.src = logoSrc(brand.domain);
-      activeLogo.onerror = function() { logoFallback(this, brand.domain, brand.name, brand.color); };
-      activeLogo.alt = brand.name;
-      activeName.textContent = brand.name;
-
-      // Update 3D card preview with brand-specific look
-      var cardPreview = document.getElementById('gc2CardPreview');
-      var cardMockup = document.getElementById('gc2CardMockup');
-      var cardLogo = document.getElementById('gc2CardLogo');
-      var cardBrandName = document.getElementById('gc2CardBrandName');
-      if (cardPreview && cardMockup && cardLogo) {
-        cardPreview.style.display = 'block';
-        var c = brand.color || '#FFD700';
-        cardMockup.style.background = brandGradients[brand.name] || ('linear-gradient(135deg, ' + c + ', ' + c + '88, #1a1a2e)');
-        cardMockup.style.setProperty('--card-glow', c + '33');
-        cardLogo.src = logoSrc(brand.domain);
-        cardLogo.onerror = function() { logoFallback(this, brand.domain, brand.name, brand.color); };
-        cardLogo.alt = brand.name;
-      }
-      if (cardBrandName) cardBrandName.textContent = brand.name + ' Gift Card';
-
-      // Generate random last 4 digits
-      var last4 = document.getElementById('gc2CardLast4');
-      if (last4) last4.textContent = (1000 + Math.floor(Math.random() * 9000)).toString();
-
-      document.getElementById('gc2Flow').style.display = 'none';
-      document.getElementById('gc2Delivered').style.display = 'none';
-      resetFlowSteps();
-      updateRedeem();
-      updateBuy();
-      if (window.innerWidth <= 800) {
-        var actionCol = document.getElementById('gc2ActionCol');
-        if (actionCol) actionCol.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }
-    }
-
-    // Mode toggle
-    document.querySelectorAll('.gc2-mode').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        document.querySelectorAll('.gc2-mode').forEach(function(b) { b.classList.remove('gc2-mode-active'); });
-        btn.classList.add('gc2-mode-active');
-        var mode = btn.dataset.mode;
-        document.getElementById('gc2PaneRedeem').classList.toggle('gc2-pane-active', mode === 'redeem');
-        document.getElementById('gc2PaneBuy').classList.toggle('gc2-pane-active', mode === 'buy');
-        document.getElementById('gc2Flow').style.display = 'none';
-        document.getElementById('gc2Delivered').style.display = 'none';
-        resetFlowSteps();
-      });
-    });
-
-    // Quick amounts (with active state)
-    document.querySelectorAll('.gc2-q').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        var amt = btn.dataset.amt;
-        var pane = btn.closest('.gc2-pane');
-        if (!pane) return;
-        pane.querySelectorAll('.gc2-q').forEach(function(q) { q.classList.remove('gc2-q-active'); });
-        btn.classList.add('gc2-q-active');
-        var input = pane.querySelector('.gc2-inp[type="number"]');
-        if (input) { input.value = amt; input.dispatchEvent(new Event('input')); }
-      });
-    });
-
-    // 3D card tilt on mouse move
-    (function() {
-      var scene = document.querySelector('.gc2-card-scene');
-      var card = document.getElementById('gc2CardMockup');
-      if (!scene || !card) return;
-      scene.addEventListener('mousemove', function(e) {
-        var rect = scene.getBoundingClientRect();
-        var x = (e.clientX - rect.left) / rect.width;
-        var y = (e.clientY - rect.top) / rect.height;
-        var rotY = (x - 0.5) * 20;
-        var rotX = (0.5 - y) * 14;
-        card.style.transform = 'rotateY(' + rotY + 'deg) rotateX(' + rotX + 'deg) scale(1.02)';
-      });
-      scene.addEventListener('mouseleave', function() {
-        card.style.transform = '';
-      });
-    })();
-
-    // Redeem
-    var gc2Balance = document.getElementById('gc2Balance');
-    var gc2Code = document.getElementById('gc2Code');
-    var gc2Currency = document.getElementById('gc2Currency');
-    var gc2RedeemVal = document.getElementById('gc2RedeemVal');
-    var gc2RedeemRate = document.getElementById('gc2RedeemRate');
-    var gc2RedeemFee = document.getElementById('gc2RedeemFee');
-    var gc2RedeemBtn = document.getElementById('gc2RedeemBtn');
-
-    function updateCardValue() {
-      var el = document.getElementById('gc2CardValue');
-      if (!el) return;
-      var mode = document.querySelector('.gc2-mode-active');
-      var isRedeem = mode && mode.dataset.mode === 'redeem';
-      var amt = parseFloat((isRedeem ? gc2Balance.value : document.getElementById('gc2BuyAmt').value) || 0);
-      var cur = isRedeem ? gc2Currency.value : (document.getElementById('gc2BuyCur') || {}).value || 'USD';
-      var sym = { USD:'$', EUR:'€', GBP:'£', CAD:'C$', AUD:'A$', BRL:'R$', MXN:'MX$', INR:'₹', JPY:'¥', KRW:'₩', TRY:'₺', RUB:'₽', AED:'د.إ' };
-      el.textContent = (sym[cur] || '$') + (amt || 0);
-    }
-
-    function updateRedeem() {
-      var bal = parseFloat(gc2Balance.value) || 0;
-      var code = (gc2Code.value || '').trim();
-      var cur = gc2Currency.value;
-      var usd = bal * (fxToUSD[cur] || 1);
-      if (usd > 0 && window.ostPrice > 0) {
-        var ost = usd / window.ostPrice;
-        var fee = ost * 0.001;
-        gc2RedeemVal.textContent = (ost - fee).toFixed(2) + ' OST';
-        gc2RedeemRate.textContent = '1 OST = $' + window.ostPrice.toFixed(6);
-        gc2RedeemFee.textContent = fee.toFixed(4) + ' OST';
-        gc2RedeemBtn.disabled = !(code && selectedBrand);
-      } else {
-        gc2RedeemVal.textContent = '\u2014 OST';
-        gc2RedeemRate.textContent = '\u2014';
-        gc2RedeemFee.textContent = '\u2014';
-        gc2RedeemBtn.disabled = true;
-      }
-    }
-    gc2Balance.addEventListener('input', function() { updateRedeem(); updateCardValue(); });
-    gc2Code.addEventListener('input', updateRedeem);
-    gc2Currency.addEventListener('change', function() { updateRedeem(); updateCardValue(); });
-
-    // Buy
-    var gc2BuyAmt = document.getElementById('gc2BuyAmt');
-    var gc2BuyCur = document.getElementById('gc2BuyCur');
-    var gc2BuyVal = document.getElementById('gc2BuyVal');
-    var gc2BuyRate = document.getElementById('gc2BuyRate');
-    var gc2BuyFee = document.getElementById('gc2BuyFee');
-    var gc2BuyBtn = document.getElementById('gc2BuyBtn');
-
-    function updateBuy() {
-      var amt = parseFloat(gc2BuyAmt.value) || 0;
-      var cur = gc2BuyCur.value;
-      var usd = amt * (fxToUSD[cur] || 1);
-      if (usd > 0 && window.ostPrice > 0) {
-        var ost = usd / window.ostPrice;
-        var fee = ost * 0.001;
-        gc2BuyVal.textContent = (ost + fee).toFixed(2) + ' OST';
-        gc2BuyRate.textContent = '1 OST = $' + window.ostPrice.toFixed(6);
-        gc2BuyFee.textContent = fee.toFixed(4) + ' OST';
-        gc2BuyBtn.disabled = !selectedBrand;
-      } else {
-        gc2BuyVal.textContent = '\u2014 OST';
-        gc2BuyRate.textContent = '\u2014';
-        gc2BuyFee.textContent = '\u2014';
-        gc2BuyBtn.disabled = true;
-      }
-    }
-    gc2BuyAmt.addEventListener('input', function() { updateBuy(); updateCardValue(); });
-    gc2BuyCur.addEventListener('change', function() { updateBuy(); updateCardValue(); });
-
-    // Flow
-    function resetFlowSteps() {
-      document.querySelectorAll('.gc2-fstep').forEach(function(s) { s.classList.remove('gc2-fs-active', 'gc2-fs-done'); });
-    }
-    function runFlow(onDone) {
-      var flow = document.getElementById('gc2Flow');
-      flow.style.display = 'flex';
-      resetFlowSteps();
-      var steps = flow.querySelectorAll('.gc2-fstep');
-      var i = 0;
-      function next() {
-        if (i > 0) { steps[i - 1].classList.remove('gc2-fs-active'); steps[i - 1].classList.add('gc2-fs-done'); }
-        if (i < steps.length) { steps[i].classList.add('gc2-fs-active'); i++; setTimeout(next, 900 + Math.random() * 600); }
-        else { if (onDone) onDone(); }
-      }
-      next();
-    }
-
-    gc2RedeemBtn.addEventListener('click', function() {
-      gc2RedeemBtn.disabled = true;
-      runFlow(function() {
-        var bal = parseFloat(gc2Balance.value) || 0;
-        var cur = gc2Currency.value;
-        var usd = (bal * (fxToUSD[cur] || 1)).toFixed(2);
-        var ost = gc2RedeemVal.textContent.replace(' OST', '');
-        addToHistory('sell', selectedBrand ? selectedBrand.name : 'Gift Card', selectedBrand ? selectedBrand.domain : '', usd, ost);
-        toast('&#9989;', 'Gift card redeemed! ' + ost + ' OST received.');
-        setTimeout(function() { updateRedeem(); }, 500);
-      });
-    });
-
-    gc2BuyBtn.addEventListener('click', function() {
-      gc2BuyBtn.disabled = true;
-      runFlow(function() {
-        var delivered = document.getElementById('gc2Delivered');
-        delivered.style.display = 'block';
-        var logo = document.getElementById('gc2DelLogo');
-        if (logo && selectedBrand) { logo.src = logoSrc(selectedBrand.domain); logo.onerror = function() { logoFallback(this, selectedBrand.domain, selectedBrand.name, selectedBrand.color); }; logo.alt = selectedBrand.name; }
-        var seg = function() { return Math.random().toString(36).substring(2, 6).toUpperCase(); };
-        document.getElementById('gc2DelCode').textContent = seg() + '-' + seg() + '-' + seg() + '-' + seg();
-        setTimeout(function() { updateBuy(); }, 500);
-        var amt = parseFloat(gc2BuyAmt.value) || 0;
-        var cur = gc2BuyCur.value;
-        var usd = (amt * (fxToUSD[cur] || 1)).toFixed(2);
-        var ost = gc2BuyVal.textContent.replace(' OST', '');
-        addToHistory('buy', selectedBrand ? selectedBrand.name : 'Gift Card', selectedBrand ? selectedBrand.domain : '', usd, ost);
-        toast('&#127873;', 'Gift card purchased! Code delivered.');
-      });
-    });
-
-    var copyBtn = document.getElementById('gc2Copy');
-    if (copyBtn) {
-      copyBtn.addEventListener('click', function() {
-        var code = document.getElementById('gc2DelCode').textContent;
-        navigator.clipboard.writeText(code).then(function() { toast('&#128203;', 'Code copied!'); });
-      });
-    }
 
     // History
     function renderHistory() {
-      var list = document.getElementById('gc2HistList');
-      var empty = document.getElementById('gc2HistEmpty');
-      var countEl = document.getElementById('gc2HistCount');
-      if (countEl) countEl.textContent = '(' + gcHistory.length + ')';
-      if (!list) return;
-      if (gcHistory.length === 0) { empty.style.display = 'block'; list.innerHTML = ''; return; }
-      empty.style.display = 'none';
-      list.innerHTML = '';
+      if (histCount) histCount.textContent = '(' + gcHistory.length + ')';
+      if (!histList) return;
+      if (gcHistory.length === 0) { histEmpty.style.display = 'block'; histList.innerHTML = ''; return; }
+      histEmpty.style.display = 'none';
+      histList.innerHTML = '';
       gcHistory.slice().reverse().forEach(function(tx) {
         var el = document.createElement('div');
         el.className = 'gc2-hx';
-        var hxImg = document.createElement('img');
-        hxImg.className = 'gc2-hx-logo';
-        hxImg.src = logoSrc(tx.domain || '');
-        hxImg.onerror = function() { logoFallback(this, tx.domain || '', tx.brand || '?', '#FFD700'); };
-        el.appendChild(hxImg);
-        var hxRest = document.createElement('span');
-        hxRest.innerHTML = '<div class="gc2-hx-info"><div class="gc2-hx-name">' + tx.brand + '</div><div class="gc2-hx-date">' + tx.date + '</div></div>' +
-          '<div class="gc2-hx-amt"><div class="gc2-hx-fiat">$' + tx.usd + '</div><div class="gc2-hx-ost">' + tx.ost + ' OST</div></div>' +
-          '<span class="gc2-hx-type ' + (tx.type === 'sell' ? 'gc2-hx-sell' : 'gc2-hx-buy') + '">' + tx.type + '</span>';
-        while (hxRest.firstChild) el.appendChild(hxRest.firstChild);
-        list.appendChild(el);
+        var img = document.createElement('img');
+        img.src = logoSrc(tx.domain || '');
+        img.onerror = function() { logoFallback(this, tx.domain || '', tx.brand || '?', '#00c853'); };
+        el.appendChild(img);
+        el.innerHTML += '<div class="gc2-hx-info"><div class="gc2-hx-name">' + (tx.brand || '?') + '</div><div class="gc2-hx-date">' + (tx.date || '') + '</div></div>' +
+          '<div class="gc2-hx-amt"><div class="gc2-hx-fiat">$' + (tx.usd || '0') + '</div><div class="gc2-hx-ost">' + (tx.ost || '0') + ' OST</div></div>';
+        histList.appendChild(el);
       });
     }
     renderHistory();
 
-    function addToHistory(type, brand, domain, usd, ost) {
-      gcHistory.push({ type: type, brand: brand, domain: domain, usd: usd, ost: ost, date: new Date().toLocaleDateString() });
-      localStorage.setItem('ost_gc_history', JSON.stringify(gcHistory));
-      renderHistory();
-    }
-
-    var histToggle = document.getElementById('gc2HistToggle');
-    var histPanel = document.getElementById('gc2Hist');
     if (histToggle && histPanel) {
       histToggle.addEventListener('click', function() {
         var open = histPanel.style.display !== 'none';
@@ -6418,299 +6445,236 @@
       });
     }
 
-    // Auto-select first brand so card preview is never blank
-    if (brands.length > 0) {
-      var firstCard = store.querySelector('.gc2-brand');
-      selectBrand(brands[0], firstCard);
-    }
+    // Init state
+    setStep(1);
   })();
 
   // ========================================================================
-  // OST FUEL & GO v3 — Tabs + World Map + Browse + Pay
+  // OST FUEL FINDER — gasbuddy.com style (station list + detail modal)
   // ========================================================================
   (function initFuelStation() {
-    var mapEl = document.getElementById('fuel2Map');
-    if (!mapEl) return;
+    var findBtn = document.getElementById('fuel2FindBtn');
+    if (!findBtn) return;
 
     var stations = [
-      { name:'Shell',          domain:'shell.com',          count:'46,000+', region:'Global',          lat:29.76,  lng:-95.37,  color:'#FFD500', fuel:'Gas · Diesel · EV' },
-      { name:'BP',             domain:'bp.com',             count:'21,000+', region:'Europe/Americas',  lat:51.51,  lng:-0.13,   color:'#009900', fuel:'Gas · Diesel' },
-      { name:'ExxonMobil',     domain:'exxonmobil.com',     count:'12,000+', region:'Americas',         lat:32.78,  lng:-96.80,  color:'#E21836', fuel:'Gas · Diesel' },
-      { name:'Chevron',        domain:'chevron.com',        count:'8,000+',  region:'Americas',         lat:37.77,  lng:-122.42, color:'#0054A6', fuel:'Gas · Diesel' },
-      { name:'TotalEnergies',  domain:'totalenergies.com',  count:'16,000+', region:'Europe/Africa',    lat:48.86,  lng:2.35,    color:'#FF0000', fuel:'Gas · Diesel · EV' },
-      { name:'ADNOC',          domain:'adnoc.ae',           count:'500+',    region:'Middle East',      lat:24.45,  lng:54.65,   color:'#00A74A', fuel:'Gas · Diesel' },
-      { name:'7-Eleven',       domain:'7-eleven.com',       count:'83,000+', region:'Global',           lat:35.68,  lng:139.69,  color:'#F7941D', fuel:'Gas · Convenience' },
-      { name:'OXXO',           domain:'oxxo.com',           count:'21,000+', region:'Latin America',    lat:25.67,  lng:-100.31, color:'#ED1C24', fuel:'Gas · Convenience' },
-      { name:'Circle K',       domain:'circlek.com',        count:'14,000+', region:'Global',           lat:33.45,  lng:-112.07, color:'#ED1C24', fuel:'Gas · Diesel · EV' },
-      { name:'Petronas',       domain:'petronas.com',       count:'2,500+',  region:'Asia',             lat:3.14,   lng:101.69,  color:'#00A19C', fuel:'Gas · Diesel' },
-      { name:'Indian Oil',     domain:'indianoil.co.in',    count:'34,000+', region:'India',            lat:28.61,  lng:77.21,   color:'#FF6600', fuel:'Gas · Diesel · CNG' },
-      { name:'Ipiranga',       domain:'ipiranga.com.br',    count:'7,600+',  region:'Brazil',           lat:-23.55, lng:-46.63,  color:'#0057A7', fuel:'Gas · Ethanol' },
-      { name:'PEMEX',          domain:'pemex.com',          count:'11,000+', region:'Mexico',           lat:19.43,  lng:-99.13,  color:'#006847', fuel:'Gas · Diesel' },
-      { name:'Repsol',         domain:'repsol.com',         count:'4,700+',  region:'Europe',           lat:40.42,  lng:-3.70,   color:'#FF6600', fuel:'Gas · Diesel · EV' },
-      { name:'Lukoil',         domain:'lukoil.com',         count:'5,500+',  region:'Russia/Europe',    lat:55.76,  lng:37.62,   color:'#E21A1A', fuel:'Gas · Diesel' },
-      { name:'Sinopec',        domain:'sinopec.com',        count:'30,000+', region:'China',            lat:39.91,  lng:116.40,  color:'#D50032', fuel:'Gas · Diesel · CNG' },
-      { name:'Aramco',         domain:'aramco.com',         count:'2,000+',  region:'Middle East',      lat:24.71,  lng:46.67,   color:'#006B77', fuel:'Gas · Diesel' },
-      { name:'Petrobras',      domain:'petrobras.com.br',   count:'7,700+',  region:'Brazil',           lat:-22.91, lng:-43.17,  color:'#008542', fuel:'Gas · Ethanol' },
-      { name:'Engen',          domain:'engenoil.com',       count:'1,500+',  region:'Africa',           lat:-33.93, lng:18.42,   color:'#005CA9', fuel:'Gas · Diesel' },
-      { name:'Caltex',         domain:'caltex.com',         count:'4,200+',  region:'Asia/Africa',      lat:1.35,   lng:103.82,  color:'#E4002B', fuel:'Gas · Diesel' },
-      { name:'Wawa',           domain:'wawa.com',           count:'950+',    region:'USA East',         lat:39.95,  lng:-75.17,  color:'#B11A2B', fuel:'Gas · Convenience' },
-      { name:'Casey\'s',       domain:'caseys.com',         count:'2,500+',  region:'USA Midwest',      lat:41.59,  lng:-93.62,  color:'#D71920', fuel:'Gas · Food' },
-      { name:'Eni/Agip',       domain:'eni.com',            count:'5,200+',  region:'Europe/Africa',    lat:41.90,  lng:12.50,   color:'#FFD700', fuel:'Gas · Diesel' },
-      { name:'OMV',            domain:'omv.com',            count:'2,100+',  region:'Central Europe',   lat:48.21,  lng:16.37,   color:'#003D7C', fuel:'Gas · Diesel · EV' },
-      { name:'PKN Orlen',      domain:'orlen.pl',           count:'2,800+',  region:'Eastern Europe',   lat:52.23,  lng:21.01,   color:'#E30613', fuel:'Gas · Diesel' },
-      { name:'PTT',            domain:'pttplc.com',         count:'2,100+',  region:'Thailand',         lat:13.76,  lng:100.50,  color:'#2D5DA1', fuel:'Gas · Diesel · CNG' },
-      { name:'GS Caltex',      domain:'gscaltex.com',       count:'6,000+',  region:'South Korea',      lat:37.57,  lng:126.98,  color:'#E4002B', fuel:'Gas · Diesel' },
-      { name:'ENEOS',          domain:'eneos.co.jp',        count:'12,500+', region:'Japan',            lat:35.69,  lng:139.70,  color:'#FF6600', fuel:'Gas · Diesel · EV' },
-      { name:'Woolworths',     domain:'woolworths.com.au',  count:'1,200+',  region:'Australia',        lat:-33.87, lng:151.21,  color:'#009B4D', fuel:'Gas · Diesel' },
-      { name:'Puma Energy',    domain:'pumaenergy.com',     count:'3,100+',  region:'Africa/Americas',  lat:6.52,   lng:3.38,    color:'#009640', fuel:'Gas · Diesel' }
+      { name:'Shell',          domain:'shell.com',          addr:'2100 Main St',        city:'Houston, TX',     prices:{regular:3.29,midgrade:3.59,premium:3.89,diesel:3.69}, rating:4.2, numReviews:128, amenities:['C-Store','Pay at Pump','Restrooms','Car Wash','Air'], reporter:'priceHunter42', reportedAgo:'3 hours', cash:true, dist:0.8, reviews:[{user:'FuelFan',stars:5,text:'Great prices and clean restrooms.',date:'2 days ago'},{user:'DriverTX',stars:4,text:'Quick in and out. Good rewards.',date:'5 days ago'}] },
+      { name:'BP',             domain:'bp.com',             addr:'550 Westheimer Rd',   city:'Houston, TX',     prices:{regular:3.19,midgrade:3.49,premium:3.79,diesel:3.59}, rating:4.0, numReviews:95,  amenities:['C-Store','Pay at Pump','Restrooms','ATM'], reporter:'gasWatcher', reportedAgo:'5 hours', cash:false, dist:1.2, reviews:[{user:'TXDriver',stars:4,text:'Decent prices. A bit crowded sometimes.',date:'1 day ago'}] },
+      { name:'ExxonMobil',     domain:'exxonmobil.com',     addr:'1800 Richmond Ave',   city:'Houston, TX',     prices:{regular:3.35,midgrade:3.65,premium:3.95,diesel:3.75}, rating:3.8, numReviews:67,  amenities:['C-Store','Pay at Pump','Air'], reporter:'cheapGas99', reportedAgo:'1 hour', cash:true, dist:1.5, reviews:[{user:'Mike_M',stars:3,text:'Prices are OK. Nothing special.',date:'3 days ago'}] },
+      { name:'Chevron',        domain:'chevron.com',        addr:'4200 Montrose Blvd',  city:'Houston, TX',     prices:{regular:3.39,midgrade:3.69,premium:3.99,diesel:3.79}, rating:4.5, numReviews:203, amenities:['C-Store','Pay at Pump','Restrooms','Car Wash','Air','EV Charging'], reporter:'saveOnGas', reportedAgo:'2 hours', cash:true, dist:2.1, reviews:[{user:'EV_Dave',stars:5,text:'Love the EV chargers! Great location.',date:'1 day ago'},{user:'Cara_D',stars:4,text:'Always clean. Friendly staff.',date:'4 days ago'}] },
+      { name:'Valero',         domain:'valero.com',         addr:'3300 Kirby Dr',       city:'Houston, TX',     prices:{regular:3.15,midgrade:3.45,premium:3.75,diesel:3.55}, rating:3.9, numReviews:82,  amenities:['C-Store','Pay at Pump','Restrooms'], reporter:'budgetDriver', reportedAgo:'6 hours', cash:true, dist:2.8, reviews:[{user:'SammyH',stars:4,text:'Cheapest around!',date:'2 days ago'}] },
+      { name:'Costco',         domain:'costco.com',         addr:'9700 Westheimer Rd',  city:'Houston, TX',     prices:{regular:2.99,midgrade:3.29,premium:3.59,diesel:3.39}, rating:4.7, numReviews:412, amenities:['Pay at Pump','Members Only'], reporter:'costcoFan', reportedAgo:'30 min', cash:false, dist:5.2, reviews:[{user:'MemberMike',stars:5,text:'Best prices in town. Worth the wait.',date:'6 hours ago'},{user:'Lisa_Q',stars:5,text:'Saved $15 on a full tank! Love Costco gas.',date:'1 day ago'}] },
+      { name:'Circle K',       domain:'circlek.com',        addr:'2900 Shepherd Dr',    city:'Houston, TX',     prices:{regular:3.22,midgrade:3.52,premium:3.82,diesel:3.62}, rating:3.6, numReviews:54,  amenities:['C-Store','Pay at Pump','Restrooms','ATM'], reporter:'nightOwl', reportedAgo:'4 hours', cash:false, dist:1.9, reviews:[{user:'NightDrv',stars:3,text:'Open 24/7 which is great.',date:'3 days ago'}] },
+      { name:'7-Eleven',       domain:'7-eleven.com',       addr:'1200 Elgin St',       city:'Houston, TX',     prices:{regular:3.25,midgrade:3.55,premium:3.85,diesel:3.65}, rating:3.5, numReviews:41,  amenities:['C-Store','Pay at Pump','Restrooms','ATM'], reporter:'slurpee7', reportedAgo:'8 hours', cash:true, dist:0.5, reviews:[{user:'QuickStop',stars:3,text:'Convenient location but prices are mid.',date:'1 week ago'}] },
+      { name:'Buc-ee\'s',      domain:'buc-ees.com',        addr:'22814 Katy Fwy',      city:'Katy, TX',        prices:{regular:3.05,midgrade:3.35,premium:3.65,diesel:3.45}, rating:4.9, numReviews:1024,amenities:['C-Store','Restrooms','Car Wash','Food Court','Air'], reporter:'bucFan', reportedAgo:'15 min', cash:true, dist:28.0, reviews:[{user:'RoadTrip',stars:5,text:'BEST gas station ever. Cleanest restrooms in Texas!',date:'1 day ago'},{user:'TXPride',stars:5,text:'The brisket alone is worth the drive.',date:'2 days ago'}] },
+      { name:'Murphy USA',     domain:'murphyusa.com',      addr:'7500 FM 1960',        city:'Houston, TX',     prices:{regular:3.09,midgrade:3.39,premium:3.69,diesel:3.49}, rating:4.1, numReviews:76,  amenities:['C-Store','Pay at Pump'], reporter:'savvyShopper', reportedAgo:'2 hours', cash:true, dist:8.4, reviews:[{user:'WalMart_G',stars:4,text:'Always cheap. Right next to Walmart.',date:'3 days ago'}] },
+      { name:'Sunoco',         domain:'sunoco.com',         addr:'3500 Scott St',       city:'Houston, TX',     prices:{regular:3.31,midgrade:3.61,premium:3.91,diesel:3.71}, rating:3.7, numReviews:38,  amenities:['C-Store','Pay at Pump','Restrooms'], reporter:'gasGuru', reportedAgo:'10 hours', cash:false, dist:3.1, reviews:[{user:'ScottSt',stars:4,text:'Nice clean pumps.',date:'5 days ago'}] },
+      { name:'Marathon',       domain:'marathon.com',       addr:'4800 Washington Ave', city:'Houston, TX',     prices:{regular:3.27,midgrade:3.57,premium:3.87,diesel:3.67}, rating:3.9, numReviews:63,  amenities:['C-Store','Pay at Pump','Restrooms','Air'], reporter:'marathonMan', reportedAgo:'7 hours', cash:true, dist:2.5, reviews:[{user:'WashAve',stars:4,text:'Solid station. Fair prices.',date:'4 days ago'}] },
+      { name:'TotalEnergies',  domain:'totalenergies.com',  addr:'900 Texas Ave',       city:'Houston, TX',     prices:{regular:3.33,midgrade:3.63,premium:3.93,diesel:3.73}, rating:3.8, numReviews:29,  amenities:['C-Store','Pay at Pump','EV Charging'], reporter:'euroGas', reportedAgo:'12 hours', cash:false, dist:1.0, reviews:[{user:'EU_expat',stars:4,text:'Familiar brand. Clean station.',date:'1 week ago'}] },
+      { name:'Wawa',           domain:'wawa.com',           addr:'1500 San Jacinto St', city:'Houston, TX',     prices:{regular:3.18,midgrade:3.48,premium:3.78,diesel:3.58}, rating:4.4, numReviews:187, amenities:['C-Store','Pay at Pump','Restrooms','Food Court','ATM'], reporter:'wawaFan', reportedAgo:'1 hour', cash:true, dist:4.0, reviews:[{user:'SubLover',stars:5,text:'Amazing hoagies AND cheap gas!',date:'12 hours ago'},{user:'JaxTX',stars:4,text:'Wish we had more Wawas in Texas.',date:'3 days ago'}] },
+      { name:'QT',             domain:'quiktrip.com',       addr:'6800 Almeda Rd',      city:'Houston, TX',     prices:{regular:3.12,midgrade:3.42,premium:3.72,diesel:3.52}, rating:4.6, numReviews:298, amenities:['C-Store','Pay at Pump','Restrooms','Food Court','Car Wash','Air'], reporter:'qtFan', reportedAgo:'45 min', cash:true, dist:3.7, reviews:[{user:'QTLover',stars:5,text:'Best gas station chain. Spotless restrooms!',date:'1 day ago'}] }
     ];
 
-    var selectedStation = null;
+    var activeFuelType = 'regular';
+    var activeSort = 'price';
     var fuelHistory = JSON.parse(localStorage.getItem('ost_fuel_history') || '[]');
-    var map = null;
+    var selectedStation = null;
 
-    // Tab switching
-    document.querySelectorAll('.fuel2-tab').forEach(function(tab) {
+    // DOM refs
+    var locInput = document.getElementById('fuel2SearchLoc');
+    var resultCount = document.getElementById('fuel2ResultCount');
+    var stationList = document.getElementById('fuel2StationList');
+    var detailOverlay = document.getElementById('fuel2DetailOverlay');
+    var detailModal = document.getElementById('fuel2DetailModal');
+    var closeDetail = document.getElementById('fuel2DetailClose');
+
+    // Fuel type tabs
+    document.querySelectorAll('.fuel2-ft').forEach(function(tab) {
       tab.addEventListener('click', function() {
-        document.querySelectorAll('.fuel2-tab').forEach(function(t) { t.classList.remove('fuel2-tab-active'); });
-        tab.classList.add('fuel2-tab-active');
-        var target = tab.dataset.tab;
-        document.querySelectorAll('.fuel2-panel').forEach(function(p) { p.classList.remove('fuel2-panel-active'); });
-        var panelId = target === 'map' ? 'fuel2PanelMap' : target === 'stations' ? 'fuel2PanelStations' : 'fuel2PanelPay';
-        document.getElementById(panelId).classList.add('fuel2-panel-active');
-        if (target === 'map' && map) setTimeout(function() { map.invalidateSize(); }, 100);
+        document.querySelectorAll('.fuel2-ft').forEach(function(t) { t.classList.remove('fuel2-ft-active'); });
+        tab.classList.add('fuel2-ft-active');
+        activeFuelType = tab.dataset.fuel;
+        renderStations();
       });
     });
 
-    // Init Leaflet map with RED markers
-    try {
-      map = L.map(mapEl, { scrollWheelZoom: false, zoomControl: true }).setView([20, 0], 2);
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OSM &amp; CARTO',
-        subdomains: 'abcd',
-        maxZoom: 19
-      }).addTo(map);
-
-      var stationIcon = L.divIcon({
-        className: 'fuel2-marker',
-        html: '<div style="width:14px;height:14px;border-radius:50%;background:#e63946;box-shadow:0 0 8px rgba(230,57,70,.6),0 0 16px rgba(230,57,70,.3);border:2px solid rgba(255,255,255,.4);"></div>',
-        iconSize: [14, 14],
-        iconAnchor: [7, 7],
-        popupAnchor: [0, -10]
+    // Sort buttons
+    document.querySelectorAll('.fuel2-sort').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.fuel2-sort').forEach(function(b) { b.classList.remove('fuel2-sort-active'); });
+        btn.classList.add('fuel2-sort-active');
+        activeSort = btn.dataset.sort;
+        renderStations();
       });
+    });
 
-      stations.forEach(function(s) {
-        var marker = L.marker([s.lat, s.lng], { icon: stationIcon }).addTo(map);
-        var popupSvg = brandSvg(s.name, s.color || '#e63946').replace(/'/g, '&apos;');
-        marker.bindPopup(
-          '<div style="text-align:center">' +
-          '<img src="' + logoSrc(s.domain) + '" style="width:44px;height:44px;border-radius:10px;background:#fff;padding:4px;box-sizing:border-box;margin-bottom:8px;box-shadow:0 2px 8px rgba(0,0,0,.3)" onerror="this.onerror=null;this.style.background=\'transparent\';this.style.padding=\'0\';this.src=\'' + popupSvg + '\'">' +
-          '<div style="font-weight:800;font-size:.95rem;margin-bottom:2px">' + s.name + '</div>' +
-          '<div style="font-size:.72rem;color:rgba(255,255,255,.5);margin-bottom:2px">' + s.region + '</div>' +
-          '<div style="font-size:.82rem;font-weight:700;color:#e63946;margin-bottom:8px">' + s.count + ' stations</div>' +
-          '<button class="fuel2-popup-btn" onclick="window._selectFuelStation(\'' + s.name.replace(/'/g, "\\'") + '\')">&#9981; Pay Here</button></div>'
-        );
-      });
+    // Find button
+    findBtn.addEventListener('click', function() { renderStations(); });
+    locInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') renderStations(); });
 
-      setTimeout(function() { map.invalidateSize(); }, 500);
-    } catch (e) {
-      mapEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:.9rem;">Map loading&hellip;</div>';
+    function getStationPrice(s) {
+      return s.prices[activeFuelType] || s.prices.regular;
     }
 
-    // Build legend below map
-    var legendEl = document.getElementById('fuel2Legend');
-    if (legendEl) {
-      stations.forEach(function(s) {
-        var item = document.createElement('div');
-        item.className = 'fuel2-legend-item';
-        item.style.setProperty('--station-color', s.color || '#FF6B35');
-        var legImg = document.createElement('img');
-        legImg.alt = s.name;
-        legImg.loading = 'lazy';
-        legImg.src = logoSrc(s.domain);
-        legImg.onerror = function() { logoFallback(this, s.domain, s.name, s.color); };
-        item.innerHTML = '<span class="fuel2-legend-dot" style="background:' + (s.color || '#e63946') + ';box-shadow:0 0 6px ' + (s.color || '#e63946') + '80"></span>';
-        item.appendChild(legImg);
-        var infoDiv = document.createElement('div');
-        infoDiv.innerHTML = '<div class="fuel2-legend-name">' + s.name + '</div><div class="fuel2-legend-cnt">' + s.count + '</div>';
-        item.appendChild(infoDiv);
-        item.addEventListener('click', function() {
-          if (map) map.setView([s.lat, s.lng], 6);
-        });
-        legendEl.appendChild(item);
+    function sortedStations() {
+      var q = (locInput.value || '').toLowerCase();
+      var filtered = stations.filter(function(s) {
+        if (!q) return true;
+        return s.name.toLowerCase().indexOf(q) >= 0 || s.addr.toLowerCase().indexOf(q) >= 0 || s.city.toLowerCase().indexOf(q) >= 0;
       });
+      filtered.sort(function(a, b) {
+        if (activeSort === 'price') return getStationPrice(a) - getStationPrice(b);
+        if (activeSort === 'rating') return b.rating - a.rating;
+        return a.dist - b.dist;
+      });
+      return filtered;
     }
 
-    // Build browse grid (Tab 2)
-    var browseGrid = document.getElementById('fuel2BrowseGrid');
-    if (browseGrid) {
-      stations.forEach(function(s) {
-        var card = document.createElement('div');
-        card.className = 'fuel2-bcard';
-        card.dataset.station = s.name;
-        card.style.setProperty('--station-color', s.color || '#FF6B35');
-        var bImg = document.createElement('img');
-        bImg.alt = s.name;
-        bImg.loading = 'lazy';
-        bImg.src = logoSrc(s.domain);
-        bImg.onerror = function() { logoFallback(this, s.domain, s.name, s.color); };
-        card.appendChild(bImg);
-        var infoDiv = document.createElement('div');
-        infoDiv.className = 'fuel2-bcard-info';
-        infoDiv.innerHTML = '<div class="fuel2-bcard-name">' + s.name + '</div><div class="fuel2-bcard-cnt">' + s.count + '</div><div class="fuel2-bcard-region">' + s.region + '</div>' +
-          '<div class="fuel2-bcard-fuel">' + (s.fuel || 'Gas') + '</div>';
-        card.appendChild(infoDiv);
-        card.addEventListener('click', function() {
-          selectStation(s);
-          document.querySelectorAll('.fuel2-tab').forEach(function(t) { t.classList.remove('fuel2-tab-active'); });
-          document.querySelector('[data-tab="pay"]').classList.add('fuel2-tab-active');
-          document.querySelectorAll('.fuel2-panel').forEach(function(p) { p.classList.remove('fuel2-panel-active'); });
-          document.getElementById('fuel2PanelPay').classList.add('fuel2-panel-active');
-        });
-        browseGrid.appendChild(card);
-      });
-    }
-
-    // Browse search
-    var browseSearch = document.getElementById('fuel2BrowseSearch');
-    if (browseSearch) {
-      browseSearch.addEventListener('input', function() {
-        var q = this.value.toLowerCase();
-        document.querySelectorAll('.fuel2-bcard').forEach(function(c) {
-          var name = (c.dataset.station || '').toLowerCase();
-          c.style.display = name.indexOf(q) >= 0 ? '' : 'none';
-        });
-      });
-    }
-
-    // Global station select
-    window._selectFuelStation = function(name) {
-      var s = stations.find(function(st) { return st.name === name; });
-      if (s) {
-        selectStation(s);
-        document.querySelectorAll('.fuel2-tab').forEach(function(t) { t.classList.remove('fuel2-tab-active'); });
-        document.querySelector('[data-tab="pay"]').classList.add('fuel2-tab-active');
-        document.querySelectorAll('.fuel2-panel').forEach(function(p) { p.classList.remove('fuel2-panel-active'); });
-        document.getElementById('fuel2PanelPay').classList.add('fuel2-panel-active');
+    function starsHTML(rating, full) {
+      var html = '';
+      var rounded = Math.round(rating);
+      for (var i = 1; i <= 5; i++) {
+        html += i <= rounded ? '<span class="fuel2-star">&#9733;</span>' : '<span class="fuel2-star-empty">&#9733;</span>';
       }
-    };
+      return html;
+    }
 
-    function selectStation(s) {
+    function renderStations() {
+      var list = sortedStations();
+      resultCount.textContent = list.length;
+      stationList.innerHTML = '';
+      list.forEach(function(s, idx) {
+        var price = getStationPrice(s);
+        var row = document.createElement('div');
+        row.className = 'fuel2-station';
+        row.innerHTML =
+          '<div class="fuel2-station-rank">' + (idx + 1) + '</div>' +
+          '<img class="fuel2-station-logo" src="' + logoSrc(s.domain) + '" alt="' + s.name + '" onerror="this.onerror=null;this.src=\'' + brandSvg(s.name, '#0071CE').replace(/'/g, "\\'") + '\'">' +
+          '<div class="fuel2-station-info">' +
+            '<div class="fuel2-station-name">' + s.name + '</div>' +
+            '<div class="fuel2-station-addr">' + s.addr + ', ' + s.city + '</div>' +
+            '<div class="fuel2-station-stars">' + starsHTML(s.rating) + '</div>' +
+            '<div class="fuel2-station-reviews">' + s.numReviews + ' reviews</div>' +
+            '<div class="fuel2-station-amenities">' + s.amenities.map(function(a) { return '<span class="fuel2-amenity">' + a + '</span>'; }).join('') + '</div>' +
+          '</div>' +
+          '<div class="fuel2-station-price-col">' +
+            '<div class="fuel2-station-price">$' + price.toFixed(2) + '</div>' +
+            '<div class="fuel2-station-price-unit">/gal</div>' +
+            '<div class="fuel2-station-reporter">' + s.reporter + '</div>' +
+            '<div class="fuel2-station-time">' + s.reportedAgo + ' ago</div>' +
+            (s.cash ? '<div class="fuel2-station-cash">Cash discount</div>' : '') +
+            '<div class="fuel2-station-dist">' + s.dist + ' mi</div>' +
+          '</div>';
+        row.addEventListener('click', function() { openDetail(s); });
+        stationList.appendChild(row);
+      });
+    }
+
+    // Detail modal
+    function openDetail(s) {
       selectedStation = s;
-      var pay = document.getElementById('fuel2Pay');
-      var prompt = document.getElementById('fuel2PayPrompt');
-      if (prompt) prompt.style.display = 'none';
-      pay.style.display = 'block';
-      pay.style.animation = 'none';
-      void pay.offsetHeight;
-      pay.style.animation = 'gc2DrawerIn .4s ease';
-      document.getElementById('fuel2PayLogo').src = logoSrc(s.domain);
-      document.getElementById('fuel2PayLogo').onerror = function() { logoFallback(this, s.domain, s.name, s.color); };
-      document.getElementById('fuel2PayLogo').alt = s.name;
-      document.getElementById('fuel2PayName').textContent = s.name;
-      document.getElementById('fuel2Flow').style.display = 'none';
-      document.querySelectorAll('.fuel2-fs').forEach(function(st) { st.classList.remove('f2-active', 'f2-done'); });
-      // Auto-fill regional gas price
-      var priceHints = { 'Shell': 3.49, 'BP': 3.39, 'ExxonMobil': 3.29, 'Chevron': 3.59, 'TotalEnergies': 1.89, 'ADNOC': 0.55, '7-Eleven': 3.19, 'OXXO': 1.15, 'Circle K': 3.25, 'Petronas': 0.61, 'Indian Oil': 1.33, 'Ipiranga': 1.29, 'PEMEX': 1.05, 'Repsol': 1.79, 'Lukoil': 0.89, 'Sinopec': 1.19, 'Aramco': 0.48 };
-      var priceField = document.getElementById('fuel2Price');
-      if (priceField && !priceField.value) priceField.value = priceHints[s.name] || (2 + Math.random() * 2).toFixed(2);
-      updateFuelCalc();
-      pay.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      document.querySelectorAll('.fuel2-bcard').forEach(function(c) { c.classList.remove('fuel2-bcard-selected'); });
-      if (browseGrid) {
-        var match = browseGrid.querySelector('[data-station="' + s.name + '"]');
-        if (match) match.classList.add('fuel2-bcard-selected');
-      }
-    }
+      detailOverlay.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
 
-    document.getElementById('fuel2PayClose').addEventListener('click', function() {
-      document.getElementById('fuel2Pay').style.display = 'none';
-      var prompt = document.getElementById('fuel2PayPrompt');
-      if (prompt) prompt.style.display = '';
-      selectedStation = null;
-    });
+      document.getElementById('fuel2DetLogo').src = logoSrc(s.domain);
+      document.getElementById('fuel2DetLogo').onerror = function() { logoFallback(this, s.domain, s.name, '#0071CE'); };
+      document.getElementById('fuel2DetName').textContent = s.name;
+      document.getElementById('fuel2DetAddr').textContent = s.addr + ', ' + s.city;
+      document.getElementById('fuel2DetStars').innerHTML = starsHTML(s.rating);
+      document.getElementById('fuel2DetRevCount').textContent = s.numReviews + ' reviews';
 
-    // Near Me
-    document.getElementById('fuel2NearMe').addEventListener('click', function() {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(function(pos) {
-          if (map) {
-            map.setView([pos.coords.latitude, pos.coords.longitude], 8);
-            L.circleMarker([pos.coords.latitude, pos.coords.longitude], {
-              radius: 8, fillColor: '#00e676', fillOpacity: .8, color: '#fff', weight: 2
-            }).addTo(map).bindPopup('You are here').openPopup();
-          }
-        }, function() {
-          toast('&#128205;', 'Location access denied.');
-        });
-      } else {
-        toast('&#128205;', 'Geolocation not supported.');
-      }
-    });
-
-    // Map search
-    var searchEl = document.getElementById('fuel2Search');
-    if (searchEl) {
-      searchEl.addEventListener('input', function() {
-        var q = this.value.toLowerCase();
-        document.querySelectorAll('.fuel2-legend-item').forEach(function(item) {
-          var name = item.querySelector('.fuel2-legend-name');
-          item.style.display = !name || name.textContent.toLowerCase().indexOf(q) >= 0 ? '' : 'none';
-        });
-        if (q.length >= 2 && map) {
-          var match = stations.find(function(s) { return s.name.toLowerCase().indexOf(q) >= 0; });
-          if (match) map.setView([match.lat, match.lng], 6);
-        }
+      // Prices grid
+      var prGrid = document.getElementById('fuel2DetPrices');
+      prGrid.innerHTML = '';
+      ['regular','midgrade','premium','diesel'].forEach(function(ft) {
+        var box = document.createElement('div');
+        box.className = 'fuel2-det-price-box';
+        box.innerHTML = '<div class="fuel2-det-price-type">' + ft.charAt(0).toUpperCase() + ft.slice(1) + '</div><div class="fuel2-det-price-val">$' + (s.prices[ft] || 0).toFixed(2) + '</div>';
+        prGrid.appendChild(box);
       });
+
+      // Amenities
+      var amenEl = document.getElementById('fuel2DetAmenities');
+      amenEl.innerHTML = '';
+      s.amenities.forEach(function(a) {
+        var span = document.createElement('span');
+        span.className = 'fuel2-det-amenity';
+        span.textContent = a;
+        amenEl.appendChild(span);
+      });
+
+      // Pre-fill pay
+      var priceField = document.getElementById('fuel2DetPrice');
+      priceField.value = getStationPrice(s).toFixed(2);
+      updateDetailCalc();
+
+      // Render reviews
+      renderDetailReviews(s);
+
+      // Report fuel type
+      document.getElementById('fuel2ReportFuel').value = activeFuelType;
+
+      // Reset flow
+      var flow = document.getElementById('fuel2DetFlow');
+      flow.style.display = 'none';
+      flow.querySelectorAll('.fuel2-dfs').forEach(function(st) { st.classList.remove('f2-active', 'f2-done'); });
+      document.getElementById('fuel2DetPayBtn').disabled = false;
     }
 
-    // Fuel calculator
-    var galEl = document.getElementById('fuel2Gal');
-    var priceEl = document.getElementById('fuel2Price');
-    var usdEl = document.getElementById('fuel2USD');
-    var ostEl = document.getElementById('fuel2OST');
-    var rwEl = document.getElementById('fuel2Rw');
-    var payBtn = document.getElementById('fuel2PayBtn');
+    closeDetail.addEventListener('click', function() {
+      detailOverlay.style.display = 'none';
+      document.body.style.overflow = '';
+    });
+    detailOverlay.addEventListener('click', function(e) {
+      if (e.target === detailOverlay) { closeDetail.click(); }
+    });
+
+    // Pay calc in detail
+    var galEl = document.getElementById('fuel2DetGal');
+    var priceDetEl = document.getElementById('fuel2DetPrice');
+    var usdOut = document.getElementById('fuel2DetUSD');
+    var ostOut = document.getElementById('fuel2DetOST');
+    var rwOut = document.getElementById('fuel2DetRw');
+    var payBtn = document.getElementById('fuel2DetPayBtn');
 
     function getRewardRate() {
       var c = fuelHistory.length;
       return c >= 500 ? 0.08 : c >= 100 ? 0.05 : 0.03;
     }
 
-    function updateFuelCalc() {
+    function updateDetailCalc() {
       var g = parseFloat(galEl.value) || 0;
-      var p = parseFloat(priceEl.value) || 0;
+      var p = parseFloat(priceDetEl.value) || 0;
       var cost = g * p;
-      usdEl.textContent = '$' + cost.toFixed(2);
+      usdOut.textContent = '$' + cost.toFixed(2);
       if (cost > 0 && window.ostPrice > 0) {
         var ost = cost / window.ostPrice;
         var rate = getRewardRate();
-        ostEl.textContent = ost.toFixed(2) + ' OST';
-        rwEl.textContent = '+' + (ost * rate).toFixed(2) + ' OST';
-        payBtn.disabled = !selectedStation;
+        ostOut.textContent = ost.toFixed(2) + ' OST';
+        rwOut.textContent = '+' + (ost * rate).toFixed(2) + ' OST';
+        payBtn.disabled = false;
       } else {
-        ostEl.textContent = '0 OST';
-        rwEl.textContent = '+0 OST';
+        ostOut.textContent = '0 OST';
+        rwOut.textContent = '+0 OST';
         payBtn.disabled = true;
       }
     }
-    galEl.addEventListener('input', updateFuelCalc);
-    priceEl.addEventListener('input', updateFuelCalc);
+    galEl.addEventListener('input', updateDetailCalc);
+    priceDetEl.addEventListener('input', updateDetailCalc);
 
     // Pay flow
     payBtn.addEventListener('click', function() {
       payBtn.disabled = true;
-      var flow = document.getElementById('fuel2Flow');
+      var flow = document.getElementById('fuel2DetFlow');
       flow.style.display = 'flex';
-      var steps = flow.querySelectorAll('.fuel2-fs');
+      var steps = flow.querySelectorAll('.fuel2-dfs');
       steps.forEach(function(s) { s.classList.remove('f2-active', 'f2-done'); });
       var i = 0;
       function next() {
         if (i > 0) { steps[i - 1].classList.remove('f2-active'); steps[i - 1].classList.add('f2-done'); }
-        if (i < steps.length) { steps[i].classList.add('f2-active'); i++; setTimeout(next, 900 + Math.random() * 500); }
+        if (i < steps.length) { steps[i].classList.add('f2-active'); i++; setTimeout(next, 800 + Math.random() * 500); }
         else {
           var g = parseFloat(galEl.value) || 0;
-          var p = parseFloat(priceEl.value) || 0;
+          var p = parseFloat(priceDetEl.value) || 0;
           var cost = g * p;
           var ost = window.ostPrice > 0 ? cost / window.ostPrice : 0;
           var rate = getRewardRate();
@@ -6725,16 +6689,81 @@
           localStorage.setItem('ost_fuel_history', JSON.stringify(fuelHistory));
           renderRewards();
           toast('&#9981;', 'Payment complete! +' + reward.toFixed(2) + ' OST cashback.');
-          // Animate pump fill gauge
-          var pumpFill = document.getElementById('fuel2PumpFill');
-          if (pumpFill) { pumpFill.style.transition = 'width 1.2s ease'; pumpFill.style.width = '100%'; setTimeout(function() { pumpFill.style.width = '0%'; }, 3000); }
-          // Re-enable pay button
           setTimeout(function() { payBtn.disabled = false; }, 800);
         }
       }
       next();
     });
 
+    // Reviews rendering
+    function renderDetailReviews(s) {
+      var container = document.getElementById('fuel2DetReviews');
+      container.innerHTML = '';
+      (s.reviews || []).forEach(function(r) {
+        var div = document.createElement('div');
+        div.className = 'fuel2-review';
+        div.innerHTML = '<div class="fuel2-review-user">' + r.user + '</div>' +
+          '<div class="fuel2-review-stars-sm">' + starsHTML(r.stars) + '</div>' +
+          '<div class="fuel2-review-text">' + r.text + '</div>' +
+          '<div class="fuel2-review-date">' + (r.date || '') + '</div>';
+        container.appendChild(div);
+      });
+    }
+
+    // Post review
+    var reviewText = document.getElementById('fuel2ReviewText');
+    var reviewStarsWrap = document.getElementById('fuel2ReviewStars');
+    var reviewSend = document.getElementById('fuel2ReviewSend');
+    var userReviewRating = 5;
+
+    if (reviewStarsWrap) {
+      var starSpans = reviewStarsWrap.querySelectorAll('span');
+      starSpans.forEach(function(sp, idx) {
+        sp.addEventListener('click', function() {
+          userReviewRating = idx + 1;
+          starSpans.forEach(function(s, j) {
+            s.classList.toggle('fuel2-star-lit', j < userReviewRating);
+          });
+        });
+        sp.addEventListener('mouseenter', function() {
+          starSpans.forEach(function(s, j) { s.classList.toggle('fuel2-star-lit', j <= idx); });
+        });
+      });
+      reviewStarsWrap.addEventListener('mouseleave', function() {
+        starSpans.forEach(function(s, j) { s.classList.toggle('fuel2-star-lit', j < userReviewRating); });
+      });
+    }
+
+    if (reviewSend) {
+      reviewSend.addEventListener('click', function() {
+        var text = reviewText.value.trim();
+        if (!text || !selectedStation) return;
+        selectedStation.reviews = selectedStation.reviews || [];
+        selectedStation.reviews.push({ user: 'You', stars: userReviewRating, text: text, date: 'just now' });
+        selectedStation.numReviews++;
+        renderDetailReviews(selectedStation);
+        reviewText.value = '';
+        toast('&#11088;', 'Review posted!');
+      });
+    }
+
+    // Report price
+    var reportBtn = document.getElementById('fuel2ReportBtn');
+    if (reportBtn) {
+      reportBtn.addEventListener('click', function() {
+        var ft = document.getElementById('fuel2ReportFuel').value;
+        var pr = parseFloat(document.getElementById('fuel2ReportPrice').value);
+        if (!pr || !selectedStation) return;
+        selectedStation.prices[ft] = pr;
+        selectedStation.reporter = 'You';
+        selectedStation.reportedAgo = 'just now';
+        renderStations();
+        openDetail(selectedStation);
+        toast('&#128200;', 'Price reported! Thanks for contributing.');
+      });
+    }
+
+    // Rewards bar
     function renderRewards() {
       var count = fuelHistory.length;
       var tier = count >= 500 ? 'Gold' : count >= 100 ? 'Silver' : 'Bronze';
@@ -6754,6 +6783,9 @@
       var earnedEl = document.getElementById('fuel2RwEarned');
       if (earnedEl) earnedEl.textContent = totalRw.toFixed(2) + ' OST earned';
     }
+
+    // Initial render
+    renderStations();
     renderRewards();
   })();
 

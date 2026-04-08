@@ -26,7 +26,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="style.css?v=41">
+  <link rel="stylesheet" href="style.css?v=42">
 </head>
 <body>
 
@@ -880,252 +880,274 @@
         </div>
       </div>
 
-      <!-- ==================== OST GIFT CARD HUB ==================== -->
+      <!-- ==================== OST GIFT CARD EXCHANGE (giftcash-style) ==================== -->
       <div class="gc2" id="gcSection">
-        <div class="gc2-head">
-          <h3 data-i18n="gc.title">&#127873; OST Gift Card Hub</h3>
-          <p data-i18n="gc.sub">Turn any gift card into OST, or buy instant digital cards. No KYC. No limits.</p>
-          <div class="gc2-badges">
-            <span class="gc2-badge">&#10003; 20+ Brands</span>
-            <span class="gc2-badge">&#128274; No KYC</span>
-            <span class="gc2-badge">&#9889; Instant</span>
-            <span class="gc2-badge">&#127758; Global</span>
-          </div>
+
+        <!-- Hero -->
+        <div class="gc2-hero">
+          <h3>Sell Gift Cards for OST</h3>
+          <p>Enter the brand name and card balance to get an instant offer in OST.</p>
         </div>
 
-        <!-- Compact Brand Strip -->
-        <div class="gc2-cats" id="gc2Cats">
-          <button class="gc2-cat gc2-cat-active" data-cat="all">All</button>
-          <button class="gc2-cat" data-cat="shop">&#128722; Shopping</button>
-          <button class="gc2-cat" data-cat="food">&#127828; Food</button>
-          <button class="gc2-cat" data-cat="game">&#127918; Gaming</button>
-          <button class="gc2-cat" data-cat="media">&#127916; Media</button>
-          <button class="gc2-cat" data-cat="travel">&#128663; Travel</button>
-        </div>
-        <div class="gc2-strip-wrap">
-          <div class="gc2-store" id="gc2Store"></div>
+        <!-- 3-step flow -->
+        <div class="gc2-steps-bar">
+          <div class="gc2-step-pill gc2-step-active" data-step="1"><span class="gc2-step-num">1</span> Add Cards</div>
+          <div class="gc2-step-pill" data-step="2"><span class="gc2-step-num">2</span> Accept Offer</div>
+          <div class="gc2-step-pill" data-step="3"><span class="gc2-step-num">3</span> Get Paid</div>
         </div>
 
-        <div class="gc2-main">
-          <!-- 3D Card Preview -->
-          <div class="gc2-card-col">
-            <div class="gc2-card-preview" id="gc2CardPreview">
-              <div class="gc2-card-scene">
-                <div class="gc2-card-mockup" id="gc2CardMockup">
-                  <div class="gc2-card-shine"></div>
-                  <div class="gc2-card-holo"></div>
-                  <div class="gc2-card-chip">
-                    <div class="gc2-chip-lines"></div>
-                  </div>
-                  <div class="gc2-card-contactless">&#8942;&#8942;&#8942;</div>
-                  <img class="gc2-card-logo" id="gc2CardLogo" src="" alt="">
-                  <div class="gc2-card-value" id="gc2CardValue">$0</div>
-                  <div class="gc2-card-label">DIGITAL GIFT CARD</div>
-                  <div class="gc2-card-number">&#9679;&#9679;&#9679;&#9679; &nbsp; &#9679;&#9679;&#9679;&#9679; &nbsp; &#9679;&#9679;&#9679;&#9679; &nbsp; <span id="gc2CardLast4">XXXX</span></div>
-                  <div class="gc2-card-bottom">
-                    <div class="gc2-card-holder">
-                      <div class="gc2-card-holder-lbl">CARD HOLDER</div>
-                      <div class="gc2-card-holder-name" id="gc2CardHolder">OST USER</div>
-                    </div>
-                    <div class="gc2-card-exp">
-                      <div class="gc2-card-exp-lbl">VALID THRU</div>
-                      <div class="gc2-card-exp-val">12/28</div>
-                    </div>
-                    <div class="gc2-card-network">
-                      <div class="gc2-card-net-logo">&#9673; OST</div>
-                    </div>
-                  </div>
-                </div>
+        <!-- Step 1: Add Cards -->
+        <div class="gc2-panel gc2-panel-active" id="gc2Step1">
+          <div class="gc2-add-card">
+            <!-- Brand search -->
+            <div class="gc2-field">
+              <label class="gc2-label">Brand</label>
+              <div class="gc2-brand-search-wrap">
+                <input type="text" id="gc2BrandSearch" class="gc2-inp" placeholder="Search brand name..." autocomplete="off">
+                <div class="gc2-brand-dropdown" id="gc2BrandDropdown"></div>
               </div>
-            </div>
-            <div class="gc2-card-brand-name" id="gc2CardBrandName">Select a brand to preview</div>
-          </div>
-
-          <!-- Action Panel -->
-          <div class="gc2-action-col" id="gc2ActionCol">
-            <div class="gc2-active-brand" id="gc2ActiveBrand">
-              <img class="gc2-active-logo" id="gc2DrawerLogo" alt="">
-              <div class="gc2-active-info">
-                <div class="gc2-active-name" id="gc2DrawerBrand">Select a brand &rarr;</div>
-                <div class="gc2-active-tag">Gift Card</div>
+              <div class="gc2-selected-brand" id="gc2SelectedBrand" style="display:none">
+                <img class="gc2-sel-logo" id="gc2SelLogo" alt="">
+                <span class="gc2-sel-name" id="gc2SelName"></span>
+                <button class="gc2-sel-x" id="gc2SelClear">&times;</button>
               </div>
             </div>
 
-            <div class="gc2-mode-toggle">
-              <button class="gc2-mode gc2-mode-active" data-mode="redeem">&#9673; Redeem &rarr; OST</button>
-              <button class="gc2-mode" data-mode="buy">&#127873; Buy with OST</button>
-            </div>
-
-            <!-- Redeem Pane -->
-            <div class="gc2-pane gc2-pane-active" id="gc2PaneRedeem">
-              <div class="gc2-field-row">
-                <select id="gc2Currency" class="gc2-sel">
-                  <option value="USD">&#127482;&#127480; USD</option><option value="EUR">&#127466;&#127482; EUR</option><option value="GBP">&#127468;&#127463; GBP</option>
-                  <option value="CAD">&#127464;&#127462; CAD</option><option value="AUD">&#127462;&#127482; AUD</option><option value="BRL">&#127463;&#127479; BRL</option>
-                  <option value="MXN">&#127474;&#127485; MXN</option><option value="INR">&#127470;&#127475; INR</option><option value="JPY">&#127471;&#127477; JPY</option>
-                  <option value="KRW">&#127472;&#127479; KRW</option><option value="TRY">&#127481;&#127479; TRY</option><option value="RUB">&#127479;&#127482; RUB</option>
-                  <option value="AED">&#127462;&#127466; AED</option>
+            <!-- Balance -->
+            <div class="gc2-field">
+              <label class="gc2-label">Card Balance</label>
+              <div class="gc2-balance-row">
+                <select id="gc2Currency" class="gc2-currency-sel">
+                  <option value="USD">$ USD</option><option value="EUR">&euro; EUR</option><option value="GBP">&pound; GBP</option>
+                  <option value="CAD">$ CAD</option><option value="AUD">$ AUD</option><option value="MXN">$ MXN</option>
+                  <option value="BRL">R$ BRL</option><option value="JPY">&yen; JPY</option>
                 </select>
-                <input type="number" id="gc2Balance" class="gc2-inp" placeholder="Card balance" min="1" max="10000" step="any">
+                <input type="number" id="gc2Balance" class="gc2-inp" placeholder="0.00" min="1" max="10000" step="0.01">
               </div>
-              <div class="gc2-quicks">
-                <button class="gc2-q" data-amt="25">$25</button><button class="gc2-q" data-amt="50">$50</button>
-                <button class="gc2-q" data-amt="100">$100</button><button class="gc2-q" data-amt="250">$250</button>
-                <button class="gc2-q" data-amt="500">$500</button>
-              </div>
-              <input type="text" id="gc2Code" class="gc2-inp" placeholder="Card code (XXXX-XXXX-XXXX)" autocomplete="off" spellcheck="false">
-              <div class="gc2-result"><span class="gc2-result-lbl">You receive</span><span class="gc2-result-val" id="gc2RedeemVal">&mdash; OST</span></div>
-              <div class="gc2-fees"><span>Rate: <b id="gc2RedeemRate">&mdash;</b></span><span>Fee: <b id="gc2RedeemFee">&mdash;</b></span></div>
-              <button class="gc2-submit" id="gc2RedeemBtn" disabled>&#9673; Redeem Gift Card</button>
             </div>
 
-            <!-- Buy Pane -->
-            <div class="gc2-pane" id="gc2PaneBuy">
-              <div class="gc2-field-row">
-                <select id="gc2BuyCur" class="gc2-sel">
-                  <option value="USD">&#127482;&#127480; USD</option><option value="EUR">&#127466;&#127482; EUR</option><option value="GBP">&#127468;&#127463; GBP</option>
-                  <option value="CAD">&#127464;&#127462; CAD</option><option value="AUD">&#127462;&#127482; AUD</option><option value="BRL">&#127463;&#127479; BRL</option>
-                  <option value="MXN">&#127474;&#127485; MXN</option><option value="INR">&#127470;&#127475; INR</option><option value="JPY">&#127471;&#127477; JPY</option>
-                  <option value="KRW">&#127472;&#127479; KRW</option><option value="TRY">&#127481;&#127479; TRY</option><option value="RUB">&#127479;&#127482; RUB</option>
-                  <option value="AED">&#127462;&#127466; AED</option>
-                </select>
-                <input type="number" id="gc2BuyAmt" class="gc2-inp" placeholder="Card value" min="5" max="500" step="5">
-              </div>
-              <div class="gc2-quicks">
-                <button class="gc2-q" data-amt="25">$25</button><button class="gc2-q" data-amt="50">$50</button>
-                <button class="gc2-q" data-amt="100">$100</button><button class="gc2-q" data-amt="250">$250</button>
-                <button class="gc2-q" data-amt="500">$500</button>
-              </div>
-              <div class="gc2-result"><span class="gc2-result-lbl">You pay</span><span class="gc2-result-val" id="gc2BuyVal">&mdash; OST</span></div>
-              <div class="gc2-fees"><span>Rate: <b id="gc2BuyRate">&mdash;</b></span><span>Fee: <b id="gc2BuyFee">&mdash;</b></span></div>
-              <button class="gc2-submit gc2-submit-buy" id="gc2BuyBtn" disabled>&#127873; Buy Gift Card</button>
+            <!-- Quick amounts -->
+            <div class="gc2-quicks">
+              <button class="gc2-q" data-amt="25">$25</button>
+              <button class="gc2-q" data-amt="50">$50</button>
+              <button class="gc2-q" data-amt="100">$100</button>
+              <button class="gc2-q" data-amt="250">$250</button>
+              <button class="gc2-q" data-amt="500">$500</button>
             </div>
 
-            <!-- Flow -->
-            <div class="gc2-flow" id="gc2Flow" style="display:none">
-              <div class="gc2-fstep" data-s="1"><span class="gc2-fdot"></span><span>Verifying card&hellip;</span></div>
-              <div class="gc2-fstep" data-s="2"><span class="gc2-fdot"></span><span>ZK proof&hellip;</span></div>
-              <div class="gc2-fstep" data-s="3"><span class="gc2-fdot"></span><span>Processing on Solana&hellip;</span></div>
-              <div class="gc2-fstep" data-s="4"><span class="gc2-fdot"></span><span>Complete &#10003;</span></div>
+            <!-- Card code (optional) -->
+            <div class="gc2-field">
+              <label class="gc2-label">Card Code <span class="gc2-opt">(optional)</span></label>
+              <input type="text" id="gc2Code" class="gc2-inp" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false">
             </div>
 
-            <!-- Delivered -->
-            <div class="gc2-delivered" id="gc2Delivered" style="display:none">
-              <div class="gc2-del-badge">&#127881; Card Delivered</div>
-              <img class="gc2-del-logo" id="gc2DelLogo" src="" alt="">
-              <div class="gc2-del-code" id="gc2DelCode">XXXX-XXXX-XXXX</div>
-              <button class="gc2-copy" id="gc2Copy">&#128203; Copy Code</button>
+            <button class="gc2-offer-btn" id="gc2GetOffer" disabled>Get Offer</button>
+          </div>
+
+          <!-- Cart: cards added so far -->
+          <div class="gc2-cart" id="gc2Cart" style="display:none">
+            <div class="gc2-cart-title">Your Cards</div>
+            <div class="gc2-cart-list" id="gc2CartList"></div>
+            <div class="gc2-cart-total">
+              <span>Total Offer</span>
+              <span class="gc2-cart-total-val" id="gc2CartTotal">0 OST</span>
             </div>
+            <button class="gc2-checkout-btn" id="gc2Checkout">Accept Offer &amp; Cash Out</button>
           </div>
         </div>
 
-        <!-- Compact History -->
+        <!-- Step 2: Accept Offer -->
+        <div class="gc2-panel" id="gc2Step2">
+          <div class="gc2-offer-card">
+            <div class="gc2-offer-icon">&#127873;</div>
+            <div class="gc2-offer-heading">Your Offer</div>
+            <div class="gc2-offer-details" id="gc2OfferDetails"></div>
+            <div class="gc2-offer-total-row">
+              <span>You Receive</span>
+              <span class="gc2-offer-total-val" id="gc2OfferTotal">0 OST</span>
+            </div>
+            <div class="gc2-offer-fees">
+              <span>Rate: <b id="gc2OfferRate">--</b></span>
+              <span>Fee: <b id="gc2OfferFee">--</b></span>
+            </div>
+            <div class="gc2-offer-payout">
+              <div class="gc2-payout-label">Payout Method</div>
+              <div class="gc2-payout-opts">
+                <label class="gc2-payout-opt gc2-payout-active"><input type="radio" name="gc2pay" value="ost" checked> OST (Solana)</label>
+                <label class="gc2-payout-opt"><input type="radio" name="gc2pay" value="usdc"> USDC</label>
+                <label class="gc2-payout-opt"><input type="radio" name="gc2pay" value="sol"> SOL</label>
+              </div>
+            </div>
+            <button class="gc2-accept-btn" id="gc2Accept">Accept &amp; Process</button>
+            <button class="gc2-back-btn" id="gc2BackTo1">&larr; Go Back</button>
+          </div>
+        </div>
+
+        <!-- Step 3: Get Paid -->
+        <div class="gc2-panel" id="gc2Step3">
+          <div class="gc2-done-card">
+            <div class="gc2-done-icon">&#10003;</div>
+            <div class="gc2-done-heading">Payment Sent!</div>
+            <div class="gc2-done-amount" id="gc2DoneAmount">0 OST</div>
+            <div class="gc2-done-tx">TX: <span id="gc2DoneTx" class="gc2-tx-hash">--</span></div>
+            <button class="gc2-copy-tx" id="gc2CopyTx">Copy TX</button>
+            <button class="gc2-new-btn" id="gc2NewSell">Sell Another Card</button>
+          </div>
+
+          <!-- Flow animation -->
+          <div class="gc2-flow" id="gc2Flow" style="display:none">
+            <div class="gc2-fstep"><span class="gc2-fdot"></span><span>Verifying card&hellip;</span></div>
+            <div class="gc2-fstep"><span class="gc2-fdot"></span><span>Calculating offer&hellip;</span></div>
+            <div class="gc2-fstep"><span class="gc2-fdot"></span><span>Processing on Solana&hellip;</span></div>
+            <div class="gc2-fstep"><span class="gc2-fdot"></span><span>Complete &#10003;</span></div>
+          </div>
+        </div>
+
+        <!-- Available brands grid -->
+        <div class="gc2-brands-section">
+          <div class="gc2-brands-head">
+            <h4>Available Gift Cards</h4>
+            <p>We accept cards from 150+ top brands. Search or browse below.</p>
+          </div>
+          <div class="gc2-cats" id="gc2Cats">
+            <button class="gc2-cat gc2-cat-active" data-cat="all">All</button>
+            <button class="gc2-cat" data-cat="shop">Shopping</button>
+            <button class="gc2-cat" data-cat="food">Food &amp; Beverage</button>
+            <button class="gc2-cat" data-cat="game">Gaming</button>
+            <button class="gc2-cat" data-cat="media">Entertainment</button>
+            <button class="gc2-cat" data-cat="travel">Travel</button>
+          </div>
+          <div class="gc2-brands-grid" id="gc2BrandsGrid"></div>
+        </div>
+
+        <!-- History -->
         <div class="gc2-hist-wrap">
-          <button class="gc2-hist-toggle" id="gc2HistToggle">&#128203; History <span id="gc2HistCount">(0)</span></button>
+          <button class="gc2-hist-toggle" id="gc2HistToggle">&#128203; Transaction History <span id="gc2HistCount">(0)</span></button>
           <div class="gc2-hist" id="gc2Hist" style="display:none">
             <div class="gc2-hist-empty" id="gc2HistEmpty">No transactions yet.</div>
             <div class="gc2-hist-list" id="gc2HistList"></div>
           </div>
         </div>
 
-        <div class="gc2-note">&#9888; Uses third-party APIs. Verify card validity. Subject to local laws.</div>
+        <div class="gc2-note">&#9888; Uses third-party APIs. Verify card validity before selling. Subject to local laws.</div>
       </div>
 
-      <!-- ==================== OST FUEL & GO ==================== -->
+      <!-- ==================== OST FUEL FINDER (gasbuddy-style) ==================== -->
       <div class="fuel2" id="fuelSection">
-        <div class="fuel2-head">
-          <h3>&#9981; Fuel &amp; Go &mdash; Pay at Any Station</h3>
-          <p>Tap your phone. Fill up. Drive away. 300,000+ stations worldwide.</p>
-          <div class="fuel2-badges">
-            <span class="fuel2-badge">&#128205; 300K+ Stations</span>
-            <span class="fuel2-badge">&#127758; 65+ Countries</span>
-            <span class="fuel2-badge">&#128179; NFC Pay</span>
-            <span class="fuel2-badge">&#127942; 3-8% Cashback</span>
+
+        <!-- Hero -->
+        <div class="fuel2-hero">
+          <h3>Never Pay Full Price for Gas Again.</h3>
+          <p class="fuel2-hero-sub">Find the cheapest fuel prices near you. Pay with OST &amp; earn cashback.</p>
+          <div class="fuel2-search-bar">
+            <input type="text" id="fuel2SearchLoc" class="fuel2-loc-input" placeholder="&#128269; Search city, zip, or station name...">
+            <button class="fuel2-find-btn" id="fuel2FindBtn">Find Gas</button>
           </div>
-          <div class="fuel2-stats">
-            <div class="fuel2-stat"><span class="fuel2-stat-val">300K+</span><span class="fuel2-stat-lbl">Stations</span></div>
-            <div class="fuel2-stat"><span class="fuel2-stat-val">65+</span><span class="fuel2-stat-lbl">Countries</span></div>
-            <div class="fuel2-stat"><span class="fuel2-stat-val">30+</span><span class="fuel2-stat-lbl">Partners</span></div>
-            <div class="fuel2-stat"><span class="fuel2-stat-val">3&ndash;8%</span><span class="fuel2-stat-lbl">Cashback</span></div>
+          <div class="fuel2-fuel-tabs">
+            <button class="fuel2-ft fuel2-ft-active" data-fuel="regular">Regular</button>
+            <button class="fuel2-ft" data-fuel="midgrade">Midgrade</button>
+            <button class="fuel2-ft" data-fuel="premium">Premium</button>
+            <button class="fuel2-ft" data-fuel="diesel">Diesel</button>
           </div>
         </div>
 
-        <!-- Tab Bar -->
-        <div class="fuel2-tabs">
-          <button class="fuel2-tab fuel2-tab-active" data-tab="map">&#127758; World Map</button>
-          <button class="fuel2-tab" data-tab="stations">&#9981; Browse Stations</button>
-          <button class="fuel2-tab" data-tab="pay">&#128179; Pay &amp; Rewards</button>
-        </div>
-
-        <!-- Tab 1: World Map -->
-        <div class="fuel2-panel fuel2-panel-active" id="fuel2PanelMap">
-          <div class="fuel2-map-bar">
-            <button class="fuel2-near" id="fuel2NearMe">&#128205; Find Near Me</button>
-            <input type="text" class="fuel2-search" id="fuel2Search" placeholder="&#128269; Search stations&hellip;">
+        <!-- Station List -->
+        <div class="fuel2-list-head">
+          <div class="fuel2-list-title">
+            <span id="fuel2ResultCount">0</span> Stations Near You
           </div>
-          <div class="fuel2-map" id="fuel2Map"></div>
-          <div class="fuel2-map-legend" id="fuel2Legend"></div>
-        </div>
-
-        <!-- Tab 2: Browse Stations -->
-        <div class="fuel2-panel" id="fuel2PanelStations">
-          <div class="fuel2-browse-head">
-            <input type="text" class="fuel2-browse-search" id="fuel2BrowseSearch" placeholder="&#128269; Filter stations&hellip;">
+          <div class="fuel2-sort-row">
+            <button class="fuel2-sort fuel2-sort-active" data-sort="price">Lowest Price</button>
+            <button class="fuel2-sort" data-sort="rating">Top Rated</button>
+            <button class="fuel2-sort" data-sort="distance">Nearest</button>
           </div>
-          <div class="fuel2-browse-grid" id="fuel2BrowseGrid"></div>
         </div>
 
-        <!-- Tab 3: Pay & Rewards -->
-        <div class="fuel2-panel" id="fuel2PanelPay">
-          <div class="fuel2-pay-prompt" id="fuel2PayPrompt">
-            <div class="fuel2-pump-visual">
-              <div class="fuel2-pump">
-                <div class="fuel2-pump-body">
-                  <div class="fuel2-pump-screen">&#9981;</div>
-                  <div class="fuel2-pump-gauge">
-                    <div class="fuel2-pump-fill" id="fuel2PumpFill"></div>
-                  </div>
+        <div class="fuel2-station-list" id="fuel2StationList"></div>
+
+        <!-- Station Detail Modal -->
+        <div class="fuel2-detail-overlay" id="fuel2DetailOverlay" style="display:none">
+          <div class="fuel2-detail-modal" id="fuel2DetailModal">
+            <button class="fuel2-detail-close" id="fuel2DetailClose">&times;</button>
+
+            <div class="fuel2-det-top">
+              <img class="fuel2-det-logo" id="fuel2DetLogo" alt="">
+              <div class="fuel2-det-info">
+                <h4 id="fuel2DetName">Station</h4>
+                <div class="fuel2-det-addr" id="fuel2DetAddr">Address</div>
+                <div class="fuel2-det-stars" id="fuel2DetStars"></div>
+                <div class="fuel2-det-reviews-count" id="fuel2DetRevCount">0 reviews</div>
+              </div>
+            </div>
+
+            <!-- Prices grid -->
+            <div class="fuel2-det-prices" id="fuel2DetPrices"></div>
+
+            <!-- Amenities -->
+            <div class="fuel2-det-section">
+              <div class="fuel2-det-section-title">Amenities</div>
+              <div class="fuel2-det-amenities" id="fuel2DetAmenities"></div>
+            </div>
+
+            <!-- Pay with OST -->
+            <div class="fuel2-det-pay">
+              <div class="fuel2-det-section-title">Pay with OST</div>
+              <div class="fuel2-det-pay-fields">
+                <div class="fuel2-pf"><label>Gallons</label><input type="number" id="fuel2DetGal" class="fuel2-det-inp" placeholder="15" min="1" max="999" step="any"></div>
+                <div class="fuel2-pf"><label>$/gal</label><input type="number" id="fuel2DetPrice" class="fuel2-det-inp" placeholder="3.50" min="0.01" max="20" step="0.01" readonly></div>
+              </div>
+              <div class="fuel2-det-totals">
+                <div class="fuel2-dtr"><span>Total</span><span id="fuel2DetUSD">$0.00</span></div>
+                <div class="fuel2-dtr fuel2-dtr-ost"><span>OST Cost</span><span id="fuel2DetOST">0 OST</span></div>
+                <div class="fuel2-dtr fuel2-dtr-rw"><span>&#127942; Cashback</span><span id="fuel2DetRw">+0 OST</span></div>
+              </div>
+              <button class="fuel2-pay-btn" id="fuel2DetPayBtn" disabled>Pay with OST</button>
+              <div class="fuel2-det-flow" id="fuel2DetFlow" style="display:none">
+                <div class="fuel2-dfs"><span class="fuel2-dfd"></span>Detecting NFC&hellip;</div>
+                <div class="fuel2-dfs"><span class="fuel2-dfd"></span>Authorising OST&hellip;</div>
+                <div class="fuel2-dfs"><span class="fuel2-dfd"></span>Settling on Solana&hellip;</div>
+                <div class="fuel2-dfs"><span class="fuel2-dfd"></span>Complete &#10003;</div>
+              </div>
+            </div>
+
+            <!-- Reviews -->
+            <div class="fuel2-det-section">
+              <div class="fuel2-det-section-title">Reviews</div>
+              <div class="fuel2-det-reviews" id="fuel2DetReviews"></div>
+              <div class="fuel2-det-review-form">
+                <input type="text" id="fuel2ReviewText" class="fuel2-det-inp fuel2-review-inp" placeholder="Write a review...">
+                <div class="fuel2-review-stars" id="fuel2ReviewStars">
+                  <span data-star="1">&#9734;</span><span data-star="2">&#9734;</span><span data-star="3">&#9734;</span><span data-star="4">&#9734;</span><span data-star="5">&#9734;</span>
                 </div>
-                <div class="fuel2-pump-nozzle"></div>
+                <button class="fuel2-review-send" id="fuel2ReviewSend">Post</button>
               </div>
             </div>
-            <p style="font-size:1.05rem;font-weight:600;color:var(--text);margin-bottom:4px">Select a Station to Pay</p>
-            <p>Choose from <b>World Map</b> or <b>Browse Stations</b>, then return here.</p>
-          </div>
-          <div class="fuel2-pay" id="fuel2Pay" style="display:none">
-            <div class="fuel2-pay-head">
-              <img class="fuel2-pay-logo" id="fuel2PayLogo" src="" alt="">
-              <div class="fuel2-pay-info">
-                <div class="fuel2-pay-name" id="fuel2PayName">Station</div>
-                <div class="fuel2-pay-status">&#128994; Ready &middot; NFC</div>
+
+            <!-- Report price -->
+            <div class="fuel2-det-section">
+              <div class="fuel2-det-section-title">Report a Price</div>
+              <div class="fuel2-report-row">
+                <select id="fuel2ReportFuel" class="fuel2-det-inp fuel2-report-sel">
+                  <option value="regular">Regular</option>
+                  <option value="midgrade">Midgrade</option>
+                  <option value="premium">Premium</option>
+                  <option value="diesel">Diesel</option>
+                </select>
+                <input type="number" id="fuel2ReportPrice" class="fuel2-det-inp" placeholder="$0.00" min="0.01" max="20" step="0.01">
+                <button class="fuel2-report-btn" id="fuel2ReportBtn">Report</button>
               </div>
-              <button class="fuel2-pay-x" id="fuel2PayClose">&times;</button>
-            </div>
-            <div class="fuel2-pay-fields">
-              <div class="fuel2-pf"><label>Gallons</label><input type="number" id="fuel2Gal" class="gc2-inp" placeholder="15" min="1" max="999" step="any"></div>
-              <div class="fuel2-pf"><label>$/gal</label><input type="number" id="fuel2Price" class="gc2-inp" placeholder="3.50" min="0.01" max="20" step="0.01"></div>
-            </div>
-            <div class="fuel2-totals">
-              <div class="fuel2-tr"><span>Total</span><span id="fuel2USD">$0.00</span></div>
-              <div class="fuel2-tr fuel2-tr-ost"><span>OST</span><span id="fuel2OST">0 OST</span></div>
-              <div class="fuel2-tr fuel2-tr-rw"><span>&#127942; Cashback</span><span id="fuel2Rw">+0 OST</span></div>
-            </div>
-            <button class="fuel2-btn" id="fuel2PayBtn" disabled>&#128225; Tap to Pay &mdash; NFC</button>
-            <div class="fuel2-flow" id="fuel2Flow" style="display:none">
-              <div class="fuel2-fs" data-s="1"><span class="fuel2-fd"></span>Detecting NFC&hellip;</div>
-              <div class="fuel2-fs" data-s="2"><span class="fuel2-fd"></span>Authorising OST&hellip;</div>
-              <div class="fuel2-fs" data-s="3"><span class="fuel2-fd"></span>Settling on Solana&hellip;</div>
-              <div class="fuel2-fs" data-s="4"><span class="fuel2-fd"></span>Complete &#10003;</div>
             </div>
           </div>
-          <div class="fuel2-rw-bar-wrap">
-            <div class="fuel2-rw-title">&#127942; Rewards Progress</div>
-            <div class="fuel2-rw-bar"><div class="fuel2-rw-fill" id="fuel2RwFill" style="width:0%"></div></div>
-            <div class="fuel2-rw-meta">
-              <span id="fuel2RwTier">&#129353; Bronze &middot; 3%</span>
-              <span id="fuel2RwCount">0 fill-ups</span>
-              <span id="fuel2RwEarned">0 OST earned</span>
-            </div>
+        </div>
+
+        <!-- Rewards bar -->
+        <div class="fuel2-rw-bar-wrap">
+          <div class="fuel2-rw-title">&#127942; Rewards Progress</div>
+          <div class="fuel2-rw-bar"><div class="fuel2-rw-fill" id="fuel2RwFill" style="width:0%"></div></div>
+          <div class="fuel2-rw-meta">
+            <span id="fuel2RwTier">&#129353; Bronze &middot; 3%</span>
+            <span id="fuel2RwCount">0 fill-ups</span>
+            <span id="fuel2RwEarned">0 OST earned</span>
           </div>
         </div>
 
@@ -3571,6 +3593,6 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=41"></script>
+  <script src="app.js?v=42"></script>
 </body>
 </html>
