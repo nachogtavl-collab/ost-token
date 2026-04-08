@@ -6344,6 +6344,7 @@
         var ost = gc2RedeemVal.textContent.replace(' OST', '');
         addToHistory('sell', selectedBrand ? selectedBrand.name : 'Gift Card', selectedBrand ? selectedBrand.domain : '', usd, ost);
         toast('&#9989;', 'Gift card redeemed! ' + ost + ' OST received.');
+        setTimeout(function() { updateRedeem(); }, 500);
       });
     });
 
@@ -6356,6 +6357,7 @@
         if (logo && selectedBrand) { logo.src = logoSrc(selectedBrand.domain); logo.onerror = function() { logoFallback(this, selectedBrand.domain, selectedBrand.name, selectedBrand.color); }; logo.alt = selectedBrand.name; }
         var seg = function() { return Math.random().toString(36).substring(2, 6).toUpperCase(); };
         document.getElementById('gc2DelCode').textContent = seg() + '-' + seg() + '-' + seg() + '-' + seg();
+        setTimeout(function() { updateBuy(); }, 500);
         var amt = parseFloat(gc2BuyAmt.value) || 0;
         var cur = gc2BuyCur.value;
         var usd = (amt * (fxToUSD[cur] || 1)).toFixed(2);
@@ -6414,6 +6416,12 @@
         var open = histPanel.style.display !== 'none';
         histPanel.style.display = open ? 'none' : 'block';
       });
+    }
+
+    // Auto-select first brand so card preview is never blank
+    if (brands.length > 0) {
+      var firstCard = store.querySelector('.gc2-brand');
+      selectBrand(brands[0], firstCard);
     }
   })();
 
@@ -6602,6 +6610,10 @@
       document.getElementById('fuel2PayName').textContent = s.name;
       document.getElementById('fuel2Flow').style.display = 'none';
       document.querySelectorAll('.fuel2-fs').forEach(function(st) { st.classList.remove('f2-active', 'f2-done'); });
+      // Auto-fill regional gas price
+      var priceHints = { 'Shell': 3.49, 'BP': 3.39, 'ExxonMobil': 3.29, 'Chevron': 3.59, 'TotalEnergies': 1.89, 'ADNOC': 0.55, '7-Eleven': 3.19, 'OXXO': 1.15, 'Circle K': 3.25, 'Petronas': 0.61, 'Indian Oil': 1.33, 'Ipiranga': 1.29, 'PEMEX': 1.05, 'Repsol': 1.79, 'Lukoil': 0.89, 'Sinopec': 1.19, 'Aramco': 0.48 };
+      var priceField = document.getElementById('fuel2Price');
+      if (priceField && !priceField.value) priceField.value = priceHints[s.name] || (2 + Math.random() * 2).toFixed(2);
       updateFuelCalc();
       pay.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       document.querySelectorAll('.fuel2-bcard').forEach(function(c) { c.classList.remove('fuel2-bcard-selected'); });
@@ -6713,6 +6725,11 @@
           localStorage.setItem('ost_fuel_history', JSON.stringify(fuelHistory));
           renderRewards();
           toast('&#9981;', 'Payment complete! +' + reward.toFixed(2) + ' OST cashback.');
+          // Animate pump fill gauge
+          var pumpFill = document.getElementById('fuel2PumpFill');
+          if (pumpFill) { pumpFill.style.transition = 'width 1.2s ease'; pumpFill.style.width = '100%'; setTimeout(function() { pumpFill.style.width = '0%'; }, 3000); }
+          // Re-enable pay button
+          setTimeout(function() { payBtn.disabled = false; }, 800);
         }
       }
       next();
@@ -6755,6 +6772,19 @@
 
     var LAUNCH_FEE_OST = 25;
     var launches = JSON.parse(localStorage.getItem('ost_lp_history') || '[]');
+
+    // Seed demo launches so section never looks empty
+    if (launches.length === 0) {
+      var demoLaunches = [
+        { name:'MarsPuppy', symbol:'MARS', supply:1000000000, decimals:9, desc:'The first memecoin for space dogs', mint:'MPup' + 'aBcDeFgHiJkLmNoPqRsTuVwXyZ123456789Ab', creator:'7xKq...b2Fp', date:'4/5/2026' },
+        { name:'Starlink Inu', symbol:'SINU', supply:100000000000, decimals:9, desc:'Decentralized satellite meme power', mint:'SINu' + 'XyZaBcDeFgHiJkLmNoPqRsTuVwXyZ12345678', creator:'4pRx...mN3q', date:'4/6/2026' },
+        { name:'ZeroGravity', symbol:'0GRV', supply:500000000, decimals:6, desc:'No gravity no limits', mint:'0GRV' + 'aBcDeFgHiJkLmNoPqRsTuVwXyZ123456789Cd', creator:'9aWz...hJ7k', date:'4/7/2026' },
+        { name:'OrbitalCash', symbol:'ORBT', supply:10000000000, decimals:9, desc:'Cash for the orbital economy', mint:'ORBT' + 'eFgHiJkLmNoPqRsTuVwXyZ123456789AbCdEf', creator:'2bTr...pQ5s', date:'4/7/2026' },
+        { name:'LunarDAO', symbol:'LUNA', supply:1000000000, decimals:9, desc:'Governance token for Moon settlers', mint:'LUNA' + 'HiJkLmNoPqRsTuVwXyZ123456789AbCdEfGhI', creator:'6cDx...wM8n', date:'4/8/2026' }
+      ];
+      launches = demoLaunches;
+      localStorage.setItem('ost_lp_history', JSON.stringify(launches));
+    }
 
     // Character counter
     if (descEl && descCount) {
@@ -6887,10 +6917,10 @@
       var decimals = parseInt(decimalsEl.value) || 9;
       var desc = (descEl.value || '').trim();
 
-      // Check wallet
-      if (!connectedWallet) {
-        toast('👛', 'Connect your wallet first (button in the header)');
-        return;
+      // Demo mode — works without wallet, shows toast
+      var isDemoMode = !connectedWallet;
+      if (isDemoMode) {
+        toast('&#128640;', 'Demo mode — connect wallet for real launches');
       }
 
       launchBtn.disabled = true;
@@ -6950,6 +6980,65 @@
         }
       });
     }
+
+    // Initialize preview with default values
+    updateTokenPreview();
+  })();
+
+  // ========================================================================
+  // SpaceX Accordion Toggle — Expand/Collapse Phases
+  // ========================================================================
+  (function initSpaceXAccordion() {
+    document.querySelectorAll('.sx-phase-banner').forEach(function(banner) {
+      banner.style.cursor = 'pointer';
+      var phase = banner.closest('.sx-checklist-phase');
+      if (!phase) return;
+      var grid = phase.querySelector('.checklist-grid');
+      if (!grid) return;
+      // Collapse all but phase 1 & 2 by default
+      var id = phase.id;
+      if (id !== 'sxPhase1' && id !== 'sxPhase2') {
+        grid.style.maxHeight = '0';
+        grid.style.overflow = 'hidden';
+        grid.style.transition = 'max-height .5s ease, opacity .3s ease';
+        grid.style.opacity = '0.3';
+        banner.dataset.collapsed = '1';
+      } else {
+        grid.style.maxHeight = '2000px';
+        grid.style.overflow = 'hidden';
+        grid.style.transition = 'max-height .5s ease, opacity .3s ease';
+        grid.style.opacity = '1';
+        banner.dataset.collapsed = '0';
+      }
+      banner.addEventListener('click', function() {
+        var collapsed = banner.dataset.collapsed === '1';
+        if (collapsed) {
+          grid.style.maxHeight = '2000px';
+          grid.style.opacity = '1';
+          banner.dataset.collapsed = '0';
+        } else {
+          grid.style.maxHeight = '0';
+          grid.style.opacity = '0.3';
+          banner.dataset.collapsed = '1';
+        }
+      });
+    });
+  })();
+
+  // ========================================================================
+  // Enhanced Satellite Animation — subtle parallax on scroll
+  // ========================================================================
+  (function initSatelliteParallax() {
+    var layer = document.getElementById('satelliteLayer');
+    if (!layer) return;
+    var sats = layer.querySelectorAll('.satellite');
+    window.addEventListener('scroll', function() {
+      var scrollY = window.pageYOffset;
+      sats.forEach(function(sat, i) {
+        var speed = 0.02 + i * 0.01;
+        sat.style.transform = 'translateY(' + (scrollY * speed) + 'px)';
+      });
+    }, { passive: true });
   })();
 
 })();

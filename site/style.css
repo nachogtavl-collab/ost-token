@@ -3889,3 +3889,138 @@ select.sim-input { cursor: pointer; }
   .lp-form-col { padding: 20px; }
   .lp-presets { gap: 6px; }
 }
+
+/* ================================================================== */
+/* v39 ENHANCEMENTS — All 4 Sections                                  */
+/* ================================================================== */
+
+/* --- Launchpad: Spinning Coin + Glow --- */
+@keyframes lpCoinFloat {
+  0%, 100% { transform: rotateY(0deg) scale(1); }
+  50% { transform: rotateY(180deg) scale(1.05); }
+}
+.lp-coin {
+  animation: lpCoinFloat 6s ease-in-out infinite;
+  transform-style: preserve-3d;
+  box-shadow: 0 0 30px rgba(109,159,255,.25), 0 0 60px rgba(167,139,250,.1);
+}
+.lp-coin:hover {
+  animation-play-state: paused;
+  transform: rotateY(15deg) scale(1.1);
+  box-shadow: 0 0 50px rgba(109,159,255,.4), 0 0 80px rgba(167,139,250,.2);
+}
+.lp-launch-btn:not(:disabled) {
+  animation: lpBtnPulse 3s ease-in-out infinite;
+}
+@keyframes lpBtnPulse {
+  0%, 100% { box-shadow: 0 0 24px rgba(109,159,255,.2); }
+  50% { box-shadow: 0 0 40px rgba(109,159,255,.4), 0 0 80px rgba(109,159,255,.15); }
+}
+.lp-token-card {
+  transition: transform .3s, box-shadow .3s;
+}
+.lp-token-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 48px rgba(0,0,0,.4), 0 0 32px rgba(109,159,255,.08);
+}
+
+/* --- Gift Card: Card entrance animation --- */
+@keyframes gc2CardReveal {
+  0% { transform: rotateY(-15deg) scale(.9); opacity: 0; }
+  100% { transform: rotateY(0deg) scale(1); opacity: 1; }
+}
+.gc2-card-mockup {
+  animation: gc2CardReveal .6s ease;
+}
+.gc2-brand-selected {
+  animation: gc2BrandPick .3s ease;
+}
+@keyframes gc2BrandPick {
+  0% { transform: scale(1); }
+  50% { transform: scale(.92); }
+  100% { transform: scale(1); }
+}
+
+/* --- Fuel: Pump gauge animation --- */
+.fuel2-pump-gauge {
+  overflow: hidden;
+  border-radius: 4px;
+}
+.fuel2-pump-fill {
+  height: 100%;
+  background: linear-gradient(to top, #FF6B35, #FFD700);
+  border-radius: 4px;
+  transition: width 1.2s ease;
+}
+.fuel2-pay-head {
+  transition: transform .3s;
+}
+.fuel2-pay-head:hover {
+  transform: translateY(-2px);
+}
+.fuel2-btn:not(:disabled) {
+  animation: fuelBtnGlow 3s ease-in-out infinite;
+}
+@keyframes fuelBtnGlow {
+  0%, 100% { box-shadow: 0 4px 18px rgba(255,107,53,.2); }
+  50% { box-shadow: 0 4px 30px rgba(255,107,53,.4), 0 0 60px rgba(255,107,53,.1); }
+}
+
+/* --- SpaceX: Accordion + Enhanced Satellite --- */
+.sx-phase-banner {
+  transition: background .3s, border-color .3s;
+}
+.sx-phase-banner:hover {
+  background: rgba(109,159,255,.06);
+  border-color: rgba(109,159,255,.3);
+}
+.sx-phase-banner::after {
+  content: '▾';
+  font-size: .8rem;
+  color: var(--text-muted);
+  transition: transform .3s;
+  margin-left: auto;
+}
+.sx-phase-banner[data-collapsed="1"]::after {
+  transform: rotate(-90deg);
+}
+.checklist-grid {
+  transition: max-height .5s ease, opacity .3s ease;
+}
+
+/* Enhanced satellite trails */
+.sat-trail {
+  width: 80px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(100,200,255,.3), rgba(100,200,255,.6));
+  filter: blur(.5px);
+}
+.satellite {
+  transition: transform .1s linear;
+}
+.sat-body {
+  cursor: default;
+}
+
+/* Rocket timeline station hover */
+.rt-station {
+  transition: opacity .4s, transform .5s;
+  cursor: pointer;
+}
+.rt-station:hover .rt-station-ring {
+  border-color: rgba(109,159,255,.6);
+  box-shadow: 0 0 20px rgba(109,159,255,.3);
+}
+.rt-station:hover .rt-station-icon {
+  transform: scale(1.15);
+  transition: transform .2s;
+}
+
+/* Space journey phase buttons glow */
+.sj-phase-active {
+  animation: sjPhasePulse 2.5s ease-in-out infinite;
+}
+@keyframes sjPhasePulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(109,159,255,.3); }
+  50% { box-shadow: 0 0 20px rgba(109,159,255,.5), 0 0 40px rgba(109,159,255,.15); }
+}
