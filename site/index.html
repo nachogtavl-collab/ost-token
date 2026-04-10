@@ -26,9 +26,62 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="style.css?v=46">
+  <link rel="stylesheet" href="style.css?v=47">
 </head>
 <body>
+
+  <!-- ===== FIRST-VISIT: Language & Currency Selector ===== -->
+  <div class="welcome-overlay" id="welcomeOverlay">
+    <div class="welcome-modal">
+      <div class="welcome-header">
+        <span class="welcome-logo"><span class="logo-icon">&#9673;</span> OST</span>
+        <h2>Welcome &mdash; Choose Your Preferences</h2>
+        <p>Select your language and primary currency to get started.</p>
+      </div>
+
+      <!-- Step 1: Language -->
+      <div class="welcome-step" id="welStep1">
+        <h3>&#127760; Language</h3>
+        <div class="welcome-lang-grid" id="welLangGrid">
+          <button class="wel-lang-btn wel-lang-active" data-lang="en"><span class="wel-flag">&#127482;&#127480;</span> English</button>
+          <button class="wel-lang-btn" data-lang="es"><span class="wel-flag">&#127466;&#127480;</span> Espa&ntilde;ol</button>
+          <button class="wel-lang-btn" data-lang="zh"><span class="wel-flag">&#127464;&#127475;</span> &#20013;&#25991;</button>
+          <button class="wel-lang-btn" data-lang="ru"><span class="wel-flag">&#127479;&#127482;</span> &#1056;&#1091;&#1089;&#1089;&#1082;&#1080;&#1081;</button>
+          <button class="wel-lang-btn" data-lang="hi"><span class="wel-flag">&#127470;&#127475;</span> &#2361;&#2367;&#2344;&#2381;&#2342;&#2368;</button>
+          <button class="wel-lang-btn" data-lang="ar"><span class="wel-flag">&#127480;&#127462;</span> &#1575;&#1604;&#1593;&#1585;&#1576;&#1610;&#1577;</button>
+          <button class="wel-lang-btn" data-lang="pt"><span class="wel-flag">&#127463;&#127479;</span> Portugu&ecirc;s</button>
+          <button class="wel-lang-btn" data-lang="fr"><span class="wel-flag">&#127467;&#127479;</span> Fran&ccedil;ais</button>
+          <button class="wel-lang-btn" data-lang="ja"><span class="wel-flag">&#127471;&#127477;</span> &#26085;&#26412;&#35486;</button>
+          <button class="wel-lang-btn" data-lang="ko"><span class="wel-flag">&#127472;&#127479;</span> &#54620;&#44397;&#50612;</button>
+          <button class="wel-lang-btn" data-lang="tr"><span class="wel-flag">&#127481;&#127479;</span> T&uuml;rk&ccedil;e</button>
+        </div>
+        <button class="wel-next-btn" id="welNext1">Next &rarr; Currency</button>
+      </div>
+
+      <!-- Step 2: Currency -->
+      <div class="welcome-step" id="welStep2" style="display:none">
+        <h3>&#128176; Primary Currency</h3>
+        <div class="welcome-currency-grid" id="welCurrGrid">
+          <button class="wel-curr-btn wel-curr-active" data-curr="USD"><span class="wel-curr-symbol">$</span> USD<span class="wel-curr-name">US Dollar</span></button>
+          <button class="wel-curr-btn" data-curr="EUR"><span class="wel-curr-symbol">&euro;</span> EUR<span class="wel-curr-name">Euro</span></button>
+          <button class="wel-curr-btn" data-curr="GBP"><span class="wel-curr-symbol">&pound;</span> GBP<span class="wel-curr-name">British Pound</span></button>
+          <button class="wel-curr-btn" data-curr="CAD"><span class="wel-curr-symbol">$</span> CAD<span class="wel-curr-name">Canadian Dollar</span></button>
+          <button class="wel-curr-btn" data-curr="AUD"><span class="wel-curr-symbol">$</span> AUD<span class="wel-curr-name">Australian Dollar</span></button>
+          <button class="wel-curr-btn" data-curr="MXN"><span class="wel-curr-symbol">$</span> MXN<span class="wel-curr-name">Mexican Peso</span></button>
+          <button class="wel-curr-btn" data-curr="BRL"><span class="wel-curr-symbol">R$</span> BRL<span class="wel-curr-name">Brazilian Real</span></button>
+          <button class="wel-curr-btn" data-curr="JPY"><span class="wel-curr-symbol">&yen;</span> JPY<span class="wel-curr-name">Japanese Yen</span></button>
+          <button class="wel-curr-btn" data-curr="INR"><span class="wel-curr-symbol">&#8377;</span> INR<span class="wel-curr-name">Indian Rupee</span></button>
+          <button class="wel-curr-btn" data-curr="KRW"><span class="wel-curr-symbol">&#8361;</span> KRW<span class="wel-curr-name">Korean Won</span></button>
+          <button class="wel-curr-btn" data-curr="TRY"><span class="wel-curr-symbol">&#8378;</span> TRY<span class="wel-curr-name">Turkish Lira</span></button>
+          <button class="wel-curr-btn" data-curr="AED"><span class="wel-curr-symbol">&#1583;.&#1573;</span> AED<span class="wel-curr-name">UAE Dirham</span></button>
+        </div>
+        <div class="wel-btn-row">
+          <button class="wel-back-btn" id="welBack2">&larr; Back</button>
+          <button class="wel-next-btn wel-go-btn" id="welGo">Enter OST &rarr;</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <nav id="nav">
     <div class="nav-inner">
@@ -562,6 +615,14 @@
       <h2 class="section-title" data-i18n="demos.title">&#127916; Live Demos</h2>
       <p class="section-subtitle" data-i18n="demos.sub">See what private, instant payments feel like. Real products, real prices. Zero fees.</p>
 
+      <!-- Demos Tab Navigation -->
+      <div class="demos-tabs" id="demosTabs">
+        <button class="demos-tab demos-tab-active" data-dtab="shop">&#128722; Shop</button>
+        <button class="demos-tab" data-dtab="interchange">&#127974; Interchange</button>
+        <button class="demos-tab" data-dtab="giftcards">&#127873; Gift Cards</button>
+        <button class="demos-tab" data-dtab="fuel">&#9981; Gas Station</button>
+      </div>
+
       <div class="features-grid" style="display:none;">
         <div class="feature-card glow-card sr">
           <div class="feature-icon">&#128274;</div>
@@ -655,7 +716,7 @@
         </div>
       </div>
 
-      <div class="pay-demo" id="pay-demo">
+      <div class="pay-demo demos-panel" id="pay-demo" data-dtab="shop">
         <div class="pay-demo-header">
           <div class="pay-demo-icon-ring"><span>&#9673;</span></div>
           <h3 data-i18n="pay.title">Shop with OST &mdash; Real Prices</h3>
@@ -738,7 +799,7 @@
         </div>
       </div>
 
-      <div class="pay-anywhere" id="payAnywhere">
+      <div class="pay-anywhere demos-panel" id="payAnywhere" data-dtab="interchange" style="display:none">
         <div class="pa-hero">
           <div class="pa-hero-glow"></div>
           <div class="pa-hero-icon">&#9673;</div>
@@ -889,18 +950,29 @@
       </div>
 
       <!-- ==================== OST GIFT CARD EXCHANGE (giftcash-style) ==================== -->
-      <div class="gc2" id="gcSection">
+      <div class="gc2 demos-panel" id="gcSection" data-dtab="giftcards" style="display:none">
 
         <!-- Hero -->
         <div class="gc2-hero">
-          <h3>Sell Gift Cards for OST</h3>
-          <p>Enter the brand name and card balance to get an instant offer in OST.</p>
+          <div class="gc2-hero-badge">&#9889; Live Trading</div>
+          <h3>&#127873; Sell Gift Cards for OST</h3>
+          <p>Select a brand, enter your card details, and get an instant offer. Real-time rates.</p>
+        </div>
+
+        <!-- Scrolling Brand Carousel -->
+        <div class="gc2-brand-carousel-wrap">
+          <h4 class="gc2-carousel-title">Available Gift Cards</h4>
+          <div class="gc2-brand-carousel" id="gc2BrandCarousel">
+            <!-- JS fills brand logos as scrolling strip -->
+          </div>
         </div>
 
         <!-- 3-step flow -->
         <div class="gc2-steps-bar">
-          <div class="gc2-step-pill gc2-step-active" data-step="1"><span class="gc2-step-num">1</span> Add Cards</div>
-          <div class="gc2-step-pill" data-step="2"><span class="gc2-step-num">2</span> Accept Offer</div>
+          <div class="gc2-step-pill gc2-step-active" data-step="1"><span class="gc2-step-num">1</span> Select &amp; Add</div>
+          <div class="gc2-step-connector"></div>
+          <div class="gc2-step-pill" data-step="2"><span class="gc2-step-num">2</span> Review Offer</div>
+          <div class="gc2-step-connector"></div>
           <div class="gc2-step-pill" data-step="3"><span class="gc2-step-num">3</span> Get Paid</div>
         </div>
 
@@ -909,28 +981,35 @@
           <div class="gc2-add-card">
             <!-- Brand search -->
             <div class="gc2-field">
-              <label class="gc2-label">Brand</label>
+              <label class="gc2-label">&#127991; Select Brand</label>
               <div class="gc2-brand-search-wrap">
-                <input type="text" id="gc2BrandSearch" class="gc2-inp" placeholder="Search brand name..." autocomplete="off">
+                <span class="gc2-search-icon">&#128269;</span>
+                <input type="text" id="gc2BrandSearch" class="gc2-inp gc2-inp-search" placeholder="Search 32+ brands (Amazon, Apple, Steam...)" autocomplete="off">
                 <div class="gc2-brand-dropdown" id="gc2BrandDropdown"></div>
               </div>
               <div class="gc2-selected-brand" id="gc2SelectedBrand" style="display:none">
                 <img class="gc2-sel-logo" id="gc2SelLogo" alt="">
                 <span class="gc2-sel-name" id="gc2SelName"></span>
+                <span class="gc2-sel-rate" id="gc2SelRate"></span>
                 <button class="gc2-sel-x" id="gc2SelClear">&times;</button>
               </div>
             </div>
 
-            <!-- Balance -->
+            <!-- Balance + Currency -->
             <div class="gc2-field">
-              <label class="gc2-label">Card Balance</label>
+              <label class="gc2-label">&#128179; Card Balance</label>
               <div class="gc2-balance-row">
                 <select id="gc2Currency" class="gc2-currency-sel">
                   <option value="USD">$ USD</option><option value="EUR">&euro; EUR</option><option value="GBP">&pound; GBP</option>
                   <option value="CAD">$ CAD</option><option value="AUD">$ AUD</option><option value="MXN">$ MXN</option>
                   <option value="BRL">R$ BRL</option><option value="JPY">&yen; JPY</option>
+                  <option value="INR">&#8377; INR</option><option value="KRW">&#8361; KRW</option>
+                  <option value="TRY">&#8378; TRY</option><option value="AED">AED</option>
                 </select>
-                <input type="number" id="gc2Balance" class="gc2-inp" placeholder="0.00" min="1" max="10000" step="0.01">
+                <input type="number" id="gc2Balance" class="gc2-inp gc2-inp-balance" placeholder="0.00" min="1" max="10000" step="0.01">
+              </div>
+              <div class="gc2-live-estimate" id="gc2LiveEstimate" style="display:none">
+                &#8776; <span id="gc2EstOST">0</span> OST at <span id="gc2EstRate">0%</span> rate
               </div>
             </div>
 
@@ -941,12 +1020,13 @@
               <button class="gc2-q" data-amt="100">$100</button>
               <button class="gc2-q" data-amt="250">$250</button>
               <button class="gc2-q" data-amt="500">$500</button>
+              <button class="gc2-q" data-amt="1000">$1000</button>
             </div>
 
-            <!-- Card code (optional) -->
+            <!-- Card code -->
             <div class="gc2-field">
-              <label class="gc2-label">Card Code <span class="gc2-opt">(optional)</span></label>
-              <input type="text" id="gc2Code" class="gc2-inp" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false">
+              <label class="gc2-label">&#128273; Card Code <span class="gc2-opt">(for verification)</span></label>
+              <input type="text" id="gc2Code" class="gc2-inp gc2-inp-code" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false">
             </div>
 
             <button class="gc2-offer-btn" id="gc2GetOffer" disabled>Get Offer</button>
@@ -1041,12 +1121,32 @@
       </div>
 
       <!-- ==================== OST FUEL FINDER (gasbuddy-style) ==================== -->
-      <div class="fuel2" id="fuelSection">
+      <div class="fuel2 demos-panel" id="fuelSection" data-dtab="fuel" style="display:none">
 
         <!-- Hero -->
         <div class="fuel2-hero">
+          <div class="fuel2-hero-badge">&#9981; Live Prices</div>
           <h3>Never Pay Full Price for Gas Again.</h3>
           <p class="fuel2-hero-sub">Find the cheapest fuel prices near you. Pay with OST &amp; earn cashback.</p>
+
+          <!-- Country Selector -->
+          <div class="fuel2-country-row">
+            <label class="fuel2-country-label">&#127758; Country:</label>
+            <select id="fuel2Country" class="fuel2-country-sel">
+              <option value="US">&#127482;&#127480; United States</option>
+              <option value="CA">&#127464;&#127462; Canada</option>
+              <option value="MX">&#127474;&#127485; Mexico</option>
+              <option value="GB">&#127468;&#127463; United Kingdom</option>
+              <option value="DE">&#127465;&#127466; Germany</option>
+              <option value="FR">&#127467;&#127479; France</option>
+              <option value="BR">&#127463;&#127479; Brazil</option>
+              <option value="AU">&#127462;&#127482; Australia</option>
+              <option value="JP">&#127471;&#127477; Japan</option>
+              <option value="IN">&#127470;&#127475; India</option>
+              <option value="AE">&#127462;&#127466; UAE</option>
+            </select>
+          </div>
+
           <div class="fuel2-search-bar">
             <input type="text" id="fuel2SearchLoc" class="fuel2-loc-input" placeholder="&#128269; Search city, zip, or station name...">
             <button class="fuel2-find-btn" id="fuel2FindBtn">Find Gas</button>
@@ -1060,6 +1160,12 @@
         </div>
 
         <!-- Station List -->
+        <!-- Scrolling Gas Station Brand Carousel -->
+        <div class="fuel2-brand-carousel-wrap">
+          <div class="fuel2-brand-carousel" id="fuel2BrandCarousel">
+            <!-- JS fills with scrolling brand logos -->
+          </div>
+        </div>
         <div class="fuel2-brand-tabs" id="fuel2BrandTabs"></div>
 
         <div class="fuel2-list-head">
@@ -3117,6 +3223,9 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
             <h2 class="lp-create-title">&#128640; start a new coin</h2>
             <p class="lp-create-sub text-muted">Launch a token on Solana instantly. It costs 0 OST. Powered by bonding curve.</p>
 
+            <!-- Section: Token Identity -->
+            <div class="lp-section-divider"><span>&#127912; Token Identity</span></div>
+
             <!-- Image upload -->
             <div class="lp-upload-area" id="lpUploadArea">
               <input type="file" id="lpImageInput" accept="image/*,video/mp4,video/webm" hidden>
@@ -3141,6 +3250,9 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
               <input type="text" id="lpSymbol" class="lp-input" placeholder="e.g. SDOGE" maxlength="10" autocomplete="off" style="text-transform:uppercase;">
             </div>
 
+            <!-- Section: Details -->
+            <div class="lp-section-divider"><span>&#128196; Details</span></div>
+
             <!-- Description -->
             <div class="lp-field">
               <label class="lp-label">description</label>
@@ -3152,18 +3264,21 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
             <button class="lp-more-toggle" id="lpMoreToggle">show more options &darr;</button>
             <div class="lp-more-fields" id="lpMoreFields" style="display:none">
               <div class="lp-field">
-                <label class="lp-label">twitter link</label>
+                <label class="lp-label">&#128038; twitter link</label>
                 <input type="url" id="lpTwitter" class="lp-input" placeholder="https://twitter.com/..." autocomplete="off">
               </div>
               <div class="lp-field">
-                <label class="lp-label">telegram link</label>
+                <label class="lp-label">&#128172; telegram link</label>
                 <input type="url" id="lpTelegram" class="lp-input" placeholder="https://t.me/..." autocomplete="off">
               </div>
               <div class="lp-field">
-                <label class="lp-label">website</label>
+                <label class="lp-label">&#127760; website</label>
                 <input type="url" id="lpWebsite" class="lp-input" placeholder="https://..." autocomplete="off">
               </div>
             </div>
+
+            <!-- Section: Launch Config -->
+            <div class="lp-section-divider"><span>&#9889; Launch Config</span></div>
 
             <!-- Initial buy (optional) -->
             <div class="lp-field lp-initial-buy">
@@ -3172,6 +3287,14 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
               <div class="lp-buy-row">
                 <input type="number" id="lpInitialBuy" class="lp-input" placeholder="0.0" min="0" step="0.01">
                 <span class="lp-buy-denom">OST</span>
+              </div>
+              <div class="lp-buy-presets">
+                <button class="lp-buy-preset" data-amt="0">0</button>
+                <button class="lp-buy-preset" data-amt="10">10</button>
+                <button class="lp-buy-preset" data-amt="50">50</button>
+                <button class="lp-buy-preset" data-amt="100">100</button>
+                <button class="lp-buy-preset" data-amt="500">500</button>
+                <button class="lp-buy-preset" data-amt="1000">1K</button>
               </div>
             </div>
 
@@ -3793,6 +3916,6 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=46"></script>
+  <script src="app.js?v=47"></script>
 </body>
 </html>

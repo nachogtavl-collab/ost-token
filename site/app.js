@@ -1712,6 +1712,7 @@
     document.documentElement.setAttribute('data-lang', lang);
     document.documentElement.lang = lang;
   }
+  window.applyTranslations = applyTranslations;
 
   if (langTrigger) {
     langTrigger.addEventListener('click', e => {
@@ -8426,6 +8427,338 @@
         }
       }, { passive: true });
     }
+  })();
+
+  /* ================================================================== */
+  /* v47: WELCOME OVERLAY — Language & Currency Selector                */
+  /* ================================================================== */
+  (function initWelcome() {
+    var overlay = document.getElementById('welcomeOverlay');
+    if (!overlay) return;
+
+    // Check if already set preferences
+    var prefs = {};
+    try { prefs = JSON.parse(localStorage.getItem('ost_prefs') || '{}'); } catch(e) {}
+    if (prefs.lang && prefs.currency) {
+      overlay.classList.add('hidden');
+      // Apply saved prefs
+      if (typeof applyTranslations === 'function') applyTranslations(prefs.lang);
+      window.__ostCurrency = prefs.currency;
+      // Update nav lang display
+      var langCode = document.getElementById('langCode');
+      if (langCode) langCode.textContent = prefs.lang.toUpperCase();
+      return;
+    }
+
+    var selectedLang = 'en';
+    var selectedCurrency = 'USD';
+
+    // Language buttons
+    overlay.querySelectorAll('.wel-lang-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        overlay.querySelectorAll('.wel-lang-btn').forEach(function(b) { b.classList.remove('wel-lang-active'); });
+        btn.classList.add('wel-lang-active');
+        selectedLang = btn.dataset.lang;
+      });
+    });
+
+    // Currency buttons
+    overlay.querySelectorAll('.wel-curr-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        overlay.querySelectorAll('.wel-curr-btn').forEach(function(b) { b.classList.remove('wel-curr-active'); });
+        btn.classList.add('wel-curr-active');
+        selectedCurrency = btn.dataset.curr;
+      });
+    });
+
+    // Navigation
+    var step1 = document.getElementById('welStep1');
+    var step2 = document.getElementById('welStep2');
+    document.getElementById('welNext1').addEventListener('click', function() {
+      step1.style.display = 'none';
+      step2.style.display = '';
+    });
+    document.getElementById('welBack2').addEventListener('click', function() {
+      step2.style.display = 'none';
+      step1.style.display = '';
+    });
+
+    // Enter
+    document.getElementById('welGo').addEventListener('click', function() {
+      try {
+        localStorage.setItem('ost_prefs', JSON.stringify({ lang: selectedLang, currency: selectedCurrency }));
+      } catch(e) {}
+
+      // Apply language
+      if (typeof applyTranslations === 'function') applyTranslations(selectedLang);
+      var langCode = document.getElementById('langCode');
+      if (langCode) langCode.textContent = selectedLang.toUpperCase();
+      // Also update the lang list active state
+      document.querySelectorAll('#langList a').forEach(function(a) {
+        a.classList.toggle('active', a.dataset.lang === selectedLang);
+      });
+
+      // Apply currency
+      window.__ostCurrency = selectedCurrency;
+
+      // Hide overlay
+      overlay.style.opacity = '0';
+      overlay.style.transition = 'opacity .4s';
+      setTimeout(function() { overlay.classList.add('hidden'); overlay.style.opacity = ''; }, 400);
+
+      if (typeof window.__ostXP !== 'undefined') {
+        window.__ostXP.award(10, 'Set preferences');
+      }
+    });
+  })();
+
+  /* ================================================================== */
+  /* v47: DEMOS TAB SWITCHING                                           */
+  /* ================================================================== */
+  (function initDemosTabs() {
+    var tabs = document.querySelectorAll('.demos-tab');
+    var panels = document.querySelectorAll('.demos-panel');
+    if (!tabs.length) return;
+
+    tabs.forEach(function(tab) {
+      tab.addEventListener('click', function() {
+        var target = tab.dataset.dtab;
+        tabs.forEach(function(t) { t.classList.remove('demos-tab-active'); });
+        tab.classList.add('demos-tab-active');
+        panels.forEach(function(p) {
+          if (p.dataset.dtab === target) {
+            p.style.display = '';
+            p.style.animation = 'none';
+            void p.offsetWidth;
+            p.style.animation = '';
+          } else {
+            p.style.display = 'none';
+          }
+        });
+      });
+    });
+  })();
+
+  /* ================================================================== */
+  /* v47: GIFT CARD BRAND CAROUSEL                                      */
+  /* ================================================================== */
+  (function initGCCarousel() {
+    var carousel = document.getElementById('gc2BrandCarousel');
+    if (!carousel) return;
+
+    var gcBrands = [
+      { name:'Amazon', domain:'amazon.com' },
+      { name:'Apple', domain:'apple.com' },
+      { name:'Google Play', domain:'play.google.com' },
+      { name:'Steam', domain:'store.steampowered.com' },
+      { name:'Walmart', domain:'walmart.com' },
+      { name:'Target', domain:'target.com' },
+      { name:'eBay', domain:'ebay.com' },
+      { name:'Starbucks', domain:'starbucks.com' },
+      { name:'Nike', domain:'nike.com' },
+      { name:'Netflix', domain:'netflix.com' },
+      { name:'Spotify', domain:'spotify.com' },
+      { name:'Uber', domain:'uber.com' },
+      { name:'DoorDash', domain:'doordash.com' },
+      { name:'PlayStation', domain:'playstation.com' },
+      { name:'Xbox', domain:'xbox.com' },
+      { name:'Best Buy', domain:'bestbuy.com' },
+      { name:'Sephora', domain:'sephora.com' },
+      { name:'Nordstrom', domain:'nordstrom.com' },
+      { name:'Delta', domain:'delta.com' },
+      { name:'Airbnb', domain:'airbnb.com' },
+      { name:'Visa', domain:'visa.com' },
+      { name:'Mastercard', domain:'mastercard.com' },
+      { name:'Home Depot', domain:'homedepot.com' },
+      { name:'Costco', domain:'costco.com' },
+      { name:'Adidas', domain:'adidas.com' },
+      { name:'Chipotle', domain:'chipotle.com' },
+      { name:"McDonald's", domain:'mcdonalds.com' },
+      { name:'Uber Eats', domain:'ubereats.com' },
+      { name:'Disney+', domain:'disneyplus.com' },
+      { name:'Hulu', domain:'hulu.com' },
+      { name:'Southwest', domain:'southwest.com' },
+      { name:'Marriott', domain:'marriott.com' }
+    ];
+
+    function logoUrl(domain) {
+      return 'https://logo.clearbit.com/' + domain + '?size=72';
+    }
+
+    gcBrands.forEach(function(b) {
+      var item = document.createElement('div');
+      item.className = 'gc2-carousel-item';
+      item.dataset.brand = b.name;
+      item.innerHTML = '<img src="' + logoUrl(b.domain) + '" alt="' + b.name + '" onerror="this.style.display=\'none\'"><span>' + b.name + '</span>';
+      item.addEventListener('click', function() {
+        // Click carousel item → fill search
+        var searchEl = document.getElementById('gc2BrandSearch');
+        if (searchEl) {
+          searchEl.value = b.name;
+          searchEl.dispatchEvent(new Event('input', { bubbles: true }));
+          // Auto-pick if single match
+          setTimeout(function() {
+            var dd = document.getElementById('gc2BrandDropdown');
+            if (dd && dd.children.length === 1) dd.children[0].click();
+          }, 100);
+        }
+        carousel.querySelectorAll('.gc2-carousel-item').forEach(function(c) { c.classList.remove('active'); });
+        item.classList.add('active');
+      });
+      carousel.appendChild(item);
+    });
+
+    // Live estimate
+    var balanceEl = document.getElementById('gc2Balance');
+    var estimateEl = document.getElementById('gc2LiveEstimate');
+    var estOST = document.getElementById('gc2EstOST');
+    var estRate = document.getElementById('gc2EstRate');
+    if (balanceEl && estimateEl) {
+      balanceEl.addEventListener('input', function() {
+        var val = parseFloat(balanceEl.value) || 0;
+        if (val > 0) {
+          var rate = 85; // average rate
+          var ostPrice = (typeof window.ostPrice === 'number' && window.ostPrice > 0) ? window.ostPrice : 0.00041;
+          var ost = (val * (rate / 100)) / ostPrice;
+          if (estOST) estOST.textContent = Math.floor(ost).toLocaleString();
+          if (estRate) estRate.textContent = rate + '%';
+          estimateEl.style.display = '';
+        } else {
+          estimateEl.style.display = 'none';
+        }
+      });
+    }
+  })();
+
+  /* ================================================================== */
+  /* v47: GAS STATION BRAND CAROUSEL + COUNTRY DATA                     */
+  /* ================================================================== */
+  (function initFuelCarousel() {
+    var carousel = document.getElementById('fuel2BrandCarousel');
+    if (!carousel) return;
+
+    var stationBrands = [
+      { name:'Shell', domain:'shell.com' },
+      { name:'BP', domain:'bp.com' },
+      { name:'ExxonMobil', domain:'exxonmobil.com' },
+      { name:'Chevron', domain:'chevron.com' },
+      { name:'Valero', domain:'valero.com' },
+      { name:'Costco Gas', domain:'costco.com' },
+      { name:'Circle K', domain:'circlek.com' },
+      { name:'7-Eleven', domain:'7-eleven.com' },
+      { name:"Buc-ee's", domain:'buc-ees.com' },
+      { name:'Murphy USA', domain:'murphyusa.com' },
+      { name:'Sunoco', domain:'sunoco.com' },
+      { name:'Marathon', domain:'marathon.com' },
+      { name:'TotalEnergies', domain:'totalenergies.com' },
+      { name:'Wawa', domain:'wawa.com' },
+      { name:'QuikTrip', domain:'quiktrip.com' },
+      { name:'Sheetz', domain:'sheetz.com' },
+      { name:'Pilot', domain:'pilotflyingj.com' },
+      { name:"Love's", domain:'loves.com' },
+      { name:'RaceTrac', domain:'racetrac.com' },
+      { name:'Speedway', domain:'speedway.com' },
+      { name:'ARCO', domain:'arco.com' },
+      { name:'Mobil', domain:'mobil.com' },
+      { name:'Conoco', domain:'conoco.com' },
+      { name:'Phillips 66', domain:'phillips66.com' },
+      { name:'Casey\'s', domain:'caseys.com' },
+      { name:'Kwik Trip', domain:'kwiktrip.com' },
+      { name:'Cumberland', domain:'cumberlandfarms.com' },
+      { name:'Esso', domain:'esso.com' },
+      { name:'Petro-Canada', domain:'petro-canada.ca' },
+      { name:'PEMEX', domain:'pemex.com' }
+    ];
+
+    function logoUrl(domain) {
+      return 'https://logo.clearbit.com/' + domain + '?size=72';
+    }
+
+    stationBrands.forEach(function(b) {
+      var item = document.createElement('div');
+      item.className = 'fuel2-carousel-item';
+      item.innerHTML = '<img src="' + logoUrl(b.domain) + '" alt="' + b.name + '" onerror="this.style.display=\'none\'"><span>' + b.name + '</span>';
+      item.addEventListener('click', function() {
+        var searchEl = document.getElementById('fuel2SearchLoc');
+        if (searchEl) {
+          searchEl.value = b.name;
+          searchEl.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        carousel.querySelectorAll('.fuel2-carousel-item').forEach(function(c) { c.classList.remove('active'); });
+        item.classList.add('active');
+        // Trigger find
+        var findBtn = document.getElementById('fuel2FindBtn');
+        if (findBtn) findBtn.click();
+      });
+      carousel.appendChild(item);
+    });
+
+    // Country-based station data
+    var countryStations = {
+      US: ['Shell','BP','ExxonMobil','Chevron','Valero','Costco Gas','Circle K','7-Eleven',"Buc-ee's",'Murphy USA','Sunoco','Marathon','Wawa','QuikTrip','Sheetz'],
+      CA: ['Shell','Petro-Canada','Esso','Circle K','7-Eleven','Costco Gas','Pioneer','Ultramar','Co-op','Husky'],
+      MX: ['PEMEX','Shell','BP','Mobil','Total','G500','Oxxo Gas','Redco'],
+      GB: ['Shell','BP','Esso','Texaco','Tesco','Sainsbury\'s','Morrisons','Asda','Jet'],
+      DE: ['Shell','Aral','Total','Esso','Jet','Star','Agip','OMV','HEM'],
+      FR: ['TotalEnergies','Shell','Esso','Carrefour','Leclerc','Intermarché','Auchan','BP'],
+      BR: ['Petrobras','Shell','Ipiranga','Ale','Raízen','BP','TotalEnergies'],
+      AU: ['Shell','BP','Caltex','7-Eleven','United','Ampol','Costco','Puma'],
+      JP: ['ENEOS','Shell','Idemitsu','Cosmo','Solato','Mobil'],
+      IN: ['Indian Oil','Bharat Petroleum','HP','Shell','Reliance','Nayara'],
+      AE: ['ADNOC','ENOC','Emarat','Shell','Total']
+    };
+
+    var countrySel = document.getElementById('fuel2Country');
+    if (countrySel) {
+      countrySel.addEventListener('change', function() {
+        var code = countrySel.value;
+        var brands = countryStations[code] || countryStations.US;
+        // Update carousel to show country-relevant stations first
+        carousel.querySelectorAll('.fuel2-carousel-item').forEach(function(item) {
+          var name = item.querySelector('span').textContent;
+          item.style.order = brands.indexOf(name) >= 0 ? '0' : '1';
+          item.style.opacity = brands.indexOf(name) >= 0 ? '1' : '.4';
+        });
+        // Also filter station list
+        var findBtn = document.getElementById('fuel2FindBtn');
+        if (findBtn) findBtn.click();
+      });
+    }
+  })();
+
+  /* ================================================================== */
+  /* v47: LAUNCHPAD BUY PRESETS + ENHANCED SEED DATA                    */
+  /* ================================================================== */
+  (function initLPEnhancements() {
+    // Buy preset buttons
+    var presets = document.querySelectorAll('.lp-buy-preset');
+    var buyInput = document.getElementById('lpInitialBuy');
+    if (presets.length && buyInput) {
+      presets.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          presets.forEach(function(b) { b.classList.remove('active'); });
+          btn.classList.add('active');
+          buyInput.value = btn.dataset.amt;
+        });
+      });
+    }
+
+    // Initialize feed+board on load if visible
+    var feedGrid = document.getElementById('lpFeedGrid');
+    var boardList = document.getElementById('lpBoardList');
+    // Auto-render trending and board so they're not empty
+    setTimeout(function() {
+      if (feedGrid && !feedGrid.children.length) {
+        // Trigger feed tab render
+        var feedTab = document.querySelector('.lp-tab[data-tab="feed"]');
+        if (feedTab) { feedTab.click(); }
+        // Go back to create tab
+        setTimeout(function() {
+          var createTab = document.querySelector('.lp-tab[data-tab="create"]');
+          if (createTab) createTab.click();
+        }, 50);
+      }
+    }, 300);
   })();
 
 })();

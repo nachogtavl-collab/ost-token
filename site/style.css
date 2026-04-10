@@ -5109,3 +5109,234 @@ select.sim-input { cursor: pointer; }
   animation: hudFlash .6s ease-out;
 }
 
+/* ================================================================== */
+/* v47: WELCOME OVERLAY — Language & Currency Selector                */
+/* ================================================================== */
+.welcome-overlay {
+  position: fixed; inset: 0; z-index: 10000;
+  background: rgba(6,8,15,.95);
+  backdrop-filter: blur(20px);
+  display: flex; align-items: center; justify-content: center;
+  animation: welFadeIn .4s ease;
+}
+.welcome-overlay.hidden { display: none; }
+@keyframes welFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.welcome-modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 36px 32px;
+  max-width: 560px; width: 90%;
+  max-height: 85vh; overflow-y: auto;
+  box-shadow: 0 40px 80px rgba(0,0,0,.5), 0 0 60px rgba(109,159,255,.06);
+}
+.welcome-header { text-align: center; margin-bottom: 28px; }
+.welcome-header .welcome-logo { font-size: 1.4rem; font-weight: 700; color: var(--accent); }
+.welcome-header h2 { font-size: 1.3rem; margin: 12px 0 6px; color: #fff; }
+.welcome-header p { color: var(--text-muted); font-size: .88rem; }
+
+.welcome-step h3 { font-size: 1rem; margin-bottom: 14px; color: #fff; }
+
+.welcome-lang-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.wel-lang-btn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; border-radius: 10px;
+  background: var(--surface2); border: 1.5px solid transparent;
+  color: var(--text-muted); font-size: .85rem; cursor: pointer;
+  transition: all .2s;
+}
+.wel-lang-btn:hover { border-color: var(--border); color: #fff; }
+.wel-lang-btn.wel-lang-active {
+  border-color: var(--accent); color: #fff;
+  background: rgba(109,159,255,.08);
+  box-shadow: 0 0 12px rgba(109,159,255,.15);
+}
+.wel-flag { font-size: 1.2rem; }
+
+.welcome-currency-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+.wel-curr-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 12px 10px; border-radius: 10px;
+  background: var(--surface2); border: 1.5px solid transparent;
+  color: var(--text-muted); font-size: .82rem; cursor: pointer;
+  transition: all .2s;
+}
+.wel-curr-btn:hover { border-color: var(--border); color: #fff; }
+.wel-curr-btn.wel-curr-active {
+  border-color: var(--accent); color: #fff;
+  background: rgba(109,159,255,.08);
+}
+.wel-curr-symbol { font-size: 1.3rem; font-weight: 700; color: var(--accent); }
+.wel-curr-name { font-size: .68rem; color: var(--text-muted); }
+
+.wel-next-btn, .wel-go-btn, .wel-back-btn {
+  padding: 12px 28px; border-radius: 10px; font-weight: 600; font-size: .9rem;
+  cursor: pointer; border: none; margin-top: 18px; transition: all .2s;
+}
+.wel-next-btn, .wel-go-btn {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #fff; width: 100%;
+}
+.wel-next-btn:hover, .wel-go-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(109,159,255,.3); }
+.wel-back-btn { background: var(--surface2); color: var(--text-muted); }
+.wel-back-btn:hover { color: #fff; }
+.wel-btn-row { display: flex; gap: 12px; margin-top: 18px; }
+.wel-btn-row .wel-back-btn { flex: 0 0 auto; }
+.wel-btn-row .wel-go-btn { flex: 1; }
+
+/* ================================================================== */
+/* v47: DEMOS TAB NAVIGATION                                         */
+/* ================================================================== */
+.demos-tabs {
+  display: flex; gap: 6px; justify-content: center;
+  flex-wrap: wrap;
+  margin: 24px 0 32px;
+  padding: 6px;
+  background: var(--surface);
+  border-radius: 14px;
+  border: 1px solid var(--border);
+}
+.demos-tab {
+  padding: 10px 22px; border-radius: 10px; border: none;
+  background: transparent; color: var(--text-muted);
+  font-size: .88rem; font-weight: 600; cursor: pointer;
+  transition: all .2s;
+}
+.demos-tab:hover { color: #fff; background: rgba(255,255,255,.04); }
+.demos-tab.demos-tab-active {
+  background: linear-gradient(135deg, rgba(109,159,255,.12), rgba(167,139,250,.08));
+  color: #fff;
+  box-shadow: 0 2px 12px rgba(109,159,255,.15);
+}
+.demos-panel { animation: demosPanelIn .35s ease; }
+@keyframes demosPanelIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ================================================================== */
+/* v47: GIFT CARD BRAND CAROUSEL                                     */
+/* ================================================================== */
+.gc2-hero-badge, .fuel2-hero-badge {
+  display: inline-block; padding: 4px 14px; border-radius: 50px;
+  background: rgba(52,211,153,.1); border: 1px solid rgba(52,211,153,.3);
+  color: var(--success); font-size: .72rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;
+}
+.gc2-brand-carousel-wrap, .fuel2-brand-carousel-wrap {
+  margin: 20px 0 24px;
+  position: relative;
+  overflow: hidden;
+}
+.gc2-carousel-title { font-size: .82rem; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+
+.gc2-brand-carousel, .fuel2-brand-carousel {
+  display: flex; gap: 12px;
+  overflow-x: auto; scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 8px 0;
+}
+.gc2-brand-carousel::-webkit-scrollbar, .fuel2-brand-carousel::-webkit-scrollbar { display: none; }
+
+.gc2-carousel-item, .fuel2-carousel-item {
+  flex: 0 0 80px; height: 80px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all .2s;
+  padding: 8px;
+}
+.gc2-carousel-item:hover, .fuel2-carousel-item:hover {
+  border-color: var(--accent);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(109,159,255,.12);
+}
+.gc2-carousel-item.active, .fuel2-carousel-item.active {
+  border-color: var(--accent);
+  background: rgba(109,159,255,.08);
+}
+.gc2-carousel-item img, .fuel2-carousel-item img {
+  width: 36px; height: 36px; border-radius: 8px;
+  object-fit: contain; background: #fff; padding: 2px;
+}
+.gc2-carousel-item span, .fuel2-carousel-item span {
+  font-size: .62rem; color: var(--text-muted); text-align: center;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 70px;
+}
+
+/* Brand search icon */
+.gc2-brand-search-wrap { position: relative; }
+.gc2-search-icon {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  font-size: .9rem; pointer-events: none; z-index: 1;
+}
+.gc2-inp-search { padding-left: 36px !important; }
+
+/* Rate badge */
+.gc2-sel-rate {
+  font-size: .72rem; color: var(--success); font-weight: 600;
+  background: rgba(52,211,153,.1); padding: 2px 8px; border-radius: 6px;
+  margin-left: auto;
+}
+
+/* Live estimate */
+.gc2-live-estimate {
+  margin-top: 6px; font-size: .78rem; color: var(--accent);
+  padding: 6px 12px; border-radius: 8px;
+  background: rgba(109,159,255,.05);
+  border: 1px solid rgba(109,159,255,.1);
+}
+
+/* Step connector line */
+.gc2-step-connector {
+  flex: 1; height: 2px; background: var(--border);
+  min-width: 20px; margin: 0 -4px;
+  align-self: center;
+}
+
+/* ================================================================== */
+/* v47: FUEL COUNTRY SELECTOR                                        */
+/* ================================================================== */
+.fuel2-country-row {
+  display: flex; align-items: center; gap: 10px;
+  margin: 12px 0 0; justify-content: center;
+}
+.fuel2-country-label { font-size: .82rem; color: var(--text-muted); }
+.fuel2-country-sel {
+  padding: 8px 14px; border-radius: 8px;
+  background: var(--surface2); border: 1px solid var(--border);
+  color: #fff; font-size: .85rem; cursor: pointer;
+}
+
+/* ================================================================== */
+/* v47: LAUNCHPAD SECTION DIVIDERS + BUY PRESETS                     */
+/* ================================================================== */
+.lp-section-divider {
+  display: flex; align-items: center; gap: 12px;
+  margin: 20px 0 14px;
+  color: var(--text-muted); font-size: .78rem;
+  text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600;
+}
+.lp-section-divider::before, .lp-section-divider::after {
+  content: ''; flex: 1; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+}
+
+.lp-buy-presets {
+  display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap;
+}
+.lp-buy-preset {
+  padding: 6px 16px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--text-muted);
+  font-size: .78rem; font-weight: 600; cursor: pointer;
+  transition: all .2s;
+}
+.lp-buy-preset:hover { border-color: var(--accent); color: var(--accent); }
+.lp-buy-preset.active {
+  border-color: var(--accent); color: #fff;
+  background: rgba(109,159,255,.1);
+}
+
