@@ -6195,6 +6195,9 @@
     var gcHistory = JSON.parse(localStorage.getItem('ost_gc_history') || '[]');
     var chosenPayout = 'OST';
 
+    // Expose brands globally for brand wheel
+    window.__ostGCBrands = brands;
+
     // DOM refs — Step 1
     var dropdown = document.getElementById('gc2BrandDropdown');
     var selBrandWrap = document.getElementById('gc2SelectedBrand');
@@ -6228,7 +6231,7 @@
     // Flow
     var flowEl = document.getElementById('gc2Flow');
     // Brands grid
-    var brandsGrid = document.getElementById('gc2BrandsGrid');
+    // (removed in v48 — brand wheel replaces grid)
     // History
     var histToggle = document.getElementById('gc2HistToggle');
     var histPanel = document.getElementById('gc2Hist');
@@ -6286,20 +6289,34 @@
 
     function pickBrand(b) {
       selectedBrand = b;
+      window.__ostSelectedGCBrand = b;
       dropdown.classList.remove('gc2-dd-open');
       searchEl.style.display = 'none';
       selBrandWrap.style.display = 'flex';
       selLogo.src = logoSrc(b.domain);
       selLogo.onerror = function() { logoFallback(this, b.domain, b.name, b.color); };
-      selName.textContent = b.name + ' (' + b.rate + '%)';
+      selName.textContent = b.name;
+      var selRate = document.getElementById('gc2SelRate');
+      if (selRate) selRate.textContent = b.rate + '%';
+      // Update 3D card
+      var cardLogo = document.getElementById('gc2CardLogo');
+      var cardBrand = document.getElementById('gc2CardBrand');
+      if (cardLogo) cardLogo.innerHTML = '<img src="' + logoSrc(b.domain) + '" alt="' + b.name + '" onerror="this.parentElement.innerHTML=\'&#127873;\'">';
+      if (cardBrand) cardBrand.textContent = b.name;
       updateOfferBtn();
     }
 
     clearBrand.addEventListener('click', function() {
       selectedBrand = null;
+      window.__ostSelectedGCBrand = null;
       searchEl.style.display = '';
       selBrandWrap.style.display = 'none';
       searchEl.value = '';
+      // Reset 3D card
+      var cardLogo = document.getElementById('gc2CardLogo');
+      var cardBrand = document.getElementById('gc2CardBrand');
+      if (cardLogo) cardLogo.innerHTML = '<span class="gc2-card-logo-placeholder">&#127873;</span>';
+      if (cardBrand) cardBrand.textContent = 'Select a Gift Card';
       updateOfferBtn();
     });
 
@@ -6473,43 +6490,6 @@
       acceptBtn.disabled = false;
       flowEl.style.display = 'none';
       setStep(1);
-    });
-
-    // Brands grid
-    function renderBrandsGrid(filter) {
-      brandsGrid.innerHTML = '';
-      brands.forEach(function(b) {
-        if (filter && filter !== 'all' && b.cat !== filter) return;
-        var card = document.createElement('div');
-        card.className = 'gc2-brand-card';
-        var img = document.createElement('img');
-        img.src = logoSrc(b.domain);
-        img.onerror = function() { logoFallback(this, b.domain, b.name, b.color); };
-        img.alt = b.name;
-        card.appendChild(img);
-        var nameEl = document.createElement('div');
-        nameEl.className = 'gc2-brand-card-name';
-        nameEl.textContent = b.name;
-        card.appendChild(nameEl);
-        var rateEl = document.createElement('div');
-        rateEl.className = 'gc2-brand-card-rate';
-        rateEl.textContent = b.rate + '%';
-        card.appendChild(rateEl);
-        card.addEventListener('click', function() {
-          pickBrand(b);
-          step1.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        });
-        brandsGrid.appendChild(card);
-      });
-    }
-    renderBrandsGrid('all');
-
-    document.querySelectorAll('.gc2-cat').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        document.querySelectorAll('.gc2-cat').forEach(function(b) { b.classList.remove('gc2-cat-active'); });
-        btn.classList.add('gc2-cat-active');
-        renderBrandsGrid(btn.dataset.cat);
-      });
     });
 
     // History
@@ -8513,18 +8493,18 @@
   })();
 
   /* ================================================================== */
-  /* v47: DEMOS TAB SWITCHING                                           */
+  /* v48: STORE TAB SWITCHING                                           */
   /* ================================================================== */
-  (function initDemosTabs() {
-    var tabs = document.querySelectorAll('.demos-tab');
+  (function initStoreTabs() {
+    var tabs = document.querySelectorAll('.store-tab');
     var panels = document.querySelectorAll('.demos-panel');
     if (!tabs.length) return;
 
     tabs.forEach(function(tab) {
       tab.addEventListener('click', function() {
         var target = tab.dataset.dtab;
-        tabs.forEach(function(t) { t.classList.remove('demos-tab-active'); });
-        tab.classList.add('demos-tab-active');
+        tabs.forEach(function(t) { t.classList.remove('store-tab-active'); });
+        tab.classList.add('store-tab-active');
         panels.forEach(function(p) {
           if (p.dataset.dtab === target) {
             p.style.display = '';
@@ -8540,46 +8520,14 @@
   })();
 
   /* ================================================================== */
-  /* v47: GIFT CARD BRAND CAROUSEL                                      */
+  /* v48: GIFT CARD BRAND WHEEL + CARD CODE FORMATTER + LIVE PREVIEW   */
   /* ================================================================== */
-  (function initGCCarousel() {
+  (function initGCBrandWheel() {
     var carousel = document.getElementById('gc2BrandCarousel');
     if (!carousel) return;
 
-    var gcBrands = [
-      { name:'Amazon', domain:'amazon.com' },
-      { name:'Apple', domain:'apple.com' },
-      { name:'Google Play', domain:'play.google.com' },
-      { name:'Steam', domain:'store.steampowered.com' },
-      { name:'Walmart', domain:'walmart.com' },
-      { name:'Target', domain:'target.com' },
-      { name:'eBay', domain:'ebay.com' },
-      { name:'Starbucks', domain:'starbucks.com' },
-      { name:'Nike', domain:'nike.com' },
-      { name:'Netflix', domain:'netflix.com' },
-      { name:'Spotify', domain:'spotify.com' },
-      { name:'Uber', domain:'uber.com' },
-      { name:'DoorDash', domain:'doordash.com' },
-      { name:'PlayStation', domain:'playstation.com' },
-      { name:'Xbox', domain:'xbox.com' },
-      { name:'Best Buy', domain:'bestbuy.com' },
-      { name:'Sephora', domain:'sephora.com' },
-      { name:'Nordstrom', domain:'nordstrom.com' },
-      { name:'Delta', domain:'delta.com' },
-      { name:'Airbnb', domain:'airbnb.com' },
-      { name:'Visa', domain:'visa.com' },
-      { name:'Mastercard', domain:'mastercard.com' },
-      { name:'Home Depot', domain:'homedepot.com' },
-      { name:'Costco', domain:'costco.com' },
-      { name:'Adidas', domain:'adidas.com' },
-      { name:'Chipotle', domain:'chipotle.com' },
-      { name:"McDonald's", domain:'mcdonalds.com' },
-      { name:'Uber Eats', domain:'ubereats.com' },
-      { name:'Disney+', domain:'disneyplus.com' },
-      { name:'Hulu', domain:'hulu.com' },
-      { name:'Southwest', domain:'southwest.com' },
-      { name:'Marriott', domain:'marriott.com' }
-    ];
+    // Use globally exposed brand data from initGiftCardHub
+    var gcBrands = window.__ostGCBrands || [];
 
     function logoUrl(domain) {
       return 'https://logo.clearbit.com/' + domain + '?size=72';
@@ -8587,45 +8535,93 @@
 
     gcBrands.forEach(function(b) {
       var item = document.createElement('div');
-      item.className = 'gc2-carousel-item';
+      item.className = 'gc2-wheel-item';
       item.dataset.brand = b.name;
       item.innerHTML = '<img src="' + logoUrl(b.domain) + '" alt="' + b.name + '" onerror="this.style.display=\'none\'"><span>' + b.name + '</span>';
       item.addEventListener('click', function() {
-        // Click carousel item → fill search
         var searchEl = document.getElementById('gc2BrandSearch');
         if (searchEl) {
           searchEl.value = b.name;
           searchEl.dispatchEvent(new Event('input', { bubbles: true }));
-          // Auto-pick if single match
           setTimeout(function() {
             var dd = document.getElementById('gc2BrandDropdown');
             if (dd && dd.children.length === 1) dd.children[0].click();
           }, 100);
         }
-        carousel.querySelectorAll('.gc2-carousel-item').forEach(function(c) { c.classList.remove('active'); });
+        carousel.querySelectorAll('.gc2-wheel-item').forEach(function(c) { c.classList.remove('active'); });
         item.classList.add('active');
       });
       carousel.appendChild(item);
     });
 
-    // Live estimate
-    var balanceEl = document.getElementById('gc2Balance');
-    var estimateEl = document.getElementById('gc2LiveEstimate');
-    var estOST = document.getElementById('gc2EstOST');
-    var estRate = document.getElementById('gc2EstRate');
-    if (balanceEl && estimateEl) {
-      balanceEl.addEventListener('input', function() {
-        var val = parseFloat(balanceEl.value) || 0;
-        if (val > 0) {
-          var rate = 85; // average rate
+    // Card code formatter (XXXX-XXXX-XXXX-XXXX)
+    var codeInput = document.getElementById('gc2Code');
+    var codeStatus = document.getElementById('gc2CodeStatus');
+    if (codeInput) {
+      codeInput.addEventListener('input', function(e) {
+        var raw = codeInput.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+        if (raw.length > 16) raw = raw.slice(0, 16);
+        var formatted = raw.match(/.{1,4}/g);
+        codeInput.value = formatted ? formatted.join('-') : '';
+        // Update status icon
+        if (codeStatus) {
+          if (raw.length === 16) {
+            codeStatus.textContent = '\u2713';
+            codeStatus.className = 'gc2-code-status valid';
+          } else if (raw.length > 0) {
+            codeStatus.textContent = raw.length + '/16';
+            codeStatus.className = 'gc2-code-status invalid';
+          } else {
+            codeStatus.textContent = '';
+            codeStatus.className = 'gc2-code-status';
+          }
+        }
+        // Update 3D card number
+        var cardNum = document.getElementById('gc2CardNumber');
+        if (cardNum) {
+          cardNum.textContent = codeInput.value || 'XXXX-XXXX-XXXX-XXXX';
+        }
+      });
+    }
+
+    // Live preview updates for 3D card
+    var balanceInput = document.getElementById('gc2Balance');
+    var pinInput = document.getElementById('gc2Pin');
+    if (balanceInput) {
+      balanceInput.addEventListener('input', function() {
+        var val = parseFloat(balanceInput.value) || 0;
+        var cardValue = document.getElementById('gc2CardValue');
+        var currSel = document.getElementById('gc2Currency');
+        var sym = '$';
+        if (currSel) {
+          var opt = currSel.options[currSel.selectedIndex];
+          if (opt) sym = opt.textContent.trim().charAt(0);
+        }
+        if (cardValue) cardValue.textContent = sym + val.toFixed(2);
+
+        // Live estimate
+        var estimateEl = document.getElementById('gc2LiveEstimate');
+        var estOST = document.getElementById('gc2EstOST');
+        var estRate = document.getElementById('gc2EstRate');
+        var estUSD = document.getElementById('gc2EstUSD');
+        if (estimateEl && val > 0) {
+          var rate = window.__ostSelectedGCBrand ? window.__ostSelectedGCBrand.rate : 85;
           var ostPrice = (typeof window.ostPrice === 'number' && window.ostPrice > 0) ? window.ostPrice : 0.00041;
-          var ost = (val * (rate / 100)) / ostPrice;
+          var payout = val * (rate / 100);
+          var ost = payout / ostPrice;
           if (estOST) estOST.textContent = Math.floor(ost).toLocaleString();
           if (estRate) estRate.textContent = rate + '%';
+          if (estUSD) estUSD.textContent = '$' + payout.toFixed(2);
           estimateEl.style.display = '';
-        } else {
+        } else if (estimateEl) {
           estimateEl.style.display = 'none';
         }
+      });
+    }
+    if (pinInput) {
+      pinInput.addEventListener('input', function() {
+        var cardPin = document.getElementById('gc2CardPin');
+        if (cardPin) cardPin.textContent = pinInput.value || '****';
       });
     }
   })();

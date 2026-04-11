@@ -26,7 +26,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="style.css?v=47">
+  <link rel="stylesheet" href="style.css?v=48">
 </head>
 <body>
 
@@ -89,7 +89,7 @@
       <div class="nav-links" id="navLinks">
         <a href="#home" data-i18n="nav.home">Home</a>
         <a href="#new-here" data-i18n="nav.newhere">Get OST</a>
-        <a href="#demos" data-i18n="nav.demos">Demos</a>
+        <a href="#demos" data-i18n="nav.stores">Stores</a>
         <a href="#wallet" data-i18n="nav.wallet">Wallet</a>
         <a href="#ai" data-i18n="nav.ai">AI &amp; Bots</a>
         <a href="#offline" data-i18n="nav.offline">Offline</a>
@@ -608,19 +608,31 @@
 
 
   <!-- ================================================================== -->
-  <!-- 3. DEMOS — Pay Demo + Interchange -->
+  <!-- 3. STORES — Shop, Interchange, Gift Cards, Gas -->
   <!-- ================================================================== -->
   <section id="demos" class="section section-space">
     <div class="container">
-      <h2 class="section-title" data-i18n="demos.title">&#127916; Live Demos</h2>
-      <p class="section-subtitle" data-i18n="demos.sub">See what private, instant payments feel like. Real products, real prices. Zero fees.</p>
+      <h2 class="section-title" data-i18n="demos.title">&#128722; OST Stores</h2>
+      <p class="section-subtitle" data-i18n="demos.sub">Shop, swap gift cards, pay for gas &mdash; all with OST. Real products, real prices.</p>
 
-      <!-- Demos Tab Navigation -->
-      <div class="demos-tabs" id="demosTabs">
-        <button class="demos-tab demos-tab-active" data-dtab="shop">&#128722; Shop</button>
-        <button class="demos-tab" data-dtab="interchange">&#127974; Interchange</button>
-        <button class="demos-tab" data-dtab="giftcards">&#127873; Gift Cards</button>
-        <button class="demos-tab" data-dtab="fuel">&#9981; Gas Station</button>
+      <!-- Store Tab Navigation -->
+      <div class="store-tabs" id="demosTabs">
+        <button class="store-tab store-tab-active" data-dtab="shop">
+          <span class="store-tab-icon">&#128722;</span>
+          <span class="store-tab-label">Shop</span>
+        </button>
+        <button class="store-tab" data-dtab="interchange">
+          <span class="store-tab-icon">&#127974;</span>
+          <span class="store-tab-label">Interchange</span>
+        </button>
+        <button class="store-tab" data-dtab="giftcards">
+          <span class="store-tab-icon">&#127873;</span>
+          <span class="store-tab-label">Gift Cards</span>
+        </button>
+        <button class="store-tab" data-dtab="fuel">
+          <span class="store-tab-icon">&#9981;</span>
+          <span class="store-tab-label">Gas Station</span>
+        </button>
       </div>
 
       <div class="features-grid" style="display:none;">
@@ -949,7 +961,7 @@
         </div>
       </div>
 
-      <!-- ==================== OST GIFT CARD EXCHANGE (giftcash-style) ==================== -->
+      <!-- ==================== OST GIFT CARD EXCHANGE ==================== -->
       <div class="gc2 demos-panel" id="gcSection" data-dtab="giftcards" style="display:none">
 
         <!-- Hero -->
@@ -959,12 +971,9 @@
           <p>Select a brand, enter your card details, and get an instant offer. Real-time rates.</p>
         </div>
 
-        <!-- Scrolling Brand Carousel -->
-        <div class="gc2-brand-carousel-wrap">
-          <h4 class="gc2-carousel-title">Available Gift Cards</h4>
-          <div class="gc2-brand-carousel" id="gc2BrandCarousel">
-            <!-- JS fills brand logos as scrolling strip -->
-          </div>
+        <!-- Scrolling Brand Wheel -->
+        <div class="gc2-brand-wheel-wrap">
+          <div class="gc2-brand-wheel" id="gc2BrandCarousel"></div>
         </div>
 
         <!-- 3-step flow -->
@@ -978,58 +987,103 @@
 
         <!-- Step 1: Add Cards -->
         <div class="gc2-panel gc2-panel-active" id="gc2Step1">
-          <div class="gc2-add-card">
-            <!-- Brand search -->
-            <div class="gc2-field">
-              <label class="gc2-label">&#127991; Select Brand</label>
-              <div class="gc2-brand-search-wrap">
-                <span class="gc2-search-icon">&#128269;</span>
-                <input type="text" id="gc2BrandSearch" class="gc2-inp gc2-inp-search" placeholder="Search 32+ brands (Amazon, Apple, Steam...)" autocomplete="off">
-                <div class="gc2-brand-dropdown" id="gc2BrandDropdown"></div>
-              </div>
-              <div class="gc2-selected-brand" id="gc2SelectedBrand" style="display:none">
-                <img class="gc2-sel-logo" id="gc2SelLogo" alt="">
-                <span class="gc2-sel-name" id="gc2SelName"></span>
-                <span class="gc2-sel-rate" id="gc2SelRate"></span>
-                <button class="gc2-sel-x" id="gc2SelClear">&times;</button>
-              </div>
-            </div>
+          <div class="gc2-swap-layout">
 
-            <!-- Balance + Currency -->
-            <div class="gc2-field">
-              <label class="gc2-label">&#128179; Card Balance</label>
-              <div class="gc2-balance-row">
-                <select id="gc2Currency" class="gc2-currency-sel">
-                  <option value="USD">$ USD</option><option value="EUR">&euro; EUR</option><option value="GBP">&pound; GBP</option>
-                  <option value="CAD">$ CAD</option><option value="AUD">$ AUD</option><option value="MXN">$ MXN</option>
-                  <option value="BRL">R$ BRL</option><option value="JPY">&yen; JPY</option>
-                  <option value="INR">&#8377; INR</option><option value="KRW">&#8361; KRW</option>
-                  <option value="TRY">&#8378; TRY</option><option value="AED">AED</option>
-                </select>
-                <input type="number" id="gc2Balance" class="gc2-inp gc2-inp-balance" placeholder="0.00" min="1" max="10000" step="0.01">
+            <!-- Left: Card Input Form -->
+            <div class="gc2-form-side">
+              <!-- Brand search -->
+              <div class="gc2-field">
+                <label class="gc2-label">&#127991; Select Brand</label>
+                <div class="gc2-brand-search-wrap">
+                  <span class="gc2-search-icon">&#128269;</span>
+                  <input type="text" id="gc2BrandSearch" class="gc2-inp gc2-inp-search" placeholder="Search 32+ brands..." autocomplete="off">
+                  <div class="gc2-brand-dropdown" id="gc2BrandDropdown"></div>
+                </div>
+                <div class="gc2-selected-brand" id="gc2SelectedBrand" style="display:none">
+                  <img class="gc2-sel-logo" id="gc2SelLogo" alt="">
+                  <span class="gc2-sel-name" id="gc2SelName"></span>
+                  <span class="gc2-sel-rate" id="gc2SelRate"></span>
+                  <button class="gc2-sel-x" id="gc2SelClear">&times;</button>
+                </div>
               </div>
+
+              <!-- Balance + Currency -->
+              <div class="gc2-field">
+                <label class="gc2-label">&#128179; Card Balance</label>
+                <div class="gc2-balance-row">
+                  <select id="gc2Currency" class="gc2-currency-sel">
+                    <option value="USD">$ USD</option><option value="EUR">&euro; EUR</option><option value="GBP">&pound; GBP</option>
+                    <option value="CAD">$ CAD</option><option value="AUD">$ AUD</option><option value="MXN">$ MXN</option>
+                    <option value="BRL">R$ BRL</option><option value="JPY">&yen; JPY</option>
+                    <option value="INR">&#8377; INR</option><option value="KRW">&#8361; KRW</option>
+                    <option value="TRY">&#8378; TRY</option><option value="AED">AED</option>
+                  </select>
+                  <input type="number" id="gc2Balance" class="gc2-inp gc2-inp-balance" placeholder="0.00" min="1" max="10000" step="0.01">
+                </div>
+                <div class="gc2-quicks">
+                  <button class="gc2-q" data-amt="25">$25</button>
+                  <button class="gc2-q" data-amt="50">$50</button>
+                  <button class="gc2-q" data-amt="100">$100</button>
+                  <button class="gc2-q" data-amt="250">$250</button>
+                  <button class="gc2-q" data-amt="500">$500</button>
+                  <button class="gc2-q" data-amt="1000">$1K</button>
+                </div>
+              </div>
+
+              <!-- Card code with formatter -->
+              <div class="gc2-field">
+                <label class="gc2-label">&#128273; Card Code</label>
+                <div class="gc2-code-input-wrap">
+                  <input type="text" id="gc2Code" class="gc2-inp gc2-inp-code" placeholder="XXXX-XXXX-XXXX-XXXX" maxlength="19" autocomplete="off" spellcheck="false">
+                  <span class="gc2-code-status" id="gc2CodeStatus"></span>
+                </div>
+                <div class="gc2-code-hint">Enter 16 digits. Dashes are added automatically.</div>
+              </div>
+
+              <!-- Card PIN (optional) -->
+              <div class="gc2-field">
+                <label class="gc2-label">&#128274; PIN <span class="gc2-opt">(if applicable)</span></label>
+                <input type="text" id="gc2Pin" class="gc2-inp" placeholder="4-8 digit PIN" maxlength="8" autocomplete="off">
+              </div>
+
+              <button class="gc2-offer-btn" id="gc2GetOffer" disabled>&#9889; Get Instant Offer</button>
+
+              <!-- Live estimate bar -->
               <div class="gc2-live-estimate" id="gc2LiveEstimate" style="display:none">
-                &#8776; <span id="gc2EstOST">0</span> OST at <span id="gc2EstRate">0%</span> rate
+                <div class="gc2-est-row">
+                  <span>Estimated payout:</span>
+                  <span class="gc2-est-val">&#8776; <span id="gc2EstOST">0</span> OST</span>
+                </div>
+                <div class="gc2-est-rate">at <span id="gc2EstRate">0%</span> rate &middot; <span id="gc2EstUSD">$0</span></div>
               </div>
             </div>
 
-            <!-- Quick amounts -->
-            <div class="gc2-quicks">
-              <button class="gc2-q" data-amt="25">$25</button>
-              <button class="gc2-q" data-amt="50">$50</button>
-              <button class="gc2-q" data-amt="100">$100</button>
-              <button class="gc2-q" data-amt="250">$250</button>
-              <button class="gc2-q" data-amt="500">$500</button>
-              <button class="gc2-q" data-amt="1000">$1000</button>
+            <!-- Right: 3D Card Preview -->
+            <div class="gc2-preview-side">
+              <div class="gc2-card-3d-wrap">
+                <div class="gc2-card-3d" id="gc2Card3d">
+                  <div class="gc2-card-front">
+                    <div class="gc2-card-logo" id="gc2CardLogo">
+                      <span class="gc2-card-logo-placeholder">&#127873;</span>
+                    </div>
+                    <div class="gc2-card-brand" id="gc2CardBrand">Select a Gift Card</div>
+                    <div class="gc2-card-value" id="gc2CardValue">$0.00</div>
+                    <div class="gc2-card-chip"></div>
+                    <div class="gc2-card-number" id="gc2CardNumber">XXXX-XXXX-XXXX-XXXX</div>
+                  </div>
+                  <div class="gc2-card-back">
+                    <div class="gc2-card-stripe"></div>
+                    <div class="gc2-card-cvv">
+                      <span>PIN</span>
+                      <div class="gc2-card-cvv-box" id="gc2CardPin">****</div>
+                    </div>
+                    <div class="gc2-card-barcode"></div>
+                    <div class="gc2-card-powered">Powered by OST Exchange</div>
+                  </div>
+                </div>
+              </div>
+              <p class="gc2-card-hint">Hover to flip &middot; Your card renders live</p>
             </div>
-
-            <!-- Card code -->
-            <div class="gc2-field">
-              <label class="gc2-label">&#128273; Card Code <span class="gc2-opt">(for verification)</span></label>
-              <input type="text" id="gc2Code" class="gc2-inp gc2-inp-code" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false">
-            </div>
-
-            <button class="gc2-offer-btn" id="gc2GetOffer" disabled>Get Offer</button>
           </div>
 
           <!-- Cart: cards added so far -->
@@ -1081,31 +1135,12 @@
             <button class="gc2-copy-tx" id="gc2CopyTx">Copy TX</button>
             <button class="gc2-new-btn" id="gc2NewSell">Sell Another Card</button>
           </div>
-
-          <!-- Flow animation -->
           <div class="gc2-flow" id="gc2Flow" style="display:none">
             <div class="gc2-fstep"><span class="gc2-fdot"></span><span>Verifying card&hellip;</span></div>
             <div class="gc2-fstep"><span class="gc2-fdot"></span><span>Calculating offer&hellip;</span></div>
             <div class="gc2-fstep"><span class="gc2-fdot"></span><span>Processing on Solana&hellip;</span></div>
             <div class="gc2-fstep"><span class="gc2-fdot"></span><span>Complete &#10003;</span></div>
           </div>
-        </div>
-
-        <!-- Available brands grid -->
-        <div class="gc2-brands-section">
-          <div class="gc2-brands-head">
-            <h4>Available Gift Cards</h4>
-            <p>We accept cards from 150+ top brands. Search or browse below.</p>
-          </div>
-          <div class="gc2-cats" id="gc2Cats">
-            <button class="gc2-cat gc2-cat-active" data-cat="all">All</button>
-            <button class="gc2-cat" data-cat="shop">Shopping</button>
-            <button class="gc2-cat" data-cat="food">Food &amp; Beverage</button>
-            <button class="gc2-cat" data-cat="game">Gaming</button>
-            <button class="gc2-cat" data-cat="media">Entertainment</button>
-            <button class="gc2-cat" data-cat="travel">Travel</button>
-          </div>
-          <div class="gc2-brands-grid" id="gc2BrandsGrid"></div>
         </div>
 
         <!-- History -->
@@ -1117,7 +1152,7 @@
           </div>
         </div>
 
-        <div class="gc2-note">&#9888; Uses third-party APIs. Verify card validity before selling. Subject to local laws.</div>
+        <div class="gc2-note">&#9888; Live trading powered by OST Exchange. Card verification required. Subject to local laws.</div>
       </div>
 
       <!-- ==================== OST FUEL FINDER (gasbuddy-style) ==================== -->
@@ -3916,6 +3951,6 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=47"></script>
+  <script src="app.js?v=48"></script>
 </body>
 </html>
