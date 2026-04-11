@@ -6525,35 +6525,156 @@
   })();
 
   // ========================================================================
-  // OST FUEL FINDER — gasbuddy.com style (station list + detail modal)
+  // OST FUEL & CONVENIENCE — global station data + oil chart + news
   // ========================================================================
   (function initFuelStation() {
     var findBtn = document.getElementById('fuel2FindBtn');
     if (!findBtn) return;
 
-    var stations = [
-      { name:'Shell',          domain:'shell.com',          addr:'2100 Main St',        city:'Houston, TX',     prices:{regular:3.29,midgrade:3.59,premium:3.89,diesel:3.69}, rating:4.2, numReviews:128, amenities:['C-Store','Pay at Pump','Restrooms','Car Wash','Air'], reporter:'priceHunter42', reportedAgo:'3 hours', cash:true, dist:0.8, reviews:[{user:'FuelFan',stars:5,text:'Great prices and clean restrooms.',date:'2 days ago'},{user:'DriverTX',stars:4,text:'Quick in and out. Good rewards.',date:'5 days ago'}] },
-      { name:'BP',             domain:'bp.com',             addr:'550 Westheimer Rd',   city:'Houston, TX',     prices:{regular:3.19,midgrade:3.49,premium:3.79,diesel:3.59}, rating:4.0, numReviews:95,  amenities:['C-Store','Pay at Pump','Restrooms','ATM'], reporter:'gasWatcher', reportedAgo:'5 hours', cash:false, dist:1.2, reviews:[{user:'TXDriver',stars:4,text:'Decent prices. A bit crowded sometimes.',date:'1 day ago'}] },
-      { name:'ExxonMobil',     domain:'exxonmobil.com',     addr:'1800 Richmond Ave',   city:'Houston, TX',     prices:{regular:3.35,midgrade:3.65,premium:3.95,diesel:3.75}, rating:3.8, numReviews:67,  amenities:['C-Store','Pay at Pump','Air'], reporter:'cheapGas99', reportedAgo:'1 hour', cash:true, dist:1.5, reviews:[{user:'Mike_M',stars:3,text:'Prices are OK. Nothing special.',date:'3 days ago'}] },
-      { name:'Chevron',        domain:'chevron.com',        addr:'4200 Montrose Blvd',  city:'Houston, TX',     prices:{regular:3.39,midgrade:3.69,premium:3.99,diesel:3.79}, rating:4.5, numReviews:203, amenities:['C-Store','Pay at Pump','Restrooms','Car Wash','Air','EV Charging'], reporter:'saveOnGas', reportedAgo:'2 hours', cash:true, dist:2.1, reviews:[{user:'EV_Dave',stars:5,text:'Love the EV chargers! Great location.',date:'1 day ago'},{user:'Cara_D',stars:4,text:'Always clean. Friendly staff.',date:'4 days ago'}] },
-      { name:'Valero',         domain:'valero.com',         addr:'3300 Kirby Dr',       city:'Houston, TX',     prices:{regular:3.15,midgrade:3.45,premium:3.75,diesel:3.55}, rating:3.9, numReviews:82,  amenities:['C-Store','Pay at Pump','Restrooms'], reporter:'budgetDriver', reportedAgo:'6 hours', cash:true, dist:2.8, reviews:[{user:'SammyH',stars:4,text:'Cheapest around!',date:'2 days ago'}] },
-      { name:'Costco',         domain:'costco.com',         addr:'9700 Westheimer Rd',  city:'Houston, TX',     prices:{regular:2.99,midgrade:3.29,premium:3.59,diesel:3.39}, rating:4.7, numReviews:412, amenities:['Pay at Pump','Members Only'], reporter:'costcoFan', reportedAgo:'30 min', cash:false, dist:5.2, reviews:[{user:'MemberMike',stars:5,text:'Best prices in town. Worth the wait.',date:'6 hours ago'},{user:'Lisa_Q',stars:5,text:'Saved $15 on a full tank! Love Costco gas.',date:'1 day ago'}] },
-      { name:'Circle K',       domain:'circlek.com',        addr:'2900 Shepherd Dr',    city:'Houston, TX',     prices:{regular:3.22,midgrade:3.52,premium:3.82,diesel:3.62}, rating:3.6, numReviews:54,  amenities:['C-Store','Pay at Pump','Restrooms','ATM'], reporter:'nightOwl', reportedAgo:'4 hours', cash:false, dist:1.9, reviews:[{user:'NightDrv',stars:3,text:'Open 24/7 which is great.',date:'3 days ago'}] },
-      { name:'7-Eleven',       domain:'7-eleven.com',       addr:'1200 Elgin St',       city:'Houston, TX',     prices:{regular:3.25,midgrade:3.55,premium:3.85,diesel:3.65}, rating:3.5, numReviews:41,  amenities:['C-Store','Pay at Pump','Restrooms','ATM'], reporter:'slurpee7', reportedAgo:'8 hours', cash:true, dist:0.5, reviews:[{user:'QuickStop',stars:3,text:'Convenient location but prices are mid.',date:'1 week ago'}] },
-      { name:'Buc-ee\'s',      domain:'buc-ees.com',        addr:'22814 Katy Fwy',      city:'Katy, TX',        prices:{regular:3.05,midgrade:3.35,premium:3.65,diesel:3.45}, rating:4.9, numReviews:1024,amenities:['C-Store','Restrooms','Car Wash','Food Court','Air'], reporter:'bucFan', reportedAgo:'15 min', cash:true, dist:28.0, reviews:[{user:'RoadTrip',stars:5,text:'BEST gas station ever. Cleanest restrooms in Texas!',date:'1 day ago'},{user:'TXPride',stars:5,text:'The brisket alone is worth the drive.',date:'2 days ago'}] },
-      { name:'Murphy USA',     domain:'murphyusa.com',      addr:'7500 FM 1960',        city:'Houston, TX',     prices:{regular:3.09,midgrade:3.39,premium:3.69,diesel:3.49}, rating:4.1, numReviews:76,  amenities:['C-Store','Pay at Pump'], reporter:'savvyShopper', reportedAgo:'2 hours', cash:true, dist:8.4, reviews:[{user:'WalMart_G',stars:4,text:'Always cheap. Right next to Walmart.',date:'3 days ago'}] },
-      { name:'Sunoco',         domain:'sunoco.com',         addr:'3500 Scott St',       city:'Houston, TX',     prices:{regular:3.31,midgrade:3.61,premium:3.91,diesel:3.71}, rating:3.7, numReviews:38,  amenities:['C-Store','Pay at Pump','Restrooms'], reporter:'gasGuru', reportedAgo:'10 hours', cash:false, dist:3.1, reviews:[{user:'ScottSt',stars:4,text:'Nice clean pumps.',date:'5 days ago'}] },
-      { name:'Marathon',       domain:'marathon.com',       addr:'4800 Washington Ave', city:'Houston, TX',     prices:{regular:3.27,midgrade:3.57,premium:3.87,diesel:3.67}, rating:3.9, numReviews:63,  amenities:['C-Store','Pay at Pump','Restrooms','Air'], reporter:'marathonMan', reportedAgo:'7 hours', cash:true, dist:2.5, reviews:[{user:'WashAve',stars:4,text:'Solid station. Fair prices.',date:'4 days ago'}] },
-      { name:'TotalEnergies',  domain:'totalenergies.com',  addr:'900 Texas Ave',       city:'Houston, TX',     prices:{regular:3.33,midgrade:3.63,premium:3.93,diesel:3.73}, rating:3.8, numReviews:29,  amenities:['C-Store','Pay at Pump','EV Charging'], reporter:'euroGas', reportedAgo:'12 hours', cash:false, dist:1.0, reviews:[{user:'EU_expat',stars:4,text:'Familiar brand. Clean station.',date:'1 week ago'}] },
-      { name:'Wawa',           domain:'wawa.com',           addr:'1500 San Jacinto St', city:'Houston, TX',     prices:{regular:3.18,midgrade:3.48,premium:3.78,diesel:3.58}, rating:4.4, numReviews:187, amenities:['C-Store','Pay at Pump','Restrooms','Food Court','ATM'], reporter:'wawaFan', reportedAgo:'1 hour', cash:true, dist:4.0, reviews:[{user:'SubLover',stars:5,text:'Amazing hoagies AND cheap gas!',date:'12 hours ago'},{user:'JaxTX',stars:4,text:'Wish we had more Wawas in Texas.',date:'3 days ago'}] },
-      { name:'QT',             domain:'quiktrip.com',       addr:'6800 Almeda Rd',      city:'Houston, TX',     prices:{regular:3.12,midgrade:3.42,premium:3.72,diesel:3.52}, rating:4.6, numReviews:298, amenities:['C-Store','Pay at Pump','Restrooms','Food Court','Car Wash','Air'], reporter:'qtFan', reportedAgo:'45 min', cash:true, dist:3.7, reviews:[{user:'QTLover',stars:5,text:'Best gas station chain. Spotless restrooms!',date:'1 day ago'}] }
-    ];
+    // Global stations by country
+    var stationsByCountry = {
+      US: [
+        { name:'Shell', domain:'shell.com', addr:'2100 Main St', city:'Houston, TX', prices:{regular:3.29,midgrade:3.59,premium:3.89,diesel:3.69}, rating:4.2, numReviews:128, amenities:['C-Store','Pay at Pump','Restrooms','Car Wash'], reporter:'priceHunter42', reportedAgo:'3h', cash:true, dist:0.8, reviews:[{user:'FuelFan',stars:5,text:'Great prices and clean.',date:'2 days ago'}] },
+        { name:'Costco', domain:'costco.com', addr:'9700 Westheimer Rd', city:'Houston, TX', prices:{regular:2.99,midgrade:3.29,premium:3.59,diesel:3.39}, rating:4.7, numReviews:412, amenities:['Pay at Pump','Members Only'], reporter:'costcoFan', reportedAgo:'30m', cash:false, dist:5.2, reviews:[{user:'MemberMike',stars:5,text:'Best prices in town.',date:'6h ago'}] },
+        { name:'Buc-ee\'s', domain:'buc-ees.com', addr:'22814 Katy Fwy', city:'Katy, TX', prices:{regular:3.05,midgrade:3.35,premium:3.65,diesel:3.45}, rating:4.9, numReviews:1024, amenities:['C-Store','Restrooms','Car Wash','Food Court'], reporter:'bucFan', reportedAgo:'15m', cash:true, dist:28.0, reviews:[{user:'RoadTrip',stars:5,text:'BEST gas station ever!',date:'1 day ago'}] },
+        { name:'Wawa', domain:'wawa.com', addr:'1500 San Jacinto St', city:'Houston, TX', prices:{regular:3.18,midgrade:3.48,premium:3.78,diesel:3.58}, rating:4.4, numReviews:187, amenities:['C-Store','Pay at Pump','Food Court','ATM'], reporter:'wawaFan', reportedAgo:'1h', cash:true, dist:4.0, reviews:[{user:'SubLover',stars:5,text:'Amazing hoagies AND cheap gas!',date:'12h ago'}] },
+        { name:'QuikTrip', domain:'quiktrip.com', addr:'6800 Almeda Rd', city:'Houston, TX', prices:{regular:3.12,midgrade:3.42,premium:3.72,diesel:3.52}, rating:4.6, numReviews:298, amenities:['C-Store','Pay at Pump','Restrooms','Food Court','Car Wash'], reporter:'qtFan', reportedAgo:'45m', cash:true, dist:3.7, reviews:[{user:'QTLover',stars:5,text:'Spotless restrooms!',date:'1 day ago'}] },
+        { name:'7-Eleven', domain:'7-eleven.com', addr:'1200 Elgin St', city:'Houston, TX', prices:{regular:3.25,midgrade:3.55,premium:3.85,diesel:3.65}, rating:3.5, numReviews:41, amenities:['C-Store','Pay at Pump','ATM'], reporter:'slurpee7', reportedAgo:'8h', cash:true, dist:0.5, reviews:[] },
+        { name:'Circle K', domain:'circlek.com', addr:'2900 Shepherd Dr', city:'Houston, TX', prices:{regular:3.22,midgrade:3.52,premium:3.82,diesel:3.62}, rating:3.6, numReviews:54, amenities:['C-Store','Pay at Pump','Restrooms','ATM'], reporter:'nightOwl', reportedAgo:'4h', cash:false, dist:1.9, reviews:[] },
+        { name:'Sheetz', domain:'sheetz.com', addr:'4100 Liberty Ave', city:'Pittsburgh, PA', prices:{regular:3.35,midgrade:3.65,premium:3.95,diesel:3.75}, rating:4.5, numReviews:320, amenities:['C-Store','Food Court','Pay at Pump','Restrooms','Car Wash'], reporter:'sheetzer', reportedAgo:'2h', cash:true, dist:1.1, reviews:[{user:'PA_local',stars:5,text:'Best convenience store gas combo.',date:'1 day ago'}] },
+        { name:"Casey's", domain:'caseys.com', addr:'800 Main St', city:'Des Moines, IA', prices:{regular:3.08,midgrade:3.38,premium:3.68,diesel:3.48}, rating:4.3, numReviews:195, amenities:['C-Store','Pay at Pump','Pizza','Restrooms'], reporter:'pizzaGas', reportedAgo:'3h', cash:true, dist:2.3, reviews:[{user:'IA_fan',stars:5,text:'Their pizza is legendary.',date:'2 days ago'}] },
+        { name:'Chevron', domain:'chevron.com', addr:'4200 Montrose Blvd', city:'Houston, TX', prices:{regular:3.39,midgrade:3.69,premium:3.99,diesel:3.79}, rating:4.5, numReviews:203, amenities:['C-Store','Pay at Pump','EV Charging','Car Wash'], reporter:'saveOnGas', reportedAgo:'2h', cash:true, dist:2.1, reviews:[] },
+        { name:'BP', domain:'bp.com', addr:'550 Westheimer Rd', city:'Houston, TX', prices:{regular:3.19,midgrade:3.49,premium:3.79,diesel:3.59}, rating:4.0, numReviews:95, amenities:['C-Store','Pay at Pump','Restrooms'], reporter:'gasWatcher', reportedAgo:'5h', cash:false, dist:1.2, reviews:[] },
+        { name:'ExxonMobil', domain:'exxonmobil.com', addr:'1800 Richmond Ave', city:'Houston, TX', prices:{regular:3.35,midgrade:3.65,premium:3.95,diesel:3.75}, rating:3.8, numReviews:67, amenities:['C-Store','Pay at Pump'], reporter:'cheapGas99', reportedAgo:'1h', cash:true, dist:1.5, reviews:[] }
+      ],
+      CA: [
+        { name:'Petro-Canada', domain:'petro-canada.ca', addr:'120 King St W', city:'Toronto, ON', prices:{regular:1.62,midgrade:1.78,premium:1.92,diesel:1.69}, rating:4.1, numReviews:89, amenities:['C-Store','Car Wash','Pay at Pump'], reporter:'canFuel', reportedAgo:'2h', cash:true, dist:1.2, reviews:[{user:'TO_driver',stars:4,text:'Reliable. Good car wash.',date:'1 day ago'}] },
+        { name:'Shell', domain:'shell.com', addr:'250 Bay St', city:'Toronto, ON', prices:{regular:1.58,midgrade:1.74,premium:1.88,diesel:1.65}, rating:4.3, numReviews:145, amenities:['C-Store','Pay at Pump','Restrooms'], reporter:'shellTO', reportedAgo:'1h', cash:true, dist:0.8, reviews:[] },
+        { name:'Esso', domain:'esso.ca', addr:'400 Yonge St', city:'Toronto, ON', prices:{regular:1.60,midgrade:1.76,premium:1.90,diesel:1.67}, rating:3.9, numReviews:72, amenities:['C-Store','Pay at Pump'], reporter:'essoFan', reportedAgo:'3h', cash:false, dist:1.5, reviews:[] },
+        { name:'Circle K', domain:'circlek.com', addr:'88 Queens Quay', city:'Toronto, ON', prices:{regular:1.55,midgrade:1.71,premium:1.85,diesel:1.62}, rating:3.7, numReviews:56, amenities:['C-Store','Pay at Pump','ATM'], reporter:'CKcanada', reportedAgo:'4h', cash:true, dist:2.0, reviews:[] },
+        { name:'Costco', domain:'costco.com', addr:'35 Weston Rd', city:'Toronto, ON', prices:{regular:1.48,midgrade:1.64,premium:1.78,diesel:1.55}, rating:4.8, numReviews:320, amenities:['Pay at Pump','Members Only'], reporter:'costcoCA', reportedAgo:'45m', cash:false, dist:6.5, reviews:[] },
+        { name:'Pioneer', domain:'pioneerenergy.ca', addr:'600 Dundas St', city:'Toronto, ON', prices:{regular:1.56,midgrade:1.72,premium:1.86,diesel:1.63}, rating:3.8, numReviews:41, amenities:['C-Store','Pay at Pump'], reporter:'pionCA', reportedAgo:'5h', cash:true, dist:3.1, reviews:[] }
+      ],
+      MX: [
+        { name:'PEMEX', domain:'pemex.com', addr:'Av. Reforma 222', city:'Ciudad de México', prices:{regular:22.50,midgrade:24.20,premium:25.80,diesel:23.90}, rating:3.8, numReviews:210, amenities:['C-Store','Restrooms'], reporter:'mxFuel', reportedAgo:'1h', cash:true, dist:0.5, reviews:[{user:'CDMX_driver',stars:4,text:'Estación confiable.',date:'1 day ago'}] },
+        { name:'Oxxo Gas', domain:'oxxo.com', addr:'Blvd. Díaz Ordaz 100', city:'Monterrey, NL', prices:{regular:22.10,midgrade:23.80,premium:25.40,diesel:23.50}, rating:4.2, numReviews:156, amenities:['C-Store','Pay at Pump','Restrooms','ATM'], reporter:'oxxoMTY', reportedAgo:'2h', cash:true, dist:1.1, reviews:[] },
+        { name:'Shell', domain:'shell.com', addr:'Paseo Tabasco 1200', city:'Villahermosa, TAB', prices:{regular:22.80,midgrade:24.50,premium:26.10,diesel:24.20}, rating:4.0, numReviews:67, amenities:['C-Store','Pay at Pump','Car Wash'], reporter:'shellMX', reportedAgo:'3h', cash:true, dist:2.3, reviews:[] },
+        { name:'G500', domain:'g500.mx', addr:'Av. Universidad 500', city:'Puebla, PUE', prices:{regular:21.90,midgrade:23.60,premium:25.20,diesel:23.30}, rating:3.6, numReviews:38, amenities:['C-Store','Restrooms'], reporter:'g500fan', reportedAgo:'6h', cash:true, dist:3.8, reviews:[] }
+      ],
+      GB: [
+        { name:'Shell', domain:'shell.com', addr:'101 Marylebone Rd', city:'London', prices:{regular:1.42,midgrade:1.48,premium:1.55,diesel:1.47}, rating:4.2, numReviews:178, amenities:['C-Store','Pay at Pump','Restrooms','Car Wash'], reporter:'londonFuel', reportedAgo:'1h', cash:true, dist:0.6, reviews:[{user:'UK_driver',stars:4,text:'Pricey but reliable.',date:'1 day ago'}] },
+        { name:'BP', domain:'bp.com', addr:'55 Baker St', city:'London', prices:{regular:1.45,midgrade:1.51,premium:1.58,diesel:1.50}, rating:4.0, numReviews:132, amenities:['C-Store','Pay at Pump','Restrooms'], reporter:'bpUK', reportedAgo:'2h', cash:true, dist:1.0, reviews:[] },
+        { name:'Tesco', domain:'tesco.com', addr:'Aston Lane', city:'Birmingham', prices:{regular:1.38,midgrade:1.44,premium:1.51,diesel:1.43}, rating:4.5, numReviews:256, amenities:['C-Store','Pay at Pump'], reporter:'tescoDeals', reportedAgo:'30m', cash:true, dist:0.3, reviews:[{user:'Brum_saver',stars:5,text:'Cheapest in the area with Clubcard.',date:'6h ago'}] },
+        { name:'Sainsbury\'s', domain:'sainsburys.co.uk', addr:'Camden Rd', city:'London', prices:{regular:1.39,midgrade:1.45,premium:1.52,diesel:1.44}, rating:4.3, numReviews:198, amenities:['C-Store','Pay at Pump'], reporter:'nectarFan', reportedAgo:'1h', cash:true, dist:1.5, reviews:[] },
+        { name:'Asda', domain:'asda.com', addr:'Great Wilson St', city:'Leeds', prices:{regular:1.36,midgrade:1.42,premium:1.49,diesel:1.41}, rating:4.4, numReviews:215, amenities:['C-Store','Pay at Pump'], reporter:'asdaSave', reportedAgo:'2h', cash:true, dist:2.1, reviews:[] }
+      ],
+      DE: [
+        { name:'Aral', domain:'aral.de', addr:'Kurfürstendamm 30', city:'Berlin', prices:{regular:1.75,midgrade:1.82,premium:1.90,diesel:1.68}, rating:4.1, numReviews:167, amenities:['C-Store','Pay at Pump','Car Wash','Restrooms'], reporter:'berlinFuel', reportedAgo:'1h', cash:true, dist:0.9, reviews:[{user:'DE_driver',stars:4,text:'Zuverlässig und sauber.',date:'1 day ago'}] },
+        { name:'Shell', domain:'shell.com', addr:'Hauptstr. 45', city:'München', prices:{regular:1.78,midgrade:1.85,premium:1.93,diesel:1.71}, rating:4.3, numReviews:122, amenities:['C-Store','Pay at Pump','Car Wash'], reporter:'shellDE', reportedAgo:'2h', cash:true, dist:1.3, reviews:[] },
+        { name:'TotalEnergies', domain:'totalenergies.com', addr:'Alexanderplatz 8', city:'Berlin', prices:{regular:1.73,midgrade:1.80,premium:1.88,diesel:1.66}, rating:3.9, numReviews:85, amenities:['C-Store','Pay at Pump','EV Charging'], reporter:'totalDE', reportedAgo:'3h', cash:false, dist:1.8, reviews:[] },
+        { name:'Jet', domain:'jet.de', addr:'Schönhauser Allee 12', city:'Berlin', prices:{regular:1.69,midgrade:1.76,premium:1.84,diesel:1.62}, rating:3.7, numReviews:63, amenities:['Pay at Pump'], reporter:'jetDE', reportedAgo:'4h', cash:true, dist:2.5, reviews:[] }
+      ],
+      FR: [
+        { name:'TotalEnergies', domain:'totalenergies.com', addr:'12 Av. des Champs-Élysées', city:'Paris', prices:{regular:1.82,midgrade:1.89,premium:1.97,diesel:1.74}, rating:4.0, numReviews:195, amenities:['C-Store','Pay at Pump','Restrooms'], reporter:'parisFuel', reportedAgo:'1h', cash:true, dist:0.7, reviews:[{user:'FR_driver',stars:4,text:'Station propre et bien située.',date:'1 day ago'}] },
+        { name:'Leclerc', domain:'e-leclerc.com', addr:'ZAC des Ulis', city:'Les Ulis', prices:{regular:1.72,midgrade:1.79,premium:1.87,diesel:1.64}, rating:4.6, numReviews:340, amenities:['C-Store','Pay at Pump'], reporter:'leclercFan', reportedAgo:'30m', cash:true, dist:3.2, reviews:[] },
+        { name:'Carrefour', domain:'carrefour.fr', addr:'Route de Paris', city:'Lyon', prices:{regular:1.74,midgrade:1.81,premium:1.89,diesel:1.66}, rating:4.3, numReviews:210, amenities:['C-Store','Pay at Pump'], reporter:'carFR', reportedAgo:'2h', cash:true, dist:1.5, reviews:[] }
+      ],
+      ES: [
+        { name:'Repsol', domain:'repsol.com', addr:'Paseo de la Castellana 100', city:'Madrid', prices:{regular:1.65,midgrade:1.72,premium:1.80,diesel:1.58}, rating:4.2, numReviews:188, amenities:['C-Store','Pay at Pump','Car Wash'], reporter:'madridFuel', reportedAgo:'1h', cash:true, dist:0.8, reviews:[] },
+        { name:'Cepsa', domain:'cepsa.com', addr:'Gran Via 50', city:'Barcelona', prices:{regular:1.63,midgrade:1.70,premium:1.78,diesel:1.56}, rating:4.0, numReviews:145, amenities:['C-Store','Pay at Pump','Restrooms'], reporter:'cepsaBCN', reportedAgo:'2h', cash:true, dist:1.2, reviews:[] },
+        { name:'Shell', domain:'shell.com', addr:'Av. de América 25', city:'Madrid', prices:{regular:1.68,midgrade:1.75,premium:1.83,diesel:1.61}, rating:4.1, numReviews:92, amenities:['C-Store','Pay at Pump','Car Wash'], reporter:'shellES', reportedAgo:'3h', cash:true, dist:2.0, reviews:[] }
+      ],
+      IT: [
+        { name:'Eni', domain:'eni.com', addr:'Via Roma 100', city:'Roma', prices:{regular:1.79,midgrade:1.86,premium:1.94,diesel:1.72}, rating:4.0, numReviews:165, amenities:['C-Store','Pay at Pump'], reporter:'romaFuel', reportedAgo:'2h', cash:true, dist:1.0, reviews:[] },
+        { name:'Q8', domain:'q8.it', addr:'Corso Buenos Aires 30', city:'Milano', prices:{regular:1.77,midgrade:1.84,premium:1.92,diesel:1.70}, rating:3.9, numReviews:98, amenities:['C-Store','Pay at Pump'], reporter:'q8MI', reportedAgo:'3h', cash:true, dist:1.5, reviews:[] },
+        { name:'TotalEnergies', domain:'totalenergies.com', addr:'Via Veneto 55', city:'Roma', prices:{regular:1.81,midgrade:1.88,premium:1.96,diesel:1.74}, rating:3.8, numReviews:72, amenities:['C-Store','Pay at Pump','EV Charging'], reporter:'totalIT', reportedAgo:'4h', cash:false, dist:2.2, reviews:[] }
+      ],
+      BR: [
+        { name:'Petrobras', domain:'petrobras.com.br', addr:'Av. Paulista 1000', city:'São Paulo', prices:{regular:5.89,midgrade:6.20,premium:6.59,diesel:5.49}, rating:4.0, numReviews:280, amenities:['C-Store','Restrooms','Pay at Pump'], reporter:'spFuel', reportedAgo:'1h', cash:true, dist:0.6, reviews:[] },
+        { name:'Shell', domain:'shell.com', addr:'Rua Augusta 500', city:'São Paulo', prices:{regular:5.95,midgrade:6.28,premium:6.65,diesel:5.55}, rating:4.2, numReviews:190, amenities:['C-Store','Pay at Pump','Car Wash'], reporter:'shellBR', reportedAgo:'2h', cash:true, dist:1.1, reviews:[] },
+        { name:'Ipiranga', domain:'ipiranga.com.br', addr:'Av. Brasil 800', city:'Rio de Janeiro', prices:{regular:5.79,midgrade:6.10,premium:6.49,diesel:5.39}, rating:4.1, numReviews:215, amenities:['C-Store','Restrooms','Pay at Pump'], reporter:'ipiFan', reportedAgo:'3h', cash:true, dist:1.8, reviews:[] }
+      ],
+      AR: [
+        { name:'YPF', domain:'ypf.com', addr:'Av. 9 de Julio 1200', city:'Buenos Aires', prices:{regular:850,midgrade:920,premium:995,diesel:810}, rating:4.0, numReviews:320, amenities:['C-Store','Restrooms','Pay at Pump'], reporter:'ypfBA', reportedAgo:'1h', cash:true, dist:0.5, reviews:[] },
+        { name:'Shell', domain:'shell.com', addr:'Av. Santa Fe 3000', city:'Buenos Aires', prices:{regular:870,midgrade:940,premium:1015,diesel:830}, rating:4.2, numReviews:185, amenities:['C-Store','Pay at Pump','Car Wash'], reporter:'shellAR', reportedAgo:'2h', cash:true, dist:1.3, reviews:[] }
+      ],
+      CO: [
+        { name:'Terpel', domain:'terpel.com', addr:'Calle 100 #15-20', city:'Bogotá', prices:{regular:14200,midgrade:15100,premium:15900,diesel:11800}, rating:4.1, numReviews:175, amenities:['C-Store','Restrooms','Pay at Pump'], reporter:'terpelBog', reportedAgo:'2h', cash:true, dist:0.8, reviews:[] },
+        { name:'Primax', domain:'primax.com.co', addr:'Av. Boyacá #80-50', city:'Bogotá', prices:{regular:14050,midgrade:14950,premium:15750,diesel:11650}, rating:3.9, numReviews:92, amenities:['C-Store','Pay at Pump'], reporter:'primaxCO', reportedAgo:'4h', cash:true, dist:2.5, reviews:[] }
+      ],
+      AU: [
+        { name:'Ampol', domain:'ampol.com.au', addr:'George St 200', city:'Sydney, NSW', prices:{regular:1.85,midgrade:1.95,premium:2.10,diesel:1.90}, rating:4.0, numReviews:165, amenities:['C-Store','Pay at Pump','Car Wash'], reporter:'sydFuel', reportedAgo:'1h', cash:true, dist:0.9, reviews:[{user:'AU_driver',stars:4,text:'Decent prices for Sydney.',date:'1 day ago'}] },
+        { name:'7-Eleven', domain:'7-eleven.com', addr:'Bourke St 100', city:'Melbourne, VIC', prices:{regular:1.82,midgrade:1.92,premium:2.07,diesel:1.87}, rating:3.7, numReviews:98, amenities:['C-Store','Pay at Pump','ATM'], reporter:'711AU', reportedAgo:'2h', cash:true, dist:1.5, reviews:[] },
+        { name:'Shell', domain:'shell.com', addr:'Pacific Hwy 300', city:'Sydney, NSW', prices:{regular:1.88,midgrade:1.98,premium:2.13,diesel:1.93}, rating:4.3, numReviews:142, amenities:['C-Store','Pay at Pump','Restrooms','Car Wash'], reporter:'shellAU', reportedAgo:'45m', cash:true, dist:2.0, reviews:[] }
+      ],
+      JP: [
+        { name:'ENEOS', domain:'eneos.co.jp', addr:'Shibuya 2-chome', city:'Tokyo', prices:{regular:175,midgrade:185,premium:195,diesel:162}, rating:4.3, numReviews:340, amenities:['Pay at Pump','Restrooms','Car Wash'], reporter:'tokyoFuel', reportedAgo:'1h', cash:true, dist:0.5, reviews:[] },
+        { name:'Idemitsu', domain:'idemitsu.com', addr:'Shinjuku 3-chome', city:'Tokyo', prices:{regular:173,midgrade:183,premium:193,diesel:160}, rating:4.1, numReviews:210, amenities:['Pay at Pump','Restrooms'], reporter:'ideFan', reportedAgo:'2h', cash:true, dist:1.2, reviews:[] },
+        { name:'Cosmo', domain:'cosmo-oil.co.jp', addr:'Roppongi 5-chome', city:'Tokyo', prices:{regular:176,midgrade:186,premium:196,diesel:163}, rating:4.0, numReviews:125, amenities:['Pay at Pump','Restrooms','Car Wash'], reporter:'cosmoJP', reportedAgo:'3h', cash:true, dist:1.8, reviews:[] }
+      ],
+      KR: [
+        { name:'GS Caltex', domain:'gscaltex.com', addr:'Gangnam-daero 100', city:'Seoul', prices:{regular:1680,midgrade:1780,premium:1890,diesel:1540}, rating:4.2, numReviews:215, amenities:['C-Store','Pay at Pump','Car Wash'], reporter:'seoulFuel', reportedAgo:'1h', cash:true, dist:0.7, reviews:[] },
+        { name:'SK Energy', domain:'skenergy.com', addr:'Jongno 50', city:'Seoul', prices:{regular:1670,midgrade:1770,premium:1880,diesel:1530}, rating:4.0, numReviews:180, amenities:['C-Store','Pay at Pump','Restrooms'], reporter:'skFan', reportedAgo:'2h', cash:true, dist:1.5, reviews:[] }
+      ],
+      IN: [
+        { name:'Indian Oil', domain:'iocl.com', addr:'Connaught Place', city:'New Delhi', prices:{regular:96.72,midgrade:102,premium:108,diesel:89.62}, rating:4.0, numReviews:450, amenities:['C-Store','Restrooms','Pay at Pump'], reporter:'delhiFuel', reportedAgo:'1h', cash:true, dist:0.4, reviews:[] },
+        { name:'Bharat Petroleum', domain:'bharatpetroleum.in', addr:'MG Road', city:'Bangalore', prices:{regular:101.94,midgrade:108,premium:114,diesel:87.89}, rating:4.1, numReviews:320, amenities:['C-Store','Restrooms','ATM'], reporter:'bpclFan', reportedAgo:'2h', cash:true, dist:1.0, reviews:[] },
+        { name:'HP', domain:'hindustanpetroleum.com', addr:'Marine Drive', city:'Mumbai', prices:{regular:103.44,midgrade:110,premium:116,diesel:89.97}, rating:3.9, numReviews:278, amenities:['C-Store','Pay at Pump','Restrooms'], reporter:'hpMumbai', reportedAgo:'3h', cash:true, dist:1.5, reviews:[] },
+        { name:'Reliance', domain:'reliancepetroleum.com', addr:'Link Road', city:'Mumbai', prices:{regular:95.30,midgrade:101,premium:107,diesel:87.20}, rating:4.3, numReviews:195, amenities:['C-Store','Pay at Pump','Restrooms','ATM'], reporter:'rilFuel', reportedAgo:'1h', cash:true, dist:2.2, reviews:[] }
+      ],
+      AE: [
+        { name:'ADNOC', domain:'adnoc.ae', addr:'Sheikh Zayed Rd', city:'Dubai', prices:{regular:2.99,midgrade:3.10,premium:3.23,diesel:2.92}, rating:4.5, numReviews:380, amenities:['C-Store','Pay at Pump','Car Wash','Restrooms','EV Charging'], reporter:'dubaiFuel', reportedAgo:'30m', cash:true, dist:0.3, reviews:[{user:'UAE_driver',stars:5,text:'Best prices. Always clean.',date:'6h ago'}] },
+        { name:'ENOC', domain:'enoc.com', addr:'Al Wasl Road', city:'Dubai', prices:{regular:2.99,midgrade:3.10,premium:3.23,diesel:2.92}, rating:4.3, numReviews:245, amenities:['C-Store','Pay at Pump','Restrooms'], reporter:'enocFan', reportedAgo:'1h', cash:true, dist:1.0, reviews:[] },
+        { name:'Emarat', domain:'emarat.ae', addr:'Jumeirah Beach Rd', city:'Dubai', prices:{regular:2.99,midgrade:3.10,premium:3.23,diesel:2.92}, rating:4.1, numReviews:168, amenities:['C-Store','Pay at Pump','Restrooms','Car Wash'], reporter:'emaratDXB', reportedAgo:'2h', cash:true, dist:2.5, reviews:[] }
+      ],
+      SA: [
+        { name:'Saudi Aramco', domain:'aramco.com', addr:'King Fahd Rd', city:'Riyadh', prices:{regular:2.18,midgrade:2.33,premium:2.68,diesel:1.44}, rating:4.4, numReviews:520, amenities:['C-Store','Pay at Pump','Restrooms','Car Wash'], reporter:'riyadhFuel', reportedAgo:'1h', cash:true, dist:0.5, reviews:[] },
+        { name:'Shell', domain:'shell.com', addr:'Olaya St', city:'Riyadh', prices:{regular:2.18,midgrade:2.33,premium:2.68,diesel:1.44}, rating:4.2, numReviews:180, amenities:['C-Store','Pay at Pump','Restrooms'], reporter:'shellSA', reportedAgo:'2h', cash:true, dist:1.8, reviews:[] }
+      ],
+      TR: [
+        { name:'OPET', domain:'opet.com.tr', addr:'Bağdat Cad.', city:'Istanbul', prices:{regular:42.50,midgrade:44.80,premium:47.20,diesel:41.30}, rating:4.2, numReviews:225, amenities:['C-Store','Pay at Pump','Restrooms','Car Wash'], reporter:'istFuel', reportedAgo:'1h', cash:true, dist:0.8, reviews:[] },
+        { name:'Petrol Ofisi', domain:'petrolofisi.com.tr', addr:'Istiklal Cad.', city:'Istanbul', prices:{regular:42.30,midgrade:44.60,premium:47.00,diesel:41.10}, rating:4.0, numReviews:178, amenities:['C-Store','Pay at Pump','Restrooms'], reporter:'poFan', reportedAgo:'2h', cash:true, dist:1.5, reviews:[] }
+      ],
+      NG: [
+        { name:'NNPC Retail', domain:'nnpcgroup.com', addr:'Ikorodu Rd', city:'Lagos', prices:{regular:617,midgrade:650,premium:700,diesel:900}, rating:3.8, numReviews:420, amenities:['C-Store','Restrooms'], reporter:'lagosFuel', reportedAgo:'1h', cash:true, dist:0.5, reviews:[] },
+        { name:'Total', domain:'totalenergies.com', addr:'Victoria Island', city:'Lagos', prices:{regular:620,midgrade:655,premium:705,diesel:910}, rating:4.0, numReviews:185, amenities:['C-Store','Restrooms','Pay at Pump'], reporter:'totalNG', reportedAgo:'3h', cash:true, dist:2.0, reviews:[] },
+        { name:'Oando', domain:'oandoplc.com', addr:'Allen Ave', city:'Lagos', prices:{regular:615,midgrade:648,premium:698,diesel:895}, rating:3.9, numReviews:142, amenities:['C-Store','Restrooms'], reporter:'oandoFan', reportedAgo:'4h', cash:true, dist:3.2, reviews:[] }
+      ],
+      ZA: [
+        { name:'Engen', domain:'engen.co.za', addr:'Jan Smuts Ave', city:'Johannesburg', prices:{regular:24.20,midgrade:25.50,premium:26.80,diesel:22.50}, rating:4.1, numReviews:210, amenities:['C-Store','Restrooms','Pay at Pump','Car Wash'], reporter:'joFuel', reportedAgo:'2h', cash:true, dist:0.7, reviews:[] },
+        { name:'Shell', domain:'shell.com', addr:'Nelson Mandela Dr', city:'Cape Town', prices:{regular:24.40,midgrade:25.70,premium:27.00,diesel:22.70}, rating:4.3, numReviews:175, amenities:['C-Store','Pay at Pump','Restrooms','Car Wash'], reporter:'shellZA', reportedAgo:'1h', cash:true, dist:1.2, reviews:[] },
+        { name:'Sasol', domain:'sasol.com', addr:'Rivonia Rd', city:'Johannesburg', prices:{regular:24.10,midgrade:25.40,premium:26.70,diesel:22.40}, rating:4.0, numReviews:135, amenities:['C-Store','Restrooms','Pay at Pump'], reporter:'sasolFan', reportedAgo:'3h', cash:true, dist:2.5, reviews:[] }
+      ]
+    };
 
+    var activeCountry = 'US';
+    var stations = stationsByCountry[activeCountry] || [];
     var activeFuelType = 'regular';
     var activeSort = 'price';
     var activeBrandFilter = 'all';
     var fuelHistory = JSON.parse(localStorage.getItem('ost_fuel_history') || '[]');
     var selectedStation = null;
+
+    // Country change
+    var countrySel = document.getElementById('fuel2Country');
+    if (countrySel) {
+      countrySel.addEventListener('change', function() {
+        activeCountry = countrySel.value;
+        stations = stationsByCountry[activeCountry] || [];
+        activeBrandFilter = 'all';
+        renderBrandTabs();
+        renderStations();
+        // Update brand wheel highlights
+        var carousel = document.getElementById('fuel2BrandCarousel');
+        if (carousel) {
+          carousel.querySelectorAll('.fuel2-wheel-item').forEach(function(item) {
+            var found = stations.some(function(s) { return s.name === item.dataset.brand; });
+            item.classList.toggle('dimmed', !found);
+            item.classList.toggle('active', false);
+          });
+        }
+      });
+    }
 
     // DOM refs
     var locInput = document.getElementById('fuel2SearchLoc');
@@ -6564,9 +6685,9 @@
     var closeDetail = document.getElementById('fuel2DetailClose');
     var brandTabsWrap = document.getElementById('fuel2BrandTabs');
 
-    // Build brand tabs from stations
     function renderBrandTabs() {
       if (!brandTabsWrap) return;
+      brandTabsWrap.innerHTML = '';
       var seen = {};
       var allTab = document.createElement('button');
       allTab.className = 'fuel2-brand-tab fuel2-brand-tab-active';
@@ -6616,13 +6737,10 @@
       });
     });
 
-    // Find button
     findBtn.addEventListener('click', function() { renderStations(); });
     locInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') renderStations(); });
 
-    function getStationPrice(s) {
-      return s.prices[activeFuelType] || s.prices.regular;
-    }
+    function getStationPrice(s) { return s.prices[activeFuelType] || s.prices.regular; }
 
     function sortedStations() {
       var q = (locInput.value || '').toLowerCase();
@@ -6639,19 +6757,21 @@
       return filtered;
     }
 
-    function starsHTML(rating, full) {
+    function starsHTML(rating) {
       var html = '';
       var rounded = Math.round(rating);
-      for (var i = 1; i <= 5; i++) {
-        html += i <= rounded ? '<span class="fuel2-star">&#9733;</span>' : '<span class="fuel2-star-empty">&#9733;</span>';
-      }
+      for (var i = 1; i <= 5; i++) html += i <= rounded ? '<span class="fuel2-star">&#9733;</span>' : '<span class="fuel2-star-empty">&#9733;</span>';
       return html;
     }
+
+    // Currency units by country
+    var currUnits = { US:'$/gal', CA:'$/L', MX:'MXN/L', GB:'£/L', DE:'€/L', FR:'€/L', ES:'€/L', IT:'€/L', BR:'R$/L', AR:'ARS/L', CO:'COP/gal', AU:'$/L', JP:'¥/L', KR:'₩/L', IN:'₹/L', AE:'AED/L', SA:'SAR/L', TR:'₺/L', NG:'₦/L', ZA:'ZAR/L' };
 
     function renderStations() {
       var list = sortedStations();
       resultCount.textContent = list.length;
       stationList.innerHTML = '';
+      var unit = currUnits[activeCountry] || '$/gal';
       list.forEach(function(s, idx) {
         var price = getStationPrice(s);
         var row = document.createElement('div');
@@ -6667,8 +6787,8 @@
             '<div class="fuel2-station-amenities">' + s.amenities.map(function(a) { return '<span class="fuel2-amenity">' + a + '</span>'; }).join('') + '</div>' +
           '</div>' +
           '<div class="fuel2-station-price-col">' +
-            '<div class="fuel2-station-price">$' + price.toFixed(2) + '</div>' +
-            '<div class="fuel2-station-price-unit">/gal</div>' +
+            '<div class="fuel2-station-price">' + price.toFixed(2) + '</div>' +
+            '<div class="fuel2-station-price-unit">' + unit + '</div>' +
             '<div class="fuel2-station-reporter">' + s.reporter + '</div>' +
             '<div class="fuel2-station-time">' + s.reportedAgo + ' ago</div>' +
             (s.cash ? '<div class="fuel2-station-cash">Cash discount</div>' : '') +
@@ -6684,35 +6804,23 @@
       selectedStation = s;
       detailOverlay.style.display = 'flex';
       document.body.style.overflow = 'hidden';
-
       document.getElementById('fuel2DetLogo').src = logoSrc(s.domain);
       document.getElementById('fuel2DetLogo').onerror = function() { logoFallback(this, s.domain, s.name, '#0071CE'); };
       document.getElementById('fuel2DetName').textContent = s.name;
       document.getElementById('fuel2DetAddr').textContent = s.addr + ', ' + s.city;
       document.getElementById('fuel2DetStars').innerHTML = starsHTML(s.rating);
       document.getElementById('fuel2DetRevCount').textContent = s.numReviews + ' reviews';
-
-      // Prices grid
       var prGrid = document.getElementById('fuel2DetPrices');
       prGrid.innerHTML = '';
       ['regular','midgrade','premium','diesel'].forEach(function(ft) {
         var box = document.createElement('div');
         box.className = 'fuel2-det-price-box';
-        box.innerHTML = '<div class="fuel2-det-price-type">' + ft.charAt(0).toUpperCase() + ft.slice(1) + '</div><div class="fuel2-det-price-val">$' + (s.prices[ft] || 0).toFixed(2) + '</div>';
+        box.innerHTML = '<div class="fuel2-det-price-type">' + ft.charAt(0).toUpperCase() + ft.slice(1) + '</div><div class="fuel2-det-price-val">' + (s.prices[ft] || 0).toFixed(2) + '</div>';
         prGrid.appendChild(box);
       });
-
-      // Amenities
       var amenEl = document.getElementById('fuel2DetAmenities');
       amenEl.innerHTML = '';
-      s.amenities.forEach(function(a) {
-        var span = document.createElement('span');
-        span.className = 'fuel2-det-amenity';
-        span.textContent = a;
-        amenEl.appendChild(span);
-      });
-
-      // Gallery — generate placeholder station images
+      s.amenities.forEach(function(a) { var span = document.createElement('span'); span.className = 'fuel2-det-amenity'; span.textContent = a; amenEl.appendChild(span); });
       var gallery = document.getElementById('fuel2DetGallery');
       if (gallery) {
         gallery.innerHTML = '';
@@ -6720,51 +6828,34 @@
         var labels = ['Pumps','Store','Car Wash','Entrance','Night'];
         for (var gi = 0; gi < 5; gi++) {
           var gimg = document.createElement('img');
-          gimg.src = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160"><rect fill="' + colors[gi % colors.length] + '" width="240" height="160" rx="8"/><text x="120" y="70" text-anchor="middle" fill="rgba(255,255,255,.7)" font-size="14" font-weight="700" font-family="Inter,sans-serif">' + s.name + '</text><text x="120" y="100" text-anchor="middle" fill="rgba(255,255,255,.35)" font-size="12" font-family="Inter,sans-serif">' + labels[gi] + '</text></svg>');
+          gimg.src = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160"><rect fill="' + colors[gi] + '" width="240" height="160" rx="8"/><text x="120" y="70" text-anchor="middle" fill="rgba(255,255,255,.7)" font-size="14" font-weight="700" font-family="Inter,sans-serif">' + s.name + '</text><text x="120" y="100" text-anchor="middle" fill="rgba(255,255,255,.35)" font-size="12" font-family="Inter,sans-serif">' + labels[gi] + '</text></svg>');
           gimg.alt = s.name + ' ' + labels[gi];
           gallery.appendChild(gimg);
         }
       }
-
-      // External links — Yelp, Google, Maps
       var extLinks = document.getElementById('fuel2ExtLinks');
       if (extLinks) {
         var yelpQ = encodeURIComponent(s.name + ' ' + s.addr + ' ' + s.city);
         var gQ = encodeURIComponent(s.name + ' ' + s.addr + ' ' + s.city);
         var mapsQ = encodeURIComponent(s.addr + ', ' + s.city);
-        extLinks.innerHTML =
-          '<a class="fuel2-yelp-link" href="https://www.yelp.com/search?find_desc=' + yelpQ + '" target="_blank" rel="noopener">&#11088; Yelp Reviews</a>' +
+        extLinks.innerHTML = '<a class="fuel2-yelp-link" href="https://www.yelp.com/search?find_desc=' + yelpQ + '" target="_blank" rel="noopener">&#11088; Yelp</a>' +
           '<a class="fuel2-google-link" href="https://www.google.com/search?q=' + gQ + '+reviews" target="_blank" rel="noopener">&#128270; Google</a>' +
           '<a class="fuel2-maps-link" href="https://www.google.com/maps/search/' + mapsQ + '" target="_blank" rel="noopener">&#128205; Directions</a>';
       }
-
-      // Pre-fill pay
       var priceField = document.getElementById('fuel2DetPrice');
       priceField.value = getStationPrice(s).toFixed(2);
       updateDetailCalc();
-
-      // Render reviews
       renderDetailReviews(s);
-
-      // Report fuel type
       document.getElementById('fuel2ReportFuel').value = activeFuelType;
-
-      // Reset flow
       var flow = document.getElementById('fuel2DetFlow');
       flow.style.display = 'none';
       flow.querySelectorAll('.fuel2-dfs').forEach(function(st) { st.classList.remove('f2-active', 'f2-done'); });
       document.getElementById('fuel2DetPayBtn').disabled = false;
     }
 
-    closeDetail.addEventListener('click', function() {
-      detailOverlay.style.display = 'none';
-      document.body.style.overflow = '';
-    });
-    detailOverlay.addEventListener('click', function(e) {
-      if (e.target === detailOverlay) { closeDetail.click(); }
-    });
+    closeDetail.addEventListener('click', function() { detailOverlay.style.display = 'none'; document.body.style.overflow = ''; });
+    detailOverlay.addEventListener('click', function(e) { if (e.target === detailOverlay) closeDetail.click(); });
 
-    // Pay calc in detail
     var galEl = document.getElementById('fuel2DetGal');
     var priceDetEl = document.getElementById('fuel2DetPrice');
     var usdOut = document.getElementById('fuel2DetUSD');
@@ -6772,10 +6863,7 @@
     var rwOut = document.getElementById('fuel2DetRw');
     var payBtn = document.getElementById('fuel2DetPayBtn');
 
-    function getRewardRate() {
-      var c = fuelHistory.length;
-      return c >= 500 ? 0.08 : c >= 100 ? 0.05 : 0.03;
-    }
+    function getRewardRate() { var c = fuelHistory.length; return c >= 500 ? 0.08 : c >= 100 ? 0.05 : 0.03; }
 
     function updateDetailCalc() {
       var g = parseFloat(galEl.value) || 0;
@@ -6788,16 +6876,11 @@
         ostOut.textContent = ost.toFixed(2) + ' OST';
         rwOut.textContent = '+' + (ost * rate).toFixed(2) + ' OST';
         payBtn.disabled = false;
-      } else {
-        ostOut.textContent = '0 OST';
-        rwOut.textContent = '+0 OST';
-        payBtn.disabled = true;
-      }
+      } else { ostOut.textContent = '0 OST'; rwOut.textContent = '+0 OST'; payBtn.disabled = true; }
     }
     galEl.addEventListener('input', updateDetailCalc);
     priceDetEl.addEventListener('input', updateDetailCalc);
 
-    // Pay flow
     payBtn.addEventListener('click', function() {
       payBtn.disabled = true;
       var flow = document.getElementById('fuel2DetFlow');
@@ -6815,13 +6898,7 @@
           var ost = safeOstPrice() > 0 ? cost / safeOstPrice() : 0;
           var rate = getRewardRate();
           var reward = ost * rate;
-          fuelHistory.push({
-            station: selectedStation ? selectedStation.name : 'Unknown',
-            domain: selectedStation ? selectedStation.domain : '',
-            gallons: g, pricePerGal: p, usd: cost.toFixed(2),
-            ost: ost.toFixed(2), reward: reward.toFixed(2),
-            date: new Date().toLocaleDateString()
-          });
+          fuelHistory.push({ station: selectedStation ? selectedStation.name : 'Unknown', domain: selectedStation ? selectedStation.domain : '', gallons: g, pricePerGal: p, usd: cost.toFixed(2), ost: ost.toFixed(2), reward: reward.toFixed(2), date: new Date().toLocaleDateString() });
           localStorage.setItem('ost_fuel_history', JSON.stringify(fuelHistory));
           renderRewards();
           toast('&#9981;', 'Payment complete! +' + reward.toFixed(2) + ' OST cashback.');
@@ -6831,45 +6908,29 @@
       next();
     });
 
-    // Reviews rendering
     function renderDetailReviews(s) {
       var container = document.getElementById('fuel2DetReviews');
       container.innerHTML = '';
       (s.reviews || []).forEach(function(r) {
         var div = document.createElement('div');
         div.className = 'fuel2-review';
-        div.innerHTML = '<div class="fuel2-review-user">' + r.user + '</div>' +
-          '<div class="fuel2-review-stars-sm">' + starsHTML(r.stars) + '</div>' +
-          '<div class="fuel2-review-text">' + r.text + '</div>' +
-          '<div class="fuel2-review-date">' + (r.date || '') + '</div>';
+        div.innerHTML = '<div class="fuel2-review-user">' + r.user + '</div><div class="fuel2-review-stars-sm">' + starsHTML(r.stars) + '</div><div class="fuel2-review-text">' + r.text + '</div><div class="fuel2-review-date">' + (r.date || '') + '</div>';
         container.appendChild(div);
       });
     }
 
-    // Post review
     var reviewText = document.getElementById('fuel2ReviewText');
     var reviewStarsWrap = document.getElementById('fuel2ReviewStars');
     var reviewSend = document.getElementById('fuel2ReviewSend');
     var userReviewRating = 5;
-
     if (reviewStarsWrap) {
       var starSpans = reviewStarsWrap.querySelectorAll('span');
       starSpans.forEach(function(sp, idx) {
-        sp.addEventListener('click', function() {
-          userReviewRating = idx + 1;
-          starSpans.forEach(function(s, j) {
-            s.classList.toggle('fuel2-star-lit', j < userReviewRating);
-          });
-        });
-        sp.addEventListener('mouseenter', function() {
-          starSpans.forEach(function(s, j) { s.classList.toggle('fuel2-star-lit', j <= idx); });
-        });
+        sp.addEventListener('click', function() { userReviewRating = idx + 1; starSpans.forEach(function(s, j) { s.classList.toggle('fuel2-star-lit', j < userReviewRating); }); });
+        sp.addEventListener('mouseenter', function() { starSpans.forEach(function(s, j) { s.classList.toggle('fuel2-star-lit', j <= idx); }); });
       });
-      reviewStarsWrap.addEventListener('mouseleave', function() {
-        starSpans.forEach(function(s, j) { s.classList.toggle('fuel2-star-lit', j < userReviewRating); });
-      });
+      reviewStarsWrap.addEventListener('mouseleave', function() { starSpans.forEach(function(s, j) { s.classList.toggle('fuel2-star-lit', j < userReviewRating); }); });
     }
-
     if (reviewSend) {
       reviewSend.addEventListener('click', function() {
         var text = reviewText.value.trim();
@@ -6883,7 +6944,6 @@
       });
     }
 
-    // Report price
     var reportBtn = document.getElementById('fuel2ReportBtn');
     if (reportBtn) {
       reportBtn.addEventListener('click', function() {
@@ -6899,7 +6959,6 @@
       });
     }
 
-    // Rewards bar
     function renderRewards() {
       var count = fuelHistory.length;
       var tier = count >= 500 ? 'Gold' : count >= 100 ? 'Silver' : 'Bronze';
@@ -6923,6 +6982,118 @@
     // Initial render
     renderStations();
     renderRewards();
+
+    // ================================================================
+    // OIL BARREL PRICE CHART (Brent Crude since Feb 2025)
+    // ================================================================
+    (function drawOilChart() {
+      var canvas = document.getElementById('fuel2OilChart');
+      if (!canvas || !canvas.getContext) return;
+      var ctx = canvas.getContext('2d');
+      var dpr = window.devicePixelRatio || 1;
+      var rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = 220 * dpr;
+      canvas.style.width = rect.width + 'px';
+      canvas.style.height = '220px';
+      ctx.scale(dpr, dpr);
+      var W = rect.width;
+      var H = 220;
+      var pad = { top: 20, right: 20, bottom: 30, left: 50 };
+
+      // Monthly Brent crude data Feb 2025 - Apr 2026 (approximate)
+      var data = [
+        { month: 'Feb 25', price: 74.5 },
+        { month: 'Mar 25', price: 72.8 },
+        { month: 'Apr 25', price: 66.2 },
+        { month: 'May 25', price: 64.8 },
+        { month: 'Jun 25', price: 68.3 },
+        { month: 'Jul 25', price: 71.5 },
+        { month: 'Aug 25', price: 73.2 },
+        { month: 'Sep 25', price: 69.8 },
+        { month: 'Oct 25', price: 72.1 },
+        { month: 'Nov 25', price: 75.4 },
+        { month: 'Dec 25', price: 78.9 },
+        { month: 'Jan 26', price: 80.2 },
+        { month: 'Feb 26', price: 82.7 },
+        { month: 'Mar 26', price: 89.1 },
+        { month: 'Apr 26', price: 85.4 }
+      ];
+
+      var prices = data.map(function(d) { return d.price; });
+      var minP = Math.floor(Math.min.apply(null, prices) - 5);
+      var maxP = Math.ceil(Math.max.apply(null, prices) + 5);
+      var chartW = W - pad.left - pad.right;
+      var chartH = H - pad.top - pad.bottom;
+
+      function x(i) { return pad.left + (i / (data.length - 1)) * chartW; }
+      function y(p) { return pad.top + chartH - ((p - minP) / (maxP - minP)) * chartH; }
+
+      // Grid lines
+      ctx.strokeStyle = 'rgba(255,255,255,.06)';
+      ctx.lineWidth = 1;
+      for (var gl = minP; gl <= maxP; gl += 5) {
+        var gy = y(gl);
+        ctx.beginPath(); ctx.moveTo(pad.left, gy); ctx.lineTo(W - pad.right, gy); ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,.3)';
+        ctx.font = '10px Inter, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText('$' + gl, pad.left - 6, gy + 3);
+      }
+
+      // X labels
+      ctx.textAlign = 'center';
+      ctx.fillStyle = 'rgba(255,255,255,.3)';
+      data.forEach(function(d, i) {
+        if (i % 2 === 0 || i === data.length - 1) ctx.fillText(d.month, x(i), H - 6);
+      });
+
+      // Gradient fill
+      var lg = ctx.createLinearGradient(0, pad.top, 0, H - pad.bottom);
+      lg.addColorStop(0, 'rgba(255,152,0,.2)');
+      lg.addColorStop(1, 'rgba(255,152,0,0)');
+      ctx.beginPath();
+      ctx.moveTo(x(0), y(data[0].price));
+      data.forEach(function(d, i) { ctx.lineTo(x(i), y(d.price)); });
+      ctx.lineTo(x(data.length - 1), H - pad.bottom);
+      ctx.lineTo(x(0), H - pad.bottom);
+      ctx.closePath();
+      ctx.fillStyle = lg;
+      ctx.fill();
+
+      // Line
+      ctx.beginPath();
+      ctx.moveTo(x(0), y(data[0].price));
+      data.forEach(function(d, i) { ctx.lineTo(x(i), y(d.price)); });
+      ctx.strokeStyle = '#ff9800';
+      ctx.lineWidth = 2.5;
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+
+      // Dots
+      data.forEach(function(d, i) {
+        ctx.beginPath();
+        ctx.arc(x(i), y(d.price), 3.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#ff9800';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,.4)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      });
+
+      // Update live price display
+      var latest = data[data.length - 1];
+      var prev = data[data.length - 2];
+      var priceEl = document.getElementById('fuel2OilPrice');
+      var changeEl = document.getElementById('fuel2OilChange');
+      if (priceEl) priceEl.textContent = '$' + latest.price.toFixed(1);
+      if (changeEl) {
+        var diff = latest.price - prev.price;
+        var pct = ((diff / prev.price) * 100).toFixed(1);
+        changeEl.textContent = (diff >= 0 ? '+' : '') + diff.toFixed(1) + ' (' + (diff >= 0 ? '+' : '') + pct + '%)';
+        changeEl.className = 'fuel2-oil-change ' + (diff >= 0 ? 'up' : 'down');
+      }
+    })();
   })();
 
   // ========================================================================
@@ -8627,7 +8798,7 @@
   })();
 
   /* ================================================================== */
-  /* v47: GAS STATION BRAND CAROUSEL + COUNTRY DATA                     */
+  /* v49: GAS STATION BRAND WHEEL + GLOBAL COUNTRY DATA                 */
   /* ================================================================== */
   (function initFuelCarousel() {
     var carousel = document.getElementById('fuel2BrandCarousel');
@@ -8638,33 +8809,73 @@
       { name:'BP', domain:'bp.com' },
       { name:'ExxonMobil', domain:'exxonmobil.com' },
       { name:'Chevron', domain:'chevron.com' },
-      { name:'Valero', domain:'valero.com' },
-      { name:'Costco Gas', domain:'costco.com' },
+      { name:'Costco', domain:'costco.com' },
       { name:'Circle K', domain:'circlek.com' },
       { name:'7-Eleven', domain:'7-eleven.com' },
       { name:"Buc-ee's", domain:'buc-ees.com' },
-      { name:'Murphy USA', domain:'murphyusa.com' },
-      { name:'Sunoco', domain:'sunoco.com' },
-      { name:'Marathon', domain:'marathon.com' },
-      { name:'TotalEnergies', domain:'totalenergies.com' },
       { name:'Wawa', domain:'wawa.com' },
       { name:'QuikTrip', domain:'quiktrip.com' },
       { name:'Sheetz', domain:'sheetz.com' },
-      { name:'Pilot', domain:'pilotflyingj.com' },
-      { name:"Love's", domain:'loves.com' },
-      { name:'RaceTrac', domain:'racetrac.com' },
-      { name:'Speedway', domain:'speedway.com' },
-      { name:'ARCO', domain:'arco.com' },
-      { name:'Mobil', domain:'mobil.com' },
-      { name:'Conoco', domain:'conoco.com' },
-      { name:'Phillips 66', domain:'phillips66.com' },
-      { name:'Casey\'s', domain:'caseys.com' },
-      { name:'Kwik Trip', domain:'kwiktrip.com' },
-      { name:'Cumberland', domain:'cumberlandfarms.com' },
-      { name:'Esso', domain:'esso.com' },
+      { name:"Casey's", domain:'caseys.com' },
+      { name:'TotalEnergies', domain:'totalenergies.com' },
       { name:'Petro-Canada', domain:'petro-canada.ca' },
-      { name:'PEMEX', domain:'pemex.com' }
+      { name:'Esso', domain:'esso.com' },
+      { name:'PEMEX', domain:'pemex.com' },
+      { name:'Oxxo Gas', domain:'oxxo.com' },
+      { name:'Repsol', domain:'repsol.com' },
+      { name:'Cepsa', domain:'cepsa.com' },
+      { name:'Aral', domain:'aral.de' },
+      { name:'Tesco', domain:'tesco.com' },
+      { name:"Sainsbury's", domain:'sainsburys.co.uk' },
+      { name:'Asda', domain:'asda.com' },
+      { name:'Leclerc', domain:'e-leclerc.com' },
+      { name:'Carrefour', domain:'carrefour.fr' },
+      { name:'Eni', domain:'eni.com' },
+      { name:'Q8', domain:'q8.it' },
+      { name:'Petrobras', domain:'petrobras.com.br' },
+      { name:'Ipiranga', domain:'ipiranga.com.br' },
+      { name:'YPF', domain:'ypf.com' },
+      { name:'Terpel', domain:'terpel.com' },
+      { name:'Ampol', domain:'ampol.com.au' },
+      { name:'ENEOS', domain:'eneos.co.jp' },
+      { name:'Idemitsu', domain:'idemitsu.com' },
+      { name:'GS Caltex', domain:'gscaltex.com' },
+      { name:'SK Energy', domain:'skenergy.com' },
+      { name:'Indian Oil', domain:'iocl.com' },
+      { name:'Bharat Petroleum', domain:'bharatpetroleum.in' },
+      { name:'Reliance', domain:'reliancepetroleum.com' },
+      { name:'ADNOC', domain:'adnoc.ae' },
+      { name:'ENOC', domain:'enoc.com' },
+      { name:'Saudi Aramco', domain:'aramco.com' },
+      { name:'OPET', domain:'opet.com.tr' },
+      { name:'NNPC Retail', domain:'nnpcgroup.com' },
+      { name:'Engen', domain:'engen.co.za' },
+      { name:'Sasol', domain:'sasol.com' }
     ];
+
+    // Country brand mapping for dimming
+    var countryBrands = {
+      US: ['Shell','BP','ExxonMobil','Chevron','Costco','Circle K','7-Eleven',"Buc-ee's",'Wawa','QuikTrip','Sheetz',"Casey's"],
+      CA: ['Shell','Petro-Canada','Esso','Circle K','Costco','Pioneer'],
+      MX: ['PEMEX','Oxxo Gas','Shell','G500'],
+      GB: ['Shell','BP','Tesco',"Sainsbury's",'Asda'],
+      DE: ['Aral','Shell','TotalEnergies','Jet'],
+      FR: ['TotalEnergies','Leclerc','Carrefour'],
+      ES: ['Repsol','Cepsa','Shell'],
+      IT: ['Eni','Q8','TotalEnergies'],
+      BR: ['Petrobras','Shell','Ipiranga'],
+      AR: ['YPF','Shell'],
+      CO: ['Terpel','Primax'],
+      AU: ['Ampol','7-Eleven','Shell'],
+      JP: ['ENEOS','Idemitsu','Cosmo'],
+      KR: ['GS Caltex','SK Energy'],
+      IN: ['Indian Oil','Bharat Petroleum','HP','Reliance'],
+      AE: ['ADNOC','ENOC','Emarat'],
+      SA: ['Saudi Aramco','Shell'],
+      TR: ['OPET','Petrol Ofisi'],
+      NG: ['NNPC Retail','Total','Oando'],
+      ZA: ['Engen','Shell','Sasol']
+    };
 
     function logoUrl(domain) {
       return 'https://logo.clearbit.com/' + domain + '?size=72';
@@ -8672,7 +8883,8 @@
 
     stationBrands.forEach(function(b) {
       var item = document.createElement('div');
-      item.className = 'fuel2-carousel-item';
+      item.className = 'fuel2-wheel-item';
+      item.dataset.brand = b.name;
       item.innerHTML = '<img src="' + logoUrl(b.domain) + '" alt="' + b.name + '" onerror="this.style.display=\'none\'"><span>' + b.name + '</span>';
       item.addEventListener('click', function() {
         var searchEl = document.getElementById('fuel2SearchLoc');
@@ -8680,45 +8892,30 @@
           searchEl.value = b.name;
           searchEl.dispatchEvent(new Event('input', { bubbles: true }));
         }
-        carousel.querySelectorAll('.fuel2-carousel-item').forEach(function(c) { c.classList.remove('active'); });
+        carousel.querySelectorAll('.fuel2-wheel-item').forEach(function(c) { c.classList.remove('active'); });
         item.classList.add('active');
-        // Trigger find
         var findBtn = document.getElementById('fuel2FindBtn');
         if (findBtn) findBtn.click();
       });
       carousel.appendChild(item);
     });
 
-    // Country-based station data
-    var countryStations = {
-      US: ['Shell','BP','ExxonMobil','Chevron','Valero','Costco Gas','Circle K','7-Eleven',"Buc-ee's",'Murphy USA','Sunoco','Marathon','Wawa','QuikTrip','Sheetz'],
-      CA: ['Shell','Petro-Canada','Esso','Circle K','7-Eleven','Costco Gas','Pioneer','Ultramar','Co-op','Husky'],
-      MX: ['PEMEX','Shell','BP','Mobil','Total','G500','Oxxo Gas','Redco'],
-      GB: ['Shell','BP','Esso','Texaco','Tesco','Sainsbury\'s','Morrisons','Asda','Jet'],
-      DE: ['Shell','Aral','Total','Esso','Jet','Star','Agip','OMV','HEM'],
-      FR: ['TotalEnergies','Shell','Esso','Carrefour','Leclerc','Intermarché','Auchan','BP'],
-      BR: ['Petrobras','Shell','Ipiranga','Ale','Raízen','BP','TotalEnergies'],
-      AU: ['Shell','BP','Caltex','7-Eleven','United','Ampol','Costco','Puma'],
-      JP: ['ENEOS','Shell','Idemitsu','Cosmo','Solato','Mobil'],
-      IN: ['Indian Oil','Bharat Petroleum','HP','Shell','Reliance','Nayara'],
-      AE: ['ADNOC','ENOC','Emarat','Shell','Total']
-    };
-
+    // Dim non-matching brands on country change
     var countrySel = document.getElementById('fuel2Country');
     if (countrySel) {
-      countrySel.addEventListener('change', function() {
+      function updateWheel() {
         var code = countrySel.value;
-        var brands = countryStations[code] || countryStations.US;
-        // Update carousel to show country-relevant stations first
-        carousel.querySelectorAll('.fuel2-carousel-item').forEach(function(item) {
-          var name = item.querySelector('span').textContent;
-          item.style.order = brands.indexOf(name) >= 0 ? '0' : '1';
-          item.style.opacity = brands.indexOf(name) >= 0 ? '1' : '.4';
+        var brands = countryBrands[code] || countryBrands.US;
+        carousel.querySelectorAll('.fuel2-wheel-item').forEach(function(item) {
+          var name = item.dataset.brand;
+          var match = brands.indexOf(name) >= 0;
+          item.classList.toggle('dimmed', !match);
+          // Move matching to front
+          item.style.order = match ? '0' : '1';
         });
-        // Also filter station list
-        var findBtn = document.getElementById('fuel2FindBtn');
-        if (findBtn) findBtn.click();
-      });
+      }
+      countrySel.addEventListener('change', updateWheel);
+      updateWheel();
     }
   })();
 

@@ -26,7 +26,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="style.css?v=48">
+  <link rel="stylesheet" href="style.css?v=49">
 </head>
 <body>
 
@@ -1155,14 +1155,23 @@
         <div class="gc2-note">&#9888; Live trading powered by OST Exchange. Card verification required. Subject to local laws.</div>
       </div>
 
-      <!-- ==================== OST FUEL FINDER (gasbuddy-style) ==================== -->
+      <!-- ==================== OST FUEL & CONVENIENCE (global) ==================== -->
       <div class="fuel2 demos-panel" id="fuelSection" data-dtab="fuel" style="display:none">
 
         <!-- Hero -->
         <div class="fuel2-hero">
-          <div class="fuel2-hero-badge">&#9981; Live Prices</div>
-          <h3>Never Pay Full Price for Gas Again.</h3>
-          <p class="fuel2-hero-sub">Find the cheapest fuel prices near you. Pay with OST &amp; earn cashback.</p>
+          <div class="fuel2-hero-badge">&#9981; Global Fuel &amp; Convenience</div>
+          <h3>Pump with OST. Save Worldwide.</h3>
+          <p class="fuel2-hero-sub">Pay for fuel &amp; convenience with OST at 50+ brands across 20 countries. Earn cashback on every fill-up.</p>
+
+          <!-- OST Incentive Banner -->
+          <div class="fuel2-incentive-banner">
+            <div class="fuel2-incentive-icon">&#128176;</div>
+            <div class="fuel2-incentive-text">
+              <strong>Pay with OST &amp; save up to 8%</strong>
+              <span>Swap any currency &rarr; OST &rarr; pay at the pump. Earn tiered cashback + XP rewards.</span>
+            </div>
+          </div>
 
           <!-- Country Selector -->
           <div class="fuel2-country-row">
@@ -1174,17 +1183,26 @@
               <option value="GB">&#127468;&#127463; United Kingdom</option>
               <option value="DE">&#127465;&#127466; Germany</option>
               <option value="FR">&#127467;&#127479; France</option>
+              <option value="ES">&#127466;&#127480; Spain</option>
+              <option value="IT">&#127470;&#127481; Italy</option>
               <option value="BR">&#127463;&#127479; Brazil</option>
+              <option value="AR">&#127462;&#127479; Argentina</option>
+              <option value="CO">&#127464;&#127476; Colombia</option>
               <option value="AU">&#127462;&#127482; Australia</option>
               <option value="JP">&#127471;&#127477; Japan</option>
+              <option value="KR">&#127472;&#127479; South Korea</option>
               <option value="IN">&#127470;&#127475; India</option>
               <option value="AE">&#127462;&#127466; UAE</option>
+              <option value="SA">&#127480;&#127462; Saudi Arabia</option>
+              <option value="TR">&#127481;&#127479; Turkey</option>
+              <option value="NG">&#127475;&#127468; Nigeria</option>
+              <option value="ZA">&#127487;&#127462; South Africa</option>
             </select>
           </div>
 
           <div class="fuel2-search-bar">
             <input type="text" id="fuel2SearchLoc" class="fuel2-loc-input" placeholder="&#128269; Search city, zip, or station name...">
-            <button class="fuel2-find-btn" id="fuel2FindBtn">Find Gas</button>
+            <button class="fuel2-find-btn" id="fuel2FindBtn">Find Stations</button>
           </div>
           <div class="fuel2-fuel-tabs">
             <button class="fuel2-ft fuel2-ft-active" data-fuel="regular">Regular</button>
@@ -1194,15 +1212,13 @@
           </div>
         </div>
 
-        <!-- Station List -->
-        <!-- Scrolling Gas Station Brand Carousel -->
-        <div class="fuel2-brand-carousel-wrap">
-          <div class="fuel2-brand-carousel" id="fuel2BrandCarousel">
-            <!-- JS fills with scrolling brand logos -->
-          </div>
+        <!-- Scrolling Brand Wheel -->
+        <div class="fuel2-brand-wheel-wrap">
+          <div class="fuel2-brand-wheel" id="fuel2BrandCarousel"></div>
         </div>
         <div class="fuel2-brand-tabs" id="fuel2BrandTabs"></div>
 
+        <!-- Station List -->
         <div class="fuel2-list-head">
           <div class="fuel2-list-title">
             <span id="fuel2ResultCount">0</span> Stations Near You
@@ -1213,14 +1229,12 @@
             <button class="fuel2-sort" data-sort="distance">Nearest</button>
           </div>
         </div>
-
         <div class="fuel2-station-list" id="fuel2StationList"></div>
 
         <!-- Station Detail Modal -->
         <div class="fuel2-detail-overlay" id="fuel2DetailOverlay" style="display:none">
           <div class="fuel2-detail-modal" id="fuel2DetailModal">
             <button class="fuel2-detail-close" id="fuel2DetailClose">&times;</button>
-
             <div class="fuel2-det-top">
               <img class="fuel2-det-logo" id="fuel2DetLogo" alt="">
               <div class="fuel2-det-info">
@@ -1230,41 +1244,34 @@
                 <div class="fuel2-det-reviews-count" id="fuel2DetRevCount">0 reviews</div>
               </div>
             </div>
-
-            <!-- Prices grid -->
             <div class="fuel2-det-prices" id="fuel2DetPrices"></div>
-
-            <!-- Amenities -->
             <div class="fuel2-det-section">
               <div class="fuel2-det-section-title">Amenities</div>
               <div class="fuel2-det-amenities" id="fuel2DetAmenities"></div>
             </div>
-
-            <!-- Gallery -->
             <div class="fuel2-det-section">
               <div class="fuel2-det-section-title">Photos</div>
               <div class="fuel2-det-gallery" id="fuel2DetGallery"></div>
             </div>
-
-            <!-- External Links: Yelp, Google, Maps -->
             <div class="fuel2-det-section fuel2-yelp-section">
               <div class="fuel2-det-section-title">Explore &amp; Reviews</div>
               <div class="fuel2-ext-links" id="fuel2ExtLinks"></div>
             </div>
-
-            <!-- Pay with OST -->
             <div class="fuel2-det-pay">
-              <div class="fuel2-det-section-title">Pay with OST</div>
+              <div class="fuel2-det-section-title">&#128176; Pay with OST</div>
               <div class="fuel2-det-pay-fields">
-                <div class="fuel2-pf"><label>Gallons</label><input type="number" id="fuel2DetGal" class="fuel2-det-inp" placeholder="15" min="1" max="999" step="any"></div>
-                <div class="fuel2-pf"><label>$/gal</label><input type="number" id="fuel2DetPrice" class="fuel2-det-inp" placeholder="3.50" min="0.01" max="20" step="0.01" readonly></div>
+                <div class="fuel2-pf"><label>Gallons / Litres</label><input type="number" id="fuel2DetGal" class="fuel2-det-inp" placeholder="15" min="1" max="999" step="any"></div>
+                <div class="fuel2-pf"><label>Price/unit</label><input type="number" id="fuel2DetPrice" class="fuel2-det-inp" placeholder="3.50" min="0.01" max="20" step="0.01" readonly></div>
+              </div>
+              <div class="fuel2-det-ost-swap">
+                <span>&#128260; Swap any currency &rarr; OST instantly</span>
               </div>
               <div class="fuel2-det-totals">
                 <div class="fuel2-dtr"><span>Total</span><span id="fuel2DetUSD">$0.00</span></div>
                 <div class="fuel2-dtr fuel2-dtr-ost"><span>OST Cost</span><span id="fuel2DetOST">0 OST</span></div>
                 <div class="fuel2-dtr fuel2-dtr-rw"><span>&#127942; Cashback</span><span id="fuel2DetRw">+0 OST</span></div>
               </div>
-              <button class="fuel2-pay-btn" id="fuel2DetPayBtn" disabled>Pay with OST</button>
+              <button class="fuel2-pay-btn" id="fuel2DetPayBtn" disabled>&#9889; Pay with OST</button>
               <div class="fuel2-det-flow" id="fuel2DetFlow" style="display:none">
                 <div class="fuel2-dfs"><span class="fuel2-dfd"></span>Detecting NFC&hellip;</div>
                 <div class="fuel2-dfs"><span class="fuel2-dfd"></span>Authorising OST&hellip;</div>
@@ -1272,8 +1279,6 @@
                 <div class="fuel2-dfs"><span class="fuel2-dfd"></span>Complete &#10003;</div>
               </div>
             </div>
-
-            <!-- Reviews -->
             <div class="fuel2-det-section">
               <div class="fuel2-det-section-title">Reviews</div>
               <div class="fuel2-det-reviews" id="fuel2DetReviews"></div>
@@ -1285,16 +1290,12 @@
                 <button class="fuel2-review-send" id="fuel2ReviewSend">Post</button>
               </div>
             </div>
-
-            <!-- Report price -->
             <div class="fuel2-det-section">
               <div class="fuel2-det-section-title">Report a Price</div>
               <div class="fuel2-report-row">
                 <select id="fuel2ReportFuel" class="fuel2-det-inp fuel2-report-sel">
-                  <option value="regular">Regular</option>
-                  <option value="midgrade">Midgrade</option>
-                  <option value="premium">Premium</option>
-                  <option value="diesel">Diesel</option>
+                  <option value="regular">Regular</option><option value="midgrade">Midgrade</option>
+                  <option value="premium">Premium</option><option value="diesel">Diesel</option>
                 </select>
                 <input type="number" id="fuel2ReportPrice" class="fuel2-det-inp" placeholder="$0.00" min="0.01" max="20" step="0.01">
                 <button class="fuel2-report-btn" id="fuel2ReportBtn">Report</button>
@@ -1303,9 +1304,79 @@
           </div>
         </div>
 
+        <!-- Oil Price Graph -->
+        <div class="fuel2-oil-section">
+          <div class="fuel2-oil-header">
+            <div class="fuel2-oil-icon">&#128738;</div>
+            <div>
+              <h4>Crude Oil &mdash; Brent Barrel Price</h4>
+              <p>Since February 2025 &middot; Market context for fuel costs</p>
+            </div>
+            <div class="fuel2-oil-live">
+              <span class="fuel2-oil-price" id="fuel2OilPrice">$--</span>
+              <span class="fuel2-oil-change" id="fuel2OilChange">--</span>
+            </div>
+          </div>
+          <div class="fuel2-oil-chart-wrap">
+            <canvas id="fuel2OilChart" width="800" height="220"></canvas>
+          </div>
+          <div class="fuel2-oil-legend">
+            <span>&#128994; Brent Crude ($/barrel)</span>
+            <span class="fuel2-oil-range" id="fuel2OilRange">Feb 2025 &mdash; Apr 2026</span>
+          </div>
+        </div>
+
+        <!-- Strait of Hormuz News -->
+        <div class="fuel2-news-section">
+          <div class="fuel2-news-header">
+            <div class="fuel2-news-icon">&#128240;</div>
+            <div>
+              <h4>Strait of Hormuz &amp; Energy News</h4>
+              <p>Critical shipping lane &middot; 21% of global oil supply</p>
+            </div>
+          </div>
+          <div class="fuel2-news-list" id="fuel2NewsList">
+            <div class="fuel2-news-item">
+              <div class="fuel2-news-date">Apr 10, 2026</div>
+              <div class="fuel2-news-title">Iran warns of Hormuz closure amid rising tensions with U.S. Navy</div>
+              <div class="fuel2-news-src">Reuters</div>
+            </div>
+            <div class="fuel2-news-item">
+              <div class="fuel2-news-date">Apr 8, 2026</div>
+              <div class="fuel2-news-title">Oil tanker insurance premiums surge 35% for Strait of Hormuz routes</div>
+              <div class="fuel2-news-src">Bloomberg</div>
+            </div>
+            <div class="fuel2-news-item">
+              <div class="fuel2-news-date">Apr 5, 2026</div>
+              <div class="fuel2-news-title">OPEC+ emergency meeting called as Hormuz disruption fears grow</div>
+              <div class="fuel2-news-src">Al Jazeera</div>
+            </div>
+            <div class="fuel2-news-item">
+              <div class="fuel2-news-date">Apr 2, 2026</div>
+              <div class="fuel2-news-title">UAE activates Fujairah bypass pipeline to reduce Hormuz dependency</div>
+              <div class="fuel2-news-src">Financial Times</div>
+            </div>
+            <div class="fuel2-news-item">
+              <div class="fuel2-news-date">Mar 28, 2026</div>
+              <div class="fuel2-news-title">U.S. deploys additional carrier group to Persian Gulf as tensions escalate</div>
+              <div class="fuel2-news-src">AP News</div>
+            </div>
+            <div class="fuel2-news-item">
+              <div class="fuel2-news-date">Mar 22, 2026</div>
+              <div class="fuel2-news-title">Brent crude spikes to $89/barrel on Strait of Hormuz mine threat reports</div>
+              <div class="fuel2-news-src">CNBC</div>
+            </div>
+          </div>
+        </div>
+
         <!-- Rewards bar -->
         <div class="fuel2-rw-bar-wrap">
-          <div class="fuel2-rw-title">&#127942; Rewards Progress</div>
+          <div class="fuel2-rw-title">&#127942; OST Fuel Rewards</div>
+          <div class="fuel2-rw-tiers">
+            <span class="fuel2-rw-tier-badge" data-tier="bronze">&#129353; Bronze 3%</span>
+            <span class="fuel2-rw-tier-badge" data-tier="silver">&#129352; Silver 5%</span>
+            <span class="fuel2-rw-tier-badge" data-tier="gold">&#129351; Gold 8%</span>
+          </div>
           <div class="fuel2-rw-bar"><div class="fuel2-rw-fill" id="fuel2RwFill" style="width:0%"></div></div>
           <div class="fuel2-rw-meta">
             <span id="fuel2RwTier">&#129353; Bronze &middot; 3%</span>
@@ -1314,7 +1385,7 @@
           </div>
         </div>
 
-        <div class="fuel2-note">&#9888; Partnerships in development. Rewards subject to agreements. NFC settles on Solana when online.</div>
+        <div class="fuel2-note">&#9888; Global partnerships expanding. Pay at any supported station via OST NFC or QR. Cashback settled on Solana.</div>
       </div>
 
     </div>
@@ -3951,6 +4022,6 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=48"></script>
+  <script src="app.js?v=49"></script>
 </body>
 </html>
