@@ -6637,7 +6637,7 @@
       ],
       NG: [
         { name:'NNPC Retail', domain:'nnpcgroup.com', addr:'Ikorodu Rd', city:'Lagos', prices:{regular:617,midgrade:650,premium:700,diesel:900}, rating:3.8, numReviews:420, amenities:['C-Store','Restrooms'], reporter:'lagosFuel', reportedAgo:'1h', cash:true, dist:0.5, reviews:[] },
-        { name:'Total', domain:'totalenergies.com', addr:'Victoria Island', city:'Lagos', prices:{regular:620,midgrade:655,premium:705,diesel:910}, rating:4.0, numReviews:185, amenities:['C-Store','Restrooms','Pay at Pump'], reporter:'totalNG', reportedAgo:'3h', cash:true, dist:2.0, reviews:[] },
+        { name:'TotalEnergies', domain:'totalenergies.com', addr:'Victoria Island', city:'Lagos', prices:{regular:620,midgrade:655,premium:705,diesel:910}, rating:4.0, numReviews:185, amenities:['C-Store','Restrooms','Pay at Pump'], reporter:'totalNG', reportedAgo:'3h', cash:true, dist:2.0, reviews:[] },
         { name:'Oando', domain:'oandoplc.com', addr:'Allen Ave', city:'Lagos', prices:{regular:615,midgrade:648,premium:698,diesel:895}, rating:3.9, numReviews:142, amenities:['C-Store','Restrooms'], reporter:'oandoFan', reportedAgo:'4h', cash:true, dist:3.2, reviews:[] }
       ],
       ZA: [
@@ -6664,15 +6664,6 @@
         activeBrandFilter = 'all';
         renderBrandTabs();
         renderStations();
-        // Update brand wheel highlights
-        var carousel = document.getElementById('fuel2BrandCarousel');
-        if (carousel) {
-          carousel.querySelectorAll('.fuel2-wheel-item').forEach(function(item) {
-            var found = stations.some(function(s) { return s.name === item.dataset.brand; });
-            item.classList.toggle('dimmed', !found);
-            item.classList.toggle('active', false);
-          });
-        }
       });
     }
 
@@ -8850,7 +8841,16 @@
       { name:'OPET', domain:'opet.com.tr' },
       { name:'NNPC Retail', domain:'nnpcgroup.com' },
       { name:'Engen', domain:'engen.co.za' },
-      { name:'Sasol', domain:'sasol.com' }
+      { name:'Sasol', domain:'sasol.com' },
+      { name:'Pioneer', domain:'pioneerenergy.ca' },
+      { name:'G500', domain:'g500.mx' },
+      { name:'Jet', domain:'jet.de' },
+      { name:'Cosmo', domain:'cosmo-oil.co.jp' },
+      { name:'HP', domain:'hindustanpetroleum.com' },
+      { name:'Emarat', domain:'emarat.ae' },
+      { name:'Petrol Ofisi', domain:'petrolofisi.com.tr' },
+      { name:'Oando', domain:'oandoplc.com' },
+      { name:'Primax', domain:'primax.com.co' }
     ];
 
     // Country brand mapping for dimming
@@ -8873,7 +8873,7 @@
       AE: ['ADNOC','ENOC','Emarat'],
       SA: ['Saudi Aramco','Shell'],
       TR: ['OPET','Petrol Ofisi'],
-      NG: ['NNPC Retail','Total','Oando'],
+      NG: ['NNPC Retail','TotalEnergies','Oando'],
       ZA: ['Engen','Shell','Sasol']
     };
 
