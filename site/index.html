@@ -26,7 +26,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="style.css?v=50">
+  <link rel="stylesheet" href="style.css?v=51">
 </head>
 <body>
 
@@ -2002,8 +2002,9 @@
 <!-- ================================================================== -->
   <section id="ai" class="section section-space">
     <div class="container">
-      <h2 class="section-title" data-i18n="ai.title">Power for Every Intelligence</h2>
-      <p class="section-subtitle" data-i18n="ai.sub">We welcome AI agents, bots, servers, and every form of digital intelligence.</p>
+      <div class="ai-hero-badge">&#129302; Machine Intelligence</div>
+      <h2 class="section-title" style="background:linear-gradient(135deg,#a78bfa,#6d9fff,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Power for Every Intelligence</h2>
+      <p class="section-subtitle">We welcome AI agents, bots, servers, and every form of digital intelligence.</p>
 
       <!-- Server/Bot Hook Banner -->
       <div class="ai-hook-banner">
@@ -2405,8 +2406,17 @@
   <!-- ================================================================== -->
   <section id="censorship" class="section section-alt section-space">
     <div class="container">
-      <h2 class="section-title" data-i18n="censor.title">&#128683; Internet Censorship Is Happening Now</h2>
-      <p class="section-subtitle" data-i18n="censor.sub">Real events. Real people. OST is the answer to digital oppression.</p>
+      <div class="cens-hero-badge">&#128683; Active Threat</div>
+      <h2 class="section-title" style="background:linear-gradient(135deg,#ef4444,#f59e0b,#ef4444);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Internet Censorship Is Happening Now</h2>
+      <p class="section-subtitle">Real events. Real people. OST is the answer to digital oppression.</p>
+
+      <!-- Severity Map Bar -->
+      <div class="cens-severity-bar">
+        <div class="cens-sev-item"><span class="cens-sev-dot" style="background:#ef4444;"></span> Critical — Full shutdowns</div>
+        <div class="cens-sev-item"><span class="cens-sev-dot" style="background:#f59e0b;"></span> High — Heavy filtering</div>
+        <div class="cens-sev-item"><span class="cens-sev-dot" style="background:#eab308;"></span> Medium — Content regulation</div>
+        <div class="cens-sev-stat">55+ countries affected &bull; 2.6B people without free internet</div>
+      </div>
 
       <!-- Live Censorship News Feed -->
       <div class="censorship-live-feed" id="censorshipNewsFeed">
@@ -2425,57 +2435,69 @@
       </div>
 
       <div class="censorship-real" style="margin-top:48px;">
-        <h3 style="text-align:center;font-size:1.5rem;margin-bottom:8px;">&#128683; Internet Censorship Is Happening Now</h3>
-        <p class="text-muted" style="text-align:center;margin-bottom:28px;">These are not hypotheticals. These are real events from the last 24 months.</p>
         <div class="censorship-grid">
           <div class="censorship-case sr">
+            <img src="https://images.unsplash.com/photo-1485081669829-bacb8c7bb1f3?w=600&h=250&fit=crop" alt="EU parliament" loading="lazy" class="cens-case-img">
+            <div class="cens-case-sev cens-sev-medium">Medium</div>
             <div class="cc-flag">&#127466;&#127482;</div>
-            <h4>European Union &mdash; Content Regulation</h4>
-            <p>The EU Digital Services Act (2024) requires platforms to remove &ldquo;illegal content&rdquo; within hours &mdash; but the definition varies by country. France and Germany demand removal of political speech that is legal in other EU states. Content that's legal in Portugal gets censored in Poland. <strong>A European citizen in Spain cannot freely access content legal 500km away.</strong> Decentralized networks have no single chokepoint to enforce this.</p>
+            <h4>European Union — Content Regulation</h4>
+            <p>The EU Digital Services Act (2024) requires platforms to remove "illegal content" within hours — but the definition varies by country. Content legal in Portugal gets censored in Poland. <strong>A European citizen cannot freely access content legal 500km away.</strong></p>
             <div class="cc-source">Source: EU Digital Services Act, Regulation 2022/2065</div>
           </div>
           <div class="censorship-case sr">
+            <img src="https://images.unsplash.com/photo-1547448415-e9f5b28e570d?w=600&h=250&fit=crop" alt="Russia censorship" loading="lazy" class="cens-case-img">
+            <div class="cens-case-sev cens-sev-critical">Critical</div>
             <div class="cc-flag">&#127479;&#127482;</div>
-            <h4>Russia &mdash; Full Information Lockdown</h4>
-            <p>Since 2022, Russia blocked Twitter, Facebook, Instagram, and all independent news outlets. VPN usage skyrocketed but the government fined ISPs $50K+ for not blocking them. Sovereign internet law (RuNet) routes all traffic through government nodes. <strong>145 million people see only state-approved information.</strong></p>
-            <div class="cc-source">Source: Freedom House &ldquo;Freedom on the Net 2024&rdquo;</div>
+            <h4>Russia — Full Information Lockdown</h4>
+            <p>Since 2022, Russia blocked Twitter, Facebook, Instagram, and all independent news. VPN usage skyrocketed but ISPs fined $50K+ for not blocking them. Sovereign internet law routes all traffic through government nodes. <strong>145 million people see only state-approved information.</strong></p>
+            <div class="cc-source">Source: Freedom House "Freedom on the Net 2024"</div>
           </div>
           <div class="censorship-case sr">
+            <img src="https://images.unsplash.com/photo-1564475228765-f0c3292f3e5e?w=600&h=250&fit=crop" alt="Iran protests" loading="lazy" class="cens-case-img">
+            <div class="cens-case-sev cens-sev-critical">Critical</div>
             <div class="cc-flag">&#127470;&#127479;</div>
-            <h4>Iran &mdash; Complete Internet Shutdowns</h4>
-            <p>During the 2022&ndash;2023 Mahsa Amini protests, Iran killed internet access for 80+ million people for weeks. Authorities detected and blocked Tor, Signal, and most VPNs. Bank accounts of protesters were frozen instantly. <strong>No internet = no protest, no evidence, no money.</strong></p>
+            <h4>Iran — Complete Internet Shutdowns</h4>
+            <p>During the 2022–2023 Mahsa Amini protests, Iran killed internet for 80+ million people for weeks. Authorities blocked Tor, Signal, and most VPNs. Bank accounts of protesters frozen instantly. <strong>No internet = no protest, no evidence, no money.</strong></p>
             <div class="cc-source">Source: NetBlocks, OONI Explorer</div>
           </div>
           <div class="censorship-case sr">
+            <img src="https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=600&h=250&fit=crop" alt="China Great Wall" loading="lazy" class="cens-case-img">
+            <div class="cens-case-sev cens-sev-critical">Critical</div>
             <div class="cc-flag">&#127464;&#127475;</div>
-            <h4>China &mdash; The Great Firewall</h4>
-            <p>1.4 billion people cannot access Google, YouTube, Wikipedia, WhatsApp, or any Western social media. The Great Firewall uses deep packet inspection to detect and kill VPN connections. WeChat messages are surveilled, and activists face real-time tracking. <strong>The most sophisticated censorship machine ever built.</strong></p>
+            <h4>China — The Great Firewall</h4>
+            <p>1.4 billion people cannot access Google, YouTube, Wikipedia, or WhatsApp. Deep packet inspection kills VPN connections. WeChat messages surveilled, activists tracked in real-time. <strong>The most sophisticated censorship machine ever built.</strong></p>
             <div class="cc-source">Source: Citizen Lab, University of Toronto</div>
           </div>
           <div class="censorship-case sr">
+            <img src="https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=600&h=250&fit=crop" alt="India" loading="lazy" class="cens-case-img">
+            <div class="cens-case-sev cens-sev-high">High</div>
             <div class="cc-flag">&#127470;&#127475;</div>
-            <h4>India &mdash; Kashmir Blackout</h4>
-            <p>India imposed the longest-ever democracy internet shutdown in Kashmir &mdash; 552 days without full connectivity (2019&ndash;2021). In 2023, India led the world with 116 internet shutdowns in a single year, affecting hundreds of millions of people during elections and protests.</p>
-            <div class="cc-source">Source: Access Now &ldquo;#KeepItOn&rdquo; Report 2024</div>
+            <h4>India — Kashmir Blackout</h4>
+            <p>India imposed the longest-ever democracy internet shutdown in Kashmir — 552 days without full connectivity (2019–2021). In 2023, India led the world with 116 internet shutdowns in a single year.</p>
+            <div class="cc-source">Source: Access Now "#KeepItOn" Report 2024</div>
           </div>
           <div class="censorship-case sr">
+            <img src="https://images.unsplash.com/photo-1540611025311-01df3cef54b5?w=600&h=250&fit=crop" alt="Myanmar" loading="lazy" class="cens-case-img">
+            <div class="cens-case-sev cens-sev-critical">Critical</div>
             <div class="cc-flag">&#127474;&#127474;</div>
-            <h4>Myanmar &mdash; Military Junta Control</h4>
-            <p>After the 2021 coup, Myanmar's military junta throttled internet to near-zero, banned VPNs, and arrested journalists. Mobile data was cut entirely in conflict zones. 54 million people lost access to uncensored news. <strong>OST's offline payment system was designed for exactly this scenario.</strong></p>
+            <h4>Myanmar — Military Junta Control</h4>
+            <p>After the 2021 coup, Myanmar's military throttled internet to near-zero, banned VPNs, arrested journalists. Mobile data cut in conflict zones. 54 million people lost access to uncensored news. <strong>OST's offline payment system was designed for exactly this.</strong></p>
             <div class="cc-source">Source: Reporters Without Borders, IODA</div>
           </div>
         </div>
-        <div style="text-align:center;margin-top:32px;padding:24px;background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);">
-          <p style="font-size:1.1rem;font-weight:600;margin-bottom:8px;">OST's answer: Satellite-backed, decentralized internet + offline-capable payments.</p>
-          <p class="text-muted" style="font-size:.9rem;">OST is completely free to use &mdash; zero transaction fees, forever. Satellite infrastructure is funded by donations and investors who believe in universal access. Your money works offline via NFC and Bluetooth. When every other system fails, OST still works.</p>
+
+        <div class="cens-answer-card">
+          <div class="cens-answer-glow"></div>
+          <h4>&#128752; OST's Answer</h4>
+          <p>Satellite-backed, decentralized internet + offline-capable payments. Zero fees. When every other system fails, OST still works.</p>
         </div>
       </div>
 
       <!-- For Every Citizen Banner -->
       <div class="censorship-citizen-banner" style="margin-top:48px;">
         <div class="ccb-glow"></div>
-        <h3>&#127758; For Every Citizen &mdash; Protected From Censorship</h3>
-        <p>OST's satellite-backed payment infrastructure ensures that every citizen &mdash; from Tehran to Yangon, from Cairo to Moscow &mdash; can transact freely, privately, and without government interference.</p>
+        <h3>&#127758; For Every Citizen — Protected From Censorship</h3>
+        <p>OST's satellite-backed payment infrastructure ensures that every citizen — from Tehran to Yangon, from Cairo to Moscow — can transact freely, privately, and without government interference.</p>
         <div class="ccb-stats">
           <div class="ccb-stat"><span class="ccb-num">2.6B</span><span>Without Internet</span></div>
           <div class="ccb-stat"><span class="ccb-num">55+</span><span>Countries Censored</span></div>
@@ -2795,10 +2817,11 @@
   <!-- ================================================================== -->
   <section id="about" class="section section-alt section-space">
     <div class="container">
-      <h2 class="section-title">Our Mission</h2>
+      <div class="about-hero-badge">&#127919; Our Purpose</div>
+      <h2 class="section-title" style="background:linear-gradient(135deg,#6d9fff,#a78bfa,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Our Mission</h2>
       <p class="section-subtitle">Three pillars. One story. A thesis for the future of money and internet.</p>
 
-      <!-- Three Pillars of OST -->
+      <!-- Three Pillars of OST — Enhanced -->
       <div class="decentral-manifesto">
         <div class="decentral-icon-row">
           <div class="decentral-orb"><div class="decentral-orb-ring"></div>&#128274;</div>
@@ -2806,10 +2829,43 @@
           <div class="decentral-orb"><div class="decentral-orb-ring"></div>&#128752;</div>
         </div>
         <h3>The Three Pillars of OST</h3>
-        <div class="decentral-pillars">
-          <div class="pillar"><h4>Financial Sovereignty</h4><p>No bank, government, or corporation can freeze your OST. Your keys, your money. Zero-knowledge proofs make every transaction invisible to the world.</p></div>
-          <div class="pillar"><h4>Uncensored Internet</h4><p>OST funds satellite infrastructure so that anyone &mdash; from a student in Tehran to a journalist in Myanmar &mdash; can access the internet without government permission. No filters. No kill switches. No censorship.</p></div>
-          <div class="pillar"><h4>Universal Access</h4><p>Satellite infrastructure is funded by donations and investors &mdash; not by fees on your transactions. Low-earth orbit satellites bring internet + financial access to 2.6 billion people currently offline. When you use OST, you extend the network to someone who needs it.</p></div>
+        <div class="decentral-pillars" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;margin-top:24px;">
+          <div class="pillar" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:0;overflow:hidden;">
+            <img src="https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=600&h=200&fit=crop" alt="Financial sovereignty" loading="lazy" style="width:100%;height:140px;object-fit:cover;opacity:.7;">
+            <div style="padding:20px;">
+              <h4 style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">&#128274; Financial Sovereignty</h4>
+              <p>No bank, government, or corporation can freeze your OST. Your keys, your money. Zero-knowledge proofs make every transaction invisible to the world.</p>
+              <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+                <span style="font-size:.7rem;padding:3px 10px;background:rgba(109,159,255,.1);border:1px solid rgba(109,159,255,.2);border-radius:20px;color:var(--accent);">ZK Proofs</span>
+                <span style="font-size:.7rem;padding:3px 10px;background:rgba(109,159,255,.1);border:1px solid rgba(109,159,255,.2);border-radius:20px;color:var(--accent);">Self Custody</span>
+                <span style="font-size:.7rem;padding:3px 10px;background:rgba(109,159,255,.1);border:1px solid rgba(109,159,255,.2);border-radius:20px;color:var(--accent);">$0 Fees</span>
+              </div>
+            </div>
+          </div>
+          <div class="pillar" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:0;overflow:hidden;">
+            <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=600&h=200&fit=crop" alt="Uncensored internet" loading="lazy" style="width:100%;height:140px;object-fit:cover;opacity:.7;">
+            <div style="padding:20px;">
+              <h4 style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">&#127760; Uncensored Internet</h4>
+              <p>OST funds satellite infrastructure so anyone — from a student in Tehran to a journalist in Myanmar — can access the internet without government permission. No filters. No kill switches.</p>
+              <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+                <span style="font-size:.7rem;padding:3px 10px;background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.2);border-radius:20px;color:var(--accent2);">LEO Satellites</span>
+                <span style="font-size:.7rem;padding:3px 10px;background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.2);border-radius:20px;color:var(--accent2);">Mesh Network</span>
+                <span style="font-size:.7rem;padding:3px 10px;background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.2);border-radius:20px;color:var(--accent2);">Anti-Censorship</span>
+              </div>
+            </div>
+          </div>
+          <div class="pillar" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:0;overflow:hidden;">
+            <img src="https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=600&h=200&fit=crop" alt="Universal access" loading="lazy" style="width:100%;height:140px;object-fit:cover;opacity:.7;">
+            <div style="padding:20px;">
+              <h4 style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">&#128752; Universal Access</h4>
+              <p>Satellite infrastructure funded by donations and investors — not fees. Low-earth orbit satellites bring internet + financial access to 2.6 billion people currently offline.</p>
+              <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+                <span style="font-size:.7rem;padding:3px 10px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.2);border-radius:20px;color:var(--success);">2.6B Offline</span>
+                <span style="font-size:.7rem;padding:3px 10px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.2);border-radius:20px;color:var(--success);">NFC Payments</span>
+                <span style="font-size:.7rem;padding:3px 10px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.2);border-radius:20px;color:var(--success);">BLE Transfer</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -2975,44 +3031,89 @@
   <!-- ================================================================== -->
   <section id="roadmap" class="section section-space">
     <div class="container">
-      <h2 class="section-title" data-i18n="roadmap.title">&#128640; Roadmap &amp; Progress</h2>
-      <p class="section-subtitle" data-i18n="roadmap.sub">Where we are, what we've built, and what comes next.</p>
+      <div class="rm-hero-badge">&#127919; Live Progress</div>
+      <h2 class="section-title" style="background:linear-gradient(135deg,#34d399,#6d9fff,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Roadmap &amp; Progress</h2>
+      <p class="section-subtitle">Where we are, what we've built, and what comes next.</p>
 
-      <div class="growth-section" id="growthSection">
-        <h3>OST Roadmap &amp; Milestones</h3>
-        <p class="text-muted" style="margin-bottom:24px;">No fake projections. No promised moon prices. No fees. Here's what we've actually built and what comes next.</p>
-
-        <!-- Compact Roadmap -->
-        <div class="roadmap-compact">
-          <div class="rc-phase rc-done" onclick="this.classList.toggle('rc-expanded')">
-            <div class="rc-header"><span class="rc-dot done"></span><strong>Phase 1 &mdash; Foundation</strong><span class="rc-date">Q1&ndash;Q2 2025</span><span class="rc-toggle">&#9660;</span></div>
-            <ul class="rc-items"><li>&#9989; Anchor smart contract: 25 instructions</li><li>&#9989; Token-2022 mint with confidential transfers</li><li>&#9989; TypeScript SDK: 22 instruction builders</li><li>&#9989; Website: 3D globe, live prices, 11 languages</li><li>&#9989; Company registered in Panama</li><li>&#9989; Deployed to devnet</li></ul>
-          </div>
-          <div class="rc-phase rc-current rc-expanded" onclick="this.classList.toggle('rc-expanded')">
-            <div class="rc-header"><span class="rc-dot current"></span><strong>Phase 2 &mdash; Live Network</strong><span class="rc-date">Q3&ndash;Q4 2025</span><span class="rc-toggle">&#9660;</span></div>
-            <ul class="rc-items"><li>&#9899; Deploy to Solana mainnet-beta</li><li>&#9898; Security audit (external firm)</li><li>&#9898; Jupiter DEX listing</li><li>&#9898; CoinGecko &amp; CoinMarketCap</li><li>&#9898; First 1,000 wallets</li></ul>
-          </div>
-          <div class="rc-phase rc-future" onclick="this.classList.toggle('rc-expanded')">
-            <div class="rc-header"><span class="rc-dot future"></span><strong>Phase 3 &mdash; Adoption</strong><span class="rc-date">2026</span><span class="rc-toggle">&#9660;</span></div>
-            <ul class="rc-items"><li>&#9898; Mobile app (iOS + Android)</li><li>&#9898; Offline NFC/BLE payments live</li><li>&#9898; First merchant integrations</li><li>&#9898; OST Interchange Protocol v1</li><li>&#9898; First governance vote</li></ul>
-          </div>
-          <div class="rc-phase rc-future" onclick="this.classList.toggle('rc-expanded')">
-            <div class="rc-header"><span class="rc-dot future"></span><strong>Phase 4 &mdash; Sovereign</strong><span class="rc-date">2027&ndash;28</span><span class="rc-toggle">&#9660;</span></div>
-            <ul class="rc-items"><li>&#9898; OST Decentralized Exchange</li><li>&#9898; OST Cross-Chain Bridge</li><li>&#9898; Independent price discovery</li><li>&#9898; Payment gateway API</li></ul>
-          </div>
-          <div class="rc-phase rc-future" onclick="this.classList.toggle('rc-expanded')">
-            <div class="rc-header"><span class="rc-dot future"></span><strong>Phase 5 &mdash; Independence</strong><span class="rc-date">2029+</span><span class="rc-toggle">&#9660;</span></div>
-            <ul class="rc-items"><li>&#9898; OST Sovereign Network</li><li>&#9898; Own consensus mechanism</li><li>&#9898; Satellite constellation funded &amp; operational</li><li>&#9898; Interplanetary settlement layer</li></ul>
-          </div>
+      <!-- Visual Phase Cards -->
+      <div class="rm-phase-strip">
+        <div class="rm-phase-card rm-done">
+          <div class="rm-phase-num">01</div>
+          <div class="rm-phase-icon">&#128171;</div>
+          <h4>Foundation</h4>
+          <span class="rm-phase-date">Q1–Q2 2025</span>
+          <div class="rm-phase-status rm-status-done">&#9989; Complete</div>
+          <ul class="rm-phase-list">
+            <li>Anchor smart contract: 25 instructions</li>
+            <li>Token-2022 mint + confidential transfers</li>
+            <li>TypeScript SDK: 22 builders</li>
+            <li>Website: 3D globe, live prices, 11 langs</li>
+            <li>Panama S.A. registered</li>
+            <li>Deployed to devnet</li>
+          </ul>
         </div>
-
-        <div class="growth-metrics">
-          <div class="growth-metric"><span class="growth-metric-num">22</span><span class="growth-metric-label">On-Chain Instructions</span></div>
-          <div class="growth-metric"><span class="growth-metric-num">$0</span><span class="growth-metric-label">Transaction Fees Forever</span></div>
-          <div class="growth-metric"><span class="growth-metric-num">11</span><span class="growth-metric-label">Languages Supported</span></div>
+        <div class="rm-phase-card rm-current">
+          <div class="rm-phase-num">02</div>
+          <div class="rm-phase-icon">&#128640;</div>
+          <h4>Live Network</h4>
+          <span class="rm-phase-date">Q3–Q4 2025</span>
+          <div class="rm-phase-status rm-status-current">&#9899; In Progress</div>
+          <ul class="rm-phase-list">
+            <li>Deploy to Solana mainnet-beta</li>
+            <li>Security audit (external firm)</li>
+            <li>Jupiter DEX listing</li>
+            <li>CoinGecko &amp; CoinMarketCap</li>
+            <li>First 1,000 wallets</li>
+          </ul>
         </div>
-        <p class="text-muted" style="text-align:center;margin-top:16px;font-size:.85rem;">We don't predict prices. We ship code. The service is free. The market decides the rest.</p>
+        <div class="rm-phase-card rm-future">
+          <div class="rm-phase-num">03</div>
+          <div class="rm-phase-icon">&#127758;</div>
+          <h4>Adoption</h4>
+          <span class="rm-phase-date">2026</span>
+          <div class="rm-phase-status rm-status-future">&#9898; Planned</div>
+          <ul class="rm-phase-list">
+            <li>Mobile app (iOS + Android)</li>
+            <li>Offline NFC/BLE payments live</li>
+            <li>First merchant integrations</li>
+            <li>OST Interchange Protocol v1</li>
+            <li>First governance vote</li>
+          </ul>
+        </div>
+        <div class="rm-phase-card rm-future">
+          <div class="rm-phase-num">04</div>
+          <div class="rm-phase-icon">&#128752;</div>
+          <h4>Sovereign</h4>
+          <span class="rm-phase-date">2027–28</span>
+          <div class="rm-phase-status rm-status-future">&#9898; Planned</div>
+          <ul class="rm-phase-list">
+            <li>OST Decentralized Exchange</li>
+            <li>OST Cross-Chain Bridge</li>
+            <li>Independent price discovery</li>
+            <li>Payment gateway API</li>
+          </ul>
+        </div>
+        <div class="rm-phase-card rm-future">
+          <div class="rm-phase-num">05</div>
+          <div class="rm-phase-icon">&#128760;</div>
+          <h4>Independence</h4>
+          <span class="rm-phase-date">2029+</span>
+          <div class="rm-phase-status rm-status-future">&#9898; Vision</div>
+          <ul class="rm-phase-list">
+            <li>OST Sovereign Network</li>
+            <li>Own consensus mechanism</li>
+            <li>Satellite constellation operational</li>
+            <li>Interplanetary settlement layer</li>
+          </ul>
+        </div>
       </div>
+
+      <div class="growth-metrics" style="margin-top:48px;">
+        <div class="growth-metric"><span class="growth-metric-num">22</span><span class="growth-metric-label">On-Chain Instructions</span></div>
+        <div class="growth-metric"><span class="growth-metric-num">$0</span><span class="growth-metric-label">Transaction Fees Forever</span></div>
+        <div class="growth-metric"><span class="growth-metric-num">11</span><span class="growth-metric-label">Languages Supported</span></div>
+      </div>
+      <p class="text-muted" style="text-align:center;margin-top:16px;font-size:.85rem;">We don't predict prices. We ship code. The service is free. The market decides the rest.</p>
 
       <div style="margin-top:64px;">
         <div class="launch-checklist" id="launchChecklist" style="margin-top:64px;">
@@ -3166,8 +3267,9 @@
 <!-- ================================================================== -->
   <section id="build" class="section section-alt section-space">
     <div class="container">
-      <h2 class="section-title" data-i18n="build.title">Build the Future With Us</h2>
-      <p class="section-subtitle" data-i18n="build.sub">Code, create, or dream in pixels — OST is your platform.</p>
+      <div class="build-hero-badge">&#128736;&#65039; Open Source</div>
+      <h2 class="section-title" style="background:linear-gradient(135deg,#34d399,#6d9fff,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Build the Future With Us</h2>
+      <p class="section-subtitle">Code, create, or dream in pixels — OST is your platform.</p>
 
       <!-- Code Preview -->
       <div class="build-code-showcase">
@@ -3950,21 +4052,165 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
 <!-- ================================================================== -->
   <section id="transparency" class="section section-space">
     <div class="container">
-      <h2 class="section-title" data-i18n="verify.title">Full Transparency</h2>
-      <p class="section-subtitle" data-i18n="verify.sub">Verify everything yourself. We have nothing to hide.</p>
-      <div class="manifesto">
-        <p class="manifesto-lead" data-i18n="verify.lead">Trust is earned with facts, not promises.</p>
-        <p data-i18n="verify.t1"><strong>No pre-mine. No hidden allocations. No "team tokens."</strong> Every token minted through the public confidential_mint instruction.</p>
-        <p data-i18n="verify.t2"><strong>Open source from day one.</strong> Every line of Rust, TypeScript, and HTML on GitHub. Find a flaw? Open a PR.</p>
-        <p data-i18n="verify.t3"><strong>Real company, real founder.</strong> Panama S.A. operated by a builder from Mexico. Company docs are public.</p>
-        <p data-i18n="verify.t4"><strong>The space story is real.</strong> Zero transaction fees. Satellites funded by donations &amp; investors. Every disbursement voted publicly.</p>
-        <p class="manifesto-closing" data-i18n="verify.closing">Read the code. Check the company. Verify the treasury. <strong>Then decide.</strong></p>
+      <div class="transp-hero-badge">&#128274; Fully Verifiable</div>
+      <h2 class="section-title" style="background:linear-gradient(135deg,#6d9fff,#a78bfa,#6d9fff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Full Transparency</h2>
+      <p class="section-subtitle">Verify everything yourself. We have nothing to hide.</p>
+
+      <!-- Live On-Chain Stats -->
+      <div class="transp-stats-row">
+        <div class="transp-stat-card">
+          <div class="transp-stat-icon">&#128279;</div>
+          <div class="transp-stat-num" id="transpTotalTx">1,247</div>
+          <div class="transp-stat-label">On-Chain Transactions</div>
+        </div>
+        <div class="transp-stat-card">
+          <div class="transp-stat-icon">&#128176;</div>
+          <div class="transp-stat-num" id="transpTreasury">1,000,000,000</div>
+          <div class="transp-stat-label">Total Supply (OST)</div>
+        </div>
+        <div class="transp-stat-card">
+          <div class="transp-stat-icon">&#128272;</div>
+          <div class="transp-stat-num">25</div>
+          <div class="transp-stat-label">On-Chain Instructions</div>
+        </div>
+        <div class="transp-stat-card">
+          <div class="transp-stat-icon">&#128737;&#65039;</div>
+          <div class="transp-stat-num">$0</div>
+          <div class="transp-stat-label">Fees Forever</div>
+        </div>
       </div>
-      <div class="verify-grid">
-        <div class="feature-card glow-card sr"><div class="feature-icon">&#128194;</div><h3>GitHub</h3><p>Full source code. MIT licensed.</p><a href="https://github.com/nachogtavl-collab/ost-token" target="_blank" rel="noopener" class="btn btn-outline" style="margin-top:12px;">View</a></div>
-        <div class="feature-card glow-card sr"><div class="feature-icon">&#127963;&#65039;</div><h3>Company Docs</h3><p>Panama S.A. registration and filings.</p><a href="https://github.com/nachogtavl-collab/ost-token/wiki/Company" target="_blank" rel="noopener" class="btn btn-outline" style="margin-top:12px;">View</a></div>
-        <div class="feature-card glow-card sr"><div class="feature-icon">&#128269;</div><h3>Treasury</h3><p>On-chain. Every donation, vote, disbursement.</p><a href="https://explorer.solana.com/address/J2jiS296YWVie1Sopb4SxcM3aJnP9aAwe6aLDhCqvGXY?cluster=devnet" target="_blank" rel="noopener" class="btn btn-outline" style="margin-top:12px;">View</a></div>
+
+      <!-- Trust Manifesto -->
+      <div class="transp-manifesto">
+        <div class="transp-manifesto-glow"></div>
+        <h3>&#128220; Trust Manifesto</h3>
+        <p class="transp-manifesto-lead">Trust is earned with facts, not promises.</p>
+        <div class="transp-manifesto-grid">
+          <div class="transp-pledge"><span class="transp-pledge-icon">&#9989;</span><div><strong>No pre-mine. No hidden allocations. No "team tokens."</strong><p>Every token minted through the public confidential_mint instruction.</p></div></div>
+          <div class="transp-pledge"><span class="transp-pledge-icon">&#9989;</span><div><strong>Open source from day one.</strong><p>Every line of Rust, TypeScript, and HTML on GitHub. Find a flaw? Open a PR.</p></div></div>
+          <div class="transp-pledge"><span class="transp-pledge-icon">&#9989;</span><div><strong>Real company, real founder.</strong><p>Panama S.A. operated by a builder from Mexico. Company docs are public.</p></div></div>
+          <div class="transp-pledge"><span class="transp-pledge-icon">&#9989;</span><div><strong>The space story is real.</strong><p>Satellites funded by donations &amp; investors. Every disbursement voted publicly.</p></div></div>
+        </div>
       </div>
+
+      <!-- Verification Cards -->
+      <div class="transp-verify-grid">
+        <div class="transp-verify-card sr">
+          <div class="transp-verify-visual" style="background:linear-gradient(135deg,#1a1a2e,#16213e);">
+            <img src="https://images.unsplash.com/photo-1618401471353-b98afee0b2eb?w=600&h=300&fit=crop" alt="GitHub code" loading="lazy" style="width:100%;height:160px;object-fit:cover;border-radius:12px 12px 0 0;opacity:.7;">
+          </div>
+          <div class="transp-verify-body">
+            <div class="transp-verify-icon">&#128194;</div>
+            <h4>GitHub — Full Source Code</h4>
+            <p>MIT licensed. Anchor smart contract (25 instructions), TypeScript SDK, full website. Every commit public and auditable.</p>
+            <div class="transp-verify-tags"><span>Rust</span><span>TypeScript</span><span>Solana</span><span>MIT License</span></div>
+            <a href="https://github.com/nachogtavl-collab/ost-token" target="_blank" rel="noopener" class="btn btn-outline" style="margin-top:12px;width:100%;text-align:center;">&#128279; View Repository</a>
+          </div>
+        </div>
+        <div class="transp-verify-card sr">
+          <div class="transp-verify-visual" style="background:linear-gradient(135deg,#1a1a2e,#16213e);">
+            <img src="https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=600&h=300&fit=crop" alt="Company documents" loading="lazy" style="width:100%;height:160px;object-fit:cover;border-radius:12px 12px 0 0;opacity:.7;">
+          </div>
+          <div class="transp-verify-body">
+            <div class="transp-verify-icon">&#127963;&#65039;</div>
+            <h4>Company Registration</h4>
+            <p>Panama S.A. — legally incorporated. Registration filings, articles of incorporation, and director information publicly accessible.</p>
+            <div class="transp-verify-tags"><span>Panama S.A.</span><span>Legal Entity</span><span>Public Filings</span></div>
+            <a href="https://github.com/nachogtavl-collab/ost-token/wiki/Company" target="_blank" rel="noopener" class="btn btn-outline" style="margin-top:12px;width:100%;text-align:center;">&#128196; View Documents</a>
+          </div>
+        </div>
+        <div class="transp-verify-card sr">
+          <div class="transp-verify-visual" style="background:linear-gradient(135deg,#1a1a2e,#16213e);">
+            <img src="https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=600&h=300&fit=crop" alt="Blockchain explorer" loading="lazy" style="width:100%;height:160px;object-fit:cover;border-radius:12px 12px 0 0;opacity:.7;">
+          </div>
+          <div class="transp-verify-body">
+            <div class="transp-verify-icon">&#128269;</div>
+            <h4>On-Chain Treasury</h4>
+            <p>Every donation, governance vote, and disbursement visible on Solana Explorer. PDA-controlled — no single person can drain funds.</p>
+            <div class="transp-verify-tags"><span>Solana Devnet</span><span>PDA Secured</span><span>DAO Governed</span></div>
+            <a href="https://explorer.solana.com/address/J2jiS296YWVie1Sopb4SxcM3aJnP9aAwe6aLDhCqvGXY?cluster=devnet" target="_blank" rel="noopener" class="btn btn-outline" style="margin-top:12px;width:100%;text-align:center;">&#128270; View on Explorer</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Audit Timeline -->
+      <div class="transp-audit-timeline">
+        <h3 style="text-align:center;margin-bottom:24px;">&#128203; Verification Timeline</h3>
+        <div class="transp-timeline-track">
+          <div class="transp-tl-item done">
+            <div class="transp-tl-dot done"></div>
+            <div class="transp-tl-content">
+              <span class="transp-tl-date">Q1 2025</span>
+              <strong>Anchor Contract Compiled</strong>
+              <p>572KB BPF binary. 25 instructions verified.</p>
+            </div>
+          </div>
+          <div class="transp-tl-item done">
+            <div class="transp-tl-dot done"></div>
+            <div class="transp-tl-content">
+              <span class="transp-tl-date">Q1 2025</span>
+              <strong>Devnet Deployment</strong>
+              <p>Program + mint + treasury live on Solana devnet.</p>
+            </div>
+          </div>
+          <div class="transp-tl-item done">
+            <div class="transp-tl-dot done"></div>
+            <div class="transp-tl-content">
+              <span class="transp-tl-date">Q2 2025</span>
+              <strong>Internal Security Review</strong>
+              <p>CT instructions simplified to event emitters. SDK handles Token-2022 directly.</p>
+            </div>
+          </div>
+          <div class="transp-tl-item done">
+            <div class="transp-tl-dot done"></div>
+            <div class="transp-tl-content">
+              <span class="transp-tl-date">Q2 2025</span>
+              <strong>wOST Wrapper Created</strong>
+              <p>SPL wrapper for AMM/DEX compatibility. Enables Raydium pools and Jupiter routing.</p>
+            </div>
+          </div>
+          <div class="transp-tl-item pending">
+            <div class="transp-tl-dot pending"></div>
+            <div class="transp-tl-content">
+              <span class="transp-tl-date">Q3 2025</span>
+              <strong>External Security Audit</strong>
+              <p>Third-party audit from OtterSec, Neodyme, or Halborn.</p>
+            </div>
+          </div>
+          <div class="transp-tl-item pending">
+            <div class="transp-tl-dot pending"></div>
+            <div class="transp-tl-content">
+              <span class="transp-tl-date">Q4 2025</span>
+              <strong>Mainnet Deployment</strong>
+              <p>Verified program deployed to Solana mainnet-beta.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contract Addresses -->
+      <div class="transp-contracts">
+        <h3 style="text-align:center;margin-bottom:20px;">&#128272; Contract Addresses</h3>
+        <div class="transp-contract-grid">
+          <div class="transp-contract-card">
+            <div class="transp-contract-label">Program ID</div>
+            <code class="transp-contract-addr">J2jiS296YWVie1Sopb4SxcM3aJnP9aAwe6aLDhCqvGXY</code>
+            <div class="transp-contract-net">Devnet</div>
+          </div>
+          <div class="transp-contract-card">
+            <div class="transp-contract-label">OST Mint</div>
+            <code class="transp-contract-addr">383pZBNWtnX1qGGAGETCSm2Dho8JBf8uxLan5N12pAJJ</code>
+            <div class="transp-contract-net">Token-2022</div>
+          </div>
+          <div class="transp-contract-card">
+            <div class="transp-contract-label">wOST Wrapper</div>
+            <code class="transp-contract-addr">Ac8R...iHoS</code>
+            <div class="transp-contract-net">SPL Token</div>
+          </div>
+        </div>
+      </div>
+
+      <p class="transp-closing">Read the code. Check the company. Verify the treasury. <strong>Then decide.</strong></p>
     </div>
   </section>
 
@@ -4022,6 +4268,6 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=50"></script>
+  <script src="app.js?v=51"></script>
 </body>
 </html>
