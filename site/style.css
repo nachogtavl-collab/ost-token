@@ -5736,7 +5736,7 @@ select.sim-input { cursor: pointer; }
 /* v51: ROADMAP PHASE CARDS                                           */
 /* ================================================================== */
 .rm-phase-strip {
-  display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin: 32px 0;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin: 32px 0;
 }
 .rm-phase-card {
   background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
@@ -5806,7 +5806,149 @@ select.sim-input { cursor: pointer; }
 .cens-answer-card p { font-size: .9rem; color: var(--text-muted); }
 
 /* ================================================================== */
-/* v51: RESPONSIVE                                                    */
+/* v52: LEGACY MODE SECTION                                           */
+/* ================================================================== */
+.leg-hero-badge {
+  display: inline-block; padding: 4px 14px; border-radius: 50px;
+  background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.25);
+  color: #f59e0b; font-size: .72rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;
+}
+
+/* Logo Legacy Badge */
+.logo-legacy-badge {
+  font-size: .55rem; vertical-align: super; margin-left: 2px;
+  opacity: .7; letter-spacing: -1px;
+}
+
+/* Problem Statement */
+.leg-problem {
+  position: relative; background: var(--surface); border: 1px solid rgba(239,68,68,.15);
+  border-radius: 20px; padding: 36px 32px; margin: 32px 0; overflow: hidden;
+}
+.leg-problem-glow {
+  position: absolute; top: -60px; right: -60px; width: 200px; height: 200px;
+  background: radial-gradient(circle, rgba(239,68,68,.08), transparent 70%);
+  pointer-events: none;
+}
+.leg-problem h3 { text-align: center; margin-bottom: 12px; font-size: 1.2rem; }
+.leg-problem > p { text-align: center; color: var(--text-muted); font-size: .9rem; line-height: 1.6; max-width: 800px; margin: 0 auto 24px; }
+.leg-problem-stats {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+}
+.leg-pstat {
+  text-align: center; padding: 16px 8px; background: rgba(239,68,68,.04);
+  border: 1px solid rgba(239,68,68,.1); border-radius: 12px;
+}
+.leg-pstat-num { display: block; font-size: 1.4rem; font-weight: 800; color: #ef4444; margin-bottom: 4px; }
+.leg-pstat span:last-child { font-size: .72rem; color: var(--text-muted); }
+
+/* Three Survival Layers */
+.leg-layers { display: flex; flex-direction: column; gap: 32px; }
+.leg-layer-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+  overflow: hidden; transition: all .3s;
+}
+.leg-layer-card:hover { border-color: var(--accent); transform: translateY(-3px); box-shadow: 0 12px 40px rgba(109,159,255,.08); }
+.leg-layer-img { width: 100%; height: 200px; object-fit: cover; opacity: .6; transition: opacity .3s; }
+.leg-layer-card:hover .leg-layer-img { opacity: .8; }
+.leg-layer-badge {
+  display: inline-block; margin: -20px 0 0 20px; position: relative; z-index: 2;
+  font-size: .68rem; font-weight: 700; padding: 4px 14px; border-radius: 20px;
+  text-transform: uppercase; letter-spacing: .5px;
+}
+.leg-badge-short { background: rgba(52,211,153,.15); color: var(--success); border: 1px solid rgba(52,211,153,.25); }
+.leg-badge-mid { background: rgba(167,139,250,.15); color: var(--accent2); border: 1px solid rgba(167,139,250,.25); }
+.leg-badge-long { background: rgba(245,158,11,.15); color: #f59e0b; border: 1px solid rgba(245,158,11,.25); }
+.leg-layer-body { padding: 20px 24px 28px; }
+.leg-layer-body h4 { font-size: 1.15rem; margin-bottom: 8px; }
+.leg-layer-body > p { color: var(--text-muted); font-size: .88rem; margin-bottom: 16px; line-height: 1.5; }
+.leg-feature-list { list-style: none; padding: 0; margin: 0 0 16px; }
+.leg-feature-list li {
+  font-size: .84rem; color: var(--text-muted); padding: 8px 0;
+  border-bottom: 1px solid rgba(255,255,255,.04); line-height: 1.5;
+}
+.leg-feature-list li:last-child { border-bottom: none; }
+.leg-feature-list li strong { color: #fff; }
+.leg-layer-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.leg-layer-tags span {
+  font-size: .65rem; padding: 3px 10px; border-radius: 20px;
+  background: rgba(109,159,255,.08); border: 1px solid rgba(109,159,255,.15); color: var(--accent);
+}
+
+/* Governance Vote */
+.leg-governance {
+  position: relative; margin: 48px 0 32px; padding: 36px 32px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+  overflow: hidden;
+}
+.leg-gov-glow {
+  position: absolute; top: -40px; left: 50%; transform: translateX(-50%);
+  width: 400px; height: 200px;
+  background: radial-gradient(circle, rgba(52,211,153,.08), transparent 70%);
+  pointer-events: none;
+}
+.leg-governance h3 { text-align: center; margin-bottom: 8px; font-size: 1.2rem; }
+.leg-governance > p { text-align: center; color: var(--text-muted); font-size: .9rem; margin-bottom: 24px; }
+.leg-governance > p strong { color: var(--success); }
+.leg-gov-vote { margin-bottom: 24px; }
+.leg-vote-bar {
+  height: 12px; background: rgba(255,255,255,.06); border-radius: 8px;
+  overflow: hidden; margin-bottom: 8px;
+}
+.leg-vote-fill {
+  height: 100%; border-radius: 8px;
+  background: linear-gradient(90deg, var(--success), var(--accent));
+}
+.leg-vote-stats {
+  display: flex; justify-content: space-between; font-size: .78rem; color: var(--text-muted);
+}
+.leg-gov-alloc {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+}
+.leg-alloc-item {
+  text-align: center; padding: 14px 8px;
+  background: rgba(52,211,153,.04); border: 1px solid rgba(52,211,153,.1);
+  border-radius: 12px;
+}
+.leg-alloc-pct {
+  display: block; font-size: 1.2rem; font-weight: 800;
+  background: linear-gradient(135deg, var(--success), var(--accent));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  margin-bottom: 4px;
+}
+.leg-alloc-item span:last-child { font-size: .72rem; color: var(--text-muted); }
+
+/* Legacy Symbol */
+.leg-symbol {
+  text-align: center; margin: 40px 0 24px; padding: 32px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+}
+.leg-symbol-icon { font-size: 3rem; margin-bottom: 8px; letter-spacing: 8px; }
+.leg-symbol-label { font-size: .82rem; font-weight: 700; color: var(--accent); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+.leg-symbol-desc { font-size: .85rem; color: var(--text-muted); max-width: 600px; margin: 0 auto; line-height: 1.5; }
+
+/* Legacy Closing Quote */
+.leg-closing {
+  text-align: center; margin: 32px 0 24px; padding: 32px;
+  background: linear-gradient(135deg, rgba(245,158,11,.04), rgba(167,139,250,.04));
+  border: 1px solid rgba(245,158,11,.15); border-radius: 16px;
+}
+.leg-closing p {
+  font-size: 1.05rem; font-style: italic; color: var(--text-muted); line-height: 1.6;
+  max-width: 700px; margin: 0 auto;
+}
+.leg-note {
+  font-size: .75rem; color: var(--text-muted); text-align: center; padding: 16px;
+  opacity: .7;
+}
+
+/* Roadmap legacy phase accent */
+.rm-phase-card.rm-legacy { border-color: rgba(245,158,11,.2); }
+.rm-phase-card.rm-legacy:hover { border-color: rgba(245,158,11,.5); box-shadow: 0 12px 40px rgba(245,158,11,.08); }
+
+/* ================================================================== */
+/* v51+v52: RESPONSIVE                                                */
 /* ================================================================== */
 @media (max-width: 768px) {
   .transp-stats-row { grid-template-columns: repeat(2, 1fr); }
@@ -5815,5 +5957,8 @@ select.sim-input { cursor: pointer; }
   .transp-contract-grid { grid-template-columns: 1fr; }
   .rm-phase-strip { grid-template-columns: 1fr; }
   .cens-severity-bar { flex-direction: column; gap: 8px; }
+  .leg-problem-stats { grid-template-columns: repeat(2, 1fr); }
+  .leg-gov-alloc { grid-template-columns: repeat(2, 1fr); }
+  .leg-vote-stats { flex-direction: column; gap: 4px; text-align: center; }
 }
 
