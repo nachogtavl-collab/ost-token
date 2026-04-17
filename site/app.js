@@ -8954,5 +8954,88 @@
     }, 300);
   })();
 
+  /* ================================================================== */
+  /* v53: ANCIENT MODE + TRANSMIT TO SPACE                              */
+  /* ================================================================== */
+
+  /* --- Ancient Mode Toggle --- */
+  (function() {
+    var toggle = document.getElementById('ancientToggle');
+    var label = document.getElementById('ancientToggleText');
+    if (!toggle) return;
+    // Restore from localStorage
+    if (localStorage.getItem('ost-ancient') === '1') {
+      document.documentElement.classList.add('ancient-mode');
+      toggle.classList.add('active');
+      if (label) label.textContent = 'Modern Mode';
+    }
+    toggle.addEventListener('click', function() {
+      var isOn = document.documentElement.classList.toggle('ancient-mode');
+      toggle.classList.toggle('active', isOn);
+      if (label) label.textContent = isOn ? 'Modern Mode' : '\u{13171} Ancient';
+      localStorage.setItem('ost-ancient', isOn ? '1' : '0');
+    });
+  })();
+
+  /* --- Transmit to Space --- */
+  (function() {
+    var overlay = document.getElementById('transmitOverlay');
+    var closeBtn = document.getElementById('transmitClose');
+    var fill = document.getElementById('transmitFill');
+    var status = document.getElementById('transmitStatus');
+    var glyphs = document.getElementById('transmitGlyphs');
+    if (!overlay) return;
+
+    var hieroglyphSets = [
+      '\u{13000}\u{1303F}\u{13171}\u{130B8}\u{13087}\u{1305F}\u{130AD}\u{13000}',
+      '\u{13171}\u{130AD}\u{1303F}\u{13087}\u{13000}\u{130B8}\u{1305F}\u{13171}',
+      '\u{13087}\u{13000}\u{130AD}\u{1303F}\u{130B8}\u{13171}\u{13000}\u{1305F}',
+      '\u{130B8}\u{13087}\u{13171}\u{13000}\u{1305F}\u{130AD}\u{1303F}\u{130B8}'
+    ];
+
+    var stages = [
+      'Initializing satellite relay...',
+      'Encoding in hieroglyphic format...',
+      'Converting to binary + quantum states...',
+      'Routing through orbital infrastructure...',
+      'Transmitting to LEO satellites...',
+      'Signal confirmed by relay node...',
+      'Broadcast aimed at Moon, Mars, deep space...',
+      '\u2705 Transmission complete — OST genesis message sent.'
+    ];
+
+    function runTransmit() {
+      overlay.classList.add('active');
+      if (fill) fill.style.width = '0%';
+      var i = 0;
+      var interval = setInterval(function() {
+        i++;
+        if (i < stages.length) {
+          if (status) status.textContent = stages[i];
+          if (glyphs) glyphs.textContent = hieroglyphSets[i % hieroglyphSets.length];
+          if (fill) fill.style.width = Math.min(100, (i / (stages.length - 1)) * 100) + '%';
+        } else {
+          clearInterval(interval);
+          if (fill) fill.style.width = '100%';
+          if (status) status.textContent = stages[stages.length - 1];
+        }
+      }, 800);
+    }
+
+    // Bind both transmit buttons
+    var btn1 = document.getElementById('transmitBtn');
+    var btn2 = document.getElementById('transmitBtnLg');
+    if (btn1) btn1.addEventListener('click', runTransmit);
+    if (btn2) btn2.addEventListener('click', runTransmit);
+
+    // Close modal
+    if (closeBtn) closeBtn.addEventListener('click', function() {
+      overlay.classList.remove('active');
+    });
+    overlay.addEventListener('click', function(e) {
+      if (e.target === overlay) overlay.classList.remove('active');
+    });
+  })();
+
 })();
 

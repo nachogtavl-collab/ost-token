@@ -25,8 +25,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Egyptian+Hieroglyphs&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="style.css?v=52">
+  <link rel="stylesheet" href="style.css?v=53">
 </head>
 <body>
 
@@ -105,6 +106,9 @@
         <a href="#transparency" data-i18n="nav.verify">Verify</a>
       </div>
       <div class="nav-right">
+        <button class="ancient-toggle" id="ancientToggle" aria-label="Ancient Mode" title="Toggle Ancient Hieroglyphic Mode">
+          <span id="ancientToggleText">&#x13171; Ancient</span>
+        </button>
         <button class="wallet-btn" id="walletBtn" aria-label="Connect Wallet">
           <span class="wallet-icon">&#128091;</span>
           <span class="wallet-text" id="walletText" data-i18n="nav.connect">Connect Wallet</span>
@@ -163,6 +167,7 @@
           <a href="#revolution" class="btn btn-primary btn-glow btn-pulse" data-i18n="hero.cta1">Try the Pay Demo</a>
           <a href="#get-ost" class="btn btn-outline" data-i18n="hero.cta2">Get OST Now</a>
           <a href="#my-wallet" class="btn btn-outline" data-i18n="hero.createwallet">Create Wallet</a>
+          <button class="btn btn-transmit" id="transmitBtn">&#x13087; Transmit to Space</button>
         </div>
         <div class="hero-stats">
           <div class="stat"><span class="stat-num">0</span><span class="stat-label" data-i18n="hero.premine">Pre-mine</span></div>
@@ -4199,6 +4204,12 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
       </div>
 
       <div class="leg-note">&#9878; Legacy Mode features represent a long-term research vision. Short-term physical bearer tokens and multi-chain deployment are actionable now. Biological quantum computing and natural megastructures are active research frontiers in synthetic biology, quantum information theory, and materials science.</div>
+
+      <!-- Transmit to Space CTA -->
+      <div class="leg-transmit">
+        <button class="btn-transmit-lg" id="transmitBtnLg">&#x13087; Transmit OST Genesis Message to Space</button>
+        <p class="leg-transmit-sub">Encode your message in hieroglyphs, binary, and quantum format. Broadcast via future OST-funded satellite relays aimed at the Moon, Mars, and deep space.</p>
+      </div>
     </div>
   </section>
 
@@ -4418,9 +4429,22 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
     </div>
   </div>
 
+  <!-- Transmit to Space Modal -->
+  <div class="transmit-overlay" id="transmitOverlay">
+    <div class="transmit-modal">
+      <div class="transmit-modal-glow"></div>
+      <button class="transmit-close" id="transmitClose">&times;</button>
+      <h3 style="font-size:1.3rem;margin-bottom:4px;">&#x13087; Transmitting to Space</h3>
+      <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:16px;">Encoding OST genesis message in hieroglyphs, binary &amp; quantum format...</p>
+      <div class="transmit-hieroglyphs" id="transmitGlyphs">&#x13000;&#x1303F;&#x13171;&#x130B8;&#x13087;&#x1305F;&#x130AD;&#x13000;</div>
+      <div class="transmit-progress"><div class="transmit-progress-fill" id="transmitFill"></div></div>
+      <div class="transmit-status" id="transmitStatus">Initializing satellite relay...</div>
+    </div>
+  </div>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=52"></script>
+  <script src="app.js?v=53"></script>
 </body>
 </html>

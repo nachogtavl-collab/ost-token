@@ -5948,7 +5948,130 @@ select.sim-input { cursor: pointer; }
 .rm-phase-card.rm-legacy:hover { border-color: rgba(245,158,11,.5); box-shadow: 0 12px 40px rgba(245,158,11,.08); }
 
 /* ================================================================== */
-/* v51+v52: RESPONSIVE                                                */
+/* v53: ANCIENT MODE + TRANSMIT TO SPACE                              */
+/* ================================================================== */
+
+/* Ancient Mode Toggle Button */
+.ancient-toggle {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: 50px;
+  background: transparent; border: 1px solid rgba(245,158,11,.35);
+  color: #f59e0b; font-size: .78rem; font-weight: 600;
+  cursor: pointer; transition: all .3s; white-space: nowrap;
+}
+.ancient-toggle:hover {
+  background: rgba(245,158,11,.1); border-color: #f59e0b;
+  box-shadow: 0 0 20px rgba(245,158,11,.15);
+}
+.ancient-toggle.active {
+  background: #f59e0b; color: #000; border-color: #f59e0b;
+}
+
+/* Ancient Mode — Global Hieroglyphic Override */
+html.ancient-mode {
+  --ancient-font: 'Noto Sans Egyptian Hieroglyphs', sans-serif;
+}
+html.ancient-mode h1,
+html.ancient-mode h2,
+html.ancient-mode h3,
+html.ancient-mode h4 {
+  font-family: var(--ancient-font) !important;
+  letter-spacing: 4px;
+}
+html.ancient-mode .section-title {
+  font-family: var(--ancient-font) !important;
+  letter-spacing: 6px;
+}
+html.ancient-mode .logo {
+  font-family: var(--ancient-font) !important;
+  letter-spacing: 3px;
+}
+html.ancient-mode .hero-tag {
+  font-family: var(--ancient-font) !important;
+}
+
+/* Transmit to Space — Hero Button */
+.btn-transmit {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 20px; border-radius: 50px;
+  background: transparent; border: 2px solid #f59e0b;
+  color: #f59e0b; font-size: .88rem; font-weight: 600;
+  cursor: pointer; transition: all .3s; white-space: nowrap;
+}
+.btn-transmit:hover {
+  background: #f59e0b; color: #000;
+  box-shadow: 0 0 30px rgba(245,158,11,.3);
+  transform: scale(1.03);
+}
+
+/* Transmit to Space — Large CTA in Legacy Section */
+.leg-transmit { text-align: center; margin-top: 32px; }
+.btn-transmit-lg {
+  display: inline-block; padding: 18px 40px;
+  font-size: 1.2rem; font-weight: 700; border-radius: 50px;
+  background: transparent; border: 3px solid #f59e0b;
+  color: #f59e0b; cursor: pointer; transition: all .3s;
+  letter-spacing: .5px;
+}
+.btn-transmit-lg:hover {
+  background: #f59e0b; color: #000;
+  box-shadow: 0 0 40px rgba(245,158,11,.3), 0 0 80px rgba(245,158,11,.1);
+  transform: scale(1.02);
+}
+.leg-transmit-sub {
+  font-size: .82rem; color: var(--text-muted); margin-top: 12px; max-width: 600px;
+  margin-left: auto; margin-right: auto;
+}
+
+/* Transmit Modal Overlay */
+.transmit-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,.92); backdrop-filter: blur(10px);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity .4s;
+}
+.transmit-overlay.active { opacity: 1; pointer-events: auto; }
+.transmit-modal {
+  background: var(--surface); border: 1px solid rgba(245,158,11,.3);
+  border-radius: 24px; padding: 40px; max-width: 520px; width: 90%;
+  text-align: center; position: relative;
+}
+.transmit-modal-glow {
+  position: absolute; top: -60px; left: 50%; transform: translateX(-50%);
+  width: 300px; height: 200px;
+  background: radial-gradient(circle, rgba(245,158,11,.12), transparent 70%);
+  pointer-events: none;
+}
+.transmit-hieroglyphs {
+  font-family: 'Noto Sans Egyptian Hieroglyphs', sans-serif;
+  font-size: 2rem; letter-spacing: 6px; color: #f59e0b;
+  margin: 16px 0; line-height: 1.8;
+  animation: transmitPulse 2s ease-in-out infinite;
+}
+@keyframes transmitPulse {
+  0%, 100% { opacity: .6; text-shadow: 0 0 10px rgba(245,158,11,.2); }
+  50% { opacity: 1; text-shadow: 0 0 30px rgba(245,158,11,.5); }
+}
+.transmit-progress {
+  height: 6px; background: rgba(255,255,255,.06); border-radius: 4px;
+  overflow: hidden; margin: 20px 0;
+}
+.transmit-progress-fill {
+  height: 100%; width: 0; border-radius: 4px;
+  background: linear-gradient(90deg, #f59e0b, #6d9fff, #a78bfa);
+  transition: width 3s ease-out;
+}
+.transmit-status {
+  font-size: .82rem; color: var(--text-muted); margin-top: 12px;
+}
+.transmit-close {
+  position: absolute; top: 16px; right: 16px;
+  background: none; border: none; color: var(--text-muted);
+  font-size: 1.4rem; cursor: pointer;
+}
+
+/* ================================================================== */
+/* v51+v52+v53: RESPONSIVE                                            */
 /* ================================================================== */
 @media (max-width: 768px) {
   .transp-stats-row { grid-template-columns: repeat(2, 1fr); }
@@ -5960,5 +6083,7 @@ select.sim-input { cursor: pointer; }
   .leg-problem-stats { grid-template-columns: repeat(2, 1fr); }
   .leg-gov-alloc { grid-template-columns: repeat(2, 1fr); }
   .leg-vote-stats { flex-direction: column; gap: 4px; text-align: center; }
+  .ancient-toggle span { font-size: .7rem; }
+  .btn-transmit-lg { font-size: 1rem; padding: 14px 28px; }
 }
 
