@@ -6652,6 +6652,8 @@
     var activeFuelType = 'regular';
     var activeSort = 'price';
     var activeBrandFilter = 'all';
+    var stationsExpanded = false;
+    var collapsedStationCount = 6;
     var fuelHistory = JSON.parse(localStorage.getItem('ost_fuel_history') || '[]');
     var selectedStation = null;
 
@@ -6662,6 +6664,7 @@
         activeCountry = countrySel.value;
         stations = stationsByCountry[activeCountry] || [];
         activeBrandFilter = 'all';
+        stationsExpanded = false;
         renderBrandTabs();
         renderStations();
       });
@@ -6670,11 +6673,20 @@
     // DOM refs
     var locInput = document.getElementById('fuel2SearchLoc');
     var resultCount = document.getElementById('fuel2ResultCount');
+    var listSub = document.getElementById('fuel2ListSub');
+    var listToggle = document.getElementById('fuel2ListToggle');
     var stationList = document.getElementById('fuel2StationList');
     var detailOverlay = document.getElementById('fuel2DetailOverlay');
     var detailModal = document.getElementById('fuel2DetailModal');
     var closeDetail = document.getElementById('fuel2DetailClose');
     var brandTabsWrap = document.getElementById('fuel2BrandTabs');
+
+    if (listToggle) {
+      listToggle.addEventListener('click', function() {
+        stationsExpanded = !stationsExpanded;
+        renderStations();
+      });
+    }
 
     function renderBrandTabs() {
       if (!brandTabsWrap) return;
@@ -6684,7 +6696,7 @@
       allTab.className = 'fuel2-brand-tab fuel2-brand-tab-active';
       allTab.textContent = 'All Stations';
       allTab.dataset.brand = 'all';
-      allTab.addEventListener('click', function() { activeBrandFilter = 'all'; highlightBrandTab('all'); renderStations(); });
+      allTab.addEventListener('click', function() { activeBrandFilter = 'all'; stationsExpanded = false; highlightBrandTab('all'); renderStations(); });
       brandTabsWrap.appendChild(allTab);
       stations.forEach(function(s) {
         if (seen[s.name]) return;
@@ -6697,7 +6709,7 @@
         img.onerror = function() { logoFallback(this, s.domain, s.name, '#0071CE'); };
         tab.appendChild(img);
         tab.appendChild(document.createTextNode(s.name));
-        tab.addEventListener('click', function() { activeBrandFilter = s.name; highlightBrandTab(s.name); renderStations(); });
+        tab.addEventListener('click', function() { activeBrandFilter = s.name; stationsExpanded = false; highlightBrandTab(s.name); renderStations(); });
         brandTabsWrap.appendChild(tab);
       });
     }
@@ -6714,6 +6726,7 @@
         document.querySelectorAll('.fuel2-ft').forEach(function(t) { t.classList.remove('fuel2-ft-active'); });
         tab.classList.add('fuel2-ft-active');
         activeFuelType = tab.dataset.fuel;
+        stationsExpanded = false;
         renderStations();
       });
     });
@@ -6724,12 +6737,13 @@
         document.querySelectorAll('.fuel2-sort').forEach(function(b) { b.classList.remove('fuel2-sort-active'); });
         btn.classList.add('fuel2-sort-active');
         activeSort = btn.dataset.sort;
+        stationsExpanded = false;
         renderStations();
       });
     });
 
-    findBtn.addEventListener('click', function() { renderStations(); });
-    locInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') renderStations(); });
+    findBtn.addEventListener('click', function() { stationsExpanded = false; renderStations(); });
+    locInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') { stationsExpanded = false; renderStations(); } });
 
     function getStationPrice(s) { return s.prices[activeFuelType] || s.prices.regular; }
 
@@ -6762,8 +6776,9 @@
       var list = sortedStations();
       resultCount.textContent = list.length;
       stationList.innerHTML = '';
+      var visibleList = stationsExpanded ? list : list.slice(0, collapsedStationCount);
       var unit = currUnits[activeCountry] || '$/gal';
-      list.forEach(function(s, idx) {
+      visibleList.forEach(function(s, idx) {
         var price = getStationPrice(s);
         var row = document.createElement('div');
         row.className = 'fuel2-station';
@@ -6788,6 +6803,20 @@
         row.addEventListener('click', function() { openDetail(s); });
         stationList.appendChild(row);
       });
+
+      if (listSub) {
+        listSub.textContent = list.length > collapsedStationCount && !stationsExpanded
+          ? 'Showing ' + visibleList.length + ' of ' + list.length + ' nearby stations. Open one to start a merchant-session checkout.'
+          : 'Open a station to enter the merchant session, authorize the fill, and collect cashback.';
+      }
+      if (listToggle) {
+        if (list.length > collapsedStationCount) {
+          listToggle.style.display = '';
+          listToggle.textContent = stationsExpanded ? 'Show fewer stations' : 'Show all ' + list.length + ' stations';
+        } else {
+          listToggle.style.display = 'none';
+        }
+      }
     }
 
     // Detail modal
@@ -6834,14 +6863,24 @@
           '<a class="fuel2-maps-link" href="https://www.google.com/maps/search/' + mapsQ + '" target="_blank" rel="noopener">&#128205; Directions</a>';
       }
       var priceField = document.getElementById('fuel2DetPrice');
+      var qtyField = document.getElementById('fuel2DetGal');
+      var sessionField = document.getElementById('fuel2DetSession');
+      var pumpField = document.getElementById('fuel2DetPump');
       priceField.value = getStationPrice(s).toFixed(2);
+      if (qtyField) qtyField.value = '';
+      if (sessionField) sessionField.value = '';
+      if (pumpField) pumpField.value = '';
       updateDetailCalc();
       renderDetailReviews(s);
       document.getElementById('fuel2ReportFuel').value = activeFuelType;
       var flow = document.getElementById('fuel2DetFlow');
       flow.style.display = 'none';
       flow.querySelectorAll('.fuel2-dfs').forEach(function(st) { st.classList.remove('f2-active', 'f2-done'); });
-      document.getElementById('fuel2DetPayBtn').disabled = false;
+      var receipt = document.getElementById('fuel2DetReceipt');
+      if (receipt) {
+        receipt.style.display = 'none';
+        receipt.innerHTML = '';
+      }
     }
 
     closeDetail.addEventListener('click', function() { detailOverlay.style.display = 'none'; document.body.style.overflow = ''; });
@@ -6849,19 +6888,24 @@
 
     var galEl = document.getElementById('fuel2DetGal');
     var priceDetEl = document.getElementById('fuel2DetPrice');
+    var sessionEl = document.getElementById('fuel2DetSession');
+    var pumpEl = document.getElementById('fuel2DetPump');
     var usdOut = document.getElementById('fuel2DetUSD');
     var ostOut = document.getElementById('fuel2DetOST');
     var rwOut = document.getElementById('fuel2DetRw');
     var payBtn = document.getElementById('fuel2DetPayBtn');
+    var receiptEl = document.getElementById('fuel2DetReceipt');
 
     function getRewardRate() { var c = fuelHistory.length; return c >= 500 ? 0.08 : c >= 100 ? 0.05 : 0.03; }
 
     function updateDetailCalc() {
       var g = parseFloat(galEl.value) || 0;
       var p = parseFloat(priceDetEl.value) || 0;
+      var hasSession = sessionEl && sessionEl.value.trim().length >= 4;
+      var hasPump = pumpEl && pumpEl.value.trim().length >= 1;
       var cost = g * p;
       usdOut.textContent = '$' + cost.toFixed(2);
-      if (cost > 0 && safeOstPrice() > 0) {
+      if (cost > 0 && safeOstPrice() > 0 && hasSession && hasPump) {
         var ost = cost / safeOstPrice();
         var rate = getRewardRate();
         ostOut.textContent = ost.toFixed(2) + ' OST';
@@ -6871,11 +6915,18 @@
     }
     galEl.addEventListener('input', updateDetailCalc);
     priceDetEl.addEventListener('input', updateDetailCalc);
+    if (sessionEl) sessionEl.addEventListener('input', updateDetailCalc);
+    if (pumpEl) pumpEl.addEventListener('input', updateDetailCalc);
 
     payBtn.addEventListener('click', function() {
+      if (!selectedStation) return;
       payBtn.disabled = true;
       var flow = document.getElementById('fuel2DetFlow');
       flow.style.display = 'flex';
+      if (receiptEl) {
+        receiptEl.style.display = 'none';
+        receiptEl.innerHTML = '';
+      }
       var steps = flow.querySelectorAll('.fuel2-dfs');
       steps.forEach(function(s) { s.classList.remove('f2-active', 'f2-done'); });
       var i = 0;
@@ -6889,11 +6940,22 @@
           var ost = safeOstPrice() > 0 ? cost / safeOstPrice() : 0;
           var rate = getRewardRate();
           var reward = ost * rate;
-          fuelHistory.push({ station: selectedStation ? selectedStation.name : 'Unknown', domain: selectedStation ? selectedStation.domain : '', gallons: g, pricePerGal: p, usd: cost.toFixed(2), ost: ost.toFixed(2), reward: reward.toFixed(2), date: new Date().toLocaleDateString() });
+          var sessionCode = sessionEl ? sessionEl.value.trim().toUpperCase() : '';
+          var pumpCode = pumpEl ? pumpEl.value.trim().toUpperCase() : '';
+          var receiptCode = 'OST-' + Math.random().toString(36).slice(2, 8).toUpperCase();
+          fuelHistory.push({ station: selectedStation ? selectedStation.name : 'Unknown', domain: selectedStation ? selectedStation.domain : '', gallons: g, pricePerGal: p, usd: cost.toFixed(2), ost: ost.toFixed(2), reward: reward.toFixed(2), session: sessionCode, pump: pumpCode, receipt: receiptCode, date: new Date().toLocaleDateString() });
           localStorage.setItem('ost_fuel_history', JSON.stringify(fuelHistory));
           renderRewards();
-          toast('&#9981;', 'Payment complete! +' + reward.toFixed(2) + ' OST cashback.');
-          setTimeout(function() { payBtn.disabled = false; }, 800);
+          if (receiptEl) {
+            receiptEl.innerHTML = '<strong>Merchant receipt confirmed</strong><p>Session <b>' + sessionCode + '</b> · Pump <b>' + pumpCode + '</b> · Receipt <b>' + receiptCode + '</b><br>Total ' + ost.toFixed(2) + ' OST settled at ' + selectedStation.name + '. Cashback credited: +' + reward.toFixed(2) + ' OST.</p>';
+            receiptEl.style.display = 'block';
+          }
+          toast('&#9981;', 'Merchant checkout settled. +' + reward.toFixed(2) + ' OST cashback.');
+          setTimeout(function() {
+            flow.style.display = 'none';
+            steps.forEach(function(step) { step.classList.remove('f2-active', 'f2-done'); });
+            payBtn.disabled = false;
+          }, 1200);
         }
       }
       next();
@@ -6970,23 +7032,22 @@
       if (earnedEl) earnedEl.textContent = totalRw.toFixed(2) + ' OST earned';
     }
 
-    // Initial render
-    renderStations();
-    renderRewards();
-
     // ================================================================
     // OIL BARREL PRICE CHART (Brent Crude since Feb 2025)
     // ================================================================
-    (function drawOilChart() {
+    function drawOilChart() {
       var canvas = document.getElementById('fuel2OilChart');
       if (!canvas || !canvas.getContext) return;
       var ctx = canvas.getContext('2d');
       var dpr = window.devicePixelRatio || 1;
       var rect = canvas.parentElement.getBoundingClientRect();
+      if (!rect.width) return;
       canvas.width = rect.width * dpr;
       canvas.height = 220 * dpr;
       canvas.style.width = rect.width + 'px';
       canvas.style.height = '220px';
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.scale(dpr, dpr);
       var W = rect.width;
       var H = 220;
@@ -7084,7 +7145,19 @@
         changeEl.textContent = (diff >= 0 ? '+' : '') + diff.toFixed(1) + ' (' + (diff >= 0 ? '+' : '') + pct + '%)';
         changeEl.className = 'fuel2-oil-change ' + (diff >= 0 ? 'up' : 'down');
       }
-    })();
+    }
+
+    // Initial render
+    renderStations();
+    renderRewards();
+    drawOilChart();
+
+    window.addEventListener('resize', drawOilChart);
+    document.addEventListener('ost:store-tab-change', function(event) {
+      if (event && event.detail && event.detail.tab === 'fuel') {
+        window.requestAnimationFrame(drawOilChart);
+      }
+    });
   })();
 
   // ========================================================================
@@ -7101,6 +7174,20 @@
     /* ── State ── */
     var launches = JSON.parse(localStorage.getItem('ost_lp_history2') || '[]');
     var uploadedImage = null; // data URL
+    var previewEls = {
+      media: document.getElementById('lpPreviewMedia'),
+      stage: document.getElementById('lpPreviewStage'),
+      name: document.getElementById('lpPreviewName'),
+      ticker: document.getElementById('lpPreviewTicker'),
+      creator: document.getElementById('lpPreviewCreator'),
+      desc: document.getElementById('lpPreviewDesc'),
+      buy: document.getElementById('lpPreviewBuy'),
+      curve: document.getElementById('lpPreviewCurve'),
+      links: document.getElementById('lpPreviewLinks'),
+      pulseHot: document.getElementById('lpPulseHot'),
+      pulseNew: document.getElementById('lpPulseNew'),
+      pulseGrad: document.getElementById('lpPulseGrad')
+    };
 
     /* ── Demo seed ── */
     var DEMO_IMAGES = [
@@ -7154,6 +7241,45 @@
       return Math.floor(diff / 86400) + 'd ago';
     }
     function escHtml(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+    function renderComposePreview() {
+      if (!previewEls.name) return;
+      var twitterEl = document.getElementById('lpTwitter');
+      var telegramEl = document.getElementById('lpTelegram');
+      var websiteEl = document.getElementById('lpWebsite');
+      var initialBuyEl = document.getElementById('lpInitialBuy');
+      var name = (nameEl.value || '').trim();
+      var symbol = (symbolEl.value || '').trim().toUpperCase();
+      var desc = ((descEl && descEl.value) || '').trim();
+      var initialBuy = parseFloat((initialBuyEl && initialBuyEl.value) || '0') || 0;
+      var openingMcap = initialBuy > 0 ? Math.floor(initialBuy * 10) : 100;
+      var openingCurve = Math.min(Math.floor(openingMcap / 690), 100);
+      previewEls.name.textContent = name || 'Your coin name';
+      previewEls.ticker.textContent = '$' + (symbol || 'TICK');
+      previewEls.creator.textContent = connectedWallet ? connectedWallet.slice(0, 4) + '...' + connectedWallet.slice(-4) : 'anon';
+      previewEls.desc.textContent = desc || 'Write the pitch, drop the meme, and show traders why this deserves the next rotation.';
+      previewEls.buy.textContent = (initialBuy ? initialBuy.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '0') + ' OST';
+      previewEls.curve.textContent = openingCurve + '%';
+      previewEls.stage.textContent = name.length >= 2 && symbol.length >= 1 ? 'Ready for fair launch' : 'Waiting for token identity';
+      if (previewEls.media) {
+        if (uploadedImage) previewEls.media.innerHTML = '<img src="' + escHtml(uploadedImage) + '" alt="">';
+        else previewEls.media.innerHTML = '<span>' + escHtml(symbol ? symbol.charAt(0) : '◉') + '</span>';
+      }
+      if (previewEls.links) {
+        var chips = [];
+        if (twitterEl && twitterEl.value.trim()) chips.push('Twitter');
+        if (telegramEl && telegramEl.value.trim()) chips.push('Telegram');
+        if (websiteEl && websiteEl.value.trim()) chips.push('Website');
+        previewEls.links.innerHTML = chips.length ? chips.map(function(label) { return '<span>' + label + '</span>'; }).join('') : '<span>No socials yet</span>';
+      }
+    }
+    function updatePulseShell() {
+      var hottest = launches.slice().sort(function(a, b) { return b.mcap - a.mcap; })[0];
+      var newest = launches.slice().sort(function(a, b) { return b.date - a.date; })[0];
+      var graduating = launches.slice().sort(function(a, b) { return b.curve - a.curve; })[0];
+      if (previewEls.pulseHot) previewEls.pulseHot.textContent = hottest ? '$' + hottest.symbol : '--';
+      if (previewEls.pulseNew) previewEls.pulseNew.textContent = newest ? '$' + newest.symbol : '--';
+      if (previewEls.pulseGrad) previewEls.pulseGrad.textContent = graduating ? '$' + graduating.symbol + ' ' + Math.min(graduating.curve, 100) + '%' : '--';
+    }
 
     /* ── Tab switching ── */
     var tabs = document.querySelectorAll('.lp-tab');
@@ -7199,6 +7325,7 @@
         uploadClear.style.display = 'none';
         uploadPH.style.display = '';
         imageInput.value = '';
+        renderComposePreview();
       });
     }
     function handleFile(file) {
@@ -7211,6 +7338,7 @@
         uploadPrev.style.display = 'block';
         uploadClear.style.display = 'flex';
         uploadPH.style.display = 'none';
+        renderComposePreview();
       };
       reader.readAsDataURL(file);
     }
@@ -7236,9 +7364,15 @@
       var name = (nameEl.value || '').trim();
       var symbol = (symbolEl.value || '').trim();
       launchBtn.disabled = !(name.length >= 2 && symbol.length >= 1);
+      renderComposePreview();
     }
     nameEl.addEventListener('input', validateForm);
     symbolEl.addEventListener('input', validateForm);
+    if (descEl) descEl.addEventListener('input', renderComposePreview);
+    ['lpTwitter', 'lpTelegram', 'lpWebsite', 'lpInitialBuy'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener('input', renderComposePreview);
+    });
 
     /* ── Flow animation ── */
     function runFlow(onDone) {
@@ -7308,6 +7442,7 @@
         var wsEl = document.getElementById('lpWebsite'); if (wsEl) wsEl.value = '';
         var ibEl = document.getElementById('lpInitialBuy'); if (ibEl) ibEl.value = '';
         validateForm();
+        renderComposePreview();
 
         updateTotalCount();
         toast('🚀', symbol + ' is live! Mint: ' + mintAddr.slice(0, 6) + '...');
@@ -7356,6 +7491,7 @@
       launches.forEach(function(l) { totalMcap += l.mcap; if (l.curve >= 100) grads++; });
       if (tvlEl) tvlEl.textContent = fmtMcap(totalMcap);
       if (gradEl) gradEl.textContent = grads;
+      updatePulseShell();
     }
 
     /* ── Live ticker ── */
@@ -7423,6 +7559,7 @@
     }
 
     updateStats();
+    renderComposePreview();
 
     /* ══════════════════════════════════════════════════
        FEED — Token card grid
@@ -8677,6 +8814,7 @@
             p.style.display = 'none';
           }
         });
+        document.dispatchEvent(new CustomEvent('ost:store-tab-change', { detail: { tab: target } }));
       });
     });
   })();
@@ -8932,6 +9070,7 @@
           presets.forEach(function(b) { b.classList.remove('active'); });
           btn.classList.add('active');
           buyInput.value = btn.dataset.amt;
+          renderComposePreview();
         });
       });
     }
@@ -8952,6 +9091,161 @@
         }, 50);
       }
     }, 300);
+  })();
+
+  /* ================================================================== */
+  /* v54: SECTION SHELL ENHANCEMENTS                                     */
+  /* ================================================================== */
+
+  (function initLaunchpadHeroJumps() {
+    var jumpers = document.querySelectorAll('[data-lp-jump]');
+    if (!jumpers.length) return;
+    jumpers.forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var target = btn.getAttribute('data-lp-jump');
+        var tab = document.querySelector('.lp-tab[data-tab="' + target + '"]');
+        if (tab) tab.click();
+      });
+    });
+  })();
+
+  (function initAutoRailCarousels() {
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    function attachRail(selector) {
+      var rail = document.querySelector(selector);
+      if (!rail) return;
+
+      var paused = false;
+      var direction = 1;
+      var lastTs = 0;
+
+      function frame(ts) {
+        if (!rail || !rail.isConnected) return;
+        if (!lastTs) lastTs = ts;
+        var delta = ts - lastTs;
+        lastTs = ts;
+
+        if (!paused && rail.scrollWidth > rail.clientWidth + 8) {
+          rail.scrollLeft += direction * delta * 0.03;
+          if (rail.scrollLeft + rail.clientWidth >= rail.scrollWidth - 2) direction = -1;
+          if (rail.scrollLeft <= 2) direction = 1;
+        }
+        window.requestAnimationFrame(frame);
+      }
+
+      rail.addEventListener('mouseenter', function() { paused = true; });
+      rail.addEventListener('mouseleave', function() { paused = false; });
+      rail.addEventListener('pointerdown', function() { paused = true; });
+      rail.addEventListener('pointerup', function() { paused = false; });
+
+      window.requestAnimationFrame(frame);
+    }
+
+    window.setTimeout(function() {
+      attachRail('#gc2BrandCarousel');
+      attachRail('#fuel2BrandCarousel');
+    }, 700);
+  })();
+
+  (function initSpaceMontage() {
+    var wrap = document.getElementById('sxMontage');
+    var frameWrap = wrap ? wrap.querySelector('.sx-montage-frame-wrap') : null;
+    var frame = document.getElementById('sxMontageFrame');
+    var fallback = document.getElementById('sxMontageFallback');
+    var tag = document.getElementById('sxMontageTag');
+    var title = document.getElementById('sxMontageTitle');
+    var desc = document.getElementById('sxMontageDesc');
+    var link = document.getElementById('sxMontageLink');
+    var toggle = document.getElementById('sxMontageAuto');
+    var buttons = Array.prototype.slice.call(document.querySelectorAll('.sx-montage-btn'));
+    if (!wrap || !frameWrap || !frame || !buttons.length) return;
+
+    var auto = !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    var currentIndex = 0;
+    var timer = null;
+    var localPreviewMode = window.location.protocol === 'file:';
+
+    function openSource(url) {
+      if (!url) return;
+      window.open(url, '_blank', 'noopener');
+    }
+
+    function syncFrameMode(btn) {
+      var poster = btn.dataset.poster ? 'url("' + btn.dataset.poster + '")' : 'none';
+      frameWrap.style.setProperty('--sx-montage-poster', poster);
+      if (localPreviewMode) {
+        frameWrap.classList.add('is-local');
+        frame.removeAttribute('src');
+        if (fallback) {
+          fallback.hidden = false;
+          fallback.onclick = function() {
+            openSource(btn.dataset.link || '');
+          };
+        }
+        return;
+      }
+
+      frameWrap.classList.remove('is-local');
+      if (fallback) {
+        fallback.hidden = true;
+        fallback.onclick = null;
+      }
+      if (frame.src !== btn.dataset.src) frame.src = btn.dataset.src;
+    }
+
+    function applyButton(index) {
+      var btn = buttons[index];
+      if (!btn) return;
+      buttons.forEach(function(item, itemIndex) {
+        item.classList.toggle('active', itemIndex === index);
+      });
+      currentIndex = index;
+      syncFrameMode(btn);
+      if (tag) tag.textContent = btn.dataset.tag || '';
+      if (title) title.textContent = btn.dataset.title || '';
+      if (desc) desc.textContent = btn.dataset.desc || '';
+      if (link) link.href = btn.dataset.link || '#';
+    }
+
+    function clearTimer() {
+      if (timer) {
+        window.clearInterval(timer);
+        timer = null;
+      }
+    }
+
+    function schedule() {
+      clearTimer();
+      if (!auto) return;
+      timer = window.setInterval(function() {
+        applyButton((currentIndex + 1) % buttons.length);
+      }, 8000);
+    }
+
+    buttons.forEach(function(btn, index) {
+      btn.addEventListener('click', function() {
+        applyButton(index);
+        auto = false;
+        if (toggle) toggle.textContent = 'Resume auto-cycle';
+        clearTimer();
+      });
+    });
+
+    wrap.addEventListener('mouseenter', clearTimer);
+    wrap.addEventListener('mouseleave', schedule);
+
+    if (toggle) {
+      toggle.textContent = auto ? 'Pause auto-cycle' : 'Resume auto-cycle';
+      toggle.addEventListener('click', function() {
+        auto = !auto;
+        toggle.textContent = auto ? 'Pause auto-cycle' : 'Resume auto-cycle';
+        schedule();
+      });
+    }
+
+    applyButton(0);
+    schedule();
   })();
 
   /* ================================================================== */

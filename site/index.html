@@ -27,7 +27,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Egyptian+Hieroglyphs&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="style.css?v=53">
+  <link rel="stylesheet" href="style.css?v=55">
 </head>
 <body>
 
@@ -971,10 +971,52 @@
       <div class="gc2 demos-panel" id="gcSection" data-dtab="giftcards" style="display:none">
 
         <!-- Hero -->
-        <div class="gc2-hero">
-          <div class="gc2-hero-badge">&#9889; Live Trading</div>
-          <h3>&#127873; Sell Gift Cards for OST</h3>
-          <p>Select a brand, enter your card details, and get an instant offer. Real-time rates.</p>
+        <div class="gc2-atlas">
+          <div class="gc2-atlas-main">
+            <div class="gc2-hero">
+              <div class="gc2-hero-badge">&#9889; Live Trading</div>
+              <h3>&#127873; Sell Gift Cards for OST</h3>
+              <p>Trade branded balances into OST with a cleaner three-step desk, live quote signals, and batch-ready payout flow.</p>
+              <div class="gc2-hero-actions">
+                <a class="gc2-hero-btn" href="#gc2Step1">Start a sell</a>
+                <a class="gc2-hero-btn gc2-hero-btn-ghost" href="#gc2HistToggle">View history</a>
+              </div>
+              <div class="gc2-signal-grid">
+                <div class="gc2-signal-card">
+                  <span class="gc2-signal-label">Settlement</span>
+                  <strong>&lt;0.4s</strong>
+                  <p>Quote, accept, and route payout without leaving the OST exchange shell.</p>
+                </div>
+                <div class="gc2-signal-card">
+                  <span class="gc2-signal-label">Brands</span>
+                  <strong>32+</strong>
+                  <p>Amazon, Apple, Uber, Steam, travel, dining, gaming, and more.</p>
+                </div>
+                <div class="gc2-signal-card">
+                  <span class="gc2-signal-label">Cashout</span>
+                  <strong>OST / USDC / SOL</strong>
+                  <p>Choose the payout rail after your offer is calculated.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gc2-atlas-side">
+            <div class="gc2-market-board">
+              <div class="gc2-market-board-head">Today&apos;s desk snapshot</div>
+              <div class="gc2-market-board-list">
+                <div class="gc2-market-row"><span>Amazon</span><strong>92%</strong></div>
+                <div class="gc2-market-row"><span>Apple</span><strong>89%</strong></div>
+                <div class="gc2-market-row"><span>Target</span><strong>86%</strong></div>
+                <div class="gc2-market-row"><span>Steam</span><strong>84%</strong></div>
+              </div>
+              <div class="gc2-market-foot">Rates tighten after brand, balance, and payout selection.</div>
+            </div>
+            <div class="gc2-trust-strip">
+              <span>Batch selling</span>
+              <span>Rate preview</span>
+              <span>Live card render</span>
+            </div>
+          </div>
         </div>
 
         <!-- Scrolling Brand Wheel -->
@@ -1165,56 +1207,83 @@
       <div class="fuel2 demos-panel" id="fuelSection" data-dtab="fuel" style="display:none">
 
         <!-- Hero -->
-        <div class="fuel2-hero">
-          <div class="fuel2-hero-badge">&#9981; Global Fuel &amp; Convenience</div>
-          <h3>Pump with OST. Save Worldwide.</h3>
-          <p class="fuel2-hero-sub">Pay for fuel &amp; convenience with OST at 50+ brands across 20 countries. Earn cashback on every fill-up.</p>
+        <div class="fuel2-command">
+          <div class="fuel2-command-copy">
+            <div class="fuel2-hero">
+              <div class="fuel2-hero-badge">&#9981; Global Fuel &amp; Convenience</div>
+              <h3>Pump with OST. Save Worldwide.</h3>
+              <p class="fuel2-hero-sub">Compare global fuel brands, route local spend into OST, and carry the same rewards logic across country, station, and market context.</p>
+              <div class="fuel2-hero-actions">
+                <a class="fuel2-hero-btn" href="#fuel2StationList">Browse stations</a>
+                <a class="fuel2-hero-btn fuel2-hero-btn-ghost" href="#fuel2NewsList">Track market news</a>
+              </div>
 
-          <!-- OST Incentive Banner -->
-          <div class="fuel2-incentive-banner">
-            <div class="fuel2-incentive-icon">&#128176;</div>
-            <div class="fuel2-incentive-text">
-              <strong>Pay with OST &amp; save up to 8%</strong>
-              <span>Swap any currency &rarr; OST &rarr; pay at the pump. Earn tiered cashback + XP rewards.</span>
+              <!-- OST Incentive Banner -->
+              <div class="fuel2-incentive-banner">
+                <div class="fuel2-incentive-icon">&#128176;</div>
+                <div class="fuel2-incentive-text">
+                  <strong>Pay with OST &amp; save up to 8%</strong>
+                  <span>Scan a station QR or use a clerk-issued session code, settle the fill in OST, and earn automatic cashback on completed purchases.</span>
+                </div>
+              </div>
+
+              <!-- Country Selector -->
+              <div class="fuel2-country-row">
+                <label class="fuel2-country-label">&#127758; Country:</label>
+                <select id="fuel2Country" class="fuel2-country-sel">
+                  <option value="US">&#127482;&#127480; United States</option>
+                  <option value="CA">&#127464;&#127462; Canada</option>
+                  <option value="MX">&#127474;&#127485; Mexico</option>
+                  <option value="GB">&#127468;&#127463; United Kingdom</option>
+                  <option value="DE">&#127465;&#127466; Germany</option>
+                  <option value="FR">&#127467;&#127479; France</option>
+                  <option value="ES">&#127466;&#127480; Spain</option>
+                  <option value="IT">&#127470;&#127481; Italy</option>
+                  <option value="BR">&#127463;&#127479; Brazil</option>
+                  <option value="AR">&#127462;&#127479; Argentina</option>
+                  <option value="CO">&#127464;&#127476; Colombia</option>
+                  <option value="AU">&#127462;&#127482; Australia</option>
+                  <option value="JP">&#127471;&#127477; Japan</option>
+                  <option value="KR">&#127472;&#127479; South Korea</option>
+                  <option value="IN">&#127470;&#127475; India</option>
+                  <option value="AE">&#127462;&#127466; UAE</option>
+                  <option value="SA">&#127480;&#127462; Saudi Arabia</option>
+                  <option value="TR">&#127481;&#127479; Turkey</option>
+                  <option value="NG">&#127475;&#127468; Nigeria</option>
+                  <option value="ZA">&#127487;&#127462; South Africa</option>
+                </select>
+              </div>
+
+              <div class="fuel2-search-bar">
+                <input type="text" id="fuel2SearchLoc" class="fuel2-loc-input" placeholder="&#128269; Search city, zip, or station name...">
+                <button class="fuel2-find-btn" id="fuel2FindBtn">Find Stations</button>
+              </div>
+              <div class="fuel2-fuel-tabs">
+                <button class="fuel2-ft fuel2-ft-active" data-fuel="regular">Regular</button>
+                <button class="fuel2-ft" data-fuel="midgrade">Midgrade</button>
+                <button class="fuel2-ft" data-fuel="premium">Premium</button>
+                <button class="fuel2-ft" data-fuel="diesel">Diesel</button>
+              </div>
             </div>
           </div>
-
-          <!-- Country Selector -->
-          <div class="fuel2-country-row">
-            <label class="fuel2-country-label">&#127758; Country:</label>
-            <select id="fuel2Country" class="fuel2-country-sel">
-              <option value="US">&#127482;&#127480; United States</option>
-              <option value="CA">&#127464;&#127462; Canada</option>
-              <option value="MX">&#127474;&#127485; Mexico</option>
-              <option value="GB">&#127468;&#127463; United Kingdom</option>
-              <option value="DE">&#127465;&#127466; Germany</option>
-              <option value="FR">&#127467;&#127479; France</option>
-              <option value="ES">&#127466;&#127480; Spain</option>
-              <option value="IT">&#127470;&#127481; Italy</option>
-              <option value="BR">&#127463;&#127479; Brazil</option>
-              <option value="AR">&#127462;&#127479; Argentina</option>
-              <option value="CO">&#127464;&#127476; Colombia</option>
-              <option value="AU">&#127462;&#127482; Australia</option>
-              <option value="JP">&#127471;&#127477; Japan</option>
-              <option value="KR">&#127472;&#127479; South Korea</option>
-              <option value="IN">&#127470;&#127475; India</option>
-              <option value="AE">&#127462;&#127466; UAE</option>
-              <option value="SA">&#127480;&#127462; Saudi Arabia</option>
-              <option value="TR">&#127481;&#127479; Turkey</option>
-              <option value="NG">&#127475;&#127468; Nigeria</option>
-              <option value="ZA">&#127487;&#127462; South Africa</option>
-            </select>
-          </div>
-
-          <div class="fuel2-search-bar">
-            <input type="text" id="fuel2SearchLoc" class="fuel2-loc-input" placeholder="&#128269; Search city, zip, or station name...">
-            <button class="fuel2-find-btn" id="fuel2FindBtn">Find Stations</button>
-          </div>
-          <div class="fuel2-fuel-tabs">
-            <button class="fuel2-ft fuel2-ft-active" data-fuel="regular">Regular</button>
-            <button class="fuel2-ft" data-fuel="midgrade">Midgrade</button>
-            <button class="fuel2-ft" data-fuel="premium">Premium</button>
-            <button class="fuel2-ft" data-fuel="diesel">Diesel</button>
+          <div class="fuel2-command-side">
+            <div class="fuel2-market-card">
+              <span class="fuel2-market-kicker">Route intelligence</span>
+              <h4>See the cheapest fill, the strongest cashback tier, and the market pressure behind both.</h4>
+              <div class="fuel2-market-metrics">
+                <div><strong>20</strong><span>countries</span></div>
+                <div><strong>50+</strong><span>brands</span></div>
+                <div><strong>8%</strong><span>top cashback</span></div>
+              </div>
+            </div>
+            <div class="fuel2-market-card fuel2-market-card-secondary">
+              <span class="fuel2-market-kicker">Merchant checkout</span>
+              <div class="fuel2-ops-list">
+                <div class="fuel2-ops-item"><span>01</span>Find a nearby partner station and open its checkout sheet.</div>
+                <div class="fuel2-ops-item"><span>02</span>Enter the station QR session or clerk-issued pump code.</div>
+                <div class="fuel2-ops-item"><span>03</span>Authorize the fill in OST and receive cashback after settlement.</div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1226,14 +1295,20 @@
 
         <!-- Station List -->
         <div class="fuel2-list-head">
-          <div class="fuel2-list-title">
-            <span id="fuel2ResultCount">0</span> Stations Near You
+          <div class="fuel2-list-title-wrap">
+            <div class="fuel2-list-title">
+              <span id="fuel2ResultCount">0</span> Stations Near You
+            </div>
+            <div class="fuel2-list-sub" id="fuel2ListSub">Showing the closest merchant-ready options first.</div>
           </div>
           <div class="fuel2-sort-row">
             <button class="fuel2-sort fuel2-sort-active" data-sort="price">Lowest Price</button>
             <button class="fuel2-sort" data-sort="rating">Top Rated</button>
             <button class="fuel2-sort" data-sort="distance">Nearest</button>
           </div>
+        </div>
+        <div class="fuel2-list-tools">
+          <button class="fuel2-list-toggle" id="fuel2ListToggle" style="display:none">Show all stations</button>
         </div>
         <div class="fuel2-station-list" id="fuel2StationList"></div>
 
@@ -1264,26 +1339,32 @@
               <div class="fuel2-ext-links" id="fuel2ExtLinks"></div>
             </div>
             <div class="fuel2-det-pay">
-              <div class="fuel2-det-section-title">&#128176; Pay with OST</div>
+              <div class="fuel2-det-section-title">&#128176; Merchant Checkout with OST</div>
+              <div class="fuel2-det-session-grid">
+                <div class="fuel2-pf"><label>Merchant Session</label><input type="text" id="fuel2DetSession" class="fuel2-det-inp" placeholder="Scan QR or enter station code"></div>
+                <div class="fuel2-pf"><label>Pump / Bay</label><input type="text" id="fuel2DetPump" class="fuel2-det-inp" placeholder="04"></div>
+              </div>
               <div class="fuel2-det-pay-fields">
-                <div class="fuel2-pf"><label>Gallons / Litres</label><input type="number" id="fuel2DetGal" class="fuel2-det-inp" placeholder="15" min="1" max="999" step="any"></div>
+                <div class="fuel2-pf"><label>Fuel Quantity</label><input type="number" id="fuel2DetGal" class="fuel2-det-inp" placeholder="15" min="1" max="999" step="any"></div>
                 <div class="fuel2-pf"><label>Price/unit</label><input type="number" id="fuel2DetPrice" class="fuel2-det-inp" placeholder="3.50" min="0.01" max="20" step="0.01" readonly></div>
               </div>
+              <div class="fuel2-det-merchant-note">Use a station QR, POS session, or clerk-issued code to bind the fill to a real checkout flow before you authorize OST.</div>
               <div class="fuel2-det-ost-swap">
-                <span>&#128260; Swap any currency &rarr; OST instantly</span>
+                <span>&#128260; Swap local currency into OST instantly before settlement</span>
               </div>
               <div class="fuel2-det-totals">
                 <div class="fuel2-dtr"><span>Total</span><span id="fuel2DetUSD">$0.00</span></div>
                 <div class="fuel2-dtr fuel2-dtr-ost"><span>OST Cost</span><span id="fuel2DetOST">0 OST</span></div>
                 <div class="fuel2-dtr fuel2-dtr-rw"><span>&#127942; Cashback</span><span id="fuel2DetRw">+0 OST</span></div>
               </div>
-              <button class="fuel2-pay-btn" id="fuel2DetPayBtn" disabled>&#9889; Pay with OST</button>
+              <button class="fuel2-pay-btn" id="fuel2DetPayBtn" disabled>&#9889; Authorize Pump with OST</button>
               <div class="fuel2-det-flow" id="fuel2DetFlow" style="display:none">
-                <div class="fuel2-dfs"><span class="fuel2-dfd"></span>Detecting NFC&hellip;</div>
-                <div class="fuel2-dfs"><span class="fuel2-dfd"></span>Authorising OST&hellip;</div>
-                <div class="fuel2-dfs"><span class="fuel2-dfd"></span>Settling on Solana&hellip;</div>
-                <div class="fuel2-dfs"><span class="fuel2-dfd"></span>Complete &#10003;</div>
+                <div class="fuel2-dfs"><span class="fuel2-dfd"></span>Verifying merchant session&hellip;</div>
+                <div class="fuel2-dfs"><span class="fuel2-dfd"></span>Holding OST pre-authorisation&hellip;</div>
+                <div class="fuel2-dfs"><span class="fuel2-dfd"></span>Unlocking pump and tracking fill&hellip;</div>
+                <div class="fuel2-dfs"><span class="fuel2-dfd"></span>Settling cashback receipt &#10003;</div>
               </div>
+              <div class="fuel2-det-receipt" id="fuel2DetReceipt" style="display:none"></div>
             </div>
             <div class="fuel2-det-section">
               <div class="fuel2-det-section-title">Reviews</div>
@@ -2010,7 +2091,7 @@
     <div class="container">
       <div class="ai-hero-badge">&#129302; Machine Intelligence</div>
       <h2 class="section-title" style="background:linear-gradient(135deg,#a78bfa,#6d9fff,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Power for Every Intelligence</h2>
-      <p class="section-subtitle">We welcome AI agents, bots, servers, and every form of digital intelligence.</p>
+      <p class="section-subtitle">Deploy AI agents, servers, and market bots with OST as the confidential settlement layer.</p>
 
       <!-- Server/Bot Hook Banner -->
       <div class="ai-hook-banner">
@@ -2037,6 +2118,41 @@
           </div>
         </div>
       </div>
+      <div class="ai-command-grid">
+        <div class="ai-command-card ai-command-terminal">
+          <div class="ai-command-top">
+            <span class="ai-command-kicker">Agent runtime</span>
+            <span class="ai-command-status">Confidential settlement rail</span>
+          </div>
+          <h3>Give bots one place to quote, swap, settle, meter API usage, and move treasury capital in OST.</h3>
+          <pre class="ai-command-code"><code>agent.connect({
+  rails: ['wallet', 'swap', 'prediction', 'depin'],
+  settlement: 'confidential_ost',
+  budget: '250000 OST',
+  policy: 'risk-aware'
+});</code></pre>
+          <div class="ai-command-tags">
+            <span>REST</span>
+            <span>WebSocket</span>
+            <span>MCP</span>
+            <span>Webhooks</span>
+            <span>TypeScript</span>
+          </div>
+        </div>
+        <div class="ai-command-card ai-command-routes">
+          <div class="ai-command-top">
+            <span class="ai-command-kicker">What builders can deploy</span>
+            <span class="ai-command-status">From localhost to live servers</span>
+          </div>
+          <div class="ai-route-list">
+            <div class="ai-route-row"><strong>Swap bots</strong><span>Route inventory into OST, quote against live markets, and rebalance on every trigger.</span></div>
+            <div class="ai-route-row"><strong>Mining / compute</strong><span>Pay GPU, CPU, bandwidth, and node contributors in OST with programmable reward logic.</span></div>
+            <div class="ai-route-row"><strong>Arbitrage</strong><span>Scan exchanges, payment rails, and tokenized stock venues for spread capture without exposing balances.</span></div>
+            <div class="ai-route-row"><strong>Prediction systems</strong><span>Wire Polymarket, Kalshi, and custom event engines into OST-denominated agent strategies.</span></div>
+            <div class="ai-route-row"><strong>Treasury operators</strong><span>Let assistants manage recurring payouts, alerts, and execution policies across wallets and services.</span></div>
+          </div>
+        </div>
+      </div>
       <div class="ai-hero-visual"><div class="ai-orb"><div class="ai-ring ai-ring-1"></div><div class="ai-ring ai-ring-2"></div><div class="ai-ring ai-ring-3"></div><div class="ai-core">&#129302;</div></div></div>
       <div class="features-grid">
         <div class="feature-card glow-card sr"><div class="feature-icon">&#129302;</div><h3>AI Agents</h3><p>Autonomous agents can hold, send, and receive OST. Any LLM with function calling can integrate in minutes.</p></div>
@@ -2050,7 +2166,7 @@
       <!-- Bot Connector Panel -->
       <div class="bot-connector-panel" id="botConnectorPanel">
         <h3>&#128268; Connect Your Bot or AI</h3>
-        <p class="text-muted" style="margin-bottom:24px;">Plug any AI agent, chatbot, or server into the OST network. Enter your API details below to test the connection.</p>
+        <p class="text-muted" style="margin-bottom:24px;">Plug any AI agent, chatbot, or server into the OST network. Test API connectivity, webhook rails, and prediction-market execution paths below.</p>
 
         <div class="connector-grid">
           <div class="connector-card" id="connectorOpenAI">
@@ -2520,10 +2636,62 @@
   <!-- ================================================================== -->
   <section id="spacex" class="section section-space">
     <div class="container">
-      <div class="sx-header" style="text-align:center;">
-        <div class="sx-icon-ring" style="margin:0 auto 16px;"><span>&#128640;</span></div>
-        <h2 class="section-title" data-i18n="spacex.title">OST &times; SpaceX &mdash; The Journey to Space</h2>
-        <p class="section-subtitle" data-i18n="spacex.sub">Follow our partnership roadmap from Earth to Mars. Every milestone is real, every goal is funded by donations and investors &mdash; never by taxing your transactions.</p>
+      <div class="sx-stage">
+        <div class="sx-stage-copy">
+          <div class="sx-header" style="text-align:left;">
+            <div class="sx-icon-ring" style="margin:0 0 16px;"><span>&#128640;</span></div>
+            <h2 class="section-title" data-i18n="spacex.title">OST &times; SpaceX &mdash; The Journey to Space</h2>
+            <p class="section-subtitle" data-i18n="spacex.sub">Follow our partnership roadmap from Earth to Mars. Every milestone is real, every goal is funded by donations and investors &mdash; never by taxing your transactions.</p>
+            <div class="sx-hero-actions">
+              <a class="sx-hero-btn" href="#spaceJourney3d">Open 3D journey</a>
+              <a class="sx-hero-btn sx-hero-btn-ghost" href="https://www.spacex.com/updates/" target="_blank" rel="noopener">Read official updates</a>
+            </div>
+            <div class="sx-proof-strip">
+              <div class="sx-proof-card"><strong>4</strong><span>journey phases</span></div>
+              <div class="sx-proof-card"><strong>LEO</strong><span>rideshare path</span></div>
+              <div class="sx-proof-card"><strong>$0</strong><span>user fees funding model</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="sx-montage" id="sxMontage">
+          <div class="sx-montage-frame-wrap">
+            <iframe
+              id="sxMontageFrame"
+              class="sx-montage-frame"
+              src="https://www.youtube-nocookie.com/embed/wbSwFU6tY1c?rel=0&amp;modestbranding=1&amp;playsinline=1"
+              title="SpaceX mission montage"
+              loading="lazy"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              referrerpolicy="strict-origin-when-cross-origin"
+              allowfullscreen></iframe>
+            <button id="sxMontageFallback" class="sx-montage-fallback" type="button" hidden>
+              <span class="sx-montage-fallback-pill">Open source video</span>
+            </button>
+            <div class="sx-montage-caption">
+              <span class="sx-montage-tag" id="sxMontageTag">Mission opener</span>
+              <h3 id="sxMontageTitle">Falcon Heavy debut</h3>
+              <p id="sxMontageDesc">Heavy-lift footage to anchor the opening of the OST transport narrative.</p>
+            </div>
+          </div>
+          <div class="sx-montage-controls">
+            <button class="sx-montage-btn active" data-src="https://www.youtube-nocookie.com/embed/wbSwFU6tY1c?rel=0&amp;modestbranding=1&amp;playsinline=1" data-link="https://www.youtube.com/watch?v=wbSwFU6tY1c" data-poster="https://www.spacex.com/assets/images/vehicles/falcon-9/f9_feature.jpg" data-tag="Mission opener" data-title="Falcon Heavy debut" data-desc="Heavy-lift footage to anchor the opening of the OST transport narrative." style="--sx-shot:url('https://www.spacex.com/assets/images/vehicles/falcon-9/f9_feature.jpg');">
+              <span>Falcon Heavy</span>
+              <small>Launch energy</small>
+            </button>
+            <button class="sx-montage-btn" data-src="https://www.youtube-nocookie.com/embed/FMi_m9-e9MU?rel=0&amp;modestbranding=1&amp;playsinline=1" data-link="https://www.youtube.com/watch?v=FMi_m9-e9MU" data-poster="https://www.spacex.com/assets/images/vehicles/starship/starship_hero_d.jpg" data-tag="Crew systems" data-title="Demo-2" data-desc="Human-rated mission control, docking, and return discipline for the operational layer." style="--sx-shot:url('https://www.spacex.com/assets/images/vehicles/starship/starship_hero_d.jpg');">
+              <span>Demo-2</span>
+              <small>Orbit operations</small>
+            </button>
+            <button class="sx-montage-btn" data-src="https://www.youtube-nocookie.com/embed/lW07SN3YoLI?rel=0&amp;modestbranding=1&amp;playsinline=1" data-link="https://www.youtube.com/watch?v=lW07SN3YoLI" data-poster="https://www.spacex.com/assets/images/vehicles/starship/mobile/starship_carousel4_card1_m.jpg" data-tag="Crew transfer" data-title="Crew-2" data-desc="Recurring launch cadence and orbital handoff visuals for the active transport stack." style="--sx-shot:url('https://www.spacex.com/assets/images/vehicles/starship/mobile/starship_carousel4_card1_m.jpg');">
+              <span>Crew-2</span>
+              <small>Cadence</small>
+            </button>
+          </div>
+          <div class="sx-montage-links">
+            <a id="sxMontageLink" class="sx-montage-link" href="https://www.youtube.com/watch?v=wbSwFU6tY1c" target="_blank" rel="noopener">Open official source</a>
+            <button id="sxMontageAuto" class="sx-montage-toggle" type="button">Pause auto-cycle</button>
+          </div>
+        </div>
       </div>
 
       <!-- Unified 3D Space Journey Scene — Full Immersive -->
@@ -3303,7 +3471,44 @@
     <div class="container">
       <div class="build-hero-badge">&#128736;&#65039; Open Source</div>
       <h2 class="section-title" style="background:linear-gradient(135deg,#34d399,#6d9fff,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Build the Future With Us</h2>
-      <p class="section-subtitle">Code, create, or dream in pixels — OST is your platform.</p>
+      <p class="section-subtitle">Ship wallets, payment rails, agent runtimes, and launch tools on top of OST.</p>
+
+      <div class="build-command-grid">
+        <div class="build-command-card">
+          <span class="build-command-kicker">Ship real modules</span>
+          <h3>The repo already spans contract, SDK, launchpad, AI surfaces, and contributor workflows.</h3>
+          <div class="build-command-stats">
+            <div class="build-command-stat"><strong>25</strong><span>contract instructions</span></div>
+            <div class="build-command-stat"><strong>22</strong><span>SDK builders</span></div>
+            <div class="build-command-stat"><strong>0</strong><span>user fees</span></div>
+            <div class="build-command-stat"><strong>3</strong><span>high-leverage fronts</span></div>
+          </div>
+          <div class="build-command-list">
+            <div class="build-command-item"><span>01</span><div><strong>Merchant rails</strong><p>Checkout sessions, receipts, and wallet-powered payment gateways for real-world OST usage.</p></div></div>
+            <div class="build-command-item"><span>02</span><div><strong>Agent middleware</strong><p>API metering, bot wallets, and execution policies for servers, MCP tools, and trading systems.</p></div></div>
+            <div class="build-command-item"><span>03</span><div><strong>Launch tooling</strong><p>Curves, ranking, moderation, analytics, and better creator onboarding for the OST launchpad.</p></div></div>
+            <div class="build-command-item"><span>04</span><div><strong>Mainnet readiness</strong><p>Audit, liquidity, observability, and docs that turn prototypes into production surfaces.</p></div></div>
+          </div>
+        </div>
+        <div class="build-command-card build-command-card-secondary">
+          <span class="build-command-kicker">Builder loop</span>
+          <h3>Pick a lane, ship a slice, and plug it into the same open stack the site already demonstrates.</h3>
+          <div class="build-surface-grid">
+            <div class="build-surface-card"><strong>Anchor core</strong><span>Confidential transfer, mint, governance, satellite, and faucet rails.</span></div>
+            <div class="build-surface-card"><strong>TypeScript SDK</strong><span>Client builders, wallet flows, swap surfaces, and app integrations.</span></div>
+            <div class="build-surface-card"><strong>Frontend apps</strong><span>Merchant checkout, AI control plane, launchpad, wallet, and demo surfaces.</span></div>
+            <div class="build-surface-card"><strong>Infra &amp; content</strong><span>Localization, docs, runbooks, analytics, tutorials, and ops.</span></div>
+          </div>
+          <div class="build-signal-strip">
+            <span>Rust</span>
+            <span>Anchor</span>
+            <span>TypeScript</span>
+            <span>Wallet UX</span>
+            <span>AI Ops</span>
+            <span>DePIN</span>
+          </div>
+        </div>
+      </div>
 
       <!-- Code Preview -->
       <div class="build-code-showcase">
@@ -3430,6 +3635,43 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <section id="launchpad" class="section section-alt section-space">
     <div class="container">
 
+      <div class="lp-hero-shell">
+        <div class="lp-hero-copy">
+          <span class="lp-hero-kicker">Creator economy</span>
+          <h2 class="lp-hero-title">Launch fast, inspect curves clearly, and route attention into the tokens actually moving.</h2>
+          <p class="lp-hero-sub">The launchpad now pairs a fast launch form with live market context, clearer curve pressure, and direct jumps into create, trending, and leaderboard modes.</p>
+          <div class="lp-hero-actions">
+            <button class="lp-hero-btn" type="button" data-lp-jump="create">Start a coin</button>
+            <button class="lp-hero-btn lp-hero-btn-ghost" type="button" data-lp-jump="feed">See trending</button>
+            <button class="lp-hero-btn lp-hero-btn-ghost" type="button" data-lp-jump="board">Open leaderboard</button>
+          </div>
+        </div>
+        <div class="lp-hero-side">
+          <div class="lp-hero-grid">
+            <div class="lp-hero-card">
+              <span>Launch fee</span>
+              <strong>0 OST</strong>
+              <p>Fair-launch positioning without a front-loaded creator tax.</p>
+            </div>
+            <div class="lp-hero-card">
+              <span>Graduation</span>
+              <strong>69K OST</strong>
+              <p>Liquidity deposits and burn target remain visible from the first screen.</p>
+            </div>
+            <div class="lp-hero-card">
+              <span>Media</span>
+              <strong>Image or video</strong>
+              <p>Listings surface richer identity assets before the first trade even lands.</p>
+            </div>
+            <div class="lp-hero-card">
+              <span>Views</span>
+              <strong>Create / Feed / Board</strong>
+              <p>Switch between launching, scanning flow, and leaderboard confirmation instantly.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- ── Top bar ── -->
       <div class="lp-topbar">
         <div class="lp-topbar-left">
@@ -3458,12 +3700,33 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
         <div class="lp-stat-box"><div class="lp-stat-val" id="lpStatGrads">0</div><div class="lp-stat-label">Graduated</div></div>
       </div>
 
+      <div class="lp-market-shell">
+        <div class="lp-market-card">
+          <span class="lp-market-kicker">Market pulse</span>
+          <h3>Read the curve before you press create.</h3>
+          <div class="lp-market-grid">
+            <div class="lp-market-stat"><span>Hot runner</span><strong id="lpPulseHot">--</strong></div>
+            <div class="lp-market-stat"><span>Fresh mint</span><strong id="lpPulseNew">--</strong></div>
+            <div class="lp-market-stat"><span>Near graduation</span><strong id="lpPulseGrad">--</strong></div>
+          </div>
+        </div>
+        <div class="lp-market-card lp-market-card-rules">
+          <span class="lp-market-kicker">OST fair-launch rules</span>
+          <div class="lp-rule-list">
+            <div class="lp-rule-row"><strong>No presale</strong><span>Everyone enters on the same bonding curve.</span></div>
+            <div class="lp-rule-row"><strong>0 OST launch fee</strong><span>Creators pay attention, not a front-loaded tax.</span></div>
+            <div class="lp-rule-row"><strong>69K graduation</strong><span>Liquidity deposit and burn target stays visible the entire time.</span></div>
+          </div>
+        </div>
+      </div>
+
       <!-- ===== TAB: CREATE ===== -->
       <div class="lp-panel lp-panel-create" id="lpPanelCreate">
+        <div class="lp-create-layout">
         <div class="lp-create-wrap">
           <div class="lp-create-card">
             <h2 class="lp-create-title">&#128640; start a new coin</h2>
-            <p class="lp-create-sub text-muted">Launch a token on Solana instantly. It costs 0 OST. Powered by bonding curve.</p>
+            <p class="lp-create-sub text-muted">Launch an OST-native coin on a fair bonding curve. It costs 0 OST to deploy.</p>
 
             <!-- Section: Token Identity -->
             <div class="lp-section-divider"><span>&#127912; Token Identity</span></div>
@@ -3582,6 +3845,44 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
             </div>
             <p class="lp-safe-note">&#128274; All tokens are safe &mdash; no presale, no team allocation, fair launch.</p>
           </div>
+        </div>
+
+        <aside class="lp-compose-rail">
+          <div class="lp-compose-card">
+            <div class="lp-compose-head">
+              <span class="lp-market-kicker">Launch preview</span>
+              <span class="lp-compose-stage" id="lpPreviewStage">Waiting for token identity</span>
+            </div>
+            <div class="lp-compose-media" id="lpPreviewMedia"><span>&#9673;</span></div>
+            <div class="lp-compose-token">
+              <div>
+                <div class="lp-compose-name" id="lpPreviewName">Your coin name</div>
+                <div class="lp-compose-ticker" id="lpPreviewTicker">$TICK</div>
+              </div>
+              <div class="lp-compose-creator">
+                <span>Creator</span>
+                <strong id="lpPreviewCreator">anon</strong>
+              </div>
+            </div>
+            <p class="lp-compose-desc" id="lpPreviewDesc">Write the pitch, drop the meme, and show traders why this deserves the next rotation.</p>
+            <div class="lp-compose-stats">
+              <div><span>Opening buy</span><strong id="lpPreviewBuy">0 OST</strong></div>
+              <div><span>Curve start</span><strong id="lpPreviewCurve">0%</strong></div>
+              <div><span>Graduate at</span><strong>69K OST</strong></div>
+              <div><span>Media</span><strong>Image or video</strong></div>
+            </div>
+            <div class="lp-compose-links" id="lpPreviewLinks"><span>No socials yet</span></div>
+          </div>
+          <div class="lp-compose-card lp-compose-card-secondary">
+            <span class="lp-market-kicker">Launch checklist</span>
+            <div class="lp-compose-checklist">
+              <div class="lp-compose-check"><strong>Identity</strong><span>Name, ticker, media, and narrative should scan instantly.</span></div>
+              <div class="lp-compose-check"><strong>Social proof</strong><span>Add links so traders can verify context before they ape in.</span></div>
+              <div class="lp-compose-check"><strong>Opening liquidity</strong><span>Seed a small first buy if you want a stronger opening curve.</span></div>
+              <div class="lp-compose-check"><strong>Fair launch</strong><span>No team allocation, no presale, and OST rails from the first block.</span></div>
+            </div>
+          </div>
+        </aside>
         </div>
       </div>
 
@@ -4445,6 +4746,6 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=53"></script>
+  <script src="app.js?v=55"></script>
 </body>
 </html>
