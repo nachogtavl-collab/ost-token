@@ -36,7 +36,7 @@
 
   const translations = {
     en: {
-      'nav.home': 'Home', 'nav.newhere': 'Get OST', 'nav.demos': 'Demos', 'nav.wallet': 'Wallet',
+      'nav.home': 'Home', 'nav.newhere': 'Get OST', 'nav.demos': 'Commerce', 'nav.stores': 'Commerce', 'nav.wallet': 'Wallet',
       'nav.ai': 'AI & Bots', 'nav.offline': 'Offline', 'nav.censorship': 'Censorship', 'nav.spacex': 'SpaceX',
       'nav.about': 'Our Story', 'nav.roadmap': 'Roadmap', 'nav.build': 'Build', 'nav.verify': 'Verify',
       'nav.connect': 'Connect Wallet',
@@ -45,7 +45,7 @@
       'hero.tag': 'The Next Step After Bitcoin',
       'hero.title': 'We are all <span class="gradient-text">one family.</span>',
       'hero.sub': 'OST is the digital cash made for every citizen of the world - private, instant, and connected to any currency you already have.',
-      'hero.cta1': 'Try the Pay Demo', 'hero.cta2': 'Get OST Now',
+      'hero.cta1': 'Explore Commerce', 'hero.cta2': 'Get OST Now',
       'hero.premine': 'Pre-mine', 'hero.settle': 'Settlement', 'hero.opensource': 'Open Source', 'hero.privacy': 'Privacy',
       'story.title': 'Our Story', 'story.sub': 'A journey from the first spark of decentralized money to the future of private digital cash.',
       'story.t1.title': 'The Spark', 'story.t1.text': 'Bitcoin proved that people - not banks, not governments - could create money that crosses every border. The spark changed everything.',
@@ -64,8 +64,8 @@
       'features.f4.title': 'Forever Free', 'features.f4.text': 'Zero transaction fees. Funded by donations & investors. On-chain transparency.',
       'features.f5.title': 'Offline Payments', 'features.f5.text': 'NFC, QR, Bluetooth. Pay without internet.',
       'features.f6.title': 'ZK Tax Compliance', 'features.f6.text': 'Prove taxes without revealing your balance.',
-      'pay.title': 'Shop with OST - Real Prices', 'pay.sub': 'Real products, real world prices. See what private payments feel like.',
-      'pay.cart': 'Your Cart', 'pay.empty': 'Tap + to add items', 'pay.paybtn': 'Pay with OST',
+      'pay.title': 'Curated Shop - Live Listings', 'pay.sub': 'Build a cart from real products, then send it to the interchange desk for a live OST request.',
+      'pay.cart': 'Your Cart', 'pay.empty': 'Tap + to add items', 'pay.paybtn': 'Review in OST Desk',
       'pay.s1': 'Connecting wallet', 'pay.s2': 'Generating ZK proof', 'pay.s3': 'Broadcasting transfer', 'pay.s4': 'Confirmed in 0.4s',
       'pay.done': 'Payment Complete - Fully Private', 'pay.donesub': 'No one on Earth saw this transaction.',
       'transfer.title': 'Bring Your Money From Anywhere', 'transfer.sub': 'Live prices. Real-time charts. Exchange any currency into OST.',
@@ -87,14 +87,41 @@
       'getost.fiat': 'Buy with Local Money', 'getost.fiatsub': 'Buy SOL or USDC, then swap to OST. No KYC for the swap.',
       'getost.faucet': 'New Here? Claim Free OST', 'getost.faucettext': 'Every new wallet gets <strong>10 OST</strong> from the community treasury &mdash; enough to start using OST right away.',
       'getost.faucetbtn': 'Turn the Faucet',
-      'pay.anywhere': '🌐 Pay Anywhere with OST',
-      'pay.anywheresub': 'Paste any website where you\'re buying something. We convert your OST into whatever currency they accept.',
+      'pay.anywhere': '🌐 Interchange - Browse Any Merchant',
+      'pay.anywheresub': 'Paste a real product or checkout URL, or open a merchant lane below. OST loads the quote and prepares an honest on-chain request instead of pretending merchant settlement is live.',
       'pay.aurl': 'Merchant URL', 'pay.aamount': 'Amount to Pay', 'pay.acurrency': 'Their Currency',
       'pay.ayoupay': 'You Pay:', 'pay.arate': 'Rate:', 'pay.afee': 'Network Fee:',
       'pay.ahow': 'How It Works',
       'pay.astep1': 'Paste the merchant checkout link', 'pay.astep2': 'Enter the amount in their currency',
       'pay.astep3': 'OST converts at live rates via Jupiter + Wormhole', 'pay.astep4': 'Merchant receives their currency, you paid with OST',
-      'pay.apaybtn': 'Pay with OST', 'pay.asupported': 'Works with any site that accepts:',
+      'pay.apaybtn': 'Load Request Desk', 'pay.asupported': 'Works with any site that accepts:',
+      'pay.catalogkicker': 'Curated lanes',
+      'pay.catalogcopy': 'Build a cart from live products, flights, hotels, vehicles, and property listings, then move it into the OST desk.',
+      'pay.catalogCountSuffix': 'live listings',
+      'pay.filter.all': 'All', 'pay.filter.tech': 'Tech', 'pay.filter.fashion': 'Fashion', 'pay.filter.travel': 'Travel',
+      'pay.filter.flight': 'Flights', 'pay.filter.hotel': 'Hotels', 'pay.filter.car': 'Cars', 'pay.filter.property': 'Property', 'pay.filter.food': 'Food',
+      'pay.deskKicker': 'Live rail', 'pay.deskTitle': 'Real OST purchase request desk', 'pay.deskBadge': 'On-chain vault + memo',
+      'pay.deskCopy': 'This rail no longer fakes merchant settlement. OST records a real on-chain payment request to the interchange vault and attaches the merchant and order memo while direct merchant connectors roll out.',
+      'pay.deskStatusIdle': 'Paste a live product or checkout URL, or send a curated cart here from Shop.',
+      'pay.deskStatusLoaded': 'Request loaded. The next step creates a real devnet OST transfer to the interchange desk vault.',
+      'pay.deskStatusSending': 'Sending a real OST payment request to the interchange vault...',
+      'pay.deskStatusRecorded': 'On-chain request recorded. Share the signature with the desk to finish fulfillment.',
+      'pay.deskNeedRequest': 'Load a request first.', 'pay.deskNeedWallet': 'Create or connect your OST wallet first.',
+      'pay.deskMerchantLabel': 'Merchant', 'pay.deskSourceLabel': 'Source', 'pay.deskFiatLabel': 'Fiat total', 'pay.deskOstLabel': 'OST total', 'pay.deskWalletLabel': 'Wallet',
+      'pay.deskEmpty': 'No request loaded yet.', 'pay.deskMerchantLink': 'Open merchant page', 'pay.deskCreate': 'Create on-chain OST request',
+      'pay.deskSendingButton': 'Sending OST request...',
+      'pay.deskReceiptTitle': 'On-chain request recorded', 'pay.deskReceiptSignature': 'Signature', 'pay.deskReceiptMerchant': 'Merchant',
+      'pay.deskReceiptFiat': 'Fiat total', 'pay.deskReceiptOst': 'OST sent',
+      'pay.deskReceiptHelp': 'Share this transaction with the interchange desk to complete merchant-side fulfillment.',
+      'pay.deskReceiptExplorer': 'View on Solana Explorer',
+      'pay.toastAdded': 'Added', 'pay.toastConnectWallet': 'Connect your OST wallet first', 'pay.toastRequestCreated': 'On-chain interchange request created',
+      'pay.interchangeLoading': 'Interchange desk is still loading', 'pay.cartMoved': 'Cart moved to the interchange desk',
+      'pay.shopSource': 'shop cart', 'pay.manualSource': 'manual request', 'pay.browserSource': 'interchange browser',
+      'pay.walletNeedsSol': 'This wallet needs a little devnet SOL for the network fee. Fund it at faucet.solana.com, then try again.',
+      'pay.notEnoughOst': 'Not enough OST in this wallet. Claim or buy OST first.', 'pay.deskNeedValidAmount': 'Load a request with a valid OST amount first',
+      'pay.deskRequestFailed': 'Could not create the interchange request right now.',
+      'pay.browseTitle': 'Browse merchant lanes', 'pay.browseSub': 'Pick hotels, flights, cars, property, or retail, then load a real quote into the request desk.',
+      'pay.browseHotels': 'Hotels', 'pay.browseFlights': 'Flights', 'pay.browseCars': 'Cars', 'pay.browseProperty': 'Property', 'pay.browseRetail': 'Retail', 'pay.browseOpen': 'Open lane',
       'launch.title': '🚀 Mainnet Launch Checklist', 'launch.sub': 'What we need to make OST fully real on Solana mainnet.',
       'ai.title': 'Power for Every Intelligence', 'ai.sub': 'We welcome AI agents, bots, servers, and every form of digital intelligence.',
       'build.title': 'Build the Future With Us', 'build.sub': 'Code, create, or dream in pixels - OST is your platform.',
@@ -103,7 +130,7 @@
       'verify.title': 'Full Transparency', 'verify.sub': 'Verify everything yourself. We have nothing to hide.',
       'verify.lead': 'Trust is earned with facts, not promises.',
       'verify.closing': 'Read the code. Check the company. Verify the treasury. <strong>Then decide.</strong>',
-      'wallet.title': 'Connect Your Wallet', 'wallet.sub': 'Choose a wallet to connect to OST.',
+      'wallet.title': 'Connect or Create Wallet', 'wallet.sub': 'Choose an existing wallet or generate a local OST wallet in this browser.',
       'footer.mission': 'Every transaction helps fund satellite infrastructure for universal internet access. <strong>A gift we build together.</strong>',
       'footer.copy': 'Open source. Built with love for every human on Earth.',
       'hero.free': '&#128176; FREE FOREVER',
@@ -129,9 +156,130 @@
       'gv.disclaimer': 'Educational use only. Parents/guardians are responsible for all tax, custody, and local laws regarding gifts to minors.',
       'depin.title': 'DePIN Data-Center Faucet',
       'depin.sub': 'Share bandwidth, GPU, CPU, or satellite capacity &mdash; earn OST for building the decentralized data centers and satellite internet. Big rewards for real contributions.',
-      'demos.title': '&#127916; Live Demos', 'demos.sub': 'See what private, instant payments feel like. Real products, real prices. Zero fees.',
-      'wallet.getTitle': 'Get Your Personal OST Wallet', 'wallet.getSub': 'Choose how to create or connect your wallet. No seed phrase required with Web3Auth.',
-      'sell.title': 'Sell or Trade OST', 'sell.sub': 'Cash out to any crypto or fiat. Same speed, same privacy.',
+      'demos.title': '&#128717;&#65039; OST Commerce', 'demos.sub': 'Curated shopping, live merchant browsing, and real on-chain request routing with OST.',
+        'wallet.getTitle': 'Get Your Personal OST Wallet', 'wallet.getSub': 'Choose how to create or connect your wallet. Build one in this browser or connect an existing Solana wallet.',
+        'wallet.commandKicker': 'Wallet + conversion rail',
+        'wallet.commandTitle': 'Open a wallet, read the OST market, and move from fiat or crypto into confidential OST.',
+        'wallet.commandSub': 'The wallet page now behaves like a command center for access, market watch, conversion, and portal routing.',
+        'wallet.tabs.aria': 'Wallet command panels',
+        'wallet.market.velocity': 'Route speed',
+        'wallet.market.liquidity': 'Liquidity',
+        'wallet.market.title': 'OST market pulse',
+        'wallet.market.updated': 'Live',
+        'wallet.market.price': 'OST price',
+        'wallet.market.volume': '24h volume',
+        'wallet.tabs.access': 'Access',
+        'wallet.tabs.market': 'Market',
+        'wallet.tabs.convert': 'Convert',
+        'wallet.tabs.portals': 'Portals',
+        'wallet.card.phantomDesc': 'Fast mobile and desktop access for users who already live inside Solana.',
+        'wallet.card.connectAction': 'Connect',
+        'wallet.card.solflareDesc': 'Strong staking and portfolio tools for users who want a deeper wallet dashboard.',
+        'wallet.card.backpackDesc': 'A multi-chain option for people who want apps, collectibles, and payments in one place.',
+        'wallet.card.seedlessTitle': 'Create OST wallet',
+        'wallet.card.seedlessDesc': 'Generate an OST wallet in this browser, download a backup, and start with devnet OST.',
+        'wallet.card.seedlessAction': 'Create wallet',
+        'wallet.downloadTitle': 'Need an install first? Use the official wallet download links.',
+        'wallet.copy': 'Copy',
+        'wallet.explorer': 'Explorer',
+        'wallet.buyOst': 'Buy OST',
+        'wallet.send': 'Send',
+        'wallet.bridge': 'Bridge',
+        'wallet.receive': 'Receive',
+        'wallet.swap': 'Swap',
+        'wallet.receiveTitle': 'Receive OST or SOL',
+        'wallet.receiveSub': 'Share your address or let someone scan the QR rail below.',
+        'wallet.quickLinksTitle': 'Quick routes',
+        'wallet.secure.title': 'Secure onboarding',
+        'wallet.secure.sub': 'Choose the access rail that matches the user: seed phrase power users, browser-wallet newcomers, or wallet-native Solana traders.',
+        'wallet.secure.point1': 'Use Phantom, Solflare, or Backpack when the user already has a Solana workflow.',
+        'wallet.secure.point2': 'Use the local wallet flow when the priority is onboarding a first wallet in minutes.',
+        'wallet.secure.point3': 'Keep one address across swap, payment, and launchpad rails to reduce confusion.',
+        'wallet.secure.point4': 'The connected view surfaces balances, receive QR, and direct links without leaving the page.',
+        'wallet.market.note2': 'The calculator below reads the same OST quote as the convert rail, so the preview and execution surface stay aligned.',
+        'wallet.convert.lead': 'Institutional-grade currency conversion, redesigned for regular users who need a clean entry rail into confidential OST.',
+        'wallet.convert.from': 'From',
+        'wallet.convert.bridge': 'Bridge',
+        'wallet.convert.swap': 'Swap',
+        'wallet.convert.encrypt': 'Encrypt',
+        'wallet.convert.to': 'To',
+        'wallet.convert.providers': 'Direct fiat on-ramps for the selected currency:',
+        'wallet.convert.note': 'Currently powered by Jupiter + Wormhole on Solana while the OST native interchange engine is under construction.',
+        'wallet.convert.received': 'Received',
+        'wallet.convert.done': 'Done - private and instant',
+        'wallet.sell.stable': 'Swap to stablecoins',
+        'wallet.sell.stableDesc': 'Route OST into USDC, USDT, or DAI when the user needs a fast stable exit.',
+        'wallet.sell.cashout': 'Cash out to bank',
+        'wallet.sell.cashoutDesc': 'Use Onramper or Transak sell rails after the OST to SOL or OST to USDC swap completes.',
+        'wallet.sell.p2p': 'P2P market',
+        'wallet.sell.p2pDesc': 'Direct wallet-to-wallet trading stays on the roadmap for people who want a simpler off-ramp.',
+        'wallet.portal.wormholeDesc': 'Move liquidity from major chains into Solana before the OST swap rail takes over.',
+        'wallet.portal.onramperDesc': 'Aggregator entry rail with card, bank, Apple Pay, and local fiat routing.',
+        'wallet.portal.moonpayDesc': 'Fast card-based SOL entry for users who want the cleanest first purchase flow.',
+        'wallet.portal.transakDesc': 'Regional payment coverage with PIX, UPI, SEPA, Faster Payments, and card rails.',
+        'wallet.portal.onramperSellDesc': 'Cash out SOL or USDC into bank accounts and mobile money rails after conversion.',
+        'wallet.portal.transakSellDesc': 'Regional fiat exits for users who want local banking rails instead of stablecoin custody.',
+        'wallet.portal.jupiterDesc': 'Best-route aggregator for OST conversions, stable exits, and spot rotations.',
+        'wallet.portal.raydiumDesc': 'Liquidity and swap venue for users who want direct pool access on Solana.',
+        'wallet.portal.orcaDesc': 'Cleaner swap route for concentrated liquidity users who want a simpler interface.',
+        'wallet.portal.meteoraDesc': 'Dynamic liquidity venue for newer assets and launchpad-native routing.',
+        'wallet.portal.prediction.title': 'Coming soon',
+        'wallet.portal.prediction.sub': 'A community-first event market rail inspired by Polymarket, Kalshi, and the rest of the contract platforms, but built inside OST.',
+        'ancient.toggle.off': '𓅱 Ancient',
+        'ancient.toggle.on': 'Modern Mode',
+        'ancient.toggle.activate': 'Activate ancient hieroglyphic mode',
+        'ancient.toggle.deactivate': 'Return to the modern interface',
+        'ancient.toast.on': 'Ancient mode activated',
+        'ancient.toast.off': 'Modern interface restored',
+        'transmit.button': '𓂇 Transmit to Space',
+        'transmit.buttonLarge': '𓂇 Open Transmission Console',
+        'transmit.ctaSub': 'Encode a custom message, DNA sequence, image, video, or any file in hieroglyphic, binary, and quantum form before routing it toward future OST relay targets.',
+        'transmit.kicker': 'Deep-space payload console',
+        'transmit.title': '𓂇 Transmit to Space',
+        'transmit.sub': 'Send a custom message, DNA sequence, image, video, or any file through the OST transmission ritual. Preview the payload in hieroglyphs, binary, and quantum entanglement before launch.',
+        'transmit.message.label': 'Custom message',
+        'transmit.message.placeholder': 'Describe the signal, dedication, coordinates, or mission note you want to send...',
+        'transmit.dna.label': 'DNA / life-seed sequence',
+        'transmit.dna.placeholder': 'Optional: ACGT sequence, sample tag, or biological archive note',
+        'transmit.files.label': 'Attach payloads',
+        'transmit.files.sub': 'Drop images, video, documents, archives, or any other file type',
+        'transmit.launch': 'Encode and transmit',
+        'transmit.launchBusy': 'Transmitting...',
+        'transmit.preview.glyph': 'Ancient hieroglyph render',
+        'transmit.preview.binary': 'Binary + checksum',
+        'transmit.preview.quantum': 'Quantum entanglement',
+        'transmit.preview.manifest': 'Transmission manifest',
+        'transmit.preview.attachments': 'Attached payloads',
+        'transmit.empty': 'Add a message, DNA sequence, or file to build a transmission.',
+        'transmit.none': 'No payload attached yet.',
+        'transmit.result.ready': 'Signal deck ready',
+        'transmit.result.sent': 'Transmission complete',
+        'transmit.manifest.default': 'Awaiting payload',
+        'transmit.summary.message': 'Message',
+        'transmit.summary.dna': 'DNA',
+        'transmit.summary.files': 'Files',
+        'transmit.summary.route': 'Route',
+        'transmit.summary.checksum': 'Checksum',
+        'transmit.summary.packet': 'Packet',
+        'transmit.summary.target': 'Target',
+        'transmit.summary.render': 'Render',
+        'transmit.summary.chars': 'chars',
+        'transmit.summary.bases': 'bases',
+        'transmit.route.value': 'LEO relay -> quantum entanglement -> Moon / Mars / deep space',
+        'transmit.target.value': 'Moon, Mars, deep space',
+        'transmit.render.value': 'Hieroglyphic + binary + quantum',
+        'transmit.stage.prepare': 'Preparing payload lattice...',
+        'transmit.stage.encode': 'Encoding payload into hieroglyphic memory...',
+        'transmit.stage.binary': 'Converting packet into binary and orbital checksum...',
+        'transmit.stage.entangle': 'Entangling packet states across relay pairs...',
+        'transmit.stage.route': 'Routing through orbital infrastructure...',
+        'transmit.stage.broadcast': 'Broadcast aimed at Moon, Mars, and deep space...',
+        'transmit.stage.done': 'Transmission complete — relay lock confirmed.',
+        'transmit.file.image': 'Image payload',
+        'transmit.file.video': 'Video payload',
+        'transmit.file.text': 'Text payload',
+        'transmit.file.data': 'Archive payload',
+        'sell.title': 'Sell or Trade OST', 'sell.sub': 'Cash out to any crypto or fiat. Same speed, same privacy.',
       'censor.title': '&#128683; Internet Censorship Is Happening Now', 'censor.sub': 'Real events. Real people. OST is the answer to digital oppression.',
       'spacex.title': 'OST &times; SpaceX &mdash; The Journey to Space', 'spacex.sub': 'Follow our partnership roadmap from Earth to Mars. Every milestone is real, every goal is funded by donations and investors &mdash; never by taxing your transactions.',
       'roadmap.title': '&#128640; Roadmap &amp; Progress', 'roadmap.sub': 'Where we are, what we\'ve built, and what comes next.',
@@ -187,7 +335,7 @@
       'fuel.disclaimer': '&#9888; Partnerships shown are in development. OST is not affiliated with listed brands. Fuel prices are illustrative.',
     },
     es: {
-      'nav.home': 'Inicio', 'nav.newhere': 'Obtener OST', 'nav.demos': 'Demos', 'nav.wallet': 'Billetera',
+      'nav.home': 'Inicio', 'nav.newhere': 'Obtener OST', 'nav.demos': 'Comercio', 'nav.stores': 'Comercio', 'nav.wallet': 'Billetera',
       'nav.ai': 'IA y Bots', 'nav.offline': 'Sin Conexion', 'nav.censorship': 'Censura', 'nav.spacex': 'SpaceX',
       'nav.about': 'Nuestra Historia', 'nav.roadmap': 'Hoja de Ruta', 'nav.build': 'Construir', 'nav.verify': 'Verificar',
       'nav.connect': 'Conectar Billetera',
@@ -196,7 +344,7 @@
       'hero.tag': 'El Siguiente Paso Despues de Bitcoin',
       'hero.title': 'Todos somos <span class="gradient-text">una familia.</span>',
       'hero.sub': 'OST es el dinero digital hecho para cada ciudadano del mundo - privado, instantaneo y conectado a cualquier moneda que ya tengas.',
-      'hero.cta1': 'Probar la Demo', 'hero.cta2': 'Obtener OST',
+      'hero.cta1': 'Explorar Comercio', 'hero.cta2': 'Obtener OST',
       'hero.premine': 'Pre-minado', 'hero.settle': 'Liquidacion', 'hero.opensource': 'Codigo Abierto', 'hero.privacy': 'Privacidad',
       'story.title': 'Nuestra Historia', 'story.sub': 'Un viaje desde la primera chispa del dinero descentralizado hasta el futuro del efectivo digital privado.',
       'story.t1.title': 'La Chispa', 'story.t1.text': 'Bitcoin demostro que las personas - no los bancos, no los gobiernos - podian crear dinero que cruza todas las fronteras.',
@@ -215,8 +363,8 @@
       'features.f4.title': 'Gratis Para Siempre', 'features.f4.text': 'Cero comisiones. Financiado por donaciones e inversores. Transparencia on-chain.',
       'features.f5.title': 'Pagos Sin Internet', 'features.f5.text': 'NFC, QR, Bluetooth. Paga sin internet.',
       'features.f6.title': 'Cumplimiento Fiscal ZK', 'features.f6.text': 'Demuestra tus impuestos sin revelar tu saldo.',
-      'pay.title': 'Compra con OST - Precios Reales', 'pay.sub': 'Productos reales, precios reales. Siente los pagos privados.',
-      'pay.cart': 'Tu Carrito', 'pay.empty': 'Toca + para agregar', 'pay.paybtn': 'Pagar con OST',
+      'pay.title': 'Tienda Curada - Listados Reales', 'pay.sub': 'Arma un carrito con productos reales y luego envialo al desk OST para una solicitud en vivo.',
+      'pay.cart': 'Tu Carrito', 'pay.empty': 'Toca + para agregar', 'pay.paybtn': 'Revisar en el Desk OST',
       'pay.s1': 'Conectando billetera', 'pay.s2': 'Generando prueba ZK', 'pay.s3': 'Transmitiendo a Solana', 'pay.s4': 'Confirmado en 0.4s',
       'pay.done': 'Pago Completo - Totalmente Privado', 'pay.donesub': 'Nadie en la Tierra vio esta transaccion.',
       'transfer.title': 'Trae Tu Dinero de Cualquier Lugar', 'transfer.sub': 'Precios en vivo. Graficos en tiempo real. Cambia cualquier moneda a OST.',
@@ -238,14 +386,41 @@
       'getost.fiat': 'Compra con Moneda Local', 'getost.fiatsub': 'Compra SOL o USDC, luego cambia a OST. Sin KYC para el intercambio.',
       'getost.faucet': 'Nuevo? Reclama OST Gratis', 'getost.faucettext': 'Cada nueva billetera recibe <strong>10 OST</strong> del tesoro comunitario &mdash; suficiente para empezar a usar OST de inmediato.',
       'getost.faucetbtn': 'Abrir el Grifo',
-      'pay.anywhere': '🌐 Paga en Cualquier Sitio con OST',
-      'pay.anywheresub': 'Pega cualquier sitio web donde estes comprando. Convertimos tu OST a la moneda que acepten.',
+      'pay.anywhere': '🌐 Interchange - Explora Cualquier Comercio',
+      'pay.anywheresub': 'Pega una URL real de producto o checkout, o abre una ruta comercial abajo. OST carga la cotizacion y prepara una solicitud on-chain honesta en vez de fingir que la liquidacion del comercio ya existe.',
       'pay.aurl': 'URL del Comercio', 'pay.aamount': 'Monto a Pagar', 'pay.acurrency': 'Su Moneda',
       'pay.ayoupay': 'Tu Pagas:', 'pay.arate': 'Tasa:', 'pay.afee': 'Comision de Red:',
       'pay.ahow': 'Como Funciona',
       'pay.astep1': 'Pega el enlace de pago del comercio', 'pay.astep2': 'Ingresa el monto en su moneda',
       'pay.astep3': 'OST convierte a tasas en vivo via Jupiter + Wormhole', 'pay.astep4': 'El comercio recibe su moneda, tu pagaste con OST',
-      'pay.apaybtn': 'Pagar con OST', 'pay.asupported': 'Funciona con cualquier sitio que acepte:',
+      'pay.apaybtn': 'Cargar en el Desk', 'pay.asupported': 'Funciona con cualquier sitio que acepte:',
+      'pay.catalogkicker': 'Rutas curadas',
+      'pay.catalogcopy': 'Arma un carrito con productos, vuelos, hoteles, vehiculos y propiedades reales, y luego muevelo al desk OST.',
+      'pay.catalogCountSuffix': 'listados activos',
+      'pay.filter.all': 'Todo', 'pay.filter.tech': 'Tecnologia', 'pay.filter.fashion': 'Moda', 'pay.filter.travel': 'Viajes',
+      'pay.filter.flight': 'Vuelos', 'pay.filter.hotel': 'Hoteles', 'pay.filter.car': 'Autos', 'pay.filter.property': 'Propiedad', 'pay.filter.food': 'Comida',
+      'pay.deskKicker': 'Riel activo', 'pay.deskTitle': 'Desk real de solicitudes de compra OST', 'pay.deskBadge': 'Boveda on-chain + memo',
+      'pay.deskCopy': 'Este riel ya no finge la liquidacion del comercio. OST registra una solicitud de pago real on-chain hacia la boveda del interchange y adjunta el comercio y el memo del pedido mientras llegan los conectores directos.',
+      'pay.deskStatusIdle': 'Pega una URL real de producto o checkout, o envia un carrito curado desde Shop.',
+      'pay.deskStatusLoaded': 'Solicitud cargada. El siguiente paso crea una transferencia real de OST en devnet hacia la boveda del desk interchange.',
+      'pay.deskStatusSending': 'Enviando una solicitud real de pago OST hacia la boveda interchange...',
+      'pay.deskStatusRecorded': 'Solicitud on-chain registrada. Comparte la firma con el desk para terminar la entrega.',
+      'pay.deskNeedRequest': 'Primero carga una solicitud.', 'pay.deskNeedWallet': 'Primero crea o conecta tu billetera OST.',
+      'pay.deskMerchantLabel': 'Comercio', 'pay.deskSourceLabel': 'Origen', 'pay.deskFiatLabel': 'Total fiat', 'pay.deskOstLabel': 'Total OST', 'pay.deskWalletLabel': 'Billetera',
+      'pay.deskEmpty': 'Aun no hay ninguna solicitud cargada.', 'pay.deskMerchantLink': 'Abrir pagina del comercio', 'pay.deskCreate': 'Crear solicitud OST on-chain',
+      'pay.deskSendingButton': 'Enviando solicitud OST...',
+      'pay.deskReceiptTitle': 'Solicitud on-chain registrada', 'pay.deskReceiptSignature': 'Firma', 'pay.deskReceiptMerchant': 'Comercio',
+      'pay.deskReceiptFiat': 'Total fiat', 'pay.deskReceiptOst': 'OST enviado',
+      'pay.deskReceiptHelp': 'Comparte esta transaccion con el desk interchange para completar la entrega del lado del comercio.',
+      'pay.deskReceiptExplorer': 'Ver en Solana Explorer',
+      'pay.toastAdded': 'Agregado', 'pay.toastConnectWallet': 'Conecta tu billetera OST primero', 'pay.toastRequestCreated': 'Solicitud interchange on-chain creada',
+      'pay.interchangeLoading': 'El desk interchange todavia se esta cargando', 'pay.cartMoved': 'El carrito fue enviado al desk interchange',
+      'pay.shopSource': 'carrito de shop', 'pay.manualSource': 'solicitud manual', 'pay.browserSource': 'navegador interchange',
+      'pay.walletNeedsSol': 'Esta billetera necesita un poco de SOL en devnet para la comision de red. Fondeala en faucet.solana.com y vuelve a intentar.',
+      'pay.notEnoughOst': 'No hay suficiente OST en esta billetera. Reclama o compra OST primero.', 'pay.deskNeedValidAmount': 'Carga primero una solicitud con un monto OST valido',
+      'pay.deskRequestFailed': 'No se pudo crear la solicitud interchange en este momento.',
+      'pay.browseTitle': 'Explora rutas comerciales', 'pay.browseSub': 'Elige hoteles, vuelos, autos, propiedad o retail y carga una cotizacion real en el desk.',
+      'pay.browseHotels': 'Hoteles', 'pay.browseFlights': 'Vuelos', 'pay.browseCars': 'Autos', 'pay.browseProperty': 'Propiedad', 'pay.browseRetail': 'Retail', 'pay.browseOpen': 'Abrir ruta',
       'launch.title': '🚀 Lista de Lanzamiento Mainnet', 'launch.sub': 'Lo que necesitamos para hacer OST real en Solana mainnet.',
       'ai.title': 'Poder para Cada Inteligencia', 'ai.sub': 'Damos la bienvenida a agentes IA, bots, servidores y toda forma de inteligencia digital.',
       'build.title': 'Construye el Futuro Con Nosotros', 'build.sub': 'Programa, crea o suena en pixeles — OST es tu plataforma.',
@@ -280,9 +455,130 @@
       'gv.disclaimer': 'Solo uso educativo. Los padres/tutores son responsables de todas las leyes fiscales y de custodia.',
       'depin.title': 'Faucet DePIN de Centro de Datos',
       'depin.sub': 'Comparte ancho de banda, GPU, CPU o capacidad satelital &mdash; gana OST por construir centros de datos descentralizados e internet satelital.',
-      'demos.title': '&#127916; Demos en Vivo', 'demos.sub': 'Siente c\u00f3mo son los pagos privados e instant\u00e1neos. Productos reales, precios reales. Cero comisiones.',
-      'wallet.getTitle': 'Obt\u00e9n Tu Billetera OST Personal', 'wallet.getSub': 'Elige c\u00f3mo crear o conectar tu billetera. Sin frase semilla con Web3Auth.',
-      'sell.title': 'Vender o Intercambiar OST', 'sell.sub': 'Retira a cualquier cripto o fiat. Misma velocidad, misma privacidad.',
+      'demos.title': '&#128717;&#65039; Comercio OST', 'demos.sub': 'Compra curada, navegacion de comercios reales y ruteo on-chain de solicitudes con OST.',
+        'wallet.getTitle': 'Obten Tu Billetera OST Personal', 'wallet.getSub': 'Elige como crear o conectar tu billetera. Genera una billetera local en este navegador o conecta una billetera Solana existente.',
+        'wallet.commandKicker': 'Billetera + riel de conversi\u00f3n',
+        'wallet.commandTitle': 'Abre una billetera, sigue el mercado OST y pasa de fiat o cripto a OST confidencial.',
+        'wallet.commandSub': 'La p\u00e1gina de billetera ahora funciona como un centro de mando para acceso, mercado, conversi\u00f3n y portales.',
+        'wallet.tabs.aria': 'Paneles de la billetera',
+        'wallet.market.velocity': 'Velocidad de ruta',
+        'wallet.market.liquidity': 'Liquidez',
+        'wallet.market.title': 'Pulso de mercado OST',
+        'wallet.market.updated': 'En vivo',
+        'wallet.market.price': 'Precio de OST',
+        'wallet.market.volume': 'Volumen 24h',
+        'wallet.tabs.access': 'Acceso',
+        'wallet.tabs.market': 'Mercado',
+        'wallet.tabs.convert': 'Convertir',
+        'wallet.tabs.portals': 'Portales',
+        'wallet.card.phantomDesc': 'Acceso r\u00e1pido en m\u00f3vil y escritorio para usuarios que ya viven dentro de Solana.',
+        'wallet.card.connectAction': 'Conectar',
+        'wallet.card.solflareDesc': 'Herramientas s\u00f3lidas de staking y portafolio para usuarios que quieren una billetera m\u00e1s profunda.',
+        'wallet.card.backpackDesc': 'Una opci\u00f3n multicadena para quienes quieren apps, coleccionables y pagos en un solo lugar.',
+        'wallet.card.seedlessTitle': 'Crear billetera OST',
+        'wallet.card.seedlessDesc': 'Genera una billetera OST en este navegador, descarga un respaldo y empieza con OST en devnet.',
+        'wallet.card.seedlessAction': 'Crear billetera',
+        'wallet.downloadTitle': '¿Necesitas instalar primero? Usa los enlaces oficiales de descarga.',
+        'wallet.copy': 'Copiar',
+        'wallet.explorer': 'Explorador',
+        'wallet.buyOst': 'Comprar OST',
+        'wallet.send': 'Enviar',
+        'wallet.bridge': 'Puente',
+        'wallet.receive': 'Recibir',
+        'wallet.swap': 'Intercambiar',
+        'wallet.receiveTitle': 'Recibir OST o SOL',
+        'wallet.receiveSub': 'Comparte tu direcci\u00f3n o deja que alguien escanee el riel QR de abajo.',
+        'wallet.quickLinksTitle': 'Rutas r\u00e1pidas',
+        'wallet.secure.title': 'Ingreso seguro',
+        'wallet.secure.sub': 'Elige el riel de acceso que coincide con el usuario: avanzados con frase semilla, nuevos sin semilla o traders nativos de Solana.',
+        'wallet.secure.point1': 'Usa Phantom, Solflare o Backpack cuando el usuario ya tenga un flujo dentro de Solana.',
+        'wallet.secure.point2': 'Usa el flujo sin semilla cuando la prioridad sea abrir una primera billetera en minutos.',
+        'wallet.secure.point3': 'Mant\u00e9n una sola direcci\u00f3n en swap, pagos y launchpad para reducir la confusi\u00f3n.',
+        'wallet.secure.point4': 'La vista conectada muestra balances, QR de recepci\u00f3n y enlaces directos sin salir de la p\u00e1gina.',
+        'wallet.market.note2': 'La calculadora de abajo usa la misma cotizaci\u00f3n de OST que el riel de conversi\u00f3n, para que la vista previa y la ejecuci\u00f3n coincidan.',
+        'wallet.convert.lead': 'Conversi\u00f3n de moneda de grado institucional, redise\u00f1ada para usuarios comunes que necesitan una entrada clara a OST confidencial.',
+        'wallet.convert.from': 'Desde',
+        'wallet.convert.bridge': 'Puente',
+        'wallet.convert.swap': 'Intercambio',
+        'wallet.convert.encrypt': 'Cifrar',
+        'wallet.convert.to': 'Hacia',
+        'wallet.convert.providers': 'Rampas fiat directas para la moneda seleccionada:',
+        'wallet.convert.note': 'Actualmente funciona con Jupiter + Wormhole en Solana mientras el motor nativo de intercambio de OST sigue en construcci\u00f3n.',
+        'wallet.convert.received': 'Recibido',
+        'wallet.convert.done': 'Listo - privado e instant\u00e1neo',
+        'wallet.sell.stable': 'Cambiar a stablecoins',
+        'wallet.sell.stableDesc': 'Mueve OST a USDC, USDT o DAI cuando el usuario necesita una salida estable r\u00e1pida.',
+        'wallet.sell.cashout': 'Retirar al banco',
+        'wallet.sell.cashoutDesc': 'Usa las rutas de venta de Onramper o Transak despu\u00e9s de completar el swap de OST a SOL o de OST a USDC.',
+        'wallet.sell.p2p': 'Mercado P2P',
+        'wallet.sell.p2pDesc': 'El intercambio directo entre billeteras sigue en la hoja de ruta para quienes quieren una salida m\u00e1s simple.',
+        'wallet.portal.wormholeDesc': 'Mueve liquidez desde cadenas principales a Solana antes de que el riel de swap de OST tome el control.',
+        'wallet.portal.onramperDesc': 'Ruta agregadora de entrada con tarjeta, banco, Apple Pay y ruteo fiat local.',
+        'wallet.portal.moonpayDesc': 'Entrada r\u00e1pida a SOL con tarjeta para usuarios que quieren el flujo de compra m\u00e1s limpio.',
+        'wallet.portal.transakDesc': 'Cobertura regional de pagos con PIX, UPI, SEPA, Faster Payments y tarjetas.',
+        'wallet.portal.onramperSellDesc': 'Retira SOL o USDC a cuentas bancarias y rieles de dinero m\u00f3vil despu\u00e9s de la conversi\u00f3n.',
+        'wallet.portal.transakSellDesc': 'Salidas fiat regionales para usuarios que quieren banca local en lugar de custodiar stablecoins.',
+        'wallet.portal.jupiterDesc': 'Agregador de mejor ruta para conversiones OST, salidas estables y rotaciones spot.',
+        'wallet.portal.raydiumDesc': 'Lugar de liquidez e intercambio para usuarios que quieren acceso directo a pools en Solana.',
+        'wallet.portal.orcaDesc': 'Ruta de swap m\u00e1s limpia para usuarios de liquidez concentrada que quieren una interfaz m\u00e1s simple.',
+        'wallet.portal.meteoraDesc': 'Lugar de liquidez din\u00e1mica para activos nuevos y ruteo nativo del launchpad.',
+        'wallet.portal.prediction.title': 'Pr\u00f3ximamente',
+        'wallet.portal.prediction.sub': 'Un riel comunitario de mercados de eventos inspirado por Polymarket, Kalshi y el resto de las plataformas de contratos, pero construido dentro de OST.',
+        'ancient.toggle.off': '𓅱 Antiguo',
+        'ancient.toggle.on': 'Modo Moderno',
+        'ancient.toggle.activate': 'Activar el modo jerogl\u00edfico antiguo',
+        'ancient.toggle.deactivate': 'Volver a la interfaz moderna',
+        'ancient.toast.on': 'Modo antiguo activado',
+        'ancient.toast.off': 'Interfaz moderna restaurada',
+        'transmit.button': '𓂇 Transmitir al Espacio',
+        'transmit.buttonLarge': '𓂇 Abrir Consola de Transmisi\u00f3n',
+        'transmit.ctaSub': 'Codifica un mensaje personalizado, secuencia de ADN, imagen, video o cualquier archivo en forma jerogl\u00edfica, binaria y cu\u00e1ntica antes de dirigirlo a futuros rel\u00e9s OST.',
+        'transmit.kicker': 'Consola de carga para espacio profundo',
+        'transmit.title': '𓂇 Transmitir al Espacio',
+        'transmit.sub': 'Env\u00eda un mensaje personalizado, secuencia de ADN, imagen, video o cualquier archivo mediante el ritual de transmisi\u00f3n OST. Previsualiza la carga en jerogl\u00edficos, binario y entrelazamiento cu\u00e1ntico antes del lanzamiento.',
+        'transmit.message.label': 'Mensaje personalizado',
+        'transmit.message.placeholder': 'Describe la se\u00f1al, dedicatoria, coordenadas o nota de misi\u00f3n que quieres enviar...',
+        'transmit.dna.label': 'Secuencia de ADN / semilla de vida',
+        'transmit.dna.placeholder': 'Opcional: secuencia ACGT, etiqueta de muestra o nota de archivo biol\u00f3gico',
+        'transmit.files.label': 'Adjuntar cargas',
+        'transmit.files.sub': 'Suelta im\u00e1genes, video, documentos, archivos comprimidos o cualquier otro tipo de archivo',
+        'transmit.launch': 'Codificar y transmitir',
+        'transmit.launchBusy': 'Transmitiendo...',
+        'transmit.preview.glyph': 'Render jerogl\u00edfico antiguo',
+        'transmit.preview.binary': 'Binario + checksum',
+        'transmit.preview.quantum': 'Entrelazamiento cu\u00e1ntico',
+        'transmit.preview.manifest': 'Manifiesto de transmisi\u00f3n',
+        'transmit.preview.attachments': 'Cargas adjuntas',
+        'transmit.empty': 'Agrega un mensaje, secuencia de ADN o archivo para construir una transmisi\u00f3n.',
+        'transmit.none': 'Todav\u00eda no hay carga adjunta.',
+        'transmit.result.ready': 'Panel de se\u00f1al listo',
+        'transmit.result.sent': 'Transmisi\u00f3n completa',
+        'transmit.manifest.default': 'Esperando carga',
+        'transmit.summary.message': 'Mensaje',
+        'transmit.summary.dna': 'ADN',
+        'transmit.summary.files': 'Archivos',
+        'transmit.summary.route': 'Ruta',
+        'transmit.summary.checksum': 'Checksum',
+        'transmit.summary.packet': 'Paquete',
+        'transmit.summary.target': 'Objetivo',
+        'transmit.summary.render': 'Render',
+        'transmit.summary.chars': 'caracteres',
+        'transmit.summary.bases': 'bases',
+        'transmit.route.value': 'Rel\u00e9 LEO -> entrelazamiento cu\u00e1ntico -> Luna / Marte / espacio profundo',
+        'transmit.target.value': 'Luna, Marte, espacio profundo',
+        'transmit.render.value': 'Jerogl\u00edfico + binario + cu\u00e1ntico',
+        'transmit.stage.prepare': 'Preparando la red de carga...',
+        'transmit.stage.encode': 'Codificando la carga en memoria jerogl\u00edfica...',
+        'transmit.stage.binary': 'Convirtiendo el paquete a binario y checksum orbital...',
+        'transmit.stage.entangle': 'Entrelazando estados del paquete entre pares de rel\u00e9...',
+        'transmit.stage.route': 'Enrutando por infraestructura orbital...',
+        'transmit.stage.broadcast': 'Difusi\u00f3n apuntada a la Luna, Marte y espacio profundo...',
+        'transmit.stage.done': 'Transmisi\u00f3n completa \u2014 bloqueo del rel\u00e9 confirmado.',
+        'transmit.file.image': 'Carga de imagen',
+        'transmit.file.video': 'Carga de video',
+        'transmit.file.text': 'Carga de texto',
+        'transmit.file.data': 'Carga de archivo',
+        'sell.title': 'Vender o Intercambiar OST', 'sell.sub': 'Retira a cualquier cripto o fiat. Misma velocidad, misma privacidad.',
       'censor.title': '&#128683; La Censura de Internet Est\u00e1 Ocurriendo Ahora', 'censor.sub': 'Eventos reales. Personas reales. OST es la respuesta a la opresi\u00f3n digital.',
       'spacex.title': 'OST &times; SpaceX &mdash; El Viaje al Espacio', 'spacex.sub': 'Sigue nuestra hoja de ruta desde la Tierra hasta Marte. Cada hito es real, cada objetivo est\u00e1 financiado por donaciones e inversores.',
       'roadmap.title': '&#128640; Hoja de Ruta y Progreso', 'roadmap.sub': 'D\u00f3nde estamos, qu\u00e9 hemos construido y qu\u00e9 sigue.',
@@ -338,7 +634,7 @@
       'fuel.disclaimer': '&#9888; Las alianzas mostradas est\u00e1n en desarrollo. OST no est\u00e1 afiliado a las marcas listadas.',
     },
     zh: {
-      'nav.home': '首页', 'nav.newhere': '获取OST', 'nav.demos': '演示', 'nav.wallet': '钱包',
+      'nav.home': '首页', 'nav.newhere': '获取OST', 'nav.demos': '商业', 'nav.wallet': '钱包',
       'nav.ai': 'AI和机器人', 'nav.offline': '离线', 'nav.censorship': '审查', 'nav.spacex': 'SpaceX',
       'nav.about': '我们的故事', 'nav.roadmap': '路线图', 'nav.build': '开发', 'nav.verify': '验证',
       'nav.connect': '连接钱包',
@@ -347,7 +643,7 @@
       'hero.tag': '比特币之后的下一步',
       'hero.title': '我们都是 <span class="gradient-text">一家人。</span>',
       'hero.sub': 'OST是为世界上每个公民制造的数字现金 - 私密、即时，连接你已有的任何货币。',
-      'hero.cta1': '试用支付演示', 'hero.cta2': '获取OST',
+      'hero.cta1': '探索商业', 'hero.cta2': '获取OST',
       'hero.premine': '无预挖', 'hero.settle': '结算', 'hero.opensource': '开源', 'hero.privacy': '隐私',
       'story.title': '我们的故事', 'story.sub': '从去中心化货币的第一颗火花到私人数字现金未来的旅程。',
       'story.t1.title': '火花', 'story.t1.text': '比特币证明了人民——而非银行或政府——可以创造跨越所有国界的货币。这颗火花改变了一切。',
@@ -431,7 +727,7 @@
       'gv.disclaimer': '\u4ec5\u4f9b\u6559\u80b2\u7528\u9014\u3002\u7236\u6bcd/\u76d1\u62a4\u4eba\u8d1f\u8d23\u6240\u6709\u7a0e\u52a1\u3001\u76d1\u62a4\u548c\u5f53\u5730\u6cd5\u5f8b\u3002',
       'depin.title': 'DePIN\u6570\u636e\u4e2d\u5fc3\u6c34\u9f99\u5934',
       'depin.sub': '\u5206\u4eab\u5e26\u5bbd\u3001GPU\u3001CPU\u6216\u536b\u661f\u5bb9\u91cf &mdash; \u4e3a\u5efa\u8bbe\u53bb\u4e2d\u5fc3\u5316\u6570\u636e\u4e2d\u5fc3\u548c\u536b\u661f\u4e92\u8054\u7f51\u83b7\u5f97OST\u5956\u52b1\u3002',
-      'demos.title': '&#127916; \u5b9e\u65f6\u6f14\u793a', 'demos.sub': '\u4f53\u9a8c\u79c1\u5bc6\u5373\u65f6\u652f\u4ed8\u7684\u611f\u89c9\u3002\u771f\u5b9e\u4ea7\u54c1\uff0c\u771f\u5b9e\u4ef7\u683c\u3002\u96f6\u8d39\u7528\u3002',
+      'demos.title': '&#128717;&#65039; OST \u5546\u4e1a', 'demos.sub': '\u4f53\u9a8c\u79c1\u5bc6\u5373\u65f6\u652f\u4ed8\u7684\u611f\u89c9\u3002\u771f\u5b9e\u4ea7\u54c1\uff0c\u771f\u5b9e\u4ef7\u683c\u3002\u96f6\u8d39\u7528\u3002',
       'wallet.getTitle': '\u83b7\u53d6\u4f60\u7684\u4e2a\u4ebaOST\u94b1\u5305', 'wallet.getSub': '\u9009\u62e9\u5982\u4f55\u521b\u5efa\u6216\u8fde\u63a5\u4f60\u7684\u94b1\u5305\u3002Web3Auth\u65e0\u9700\u52a9\u8bb0\u8bcd\u3002',
       'sell.title': '\u51fa\u552e\u6216\u4ea4\u6613OST', 'sell.sub': '\u63d0\u73b0\u5230\u4efb\u4f55\u52a0\u5bc6\u8d27\u5e01\u6216\u6cd5\u5e01\u3002\u540c\u6837\u7684\u901f\u5ea6\uff0c\u540c\u6837\u7684\u9690\u79c1\u3002',
       'censor.title': '&#128683; \u4e92\u8054\u7f51\u5ba1\u67e5\u6b63\u5728\u53d1\u751f', 'censor.sub': '\u771f\u5b9e\u4e8b\u4ef6\u3002\u771f\u5b9e\u7684\u4eba\u3002OST\u662f\u5bf9\u6570\u5b57\u538b\u8feb\u7684\u56de\u7b54\u3002',
@@ -489,7 +785,7 @@
       'fuel.disclaimer': '&#9888; \u6240\u793a\u5408\u4f5c\u5173\u7cfb\u6b63\u5728\u5f00\u53d1\u4e2d\u3002OST\u4e0e\u6240\u5217\u54c1\u724c\u65e0\u5173\u8054\u3002',
     },
     ru: {
-      'nav.home': 'Главная', 'nav.newhere': 'Получить OST', 'nav.demos': 'Демо', 'nav.wallet': 'Кошелек',
+      'nav.home': 'Главная', 'nav.newhere': 'Получить OST', 'nav.demos': 'Коммерция', 'nav.wallet': 'Кошелек',
       'nav.ai': 'ИИ и Боты', 'nav.offline': 'Оффлайн', 'nav.censorship': 'Цензура', 'nav.spacex': 'SpaceX',
       'nav.about': 'Наша История', 'nav.roadmap': 'Дорожная Карта', 'nav.build': 'Создать', 'nav.verify': 'Проверить',
       'nav.connect': 'Подключить кошелек',
@@ -498,7 +794,7 @@
       'hero.tag': 'Следующий Шаг После Биткоина',
       'hero.title': 'Мы все <span class="gradient-text">одна семья.</span>',
       'hero.sub': 'OST — цифровые деньги для каждого гражданина мира. Приватные, мгновенные, подключенные к любой валюте.',
-      'hero.cta1': 'Попробовать демо оплаты', 'hero.cta2': 'Получить OST',
+      'hero.cta1': 'Открыть коммерцию', 'hero.cta2': 'Получить OST',
       'hero.premine': 'Без премайна', 'hero.settle': 'Расчет', 'hero.opensource': 'Открытый код', 'hero.privacy': 'Приватность',
       'story.title': 'Наша История', 'story.sub': 'Путь от первой искры децентрализованных денег к будущему приватных цифровых наличных.',
       'story.t1.title': 'Искра', 'story.t1.text': 'Биткоин доказал, что люди — не банки, не правительства — могут создавать деньги, пересекающие любые границы.',
@@ -582,7 +878,7 @@
       'gv.disclaimer': '\u0422\u043e\u043b\u044c\u043a\u043e \u0434\u043b\u044f \u043e\u0431\u0440\u0430\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044c\u043d\u044b\u0445 \u0446\u0435\u043b\u0435\u0439. \u0420\u043e\u0434\u0438\u0442\u0435\u043b\u0438 \u043d\u0435\u0441\u0443\u0442 \u043e\u0442\u0432\u0435\u0442\u0441\u0442\u0432\u0435\u043d\u043d\u043e\u0441\u0442\u044c \u0437\u0430 \u0432\u0441\u0435 \u043d\u0430\u043b\u043e\u0433\u043e\u0432\u044b\u0435 \u0438 \u043f\u0440\u0430\u0432\u043e\u0432\u044b\u0435 \u0432\u043e\u043f\u0440\u043e\u0441\u044b.',
       'depin.title': '\u041a\u0440\u0430\u043d DePIN \u0434\u0430\u0442\u0430-\u0446\u0435\u043d\u0442\u0440\u043e\u0432',
       'depin.sub': '\u0414\u0435\u043b\u0438\u0442\u0435\u0441\u044c \u043f\u0440\u043e\u043f\u0443\u0441\u043a\u043d\u043e\u0439 \u0441\u043f\u043e\u0441\u043e\u0431\u043d\u043e\u0441\u0442\u044c\u044e, GPU, CPU \u0438\u043b\u0438 \u0441\u043f\u0443\u0442\u043d\u0438\u043a\u043e\u0432\u043e\u0439 \u0435\u043c\u043a\u043e\u0441\u0442\u044c\u044e &mdash; \u043f\u043e\u043b\u0443\u0447\u0430\u0439\u0442\u0435 OST \u0437\u0430 \u0441\u0442\u0440\u043e\u0438\u0442\u0435\u043b\u044c\u0441\u0442\u0432\u043e \u0434\u0435\u0446\u0435\u043d\u0442\u0440\u0430\u043b\u0438\u0437\u043e\u0432\u0430\u043d\u043d\u044b\u0445 \u0434\u0430\u0442\u0430-\u0446\u0435\u043d\u0442\u0440\u043e\u0432.',
-      'demos.title': '&#127916; \u0414\u0435\u043c\u043e', 'demos.sub': '\u041f\u043e\u0447\u0443\u0432\u0441\u0442\u0432\u0443\u0439\u0442\u0435 \u043f\u0440\u0438\u0432\u0430\u0442\u043d\u044b\u0435 \u043c\u0433\u043d\u043e\u0432\u0435\u043d\u043d\u044b\u0435 \u043f\u043b\u0430\u0442\u0435\u0436\u0438. \u0420\u0435\u0430\u043b\u044c\u043d\u044b\u0435 \u0442\u043e\u0432\u0430\u0440\u044b. \u041d\u0443\u043b\u0435\u0432\u044b\u0435 \u043a\u043e\u043c\u0438\u0441\u0441\u0438\u0438.',
+      'demos.title': '&#128717;&#65039; \u041a\u043e\u043c\u043c\u0435\u0440\u0446\u0438\u044f OST', 'demos.sub': '\u041f\u043e\u0447\u0443\u0432\u0441\u0442\u0432\u0443\u0439\u0442\u0435 \u043f\u0440\u0438\u0432\u0430\u0442\u043d\u044b\u0435 \u043c\u0433\u043d\u043e\u0432\u0435\u043d\u043d\u044b\u0435 \u043f\u043b\u0430\u0442\u0435\u0436\u0438. \u0420\u0435\u0430\u043b\u044c\u043d\u044b\u0435 \u0442\u043e\u0432\u0430\u0440\u044b. \u041d\u0443\u043b\u0435\u0432\u044b\u0435 \u043a\u043e\u043c\u0438\u0441\u0441\u0438\u0438.',
       'wallet.getTitle': '\u041f\u043e\u043b\u0443\u0447\u0438\u0442\u0435 \u0441\u0432\u043e\u0439 \u043a\u043e\u0448\u0435\u043b\u0451\u043a OST', 'wallet.getSub': '\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u0441\u043f\u043e\u0441\u043e\u0431 \u0441\u043e\u0437\u0434\u0430\u043d\u0438\u044f \u043a\u043e\u0448\u0435\u043b\u044c\u043a\u0430. \u0421\u0435\u043c\u0435\u043d\u043d\u0430\u044f \u0444\u0440\u0430\u0437\u0430 \u043d\u0435 \u043d\u0443\u0436\u043d\u0430 c Web3Auth.',
       'sell.title': '\u041f\u0440\u043e\u0434\u0430\u0442\u044c \u0438\u043b\u0438 \u043e\u0431\u043c\u0435\u043d\u044f\u0442\u044c OST', 'sell.sub': '\u0412\u044b\u0432\u043e\u0434 \u0432 \u043b\u044e\u0431\u0443\u044e \u043a\u0440\u0438\u043f\u0442\u043e \u0438\u043b\u0438 \u0444\u0438\u0430\u0442. \u0422\u0430 \u0436\u0435 \u0441\u043a\u043e\u0440\u043e\u0441\u0442\u044c, \u0442\u0430 \u0436\u0435 \u043f\u0440\u0438\u0432\u0430\u0442\u043d\u043e\u0441\u0442\u044c.',
       'censor.title': '&#128683; \u0418\u043d\u0442\u0435\u0440\u043d\u0435\u0442-\u0446\u0435\u043d\u0437\u0443\u0440\u0430 \u043f\u0440\u043e\u0438\u0441\u0445\u043e\u0434\u0438\u0442 \u0441\u0435\u0439\u0447\u0430\u0441', 'censor.sub': '\u0420\u0435\u0430\u043b\u044c\u043d\u044b\u0435 \u0441\u043e\u0431\u044b\u0442\u0438\u044f. \u0420\u0435\u0430\u043b\u044c\u043d\u044b\u0435 \u043b\u044e\u0434\u0438. OST &mdash; \u043e\u0442\u0432\u0435\u0442 \u043d\u0430 \u0446\u0438\u0444\u0440\u043e\u0432\u043e\u0435 \u0443\u0433\u043d\u0435\u0442\u0435\u043d\u0438\u0435.',
@@ -640,7 +936,7 @@
       'fuel.disclaimer': '&#9888; \u041f\u043e\u043a\u0430\u0437\u0430\u043d\u043d\u044b\u0435 \u043f\u0430\u0440\u0442\u043d\u0451\u0440\u0441\u0442\u0432\u0430 \u0432 \u0440\u0430\u0437\u0440\u0430\u0431\u043e\u0442\u043a\u0435. OST \u043d\u0435 \u0441\u0432\u044f\u0437\u0430\u043d \u0441 \u0443\u043a\u0430\u0437\u0430\u043d\u043d\u044b\u043c\u0438 \u0431\u0440\u0435\u043d\u0434\u0430\u043c\u0438.',
     },
     hi: {
-      'nav.home': 'होम', 'nav.newhere': 'OST पाएं', 'nav.demos': 'डेमो', 'nav.wallet': 'वॉलेट',
+      'nav.home': 'होम', 'nav.newhere': 'OST पाएं', 'nav.demos': 'कॉमर्स', 'nav.wallet': 'वॉलेट',
       'nav.ai': 'AI और बॉट्स', 'nav.offline': 'ऑफलाइन', 'nav.censorship': 'सेंसरशिप', 'nav.spacex': 'SpaceX',
       'nav.about': 'हमारी कहानी', 'nav.roadmap': 'रोडमैप', 'nav.build': 'निर्माण', 'nav.verify': 'सत्यापन',
       'nav.connect': 'वॉलेट कनेक्ट करें',
@@ -649,7 +945,7 @@
       'hero.tag': 'बिटकॉइन के बाद अगला कदम',
       'hero.title': 'हम सब <span class="gradient-text">एक परिवार हैं।</span>',
       'hero.sub': 'OST दुनिया के हर नागरिक के लिए बनी डिजिटल कैश है - निजी, तत्काल, और आपकी किसी भी मुद्रा से जुड़ी।',
-      'hero.cta1': 'भुगतान डेमो आज़माएं', 'hero.cta2': 'OST पाएं',
+      'hero.cta1': 'कॉमर्स देखें', 'hero.cta2': 'OST पाएं',
       'hero.premine': 'प्री-माइन नहीं', 'hero.settle': 'निपटान', 'hero.opensource': 'ओपन सोर्स', 'hero.privacy': 'गोपनीयता',
       'story.title': 'हमारी कहानी', 'story.sub': 'विकेंद्रीकृत धन की पहली चिंगारी से निजी डिजिटल नकदी के भविष्य तक की यात्रा।',
       'story.t1.title': 'चिंगारी', 'story.t1.text': 'बिटकॉइन ने साबित किया कि लोग - बैंक नहीं, सरकारें नहीं - हर सीमा पार करने वाला पैसा बना सकते हैं।',
@@ -733,7 +1029,7 @@
       'gv.disclaimer': 'केवल शैक्षिक उपयोग। माता-पिता/अभिभावक सभी कर और स्थानीय कानूनों के लिए जिम्मेदार हैं।',
       'depin.title': 'DePIN डेटा-सेंटर फॉसेट',
       'depin.sub': 'बैंडविड्थ, GPU, CPU या उपग्रह क्षमता साझा करें &mdash; विकेंद्रीकृत डेटा सेंटर बनाने के लिए OST अर्जित करें।',
-      'demos.title': '&#127916; लाइव डेमो', 'demos.sub': 'निजी, तत्काल भुगतान कैसा लगता है देखें। वास्तविक उत्पाद। शून्य शुल्क।',
+      'demos.title': '&#128717;&#65039; OST कॉमर्स', 'demos.sub': 'निजी, तत्काल भुगतान कैसा लगता है देखें। वास्तविक उत्पाद। शून्य शुल्क।',
       'wallet.getTitle': 'अपना व्यक्तिगत OST वॉलेट प्राप्त करें', 'wallet.getSub': 'अपना वॉलेट बनाने या कनेक्ट करने का तरीका चुनें।',
       'sell.title': 'OST बेचें या व्यापार करें', 'sell.sub': 'किसी भी क्रिप्टो या फिएट में निकासी। समान गति, समान गोपनीयता।',
       'censor.title': '&#128683; इंटरनेट सेंसरशिप अभी हो रही है', 'censor.sub': 'वास्तविक घटनाएं। वास्तविक लोग। OST डिजिटल उत्पीड़न का उत्तर है।',
@@ -791,7 +1087,7 @@
       'fuel.disclaimer': '&#9888; दिखाई गई साझेदारी विकास में है। OST सूचीबद्ध ब्रांडों से संबद्ध नहीं है।',
     },
     ar: {
-      'nav.home': 'الرئيسية', 'nav.newhere': 'احصل على OST', 'nav.demos': 'عروض', 'nav.wallet': 'محفظة',
+      'nav.home': 'الرئيسية', 'nav.newhere': 'احصل على OST', 'nav.demos': 'التجارة', 'nav.wallet': 'محفظة',
       'nav.ai': 'الذكاء الاصطناعي', 'nav.offline': 'بدون إنترنت', 'nav.censorship': 'الرقابة', 'nav.spacex': 'SpaceX',
       'nav.about': 'قصتنا', 'nav.roadmap': 'خارطة الطريق', 'nav.build': 'بناء', 'nav.verify': 'تحقق',
       'nav.connect': 'ربط المحفظة',
@@ -800,7 +1096,7 @@
       'hero.tag': 'الخطوة التالية بعد بيتكوين',
       'hero.title': 'نحن جميعا <span class="gradient-text">عائلة واحدة.</span>',
       'hero.sub': 'OST هو النقد الرقمي المصنوع لكل مواطن في العالم - خاص وفوري ومتصل بأي عملة لديك.',
-      'hero.cta1': 'جرب عرض الدفع', 'hero.cta2': 'احصل على OST',
+      'hero.cta1': 'استكشف التجارة', 'hero.cta2': 'احصل على OST',
       'hero.premine': 'بدون تعدين مسبق', 'hero.settle': 'تسوية', 'hero.opensource': 'مفتوح المصدر', 'hero.privacy': 'خصوصية',
       'story.title': 'قصتنا', 'story.sub': 'رحلة من أول شرارة للأموال اللامركزية إلى مستقبل النقد الرقمي الخاص.',
       'story.t1.title': 'الشرارة', 'story.t1.text': 'أثبت بيتكوين أن الناس - ليس البنوك ولا الحكومات - يمكنهم إنشاء أموال تعبر كل حدود.',
@@ -884,7 +1180,7 @@
       'gv.disclaimer': 'للاستخدام التعليمي فقط. الآباء/الأوصياء مسؤولون عن جميع الضرائب والقوانين.',
       'depin.title': 'صنبور DePIN لمراكز البيانات',
       'depin.sub': 'شارك عرض النطاق أو GPU أو CPU أو سعة الأقمار الصناعية &mdash; واكسب OST لبناء مراكز بيانات لامركزية.',
-      'demos.title': '&#127916; عروض حية', 'demos.sub': 'شاهد كيف تبدو المدفوعات الخاصة والفورية. منتجات حقيقية. صفر رسوم.',
+      'demos.title': '&#128717;&#65039; تجارة OST', 'demos.sub': 'شاهد كيف تبدو المدفوعات الخاصة والفورية. منتجات حقيقية. صفر رسوم.',
       'wallet.getTitle': 'احصل على محفظة OST الخاصة بك', 'wallet.getSub': 'اختر طريقة إنشاء أو ربط محفظتك.',
       'sell.title': 'بيع أو تداول OST', 'sell.sub': 'سحب إلى أي عملة رقمية أو ورقية. نفس السرعة والخصوصية.',
       'censor.title': '&#128683; رقابة الإنترنت تحدث الآن', 'censor.sub': 'أحداث حقيقية. أشخاص حقيقيون. OST هو الجواب.',
@@ -942,7 +1238,7 @@
       'fuel.disclaimer': '&#9888; الشراكات المعروضة قيد التطوير. OST غير تابع للعلامات التجارية المذكورة.',
     },
     pt: {
-      'nav.home': 'Inicio', 'nav.newhere': 'Obter OST', 'nav.demos': 'Demos', 'nav.wallet': 'Carteira',
+      'nav.home': 'Inicio', 'nav.newhere': 'Obter OST', 'nav.demos': 'Comércio', 'nav.wallet': 'Carteira',
       'nav.ai': 'IA e Bots', 'nav.offline': 'Offline', 'nav.censorship': 'Censura', 'nav.spacex': 'SpaceX',
       'nav.about': 'Nossa Historia', 'nav.roadmap': 'Roteiro', 'nav.build': 'Construir', 'nav.verify': 'Verificar',
       'nav.connect': 'Conectar Carteira',
@@ -951,7 +1247,7 @@
       'hero.tag': 'O Proximo Passo Apos o Bitcoin',
       'hero.title': 'Somos todos <span class="gradient-text">uma familia.</span>',
       'hero.sub': 'OST e o dinheiro digital feito para cada cidadao do mundo - privado, instantaneo e conectado a qualquer moeda que voce ja tem.',
-      'hero.cta1': 'Experimentar Demo de Pagamento', 'hero.cta2': 'Obter OST',
+      'hero.cta1': 'Explorar Comércio', 'hero.cta2': 'Obter OST',
       'hero.premine': 'Pre-mineracao', 'hero.settle': 'Liquidacao', 'hero.opensource': 'Codigo Aberto', 'hero.privacy': 'Privacidade',
       'story.title': 'Nossa Historia', 'story.sub': 'Uma jornada da primeira faísca do dinheiro descentralizado ao futuro do dinheiro digital privado.',
       'story.t1.title': 'A Faísca', 'story.t1.text': 'Bitcoin provou que pessoas - nao bancos, nao governos - poderiam criar dinheiro que cruza todas as fronteiras.',
@@ -1035,7 +1331,7 @@
       'gv.disclaimer': 'Apenas uso educacional. Pais/responsáveis são responsáveis por todas as leis fiscais e locais.',
       'depin.title': 'Faucet DePIN de Data Center',
       'depin.sub': 'Compartilhe largura de banda, GPU, CPU ou capacidade de satélite &mdash; ganhe OST por construir data centers descentralizados.',
-      'demos.title': '&#127916; Demos ao Vivo', 'demos.sub': 'Veja como são pagamentos privados e instantâneos. Produtos reais. Zero taxas.',
+      'demos.title': '&#128717;&#65039; Comércio OST', 'demos.sub': 'Veja como são pagamentos privados e instantâneos. Produtos reais. Zero taxas.',
       'wallet.getTitle': 'Obtenha Sua Carteira OST Pessoal', 'wallet.getSub': 'Escolha como criar ou conectar sua carteira.',
       'sell.title': 'Vender ou Trocar OST', 'sell.sub': 'Saque para qualquer cripto ou fiat. Mesma velocidade, mesma privacidade.',
       'censor.title': '&#128683; A Censura na Internet Está Acontecendo Agora', 'censor.sub': 'Eventos reais. Pessoas reais. OST é a resposta à opressão digital.',
@@ -1093,7 +1389,7 @@
       'fuel.disclaimer': '&#9888; Parcerias mostradas est\u00e3o em desenvolvimento. OST n\u00e3o \u00e9 afiliado \u00e0s marcas listadas.',
     },
     fr: {
-      'nav.home': 'Accueil', 'nav.newhere': 'Obtenir OST', 'nav.demos': 'Demos', 'nav.wallet': 'Portefeuille',
+      'nav.home': 'Accueil', 'nav.newhere': 'Obtenir OST', 'nav.demos': 'Commerce', 'nav.wallet': 'Portefeuille',
       'nav.ai': 'IA et Bots', 'nav.offline': 'Hors Ligne', 'nav.censorship': 'Censure', 'nav.spacex': 'SpaceX',
       'nav.about': 'Notre Histoire', 'nav.roadmap': 'Feuille de Route', 'nav.build': 'Construire', 'nav.verify': 'Verifier',
       'nav.connect': 'Connecter Portefeuille',
@@ -1102,7 +1398,7 @@
       'hero.tag': 'La Prochaine Etape Apres Bitcoin',
       'hero.title': 'Nous sommes tous <span class="gradient-text">une famille.</span>',
       'hero.sub': 'OST est l\'argent numerique fait pour chaque citoyen du monde - prive, instantane et connecte a toute devise.',
-      'hero.cta1': 'Essayer la Demo de Paiement', 'hero.cta2': 'Obtenir OST',
+      'hero.cta1': 'Explorer le Commerce', 'hero.cta2': 'Obtenir OST',
       'hero.premine': 'Pre-minage', 'hero.settle': 'Reglement', 'hero.opensource': 'Open Source', 'hero.privacy': 'Confidentialite',
       'story.title': 'Notre Histoire', 'story.sub': 'Un voyage de la premiere etincelle de la monnaie decentralisee au futur de l\'argent numerique prive.',
       'story.t1.title': 'L\'Etincelle', 'story.t1.text': 'Bitcoin a prouve que les gens - pas les banques, pas les gouvernements - pouvaient creer de l\'argent traversant toutes les frontieres.',
@@ -1186,7 +1482,7 @@
       'gv.disclaimer': 'Usage éducatif uniquement. Les parents/tuteurs sont responsables de toutes les lois fiscales et locales.',
       'depin.title': 'Robinet DePIN Data Center',
       'depin.sub': 'Partagez bande passante, GPU, CPU ou capacité satellite &mdash; gagnez des OST pour construire des centres de données décentralisés.',
-      'demos.title': '&#127916; Démos en Direct', 'demos.sub': 'Découvrez les paiements privés et instantanés. Produits réels. Zéro frais.',
+      'demos.title': '&#128717;&#65039; Commerce OST', 'demos.sub': 'Découvrez les paiements privés et instantanés. Produits réels. Zéro frais.',
       'wallet.getTitle': 'Obtenez Votre Portefeuille OST', 'wallet.getSub': 'Choisissez comment créer ou connecter votre portefeuille.',
       'sell.title': 'Vendre ou Échanger OST', 'sell.sub': 'Retrait vers n\'importe quelle crypto ou fiat. Même vitesse, même confidentialité.',
       'censor.title': '&#128683; La Censure d\'Internet Se Produit Maintenant', 'censor.sub': 'Événements réels. Personnes réelles. OST est la réponse.',
@@ -1244,7 +1540,7 @@
       'fuel.disclaimer': '&#9888; Les partenariats pr\u00e9sent\u00e9s sont en d\u00e9veloppement. OST n\'est pas affili\u00e9 aux marques list\u00e9es.',
     },
     ja: {
-      'nav.home': 'ホーム', 'nav.newhere': 'OST入手', 'nav.demos': 'デモ', 'nav.wallet': 'ウォレット',
+      'nav.home': 'ホーム', 'nav.newhere': 'OST入手', 'nav.demos': 'コマース', 'nav.wallet': 'ウォレット',
       'nav.ai': 'AIとボット', 'nav.offline': 'オフライン', 'nav.censorship': '検閲', 'nav.spacex': 'SpaceX',
       'nav.about': '私たちの物語', 'nav.roadmap': 'ロードマップ', 'nav.build': '開発', 'nav.verify': '検証',
       'nav.connect': 'ウォレット接続',
@@ -1253,7 +1549,7 @@
       'hero.tag': 'ビットコインの次のステップ',
       'hero.title': '私たちは皆 <span class="gradient-text">一つの家族です。</span>',
       'hero.sub': 'OSTは世界のすべての市民のためのデジタルキャッシュです - プライベート、即時、すでに持っているどの通貨にも接続。',
-      'hero.cta1': '支払いデモを試す', 'hero.cta2': 'OSTを入手',
+      'hero.cta1': 'コマースを見る', 'hero.cta2': 'OSTを入手',
       'hero.premine': 'プレマインなし', 'hero.settle': '決済', 'hero.opensource': 'オープンソース', 'hero.privacy': 'プライバシー',
       'story.title': '私たちの物語', 'story.sub': '分散型通貨の最初の火花からプライベートデジタルキャッシュの未来への旅。',
       'story.t1.title': '火花', 'story.t1.text': 'ビットコインは、銀行でも政府でもなく人々があらゆる国境を越える通貨を作れることを証明しました。',
@@ -1337,7 +1633,7 @@
       'gv.disclaimer': '教育目的のみ。両親/保護者がすべての税法と現地法に責任を負います。',
       'depin.title': 'DePINデータセンターフォーセット',
       'depin.sub': '帯域幅、GPU、CPU、衛星容量を共有 &mdash; 分散型データセンター構築でOSTを獲得。',
-      'demos.title': '&#127916; ライブデモ', 'demos.sub': 'プライベートで即時の支払いを体験。リアル製品。手数料ゼロ。',
+      'demos.title': '&#128717;&#65039; OSTコマース', 'demos.sub': 'プライベートで即時の支払いを体験。リアル製品。手数料ゼロ。',
       'wallet.getTitle': 'あなたのOSTウォレットを取得', 'wallet.getSub': 'ウォレットの作成または接続方法を選択してください。',
       'sell.title': 'OSTの売却・取引', 'sell.sub': '任意の暗号通貨またはフィアットに引き出し。同じ速度、同じプライバシー。',
       'censor.title': '&#128683; インターネット検閲が今起きている', 'censor.sub': '実際の出来事。実際の人々。OSTはデジタル弾圧への答え。',
@@ -1395,7 +1691,7 @@
       'fuel.disclaimer': '&#9888; 表示されているパートナーシップは開発中です。OSTは掲載ブランドとは提携していません。',
     },
     ko: {
-      'nav.home': '홈', 'nav.newhere': 'OST 받기', 'nav.demos': '데모', 'nav.wallet': '지갑',
+      'nav.home': '홈', 'nav.newhere': 'OST 받기', 'nav.demos': '커머스', 'nav.wallet': '지갑',
       'nav.ai': 'AI와 봇', 'nav.offline': '오프라인', 'nav.censorship': '검열', 'nav.spacex': 'SpaceX',
       'nav.about': '우리의 이야기', 'nav.roadmap': '로드맵', 'nav.build': '개발', 'nav.verify': '검증',
       'nav.connect': '지갑 연결',
@@ -1404,7 +1700,7 @@
       'hero.tag': '비트코인 이후의 다음 단계',
       'hero.title': '우리 모두는 <span class="gradient-text">하나의 가족입니다.</span>',
       'hero.sub': 'OST는 세계 모든 시민을 위한 디지털 현금입니다 - 프라이빗, 즉시, 이미 가진 모든 통화와 연결.',
-      'hero.cta1': '결제 데모 체험', 'hero.cta2': 'OST 받기',
+      'hero.cta1': '커머스 둘러보기', 'hero.cta2': 'OST 받기',
       'hero.premine': '프리마이닝 없음', 'hero.settle': '결제', 'hero.opensource': '오픈 소스', 'hero.privacy': '프라이버시',
       'story.title': '우리의 이야기', 'story.sub': '탈중앙화 화폐의 첫 불꽃에서 프라이빗 디지털 현금의 미래까지의 여정.',
       'story.t1.title': '불꽃', 'story.t1.text': '비트코인은 은행도 정부도 아닌 사람들이 모든 국경을 넘는 화폐를 만들 수 있음을 증명했습니다.',
@@ -1488,7 +1784,7 @@
       'gv.disclaimer': '교육 목적으로만 사용. 부모/보호자가 모든 세법과 현지 법률에 책임.',
       'depin.title': 'DePIN 데이터센터 파우셋',
       'depin.sub': '대역폭, GPU, CPU 또는 위성 용량 공유 &mdash; 분산 데이터센터 구축으로 OST 획득.',
-      'demos.title': '&#127916; 라이브 데모', 'demos.sub': '프라이빗 즉시 결제를 경험하세요. 실제 제품. 수수료 제로.',
+      'demos.title': '&#128717;&#65039; OST 커머스', 'demos.sub': '프라이빗 즉시 결제를 경험하세요. 실제 제품. 수수료 제로.',
       'wallet.getTitle': '개인 OST 지갑 받기', 'wallet.getSub': '지갑을 만들거나 연결하는 방법을 선택하세요.',
       'sell.title': 'OST 판매 또는 거래', 'sell.sub': '모든 암호화폐 또는 법정화폐로 출금. 같은 속도, 같은 프라이버시.',
       'censor.title': '&#128683; 인터넷 검열이 지금 일어나고 있습니다', 'censor.sub': '실제 사건. 실제 사람들. OST는 디지털 억압에 대한 답.',
@@ -1546,7 +1842,7 @@
       'fuel.disclaimer': '&#9888; 표시된 파트너십은 개발 중입니다. OST는 나열된 브랜드와 제휴하지 않습니다.',
     },
     tr: {
-      'nav.home': 'Ana Sayfa', 'nav.newhere': 'OST Al', 'nav.demos': 'Demolar', 'nav.wallet': 'Cuzdan',
+      'nav.home': 'Ana Sayfa', 'nav.newhere': 'OST Al', 'nav.demos': 'Ticaret', 'nav.wallet': 'Cuzdan',
       'nav.ai': 'Yapay Zeka', 'nav.offline': 'Cevrimdisi', 'nav.censorship': 'Sansur', 'nav.spacex': 'SpaceX',
       'nav.about': 'Hikayemiz', 'nav.roadmap': 'Yol Haritasi', 'nav.build': 'Gelistir', 'nav.verify': 'Dogrula',
       'nav.connect': 'Cuzdani Bagla',
@@ -1555,7 +1851,7 @@
       'hero.tag': 'Bitcoin\'den Sonraki Adim',
       'hero.title': 'Hepimiz <span class="gradient-text">bir aileyiz.</span>',
       'hero.sub': 'OST, dunyadaki her vatandas icin yapilmis dijital nakit paradir — ozel, anlik ve zaten sahip oldugunuz herhangi bir para birimine bagli.',
-      'hero.cta1': 'Odeme Demosunu Dene', 'hero.cta2': 'OST Al',
+      'hero.cta1': 'Ticareti Kesfet', 'hero.cta2': 'OST Al',
       'hero.premine': 'On Madencilik Yok', 'hero.settle': 'Uzlasma', 'hero.opensource': 'Acik Kaynak', 'hero.privacy': 'Gizlilik',
       'story.title': 'Hikayemiz', 'story.sub': 'Merkezi olmayan paranin ilk kivilcimindan ozel dijital nakitin gelecegine bir yolculuk.',
       'story.t1.title': 'Kivilcim', 'story.t1.text': 'Bitcoin, insanlarin — bankalar degil, hukumetler degil — her siniri asan para yaratabilecegini kanitladi.',
@@ -1639,7 +1935,7 @@
       'gv.disclaimer': 'Yalnızca eğitim amaçlıdır. Ebeveynler/vasiler tüm vergi ve yerel yasalardan sorumludur.',
       'depin.title': 'DePIN Veri Merkezi Musluğu',
       'depin.sub': 'Bant genişliği, GPU, CPU veya uydu kapasitesi paylaşın &mdash; merkeziyetsiz veri merkezleri kurmak için OST kazanın.',
-      'demos.title': '&#127916; Canlı Demolar', 'demos.sub': 'Özel, anlık ödemelerin nasıl hissettirdiğini görün. Gerçek ürünler. Sıfır ücret.',
+      'demos.title': '&#128717;&#65039; OST Ticaret', 'demos.sub': 'Özel, anlık ödemelerin nasıl hissettirdiğini görün. Gerçek ürünler. Sıfır ücret.',
       'wallet.getTitle': 'Kişisel OST Cüzdanınızı Alın', 'wallet.getSub': 'Cüzdanınızı nasıl oluşturacağınızı veya bağlayacağınızı seçin.',
       'sell.title': 'OST Sat veya Takas Et', 'sell.sub': 'Herhangi bir kriptoya veya fiata çek. Aynı hız, aynı gizlilik.',
       'censor.title': '&#128683; İnternet Sansürü Şu Anda Yaşanıyor', 'censor.sub': 'Gerçek olaylar. Gerçek insanlar. OST dijital baskıya cevaptır.',
@@ -1700,19 +1996,46 @@
 
   let currentLang = 'en';
 
-  function applyTranslations(lang) {
-    currentLang = lang;
-    const dict = translations[lang] || {};
+  function applyTranslations(lang = currentLang) {
+    currentLang = translations[lang] ? lang : 'en';
+    const dict = translations[currentLang] || {};
     const fallback = translations.en;
+    const getTranslation = key => dict[key] || fallback[key];
+    const stripHtml = value => value.replace(/<[^>]*>/g, '');
+
     $$('[data-i18n]').forEach(el => {
       const key = el.getAttribute('data-i18n');
-      const val = dict[key] || fallback[key];
+      const val = getTranslation(key);
       if (val) el.innerHTML = val;
     });
-    document.documentElement.setAttribute('data-lang', lang);
-    document.documentElement.lang = lang;
+
+    [
+      ['data-i18n-placeholder', 'placeholder'],
+      ['data-i18n-title', 'title'],
+      ['data-i18n-aria-label', 'aria-label'],
+    ].forEach(([dataAttr, domAttr]) => {
+      $$(`[${dataAttr}]`).forEach(el => {
+        const key = el.getAttribute(dataAttr);
+        const val = getTranslation(key);
+        if (val) el.setAttribute(domAttr, stripHtml(val));
+      });
+    });
+
+    document.documentElement.setAttribute('data-lang', currentLang);
+    document.documentElement.lang = currentLang;
+
+    if (typeof window.syncAncientModeUi === 'function') window.syncAncientModeUi();
+    if (typeof window.syncTransmitUi === 'function') window.syncTransmitUi();
+    if (typeof window.syncConnectedWalletUi === 'function') window.syncConnectedWalletUi();
+    if (typeof window.syncStoreCatalogUi === 'function') window.syncStoreCatalogUi();
+    if (typeof window.syncInterchangeBrowserUi === 'function') window.syncInterchangeBrowserUi();
+    if (typeof window.syncPredictionMarketBoardUi === 'function') window.syncPredictionMarketBoardUi();
   }
   window.applyTranslations = applyTranslations;
+
+  function t(key, fallbackText) {
+    return (translations[currentLang] && translations[currentLang][key]) || translations.en[key] || fallbackText || key;
+  }
 
   if (langTrigger) {
     langTrigger.addEventListener('click', e => {
@@ -1729,6 +2052,13 @@
       langCode.textContent = lang.toUpperCase();
       langList.classList.remove('open');
       applyTranslations(lang);
+      try {
+        const prefs = JSON.parse(localStorage.getItem('ost_prefs') || '{}');
+        localStorage.setItem('ost_prefs', JSON.stringify({
+          lang,
+          currency: prefs.currency || window.__ostCurrency || 'USD'
+        }));
+      } catch (err) {}
       toast('🌐', `Language: ${lang.toUpperCase()}`);
     });
   });
@@ -1741,6 +2071,7 @@
   const walletClose = $('#walletClose');
   const walletOverlay = $('#walletModalOverlay');
   let connectedWallet = null;
+  let connectedWalletSession = null;
   let solanaConnection = null;
 
   // OST Program & Network Config
@@ -1751,6 +2082,16 @@
     network: 'devnet',
     rpcUrl: 'https://api.devnet.solana.com'
   };
+  const TOKEN_2022_PROGRAM_ID = new solanaWeb3.PublicKey('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb');
+  const ASSOCIATED_TOKEN_PROGRAM_ID = new solanaWeb3.PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
+  const MEMO_PROGRAM_ID = new solanaWeb3.PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');
+  const OST_TOKEN_DECIMALS = 9;
+  const LOCAL_WALLET_STORAGE_KEY = 'ost.localWallet.v1';
+  const INTERCHANGE_REQUESTS_STORAGE_KEY = 'ost.interchange.requests.v1';
+  const PREDICTION_ORDERS_STORAGE_KEY = 'ost.prediction.orders.v1';
+  const CLAIM_FAUCET_DISCRIMINATOR = Uint8Array.from([80, 7, 251, 108, 55, 145, 135, 68]);
+  const SEEDLESS_ONBOARD_DISCRIMINATOR = Uint8Array.from([135, 41, 102, 172, 127, 61, 190, 75]);
+  const textEncoder = new TextEncoder();
   window.OST_CONFIG = OST_CONFIG;
 
   // Initialize Solana connection
@@ -1804,6 +2145,615 @@
     }
   }
 
+  function shortAddress(pubkeyStr) {
+    if (!pubkeyStr) return translations[currentLang]?.['nav.connect'] || 'Connect Wallet';
+    return pubkeyStr.slice(0, 4) + '...' + pubkeyStr.slice(-4);
+  }
+
+  function setWalletButtonState(pubkeyStr) {
+    if (!walletBtn || !walletText) return;
+    if (pubkeyStr) {
+      walletBtn.classList.add('connected');
+      walletText.textContent = shortAddress(pubkeyStr);
+      return;
+    }
+    walletBtn.classList.remove('connected');
+    walletText.textContent = translations[currentLang]?.['nav.connect'] || 'Connect Wallet';
+  }
+
+  window.syncConnectedWalletUi = function syncConnectedWalletUi() {
+    setWalletButtonState(connectedWallet);
+    if (typeof window.syncInterchangeDeskWallet === 'function') {
+      window.syncInterchangeDeskWallet();
+    }
+    if (typeof window.syncPredictionMarketTradeWallet === 'function') {
+      window.syncPredictionMarketTradeWallet();
+    }
+  };
+
+  function toPublicKey(value) {
+    return value instanceof solanaWeb3.PublicKey ? value : new solanaWeb3.PublicKey(value);
+  }
+
+  function encodeSeed(seedText) {
+    return textEncoder.encode(seedText);
+  }
+
+  function createLocalWalletRecord(keypair) {
+    return {
+      createdAt: Date.now(),
+      secretKey: Array.from(keypair.secretKey)
+    };
+  }
+
+  function readStoredLocalWallet() {
+    try {
+      const raw = localStorage.getItem(LOCAL_WALLET_STORAGE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || !Array.isArray(parsed.secretKey) || !parsed.secretKey.length) return null;
+      return parsed;
+    } catch {
+      return null;
+    }
+  }
+
+  function persistLocalWallet(keypair) {
+    try {
+      localStorage.setItem(LOCAL_WALLET_STORAGE_KEY, JSON.stringify(createLocalWalletRecord(keypair)));
+    } catch {
+      toast('⚠️', 'Could not persist the local wallet in this browser');
+    }
+  }
+
+  function loadLocalWalletKeypair() {
+    const record = readStoredLocalWallet();
+    if (!record) return null;
+    try {
+      return solanaWeb3.Keypair.fromSecretKey(Uint8Array.from(record.secretKey));
+    } catch {
+      return null;
+    }
+  }
+
+  function downloadTextFile(filename, content, mimeType) {
+    const blob = new Blob([content], { type: mimeType || 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
+
+  function exportLocalWalletBackup(keypair) {
+    downloadTextFile('ost-browser-wallet.json', JSON.stringify(Array.from(keypair.secretKey)), 'application/json');
+  }
+
+  function getLocalWalletSession() {
+    const keypair = loadLocalWalletKeypair();
+    if (!keypair) return null;
+    return {
+      kind: 'local',
+      type: 'local',
+      label: 'OST Browser Wallet',
+      keypair,
+      publicKey: keypair.publicKey
+    };
+  }
+
+  function setConnectedWalletSession(session, options) {
+    const settings = options || {};
+    if (!session || !session.publicKey) return;
+    connectedWalletSession = session;
+    connectedWallet = session.publicKey.toBase58();
+    setWalletButtonState(connectedWallet);
+
+    if (settings.backup && session.kind === 'local' && session.keypair) {
+      exportLocalWalletBackup(session.keypair);
+      toast('🧾', 'Wallet backup downloaded. Keep that file offline.');
+    }
+
+    if (settings.announce !== false) {
+      toast('✅', `Connected: ${shortAddress(connectedWallet)}`);
+      verifyWalletAccount(connectedWallet).then(info => {
+        if (info.verified) {
+          toast('🔗', `Account verified — ${info.balance.toFixed(4)} SOL`);
+        } else if (session.kind === 'local') {
+          toast('💡', 'Local wallet ready. Open Get OST to fund fees and claim your first OST.');
+        } else {
+          toast('💡', `New wallet — ${info.balance.toFixed(4)} SOL. Use the faucet below to get OST.`);
+        }
+      });
+    }
+  }
+
+  function disconnectConnectedWallet() {
+    const provider = connectedWalletSession && connectedWalletSession.provider;
+    try {
+      if (provider && typeof provider.disconnect === 'function') provider.disconnect();
+    } catch {}
+    connectedWalletSession = null;
+    connectedWallet = null;
+    setWalletButtonState(null);
+    if (typeof window.syncInterchangeDeskWallet === 'function') {
+      window.syncInterchangeDeskWallet();
+    }
+    if (typeof window.syncPredictionMarketTradeWallet === 'function') {
+      window.syncPredictionMarketTradeWallet();
+    }
+    toast('👛', 'Wallet disconnected');
+  }
+
+  function getAssociatedTokenAddressSync(mint, owner, allowOwnerOffCurve, tokenProgramId, associatedTokenProgramId) {
+    const nextMint = toPublicKey(mint);
+    const nextOwner = toPublicKey(owner);
+    const nextTokenProgramId = tokenProgramId || TOKEN_2022_PROGRAM_ID;
+    const nextAssociatedTokenProgramId = associatedTokenProgramId || ASSOCIATED_TOKEN_PROGRAM_ID;
+    if (!allowOwnerOffCurve && !solanaWeb3.PublicKey.isOnCurve(nextOwner.toBuffer())) {
+      throw new Error('Owner must be on curve');
+    }
+    return solanaWeb3.PublicKey.findProgramAddressSync(
+      [nextOwner.toBuffer(), nextTokenProgramId.toBuffer(), nextMint.toBuffer()],
+      nextAssociatedTokenProgramId
+    )[0];
+  }
+
+  function createAssociatedTokenAccountInstruction(payer, associatedToken, owner, mint, tokenProgramId, associatedTokenProgramId) {
+    return new solanaWeb3.TransactionInstruction({
+      programId: associatedTokenProgramId || ASSOCIATED_TOKEN_PROGRAM_ID,
+      keys: [
+        { pubkey: toPublicKey(payer), isSigner: true, isWritable: true },
+        { pubkey: toPublicKey(associatedToken), isSigner: false, isWritable: true },
+        { pubkey: toPublicKey(owner), isSigner: false, isWritable: false },
+        { pubkey: toPublicKey(mint), isSigner: false, isWritable: false },
+        { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false },
+        { pubkey: tokenProgramId || TOKEN_2022_PROGRAM_ID, isSigner: false, isWritable: false }
+      ],
+      data: new Uint8Array([])
+    });
+  }
+
+  function encodeU64LE(value) {
+    let remaining = typeof value === 'bigint' ? value : BigInt(value);
+    const bytes = new Uint8Array(8);
+    for (let index = 0; index < 8; index++) {
+      bytes[index] = Number(remaining & 255n);
+      remaining >>= 8n;
+    }
+    return bytes;
+  }
+
+  function decimalAmountToBaseUnits(amount, decimals) {
+    const numericAmount = Number(amount);
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      throw new Error('Amount must be greater than zero');
+    }
+    const fixed = numericAmount.toFixed(decimals);
+    const parts = fixed.split('.');
+    return BigInt(parts[0] + (parts[1] || '').padEnd(decimals, '0'));
+  }
+
+  function createTransferCheckedInstruction(source, mint, destination, owner, amountBaseUnits, decimals, tokenProgramId) {
+    const data = new Uint8Array(10);
+    data[0] = 12;
+    data.set(encodeU64LE(amountBaseUnits), 1);
+    data[9] = decimals;
+    return new solanaWeb3.TransactionInstruction({
+      programId: tokenProgramId || TOKEN_2022_PROGRAM_ID,
+      keys: [
+        { pubkey: toPublicKey(source), isSigner: false, isWritable: true },
+        { pubkey: toPublicKey(mint), isSigner: false, isWritable: false },
+        { pubkey: toPublicKey(destination), isSigner: false, isWritable: true },
+        { pubkey: toPublicKey(owner), isSigner: true, isWritable: false }
+      ],
+      data
+    });
+  }
+
+  function createMemoInstruction(memoText, signerPubkey) {
+    return new solanaWeb3.TransactionInstruction({
+      programId: MEMO_PROGRAM_ID,
+      keys: signerPubkey ? [{ pubkey: toPublicKey(signerPubkey), isSigner: true, isWritable: false }] : [],
+      data: textEncoder.encode(String(memoText || ''))
+    });
+  }
+
+  function sanitizeMemoChunk(value, maxLength) {
+    return String(value || '')
+      .replace(/[|\r\n]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, maxLength || 32);
+  }
+
+  function buildInterchangeMemo(request) {
+    const itemName = request && request.items && request.items.length
+      ? sanitizeMemoChunk(request.items[0].name || request.items[0].merchant || 'item', 36)
+      : 'item';
+    return [
+      'OST',
+      'interchange',
+      'source=' + sanitizeMemoChunk(request && request.source, 18),
+      'merchant=' + sanitizeMemoChunk(request && request.merchant, 28),
+      'curr=' + sanitizeMemoChunk(request && request.currency, 6),
+      'fiat=' + Number(request && request.amount || 0).toFixed(2),
+      'ost=' + Number(request && request.ostAmount || 0).toFixed(2),
+      'items=' + Number(request && request.items ? request.items.length : 0),
+      'ref=' + sanitizeMemoChunk(request && request.reference, 18),
+      'item=' + itemName
+    ].join('|');
+  }
+
+  function buildPredictionOrderMemo(order) {
+    return [
+      'OST',
+      'prediction',
+      'source=' + sanitizeMemoChunk(order && order.source, 18),
+      'market=' + sanitizeMemoChunk(order && order.marketId, 24),
+      'side=' + sanitizeMemoChunk(order && order.side, 4),
+      'stake=' + Number(order && order.stake || 0).toFixed(2),
+      'price=' + Number(order && order.price || 0).toFixed(4),
+      'title=' + sanitizeMemoChunk(order && order.title, 36),
+      'ref=' + sanitizeMemoChunk(order && order.reference, 18)
+    ].join('|');
+  }
+
+  function getInterchangeDeskAccounts() {
+    const programId = new solanaWeb3.PublicKey(OST_CONFIG.programId);
+    const mintPk = new solanaWeb3.PublicKey(OST_CONFIG.mint);
+    const treasuryAuthority = solanaWeb3.PublicKey.findProgramAddressSync([encodeSeed('treasury-authority')], programId)[0];
+    const vaultTokenAccount = getAssociatedTokenAddressSync(mintPk, treasuryAuthority, true, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
+    return { programId, mintPk, treasuryAuthority, vaultTokenAccount };
+  }
+
+  async function ensureInterchangeDeskVaultAccount() {
+    const conn = getSolanaConnection();
+    if (!conn) throw new Error('Solana RPC unavailable');
+    if (!connectedWalletSession || !connectedWalletSession.publicKey) throw new Error('Connect your wallet first');
+
+    const accounts = getInterchangeDeskAccounts();
+    const existingAccount = await conn.getAccountInfo(accounts.vaultTokenAccount);
+    if (!existingAccount) {
+      const createVaultTx = new solanaWeb3.Transaction().add(
+        createAssociatedTokenAccountInstruction(
+          connectedWalletSession.publicKey,
+          accounts.vaultTokenAccount,
+          accounts.treasuryAuthority,
+          accounts.mintPk,
+          TOKEN_2022_PROGRAM_ID,
+          ASSOCIATED_TOKEN_PROGRAM_ID
+        )
+      );
+      await signAndSendTransaction(createVaultTx);
+    }
+    return accounts;
+  }
+
+  function storeInterchangeRequestRecord(record) {
+    try {
+      const existing = JSON.parse(localStorage.getItem(INTERCHANGE_REQUESTS_STORAGE_KEY) || '[]');
+      existing.unshift(record);
+      localStorage.setItem(INTERCHANGE_REQUESTS_STORAGE_KEY, JSON.stringify(existing.slice(0, 12)));
+    } catch {}
+  }
+
+  function readPredictionOrderRecords() {
+    try {
+      return JSON.parse(localStorage.getItem(PREDICTION_ORDERS_STORAGE_KEY) || '[]');
+    } catch {
+      return [];
+    }
+  }
+
+  function storePredictionOrderRecord(record) {
+    try {
+      const existing = readPredictionOrderRecords();
+      existing.unshift(record);
+      localStorage.setItem(PREDICTION_ORDERS_STORAGE_KEY, JSON.stringify(existing.slice(0, 12)));
+    } catch {}
+  }
+
+  function getPredictionDeskAccounts() {
+    return getInterchangeDeskAccounts();
+  }
+
+  async function ensurePredictionDeskVaultAccount() {
+    return ensureInterchangeDeskVaultAccount();
+  }
+
+  async function createPredictionMarketOrder(order) {
+    if (!order || !Number.isFinite(Number(order.stake)) || Number(order.stake) <= 0) {
+      throw new Error('Select a live market and enter a valid OST stake first.');
+    }
+    if (!connectedWalletSession || !connectedWalletSession.publicKey) {
+      throw new Error(t('pay.deskNeedWallet', 'Create or connect your OST wallet first'));
+    }
+
+    const conn = getSolanaConnection();
+    if (!conn) throw new Error('Solana RPC unavailable');
+
+    const trader = connectedWalletSession.publicKey;
+    const lamports = await conn.getBalance(trader);
+    if (lamports < Math.round(0.001 * solanaWeb3.LAMPORTS_PER_SOL)) {
+      throw new Error(t('pay.walletNeedsSol', 'This wallet needs a little devnet SOL for the network fee. Fund it at faucet.solana.com, then try again.'));
+    }
+
+    const ostBalance = await getOstBalanceForAddress(trader);
+    if (ostBalance + 1e-9 < Number(order.stake)) {
+      throw new Error(t('pay.notEnoughOst', 'Not enough OST in this wallet. Claim or buy OST first.'));
+    }
+
+    const mintPk = new solanaWeb3.PublicKey(OST_CONFIG.mint);
+    const sourceAta = getAssociatedTokenAddressSync(mintPk, trader, false, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
+    const sourceInfo = await conn.getAccountInfo(sourceAta);
+    if (!sourceInfo) {
+      throw new Error('This wallet does not have an OST token account yet. Claim or receive OST first.');
+    }
+
+    const deskAccounts = await ensurePredictionDeskVaultAccount();
+    const memo = buildPredictionOrderMemo(order);
+    const amountBaseUnits = decimalAmountToBaseUnits(Number(order.stake), OST_TOKEN_DECIMALS);
+    const transaction = new solanaWeb3.Transaction();
+    transaction.add(createMemoInstruction(memo, trader));
+    transaction.add(
+      createTransferCheckedInstruction(
+        sourceAta,
+        mintPk,
+        deskAccounts.vaultTokenAccount,
+        trader,
+        amountBaseUnits,
+        OST_TOKEN_DECIMALS,
+        TOKEN_2022_PROGRAM_ID
+      )
+    );
+
+    const signature = await signAndSendTransaction(transaction);
+    const remainingBalance = await getOstBalanceForAddress(trader);
+    var record = {
+      signature: signature,
+      source: order.source,
+      marketId: order.marketId,
+      title: order.title,
+      side: order.side,
+      topic: order.topic,
+      price: Number(order.price),
+      stake: Number(order.stake),
+      potentialReturn: Number(order.potentialReturn),
+      sourceUrl: order.sourceUrl,
+      createdAt: Date.now()
+    };
+    storePredictionOrderRecord(record);
+    return {
+      signature: signature,
+      remainingBalance: remainingBalance,
+      vaultTokenAccount: deskAccounts.vaultTokenAccount.toBase58(),
+      record: record
+    };
+  }
+
+  async function createInterchangePaymentRequest(request) {
+    if (!request || !Number.isFinite(Number(request.ostAmount)) || Number(request.ostAmount) <= 0) {
+      throw new Error(t('pay.deskNeedValidAmount', 'Load a request with a valid OST amount first'));
+    }
+    if (!connectedWalletSession || !connectedWalletSession.publicKey) {
+      throw new Error(t('pay.deskNeedWallet', 'Create or connect your OST wallet first'));
+    }
+
+    const conn = getSolanaConnection();
+    if (!conn) throw new Error('Solana RPC unavailable');
+
+    const requester = connectedWalletSession.publicKey;
+    const lamports = await conn.getBalance(requester);
+    if (lamports < Math.round(0.001 * solanaWeb3.LAMPORTS_PER_SOL)) {
+      throw new Error(t('pay.walletNeedsSol', 'This wallet needs a little devnet SOL for the network fee. Fund it at faucet.solana.com, then try again.'));
+    }
+
+    const ostBalance = await getOstBalanceForAddress(requester);
+    if (ostBalance + 1e-9 < Number(request.ostAmount)) {
+      throw new Error(t('pay.notEnoughOst', 'Not enough OST in this wallet. Claim or buy OST first.'));
+    }
+
+    const mintPk = new solanaWeb3.PublicKey(OST_CONFIG.mint);
+    const sourceAta = getAssociatedTokenAddressSync(mintPk, requester, false, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
+    const sourceInfo = await conn.getAccountInfo(sourceAta);
+    if (!sourceInfo) {
+      throw new Error('This wallet does not have an OST token account yet. Claim or receive OST first.');
+    }
+
+    const deskAccounts = await ensureInterchangeDeskVaultAccount();
+    const memo = buildInterchangeMemo(request);
+    const amountBaseUnits = decimalAmountToBaseUnits(Number(request.ostAmount), OST_TOKEN_DECIMALS);
+    const transaction = new solanaWeb3.Transaction();
+    transaction.add(createMemoInstruction(memo, requester));
+    transaction.add(
+      createTransferCheckedInstruction(
+        sourceAta,
+        mintPk,
+        deskAccounts.vaultTokenAccount,
+        requester,
+        amountBaseUnits,
+        OST_TOKEN_DECIMALS,
+        TOKEN_2022_PROGRAM_ID
+      )
+    );
+
+    const signature = await signAndSendTransaction(transaction);
+    const remainingBalance = await getOstBalanceForAddress(requester);
+    storeInterchangeRequestRecord({
+      signature,
+      merchant: request.merchant,
+      amount: request.amount,
+      currency: request.currency,
+      ostAmount: request.ostAmount,
+      createdAt: Date.now()
+    });
+    return {
+      signature,
+      vaultTokenAccount: deskAccounts.vaultTokenAccount.toBase58(),
+      remainingBalance
+    };
+  }
+
+  function decodeTokenBalance(accountInfo) {
+    if (!accountInfo || !accountInfo.data || accountInfo.data.length < 72) return 0;
+    let rawAmount = 0n;
+    for (let index = 0; index < 8; index++) {
+      rawAmount |= BigInt(accountInfo.data[64 + index]) << BigInt(index * 8);
+    }
+    return Number(rawAmount) / 1e9;
+  }
+
+  async function getOstBalanceForAddress(pubkeyInput) {
+    try {
+      const conn = getSolanaConnection();
+      if (!conn) return 0;
+      const owner = toPublicKey(pubkeyInput);
+      const mintPk = new solanaWeb3.PublicKey(OST_CONFIG.mint);
+      const ata = getAssociatedTokenAddressSync(mintPk, owner, false, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
+      const ataInfo = await conn.getAccountInfo(ata);
+      return decodeTokenBalance(ataInfo);
+    } catch {
+      return 0;
+    }
+  }
+
+  async function signAndSendTransaction(transaction) {
+    const conn = getSolanaConnection();
+    if (!conn) throw new Error('Solana RPC unavailable');
+    if (!connectedWalletSession || !connectedWalletSession.publicKey) throw new Error('Connect your wallet first');
+
+    const latest = await conn.getLatestBlockhash('confirmed');
+    transaction.feePayer = connectedWalletSession.publicKey;
+    transaction.recentBlockhash = latest.blockhash;
+
+    let signature = null;
+    if (connectedWalletSession.kind === 'local' && connectedWalletSession.keypair) {
+      transaction.sign(connectedWalletSession.keypair);
+      signature = await conn.sendRawTransaction(transaction.serialize());
+    } else if (connectedWalletSession.provider && typeof connectedWalletSession.provider.signAndSendTransaction === 'function') {
+      const result = await connectedWalletSession.provider.signAndSendTransaction(transaction);
+      signature = typeof result === 'string' ? result : result && result.signature;
+    } else if (connectedWalletSession.provider && typeof connectedWalletSession.provider.signTransaction === 'function') {
+      const signedTransaction = await connectedWalletSession.provider.signTransaction(transaction);
+      signature = await conn.sendRawTransaction(signedTransaction.serialize());
+    }
+
+    if (!signature) throw new Error('Active wallet cannot sign transactions');
+    await conn.confirmTransaction({
+      signature,
+      blockhash: latest.blockhash,
+      lastValidBlockHeight: latest.lastValidBlockHeight
+    }, 'confirmed');
+    return signature;
+  }
+
+  async function ensureWalletFeeBalance(pubkeyInput) {
+    const conn = getSolanaConnection();
+    if (!conn) throw new Error('Solana RPC unavailable');
+    const pubkey = toPublicKey(pubkeyInput);
+    const minimumLamports = Math.round(0.02 * solanaWeb3.LAMPORTS_PER_SOL);
+    const airdropLamports = Math.round(0.1 * solanaWeb3.LAMPORTS_PER_SOL);
+    const currentLamports = await conn.getBalance(pubkey);
+    if (currentLamports >= minimumLamports) {
+      return { funded: false, balance: currentLamports / solanaWeb3.LAMPORTS_PER_SOL };
+    }
+    const signature = await conn.requestAirdrop(pubkey, airdropLamports);
+    await conn.confirmTransaction(signature, 'confirmed');
+    const nextLamports = await conn.getBalance(pubkey);
+    return { funded: true, balance: nextLamports / solanaWeb3.LAMPORTS_PER_SOL };
+  }
+
+  async function ensureOstAssociatedTokenAccount(ownerPubkey) {
+    const conn = getSolanaConnection();
+    if (!conn) throw new Error('Solana RPC unavailable');
+    const owner = toPublicKey(ownerPubkey);
+    const mintPk = new solanaWeb3.PublicKey(OST_CONFIG.mint);
+    const claimerAta = getAssociatedTokenAddressSync(mintPk, owner, false, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
+    const existingAccount = await conn.getAccountInfo(claimerAta);
+    if (!existingAccount) {
+      const createAtaTx = new solanaWeb3.Transaction().add(
+        createAssociatedTokenAccountInstruction(owner, claimerAta, owner, mintPk, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID)
+      );
+      await signAndSendTransaction(createAtaTx);
+    }
+    return claimerAta;
+  }
+
+  async function maybeRecordSeedlessOnboard() {
+    if (!connectedWalletSession || connectedWalletSession.kind !== 'local') return null;
+    const conn = getSolanaConnection();
+    if (!conn) throw new Error('Solana RPC unavailable');
+
+    const user = connectedWalletSession.publicKey;
+    const programId = new solanaWeb3.PublicKey(OST_CONFIG.programId);
+    const seedlessAccount = solanaWeb3.PublicKey.findProgramAddressSync([encodeSeed('seedless'), user.toBuffer()], programId)[0];
+
+    if (await conn.getAccountInfo(seedlessAccount)) {
+      return { created: false, seedlessAccount: seedlessAccount.toBase58() };
+    }
+
+    const data = new Uint8Array(SEEDLESS_ONBOARD_DISCRIMINATOR.length + 1);
+    data.set(SEEDLESS_ONBOARD_DISCRIMINATOR, 0);
+    data[SEEDLESS_ONBOARD_DISCRIMINATOR.length] = 0;
+
+    const instruction = new solanaWeb3.TransactionInstruction({
+      programId,
+      keys: [
+        { pubkey: user, isSigner: true, isWritable: true },
+        { pubkey: seedlessAccount, isSigner: false, isWritable: true },
+        { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false }
+      ],
+      data
+    });
+
+    const signature = await signAndSendTransaction(new solanaWeb3.Transaction().add(instruction));
+    return { created: true, signature, seedlessAccount: seedlessAccount.toBase58() };
+  }
+
+  async function claimOstFaucetForActiveWallet() {
+    if (!connectedWalletSession || !connectedWalletSession.publicKey) {
+      throw new Error(t('pay.deskNeedWallet', 'Create or connect your OST wallet first'));
+    }
+
+    const conn = getSolanaConnection();
+    if (!conn) throw new Error('Solana RPC unavailable');
+
+    const claimer = connectedWalletSession.publicKey;
+    const programId = new solanaWeb3.PublicKey(OST_CONFIG.programId);
+    const mintPk = new solanaWeb3.PublicKey(OST_CONFIG.mint);
+    const daoTreasury = solanaWeb3.PublicKey.findProgramAddressSync([encodeSeed('dao-treasury')], programId)[0];
+    const treasuryAuthority = solanaWeb3.PublicKey.findProgramAddressSync([encodeSeed('treasury-authority')], programId)[0];
+    const faucetClaim = solanaWeb3.PublicKey.findProgramAddressSync([encodeSeed('faucet-claim'), claimer.toBuffer()], programId)[0];
+    const treasuryTokenAccount = getAssociatedTokenAddressSync(mintPk, treasuryAuthority, true, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
+    const claimerTokenAccount = await ensureOstAssociatedTokenAccount(claimer);
+
+    if (await conn.getAccountInfo(faucetClaim)) {
+      return { claimed: false, alreadyClaimed: true, balance: await getOstBalanceForAddress(claimer) };
+    }
+
+    const instruction = new solanaWeb3.TransactionInstruction({
+      programId,
+      keys: [
+        { pubkey: claimer, isSigner: true, isWritable: true },
+        { pubkey: claimerTokenAccount, isSigner: false, isWritable: true },
+        { pubkey: treasuryTokenAccount, isSigner: false, isWritable: true },
+        { pubkey: daoTreasury, isSigner: false, isWritable: false },
+        { pubkey: treasuryAuthority, isSigner: false, isWritable: false },
+        { pubkey: faucetClaim, isSigner: false, isWritable: true },
+        { pubkey: mintPk, isSigner: false, isWritable: false },
+        { pubkey: TOKEN_2022_PROGRAM_ID, isSigner: false, isWritable: false },
+        { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false }
+      ],
+      data: CLAIM_FAUCET_DISCRIMINATOR
+    });
+
+    const signature = await signAndSendTransaction(new solanaWeb3.Transaction().add(instruction));
+    return { claimed: true, signature, balance: await getOstBalanceForAddress(claimer) };
+  }
+
   function openWalletModal() { if (walletModal) walletModal.classList.add('open'); }
   function closeWalletModal() { if (walletModal) walletModal.classList.remove('open'); }
 
@@ -1842,13 +2792,7 @@
 
   if (walletBtn) walletBtn.addEventListener('click', () => {
     if (connectedWallet) {
-      // Disconnect: try to disconnect from provider
-      try { if (window.solana && window.solana.disconnect) window.solana.disconnect(); } catch {}
-      try { if (window.solflare && window.solflare.disconnect) window.solflare.disconnect(); } catch {}
-      connectedWallet = null;
-      walletBtn.classList.remove('connected');
-      walletText.textContent = translations[currentLang]?.['nav.connect'] || 'Connect Wallet';
-      toast('👛', 'Wallet disconnected');
+      disconnectConnectedWallet();
       return;
     }
     openWalletModal();
@@ -1866,26 +2810,47 @@
   function connectWallet(type) {
     closeWalletModal();
     const providers = {
-      phantom: () => {
+      phantom: async () => {
         if (window.solana && window.solana.isPhantom) {
-          return window.solana.connect().then(r => r.publicKey.toString());
+          const response = await window.solana.connect();
+          return {
+            kind: 'extension',
+            type: 'phantom',
+            label: 'Phantom',
+            provider: window.solana,
+            publicKey: response.publicKey || window.solana.publicKey
+          };
         }
         window.open('https://phantom.app/', '_blank');
-        return Promise.reject('Install Phantom');
+        throw 'Install Phantom';
       },
-      solflare: () => {
+      solflare: async () => {
         if (window.solflare && window.solflare.isSolflare) {
-          return window.solflare.connect().then(() => window.solflare.publicKey.toString());
+          await window.solflare.connect();
+          return {
+            kind: 'extension',
+            type: 'solflare',
+            label: 'Solflare',
+            provider: window.solflare,
+            publicKey: window.solflare.publicKey
+          };
         }
         window.open('https://solflare.com/', '_blank');
-        return Promise.reject('Install Solflare');
+        throw 'Install Solflare';
       },
-      backpack: () => {
+      backpack: async () => {
         if (window.backpack) {
-          return window.backpack.connect().then(r => r.publicKey.toString());
+          const response = await window.backpack.connect();
+          return {
+            kind: 'extension',
+            type: 'backpack',
+            label: 'Backpack',
+            provider: window.backpack,
+            publicKey: response.publicKey || window.backpack.publicKey
+          };
         }
         window.open('https://www.backpack.app/', '_blank');
-        return Promise.reject('Install Backpack');
+        throw 'Install Backpack';
       },
       ledger: () => {
         toast('💳', 'Ledger: Use Phantom or Solflare with Ledger connected');
@@ -1895,35 +2860,45 @@
         toast('🔗', 'WalletConnect: Coming soon');
         return Promise.reject('Coming soon');
       },
-      google: () => {
-        window.open('https://app.tor.us/', '_blank');
-        toast('🔑', 'Opening Web3Auth / Torus...');
-        return Promise.reject('Redirect');
+      local: async () => {
+        let keypair = loadLocalWalletKeypair();
+        const isNewWallet = !keypair;
+        if (!keypair) {
+          keypair = solanaWeb3.Keypair.generate();
+          persistLocalWallet(keypair);
+        }
+        return {
+          kind: 'local',
+          type: 'local',
+          label: 'OST Browser Wallet',
+          publicKey: keypair.publicKey,
+          keypair,
+          created: isNewWallet
+        };
       }
     };
 
     const fn = providers[type];
     if (!fn) return;
 
-    fn().then(pubkey => {
-      connectedWallet = pubkey;
-      const short = pubkey.slice(0, 4) + '...' + pubkey.slice(-4);
-      walletBtn.classList.add('connected');
-      walletText.textContent = short;
-      toast('✅', `Connected: ${short}`);
-      // Verify account & show balance
-      verifyWalletAccount(pubkey).then(info => {
-        if (info.verified) {
-          toast('🔗', `Account verified — ${info.balance.toFixed(4)} SOL`);
-        } else {
-          toast('💡', `New wallet — ${info.balance.toFixed(4)} SOL. Use the faucet below to get devnet SOL!`);
+    Promise.resolve()
+      .then(() => fn())
+      .then(session => {
+        setConnectedWalletSession(session, {
+          announce: true,
+          backup: !!session.created
+        });
+      })
+      .catch(err => {
+        if (typeof err === 'string' && err !== 'Redirect') {
+          toast('⚠️', err);
         }
       });
-    }).catch(err => {
-      if (typeof err === 'string' && err !== 'Redirect') {
-        toast('⚠️', err);
-      }
-    });
+  }
+
+  const restoredLocalWalletSession = getLocalWalletSession();
+  if (restoredLocalWalletSession) {
+    setConnectedWalletSession(restoredLocalWalletSession, { announce: false });
   }
 
   /* ---------- 3D EARTH — Realistic Day/Night ---------- */
@@ -2311,10 +3286,67 @@
 
   /* ---------- LIVE PRICES — CoinGecko ---------- */
   let prices = { bitcoin: 0, ethereum: 0, solana: 0 };
-  let priceHistory = { bitcoin: [], ethereum: [], solana: [] };
+    let priceHistory = { bitcoin: [], ethereum: [], solana: [], ost: [] };
   let ostPrice = 0.0001; // Default OST price
   window.ostPrice = ostPrice;
   const OST_BASE_PRICE = 0.0001;
+
+    function getChartBasePrice(coin) {
+      if (coin === 'bitcoin') return prices.bitcoin || 105000;
+      if (coin === 'ethereum') return prices.ethereum || 3800;
+      if (coin === 'solana') return prices.solana || 170;
+      if (coin === 'ost') return ostPrice || OST_BASE_PRICE;
+      return 1;
+    }
+
+    function formatCompactUsd(value) {
+      if (!Number.isFinite(value)) return '$0';
+      const abs = Math.abs(value);
+      if (abs >= 1e9) return '$' + (value / 1e9).toFixed(2) + 'B';
+      if (abs >= 1e6) return '$' + (value / 1e6).toFixed(2) + 'M';
+      if (abs >= 1e3) return '$' + (value / 1e3).toFixed(1) + 'K';
+      return '$' + value.toFixed(0);
+    }
+
+    function updateOstMarketBoard(changeValue = 0) {
+      const normalizedChange = Number.isFinite(changeValue) ? changeValue : 0;
+      const volumeValue = 1250000 * (ostPrice / OST_BASE_PRICE) * (1 + Math.abs(normalizedChange) / 18);
+      const liquidityValue = 4800000 * (1 + Math.abs(normalizedChange) / 24);
+      const velocityValue = Math.max(0.18, 0.42 - Math.abs(normalizedChange) / 30);
+      const updatedLabel = (translations[currentLang] && translations[currentLang]['wallet.market.updated']) || translations.en['wallet.market.updated'] || 'Live';
+
+      const volumeEl = $('#ostMarketVolume');
+      const liquidityEl = $('#ostMarketLiquidity');
+      const velocityEl = $('#ostMarketVelocity');
+      const updatedEl = $('#ostMarketUpdated');
+
+      if (volumeEl) volumeEl.textContent = formatCompactUsd(volumeValue);
+      if (liquidityEl) liquidityEl.textContent = formatCompactUsd(liquidityValue);
+      if (velocityEl) velocityEl.textContent = velocityValue.toFixed(2) + 's';
+      if (updatedEl) {
+        updatedEl.textContent = `${updatedLabel} · ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+      }
+    }
+
+    function refreshOstDisplays(changeValue = 0) {
+      const tickerPrice = $('#tickerPrice');
+      const tickerChange = $('#tickerChange');
+      const ostLive = $('#ostLivePrice');
+      const ostChange = $('#ostLiveChange');
+
+      if (tickerPrice) tickerPrice.textContent = '$' + ostPrice.toFixed(6);
+      if (tickerChange) {
+        tickerChange.textContent = (changeValue >= 0 ? '+' : '') + changeValue.toFixed(2) + '%';
+        tickerChange.className = 'ticker-change ' + (changeValue >= 0 ? 'up' : 'down');
+      }
+      if (ostLive) ostLive.textContent = '$' + ostPrice.toFixed(6);
+      if (ostChange) {
+        ostChange.textContent = (changeValue >= 0 ? '+' : '') + changeValue.toFixed(2) + '%';
+        ostChange.className = 'price-card-change ' + (changeValue >= 0 ? 'up' : 'down');
+      }
+
+      updateOstMarketBoard(changeValue);
+    }
 
   // Fiat exchange rates — fetched live, defaults as fallback
   const fiatRates = {
@@ -2388,29 +3420,10 @@
       if (prices.ethereum) fiatRates.ETH = 1 / prices.ethereum;
       if (prices.solana) fiatRates.SOL = 1 / prices.solana;
 
-      // Simulate OST price with slight variation
+      // Simulate OST price with slight variation until a direct OST market feed is available.
       ostPrice = OST_BASE_PRICE * (0.95 + Math.random() * 0.1);
       window.ostPrice = ostPrice;
-
-      // Update ticker
-      const tickerPrice = $('#tickerPrice');
-      const tickerChange = $('#tickerChange');
-      if (tickerPrice) tickerPrice.textContent = '$' + ostPrice.toFixed(6);
-      if (tickerChange) {
-        const ch = (Math.random() - 0.5) * 4;
-        tickerChange.textContent = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%';
-        tickerChange.className = 'ticker-change ' + (ch >= 0 ? 'up' : 'down');
-      }
-
-      // Update OST price card
-      const ostLive = $('#ostLivePrice');
-      const ostChange = $('#ostLiveChange');
-      if (ostLive) ostLive.textContent = '$' + ostPrice.toFixed(6);
-      if (ostChange) {
-        const ch2 = (Math.random() - 0.5) * 5;
-        ostChange.textContent = (ch2 >= 0 ? '+' : '') + ch2.toFixed(2) + '%';
-        ostChange.className = 'price-card-change ' + (ch2 >= 0 ? 'up' : 'down');
-      }
+      refreshOstDisplays((Math.random() - 0.5) * 5);
 
       // Update product OST prices
       updateProductOSTPrices();
@@ -2425,6 +3438,9 @@
       fiatRates.BTC = 1 / prices.bitcoin;
       fiatRates.ETH = 1 / prices.ethereum;
       fiatRates.SOL = 1 / prices.solana;
+      ostPrice = OST_BASE_PRICE * (0.95 + Math.random() * 0.1);
+      window.ostPrice = ostPrice;
+      refreshOstDisplays((Math.random() - 0.5) * 5);
       updateProductOSTPrices();
       updateCalc();
     }
@@ -2453,22 +3469,22 @@
 
   /* ---------- MINI CHARTS ---------- */
   function initCharts() {
-    ['bitcoin', 'ethereum', 'solana'].forEach(coin => {
+    ['bitcoin', 'ethereum', 'solana', 'ost'].forEach(coin => {
       const canvas = $(`#chart-${coin}`);
       if (!canvas) return;
-      // Start with random history
-      priceHistory[coin] = Array.from({ length: 60 }, () => 0);
+      const seedPrice = getChartBasePrice(coin);
+      priceHistory[coin] = Array.from({ length: 60 }, () => seedPrice * (0.995 + Math.random() * 0.01));
     });
   }
   initCharts();
 
   function updateCharts() {
-    ['bitcoin', 'ethereum', 'solana'].forEach(coin => {
+    ['bitcoin', 'ethereum', 'solana', 'ost'].forEach(coin => {
       const canvas = $(`#chart-${coin}`);
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
       const w = canvas.parentElement.clientWidth;
-      const h = 120;
+      const h = Number(canvas.getAttribute('height')) || 120;
       canvas.width = w * 2;
       canvas.height = h * 2;
       canvas.style.width = w + 'px';
@@ -2476,8 +3492,9 @@
       ctx.scale(2, 2);
 
       // Add current price with small variation
-      const baseP = prices[coin] || 1;
-      const newP = baseP * (0.998 + Math.random() * 0.004);
+      const baseP = getChartBasePrice(coin);
+      const volatility = coin === 'ost' ? 0.016 : 0.004;
+      const newP = baseP * (1 - volatility / 2 + Math.random() * volatility);
       priceHistory[coin].push(newP);
       if (priceHistory[coin].length > 60) priceHistory[coin].shift();
 
@@ -2583,6 +3600,14 @@
     if (!calcAmount || !calcCurrency) return;
     const amount = parseFloat(calcAmount.value) || 0;
     const curr = calcCurrency.value;
+    const liveLabel = (translations[currentLang] && translations[currentLang]['wallet.market.updated']) || translations.en['wallet.market.updated'] || 'Live';
+
+    if (amount <= 0) {
+      if (calcResult) calcResult.textContent = '--';
+      if (calcRate) calcRate.textContent = '--';
+      if (calcUpdated) calcUpdated.textContent = `● ${liveLabel}`;
+      return;
+    }
 
     let usdValue;
     if (curr === 'BTC') usdValue = amount * (prices.bitcoin || 105000);
@@ -2605,7 +3630,7 @@
       calcRate.textContent = `1 ${curr} = ${rateVal.toLocaleString(undefined, { maximumFractionDigits: 0 })} OST`;
     }
     if (calcUpdated) {
-      calcUpdated.textContent = `● Live · Updated ${new Date().toLocaleTimeString()}`;
+      calcUpdated.textContent = `● ${liveLabel} · ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
     }
   }
 
@@ -2614,6 +3639,39 @@
 
   /* ---------- MINI STORE / CART ---------- */
   let cart = [];
+  const storeCatalogMeta = $('#storeCatalogMeta');
+  const storeItems = $$('.store-item');
+  const storeFilterChips = $$('.store-filter-chip');
+  let activeStoreFilter = 'all';
+
+  function applyStoreFilter(filter = activeStoreFilter) {
+    activeStoreFilter = filter;
+    let visibleCount = 0;
+    storeItems.forEach(item => {
+      const categories = (item.getAttribute('data-category') || '').split(/\s+/).filter(Boolean);
+      const isVisible = filter === 'all' || categories.includes(filter);
+      item.classList.toggle('store-item-hidden', !isVisible);
+      if (isVisible) visibleCount += 1;
+    });
+
+    if (storeCatalogMeta) {
+      storeCatalogMeta.textContent = visibleCount + ' ' + t('pay.catalogCountSuffix', 'live listings');
+    }
+
+    storeFilterChips.forEach(btn => {
+      btn.classList.toggle('is-active', btn.getAttribute('data-filter') === filter);
+    });
+  }
+
+  window.syncStoreCatalogUi = function syncStoreCatalogUi() {
+    applyStoreFilter(activeStoreFilter);
+  };
+
+  storeFilterChips.forEach(btn => {
+    btn.addEventListener('click', () => applyStoreFilter(btn.getAttribute('data-filter') || 'all'));
+  });
+
+  applyStoreFilter();
 
   function renderCart() {
     const cartItems = $('#cartItems');
@@ -2623,7 +3681,7 @@
     if (!cartItems) return;
 
     if (cart.length === 0) {
-      cartItems.innerHTML = '<p class="cart-empty">Tap + to add items</p>';
+      cartItems.innerHTML = '<p class="cart-empty">' + esc(t('pay.empty', 'Tap + to add items')) + '</p>';
       cartBadge.textContent = '0';
       cartTotal.textContent = '$0.00 - 0 OST';
       payBtn.disabled = true;
@@ -2653,6 +3711,11 @@
     });
   }
 
+  window.clearShopCart = function clearShopCart() {
+    cart = [];
+    renderCart();
+  };
+
   $$('.btn-add').forEach(btn => {
     btn.addEventListener('click', () => {
       const item = btn.closest('.store-item');
@@ -2660,141 +3723,45 @@
       cart.push({
         name: item.getAttribute('data-name'),
         price: parseFloat(item.getAttribute('data-price')),
+        merchant: item.getAttribute('data-merchant') || 'Merchant',
+        url: item.getAttribute('data-link') || '',
+        currency: item.getAttribute('data-currency') || 'USD',
+        category: item.getAttribute('data-category') || 'general',
         emoji: img ? '🛍️' : (item.querySelector('.item-visual')?.textContent || ''),
       });
       renderCart();
-      toast('🛒', `Added ${item.getAttribute('data-name')}`);
+      toast('🛒', t('pay.toastAdded', 'Added') + ' ' + item.getAttribute('data-name'));
     });
   });
 
   /* Pay Button */
   const payBtn = $('#payBtn');
-  const payOverlay = $('#payOverlay');
-
-  function randomHex(len) {
-    const chars = '0123456789abcdef';
-    let s = '';
-    for (let i = 0; i < len; i++) s += chars[Math.floor(Math.random() * 16)];
-    return s;
-  }
-
-  function randomBase58(len) {
-    const chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-    let s = '';
-    for (let i = 0; i < len; i++) s += chars[Math.floor(Math.random() * chars.length)];
-    return s;
-  }
-
-  if (payBtn) payBtn.addEventListener('click', async () => {
-    if (!payOverlay) return;
-    payOverlay.classList.add('active');
-
-    const steps = $$('.pay-step', payOverlay);
-    const connectors = $$('.pay-connector', payOverlay);
-    const receipt = $('#payReceipt');
-    const walletAddr = $('#payWalletAddr');
-    const zkHex = $('#payZKHex');
-    const slotEl = $('#paySlot');
-    const timingEl = $('#payTiming');
-    const confirmText = $('#payConfirmText');
-    const receiptDetails = $('#receiptDetails');
-
-    steps.forEach(s => { s.classList.remove('active', 'done'); });
-    connectors.forEach(c => { c.classList.remove('active'); });
-    if (receipt) receipt.classList.remove('show');
-    [walletAddr, zkHex, slotEl, timingEl].forEach(el => { if (el) el.textContent = ''; });
-
-    const txStartTime = performance.now();
-
-    // Step 1: Connect wallet — show animated wallet address
-    steps[0].classList.add('active');
-    if (walletAddr) {
-      const addr = randomBase58(44);
-      for (let i = 0; i <= addr.length; i++) {
-        walletAddr.textContent = addr.slice(0, i) + '█';
-        await sleep(18);
-      }
-      walletAddr.textContent = addr.slice(0, 4) + '...' + addr.slice(-4);
-    }
-    await sleep(400);
-    steps[0].classList.remove('active');
-    steps[0].classList.add('done');
-    if (connectors[0]) connectors[0].classList.add('active');
-
-    // Step 2: ZK proof — scrolling hex animation
-    steps[1].classList.add('active');
-    if (zkHex) {
-      for (let i = 0; i < 20; i++) {
-        zkHex.textContent = '0x' + randomHex(16);
-        await sleep(60);
-      }
-      zkHex.textContent = '✓ proof valid';
-      zkHex.style.color = 'var(--success)';
-    }
-    await sleep(300);
-    steps[1].classList.remove('active');
-    steps[1].classList.add('done');
-    if (connectors[1]) connectors[1].classList.add('active');
-
-    // Step 3: Broadcast — try fetching real Solana slot
-    steps[2].classList.add('active');
-    let solSlot = Math.floor(300000000 + Math.random() * 5000000); // fallback
-    try {
-      const sr = await fetch('https://api.mainnet-beta.solana.com', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getSlot' }),
-      });
-      const sd = await sr.json();
-      if (sd.result) solSlot = sd.result;
-    } catch (_) { /* use fallback */ }
-    if (slotEl) {
-      slotEl.textContent = `Slot #${solSlot.toLocaleString()}`;
-    }
-    await sleep(500);
-    steps[2].classList.remove('active');
-    steps[2].classList.add('done');
-    if (connectors[2]) connectors[2].classList.add('active');
-
-    // Step 4: Confirmed — show real timing
-    const txEndTime = performance.now();
-    const txDuration = ((txEndTime - txStartTime) / 1000).toFixed(2);
-    steps[3].classList.add('active');
-    if (confirmText) confirmText.textContent = `Confirmed in ${txDuration}s`;
-    if (timingEl) timingEl.textContent = `~400ms block time`;
-    await sleep(600);
-    steps[3].classList.remove('active');
-    steps[3].classList.add('done');
-
-    // Show receipt with transaction details
-    const txHash = randomBase58(88);
-    const totalUSD = cart.reduce((s, i) => s + i.price, 0);
-    const totalOST = totalUSD / ostPrice;
-    const itemNames = cart.map(i => i.name).join(', ');
-
-    if (receiptDetails) {
-      receiptDetails.innerHTML = `
-        <div><span class="rd-label">Tx Hash:</span> <span class="rd-value">${txHash.slice(0, 20)}...${txHash.slice(-8)}</span></div>
-        <div><span class="rd-label">Block:</span> <span class="rd-value">#${solSlot.toLocaleString()}</span></div>
-        <div><span class="rd-label">Items:</span> <span class="rd-value">${esc(itemNames)}</span></div>
-        <div><span class="rd-label">Total:</span> <span class="rd-value">$${totalUSD.toFixed(2)} → ${totalOST >= 1e6 ? (totalOST / 1e6).toFixed(1) + 'M' : totalOST.toFixed(0)} OST</span></div>
-        <div><span class="rd-label">Fee:</span> <span class="rd-value">$0.00 (free forever)</span></div>
-        <div><span class="rd-label">Time:</span> <span class="rd-value">${txDuration}s</span></div>
-        <div><span class="rd-label">Privacy:</span> <span class="rd-value">ZK-SNARKs verified ✓</span></div>
-      `;
+  if (payBtn) payBtn.addEventListener('click', () => {
+    if (!cart.length) return;
+    if (typeof window.loadInterchangeRequest !== 'function') {
+      toast('⚠️', t('pay.interchangeLoading', 'Interchange desk is still loading'));
+      return;
     }
 
-    if (receipt) receipt.classList.add('show');
-    launchConfetti();
-
-    // Reset ZK hex color
-    if (zkHex) zkHex.style.color = '';
-
-    cart = [];
-    renderCart();
-
-    await sleep(6000);
-    payOverlay.classList.remove('active');
+    const merchantNames = [...new Set(cart.map(item => item.merchant).filter(Boolean))];
+    const firstUrl = cart.find(item => item.url)?.url || '';
+    window.loadInterchangeRequest({
+      merchant: merchantNames.length === 1 ? merchantNames[0] : 'OST Interchange Desk',
+      merchantUrl: merchantNames.length === 1 ? firstUrl : '',
+      amount: cart.reduce((sum, item) => sum + item.price, 0),
+      currency: cart[0]?.currency || 'USD',
+      items: cart.map(item => ({
+        name: item.name,
+        price: item.price,
+        merchant: item.merchant || 'Merchant',
+        url: item.url || '',
+        currency: item.currency || 'USD',
+        category: item.category || 'general'
+      })),
+      source: t('pay.shopSource', 'shop cart'),
+      note: merchantNames.length > 1 ? 'Batch cart from curated shop' : 'Curated shop order'
+    });
+    toast('🧾', t('pay.cartMoved', 'Cart moved to the interchange desk'));
   });
 
   /* ---------- PAY ANYWHERE WIDGET ---------- */
@@ -3002,11 +3969,13 @@
         else if (ostOut >= 1e6) formatted = (ostOut / 1e6).toFixed(2) + 'M';
         else if (ostOut >= 1e3) formatted = (ostOut / 1e3).toFixed(1) + 'K';
         else formatted = ostOut.toFixed(2);
-        transferResult.textContent = `✅ Received ${formatted} OST ($${usdValue.toLocaleString(undefined, { maximumFractionDigits: 2 })})`;
+        const receivedLabel = (translations[currentLang] && translations[currentLang]['wallet.convert.received']) || translations.en['wallet.convert.received'] || 'Received';
+        transferResult.textContent = `✅ ${receivedLabel} ${formatted} OST ($${usdValue.toLocaleString(undefined, { maximumFractionDigits: 2 })})`;
       } else {
-        if (transferResult) transferResult.textContent = '✅ Done — Private & Instant';
+        const doneLabel = (translations[currentLang] && translations[currentLang]['wallet.convert.done']) || translations.en['wallet.convert.done'] || 'Done - private and instant';
+        if (transferResult) transferResult.textContent = `✅ ${doneLabel}`;
       }
-      toast('✅', 'Conversion complete (demo)');
+      toast('✅', 'Conversion flow complete');
       launchConfetti();
 
       await sleep(4000);
@@ -3073,31 +4042,46 @@
         await sleep(120);
       }
 
-      // Try real devnet airdrop if wallet is connected
-      if (connectedWallet && typeof solanaWeb3 !== 'undefined') {
+      if (connectedWalletSession && typeof solanaWeb3 !== 'undefined') {
         try {
-          const conn = getSolanaConnection();
-          const pubkey = new solanaWeb3.PublicKey(connectedWallet);
-          if (faucetStatus) faucetStatus.textContent = 'Requesting devnet SOL airdrop...';
-          const sig = await conn.requestAirdrop(pubkey, 1e9);
-          await conn.confirmTransaction(sig, 'confirmed');
-          const lamports = await conn.getBalance(pubkey);
-          const sol = (lamports / 1e9).toFixed(4);
-          faucetTotal += 1;
-          if (faucetAmount) faucetAmount.textContent = sol;
-          if (faucetStatus) faucetStatus.textContent = 'Airdrop confirmed! ' + sol + ' SOL in your wallet.';
-          toast('🎉', '+1 SOL airdropped on devnet!');
+          if (faucetStatus) faucetStatus.textContent = 'Funding your wallet for network fees...';
+          const funding = await ensureWalletFeeBalance(connectedWalletSession.publicKey);
+          if (funding.funded && faucetStatus) {
+            faucetStatus.textContent = 'Fee balance ready. Recording wallet profile...';
+          }
+
+          await maybeRecordSeedlessOnboard();
+
+          if (faucetStatus) faucetStatus.textContent = 'Preparing your OST token account...';
+          const faucetResult = await claimOstFaucetForActiveWallet();
+          const ostBalance = faucetResult.balance || await getOstBalanceForAddress(connectedWalletSession.publicKey);
+          faucetTotal = ostBalance;
+          if (faucetAmount) faucetAmount.textContent = ostBalance.toFixed(2);
+
+          if (faucetResult.alreadyClaimed) {
+            if (faucetStatus) faucetStatus.textContent = 'This wallet already claimed its OST faucet. Current balance: ' + ostBalance.toFixed(2) + ' OST.';
+            toast('ℹ️', 'OST faucet already claimed for this wallet');
+          } else {
+            if (faucetStatus) faucetStatus.textContent = 'OST claimed on devnet. Balance ready: ' + ostBalance.toFixed(2) + ' OST.';
+            toast('🎉', '+1 OST claimed on devnet!');
+          }
+
+          updateWalletBalance(connectedWallet);
         } catch (e) {
-          faucetTotal += 1;
-          if (faucetAmount) faucetAmount.textContent = faucetTotal.toFixed(2);
-          if (faucetStatus) faucetStatus.textContent = 'Devnet faucet rate-limited. Visit faucet.solana.com to get SOL manually.';
-          toast('⚠️', 'Rate limited — try faucet.solana.com');
+          const errorText = (e && e.message) || String(e || 'OST faucet failed');
+          const isRateLimited = /429|airdrop limit|faucet has run dry/i.test(errorText);
+          if (isRateLimited) {
+            if (faucetStatus) faucetStatus.textContent = 'Devnet SOL faucet is rate-limited. Fund this wallet at faucet.solana.com, then click again to claim OST.';
+            toast('⚠️', 'Devnet SOL faucet is rate-limited. Fund test SOL manually, then retry.');
+          } else {
+            if (faucetStatus) faucetStatus.textContent = 'Could not claim OST right now. Make sure Devnet is reachable and try again.';
+            toast('⚠️', errorText);
+          }
         }
       } else {
-        faucetTotal += 1;
-        if (faucetAmount) faucetAmount.textContent = faucetTotal.toFixed(2);
-        if (faucetStatus) faucetStatus.textContent = 'Connect your wallet first for real devnet OST!';
-        toast('👛', 'Connect wallet for real airdrop');
+        if (faucetAmount) faucetAmount.textContent = '0.00';
+        if (faucetStatus) faucetStatus.textContent = 'Create or connect your wallet first, then claim real devnet OST.';
+        toast('👛', 'Create or connect your OST wallet first');
       }
       launchConfetti();
       faucetRunning = false;
@@ -3229,8 +4213,8 @@
         }
       } else {
         await sleep(1500);
-        if (gvStatus) gvStatus.textContent = '\u2705 Vault created (demo) for ' + childName + ' (age ' + childAge + '). Connect wallet for on-chain vault.';
-        toast('\uD83D\uDD12', 'Grow Vault created (demo) for ' + childName);
+        if (gvStatus) gvStatus.textContent = '\u2705 Local vault plan created for ' + childName + ' (age ' + childAge + '). Connect wallet to open the on-chain vault.';
+        toast('\uD83D\uDD12', 'Local Grow Vault plan created for ' + childName);
         launchConfetti();
       }
 
@@ -3716,6 +4700,66 @@
     return d.innerHTML;
   }
 
+  (function initWalletCommandTabs() {
+    const tabButtons = $$('.wallet-tab-btn');
+    const panels = $$('.wallet-tab-panel');
+    if (!tabButtons.length || !panels.length) return;
+
+    function setWalletPanel(target, options = {}) {
+      const nextTarget = tabButtons.some(button => button.getAttribute('data-wallet-panel-target') === target)
+        ? target
+        : tabButtons[0].getAttribute('data-wallet-panel-target');
+      const panelId = `wallet-panel-${nextTarget}`;
+
+      tabButtons.forEach(button => {
+        const isActive = button.getAttribute('data-wallet-panel-target') === nextTarget;
+        button.classList.toggle('active', isActive);
+        button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        button.setAttribute('tabindex', isActive ? '0' : '-1');
+      });
+
+      panels.forEach(panel => {
+        const isActive = panel.id === panelId;
+        panel.classList.toggle('is-active', isActive);
+        if (isActive) panel.removeAttribute('hidden');
+        else panel.setAttribute('hidden', '');
+      });
+
+      if (options.scroll) {
+        const walletSection = $('#wallet');
+        if (walletSection) {
+          walletSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }
+    }
+
+    tabButtons.forEach(button => {
+      const target = button.getAttribute('data-wallet-panel-target');
+      if (!target) return;
+      button.setAttribute('role', 'tab');
+      button.setAttribute('aria-controls', `wallet-panel-${target}`);
+      button.addEventListener('click', () => setWalletPanel(target));
+    });
+
+    panels.forEach(panel => panel.setAttribute('role', 'tabpanel'));
+
+    $$('[data-wallet-tab-link]').forEach(link => {
+      link.addEventListener('click', event => {
+        const target = link.getAttribute('data-wallet-tab-link');
+        if (!target) return;
+        event.preventDefault();
+        setWalletPanel(target, { scroll: true });
+      });
+    });
+
+    const initialHash = window.location.hash || '';
+    const hashTarget = initialHash.startsWith('#wallet-panel-') ? initialHash.replace('#wallet-panel-', '') : '';
+    const defaultTarget = tabButtons.find(button => button.classList.contains('active'))?.getAttribute('data-wallet-panel-target') || 'access';
+    setWalletPanel(hashTarget || defaultTarget);
+
+    window.setWalletPanel = setWalletPanel;
+  })();
+
   /* ================================================================== */
   /* WALLET DASHBOARD — Personalized Wallet Panel                       */
   /* ================================================================== */
@@ -3797,25 +4841,9 @@
           const solPrice = prices.solana || 0;
           wdSolUsd.textContent = '$' + (solBal * solPrice).toFixed(2);
         }
-        // Try fetching OST token balance (Token-2022)
-        try {
-          const mintPk = new solanaWeb3.PublicKey('383pTzoZ8Gp83dzk23ZnvLcfX2Sq32TAGN48CMQu2pAJ');
-          const TOKEN_2022_PID = new solanaWeb3.PublicKey('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb');
-          const ataSeeds = [pk.toBuffer(), TOKEN_2022_PID.toBuffer(), mintPk.toBuffer()];
-          const ATA_PID = new solanaWeb3.PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
-          const [ata] = solanaWeb3.PublicKey.findProgramAddressSync(ataSeeds, ATA_PID);
-          const ataInfo = await conn.getAccountInfo(ata);
-          if (ataInfo && ataInfo.data.length >= 72) {
-            // Token account data: offset 64 = amount (u64 LE)
-            const raw = ataInfo.data;
-            const lo = raw[64] | (raw[65] << 8) | (raw[66] << 16) | (raw[67] << 24);
-            const hi = raw[68] | (raw[69] << 8) | (raw[70] << 16) | (raw[71] << 24);
-            const amount = lo + hi * 4294967296;
-            const ostBal = amount / 1e9; // 9 decimals
-            if (wdOstBal) wdOstBal.textContent = ostBal.toFixed(2);
-            if (wdOstUsd) wdOstUsd.textContent = '$' + (ostBal * ostPrice).toFixed(2);
-          }
-        } catch (_) { /* no OST balance */ }
+        const ostBal = await getOstBalanceForAddress(pk);
+        if (wdOstBal) wdOstBal.textContent = ostBal.toFixed(2);
+        if (wdOstUsd) wdOstUsd.textContent = '$' + (ostBal * ostPrice).toFixed(2);
       } catch (_) { /* silently ignore */ }
     }
 
@@ -3967,17 +4995,218 @@
     const checkoutRate = $('#checkoutRate');
     const checkoutOst = $('#checkoutOst');
     const checkoutPayBtn = $('#checkoutPayBtn');
+    const deskStatus = $('#deskStatus');
+    const deskMerchant = $('#deskMerchant');
+    const deskSource = $('#deskSource');
+    const deskFiat = $('#deskFiat');
+    const deskOst = $('#deskOst');
+    const deskWallet = $('#deskWallet');
+    const deskItems = $('#deskItems');
+    const deskMerchantLink = $('#deskMerchantLink');
+    const deskPayBtn = $('#deskPayBtn');
+    const deskPayBtnLabel = $('#deskPayBtnLabel');
+    const deskReceipt = $('#deskReceipt');
+
+    let activeInterchangeRequest = null;
 
     if (!browserUrl || !viewport) return;
 
-    // Quick store buttons
-    $$('.browser-quick').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const url = btn.getAttribute('data-url');
-        browserUrl.value = url;
-        loadStore(url);
+    function openStoreTab(target) {
+      const tab = document.querySelector('.store-tab[data-dtab="' + target + '"]');
+      if (tab) tab.click();
+    }
+
+    function currencyAmountToUsd(amount, currency) {
+      const nextAmount = Number(amount) || 0;
+      const nextCurrency = currency || 'USD';
+      if (nextCurrency === 'BTC') return nextAmount * (prices.bitcoin || 105000);
+      if (nextCurrency === 'ETH') return nextAmount * (prices.ethereum || 3800);
+      if (nextCurrency === 'SOL') return nextAmount * (prices.solana || 170);
+      if (nextCurrency === 'BNB') return nextAmount * 650;
+      if (nextCurrency === 'USDC' || nextCurrency === 'USDT') return nextAmount;
+      return nextAmount / (fiatRates[nextCurrency] || 1);
+    }
+
+    function formatCurrencyAmount(amount, currency) {
+      const symbol = getCurrSym(currency || 'USD');
+      const numericAmount = Number(amount) || 0;
+      const formatted = numericAmount >= 1000
+        ? numericAmount.toLocaleString(undefined, { minimumFractionDigits: numericAmount % 1 ? 2 : 0, maximumFractionDigits: 2 })
+        : numericAmount.toFixed(2);
+      return symbol + formatted + ' ' + (currency || 'USD');
+    }
+
+    function formatOstAmount(amount) {
+      const numericAmount = Number(amount) || 0;
+      if (numericAmount >= 1e9) return (numericAmount / 1e9).toFixed(2) + 'B OST';
+      if (numericAmount >= 1e6) return (numericAmount / 1e6).toFixed(2) + 'M OST';
+      if (numericAmount >= 1e3) return (numericAmount / 1e3).toFixed(1) + 'K OST';
+      return numericAmount.toFixed(2) + ' OST';
+    }
+
+    function setDeskStatus(message, tone) {
+      if (!deskStatus) return;
+      deskStatus.className = 'interchange-desk-status' + (tone ? ' is-' + tone : '');
+      deskStatus.textContent = message;
+    }
+
+    function clearDeskReceipt() {
+      if (deskReceipt) deskReceipt.innerHTML = '';
+    }
+
+    function normalizeInterchangeRequest(request) {
+      const rawItems = Array.isArray(request && request.items) ? request.items : [];
+      const items = rawItems.map(function(item) {
+        return {
+          name: item.name || item.label || 'Order item',
+          merchant: item.merchant || request.merchant || 'Merchant',
+          url: item.url || request.merchantUrl || request.url || '',
+          price: Number(item.price || item.amount || 0),
+          currency: item.currency || request.currency || 'USD',
+          category: item.category || request.category || 'general'
+        };
       });
-    });
+      const currency = (request && request.currency) || items[0]?.currency || 'USD';
+      const amount = Number(request && request.amount || items.reduce(function(sum, item) { return sum + (Number(item.price) || 0); }, 0));
+      const usdTotal = Number(request && request.usdTotal || currencyAmountToUsd(amount, currency));
+      return {
+        merchant: (request && request.merchant) || getHostname((request && (request.merchantUrl || request.url)) || '') || 'OST Interchange Desk',
+        merchantUrl: (request && (request.merchantUrl || request.url)) || items[0]?.url || '',
+        amount,
+        currency,
+        usdTotal,
+        ostAmount: usdTotal / (ostPrice || 0.0001),
+        items: items.length ? items : [{ name: (request && request.label) || 'Order item', merchant: (request && request.merchant) || 'Merchant', price: amount, currency }],
+        source: (request && request.source) || t('pay.manualSource', 'manual request'),
+        note: (request && request.note) || '',
+        reference: (request && request.reference) || ('req-' + Date.now().toString(36))
+      };
+    }
+
+    function renderInterchangeRequest(request) {
+      activeInterchangeRequest = request;
+      clearDeskReceipt();
+      if (deskMerchant) deskMerchant.textContent = request.merchant;
+      if (deskSource) deskSource.textContent = request.source;
+      if (deskFiat) deskFiat.textContent = formatCurrencyAmount(request.amount, request.currency);
+      if (deskOst) deskOst.textContent = formatOstAmount(request.ostAmount);
+      if (deskItems) {
+        deskItems.innerHTML = request.items.map(function(item) {
+          return '<div class="interchange-desk-item">' +
+            '<div class="interchange-desk-item-copy">' +
+              '<strong>' + esc(item.name) + '</strong>' +
+              '<span>' + esc(item.merchant || request.merchant) + '</span>' +
+            '</div>' +
+            '<span class="interchange-desk-item-value">' + formatCurrencyAmount(item.price, item.currency || request.currency) + '</span>' +
+          '</div>';
+        }).join('');
+      }
+      if (deskMerchantLink) {
+        if (request.merchantUrl) {
+          deskMerchantLink.href = request.merchantUrl;
+          deskMerchantLink.classList.remove('interchange-link-disabled');
+          deskMerchantLink.setAttribute('aria-disabled', 'false');
+        } else {
+          deskMerchantLink.href = '#';
+          deskMerchantLink.classList.add('interchange-link-disabled');
+          deskMerchantLink.setAttribute('aria-disabled', 'true');
+        }
+      }
+      if (deskPayBtn) deskPayBtn.disabled = false;
+      if (deskPayBtnLabel) deskPayBtnLabel.textContent = t('pay.deskCreate', 'Create on-chain OST request');
+      setDeskStatus(t('pay.deskStatusLoaded', 'Request loaded. The next step creates a real devnet OST transfer to the interchange desk vault.'), 'info');
+      if (typeof window.syncInterchangeDeskWallet === 'function') window.syncInterchangeDeskWallet();
+    }
+
+    window.syncInterchangeDeskWallet = function syncInterchangeDeskWallet() {
+      if (deskWallet) {
+        deskWallet.textContent = connectedWallet ? shortAddress(connectedWallet) : t('nav.connect', 'Connect wallet');
+      }
+    };
+
+    window.loadInterchangeRequest = function loadInterchangeRequest(request) {
+      const nextRequest = normalizeInterchangeRequest(request || {});
+      renderInterchangeRequest(nextRequest);
+      openStoreTab('interchange');
+      const interchangeSection = $('#payAnywhere');
+      if (interchangeSection) {
+        interchangeSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    };
+
+    if (deskMerchantLink) {
+      deskMerchantLink.addEventListener('click', function(event) {
+        if (deskMerchantLink.classList.contains('interchange-link-disabled')) {
+          event.preventDefault();
+        }
+      });
+    }
+
+    if (deskPayBtn) {
+      deskPayBtn.addEventListener('click', async function() {
+        if (!activeInterchangeRequest) {
+          setDeskStatus(t('pay.deskNeedRequest', 'Load a request first.'), 'error');
+          return;
+        }
+        if (!connectedWalletSession || !connectedWalletSession.publicKey) {
+          openWalletModal();
+          setDeskStatus(t('pay.deskNeedWallet', 'Create or connect your OST wallet first.'), 'warning');
+          toast('👛', t('pay.toastConnectWallet', 'Connect your OST wallet first'));
+          return;
+        }
+
+        deskPayBtn.disabled = true;
+        if (deskPayBtnLabel) deskPayBtnLabel.innerHTML = '<span class="spinner"></span> ' + esc(t('pay.deskSendingButton', 'Sending OST request...'));
+        setDeskStatus(t('pay.deskStatusSending', 'Sending a real OST payment request to the interchange vault...'), 'info');
+
+        try {
+          const result = await createInterchangePaymentRequest(activeInterchangeRequest);
+          const explorerUrl = 'https://explorer.solana.com/tx/' + result.signature + '?cluster=' + OST_CONFIG.network;
+          if (deskReceipt) {
+            deskReceipt.innerHTML =
+              '<div class="interchange-desk-receipt-card">' +
+                '<div class="interchange-desk-receipt-title">' + esc(t('pay.deskReceiptTitle', 'On-chain request recorded')) + '</div>' +
+                '<div class="interchange-desk-receipt-grid">' +
+                  '<div><span>' + esc(t('pay.deskReceiptSignature', 'Signature')) + '</span><strong>' + esc(result.signature.slice(0, 18) + '...' + result.signature.slice(-8)) + '</strong></div>' +
+                  '<div><span>' + esc(t('pay.deskReceiptMerchant', 'Merchant')) + '</span><strong>' + esc(activeInterchangeRequest.merchant) + '</strong></div>' +
+                  '<div><span>' + esc(t('pay.deskReceiptFiat', 'Fiat total')) + '</span><strong>' + esc(formatCurrencyAmount(activeInterchangeRequest.amount, activeInterchangeRequest.currency)) + '</strong></div>' +
+                  '<div><span>' + esc(t('pay.deskReceiptOst', 'OST sent')) + '</span><strong>' + esc(formatOstAmount(activeInterchangeRequest.ostAmount)) + '</strong></div>' +
+                '</div>' +
+                '<p>' + esc(t('pay.deskReceiptHelp', 'Share this transaction with the interchange desk to complete merchant-side fulfillment.')) + '</p>' +
+                '<div class="interchange-desk-receipt-links">' +
+                  '<a href="' + esc(explorerUrl) + '" target="_blank" rel="noopener">' + esc(t('pay.deskReceiptExplorer', 'View on Solana Explorer')) + '</a>' +
+                  (activeInterchangeRequest.merchantUrl ? '<a href="' + esc(activeInterchangeRequest.merchantUrl) + '" target="_blank" rel="noopener">' + esc(t('pay.deskMerchantLink', 'Open merchant page')) + '</a>' : '') +
+                '</div>' +
+              '</div>';
+          }
+          if (activeInterchangeRequest.source === 'shop cart' && typeof window.clearShopCart === 'function') {
+            window.clearShopCart();
+          }
+          setDeskStatus(t('pay.deskStatusRecorded', 'On-chain request recorded. Share the signature with the desk to finish fulfillment.'), 'success');
+          toast('✅', t('pay.toastRequestCreated', 'On-chain interchange request created'));
+          launchConfetti();
+        } catch (error) {
+          const message = error && error.message ? error.message : t('pay.deskRequestFailed', 'Could not create the interchange request right now.');
+          setDeskStatus(message, 'error');
+          toast('⚠️', message);
+        } finally {
+          deskPayBtn.disabled = !activeInterchangeRequest;
+          if (deskPayBtnLabel) deskPayBtnLabel.textContent = t('pay.deskCreate', 'Create on-chain OST request');
+        }
+      });
+    }
+
+    function bindBrowserQuickLinks(root) {
+      $$('.browser-quick', root || document).forEach(btn => {
+        btn.addEventListener('click', () => {
+          const url = btn.getAttribute('data-url');
+          browserUrl.value = url;
+          loadStore(url);
+        });
+      });
+    }
+
+    bindBrowserQuickLinks();
 
     if (browserGo) browserGo.addEventListener('click', () => {
       const url = browserUrl.value.trim();
@@ -4008,7 +5237,7 @@
       } catch (_) { return raw.includes('/'); }
     }
 
-    // Simulated store data for quick-link demos — real product images & descriptions
+    // Curated merchant data for the interchange browser
     const stores = {
       'amazon.com': { name: 'Amazon', icon: '&#128230;', color: '#ff9900', items: [
         { name: 'Echo Dot 5th Gen', price: 49.99, img: 'https://images.unsplash.com/photo-1543512214-318c7553f230?w=200&h=200&fit=crop&q=80', desc: 'Smart speaker with Alexa, improved bass' },
@@ -4030,10 +5259,26 @@
         { name: 'Model 3 Highland', price: 38990.00, img: 'https://images.unsplash.com/photo-1536700503339-1e4b06520771?w=200&h=200&fit=crop&q=80', desc: 'RWD, 272mi range, 15" touchscreen, refreshed' },
         { name: 'Cybertruck AWD', price: 79990.00, img: 'https://images.unsplash.com/photo-1571840546980-4bed46a14d0f?w=200&h=200&fit=crop&q=80', desc: 'Stainless steel exoskeleton, adaptive air suspension' },
       ], currency: 'USD' },
+      'delta.com': { name: 'Delta', icon: '&#9992;&#65039;', color: '#003A70', items: [
+        { name: 'Round Trip NYC → Miami', price: 398.00, img: 'https://images.unsplash.com/photo-1436491865332-7a61a109db05?w=200&h=200&fit=crop&q=80', desc: 'Economy, nonstop, 3h 15m each way' },
+        { name: 'Round Trip LAX → Tokyo', price: 1249.00, img: 'https://images.unsplash.com/photo-1540339832862-474599807836?w=200&h=200&fit=crop&q=80', desc: 'Main cabin, checked bag included, overnight route' },
+      ], currency: 'USD' },
+      'marriott.com': { name: 'Marriott', icon: '&#127976;', color: '#7A0019', items: [
+        { name: 'New York Marriott Marquis', price: 624.00, img: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=200&h=200&fit=crop&q=80', desc: 'Times Square, 2 nights, king room, flexible rate' },
+        { name: 'Marriott Cancun Resort', price: 842.00, img: 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=200&h=200&fit=crop&q=80', desc: 'Ocean view, 3 nights, breakfast included' },
+      ], currency: 'USD' },
+      'autotrader.com': { name: 'Autotrader', icon: '&#128663;', color: '#0A5AFF', items: [
+        { name: '2024 BMW M340i', price: 58995.00, img: 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=200&h=200&fit=crop&q=80', desc: 'AWD, executive package, 12K miles' },
+        { name: '2023 Ford Bronco Wildtrak', price: 54350.00, img: 'https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=200&h=200&fit=crop&q=80', desc: '4x4, hard top, Sasquatch package' },
+      ], currency: 'USD' },
       'booking.com': { name: 'Booking.com', icon: '&#127968;', color: '#003580', items: [
         { name: 'Hotel Room 3 Nights', price: 285.00, img: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=200&h=200&fit=crop&q=80', desc: 'Luxury suite, king bed, city center, breakfast included' },
         { name: 'Airport Transfer', price: 45.00, img: 'https://images.unsplash.com/photo-1449965408869-ebd13bc9e5a8?w=200&h=200&fit=crop&q=80', desc: 'Private car, meet & greet, flight tracking' },
       ], currency: 'EUR' },
+      'expedia.com': { name: 'Expedia', icon: '&#129523;', color: '#FFC72C', items: [
+        { name: 'Las Vegas Weekend Package', price: 712.00, img: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=200&h=200&fit=crop&q=80', desc: 'Hotel + flight bundle, 2 travelers, Friday to Sunday' },
+        { name: 'Barcelona Hotel + Flight', price: 1385.00, img: 'https://images.unsplash.com/photo-1464790719320-516ecd75af6c?w=200&h=200&fit=crop&q=80', desc: '5 nights, city center, breakfast included' },
+      ], currency: 'USD' },
       'ebay.com': { name: 'eBay', icon: '&#128717;', color: '#e53238', items: [
         { name: 'Vintage Record Player', price: 125.00, img: 'https://images.unsplash.com/photo-1535992165-4af54da9c2b7?w=200&h=200&fit=crop&q=80', desc: 'Belt-driven turntable, built-in speakers, bluetooth' },
         { name: 'Vinyl Collection (10)', price: 45.00, img: 'https://images.unsplash.com/photo-1483412033650-1015ddeb83d1?w=200&h=200&fit=crop&q=80', desc: 'Classic rock & jazz vinyl records, mint condition' },
@@ -4127,6 +5372,7 @@
       if (store && !hasPath(rawUrl)) {
         browserUrl.value = hostname;
         currentStore = Object.assign({}, store, {
+          url: store.url || ('https://' + hostname),
           total: store.items.reduce(function(s, i) { return s + i.price; }, 0),
           selected: store.items.map(function() { return true; })
         });
@@ -4183,6 +5429,7 @@
               icon: '&#128722;', color: '#6d9fff',
               items: [{ name: parsed.title || 'Product', price: parsed.price, img: parsed.image ? '<img src="' + esc(parsed.image) + '" style="width:48px;height:48px;object-fit:cover;border-radius:8px;" onerror="this.outerHTML=\'&#128722;\'">' : '&#128722;' }],
               currency: parsed.currency || 'USD',
+              url: fetchUrl,
               total: parsed.price,
               selected: [true],
               autoDetected: true,
@@ -4483,7 +5730,7 @@
         currentStore = {
           name: hostname, icon: '&#127760;', color: '#555',
           items: [{ name: 'Product from ' + hostname, price: priceVal, img: '&#127760;' }],
-          currency: curr, total: priceVal, selected: [true]
+          currency: curr, url: 'https://' + hostname, total: priceVal, selected: [true]
         };
       }
 
@@ -4557,88 +5804,62 @@
       if (backBtn) backBtn.addEventListener('click', resetViewport);
     }
 
-    /* ---- Auto-cycling showcase that makes the browser feel alive ---- */
+    /* ---- Static browse board for real merchant lanes ---- */
     var showcaseInterval = null;
     function startAutoShowcase() {
       var showcase = $('#browserAutoShowcase');
       if (!showcase) return;
-      var allProducts = [];
-      Object.keys(stores).forEach(function(domain) {
-        var s = stores[domain];
-        s.items.forEach(function(item) {
-          allProducts.push({ store: s.name, color: s.color, domain: domain, name: item.name, price: item.price, img: item.img, desc: item.desc || '', currency: s.currency });
+      if (showcaseInterval) { clearInterval(showcaseInterval); showcaseInterval = null; }
+
+      var lanes = [
+        { key: 'pay.browseHotels', domain: 'marriott.com', icon: '&#127976;', sample: 'Marriott, Booking, Airbnb' },
+        { key: 'pay.browseFlights', domain: 'delta.com', icon: '&#9992;&#65039;', sample: 'Delta, Expedia, Google Shopping' },
+        { key: 'pay.browseCars', domain: 'autotrader.com', icon: '&#128663;', sample: 'Autotrader, Tesla' },
+        { key: 'pay.browseProperty', domain: 'zillow.com', icon: '&#127968;', sample: 'Zillow, Expedia stays' },
+        { key: 'pay.browseRetail', domain: 'amazon.com', icon: '&#128722;', sample: 'Amazon, Apple, Nike' }
+      ];
+
+      showcase.innerHTML =
+        '<div class="browser-browse-board">' +
+          '<div class="browser-browse-head">' +
+            '<h4>' + esc(t('pay.browseTitle', 'Browse merchant lanes')) + '</h4>' +
+            '<p>' + esc(t('pay.browseSub', 'Pick hotels, flights, cars, property, or retail, then load a real quote into the request desk.')) + '</p>' +
+          '</div>' +
+          '<div class="browser-browse-grid">' + lanes.map(function(lane) {
+            return '<button class="browser-browse-card" type="button" data-domain="' + esc(lane.domain) + '">' +
+              '<span class="browser-browse-icon">' + lane.icon + '</span>' +
+              '<strong>' + esc(t(lane.key, lane.domain)) + '</strong>' +
+              '<span>' + esc(lane.sample) + '</span>' +
+              '<span class="browser-browse-action">' + esc(t('pay.browseOpen', 'Open lane')) + '</span>' +
+            '</button>';
+          }).join('') + '</div>' +
+        '</div>';
+
+      showcase.querySelectorAll('.browser-browse-card').forEach(function(card) {
+        card.addEventListener('click', function() {
+          var domain = card.getAttribute('data-domain');
+          browserUrl.value = domain;
+          loadStore(domain);
         });
       });
-      // Shuffle
-      for (var i = allProducts.length - 1; i > 0; i--) {
-        var j = Math.floor(Math.random() * (i + 1));
-        var tmp = allProducts[i]; allProducts[i] = allProducts[j]; allProducts[j] = tmp;
-      }
+    }
 
-      var idx = 0;
-      function showNext() {
-        if (!showcase.offsetParent && !showcase.closest('[style*="display"]')) return;
-        var product = allProducts[idx % allProducts.length];
-        var ostRate = ostPrice || 0.0001;
-        var usdVal = product.price;
-        if (product.currency !== 'USD' && fiatRates[product.currency]) usdVal = product.price / fiatRates[product.currency];
-        var ostVal = usdVal / ostRate;
-        var fmtOst = ostVal >= 1e6 ? (ostVal / 1e6).toFixed(2) + 'M' : ostVal >= 1e3 ? (ostVal / 1e3).toFixed(1) + 'K' : ostVal.toFixed(2);
-        var sym = getCurrSym(product.currency);
-        var isImg = product.img && product.img.startsWith('http');
-        var imgHtml = isImg
-          ? '<img src="' + esc(product.img) + '" alt="' + esc(product.name) + '" loading="lazy">'
-          : '<span style="font-size:3rem;">' + product.img + '</span>';
+    window.syncInterchangeBrowserUi = startAutoShowcase;
 
-        showcase.classList.remove('showcase-fade-in');
-        void showcase.offsetWidth;
-        showcase.innerHTML =
-          '<div class="showcase-card">' +
-            '<div class="showcase-store-bar" style="color:' + product.color + ';">' +
-              '<span class="showcase-domain">' + esc(product.domain) + '</span>' +
-              '<span class="showcase-badge">&#9673; OST Detected</span>' +
-            '</div>' +
-            '<div class="showcase-body">' +
-              '<div class="showcase-img">' + imgHtml + '</div>' +
-              '<div class="showcase-info">' +
-                '<h4>' + esc(product.name) + '</h4>' +
-                (product.desc ? '<p>' + esc(product.desc) + '</p>' : '') +
-                '<div class="showcase-prices">' +
-                  '<span class="showcase-fiat">' + sym + (product.price >= 1000 ? product.price.toLocaleString('en-US') : product.price.toFixed(2)) + '</span>' +
-                  '<span class="showcase-arrow">&#8594;</span>' +
-                  '<span class="showcase-ost">' + fmtOst + ' OST</span>' +
-                '</div>' +
-              '</div>' +
-            '</div>' +
-            '<div class="showcase-ext-cta">' +
-              '<button class="btn btn-primary btn-glow showcase-pay-btn" data-domain="' + esc(product.domain) + '">&#9673; Pay with OST</button>' +
-            '</div>' +
-          '</div>';
-        showcase.classList.add('showcase-fade-in');
-
-        // Wire pay button
-        var payBtn = showcase.querySelector('.showcase-pay-btn');
-        if (payBtn) payBtn.addEventListener('click', function() {
-          browserUrl.value = product.domain;
-          loadStore(product.domain);
-        });
-
-        idx++;
-      }
-
-      showNext();
-      if (showcaseInterval) clearInterval(showcaseInterval);
-      showcaseInterval = setInterval(showNext, 4000);
-
-      // Update URL bar to match current showcase product
-      var origInterval = showcaseInterval;
-      var checkExist = setInterval(function() {
-        if (showcaseInterval !== origInterval) { clearInterval(checkExist); return; }
-        var domainEl = showcase.querySelector('.showcase-domain');
-        if (domainEl && browserUrl && !browserUrl.matches(':focus')) {
-          browserUrl.value = domainEl.textContent;
-        }
-      }, 4050);
+    function getBrowserQuickLinksMarkup() {
+      return '' +
+        '<button class="browser-quick browser-quick-google" data-url="shopping.google.com">&#128269; Google Shopping</button>' +
+        '<button class="browser-quick" data-url="amazon.com">Amazon</button>' +
+        '<button class="browser-quick" data-url="apple.com">Apple</button>' +
+        '<button class="browser-quick" data-url="marriott.com">Marriott</button>' +
+        '<button class="browser-quick" data-url="delta.com">Delta</button>' +
+        '<button class="browser-quick" data-url="autotrader.com">Autotrader</button>' +
+        '<button class="browser-quick" data-url="zillow.com">Zillow</button>' +
+        '<button class="browser-quick" data-url="expedia.com">Expedia</button>' +
+        '<button class="browser-quick" data-url="booking.com">Booking</button>' +
+        '<button class="browser-quick" data-url="airbnb.com">Airbnb</button>' +
+        '<button class="browser-quick" data-url="nike.com">Nike</button>' +
+        '<button class="browser-quick" data-url="tesla.com">Tesla</button>';
     }
 
     function resetViewport() {
@@ -4648,30 +5869,11 @@
       viewport.innerHTML =
         '<div class="browser-auto-showcase" id="browserAutoShowcase"></div>' +
         '<div class="browser-quick-links" id="browserQuickLinks">' +
-          '<button class="browser-quick browser-quick-google" data-url="shopping.google.com">&#128269; Google Shopping</button>' +
-          '<button class="browser-quick" data-url="amazon.com">Amazon</button>' +
-          '<button class="browser-quick" data-url="nike.com">Nike</button>' +
-          '<button class="browser-quick" data-url="apple.com">Apple</button>' +
-          '<button class="browser-quick" data-url="tesla.com">Tesla</button>' +
-          '<button class="browser-quick" data-url="bestbuy.com">Best Buy</button>' +
-          '<button class="browser-quick" data-url="walmart.com">Walmart</button>' +
-          '<button class="browser-quick" data-url="booking.com">Booking</button>' +
-          '<button class="browser-quick" data-url="airbnb.com">Airbnb</button>' +
-          '<button class="browser-quick" data-url="samsung.com">Samsung</button>' +
-          '<button class="browser-quick" data-url="ebay.com">eBay</button>' +
-          '<button class="browser-quick" data-url="zara.com">Zara</button>' +
-          '<button class="browser-quick" data-url="adidas.com">Adidas</button>' +
+          getBrowserQuickLinksMarkup() +
         '</div>';
       viewport.style.background = '';
       viewport.style.color = '';
-      // Re-wire quick link buttons
-      viewport.querySelectorAll('.browser-quick').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-          var url = btn.getAttribute('data-url');
-          browserUrl.value = url;
-          loadStore(url);
-        });
-      });
+      bindBrowserQuickLinks(viewport);
       startAutoShowcase();
     }
 
@@ -4690,48 +5892,24 @@
     }
 
     function showCheckout(store) {
-      if (!checkout) return;
-      checkout.style.display = '';
-      if (checkoutStore) checkoutStore.textContent = store.name;
-      const symbol = getCurrSym(store.currency);
-      if (checkoutTotal) checkoutTotal.textContent = symbol + store.total.toFixed(2) + ' ' + store.currency;
-      const rate = ostPrice || 0.0001;
-      // Convert store total to USD first for proper OST conversion
-      var usdTotal = store.total;
-      var c = store.currency;
-      if (c === 'BTC') usdTotal = store.total * (prices.bitcoin || 105000);
-      else if (c === 'ETH') usdTotal = store.total * (prices.ethereum || 3800);
-      else if (c === 'SOL') usdTotal = store.total * (prices.solana || 170);
-      else if (c === 'USDC' || c === 'USDT') usdTotal = store.total;
-      else if (fiatRates[c] && fiatRates[c] > 0) usdTotal = store.total / fiatRates[c];
-      const ostAmount = usdTotal / rate;
-      if (checkoutRate) checkoutRate.textContent = '1 OST = ' + symbol + rate.toFixed(6);
-      if (checkoutOst) checkoutOst.textContent = ostAmount.toFixed(2) + ' OST';
-
-      // Detect currency and show conversion info
-      var convInfo = '';
-      if (store.currency !== 'USD') {
-        convInfo = '<div class="checkout-row checkout-row-conv"><span>Currency detected:</span><span>' + store.currency + ' &rarr; auto-converted</span></div>';
-      }
-      var summaryEl = $('#checkoutSummary');
-      if (summaryEl && convInfo) {
-        var convDiv = summaryEl.querySelector('.checkout-row-conv');
-        if (!convDiv) summaryEl.insertAdjacentHTML('afterbegin', convInfo);
-      }
-
-      if (checkoutPayBtn) {
-        checkoutPayBtn.disabled = false;
-        checkoutPayBtn.innerHTML = '<span>&#9673;</span> Confirm &amp; Pay with OST';
-        checkoutPayBtn.onclick = () => {
-          checkoutPayBtn.disabled = true;
-          checkoutPayBtn.innerHTML = '<span class="spinner"></span> Processing... ZK proof generation';
-          setTimeout(() => {
-            checkout.innerHTML = '<div style="text-align:center;padding:20px;"><div style="font-size:3rem;margin-bottom:12px;">&#127881;</div><h4 style="color:#34d399;">Payment Complete!</h4><p style="color:#8b92ad;font-size:.85rem;margin-top:8px;">' + esc(store.name) + ' received ' + symbol + store.total.toFixed(2) + ' ' + store.currency + '</p><p style="color:#6d9fff;font-size:.9rem;margin-top:4px;">You paid ' + ostAmount.toFixed(2) + ' OST</p><p style="color:#8b92ad;font-size:.75rem;margin-top:8px;">&#128274; Private via ZK proofs &mdash; no one saw this transaction.</p><p style="color:#555;font-size:.7rem;margin-top:12px;">OST automatically detected ' + store.currency + ', converted via Jupiter, and settled on Solana in 400ms.</p></div>';
-            toast('&#127881;', 'Payment to ' + store.name + ' complete!');
-            launchConfetti();
-          }, 2500);
+      const requestItems = Array.isArray(store && store.items) ? store.items.map(function(item) {
+        return {
+          name: item.name,
+          merchant: store.name,
+          url: store.url || '',
+          price: item.price,
+          currency: store.currency || 'USD'
         };
-      }
+      }) : [];
+      window.loadInterchangeRequest({
+        merchant: store && store.name,
+        merchantUrl: store && store.url,
+        amount: store && store.total,
+        currency: store && store.currency,
+        items: requestItems,
+        source: t('pay.browserSource', 'interchange browser'),
+        note: 'Quoted from the interchange browser surface'
+      });
     }
   })();
 
@@ -7401,7 +8579,7 @@
       var initialBuy = parseFloat((document.getElementById('lpInitialBuy') || {}).value) || 0;
 
       var isDemoMode = !connectedWallet;
-      if (isDemoMode) toast('🚀', 'Demo mode — connect wallet for real launches');
+      if (isDemoMode) toast('🚀', 'Local launch preview — connect wallet to publish on-chain');
 
       launchBtn.disabled = true;
       launchBtn.textContent = 'creating...';
@@ -8714,6 +9892,25 @@
   (function initWelcome() {
     var overlay = document.getElementById('welcomeOverlay');
     if (!overlay) return;
+    var modal = overlay.querySelector('.welcome-modal');
+
+    function syncStoredPrefs(lang, currency) {
+      try {
+        var prefs = JSON.parse(localStorage.getItem('ost_prefs') || '{}');
+        localStorage.setItem('ost_prefs', JSON.stringify({
+          lang: lang || prefs.lang || 'en',
+          currency: currency || prefs.currency || 'USD'
+        }));
+      } catch (e) {}
+    }
+
+    function syncNavLanguage(lang) {
+      var langCode = document.getElementById('langCode');
+      if (langCode) langCode.textContent = lang.toUpperCase();
+      document.querySelectorAll('#langList a').forEach(function(a) {
+        a.classList.toggle('active', a.dataset.lang === lang);
+      });
+    }
 
     // Check if already set preferences
     var prefs = {};
@@ -8723,9 +9920,7 @@
       // Apply saved prefs
       if (typeof applyTranslations === 'function') applyTranslations(prefs.lang);
       window.__ostCurrency = prefs.currency;
-      // Update nav lang display
-      var langCode = document.getElementById('langCode');
-      if (langCode) langCode.textContent = prefs.lang.toUpperCase();
+      syncNavLanguage(prefs.lang);
       return;
     }
 
@@ -8756,26 +9951,21 @@
     document.getElementById('welNext1').addEventListener('click', function() {
       step1.style.display = 'none';
       step2.style.display = '';
+      if (modal) modal.scrollTop = 0;
     });
     document.getElementById('welBack2').addEventListener('click', function() {
       step2.style.display = 'none';
       step1.style.display = '';
+      if (modal) modal.scrollTop = 0;
     });
 
     // Enter
     document.getElementById('welGo').addEventListener('click', function() {
-      try {
-        localStorage.setItem('ost_prefs', JSON.stringify({ lang: selectedLang, currency: selectedCurrency }));
-      } catch(e) {}
+      syncStoredPrefs(selectedLang, selectedCurrency);
 
       // Apply language
       if (typeof applyTranslations === 'function') applyTranslations(selectedLang);
-      var langCode = document.getElementById('langCode');
-      if (langCode) langCode.textContent = selectedLang.toUpperCase();
-      // Also update the lang list active state
-      document.querySelectorAll('#langList a').forEach(function(a) {
-        a.classList.toggle('active', a.dataset.lang === selectedLang);
-      });
+      syncNavLanguage(selectedLang);
 
       // Apply currency
       window.__ostCurrency = selectedCurrency;
@@ -9148,6 +10338,1607 @@
     }, 700);
   })();
 
+  (function initPredictionMarketBoard() {
+    var board = document.getElementById('predictionMarketBoard');
+    if (!board) return;
+
+    var listEl = document.getElementById('predictionMarketList');
+    var statusEl = document.getElementById('predictionMarketStatus');
+    var updatedEl = document.getElementById('predictionMarketUpdated');
+    var searchEl = document.getElementById('predictionMarketSearch');
+    var refreshBtn = document.getElementById('predictionMarketRefresh');
+    var countEl = document.getElementById('predictionMarketCount');
+    var sourceCountEl = document.getElementById('predictionSourceCount');
+    var breakingCountEl = document.getElementById('predictionBtcCount');
+    var pulseEl = document.getElementById('predictionMarketPulse');
+    var pulseMetaEl = document.getElementById('predictionPulseMeta');
+    var sourceToggle = document.getElementById('predictionSourceToggle');
+    var rankToggle = document.getElementById('predictionRankToggle');
+    var topicToggle = document.getElementById('predictionTopicToggle');
+    var heroRankEl = document.getElementById('predictionHeroRank');
+    var heroSourceEl = document.getElementById('predictionHeroSource');
+    var heroTopicEl = document.getElementById('predictionHeroTopic');
+    var heroTitleEl = document.getElementById('predictionHeroTitle');
+    var heroDetailEl = document.getElementById('predictionHeroDetail');
+    var heroYesPriceEl = document.getElementById('predictionHeroYesPrice');
+    var heroNoPriceEl = document.getElementById('predictionHeroNoPrice');
+    var heroProbabilityEl = document.getElementById('predictionHeroProbability');
+    var heroVolumeEl = document.getElementById('predictionHeroVolume');
+    var heroDepthEl = document.getElementById('predictionHeroDepth');
+    var heroCloseEl = document.getElementById('predictionHeroClose');
+    var heroMomentumEl = document.getElementById('predictionHeroMomentum');
+    var heroVenueLinkEl = document.getElementById('predictionHeroVenueLink');
+    var heroFeedLinkEl = document.getElementById('predictionHeroFeedLink');
+    var tradeHeadingEl = document.getElementById('predictionTradeHeading');
+    var tradeCopyEl = document.getElementById('predictionTradeCopy');
+    var selectedSourceEl = document.getElementById('predictionSelectedSource');
+    var selectedTopicEl = document.getElementById('predictionSelectedTopic');
+    var selectedTitleEl = document.getElementById('predictionSelectedTitle');
+    var selectedDetailEl = document.getElementById('predictionSelectedDetail');
+    var outcomeToggle = document.getElementById('predictionOutcomeToggle');
+    var yesValueEl = document.getElementById('predictionOutcomeYesValue');
+    var noValueEl = document.getElementById('predictionOutcomeNoValue');
+    var stakeInputEl = document.getElementById('predictionStakeInput');
+    var stakeQuickEl = document.getElementById('predictionStakeQuick');
+    var availableBalanceEl = document.getElementById('predictionAvailableBalance');
+    var estimatedSharesEl = document.getElementById('predictionEstimatedShares');
+    var potentialReturnEl = document.getElementById('predictionPotentialReturn');
+    var tradeStatusEl = document.getElementById('predictionTradeStatus');
+    var tradeActionBtn = document.getElementById('predictionTradeAction');
+    var tradeActionLabelEl = document.getElementById('predictionTradeActionLabel');
+    var receiptEl = document.getElementById('predictionTradeReceipt');
+    var receiptSignatureEl = document.getElementById('predictionReceiptSignature');
+    var receiptStakeEl = document.getElementById('predictionReceiptStake');
+    var receiptExplorerEl = document.getElementById('predictionReceiptExplorer');
+    var ledgerCountEl = document.getElementById('predictionLedgerCount');
+    var positionListEl = document.getElementById('predictionPositionList');
+    var stageRankEl = document.getElementById('predictionStageRank');
+    var stageSourceEl = document.getElementById('predictionStageSource');
+    var stageTopicEl = document.getElementById('predictionStageTopic');
+    var stageTitleEl = document.getElementById('predictionStageTitle');
+    var stageDetailEl = document.getElementById('predictionStageDetail');
+    var stageYesPriceEl = document.getElementById('predictionStageYesPrice');
+    var stageNoPriceEl = document.getElementById('predictionStageNoPrice');
+    var stageProbabilityEl = document.getElementById('predictionStageProbability');
+    var stageVolumeEl = document.getElementById('predictionStageVolume');
+    var stageDepthEl = document.getElementById('predictionStageDepth');
+    var stageCloseEl = document.getElementById('predictionStageClose');
+    var stageChartCopyEl = document.getElementById('predictionStageChartCopy');
+    var stageTrendEl = document.getElementById('predictionStageTrend');
+    var stageChartEl = document.getElementById('predictionStageChart');
+    var stageAxisStartEl = document.getElementById('predictionStageAxisStart');
+    var stageAxisEndEl = document.getElementById('predictionStageAxisEnd');
+    var depthYesEl = document.getElementById('predictionDepthYes');
+    var depthNoEl = document.getElementById('predictionDepthNo');
+    var stageVenueLinkEl = document.getElementById('predictionStageVenueLink');
+    var stageFeedLinkEl = document.getElementById('predictionStageFeedLink');
+    var loadTimer = null;
+    var resizeFrame = null;
+
+    var state = {
+      markets: [],
+      source: 'all',
+      rank: 'trending',
+      topic: 'all',
+      query: '',
+      selectedMarketId: '',
+      selectedSide: 'yes',
+      stake: 25,
+      loading: false,
+      placing: false,
+      availableBalance: null,
+      orderHistory: readPredictionOrderRecords(),
+      latestReceipt: null,
+      lastUpdated: null,
+      sourceHealth: { polymarket: false, kalshi: false },
+      lastError: ''
+    };
+
+    var rankLabels = {
+      all: 'All markets',
+      trending: 'Trending',
+      breaking: 'Breaking',
+      new: 'New'
+    };
+
+    var topicLabels = {
+      all: 'All markets',
+      politics: 'Politics',
+      sports: 'Sports',
+      crypto: 'Crypto',
+      esports: 'Esports',
+      iran: 'Iran',
+      finance: 'Finance',
+      geopolitics: 'Geopolitics',
+      tech: 'Tech',
+      culture: 'Culture',
+      economy: 'Economy',
+      weather: 'Weather',
+      mentions: 'Mentions',
+      elections: 'Elections'
+    };
+
+    var topicOrder = ['crypto', 'elections', 'politics', 'sports', 'esports', 'iran', 'geopolitics', 'finance', 'tech', 'economy', 'culture', 'weather', 'mentions'];
+
+    function setChipState(container, attr, value) {
+      if (!container) return;
+      container.querySelectorAll('button[' + attr + ']').forEach(function(btn) {
+        btn.classList.toggle('is-active', btn.getAttribute(attr) === value);
+      });
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function formatOst(value) {
+      var number = Number(value);
+      if (!Number.isFinite(number)) return '--';
+      return number.toLocaleString(undefined, {
+        maximumFractionDigits: number >= 100 ? 0 : 2
+      }) + ' OST';
+    }
+
+    function formatCompactNumber(value) {
+      var number = Number(value);
+      if (!Number.isFinite(number)) return 'N/A';
+      return new Intl.NumberFormat(undefined, {
+        notation: 'compact',
+        maximumFractionDigits: number >= 100 ? 0 : 1
+      }).format(number);
+    }
+
+    function formatPercent(value) {
+      var number = Number(value);
+      if (!Number.isFinite(number)) return 'N/A';
+      return Math.round(number * 100) + '%';
+    }
+
+    function formatSignedPoints(value, fallback) {
+      var number = Number(value);
+      if (!Number.isFinite(number)) return fallback || 'Flat';
+      var rounded = Math.round(number);
+      if (!rounded) return fallback || 'Flat';
+      return (rounded > 0 ? '+' : '') + rounded + ' pts';
+    }
+
+    function formatMoney(value) {
+      var number = Number(value);
+      if (!Number.isFinite(number)) return 'N/A';
+      return new Intl.NumberFormat(undefined, {
+        style: 'currency',
+        currency: 'USD',
+        maximumFractionDigits: number >= 100 ? 0 : 2
+      }).format(number);
+    }
+
+    function formatRelativeTime(value) {
+      if (!value) return t('wallet.portal.prediction.noClose', 'No close time');
+      var date = new Date(value);
+      if (Number.isNaN(date.getTime())) return t('wallet.portal.prediction.noClose', 'No close time');
+      var delta = date.getTime() - Date.now();
+      var minutes = Math.round(delta / 60000);
+      if (Math.abs(minutes) < 60) {
+        if (minutes === 0) return t('wallet.portal.prediction.now', 'Closing now');
+        return minutes > 0 ? t('wallet.portal.prediction.inMinutes', 'Closes in ') + minutes + 'm' : Math.abs(minutes) + 'm ' + t('wallet.portal.prediction.ago', 'ago');
+      }
+      var hours = Math.round(minutes / 60);
+      if (Math.abs(hours) < 48) {
+        return hours > 0 ? t('wallet.portal.prediction.inHours', 'Closes in ') + hours + 'h' : Math.abs(hours) + 'h ' + t('wallet.portal.prediction.ago', 'ago');
+      }
+      var days = Math.round(hours / 24);
+      return days > 0 ? t('wallet.portal.prediction.inDays', 'Closes in ') + days + 'd' : Math.abs(days) + 'd ' + t('wallet.portal.prediction.ago', 'ago');
+    }
+
+    function formatAxisDate(value, prefix) {
+      if (!value) return prefix + ' --';
+      var date = new Date(value);
+      if (Number.isNaN(date.getTime())) return prefix + ' --';
+      return prefix + ' ' + date.toLocaleDateString([], {
+        month: 'short',
+        day: 'numeric'
+      });
+    }
+
+    function explorerTxUrl(signature) {
+      return 'https://explorer.solana.com/tx/' + encodeURIComponent(signature) + '?cluster=' + encodeURIComponent(OST_CONFIG.network || 'devnet');
+    }
+
+    function safeFraction(value, fallback) {
+      var number = Number(value);
+      if (!Number.isFinite(number)) return fallback;
+      if (number > 1) number = number / 100;
+      return clamp(number, 0, 1);
+    }
+
+    function getMarketPrice(market, side) {
+      if (!market) return NaN;
+      if (side === 'no' && Number.isFinite(market.noPriceNumber)) return market.noPriceNumber;
+      if (side !== 'no' && Number.isFinite(market.yesPriceNumber)) return market.yesPriceNumber;
+      var rawValue = side === 'no' ? market.noValue : market.yesValue;
+      var numericValue = typeof rawValue === 'number' ? rawValue : parseFloat(String(rawValue || '').replace(/[^\d.\-]/g, ''));
+      if (!Number.isFinite(numericValue)) return NaN;
+      return numericValue / 100;
+    }
+
+    function calculatePotentialReturn(stake, priceFraction) {
+      var numericStake = Number(stake);
+      var numericPrice = Number(priceFraction);
+      if (!Number.isFinite(numericStake) || numericStake <= 0 || !Number.isFinite(numericPrice) || numericPrice <= 0) return NaN;
+      return numericStake / numericPrice;
+    }
+
+    function calculateEstimatedShares(stake, priceFraction) {
+      var numericStake = Number(stake);
+      var numericPrice = Number(priceFraction);
+      if (!Number.isFinite(numericStake) || numericStake <= 0 || !Number.isFinite(numericPrice) || numericPrice <= 0) return NaN;
+      return numericStake / numericPrice;
+    }
+
+    function getMarketSourceClass(market) {
+      return market && market.source === 'kalshi' ? 'source-kalshi' : 'source-polymarket';
+    }
+
+    function escapeHtml(value) {
+      return String(value || '').replace(/[&<>"']/g, function(ch) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch];
+      });
+    }
+
+    function parseMaybeJson(value) {
+      if (Array.isArray(value)) return value;
+      if (typeof value !== 'string') return [];
+      try {
+        var parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function normalizeWhitespace(value) {
+      return String(value || '').replace(/\s+/g, ' ').trim();
+    }
+
+    function truncateText(value, maxLength) {
+      var text = normalizeWhitespace(value);
+      if (!text || !maxLength || text.length <= maxLength) return text;
+      return text.slice(0, maxLength - 1).trim() + '…';
+    }
+
+    function summarizeMarketText(value, fallback, maxLength) {
+      var text = normalizeWhitespace(value);
+      if (!text) return fallback;
+      var sentenceMatch = text.match(/^[\s\S]{0,220}?[.!?](?=\s|$)/);
+      var summary = sentenceMatch ? sentenceMatch[0] : text;
+      return truncateText(summary, maxLength || 180) || fallback;
+    }
+
+    function cleanKalshiLeg(value) {
+      var text = normalizeWhitespace(value);
+      if (!text) return '';
+      if (/^yes\s+/i.test(text)) {
+        text = text.replace(/^yes\s+/i, '');
+      } else if (/^no\s+/i.test(text)) {
+        text = 'No ' + text.replace(/^no\s+/i, '');
+      }
+      return text.replace(/\s*:\s*/g, ' ').trim();
+    }
+
+    function summarizeKalshiBundle(title, fallbackDetail) {
+      var rawTitle = normalizeWhitespace(title);
+      var legs = rawTitle ? rawTitle.split(/\s*,\s*/).map(cleanKalshiLeg).filter(Boolean) : [];
+      if (legs.length <= 1) {
+        return {
+          title: rawTitle || t('wallet.portal.prediction.kalshiTitle', 'Kalshi market'),
+          detail: summarizeMarketText(fallbackDetail || rawTitle, t('wallet.portal.prediction.kalshiDetail', 'Live event contract routed from Kalshi.'), 170),
+          legCount: Math.max(legs.length, rawTitle ? 1 : 0),
+          isBundle: false
+        };
+      }
+
+      var heroTitle = legs.slice(0, 2).join(' + ');
+      if (legs.length > 2) heroTitle += ' + ' + (legs.length - 2) + ' more';
+
+      var detail = legs.slice(0, 5).join(' • ');
+      if (legs.length > 5) detail += ' • +' + (legs.length - 5) + ' more';
+
+      return {
+        title: heroTitle,
+        detail: legs.length + '-leg live bundle: ' + detail,
+        legCount: legs.length,
+        isBundle: true
+      };
+    }
+
+    function toDateMs(value) {
+      if (!value) return 0;
+      var date = new Date(value);
+      return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+    }
+
+    function buildTopicSet(text) {
+      var lower = String(text || '').toLowerCase();
+      var topics = new Set();
+      if (/\bbitcoin\b|\bbtc\b|\bethereum\b|\beth\b|\bsolana\b|\bsol\b|\bcrypto\b|\btoken\b|\bdefi\b|\betf\b|\bblockchain\b|\baltcoin\b|\bdogecoin\b/.test(lower)) topics.add('crypto');
+      if (/\belection\b|\bvote\b|\bballot\b|\bcaucus\b|\breferendum\b|\bgubernatorial\b|\bmayor\b/.test(lower)) {
+        topics.add('elections');
+        topics.add('politics');
+      }
+      if (/\btrump\b|\bbiden\b|\bpresident\b|\bsenate\b|\bhouse\b|\bcampaign\b|\bcongress\b|\bpolitic/.test(lower)) topics.add('politics');
+      if (/\besports?\b|\bleague of legends\b|\bvalorant\b|\bcs2\b|\bcounter-strike\b|\bdota\b|\boverwatch\b|\bfortnite\b|\bcall of duty\b/.test(lower)) {
+        topics.add('esports');
+        topics.add('sports');
+      }
+      if (/\bnba\b|\bnfl\b|\bmlb\b|\bnhl\b|\bsoccer\b|\bfootball\b|\bgolf\b|\btennis\b|\bgoal\b|\bpoints scored\b|\bplayer points\b|\bwins by over\b|\bworld cup\b|\bfinals\b|\bmls\b|\bformula 1\b|\bf1\b|\bbaseball\b|\bbasketball\b|sportsmultigame/.test(lower)) topics.add('sports');
+      if (/\biran\b|\btehran\b|\bhormuz\b|\biranian\b|\bpersian gulf\b/.test(lower)) {
+        topics.add('iran');
+        topics.add('geopolitics');
+      }
+      if (/\bukraine\b|\bisrael\b|\bgaza\b|\bchina\b|\btaiwan\b|\bnato\b|\bceasefire\b|\bwar\b|\bsanctions?\b|\btariff\b|\bmissile\b|\bmilitary\b|\bgeopolit/.test(lower)) topics.add('geopolitics');
+      if (/\bfed\b|\brates?\b|\bstock\b|\bnasdaq\b|\bs&p\b|\bdow\b|\btreasury\b|\byield\b|\bearnings\b|\boil\b|\bgold\b|\bfinancial\b|\bbonds?\b|\bbank\b/.test(lower)) topics.add('finance');
+      if (/\bcpi\b|\binflation\b|\brecession\b|\bgdp\b|\bunemployment\b|\bpayrolls?\b|\beconomy\b|\bconsumer\b|\bdeficit\b/.test(lower)) topics.add('economy');
+      if (/\bai\b|\bopenai\b|\bgoogle\b|\bapple\b|\bmeta\b|\bmicrosoft\b|\bnvidia\b|\btesla\b|\brobot\b|\bsemiconductor\b|\bchip\b|\btech\b/.test(lower)) topics.add('tech');
+      if (/\boscar\b|\bgrammy\b|\bmovie\b|\bfilm\b|\bmusic\b|\bcelebrity\b|\bhollywood\b|\bnetflix\b|\bshow\b|\btaylor swift\b|\bgta\b|\bculture\b/.test(lower)) topics.add('culture');
+      if (/\bhurricane\b|\bstorm\b|\brain\b|\bweather\b|\bheat\b|\bsnow\b|\btemperature\b|\bforecast\b|\bflood\b|\bwind\b/.test(lower)) topics.add('weather');
+      if (/\bviral\b|\btrending\b|\bmentions?\b|\bheadline\b|\bbreaking\b|\bspotlight\b/.test(lower)) topics.add('mentions');
+      if (!topics.size) topics.add('all');
+      return topics;
+    }
+
+    function pickPrimaryTopic(topics) {
+      var match = topicOrder.find(function(key) {
+        return topics.has(key);
+      });
+      return match || 'all';
+    }
+
+    function getDisplayTopics(topics) {
+      var values = topicOrder.filter(function(key) {
+        return topics.has(key);
+      });
+      return values.length ? values : ['all'];
+    }
+
+    function estimateAttentionScore(text, volumeNumber, depthNumber) {
+      var hits = (String(text || '').match(/\b(bitcoin|trump|election|fed|ai|iran|storm|war|earnings|weather|nba|finals|gta|nvidia|inflation)\b/gi) || []).length;
+      return clamp(Math.round(Math.log10((volumeNumber || 0) + 10) * 5 + Math.log10((depthNumber || 0) + 10) * 3 + hits * 4), 1, 99);
+    }
+
+    function isBreakingText(text, topics, closeAtMs) {
+      var lower = String(text || '').toLowerCase();
+      if (topics.has('iran') || topics.has('geopolitics') || topics.has('weather') || topics.has('elections')) return true;
+      if (/\bbreaking\b|\bwar\b|\bceasefire\b|\bstorm\b|\btariff\b|\bfed\b|\bcpi\b|\bearnings\b|\bhormuz\b/.test(lower)) return true;
+      if (closeAtMs && closeAtMs > Date.now()) {
+        var hoursLeft = (closeAtMs - Date.now()) / 3600000;
+        if (hoursLeft < 36 && (topics.has('finance') || topics.has('politics') || topics.has('economy'))) return true;
+      }
+      return false;
+    }
+
+    function getSelectedMarket(filteredMarkets) {
+      var pool = filteredMarkets || state.markets;
+      if (!pool.length) return null;
+      var selected = pool.find(function(market) {
+        return market.id === state.selectedMarketId;
+      });
+      if (selected) return selected;
+      return pool[0] || null;
+    }
+
+    function setTradeStatus(message, tone) {
+      if (!tradeStatusEl) return;
+      tradeStatusEl.className = 'prediction-trade-status' + (tone ? ' is-' + tone : '');
+      tradeStatusEl.textContent = message;
+    }
+
+    function renderPredictionLedger() {
+      if (!positionListEl) return;
+      if (ledgerCountEl) ledgerCountEl.textContent = String(state.orderHistory.length);
+      if (!state.orderHistory.length) {
+        positionListEl.innerHTML = '<div class="prediction-position-empty">' + escapeHtml(t('wallet.portal.prediction.noTickets', 'No OST market tickets recorded yet.')) + '</div>';
+        return;
+      }
+
+      positionListEl.innerHTML = state.orderHistory.map(function(order) {
+        var sideLabel = order.side === 'no'
+          ? t('wallet.portal.prediction.buyNo', 'Buy No')
+          : t('wallet.portal.prediction.buyYes', 'Buy Yes');
+        return [
+          '<div class="prediction-position-row">',
+            '<div class="prediction-position-row-top">',
+              '<div>',
+                '<strong>' + escapeHtml(order.title || 'Prediction ticket') + '</strong>',
+                '<span>' + escapeHtml((order.source || 'ost') + ' • ' + (topicLabels[order.topic] || topicLabels.all)) + '</span>',
+              '</div>',
+              '<span class="prediction-position-pill side-' + escapeHtml(order.side || 'yes') + '">' + escapeHtml(sideLabel) + '</span>',
+            '</div>',
+            '<div class="prediction-position-row-meta">',
+              '<span>' + escapeHtml(formatOst(order.stake)) + ' • ' + escapeHtml(formatOst(order.potentialReturn)) + '</span>',
+              '<a class="prediction-market-api-link" href="' + escapeHtml(explorerTxUrl(order.signature)) + '" target="_blank" rel="noopener">' + escapeHtml(shortAddress(order.signature || '')) + '</a>',
+            '</div>',
+          '</div>'
+        ].join('');
+      }).join('');
+    }
+
+    function renderLatestReceipt() {
+      if (!receiptEl) return;
+      if (!state.latestReceipt) {
+        receiptEl.hidden = true;
+        return;
+      }
+
+      receiptEl.hidden = false;
+      if (receiptSignatureEl) receiptSignatureEl.textContent = shortAddress(state.latestReceipt.signature);
+      if (receiptStakeEl) receiptStakeEl.textContent = formatOst(state.latestReceipt.stake);
+      if (receiptExplorerEl) receiptExplorerEl.href = explorerTxUrl(state.latestReceipt.signature);
+    }
+
+    function syncTradeWallet() {
+      if (!connectedWalletSession || !connectedWalletSession.publicKey) {
+        state.availableBalance = null;
+        renderPredictionTicket(getFilteredMarkets());
+        return Promise.resolve(null);
+      }
+
+      return getOstBalanceForAddress(connectedWalletSession.publicKey).then(function(balance) {
+        state.availableBalance = balance;
+        renderPredictionTicket(getFilteredMarkets());
+        return balance;
+      }).catch(function() {
+        state.availableBalance = 0;
+        renderPredictionTicket(getFilteredMarkets());
+        return 0;
+      });
+    }
+
+    function handlePredictionCardSelection(target) {
+      var pulseCard = target.closest('[data-prediction-select-market-id]');
+      if (pulseCard) {
+        state.selectedMarketId = pulseCard.getAttribute('data-prediction-select-market-id') || '';
+        renderPredictionBoard();
+        return true;
+      }
+      var article = target.closest('.prediction-market-card[data-prediction-market-id]');
+      if (!article) return false;
+      state.selectedMarketId = article.getAttribute('data-prediction-market-id') || '';
+      renderPredictionBoard();
+      return true;
+    }
+
+    function getAgeHours(market) {
+      if (!market || !market.createdAtMs) return 999;
+      return Math.max(0, (Date.now() - market.createdAtMs) / 3600000);
+    }
+
+    function getHoursUntilClose(market) {
+      if (!market || !market.closeAtMs) return 999;
+      return (market.closeAtMs - Date.now()) / 3600000;
+    }
+
+    function getTrendPoints(market) {
+      var current = getMarketPrice(market, 'yes');
+      if (!Number.isFinite(current)) return 0;
+      if (Number.isFinite(market.previousYesPriceNumber)) return (current - market.previousYesPriceNumber) * 100;
+      if (Number.isFinite(market.oneWeekPriceChangeNumber)) return market.oneWeekPriceChangeNumber * 100;
+      if (Number.isFinite(market.oneMonthPriceChangeNumber)) return market.oneMonthPriceChangeNumber * 50;
+      return 0;
+    }
+
+    function getRankingScore(market) {
+      var volumeScore = Math.log10((market.volumeNumber || 0) + 10) * 210;
+      var depthScore = Math.log10((market.secondaryMetricNumber || 0) + 10) * 150;
+      var skewScore = Math.abs((getMarketPrice(market, 'yes') || 0.5) - 0.5) * 220;
+      var trendScore = Math.abs(getTrendPoints(market)) * 12;
+      var mentionScore = market.attentionScore * 7;
+      var recencyScore = Math.max(0, 72 - getAgeHours(market)) * 7;
+      var urgencyScore = market.closeAtMs ? Math.max(0, 48 - getHoursUntilClose(market)) * 10 : 0;
+
+      if (state.rank === 'new') {
+        return recencyScore * 7 + volumeScore * 0.35 + depthScore * 0.25 + trendScore;
+      }
+      if (state.rank === 'breaking') {
+        return (market.isBreaking ? 1800 : 0) + urgencyScore * 5 + trendScore * 1.4 + mentionScore + volumeScore * 0.4;
+      }
+      if (state.rank === 'all') {
+        return volumeScore + depthScore + trendScore + mentionScore * 0.4;
+      }
+      return volumeScore + depthScore + skewScore + trendScore + mentionScore + recencyScore;
+    }
+
+    function hashString(value) {
+      var hash = 0;
+      String(value || '').split('').forEach(function(ch) {
+        hash = ((hash << 5) - hash) + ch.charCodeAt(0);
+        hash |= 0;
+      });
+      return Math.abs(hash);
+    }
+
+    function buildPredictionSeries(market) {
+      var current = clamp(getMarketPrice(market, 'yes') * 100 || 50, 1, 99);
+      var previous = Number.isFinite(market.previousYesPriceNumber)
+        ? clamp(market.previousYesPriceNumber * 100, 1, 99)
+        : clamp(current - getTrendPoints(market), 1, 99);
+      var weeklyAnchor = Number.isFinite(market.oneWeekPriceChangeNumber)
+        ? clamp(current - (market.oneWeekPriceChangeNumber * 100), 1, 99)
+        : previous;
+      var monthlyAnchor = Number.isFinite(market.oneMonthPriceChangeNumber)
+        ? clamp(current - (market.oneMonthPriceChangeNumber * 100), 1, 99)
+        : weeklyAnchor;
+      var seed = hashString(market.id + market.source);
+      var volatility = Math.max(2, Math.min(12, Math.abs(current - previous) + Math.log10((market.volumeNumber || 0) + 10) * 1.2));
+      var points = [];
+
+      for (var index = 0; index < 24; index += 1) {
+        var progress = index / 23;
+        var anchor = progress < 0.35
+          ? monthlyAnchor + (weeklyAnchor - monthlyAnchor) * (progress / 0.35)
+          : progress < 0.7
+            ? weeklyAnchor + (previous - weeklyAnchor) * ((progress - 0.35) / 0.35)
+            : previous + (current - previous) * ((progress - 0.7) / 0.3);
+        var wobble = Math.sin(progress * Math.PI * 3 + seed) * volatility * 0.35 * Math.sin(progress * Math.PI);
+        var micro = Math.cos(progress * Math.PI * 8 + seed * 0.7) * volatility * 0.08;
+        points.push(clamp(anchor + wobble + micro, 1, 99));
+      }
+
+      points[points.length - 1] = current;
+      return points;
+    }
+
+    function prepareCanvas(canvas, fallbackHeight) {
+      if (!canvas || !canvas.getContext) return null;
+      var rect = canvas.getBoundingClientRect();
+      var width = Math.max(320, Math.round(rect.width || canvas.width || 860));
+      var height = Math.max(220, Math.round(fallbackHeight || rect.height || canvas.height || 280));
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
+      var ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      return { ctx: ctx, width: width, height: height };
+    }
+
+    function drawEmptyPredictionChart() {
+      var prepared = prepareCanvas(stageChartEl, 280);
+      if (!prepared) return;
+      var ctx = prepared.ctx;
+      var width = prepared.width;
+      var height = prepared.height;
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = 'rgba(5, 8, 14, 0.95)';
+      ctx.fillRect(0, 0, width, height);
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.setLineDash([8, 8]);
+      ctx.beginPath();
+      ctx.moveTo(40, height / 2);
+      ctx.lineTo(width - 24, height / 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(226,232,240,0.7)';
+      ctx.font = '600 16px Inter, sans-serif';
+      ctx.fillText('Select a live market to render the probability curve.', 40, height / 2 - 18);
+    }
+
+    function drawPredictionStageChart(market) {
+      if (!market) {
+        drawEmptyPredictionChart();
+        return;
+      }
+
+      var prepared = prepareCanvas(stageChartEl, 280);
+      if (!prepared) return;
+      var ctx = prepared.ctx;
+      var width = prepared.width;
+      var height = prepared.height;
+      var pad = { left: 42, right: 18, top: 18, bottom: 28 };
+      var chartW = width - pad.left - pad.right;
+      var chartH = height - pad.top - pad.bottom;
+      var points = buildPredictionSeries(market);
+      var current = points[points.length - 1];
+      var lineColor = current >= 50 ? '#34d399' : '#6d9fff';
+      var fillGradient = ctx.createLinearGradient(0, pad.top, 0, height - pad.bottom);
+      fillGradient.addColorStop(0, current >= 50 ? 'rgba(52,211,153,0.25)' : 'rgba(109,159,255,0.25)');
+      fillGradient.addColorStop(1, 'rgba(109,159,255,0.02)');
+
+      function x(index) {
+        return pad.left + (index / Math.max(points.length - 1, 1)) * chartW;
+      }
+
+      function y(value) {
+        return pad.top + chartH - (value / 100) * chartH;
+      }
+
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = 'rgba(5, 8, 14, 0.94)';
+      ctx.fillRect(0, 0, width, height);
+
+      [0, 25, 50, 75, 100].forEach(function(level) {
+        var levelY = y(level);
+        ctx.strokeStyle = level === 50 ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.07)';
+        ctx.beginPath();
+        ctx.moveTo(pad.left, levelY);
+        ctx.lineTo(width - pad.right, levelY);
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(226,232,240,0.58)';
+        ctx.font = '12px Inter, sans-serif';
+        ctx.fillText(level + '%', 6, levelY + 4);
+      });
+
+      ctx.beginPath();
+      points.forEach(function(point, index) {
+        var px = x(index);
+        var py = y(point);
+        if (index === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      });
+      ctx.lineTo(x(points.length - 1), height - pad.bottom);
+      ctx.lineTo(x(0), height - pad.bottom);
+      ctx.closePath();
+      ctx.fillStyle = fillGradient;
+      ctx.fill();
+
+      ctx.beginPath();
+      points.forEach(function(point, index) {
+        var px = x(index);
+        var py = y(point);
+        if (index === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      });
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = lineColor;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(x(points.length - 1), y(current), 5, 0, Math.PI * 2);
+      ctx.fillStyle = '#f8fafc';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(x(points.length - 1), y(current), 3, 0, Math.PI * 2);
+      ctx.fillStyle = lineColor;
+      ctx.fill();
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = '600 14px Inter, sans-serif';
+      ctx.fillText(formatPercent(current / 100), x(points.length - 1) - 48, y(current) - 12);
+    }
+
+    function buildDepthRows(market, side) {
+      var price = getMarketPrice(market, side);
+      if (!Number.isFinite(price) || price <= 0) return [];
+      var seed = hashString(market.id + ':' + side);
+      var step = market.source === 'kalshi' ? 0.03 : 0.02;
+      var baseDepth = market.secondaryMetricNumber || market.volumeNumber || 0;
+      var baseShares = Math.max(120, Math.round(baseDepth / Math.max(price, 0.03) / 55));
+      var rows = [];
+      var maxRawSize = 0;
+
+      for (var index = 0; index < 5; index += 1) {
+        var offset = (2 - index) * step;
+        var levelPrice = clamp(price + offset, 0.01, 0.99);
+        var size = Math.round(baseShares * (1.3 - index * 0.12) * (0.9 + (((seed >> index) & 7) / 20)));
+        maxRawSize = Math.max(maxRawSize, size);
+        rows.push({
+          priceText: formatPercent(levelPrice),
+          sizeText: formatCompactNumber(size) + ' shares',
+          payoutText: formatOst(size),
+          rawSize: size
+        });
+      }
+
+      rows.forEach(function(row) {
+        row.fill = maxRawSize ? (row.rawSize / maxRawSize) * 100 : 0;
+      });
+      return rows;
+    }
+
+    function renderDepthList(container, rows) {
+      if (!container) return;
+      if (!rows.length) {
+        container.innerHTML = '<div class="prediction-depth-empty">No live ladder available.</div>';
+        return;
+      }
+      container.innerHTML = rows.map(function(row) {
+        return [
+          '<div class="prediction-depth-row">',
+            '<div class="prediction-depth-fill" style="width:' + escapeHtml(row.fill.toFixed(1)) + '%"></div>',
+            '<span>' + escapeHtml(row.priceText) + '</span>',
+            '<strong>' + escapeHtml(row.sizeText) + '</strong>',
+            '<em>' + escapeHtml(row.payoutText) + '</em>',
+          '</div>'
+        ].join('');
+      }).join('');
+    }
+
+    function updateMarketLink(el, url, text) {
+      if (!el) return;
+      el.textContent = text;
+      el.href = url || '#';
+      el.classList.toggle('is-disabled', !url || url === '#');
+    }
+
+    function renderPredictionHero(filteredMarkets) {
+      var market = getSelectedMarket(filteredMarkets);
+      if (!market) {
+        if (heroRankEl) heroRankEl.textContent = rankLabels[state.rank] || rankLabels.trending;
+        if (heroSourceEl) {
+          heroSourceEl.textContent = 'Live venue';
+          heroSourceEl.className = 'prediction-market-source source-polymarket';
+        }
+        if (heroTopicEl) heroTopicEl.textContent = topicLabels.all;
+        if (heroTitleEl) heroTitleEl.textContent = 'Select a lead market';
+        if (heroDetailEl) heroDetailEl.textContent = 'We surface the lead contract here so the tape, ladder, and OST trade desk stay locked on one live market at a time.';
+        if (heroYesPriceEl) heroYesPriceEl.textContent = '--';
+        if (heroNoPriceEl) heroNoPriceEl.textContent = '--';
+        if (heroProbabilityEl) heroProbabilityEl.textContent = '--';
+        if (heroVolumeEl) heroVolumeEl.textContent = '--';
+        if (heroDepthEl) heroDepthEl.textContent = '--';
+        if (heroCloseEl) heroCloseEl.textContent = '--';
+        if (heroMomentumEl) heroMomentumEl.textContent = 'Flat';
+        updateMarketLink(heroVenueLinkEl, '', 'Open venue');
+        updateMarketLink(heroFeedLinkEl, '', 'Open feed');
+        return;
+      }
+
+      var sourceClass = getMarketSourceClass(market);
+      if (heroRankEl) heroRankEl.textContent = getStageRankLabel(market);
+      if (heroSourceEl) {
+        heroSourceEl.textContent = market.sourceLabel;
+        heroSourceEl.className = 'prediction-market-source ' + sourceClass;
+      }
+      if (heroTopicEl) heroTopicEl.textContent = topicLabels[market.topic] || topicLabels.all;
+      if (heroTitleEl) heroTitleEl.textContent = market.title;
+      if (heroDetailEl) heroDetailEl.textContent = market.detail;
+      if (heroYesPriceEl) heroYesPriceEl.textContent = market.yesValue;
+      if (heroNoPriceEl) heroNoPriceEl.textContent = market.noValue;
+      if (heroProbabilityEl) heroProbabilityEl.textContent = market.yesValue;
+      if (heroVolumeEl) heroVolumeEl.textContent = market.volumeValue;
+      if (heroDepthEl) heroDepthEl.textContent = market.secondaryMetricValue;
+      if (heroCloseEl) heroCloseEl.textContent = market.closeText;
+      if (heroMomentumEl) heroMomentumEl.textContent = formatSignedPoints(getTrendPoints(market), 'Flat');
+      updateMarketLink(heroVenueLinkEl, market.primaryUrl, market.primaryLabel);
+      updateMarketLink(heroFeedLinkEl, market.secondaryUrl, market.secondaryLabel);
+    }
+
+    function buildPredictionPulseItems(filteredMarkets) {
+      var visibleMarkets = (filteredMarkets && filteredMarkets.length ? filteredMarkets : state.markets).slice();
+      var items = [];
+      var seen = {};
+
+      function addItem(label, copy, market) {
+        if (!market || seen[market.id]) return;
+        seen[market.id] = true;
+        items.push({ label: label, copy: copy, market: market });
+      }
+
+      addItem('Lead contract', 'The first market in the current board.', visibleMarkets[0]);
+      addItem('Fast mover', 'Largest live shift in the current lane.', visibleMarkets.slice().sort(function(a, b) {
+        return Math.abs(getTrendPoints(b)) - Math.abs(getTrendPoints(a));
+      })[0]);
+      addItem('Closes soon', 'Nearest live expiry still on the tape.', visibleMarkets.filter(function(market) {
+        return market.closeAtMs && market.closeAtMs > Date.now();
+      }).sort(function(a, b) {
+        return a.closeAtMs - b.closeAtMs;
+      })[0]);
+      addItem('Deepest book', 'Highest visible depth in this board.', visibleMarkets.slice().sort(function(a, b) {
+        return (b.secondaryMetricNumber || 0) - (a.secondaryMetricNumber || 0);
+      })[0]);
+
+      visibleMarkets.forEach(function(market) {
+        if (items.length >= 3) return;
+        addItem('Live contract', 'Visible in the current market lane.', market);
+      });
+
+      return items.slice(0, 3);
+    }
+
+    function renderPredictionPulse(filteredMarkets) {
+      if (!pulseEl) return;
+      var items = buildPredictionPulseItems(filteredMarkets);
+
+      if (pulseMetaEl) {
+        pulseMetaEl.textContent = items.length
+          ? filteredMarkets.length + ' live contracts in this lane. Click a tile to focus the desk.'
+          : 'Click a tile to load the stage and trade desk.';
+      }
+
+      if (!items.length) {
+        pulseEl.innerHTML = '<div class="prediction-pulse-empty">' + escapeHtml(state.loading ? 'Loading market pulse...' : 'No live contracts in this lane yet.') + '</div>';
+        return;
+      }
+
+      pulseEl.innerHTML = items.map(function(item) {
+        var market = item.market;
+        var trendPoints = getTrendPoints(market);
+        var toneClass = trendPoints > 0 ? ' is-up' : trendPoints < 0 ? ' is-down' : '';
+        var isSelected = market.id === state.selectedMarketId;
+        var sourceClass = getMarketSourceClass(market);
+        return [
+          '<button type="button" class="prediction-pulse-card' + toneClass + (isSelected ? ' is-selected' : '') + '" data-prediction-select-market-id="' + escapeHtml(market.id) + '" aria-pressed="' + (isSelected ? 'true' : 'false') + '">',
+            '<span class="prediction-pulse-kicker">' + escapeHtml(item.label) + '</span>',
+            '<div class="prediction-pulse-topline">',
+              '<span class="prediction-market-source ' + sourceClass + '">' + escapeHtml(market.sourceLabel) + '</span>',
+              '<span class="prediction-market-topic">' + escapeHtml(topicLabels[market.topic] || topicLabels.all) + '</span>',
+            '</div>',
+            '<strong>' + escapeHtml(market.title) + '</strong>',
+            '<p>' + escapeHtml(item.copy) + '</p>',
+            '<div class="prediction-pulse-meta">',
+              '<span>' + escapeHtml(market.yesLabel) + ' ' + escapeHtml(market.yesValue) + '</span>',
+              '<span>' + escapeHtml(formatSignedPoints(trendPoints, 'Flat')) + '</span>',
+              '<span>' + escapeHtml(market.closeText) + '</span>',
+            '</div>',
+          '</button>'
+        ].join('');
+      }).join('');
+    }
+
+    function getStageRankLabel(market) {
+      if (state.rank !== 'all') return rankLabels[state.rank] || rankLabels.trending;
+      if (market && market.isBreaking) return rankLabels.breaking;
+      return 'Lead market';
+    }
+
+    function renderPredictionStage(filteredMarkets) {
+      var market = getSelectedMarket(filteredMarkets);
+      if (!market) {
+        if (stageRankEl) stageRankEl.textContent = rankLabels[state.rank] || rankLabels.trending;
+        if (stageSourceEl) {
+          stageSourceEl.textContent = 'OST';
+          stageSourceEl.className = 'prediction-market-source source-polymarket';
+        }
+        if (stageTopicEl) stageTopicEl.textContent = topicLabels.all;
+        if (stageTitleEl) stageTitleEl.textContent = 'Select a live market';
+        if (stageDetailEl) stageDetailEl.textContent = 'Choose a live contract to inspect the live probability curve, price ladder, share pricing, and OST ticket details before you commit.';
+        if (stageYesPriceEl) stageYesPriceEl.textContent = '--';
+        if (stageNoPriceEl) stageNoPriceEl.textContent = '--';
+        if (stageProbabilityEl) stageProbabilityEl.textContent = '--';
+        if (stageVolumeEl) stageVolumeEl.textContent = '--';
+        if (stageDepthEl) stageDepthEl.textContent = '--';
+        if (stageCloseEl) stageCloseEl.textContent = '--';
+        if (stageChartCopyEl) stageChartCopyEl.textContent = 'Anchored to current share pricing, recent venue changes, and source liquidity.';
+        if (stageTrendEl) stageTrendEl.textContent = 'Flat';
+        if (stageAxisStartEl) stageAxisStartEl.textContent = 'Opened --';
+        if (stageAxisEndEl) stageAxisEndEl.textContent = 'Closes --';
+        renderDepthList(depthYesEl, []);
+        renderDepthList(depthNoEl, []);
+        updateMarketLink(stageVenueLinkEl, '', 'Open venue');
+        updateMarketLink(stageFeedLinkEl, '', 'Open feed');
+        drawEmptyPredictionChart();
+        return;
+      }
+
+      var sourceClass = market.source === 'kalshi' ? 'source-kalshi' : 'source-polymarket';
+      if (stageRankEl) stageRankEl.textContent = getStageRankLabel(market);
+      if (stageSourceEl) {
+        stageSourceEl.textContent = market.sourceLabel;
+        stageSourceEl.className = 'prediction-market-source ' + sourceClass;
+      }
+      if (stageTopicEl) stageTopicEl.textContent = topicLabels[market.topic] || topicLabels.all;
+      if (stageTitleEl) stageTitleEl.textContent = market.title;
+      if (stageDetailEl) stageDetailEl.textContent = market.detail;
+      if (stageYesPriceEl) stageYesPriceEl.textContent = market.yesValue;
+      if (stageNoPriceEl) stageNoPriceEl.textContent = market.noValue;
+      if (stageProbabilityEl) stageProbabilityEl.textContent = market.yesValue;
+      if (stageVolumeEl) stageVolumeEl.textContent = market.volumeValue;
+      if (stageDepthEl) stageDepthEl.textContent = market.secondaryMetricValue;
+      if (stageCloseEl) stageCloseEl.textContent = market.closeText;
+      if (stageChartCopyEl) {
+        stageChartCopyEl.textContent = market.source === 'polymarket'
+          ? 'Anchored to current price, weekly change, and venue liquidity.'
+          : 'Anchored to current price, previous trade, and venue liquidity.';
+      }
+      if (stageTrendEl) {
+        var trendPoints = getTrendPoints(market);
+        stageTrendEl.textContent = formatSignedPoints(trendPoints, 'Flat');
+        stageTrendEl.className = 'prediction-stage-trend' + (trendPoints > 0 ? ' is-up' : trendPoints < 0 ? ' is-down' : '');
+      }
+      if (stageAxisStartEl) stageAxisStartEl.textContent = formatAxisDate(market.createdAtMs, 'Opened');
+      if (stageAxisEndEl) stageAxisEndEl.textContent = formatAxisDate(market.closeAtMs, 'Closes');
+      renderDepthList(depthYesEl, buildDepthRows(market, 'yes'));
+      renderDepthList(depthNoEl, buildDepthRows(market, 'no'));
+      updateMarketLink(stageVenueLinkEl, market.primaryUrl, market.primaryLabel);
+      updateMarketLink(stageFeedLinkEl, market.secondaryUrl, market.secondaryLabel);
+      drawPredictionStageChart(market);
+    }
+
+    function renderPredictionTicket(filteredMarkets) {
+      var market = getSelectedMarket(filteredMarkets);
+      if (market && market.id !== state.selectedMarketId) {
+        state.selectedMarketId = market.id;
+      }
+
+      if (!market) {
+        if (selectedTitleEl) selectedTitleEl.textContent = t('wallet.portal.prediction.noSelection', 'No market selected');
+        if (selectedDetailEl) selectedDetailEl.textContent = t('wallet.portal.prediction.noSelectionCopy', 'Choose a live contract from the board to build an OST-denominated position.');
+        if (selectedSourceEl) selectedSourceEl.textContent = 'OST';
+        if (selectedTopicEl) selectedTopicEl.textContent = topicLabels.all;
+        if (yesValueEl) yesValueEl.textContent = '--';
+        if (noValueEl) noValueEl.textContent = '--';
+        if (estimatedSharesEl) estimatedSharesEl.textContent = '--';
+        if (potentialReturnEl) potentialReturnEl.textContent = '--';
+        if (tradeActionBtn) tradeActionBtn.disabled = true;
+        setTradeStatus(t('wallet.portal.prediction.tradeSelectPrompt', 'Select a live contract first.'), 'info');
+        return;
+      }
+
+      var sourceClass = market.source === 'kalshi' ? 'source-kalshi' : 'source-polymarket';
+      if (selectedSourceEl) {
+        selectedSourceEl.textContent = market.sourceLabel;
+        selectedSourceEl.className = 'prediction-market-source ' + sourceClass;
+      }
+      if (selectedTopicEl) selectedTopicEl.textContent = topicLabels[market.topic] || topicLabels.all;
+      if (selectedTitleEl) selectedTitleEl.textContent = market.title;
+      if (selectedDetailEl) selectedDetailEl.textContent = market.detail;
+      if (yesValueEl) yesValueEl.textContent = market.yesValue;
+      if (noValueEl) noValueEl.textContent = market.noValue;
+      setChipState(outcomeToggle, 'data-prediction-side', state.selectedSide);
+      setChipState(stakeQuickEl, 'data-prediction-stake', String(Math.round(Number(state.stake) || 0)));
+
+      var priceFraction = getMarketPrice(market, state.selectedSide);
+      var estimatedShares = calculateEstimatedShares(state.stake, priceFraction);
+      var estimatedReturn = calculatePotentialReturn(state.stake, priceFraction);
+      var hasSufficientBalance = state.availableBalance == null || state.availableBalance + 1e-9 >= Number(state.stake);
+      var canTradeSelection = Number.isFinite(priceFraction) && priceFraction > 0;
+
+      if (estimatedSharesEl) {
+        estimatedSharesEl.textContent = Number.isFinite(estimatedShares)
+          ? formatCompactNumber(estimatedShares) + ' shares'
+          : t('wallet.portal.prediction.tradeUnavailable', 'Unavailable');
+      }
+      if (potentialReturnEl) {
+        potentialReturnEl.textContent = Number.isFinite(estimatedReturn)
+          ? formatOst(estimatedReturn)
+          : t('wallet.portal.prediction.tradeUnavailable', 'Unavailable');
+      }
+
+      if (availableBalanceEl) {
+        availableBalanceEl.textContent = state.availableBalance == null
+          ? t('wallet.portal.prediction.connectWalletPrompt', 'Connect wallet')
+          : formatOst(state.availableBalance);
+      }
+
+      if (tradeHeadingEl) tradeHeadingEl.textContent = 'Build an OST ticket';
+      if (tradeCopyEl) tradeCopyEl.textContent = 'Choose the live side, size the order, and route an OST-denominated ticket from the same market board.';
+      if (tradeActionBtn) {
+        tradeActionBtn.disabled = state.loading || state.placing || !connectedWalletSession || !connectedWalletSession.publicKey || !canTradeSelection || !hasSufficientBalance;
+      }
+      if (tradeActionLabelEl) {
+        tradeActionLabelEl.textContent = state.placing
+          ? t('wallet.portal.prediction.tradeSending', 'Sending OST order...')
+          : state.selectedSide === 'no'
+            ? 'Buy No with OST'
+            : 'Buy Yes with OST';
+      }
+
+      if (state.placing) {
+        setTradeStatus(t('wallet.portal.prediction.tradePending', 'Sending a real OST market ticket to the prediction vault...'), 'warning');
+      } else if (!connectedWalletSession || !connectedWalletSession.publicKey) {
+        setTradeStatus(t('wallet.portal.prediction.tradeWalletNeeded', 'Connect your OST wallet to place a market ticket.'), 'info');
+      } else if (!canTradeSelection) {
+        setTradeStatus(t('wallet.portal.prediction.tradeUnavailable', 'This side is not tradeable right now.'), 'warning');
+      } else if (!hasSufficientBalance) {
+        setTradeStatus(t('wallet.portal.prediction.tradeNotEnough', 'This wallet does not have enough OST for that stake.'), 'error');
+      } else {
+        setTradeStatus(t('wallet.portal.prediction.tradeReady', 'Ready to route this position into the OST prediction vault.'), 'success');
+      }
+    }
+
+    function buildPolymarketUrl(item) {
+      return item.slug ? 'https://polymarket.com/event/' + encodeURIComponent(item.slug) : 'https://polymarket.com/';
+    }
+
+    function buildKalshiUrl(item) {
+      return item.eventTicker ? 'https://kalshi.com/markets' : 'https://kalshi.com/markets';
+    }
+
+    function buildKalshiApiUrl(item) {
+      return item.ticker ? 'https://api.elections.kalshi.com/trade-api/v2/markets/' + encodeURIComponent(item.ticker) : 'https://api.elections.kalshi.com/trade-api/v2/markets';
+    }
+
+    function mapPolymarketMarket(item) {
+      var question = item.question || 'Untitled market';
+      var outcomes = parseMaybeJson(item.outcomes);
+      var prices = parseMaybeJson(item.outcomePrices).map(Number);
+      var yesIndex = outcomes.findIndex(function(outcome) {
+        return String(outcome).toLowerCase() === 'yes';
+      });
+      var noIndex = outcomes.findIndex(function(outcome) {
+        return String(outcome).toLowerCase() === 'no';
+      });
+      var yesPrice = safeFraction(yesIndex >= 0 ? prices[yesIndex] : prices[0], NaN);
+      var noPrice = safeFraction(noIndex >= 0 ? prices[noIndex] : prices[1], NaN);
+      if (!Number.isFinite(noPrice) && Number.isFinite(yesPrice)) noPrice = clamp(1 - yesPrice, 0, 1);
+      if (!Number.isFinite(yesPrice) && Number.isFinite(noPrice)) yesPrice = clamp(1 - noPrice, 0, 1);
+
+      var rawDetail = item.description || t('wallet.portal.prediction.polyDetail', 'Live yes/no contract routed directly from Polymarket.');
+      var detail = summarizeMarketText(rawDetail, t('wallet.portal.prediction.polyDetail', 'Live yes/no contract routed directly from Polymarket.'), 180);
+      var textBlob = [question, rawDetail, detail, item.slug, item.category].join(' ');
+      var topics = buildTopicSet(textBlob);
+      var volumeNumber = Number(item.volume24hr || item.volume || item.volumeNum || 0);
+      var liquidityNumber = Number(item.liquidityNum || item.liquidity || item.liquidityClob || 0);
+      var createdAtMs = toDateMs(item.createdAt || item.startDate || item.startDateIso);
+      var closeAtMs = toDateMs(item.endDate || item.endDateIso);
+      var weekChange = Number(item.oneWeekPriceChange);
+      var monthChange = Number(item.oneMonthPriceChange);
+      var lastTradePrice = safeFraction(item.lastTradePrice, yesPrice);
+      var previousYesPrice = Number.isFinite(lastTradePrice)
+        ? lastTradePrice
+        : Number.isFinite(weekChange)
+          ? clamp(yesPrice - weekChange, 0, 1)
+          : NaN;
+      var primaryTopic = pickPrimaryTopic(topics);
+
+      return {
+        source: 'polymarket',
+        sourceLabel: 'Polymarket',
+        id: String(item.id),
+        title: question,
+        detail: detail,
+        yesLabel: t('wallet.portal.prediction.yesLabel', 'Yes'),
+        yesValue: formatPercent(yesPrice),
+        yesPriceNumber: yesPrice,
+        noLabel: t('wallet.portal.prediction.noLabel', 'No'),
+        noValue: formatPercent(noPrice),
+        noPriceNumber: noPrice,
+        volumeLabel: t('wallet.portal.prediction.volumeLabel', 'Volume'),
+        volumeValue: formatMoney(volumeNumber),
+        volumeNumber: volumeNumber,
+        secondaryMetricLabel: t('wallet.portal.prediction.liquidityLabel', 'Liquidity'),
+        secondaryMetricValue: formatMoney(liquidityNumber),
+        secondaryMetricNumber: liquidityNumber,
+        closeText: formatRelativeTime(closeAtMs),
+        closeLabel: t('wallet.portal.prediction.closeLabel', 'Closes'),
+        topic: primaryTopic,
+        topics: topics,
+        displayTopics: getDisplayTopics(topics),
+        searchText: [question, rawDetail, detail, item.slug, item.category].join(' ').toLowerCase(),
+        primaryUrl: buildPolymarketUrl(item),
+        secondaryUrl: 'https://gamma-api.polymarket.com/markets/' + encodeURIComponent(item.id),
+        secondaryLabel: t('wallet.portal.prediction.openFeed', 'Open feed'),
+        primaryLabel: t('wallet.portal.prediction.openVenue', 'Open venue'),
+        contractLabel: t('wallet.portal.prediction.binaryContract', 'Binary contract'),
+        sortValue: volumeNumber,
+        createdAtMs: createdAtMs,
+        closeAtMs: closeAtMs,
+        previousYesPriceNumber: previousYesPrice,
+        lastPriceNumber: lastTradePrice,
+        oneWeekPriceChangeNumber: Number.isFinite(weekChange) ? weekChange : NaN,
+        oneMonthPriceChangeNumber: Number.isFinite(monthChange) ? monthChange : NaN,
+        attentionScore: estimateAttentionScore(textBlob, volumeNumber, liquidityNumber),
+        isBreaking: isBreakingText(textBlob, topics, closeAtMs)
+      };
+    }
+
+    function mapKalshiMarket(item) {
+      var rawTitle = item.title || item.ticker || 'Kalshi market';
+      var yesPrice = safeFraction(item.yes_ask_dollars || item.yes_bid_dollars || item.last_price_dollars, NaN);
+      var noPrice = safeFraction(item.no_ask_dollars || item.no_bid_dollars || (Number.isFinite(yesPrice) ? 1 - yesPrice : NaN), NaN);
+      if (!Number.isFinite(noPrice) && Number.isFinite(yesPrice)) noPrice = clamp(1 - yesPrice, 0, 1);
+      if (!Number.isFinite(yesPrice) && Number.isFinite(noPrice)) yesPrice = clamp(1 - noPrice, 0, 1);
+
+      var rawDetail = item.yes_sub_title || item.no_sub_title || item.rules_primary || t('wallet.portal.prediction.kalshiDetail', 'Live event contract routed from Kalshi.');
+      var summary = summarizeKalshiBundle(rawTitle, rawDetail);
+      var title = summary.title;
+      var detail = summary.detail;
+      var textBlob = [rawTitle, rawDetail, title, detail, item.event_ticker, item.ticker].join(' ');
+      var topics = buildTopicSet(textBlob);
+      var volumeNumber = Number(item.volume_24h_fp || item.volume_fp || item.liquidity_dollars || 0);
+      var openInterestNumber = Number(item.open_interest_fp || item.liquidity_dollars || item.notional_value_dollars || 0);
+      var createdAtMs = toDateMs(item.created_time || item.open_time);
+      var closeAtMs = toDateMs(item.close_time);
+      var previousYesPrice = safeFraction(item.previous_price_dollars, NaN);
+      var primaryTopic = pickPrimaryTopic(topics);
+
+      return {
+        source: 'kalshi',
+        sourceLabel: 'Kalshi',
+        id: String(item.ticker),
+        title: title,
+        detail: detail,
+        yesLabel: t('wallet.portal.prediction.yesAskLabel', 'Yes ask'),
+        yesValue: formatPercent(yesPrice),
+        yesPriceNumber: yesPrice,
+        noLabel: t('wallet.portal.prediction.noAskLabel', 'No ask'),
+        noValue: formatPercent(noPrice),
+        noPriceNumber: noPrice,
+        volumeLabel: t('wallet.portal.prediction.volumeLabel', 'Volume'),
+        volumeValue: formatMoney(volumeNumber),
+        volumeNumber: volumeNumber,
+        secondaryMetricLabel: t('wallet.portal.prediction.openInterestLabel', 'Open interest'),
+        secondaryMetricValue: formatMoney(openInterestNumber),
+        secondaryMetricNumber: openInterestNumber,
+        closeText: formatRelativeTime(closeAtMs),
+        closeLabel: t('wallet.portal.prediction.closeLabel', 'Closes'),
+        topic: primaryTopic,
+        topics: topics,
+        displayTopics: getDisplayTopics(topics),
+        searchText: [rawTitle, rawDetail, title, detail, item.event_ticker, item.ticker].join(' ').toLowerCase(),
+        primaryUrl: buildKalshiUrl(item),
+        secondaryUrl: buildKalshiApiUrl(item),
+        secondaryLabel: t('wallet.portal.prediction.openFeed', 'Open feed'),
+        primaryLabel: t('wallet.portal.prediction.openVenue', 'Open venue'),
+        contractLabel: t('wallet.portal.prediction.eventContract', 'Event contract'),
+        sortValue: volumeNumber,
+        createdAtMs: createdAtMs,
+        closeAtMs: closeAtMs,
+        previousYesPriceNumber: previousYesPrice,
+        lastPriceNumber: safeFraction(item.last_price_dollars, yesPrice),
+        oneWeekPriceChangeNumber: Number.isFinite(previousYesPrice) && Number.isFinite(yesPrice) ? yesPrice - previousYesPrice : NaN,
+        oneMonthPriceChangeNumber: NaN,
+        attentionScore: estimateAttentionScore(textBlob, volumeNumber, openInterestNumber),
+        isBreaking: isBreakingText(textBlob, topics, closeAtMs)
+      };
+    }
+
+    function interleaveMarkets(markets, limit) {
+      if (state.source !== 'all') return markets.slice(0, limit);
+      var groups = {
+        polymarket: markets.filter(function(market) { return market.source === 'polymarket'; }),
+        kalshi: markets.filter(function(market) { return market.source === 'kalshi'; })
+      };
+      var order = groups.polymarket.length >= groups.kalshi.length ? ['polymarket', 'kalshi'] : ['kalshi', 'polymarket'];
+      var mixed = [];
+      while (mixed.length < limit && (groups.polymarket.length || groups.kalshi.length)) {
+        order.forEach(function(source) {
+          if (mixed.length >= limit) return;
+          if (groups[source].length) mixed.push(groups[source].shift());
+        });
+      }
+      return mixed;
+    }
+
+    function getFilteredMarkets() {
+      var query = state.query.trim().toLowerCase();
+      var filtered = state.markets.filter(function(market) {
+        if (state.source !== 'all' && market.source !== state.source) return false;
+        if (state.topic !== 'all' && !market.topics.has(state.topic)) return false;
+        if (state.rank === 'breaking' && !market.isBreaking) return false;
+        if (query && market.searchText.indexOf(query) === -1) return false;
+        return true;
+      });
+
+      filtered.sort(function(a, b) {
+        var scoreDiff = getRankingScore(b) - getRankingScore(a);
+        if (scoreDiff) return scoreDiff;
+        return (b.sortValue || 0) - (a.sortValue || 0);
+      });
+
+      return interleaveMarkets(filtered, query ? 24 : 18);
+    }
+
+    function updateStatus(kind, text) {
+      if (!statusEl) return;
+      statusEl.textContent = text;
+      statusEl.classList.remove('is-live', 'is-warning', 'is-error');
+      if (kind) statusEl.classList.add(kind);
+    }
+
+    function updateSummary(filteredMarkets) {
+      if (countEl) countEl.textContent = String(filteredMarkets.length);
+      if (sourceCountEl) {
+        var liveCount = Number(state.sourceHealth.polymarket) + Number(state.sourceHealth.kalshi);
+        sourceCountEl.textContent = liveCount + ' / 2';
+      }
+      if (breakingCountEl) {
+        breakingCountEl.textContent = String(state.markets.filter(function(market) {
+          return market.isBreaking;
+        }).length);
+      }
+    }
+
+    function renderPredictionBoard() {
+      if (!listEl) return;
+      setChipState(sourceToggle, 'data-prediction-source', state.source);
+      setChipState(rankToggle, 'data-prediction-rank', state.rank);
+      setChipState(topicToggle, 'data-prediction-topic', state.topic);
+
+      var filteredMarkets = getFilteredMarkets();
+      updateSummary(filteredMarkets);
+
+      if (!filteredMarkets.length) {
+        var emptyText = state.loading
+          ? t('wallet.portal.prediction.loadingBoard', 'Loading live prediction markets...')
+          : state.topic === 'crypto'
+            ? 'No live crypto contracts matched that lane. Try All markets or search for bitcoin, ethereum, solana, or ETF.'
+            : 'No active markets matched that filter. Try another topic, rank, or search term.';
+        listEl.innerHTML = '<div class="prediction-market-empty-card">' + escapeHtml(emptyText) + '</div>';
+        renderPredictionHero(filteredMarkets);
+        renderPredictionPulse(filteredMarkets);
+        renderPredictionStage(filteredMarkets);
+        renderPredictionTicket(filteredMarkets);
+        renderPredictionLedger();
+        renderLatestReceipt();
+        return;
+      }
+
+      if (!getSelectedMarket(filteredMarkets)) {
+        state.selectedMarketId = filteredMarkets[0].id;
+      }
+
+      listEl.innerHTML = filteredMarkets.map(function(market, index) {
+        var sourceClass = getMarketSourceClass(market);
+        var topicLabel = topicLabels[market.topic] || topicLabels.all;
+        var isFeatured = index === 0;
+        var isSelected = market.id === state.selectedMarketId;
+        var articleClass = 'prediction-market-card ' + (market.source === 'polymarket' ? 'source-polymarket-card' : 'source-kalshi-card') + (isFeatured ? ' is-featured' : '');
+        if (isSelected) articleClass += ' is-selected';
+        var spotlightLabel = state.rank === 'breaking'
+          ? 'Breaking tape'
+          : state.rank === 'new'
+            ? 'Fresh market'
+            : 'Lead contract';
+        var topicTags = market.displayTopics.slice(0, 3).map(function(topic) {
+          return '<span class="prediction-market-tag">' + escapeHtml(topicLabels[topic] || topicLabels.all) + '</span>';
+        }).join('');
+        return [
+          '<article class="' + articleClass + '" data-prediction-market-id="' + escapeHtml(market.id) + '" tabindex="0">',
+            '<div class="prediction-market-topline">',
+              '<span class="prediction-market-source ' + sourceClass + '">' + escapeHtml(market.sourceLabel) + '</span>',
+              '<span class="prediction-market-topic">' + escapeHtml(topicLabel) + '</span>',
+            '</div>',
+            '<div class="prediction-market-copy">',
+              (isFeatured ? '<span class="prediction-market-spotlight">' + escapeHtml(spotlightLabel) + '</span>' : ''),
+              '<h5>' + escapeHtml(market.title) + '</h5>',
+              '<p>' + escapeHtml(market.detail) + '</p>',
+            '</div>',
+            '<div class="prediction-market-tags">' + topicTags + '</div>',
+            '<div class="prediction-market-probability-row">',
+              '<span>' + escapeHtml(market.yesLabel) + ' ' + escapeHtml(market.yesValue) + '</span>',
+              '<span>' + escapeHtml(market.noLabel) + ' ' + escapeHtml(market.noValue) + '</span>',
+            '</div>',
+            '<div class="prediction-market-bar"><span class="prediction-market-bar-fill" style="width:' + escapeHtml(String(clamp((market.yesPriceNumber || 0) * 100, 0, 100))) + '%"></span></div>',
+            '<div class="prediction-market-price-grid">',
+              '<div class="prediction-market-price">',
+                '<span>' + escapeHtml(market.yesLabel) + '</span>',
+                '<strong>' + escapeHtml(market.yesValue) + '</strong>',
+              '</div>',
+              '<div class="prediction-market-price">',
+                '<span>' + escapeHtml(market.noLabel) + '</span>',
+                '<strong>' + escapeHtml(market.noValue) + '</strong>',
+              '</div>',
+            '</div>',
+            '<div class="prediction-market-meta-row">',
+              '<div class="prediction-market-metric">',
+                '<span>' + escapeHtml(market.volumeLabel) + '</span>',
+                '<strong>' + escapeHtml(market.volumeValue) + '</strong>',
+              '</div>',
+              '<div class="prediction-market-metric">',
+                '<span>' + escapeHtml(market.secondaryMetricLabel) + '</span>',
+                '<strong>' + escapeHtml(market.secondaryMetricValue) + '</strong>',
+              '</div>',
+              '<div class="prediction-market-metric">',
+                '<span>' + escapeHtml(market.closeLabel) + '</span>',
+                '<strong>' + escapeHtml(market.closeText) + '</strong>',
+              '</div>',
+            '</div>',
+            '<div class="prediction-market-footer">',
+              '<span class="prediction-market-contract">' + escapeHtml(market.contractLabel) + '</span>',
+              '<span class="prediction-market-contract prediction-market-contract-trend">' + escapeHtml(formatSignedPoints(getTrendPoints(market), 'Flat')) + '</span>',
+            '</div>',
+            '<div class="prediction-market-actions">',
+              '<a class="prediction-market-link" href="' + escapeHtml(market.primaryUrl) + '" target="_blank" rel="noopener">' + escapeHtml(market.primaryLabel) + '</a>',
+              '<a class="prediction-market-api-link" href="' + escapeHtml(market.secondaryUrl) + '" target="_blank" rel="noopener">' + escapeHtml(market.secondaryLabel) + '</a>',
+            '</div>',
+          '</article>'
+        ].join('');
+      }).join('');
+
+      renderPredictionHero(filteredMarkets);
+      renderPredictionPulse(filteredMarkets);
+      renderPredictionStage(filteredMarkets);
+      renderPredictionTicket(filteredMarkets);
+      renderPredictionLedger();
+      renderLatestReceipt();
+    }
+
+    function syncPredictionMarketBoardUi() {
+      var kickerEl = document.getElementById('predictionMarketKicker');
+      var headingEl = document.getElementById('predictionMarketHeading');
+      var introEl = document.getElementById('predictionMarketIntro');
+      var noteEl = document.getElementById('predictionMarketNote');
+      var pulseHeadingEl = document.getElementById('predictionPulseHeading');
+      var pulseCopyEl = document.getElementById('predictionPulseCopy');
+      var marketsLabelEl = document.getElementById('predictionStatMarketsLabel');
+      var sourcesLabelEl = document.getElementById('predictionStatSourcesLabel');
+      var breakingLabelEl = document.getElementById('predictionStatBtcLabel');
+      var searchLabelEl = document.getElementById('predictionSearchLabel');
+
+      if (kickerEl) kickerEl.textContent = 'Predict with OST';
+      if (headingEl) headingEl.textContent = 'Prediction venue';
+      if (introEl) introEl.textContent = 'Scan live Polymarket and Kalshi markets, read the tape, inspect the ladder, and route an OST ticket without leaving the wallet rail.';
+      if (noteEl) noteEl.textContent = 'Public venue feeds expose live prices, change anchors, and liquidity. The curve and ladder reflect that data directly without inventing candles or settlement.';
+      if (pulseHeadingEl) pulseHeadingEl.textContent = 'Market pulse';
+      if (pulseCopyEl) pulseCopyEl.textContent = 'Lead contracts, fastest movers, and the markets closing soonest across both venues.';
+      if (marketsLabelEl) marketsLabelEl.textContent = 'Markets loaded';
+      if (sourcesLabelEl) sourcesLabelEl.textContent = 'Live sources';
+      if (breakingLabelEl) breakingLabelEl.textContent = 'Breaking now';
+      if (searchLabelEl) searchLabelEl.textContent = 'Search any contract';
+      if (searchEl) {
+        searchEl.placeholder = 'Bitcoin, Trump, NBA, inflation, Nvidia, weather, election...';
+        searchEl.setAttribute('aria-label', 'Search live prediction contracts');
+      }
+      if (refreshBtn) refreshBtn.textContent = 'Refresh';
+
+      if (sourceToggle) {
+        sourceToggle.querySelectorAll('button[data-prediction-source]').forEach(function(btn) {
+          var value = btn.getAttribute('data-prediction-source');
+          if (value === 'all') btn.textContent = 'All venues';
+          if (value === 'polymarket') btn.textContent = 'Polymarket';
+          if (value === 'kalshi') btn.textContent = 'Kalshi';
+        });
+      }
+
+      if (rankToggle) {
+        rankToggle.querySelectorAll('button[data-prediction-rank]').forEach(function(btn) {
+          var value = btn.getAttribute('data-prediction-rank');
+          btn.textContent = rankLabels[value] || value;
+        });
+      }
+
+      if (topicToggle) {
+        topicToggle.querySelectorAll('button[data-prediction-topic]').forEach(function(btn) {
+          var value = btn.getAttribute('data-prediction-topic');
+          btn.textContent = topicLabels[value] || value;
+        });
+      }
+
+      renderPredictionBoard();
+    }
+    window.syncPredictionMarketBoardUi = syncPredictionMarketBoardUi;
+    window.syncPredictionMarketTradeWallet = syncTradeWallet;
+
+    function normalizeArray(value) {
+      return Array.isArray(value) ? value : [];
+    }
+
+    function fetchPolymarketMarkets() {
+      return fetch('https://gamma-api.polymarket.com/markets?limit=160&closed=false', {
+        headers: { accept: 'application/json' }
+      }).then(function(response) {
+        if (!response.ok) throw new Error('Polymarket returned ' + response.status);
+        return response.json();
+      }).then(function(data) {
+        return normalizeArray(data).filter(function(item) {
+          return item && item.active !== false && item.closed !== true;
+        }).map(mapPolymarketMarket);
+      });
+    }
+
+    function fetchKalshiMarkets() {
+      return fetch('https://api.elections.kalshi.com/trade-api/v2/markets?limit=160', {
+        headers: { accept: 'application/json' }
+      }).then(function(response) {
+        if (!response.ok) throw new Error('Kalshi returned ' + response.status);
+        return response.json();
+      }).then(function(data) {
+        return normalizeArray(data && data.markets).filter(function(item) {
+          return item && item.status === 'active';
+        }).map(mapKalshiMarket);
+      });
+    }
+
+    function loadPredictionMarkets() {
+      if (state.loading) return;
+      state.loading = true;
+      state.lastError = '';
+      updateStatus('', 'Loading live feeds...');
+      renderPredictionBoard();
+
+      Promise.allSettled([
+        fetchPolymarketMarkets(),
+        fetchKalshiMarkets()
+      ]).then(function(results) {
+        var markets = [];
+        var failures = [];
+
+        state.sourceHealth.polymarket = results[0].status === 'fulfilled';
+        state.sourceHealth.kalshi = results[1].status === 'fulfilled';
+
+        if (results[0].status === 'fulfilled') {
+          markets = markets.concat(results[0].value);
+        } else {
+          failures.push('Polymarket');
+        }
+
+        if (results[1].status === 'fulfilled') {
+          markets = markets.concat(results[1].value);
+        } else {
+          failures.push('Kalshi');
+        }
+
+        state.markets = markets;
+        state.lastUpdated = new Date();
+
+        if (updatedEl) {
+          updatedEl.textContent = 'Updated ' + state.lastUpdated.toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+        }
+
+        if (markets.length) {
+          updateStatus(failures.length ? 'is-warning' : 'is-live', failures.length ? 'Live with one source degraded' : '2 live venues connected');
+        } else {
+          state.lastError = failures.length ? failures.join(', ') + ' unavailable' : 'No active markets returned';
+          updateStatus('is-error', 'Feeds unavailable right now');
+        }
+
+        renderPredictionBoard();
+      }).catch(function(error) {
+        state.markets = [];
+        state.lastError = error && error.message ? error.message : String(error);
+        state.sourceHealth.polymarket = false;
+        state.sourceHealth.kalshi = false;
+        updateStatus('is-error', 'Feeds unavailable right now');
+        renderPredictionBoard();
+      }).finally(function() {
+        state.loading = false;
+      });
+    }
+
+    function queueStageRedraw() {
+      if (resizeFrame) window.cancelAnimationFrame(resizeFrame);
+      resizeFrame = window.requestAnimationFrame(function() {
+        renderPredictionStage(getFilteredMarkets());
+      });
+    }
+
+    if (sourceToggle) {
+      sourceToggle.addEventListener('click', function(event) {
+        var button = event.target.closest('button[data-prediction-source]');
+        if (!button) return;
+        state.source = button.getAttribute('data-prediction-source') || 'all';
+        renderPredictionBoard();
+      });
+    }
+
+    if (rankToggle) {
+      rankToggle.addEventListener('click', function(event) {
+        var button = event.target.closest('button[data-prediction-rank]');
+        if (!button) return;
+        state.rank = button.getAttribute('data-prediction-rank') || 'trending';
+        renderPredictionBoard();
+      });
+    }
+
+    if (topicToggle) {
+      topicToggle.addEventListener('click', function(event) {
+        var button = event.target.closest('button[data-prediction-topic]');
+        if (!button) return;
+        state.topic = button.getAttribute('data-prediction-topic') || 'all';
+        renderPredictionBoard();
+      });
+    }
+
+    if (searchEl) {
+      searchEl.addEventListener('input', function() {
+        state.query = searchEl.value || '';
+        renderPredictionBoard();
+      });
+    }
+
+    if (listEl) {
+      listEl.addEventListener('click', function(event) {
+        if (event.target.closest('a')) return;
+        handlePredictionCardSelection(event.target);
+      });
+      listEl.addEventListener('keydown', function(event) {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        if (handlePredictionCardSelection(event.target)) {
+          event.preventDefault();
+        }
+      });
+    }
+
+    if (pulseEl) {
+      pulseEl.addEventListener('click', function(event) {
+        if (event.target.closest('a')) return;
+        handlePredictionCardSelection(event.target);
+      });
+      pulseEl.addEventListener('keydown', function(event) {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        if (handlePredictionCardSelection(event.target)) {
+          event.preventDefault();
+        }
+      });
+    }
+
+    if (outcomeToggle) {
+      outcomeToggle.addEventListener('click', function(event) {
+        var button = event.target.closest('button[data-prediction-side]');
+        if (!button) return;
+        state.selectedSide = button.getAttribute('data-prediction-side') || 'yes';
+        renderPredictionTicket(getFilteredMarkets());
+      });
+    }
+
+    if (stakeInputEl) {
+      stakeInputEl.addEventListener('input', function() {
+        var nextStake = Number(stakeInputEl.value);
+        state.stake = Number.isFinite(nextStake) && nextStake > 0 ? nextStake : 0;
+        renderPredictionTicket(getFilteredMarkets());
+      });
+    }
+
+    if (stakeQuickEl) {
+      stakeQuickEl.addEventListener('click', function(event) {
+        var button = event.target.closest('button[data-prediction-stake]');
+        if (!button) return;
+        var nextStake = Number(button.getAttribute('data-prediction-stake'));
+        if (!Number.isFinite(nextStake)) return;
+        state.stake = nextStake;
+        if (stakeInputEl) stakeInputEl.value = String(nextStake);
+        renderPredictionTicket(getFilteredMarkets());
+      });
+    }
+
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', function() {
+        loadPredictionMarkets();
+      });
+    }
+
+    if (tradeActionBtn) {
+      tradeActionBtn.addEventListener('click', function() {
+        var market = getSelectedMarket(getFilteredMarkets());
+        if (!market) {
+          setTradeStatus(t('wallet.portal.prediction.tradeSelectPrompt', 'Select a live contract first.'), 'error');
+          return;
+        }
+
+        var priceFraction = getMarketPrice(market, state.selectedSide);
+        var potentialReturn = calculatePotentialReturn(state.stake, priceFraction);
+        if (!Number.isFinite(priceFraction) || priceFraction <= 0 || !Number.isFinite(potentialReturn)) {
+          setTradeStatus(t('wallet.portal.prediction.tradeUnavailable', 'This side is not tradeable right now.'), 'error');
+          return;
+        }
+
+        state.placing = true;
+        renderPredictionTicket(getFilteredMarkets());
+
+        createPredictionMarketOrder({
+          source: market.source,
+          marketId: market.id,
+          title: market.title,
+          topic: market.topic,
+          side: state.selectedSide,
+          stake: state.stake,
+          price: priceFraction,
+          potentialReturn: potentialReturn,
+          sourceUrl: market.primaryUrl,
+          reference: Date.now().toString(36)
+        }).then(function(result) {
+          state.latestReceipt = result && result.record ? result.record : null;
+          state.orderHistory = readPredictionOrderRecords();
+          state.availableBalance = result && Number.isFinite(result.remainingBalance) ? result.remainingBalance : state.availableBalance;
+          setTradeStatus(t('wallet.portal.prediction.tradeRecorded', 'OST order recorded on devnet. Use the signature to audit the ticket on-chain.'), 'success');
+          toast('📈', 'Prediction market ticket recorded on-chain');
+          renderPredictionBoard();
+        }).catch(function(error) {
+          setTradeStatus(error && error.message ? error.message : t('wallet.portal.prediction.tradeFailed', 'Could not place the prediction market order right now.'), 'error');
+        }).finally(function() {
+          state.placing = false;
+          renderPredictionTicket(getFilteredMarkets());
+          renderLatestReceipt();
+          renderPredictionLedger();
+        });
+      });
+    }
+
+    window.addEventListener('resize', queueStageRedraw);
+
+    syncPredictionMarketBoardUi();
+    syncTradeWallet();
+    loadPredictionMarkets();
+    loadTimer = window.setInterval(loadPredictionMarkets, 120000);
+
+    window.addEventListener('beforeunload', function() {
+      if (loadTimer) window.clearInterval(loadTimer);
+      if (resizeFrame) window.cancelAnimationFrame(resizeFrame);
+    });
+  })();
+
   (function initSpaceMontage() {
     var wrap = document.getElementById('sxMontage');
     var frameWrap = wrap ? wrap.querySelector('.sx-montage-frame-wrap') : null;
@@ -9257,17 +12048,31 @@
     var toggle = document.getElementById('ancientToggle');
     var label = document.getElementById('ancientToggleText');
     if (!toggle) return;
-    // Restore from localStorage
+
+    function syncAncientToggle() {
+      var isOn = document.documentElement.classList.contains('ancient-mode');
+      toggle.classList.toggle('active', isOn);
+      toggle.setAttribute('aria-pressed', String(isOn));
+      toggle.setAttribute('title', isOn ? t('ancient.toggle.deactivate') : t('ancient.toggle.activate'));
+      toggle.setAttribute('aria-label', isOn ? t('ancient.toggle.deactivate') : t('ancient.toggle.activate'));
+      document.documentElement.setAttribute('data-ancient-mode', isOn ? 'on' : 'off');
+      if (label) label.textContent = isOn ? t('ancient.toggle.on') : t('ancient.toggle.off');
+    }
+
+    window.syncAncientModeUi = syncAncientToggle;
+
     if (localStorage.getItem('ost-ancient') === '1') {
       document.documentElement.classList.add('ancient-mode');
-      toggle.classList.add('active');
-      if (label) label.textContent = 'Modern Mode';
     }
+    syncAncientToggle();
+
     toggle.addEventListener('click', function() {
       var isOn = document.documentElement.classList.toggle('ancient-mode');
-      toggle.classList.toggle('active', isOn);
-      if (label) label.textContent = isOn ? 'Modern Mode' : '\u{13171} Ancient';
       localStorage.setItem('ost-ancient', isOn ? '1' : '0');
+      syncAncientToggle();
+      if (typeof toast === 'function') {
+        toast(isOn ? '𓅱' : '◉', isOn ? t('ancient.toast.on') : t('ancient.toast.off'));
+      }
     });
   })();
 
@@ -9278,57 +12083,414 @@
     var fill = document.getElementById('transmitFill');
     var status = document.getElementById('transmitStatus');
     var glyphs = document.getElementById('transmitGlyphs');
+    var messageInput = document.getElementById('transmitMessage');
+    var dnaInput = document.getElementById('transmitDna');
+    var filesInput = document.getElementById('transmitFiles');
+    var launchBtn = document.getElementById('transmitLaunch');
+    var launchLabel = document.getElementById('transmitLaunchLabel');
+    var attachmentList = document.getElementById('transmitAttachmentList');
+    var binary = document.getElementById('transmitBinary');
+    var quantum = document.getElementById('transmitQuantum');
+    var manifestId = document.getElementById('transmitManifestId');
+    var manifestState = document.getElementById('transmitManifestState');
+    var payloadSummary = document.getElementById('transmitPayloadSummary');
+    var resultMeta = document.getElementById('transmitResultMeta');
+    var attachmentPreview = document.getElementById('transmitAttachmentPreview');
     if (!overlay) return;
 
-    var hieroglyphSets = [
-      '\u{13000}\u{1303F}\u{13171}\u{130B8}\u{13087}\u{1305F}\u{130AD}\u{13000}',
-      '\u{13171}\u{130AD}\u{1303F}\u{13087}\u{13000}\u{130B8}\u{1305F}\u{13171}',
-      '\u{13087}\u{13000}\u{130AD}\u{1303F}\u{130B8}\u{13171}\u{13000}\u{1305F}',
-      '\u{130B8}\u{13087}\u{13171}\u{13000}\u{1305F}\u{130AD}\u{1303F}\u{130B8}'
+    var glyphAlphabet = [
+      '𓀀', '𓁐', '𓂀', '𓃭', '𓄿', '𓅱', '𓆣', '𓇯', '𓈖', '𓉔', '𓊪', '𓋴', '𓌳', '𓍯', '𓎛', '𓏏'
     ];
+    var objectUrls = [];
+    var activeTransmission = 0;
+    var isTransmitting = false;
+    var currentStageKey = 'transmit.empty';
+    var lastPayload = null;
 
-    var stages = [
-      'Initializing satellite relay...',
-      'Encoding in hieroglyphic format...',
-      'Converting to binary + quantum states...',
-      'Routing through orbital infrastructure...',
-      'Transmitting to LEO satellites...',
-      'Signal confirmed by relay node...',
-      'Broadcast aimed at Moon, Mars, deep space...',
-      '\u2705 Transmission complete — OST genesis message sent.'
-    ];
-
-    function runTransmit() {
-      overlay.classList.add('active');
-      if (fill) fill.style.width = '0%';
-      var i = 0;
-      var interval = setInterval(function() {
-        i++;
-        if (i < stages.length) {
-          if (status) status.textContent = stages[i];
-          if (glyphs) glyphs.textContent = hieroglyphSets[i % hieroglyphSets.length];
-          if (fill) fill.style.width = Math.min(100, (i / (stages.length - 1)) * 100) + '%';
-        } else {
-          clearInterval(interval);
-          if (fill) fill.style.width = '100%';
-          if (status) status.textContent = stages[stages.length - 1];
-        }
-      }, 800);
+    function escapeHtml(value) {
+      return String(value || '').replace(/[&<>"']/g, function(char) {
+        if (char === '&') return '&amp;';
+        if (char === '<') return '&lt;';
+        if (char === '>') return '&gt;';
+        if (char === '"') return '&quot;';
+        return '&#39;';
+      });
     }
 
-    // Bind both transmit buttons
+    function formatBytes(bytes) {
+      if (!bytes) return '0 B';
+      var units = ['B', 'KB', 'MB', 'GB'];
+      var size = bytes;
+      var unitIndex = 0;
+      while (size >= 1024 && unitIndex < units.length - 1) {
+        size /= 1024;
+        unitIndex += 1;
+      }
+      return size.toFixed(size >= 10 || unitIndex === 0 ? 0 : 1) + ' ' + units[unitIndex];
+    }
+
+    function checksumOf(input) {
+      var hash = 2166136261;
+      for (var index = 0; index < input.length; index += 1) {
+        hash ^= input.charCodeAt(index);
+        hash = Math.imul(hash, 16777619);
+      }
+      return (hash >>> 0).toString(16).toUpperCase().padStart(8, '0');
+    }
+
+    function bytesFromString(input) {
+      if (typeof TextEncoder !== 'undefined') return new TextEncoder().encode(input);
+      return Uint8Array.from(String(input).split('').map(function(char) { return char.charCodeAt(0); }));
+    }
+
+    function buildGlyphString(input) {
+      var bytes = bytesFromString((input || 'OST') + '|OST');
+      return Array.from(bytes.slice(0, 20)).map(function(byte, index) {
+        return glyphAlphabet[(byte + index) % glyphAlphabet.length];
+      }).join('');
+    }
+
+    function buildBinaryPreview(input, checksum) {
+      var bytes = bytesFromString((input || 'OST') + '|' + checksum);
+      var chunks = Array.from(bytes.slice(0, 24)).map(function(byte) {
+        return byte.toString(2).padStart(8, '0');
+      });
+      var rows = [];
+      for (var index = 0; index < chunks.length; index += 3) {
+        rows.push(chunks.slice(index, index + 3).join(' '));
+      }
+      return rows.join('\n');
+    }
+
+    function buildQuantumStates(checksum) {
+      return Array.from({ length: 6 }, function(_, index) {
+        var seed = parseInt(checksum[index % checksum.length], 16);
+        var alpha = Math.min(0.94, 0.32 + (seed / 25));
+        return {
+          label: 'Q' + (index + 1),
+          state: seed % 2 ? '|01⟩' : '|10⟩',
+          alpha: alpha.toFixed(2),
+          beta: (1 - alpha).toFixed(2),
+          coherence: (82 + seed) + '%'
+        };
+      });
+    }
+
+    function attachmentKind(fileName, mimeType) {
+      if ((mimeType || '').indexOf('image/') === 0) return 'image';
+      if ((mimeType || '').indexOf('video/') === 0) return 'video';
+      if ((mimeType || '').indexOf('text/') === 0 || /\.(txt|md|json|csv|fasta|fastq|dna|xml)$/i.test(fileName || '')) return 'text';
+      return 'data';
+    }
+
+    function revokeObjectUrls() {
+      objectUrls.forEach(function(url) { URL.revokeObjectURL(url); });
+      objectUrls = [];
+    }
+
+    function currentDraft() {
+      return {
+        message: (messageInput && messageInput.value || '').trim(),
+        dna: (dnaInput && dnaInput.value || '').replace(/\s+/g, '').toUpperCase(),
+        files: Array.from(filesInput && filesInput.files ? filesInput.files : []).map(function(file) {
+          return {
+            name: file.name,
+            size: file.size,
+            type: file.type || 'application/octet-stream',
+            kind: attachmentKind(file.name, file.type)
+          };
+        })
+      };
+    }
+
+    function hasPayload(draft) {
+      return Boolean(draft.message || draft.dna || draft.files.length);
+    }
+
+    function createManifestId(checksum) {
+      return 'OST-' + Date.now().toString(36).toUpperCase() + '-' + checksum.slice(0, 4);
+    }
+
+    function createPreviewPayload(draft) {
+      var seed = [draft.message, draft.dna].concat(draft.files.map(function(file) {
+        return [file.name, file.size, file.type].join(':');
+      })).filter(Boolean).join('|') || 'OST';
+      var checksum = checksumOf(seed);
+      return {
+        message: draft.message,
+        dna: draft.dna,
+        files: draft.files,
+        checksum: checksum,
+        manifestId: hasPayload(draft) ? createManifestId(checksum) : t('transmit.manifest.default'),
+        glyphs: buildGlyphString(seed),
+        binary: buildBinaryPreview(seed, checksum),
+        quantumStates: buildQuantumStates(checksum),
+        packetSize: seed.length + draft.files.reduce(function(total, file) { return total + (file.size || 0); }, 0),
+        sent: false,
+        statusKey: hasPayload(draft) ? 'transmit.result.ready' : 'transmit.empty'
+      };
+    }
+
+    function readFileSample(file) {
+      return file.slice(0, 65536).arrayBuffer().then(function(buffer) {
+        var bytes = new Uint8Array(buffer);
+        var sampleHex = Array.from(bytes.slice(0, 24)).map(function(byte) {
+          return byte.toString(16).padStart(2, '0');
+        }).join('').toUpperCase();
+        var textPreview = '';
+        if (attachmentKind(file.name, file.type) === 'text' && typeof TextDecoder !== 'undefined') {
+          try {
+            textPreview = new TextDecoder().decode(bytes.slice(0, 220)).replace(/\s+/g, ' ').trim();
+          } catch (error) {
+            textPreview = '';
+          }
+        }
+        return {
+          name: file.name,
+          size: file.size,
+          type: file.type || 'application/octet-stream',
+          kind: attachmentKind(file.name, file.type),
+          sampleHex: sampleHex,
+          textPreview: textPreview,
+          url: ''
+        };
+      }).catch(function() {
+        return {
+          name: file.name,
+          size: file.size,
+          type: file.type || 'application/octet-stream',
+          kind: attachmentKind(file.name, file.type),
+          sampleHex: checksumOf(file.name + ':' + file.size),
+          textPreview: '',
+          url: ''
+        };
+      }).then(function(info) {
+        if (info.kind === 'image' || info.kind === 'video') {
+          info.url = URL.createObjectURL(file);
+          objectUrls.push(info.url);
+        }
+        return info;
+      });
+    }
+
+    function buildTransmissionPayload() {
+      var draft = currentDraft();
+      if (!hasPayload(draft)) return Promise.resolve(null);
+
+      revokeObjectUrls();
+
+      return Promise.all(Array.from(filesInput && filesInput.files ? filesInput.files : []).map(readFileSample)).then(function(files) {
+        var seed = [draft.message, draft.dna].concat(files.map(function(file) {
+          return [file.name, file.size, file.sampleHex].join(':');
+        })).filter(Boolean).join('|');
+        var checksum = checksumOf(seed);
+        return {
+          message: draft.message,
+          dna: draft.dna,
+          files: files,
+          checksum: checksum,
+          manifestId: createManifestId(checksum),
+          glyphs: buildGlyphString(seed + checksum),
+          binary: buildBinaryPreview(seed, checksum),
+          quantumStates: buildQuantumStates(checksum),
+          packetSize: seed.length + files.reduce(function(total, file) { return total + (file.size || 0); }, 0),
+          sent: false,
+          statusKey: 'transmit.result.ready'
+        };
+      });
+    }
+
+    function renderAttachmentList(files) {
+      if (!attachmentList) return;
+      if (!files.length) {
+        attachmentList.innerHTML = '<span class="transmit-empty-pill">' + escapeHtml(t('transmit.none')) + '</span>';
+        return;
+      }
+
+      attachmentList.innerHTML = files.map(function(file) {
+        return '<span class="transmit-attachment-pill"><strong>' + escapeHtml(file.name) + '</strong><span>' + escapeHtml(formatBytes(file.size || 0)) + '</span></span>';
+      }).join('');
+    }
+
+    function renderQuantumStates(states) {
+      if (!quantum) return;
+      quantum.innerHTML = states.map(function(state) {
+        return [
+          '<div class="transmit-quantum-card">',
+          '<span class="transmit-quantum-label">' + escapeHtml(state.label) + '</span>',
+          '<strong class="transmit-quantum-state">' + escapeHtml(state.state) + '</strong>',
+          '<span class="transmit-quantum-detail">|0⟩ ' + escapeHtml(state.alpha) + ' · |1⟩ ' + escapeHtml(state.beta) + '</span>',
+          '<span class="transmit-quantum-coherence">' + escapeHtml(state.coherence) + ' coherence</span>',
+          '</div>'
+        ].join('');
+      }).join('');
+    }
+
+    function renderAttachmentPreview(files) {
+      if (!attachmentPreview) return;
+      if (!files.length) {
+        attachmentPreview.innerHTML = '<div class="transmit-attachment-card"><p class="transmit-file-snippet">' + escapeHtml(t('transmit.none')) + '</p></div>';
+        return;
+      }
+
+      attachmentPreview.innerHTML = files.slice(0, 3).map(function(file) {
+        var titleKey = 'transmit.file.' + (file.kind || 'data');
+        var body = '<p class="transmit-file-snippet">' + escapeHtml((file.textPreview || file.sampleHex || '').slice(0, 160) || t('transmit.none')) + '</p>';
+        if (file.kind === 'image' && file.url) {
+          body = '<img class="transmit-media-thumb" src="' + escapeHtml(file.url) + '" alt="' + escapeHtml(file.name) + '">';
+        } else if (file.kind === 'video' && file.url) {
+          body = '<video class="transmit-media-thumb" src="' + escapeHtml(file.url) + '" controls muted playsinline></video>';
+        }
+
+        return [
+          '<article class="transmit-attachment-card">',
+          '<div class="transmit-attachment-meta">',
+          '<strong>' + escapeHtml(t(titleKey, t('transmit.file.data'))) + '</strong>',
+          '<span>' + escapeHtml(file.name) + ' · ' + escapeHtml(formatBytes(file.size || 0)) + '</span>',
+          '</div>',
+          body,
+          '</article>'
+        ].join('');
+      }).join('');
+    }
+
+    function renderSummary(payload) {
+      if (!payloadSummary || !resultMeta) return;
+
+      payloadSummary.innerHTML = [
+        '<div class="transmit-summary-line"><span>' + escapeHtml(t('transmit.summary.message')) + '</span><strong>' + escapeHtml(payload.message ? payload.message.length + ' ' + t('transmit.summary.chars') : '0') + '</strong></div>',
+        '<div class="transmit-summary-line"><span>' + escapeHtml(t('transmit.summary.dna')) + '</span><strong>' + escapeHtml(payload.dna ? payload.dna.length + ' ' + t('transmit.summary.bases') : '0') + '</strong></div>',
+        '<div class="transmit-summary-line"><span>' + escapeHtml(t('transmit.summary.files')) + '</span><strong>' + escapeHtml(String(payload.files.length)) + '</strong></div>'
+      ].join('');
+
+      resultMeta.innerHTML = [
+        '<div class="transmit-meta-line"><span>' + escapeHtml(t('transmit.summary.route')) + '</span><strong>' + escapeHtml(t('transmit.route.value')) + '</strong></div>',
+        '<div class="transmit-meta-line"><span>' + escapeHtml(t('transmit.summary.checksum')) + '</span><strong>' + escapeHtml(payload.checksum) + '</strong></div>',
+        '<div class="transmit-meta-line"><span>' + escapeHtml(t('transmit.summary.packet')) + '</span><strong>' + escapeHtml(formatBytes(payload.packetSize || 0)) + '</strong></div>',
+        '<div class="transmit-meta-line"><span>' + escapeHtml(t('transmit.summary.target')) + '</span><strong>' + escapeHtml(t('transmit.target.value')) + '</strong></div>',
+        '<div class="transmit-meta-line"><span>' + escapeHtml(t('transmit.summary.render')) + '</span><strong>' + escapeHtml(t('transmit.render.value')) + '</strong></div>'
+      ].join('');
+    }
+
+    function renderPayload(payload) {
+      var effectivePayload = payload || createPreviewPayload(currentDraft());
+      lastPayload = effectivePayload;
+
+      if (glyphs) glyphs.textContent = effectivePayload.glyphs || buildGlyphString('OST');
+      if (binary) binary.textContent = effectivePayload.binary || buildBinaryPreview('OST', checksumOf('OST'));
+      if (manifestId) manifestId.textContent = effectivePayload.manifestId || t('transmit.manifest.default');
+      if (manifestState) manifestState.textContent = effectivePayload.sent ? t('transmit.result.sent') : t('transmit.result.ready');
+      if (fill) fill.style.width = effectivePayload.sent ? '100%' : (hasPayload(currentDraft()) ? '18%' : '0%');
+      if (status && !isTransmitting) status.textContent = t(effectivePayload.statusKey || 'transmit.empty');
+
+      renderAttachmentList(effectivePayload.files || []);
+      renderQuantumStates(effectivePayload.quantumStates || buildQuantumStates(checksumOf('OST')));
+      renderSummary(effectivePayload);
+      renderAttachmentPreview(effectivePayload.files || []);
+    }
+
+    function syncTransmitUi() {
+      if (launchLabel) launchLabel.textContent = isTransmitting ? t('transmit.launchBusy') : t('transmit.launch');
+      if (launchBtn) launchBtn.disabled = isTransmitting;
+      if (!isTransmitting && status) status.textContent = t(currentStageKey || 'transmit.empty');
+      renderPayload(lastPayload || createPreviewPayload(currentDraft()));
+    }
+
+    window.syncTransmitUi = syncTransmitUi;
+
+    function openTransmitConsole() {
+      overlay.classList.add('active');
+      currentStageKey = hasPayload(currentDraft()) ? 'transmit.result.ready' : 'transmit.empty';
+      syncTransmitUi();
+      if (messageInput) messageInput.focus();
+    }
+
+    function closeTransmitConsole() {
+      activeTransmission += 1;
+      isTransmitting = false;
+      overlay.classList.remove('active');
+      if (launchBtn) launchBtn.disabled = false;
+      if (launchLabel) launchLabel.textContent = t('transmit.launch');
+      currentStageKey = hasPayload(currentDraft()) ? ((lastPayload && lastPayload.sent) ? 'transmit.result.sent' : 'transmit.result.ready') : 'transmit.empty';
+    }
+
+    function refreshDraftPreview() {
+      if (isTransmitting) return;
+      currentStageKey = hasPayload(currentDraft()) ? 'transmit.result.ready' : 'transmit.empty';
+      renderPayload(createPreviewPayload(currentDraft()));
+    }
+
+    function rotateGlyphs(input, offset) {
+      if (!input) return buildGlyphString('OST');
+      var safeOffset = offset % input.length;
+      return input.slice(safeOffset) + input.slice(0, safeOffset);
+    }
+
+    function startTransmit() {
+      buildTransmissionPayload().then(function(payload) {
+        if (!payload) {
+          currentStageKey = 'transmit.empty';
+          syncTransmitUi();
+          if (typeof toast === 'function') toast('𓂇', t('transmit.empty'));
+          return;
+        }
+
+        var runId = activeTransmission + 1;
+        var stages = [
+          'transmit.stage.prepare',
+          'transmit.stage.encode',
+          'transmit.stage.binary',
+          'transmit.stage.entangle',
+          'transmit.stage.route',
+          'transmit.stage.broadcast',
+          'transmit.stage.done'
+        ];
+
+        activeTransmission = runId;
+        isTransmitting = true;
+        lastPayload = payload;
+        if (launchBtn) launchBtn.disabled = true;
+        if (launchLabel) launchLabel.textContent = t('transmit.launchBusy');
+
+        (async function() {
+          for (var stageIndex = 0; stageIndex < stages.length; stageIndex += 1) {
+            if (runId !== activeTransmission) return;
+            currentStageKey = stages[stageIndex];
+            if (status) status.textContent = t(currentStageKey);
+            if (fill) fill.style.width = (stageIndex / (stages.length - 1)) * 100 + '%';
+            if (glyphs) glyphs.textContent = rotateGlyphs(payload.glyphs, stageIndex * 2);
+            await sleep(620);
+          }
+
+          if (runId !== activeTransmission) return;
+          payload.sent = true;
+          payload.statusKey = 'transmit.stage.done';
+          currentStageKey = 'transmit.stage.done';
+          isTransmitting = false;
+          renderPayload(payload);
+          if (status) status.textContent = t('transmit.stage.done');
+          if (fill) fill.style.width = '100%';
+          if (launchBtn) launchBtn.disabled = false;
+          if (launchLabel) launchLabel.textContent = t('transmit.launch');
+          if (typeof toast === 'function') toast('🛰', t('transmit.stage.done'));
+        })();
+      });
+    }
+
     var btn1 = document.getElementById('transmitBtn');
     var btn2 = document.getElementById('transmitBtnLg');
-    if (btn1) btn1.addEventListener('click', runTransmit);
-    if (btn2) btn2.addEventListener('click', runTransmit);
+    if (btn1) btn1.addEventListener('click', openTransmitConsole);
+    if (btn2) btn2.addEventListener('click', openTransmitConsole);
+    if (launchBtn) launchBtn.addEventListener('click', startTransmit);
+    if (messageInput) messageInput.addEventListener('input', refreshDraftPreview);
+    if (dnaInput) dnaInput.addEventListener('input', refreshDraftPreview);
+    if (filesInput) filesInput.addEventListener('change', refreshDraftPreview);
+    if (closeBtn) closeBtn.addEventListener('click', closeTransmitConsole);
+    overlay.addEventListener('click', function(event) {
+      if (event.target === overlay) closeTransmitConsole();
+    });
 
-    // Close modal
-    if (closeBtn) closeBtn.addEventListener('click', function() {
-      overlay.classList.remove('active');
-    });
-    overlay.addEventListener('click', function(e) {
-      if (e.target === overlay) overlay.classList.remove('active');
-    });
+    renderPayload(createPreviewPayload(currentDraft()));
   })();
 
 })();

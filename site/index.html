@@ -90,7 +90,7 @@
       <div class="nav-links" id="navLinks">
         <a href="#home" data-i18n="nav.home">Home</a>
         <a href="#new-here" data-i18n="nav.newhere">Get OST</a>
-        <a href="#demos" data-i18n="nav.stores">Stores</a>
+          <a href="#commerce" data-i18n="nav.demos">Commerce</a>
         <a href="#wallet" data-i18n="nav.wallet">Wallet</a>
         <a href="#ai" data-i18n="nav.ai">AI &amp; Bots</a>
         <a href="#offline" data-i18n="nav.offline">Offline</a>
@@ -106,7 +106,7 @@
         <a href="#transparency" data-i18n="nav.verify">Verify</a>
       </div>
       <div class="nav-right">
-        <button class="ancient-toggle" id="ancientToggle" aria-label="Ancient Mode" title="Toggle Ancient Hieroglyphic Mode">
+          <button class="ancient-toggle" id="ancientToggle" type="button" aria-pressed="false" title="Toggle Ancient Hieroglyphic Mode">
           <span id="ancientToggleText">&#x13171; Ancient</span>
         </button>
         <button class="wallet-btn" id="walletBtn" aria-label="Connect Wallet">
@@ -164,10 +164,10 @@
           <span class="hero-free-text" data-i18n="hero.freetext">Zero transaction fees. No hidden costs. Funded by donations &amp; investors.</span>
         </div>
         <div class="hero-actions">
-          <a href="#revolution" class="btn btn-primary btn-glow btn-pulse" data-i18n="hero.cta1">Try the Pay Demo</a>
-          <a href="#get-ost" class="btn btn-outline" data-i18n="hero.cta2">Get OST Now</a>
-          <a href="#my-wallet" class="btn btn-outline" data-i18n="hero.createwallet">Create Wallet</a>
-          <button class="btn btn-transmit" id="transmitBtn">&#x13087; Transmit to Space</button>
+            <a href="#commerce" class="btn btn-primary btn-glow btn-pulse" data-i18n="hero.cta1">Explore Commerce</a>
+          <a href="#new-here" class="btn btn-outline" data-i18n="hero.cta2">Get OST Now</a>
+          <a href="#wallet" class="btn btn-outline" data-i18n="hero.createwallet">Create Wallet</a>
+          <button class="btn btn-transmit" id="transmitBtn" type="button" data-i18n="transmit.button">&#x13087; Transmit to Space</button>
         </div>
         <div class="hero-stats">
           <div class="stat"><span class="stat-num">0</span><span class="stat-label" data-i18n="hero.premine">Pre-mine</span></div>
@@ -616,10 +616,10 @@
   <!-- ================================================================== -->
   <!-- 3. STORES — Shop, Interchange, Gift Cards, Gas -->
   <!-- ================================================================== -->
-  <section id="demos" class="section section-space">
+  <section id="commerce" class="section section-space">
     <div class="container">
-      <h2 class="section-title" data-i18n="demos.title">&#128722; OST Stores</h2>
-      <p class="section-subtitle" data-i18n="demos.sub">Shop, swap gift cards, pay for gas &mdash; all with OST. Real products, real prices.</p>
+      <h2 class="section-title" data-i18n="demos.title">&#128717;&#65039; OST Commerce</h2>
+      <p class="section-subtitle" data-i18n="demos.sub">Curated shopping, live merchant browsing, and real on-chain request routing with OST.</p>
 
       <!-- Store Tab Navigation -->
       <div class="store-tabs" id="demosTabs">
@@ -737,8 +737,8 @@
       <div class="pay-demo demos-panel" id="pay-demo" data-dtab="shop">
         <div class="pay-demo-header">
           <div class="pay-demo-icon-ring"><span>&#9673;</span></div>
-          <h3 data-i18n="pay.title">Shop with OST &mdash; Real Prices</h3>
-          <p class="pay-demo-sub" data-i18n="pay.sub">Real products, real world prices. See what private payments feel like.</p>
+          <h3 data-i18n="pay.title">Curated Shop &mdash; Live Listings</h3>
+          <p class="pay-demo-sub" data-i18n="pay.sub">Build a cart from real products, then send it to the interchange desk for a live OST request.</p>
           <div class="pay-demo-trust">
             <span class="pdt-item"><span class="pdt-dot pdt-green"></span>ZK-Private</span>
             <span class="pdt-item"><span class="pdt-dot pdt-blue"></span>Sub-Second</span>
@@ -746,45 +746,70 @@
           </div>
         </div>
 
+        <div class="shop-catalog-head">
+          <div>
+            <span class="shop-catalog-kicker" data-i18n="pay.catalogkicker">Curated lanes</span>
+            <p class="shop-catalog-copy" data-i18n="pay.catalogcopy">Build a cart from live products, flights, hotels, vehicles, and property listings, then move it into the OST desk.</p>
+          </div>
+          <div class="shop-catalog-meta" id="storeCatalogMeta">9 live listings</div>
+        </div>
+
+        <div class="store-filter-bar" id="storeFilters">
+          <button class="store-filter-chip is-active" type="button" data-filter="all" data-i18n="pay.filter.all">All</button>
+          <button class="store-filter-chip" type="button" data-filter="tech" data-i18n="pay.filter.tech">Tech</button>
+          <button class="store-filter-chip" type="button" data-filter="fashion" data-i18n="pay.filter.fashion">Fashion</button>
+          <button class="store-filter-chip" type="button" data-filter="travel" data-i18n="pay.filter.travel">Travel</button>
+          <button class="store-filter-chip" type="button" data-filter="flight" data-i18n="pay.filter.flight">Flights</button>
+          <button class="store-filter-chip" type="button" data-filter="hotel" data-i18n="pay.filter.hotel">Hotels</button>
+          <button class="store-filter-chip" type="button" data-filter="car" data-i18n="pay.filter.car">Cars</button>
+          <button class="store-filter-chip" type="button" data-filter="property" data-i18n="pay.filter.property">Property</button>
+          <button class="store-filter-chip" type="button" data-filter="food" data-i18n="pay.filter.food">Food</button>
+        </div>
+
         <div class="store-products" id="storeProducts">
-          <div class="store-item" data-price="6.45" data-name="Starbucks Caramel Macchiato" data-link="https://www.starbucks.com/menu/drinks/espresso-drinks/caramel-macchiato">
+          <div class="store-item" data-price="6.45" data-name="Starbucks Caramel Macchiato" data-link="https://www.starbucks.com/menu/drinks/espresso-drinks/caramel-macchiato" data-merchant="Starbucks" data-category="food" data-currency="USD">
             <img class="item-img" src="https://globalassets.starbucks.com/digitalassets/products/bev/SBX20190617_CaffeMocha.jpg" alt="Starbucks Coffee" loading="lazy">
-            <div class="item-details"><span class="item-name">Caramel Macchiato</span><span class="item-desc">Espresso, vanilla, steamed milk &amp; caramel drizzle</span><span class="item-source">Starbucks <a href="https://www.starbucks.com" target="_blank" rel="noopener" class="item-link">starbucks.com</a></span><span class="item-price"><span class="item-usd">$6.45</span> &middot; <span class="item-ost">-- OST</span></span></div>
+            <div class="item-details"><span class="item-name">Caramel Macchiato</span><span class="item-desc">Espresso, vanilla, steamed milk &amp; caramel drizzle</span><div class="item-tags"><span class="item-tag">Food</span><span class="item-tag">Cafe</span></div><span class="item-source">Starbucks <a href="https://www.starbucks.com" target="_blank" rel="noopener" class="item-link">starbucks.com</a></span><span class="item-price"><span class="item-usd">$6.45</span> &middot; <span class="item-ost">-- OST</span></span></div>
             <button class="btn-add" aria-label="Add">+</button>
           </div>
-          <div class="store-item" data-price="185.00" data-name="Nike Air Max 90" data-link="https://www.nike.com/w/air-max-90-shoes-aalde6zy7ok">
+          <div class="store-item" data-price="185.00" data-name="Nike Air Max 90" data-link="https://www.nike.com/w/air-max-90-shoes-aalde6zy7ok" data-merchant="Nike" data-category="fashion" data-currency="USD">
             <img class="item-img" src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=120&h=120&fit=crop&q=80" alt="Nike Air Max 90" loading="lazy">
-            <div class="item-details"><span class="item-name">Air Max 90</span><span class="item-desc">Iconic running silhouette. Visible Air cushioning.</span><span class="item-source">Nike <a href="https://www.nike.com" target="_blank" rel="noopener" class="item-link">nike.com</a></span><span class="item-price"><span class="item-usd">$185.00</span> &middot; <span class="item-ost">-- OST</span></span></div>
+            <div class="item-details"><span class="item-name">Air Max 90</span><span class="item-desc">Iconic running silhouette. Visible Air cushioning.</span><div class="item-tags"><span class="item-tag">Fashion</span><span class="item-tag">Footwear</span></div><span class="item-source">Nike <a href="https://www.nike.com" target="_blank" rel="noopener" class="item-link">nike.com</a></span><span class="item-price"><span class="item-usd">$185.00</span> &middot; <span class="item-ost">-- OST</span></span></div>
             <button class="btn-add" aria-label="Add">+</button>
           </div>
-          <div class="store-item" data-price="999.00" data-name="iPhone 16 Pro" data-link="https://www.apple.com/iphone-16-pro/">
+          <div class="store-item" data-price="999.00" data-name="iPhone 16 Pro" data-link="https://www.apple.com/iphone-16-pro/" data-merchant="Apple" data-category="tech" data-currency="USD">
             <img class="item-img" src="https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=120&h=120&fit=crop&q=80" alt="iPhone 16 Pro" loading="lazy">
-            <div class="item-details"><span class="item-name">iPhone 16 Pro</span><span class="item-desc">A18 Pro chip, 48MP camera, titanium design</span><span class="item-source">Apple <a href="https://www.apple.com" target="_blank" rel="noopener" class="item-link">apple.com</a></span><span class="item-price"><span class="item-usd">$999</span> &middot; <span class="item-ost">-- OST</span></span></div>
+            <div class="item-details"><span class="item-name">iPhone 16 Pro</span><span class="item-desc">A18 Pro chip, 48MP camera, titanium design</span><div class="item-tags"><span class="item-tag">Tech</span><span class="item-tag">Mobile</span></div><span class="item-source">Apple <a href="https://www.apple.com" target="_blank" rel="noopener" class="item-link">apple.com</a></span><span class="item-price"><span class="item-usd">$999</span> &middot; <span class="item-ost">-- OST</span></span></div>
             <button class="btn-add" aria-label="Add">+</button>
           </div>
-          <div class="store-item" data-price="52990.00" data-name="Tesla Model Y Long Range" data-link="https://www.tesla.com/modely">
+          <div class="store-item" data-price="52990.00" data-name="Tesla Model Y Long Range" data-link="https://www.tesla.com/modely" data-merchant="Tesla" data-category="car" data-currency="USD">
             <img class="item-img" src="https://images.unsplash.com/photo-1560958089-b8a1929cea89?w=120&h=120&fit=crop&q=80" alt="Tesla Model Y" loading="lazy">
-            <div class="item-details"><span class="item-name">Model Y Long Range</span><span class="item-desc">AWD, 310mi range, 0-60 in 4.8s, autopilot</span><span class="item-source">Tesla <a href="https://www.tesla.com" target="_blank" rel="noopener" class="item-link">tesla.com</a></span><span class="item-price"><span class="item-usd">$52,990</span> &middot; <span class="item-ost">-- OST</span></span></div>
+            <div class="item-details"><span class="item-name">Model Y Long Range</span><span class="item-desc">AWD, 310mi range, 0-60 in 4.8s, autopilot</span><div class="item-tags"><span class="item-tag">Cars</span><span class="item-tag">EV</span></div><span class="item-source">Tesla <a href="https://www.tesla.com" target="_blank" rel="noopener" class="item-link">tesla.com</a></span><span class="item-price"><span class="item-usd">$52,990</span> &middot; <span class="item-ost">-- OST</span></span></div>
             <button class="btn-add" aria-label="Add">+</button>
           </div>
-          <div class="store-item" data-price="485000.00" data-name="Miami Beach Condo 2BR" data-link="https://www.zillow.com">
+          <div class="store-item" data-price="485000.00" data-name="Miami Beach Condo 2BR" data-link="https://www.zillow.com" data-merchant="Zillow" data-category="property" data-currency="USD">
             <img class="item-img" src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=120&h=120&fit=crop&q=80" alt="Miami Beach Condo" loading="lazy">
-            <div class="item-details"><span class="item-name">Miami Beach Condo 2BR</span><span class="item-desc">Ocean view, 1,200 sqft, pool, gym, parking</span><span class="item-source">Zillow <a href="https://www.zillow.com" target="_blank" rel="noopener" class="item-link">zillow.com</a></span><span class="item-price"><span class="item-usd">$485,000</span> &middot; <span class="item-ost">-- OST</span></span></div>
+            <div class="item-details"><span class="item-name">Miami Beach Condo 2BR</span><span class="item-desc">Ocean view, 1,200 sqft, pool, gym, parking</span><div class="item-tags"><span class="item-tag">Property</span><span class="item-tag">Real Estate</span></div><span class="item-source">Zillow <a href="https://www.zillow.com" target="_blank" rel="noopener" class="item-link">zillow.com</a></span><span class="item-price"><span class="item-usd">$485,000</span> &middot; <span class="item-ost">-- OST</span></span></div>
             <button class="btn-add" aria-label="Add">+</button>
           </div>
-          <div class="store-item" data-price="398.00" data-name="Delta Airlines Round Trip" data-link="https://www.delta.com">
+          <div class="store-item" data-price="398.00" data-name="Delta Airlines Round Trip" data-link="https://www.delta.com" data-merchant="Delta Airlines" data-category="travel flight" data-currency="USD">
             <img class="item-img" src="https://images.unsplash.com/photo-1436491865332-7a61a109db05?w=120&h=120&fit=crop&q=80" alt="Delta Airlines Flight" loading="lazy">
-            <div class="item-details"><span class="item-name">Round Trip NYC → Miami</span><span class="item-desc">Economy, nonstop, 3h 15m each way</span><span class="item-source">Delta Airlines <a href="https://www.delta.com" target="_blank" rel="noopener" class="item-link">delta.com</a></span><span class="item-price"><span class="item-usd">$398.00</span> &middot; <span class="item-ost">-- OST</span></span></div>
+            <div class="item-details"><span class="item-name">Round Trip NYC → Miami</span><span class="item-desc">Economy, nonstop, 3h 15m each way</span><div class="item-tags"><span class="item-tag">Flights</span><span class="item-tag">Travel</span></div><span class="item-source">Delta Airlines <a href="https://www.delta.com" target="_blank" rel="noopener" class="item-link">delta.com</a></span><span class="item-price"><span class="item-usd">$398.00</span> &middot; <span class="item-ost">-- OST</span></span></div>
             <button class="btn-add" aria-label="Add">+</button>
           </div>
-          <div class="store-item" data-price="1299.00" data-name="MacBook Air M3" data-link="https://www.apple.com/macbook-air/">
+          <div class="store-item" data-price="624.00" data-name="New York Marriott Marquis" data-link="https://www.marriott.com/en-us/hotels/nycmq-new-york-marriott-marquis/overview/" data-merchant="Marriott" data-category="travel hotel" data-currency="USD">
+            <img class="item-img" src="https://images.unsplash.com/photo-1566073771259-6a8506099945?w=120&h=120&fit=crop&q=80" alt="Marriott Hotel" loading="lazy">
+            <div class="item-details"><span class="item-name">New York Marriott Marquis</span><span class="item-desc">Times Square, 2 nights, king room, flexible rate</span><div class="item-tags"><span class="item-tag">Hotels</span><span class="item-tag">Travel</span></div><span class="item-source">Marriott <a href="https://www.marriott.com" target="_blank" rel="noopener" class="item-link">marriott.com</a></span><span class="item-price"><span class="item-usd">$624.00</span> &middot; <span class="item-ost">-- OST</span></span></div>
+            <button class="btn-add" aria-label="Add">+</button>
+          </div>
+          <div class="store-item" data-price="1299.00" data-name="MacBook Air M3" data-link="https://www.apple.com/macbook-air/" data-merchant="Apple" data-category="tech" data-currency="USD">
             <img class="item-img" src="https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=120&h=120&fit=crop&q=80" alt="MacBook Air M3" loading="lazy">
-            <div class="item-details"><span class="item-name">MacBook Air M3</span><span class="item-desc">15" Liquid Retina, 18hr battery, 8-core GPU</span><span class="item-source">Apple <a href="https://www.apple.com" target="_blank" rel="noopener" class="item-link">apple.com</a></span><span class="item-price"><span class="item-usd">$1,299</span> &middot; <span class="item-ost">-- OST</span></span></div>
+            <div class="item-details"><span class="item-name">MacBook Air M3</span><span class="item-desc">15&quot; Liquid Retina, 18hr battery, 8-core GPU</span><div class="item-tags"><span class="item-tag">Tech</span><span class="item-tag">Laptop</span></div><span class="item-source">Apple <a href="https://www.apple.com/macbook-air/" target="_blank" rel="noopener" class="item-link">apple.com</a></span><span class="item-price"><span class="item-usd">$1,299</span> &middot; <span class="item-ost">-- OST</span></span></div>
             <button class="btn-add" aria-label="Add">+</button>
           </div>
-          <div class="store-item" data-price="499.99" data-name="PS5 Console" data-link="https://direct.playstation.com/en-us/buy-consoles/ps5-console">
+          <div class="store-item" data-price="499.99" data-name="PS5 Console" data-link="https://direct.playstation.com/en-us/buy-consoles/ps5-console" data-merchant="Sony" data-category="tech" data-currency="USD">
             <img class="item-img" src="https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=120&h=120&fit=crop&q=80" alt="PS5 Console" loading="lazy">
-            <div class="item-details"><span class="item-name">PS5 Console</span><span class="item-desc">4K gaming, 825GB SSD, DualSense controller</span><span class="item-source">Sony <a href="https://direct.playstation.com" target="_blank" rel="noopener" class="item-link">playstation.com</a></span><span class="item-price"><span class="item-usd">$499.99</span> &middot; <span class="item-ost">-- OST</span></span></div>
+            <div class="item-details"><span class="item-name">PS5 Console</span><span class="item-desc">4K gaming, 825GB SSD, DualSense controller</span><div class="item-tags"><span class="item-tag">Tech</span><span class="item-tag">Gaming</span></div><span class="item-source">Sony <a href="https://direct.playstation.com" target="_blank" rel="noopener" class="item-link">playstation.com</a></span><span class="item-price"><span class="item-usd">$499.99</span> &middot; <span class="item-ost">-- OST</span></span></div>
             <button class="btn-add" aria-label="Add">+</button>
           </div>
         </div>
@@ -794,7 +819,7 @@
           <div class="cart-items" id="cartItems"><p class="cart-empty" data-i18n="pay.empty">Tap + to add items</p></div>
           <div class="cart-footer">
             <div class="cart-total"><span>Total</span><span class="cart-total-amount" id="cartTotal">$0.00 - 0 OST</span></div>
-            <button class="btn btn-primary btn-pay" id="payBtn" disabled><span class="pay-icon">&#9673;</span> <span data-i18n="pay.paybtn">Pay with OST</span></button>
+            <button class="btn btn-primary btn-pay" id="payBtn" disabled><span class="pay-icon">&#9673;</span> <span data-i18n="pay.paybtn">Review in OST Desk</span></button>
           </div>
         </div>
 
@@ -821,8 +846,8 @@
         <div class="pa-hero">
           <div class="pa-hero-glow"></div>
           <div class="pa-hero-icon">&#9673;</div>
-          <h3 data-i18n="pay.anywhere">The OST Interchange &mdash; Buy Anything, Pay With OST</h3>
-          <p class="pay-anywhere-sub" data-i18n="pay.anywheresub">Paste any product link from any website. OST scans the page, detects the real price, converts your OST in real-time through our interchange engine, and the merchant receives exactly what they expect. You paid with OST. They got USD. The internet just became your store.</p>
+          <h3 data-i18n="pay.anywhere">&#127760; Interchange &mdash; Browse Any Merchant</h3>
+          <p class="pay-anywhere-sub" data-i18n="pay.anywheresub">Paste a real product or checkout URL, or open a merchant lane below. OST loads the quote and prepares an honest on-chain request instead of pretending merchant settlement is live.</p>
           <div class="pa-pipeline">
             <div class="pa-pipe-node"><span class="pa-pipe-icon">&#128722;</span><span>You Shop</span></div>
             <div class="pa-pipe-arrow"><div class="pa-pipe-line"></div><span>&#8594;</span></div>
@@ -846,23 +871,22 @@
             <div class="browser-ost-badge">&#9673; OST Interchange Active</div>
           </div>
           <div class="browser-viewport" id="browserViewport">
-            <!-- Auto-cycling product showcase — simulates browsing real stores -->
+            <!-- Static browse board for real merchant lanes -->
             <div class="browser-auto-showcase" id="browserAutoShowcase"></div>
             <!-- Quick-link row to jump to a store manually -->
             <div class="browser-quick-links" id="browserQuickLinks">
               <button class="browser-quick browser-quick-google" data-url="shopping.google.com">&#128269; Google Shopping</button>
               <button class="browser-quick" data-url="amazon.com">Amazon</button>
-              <button class="browser-quick" data-url="nike.com">Nike</button>
               <button class="browser-quick" data-url="apple.com">Apple</button>
-              <button class="browser-quick" data-url="tesla.com">Tesla</button>
-              <button class="browser-quick" data-url="bestbuy.com">Best Buy</button>
-              <button class="browser-quick" data-url="walmart.com">Walmart</button>
+              <button class="browser-quick" data-url="marriott.com">Marriott</button>
+              <button class="browser-quick" data-url="delta.com">Delta</button>
+              <button class="browser-quick" data-url="autotrader.com">Autotrader</button>
+              <button class="browser-quick" data-url="zillow.com">Zillow</button>
+              <button class="browser-quick" data-url="expedia.com">Expedia</button>
               <button class="browser-quick" data-url="booking.com">Booking</button>
               <button class="browser-quick" data-url="airbnb.com">Airbnb</button>
-              <button class="browser-quick" data-url="samsung.com">Samsung</button>
-              <button class="browser-quick" data-url="ebay.com">eBay</button>
-              <button class="browser-quick" data-url="zara.com">Zara</button>
-              <button class="browser-quick" data-url="adidas.com">Adidas</button>
+              <button class="browser-quick" data-url="nike.com">Nike</button>
+              <button class="browser-quick" data-url="tesla.com">Tesla</button>
             </div>
           </div>
           <!-- OST Extension overlay badge — floats on top of the browser -->
@@ -949,10 +973,39 @@
             </div>
 
             <button class="btn btn-primary btn-glow pa-pay-btn" id="paPayBtn" disabled>
-              <span class="pay-icon">&#9673;</span> <span data-i18n="pay.apaybtn">Pay with OST</span>
+              <span class="pay-icon">&#9673;</span> <span data-i18n="pay.apaybtn">Load Request Desk</span>
             </button>
           </div>
         </details>
+
+        <div class="interchange-desk" id="interchangeDesk">
+          <div class="interchange-desk-head">
+            <div>
+              <span class="interchange-desk-kicker" data-i18n="pay.deskKicker">Live rail</span>
+              <h4 data-i18n="pay.deskTitle">Real OST purchase request desk</h4>
+            </div>
+            <span class="interchange-desk-badge" data-i18n="pay.deskBadge">On-chain vault + memo</span>
+          </div>
+          <p class="interchange-desk-copy" data-i18n="pay.deskCopy">This rail no longer fakes merchant settlement. OST records a real on-chain payment request to the interchange vault and attaches the merchant and order memo while direct merchant connectors roll out.</p>
+          <div class="interchange-desk-status" id="deskStatus" data-i18n="pay.deskStatusIdle">Paste a live product or checkout URL, or send a curated cart here from Shop.</div>
+          <div class="interchange-desk-summary">
+            <div class="interchange-desk-stat"><span data-i18n="pay.deskMerchantLabel">Merchant</span><strong id="deskMerchant">--</strong></div>
+            <div class="interchange-desk-stat"><span data-i18n="pay.deskSourceLabel">Source</span><strong id="deskSource">--</strong></div>
+            <div class="interchange-desk-stat"><span data-i18n="pay.deskFiatLabel">Fiat total</span><strong id="deskFiat">--</strong></div>
+            <div class="interchange-desk-stat"><span data-i18n="pay.deskOstLabel">OST total</span><strong id="deskOst">--</strong></div>
+            <div class="interchange-desk-stat"><span data-i18n="pay.deskWalletLabel">Wallet</span><strong id="deskWallet">Connect wallet</strong></div>
+          </div>
+          <div class="interchange-desk-items" id="deskItems">
+            <p class="interchange-desk-empty" data-i18n="pay.deskEmpty">No request loaded yet.</p>
+          </div>
+          <div class="interchange-desk-actions">
+            <a class="btn btn-secondary interchange-link-disabled" id="deskMerchantLink" href="#" target="_blank" rel="noopener" data-i18n="pay.deskMerchantLink">Open merchant page</a>
+            <button class="btn btn-primary btn-glow" id="deskPayBtn" disabled>
+              <span class="pay-icon">&#9673;</span> <span id="deskPayBtnLabel" data-i18n="pay.deskCreate">Create on-chain OST request</span>
+            </button>
+          </div>
+          <div class="interchange-desk-receipt" id="deskReceipt"></div>
+        </div>
 
         <div class="pa-supported" style="margin-top:24px;">
           <span data-i18n="pay.asupported">Works with any site that accepts:</span>
@@ -1487,601 +1540,757 @@
       <h2 class="section-title" data-i18n="wallet.dashTitle">My OST Wallet</h2>
       <p class="section-subtitle" data-i18n="wallet.dashSub">Your personal command center. Create, connect, and manage your OST wallet.</p>
 
-      <div class="wallet-dashboard" id="walletDashboard">
-        <div class="wd-not-connected" id="wdNotConnected">
-          <div class="wd-hero-icon">&#128091;</div>
-          <h3 data-i18n="wallet.getTitle">Get Your Personal OST Wallet</h3>
-          <p class="text-muted" data-i18n="wallet.getSub">Choose how to create or connect your wallet. No seed phrase required with Web3Auth.</p>
-
-          <div class="wd-create-grid">
-            <div class="wd-create-card" data-action="phantom">
-              <div class="wd-card-icon">&#128123;</div>
-              <h4>Phantom</h4>
-              <p>Most popular Solana wallet. Mobile &amp; desktop.</p>
-              <div class="wd-card-tags"><span class="wd-tag">Mobile</span><span class="wd-tag">Desktop</span><span class="wd-tag">Browser</span></div>
-              <button class="btn btn-primary btn-sm wd-connect-btn" data-wallet="phantom">Connect Phantom</button>
-            </div>
-            <div class="wd-create-card" data-action="solflare">
-              <div class="wd-card-icon">&#9728;&#65039;</div>
-              <h4>Solflare</h4>
-              <p>Full-featured Solana wallet with staking.</p>
-              <div class="wd-card-tags"><span class="wd-tag">Mobile</span><span class="wd-tag">Desktop</span><span class="wd-tag">Staking</span></div>
-              <button class="btn btn-primary btn-sm wd-connect-btn" data-wallet="solflare">Connect Solflare</button>
-            </div>
-            <div class="wd-create-card" data-action="backpack">
-              <div class="wd-card-icon">&#127890;</div>
-              <h4>Backpack</h4>
-              <p>xNFT wallet with built-in dApps.</p>
-              <div class="wd-card-tags"><span class="wd-tag">Mobile</span><span class="wd-tag">xNFTs</span><span class="wd-tag">Multi-chain</span></div>
-              <button class="btn btn-primary btn-sm wd-connect-btn" data-wallet="backpack">Connect Backpack</button>
-            </div>
-            <div class="wd-create-card wd-card-seedless" data-action="google">
-              <div class="wd-card-icon">&#128273;</div>
-              <h4>No Seed Phrase</h4>
-              <p>Sign in with Google, Apple, or email. Wallet created instantly via Web3Auth.</p>
-              <div class="wd-card-tags"><span class="wd-tag wd-tag-new">New User Friendly</span><span class="wd-tag">No Download</span><span class="wd-tag">Email/Social</span></div>
-              <button class="btn btn-primary btn-sm wd-connect-btn" data-wallet="google">Create with Google</button>
-            </div>
-          </div>
-
-          <div class="wd-download-links">
-            <p class="text-muted">Don't have a wallet yet? Download one:</p>
-            <div class="wd-dl-row">
-              <a href="https://phantom.app/download" target="_blank" rel="noopener" class="wd-dl-link">&#128123; Phantom</a>
-              <a href="https://solflare.com/download" target="_blank" rel="noopener" class="wd-dl-link">&#9728;&#65039; Solflare</a>
-              <a href="https://www.backpack.app/download" target="_blank" rel="noopener" class="wd-dl-link">&#127890; Backpack</a>
-              <a href="https://phantom.app/download" target="_blank" rel="noopener" class="wd-dl-link">&#128241; Mobile (iOS/Android)</a>
-            </div>
-          </div>
-        </div>
-
-        <!-- Wallet Connected State -->
-        <div class="wd-connected" id="wdConnected" style="display:none;">
-          <div class="wd-profile">
-            <div class="wd-avatar" id="wdAvatar">&#128091;</div>
-            <div class="wd-info">
-              <div class="wd-address" id="wdAddress">--</div>
-              <div class="wd-network" id="wdNetwork">Solana Mainnet</div>
-            </div>
-            <button class="btn btn-outline btn-sm" id="wdCopyAddr" title="Copy address">&#128203; Copy</button>
-            <button class="btn btn-outline btn-sm" id="wdExplorer" title="View on Explorer">&#128269; Explorer</button>
-          </div>
-
-          <div class="wd-balances">
-            <div class="wd-balance-card wd-balance-sol">
-              <span class="wd-bal-icon">&#9783;</span>
-              <div class="wd-bal-info">
-                <div class="wd-bal-amount" id="wdSolBal">0.0000</div>
-                <div class="wd-bal-label">SOL</div>
+      <div class="wallet-command-shell">
+        <div class="wallet-command-hero">
+          <div class="wallet-command-copy">
+            <span class="wallet-command-kicker" data-i18n="wallet.commandKicker">Wallet + conversion rail</span>
+            <h3 data-i18n="wallet.commandTitle">Open a wallet, read the OST market, and move from fiat or crypto into confidential OST.</h3>
+            <p data-i18n="wallet.commandSub">The wallet page now behaves like a command center for access, market watch, conversion, and portal routing.</p>
+            <div class="wallet-market-strip">
+              <div class="wallet-mini-stat">
+                <span data-i18n="wallet.market.velocity">Route speed</span>
+                <strong id="ostMarketVelocity">0.4s</strong>
               </div>
-              <div class="wd-bal-usd" id="wdSolUsd">$0.00</div>
-            </div>
-            <div class="wd-balance-card wd-balance-ost">
-              <span class="wd-bal-icon">&#9673;</span>
-              <div class="wd-bal-info">
-                <div class="wd-bal-amount" id="wdOstBal">0.00</div>
-                <div class="wd-bal-label">OST</div>
-              </div>
-              <div class="wd-bal-usd" id="wdOstUsd">$0.00</div>
-            </div>
-          </div>
-
-          <div class="wd-actions">
-            <a href="#get-ost" class="wd-action-btn"><span>&#128176;</span> Buy OST</a>
-            <a href="#transfer" class="wd-action-btn"><span>&#128257;</span> Send</a>
-            <a href="#bridges" class="wd-action-btn"><span>&#127757;</span> Bridge</a>
-            <button class="wd-action-btn" id="wdReceiveBtn"><span>&#128229;</span> Receive</button>
-            <a href="#get-ost" class="wd-action-btn"><span>&#9889;</span> Swap</a>
-          </div>
-
-          <!-- Receive QR Modal -->
-          <div class="wd-receive-panel" id="wdReceivePanel" style="display:none;">
-            <h4>Receive OST or SOL</h4>
-            <p class="text-muted">Share your address or scan the QR code</p>
-            <div class="wd-qr" id="wdQr"></div>
-            <div class="wd-receive-addr" id="wdReceiveAddr">--</div>
-            <button class="btn btn-outline btn-sm" id="wdCopyReceive">&#128203; Copy Address</button>
-          </div>
-
-          <div class="wd-quick-links">
-            <h4>Quick Actions</h4>
-            <div class="wd-ql-grid">
-              <a href="https://jup.ag/" target="_blank" rel="noopener" class="wd-ql-item"><span>&#9889;</span> Swap on Jupiter</a>
-              <a href="https://raydium.io/swap/" target="_blank" rel="noopener" class="wd-ql-item"><span>&#128167;</span> Raydium Swap</a>
-              <a href="https://www.orca.so/" target="_blank" rel="noopener" class="wd-ql-item"><span>&#128011;</span> Orca Whirlpool</a>
-              <a href="https://www.portalbridge.com/" target="_blank" rel="noopener" class="wd-ql-item"><span>&#127757;</span> Wormhole Bridge</a>
-              <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy" target="_blank" rel="noopener" class="wd-ql-item"><span>&#128179;</span> Buy with Card</a>
-              <a href="https://stake.solblaze.org/" target="_blank" rel="noopener" class="wd-ql-item"><span>&#128200;</span> Stake SOL</a>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- How to Buy OST - Step by Step -->
-      <div style="margin-top:64px;">
-        <div class="bridge-how" style="margin-top:64px;">
-        <h3>&#128221; How to Buy OST — Step by Step</h3>
-        <div class="bridge-steps">
-          <div class="bridge-step">
-            <div class="bridge-step-num">1</div>
-            <h4>Get a Wallet</h4>
-            <p>Download <a href="https://phantom.app/download" target="_blank" rel="noopener">Phantom</a> or <a href="https://solflare.com/download" target="_blank" rel="noopener">Solflare</a> for your phone or browser. Or use Google sign-in above for no seed phrase.</p>
-          </div>
-          <div class="bridge-step">
-            <div class="bridge-step-num">2</div>
-            <h4>Fund with SOL</h4>
-            <p>Buy SOL from any on-ramp above (MoonPay, Transak, Ramp, Coinbase, Binance). Or bridge from another chain.</p>
-          </div>
-          <div class="bridge-step">
-            <div class="bridge-step-num">3</div>
-            <h4>Swap to OST</h4>
-            <p>Go to <a href="https://jup.ag/" target="_blank" rel="noopener">Jupiter</a> or use the swap widget above. Swap SOL → OST. Instant, zero fees.</p>
-          </div>
-          <div class="bridge-step">
-            <div class="bridge-step-num">4</div>
-            <h4>Go Private</h4>
-            <p>Enable confidential transfers in your wallet. Your balance and transactions become fully private.</p>
-          </div>
-        </div>
-      </div>
-      </div>
-
-      <!-- Bring Your Money From Anywhere -->
-      <div style="margin-top:64px;">
-        <h3 class="section-title" style="font-size:1.8rem;" data-i18n="transfer.title">Bring Your Money From Anywhere</h3>
-        <p class="section-subtitle" data-i18n="transfer.sub">Live prices. Real-time charts. Exchange any currency into OST.</p>
-
-        <div class="charts-row" id="chartsRow">
-          <div class="chart-card" data-coin="bitcoin">
-            <div class="chart-header"><span class="chart-coin">BTC Bitcoin</span><span class="chart-price" id="price-bitcoin">--</span></div>
-            <div class="chart-canvas-wrap"><canvas id="chart-bitcoin" height="120"></canvas></div>
-            <span class="chart-change" id="change-bitcoin">--</span>
-          </div>
-          <div class="chart-card" data-coin="ethereum">
-            <div class="chart-header"><span class="chart-coin">ETH Ethereum</span><span class="chart-price" id="price-ethereum">--</span></div>
-            <div class="chart-canvas-wrap"><canvas id="chart-ethereum" height="120"></canvas></div>
-            <span class="chart-change" id="change-ethereum">--</span>
-          </div>
-          <div class="chart-card" data-coin="solana">
-            <div class="chart-header"><span class="chart-coin">SOL Solana</span><span class="chart-price" id="price-solana">--</span></div>
-            <div class="chart-canvas-wrap"><canvas id="chart-solana" height="120"></canvas></div>
-            <span class="chart-change" id="change-solana">--</span>
-          </div>
-        </div>
-
-        <div class="exchange-calc" id="exchangeCalc">
-        <h3 data-i18n="transfer.calc">Exchange Rate Calculator</h3>
-        <p class="text-muted" data-i18n="transfer.calcsub">See how much OST you get for any amount.</p>
-        <div class="calc-row">
-          <div class="calc-input-group">
-            <input type="number" id="calcAmount" class="calc-input" placeholder="100" min="0" step="any" value="100">
-            <select id="calcCurrency" class="calc-select">
-              <option value="USD">USD ($)</option>
-              <option value="EUR">EUR</option>
-              <option value="GBP">GBP</option>
-              <option value="CNY">CNY</option>
-              <option value="INR">INR</option>
-              <option value="BRL">BRL</option>
-              <option value="RUB">RUB</option>
-              <option value="MXN">MXN</option>
-              <option value="JPY">JPY</option>
-              <option value="NGN">NGN</option>
-              <option value="KRW">KRW</option>
-              <option value="TRY">TRY</option>
-              <option value="BTC">Bitcoin</option>
-              <option value="ETH">Ethereum</option>
-              <option value="SOL">Solana</option>
-            </select>
-          </div>
-          <div class="calc-arrow"><span class="calc-arrow-icon">&#8594;</span><span class="calc-live-dot"></span></div>
-          <div class="calc-result">
-            <div class="calc-ost-amount" id="calcResult">--</div>
-            <div class="calc-ost-label">OST</div>
-            <div class="calc-rate" id="calcRate">--</div>
-            <div class="calc-updated" id="calcUpdated">&#9679; Live</div>
-          </div>
-        </div>
-      </div>
-      </div>
-
-      <!-- Exchange & Convert -->
-      <div style="margin-top:48px;">
-        <div class="convert-terminal">
-        <div class="ct-glow"></div>
-        <div class="ct-header">
-          <div class="ct-status"><span class="ct-status-dot"></span>OST Interchange &mdash; Live</div>
-          <h3 data-i18n="transfer.widgettitle">Convert Now</h3>
-          <p class="ct-sub">Institutional-grade currency conversion. Your money enters one side; confidential OST comes out the other.</p>
-        </div>
-        <div class="ct-body">
-          <div class="ct-side ct-from">
-            <label class="ct-label">FROM</label>
-            <select class="ct-select" id="transferFrom">
-              <option value="BTC">&#8383; Bitcoin (BTC)</option>
-              <option value="ETH">&#9830; Ethereum (ETH)</option>
-              <option value="USDC">&#9675; USDC</option>
-              <option value="SOL">&#9788; Solana (SOL)</option>
-              <option value="USDT">&#9675; Tether (USDT)</option>
-              <option value="BNB">&#9830; BNB Chain</option>
-              <option value="USD">$ US Dollar</option>
-              <option value="EUR">&euro; Euro</option>
-              <option value="GBP">&pound; British Pound</option>
-              <option value="CNY">&yen; Chinese Yuan</option>
-              <option value="INR">&#8377; Indian Rupee</option>
-              <option value="BRL">R$ Brazilian Real</option>
-              <option value="RUB">&#8381; Russian Ruble</option>
-              <option value="NGN">&#8358; Nigerian Naira</option>
-              <option value="MXN">$ Mexican Peso</option>
-            </select>
-            <input type="number" class="ct-amount" id="transferAmount" placeholder="0.00" min="0" step="any">
-          </div>
-          <div class="ct-middle">
-            <div class="ct-flow">
-              <div class="ct-flow-line"></div>
-              <div class="ct-flow-steps">
-                <div class="ct-step" id="pStep1"><span class="ct-step-dot"></span><span>Bridge</span></div>
-                <div class="ct-step" id="pStep2"><span class="ct-step-dot"></span><span>Swap</span></div>
-                <div class="ct-step" id="pStep3"><span class="ct-step-dot"></span><span>Encrypt</span></div>
+              <div class="wallet-mini-stat">
+                <span data-i18n="wallet.market.liquidity">Liquidity</span>
+                <strong id="ostMarketLiquidity">$0</strong>
               </div>
             </div>
-            <button class="ct-convert-btn" id="transferBtn" data-i18n="transfer.convert">
-              <span class="ct-btn-icon">&#9673;</span> Convert to OST
-            </button>
           </div>
-          <div class="ct-side ct-to">
-            <label class="ct-label">TO</label>
-            <div class="ct-ost-output">
-              <div class="ct-ost-icon">&#9673;</div>
-              <div class="ct-ost-name">Confidential OST</div>
-              <div class="ct-ost-result" id="transferResult" data-i18n="transfer.result">Private &amp; Instant</div>
+
+          <div class="wallet-market-board">
+            <div class="wallet-market-board-head">
+              <span data-i18n="wallet.market.title">OST market pulse</span>
+              <span class="wallet-market-live" id="ostMarketUpdated" data-i18n="wallet.market.updated">Live</span>
+            </div>
+            <div class="wallet-market-main">
+              <div class="wallet-market-stat wallet-market-stat-price">
+                <span data-i18n="wallet.market.price">OST price</span>
+                <strong id="ostLivePrice">$0.000100</strong>
+                <em id="ostLiveChange">+0.00%</em>
+              </div>
+              <div class="wallet-market-stat">
+                <span data-i18n="wallet.market.volume">24h volume</span>
+                <strong id="ostMarketVolume">$0</strong>
+              </div>
+            </div>
+            <div class="wallet-market-chart-wrap">
+              <canvas id="chart-ost" height="140"></canvas>
             </div>
           </div>
         </div>
-        <div class="ct-providers" id="convertProviders" style="display:none;">
-          <p class="ct-prov-label">Direct fiat on-ramps:</p>
-          <div class="ct-prov-btns">
-            <a id="cpOnramper" href="#" target="_blank" rel="noopener" class="ct-prov-btn">&#9889; Onramper</a>
-            <a id="cpMoonPay" href="#" target="_blank" rel="noopener" class="ct-prov-btn">&#127769; MoonPay</a>
-            <a id="cpTransak" href="#" target="_blank" rel="noopener" class="ct-prov-btn">&#128178; Transak</a>
+
+        <div class="wallet-tabs" role="tablist" aria-label="Wallet command panels" data-i18n-aria-label="wallet.tabs.aria">
+          <button class="wallet-tab-btn active" data-wallet-panel-target="access" data-i18n="wallet.tabs.access">Access</button>
+          <button class="wallet-tab-btn" data-wallet-panel-target="market" data-i18n="wallet.tabs.market">Market</button>
+          <button class="wallet-tab-btn" data-wallet-panel-target="convert" data-i18n="wallet.tabs.convert">Convert</button>
+          <button class="wallet-tab-btn" data-wallet-panel-target="portals" data-i18n="wallet.tabs.portals">Portals</button>
+        </div>
+
+        <div class="wallet-tab-panel is-active" id="wallet-panel-access">
+          <div class="wallet-access-grid">
+            <div class="wallet-dashboard" id="walletDashboard">
+              <div class="wd-not-connected" id="wdNotConnected">
+                <div class="wd-hero-icon">&#128091;</div>
+                <h3 data-i18n="wallet.getTitle">Get Your Personal OST Wallet</h3>
+                <p class="text-muted" data-i18n="wallet.getSub">Choose how to create or connect your wallet. Build one in this browser or connect an existing Solana wallet.</p>
+
+                <div class="wd-create-grid">
+                  <div class="wd-create-card" data-action="phantom">
+                    <div class="wd-card-icon">&#128123;</div>
+                    <h4>Phantom</h4>
+                    <p data-i18n="wallet.card.phantomDesc">Fast mobile and desktop access for users who already live inside Solana.</p>
+                    <button class="btn btn-primary btn-sm wd-connect-btn" data-wallet="phantom" data-i18n="wallet.card.connectAction">Connect</button>
+                  </div>
+                  <div class="wd-create-card" data-action="solflare">
+                    <div class="wd-card-icon">&#9728;&#65039;</div>
+                    <h4>Solflare</h4>
+                    <p data-i18n="wallet.card.solflareDesc">Strong staking and portfolio tools for users who want a deeper wallet dashboard.</p>
+                    <button class="btn btn-primary btn-sm wd-connect-btn" data-wallet="solflare" data-i18n="wallet.card.connectAction">Connect</button>
+                  </div>
+                  <div class="wd-create-card" data-action="backpack">
+                    <div class="wd-card-icon">&#127890;</div>
+                    <h4>Backpack</h4>
+                    <p data-i18n="wallet.card.backpackDesc">A multi-chain option for people who want apps, collectibles, and payments in one place.</p>
+                    <button class="btn btn-primary btn-sm wd-connect-btn" data-wallet="backpack" data-i18n="wallet.card.connectAction">Connect</button>
+                  </div>
+                  <div class="wd-create-card wd-card-seedless" data-action="local">
+                    <div class="wd-card-icon">&#128273;</div>
+                    <h4 data-i18n="wallet.card.seedlessTitle">Create OST wallet</h4>
+                    <p data-i18n="wallet.card.seedlessDesc">Generate an OST wallet in this browser, download a backup, and start with devnet OST.</p>
+                    <button class="btn btn-primary btn-sm wd-connect-btn" data-wallet="local" data-i18n="wallet.card.seedlessAction">Create wallet</button>
+                  </div>
+                </div>
+
+                <div class="wd-download-links">
+                  <p class="text-muted" data-i18n="wallet.downloadTitle">Need an install first? Use the official wallet download links.</p>
+                  <div class="wd-dl-row">
+                    <a href="https://phantom.app/download" target="_blank" rel="noopener" class="wd-dl-link">&#128123; Phantom</a>
+                    <a href="https://solflare.com/download" target="_blank" rel="noopener" class="wd-dl-link">&#9728;&#65039; Solflare</a>
+                    <a href="https://www.backpack.app/download" target="_blank" rel="noopener" class="wd-dl-link">&#127890; Backpack</a>
+                    <a href="https://phantom.app/download" target="_blank" rel="noopener" class="wd-dl-link">&#128241; Mobile</a>
+                  </div>
+                </div>
+              </div>
+
+              <div class="wd-connected" id="wdConnected" style="display:none;">
+                <div class="wd-profile">
+                  <div class="wd-avatar" id="wdAvatar">&#128091;</div>
+                  <div class="wd-info">
+                    <div class="wd-address" id="wdAddress">--</div>
+                    <div class="wd-network" id="wdNetwork">Solana Mainnet</div>
+                  </div>
+                  <button class="btn btn-outline btn-sm" id="wdCopyAddr" data-i18n="wallet.copy" data-i18n-title="wallet.copy">Copy</button>
+                  <button class="btn btn-outline btn-sm" id="wdExplorer" data-i18n="wallet.explorer" data-i18n-title="wallet.explorer">Explorer</button>
+                </div>
+
+                <div class="wd-balances">
+                  <div class="wd-balance-card wd-balance-sol">
+                    <span class="wd-bal-icon">&#9783;</span>
+                    <div class="wd-bal-info">
+                      <div class="wd-bal-amount" id="wdSolBal">0.0000</div>
+                      <div class="wd-bal-label">SOL</div>
+                    </div>
+                    <div class="wd-bal-usd" id="wdSolUsd">$0.00</div>
+                  </div>
+                  <div class="wd-balance-card wd-balance-ost">
+                    <span class="wd-bal-icon">&#9673;</span>
+                    <div class="wd-bal-info">
+                      <div class="wd-bal-amount" id="wdOstBal">0.00</div>
+                      <div class="wd-bal-label">OST</div>
+                    </div>
+                    <div class="wd-bal-usd" id="wdOstUsd">$0.00</div>
+                  </div>
+                </div>
+
+                <div class="wd-actions">
+                  <a href="#wallet-panel-convert" class="wd-action-btn" data-wallet-tab-link="convert"><span>&#128176;</span><span data-i18n="wallet.buyOst">Buy OST</span></a>
+                  <a href="#commerce" class="wd-action-btn"><span>&#128257;</span><span data-i18n="wallet.send">Send</span></a>
+                  <a href="#wallet-panel-portals" class="wd-action-btn" data-wallet-tab-link="portals"><span>&#127757;</span><span data-i18n="wallet.bridge">Bridge</span></a>
+                  <button class="wd-action-btn" id="wdReceiveBtn"><span>&#128229;</span><span data-i18n="wallet.receive">Receive</span></button>
+                  <a href="#wallet-panel-convert" class="wd-action-btn" data-wallet-tab-link="convert"><span>&#9889;</span><span data-i18n="wallet.swap">Swap</span></a>
+                </div>
+
+                <div class="wd-receive-panel" id="wdReceivePanel" style="display:none;">
+                  <h4 data-i18n="wallet.receiveTitle">Receive OST or SOL</h4>
+                  <p class="text-muted" data-i18n="wallet.receiveSub">Share your address or let someone scan the QR rail below.</p>
+                  <div class="wd-qr" id="wdQr"></div>
+                  <div class="wd-receive-addr" id="wdReceiveAddr">--</div>
+                  <button class="btn btn-outline btn-sm" id="wdCopyReceive" data-i18n="wallet.copy">Copy</button>
+                </div>
+
+                <div class="wd-quick-links">
+                  <h4 data-i18n="wallet.quickLinksTitle">Quick routes</h4>
+                  <div class="wd-ql-grid">
+                    <a href="https://jup.ag/" target="_blank" rel="noopener" class="wd-ql-item"><span>&#9889;</span>Jupiter</a>
+                    <a href="https://raydium.io/swap/" target="_blank" rel="noopener" class="wd-ql-item"><span>&#128167;</span>Raydium</a>
+                    <a href="https://www.orca.so/" target="_blank" rel="noopener" class="wd-ql-item"><span>&#128011;</span>Orca</a>
+                    <a href="https://www.portalbridge.com/" target="_blank" rel="noopener" class="wd-ql-item"><span>&#127757;</span>Wormhole</a>
+                    <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy" target="_blank" rel="noopener" class="wd-ql-item"><span>&#128179;</span>Onramper</a>
+                    <a href="https://stake.solblaze.org/" target="_blank" rel="noopener" class="wd-ql-item"><span>&#128200;</span>SolBlaze</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <aside class="wallet-side-card">
+              <span class="wallet-side-kicker" data-i18n="wallet.secure.title">Secure onboarding</span>
+              <p data-i18n="wallet.secure.sub">Choose the access rail that matches the user: seed phrase power users, seedless newcomers, or wallet-native Solana traders.</p>
+              <div class="wallet-side-list">
+                <div class="wallet-side-item" data-i18n="wallet.secure.point1">Use Phantom, Solflare, or Backpack when the user already has a Solana workflow.</div>
+                <div class="wallet-side-item" data-i18n="wallet.secure.point2">Use the seedless flow when the priority is onboarding a first wallet in minutes.</div>
+                <div class="wallet-side-item" data-i18n="wallet.secure.point3">Keep one address across swap, payment, and launchpad rails to reduce confusion.</div>
+                <div class="wallet-side-item" data-i18n="wallet.secure.point4">The connected view surfaces balances, receive QR, and direct links without leaving the page.</div>
+              </div>
+            </aside>
           </div>
         </div>
-        <p class="ct-note">Currently powered by Jupiter + Wormhole on Solana. <strong>Temporary infrastructure</strong> &mdash; the OST native interchange engine is under development.</p>
-      </div>
-      </div>
 
-      <!-- Live Price -->
-      <div style="margin-top:48px;">
-        <div class="ost-price-card" id="ostPriceCard">
-        <div class="price-card-left">
-          <span class="price-card-icon">&#9673;</span>
-          <div class="price-card-info">
-            <span class="price-card-name">OST Token</span>
-            <span class="price-card-chain">Solana &middot; Token-2022</span>
+        <div class="wallet-tab-panel" id="wallet-panel-market" hidden>
+          <div class="wallet-market-grid-shell">
+            <div class="wallet-market-grid-main">
+              <div class="charts-row" id="chartsRow">
+                <div class="chart-card" data-coin="bitcoin">
+                  <div class="chart-header"><span class="chart-coin">BTC Bitcoin</span><span class="chart-price" id="price-bitcoin">--</span></div>
+                  <div class="chart-canvas-wrap"><canvas id="chart-bitcoin" height="120"></canvas></div>
+                  <span class="chart-change" id="change-bitcoin">--</span>
+                </div>
+                <div class="chart-card" data-coin="ethereum">
+                  <div class="chart-header"><span class="chart-coin">ETH Ethereum</span><span class="chart-price" id="price-ethereum">--</span></div>
+                  <div class="chart-canvas-wrap"><canvas id="chart-ethereum" height="120"></canvas></div>
+                  <span class="chart-change" id="change-ethereum">--</span>
+                </div>
+                <div class="chart-card" data-coin="solana">
+                  <div class="chart-header"><span class="chart-coin">SOL Solana</span><span class="chart-price" id="price-solana">--</span></div>
+                  <div class="chart-canvas-wrap"><canvas id="chart-solana" height="120"></canvas></div>
+                  <span class="chart-change" id="change-solana">--</span>
+                </div>
+              </div>
+            </div>
+
+            <aside class="wallet-side-card wallet-side-card-market">
+              <span class="wallet-side-kicker" data-i18n="transfer.title">Bring Your Money From Anywhere</span>
+              <p data-i18n="wallet.market.note2">The calculator below reads the same OST quote as the convert rail, so the preview and the execution surface stay aligned.</p>
+              <div class="exchange-calc" id="exchangeCalc">
+                <h3 data-i18n="transfer.calc">Exchange Rate Calculator</h3>
+                <p class="text-muted" data-i18n="transfer.calcsub">See how much OST you get for any amount.</p>
+                <div class="calc-row">
+                  <div class="calc-input-group">
+                    <input type="number" id="calcAmount" class="calc-input" placeholder="100" min="0" step="any" value="100">
+                    <select id="calcCurrency" class="calc-select">
+                      <option value="USD">USD ($)</option>
+                      <option value="EUR">EUR</option>
+                      <option value="GBP">GBP</option>
+                      <option value="CNY">CNY</option>
+                      <option value="INR">INR</option>
+                      <option value="BRL">BRL</option>
+                      <option value="RUB">RUB</option>
+                      <option value="MXN">MXN</option>
+                      <option value="JPY">JPY</option>
+                      <option value="NGN">NGN</option>
+                      <option value="KRW">KRW</option>
+                      <option value="TRY">TRY</option>
+                      <option value="BTC">Bitcoin</option>
+                      <option value="ETH">Ethereum</option>
+                      <option value="SOL">Solana</option>
+                    </select>
+                  </div>
+                  <div class="calc-arrow"><span class="calc-arrow-icon">&#8594;</span><span class="calc-live-dot"></span></div>
+                  <div class="calc-result">
+                    <div class="calc-ost-amount" id="calcResult">--</div>
+                    <div class="calc-ost-label">OST</div>
+                    <div class="calc-rate" id="calcRate">--</div>
+                    <div class="calc-updated" id="calcUpdated" data-i18n="wallet.market.updated">Live</div>
+                  </div>
+                </div>
+              </div>
+            </aside>
           </div>
         </div>
-        <div class="price-card-right">
-          <span class="price-card-value" id="ostLivePrice">$0.0001</span>
-          <span class="price-card-change" id="ostLiveChange">+0.00%</span>
-        </div>
-      </div>
-      </div>
 
-      <!-- Jupiter Widget -->
-      <div class="jupiter-widget glow-card" id="jupiterWidget">
-        <h3 data-i18n="getost.swap">Swap Any Crypto to OST</h3>
-        <p data-i18n="getost.swaptext">Jupiter Aggregator finds the best route across all Solana liquidity pools.</p>
-        <div class="jupiter-embed-area" id="jupiterEmbed">
-          <div class="jupiter-placeholder">
-            <span class="jupiter-bolt">&#9889;</span>
-            <p><strong>Jupiter Terminal</strong></p>
-            <p class="text-muted" data-i18n="getost.jupnote">Connect your wallet to load the live swap widget.</p>
-            <button class="btn btn-primary" id="loadJupiterBtn" data-i18n="getost.jupbtn">Load Swap Widget</button>
+        <div class="wallet-tab-panel" id="wallet-panel-convert" hidden>
+          <div class="wallet-convert-grid">
+            <div class="convert-terminal">
+              <div class="ct-glow"></div>
+              <div class="ct-header">
+                <div class="ct-status"><span class="ct-status-dot"></span>OST Interchange &mdash; Live</div>
+                <h3 data-i18n="transfer.widgettitle">Convert Now</h3>
+                <p class="ct-sub" data-i18n="wallet.convert.lead">Institutional-grade currency conversion, but redesigned for regular users who need a clean entry rail into confidential OST.</p>
+              </div>
+              <div class="ct-body">
+                <div class="ct-side ct-from">
+                  <label class="ct-label" data-i18n="wallet.convert.from">From</label>
+                  <select class="ct-select" id="transferFrom">
+                    <option value="BTC">&#8383; Bitcoin (BTC)</option>
+                    <option value="ETH">&#9830; Ethereum (ETH)</option>
+                    <option value="USDC">&#9675; USDC</option>
+                    <option value="SOL">&#9788; Solana (SOL)</option>
+                    <option value="USDT">&#9675; Tether (USDT)</option>
+                    <option value="BNB">&#9830; BNB Chain</option>
+                    <option value="USD">$ US Dollar</option>
+                    <option value="EUR">&euro; Euro</option>
+                    <option value="GBP">&pound; British Pound</option>
+                    <option value="CNY">&yen; Chinese Yuan</option>
+                    <option value="INR">&#8377; Indian Rupee</option>
+                    <option value="BRL">R$ Brazilian Real</option>
+                    <option value="RUB">&#8381; Russian Ruble</option>
+                    <option value="NGN">&#8358; Nigerian Naira</option>
+                    <option value="MXN">$ Mexican Peso</option>
+                  </select>
+                  <input type="number" class="ct-amount" id="transferAmount" placeholder="0.00" min="0" step="any">
+                </div>
+                <div class="ct-middle">
+                  <div class="ct-flow">
+                    <div class="ct-flow-line"></div>
+                    <div class="ct-flow-steps">
+                      <div class="ct-step" id="pStep1"><span class="ct-step-dot"></span><span data-i18n="wallet.convert.bridge">Bridge</span></div>
+                      <div class="ct-step" id="pStep2"><span class="ct-step-dot"></span><span data-i18n="wallet.convert.swap">Swap</span></div>
+                      <div class="ct-step" id="pStep3"><span class="ct-step-dot"></span><span data-i18n="wallet.convert.encrypt">Encrypt</span></div>
+                    </div>
+                  </div>
+                  <button class="ct-convert-btn" id="transferBtn">
+                    <span class="ct-btn-icon">&#9673;</span> <span data-i18n="transfer.convert">Convert to OST</span>
+                  </button>
+                </div>
+                <div class="ct-side ct-to">
+                  <label class="ct-label" data-i18n="wallet.convert.to">To</label>
+                  <div class="ct-ost-output">
+                    <div class="ct-ost-icon">&#9673;</div>
+                    <div class="ct-ost-name">Confidential OST</div>
+                    <div class="ct-ost-result" id="transferResult" data-i18n="transfer.result">Private &amp; Instant</div>
+                  </div>
+                </div>
+              </div>
+              <div class="ct-providers" id="convertProviders" style="display:none;">
+                <p class="ct-prov-label" data-i18n="wallet.convert.providers">Direct fiat on-ramps for the selected currency:</p>
+                <div class="ct-prov-btns">
+                  <a id="cpOnramper" href="#" target="_blank" rel="noopener" class="ct-prov-btn">&#9889; Onramper</a>
+                  <a id="cpMoonPay" href="#" target="_blank" rel="noopener" class="ct-prov-btn">&#127769; MoonPay</a>
+                  <a id="cpTransak" href="#" target="_blank" rel="noopener" class="ct-prov-btn">&#128178; Transak</a>
+                </div>
+              </div>
+              <p class="ct-note" data-i18n="wallet.convert.note">Currently powered by Jupiter + Wormhole on Solana while the OST native interchange engine is still under construction.</p>
+            </div>
+
+            <div class="wallet-convert-side">
+              <div class="jupiter-widget glow-card" id="jupiterWidget">
+                <h3 data-i18n="getost.swap">Swap Any Crypto to OST</h3>
+                <p data-i18n="getost.swaptext">Jupiter Aggregator finds the best route across all Solana liquidity pools.</p>
+                <div class="jupiter-embed-area" id="jupiterEmbed">
+                  <div class="jupiter-placeholder">
+                    <span class="jupiter-bolt">&#9889;</span>
+                    <p><strong>Jupiter Terminal</strong></p>
+                    <p class="text-muted" data-i18n="getost.jupnote">Connect your wallet to load the live swap widget.</p>
+                    <button class="btn btn-primary" id="loadJupiterBtn" data-i18n="getost.jupbtn">Load Swap Widget</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="sell-ost-section" id="sellOstSection">
+                <h3 data-i18n="sell.title">Sell or Trade OST</h3>
+                <p class="text-muted" style="margin-bottom:24px;" data-i18n="sell.sub">Cash out to any crypto or fiat. Same speed, same privacy.</p>
+                <div class="sell-grid">
+                  <div class="sell-card">
+                    <div class="sell-icon">&#128176;</div>
+                    <h4 data-i18n="wallet.sell.stable">Swap to stablecoins</h4>
+                    <p data-i18n="wallet.sell.stableDesc">Route OST into USDC, USDT, or DAI when the user needs a fast stable exit.</p>
+                    <button class="btn btn-outline btn-sm" onclick="window.openOstPopup&&openOstPopup('https://jup.ag/','Jupiter Aggregator')">Open Jupiter</button>
+                  </div>
+                  <div class="sell-card">
+                    <div class="sell-icon">&#127968;</div>
+                    <h4 data-i18n="wallet.sell.cashout">Cash out to bank</h4>
+                    <p data-i18n="wallet.sell.cashoutDesc">Use Onramper or Transak sell rails after the OST to SOL or OST to USDC swap completes.</p>
+                    <button class="btn btn-outline btn-sm" onclick="window.openOstPopup&&openOstPopup('https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=sell','Onramper — Cash Out')">Cash Out</button>
+                  </div>
+                  <div class="sell-card">
+                    <div class="sell-icon">&#128257;</div>
+                    <h4 data-i18n="wallet.sell.p2p">P2P market</h4>
+                    <p data-i18n="wallet.sell.p2pDesc">Direct wallet-to-wallet trading stays on the roadmap for people who want a simpler off-ramp.</p>
+                    <button class="btn btn-outline btn-sm" onclick="window.showToast&&showToast('P2P marketplace coming soon!','&#128279;')">Coming Soon</button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Buy with Local Money -->
-      <div class="fiat-section">
-        <h3 class="fiat-heading" data-i18n="getost.fiat">Buy with Local Money</h3>
-        <p class="fiat-sub" data-i18n="getost.fiatsub">Buy SOL or USDC, then swap to OST. No KYC for the swap.</p>
-        <div class="fiat-grid" id="fiatGrid">
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=USD" target="_blank" rel="noopener" class="fiat-pill">USD</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=EUR" target="_blank" rel="noopener" class="fiat-pill">EUR</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=GBP" target="_blank" rel="noopener" class="fiat-pill">GBP</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=CAD" target="_blank" rel="noopener" class="fiat-pill">CAD</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=AUD" target="_blank" rel="noopener" class="fiat-pill">AUD</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=INR" target="_blank" rel="noopener" class="fiat-pill">INR</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=BRL" target="_blank" rel="noopener" class="fiat-pill">BRL</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=MXN" target="_blank" rel="noopener" class="fiat-pill">MXN</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=JPY" target="_blank" rel="noopener" class="fiat-pill">JPY</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=KRW" target="_blank" rel="noopener" class="fiat-pill">KRW</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=TRY" target="_blank" rel="noopener" class="fiat-pill">TRY</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=NGN" target="_blank" rel="noopener" class="fiat-pill">NGN</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=ARS" target="_blank" rel="noopener" class="fiat-pill">ARS</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=EGP" target="_blank" rel="noopener" class="fiat-pill">EGP</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=IDR" target="_blank" rel="noopener" class="fiat-pill">IDR</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=PHP" target="_blank" rel="noopener" class="fiat-pill">PHP</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=THB" target="_blank" rel="noopener" class="fiat-pill">THB</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=VND" target="_blank" rel="noopener" class="fiat-pill">VND</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=PLN" target="_blank" rel="noopener" class="fiat-pill">PLN</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=SAR" target="_blank" rel="noopener" class="fiat-pill">SAR</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=COP" target="_blank" rel="noopener" class="fiat-pill">COP</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=KES" target="_blank" rel="noopener" class="fiat-pill">KES</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=CHF" target="_blank" rel="noopener" class="fiat-pill">CHF</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=SEK" target="_blank" rel="noopener" class="fiat-pill">SEK</a>
-        </div>
-      </div>
+        <div class="wallet-tab-panel" id="wallet-panel-portals" hidden>
+          <div class="wallet-portal-grid">
+            <a href="https://www.portalbridge.com/" target="_blank" rel="noopener" class="wallet-portal-card">
+              <span class="wallet-portal-kicker" data-i18n="wallet.bridge">Bridge</span>
+              <h4>Wormhole</h4>
+              <p data-i18n="wallet.portal.wormholeDesc">Move liquidity from major chains into Solana before the OST swap rail takes over.</p>
+              <span class="wallet-portal-meta">ETH &bull; Base &bull; Arbitrum &bull; Solana</span>
+            </a>
+            <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy" target="_blank" rel="noopener" class="wallet-portal-card">
+              <span class="wallet-portal-kicker" data-i18n="getost.fiat">Buy</span>
+              <h4>Onramper</h4>
+              <p data-i18n="wallet.portal.onramperDesc">Aggregator entry rail with card, bank, Apple Pay, and local fiat routing.</p>
+              <span class="wallet-portal-meta">Card &bull; Bank &bull; Apple Pay</span>
+            </a>
+            <a href="https://www.moonpay.com/buy/sol" target="_blank" rel="noopener" class="wallet-portal-card">
+              <span class="wallet-portal-kicker" data-i18n="getost.fiat">Buy</span>
+              <h4>MoonPay</h4>
+              <p data-i18n="wallet.portal.moonpayDesc">Fast card-based SOL entry for users who want the cleanest first purchase flow.</p>
+              <span class="wallet-portal-meta">Card &bull; Bank &bull; Google Pay</span>
+            </a>
+            <a href="https://global.transak.com/?defaultCryptoCurrency=SOL" target="_blank" rel="noopener" class="wallet-portal-card">
+              <span class="wallet-portal-kicker" data-i18n="getost.fiat">Buy</span>
+              <h4>Transak</h4>
+              <p data-i18n="wallet.portal.transakDesc">Regional payment coverage with PIX, UPI, SEPA, Faster Payments, and card rails.</p>
+              <span class="wallet-portal-meta">UPI &bull; PIX &bull; SEPA &bull; Card</span>
+            </a>
+            <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=sell" target="_blank" rel="noopener" class="wallet-portal-card">
+              <span class="wallet-portal-kicker" data-i18n="sell.title">Sell</span>
+              <h4>Onramper Sell</h4>
+              <p data-i18n="wallet.portal.onramperSellDesc">Cash out SOL or USDC into bank accounts and mobile money rails after conversion.</p>
+              <span class="wallet-portal-meta">90+ currencies &bull; Bank &bull; Mobile Money</span>
+            </a>
+            <a href="https://global.transak.com/?defaultCryptoCurrency=SOL&productsAvailed=SELL" target="_blank" rel="noopener" class="wallet-portal-card">
+              <span class="wallet-portal-kicker" data-i18n="sell.title">Sell</span>
+              <h4>Transak Sell</h4>
+              <p data-i18n="wallet.portal.transakSellDesc">Regional fiat exits for users who want local banking rails instead of stablecoin custody.</p>
+              <span class="wallet-portal-meta">SEPA &bull; Faster Payments &bull; Wire</span>
+            </a>
+            <a href="https://jup.ag/" target="_blank" rel="noopener" class="wallet-portal-card">
+              <span class="wallet-portal-kicker" data-i18n="wallet.swap">Swap</span>
+              <h4>Jupiter</h4>
+              <p data-i18n="wallet.portal.jupiterDesc">Best-route aggregator for OST conversions, stable exits, and spot rotations.</p>
+              <span class="wallet-portal-meta">Spot &bull; Limit &bull; DCA &bull; Perps</span>
+            </a>
+            <a href="https://raydium.io/swap/" target="_blank" rel="noopener" class="wallet-portal-card">
+              <span class="wallet-portal-kicker" data-i18n="wallet.swap">Swap</span>
+              <h4>Raydium</h4>
+              <p data-i18n="wallet.portal.raydiumDesc">Liquidity and swap venue for users who want direct pool access on Solana.</p>
+              <span class="wallet-portal-meta">Swap &bull; Liquidity &bull; Farms</span>
+            </a>
+            <a href="https://www.orca.so/" target="_blank" rel="noopener" class="wallet-portal-card">
+              <span class="wallet-portal-kicker" data-i18n="wallet.swap">Swap</span>
+              <h4>Orca</h4>
+              <p data-i18n="wallet.portal.orcaDesc">Cleaner swap route for concentrated liquidity users who want a simpler interface.</p>
+              <span class="wallet-portal-meta">Swap &bull; Whirlpools &bull; SOL</span>
+            </a>
+            <a href="https://app.meteora.ag/" target="_blank" rel="noopener" class="wallet-portal-card">
+              <span class="wallet-portal-kicker" data-i18n="wallet.swap">Swap</span>
+              <h4>Meteora</h4>
+              <p data-i18n="wallet.portal.meteoraDesc">Dynamic liquidity venue for newer assets and launchpad-native routing.</p>
+              <span class="wallet-portal-meta">DLMM &bull; Dynamic Pools &bull; Auto-compound</span>
+            </a>
+              <div class="prediction-market-board" id="predictionMarketBoard">
+                <div class="prediction-market-head">
+                  <div class="prediction-market-copy">
+                    <span class="wallet-portal-kicker" id="predictionMarketKicker">Predict with OST</span>
+                    <h4 id="predictionMarketHeading">Prediction venue</h4>
+                    <p id="predictionMarketIntro">Scan live Polymarket and Kalshi markets, read the tape, inspect the ladder, and route an OST ticket without leaving the wallet rail.</p>
+                    <div class="prediction-market-venue-row">
+                      <span class="prediction-venue-pill">Polymarket-style tape</span>
+                      <span class="prediction-venue-pill">Kalshi-style ladder</span>
+                      <span class="prediction-venue-pill">OST wallet execution</span>
+                    </div>
+                  </div>
 
-      <!-- Sell OST -->
-      <div class="sell-ost-section" id="sellOstSection">
-        <h3 data-i18n="sell.title">Sell or Trade OST</h3>
-        <p class="text-muted" style="margin-bottom:24px;" data-i18n="sell.sub">Cash out to any crypto or fiat. Same speed, same privacy.</p>
-        <div class="sell-grid">
-          <div class="sell-card">
-            <div class="sell-icon">&#128176;</div>
-            <h4>Swap to Stablecoins</h4>
-            <p>Convert OST → USDC, USDT, or DAI via Jupiter Aggregator. Instant settlement on Solana.</p>
-            <button class="btn btn-outline btn-sm" onclick="window.openOstPopup&&openOstPopup('https://jup.ag/','Jupiter Aggregator')">Open Jupiter</button>
+                  <div class="prediction-market-hero-card" id="predictionMarketHero">
+                    <div class="prediction-market-hero-topline">
+                      <span class="prediction-market-contract" id="predictionHeroRank">Trending</span>
+                      <span class="prediction-market-source source-polymarket" id="predictionHeroSource">Live venue</span>
+                      <span class="prediction-market-topic" id="predictionHeroTopic">All markets</span>
+                    </div>
+
+                    <div class="prediction-market-hero-copy">
+                      <span class="prediction-market-hero-label">Live market spotlight</span>
+                      <h5 id="predictionHeroTitle">Select a lead market</h5>
+                      <p id="predictionHeroDetail">We surface the lead contract here so the tape, ladder, and OST trade desk stay locked on one live market at a time.</p>
+                    </div>
+
+                    <div class="prediction-market-hero-price-grid">
+                      <div class="prediction-market-hero-price is-yes">
+                        <span>Yes share</span>
+                        <strong id="predictionHeroYesPrice">--</strong>
+                      </div>
+                      <div class="prediction-market-hero-price is-no">
+                        <span>No share</span>
+                        <strong id="predictionHeroNoPrice">--</strong>
+                      </div>
+                    </div>
+
+                    <div class="prediction-market-hero-metrics">
+                      <div class="prediction-market-hero-metric">
+                        <span>Implied yes</span>
+                        <strong id="predictionHeroProbability">--</strong>
+                      </div>
+                      <div class="prediction-market-hero-metric">
+                        <span>24h volume</span>
+                        <strong id="predictionHeroVolume">--</strong>
+                      </div>
+                      <div class="prediction-market-hero-metric">
+                        <span>Depth</span>
+                        <strong id="predictionHeroDepth">--</strong>
+                      </div>
+                      <div class="prediction-market-hero-metric">
+                        <span>Closes</span>
+                        <strong id="predictionHeroClose">--</strong>
+                      </div>
+                      <div class="prediction-market-hero-metric">
+                        <span>Momentum</span>
+                        <strong id="predictionHeroMomentum">--</strong>
+                      </div>
+                    </div>
+
+                    <div class="prediction-market-hero-actions">
+                      <a href="#" target="_blank" rel="noopener" class="prediction-market-link" id="predictionHeroVenueLink">Open venue</a>
+                      <a href="#" target="_blank" rel="noopener" class="prediction-market-api-link" id="predictionHeroFeedLink">Open feed</a>
+                    </div>
+                  </div>
+
+                  <div class="prediction-market-side">
+                    <div class="prediction-market-badge" id="predictionMarketStatus">Loading live feeds...</div>
+                    <div class="prediction-market-updated" id="predictionMarketUpdated">Waiting for first refresh</div>
+                    <div class="prediction-market-side-stack">
+                      <div class="prediction-market-side-card">
+                        <span>Venue parity</span>
+                        <strong>Polymarket + Kalshi</strong>
+                        <p>Live pricing, ranking, and one market board instead of a static prediction widget.</p>
+                      </div>
+                      <div class="prediction-market-side-card">
+                        <span>Execution rail</span>
+                        <strong>OST order path</strong>
+                        <p>Stay on the same page from venue scan to Yes or No sizing and ticket routing.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="prediction-market-controls">
+                  <div class="prediction-market-source-toggle" id="predictionSourceToggle" aria-label="Prediction market source filter">
+                    <button class="prediction-chip is-active" type="button" data-prediction-source="all">All venues</button>
+                    <button class="prediction-chip" type="button" data-prediction-source="polymarket">Polymarket</button>
+                    <button class="prediction-chip" type="button" data-prediction-source="kalshi">Kalshi</button>
+                  </div>
+
+                  <div class="prediction-market-rank-toggle" id="predictionRankToggle" aria-label="Prediction market ranking filter">
+                    <button class="prediction-chip" type="button" data-prediction-rank="all">All markets</button>
+                    <button class="prediction-chip is-active" type="button" data-prediction-rank="trending">Trending</button>
+                    <button class="prediction-chip" type="button" data-prediction-rank="breaking">Breaking</button>
+                    <button class="prediction-chip" type="button" data-prediction-rank="new">New</button>
+                  </div>
+
+                  <div class="prediction-market-topic-toggle" id="predictionTopicToggle" aria-label="Prediction market topic filter">
+                    <button class="prediction-chip is-active" type="button" data-prediction-topic="all">All markets</button>
+                    <button class="prediction-chip" type="button" data-prediction-topic="politics">Politics</button>
+                    <button class="prediction-chip" type="button" data-prediction-topic="sports">Sports</button>
+                    <button class="prediction-chip" type="button" data-prediction-topic="crypto">Crypto</button>
+                    <button class="prediction-chip" type="button" data-prediction-topic="esports">Esports</button>
+                    <button class="prediction-chip" type="button" data-prediction-topic="iran">Iran</button>
+                    <button class="prediction-chip" type="button" data-prediction-topic="finance">Finance</button>
+                    <button class="prediction-chip" type="button" data-prediction-topic="geopolitics">Geopolitics</button>
+                    <button class="prediction-chip" type="button" data-prediction-topic="tech">Tech</button>
+                    <button class="prediction-chip" type="button" data-prediction-topic="culture">Culture</button>
+                    <button class="prediction-chip" type="button" data-prediction-topic="economy">Economy</button>
+                    <button class="prediction-chip" type="button" data-prediction-topic="weather">Weather</button>
+                    <button class="prediction-chip" type="button" data-prediction-topic="mentions">Mentions</button>
+                    <button class="prediction-chip" type="button" data-prediction-topic="elections">Elections</button>
+                  </div>
+
+                  <div class="prediction-market-search-row">
+                    <label class="prediction-market-search">
+                      <span class="prediction-market-search-label" id="predictionSearchLabel">Search any contract</span>
+                      <input type="search" id="predictionMarketSearch" class="prediction-market-search-input" placeholder="Bitcoin, Trump, NBA, inflation, Nvidia, weather, election..." aria-label="Search live prediction contracts">
+                    </label>
+                    <button type="button" class="btn btn-outline btn-sm prediction-refresh-btn" id="predictionMarketRefresh">Refresh</button>
+                  </div>
+                </div>
+
+                <div class="prediction-market-summary" id="predictionMarketSummary">
+                  <div class="prediction-market-stat">
+                    <span id="predictionStatMarketsLabel">Markets loaded</span>
+                    <strong id="predictionMarketCount">0</strong>
+                  </div>
+                  <div class="prediction-market-stat">
+                    <span id="predictionStatSourcesLabel">Live sources</span>
+                    <strong id="predictionSourceCount">0 / 2</strong>
+                  </div>
+                  <div class="prediction-market-stat">
+                    <span id="predictionStatBtcLabel">Breaking now</span>
+                    <strong id="predictionBtcCount">0</strong>
+                  </div>
+                </div>
+
+                <div class="prediction-market-note" id="predictionMarketNote">
+                  Public venue feeds expose live prices, change anchors, and liquidity. The curve and ladder reflect that data directly without inventing candles or settlement.
+                </div>
+
+                <div class="prediction-market-pulse-wrap">
+                  <div class="prediction-market-pulse-head">
+                    <div>
+                      <strong id="predictionPulseHeading">Market pulse</strong>
+                      <p id="predictionPulseCopy">Lead contracts, fastest movers, and the markets closing soonest across both venues.</p>
+                    </div>
+                    <span class="prediction-market-updated" id="predictionPulseMeta">Click a tile to load the stage and trade desk.</span>
+                  </div>
+
+                  <div class="prediction-market-pulse" id="predictionMarketPulse">
+                    <div class="prediction-pulse-empty">Loading market pulse...</div>
+                  </div>
+                </div>
+
+                <div class="prediction-market-shell">
+                  <div class="prediction-market-main">
+                    <section class="prediction-market-stage" id="predictionMarketStage">
+                      <div class="prediction-stage-head">
+                        <div class="prediction-stage-copy">
+                          <div class="prediction-stage-topline">
+                            <span class="prediction-market-contract" id="predictionStageRank">Trending</span>
+                            <span class="prediction-market-source source-polymarket" id="predictionStageSource">Polymarket</span>
+                            <span class="prediction-market-topic" id="predictionStageTopic">All markets</span>
+                          </div>
+                          <h5 id="predictionStageTitle">Select a live market</h5>
+                          <p id="predictionStageDetail">Choose a live contract to inspect the live probability curve, price ladder, share pricing, and OST ticket details before you commit.</p>
+                        </div>
+
+                        <div class="prediction-stage-stats">
+                          <div class="prediction-market-stat prediction-stage-stat">
+                            <span>Yes share</span>
+                            <strong id="predictionStageYesPrice">--</strong>
+                          </div>
+                          <div class="prediction-market-stat prediction-stage-stat">
+                            <span>No share</span>
+                            <strong id="predictionStageNoPrice">--</strong>
+                          </div>
+                          <div class="prediction-market-stat prediction-stage-stat">
+                            <span>Implied yes</span>
+                            <strong id="predictionStageProbability">--</strong>
+                          </div>
+                          <div class="prediction-market-stat prediction-stage-stat">
+                            <span>24h volume</span>
+                            <strong id="predictionStageVolume">--</strong>
+                          </div>
+                          <div class="prediction-market-stat prediction-stage-stat">
+                            <span>Depth</span>
+                            <strong id="predictionStageDepth">--</strong>
+                          </div>
+                          <div class="prediction-market-stat prediction-stage-stat">
+                            <span>Closes</span>
+                            <strong id="predictionStageClose">--</strong>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="prediction-stage-body">
+                        <div class="prediction-stage-chart-card">
+                          <div class="prediction-stage-panel-head">
+                            <div>
+                              <strong id="predictionStageChartHeading">Live probability curve</strong>
+                              <p id="predictionStageChartCopy">Anchored to current share pricing, recent venue changes, and source liquidity.</p>
+                            </div>
+                            <span class="prediction-stage-trend" id="predictionStageTrend">Flat</span>
+                          </div>
+                          <canvas id="predictionStageChart" class="prediction-stage-chart" width="860" height="280" aria-label="Prediction market probability chart"></canvas>
+                          <div class="prediction-stage-axis">
+                            <span id="predictionStageAxisStart">Opened --</span>
+                            <span id="predictionStageAxisMid">Live now</span>
+                            <span id="predictionStageAxisEnd">Closes --</span>
+                          </div>
+                        </div>
+
+                        <div class="prediction-depth-card">
+                          <div class="prediction-stage-panel-head">
+                            <div>
+                              <strong id="predictionDepthHeading">Order depth map</strong>
+                              <p id="predictionDepthCopy">Quote bands shaped from live venue pricing and available depth.</p>
+                            </div>
+                          </div>
+
+                          <div class="prediction-depth-columns">
+                            <div>
+                              <span class="prediction-depth-label" id="predictionDepthYesLabel">Yes depth</span>
+                              <div class="prediction-depth-list" id="predictionDepthYes">
+                                <div class="prediction-depth-empty">Waiting for a live contract.</div>
+                              </div>
+                            </div>
+                            <div>
+                              <span class="prediction-depth-label" id="predictionDepthNoLabel">No depth</span>
+                              <div class="prediction-depth-list" id="predictionDepthNo">
+                                <div class="prediction-depth-empty">Waiting for a live contract.</div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="prediction-stage-links">
+                            <a href="#" target="_blank" rel="noopener" class="prediction-market-link" id="predictionStageVenueLink">Open venue</a>
+                            <a href="#" target="_blank" rel="noopener" class="prediction-market-api-link" id="predictionStageFeedLink">Open feed</a>
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+
+                    <div class="prediction-market-grid" id="predictionMarketList">
+                      <div class="prediction-market-empty-card">Loading live prediction markets...</div>
+                    </div>
+                  </div>
+
+                  <aside class="prediction-trade-desk" id="predictionTradeDesk">
+                    <div class="prediction-trade-head">
+                      <span class="wallet-portal-kicker" id="predictionTradeKicker">Trade with OST</span>
+                      <h5 id="predictionTradeHeading">Build an OST ticket</h5>
+                      <p id="predictionTradeCopy">Pick a live contract, choose Yes or No, review your share pricing, then commit OST directly from your wallet into the market vault.</p>
+                    </div>
+
+                    <div class="prediction-selected-card" id="predictionSelectedCard">
+                      <div class="prediction-selected-topline">
+                        <span class="prediction-market-source source-polymarket" id="predictionSelectedSource">Polymarket</span>
+                        <span class="prediction-market-topic" id="predictionSelectedTopic">All markets</span>
+                      </div>
+                      <h6 id="predictionSelectedTitle">No market selected</h6>
+                      <p id="predictionSelectedDetail">Choose a live contract from the board to build an OST-denominated position.</p>
+                    </div>
+
+                    <div class="prediction-outcome-toggle" id="predictionOutcomeToggle" aria-label="Prediction outcome selector">
+                      <button class="prediction-side-btn is-active" type="button" data-prediction-side="yes">
+                        <span id="predictionOutcomeYesLabel">Buy Yes</span>
+                        <strong id="predictionOutcomeYesValue">--</strong>
+                      </button>
+                      <button class="prediction-side-btn" type="button" data-prediction-side="no">
+                        <span id="predictionOutcomeNoLabel">Buy No</span>
+                        <strong id="predictionOutcomeNoValue">--</strong>
+                      </button>
+                    </div>
+
+                    <label class="prediction-stake-field" for="predictionStakeInput">
+                      <span class="prediction-market-search-label" id="predictionStakeLabel">Stake in OST</span>
+                      <input type="number" min="1" step="1" inputmode="decimal" id="predictionStakeInput" class="prediction-market-search-input" value="25" placeholder="25">
+                    </label>
+
+                    <div class="prediction-stake-quick" id="predictionStakeQuick">
+                      <button class="prediction-chip is-active" type="button" data-prediction-stake="25">25 OST</button>
+                      <button class="prediction-chip" type="button" data-prediction-stake="50">50 OST</button>
+                      <button class="prediction-chip" type="button" data-prediction-stake="100">100 OST</button>
+                      <button class="prediction-chip" type="button" data-prediction-stake="250">250 OST</button>
+                    </div>
+
+                    <div class="prediction-trade-metrics" id="predictionTradeMetrics">
+                      <div class="prediction-market-stat prediction-trade-stat">
+                        <span id="predictionAvailableLabel">Available OST</span>
+                        <strong id="predictionAvailableBalance">Connect wallet</strong>
+                      </div>
+                      <div class="prediction-market-stat prediction-trade-stat">
+                        <span id="predictionSharesLabel">Est. shares</span>
+                        <strong id="predictionEstimatedShares">--</strong>
+                      </div>
+                      <div class="prediction-market-stat prediction-trade-stat">
+                        <span id="predictionReturnLabel">Est. win return</span>
+                        <strong id="predictionPotentialReturn">--</strong>
+                      </div>
+                    </div>
+
+                    <div class="prediction-trade-status is-info" id="predictionTradeStatus">Connect your OST wallet to place a market ticket.</div>
+
+                    <button type="button" class="btn btn-primary prediction-trade-action" id="predictionTradeAction">
+                      <span id="predictionTradeActionLabel">Place OST order</span>
+                    </button>
+
+                    <div class="prediction-trade-receipt" id="predictionTradeReceipt" hidden>
+                      <div class="prediction-trade-receipt-head">
+                        <span class="wallet-portal-kicker" id="predictionReceiptKicker">Recorded on devnet</span>
+                        <h6 id="predictionReceiptTitle">Latest market ticket</h6>
+                      </div>
+                      <div class="prediction-trade-receipt-grid">
+                        <div class="prediction-market-metric">
+                          <span id="predictionReceiptSignatureLabel">Signature</span>
+                          <strong id="predictionReceiptSignature">--</strong>
+                        </div>
+                        <div class="prediction-market-metric">
+                          <span id="predictionReceiptStakeLabel">OST committed</span>
+                          <strong id="predictionReceiptStake">--</strong>
+                        </div>
+                      </div>
+                      <a href="#" target="_blank" rel="noopener" class="prediction-market-link" id="predictionReceiptExplorer">View on Solana Explorer</a>
+                    </div>
+
+                    <div class="prediction-position-ledger">
+                      <div class="prediction-position-ledger-head">
+                        <span class="wallet-portal-kicker" id="predictionLedgerKicker">Recent positions</span>
+                        <strong id="predictionLedgerCount">0</strong>
+                      </div>
+                      <div class="prediction-position-list" id="predictionPositionList">
+                        <div class="prediction-position-empty">No OST market tickets recorded yet.</div>
+                      </div>
+                    </div>
+                  </aside>
+                </div>
+            </div>
           </div>
-          <div class="sell-card">
-            <div class="sell-icon">&#127968;</div>
-            <h4>Cash Out to Bank</h4>
-            <p>Swap OST → SOL/USDC, then offramp via Onramper to your local bank in 90+ currencies.</p>
-            <button class="btn btn-outline btn-sm" onclick="window.openOstPopup&&openOstPopup('https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=sell','Onramper — Cash Out')">Cash Out</button>
-          </div>
-          <div class="sell-card">
-            <div class="sell-icon">&#128257;</div>
-            <h4>P2P Trading</h4>
-            <p>Trade directly with other OST holders. Set your own price. No middlemen, no KYC.</p>
-            <button class="btn btn-outline btn-sm" onclick="window.showToast&&showToast('P2P marketplace coming soon!','&#128279;')">Coming Soon</button>
-          </div>
-        </div>
-      </div>
 
-      <!-- Bridges, Ramps & Exchanges -->
-      <div style="margin-top:64px;">
-        <h3 class="section-title" style="font-size:1.8rem;" data-i18n="bridges.title">Bridges, Ramps &amp; Exchanges</h3>
-        <p class="section-subtitle" data-i18n="bridges.sub">Every path to OST &mdash; from any chain, any currency, any country.</p>
-
-      <!-- OST Independence Vision -->
-      <div class="ost-independence-banner sr">
-        <div class="ind-glow"></div>
-        <div class="ind-icon">&#127760;</div>
-        <h3>The OST Vision: Complete Financial Independence</h3>
-        <p>We currently use Solana, Jupiter, and third-party bridges as <strong>temporary infrastructure</strong>. Our goal is to build the <strong>OST Sovereign Network</strong> — our own interchange protocol, trading algorithm, decentralized market, faucet system, and settlement layer. Completely separate from any existing system. Fully decentralized. No dependencies.</p>
-        <div class="ind-roadmap">
-          <div class="ind-phase ind-phase-now"><span class="ind-dot ind-dot-now"></span><strong>Now:</strong> Solana + Jupiter + Bridges (temporary scaffolding)</div>
-          <div class="ind-arrow">&#8594;</div>
-          <div class="ind-phase ind-phase-next"><span class="ind-dot ind-dot-next"></span><strong>Next:</strong> OST Interchange Protocol (own matching engine)</div>
-          <div class="ind-arrow">&#8594;</div>
-          <div class="ind-phase ind-phase-future"><span class="ind-dot ind-dot-future"></span><strong>Goal:</strong> OST Sovereign Network (zero third-party dependencies)</div>
-        </div>
-        <p class="ind-footnote">Every tool below is a stepping stone. We use them today so you can use OST now — while we build the infrastructure to replace them all.</p>
-      </div>
-
-      <!-- Cross-Chain Bridges -->
-      <div class="bridge-hub">
-        <h3>&#127757; Cross-Chain Bridges <span class="bridge-temp-badge">Temporary — until OST Interchange launches</span></h3>
-        <p class="text-muted" style="margin-bottom:24px;">Move assets from any blockchain to Solana, then swap to OST. These bridges will be replaced by the OST native interchange.</p>
-        <div class="bridge-grid">
-          <a href="https://www.portalbridge.com/" target="_blank" rel="noopener" class="bridge-card">
-            <div class="bridge-icon">&#128302;</div>
-            <h4>Wormhole Portal</h4>
-            <p>Bridge from Ethereum, Polygon, BSC, Avalanche, Arbitrum, Base, Sui, Aptos to Solana. Full cross-chain asset transfers.</p>
-            <div class="bridge-chains">ETH &bull; BSC &bull; Polygon &bull; Avax &bull; Arbitrum &bull; Base &bull; Sui</div>
-            <span class="bridge-status bridge-live">&#9679; Live</span>
-          </a>
-          <a href="https://core.allbridge.io/" target="_blank" rel="noopener" class="bridge-card">
-            <div class="bridge-icon">&#128279;</div>
-            <h4>Allbridge Core</h4>
-            <p>Native stablecoin bridge. Transfer USDC, USDT, and DAI across chains to Solana with minimal slippage.</p>
-            <div class="bridge-chains">USDC &bull; USDT &bull; DAI &bull; ETH &bull; BSC &bull; Tron &bull; Polygon</div>
-            <span class="bridge-status bridge-live">&#9679; Live</span>
-          </a>
-          <a href="https://app.debridge.finance/" target="_blank" rel="noopener" class="bridge-card">
-            <div class="bridge-icon">&#9889;</div>
-            <h4>deBridge</h4>
-            <p>Cross-chain swaps with no wrapping. Direct SOL output from any chain.</p>
-            <div class="bridge-chains">ETH &bull; BSC &bull; Polygon &bull; Arbitrum &bull; Solana</div>
-            <span class="bridge-status bridge-live">&#9679; Live</span>
-          </a>
-          <a href="https://mayan.finance/" target="_blank" rel="noopener" class="bridge-card">
-            <div class="bridge-icon">&#127793;</div>
-            <h4>Mayan Finance</h4>
-            <p>Fastest cross-chain swap. Wormhole-powered with best gas optimization.</p>
-            <div class="bridge-chains">ETH &bull; Solana &bull; Polygon &bull; Avalanche &bull; Arbitrum</div>
-            <span class="bridge-status bridge-live">&#9679; Live</span>
-          </a>
-        </div>
-      </div>
-
-      <!-- Fiat On-Ramps -->
-      <div class="bridge-hub" style="margin-top:64px;">
-        <h3>&#128179; Fiat On-Ramps — Buy with Your Currency</h3>
-        <p class="text-muted" style="margin-bottom:24px;">Purchase SOL or USDC with credit card, bank transfer, or mobile pay. Then swap to OST on Jupiter.</p>
-        <div class="bridge-grid">
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy" target="_blank" rel="noopener" class="bridge-card ramp-card">
-            <div class="bridge-icon">&#9889;</div>
-            <h4>Onramper</h4>
-            <p>Aggregator of 15+ on-ramp providers. Best rates across MoonPay, Transak, Banxa, etc.</p>
-            <div class="bridge-chains">100+ countries &bull; Card &bull; Bank &bull; Apple Pay</div>
-            <span class="bridge-status bridge-live">&#9679; Live</span>
-          </a>
-          <a href="https://www.moonpay.com/buy/sol" target="_blank" rel="noopener" class="bridge-card ramp-card">
-            <div class="bridge-icon">&#127769;</div>
-            <h4>MoonPay</h4>
-            <p>Buy SOL with Visa, Mastercard, Apple Pay, Google Pay, or bank transfer.</p>
-            <div class="bridge-chains">160+ countries &bull; Card &bull; Apple Pay &bull; Bank</div>
-            <span class="bridge-status bridge-live">&#9679; Live</span>
-          </a>
-          <a href="https://global.transak.com/?defaultCryptoCurrency=SOL" target="_blank" rel="noopener" class="bridge-card ramp-card">
-            <div class="bridge-icon">&#128178;</div>
-            <h4>Transak</h4>
-            <p>Buy crypto in 170+ countries. Supports UPI, PIX, SEPA, Faster Payments, and more.</p>
-            <div class="bridge-chains">170+ countries &bull; UPI &bull; PIX &bull; SEPA &bull; Card</div>
-            <span class="bridge-status bridge-live">&#9679; Live</span>
-          </a>
-          <a href="https://ramp.network/buy?defaultAsset=SOLANA_SOL" target="_blank" rel="noopener" class="bridge-card ramp-card">
-            <div class="bridge-icon">&#128640;</div>
-            <h4>Ramp Network</h4>
-            <p>Instant purchases with bank transfer or card. Zero fees, fast settlement.</p>
-            <div class="bridge-chains">150+ countries &bull; Open Banking &bull; Card &bull; ACH</div>
-            <span class="bridge-status bridge-live">&#9679; Live</span>
-          </a>
-          <a href="https://www.coinbase.com/how-to-buy/solana" target="_blank" rel="noopener" class="bridge-card ramp-card">
-            <div class="bridge-icon">&#128309;</div>
-            <h4>Coinbase Pay</h4>
-            <p>Buy SOL directly from Coinbase. Link your existing Coinbase account.</p>
-            <div class="bridge-chains">100+ countries &bull; Coinbase Account &bull; Card &bull; ACH</div>
-            <span class="bridge-status bridge-live">&#9679; Live</span>
-          </a>
-          <a href="https://www.binance.com/en/buy-sell-crypto" target="_blank" rel="noopener" class="bridge-card ramp-card">
-            <div class="bridge-icon">&#128311;</div>
-            <h4>Binance</h4>
-            <p>Buy SOL on the world's largest exchange (not available in USA). Transfer to Solana wallet.</p>
-            <div class="bridge-chains">180+ countries &bull; P2P &bull; Card &bull; Bank</div>
-            <span class="bridge-status bridge-live">&#9679; Live</span>
-          </a>
-        </div>
-      </div>
-
-      <!-- Fiat Off-Ramps -->
-      <div class="bridge-hub" style="margin-top:64px;">
-        <h3>&#128176; Fiat Off-Ramps — Cash Out to Bank</h3>
-        <p class="text-muted" style="margin-bottom:24px;">Swap OST → SOL/USDC on Jupiter, then off-ramp to your local bank account.</p>
-        <div class="bridge-grid">
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=sell" target="_blank" rel="noopener" class="bridge-card offramp-card">
-            <div class="bridge-icon">&#127974;</div>
-            <h4>Onramper (Sell)</h4>
-            <p>Sell SOL/USDC and receive funds in your bank account. 90+ currencies supported.</p>
-            <div class="bridge-chains">90+ currencies &bull; Bank Transfer &bull; Mobile Money</div>
-            <span class="bridge-status bridge-live">&#9679; Live</span>
-          </a>
-          <a href="https://global.transak.com/?defaultCryptoCurrency=SOL&productsAvailed=SELL" target="_blank" rel="noopener" class="bridge-card offramp-card">
-            <div class="bridge-icon">&#128178;</div>
-            <h4>Transak (Sell)</h4>
-            <p>Cash out in 75+ countries. Receive in your local currency via bank transfer.</p>
-            <div class="bridge-chains">75+ countries &bull; SEPA &bull; Faster Payments &bull; Wire</div>
-            <span class="bridge-status bridge-live">&#9679; Live</span>
-          </a>
-        </div>
-      </div>
-
-      <!-- DEX / Swap Exchanges -->
-      <div class="bridge-hub" style="margin-top:64px;">
-        <h3>&#9889; DEX &amp; Swap — Trade OST</h3>
-        <p class="text-muted" style="margin-bottom:24px;">Swap any Solana token to/from OST. No account needed, just connect your wallet.</p>
-        <div class="bridge-grid">
-          <a href="https://jup.ag/" target="_blank" rel="noopener" class="bridge-card dex-card">
-            <div class="bridge-icon">&#9889;</div>
-            <h4>Jupiter Aggregator</h4>
-            <p>Best swap rates. Routes through all Solana DEXs to find optimal price.</p>
-            <div class="bridge-chains">All Solana tokens &bull; Limit Orders &bull; DCA &bull; Perps</div>
-            <span class="bridge-status bridge-live">&#9679; Live</span>
-          </a>
-          <a href="https://raydium.io/swap/" target="_blank" rel="noopener" class="bridge-card dex-card">
-            <div class="bridge-icon">&#128167;</div>
-            <h4>Raydium</h4>
-            <p>AMM &amp; CLMM pools on Solana. Provide liquidity to earn rewards.</p>
-            <div class="bridge-chains">Swap &bull; Liquidity &bull; Farms &bull; AcceleRaytor</div>
-            <span class="bridge-status bridge-live">&#9679; Live</span>
-          </a>
-          <a href="https://www.orca.so/" target="_blank" rel="noopener" class="bridge-card dex-card">
-            <div class="bridge-icon">&#128011;</div>
-            <h4>Orca</h4>
-            <p>Concentrated liquidity pools (Whirlpools). Clean UI, great rates.</p>
-            <div class="bridge-chains">Swap &bull; Whirlpools &bull; SOL &bull; USDC</div>
-            <span class="bridge-status bridge-live">&#9679; Live</span>
-          </a>
-          <a href="https://app.meteora.ag/" target="_blank" rel="noopener" class="bridge-card dex-card">
-            <div class="bridge-icon">&#9733;</div>
-            <h4>Meteora</h4>
-            <p>Dynamic liquidity pools with automated rebalancing. Ideal for new tokens.</p>
-            <div class="bridge-chains">DLMM &bull; Dynamic Pools &bull; Auto-compound</div>
-            <span class="bridge-status bridge-live">&#9679; Live</span>
-          </a>
-        </div>
-      </div>
-
-      <!-- How It Works -->
-      <div class="bridge-how" style="margin-top:64px;">
-        <h3>&#128221; How to Buy OST — Step by Step</h3>
-        <div class="bridge-steps">
-          <div class="bridge-step">
-            <div class="bridge-step-num">1</div>
-            <h4>Get a Wallet</h4>
-            <p>Download <a href="https://phantom.app/download" target="_blank" rel="noopener">Phantom</a> or <a href="https://solflare.com/download" target="_blank" rel="noopener">Solflare</a> for your phone or browser. Or use Google sign-in above for no seed phrase.</p>
-          </div>
-          <div class="bridge-step">
-            <div class="bridge-step-num">2</div>
-            <h4>Fund with SOL</h4>
-            <p>Buy SOL from any on-ramp above (MoonPay, Transak, Ramp, Coinbase, Binance). Or bridge from another chain.</p>
-          </div>
-          <div class="bridge-step">
-            <div class="bridge-step-num">3</div>
-            <h4>Swap to OST</h4>
-            <p>Go to <a href="https://jup.ag/" target="_blank" rel="noopener">Jupiter</a> or use the swap widget above. Swap SOL → OST. Instant, zero fees.</p>
-          </div>
-          <div class="bridge-step">
-            <div class="bridge-step-num">4</div>
-            <h4>Go Private</h4>
-            <p>Enable confidential transfers in your wallet. Your balance and transactions become fully private.</p>
+          <div class="wallet-region-row">
+            <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=USD" target="_blank" rel="noopener" class="fiat-pill">USD</a>
+            <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=EUR" target="_blank" rel="noopener" class="fiat-pill">EUR</a>
+            <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=GBP" target="_blank" rel="noopener" class="fiat-pill">GBP</a>
+            <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=INR" target="_blank" rel="noopener" class="fiat-pill">INR</a>
+            <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=BRL" target="_blank" rel="noopener" class="fiat-pill">BRL</a>
+            <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=NGN" target="_blank" rel="noopener" class="fiat-pill">NGN</a>
+            <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=JPY" target="_blank" rel="noopener" class="fiat-pill">JPY</a>
+            <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=KRW" target="_blank" rel="noopener" class="fiat-pill">KRW</a>
           </div>
         </div>
-      </div>
-
-      <!-- Supported Fiat Currencies (comprehensive) -->
-      <div class="bridge-hub" style="margin-top:64px;">
-        <h3>&#127760; Supported Currencies — Buy from Any Country</h3>
-        <p class="text-muted" style="margin-bottom:24px;">Click any currency to open the best on-ramp for your region.</p>
-        <div class="fiat-grid fiat-grid-full" id="fiatGridFull">
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=USD" target="_blank" rel="noopener" class="fiat-pill">&#127482;&#127480; USD</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=EUR" target="_blank" rel="noopener" class="fiat-pill">&#127466;&#127482; EUR</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=GBP" target="_blank" rel="noopener" class="fiat-pill">&#127468;&#127463; GBP</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=CAD" target="_blank" rel="noopener" class="fiat-pill">&#127464;&#127462; CAD</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=AUD" target="_blank" rel="noopener" class="fiat-pill">&#127462;&#127482; AUD</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=JPY" target="_blank" rel="noopener" class="fiat-pill">&#127471;&#127477; JPY</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=KRW" target="_blank" rel="noopener" class="fiat-pill">&#127472;&#127479; KRW</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=CNY" target="_blank" rel="noopener" class="fiat-pill">&#127464;&#127475; CNY</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=INR" target="_blank" rel="noopener" class="fiat-pill">&#127470;&#127475; INR</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=BRL" target="_blank" rel="noopener" class="fiat-pill">&#127463;&#127479; BRL</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=MXN" target="_blank" rel="noopener" class="fiat-pill">&#127474;&#127485; MXN</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=ARS" target="_blank" rel="noopener" class="fiat-pill">&#127462;&#127479; ARS</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=COP" target="_blank" rel="noopener" class="fiat-pill">&#127464;&#127476; COP</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=CLP" target="_blank" rel="noopener" class="fiat-pill">&#127464;&#127473; CLP</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=PEN" target="_blank" rel="noopener" class="fiat-pill">&#127477;&#127466; PEN</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=NGN" target="_blank" rel="noopener" class="fiat-pill">&#127475;&#127468; NGN</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=KES" target="_blank" rel="noopener" class="fiat-pill">&#127472;&#127466; KES</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=GHS" target="_blank" rel="noopener" class="fiat-pill">&#127468;&#127469; GHS</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=ZAR" target="_blank" rel="noopener" class="fiat-pill">&#127487;&#127462; ZAR</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=EGP" target="_blank" rel="noopener" class="fiat-pill">&#127466;&#127468; EGP</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=TRY" target="_blank" rel="noopener" class="fiat-pill">&#127481;&#127479; TRY</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=SAR" target="_blank" rel="noopener" class="fiat-pill">&#127480;&#127462; SAR</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=AED" target="_blank" rel="noopener" class="fiat-pill">&#127462;&#127466; AED</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=QAR" target="_blank" rel="noopener" class="fiat-pill">&#127478;&#127462; QAR</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=RUB" target="_blank" rel="noopener" class="fiat-pill">&#127479;&#127482; RUB</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=UAH" target="_blank" rel="noopener" class="fiat-pill">&#127482;&#127462; UAH</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=PLN" target="_blank" rel="noopener" class="fiat-pill">&#127477;&#127473; PLN</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=CZK" target="_blank" rel="noopener" class="fiat-pill">&#127464;&#127487; CZK</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=SEK" target="_blank" rel="noopener" class="fiat-pill">&#127480;&#127466; SEK</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=NOK" target="_blank" rel="noopener" class="fiat-pill">&#127475;&#127476; NOK</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=DKK" target="_blank" rel="noopener" class="fiat-pill">&#127465;&#127472; DKK</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=CHF" target="_blank" rel="noopener" class="fiat-pill">&#127464;&#127469; CHF</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=THB" target="_blank" rel="noopener" class="fiat-pill">&#127481;&#127469; THB</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=VND" target="_blank" rel="noopener" class="fiat-pill">&#127483;&#127475; VND</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=IDR" target="_blank" rel="noopener" class="fiat-pill">&#127470;&#127465; IDR</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=PHP" target="_blank" rel="noopener" class="fiat-pill">&#127477;&#127469; PHP</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=MYR" target="_blank" rel="noopener" class="fiat-pill">&#127474;&#127486; MYR</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=SGD" target="_blank" rel="noopener" class="fiat-pill">&#127480;&#127468; SGD</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=HKD" target="_blank" rel="noopener" class="fiat-pill">&#127469;&#127472; HKD</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=TWD" target="_blank" rel="noopener" class="fiat-pill">&#127481;&#127484; TWD</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=NZD" target="_blank" rel="noopener" class="fiat-pill">&#127475;&#127487; NZD</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=PKR" target="_blank" rel="noopener" class="fiat-pill">&#127477;&#127472; PKR</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=BDT" target="_blank" rel="noopener" class="fiat-pill">&#127463;&#127465; BDT</a>
-          <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=LKR" target="_blank" rel="noopener" class="fiat-pill">&#127473;&#127472; LKR</a>
-        </div>
-      </div>
-    
       </div>
     </div>
   </section>
@@ -3496,7 +3705,7 @@
           <div class="build-surface-grid">
             <div class="build-surface-card"><strong>Anchor core</strong><span>Confidential transfer, mint, governance, satellite, and faucet rails.</span></div>
             <div class="build-surface-card"><strong>TypeScript SDK</strong><span>Client builders, wallet flows, swap surfaces, and app integrations.</span></div>
-            <div class="build-surface-card"><strong>Frontend apps</strong><span>Merchant checkout, AI control plane, launchpad, wallet, and demo surfaces.</span></div>
+            <div class="build-surface-card"><strong>Frontend apps</strong><span>Merchant checkout, AI control plane, launchpad, wallet, and payment surfaces.</span></div>
             <div class="build-surface-card"><strong>Infra &amp; content</strong><span>Localization, docs, runbooks, analytics, tutorials, and ops.</span></div>
           </div>
           <div class="build-signal-strip">
@@ -3619,7 +3828,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
           <div class="bounty-card"><span class="bounty-amount">$3,000</span><span class="bounty-task">New Language Translation Pack</span></div>
           <div class="bounty-card"><span class="bounty-amount">$2,500</span><span class="bounty-task">Mobile Wallet UI Design</span></div>
           <div class="bounty-card"><span class="bounty-amount">$2,000</span><span class="bounty-task">Video Tutorial Series</span></div>
-          <div class="bounty-card"><span class="bounty-amount">$1,500</span><span class="bounty-task">Offline Payment Demo</span></div>
+          <div class="bounty-card"><span class="bounty-amount">$1,500</span><span class="bounty-task">Offline Payment Rail</span></div>
         </div>
         <div class="cta-actions">
           <a href="https://github.com/nachogtavl-collab/ost-token" class="btn btn-primary btn-glow" target="_blank" rel="noopener" data-i18n="build.github">View GitHub Repo</a>
@@ -3991,7 +4200,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
         </div>
       </div>
 
-      <div class="lp-footer-note">&#9888; Memecoins are highly speculative. This is a demo of the OST launchpad. Real token minting requires a connected Solana wallet and OST balance. DYOR.</div>
+      <div class="lp-footer-note">&#9888; Memecoins are highly speculative. Launches created here stay local until a connected Solana wallet signs and funds the mint on Solana. DYOR.</div>
     </div>
   </section>
 
@@ -4237,7 +4446,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
         </div>
       </div>
 
-      <div class="sv-note">&#9888; Survival bearer tokens are experimental. This demo generates representative tokens locally. Real on-chain vault locking is under development. Bearer tokens are irreversible once transferred &mdash; treat them like cash.</div>
+      <div class="sv-note">&#9888; Survival bearer tokens are experimental. This flow currently generates local bearer previews while on-chain vault locking is under development. Bearer tokens are irreversible once transferred &mdash; treat them like cash.</div>
     </div>
   </section>
 
@@ -4508,8 +4717,8 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
 
       <!-- Transmit to Space CTA -->
       <div class="leg-transmit">
-        <button class="btn-transmit-lg" id="transmitBtnLg">&#x13087; Transmit OST Genesis Message to Space</button>
-        <p class="leg-transmit-sub">Encode your message in hieroglyphs, binary, and quantum format. Broadcast via future OST-funded satellite relays aimed at the Moon, Mars, and deep space.</p>
+        <button class="btn-transmit-lg" id="transmitBtnLg" type="button" data-i18n="transmit.buttonLarge">&#x13087; Open Transmission Console</button>
+        <p class="leg-transmit-sub" data-i18n="transmit.ctaSub">Encode a custom message, DNA sequence, image, video, or any file in hieroglyphic, binary, and quantum form before routing it toward future OST relay targets.</p>
       </div>
     </div>
   </section>
@@ -4710,7 +4919,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
         <button class="wallet-option" data-wallet="backpack"><span class="wallet-fallback">&#127890;</span> Backpack</button>
         <button class="wallet-option" data-wallet="ledger"><span class="wallet-fallback">&#128179;</span> Ledger</button>
         <button class="wallet-option" data-wallet="walletconnect"><span class="wallet-fallback">&#128279;</span> WalletConnect</button>
-        <button class="wallet-option" data-wallet="google"><span class="wallet-fallback">&#128273;</span> Google (Web3Auth)</button>
+        <button class="wallet-option" data-wallet="local"><span class="wallet-fallback">&#128273;</span> Create Local OST Wallet</button>
       </div>
       <button class="wallet-close" id="walletClose">&times;</button>
     </div>
@@ -4734,18 +4943,85 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <div class="transmit-overlay" id="transmitOverlay">
     <div class="transmit-modal">
       <div class="transmit-modal-glow"></div>
-      <button class="transmit-close" id="transmitClose">&times;</button>
-      <h3 style="font-size:1.3rem;margin-bottom:4px;">&#x13087; Transmitting to Space</h3>
-      <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:16px;">Encoding OST genesis message in hieroglyphs, binary &amp; quantum format...</p>
-      <div class="transmit-hieroglyphs" id="transmitGlyphs">&#x13000;&#x1303F;&#x13171;&#x130B8;&#x13087;&#x1305F;&#x130AD;&#x13000;</div>
-      <div class="transmit-progress"><div class="transmit-progress-fill" id="transmitFill"></div></div>
-      <div class="transmit-status" id="transmitStatus">Initializing satellite relay...</div>
+      <button class="transmit-close" id="transmitClose" type="button" aria-label="Close transmit console">&times;</button>
+      <div class="transmit-modal-header">
+        <p class="transmit-kicker" data-i18n="transmit.kicker">Deep-space payload console</p>
+        <h3 class="transmit-title" data-i18n="transmit.title">&#x13087; Transmit to Space</h3>
+        <p class="transmit-sub" data-i18n="transmit.sub">Send a custom message, DNA sequence, image, video, or any file through the OST transmission ritual. Preview the payload in hieroglyphs, binary, and quantum entanglement before launch.</p>
+      </div>
+
+      <div class="transmit-shell">
+        <div class="transmit-compose">
+          <label class="transmit-field">
+            <span class="transmit-field-label" data-i18n="transmit.message.label">Custom message</span>
+            <textarea id="transmitMessage" class="transmit-textarea" rows="4" data-i18n-placeholder="transmit.message.placeholder" placeholder="Describe the signal, dedication, coordinates, or mission note you want to send..."></textarea>
+          </label>
+
+          <label class="transmit-field">
+            <span class="transmit-field-label" data-i18n="transmit.dna.label">DNA / life-seed sequence</span>
+            <textarea id="transmitDna" class="transmit-textarea transmit-textarea-dna" rows="4" spellcheck="false" data-i18n-placeholder="transmit.dna.placeholder" placeholder="Optional: ACGT sequence, sample tag, or biological archive note"></textarea>
+          </label>
+
+          <label class="transmit-dropzone" for="transmitFiles">
+            <input class="transmit-file-input" id="transmitFiles" type="file" multiple>
+            <span class="transmit-drop-title" data-i18n="transmit.files.label">Attach payloads</span>
+            <span class="transmit-drop-sub" data-i18n="transmit.files.sub">Drop images, video, documents, archives, or any other file type</span>
+          </label>
+
+          <div class="transmit-attachment-list" id="transmitAttachmentList"></div>
+
+          <button class="btn btn-transmit-submit" id="transmitLaunch" type="button">
+            <span id="transmitLaunchLabel" data-i18n="transmit.launch">Encode and transmit</span>
+          </button>
+        </div>
+
+        <div class="transmit-monitor">
+          <div class="transmit-preview-card">
+            <div class="transmit-preview-head">
+              <span class="transmit-block-label" data-i18n="transmit.preview.glyph">Ancient hieroglyph render</span>
+              <span class="transmit-preview-state" id="transmitManifestState" data-i18n="transmit.result.ready">Signal deck ready</span>
+            </div>
+
+            <div class="transmit-hieroglyphs" id="transmitGlyphs">&#x13000;&#x1303F;&#x13171;&#x130B8;&#x13087;&#x1305F;&#x130AD;&#x13000;</div>
+
+            <div class="transmit-preview-grid">
+              <div class="transmit-preview-block">
+                <span class="transmit-block-label" data-i18n="transmit.preview.binary">Binary + checksum</span>
+                <pre class="transmit-binary" id="transmitBinary">01001111 01010011 01010100</pre>
+              </div>
+
+              <div class="transmit-preview-block">
+                <span class="transmit-block-label" data-i18n="transmit.preview.quantum">Quantum entanglement</span>
+                <div class="transmit-quantum-grid" id="transmitQuantum"></div>
+              </div>
+            </div>
+
+            <div class="transmit-progress"><div class="transmit-progress-fill" id="transmitFill"></div></div>
+            <div class="transmit-status" id="transmitStatus">Add a message, DNA sequence, or file to build a transmission.</div>
+          </div>
+
+          <div class="transmit-result-card">
+            <div class="transmit-result-head">
+              <span class="transmit-block-label" data-i18n="transmit.preview.manifest">Transmission manifest</span>
+              <span class="transmit-manifest-id" id="transmitManifestId" data-i18n="transmit.manifest.default">Awaiting payload</span>
+            </div>
+
+            <div class="transmit-summary" id="transmitPayloadSummary"></div>
+            <div class="transmit-meta-grid" id="transmitResultMeta"></div>
+
+            <div class="transmit-attachment-preview">
+              <span class="transmit-block-label" data-i18n="transmit.preview.attachments">Attached payloads</span>
+              <div class="transmit-attachment-preview-grid" id="transmitAttachmentPreview"></div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=55"></script>
+  <script src="app.js?v=56"></script>
 </body>
 </html>
