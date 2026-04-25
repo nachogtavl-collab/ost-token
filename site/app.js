@@ -11692,6 +11692,116 @@
       return Array.isArray(value) ? value : [];
     }
 
+    function extractPolymarketMarkets(data) {
+      var direct = normalizeArray(data);
+      if (direct.length) return direct;
+      return normalizeArray(data && data.value);
+    }
+
+    function extractKalshiMarkets(data) {
+      var direct = normalizeArray(data);
+      if (direct.length) return direct;
+      return normalizeArray(data && data.markets);
+    }
+
+    function fetchPredictionMarketSnapshot() {
+      if (window.location.protocol === 'file:') {
+        return Promise.reject(new Error('Prediction snapshot unavailable on file protocol'));
+      }
+
+      return fetch('data/prediction-market-snapshot.json', {
+        headers: { accept: 'application/json' },
+        cache: 'no-store'
+      }).then(function(response) {
+        if (!response.ok) throw new Error('Snapshot returned ' + response.status);
+        return response.json();
+      }).then(function(snapshot) {
+        var polymarketMarkets = extractPolymarketMarkets(snapshot && snapshot.polymarket).filter(function(item) {
+          return item && item.active !== false && item.closed !== true;
+        }).map(mapPolymarketMarket);
+        var kalshiMarkets = extractKalshiMarkets(snapshot && snapshot.kalshi).filter(function(item) {
+          return item && item.status === 'active';
+        }).map(mapKalshiMarket);
+        var sourceHealth = snapshot && snapshot.sourceHealth ? snapshot.sourceHealth : null;
+        var generatedAt = snapshot && snapshot.generatedAt ? new Date(snapshot.generatedAt) : new Date();
+
+        return {
+          polymarketMarkets: polymarketMarkets,
+          kalshiMarkets: kalshiMarkets,
+          sourceHealth: {
+            polymarket: sourceHealth ? sourceHealth.polymarket !== false : polymarketMarkets.length > 0,
+            kalshi: sourceHealth ? sourceHealth.kalshi !== false : kalshiMarkets.length > 0
+          },
+          generatedAt: Number.isNaN(generatedAt.getTime()) ? new Date() : generatedAt
+        };
+      });
+    }
+
+    function setLoadedPredictionMarkets(polymarketMarkets, kalshiMarkets, sourceHealth, updatedAt) {
+      var markets = [];
+      var failures = [];
+
+      state.sourceHealth.polymarket = !!(sourceHealth && sourceHealth.polymarket);
+      state.sourceHealth.kalshi = !!(sourceHealth && sourceHealth.kalshi);
+
+      if (state.sourceHealth.polymarket) {
+        markets = markets.concat(polymarketMarkets || []);
+      } else {
+        failures.push('Polymarket');
+      }
+
+      if (state.sourceHealth.kalshi) {
+        markets = markets.concat(kalshiMarkets || []);
+      } else {
+        failures.push('Kalshi');
+      }
+
+      if (!state.sourceHealth.polymarket && polymarketMarkets && polymarketMarkets.length) {
+        markets = markets.concat(polymarketMarkets);
+      }
+
+      if (!state.sourceHealth.kalshi && kalshiMarkets && kalshiMarkets.length) {
+        markets = markets.concat(kalshiMarkets);
+      }
+
+      state.markets = markets;
+      state.lastUpdated = updatedAt || new Date();
+      state.lastError = failures.length ? failures.join(', ') + ' unavailable' : '';
+
+      if (updatedEl) {
+        updatedEl.textContent = 'Updated ' + state.lastUpdated.toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+
+      if (markets.length) {
+        updateStatus(failures.length ? 'is-warning' : 'is-live', failures.length ? 'Live with one source degraded' : '2 live venues connected');
+      } else {
+        if (!state.lastError) state.lastError = 'No active markets returned';
+        updateStatus('is-error', 'Feeds unavailable right now');
+      }
+
+      renderPredictionBoard();
+    }
+
+    function loadDirectPredictionMarkets() {
+      return Promise.allSettled([
+        fetchPolymarketMarkets(),
+        fetchKalshiMarkets()
+      ]).then(function(results) {
+        setLoadedPredictionMarkets(
+          results[0].status === 'fulfilled' ? results[0].value : [],
+          results[1].status === 'fulfilled' ? results[1].value : [],
+          {
+            polymarket: results[0].status === 'fulfilled' && results[0].value.length > 0,
+            kalshi: results[1].status === 'fulfilled' && results[1].value.length > 0
+          },
+          new Date()
+        );
+      });
+    }
+
     function fetchPolymarketMarkets() {
       return fetch('https://gamma-api.polymarket.com/markets?limit=160&closed=false', {
         headers: { accept: 'application/json' }
@@ -11699,7 +11809,7 @@
         if (!response.ok) throw new Error('Polymarket returned ' + response.status);
         return response.json();
       }).then(function(data) {
-        return normalizeArray(data).filter(function(item) {
+        return extractPolymarketMarkets(data).filter(function(item) {
           return item && item.active !== false && item.closed !== true;
         }).map(mapPolymarketMarket);
       });
@@ -11712,7 +11822,7 @@
         if (!response.ok) throw new Error('Kalshi returned ' + response.status);
         return response.json();
       }).then(function(data) {
-        return normalizeArray(data && data.markets).filter(function(item) {
+        return extractKalshiMarkets(data).filter(function(item) {
           return item && item.status === 'active';
         }).map(mapKalshiMarket);
       });
@@ -11725,47 +11835,20 @@
       updateStatus('', 'Loading live feeds...');
       renderPredictionBoard();
 
-      Promise.allSettled([
-        fetchPolymarketMarkets(),
-        fetchKalshiMarkets()
-      ]).then(function(results) {
-        var markets = [];
-        var failures = [];
-
-        state.sourceHealth.polymarket = results[0].status === 'fulfilled';
-        state.sourceHealth.kalshi = results[1].status === 'fulfilled';
-
-        if (results[0].status === 'fulfilled') {
-          markets = markets.concat(results[0].value);
-        } else {
-          failures.push('Polymarket');
-        }
-
-        if (results[1].status === 'fulfilled') {
-          markets = markets.concat(results[1].value);
-        } else {
-          failures.push('Kalshi');
-        }
-
-        state.markets = markets;
-        state.lastUpdated = new Date();
-
-        if (updatedEl) {
-          updatedEl.textContent = 'Updated ' + state.lastUpdated.toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit'
+      var loadTask = window.location.protocol === 'file:'
+        ? loadDirectPredictionMarkets()
+        : fetchPredictionMarketSnapshot().then(function(snapshot) {
+            setLoadedPredictionMarkets(
+              snapshot.polymarketMarkets,
+              snapshot.kalshiMarkets,
+              snapshot.sourceHealth,
+              snapshot.generatedAt
+            );
+          }).catch(function() {
+            return loadDirectPredictionMarkets();
           });
-        }
 
-        if (markets.length) {
-          updateStatus(failures.length ? 'is-warning' : 'is-live', failures.length ? 'Live with one source degraded' : '2 live venues connected');
-        } else {
-          state.lastError = failures.length ? failures.join(', ') + ' unavailable' : 'No active markets returned';
-          updateStatus('is-error', 'Feeds unavailable right now');
-        }
-
-        renderPredictionBoard();
-      }).catch(function(error) {
+      loadTask.catch(function(error) {
         state.markets = [];
         state.lastError = error && error.message ? error.message : String(error);
         state.sourceHealth.polymarket = false;
