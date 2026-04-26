@@ -1793,11 +1793,11 @@
                 </div>
 
                 <div class="wd-actions">
-                  <a href="#wallet-panel-convert" class="wd-action-btn" data-wallet-tab-link="convert"><span>&#128176;</span><span data-i18n="wallet.buyOst">Buy OST</span></a>
-                  <a href="#commerce" class="wd-action-btn"><span>&#128257;</span><span data-i18n="wallet.send">Send</span></a>
+                  <a href="#wallet-panel-convert" class="wd-action-btn" data-wallet-tab-link="convert" data-buy-ost="sol"><span>&#128176;</span><span data-i18n="wallet.buyOst">Buy OST</span></a>
+                  <button class="wd-action-btn" id="wdSendBtn" type="button"><span>&#128257;</span><span data-i18n="wallet.send">Send</span></button>
                   <a href="#wallet-panel-portals" class="wd-action-btn" data-wallet-tab-link="portals"><span>&#127757;</span><span data-i18n="wallet.bridge">Bridge</span></a>
                   <button class="wd-action-btn" id="wdReceiveBtn"><span>&#128229;</span><span data-i18n="wallet.receive">Receive</span></button>
-                  <a href="#wallet-panel-convert" class="wd-action-btn" data-wallet-tab-link="convert"><span>&#9889;</span><span data-i18n="wallet.swap">Swap</span></a>
+                  <a href="#wallet-panel-convert" class="wd-action-btn" data-wallet-tab-link="convert" data-buy-ost="sol"><span>&#9889;</span><span data-i18n="wallet.swap">Swap</span></a>
                 </div>
 
                 <div class="wd-receive-panel" id="wdReceivePanel" style="display:none;">
@@ -1930,10 +1930,10 @@
                 <div class="ct-side ct-from">
                   <label class="ct-label" data-i18n="wallet.convert.from">From</label>
                   <select class="ct-select" id="transferFrom">
+                    <option value="SOL">&#9788; Solana DEVNET (instant via OST treasury)</option>
                     <option value="BTC">&#8383; Bitcoin (BTC)</option>
                     <option value="ETH">&#9830; Ethereum (ETH)</option>
                     <option value="USDC">&#9675; USDC</option>
-                    <option value="SOL">&#9788; Solana (SOL)</option>
                     <option value="USDT">&#9675; Tether (USDT)</option>
                     <option value="BNB">&#9830; BNB Chain</option>
                     <option value="USD">$ US Dollar</option>
@@ -5195,7 +5195,8 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=59"></script>
-  <script src="polish.js?v=1"></script>
+  <script src="app.js?v=60"></script>
+  <script src="polish.js?v=2"></script>
+  <script src="wallet-extras.js?v=1"></script>
 </body>
 </html>

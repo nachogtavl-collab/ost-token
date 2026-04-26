@@ -3559,6 +3559,8 @@
 
   /* ---------- LIVE PRICES — CoinGecko ---------- */
   let prices = { bitcoin: 0, ethereum: 0, solana: 0 };
+  // Expose live prices for wallet-extras.js to compute real-USD curve
+  Object.defineProperty(window, '__ostPrices', { get: function () { return Object.assign({}, prices, { ost: typeof ostPrice !== 'undefined' ? ostPrice : 1 }); } });
     let priceHistory = { bitcoin: [], ethereum: [], solana: [] };
   let ostPrice = 0.0001; // Default OST price
   window.ostPrice = ostPrice;
@@ -4713,6 +4715,29 @@
   }
 
   window.runOstFaucetFlow = runOstFaucetFlow;
+
+  // Expose primitives needed by wallet-extras.js (real send/receive/portfolio)
+  window.OST_WALLET = {
+    get session() { return connectedWalletSession; },
+    get address() { return connectedWallet; },
+    getConnection: getSolanaConnection,
+    getOstBalance: getOstBalanceForAddress,
+    ensureAta: ensureOstAssociatedTokenAccount,
+    ensureFee: ensureWalletFeeBalance,
+    sign: signAndSendTransaction,
+    transferChecked: createTransferCheckedInstruction,
+    associatedAddress: getAssociatedTokenAddressSync,
+    associatedAccountIx: createAssociatedTokenAccountInstruction,
+    memoIx: createMemoInstruction,
+    toBaseUnits: decimalAmountToBaseUnits,
+    toPublicKey,
+    constants: {
+      TOKEN_2022_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID,
+      MEMO_PROGRAM_ID,
+      OST_TOKEN_DECIMALS
+    }
+  };
 
   if (faucetBtn) {
     faucetBtn.addEventListener('click', () => {
