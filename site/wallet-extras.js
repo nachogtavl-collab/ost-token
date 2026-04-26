@@ -182,6 +182,17 @@
     var yes = Math.max(0.02, Math.min(0.98, spec.yesPrice));
     var no = 1 - yes;
     var vol = spec.volume || 250000;
+    // Map our friendly topic names onto the canonical filter pills already in the page
+    var topicAliases = {
+      'Crypto': ['crypto'],
+      'World Cup': ['sports'],
+      'Oil': ['economy', 'finance'],
+      'US Election': ['politics', 'elections'],
+      'World Events': ['tech']
+    };
+    var aliasTags = topicAliases[spec.topic] || [String(spec.topic || 'OST').toLowerCase()];
+    var topicNames = Array.isArray(spec.topicTags) ? spec.topicTags : aliasTags;
+    var topicSet = new Set(topicNames);
     return {
       source: 'ost',
       sourceLabel: 'OST Native',
@@ -197,9 +208,9 @@
       closeText: relTime(spec.closeAtMs),
       closeLabel: 'Closes',
       topic: spec.topic || 'OST',
-      topics: [spec.topic || 'OST'],
+      topics: topicSet,
       displayTopics: [spec.topic || 'OST'],
-      searchText: (spec.title + ' ' + spec.detail + ' ' + (spec.topic || '')).toLowerCase(),
+      searchText: (spec.title + ' ' + spec.detail + ' ' + (spec.topic || '') + ' ' + topicNames.join(' ')).toLowerCase(),
       primaryUrl: '#wallet-portal',
       secondaryUrl: '#wallet-portal',
       secondaryLabel: 'Trade with OST',
@@ -209,6 +220,7 @@
       createdAtMs: spec.createdAtMs || Date.now() - 86400000,
       closeAtMs: spec.closeAtMs,
       isOstNative: true,
+      isBreaking: !!spec.isBreaking,
     };
   }
 

@@ -1,0 +1,185 @@
+/* ========== Prediction extras (Info / Graph / Bet buttons + modal) ========== */
+.ost-pred-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.ost-pred-btn {
+  flex: 1 1 auto;
+  min-width: 70px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: #f3f8ff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+.ost-pred-btn:hover { background: rgba(255, 255, 255, 0.13); }
+.ost-pred-btn:active { transform: scale(0.97); }
+.ost-pred-btn--yes { background: linear-gradient(135deg, #1f8a4f, #2eaf6f); border-color: #2eaf6f; color: #fff; }
+.ost-pred-btn--no  { background: linear-gradient(135deg, #b13b4a, #d04a5b); border-color: #d04a5b; color: #fff; }
+
+.ost-pred-modal {
+  position: fixed; inset: 0; z-index: 9999;
+  display: none; align-items: center; justify-content: center;
+}
+.ost-pred-modal.is-open { display: flex; }
+.ost-pred-modal__backdrop { position: absolute; inset: 0; background: rgba(2, 6, 23, 0.78); backdrop-filter: blur(6px); }
+.ost-pred-modal__panel {
+  position: relative; max-width: 720px; width: calc(100% - 32px);
+  max-height: 90vh; overflow-y: auto;
+  background: linear-gradient(180deg, #0e1730, #0a1024);
+  border: 1px solid rgba(125, 200, 255, 0.18);
+  border-radius: 18px; padding: 28px 26px; color: #e9f1ff;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7);
+}
+.ost-pred-modal__close {
+  position: absolute; top: 10px; right: 14px; background: transparent; border: 0;
+  color: #a8b6d6; font-size: 26px; cursor: pointer; line-height: 1;
+}
+.ost-pred-modal__close:hover { color: #fff; }
+.ost-pred-modal__head { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.ost-pred-tag {
+  padding: 4px 10px; border-radius: 999px;
+  background: rgba(125, 200, 255, 0.12);
+  font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase;
+}
+.ost-pred-modal__panel h2 { margin: 0 0 14px; font-size: 22px; line-height: 1.3; }
+.ost-pred-sub { color: #9bb0d8; margin: 0 0 14px; font-size: 13px; }
+.ost-pred-meta {
+  display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px;
+  margin: 0 0 18px; font-size: 13px;
+}
+.ost-pred-meta dt { color: #9bb0d8; }
+.ost-pred-meta dd { margin: 0; color: #f3f8ff; }
+.ost-pred-modal__cta { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+.ost-pred-modal__cta .ost-pred-btn { flex: 1 1 140px; padding: 12px 14px; font-size: 14px; }
+.ost-pred-canvas {
+  width: 100%; max-width: 100%; height: auto; aspect-ratio: 64/22;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.ost-pred-label { display: block; margin: 14px 0; font-size: 13px; color: #c8d4ee; }
+.ost-pred-label input {
+  display: block; width: 100%; margin-top: 6px; padding: 12px 14px;
+  border-radius: 10px; border: 1px solid rgba(125, 200, 255, 0.25);
+  background: rgba(2, 6, 23, 0.6); color: #fff; font-size: 18px;
+}
+.ost-pred-status { min-height: 1.4em; margin-top: 10px; font-size: 13px; color: #c4d3f0; }
+.ost-pred-status code { background: rgba(255, 255, 255, 0.08); padding: 2px 6px; border-radius: 4px; font-size: 11px; }
+
+/* My bets panel */
+.ost-bets-panel {
+  margin: 24px 16px; padding: 18px; border-radius: 14px;
+  background: linear-gradient(180deg, #0c1530, #0a1024);
+  border: 1px solid rgba(125, 200, 255, 0.16);
+}
+.ost-bets-panel header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.ost-bets-panel h3 { margin: 0; font-size: 16px; color: #e9f1ff; }
+.ost-bets-panel #ost-bets-refresh {
+  background: transparent; border: 1px solid rgba(125, 200, 255, 0.3); color: #a8c4ee;
+  padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 12px;
+}
+.ost-bet-row {
+  display: grid; gap: 6px; padding: 12px; border-radius: 10px; margin-bottom: 8px;
+  background: rgba(255, 255, 255, 0.04); border-left: 3px solid #5a7;
+}
+.ost-bet-row.is-won  { border-left-color: #2eaf6f; background: rgba(46, 175, 111, 0.08); }
+.ost-bet-row.is-lost { border-left-color: #d04a5b; background: rgba(208, 74, 91, 0.06); }
+.ost-bet-row.is-open { border-left-color: #7bbcf0; }
+.ost-bet-row__title { font-weight: 600; font-size: 14px; }
+.ost-bet-row__meta { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: #b9c8e8; }
+.ost-bet-row__meta strong { color: #f3f8ff; }
+.ost-bet-claimed { color: #7be3a8; font-size: 12px; font-weight: 600; }
+.ost-pred-empty { color: #97a8c8; font-size: 13px; padding: 12px; text-align: center; }
+
+/* ========== Mobile request-desktop bar + tour ========== */
+.ost-mobile-bar {
+  position: fixed; bottom: 8px; left: 50%; transform: translateX(-50%);
+  display: none; gap: 8px; z-index: 9000;
+  background: rgba(8, 14, 30, 0.92); border: 1px solid rgba(125, 200, 255, 0.25);
+  border-radius: 999px; padding: 6px 8px; backdrop-filter: blur(8px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+.ost-mobile-bar button {
+  background: transparent; border: 0; color: #d8e4ff;
+  padding: 8px 14px; border-radius: 999px; font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.ost-mobile-bar button.is-active { background: rgba(125, 200, 255, 0.2); color: #fff; }
+@media (max-width: 780px) { .ost-mobile-bar { display: inline-flex; } }
+body.ost-force-desktop .ost-mobile-bar { display: inline-flex !important; }
+body.ost-force-desktop { min-width: 1280px; }
+
+/* Mobile responsiveness fixes */
+@media (max-width: 780px) {
+  body:not(.ost-force-desktop) {
+    font-size: 15px;
+  }
+  body:not(.ost-force-desktop) .prediction-card,
+  body:not(.ost-force-desktop) .prediction-pulse-card {
+    min-height: auto;
+  }
+  body:not(.ost-force-desktop) .ost-pred-btn {
+    padding: 12px 8px; font-size: 13px; min-height: 44px;
+  }
+  body:not(.ost-force-desktop) .ost-pred-modal__panel {
+    width: calc(100% - 16px); padding: 20px 16px; border-radius: 14px;
+  }
+  body:not(.ost-force-desktop) input,
+  body:not(.ost-force-desktop) button:not(.ost-pred-btn):not(.ost-mobile-bar button) {
+    min-height: 44px; /* iOS touch target */
+  }
+  /* Compartments dock collapses to bottom row on phones */
+  body:not(.ost-force-desktop) .ost-compartments-dock {
+    bottom: 60px !important; top: auto !important; right: 50% !important;
+    transform: translateX(50%) !important;
+    flex-direction: row !important; max-width: calc(100vw - 16px); overflow-x: auto;
+  }
+}
+
+/* ========== Guided tour overlay ========== */
+.ost-tour {
+  position: fixed; inset: 0; z-index: 10000; display: none;
+  pointer-events: none;
+}
+.ost-tour.is-open { display: block; }
+.ost-tour__veil {
+  position: absolute; inset: 0;
+  background: rgba(2, 6, 23, 0.55);
+  pointer-events: auto;
+}
+.ost-tour__card {
+  position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+  max-width: 480px; width: calc(100% - 32px);
+  background: linear-gradient(180deg, #0e1730, #0a1024);
+  border: 1px solid rgba(125, 200, 255, 0.3);
+  border-radius: 16px; padding: 20px; color: #f3f8ff;
+  pointer-events: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+.ost-tour__step { font-size: 11px; color: #9bb0d8; letter-spacing: 0.08em; text-transform: uppercase; }
+.ost-tour__title { margin: 6px 0 10px; font-size: 18px; }
+.ost-tour__body { font-size: 14px; line-height: 1.5; color: #d8e4ff; }
+.ost-tour__cta { display: flex; gap: 10px; margin-top: 16px; justify-content: space-between; flex-wrap: wrap; }
+.ost-tour__cta button {
+  padding: 10px 16px; border-radius: 10px; border: 0; cursor: pointer; font-weight: 600; font-size: 13px;
+}
+.ost-tour__skip { background: transparent; color: #a8b6d6; }
+.ost-tour__next { background: linear-gradient(135deg, #6cb3ff, #4f8cf0); color: #fff; }
+.ost-tour__pulse {
+  position: absolute; border: 3px solid #6cb3ff; border-radius: 14px;
+  pointer-events: none;
+  box-shadow: 0 0 0 9999px rgba(2, 6, 23, 0.55);
+  animation: ostTourPulse 1.6s ease-in-out infinite;
+  transition: top 0.3s ease, left 0.3s ease, width 0.3s ease, height 0.3s ease;
+}
+@keyframes ostTourPulse {
+  0%, 100% { box-shadow: 0 0 0 9999px rgba(2, 6, 23, 0.55), 0 0 0 0 rgba(108, 179, 255, 0.5); }
+  50% { box-shadow: 0 0 0 9999px rgba(2, 6, 23, 0.55), 0 0 0 14px rgba(108, 179, 255, 0); }
+}

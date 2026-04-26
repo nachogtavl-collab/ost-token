@@ -6,7 +6,8 @@
     "build": "anchor build",
     "test": "anchor test",
     "deploy:devnet": "anchor deploy --provider.cluster devnet",
-    "deploy:localnet": "anchor deploy --provider.cluster localnet"
+    "deploy:localnet": "anchor deploy --provider.cluster localnet",
+    "fund:treasury": "ts-node scripts/fund-faucet-treasury.ts"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.0",
