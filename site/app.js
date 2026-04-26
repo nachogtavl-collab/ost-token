@@ -4395,26 +4395,55 @@
       // Native devnet path: SOL holders can buy OST directly through the OST program
       // by claiming from the on-chain treasury. This is the "buy through us, not Solana"
       // route — no Jupiter, no Raydium, no external liquidity required.
-      if (curr === 'SOL' && typeof window.runOstFaucetFlow === 'function') {
-        try {
-          const result = await window.runOstFaucetFlow({ animate: false });
-          if (result && result.ok) {
-            transferResult.textContent = `Received ${OST_FAUCET_AMOUNT} OST through OST treasury.`;
-            setConvertRouteMessage('Native devnet route succeeded. ' + OST_FAUCET_AMOUNT + ' OST was minted to your wallet directly through the OST program — no third-party DEX involved.');
-            toast('🎁', `Bought ${OST_FAUCET_AMOUNT} OST through the OST treasury`);
+      if (curr === 'SOL') {
+        const solAmount = parseFloat((transferAmount && transferAmount.value) || '0');
+        // If user typed a SOL amount > 0, run the real co-signed swap from the swap pool
+        // (live USD-rate conversion). Otherwise fall back to the 1-OST faucet for first-time users.
+        if (solAmount > 0 && window.OST_REAL_SWAP && window.OST_SWAP_POOL) {
+          try {
+            transferResult.textContent = `Quoting ${solAmount} SOL → OST at live rate...`;
+            const q = window.OST_REAL_SWAP.quote(solAmount);
+            transferResult.textContent = `Routing ${solAmount} SOL → ~${q.ost.toFixed(2)} OST (rate ${q.rate.toFixed(2)} OST/SOL)...`;
+            const result = await window.OST_REAL_SWAP.swap(solAmount, { memo: 'OST swap' });
+            transferResult.textContent = `Received ${result.ost.toFixed(2)} OST · sig ${result.sig.slice(0, 8)}...`;
+            setConvertRouteMessage(`Atomic swap settled on devnet at $${result.solUsd.toFixed(2)}/SOL. ${result.ost.toFixed(2)} OST released from the OST swap pool to your wallet in a single transaction.`);
+            toast('💱', `Swapped ${solAmount} SOL → ${result.ost.toFixed(2)} OST`);
+            launchConfetti();
+            updateWalletBalance(connectedWallet);
             return;
+          } catch (err) {
+            console.warn('[OST] Real SOL→OST swap failed, falling back', err);
+            const msg = (err && err.message) || String(err);
+            // If pool is missing or low on OST, fall through to faucet attempt below.
+            if (!/Connect a wallet/i.test(msg)) {
+              transferResult.textContent = 'Swap pool unavailable: ' + msg + '. Trying faucet fallback...';
+            } else {
+              transferResult.textContent = msg;
+              return;
+            }
           }
-          // Treasury empty or claim already used — fall through to Jupiter
-          if (result && result.reason === 'already-claimed') {
-            transferResult.textContent = 'Already claimed from OST treasury. Loading Jupiter as a fallback route...';
-            setConvertRouteMessage('You already claimed your OST treasury allocation for this wallet. Loading Jupiter so you can swap additional SOL for OST through liquidity pools.');
-          } else {
+        }
+
+        if (typeof window.runOstFaucetFlow === 'function') {
+          try {
+            const result = await window.runOstFaucetFlow({ animate: false });
+            if (result && result.ok) {
+              transferResult.textContent = `Received ${OST_FAUCET_AMOUNT} OST through OST treasury (faucet).`;
+              setConvertRouteMessage('Faucet route used: ' + OST_FAUCET_AMOUNT + ' OST minted to your wallet through the OST program. To buy more, type a SOL amount above and convert again — the swap pool will release OST at the live USD rate.');
+              toast('🎁', `Claimed ${OST_FAUCET_AMOUNT} OST faucet`);
+              return;
+            }
+            if (result && result.reason === 'already-claimed') {
+              transferResult.textContent = 'Already claimed from OST treasury. Type a SOL amount above to swap for more OST through the swap pool.';
+              setConvertRouteMessage('You already claimed your one-time OST treasury allocation. Enter a SOL amount and click Convert again to do a live SOL→OST swap through the OST swap pool.');
+              return;
+            }
             transferResult.textContent = 'Native OST route unavailable. Loading Jupiter fallback...';
             setConvertRouteMessage('The OST treasury is unavailable right now. Loading Jupiter as the fallback liquidity route.');
+          } catch (err) {
+            console.warn('[OST] Native convert flow failed', err);
+            transferResult.textContent = 'Native route failed. Loading Jupiter fallback...';
           }
-        } catch (err) {
-          console.warn('[OST] Native convert flow failed', err);
-          transferResult.textContent = 'Native route failed. Loading Jupiter fallback...';
         }
       }
 
@@ -13032,6 +13061,16 @@
 
       if (!state.sourceHealth.kalshi && kalshiMarkets && kalshiMarkets.length) {
         markets = markets.concat(kalshiMarkets);
+      }
+
+      // OST native markets — always present, on top of any live feed
+      if (typeof window.buildOstNativeMarkets === 'function') {
+        try {
+          var native = window.buildOstNativeMarkets();
+          if (Array.isArray(native) && native.length) {
+            markets = native.concat(markets);
+          }
+        } catch (e) { console.warn('[OST native markets]', e); }
       }
 
       state.markets = markets;

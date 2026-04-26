@@ -32,6 +32,348 @@
   }
 
   // ------------------------------------------------------------------
+  // 0) Real SOL → OST swap engine (devnet co-signed)
+  //    Builds an atomic Transaction:
+  //      ix1: SystemProgram.transfer(user → swapPool, lamports)
+  //      ix2: token transferChecked(swapPool ATA → user ATA, OST amount)
+  //    Both signers (user + swapPool) sign before the network sees it.
+  //    The swap pool keypair is published in site/swap-pool.js (devnet ONLY).
+  // ------------------------------------------------------------------
+  function getLiveSolUsd() {
+    var p = window.__ostPrices || {};
+    if (Number.isFinite(p.solana) && p.solana > 0) return p.solana;
+    return 86.6; // sane fallback ~ April 2026
+  }
+  function getLiveOstUsd() {
+    var p = window.__ostPrices || {};
+    if (Number.isFinite(p.ost) && p.ost > 0) return p.ost;
+    return 1;
+  }
+
+  function quoteSolToOst(solAmount) {
+    var solUsd = getLiveSolUsd();
+    var ostUsd = getLiveOstUsd();
+    var grossOst = (Number(solAmount) * solUsd) / ostUsd;
+    var fee = grossOst * 0.005; // 0.5% pool fee
+    return {
+      ost: Math.max(grossOst - fee, 0),
+      grossOst: grossOst,
+      fee: fee,
+      solUsd: solUsd,
+      ostUsd: ostUsd,
+      rate: solUsd / ostUsd
+    };
+  }
+
+  function getSwapPool() {
+    if (!window.OST_SWAP_POOL || !window.OST_SWAP_POOL.secretKey) return null;
+    try {
+      var sk = Uint8Array.from(window.OST_SWAP_POOL.secretKey);
+      return solanaWeb3.Keypair.fromSecretKey(sk);
+    } catch (e) { console.warn('[swap-pool] bad secret key', e); return null; }
+  }
+
+  async function performRealSwap(solAmount, opts) {
+    opts = opts || {};
+    var w = window.OST_WALLET;
+    if (!w || !w.session || !w.session.publicKey) throw new Error('Connect a wallet first');
+    if (!Number.isFinite(solAmount) || solAmount <= 0) throw new Error('Invalid SOL amount');
+
+    var pool = getSwapPool();
+    if (!pool) throw new Error('Swap pool not loaded — refresh the page');
+
+    var poolPub = pool.publicKey;
+    var poolAta = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.ata);
+    var mintPk = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.mint);
+    var c = w.constants;
+    var conn = w.getConnection();
+
+    var quote = quoteSolToOst(solAmount);
+    if (quote.ost <= 0) throw new Error('Quote too small');
+
+    // Make sure the user has enough SOL (for swap + fee + ATA rent)
+    var userLamports = await conn.getBalance(w.session.publicKey);
+    var needed = Math.round(solAmount * solanaWeb3.LAMPORTS_PER_SOL) + 5_000_000; // +0.005 SOL buffer
+    if (userLamports < needed) {
+      try { await w.ensureFee(w.session.publicKey); } catch (e) {}
+      userLamports = await conn.getBalance(w.session.publicKey);
+      if (userLamports < needed) {
+        throw new Error('Need ' + (needed / solanaWeb3.LAMPORTS_PER_SOL).toFixed(4) + ' SOL on devnet (have ' + (userLamports / solanaWeb3.LAMPORTS_PER_SOL).toFixed(4) + ')');
+      }
+    }
+
+    // Make sure the pool has enough OST
+    try {
+      var poolAcct = await conn.getTokenAccountBalance(poolAta);
+      var poolOst = Number(poolAcct.value.uiAmount || 0);
+      if (poolOst < quote.ost) {
+        throw new Error('Swap pool low on OST (' + poolOst.toFixed(2) + '). Try again later or contact admin to refill.');
+      }
+    } catch (e) {
+      if (e && /low on OST/.test(e.message)) throw e;
+      // pool ATA missing — bail
+      throw new Error('Swap pool not initialised on devnet');
+    }
+
+    // Make sure user has an OST ATA
+    var userAta = await w.ensureAta(w.session.publicKey);
+
+    var tx = new solanaWeb3.Transaction();
+    tx.add(solanaWeb3.SystemProgram.transfer({
+      fromPubkey: w.session.publicKey,
+      toPubkey: poolPub,
+      lamports: Math.round(solAmount * solanaWeb3.LAMPORTS_PER_SOL)
+    }));
+    tx.add(w.transferChecked(
+      poolAta, mintPk, userAta, poolPub,
+      w.toBaseUnits(quote.ost, c.OST_TOKEN_DECIMALS),
+      c.OST_TOKEN_DECIMALS, c.TOKEN_2022_PROGRAM_ID
+    ));
+    if (opts.memo) tx.add(w.memoIx(opts.memo, w.session.publicKey));
+
+    tx.feePayer = w.session.publicKey;
+    var bh = await conn.getLatestBlockhash('confirmed');
+    tx.recentBlockhash = bh.blockhash;
+
+    // Co-sign with the swap pool keypair (devnet only) FIRST
+    tx.partialSign(pool);
+
+    // Then user signs + sends via the existing helper (handles local + provider)
+    var sig = await w.sign(tx);
+
+    // Snapshot for the curve
+    try {
+      var ostBal = await w.getOstBalance(w.session.publicKey);
+      var solBal = (await conn.getBalance(w.session.publicKey)) / solanaWeb3.LAMPORTS_PER_SOL;
+      recordSnapshot({ ts: Date.now(), ostBalance: ostBal, solBalance: solBal, kind: 'swap-in', amount: quote.ost, sig: sig });
+      refreshChartIfReady();
+    } catch (e) {}
+
+    return { sig: sig, ost: quote.ost, solUsd: quote.solUsd, rate: quote.rate, fee: quote.fee };
+  }
+
+  window.OST_REAL_SWAP = {
+    quote: quoteSolToOst,
+    swap: performRealSwap,
+    pool: function () { return window.OST_SWAP_POOL ? window.OST_SWAP_POOL.publicKey : null; }
+  };
+
+  // ------------------------------------------------------------------
+  // 0b) OST-native prediction markets (BTC up/down, World Cup, oil, US presidency, world events)
+  // Surfaced on top of Polymarket + Kalshi via window.buildOstNativeMarkets()
+  // BTC market uses live SOL/BTC price ticks; the rest are curated event lines.
+  // ------------------------------------------------------------------
+  function pct(n) { return Math.round(n * 100) + '%'; }
+  function fmtMoney(n) {
+    if (n >= 1e6) return '$' + (n / 1e6).toFixed(2) + 'M';
+    if (n >= 1e3) return '$' + (n / 1e3).toFixed(1) + 'K';
+    return '$' + Math.round(n);
+  }
+  function relTime(ms) {
+    var d = ms - Date.now();
+    var hrs = Math.round(d / 3600000);
+    if (hrs < 24) return 'in ' + hrs + 'h';
+    var days = Math.round(hrs / 24);
+    if (days < 30) return 'in ' + days + 'd';
+    return 'in ' + Math.round(days / 30) + 'mo';
+  }
+
+  function makeNativeMarket(spec) {
+    var yes = Math.max(0.02, Math.min(0.98, spec.yesPrice));
+    var no = 1 - yes;
+    var vol = spec.volume || 250000;
+    return {
+      source: 'ost',
+      sourceLabel: 'OST Native',
+      id: 'ost-' + spec.id,
+      title: spec.title,
+      detail: spec.detail,
+      yesLabel: 'Yes', yesValue: pct(yes), yesPriceNumber: yes,
+      noLabel: 'No', noValue: pct(no), noPriceNumber: no,
+      volumeLabel: 'Volume', volumeValue: fmtMoney(vol), volumeNumber: vol,
+      secondaryMetricLabel: 'Open interest',
+      secondaryMetricValue: fmtMoney(vol * 0.6),
+      secondaryMetricNumber: vol * 0.6,
+      closeText: relTime(spec.closeAtMs),
+      closeLabel: 'Closes',
+      topic: spec.topic || 'OST',
+      topics: [spec.topic || 'OST'],
+      displayTopics: [spec.topic || 'OST'],
+      searchText: (spec.title + ' ' + spec.detail + ' ' + (spec.topic || '')).toLowerCase(),
+      primaryUrl: '#wallet-portal',
+      secondaryUrl: '#wallet-portal',
+      secondaryLabel: 'Trade with OST',
+      primaryLabel: 'Open OST market',
+      contractLabel: 'OST native binary',
+      sortValue: vol,
+      createdAtMs: spec.createdAtMs || Date.now() - 86400000,
+      closeAtMs: spec.closeAtMs,
+      isOstNative: true,
+    };
+  }
+
+  window.buildOstNativeMarkets = function () {
+    var now = Date.now();
+    var DAY = 86400000;
+    var prices = window.__ostPrices || {};
+    var btc = Number(prices.bitcoin) || 92000;
+    var eth = Number(prices.ethereum) || 4200;
+    var sol = Number(prices.solana) || 86;
+
+    // Use a small deterministic-ish jitter so the live YES price feels alive
+    function jitter(base, range) {
+      var t = Math.floor(now / 60000); // changes every minute
+      return base + Math.sin(t * 0.31) * range;
+    }
+
+    return [
+      // Crypto (live-priced)
+      makeNativeMarket({
+        id: 'btc-up-today', topic: 'Crypto',
+        title: 'Will BTC close higher today?',
+        detail: 'Resolves YES if Bitcoin closes above its current spot of $' + btc.toFixed(0) + ' at 23:59 UTC.',
+        yesPrice: jitter(0.54, 0.04),
+        volume: 1_840_000,
+        closeAtMs: now + (24 - new Date().getUTCHours()) * 3600000,
+      }),
+      makeNativeMarket({
+        id: 'btc-100k-2026', topic: 'Crypto',
+        title: 'BTC above $100,000 by Dec 31, 2026?',
+        detail: 'Spot price currently $' + btc.toFixed(0) + '. Resolves on official CoinGecko close.',
+        yesPrice: jitter(0.61, 0.03), volume: 4_200_000,
+        closeAtMs: new Date('2026-12-31T23:59:00Z').getTime(),
+      }),
+      makeNativeMarket({
+        id: 'eth-flippening', topic: 'Crypto',
+        title: 'ETH market cap flips BTC in 2026?',
+        detail: 'ETH spot $' + eth.toFixed(0) + '. Long-shot binary settled on year-end CoinGecko data.',
+        yesPrice: 0.06, volume: 720_000,
+        closeAtMs: new Date('2026-12-31T23:59:00Z').getTime(),
+      }),
+      makeNativeMarket({
+        id: 'sol-150', topic: 'Crypto',
+        title: 'SOL above $150 before July 1, 2026?',
+        detail: 'SOL spot $' + sol.toFixed(2) + '. OST swap pool settles directly into your wallet.',
+        yesPrice: jitter(0.42, 0.05), volume: 980_000,
+        closeAtMs: new Date('2026-07-01T00:00:00Z').getTime(),
+      }),
+
+      // World Cup 2026 (USA / Canada / Mexico — June 11–July 19, 2026)
+      makeNativeMarket({
+        id: 'wc26-winner-brazil', topic: 'World Cup',
+        title: 'Brazil to win FIFA World Cup 2026?',
+        detail: 'Final on July 19, 2026 at MetLife Stadium. Resolves on the official FIFA result.',
+        yesPrice: 0.18, volume: 3_400_000,
+        closeAtMs: new Date('2026-07-19T22:00:00Z').getTime(),
+      }),
+      makeNativeMarket({
+        id: 'wc26-winner-argentina', topic: 'World Cup',
+        title: 'Argentina to defend the World Cup 2026?',
+        detail: 'Reigning champion. Resolves on the official FIFA final result.',
+        yesPrice: 0.15, volume: 2_900_000,
+        closeAtMs: new Date('2026-07-19T22:00:00Z').getTime(),
+      }),
+      makeNativeMarket({
+        id: 'wc26-winner-france', topic: 'World Cup',
+        title: 'France to win World Cup 2026?',
+        detail: 'Strong squad. Settled on FIFA-confirmed final.',
+        yesPrice: 0.12, volume: 1_800_000,
+        closeAtMs: new Date('2026-07-19T22:00:00Z').getTime(),
+      }),
+      makeNativeMarket({
+        id: 'wc26-host-quarter', topic: 'World Cup',
+        title: 'USA reaches the World Cup 2026 quarter-finals?',
+        detail: 'Co-host advantage. Resolves YES if USMNT plays a QF match.',
+        yesPrice: 0.34, volume: 1_100_000,
+        closeAtMs: new Date('2026-07-11T20:00:00Z').getTime(),
+      }),
+
+      // Energy / commodities
+      makeNativeMarket({
+        id: 'oil-90', topic: 'Oil',
+        title: 'WTI crude above $90 a barrel by year-end 2026?',
+        detail: 'Settled on EIA spot price for West Texas Intermediate on Dec 31, 2026.',
+        yesPrice: 0.38, volume: 1_650_000,
+        closeAtMs: new Date('2026-12-31T23:59:00Z').getTime(),
+      }),
+      makeNativeMarket({
+        id: 'opec-cut', topic: 'Oil',
+        title: 'OPEC+ announces a production cut at June 2026 meeting?',
+        detail: 'Resolves YES if any headline cut > 200kbpd is announced at the next OPEC+ ministerial.',
+        yesPrice: 0.46, volume: 540_000,
+        closeAtMs: new Date('2026-06-30T23:59:00Z').getTime(),
+      }),
+      makeNativeMarket({
+        id: 'gas-3', topic: 'Oil',
+        title: 'US average gas under $3.00/gal on July 4, 2026?',
+        detail: 'Settled on AAA national average on July 4. Currently around $3.21.',
+        yesPrice: 0.41, volume: 380_000,
+        closeAtMs: new Date('2026-07-04T23:59:00Z').getTime(),
+      }),
+
+      // US politics / 2028 presidency
+      makeNativeMarket({
+        id: 'us28-dem', topic: 'US Election',
+        title: 'Democratic candidate wins the 2028 US presidency?',
+        detail: 'Settled on certified Electoral College result. Lines refresh as primaries unfold.',
+        yesPrice: jitter(0.48, 0.03), volume: 6_200_000,
+        closeAtMs: new Date('2028-11-07T23:59:00Z').getTime(),
+      }),
+      makeNativeMarket({
+        id: 'us28-gop', topic: 'US Election',
+        title: 'Republican candidate wins the 2028 US presidency?',
+        detail: 'Settled on certified Electoral College result. Counterpart of the Dem line.',
+        yesPrice: jitter(0.47, 0.03), volume: 5_900_000,
+        closeAtMs: new Date('2028-11-07T23:59:00Z').getTime(),
+      }),
+      makeNativeMarket({
+        id: 'us28-vance', topic: 'US Election',
+        title: 'JD Vance wins the 2028 GOP presidential nomination?',
+        detail: 'Resolves on official RNC nomination roll-call.',
+        yesPrice: 0.31, volume: 1_700_000,
+        closeAtMs: new Date('2028-08-31T23:59:00Z').getTime(),
+      }),
+      makeNativeMarket({
+        id: 'us28-newsom', topic: 'US Election',
+        title: 'Gavin Newsom wins the 2028 Democratic presidential nomination?',
+        detail: 'Resolves on official DNC nomination roll-call.',
+        yesPrice: 0.27, volume: 1_500_000,
+        closeAtMs: new Date('2028-08-31T23:59:00Z').getTime(),
+      }),
+      makeNativeMarket({
+        id: 'us-midterm-house', topic: 'US Election',
+        title: 'Democrats flip the US House in 2026 midterms?',
+        detail: 'Settled on AP race calls for the 435 House seats on Nov 3, 2026.',
+        yesPrice: 0.52, volume: 2_200_000,
+        closeAtMs: new Date('2026-11-04T05:00:00Z').getTime(),
+      }),
+
+      // Other world events
+      makeNativeMarket({
+        id: 'ai-gpt6', topic: 'World Events',
+        title: 'OpenAI ships a public "GPT-6" model in 2026?',
+        detail: 'Resolves YES on a generally-available GPT-6-branded launch announced by OpenAI in 2026.',
+        yesPrice: 0.34, volume: 920_000,
+        closeAtMs: new Date('2026-12-31T23:59:00Z').getTime(),
+      }),
+      makeNativeMarket({
+        id: 'space-starship-orbit', topic: 'World Events',
+        title: 'SpaceX Starship reaches orbit with payload deploy in 2026?',
+        detail: 'Resolves on FAA + SpaceX confirmation of orbital insertion + payload separation.',
+        yesPrice: 0.66, volume: 480_000,
+        closeAtMs: new Date('2026-12-31T23:59:00Z').getTime(),
+      }),
+      makeNativeMarket({
+        id: 'climate-1-5', topic: 'World Events',
+        title: '2026 ranks as one of the 3 hottest years on record?',
+        detail: 'Settled on NOAA + Copernicus annual global temperature ranking.',
+        yesPrice: 0.74, volume: 380_000,
+        closeAtMs: new Date('2027-01-15T00:00:00Z').getTime(),
+      }),
+    ];
+  };
+
+  // ------------------------------------------------------------------
   // 1) Auto-select SOL when arriving at convert via "Buy OST" button
   // ------------------------------------------------------------------
   function wireBuyOstAutoSelect() {
@@ -369,6 +711,32 @@
   }
 
   // ------------------------------------------------------------------
+  // 4b) Live quote under Convert amount input
+  // ------------------------------------------------------------------
+  function wireConvertQuote() {
+    var amt = $('transferAmount');
+    var sel = $('transferFrom');
+    var out = $('transferQuote');
+    if (!amt || !sel || !out) return;
+    function refresh() {
+      var v = parseFloat(amt.value);
+      var cur = sel.value;
+      if (cur !== 'SOL' || !Number.isFinite(v) || v <= 0) {
+        out.textContent = '';
+        return;
+      }
+      if (!window.OST_REAL_SWAP) { out.textContent = ''; return; }
+      var q = window.OST_REAL_SWAP.quote(v);
+      out.innerHTML = '<span style="color:#34d399;">&asymp; ' + q.ost.toFixed(2) +
+        ' OST</span> at $' + q.solUsd.toFixed(2) + '/SOL &middot; pool fee ' + q.fee.toFixed(2) + ' OST';
+    }
+    amt.addEventListener('input', refresh);
+    sel.addEventListener('change', refresh);
+    setInterval(refresh, 8000);
+    refresh();
+  }
+
+  // ------------------------------------------------------------------
   // 5) Boot
   // ------------------------------------------------------------------
   function boot() {
@@ -382,6 +750,7 @@
     }
     try { wireBuyOstAutoSelect(); } catch (e) { console.warn(e); }
     try { wireWalletButtons(); } catch (e) { console.warn(e); }
+    try { wireConvertQuote(); } catch (e) { console.warn(e); }
     try { startSnapshotPoller(); } catch (e) { console.warn(e); }
     // Initial chart redraw shortly after load
     setTimeout(refreshChartIfReady, 1500);
