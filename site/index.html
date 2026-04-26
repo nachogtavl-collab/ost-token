@@ -27,7 +27,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Egyptian+Hieroglyphs&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="style.css?v=55">
+  <link rel="stylesheet" href="style.css?v=57">
 </head>
 <body>
 
@@ -56,7 +56,9 @@
           <button class="wel-lang-btn" data-lang="ko"><span class="wel-flag">&#127472;&#127479;</span> &#54620;&#44397;&#50612;</button>
           <button class="wel-lang-btn" data-lang="tr"><span class="wel-flag">&#127481;&#127479;</span> T&uuml;rk&ccedil;e</button>
         </div>
-        <button class="wel-next-btn" id="welNext1">Next &rarr; Currency</button>
+        <div class="wel-btn-row wel-btn-row-single">
+          <button class="wel-next-btn" id="welNext1">Next &rarr; Currency</button>
+        </div>
       </div>
 
       <!-- Step 2: Currency -->
@@ -1590,6 +1592,132 @@
         <div class="wallet-tab-panel is-active" id="wallet-panel-access">
           <div class="wallet-access-grid">
             <div class="wallet-dashboard" id="walletDashboard">
+              <div class="wd-journey" id="wdJourney">
+                <div class="wd-journey-head">
+                  <span class="wallet-side-kicker">Devnet onboarding rail</span>
+                  <div class="wd-journey-badge" id="wdJourneyBadge">Awaiting wallet</div>
+                  <h4 id="wdJourneyTitle">Connect a wallet to start on devnet</h4>
+                  <p id="wdJourneySummary">Create a browser wallet or connect an existing Solana wallet. OST will then guide you through devnet SOL and your first OST balance.</p>
+                </div>
+                <div class="wd-journey-grid">
+                  <article class="wd-journey-step is-active" id="wdJourneyStepWallet">
+                    <span class="wd-journey-step-index">01</span>
+                    <div class="wd-journey-step-copy">
+                      <strong>Wallet access</strong>
+                      <p class="wd-journey-step-text">Choose create wallet or connect an existing address.</p>
+                    </div>
+                  </article>
+                  <article class="wd-journey-step" id="wdJourneyStepBackup">
+                    <span class="wd-journey-step-index">02</span>
+                    <div class="wd-journey-step-copy">
+                      <strong>Backup / verify</strong>
+                      <p class="wd-journey-step-text">Download the browser-wallet backup or verify your extension session.</p>
+                    </div>
+                  </article>
+                  <article class="wd-journey-step" id="wdJourneyStepSol">
+                    <span class="wd-journey-step-index">03</span>
+                    <div class="wd-journey-step-copy">
+                      <strong>Devnet SOL</strong>
+                      <p class="wd-journey-step-text">OST needs a small devnet SOL balance for network fees.</p>
+                    </div>
+                  </article>
+                  <article class="wd-journey-step" id="wdJourneyStepOst">
+                    <span class="wd-journey-step-index">04</span>
+                    <div class="wd-journey-step-copy">
+                      <strong>OST ready</strong>
+                      <p class="wd-journey-step-text">Claim devnet OST or open the convert rail for the future mainnet route.</p>
+                    </div>
+                  </article>
+                </div>
+                <div class="wd-journey-actions">
+                  <button class="btn btn-primary btn-sm" id="wdJourneyPrimaryBtn" type="button">Create browser wallet</button>
+                  <button class="btn btn-outline btn-sm" id="wdJourneySecondaryBtn" type="button">Use extension wallet</button>
+                </div>
+              </div>
+
+              <div class="wd-intelligence" id="wdIntelligence">
+                <div class="wd-intelligence-head">
+                  <div>
+                    <span class="wallet-side-kicker">Wallet intelligence</span>
+                    <h4 id="wdIntelTitle">Address, funds, and execution health</h4>
+                    <p id="wdIntelCopy">Create or connect a wallet to unlock a live address, balance curve, and route readiness across OST rails.</p>
+                  </div>
+                  <div class="wd-intelligence-badge" id="wdIntelMode">Awaiting wallet</div>
+                </div>
+
+                <div class="wd-intelligence-grid">
+                  <div class="wd-intel-card">
+                    <span>Live address</span>
+                    <strong id="wdIntelAddress">Connect wallet</strong>
+                    <p id="wdIntelAddressCopy">No wallet session yet</p>
+                  </div>
+                  <div class="wd-intel-card">
+                    <span>Total wallet value</span>
+                    <strong id="wdIntelTotal">$0.00</strong>
+                    <p id="wdIntelTotalCopy">SOL + OST mark-to-market</p>
+                  </div>
+                  <div class="wd-intel-card">
+                    <span>24h move</span>
+                    <strong id="wdIntelChange">--</strong>
+                    <p id="wdIntelChangeCopy">Waiting for live holdings</p>
+                  </div>
+                  <div class="wd-intel-card">
+                    <span>Execution routes</span>
+                    <strong id="wdIntelRoutes">0 live / 7 linked</strong>
+                    <p id="wdIntelRoutesCopy">Wallet, devnet swap, fiat, bridge, prediction</p>
+                  </div>
+                  <div class="wd-intel-card">
+                    <span>Recorded activity</span>
+                    <strong id="wdIntelActivity">0 tickets</strong>
+                    <p id="wdIntelActivityCopy">Prediction + interchange history</p>
+                  </div>
+                  <div class="wd-intel-card">
+                    <span>Funding status</span>
+                    <strong id="wdIntelFunding">Not ready</strong>
+                    <p id="wdIntelFundingCopy">Needs wallet and devnet SOL</p>
+                  </div>
+                </div>
+
+                <div class="wd-intelligence-chart-card">
+                  <div class="wd-intelligence-chart-head">
+                    <div>
+                      <strong id="wdPortfolioHeading">Wallet curve</strong>
+                      <p id="wdPortfolioCopy">Your live wallet curve combines current SOL and OST holdings with the latest market tape.</p>
+                    </div>
+                    <span class="wd-intelligence-badge" id="wdPortfolioBadge">Waiting for funds</span>
+                  </div>
+                  <canvas id="wdPortfolioChart" class="wd-portfolio-chart" width="820" height="240" aria-label="Wallet portfolio chart"></canvas>
+                  <div class="wd-portfolio-axis">
+                    <span id="wdPortfolioStart">24h ago</span>
+                    <span id="wdPortfolioMid">12h</span>
+                    <span id="wdPortfolioEnd">Now</span>
+                  </div>
+                </div>
+
+                <div class="wd-route-matrix" id="wdRouteMatrix">
+                  <article class="wd-route-card">
+                    <span class="wd-route-status" id="wdRouteHoldStatus">Locked</span>
+                    <strong>Wallet hold rail</strong>
+                    <p id="wdRouteHoldCopy">Create or connect a wallet to hold SOL and devnet OST in one place.</p>
+                  </article>
+                  <article class="wd-route-card">
+                    <span class="wd-route-status" id="wdRouteSwapStatus">Needs wallet</span>
+                    <strong>Devnet buy + swap</strong>
+                    <p id="wdRouteSwapCopy">Live once a wallet is connected, funded with devnet SOL, and routed into OST.</p>
+                  </article>
+                  <article class="wd-route-card">
+                    <span class="wd-route-status" id="wdRoutePortalStatus">Preview rails</span>
+                    <strong>Bridge + fiat portals</strong>
+                    <p id="wdRoutePortalCopy">Wormhole, Onramper, MoonPay, and Transak stay linked here as the mainnet entry and exit stack.</p>
+                  </article>
+                  <article class="wd-route-card">
+                    <span class="wd-route-status" id="wdRoutePredictStatus">Needs OST</span>
+                    <strong>Prediction vault</strong>
+                    <p id="wdRoutePredictCopy">Place live devnet market tickets after this wallet is holding OST.</p>
+                  </article>
+                </div>
+              </div>
+
               <div class="wd-not-connected" id="wdNotConnected">
                 <div class="wd-hero-icon">&#128091;</div>
                 <h3 data-i18n="wallet.getTitle">Get Your Personal OST Wallet</h3>
@@ -1809,7 +1937,7 @@
                     </div>
                   </div>
                   <button class="ct-convert-btn" id="transferBtn">
-                    <span class="ct-btn-icon">&#9673;</span> <span data-i18n="transfer.convert">Convert to OST</span>
+                    <span class="ct-btn-icon">&#9673;</span> <span id="transferBtnLabel" data-i18n="transfer.convert">Convert to OST</span>
                   </button>
                 </div>
                 <div class="ct-side ct-to">
@@ -1829,6 +1957,7 @@
                   <a id="cpTransak" href="#" target="_blank" rel="noopener" class="ct-prov-btn">&#128178; Transak</a>
                 </div>
               </div>
+              <p class="ct-route-state" id="convertRouteState">Devnet mode: claim live test OST from the faucet. The providers below preview the future mainnet buy path and do not mint devnet OST directly.</p>
               <p class="ct-note" data-i18n="wallet.convert.note">Currently powered by Jupiter + Wormhole on Solana while the OST native interchange engine is still under construction.</p>
             </div>
 
@@ -2075,6 +2204,10 @@
                   </div>
                 </div>
 
+                <div class="prediction-market-tape" id="predictionMarketTape">
+                  <div class="prediction-tape-empty">Loading venue tape...</div>
+                </div>
+
                 <div class="prediction-market-note" id="predictionMarketNote">
                   Public venue feeds expose live prices, change anchors, and liquidity. The curve and ladder reflect that data directly without inventing candles or settlement.
                 </div>
@@ -2239,6 +2372,25 @@
                       <div class="prediction-market-stat prediction-trade-stat">
                         <span id="predictionReturnLabel">Est. win return</span>
                         <strong id="predictionPotentialReturn">--</strong>
+                      </div>
+                    </div>
+
+                    <div class="prediction-trade-breakdown" id="predictionTradeBreakdown">
+                      <div class="prediction-market-stat prediction-trade-stat">
+                        <span id="predictionEntryPriceLabel">Entry price</span>
+                        <strong id="predictionEntryPrice">--</strong>
+                      </div>
+                      <div class="prediction-market-stat prediction-trade-stat">
+                        <span id="predictionMultipleLabel">Payout multiple</span>
+                        <strong id="predictionPayoutMultiple">--</strong>
+                      </div>
+                      <div class="prediction-market-stat prediction-trade-stat">
+                        <span id="predictionWinNetLabel">Net if right</span>
+                        <strong id="predictionWinNet">--</strong>
+                      </div>
+                      <div class="prediction-market-stat prediction-trade-stat">
+                        <span id="predictionSettleLabel">Settlement path</span>
+                        <strong id="predictionSettlementPath">Wallet -> OST vault</strong>
                       </div>
                     </div>
 
@@ -5022,6 +5174,6 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=56"></script>
+  <script src="app.js?v=58"></script>
 </body>
 </html>

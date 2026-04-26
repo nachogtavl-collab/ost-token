@@ -2087,8 +2087,10 @@
   const MEMO_PROGRAM_ID = new solanaWeb3.PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');
   const OST_TOKEN_DECIMALS = 9;
   const LOCAL_WALLET_STORAGE_KEY = 'ost.localWallet.v1';
+  const LOCAL_WALLET_BACKUP_EXPORTED_KEY = 'ost.localWallet.backupExportedAt';
   const INTERCHANGE_REQUESTS_STORAGE_KEY = 'ost.interchange.requests.v1';
   const PREDICTION_ORDERS_STORAGE_KEY = 'ost.prediction.orders.v1';
+  const WELCOME_SESSION_KEY = 'ost.welcome.seen.session';
   const CLAIM_FAUCET_DISCRIMINATOR = Uint8Array.from([80, 7, 251, 108, 55, 145, 135, 68]);
   const SEEDLESS_ONBOARD_DISCRIMINATOR = Uint8Array.from([135, 41, 102, 172, 127, 61, 190, 75]);
   const textEncoder = new TextEncoder();
@@ -2142,6 +2144,9 @@
       toast('💰', `Balance: ${sol} SOL`);
     } catch (e) {
       // silently ignore balance fetch errors
+    }
+    if (typeof window.syncWalletJourneyUi === 'function') {
+      window.syncWalletJourneyUi();
     }
   }
 
@@ -2228,7 +2233,22 @@
     setTimeout(() => URL.revokeObjectURL(url), 0);
   }
 
+  function markLocalWalletBackupExported() {
+    try {
+      localStorage.setItem(LOCAL_WALLET_BACKUP_EXPORTED_KEY, String(Date.now()));
+    } catch {}
+  }
+
+  function readLocalWalletBackupExportedAt() {
+    try {
+      return Number(localStorage.getItem(LOCAL_WALLET_BACKUP_EXPORTED_KEY) || 0) || 0;
+    } catch {
+      return 0;
+    }
+  }
+
   function exportLocalWalletBackup(keypair) {
+    markLocalWalletBackupExported();
     downloadTextFile('ost-browser-wallet.json', JSON.stringify(Array.from(keypair.secretKey)), 'application/json');
   }
 
@@ -2257,16 +2277,30 @@
     }
 
     if (settings.announce !== false) {
-      toast('✅', `Connected: ${shortAddress(connectedWallet)}`);
+      if (session.kind === 'local' && settings.backup) {
+        toast('🔐', 'Browser wallet created on Solana devnet.');
+      } else {
+        toast('✅', `Connected: ${shortAddress(connectedWallet)}`);
+      }
       verifyWalletAccount(connectedWallet).then(info => {
         if (info.verified) {
           toast('🔗', `Account verified — ${info.balance.toFixed(4)} SOL`);
         } else if (session.kind === 'local') {
-          toast('💡', 'Local wallet ready. Open Get OST to fund fees and claim your first OST.');
+          toast('💡', 'Local wallet ready. Claim devnet OST next to finish the live test flow.');
         } else {
           toast('💡', `New wallet — ${info.balance.toFixed(4)} SOL. Use the faucet below to get OST.`);
         }
       });
+    }
+
+    setTimeout(() => {
+      if (typeof updateConvertProviders === 'function') {
+        updateConvertProviders();
+      }
+    }, 0);
+
+    if (typeof window.syncWalletJourneyUi === 'function') {
+      window.syncWalletJourneyUi();
     }
   }
 
@@ -2283,6 +2317,14 @@
     }
     if (typeof window.syncPredictionMarketTradeWallet === 'function') {
       window.syncPredictionMarketTradeWallet();
+    }
+    setTimeout(() => {
+      if (typeof updateConvertProviders === 'function') {
+        updateConvertProviders();
+      }
+    }, 0);
+    if (typeof window.syncWalletJourneyUi === 'function') {
+      window.syncWalletJourneyUi();
     }
     toast('👛', 'Wallet disconnected');
   }
@@ -3888,6 +3930,35 @@
   const transferAmount = $('#transferAmount');
   const transferFrom = $('#transferFrom');
   const transferResult = $('#transferResult');
+  const transferBtnLabel = $('#transferBtnLabel');
+  const convertRouteState = $('#convertRouteState');
+
+  function setConvertRouteMessage(text) {
+    if (convertRouteState) convertRouteState.textContent = text;
+  }
+
+  function resetConvertStepState() {
+    ['pStep1', 'pStep2', 'pStep3'].forEach(id => {
+      const el = $(`#${id}`);
+      if (!el) return;
+      el.classList.remove('active', 'done');
+    });
+  }
+
+  async function pulseConvertSteps(doneCount) {
+    const steps = ['pStep1', 'pStep2', 'pStep3'];
+    resetConvertStepState();
+    for (let index = 0; index < steps.length; index++) {
+      const el = $(`#${steps[index]}`);
+      if (!el) continue;
+      if (index < doneCount) {
+        el.classList.add('active');
+        await sleep(220);
+        el.classList.remove('active');
+        el.classList.add('done');
+      }
+    }
+  }
 
   function updateTransferPreview() {
     if (!transferAmount || !transferFrom || !transferResult) return;
@@ -3895,6 +3966,7 @@
     const curr = transferFrom.value;
     if (amount <= 0) {
       transferResult.textContent = translations[currentLang]?.['transfer.result'] || 'Private & Instant';
+      resetConvertStepState();
       return;
     }
     let usdValue;
@@ -3926,7 +3998,16 @@
   function updateConvertProviders() {
     if (!convertProviders || !transferFrom) return;
     const curr = transferFrom.value;
-    if (fiatCurrencies.includes(curr)) {
+    const isFiat = fiatCurrencies.includes(curr);
+    if (transferBtnLabel) {
+      transferBtnLabel.textContent = isFiat
+        ? 'Open devnet guide'
+        : connectedWallet
+          ? 'Load live swap route'
+          : 'Connect wallet to swap';
+    }
+
+    if (isFiat) {
       convertProviders.style.display = 'block';
       const onr = $('#cpOnramper');
       const mp = $('#cpMoonPay');
@@ -3934,8 +4015,12 @@
       if (onr) onr.href = 'https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=' + encodeURIComponent(curr);
       if (mp) mp.href = 'https://www.moonpay.com/buy/sol';
       if (tr) tr.href = 'https://global.transak.com/?cryptoCurrencyCode=SOL&fiatCurrency=' + encodeURIComponent(curr);
+      setConvertRouteMessage('Devnet OST cannot be bought directly with fiat yet. Use the faucet for live test OST, or use these provider links as the future mainnet route into SOL or USDC.');
     } else {
       convertProviders.style.display = 'none';
+      setConvertRouteMessage(connectedWallet
+        ? 'Your wallet can now use the live Jupiter swap route. Review the widget before approving any on-chain action.'
+        : 'Crypto routes stay in preview mode until you create or connect a wallet. Once connected, OST will load the live swap widget.');
     }
   }
 
@@ -3943,47 +4028,41 @@
     transferBtn.addEventListener('click', async () => {
       const amount = parseFloat(transferAmount?.value) || 0;
       const curr = transferFrom?.value || 'BTC';
+      const isFiat = fiatCurrencies.includes(curr);
 
-      const steps = ['pStep1', 'pStep2', 'pStep3'];
-      for (const id of steps) {
-        const el = $(`#${id}`);
-        if (el) {
-          el.classList.add('active');
-          await sleep(700);
-          el.classList.remove('active');
-          el.classList.add('done');
+      if (amount <= 0) {
+        transferResult.textContent = 'Enter an amount to preview the route.';
+        setConvertRouteMessage('OST shows the estimate first. Enter an amount, then choose whether to use the faucet, provider links, or the live swap widget.');
+        resetConvertStepState();
+        return;
+      }
+
+      if (!isFiat && !connectedWalletSession) {
+        if (window.setWalletPanel) window.setWalletPanel('access', { scroll: true });
+        transferResult.textContent = 'Connect a wallet first to execute a live crypto route.';
+        setConvertRouteMessage('Crypto routes stay in preview mode until a wallet is connected. Create a browser wallet or connect Phantom, Solflare, or Backpack first.');
+        toast('👛', 'Create or connect a wallet first to use the live swap route');
+        resetConvertStepState();
+        return;
+      }
+
+      if (isFiat) {
+        await pulseConvertSteps(1);
+        transferResult.textContent = `Route guide ready for ${curr} → OST.`;
+        setConvertRouteMessage('Direct fiat purchase is not live on devnet. Use the faucet for test OST, or open the provider links below as the future mainnet on-ramp into SOL or USDC.');
+        if (convertProviders) {
+          convertProviders.style.display = 'block';
+          convertProviders.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
+        toast('💳', 'Devnet guide ready. Use the faucet for live test OST.');
+        return;
       }
 
-      if (amount > 0 && transferResult) {
-        let usdValue;
-        if (curr === 'BTC') usdValue = amount * (prices.bitcoin || 105000);
-        else if (curr === 'ETH') usdValue = amount * (prices.ethereum || 3800);
-        else if (curr === 'SOL') usdValue = amount * (prices.solana || 170);
-        else if (['USDC', 'USDT'].includes(curr)) usdValue = amount;
-        else if (curr === 'BNB') usdValue = amount * 650;
-        else usdValue = amount / (fiatRates[curr] || 1);
-        const ostOut = usdValue / ostPrice;
-        let formatted;
-        if (ostOut >= 1e9) formatted = (ostOut / 1e9).toFixed(2) + 'B';
-        else if (ostOut >= 1e6) formatted = (ostOut / 1e6).toFixed(2) + 'M';
-        else if (ostOut >= 1e3) formatted = (ostOut / 1e3).toFixed(1) + 'K';
-        else formatted = ostOut.toFixed(2);
-        const receivedLabel = (translations[currentLang] && translations[currentLang]['wallet.convert.received']) || translations.en['wallet.convert.received'] || 'Received';
-        transferResult.textContent = `✅ ${receivedLabel} ${formatted} OST ($${usdValue.toLocaleString(undefined, { maximumFractionDigits: 2 })})`;
-      } else {
-        const doneLabel = (translations[currentLang] && translations[currentLang]['wallet.convert.done']) || translations.en['wallet.convert.done'] || 'Done - private and instant';
-        if (transferResult) transferResult.textContent = `✅ ${doneLabel}`;
-      }
-      toast('✅', 'Conversion flow complete');
-      launchConfetti();
-
-      await sleep(4000);
-      for (const id of steps) {
-        const el = $(`#${id}`);
-        if (el) el.classList.remove('done');
-      }
-      if (transferResult) transferResult.textContent = translations[currentLang]?.['transfer.result'] || 'Private & Instant';
+      await pulseConvertSteps(2);
+      if (loadJupiterBtn) loadJupiterBtn.click();
+      transferResult.textContent = `Live route loaded for ${curr} → OST.`;
+      setConvertRouteMessage('Jupiter is now loaded with your connected wallet. Review the route and approve on-chain only if the swap details look right.');
+      toast('⚡', 'Live swap route loaded in Jupiter');
     });
   }
 
@@ -4026,65 +4105,87 @@
   let faucetTotal = 0;
   let faucetRunning = false;
 
-  if (faucetBtn) {
-    faucetBtn.addEventListener('click', async () => {
-      if (faucetRunning) return;
-      faucetRunning = true;
+  async function animateFaucetCoins() {
+    if (!faucetDropZone) return;
+    for (let i = 0; i < 8; i++) {
+      const coin = document.createElement('div');
+      coin.className = 'faucet-coin';
+      coin.style.left = (30 + Math.random() * 40) + '%';
+      coin.style.animationDuration = (0.6 + Math.random() * 0.5) + 's';
+      faucetDropZone.appendChild(coin);
+      setTimeout(() => coin.remove(), 1200);
+      await sleep(120);
+    }
+  }
 
-      // Drop coins animation
-      for (let i = 0; i < 8; i++) {
-        const coin = document.createElement('div');
-        coin.className = 'faucet-coin';
-        coin.style.left = (30 + Math.random() * 40) + '%';
-        coin.style.animationDuration = (0.6 + Math.random() * 0.5) + 's';
-        faucetDropZone.appendChild(coin);
-        setTimeout(() => coin.remove(), 1200);
-        await sleep(120);
+  async function runOstFaucetFlow(options) {
+    const settings = options || {};
+    if (faucetRunning) return { ok: false, busy: true };
+    faucetRunning = true;
+
+    try {
+      if (settings.animate !== false) {
+        await animateFaucetCoins();
       }
 
-      if (connectedWalletSession && typeof solanaWeb3 !== 'undefined') {
-        try {
-          if (faucetStatus) faucetStatus.textContent = 'Funding your wallet for network fees...';
-          const funding = await ensureWalletFeeBalance(connectedWalletSession.publicKey);
-          if (funding.funded && faucetStatus) {
-            faucetStatus.textContent = 'Fee balance ready. Recording wallet profile...';
-          }
-
-          await maybeRecordSeedlessOnboard();
-
-          if (faucetStatus) faucetStatus.textContent = 'Preparing your OST token account...';
-          const faucetResult = await claimOstFaucetForActiveWallet();
-          const ostBalance = faucetResult.balance || await getOstBalanceForAddress(connectedWalletSession.publicKey);
-          faucetTotal = ostBalance;
-          if (faucetAmount) faucetAmount.textContent = ostBalance.toFixed(2);
-
-          if (faucetResult.alreadyClaimed) {
-            if (faucetStatus) faucetStatus.textContent = 'This wallet already claimed its OST faucet. Current balance: ' + ostBalance.toFixed(2) + ' OST.';
-            toast('ℹ️', 'OST faucet already claimed for this wallet');
-          } else {
-            if (faucetStatus) faucetStatus.textContent = 'OST claimed on devnet. Balance ready: ' + ostBalance.toFixed(2) + ' OST.';
-            toast('🎉', '+1 OST claimed on devnet!');
-          }
-
-          updateWalletBalance(connectedWallet);
-        } catch (e) {
-          const errorText = (e && e.message) || String(e || 'OST faucet failed');
-          const isRateLimited = /429|airdrop limit|faucet has run dry/i.test(errorText);
-          if (isRateLimited) {
-            if (faucetStatus) faucetStatus.textContent = 'Devnet SOL faucet is rate-limited. Fund this wallet at faucet.solana.com, then click again to claim OST.';
-            toast('⚠️', 'Devnet SOL faucet is rate-limited. Fund test SOL manually, then retry.');
-          } else {
-            if (faucetStatus) faucetStatus.textContent = 'Could not claim OST right now. Make sure Devnet is reachable and try again.';
-            toast('⚠️', errorText);
-          }
-        }
-      } else {
+      if (!connectedWalletSession || typeof solanaWeb3 === 'undefined') {
         if (faucetAmount) faucetAmount.textContent = '0.00';
         if (faucetStatus) faucetStatus.textContent = 'Create or connect your wallet first, then claim real devnet OST.';
         toast('👛', 'Create or connect your OST wallet first');
+        return { ok: false, reason: 'no-wallet' };
       }
-      launchConfetti();
+
+      try {
+        if (faucetStatus) faucetStatus.textContent = 'Funding your wallet for network fees...';
+        const funding = await ensureWalletFeeBalance(connectedWalletSession.publicKey);
+        if (funding.funded && faucetStatus) {
+          faucetStatus.textContent = 'Fee balance ready. Recording wallet profile...';
+        }
+
+        await maybeRecordSeedlessOnboard();
+
+        if (faucetStatus) faucetStatus.textContent = 'Preparing your OST token account...';
+        const faucetResult = await claimOstFaucetForActiveWallet();
+        const ostBalance = faucetResult.balance || await getOstBalanceForAddress(connectedWalletSession.publicKey);
+        faucetTotal = ostBalance;
+        if (faucetAmount) faucetAmount.textContent = ostBalance.toFixed(2);
+
+        if (faucetResult.alreadyClaimed) {
+          if (faucetStatus) faucetStatus.textContent = 'This wallet already claimed its OST faucet. Current balance: ' + ostBalance.toFixed(2) + ' OST.';
+          toast('ℹ️', 'OST faucet already claimed for this wallet');
+          return { ok: true, alreadyClaimed: true, balance: ostBalance };
+        }
+
+        if (faucetStatus) faucetStatus.textContent = 'OST claimed on devnet. Balance ready: ' + ostBalance.toFixed(2) + ' OST.';
+        toast('🎉', '+1 OST claimed on devnet!');
+        launchConfetti();
+        updateWalletBalance(connectedWallet);
+        return { ok: true, claimed: true, balance: ostBalance };
+      } catch (e) {
+        const errorText = (e && e.message) || String(e || 'OST faucet failed');
+        const isRateLimited = /429|airdrop limit|faucet has run dry/i.test(errorText);
+        if (isRateLimited) {
+          if (faucetStatus) faucetStatus.textContent = 'Devnet SOL faucet is rate-limited. Fund this wallet at faucet.solana.com, then click again to claim OST.';
+          toast('⚠️', 'Devnet SOL faucet is rate-limited. Fund test SOL manually, then retry.');
+        } else {
+          if (faucetStatus) faucetStatus.textContent = 'Could not claim OST right now. Make sure Devnet is reachable and try again.';
+          toast('⚠️', errorText);
+        }
+        return { ok: false, reason: 'error', error: e };
+      }
+    } finally {
       faucetRunning = false;
+      if (typeof window.syncWalletJourneyUi === 'function') {
+        window.syncWalletJourneyUi();
+      }
+    }
+  }
+
+  window.runOstFaucetFlow = runOstFaucetFlow;
+
+  if (faucetBtn) {
+    faucetBtn.addEventListener('click', () => {
+      runOstFaucetFlow({ animate: true });
     });
   }
 
@@ -4766,6 +4867,15 @@
   (function initWalletDashboard() {
     const wdNotConnected = $('#wdNotConnected');
     const wdConnected    = $('#wdConnected');
+    const wdJourneyBadge = $('#wdJourneyBadge');
+    const wdJourneyTitle = $('#wdJourneyTitle');
+    const wdJourneySummary = $('#wdJourneySummary');
+    const wdJourneyPrimaryBtn = $('#wdJourneyPrimaryBtn');
+    const wdJourneySecondaryBtn = $('#wdJourneySecondaryBtn');
+    const wdJourneyStepWallet = $('#wdJourneyStepWallet');
+    const wdJourneyStepBackup = $('#wdJourneyStepBackup');
+    const wdJourneyStepSol = $('#wdJourneyStepSol');
+    const wdJourneyStepOst = $('#wdJourneyStepOst');
     const wdAddress      = $('#wdAddress');
     const wdNetwork      = $('#wdNetwork');
     const wdSolBal       = $('#wdSolBal');
@@ -4780,8 +4890,381 @@
     const wdQr           = $('#wdQr');
     const wdReceiveAddr  = $('#wdReceiveAddr');
     const wdCopyReceive  = $('#wdCopyReceive');
+    const wdIntelMode    = $('#wdIntelMode');
+    const wdIntelAddress = $('#wdIntelAddress');
+    const wdIntelAddressCopy = $('#wdIntelAddressCopy');
+    const wdIntelTotal   = $('#wdIntelTotal');
+    const wdIntelTotalCopy = $('#wdIntelTotalCopy');
+    const wdIntelChange  = $('#wdIntelChange');
+    const wdIntelChangeCopy = $('#wdIntelChangeCopy');
+    const wdIntelRoutes  = $('#wdIntelRoutes');
+    const wdIntelRoutesCopy = $('#wdIntelRoutesCopy');
+    const wdIntelActivity = $('#wdIntelActivity');
+    const wdIntelActivityCopy = $('#wdIntelActivityCopy');
+    const wdIntelFunding = $('#wdIntelFunding');
+    const wdIntelFundingCopy = $('#wdIntelFundingCopy');
+    const wdPortfolioCopy = $('#wdPortfolioCopy');
+    const wdPortfolioBadge = $('#wdPortfolioBadge');
+    const wdPortfolioChart = $('#wdPortfolioChart');
+    const wdRouteHoldStatus = $('#wdRouteHoldStatus');
+    const wdRouteHoldCopy = $('#wdRouteHoldCopy');
+    const wdRouteSwapStatus = $('#wdRouteSwapStatus');
+    const wdRouteSwapCopy = $('#wdRouteSwapCopy');
+    const wdRoutePortalStatus = $('#wdRoutePortalStatus');
+    const wdRoutePortalCopy = $('#wdRoutePortalCopy');
+    const wdRoutePredictStatus = $('#wdRoutePredictStatus');
+    const wdRoutePredictCopy = $('#wdRoutePredictCopy');
+    let journeySyncToken = 0;
 
     if (!wdNotConnected) return; // section not present
+
+    function setJourneyText(badge, title, summary) {
+      if (wdJourneyBadge) wdJourneyBadge.textContent = badge;
+      if (wdJourneyTitle) wdJourneyTitle.textContent = title;
+      if (wdJourneySummary) wdJourneySummary.textContent = summary;
+    }
+
+    function setJourneyStep(stepEl, state, text) {
+      if (!stepEl) return;
+      stepEl.classList.remove('is-pending', 'is-active', 'is-ready');
+      stepEl.classList.add('is-' + state);
+      const textEl = stepEl.querySelector('.wd-journey-step-text');
+      if (textEl) textEl.textContent = text;
+    }
+
+    function setJourneyAction(button, config) {
+      if (!button) return;
+      if (!config || config.hidden) {
+        button.hidden = true;
+        button.dataset.action = '';
+        return;
+      }
+      button.hidden = false;
+      button.disabled = !!config.disabled;
+      button.dataset.action = config.action || '';
+      button.textContent = config.label || 'Continue';
+    }
+
+    function readInterchangeRequestRecords() {
+      try {
+        return JSON.parse(localStorage.getItem(INTERCHANGE_REQUESTS_STORAGE_KEY) || '[]');
+      } catch {
+        return [];
+      }
+    }
+
+    function setIntelBadge(element, tone, text) {
+      if (!element) return;
+      element.className = 'wd-intelligence-badge' + (tone ? ' is-' + tone : '');
+      element.textContent = text;
+    }
+
+    function setRouteStatus(element, tone, text) {
+      if (!element) return;
+      element.className = 'wd-route-status' + (tone ? ' is-' + tone : '');
+      element.textContent = text;
+    }
+
+    function formatWalletUsd(value) {
+      const amount = Number(value);
+      if (!Number.isFinite(amount)) return '$0.00';
+      if (Math.abs(amount) >= 1000) return formatCompactUsd(amount);
+      if (Math.abs(amount) >= 1) return '$' + amount.toFixed(2);
+      return '$' + amount.toFixed(3);
+    }
+
+    function buildWalletPortfolioSeries(solBalance, ostBalance) {
+      const solHistory = Array.isArray(priceHistory.solana) && priceHistory.solana.length
+        ? priceHistory.solana.slice(-24)
+        : Array(24).fill(prices.solana || 0);
+      const ostHistory = Array.isArray(priceHistory.ost) && priceHistory.ost.length
+        ? priceHistory.ost.slice(-24)
+        : Array(24).fill(ostPrice || OST_BASE_PRICE);
+      const totalPoints = Math.max(solHistory.length, ostHistory.length, 24);
+      const series = [];
+
+      for (let index = 0; index < totalPoints; index += 1) {
+        const solPoint = solHistory[Math.max(0, solHistory.length - totalPoints + index)] ?? solHistory[solHistory.length - 1] ?? 0;
+        const ostPoint = ostHistory[Math.max(0, ostHistory.length - totalPoints + index)] ?? ostHistory[ostHistory.length - 1] ?? 0;
+        series.push((Number(solBalance) || 0) * solPoint + (Number(ostBalance) || 0) * ostPoint);
+      }
+
+      return series.filter(point => Number.isFinite(point));
+    }
+
+    function drawWalletPortfolioChart(series, options) {
+      if (!wdPortfolioChart || !wdPortfolioChart.getContext) return;
+
+      const config = options || {};
+      const rect = wdPortfolioChart.getBoundingClientRect();
+      const width = Math.max(320, Math.round(rect.width || wdPortfolioChart.width || 820));
+      const height = Math.max(220, Math.round(rect.height || wdPortfolioChart.height || 240));
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      wdPortfolioChart.width = Math.round(width * dpr);
+      wdPortfolioChart.height = Math.round(height * dpr);
+
+      const ctx = wdPortfolioChart.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = 'rgba(5, 8, 14, 0.94)';
+      ctx.fillRect(0, 0, width, height);
+
+      if (!config.hasWallet) {
+        ctx.fillStyle = 'rgba(226,232,240,0.72)';
+        ctx.font = '600 16px Inter, sans-serif';
+        ctx.fillText('Create or connect a wallet to unlock your live curve.', 24, height / 2 - 6);
+        ctx.font = '13px Inter, sans-serif';
+        ctx.fillStyle = 'rgba(148,163,184,0.9)';
+        ctx.fillText('The curve will price your SOL and OST against the latest market tape.', 24, height / 2 + 18);
+        return;
+      }
+
+      const points = Array.isArray(series) ? series.filter(value => Number.isFinite(value)) : [];
+      if (!points.length || points.every(value => value <= 0)) {
+        ctx.fillStyle = 'rgba(226,232,240,0.72)';
+        ctx.font = '600 16px Inter, sans-serif';
+        ctx.fillText('Fund the wallet to generate a live portfolio curve.', 24, height / 2 - 6);
+        ctx.font = '13px Inter, sans-serif';
+        ctx.fillStyle = 'rgba(148,163,184,0.9)';
+        ctx.fillText('The graph tracks the current SOL and OST mix across the last 24 pricing points.', 24, height / 2 + 18);
+        return;
+      }
+
+      const pad = { left: 18, right: 18, top: 20, bottom: 26 };
+      const minValue = Math.min(...points);
+      const maxValue = Math.max(...points);
+      const range = Math.max(maxValue - minValue, maxValue || 1, 1);
+      const changePct = Number(config.changePct) || 0;
+      const lineColor = changePct >= 0 ? '#34d399' : '#f5c468';
+      const fillGradient = ctx.createLinearGradient(0, pad.top, 0, height - pad.bottom);
+      fillGradient.addColorStop(0, changePct >= 0 ? 'rgba(52,211,153,0.22)' : 'rgba(245,196,104,0.22)');
+      fillGradient.addColorStop(1, 'rgba(109,159,255,0.02)');
+
+      function x(index) {
+        return pad.left + (index / Math.max(points.length - 1, 1)) * (width - pad.left - pad.right);
+      }
+
+      function y(value) {
+        return pad.top + (height - pad.top - pad.bottom) - ((value - minValue) / range) * (height - pad.top - pad.bottom);
+      }
+
+      [0.25, 0.5, 0.75].forEach(level => {
+        const yPoint = pad.top + (height - pad.top - pad.bottom) * level;
+        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+        ctx.beginPath();
+        ctx.moveTo(pad.left, yPoint);
+        ctx.lineTo(width - pad.right, yPoint);
+        ctx.stroke();
+      });
+
+      ctx.beginPath();
+      points.forEach((point, index) => {
+        const px = x(index);
+        const py = y(point);
+        if (!index) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      });
+      ctx.lineTo(x(points.length - 1), height - pad.bottom);
+      ctx.lineTo(x(0), height - pad.bottom);
+      ctx.closePath();
+      ctx.fillStyle = fillGradient;
+      ctx.fill();
+
+      ctx.beginPath();
+      points.forEach((point, index) => {
+        const px = x(index);
+        const py = y(point);
+        if (!index) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      });
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = lineColor;
+      ctx.stroke();
+
+      const lastValue = points[points.length - 1];
+      const lastX = x(points.length - 1);
+      const lastY = y(lastValue);
+      ctx.beginPath();
+      ctx.arc(lastX, lastY, 5, 0, Math.PI * 2);
+      ctx.fillStyle = '#f8fafc';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(lastX, lastY, 3, 0, Math.PI * 2);
+      ctx.fillStyle = lineColor;
+      ctx.fill();
+
+      ctx.fillStyle = 'rgba(248,250,252,0.96)';
+      ctx.font = '600 13px Inter, sans-serif';
+      ctx.fillText(formatWalletUsd(lastValue), Math.max(pad.left, lastX - 72), Math.max(18, lastY - 12));
+    }
+
+    function updateWalletIntelligence(pubkey, snapshot) {
+      const hasWallet = !!pubkey;
+      const details = snapshot || {};
+      const solBalance = Number(details.solBalance || 0);
+      const ostBalance = Number(details.ostBalance || 0);
+      const hasSol = !!details.hasSol;
+      const hasOst = !!details.hasOst;
+      const walletLabel = details.walletLabel || (details.isLocalWallet ? 'OST Browser Wallet' : 'Connected wallet');
+      const totalUsd = (solBalance * (prices.solana || 0)) + (ostBalance * (ostPrice || 0));
+      const portfolioSeries = hasWallet ? buildWalletPortfolioSeries(solBalance, ostBalance) : [];
+      const firstValue = portfolioSeries.length ? portfolioSeries[0] : 0;
+      const lastValue = portfolioSeries.length ? portfolioSeries[portfolioSeries.length - 1] : totalUsd;
+      const changePct = firstValue > 0 ? ((lastValue - firstValue) / firstValue) * 100 : 0;
+      const predictionOrders = readPredictionOrderRecords();
+      const interchangeRequests = readInterchangeRequestRecords();
+      const totalActivities = predictionOrders.length + interchangeRequests.length;
+      let liveRoutes = 0;
+
+      if (hasWallet) liveRoutes += 1;
+      if (hasWallet) liveRoutes += 1;
+      if (hasOst) liveRoutes += 1;
+
+      if (wdIntelAddress) wdIntelAddress.textContent = hasWallet ? shortAddress(pubkey) : 'Connect wallet';
+      if (wdIntelAddressCopy) {
+        wdIntelAddressCopy.textContent = hasWallet
+          ? walletLabel + ' on ' + (OST_CONFIG.network === 'devnet' ? 'Solana Devnet' : 'Solana Mainnet')
+          : 'No wallet session yet';
+      }
+
+      if (wdIntelTotal) wdIntelTotal.textContent = hasWallet ? formatWalletUsd(totalUsd) : '$0.00';
+      if (wdIntelTotalCopy) {
+        wdIntelTotalCopy.textContent = hasWallet
+          ? solBalance.toFixed(4) + ' SOL • ' + ostBalance.toFixed(2) + ' OST'
+          : 'SOL + OST mark-to-market';
+      }
+
+      if (wdIntelChange) {
+        wdIntelChange.textContent = hasWallet && firstValue > 0
+          ? (changePct >= 0 ? '+' : '') + changePct.toFixed(2) + '%'
+          : '--';
+      }
+      if (wdIntelChangeCopy) {
+        wdIntelChangeCopy.textContent = hasWallet && firstValue > 0
+          ? formatWalletUsd(lastValue - firstValue) + ' across the current holdings mix'
+          : 'Waiting for live holdings';
+      }
+
+      if (wdIntelRoutes) wdIntelRoutes.textContent = liveRoutes + ' live / 7 linked';
+      if (wdIntelRoutesCopy) {
+        wdIntelRoutesCopy.textContent = hasWallet
+          ? 'Wallet, devnet swap, prediction, bridge, fiat, and cash-out routing'
+          : 'Wallet, devnet swap, fiat, bridge, and prediction rails';
+      }
+
+      if (wdIntelActivity) wdIntelActivity.textContent = totalActivities + ' records';
+      if (wdIntelActivityCopy) {
+        wdIntelActivityCopy.textContent = predictionOrders.length + ' tickets • ' + interchangeRequests.length + ' commerce requests';
+      }
+
+      if (!hasWallet) {
+        if (wdIntelFunding) wdIntelFunding.textContent = 'Not ready';
+        if (wdIntelFundingCopy) wdIntelFundingCopy.textContent = 'Needs wallet and devnet SOL';
+        setIntelBadge(wdIntelMode, '', 'Awaiting wallet');
+        setIntelBadge(wdPortfolioBadge, '', 'Waiting for funds');
+        if (wdPortfolioCopy) wdPortfolioCopy.textContent = 'Your live wallet curve combines current SOL and OST holdings with the latest market tape.';
+        setRouteStatus(wdRouteHoldStatus, '', 'Locked');
+        setRouteStatus(wdRouteSwapStatus, '', 'Needs wallet');
+        setRouteStatus(wdRoutePortalStatus, 'preview', 'Preview rails');
+        setRouteStatus(wdRoutePredictStatus, '', 'Needs OST');
+        if (wdRouteHoldCopy) wdRouteHoldCopy.textContent = 'Create or connect a wallet to hold SOL and devnet OST in one place.';
+        if (wdRouteSwapCopy) wdRouteSwapCopy.textContent = 'Live once a wallet is connected, funded with devnet SOL, and routed into OST.';
+        if (wdRoutePortalCopy) wdRoutePortalCopy.textContent = 'Wormhole, Onramper, MoonPay, and Transak stay linked here as the mainnet entry and exit stack.';
+        if (wdRoutePredictCopy) wdRoutePredictCopy.textContent = 'Place live devnet market tickets after this wallet is holding OST.';
+        drawWalletPortfolioChart([], { hasWallet: false });
+        return;
+      }
+
+      if (hasOst) {
+        if (wdIntelFunding) wdIntelFunding.textContent = 'OST ready';
+        if (wdIntelFundingCopy) wdIntelFundingCopy.textContent = 'Commerce, swaps, and prediction vault are live on devnet';
+        setIntelBadge(wdIntelMode, 'live', 'Wallet live');
+        setIntelBadge(wdPortfolioBadge, 'live', (changePct >= 0 ? '+' : '') + changePct.toFixed(2) + '% 24h');
+        setRouteStatus(wdRouteHoldStatus, 'live', 'Live now');
+        setRouteStatus(wdRouteSwapStatus, 'live', 'Live devnet');
+        setRouteStatus(wdRoutePortalStatus, 'preview', 'Preview rails');
+        setRouteStatus(wdRoutePredictStatus, 'live', 'Live devnet');
+        if (wdRouteHoldCopy) wdRouteHoldCopy.textContent = 'This wallet is actively holding live devnet balances and exposing a real receive address.';
+        if (wdRouteSwapCopy) wdRouteSwapCopy.textContent = 'Switch between SOL and OST on the current wallet rail, then review the Jupiter route before any approval.';
+        if (wdRoutePortalCopy) wdRoutePortalCopy.textContent = 'Use Wormhole and the fiat portals as the future mainnet bridge, bank, card, and cash-out stack.';
+        if (wdRoutePredictCopy) wdRoutePredictCopy.textContent = 'Prediction tickets can already move OST into the devnet market vault from this same wallet.';
+      } else if (hasSol) {
+        if (wdIntelFunding) wdIntelFunding.textContent = 'Gas ready';
+        if (wdIntelFundingCopy) wdIntelFundingCopy.textContent = 'Wallet has devnet SOL and is one step away from OST';
+        setIntelBadge(wdIntelMode, 'warning', 'Needs OST');
+        setIntelBadge(wdPortfolioBadge, 'warning', 'SOL funded');
+        setRouteStatus(wdRouteHoldStatus, 'live', 'Live now');
+        setRouteStatus(wdRouteSwapStatus, 'live', 'Swap ready');
+        setRouteStatus(wdRoutePortalStatus, 'preview', 'Preview rails');
+        setRouteStatus(wdRoutePredictStatus, 'warning', 'Needs OST');
+        if (wdRouteHoldCopy) wdRouteHoldCopy.textContent = 'The address is live and already funded with enough SOL for network fees.';
+        if (wdRouteSwapCopy) wdRouteSwapCopy.textContent = 'Route this wallet from SOL into OST on devnet, then use the same session for commerce and trading.';
+        if (wdRoutePortalCopy) wdRoutePortalCopy.textContent = 'Fiat, bank, and bridge partners stay linked as the future mainnet access layer.';
+        if (wdRoutePredictCopy) wdRoutePredictCopy.textContent = 'Claim or swap into OST first, then the prediction vault becomes tradeable.';
+      } else {
+        if (wdIntelFunding) wdIntelFunding.textContent = 'Needs devnet gas';
+        if (wdIntelFundingCopy) wdIntelFundingCopy.textContent = 'Top up devnet SOL, then claim or swap into OST';
+        setIntelBadge(wdIntelMode, 'warning', 'Funding wallet');
+        setIntelBadge(wdPortfolioBadge, 'warning', 'Needs SOL');
+        setRouteStatus(wdRouteHoldStatus, 'live', 'Live now');
+        setRouteStatus(wdRouteSwapStatus, 'warning', 'Fund first');
+        setRouteStatus(wdRoutePortalStatus, 'preview', 'Preview rails');
+        setRouteStatus(wdRoutePredictStatus, 'warning', 'Needs OST');
+        if (wdRouteHoldCopy) wdRouteHoldCopy.textContent = 'The address is real and connected, but it still needs devnet SOL for fees.';
+        if (wdRouteSwapCopy) wdRouteSwapCopy.textContent = 'The devnet route wakes up after the faucet or manual SOL funding lands in this wallet.';
+        if (wdRoutePortalCopy) wdRoutePortalCopy.textContent = 'Use the linked bank, card, and bridge portals to preview the future mainnet stack.';
+        if (wdRoutePredictCopy) wdRoutePredictCopy.textContent = 'The prediction vault stays locked until this wallet is holding OST.';
+      }
+
+      if (wdPortfolioCopy) {
+        wdPortfolioCopy.textContent = totalUsd > 0
+          ? 'The curve reprices this wallet using current SOL and OST balances against the latest wallet market tape.'
+          : 'Fund this wallet to turn the market tape into a live portfolio curve.';
+      }
+      drawWalletPortfolioChart(portfolioSeries, { hasWallet: true, changePct: changePct });
+    }
+
+    function handleJourneyAction(action) {
+      if (!action) return;
+      if (action === 'create-local') {
+        connectWallet('local');
+        return;
+      }
+      if (action === 'show-access') {
+        if (window.setWalletPanel) window.setWalletPanel('access', { scroll: true });
+        return;
+      }
+      if (action === 'download-backup' && connectedWalletSession && connectedWalletSession.kind === 'local' && connectedWalletSession.keypair) {
+        exportLocalWalletBackup(connectedWalletSession.keypair);
+        toast('🧾', 'Wallet backup downloaded. Keep it offline.');
+        syncJourneyUi();
+        return;
+      }
+      if (action === 'claim-faucet') {
+        if (typeof window.runOstFaucetFlow === 'function') {
+          window.runOstFaucetFlow({ animate: false });
+        }
+        return;
+      }
+      if (action === 'open-convert') {
+        if (window.setWalletPanel) window.setWalletPanel('convert', { scroll: true });
+        return;
+      }
+      if (action === 'open-portals') {
+        if (window.setWalletPanel) window.setWalletPanel('portals', { scroll: true });
+      }
+    }
+
+    if (wdJourneyPrimaryBtn) {
+      wdJourneyPrimaryBtn.addEventListener('click', function() {
+        handleJourneyAction(wdJourneyPrimaryBtn.dataset.action || '');
+      });
+    }
+    if (wdJourneySecondaryBtn) {
+      wdJourneySecondaryBtn.addEventListener('click', function() {
+        handleJourneyAction(wdJourneySecondaryBtn.dataset.action || '');
+      });
+    }
 
     // Connect buttons inside wallet dashboard cards
     $$('.wd-connect-btn').forEach(btn => {
@@ -4818,7 +5301,7 @@
         wdAvatar.style.fontSize = '1.2rem';
         wdAvatar.style.fontWeight = '700';
       }
-      fetchDashboardBalances(pubkey);
+      syncJourneyUi();
     }
 
     // Hide dashboard (disconnect)
@@ -4826,13 +5309,17 @@
       if (wdNotConnected) wdNotConnected.style.display = '';
       if (wdConnected) wdConnected.style.display = 'none';
       if (wdReceivePanel) wdReceivePanel.style.display = 'none';
+      updateWalletIntelligence('', null);
+      syncJourneyUi();
     }
 
     // Fetch balances for dashboard
     async function fetchDashboardBalances(pubkey) {
       try {
         const conn = getSolanaConnection();
-        if (!conn) return;
+        if (!conn) {
+          return { solBalance: 0, ostBalance: 0 };
+        }
         const pk = new solanaWeb3.PublicKey(pubkey);
         const lamports = await conn.getBalance(pk);
         const solBal = lamports / 1e9;
@@ -4844,8 +5331,120 @@
         const ostBal = await getOstBalanceForAddress(pk);
         if (wdOstBal) wdOstBal.textContent = ostBal.toFixed(2);
         if (wdOstUsd) wdOstUsd.textContent = '$' + (ostBal * ostPrice).toFixed(2);
-      } catch (_) { /* silently ignore */ }
+        return {
+          solBalance: solBal,
+          ostBalance: ostBal
+        };
+      } catch (_) {
+        return {
+          solBalance: 0,
+          ostBalance: 0
+        };
+      }
     }
+
+    async function syncJourneyUi() {
+      const syncToken = ++journeySyncToken;
+      const session = connectedWalletSession;
+      const pubkey = session && session.publicKey ? session.publicKey.toBase58() : '';
+      const isLocalWallet = !!(session && session.kind === 'local');
+      const backupExportedAt = readLocalWalletBackupExportedAt();
+
+      if (!pubkey) {
+        updateWalletIntelligence('', null);
+        setJourneyText(
+          'Awaiting wallet',
+          'Connect a wallet to start on devnet',
+          'Create a browser wallet or connect an existing Solana wallet. OST will then guide you through devnet SOL and your first OST balance.'
+        );
+        setJourneyStep(wdJourneyStepWallet, 'active', 'Choose create wallet or connect an existing address.');
+        setJourneyStep(wdJourneyStepBackup, 'pending', 'Backup or verification starts right after the wallet session is open.');
+        setJourneyStep(wdJourneyStepSol, 'pending', 'Devnet SOL arrives during the faucet setup if this wallet needs fees.');
+        setJourneyStep(wdJourneyStepOst, 'pending', 'Claim devnet OST or open the convert rail once the wallet is ready.');
+        setJourneyAction(wdJourneyPrimaryBtn, { action: 'create-local', label: 'Create browser wallet' });
+        setJourneyAction(wdJourneySecondaryBtn, { action: 'show-access', label: 'Use extension wallet' });
+        return;
+      }
+
+      const walletLabel = session.label || (isLocalWallet ? 'OST Browser Wallet' : 'Connected wallet');
+      const balances = await fetchDashboardBalances(pubkey);
+      if (syncToken !== journeySyncToken) return;
+
+      const solBalance = Number((balances && balances.solBalance) || 0);
+      const ostBalance = Number((balances && balances.ostBalance) || 0);
+      const hasSol = solBalance >= 0.02;
+      const hasOst = ostBalance > 0;
+      const backupReady = !isLocalWallet || !!backupExportedAt;
+
+      updateWalletIntelligence(pubkey, {
+        solBalance,
+        ostBalance,
+        hasSol,
+        hasOst,
+        backupReady,
+        isLocalWallet,
+        walletLabel
+      });
+
+      setJourneyStep(wdJourneyStepWallet, 'ready', walletLabel + ' connected: ' + shortAddress(pubkey));
+      setJourneyStep(
+        wdJourneyStepBackup,
+        backupReady ? 'ready' : 'active',
+        isLocalWallet
+          ? (backupReady ? 'Browser-wallet backup downloaded and ready to store offline.' : 'Download the browser-wallet JSON backup and keep it offline.')
+          : 'Extension session verified in this browser.'
+      );
+      setJourneyStep(
+        wdJourneyStepSol,
+        hasSol ? 'ready' : 'active',
+        hasSol
+          ? solBalance.toFixed(4) + ' SOL ready for devnet fees.'
+          : 'This wallet still needs a small devnet SOL balance for fees.'
+      );
+      setJourneyStep(
+        wdJourneyStepOst,
+        hasOst ? 'ready' : (hasSol ? 'active' : 'pending'),
+        hasOst
+          ? ostBalance.toFixed(2) + ' OST ready for commerce and prediction.'
+          : 'Claim devnet OST now or open the convert rail to preview the future mainnet route.'
+      );
+
+      if (hasOst) {
+        setJourneyText(
+          'OST ready',
+          'Wallet connected and funded',
+          'This address is ready for commerce, swaps, and the prediction venue. The balances below are live from devnet.'
+        );
+        setJourneyAction(wdJourneyPrimaryBtn, { action: 'open-portals', label: 'Open prediction venue' });
+        setJourneyAction(wdJourneySecondaryBtn, { action: 'open-convert', label: 'Open convert rail' });
+        return;
+      }
+
+      if (!hasSol) {
+        setJourneyText(
+          'Devnet funding',
+          'Wallet connected, needs devnet gas',
+          'OST can top this wallet up with devnet SOL during the faucet flow. Claim OST once to finish the live testing setup.'
+        );
+        setJourneyAction(wdJourneyPrimaryBtn, { action: 'claim-faucet', label: 'Fund and claim devnet OST' });
+        setJourneyAction(wdJourneySecondaryBtn, isLocalWallet && !backupReady
+          ? { action: 'download-backup', label: 'Download backup again' }
+          : { action: 'open-convert', label: 'Open convert rail' });
+        return;
+      }
+
+      setJourneyText(
+        'Claim OST',
+        'Wallet connected, one step from OST',
+        'This address has enough devnet SOL for fees. Claim test OST from the community faucet or inspect the convert rail.'
+      );
+      setJourneyAction(wdJourneyPrimaryBtn, { action: 'claim-faucet', label: 'Claim devnet OST' });
+      setJourneyAction(wdJourneySecondaryBtn, isLocalWallet && !backupReady
+        ? { action: 'download-backup', label: 'Download backup again' }
+        : { action: 'open-convert', label: 'Open convert rail' });
+    }
+
+    window.syncWalletJourneyUi = syncJourneyUi;
 
     // Copy address
     if (wdCopyAddr) wdCopyAddr.addEventListener('click', () => {
@@ -4888,11 +5487,13 @@
 
     // Also refresh balances every 30s while connected
     setInterval(() => {
-      if (connectedWallet) fetchDashboardBalances(connectedWallet);
+      if (connectedWallet) syncJourneyUi();
     }, 30000);
 
     // If already connected on load
     if (connectedWallet) showDashboard(connectedWallet);
+    else updateWalletIntelligence('', null);
+    syncJourneyUi();
   })();
 
   /* ================================================================== */
@@ -9894,6 +10495,26 @@
     if (!overlay) return;
     var modal = overlay.querySelector('.welcome-modal');
 
+    function rememberWelcomeSeen() {
+      try {
+        sessionStorage.setItem(WELCOME_SESSION_KEY, '1');
+      } catch (e) {}
+    }
+
+    function hasSeenWelcomeThisSession() {
+      try {
+        return sessionStorage.getItem(WELCOME_SESSION_KEY) === '1';
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function setSelectedButton(selector, attribute, value, activeClass) {
+      overlay.querySelectorAll(selector).forEach(function(btn) {
+        btn.classList.toggle(activeClass, btn.getAttribute(attribute) === value);
+      });
+    }
+
     function syncStoredPrefs(lang, currency) {
       try {
         var prefs = JSON.parse(localStorage.getItem('ost_prefs') || '{}');
@@ -9912,20 +10533,26 @@
       });
     }
 
-    // Check if already set preferences
     var prefs = {};
     try { prefs = JSON.parse(localStorage.getItem('ost_prefs') || '{}'); } catch(e) {}
-    if (prefs.lang && prefs.currency) {
-      overlay.classList.add('hidden');
-      // Apply saved prefs
+    var selectedLang = prefs.lang || 'en';
+    var selectedCurrency = prefs.currency || 'USD';
+
+    if (prefs.lang) {
       if (typeof applyTranslations === 'function') applyTranslations(prefs.lang);
-      window.__ostCurrency = prefs.currency;
       syncNavLanguage(prefs.lang);
-      return;
+    }
+    if (prefs.currency) {
+      window.__ostCurrency = prefs.currency;
     }
 
-    var selectedLang = 'en';
-    var selectedCurrency = 'USD';
+    setSelectedButton('.wel-lang-btn', 'data-lang', selectedLang, 'wel-lang-active');
+    setSelectedButton('.wel-curr-btn', 'data-curr', selectedCurrency, 'wel-curr-active');
+
+    if (prefs.lang && prefs.currency && hasSeenWelcomeThisSession()) {
+      overlay.classList.add('hidden');
+      return;
+    }
 
     // Language buttons
     overlay.querySelectorAll('.wel-lang-btn').forEach(function(btn) {
@@ -9962,6 +10589,7 @@
     // Enter
     document.getElementById('welGo').addEventListener('click', function() {
       syncStoredPrefs(selectedLang, selectedCurrency);
+      rememberWelcomeSeen();
 
       // Apply language
       if (typeof applyTranslations === 'function') applyTranslations(selectedLang);
@@ -10350,6 +10978,7 @@
     var countEl = document.getElementById('predictionMarketCount');
     var sourceCountEl = document.getElementById('predictionSourceCount');
     var breakingCountEl = document.getElementById('predictionBtcCount');
+    var tapeEl = document.getElementById('predictionMarketTape');
     var pulseEl = document.getElementById('predictionMarketPulse');
     var pulseMetaEl = document.getElementById('predictionPulseMeta');
     var sourceToggle = document.getElementById('predictionSourceToggle');
@@ -10383,6 +11012,10 @@
     var availableBalanceEl = document.getElementById('predictionAvailableBalance');
     var estimatedSharesEl = document.getElementById('predictionEstimatedShares');
     var potentialReturnEl = document.getElementById('predictionPotentialReturn');
+    var entryPriceEl = document.getElementById('predictionEntryPrice');
+    var payoutMultipleEl = document.getElementById('predictionPayoutMultiple');
+    var winNetEl = document.getElementById('predictionWinNet');
+    var settlementPathEl = document.getElementById('predictionSettlementPath');
     var tradeStatusEl = document.getElementById('predictionTradeStatus');
     var tradeActionBtn = document.getElementById('predictionTradeAction');
     var tradeActionLabelEl = document.getElementById('predictionTradeActionLabel');
@@ -11173,6 +11806,30 @@
       }).join('');
     }
 
+    function renderPredictionTape(filteredMarkets) {
+      if (!tapeEl) return;
+      var tapeMarkets = (filteredMarkets && filteredMarkets.length ? filteredMarkets : state.markets).slice(0, 8);
+
+      if (!tapeMarkets.length) {
+        tapeEl.innerHTML = '<div class="prediction-tape-empty">' + escapeHtml(state.loading ? 'Loading venue tape...' : 'No live contracts in this lane yet.') + '</div>';
+        return;
+      }
+
+      tapeEl.innerHTML = tapeMarkets.map(function(market) {
+        var trendPoints = getTrendPoints(market);
+        var sourceClass = getMarketSourceClass(market);
+        var isSelected = market.id === state.selectedMarketId;
+        return [
+          '<button type="button" class="prediction-tape-chip' + (trendPoints > 0 ? ' is-up' : trendPoints < 0 ? ' is-down' : '') + (isSelected ? ' is-selected' : '') + '" data-prediction-select-market-id="' + escapeHtml(market.id) + '">',
+            '<span class="prediction-market-source ' + sourceClass + '">' + escapeHtml(market.sourceLabel) + '</span>',
+            '<strong>' + escapeHtml(truncateText(market.title, 62)) + '</strong>',
+            '<span>' + escapeHtml(market.yesLabel) + ' ' + escapeHtml(market.yesValue) + ' • ' + escapeHtml(market.closeText) + '</span>',
+            '<em>' + escapeHtml(formatSignedPoints(trendPoints, 'Flat')) + '</em>',
+          '</button>'
+        ].join('');
+      }).join('');
+    }
+
     function getStageRankLabel(market) {
       if (state.rank !== 'all') return rankLabels[state.rank] || rankLabels.trending;
       if (market && market.isBreaking) return rankLabels.breaking;
@@ -11257,6 +11914,10 @@
         if (noValueEl) noValueEl.textContent = '--';
         if (estimatedSharesEl) estimatedSharesEl.textContent = '--';
         if (potentialReturnEl) potentialReturnEl.textContent = '--';
+        if (entryPriceEl) entryPriceEl.textContent = '--';
+        if (payoutMultipleEl) payoutMultipleEl.textContent = '--';
+        if (winNetEl) winNetEl.textContent = '--';
+        if (settlementPathEl) settlementPathEl.textContent = 'Wallet -> OST vault';
         if (tradeActionBtn) tradeActionBtn.disabled = true;
         setTradeStatus(t('wallet.portal.prediction.tradeSelectPrompt', 'Select a live contract first.'), 'info');
         return;
@@ -11278,6 +11939,8 @@
       var priceFraction = getMarketPrice(market, state.selectedSide);
       var estimatedShares = calculateEstimatedShares(state.stake, priceFraction);
       var estimatedReturn = calculatePotentialReturn(state.stake, priceFraction);
+      var payoutMultiple = Number.isFinite(priceFraction) && priceFraction > 0 ? (1 / priceFraction) : NaN;
+      var netIfRight = Number.isFinite(estimatedReturn) ? Math.max(estimatedReturn - state.stake, 0) : NaN;
       var hasSufficientBalance = state.availableBalance == null || state.availableBalance + 1e-9 >= Number(state.stake);
       var canTradeSelection = Number.isFinite(priceFraction) && priceFraction > 0;
 
@@ -11291,6 +11954,24 @@
           ? formatOst(estimatedReturn)
           : t('wallet.portal.prediction.tradeUnavailable', 'Unavailable');
       }
+      if (entryPriceEl) {
+        entryPriceEl.textContent = Number.isFinite(priceFraction)
+          ? formatPercent(priceFraction)
+          : t('wallet.portal.prediction.tradeUnavailable', 'Unavailable');
+      }
+      if (payoutMultipleEl) {
+        payoutMultipleEl.textContent = Number.isFinite(payoutMultiple)
+          ? payoutMultiple.toFixed(2) + 'x'
+          : t('wallet.portal.prediction.tradeUnavailable', 'Unavailable');
+      }
+      if (winNetEl) {
+        winNetEl.textContent = Number.isFinite(netIfRight)
+          ? formatOst(netIfRight)
+          : t('wallet.portal.prediction.tradeUnavailable', 'Unavailable');
+      }
+      if (settlementPathEl) {
+        settlementPathEl.textContent = market.sourceLabel + ' -> OST vault';
+      }
 
       if (availableBalanceEl) {
         availableBalanceEl.textContent = state.availableBalance == null
@@ -11299,7 +11980,7 @@
       }
 
       if (tradeHeadingEl) tradeHeadingEl.textContent = 'Build an OST ticket';
-      if (tradeCopyEl) tradeCopyEl.textContent = 'Choose the live side, size the order, and route an OST-denominated ticket from the same market board.';
+      if (tradeCopyEl) tradeCopyEl.textContent = 'Choose the live side, size the order, and route an OST-denominated ticket from the same market board into the devnet settlement vault.';
       if (tradeActionBtn) {
         tradeActionBtn.disabled = state.loading || state.placing || !connectedWalletSession || !connectedWalletSession.publicKey || !canTradeSelection || !hasSufficientBalance;
       }
@@ -11543,6 +12224,7 @@
             ? 'No live crypto contracts matched that lane. Try All markets or search for bitcoin, ethereum, solana, or ETF.'
             : 'No active markets matched that filter. Try another topic, rank, or search term.';
         listEl.innerHTML = '<div class="prediction-market-empty-card">' + escapeHtml(emptyText) + '</div>';
+        renderPredictionTape(filteredMarkets);
         renderPredictionHero(filteredMarkets);
         renderPredictionPulse(filteredMarkets);
         renderPredictionStage(filteredMarkets);
@@ -11624,6 +12306,7 @@
         ].join('');
       }).join('');
 
+      renderPredictionTape(filteredMarkets);
       renderPredictionHero(filteredMarkets);
       renderPredictionPulse(filteredMarkets);
       renderPredictionStage(filteredMarkets);
