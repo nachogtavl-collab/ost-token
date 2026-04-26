@@ -1,0 +1,123 @@
+/* ==========================================================================
+   OST polish.css — micro-animations, loading states, "alive" feedback
+   ========================================================================== */
+
+/* ---------- Pulse (live indicators) ---------- */
+@keyframes ost-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.55; transform: scale(1.08); }
+}
+.ost-pulse { animation: ost-pulse 1.6s ease-in-out infinite; }
+
+@keyframes ost-pulse-dot {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.55); }
+  70%      { box-shadow: 0 0 0 10px rgba(52, 211, 153, 0); }
+}
+.ost-pulse-dot {
+  display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+  background: #34d399; margin-right: 6px; vertical-align: middle;
+  animation: ost-pulse-dot 1.8s ease-out infinite;
+}
+
+/* ---------- Loading spinner ---------- */
+@keyframes ost-spin { to { transform: rotate(360deg); } }
+.ost-spinner {
+  display: inline-block; width: 14px; height: 14px; vertical-align: -2px;
+  border: 2px solid currentColor; border-right-color: transparent;
+  border-radius: 50%; animation: ost-spin 0.7s linear infinite;
+  margin-right: 6px;
+}
+.ost-loading { pointer-events: none; opacity: 0.85; }
+
+/* ---------- Shimmer (loading skeleton) ---------- */
+@keyframes ost-shimmer {
+  0%   { background-position: -468px 0; }
+  100% { background-position: 468px 0; }
+}
+.ost-shimmer {
+  background: linear-gradient(90deg, rgba(255,255,255,0.04) 8%, rgba(255,255,255,0.12) 38%, rgba(255,255,255,0.04) 54%);
+  background-size: 800px 100%;
+  animation: ost-shimmer 1.4s linear infinite;
+  border-radius: 8px;
+}
+
+/* ---------- Success checkmark burst ---------- */
+@keyframes ost-success-pop {
+  0%   { transform: scale(0); opacity: 0; }
+  60%  { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.ost-success-check {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: #34d399; color: #0a0e1a; font-weight: 800; font-size: .9rem;
+  animation: ost-success-pop 0.45s cubic-bezier(.34,1.56,.64,1) both;
+}
+
+/* ---------- Tap ripple (buttons) ---------- */
+.ost-ripple-host { position: relative; overflow: hidden; }
+@keyframes ost-ripple-anim {
+  to { transform: scale(2.4); opacity: 0; }
+}
+.ost-ripple {
+  position: absolute; border-radius: 50%; pointer-events: none;
+  background: currentColor; opacity: 0.25; transform: scale(0);
+  animation: ost-ripple-anim 0.55s ease-out forwards;
+}
+
+/* ---------- Live ticker (price/rate updates) ---------- */
+@keyframes ost-tick-up   { 0% { color: #34d399; transform: translateY(-3px); } 100% { color: inherit; transform: none; } }
+@keyframes ost-tick-down { 0% { color: #ef4444; transform: translateY(3px);  } 100% { color: inherit; transform: none; } }
+.ost-tick-up   { animation: ost-tick-up   0.9s ease-out; }
+.ost-tick-down { animation: ost-tick-down 0.9s ease-out; }
+
+/* ---------- Satellite orbit (#spacex) ---------- */
+@keyframes ost-orbit {
+  from { transform: rotate(0deg)   translateX(var(--ost-orbit-r, 220px)) rotate(0deg); }
+  to   { transform: rotate(360deg) translateX(var(--ost-orbit-r, 220px)) rotate(-360deg); }
+}
+.satellite-layer { position: relative; min-height: 320px; pointer-events: none; }
+.satellite-layer .satellite {
+  position: absolute; top: 50%; left: 50%; font-size: 1.4rem;
+  filter: drop-shadow(0 0 10px rgba(109, 159, 255, 0.55));
+  animation: ost-orbit linear infinite;
+  transform-origin: 0 0;
+}
+.satellite-layer .sat-1 { --ost-orbit-r: 180px; animation-duration: 14s; }
+.satellite-layer .sat-2 { --ost-orbit-r: 240px; animation-duration: 22s; animation-delay: -7s; }
+.satellite-layer .sat-3 { --ost-orbit-r: 300px; animation-duration: 32s; animation-delay: -16s; }
+.satellite-layer .satellite .sat-trail {
+  position: absolute; top: 50%; left: 0; width: 60px; height: 2px;
+  background: linear-gradient(90deg, rgba(109,159,255,0.7), transparent);
+  transform: translateY(-50%);
+}
+
+/* ---------- Rewards / progress fill ---------- */
+@keyframes ost-fill-shine {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.ost-rewards-bar-fill {
+  background: linear-gradient(90deg, #6d9fff 0%, #a78bfa 50%, #6d9fff 100%);
+  background-size: 200% 100%;
+  animation: ost-fill-shine 2.4s linear infinite;
+  transition: width 0.6s cubic-bezier(.4,0,.2,1);
+}
+
+/* ---------- Hover lift (cards) ---------- */
+.ost-hover-lift { transition: transform 0.22s ease, box-shadow 0.22s ease; }
+.ost-hover-lift:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(0,0,0,0.35); }
+
+/* ---------- "Live" badge ---------- */
+.ost-live-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 2px 10px; border-radius: 999px;
+  background: rgba(52, 211, 153, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.35);
+  color: #34d399; font-size: .72rem; font-weight: 600; letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.ost-live-badge::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%;
+  background: #34d399; animation: ost-pulse-dot 1.8s ease-out infinite;
+}

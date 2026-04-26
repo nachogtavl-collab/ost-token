@@ -28,6 +28,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Egyptian+Hieroglyphs&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <link rel="stylesheet" href="style.css?v=57">
+  <link rel="stylesheet" href="polish.css?v=1">
 </head>
 <body>
 
@@ -280,7 +281,7 @@
 
       <div class="faucet-section" id="faucetSection">
         <h3 data-i18n="getost.faucet">New Here? Claim Free OST</h3>
-        <p data-i18n="getost.faucettext">Every new wallet gets <strong>10 OST</strong> from the community treasury &mdash; enough to start using OST right away.</p>
+        <p data-i18n="getost.faucettext">Every new wallet gets <strong>1 OST</strong> from the community treasury &mdash; enough to test the live devnet wallet flow right away.</p>
         <div class="faucet-machine" id="faucetMachine">
           <div class="faucet-pipe"><div class="faucet-spout"></div></div>
           <div class="faucet-drop-zone" id="faucetDropZone"></div>
@@ -1550,30 +1551,30 @@
             <p data-i18n="wallet.commandSub">The wallet page now behaves like a command center for access, market watch, conversion, and portal routing.</p>
             <div class="wallet-market-strip">
               <div class="wallet-mini-stat">
-                <span data-i18n="wallet.market.velocity">Route speed</span>
-                <strong id="ostMarketVelocity">0.4s</strong>
+                <span>Faucet claims</span>
+                <strong id="ostMarketVelocity">0</strong>
               </div>
               <div class="wallet-mini-stat">
-                <span data-i18n="wallet.market.liquidity">Liquidity</span>
-                <strong id="ostMarketLiquidity">$0</strong>
+                <span>Treasury reserve</span>
+                <strong id="ostMarketLiquidity">0 OST</strong>
               </div>
             </div>
           </div>
 
           <div class="wallet-market-board">
             <div class="wallet-market-board-head">
-              <span data-i18n="wallet.market.title">OST market pulse</span>
-              <span class="wallet-market-live" id="ostMarketUpdated" data-i18n="wallet.market.updated">Live</span>
+              <span>OST devnet pulse</span>
+              <span class="wallet-market-live" id="ostMarketUpdated">Syncing devnet…</span>
             </div>
             <div class="wallet-market-main">
               <div class="wallet-market-stat wallet-market-stat-price">
-                <span data-i18n="wallet.market.price">OST price</span>
-                <strong id="ostLivePrice">$0.000100</strong>
-                <em id="ostLiveChange">+0.00%</em>
+                <span>Faucet amount</span>
+                <strong id="ostLivePrice">1.00 OST</strong>
+                <em id="ostLiveChange">Devnet sync pending</em>
               </div>
               <div class="wallet-market-stat">
-                <span data-i18n="wallet.market.volume">24h volume</span>
-                <strong id="ostMarketVolume">$0</strong>
+                <span>Minted supply</span>
+                <strong id="ostMarketVolume">0 OST</strong>
               </div>
             </div>
             <div class="wallet-market-chart-wrap">
@@ -1904,6 +1905,26 @@
                 <div class="ct-status"><span class="ct-status-dot"></span>OST Interchange &mdash; Live</div>
                 <h3 data-i18n="transfer.widgettitle">Convert Now</h3>
                 <p class="ct-sub" data-i18n="wallet.convert.lead">Institutional-grade currency conversion, but redesigned for regular users who need a clean entry rail into confidential OST.</p>
+              </div>
+              <div id="convertWalletBackupBar" class="convert-backup-bar" style="margin:0 0 16px;padding:12px 14px;border-radius:12px;background:rgba(245,196,104,0.08);border:1px solid rgba(245,196,104,0.25);font-size:.85rem;color:var(--text-light);display:flex;flex-direction:column;gap:10px;">
+                <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;">
+                  <span id="convertBackupBarMsg"><strong>⚠ Save your browser wallet.</strong> If you clear this browser's storage, your devnet wallet is lost. Download the backup file once and keep it offline.</span>
+                  <span style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button type="button" class="btn btn-outline btn-sm" id="convertBackupBtn">Download backup</button>
+                    <label for="convertRestoreInput" class="btn btn-outline btn-sm" style="cursor:pointer;margin:0;">Restore from file</label>
+                    <input type="file" id="convertRestoreInput" accept="application/json,.json" style="display:none;">
+                  </span>
+                </div>
+                <details style="margin:0;">
+                  <summary style="cursor:pointer;color:var(--text-muted);font-size:.82rem;">Paste an existing wallet secret key to access its funds</summary>
+                  <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px;">
+                    <textarea id="convertPasteKeyInput" rows="3" placeholder='Paste secret key as JSON array like [12,34,...] (64 numbers) or a base58 string' style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:rgba(0,0,0,0.25);color:var(--text-light);font-family:monospace;font-size:.78rem;resize:vertical;"></textarea>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                      <button type="button" class="btn btn-primary btn-sm" id="convertPasteKeyBtn">Import wallet</button>
+                      <span style="color:var(--text-muted);font-size:.75rem;">Stored locally in this browser only. Never paste a mainnet key on a site you don't trust.</span>
+                    </div>
+                  </div>
+                </details>
               </div>
               <div class="ct-body">
                 <div class="ct-side ct-from">
@@ -5025,7 +5046,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
           </div>
           <div class="transp-contract-card">
             <div class="transp-contract-label">OST Mint</div>
-            <code class="transp-contract-addr">383pZBNWtnX1qGGAGETCSm2Dho8JBf8uxLan5N12pAJJ</code>
+            <code class="transp-contract-addr">383pTzoZ8Gp83dzk23ZnvLcfX2Sq32TAGN48CMQu2pAJ</code>
             <div class="transp-contract-net">Token-2022</div>
           </div>
           <div class="transp-contract-card">
@@ -5175,5 +5196,6 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="app.js?v=59"></script>
+  <script src="polish.js?v=1"></script>
 </body>
 </html>

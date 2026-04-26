@@ -85,7 +85,7 @@
       'getost.swap': 'Swap Any Crypto to OST', 'getost.swaptext': 'Jupiter Aggregator finds the best route across all Solana liquidity pools.',
       'getost.jupnote': 'Connect your wallet to load the live swap widget.', 'getost.jupbtn': 'Load Swap Widget',
       'getost.fiat': 'Buy with Local Money', 'getost.fiatsub': 'Buy SOL or USDC, then swap to OST. No KYC for the swap.',
-      'getost.faucet': 'New Here? Claim Free OST', 'getost.faucettext': 'Every new wallet gets <strong>10 OST</strong> from the community treasury &mdash; enough to start using OST right away.',
+      'getost.faucet': 'New Here? Claim Free OST', 'getost.faucettext': 'Every new wallet gets <strong>1 OST</strong> from the community treasury &mdash; enough to test the live devnet wallet flow right away.',
       'getost.faucetbtn': 'Turn the Faucet',
       'pay.anywhere': '🌐 Interchange - Browse Any Merchant',
       'pay.anywheresub': 'Paste a real product or checkout URL, or open a merchant lane below. OST loads the quote and prepares an honest on-chain request instead of pretending merchant settlement is live.',
@@ -384,7 +384,7 @@
       'getost.swap': 'Cambia Cualquier Cripto a OST', 'getost.swaptext': 'Jupiter encuentra la mejor ruta en todos los pools de liquidez de Solana.',
       'getost.jupnote': 'Conecta tu billetera para cargar el widget de intercambio.', 'getost.jupbtn': 'Cargar Widget',
       'getost.fiat': 'Compra con Moneda Local', 'getost.fiatsub': 'Compra SOL o USDC, luego cambia a OST. Sin KYC para el intercambio.',
-      'getost.faucet': 'Nuevo? Reclama OST Gratis', 'getost.faucettext': 'Cada nueva billetera recibe <strong>10 OST</strong> del tesoro comunitario &mdash; suficiente para empezar a usar OST de inmediato.',
+      'getost.faucet': 'Nuevo? Reclama OST Gratis', 'getost.faucettext': 'Cada nueva billetera recibe <strong>1 OST</strong> del tesoro comunitario &mdash; suficiente para probar el flujo real en devnet de inmediato.',
       'getost.faucetbtn': 'Abrir el Grifo',
       'pay.anywhere': '🌐 Interchange - Explora Cualquier Comercio',
       'pay.anywheresub': 'Pega una URL real de producto o checkout, o abre una ruta comercial abajo. OST carga la cotizacion y prepara una solicitud on-chain honesta en vez de fingir que la liquidacion del comercio ya existe.',
@@ -683,7 +683,7 @@
       'getost.swap': '任何加密货币兑换OST', 'getost.swaptext': 'Jupiter聚合器在所有Solana流动性池中找到最佳路线。',
       'getost.jupnote': '连接您的钱包以加载实时兑换小部件。', 'getost.jupbtn': '加载兑换小部件',
       'getost.fiat': '用当地货币购买', 'getost.fiatsub': '购买SOL或USDC，然后兑换为OST。兑换无需KYC。',
-      'getost.faucet': '新人？领取免费OST', 'getost.faucettext': '每个新钱包从社区金库获得<strong>10 OST</strong>。',
+      'getost.faucet': '新人？领取免费OST', 'getost.faucettext': '每个新钱包从社区金库获得<strong>1 OST</strong>。',
       'getost.faucetbtn': '开启水龙头',
       'pay.anywhere': '🌐 用OST在任何网站支付',
       'pay.anywheresub': '粘贴你正在购物的任何网站。我们将你的OST转换为他们接受的货币。',
@@ -834,7 +834,7 @@
       'getost.swap': 'Обмен Любой Крипты на OST', 'getost.swaptext': 'Jupiter находит лучший маршрут по всем пулам ликвидности Solana.',
       'getost.jupnote': 'Подключите кошелёк для загрузки виджета обмена.', 'getost.jupbtn': 'Загрузить виджет',
       'getost.fiat': 'Купить за местную валюту', 'getost.fiatsub': 'Купите SOL или USDC, затем обменяйте на OST.',
-      'getost.faucet': 'Новичок? Получите Бесплатный OST', 'getost.faucettext': 'Каждый новый кошелёк получает <strong>10 OST</strong> из казны сообщества.',
+      'getost.faucet': 'Новичок? Получите Бесплатный OST', 'getost.faucettext': 'Каждый новый кошелёк получает <strong>1 OST</strong> из казны сообщества.',
       'getost.faucetbtn': 'Открыть кран',
       'pay.anywhere': '🌐 Платите OST на любом сайте',
       'pay.anywheresub': 'Вставьте ссылку на любой сайт, где вы покупаете. Мы конвертируем ваши OST в нужную валюту.',
@@ -985,7 +985,7 @@
       'getost.swap': 'किसी भी क्रिप्टो को OST में बदलें', 'getost.swaptext': 'Jupiter सभी Solana पूल में सबसे अच्छा रूट ढूंढता है।',
       'getost.jupnote': 'स्वैप विजेट लोड करने के लिए वॉलेट कनेक्ट करें।', 'getost.jupbtn': 'स्वैप विजेट लोड करें',
       'getost.fiat': 'स्थानीय मुद्रा से खरीदें', 'getost.fiatsub': 'SOL या USDC खरीदें, फिर OST में बदलें।',
-      'getost.faucet': 'नए हैं? मुफ्त OST प्राप्त करें', 'getost.faucettext': 'हर नए वॉलेट को समुदाय खजाने से <strong>10 OST</strong> मिलता है।',
+      'getost.faucet': 'नए हैं? मुफ्त OST प्राप्त करें', 'getost.faucettext': 'हर नए वॉलेट को समुदाय खजाने से <strong>1 OST</strong> मिलता है।',
       'getost.faucetbtn': 'नल खोलें',
       'pay.anywhere': '🌐 OST से किसी भी वेबसाइट पर भुगतान करें',
       'pay.anywheresub': 'जहाँ आप खरीदारी कर रहे हैं वह वेबसाइट पेस्ट करें। हम आपके OST को उनकी मुद्रा में बदल देंगे।',
@@ -1136,7 +1136,7 @@
       'getost.swap': 'بادل أي عملة رقمية بـ OST', 'getost.swaptext': 'Jupiter يجد أفضل مسار عبر جميع مجمعات السيولة.',
       'getost.jupnote': 'اربط محفظتك لتحميل أداة التبادل.', 'getost.jupbtn': 'تحميل أداة التبادل',
       'getost.fiat': 'اشترِ بالعملة المحلية', 'getost.fiatsub': 'اشترِ SOL أو USDC، ثم بادل إلى OST.',
-      'getost.faucet': 'جديد هنا؟ احصل على OST مجاني', 'getost.faucettext': 'كل محفظة جديدة تحصل على <strong>10 OST</strong> من خزينة المجتمع.',
+      'getost.faucet': 'جديد هنا؟ احصل على OST مجاني', 'getost.faucettext': 'كل محفظة جديدة تحصل على <strong>1 OST</strong> من خزينة المجتمع.',
       'getost.faucetbtn': 'افتح الصنبور',
       'pay.anywhere': '🌐 ادفع بـ OST في أي موقع',
       'pay.anywheresub': 'الصق رابط أي موقع تتسوق منه. سنحول OST الخاص بك إلى عملتهم.',
@@ -1287,7 +1287,7 @@
       'getost.swap': 'Troque Qualquer Cripto por OST', 'getost.swaptext': 'Jupiter encontra a melhor rota em todos os pools de liquidez Solana.',
       'getost.jupnote': 'Conecte sua carteira para carregar o widget de troca.', 'getost.jupbtn': 'Carregar Widget',
       'getost.fiat': 'Compre com Moeda Local', 'getost.fiatsub': 'Compre SOL ou USDC, depois troque por OST.',
-      'getost.faucet': 'Novo Aqui? Receba OST Gratis', 'getost.faucettext': 'Cada nova carteira recebe <strong>10 OST</strong> do tesouro comunitario.',
+      'getost.faucet': 'Novo Aqui? Receba OST Gratis', 'getost.faucettext': 'Cada nova carteira recebe <strong>1 OST</strong> do tesouro comunitario.',
       'getost.faucetbtn': 'Abrir a Torneira',
       'pay.anywhere': '🌐 Pague em Qualquer Site com OST',
       'pay.anywheresub': 'Cole qualquer site onde voce esta comprando. Convertemos seu OST na moeda que eles aceitam.',
@@ -1438,7 +1438,7 @@
       'getost.swap': 'Echangez N\'importe Quelle Crypto Contre OST', 'getost.swaptext': 'Jupiter trouve la meilleure route dans tous les pools de liquidite.',
       'getost.jupnote': 'Connectez votre portefeuille pour charger le widget d\'echange.', 'getost.jupbtn': 'Charger le Widget',
       'getost.fiat': 'Achetez avec Votre Monnaie Locale', 'getost.fiatsub': 'Achetez SOL ou USDC, puis echangez contre OST.',
-      'getost.faucet': 'Nouveau? Recevez OST Gratuit', 'getost.faucettext': 'Chaque nouveau portefeuille recoit <strong>10 OST</strong> du tresor communautaire.',
+      'getost.faucet': 'Nouveau? Recevez OST Gratuit', 'getost.faucettext': 'Chaque nouveau portefeuille recoit <strong>1 OST</strong> du tresor communautaire.',
       'getost.faucetbtn': 'Ouvrir le Robinet',
       'pay.anywhere': '🌐 Payez Partout avec OST',
       'pay.anywheresub': 'Collez le lien de n\'importe quel site ou vous achetez. Nous convertissons vos OST dans leur devise.',
@@ -1589,7 +1589,7 @@
       'getost.swap': 'あらゆる暗号通貨をOSTに交換', 'getost.swaptext': 'JupiterがすべてのSolana流動性プールで最適ルートを検索。',
       'getost.jupnote': 'ウォレットを接続してスワップウィジェットを読み込む。', 'getost.jupbtn': 'ウィジェットを読み込む',
       'getost.fiat': '現地通貨で購入', 'getost.fiatsub': 'SOLまたはUSDCを購入し、OSTに交換。',
-      'getost.faucet': '初めてですか？無料OSTを取得', 'getost.faucettext': '新しいウォレットにはコミュニティトレジャリーから<strong>10 OST</strong>が支給されます。',
+      'getost.faucet': '初めてですか？無料OSTを取得', 'getost.faucettext': '新しいウォレットにはコミュニティトレジャリーから<strong>1 OST</strong>が支給されます。',
       'getost.faucetbtn': '蛇口を開く',
       'pay.anywhere': '🌐 OSTでどこでも支払い',
       'pay.anywheresub': '購入中のウェブサイトのリンクを貼り付けてください。OSTを相手が受け入れる通貨に変換します。',
@@ -1740,7 +1740,7 @@
       'getost.swap': '모든 암호화폐를 OST로 교환', 'getost.swaptext': 'Jupiter가 모든 Solana 유동성 풀에서 최적 경로를 찾습니다.',
       'getost.jupnote': '스왑 위젯을 로드하려면 지갑을 연결하세요.', 'getost.jupbtn': '위젯 로드',
       'getost.fiat': '현지 화폐로 구매', 'getost.fiatsub': 'SOL 또는 USDC를 구매한 후 OST로 교환.',
-      'getost.faucet': '처음이신가요? 무료 OST를 받으세요', 'getost.faucettext': '모든 새 지갑은 커뮤니티 재무에서 <strong>10 OST</strong>를 받습니다.',
+      'getost.faucet': '처음이신가요? 무료 OST를 받으세요', 'getost.faucettext': '모든 새 지갑은 커뮤니티 재무에서 <strong>1 OST</strong>를 받습니다.',
       'getost.faucetbtn': '수도꼭지 열기',
       'pay.anywhere': '🌐 OST로 어디서나 결제',
       'pay.anywheresub': '구매 중인 웹사이트 링크를 붙여넣으세요. OST를 상대방이 받는 통화로 변환합니다.',
@@ -1891,7 +1891,7 @@
       'getost.swap': 'Herhangi Bir Kripto\'yu OST\'ye Donustür', 'getost.swaptext': 'Jupiter tüm Solana likidite havuzlarinda en iyi rotayi bulur.',
       'getost.jupnote': 'Takas widget\'ini yuklemek icin cuzdaninizi baglayiniz.', 'getost.jupbtn': 'Widget\'i Yükle',
       'getost.fiat': 'Yerel Para ile Satin Al', 'getost.fiatsub': 'SOL veya USDC satin alin, ardindan OST\'ye donustürun.',
-      'getost.faucet': 'Yeni misiniz? Ucretsiz OST Alin', 'getost.faucettext': 'Her yeni cuzdan topluluk hazinesinden <strong>10 OST</strong> alir.',
+      'getost.faucet': 'Yeni misiniz? Ucretsiz OST Alin', 'getost.faucettext': 'Her yeni cuzdan topluluk hazinesinden <strong>1 OST</strong> alir.',
       'getost.faucetbtn': 'Muslugu Ac',
       'pay.anywhere': '🌐 OST ile Her Yerde Ode',
       'pay.anywheresub': 'Alisveris yaptiginiz herhangi bir web sitesini yapisitirin. OST\'nizi kabul ettikleri para birimine donusturuyoruz.',
@@ -2086,6 +2086,8 @@
   const ASSOCIATED_TOKEN_PROGRAM_ID = new solanaWeb3.PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
   const MEMO_PROGRAM_ID = new solanaWeb3.PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');
   const OST_TOKEN_DECIMALS = 9;
+  const OST_FAUCET_AMOUNT = 1;
+  const OST_DEVNET_METRICS_REFRESH_MS = 120000;
   const LOCAL_WALLET_STORAGE_KEY = 'ost.localWallet.v1';
   const LOCAL_WALLET_BACKUP_EXPORTED_KEY = 'ost.localWallet.backupExportedAt';
   const INTERCHANGE_REQUESTS_STORAGE_KEY = 'ost.interchange.requests.v1';
@@ -2094,6 +2096,26 @@
   const CLAIM_FAUCET_DISCRIMINATOR = Uint8Array.from([80, 7, 251, 108, 55, 145, 135, 68]);
   const SEEDLESS_ONBOARD_DISCRIMINATOR = Uint8Array.from([135, 41, 102, 172, 127, 61, 190, 75]);
   const textEncoder = new TextEncoder();
+  const accountDiscriminatorCache = {};
+  let ostDevnetMetrics = {
+    mintSupply: 0,
+    treasuryBalance: 0,
+    faucetClaimCount: 0,
+    faucetDistributed: 0,
+    circulatingSupply: 0,
+    unstagedSupply: 0,
+    feeBasisPoints: 10,
+    totalFeesCollected: 0,
+    available: false,
+    loading: false,
+    error: '',
+    lastUpdatedAt: 0
+  };
+  let walletFundingState = {
+    needsManualFunding: false,
+    walletAddress: '',
+    lastError: ''
+  };
   window.OST_CONFIG = OST_CONFIG;
 
   // Initialize Solana connection
@@ -2102,6 +2124,208 @@
       solanaConnection = new solanaWeb3.Connection(OST_CONFIG.rpcUrl, 'confirmed');
     }
     return solanaConnection;
+  }
+
+  function readU16LE(bytes, offset) {
+    return bytes[offset] | (bytes[offset + 1] << 8);
+  }
+
+  function readU64LE(bytes, offset) {
+    let value = 0n;
+    for (let index = 0; index < 8; index++) {
+      value |= BigInt(bytes[offset + index]) << BigInt(index * 8);
+    }
+    return value;
+  }
+
+  function formatCompactCount(value) {
+    if (!Number.isFinite(value) || value <= 0) return '0';
+    if (value >= 1e9) return (value / 1e9).toFixed(2) + 'B';
+    if (value >= 1e6) return (value / 1e6).toFixed(2) + 'M';
+    if (value >= 1e3) return (value / 1e3).toFixed(1) + 'K';
+    return Math.round(value).toLocaleString();
+  }
+
+  function formatCompactTokenAmount(value) {
+    if (!Number.isFinite(value) || value <= 0) return '0 OST';
+    if (value >= 1e9) return (value / 1e9).toFixed(2) + 'B OST';
+    if (value >= 1e6) return (value / 1e6).toFixed(2) + 'M OST';
+    if (value >= 1e3) return (value / 1e3).toFixed(1) + 'K OST';
+    return value.toFixed(value >= 10 ? 0 : 2) + ' OST';
+  }
+
+  function decodeDaoTreasuryAccount(accountInfo) {
+    if (!accountInfo || !accountInfo.data || accountInfo.data.length < 83) return null;
+    const bytes = accountInfo.data;
+    return {
+      treasuryTokenAccount: new solanaWeb3.PublicKey(bytes.slice(8, 40)).toBase58(),
+      feeBasisPoints: readU16LE(bytes, 40),
+      totalFeesCollected: Number(readU64LE(bytes, 42)) / 1e9,
+      authority: new solanaWeb3.PublicKey(bytes.slice(50, 82)).toBase58(),
+      bump: bytes[82]
+    };
+  }
+
+  async function getAnchorAccountDiscriminator(name) {
+    if (accountDiscriminatorCache[name]) return accountDiscriminatorCache[name];
+    if (!(window.crypto && window.crypto.subtle)) {
+      accountDiscriminatorCache[name] = null;
+      return null;
+    }
+    const digest = await window.crypto.subtle.digest('SHA-256', textEncoder.encode('account:' + name));
+    const discriminator = Array.from(new Uint8Array(digest).slice(0, 8));
+    accountDiscriminatorCache[name] = discriminator;
+    return discriminator;
+  }
+
+  function clearWalletFundingState() {
+    walletFundingState = {
+      needsManualFunding: false,
+      walletAddress: '',
+      lastError: ''
+    };
+  }
+
+  function setWalletFundingState(nextState) {
+    walletFundingState = Object.assign({}, walletFundingState, nextState || {});
+    if (typeof window.syncWalletJourneyUi === 'function') {
+      window.syncWalletJourneyUi();
+    }
+  }
+
+  function copyTextToClipboard(text) {
+    if (!text || !(navigator && navigator.clipboard && navigator.clipboard.writeText)) {
+      return Promise.reject(new Error('Clipboard unavailable'));
+    }
+    return navigator.clipboard.writeText(String(text));
+  }
+
+  function openManualSolFaucet(pubkeyInput, options) {
+    const settings = options || {};
+    const address = pubkeyInput ? String(pubkeyInput) : '';
+    if (!address) {
+      toast('⚠️', 'Connect a wallet first');
+      return false;
+    }
+    setWalletFundingState({
+      needsManualFunding: true,
+      walletAddress: address,
+      lastError: walletFundingState.lastError || 'Manual devnet SOL top-up required'
+    });
+    copyTextToClipboard(address).then(function() {
+      toast('📋', 'Wallet address copied. Fund a little devnet SOL, then return to claim OST.');
+    }).catch(function() {
+      toast('ℹ️', 'Copy this wallet address into the Solana browser faucet.');
+    });
+    if (faucetStatus) {
+      faucetStatus.textContent = 'Wallet address ready. Open the Solana browser faucet, add a little devnet SOL, then come back here to claim OST.';
+    }
+    if (settings.open !== false) {
+      window.open('https://faucet.solana.com/', '_blank', 'noopener');
+    }
+    return true;
+  }
+
+  async function fetchOstDevnetMetrics(options) {
+    const settings = options || {};
+    const now = Date.now();
+    if (!settings.force && ostDevnetMetrics.available && ostDevnetMetrics.lastUpdatedAt && now - ostDevnetMetrics.lastUpdatedAt < OST_DEVNET_METRICS_REFRESH_MS) {
+      return ostDevnetMetrics;
+    }
+
+    const conn = getSolanaConnection();
+    if (!conn) throw new Error('Solana RPC unavailable');
+
+    const programId = new solanaWeb3.PublicKey(OST_CONFIG.programId);
+    const mintPk = new solanaWeb3.PublicKey(OST_CONFIG.mint);
+    const daoTreasury = solanaWeb3.PublicKey.findProgramAddressSync([encodeSeed('dao-treasury')], programId)[0];
+    const treasuryAuthority = solanaWeb3.PublicKey.findProgramAddressSync([encodeSeed('treasury-authority')], programId)[0];
+    const derivedTreasuryTokenAccount = getAssociatedTokenAddressSync(
+      mintPk,
+      treasuryAuthority,
+      true,
+      TOKEN_2022_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID
+    );
+
+    const [mintInfo, daoInfo] = await Promise.all([
+      conn.getParsedAccountInfo(mintPk),
+      conn.getAccountInfo(daoTreasury)
+    ]);
+
+    const daoTreasuryData = decodeDaoTreasuryAccount(daoInfo);
+    const treasuryTokenAccount = daoTreasuryData && daoTreasuryData.treasuryTokenAccount
+      ? new solanaWeb3.PublicKey(daoTreasuryData.treasuryTokenAccount)
+      : derivedTreasuryTokenAccount;
+
+    const [treasuryBalanceResponse, faucetClaimDiscriminator] = await Promise.all([
+      conn.getTokenAccountBalance(treasuryTokenAccount).catch(function() { return null; }),
+      getAnchorAccountDiscriminator('FaucetClaim')
+    ]);
+
+    let faucetClaimCount = ostDevnetMetrics.faucetClaimCount || 0;
+    if (faucetClaimDiscriminator) {
+      const faucetAccounts = await conn.getProgramAccounts(programId, {
+        filters: [{ dataSize: 57 }]
+      });
+      faucetClaimCount = faucetAccounts.reduce(function(total, entry) {
+        const matches = faucetClaimDiscriminator.every(function(byte, index) {
+          return entry.account.data[index] === byte;
+        });
+        return matches ? total + 1 : total;
+      }, 0);
+    }
+
+    const mintParsed = mintInfo && mintInfo.value && mintInfo.value.data && mintInfo.value.data.parsed && mintInfo.value.data.parsed.info
+      ? mintInfo.value.data.parsed.info
+      : null;
+    const mintSupply = mintParsed ? Number(mintParsed.supply || 0) / 1e9 : 0;
+    const treasuryBalance = treasuryBalanceResponse ? Number(treasuryBalanceResponse.value.amount || 0) / 1e9 : 0;
+    const faucetDistributed = faucetClaimCount * OST_FAUCET_AMOUNT;
+    const circulatingSupply = Math.max(0, mintSupply - treasuryBalance);
+    const unstagedSupply = Math.max(0, circulatingSupply - faucetDistributed);
+
+    return {
+      mintSupply,
+      treasuryBalance,
+      faucetClaimCount,
+      faucetDistributed,
+      circulatingSupply,
+      unstagedSupply,
+      feeBasisPoints: daoTreasuryData ? daoTreasuryData.feeBasisPoints : 10,
+      totalFeesCollected: daoTreasuryData ? daoTreasuryData.totalFeesCollected : 0,
+      treasuryTokenAccount: treasuryTokenAccount.toBase58(),
+      available: true,
+      loading: false,
+      error: '',
+      lastUpdatedAt: now
+    };
+  }
+
+  async function syncOstDevnetMetrics(options) {
+    const settings = options || {};
+    if (ostDevnetMetrics.loading && !settings.force) {
+      return ostDevnetMetrics;
+    }
+    ostDevnetMetrics = Object.assign({}, ostDevnetMetrics, {
+      loading: true,
+      error: ''
+    });
+    updateOstMarketBoard();
+    renderOstReserveChart();
+
+    try {
+      ostDevnetMetrics = await fetchOstDevnetMetrics(settings);
+    } catch (error) {
+      ostDevnetMetrics = Object.assign({}, ostDevnetMetrics, {
+        loading: false,
+        error: (error && error.message) || String(error || 'Devnet sync failed')
+      });
+    }
+
+    updateOstMarketBoard();
+    renderOstReserveChart();
+    return ostDevnetMetrics;
   }
 
   // Check if OST program is deployed on-chain
@@ -2267,6 +2491,9 @@
   function setConnectedWalletSession(session, options) {
     const settings = options || {};
     if (!session || !session.publicKey) return;
+    if (!connectedWalletSession || !connectedWalletSession.publicKey || connectedWalletSession.publicKey.toBase58() !== session.publicKey.toBase58()) {
+      clearWalletFundingState();
+    }
     connectedWalletSession = session;
     connectedWallet = session.publicKey.toBase58();
     setWalletButtonState(connectedWallet);
@@ -2297,11 +2524,13 @@
       if (typeof updateConvertProviders === 'function') {
         updateConvertProviders();
       }
+      try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch {}
     }, 0);
 
     if (typeof window.syncWalletJourneyUi === 'function') {
       window.syncWalletJourneyUi();
     }
+    syncOstDevnetMetrics();
   }
 
   function disconnectConnectedWallet() {
@@ -2311,6 +2540,7 @@
     } catch {}
     connectedWalletSession = null;
     connectedWallet = null;
+    clearWalletFundingState();
     setWalletButtonState(null);
     if (typeof window.syncInterchangeDeskWallet === 'function') {
       window.syncInterchangeDeskWallet();
@@ -2326,6 +2556,7 @@
     if (typeof window.syncWalletJourneyUi === 'function') {
       window.syncWalletJourneyUi();
     }
+    syncOstDevnetMetrics();
     toast('👛', 'Wallet disconnected');
   }
 
@@ -3328,7 +3559,7 @@
 
   /* ---------- LIVE PRICES — CoinGecko ---------- */
   let prices = { bitcoin: 0, ethereum: 0, solana: 0 };
-    let priceHistory = { bitcoin: [], ethereum: [], solana: [], ost: [] };
+    let priceHistory = { bitcoin: [], ethereum: [], solana: [] };
   let ostPrice = 0.0001; // Default OST price
   window.ostPrice = ostPrice;
   const OST_BASE_PRICE = 0.0001;
@@ -3337,7 +3568,6 @@
       if (coin === 'bitcoin') return prices.bitcoin || 105000;
       if (coin === 'ethereum') return prices.ethereum || 3800;
       if (coin === 'solana') return prices.solana || 170;
-      if (coin === 'ost') return ostPrice || OST_BASE_PRICE;
       return 1;
     }
 
@@ -3350,44 +3580,60 @@
       return '$' + value.toFixed(0);
     }
 
-    function updateOstMarketBoard(changeValue = 0) {
-      const normalizedChange = Number.isFinite(changeValue) ? changeValue : 0;
-      const volumeValue = 1250000 * (ostPrice / OST_BASE_PRICE) * (1 + Math.abs(normalizedChange) / 18);
-      const liquidityValue = 4800000 * (1 + Math.abs(normalizedChange) / 24);
-      const velocityValue = Math.max(0.18, 0.42 - Math.abs(normalizedChange) / 30);
-      const updatedLabel = (translations[currentLang] && translations[currentLang]['wallet.market.updated']) || translations.en['wallet.market.updated'] || 'Live';
+    function getOstPulseStatusText() {
+      if (walletFundingState.needsManualFunding && connectedWallet && walletFundingState.walletAddress === connectedWallet) {
+        return 'Wallet needs SOL';
+      }
+      if (!ostDevnetMetrics.available) {
+        return ostDevnetMetrics.loading ? 'Syncing devnet' : 'Devnet sync pending';
+      }
+      if (ostDevnetMetrics.treasuryBalance < OST_FAUCET_AMOUNT) {
+        return 'Treasury empty';
+      }
+      if (ostDevnetMetrics.faucetClaimCount > 0) {
+        return formatCompactCount(ostDevnetMetrics.faucetClaimCount) + ' wallets served';
+      }
+      return 'Treasury ready';
+    }
 
+    function updateOstMarketBoard() {
       const volumeEl = $('#ostMarketVolume');
       const liquidityEl = $('#ostMarketLiquidity');
       const velocityEl = $('#ostMarketVelocity');
       const updatedEl = $('#ostMarketUpdated');
+      const liveValueEl = $('#ostLivePrice');
+      const liveChangeEl = $('#ostLiveChange');
 
-      if (volumeEl) volumeEl.textContent = formatCompactUsd(volumeValue);
-      if (liquidityEl) liquidityEl.textContent = formatCompactUsd(liquidityValue);
-      if (velocityEl) velocityEl.textContent = velocityValue.toFixed(2) + 's';
+      if (liveValueEl) liveValueEl.textContent = OST_FAUCET_AMOUNT.toFixed(2) + ' OST';
+      if (liveChangeEl) {
+        liveChangeEl.textContent = getOstPulseStatusText();
+        liveChangeEl.className = 'price-card-change';
+      }
+
+      if (volumeEl) volumeEl.textContent = ostDevnetMetrics.available ? formatCompactTokenAmount(ostDevnetMetrics.mintSupply) : '0 OST';
+      if (liquidityEl) liquidityEl.textContent = ostDevnetMetrics.available ? formatCompactTokenAmount(ostDevnetMetrics.treasuryBalance) : '0 OST';
+      if (velocityEl) velocityEl.textContent = ostDevnetMetrics.available ? formatCompactCount(ostDevnetMetrics.faucetClaimCount) : '0';
+
       if (updatedEl) {
-        updatedEl.textContent = `${updatedLabel} · ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+        if (ostDevnetMetrics.available) {
+          updatedEl.textContent = 'Devnet live · ' + new Date(ostDevnetMetrics.lastUpdatedAt || Date.now()).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        } else {
+          updatedEl.textContent = ostDevnetMetrics.loading ? 'Syncing devnet…' : 'Devnet sync pending';
+        }
       }
     }
 
-    function refreshOstDisplays(changeValue = 0) {
+    function refreshOstDisplays() {
       const tickerPrice = $('#tickerPrice');
       const tickerChange = $('#tickerChange');
-      const ostLive = $('#ostLivePrice');
-      const ostChange = $('#ostLiveChange');
 
       if (tickerPrice) tickerPrice.textContent = '$' + ostPrice.toFixed(6);
       if (tickerChange) {
-        tickerChange.textContent = (changeValue >= 0 ? '+' : '') + changeValue.toFixed(2) + '%';
-        tickerChange.className = 'ticker-change ' + (changeValue >= 0 ? 'up' : 'down');
-      }
-      if (ostLive) ostLive.textContent = '$' + ostPrice.toFixed(6);
-      if (ostChange) {
-        ostChange.textContent = (changeValue >= 0 ? '+' : '') + changeValue.toFixed(2) + '%';
-        ostChange.className = 'price-card-change ' + (changeValue >= 0 ? 'up' : 'down');
+        tickerChange.textContent = 'Preview quote';
+        tickerChange.className = 'ticker-change';
       }
 
-      updateOstMarketBoard(changeValue);
+      updateOstMarketBoard();
     }
 
   // Fiat exchange rates — fetched live, defaults as fallback
@@ -3462,10 +3708,10 @@
       if (prices.ethereum) fiatRates.ETH = 1 / prices.ethereum;
       if (prices.solana) fiatRates.SOL = 1 / prices.solana;
 
-      // Simulate OST price with slight variation until a direct OST market feed is available.
-      ostPrice = OST_BASE_PRICE * (0.95 + Math.random() * 0.1);
+      // Keep OST pricing deterministic until a direct live market feed exists.
+      ostPrice = OST_BASE_PRICE;
       window.ostPrice = ostPrice;
-      refreshOstDisplays((Math.random() - 0.5) * 5);
+      refreshOstDisplays();
 
       // Update product OST prices
       updateProductOSTPrices();
@@ -3480,9 +3726,9 @@
       fiatRates.BTC = 1 / prices.bitcoin;
       fiatRates.ETH = 1 / prices.ethereum;
       fiatRates.SOL = 1 / prices.solana;
-      ostPrice = OST_BASE_PRICE * (0.95 + Math.random() * 0.1);
+      ostPrice = OST_BASE_PRICE;
       window.ostPrice = ostPrice;
-      refreshOstDisplays((Math.random() - 0.5) * 5);
+      refreshOstDisplays();
       updateProductOSTPrices();
       updateCalc();
     }
@@ -3511,7 +3757,7 @@
 
   /* ---------- MINI CHARTS ---------- */
   function initCharts() {
-    ['bitcoin', 'ethereum', 'solana', 'ost'].forEach(coin => {
+    ['bitcoin', 'ethereum', 'solana'].forEach(coin => {
       const canvas = $(`#chart-${coin}`);
       if (!canvas) return;
       const seedPrice = getChartBasePrice(coin);
@@ -3520,8 +3766,83 @@
   }
   initCharts();
 
+  function renderOstReserveChart() {
+    const canvas = $('#chart-ost');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const rect = canvas.getBoundingClientRect();
+    const computedHeight = parseFloat(window.getComputedStyle(canvas).height || '0');
+    const w = Math.max(160, Math.round(rect.width || canvas.parentElement?.clientWidth || canvas.clientWidth || 320));
+    const h = Math.max(120, Math.round(rect.height || computedHeight || canvas.clientHeight || 140));
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+
+    ctx.font = '600 12px system-ui';
+    ctx.fillStyle = 'rgba(226, 232, 240, 0.92)';
+    ctx.fillText('Devnet reserve split', 16, 24);
+    ctx.font = '500 11px system-ui';
+    ctx.fillStyle = 'rgba(148, 163, 184, 0.92)';
+
+    if (!ostDevnetMetrics.available) {
+      ctx.fillText(ostDevnetMetrics.loading ? 'Loading mint, treasury, and faucet data…' : 'Devnet metrics are waiting for the next sync.', 16, 48);
+      return;
+    }
+
+    const total = Math.max(ostDevnetMetrics.mintSupply || 0, 1);
+    const treasury = Math.max(0, Math.min(ostDevnetMetrics.treasuryBalance || 0, total));
+    const faucet = Math.max(0, Math.min(ostDevnetMetrics.faucetDistributed || 0, total));
+    const other = Math.max(0, total - treasury - faucet);
+    const segments = [
+      { label: 'Treasury', value: treasury, color: '#22c55e' },
+      { label: 'Faucet', value: faucet, color: '#38bdf8' },
+      { label: 'Other', value: other, color: 'rgba(148, 163, 184, 0.82)' }
+    ].filter(function(segment) {
+      return segment.value > 0 || segment.label === 'Treasury';
+    });
+    const barX = 16;
+    const barY = 56;
+    const barW = w - 32;
+    const barH = 18;
+    let cursorX = barX;
+
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.45)';
+    ctx.fillRect(barX, barY, barW, barH);
+
+    segments.forEach(function(segment) {
+      const segmentWidth = Math.max((segment.value / total) * barW, segment.value > 0 ? 2 : 0);
+      ctx.fillStyle = segment.color;
+      ctx.fillRect(cursorX, barY, Math.min(segmentWidth, barX + barW - cursorX), barH);
+      cursorX += segmentWidth;
+    });
+
+    ctx.fillStyle = 'rgba(148, 163, 184, 0.92)';
+    ctx.fillText(formatCompactTokenAmount(total) + ' minted on devnet', 16, 96);
+
+    const legend = [
+      { label: 'Treasury', value: treasury, color: '#22c55e' },
+      { label: 'Claimed', value: faucet, color: '#38bdf8' },
+      { label: 'Other', value: other, color: 'rgba(148, 163, 184, 0.82)' }
+    ];
+
+    legend.forEach(function(item, index) {
+      const rowY = 118 + (index * 20);
+      ctx.fillStyle = item.color;
+      ctx.fillRect(16, rowY - 9, 10, 10);
+      ctx.fillStyle = 'rgba(226, 232, 240, 0.92)';
+      ctx.fillText(item.label, 32, rowY);
+      ctx.textAlign = 'right';
+      ctx.fillText(formatCompactTokenAmount(item.value), w - 16, rowY);
+      ctx.textAlign = 'left';
+    });
+  }
+
   function updateCharts() {
-    ['bitcoin', 'ethereum', 'solana', 'ost'].forEach(coin => {
+    ['bitcoin', 'ethereum', 'solana'].forEach(coin => {
       const canvas = $(`#chart-${coin}`);
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
@@ -3538,7 +3859,7 @@
 
       // Add current price with small variation
       const baseP = getChartBasePrice(coin);
-      const volatility = coin === 'ost' ? 0.016 : 0.004;
+      const volatility = 0.004;
       const newP = baseP * (1 - volatility / 2 + Math.random() * volatility);
       priceHistory[coin].push(newP);
       if (priceHistory[coin].length > 60) priceHistory[coin].shift();
@@ -3600,11 +3921,17 @@
       ctx.fillStyle = isUp ? '#34d399' : '#ef4444';
       ctx.fill();
     });
+
+    renderOstReserveChart();
   }
 
   // Update charts every second
   setInterval(updateCharts, 1000);
   setTimeout(updateCharts, 500);
+  syncOstDevnetMetrics({ force: true });
+  setInterval(function() {
+    syncOstDevnetMetrics();
+  }, OST_DEVNET_METRICS_REFRESH_MS);
 
   /* ---------- GROWTH PROJECTION CHART — removed, replaced by roadmap in HTML ---------- */
 
@@ -4006,7 +4333,7 @@
       transferBtnLabel.textContent = isFiat
         ? 'Open devnet guide'
         : connectedWallet
-          ? 'Load live swap route'
+          ? (curr === 'SOL' ? 'Buy OST through OST treasury' : 'Load live swap route')
           : 'Connect wallet to swap';
     }
 
@@ -4062,12 +4389,173 @@
       }
 
       await pulseConvertSteps(2);
+
+      // Native devnet path: SOL holders can buy OST directly through the OST program
+      // by claiming from the on-chain treasury. This is the "buy through us, not Solana"
+      // route — no Jupiter, no Raydium, no external liquidity required.
+      if (curr === 'SOL' && typeof window.runOstFaucetFlow === 'function') {
+        try {
+          const result = await window.runOstFaucetFlow({ animate: false });
+          if (result && result.ok) {
+            transferResult.textContent = `Received ${OST_FAUCET_AMOUNT} OST through OST treasury.`;
+            setConvertRouteMessage('Native devnet route succeeded. ' + OST_FAUCET_AMOUNT + ' OST was minted to your wallet directly through the OST program — no third-party DEX involved.');
+            toast('🎁', `Bought ${OST_FAUCET_AMOUNT} OST through the OST treasury`);
+            return;
+          }
+          // Treasury empty or claim already used — fall through to Jupiter
+          if (result && result.reason === 'already-claimed') {
+            transferResult.textContent = 'Already claimed from OST treasury. Loading Jupiter as a fallback route...';
+            setConvertRouteMessage('You already claimed your OST treasury allocation for this wallet. Loading Jupiter so you can swap additional SOL for OST through liquidity pools.');
+          } else {
+            transferResult.textContent = 'Native OST route unavailable. Loading Jupiter fallback...';
+            setConvertRouteMessage('The OST treasury is unavailable right now. Loading Jupiter as the fallback liquidity route.');
+          }
+        } catch (err) {
+          console.warn('[OST] Native convert flow failed', err);
+          transferResult.textContent = 'Native route failed. Loading Jupiter fallback...';
+        }
+      }
+
       if (loadJupiterBtn) loadJupiterBtn.click();
-      transferResult.textContent = `Live route loaded for ${curr} → OST.`;
+      transferResult.textContent = transferResult.textContent || `Live route loaded for ${curr} → OST.`;
       setConvertRouteMessage('Jupiter is now loaded with your connected wallet. Review the route and approve on-chain only if the swap details look right.');
       toast('⚡', 'Live swap route loaded in Jupiter');
     });
   }
+
+  // ---------- CONVERT-PANEL WALLET BACKUP / RESTORE ----------
+  // Surface persistence controls right in the convert panel so users never lose
+  // their browser-generated wallet on a hard refresh or storage clear.
+  const convertBackupBar = $('#convertWalletBackupBar');
+  const convertBackupBarMsg = $('#convertBackupBarMsg');
+  const convertBackupBtn = $('#convertBackupBtn');
+  const convertRestoreInput = $('#convertRestoreInput');
+  const convertPasteKeyInput = $('#convertPasteKeyInput');
+  const convertPasteKeyBtn = $('#convertPasteKeyBtn');
+
+  function refreshConvertBackupBar() {
+    if (!convertBackupBar) return;
+    const isLocal = connectedWalletSession && connectedWalletSession.kind === 'local' && connectedWalletSession.keypair;
+    if (convertBackupBarMsg) {
+      convertBackupBarMsg.innerHTML = isLocal
+        ? '<strong>⚠ Save your browser wallet.</strong> If you clear this browser\'s storage, your devnet wallet is lost. Download the backup file once and keep it offline.'
+        : '<strong>🔑 Import or back up a browser wallet.</strong> Paste a secret key below to access an existing wallet, or create a new browser wallet to download a backup file.';
+    }
+    if (convertBackupBtn) convertBackupBtn.disabled = !isLocal;
+  }
+
+  // Parse a pasted secret key — accepts JSON array of 64 numbers, comma-separated
+  // numbers, hex (128 chars), or base58. Returns Uint8Array(64) or throws.
+  function parsePastedSecretKey(raw) {
+    const trimmed = (raw || '').trim();
+    if (!trimmed) throw new Error('Paste a secret key first.');
+
+    // JSON array form: [12,34,...]
+    if (trimmed.startsWith('[')) {
+      const arr = JSON.parse(trimmed);
+      if (!Array.isArray(arr) || arr.length !== 64) {
+        throw new Error('JSON key must be an array of 64 numbers.');
+      }
+      return Uint8Array.from(arr);
+    }
+
+    // Bare comma-separated numbers
+    if (trimmed.includes(',')) {
+      const arr = trimmed.split(',').map(s => parseInt(s.trim(), 10));
+      if (arr.length !== 64 || arr.some(n => !Number.isFinite(n))) {
+        throw new Error('Comma-separated key must be 64 integers.');
+      }
+      return Uint8Array.from(arr);
+    }
+
+    // Hex
+    if (/^[0-9a-fA-F]+$/.test(trimmed) && trimmed.length === 128) {
+      const out = new Uint8Array(64);
+      for (let i = 0; i < 64; i++) out[i] = parseInt(trimmed.substr(i * 2, 2), 16);
+      return out;
+    }
+
+    // Base58 (Phantom export format)
+    if (solanaWeb3.utils && solanaWeb3.utils.bytes && solanaWeb3.utils.bytes.bs58) {
+      const decoded = solanaWeb3.utils.bytes.bs58.decode(trimmed);
+      if (decoded.length === 64) return decoded;
+      throw new Error('Base58 key must decode to 64 bytes.');
+    }
+    // Fallback base58 decoder using Keypair.fromSecretKey via bs58 if exposed elsewhere
+    if (typeof window.bs58 !== 'undefined' && typeof window.bs58.decode === 'function') {
+      const decoded = window.bs58.decode(trimmed);
+      if (decoded.length === 64) return Uint8Array.from(decoded);
+      throw new Error('Base58 key must decode to 64 bytes.');
+    }
+
+    throw new Error('Unrecognized format. Paste a 64-number JSON array, comma list, 128-char hex, or base58 string.');
+  }
+
+  function importPastedWallet(secretBytes) {
+    const restored = solanaWeb3.Keypair.fromSecretKey(secretBytes);
+    persistLocalWallet(restored);
+    setConnectedWalletSession({
+      kind: 'local',
+      type: 'local',
+      label: 'OST Browser Wallet',
+      keypair: restored,
+      publicKey: restored.publicKey
+    }, { announce: true });
+    refreshConvertBackupBar();
+    return restored.publicKey.toBase58();
+  }
+
+  if (convertBackupBtn) {
+    convertBackupBtn.addEventListener('click', () => {
+      if (connectedWalletSession && connectedWalletSession.kind === 'local' && connectedWalletSession.keypair) {
+        exportLocalWalletBackup(connectedWalletSession.keypair);
+        toast('🧾', 'Wallet backup downloaded. Keep it offline.');
+      } else {
+        toast('ℹ️', 'Create a browser wallet first to download a backup.');
+      }
+    });
+  }
+
+  if (convertRestoreInput) {
+    convertRestoreInput.addEventListener('change', async (event) => {
+      const file = event.target.files && event.target.files[0];
+      event.target.value = '';
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+        const secret = Array.isArray(parsed) ? parsed : (parsed && parsed.secretKey);
+        if (!Array.isArray(secret) || secret.length < 32) {
+          throw new Error('Invalid wallet backup file.');
+        }
+        const address = importPastedWallet(Uint8Array.from(secret));
+        toast('✅', `Wallet restored: ${address.slice(0, 6)}…${address.slice(-4)}`);
+      } catch (err) {
+        console.warn('[OST] Wallet restore failed', err);
+        toast('⚠️', 'Could not restore that file — make sure it is a valid OST wallet backup.');
+      }
+    });
+  }
+
+  if (convertPasteKeyBtn && convertPasteKeyInput) {
+    convertPasteKeyBtn.addEventListener('click', () => {
+      try {
+        const secretBytes = parsePastedSecretKey(convertPasteKeyInput.value);
+        const address = importPastedWallet(secretBytes);
+        convertPasteKeyInput.value = '';
+        toast('✅', `Wallet imported: ${address.slice(0, 6)}…${address.slice(-4)}`);
+      } catch (err) {
+        console.warn('[OST] Paste-key import failed', err);
+        toast('⚠️', err && err.message ? err.message : 'Could not parse the pasted secret key.');
+      }
+    });
+  }
+
+  // Refresh the backup bar whenever the connected wallet changes
+  if (typeof window.addEventListener === 'function') {
+    window.addEventListener('ost:wallet-changed', refreshConvertBackupBar);
+  }
+  refreshConvertBackupBar();
 
   /* ---------- CITIZEN MAP MODAL ---------- */
   const mapModal = $('#mapModal');
@@ -4139,10 +4627,39 @@
       }
 
       try {
-        if (faucetStatus) faucetStatus.textContent = 'Funding your wallet for network fees...';
-        const funding = await ensureWalletFeeBalance(connectedWalletSession.publicKey);
+        const walletAddress = connectedWalletSession.publicKey.toBase58();
+        const metrics = await syncOstDevnetMetrics({ force: true });
+        if (metrics.available && metrics.treasuryBalance < OST_FAUCET_AMOUNT) {
+          throw new Error('OST treasury is empty on devnet. Refill the treasury before users can claim the faucet.');
+        }
+
+        if (faucetStatus) faucetStatus.textContent = 'Checking devnet SOL for network fees...';
+        let funding = { funded: false, balance: 0 };
+        try {
+          funding = await ensureWalletFeeBalance(connectedWalletSession.publicKey);
+        } catch (fundingError) {
+          const fundingErrorText = (fundingError && fundingError.message) || String(fundingError || 'Funding failed');
+          const isFundingRateLimited = /429|airdrop limit|faucet has run dry/i.test(fundingErrorText);
+          if (isFundingRateLimited) {
+            setWalletFundingState({
+              needsManualFunding: true,
+              walletAddress,
+              lastError: fundingErrorText
+            });
+            if (faucetStatus) {
+              faucetStatus.textContent = 'The public RPC airdrop is rate-limited. Open the Solana browser faucet, fund a little SOL into this wallet, then return here to claim OST.';
+            }
+            toast('⚠️', 'Open the browser faucet and add a little devnet SOL first.');
+            return { ok: false, reason: 'needs-manual-funding', error: fundingError };
+          }
+          throw fundingError;
+        }
+
+        clearWalletFundingState();
         if (funding.funded && faucetStatus) {
           faucetStatus.textContent = 'Fee balance ready. Recording wallet profile...';
+        } else if (faucetStatus) {
+          faucetStatus.textContent = 'Network fee balance ready. Recording wallet profile...';
         }
 
         await maybeRecordSeedlessOnboard();
@@ -4156,6 +4673,7 @@
         if (faucetResult.alreadyClaimed) {
           if (faucetStatus) faucetStatus.textContent = 'This wallet already claimed its OST faucet. Current balance: ' + ostBalance.toFixed(2) + ' OST.';
           toast('ℹ️', 'OST faucet already claimed for this wallet');
+          syncOstDevnetMetrics({ force: true });
           return { ok: true, alreadyClaimed: true, balance: ostBalance };
         }
 
@@ -4163,13 +4681,23 @@
         toast('🎉', '+1 OST claimed on devnet!');
         launchConfetti();
         updateWalletBalance(connectedWallet);
+        syncOstDevnetMetrics({ force: true });
         return { ok: true, claimed: true, balance: ostBalance };
       } catch (e) {
         const errorText = (e && e.message) || String(e || 'OST faucet failed');
         const isRateLimited = /429|airdrop limit|faucet has run dry/i.test(errorText);
-        if (isRateLimited) {
-          if (faucetStatus) faucetStatus.textContent = 'Devnet SOL faucet is rate-limited. Fund this wallet at faucet.solana.com, then click again to claim OST.';
-          toast('⚠️', 'Devnet SOL faucet is rate-limited. Fund test SOL manually, then retry.');
+        const isTreasuryEmpty = /treasury is empty|refill the treasury/i.test(errorText);
+        if (isTreasuryEmpty) {
+          if (faucetStatus) faucetStatus.textContent = 'The OST treasury is empty on devnet. Refill the treasury before users can claim the faucet.';
+          toast('⚠️', 'OST treasury is empty on devnet.');
+        } else if (isRateLimited) {
+          setWalletFundingState({
+            needsManualFunding: true,
+            walletAddress: connectedWalletSession.publicKey.toBase58(),
+            lastError: errorText
+          });
+          if (faucetStatus) faucetStatus.textContent = 'Devnet SOL faucet is rate-limited. Open the browser faucet, fund a little SOL, then click claim OST again.';
+          toast('⚠️', 'Open the browser faucet and fund test SOL manually, then retry.');
         } else {
           if (faucetStatus) faucetStatus.textContent = 'Could not claim OST right now. Make sure Devnet is reachable and try again.';
           toast('⚠️', errorText);
@@ -5108,6 +5636,7 @@
       const ostBalance = Number(details.ostBalance || 0);
       const hasSol = !!details.hasSol;
       const hasOst = !!details.hasOst;
+      const needsManualFunding = hasWallet && !hasSol && walletFundingState.needsManualFunding && walletFundingState.walletAddress === pubkey;
       const walletLabel = details.walletLabel || (details.isLocalWallet ? 'OST Browser Wallet' : 'Connected wallet');
       const totalUsd = (solBalance * (prices.solana || 0)) + (ostBalance * (ostPrice || 0));
       const portfolioSeries = hasWallet ? buildWalletPortfolioSeries(solBalance, ostBalance) : [];
@@ -5205,16 +5734,22 @@
         if (wdRoutePortalCopy) wdRoutePortalCopy.textContent = 'Fiat, bank, and bridge partners stay linked as the future mainnet access layer.';
         if (wdRoutePredictCopy) wdRoutePredictCopy.textContent = 'Claim or swap into OST first, then the prediction vault becomes tradeable.';
       } else {
-        if (wdIntelFunding) wdIntelFunding.textContent = 'Needs devnet gas';
-        if (wdIntelFundingCopy) wdIntelFundingCopy.textContent = 'Top up devnet SOL, then claim or swap into OST';
-        setIntelBadge(wdIntelMode, 'warning', 'Funding wallet');
+        if (wdIntelFunding) wdIntelFunding.textContent = needsManualFunding ? 'Needs browser faucet' : 'Needs devnet gas';
+        if (wdIntelFundingCopy) wdIntelFundingCopy.textContent = needsManualFunding
+          ? 'Copy this address into the Solana browser faucet, fund a little SOL, then claim OST'
+          : 'Top up devnet SOL, then claim or swap into OST';
+        setIntelBadge(wdIntelMode, 'warning', needsManualFunding ? 'Browser faucet' : 'Funding wallet');
         setIntelBadge(wdPortfolioBadge, 'warning', 'Needs SOL');
         setRouteStatus(wdRouteHoldStatus, 'live', 'Live now');
         setRouteStatus(wdRouteSwapStatus, 'warning', 'Fund first');
         setRouteStatus(wdRoutePortalStatus, 'preview', 'Preview rails');
         setRouteStatus(wdRoutePredictStatus, 'warning', 'Needs OST');
-        if (wdRouteHoldCopy) wdRouteHoldCopy.textContent = 'The address is real and connected, but it still needs devnet SOL for fees.';
-        if (wdRouteSwapCopy) wdRouteSwapCopy.textContent = 'The devnet route wakes up after the faucet or manual SOL funding lands in this wallet.';
+        if (wdRouteHoldCopy) wdRouteHoldCopy.textContent = needsManualFunding
+          ? 'The address is real and connected. The next step is funding a little SOL through the Solana browser faucet.'
+          : 'The address is real and connected, but it still needs devnet SOL for fees.';
+        if (wdRouteSwapCopy) wdRouteSwapCopy.textContent = needsManualFunding
+          ? 'Use the browser faucet or a funded extension wallet, then claim OST and wake the full devnet route up.'
+          : 'The devnet route wakes up after the faucet or manual SOL funding lands in this wallet.';
         if (wdRoutePortalCopy) wdRoutePortalCopy.textContent = 'Use the linked bank, card, and bridge portals to preview the future mainnet stack.';
         if (wdRoutePredictCopy) wdRoutePredictCopy.textContent = 'The prediction vault stays locked until this wallet is holding OST.';
       }
@@ -5249,8 +5784,31 @@
         }
         return;
       }
+      if (action === 'open-sol-faucet') {
+        openManualSolFaucet(connectedWallet, { open: true });
+        return;
+      }
+      if (action === 'copy-address') {
+        if (!connectedWallet) return;
+        copyTextToClipboard(connectedWallet).then(function() {
+          toast('📋', 'Wallet address copied.');
+        }).catch(function() {
+          toast('ℹ️', 'Copy the connected wallet address from the receive card.');
+        });
+        return;
+      }
       if (action === 'open-convert') {
         if (window.setWalletPanel) window.setWalletPanel('convert', { scroll: true });
+        return;
+      }
+      if (action === 'open-prediction') {
+        if (window.setWalletPanel) window.setWalletPanel('portals');
+        const predictionBoard = $('#predictionMarketBoard');
+        if (predictionBoard) {
+          predictionBoard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else if (window.setWalletPanel) {
+          window.setWalletPanel('portals', { scroll: true });
+        }
         return;
       }
       if (action === 'open-portals') {
@@ -5351,6 +5909,7 @@
       const session = connectedWalletSession;
       const pubkey = session && session.publicKey ? session.publicKey.toBase58() : '';
       const isLocalWallet = !!(session && session.kind === 'local');
+      const needsManualFunding = !!(pubkey && walletFundingState.needsManualFunding && walletFundingState.walletAddress === pubkey);
       const backupExportedAt = readLocalWalletBackupExportedAt();
 
       if (!pubkey) {
@@ -5418,21 +5977,21 @@
           'Wallet connected and funded',
           'This address is ready for commerce, swaps, and the prediction venue. The balances below are live from devnet.'
         );
-        setJourneyAction(wdJourneyPrimaryBtn, { action: 'open-portals', label: 'Open prediction venue' });
-        setJourneyAction(wdJourneySecondaryBtn, { action: 'open-convert', label: 'Open convert rail' });
+        setJourneyAction(wdJourneyPrimaryBtn, { action: 'open-prediction', label: 'Open prediction venue' });
+        setJourneyAction(wdJourneySecondaryBtn, { action: 'open-portals', label: 'Open portal stack' });
         return;
       }
 
       if (!hasSol) {
         setJourneyText(
-          'Devnet funding',
-          'Wallet connected, needs devnet gas',
-          'OST can top this wallet up with devnet SOL during the faucet flow. Claim OST once to finish the live testing setup.'
+          needsManualFunding ? 'Manual SOL top-up' : 'Devnet funding',
+          needsManualFunding ? 'Wallet connected, browser faucet step next' : 'Wallet connected, needs devnet gas',
+          needsManualFunding
+            ? 'The public RPC airdrop is rate-limited. Open the Solana browser faucet, fund a little devnet SOL into this address, then return here to claim OST from the community treasury.'
+            : 'This wallet needs a small devnet SOL balance before it can sign the OST faucet claim. Use the Solana browser faucet or a funded extension wallet, then return here to claim OST.'
         );
-        setJourneyAction(wdJourneyPrimaryBtn, { action: 'claim-faucet', label: 'Fund and claim devnet OST' });
-        setJourneyAction(wdJourneySecondaryBtn, isLocalWallet && !backupReady
-          ? { action: 'download-backup', label: 'Download backup again' }
-          : { action: 'open-convert', label: 'Open convert rail' });
+        setJourneyAction(wdJourneyPrimaryBtn, { action: 'open-sol-faucet', label: 'Open Solana faucet' });
+        setJourneyAction(wdJourneySecondaryBtn, { action: 'copy-address', label: 'Copy wallet address' });
         return;
       }
 
