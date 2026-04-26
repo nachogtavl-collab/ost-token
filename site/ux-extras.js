@@ -158,7 +158,24 @@
 
   function maybeAutoStart() {
     if (localStorage.getItem('ost.tour.completed')) return;
-    setTimeout(startTour, 1200);
+    // Wait for the welcome overlay (and any other auto-popups) to be closed
+    // before starting the tour, so they don't stack on top of each other.
+    function popupVisible() {
+      var sels = ['.welcome-overlay', '.ost-popup-overlay', '#ostPopupOverlay', '.map-modal.is-open', '.ost-modal-overlay.is-open'];
+      for (var i = 0; i < sels.length; i++) {
+        var el = document.querySelector(sels[i]);
+        if (!el) continue;
+        var cs = window.getComputedStyle(el);
+        if (cs.display !== 'none' && cs.visibility !== 'hidden' && Number(cs.opacity) > 0.01) return true;
+      }
+      return false;
+    }
+    var tries = 0;
+    var iv = setInterval(function () {
+      tries++;
+      if (!popupVisible()) { clearInterval(iv); startTour(); return; }
+      if (tries > 120) { clearInterval(iv); } // give up after ~60s
+    }, 500);
   }
 
   // ------------------ Runtime i18n fallback for missing keys ----------------

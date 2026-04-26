@@ -145,7 +145,7 @@ body.ost-force-desktop { min-width: 1280px; }
 
 /* ========== Guided tour overlay ========== */
 .ost-tour {
-  position: fixed; inset: 0; z-index: 10000; display: none;
+  position: fixed; inset: 0; z-index: 10050; display: none;
   pointer-events: none;
 }
 .ost-tour.is-open { display: block; }
