@@ -3525,13 +3525,16 @@
       const canvas = $(`#chart-${coin}`);
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
-      const w = canvas.parentElement.clientWidth;
-      const h = Number(canvas.getAttribute('height')) || 120;
-      canvas.width = w * 2;
-      canvas.height = h * 2;
+      const rect = canvas.getBoundingClientRect();
+      const computedHeight = parseFloat(window.getComputedStyle(canvas).height || '0');
+      const w = Math.max(160, Math.round(rect.width || canvas.parentElement?.clientWidth || canvas.clientWidth || 320));
+      const h = Math.max(120, Math.round(rect.height || computedHeight || canvas.clientHeight || 140));
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
       canvas.style.width = w + 'px';
       canvas.style.height = h + 'px';
-      ctx.scale(2, 2);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
       // Add current price with small variation
       const baseP = getChartBasePrice(coin);
