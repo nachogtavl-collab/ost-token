@@ -13594,9 +13594,20 @@
           state.latestReceipt = result && result.record ? result.record : null;
           state.orderHistory = readPredictionOrderRecords();
           state.availableBalance = result && Number.isFinite(result.remainingBalance) ? result.remainingBalance : state.availableBalance;
-          setTradeStatus(t('wallet.portal.prediction.tradeRecorded', 'OST order recorded on devnet. Use the signature to audit the ticket on-chain.'), 'success');
-          toast('📈', 'Prediction market ticket recorded on-chain');
+          // Reset the stake so the ticket panel does NOT immediately re-show
+          // "not enough OST" against the freshly-debited balance — that
+          // misled users into thinking the trade had failed.
+          state.stake = 0;
+          if (stakeInputEl) stakeInputEl.value = '';
+          var sigShort = result && result.signature ? String(result.signature).slice(0, 10) + '…' : '';
+          setTradeStatus('✅ Position opened — staked ' + formatOst(Number(result && result.record && result.record.stake) || 0) + ' on ' + (state.selectedSide || 'yes').toUpperCase() + '. Tx: ' + sigShort + ' — see Open positions below.', 'success');
+          toast('📈', 'Position opened — see Open positions');
           renderPredictionBoard();
+          // Auto-scroll to the open positions list so the user can see the new entry
+          try {
+            var posEl = document.getElementById('predictionPositions') || document.getElementById('predictionPositionList');
+            if (posEl && posEl.scrollIntoView) posEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          } catch (_) {}
         }).catch(function(error) {
           setTradeStatus(error && error.message ? error.message : t('wallet.portal.prediction.tradeFailed', 'Could not place the prediction market order right now.'), 'error');
         }).finally(function() {

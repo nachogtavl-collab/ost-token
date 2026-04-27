@@ -1,0 +1,125 @@
+/* OST Prediction PRO — detail modal + featured cards styling */
+
+.ost-prodetail-modal {
+  position: fixed; inset: 0; z-index: 9999;
+  display: none; align-items: center; justify-content: center;
+}
+.ost-prodetail-modal.is-open { display: flex; }
+.ost-prodetail-backdrop {
+  position: absolute; inset: 0;
+  background: rgba(4, 6, 16, 0.78);
+  backdrop-filter: blur(6px);
+}
+.ost-prodetail-panel {
+  position: relative;
+  background: linear-gradient(160deg, #11142a 0%, #0a0c1c 100%);
+  border: 1px solid rgba(108, 230, 164, 0.18);
+  border-radius: 18px;
+  width: min(880px, 94vw);
+  max-height: 92vh;
+  overflow-y: auto;
+  padding: 28px 28px 24px;
+  color: #e7ecff;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+}
+.ost-prodetail-close {
+  position: absolute; top: 12px; right: 14px;
+  background: transparent; border: none; color: #fff;
+  font-size: 26px; cursor: pointer; opacity: 0.75;
+  width: 36px; height: 36px; line-height: 1;
+}
+.ost-prodetail-close:hover { opacity: 1; }
+
+.ost-prodetail-head { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.ost-prodetail-tag {
+  display: inline-block; padding: 4px 10px;
+  background: rgba(108, 230, 164, 0.12);
+  border: 1px solid rgba(108, 230, 164, 0.3);
+  border-radius: 999px; font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.04em;
+  color: #6ce6a4;
+}
+.ost-prodetail-tag-close { background: rgba(245, 196, 104, 0.12); border-color: rgba(245, 196, 104, 0.3); color: #f5c468; }
+
+.ost-prodetail-panel h2 { margin: 4px 0 8px; font-size: 22px; line-height: 1.25; }
+.ost-prodetail-sub { margin: 0 0 16px; opacity: 0.75; font-size: 14px; }
+
+.ost-prodetail-btc5m {
+  display: flex; gap: 18px; flex-wrap: wrap;
+  background: rgba(245, 196, 104, 0.08);
+  border: 1px solid rgba(245, 196, 104, 0.25);
+  border-radius: 12px; padding: 12px 14px; margin: 8px 0 16px;
+  font-size: 13px;
+}
+.ost-prodetail-btc5m strong { color: #f5c468; font-variant-numeric: tabular-nums; }
+
+.ost-prodetail-prices {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 10px 0 14px;
+}
+.ost-prodetail-price {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 14px 10px; border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.ost-prodetail-price span { font-size: 11px; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.06em; }
+.ost-prodetail-price strong { font-size: 28px; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.ost-prodetail-yes strong { color: #34d399; }
+.ost-prodetail-no  strong { color: #f87171; }
+
+.ost-prodetail-chart {
+  width: 100%; height: 200px; max-height: 200px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 12px; margin: 6px 0 16px;
+  display: block;
+}
+
+.ost-prodetail-grid {
+  display: grid; grid-template-columns: 1.2fr 1fr; gap: 14px; margin-bottom: 16px;
+}
+@media (max-width: 720px) { .ost-prodetail-grid { grid-template-columns: 1fr; } }
+.ost-prodetail-grid h4 { margin: 0 0 8px; font-size: 13px; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.04em; }
+
+.ost-prodetail-trades-scroll { max-height: 210px; overflow-y: auto; border-radius: 10px; background: rgba(0,0,0,0.2); }
+.ost-prodetail-trades-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.ost-prodetail-trades-table th, .ost-prodetail-trades-table td { padding: 6px 10px; text-align: left; }
+.ost-prodetail-trades-table thead { position: sticky; top: 0; background: #0d1024; }
+.ost-prodetail-trades-table th { font-weight: 600; opacity: 0.7; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+.ost-prodetail-trades-table tbody tr:nth-child(odd) { background: rgba(255,255,255,0.02); }
+.ost-prodetail-trades-table td { font-variant-numeric: tabular-nums; }
+
+.ost-prodetail-depth { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ost-prodetail-depth-side { background: rgba(0,0,0,0.2); border-radius: 10px; padding: 10px 8px; }
+.ost-prodetail-depth-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.7; margin-bottom: 6px; }
+.ost-prodetail-depth-yes .ost-prodetail-depth-label { color: #34d399; }
+.ost-prodetail-depth-no  .ost-prodetail-depth-label { color: #f87171; }
+.ost-prodetail-depth-row { display: flex; justify-content: space-between; padding: 4px 4px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.ost-prodetail-depth-row + .ost-prodetail-depth-row { border-top: 1px dashed rgba(255,255,255,0.06); }
+
+.ost-prodetail-actions {
+  display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px;
+}
+.ost-prodetail-bet, .ost-prodetail-link {
+  flex: 1 1 160px;
+  padding: 12px 16px; border-radius: 10px; border: none;
+  font-weight: 700; font-size: 14px; cursor: pointer;
+  text-align: center; text-decoration: none;
+  transition: transform 0.1s ease, opacity 0.2s ease;
+}
+.ost-prodetail-link {
+  background: rgba(255,255,255,0.06);
+  color: #e7ecff;
+  border: 1px solid rgba(255,255,255,0.12);
+}
+.ost-prodetail-yes-btn { background: #22c55e; color: #052e16; }
+.ost-prodetail-no-btn  { background: #ef4444; color: #1c0606; }
+.ost-prodetail-bet:hover, .ost-prodetail-link:hover { transform: translateY(-1px); opacity: 0.92; }
+
+/* The injected Details button on every market card */
+.ost-prodetail-trigger {
+  background: linear-gradient(135deg, rgba(108,230,164,0.16), rgba(108,230,164,0.06));
+  border: 1px solid rgba(108,230,164,0.3) !important;
+  color: #6ce6a4 !important;
+  font-weight: 700;
+}
+.ost-prodetail-trigger:hover { background: rgba(108,230,164,0.26); }
