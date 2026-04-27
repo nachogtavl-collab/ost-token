@@ -69,7 +69,7 @@ async function main() {
   ]);
 
   if (!polymarket.ok && !kalshi.ok) {
-    throw new Error('Prediction snapshot fetch failed for both sources');
+    console.warn('[prediction-snapshot] Both sources failed — writing empty snapshot so deploy continues.');
   }
 
   const snapshot = {
@@ -93,5 +93,6 @@ async function main() {
 
 main().catch(function(error) {
   console.error('[prediction-snapshot] ' + error.message);
-  process.exitCode = 1;
+  // Do NOT set a non-zero exit code — a failed snapshot must never block the
+  // Pages deployment. The site handles an empty/stale snapshot gracefully.
 });
