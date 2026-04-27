@@ -1,0 +1,229 @@
+/* ============================================================================
+   OST Prediction — Unified Market Modal
+   Always renders above EVERYTHING (z-index max). Mounted at body level so
+   nested overflow:hidden / transform parents in the wallet portal can't trap
+   it. Replaces the previous mini-modal that overlapped the wallet portal page.
+   ============================================================================ */
+
+.ost-modal {
+  position: fixed;
+  inset: 0;
+  /* Max int32 — beats any other overlay on the page including the wallet
+     portal modals, leaflet markers, faucet hub, etc. */
+  z-index: 2147483647;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  color: #f4ead4;
+}
+.ost-modal.is-open { display: flex; }
+
+.ost-modal__backdrop {
+  position: absolute; inset: 0;
+  background: rgba(2, 4, 12, 0.82);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.ost-modal__panel {
+  position: relative;
+  width: min(960px, 96vw);
+  max-height: 92vh;
+  overflow-y: auto;
+  background: linear-gradient(170deg, #14102a 0%, #0a0c1c 60%, #06080f 100%);
+  border: 1px solid rgba(108, 230, 164, 0.18);
+  border-radius: 18px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.65);
+  padding: 26px 30px 24px;
+}
+
+.ost-modal__close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f4ead4;
+  font-size: 22px;
+  cursor: pointer;
+  z-index: 5;
+  transition: background 120ms ease, transform 120ms ease;
+}
+.ost-modal__close:hover { background: rgba(255, 255, 255, 0.14); transform: rotate(90deg); }
+
+/* Header --------------------------------------------------------------- */
+.ost-modal__header { margin-bottom: 16px; }
+.ost-modal__tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.ost-modal__tag {
+  display: inline-flex; align-items: center; padding: 3px 10px;
+  border-radius: 999px; font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  background: rgba(108, 230, 164, 0.12);
+  border: 1px solid rgba(108, 230, 164, 0.3);
+  color: #6ce6a4;
+}
+.ost-modal__tag--time {
+  background: rgba(255, 217, 128, 0.12);
+  border-color: rgba(255, 217, 128, 0.3);
+  color: #ffd980;
+}
+.ost-modal__title { font-size: 22px; font-weight: 700; margin: 0 0 6px 0; line-height: 1.25; padding-right: 50px; }
+.ost-modal__detail { margin: 0; font-size: 13px; opacity: 0.78; line-height: 1.5; }
+
+/* Main grid ------------------------------------------------------------ */
+.ost-modal__main { display: flex; flex-direction: column; gap: 16px; }
+.ost-modal__two-col { display: grid; gap: 16px; grid-template-columns: 1fr 1fr; }
+@media (max-width: 720px) { .ost-modal__two-col { grid-template-columns: 1fr; } }
+
+/* BTC tile inside modal ------------------------------------------------ */
+.ost-modal__btc {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+  padding: 12px 14px; border-radius: 12px;
+  background: linear-gradient(135deg, rgba(255,167,38,0.10), rgba(255,217,128,0.04));
+  border: 1px solid rgba(255, 167, 38, 0.3);
+}
+@media (max-width: 720px) { .ost-modal__btc { grid-template-columns: repeat(2, 1fr); } }
+.ost-modal__btc-row { display: flex; flex-direction: column; gap: 2px; }
+.ost-modal__btc-row span { font-size: 10px; opacity: 0.6; letter-spacing: 0.06em; text-transform: uppercase; }
+.ost-modal__btc-row strong { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; color: #ffd980; }
+
+/* Prices --------------------------------------------------------------- */
+.ost-modal__prices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ost-modal__price {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 14px 18px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+}
+.ost-modal__price--yes { border-color: rgba(124,230,168,0.35); background: rgba(124,230,168,0.07); }
+.ost-modal__price--no  { border-color: rgba(255,124,138,0.35); background: rgba(255,124,138,0.07); }
+.ost-modal__price span { font-size: 11px; opacity: 0.7; letter-spacing: 0.05em; text-transform: uppercase; }
+.ost-modal__price strong { font-size: 26px; font-variant-numeric: tabular-nums; }
+
+/* Chart ---------------------------------------------------------------- */
+.ost-modal__chart {
+  padding: 12px 14px 8px; border-radius: 12px;
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+}
+.ost-modal__chart-head, .ost-modal__book-head, .ost-modal__trades-head {
+  display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;
+}
+.ost-modal__chart-head h4, .ost-modal__book-head h4, .ost-modal__trades-head h4 {
+  margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #ffd980;
+}
+.ost-modal__chart-head span, .ost-modal__book-head span, .ost-modal__trades-head span { font-size: 11px; opacity: 0.6; }
+.ost-modal__chart canvas { display: block; width: 100%; height: 200px; }
+
+/* Order book + trades -------------------------------------------------- */
+.ost-modal__book, .ost-modal__trades {
+  padding: 12px 14px; border-radius: 12px;
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+}
+.ost-modal__book-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ost-modal__book-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.ost-modal__book-label--yes { color: #7ce6a8; }
+.ost-modal__book-label--no  { color: #ff7c8a; }
+.ost-modal__book-list { display: flex; flex-direction: column; gap: 4px; max-height: 180px; overflow-y: auto; }
+.ost-modal__book-row {
+  display: flex; justify-content: space-between; padding: 4px 8px;
+  border-radius: 6px; background: rgba(255,255,255,0.03);
+  font-size: 12px; font-variant-numeric: tabular-nums;
+}
+.ost-modal__book-empty { padding: 10px; font-size: 11px; opacity: 0.5; text-align: center; }
+
+.ost-modal__trades-scroll { max-height: 220px; overflow-y: auto; }
+.ost-modal__trades-table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.ost-modal__trades-table thead { position: sticky; top: 0; background: #0a0c1c; }
+.ost-modal__trades-table th, .ost-modal__trades-table td {
+  padding: 5px 6px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.ost-modal__trades-table th { font-size: 10px; opacity: 0.55; letter-spacing: 0.05em; text-transform: uppercase; font-weight: 600; }
+
+/* Bet panel ------------------------------------------------------------ */
+.ost-modal__bet {
+  padding: 14px 16px; border-radius: 12px;
+  background: linear-gradient(135deg, rgba(108,230,164,0.08), rgba(108,230,164,0.02));
+  border: 1px solid rgba(108,230,164,0.25);
+}
+.ost-modal__bet-head h4 { margin: 0 0 10px 0; font-size: 13px; font-weight: 700; letter-spacing: 0.04em; color: #6ce6a4; text-transform: uppercase; }
+.ost-modal__bet-grid {
+  display: grid; gap: 10px;
+  grid-template-columns: minmax(180px, auto) minmax(120px, auto) 1fr minmax(160px, auto);
+  align-items: end;
+}
+@media (max-width: 720px) { .ost-modal__bet-grid { grid-template-columns: 1fr 1fr; } }
+.ost-modal__bet-toggle {
+  display: inline-flex; gap: 0;
+  border-radius: 10px; overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.ost-modal__side-btn {
+  appearance: none; border: 0; background: rgba(255,255,255,0.04);
+  color: #f4ead4; padding: 10px 18px; font-weight: 700; font-size: 13px;
+  cursor: pointer; transition: background 120ms ease;
+}
+.ost-modal__side-btn--yes.is-active { background: linear-gradient(135deg, #7ce6a8, #4cc985); color: #0a0a0a; }
+.ost-modal__side-btn--no.is-active  { background: linear-gradient(135deg, #ff7c8a, #e85565); color: #fff; }
+.ost-modal__side-btn:not(.is-active):hover { background: rgba(255,255,255,0.08); }
+
+.ost-modal__bet-stake {
+  display: flex; flex-direction: column; gap: 4px;
+  font-size: 11px; opacity: 0.75; letter-spacing: 0.04em; text-transform: uppercase;
+}
+.ost-modal__bet-stake input {
+  padding: 9px 12px; border-radius: 8px;
+  background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.12);
+  color: #f4ead4; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums;
+}
+.ost-modal__bet-projected {
+  font-size: 12px; opacity: 0.85; font-variant-numeric: tabular-nums; line-height: 1.4;
+}
+.ost-modal__bet-action {
+  appearance: none; border: 0; cursor: pointer;
+  background: linear-gradient(135deg, #ffd980, #f5b637);
+  color: #0a0a0a; font-weight: 800; font-size: 14px;
+  padding: 12px 18px; border-radius: 10px; letter-spacing: 0.04em;
+  box-shadow: 0 8px 18px rgba(255, 217, 128, 0.25);
+  transition: transform 100ms ease, filter 120ms ease;
+}
+.ost-modal__bet-action:hover { transform: translateY(-1px); filter: brightness(1.05); }
+.ost-modal__bet-action:active { transform: translateY(0); }
+
+.ost-modal__bet-venue {
+  display: inline-block; margin-top: 10px;
+  font-size: 12px; color: #9ec8ff; text-decoration: none; opacity: 0.85;
+}
+.ost-modal__bet-venue:hover { opacity: 1; text-decoration: underline; }
+
+/* Toast inside modal --------------------------------------------------- */
+.ost-modal__toast {
+  position: sticky; bottom: 8px; left: 0; right: 0;
+  margin-top: 14px;
+  padding: 10px 14px; border-radius: 10px;
+  font-size: 12px; font-weight: 600; text-align: center;
+  background: rgba(20, 16, 8, 0.95); border: 1px solid rgba(255,217,128,0.35);
+  color: #ffd980;
+}
+.ost-modal__toast.is-ok  { color: #7ce6a8; border-color: rgba(124,230,168,0.45); }
+.ost-modal__toast.is-err { color: #ff7c8a; border-color: rgba(255,124,138,0.45); }
+
+/* Make every market card visibly clickable */
+.prediction-market-card { cursor: pointer; transition: transform 120ms ease, box-shadow 120ms ease; }
+.prediction-market-card:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(0,0,0,0.35); }
+.prediction-market-card::after {
+  content: 'Click for live data, depth, ticks & bet';
+  display: block;
+  margin-top: 8px;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(108, 230, 164, 0.7);
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+.prediction-market-card:hover::after { opacity: 1; }

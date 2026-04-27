@@ -324,18 +324,37 @@
   }
 
   function placeBet(root, side) {
-    var stakeEl = root.querySelector('[data-bind="stake"]');
-    var stake = Math.max(0, parseFloat(stakeEl.value) || 0);
-    if (!stake) { showToast(root, 'Set a stake first.', 'err'); return; }
-    if (!window.OST_PREDICTION_API || typeof window.OST_PREDICTION_API.placeBet !== 'function') {
-      showToast(root, 'OST_PREDICTION_API not loaded yet — wait a second and retry.', 'err');
+    var rd = currentRound();
+    // Open the unified market modal (preferred UX) — the user gets full
+    // context: live BTC, countdown, depth, ticks, bet panel.
+    if (window.OST_MARKET_MODAL && typeof window.OST_MARKET_MODAL.open === 'function') {
+      // Build a synthetic OST native market record so the modal can render
+      // even if the card hasn't been injected into the list yet.
+      window.OST_MARKET_MODAL.open({
+        id: rd.id,
+        title: '5-min BTC: will price be UP at ' + new Date(rd.closeAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + '?',
+        detail: 'Native OST market. Settles automatically every 5 minutes from Coinbase BTC-USD spot.',
+        sourceLabel: 'OST 5-min BTC',
+        source: 'ost',
+        yesLabel: 'YES (UP)', noLabel: 'NO (DOWN)',
+        yesPriceNumber: 0.5, noPriceNumber: 0.5,
+        closeText: 'Closes ' + new Date(rd.closeAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        contractLabel: 'OST native · 5-min round',
+        primaryUrl: 'https://www.coinbase.com/price/bitcoin',
+        primaryLabel: 'Open Coinbase',
+        isOstNative: true,
+        meta: { kind: 'btc5m', openAt: rd.openAt, closeAt: rd.closeAt, openPrice: (state.rounds[String(rd.openAt)] || {}).openPrice || state.btcPrice }
+      });
+      // Pre-select the side the user clicked
+      setTimeout(function () {
+        var modal = document.getElementById('ost-market-modal');
+        if (!modal) return;
+        var btn = modal.querySelector('.ost-modal__side-btn[data-side="' + side + '"]');
+        if (btn) btn.click();
+      }, 50);
       return;
     }
-    var rd = currentRound();
-    showToast(root, 'Placing ' + side + ' ' + stake + ' OST on round ' + new Date(rd.closeAt).toLocaleTimeString() + '…', 'ok');
-    Promise.resolve(window.OST_PREDICTION_API.placeBet({ marketId: rd.id, side: side, stake: stake }))
-      .then(function () { showToast(root, '✅ Bet submitted. See Open Positions below.', 'ok'); })
-      .catch(function (err) { showToast(root, '⚠️ ' + (err && err.message ? err.message : 'Bet failed'), 'err'); });
+    showToast(root, 'Market modal not loaded — refresh the page.', 'err');
   }
 
   function copySnippet(root) {
@@ -349,9 +368,19 @@
   }
 
   function bindEvents(root) {
+    // Clicking anywhere on the BTC tile (except the bet buttons / input)
+    // opens the unified market modal.
+    var btcTile = root.querySelector('[data-tile="btc"]');
+    if (btcTile) {
+      btcTile.addEventListener('click', function (ev) {
+        if (ev.target.closest('[data-bet], input, label, button')) return;
+        placeBet(root, 'YES'); // opens modal; user picks side inside
+      });
+      btcTile.style.cursor = 'pointer';
+    }
     root.addEventListener('click', function (ev) {
       var bet = ev.target.closest('[data-bet]');
-      if (bet) { placeBet(root, bet.getAttribute('data-bet')); return; }
+      if (bet) { ev.stopPropagation(); placeBet(root, bet.getAttribute('data-bet')); return; }
       var act = ev.target.closest('[data-action]');
       if (!act) return;
       if (act.getAttribute('data-action') === 'copy-snippet') copySnippet(root);
