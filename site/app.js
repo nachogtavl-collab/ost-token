@@ -2363,14 +2363,22 @@
       const conn = getSolanaConnection();
       if (!conn) return;
       const pubkey = new solanaWeb3.PublicKey(pubkeyStr);
-      const lamports = await conn.getBalance(pubkey);
+      const [lamports, ostBal] = await Promise.all([
+        conn.getBalance(pubkey),
+        getOstBalanceForAddress(pubkey).catch(function() { return null; })
+      ]);
       const sol = (lamports / 1e9).toFixed(4);
-      toast('💰', `Balance: ${sol} SOL`);
+      const ostTxt = ostBal !== null ? ' · ' + ostBal.toFixed(2) + ' OST' : '';
+      toast('💰', `Balance: ${sol} SOL${ostTxt}`);
     } catch (e) {
       // silently ignore balance fetch errors
     }
     if (typeof window.syncWalletJourneyUi === 'function') {
       window.syncWalletJourneyUi();
+    }
+    // Keep every OST-balance consumer in sync (prediction desk, send, memecoin)
+    if (typeof window.syncPredictionMarketTradeWallet === 'function') {
+      window.syncPredictionMarketTradeWallet();
     }
   }
 
@@ -4839,6 +4847,12 @@
         launchConfetti();
         updateWalletBalance(connectedWallet);
         syncOstDevnetMetrics({ force: true });
+        // Refresh every OST-balance consumer so new members can immediately use
+        // their claimed OST for shares, send, memecoins, etc.
+        try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch(e) {}
+        if (typeof window.syncPredictionMarketTradeWallet === 'function') {
+          window.syncPredictionMarketTradeWallet();
+        }
         return { ok: true, claimed: true, balance: ostBalance };
       } catch (e) {
         const errorText = (e && e.message) || String(e || 'OST faucet failed');
