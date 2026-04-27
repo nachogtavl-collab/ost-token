@@ -13060,19 +13060,22 @@
 
     function interleaveMarkets(markets, limit) {
       if (state.source !== 'all') return markets.slice(0, limit);
+      // Always preserve OST native markets at the top — they were getting
+      // silently dropped here because they're neither polymarket nor kalshi.
+      var ostNative = markets.filter(function(market) { return market.source === 'ost' || market.isOstNative; });
       var groups = {
         polymarket: markets.filter(function(market) { return market.source === 'polymarket'; }),
         kalshi: markets.filter(function(market) { return market.source === 'kalshi'; })
       };
       var order = groups.polymarket.length >= groups.kalshi.length ? ['polymarket', 'kalshi'] : ['kalshi', 'polymarket'];
-      var mixed = [];
+      var mixed = ostNative.slice();
       while (mixed.length < limit && (groups.polymarket.length || groups.kalshi.length)) {
         order.forEach(function(source) {
           if (mixed.length >= limit) return;
           if (groups[source].length) mixed.push(groups[source].shift());
         });
       }
-      return mixed;
+      return mixed.slice(0, limit);
     }
 
     function getFilteredMarkets() {

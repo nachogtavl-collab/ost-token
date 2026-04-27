@@ -1,0 +1,172 @@
+/* ===========================================================================
+   OST Prediction PRO Dashboard — top-of-section command center
+   =========================================================================== */
+
+.ost-pro-dash {
+  display: block;
+  margin: 0 0 24px 0;
+  position: relative;
+}
+
+.ost-pro-dash__grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(280px, 1.4fr) minmax(220px, 1fr) minmax(260px, 1.1fr) minmax(240px, 1fr);
+}
+@media (max-width: 1180px) { .ost-pro-dash__grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 720px)  { .ost-pro-dash__grid { grid-template-columns: 1fr; } }
+
+.ost-pro-tile {
+  position: relative;
+  background: linear-gradient(160deg, rgba(20, 16, 8, 0.92), rgba(8, 8, 8, 0.96));
+  border: 1px solid rgba(255, 215, 128, 0.18);
+  border-radius: 16px;
+  padding: 14px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  color: #f4ead4;
+  overflow: hidden;
+}
+.ost-pro-tile::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(120% 80% at 0% 0%, rgba(255,215,128,0.08), transparent 60%);
+  pointer-events: none;
+}
+.ost-pro-tile--btc    { border-color: rgba(255, 167, 38, 0.45); }
+.ost-pro-tile--relay  { border-color: rgba(140, 200, 255, 0.30); }
+.ost-pro-tile--api    { border-color: rgba(160, 255, 180, 0.28); }
+.ost-pro-tile--scalar { border-color: rgba(220, 160, 255, 0.30); }
+
+.ost-pro-tile__head {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 8px;
+}
+.ost-pro-tile__sub {
+  font-size: 11px; opacity: 0.6; letter-spacing: 0.05em; text-transform: uppercase;
+}
+.ost-pro-tile__countdown {
+  font-variant-numeric: tabular-nums;
+  font-size: 22px; font-weight: 700;
+  color: #ffd980;
+  letter-spacing: 0.04em;
+}
+
+.ost-pro-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 9px; border-radius: 999px;
+  font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+  background: rgba(255,255,255,0.06); color: #f4ead4;
+}
+.ost-pro-pill--live { background: rgba(124, 230, 168, 0.18); color: #7ce6a8; }
+.ost-pro-pill--warn { background: rgba(255, 200, 80, 0.18); color: #ffc850; }
+.ost-pro-pill--off  { background: rgba(255, 255, 255, 0.06); color: #aaa; }
+.ost-pro-pill--api  { background: rgba(160, 255, 180, 0.16); color: #a0ffb4; }
+.ost-pro-pill--scalar { background: rgba(220, 160, 255, 0.16); color: #dca0ff; }
+
+.ost-pro-tile__body { display: flex; flex-direction: column; gap: 10px; flex: 1; min-height: 0; position: relative; z-index: 1; }
+.ost-pro-tile__foot { display: flex; gap: 8px; position: relative; z-index: 1; }
+.ost-pro-tile__stats {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 12px;
+  margin: 0; padding: 0;
+}
+.ost-pro-tile__stats > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ost-pro-tile__stats dt { font-size: 10px; opacity: 0.55; letter-spacing: 0.05em; text-transform: uppercase; }
+.ost-pro-tile__stats dd { margin: 0; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* BTC tile -------------------------------------------------------------- */
+.ost-pro-btc-now {
+  display: flex; flex-direction: column; gap: 2px;
+}
+.ost-pro-btc-now__label { font-size: 10px; opacity: 0.55; letter-spacing: 0.06em; text-transform: uppercase; }
+.ost-pro-btc-now__price { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; color: #ffd980; line-height: 1; }
+.ost-pro-btc-now__delta { font-size: 12px; font-weight: 600; opacity: 0.7; }
+.ost-pro-btc-now__delta.is-up   { color: #7ce6a8; }
+.ost-pro-btc-now__delta.is-down { color: #ff7c8a; }
+
+.ost-pro-spark {
+  width: 100%; height: 50px; color: #7ce6a8; display: block;
+}
+
+.ost-pro-bet {
+  flex: 1; appearance: none; border: 0; border-radius: 10px;
+  padding: 10px 12px; font-weight: 700; cursor: pointer;
+  font-size: 13px; letter-spacing: 0.04em;
+  transition: transform 100ms ease, filter 120ms ease, box-shadow 120ms ease;
+  color: #0a0a0a;
+}
+.ost-pro-bet--yes { background: linear-gradient(135deg, #7ce6a8, #4cc985); box-shadow: 0 6px 14px rgba(124,230,168,0.25); }
+.ost-pro-bet--no  { background: linear-gradient(135deg, #ff7c8a, #e85565); box-shadow: 0 6px 14px rgba(255,124,138,0.25); color: #fff; }
+.ost-pro-bet:hover { transform: translateY(-1px); filter: brightness(1.05); }
+.ost-pro-bet:active { transform: translateY(0); filter: brightness(0.95); }
+
+.ost-pro-bet-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ost-pro-bet-row label { display: flex; flex-direction: column; gap: 2px; font-size: 11px; opacity: 0.7; letter-spacing: 0.04em; text-transform: uppercase; }
+.ost-pro-bet-row input {
+  width: 100px; padding: 8px 10px; border-radius: 8px;
+  border: 1px solid rgba(255,215,128,0.25);
+  background: rgba(0,0,0,0.4); color: #f4ead4;
+  font-variant-numeric: tabular-nums; font-weight: 600; font-size: 14px;
+}
+.ost-pro-bet-row__projected {
+  flex: 1; min-width: 200px; font-size: 12px; opacity: 0.8; font-variant-numeric: tabular-nums;
+}
+
+/* Relay tile ------------------------------------------------------------ */
+.ost-pro-relay__url {
+  margin: 0; padding: 8px 10px; border-radius: 8px;
+  background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.06);
+  font-family: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+  font-size: 11px; word-break: break-all; color: #cfe6ff;
+}
+.ost-pro-relay__how {
+  font-size: 12px;
+}
+.ost-pro-relay__how summary { cursor: pointer; opacity: 0.85; font-weight: 600; padding: 2px 0; }
+.ost-pro-relay__how ol { margin: 6px 0 0 18px; padding: 0; line-height: 1.5; }
+.ost-pro-relay__how code { background: rgba(255,255,255,0.06); padding: 1px 5px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+
+/* API tile -------------------------------------------------------------- */
+.ost-pro-api__hint { margin: 0; font-size: 12px; opacity: 0.75; }
+.ost-pro-api__snippet {
+  margin: 0; padding: 10px 12px; border-radius: 8px;
+  background: rgba(0,0,0,0.55); border: 1px solid rgba(160,255,180,0.18);
+  font-family: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+  font-size: 11px; line-height: 1.55; color: #e8ffe8;
+  overflow-x: auto; max-height: 130px;
+}
+.ost-pro-api__actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.ost-pro-api__actions button {
+  appearance: none; border: 1px solid rgba(160,255,180,0.35);
+  background: rgba(160,255,180,0.08); color: #a0ffb4;
+  padding: 6px 12px; border-radius: 999px; font-size: 11px; font-weight: 700;
+  letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer;
+  transition: background 120ms ease, transform 120ms ease;
+}
+.ost-pro-api__actions button:hover { background: rgba(160,255,180,0.18); transform: translateY(-1px); }
+
+/* Scalar tile ----------------------------------------------------------- */
+.ost-pro-scalar__hint { margin: 0; font-size: 12px; opacity: 0.75; }
+.ost-pro-scalar__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 180px; overflow-y: auto; }
+.ost-pro-scalar__row {
+  padding: 8px 10px; border-radius: 8px; background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(220,160,255,0.18);
+}
+.ost-pro-scalar__title { font-size: 12px; font-weight: 600; line-height: 1.3; margin-bottom: 4px; }
+.ost-pro-scalar__meta { font-size: 11px; opacity: 0.7; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ost-pro-scalar__empty { padding: 10px; font-size: 12px; opacity: 0.6; text-align: center; }
+
+/* Toast ----------------------------------------------------------------- */
+.ost-pro-dash__toast {
+  position: absolute; left: 50%; bottom: -16px;
+  transform: translate(-50%, 100%);
+  padding: 8px 14px; border-radius: 999px;
+  font-size: 12px; font-weight: 600;
+  background: rgba(20, 16, 8, 0.95); border: 1px solid rgba(255,215,128,0.4);
+  color: #ffd980; box-shadow: 0 8px 20px rgba(0,0,0,0.45);
+  z-index: 50; max-width: 90%; white-space: normal; text-align: center;
+}
+.ost-pro-dash__toast.is-ok  { color: #a0ffb4; border-color: rgba(160,255,180,0.45); }
+.ost-pro-dash__toast.is-err { color: #ff7c8a; border-color: rgba(255,124,138,0.45); }
