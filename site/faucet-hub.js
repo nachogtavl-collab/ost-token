@@ -865,45 +865,94 @@
   }); }
 
   // ============================================================
-  // 6) CASH OUT
+  // 6) CASH OUT — pool transfers OST → user wallet (real on-chain)
   // ============================================================
   async function onCashout() {
     var s = load();
     var amount = Number(s.credits || 0);
     if (amount < MIN_PAYOUT) { pop('Earn at least ' + MIN_PAYOUT + ' OST first'); return; }
     var w = window.OST_WALLET;
-    if (!w || !w.session || !w.session.publicKey) { pop('Connect a wallet first'); return; }
-    if (!window.OST_SWAP_POOL || !window.OST_REAL_SWAP) { pop('Swap pool not ready'); return; }
+    if (!w || !w.session || !w.session.publicKey) {
+      pop('Connect a wallet first');
+      try {
+        var btnConnect = document.getElementById('connectWalletBtn');
+        if (btnConnect) btnConnect.click();
+      } catch(e) {}
+      return;
+    }
+    if (!window.OST_SWAP_POOL || !window.OST_SWAP_POOL.secretKey) {
+      pop('Rewards vault not loaded — refresh the page');
+      return;
+    }
+    if (!window.solanaWeb3) { pop('Solana SDK still loading — try again'); return; }
 
     var btn = document.getElementById('fhCashout');
     btn.disabled = true; var prev = btn.textContent; btn.textContent = 'Sending…';
     try {
-      var pool = solanaWeb3.Keypair.fromSecretKey(Uint8Array.from(window.OST_SWAP_POOL.secretKey));
-      var poolPub = pool.publicKey;
-      var poolAta = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.ata);
-      var mintPk  = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.mint);
-      var c = w.constants;
+      // Cap the cashout to what the rewards vault can actually pay out.
       var conn = w.getConnection();
-      var userAta = await w.ensureAta(w.session.publicKey);
+      if (!conn) throw new Error('Solana RPC unavailable');
+      var poolAtaPk = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.ata);
+      var mintPk    = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.mint);
+      var poolBal = await conn.getTokenAccountBalance(poolAtaPk).catch(function(){ return null; });
+      var poolOst = poolBal ? Number(poolBal.value.uiAmount || 0) : 0;
+      if (poolOst <= 0) throw new Error('Rewards vault is empty right now. Try again in a few minutes.');
+      var toSend = Math.min(amount, Math.floor(poolOst * 100) / 100);
+      if (toSend < 0.01) throw new Error('Vault balance too small to pay out');
+
+      // Make sure the user wallet has SOL to cover the network fee (we are the
+      // fee payer + signer). Local browser wallets get an automatic devnet airdrop.
+      var userPk = w.session.publicKey;
+      var userLamports = await conn.getBalance(userPk);
+      if (userLamports < 5_000_000) {
+        try { await w.ensureFee(userPk); } catch(e) {
+          throw new Error('This wallet has no SOL for the network fee. Get a tiny bit of devnet SOL at faucet.solana.com and try again.');
+        }
+      }
+
+      // Make sure the user has an OST associated token account (creates one if missing).
+      // This may require a separate transaction — do it BEFORE the pool tx so we
+      // do not invalidate the pool's partial signature.
+      btn.textContent = 'Preparing token account…';
+      var userAta = await w.ensureAta(userPk);
+
+      btn.textContent = 'Signing & sending…';
+      var pool = solanaWeb3.Keypair.fromSecretKey(Uint8Array.from(window.OST_SWAP_POOL.secretKey));
+      var c = w.constants;
 
       var tx = new solanaWeb3.Transaction();
-      tx.add(w.transferChecked(poolAta, mintPk, userAta, poolPub,
-        w.toBaseUnits(amount, c.OST_TOKEN_DECIMALS), c.OST_TOKEN_DECIMALS, c.TOKEN_2022_PROGRAM_ID));
-      tx.add(w.memoIx(JSON.stringify({ k:'faucet-hub-cashout', amt: amount, t: Date.now() }), w.session.publicKey));
-      tx.feePayer = w.session.publicKey;
+      tx.add(w.transferChecked(
+        poolAtaPk, mintPk, userAta, pool.publicKey,
+        w.toBaseUnits(toSend, c.OST_TOKEN_DECIMALS),
+        c.OST_TOKEN_DECIMALS, c.TOKEN_2022_PROGRAM_ID
+      ));
+      tx.add(w.memoIx(JSON.stringify({
+        k:'faucet-hub-cashout', amt: toSend, lifetime: Number(s.lifetime||0), t: Date.now()
+      }), userPk));
+      tx.feePayer = userPk;
       var bh = await conn.getLatestBlockhash('confirmed');
       tx.recentBlockhash = bh.blockhash;
       tx.partialSign(pool);
       var sig = await w.sign(tx);
 
-      s.credits = 0; s.lastCashout = Date.now(); save(s);
-      pop('+' + amount.toFixed(2) + ' OST sent!');
-      btn.textContent = 'Sent · ' + String(sig).slice(0, 6);
-      setTimeout(function(){ btn.textContent = prev; refreshUi(); }, 4000);
+      // Persist new state — only after the on-chain confirm so failures keep credits
+      var s2 = load();
+      s2.credits = Math.max(0, Number(s2.credits || 0) - toSend);
+      s2.lastCashout = Date.now();
+      save(s2);
+      pop('+' + toSend.toFixed(2) + ' OST sent!');
+      vaultDrop();
+      btn.textContent = '✓ Sent · ' + String(sig).slice(0, 8) + '…';
+      try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch(e) {}
+      setTimeout(function(){ btn.textContent = prev; refreshUi(); }, 4500);
     } catch (err) {
       console.warn('[fh] cashout failed', err);
-      pop('Cash-out failed');
+      var msg = (err && err.message) ? err.message : 'Cash-out failed';
+      // Show the real error so the user knows what to fix
+      pop(msg.length > 60 ? msg.slice(0, 60) + '…' : msg);
+      try { alert('Cash-out failed:\n\n' + msg); } catch(e) {}
       btn.disabled = false; btn.textContent = prev;
+      refreshUi();
     }
   }
 
