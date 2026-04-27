@@ -23,7 +23,7 @@
 
   // ---- CONFIG (edit after you sign up) -----------------------------------
   var ADSTERRA_ZONE = ''; // e.g. '12345678' from your Adsterra zone dashboard
-  var A_ADS_UNIT    = ''; // e.g. '2412345' from your A-Ads unit
+  var A_ADS_UNIT    = '2435726'; // A-Ads unit — live (BTC payouts daily)
   // OST AD TREASURY VAULT (devnet) — ad revenue lands here off-chain, the
   // sweep script then converts → SOL → refills the swap pool ATA. Keep this
   // SEPARATE from the swap pool keypair so revenue accounting is clean.
