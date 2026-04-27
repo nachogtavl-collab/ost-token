@@ -10247,39 +10247,56 @@
       });
     });
 
-    /* Place trade (demo) */
+    /* Place trade (real on-chain via OST_TRADE / swap pool) */
     var tradeBtn = document.getElementById('lpTradeBtn');
     if (tradeBtn) {
-      tradeBtn.addEventListener('click', function() {
+      tradeBtn.addEventListener('click', async function() {
         if (!currentToken) return;
         var amt = parseFloat(document.getElementById('lpTradeAmount').value) || 0;
         if (amt <= 0) { toast('⚠️', 'Enter an amount'); return; }
 
-        // Simulate market impact
-        if (tradeSide === 'buy') {
-          currentToken.mcap += Math.floor(amt * 8);
-          currentToken.curve = Math.min(Math.floor(currentToken.mcap / 690), 100);
-          activities.unshift({ user: connectedWallet ? connectedWallet.slice(0,4)+'...' : 'You', verb: 'bought', token: '$' + currentToken.symbol, amount: amt.toString(), type: 'buy', time: Date.now() });
-          toast('✅', 'Bought ' + amt + ' OST of $' + currentToken.symbol);
-        } else {
-          currentToken.mcap = Math.max(100, currentToken.mcap - Math.floor(amt * 5));
-          currentToken.curve = Math.min(Math.floor(currentToken.mcap / 690), 100);
-          activities.unshift({ user: connectedWallet ? connectedWallet.slice(0,4)+'...' : 'You', verb: 'sold', token: '$' + currentToken.symbol, amount: amt.toString(), type: 'sell', time: Date.now() });
-          toast('✅', 'Sold ' + amt + ' ' + currentToken.symbol);
-        }
+        var origLabel = tradeBtn.textContent;
+        tradeBtn.disabled = true; tradeBtn.textContent = 'Sending…';
+        try {
+          var trade = window.OST_TRADE;
+          if (!trade || !trade.memecoinBuy) throw new Error('Trading module not loaded — refresh the page');
+          var result;
+          if (tradeSide === 'buy') {
+            result = await trade.memecoinBuy(currentToken.symbol, amt);
+            // Simulated price impact (real on-chain transfer already done)
+            currentToken.mcap += Math.floor(amt * 8);
+            currentToken.curve = Math.min(Math.floor(currentToken.mcap / 690), 100);
+            activities.unshift({ user: connectedWallet ? connectedWallet.slice(0,4)+'...' : 'You', verb: 'bought', token: '$' + currentToken.symbol, amount: amt.toString(), type: 'buy', time: Date.now() });
+            toast('✅', 'Bought ' + amt + ' OST of $' + currentToken.symbol + ' · sig ' + String(result.sig).slice(0,8));
+          } else {
+            result = await trade.memecoinSell(currentToken.symbol, amt);
+            currentToken.mcap = Math.max(100, currentToken.mcap - Math.floor(amt * 5));
+            currentToken.curve = Math.min(Math.floor(currentToken.mcap / 690), 100);
+            activities.unshift({ user: connectedWallet ? connectedWallet.slice(0,4)+'...' : 'You', verb: 'sold', token: '$' + currentToken.symbol, amount: result.ost.toString(), type: 'sell', time: Date.now() });
+            toast('✅', 'Sold ' + result.ost.toFixed(2) + ' ' + currentToken.symbol + ' · sig ' + String(result.sig).slice(0,8));
+          }
 
-        // Check graduation
-        if (currentToken.curve >= 100) {
-          toast('🎓', '$' + currentToken.symbol + ' graduated! Liquidity deposited & burned!');
-          currentToken.curve = 100;
-        }
+          // Check graduation
+          if (currentToken.curve >= 100) {
+            toast('🎓', '$' + currentToken.symbol + ' graduated! Liquidity deposited & burned!');
+            currentToken.curve = 100;
+          }
 
-        // Update UI
-        document.getElementById('lpDetailMcap').textContent = fmtMcap(currentToken.mcap) + ' OST';
-        document.getElementById('lpDetailCurveVal').textContent = Math.min(currentToken.curve, 100) + '%';
-        document.getElementById('lpDetailCurveFill').style.width = Math.min(currentToken.curve, 100) + '%';
-        document.getElementById('lpTradeAmount').value = '';
-        localStorage.setItem('ost_lp_history2', JSON.stringify(launches));
+          // Update UI
+          document.getElementById('lpDetailMcap').textContent = fmtMcap(currentToken.mcap) + ' OST';
+          document.getElementById('lpDetailCurveVal').textContent = Math.min(currentToken.curve, 100) + '%';
+          document.getElementById('lpDetailCurveFill').style.width = Math.min(currentToken.curve, 100) + '%';
+          document.getElementById('lpTradeAmount').value = '';
+          localStorage.setItem('ost_lp_history2', JSON.stringify(launches));
+          try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch(e){}
+        } catch (err) {
+          console.warn('[memecoin trade] failed', err);
+          var msg = (err && err.message) ? err.message : 'Trade failed';
+          toast('⚠️', msg.length > 80 ? msg.slice(0, 80) + '…' : msg);
+          try { alert('Memecoin trade failed:\n\n' + msg); } catch(e){}
+        } finally {
+          tradeBtn.disabled = false; tradeBtn.textContent = origLabel;
+        }
       });
     }
 
@@ -12026,10 +12043,14 @@
         return;
       }
 
-      positionListEl.innerHTML = state.orderHistory.map(function(order) {
+      positionListEl.innerHTML = state.orderHistory.map(function(order, idx) {
         var sideLabel = order.side === 'no'
           ? t('wallet.portal.prediction.buyNo', 'Buy No')
           : t('wallet.portal.prediction.buyYes', 'Buy Yes');
+        var canCash = !order.cashedOut && Number(order.stake || 0) > 0;
+        var cashBtn = canCash
+          ? '<button class="prediction-cashout-btn" data-cashout-idx="' + idx + '" style="margin-left:auto;padding:4px 10px;border-radius:6px;background:#22c55e;color:#000;border:none;font-weight:700;cursor:pointer;font-size:12px">Cash out</button>'
+          : (order.cashedOut ? '<span style="color:#22c55e;font-weight:700;font-size:12px;margin-left:auto">✓ Paid out</span>' : '');
         return [
           '<div class="prediction-position-row">',
             '<div class="prediction-position-row-top">',
@@ -12039,13 +12060,49 @@
               '</div>',
               '<span class="prediction-position-pill side-' + escapeHtml(order.side || 'yes') + '">' + escapeHtml(sideLabel) + '</span>',
             '</div>',
-            '<div class="prediction-position-row-meta">',
+            '<div class="prediction-position-row-meta" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">',
               '<span>' + escapeHtml(formatOst(order.stake)) + ' • ' + escapeHtml(formatOst(order.potentialReturn)) + '</span>',
               '<a class="prediction-market-api-link" href="' + escapeHtml(explorerTxUrl(order.signature)) + '" target="_blank" rel="noopener">' + escapeHtml(shortAddress(order.signature || '')) + '</a>',
+              cashBtn,
             '</div>',
           '</div>'
         ].join('');
       }).join('');
+
+      // Wire cash-out buttons
+      positionListEl.querySelectorAll('[data-cashout-idx]').forEach(function(btn) {
+        btn.addEventListener('click', async function() {
+          var idx = Number(btn.getAttribute('data-cashout-idx'));
+          var orders = readPredictionOrderRecords();
+          var order = orders[idx];
+          if (!order) return;
+          if (!window.OST_TRADE || !window.OST_TRADE.predictionCashOut) {
+            try { alert('Trading module not loaded — refresh the page'); } catch(e){}
+            return;
+          }
+          // Payout = 95% of stake (5% house edge — keeps the pool sustainable on devnet)
+          var payout = Number(order.stake || 0) * 0.95;
+          var orig = btn.textContent;
+          btn.disabled = true; btn.textContent = '…';
+          try {
+            var r = await window.OST_TRADE.predictionCashOut(order, payout);
+            order.cashedOut = true;
+            order.cashoutSig = r.sig;
+            order.cashoutOst = r.ost;
+            order.cashoutAt = Date.now();
+            orders[idx] = order;
+            try { localStorage.setItem(PREDICTION_ORDERS_STORAGE_KEY, JSON.stringify(orders)); } catch(e){}
+            state.orderHistory = orders;
+            renderPredictionLedger();
+            try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch(e){}
+          } catch (err) {
+            console.warn('[prediction cashout] failed', err);
+            var msg = (err && err.message) ? err.message : 'Cash-out failed';
+            try { alert('Prediction cash-out failed:\n\n' + msg); } catch(e){}
+            btn.disabled = false; btn.textContent = orig;
+          }
+        });
+      });
     }
 
     function renderLatestReceipt() {
