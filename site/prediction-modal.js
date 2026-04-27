@@ -83,6 +83,40 @@
     try { var v = JSON.parse(localStorage.getItem(key) || 'null'); return v == null ? fallback : v; }
     catch (_) { return fallback; }
   }
+
+  // ----- CORS-resilient fetch -------------------------------------------------
+  // Tries the URL directly first. If it errors (network / CORS), retries
+  // through a public CORS proxy. Records the last failure reason on the
+  // returned promise's `.error` field for debugging surfacing.
+  var CORS_PROXIES = [
+    'https://corsproxy.io/?url=',
+    'https://api.allorigins.win/raw?url='
+  ];
+  function fetchJsonResilient(url) {
+    var diag = { url: url, attempts: [] };
+    var attempt = function (target, label) {
+      diag.attempts.push(label);
+      return fetch(target, { headers: { accept: 'application/json' }, mode: 'cors' })
+        .then(function (r) {
+          if (!r.ok) throw new Error(label + ' HTTP ' + r.status);
+          return r.json();
+        });
+    };
+    return attempt(url, 'direct')
+      .catch(function (e) {
+        diag.lastError = String(e && e.message || e);
+        return attempt(CORS_PROXIES[0] + encodeURIComponent(url), 'proxy:corsproxy.io');
+      })
+      .catch(function (e) {
+        diag.lastError = String(e && e.message || e);
+        return attempt(CORS_PROXIES[1] + encodeURIComponent(url), 'proxy:allorigins');
+      })
+      .catch(function (e) {
+        diag.lastError = String(e && e.message || e);
+        console.warn('[ost-modal] all fetch attempts failed', diag);
+        return null;
+      });
+  }
   function escapeHtml(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
       return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
@@ -244,30 +278,21 @@
   }
   function fetchPolyOrderbook(tokenId) {
     if (!tokenId) return Promise.resolve(null);
-    // Polymarket CLOB uses ?token_id= as a query param, NOT a path segment.
-    return fetch(pmClob('/book', 'token_id=' + encodeURIComponent(tokenId)), { headers: { accept: 'application/json' } })
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .catch(function () { return null; });
+    return fetchJsonResilient(pmClob('/book', 'token_id=' + encodeURIComponent(tokenId)));
   }
   function fetchPolyTrades(marketId) {
     if (!marketId) return Promise.resolve(null);
-    return fetch(pmClob('/trades', 'market=' + encodeURIComponent(marketId) + '&limit=20'), { headers: { accept: 'application/json' } })
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .catch(function () { return null; });
+    return fetchJsonResilient(pmClob('/trades', 'market=' + encodeURIComponent(marketId) + '&limit=20'));
   }
   function fetchPolyHistory(marketId) {
     if (!marketId) return Promise.resolve(null);
-    return fetch(pmData('/prices-history/' + encodeURIComponent(marketId), 'interval=1d&fidelity=10'), { headers: { accept: 'application/json' } })
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .catch(function () { return null; });
+    return fetchJsonResilient(pmData('/prices-history', 'market=' + encodeURIComponent(marketId) + '&interval=1d&fidelity=10'));
   }
   // Gamma-api fallback — works from browsers (CORS-enabled), gives us
   // bestBid / bestAsk / lastTradePrice / volume24hr without needing CLOB.
   function fetchPolyGammaMarket(marketId) {
     if (!marketId) return Promise.resolve(null);
-    return fetch(pmGamma('/markets/' + encodeURIComponent(marketId)), { headers: { accept: 'application/json' } })
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .catch(function () { return null; });
+    return fetchJsonResilient(pmGamma('/markets/' + encodeURIComponent(marketId)));
   }
 
   // --------------------------------------------------------------------------
@@ -519,8 +544,7 @@
         var tryFeed = function (i) {
           if (i >= BTC_PRICE_FEEDS.length) return Promise.resolve(null);
           var feed = BTC_PRICE_FEEDS[(BTC_FEED_INDEX + i) % BTC_PRICE_FEEDS.length];
-          return fetch(feed.url, { headers: { accept: 'application/json' } })
-            .then(function (r) { return r.ok ? r.json() : null; })
+          return fetchJsonResilient(feed.url)
             .then(function (j) {
               var p = j && feed.pick(j);
               if (Number.isFinite(p) && p > 1000) {
@@ -528,8 +552,7 @@
                 return p;
               }
               return tryFeed(i + 1);
-            })
-            .catch(function () { return tryFeed(i + 1); });
+            });
         };
         tryFeed(0).then(function (p) {
           if (!Number.isFinite(p)) {

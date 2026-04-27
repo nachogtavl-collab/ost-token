@@ -103,12 +103,17 @@ body.ost-modal-open .prediction-trade-desk.ost-tradepop { display: none !importa
   50% { box-shadow: 0 0 0 14px rgba(124, 230, 168, 0); }
 }
 
-/* Stop the wallet portal column from reserving space for an aside that no
-   longer lives there. The market list now spans the row. */
-.wallet-portal-grid .prediction-board,
-.wallet-portal-grid [data-section="prediction"] {
+/* Stop the prediction shell from reserving a right column for the aside.
+   The aside is hoisted out by JS, but CSS must apply BEFORE the JS runs
+   so there's no flash of the desk in the right column. */
+.prediction-market-shell {
   grid-template-columns: 1fr !important;
 }
+.prediction-market-shell > .prediction-trade-desk { display: none !important; }
+
+/* Once the popout JS hoists the aside to <body>, those rules above no
+   longer apply (it isn't a child of .prediction-market-shell anymore)
+   and the .ost-tradepop styles take over. */
 
 @media (max-width: 720px) {
   .prediction-trade-desk.ost-tradepop {
