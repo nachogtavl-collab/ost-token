@@ -2898,13 +2898,22 @@
     if (!conn) throw new Error('Solana RPC unavailable');
     if (!connectedWalletSession || !connectedWalletSession.publicKey) throw new Error('Connect your wallet first');
 
-    const latest = await conn.getLatestBlockhash('confirmed');
-    transaction.feePayer = connectedWalletSession.publicKey;
-    transaction.recentBlockhash = latest.blockhash;
+    // Preserve any existing blockhash/feePayer/partial signatures (e.g. when the
+    // OST swap pool has already co-signed the transaction). Overwriting the
+    // blockhash invalidates the pool's signature and silently breaks every swap.
+    let latest = null;
+    if (!transaction.recentBlockhash) {
+      latest = await conn.getLatestBlockhash('confirmed');
+      transaction.recentBlockhash = latest.blockhash;
+    }
+    if (!transaction.feePayer) {
+      transaction.feePayer = connectedWalletSession.publicKey;
+    }
 
     let signature = null;
     if (connectedWalletSession.kind === 'local' && connectedWalletSession.keypair) {
-      transaction.sign(connectedWalletSession.keypair);
+      // partialSign preserves any pre-existing co-signer signatures (vs .sign which clears them).
+      transaction.partialSign(connectedWalletSession.keypair);
       signature = await conn.sendRawTransaction(transaction.serialize());
     } else if (connectedWalletSession.provider && typeof connectedWalletSession.provider.signAndSendTransaction === 'function') {
       const result = await connectedWalletSession.provider.signAndSendTransaction(transaction);
@@ -2915,11 +2924,18 @@
     }
 
     if (!signature) throw new Error('Active wallet cannot sign transactions');
-    await conn.confirmTransaction({
-      signature,
-      blockhash: latest.blockhash,
-      lastValidBlockHeight: latest.lastValidBlockHeight
-    }, 'confirmed');
+    if (!latest) {
+      try { latest = await conn.getLatestBlockhash('confirmed'); } catch (_) {}
+    }
+    if (latest) {
+      await conn.confirmTransaction({
+        signature,
+        blockhash: latest.blockhash,
+        lastValidBlockHeight: latest.lastValidBlockHeight
+      }, 'confirmed');
+    } else {
+      await conn.confirmTransaction(signature, 'confirmed');
+    }
     return signature;
   }
 
