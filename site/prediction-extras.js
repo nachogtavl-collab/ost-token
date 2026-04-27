@@ -181,8 +181,15 @@
   }
 
   function openBetFlow(card, id, side, market) {
-    // First, simulate clicking the card so the trade desk selects this market and updates state
+    // Select the market in the main trade desk
     card.click();
+    // Sync the trade desk outcome toggle to the correct side so the main
+    // "Buy Yes/No with OST" button always reflects what the user clicked.
+    var toggle = document.getElementById('predictionOutcomeToggle');
+    if (toggle) {
+      var sideBtn = toggle.querySelector('button[data-prediction-side="' + side + '"]');
+      if (sideBtn) sideBtn.click(); // triggers state.selectedSide update in app.js
+    }
     placeBetPrompt(market, side);
   }
 
