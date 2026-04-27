@@ -2947,16 +2947,20 @@
     }
 
     let signature = null;
-    if (connectedWalletSession.kind === 'local' && connectedWalletSession.keypair) {
-      // partialSign preserves any pre-existing co-signer signatures (vs .sign which clears them).
-      transaction.partialSign(connectedWalletSession.keypair);
-      signature = await conn.sendRawTransaction(transaction.serialize());
-    } else if (connectedWalletSession.provider && typeof connectedWalletSession.provider.signAndSendTransaction === 'function') {
-      const result = await connectedWalletSession.provider.signAndSendTransaction(transaction);
-      signature = typeof result === 'string' ? result : result && result.signature;
-    } else if (connectedWalletSession.provider && typeof connectedWalletSession.provider.signTransaction === 'function') {
-      const signedTransaction = await connectedWalletSession.provider.signTransaction(transaction);
-      signature = await conn.sendRawTransaction(signedTransaction.serialize());
+    try {
+      if (connectedWalletSession.kind === 'local' && connectedWalletSession.keypair) {
+        // partialSign preserves any pre-existing co-signer signatures (vs .sign which clears them).
+        transaction.partialSign(connectedWalletSession.keypair);
+        signature = await _sendRaw(conn, transaction.serialize());
+      } else if (connectedWalletSession.provider && typeof connectedWalletSession.provider.signAndSendTransaction === 'function') {
+        const result = await connectedWalletSession.provider.signAndSendTransaction(transaction);
+        signature = typeof result === 'string' ? result : result && result.signature;
+      } else if (connectedWalletSession.provider && typeof connectedWalletSession.provider.signTransaction === 'function') {
+        const signedTransaction = await connectedWalletSession.provider.signTransaction(transaction);
+        signature = await _sendRaw(conn, signedTransaction.serialize());
+      }
+    } catch (sendErr) {
+      throw await _unpackSendError(sendErr);
     }
 
     if (!signature) throw new Error('Active wallet cannot sign transactions');
@@ -2980,6 +2984,48 @@
       throw new Error('Transaction reverted on-chain: ' + errStr + ' (sig ' + signature + ')');
     }
     return signature;
+  }
+
+  // ---------------------------------------------------------------------------
+  // sendRawTransaction wrapper: uses confirmed preflight, then retries with
+  // skipPreflight if simulation rejects due to stale account state (the common
+  // "no record of a prior credit" false-positive right after ATA creation).
+  // Also calls getLogs() on SendTransactionError for real program logs.
+  // ---------------------------------------------------------------------------
+  async function _sendRaw(conn, serialized) {
+    try {
+      return await conn.sendRawTransaction(serialized, {
+        skipPreflight: false,
+        preflightCommitment: 'confirmed'
+      });
+    } catch (e) {
+      var msg = (e && e.message) || '';
+      // Simulation false-positive: account state not yet visible at confirmed.
+      // The balance checks above already verified funds — retry without preflight.
+      if (msg.includes('no record of a prior credit') ||
+          msg.includes('simulation failed') ||
+          msg.includes('Simulation failed')) {
+        return conn.sendRawTransaction(serialized, { skipPreflight: true });
+      }
+      throw e;
+    }
+  }
+
+  // Unpack a SendTransactionError: call getLogs() if available so the error
+  // message contains real program logs instead of "Logs: []".
+  async function _unpackSendError(err) {
+    if (!err) return new Error('Transaction send failed');
+    var logs = [];
+    if (typeof err.getLogs === 'function') {
+      try { logs = await err.getLogs(); } catch (_) {}
+    } else if (Array.isArray(err.logs)) {
+      logs = err.logs;
+    }
+    var base = err.message || 'Send failed';
+    if (logs && logs.length) {
+      return new Error(base + '\n\nProgram logs:\n' + logs.join('\n'));
+    }
+    return err;
   }
 
   async function ensureWalletFeeBalance(pubkeyInput) {

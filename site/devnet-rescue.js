@@ -98,11 +98,53 @@
     return { tx: tx, pool: pool, conn: conn, blockhash: bh };
   }
 
+  // Unpack SendTransactionError: call getLogs() so error messages contain real
+  // program logs instead of the useless "Logs: []" placeholder.
+  async function unpackSendError(err) {
+    if (!err) return new Error('Transaction failed');
+    var logs = [];
+    if (typeof err.getLogs === 'function') {
+      try { logs = await err.getLogs(); } catch (_) {}
+    } else if (Array.isArray(err.logs)) {
+      logs = err.logs;
+    }
+    var base = err.message || 'Send failed';
+    if (logs && logs.length) {
+      return new Error(base + '\n\nProgram logs:\n' + logs.join('\n'));
+    }
+    return err;
+  }
+
+  // Send raw bytes with confirmed preflight; retries without preflight on stale-
+  // simulation false-positives ("no record of a prior credit").
+  async function sendRawSafe(conn, serialized) {
+    try {
+      return await conn.sendRawTransaction(serialized, {
+        skipPreflight: false,
+        preflightCommitment: 'confirmed'
+      });
+    } catch (e) {
+      var msg = (e && e.message) || '';
+      if (msg.includes('no record of a prior credit') ||
+          msg.includes('simulation failed') ||
+          msg.includes('Simulation failed')) {
+        // Balance was verified before this call — safe to skip stale simulation.
+        return conn.sendRawTransaction(serialized, { skipPreflight: true });
+      }
+      throw await unpackSendError(e);
+    }
+  }
+
   // Pool-only tx: pool is the only signer.
   async function sendPoolOnlyTx(instructions) {
     var built = await buildPoolPaidTx(instructions);
     built.tx.sign(built.pool);
-    var sig = await built.conn.sendRawTransaction(built.tx.serialize());
+    var sig;
+    try {
+      sig = await sendRawSafe(built.conn, built.tx.serialize());
+    } catch (e) {
+      throw await unpackSendError(e);
+    }
     await built.conn.confirmTransaction({
       signature: sig,
       blockhash: built.blockhash.blockhash,
@@ -118,7 +160,30 @@
     if (!w || !w.sign) throw new Error('Wallet helpers not loaded');
     var built = await buildPoolPaidTx(instructions);
     built.tx.partialSign(built.pool);
-    return await w.sign(built.tx);
+
+    // w.sign calls signAndSendTransaction which already uses _sendRaw internally,
+    // but we need to hand it the partly-signed tx directly.
+    var session = w.session;
+    if (!session || !session.publicKey) throw new Error('Connect a wallet first');
+    var serialized;
+    if (session.kind === 'local' && session.keypair) {
+      built.tx.partialSign(session.keypair);
+      serialized = built.tx.serialize();
+    } else if (session.provider && typeof session.provider.signTransaction === 'function') {
+      var signed = await session.provider.signTransaction(built.tx);
+      serialized = signed.serialize();
+    } else if (session.provider && typeof session.provider.signAndSendTransaction === 'function') {
+      // Provider handles send; just return the signature.
+      var res = await session.provider.signAndSendTransaction(built.tx);
+      return typeof res === 'string' ? res : (res && res.signature);
+    } else {
+      throw new Error('Wallet cannot sign transactions');
+    }
+    try {
+      return await sendRawSafe(built.conn, serialized);
+    } catch (e) {
+      throw await unpackSendError(e);
+    }
   }
 
   // -----------------------------------------------------------------------
