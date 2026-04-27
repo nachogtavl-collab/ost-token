@@ -66,33 +66,54 @@
   }
 
   // ---------------------------------------------------------------------------
+  // Timeout-aware fetch helper (3 s hard abort)
+  // ---------------------------------------------------------------------------
+  function fetchTimeout(url, opts) {
+    var ctrl = new AbortController();
+    var tid = setTimeout(function () { ctrl.abort(); }, 3000);
+    return fetch(url, Object.assign({ signal: ctrl.signal }, opts || {}))
+      .then(function (r) { clearTimeout(tid); return r; })
+      .catch(function (e) { clearTimeout(tid); throw e; });
+  }
+
+  // ---------------------------------------------------------------------------
   // Data fetchers
   // ---------------------------------------------------------------------------
   function refreshBtc() {
-      var apiBase = (window.OST_API_BASE || '').replace(/\/$/, '');
-      var url = apiBase ? apiBase + '/btc/price' : BTC_PRICE_URL;
-      var extractPrice = apiBase
-        ? function (j) { return j && Number(j.price); }
-        : function (j) { return j && j.data && Number(j.data.amount); };
-      return fetch(url, { headers: { accept: 'application/json' } })
-        .then(function (r) { return r.ok ? r.json() : null; })
+    var apiBase = (window.OST_API_BASE || '').replace(/\/$/, '');
+    // Race all feeds simultaneously for fastest possible response
+    var feeds = apiBase
+      ? [{ url: apiBase + '/btc/price', pick: function (j) { return j && Number(j.price); } }]
+      : [
+          { url: BTC_PRICE_URL, pick: function (j) { return j && j.data && Number(j.data.amount); } },
+          { url: 'https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT', pick: function (j) { return j && Number(j.price); } }
+        ];
+    var racePromises = feeds.map(function (f) {
+      return fetchTimeout(f.url, { headers: { accept: 'application/json' } })
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
         .then(function (j) {
-          var p = extractPrice(j);
-        if (Number.isFinite(p) && p > 0) {
-          state.btcPrev = state.btcPrice || p;
-          state.btcPrice = p;
-          state.btcUpdatedAt = Date.now();
-          state.btcSeries.push(p);
-          if (state.btcSeries.length > 150) state.btcSeries.shift();
-        }
+          var p = f.pick(j);
+          if (!Number.isFinite(p) || p <= 0) return Promise.reject();
+          return p;
+        });
+    });
+    var race = (Promise.any ? Promise.any(racePromises)
+      : racePromises.reduce(function (ch, p) { return ch.catch(function () { return p; }); }, Promise.reject()));
+    return race
+      .then(function (p) {
+        state.btcPrev = state.btcPrice || p;
+        state.btcPrice = p;
+        state.btcUpdatedAt = Date.now();
+        state.btcSeries.push(p);
+        if (state.btcSeries.length > 150) state.btcSeries.shift();
       })
-      .catch(function () {/* silent */});
+      .catch(function () { /* all feeds failed — keep last value */ });
   }
 
   function refreshRelay() {
     state.relayUrl = (window.OST_POLY_RELAY_URL || '').replace(/\/$/, '') || null;
     if (!state.relayUrl) { state.relayHealth = 'not-configured'; state.relayEdge = null; return Promise.resolve(); }
-    return fetch(state.relayUrl + '/health', { headers: { accept: 'application/json' } })
+    return fetchTimeout(state.relayUrl + '/health', { headers: { accept: 'application/json' } })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (j) {
         if (j && j.ok) { state.relayHealth = 'live'; state.relayEdge = j.edge || null; }
@@ -450,10 +471,10 @@
       refreshLocalState();
       paintBtc(root); paintApi(root);
     }, 1000);
-    // 4s BTC price tick
+    // 800ms BTC price tick — real-time accuracy
     setInterval(function () {
       refreshBtc().then(function () { paintBtc(root); });
-    }, 4000);
+    }, 800);
     // 30s relay health tick
     setInterval(function () { refreshRelay().then(function () { paintRelay(root); }); }, 30000);
     // 60s scalar discovery

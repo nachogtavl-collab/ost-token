@@ -84,38 +84,56 @@
     catch (_) { return fallback; }
   }
 
-  // ----- CORS-resilient fetch -------------------------------------------------
-  // Tries the URL directly first. If it errors (network / CORS), retries
-  // through a public CORS proxy. Records the last failure reason on the
-  // returned promise's `.error` field for debugging surfacing.
+  // ----- Timeout-aware, CORS-resilient fetch ----------------------------------
+  // Each attempt gets a hard 4 s abort budget so a stalled CORS proxy can
+  // never block the next refresh tick.
   var CORS_PROXIES = [
     'https://corsproxy.io/?url=',
     'https://api.allorigins.win/raw?url='
   ];
+  var FETCH_TIMEOUT_MS = 4000;
+  function fetchWithTimeout(url, opts) {
+    var ctrl = new AbortController();
+    var tid = setTimeout(function () { ctrl.abort(); }, FETCH_TIMEOUT_MS);
+    return fetch(url, Object.assign({ signal: ctrl.signal }, opts))
+      .then(function (r) { clearTimeout(tid); return r; })
+      .catch(function (e) { clearTimeout(tid); throw e; });
+  }
   function fetchJsonResilient(url) {
-    var diag = { url: url, attempts: [] };
-    var attempt = function (target, label) {
-      diag.attempts.push(label);
-      return fetch(target, { headers: { accept: 'application/json' }, mode: 'cors' })
+    var attempt = function (target) {
+      return fetchWithTimeout(target, { headers: { accept: 'application/json' }, mode: 'cors' })
         .then(function (r) {
-          if (!r.ok) throw new Error(label + ' HTTP ' + r.status);
+          if (!r.ok) throw new Error('HTTP ' + r.status);
           return r.json();
         });
     };
-    return attempt(url, 'direct')
-      .catch(function (e) {
-        diag.lastError = String(e && e.message || e);
-        return attempt(CORS_PROXIES[0] + encodeURIComponent(url), 'proxy:corsproxy.io');
+    return attempt(url)
+      .catch(function () {
+        return attempt(CORS_PROXIES[0] + encodeURIComponent(url));
+      })
+      .catch(function () {
+        return attempt(CORS_PROXIES[1] + encodeURIComponent(url));
       })
       .catch(function (e) {
-        diag.lastError = String(e && e.message || e);
-        return attempt(CORS_PROXIES[1] + encodeURIComponent(url), 'proxy:allorigins');
-      })
-      .catch(function (e) {
-        diag.lastError = String(e && e.message || e);
-        console.warn('[ost-modal] all fetch attempts failed', diag);
+        console.warn('[ost-modal] fetch failed', url, e && e.message);
         return null;
       });
+  }
+  // Race all BTC feeds simultaneously — return whichever answers first.
+  function fetchBtcRace() {
+    var racePromises = BTC_PRICE_FEEDS.map(function (feed, i) {
+      return fetchWithTimeout(feed.url, { headers: { accept: 'application/json' }, mode: 'cors' })
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+        .then(function (j) {
+          var p = feed.pick(j);
+          if (!Number.isFinite(p) || p < 1000) return Promise.reject();
+          BTC_FEED_INDEX = i;
+          return p;
+        });
+    });
+    return Promise.any
+      ? Promise.any(racePromises)
+      : racePromises.reduce(function (chain, p) { return chain.catch(function () { return p; }); }, Promise.reject());
   }
   function escapeHtml(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -541,24 +559,12 @@
       tickBtc();
       liveTimers.push(setInterval(tickBtc, 500));
       var fetchBtcLive = function () {
-        var tryFeed = function (i) {
-          if (i >= BTC_PRICE_FEEDS.length) return Promise.resolve(null);
-          var feed = BTC_PRICE_FEEDS[(BTC_FEED_INDEX + i) % BTC_PRICE_FEEDS.length];
-          return fetchJsonResilient(feed.url)
-            .then(function (j) {
-              var p = j && feed.pick(j);
-              if (Number.isFinite(p) && p > 1000) {
-                BTC_FEED_INDEX = (BTC_FEED_INDEX + i) % BTC_PRICE_FEEDS.length;
-                return p;
-              }
-              return tryFeed(i + 1);
-            });
-        };
-        tryFeed(0).then(function (p) {
-          if (!Number.isFinite(p)) {
-            setText(bodyEl, 'btcLive', 'feed offline');
-            return;
-          }
+        fetchBtcRace()
+          .then(function (p) {
+            if (!Number.isFinite(p)) {
+              setText(bodyEl, 'btcLive', 'feed offline');
+              return;
+            }
           setText(bodyEl, 'btcLive', fmtUsd(p) + '  · ' + BTC_PRICE_FEEDS[BTC_FEED_INDEX].name);
           // Persist open price on first tick of the round if missing.
           if (!market.meta.openPrice) {
@@ -590,13 +596,17 @@
         });
       };
       fetchBtcLive();
-      liveTimers.push(setInterval(fetchBtcLive, 4000));
+      liveTimers.push(setInterval(fetchBtcLive, 800));
     }
 
     // ---- Polymarket live data ----
     if (looksLikePolymarketId(market)) {
       var tokenId = findPolymarketTokenId(market);
-      var rawId = market.raw && (market.raw.conditionId || market.raw.condition_id || market.raw.id) || market.conditionId || market.id;
+      // Correct precedence: prefer raw conditionId, then market.conditionId, fallback to market.id
+      var rawId = (market.raw && (market.raw.conditionId || market.raw.condition_id))
+               || market.conditionId
+               || (market.raw && market.raw.id)
+               || market.id;
 
       // Apply a fresh YES/NO from any source.
       var applyYes = function (yesPx, src) {
@@ -611,7 +621,7 @@
       };
 
       // Gamma-api refresh — works even when CLOB CORS blocks. Gives us
-      // bestBid/bestAsk/lastTradePrice. Refreshed every 4s.
+      // bestBid/bestAsk/lastTradePrice. Refreshed every 2s.
       var refreshGamma = function () {
         fetchPolyGammaMarket(rawId).then(function (g) {
           if (!g) return;
@@ -626,17 +636,21 @@
           if (Number.isFinite(Number(g.volume24hr))) {
             setText(bodyEl, 'tradesStatus', 'gamma · 24h vol $' + Math.round(Number(g.volume24hr)).toLocaleString());
           }
-          // If we didn't have clobTokenIds, pull them from gamma now.
-          if (!tokenId) {
+          // If we didn't have clobTokenIds or conditionId, pull them from gamma now
+          // and immediately trigger the dependent fetches with the correct IDs.
+          if (!tokenId || rawId === market.id) {
             try {
               var t = g.clobTokenIds; if (typeof t === 'string') t = JSON.parse(t);
-              if (Array.isArray(t) && t[0]) { tokenId = String(t[0]); refreshBook(); }
+              if (Array.isArray(t) && t[0]) { tokenId = String(t[0]); }
             } catch (_) {}
+            // Update rawId with the proper condition ID from gamma
+            if (g.conditionId || g.condition_id) rawId = g.conditionId || g.condition_id;
+            if (tokenId) refreshBook();
           }
         });
       };
       refreshGamma();
-      liveTimers.push(setInterval(refreshGamma, 4000));
+      liveTimers.push(setInterval(refreshGamma, 2000));
 
       // Order book — refreshed every 5s. Updates YES/NO prices from book mid.
       var refreshBook = function () {
@@ -668,7 +682,7 @@
         });
       };
       refreshBook();
-      liveTimers.push(setInterval(refreshBook, 5000));
+      liveTimers.push(setInterval(refreshBook, 1500));
 
       // Trades — refresh every 8s
       var refreshTrades = function () {
@@ -699,7 +713,7 @@
         });
       };
       refreshTrades();
-      liveTimers.push(setInterval(refreshTrades, 8000));
+      liveTimers.push(setInterval(refreshTrades, 3000));
 
       // Price history — refresh every 30s
       var refreshHistory = function () {
