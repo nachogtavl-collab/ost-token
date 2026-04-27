@@ -2525,6 +2525,10 @@
         updateConvertProviders();
       }
       try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch {}
+      // Refresh prediction desk balance so the buy button is enabled with real OST funds.
+      if (typeof window.syncPredictionMarketTradeWallet === 'function') {
+        window.syncPredictionMarketTradeWallet();
+      }
     }, 0);
 
     if (typeof window.syncWalletJourneyUi === 'function') {
@@ -13487,9 +13491,14 @@
     syncTradeWallet();
     loadPredictionMarkets();
     loadTimer = window.setInterval(loadPredictionMarkets, 120000);
+    // Re-sync wallet balance every 30 s so displayed OST funds stay accurate.
+    var balancePollTimer = window.setInterval(syncTradeWallet, 30000);
+    // Also refresh when a wallet connects/switches.
+    window.addEventListener('ost:wallet-changed', syncTradeWallet);
 
     window.addEventListener('beforeunload', function() {
       if (loadTimer) window.clearInterval(loadTimer);
+      if (balancePollTimer) window.clearInterval(balancePollTimer);
       if (resizeFrame) window.cancelAnimationFrame(resizeFrame);
     });
   })();
