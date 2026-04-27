@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::{program::invoke, program::invoke_signed, system_instruction};
+use anchor_lang::system_program::{self, Transfer};
 
 pub mod errors;
 pub mod state;
@@ -47,19 +47,16 @@ pub mod ost_betting {
         require!(!market.resolved, BettingError::MarketAlreadyResolved);
         require!(clock.unix_timestamp < market.lock_ts, BettingError::MarketLocked);
 
-        // Transfer SOL stake into the market vault PDA.
-        let ix = system_instruction::transfer(
-            &ctx.accounts.bettor.key(),
-            &ctx.accounts.vault.key(),
-            amount,
-        );
-        invoke(
-            &ix,
-            &[
-                ctx.accounts.bettor.to_account_info(),
-                ctx.accounts.vault.to_account_info(),
+        // Transfer SOL stake from bettor to market vault PDA via Anchor CPI helper.
+        system_program::transfer(
+            CpiContext::new(
                 ctx.accounts.system_program.to_account_info(),
-            ],
+                Transfer {
+                    from: ctx.accounts.bettor.to_account_info(),
+                    to: ctx.accounts.vault.to_account_info(),
+                },
+            ),
+            amount,
         )?;
 
         if side == 1 {
@@ -143,23 +140,24 @@ pub mod ost_betting {
 
         let market_key = market.key();
         let market_id_bytes = market.market_id.to_le_bytes();
-        let vault_bump_slice = [market.vault_bump];
-        let seeds: &[&[u8]] = &[
+        let vault_bump = [market.vault_bump];
+        let signer_seeds: &[&[&[u8]]] = &[&[
             b"vault",
             market_key.as_ref(),
             market_id_bytes.as_ref(),
-            &vault_bump_slice,
-        ];
+            &vault_bump,
+        ]];
 
-        let ix = system_instruction::transfer(&ctx.accounts.vault.key(), &ctx.accounts.bettor.key(), payout);
-        invoke_signed(
-            &ix,
-            &[
-                ctx.accounts.vault.to_account_info(),
-                ctx.accounts.bettor.to_account_info(),
+        system_program::transfer(
+            CpiContext::new_with_signer(
                 ctx.accounts.system_program.to_account_info(),
-            ],
-            &[seeds],
+                Transfer {
+                    from: ctx.accounts.vault.to_account_info(),
+                    to: ctx.accounts.bettor.to_account_info(),
+                },
+                signer_seeds,
+            ),
+            payout,
         )?;
 
         position.claimed = true;
@@ -185,14 +183,11 @@ pub struct InitializeMarket<'info> {
 
     /// CHECK: System-owned PDA vault for SOL escrow.
     #[account(
-        init,
-        payer = authority,
-        space = 0,
-        owner = system_program.key(),
+        mut,
         seeds = [b"vault", market.key().as_ref(), &market_id.to_le_bytes()],
         bump
     )]
-    pub vault: AccountInfo<'info>,
+    pub vault: SystemAccount<'info>,
 
     pub system_program: Program<'info, System>,
 }
@@ -248,13 +243,13 @@ pub struct ClaimPayout<'info> {
     )]
     pub position: Account<'info, Position>,
 
-    /// CHECK: Market escrow vault PDA.
+    /// CHECK: Market escrow vault PDA, system-owned.
     #[account(
         mut,
         seeds = [b"vault", market.key().as_ref(), &market.market_id.to_le_bytes()],
         bump = market.vault_bump
     )]
-    pub vault: AccountInfo<'info>,
+    pub vault: SystemAccount<'info>,
 
     pub system_program: Program<'info, System>,
 }
