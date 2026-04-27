@@ -2809,11 +2809,10 @@
       signature = await signAndSendTransaction(transaction);
     }
 
-    const remainingBalance = await getOstBalanceForAddress(trader);
-    // Sanity-check the debit actually happened on-chain.
-    if (remainingBalance + 1e-6 >= ostBalance) {
-      throw new Error('Order reverted: OST balance unchanged. Please retry. (sig ' + signature + ')');
-    }
+    // Record the position immediately — we already have a confirmed signature.
+    // The balance is re-fetched below for UI feedback only; we must NOT gate
+    // position storage on it because RPC propagation can lag by several seconds,
+    // making a freshly-deducted balance appear unchanged (false "reverted" error).
     var record = {
       signature: signature,
       sig: signature,
@@ -2830,6 +2829,18 @@
       createdAt: Date.now()
     };
     storePredictionOrderRecord(record);
+
+    // Fetch updated balance for UI display (best-effort — use stake-adjusted
+    // fallback if the RPC hasn't propagated the debit yet).
+    var remainingBalance;
+    try {
+      var fetched = await getOstBalanceForAddress(trader);
+      // If RPC returned a stale value (≥ pre-trade balance), use a locally-
+      // calculated estimate so the ticket panel shows something sensible.
+      remainingBalance = (fetched + 1e-6 < ostBalance) ? fetched : Math.max(0, ostBalance - Number(order.stake));
+    } catch (_) {
+      remainingBalance = Math.max(0, ostBalance - Number(order.stake));
+    }
     // Update the wallet portfolio chart + transaction history list immediately.
     try {
       if (window.OST_WALLET && window.OST_WALLET.session) {
@@ -12285,7 +12296,21 @@
         return Promise.resolve(null);
       }
 
-      return getOstBalanceForAddress(connectedWalletSession.publicKey).then(function(balance) {
+      var pubkey = connectedWalletSession.publicKey;
+      var prevBalance = state.availableBalance;
+      return getOstBalanceForAddress(pubkey).then(function(balance) {
+        // If RPC returned 0 but the user previously had OST, the devnet node may
+        // still be propagating the latest block.  Retry once after 2 s to avoid
+        // showing a false "not enough OST" gate while the balance catches up.
+        if (balance === 0 && prevBalance !== null && prevBalance > 0) {
+          return new Promise(function(resolve) {
+            setTimeout(function() {
+              getOstBalanceForAddress(pubkey).then(resolve).catch(function() { resolve(0); });
+            }, 2000);
+          });
+        }
+        return balance;
+      }).then(function(balance) {
         state.availableBalance = balance;
         renderPredictionTicket(getFilteredMarkets());
         return balance;
