@@ -120,7 +120,13 @@
   box-shadow: 0 18px 50px rgba(0,0,0,0.6);
   background: #111; position: relative; overflow: hidden;
   transform: rotate(0deg);
-  transition: transform 5.5s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 10s cubic-bezier(0.18, 0.9, 0.22, 1);
+}
+.fh-bigwheel-label {
+  position: absolute; top: 50%; left: 50%; transform-origin: 0 0;
+  font-weight: 900; font-size: 18px; color: #0a0a0a;
+  text-shadow: 0 1px 2px rgba(255,255,255,0.5);
+  pointer-events: none;
 }
 .fh-bigwheel-pin {
   position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
@@ -150,7 +156,34 @@
 .fh-ad-bar { height: 6px; background: rgba(255,255,255,0.10); border-radius: 4px; overflow: hidden; margin-top: 8px; }
 .fh-ad-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #ffd860, #f5a623); transition: width 0.5s linear; }
 
-/* Streak */
+/* Vault drop bank */
+.fh-bank {
+  display: flex; align-items: center; justify-content: space-between;
+  margin: 0 0 14px; padding: 12px 16px;
+  background: rgba(255,215,90,0.10);
+  border: 1px solid rgba(255,215,90,0.35);
+  border-radius: 14px;
+  font-size: 0.95rem;
+  flex-wrap: wrap; gap: 10px;
+}
+.fh-bank strong { font-size: 1.25rem; color: #ffd860; }
+.fh-vault-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 0.78rem; color: #9ec3ff; text-decoration: none;
+  padding: 4px 10px; border-radius: 999px;
+  background: rgba(78,140,255,0.12); border: 1px solid rgba(78,140,255,0.3);
+}
+.fh-vault-link:hover { background: rgba(78,140,255,0.22); }
+.fh-vault-drop {
+  position: fixed; left: 50%; top: 30%;
+  font-size: 2.4rem; pointer-events: none; z-index: 10075;
+  animation: fh-drop 1.3s cubic-bezier(0.32, 0.85, 0.4, 1) forwards;
+}
+@keyframes fh-drop {
+  0%   { opacity: 0; transform: translate(-50%, -120px) scale(0.6) rotate(-12deg); }
+  20%  { opacity: 1; transform: translate(-50%, -40px) scale(1.1) rotate(0deg); }
+  100% { opacity: 0; transform: translate(-50%, 240px) scale(0.7) rotate(8deg); }
+}
 .fh-streak-num { font-size: 2.2rem; font-weight: 800; color: #ff9d3a; line-height: 1; margin: 4px 0 6px; }
 .fh-streak-fire { display: inline-block; animation: fh-flicker 1.6s ease-in-out infinite; }
 @keyframes fh-flicker { 0%,100%{transform:scale(1);} 50%{transform:scale(1.18) rotate(-4deg);} }
@@ -213,6 +246,13 @@
   align-items: center; justify-content: center; text-align: center;
 }
 .fh-ad-logo { font-size: 3.4rem; line-height: 1; }
+.fh-ad-photo {
+  max-width: 320px; max-height: 200px; width: auto; height: auto;
+  object-fit: contain; border-radius: 12px;
+  background: rgba(255,255,255,0.08); padding: 16px;
+  box-shadow: 0 12px 36px rgba(0,0,0,0.5);
+}
+.fh-ad-photo-fallback { max-width: 128px; max-height: 128px; padding: 22px; }
 .fh-ad-title { font-size: 1.4rem; font-weight: 800; margin: 0; }
 .fh-ad-tag { opacity: 0.78; margin: 0 0 8px; max-width: 460px; }
 .fh-ad-cta {

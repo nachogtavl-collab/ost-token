@@ -47,8 +47,15 @@
     s.lifetime = Number(s.lifetime || 0) + Number(credits || 0);
     save(s);
     pop('+' + Number(credits).toFixed(2) + ' OST');
+    vaultDrop();
     refreshUi();
     try { window.dispatchEvent(new CustomEvent('ost-faucet-hub-award', { detail: { credits: credits, source: source, total: s.credits }})); } catch(e) {}
+  }
+  function vaultDrop() {
+    var d = document.createElement('div');
+    d.className = 'fh-vault-drop'; d.textContent = '🪙';
+    document.body.appendChild(d);
+    setTimeout(function(){ d.remove(); }, 1300);
   }
 
   // -------- Streak ---------
@@ -73,8 +80,8 @@
       '<h3>🎰 OST Faucet Hub</h3>' +
       '<p class="fh-sub">Mini-games, prediction wheels, real ads & surveys. Every 60 seconds you can play the daily guess game for +1 OST.</p>' +
       '<div class="fh-bank">' +
-        '<span>Your earned bonus credits</span>' +
-        '<span><strong id="fhCredits">0.00</strong> OST <button class="fh-btn fh-btn-alt" id="fhCashout" style="margin-left:14px;width:auto;padding:8px 14px;">Cash out to wallet</button></span>' +
+        '<span>Your earned bonus credits · paid from on-chain rewards vault</span>' +
+        '<span><strong id="fhCredits">0.00</strong> OST <button class="fh-btn fh-btn-alt" id="fhCashout" style="margin-left:14px;width:auto;padding:8px 14px;">Cash out from vault</button> <a class="fh-vault-link" id="fhVaultLink" target="_blank" rel="noopener">🔗 view rewards vault</a></span>' +
       '</div>' +
       '<div class="fh-grid">' +
         // 3x3 guess game
@@ -152,6 +159,11 @@
     if (creditsEl) creditsEl.textContent = fmt(s.credits);
     var streakEl = document.getElementById('fhStreakNum');
     if (streakEl) streakEl.textContent = String(s.streak || 0);
+    // Wire vault link to the on-chain rewards ATA on Solana Explorer
+    var vlink = document.getElementById('fhVaultLink');
+    if (vlink && !vlink.href && window.OST_SWAP_POOL && window.OST_SWAP_POOL.ata) {
+      vlink.href = 'https://explorer.solana.com/address/' + window.OST_SWAP_POOL.ata + '?cluster=devnet';
+    }
     setCooldown('fhGuessChip', null, s.lastGuess, COOLDOWN_GUESS_MS, null);
     setCooldown(null, 'fhSpinBtn', s.lastSpin, COOLDOWN_SPIN_MS, 'Open spin (1–20 OST)');
     var ad = document.getElementById('fhAdBtn');
@@ -260,9 +272,12 @@
   }
   function buildBigWheelLabels() {
     var SEG = 20, html = '';
+    // Each label sits along the radius of its segment, head pointing outward.
+    // We place at top:50%/left:50% then rotate around centre and translate outward.
     for (var i = 0; i < SEG; i++) {
-      var midDeg = (i + 0.5) * (360 / SEG);
-      html += '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(' + midDeg + 'deg) translateY(-42%);font-weight:800;color:#0a0a0a;font-size:14px;">' + (i + 1) + '</div>';
+      var midDeg = (i + 0.5) * (360 / SEG); // 0deg = pin (top)
+      // CSS rotate is clockwise; pin is at 0deg, so segment 0 centre is at 9deg.
+      html += '<div class="fh-bigwheel-label" style="transform: rotate(' + midDeg + 'deg) translate(-50%, -140px) rotate(' + (-midDeg) + 'deg);">' + (i + 1) + '</div>';
     }
     return html;
   }
@@ -299,15 +314,15 @@
       var prize = idx + 1;
       var degPerSeg = 360 / SEG;
       // pin is at top — segment idx midpoint should land at 0/360deg
-      var targetDeg = 360 * 8 + (360 - (idx * degPerSeg + degPerSeg / 2));
+      var targetDeg = 360 * 12 + (360 - (idx * degPerSeg + degPerSeg / 2));
       wheel.style.transform = 'rotate(' + targetDeg + 'deg)';
       setTimeout(function() {
         var st = load(); st.lastSpin = Date.now(); save(st);
         award(prize, 'spin');
         document.getElementById('fhSpinResult').textContent = '🎉 You won ' + prize + ' OST!';
         btn.textContent = 'Won ' + prize + ' OST';
-        setTimeout(function(){ modal.remove(); }, 2200);
-      }, 5600);
+        setTimeout(function(){ modal.remove(); }, 2400);
+      }, 10100);
     };
   }
 
@@ -377,21 +392,21 @@
     if (jumper.running) return;
     jumper.running = true;
     jumper.obstacles = [];
-    jumper.speed = 5.5;
+    jumper.speed = 4.8;
     jumper.score = 0;
     jumper.sessionEarned = 0;
     jumper.player.vy = 0;
     jumper.player.y = jumper.h - 50 - jumper.player.h;
     jumper.player.onGround = true;
     jumper.last = performance.now();
-    jumper.spawnAt = jumper.last + 1000;
+    jumper.spawnAt = jumper.last + 1400;
     var ov = document.getElementById('fhJumperOverlay');
     if (ov) ov.classList.add('fh-hidden');
     jumperLoop();
   }
   function jumperJump() {
     if (!jumper.player.onGround) return;
-    jumper.player.vy = -13;
+    jumper.player.vy = -14;
     jumper.player.onGround = false;
   }
   function jumperLoop() {
@@ -399,15 +414,23 @@
     var now = performance.now();
     jumper.last = now;
     // Physics
-    jumper.player.vy += 0.62;
+    jumper.player.vy += 0.55;
     jumper.player.y += jumper.player.vy;
     var groundY = jumper.h - 50 - jumper.player.h;
     if (jumper.player.y >= groundY) { jumper.player.y = groundY; jumper.player.vy = 0; jumper.player.onGround = true; }
-    // Spawn
-    if (now >= jumper.spawnAt) {
-      var tall = Math.random() < 0.35;
-      jumper.obstacles.push({ x: jumper.w + 10, w: 26 + Math.random()*16, h: tall ? 80 : 52, passed:false });
-      jumper.spawnAt = now + 800 + Math.random()*1100;
+    // Spawn obstacles — require fair gap so the player can ALWAYS land + re-jump.
+    // Jump airtime ≈ 2 * |vy| / gravity = 2*14/0.55 ≈ 51 frames ≈ 850ms.
+    // Horizontal jump distance ≈ speed * 51 ≈ 245px at speed 4.8.
+    // Min gap between obstacles must exceed jumpDist + player width + safety.
+    var minGapPx = (2 * 14 / 0.55) * jumper.speed + jumper.player.w + 80;
+    var lastObs = jumper.obstacles.length ? jumper.obstacles[jumper.obstacles.length - 1] : null;
+    var canSpawn = !lastObs || (jumper.w - (lastObs.x + lastObs.w)) > minGapPx;
+    if (now >= jumper.spawnAt && canSpawn) {
+      var tall = Math.random() < 0.25;
+      jumper.obstacles.push({ x: jumper.w + 10, w: 24 + Math.random()*14, h: tall ? 70 : 48, passed:false });
+      // Next spawn gives at least the airtime + buffer in time-units.
+      var minMs = (minGapPx / jumper.speed) * (1000 / 60);
+      jumper.spawnAt = now + minMs + 350 + Math.random() * 700;
     }
     // Move + score
     for (var i = jumper.obstacles.length - 1; i >= 0; i--) {
@@ -419,7 +442,8 @@
         jumper.sessionEarned += 0.1;
         var sc = document.getElementById('fhJumperScore');
         if (sc) sc.textContent = jumper.score.toFixed(2) + ' OST';
-        jumper.speed = Math.min(13, jumper.speed + 0.06);
+        // gentler speedup so the gap math stays survivable
+        jumper.speed = Math.min(9, jumper.speed + 0.04);
       }
       if (o.x + o.w < -10) jumper.obstacles.splice(i, 1);
       var px = jumper.player.x, py = jumper.player.y, pw = jumper.player.w, ph = jumper.player.h;
@@ -534,22 +558,40 @@
   // ============================================================
   var AD_MIN_SECONDS = 15, AD_MAX_SECONDS = 30;
   var PUBLIC_ADS = [
-    { id:'polymarket', logo:'📊', title:'Polymarket',
+    { id:'polymarket', logo:'📊',
+      img:'https://www.google.com/s2/favicons?domain=polymarket.com&sz=256',
+      photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Polymarket_logo.svg/640px-Polymarket_logo.svg.png',
+      title:'Polymarket',
       tag:'Bet on real-world events with USDC. The largest prediction market on-chain.',
       cta:'Open Polymarket', url:'https://polymarket.com/' },
-    { id:'kalshi', logo:'🇺🇸', title:'Kalshi',
+    { id:'kalshi', logo:'🇺🇸',
+      img:'https://www.google.com/s2/favicons?domain=kalshi.com&sz=256',
+      photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Kalshi_logo.svg/640px-Kalshi_logo.svg.png',
+      title:'Kalshi',
       tag:'CFTC-regulated event contracts — trade on news, politics, weather and more.',
       cta:'Open Kalshi', url:'https://kalshi.com/' },
-    { id:'dow', logo:'🛡️', title:'U.S. Department of War',
+    { id:'dow', logo:'🛡️',
+      img:'https://www.google.com/s2/favicons?domain=war.gov&sz=256',
+      photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Department_of_War_seal.svg/512px-Department_of_War_seal.svg.png',
+      title:'U.S. Department of War',
       tag:'Careers, contracts and recruitment with the Department of War.',
       cta:'Visit war.gov', url:'https://www.war.gov/' },
-    { id:'wc26', logo:'⚽', title:'FIFA World Cup 2026',
+    { id:'wc26', logo:'⚽',
+      img:'https://www.google.com/s2/favicons?domain=fifa.com&sz=256',
+      photo:'https://upload.wikimedia.org/wikipedia/en/thumb/d/d4/2026_FIFA_World_Cup.svg/512px-2026_FIFA_World_Cup.svg.png',
+      title:'FIFA World Cup 2026',
       tag:'USA · Canada · Mexico · 48 teams · the biggest World Cup ever. Tickets & schedule.',
       cta:'Open FIFA.com', url:'https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026' },
-    { id:'kick', logo:'🟢', title:'Kick.com',
+    { id:'kick', logo:'🟢',
+      img:'https://www.google.com/s2/favicons?domain=kick.com&sz=256',
+      photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8d/Kick_logo.svg/512px-Kick_logo.svg.png',
+      title:'Kick.com',
       tag:'Watch & stream live — 95/5 creator revenue split. The streamer-first platform.',
       cta:'Open Kick', url:'https://kick.com/' },
-    { id:'twitch', logo:'🟣', title:'Twitch',
+    { id:'twitch', logo:'🟣',
+      img:'https://www.google.com/s2/favicons?domain=twitch.tv&sz=256',
+      photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/Twitch_logo.svg/512px-Twitch_logo.svg.png',
+      title:'Twitch',
       tag:'Where millions of people come together to watch, chat and create live streams.',
       cta:'Open Twitch', url:'https://www.twitch.tv/' }
   ];
@@ -582,8 +624,9 @@
       var a = PUBLIC_ADS[i % PUBLIC_ADS.length];
       stage.innerHTML =
         '<div class="fh-ad-slide">' +
-          '<div class="fh-ad-logo">' + a.logo + '</div>' +
-          '<h4 class="fh-ad-title">' + a.title + '</h4>' +
+          '<img class="fh-ad-photo" src="' + a.photo + '" alt="' + a.title + '" ' +
+               'onerror="this.onerror=null;this.src=\'' + a.img + '\';this.classList.add(\'fh-ad-photo-fallback\');" />' +
+          '<h4 class="fh-ad-title">' + a.logo + ' ' + a.title + '</h4>' +
           '<p class="fh-ad-tag">' + a.tag + '</p>' +
           '<a class="fh-ad-cta" href="' + a.url + '" target="_blank" rel="noopener nofollow">' + a.cta + ' →</a>' +
         '</div>';
