@@ -114,6 +114,8 @@
     el.classList.add('is-open');
     el.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
+    document.body.classList.add('ost-modal-open');
+    try { window.dispatchEvent(new CustomEvent('ost-modal:open')); } catch (_) {}
   }
 
   function closeModal() {
@@ -123,6 +125,8 @@
     el.classList.remove('is-open');
     el.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
+    document.body.classList.remove('ost-modal-open');
+    try { window.dispatchEvent(new CustomEvent('ost-modal:close')); } catch (_) {}
   }
 
   function toast(msg, kind) {

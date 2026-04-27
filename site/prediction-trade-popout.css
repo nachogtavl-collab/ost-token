@@ -1,0 +1,121 @@
+/* ==========================================================================
+   OST Prediction — Trade Desk Pop-out styles
+   --------------------------------------------------------------------------
+   Hides the static `#predictionTradeDesk` aside in its column, restyles it
+   as a fixed, draggable, popable panel with a header bar.
+   ========================================================================== */
+
+/* The aside is now a popable floating panel — hidden by default. */
+.prediction-trade-desk.ost-tradepop {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  top: auto;
+  left: auto;
+  width: min(380px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  z-index: 2147483645; /* one below the market modal */
+  display: none;
+  border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(108, 230, 164, 0.18);
+  padding-top: 0; /* header sits at top */
+}
+.prediction-trade-desk.ost-tradepop.is-open { display: grid; }
+
+/* When the unified market modal is open, hide the popout entirely. */
+body.ost-modal-open .prediction-trade-desk.ost-tradepop { display: none !important; }
+
+/* Header bar (drag handle + close) */
+.ost-tradepop__header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin: -22px -22px 8px;        /* pull flush with the existing 22px panel padding */
+  border-radius: 18px 18px 0 0;
+  background: linear-gradient(180deg, rgba(108, 230, 164, 0.12), rgba(0, 0, 0, 0.4));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: grab;
+  user-select: none;
+}
+.ost-tradepop__header:active { cursor: grabbing; }
+.ost-tradepop__grip {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.45);
+  letter-spacing: -2px;
+}
+.ost-tradepop__title {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #6ce6a4;
+}
+.ost-tradepop__close {
+  appearance: none;
+  border: 0;
+  background: rgba(255, 255, 255, 0.06);
+  color: #f4ead4;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 120ms ease, transform 120ms ease;
+}
+.ost-tradepop__close:hover { background: rgba(255, 124, 138, 0.25); transform: rotate(90deg); }
+
+/* Floating launcher button (fixed bottom-right of the viewport) */
+.ost-tradepop__launcher {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 2147483644;
+  appearance: none;
+  border: 0;
+  cursor: pointer;
+  padding: 12px 18px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #6ce6a4, #34c781);
+  color: #06120c;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  box-shadow: 0 12px 28px rgba(52, 199, 129, 0.35);
+  transition: transform 120ms ease, filter 120ms ease;
+}
+.ost-tradepop__launcher:hover { transform: translateY(-1px); filter: brightness(1.05); }
+.ost-tradepop__launcher.is-active {
+  background: linear-gradient(135deg, #ffd980, #f5b637);
+  box-shadow: 0 12px 28px rgba(245, 182, 55, 0.35);
+}
+.ost-tradepop__launcher.is-fired {
+  animation: ost-tradepop-pulse 0.6s ease 2;
+}
+@keyframes ost-tradepop-pulse {
+  0%, 100% { box-shadow: 0 12px 28px rgba(124, 230, 168, 0.35); }
+  50% { box-shadow: 0 0 0 14px rgba(124, 230, 168, 0); }
+}
+
+/* Stop the wallet portal column from reserving space for an aside that no
+   longer lives there. The market list now spans the row. */
+.wallet-portal-grid .prediction-board,
+.wallet-portal-grid [data-section="prediction"] {
+  grid-template-columns: 1fr !important;
+}
+
+@media (max-width: 720px) {
+  .prediction-trade-desk.ost-tradepop {
+    right: 8px;
+    bottom: 8px;
+    left: 8px;
+    width: auto;
+  }
+  .ost-tradepop__launcher { right: 12px; bottom: 12px; padding: 10px 14px; font-size: 12px; }
+}
