@@ -1,0 +1,156 @@
+/* ==========================================================================
+   OST API Console — styles
+   ========================================================================== */
+
+.ost-console {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483646;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+.ost-console.is-open { display: flex; }
+
+.ost-console__backdrop {
+  position: absolute; inset: 0;
+  background: rgba(2, 4, 12, 0.80);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.ost-console__panel {
+  position: relative;
+  width: min(1100px, 97vw);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(170deg, #0d0f1e 0%, #060810 100%);
+  border: 1px solid rgba(108, 230, 164, 0.22);
+  border-radius: 16px;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.65);
+  overflow: hidden;
+}
+
+.ost-console__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+  flex-shrink: 0;
+}
+.ost-console__title {
+  font-size: 13px; font-weight: 800; letter-spacing: 0.05em;
+  color: #6ce6a4; text-transform: uppercase;
+}
+.ost-console__url {
+  flex: 1; font-size: 11px; color: rgba(255,255,255,0.45);
+  font-family: 'Fira Code', 'Cascadia Code', monospace;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ost-console__close {
+  appearance: none; border: 0; background: rgba(255,255,255,0.06);
+  color: #f4ead4; width: 30px; height: 30px; border-radius: 50%;
+  font-size: 20px; cursor: pointer; flex-shrink: 0;
+  transition: background 120ms, transform 120ms;
+}
+.ost-console__close:hover { background: rgba(255,100,100,0.2); transform: rotate(90deg); }
+
+.ost-console__body {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  flex: 1; overflow: hidden;
+}
+@media (max-width: 720px) { .ost-console__body { grid-template-columns: 1fr; } }
+
+.ost-console__left {
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 14px; border-right: 1px solid rgba(255,255,255,0.06);
+  overflow-y: auto;
+}
+
+.ost-console__server-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 8px;
+}
+.ost-console__server-row label { grid-column: 1 / -1; }
+
+.ost-console__url-input {
+  padding: 7px 10px; border-radius: 8px;
+  background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.14);
+  color: #f4ead4; font-size: 12px;
+  font-family: 'Fira Code', 'Cascadia Code', monospace;
+}
+.ost-console__url-input::placeholder { color: rgba(255,255,255,0.3); }
+
+.ost-console__label {
+  display: block; font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: rgba(255,255,255,0.5); margin-bottom: 4px;
+}
+
+.ost-console__example-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.ost-console__example-btn {
+  appearance: none; border: 1px solid rgba(108,230,164,0.25);
+  background: rgba(108,230,164,0.07); color: #6ce6a4;
+  font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 999px;
+  cursor: pointer; transition: background 100ms;
+}
+.ost-console__example-btn:hover { background: rgba(108,230,164,0.15); }
+
+.ost-console__editor-wrap { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.ost-console__editor {
+  flex: 1; resize: vertical; min-height: 100px;
+  padding: 10px 12px; border-radius: 8px;
+  background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.12);
+  color: #a8ffcc; font-size: 13px; font-family: 'Fira Code', 'Cascadia Code', monospace;
+  line-height: 1.55;
+}
+
+.ost-console__run-row { display: flex; align-items: center; gap: 8px; }
+.ost-console__hint { font-size: 11px; opacity: 0.8; font-variant-numeric: tabular-nums; }
+.ost-console__hint--ok  { color: #7ce6a8; }
+.ost-console__hint--err { color: #ff7c8a; }
+
+.ost-console__btn {
+  appearance: none; border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06); color: #f4ead4;
+  padding: 7px 14px; border-radius: 8px; font-size: 12px; font-weight: 700;
+  cursor: pointer; transition: background 100ms;
+}
+.ost-console__btn:hover { background: rgba(255,255,255,0.12); }
+.ost-console__btn--run {
+  background: linear-gradient(135deg, #6ce6a4, #34c781);
+  border-color: transparent; color: #06120c;
+  padding: 8px 18px;
+}
+.ost-console__btn--run:hover { filter: brightness(1.1); }
+.ost-console__btn--save {
+  background: linear-gradient(135deg, #ffd980, #f5b637);
+  border-color: transparent; color: #0a0a0a; padding: 7px 12px;
+}
+.ost-console__btn--sm { padding: 3px 10px; font-size: 11px; }
+
+.ost-console__right {
+  display: flex; flex-direction: column;
+  padding: 14px; overflow: hidden;
+}
+.ost-console__output-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.ost-console__output {
+  flex: 1; overflow: auto;
+  padding: 12px 14px; border-radius: 8px;
+  background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.08);
+  color: #c8ffdd; font-size: 12px; font-family: 'Fira Code', 'Cascadia Code', monospace;
+  line-height: 1.55; margin: 0; white-space: pre-wrap; word-break: break-word;
+}
+
+.ost-console__status-bar {
+  display: flex; gap: 20px; flex-wrap: wrap;
+  padding: 7px 16px; border-top: 1px solid rgba(255,255,255,0.06);
+  background: rgba(0,0,0,0.3); flex-shrink: 0;
+  font-size: 11px; color: rgba(255,255,255,0.55);
+  font-family: 'Fira Code', 'Cascadia Code', monospace;
+}

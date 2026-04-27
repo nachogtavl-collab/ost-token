@@ -69,10 +69,15 @@
   // Data fetchers
   // ---------------------------------------------------------------------------
   function refreshBtc() {
-    return fetch(BTC_PRICE_URL, { headers: { accept: 'application/json' } })
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (j) {
-        var p = j && j.data && Number(j.data.amount);
+      var apiBase = (window.OST_API_BASE || '').replace(/\/$/, '');
+      var url = apiBase ? apiBase + '/btc/price' : BTC_PRICE_URL;
+      var extractPrice = apiBase
+        ? function (j) { return j && Number(j.price); }
+        : function (j) { return j && j.data && Number(j.data.amount); };
+      return fetch(url, { headers: { accept: 'application/json' } })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (j) {
+          var p = extractPrice(j);
         if (Number.isFinite(p) && p > 0) {
           state.btcPrev = state.btcPrice || p;
           state.btcPrice = p;
@@ -385,7 +390,8 @@
       if (!act) return;
       if (act.getAttribute('data-action') === 'copy-snippet') copySnippet(root);
       else if (act.getAttribute('data-action') === 'open-console') {
-        showToast(root, 'Press F12 (or Cmd+Opt+I) → Console tab. The OST_PREDICTION_API object is global.', 'ok');
+        if (window.OST_CONSOLE) window.OST_CONSOLE.open();
+        else showToast(root, 'API console loading — try again in a moment.', 'ok');
       }
     });
     root.addEventListener('input', function (ev) {
