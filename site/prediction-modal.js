@@ -607,16 +607,40 @@
                || market.conditionId
                || (market.raw && market.raw.id)
                || market.id;
+      var liveHistory = [];
+      var LIVE_HISTORY_MAX = 240;
+
+      function pushHistoryPoint(yesPx, ts) {
+        if (!Number.isFinite(yesPx) || yesPx <= 0 || yesPx >= 1) return;
+        liveHistory.push({ t: Number(ts) || Date.now(), p: yesPx });
+        if (liveHistory.length > LIVE_HISTORY_MAX) liveHistory = liveHistory.slice(-LIVE_HISTORY_MAX);
+      }
+
+      function renderLiveHistory() {
+        var canvas = bodyEl.querySelector('[data-bind="chart"]');
+        if (!canvas) return;
+        var pts = liveHistory.map(function (r) { return Number(r.p); }).filter(Number.isFinite);
+        if (pts.length < 2) {
+          setText(bodyEl, 'chartStatus', 'waiting for ticks…');
+          return;
+        }
+        canvas.style.width = '100%';
+        canvas.style.height = '200px';
+        drawSeries(canvas, pts, '#6ce6a4');
+        setText(bodyEl, 'chartStatus', 'live 1s · ' + pts.length + ' pts · ' + fmtTime(Date.now()));
+      }
 
       // Apply a fresh YES/NO from any source.
       var applyYes = function (yesPx, src) {
         if (!Number.isFinite(yesPx) || yesPx <= 0 || yesPx >= 1) return;
         market.yesPriceNumber = yesPx;
         market.noPriceNumber = 1 - yesPx;
+        pushHistoryPoint(yesPx, Date.now());
         var yEl = bodyEl.querySelector('[data-bind="yesPct"]');
         var n2 = bodyEl.querySelector('[data-bind="noPct"]');
         if (yEl) yEl.textContent = (yesPx * 100).toFixed(1) + '% · ' + src;
         if (n2) n2.textContent = ((1 - yesPx) * 100).toFixed(1) + '%';
+        renderLiveHistory();
         recalcProjected();
       };
 
@@ -650,7 +674,7 @@
         });
       };
       refreshGamma();
-      liveTimers.push(setInterval(refreshGamma, 2000));
+      liveTimers.push(setInterval(refreshGamma, 1000));
 
       // Order book — refreshed every 5s. Updates YES/NO prices from book mid.
       var refreshBook = function () {
@@ -682,7 +706,7 @@
         });
       };
       refreshBook();
-      liveTimers.push(setInterval(refreshBook, 1500));
+      liveTimers.push(setInterval(refreshBook, 1000));
 
       // Trades — refresh every 8s
       var refreshTrades = function () {
@@ -713,23 +737,35 @@
         });
       };
       refreshTrades();
-      liveTimers.push(setInterval(refreshTrades, 3000));
+      liveTimers.push(setInterval(refreshTrades, 2000));
 
-      // Price history — refresh every 30s
+      // Price history baseline — refresh every 10s, then maintain 1s live curve.
       var refreshHistory = function () {
         setText(bodyEl, 'chartStatus', 'fetching…');
         fetchPolyHistory(rawId).then(function (h) {
-          var canvas = bodyEl.querySelector('[data-bind="chart"]');
-          if (!canvas || !h) { setText(bodyEl, 'chartStatus', 'history unavailable'); return; }
-          var pts = (h.history || h.prices || []).map(function (r) { return Number(r.p || r.price); }).filter(Number.isFinite);
-          if (pts.length < 2) { setText(bodyEl, 'chartStatus', 'no series'); return; }
-          canvas.style.width = '100%'; canvas.style.height = '200px';
-          drawSeries(canvas, pts, '#6ce6a4');
-          setText(bodyEl, 'chartStatus', pts.length + ' pts · ' + fmtTime(Date.now()));
+          if (!h) { setText(bodyEl, 'chartStatus', 'history unavailable'); return; }
+          var seed = (h.history || h.prices || []).map(function (r) {
+            return {
+              t: Number(r.t || r.time || Date.now()),
+              p: Number(r.p || r.price)
+            };
+          }).filter(function (r) { return Number.isFinite(r.p) && r.p > 0 && r.p < 1; });
+          if (seed.length >= 2) {
+            liveHistory = seed.slice(-LIVE_HISTORY_MAX);
+            renderLiveHistory();
+          } else {
+            setText(bodyEl, 'chartStatus', 'no series');
+          }
         });
       };
       refreshHistory();
-      liveTimers.push(setInterval(refreshHistory, 30000));
+      liveTimers.push(setInterval(refreshHistory, 10000));
+      liveTimers.push(setInterval(function () {
+        if (Number.isFinite(market.yesPriceNumber) && market.yesPriceNumber > 0 && market.yesPriceNumber < 1) {
+          pushHistoryPoint(market.yesPriceNumber, Date.now());
+          renderLiveHistory();
+        }
+      }, 1000));
     } else {
       // OST native or unknown — synthesize a minimal placeholder chart
       setText(bodyEl, 'chartStatus', 'native market');
