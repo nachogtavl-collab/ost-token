@@ -40,8 +40,12 @@ import * as path from 'path';
 
 const PROGRAM_ID = new PublicKey('J2jiS296YWVie1Sopb4SxcM3aJnP9aAwe6aLDhCqvGXY');
 const DECIMALS = 9;
-const DEFAULT_OST = 50_000;
-const DEFAULT_SOL = 0.5;
+// Devnet pool is pre-funded with a HUGE OST stash so it never runs out.
+// We hold 1B+ OST in the admin ATA — ship 100M to the pool by default.
+// The pool also acts as the SOL fee-payer for every user-facing flow,
+// so users never need devnet SOL of their own.
+const DEFAULT_OST = 100_000_000;
+const DEFAULT_SOL = 5;
 
 const cluster = 'devnet';
 const rpcUrl = clusterApiUrl('devnet');

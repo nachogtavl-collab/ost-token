@@ -1,14 +1,13 @@
 /* ==========================================================================
-   OST Devnet Rescue v1
-   Patches the live site to fix five long-standing devnet pain points:
-     1) Multi-RPC fallback connection (no more single-endpoint outages)
-     2) Robust devnet SOL airdrop with retries + multi-faucet rotation
-     3) Auto-refill of the OST swap pool (claim-faucet helper + recycling)
-     4) Real on-chain memecoin BUY/SELL through the pool (was localStorage only)
-     5) Prediction market CASH-OUT (pool returns OST when user closes a bet)
-
-   This module monkey-patches window.OST_WALLET / window.OST_TRADE after the
-   main app has loaded, then exposes window.OST_RESCUE for direct use.
+   OST Devnet Rescue v2 — Pool-paid, OST-native UX
+   ----------------------------------------------------------------------------
+   Architecture:
+     • The OST swap pool keypair (devnet only) is pre-funded with 100M OST and
+       5 SOL by scripts/init-swap-pool.ts. That gives us a virtually infinite
+       reserve INSIDE the OST ecosystem — no per-user SOL faucet calls needed.
+     • The pool is the SOL FEE PAYER for every user-facing flow (cash-out,
+       sell, ATA creation, etc.) so the user never needs devnet SOL.
+     • Multi-RPC fallback so a single Solana endpoint outage doesn't kill us.
    ========================================================================== */
 (function () {
   'use strict';
@@ -18,8 +17,6 @@
   // -----------------------------------------------------------------------
   // 1) MULTI-RPC CONNECTION
   // -----------------------------------------------------------------------
-  // Public devnet endpoints. Helius/Triton free tiers + Solana primary.
-  // We rotate on failure so a single endpoint outage does not kill the site.
   var RPC_ENDPOINTS = [
     'https://api.devnet.solana.com',
     'https://devnet.helius-rpc.com/?api-key=public',
@@ -35,17 +32,13 @@
     }
     return rpcConnections[url];
   }
-
   function getRpc() {
     return makeConn(RPC_ENDPOINTS[rpcIndex % RPC_ENDPOINTS.length]);
   }
-
   function rotateRpc() {
     rpcIndex = (rpcIndex + 1) % RPC_ENDPOINTS.length;
     return getRpc();
   }
-
-  // Run an RPC call with up to N retries across rotating endpoints.
   async function withRpc(label, fn) {
     var lastErr = null;
     for (var attempt = 0; attempt < RPC_ENDPOINTS.length * 2; attempt++) {
@@ -62,312 +55,183 @@
   }
 
   // -----------------------------------------------------------------------
-  // 2) ROBUST DEVNET SOL AIRDROP
+  // 2) POOL HELPERS
   // -----------------------------------------------------------------------
-  // The official devnet faucet rate-limits hard. We:
-  //   a) try requestAirdrop on each RPC endpoint (each has its own quota)
-  //   b) wait+retry with backoff
-  //   c) fall back to refilling from the swap pool's lamports if all faucets fail
-  async function airdropSol(pubkeyInput, sol) {
-    var pk = (pubkeyInput && pubkeyInput.toBase58) ? pubkeyInput : new solanaWeb3.PublicKey(pubkeyInput);
-    var lamports = Math.round((sol || 0.1) * solanaWeb3.LAMPORTS_PER_SOL);
-    var lastErr = null;
-    var startIdx = rpcIndex;
-    for (var i = 0; i < RPC_ENDPOINTS.length; i++) {
-      var conn = makeConn(RPC_ENDPOINTS[(startIdx + i) % RPC_ENDPOINTS.length]);
-      if (!conn) continue;
-      try {
-        var sig = await conn.requestAirdrop(pk, lamports);
-        try { await conn.confirmTransaction(sig, 'confirmed'); } catch (_) {}
-        return { ok: true, sig: sig, source: 'faucet:' + RPC_ENDPOINTS[(startIdx + i) % RPC_ENDPOINTS.length] };
-      } catch (e) {
-        lastErr = e;
-        console.warn('[rescue] airdrop on RPC ' + i + ' failed:', e && e.message);
-      }
-    }
-    // Last-resort: ship SOL from the swap pool keypair (it is pre-funded).
-    try {
-      var pool = loadPoolKeypair();
-      if (pool) {
-        var conn2 = getRpc();
-        var poolBal = await conn2.getBalance(pool.publicKey);
-        if (poolBal > lamports + 5_000_000) {
-          var tx = new solanaWeb3.Transaction().add(
-            solanaWeb3.SystemProgram.transfer({
-              fromPubkey: pool.publicKey,
-              toPubkey: pk,
-              lamports: lamports
-            })
-          );
-          tx.feePayer = pool.publicKey;
-          var bh = await conn2.getLatestBlockhash('confirmed');
-          tx.recentBlockhash = bh.blockhash;
-          tx.sign(pool);
-          var sig2 = await conn2.sendRawTransaction(tx.serialize());
-          await conn2.confirmTransaction({ signature: sig2, blockhash: bh.blockhash, lastValidBlockHeight: bh.lastValidBlockHeight }, 'confirmed');
-          return { ok: true, sig: sig2, source: 'pool-sweep' };
-        }
-      }
-    } catch (e) {
-      console.warn('[rescue] pool sweep airdrop failed:', e && e.message);
-      lastErr = e;
-    }
-    throw lastErr || new Error('All devnet faucets are rate-limited right now. Try again in 30 seconds.');
-  }
-
   function loadPoolKeypair() {
     if (!window.OST_SWAP_POOL || !window.OST_SWAP_POOL.secretKey) return null;
     try { return solanaWeb3.Keypair.fromSecretKey(Uint8Array.from(window.OST_SWAP_POOL.secretKey)); }
     catch (e) { return null; }
   }
 
-  // -----------------------------------------------------------------------
-  // 3) VAULT AUTO-REFILL
-  // -----------------------------------------------------------------------
-  // The pool is a regular keypair (devnet only). We keep it topped up by:
-  //   a) claiming the OST faucet from EPHEMERAL helper wallets (each can claim
-  //      1 OST once via the program), then sweeping to the pool ATA.
-  //   b) any user-initiated sink (interchange / prediction / memecoin BUY)
-  //      already sends OST to the pool ATA via OST_TRADE below — net positive.
-  //
-  // Triggered automatically when balance drops below MIN_VAULT_OST.
-  var MIN_VAULT_OST = 25;
-  var TARGET_VAULT_OST = 100;
-  var refillInFlight = false;
-
   async function getPoolOstBalance() {
     if (!window.OST_SWAP_POOL) return 0;
-    return withRpc('pool-balance', async function (conn) {
+    return withRpc('pool-ost', async function (conn) {
       var ata = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.ata);
       var bal = await conn.getTokenAccountBalance(ata);
       return Number(bal && bal.value && bal.value.uiAmount || 0);
     }).catch(function () { return 0; });
   }
 
-  // Spin up an ephemeral helper, airdrop SOL, claim faucet, sweep OST → pool.
-  async function refillFromHelperFaucet() {
-    if (refillInFlight) return { skipped: true };
-    refillInFlight = true;
-    try {
-      if (!window.OST_CONFIG || !window.OST_SWAP_POOL) return { skipped: true };
-      var w = window.OST_WALLET;
-      if (!w) return { skipped: true };
-      var helper = solanaWeb3.Keypair.generate();
-      // Step 1: airdrop SOL to helper
-      await airdropSol(helper.publicKey, 0.05);
-      // Step 2: build claim-faucet tx signed by helper
-      var conn = getRpc();
-      var programId = new solanaWeb3.PublicKey(window.OST_CONFIG.programId);
-      var mintPk = new solanaWeb3.PublicKey(window.OST_CONFIG.mint);
-      var encoder = new TextEncoder();
-      var seedDao = encoder.encode('dao-treasury');
-      var seedAuth = encoder.encode('treasury-authority');
-      var seedClaim = encoder.encode('faucet-claim');
-      var c = w.constants;
-      var daoTreasury = solanaWeb3.PublicKey.findProgramAddressSync([seedDao], programId)[0];
-      var treasuryAuth = solanaWeb3.PublicKey.findProgramAddressSync([seedAuth], programId)[0];
-      var faucetClaim = solanaWeb3.PublicKey.findProgramAddressSync([seedClaim, helper.publicKey.toBuffer()], programId)[0];
-      var treasuryAta = w.associatedAddress(mintPk, treasuryAuth, true, c.TOKEN_2022_PROGRAM_ID, w.constants && w.constants.ASSOCIATED_TOKEN_PROGRAM_ID);
-      var helperAta = w.associatedAddress(mintPk, helper.publicKey, false, c.TOKEN_2022_PROGRAM_ID);
-
-      var tx = new solanaWeb3.Transaction();
-      // Create helper ATA (helper is signer + payer)
-      tx.add(w.associatedAccountIx(helper.publicKey, helperAta, helper.publicKey, mintPk, c.TOKEN_2022_PROGRAM_ID));
-      // Claim faucet
-      var disc = Uint8Array.from([80, 7, 251, 108, 55, 145, 135, 68]);
-      tx.add(new solanaWeb3.TransactionInstruction({
-        programId: programId,
-        keys: [
-          { pubkey: helper.publicKey, isSigner: true, isWritable: true },
-          { pubkey: helperAta, isSigner: false, isWritable: true },
-          { pubkey: treasuryAta, isSigner: false, isWritable: true },
-          { pubkey: daoTreasury, isSigner: false, isWritable: false },
-          { pubkey: treasuryAuth, isSigner: false, isWritable: false },
-          { pubkey: faucetClaim, isSigner: false, isWritable: true },
-          { pubkey: mintPk, isSigner: false, isWritable: false },
-          { pubkey: c.TOKEN_2022_PROGRAM_ID, isSigner: false, isWritable: false },
-          { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false }
-        ],
-        data: disc
-      }));
-      // Pay the per-claim 0.001 SOL fee (the existing program wires this; mirror it to the pool)
-      tx.add(solanaWeb3.SystemProgram.transfer({
-        fromPubkey: helper.publicKey,
-        toPubkey: new solanaWeb3.PublicKey(window.OST_SWAP_POOL.publicKey),
-        lamports: 1_000_000
-      }));
-      tx.feePayer = helper.publicKey;
-      var bh = await conn.getLatestBlockhash('confirmed');
-      tx.recentBlockhash = bh.blockhash;
-      tx.sign(helper);
-      var sigClaim = await conn.sendRawTransaction(tx.serialize());
-      await conn.confirmTransaction({ signature: sigClaim, blockhash: bh.blockhash, lastValidBlockHeight: bh.lastValidBlockHeight }, 'confirmed');
-      // Step 3: sweep helper OST → pool ATA
-      var helperBal = await conn.getTokenAccountBalance(helperAta).catch(function () { return null; });
-      var amount = helperBal && helperBal.value ? BigInt(helperBal.value.amount || '0') : 0n;
-      if (amount > 0n) {
-        var poolAta = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.ata);
-        var tx2 = new solanaWeb3.Transaction().add(
-          w.transferChecked(helperAta, mintPk, poolAta, helper.publicKey, amount, c.OST_TOKEN_DECIMALS, c.TOKEN_2022_PROGRAM_ID)
-        );
-        tx2.feePayer = helper.publicKey;
-        var bh2 = await conn.getLatestBlockhash('confirmed');
-        tx2.recentBlockhash = bh2.blockhash;
-        tx2.sign(helper);
-        var sigSweep = await conn.sendRawTransaction(tx2.serialize());
-        await conn.confirmTransaction({ signature: sigSweep, blockhash: bh2.blockhash, lastValidBlockHeight: bh2.lastValidBlockHeight }, 'confirmed');
-        return { ok: true, claimed: Number(amount) / Math.pow(10, c.OST_TOKEN_DECIMALS), claimSig: sigClaim, sweepSig: sigSweep };
-      }
-      return { ok: true, claimed: 0, claimSig: sigClaim };
-    } finally {
-      refillInFlight = false;
-    }
-  }
-
-  async function ensurePoolHasOst(minOst) {
-    var min = Number(minOst || MIN_VAULT_OST);
-    var bal = await getPoolOstBalance();
-    if (bal >= min) return { ok: true, balance: bal };
-    var topUps = 0;
-    while (bal < Math.max(min, TARGET_VAULT_OST) && topUps < 5) {
-      try {
-        var r = await refillFromHelperFaucet();
-        topUps++;
-        if (!r || r.skipped) break;
-      } catch (e) {
-        console.warn('[rescue] vault refill failed:', e && e.message);
-        break;
-      }
-      bal = await getPoolOstBalance();
-    }
-    return { ok: bal >= min, balance: bal, topUps: topUps };
-  }
-
-  // Daemon: every 90s while page is open, if pool < MIN_VAULT_OST, refill.
-  function startVaultDaemon() {
-    if (window.__OST_VAULT_DAEMON__) return;
-    window.__OST_VAULT_DAEMON__ = true;
-    async function tick() {
-      try {
-        var bal = await getPoolOstBalance();
-        if (bal > 0 && bal < MIN_VAULT_OST) {
-          console.log('[rescue] vault low (' + bal.toFixed(2) + ' OST) — refilling');
-          await ensurePoolHasOst(TARGET_VAULT_OST);
-        }
-      } catch (e) {}
-    }
-    setTimeout(tick, 5000);
-    setInterval(tick, 90000);
+  async function getPoolSolBalance() {
+    if (!window.OST_SWAP_POOL) return 0;
+    return withRpc('pool-sol', async function (conn) {
+      var pk = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.publicKey);
+      var lam = await conn.getBalance(pk);
+      return lam / solanaWeb3.LAMPORTS_PER_SOL;
+    }).catch(function () { return 0; });
   }
 
   // -----------------------------------------------------------------------
-  // 4) MEMECOIN ON-CHAIN BUY / SELL via swap pool
+  // 3) POOL-PAID TRANSACTION BUILDER
+  //    Pool signs as feePayer (always) and optionally as a source authority.
   // -----------------------------------------------------------------------
-  // BUY  (user OST → pool ATA, simulated price impact updates local state)
-  // SELL (pool ATA → user, capped by pool balance)
-  async function memecoinBuy(token, ostAmount) {
-    var w = window.OST_WALLET;
-    if (!w || !w.session || !w.session.publicKey) throw new Error('Connect a wallet first');
-    if (!window.OST_SWAP_POOL) throw new Error('Vault not loaded');
-    var amt = Number(ostAmount);
-    if (!Number.isFinite(amt) || amt <= 0) throw new Error('Enter a valid OST amount');
-
-    var conn = w.getConnection();
-    var c = w.constants;
-    var mintPk = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.mint);
-    var poolAta = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.ata);
-    var userAta = await w.ensureAta(w.session.publicKey);
-    var userBal = await w.getOstBalance(w.session.publicKey);
-    if (userBal + 1e-9 < amt) throw new Error('Not enough OST. Cash in first.');
-
+  async function buildPoolPaidTx(instructions) {
+    var pool = loadPoolKeypair();
+    if (!pool) throw new Error('Vault keypair not loaded');
+    var conn = getRpc();
     var tx = new solanaWeb3.Transaction();
-    tx.add(w.transferChecked(userAta, mintPk, poolAta, w.session.publicKey,
-      w.toBaseUnits(amt, c.OST_TOKEN_DECIMALS), c.OST_TOKEN_DECIMALS, c.TOKEN_2022_PROGRAM_ID));
-    tx.add(w.memoIx(JSON.stringify({ k: 'memecoin-buy', token: String(token || ''), ost: amt, t: Date.now() }), w.session.publicKey));
-    var sig = await w.sign(tx);
-    return { sig: sig, ost: amt, side: 'buy', token: token };
+    instructions.forEach(function (ix) { if (ix) tx.add(ix); });
+    tx.feePayer = pool.publicKey;
+    var bh = await conn.getLatestBlockhash('confirmed');
+    tx.recentBlockhash = bh.blockhash;
+    tx.lastValidBlockHeight = bh.lastValidBlockHeight;
+    return { tx: tx, pool: pool, conn: conn, blockhash: bh };
   }
 
-  async function memecoinSell(token, ostAmount) {
+  // Pool-only tx: pool is the only signer.
+  async function sendPoolOnlyTx(instructions) {
+    var built = await buildPoolPaidTx(instructions);
+    built.tx.sign(built.pool);
+    var sig = await built.conn.sendRawTransaction(built.tx.serialize());
+    await built.conn.confirmTransaction({
+      signature: sig,
+      blockhash: built.blockhash.blockhash,
+      lastValidBlockHeight: built.blockhash.lastValidBlockHeight
+    }, 'confirmed').catch(function () {});
+    return sig;
+  }
+
+  // Pool pays SOL fee + partial-signs first; user wallet signs to authorise
+  // their OST transfer. Used when user is spending their own OST.
+  async function sendUserSignedPoolPaidTx(instructions) {
     var w = window.OST_WALLET;
-    if (!w || !w.session || !w.session.publicKey) throw new Error('Connect a wallet first');
-    if (!window.OST_SWAP_POOL || !window.OST_SWAP_POOL.secretKey) throw new Error('Vault not loaded');
-    var amt = Number(ostAmount);
-    if (!Number.isFinite(amt) || amt <= 0) throw new Error('Enter a valid OST amount');
+    if (!w || !w.sign) throw new Error('Wallet helpers not loaded');
+    var built = await buildPoolPaidTx(instructions);
+    built.tx.partialSign(built.pool);
+    return await w.sign(built.tx);
+  }
 
-    await ensurePoolHasOst(amt + 5);
-    var poolBal = await getPoolOstBalance();
-    var toSend = Math.min(amt, Math.floor(poolBal * 100) / 100);
-    if (toSend < 0.01) throw new Error('Vault temporarily empty. Try in a minute.');
-
-    var conn = w.getConnection();
+  // -----------------------------------------------------------------------
+  // 4) POOL-PAID USER OST ATA CREATION
+  // -----------------------------------------------------------------------
+  async function ensureUserOstAtaPoolPaid(userPubkey) {
+    var w = window.OST_WALLET; if (!w) throw new Error('Wallet helpers not loaded');
     var c = w.constants;
+    var owner = (userPubkey && userPubkey.toBase58) ? userPubkey : new solanaWeb3.PublicKey(userPubkey);
+    var mintPk = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.mint);
+    var ata = w.associatedAddress(mintPk, owner, false, c.TOKEN_2022_PROGRAM_ID);
+    var conn = getRpc();
+    var info = await conn.getAccountInfo(ata).catch(function () { return null; });
+    if (info) return ata;
+    var pool = loadPoolKeypair();
+    var ix = w.associatedAccountIx(pool.publicKey, ata, owner, mintPk, c.TOKEN_2022_PROGRAM_ID);
+    await sendPoolOnlyTx([ix]);
+    return ata;
+  }
+
+  // -----------------------------------------------------------------------
+  // 5) PAYOUT OST  (pool → user, zero-SOL UX)
+  // -----------------------------------------------------------------------
+  async function payoutOst(toPubkeyInput, amountOst, memoText) {
+    var w = window.OST_WALLET; if (!w) throw new Error('Wallet helpers not loaded');
+    var c = w.constants;
+    var amt = Number(amountOst);
+    if (!Number.isFinite(amt) || amt <= 0) throw new Error('Invalid payout amount');
+
+    var poolBal = await getPoolOstBalance();
+    if (poolBal <= 0) throw new Error('Vault is being refilled. Try again in a moment.');
+    var toSend = Math.min(amt, Math.floor(poolBal * 100) / 100);
+    if (toSend < 0.01) throw new Error('Vault temporarily empty.');
+
+    var to = (toPubkeyInput && toPubkeyInput.toBase58) ? toPubkeyInput : new solanaWeb3.PublicKey(toPubkeyInput);
     var pool = loadPoolKeypair();
     var mintPk = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.mint);
     var poolAta = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.ata);
-    var userAta = await w.ensureAta(w.session.publicKey);
 
-    // Make sure user has SOL for fee
-    try { await w.ensureFee(w.session.publicKey); } catch (_) {}
+    // Pool pays for the user's ATA rent if missing.
+    var userAta = await ensureUserOstAtaPoolPaid(to);
 
-    var tx = new solanaWeb3.Transaction();
-    tx.add(w.transferChecked(poolAta, mintPk, userAta, pool.publicKey,
-      w.toBaseUnits(toSend, c.OST_TOKEN_DECIMALS), c.OST_TOKEN_DECIMALS, c.TOKEN_2022_PROGRAM_ID));
-    tx.add(w.memoIx(JSON.stringify({ k: 'memecoin-sell', token: String(token || ''), ost: toSend, t: Date.now() }), w.session.publicKey));
-    tx.feePayer = w.session.publicKey;
-    var bh = await conn.getLatestBlockhash('confirmed');
-    tx.recentBlockhash = bh.blockhash;
-    tx.partialSign(pool);
-    var sig = await w.sign(tx);
-    return { sig: sig, ost: toSend, side: 'sell', token: token };
-  }
-
-  // -----------------------------------------------------------------------
-  // 5) PREDICTION CASH-OUT
-  // -----------------------------------------------------------------------
-  // Closes a local prediction order: pool returns the original stake (minus
-  // a small fee) so users actually get their OST back on devnet.
-  async function predictionCashOut(orderRecord, payoutOst) {
-    var w = window.OST_WALLET;
-    if (!w || !w.session || !w.session.publicKey) throw new Error('Connect a wallet first');
-    if (!window.OST_SWAP_POOL || !window.OST_SWAP_POOL.secretKey) throw new Error('Vault not loaded');
-    var amt = Number(payoutOst);
-    if (!Number.isFinite(amt) || amt <= 0) throw new Error('Invalid payout');
-
-    await ensurePoolHasOst(amt + 5);
-    var poolBal = await getPoolOstBalance();
-    var toSend = Math.min(amt, Math.floor(poolBal * 100) / 100);
-    if (toSend < 0.01) throw new Error('Vault temporarily empty. Try in a minute.');
-
-    var conn = w.getConnection();
-    var c = w.constants;
-    var pool = loadPoolKeypair();
-    var mintPk = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.mint);
-    var poolAta = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.ata);
-    var userAta = await w.ensureAta(w.session.publicKey);
-    try { await w.ensureFee(w.session.publicKey); } catch (_) {}
-
-    var tx = new solanaWeb3.Transaction();
-    tx.add(w.transferChecked(poolAta, mintPk, userAta, pool.publicKey,
-      w.toBaseUnits(toSend, c.OST_TOKEN_DECIMALS), c.OST_TOKEN_DECIMALS, c.TOKEN_2022_PROGRAM_ID));
-    tx.add(w.memoIx(JSON.stringify({
-      k: 'prediction-cashout',
-      market: orderRecord && orderRecord.marketId,
-      side: orderRecord && orderRecord.side,
-      stake: orderRecord && Number(orderRecord.stake || 0),
-      payout: toSend,
-      t: Date.now()
-    }), w.session.publicKey));
-    tx.feePayer = w.session.publicKey;
-    var bh = await conn.getLatestBlockhash('confirmed');
-    tx.recentBlockhash = bh.blockhash;
-    tx.partialSign(pool);
-    var sig = await w.sign(tx);
+    var ixs = [
+      w.transferChecked(poolAta, mintPk, userAta, pool.publicKey,
+        w.toBaseUnits(toSend, c.OST_TOKEN_DECIMALS), c.OST_TOKEN_DECIMALS, c.TOKEN_2022_PROGRAM_ID)
+    ];
+    if (memoText) ixs.push(w.memoIx(String(memoText), pool.publicKey));
+    var sig = await sendPoolOnlyTx(ixs);
     return { sig: sig, ost: toSend };
   }
 
   // -----------------------------------------------------------------------
-  // PATCH the live OST_WALLET.ensureFee with the robust airdrop
+  // 6) USER → POOL  (BUY-side; pool pays the SOL fee)
+  // -----------------------------------------------------------------------
+  async function userSendsOstToPool(amountOst, memoText) {
+    var w = window.OST_WALLET; if (!w || !w.session || !w.session.publicKey) throw new Error('Connect a wallet first');
+    var c = w.constants;
+    var amt = Number(amountOst);
+    if (!Number.isFinite(amt) || amt <= 0) throw new Error('Enter a valid OST amount');
+
+    var userBal = await w.getOstBalance(w.session.publicKey);
+    if (userBal + 1e-9 < amt) throw new Error('Not enough OST in wallet');
+
+    var mintPk = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.mint);
+    var poolAta = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.ata);
+    var userAta = await ensureUserOstAtaPoolPaid(w.session.publicKey);
+
+    var ixs = [
+      w.transferChecked(userAta, mintPk, poolAta, w.session.publicKey,
+        w.toBaseUnits(amt, c.OST_TOKEN_DECIMALS), c.OST_TOKEN_DECIMALS, c.TOKEN_2022_PROGRAM_ID)
+    ];
+    if (memoText) ixs.push(w.memoIx(String(memoText), w.session.publicKey));
+
+    var sig = await sendUserSignedPoolPaidTx(ixs);
+    return { sig: sig, ost: amt };
+  }
+
+  // -----------------------------------------------------------------------
+  // 7) MEMECOIN BUY / SELL
+  // -----------------------------------------------------------------------
+  async function memecoinBuy(token, ostAmount) {
+    return userSendsOstToPool(ostAmount,
+      JSON.stringify({ k: 'memecoin-buy', token: String(token || ''), ost: Number(ostAmount), t: Date.now() })
+    ).then(function (r) { return Object.assign({ side: 'buy', token: token }, r); });
+  }
+  async function memecoinSell(token, ostAmount) {
+    var w = window.OST_WALLET;
+    if (!w || !w.session || !w.session.publicKey) throw new Error('Connect a wallet first');
+    return payoutOst(w.session.publicKey, ostAmount,
+      JSON.stringify({ k: 'memecoin-sell', token: String(token || ''), ost: Number(ostAmount), t: Date.now() })
+    ).then(function (r) { return Object.assign({ side: 'sell', token: token }, r); });
+  }
+
+  // -----------------------------------------------------------------------
+  // 8) PREDICTION CASH-OUT
+  // -----------------------------------------------------------------------
+  async function predictionCashOut(orderRecord, payoutAmount) {
+    var w = window.OST_WALLET;
+    if (!w || !w.session || !w.session.publicKey) throw new Error('Connect a wallet first');
+    return payoutOst(w.session.publicKey, payoutAmount,
+      JSON.stringify({
+        k: 'prediction-cashout',
+        market: orderRecord && orderRecord.marketId,
+        side: orderRecord && orderRecord.side,
+        stake: orderRecord && Number(orderRecord.stake || 0),
+        payout: Number(payoutAmount),
+        t: Date.now()
+      })
+    );
+  }
+
+  // -----------------------------------------------------------------------
+  // 9) PATCH OST_WALLET.ensureFee  →  no-op (pool pays)
   // -----------------------------------------------------------------------
   function patchEnsureFee() {
     var w = window.OST_WALLET;
@@ -376,40 +240,47 @@
     var origEnsure = w.ensureFee;
     w.ensureFee = async function (pubkeyInput) {
       try {
-        // Try the original (single endpoint) first — fast path
-        return await origEnsure(pubkeyInput);
-      } catch (e) {
-        console.warn('[rescue] primary airdrop failed, rotating endpoints:', e && e.message);
-        var r = await airdropSol(pubkeyInput, 0.1);
+        var pk = (pubkeyInput && pubkeyInput.toBase58) ? pubkeyInput : new solanaWeb3.PublicKey(pubkeyInput);
         var conn = getRpc();
-        var lamports = await conn.getBalance((pubkeyInput && pubkeyInput.toBase58) ? pubkeyInput : new solanaWeb3.PublicKey(pubkeyInput));
-        return { funded: true, balance: lamports / solanaWeb3.LAMPORTS_PER_SOL, source: r.source };
+        var lam = await conn.getBalance(pk).catch(function () { return 0; });
+        return { funded: false, balance: lam / solanaWeb3.LAMPORTS_PER_SOL, source: 'pool-paid' };
+      } catch (e) {
+        return { funded: false, balance: 0, source: 'pool-paid' };
       }
     };
+    w.ensureFeeOriginal = origEnsure;
   }
 
   // -----------------------------------------------------------------------
-  // PUBLIC API
+  // 10) PUBLIC API
   // -----------------------------------------------------------------------
   window.OST_RESCUE = {
     rpc: { get: getRpc, rotate: rotateRpc, endpoints: RPC_ENDPOINTS, withRpc: withRpc },
-    airdropSol: airdropSol,
     poolBalance: getPoolOstBalance,
-    refillVault: ensurePoolHasOst,
-    refillOnce: refillFromHelperFaucet,
-    startDaemon: startVaultDaemon
+    poolSolBalance: getPoolSolBalance,
+    ensureUserAta: ensureUserOstAtaPoolPaid,
+    buildPoolPaidTx: buildPoolPaidTx,
+    sendPoolOnlyTx: sendPoolOnlyTx,
+    sendUserSignedPoolPaidTx: sendUserSignedPoolPaidTx,
+    payoutOst: payoutOst,
+    userSendsOstToPool: userSendsOstToPool
   };
   window.OST_TRADE = window.OST_TRADE || {};
   window.OST_TRADE.memecoinBuy = memecoinBuy;
   window.OST_TRADE.memecoinSell = memecoinSell;
   window.OST_TRADE.predictionCashOut = predictionCashOut;
+  window.OST_TRADE.payoutOst = payoutOst;
 
-  // Wait for OST_WALLET to be defined, then patch + start the daemon.
   function bootstrap() {
     if (!window.OST_WALLET) { return setTimeout(bootstrap, 250); }
     patchEnsureFee();
-    startVaultDaemon();
-    console.log('[rescue] OST devnet rescue active. Endpoints:', RPC_ENDPOINTS.length, 'Daemon: on');
+    console.log('[rescue v2] pool-paid OST flows active. Endpoints:', RPC_ENDPOINTS.length);
+    Promise.all([getPoolOstBalance(), getPoolSolBalance()]).then(function (r) {
+      console.log('[rescue v2] pool: ' + r[0].toLocaleString() + ' OST · ' + r[1].toFixed(3) + ' SOL');
+      if (r[0] < 1000) {
+        console.warn('[rescue v2] POOL LOW — admin must run: npx ts-node scripts/init-swap-pool.ts');
+      }
+    }).catch(function () {});
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', bootstrap);

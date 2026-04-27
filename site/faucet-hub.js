@@ -889,51 +889,16 @@
     var btn = document.getElementById('fhCashout');
     btn.disabled = true; var prev = btn.textContent; btn.textContent = 'Sending…';
     try {
-      // Cap the cashout to what the rewards vault can actually pay out.
-      var conn = w.getConnection();
-      if (!conn) throw new Error('Solana RPC unavailable');
-      var poolAtaPk = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.ata);
-      var mintPk    = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.mint);
-      var poolBal = await conn.getTokenAccountBalance(poolAtaPk).catch(function(){ return null; });
-      var poolOst = poolBal ? Number(poolBal.value.uiAmount || 0) : 0;
-      if (poolOst <= 0) throw new Error('Rewards vault is empty right now. Try again in a few minutes.');
-      var toSend = Math.min(amount, Math.floor(poolOst * 100) / 100);
-      if (toSend < 0.01) throw new Error('Vault balance too small to pay out');
-
-      // Make sure the user wallet has SOL to cover the network fee (we are the
-      // fee payer + signer). Local browser wallets get an automatic devnet airdrop.
-      var userPk = w.session.publicKey;
-      var userLamports = await conn.getBalance(userPk);
-      if (userLamports < 5_000_000) {
-        try { await w.ensureFee(userPk); } catch(e) {
-          throw new Error('This wallet has no SOL for the network fee. Get a tiny bit of devnet SOL at faucet.solana.com and try again.');
-        }
+      // Use the pool-paid payout API: pool covers the SOL fee and (if needed)
+      // the user's OST ATA rent. The user's wallet does not need any devnet SOL.
+      if (!window.OST_RESCUE || !window.OST_RESCUE.payoutOst) {
+        throw new Error('Vault helpers still loading — try again in a second.');
       }
-
-      // Make sure the user has an OST associated token account (creates one if missing).
-      // This may require a separate transaction — do it BEFORE the pool tx so we
-      // do not invalidate the pool's partial signature.
-      btn.textContent = 'Preparing token account…';
-      var userAta = await w.ensureAta(userPk);
-
-      btn.textContent = 'Signing & sending…';
-      var pool = solanaWeb3.Keypair.fromSecretKey(Uint8Array.from(window.OST_SWAP_POOL.secretKey));
-      var c = w.constants;
-
-      var tx = new solanaWeb3.Transaction();
-      tx.add(w.transferChecked(
-        poolAtaPk, mintPk, userAta, pool.publicKey,
-        w.toBaseUnits(toSend, c.OST_TOKEN_DECIMALS),
-        c.OST_TOKEN_DECIMALS, c.TOKEN_2022_PROGRAM_ID
-      ));
-      tx.add(w.memoIx(JSON.stringify({
-        k:'faucet-hub-cashout', amt: toSend, lifetime: Number(s.lifetime||0), t: Date.now()
-      }), userPk));
-      tx.feePayer = userPk;
-      var bh = await conn.getLatestBlockhash('confirmed');
-      tx.recentBlockhash = bh.blockhash;
-      tx.partialSign(pool);
-      var sig = await w.sign(tx);
+      btn.textContent = 'Sending OST…';
+      var memo = JSON.stringify({ k:'faucet-hub-cashout', amt: amount, lifetime: Number(s.lifetime||0), t: Date.now() });
+      var result = await window.OST_RESCUE.payoutOst(w.session.publicKey, amount, memo);
+      var toSend = result.ost;
+      var sig = result.sig;
 
       // Persist new state — only after the on-chain confirm so failures keep credits
       var s2 = load();
