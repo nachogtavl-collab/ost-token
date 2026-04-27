@@ -728,6 +728,8 @@
     list.push(snap);
     saveSnapshots(list);
   }
+  // Expose so external modules (e.g. prediction buys in app.js) can log events.
+  window.recordOstSnapshot = recordSnapshot;
 
   // Periodic background snapshot so the curve fills in even without txs
   function startSnapshotPoller() {
@@ -903,7 +905,10 @@
         .filter(function(s){ return s.kind !== 'tick'; })
         .map(function(s){ return {ts: s.ts, kind: s.kind, amount: s.amount, sig: s.sig, ostBalance: s.ostBalance}; });
       orders.forEach(function(o){
-        items.push({ts: o.ts || o.timestamp, kind: 'prediction-buy', amount: o.stake, sig: o.sig, label: (o.side||'?').toUpperCase()+' on '+String(o.title||'').substring(0,32)});
+        items.push({ts: o.ts || o.createdAt || o.timestamp, kind: 'prediction-buy', amount: o.stake, sig: o.sig || o.signature, label: (o.side||'?').toUpperCase()+' on '+String(o.title||'').substring(0,32)});
+        if (o.cashedOut) {
+          items.push({ts: o.cashoutAt || o.ts, kind: 'prediction-cashout', amount: o.cashoutOst, sig: o.cashoutSig, label: 'Cashout: '+String(o.title||'').substring(0,32)});
+        }
       });
       items.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
       if (!items.length) {

@@ -2749,44 +2749,63 @@
     if (!conn) throw new Error('Solana RPC unavailable');
 
     const trader = connectedWalletSession.publicKey;
-    const lamports = await conn.getBalance(trader);
-    if (lamports < Math.round(0.001 * solanaWeb3.LAMPORTS_PER_SOL)) {
-      throw new Error(t('pay.walletNeedsSol', 'This wallet needs a little devnet SOL for the network fee. Fund it at faucet.solana.com, then try again.'));
-    }
-
+    // Pool covers the SOL fee — user only needs OST. Skip SOL check.
     const ostBalance = await getOstBalanceForAddress(trader);
     if (ostBalance + 1e-9 < Number(order.stake)) {
       throw new Error(t('pay.notEnoughOst', 'Not enough OST in this wallet. Claim or buy OST first.'));
     }
 
     const mintPk = new solanaWeb3.PublicKey(OST_CONFIG.mint);
-    const sourceAta = getAssociatedTokenAddressSync(mintPk, trader, false, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
-    const sourceInfo = await conn.getAccountInfo(sourceAta);
-    if (!sourceInfo) {
-      throw new Error('This wallet does not have an OST token account yet. Claim or receive OST first.');
+    // Ensure user has an OST ATA (pool pays the rent if missing).
+    let sourceAta;
+    if (window.OST_RESCUE && window.OST_RESCUE.ensureUserAta) {
+      sourceAta = await window.OST_RESCUE.ensureUserAta(trader);
+    } else {
+      sourceAta = getAssociatedTokenAddressSync(mintPk, trader, false, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
+      const sourceInfo = await conn.getAccountInfo(sourceAta);
+      if (!sourceInfo) throw new Error('This wallet does not have an OST token account yet. Claim or receive OST first.');
     }
 
     const deskAccounts = await ensurePredictionDeskVaultAccount();
     const memo = buildPredictionOrderMemo(order);
     const amountBaseUnits = decimalAmountToBaseUnits(Number(order.stake), OST_TOKEN_DECIMALS);
-    const transaction = new solanaWeb3.Transaction();
-    transaction.add(createMemoInstruction(memo, trader));
-    transaction.add(
-      createTransferCheckedInstruction(
-        sourceAta,
-        mintPk,
-        deskAccounts.vaultTokenAccount,
-        trader,
-        amountBaseUnits,
-        OST_TOKEN_DECIMALS,
-        TOKEN_2022_PROGRAM_ID
-      )
-    );
 
-    const signature = await signAndSendTransaction(transaction);
+    const transferIx = createTransferCheckedInstruction(
+      sourceAta,
+      mintPk,
+      deskAccounts.vaultTokenAccount,
+      trader,
+      amountBaseUnits,
+      OST_TOKEN_DECIMALS,
+      TOKEN_2022_PROGRAM_ID
+    );
+    const memoIx = createMemoInstruction(memo, trader);
+
+    let signature;
+    // Route through pool-paid tx if the rescue helper is loaded — user pays zero SOL.
+    if (window.OST_RESCUE && window.OST_RESCUE.sendUserSignedPoolPaidTx) {
+      signature = await window.OST_RESCUE.sendUserSignedPoolPaidTx([memoIx, transferIx]);
+    } else {
+      // Legacy fallback: user must have SOL for the fee.
+      const lamports = await conn.getBalance(trader);
+      if (lamports < Math.round(0.001 * solanaWeb3.LAMPORTS_PER_SOL)) {
+        throw new Error(t('pay.walletNeedsSol', 'This wallet needs a little devnet SOL for the network fee. Fund it at faucet.solana.com, then try again.'));
+      }
+      const transaction = new solanaWeb3.Transaction();
+      transaction.add(memoIx);
+      transaction.add(transferIx);
+      signature = await signAndSendTransaction(transaction);
+    }
+
     const remainingBalance = await getOstBalanceForAddress(trader);
+    // Sanity-check the debit actually happened on-chain.
+    if (remainingBalance + 1e-6 >= ostBalance) {
+      throw new Error('Order reverted: OST balance unchanged. Please retry. (sig ' + signature + ')');
+    }
     var record = {
       signature: signature,
+      sig: signature,
+      ts: Date.now(),
       source: order.source,
       marketId: order.marketId,
       title: order.title,
@@ -2799,6 +2818,19 @@
       createdAt: Date.now()
     };
     storePredictionOrderRecord(record);
+    // Update the wallet portfolio chart + transaction history list immediately.
+    try {
+      if (window.OST_WALLET && window.OST_WALLET.session) {
+        var solBal = (await conn.getBalance(trader)) / solanaWeb3.LAMPORTS_PER_SOL;
+        if (typeof window.recordOstSnapshot === 'function') {
+          window.recordOstSnapshot({
+            ts: Date.now(), ostBalance: remainingBalance, solBalance: solBal,
+            kind: 'prediction-buy', amount: Number(order.stake), sig: signature
+          });
+        }
+      }
+      if (typeof window.notifyOstTxHistory === 'function') window.notifyOstTxHistory();
+    } catch (_) {}
     return {
       signature: signature,
       remainingBalance: remainingBalance,
@@ -2927,14 +2959,21 @@
     if (!latest) {
       try { latest = await conn.getLatestBlockhash('confirmed'); } catch (_) {}
     }
+    let confirmRes = null;
     if (latest) {
-      await conn.confirmTransaction({
+      confirmRes = await conn.confirmTransaction({
         signature,
         blockhash: latest.blockhash,
         lastValidBlockHeight: latest.lastValidBlockHeight
       }, 'confirmed');
     } else {
-      await conn.confirmTransaction(signature, 'confirmed');
+      confirmRes = await conn.confirmTransaction(signature, 'confirmed');
+    }
+    // Surface on-chain failures: a confirmed tx can still have reverted with err.
+    if (confirmRes && confirmRes.value && confirmRes.value.err) {
+      var errStr;
+      try { errStr = JSON.stringify(confirmRes.value.err); } catch (_) { errStr = String(confirmRes.value.err); }
+      throw new Error('Transaction reverted on-chain: ' + errStr + ' (sig ' + signature + ')');
     }
     return signature;
   }
