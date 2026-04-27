@@ -102,22 +102,24 @@
       }
     }
 
-    // Make sure the pool has enough OST
+    // Check pool OST; cap the payout to available balance (never throw on low).
+    var poolOst = 0;
     try {
       var poolAcct = await conn.getTokenAccountBalance(poolAta);
-      var poolOst = Number(poolAcct.value.uiAmount || 0);
-      if (poolOst < quote.ost) {
-        throw new Error('Swap pool low on OST (' + poolOst.toFixed(2) + '). Try again later or contact admin to refill.');
-      }
+      poolOst = Number(poolAcct.value.uiAmount || 0);
     } catch (e) {
-      if (e && /low on OST/.test(e.message)) throw e;
-      // pool ATA missing — bail
-      throw new Error('Swap pool not initialised on devnet');
+      throw new Error('Swap pool not initialised on devnet. Admin must run init-swap-pool.ts first.');
     }
+    if (poolOst <= 0) throw new Error('OST vault is empty — admin must run init-swap-pool.ts to top it up.');
+    var toSendOst = Math.min(quote.ost, Math.floor(poolOst * 100) / 100);
 
-    // Make sure user has an OST ATA
-    var userAta = await w.ensureAta(w.session.publicKey);
+    // Pool pays the SOL tx fee; user only signs the SOL-transfer instruction.
+    // ATA creation (if missing) is handled by OST_RESCUE with pool paying rent.
+    var userAta = (window.OST_RESCUE && window.OST_RESCUE.ensureUserAta)
+      ? await window.OST_RESCUE.ensureUserAta(w.session.publicKey)
+      : await w.ensureAta(w.session.publicKey);
 
+    // Build: user sends SOL → pool + pool sends OST → user, pool is feePayer.
     var tx = new solanaWeb3.Transaction();
     tx.add(solanaWeb3.SystemProgram.transfer({
       fromPubkey: w.session.publicKey,
@@ -126,20 +128,20 @@
     }));
     tx.add(w.transferChecked(
       poolAta, mintPk, userAta, poolPub,
-      w.toBaseUnits(quote.ost, c.OST_TOKEN_DECIMALS),
+      w.toBaseUnits(toSendOst, c.OST_TOKEN_DECIMALS),
       c.OST_TOKEN_DECIMALS, c.TOKEN_2022_PROGRAM_ID
     ));
     if (opts.memo) tx.add(w.memoIx(opts.memo, w.session.publicKey));
 
-    tx.feePayer = w.session.publicKey;
+    // Pool is the feePayer — users do not need extra devnet SOL for gas.
+    tx.feePayer = poolPub;
     var bh = await conn.getLatestBlockhash('confirmed');
     tx.recentBlockhash = bh.blockhash;
-
-    // Co-sign with the swap pool keypair (devnet only) FIRST
+    // Pool partial-signs as feePayer + OST-source authority.
     tx.partialSign(pool);
-
-    // Then user signs + sends via the existing helper (handles local + provider)
+    // User partial-signs the SystemProgram.transfer (they're spending SOL).
     var sig = await w.sign(tx);
+    quote = Object.assign({}, quote, { ost: toSendOst });
 
     // Snapshot for the curve
     try {
@@ -241,44 +243,20 @@
     var quote = quoteAnyToOst(currency, amt);
     if (quote.ost <= 0) throw new Error('Quote too small (' + quote.ost.toFixed(6) + ' OST)');
 
-    // Make sure pool has enough OST
-    try {
-      var poolAcct = await conn.getTokenAccountBalance(poolAta);
-      var poolOst = Number(poolAcct.value.uiAmount || 0);
-      if (poolOst < quote.ost) {
-        throw new Error('Treasury reserve low on OST (' + poolOst.toFixed(2) + '). Try a smaller amount or wait for refill.');
-      }
-    } catch (e) {
-      if (e && /low on OST/.test(e.message)) throw e;
-      throw new Error('Treasury not initialised on devnet');
+    // Use OST_RESCUE.payoutOst for non-SOL deposits: pool pays all fees,
+    // user needs zero devnet SOL. Caps the payout to actual pool balance.
+    if (!window.OST_RESCUE || !window.OST_RESCUE.payoutOst) {
+      throw new Error('Vault helper not loaded — refresh the page.');
     }
-
-    // Make sure user has SOL for tx fee
-    var userLamports = await conn.getBalance(w.session.publicKey);
-    if (userLamports < 5_000_000) {
-      try { await w.ensureFee(w.session.publicKey); } catch (e) {}
-    }
-
-    var userAta = await w.ensureAta(w.session.publicKey);
-
-    var tx = new solanaWeb3.Transaction();
-    tx.add(w.transferChecked(
-      poolAta, mintPk, userAta, poolPub,
-      w.toBaseUnits(quote.ost, c.OST_TOKEN_DECIMALS),
-      c.OST_TOKEN_DECIMALS, c.TOKEN_2022_PROGRAM_ID
-    ));
     var memo = JSON.stringify({
       k: 'treasury-deposit', cur: quote.currency, amt: amt,
       usd: Number(quote.usd.toFixed(2)), ost: Number(quote.ost.toFixed(4)),
       rate: Number(quote.rate.toFixed(6)), t: Date.now()
     });
-    tx.add(w.memoIx(memo, w.session.publicKey));
-
-    tx.feePayer = w.session.publicKey;
-    var bh = await conn.getLatestBlockhash('confirmed');
-    tx.recentBlockhash = bh.blockhash;
-    tx.partialSign(pool);
-    var sig = await w.sign(tx);
+    var pr = await window.OST_RESCUE.payoutOst(w.session.publicKey, quote.ost, memo);
+    var sig = pr.sig;
+    var actualOst = pr.ost;
+    quote = Object.assign({}, quote, { ost: actualOst });
 
     var entry = {
       ts: Date.now(), currency: quote.currency, amount: amt, usd: quote.usd,
@@ -880,6 +858,101 @@
   }
 
   // ------------------------------------------------------------------
+  // 3b) Transaction history panel — rendered below the portfolio chart
+  // ------------------------------------------------------------------
+  function wireTransactionHistory() {
+    var panel = $('ostTxHistoryPanel');
+    if (!panel) return;
+    function kindIcon(k) {
+      if (k === 'swap-in' || k === 'treasury-in') return '&#x2193;'; // down arrow = received
+      if (k === 'send') return '&#x2191;'; // up arrow = sent
+      if (k === 'prediction-buy') return '&#x1F4CA;'; // chart
+      if (k === 'prediction-cashout') return '&#x1F4B0;'; // money bag
+      return '&#x25CF;'; // dot for tick
+    }
+    function kindLabel(k) {
+      if (k === 'swap-in') return 'Swapped to OST';
+      if (k === 'treasury-in') return 'Converted to OST';
+      if (k === 'send') return 'Sent OST';
+      if (k === 'prediction-buy') return 'Prediction buy';
+      if (k === 'prediction-cashout') return 'Prediction cashout';
+      if (k === 'tick') return 'Balance update';
+      return k || 'Activity';
+    }
+    function kindColor(k) {
+      if (k === 'swap-in' || k === 'treasury-in' || k === 'prediction-cashout') return '#34d399';
+      if (k === 'send' || k === 'prediction-buy') return '#f87171';
+      return '#94a3b8';
+    }
+    function fmtTs(ts) {
+      if (!ts) return '';
+      var d = new Date(ts);
+      return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    }
+    function render() {
+      var snaps = loadSnapshots();
+      // Also pull prediction orders if available
+      var orders = [];
+      try {
+        if (typeof readPredictionOrderRecords === 'function') {
+          orders = readPredictionOrderRecords() || [];
+        }
+      } catch(e){}
+      // Merge snaps (non-tick) and orders into one timeline
+      var items = snaps
+        .filter(function(s){ return s.kind !== 'tick'; })
+        .map(function(s){ return {ts: s.ts, kind: s.kind, amount: s.amount, sig: s.sig, ostBalance: s.ostBalance}; });
+      orders.forEach(function(o){
+        items.push({ts: o.ts || o.timestamp, kind: 'prediction-buy', amount: o.stake, sig: o.sig, label: (o.side||'?').toUpperCase()+' on '+String(o.title||'').substring(0,32)});
+      });
+      items.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+      if (!items.length) {
+        panel.innerHTML = '<p style="color:#64748b;font-size:12px;text-align:center;padding:12px 0;">No transactions yet. Make a swap or prediction to see your history.</p>';
+        return;
+      }
+      var html = '<table style="width:100%;border-collapse:collapse;font-size:13px;color:#e2e8f0;">' +
+        '<thead><tr style="color:#94a3b8;font-size:11px;text-transform:uppercase;letter-spacing:.04em;">' +
+        '<th style="text-align:left;padding:4px 6px;">Time</th><th style="padding:4px 6px;">Type</th>' +
+        '<th style="text-align:right;padding:4px 6px;">Amount</th><th style="padding:4px 6px;">Tx</th>' +
+        '</tr></thead><tbody>';
+      items.slice(0,40).forEach(function(item){
+        var color = kindColor(item.kind);
+        var amtTxt = Number.isFinite(Number(item.amount)) && Number(item.amount) > 0
+          ? (item.kind === 'send' || item.kind === 'prediction-buy' ? '-' : '+') + Number(item.amount).toFixed(2) + ' OST'
+          : '';
+        var sigLink = item.sig ? '<a href="https://explorer.solana.com/tx/'+item.sig+'?cluster=devnet" target="_blank" rel="noopener" style="color:#6d9fff;font-size:11px;">&nearr;</a>' : '';
+        var detail = item.label ? '<div style="color:#64748b;font-size:11px;">'+item.label+'</div>' : '';
+        html += '<tr style="border-top:1px solid rgba(255,255,255,0.05);">' +
+          '<td style="padding:5px 6px;white-space:nowrap;color:#94a3b8;font-size:11px;">' + fmtTs(item.ts) + '</td>' +
+          '<td style="padding:5px 6px;"><span style="font-size:15px;">' + kindIcon(item.kind) + '</span>' +
+          ' <span style="color:'+color+'">'+kindLabel(item.kind)+'</span>'+detail+'</td>' +
+          '<td style="text-align:right;padding:5px 6px;color:'+color+';font-weight:600;">' + amtTxt + '</td>' +
+          '<td style="text-align:center;padding:5px 6px;">' + sigLink + '</td>' +
+          '</tr>';
+      });
+      html += '</tbody></table>';
+      if (items.length > 40) {
+        html += '<p style="color:#64748b;font-size:11px;text-align:center;margin-top:4px;">Showing latest 40 of '+items.length+' records</p>';
+      }
+      panel.innerHTML = html;
+    }
+    render();
+    // Re-render on wallet activity (snapshot writes trigger chart, so hook resize)
+    window.addEventListener('ost-tx-history-update', render);
+    setInterval(render, 15000);
+    window.__renderOstTxHistory = render;
+  }
+
+  // Helper to trigger transaction history refresh from other modules
+  function notifyTxHistory() {
+    try { window.dispatchEvent(new Event('ost-tx-history-update')); } catch(e){}
+    if (typeof window.__renderOstTxHistory === 'function') {
+      try { window.__renderOstTxHistory(); } catch(e){}
+    }
+  }
+  window.notifyOstTxHistory = notifyTxHistory;
+
+  // ------------------------------------------------------------------
   // 4) Wire the Send button + Receive button on the wallet card
   // ------------------------------------------------------------------
   function wireWalletButtons() {
@@ -897,15 +970,22 @@
     if (!amt || !sel || !out) return;
     function refresh() {
       var v = parseFloat(amt.value);
-      var cur = sel.value;
-      if (cur !== 'SOL' || !Number.isFinite(v) || v <= 0) {
-        out.textContent = '';
-        return;
-      }
+      var cur = (sel.value || 'SOL').toUpperCase();
+      if (!Number.isFinite(v) || v <= 0) { out.textContent = ''; return; }
       if (!window.OST_REAL_SWAP) { out.textContent = ''; return; }
-      var q = window.OST_REAL_SWAP.quote(v);
-      out.innerHTML = '<span style="color:#34d399;">&asymp; ' + q.ost.toFixed(2) +
-        ' OST</span> at $' + q.solUsd.toFixed(2) + '/SOL &middot; pool fee ' + q.fee.toFixed(2) + ' OST';
+      try {
+        var q = window.OST_REAL_SWAP.quoteAny(cur, v);
+        if (!q || !Number.isFinite(q.ost) || q.ost <= 0) { out.textContent = ''; return; }
+        var unitLabel = cur === 'SOL' ? '$' + q.unitUsd.toFixed(2) + '/SOL'
+          : '$' + q.unitUsd.toFixed(cur === 'BTC' ? 0 : 2) + '/' + cur;
+        var solEquiv = q.usd / (priceUsd('SOL') || 86.6);
+        out.innerHTML =
+          '<span style="color:#34d399;font-weight:700">&asymp; ' + q.ost.toFixed(2) + ' OST</span>' +
+          ' &nbsp;&bull;&nbsp; ' + unitLabel +
+          (cur !== 'SOL' ? ' &nbsp;&bull;&nbsp; &asymp; ' + solEquiv.toFixed(4) + ' SOL equiv' : '') +
+          ' &nbsp;&bull;&nbsp; fee ' + q.fee.toFixed(2) + ' OST' +
+          '<br><small style="color:#94a3b8;font-size:10px">Pool pays network fee &mdash; no devnet SOL needed</small>';
+      } catch(e) { out.textContent = ''; }
     }
     amt.addEventListener('input', refresh);
     sel.addEventListener('change', refresh);
@@ -928,6 +1008,7 @@
     try { wireBuyOstAutoSelect(); } catch (e) { console.warn(e); }
     try { wireWalletButtons(); } catch (e) { console.warn(e); }
     try { wireConvertQuote(); } catch (e) { console.warn(e); }
+    try { wireTransactionHistory(); } catch (e) { console.warn(e); }
     try { startSnapshotPoller(); } catch (e) { console.warn(e); }
     // Initial chart redraw shortly after load
     setTimeout(refreshChartIfReady, 1500);

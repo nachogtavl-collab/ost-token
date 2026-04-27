@@ -5978,11 +5978,23 @@
         if (wdSolBal) wdSolBal.textContent = solBal.toFixed(4);
         if (wdSolUsd) {
           const solPrice = prices.solana || 0;
-          wdSolUsd.textContent = '$' + (solBal * solPrice).toFixed(2);
+          const cur = window.__ostCurrency || 'USD';
+          const fiatRate = (window.OST_TREASURY && window.OST_TREASURY.priceUsd)
+            ? (window.OST_TREASURY.priceUsd(cur) || 1) : 1;
+          // fiatRate is how many USD equal 1 unit of `cur`; invert to get cur per USD
+          const curSymbol = {'EUR':'€','GBP':'£','CAD':'C$','AUD':'A$','MXN':'MX$','JPY':'¥','BTC':'₿','ETH':'Ξ'}[cur] || cur + ' ';
+          const solInCur = solBal * solPrice / fiatRate;
+          wdSolUsd.textContent = curSymbol + solInCur.toFixed(cur === 'BTC' ? 6 : 2);
         }
         const ostBal = await getOstBalanceForAddress(pk);
         if (wdOstBal) wdOstBal.textContent = ostBal.toFixed(2);
-        if (wdOstUsd) wdOstUsd.textContent = '$' + (ostBal * ostPrice).toFixed(2);
+        if (wdOstUsd) {
+          const cur2 = window.__ostCurrency || 'USD';
+          const fiatRate2 = (window.OST_TREASURY && window.OST_TREASURY.priceUsd)
+            ? (window.OST_TREASURY.priceUsd(cur2) || 1) : 1;
+          const curSymbol2 = {'EUR':'€','GBP':'£','CAD':'C$','AUD':'A$','MXN':'MX$','JPY':'¥','BTC':'₿','ETH':'Ξ'}[cur2] || cur2 + ' ';
+          wdOstUsd.textContent = curSymbol2 + (ostBal * ostPrice / fiatRate2).toFixed(cur2 === 'BTC' ? 6 : 2);
+        }
         return {
           solBalance: solBal,
           ostBalance: ostBal
@@ -12050,18 +12062,33 @@
         var canCash = !order.cashedOut && Number(order.stake || 0) > 0;
         var cashBtn = canCash
           ? '<button class="prediction-cashout-btn" data-cashout-idx="' + idx + '" style="margin-left:auto;padding:4px 10px;border-radius:6px;background:#22c55e;color:#000;border:none;font-weight:700;cursor:pointer;font-size:12px">Cash out</button>'
-          : (order.cashedOut ? '<span style="color:#22c55e;font-weight:700;font-size:12px;margin-left:auto">✓ Paid out</span>' : '');
+          : (order.cashedOut ? '<span style="color:#22c55e;font-weight:700;font-size:12px;margin-left:auto">\u2713 Paid out ' + formatOst(order.cashoutOst || 0) + '</span>' : '');
+        // Per-share info derived from the stored stake + potentialReturn
+        var stake = Number(order.stake || 0);
+        var potReturn = Number(order.potentialReturn || 0);
+        var entryPrice = potReturn > 0 ? stake / potReturn : Number(order.price || 0);
+        var shares = entryPrice > 0 ? (stake / entryPrice).toFixed(2) : potReturn.toFixed(2);
+        var pricePct = Number.isFinite(entryPrice) && entryPrice > 0 ? (entryPrice * 100).toFixed(1) + '\u00a2' : '\u2014';
+        // Source badge (Kalshi green, Polymarket blue, OST native amber)
+        var src = (order.source || 'ost').toLowerCase();
+        var srcColor = src === 'kalshi' ? '#00c896' : src === 'polymarket' ? '#6d9fff' : '#f5c468';
+        var srcBadge = '<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;background:' + srcColor + '22;color:' + srcColor + ';border:1px solid ' + srcColor + '55;text-transform:uppercase;">' + escapeHtml(src) + '</span>';
         return [
           '<div class="prediction-position-row">',
             '<div class="prediction-position-row-top">',
-              '<div>',
+              '<div style="display:flex;align-items:center;gap:6px;">',
+                srcBadge,
                 '<strong>' + escapeHtml(order.title || 'Prediction ticket') + '</strong>',
-                '<span>' + escapeHtml((order.source || 'ost') + ' • ' + (topicLabels[order.topic] || topicLabels.all)) + '</span>',
               '</div>',
               '<span class="prediction-position-pill side-' + escapeHtml(order.side || 'yes') + '">' + escapeHtml(sideLabel) + '</span>',
             '</div>',
             '<div class="prediction-position-row-meta" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">',
-              '<span>' + escapeHtml(formatOst(order.stake)) + ' • ' + escapeHtml(formatOst(order.potentialReturn)) + '</span>',
+              '<span title="Stake / Entry price / Shares / Max return">',
+                '<b>' + escapeHtml(formatOst(stake)) + '</b> stake',
+                ' \u2022 <b>' + pricePct + '</b> entry',
+                ' \u2022 <b>' + shares + '</b> shares',
+                ' \u2022 max <b>' + escapeHtml(formatOst(potReturn)) + '</b>',
+              '</span>',
               '<a class="prediction-market-api-link" href="' + escapeHtml(explorerTxUrl(order.signature)) + '" target="_blank" rel="noopener">' + escapeHtml(shortAddress(order.signature || '')) + '</a>',
               cashBtn,
             '</div>',
@@ -12077,13 +12104,15 @@
           var order = orders[idx];
           if (!order) return;
           if (!window.OST_TRADE || !window.OST_TRADE.predictionCashOut) {
-            try { alert('Trading module not loaded — refresh the page'); } catch(e){}
+            try { alert('Trading module not loaded \u2014 refresh the page'); } catch(e){}
             return;
           }
-          // Payout = 95% of stake (5% house edge — keeps the pool sustainable on devnet)
-          var payout = Number(order.stake || 0) * 0.95;
+          // Payout = potentialReturn * 0.8 (devnet win simulation; minimum = stake back)
+          var stake = Number(order.stake || 0);
+          var potReturn = Number(order.potentialReturn || 0);
+          var payout = Math.max(stake, potReturn > 0 ? potReturn * 0.8 : stake * 1.5);
           var orig = btn.textContent;
-          btn.disabled = true; btn.textContent = '…';
+          btn.disabled = true; btn.textContent = '\u2026';
           try {
             var r = await window.OST_TRADE.predictionCashOut(order, payout);
             order.cashedOut = true;
@@ -12095,6 +12124,7 @@
             state.orderHistory = orders;
             renderPredictionLedger();
             try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch(e){}
+            if (typeof window.notifyOstTxHistory === 'function') window.notifyOstTxHistory();
           } catch (err) {
             console.warn('[prediction cashout] failed', err);
             var msg = (err && err.message) ? err.message : 'Cash-out failed';
