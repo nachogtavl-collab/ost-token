@@ -767,182 +767,463 @@
     drawRealCurve(canvas);
   }
 
+  // ── Currency helpers ──────────────────────────────────────────────────
+  function getCurrencySymbol() {
+    var cur = (window.__ostCurrency || 'USD').toUpperCase();
+    return { EUR: '€', GBP: '£', CAD: 'C$', AUD: 'A$', MXN: 'MX$', JPY: '¥', BTC: '₿', ETH: 'Ξ' }[cur] || '$';
+  }
+  function getCurrencyRate() {
+    // priceUsd(cur) returns USD per 1 unit of cur (e.g. EUR→1.09).
+    // We want USD→cur conversion: USD * (1/rate).
+    var cur = (window.__ostCurrency || 'USD').toUpperCase();
+    if (cur === 'USD') return 1;
+    var rate = (window.OST_TREASURY && window.OST_TREASURY.priceUsd)
+      ? window.OST_TREASURY.priceUsd(cur) : 1;
+    return (rate > 0) ? rate : 1;
+  }
+  // Convert a USD amount to the user's selected display currency.
+  function usdToDisplayCurrency(usd) {
+    return usd / getCurrencyRate();
+  }
+
+  // ── Smart axis tick calculator ────────────────────────────────────────
+  function calcTicks(min, max, count) {
+    count = count || 5;
+    var range = max - min;
+    if (range === 0) return [min];
+    var raw = range / (count - 1);
+    var mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    var nice = [1, 2, 2.5, 5, 10];
+    var step = mag;
+    for (var i = 0; i < nice.length; i++) {
+      if (raw <= nice[i] * mag) { step = nice[i] * mag; break; }
+    }
+    var start = Math.floor(min / step) * step;
+    var ticks = [];
+    for (var v = start; v <= max + step * 0.01; v += step) {
+      if (v >= min - step * 0.01) ticks.push(parseFloat(v.toPrecision(8)));
+    }
+    return ticks;
+  }
+
+  // ── Format a value label depending on mode ────────────────────────────
+  function fmtLabel(v, mode) {
+    if (mode === 'sol') return v.toFixed(v >= 10 ? 2 : 4) + ' SOL';
+    if (mode === 'ost') return v >= 1000 ? (v / 1000).toFixed(1) + 'K OST' : v.toFixed(2) + ' OST';
+    // usd / default
+    var sym = getCurrencySymbol();
+    if (v >= 1e6) return sym + (v / 1e6).toFixed(2) + 'M';
+    if (v >= 1000) return sym + (v / 1000).toFixed(1) + 'K';
+    return sym + v.toFixed(v >= 1 ? 2 : 4);
+  }
+
+  // ── Friendly relative time for X-axis labels ──────────────────────────
+  function relTime(ts, nowTs) {
+    var diff = Math.max(0, nowTs - ts);
+    if (diff < 60000) return 'now';
+    if (diff < 3600000) return Math.round(diff / 60000) + 'm ago';
+    if (diff < 86400000) return Math.round(diff / 3600000) + 'h ago';
+    return Math.round(diff / 86400000) + 'd ago';
+  }
+
   function drawRealCurve(canvas) {
     var snaps = loadSnapshots();
-    if (snaps.length < 2) return; // let the original draw handle it
-    var prices = (window.__ostPrices || { solana: 150, ost: 1 });
-    // Compute USD value at each snapshot
-    var pts = snaps.slice(-60).map(function (s) {
+    if (snaps.length < 2) {
+      // Draw a placeholder with a "waiting" message
+      var ctx0 = canvas.getContext('2d');
+      var dpr0 = Math.min(window.devicePixelRatio || 1, 2);
+      var rect0 = canvas.getBoundingClientRect();
+      var w0 = Math.max(320, Math.round(rect0.width || 820));
+      var h0 = Math.max(180, Math.round(rect0.height || 240));
+      canvas.width = Math.round(w0 * dpr0); canvas.height = Math.round(h0 * dpr0);
+      ctx0.setTransform(dpr0, 0, 0, dpr0, 0, 0);
+      ctx0.fillStyle = 'rgba(5,8,14,0.94)'; ctx0.fillRect(0, 0, w0, h0);
+      ctx0.fillStyle = '#475569'; ctx0.font = '500 13px Inter,sans-serif';
+      ctx0.textAlign = 'center';
+      ctx0.fillText('Connect a wallet and make transactions to see your curve', w0 / 2, h0 / 2);
+      return;
+    }
+
+    var mode = window.__chartMode || 'ost';
+    var prices = window.__ostPrices || { solana: 150, ost: 1 };
+    var solUsd = prices.solana || 150;
+    var ostUsd = prices.ost || 1;
+
+    var recent = snaps.slice(-80);
+    var nowTs = Date.now();
+
+    // Build data points based on mode
+    var pts = recent.map(function (s) {
       var sol = Number(s.solBalance) || 0;
       var ost = Number(s.ostBalance) || 0;
-      return {
-        ts: s.ts,
-        usd: sol * (prices.solana || 150) + ost * (prices.ost || 1),
-        kind: s.kind
-      };
+      var v;
+      if (mode === 'ost') {
+        v = ost;
+      } else if (mode === 'sol') {
+        v = sol;
+      } else { // usd
+        v = usdToDisplayCurrency(sol * solUsd + ost * ostUsd);
+      }
+      return { ts: s.ts, v: v, kind: s.kind, ost: ost, sol: sol };
     });
 
+    // ── Canvas setup ──────────────────────────────────────────────────
     var rect = canvas.getBoundingClientRect();
-    var width = Math.max(320, Math.round(rect.width || canvas.width || 820));
-    var height = Math.max(220, Math.round(rect.height || canvas.height || 240));
+    var width = Math.max(320, Math.round(rect.width || canvas.offsetWidth || 820));
+    var height = Math.max(200, Math.round(rect.height || canvas.offsetHeight || 240));
     var dpr = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = Math.round(width * dpr);
     canvas.height = Math.round(height * dpr);
     var ctx = canvas.getContext('2d');
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = 'rgba(5,8,14,0.94)';
+    ctx.fillStyle = 'rgba(5,8,14,0.96)';
     ctx.fillRect(0, 0, width, height);
 
-    var pad = { l: 22, r: 22, t: 24, b: 30 };
-    var values = pts.map(function (p) { return p.usd; });
+    // ── Padding (left wider for Y labels) ─────────────────────────────
+    var pad = { l: 62, r: 18, t: 28, b: 28 };
+    var cw = width - pad.l - pad.r;
+    var ch = height - pad.t - pad.b;
+
+    var values = pts.map(function (p) { return p.v; });
     var minV = Math.min.apply(null, values);
     var maxV = Math.max.apply(null, values);
-    var range = Math.max(maxV - minV, maxV * 0.05, 1);
+    // Pad the range so the line doesn't hug the edges
+    var rangeRaw = maxV - minV;
+    var rangePad = Math.max(rangeRaw * 0.12, maxV * 0.04, 0.01);
+    var lo = Math.max(0, minV - rangePad);
+    var hi = maxV + rangePad;
+    var range = hi - lo;
+
     var first = values[0], last = values[values.length - 1];
-    var trendUp = last >= first;
-    var color = trendUp ? '#34d399' : '#f5c468';
+    var delta = last - first;
+    var pct = first > 0 ? (delta / first) * 100 : 0;
+    var trendUp = delta >= 0;
+    var lineColor = trendUp ? '#34d399' : '#f87171';
 
-    function x(i) { return pad.l + (i / Math.max(pts.length - 1, 1)) * (width - pad.l - pad.r); }
-    function y(v) { return pad.t + (height - pad.t - pad.b) - ((v - minV) / range) * (height - pad.t - pad.b); }
+    function xPos(i) { return pad.l + (i / Math.max(pts.length - 1, 1)) * cw; }
+    function yPos(v) { return pad.t + ch - ((v - lo) / range) * ch; }
 
-    // grid
-    [0.25, 0.5, 0.75].forEach(function (lvl) {
-      var py = pad.t + (height - pad.t - pad.b) * lvl;
-      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    // ── Y-axis ticks ──────────────────────────────────────────────────
+    var yTicks = calcTicks(lo, hi, 5);
+    ctx.font = '500 10px Inter,ui-sans-serif,sans-serif';
+    ctx.textAlign = 'right';
+    yTicks.forEach(function (tick) {
+      var py = yPos(tick);
+      if (py < pad.t - 4 || py > height - pad.b + 4) return;
+      // Grid line
+      ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 4]);
       ctx.beginPath(); ctx.moveTo(pad.l, py); ctx.lineTo(width - pad.r, py); ctx.stroke();
+      ctx.setLineDash([]);
+      // Tick label
+      ctx.fillStyle = '#64748b';
+      ctx.fillText(fmtLabel(tick, mode), pad.l - 5, py + 3.5);
     });
 
-    // fill
+    // ── X-axis time markers ───────────────────────────────────────────
+    var xTickCount = Math.min(pts.length, 5);
+    var step = Math.max(1, Math.floor((pts.length - 1) / (xTickCount - 1)));
+    ctx.font = '500 10px Inter,ui-sans-serif,sans-serif';
+    ctx.textAlign = 'center';
+    for (var xi = 0; xi < pts.length; xi += step) {
+      if (xi >= pts.length) break;
+      var xp = xPos(xi);
+      ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([2, 5]);
+      ctx.beginPath(); ctx.moveTo(xp, pad.t); ctx.lineTo(xp, height - pad.b); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#475569';
+      ctx.fillText(relTime(pts[xi].ts, nowTs), xp, height - pad.b + 14);
+    }
+
+    // ── Gradient fill ─────────────────────────────────────────────────
     var grad = ctx.createLinearGradient(0, pad.t, 0, height - pad.b);
-    grad.addColorStop(0, trendUp ? 'rgba(52,211,153,0.28)' : 'rgba(245,196,104,0.28)');
-    grad.addColorStop(1, 'rgba(109,159,255,0.02)');
+    grad.addColorStop(0, trendUp ? 'rgba(52,211,153,0.22)' : 'rgba(248,113,113,0.22)');
+    grad.addColorStop(0.7, 'rgba(109,159,255,0.03)');
+    grad.addColorStop(1, 'rgba(5,8,14,0)');
     ctx.beginPath();
     pts.forEach(function (p, i) {
-      var px = x(i), py = y(p.usd);
+      var px = xPos(i), py = yPos(p.v);
       if (!i) ctx.moveTo(px, py); else ctx.lineTo(px, py);
     });
-    ctx.lineTo(x(pts.length - 1), height - pad.b);
-    ctx.lineTo(x(0), height - pad.b);
+    ctx.lineTo(xPos(pts.length - 1), height - pad.b);
+    ctx.lineTo(xPos(0), height - pad.b);
     ctx.closePath();
     ctx.fillStyle = grad; ctx.fill();
 
-    // line
+    // ── Curve line ────────────────────────────────────────────────────
     ctx.beginPath();
     pts.forEach(function (p, i) {
-      var px = x(i), py = y(p.usd);
+      var px = xPos(i), py = yPos(p.v);
       if (!i) ctx.moveTo(px, py); else ctx.lineTo(px, py);
     });
-    ctx.lineWidth = 2.6; ctx.strokeStyle = color; ctx.stroke();
+    ctx.lineWidth = 2.4; ctx.strokeStyle = lineColor;
+    ctx.setLineDash([]); ctx.stroke();
 
-    // markers for non-tick events (real money in/out)
+    // ── Event markers (non-tick) ──────────────────────────────────────
+    var eventColors = {
+      'swap-in': '#60a5fa', 'treasury-in': '#60a5fa',
+      'send': '#f87171',
+      'prediction-buy': '#fbbf24', 'prediction-cashout': '#34d399'
+    };
+    var eventSymbols = {
+      'swap-in': '↓', 'treasury-in': '↓',
+      'send': '↑',
+      'prediction-buy': '📈', 'prediction-cashout': '💰'
+    };
     pts.forEach(function (p, i) {
-      if (p.kind && p.kind !== 'tick') {
-        ctx.beginPath();
-        ctx.arc(x(i), y(p.usd), 4, 0, Math.PI * 2);
-        ctx.fillStyle = p.kind === 'send' ? '#f87171' : '#60a5fa';
-        ctx.fill();
-      }
+      if (!p.kind || p.kind === 'tick') return;
+      var ec = eventColors[p.kind] || '#94a3b8';
+      var px = xPos(i), py = yPos(p.v);
+      // Outer glow
+      ctx.beginPath(); ctx.arc(px, py, 7, 0, Math.PI * 2);
+      ctx.fillStyle = ec.replace(')', ',0.22)').replace('rgb', 'rgba'); ctx.fill();
+      // Inner dot
+      ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI * 2);
+      ctx.fillStyle = ec; ctx.fill();
+      ctx.beginPath(); ctx.arc(px, py, 2, 0, Math.PI * 2);
+      ctx.fillStyle = '#fff'; ctx.fill();
+      // Event label above marker
+      ctx.font = '600 9px Inter,sans-serif';
+      ctx.fillStyle = ec;
+      ctx.textAlign = 'center';
+      var lbl = (eventSymbols[p.kind] || '●');
+      ctx.fillText(lbl, px, py - 10);
     });
 
-    // last value label
-    var lx = x(pts.length - 1), ly = y(last);
-    ctx.beginPath(); ctx.arc(lx, ly, 5, 0, Math.PI * 2); ctx.fillStyle = '#f8fafc'; ctx.fill();
-    ctx.beginPath(); ctx.arc(lx, ly, 3, 0, Math.PI * 2); ctx.fillStyle = color; ctx.fill();
-    ctx.fillStyle = '#f8fafc'; ctx.font = '600 13px Inter, sans-serif';
-    var label = '$' + last.toFixed(last >= 1 ? 2 : 4);
-    ctx.fillText(label, Math.max(pad.l, lx - 64), Math.max(18, ly - 10));
+    // ── Last-value endpoint dot + label ───────────────────────────────
+    var lx = xPos(pts.length - 1), ly = yPos(last);
+    ctx.beginPath(); ctx.arc(lx, ly, 6, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(248,250,252,0.18)'; ctx.fill();
+    ctx.beginPath(); ctx.arc(lx, ly, 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#f8fafc'; ctx.fill();
+    ctx.beginPath(); ctx.arc(lx, ly, 2.5, 0, Math.PI * 2);
+    ctx.fillStyle = lineColor; ctx.fill();
 
-    // "real on-chain" badge
-    ctx.fillStyle = 'rgba(52,211,153,0.85)';
-    ctx.font = '600 10px Inter, sans-serif';
-    ctx.fillText('● real on-chain history (' + pts.length + ' samples)', pad.l, height - 10);
+    // Current value label (top right)
+    var valStr = fmtLabel(last, mode);
+    ctx.font = '700 13px Inter,sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillStyle = lineColor;
+    ctx.fillText(valStr, width - pad.r, pad.t - 8);
+
+    // ── SOL USD equivalent line (only in SOL mode, small label) ───────
+    if (mode === 'sol') {
+      var sym = getCurrencySymbol();
+      var rate = getCurrencyRate();
+      var solEquiv = last * solUsd / rate;
+      var eqStr = '≈ ' + sym + solEquiv.toFixed(solEquiv >= 1 ? 2 : 4);
+      ctx.font = '500 11px Inter,sans-serif';
+      ctx.fillStyle = 'rgba(148,163,184,0.8)';
+      ctx.textAlign = 'right';
+      ctx.fillText(eqStr, width - pad.r, pad.t + 10);
+    }
+
+    // ── Data source badge ─────────────────────────────────────────────
+    ctx.font = '500 9px Inter,sans-serif';
+    ctx.fillStyle = 'rgba(52,211,153,0.55)';
+    ctx.textAlign = 'left';
+    ctx.fillText('● on-chain · ' + pts.length + ' pts', pad.l, height - pad.b + 14);
+
+    // ── Update stats bar ──────────────────────────────────────────────
+    var statsEl = $('ostChartStats');
+    if (statsEl) {
+      var sign = delta >= 0 ? '+' : '';
+      var deltaStr = fmtLabel(Math.abs(delta), mode);
+      var pctStr = (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
+      var colr = trendUp ? '#34d399' : '#f87171';
+      var modeLabel = { ost: 'OST Balance', sol: 'SOL Balance', usd: 'Portfolio (' + getCurrencySymbol() + ')' }[mode] || mode;
+      var extraSol = '';
+      if (mode === 'sol') {
+        var sym2 = getCurrencySymbol(); var rate2 = getCurrencyRate();
+        extraSol = ' <span style="color:#64748b;margin-left:4px;">= ' + sym2 + (last * solUsd / rate2).toFixed(2) + '</span>';
+      }
+      statsEl.innerHTML =
+        '<span style="color:#94a3b8;">' + modeLabel + '</span>' +
+        '<span style="color:#e2e8f0;font-weight:700;">' + fmtLabel(last, mode) + extraSol + '</span>' +
+        '<span style="color:' + colr + ';font-weight:600;">' + sign + deltaStr + '</span>' +
+        '<span style="color:' + colr + ';">' + pctStr + '</span>' +
+        '<span style="color:#475569;font-size:10px;">' + pts.length + ' samples · last updated ' + relTime(pts[pts.length-1].ts, nowTs) + '</span>';
+    }
+
+    // ── Update axis time labels ───────────────────────────────────────
+    var startEl = $('wdPortfolioStart'), midEl = $('wdPortfolioMid'), endEl = $('wdPortfolioEnd');
+    if (startEl && pts.length > 0) startEl.textContent = relTime(pts[0].ts, nowTs);
+    if (midEl && pts.length > 1) midEl.textContent = relTime(pts[Math.floor(pts.length / 2)].ts, nowTs);
+    if (endEl) endEl.textContent = 'Now';
   }
 
   // ------------------------------------------------------------------
-  // 3b) Transaction history panel — rendered below the portfolio chart
+  // 3b) Chart toggle wiring
+  // ------------------------------------------------------------------
+  function wireChartToggle() {
+    var container = $('ostChartToggle');
+    if (!container) return;
+    window.__chartMode = window.__chartMode || 'ost';
+    function setActive(mode) {
+      window.__chartMode = mode;
+      container.querySelectorAll('.chart-toggle-btn').forEach(function(btn) {
+        var active = btn.getAttribute('data-chart-mode') === mode;
+        btn.style.background = active ? '#6d9fff33' : 'transparent';
+        btn.style.color = active ? '#6d9fff' : '#94a3b8';
+        if (mode === 'sol' && active) { btn.style.background = '#a78bfa33'; btn.style.color = '#a78bfa'; }
+        if (mode === 'usd' && active) { btn.style.background = '#34d39922'; btn.style.color = '#34d399'; }
+      });
+      refreshChartIfReady();
+    }
+    container.querySelectorAll('.chart-toggle-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() { setActive(btn.getAttribute('data-chart-mode')); });
+    });
+    setActive(window.__chartMode);
+  }
+
+  // ------------------------------------------------------------------
+  // 3c) Transaction history panel — rendered below the portfolio chart
   // ------------------------------------------------------------------
   function wireTransactionHistory() {
     var panel = $('ostTxHistoryPanel');
     if (!panel) return;
-    function kindIcon(k) {
-      if (k === 'swap-in' || k === 'treasury-in') return '&#x2193;'; // down arrow = received
-      if (k === 'send') return '&#x2191;'; // up arrow = sent
-      if (k === 'prediction-buy') return '&#x1F4CA;'; // chart
-      if (k === 'prediction-cashout') return '&#x1F4B0;'; // money bag
-      return '&#x25CF;'; // dot for tick
-    }
-    function kindLabel(k) {
-      if (k === 'swap-in') return 'Swapped to OST';
-      if (k === 'treasury-in') return 'Converted to OST';
-      if (k === 'send') return 'Sent OST';
-      if (k === 'prediction-buy') return 'Prediction buy';
-      if (k === 'prediction-cashout') return 'Prediction cashout';
-      if (k === 'tick') return 'Balance update';
-      return k || 'Activity';
-    }
-    function kindColor(k) {
-      if (k === 'swap-in' || k === 'treasury-in' || k === 'prediction-cashout') return '#34d399';
-      if (k === 'send' || k === 'prediction-buy') return '#f87171';
-      return '#94a3b8';
-    }
+    var ICONS = {
+      'swap-in': '↓', 'treasury-in': '↓', 'send': '↑',
+      'prediction-buy': '📈', 'prediction-cashout': '💰', 'tick': '·'
+    };
+    var LABELS = {
+      'swap-in': 'Swapped → OST', 'treasury-in': 'Converted → OST',
+      'send': 'Sent OST', 'prediction-buy': 'Prediction buy',
+      'prediction-cashout': 'Prediction cashout', 'tick': 'Balance tick'
+    };
+    var COLORS = {
+      'swap-in': '#60a5fa', 'treasury-in': '#60a5fa',
+      'send': '#f87171', 'prediction-buy': '#fbbf24',
+      'prediction-cashout': '#34d399', 'tick': '#475569'
+    };
     function fmtTs(ts) {
-      if (!ts) return '';
+      if (!ts) return '—';
       var d = new Date(ts);
-      return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+      return d.toLocaleDateString(undefined, {month:'short', day:'numeric'}) + ' ' +
+             d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    }
+    function fmtAmt(item) {
+      var n = Number(item.amount);
+      if (!Number.isFinite(n) || n <= 0) return '—';
+      var isOut = item.kind === 'send' || item.kind === 'prediction-buy';
+      var sign = isOut ? '−' : '+';
+      var color = isOut ? '#f87171' : '#34d399';
+      return '<span style="color:' + color + ';font-weight:700;">' + sign + n.toFixed(2) + ' OST</span>';
     }
     function render() {
       var snaps = loadSnapshots();
-      // Also pull prediction orders if available
       var orders = [];
       try {
-        if (typeof readPredictionOrderRecords === 'function') {
-          orders = readPredictionOrderRecords() || [];
-        }
+        var storedOrders = JSON.parse(localStorage.getItem('ost.prediction.orders.v1') || '[]');
+        orders = Array.isArray(storedOrders) ? storedOrders : [];
       } catch(e){}
-      // Merge snaps (non-tick) and orders into one timeline
+
       var items = snaps
         .filter(function(s){ return s.kind !== 'tick'; })
-        .map(function(s){ return {ts: s.ts, kind: s.kind, amount: s.amount, sig: s.sig, ostBalance: s.ostBalance}; });
-      orders.forEach(function(o){
-        items.push({ts: o.ts || o.createdAt || o.timestamp, kind: 'prediction-buy', amount: o.stake, sig: o.sig || o.signature, label: (o.side||'?').toUpperCase()+' on '+String(o.title||'').substring(0,32)});
+        .map(function(s){ return { ts: s.ts, kind: s.kind, amount: s.amount, sig: s.sig }; });
+
+      orders.forEach(function(o) {
+        items.push({ ts: o.ts || o.createdAt, kind: 'prediction-buy', amount: o.stake,
+          sig: o.sig || o.signature,
+          label: (o.side||'?').toUpperCase() + ' · ' + String(o.title||'').substring(0,30),
+          price: o.price, potentialReturn: o.potentialReturn });
         if (o.cashedOut) {
-          items.push({ts: o.cashoutAt || o.ts, kind: 'prediction-cashout', amount: o.cashoutOst, sig: o.cashoutSig, label: 'Cashout: '+String(o.title||'').substring(0,32)});
+          items.push({ ts: o.cashoutAt, kind: 'prediction-cashout', amount: o.cashoutOst,
+            sig: o.cashoutSig, label: 'Cashout · ' + String(o.title||'').substring(0,30) });
         }
       });
+
       items.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+
+      var openPositions = orders.filter(function(o){ return !o.cashedOut; });
+
+      // ── Summary chips ──────────────────────────────────────────────
+      var totalIn = 0, totalOut = 0;
+      items.forEach(function(it){
+        var n = Number(it.amount) || 0;
+        if (it.kind === 'swap-in' || it.kind === 'treasury-in' || it.kind === 'prediction-cashout') totalIn += n;
+        if (it.kind === 'send' || it.kind === 'prediction-buy') totalOut += n;
+      });
+
+      var summaryHtml =
+        '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;">' +
+        _chip('↓ Received', totalIn.toFixed(2) + ' OST', '#34d399') +
+        _chip('↑ Sent/Bet', totalOut.toFixed(2) + ' OST', '#f87171') +
+        _chip('📈 Open positions', openPositions.length, '#fbbf24') +
+        _chip('📋 Total events', items.length, '#94a3b8') +
+        '</div>';
+
       if (!items.length) {
-        panel.innerHTML = '<p style="color:#64748b;font-size:12px;text-align:center;padding:12px 0;">No transactions yet. Make a swap or prediction to see your history.</p>';
+        panel.innerHTML = summaryHtml + '<p style="color:#64748b;font-size:12px;text-align:center;padding:10px 0;">No transactions yet — make a swap or prediction to start your history.</p>';
         return;
       }
-      var html = '<table style="width:100%;border-collapse:collapse;font-size:13px;color:#e2e8f0;">' +
-        '<thead><tr style="color:#94a3b8;font-size:11px;text-transform:uppercase;letter-spacing:.04em;">' +
-        '<th style="text-align:left;padding:4px 6px;">Time</th><th style="padding:4px 6px;">Type</th>' +
-        '<th style="text-align:right;padding:4px 6px;">Amount</th><th style="padding:4px 6px;">Tx</th>' +
-        '</tr></thead><tbody>';
-      items.slice(0,40).forEach(function(item){
-        var color = kindColor(item.kind);
-        var amtTxt = Number.isFinite(Number(item.amount)) && Number(item.amount) > 0
-          ? (item.kind === 'send' || item.kind === 'prediction-buy' ? '-' : '+') + Number(item.amount).toFixed(2) + ' OST'
-          : '';
-        var sigLink = item.sig ? '<a href="https://explorer.solana.com/tx/'+item.sig+'?cluster=devnet" target="_blank" rel="noopener" style="color:#6d9fff;font-size:11px;">&nearr;</a>' : '';
-        var detail = item.label ? '<div style="color:#64748b;font-size:11px;">'+item.label+'</div>' : '';
-        html += '<tr style="border-top:1px solid rgba(255,255,255,0.05);">' +
-          '<td style="padding:5px 6px;white-space:nowrap;color:#94a3b8;font-size:11px;">' + fmtTs(item.ts) + '</td>' +
-          '<td style="padding:5px 6px;"><span style="font-size:15px;">' + kindIcon(item.kind) + '</span>' +
-          ' <span style="color:'+color+'">'+kindLabel(item.kind)+'</span>'+detail+'</td>' +
-          '<td style="text-align:right;padding:5px 6px;color:'+color+';font-weight:600;">' + amtTxt + '</td>' +
-          '<td style="text-align:center;padding:5px 6px;">' + sigLink + '</td>' +
+
+      // ── Table ──────────────────────────────────────────────────────
+      var tableHtml =
+        '<div style="overflow-x:auto;">' +
+        '<table style="width:100%;border-collapse:collapse;font-size:12px;color:#e2e8f0;min-width:440px;">' +
+        '<thead>' +
+        '<tr style="color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid rgba(255,255,255,0.07);">' +
+        '<th style="text-align:left;padding:5px 8px;font-weight:600;">Time</th>' +
+        '<th style="text-align:left;padding:5px 8px;font-weight:600;">Type</th>' +
+        '<th style="text-align:right;padding:5px 8px;font-weight:600;">Amount</th>' +
+        '<th style="text-align:right;padding:5px 8px;font-weight:600;">Details</th>' +
+        '<th style="text-align:center;padding:5px 8px;font-weight:600;">Tx</th>' +
+        '</tr>' +
+        '</thead><tbody>';
+
+      items.slice(0, 50).forEach(function(item, idx) {
+        var c = COLORS[item.kind] || '#94a3b8';
+        var icon = ICONS[item.kind] || '●';
+        var lbl = LABELS[item.kind] || item.kind;
+        var rowBg = idx % 2 === 0 ? 'rgba(255,255,255,0.015)' : 'transparent';
+        var sigLink = item.sig
+          ? '<a href="https://explorer.solana.com/tx/' + item.sig + '?cluster=devnet" target="_blank" rel="noopener" title="View on Solscan" style="color:#6d9fff;font-size:13px;text-decoration:none;">↗</a>'
+          : '—';
+        var detail = '';
+        if (item.label) {
+          detail = '<div style="color:#64748b;font-size:10px;margin-top:1px;">' + String(item.label) + '</div>';
+        }
+        if (item.price && item.potentialReturn) {
+          var entryPct = (Number(item.price) * 100).toFixed(1);
+          var shares = Number(item.price) > 0 ? (Number(item.amount||0) / Number(item.price)).toFixed(2) : '—';
+          detail += '<div style="color:#475569;font-size:10px;">' + entryPct + '¢ · ' + shares + ' shares · max ' + Number(item.potentialReturn).toFixed(2) + ' OST</div>';
+        }
+        tableHtml +=
+          '<tr style="background:' + rowBg + ';border-top:1px solid rgba(255,255,255,0.04);">' +
+          '<td style="padding:5px 8px;white-space:nowrap;color:#94a3b8;font-size:10px;">' + fmtTs(item.ts) + '</td>' +
+          '<td style="padding:5px 8px;">' +
+            '<span style="font-size:13px;margin-right:4px;">' + icon + '</span>' +
+            '<span style="color:' + c + ';font-weight:600;">' + lbl + '</span>' +
+            detail +
+          '</td>' +
+          '<td style="text-align:right;padding:5px 8px;">' + fmtAmt(item) + '</td>' +
+          '<td style="text-align:right;padding:5px 8px;color:#64748b;font-size:10px;">' +
+            (item.sig ? item.sig.substring(0,8) + '…' : '—') + '</td>' +
+          '<td style="text-align:center;padding:5px 8px;">' + sigLink + '</td>' +
           '</tr>';
       });
-      html += '</tbody></table>';
-      if (items.length > 40) {
-        html += '<p style="color:#64748b;font-size:11px;text-align:center;margin-top:4px;">Showing latest 40 of '+items.length+' records</p>';
+
+      tableHtml += '</tbody></table></div>';
+      if (items.length > 50) {
+        tableHtml += '<p style="color:#475569;font-size:10px;text-align:center;margin-top:4px;">Showing latest 50 of ' + items.length + ' records</p>';
       }
-      panel.innerHTML = html;
+
+      panel.innerHTML = summaryHtml + tableHtml;
     }
+
+    function _chip(label, val, color) {
+      return '<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:7px;padding:4px 10px;display:flex;gap:6px;align-items:baseline;">' +
+        '<span style="color:#64748b;font-size:10px;">' + label + '</span>' +
+        '<span style="color:' + color + ';font-weight:700;font-size:13px;">' + val + '</span>' +
+        '</div>';
+    }
+
     render();
-    // Re-render on wallet activity (snapshot writes trigger chart, so hook resize)
     window.addEventListener('ost-tx-history-update', render);
     setInterval(render, 15000);
     window.__renderOstTxHistory = render;
@@ -1012,6 +1293,7 @@
     }
     try { wireBuyOstAutoSelect(); } catch (e) { console.warn(e); }
     try { wireWalletButtons(); } catch (e) { console.warn(e); }
+    try { wireChartToggle(); } catch (e) { console.warn(e); }
     try { wireConvertQuote(); } catch (e) { console.warn(e); }
     try { wireTransactionHistory(); } catch (e) { console.warn(e); }
     try { startSnapshotPoller(); } catch (e) { console.warn(e); }

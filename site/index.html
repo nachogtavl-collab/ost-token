@@ -1686,14 +1686,24 @@
                   <div class="wd-intelligence-chart-head">
                     <div>
                       <strong id="wdPortfolioHeading">Wallet curve</strong>
-                      <p id="wdPortfolioCopy">Your live wallet curve combines current SOL and OST holdings with the latest market tape.</p>
+                      <p id="wdPortfolioCopy">Your live on-chain balance history.</p>
                     </div>
-                    <span class="wd-intelligence-badge" id="wdPortfolioBadge">Waiting for funds</span>
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                      <!-- Chart mode toggle -->
+                      <div id="ostChartToggle" style="display:flex;gap:4px;background:rgba(255,255,255,0.05);border:1px solid rgba(109,159,255,0.15);border-radius:8px;padding:3px;">
+                        <button data-chart-mode="ost" class="chart-toggle-btn chart-toggle-active" style="padding:3px 10px;border-radius:5px;border:none;font-size:11px;font-weight:700;cursor:pointer;background:#6d9fff22;color:#6d9fff;letter-spacing:.04em;">OST</button>
+                        <button data-chart-mode="sol" class="chart-toggle-btn" style="padding:3px 10px;border-radius:5px;border:none;font-size:11px;font-weight:700;cursor:pointer;background:transparent;color:#94a3b8;letter-spacing:.04em;">SOL</button>
+                        <button data-chart-mode="usd" class="chart-toggle-btn" style="padding:3px 10px;border-radius:5px;border:none;font-size:11px;font-weight:700;cursor:pointer;background:transparent;color:#94a3b8;letter-spacing:.04em;">USD</button>
+                      </div>
+                      <span class="wd-intelligence-badge" id="wdPortfolioBadge">Waiting for funds</span>
+                    </div>
                   </div>
+                  <!-- Stats bar -->
+                  <div id="ostChartStats" style="display:flex;gap:18px;flex-wrap:wrap;padding:6px 2px 2px;font-size:12px;color:#94a3b8;min-height:22px;"></div>
                   <canvas id="wdPortfolioChart" class="wd-portfolio-chart" width="820" height="240" aria-label="Wallet portfolio chart"></canvas>
-                  <div class="wd-portfolio-axis">
-                    <span id="wdPortfolioStart">24h ago</span>
-                    <span id="wdPortfolioMid">12h</span>
+                  <div class="wd-portfolio-axis" id="ostChartAxis" style="display:flex;justify-content:space-between;padding:2px 6px 0;">
+                    <span id="wdPortfolioStart">—</span>
+                    <span id="wdPortfolioMid">—</span>
                     <span id="wdPortfolioEnd">Now</span>
                   </div>
                   <!-- Transaction history feed -->
@@ -5211,7 +5221,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="app.js?v=69"></script>
   <script src="polish.js?v=2"></script>
   <script src="swap-pool.js?v=1"></script>
-  <script src="wallet-extras.js?v=6"></script>
+  <script src="wallet-extras.js?v=7"></script>
   <script src="compartments.js?v=1"></script>
   <script src="prediction-extras.js?v=1"></script>
   <script src="ux-extras.js?v=3"></script>
