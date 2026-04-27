@@ -152,10 +152,175 @@
     return { sig: sig, ost: quote.ost, solUsd: quote.solUsd, rate: quote.rate, fee: quote.fee };
   }
 
+  // ------------------------------------------------------------------
+  // 0a-bis) Universal "any currency → OST" path
+  // For SOL we do the real co-signed atomic swap above.
+  // For BTC/ETH/USDC/USDT/BNB/fiat we can't receive the actual asset on
+  // Solana devnet, so the swap pool releases OST to the user at the live
+  // USD rate and we record a TREASURY RESERVE entry — a synthetic IOU that
+  // says "the OST treasury is backed by N units of <currency>". The ledger
+  // is exposed via window.OST_TREASURY.reserves() for the dashboard.
+  // ------------------------------------------------------------------
+  var TREASURY_KEY = 'ost.treasury.reserves.v1';
+  function readReserves() {
+    try { return JSON.parse(localStorage.getItem(TREASURY_KEY) || '[]'); } catch (e) { return []; }
+  }
+  function writeReserves(list) {
+    try { localStorage.setItem(TREASURY_KEY, JSON.stringify(list.slice(0, 500))); } catch (e) {}
+  }
+  function recordReserve(entry) {
+    var list = readReserves(); list.unshift(entry); writeReserves(list);
+    try { window.dispatchEvent(new CustomEvent('ost-treasury-changed', { detail: entry })); } catch (e) {}
+  }
+
+  // Live USD price per unit for any supported currency
+  function priceUsd(currency) {
+    var p = window.__ostPrices || {};
+    var c = String(currency || '').toUpperCase();
+    if (c === 'SOL') return Number.isFinite(p.solana) && p.solana > 0 ? p.solana : 86.6;
+    if (c === 'BTC') return Number.isFinite(p.bitcoin) && p.bitcoin > 0 ? p.bitcoin : 105000;
+    if (c === 'ETH') return Number.isFinite(p.ethereum) && p.ethereum > 0 ? p.ethereum : 3800;
+    if (c === 'BNB') return 650;
+    if (c === 'USDC' || c === 'USDT' || c === 'USD') return 1;
+    // Approximate fiat → USD rates (live overrides via window.__fiatRates if present)
+    var fiatRates = window.__fiatRates || {
+      EUR: 1.08, GBP: 1.27, JPY: 0.0066, CNY: 0.14, INR: 0.012, BRL: 0.20,
+      RUB: 0.011, NGN: 0.0006, MXN: 0.058, CAD: 0.74, AUD: 0.66, CHF: 1.13,
+      KRW: 0.00074, TRY: 0.029, ARS: 0.0011, EGP: 0.020, IDR: 0.000063,
+      PHP: 0.018, THB: 0.028, VND: 0.000040, PLN: 0.25, SAR: 0.27, COP: 0.00024,
+      KES: 0.0078, SEK: 0.094
+    };
+    return Number(fiatRates[c]) || 1;
+  }
+
+  function quoteAnyToOst(currency, amount) {
+    var unitUsd = priceUsd(currency);
+    var ostUsd = getLiveOstUsd();
+    var usd = Number(amount) * unitUsd;
+    var grossOst = usd / ostUsd;
+    var fee = grossOst * 0.005; // 0.5%
+    return {
+      ost: Math.max(grossOst - fee, 0),
+      grossOst: grossOst,
+      fee: fee,
+      usd: usd,
+      unitUsd: unitUsd,
+      ostUsd: ostUsd,
+      rate: unitUsd / ostUsd,
+      currency: String(currency || '').toUpperCase()
+    };
+  }
+
+  // Pool sends OST to user (transferChecked only, no inbound asset on devnet).
+  // Records a treasury reserve entry so the IOU is visible.
+  async function performTreasuryDeposit(currency, amount, opts) {
+    opts = opts || {};
+    var w = window.OST_WALLET;
+    if (!w || !w.session || !w.session.publicKey) throw new Error('Connect a wallet first');
+    var amt = Number(amount);
+    if (!Number.isFinite(amt) || amt <= 0) throw new Error('Invalid amount');
+
+    // SOL keeps its real atomic on-chain swap path
+    if (String(currency || '').toUpperCase() === 'SOL') {
+      var r = await performRealSwap(amt, opts);
+      recordReserve({
+        ts: Date.now(), currency: 'SOL', amount: amt, usd: amt * priceUsd('SOL'),
+        ost: r.ost, kind: 'on-chain-swap', sig: r.sig, backed: true
+      });
+      return Object.assign({}, r, { currency: 'SOL', kind: 'on-chain-swap' });
+    }
+
+    var pool = getSwapPool();
+    if (!pool) throw new Error('Swap pool not loaded — refresh the page');
+    var poolPub = pool.publicKey;
+    var poolAta = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.ata);
+    var mintPk = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.mint);
+    var c = w.constants;
+    var conn = w.getConnection();
+
+    var quote = quoteAnyToOst(currency, amt);
+    if (quote.ost <= 0) throw new Error('Quote too small (' + quote.ost.toFixed(6) + ' OST)');
+
+    // Make sure pool has enough OST
+    try {
+      var poolAcct = await conn.getTokenAccountBalance(poolAta);
+      var poolOst = Number(poolAcct.value.uiAmount || 0);
+      if (poolOst < quote.ost) {
+        throw new Error('Treasury reserve low on OST (' + poolOst.toFixed(2) + '). Try a smaller amount or wait for refill.');
+      }
+    } catch (e) {
+      if (e && /low on OST/.test(e.message)) throw e;
+      throw new Error('Treasury not initialised on devnet');
+    }
+
+    // Make sure user has SOL for tx fee
+    var userLamports = await conn.getBalance(w.session.publicKey);
+    if (userLamports < 5_000_000) {
+      try { await w.ensureFee(w.session.publicKey); } catch (e) {}
+    }
+
+    var userAta = await w.ensureAta(w.session.publicKey);
+
+    var tx = new solanaWeb3.Transaction();
+    tx.add(w.transferChecked(
+      poolAta, mintPk, userAta, poolPub,
+      w.toBaseUnits(quote.ost, c.OST_TOKEN_DECIMALS),
+      c.OST_TOKEN_DECIMALS, c.TOKEN_2022_PROGRAM_ID
+    ));
+    var memo = JSON.stringify({
+      k: 'treasury-deposit', cur: quote.currency, amt: amt,
+      usd: Number(quote.usd.toFixed(2)), ost: Number(quote.ost.toFixed(4)),
+      rate: Number(quote.rate.toFixed(6)), t: Date.now()
+    });
+    tx.add(w.memoIx(memo, w.session.publicKey));
+
+    tx.feePayer = w.session.publicKey;
+    var bh = await conn.getLatestBlockhash('confirmed');
+    tx.recentBlockhash = bh.blockhash;
+    tx.partialSign(pool);
+    var sig = await w.sign(tx);
+
+    var entry = {
+      ts: Date.now(), currency: quote.currency, amount: amt, usd: quote.usd,
+      ost: quote.ost, kind: 'treasury-iou', sig: sig, backed: true,
+      rate: quote.rate, unitUsd: quote.unitUsd, fee: quote.fee
+    };
+    recordReserve(entry);
+
+    try {
+      var ostBal = await w.getOstBalance(w.session.publicKey);
+      var solBal = (await conn.getBalance(w.session.publicKey)) / solanaWeb3.LAMPORTS_PER_SOL;
+      recordSnapshot({ ts: Date.now(), ostBalance: ostBal, solBalance: solBal, kind: 'treasury-in', amount: quote.ost, sig: sig });
+      refreshChartIfReady();
+    } catch (e) {}
+
+    return { sig: sig, ost: quote.ost, currency: quote.currency, usd: quote.usd, rate: quote.rate, kind: 'treasury-iou' };
+  }
+
+  function reserveTotals() {
+    var list = readReserves();
+    var byCurrency = {}, totalUsd = 0, totalOst = 0;
+    list.forEach(function (e) {
+      byCurrency[e.currency] = (byCurrency[e.currency] || 0) + Number(e.amount || 0);
+      totalUsd += Number(e.usd || 0);
+      totalOst += Number(e.ost || 0);
+    });
+    return { byCurrency: byCurrency, totalUsd: totalUsd, totalOst: totalOst, count: list.length };
+  }
+
   window.OST_REAL_SWAP = {
     quote: quoteSolToOst,
     swap: performRealSwap,
+    quoteAny: quoteAnyToOst,
+    swapAny: performTreasuryDeposit,
     pool: function () { return window.OST_SWAP_POOL ? window.OST_SWAP_POOL.publicKey : null; }
+  };
+
+  window.OST_TREASURY = {
+    reserves: readReserves,
+    totals: reserveTotals,
+    record: recordReserve,
+    priceUsd: priceUsd
   };
 
   // ------------------------------------------------------------------

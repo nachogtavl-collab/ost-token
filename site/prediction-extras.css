@@ -143,6 +143,42 @@ body.ost-force-desktop { min-width: 1280px; }
   }
 }
 
+/* ========== Treasury reserves panel ========== */
+.ost-treasury-panel {
+  margin: 24px 16px; padding: 18px; border-radius: 14px;
+  background: linear-gradient(180deg, #0b1430, #08101f);
+  border: 1px solid rgba(125, 200, 255, 0.16);
+  color: #e9f1ff;
+}
+.ost-treasury-panel header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.ost-treasury-panel h3 { margin: 0; font-size: 16px; }
+.ost-treasury-panel #ost-treasury-refresh {
+  background: transparent; border: 1px solid rgba(125, 200, 255, 0.3); color: #a8c4ee;
+  padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 12px;
+}
+.ost-treasury-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 12px; }
+.ost-treasury-summary > div {
+  background: rgba(255, 255, 255, 0.04); padding: 10px 12px; border-radius: 10px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.ost-treasury-summary strong { font-size: 18px; }
+.ost-treasury-label { font-size: 11px; color: #9bb0d8; text-transform: uppercase; letter-spacing: 0.06em; }
+.ost-treasury-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.ost-treasury-chip {
+  background: rgba(125, 200, 255, 0.12); padding: 4px 10px; border-radius: 999px;
+  font-size: 12px; color: #c4d8f5;
+}
+.ost-treasury-chip strong { color: #fff; margin-right: 4px; }
+.ost-treasury-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.ost-treasury-table th, .ost-treasury-table td {
+  text-align: left; padding: 6px 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.ost-treasury-table th { color: #9bb0d8; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+.ost-treasury-empty { color: #97a8c8; font-size: 13px; padding: 16px; text-align: center; }
+@media (max-width: 780px) {
+  body:not(.ost-force-desktop) .ost-treasury-table { display: block; overflow-x: auto; }
+}
+
 /* ========== Guided tour overlay ========== */
 .ost-tour {
   position: fixed; inset: 0; z-index: 10050; display: none;

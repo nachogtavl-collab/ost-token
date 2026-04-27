@@ -4379,6 +4379,27 @@
       }
 
       if (isFiat) {
+        // Fiat now also routes through the universal treasury path:
+        // pool releases OST at the live FX rate and the treasury records
+        // a synthetic IOU backed by the deposited fiat.
+        if (window.OST_REAL_SWAP && typeof window.OST_REAL_SWAP.swapAny === 'function' && connectedWalletSession) {
+          try {
+            await pulseConvertSteps(2);
+            const fq = window.OST_REAL_SWAP.quoteAny(curr, amount);
+            transferResult.textContent = 'Routing ' + amount + ' ' + curr + ' → ~' + fq.ost.toFixed(2) + ' OST...';
+            const fr = await window.OST_REAL_SWAP.swapAny(curr, amount, {});
+            transferResult.textContent = 'Received ' + fr.ost.toFixed(2) + ' OST · sig ' + String(fr.sig).slice(0, 8) + '...';
+            setConvertRouteMessage('Treasury reserve created: ' + amount + ' ' + curr + ' (≈ $' + fr.usd.toFixed(2) + ') is held as backing for the ' + fr.ost.toFixed(2) + ' OST released to your wallet.');
+            toast('💱', 'Converted ' + amount + ' ' + curr + ' → ' + fr.ost.toFixed(2) + ' OST');
+            launchConfetti();
+            updateWalletBalance(connectedWallet);
+            return;
+          } catch (err) {
+            console.warn('[OST] Fiat treasury route failed, showing provider links', err);
+            transferResult.textContent = 'Treasury route failed: ' + ((err && err.message) || err);
+          }
+        }
+        // Fallback: show fiat provider links as before
         await pulseConvertSteps(1);
         transferResult.textContent = `Route guide ready for ${curr} → OST.`;
         setConvertRouteMessage('Direct fiat purchase is not live on devnet. Use the faucet for test OST, or open the provider links below as the future mainnet on-ramp into SOL or USDC.');
@@ -4392,58 +4413,59 @@
 
       await pulseConvertSteps(2);
 
-      // Native devnet path: SOL holders can buy OST directly through the OST program
-      // by claiming from the on-chain treasury. This is the "buy through us, not Solana"
-      // route — no Jupiter, no Raydium, no external liquidity required.
-      if (curr === 'SOL') {
-        const solAmount = parseFloat((transferAmount && transferAmount.value) || '0');
-        // If user typed a SOL amount > 0, run the real co-signed swap from the swap pool
-        // (live USD-rate conversion). Otherwise fall back to the 1-OST faucet for first-time users.
-        if (solAmount > 0 && window.OST_REAL_SWAP && window.OST_SWAP_POOL) {
-          try {
-            transferResult.textContent = `Quoting ${solAmount} SOL → OST at live rate...`;
-            const q = window.OST_REAL_SWAP.quote(solAmount);
-            transferResult.textContent = `Routing ${solAmount} SOL → ~${q.ost.toFixed(2)} OST (rate ${q.rate.toFixed(2)} OST/SOL)...`;
-            const result = await window.OST_REAL_SWAP.swap(solAmount, { memo: 'OST swap' });
-            transferResult.textContent = `Received ${result.ost.toFixed(2)} OST · sig ${result.sig.slice(0, 8)}...`;
-            setConvertRouteMessage(`Atomic swap settled on devnet at $${result.solUsd.toFixed(2)}/SOL. ${result.ost.toFixed(2)} OST released from the OST swap pool to your wallet in a single transaction.`);
-            toast('💱', `Swapped ${solAmount} SOL → ${result.ost.toFixed(2)} OST`);
-            launchConfetti();
-            updateWalletBalance(connectedWallet);
+      // ---- Universal "any currency → OST" path through the OST treasury ----
+      // SOL still does the real atomic on-chain co-signed swap.
+      // Everything else (BTC, ETH, USDC, USDT, BNB, fiat) routes through the
+      // treasury reserve: pool releases OST at the live USD rate and we
+      // record an IOU entry backed by the deposited currency.
+      if (window.OST_REAL_SWAP && typeof window.OST_REAL_SWAP.swapAny === 'function' && window.OST_SWAP_POOL) {
+        try {
+          var q = window.OST_REAL_SWAP.quoteAny(curr, amount);
+          transferResult.textContent = 'Routing ' + amount + ' ' + curr + ' → ~' + q.ost.toFixed(2) + ' OST (rate ' + q.rate.toFixed(2) + ' OST/' + curr + ')...';
+          var result = await window.OST_REAL_SWAP.swapAny(curr, amount, { });
+          transferResult.textContent = 'Received ' + result.ost.toFixed(2) + ' OST · sig ' + String(result.sig).slice(0, 8) + '...';
+          if (result.kind === 'on-chain-swap') {
+            setConvertRouteMessage('Atomic ' + curr + ' → OST swap settled on-chain. The OST treasury now holds ' + amount + ' ' + curr + ' as backing.');
+          } else {
+            setConvertRouteMessage('Treasury reserve created: ' + amount + ' ' + curr + ' (≈ $' + result.usd.toFixed(2) + ') is now held as backing for the ' + result.ost.toFixed(2) + ' OST released to your wallet.');
+          }
+          toast('🏦', 'Converted ' + amount + ' ' + curr + ' → ' + result.ost.toFixed(2) + ' OST');
+          launchConfetti();
+          updateWalletBalance(connectedWallet);
+          return;
+        } catch (err) {
+          console.warn('[OST] Universal swap failed', err);
+          var errMsg = (err && err.message) || String(err);
+          if (curr === 'SOL') {
+            transferResult.textContent = 'Swap pool unavailable: ' + errMsg + '. Trying faucet fallback...';
+          } else {
+            transferResult.textContent = 'Treasury route failed: ' + errMsg;
+            setConvertRouteMessage('Could not complete the ' + curr + ' → OST conversion. ' + errMsg);
             return;
-          } catch (err) {
-            console.warn('[OST] Real SOL→OST swap failed, falling back', err);
-            const msg = (err && err.message) || String(err);
-            // If pool is missing or low on OST, fall through to faucet attempt below.
-            if (!/Connect a wallet/i.test(msg)) {
-              transferResult.textContent = 'Swap pool unavailable: ' + msg + '. Trying faucet fallback...';
-            } else {
-              transferResult.textContent = msg;
-              return;
-            }
           }
         }
+      }
 
-        if (typeof window.runOstFaucetFlow === 'function') {
-          try {
-            const result = await window.runOstFaucetFlow({ animate: false });
-            if (result && result.ok) {
-              transferResult.textContent = `Received ${OST_FAUCET_AMOUNT} OST through OST treasury (faucet).`;
-              setConvertRouteMessage('Faucet route used: ' + OST_FAUCET_AMOUNT + ' OST minted to your wallet through the OST program. To buy more, type a SOL amount above and convert again — the swap pool will release OST at the live USD rate.');
-              toast('🎁', `Claimed ${OST_FAUCET_AMOUNT} OST faucet`);
-              return;
-            }
-            if (result && result.reason === 'already-claimed') {
-              transferResult.textContent = 'Already claimed from OST treasury. Type a SOL amount above to swap for more OST through the swap pool.';
-              setConvertRouteMessage('You already claimed your one-time OST treasury allocation. Enter a SOL amount and click Convert again to do a live SOL→OST swap through the OST swap pool.');
-              return;
-            }
-            transferResult.textContent = 'Native OST route unavailable. Loading Jupiter fallback...';
-            setConvertRouteMessage('The OST treasury is unavailable right now. Loading Jupiter as the fallback liquidity route.');
-          } catch (err) {
-            console.warn('[OST] Native convert flow failed', err);
-            transferResult.textContent = 'Native route failed. Loading Jupiter fallback...';
+      // SOL-specific faucet fallback (only for first-time users when pool is empty)
+      if (curr === 'SOL' && typeof window.runOstFaucetFlow === 'function') {
+        try {
+          const result = await window.runOstFaucetFlow({ animate: false });
+          if (result && result.ok) {
+            transferResult.textContent = `Received ${OST_FAUCET_AMOUNT} OST through OST treasury (faucet).`;
+            setConvertRouteMessage('Faucet route used: ' + OST_FAUCET_AMOUNT + ' OST minted to your wallet through the OST program. To buy more, type a SOL amount above and convert again — the swap pool will release OST at the live USD rate.');
+            toast('🎁', `Claimed ${OST_FAUCET_AMOUNT} OST faucet`);
+            return;
           }
+          if (result && result.reason === 'already-claimed') {
+            transferResult.textContent = 'Already claimed from OST treasury. Type a SOL amount above to swap for more OST through the swap pool.';
+            setConvertRouteMessage('You already claimed your one-time OST treasury allocation. Enter a SOL amount and click Convert again to do a live SOL→OST swap through the OST swap pool.');
+            return;
+          }
+          transferResult.textContent = 'Native OST route unavailable. Loading Jupiter fallback...';
+          setConvertRouteMessage('The OST treasury is unavailable right now. Loading Jupiter as the fallback liquidity route.');
+        } catch (err) {
+          console.warn('[OST] Native convert flow failed', err);
+          transferResult.textContent = 'Native route failed. Loading Jupiter fallback...';
         }
       }
 

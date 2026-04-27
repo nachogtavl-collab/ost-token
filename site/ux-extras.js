@@ -156,6 +156,63 @@
     localStorage.setItem('ost.tour.completed', '1');
   }
 
+  // ------------------ Treasury Reserves panel ------------------------------
+  function fmtUsd(n) { return '$' + Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function fmtNum(n, d) { d = d == null ? 4 : d; return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: d }); }
+  function renderTreasury(host) {
+    if (!host || !window.OST_TREASURY) return;
+    var totals = window.OST_TREASURY.totals();
+    var list = window.OST_TREASURY.reserves().slice(0, 30);
+    if (!list.length) {
+      host.innerHTML = '<div class="ost-treasury-empty">No reserves yet. Convert any currency from the <strong>Convert</strong> panel — the OST treasury will hold it as backing.</div>';
+      return;
+    }
+    var byCur = totals.byCurrency;
+    var chips = Object.keys(byCur).sort().map(function (cur) {
+      return '<span class="ost-treasury-chip"><strong>' + escapeHtml(cur) + '</strong> ' + fmtNum(byCur[cur], 6) + '</span>';
+    }).join('');
+    host.innerHTML = [
+      '<div class="ost-treasury-summary">',
+        '<div><span class="ost-treasury-label">Total backing</span><strong>' + fmtUsd(totals.totalUsd) + '</strong></div>',
+        '<div><span class="ost-treasury-label">OST issued</span><strong>' + fmtNum(totals.totalOst, 2) + ' OST</strong></div>',
+        '<div><span class="ost-treasury-label">Entries</span><strong>' + totals.count + '</strong></div>',
+      '</div>',
+      '<div class="ost-treasury-chips">' + chips + '</div>',
+      '<table class="ost-treasury-table"><thead><tr><th>When</th><th>Currency</th><th>Amount</th><th>USD</th><th>OST out</th><th>Path</th></tr></thead><tbody>',
+      list.map(function (e) {
+        var when = new Date(e.ts).toLocaleString();
+        return '<tr>' +
+          '<td>' + escapeHtml(when) + '</td>' +
+          '<td><strong>' + escapeHtml(e.currency) + '</strong></td>' +
+          '<td>' + fmtNum(e.amount, 6) + '</td>' +
+          '<td>' + fmtUsd(e.usd) + '</td>' +
+          '<td>' + fmtNum(e.ost, 4) + '</td>' +
+          '<td>' + (e.kind === 'on-chain-swap' ? 'on-chain' : 'IOU') + '</td>' +
+          '</tr>';
+      }).join(''),
+      '</tbody></table>'
+    ].join('');
+  }
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]);
+    });
+  }
+  function mountTreasuryPanel() {
+    if (document.getElementById('ost-treasury-panel')) return;
+    // Place under the convert widget if found, otherwise under the wallet portal
+    var anchor = document.querySelector('#convertWalletBackupBar') || document.querySelector('#wallet-portal') || document.body;
+    var host = document.createElement('section');
+    host.id = 'ost-treasury-panel';
+    host.className = 'ost-treasury-panel';
+    host.innerHTML = '<header><h3>🏦 OST Treasury reserves</h3><button type="button" id="ost-treasury-refresh">Refresh</button></header><div id="ost-treasury-body"></div>';
+    anchor.parentNode.insertBefore(host, anchor.nextSibling);
+    var body = host.querySelector('#ost-treasury-body');
+    host.querySelector('#ost-treasury-refresh').addEventListener('click', function () { renderTreasury(body); });
+    renderTreasury(body);
+    window.addEventListener('ost-treasury-changed', function () { renderTreasury(body); });
+  }
+
   function maybeAutoStart() {
     if (localStorage.getItem('ost.tour.completed')) return;
     // Wait for the welcome overlay (and any other auto-popups) to be closed
@@ -245,6 +302,7 @@
     // Suppress the older 3-step compartments guide so users only see the new deep tour.
     try { localStorage.setItem('ost.compartments.guideSeen.v1', '1'); } catch (e) {}
     mountMobileBar();
+    mountTreasuryPanel();
     watchLangChanges();
     setTimeout(autoTranslate, 1500);
     setInterval(autoTranslate, 5000); // pick up dynamically rendered strings
