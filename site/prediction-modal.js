@@ -26,7 +26,32 @@
   var FIVE_MIN_MS = 5 * 60 * 1000;
   var ROUND_KEY = 'ost.prediction.btc5m.rounds.v1';
   var ORDERS_KEY = 'ost.prediction.orders.v1';
-  var BTC_PRICE_URL = 'https://api.coinbase.com/v2/prices/BTC-USD/spot';
+  // BTC price feeds — try in order, all browser-CORS-safe.
+  var BTC_PRICE_FEEDS = [
+    {
+      name: 'coinbase',
+      url: 'https://api.coinbase.com/v2/prices/BTC-USD/spot',
+      pick: function (j) { return j && j.data && Number(j.data.amount); }
+    },
+    {
+      name: 'binance',
+      url: 'https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT',
+      pick: function (j) { return j && Number(j.price); }
+    },
+    {
+      name: 'coingecko',
+      url: 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd',
+      pick: function (j) { return j && j.bitcoin && Number(j.bitcoin.usd); }
+    },
+    {
+      name: 'kraken',
+      url: 'https://api.kraken.com/0/public/Ticker?pair=XBTUSD',
+      pick: function (j) {
+        try { var k = Object.keys(j.result || {})[0]; return Number(j.result[k].c[0]); } catch (_) { return null; }
+      }
+    }
+  ];
+  var BTC_FEED_INDEX = 0;
 
   // Track timers for the currently-open modal so we can stop them on close.
   var liveTimers = [];
@@ -219,7 +244,8 @@
   }
   function fetchPolyOrderbook(tokenId) {
     if (!tokenId) return Promise.resolve(null);
-    return fetch(pmClob('/book/' + encodeURIComponent(tokenId)), { headers: { accept: 'application/json' } })
+    // Polymarket CLOB uses ?token_id= as a query param, NOT a path segment.
+    return fetch(pmClob('/book', 'token_id=' + encodeURIComponent(tokenId)), { headers: { accept: 'application/json' } })
       .then(function (r) { return r.ok ? r.json() : null; })
       .catch(function () { return null; });
   }
@@ -232,6 +258,14 @@
   function fetchPolyHistory(marketId) {
     if (!marketId) return Promise.resolve(null);
     return fetch(pmData('/prices-history/' + encodeURIComponent(marketId), 'interval=1d&fidelity=10'), { headers: { accept: 'application/json' } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .catch(function () { return null; });
+  }
+  // Gamma-api fallback — works from browsers (CORS-enabled), gives us
+  // bestBid / bestAsk / lastTradePrice / volume24hr without needing CLOB.
+  function fetchPolyGammaMarket(marketId) {
+    if (!marketId) return Promise.resolve(null);
+    return fetch(pmGamma('/markets/' + encodeURIComponent(marketId)), { headers: { accept: 'application/json' } })
       .then(function (r) { return r.ok ? r.json() : null; })
       .catch(function () { return null; });
   }
@@ -482,22 +516,55 @@
       tickBtc();
       liveTimers.push(setInterval(tickBtc, 500));
       var fetchBtcLive = function () {
-        fetch(BTC_PRICE_URL, { headers: { accept: 'application/json' } })
-          .then(function (r) { return r.ok ? r.json() : null; })
-          .then(function (j) {
-            var p = j && j.data && Number(j.data.amount);
-            if (!Number.isFinite(p)) return;
-            setText(bodyEl, 'btcLive', fmtUsd(p));
-            if (market.meta.openPrice) {
-              var d = p - market.meta.openPrice;
-              var pct = (d / market.meta.openPrice) * 100;
-              var n = bodyEl.querySelector('[data-bind="btcDelta"]');
-              if (n) {
-                n.textContent = (d >= 0 ? '▲ +' : '▼ ') + fmtUsd(d) + '  (' + pct.toFixed(2) + '%)';
-                n.style.color = d >= 0 ? '#7ce6a8' : '#ff7c8a';
+        var tryFeed = function (i) {
+          if (i >= BTC_PRICE_FEEDS.length) return Promise.resolve(null);
+          var feed = BTC_PRICE_FEEDS[(BTC_FEED_INDEX + i) % BTC_PRICE_FEEDS.length];
+          return fetch(feed.url, { headers: { accept: 'application/json' } })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (j) {
+              var p = j && feed.pick(j);
+              if (Number.isFinite(p) && p > 1000) {
+                BTC_FEED_INDEX = (BTC_FEED_INDEX + i) % BTC_PRICE_FEEDS.length;
+                return p;
               }
-            }
-          }).catch(function () {});
+              return tryFeed(i + 1);
+            })
+            .catch(function () { return tryFeed(i + 1); });
+        };
+        tryFeed(0).then(function (p) {
+          if (!Number.isFinite(p)) {
+            setText(bodyEl, 'btcLive', 'feed offline');
+            return;
+          }
+          setText(bodyEl, 'btcLive', fmtUsd(p) + '  · ' + BTC_PRICE_FEEDS[BTC_FEED_INDEX].name);
+          // Persist open price on first tick of the round if missing.
+          if (!market.meta.openPrice) {
+            market.meta.openPrice = p;
+            try {
+              var rounds = readJson(ROUND_KEY, {});
+              rounds[String(market.meta.openAt)] = Object.assign({}, rounds[String(market.meta.openAt)] || {}, { openPrice: p });
+              localStorage.setItem(ROUND_KEY, JSON.stringify(rounds));
+            } catch (_) {}
+            setText(bodyEl, 'btcOpen', fmtUsd(p));
+          }
+          var d = p - market.meta.openPrice;
+          var pct = (d / market.meta.openPrice) * 100;
+          var n = bodyEl.querySelector('[data-bind="btcDelta"]');
+          if (n) {
+            n.textContent = (d >= 0 ? '▲ +' : '▼ ') + fmtUsd(d) + '  (' + pct.toFixed(3) + '%)';
+            n.style.color = d >= 0 ? '#7ce6a8' : '#ff7c8a';
+          }
+          // Live YES/NO odds from delta sign + magnitude (0.5 + tanh(delta*100))
+          var yesProb = 0.5 + 0.5 * Math.tanh(pct * 0.6);
+          yesProb = Math.max(0.02, Math.min(0.98, yesProb));
+          market.yesPriceNumber = yesProb;
+          market.noPriceNumber = 1 - yesProb;
+          var yEl = bodyEl.querySelector('[data-bind="yesPct"]');
+          var nEl2 = bodyEl.querySelector('[data-bind="noPct"]');
+          if (yEl) yEl.textContent = (yesProb * 100).toFixed(1) + '%';
+          if (nEl2) nEl2.textContent = ((1 - yesProb) * 100).toFixed(1) + '%';
+          recalcProjected();
+        });
       };
       fetchBtcLive();
       liveTimers.push(setInterval(fetchBtcLive, 4000));
@@ -506,16 +573,57 @@
     // ---- Polymarket live data ----
     if (looksLikePolymarketId(market)) {
       var tokenId = findPolymarketTokenId(market);
-      var rawId = market.raw && (market.raw.conditionId || market.raw.id) || market.id;
+      var rawId = market.raw && (market.raw.conditionId || market.raw.condition_id || market.raw.id) || market.conditionId || market.id;
 
-      // Order book
-      setText(bodyEl, 'bookStatus', tokenId ? 'Loading…' : 'token id unknown');
-      if (tokenId) {
+      // Apply a fresh YES/NO from any source.
+      var applyYes = function (yesPx, src) {
+        if (!Number.isFinite(yesPx) || yesPx <= 0 || yesPx >= 1) return;
+        market.yesPriceNumber = yesPx;
+        market.noPriceNumber = 1 - yesPx;
+        var yEl = bodyEl.querySelector('[data-bind="yesPct"]');
+        var n2 = bodyEl.querySelector('[data-bind="noPct"]');
+        if (yEl) yEl.textContent = (yesPx * 100).toFixed(1) + '% · ' + src;
+        if (n2) n2.textContent = ((1 - yesPx) * 100).toFixed(1) + '%';
+        recalcProjected();
+      };
+
+      // Gamma-api refresh — works even when CLOB CORS blocks. Gives us
+      // bestBid/bestAsk/lastTradePrice. Refreshed every 4s.
+      var refreshGamma = function () {
+        fetchPolyGammaMarket(rawId).then(function (g) {
+          if (!g) return;
+          var bb = Number(g.bestBid), ba = Number(g.bestAsk), lt = Number(g.lastTradePrice);
+          var yesPx = NaN;
+          if (Number.isFinite(bb) && Number.isFinite(ba)) yesPx = (bb + ba) / 2;
+          else if (Number.isFinite(lt)) yesPx = lt;
+          else if (Number.isFinite(bb)) yesPx = bb;
+          else if (Number.isFinite(ba)) yesPx = ba;
+          applyYes(yesPx, 'gamma');
+          // Update header tag with live volume.
+          if (Number.isFinite(Number(g.volume24hr))) {
+            setText(bodyEl, 'tradesStatus', 'gamma · 24h vol $' + Math.round(Number(g.volume24hr)).toLocaleString());
+          }
+          // If we didn't have clobTokenIds, pull them from gamma now.
+          if (!tokenId) {
+            try {
+              var t = g.clobTokenIds; if (typeof t === 'string') t = JSON.parse(t);
+              if (Array.isArray(t) && t[0]) { tokenId = String(t[0]); refreshBook(); }
+            } catch (_) {}
+          }
+        });
+      };
+      refreshGamma();
+      liveTimers.push(setInterval(refreshGamma, 4000));
+
+      // Order book — refreshed every 5s. Updates YES/NO prices from book mid.
+      var refreshBook = function () {
+        if (!tokenId) { setText(bodyEl, 'bookStatus', 'token id unknown — book unavailable'); return; }
+        setText(bodyEl, 'bookStatus', 'fetching…');
         fetchPolyOrderbook(tokenId).then(function (book) {
-          if (!book) { setText(bodyEl, 'bookStatus', 'no book'); return; }
-          setText(bodyEl, 'bookStatus', 'Live · ' + (book.market || ''));
-          var bids = (book.bids || []).slice(0, 6);
-          var asks = (book.asks || []).slice(0, 6);
+          if (!book) { setText(bodyEl, 'bookStatus', 'book offline'); return; }
+          var bids = (book.bids || []).slice(0, 8);
+          var asks = (book.asks || []).slice(0, 8);
+          setText(bodyEl, 'bookStatus', 'live · ' + bids.length + 'b / ' + asks.length + 'a · ' + fmtTime(Date.now()));
           var fmtRow = function (r) {
             var px = Number(r.price), sz = Number(r.size);
             return '<div class="ost-modal__book-row"><span>' + (Number.isFinite(px) ? (px * 100).toFixed(1) + '¢' : '—') + '</span><span>' + (Number.isFinite(sz) ? sz.toFixed(0) : '—') + '</span></div>';
@@ -524,46 +632,67 @@
           var noEl  = bodyEl.querySelector('[data-bind="bookNo"]');
           if (yesEl) yesEl.innerHTML = bids.length ? bids.map(fmtRow).join('') : '<div class="ost-modal__book-empty">No bids</div>';
           if (noEl)  noEl.innerHTML  = asks.length ? asks.map(fmtRow).join('') : '<div class="ost-modal__book-empty">No asks</div>';
+          // Live YES price = best bid (mid of best bid/ask if both available).
+          var bestBid = bids[0] && Number(bids[0].price);
+          var bestAsk = asks[0] && Number(asks[0].price);
+          var yesPx = NaN;
+          if (Number.isFinite(bestBid) && Number.isFinite(bestAsk)) yesPx = (bestBid + bestAsk) / 2;
+          else if (Number.isFinite(bestBid)) yesPx = bestBid;
+          else if (Number.isFinite(bestAsk)) yesPx = bestAsk;
+          if (Number.isFinite(yesPx) && yesPx > 0 && yesPx < 1) {
+            applyYes(yesPx, 'clob');
+          }
         });
-      }
+      };
+      refreshBook();
+      liveTimers.push(setInterval(refreshBook, 5000));
 
-      // Trades
-      setText(bodyEl, 'tradesStatus', 'Loading…');
-      fetchPolyTrades(rawId).then(function (trades) {
-        var body = bodyEl.querySelector('[data-bind="tradesBody"]');
-        if (!body) return;
-        if (!trades || !Array.isArray(trades) || !trades.length) {
-          body.innerHTML = '<tr><td colspan="4" style="text-align:center;opacity:0.6;">No recent trades available</td></tr>';
-          setText(bodyEl, 'tradesStatus', '—');
-          return;
-        }
-        setText(bodyEl, 'tradesStatus', 'Live · ' + trades.length);
-        body.innerHTML = trades.slice(0, 18).map(function (t) {
-          var side = (t.side || t.outcome || '').toString().toUpperCase();
-          var color = /YES|BUY/i.test(side) ? '#7ce6a8' : '#ff7c8a';
-          var px = Number(t.price);
-          var sz = Number(t.size || t.amount);
-          var ts = Number(t.timestamp || t.match_time || t.ts) * (Number(t.timestamp) > 1e12 ? 1 : 1000);
-          return '<tr>' +
-            '<td>' + escapeHtml(fmtTime(ts)) + '</td>' +
-            '<td style="color:' + color + ';font-weight:700;">' + escapeHtml(side || '—') + '</td>' +
-            '<td>' + (Number.isFinite(px) ? (px * 100).toFixed(1) + '¢' : '—') + '</td>' +
-            '<td>' + (Number.isFinite(sz) ? sz.toFixed(1) : '—') + '</td>' +
-          '</tr>';
-        }).join('');
-      });
+      // Trades — refresh every 8s
+      var refreshTrades = function () {
+        setText(bodyEl, 'tradesStatus', 'fetching…');
+        fetchPolyTrades(rawId).then(function (trades) {
+          var body = bodyEl.querySelector('[data-bind="tradesBody"]');
+          if (!body) return;
+          if (!trades || !Array.isArray(trades) || !trades.length) {
+            body.innerHTML = '<tr><td colspan="4" style="text-align:center;opacity:0.6;">No recent trades available</td></tr>';
+            setText(bodyEl, 'tradesStatus', 'no ticks');
+            return;
+          }
+          setText(bodyEl, 'tradesStatus', 'live · ' + trades.length + ' · ' + fmtTime(Date.now()));
+          body.innerHTML = trades.slice(0, 18).map(function (t) {
+            var side = (t.side || t.outcome || '').toString().toUpperCase();
+            var color = /YES|BUY/i.test(side) ? '#7ce6a8' : '#ff7c8a';
+            var px = Number(t.price);
+            var sz = Number(t.size || t.amount);
+            var rawTs = Number(t.timestamp || t.match_time || t.ts);
+            var ts = rawTs > 1e12 ? rawTs : rawTs * 1000;
+            return '<tr>' +
+              '<td>' + escapeHtml(fmtTime(ts)) + '</td>' +
+              '<td style="color:' + color + ';font-weight:700;">' + escapeHtml(side || '—') + '</td>' +
+              '<td>' + (Number.isFinite(px) ? (px * 100).toFixed(1) + '¢' : '—') + '</td>' +
+              '<td>' + (Number.isFinite(sz) ? sz.toFixed(1) : '—') + '</td>' +
+            '</tr>';
+          }).join('');
+        });
+      };
+      refreshTrades();
+      liveTimers.push(setInterval(refreshTrades, 8000));
 
-      // Price history
-      setText(bodyEl, 'chartStatus', 'Loading…');
-      fetchPolyHistory(rawId).then(function (h) {
-        var canvas = bodyEl.querySelector('[data-bind="chart"]');
-        if (!canvas || !h) { setText(bodyEl, 'chartStatus', '—'); return; }
-        var pts = (h.history || h.prices || []).map(function (r) { return Number(r.p || r.price); }).filter(Number.isFinite);
-        if (pts.length < 2) { setText(bodyEl, 'chartStatus', 'no series'); return; }
-        canvas.style.width = '100%'; canvas.style.height = '200px';
-        drawSeries(canvas, pts, '#6ce6a4');
-        setText(bodyEl, 'chartStatus', pts.length + ' pts · live');
-      });
+      // Price history — refresh every 30s
+      var refreshHistory = function () {
+        setText(bodyEl, 'chartStatus', 'fetching…');
+        fetchPolyHistory(rawId).then(function (h) {
+          var canvas = bodyEl.querySelector('[data-bind="chart"]');
+          if (!canvas || !h) { setText(bodyEl, 'chartStatus', 'history unavailable'); return; }
+          var pts = (h.history || h.prices || []).map(function (r) { return Number(r.p || r.price); }).filter(Number.isFinite);
+          if (pts.length < 2) { setText(bodyEl, 'chartStatus', 'no series'); return; }
+          canvas.style.width = '100%'; canvas.style.height = '200px';
+          drawSeries(canvas, pts, '#6ce6a4');
+          setText(bodyEl, 'chartStatus', pts.length + ' pts · ' + fmtTime(Date.now()));
+        });
+      };
+      refreshHistory();
+      liveTimers.push(setInterval(refreshHistory, 30000));
     } else {
       // OST native or unknown — synthesize a minimal placeholder chart
       setText(bodyEl, 'chartStatus', 'native market');

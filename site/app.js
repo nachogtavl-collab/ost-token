@@ -12993,7 +12993,18 @@
         oneWeekPriceChangeNumber: Number.isFinite(weekChange) ? weekChange : NaN,
         oneMonthPriceChangeNumber: Number.isFinite(monthChange) ? monthChange : NaN,
         attentionScore: estimateAttentionScore(textBlob, volumeNumber, liquidityNumber),
-        isBreaking: isBreakingText(textBlob, topics, closeAtMs)
+        isBreaking: isBreakingText(textBlob, topics, closeAtMs),
+        // --- raw fields needed by prediction-modal.js for live data ---
+        clobTokenIds: (function () {
+          try {
+            var t = item.clobTokenIds || item.outcomeTokens || item.tokens;
+            if (typeof t === 'string') t = JSON.parse(t);
+            return Array.isArray(t) ? t.map(String) : null;
+          } catch (_) { return null; }
+        })(),
+        conditionId: item.conditionId || item.condition_id || null,
+        slug: item.slug || null,
+        raw: item
       };
     }
 
@@ -13369,6 +13380,9 @@
       state.markets = markets;
       state.lastUpdated = updatedAt || new Date();
       state.lastError = failures.length ? failures.join(', ') + ' unavailable' : '';
+      // Expose to other scripts (prediction-modal.js needs the full records
+      // including clobTokenIds, conditionId, raw fields).
+      try { window.__predictionState = state; } catch (_) {}
 
       if (updatedEl) {
         updatedEl.textContent = 'Updated ' + state.lastUpdated.toLocaleTimeString([], {
