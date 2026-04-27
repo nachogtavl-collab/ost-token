@@ -13402,12 +13402,23 @@
     }
 
     function fetchPolymarketMarkets() {
-      return fetch('https://gamma-api.polymarket.com/markets?limit=160&closed=false', {
-        headers: { accept: 'application/json' }
-      }).then(function(response) {
-        if (!response.ok) throw new Error('Polymarket returned ' + response.status);
-        return response.json();
-      }).then(function(data) {
+      // Try the OST edge relay first (low-latency, cached, near-Polymarket).
+      // Falls back to direct Gamma API if the relay is not configured or down.
+      var relay = (typeof window !== 'undefined' && window.OST_POLY_RELAY_URL) || '';
+      var primaryUrl   = relay ? (relay.replace(/\/$/, '') + '/gamma/markets?limit=160&closed=false')
+                                : 'https://gamma-api.polymarket.com/markets?limit=160&closed=false';
+      var fallbackUrl  = 'https://gamma-api.polymarket.com/markets?limit=160&closed=false';
+      function tryFetch(url) {
+        return fetch(url, { headers: { accept: 'application/json' } }).then(function(response) {
+          if (!response.ok) throw new Error('Polymarket returned ' + response.status);
+          return response.json();
+        });
+      }
+      var firstAttempt = tryFetch(primaryUrl);
+      var resolved = (relay && primaryUrl !== fallbackUrl)
+        ? firstAttempt.catch(function() { return tryFetch(fallbackUrl); })
+        : firstAttempt;
+      return resolved.then(function(data) {
         return extractPolymarketMarkets(data).filter(function(item) {
           return item && item.active !== false && item.closed !== true;
         }).map(mapPolymarketMarket);

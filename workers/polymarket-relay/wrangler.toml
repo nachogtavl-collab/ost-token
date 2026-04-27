@@ -1,0 +1,19 @@
+name = "ost-poly-relay"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+# Run on Cloudflare's edge — every PoP. Cloudflare picks the closest one to
+# the requester automatically; for arbitrage latency we get the lowest possible
+# RTT to the user, and the upstream fetch is cached at the same PoP.
+[placement]
+mode = "smart"
+
+# Optional: bind a custom domain like relay.ost-token.example
+# [[routes]]
+# pattern = "relay.ost-token.example/*"
+# zone_name = "ost-token.example"
+
+[vars]
+GAMMA_BASE = "https://gamma-api.polymarket.com"
+CLOB_BASE  = "https://clob.polymarket.com"
+DATA_BASE  = "https://data-api.polymarket.com"

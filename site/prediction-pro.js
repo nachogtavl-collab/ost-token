@@ -17,6 +17,33 @@
   'use strict';
 
   // ---------------------------------------------------------------------------
+  // 0) Polymarket Relay configuration
+  //    Set window.OST_POLY_RELAY_URL = 'https://ost-poly-relay.<account>.workers.dev'
+  //    BEFORE this script loads (or on the page) to route Polymarket reads
+  //    through the OST Cloudflare Worker. Falls back to the direct Gamma API
+  //    so the site still works if the relay is down or not configured.
+  // ---------------------------------------------------------------------------
+  function relayBase() {
+    var v = (typeof window !== 'undefined' && window.OST_POLY_RELAY_URL) || '';
+    return v ? String(v).replace(/\/$/, '') : '';
+  }
+  function pmGammaUrl(path, query) {
+    var base = relayBase();
+    if (base) return base + '/gamma' + path + (query ? ('?' + query) : '');
+    return 'https://gamma-api.polymarket.com' + path + (query ? ('?' + query) : '');
+  }
+  function pmClobUrl(path, query) {
+    var base = relayBase();
+    if (base) return base + '/clob' + path + (query ? ('?' + query) : '');
+    return 'https://clob.polymarket.com' + path + (query ? ('?' + query) : '');
+  }
+  function pmDataUrl(path, query) {
+    var base = relayBase();
+    if (base) return base + '/data' + path + (query ? ('?' + query) : '');
+    return 'https://data-api.polymarket.com' + path + (query ? ('?' + query) : '');
+  }
+
+  // ---------------------------------------------------------------------------
   // 1) Curated featured Polymarket events (the user's wishlist)
   // ---------------------------------------------------------------------------
   var FEATURED_SLUGS = [
@@ -613,19 +640,27 @@
       return Object.assign({}, rounds[String(b.openAt)] || {}, { openAt: b.openAt, closeAt: b.closeAt });
     },
     markets: function () {
-      // Direct fetch from Polymarket Gamma API + Kalshi public API + native
+      // Direct fetch from Polymarket Gamma API (via relay if configured) +
+      // Kalshi public API + native OST markets.
       return Promise.all([
-        fetch('https://gamma-api.polymarket.com/markets?limit=160&closed=false').then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; }),
+        fetch(pmGammaUrl('/markets', 'limit=160&closed=false')).then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; }),
         fetch('https://api.elections.kalshi.com/trade-api/v2/markets?limit=160').then(function (r) { return r.ok ? r.json() : { markets: [] }; }).catch(function () { return { markets: [] }; })
       ]).then(function (results) {
         return {
           ts: Date.now(),
+          relay: !!relayBase(),
           ostNative: window.buildOstNativeMarkets ? window.buildOstNativeMarkets() : [],
           polymarket: Array.isArray(results[0]) ? results[0] : (results[0].data || []),
           kalshi: (results[1] && results[1].markets) || []
         };
       });
     },
+    // Direct CLOB helpers — bots can use these for arbitrage decisions
+    clobBook: function (tokenId)        { return fetch(pmClobUrl('/book/' + encodeURIComponent(tokenId))).then(function (r) { return r.ok ? r.json() : null; }); },
+    clobPrice: function (tokenId, side) { return fetch(pmClobUrl('/price/' + encodeURIComponent(tokenId) + '/' + (side === 'sell' ? 'sell' : 'buy'))).then(function (r) { return r.ok ? r.json() : null; }); },
+    clobTrades: function (marketId)     { return fetch(pmClobUrl('/trades', 'market=' + encodeURIComponent(marketId))).then(function (r) { return r.ok ? r.json() : null; }); },
+    pricesHistory: function (marketId, intervalParam) { return fetch(pmDataUrl('/prices-history/' + encodeURIComponent(marketId), intervalParam || 'interval=1d')).then(function (r) { return r.ok ? r.json() : null; }); },
+    relayUrl: function () { return relayBase() || null; },
     subscribe: function (cb) {
       if (typeof cb !== 'function') return function () {};
       subscribers.push(cb);
