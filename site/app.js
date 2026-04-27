@@ -3023,8 +3023,27 @@
       data: CLAIM_FAUCET_DISCRIMINATOR
     });
 
-    const signature = await signAndSendTransaction(new solanaWeb3.Transaction().add(instruction));
-    return { claimed: true, signature, balance: await getOstBalanceForAddress(claimer) };
+    // Charge a real per-wallet SOL fee so users individually pay for their
+    // OST faucet claim — no more free-riding the public faucet. The fee
+    // goes to the OST swap pool which is what backs the live swap path.
+    const FAUCET_SOL_FEE_LAMPORTS = 1_000_000; // 0.001 SOL ≈ $0.10
+    const tx = new solanaWeb3.Transaction();
+    try {
+      var poolPubkey = (window.OST_SWAP_POOL && window.OST_SWAP_POOL.publicKey)
+        ? new solanaWeb3.PublicKey(window.OST_SWAP_POOL.publicKey)
+        : daoTreasury; // fallback: send fee to the program treasury
+      tx.add(solanaWeb3.SystemProgram.transfer({
+        fromPubkey: claimer,
+        toPubkey: poolPubkey,
+        lamports: FAUCET_SOL_FEE_LAMPORTS
+      }));
+    } catch (e) {
+      console.warn('[OST] could not attach faucet SOL fee', e);
+    }
+    tx.add(instruction);
+
+    const signature = await signAndSendTransaction(tx);
+    return { claimed: true, signature, balance: await getOstBalanceForAddress(claimer), feeLamports: FAUCET_SOL_FEE_LAMPORTS };
   }
 
   function openWalletModal() { if (walletModal) walletModal.classList.add('open'); }
@@ -4437,7 +4456,9 @@
           console.warn('[OST] Universal swap failed', err);
           var errMsg = (err && err.message) || String(err);
           if (curr === 'SOL') {
-            transferResult.textContent = 'Swap pool unavailable: ' + errMsg + '. Trying faucet fallback...';
+            transferResult.textContent = 'Swap failed: ' + errMsg;
+            setConvertRouteMessage('Convert could not complete: ' + errMsg + '. The swap pool releases OST at the live USD rate; if your wallet is empty of devnet SOL, fund it first via faucet.solana.com.');
+            return;
           } else {
             transferResult.textContent = 'Treasury route failed: ' + errMsg;
             setConvertRouteMessage('Could not complete the ' + curr + ' → OST conversion. ' + errMsg);
@@ -4446,33 +4467,11 @@
         }
       }
 
-      // SOL-specific faucet fallback (only for first-time users when pool is empty)
-      if (curr === 'SOL' && typeof window.runOstFaucetFlow === 'function') {
-        try {
-          const result = await window.runOstFaucetFlow({ animate: false });
-          if (result && result.ok) {
-            transferResult.textContent = `Received ${OST_FAUCET_AMOUNT} OST through OST treasury (faucet).`;
-            setConvertRouteMessage('Faucet route used: ' + OST_FAUCET_AMOUNT + ' OST minted to your wallet through the OST program. To buy more, type a SOL amount above and convert again — the swap pool will release OST at the live USD rate.');
-            toast('🎁', `Claimed ${OST_FAUCET_AMOUNT} OST faucet`);
-            return;
-          }
-          if (result && result.reason === 'already-claimed') {
-            transferResult.textContent = 'Already claimed from OST treasury. Type a SOL amount above to swap for more OST through the swap pool.';
-            setConvertRouteMessage('You already claimed your one-time OST treasury allocation. Enter a SOL amount and click Convert again to do a live SOL→OST swap through the OST swap pool.');
-            return;
-          }
-          transferResult.textContent = 'Native OST route unavailable. Loading Jupiter fallback...';
-          setConvertRouteMessage('The OST treasury is unavailable right now. Loading Jupiter as the fallback liquidity route.');
-        } catch (err) {
-          console.warn('[OST] Native convert flow failed', err);
-          transferResult.textContent = 'Native route failed. Loading Jupiter fallback...';
-        }
-      }
-
-      if (loadJupiterBtn) loadJupiterBtn.click();
-      transferResult.textContent = transferResult.textContent || `Live route loaded for ${curr} → OST.`;
-      setConvertRouteMessage('Jupiter is now loaded with your connected wallet. Review the route and approve on-chain only if the swap details look right.');
-      toast('⚡', 'Live swap route loaded in Jupiter');
+      // No fallback — Convert is now the real swap path only. The free 1-OST
+      // faucet is a separate explicit action elsewhere on the page.
+      transferResult.textContent = 'Swap pool not loaded. Refresh the page and try again.';
+      setConvertRouteMessage('The OST swap pool script is not loaded yet. Refresh the page; if the issue persists the pool may be temporarily offline.');
+      toast('⚠', 'Swap pool not ready');
     });
   }
 
@@ -4730,8 +4729,8 @@
           return { ok: true, alreadyClaimed: true, balance: ostBalance };
         }
 
-        if (faucetStatus) faucetStatus.textContent = 'OST claimed on devnet. Balance ready: ' + ostBalance.toFixed(2) + ' OST.';
-        toast('🎉', '+1 OST claimed on devnet!');
+        if (faucetStatus) faucetStatus.textContent = 'OST claimed on devnet (charged 0.001 SOL fee). Balance ready: ' + ostBalance.toFixed(2) + ' OST.';
+        toast('🎉', '+1 OST claimed (–0.001 SOL fee paid on-chain)');
         launchConfetti();
         updateWalletBalance(connectedWallet);
         syncOstDevnetMetrics({ force: true });
