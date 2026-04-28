@@ -126,11 +126,37 @@ async function polyData(env, path, query = '') {
   return r.ok ? r.json() : null;
 }
 
-// Normalise a raw Polymarket market record into our schema
+// Normalise a raw Polymarket market record into our schema.
+// Now supports multi-outcome markets (Trump/Harris/RFK, scalar ranges, etc.)
+// instead of forcing every market into binary YES/NO.
 function normaliseMarket(raw) {
-  const yesPrice = Math.max(0, Math.min(1, Number(raw.outcomePrices?.[0] ?? raw.bestBid ?? raw.lastTradePrice ?? 0.5)));
+  let outcomePrices = raw.outcomePrices;
+  if (typeof outcomePrices === 'string') { try { outcomePrices = JSON.parse(outcomePrices); } catch (_) { outcomePrices = null; } }
+  let outcomes = raw.outcomes;
+  if (typeof outcomes === 'string') { try { outcomes = JSON.parse(outcomes); } catch (_) { outcomes = null; } }
   let clobTokenIds = raw.clobTokenIds;
   if (typeof clobTokenIds === 'string') { try { clobTokenIds = JSON.parse(clobTokenIds); } catch (_) {} }
+
+  // Build a normalised outcomes[] array: each entry has label + price + tokenId.
+  const outcomeList = [];
+  if (Array.isArray(outcomes) && outcomes.length) {
+    outcomes.forEach((label, i) => {
+      const price = Number(outcomePrices && outcomePrices[i]);
+      const tokenId = Array.isArray(clobTokenIds) ? String(clobTokenIds[i] || '') : '';
+      outcomeList.push({
+        label: String(label),
+        price: Number.isFinite(price) ? Math.max(0, Math.min(1, price)) : null,
+        tokenId
+      });
+    });
+  }
+
+  // Pick a canonical YES price for back-compat (binary path uses this).
+  // For multi-outcome, the first outcome is the "primary".
+  const yesPrice = Math.max(0, Math.min(1, Number(
+    (outcomeList[0] && outcomeList[0].price) ?? raw.bestBid ?? raw.lastTradePrice ?? 0.5
+  )));
+
   return {
     id:             String(raw.id),
     source:         'polymarket',
@@ -138,16 +164,20 @@ function normaliseMarket(raw) {
     detail:         raw.description || '',
     slug:           raw.slug || null,
     yesPriceNumber: yesPrice,
-    noPriceNumber:  1 - yesPrice,
+    noPriceNumber:  outcomeList.length > 1 && Number.isFinite(outcomeList[1] && outcomeList[1].price)
+                    ? outcomeList[1].price : 1 - yesPrice,
     volumeNumber:   Number(raw.volume24hr || raw.volume || 0),
     liquidityNumber:Number(raw.liquidityNum || raw.liquidity || raw.liquidityClob || 0),
     closeAtMs:      raw.endDate ? new Date(raw.endDate).getTime() : null,
     conditionId:    raw.conditionId || raw.condition_id || null,
     clobTokenIds:   Array.isArray(clobTokenIds) ? clobTokenIds.map(String) : null,
+    outcomes:       outcomeList,                       // ← NEW: full outcomes list for multi-outcome markets
+    isBinary:       outcomeList.length <= 2,
     primaryUrl:     raw.slug ? `https://polymarket.com/event/${encodeURIComponent(raw.slug)}` : 'https://polymarket.com/',
     bestBid:        Number(raw.bestBid ?? NaN),
     bestAsk:        Number(raw.bestAsk ?? NaN),
-    lastTradePrice: Number(raw.lastTradePrice ?? NaN)
+    lastTradePrice: Number(raw.lastTradePrice ?? NaN),
+    image:          raw.image || raw.icon || null
   };
 }
 
@@ -200,8 +230,18 @@ export default {
           'GET  /markets/:id/trades',
           'GET  /rounds/current',
           'POST /rounds/open-price',
+          'GET  /positions/recent',
+          'GET  /positions/recent',
           'GET  /positions/:wallet',
-          'POST /positions'
+          'POST /positions',
+          'GET  /launchpad/coins',
+          'POST /launchpad/coins',
+          'POST /launchpad/trade',
+          'GET  /launchpad/ticks/:mint',
+          'GET  /launchpad/coins',
+          'POST /launchpad/coins',
+          'POST /launchpad/trade',
+          'GET  /launchpad/ticks/:mint'
         ]
       });
     }
@@ -306,6 +346,16 @@ export default {
       return json({ trades: list.slice(0, 20), ts: new Date().toISOString() });
     }
 
+    // ── GET /positions/recent ─ GLOBAL FEED of all bets across all wallets ──
+    // Powers the shared "Recent ticks" ribbon so every user sees what every
+    // other OST user just bought, on which market, at what price.
+    if (path === '/positions/recent' && method === 'GET') {
+      const limit = Math.min(50, Number(url.searchParams.get('limit') || 30));
+      if (!env.OST_KV) return json({ recent: [], note: 'KV not configured' });
+      const recent = await kvGet(env, 'positions:recent', []);
+      return json({ recent: recent.slice(0, limit), ts: new Date().toISOString() }, 200, { 'cache-control': 'no-store' });
+    }
+
     // ── GET /positions/:wallet ────────────────────────────────────────────────
     const posMatch = path.match(/^\/positions\/([^/]+)$/);
     if (posMatch && method === 'GET') {
@@ -319,17 +369,105 @@ export default {
     if (path === '/positions' && method === 'POST') {
       let body;
       try { body = await request.json(); } catch (_) { return json({ error: 'invalid_json' }, 400); }
-      const { wallet, marketId, side, stake, ts } = body || {};
+      const { wallet, marketId, marketTitle, side, stake, price, ts, signature } = body || {};
       if (!wallet || !marketId || !side || !Number.isFinite(Number(stake))) {
         return json({ error: 'missing_fields', required: ['wallet', 'marketId', 'side', 'stake'] }, 400);
       }
       if (!env.OST_KV) return json({ ok: true, stored: false, note: 'KV not configured — position not persisted server-side' });
-      const key = `positions:${wallet}`;
-      const existing = await kvGet(env, key, []);
-      const record = { id: crypto.randomUUID(), wallet, marketId, side: String(side).toUpperCase(), stake: Number(stake), ts: ts || new Date().toISOString(), status: 'open' };
-      existing.push(record);
-      await kvPut(env, key, existing);
+      const record = {
+        id: crypto.randomUUID(),
+        wallet: String(wallet).slice(0, 64),
+        walletShort: String(wallet).slice(0, 4) + '…' + String(wallet).slice(-4),
+        marketId: String(marketId).slice(0, 128),
+        marketTitle: String(marketTitle || '').slice(0, 200),
+        side: String(side).toUpperCase().slice(0, 32),
+        stake: Number(stake),
+        price: Number.isFinite(Number(price)) ? Number(price) : null,
+        signature: signature ? String(signature).slice(0, 128) : null,
+        ts: ts || new Date().toISOString(),
+        status: 'open'
+      };
+      // Per-wallet bucket (keep last 100, newest first)
+      const walletKey = `positions:${wallet}`;
+      const walletBucket = (await kvGet(env, walletKey, [])).slice(0, 99);
+      walletBucket.unshift(record);
+      await kvPut(env, walletKey, walletBucket);
+      // Global recent feed (keep last 100)
+      const recent = (await kvGet(env, 'positions:recent', [])).slice(0, 99);
+      recent.unshift(record);
+      await kvPut(env, 'positions:recent', recent, 60 * 60 * 24 * 7);
       return json({ ok: true, stored: true, record });
+    }
+
+    // ── LAUNCHPAD ─ pump.fun-style fair-launch coin registry ────────────────
+    // Anyone can read; anyone can publish a coin or trade it on the bonding curve.
+    // KV-backed so every visitor sees the same coins and their live mcap/curve.
+    if (path === '/launchpad/coins' && method === 'GET') {
+      if (!env.OST_KV) return json({ coins: [], note: 'KV not configured' });
+      const coins = await kvGet(env, 'launchpad:coins', []);
+      return json({ coins, count: coins.length, ts: new Date().toISOString() }, 200, { 'cache-control': 'public, max-age=2' });
+    }
+    if (path === '/launchpad/coins' && method === 'POST') {
+      let body;
+      try { body = await request.json(); } catch (_) { return json({ error: 'invalid_json' }, 400); }
+      const { name, symbol, desc, image, twitter, telegram, website, creator, mcap, curve, supply } = body || {};
+      if (!name || !symbol) return json({ error: 'missing_fields', required: ['name', 'symbol'] }, 400);
+      if (!env.OST_KV) return json({ ok: true, stored: false, note: 'KV not configured' });
+      const record = {
+        id: crypto.randomUUID(),
+        mint: 'ost' + crypto.randomUUID().replace(/-/g, '').slice(0, 40),
+        name: String(name).slice(0, 64),
+        symbol: String(symbol).toUpperCase().slice(0, 12),
+        desc: String(desc || '').slice(0, 1000),
+        image: image ? String(image).slice(0, 500_000) : null,
+        twitter: twitter ? String(twitter).slice(0, 200) : null,
+        telegram: telegram ? String(telegram).slice(0, 200) : null,
+        website: website ? String(website).slice(0, 200) : null,
+        creator: creator ? String(creator).slice(0, 64) : 'anon',
+        mcap: Number(mcap) || 100,
+        curve: Math.max(0, Math.min(100, Number(curve) || 1)),
+        supply: Number(supply) || 1_000_000_000,
+        createdAt: Date.now(),
+        trades: 0,
+        holders: [{ addr: creator || 'anon', pct: 100 }]
+      };
+      const coins = (await kvGet(env, 'launchpad:coins', [])).slice(0, 199);
+      coins.unshift(record);
+      await kvPut(env, 'launchpad:coins', coins);
+      return json({ ok: true, stored: true, coin: record });
+    }
+    // POST /launchpad/trade  { mint, side: 'buy'|'sell', amount, trader }
+    if (path === '/launchpad/trade' && method === 'POST') {
+      let body;
+      try { body = await request.json(); } catch (_) { return json({ error: 'invalid_json' }, 400); }
+      const { mint, side, amount, trader } = body || {};
+      if (!mint || !side || !Number.isFinite(Number(amount))) return json({ error: 'missing_fields', required: ['mint', 'side', 'amount'] }, 400);
+      if (!env.OST_KV) return json({ ok: true, stored: false, note: 'KV not configured' });
+      const coins = await kvGet(env, 'launchpad:coins', []);
+      const idx = coins.findIndex(c => c.mint === mint);
+      if (idx < 0) return json({ error: 'coin_not_found', mint }, 404);
+      const c = coins[idx];
+      const amt = Number(amount);
+      // Simple bonding-curve: each OST in moves mcap by ~10x; sells drop it.
+      const delta = side === 'buy' ? amt * 10 : -amt * 10;
+      c.mcap = Math.max(100, (Number(c.mcap) || 100) + delta);
+      c.curve = Math.max(0, Math.min(100, Math.floor((c.mcap / 690))));
+      c.trades = (c.trades || 0) + 1;
+      c.lastTradeAt = Date.now();
+      coins[idx] = c;
+      await kvPut(env, 'launchpad:coins', coins);
+      const tickKey = `launchpad:ticks:${mint}`;
+      const ticks = (await kvGet(env, tickKey, [])).slice(0, 199);
+      ticks.unshift({ side, amount: amt, mcap: c.mcap, trader: trader ? String(trader).slice(0, 8) + '…' : 'anon', ts: Date.now() });
+      await kvPut(env, tickKey, ticks, 60 * 60 * 24 * 7);
+      return json({ ok: true, coin: c });
+    }
+    const tickMatch = path.match(/^\/launchpad\/ticks\/([^/]+)$/);
+    if (tickMatch && method === 'GET') {
+      const mint = decodeURIComponent(tickMatch[1]);
+      if (!env.OST_KV) return json({ ticks: [] });
+      const ticks = await kvGet(env, `launchpad:ticks:${mint}`, []);
+      return json({ ticks, ts: new Date().toISOString() });
     }
 
     return json({ error: 'not_found', message: 'Unknown endpoint. GET /health for the full endpoint list.' }, 404);

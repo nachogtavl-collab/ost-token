@@ -5452,14 +5452,19 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="swap-pool.js?v=1"></script>
   <script src="wallet-extras.js?v=8"></script>
   <script src="compartments.js?v=1"></script>
-  <script src="prediction-extras.js?v=2"></script>
+  <script src="prediction-extras.js?v=3"></script>
   <script src="prediction-pro.js?v=3"></script>
   <script src="prediction-scalar.js?v=2"></script>
-  <script src="prediction-modal.js?v=5"></script>
+  <!-- Wire prediction modal to the OST edge worker (CORS-safe Polymarket proxy + global positions feed). -->
+  <script>
+    window.OST_API_BASE = "https://ost-api.nachogtavl.workers.dev";
+    window.OST_POLY_RELAY_URL = window.OST_API_BASE; // routes /gamma /clob /data + /positions /launchpad
+  </script>
+  <link rel="stylesheet" href="prediction-modal.css?v=2">
+  <script src="prediction-modal.js?v=6"></script>
   <script src="prediction-trade-popout.js?v=1"></script>
   <script src="prediction-pro-dash.js?v=4"></script>
   <!-- OST API edge worker (Cloudflare). Set before ost-console / pro-dash use it. -->
-  <script>window.OST_API_BASE = "https://ost-api.nachogtavl.workers.dev";</script>
   <script src="ost-console.js?v=2"></script>
   <!-- On-chain betting (devnet program ost_betting) -->
   <script src="ost-onchain-bet.js?v=1"></script>
@@ -5470,5 +5475,6 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="code-academy.js?v=2"></script>
   <script src="i18n-runtime.js?v=1"></script>
   <script src="devnet-rescue.js?v=3"></script>
+  <script src="launchpad-trenches.js?v=1"></script>
 </body>
 </html>

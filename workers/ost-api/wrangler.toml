@@ -5,10 +5,11 @@ compatibility_date = "2025-01-01"
 [placement]
 mode = "smart"
 
-# Optional: bind a KV namespace to persist round open prices + positions
-# [[kv_namespaces]]
-# binding = "OST_KV"
-# id = "YOUR_KV_NAMESPACE_ID"
+# KV namespace for shared positions, launchpad coins, round prices.
+# Created 2026-04-28; binding name MUST stay "OST_KV" to match src/index.js.
+[[kv_namespaces]]
+binding = "OST_KV"
+id = "fb5ef8073fd5408fa2d7336e7e0b9fd8"
 
 [vars]
 GAMMA_BASE = "https://gamma-api.polymarket.com"

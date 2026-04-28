@@ -28,14 +28,16 @@
 
 .ost-modal__panel {
   position: relative;
-  width: min(960px, 96vw);
-  max-height: 92vh;
+  width: min(1280px, 96vw);
+  max-height: 95vh;
   overflow-y: auto;
+  /* Reserve scrollbar space so depth/trade refreshes can't shift the layout */
+  scrollbar-gutter: stable;
   background: linear-gradient(170deg, #14102a 0%, #0a0c1c 60%, #06080f 100%);
   border: 1px solid rgba(108, 230, 164, 0.18);
   border-radius: 18px;
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.65);
-  padding: 26px 30px 24px;
+  padding: 28px 34px 26px;
 }
 
 .ost-modal__close {
@@ -114,7 +116,19 @@
   margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #ffd980;
 }
 .ost-modal__chart-head span, .ost-modal__book-head span, .ost-modal__trades-head span { font-size: 11px; opacity: 0.6; }
-.ost-modal__chart canvas { display: block; width: 100%; height: 200px; }
+.ost-modal__chart canvas { display: block; width: 100%; height: 280px; }
+
+/* YES/NO toggle for the chart */
+.ost-modal__chart-toggle { display: inline-flex; gap: 0; margin-left: 12px; border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
+.ost-modal__chart-toggle button {
+  appearance: none; border: 0; padding: 4px 12px;
+  background: rgba(255,255,255,0.04); color: #f4ead4; cursor: pointer;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+  transition: background 100ms ease;
+}
+.ost-modal__chart-toggle button.is-active.is-yes { background: linear-gradient(135deg, #7ce6a8, #4cc985); color: #0a0a0a; }
+.ost-modal__chart-toggle button.is-active.is-no  { background: linear-gradient(135deg, #ff7c8a, #e85565); color: #fff; }
+.ost-modal__chart-toggle button:not(.is-active):hover { background: rgba(255,255,255,0.08); }
 
 /* Order book + trades -------------------------------------------------- */
 .ost-modal__book, .ost-modal__trades {
@@ -128,7 +142,13 @@
 }
 .ost-modal__book-label--yes { color: #7ce6a8; }
 .ost-modal__book-label--no  { color: #ff7c8a; }
-.ost-modal__book-list { display: flex; flex-direction: column; gap: 4px; max-height: 180px; overflow-y: auto; }
+.ost-modal__book-list {
+  display: flex; flex-direction: column; gap: 4px;
+  /* Fixed min-height so refresh ticks never resize the panel — fixes the
+     jittery up/down bouncing of the surrounding tab. */
+  min-height: 220px; max-height: 240px; overflow-y: auto;
+  scrollbar-gutter: stable;
+}
 .ost-modal__book-row {
   display: flex; justify-content: space-between; padding: 4px 8px;
   border-radius: 6px; background: rgba(255,255,255,0.03);
@@ -136,7 +156,7 @@
 }
 .ost-modal__book-empty { padding: 10px; font-size: 11px; opacity: 0.5; text-align: center; }
 
-.ost-modal__trades-scroll { max-height: 220px; overflow-y: auto; }
+.ost-modal__trades-scroll { min-height: 240px; max-height: 280px; overflow-y: auto; scrollbar-gutter: stable; }
 .ost-modal__trades-table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
 .ost-modal__trades-table thead { position: sticky; top: 0; background: #0a0c1c; }
 .ost-modal__trades-table th, .ost-modal__trades-table td {
@@ -227,3 +247,39 @@
   transition: opacity 120ms ease;
 }
 .prediction-market-card:hover::after { opacity: 1; }
+
+/* ── Multi-outcome buttons ─ for non-binary markets (Trump/Harris/RFK/etc) ── */
+.ost-modal__outcomes { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; margin: 12px 0; }
+.ost-modal__outcome {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 14px; border-radius: 12px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+  cursor: pointer; transition: background 120ms ease, border-color 120ms ease, transform 80ms ease;
+  font: inherit; color: inherit; text-align: left;
+}
+.ost-modal__outcome:hover { background: rgba(124,230,168,0.10); border-color: rgba(124,230,168,0.30); }
+.ost-modal__outcome.is-active { background: linear-gradient(135deg, rgba(124,230,168,0.22), rgba(76,201,133,0.10)); border-color: rgba(124,230,168,0.55); }
+.ost-modal__outcome-label { font-size: 13px; font-weight: 700; flex: 1; }
+.ost-modal__outcome-price { font-variant-numeric: tabular-nums; font-weight: 800; color: #f4ead4; }
+
+/* ── Shared positions ticker ─ "Recent ticks" feed across ALL OST users ── */
+.ost-modal__shared {
+  margin-top: 16px; padding: 12px 14px;
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px;
+}
+.ost-modal__shared-title { display:flex; align-items:center; gap:6px; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:#9ba0c8; margin-bottom:8px; }
+.ost-modal__shared-title::before { content:''; width:8px; height:8px; border-radius:50%; background:#7ce6a8; box-shadow:0 0 8px #7ce6a8; animation: ostPulseDot 1.5s ease-in-out infinite; }
+@keyframes ostPulseDot { 0%,100% { opacity: 0.4 } 50% { opacity: 1 } }
+.ost-modal__shared-list { display:flex; flex-direction:column; gap:6px; max-height: 180px; overflow-y:auto; scrollbar-gutter:stable; }
+.ost-modal__shared-row { display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:8px; font-size:12px; background:rgba(0,0,0,0.25); animation: ostFadeIn 280ms ease; }
+.ost-modal__shared-row.is-yes { border-left: 3px solid #7ce6a8; }
+.ost-modal__shared-row.is-no  { border-left: 3px solid #ff7c8a; }
+.ost-modal__shared-wallet { font-family:'JetBrains Mono', monospace; color:#9ba0c8; font-size:11px; }
+.ost-modal__shared-side { font-weight:800; padding:1px 6px; border-radius:4px; font-size:10px; }
+.ost-modal__shared-row.is-yes .ost-modal__shared-side { background:rgba(124,230,168,0.18); color:#7ce6a8; }
+.ost-modal__shared-row.is-no  .ost-modal__shared-side { background:rgba(255,124,138,0.18); color:#ff7c8a; }
+.ost-modal__shared-stake { font-weight:700; color:#ffd980; font-variant-numeric:tabular-nums; }
+.ost-modal__shared-market { color:#cbd1f0; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ost-modal__shared-time { color:#6b7099; font-size:10px; }
+@keyframes ostFadeIn { from { opacity:0; transform: translateY(-4px); } to { opacity:1; transform:none; } }

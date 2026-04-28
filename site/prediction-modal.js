@@ -56,6 +56,31 @@
   // Track timers for the currently-open modal so we can stop them on close.
   var liveTimers = [];
 
+  // Push a freshly-placed bet to the global ost-api positions feed so every
+  // other OST user sees it in their "Live OST flow" ticker.
+  function shareBetGlobally(market, side, stake, rec) {
+    try {
+      var base = (window.OST_API_BASE || '').replace(/\/$/, '');
+      if (!base) return;
+      var wallet = (window.OST_WALLET_PUBKEY || (window.solana && window.solana.publicKey && window.solana.publicKey.toString && window.solana.publicKey.toString()) || 'anon');
+      var price = (side === 'YES' ? Number(market.yesPriceNumber) : Number(market.noPriceNumber));
+      fetch(base + '/positions', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          wallet: wallet,
+          marketId: market.id,
+          marketTitle: market.title || market.question || '',
+          side: side,
+          stake: Number(stake) || 0,
+          price: Number.isFinite(price) ? price : null,
+          signature: rec && rec.sig || null,
+          ts: new Date().toISOString()
+        })
+      }).catch(function () { /* fire-and-forget */ });
+    } catch (_) { /* never block UI */ }
+  }
+
   // --------------------------------------------------------------------------
   // Helpers
   // --------------------------------------------------------------------------
@@ -436,9 +461,45 @@
 
   function renderChartBlock() {
     return '<section class="ost-modal__chart">' +
-      '<div class="ost-modal__chart-head"><h4>Price history</h4><span data-bind="chartStatus">Loading…</span></div>' +
+      '<div class="ost-modal__chart-head">' +
+        '<h4>Price history' +
+          '<span class="ost-modal__chart-toggle" data-bind="chartToggle">' +
+            '<button type="button" data-side="YES" class="is-active is-yes">YES</button>' +
+            '<button type="button" data-side="NO" class="is-no">NO</button>' +
+          '</span>' +
+        '</h4>' +
+        '<span data-bind="chartStatus">Loading…</span>' +
+      '</div>' +
       '<canvas data-bind="chart"></canvas>' +
     '</section>';
+  }
+
+  // Shared positions ticker — every OST user sees every other user's recent bets.
+  function renderSharedBlock() {
+    return '<section class="ost-modal__shared">' +
+      '<div class="ost-modal__shared-title">Live OST flow · across all users</div>' +
+      '<div class="ost-modal__shared-list" data-bind="sharedList">' +
+        '<div style="opacity:0.55;font-size:11px;">Loading shared positions…</div>' +
+      '</div>' +
+    '</section>';
+  }
+
+  // Multi-outcome buttons (Trump/Harris/RFK…). Returns empty string for binary.
+  function renderOutcomesBlock(m) {
+    var outs = (m.raw && Array.isArray(m.raw.outcomes)) ? m.raw.outcomes
+             : (Array.isArray(m.outcomes) ? m.outcomes : []);
+    if (!Array.isArray(outs) || outs.length <= 2) return '';
+    return '<section class="ost-modal__outcomes-wrap"><h4 style="margin:0 0 8px;font-size:13px;letter-spacing:0.04em;text-transform:uppercase;color:#9ba0c8;">All outcomes</h4>' +
+      '<div class="ost-modal__outcomes" data-bind="outcomesList">' +
+      outs.map(function (o, i) {
+        var label = (o && o.label) || (typeof o === 'string' ? o : ('Outcome ' + (i+1)));
+        var price = Number(o && o.price);
+        return '<button type="button" class="ost-modal__outcome' + (i === 0 ? ' is-active' : '') + '" data-outcome-idx="' + i + '">' +
+               '<span class="ost-modal__outcome-label">' + escapeHtml(label) + '</span>' +
+               '<span class="ost-modal__outcome-price">' + (Number.isFinite(price) ? (price * 100).toFixed(1) + '¢' : '—') + '</span>' +
+               '</button>';
+      }).join('') +
+      '</div></section>';
   }
 
   function renderBookBlock() {
@@ -481,12 +542,14 @@
            '<div class="ost-modal__main">' +
              renderBtcBlock(m) +
              renderPricesBlock(m) +
+             renderOutcomesBlock(m) +
              renderChartBlock() +
              '<div class="ost-modal__two-col">' +
                renderBookBlock() +
                renderTradesBlock() +
              '</div>' +
              renderBetBlock(m) +
+             renderSharedBlock() +
            '</div>';
   }
 
@@ -538,6 +601,8 @@
       placeBetViaTradeDesk(market, selectedSide, s)
         .then(function (rec) {
           toast('✅ Bet recorded' + (rec && rec.sig ? ' (sig ' + String(rec.sig).slice(0, 8) + '…)' : '') + '. Check Open Positions below.', 'ok');
+          // Share to global feed so every other OST user sees the tick live.
+          shareBetGlobally(market, selectedSide, s, rec);
           // Auto-close after 2.5s so user can see positions
           setTimeout(closeModal, 2500);
         })
@@ -545,6 +610,68 @@
           toast('⚠️ ' + (err && err.message ? err.message : 'Bet failed'), 'err');
         });
     });
+
+    // ---- Chart YES/NO toggle ----
+    var chartSide = 'YES';
+    bodyEl.querySelectorAll('[data-bind="chartToggle"] button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        chartSide = b.getAttribute('data-side');
+        bodyEl.querySelectorAll('[data-bind="chartToggle"] button').forEach(function (x) { x.classList.remove('is-active'); });
+        b.classList.add('is-active');
+        if (typeof window.__ostChartRedraw === 'function') window.__ostChartRedraw();
+      });
+    });
+    // Expose for the polymarket renderLiveHistory closure further down
+    bodyEl.__getChartSide = function () { return chartSide; };
+
+    // ---- Multi-outcome buttons (selectable) ----
+    bodyEl.querySelectorAll('.ost-modal__outcome').forEach(function (b) {
+      b.addEventListener('click', function () {
+        bodyEl.querySelectorAll('.ost-modal__outcome').forEach(function (x) { x.classList.remove('is-active'); });
+        b.classList.add('is-active');
+        var idx = Number(b.getAttribute('data-outcome-idx'));
+        var outs = (market.raw && market.raw.outcomes) || market.outcomes || [];
+        var picked = outs[idx];
+        if (picked && Number.isFinite(Number(picked.price))) {
+          // Treat picked outcome as YES for the bet ticket.
+          market.yesPriceNumber = Number(picked.price);
+          market.noPriceNumber = 1 - Number(picked.price);
+          recalcProjected();
+          var yEl = bodyEl.querySelector('[data-bind="yesPct"]');
+          if (yEl) yEl.textContent = (Number(picked.price) * 100).toFixed(1) + '% · ' + (picked.label || ('outcome ' + (idx+1)));
+        }
+      });
+    });
+
+    // ---- Shared positions feed (cross-user ticker) ----
+    var sharedListEl = bodyEl.querySelector('[data-bind="sharedList"]');
+    function refreshSharedFeed() {
+      var base = (window.OST_API_BASE || '').replace(/\/$/, '');
+      if (!base || !sharedListEl) return;
+      fetch(base + '/positions/recent?limit=20', { cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (j) {
+          if (!j || !Array.isArray(j.recent) || !j.recent.length) {
+            sharedListEl.innerHTML = '<div style="opacity:0.55;font-size:11px;">Be the first — no shared positions yet.</div>';
+            return;
+          }
+          sharedListEl.innerHTML = j.recent.slice(0, 12).map(function (r) {
+            var sideClass = /YES|BUY/i.test(r.side) ? 'is-yes' : 'is-no';
+            var ago = Math.max(0, Math.round((Date.now() - new Date(r.ts).getTime()) / 1000));
+            var agoStr = ago < 60 ? (ago + 's ago') : (Math.round(ago / 60) + 'm ago');
+            return '<div class="ost-modal__shared-row ' + sideClass + '">' +
+              '<span class="ost-modal__shared-wallet">' + escapeHtml(r.walletShort || (r.wallet || 'anon').slice(0, 4) + '…') + '</span>' +
+              '<span class="ost-modal__shared-side">' + escapeHtml(r.side) + '</span>' +
+              '<span class="ost-modal__shared-stake">' + Number(r.stake).toFixed(2) + ' OST</span>' +
+              '<span class="ost-modal__shared-market" title="' + escapeHtml(r.marketTitle || r.marketId) + '">' + escapeHtml(r.marketTitle || r.marketId) + '</span>' +
+              '<span class="ost-modal__shared-time">' + agoStr + '</span>' +
+            '</div>';
+          }).join('');
+        })
+        .catch(function () { /* silent */ });
+    }
+    refreshSharedFeed();
+    liveTimers.push(setInterval(refreshSharedFeed, 5000));
 
     // ---- Live BTC tile ----
     if (market.isOstNative && market.meta && market.meta.kind === 'btc5m') {
@@ -619,16 +746,23 @@
       function renderLiveHistory() {
         var canvas = bodyEl.querySelector('[data-bind="chart"]');
         if (!canvas) return;
-        var pts = liveHistory.map(function (r) { return Number(r.p); }).filter(Number.isFinite);
+        var side = (typeof bodyEl.__getChartSide === 'function') ? bodyEl.__getChartSide() : 'YES';
+        var pts = liveHistory.map(function (r) {
+          var p = Number(r.p);
+          return side === 'NO' ? (1 - p) : p;
+        }).filter(Number.isFinite);
         if (pts.length < 2) {
           setText(bodyEl, 'chartStatus', 'waiting for ticks…');
           return;
         }
         canvas.style.width = '100%';
-        canvas.style.height = '200px';
-        drawSeries(canvas, pts, '#6ce6a4');
-        setText(bodyEl, 'chartStatus', 'live 1s · ' + pts.length + ' pts · ' + fmtTime(Date.now()));
+        canvas.style.height = '280px';
+        var color = side === 'NO' ? '#ff7c8a' : '#6ce6a4';
+        drawSeries(canvas, pts, color);
+        setText(bodyEl, 'chartStatus', 'live 1s · ' + side + ' · ' + pts.length + ' pts · ' + fmtTime(Date.now()));
       }
+      // Expose so toggle button can force a redraw without new ticks.
+      window.__ostChartRedraw = renderLiveHistory;
 
       // Apply a fresh YES/NO from any source.
       var applyYes = function (yesPx, src) {
