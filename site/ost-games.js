@@ -10,10 +10,7 @@
  *   - Visualise risk with multipliers, exactly like Stake/Rainbet.
  *
  * Games shipped:
- *   • Mines      — 5×5 grid, place N mines, reveal safe tiles, cash out
- *   • Crash      — multiplier rises until it crashes, you cash out before
- *   • Dice       — roll 0-100, pick over/under target, multiplier ↑ as risk ↑
- *   • Plinko     — 8/12/16-row pegboard with low/medium/high risk profiles
+ *   • 16 provably-fair games, from quick flips to strategy tables.
  *
  * Mounts a card panel inside the existing #ostFaucetHub section.
  * ========================================================================== */
@@ -217,8 +214,8 @@
       '<div class="ostg-section" id="ostGames">' +
         '<div class="ostg-head">' +
           '<div>' +
-            '<h3>🎲 Provably-Fair OST Games</h3>' +
-            '<p class="ostg-sub">Bet your earned bonus OST. Every outcome is HMAC-SHA256 of <code>serverSeed</code>+<code>clientSeed</code>+<code>nonce</code>. Verifiable. Same engine model as Stake/Rainbet.</p>' +
+            '<h3>🎲 Provably-Fair OST Arcade</h3>' +
+            '<p class="ostg-sub">Sixteen fast OST games with risk modes, cash-out decisions, table games, and instant reveals. Every outcome is HMAC-SHA256 of <code>serverSeed</code>+<code>clientSeed</code>+<code>nonce</code>.</p>' +
           '</div>' +
           '<div class="ostg-balance-card">' +
             '<span class="ostg-balance-label">Chips · play balance</span>' +
@@ -243,6 +240,14 @@
           '<button class="ostg-tab" data-game="hilo">🃏 Hi-Lo</button>' +
           '<button class="ostg-tab" data-game="wheel">🎡 Wheel</button>' +
           '<button class="ostg-tab" data-game="coinflip">🪙 Coinflip</button>' +
+          '<button class="ostg-tab" data-game="keno">🔢 Keno</button>' +
+          '<button class="ostg-tab" data-game="tower">🗼 Tower</button>' +
+          '<button class="ostg-tab" data-game="roulette">🎯 Roulette</button>' +
+          '<button class="ostg-tab" data-game="slots">🎰 Slots</button>' +
+          '<button class="ostg-tab" data-game="blackjack">♠ Blackjack</button>' +
+          '<button class="ostg-tab" data-game="baccarat">♦ Baccarat</button>' +
+          '<button class="ostg-tab" data-game="scratch">🎟 Scratch</button>' +
+          '<button class="ostg-tab" data-game="penalty">🥅 Penalty</button>' +
         '</div>' +
         '<div class="ostg-stage" id="ostgStage"></div>' +
         '<div class="ostg-history" id="ostgHistory"><span class="ostg-history-label">Recent multipliers:</span></div>' +
@@ -421,6 +426,14 @@
     if (game === 'hilo')     return renderHiLo(stage);
     if (game === 'wheel')    return renderWheel(stage);
     if (game === 'coinflip') return renderCoinflip(stage);
+    if (game === 'keno')      return renderKeno(stage);
+    if (game === 'tower')     return renderTower(stage);
+    if (game === 'roulette')  return renderRoulette(stage);
+    if (game === 'slots')     return renderSlots(stage);
+    if (game === 'blackjack') return renderBlackjack(stage);
+    if (game === 'baccarat')  return renderBaccarat(stage);
+    if (game === 'scratch')   return renderScratch(stage);
+    if (game === 'penalty')   return renderPenalty(stage);
   }
 
   function pushHistory(mult) {
@@ -1317,6 +1330,976 @@
     tails.addEventListener('click', function () { flip('t'); });
   }
 
+  function shuffleWithFloats(items, floats) {
+    var result = items.slice();
+    for (var index = result.length - 1; index > 0; index--) {
+      var floatIndex = result.length - 1 - index;
+      var swapIndex = Math.floor((floats[floatIndex] || 0) * (index + 1));
+      var temp = result[index];
+      result[index] = result[swapIndex];
+      result[swapIndex] = temp;
+    }
+    return result;
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // KENO — pick numbers, draw ten, chase match-based multipliers.
+  // ────────────────────────────────────────────────────────────────────────
+  var KENO_TABLES = {
+    1: { 1: 3.8 },
+    2: { 1: 1.2, 2: 10 },
+    3: { 2: 2.2, 3: 45 },
+    4: { 2: 1.5, 3: 6, 4: 110 },
+    5: { 3: 3, 4: 18, 5: 450 },
+    6: { 3: 1.6, 4: 8, 5: 90, 6: 1200 },
+    7: { 3: 1.2, 4: 4, 5: 30, 6: 400, 7: 3000 },
+    8: { 4: 3, 5: 12, 6: 150, 7: 1500, 8: 8000 },
+    9: { 4: 2, 5: 8, 6: 70, 7: 600, 8: 4000, 9: 12000 },
+    10: { 4: 1.4, 5: 5, 6: 40, 7: 400, 8: 2500, 9: 10000, 10: 25000 }
+  };
+
+  function renderKeno(stage) {
+    stage.innerHTML =
+      '<div class="ostg-game ostg-keno">' +
+        '<div class="ostg-controls">' +
+          '<label>Bet (OST)<input type="number" id="knBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
+          '<label>Quick picks<select id="knCount"><option value="3">3 numbers</option><option value="5" selected>5 numbers</option><option value="8">8 numbers</option><option value="10">10 numbers</option></select></label>' +
+          '<button class="ostg-btn" id="knQuick">Quick pick</button>' +
+          '<button class="ostg-btn" id="knClear">Clear</button>' +
+          '<button class="ostg-btn ostg-btn-primary" id="knDraw">Draw 10</button>' +
+          '<div class="ostg-meta"><span>Selected</span> <strong id="knSelected">0 / 10</strong></div>' +
+        '</div>' +
+        '<div class="ostg-keno-grid" id="knGrid"></div>' +
+        '<div class="ostg-keno-pays" id="knPays"></div>' +
+        '<div class="ostg-status" id="knStatus">Pick up to 10 numbers or use quick pick. Matching more numbers unlocks the big end of the table.</div>' +
+      '</div>';
+
+    var bet = document.getElementById('knBet');
+    var count = document.getElementById('knCount');
+    var quick = document.getElementById('knQuick');
+    var clear = document.getElementById('knClear');
+    var draw = document.getElementById('knDraw');
+    var grid = document.getElementById('knGrid');
+    var pays = document.getElementById('knPays');
+    var selectedEl = document.getElementById('knSelected');
+    var statusEl = document.getElementById('knStatus');
+    var selectedNumbers = new Set();
+
+    function allNumbers() {
+      var numbers = [];
+      for (var number = 1; number <= 40; number++) numbers.push(number);
+      return numbers;
+    }
+
+    function refreshGrid() {
+      grid.querySelectorAll('.ostg-keno-cell').forEach(function (button) {
+        var number = parseInt(button.dataset.number, 10);
+        button.classList.toggle('is-selected', selectedNumbers.has(number));
+        button.classList.remove('is-drawn', 'is-hit');
+      });
+      var selectedCount = selectedNumbers.size;
+      selectedEl.textContent = selectedCount + ' / 10';
+      var table = KENO_TABLES[selectedCount] || {};
+      var keys = Object.keys(table).map(Number).sort(function (left, right) { return left - right; });
+      pays.innerHTML = keys.length ? keys.map(function (hits) {
+        return '<span>' + hits + ' hit' + (hits === 1 ? '' : 's') + ' · ' + shortMult(table[hits]) + '</span>';
+      }).join('') : '<span>Select numbers to preview payouts</span>';
+    }
+
+    for (var number = 1; number <= 40; number++) {
+      var button = document.createElement('button');
+      button.className = 'ostg-keno-cell';
+      button.type = 'button';
+      button.dataset.number = String(number);
+      button.textContent = String(number);
+      button.addEventListener('click', function (event) {
+        var pickedNumber = parseInt(event.currentTarget.dataset.number, 10);
+        if (selectedNumbers.has(pickedNumber)) selectedNumbers.delete(pickedNumber);
+        else if (selectedNumbers.size < 10) selectedNumbers.add(pickedNumber);
+        else statusEl.textContent = 'Keno tickets max out at 10 numbers.';
+        refreshGrid();
+      });
+      grid.appendChild(button);
+    }
+
+    quick.addEventListener('click', async function () {
+      var pickTotal = clamp(parseInt(count.value, 10), 1, 10);
+      var shuffled = shuffleWithFloats(allNumbers(), await pfFloats(40));
+      selectedNumbers = new Set(shuffled.slice(0, pickTotal));
+      statusEl.textContent = 'Quick-picked ' + pickTotal + ' numbers. Draw when ready.';
+      refreshGrid();
+    });
+
+    clear.addEventListener('click', function () {
+      selectedNumbers.clear();
+      statusEl.textContent = 'Ticket cleared.';
+      refreshGrid();
+    });
+
+    draw.addEventListener('click', async function () {
+      var amount = parseBet(bet, statusEl);
+      if (amount === null) return;
+      if (!selectedNumbers.size) { statusEl.textContent = 'Pick at least one number first.'; return; }
+      var result = placeBet(amount);
+      if (!result.ok) { statusEl.textContent = result.msg; return; }
+      setBusy([bet, count, quick, clear, draw], true);
+      refreshGrid();
+      var drawnNumbers = shuffleWithFloats(allNumbers(), await pfFloats(40)).slice(0, 10).sort(function (left, right) { return left - right; });
+      var hitCount = drawnNumbers.filter(function (number) { return selectedNumbers.has(number); }).length;
+      statusEl.textContent = 'Drawing 10 numbers...';
+      drawnNumbers.forEach(function (number, index) {
+        setTimeout(function () {
+          var cell = grid.querySelector('[data-number="' + number + '"]');
+          if (!cell) return;
+          cell.classList.add(selectedNumbers.has(number) ? 'is-hit' : 'is-drawn');
+          pulse(cell, 'ostg-pop-win');
+        }, index * 90);
+      });
+      setTimeout(function () {
+        var table = KENO_TABLES[selectedNumbers.size] || {};
+        var multiplier = table[hitCount] || 0;
+        var payout = amount * multiplier;
+        settleGame('keno', amount, payout, multiplier, statusEl,
+          multiplier > 0 ? 'Matched ' + hitCount + '/' + selectedNumbers.size + ' for ' + shortMult(multiplier) + ' · ' + payout.toFixed(2) + ' OST'
+                         : 'Matched ' + hitCount + '/' + selectedNumbers.size + ' — no payout this draw.',
+          grid);
+        setBusy([bet, count, quick, clear, draw], false);
+      }, drawnNumbers.length * 90 + 260);
+    });
+
+    refreshGrid();
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // TOWER — climb row by row, cash out before choosing a trap.
+  // ────────────────────────────────────────────────────────────────────────
+  var TOWER_MODES = {
+    easy: { columns: 3, safe: 2, label: 'Easy' },
+    medium: { columns: 4, safe: 2, label: 'Medium' },
+    hard: { columns: 4, safe: 1, label: 'Hard' }
+  };
+
+  function towerMultiplier(level, config) {
+    if (!level) return 1;
+    return Math.pow(0.99 / (config.safe / config.columns), level);
+  }
+
+  function renderTower(stage) {
+    stage.innerHTML =
+      '<div class="ostg-game ostg-tower">' +
+        '<div class="ostg-controls">' +
+          '<label>Bet (OST)<input type="number" id="twBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
+          '<label>Difficulty<select id="twMode"><option value="easy">Easy · 2 safe / 3</option><option value="medium" selected>Medium · 2 safe / 4</option><option value="hard">Hard · 1 safe / 4</option></select></label>' +
+          '<label>Rows<select id="twRows"><option value="6">6</option><option value="8" selected>8</option><option value="10">10</option></select></label>' +
+          '<button class="ostg-btn ostg-btn-primary" id="twStart">Start climb</button>' +
+          '<button class="ostg-btn" id="twPick" disabled>Auto pick</button>' +
+          '<button class="ostg-btn ostg-btn-cash" id="twCash" disabled>Cash out</button>' +
+          '<div class="ostg-meta"><span>Current</span> <strong id="twMult">1.00x</strong></div>' +
+        '</div>' +
+        '<div class="ostg-tower-board" id="twBoard"></div>' +
+        '<div class="ostg-status" id="twStatus">Start a climb. Each row you clear raises the cash-out multiplier.</div>' +
+      '</div>';
+
+    var bet = document.getElementById('twBet');
+    var mode = document.getElementById('twMode');
+    var rows = document.getElementById('twRows');
+    var start = document.getElementById('twStart');
+    var autoPick = document.getElementById('twPick');
+    var cash = document.getElementById('twCash');
+    var multEl = document.getElementById('twMult');
+    var board = document.getElementById('twBoard');
+    var statusEl = document.getElementById('twStatus');
+    var session = null;
+
+    function updateTowerControls() {
+      if (!session) {
+        multEl.textContent = '1.00x';
+        cash.disabled = true;
+        autoPick.disabled = true;
+        return;
+      }
+      var multiplier = towerMultiplier(session.level, session.config);
+      multEl.textContent = shortMult(multiplier);
+      cash.disabled = session.level < 1;
+      autoPick.disabled = false;
+      cash.textContent = session.level ? ('Cash out · ' + (session.bet * multiplier).toFixed(2) + ' OST') : 'Cash out';
+      board.querySelectorAll('.ostg-tower-row').forEach(function (row) {
+        row.classList.toggle('is-current', parseInt(row.dataset.row, 10) === session.level);
+      });
+    }
+
+    function buildTower() {
+      board.innerHTML = '';
+      var config = session ? session.config : TOWER_MODES[mode.value];
+      var rowTotal = session ? session.rows : parseInt(rows.value, 10);
+      board.style.setProperty('--tower-cols', String(config.columns));
+      for (var rowIndex = rowTotal - 1; rowIndex >= 0; rowIndex--) {
+        var row = document.createElement('div');
+        row.className = 'ostg-tower-row';
+        row.dataset.row = String(rowIndex);
+        for (var columnIndex = 0; columnIndex < config.columns; columnIndex++) {
+          var cell = document.createElement('button');
+          cell.type = 'button';
+          cell.className = 'ostg-tower-cell';
+          cell.dataset.row = String(rowIndex);
+          cell.dataset.column = String(columnIndex);
+          cell.textContent = '◆';
+          if (session) {
+            cell.disabled = rowIndex !== session.level;
+            if (session.picks[rowIndex] === columnIndex) {
+              cell.classList.add('is-safe');
+              cell.textContent = '◇';
+              cell.disabled = true;
+            }
+            if (rowIndex < session.level && session.picks[rowIndex] !== columnIndex) cell.disabled = true;
+          } else {
+            cell.disabled = true;
+          }
+          cell.addEventListener('click', chooseTowerCell);
+          row.appendChild(cell);
+        }
+        board.appendChild(row);
+      }
+      updateTowerControls();
+    }
+
+    function revealTower() {
+      if (!session) return;
+      board.querySelectorAll('.ostg-tower-cell').forEach(function (cell) {
+        var row = parseInt(cell.dataset.row, 10);
+        var column = parseInt(cell.dataset.column, 10);
+        var isSafe = session.safeRows[row].has(column);
+        cell.disabled = true;
+        cell.classList.add(isSafe ? 'is-safe' : 'is-trap');
+        cell.textContent = isSafe ? '◇' : '×';
+      });
+    }
+
+    async function startTower() {
+      var amount = parseBet(bet, statusEl);
+      if (amount === null) return;
+      var result = placeBet(amount);
+      if (!result.ok) { statusEl.textContent = result.msg; return; }
+      var config = TOWER_MODES[mode.value];
+      var rowTotal = parseInt(rows.value, 10);
+      var floats = await pfFloats(rowTotal * config.columns);
+      var safeRows = [];
+      for (var rowIndex = 0; rowIndex < rowTotal; rowIndex++) {
+        var columns = [];
+        for (var columnIndex = 0; columnIndex < config.columns; columnIndex++) columns.push(columnIndex);
+        var rowFloats = floats.slice(rowIndex * config.columns, rowIndex * config.columns + config.columns);
+        safeRows[rowIndex] = new Set(shuffleWithFloats(columns, rowFloats).slice(0, config.safe));
+      }
+      session = { bet: amount, config: config, rows: rowTotal, safeRows: safeRows, level: 0, picks: {} };
+      setBusy([bet, mode, rows, start], true);
+      statusEl.textContent = 'Pick a tile on the glowing row. Climb or cash out.';
+      buildTower();
+    }
+
+    function chooseTowerCell(event) {
+      if (!session) return;
+      var row = parseInt(event.currentTarget.dataset.row, 10);
+      var column = parseInt(event.currentTarget.dataset.column, 10);
+      if (row !== session.level) { statusEl.textContent = 'Choose from the active row first.'; return; }
+      event.currentTarget.disabled = true;
+      if (session.safeRows[row].has(column)) {
+        session.picks[row] = column;
+        event.currentTarget.classList.add('is-safe');
+        event.currentTarget.textContent = '◇';
+        session.level += 1;
+        var multiplier = towerMultiplier(session.level, session.config);
+        statusEl.textContent = 'Safe row ' + session.level + '/' + session.rows + ' · ' + shortMult(multiplier);
+        pulse(event.currentTarget, 'ostg-pop-win');
+        if (session.level >= session.rows) return cashTower();
+        updateTowerControls();
+      } else {
+        event.currentTarget.classList.add('is-trap');
+        event.currentTarget.textContent = '×';
+        revealTower();
+        settleGame('tower', session.bet, 0, 0, statusEl, 'Tower broke on row ' + (row + 1) + ' — lost ' + fmt(session.bet) + ' OST.', board);
+        endTower();
+      }
+    }
+
+    function cashTower() {
+      if (!session || session.level < 1) return;
+      var multiplier = towerMultiplier(session.level, session.config);
+      var payout = session.bet * multiplier;
+      revealTower();
+      settleGame('tower', session.bet, payout, multiplier, statusEl, 'Cashed the tower at ' + shortMult(multiplier) + ' for ' + payout.toFixed(2) + ' OST.', board);
+      endTower();
+    }
+
+    function endTower() {
+      session = null;
+      setBusy([bet, mode, rows, start], false);
+      autoPick.disabled = true;
+      cash.disabled = true;
+      cash.textContent = 'Cash out';
+      updateTowerControls();
+    }
+
+    start.addEventListener('click', startTower);
+    autoPick.addEventListener('click', function () {
+      if (!session) return;
+      var choices = Array.prototype.slice.call(board.querySelectorAll('.ostg-tower-cell[data-row="' + session.level + '"]:not(:disabled)'));
+      if (choices.length) choices[Math.floor(Math.random() * choices.length)].click();
+    });
+    cash.addEventListener('click', cashTower);
+    buildTower();
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // ROULETTE — European wheel with inside and outside bets.
+  // ────────────────────────────────────────────────────────────────────────
+  var ROULETTE_NUMBERS = [0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
+  var ROULETTE_REDS = new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
+
+  function rouletteOutcome(number, betType, betValue) {
+    if (betType === 'straight') return number === parseInt(betValue, 10) ? 35.64 : 0;
+    if (number === 0) return 0;
+    if (betType === 'color') {
+      var color = ROULETTE_REDS.has(number) ? 'red' : 'black';
+      return color === betValue ? 1.98 : 0;
+    }
+    if (betType === 'parity') return (number % 2 === 0 ? 'even' : 'odd') === betValue ? 1.98 : 0;
+    if (betType === 'range') return (number <= 18 ? 'low' : 'high') === betValue ? 1.98 : 0;
+    if (betType === 'dozen') {
+      var dozen = number <= 12 ? 'first' : number <= 24 ? 'second' : 'third';
+      return dozen === betValue ? 2.97 : 0;
+    }
+    return 0;
+  }
+
+  function renderRoulette(stage) {
+    stage.innerHTML =
+      '<div class="ostg-game ostg-roulette">' +
+        '<div class="ostg-controls">' +
+          '<label>Bet (OST)<input type="number" id="rtBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
+          '<label>Bet type<select id="rtType"><option value="color">Color</option><option value="parity">Even / Odd</option><option value="range">Low / High</option><option value="dozen">Dozen</option><option value="straight">Straight number</option></select></label>' +
+          '<label id="rtValueWrap">Pick<select id="rtValue"></select></label>' +
+          '<label id="rtNumberWrap" style="display:none">Number<input type="number" id="rtNumber" min="0" max="36" step="1" value="17"></label>' +
+          '<button class="ostg-btn ostg-btn-primary" id="rtSpin">Spin</button>' +
+          '<div class="ostg-meta"><span>Payout</span> <strong id="rtMult">1.98x</strong></div>' +
+        '</div>' +
+        '<div class="ostg-roulette-stage"><div class="ostg-roulette-pointer"></div><canvas id="rtCanvas" width="380" height="380"></canvas><div class="ostg-roulette-result" id="rtResult">--</div></div>' +
+        '<div class="ostg-status" id="rtStatus">Choose a bet type, then spin the European wheel.</div>' +
+      '</div>';
+
+    var canvas = document.getElementById('rtCanvas');
+    var ctx = canvas.getContext('2d');
+    var bet = document.getElementById('rtBet');
+    var type = document.getElementById('rtType');
+    var value = document.getElementById('rtValue');
+    var valueWrap = document.getElementById('rtValueWrap');
+    var numberWrap = document.getElementById('rtNumberWrap');
+    var numberInput = document.getElementById('rtNumber');
+    var spin = document.getElementById('rtSpin');
+    var multEl = document.getElementById('rtMult');
+    var resultEl = document.getElementById('rtResult');
+    var statusEl = document.getElementById('rtStatus');
+    var rotation = 0;
+
+    function setOptions() {
+      var options = [];
+      if (type.value === 'color') options = [['red', 'Red'], ['black', 'Black']];
+      if (type.value === 'parity') options = [['even', 'Even'], ['odd', 'Odd']];
+      if (type.value === 'range') options = [['low', '1-18'], ['high', '19-36']];
+      if (type.value === 'dozen') options = [['first', '1st 12'], ['second', '2nd 12'], ['third', '3rd 12']];
+      valueWrap.style.display = type.value === 'straight' ? 'none' : '';
+      numberWrap.style.display = type.value === 'straight' ? '' : 'none';
+      value.innerHTML = options.map(function (option) { return '<option value="' + option[0] + '">' + option[1] + '</option>'; }).join('');
+      var previewMult = type.value === 'straight' ? 35.64 : type.value === 'dozen' ? 2.97 : 1.98;
+      multEl.textContent = shortMult(previewMult);
+    }
+
+    function paintWheel(rot) {
+      var centerX = canvas.width / 2;
+      var centerY = canvas.height / 2;
+      var radius = centerX - 8;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.save();
+      ctx.translate(centerX, centerY);
+      ctx.rotate(rot);
+      for (var index = 0; index < ROULETTE_NUMBERS.length; index++) {
+        var number = ROULETTE_NUMBERS[index];
+        var startAngle = (index / ROULETTE_NUMBERS.length) * Math.PI * 2;
+        var endAngle = ((index + 1) / ROULETTE_NUMBERS.length) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, radius, startAngle, endAngle);
+        ctx.closePath();
+        ctx.fillStyle = number === 0 ? '#16a34a' : ROULETTE_REDS.has(number) ? '#dc2626' : '#111827';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.16)';
+        ctx.stroke();
+        ctx.save();
+        ctx.rotate((startAngle + endAngle) / 2);
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 10px sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText(String(number), radius - 10, 4);
+        ctx.restore();
+      }
+      ctx.restore();
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 36, 0, Math.PI * 2);
+      ctx.fillStyle = '#0f131e';
+      ctx.fill();
+      ctx.strokeStyle = '#f5c468';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    type.addEventListener('change', setOptions);
+    setOptions();
+    paintWheel(rotation);
+
+    spin.addEventListener('click', async function () {
+      var amount = parseBet(bet, statusEl);
+      if (amount === null) return;
+      var result = placeBet(amount);
+      if (!result.ok) { statusEl.textContent = result.msg; return; }
+      var floats = await pfFloats(1);
+      var landIndex = Math.floor(floats[0] * ROULETTE_NUMBERS.length);
+      var number = ROULETTE_NUMBERS[landIndex];
+      var centerAngle = ((landIndex + 0.5) / ROULETTE_NUMBERS.length) * Math.PI * 2;
+      var endRotation = -Math.PI / 2 - centerAngle + Math.PI * 2 * 7;
+      var startRotation = rotation;
+      var startedAt = performance.now();
+      var duration = 4200;
+      setBusy([bet, type, value, numberInput, spin], true);
+      statusEl.textContent = 'Wheel spinning...';
+      resultEl.textContent = '--';
+      function tick() {
+        var progress = Math.min(1, (performance.now() - startedAt) / duration);
+        var ease = 1 - Math.pow(1 - progress, 3);
+        rotation = startRotation + (endRotation - startRotation) * ease;
+        paintWheel(rotation);
+        if (progress < 1) return requestAnimationFrame(tick);
+        rotation = endRotation % (Math.PI * 2);
+        resultEl.textContent = String(number);
+        resultEl.dataset.color = number === 0 ? 'green' : ROULETTE_REDS.has(number) ? 'red' : 'black';
+        var pick = type.value === 'straight' ? numberInput.value : value.value;
+        var multiplier = rouletteOutcome(number, type.value, pick);
+        var payout = amount * multiplier;
+        settleGame('roulette', amount, payout, multiplier, statusEl,
+          multiplier > 0 ? 'Number ' + number + ' hit your bet · ' + shortMult(multiplier) + ' for ' + payout.toFixed(2) + ' OST.'
+                         : 'Number ' + number + ' missed your bet — lost ' + amount.toFixed(2) + ' OST.',
+          canvas.parentElement);
+        setBusy([bet, type, value, numberInput, spin], false);
+      }
+      tick();
+    });
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // SLOTS — five reels, selectable paylines and volatility.
+  // ────────────────────────────────────────────────────────────────────────
+  var SLOT_SYMBOLS = [
+    { id: 'cherry', icon: '🍒', classic: 28, hot: 24, chaos: 18, pays: { 3: 1.6, 4: 4, 5: 12 } },
+    { id: 'lemon', icon: '🍋', classic: 24, hot: 22, chaos: 18, pays: { 3: 1.8, 4: 5, 5: 16 } },
+    { id: 'bell', icon: '🔔', classic: 18, hot: 18, chaos: 17, pays: { 3: 2.4, 4: 8, 5: 28 } },
+    { id: 'gem', icon: '💎', classic: 12, hot: 14, chaos: 15, pays: { 3: 4, 4: 16, 5: 75 } },
+    { id: 'seven', icon: '7', classic: 8, hot: 10, chaos: 13, pays: { 3: 8, 4: 40, 5: 250 } },
+    { id: 'wild', icon: '★', classic: 10, hot: 12, chaos: 19, pays: { 3: 5, 4: 30, 5: 180 } }
+  ];
+  var SLOT_LINES = [
+    [[1,0],[1,1],[1,2],[1,3],[1,4]],
+    [[0,0],[0,1],[0,2],[0,3],[0,4]],
+    [[2,0],[2,1],[2,2],[2,3],[2,4]],
+    [[0,0],[1,1],[2,2],[1,3],[0,4]],
+    [[2,0],[1,1],[0,2],[1,3],[2,4]]
+  ];
+
+  function pickSlotSymbol(randomValue, mode) {
+    var totalWeight = SLOT_SYMBOLS.reduce(function (sum, symbol) { return sum + symbol[mode]; }, 0);
+    var cursor = randomValue * totalWeight;
+    for (var index = 0; index < SLOT_SYMBOLS.length; index++) {
+      cursor -= SLOT_SYMBOLS[index][mode];
+      if (cursor <= 0) return SLOT_SYMBOLS[index];
+    }
+    return SLOT_SYMBOLS[SLOT_SYMBOLS.length - 1];
+  }
+
+  function scoreSlotLine(grid, line) {
+    var symbols = line.map(function (point) { return grid[point[0]][point[1]]; });
+    var base = symbols.find(function (symbol) { return symbol.id !== 'wild'; }) || symbols[0];
+    var count = 0;
+    for (var index = 0; index < symbols.length; index++) {
+      if (symbols[index].id === base.id || symbols[index].id === 'wild') count++;
+      else break;
+    }
+    if (count < 3) return 0;
+    return base.pays[count] || 0;
+  }
+
+  function renderSlots(stage) {
+    stage.innerHTML =
+      '<div class="ostg-game ostg-slots">' +
+        '<div class="ostg-controls">' +
+          '<label>Bet (OST)<input type="number" id="slBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
+          '<label>Lines<select id="slLines"><option value="1">1 line</option><option value="3">3 lines</option><option value="5" selected>5 lines</option></select></label>' +
+          '<label>Volatility<select id="slMode"><option value="classic">Classic</option><option value="hot" selected>Hot</option><option value="chaos">Chaos</option></select></label>' +
+          '<button class="ostg-btn ostg-btn-primary" id="slSpin">Spin reels</button>' +
+          '<div class="ostg-meta"><span>Wild</span> <strong>★ substitutes</strong></div>' +
+        '</div>' +
+        '<div class="ostg-slot-grid" id="slGrid"></div>' +
+        '<div class="ostg-slot-pays">3+ left-to-right symbols pay. More lines split the bet across more chances.</div>' +
+        '<div class="ostg-status" id="slStatus">Choose paylines and volatility, then spin.</div>' +
+      '</div>';
+
+    var bet = document.getElementById('slBet');
+    var lines = document.getElementById('slLines');
+    var mode = document.getElementById('slMode');
+    var spin = document.getElementById('slSpin');
+    var gridEl = document.getElementById('slGrid');
+    var statusEl = document.getElementById('slStatus');
+    for (var cellIndex = 0; cellIndex < 15; cellIndex++) {
+      var cell = document.createElement('div');
+      cell.className = 'ostg-slot-cell';
+      cell.textContent = '•';
+      gridEl.appendChild(cell);
+    }
+
+    spin.addEventListener('click', async function () {
+      var amount = parseBet(bet, statusEl);
+      if (amount === null) return;
+      var result = placeBet(amount);
+      if (!result.ok) { statusEl.textContent = result.msg; return; }
+      setBusy([bet, lines, mode, spin], true);
+      statusEl.textContent = 'Reels spinning...';
+      var cells = Array.prototype.slice.call(gridEl.children);
+      cells.forEach(function (cell) { cell.className = 'ostg-slot-cell is-spinning'; cell.textContent = '•'; });
+      var floats = await pfFloats(15);
+      var slotGrid = [[], [], []];
+      for (var row = 0; row < 3; row++) {
+        for (var column = 0; column < 5; column++) slotGrid[row][column] = pickSlotSymbol(floats[row * 5 + column], mode.value);
+      }
+      setTimeout(function () {
+        cells.forEach(function (cell, index) {
+          var row = Math.floor(index / 5);
+          var column = index % 5;
+          cell.textContent = slotGrid[row][column].icon;
+          cell.className = 'ostg-slot-cell';
+        });
+        var lineCount = parseInt(lines.value, 10);
+        var activeLines = SLOT_LINES.slice(0, lineCount);
+        var lineBet = amount / lineCount;
+        var totalPayout = 0;
+        activeLines.forEach(function (line) {
+          var multiplier = scoreSlotLine(slotGrid, line);
+          if (multiplier > 0) {
+            totalPayout += lineBet * multiplier;
+            line.forEach(function (point) { cells[point[0] * 5 + point[1]].classList.add('is-hit'); });
+          }
+        });
+        var totalMultiplier = totalPayout / amount;
+        settleGame('slots', amount, totalPayout, totalMultiplier, statusEl,
+          totalPayout > 0 ? 'Reels paid ' + totalPayout.toFixed(2) + ' OST · ' + shortMult(totalMultiplier) + ' total.'
+                          : 'No line connected this spin — lost ' + amount.toFixed(2) + ' OST.',
+          gridEl);
+        setBusy([bet, lines, mode, spin], false);
+      }, 760);
+    });
+  }
+
+  var CARD_SUITS = ['♠', '♥', '♦', '♣'];
+  var CARD_RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+
+  function createCardDeck(floats) {
+    var deck = [];
+    CARD_SUITS.forEach(function (suit) {
+      CARD_RANKS.forEach(function (rank, rankIndex) {
+        deck.push({ rank: rank, suit: suit, order: rankIndex + 1 });
+      });
+    });
+    return shuffleWithFloats(deck, floats);
+  }
+
+  function renderCard(card) {
+    var red = card.suit === '♥' || card.suit === '♦';
+    return '<span class="ostg-play-card ' + (red ? 'is-red' : '') + '"><b>' + card.rank + '</b><em>' + card.suit + '</em></span>';
+  }
+
+  function blackjackValue(cards) {
+    var total = 0;
+    var aces = 0;
+    cards.forEach(function (card) {
+      if (card.rank === 'A') { aces++; total += 11; }
+      else total += Math.min(card.order, 10);
+    });
+    while (total > 21 && aces > 0) { total -= 10; aces--; }
+    return total;
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // BLACKJACK — hit, stand, double, dealer draws to 17.
+  // ────────────────────────────────────────────────────────────────────────
+  function renderBlackjack(stage) {
+    stage.innerHTML =
+      '<div class="ostg-game ostg-blackjack">' +
+        '<div class="ostg-controls">' +
+          '<label>Bet (OST)<input type="number" id="bjBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
+          '<button class="ostg-btn ostg-btn-primary" id="bjDeal">Deal</button>' +
+          '<button class="ostg-btn" id="bjHit" disabled>Hit</button>' +
+          '<button class="ostg-btn" id="bjStand" disabled>Stand</button>' +
+          '<button class="ostg-btn ostg-btn-cash" id="bjDouble" disabled>Double</button>' +
+        '</div>' +
+        '<div class="ostg-table-stage">' +
+          '<div class="ostg-hand"><span>Dealer <strong id="bjDealerTotal">0</strong></span><div id="bjDealerCards" class="ostg-card-row"></div></div>' +
+          '<div class="ostg-hand"><span>You <strong id="bjPlayerTotal">0</strong></span><div id="bjPlayerCards" class="ostg-card-row"></div></div>' +
+        '</div>' +
+        '<div class="ostg-status" id="bjStatus">Deal two cards. Blackjack pays 2.5x, standard wins pay 1.98x.</div>' +
+      '</div>';
+
+    var bet = document.getElementById('bjBet');
+    var deal = document.getElementById('bjDeal');
+    var hit = document.getElementById('bjHit');
+    var stand = document.getElementById('bjStand');
+    var doubleBtn = document.getElementById('bjDouble');
+    var dealerCards = document.getElementById('bjDealerCards');
+    var playerCards = document.getElementById('bjPlayerCards');
+    var dealerTotal = document.getElementById('bjDealerTotal');
+    var playerTotal = document.getElementById('bjPlayerTotal');
+    var statusEl = document.getElementById('bjStatus');
+    var session = null;
+
+    function drawCard() { return session.deck.pop(); }
+
+    function renderHands() {
+      dealerCards.innerHTML = session ? session.dealer.map(renderCard).join('') : '';
+      playerCards.innerHTML = session ? session.player.map(renderCard).join('') : '';
+      dealerTotal.textContent = session ? String(blackjackValue(session.dealer)) : '0';
+      playerTotal.textContent = session ? String(blackjackValue(session.player)) : '0';
+    }
+
+    function setPlaying(active) {
+      bet.disabled = active;
+      deal.disabled = active;
+      hit.disabled = !active;
+      stand.disabled = !active;
+      doubleBtn.disabled = !active || !session || session.player.length !== 2 || getBalance() < session.bet;
+    }
+
+    function finish(payout, multiplier, text) {
+      settleGame('blackjack', session.bet, payout, multiplier, statusEl, text, stage.querySelector('.ostg-table-stage'));
+      session = null;
+      setPlaying(false);
+    }
+
+    function dealerTurn() {
+      while (blackjackValue(session.dealer) < 17) session.dealer.push(drawCard());
+      renderHands();
+      var playerScore = blackjackValue(session.player);
+      var dealerScore = blackjackValue(session.dealer);
+      if (dealerScore > 21 || playerScore > dealerScore) return finish(session.bet * 1.98, 1.98, 'You beat the dealer for ' + (session.bet * 1.98).toFixed(2) + ' OST.');
+      if (playerScore === dealerScore) return finish(session.bet, 1, 'Push. Your ' + session.bet.toFixed(2) + ' OST returned.');
+      finish(0, 0, 'Dealer wins with ' + dealerScore + '. Lost ' + session.bet.toFixed(2) + ' OST.');
+    }
+
+    deal.addEventListener('click', async function () {
+      var amount = parseBet(bet, statusEl);
+      if (amount === null) return;
+      var result = placeBet(amount);
+      if (!result.ok) { statusEl.textContent = result.msg; return; }
+      var deck = createCardDeck(await pfFloats(52));
+      session = { bet: amount, deck: deck, player: [], dealer: [] };
+      session.player.push(drawCard(), drawCard());
+      session.dealer.push(drawCard(), drawCard());
+      renderHands();
+      setPlaying(true);
+      var playerScore = blackjackValue(session.player);
+      var dealerScore = blackjackValue(session.dealer);
+      if (playerScore === 21 || dealerScore === 21) {
+        if (playerScore === dealerScore) return finish(amount, 1, 'Double blackjack push. Bet returned.');
+        if (playerScore === 21) return finish(amount * 2.5, 2.5, 'Natural blackjack! Paid ' + (amount * 2.5).toFixed(2) + ' OST.');
+        return finish(0, 0, 'Dealer blackjack. Lost ' + amount.toFixed(2) + ' OST.');
+      }
+      statusEl.textContent = 'Hit, stand, or double down.';
+    });
+
+    hit.addEventListener('click', function () {
+      if (!session) return;
+      session.player.push(drawCard());
+      renderHands();
+      if (blackjackValue(session.player) > 21) return finish(0, 0, 'Busted over 21. Lost ' + session.bet.toFixed(2) + ' OST.');
+      doubleBtn.disabled = true;
+      statusEl.textContent = 'Card drawn. Hit again or stand.';
+    });
+
+    stand.addEventListener('click', function () { if (session) dealerTurn(); });
+    doubleBtn.addEventListener('click', function () {
+      if (!session || session.player.length !== 2) return;
+      if (!debit(session.bet)) { statusEl.textContent = 'Need another ' + session.bet.toFixed(2) + ' OST to double.'; return; }
+      session.bet *= 2;
+      session.player.push(drawCard());
+      renderHands();
+      if (blackjackValue(session.player) > 21) return finish(0, 0, 'Double-down bust. Lost ' + session.bet.toFixed(2) + ' OST.');
+      dealerTurn();
+    });
+  }
+
+  function baccaratValue(cards) {
+    return cards.reduce(function (sum, card) { return sum + (card.order >= 10 ? 0 : card.order); }, 0) % 10;
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // BACCARAT — player, banker, or tie with real third-card rules.
+  // ────────────────────────────────────────────────────────────────────────
+  function renderBaccarat(stage) {
+    stage.innerHTML =
+      '<div class="ostg-game ostg-baccarat">' +
+        '<div class="ostg-controls">' +
+          '<label>Bet (OST)<input type="number" id="baBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
+          '<label>Side<select id="baSide"><option value="player">Player · 1.98x</option><option value="banker">Banker · 1.95x</option><option value="tie">Tie · 8.80x</option></select></label>' +
+          '<button class="ostg-btn ostg-btn-primary" id="baDeal">Deal</button>' +
+        '</div>' +
+        '<div class="ostg-table-stage">' +
+          '<div class="ostg-hand"><span>Player <strong id="baPlayerTotal">0</strong></span><div id="baPlayerCards" class="ostg-card-row"></div></div>' +
+          '<div class="ostg-hand"><span>Banker <strong id="baBankerTotal">0</strong></span><div id="baBankerCards" class="ostg-card-row"></div></div>' +
+        '</div>' +
+        '<div class="ostg-status" id="baStatus">Pick player, banker, or tie. Naturals and third-card draws are handled automatically.</div>' +
+      '</div>';
+
+    var bet = document.getElementById('baBet');
+    var side = document.getElementById('baSide');
+    var deal = document.getElementById('baDeal');
+    var playerCards = document.getElementById('baPlayerCards');
+    var bankerCards = document.getElementById('baBankerCards');
+    var playerTotal = document.getElementById('baPlayerTotal');
+    var bankerTotal = document.getElementById('baBankerTotal');
+    var statusEl = document.getElementById('baStatus');
+
+    deal.addEventListener('click', async function () {
+      var amount = parseBet(bet, statusEl);
+      if (amount === null) return;
+      var result = placeBet(amount);
+      if (!result.ok) { statusEl.textContent = result.msg; return; }
+      setBusy([bet, side, deal], true);
+      var deck = createCardDeck(await pfFloats(52));
+      function drawCardFromDeck() { return deck.pop(); }
+      var player = [drawCardFromDeck(), drawCardFromDeck()];
+      var banker = [drawCardFromDeck(), drawCardFromDeck()];
+      var playerThird = null;
+      var playerScore = baccaratValue(player);
+      var bankerScore = baccaratValue(banker);
+      if (playerScore < 8 && bankerScore < 8) {
+        if (playerScore <= 5) {
+          playerThird = drawCardFromDeck();
+          player.push(playerThird);
+        }
+        playerScore = baccaratValue(player);
+        var bankerDraws = false;
+        if (!playerThird) bankerDraws = bankerScore <= 5;
+        else {
+          var thirdValue = baccaratValue([playerThird]);
+          bankerDraws = bankerScore <= 2 ||
+            (bankerScore === 3 && thirdValue !== 8) ||
+            (bankerScore === 4 && thirdValue >= 2 && thirdValue <= 7) ||
+            (bankerScore === 5 && thirdValue >= 4 && thirdValue <= 7) ||
+            (bankerScore === 6 && thirdValue >= 6 && thirdValue <= 7);
+        }
+        if (bankerDraws) banker.push(drawCardFromDeck());
+      }
+      playerScore = baccaratValue(player);
+      bankerScore = baccaratValue(banker);
+      playerCards.innerHTML = player.map(renderCard).join('');
+      bankerCards.innerHTML = banker.map(renderCard).join('');
+      playerTotal.textContent = String(playerScore);
+      bankerTotal.textContent = String(bankerScore);
+      var winner = playerScore > bankerScore ? 'player' : bankerScore > playerScore ? 'banker' : 'tie';
+      var multiplier = winner === 'player' ? 1.98 : winner === 'banker' ? 1.95 : 8.8;
+      var payout = side.value === winner ? amount * multiplier : (winner === 'tie' && side.value !== 'tie' ? amount : 0);
+      var recordedMultiplier = payout === amount ? 1 : side.value === winner ? multiplier : 0;
+      settleGame('baccarat', amount, payout, recordedMultiplier, statusEl,
+        side.value === winner ? winner.toUpperCase() + ' wins ' + playerScore + '-' + bankerScore + ' · paid ' + payout.toFixed(2) + ' OST.'
+                            : payout === amount ? 'Tie push. Your bet returned.'
+                            : winner.toUpperCase() + ' wins ' + playerScore + '-' + bankerScore + ' — lost ' + amount.toFixed(2) + ' OST.',
+        stage.querySelector('.ostg-table-stage'));
+      setBusy([bet, side, deal], false);
+    });
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // SCRATCH — reveal nine tiles, match three multipliers to win.
+  // ────────────────────────────────────────────────────────────────────────
+  var SCRATCH_MODES = {
+    steady: [{ m: 0, w: 7 }, { m: 1, w: 12 }, { m: 1.2, w: 10 }, { m: 1.5, w: 7 }, { m: 3, w: 2 }],
+    burst: [{ m: 0, w: 12 }, { m: 1, w: 8 }, { m: 2, w: 7 }, { m: 5, w: 3 }, { m: 25, w: 1 }],
+    jackpot: [{ m: 0, w: 18 }, { m: 2, w: 8 }, { m: 10, w: 3 }, { m: 75, w: 1 }, { m: 500, w: 0.4 }]
+  };
+
+  function pickScratchPrize(randomValue, mode) {
+    var prizes = SCRATCH_MODES[mode];
+    var total = prizes.reduce(function (sum, prize) { return sum + prize.w; }, 0);
+    var cursor = randomValue * total;
+    for (var index = 0; index < prizes.length; index++) {
+      cursor -= prizes[index].w;
+      if (cursor <= 0) return prizes[index].m;
+    }
+    return prizes[0].m;
+  }
+
+  function renderScratch(stage) {
+    stage.innerHTML =
+      '<div class="ostg-game ostg-scratch">' +
+        '<div class="ostg-controls">' +
+          '<label>Bet (OST)<input type="number" id="scBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
+          '<label>Ticket<select id="scMode"><option value="steady">Steady</option><option value="burst" selected>Burst</option><option value="jackpot">Jackpot</option></select></label>' +
+          '<button class="ostg-btn ostg-btn-primary" id="scBuy">Buy ticket</button>' +
+          '<button class="ostg-btn" id="scReveal" disabled>Scratch all</button>' +
+        '</div>' +
+        '<div class="ostg-scratch-grid" id="scGrid"></div>' +
+        '<div class="ostg-status" id="scStatus">Buy a ticket, scratch nine panels, and match three multipliers to get paid.</div>' +
+      '</div>';
+
+    var bet = document.getElementById('scBet');
+    var mode = document.getElementById('scMode');
+    var buy = document.getElementById('scBuy');
+    var reveal = document.getElementById('scReveal');
+    var grid = document.getElementById('scGrid');
+    var statusEl = document.getElementById('scStatus');
+    var session = null;
+
+    function buildBlankTicket() {
+      grid.innerHTML = '';
+      for (var index = 0; index < 9; index++) {
+        var tile = document.createElement('button');
+        tile.type = 'button';
+        tile.className = 'ostg-scratch-tile';
+        tile.dataset.index = String(index);
+        tile.textContent = 'Scratch';
+        tile.disabled = !session;
+        tile.addEventListener('click', function (event) { scratchTile(parseInt(event.currentTarget.dataset.index, 10)); });
+        grid.appendChild(tile);
+      }
+    }
+
+    function bestScratchMatch() {
+      var counts = {};
+      session.prizes.forEach(function (prize) { counts[prize] = (counts[prize] || 0) + 1; });
+      return Object.keys(counts).map(Number).filter(function (prize) { return counts[prize] >= 3; }).sort(function (left, right) { return right - left; })[0] || 0;
+    }
+
+    function finishTicket() {
+      if (!session || session.done) return;
+      session.done = true;
+      var multiplier = bestScratchMatch();
+      var payout = session.bet * multiplier;
+      settleGame('scratch', session.bet, payout, multiplier, statusEl,
+        multiplier > 0 ? 'Matched three ' + shortMult(multiplier) + ' tiles · paid ' + payout.toFixed(2) + ' OST.'
+                       : 'No three-of-a-kind this ticket — lost ' + session.bet.toFixed(2) + ' OST.',
+        grid);
+      session = null;
+      setBusy([bet, mode, buy], false);
+      reveal.disabled = true;
+    }
+
+    function scratchTile(index) {
+      if (!session || session.revealed.has(index)) return;
+      session.revealed.add(index);
+      var tile = grid.querySelector('[data-index="' + index + '"]');
+      var prize = session.prizes[index];
+      tile.disabled = true;
+      tile.classList.add('is-revealed', prize >= 5 ? 'is-big' : prize > 0 ? 'is-soft' : 'is-zero');
+      tile.textContent = prize > 0 ? shortMult(prize) : '0x';
+      pulse(tile, prize > 0 ? 'ostg-pop-win' : 'ostg-pop-loss');
+      statusEl.textContent = 'Scratched ' + session.revealed.size + '/9 panels.';
+      if (session.revealed.size >= 9) finishTicket();
+    }
+
+    buy.addEventListener('click', async function () {
+      var amount = parseBet(bet, statusEl);
+      if (amount === null) return;
+      var result = placeBet(amount);
+      if (!result.ok) { statusEl.textContent = result.msg; return; }
+      var floats = await pfFloats(9);
+      session = { bet: amount, prizes: floats.map(function (randomValue) { return pickScratchPrize(randomValue, mode.value); }), revealed: new Set(), done: false };
+      setBusy([bet, mode, buy], true);
+      reveal.disabled = false;
+      statusEl.textContent = 'Ticket live. Scratch panels one by one or reveal all.';
+      buildBlankTicket();
+    });
+
+    reveal.addEventListener('click', function () {
+      if (!session) return;
+      for (var index = 0; index < 9; index++) {
+        setTimeout((function (tileIndex) { return function () { scratchTile(tileIndex); }; })(index), index * 85);
+      }
+    });
+
+    buildBlankTicket();
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // PENALTY — pick aim and shot style, try to beat the keeper.
+  // ────────────────────────────────────────────────────────────────────────
+  var PENALTY_STYLES = {
+    placed: { label: 'Placed', multiplier: 1.55, accuracy: 0.78, beat: 0.18 },
+    power: { label: 'Power', multiplier: 2.25, accuracy: 0.58, beat: 0.28 },
+    chip: { label: 'Chip', multiplier: 4.2, accuracy: 0.35, beat: 0.42 }
+  };
+
+  function renderPenalty(stage) {
+    stage.innerHTML =
+      '<div class="ostg-game ostg-penalty">' +
+        '<div class="ostg-controls">' +
+          '<label>Bet (OST)<input type="number" id="pnBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
+          '<label>Aim<select id="pnAim"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option><option value="top">Top corner</option></select></label>' +
+          '<label>Shot<select id="pnStyle"><option value="placed">Placed · safer</option><option value="power" selected>Power · balanced</option><option value="chip">Chip · risky</option></select></label>' +
+          '<button class="ostg-btn ostg-btn-primary" id="pnShoot">Shoot</button>' +
+          '<div class="ostg-meta"><span>Goal pays</span> <strong id="pnPay">2.25x</strong></div>' +
+        '</div>' +
+        '<div class="ostg-penalty-stage">' +
+          '<div class="ostg-penalty-goal"><div class="ostg-keeper" id="pnKeeper">🧤</div><div class="ostg-ball" id="pnBall">●</div><div class="ostg-net-line"></div></div>' +
+          '<div class="ostg-penalty-lanes"><span>Left</span><span>Center</span><span>Right</span><span>Top</span></div>' +
+        '</div>' +
+        '<div class="ostg-status" id="pnStatus">Choose an aim and shot style. Safer shots pay less; fancy chips can beat a correct keeper guess.</div>' +
+      '</div>';
+
+    var bet = document.getElementById('pnBet');
+    var aim = document.getElementById('pnAim');
+    var style = document.getElementById('pnStyle');
+    var shoot = document.getElementById('pnShoot');
+    var pay = document.getElementById('pnPay');
+    var keeper = document.getElementById('pnKeeper');
+    var ball = document.getElementById('pnBall');
+    var statusEl = document.getElementById('pnStatus');
+    var sides = ['left', 'center', 'right', 'top'];
+
+    function refreshPenalty() {
+      pay.textContent = shortMult(PENALTY_STYLES[style.value].multiplier);
+    }
+    style.addEventListener('change', refreshPenalty);
+    refreshPenalty();
+
+    shoot.addEventListener('click', async function () {
+      var amount = parseBet(bet, statusEl);
+      if (amount === null) return;
+      var result = placeBet(amount);
+      if (!result.ok) { statusEl.textContent = result.msg; return; }
+      var floats = await pfFloats(2);
+      var shot = PENALTY_STYLES[style.value];
+      var keeperSide = sides[Math.floor(floats[0] * sides.length)];
+      var keeperMatched = keeperSide === aim.value;
+      var scored = keeperMatched ? floats[1] < shot.beat : floats[1] < shot.accuracy;
+      setBusy([bet, aim, style, shoot], true);
+      keeper.dataset.side = keeperSide;
+      ball.dataset.side = aim.value;
+      statusEl.textContent = 'Shot away... keeper dives ' + keeperSide + '.';
+      setTimeout(function () {
+        var payout = scored ? amount * shot.multiplier : 0;
+        settleGame('penalty', amount, payout, scored ? shot.multiplier : 0, statusEl,
+          scored ? shot.label + ' shot scores! Paid ' + payout.toFixed(2) + ' OST at ' + shortMult(shot.multiplier) + '.'
+                 : 'Saved by the keeper. Lost ' + amount.toFixed(2) + ' OST.',
+          stage.querySelector('.ostg-penalty-stage'));
+        setBusy([bet, aim, style, shoot], false);
+        setTimeout(function () { keeper.dataset.side = ''; ball.dataset.side = ''; }, 500);
+      }, 760);
+    });
+  }
+
   // ────────────────────────────────────────────────────────────────────────
   // FAIRNESS MODAL
   // ────────────────────────────────────────────────────────────────────────
@@ -1490,6 +2473,51 @@
       '.ostg-pin-hit{animation:ostg-pin-hit .5s ease-out;}' +
       '@keyframes ostg-pin-bounce{0%{transform:translateX(-50%) translateY(0)}100%{transform:translateX(-50%) translateY(8px)}}' +
       '@keyframes ostg-pin-hit{0%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.22)}100%{transform:translateX(-50%) scale(1)}}' +
+      '.ostg-keno-grid{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:7px;padding:12px;border-radius:14px;background:radial-gradient(circle at top,rgba(56,118,252,.14),rgba(2,6,16,.42));border:1px solid rgba(255,255,255,.07);}' +
+      '.ostg-keno-cell{aspect-ratio:1;border-radius:999px;background:linear-gradient(135deg,#1e293b,#0f172a);border:1px solid rgba(148,163,184,.2);color:#dbeafe;font-weight:800;font-size:12px;box-shadow:inset 0 -6px 14px rgba(0,0,0,.24);transition:transform .15s,background .15s,border-color .15s;}' +
+      '.ostg-keno-cell:hover:not(:disabled){transform:translateY(-2px);border-color:#60a5fa;}' +
+      '.ostg-keno-cell.is-selected{background:linear-gradient(135deg,#2563eb,#7c3aed);border-color:#bfdbfe;color:#fff;box-shadow:0 0 18px rgba(96,165,250,.34);}' +
+      '.ostg-keno-cell.is-drawn{background:linear-gradient(135deg,#334155,#111827);border-color:#f5c468;color:#fde68a;}' +
+      '.ostg-keno-cell.is-hit{background:linear-gradient(135deg,#22c55e,#15803d);border-color:#86efac;color:#052e16;box-shadow:0 0 24px rgba(34,197,94,.48);}' +
+      '.ostg-keno-pays{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;color:#bfdbfe;font-size:12px;}' +
+      '.ostg-keno-pays span{padding:6px 9px;border-radius:999px;background:rgba(56,118,252,.14);border:1px solid rgba(96,165,250,.18);}' +
+      '.ostg-tower-board{display:flex;flex-direction:column;gap:7px;max-width:520px;margin:0 auto;padding:12px;border-radius:14px;background:linear-gradient(180deg,rgba(15,23,42,.82),rgba(2,6,23,.88));border:1px solid rgba(255,255,255,.07);}' +
+      '.ostg-tower-row{display:grid;grid-template-columns:repeat(var(--tower-cols,4),minmax(0,1fr));gap:7px;opacity:.58;transition:opacity .18s,transform .18s;}' +
+      '.ostg-tower-row.is-current{opacity:1;transform:scale(1.015);}' +
+      '.ostg-tower-cell{height:44px;border-radius:10px;background:linear-gradient(135deg,#172033,#0f172a);border:1px solid rgba(148,163,184,.18);color:#93c5fd;font-size:18px;font-weight:900;transition:transform .16s,border-color .16s,background .16s;}' +
+      '.ostg-tower-row.is-current .ostg-tower-cell:not(:disabled):hover{transform:translateY(-2px);border-color:#f5c468;}' +
+      '.ostg-tower-cell.is-safe{background:linear-gradient(135deg,#16a34a,#065f46);border-color:#86efac;color:#dcfce7;}' +
+      '.ostg-tower-cell.is-trap{background:linear-gradient(135deg,#dc2626,#7f1d1d);border-color:#fecaca;color:#fff;animation:ostg-shake .36s;}' +
+      '.ostg-roulette-stage{position:relative;display:flex;justify-content:center;align-items:center;min-height:360px;border-radius:14px;background:radial-gradient(circle at center,rgba(245,196,104,.13),rgba(2,6,16,.88));overflow:hidden;border:1px solid rgba(255,255,255,.07);}' +
+      '.ostg-roulette-stage canvas{display:block;max-width:100%;height:auto;}' +
+      '.ostg-roulette-pointer{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:13px solid transparent;border-right:13px solid transparent;border-top:24px solid #f5c468;z-index:3;filter:drop-shadow(0 2px 5px rgba(0,0,0,.55));}' +
+      '.ostg-roulette-result{position:absolute;inset:auto auto 18px 50%;transform:translateX(-50%);min-width:62px;text-align:center;padding:7px 12px;border-radius:999px;background:rgba(2,6,16,.78);border:1px solid rgba(255,255,255,.16);font-size:24px;font-weight:900;color:#f8fafc;}' +
+      '.ostg-roulette-result[data-color="red"]{color:#fecaca}.ostg-roulette-result[data-color="black"]{color:#cbd5e1}.ostg-roulette-result[data-color="green"]{color:#86efac}' +
+      '.ostg-slot-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;max-width:620px;margin:0 auto;padding:14px;border-radius:16px;background:linear-gradient(180deg,#111827,#020617);border:1px solid rgba(245,196,104,.22);box-shadow:inset 0 0 28px rgba(245,196,104,.06);}' +
+      '.ostg-slot-cell{aspect-ratio:1.05;border-radius:12px;background:linear-gradient(180deg,#f8fafc,#cbd5e1);color:#111827;display:flex;align-items:center;justify-content:center;font-size:clamp(1.8rem,6vw,3.2rem);font-weight:900;box-shadow:inset 0 -8px 20px rgba(0,0,0,.18);}' +
+      '.ostg-slot-cell.is-spinning{animation:ostg-slot-spin .42s linear infinite;color:transparent;text-shadow:0 0 18px rgba(255,255,255,.9);}' +
+      '.ostg-slot-cell.is-hit{outline:3px solid #f5c468;box-shadow:0 0 24px rgba(245,196,104,.48),inset 0 -8px 20px rgba(0,0,0,.18);}' +
+      '.ostg-slot-pays{text-align:center;color:#94a3b8;font-size:12px;}' +
+      '@keyframes ostg-slot-spin{0%{transform:translateY(-3px)}50%{transform:translateY(3px)}100%{transform:translateY(-3px)}}' +
+      '.ostg-table-stage{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:16px;border-radius:14px;background:radial-gradient(circle at top,rgba(15,118,110,.16),rgba(2,6,23,.86));border:1px solid rgba(255,255,255,.07);}' +
+      '.ostg-hand{min-height:190px;border-radius:12px;padding:14px;background:rgba(0,0,0,.24);border:1px solid rgba(255,255,255,.08);}' +
+      '.ostg-hand>span{display:flex;justify-content:space-between;color:#cbd5e1;font-size:12px;text-transform:uppercase;letter-spacing:.05em;font-weight:800;margin-bottom:10px;}' +
+      '.ostg-card-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}' +
+      '.ostg-play-card{width:64px;height:88px;border-radius:10px;background:linear-gradient(180deg,#f8fafc,#e2e8f0);color:#111827;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Georgia,serif;font-weight:900;font-size:22px;box-shadow:0 8px 18px rgba(0,0,0,.28);}' +
+      '.ostg-play-card.is-red{color:#dc2626}.ostg-play-card em{font-style:normal;font-size:20px;line-height:1}' +
+      '.ostg-scratch-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;max-width:520px;margin:0 auto;padding:14px;border-radius:16px;background:linear-gradient(135deg,rgba(88,28,135,.36),rgba(15,23,42,.86));border:1px solid rgba(216,180,254,.2);}' +
+      '.ostg-scratch-tile{aspect-ratio:1.4;border-radius:12px;background:repeating-linear-gradient(135deg,#94a3b8 0,#94a3b8 8px,#64748b 8px,#64748b 16px);border:1px solid rgba(255,255,255,.2);color:#0f172a;font-weight:900;font-size:15px;text-transform:uppercase;letter-spacing:.03em;}' +
+      '.ostg-scratch-tile.is-revealed{background:linear-gradient(135deg,#172033,#0f172a);color:#cbd5e1;text-transform:none;font-size:20px;}' +
+      '.ostg-scratch-tile.is-soft{color:#fde68a;border-color:#f5c468}.ostg-scratch-tile.is-big{color:#86efac;border-color:#22c55e;box-shadow:0 0 22px rgba(34,197,94,.35)}.ostg-scratch-tile.is-zero{color:#94a3b8;}' +
+      '.ostg-penalty-stage{padding:14px;border-radius:16px;background:linear-gradient(180deg,#14532d,#052e16);border:1px solid rgba(134,239,172,.18);}' +
+      '.ostg-penalty-goal{position:relative;min-height:260px;border-radius:14px;overflow:hidden;background:linear-gradient(180deg,rgba(219,234,254,.18),rgba(21,128,61,.1));border:2px solid rgba(255,255,255,.42);}' +
+      '.ostg-net-line{position:absolute;inset:18px 18px 92px;border:1px dashed rgba(255,255,255,.36);border-bottom:none;}' +
+      '.ostg-keeper{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);font-size:42px;transition:left .42s cubic-bezier(.2,1.4,.3,1),top .42s cubic-bezier(.2,1.4,.3,1);z-index:2;}' +
+      '.ostg-ball{position:absolute;left:50%;top:82%;transform:translate(-50%,-50%);width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#f8fafc;color:#111827;font-size:18px;font-weight:900;box-shadow:0 6px 12px rgba(0,0,0,.35);transition:left .62s cubic-bezier(.2,1,.2,1),top .62s cubic-bezier(.2,1,.2,1);z-index:3;}' +
+      '.ostg-keeper[data-side="left"]{left:24%;top:42%}.ostg-keeper[data-side="center"]{left:50%;top:48%}.ostg-keeper[data-side="right"]{left:76%;top:42%}.ostg-keeper[data-side="top"]{left:50%;top:22%}' +
+      '.ostg-ball[data-side="left"]{left:24%;top:42%}.ostg-ball[data-side="center"]{left:50%;top:50%}.ostg-ball[data-side="right"]{left:76%;top:42%}.ostg-ball[data-side="top"]{left:50%;top:20%}' +
+      '.ostg-penalty-lanes{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px;color:#bbf7d0;font-size:11px;text-align:center;text-transform:uppercase;letter-spacing:.05em;font-weight:800;}' +
+      '@media (max-width:640px){.ostg-keno-grid{grid-template-columns:repeat(5,minmax(0,1fr));}.ostg-table-stage{grid-template-columns:1fr}.ostg-slot-cell{font-size:1.8rem}.ostg-roulette-stage{min-height:300px}.ostg-penalty-goal{min-height:220px}}' +
       '@media (max-width:520px){.ostg-section{padding:16px}.ostg-limbo-mult{font-size:2.8rem}.ostg-dice-stats{grid-template-columns:1fr}.ostg-card{width:96px;height:136px;font-size:2.8rem}.ostg-toast{right:10px;top:74px}}';
     document.head.appendChild(st);
   }

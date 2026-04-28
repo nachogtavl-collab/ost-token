@@ -104,9 +104,9 @@
         '</div>' +
         // Pointer to the games panel
         '<div class="fh-card">' +
-          '<div class="fh-card-title">🎲 Provably-Fair Games</div>' +
-          '<div class="fh-emoji">💣🚀🎲🟡</div>' +
-          '<div class="fh-card-meta">Mines · Crash · Dice · Plinko · Limbo · Hi-Lo · Wheel · Coinflip — all HMAC-verifiable, all paid from this same vault.</div>' +
+          '<div class="fh-card-title">🎲 Provably-Fair Arcade</div>' +
+          '<div class="fh-emoji">💣🚀🎰🃏</div>' +
+          '<div class="fh-card-meta">16 HMAC-verifiable games: Mines, Crash, Dice, Plinko, table games, Keno, Slots, Scratch, Penalty and more — all paid from this same vault.</div>' +
           '<button class="fh-btn" id="fhGoGames">Open games ↓</button>' +
         '</div>' +
       '</div>' +
