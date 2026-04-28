@@ -4,6 +4,11 @@
   'use strict';
 
   var STORE_KEY = 'ost.prediction.bets.v1';
+  // Mirror of the on-chain trade-desk store written by app.js. We read it so
+  // bets placed via the main "Buy YES/NO with OST" trade desk also appear in
+  // the My OST bets panel — previously these two stores were disjoint and the
+  // panel would show "No bets yet" even right after a confirmed on-chain bet.
+  var TRADE_DESK_STORE_KEY = 'ost.prediction.orders.v1';
   var MODAL_ID = 'ost-prediction-modal';
 
   function $(s, r) { return (r || document).querySelector(s); }
@@ -51,21 +56,40 @@
   function readMarketFromCard(card) {
     // Reconstruct enough data from the card DOM (the live state isn't exported).
     var id = getSelectedMarketIdFromCard(card);
-    var titleEl = card.querySelector('strong, h3, .prediction-card-title');
-    var yesEl = card.querySelector('[class*="yes"], .prediction-yes, .prediction-card-yes');
+    var titleEl = card.querySelector('h5, .prediction-card-title, h3, strong');
     var sourceEl = card.querySelector('.prediction-market-source');
     var topicEl = card.querySelector('.prediction-market-topic');
-    var closeEl = card.querySelector('[class*="close"], .prediction-card-close');
+    var closeEl = card.querySelector('.prediction-market-meta-row .prediction-market-metric:last-child strong');
+
+    // The actual probability bar fill width gives us the most reliable YES price.
+    var barFill = card.querySelector('.prediction-market-bar-fill');
+    var yesPrice = NaN;
+    if (barFill && barFill.style && barFill.style.width) {
+      var pct = parseFloat(String(barFill.style.width).replace('%', ''));
+      if (Number.isFinite(pct)) yesPrice = clamp01(pct / 100);
+    }
+    // Secondary fallback: read from the price grid's YES <strong>.
+    if (!Number.isFinite(yesPrice)) {
+      var priceCells = card.querySelectorAll('.prediction-market-price strong');
+      if (priceCells && priceCells.length >= 1) {
+        var p = parseFloat(String(priceCells[0].textContent || '').replace(/[^\d.\-]/g, ''));
+        if (Number.isFinite(p)) yesPrice = clamp01(p > 1 ? p / 100 : p);
+      }
+    }
+    if (!Number.isFinite(yesPrice)) yesPrice = 0.5;
+
     return {
       id: id,
       title: titleEl ? titleEl.textContent.trim() : 'Untitled market',
-      yesText: yesEl ? yesEl.textContent.trim() : '',
+      yesText: Math.round(yesPrice * 100) + '%',
+      yesPrice: yesPrice,
       sourceLabel: sourceEl ? sourceEl.textContent.trim() : '',
       topic: topicEl ? topicEl.textContent.trim() : '',
       closeText: closeEl ? closeEl.textContent.trim() : '',
       isOst: /ost/i.test(sourceEl ? sourceEl.textContent : '')
     };
   }
+  function clamp01(v) { return Math.max(0.01, Math.min(0.99, v)); }
 
   // Synthetic but deterministic price history from market id
   function fakeSeries(id, anchorYes) {
@@ -107,7 +131,9 @@
 
   // --- inject Info / Graph / Bet buttons under every prediction card -------
   function enhanceCards() {
-    var cards = $$('.prediction-card[data-prediction-market-id], .prediction-pulse-card[data-prediction-select-market-id], .prediction-tape-chip[data-prediction-select-market-id]');
+    // Real cards rendered by app.js use `.prediction-market-card`; older paths
+    // and pulse/tape chips use the alternate selectors. Match all of them.
+    var cards = $$('.prediction-market-card[data-prediction-market-id], .prediction-card[data-prediction-market-id], .prediction-pulse-card[data-prediction-select-market-id], .prediction-tape-chip[data-prediction-select-market-id]');
     cards.forEach(function (card) {
       if (card.querySelector('.ost-pred-actions')) return;
       var id = getSelectedMarketIdFromCard(card);
@@ -129,7 +155,8 @@
         var action = btn.getAttribute('data-ost-pred-action');
         var market = readMarketFromCard(card);
         market.id = id;
-        market.yesPrice = parseFloat(market.yesText) / 100 || 0.5;
+        // readMarketFromCard already populates market.yesPrice from the bar-fill.
+        if (!Number.isFinite(market.yesPrice)) market.yesPrice = 0.5;
         if (action === 'info') return showInfoModal(market);
         if (action === 'graph') return showGraphModal(market);
         if (action === 'bet-yes') return openBetFlow(card, id, 'yes', market);
@@ -279,12 +306,50 @@
     return bet;
   }
 
+  // Pull bets from BOTH stores (extras + the on-chain trade desk in app.js)
+  // and merge into a single deduped list keyed by signature, newest first.
+  function readAllBets() {
+    var extras = readBets();
+    var deskOrders = [];
+    try { deskOrders = JSON.parse(localStorage.getItem(TRADE_DESK_STORE_KEY) || '[]'); } catch (e) {}
+    // Normalise trade-desk orders into the same shape the panel renders.
+    var normalised = (Array.isArray(deskOrders) ? deskOrders : []).map(function (o) {
+      var stake = Number(o.stake) || 0;
+      var price = Number(o.price) || 0.5;
+      return {
+        id: 'desk-' + (o.signature || (o.createdAt + '-' + o.marketId)),
+        marketId: o.marketId || o.id || '',
+        title: o.title || 'Prediction ticket',
+        side: (o.side || 'yes').toLowerCase(),
+        stake: stake,
+        price: price,
+        payoutIfWin: Number(o.potentialReturn) || (price > 0 ? stake / price : 0),
+        placedAt: Number(o.createdAt) || Date.now(),
+        status: o.status || 'open',
+        signature: o.signature || '',
+        isOstNative: /ost/i.test(String(o.source || '')),
+        source: o.source || ''
+      };
+    });
+    // Merge — drop duplicates by signature, otherwise keep both.
+    var byKey = Object.create(null);
+    var combined = extras.concat(normalised);
+    combined.forEach(function (b) {
+      var key = b.signature || b.id;
+      if (!byKey[key]) byKey[key] = b;
+    });
+    var list = Object.keys(byKey).map(function (k) { return byKey[k]; });
+    list.sort(function (a, b) { return (b.placedAt || 0) - (a.placedAt || 0); });
+    return list;
+  }
+
   function renderMyBetsInto(host) {
     if (!host) return;
-    var bets = readBets().map(resolveBetIfNeeded);
-    writeBets(bets);
+    var bets = readAllBets().map(resolveBetIfNeeded);
+    // Persist back only the extras-store entries (the desk store is owned by app.js).
+    writeBets(bets.filter(function (b) { return !String(b.id).startsWith('desk-'); }));
     if (!bets.length) {
-      host.innerHTML = '<div class="ost-pred-empty">No bets yet. Click <strong>Bet YES</strong> or <strong>Bet NO</strong> on any market.</div>';
+      host.innerHTML = '<div class="ost-pred-empty">No bets yet. Click <strong>Bet YES</strong> or <strong>Bet NO</strong> on any market, <em>or</em> use the main trade desk\'s <strong>Buy YES/NO with OST</strong> button — both flows show up here.</div>';
       return;
     }
     host.innerHTML = bets.map(function (b) {

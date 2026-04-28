@@ -12423,17 +12423,22 @@
 
     function buildPredictionSeries(market) {
       var current = clamp(getMarketPrice(market, 'yes') * 100 || 50, 1, 99);
+      // Anchor previous price to recent trend points OR a deterministic seeded
+      // offset, so brand-new markets (no historical price data) still produce
+      // a *moving* curve instead of a flat 50% line.
+      var seed = hashString(market.id + market.source);
+      var seededDrift = ((seed % 1000) / 1000 - 0.5) * 18; // ±9 pp
       var previous = Number.isFinite(market.previousYesPriceNumber)
         ? clamp(market.previousYesPriceNumber * 100, 1, 99)
-        : clamp(current - getTrendPoints(market), 1, 99);
+        : clamp(current - (getTrendPoints(market) || seededDrift), 1, 99);
       var weeklyAnchor = Number.isFinite(market.oneWeekPriceChangeNumber)
         ? clamp(current - (market.oneWeekPriceChangeNumber * 100), 1, 99)
-        : previous;
+        : clamp(previous + ((seed >> 4) % 17) - 8, 1, 99);
       var monthlyAnchor = Number.isFinite(market.oneMonthPriceChangeNumber)
         ? clamp(current - (market.oneMonthPriceChangeNumber * 100), 1, 99)
-        : weeklyAnchor;
-      var seed = hashString(market.id + market.source);
-      var volatility = Math.max(2, Math.min(12, Math.abs(current - previous) + Math.log10((market.volumeNumber || 0) + 10) * 1.2));
+        : clamp(weeklyAnchor + ((seed >> 8) % 25) - 12, 1, 99);
+      // Floor volatility at 6 pp so even quiet markets visibly breathe.
+      var volatility = Math.max(6, Math.min(14, Math.abs(current - previous) + Math.log10((market.volumeNumber || 0) + 10) * 1.4));
       var points = [];
 
       for (var index = 0; index < 24; index += 1) {
@@ -12443,8 +12448,8 @@
           : progress < 0.7
             ? weeklyAnchor + (previous - weeklyAnchor) * ((progress - 0.35) / 0.35)
             : previous + (current - previous) * ((progress - 0.7) / 0.3);
-        var wobble = Math.sin(progress * Math.PI * 3 + seed) * volatility * 0.35 * Math.sin(progress * Math.PI);
-        var micro = Math.cos(progress * Math.PI * 8 + seed * 0.7) * volatility * 0.08;
+        var wobble = Math.sin(progress * Math.PI * 3 + seed) * volatility * 0.5;
+        var micro = Math.cos(progress * Math.PI * 8 + seed * 0.7) * volatility * 0.18;
         points.push(clamp(anchor + wobble + micro, 1, 99));
       }
 
