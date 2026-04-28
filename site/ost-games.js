@@ -136,9 +136,14 @@
             '<p class="ostg-sub">Bet your earned bonus OST. Every outcome is HMAC-SHA256 of <code>serverSeed</code>+<code>clientSeed</code>+<code>nonce</code>. Verifiable. Same engine model as Stake/Rainbet.</p>' +
           '</div>' +
           '<div class="ostg-balance-card">' +
-            '<span class="ostg-balance-label">Bonus balance</span>' +
+            '<span class="ostg-balance-label">Chips · play balance</span>' +
             '<span class="ostg-balance-amt"><strong data-ostg-balance>0.00</strong> OST</span>' +
+            '<div class="ostg-wallet-line" id="ostgWalletLine">' +
+              '<span class="ostg-wallet-dot" data-state="off"></span>' +
+              '<span id="ostgWalletText">Wallet: not connected</span>' +
+            '</div>' +
             '<div class="ostg-balance-actions">' +
+              '<button class="ostg-deposit-btn" id="ostgDepositBtn" type="button" title="Move OST from your real wallet into the play balance">⬇ Deposit</button>' +
               '<button class="ostg-cash-btn" id="ostgCashBtn" type="button" title="Send earned OST to your real wallet">💸 Cash out</button>' +
               '<button class="ostg-fair-btn" id="ostgFairBtn" type="button">🔐 Fairness</button>' +
             '</div>' +
@@ -176,13 +181,34 @@
     document.getElementById('ostgFairBtn').addEventListener('click', openFairness);
     var cashBtn = document.getElementById('ostgCashBtn');
     if (cashBtn) {
-      cashBtn.addEventListener('click', function () {
-        // Re-use the faucet-hub cashout flow (same balance, same on-chain vault).
-        var hubBtn = document.getElementById('fhCashout');
-        if (hubBtn) { hubBtn.click(); return; }
-        // Fallback: scroll to faucet vault if hub not loaded yet.
-        var vault = document.getElementById('ostFaucetHub');
-        if (vault) vault.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      cashBtn.addEventListener('click', async function () {
+        var bal = getBalance();
+        if (bal < 1) return;
+        var w = window.OST_WALLET;
+        if (!w || !w.session || !w.session.publicKey) {
+          var b = document.getElementById('connectWalletBtn'); if (b) b.click();
+          return;
+        }
+        if (!window.OST_RESCUE || !window.OST_RESCUE.payoutOst) {
+          // Fall back to hub button if rescue helpers haven't loaded yet.
+          var hubBtn = document.getElementById('fhCashout'); if (hubBtn) hubBtn.click();
+          return;
+        }
+        var prev = cashBtn.textContent; cashBtn.disabled = true; cashBtn.textContent = 'Sending…';
+        try {
+          var memo = JSON.stringify({ k: 'games-cashout', ost: bal, t: Date.now() });
+          var r = await window.OST_RESCUE.payoutOst(w.session.publicKey, bal, memo);
+          // Debit ONLY after on-chain confirm.
+          var s = loadBank(); s.credits = Math.max(0, Number(s.credits || 0) - r.ost); saveBank(s); fireBalanceChange();
+          cashBtn.textContent = '✓ Sent ' + r.ost.toFixed(2) + ' OST';
+          try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {}
+        } catch (e) {
+          console.warn('[ostg] cashout failed', e);
+          alert('Cash-out failed: ' + (e && e.message ? e.message : e));
+          cashBtn.textContent = prev;
+        } finally {
+          setTimeout(function () { cashBtn.textContent = prev; sync(); }, 3500);
+        }
       });
       var sync = function () {
         var bal = getBalance();
@@ -193,6 +219,93 @@
       window.addEventListener('storage', sync);
       setInterval(sync, 1500);
     }
+    bindWalletStatus();
+    bindDeposit();
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // Wallet detection + on-chain deposit (Stake/Rainbet model: deposit real
+  // OST from your wallet into a play balance, then play instantly off-chain
+  // with full provably-fair logs, and cash out whenever you want).
+  // ────────────────────────────────────────────────────────────────────────
+  function shortAddr(a) { a = String(a || ''); return a.length > 8 ? a.slice(0, 4) + '…' + a.slice(-4) : a; }
+
+  function bindWalletStatus() {
+    var dot = document.querySelector('#ostgWalletLine .ostg-wallet-dot');
+    var text = document.getElementById('ostgWalletText');
+    var depBtn = document.getElementById('ostgDepositBtn');
+    if (!dot || !text) return;
+    var lastBal = null, lastAddr = null;
+    async function refresh() {
+      var w = window.OST_WALLET;
+      var connected = !!(w && w.session && w.session.publicKey);
+      if (!connected) {
+        dot.dataset.state = 'off';
+        text.innerHTML = '<a href="#" id="ostgConnectLink" style="color:#bfdbfe;text-decoration:underline;">Connect wallet</a> to deposit real OST';
+        if (depBtn) { depBtn.disabled = true; depBtn.title = 'Connect a wallet first'; }
+        var link = document.getElementById('ostgConnectLink');
+        if (link) link.addEventListener('click', function (e) {
+          e.preventDefault();
+          var b = document.getElementById('connectWalletBtn');
+          if (b) b.click();
+        });
+        return;
+      }
+      var addr = w.session.publicKey.toBase58 ? w.session.publicKey.toBase58() : String(w.session.publicKey);
+      dot.dataset.state = 'on';
+      try {
+        var bal = await w.getOstBalance(w.session.publicKey);
+        lastBal = bal; lastAddr = addr;
+        text.innerHTML = 'Wallet <code>' + shortAddr(addr) + '</code> · <strong>' + fmt(bal) + ' OST</strong>';
+        if (depBtn) {
+          depBtn.disabled = !(bal > 0);
+          depBtn.title = bal > 0 ? 'Deposit OST into play balance' : 'Wallet has 0 OST — claim from the faucet first';
+        }
+      } catch (_) {
+        text.innerHTML = 'Wallet <code>' + shortAddr(addr) + '</code> · balance unavailable';
+      }
+    }
+    refresh();
+    setInterval(refresh, 6000);
+    window.addEventListener('ost:wallet-changed', refresh);
+  }
+
+  function bindDeposit() {
+    var depBtn = document.getElementById('ostgDepositBtn');
+    if (!depBtn) return;
+    depBtn.addEventListener('click', async function () {
+      var w = window.OST_WALLET;
+      if (!w || !w.session || !w.session.publicKey) {
+        var b = document.getElementById('connectWalletBtn'); if (b) b.click();
+        return;
+      }
+      if (!window.OST_RESCUE || !window.OST_RESCUE.userSendsOstToPool) {
+        alert('Wallet helpers still loading — try again in a second.');
+        return;
+      }
+      var raw = prompt('How much OST to deposit into the play balance?\n(Will be transferred from your wallet to the rewards vault. Cash out anytime.)', '5');
+      if (raw === null) return;
+      var amt = parseFloat(raw);
+      if (!Number.isFinite(amt) || amt <= 0) { alert('Enter a positive amount'); return; }
+      var bal = 0;
+      try { bal = await w.getOstBalance(w.session.publicKey); } catch (_) {}
+      if (amt > bal + 1e-9) { alert('Wallet only has ' + fmt(bal) + ' OST.'); return; }
+      var prev = depBtn.textContent; depBtn.disabled = true; depBtn.textContent = 'Sending…';
+      try {
+        var memo = JSON.stringify({ k: 'games-deposit', ost: amt, t: Date.now() });
+        var r = await window.OST_RESCUE.userSendsOstToPool(amt, memo);
+        // Local credit ONLY after on-chain confirm so failures don't grant chips.
+        credit(r.ost, 'wallet-deposit');
+        depBtn.textContent = '✓ +' + r.ost.toFixed(2) + ' OST';
+        try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {}
+      } catch (e) {
+        console.warn('[ostg] deposit failed', e);
+        alert('Deposit failed: ' + (e && e.message ? e.message : e));
+        depBtn.textContent = prev;
+      } finally {
+        setTimeout(function () { depBtn.disabled = false; depBtn.textContent = prev; }, 3500);
+      }
+    });
   }
 
   function bindTabs() {
@@ -1125,6 +1238,13 @@
       '.ostg-balance-actions{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;}' +
       '.ostg-cash-btn{padding:6px 12px;border-radius:8px;background:linear-gradient(135deg,#22c55e,#15803d);border:none;color:#fff;font-weight:700;font-size:12px;cursor:pointer;box-shadow:0 4px 12px rgba(34,197,94,0.35);}' +
       '.ostg-cash-btn:disabled{opacity:0.4;cursor:not-allowed;box-shadow:none;}' +
+      '.ostg-deposit-btn{padding:6px 12px;border-radius:8px;background:linear-gradient(135deg,#3876fc,#1d4ed8);border:none;color:#fff;font-weight:700;font-size:12px;cursor:pointer;box-shadow:0 4px 12px rgba(56,118,252,0.35);}' +
+      '.ostg-deposit-btn:disabled{opacity:0.4;cursor:not-allowed;box-shadow:none;}' +
+      '.ostg-wallet-line{display:flex;align-items:center;gap:6px;font-size:11px;color:#cbd5e1;margin-top:4px;}' +
+      '.ostg-wallet-line code{background:rgba(0,0,0,0.4);padding:1px 6px;border-radius:4px;font-size:10px;color:#bfdbfe;}' +
+      '.ostg-wallet-line strong{color:#f5c468;}' +
+      '.ostg-wallet-dot{width:8px;height:8px;border-radius:50%;background:#64748b;flex:0 0 auto;}' +
+      '.ostg-wallet-dot[data-state="on"]{background:#22c55e;box-shadow:0 0 8px #22c55e;}' +
       '.ostg-tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap;}' +
       '.ostg-tab{flex:0 0 auto;white-space:nowrap;}' +
       // Limbo
