@@ -5221,41 +5221,223 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <!-- Buffer polyfill — required by @solana/web3.js (Transaction.serialize → Buffer.from)
-       Without this every send/swap/transfer fails with "Buffer is not defined". -->
-  <script>window.global = window.global || window;</script>
-  <script src="https://bundle.run/buffer@6.0.3"></script>
+  <!-- ──────────────────────────────────────────────────────────────────
+       Buffer + Node-globals polyfill — REQUIRED by @solana/web3.js.
+       Without this, every send / swap / faucet / convert fails with
+       "Buffer is not defined". This polyfill is synchronous (no CDN
+       dependency) and ships a Uint8Array-backed Buffer with every
+       method the Solana stack uses (toString hex/base64/utf8, slice,
+       copy, equals, readUInt*, writeUInt*, byteLength, concat …).
+       ────────────────────────────────────────────────────────────────── -->
   <script>
-    if (typeof window.Buffer === 'undefined' && window.buffer && window.buffer.Buffer) {
-      window.Buffer = window.buffer.Buffer;
-    }
-    // Fallback: minimal Uint8Array-backed shim so the page never throws even if the CDN is blocked.
-    if (typeof window.Buffer === 'undefined') {
-      window.Buffer = {
-        from: function (data, enc) {
-          if (data instanceof Uint8Array) return data;
-          if (Array.isArray(data)) return new Uint8Array(data);
-          if (typeof data === 'string') {
-            if (enc === 'hex') {
-              var out = new Uint8Array(data.length / 2);
-              for (var i = 0; i < out.length; i++) out[i] = parseInt(data.substr(i * 2, 2), 16);
-              return out;
-            }
-            return new TextEncoder().encode(data);
-          }
-          return new Uint8Array(0);
-        },
-        alloc: function (n) { return new Uint8Array(n); },
-        concat: function (list) {
-          var total = list.reduce(function (a, b) { return a + b.length; }, 0);
-          var out = new Uint8Array(total); var off = 0;
-          list.forEach(function (b) { out.set(b, off); off += b.length; });
-          return out;
-        },
-        isBuffer: function (x) { return x instanceof Uint8Array; }
+    (function () {
+      var g = (typeof globalThis !== 'undefined') ? globalThis : window;
+      g.global = g;
+      g.process = g.process || { env: { NODE_ENV: 'production' }, version: '', browser: true };
+      if (typeof g.Buffer === 'function') return; // real Buffer already present
+
+      function BufferShim(arg, encOrOffset, length) {
+        if (!(this instanceof BufferShim)) return BufferShim.from(arg, encOrOffset);
+        var u;
+        if (typeof arg === 'number') {
+          u = new Uint8Array(arg);
+        } else if (arg instanceof ArrayBuffer) {
+          u = new Uint8Array(arg, encOrOffset || 0, length === undefined ? arg.byteLength - (encOrOffset || 0) : length);
+        } else if (arg && arg.buffer instanceof ArrayBuffer) {
+          u = new Uint8Array(arg.buffer, arg.byteOffset + (encOrOffset || 0),
+            length === undefined ? arg.byteLength - (encOrOffset || 0) : length);
+        } else {
+          u = new Uint8Array(arg || 0);
+        }
+        // attach prototype methods directly on the Uint8Array so it works in `instanceof Uint8Array` checks
+        Object.setPrototypeOf(u, BufferShim.prototype);
+        return u;
+      }
+      BufferShim.prototype = Object.create(Uint8Array.prototype);
+      BufferShim.prototype.constructor = BufferShim;
+
+      function hexToBytes(s) {
+        s = String(s).replace(/[^0-9a-f]/gi, '');
+        var out = new Uint8Array(s.length >> 1);
+        for (var i = 0; i < out.length; i++) out[i] = parseInt(s.substr(i * 2, 2), 16);
+        return out;
+      }
+      function b64ToBytes(s) {
+        var bin = atob(s);
+        var out = new Uint8Array(bin.length);
+        for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+        return out;
+      }
+
+      BufferShim.from = function (data, encoding) {
+        if (data == null) return BufferShim.alloc(0);
+        if (data instanceof Uint8Array || (data && data.buffer instanceof ArrayBuffer && typeof data.length === 'number')) {
+          var b = new Uint8Array(data.length);
+          b.set(data);
+          Object.setPrototypeOf(b, BufferShim.prototype);
+          return b;
+        }
+        if (Array.isArray(data)) {
+          var b2 = new Uint8Array(data);
+          Object.setPrototypeOf(b2, BufferShim.prototype);
+          return b2;
+        }
+        if (typeof data === 'string') {
+          var bytes;
+          if (encoding === 'hex') bytes = hexToBytes(data);
+          else if (encoding === 'base64') bytes = b64ToBytes(data);
+          else bytes = new TextEncoder().encode(data);
+          Object.setPrototypeOf(bytes, BufferShim.prototype);
+          return bytes;
+        }
+        if (data && data.type === 'Buffer' && Array.isArray(data.data)) {
+          return BufferShim.from(data.data);
+        }
+        if (typeof data === 'number') return BufferShim.alloc(data);
+        return BufferShim.alloc(0);
       };
-      console.warn('[OST] Using minimal Buffer shim — bundle.run polyfill failed to load.');
-    }
+      BufferShim.alloc = function (size, fill) {
+        var b = new Uint8Array(size);
+        if (fill !== undefined && fill !== 0) {
+          if (typeof fill === 'string') {
+            var fillBytes = (new TextEncoder()).encode(fill);
+            for (var i = 0; i < size; i++) b[i] = fillBytes[i % fillBytes.length];
+          } else b.fill(fill & 0xff);
+        }
+        Object.setPrototypeOf(b, BufferShim.prototype);
+        return b;
+      };
+      BufferShim.allocUnsafe = function (size) { return BufferShim.alloc(size); };
+      BufferShim.concat = function (list, totalLength) {
+        if (!Array.isArray(list)) list = [];
+        if (totalLength === undefined) {
+          totalLength = 0;
+          for (var i = 0; i < list.length; i++) totalLength += list[i].length;
+        }
+        var out = new Uint8Array(totalLength);
+        var off = 0;
+        for (var j = 0; j < list.length; j++) {
+          var item = list[j];
+          var take = Math.min(item.length, totalLength - off);
+          out.set(item.subarray ? item.subarray(0, take) : item.slice(0, take), off);
+          off += take;
+          if (off >= totalLength) break;
+        }
+        Object.setPrototypeOf(out, BufferShim.prototype);
+        return out;
+      };
+      BufferShim.isBuffer = function (b) { return b instanceof Uint8Array; };
+      BufferShim.byteLength = function (str, encoding) {
+        if (typeof str !== 'string') return str ? str.length : 0;
+        if (encoding === 'hex') return Math.floor(str.length / 2);
+        if (encoding === 'base64') return Math.floor(str.length * 0.75);
+        return (new TextEncoder()).encode(str).length;
+      };
+      BufferShim.isEncoding = function (e) { return ['hex','base64','utf8','utf-8','ascii','latin1','binary'].indexOf((e||'').toLowerCase()) >= 0; };
+
+      BufferShim.prototype.toString = function (encoding, start, end) {
+        encoding = (encoding || 'utf8').toLowerCase();
+        var s = this.subarray(start || 0, end === undefined ? this.length : end);
+        if (encoding === 'hex') {
+          var out = '';
+          for (var i = 0; i < s.length; i++) {
+            var h = s[i].toString(16);
+            out += h.length === 1 ? '0' + h : h;
+          }
+          return out;
+        }
+        if (encoding === 'base64') {
+          var bin = '';
+          for (var j = 0; j < s.length; j++) bin += String.fromCharCode(s[j]);
+          return btoa(bin);
+        }
+        if (encoding === 'ascii' || encoding === 'latin1' || encoding === 'binary') {
+          var out2 = '';
+          for (var k = 0; k < s.length; k++) out2 += String.fromCharCode(s[k]);
+          return out2;
+        }
+        try { return new TextDecoder('utf-8').decode(s); }
+        catch (e) { return ''; }
+      };
+      BufferShim.prototype.slice = function (start, end) {
+        var u = Uint8Array.prototype.subarray.call(this, start, end);
+        Object.setPrototypeOf(u, BufferShim.prototype);
+        return u;
+      };
+      BufferShim.prototype.equals = function (other) {
+        if (!other || this.length !== other.length) return false;
+        for (var i = 0; i < this.length; i++) if (this[i] !== other[i]) return false;
+        return true;
+      };
+      BufferShim.prototype.copy = function (target, targetStart, sourceStart, sourceEnd) {
+        targetStart = targetStart || 0; sourceStart = sourceStart || 0;
+        sourceEnd = sourceEnd === undefined ? this.length : sourceEnd;
+        var bytes = this.subarray(sourceStart, sourceEnd);
+        target.set(bytes, targetStart);
+        return bytes.length;
+      };
+      BufferShim.prototype.write = function (str, offset, length, encoding) {
+        offset = offset || 0;
+        if (typeof length === 'string') { encoding = length; length = undefined; }
+        var src = BufferShim.from(str, encoding || 'utf8');
+        var n = Math.min(src.length, this.length - offset, length === undefined ? src.length : length);
+        for (var i = 0; i < n; i++) this[offset + i] = src[i];
+        return n;
+      };
+      BufferShim.prototype.readUInt8 = function (off) { return this[off]; };
+      BufferShim.prototype.writeUInt8 = function (v, off) { this[off] = v & 0xff; return off + 1; };
+      BufferShim.prototype.readUInt16LE = function (o) { return this[o] | (this[o+1] << 8); };
+      BufferShim.prototype.readUInt16BE = function (o) { return (this[o] << 8) | this[o+1]; };
+      BufferShim.prototype.writeUInt16LE = function (v, o) { this[o] = v & 0xff; this[o+1] = (v>>>8) & 0xff; return o+2; };
+      BufferShim.prototype.writeUInt16BE = function (v, o) { this[o] = (v>>>8) & 0xff; this[o+1] = v & 0xff; return o+2; };
+      BufferShim.prototype.readUInt32LE = function (o) { return ((this[o]) | (this[o+1]<<8) | (this[o+2]<<16)) + (this[o+3]*0x1000000); };
+      BufferShim.prototype.readUInt32BE = function (o) { return (this[o]*0x1000000) + ((this[o+1]<<16) | (this[o+2]<<8) | this[o+3]); };
+      BufferShim.prototype.writeUInt32LE = function (v, o) { this[o]=v&0xff; this[o+1]=(v>>>8)&0xff; this[o+2]=(v>>>16)&0xff; this[o+3]=(v>>>24)&0xff; return o+4; };
+      BufferShim.prototype.writeUInt32BE = function (v, o) { this[o]=(v>>>24)&0xff; this[o+1]=(v>>>16)&0xff; this[o+2]=(v>>>8)&0xff; this[o+3]=v&0xff; return o+4; };
+      BufferShim.prototype.readBigUInt64LE = function (o) {
+        var lo = BigInt(this.readUInt32LE(o));
+        var hi = BigInt(this.readUInt32LE(o + 4));
+        return lo + (hi << 32n);
+      };
+      BufferShim.prototype.writeBigUInt64LE = function (v, o) {
+        v = BigInt(v);
+        this.writeUInt32LE(Number(v & 0xffffffffn), o);
+        this.writeUInt32LE(Number((v >> 32n) & 0xffffffffn), o + 4);
+        return o + 8;
+      };
+      BufferShim.prototype.readIntLE = function (off, byteLength) {
+        var v = 0, mul = 1, i = 0;
+        while (i < byteLength) v += this[off + i] * mul, mul *= 0x100, i++;
+        var signBit = mul / 2;
+        if (v >= signBit) v -= mul;
+        return v;
+      };
+      BufferShim.prototype.readUIntLE = function (off, byteLength) {
+        var v = 0, mul = 1;
+        for (var i = 0; i < byteLength; i++) v += this[off + i] * mul, mul *= 0x100;
+        return v;
+      };
+      BufferShim.prototype.writeUIntLE = function (value, off, byteLength) {
+        var mul = 1;
+        for (var i = 0; i < byteLength; i++) {
+          this[off + i] = (value / mul) & 0xff; mul *= 0x100;
+        }
+        return off + byteLength;
+      };
+      BufferShim.prototype.subarray = function (start, end) {
+        var u = Uint8Array.prototype.subarray.call(this, start, end);
+        Object.setPrototypeOf(u, BufferShim.prototype);
+        return u;
+      };
+      BufferShim.prototype.fill = function (value, start, end) {
+        Uint8Array.prototype.fill.call(this, typeof value === 'string' ? value.charCodeAt(0) : (value & 0xff), start, end);
+        return this;
+      };
+
+      g.Buffer = BufferShim;
+      if (typeof window !== 'undefined') window.Buffer = BufferShim;
+      try { console.log('[OST] Buffer polyfill ready (Uint8Array-backed shim).'); } catch (_) {}
+    })();
   </script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
