@@ -454,6 +454,7 @@
   // Boot loop
   // ---------------------------------------------------------------------------
   function boot() {
+    if (document.getElementById('predictionMarketBoard')) return;
     var root = mountScaffold();
     if (!root) { setTimeout(boot, 400); return; }
     bindEvents(root);

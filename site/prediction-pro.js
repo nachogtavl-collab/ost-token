@@ -559,6 +559,7 @@
   function injectDetailButtons() {
     var cards = document.querySelectorAll('article.prediction-market-card[data-prediction-market-id]');
     cards.forEach(function (card) {
+      if (card.closest('#predictionMarketBoard')) return;
       if (card.querySelector('.ost-prodetail-trigger')) return;
       var actions = card.querySelector('.prediction-market-actions');
       if (!actions) return;

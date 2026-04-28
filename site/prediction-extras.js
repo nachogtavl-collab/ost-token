@@ -135,6 +135,7 @@
     // and pulse/tape chips use the alternate selectors. Match all of them.
     var cards = $$('.prediction-market-card[data-prediction-market-id], .prediction-card[data-prediction-market-id], .prediction-pulse-card[data-prediction-select-market-id], .prediction-tape-chip[data-prediction-select-market-id]');
     cards.forEach(function (card) {
+      if (card.closest('#predictionMarketBoard')) return;
       if (card.querySelector('.ost-pred-actions')) return;
       var id = getSelectedMarketIdFromCard(card);
       if (!id) return;

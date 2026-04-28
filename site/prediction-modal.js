@@ -1031,11 +1031,13 @@
     // selector .click() would re-trigger us and we'd loop).
     var existing = document.getElementById(MODAL_ID);
     if (existing && existing.classList.contains('is-open')) return;
-    // Don't hijack clicks on links / venue buttons
-    var ignore = ev.target.closest('a[href], .prediction-market-link, .prediction-market-api-link');
+    // Don't hijack links or quick-trade controls inside the wallet venue.
+    var explicitOpen = ev.target.closest('[data-prediction-open-modal]');
+    var ignore = ev.target.closest('a[href], .prediction-market-link, .prediction-market-api-link, .prediction-market-quick-btn, [data-prediction-quick-side], [data-prediction-show-more], [data-prediction-show-less]');
     var card = ev.target.closest('.prediction-market-card[data-prediction-market-id]');
     if (!card) return;
-    if (ignore) return;
+    if (card.closest('#predictionMarketBoard') && !explicitOpen) return;
+    if (ignore && !explicitOpen) return;
     ev.preventDefault();
     ev.stopPropagation();
     var id = card.getAttribute('data-prediction-market-id') || '';

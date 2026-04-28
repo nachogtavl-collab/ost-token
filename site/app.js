@@ -11877,8 +11877,10 @@
     var stageCloseEl = document.getElementById('predictionStageClose');
     var stageChartCopyEl = document.getElementById('predictionStageChartCopy');
     var stageTrendEl = document.getElementById('predictionStageTrend');
+    var stageChartHeadingEl = document.getElementById('predictionStageChartHeading');
     var stageChartEl = document.getElementById('predictionStageChart');
     var stageAxisStartEl = document.getElementById('predictionStageAxisStart');
+    var stageAxisMidEl = document.getElementById('predictionStageAxisMid');
     var stageAxisEndEl = document.getElementById('predictionStageAxisEnd');
     var depthYesEl = document.getElementById('predictionDepthYes');
     var depthNoEl = document.getElementById('predictionDepthNo');
@@ -11886,6 +11888,18 @@
     var stageFeedLinkEl = document.getElementById('predictionStageFeedLink');
     var loadTimer = null;
     var resizeFrame = null;
+
+    function getPredictionDefaultVisibleCount() {
+      return window.matchMedia && window.matchMedia('(max-width: 720px)').matches ? 5 : 8;
+    }
+
+    function getPredictionSearchVisibleCount() {
+      return window.matchMedia && window.matchMedia('(max-width: 720px)').matches ? 8 : 12;
+    }
+
+    function getPredictionShowMoreStep() {
+      return window.matchMedia && window.matchMedia('(max-width: 720px)').matches ? 4 : 6;
+    }
 
     var state = {
       markets: [],
@@ -11896,6 +11910,7 @@
       selectedMarketId: '',
       selectedSide: 'yes',
       stake: 25,
+      visibleCount: getPredictionDefaultVisibleCount(),
       loading: false,
       placing: false,
       availableBalance: null,
@@ -11903,7 +11918,10 @@
       latestReceipt: null,
       lastUpdated: null,
       sourceHealth: { polymarket: false, kalshi: false },
-      lastError: ''
+      lastError: '',
+      historyCache: {},
+      historyLoading: {},
+      historyError: {}
     };
 
     var rankLabels = {
@@ -12012,6 +12030,35 @@
       });
     }
 
+    function formatAxisTime(value, prefix) {
+      if (!value) return prefix + ' --';
+      var date = new Date(value);
+      if (Number.isNaN(date.getTime())) return prefix + ' --';
+      return prefix + ' ' + date.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    function fetchJsonWithTimeout(url, timeoutMs) {
+      var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      var timeoutId = controller ? window.setTimeout(function() {
+        controller.abort();
+      }, timeoutMs || 4500) : null;
+      return fetch(url, {
+        headers: { accept: 'application/json' },
+        cache: 'no-store',
+        signal: controller ? controller.signal : undefined
+      }).then(function(response) {
+        if (timeoutId) window.clearTimeout(timeoutId);
+        if (!response.ok) throw new Error('History returned ' + response.status);
+        return response.json();
+      }).catch(function(error) {
+        if (timeoutId) window.clearTimeout(timeoutId);
+        throw error;
+      });
+    }
+
     function explorerTxUrl(signature) {
       return 'https://explorer.solana.com/tx/' + encodeURIComponent(signature) + '?cluster=' + encodeURIComponent(OST_CONFIG.network || 'devnet');
     }
@@ -12031,6 +12078,95 @@
       var numericValue = typeof rawValue === 'number' ? rawValue : parseFloat(String(rawValue || '').replace(/[^\d.\-]/g, ''));
       if (!Number.isFinite(numericValue)) return NaN;
       return numericValue / 100;
+    }
+
+    function getMarketTokenIds(market) {
+      var raw = market && (market.clobTokenIds || (market.raw && (market.raw.clobTokenIds || market.raw.outcomeTokens || market.raw.tokens)));
+      if (typeof raw === 'string') raw = parseMaybeJson(raw);
+      if (!Array.isArray(raw)) return [];
+      return raw.map(function(item) {
+        if (item && typeof item === 'object') {
+          return String(item.tokenId || item.token_id || item.id || item.asset_id || '').trim();
+        }
+        return String(item || '').trim();
+      }).filter(Boolean);
+    }
+
+    function getMarketHistoryToken(market, side) {
+      var ids = getMarketTokenIds(market);
+      if (!ids.length) return '';
+      return side === 'no' ? (ids[1] || ids[0]) : ids[0];
+    }
+
+    function getHistoryKey(market, side) {
+      if (!market) return '';
+      return [market.source || 'source', market.id || 'market', side || 'yes', getMarketHistoryToken(market, side || 'yes')].join(':');
+    }
+
+    function historyPointToMs(value) {
+      var number = Number(value);
+      if (!Number.isFinite(number)) return 0;
+      return number < 100000000000 ? number * 1000 : number;
+    }
+
+    function normalizeHistoryPoints(payload) {
+      var source = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload && payload.history)
+          ? payload.history
+          : Array.isArray(payload && payload.prices)
+            ? payload.prices
+            : Array.isArray(payload && payload.data)
+              ? payload.data
+              : [];
+      return source.map(function(point) {
+        var price = Number(point && (point.p != null ? point.p : point.price));
+        var ts = historyPointToMs(point && (point.t != null ? point.t : point.time != null ? point.time : point.timestamp));
+        if (!Number.isFinite(price)) return null;
+        if (price > 1) price = price / 100;
+        return { t: ts || Date.now(), p: clamp(price, 0, 1) };
+      }).filter(Boolean).sort(function(a, b) {
+        return a.t - b.t;
+      });
+    }
+
+    function getCachedHistory(market, side) {
+      var key = getHistoryKey(market, side || 'yes');
+      return key && state.historyCache[key] ? state.historyCache[key] : null;
+    }
+
+    function buildClobHistoryUrl(tokenId) {
+      var query = 'market=' + encodeURIComponent(tokenId) + '&interval=1d&fidelity=10';
+      var relay = (typeof window !== 'undefined' && (window.OST_POLY_RELAY_URL || window.OST_API_BASE)) || '';
+      if (relay) return String(relay).replace(/\/$/, '') + '/clob/prices-history?' + query;
+      return 'https://clob.polymarket.com/prices-history?' + query;
+    }
+
+    function requestMarketHistory(market, side) {
+      side = side === 'no' ? 'no' : 'yes';
+      if (!market || market.source !== 'polymarket') return;
+      var tokenId = getMarketHistoryToken(market, side);
+      if (!tokenId) return;
+      var key = getHistoryKey(market, side);
+      if (state.historyCache[key] || state.historyLoading[key]) return;
+
+      state.historyLoading[key] = true;
+      delete state.historyError[key];
+      fetchJsonWithTimeout(buildClobHistoryUrl(tokenId), 4500).then(function(payload) {
+        var points = normalizeHistoryPoints(payload);
+        if (points.length > 1) {
+          state.historyCache[key] = points.slice(-180);
+        } else {
+          state.historyError[key] = 'No venue history returned';
+        }
+      }).catch(function(error) {
+        state.historyError[key] = error && error.message ? error.message : 'History unavailable';
+      }).finally(function() {
+        delete state.historyLoading[key];
+        if (getSelectedMarket(getFilteredMarkets()) && getSelectedMarket(getFilteredMarkets()).id === market.id) {
+          renderPredictionStage(getFilteredMarkets());
+        }
+      });
     }
 
     function calculatePotentialReturn(stake, priceFraction) {
@@ -12375,7 +12511,18 @@
       if (!article) return false;
       state.selectedMarketId = article.getAttribute('data-prediction-market-id') || '';
       renderPredictionBoard();
+      focusPredictionExperience('stage');
       return true;
+    }
+
+    function focusPredictionExperience(target) {
+      var el = target === 'trade'
+        ? document.getElementById('predictionTradeDesk')
+        : document.getElementById('predictionMarketStage');
+      if (!el || !el.scrollIntoView) return;
+      if (target === 'trade' || window.innerWidth < 1100) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     }
 
     function getAgeHours(market) {
@@ -12388,12 +12535,16 @@
       return (market.closeAtMs - Date.now()) / 3600000;
     }
 
-    function getTrendPoints(market) {
-      var current = getMarketPrice(market, 'yes');
+    function getTrendPoints(market, side) {
+      side = side === 'no' ? 'no' : 'yes';
+      var current = getMarketPrice(market, side);
       if (!Number.isFinite(current)) return 0;
-      if (Number.isFinite(market.previousYesPriceNumber)) return (current - market.previousYesPriceNumber) * 100;
-      if (Number.isFinite(market.oneWeekPriceChangeNumber)) return market.oneWeekPriceChangeNumber * 100;
-      if (Number.isFinite(market.oneMonthPriceChangeNumber)) return market.oneMonthPriceChangeNumber * 50;
+      if (Number.isFinite(market.previousYesPriceNumber)) {
+        var previous = side === 'no' ? 1 - market.previousYesPriceNumber : market.previousYesPriceNumber;
+        return (current - previous) * 100;
+      }
+      if (Number.isFinite(market.oneWeekPriceChangeNumber)) return market.oneWeekPriceChangeNumber * (side === 'no' ? -100 : 100);
+      if (Number.isFinite(market.oneMonthPriceChangeNumber)) return market.oneMonthPriceChangeNumber * (side === 'no' ? -50 : 50);
       return 0;
     }
 
@@ -12427,21 +12578,25 @@
       return Math.abs(hash);
     }
 
-    function buildPredictionSeries(market) {
-      var current = clamp(getMarketPrice(market, 'yes') * 100 || 50, 1, 99);
+    function buildPredictionSeries(market, side) {
+      side = side === 'no' ? 'no' : 'yes';
+      var current = clamp(getMarketPrice(market, side) * 100 || 50, 1, 99);
       // Anchor previous price to recent trend points OR a deterministic seeded
       // offset, so brand-new markets (no historical price data) still produce
       // a *moving* curve instead of a flat 50% line.
       var seed = hashString(market.id + market.source);
       var seededDrift = ((seed % 1000) / 1000 - 0.5) * 18; // ±9 pp
-      var previous = Number.isFinite(market.previousYesPriceNumber)
-        ? clamp(market.previousYesPriceNumber * 100, 1, 99)
-        : clamp(current - (getTrendPoints(market) || seededDrift), 1, 99);
+      var previousMarketPrice = Number.isFinite(market.previousYesPriceNumber)
+        ? (side === 'no' ? 1 - market.previousYesPriceNumber : market.previousYesPriceNumber)
+        : NaN;
+      var previous = Number.isFinite(previousMarketPrice)
+        ? clamp(previousMarketPrice * 100, 1, 99)
+        : clamp(current - (getTrendPoints(market, side) || seededDrift), 1, 99);
       var weeklyAnchor = Number.isFinite(market.oneWeekPriceChangeNumber)
-        ? clamp(current - (market.oneWeekPriceChangeNumber * 100), 1, 99)
+        ? clamp(current - (market.oneWeekPriceChangeNumber * (side === 'no' ? -100 : 100)), 1, 99)
         : clamp(previous + ((seed >> 4) % 17) - 8, 1, 99);
       var monthlyAnchor = Number.isFinite(market.oneMonthPriceChangeNumber)
-        ? clamp(current - (market.oneMonthPriceChangeNumber * 100), 1, 99)
+        ? clamp(current - (market.oneMonthPriceChangeNumber * (side === 'no' ? -100 : 100)), 1, 99)
         : clamp(weeklyAnchor + ((seed >> 8) % 25) - 12, 1, 99);
       // Floor volatility at 6 pp so even quiet markets visibly breathe.
       var volatility = Math.max(6, Math.min(14, Math.abs(current - previous) + Math.log10((market.volumeNumber || 0) + 10) * 1.4));
@@ -12503,6 +12658,9 @@
         return;
       }
 
+      var chartSide = state.selectedSide === 'no' ? 'no' : 'yes';
+      var cachedHistory = getCachedHistory(market, chartSide);
+      var usingRealHistory = cachedHistory && cachedHistory.length > 1;
       var prepared = prepareCanvas(stageChartEl, 280);
       if (!prepared) return;
       var ctx = prepared.ctx;
@@ -12511,11 +12669,13 @@
       var pad = { left: 42, right: 18, top: 18, bottom: 28 };
       var chartW = width - pad.left - pad.right;
       var chartH = height - pad.top - pad.bottom;
-      var points = buildPredictionSeries(market);
+      var points = usingRealHistory
+        ? cachedHistory.map(function(point) { return clamp(point.p * 100, 1, 99); })
+        : buildPredictionSeries(market, chartSide);
       var current = points[points.length - 1];
-      var lineColor = current >= 50 ? '#34d399' : '#6d9fff';
+      var lineColor = chartSide === 'no' ? '#f87171' : '#34d399';
       var fillGradient = ctx.createLinearGradient(0, pad.top, 0, height - pad.bottom);
-      fillGradient.addColorStop(0, current >= 50 ? 'rgba(52,211,153,0.25)' : 'rgba(109,159,255,0.25)');
+      fillGradient.addColorStop(0, chartSide === 'no' ? 'rgba(248,113,113,0.22)' : 'rgba(52,211,153,0.25)');
       fillGradient.addColorStop(1, 'rgba(109,159,255,0.02)');
 
       function x(index) {
@@ -12574,6 +12734,10 @@
       ctx.arc(x(points.length - 1), y(current), 3, 0, Math.PI * 2);
       ctx.fillStyle = lineColor;
       ctx.fill();
+
+      ctx.fillStyle = usingRealHistory ? 'rgba(209,250,229,0.92)' : 'rgba(226,232,240,0.66)';
+      ctx.font = '700 11px Inter, sans-serif';
+      ctx.fillText(usingRealHistory ? 'POLYMARKET CLOB HISTORY' : 'LIVE PRICE PREVIEW', pad.left, pad.top + 10);
 
       ctx.fillStyle = '#f8fafc';
       ctx.font = '600 14px Inter, sans-serif';
@@ -12797,8 +12961,10 @@
         if (stageDepthEl) stageDepthEl.textContent = '--';
         if (stageCloseEl) stageCloseEl.textContent = '--';
         if (stageChartCopyEl) stageChartCopyEl.textContent = 'Anchored to current share pricing, recent venue changes, and source liquidity.';
+        if (stageChartHeadingEl) stageChartHeadingEl.textContent = 'Live probability curve';
         if (stageTrendEl) stageTrendEl.textContent = 'Flat';
         if (stageAxisStartEl) stageAxisStartEl.textContent = 'Opened --';
+        if (stageAxisMidEl) stageAxisMidEl.textContent = 'Live now';
         if (stageAxisEndEl) stageAxisEndEl.textContent = 'Closes --';
         renderDepthList(depthYesEl, []);
         renderDepthList(depthNoEl, []);
@@ -12823,18 +12989,39 @@
       if (stageVolumeEl) stageVolumeEl.textContent = market.volumeValue;
       if (stageDepthEl) stageDepthEl.textContent = market.secondaryMetricValue;
       if (stageCloseEl) stageCloseEl.textContent = market.closeText;
+      var chartSide = state.selectedSide === 'no' ? 'no' : 'yes';
+      requestMarketHistory(market, chartSide);
+      var historyKey = getHistoryKey(market, chartSide);
+      var cachedHistory = getCachedHistory(market, chartSide);
+      var hasRealHistory = cachedHistory && cachedHistory.length > 1;
+      var isHistoryLoading = !!state.historyLoading[historyKey];
+      var chartSideLabel = chartSide === 'no' ? 'NO' : 'YES';
+      if (stageChartHeadingEl) stageChartHeadingEl.textContent = chartSideLabel + ' probability curve';
       if (stageChartCopyEl) {
         stageChartCopyEl.textContent = market.source === 'polymarket'
-          ? 'Anchored to current price, weekly change, and venue liquidity.'
-          : 'Anchored to current price, previous trade, and venue liquidity.';
+          ? hasRealHistory
+            ? 'Real Polymarket CLOB price history for the selected outcome.'
+            : isHistoryLoading
+              ? 'Loading real Polymarket CLOB price history through the OST worker.'
+              : state.historyError[historyKey]
+                ? 'Live Polymarket price is real; history is temporarily unavailable.'
+                : 'Live Polymarket price is real; waiting for published CLOB history.'
+          : 'Live quote shown; preview uses previous trade and venue liquidity.';
       }
       if (stageTrendEl) {
-        var trendPoints = getTrendPoints(market);
+        var trendPoints = getTrendPoints(market, chartSide);
         stageTrendEl.textContent = formatSignedPoints(trendPoints, 'Flat');
         stageTrendEl.className = 'prediction-stage-trend' + (trendPoints > 0 ? ' is-up' : trendPoints < 0 ? ' is-down' : '');
       }
-      if (stageAxisStartEl) stageAxisStartEl.textContent = formatAxisDate(market.createdAtMs, 'Opened');
-      if (stageAxisEndEl) stageAxisEndEl.textContent = formatAxisDate(market.closeAtMs, 'Closes');
+      if (hasRealHistory) {
+        if (stageAxisStartEl) stageAxisStartEl.textContent = formatAxisTime(cachedHistory[0].t, 'History');
+        if (stageAxisMidEl) stageAxisMidEl.textContent = chartSideLabel + ' token';
+        if (stageAxisEndEl) stageAxisEndEl.textContent = formatAxisTime(cachedHistory[cachedHistory.length - 1].t, 'Live');
+      } else {
+        if (stageAxisStartEl) stageAxisStartEl.textContent = formatAxisDate(market.createdAtMs, 'Opened');
+        if (stageAxisMidEl) stageAxisMidEl.textContent = chartSideLabel + ' preview';
+        if (stageAxisEndEl) stageAxisEndEl.textContent = formatAxisDate(market.closeAtMs, 'Closes');
+      }
       renderDepthList(depthYesEl, buildDepthRows(market, 'yes'));
       renderDepthList(depthNoEl, buildDepthRows(market, 'no'));
       updateMarketLink(stageVenueLinkEl, market.primaryUrl, market.primaryLabel);
@@ -13061,9 +13248,14 @@
         // --- raw fields needed by prediction-modal.js for live data ---
         clobTokenIds: (function () {
           try {
-            var t = item.clobTokenIds || item.outcomeTokens || item.tokens;
+            var t = item.clobTokenIds || item.outcomeTokens || item.tokens || item.outcomes;
             if (typeof t === 'string') t = JSON.parse(t);
-            return Array.isArray(t) ? t.map(String) : null;
+            return Array.isArray(t) ? t.map(function(token) {
+              if (token && typeof token === 'object') {
+                return String(token.tokenId || token.token_id || token.id || token.asset_id || '').trim();
+              }
+              return String(token || '').trim();
+            }).filter(Boolean) : null;
           } catch (_) { return null; }
         })(),
         conditionId: item.conditionId || item.condition_id || null,
@@ -13222,10 +13414,14 @@
         state.selectedMarketId = filteredMarkets[0].id;
       }
 
-      listEl.innerHTML = filteredMarkets.map(function(market, index) {
+      var defaultVisibleCount = getPredictionDefaultVisibleCount();
+      var visibleMarkets = filteredMarkets.slice(0, Math.max(1, state.visibleCount || defaultVisibleCount));
+      var hiddenCount = Math.max(0, filteredMarkets.length - visibleMarkets.length);
+
+      listEl.innerHTML = visibleMarkets.map(function(market, index) {
         var sourceClass = getMarketSourceClass(market);
         var topicLabel = topicLabels[market.topic] || topicLabels.all;
-        var isFeatured = index === 0;
+        var isFeatured = false;
         var isSelected = market.id === state.selectedMarketId;
         var articleClass = 'prediction-market-card ' + (market.source === 'polymarket' ? 'source-polymarket-card' : 'source-kalshi-card') + (isFeatured ? ' is-featured' : '');
         if (isSelected) articleClass += ' is-selected';
@@ -13238,7 +13434,7 @@
           return '<span class="prediction-market-tag">' + escapeHtml(topicLabels[topic] || topicLabels.all) + '</span>';
         }).join('');
         return [
-          '<article class="' + articleClass + '" data-prediction-market-id="' + escapeHtml(market.id) + '" tabindex="0">',
+          '<article class="' + articleClass + '" data-prediction-market-id="' + escapeHtml(market.id) + '" tabindex="0" style="--prediction-card-delay:' + Math.min(index * 35, 280) + 'ms">',
             '<div class="prediction-market-topline">',
               '<span class="prediction-market-source ' + sourceClass + '">' + escapeHtml(market.sourceLabel) + '</span>',
               '<span class="prediction-market-topic">' + escapeHtml(topicLabel) + '</span>',
@@ -13283,12 +13479,23 @@
               '<span class="prediction-market-contract prediction-market-contract-trend">' + escapeHtml(formatSignedPoints(getTrendPoints(market), 'Flat')) + '</span>',
             '</div>',
             '<div class="prediction-market-actions">',
-              '<a class="prediction-market-link" href="' + escapeHtml(market.primaryUrl) + '" target="_blank" rel="noopener">' + escapeHtml(market.primaryLabel) + '</a>',
-              '<a class="prediction-market-api-link" href="' + escapeHtml(market.secondaryUrl) + '" target="_blank" rel="noopener">' + escapeHtml(market.secondaryLabel) + '</a>',
+              '<button type="button" class="prediction-market-quick-btn is-yes" data-prediction-quick-side="yes">Buy YES</button>',
+              '<button type="button" class="prediction-market-quick-btn is-no" data-prediction-quick-side="no">Buy NO</button>',
+              '<button type="button" class="prediction-market-open-btn" data-prediction-open-modal="1">Details</button>',
+              '<a class="prediction-market-api-link" href="' + escapeHtml(market.primaryUrl) + '" target="_blank" rel="noopener">Venue</a>',
             '</div>',
           '</article>'
         ].join('');
-      }).join('');
+      }).join('') + (hiddenCount || state.visibleCount > defaultVisibleCount ? [
+        '<div class="prediction-market-load-card">',
+          '<span>' + escapeHtml(String(filteredMarkets.length)) + ' matched</span>',
+          '<strong>' + escapeHtml(hiddenCount ? hiddenCount + ' more markets hidden to keep the venue compact.' : 'Showing every market in this lane.') + '</strong>',
+          '<div class="prediction-market-load-actions">',
+            hiddenCount ? '<button type="button" class="btn btn-outline btn-sm" data-prediction-show-more="1">Show more</button>' : '',
+            state.visibleCount > defaultVisibleCount ? '<button type="button" class="btn btn-outline btn-sm" data-prediction-show-less="1">Show less</button>' : '',
+          '</div>',
+        '</div>'
+      ].join('') : '');
 
       renderPredictionTape(filteredMarkets);
       renderPredictionHero(filteredMarkets);
@@ -13394,6 +13601,7 @@
             // Worker already returns markets in our normalised schema, so we
             // pass-through (volumeValue / yesValue etc. are added downstream).
             var rawMarkets = Array.isArray(payload && payload.markets) ? payload.markets : [];
+            if (!rawMarkets.length) throw new Error('OST API returned no markets');
             var polymarketRaw = rawMarkets.filter(function(m) { return m.source !== 'kalshi'; });
             var polymarketMarkets = polymarketRaw.map(function(m) {
               return mapPolymarketMarket({
@@ -13647,6 +13855,7 @@
         var button = event.target.closest('button[data-prediction-source]');
         if (!button) return;
         state.source = button.getAttribute('data-prediction-source') || 'all';
+        state.visibleCount = getPredictionDefaultVisibleCount();
         renderPredictionBoard();
       });
     }
@@ -13656,6 +13865,7 @@
         var button = event.target.closest('button[data-prediction-rank]');
         if (!button) return;
         state.rank = button.getAttribute('data-prediction-rank') || 'trending';
+        state.visibleCount = getPredictionDefaultVisibleCount();
         renderPredictionBoard();
       });
     }
@@ -13665,6 +13875,7 @@
         var button = event.target.closest('button[data-prediction-topic]');
         if (!button) return;
         state.topic = button.getAttribute('data-prediction-topic') || 'all';
+        state.visibleCount = getPredictionDefaultVisibleCount();
         renderPredictionBoard();
       });
     }
@@ -13672,12 +13883,50 @@
     if (searchEl) {
       searchEl.addEventListener('input', function() {
         state.query = searchEl.value || '';
+        state.visibleCount = state.query.trim() ? getPredictionSearchVisibleCount() : getPredictionDefaultVisibleCount();
         renderPredictionBoard();
       });
     }
 
     if (listEl) {
       listEl.addEventListener('click', function(event) {
+        var showMoreBtn = event.target.closest('[data-prediction-show-more]');
+        if (showMoreBtn) {
+          state.visibleCount = Math.min((state.visibleCount || getPredictionDefaultVisibleCount()) + getPredictionShowMoreStep(), 36);
+          renderPredictionBoard();
+          return;
+        }
+        var showLessBtn = event.target.closest('[data-prediction-show-less]');
+        if (showLessBtn) {
+          state.visibleCount = getPredictionDefaultVisibleCount();
+          renderPredictionBoard();
+          focusPredictionExperience('stage');
+          return;
+        }
+        var quickSideBtn = event.target.closest('[data-prediction-quick-side]');
+        if (quickSideBtn) {
+          var quickArticle = quickSideBtn.closest('.prediction-market-card[data-prediction-market-id]');
+          if (!quickArticle) return;
+          state.selectedMarketId = quickArticle.getAttribute('data-prediction-market-id') || '';
+          state.selectedSide = quickSideBtn.getAttribute('data-prediction-quick-side') === 'no' ? 'no' : 'yes';
+          if (!Number(state.stake)) {
+            state.stake = 25;
+            if (stakeInputEl) stakeInputEl.value = '25';
+          }
+          renderPredictionBoard();
+          setTradeStatus('Selected ' + state.selectedSide.toUpperCase() + '. Review stake and route the OST ticket when ready.', 'info');
+          focusPredictionExperience('trade');
+          return;
+        }
+        var openModalBtn = event.target.closest('[data-prediction-open-modal]');
+        if (openModalBtn) {
+          var modalArticle = openModalBtn.closest('.prediction-market-card[data-prediction-market-id]');
+          var modalId = modalArticle ? modalArticle.getAttribute('data-prediction-market-id') : '';
+          if (modalId && window.OST_MARKET_MODAL && typeof window.OST_MARKET_MODAL.open === 'function') {
+            window.OST_MARKET_MODAL.open(modalId);
+          }
+          return;
+        }
         if (event.target.closest('a')) return;
         handlePredictionCardSelection(event.target);
       });
@@ -13708,6 +13957,7 @@
         if (!button) return;
         state.selectedSide = button.getAttribute('data-prediction-side') || 'yes';
         renderPredictionTicket(getFilteredMarkets());
+        renderPredictionStage(getFilteredMarkets());
       });
     }
 

@@ -27,7 +27,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Egyptian+Hieroglyphs&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="style.css?v=58">
+  <link rel="stylesheet" href="style.css?v=60">
   <link rel="stylesheet" href="mobile.css?v=1">
   <link rel="stylesheet" href="polish.css?v=1">
   <link rel="stylesheet" href="compartments.css?v=1">
@@ -5444,7 +5444,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <!-- RPC multiplexer: every Connection instance auto-fails-over and broadcast-sends.
        MUST load BEFORE app.js so all connections built by the app inherit the wrapper. -->
   <script src="rpc-multiplexer.js?v=1"></script>
-  <script src="app.js?v=82"></script>
+  <script src="app.js?v=85"></script>
   <script src="nuevo-laredo-gas.js?v=1"></script>
   <script src="shop-quickview.js?v=1"></script>
   <script src="interchange-live.js?v=1"></script>
@@ -5452,8 +5452,8 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="swap-pool.js?v=1"></script>
   <script src="wallet-extras.js?v=8"></script>
   <script src="compartments.js?v=1"></script>
-  <script src="prediction-extras.js?v=4"></script>
-  <script src="prediction-pro.js?v=3"></script>
+  <script src="prediction-extras.js?v=5"></script>
+  <script src="prediction-pro.js?v=4"></script>
   <script src="prediction-scalar.js?v=2"></script>
   <!-- Wire prediction modal to the OST edge worker (CORS-safe Polymarket proxy + global positions feed). -->
   <script>
@@ -5461,9 +5461,9 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
     window.OST_POLY_RELAY_URL = window.OST_API_BASE; // routes /gamma /clob /data + /positions /launchpad
   </script>
   <link rel="stylesheet" href="prediction-modal.css?v=3">
-  <script src="prediction-modal.js?v=8"></script>
+  <script src="prediction-modal.js?v=9"></script>
   <script src="prediction-trade-popout.js?v=1"></script>
-  <script src="prediction-pro-dash.js?v=4"></script>
+  <script src="prediction-pro-dash.js?v=5"></script>
   <!-- OST API edge worker (Cloudflare). Set before ost-console / pro-dash use it. -->
   <script src="ost-console.js?v=2"></script>
   <!-- On-chain betting (devnet program ost_betting) -->
