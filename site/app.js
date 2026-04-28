@@ -6080,6 +6080,11 @@
     }
 
     // Fetch balances for dashboard
+    // Track last known balances per address so we can detect *incoming*
+    // transfers and show a friendly toast on the receiver side (the user
+    // reported the receiver was seeing an error message instead of a
+    // "received SOL" notification).
+    var __ostLastBalances = {};
     async function fetchDashboardBalances(pubkey) {
       try {
         const conn = getSolanaConnection();
@@ -6109,6 +6114,37 @@
           const curSymbol2 = {'EUR':'€','GBP':'£','CAD':'C$','AUD':'A$','MXN':'MX$','JPY':'¥','BTC':'₿','ETH':'Ξ'}[cur2] || cur2 + ' ';
           wdOstUsd.textContent = curSymbol2 + (ostBal * ostPrice / fiatRate2).toFixed(cur2 === 'BTC' ? 6 : 2);
         }
+
+        // ── Incoming transfer detection (receiver UX) ──────────────────────
+        // If SOL or OST went UP since the last sync, show a green toast and
+        // clear any stale "needs manual funding" warning. The previous build
+        // would leave the warning banner on screen even after devnet SOL
+        // arrived, which read as an error to the receiver.
+        try {
+          var key = String(pubkey);
+          var prev = __ostLastBalances[key];
+          if (prev) {
+            var dSol = solBal - prev.sol;
+            var dOst = ostBal - prev.ost;
+            if (dSol > 0.0001) {
+              toast('💰', 'Received ' + dSol.toFixed(4) + ' SOL');
+              if (typeof window.recordOstSnapshot === 'function') {
+                try { window.recordOstSnapshot({ ts: Date.now(), ostBalance: ostBal, solBalance: solBal, kind: 'recv-sol', amount: dSol }); } catch (_) {}
+              }
+              if (walletFundingState.needsManualFunding && walletFundingState.walletAddress === key && solBal >= 0.02) {
+                clearWalletFundingState();
+              }
+            }
+            if (dOst > 0.0001) {
+              toast('🟡', 'Received ' + dOst.toFixed(4) + ' OST');
+              if (typeof window.recordOstSnapshot === 'function') {
+                try { window.recordOstSnapshot({ ts: Date.now(), ostBalance: ostBal, solBalance: solBal, kind: 'recv-ost', amount: dOst }); } catch (_) {}
+              }
+            }
+          }
+          __ostLastBalances[key] = { sol: solBal, ost: ostBal, ts: Date.now() };
+        } catch (_) {}
+
         return {
           solBalance: solBal,
           ostBalance: ostBal
@@ -6264,10 +6300,11 @@
       }
     }, 500);
 
-    // Also refresh balances every 30s while connected
+    // Also refresh balances every 8 s while connected so receivers see
+    // incoming SOL / OST quickly (was 30 s — too slow for live transfers).
     setInterval(() => {
       if (connectedWallet) syncJourneyUi();
-    }, 30000);
+    }, 8000);
 
     // If already connected on load
     if (connectedWallet) showDashboard(connectedWallet);
@@ -13312,7 +13349,58 @@
         return Promise.reject(new Error('Prediction snapshot unavailable on file protocol'));
       }
 
-      return fetch('data/prediction-market-snapshot.json', {
+      // Prefer the deployed OST API worker (returns the already-normalised
+      // /markets schema). The worker is at window.OST_API_BASE and is much
+      // faster + survives Polymarket CORS hiccups. We still fall through to
+      // the static /data snapshot if the worker is offline.
+      var apiBase = (typeof window !== 'undefined' && window.OST_API_BASE)
+        ? String(window.OST_API_BASE).replace(/\/$/, '')
+        : '';
+      var workerPromise = apiBase
+        ? fetch(apiBase + '/markets?limit=160', {
+            headers: { accept: 'application/json' },
+            cache: 'no-store'
+          }).then(function(r) {
+            if (!r.ok) throw new Error('OST API returned ' + r.status);
+            return r.json();
+          }).then(function(payload) {
+            // Worker already returns markets in our normalised schema, so we
+            // pass-through (volumeValue / yesValue etc. are added downstream).
+            var rawMarkets = Array.isArray(payload && payload.markets) ? payload.markets : [];
+            var polymarketRaw = rawMarkets.filter(function(m) { return m.source !== 'kalshi'; });
+            var polymarketMarkets = polymarketRaw.map(function(m) {
+              return mapPolymarketMarket({
+                id: m.id,
+                question: m.title,
+                description: m.detail,
+                slug: m.slug,
+                outcomes: '["Yes","No"]',
+                outcomePrices: '["' + (Number(m.yesPriceNumber) || 0.5) + '","' + (Number(m.noPriceNumber) || 0.5) + '"]',
+                volume24hr: m.volumeNumber,
+                liquidityNum: m.liquidityNumber,
+                endDate: m.closeAtMs ? new Date(m.closeAtMs).toISOString() : null,
+                conditionId: m.conditionId,
+                clobTokenIds: m.clobTokenIds,
+                bestBid: m.bestBid,
+                bestAsk: m.bestAsk,
+                lastTradePrice: m.lastTradePrice,
+                active: true,
+                closed: false
+              });
+            });
+            return {
+              polymarketMarkets: polymarketMarkets,
+              kalshiMarkets: [],
+              sourceHealth: {
+                polymarket: polymarketMarkets.length > 0,
+                kalshi: false
+              },
+              generatedAt: payload && payload.ts ? new Date(payload.ts) : new Date()
+            };
+          })
+        : Promise.reject(new Error('No OST API base configured'));
+
+      var staticPromise = fetch('data/prediction-market-snapshot.json', {
         headers: { accept: 'application/json' },
         cache: 'no-store'
       }).then(function(response) {
@@ -13338,6 +13426,8 @@
           generatedAt: Number.isNaN(generatedAt.getTime()) ? new Date() : generatedAt
         };
       });
+
+      return workerPromise.catch(function() { return staticPromise; });
     }
 
     function setLoadedPredictionMarkets(polymarketMarkets, kalshiMarkets, sourceHealth, updatedAt) {
@@ -13422,23 +13512,41 @@
       // Try the OST edge relay first (low-latency, cached, near-Polymarket).
       // Falls back to direct Gamma API if the relay is not configured or down.
       var relay = (typeof window !== 'undefined' && window.OST_POLY_RELAY_URL) || '';
-      var primaryUrl   = relay ? (relay.replace(/\/$/, '') + '/gamma/markets?limit=160&closed=false')
-                                : 'https://gamma-api.polymarket.com/markets?limit=160&closed=false';
-      var fallbackUrl  = 'https://gamma-api.polymarket.com/markets?limit=160&closed=false';
+      // Pull the standard active markets AND the sports / games ladder so
+      // pages like polymarket.com/sports/mex/games show up in the OST UI.
+      var fallbackUrls = [
+        'https://gamma-api.polymarket.com/markets?limit=160&closed=false',
+        'https://gamma-api.polymarket.com/markets?limit=120&closed=false&tag_id=100639', // sports
+        'https://gamma-api.polymarket.com/markets?limit=80&closed=false&tag_id=100640'   // games
+      ];
+      var primaryUrls = relay
+        ? fallbackUrls.map(function(u){ return relay.replace(/\/$/, '') + '/gamma' + u.slice('https://gamma-api.polymarket.com'.length); })
+        : fallbackUrls;
       function tryFetch(url) {
         return fetch(url, { headers: { accept: 'application/json' } }).then(function(response) {
           if (!response.ok) throw new Error('Polymarket returned ' + response.status);
           return response.json();
         });
       }
-      var firstAttempt = tryFetch(primaryUrl);
-      var resolved = (relay && primaryUrl !== fallbackUrl)
-        ? firstAttempt.catch(function() { return tryFetch(fallbackUrl); })
-        : firstAttempt;
-      return resolved.then(function(data) {
-        return extractPolymarketMarkets(data).filter(function(item) {
-          return item && item.active !== false && item.closed !== true;
-        }).map(mapPolymarketMarket);
+      // Run all three in parallel; combine whatever returns.
+      return Promise.all(primaryUrls.map(function(u, idx) {
+        return tryFetch(u).catch(function() {
+          // Per-tag fallback to the direct API
+          return relay ? tryFetch(fallbackUrls[idx]).catch(function(){ return []; }) : [];
+        });
+      })).then(function(batches) {
+        // Dedupe by market id.
+        var seen = {};
+        var combined = [];
+        batches.forEach(function(batch) {
+          extractPolymarketMarkets(batch).forEach(function(item) {
+            if (!item || !item.id || seen[item.id]) return;
+            if (item.active === false || item.closed === true) return;
+            seen[item.id] = true;
+            combined.push(item);
+          });
+        });
+        return combined.map(mapPolymarketMarket);
       });
     }
 
@@ -13475,15 +13583,28 @@
             return loadDirectPredictionMarkets();
           });
 
-      loadTask.catch(function(error) {
-        state.markets = [];
+      // Hard 12 s timeout so a stalled upstream never freezes the UI in
+      // "Loading live feeds..." forever (the user reported this exact bug).
+      var timeoutPromise = new Promise(function(_, reject) {
+        setTimeout(function() { reject(new Error('Market feeds timed out after 12 s')); }, 12000);
+      });
+
+      Promise.race([loadTask, timeoutPromise]).catch(function(error) {
+        // Only blow away markets if we have NONE to show; otherwise keep the
+        // last good snapshot rendered so the board never goes blank.
+        if (!state.markets || !state.markets.length) {
+          state.markets = [];
+          state.sourceHealth.polymarket = false;
+          state.sourceHealth.kalshi = false;
+          updateStatus('is-error', 'Feeds unavailable right now');
+        } else {
+          updateStatus('is-warning', 'Refresh failed — showing last snapshot');
+        }
         state.lastError = error && error.message ? error.message : String(error);
-        state.sourceHealth.polymarket = false;
-        state.sourceHealth.kalshi = false;
-        updateStatus('is-error', 'Feeds unavailable right now');
         renderPredictionBoard();
       }).finally(function() {
         state.loading = false;
+        renderPredictionBoard();
       });
     }
 
