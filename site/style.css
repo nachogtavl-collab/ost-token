@@ -8564,7 +8564,8 @@ select.sim-input { cursor: pointer; }
   border: 0;
 }
 
-.sx-montage-frame-wrap.is-local .sx-montage-frame {
+.sx-montage-frame-wrap.is-local .sx-montage-frame,
+.sx-montage-frame-wrap.is-lazy .sx-montage-frame {
   opacity: 0;
   pointer-events: none;
 }
@@ -8573,8 +8574,8 @@ select.sim-input { cursor: pointer; }
   position: absolute;
   inset: 0;
   display: none;
-  align-items: flex-start;
-  justify-content: flex-start;
+  align-items: center;
+  justify-content: center;
   padding: 18px;
   border: 0;
   background-image: linear-gradient(180deg, rgba(4,8,18,.08), rgba(4,8,18,.72)), var(--sx-montage-poster);
@@ -8583,8 +8584,35 @@ select.sim-input { cursor: pointer; }
   cursor: pointer;
 }
 
-.sx-montage-frame-wrap.is-local .sx-montage-fallback {
+.sx-montage-frame-wrap.is-local .sx-montage-fallback,
+.sx-montage-frame-wrap.is-lazy .sx-montage-fallback {
   display: flex;
+}
+
+/* Lazy mode: pill anchored bottom-left; play circle centred */
+.sx-montage-frame-wrap.is-lazy .sx-montage-fallback {
+  flex-direction: column;
+  gap: 0;
+}
+.sx-montage-frame-wrap.is-lazy .sx-montage-fallback-pill {
+  position: absolute;
+  bottom: 18px;
+  left: 18px;
+}
+.sx-montage-frame-wrap.is-lazy .sx-montage-fallback::before {
+  content: '';
+  display: block;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(2,6,14,.82) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M8 5v14l11-7z'/%3E%3C/svg%3E") center/34px no-repeat;
+  border: 2px solid rgba(255,255,255,.35);
+  box-shadow: 0 4px 24px rgba(0,0,0,.5);
+  transition: transform .15s, background-color .15s;
+}
+.sx-montage-frame-wrap.is-lazy .sx-montage-fallback:hover::before {
+  transform: scale(1.08);
+  background-color: rgba(255,60,0,.72);
 }
 
 .sx-montage-fallback-pill {

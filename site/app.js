@@ -13682,32 +13682,54 @@
     var currentIndex = 0;
     var timer = null;
     var localPreviewMode = window.location.protocol === 'file:';
+    // Facade: YouTube iframe is NOT loaded until user clicks play.
+    // This prevents the YouTube cookie banner from firing on return visits.
+    var userActivated = false;
 
     function openSource(url) {
       if (!url) return;
       window.open(url, '_blank', 'noopener');
     }
 
+    function activateFrame(btn) {
+      // Load the iframe for real (user has opted in by clicking play).
+      userActivated = true;
+      frameWrap.classList.remove('is-lazy', 'is-local');
+      if (fallback) { fallback.hidden = true; fallback.onclick = null; }
+      var target = (btn.dataset.src || '') + (btn.dataset.src && btn.dataset.src.indexOf('autoplay') === -1 ? '&autoplay=1' : '');
+      if (frame.src !== target) frame.src = target;
+    }
+
     function syncFrameMode(btn) {
       var poster = btn.dataset.poster ? 'url("' + btn.dataset.poster + '")' : 'none';
       frameWrap.style.setProperty('--sx-montage-poster', poster);
+
       if (localPreviewMode) {
         frameWrap.classList.add('is-local');
+        frameWrap.classList.remove('is-lazy');
         frame.removeAttribute('src');
         if (fallback) {
           fallback.hidden = false;
-          fallback.onclick = function() {
-            openSource(btn.dataset.link || '');
-          };
+          fallback.onclick = function() { openSource(btn.dataset.link || ''); };
         }
         return;
       }
 
-      frameWrap.classList.remove('is-local');
-      if (fallback) {
-        fallback.hidden = true;
-        fallback.onclick = null;
+      if (!userActivated) {
+        // Lazy / facade mode: show poster with play button, no iframe load.
+        frameWrap.classList.add('is-lazy');
+        frameWrap.classList.remove('is-local');
+        frame.removeAttribute('src');
+        if (fallback) {
+          fallback.hidden = false;
+          fallback.onclick = function() { activateFrame(btn); };
+        }
+        return;
       }
+
+      // Already activated this session — just swap the video.
+      frameWrap.classList.remove('is-lazy', 'is-local');
+      if (fallback) { fallback.hidden = true; fallback.onclick = null; }
       if (frame.src !== btn.dataset.src) frame.src = btn.dataset.src;
     }
 
