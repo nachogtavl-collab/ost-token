@@ -5221,6 +5221,42 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- Buffer polyfill — required by @solana/web3.js (Transaction.serialize → Buffer.from)
+       Without this every send/swap/transfer fails with "Buffer is not defined". -->
+  <script>window.global = window.global || window;</script>
+  <script src="https://bundle.run/buffer@6.0.3"></script>
+  <script>
+    if (typeof window.Buffer === 'undefined' && window.buffer && window.buffer.Buffer) {
+      window.Buffer = window.buffer.Buffer;
+    }
+    // Fallback: minimal Uint8Array-backed shim so the page never throws even if the CDN is blocked.
+    if (typeof window.Buffer === 'undefined') {
+      window.Buffer = {
+        from: function (data, enc) {
+          if (data instanceof Uint8Array) return data;
+          if (Array.isArray(data)) return new Uint8Array(data);
+          if (typeof data === 'string') {
+            if (enc === 'hex') {
+              var out = new Uint8Array(data.length / 2);
+              for (var i = 0; i < out.length; i++) out[i] = parseInt(data.substr(i * 2, 2), 16);
+              return out;
+            }
+            return new TextEncoder().encode(data);
+          }
+          return new Uint8Array(0);
+        },
+        alloc: function (n) { return new Uint8Array(n); },
+        concat: function (list) {
+          var total = list.reduce(function (a, b) { return a + b.length; }, 0);
+          var out = new Uint8Array(total); var off = 0;
+          list.forEach(function (b) { out.set(b, off); off += b.length; });
+          return out;
+        },
+        isBuffer: function (x) { return x instanceof Uint8Array; }
+      };
+      console.warn('[OST] Using minimal Buffer shim — bundle.run polyfill failed to load.');
+    }
+  </script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="app.js?v=79"></script>
@@ -5245,8 +5281,9 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="ux-extras.js?v=3"></script>
   <script src="faucet-hub.js?v=6"></script>
   <script src="faucet-hub-ads.js?v=2"></script>
-  <script src="ost-games.js?v=1"></script>
-  <script src="code-academy.js?v=1"></script>
+  <script src="ost-games.js?v=2"></script>
+  <script src="code-academy.js?v=2"></script>
+  <script src="i18n-runtime.js?v=1"></script>
   <script src="devnet-rescue.js?v=3"></script>
 </body>
 </html>
