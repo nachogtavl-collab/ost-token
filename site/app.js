@@ -5730,6 +5730,12 @@
 
     function drawWalletPortfolioChart(series, options) {
       if (!wdPortfolioChart || !wdPortfolioChart.getContext) return;
+      // wallet-extras.js draws the real on-chain curve onto the same canvas.
+      // When it is active and has at least one snapshot, suppress the synthetic
+      // placeholder draw to avoid the overlapping flat-line artifact.
+      try {
+        if (window.__ostWalletRealCurveActive) return;
+      } catch (_) {}
 
       const config = options || {};
       const rect = wdPortfolioChart.getBoundingClientRect();

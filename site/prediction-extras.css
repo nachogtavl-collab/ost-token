@@ -219,3 +219,62 @@ body.ost-force-desktop { min-width: 1280px; }
   0%, 100% { box-shadow: 0 0 0 9999px rgba(2, 6, 23, 0.55), 0 0 0 0 rgba(108, 179, 255, 0.5); }
   50% { box-shadow: 0 0 0 9999px rgba(2, 6, 23, 0.55), 0 0 0 14px rgba(108, 179, 255, 0); }
 }
+
+/* ── My OST bets — Polymarket-style portfolio v2 ─────────────────────── */
+.ost-bets-summary {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px; padding: 12px 14px; margin-bottom: 14px;
+  background: linear-gradient(135deg, rgba(124,230,168,0.04), rgba(108,159,255,0.06));
+  border: 1px solid rgba(108,159,255,0.18); border-radius: 12px;
+}
+.ost-bets-stat { display: flex; flex-direction: column; gap: 2px; }
+.ost-bets-stat span { font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: #9ba0c8; }
+.ost-bets-stat strong { font-size: 16px; color: #f4ead4; font-variant-numeric: tabular-nums; }
+.ost-bets-stat.is-pos strong { color: #7ce6a8; }
+.ost-bets-stat.is-neg strong { color: #ff7c8a; }
+.ost-bets-tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+.ost-bets-tab {
+  appearance: none; border: 1px solid rgba(255,255,255,0.10); background: rgba(255,255,255,0.04);
+  color: #cbd1f0; padding: 5px 12px; border-radius: 999px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.ost-bets-tab em { font-style: normal; opacity: 0.55; margin-left: 4px; font-weight: 500; }
+.ost-bets-tab.is-active { background: linear-gradient(135deg, #7ce6a8, #4cc985); color: #0a0a0a; border-color: transparent; }
+.ost-bets-tab:hover:not(.is-active) { background: rgba(255,255,255,0.08); }
+.ost-bets-rows { display: flex; flex-direction: column; gap: 8px; }
+.ost-bet-row {
+  display: grid; grid-template-columns: 1fr auto auto; gap: 14px; align-items: center;
+  padding: 12px 14px; border-radius: 12px; border-left: 3px solid #7bbcf0;
+  background: rgba(255,255,255,0.025); cursor: pointer;
+  transition: background 120ms ease, transform 80ms ease;
+}
+.ost-bet-row:hover { background: rgba(124,230,168,0.07); }
+.ost-bet-row.is-yes  { border-left-color: #7ce6a8; }
+.ost-bet-row.is-no   { border-left-color: #ff7c8a; }
+.ost-bet-row.is-won  { background: rgba(46,175,111,0.10); }
+.ost-bet-row.is-lost { opacity: 0.55; background: rgba(208,74,91,0.06); }
+.ost-bet-row__main { min-width: 0; }
+.ost-bet-row__title { font-weight: 700; font-size: 14px; color: #f4ead4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 4px; }
+.ost-bet-row__chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ost-bet-chip { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: rgba(255,255,255,0.06); color: #cbd1f0; letter-spacing: 0.03em; }
+.ost-bet-chip--side.is-yes { background: rgba(124,230,168,0.18); color: #7ce6a8; }
+.ost-bet-chip--side.is-no  { background: rgba(255,124,138,0.18); color: #ff7c8a; }
+.ost-bet-chip--live.is-pos { background: rgba(124,230,168,0.16); color: #7ce6a8; }
+.ost-bet-chip--live.is-neg { background: rgba(255,124,138,0.16); color: #ff7c8a; }
+.ost-bet-chip--status { background: rgba(108,159,255,0.18); color: #6c9fff; text-transform: uppercase; }
+.ost-bet-row__numbers { display: flex; gap: 14px; }
+.ost-bet-row__numbers > div { display: flex; flex-direction: column; align-items: flex-end; }
+.ost-bet-row__numbers span { font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: #9ba0c8; }
+.ost-bet-row__numbers strong { font-size: 13px; font-variant-numeric: tabular-nums; color: #f4ead4; }
+.ost-bet-row__actions { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+.ost-pred-btn--ghost {
+  appearance: none; background: rgba(108,159,255,0.10); color: #6c9fff;
+  border: 1px solid rgba(108,159,255,0.28); padding: 6px 12px; border-radius: 8px;
+  font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap;
+}
+.ost-pred-btn--ghost:hover { background: rgba(108,159,255,0.20); }
+.ost-bet-explorer { font-size: 10px; color: #9ba0c8; text-decoration: none; }
+.ost-bet-explorer:hover { color: #cbd1f0; text-decoration: underline; }
+@media (max-width: 720px) {
+  .ost-bet-row { grid-template-columns: 1fr; gap: 8px; }
+  .ost-bet-row__numbers, .ost-bet-row__actions { justify-content: flex-start; align-items: flex-start; flex-direction: row; flex-wrap: wrap; }
+}

@@ -908,6 +908,9 @@
 
   function drawRealCurve(canvas) {
     var snaps = loadSnapshots();
+    // Mark active so app.js skips its synthetic placeholder draw and we
+    // own the canvas exclusively (fixes the flat-line overlap artifact).
+    try { window.__ostWalletRealCurveActive = true; } catch (_) {}
     if (snaps.length < 2) {
       // Draw a placeholder with a "waiting" message
       var ctx0 = canvas.getContext('2d');

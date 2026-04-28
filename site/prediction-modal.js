@@ -341,14 +341,46 @@
   // --------------------------------------------------------------------------
   // Chart drawing
   // --------------------------------------------------------------------------
-  function drawSeries(canvas, points, color) {
+  // Draw a small distinctive glyph (random pixel pattern inside a 12-px circle).
+  // Each (wallet, ts) gets a deterministic look so users can recognise repeat
+  // bettors without us leaking identity. Used for the bet-tick overlay.
+  function drawBetGlyph(ctx, cx, cy, color, seed) {
+    var s = String(seed || (cx + ',' + cy));
+    var h = 0; for (var i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) >>> 0; }
+    var rng = function () { h = (h * 1664525 + 1013904223) >>> 0; return (h & 0xffff) / 0xffff; };
+    // Outer halo
+    ctx.save();
+    ctx.shadowColor = color; ctx.shadowBlur = 8;
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(cx, cy, 7, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+    // Inner dark disc so the random pixel pattern reads
+    ctx.fillStyle = 'rgba(8,10,18,0.92)';
+    ctx.beginPath(); ctx.arc(cx, cy, 5.2, 0, Math.PI * 2); ctx.fill();
+    // 4×4 random pixel mosaic in the disc, deterministic per seed
+    var palette = ['#ffd980', '#7ce6a8', '#ff7c8a', '#9ba0c8', '#cbd1f0'];
+    for (var py = 0; py < 4; py++) {
+      for (var px = 0; px < 4; px++) {
+        var dx = (px - 1.5) * 1.6, dy = (py - 1.5) * 1.6;
+        if (Math.sqrt(dx*dx + dy*dy) > 4.4) continue;
+        ctx.fillStyle = palette[Math.floor(rng() * palette.length)];
+        ctx.fillRect(cx + dx - 0.8, cy + dy - 0.8, 1.6, 1.6);
+      }
+    }
+    // Crisp ring
+    ctx.strokeStyle = color; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.arc(cx, cy, 6, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawSeries(canvas, points, color, overlay) {
     if (!canvas || !points || points.length < 2) return;
     var ctx = canvas.getContext('2d');
     var dpr = window.devicePixelRatio || 1;
     var w = canvas.clientWidth || 600;
     var h = canvas.clientHeight || 200;
     canvas.width = Math.floor(w * dpr); canvas.height = Math.floor(h * dpr);
-    ctx.scale(dpr, dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
     var min = Math.min.apply(null, points), max = Math.max.apply(null, points);
     var range = Math.max(1e-9, max - min);
@@ -378,6 +410,17 @@
       if (i === 0) ctx.moveTo(x, py); else ctx.lineTo(x, py);
     });
     ctx.stroke();
+    // Bet-tick overlay — only ticks matching the active side land on this chart.
+    // overlay = [{ frac: 0..1 across width, value, seed, color? }]
+    if (Array.isArray(overlay) && overlay.length) {
+      overlay.forEach(function (o) {
+        if (!Number.isFinite(o.frac) || !Number.isFinite(o.value)) return;
+        var x = Math.max(8, Math.min(w - 8, o.frac * w));
+        var py = h - ((o.value - min) / range) * (h - 8) - 4;
+        py = Math.max(8, Math.min(h - 8, py));
+        drawBetGlyph(ctx, x, py, o.color || color, o.seed);
+      });
+    }
   }
 
   // --------------------------------------------------------------------------
@@ -647,14 +690,29 @@
     var sharedListEl = bodyEl.querySelector('[data-bind="sharedList"]');
     function refreshSharedFeed() {
       var base = (window.OST_API_BASE || '').replace(/\/$/, '');
-      if (!base || !sharedListEl) return;
-      fetch(base + '/positions/recent?limit=20', { cache: 'no-store' })
+      if (!base) return;
+      fetch(base + '/positions/recent?limit=50', { cache: 'no-store' })
         .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (j) {
-          if (!j || !Array.isArray(j.recent) || !j.recent.length) {
+          if (!j || !Array.isArray(j.recent)) return;
+          // Index per-market for the chart overlay (only same-market ticks).
+          window.__ostSharedFeed = window.__ostSharedFeed || {};
+          var perMarket = {};
+          j.recent.forEach(function (b) {
+            var k = b.marketId; if (!k) return;
+            (perMarket[k] = perMarket[k] || []).push(b);
+          });
+          window.__ostSharedFeed = perMarket;
+          // Trigger a chart redraw so newly-arrived bets appear as glyphs.
+          if (typeof window.__ostChartRedraw === 'function') {
+            try { window.__ostChartRedraw(); } catch (_) {}
+          }
+          if (!sharedListEl) return;
+          if (!j.recent.length) {
             sharedListEl.innerHTML = '<div style="opacity:0.55;font-size:11px;">Be the first — no shared positions yet.</div>';
             return;
           }
+          // Show all-market ticker in the side panel (not filtered by side).
           sharedListEl.innerHTML = j.recent.slice(0, 12).map(function (r) {
             var sideClass = /YES|BUY/i.test(r.side) ? 'is-yes' : 'is-no';
             var ago = Math.max(0, Math.round((Date.now() - new Date(r.ts).getTime()) / 1000));
@@ -671,7 +729,7 @@
         .catch(function () { /* silent */ });
     }
     refreshSharedFeed();
-    liveTimers.push(setInterval(refreshSharedFeed, 5000));
+    liveTimers.push(setInterval(refreshSharedFeed, 4000));
 
     // ---- Live BTC tile ----
     if (market.isOstNative && market.meta && market.meta.kind === 'btc5m') {
@@ -738,7 +796,7 @@
       var LIVE_HISTORY_MAX = 240;
 
       function pushHistoryPoint(yesPx, ts) {
-        if (!Number.isFinite(yesPx) || yesPx <= 0 || yesPx >= 1) return;
+        if (!Number.isFinite(yesPx) || yesPx < 0 || yesPx > 1) return;
         liveHistory.push({ t: Number(ts) || Date.now(), p: yesPx });
         if (liveHistory.length > LIVE_HISTORY_MAX) liveHistory = liveHistory.slice(-LIVE_HISTORY_MAX);
       }
@@ -758,15 +816,40 @@
         canvas.style.width = '100%';
         canvas.style.height = '280px';
         var color = side === 'NO' ? '#ff7c8a' : '#6ce6a4';
-        drawSeries(canvas, pts, color);
-        setText(bodyEl, 'chartStatus', 'live 1s · ' + side + ' · ' + pts.length + ' pts · ' + fmtTime(Date.now()));
+        // Build per-side overlay of recent OST bets on THIS market.
+        // Critical UX rule: only show ticks matching the currently-displayed
+        // side, so YES viewers never see NO bets and vice versa.
+        var overlay = [];
+        try {
+          var feed = (window.__ostSharedFeed && window.__ostSharedFeed[market.id]) || [];
+          var firstTs = liveHistory[0] && liveHistory[0].t || (Date.now() - 60000);
+          var lastTs  = liveHistory[liveHistory.length - 1].t || Date.now();
+          var span = Math.max(1, lastTs - firstTs);
+          feed.forEach(function (b) {
+            var bSide = String(b.side || '').toUpperCase();
+            if (bSide !== side) return; // hide contrary side
+            var bTs = new Date(b.ts).getTime();
+            if (!Number.isFinite(bTs) || bTs < firstTs - 5000) return;
+            var frac = Math.max(0, Math.min(1, (bTs - firstTs) / span));
+            // Plot at the price recorded on the bet (if NO, invert to NO axis).
+            var px = Number(b.price);
+            if (!Number.isFinite(px)) return;
+            var plotted = side === 'NO' ? (1 - px) : px;
+            overlay.push({ frac: frac, value: plotted, seed: (b.wallet || '') + ':' + bTs, color: color });
+          });
+        } catch (_) {}
+        drawSeries(canvas, pts, color, overlay);
+        var status = 'live 1s · ' + side + ' · ' + pts.length + ' pts';
+        if (overlay.length) status += ' · ' + overlay.length + ' OST tick' + (overlay.length === 1 ? '' : 's');
+        setText(bodyEl, 'chartStatus', status + ' · ' + fmtTime(Date.now()));
       }
       // Expose so toggle button can force a redraw without new ticks.
       window.__ostChartRedraw = renderLiveHistory;
 
       // Apply a fresh YES/NO from any source.
       var applyYes = function (yesPx, src) {
-        if (!Number.isFinite(yesPx) || yesPx <= 0 || yesPx >= 1) return;
+        // Allow 0–1 inclusive: resolved markets can sit at 0.99 / 0.01.
+        if (!Number.isFinite(yesPx) || yesPx < 0 || yesPx > 1) return;
         market.yesPriceNumber = yesPx;
         market.noPriceNumber = 1 - yesPx;
         pushHistoryPoint(yesPx, Date.now());
@@ -783,13 +866,33 @@
       var refreshGamma = function () {
         fetchPolyGammaMarket(rawId).then(function (g) {
           if (!g) return;
+          // Prefer the real market consensus (outcomePrices) — falls back
+          // to lastTradePrice, then mid of bid/ask. Avoids the "stuck 50%"
+          // artefact you get from averaging a wide bid/ask spread.
+          var op = g.outcomePrices;
+          if (typeof op === 'string') { try { op = JSON.parse(op); } catch (_) { op = null; } }
           var bb = Number(g.bestBid), ba = Number(g.bestAsk), lt = Number(g.lastTradePrice);
+          var consensus = (Array.isArray(op) && Number(op[0]) >= 0 && Number(op[0]) <= 1) ? Number(op[0]) : NaN;
           var yesPx = NaN;
-          if (Number.isFinite(bb) && Number.isFinite(ba)) yesPx = (bb + ba) / 2;
-          else if (Number.isFinite(lt)) yesPx = lt;
-          else if (Number.isFinite(bb)) yesPx = bb;
-          else if (Number.isFinite(ba)) yesPx = ba;
+          if (Number.isFinite(consensus) && consensus > 0 && consensus < 1) yesPx = consensus;
+          else if (Number.isFinite(lt) && lt > 0 && lt < 1) yesPx = lt;
+          else if (Number.isFinite(bb) && Number.isFinite(ba) && (ba - bb) < 0.30) yesPx = (bb + ba) / 2;
+          else if (Number.isFinite(bb) && bb > 0) yesPx = bb;
+          else if (Number.isFinite(ba) && ba < 1) yesPx = ba;
           applyYes(yesPx, 'gamma');
+          // Mirror multi-outcome prices live so the buttons reflect reality.
+          if (Array.isArray(op) && op.length > 1) {
+            var outs = (g.outcomes && (typeof g.outcomes === 'string' ? JSON.parse(g.outcomes) : g.outcomes)) || [];
+            var outBtns = bodyEl.querySelectorAll('.ost-modal__outcome');
+            outBtns.forEach(function (btn, i) {
+              var p = Number(op[i]);
+              if (!Number.isFinite(p)) return;
+              var pe = btn.querySelector('.ost-modal__outcome-price');
+              if (pe) pe.textContent = (p * 100).toFixed(1) + '¢';
+              var le = btn.querySelector('.ost-modal__outcome-label');
+              if (le && outs[i]) le.textContent = String(outs[i]);
+            });
+          }
           // Update header tag with live volume.
           if (Number.isFinite(Number(g.volume24hr))) {
             setText(bodyEl, 'tradesStatus', 'gamma · 24h vol $' + Math.round(Number(g.volume24hr)).toLocaleString());
@@ -801,7 +904,6 @@
               var t = g.clobTokenIds; if (typeof t === 'string') t = JSON.parse(t);
               if (Array.isArray(t) && t[0]) { tokenId = String(t[0]); }
             } catch (_) {}
-            // Update rawId with the proper condition ID from gamma
             if (g.conditionId || g.condition_id) rawId = g.conditionId || g.condition_id;
             if (tokenId) refreshBook();
           }
@@ -883,7 +985,7 @@
               t: Number(r.t || r.time || Date.now()),
               p: Number(r.p || r.price)
             };
-          }).filter(function (r) { return Number.isFinite(r.p) && r.p > 0 && r.p < 1; });
+          }).filter(function (r) { return Number.isFinite(r.p) && r.p >= 0 && r.p <= 1; });
           if (seed.length >= 2) {
             liveHistory = seed.slice(-LIVE_HISTORY_MAX);
             renderLiveHistory();

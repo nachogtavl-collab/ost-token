@@ -352,25 +352,132 @@
       host.innerHTML = '<div class="ost-pred-empty">No bets yet. Click <strong>Bet YES</strong> or <strong>Bet NO</strong> on any market, <em>or</em> use the main trade desk\'s <strong>Buy YES/NO with OST</strong> button — both flows show up here.</div>';
       return;
     }
-    host.innerHTML = bets.map(function (b) {
+    // Polymarket-style portfolio summary
+    var totals = bets.reduce(function (acc, b) {
+      var stake = Number(b.stake) || 0;
+      acc.staked += stake;
+      if (b.status === 'open')  acc.openCount++;
+      if (b.status === 'won') { acc.wonCount++; acc.realised += (Number(b.payoutIfWin) - stake); if (b.claimed) acc.claimed += Number(b.payoutIfWin); }
+      if (b.status === 'lost')  { acc.lostCount++; acc.realised -= stake; }
+      // Mark-to-market for open positions (current YES price from window cache)
+      if (b.status === 'open') {
+        try {
+          var live = (window.OST_PREDICTIONS && window.OST_PREDICTIONS.priceFor && window.OST_PREDICTIONS.priceFor(b.marketId)) || null;
+          var px = live ? (b.side === 'yes' ? Number(live.yes) : Number(live.no)) : NaN;
+          if (!Number.isFinite(px)) px = Number(b.price) || 0.5;
+          var shares = Number(b.payoutIfWin) || (Number(b.price) > 0 ? stake / Number(b.price) : 0);
+          acc.markValue += shares * px;
+        } catch (_) { acc.markValue += stake; }
+      }
+      return acc;
+    }, { staked: 0, openCount: 0, wonCount: 0, lostCount: 0, claimed: 0, realised: 0, markValue: 0 });
+
+    var pnl = totals.realised + (totals.markValue - bets.filter(function (b) { return b.status === 'open'; }).reduce(function (s, b) { return s + (Number(b.stake) || 0); }, 0));
+    var pnlClass = pnl >= 0 ? 'is-pos' : 'is-neg';
+    var pnlSign = pnl >= 0 ? '+' : '';
+
+    var summary =
+      '<div class="ost-bets-summary">' +
+        '<div class="ost-bets-stat"><span>Total staked</span><strong>' + fmt(totals.staked) + ' OST</strong></div>' +
+        '<div class="ost-bets-stat"><span>Open positions</span><strong>' + totals.openCount + '</strong></div>' +
+        '<div class="ost-bets-stat"><span>Mark value</span><strong>' + fmt(totals.markValue) + ' OST</strong></div>' +
+        '<div class="ost-bets-stat ' + pnlClass + '"><span>P&amp;L</span><strong>' + pnlSign + fmt(pnl) + ' OST</strong></div>' +
+        '<div class="ost-bets-stat"><span>Won / Lost</span><strong>' + totals.wonCount + ' / ' + totals.lostCount + '</strong></div>' +
+      '</div>' +
+      '<div class="ost-bets-tabs">' +
+        '<button type="button" class="ost-bets-tab is-active" data-bets-filter="all">All <em>' + bets.length + '</em></button>' +
+        '<button type="button" class="ost-bets-tab" data-bets-filter="open">Open <em>' + totals.openCount + '</em></button>' +
+        '<button type="button" class="ost-bets-tab" data-bets-filter="won">Won <em>' + totals.wonCount + '</em></button>' +
+        '<button type="button" class="ost-bets-tab" data-bets-filter="lost">Lost <em>' + totals.lostCount + '</em></button>' +
+      '</div>';
+
+    function rowHtml(b) {
       var statusCls = b.status === 'won' ? 'is-won' : b.status === 'lost' ? 'is-lost' : 'is-open';
-      var canClaim = b.status === 'won' && !b.claimed;
+      var sideCls   = b.side === 'yes' ? 'is-yes' : 'is-no';
+      var canClaim  = b.status === 'won' && !b.claimed;
+      var stake     = Number(b.stake) || 0;
+      var payout    = Number(b.payoutIfWin) || 0;
+      var entryPx   = Number(b.price) || 0.5;
+      var live      = null;
+      try { live = (window.OST_PREDICTIONS && window.OST_PREDICTIONS.priceFor && window.OST_PREDICTIONS.priceFor(b.marketId)) || null; } catch (_) {}
+      var livePx    = live ? (b.side === 'yes' ? Number(live.yes) : Number(live.no)) : NaN;
+      var pctMove   = (Number.isFinite(livePx) && entryPx > 0) ? ((livePx - entryPx) / entryPx) * 100 : NaN;
+      var moveCls   = Number.isFinite(pctMove) ? (pctMove >= 0 ? 'is-pos' : 'is-neg') : '';
+      var moveTxt   = Number.isFinite(pctMove) ? ((pctMove >= 0 ? '+' : '') + pctMove.toFixed(1) + '%') : '—';
+      var ageMin    = Math.max(0, Math.round((Date.now() - (Number(b.placedAt) || Date.now())) / 60000));
+      var ageTxt    = ageMin < 60 ? (ageMin + 'm') : ageMin < 1440 ? (Math.round(ageMin/60) + 'h') : (Math.round(ageMin/1440) + 'd');
+
       return [
-        '<article class="ost-bet-row ' + statusCls + '">',
-          '<div class="ost-bet-row__title">' + escapeHtml(b.title) + '</div>',
-          '<div class="ost-bet-row__meta">' +
-            '<span>Side: <strong>' + b.side.toUpperCase() + '</strong></span>' +
-            '<span>Stake: <strong>' + fmt(b.stake) + ' OST</strong></span>' +
-            '<span>Payout if win: <strong>' + fmt(b.payoutIfWin) + ' OST</strong></span>' +
-            '<span>Status: <strong>' + b.status + '</strong></span>' +
+        '<article class="ost-bet-row ' + statusCls + ' ' + sideCls + '" data-bet-market="' + escapeHtml(b.marketId) + '">',
+          '<div class="ost-bet-row__main">',
+            '<div class="ost-bet-row__title" title="' + escapeHtml(b.title) + '">' + escapeHtml(b.title) + '</div>',
+            '<div class="ost-bet-row__chips">',
+              '<span class="ost-bet-chip ost-bet-chip--side ' + sideCls + '">' + b.side.toUpperCase() + '</span>',
+              '<span class="ost-bet-chip">' + (entryPx * 100).toFixed(1) + '¢ entry</span>',
+              (Number.isFinite(livePx) ? '<span class="ost-bet-chip ost-bet-chip--live ' + moveCls + '">' + (livePx*100).toFixed(1) + '¢ live (' + moveTxt + ')</span>' : ''),
+              '<span class="ost-bet-chip">' + ageTxt + ' ago</span>',
+              '<span class="ost-bet-chip ost-bet-chip--status">' + b.status + '</span>',
+            '</div>',
           '</div>',
-          canClaim ? '<button type="button" class="ost-pred-btn ost-pred-btn--yes" data-ost-bet-claim="' + escapeHtml(b.id) + '">Claim ' + fmt(b.payoutIfWin) + ' OST</button>'
-                   : (b.claimed ? '<span class="ost-bet-claimed">✓ claimed</span>' : ''),
+          '<div class="ost-bet-row__numbers">',
+            '<div><span>Stake</span><strong>' + fmt(stake) + ' OST</strong></div>',
+            '<div><span>Payout</span><strong>' + fmt(payout) + ' OST</strong></div>',
+          '</div>',
+          '<div class="ost-bet-row__actions">',
+            '<button type="button" class="ost-pred-btn ost-pred-btn--ghost" data-ost-bet-open="' + escapeHtml(b.marketId) + '">Open market</button>',
+            (canClaim ? '<button type="button" class="ost-pred-btn ost-pred-btn--yes" data-ost-bet-claim="' + escapeHtml(b.id) + '">Claim ' + fmt(payout) + ' OST</button>' : ''),
+            (b.claimed ? '<span class="ost-bet-claimed">✓ ' + fmt(payout) + ' OST claimed</span>' : ''),
+            (b.signature && !/^(local|sim)-/.test(b.signature) ? '<a class="ost-bet-explorer" href="https://explorer.solana.com/tx/' + encodeURIComponent(b.signature) + '?cluster=devnet" target="_blank" rel="noopener">tx ' + escapeHtml(String(b.signature).slice(0, 6)) + '… ↗</a>' : ''),
+          '</div>',
         '</article>'
       ].join('');
-    }).join('');
+    }
+
+    var listHtml = '<div class="ost-bets-rows" data-bets-list>' + bets.map(rowHtml).join('') + '</div>';
+    host.innerHTML = summary + listHtml;
+
+    // Tab filter
+    host.querySelectorAll('[data-bets-filter]').forEach(function (tab) {
+      tab.addEventListener('click', function () {
+        host.querySelectorAll('[data-bets-filter]').forEach(function (x) { x.classList.remove('is-active'); });
+        tab.classList.add('is-active');
+        var f = tab.getAttribute('data-bets-filter');
+        host.querySelectorAll('.ost-bet-row').forEach(function (row) {
+          var show = f === 'all' || row.classList.contains('is-' + f);
+          row.style.display = show ? '' : 'none';
+        });
+      });
+    });
+
+    // Open-market button → invoke the unified market modal
+    host.querySelectorAll('[data-ost-bet-open]').forEach(function (btn) {
+      btn.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        var id = btn.getAttribute('data-ost-bet-open');
+        if (window.OST_MARKET_MODAL && typeof window.OST_MARKET_MODAL.open === 'function') {
+          window.OST_MARKET_MODAL.open(id);
+        } else {
+          // Fallback: scroll to the market card and click it.
+          var card = document.querySelector('[data-prediction-market-id="' + id.replace(/"/g, '\\"') + '"]');
+          if (card) { card.scrollIntoView({ behavior: 'smooth', block: 'center' }); card.click(); }
+        }
+      });
+    });
+
+    // Click anywhere on a row also opens the market.
+    host.querySelectorAll('.ost-bet-row').forEach(function (row) {
+      row.addEventListener('click', function (ev) {
+        if (ev.target.closest('button, a')) return; // let buttons handle themselves
+        var id = row.getAttribute('data-bet-market');
+        if (window.OST_MARKET_MODAL && typeof window.OST_MARKET_MODAL.open === 'function') {
+          window.OST_MARKET_MODAL.open(id);
+        }
+      });
+    });
+
     host.querySelectorAll('[data-ost-bet-claim]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
+      btn.addEventListener('click', function (ev) {
+        ev.stopPropagation();
         claimBet(btn.getAttribute('data-ost-bet-claim'), btn);
       });
     });
