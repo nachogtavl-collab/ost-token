@@ -27,7 +27,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Egyptian+Hieroglyphs&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="style.css?v=60">
+  <link rel="stylesheet" href="style.css?v=61">
   <link rel="stylesheet" href="mobile.css?v=1">
   <link rel="stylesheet" href="polish.css?v=1">
   <link rel="stylesheet" href="compartments.css?v=1">
@@ -287,17 +287,17 @@
   <section id="new-here" class="section section-alt section-space">
     <div class="container">
       <h2 class="section-title" data-i18n="newhere.title">&#127381; New Here? Start Your OST Journey</h2>
-      <p class="section-subtitle" data-i18n="newhere.sub">Claim free OST, create family vaults, or earn rewards by contributing infrastructure.</p>
+      <p class="section-subtitle" data-i18n="newhere.sub">Claim a 100 OST head start, create family vault plans, or earn rewards by learning and contributing.</p>
 
       <div class="faucet-section" id="faucetSection">
         <h3 data-i18n="getost.faucet">New Here? Claim Free OST</h3>
-        <p data-i18n="getost.faucettext">Every new wallet gets <strong>1 OST</strong> from the community treasury &mdash; enough to test the live devnet wallet flow right away.</p>
+        <p data-i18n="getost.faucettext">New wallets get a <strong>100 OST</strong> head start. After that, come back and manually claim <strong>1 OST per day</strong>.</p>
         <div class="faucet-machine" id="faucetMachine">
           <div class="faucet-pipe"><div class="faucet-spout"></div></div>
           <div class="faucet-drop-zone" id="faucetDropZone"></div>
           <div class="faucet-pool"><div class="faucet-amount" id="faucetAmount">0.00</div><div class="faucet-label">OST</div></div>
         </div>
-        <button class="btn btn-primary btn-glow faucet-btn" id="claimFaucetBtn"><span class="pay-icon">&#9673;</span> <span data-i18n="getost.faucetbtn">Turn the Faucet</span></button>
+        <button class="btn btn-primary btn-glow faucet-btn" id="claimFaucetBtn"><span class="pay-icon">&#9673;</span> <span data-i18n="getost.faucetbtn">Claim 100 OST Head Start</span></button>
         <div class="faucet-status" id="faucetStatus"></div>
       </div>
 
@@ -305,7 +305,7 @@
         <div class="gv-header">
           <div class="gv-icon-ring"><span>&#128118;</span></div>
           <h3 data-i18n="gv.title">Family Grow Vaults</h3>
-          <p class="text-muted" data-i18n="gv.sub">The first coin born in space with every new generation. Create a custodial vault for your child &mdash; they grow up with real private digital cash.</p>
+          <p class="text-muted" data-i18n="gv.sub">Create a Grow Vault plan for your child now, even before wallet sign-in works. Link a wallet later and keep the milestone drops organized.</p>
         </div>
 
         <div class="gv-timeline">
@@ -390,8 +390,8 @@
               <input type="email" class="gv-form-input" id="gvGuardianEmail" placeholder="guardian@email.com" maxlength="120" autocomplete="email">
             </div>
             <div class="gv-form-row">
-              <label class="gv-form-label">Connected Wallet Address <span class="gv-req">*</span></label>
-              <input type="text" class="gv-form-input" id="gvWalletAddr" placeholder="Connect wallet above" readonly>
+              <label class="gv-form-label">Wallet Address (optional)</label>
+              <input type="text" class="gv-form-input" id="gvWalletAddr" placeholder="Connect wallet later" readonly>
             </div>
             <div class="gv-form-row">
               <label class="gv-form-label">Country of Residence <span class="gv-req">*</span></label>
@@ -1608,7 +1608,7 @@
                   <span class="wallet-side-kicker">Devnet onboarding rail</span>
                   <div class="wd-journey-badge" id="wdJourneyBadge">Awaiting wallet</div>
                   <h4 id="wdJourneyTitle">Connect a wallet to start on devnet</h4>
-                  <p id="wdJourneySummary">Create a browser wallet or connect an existing Solana wallet. OST will then guide you through devnet SOL and your first OST balance.</p>
+                  <p id="wdJourneySummary">Create a browser wallet or connect an existing Solana wallet. OST covers devnet network fees and guides you into your first balance.</p>
                 </div>
                 <div class="wd-journey-grid">
                   <article class="wd-journey-step is-active" id="wdJourneyStepWallet">
@@ -1628,8 +1628,8 @@
                   <article class="wd-journey-step" id="wdJourneyStepSol">
                     <span class="wd-journey-step-index">03</span>
                     <div class="wd-journey-step-copy">
-                      <strong>Devnet SOL</strong>
-                      <p class="wd-journey-step-text">OST needs a small devnet SOL balance for network fees.</p>
+                      <strong>Fee coverage</strong>
+                      <p class="wd-journey-step-text">The OST fee vault sponsors Solana network fees for onboarding.</p>
                     </div>
                   </article>
                   <article class="wd-journey-step" id="wdJourneyStepOst">
@@ -1685,7 +1685,7 @@
                   <div class="wd-intel-card">
                     <span>Funding status</span>
                     <strong id="wdIntelFunding">Not ready</strong>
-                    <p id="wdIntelFundingCopy">Needs wallet and devnet SOL</p>
+                    <p id="wdIntelFundingCopy">Fees covered after wallet connects</p>
                   </div>
                 </div>
 
@@ -1727,12 +1727,12 @@
                   <article class="wd-route-card">
                     <span class="wd-route-status" id="wdRouteHoldStatus">Locked</span>
                     <strong>Wallet hold rail</strong>
-                    <p id="wdRouteHoldCopy">Create or connect a wallet to hold SOL and devnet OST in one place.</p>
+                    <p id="wdRouteHoldCopy">Create or connect a wallet to hold OST while the fee vault sponsors devnet costs.</p>
                   </article>
                   <article class="wd-route-card">
                     <span class="wd-route-status" id="wdRouteSwapStatus">Needs wallet</span>
                     <strong>Devnet buy + swap</strong>
-                    <p id="wdRouteSwapCopy">Live once a wallet is connected, funded with devnet SOL, and routed into OST.</p>
+                    <p id="wdRouteSwapCopy">Live once a wallet is connected and routed into OST through the sponsored vault rail.</p>
                   </article>
                   <article class="wd-route-card">
                     <span class="wd-route-status" id="wdRoutePortalStatus">Preview rails</span>
@@ -5444,7 +5444,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <!-- RPC multiplexer: every Connection instance auto-fails-over and broadcast-sends.
        MUST load BEFORE app.js so all connections built by the app inherit the wrapper. -->
   <script src="rpc-multiplexer.js?v=1"></script>
-  <script src="app.js?v=85"></script>
+  <script src="app.js?v=87"></script>
   <script src="nuevo-laredo-gas.js?v=1"></script>
   <script src="shop-quickview.js?v=1"></script>
   <script src="interchange-live.js?v=1"></script>
@@ -5469,10 +5469,10 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <!-- On-chain betting (devnet program ost_betting) -->
   <script src="ost-onchain-bet.js?v=1"></script>
   <script src="ux-extras.js?v=3"></script>
-  <script src="faucet-hub.js?v=9"></script>
+  <script src="faucet-hub.js?v=10"></script>
   <script src="faucet-hub-ads.js?v=2"></script>
   <script src="ost-games.js?v=6"></script>
-  <script src="code-academy.js?v=2"></script>
+  <script src="code-academy.js?v=3"></script>
   <script src="i18n-runtime.js?v=1"></script>
   <script src="devnet-rescue.js?v=3"></script>
   <script src="launchpad-trenches.js?v=1"></script>

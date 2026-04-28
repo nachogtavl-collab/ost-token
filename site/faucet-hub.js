@@ -89,12 +89,19 @@
         '<span><strong id="fhCredits">0.00</strong> OST <button class="fh-btn fh-btn-alt" id="fhCashout" style="margin-left:14px;width:auto;padding:8px 14px;">Cash out from vault</button> <a class="fh-vault-link" id="fhVaultLink" target="_blank" rel="noopener">🔗 view rewards vault</a></span>' +
       '</div>' +
       '<div class="fh-grid">' +
+        // Manual daily reward pointer
+        '<div class="fh-card">' +
+          '<div class="fh-card-title">🎁 New User + Daily OST</div>' +
+          '<div class="fh-emoji">100 -> 1</div>' +
+          '<button class="fh-btn" id="fhDailyClaim">Claim in New Here</button>' +
+          '<div class="fh-card-meta">First wallet gets a 100 OST head start. After that, the user must manually claim 1 OST per day.</div>' +
+        '</div>' +
         // Code Academy (educational, not gambling — kept)
         '<div class="fh-card">' +
           '<div class="fh-card-title">💻 Learn to Code · earn OST</div>' +
           '<div class="fh-emoji">⌨️🧑‍💻</div>' +
           '<button class="fh-btn" id="fhTaskBtn">Open Code Academy</button>' +
-          '<div class="fh-card-meta">1000-step path: typing test → simple → medium → hard → expert. Reward per session.</div>' +
+          '<div class="fh-card-meta">Kid-friendly lessons start at zero, explain every line, and grow from tiny wins into real projects.</div>' +
         '</div>' +
         // Streak (display only)
         '<div class="fh-card">' +
@@ -108,6 +115,13 @@
           '<div class="fh-emoji">💣🚀🎰🃏</div>' +
           '<div class="fh-card-meta">16 HMAC-verifiable games: Mines, Crash, Dice, Plinko, table games, Keno, Slots, Scratch, Penalty and more — all paid from this same vault.</div>' +
           '<button class="fh-btn" id="fhGoGames">Open games ↓</button>' +
+        '</div>' +
+        // Family grow vault pointer
+        '<div class="fh-card">' +
+          '<div class="fh-card-title">👶 Family Grow Vault</div>' +
+          '<div class="fh-emoji">🔒🌱</div>' +
+          '<button class="fh-btn" id="fhGrowVault">Create vault plan</button>' +
+          '<div class="fh-card-meta">Parents can create a local vault plan even before wallet sign-in works, then link it later.</div>' +
         '</div>' +
       '</div>' +
     '</div>' +
@@ -131,6 +145,18 @@
     var on = function (id, ev, fn) { var el = document.getElementById(id); if (el) el.addEventListener(ev, fn); };
     on('fhTaskBtn', 'click', openCodeAcademy);
     on('fhCashout', 'click', onCashout);
+    on('fhDailyClaim', 'click', function () {
+      var f = document.getElementById('faucetSection');
+      if (f) f.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      var btn = document.getElementById('claimFaucetBtn');
+      if (btn) setTimeout(function () { btn.focus(); }, 450);
+    });
+    on('fhGrowVault', 'click', function () {
+      var g = document.getElementById('growVaults');
+      if (g) g.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      var open = document.getElementById('gvOpenModal');
+      if (open) setTimeout(function () { open.focus(); }, 450);
+    });
     on('fhGoGames', 'click', function () {
       var g = document.getElementById('ostGames') || document.getElementById('ostGamesSection');
       if (g) g.scrollIntoView({ behavior: 'smooth', block: 'start' });

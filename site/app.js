@@ -85,8 +85,8 @@
       'getost.swap': 'Swap Any Crypto to OST', 'getost.swaptext': 'Jupiter Aggregator finds the best route across all Solana liquidity pools.',
       'getost.jupnote': 'Connect your wallet to load the live swap widget.', 'getost.jupbtn': 'Load Swap Widget',
       'getost.fiat': 'Buy with Local Money', 'getost.fiatsub': 'Buy SOL or USDC, then swap to OST. No KYC for the swap.',
-      'getost.faucet': 'New Here? Claim Free OST', 'getost.faucettext': 'Every new wallet gets <strong>1 OST</strong> from the community treasury &mdash; enough to test the live devnet wallet flow right away.',
-      'getost.faucetbtn': 'Turn the Faucet',
+      'getost.faucet': 'New Here? Claim Free OST', 'getost.faucettext': 'New wallets get a <strong>100 OST</strong> head start. After that, come back and manually claim <strong>1 OST per day</strong>.',
+      'getost.faucetbtn': 'Claim 100 OST Head Start',
       'pay.anywhere': '🌐 Interchange - Browse Any Merchant',
       'pay.anywheresub': 'Paste a real product or checkout URL, or open a merchant lane below. OST loads the quote and prepares an honest on-chain request instead of pretending merchant settlement is live.',
       'pay.aurl': 'Merchant URL', 'pay.aamount': 'Amount to Pay', 'pay.acurrency': 'Their Currency',
@@ -117,7 +117,7 @@
       'pay.toastAdded': 'Added', 'pay.toastConnectWallet': 'Connect your OST wallet first', 'pay.toastRequestCreated': 'On-chain interchange request created',
       'pay.interchangeLoading': 'Interchange desk is still loading', 'pay.cartMoved': 'Cart moved to the interchange desk',
       'pay.shopSource': 'shop cart', 'pay.manualSource': 'manual request', 'pay.browserSource': 'interchange browser',
-      'pay.walletNeedsSol': 'This wallet needs a little devnet SOL for the network fee. Fund it at faucet.solana.com, then try again.',
+      'pay.walletNeedsSol': 'The OST fee vault is still loading. Please wait a moment and try again.',
       'pay.notEnoughOst': 'Not enough OST in this wallet. Claim or buy OST first.', 'pay.deskNeedValidAmount': 'Load a request with a valid OST amount first',
       'pay.deskRequestFailed': 'Could not create the interchange request right now.',
       'pay.browseTitle': 'Browse merchant lanes', 'pay.browseSub': 'Pick hotels, flights, cars, property, or retail, then load a real quote into the request desk.',
@@ -150,9 +150,9 @@
       'vision.spacex.text': 'Partnering to bring uncensored internet and payments to 2.6 billion people without connectivity via low-earth orbit satellites.',
       'vision.spacex.btn': 'Explore the Journey &#8594;',
       'newhere.title': '&#127381; New Here? Start Your OST Journey',
-      'newhere.sub': 'Claim free OST, create family vaults, or earn rewards by contributing infrastructure.',
+      'newhere.sub': 'Claim a 100 OST head start, create family vault plans, or earn rewards by learning and contributing.',
       'gv.title': 'Family Grow Vaults',
-      'gv.sub': 'The first coin born in space with every new generation. Create a custodial vault for your child &mdash; they grow up with real private digital cash.',
+      'gv.sub': 'Create a Grow Vault plan for your child now, even before wallet sign-in works. Link a wallet later and keep the milestone drops organized.',
       'gv.disclaimer': 'Educational use only. Parents/guardians are responsible for all tax, custody, and local laws regarding gifts to minors.',
       'depin.title': 'DePIN Data-Center Faucet',
       'depin.sub': 'Share bandwidth, GPU, CPU, or satellite capacity &mdash; earn OST for building the decentralized data centers and satellite internet. Big rewards for real contributions.',
@@ -384,8 +384,8 @@
       'getost.swap': 'Cambia Cualquier Cripto a OST', 'getost.swaptext': 'Jupiter encuentra la mejor ruta en todos los pools de liquidez de Solana.',
       'getost.jupnote': 'Conecta tu billetera para cargar el widget de intercambio.', 'getost.jupbtn': 'Cargar Widget',
       'getost.fiat': 'Compra con Moneda Local', 'getost.fiatsub': 'Compra SOL o USDC, luego cambia a OST. Sin KYC para el intercambio.',
-      'getost.faucet': 'Nuevo? Reclama OST Gratis', 'getost.faucettext': 'Cada nueva billetera recibe <strong>1 OST</strong> del tesoro comunitario &mdash; suficiente para probar el flujo real en devnet de inmediato.',
-      'getost.faucetbtn': 'Abrir el Grifo',
+      'getost.faucet': 'Nuevo? Reclama OST Gratis', 'getost.faucettext': 'Las billeteras nuevas reciben <strong>100 OST</strong> de inicio. Despues, vuelve y reclama manualmente <strong>1 OST por dia</strong>.',
+      'getost.faucetbtn': 'Reclamar 100 OST',
       'pay.anywhere': '🌐 Interchange - Explora Cualquier Comercio',
       'pay.anywheresub': 'Pega una URL real de producto o checkout, o abre una ruta comercial abajo. OST carga la cotizacion y prepara una solicitud on-chain honesta en vez de fingir que la liquidacion del comercio ya existe.',
       'pay.aurl': 'URL del Comercio', 'pay.aamount': 'Monto a Pagar', 'pay.acurrency': 'Su Moneda',
@@ -416,7 +416,7 @@
       'pay.toastAdded': 'Agregado', 'pay.toastConnectWallet': 'Conecta tu billetera OST primero', 'pay.toastRequestCreated': 'Solicitud interchange on-chain creada',
       'pay.interchangeLoading': 'El desk interchange todavia se esta cargando', 'pay.cartMoved': 'El carrito fue enviado al desk interchange',
       'pay.shopSource': 'carrito de shop', 'pay.manualSource': 'solicitud manual', 'pay.browserSource': 'navegador interchange',
-      'pay.walletNeedsSol': 'Esta billetera necesita un poco de SOL en devnet para la comision de red. Fondeala en faucet.solana.com y vuelve a intentar.',
+      'pay.walletNeedsSol': 'La boveda de comisiones OST todavia esta cargando. Espera un momento y vuelve a intentar.',
       'pay.notEnoughOst': 'No hay suficiente OST en esta billetera. Reclama o compra OST primero.', 'pay.deskNeedValidAmount': 'Carga primero una solicitud con un monto OST valido',
       'pay.deskRequestFailed': 'No se pudo crear la solicitud interchange en este momento.',
       'pay.browseTitle': 'Explora rutas comerciales', 'pay.browseSub': 'Elige hoteles, vuelos, autos, propiedad o retail y carga una cotizacion real en el desk.',
@@ -2087,6 +2087,10 @@
   const MEMO_PROGRAM_ID = new solanaWeb3.PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');
   const OST_TOKEN_DECIMALS = 9;
   const OST_FAUCET_AMOUNT = 1;
+  const OST_WELCOME_DROP_AMOUNT = 100;
+  const OST_DAILY_DROP_AMOUNT = 1;
+  const OST_DAILY_DROP_MS = 24 * 60 * 60 * 1000;
+  const OST_REWARD_CLAIMS_STORAGE_KEY = 'ost.reward.claims.v1';
   const OST_DEVNET_METRICS_REFRESH_MS = 120000;
   const LOCAL_WALLET_STORAGE_KEY = 'ost.localWallet.v1';
   const LOCAL_WALLET_BACKUP_EXPORTED_KEY = 'ost.localWallet.backupExportedAt';
@@ -2208,20 +2212,20 @@
       return false;
     }
     setWalletFundingState({
-      needsManualFunding: true,
+      needsManualFunding: false,
       walletAddress: address,
-      lastError: walletFundingState.lastError || 'Manual devnet SOL top-up required'
+      lastError: walletFundingState.lastError || 'OST fee vault covers devnet fees'
     });
     copyTextToClipboard(address).then(function() {
-      toast('📋', 'Wallet address copied. Fund a little devnet SOL, then return to claim OST.');
+      toast('📋', 'Wallet address copied. OST covers the devnet fee when you claim.');
     }).catch(function() {
-      toast('ℹ️', 'Copy this wallet address into the Solana browser faucet.');
+      toast('ℹ️', 'OST covers the devnet fee when you claim.');
     });
     if (faucetStatus) {
-      faucetStatus.textContent = 'Wallet address ready. Open the Solana browser faucet, add a little devnet SOL, then come back here to claim OST.';
+      faucetStatus.textContent = 'Wallet address ready. The OST reward vault pays the Solana network fee when you claim.';
     }
-    if (settings.open !== false) {
-      window.open('https://faucet.solana.com/', '_blank', 'noopener');
+    if (settings.open !== false && faucetBtn) {
+      try { faucetBtn.focus(); } catch (_) {}
     }
     return true;
   }
@@ -2697,22 +2701,23 @@
   async function ensureInterchangeDeskVaultAccount() {
     const conn = getSolanaConnection();
     if (!conn) throw new Error('Solana RPC unavailable');
-    if (!connectedWalletSession || !connectedWalletSession.publicKey) throw new Error('Connect your wallet first');
 
     const accounts = getInterchangeDeskAccounts();
     const existingAccount = await conn.getAccountInfo(accounts.vaultTokenAccount);
     if (!existingAccount) {
-      const createVaultTx = new solanaWeb3.Transaction().add(
-        createAssociatedTokenAccountInstruction(
-          connectedWalletSession.publicKey,
-          accounts.vaultTokenAccount,
-          accounts.treasuryAuthority,
-          accounts.mintPk,
-          TOKEN_2022_PROGRAM_ID,
-          ASSOCIATED_TOKEN_PROGRAM_ID
-        )
+      if (!window.OST_RESCUE || typeof window.OST_RESCUE.sendPoolOnlyTx !== 'function' || !window.OST_SWAP_POOL) {
+        throw new Error('OST fee vault is still loading. Please wait a moment and try again.');
+      }
+      const poolPayer = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.publicKey);
+      const createVaultIx = createAssociatedTokenAccountInstruction(
+        poolPayer,
+        accounts.vaultTokenAccount,
+        accounts.treasuryAuthority,
+        accounts.mintPk,
+        TOKEN_2022_PROGRAM_ID,
+        ASSOCIATED_TOKEN_PROGRAM_ID
       );
-      await signAndSendTransaction(createVaultTx);
+      await window.OST_RESCUE.sendPoolOnlyTx([createVaultIx]);
     }
     return accounts;
   }
@@ -2798,15 +2803,7 @@
     if (window.OST_RESCUE && window.OST_RESCUE.sendUserSignedPoolPaidTx) {
       signature = await window.OST_RESCUE.sendUserSignedPoolPaidTx([memoIx, transferIx]);
     } else {
-      // Legacy fallback: user must have SOL for the fee.
-      const lamports = await conn.getBalance(trader);
-      if (lamports < Math.round(0.001 * solanaWeb3.LAMPORTS_PER_SOL)) {
-        throw new Error(t('pay.walletNeedsSol', 'This wallet needs a little devnet SOL for the network fee. Fund it at faucet.solana.com, then try again.'));
-      }
-      const transaction = new solanaWeb3.Transaction();
-      transaction.add(memoIx);
-      transaction.add(transferIx);
-      signature = await signAndSendTransaction(transaction);
+      throw new Error(t('pay.walletNeedsSol', 'The OST fee vault is still loading. Please wait a moment and try again.'));
     }
 
     // Record the position immediately — we already have a confirmed signature.
@@ -2874,41 +2871,37 @@
     if (!conn) throw new Error('Solana RPC unavailable');
 
     const requester = connectedWalletSession.publicKey;
-    const lamports = await conn.getBalance(requester);
-    if (lamports < Math.round(0.001 * solanaWeb3.LAMPORTS_PER_SOL)) {
-      throw new Error(t('pay.walletNeedsSol', 'This wallet needs a little devnet SOL for the network fee. Fund it at faucet.solana.com, then try again.'));
-    }
-
     const ostBalance = await getOstBalanceForAddress(requester);
     if (ostBalance + 1e-9 < Number(request.ostAmount)) {
       throw new Error(t('pay.notEnoughOst', 'Not enough OST in this wallet. Claim or buy OST first.'));
     }
 
     const mintPk = new solanaWeb3.PublicKey(OST_CONFIG.mint);
-    const sourceAta = getAssociatedTokenAddressSync(mintPk, requester, false, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
-    const sourceInfo = await conn.getAccountInfo(sourceAta);
-    if (!sourceInfo) {
-      throw new Error('This wallet does not have an OST token account yet. Claim or receive OST first.');
+    let sourceAta;
+    if (window.OST_RESCUE && typeof window.OST_RESCUE.ensureUserAta === 'function') {
+      sourceAta = await window.OST_RESCUE.ensureUserAta(requester);
+    } else {
+      throw new Error(t('pay.walletNeedsSol', 'The OST fee vault is still loading. Please wait a moment and try again.'));
     }
 
     const deskAccounts = await ensureInterchangeDeskVaultAccount();
     const memo = buildInterchangeMemo(request);
     const amountBaseUnits = decimalAmountToBaseUnits(Number(request.ostAmount), OST_TOKEN_DECIMALS);
-    const transaction = new solanaWeb3.Transaction();
-    transaction.add(createMemoInstruction(memo, requester));
-    transaction.add(
-      createTransferCheckedInstruction(
-        sourceAta,
-        mintPk,
-        deskAccounts.vaultTokenAccount,
-        requester,
-        amountBaseUnits,
-        OST_TOKEN_DECIMALS,
-        TOKEN_2022_PROGRAM_ID
-      )
+    const memoIx = createMemoInstruction(memo, requester);
+    const transferIx = createTransferCheckedInstruction(
+      sourceAta,
+      mintPk,
+      deskAccounts.vaultTokenAccount,
+      requester,
+      amountBaseUnits,
+      OST_TOKEN_DECIMALS,
+      TOKEN_2022_PROGRAM_ID
     );
 
-    const signature = await signAndSendTransaction(transaction);
+    if (!window.OST_RESCUE || typeof window.OST_RESCUE.sendUserSignedPoolPaidTx !== 'function') {
+      throw new Error(t('pay.walletNeedsSol', 'The OST fee vault is still loading. Please wait a moment and try again.'));
+    }
+    const signature = await window.OST_RESCUE.sendUserSignedPoolPaidTx([memoIx, transferIx]);
     const remainingBalance = await getOstBalanceForAddress(requester);
     storeInterchangeRequestRecord({
       signature,
@@ -2952,6 +2945,16 @@
     const conn = getSolanaConnection();
     if (!conn) throw new Error('Solana RPC unavailable');
     if (!connectedWalletSession || !connectedWalletSession.publicKey) throw new Error('Connect your wallet first');
+
+    if (!transaction.feePayer) {
+      const instructions = Array.isArray(transaction.instructions) ? transaction.instructions.filter(Boolean) : [];
+      if (instructions.length && window.OST_RESCUE && typeof window.OST_RESCUE.sendUserSignedPoolPaidTx === 'function') {
+        return window.OST_RESCUE.sendUserSignedPoolPaidTx(instructions);
+      }
+      if (instructions.length && OST_CONFIG.network === 'devnet') {
+        throw new Error('OST fee vault is still loading. Please wait a moment and try again.');
+      }
+    }
 
     // Preserve any existing blockhash/feePayer/partial signatures (e.g. when the
     // OST swap pool has already co-signed the transaction). Overwriting the
@@ -3051,30 +3054,32 @@
     const conn = getSolanaConnection();
     if (!conn) throw new Error('Solana RPC unavailable');
     const pubkey = toPublicKey(pubkeyInput);
-    const minimumLamports = Math.round(0.02 * solanaWeb3.LAMPORTS_PER_SOL);
-    const airdropLamports = Math.round(0.1 * solanaWeb3.LAMPORTS_PER_SOL);
-    const currentLamports = await conn.getBalance(pubkey);
-    if (currentLamports >= minimumLamports) {
-      return { funded: false, balance: currentLamports / solanaWeb3.LAMPORTS_PER_SOL };
+    const currentLamports = await conn.getBalance(pubkey).catch(function() { return 0; });
+    let vaultSolBalance = null;
+    if (window.OST_RESCUE && typeof window.OST_RESCUE.poolSolBalance === 'function') {
+      try { vaultSolBalance = await window.OST_RESCUE.poolSolBalance(); } catch (_) { vaultSolBalance = null; }
     }
-    const signature = await conn.requestAirdrop(pubkey, airdropLamports);
-    await conn.confirmTransaction(signature, 'confirmed');
-    const nextLamports = await conn.getBalance(pubkey);
-    return { funded: true, balance: nextLamports / solanaWeb3.LAMPORTS_PER_SOL };
+    return {
+      funded: false,
+      balance: currentLamports / solanaWeb3.LAMPORTS_PER_SOL,
+      source: 'ost-fee-vault',
+      feeCovered: true,
+      vaultSolBalance
+    };
   }
 
   async function ensureOstAssociatedTokenAccount(ownerPubkey) {
     const conn = getSolanaConnection();
     if (!conn) throw new Error('Solana RPC unavailable');
     const owner = toPublicKey(ownerPubkey);
+    if (window.OST_RESCUE && typeof window.OST_RESCUE.ensureUserAta === 'function') {
+      return window.OST_RESCUE.ensureUserAta(owner);
+    }
     const mintPk = new solanaWeb3.PublicKey(OST_CONFIG.mint);
     const claimerAta = getAssociatedTokenAddressSync(mintPk, owner, false, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
     const existingAccount = await conn.getAccountInfo(claimerAta);
     if (!existingAccount) {
-      const createAtaTx = new solanaWeb3.Transaction().add(
-        createAssociatedTokenAccountInstruction(owner, claimerAta, owner, mintPk, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID)
-      );
-      await signAndSendTransaction(createAtaTx);
+      throw new Error('OST fee vault is still loading. Please wait a moment and try again.');
     }
     return claimerAta;
   }
@@ -3090,6 +3095,11 @@
 
     if (await conn.getAccountInfo(seedlessAccount)) {
       return { created: false, seedlessAccount: seedlessAccount.toBase58() };
+    }
+
+    const userLamports = await conn.getBalance(user).catch(function() { return 0; });
+    if (userLamports < Math.round(0.02 * solanaWeb3.LAMPORTS_PER_SOL)) {
+      return { created: false, skipped: true, reason: 'fee-vault-onboarding', seedlessAccount: seedlessAccount.toBase58() };
     }
 
     const data = new Uint8Array(SEEDLESS_ONBOARD_DISCRIMINATOR.length + 1);
@@ -3110,64 +3120,134 @@
     return { created: true, signature, seedlessAccount: seedlessAccount.toBase58() };
   }
 
+  function loadRewardClaims() {
+    try { return JSON.parse(localStorage.getItem(OST_REWARD_CLAIMS_STORAGE_KEY) || '{}'); } catch (e) { return {}; }
+  }
+
+  function saveRewardClaims(claims) {
+    try { localStorage.setItem(OST_REWARD_CLAIMS_STORAGE_KEY, JSON.stringify(claims)); } catch (e) {}
+  }
+
+  function getRewardClaimForWallet(walletAddress) {
+    const claims = loadRewardClaims();
+    const key = String(walletAddress || '').trim();
+    const claim = key && claims[key] ? claims[key] : {};
+    const welcomeClaimedAt = Number(claim.welcomeClaimedAt || 0);
+    const lastDailyClaimAt = Number(claim.lastDailyClaimAt || welcomeClaimedAt || 0);
+    const nextDailyClaimAt = welcomeClaimedAt ? lastDailyClaimAt + OST_DAILY_DROP_MS : 0;
+    return {
+      key,
+      raw: claim,
+      welcomeClaimed: welcomeClaimedAt > 0,
+      welcomeClaimedAt,
+      lastDailyClaimAt,
+      nextDailyClaimAt,
+      dailyReady: welcomeClaimedAt > 0 && Date.now() >= nextDailyClaimAt,
+      totalClaimed: Number(claim.totalClaimed || 0),
+      dailyClaimCount: Number(claim.dailyClaimCount || 0)
+    };
+  }
+
+  function formatDropCooldown(ms) {
+    const left = Math.max(0, Number(ms || 0));
+    const totalSeconds = Math.ceil(left / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    if (hours > 0) return hours + 'h ' + String(minutes).padStart(2, '0') + 'm';
+    return String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+  }
+
+  function writeRewardClaim(walletAddress, result) {
+    const claims = loadRewardClaims();
+    const current = claims[walletAddress] || {};
+    const now = Date.now();
+    const next = Object.assign({}, current, {
+      walletAddress,
+      totalClaimed: Number(current.totalClaimed || 0) + Number(result.amount || 0),
+      updatedAt: now,
+      lastSignature: result.signature || ''
+    });
+    if (result.kind === 'welcome') {
+      next.welcomeClaimedAt = now;
+      next.welcomeAmount = Number(result.amount || 0);
+      next.lastDailyClaimAt = now;
+    } else {
+      next.lastDailyClaimAt = now;
+      next.dailyClaimCount = Number(current.dailyClaimCount || 0) + 1;
+    }
+    claims[walletAddress] = next;
+    saveRewardClaims(claims);
+    return next;
+  }
+
+  function refreshFaucetRewardUi() {
+    if (!faucetBtn) return;
+    const label = faucetBtn.querySelector('[data-i18n="getost.faucetbtn"]') || faucetBtn;
+    if (!connectedWalletSession || !connectedWalletSession.publicKey) {
+      faucetBtn.disabled = false;
+      label.textContent = 'Claim 100 OST Head Start';
+      if (faucetAmount && !faucetTotal) faucetAmount.textContent = OST_WELCOME_DROP_AMOUNT.toFixed(2);
+      if (faucetStatus) {
+        faucetStatus.textContent = 'Create or connect a wallet to claim 100 OST. After that, manually claim 1 OST per day.';
+      }
+      return;
+    }
+    const walletAddress = connectedWalletSession.publicKey.toBase58();
+    const state = getRewardClaimForWallet(walletAddress);
+    if (!state.welcomeClaimed) {
+      faucetBtn.disabled = false;
+      label.textContent = 'Claim 100 OST Head Start';
+      if (faucetAmount && !faucetTotal) faucetAmount.textContent = OST_WELCOME_DROP_AMOUNT.toFixed(2);
+      if (faucetStatus && !faucetStatus.textContent) faucetStatus.textContent = 'First claim: 100 OST. Daily manual claims unlock after 24 hours.';
+      return;
+    }
+    if (state.dailyReady) {
+      faucetBtn.disabled = false;
+      label.textContent = 'Claim Today\'s 1 OST';
+      if (faucetAmount && !faucetTotal) faucetAmount.textContent = OST_DAILY_DROP_AMOUNT.toFixed(2);
+      if (faucetStatus && !faucetStatus.textContent) faucetStatus.textContent = 'Daily drop ready. Click the button to manually claim 1 OST.';
+      return;
+    }
+    faucetBtn.disabled = true;
+    label.textContent = 'Daily Claim in ' + formatDropCooldown(state.nextDailyClaimAt - Date.now());
+    if (faucetAmount && !faucetTotal) faucetAmount.textContent = OST_DAILY_DROP_AMOUNT.toFixed(2);
+  }
+
   async function claimOstFaucetForActiveWallet() {
     if (!connectedWalletSession || !connectedWalletSession.publicKey) {
       throw new Error(t('pay.deskNeedWallet', 'Create or connect your OST wallet first'));
     }
 
-    const conn = getSolanaConnection();
-    if (!conn) throw new Error('Solana RPC unavailable');
-
     const claimer = connectedWalletSession.publicKey;
-    const programId = new solanaWeb3.PublicKey(OST_CONFIG.programId);
-    const mintPk = new solanaWeb3.PublicKey(OST_CONFIG.mint);
-    const daoTreasury = solanaWeb3.PublicKey.findProgramAddressSync([encodeSeed('dao-treasury')], programId)[0];
-    const treasuryAuthority = solanaWeb3.PublicKey.findProgramAddressSync([encodeSeed('treasury-authority')], programId)[0];
-    const faucetClaim = solanaWeb3.PublicKey.findProgramAddressSync([encodeSeed('faucet-claim'), claimer.toBuffer()], programId)[0];
-    const treasuryTokenAccount = getAssociatedTokenAddressSync(mintPk, treasuryAuthority, true, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
-    const claimerTokenAccount = await ensureOstAssociatedTokenAccount(claimer);
-
-    if (await conn.getAccountInfo(faucetClaim)) {
-      return { claimed: false, alreadyClaimed: true, balance: await getOstBalanceForAddress(claimer) };
+    const walletAddress = claimer.toBase58();
+    const state = getRewardClaimForWallet(walletAddress);
+    let kind = 'welcome';
+    let amount = OST_WELCOME_DROP_AMOUNT;
+    if (state.welcomeClaimed) {
+      if (!state.dailyReady) {
+        return { claimed: false, cooldown: true, nextDailyClaimAt: state.nextDailyClaimAt, balance: await getOstBalanceForAddress(claimer) };
+      }
+      kind = 'daily';
+      amount = OST_DAILY_DROP_AMOUNT;
     }
 
-    const instruction = new solanaWeb3.TransactionInstruction({
-      programId,
-      keys: [
-        { pubkey: claimer, isSigner: true, isWritable: true },
-        { pubkey: claimerTokenAccount, isSigner: false, isWritable: true },
-        { pubkey: treasuryTokenAccount, isSigner: false, isWritable: true },
-        { pubkey: daoTreasury, isSigner: false, isWritable: false },
-        { pubkey: treasuryAuthority, isSigner: false, isWritable: false },
-        { pubkey: faucetClaim, isSigner: false, isWritable: true },
-        { pubkey: mintPk, isSigner: false, isWritable: false },
-        { pubkey: TOKEN_2022_PROGRAM_ID, isSigner: false, isWritable: false },
-        { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false }
-      ],
-      data: CLAIM_FAUCET_DISCRIMINATOR
-    });
-
-    // Charge a real per-wallet SOL fee so users individually pay for their
-    // OST faucet claim — no more free-riding the public faucet. The fee
-    // goes to the OST swap pool which is what backs the live swap path.
-    const FAUCET_SOL_FEE_LAMPORTS = 1_000_000; // 0.001 SOL ≈ $0.10
-    const tx = new solanaWeb3.Transaction();
-    try {
-      var poolPubkey = (window.OST_SWAP_POOL && window.OST_SWAP_POOL.publicKey)
-        ? new solanaWeb3.PublicKey(window.OST_SWAP_POOL.publicKey)
-        : daoTreasury; // fallback: send fee to the program treasury
-      tx.add(solanaWeb3.SystemProgram.transfer({
-        fromPubkey: claimer,
-        toPubkey: poolPubkey,
-        lamports: FAUCET_SOL_FEE_LAMPORTS
-      }));
-    } catch (e) {
-      console.warn('[OST] could not attach faucet SOL fee', e);
+    if (!window.OST_RESCUE || typeof window.OST_RESCUE.payoutOst !== 'function') {
+      throw new Error('Reward vault is still loading. Refresh the page and try again.');
     }
-    tx.add(instruction);
 
-    const signature = await signAndSendTransaction(tx);
-    return { claimed: true, signature, balance: await getOstBalanceForAddress(claimer), feeLamports: FAUCET_SOL_FEE_LAMPORTS };
+    const poolBalance = typeof window.OST_RESCUE.poolBalance === 'function'
+      ? await window.OST_RESCUE.poolBalance()
+      : amount;
+    if (Number(poolBalance || 0) < amount) {
+      throw new Error('Reward vault is being refilled. Try again in a moment.');
+    }
+
+    const memo = JSON.stringify({ k: 'ost-new-here', kind, amount, wallet: walletAddress, t: Date.now() });
+    const payout = await window.OST_RESCUE.payoutOst(claimer, amount, memo);
+    const actualAmount = Number(payout && payout.ost || amount);
+    writeRewardClaim(walletAddress, { kind, amount: actualAmount, signature: payout && payout.sig });
+    return { claimed: true, rewardKind: kind, amount: actualAmount, signature: payout && payout.sig, balance: await getOstBalanceForAddress(claimer) };
   }
 
   function openWalletModal() { if (walletModal) walletModal.classList.add('open'); }
@@ -3727,18 +3807,15 @@
 
     function getOstPulseStatusText() {
       if (walletFundingState.needsManualFunding && connectedWallet && walletFundingState.walletAddress === connectedWallet) {
-        return 'Wallet needs SOL';
+        return 'Fee vault ready';
       }
       if (!ostDevnetMetrics.available) {
         return ostDevnetMetrics.loading ? 'Syncing devnet' : 'Devnet sync pending';
       }
-      if (ostDevnetMetrics.treasuryBalance < OST_FAUCET_AMOUNT) {
-        return 'Treasury empty';
-      }
       if (ostDevnetMetrics.faucetClaimCount > 0) {
-        return formatCompactCount(ostDevnetMetrics.faucetClaimCount) + ' wallets served';
+        return formatCompactCount(ostDevnetMetrics.faucetClaimCount) + ' wallets served - 100 OST start';
       }
-      return 'Treasury ready';
+      return '100 OST start + 1/day';
     }
 
     function updateOstMarketBoard() {
@@ -3749,7 +3826,7 @@
       const liveValueEl = $('#ostLivePrice');
       const liveChangeEl = $('#ostLiveChange');
 
-      if (liveValueEl) liveValueEl.textContent = OST_FAUCET_AMOUNT.toFixed(2) + ' OST';
+      if (liveValueEl) liveValueEl.textContent = OST_WELCOME_DROP_AMOUNT.toFixed(0) + ' OST';
       if (liveChangeEl) {
         liveChangeEl.textContent = getOstPulseStatusText();
         liveChangeEl.className = 'price-card-change';
@@ -4581,7 +4658,7 @@
           var errMsg = (err && err.message) || String(err);
           if (curr === 'SOL') {
             transferResult.textContent = 'Swap failed: ' + errMsg;
-            setConvertRouteMessage('Convert could not complete: ' + errMsg + '. The swap pool releases OST at the live USD rate; if your wallet is empty of devnet SOL, fund it first via faucet.solana.com.');
+            setConvertRouteMessage('Convert could not complete: ' + errMsg + '. The fee vault covers network costs; SOL swaps still require SOL as the source asset. Claim the 100 OST head start if this is a new wallet.');
             return;
           } else {
             transferResult.textContent = 'Treasury route failed: ' + errMsg;
@@ -4789,6 +4866,7 @@
     const settings = options || {};
     if (faucetRunning) return { ok: false, busy: true };
     faucetRunning = true;
+    if (faucetBtn) faucetBtn.disabled = true;
 
     try {
       if (settings.animate !== false) {
@@ -4796,65 +4874,47 @@
       }
 
       if (!connectedWalletSession || typeof solanaWeb3 === 'undefined') {
-        if (faucetAmount) faucetAmount.textContent = '0.00';
-        if (faucetStatus) faucetStatus.textContent = 'Create or connect your wallet first, then claim real devnet OST.';
+        if (faucetAmount && !faucetTotal) faucetAmount.textContent = OST_WELCOME_DROP_AMOUNT.toFixed(2);
+        if (faucetStatus) faucetStatus.textContent = 'Create or connect a wallet to claim 100 OST. After that, manually claim 1 OST per day.';
         toast('👛', 'Create or connect your OST wallet first');
         return { ok: false, reason: 'no-wallet' };
       }
 
       try {
         const walletAddress = connectedWalletSession.publicKey.toBase58();
-        const metrics = await syncOstDevnetMetrics({ force: true });
-        if (metrics.available && metrics.treasuryBalance < OST_FAUCET_AMOUNT) {
-          throw new Error('OST treasury is empty on devnet. Refill the treasury before users can claim the faucet.');
-        }
-
-        if (faucetStatus) faucetStatus.textContent = 'Checking devnet SOL for network fees...';
-        let funding = { funded: false, balance: 0 };
-        try {
-          funding = await ensureWalletFeeBalance(connectedWalletSession.publicKey);
-        } catch (fundingError) {
-          const fundingErrorText = (fundingError && fundingError.message) || String(fundingError || 'Funding failed');
-          const isFundingRateLimited = /429|airdrop limit|faucet has run dry/i.test(fundingErrorText);
-          if (isFundingRateLimited) {
-            setWalletFundingState({
-              needsManualFunding: true,
-              walletAddress,
-              lastError: fundingErrorText
-            });
-            if (faucetStatus) {
-              faucetStatus.textContent = 'The public RPC airdrop is rate-limited. Open the Solana browser faucet, fund a little SOL into this wallet, then return here to claim OST.';
-            }
-            toast('⚠️', 'Open the browser faucet and add a little devnet SOL first.');
-            return { ok: false, reason: 'needs-manual-funding', error: fundingError };
-          }
-          throw fundingError;
+        const rewardState = getRewardClaimForWallet(walletAddress);
+        if (rewardState.welcomeClaimed && !rewardState.dailyReady) {
+          const waitText = formatDropCooldown(rewardState.nextDailyClaimAt - Date.now());
+          if (faucetStatus) faucetStatus.textContent = 'Daily 1 OST claim unlocks in ' + waitText + '. Claims are manual, so come back and press the button.';
+          refreshFaucetRewardUi();
+          return { ok: false, reason: 'daily-cooldown', nextDailyClaimAt: rewardState.nextDailyClaimAt };
         }
 
         clearWalletFundingState();
-        if (funding.funded && faucetStatus) {
-          faucetStatus.textContent = 'Fee balance ready. Recording wallet profile...';
-        } else if (faucetStatus) {
-          faucetStatus.textContent = 'Network fee balance ready. Recording wallet profile...';
-        }
+        const rewardLabel = rewardState.welcomeClaimed ? 'daily 1 OST drop' : '100 OST head start';
+        if (faucetStatus) faucetStatus.textContent = 'Opening the reward vault for your ' + rewardLabel + '...';
 
-        await maybeRecordSeedlessOnboard();
+        maybeRecordSeedlessOnboard().catch(function (recordError) {
+          console.warn('[OST] Seedless profile record skipped', recordError);
+        });
 
-        if (faucetStatus) faucetStatus.textContent = 'Preparing your OST token account...';
+        if (faucetStatus) faucetStatus.textContent = 'Preparing your OST token account. The reward vault pays the devnet fee.';
         const faucetResult = await claimOstFaucetForActiveWallet();
         const ostBalance = faucetResult.balance || await getOstBalanceForAddress(connectedWalletSession.publicKey);
         faucetTotal = ostBalance;
         if (faucetAmount) faucetAmount.textContent = ostBalance.toFixed(2);
 
-        if (faucetResult.alreadyClaimed) {
-          if (faucetStatus) faucetStatus.textContent = 'This wallet already claimed its OST faucet. Current balance: ' + ostBalance.toFixed(2) + ' OST.';
-          toast('ℹ️', 'OST faucet already claimed for this wallet');
-          syncOstDevnetMetrics({ force: true });
-          return { ok: true, alreadyClaimed: true, balance: ostBalance };
+        if (faucetResult.cooldown) {
+          const waitText = formatDropCooldown(faucetResult.nextDailyClaimAt - Date.now());
+          if (faucetStatus) faucetStatus.textContent = 'Daily 1 OST claim unlocks in ' + waitText + '.';
+          refreshFaucetRewardUi();
+          return { ok: false, reason: 'daily-cooldown', nextDailyClaimAt: faucetResult.nextDailyClaimAt, balance: ostBalance };
         }
 
-        if (faucetStatus) faucetStatus.textContent = 'OST claimed on devnet (charged 0.001 SOL fee). Balance ready: ' + ostBalance.toFixed(2) + ' OST.';
-        toast('🎉', '+1 OST claimed (–0.001 SOL fee paid on-chain)');
+        const claimedAmount = Number(faucetResult.amount || 0);
+        const humanKind = faucetResult.rewardKind === 'daily' ? 'daily manual drop' : 'head start';
+        if (faucetStatus) faucetStatus.textContent = claimedAmount.toFixed(2) + ' OST ' + humanKind + ' claimed. Wallet balance: ' + ostBalance.toFixed(2) + ' OST.';
+        toast('🎉', '+' + claimedAmount.toFixed(2) + ' OST ' + humanKind + ' claimed');
         launchConfetti();
         updateWalletBalance(connectedWallet);
         syncOstDevnetMetrics({ force: true });
@@ -4864,22 +4924,17 @@
         if (typeof window.syncPredictionMarketTradeWallet === 'function') {
           window.syncPredictionMarketTradeWallet();
         }
-        return { ok: true, claimed: true, balance: ostBalance };
+        refreshFaucetRewardUi();
+        return { ok: true, claimed: true, balance: ostBalance, amount: claimedAmount, rewardKind: faucetResult.rewardKind };
       } catch (e) {
         const errorText = (e && e.message) || String(e || 'OST faucet failed');
-        const isRateLimited = /429|airdrop limit|faucet has run dry/i.test(errorText);
-        const isTreasuryEmpty = /treasury is empty|refill the treasury/i.test(errorText);
+        const isTreasuryEmpty = /treasury is empty|refill the treasury|vault.*refill|vault.*empty/i.test(errorText);
         if (isTreasuryEmpty) {
-          if (faucetStatus) faucetStatus.textContent = 'The OST treasury is empty on devnet. Refill the treasury before users can claim the faucet.';
-          toast('⚠️', 'OST treasury is empty on devnet.');
-        } else if (isRateLimited) {
-          setWalletFundingState({
-            needsManualFunding: true,
-            walletAddress: connectedWalletSession.publicKey.toBase58(),
-            lastError: errorText
-          });
-          if (faucetStatus) faucetStatus.textContent = 'Devnet SOL faucet is rate-limited. Open the browser faucet, fund a little SOL, then click claim OST again.';
-          toast('⚠️', 'Open the browser faucet and fund test SOL manually, then retry.');
+          if (faucetStatus) faucetStatus.textContent = 'The OST reward vault is being refilled. Please try the claim again soon.';
+          toast('⚠️', 'OST reward vault is being refilled.');
+        } else if (/fee vault|vault keypair|OST_RESCUE|still loading/i.test(errorText)) {
+          if (faucetStatus) faucetStatus.textContent = 'The OST fee vault is still loading. Please wait a moment and click claim again.';
+          toast('⚠️', 'OST fee vault is still loading.');
         } else {
           if (faucetStatus) faucetStatus.textContent = 'Could not claim OST right now. Make sure Devnet is reachable and try again.';
           toast('⚠️', errorText);
@@ -4891,6 +4946,7 @@
       if (typeof window.syncWalletJourneyUi === 'function') {
         window.syncWalletJourneyUi();
       }
+      refreshFaucetRewardUi();
     }
   }
 
@@ -4923,6 +4979,9 @@
     faucetBtn.addEventListener('click', () => {
       runOstFaucetFlow({ animate: true });
     });
+    refreshFaucetRewardUi();
+    setInterval(refreshFaucetRewardUi, 1000);
+    window.addEventListener('ost:wallet-changed', refreshFaucetRewardUi);
   }
 
   /* ---------- PAY ANY LINK — removed, merged into Browser Mockup above ---------- */
@@ -4939,7 +4998,13 @@
     var overlay = document.getElementById('gvModalOverlay');
     var openBtn = document.getElementById('gvOpenModal');
     var closeBtn = document.getElementById('gvModalClose');
-    function openModal() { if (overlay) { overlay.classList.add('ost-modal-open'); document.body.style.overflow = 'hidden'; } }
+    function openModal() {
+      if (overlay) {
+        if (overlay.parentElement !== document.body) document.body.appendChild(overlay);
+        overlay.classList.add('ost-modal-open');
+        document.body.style.overflow = 'hidden';
+      }
+    }
     function closeModal() { if (overlay) { overlay.classList.remove('ost-modal-open'); document.body.style.overflow = ''; } }
     if (openBtn) openBtn.addEventListener('click', openModal);
     if (closeBtn) closeBtn.addEventListener('click', closeModal);
@@ -4947,6 +5012,16 @@
 
     var curStep = 1;
     var steps = ['gvStep1','gvStep2','gvStep3'];
+    var dobInput = document.getElementById('gvChildDob');
+    if (dobInput) dobInput.max = new Date().toISOString().slice(0, 10);
+
+    function saveGrowVaultPlan(plan) {
+      try {
+        var list = JSON.parse(localStorage.getItem('ost.growVaults.v1') || '[]');
+        list.unshift(plan);
+        localStorage.setItem('ost.growVaults.v1', JSON.stringify(list.slice(0, 20)));
+      } catch (e) {}
+    }
 
     function showStep(n) {
       curStep = n;
@@ -4962,7 +5037,7 @@
     // Pre-fill wallet if connected
     function fillWallet() {
       var addr = document.getElementById('gvWalletAddr');
-      if (addr && connectedWallet) addr.value = connectedWallet;
+      if (addr) addr.value = connectedWallet || 'No wallet connected - local vault plan';
     }
 
     // Step 1 validation
@@ -4975,8 +5050,8 @@
       if (!email || !email.value.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())) { if (gvStatus) gvStatus.textContent = '\u26A0\uFE0F Enter a valid email address'; return; }
       if (!country || !country.value) { if (gvStatus) gvStatus.textContent = '\u26A0\uFE0F Select your country of residence'; return; }
       fillWallet();
-      if (!connectedWallet) { if (gvStatus) gvStatus.textContent = '\u26A0\uFE0F Please connect your Solana wallet first (button in header)'; return; }
       showStep(2);
+      if (!connectedWallet && gvStatus) gvStatus.textContent = 'No wallet connected yet. You can still create a local Grow Vault plan and connect later.';
     });
 
     // Step 2 validation
@@ -5033,6 +5108,22 @@
       var dob = document.getElementById('gvChildDob');
       var childAge = dob ? Math.floor((new Date() - new Date(dob.value)) / (365.25*24*60*60*1000)) : 0;
       var childName = (document.getElementById('gvChildName') || {}).value || 'Child';
+      var guardianName = (document.getElementById('gvGuardianName') || {}).value || '';
+      var guardianEmail = (document.getElementById('gvGuardianEmail') || {}).value || '';
+      var relationship = (document.getElementById('gvRelationship') || {}).value || '';
+      var plan = {
+        id: 'gv-' + Date.now().toString(36),
+        createdAt: Date.now(),
+        childName: childName,
+        childDob: dob ? dob.value : '',
+        childAge: childAge,
+        guardianName: guardianName,
+        guardianEmail: guardianEmail,
+        relationship: relationship,
+        walletAddress: connectedWallet || '',
+        status: connectedWallet ? 'wallet-linked' : 'local-plan',
+        milestones: [10, 5, 15, 25, 50, 75, 100]
+      };
 
       if (connectedWallet && typeof solanaWeb3 !== 'undefined') {
         try {
@@ -5042,7 +5133,8 @@
           await sleep(1200);
           if (gvStatus) gvStatus.textContent = 'Setting vault lock (unlocks at age 18)...';
           await sleep(800);
-          if (gvStatus) gvStatus.textContent = '\u2705 Secure Vault created for ' + childName + ' (age ' + childAge + '). Locked until age 18. Milestone drops active.';
+          saveGrowVaultPlan(plan);
+          if (gvStatus) gvStatus.textContent = '\u2705 Secure Vault plan created for ' + childName + ' (age ' + childAge + '). Wallet linked, locked until age 18, milestone drops active.';
           toast('\uD83D\uDD12', 'Secure Grow Vault created for ' + childName + '!');
           launchConfetti();
         } catch(e) {
@@ -5050,7 +5142,8 @@
         }
       } else {
         await sleep(1500);
-        if (gvStatus) gvStatus.textContent = '\u2705 Local vault plan created for ' + childName + ' (age ' + childAge + '). Connect wallet to open the on-chain vault.';
+        saveGrowVaultPlan(plan);
+        if (gvStatus) gvStatus.textContent = '\u2705 Local vault plan saved for ' + childName + ' (age ' + childAge + '). Connect a wallet later to link it on-chain.';
         toast('\uD83D\uDD12', 'Local Grow Vault plan created for ' + childName);
         launchConfetti();
       }
@@ -5902,7 +5995,7 @@
 
       if (!hasWallet) {
         if (wdIntelFunding) wdIntelFunding.textContent = 'Not ready';
-        if (wdIntelFundingCopy) wdIntelFundingCopy.textContent = 'Needs wallet and devnet SOL';
+        if (wdIntelFundingCopy) wdIntelFundingCopy.textContent = 'Fees are covered once a wallet is connected';
         setIntelBadge(wdIntelMode, '', 'Awaiting wallet');
         setIntelBadge(wdPortfolioBadge, '', 'Waiting for funds');
         if (wdPortfolioCopy) wdPortfolioCopy.textContent = 'Your live wallet curve combines current SOL and OST holdings with the latest market tape.';
@@ -5910,8 +6003,8 @@
         setRouteStatus(wdRouteSwapStatus, '', 'Needs wallet');
         setRouteStatus(wdRoutePortalStatus, 'preview', 'Preview rails');
         setRouteStatus(wdRoutePredictStatus, '', 'Needs OST');
-        if (wdRouteHoldCopy) wdRouteHoldCopy.textContent = 'Create or connect a wallet to hold SOL and devnet OST in one place.';
-        if (wdRouteSwapCopy) wdRouteSwapCopy.textContent = 'Live once a wallet is connected, funded with devnet SOL, and routed into OST.';
+        if (wdRouteHoldCopy) wdRouteHoldCopy.textContent = 'Create or connect a wallet to hold OST while the fee vault sponsors devnet network costs.';
+        if (wdRouteSwapCopy) wdRouteSwapCopy.textContent = 'Live once a wallet is connected and routed into OST through the sponsored vault rail.';
         if (wdRoutePortalCopy) wdRoutePortalCopy.textContent = 'Wormhole, Onramper, MoonPay, and Transak stay linked here as the mainnet entry and exit stack.';
         if (wdRoutePredictCopy) wdRoutePredictCopy.textContent = 'Place live devnet market tickets after this wallet is holding OST.';
         drawWalletPortfolioChart([], { hasWallet: false });
@@ -5928,39 +6021,20 @@
         setRouteStatus(wdRoutePortalStatus, 'preview', 'Preview rails');
         setRouteStatus(wdRoutePredictStatus, 'live', 'Live devnet');
         if (wdRouteHoldCopy) wdRouteHoldCopy.textContent = 'This wallet is actively holding live devnet balances and exposing a real receive address.';
-        if (wdRouteSwapCopy) wdRouteSwapCopy.textContent = 'Switch between SOL and OST on the current wallet rail, then review the Jupiter route before any approval.';
+        if (wdRouteSwapCopy) wdRouteSwapCopy.textContent = 'Switch into OST rails while the fee vault pays Solana network costs for sponsored devnet actions.';
         if (wdRoutePortalCopy) wdRoutePortalCopy.textContent = 'Use Wormhole and the fiat portals as the future mainnet bridge, bank, card, and cash-out stack.';
         if (wdRoutePredictCopy) wdRoutePredictCopy.textContent = 'Prediction tickets can already move OST into the devnet market vault from this same wallet.';
-      } else if (hasSol) {
-        if (wdIntelFunding) wdIntelFunding.textContent = 'Gas ready';
-        if (wdIntelFundingCopy) wdIntelFundingCopy.textContent = 'Wallet has devnet SOL and is one step away from OST';
-        setIntelBadge(wdIntelMode, 'warning', 'Needs OST');
-        setIntelBadge(wdPortfolioBadge, 'warning', 'SOL funded');
-        setRouteStatus(wdRouteHoldStatus, 'live', 'Live now');
-        setRouteStatus(wdRouteSwapStatus, 'live', 'Swap ready');
-        setRouteStatus(wdRoutePortalStatus, 'preview', 'Preview rails');
-        setRouteStatus(wdRoutePredictStatus, 'warning', 'Needs OST');
-        if (wdRouteHoldCopy) wdRouteHoldCopy.textContent = 'The address is live and already funded with enough SOL for network fees.';
-        if (wdRouteSwapCopy) wdRouteSwapCopy.textContent = 'Route this wallet from SOL into OST on devnet, then use the same session for commerce and trading.';
-        if (wdRoutePortalCopy) wdRoutePortalCopy.textContent = 'Fiat, bank, and bridge partners stay linked as the future mainnet access layer.';
-        if (wdRoutePredictCopy) wdRoutePredictCopy.textContent = 'Claim or swap into OST first, then the prediction vault becomes tradeable.';
       } else {
-        if (wdIntelFunding) wdIntelFunding.textContent = needsManualFunding ? 'Needs browser faucet' : 'Needs devnet gas';
-        if (wdIntelFundingCopy) wdIntelFundingCopy.textContent = needsManualFunding
-          ? 'Copy this address into the Solana browser faucet, fund a little SOL, then claim OST'
-          : 'Top up devnet SOL, then claim or swap into OST';
-        setIntelBadge(wdIntelMode, 'warning', needsManualFunding ? 'Browser faucet' : 'Funding wallet');
-        setIntelBadge(wdPortfolioBadge, 'warning', 'Needs SOL');
+        if (wdIntelFunding) wdIntelFunding.textContent = 'Fee-covered';
+        if (wdIntelFundingCopy) wdIntelFundingCopy.textContent = 'The OST fee vault pays Solana fees. Claim the 100 OST head start next.';
+        setIntelBadge(wdIntelMode, 'warning', 'Claim OST');
+        setIntelBadge(wdPortfolioBadge, 'warning', 'Needs OST');
         setRouteStatus(wdRouteHoldStatus, 'live', 'Live now');
-        setRouteStatus(wdRouteSwapStatus, 'warning', 'Fund first');
+        setRouteStatus(wdRouteSwapStatus, 'warning', 'Claim first');
         setRouteStatus(wdRoutePortalStatus, 'preview', 'Preview rails');
         setRouteStatus(wdRoutePredictStatus, 'warning', 'Needs OST');
-        if (wdRouteHoldCopy) wdRouteHoldCopy.textContent = needsManualFunding
-          ? 'The address is real and connected. The next step is funding a little SOL through the Solana browser faucet.'
-          : 'The address is real and connected, but it still needs devnet SOL for fees.';
-        if (wdRouteSwapCopy) wdRouteSwapCopy.textContent = needsManualFunding
-          ? 'Use the browser faucet or a funded extension wallet, then claim OST and wake the full devnet route up.'
-          : 'The devnet route wakes up after the faucet or manual SOL funding lands in this wallet.';
+        if (wdRouteHoldCopy) wdRouteHoldCopy.textContent = 'The address is real and connected. No SOL top-up is needed for the sponsored OST claim.';
+        if (wdRouteSwapCopy) wdRouteSwapCopy.textContent = 'Claim the 100 OST head start first; sponsored devnet actions use the fee vault instead of user SOL.';
         if (wdRoutePortalCopy) wdRoutePortalCopy.textContent = 'Use the linked bank, card, and bridge portals to preview the future mainnet stack.';
         if (wdRoutePredictCopy) wdRoutePredictCopy.textContent = 'The prediction vault stays locked until this wallet is holding OST.';
       }
@@ -6168,7 +6242,6 @@
       const session = connectedWalletSession;
       const pubkey = session && session.publicKey ? session.publicKey.toBase58() : '';
       const isLocalWallet = !!(session && session.kind === 'local');
-      const needsManualFunding = !!(pubkey && walletFundingState.needsManualFunding && walletFundingState.walletAddress === pubkey);
       const backupExportedAt = readLocalWalletBackupExportedAt();
 
       if (!pubkey) {
@@ -6176,12 +6249,12 @@
         setJourneyText(
           'Awaiting wallet',
           'Connect a wallet to start on devnet',
-          'Create a browser wallet or connect an existing Solana wallet. OST will then guide you through devnet SOL and your first OST balance.'
+          'Create a browser wallet or connect an existing Solana wallet. OST covers the devnet network fees and guides you into your first balance.'
         );
         setJourneyStep(wdJourneyStepWallet, 'active', 'Choose create wallet or connect an existing address.');
         setJourneyStep(wdJourneyStepBackup, 'pending', 'Backup or verification starts right after the wallet session is open.');
-        setJourneyStep(wdJourneyStepSol, 'pending', 'Devnet SOL arrives during the faucet setup if this wallet needs fees.');
-        setJourneyStep(wdJourneyStepOst, 'pending', 'Claim devnet OST or open the convert rail once the wallet is ready.');
+        setJourneyStep(wdJourneyStepSol, 'pending', 'The OST fee vault sponsors Solana network fees for onboarding.');
+        setJourneyStep(wdJourneyStepOst, 'pending', 'Claim 100 OST once the wallet is ready.');
         setJourneyAction(wdJourneyPrimaryBtn, { action: 'create-local', label: 'Create browser wallet' });
         setJourneyAction(wdJourneySecondaryBtn, { action: 'show-access', label: 'Use extension wallet' });
         return;
@@ -6217,17 +6290,15 @@
       );
       setJourneyStep(
         wdJourneyStepSol,
-        hasSol ? 'ready' : 'active',
-        hasSol
-          ? solBalance.toFixed(4) + ' SOL ready for devnet fees.'
-          : 'This wallet still needs a small devnet SOL balance for fees.'
+        'ready',
+        'OST fee vault active. User SOL is not required for sponsored devnet actions.'
       );
       setJourneyStep(
         wdJourneyStepOst,
-        hasOst ? 'ready' : (hasSol ? 'active' : 'pending'),
+        hasOst ? 'ready' : 'active',
         hasOst
           ? ostBalance.toFixed(2) + ' OST ready for commerce and prediction.'
-          : 'Claim devnet OST now or open the convert rail to preview the future mainnet route.'
+          : 'Claim the 100 OST head start now. The reward vault pays the Solana fee.'
       );
 
       if (hasOst) {
@@ -6241,25 +6312,12 @@
         return;
       }
 
-      if (!hasSol) {
-        setJourneyText(
-          needsManualFunding ? 'Manual SOL top-up' : 'Devnet funding',
-          needsManualFunding ? 'Wallet connected, browser faucet step next' : 'Wallet connected, needs devnet gas',
-          needsManualFunding
-            ? 'The public RPC airdrop is rate-limited. Open the Solana browser faucet, fund a little devnet SOL into this address, then return here to claim OST from the community treasury.'
-            : 'This wallet needs a small devnet SOL balance before it can sign the OST faucet claim. Use the Solana browser faucet or a funded extension wallet, then return here to claim OST.'
-        );
-        setJourneyAction(wdJourneyPrimaryBtn, { action: 'open-sol-faucet', label: 'Open Solana faucet' });
-        setJourneyAction(wdJourneySecondaryBtn, { action: 'copy-address', label: 'Copy wallet address' });
-        return;
-      }
-
       setJourneyText(
         'Claim OST',
-        'Wallet connected, one step from OST',
-        'This address has enough devnet SOL for fees. Claim test OST from the community faucet or inspect the convert rail.'
+        'Wallet connected, fees covered',
+        'No SOL top-up is needed. The OST vault pays the network fee so this wallet can claim the 100 OST head start.'
       );
-      setJourneyAction(wdJourneyPrimaryBtn, { action: 'claim-faucet', label: 'Claim devnet OST' });
+      setJourneyAction(wdJourneyPrimaryBtn, { action: 'claim-faucet', label: 'Claim 100 OST' });
       setJourneyAction(wdJourneySecondaryBtn, isLocalWallet && !backupReady
         ? { action: 'download-backup', label: 'Download backup again' }
         : { action: 'open-convert', label: 'Open convert rail' });

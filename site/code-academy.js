@@ -41,6 +41,129 @@
   // ────────────────────────────────────────────────────────────────────────
   var LESSONS = [
     {
+      id: 'zero-hello',
+      level: 'start',
+      title: 'Start 1 · Make the computer say hello',
+      reward: 1,
+      intro: 'Code is a set of tiny instructions. This first instruction asks the computer to show a message.',
+      lines: [
+        { code: 'console.log("Hello, coder!");',
+          why: '`console.log` means "show this message". The words inside quotes are the message. The semicolon is like a period at the end of a sentence.' }
+      ],
+      run: function () { return ['Hello, coder!']; }
+    },
+    {
+      id: 'zero-name',
+      level: 'start',
+      title: 'Start 2 · Save a word in a box',
+      reward: 1,
+      intro: 'A variable is a little named box. Put a word in the box, then use the box later.',
+      lines: [
+        { code: 'let name = "Mia";',
+          why: '`let` makes a box called `name`. The box is holding the word "Mia".' },
+        { code: 'console.log(name);',
+          why: 'Now we ask the computer to show what is inside the `name` box. It prints Mia.' }
+      ],
+      run: function () { return ['Mia']; }
+    },
+    {
+      id: 'zero-math',
+      level: 'start',
+      title: 'Start 3 · Add numbers',
+      reward: 2,
+      intro: 'Computers are very good at math. We can save numbers, add them, and print the answer.',
+      lines: [
+        { code: 'let apples = 2;',
+          why: 'This makes a number box called `apples` and puts 2 inside.' },
+        { code: 'let oranges = 3;',
+          why: 'This makes another number box called `oranges` and puts 3 inside.' },
+        { code: 'console.log(apples + oranges);',
+          why: '`+` adds the two numbers. The computer prints 5.' }
+      ],
+      run: function () { return ['5']; }
+    },
+    {
+      id: 'zero-if',
+      level: 'start',
+      title: 'Start 4 · Make a choice with if',
+      reward: 2,
+      intro: 'An `if` statement lets code make a choice, like: if it is raining, take an umbrella.',
+      lines: [
+        { code: 'let score = 10;',
+          why: 'We save the number 10 in a box named `score`.' },
+        { code: 'if (score > 5) {',
+          why: '`if` checks a question. Here the question is: is score bigger than 5?' },
+        { code: '  console.log("You win!");',
+          why: 'This line runs only when the question is true. The two spaces are indentation, which helps humans read the code.' },
+        { code: '}',
+          why: 'The closing brace ends the `if` block.' }
+      ],
+      run: function () { return ['You win!']; }
+    },
+    {
+      id: 'zero-loop',
+      level: 'start',
+      title: 'Start 5 · Repeat with a loop',
+      reward: 3,
+      intro: 'A loop repeats code so you do not have to type the same instruction over and over.',
+      lines: [
+        { code: 'for (let count = 1; count <= 3; count++) {',
+          why: '`for` starts a loop. It begins at 1, keeps going while the count is 3 or less, and adds 1 each time.' },
+        { code: '  console.log(count);',
+          why: 'Each loop round prints the current count.' },
+        { code: '}',
+          why: 'The closing brace ends the loop. The output is 1, then 2, then 3.' }
+      ],
+      run: function () { return ['1', '2', '3']; }
+    },
+    {
+      id: 'zero-html',
+      level: 'start',
+      title: 'Start 6 · Build your first web page',
+      reward: 3,
+      intro: 'HTML is the skeleton of a web page. Tags tell the browser what each piece means.',
+      lines: [
+        { code: '<h1>My first page</h1>',
+          why: '`<h1>` means the biggest heading on the page. `</h1>` closes the heading.' },
+        { code: '<p>I am learning to code.</p>',
+          why: '`<p>` means paragraph. The words between the tags are what people see on the page.' }
+      ]
+    },
+    {
+      id: 'zero-css',
+      level: 'start',
+      title: 'Start 7 · Make text look friendly',
+      reward: 3,
+      intro: 'CSS is the clothing of a web page. It controls color, size, spacing, and layout.',
+      lines: [
+        { code: '.title {',
+          why: '`.title` finds anything with `class="title"`. The `{` starts the style rules.' },
+        { code: '  color: blue;',
+          why: '`color` changes text color. This makes the text blue.' },
+        { code: '  font-size: 32px;',
+          why: '`font-size` changes how tall the letters are. `px` means pixels.' },
+        { code: '}',
+          why: 'The closing brace ends the style rules.' }
+      ]
+    },
+    {
+      id: 'zero-button',
+      level: 'start',
+      title: 'Start 8 · Make a button react',
+      reward: 4,
+      intro: 'Web apps feel alive when buttons listen for clicks and run code.',
+      lines: [
+        { code: 'const button = document.querySelector("button");',
+          why: '`document.querySelector("button")` finds the first button on the page. We save it in a box called `button`.' },
+        { code: 'button.addEventListener("click", () => {',
+          why: '`addEventListener` means "listen for something". Here it listens for a click.' },
+        { code: '  console.log("Button clicked!");',
+          why: 'This message prints when the button is clicked.' },
+        { code: '});',
+          why: 'This closes the click listener.' }
+      ]
+    },
+    {
       id: 'js-hello',
       level: 'beginner',
       title: 'JavaScript · Your first variable',
@@ -287,7 +410,7 @@
     modal.innerHTML =
       '<div class="oac-card">' +
         '<div class="oac-head">' +
-          '<div class="oac-title">💻 OST Code Academy <span style="color:#94a3b8;font-weight:400;font-size:13px;">· learn what you type</span></div>' +
+          '<div class="oac-title">💻 OST Code Academy <span style="color:#94a3b8;font-weight:400;font-size:13px;">· from zero to builder</span></div>' +
           '<div style="display:flex;align-items:center;gap:14px;">' +
             '<span class="oac-balance">Balance: <strong data-ostg-balance>0.00</strong> OST</span>' +
             '<button class="oac-close" id="oacClose">×</button>' +
@@ -310,6 +433,7 @@
               '<div class="oac-progress"><div class="oac-progress-fill" id="oacProgress" style="width:0;"></div></div>' +
               '<span class="oac-foot-status" id="oacStatus">Ready when you are.</span>' +
               '<div class="oac-foot-actions">' +
+                '<button class="oac-btn" id="oacHint">Help me type</button>' +
                 '<button class="oac-btn" id="oacRun" disabled>▶ Run</button>' +
                 '<button class="oac-btn oac-btn-primary" id="oacClaim" disabled>Claim reward</button>' +
               '</div>' +
@@ -386,6 +510,7 @@
 
     document.getElementById('oacRun').disabled = !lesson.run;
     document.getElementById('oacRun').onclick = function () { runLesson(); };
+    document.getElementById('oacHint').onclick = function () { helpTypeActiveLine(); };
     document.getElementById('oacClaim').onclick = function () { claimReward(); };
   }
 
@@ -427,6 +552,17 @@
     }
   }
 
+  function helpTypeActiveLine() {
+    if (!current || current.idx >= current.lesson.lines.length) return;
+    var input = document.querySelector('#oacEditor .oac-line-input[data-i="' + current.idx + '"]');
+    if (!input) return;
+    var target = current.lesson.lines[current.idx].code;
+    if (target.indexOf(input.value) !== 0) input.value = '';
+    input.value = target.slice(0, input.value.length + 1);
+    input.focus();
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
   function refreshExplain() {
     if (!current) return;
     var idx = Math.min(current.idx, current.lesson.lines.length - 1);
@@ -450,7 +586,7 @@
     if (!current) return;
     var pct = Math.round((current.idx / current.lesson.lines.length) * 100);
     document.getElementById('oacProgress').style.width = pct + '%';
-    document.getElementById('oacStatus').textContent = current.idx + ' / ' + current.lesson.lines.length + ' lines · ' + pct + '%';
+    document.getElementById('oacStatus').textContent = current.idx + ' / ' + current.lesson.lines.length + ' lines · ' + pct + '% · type the yellow line';
     document.getElementById('oacClaim').disabled = !(current.idx >= current.lesson.lines.length && !current.claimed);
   }
 

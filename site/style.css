@@ -4712,6 +4712,14 @@ select.sim-input { cursor: pointer; }
   animation: modalSlideIn .3s ease;
   max-height: 90vh; overflow-y: auto;
 }
+.ost-modal-overlay > .ost-modal {
+  display: block;
+  position: relative;
+  inset: auto;
+  z-index: auto;
+  color: var(--text);
+  font-family: var(--font-sans);
+}
 .ost-modal-lg { max-width: 540px; }
 @keyframes modalSlideIn {
   from { opacity: 0; transform: translateY(24px) scale(.96); }
