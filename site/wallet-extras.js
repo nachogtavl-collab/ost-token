@@ -566,17 +566,21 @@
     modal.innerHTML =
       '<div style="background:#0f131e;border:1px solid rgba(255,255,255,0.08);border-radius:18px;max-width:460px;width:100%;padding:26px 24px;box-shadow:0 20px 60px rgba(0,0,0,0.55);">' +
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">' +
-          '<h3 style="margin:0;font-size:1.15rem;color:#f8fafc;">Send OST on Devnet</h3>' +
+          '<h3 style="margin:0;font-size:1.15rem;color:#f8fafc;" id="ostSendTitle">Send on Devnet</h3>' +
           '<button type="button" id="ostSendClose" aria-label="Close" style="background:transparent;border:none;color:#94a3b8;font-size:1.4rem;cursor:pointer;line-height:1;">&times;</button>' +
         '</div>' +
-        '<p style="color:#94a3b8;font-size:.85rem;margin:0 0 16px;">Real Token-2022 transfer on Solana devnet. The recipient\'s OST account is created automatically if it doesn\'t exist (small SOL fee).</p>' +
+        '<p style="color:#94a3b8;font-size:.85rem;margin:0 0 14px;" id="ostSendIntro">Real Token-2022 transfer on Solana devnet. The recipient\'s OST account is created automatically if it doesn\'t exist (small SOL fee).</p>' +
+        '<div style="display:flex;gap:8px;margin:0 0 14px;" role="tablist" aria-label="Asset to send">' +
+          '<button type="button" data-send-asset="OST" class="btn btn-outline btn-sm is-active" id="ostSendAssetOst" style="flex:1;">&#9673; OST</button>' +
+          '<button type="button" data-send-asset="SOL" class="btn btn-outline btn-sm" id="ostSendAssetSol" style="flex:1;">&#9728; SOL</button>' +
+        '</div>' +
         '<div style="display:flex;flex-direction:column;gap:14px;">' +
           '<label style="display:flex;flex-direction:column;gap:6px;color:#cbd5e1;font-size:.85rem;">' +
             'Recipient wallet address' +
             '<input type="text" id="ostSendTo" placeholder="Solana public key" autocomplete="off" spellcheck="false" style="padding:11px 12px;border-radius:9px;border:1px solid rgba(255,255,255,0.12);background:rgba(0,0,0,0.3);color:#f1f5f9;font-family:monospace;font-size:.82rem;">' +
           '</label>' +
           '<label style="display:flex;flex-direction:column;gap:6px;color:#cbd5e1;font-size:.85rem;">' +
-            '<span style="display:flex;justify-content:space-between;align-items:baseline;">Amount (OST) <span id="ostSendAvail" style="font-size:.78rem;color:#94a3b8;">balance: --</span></span>' +
+            '<span style="display:flex;justify-content:space-between;align-items:baseline;"><span id="ostSendAmountLabel">Amount (OST)</span> <span id="ostSendAvail" style="font-size:.78rem;color:#94a3b8;">balance: --</span></span>' +
             '<input type="number" id="ostSendAmount" placeholder="0.00" min="0" step="any" style="padding:11px 12px;border-radius:9px;border:1px solid rgba(255,255,255,0.12);background:rgba(0,0,0,0.3);color:#f1f5f9;font-size:.95rem;">' +
             '<span style="display:flex;gap:6px;flex-wrap:wrap;">' +
               '<button type="button" data-send-quick="0.1" class="btn btn-outline btn-sm">0.1</button>' +
@@ -598,6 +602,8 @@
     on($('ostSendClose'), 'click', closeSendModal);
     modal.addEventListener('click', function (e) { if (e.target === modal) closeSendModal(); });
     on($('ostSendBtn'), 'click', performSend);
+    on($('ostSendAssetOst'), 'click', function () { setSendAsset('OST'); });
+    on($('ostSendAssetSol'), 'click', function () { setSendAsset('SOL'); });
     modal.querySelectorAll('[data-send-quick]').forEach(function (b) {
       b.addEventListener('click', function () {
         var v = b.getAttribute('data-send-quick');
@@ -620,12 +626,35 @@
     modal.style.display = 'flex';
     var status = $('ostSendStatus');
     if (status) status.textContent = '';
-    refreshSendBalance();
+    setSendAsset(window._ostSendAsset || 'OST');
   }
 
   function closeSendModal() {
     var modal = $('ostSendModal');
     if (modal) modal.style.display = 'none';
+  }
+
+  // Asset selector: 'OST' (Token-2022 transfer) or 'SOL' (System transfer).
+  function setSendAsset(asset) {
+    asset = asset === 'SOL' ? 'SOL' : 'OST';
+    window._ostSendAsset = asset;
+    var ostBtn = $('ostSendAssetOst');
+    var solBtn = $('ostSendAssetSol');
+    if (ostBtn) ostBtn.classList.toggle('is-active', asset === 'OST');
+    if (solBtn) solBtn.classList.toggle('is-active', asset === 'SOL');
+    var sendBtn = $('ostSendBtn');
+    if (sendBtn) sendBtn.textContent = 'Send ' + asset;
+    var title = $('ostSendTitle');
+    if (title) title.textContent = 'Send ' + asset + ' on Devnet';
+    var intro = $('ostSendIntro');
+    if (intro) {
+      intro.textContent = asset === 'SOL'
+        ? 'Native SOL transfer on Solana devnet. The recipient receives lamports directly \u2014 no token account needed.'
+        : 'Real Token-2022 transfer on Solana devnet. The recipient\'s OST account is created automatically if it doesn\'t exist (small SOL fee).';
+    }
+    var amountLabel = $('ostSendAmountLabel');
+    if (amountLabel) amountLabel.textContent = 'Amount (' + asset + ')';
+    refreshSendBalance();
   }
 
   function refreshSendBalance() {
@@ -637,6 +666,15 @@
       return;
     }
     avail.textContent = 'loading…';
+    var asset = window._ostSendAsset || 'OST';
+    if (asset === 'SOL') {
+      var conn = w.getConnection();
+      conn.getBalance(w.session.publicKey).then(function (lamports) {
+        var sol = (lamports || 0) / solanaWeb3.LAMPORTS_PER_SOL;
+        avail.textContent = 'balance: ' + sol.toFixed(4) + ' SOL';
+      }).catch(function () { avail.textContent = 'balance: --'; });
+      return;
+    }
     w.getOstBalance(w.address).then(function (bal) {
       avail.textContent = 'balance: ' + (Number(bal) || 0).toFixed(4) + ' OST';
     }).catch(function () { avail.textContent = 'balance: --'; });
@@ -646,6 +684,7 @@
     var w = window.OST_WALLET;
     var statusEl = $('ostSendStatus');
     var sendBtn = $('ostSendBtn');
+    var asset = window._ostSendAsset || 'OST';
     var setStatus = function (msg, color) {
       if (statusEl) { statusEl.textContent = msg; statusEl.style.color = color || '#94a3b8'; }
     };
@@ -667,6 +706,47 @@
     sendBtn.disabled = true;
     sendBtn.innerHTML = '<span class="ost-spinner"></span> sending…';
     try {
+      // -----------------------------------------------------------------
+      // SOL native transfer path (System Program).
+      // -----------------------------------------------------------------
+      if (asset === 'SOL') {
+        var conn0 = w.getConnection();
+        var lamportsToSend = Math.round(amount * solanaWeb3.LAMPORTS_PER_SOL);
+        var senderLamports = await conn0.getBalance(w.session.publicKey);
+        var feeBuffer = 5000;
+        if (senderLamports < lamportsToSend + feeBuffer) {
+          setStatus('Not enough SOL. Have ' + (senderLamports / solanaWeb3.LAMPORTS_PER_SOL).toFixed(4) + ' SOL.', '#ef4444');
+          sendBtn.disabled = false; sendBtn.innerHTML = 'Send SOL';
+          return;
+        }
+        setStatus('Building transaction…');
+        var solTx = new solanaWeb3.Transaction();
+        if (memo) solTx.add(w.memoIx(memo, w.session.publicKey));
+        solTx.add(solanaWeb3.SystemProgram.transfer({
+          fromPubkey: w.session.publicKey,
+          toPubkey: recipient,
+          lamports: lamportsToSend,
+        }));
+        setStatus('Awaiting wallet signature…');
+        var solSig = await w.sign(solTx);
+        setStatus('✓ Sent! Signature: ' + solSig.slice(0, 14) + '…', '#34d399');
+        toast('💸', 'Sent ' + amount + ' SOL · ' + solSig.slice(0, 8));
+
+        try {
+          var newSol = (await conn0.getBalance(w.session.publicKey)) / solanaWeb3.LAMPORTS_PER_SOL;
+          var ostBal2 = await w.getOstBalance(w.session.publicKey).catch(function () { return 0; });
+          recordSnapshot({ ts: Date.now(), ostBalance: ostBal2, solBalance: newSol, kind: 'send-sol', amount: amount, sig: solSig, to: to });
+          refreshChartIfReady();
+        } catch (e) {}
+
+        refreshSendBalance();
+        setTimeout(closeSendModal, 2500);
+        return;
+      }
+
+      // -----------------------------------------------------------------
+      // OST Token-2022 transfer path (default).
+      // -----------------------------------------------------------------
       var conn = w.getConnection();
       var c = w.constants;
       var mintPk = new solanaWeb3.PublicKey(window.OST_CONFIG.mint);
@@ -716,7 +796,7 @@
       console.warn('[OST send] failed', err);
       setStatus('Send failed: ' + (err.message || err), '#ef4444');
     } finally {
-      sendBtn.disabled = false; sendBtn.innerHTML = 'Send OST';
+      sendBtn.disabled = false; sendBtn.innerHTML = 'Send ' + (window._ostSendAsset || 'OST');
     }
   }
 
