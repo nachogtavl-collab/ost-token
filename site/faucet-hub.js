@@ -15,7 +15,7 @@
   'use strict';
 
   var STATE_KEY = 'ost.faucet.hub.v2';
-  var MIN_PAYOUT = 5;                // OST credits required to cash out
+  var MIN_PAYOUT = 0.5;              // OST credits required to cash out — low so demos work end-to-end
   var COOLDOWN_GUESS_MS = 60 * 1000; // 60 seconds for the 3x3 game
   var COOLDOWN_SPIN_MS  = 30 * 60 * 1000;
   var COOLDOWN_AD_MS    = 30 * 60 * 1000;

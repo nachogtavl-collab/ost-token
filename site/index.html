@@ -5441,7 +5441,10 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   </script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="app.js?v=79"></script>
+  <!-- RPC multiplexer: every Connection instance auto-fails-over and broadcast-sends.
+       MUST load BEFORE app.js so all connections built by the app inherit the wrapper. -->
+  <script src="rpc-multiplexer.js?v=1"></script>
+  <script src="app.js?v=80"></script>
   <script src="nuevo-laredo-gas.js?v=1"></script>
   <script src="shop-quickview.js?v=1"></script>
   <script src="interchange-live.js?v=1"></script>
@@ -5461,7 +5464,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <!-- On-chain betting (devnet program ost_betting) -->
   <script src="ost-onchain-bet.js?v=1"></script>
   <script src="ux-extras.js?v=3"></script>
-  <script src="faucet-hub.js?v=6"></script>
+  <script src="faucet-hub.js?v=7"></script>
   <script src="faucet-hub-ads.js?v=2"></script>
   <script src="ost-games.js?v=2"></script>
   <script src="code-academy.js?v=2"></script>
