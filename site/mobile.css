@@ -1,0 +1,208 @@
+/* =========================================================================
+ * OST · Mobile-friendly overrides
+ * Targets: hero, store tabs, fuel section, shop cart, modals, gift cards
+ * Loaded last so it wins specificity battles without raising !important.
+ * ========================================================================= */
+
+/* ---------------------------------------------------------------- Tablet */
+@media (max-width: 960px) {
+  .hero,
+  .hero-content {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+  .store-tabs,
+  .demo-tabs {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+    flex-wrap: nowrap !important;
+    gap: 8px !important;
+    padding-bottom: 6px;
+  }
+  .store-tab,
+  .demo-tab {
+    flex: 0 0 auto !important;
+    scroll-snap-align: start;
+    min-width: 120px;
+    font-size: 13px !important;
+  }
+  .store-products,
+  .pay-anywhere-grid,
+  .interchange-desk-summary {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+  .fuel2-command,
+  .fuel2-station,
+  .fuel2-list-head {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .fuel2-country-row {
+    flex-wrap: wrap !important;
+  }
+  .fuel2-country-sel {
+    width: 100% !important;
+  }
+  .gc2-atlas {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ---------------------------------------------------------------- Phone */
+@media (max-width: 640px) {
+  body {
+    font-size: 15px;
+  }
+  h1, .hero h1 { font-size: 1.9rem !important; line-height: 1.15 !important; }
+  h2 { font-size: 1.35rem !important; }
+  h3 { font-size: 1.15rem !important; }
+
+  /* Header / nav */
+  .navbar,
+  header.site-header {
+    padding: 10px 12px !important;
+  }
+  .nav-links {
+    display: none !important;
+  }
+  .nav-mobile-toggle {
+    display: inline-flex !important;
+  }
+
+  /* Stores grid → single column */
+  .store-products,
+  .pay-anywhere-grid,
+  .interchange-desk-summary,
+  .gc2-signal-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Hero */
+  .hero {
+    min-height: 78vh !important;
+    padding: 28px 14px !important;
+    text-align: center;
+  }
+  .hero-actions {
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+  .hero-actions .btn {
+    width: 100% !important;
+  }
+
+  /* Cart */
+  .store-cart {
+    position: sticky;
+    bottom: 0;
+    z-index: 12;
+    box-shadow: 0 -8px 24px rgba(0,0,0,0.45);
+    border-radius: 14px 14px 0 0 !important;
+    margin: 0 -8px;
+  }
+  .cart-footer {
+    padding: 12px !important;
+  }
+  .btn-pay {
+    width: 100% !important;
+    padding: 14px !important;
+    font-size: 15px !important;
+  }
+
+  /* Fuel section */
+  .fuel2-search-bar {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+  .fuel2-loc-input,
+  .fuel2-find-btn {
+    width: 100% !important;
+  }
+  .fuel2-fuel-tabs,
+  .fuel2-sort-row {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap !important;
+  }
+  .fuel2-station {
+    padding: 10px !important;
+  }
+  .fuel2-detail-modal {
+    width: 96vw !important;
+    max-height: 92vh !important;
+    overflow-y: auto !important;
+    border-radius: 12px !important;
+  }
+  .fuel2-det-prices,
+  .fuel2-det-pay-fields,
+  .fuel2-det-session-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Generic modal sizing */
+  #ostSendModal > div,
+  #mxOstCheckout > div,
+  .modal-content,
+  .ost-modal {
+    width: 96vw !important;
+    max-height: 92vh !important;
+    overflow-y: auto !important;
+  }
+
+  /* Wallet dashboard */
+  .wallet-dash-grid,
+  .wd-balance-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Prediction board */
+  .prediction-board,
+  .prediction-stage,
+  .prediction-trade {
+    grid-template-columns: 1fr !important;
+  }
+  .prediction-pulse,
+  .prediction-tape {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap !important;
+  }
+
+  /* Generic readability */
+  pre, code {
+    word-break: break-word !important;
+    white-space: pre-wrap !important;
+  }
+  table {
+    display: block !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Tap targets */
+  .btn, button, .store-tab, .fuel2-ft, .fuel2-sort {
+    min-height: 40px !important;
+  }
+}
+
+/* ---------------------------------------------------------------- Tiny */
+@media (max-width: 380px) {
+  h1, .hero h1 { font-size: 1.65rem !important; }
+  .pay-demo-header h3,
+  .interchange-desk-head h3 {
+    font-size: 1rem !important;
+  }
+  .cart-badge {
+    font-size: 11px !important;
+  }
+}
+
+/* Reduced motion respect */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
