@@ -138,7 +138,10 @@
           '<div class="ostg-balance-card">' +
             '<span class="ostg-balance-label">Bonus balance</span>' +
             '<span class="ostg-balance-amt"><strong data-ostg-balance>0.00</strong> OST</span>' +
-            '<button class="ostg-fair-btn" id="ostgFairBtn" type="button">🔐 Fairness</button>' +
+            '<div class="ostg-balance-actions">' +
+              '<button class="ostg-cash-btn" id="ostgCashBtn" type="button" title="Send earned OST to your real wallet">💸 Cash out</button>' +
+              '<button class="ostg-fair-btn" id="ostgFairBtn" type="button">🔐 Fairness</button>' +
+            '</div>' +
           '</div>' +
         '</div>' +
         '<div class="ostg-tabs" id="ostgTabs">' +
@@ -146,6 +149,10 @@
           '<button class="ostg-tab" data-game="crash">🚀 Crash</button>' +
           '<button class="ostg-tab" data-game="dice">🎲 Dice</button>' +
           '<button class="ostg-tab" data-game="plinko">🟡 Plinko</button>' +
+          '<button class="ostg-tab" data-game="limbo">🌙 Limbo</button>' +
+          '<button class="ostg-tab" data-game="hilo">🃏 Hi-Lo</button>' +
+          '<button class="ostg-tab" data-game="wheel">🎡 Wheel</button>' +
+          '<button class="ostg-tab" data-game="coinflip">🪙 Coinflip</button>' +
         '</div>' +
         '<div class="ostg-stage" id="ostgStage"></div>' +
         '<div class="ostg-history" id="ostgHistory"><span class="ostg-history-label">Recent multipliers:</span></div>' +
@@ -167,6 +174,25 @@
     bindTabs();
     showGame('mines');
     document.getElementById('ostgFairBtn').addEventListener('click', openFairness);
+    var cashBtn = document.getElementById('ostgCashBtn');
+    if (cashBtn) {
+      cashBtn.addEventListener('click', function () {
+        // Re-use the faucet-hub cashout flow (same balance, same on-chain vault).
+        var hubBtn = document.getElementById('fhCashout');
+        if (hubBtn) { hubBtn.click(); return; }
+        // Fallback: scroll to faucet vault if hub not loaded yet.
+        var vault = document.getElementById('ostFaucetHub');
+        if (vault) vault.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+      var sync = function () {
+        var bal = getBalance();
+        cashBtn.disabled = bal < 1;
+        cashBtn.title = bal < 1 ? 'Need at least 1 OST to cash out' : 'Cash out ' + fmt(bal) + ' OST to your wallet';
+      };
+      sync();
+      window.addEventListener('storage', sync);
+      setInterval(sync, 1500);
+    }
   }
 
   function bindTabs() {
@@ -183,10 +209,14 @@
     var stage = document.getElementById('ostgStage');
     if (!stage) return;
     stage.innerHTML = '';
-    if (game === 'mines') return renderMines(stage);
-    if (game === 'crash') return renderCrash(stage);
-    if (game === 'dice')  return renderDice(stage);
-    if (game === 'plinko')return renderPlinko(stage);
+    if (game === 'mines')    return renderMines(stage);
+    if (game === 'crash')    return renderCrash(stage);
+    if (game === 'dice')     return renderDice(stage);
+    if (game === 'plinko')   return renderPlinko(stage);
+    if (game === 'limbo')    return renderLimbo(stage);
+    if (game === 'hilo')     return renderHiLo(stage);
+    if (game === 'wheel')    return renderWheel(stage);
+    if (game === 'coinflip') return renderCoinflip(stage);
   }
 
   function pushHistory(mult) {
@@ -633,22 +663,33 @@
       // Each row: <0.5 left, ≥0.5 right
       var bucket = 0;
       for (var i = 0; i < n; i++) if (floats[i] >= 0.5) bucket++;
-      // Animate
+      // Animate — ball must visually land in the chosen bucket so the result
+      // matches what the user sees. We keep rights = bucket count so the ball
+      // ends up at column `bucket` of `n+1` buckets.
       var topY = 30, botY = canvas.height - 40, spacingY = (botY - topY) / n;
-      var x = canvas.width / 2, y = topY;
+      var pegSpacing = 28;
+      var startX = canvas.width / 2;
+      var x = startX, y = topY;
       var stepIdx = 0;
+      var rights = 0;
       function step() {
         paintBoard();
         ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2); ctx.fillStyle = '#f5c468'; ctx.fill();
         if (stepIdx < n) {
-          var go = floats[stepIdx] >= 0.5 ? 14 : -14;
-          x += go;
+          var goRight = floats[stepIdx] >= 0.5;
+          if (goRight) { x += pegSpacing / 2; rights++; } else { x -= pegSpacing / 2; }
           y += spacingY;
           stepIdx++;
           requestAnimationFrame(step);
         } else {
-          var mult = PLINKO_MULTS[n][risk.value][bucket];
+          // Snap ball x to centre of the resolved bucket (visual integrity)
+          var buckets = n + 1;
+          var bw = canvas.width / buckets;
+          var bx = bucket * bw + bw / 2;
+          x = bx; y = botY + 18;
           paintBoard(bucket);
+          ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2); ctx.fillStyle = '#f5c468'; ctx.fill();
+          var mult = PLINKO_MULTS[n][risk.value][bucket];
           var payout = amt * mult;
           if (payout > 0) credit(payout, 'plinko');
           pushHistory(mult);
@@ -659,6 +700,307 @@
       }
       step();
     });
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // LIMBO — pick a target multiplier; you win if the random multiplier ≥ target.
+  // crash-style formula: m = 99 / (100 * r), clipped to ≥1. House edge 1%.
+  // ────────────────────────────────────────────────────────────────────────
+  function renderLimbo(stage) {
+    stage.innerHTML =
+      '<div class="ostg-game ostg-limbo">' +
+        '<div class="ostg-controls">' +
+          '<label>Bet (OST)<input type="number" id="lbBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
+          '<label>Target ×<input type="number" id="lbTarget" min="1.01" max="1000000" step="0.01" value="2.00" inputmode="decimal"></label>' +
+          '<button class="ostg-btn ostg-btn-primary" id="lbRoll">Roll</button>' +
+          '<div class="ostg-meta"><span>Win chance</span> <strong id="lbChance">49.50%</strong></div>' +
+          '<div class="ostg-meta"><span>Payout</span> <strong id="lbPay">2.00 OST</strong></div>' +
+        '</div>' +
+        '<div class="ostg-limbo-stage"><div class="ostg-limbo-mult" id="lbMult">1.00×</div></div>' +
+        '<div class="ostg-status" id="lbStatus">Pick a target multiplier — higher target, lower chance.</div>' +
+      '</div>';
+    var bet = document.getElementById('lbBet');
+    var tgt = document.getElementById('lbTarget');
+    var roll = document.getElementById('lbRoll');
+    var multEl = document.getElementById('lbMult');
+    var chance = document.getElementById('lbChance');
+    var payEl = document.getElementById('lbPay');
+    var statusEl = document.getElementById('lbStatus');
+    function recalc() {
+      var t = Math.max(1.01, parseFloat(tgt.value) || 2);
+      var p = 99 / t; // % win
+      var amt = parseFloat(bet.value) || 0;
+      chance.textContent = p.toFixed(2) + '%';
+      payEl.textContent = (amt * t).toFixed(2) + ' OST';
+    }
+    [bet, tgt].forEach(function (e) { e.addEventListener('input', recalc); });
+    recalc();
+    roll.addEventListener('click', async function () {
+      var amt = parseFloat(bet.value);
+      var r = placeBet(amt); if (!r.ok) { statusEl.textContent = r.msg; return; }
+      var t = Math.max(1.01, parseFloat(tgt.value) || 2);
+      var floats = await pfFloats(1);
+      // Limbo result: m = 99 / (100*(1-r)), with very low r → very high m.
+      var rolled = Math.max(1.0, 99 / (100 * (1 - floats[0])));
+      // Animate count-up
+      var t0 = performance.now();
+      function tick() {
+        var p = Math.min(1, (performance.now() - t0) / 600);
+        var m = 1 + (rolled - 1) * (1 - Math.pow(1 - p, 3));
+        multEl.textContent = m.toFixed(2) + '×';
+        if (p < 1) requestAnimationFrame(tick);
+        else {
+          var win = rolled >= t;
+          multEl.style.color = win ? '#86efac' : '#fca5a5';
+          if (win) {
+            var pay = amt * t;
+            credit(pay, 'limbo');
+            statusEl.textContent = '✅ Rolled ×' + rolled.toFixed(2) + ' ≥ ×' + t.toFixed(2) + ' — won ' + pay.toFixed(2) + ' OST';
+            pushHistory(t);
+          } else {
+            statusEl.textContent = '❌ Rolled ×' + rolled.toFixed(2) + ' < ×' + t.toFixed(2);
+            pushHistory(0);
+          }
+          setTimeout(function () { multEl.style.color = ''; }, 2000);
+        }
+      }
+      tick();
+    });
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // HI-LO — guess if next card is higher or lower. Multiplier compounds.
+  // ────────────────────────────────────────────────────────────────────────
+  function renderHiLo(stage) {
+    var DECK_SIZE = 13; // 1..13 (Ace..King)
+    function cardLabel(v) { return ['A','2','3','4','5','6','7','8','9','10','J','Q','K'][v - 1]; }
+    stage.innerHTML =
+      '<div class="ostg-game ostg-hilo">' +
+        '<div class="ostg-controls">' +
+          '<label>Bet (OST)<input type="number" id="hlBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
+          '<button class="ostg-btn ostg-btn-primary" id="hlStart">Deal</button>' +
+          '<button class="ostg-btn ostg-btn-cash" id="hlCash" disabled>Cash out</button>' +
+          '<div class="ostg-meta"><span>Multiplier</span> <strong id="hlMult">1.00×</strong></div>' +
+        '</div>' +
+        '<div class="ostg-hilo-stage">' +
+          '<div class="ostg-card" id="hlCard">?</div>' +
+          '<div class="ostg-hilo-actions">' +
+            '<button class="ostg-btn" id="hlHi" disabled>↑ Higher</button>' +
+            '<button class="ostg-btn" id="hlLo" disabled>↓ Lower</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="ostg-status" id="hlStatus">Press Deal to start. Then guess if the next card is higher or lower.</div>' +
+      '</div>';
+    var bet = document.getElementById('hlBet');
+    var start = document.getElementById('hlStart');
+    var cash = document.getElementById('hlCash');
+    var multEl = document.getElementById('hlMult');
+    var card = document.getElementById('hlCard');
+    var hi = document.getElementById('hlHi');
+    var lo = document.getElementById('hlLo');
+    var statusEl = document.getElementById('hlStatus');
+    var session = null;
+
+    async function newCard() {
+      var f = await pfFloats(1);
+      return Math.floor(f[0] * DECK_SIZE) + 1;
+    }
+    function probHi(c) { return (DECK_SIZE - c) / (DECK_SIZE - 1); }   // strictly higher
+    function probLo(c) { return (c - 1) / (DECK_SIZE - 1); }           // strictly lower
+    function multFor(p) { return p > 0 ? 0.99 / p : 0; }
+
+    start.addEventListener('click', async function () {
+      var amt = parseFloat(bet.value);
+      var r = placeBet(amt); if (!r.ok) { statusEl.textContent = r.msg; return; }
+      var c = await newCard();
+      session = { bet: amt, current: c, mult: 1 };
+      card.textContent = cardLabel(c);
+      multEl.textContent = '1.00×';
+      hi.disabled = false; lo.disabled = false; start.disabled = true; bet.disabled = true; cash.disabled = true;
+      statusEl.textContent = 'Higher or lower than ' + cardLabel(c) + '?';
+    });
+
+    async function pick(dir) {
+      if (!session) return;
+      var p = dir === 'hi' ? probHi(session.current) : probLo(session.current);
+      if (p <= 0) { statusEl.textContent = 'Impossible direction — choose the other side.'; return; }
+      var step = multFor(p);
+      var next = await newCard();
+      var win = dir === 'hi' ? (next > session.current) : (next < session.current);
+      card.textContent = cardLabel(next);
+      session.current = next;
+      if (win) {
+        session.mult *= step;
+        multEl.textContent = session.mult.toFixed(2) + '×';
+        cash.disabled = false;
+        cash.textContent = 'Cash out · ' + (session.bet * session.mult).toFixed(2) + ' OST';
+        statusEl.textContent = '✅ Correct! Multiplier compounded — keep going or cash out.';
+      } else {
+        statusEl.textContent = '❌ Wrong — lost ' + session.bet.toFixed(2) + ' OST';
+        pushHistory(0);
+        end();
+      }
+    }
+    hi.addEventListener('click', function () { pick('hi'); });
+    lo.addEventListener('click', function () { pick('lo'); });
+    cash.addEventListener('click', function () {
+      if (!session) return;
+      var pay = session.bet * session.mult;
+      credit(pay, 'hilo');
+      pushHistory(session.mult);
+      statusEl.textContent = '💰 Cashed out at ×' + session.mult.toFixed(2) + ' for ' + pay.toFixed(2) + ' OST';
+      end();
+    });
+    function end() {
+      session = null;
+      hi.disabled = true; lo.disabled = true; cash.disabled = true; start.disabled = false; bet.disabled = false;
+      cash.textContent = 'Cash out';
+    }
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // WHEEL — 50 segments, configurable risk; spin and land on a multiplier.
+  // ────────────────────────────────────────────────────────────────────────
+  var WHEEL_SEGMENTS = {
+    low:    [1.5,1.2,1.2,0,1.2,1.2,1.5,0,1.2,1.5,1.2,0,1.5,1.2,1.2,0,1.2,1.5,1.2,0],
+    medium: [3,1.5,0,2,0,1.5,3,0,2,0,1.5,3,0,2,0,1.5,3,0,2,0],
+    high:   [9.9,0,0,0,0,0,0,0,0,0,9.9,0,0,0,0,0,0,0,0,0]
+  };
+  function renderWheel(stage) {
+    stage.innerHTML =
+      '<div class="ostg-game ostg-wheel">' +
+        '<div class="ostg-controls">' +
+          '<label>Bet (OST)<input type="number" id="whBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
+          '<label>Risk<select id="whRisk"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select></label>' +
+          '<button class="ostg-btn ostg-btn-primary" id="whSpin">Spin</button>' +
+        '</div>' +
+        '<div class="ostg-wheel-stage">' +
+          '<div class="ostg-wheel-pin"></div>' +
+          '<canvas id="whCanvas" width="360" height="360"></canvas>' +
+        '</div>' +
+        '<div class="ostg-status" id="whStatus">Spin the wheel — payouts depend on which segment the pointer lands on.</div>' +
+      '</div>';
+    var canvas = document.getElementById('whCanvas');
+    var ctx = canvas.getContext('2d');
+    var bet = document.getElementById('whBet');
+    var risk = document.getElementById('whRisk');
+    var spin = document.getElementById('whSpin');
+    var statusEl = document.getElementById('whStatus');
+    var rotation = 0;
+    function colorFor(m) { return m === 0 ? '#374151' : m < 1.5 ? '#2563eb' : m < 3 ? '#f59e0b' : '#ef4444'; }
+    function paint(rot) {
+      var segs = WHEEL_SEGMENTS[risk.value];
+      var n = segs.length;
+      var cx = canvas.width / 2, cy = canvas.height / 2, r = canvas.width / 2 - 8;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(rot);
+      for (var i = 0; i < n; i++) {
+        var a0 = (i / n) * Math.PI * 2;
+        var a1 = ((i + 1) / n) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, r, a0, a1);
+        ctx.closePath();
+        ctx.fillStyle = colorFor(segs[i]);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.stroke();
+        // label
+        ctx.save();
+        ctx.rotate((a0 + a1) / 2);
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText(segs[i] + '×', r - 10, 4);
+        ctx.restore();
+      }
+      ctx.restore();
+      // hub
+      ctx.beginPath(); ctx.arc(cx, cy, 26, 0, Math.PI * 2); ctx.fillStyle = '#0f131e'; ctx.fill();
+      ctx.strokeStyle = '#f5c468'; ctx.lineWidth = 2; ctx.stroke();
+    }
+    risk.addEventListener('change', function () { paint(rotation); });
+    paint(rotation);
+    spin.addEventListener('click', async function () {
+      var amt = parseFloat(bet.value);
+      var r = placeBet(amt); if (!r.ok) { statusEl.textContent = r.msg; return; }
+      var f = await pfFloats(1);
+      var segs = WHEEL_SEGMENTS[risk.value];
+      var landIdx = Math.floor(f[0] * segs.length);
+      // The pin sits at the top (angle = -PI/2). We want segment `landIdx`
+      // centre to align there → final rot = -PI/2 - (centreAngleOfSeg).
+      var centre = ((landIdx + 0.5) / segs.length) * Math.PI * 2;
+      var endRot = -Math.PI / 2 - centre + Math.PI * 2 * 6; // 6 full spins
+      var startRot = rotation, t0 = performance.now(), dur = 3500;
+      spin.disabled = true; bet.disabled = true; risk.disabled = true;
+      function tick() {
+        var p = Math.min(1, (performance.now() - t0) / dur);
+        var ease = 1 - Math.pow(1 - p, 3);
+        rotation = startRot + (endRot - startRot) * ease;
+        paint(rotation);
+        if (p < 1) requestAnimationFrame(tick);
+        else {
+          rotation = endRot % (Math.PI * 2);
+          var mult = segs[landIdx];
+          var pay = amt * mult;
+          if (pay > 0) credit(pay, 'wheel');
+          pushHistory(mult);
+          statusEl.textContent = mult > 0
+            ? '🎯 Landed on ×' + mult + ' — won ' + pay.toFixed(2) + ' OST'
+            : '😬 Landed on ×0 — lost ' + amt.toFixed(2) + ' OST';
+          spin.disabled = false; bet.disabled = false; risk.disabled = false;
+        }
+      }
+      tick();
+    });
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // COINFLIP — pick heads/tails, ×1.98 payout.
+  // ────────────────────────────────────────────────────────────────────────
+  function renderCoinflip(stage) {
+    stage.innerHTML =
+      '<div class="ostg-game ostg-coin">' +
+        '<div class="ostg-controls">' +
+          '<label>Bet (OST)<input type="number" id="cfBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
+          '<button class="ostg-btn" id="cfHeads">🔆 Heads ×1.98</button>' +
+          '<button class="ostg-btn" id="cfTails">🌙 Tails ×1.98</button>' +
+        '</div>' +
+        '<div class="ostg-coin-stage"><div class="ostg-coin-disk" id="cfDisk">?</div></div>' +
+        '<div class="ostg-status" id="cfStatus">Pick heads or tails — instant 1.98× payout on a win.</div>' +
+      '</div>';
+    var bet = document.getElementById('cfBet');
+    var heads = document.getElementById('cfHeads');
+    var tails = document.getElementById('cfTails');
+    var disk = document.getElementById('cfDisk');
+    var statusEl = document.getElementById('cfStatus');
+    async function flip(side) {
+      var amt = parseFloat(bet.value);
+      var r = placeBet(amt); if (!r.ok) { statusEl.textContent = r.msg; return; }
+      heads.disabled = true; tails.disabled = true;
+      disk.classList.remove('flip-h', 'flip-t');
+      // tiny delay so the animation plays even on rapid clicks
+      void disk.offsetWidth;
+      var f = await pfFloats(1);
+      var result = f[0] < 0.5 ? 'h' : 't';
+      disk.classList.add('flip-' + result);
+      setTimeout(function () {
+        disk.textContent = result === 'h' ? '🔆' : '🌙';
+        if (result === side) {
+          var pay = amt * 1.98;
+          credit(pay, 'coinflip');
+          statusEl.textContent = '✅ ' + (result === 'h' ? 'Heads' : 'Tails') + '! Won ' + pay.toFixed(2) + ' OST';
+          pushHistory(1.98);
+        } else {
+          statusEl.textContent = '❌ ' + (result === 'h' ? 'Heads' : 'Tails') + ' — lost ' + amt.toFixed(2) + ' OST';
+          pushHistory(0);
+        }
+        heads.disabled = false; tails.disabled = false;
+      }, 700);
+    }
+    heads.addEventListener('click', function () { flip('h'); });
+    tails.addEventListener('click', function () { flip('t'); });
   }
 
   // ────────────────────────────────────────────────────────────────────────
@@ -778,7 +1120,31 @@
       '.ostg-modal label{display:block;color:#94a3b8;font-size:11px;text-transform:uppercase;letter-spacing:.04em;margin:10px 0 4px;}' +
       '.ostg-mono{font-family:ui-monospace,Menlo,monospace;font-size:11px;background:rgba(0,0,0,0.4);padding:8px;border-radius:6px;color:#bfdbfe;word-break:break-all;}' +
       '.ostg-mono-input{font-family:ui-monospace,Menlo,monospace;font-size:12px;width:100%;padding:8px;border-radius:6px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.12);color:#bfdbfe;}' +
-      '@media (max-width:640px){.ostg-controls label{flex:1 1 100%;}.ostg-controls input,.ostg-controls select{width:100%;}.ostg-balance-card{align-items:flex-start;width:100%;}.ostg-tab{flex:1 1 calc(50% - 4px);text-align:center;}.ostg-crash-mult{font-size:1.6rem;}}';
+      '@media (max-width:640px){.ostg-controls label{flex:1 1 100%;}.ostg-controls input,.ostg-controls select{width:100%;}.ostg-balance-card{align-items:flex-start;width:100%;}.ostg-tab{flex:1 1 calc(50% - 4px);text-align:center;}.ostg-crash-mult{font-size:1.6rem;}}' +
+      // ── New games shipped 2026-04-28 ────────────────────────────────────
+      '.ostg-balance-actions{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;}' +
+      '.ostg-cash-btn{padding:6px 12px;border-radius:8px;background:linear-gradient(135deg,#22c55e,#15803d);border:none;color:#fff;font-weight:700;font-size:12px;cursor:pointer;box-shadow:0 4px 12px rgba(34,197,94,0.35);}' +
+      '.ostg-cash-btn:disabled{opacity:0.4;cursor:not-allowed;box-shadow:none;}' +
+      '.ostg-tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap;}' +
+      '.ostg-tab{flex:0 0 auto;white-space:nowrap;}' +
+      // Limbo
+      '.ostg-limbo-stage{display:flex;align-items:center;justify-content:center;min-height:220px;border-radius:12px;background:radial-gradient(ellipse at center,#1e293b,#020617);border:1px solid rgba(255,255,255,0.06);}' +
+      '.ostg-limbo-mult{font-size:4rem;font-weight:800;color:#f8fafc;font-variant-numeric:tabular-nums;text-shadow:0 0 30px rgba(245,196,104,0.45);transition:color .3s;}' +
+      // Hi-Lo
+      '.ostg-hilo-stage{display:flex;flex-direction:column;align-items:center;gap:14px;padding:16px;border-radius:12px;background:radial-gradient(ellipse at top,#1e293b,#020617);}' +
+      '.ostg-card{width:120px;height:170px;border-radius:12px;background:linear-gradient(135deg,#fef3c7,#fde68a);color:#1a1a1a;display:flex;align-items:center;justify-content:center;font-size:3.5rem;font-weight:800;box-shadow:0 8px 24px rgba(0,0,0,0.4);font-family:Georgia,serif;}' +
+      '.ostg-hilo-actions{display:flex;gap:10px;}' +
+      // Wheel
+      '.ostg-wheel-stage{position:relative;display:flex;justify-content:center;}' +
+      '.ostg-wheel-stage canvas{display:block;max-width:100%;height:auto;}' +
+      '.ostg-wheel-pin{position:absolute;top:-2px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;border-top:22px solid #f5c468;z-index:2;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));}' +
+      // Coinflip
+      '.ostg-coin-stage{display:flex;justify-content:center;padding:24px;}' +
+      '.ostg-coin-disk{width:120px;height:120px;border-radius:50%;background:linear-gradient(135deg,#f5c468,#b45309);display:flex;align-items:center;justify-content:center;font-size:4rem;color:#1a1a1a;box-shadow:0 12px 32px rgba(245,196,104,0.4),inset 0 -4px 12px rgba(0,0,0,0.3);transform-style:preserve-3d;}' +
+      '.ostg-coin-disk.flip-h{animation:ostg-coin-flip-h .7s ease-out;}' +
+      '.ostg-coin-disk.flip-t{animation:ostg-coin-flip-t .7s ease-out;}' +
+      '@keyframes ostg-coin-flip-h{0%{transform:rotateY(0)}100%{transform:rotateY(1080deg)}}' +
+      '@keyframes ostg-coin-flip-t{0%{transform:rotateY(0)}100%{transform:rotateY(900deg)}}';
     document.head.appendChild(st);
   }
 

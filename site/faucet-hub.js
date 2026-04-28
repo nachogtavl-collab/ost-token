@@ -74,57 +74,40 @@
   }
 
   // -------- Section template ---------
+  // NOTE: All gambling mini-games (3×3 guess, spin wheel, cosmic jumper, watch-ad)
+  // were removed from the Faucet Hub on 2026-04-28. Real provably-fair betting
+  // now lives exclusively in the OST Games panel (see ost-games.js), which
+  // shares the same `ost.faucet.hub.v2` credit balance and routes cash-outs
+  // through the same on-chain rewards vault.
   var TEMPLATE =
     '<div class="container">' +
     '<div class="fh-section" id="ostFaucetHub">' +
-      '<h3>🎰 OST Faucet Hub</h3>' +
-      '<p class="fh-sub">Mini-games, prediction wheels, real ads & surveys. Every 60 seconds you can play the daily guess game for +1 OST.</p>' +
+      '<h3>🎰 OST Rewards Vault</h3>' +
+      '<p class="fh-sub">Earn bonus OST through provably-fair games and the Code Academy. Cash out to your real wallet whenever you hit the minimum.</p>' +
       '<div class="fh-bank">' +
         '<span>Your earned bonus credits · paid from on-chain rewards vault</span>' +
         '<span><strong id="fhCredits">0.00</strong> OST <button class="fh-btn fh-btn-alt" id="fhCashout" style="margin-left:14px;width:auto;padding:8px 14px;">Cash out from vault</button> <a class="fh-vault-link" id="fhVaultLink" target="_blank" rel="noopener">🔗 view rewards vault</a></span>' +
       '</div>' +
       '<div class="fh-grid">' +
-        // 3x3 guess game
-        '<div class="fh-card">' +
-          '<div class="fh-card-title">🎯 Guess the Number (3×3)</div>' +
-          '<div class="fh-card-meta" id="fhGuessHint">Pick a tile 1–9. If you match the secret number, +1 OST.</div>' +
-          '<div class="fh-grid3" id="fhGuessGrid"></div>' +
-          '<div class="fh-chip" id="fhGuessChip">Ready!</div>' +
-        '</div>' +
-        // Spin
-        '<div class="fh-card">' +
-          '<div class="fh-card-title">🎡 Spin for OST</div>' +
-          '<div class="fh-wheel-wrap"><div class="fh-wheel-pin"></div><div class="fh-wheel" id="fhWheel"></div></div>' +
-          '<button class="fh-btn" id="fhSpinBtn">Open spin (1–20 OST)</button>' +
-          '<div class="fh-chip" id="fhSpinChip">Ready!</div>' +
-        '</div>' +
-        // Cosmic Jumper — opens in big modal
-        '<div class="fh-card">' +
-          '<div class="fh-card-title">🚀 Cosmic Jumper</div>' +
-          '<div class="fh-emoji">🚀🪐</div>' +
-          '<div class="fh-card-meta">Pilot a SpaceX Starship through asteroids. <b>+0.1 OST</b> per obstacle cleared.</div>' +
-          '<button class="fh-btn" id="fhGameBtn" style="margin-top:8px;">Launch in big window</button>' +
-        '</div>' +
-        // Ad — public partner carousel
-        '<div class="fh-card">' +
-          '<div class="fh-card-title">▶️ Watch Ad · per-second OST</div>' +
-          '<div class="fh-emoji">📺</div>' +
-          '<button class="fh-btn" id="fhAdBtn">Watch ad (+1 OST/sec, 15s+)</button>' +
-          '<div class="fh-ad-bar"><div class="fh-ad-fill" id="fhAdFill"></div></div>' +
-          '<div class="fh-ad-timer" id="fhAdTimer">Polymarket · Kalshi · DoW · World Cup 2026 · Kick · Twitch</div>' +
-        '</div>' +
-        // Code Academy (replaces Train AI)
+        // Code Academy (educational, not gambling — kept)
         '<div class="fh-card">' +
           '<div class="fh-card-title">💻 Learn to Code · earn OST</div>' +
           '<div class="fh-emoji">⌨️🧑‍💻</div>' +
           '<button class="fh-btn" id="fhTaskBtn">Open Code Academy</button>' +
           '<div class="fh-card-meta">1000-step path: typing test → simple → medium → hard → expert. Reward per session.</div>' +
         '</div>' +
-        // Streak
+        // Streak (display only)
         '<div class="fh-card">' +
           '<div class="fh-card-title">🔥 Current Streak</div>' +
           '<div class="fh-streak-num"><span class="fh-streak-fire">🔥</span> <span id="fhStreakNum">0</span> days</div>' +
-          '<div class="fh-card-meta" id="fhStreakMeta">Play the daily guess game once a day to grow your streak.</div>' +
+          '<div class="fh-card-meta" id="fhStreakMeta">Play any provably-fair game once a day to grow your streak.</div>' +
+        '</div>' +
+        // Pointer to the games panel
+        '<div class="fh-card">' +
+          '<div class="fh-card-title">🎲 Provably-Fair Games</div>' +
+          '<div class="fh-emoji">💣🚀🎲🟡</div>' +
+          '<div class="fh-card-meta">Mines · Crash · Dice · Plinko · Limbo · Hi-Lo · Wheel · Coinflip — all HMAC-verifiable, all paid from this same vault.</div>' +
+          '<button class="fh-btn" id="fhGoGames">Open games ↓</button>' +
         '</div>' +
       '</div>' +
     '</div>' +
@@ -139,18 +122,19 @@
     wrap.style.padding = '20px 0 40px';
     wrap.innerHTML = TEMPLATE;
     anchor.closest('.container').parentElement.appendChild(wrap);
-    bindGuessGrid();
     bind();
     refreshUi();
     setInterval(refreshUi, 1000);
   }
 
   function bind() {
-    document.getElementById('fhSpinBtn').addEventListener('click', openSpinModal);
-    document.getElementById('fhGameBtn').addEventListener('click', openJumperModal);
-    document.getElementById('fhAdBtn').addEventListener('click', onAd);
-    document.getElementById('fhTaskBtn').addEventListener('click', openCodeAcademy);
-    document.getElementById('fhCashout').addEventListener('click', onCashout);
+    var on = function (id, ev, fn) { var el = document.getElementById(id); if (el) el.addEventListener(ev, fn); };
+    on('fhTaskBtn', 'click', openCodeAcademy);
+    on('fhCashout', 'click', onCashout);
+    on('fhGoGames', 'click', function () {
+      var g = document.getElementById('ostGames') || document.getElementById('ostGamesSection');
+      if (g) g.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
   }
 
   function refreshUi() {
@@ -164,29 +148,12 @@
     if (vlink && !vlink.href && window.OST_SWAP_POOL && window.OST_SWAP_POOL.ata) {
       vlink.href = 'https://explorer.solana.com/address/' + window.OST_SWAP_POOL.ata + '?cluster=devnet';
     }
-    setCooldown('fhGuessChip', null, s.lastGuess, COOLDOWN_GUESS_MS, null);
-    setCooldown(null, 'fhSpinBtn', s.lastSpin, COOLDOWN_SPIN_MS, 'Open spin (1–20 OST)');
-    var ad = document.getElementById('fhAdBtn');
-    if (ad) {
-      var leftAd = (Number(s.lastAd || 0) + COOLDOWN_AD_MS) - Date.now();
-      ad.disabled = leftAd > 0;
-      ad.textContent = leftAd > 0 ? 'Available in ' + fmtCD(leftAd) : 'Watch ad (+1 OST/sec, 15s+)';
-    }
     var task = document.getElementById('fhTaskBtn');
     if (task) {
       var leftT = (Number(s.lastTask || 0) + COOLDOWN_TASK_MS) - Date.now();
       task.disabled = leftT > 0;
       task.textContent = leftT > 0 ? 'Available in ' + fmtCD(leftT) : 'Open Code Academy';
     }
-    // re-enable guess grid when cooldown done
-    var leftG = (Number(s.lastGuess || 0) + COOLDOWN_GUESS_MS) - Date.now();
-    var cells = document.querySelectorAll('#fhGuessGrid .fh-cell');
-    cells.forEach(function(c){
-      if (leftG <= 0) {
-        c.disabled = false;
-        c.classList.remove('fh-cell-win', 'fh-cell-lose', 'fh-cell-reveal');
-      }
-    });
     var cash = document.getElementById('fhCashout');
     if (cash) {
       cash.disabled = !(Number(s.credits || 0) >= MIN_PAYOUT);
