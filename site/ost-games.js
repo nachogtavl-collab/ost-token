@@ -29,6 +29,91 @@
   function saveGames(s) { try { localStorage.setItem(GAMES_STATE_KEY, JSON.stringify(s)); } catch (_) {} }
 
   function fmt(n) { return Number(n || 0).toFixed(2); }
+  function clamp(n, min, max) { return Math.min(max, Math.max(min, Number(n) || 0)); }
+  function fmtMult(n) { return 'x' + Number(n || 0).toFixed(Number(n || 0) >= 100 ? 0 : 2); }
+  function shortMult(n) { return Number(n || 0).toFixed(Number(n || 0) >= 100 ? 0 : 2) + 'x'; }
+
+  function parseBet(input, statusEl) {
+    var amount = parseFloat(input && input.value);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      if (statusEl) statusEl.textContent = 'Enter a positive OST bet.';
+      return null;
+    }
+    if (amount > getBalance() + 1e-9) {
+      if (statusEl) statusEl.textContent = 'Not enough play balance — deposit OST or earn credits first.';
+      return null;
+    }
+    return Math.round(amount * 1000000) / 1000000;
+  }
+
+  function setBusy(elements, busy) {
+    (elements || []).forEach(function (el) { if (el) el.disabled = !!busy; });
+  }
+
+  function pulse(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.offsetWidth;
+    el.classList.add(cls);
+  }
+
+  function toast(message, kind) {
+    var host = document.getElementById('ostGames');
+    if (!host) return;
+    var el = document.createElement('div');
+    el.className = 'ostg-toast ' + (kind || 'info');
+    el.textContent = message;
+    host.appendChild(el);
+    requestAnimationFrame(function () { el.classList.add('show'); });
+    setTimeout(function () {
+      el.classList.remove('show');
+      setTimeout(function () { if (el.parentElement) el.remove(); }, 240);
+    }, 2400);
+  }
+
+  function popBurst(parent, count) {
+    if (!parent) return;
+    var box = parent.getBoundingClientRect();
+    for (var i = 0; i < (count || 18); i++) {
+      var s = document.createElement('i');
+      s.className = 'ostg-spark';
+      s.style.left = (45 + Math.random() * 10) + '%';
+      s.style.top = (45 + Math.random() * 10) + '%';
+      s.style.setProperty('--dx', ((Math.random() - 0.5) * Math.min(220, box.width || 160)) + 'px');
+      s.style.setProperty('--dy', ((Math.random() - 0.85) * 170) + 'px');
+      s.style.setProperty('--h', String(35 + Math.random() * 95));
+      parent.appendChild(s);
+      setTimeout((function (node) { return function () { if (node.parentElement) node.remove(); }; })(s), 950);
+    }
+  }
+
+  function recordRound(game, bet, payout, mult) {
+    var s = loadGames();
+    s.stats = s.stats || {};
+    var g = s.stats[game] || { rounds: 0, wagered: 0, paid: 0, best: 0 };
+    g.rounds += 1;
+    g.wagered += Number(bet || 0);
+    g.paid += Number(payout || 0);
+    g.best = Math.max(Number(g.best || 0), Number(mult || 0));
+    s.stats[game] = g;
+    s.lastRound = { game: game, bet: Number(bet || 0), payout: Number(payout || 0), mult: Number(mult || 0), ts: Date.now() };
+    saveGames(s);
+  }
+
+  function settleGame(game, bet, payout, mult, statusEl, winText, stageEl) {
+    if (payout > 0) credit(payout, game);
+    recordRound(game, bet, payout, mult);
+    pushHistory(mult);
+    if (statusEl) statusEl.textContent = winText;
+    if (payout > bet) {
+      toast('+' + fmt(payout - bet) + ' OST · ' + shortMult(mult), 'win');
+      popBurst(stageEl || statusEl && statusEl.parentElement, 20);
+    } else if (payout > 0) {
+      toast('Returned ' + fmt(payout) + ' OST · ' + shortMult(mult), 'soft');
+    } else {
+      toast('-' + fmt(bet) + ' OST', 'loss');
+    }
+  }
 
   function getBalance() { return Number(loadBank().credits || 0); }
   function debit(amount) {
@@ -308,6 +393,8 @@
     });
   }
 
+  var activeGameCleanup = null;
+
   function bindTabs() {
     document.querySelectorAll('#ostgTabs .ostg-tab').forEach(function (b) {
       b.addEventListener('click', function () {
@@ -321,6 +408,10 @@
   function showGame(game) {
     var stage = document.getElementById('ostgStage');
     if (!stage) return;
+    if (activeGameCleanup) {
+      try { activeGameCleanup(); } catch (_) {}
+      activeGameCleanup = null;
+    }
     stage.innerHTML = '';
     if (game === 'mines')    return renderMines(stage);
     if (game === 'crash')    return renderCrash(stage);
@@ -344,7 +435,7 @@
 
   function placeBet(amount) {
     if (!Number.isFinite(amount) || amount <= 0) return { ok: false, msg: 'Enter a positive bet.' };
-    if (amount > getBalance() + 1e-9) return { ok: false, msg: 'Not enough balance — earn from the faucet first.' };
+    if (amount > getBalance() + 1e-9) return { ok: false, msg: 'Not enough play balance — deposit OST or earn credits first.' };
     debit(amount);
     return { ok: true };
   }
@@ -373,18 +464,22 @@
             [1,3,5,8,10,15,24].map(function(n){ return '<option value="'+n+'">'+n+'</option>'; }).join('') +
           '</select></label>' +
           '<button class="ostg-btn ostg-btn-primary" id="mnStart">Place bet</button>' +
+          '<button class="ostg-btn" id="mnQuick" disabled>Quick pick</button>' +
           '<button class="ostg-btn ostg-btn-cash" id="mnCash" disabled>Cash out</button>' +
-          '<div class="ostg-meta"><span>Next safe pays</span> <strong id="mnNext">—</strong></div>' +
+          '<div class="ostg-meta"><span>Current</span> <strong id="mnCurrent">1.00x</strong></div>' +
+          '<div class="ostg-meta"><span>Next safe</span> <strong id="mnNext">—</strong></div>' +
         '</div>' +
         '<div class="ostg-board ostg-board-5x5" id="mnBoard"></div>' +
-        '<div class="ostg-status" id="mnStatus">Click "Place bet" to start.</div>' +
+        '<div class="ostg-status" id="mnStatus">Choose mines, place a bet, then reveal gems. Cash out before you hit a mine.</div>' +
       '</div>';
 
     var bet = document.getElementById('mnBet');
     var mines = document.getElementById('mnMines');
     mines.value = '5';
     var startBtn = document.getElementById('mnStart');
+    var quickBtn = document.getElementById('mnQuick');
     var cashBtn  = document.getElementById('mnCash');
+    var currentEl = document.getElementById('mnCurrent');
     var nextEl   = document.getElementById('mnNext');
     var statusEl = document.getElementById('mnStatus');
     var board    = document.getElementById('mnBoard');
@@ -398,12 +493,28 @@
         c.className = 'ostg-tile';
         c.dataset.idx = String(i);
         c.addEventListener('click', onPick);
+        c.disabled = !session;
         board.appendChild(c);
       }
     }
 
+    function updateMeta() {
+      if (!session) {
+        currentEl.textContent = '1.00x';
+        nextEl.textContent = '—';
+        return;
+      }
+      var current = session.safeRevealed ? minesMultiplier(session.safeRevealed, session.mines) : 1;
+      var nextPick = Math.min(session.safeRevealed + 1, 25 - session.mines);
+      currentEl.textContent = shortMult(current);
+      nextEl.textContent = shortMult(minesMultiplier(nextPick, session.mines));
+      cashBtn.textContent = session.safeRevealed ? ('Cash out · ' + (session.bet * current).toFixed(2) + ' OST') : 'Cash out';
+      cashBtn.disabled = session.safeRevealed < 1;
+    }
+
     async function onStart() {
-      var amt = parseFloat(bet.value);
+      var amt = parseBet(bet, statusEl);
+      if (amt === null) return;
       var res = placeBet(amt);
       if (!res.ok) { statusEl.textContent = res.msg; return; }
       var mineCount = parseInt(mines.value, 10);
@@ -415,12 +526,12 @@
         var t = idxs[i]; idxs[i] = idxs[j]; idxs[j] = t;
       }
       var minePositions = new Set(idxs.slice(0, mineCount));
-      session = { bet: amt, mines: mineCount, minePositions: minePositions, safeRevealed: 0 };
+      session = { bet: amt, mines: mineCount, minePositions: minePositions, safeRevealed: 0, revealed: new Set() };
       buildBoard();
-      cashBtn.disabled = true; // need at least one reveal first
-      nextEl.textContent = '×' + minesMultiplier(1, mineCount).toFixed(3);
+      updateMeta();
       statusEl.textContent = 'Pick a tile. Each safe tile boosts your multiplier.';
       startBtn.disabled = true;
+      quickBtn.disabled = false;
       mines.disabled = true;
       bet.disabled = true;
     }
@@ -431,26 +542,31 @@
       var tile = e.currentTarget;
       if (tile.disabled) return;
       tile.disabled = true;
+      session.revealed.add(idx);
       if (session.minePositions.has(idx)) {
         tile.classList.add('mine');
-        tile.textContent = '💣';
+        tile.innerHTML = '<span>💣</span>';
+        pulse(tile, 'ostg-tile-pop');
         revealAll();
-        var mult = 0;
-        pushHistory(mult);
-        statusEl.textContent = '💥 Hit a mine. -' + fmt(session.bet) + ' OST.';
+        settleGame('mines', session.bet, 0, 0, statusEl, '💥 Hit a mine. Lost ' + fmt(session.bet) + ' OST.', board);
         endRound();
       } else {
         session.safeRevealed += 1;
         tile.classList.add('safe');
-        tile.textContent = '💎';
+        tile.innerHTML = '<span>💎</span>';
+        pulse(tile, 'ostg-tile-pop');
         var mult = minesMultiplier(session.safeRevealed, session.mines);
-        cashBtn.disabled = false;
-        cashBtn.textContent = 'Cash out · ' + (session.bet * mult).toFixed(2) + ' OST';
-        var nextMult = minesMultiplier(session.safeRevealed + 1, session.mines);
-        nextEl.textContent = '×' + nextMult.toFixed(3);
-        statusEl.textContent = '✅ Safe! Multiplier ×' + mult.toFixed(3);
+        updateMeta();
+        statusEl.textContent = '✅ Safe ' + session.safeRevealed + '/' + (25 - session.mines) + ' · ' + shortMult(mult);
         if (session.safeRevealed === 25 - session.mines) onCash(); // perfect clear
       }
+    }
+
+    function onQuickPick() {
+      if (!session) return;
+      var tiles = Array.prototype.slice.call(board.querySelectorAll('.ostg-tile:not(:disabled)'));
+      if (!tiles.length) return;
+      tiles[Math.floor(Math.random() * tiles.length)].click();
     }
 
     function revealAll() {
@@ -459,7 +575,7 @@
         var i = parseInt(t.dataset.idx, 10);
         if (session.minePositions.has(i) && !t.classList.contains('mine')) {
           t.classList.add('mine-reveal');
-          t.textContent = '💣';
+          t.innerHTML = '<span>💣</span>';
         }
       });
     }
@@ -468,9 +584,7 @@
       if (!session) return;
       var mult = minesMultiplier(session.safeRevealed, session.mines);
       var payout = session.bet * mult;
-      credit(payout, 'mines');
-      pushHistory(mult);
-      statusEl.textContent = '💰 Cashed out at ×' + mult.toFixed(3) + ' for ' + payout.toFixed(2) + ' OST';
+      settleGame('mines', session.bet, payout, mult, statusEl, '💰 Cashed out at ' + shortMult(mult) + ' for ' + payout.toFixed(2) + ' OST', board);
       revealAll();
       endRound();
     }
@@ -478,15 +592,19 @@
     function endRound() {
       session = null;
       startBtn.disabled = false;
+      quickBtn.disabled = true;
       cashBtn.disabled = true;
       cashBtn.textContent = 'Cash out';
       mines.disabled = false;
       bet.disabled = false;
+      updateMeta();
     }
 
     startBtn.addEventListener('click', onStart);
+    quickBtn.addEventListener('click', onQuickPick);
     cashBtn.addEventListener('click', onCash);
     buildBoard();
+    updateMeta();
   }
 
   // ────────────────────────────────────────────────────────────────────────
@@ -526,9 +644,18 @@
 
     var session = null;
     var raf = 0;
+    activeGameCleanup = function () {
+      cancelAnimationFrame(raf);
+      session = null;
+    };
 
     function draw(mult, t, crashed) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      var gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      gradient.addColorStop(0, '#111827');
+      gradient.addColorStop(1, '#020617');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
       // grid
       ctx.strokeStyle = 'rgba(255,255,255,0.06)';
       for (var x = 0; x < canvas.width; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
@@ -546,6 +673,15 @@
       ctx.strokeStyle = crashed ? '#dc2626' : '#34d399';
       ctx.lineWidth = 3;
       ctx.stroke();
+      if (session && session.cashed && session.cashMult) {
+        var cashY = h - 20 - Math.min(h - 30, (session.cashMult - 1) * 60);
+        ctx.setLineDash([6, 6]);
+        ctx.beginPath(); ctx.moveTo(0, cashY); ctx.lineTo(w, cashY);
+        ctx.strokeStyle = 'rgba(245,196,104,0.6)'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#fde68a'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'left';
+        ctx.fillText('cashout ' + session.cashMult.toFixed(2) + 'x', 12, Math.max(18, cashY - 8));
+      }
       // rocket head
       var fx = 0.95 * w + 10;
       var fy = h - 20 - Math.min(h - 30, (mult - 1) * 60);
@@ -556,34 +692,36 @@
     }
 
     async function onStart() {
-      var amt = parseFloat(betEl.value);
+      var amt = parseBet(betEl, statusEl);
+      if (amt === null) return;
       var res = placeBet(amt);
       if (!res.ok) { statusEl.textContent = res.msg; return; }
       var floats = await pfFloats(1);
       var crashAt = crashPoint(floats[0]);
-      var auto = parseFloat(autoEl.value) || 0;
-      session = { bet: amt, crashAt: crashAt, auto: auto, t0: performance.now(), cashed: false };
+      var auto = clamp(parseFloat(autoEl.value) || 0, 0, 1000000);
+      if (auto > 0 && auto < 1.01) auto = 1.01;
+      session = { bet: amt, crashAt: crashAt, auto: auto, t0: performance.now(), cashed: false, cashMult: 0 };
       startBtn.disabled = true; cashBtn.disabled = false; betEl.disabled = true; autoEl.disabled = true;
-      statusEl.textContent = 'Flying… (will crash at ×' + crashAt.toFixed(2) + ' if you don\'t cash out)';
+      statusEl.textContent = 'Flying… cash out before the multiplier explodes.';
       function tick() {
         if (!session) return;
         var elapsed = (performance.now() - session.t0) / 1000;
-        var mult = Math.pow(Math.E, 0.07 * elapsed); // smooth exponential
+        var mult = Math.pow(Math.E, 0.22 * elapsed); // faster, playable exponential
         if (mult >= session.crashAt) {
           mult = session.crashAt;
           draw(mult, elapsed, true);
           multEl.textContent = mult.toFixed(2) + '× CRASH';
           multEl.style.color = '#fca5a5';
           if (!session.cashed) {
-            pushHistory(0);
-            statusEl.textContent = '💥 Crashed at ×' + mult.toFixed(2) + ' — lost ' + session.bet.toFixed(2) + ' OST.';
+            settleGame('crash', session.bet, 0, 0, statusEl, '💥 Crashed at ' + shortMult(mult) + ' — lost ' + session.bet.toFixed(2) + ' OST.', canvas.parentElement);
+          } else {
+            statusEl.textContent = 'Round crashed at ' + shortMult(mult) + '. You banked at ' + shortMult(session.cashMult) + '.';
           }
           endRound();
           return;
         }
         if (session.auto && mult >= session.auto && !session.cashed) {
-          onCash();
-          return;
+          onCash(true);
         }
         multEl.textContent = mult.toFixed(2) + '×';
         multEl.style.color = mult >= 2 ? '#86efac' : '#f8fafc';
@@ -593,16 +731,15 @@
       tick();
     }
 
-    function onCash() {
+    function onCash(isAuto) {
       if (!session || session.cashed) return;
       session.cashed = true;
       var elapsed = (performance.now() - session.t0) / 1000;
-      var mult = Math.min(session.crashAt, Math.pow(Math.E, 0.07 * elapsed));
+      var mult = Math.min(session.crashAt, Math.pow(Math.E, 0.22 * elapsed));
+      session.cashMult = mult;
       var payout = session.bet * mult;
-      credit(payout, 'crash');
-      pushHistory(mult);
-      statusEl.textContent = '💰 Cashed out at ×' + mult.toFixed(2) + ' for ' + payout.toFixed(2) + ' OST';
-      // Let it keep rendering until crash for honesty
+      cashBtn.disabled = true;
+      settleGame('crash', session.bet, payout, mult, statusEl, (isAuto ? '🤖 Auto ' : '💰 ') + 'cashed out at ' + shortMult(mult) + ' for ' + payout.toFixed(2) + ' OST. Round keeps flying…', canvas.parentElement);
     }
 
     function endRound() {
@@ -615,7 +752,7 @@
     }
 
     startBtn.addEventListener('click', onStart);
-    cashBtn.addEventListener('click', onCash);
+    cashBtn.addEventListener('click', function () { onCash(false); });
     draw(1, 0, false);
   }
 
@@ -669,23 +806,40 @@
     recalc();
 
     rollBtn.addEventListener('click', async function () {
-      var amt = parseFloat(bet.value);
+      var amt = parseBet(bet, statusEl);
+      if (amt === null) return;
       var res = placeBet(amt); if (!res.ok) { statusEl.textContent = res.msg; return; }
       var t = Math.min(98, Math.max(2, parseFloat(target.value) || 50));
       var floats = await pfFloats(1);
       var roll = floats[0] * 100; // 0..100
       var win = dir.value === 'under' ? (roll < t) : (roll > t);
-      rollEl.textContent = roll.toFixed(2);
-      rollEl.style.color = win ? '#86efac' : '#fca5a5';
-      var mult = win ? (99 / (dir.value === 'under' ? t : (100 - t))) : 0;
-      if (win) {
-        var payout = amt * mult;
-        credit(payout, 'dice');
-        statusEl.textContent = '✅ Won ' + payout.toFixed(2) + ' OST (×' + mult.toFixed(2) + ')';
-      } else {
-        statusEl.textContent = '❌ Lost ' + amt.toFixed(2) + ' OST';
+      var chance = dir.value === 'under' ? t : (100 - t);
+      var winMult = 99 / chance;
+      var t0 = performance.now();
+      var start = parseFloat(marker.style.left) || 0;
+      setBusy([rollBtn, bet, dir, target], true);
+      statusEl.textContent = 'Rolling…';
+      function tick() {
+        var p = Math.min(1, (performance.now() - t0) / 850);
+        var ease = 1 - Math.pow(1 - p, 3);
+        var visible = start + (roll - start) * ease;
+        marker.style.left = visible + '%';
+        rollEl.textContent = visible.toFixed(2);
+        rollEl.style.color = '#f8fafc';
+        if (p < 1) requestAnimationFrame(tick);
+        else {
+          rollEl.textContent = roll.toFixed(2);
+          rollEl.style.color = win ? '#86efac' : '#fca5a5';
+          pulse(rollEl, win ? 'ostg-pop-win' : 'ostg-pop-loss');
+          var payout = win ? amt * winMult : 0;
+          settleGame('dice', amt, payout, win ? winMult : 0, statusEl,
+            win ? '✅ Rolled ' + roll.toFixed(2) + ' — won ' + payout.toFixed(2) + ' OST (' + shortMult(winMult) + ')'
+                : '❌ Rolled ' + roll.toFixed(2) + ' — lost ' + amt.toFixed(2) + ' OST',
+            rollEl.parentElement);
+          setBusy([rollBtn, bet, dir, target], false);
+        }
       }
-      pushHistory(mult);
+      tick();
     });
   }
 
@@ -769,7 +923,8 @@
     paintBoard();
 
     dropBtn.addEventListener('click', async function () {
-      var amt = parseFloat(bet.value);
+      var amt = parseBet(bet, statusEl);
+      if (amt === null) return;
       var res = placeBet(amt); if (!res.ok) { statusEl.textContent = res.msg; return; }
       var n = parseInt(rows.value, 10);
       var floats = await pfFloats(n);
@@ -781,37 +936,55 @@
       // ends up at column `bucket` of `n+1` buckets.
       var topY = 30, botY = canvas.height - 40, spacingY = (botY - topY) / n;
       var pegSpacing = 28;
-      var startX = canvas.width / 2;
-      var x = startX, y = topY;
-      var stepIdx = 0;
-      var rights = 0;
-      function step() {
-        paintBoard();
-        ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2); ctx.fillStyle = '#f5c468'; ctx.fill();
-        if (stepIdx < n) {
-          var goRight = floats[stepIdx] >= 0.5;
-          if (goRight) { x += pegSpacing / 2; rights++; } else { x -= pegSpacing / 2; }
-          y += spacingY;
-          stepIdx++;
-          requestAnimationFrame(step);
-        } else {
-          // Snap ball x to centre of the resolved bucket (visual integrity)
-          var buckets = n + 1;
-          var bw = canvas.width / buckets;
-          var bx = bucket * bw + bw / 2;
-          x = bx; y = botY + 18;
-          paintBoard(bucket);
-          ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2); ctx.fillStyle = '#f5c468'; ctx.fill();
-          var mult = PLINKO_MULTS[n][risk.value][bucket];
-          var payout = amt * mult;
-          if (payout > 0) credit(payout, 'plinko');
-          pushHistory(mult);
-          statusEl.textContent = mult >= 1
-            ? '🎯 Landed on ' + mult + '× — won ' + payout.toFixed(2) + ' OST'
-            : '😬 Landed on ' + mult + '× — got ' + payout.toFixed(2) + ' OST back';
-        }
+      var buckets = n + 1;
+      var bw = canvas.width / buckets;
+      var path = [{ x: canvas.width / 2, y: topY }];
+      var x = canvas.width / 2, y = topY;
+      for (var stepIdx = 0; stepIdx < n; stepIdx++) {
+        x += (floats[stepIdx] >= 0.5 ? pegSpacing / 2 : -pegSpacing / 2);
+        y += spacingY;
+        path.push({ x: x, y: y });
       }
-      step();
+      path.push({ x: bucket * bw + bw / 2, y: botY + 18 });
+      var seg = 0;
+      var segStart = performance.now();
+      var segDur = Math.max(90, 920 / path.length);
+      setBusy([dropBtn, bet, risk, rows], true);
+      statusEl.textContent = 'Dropping through ' + n + ' rows…';
+      function drawBall(px, py) {
+        ctx.beginPath();
+        ctx.arc(px, py, 8, 0, Math.PI * 2);
+        ctx.fillStyle = '#f5c468';
+        ctx.shadowColor = 'rgba(245,196,104,0.9)';
+        ctx.shadowBlur = 16;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+      function animate() {
+        var p = Math.min(1, (performance.now() - segStart) / segDur);
+        var ease = 1 - Math.pow(1 - p, 2);
+        var a = path[seg], b = path[seg + 1];
+        var px = a.x + (b.x - a.x) * ease;
+        var py = a.y + (b.y - a.y) * ease + Math.sin(p * Math.PI) * 8;
+        paintBoard();
+        drawBall(px, py);
+        if (p < 1) return requestAnimationFrame(animate);
+        seg++;
+        if (seg < path.length - 1) {
+          segStart = performance.now();
+          return requestAnimationFrame(animate);
+        }
+        paintBoard(bucket);
+        drawBall(path[path.length - 1].x, path[path.length - 1].y);
+        var mult = PLINKO_MULTS[n][risk.value][bucket];
+        var payout = amt * mult;
+        settleGame('plinko', amt, payout, mult, statusEl,
+          mult >= 1 ? '🎯 Landed on ' + mult + 'x — won ' + payout.toFixed(2) + ' OST'
+                    : '😬 Landed on ' + mult + 'x — got ' + payout.toFixed(2) + ' OST back',
+          canvas.parentElement);
+        setBusy([dropBtn, bet, risk, rows], false);
+      }
+      animate();
     });
   }
 
@@ -849,32 +1022,34 @@
     [bet, tgt].forEach(function (e) { e.addEventListener('input', recalc); });
     recalc();
     roll.addEventListener('click', async function () {
-      var amt = parseFloat(bet.value);
+      var amt = parseBet(bet, statusEl);
+      if (amt === null) return;
       var r = placeBet(amt); if (!r.ok) { statusEl.textContent = r.msg; return; }
-      var t = Math.max(1.01, parseFloat(tgt.value) || 2);
+      var t = clamp(parseFloat(tgt.value) || 2, 1.01, 1000000);
+      tgt.value = t.toFixed(t >= 100 ? 0 : 2);
       var floats = await pfFloats(1);
       // Limbo result: m = 99 / (100*(1-r)), with very low r → very high m.
       var rolled = Math.max(1.0, 99 / (100 * (1 - floats[0])));
       // Animate count-up
       var t0 = performance.now();
+      setBusy([roll, bet, tgt], true);
+      statusEl.textContent = 'Rolling against ' + shortMult(t) + '…';
+      multEl.classList.remove('is-win', 'is-loss');
       function tick() {
-        var p = Math.min(1, (performance.now() - t0) / 600);
+        var p = Math.min(1, (performance.now() - t0) / 900);
         var m = 1 + (rolled - 1) * (1 - Math.pow(1 - p, 3));
         multEl.textContent = m.toFixed(2) + '×';
         if (p < 1) requestAnimationFrame(tick);
         else {
           var win = rolled >= t;
-          multEl.style.color = win ? '#86efac' : '#fca5a5';
+          multEl.classList.add(win ? 'is-win' : 'is-loss');
           if (win) {
             var pay = amt * t;
-            credit(pay, 'limbo');
-            statusEl.textContent = '✅ Rolled ×' + rolled.toFixed(2) + ' ≥ ×' + t.toFixed(2) + ' — won ' + pay.toFixed(2) + ' OST';
-            pushHistory(t);
+            settleGame('limbo', amt, pay, t, statusEl, '✅ Rolled ' + shortMult(rolled) + ' ≥ ' + shortMult(t) + ' — won ' + pay.toFixed(2) + ' OST', multEl.parentElement);
           } else {
-            statusEl.textContent = '❌ Rolled ×' + rolled.toFixed(2) + ' < ×' + t.toFixed(2);
-            pushHistory(0);
+            settleGame('limbo', amt, 0, 0, statusEl, '❌ Rolled ' + shortMult(rolled) + ' < ' + shortMult(t) + ' — lost ' + amt.toFixed(2) + ' OST', multEl.parentElement);
           }
-          setTimeout(function () { multEl.style.color = ''; }, 2000);
+          setBusy([roll, bet, tgt], false);
         }
       }
       tick();
@@ -922,14 +1097,27 @@
     function probLo(c) { return (c - 1) / (DECK_SIZE - 1); }           // strictly lower
     function multFor(p) { return p > 0 ? 0.99 / p : 0; }
 
+    function updateChoiceButtons() {
+      if (!session) return;
+      var ph = probHi(session.current);
+      var pl = probLo(session.current);
+      hi.disabled = ph <= 0;
+      lo.disabled = pl <= 0;
+      hi.textContent = ph > 0 ? ('↑ Higher · ' + shortMult(multFor(ph)) + ' · ' + (ph * 100).toFixed(1) + '%') : '↑ Higher · locked';
+      lo.textContent = pl > 0 ? ('↓ Lower · ' + shortMult(multFor(pl)) + ' · ' + (pl * 100).toFixed(1) + '%') : '↓ Lower · locked';
+    }
+
     start.addEventListener('click', async function () {
-      var amt = parseFloat(bet.value);
+      var amt = parseBet(bet, statusEl);
+      if (amt === null) return;
       var r = placeBet(amt); if (!r.ok) { statusEl.textContent = r.msg; return; }
       var c = await newCard();
       session = { bet: amt, current: c, mult: 1 };
       card.textContent = cardLabel(c);
+      pulse(card, 'ostg-card-flip');
       multEl.textContent = '1.00×';
-      hi.disabled = false; lo.disabled = false; start.disabled = true; bet.disabled = true; cash.disabled = true;
+      start.disabled = true; bet.disabled = true; cash.disabled = true;
+      updateChoiceButtons();
       statusEl.textContent = 'Higher or lower than ' + cardLabel(c) + '?';
     });
 
@@ -938,19 +1126,28 @@
       var p = dir === 'hi' ? probHi(session.current) : probLo(session.current);
       if (p <= 0) { statusEl.textContent = 'Impossible direction — choose the other side.'; return; }
       var step = multFor(p);
+      setBusy([hi, lo], true);
       var next = await newCard();
-      var win = dir === 'hi' ? (next > session.current) : (next < session.current);
+      var prev = session.current;
+      var tie = next === prev;
+      var win = dir === 'hi' ? (next > prev) : (next < prev);
       card.textContent = cardLabel(next);
+      pulse(card, 'ostg-card-flip');
       session.current = next;
-      if (win) {
+      if (tie) {
+        statusEl.textContent = '↔ Push on ' + cardLabel(next) + '. No multiplier change — pick again.';
+        updateChoiceButtons();
+        return;
+      } else if (win) {
         session.mult *= step;
         multEl.textContent = session.mult.toFixed(2) + '×';
+        pulse(multEl, 'ostg-pop-win');
         cash.disabled = false;
         cash.textContent = 'Cash out · ' + (session.bet * session.mult).toFixed(2) + ' OST';
         statusEl.textContent = '✅ Correct! Multiplier compounded — keep going or cash out.';
+        updateChoiceButtons();
       } else {
-        statusEl.textContent = '❌ Wrong — lost ' + session.bet.toFixed(2) + ' OST';
-        pushHistory(0);
+        settleGame('hilo', session.bet, 0, 0, statusEl, '❌ Wrong — lost ' + session.bet.toFixed(2) + ' OST', card.parentElement);
         end();
       }
     }
@@ -959,14 +1156,13 @@
     cash.addEventListener('click', function () {
       if (!session) return;
       var pay = session.bet * session.mult;
-      credit(pay, 'hilo');
-      pushHistory(session.mult);
-      statusEl.textContent = '💰 Cashed out at ×' + session.mult.toFixed(2) + ' for ' + pay.toFixed(2) + ' OST';
+      settleGame('hilo', session.bet, pay, session.mult, statusEl, '💰 Cashed out at ' + shortMult(session.mult) + ' for ' + pay.toFixed(2) + ' OST', card.parentElement);
       end();
     });
     function end() {
       session = null;
       hi.disabled = true; lo.disabled = true; cash.disabled = true; start.disabled = false; bet.disabled = false;
+      hi.textContent = '↑ Higher'; lo.textContent = '↓ Lower';
       cash.textContent = 'Cash out';
     }
   }
@@ -975,9 +1171,9 @@
   // WHEEL — 50 segments, configurable risk; spin and land on a multiplier.
   // ────────────────────────────────────────────────────────────────────────
   var WHEEL_SEGMENTS = {
-    low:    [1.5,1.2,1.2,0,1.2,1.2,1.5,0,1.2,1.5,1.2,0,1.5,1.2,1.2,0,1.2,1.5,1.2,0],
-    medium: [3,1.5,0,2,0,1.5,3,0,2,0,1.5,3,0,2,0,1.5,3,0,2,0],
-    high:   [9.9,0,0,0,0,0,0,0,0,0,9.9,0,0,0,0,0,0,0,0,0]
+    low:    [0,1.2,1.2,1.5,1.2,0,1.2,2,1.2,0,1.5,1.2,1.2,0,1.2,1.5,0,1.2,2,1.2,0,1.2,1.5,1.2,0,1.2,1.2,1.5,0,1.2],
+    medium: [0,1.5,0,2,0,1.5,0,3,0,1.5,0,2,0,5,0,1.5,0,2,0,3,0,1.5,0,2,0,1.5,0,3,0,1.5],
+    high:   [0,0,0,0,4,0,0,0,0,9,0,0,0,0,4,0,0,0,0,12,0,0,0,0,4,0,0,0,0,9]
   };
   function renderWheel(stage) {
     stage.innerHTML =
@@ -999,6 +1195,7 @@
     var risk = document.getElementById('whRisk');
     var spin = document.getElementById('whSpin');
     var statusEl = document.getElementById('whStatus');
+    var pin = stage.querySelector('.ostg-wheel-pin');
     var rotation = 0;
     function colorFor(m) { return m === 0 ? '#374151' : m < 1.5 ? '#2563eb' : m < 3 ? '#f59e0b' : '#ef4444'; }
     function paint(rot) {
@@ -1023,7 +1220,7 @@
         ctx.save();
         ctx.rotate((a0 + a1) / 2);
         ctx.fillStyle = '#fff';
-        ctx.font = 'bold 12px sans-serif';
+        ctx.font = 'bold 10px sans-serif';
         ctx.textAlign = 'right';
         ctx.fillText(segs[i] + '×', r - 10, 4);
         ctx.restore();
@@ -1036,7 +1233,8 @@
     risk.addEventListener('change', function () { paint(rotation); });
     paint(rotation);
     spin.addEventListener('click', async function () {
-      var amt = parseFloat(bet.value);
+      var amt = parseBet(bet, statusEl);
+      if (amt === null) return;
       var r = placeBet(amt); if (!r.ok) { statusEl.textContent = r.msg; return; }
       var f = await pfFloats(1);
       var segs = WHEEL_SEGMENTS[risk.value];
@@ -1045,8 +1243,10 @@
       // centre to align there → final rot = -PI/2 - (centreAngleOfSeg).
       var centre = ((landIdx + 0.5) / segs.length) * Math.PI * 2;
       var endRot = -Math.PI / 2 - centre + Math.PI * 2 * 6; // 6 full spins
-      var startRot = rotation, t0 = performance.now(), dur = 3500;
+      var startRot = rotation, t0 = performance.now(), dur = 3900;
       spin.disabled = true; bet.disabled = true; risk.disabled = true;
+      statusEl.textContent = 'Spinning ' + risk.value + ' risk wheel…';
+      pulse(pin, 'ostg-pin-bounce');
       function tick() {
         var p = Math.min(1, (performance.now() - t0) / dur);
         var ease = 1 - Math.pow(1 - p, 3);
@@ -1057,11 +1257,12 @@
           rotation = endRot % (Math.PI * 2);
           var mult = segs[landIdx];
           var pay = amt * mult;
-          if (pay > 0) credit(pay, 'wheel');
-          pushHistory(mult);
-          statusEl.textContent = mult > 0
-            ? '🎯 Landed on ×' + mult + ' — won ' + pay.toFixed(2) + ' OST'
-            : '😬 Landed on ×0 — lost ' + amt.toFixed(2) + ' OST';
+          settleGame('wheel', amt, pay, mult, statusEl,
+            mult > 0 ? '🎯 Landed on ' + shortMult(mult) + ' — won ' + pay.toFixed(2) + ' OST'
+                     : '😬 Landed on 0x — lost ' + amt.toFixed(2) + ' OST',
+            canvas.parentElement);
+          if (pin) pin.classList.remove('ostg-pin-bounce');
+          pulse(pin, 'ostg-pin-hit');
           spin.disabled = false; bet.disabled = false; risk.disabled = false;
         }
       }
@@ -1089,10 +1290,13 @@
     var disk = document.getElementById('cfDisk');
     var statusEl = document.getElementById('cfStatus');
     async function flip(side) {
-      var amt = parseFloat(bet.value);
+      var amt = parseBet(bet, statusEl);
+      if (amt === null) return;
       var r = placeBet(amt); if (!r.ok) { statusEl.textContent = r.msg; return; }
-      heads.disabled = true; tails.disabled = true;
+      setBusy([heads, tails, bet], true);
+      statusEl.textContent = 'Flipping for ' + (side === 'h' ? 'heads' : 'tails') + '…';
       disk.classList.remove('flip-h', 'flip-t');
+      disk.textContent = side === 'h' ? '🔆' : '🌙';
       // tiny delay so the animation plays even on rapid clicks
       void disk.offsetWidth;
       var f = await pfFloats(1);
@@ -1102,14 +1306,11 @@
         disk.textContent = result === 'h' ? '🔆' : '🌙';
         if (result === side) {
           var pay = amt * 1.98;
-          credit(pay, 'coinflip');
-          statusEl.textContent = '✅ ' + (result === 'h' ? 'Heads' : 'Tails') + '! Won ' + pay.toFixed(2) + ' OST';
-          pushHistory(1.98);
+          settleGame('coinflip', amt, pay, 1.98, statusEl, '✅ ' + (result === 'h' ? 'Heads' : 'Tails') + '! Won ' + pay.toFixed(2) + ' OST', disk.parentElement);
         } else {
-          statusEl.textContent = '❌ ' + (result === 'h' ? 'Heads' : 'Tails') + ' — lost ' + amt.toFixed(2) + ' OST';
-          pushHistory(0);
+          settleGame('coinflip', amt, 0, 0, statusEl, '❌ ' + (result === 'h' ? 'Heads' : 'Tails') + ' — lost ' + amt.toFixed(2) + ' OST', disk.parentElement);
         }
-        heads.disabled = false; tails.disabled = false;
+        setBusy([heads, tails, bet], false);
       }, 700);
     }
     heads.addEventListener('click', function () { flip('h'); });
@@ -1175,7 +1376,7 @@
     var st = document.createElement('style');
     st.id = 'ostgStyle';
     st.textContent =
-      '.ostg-section{padding:24px;border-radius:20px;background:linear-gradient(180deg,rgba(15,18,30,0.92),rgba(8,11,22,0.95));border:1px solid rgba(120,180,255,0.18);box-shadow:0 12px 40px rgba(0,0,0,0.45);}' +
+      '.ostg-section{position:relative;padding:24px;border-radius:20px;background:linear-gradient(180deg,rgba(15,18,30,0.92),rgba(8,11,22,0.95));border:1px solid rgba(120,180,255,0.18);box-shadow:0 12px 40px rgba(0,0,0,0.45);}' +
       '.ostg-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:16px;}' +
       '.ostg-section h3{margin:0 0 4px;color:#f8fafc;font-size:1.3rem;}' +
       '.ostg-sub{margin:0;color:#94a3b8;font-size:13px;line-height:1.5;}' +
@@ -1264,7 +1465,32 @@
       '.ostg-coin-disk.flip-h{animation:ostg-coin-flip-h .7s ease-out;}' +
       '.ostg-coin-disk.flip-t{animation:ostg-coin-flip-t .7s ease-out;}' +
       '@keyframes ostg-coin-flip-h{0%{transform:rotateY(0)}100%{transform:rotateY(1080deg)}}' +
-      '@keyframes ostg-coin-flip-t{0%{transform:rotateY(0)}100%{transform:rotateY(900deg)}}';
+      '@keyframes ostg-coin-flip-t{0%{transform:rotateY(0)}100%{transform:rotateY(900deg)}}' +
+      // Shared feel layer
+      '.ostg-stage,.ostg-board,.ostg-crash-stage,.ostg-plinko-stage,.ostg-limbo-stage,.ostg-hilo-stage,.ostg-wheel-stage,.ostg-coin-stage{position:relative;}' +
+      '.ostg-toast{position:absolute;right:18px;top:84px;z-index:6;transform:translateY(-8px);opacity:0;pointer-events:none;padding:9px 12px;border-radius:10px;font-size:12px;font-weight:800;letter-spacing:.01em;box-shadow:0 10px 24px rgba(0,0,0,.35);transition:opacity .22s,transform .22s;}' +
+      '.ostg-toast.show{opacity:1;transform:translateY(0);}' +
+      '.ostg-toast.win{background:rgba(34,197,94,.95);color:#052e16;}' +
+      '.ostg-toast.loss{background:rgba(220,38,38,.95);color:#fff;}' +
+      '.ostg-toast.soft{background:rgba(245,196,104,.95);color:#1f1300;}' +
+      '.ostg-spark{position:absolute;width:7px;height:7px;border-radius:2px;background:hsl(var(--h),85%,62%);z-index:5;pointer-events:none;animation:ostg-spark .9s ease-out forwards;}' +
+      '@keyframes ostg-spark{0%{opacity:1;transform:translate(0,0) scale(1) rotate(0)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.25) rotate(260deg)}}' +
+      '.ostg-tile span{display:inline-block;}' +
+      '.ostg-tile-pop span{animation:ostg-pop .34s cubic-bezier(.2,1.6,.4,1);}' +
+      '.ostg-pop-win{animation:ostg-pop-win .42s cubic-bezier(.2,1.6,.4,1);}' +
+      '.ostg-pop-loss{animation:ostg-pop-loss .42s cubic-bezier(.2,1.6,.4,1);}' +
+      '@keyframes ostg-pop{0%{transform:scale(.4)}70%{transform:scale(1.22)}100%{transform:scale(1)}}' +
+      '@keyframes ostg-pop-win{0%{transform:scale(.86);text-shadow:none}60%{transform:scale(1.12);text-shadow:0 0 22px rgba(34,197,94,.8)}100%{transform:scale(1)}}' +
+      '@keyframes ostg-pop-loss{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}' +
+      '.ostg-limbo-mult.is-win{color:#86efac;text-shadow:0 0 28px rgba(34,197,94,.72);}' +
+      '.ostg-limbo-mult.is-loss{color:#fca5a5;text-shadow:0 0 24px rgba(220,38,38,.62);}' +
+      '.ostg-card-flip{animation:ostg-card-flip .38s ease-out;}' +
+      '@keyframes ostg-card-flip{0%{transform:rotateY(90deg) translateY(8px)}100%{transform:rotateY(0) translateY(0)}}' +
+      '.ostg-pin-bounce{animation:ostg-pin-bounce .45s ease-in-out infinite alternate;}' +
+      '.ostg-pin-hit{animation:ostg-pin-hit .5s ease-out;}' +
+      '@keyframes ostg-pin-bounce{0%{transform:translateX(-50%) translateY(0)}100%{transform:translateX(-50%) translateY(8px)}}' +
+      '@keyframes ostg-pin-hit{0%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.22)}100%{transform:translateX(-50%) scale(1)}}' +
+      '@media (max-width:520px){.ostg-section{padding:16px}.ostg-limbo-mult{font-size:2.8rem}.ostg-dice-stats{grid-template-columns:1fr}.ostg-card{width:96px;height:136px;font-size:2.8rem}.ostg-toast{right:10px;top:74px}}';
     document.head.appendChild(st);
   }
 
