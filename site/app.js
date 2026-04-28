@@ -12972,9 +12972,21 @@
     }
 
     function mapPolymarketMarket(item) {
-      var question = item.question || 'Untitled market';
-      var outcomes = parseMaybeJson(item.outcomes);
-      var prices = parseMaybeJson(item.outcomePrices).map(Number);
+      var question = item.question || item.title || 'Untitled market';
+      // Two input shapes possible:
+      //  (a) Raw Polymarket gamma:  outcomes:["Yes","No"], outcomePrices:["0.5","0.5"]
+      //  (b) Worker-normalised:     outcomes:[{label:"Yes",price:0.535,tokenId},...] + yesPriceNumber/noPriceNumber
+      // Detect (b) first so the real consensus prices flow through instead of
+      // the silent 0.5 fallback (which made every market read as 50/50).
+      var outcomes, prices;
+      var rawOutcomes = parseMaybeJson(item.outcomes);
+      if (rawOutcomes.length && typeof rawOutcomes[0] === 'object' && rawOutcomes[0] !== null) {
+        outcomes = rawOutcomes.map(function (o) { return String(o.label || ''); });
+        prices   = rawOutcomes.map(function (o) { return Number(o.price); });
+      } else {
+        outcomes = rawOutcomes.map(String);
+        prices   = parseMaybeJson(item.outcomePrices).map(Number);
+      }
       var yesIndex = outcomes.findIndex(function(outcome) {
         return String(outcome).toLowerCase() === 'yes';
       });
@@ -12982,9 +12994,13 @@
         return String(outcome).toLowerCase() === 'no';
       });
       var yesPrice = safeFraction(yesIndex >= 0 ? prices[yesIndex] : prices[0], NaN);
-      var noPrice = safeFraction(noIndex >= 0 ? prices[noIndex] : prices[1], NaN);
-      if (!Number.isFinite(noPrice) && Number.isFinite(yesPrice)) noPrice = clamp(1 - yesPrice, 0, 1);
-      if (!Number.isFinite(yesPrice) && Number.isFinite(noPrice)) yesPrice = clamp(1 - noPrice, 0, 1);
+      var noPrice  = safeFraction(noIndex  >= 0 ? prices[noIndex]  : prices[1], NaN);
+      // Fall back to the worker's pre-computed yesPriceNumber/noPriceNumber when
+      // outcomes parsing didn't yield a usable price.
+      if (!Number.isFinite(yesPrice) && Number.isFinite(Number(item.yesPriceNumber))) yesPrice = clamp(Number(item.yesPriceNumber), 0, 1);
+      if (!Number.isFinite(noPrice)  && Number.isFinite(Number(item.noPriceNumber)))  noPrice  = clamp(Number(item.noPriceNumber),  0, 1);
+      if (!Number.isFinite(noPrice)  && Number.isFinite(yesPrice)) noPrice = clamp(1 - yesPrice, 0, 1);
+      if (!Number.isFinite(yesPrice) && Number.isFinite(noPrice))  yesPrice = clamp(1 - noPrice, 0, 1);
 
       var rawDetail = item.description || t('wallet.portal.prediction.polyDetail', 'Live yes/no contract routed directly from Polymarket.');
       var detail = summarizeMarketText(rawDetail, t('wallet.portal.prediction.polyDetail', 'Live yes/no contract routed directly from Polymarket.'), 180);

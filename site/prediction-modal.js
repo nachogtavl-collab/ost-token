@@ -517,10 +517,11 @@
     '</section>';
   }
 
-  // Shared positions ticker — every OST user sees every other user's recent bets.
+  // Shared positions ticker — every OST user sees every other user's recent bets
+  // ON THIS MARKET (filtered server-side fetch is global, we filter per-market here).
   function renderSharedBlock() {
     return '<section class="ost-modal__shared">' +
-      '<div class="ost-modal__shared-title">Live OST flow · across all users</div>' +
+      '<div class="ost-modal__shared-title">Live OST flow · this market</div>' +
       '<div class="ost-modal__shared-list" data-bind="sharedList">' +
         '<div style="opacity:0.55;font-size:11px;">Loading shared positions…</div>' +
       '</div>' +
@@ -708,20 +709,22 @@
             try { window.__ostChartRedraw(); } catch (_) {}
           }
           if (!sharedListEl) return;
-          if (!j.recent.length) {
-            sharedListEl.innerHTML = '<div style="opacity:0.55;font-size:11px;">Be the first — no shared positions yet.</div>';
+          // Filter the side ribbon to ONLY this market's bets — users were
+          // getting confused seeing trades from unrelated markets.
+          var thisMarketBets = (perMarket[market.id] || []).slice(0, 12);
+          if (!thisMarketBets.length) {
+            sharedListEl.innerHTML = '<div style="opacity:0.55;font-size:11px;">No OST bets on this market yet — be the first.</div>';
             return;
           }
-          // Show all-market ticker in the side panel (not filtered by side).
-          sharedListEl.innerHTML = j.recent.slice(0, 12).map(function (r) {
+          sharedListEl.innerHTML = thisMarketBets.map(function (r) {
             var sideClass = /YES|BUY/i.test(r.side) ? 'is-yes' : 'is-no';
             var ago = Math.max(0, Math.round((Date.now() - new Date(r.ts).getTime()) / 1000));
             var agoStr = ago < 60 ? (ago + 's ago') : (Math.round(ago / 60) + 'm ago');
+            var pxTxt = Number.isFinite(Number(r.price)) ? ' @ ' + (Number(r.price) * 100).toFixed(1) + '¢' : '';
             return '<div class="ost-modal__shared-row ' + sideClass + '">' +
               '<span class="ost-modal__shared-wallet">' + escapeHtml(r.walletShort || (r.wallet || 'anon').slice(0, 4) + '…') + '</span>' +
               '<span class="ost-modal__shared-side">' + escapeHtml(r.side) + '</span>' +
-              '<span class="ost-modal__shared-stake">' + Number(r.stake).toFixed(2) + ' OST</span>' +
-              '<span class="ost-modal__shared-market" title="' + escapeHtml(r.marketTitle || r.marketId) + '">' + escapeHtml(r.marketTitle || r.marketId) + '</span>' +
+              '<span class="ost-modal__shared-stake">' + Number(r.stake).toFixed(2) + ' OST' + pxTxt + '</span>' +
               '<span class="ost-modal__shared-time">' + agoStr + '</span>' +
             '</div>';
           }).join('');

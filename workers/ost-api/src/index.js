@@ -298,6 +298,40 @@ export default {
       return json({ ok: true, openAt, openPrice });
     }
 
+    // ── /gamma/* /clob/* /data/* — transparent CORS-safe Polymarket proxy ──
+    // The site's prediction-modal.js calls relayBase()+'/gamma'/'/clob'/'/data',
+    // expecting these to mirror Polymarket's gamma-api/clob/data-api hosts.
+    // Without these passes the modal silently fails over to public CORS proxies
+    // which throttle and produce the "stuck at 50%" symptom.
+    const proxyMap = {
+      '/gamma/': env.GAMMA_BASE || 'https://gamma-api.polymarket.com',
+      '/clob/' : env.CLOB_BASE  || 'https://clob.polymarket.com',
+      '/data/' : env.DATA_BASE  || 'https://data-api.polymarket.com'
+    };
+    for (const prefix in proxyMap) {
+      if (path.startsWith(prefix)) {
+        const upstream = proxyMap[prefix] + path.slice(prefix.length - 1) + (url.search || '');
+        try {
+          const r = await fetch(upstream, {
+            method,
+            headers: { accept: 'application/json', 'user-agent': 'OST-API/1.0' },
+            cf: { cacheTtl: 5, cacheEverything: true }
+          });
+          const text = await r.text();
+          return new Response(text, {
+            status: r.status,
+            headers: {
+              ...CORS_HEADERS,
+              'content-type': r.headers.get('content-type') || 'application/json',
+              'cache-control': 'public, max-age=2'
+            }
+          });
+        } catch (e) {
+          return json({ error: 'upstream_failed', upstream, message: String(e?.message || e) }, 502);
+        }
+      }
+    }
+
     // ── GET /markets ─────────────────────────────────────────────────────────
     if (path === '/markets' && method === 'GET') {
       const limit = Number(url.searchParams.get('limit') || 60);
