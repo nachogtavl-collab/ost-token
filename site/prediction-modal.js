@@ -234,6 +234,10 @@
       try { window.removeEventListener('ost:prediction:order-changed', bodyEl.__refreshSell); } catch (_) {}
       bodyEl.__refreshSell = null;
     }
+    if (bodyEl && bodyEl.__broadcastHls) {
+      try { bodyEl.__broadcastHls.destroy(); } catch (_) {}
+      bodyEl.__broadcastHls = null;
+    }
     el.classList.remove('is-open');
     el.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
@@ -700,6 +704,128 @@
     '</section>';
   }
 
+  // ──────────────────────────────────────────────────────────────────────
+  // BROADCAST — live video panel for sports markets (soccer / World Cup
+  // first). Plays an HLS stream with a built-in 15-second delay buffer so
+  // the feed lags the on-chain market just enough that latency-arbitrage
+  // bettors can't front-run prices. Falls back to a Tubi link-out when no
+  // direct stream URL is configured for the market.
+  //
+  // Owner provides streams via either:
+  //   window.OST_MARKET_STREAMS = { '<marketId|conditionId|slug>': 'https://.../master.m3u8' }
+  //   OR per-market field market.streamUrl / market.broadcastUrl
+  // ──────────────────────────────────────────────────────────────────────
+  var SPORTS_RE = /\b(world\s*cup|fifa|world-?cup|champions\s*league|premier\s*league|la\s*liga|bundesliga|serie\s*a|copa|uefa|nba|nfl|ufc|boxing|f1|formula\s*1|tennis|wimbledon|atp|wta|cricket|ipl)\b|\bvs\.?\b|\b—\b.*\b—\b/i;
+  function isSportsMarket(m) {
+    var t = String((m && (m.title || m.question || m.detail || '')) || '');
+    var topic = String((m && m.topic) || '');
+    if (SPORTS_RE.test(t) || SPORTS_RE.test(topic)) return true;
+    return false;
+  }
+  function tubiSearchUrl(m) {
+    var q = String((m && (m.title || m.question || '')) || '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
+    return 'https://tubitv.com/search/' + encodeURIComponent(q || 'fifa world cup');
+  }
+  function streamForMarket(m) {
+    if (!m) return '';
+    if (m.streamUrl) return String(m.streamUrl);
+    if (m.broadcastUrl) return String(m.broadcastUrl);
+    var registry = window.OST_MARKET_STREAMS;
+    if (registry && typeof registry === 'object') {
+      return String(registry[m.id] || registry[m.conditionId] || registry[m.slug] || '');
+    }
+    return '';
+  }
+  function renderBroadcastBlock(m) {
+    if (!isSportsMarket(m)) return '';
+    var stream = streamForMarket(m);
+    var tubi = tubiSearchUrl(m);
+    return '<section class="ost-modal__broadcast" data-bind="broadcastSection" style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px;margin-top:12px;">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;">' +
+        '<h4 style="margin:0;font-size:14px;letter-spacing:.04em;">📺 Live broadcast' +
+          '<span style="margin-left:8px;font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;background:rgba(244,114,182,.15);color:#f472b6;border:1px solid rgba(244,114,182,.35);">15s DELAY</span>' +
+        '</h4>' +
+        '<a href="' + escapeHtml(tubi) + '" target="_blank" rel="noopener" style="font-size:12px;color:#fbbf24;text-decoration:none;border:1px solid rgba(251,191,36,.4);padding:4px 10px;border-radius:6px;">Watch on Tubi ↗</a>' +
+      '</div>' +
+      (stream
+        ? '<video data-bind="broadcastVideo" controls playsinline muted preload="none" style="width:100%;max-height:360px;background:#000;border-radius:8px;"></video>' +
+          '<div style="display:flex;gap:8px;align-items:center;margin-top:6px;font-size:11px;opacity:.7;">' +
+            '<span data-bind="broadcastStatus">Click ▶ to start the 15-second-delayed feed.</span>' +
+          '</div>'
+        : '<div style="padding:10px;border-radius:6px;background:rgba(251,191,36,.06);border:1px dashed rgba(251,191,36,.3);font-size:12px;opacity:.85;">' +
+            'No direct stream wired for this market yet. Open Tubi above to watch the live broadcast (Tubi adds its own ~10–15 s delay), then come back to bet.' +
+          '</div>'
+      ) +
+    '</section>';
+  }
+  function loadHlsScript() {
+    if (window.Hls) return Promise.resolve(window.Hls);
+    if (loadHlsScript._p) return loadHlsScript._p;
+    loadHlsScript._p = new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js';
+      s.async = true;
+      s.onload = function () { resolve(window.Hls); };
+      s.onerror = function () { reject(new Error('Failed to load hls.js')); };
+      document.head.appendChild(s);
+    });
+    return loadHlsScript._p;
+  }
+  function wireBroadcast(bodyEl, market) {
+    var video = bodyEl.querySelector('[data-bind="broadcastVideo"]');
+    if (!video) return;
+    var stream = streamForMarket(market);
+    if (!stream) return;
+    var DELAY_S = 15;
+    function setStatus(msg) {
+      var el = bodyEl.querySelector('[data-bind="broadcastStatus"]');
+      if (el) el.textContent = msg;
+    }
+    // Native HLS (Safari / iOS).
+    if (video.canPlayType && video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = stream;
+      video.addEventListener('loadedmetadata', function () {
+        try {
+          if (video.seekable && video.seekable.length) {
+            var end = video.seekable.end(video.seekable.length - 1);
+            video.currentTime = Math.max(0, end - DELAY_S);
+          }
+        } catch (_) {}
+        setStatus('Live · 15s behind real-time (Safari native).');
+      });
+      return;
+    }
+    // hls.js for everything else.
+    setStatus('Loading player…');
+    loadHlsScript().then(function (Hls) {
+      if (!Hls || !Hls.isSupported()) {
+        setStatus('Browser cannot play HLS. Use the Tubi link instead.');
+        return;
+      }
+      var hls = new Hls({
+        lowLatencyMode: false,
+        liveSyncDuration: DELAY_S,
+        liveMaxLatencyDuration: DELAY_S * 2,
+        backBufferLength: 60
+      });
+      hls.loadSource(stream);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, function () {
+        setStatus('Live · 15s behind real-time. Click ▶ to play.');
+      });
+      hls.on(Hls.Events.ERROR, function (_evt, data) {
+        if (data && data.fatal) {
+          setStatus('Stream error: ' + (data.details || data.type) + '. Try the Tubi link.');
+          try { hls.destroy(); } catch (_) {}
+        }
+      });
+      // Stash for cleanup on close.
+      bodyEl.__broadcastHls = hls;
+    }).catch(function (e) {
+      setStatus('Player unavailable: ' + (e && e.message || 'unknown') + '. Use the Tubi link.');
+    });
+  }
+
   function renderSkeleton(m) {
     return '<header class="ost-modal__header">' + renderHeaderBlock(m) + '</header>' +
            '<div class="ost-modal__main">' +
@@ -707,6 +833,7 @@
              renderPricesBlock(m) +
              renderOutcomesBlock(m) +
              renderChartBlock() +
+             renderBroadcastBlock(m) +
              '<div class="ost-modal__two-col">' +
                renderBookBlock() +
                renderTradesBlock() +
@@ -917,6 +1044,9 @@
     liveTimers.push(setInterval(refreshSellList, 3000));
     bodyEl.__refreshSell = refreshSellList;
     window.addEventListener('ost:prediction:order-changed', refreshSellList);
+
+    // ---- Broadcast (HLS player with 15s delay for sports markets) ----
+    try { wireBroadcast(bodyEl, market); } catch (e) { console.warn('[ost-modal] broadcast wire failed', e); }
 
     // ---- Live BTC tile ----
     if (market.isOstNative && market.meta && market.meta.kind === 'btc5m') {
