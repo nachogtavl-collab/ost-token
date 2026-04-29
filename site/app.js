@@ -2738,11 +2738,145 @@
     }
   }
 
+  function writePredictionOrderRecords(records) {
+    try {
+      localStorage.setItem(PREDICTION_ORDERS_STORAGE_KEY, JSON.stringify((records || []).slice(0, 300)));
+    } catch {}
+  }
+
+  function getPredictionWalletAddress() {
+    try {
+      if (connectedWallet) return connectedWallet;
+      if (connectedWalletSession && connectedWalletSession.publicKey) return connectedWalletSession.publicKey.toBase58();
+      if (window.OST_WALLET && window.OST_WALLET.session && window.OST_WALLET.session.publicKey) return window.OST_WALLET.session.publicKey.toBase58();
+      if (window.OST_WALLET_PUBKEY) return String(window.OST_WALLET_PUBKEY);
+    } catch {}
+    return '';
+  }
+
+  function getOstApiBase() {
+    return window.OST_API_BASE ? String(window.OST_API_BASE).replace(/\/$/, '') : '';
+  }
+
+  function normalizeRemoteTs(value) {
+    if (!value) return Date.now();
+    const number = Number(value);
+    if (Number.isFinite(number)) return number < 100000000000 ? number * 1000 : number;
+    const parsed = Date.parse(value);
+    return Number.isFinite(parsed) ? parsed : Date.now();
+  }
+
+  function predictionOrderKey(order) {
+    if (!order) return '';
+    return String(order.signature || order.sig || order.remoteId || order.id || [order.wallet || '', order.marketId || '', order.side || '', order.createdAt || order.ts || ''].join(':'));
+  }
+
+  function normalizeRemotePredictionPosition(position, wallet) {
+    if (!position || !position.marketId) return null;
+    const stake = Number(position.stake || position.amount || 0) || 0;
+    const side = String(position.side || 'yes').toLowerCase().indexOf('no') >= 0 ? 'no' : 'yes';
+    const rawPrice = Number(position.price || 0);
+    const sidePrice = side === 'no' ? Number(position.noPrice) : Number(position.yesPrice);
+    const price = Number.isFinite(rawPrice) && rawPrice > 0 ? rawPrice : sidePrice;
+    const createdAt = normalizeRemoteTs(position.createdAt || position.ts);
+    return {
+      signature: position.signature || position.sig || position.id || '',
+      sig: position.sig || position.signature || position.id || '',
+      remoteId: position.id || '',
+      syncedFrom: 'ost-api',
+      ts: createdAt,
+      createdAt: createdAt,
+      status: position.status || 'open',
+      wallet: position.wallet || wallet || '',
+      source: position.source || 'polymarket',
+      marketId: String(position.marketId),
+      conditionId: position.conditionId || position.condition_id || '',
+      title: position.title || position.marketTitle || 'Prediction ticket',
+      topic: position.topic || '',
+      side: side,
+      price: Number.isFinite(price) && price > 0 ? price : 0,
+      yesPrice: Number(position.yesPrice),
+      noPrice: Number(position.noPrice),
+      stake: stake,
+      shares: Number(position.shares) || (price > 0 ? stake / price : 0),
+      potentialReturn: Number(position.potentialReturn) || (price > 0 ? stake / price : 0),
+      closeAtMs: Number(position.closeAtMs || 0) || 0,
+      clobTokenIds: Array.isArray(position.clobTokenIds) ? position.clobTokenIds.slice(0, 4) : [],
+      sourceUrl: position.sourceUrl || '',
+      cashoutKind: position.cashoutKind || '',
+      cashoutSig: position.cashoutSig || '',
+      cashoutOst: Number(position.cashoutOst || 0) || 0,
+      cashoutAt: Number(position.cashoutAt || 0) || 0,
+      cashedOut: !!position.cashoutAt || !!position.cashoutSig || position.status === 'sold' || position.status === 'settled',
+      finalYesPrice: Number(position.finalYesPrice),
+      finalNoPrice: Number(position.finalNoPrice),
+      resolvedAt: Number(position.resolvedAt || 0) || 0,
+      settlementSource: position.settlementSource || ''
+    };
+  }
+
+  function mergePredictionOrderRecords(records) {
+    const byKey = new Map();
+    readPredictionOrderRecords().concat(records || []).forEach(function(order) {
+      if (!order) return;
+      const key = predictionOrderKey(order);
+      if (!key) return;
+      const existing = byKey.get(key);
+      if (!existing || Number(order.cashoutAt || order.resolvedAt || order.createdAt || order.ts || 0) >= Number(existing.cashoutAt || existing.resolvedAt || existing.createdAt || existing.ts || 0)) {
+        byKey.set(key, Object.assign({}, existing || {}, order));
+      }
+    });
+    const merged = Array.from(byKey.values()).sort(function(a, b) {
+      return Number(b.createdAt || b.ts || 0) - Number(a.createdAt || a.ts || 0);
+    }).slice(0, 300);
+    writePredictionOrderRecords(merged);
+    return merged;
+  }
+
+  function sharePredictionOrderRecord(record) {
+    const base = getOstApiBase();
+    const wallet = record && (record.wallet || getPredictionWalletAddress());
+    if (!base || !wallet || !record || !record.marketId) return;
+    try {
+      fetch(base + '/positions', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(Object.assign({}, record, {
+          wallet: wallet,
+          marketTitle: record.title || record.marketTitle || '',
+          signature: record.signature || record.sig || '',
+          ts: record.createdAt || record.ts || Date.now()
+        }))
+      }).catch(function() {});
+    } catch {}
+  }
+
+  function syncPredictionOrdersFromRemote() {
+    const base = getOstApiBase();
+    const wallet = getPredictionWalletAddress();
+    if (!base || !wallet || syncPredictionOrdersFromRemote.inFlight) return Promise.resolve(false);
+    syncPredictionOrdersFromRemote.inFlight = true;
+    return fetch(base + '/positions/' + encodeURIComponent(wallet), { cache: 'no-store', headers: { accept: 'application/json' } })
+      .then(function(response) { return response.ok ? response.json() : null; })
+      .then(function(payload) {
+        const remote = Array.isArray(payload && payload.positions) ? payload.positions : [];
+        const normalized = remote.map(function(position) { return normalizeRemotePredictionPosition(position, wallet); }).filter(Boolean);
+        if (!normalized.length) return false;
+        const before = readPredictionOrderRecords().length;
+        mergePredictionOrderRecords(normalized);
+        try { window.dispatchEvent(new CustomEvent('ost:prediction-orders-synced')); } catch {}
+        return readPredictionOrderRecords().length !== before;
+      })
+      .catch(function() { return false; })
+      .finally(function() { syncPredictionOrdersFromRemote.inFlight = false; });
+  }
+
+  window.syncOstPredictionOrdersFromRemote = syncPredictionOrdersFromRemote;
+
   function storePredictionOrderRecord(record) {
     try {
-      const existing = readPredictionOrderRecords();
-      existing.unshift(record);
-      localStorage.setItem(PREDICTION_ORDERS_STORAGE_KEY, JSON.stringify(existing.slice(0, 200)));
+      mergePredictionOrderRecords([record]);
+      sharePredictionOrderRecord(record);
     } catch {}
   }
 
@@ -12543,10 +12677,11 @@
           var update = resolvePredictionOrderFromPayload(result.candidate.order, result.payload);
           if (!update) return;
           orders[result.candidate.index] = Object.assign({}, orders[result.candidate.index], update);
+          sharePredictionOrderRecord(orders[result.candidate.index]);
           changed = true;
         });
         if (!changed) return false;
-        try { localStorage.setItem(PREDICTION_ORDERS_STORAGE_KEY, JSON.stringify(orders)); } catch (_) {}
+        writePredictionOrderRecords(orders);
         state.orderHistory = orders;
         renderPredictionLedger();
         try { window.dispatchEvent(new CustomEvent('ost:prediction-resolutions-refreshed')); } catch (_) {}
@@ -12642,8 +12777,48 @@
         return;
       }
 
-      positionListEl.innerHTML = state.orderHistory.map(function(order, idx) {
+      var portfolio = state.orderHistory.reduce(function(acc, order) {
         var action = getPredictionOrderAction(order);
+        var stake = Number(order && order.stake || 0) || 0;
+        var currentValue = order && order.cashedOut ? Number(order.cashoutOst || 0) : Number(action.payout || action.liveValue || 0);
+        acc.staked += stake;
+        acc.value += Number.isFinite(currentValue) ? currentValue : 0;
+        if (order && order.cashedOut) {
+          acc.paid += 1;
+          acc.pnl += Number(order.cashoutOst || 0) - stake;
+        } else if (action.finalStatus === 'won') {
+          acc.claim += 1;
+          acc.pnl += Number(action.payout || 0) - stake;
+        } else if (action.finalStatus === 'lost') {
+          acc.closed += 1;
+          acc.pnl -= stake;
+        } else {
+          acc.open += 1;
+          acc.pnl += Number(action.liveValue || 0) - stake;
+        }
+        return acc;
+      }, { staked: 0, value: 0, pnl: 0, open: 0, claim: 0, closed: 0, paid: 0 });
+
+      var pnlColor = portfolio.pnl >= 0 ? '#34d399' : '#f87171';
+      var summaryHtml = [
+        '<div class="prediction-position-portfolio" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:10px;">',
+          '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:7px;padding:8px;"><span style="display:block;color:#94a3b8;font-size:10px;text-transform:uppercase;letter-spacing:.06em;">Staked</span><strong style="color:#f8fafc;">' + escapeHtml(formatOst(portfolio.staked)) + '</strong></div>',
+          '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:7px;padding:8px;"><span style="display:block;color:#94a3b8;font-size:10px;text-transform:uppercase;letter-spacing:.06em;">Value</span><strong style="color:#f8fafc;">' + escapeHtml(formatOst(portfolio.value)) + '</strong></div>',
+          '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:7px;padding:8px;"><span style="display:block;color:#94a3b8;font-size:10px;text-transform:uppercase;letter-spacing:.06em;">P&amp;L</span><strong style="color:' + pnlColor + ';">' + (portfolio.pnl >= 0 ? '+' : '-') + escapeHtml(formatOst(Math.abs(portfolio.pnl))) + '</strong></div>',
+          '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:7px;padding:8px;"><span style="display:block;color:#94a3b8;font-size:10px;text-transform:uppercase;letter-spacing:.06em;">Open / Claim</span><strong style="color:#f8fafc;">' + portfolio.open + ' / ' + portfolio.claim + '</strong></div>',
+        '</div>',
+        '<div class="prediction-position-filters" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">',
+          '<button type="button" data-position-filter="all" class="prediction-chip is-active">All</button>',
+          '<button type="button" data-position-filter="open" class="prediction-chip">Open ' + portfolio.open + '</button>',
+          '<button type="button" data-position-filter="claim" class="prediction-chip">Claim ' + portfolio.claim + '</button>',
+          '<button type="button" data-position-filter="paid" class="prediction-chip">Paid ' + portfolio.paid + '</button>',
+          '<button type="button" data-position-filter="closed" class="prediction-chip">Closed ' + portfolio.closed + '</button>',
+        '</div>'
+      ].join('');
+
+      var rowsHtml = state.orderHistory.map(function(order, idx) {
+        var action = getPredictionOrderAction(order);
+        var filterStatus = order.cashedOut ? 'paid' : action.finalStatus === 'won' ? 'claim' : action.finalStatus === 'lost' ? 'closed' : 'open';
         var sideLabel = order.side === 'no'
           ? t('wallet.portal.prediction.buyNo', 'NO position')
           : t('wallet.portal.prediction.buyYes', 'YES position');
@@ -12666,7 +12841,7 @@
         var srcColor = src === 'kalshi' ? '#00c896' : src === 'polymarket' ? '#6d9fff' : '#f5c468';
         var srcBadge = '<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;background:' + srcColor + '22;color:' + srcColor + ';border:1px solid ' + srcColor + '55;text-transform:uppercase;">' + escapeHtml(src) + '</span>';
         return [
-          '<div class="prediction-position-row">',
+          '<div class="prediction-position-row" data-position-status="' + filterStatus + '">',
             '<div class="prediction-position-row-top">',
               '<div style="display:flex;align-items:center;gap:6px;">',
                 srcBadge,
@@ -12689,6 +12864,19 @@
         ].join('');
       }).join('');
 
+      positionListEl.innerHTML = summaryHtml + rowsHtml;
+
+      positionListEl.querySelectorAll('[data-position-filter]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var filter = btn.getAttribute('data-position-filter') || 'all';
+          positionListEl.querySelectorAll('[data-position-filter]').forEach(function(item) { item.classList.remove('is-active'); });
+          btn.classList.add('is-active');
+          positionListEl.querySelectorAll('[data-position-status]').forEach(function(row) {
+            row.style.display = filter === 'all' || row.getAttribute('data-position-status') === filter ? '' : 'none';
+          });
+        });
+      });
+
       // Wire cash-out buttons
       positionListEl.querySelectorAll('[data-cashout-idx]').forEach(function(btn) {
         btn.addEventListener('click', async function() {
@@ -12704,7 +12892,8 @@
           if (!action.canCash || !Number.isFinite(Number(action.payout)) || Number(action.payout) <= 0) {
             order.status = action.finalStatus || order.status || 'closed';
             orders[idx] = order;
-            try { localStorage.setItem(PREDICTION_ORDERS_STORAGE_KEY, JSON.stringify(orders)); } catch(e){}
+            writePredictionOrderRecords(orders);
+            sharePredictionOrderRecord(order);
             state.orderHistory = orders;
             renderPredictionLedger();
             return;
@@ -12724,7 +12913,8 @@
             order.cashoutAt = Date.now();
             order.cashoutKind = action.kind;
             orders[idx] = order;
-            try { localStorage.setItem(PREDICTION_ORDERS_STORAGE_KEY, JSON.stringify(orders)); } catch(e){}
+            writePredictionOrderRecords(orders);
+            sharePredictionOrderRecord(order);
             state.orderHistory = orders;
             renderPredictionLedger();
             try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch(e){}
@@ -14382,6 +14572,10 @@
 
     syncPredictionMarketBoardUi();
     syncTradeWallet();
+    syncPredictionOrdersFromRemote().then(function() {
+      state.orderHistory = readPredictionOrderRecords();
+      renderPredictionLedger();
+    });
     loadPredictionMarkets();
     loadTimer = window.setInterval(loadPredictionMarkets, 120000);
     refreshPredictionOrderResolutions();
@@ -14389,7 +14583,17 @@
     // Re-sync wallet balance every 30 s so displayed OST funds stay accurate.
     var balancePollTimer = window.setInterval(syncTradeWallet, 30000);
     // Also refresh when a wallet connects/switches.
-    window.addEventListener('ost:wallet-changed', syncTradeWallet);
+    window.addEventListener('ost:wallet-changed', function() {
+      syncTradeWallet();
+      syncPredictionOrdersFromRemote().then(function() {
+        state.orderHistory = readPredictionOrderRecords();
+        renderPredictionLedger();
+      });
+    });
+    window.addEventListener('ost:prediction-orders-synced', function() {
+      state.orderHistory = readPredictionOrderRecords();
+      renderPredictionLedger();
+    });
     window.addEventListener('ost:prediction-rounds-settled', function() {
       state.orderHistory = readPredictionOrderRecords();
       renderPredictionLedger();

@@ -47,11 +47,14 @@
   }
   function applyPlatformEventToLedger(event) {
     var ledger = readPlatformLedger();
-    ledger.gameCredits = readGameCredits();
+    var eventGameCredits = Number(event && event.gameCredits);
+    ledger.gameCredits = Number.isFinite(eventGameCredits) ? eventGameCredits : readGameCredits();
     ledger.launchpadExposure = Number(ledger.launchpadExposure || 0) || 0;
     var amount = Number(event && event.amount || 0) || 0;
-    if (event && event.kind === 'launchpad-buy') ledger.launchpadExposure += amount;
-    if (event && event.kind === 'launchpad-sell') ledger.launchpadExposure = Math.max(0, ledger.launchpadExposure - amount);
+    var eventLaunchpadExposure = Number(event && event.launchpadExposure);
+    if (Number.isFinite(eventLaunchpadExposure)) ledger.launchpadExposure = Math.max(0, eventLaunchpadExposure);
+    else if (event && event.kind === 'launchpad-buy') ledger.launchpadExposure += amount;
+    else if (event && event.kind === 'launchpad-sell') ledger.launchpadExposure = Math.max(0, ledger.launchpadExposure - amount);
     ledger.updatedAt = Date.now();
     writePlatformLedger(ledger);
     return ledger;
@@ -64,6 +67,89 @@
       launchpadExposure: Number(ledger.launchpadExposure || 0) || 0
     });
   }
+
+  function getOstApiBase() {
+    return window.OST_API_BASE ? String(window.OST_API_BASE).replace(/\/$/, '') : '';
+  }
+  function getActiveWalletAddress() {
+    try {
+      var wallet = window.OST_WALLET;
+      if (wallet && wallet.session && wallet.session.publicKey) return wallet.session.publicKey.toBase58();
+      if (wallet && wallet.address) return String(wallet.address);
+      if (window.OST_WALLET_PUBKEY) return String(window.OST_WALLET_PUBKEY);
+    } catch (e) {}
+    return '';
+  }
+  function eventKey(event) {
+    if (!event) return '';
+    return String(event.id || event.eventId || event.sig || event.signature || [event.kind || '', event.ts || '', event.amount || '', event.token || event.game || event.marketId || ''].join(':'));
+  }
+  function normalizeEventTs(value) {
+    if (!value) return Date.now();
+    var number = Number(value);
+    if (Number.isFinite(number)) return number < 100000000000 ? number * 1000 : number;
+    var parsed = Date.parse(value);
+    return Number.isFinite(parsed) ? parsed : Date.now();
+  }
+  function shareWalletEvent(snapshot) {
+    var base = getOstApiBase();
+    var wallet = (snapshot && snapshot.wallet) || getActiveWalletAddress();
+    if (!base || !wallet || !snapshot || snapshot.syncedFrom === 'ost-api') return;
+    if (!snapshot.kind || snapshot.kind === 'tick') return;
+    try {
+      fetch(base + '/wallet/events', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(Object.assign({}, snapshot, {
+          wallet: wallet,
+          id: eventKey(snapshot),
+          ts: snapshot.ts || Date.now()
+        }))
+      }).catch(function() {});
+    } catch (e) {}
+  }
+  function mergeWalletEventsIntoSnapshots(events) {
+    var byKey = {};
+    loadSnapshots().forEach(function(snapshot) {
+      var key = eventKey(snapshot);
+      if (key) byKey[key] = snapshot;
+    });
+    (events || []).slice().sort(function(a, b) {
+      return normalizeEventTs(a && a.ts) - normalizeEventTs(b && b.ts);
+    }).forEach(function(event) {
+      if (!event || !event.kind) return;
+      var snap = enrichSnapshot(Object.assign({}, event, {
+        ts: normalizeEventTs(event.ts),
+        syncedFrom: 'ost-api'
+      }));
+      var key = eventKey(snap);
+      if (key) byKey[key] = Object.assign({}, byKey[key] || {}, snap);
+    });
+    var merged = Object.keys(byKey).map(function(key) { return byKey[key]; }).sort(function(a, b) {
+      return Number(a.ts || 0) - Number(b.ts || 0);
+    }).slice(-MAX_SNAPSHOTS);
+    saveSnapshots(merged);
+    return merged;
+  }
+  window.syncOstWalletEventsFromRemote = function syncOstWalletEventsFromRemote() {
+    var base = getOstApiBase();
+    var wallet = getActiveWalletAddress();
+    if (!base || !wallet || window.syncOstWalletEventsFromRemote.inFlight) return Promise.resolve(false);
+    window.syncOstWalletEventsFromRemote.inFlight = true;
+    return fetch(base + '/wallet/events/' + encodeURIComponent(wallet) + '?limit=300', { cache: 'no-store', headers: { accept: 'application/json' } })
+      .then(function(response) { return response.ok ? response.json() : null; })
+      .then(function(payload) {
+        var events = payload && Array.isArray(payload.events) ? payload.events : [];
+        if (!events.length) return false;
+        mergeWalletEventsIntoSnapshots(events);
+        refreshChartIfReady();
+        notifyTxHistory();
+        try { window.dispatchEvent(new CustomEvent('ost:wallet-events-synced')); } catch (e) {}
+        return true;
+      })
+      .catch(function() { return false; })
+      .finally(function() { window.syncOstWalletEventsFromRemote.inFlight = false; });
+  };
 
   // ------------------------------------------------------------------
   // 0) Real SOL → OST swap engine (devnet co-signed)
@@ -839,8 +925,10 @@
   // ------------------------------------------------------------------
   function recordSnapshot(snap) {
     var list = loadSnapshots();
-    list.push(enrichSnapshot(snap));
+    var enriched = enrichSnapshot(Object.assign({ wallet: getActiveWalletAddress() }, snap || {}));
+    list.push(enriched);
     saveSnapshots(list);
+    shareWalletEvent(enriched);
   }
   // Expose so external modules (e.g. prediction buys in app.js) can log events.
   window.recordOstSnapshot = recordSnapshot;
@@ -1294,6 +1382,16 @@
         }
       });
 
+      var seenItems = {};
+      items = items.filter(function(item) {
+        var key = item.sig
+          ? String(item.kind || '') + ':' + String(item.sig)
+          : String(item.kind || '') + ':' + String(item.ts || '') + ':' + String(item.amount || '') + ':' + String(item.label || '');
+        if (seenItems[key]) return false;
+        seenItems[key] = true;
+        return true;
+      });
+
       items.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
 
       var openPositions = orders.filter(function(o){ return !o.cashedOut; });
@@ -1454,6 +1552,13 @@
     try { wireConvertQuote(); } catch (e) { console.warn(e); }
     try { wireTransactionHistory(); } catch (e) { console.warn(e); }
     try { startSnapshotPoller(); } catch (e) { console.warn(e); }
+    try { window.syncOstWalletEventsFromRemote(); } catch (e) { console.warn(e); }
+    window.addEventListener('ost:wallet-changed', function() {
+      try { window.syncOstWalletEventsFromRemote(); } catch (e) {}
+    });
+    setInterval(function() {
+      try { window.syncOstWalletEventsFromRemote(); } catch (e) {}
+    }, 60000);
     // Initial chart redraw shortly after load
     setTimeout(refreshChartIfReady, 1500);
     // Also redraw on window resize

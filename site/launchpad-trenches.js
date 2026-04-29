@@ -204,18 +204,40 @@
     pop.querySelector('[data-act="submit"]').onclick = function () {
       var amt = Number(pop.querySelector('[data-bind="amount"]').value) || 0;
       if (amt <= 0) return;
-      var trader = (window.OST_WALLET_PUBKEY ||
-        (window.solana && window.solana.publicKey && window.solana.publicKey.toString && window.solana.publicKey.toString()) || 'anon');
+      var trader = (window.OST_WALLET && window.OST_WALLET.session && window.OST_WALLET.session.publicKey && window.OST_WALLET.session.publicKey.toBase58 && window.OST_WALLET.session.publicKey.toBase58()) ||
+        window.OST_WALLET_PUBKEY ||
+        (window.solana && window.solana.publicKey && window.solana.publicKey.toString && window.solana.publicKey.toString()) || '';
+      var trade = window.OST_TRADE || null;
+      if (!trader || !trade || !trade.memecoinBuy || !trade.memecoinSell) {
+        pop.querySelector('[data-bind="status"]').textContent = 'Connect an OST wallet first.';
+        return;
+      }
       pop.querySelector('[data-bind="status"]').textContent = 'Submitting…';
       var base = apiBase();
       if (!base) {
-        pop.querySelector('[data-bind="status"]').textContent = 'Local-only (no API base set)';
+        pop.querySelector('[data-bind="status"]').textContent = 'OST API base missing.';
         return;
       }
-      fetch(base + '/launchpad/trade', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ mint: coin.mint || coin.id, side: side, amount: amt, trader: trader })
+      var walletTrade = side === 'buy'
+        ? trade.memecoinBuy(coin.symbol || coin.mint || coin.id, amt)
+        : trade.memecoinSell(coin.symbol || coin.mint || coin.id, amt);
+      walletTrade.then(function(result) {
+        var ostAmount = Number(result && result.ost || amt) || amt;
+        if (typeof window.recordOstPlatformEvent === 'function') {
+          window.recordOstPlatformEvent({
+            kind: side === 'buy' ? 'launchpad-buy' : 'launchpad-sell',
+            amount: ostAmount,
+            token: coin.symbol || coin.mint || coin.id,
+            sig: result && result.sig,
+            ts: Date.now(),
+            source: 'launchpad'
+          });
+        }
+        return fetch(base + '/launchpad/trade', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ mint: coin.mint || coin.id, side: side, amount: ostAmount, trader: trader, signature: result && result.sig })
+        });
       }).then(function (r) { return r.json(); })
         .then(function (j) {
           if (j && j.ok && j.coin) {
@@ -223,6 +245,7 @@
             pop.querySelector('[data-bind="sub"]').textContent = 'Mcap ' + fmtMcap(coin.mcap) + ' OST · curve ' + (Number(coin.curve) || 0) + '% · ' + (coin.trades || 0) + ' trades';
             pop.querySelector('[data-bind="status"]').textContent = '✅ ' + side.toUpperCase() + ' ' + amt + ' OST';
             refreshTicks(coin);
+            try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {}
           } else {
             pop.querySelector('[data-bind="status"]').textContent = '⚠️ ' + (j && j.error || 'Trade failed');
           }

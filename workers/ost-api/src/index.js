@@ -17,6 +17,8 @@
  *   POST /rounds/open-price          → set open price for a round (from UI)
  *   GET /positions/:wallet           → positions for a wallet (KV-backed)
  *   POST /positions                  → record a new position  (KV-backed)
+ *   GET /wallet/events/:wallet       -> wallet activity events for one address
+ *   POST /wallet/events              -> record wallet activity for cross-device sync
  *   OPTIONS *                        → CORS preflight
  *
  * DEPLOY
@@ -188,10 +190,43 @@ async function kvGet(env, key, fallback = null) {
   try { const v = await env.OST_KV.get(key, { type: 'json' }); return v ?? fallback; }
   catch (_) { return fallback; }
 }
-async function kvPut(env, key, value, expirationTtl = 86400 * 7) {
+async function kvPut(env, key, value, expirationTtl = null) {
   if (!env.OST_KV) return false;
-  try { await env.OST_KV.put(key, JSON.stringify(value), { expirationTtl }); return true; }
+  try {
+    const opts = Number.isFinite(Number(expirationTtl)) && Number(expirationTtl) > 0
+      ? { expirationTtl: Number(expirationTtl) }
+      : undefined;
+    await env.OST_KV.put(key, JSON.stringify(value), opts);
+    return true;
+  }
   catch (_) { return false; }
+}
+
+function toMs(value) {
+  if (!value) return Date.now();
+  const n = Number(value);
+  if (Number.isFinite(n)) return n < 100000000000 ? n * 1000 : n;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : Date.now();
+}
+
+function cleanText(value, max = 200) {
+  return String(value == null ? '' : value).replace(/[\r\n]+/g, ' ').slice(0, max);
+}
+
+function cleanNumber(value, fallback = null) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
+function mergeNewest(bucket, record, limit = 100) {
+  const key = record.signature || record.sig || record.id;
+  const current = Array.isArray(bucket) ? bucket : [];
+  const next = key
+    ? current.filter(item => (item?.signature || item?.sig || item?.id) !== key)
+    : current;
+  next.unshift(record);
+  return next.slice(0, limit);
 }
 
 // ── router ───────────────────────────────────────────────────────────────────
@@ -234,6 +269,8 @@ export default {
           'GET  /positions/recent',
           'GET  /positions/:wallet',
           'POST /positions',
+          'GET  /wallet/events/:wallet',
+          'POST /wallet/events',
           'GET  /launchpad/coins',
           'POST /launchpad/coins',
           'POST /launchpad/trade',
@@ -408,28 +445,97 @@ export default {
         return json({ error: 'missing_fields', required: ['wallet', 'marketId', 'side', 'stake'] }, 400);
       }
       if (!env.OST_KV) return json({ ok: true, stored: false, note: 'KV not configured — position not persisted server-side' });
+      const createdAt = toMs(body.createdAt || ts);
       const record = {
-        id: crypto.randomUUID(),
+        id: cleanText(body.id || signature || crypto.randomUUID(), 128),
         wallet: String(wallet).slice(0, 64),
         walletShort: String(wallet).slice(0, 4) + '…' + String(wallet).slice(-4),
         marketId: String(marketId).slice(0, 128),
-        marketTitle: String(marketTitle || '').slice(0, 200),
+        conditionId: cleanText(body.conditionId || body.condition_id || '', 128),
+        marketTitle: cleanText(marketTitle || body.title || '', 200),
+        title: cleanText(body.title || marketTitle || '', 200),
+        topic: cleanText(body.topic || '', 64),
+        source: cleanText(body.source || 'polymarket', 32),
         side: String(side).toUpperCase().slice(0, 32),
         stake: Number(stake),
         price: Number.isFinite(Number(price)) ? Number(price) : null,
+        yesPrice: cleanNumber(body.yesPrice),
+        noPrice: cleanNumber(body.noPrice),
+        shares: cleanNumber(body.shares),
+        potentialReturn: cleanNumber(body.potentialReturn),
+        closeAtMs: cleanNumber(body.closeAtMs, 0),
+        clobTokenIds: Array.isArray(body.clobTokenIds) ? body.clobTokenIds.map(v => cleanText(v, 128)).slice(0, 8) : [],
+        sourceUrl: cleanText(body.sourceUrl || '', 500),
         signature: signature ? String(signature).slice(0, 128) : null,
-        ts: ts || new Date().toISOString(),
-        status: 'open'
+        sig: signature ? String(signature).slice(0, 128) : null,
+        ts: new Date(createdAt).toISOString(),
+        createdAt,
+        status: cleanText(body.status || 'open', 32),
+        cashoutKind: cleanText(body.cashoutKind || '', 40),
+        cashoutSig: cleanText(body.cashoutSig || '', 128),
+        cashoutOst: cleanNumber(body.cashoutOst),
+        cashoutAt: cleanNumber(body.cashoutAt, 0),
+        finalYesPrice: cleanNumber(body.finalYesPrice),
+        finalNoPrice: cleanNumber(body.finalNoPrice),
+        resolvedAt: cleanNumber(body.resolvedAt, 0),
+        syncedAt: Date.now()
       };
       // Per-wallet bucket (keep last 100, newest first)
       const walletKey = `positions:${wallet}`;
-      const walletBucket = (await kvGet(env, walletKey, [])).slice(0, 99);
-      walletBucket.unshift(record);
-      await kvPut(env, walletKey, walletBucket);
+      const walletBucket = await kvGet(env, walletKey, []);
+      await kvPut(env, walletKey, mergeNewest(walletBucket, record, 100));
       // Global recent feed (keep last 100)
-      const recent = (await kvGet(env, 'positions:recent', [])).slice(0, 99);
-      recent.unshift(record);
-      await kvPut(env, 'positions:recent', recent, 60 * 60 * 24 * 7);
+      const recent = await kvGet(env, 'positions:recent', []);
+      await kvPut(env, 'positions:recent', mergeNewest(recent, record, 100), 60 * 60 * 24 * 7);
+      return json({ ok: true, stored: true, record });
+    }
+
+    // ── GET /wallet/events/:wallet ──────────────────────────────────────────
+    const walletEventsMatch = path.match(/^\/wallet\/events\/([^/]+)$/);
+    if (walletEventsMatch && method === 'GET') {
+      const wallet = decodeURIComponent(walletEventsMatch[1]);
+      const limit = Math.min(300, Number(url.searchParams.get('limit') || 200));
+      if (!env.OST_KV) return json({ events: [], note: 'KV not configured', wallet });
+      const events = await kvGet(env, `wallet:events:${wallet}`, []);
+      return json({ events: events.slice(0, limit), wallet, ts: new Date().toISOString() }, 200, { 'cache-control': 'no-store' });
+    }
+
+    // ── POST /wallet/events ─────────────────────────────────────────────────
+    if (path === '/wallet/events' && method === 'POST') {
+      let body;
+      try { body = await request.json(); } catch (_) { return json({ error: 'invalid_json' }, 400); }
+      const wallet = cleanText(body?.wallet || '', 64);
+      const kind = cleanText(body?.kind || '', 48);
+      if (!wallet || !kind) return json({ error: 'missing_fields', required: ['wallet', 'kind'] }, 400);
+      if (!env.OST_KV) return json({ ok: true, stored: false, note: 'KV not configured' });
+      const eventTs = toMs(body.ts || body.createdAt || body.cashoutAt);
+      const id = cleanText(body.id || body.eventId || body.sig || body.signature || `${kind}:${eventTs}:${body.amount || ''}:${body.token || body.game || body.marketId || ''}`, 160);
+      const record = {
+        id,
+        wallet,
+        kind,
+        amount: cleanNumber(body.amount, 0),
+        sig: cleanText(body.sig || body.signature || '', 128),
+        source: cleanText(body.source || '', 48),
+        label: cleanText(body.label || '', 200),
+        token: cleanText(body.token || '', 32),
+        game: cleanText(body.game || '', 48),
+        marketId: cleanText(body.marketId || '', 128),
+        title: cleanText(body.title || '', 200),
+        side: cleanText(body.side || '', 16),
+        price: cleanNumber(body.price),
+        potentialReturn: cleanNumber(body.potentialReturn),
+        cashoutKind: cleanText(body.cashoutKind || '', 48),
+        ostBalance: cleanNumber(body.ostBalance),
+        solBalance: cleanNumber(body.solBalance),
+        gameCredits: cleanNumber(body.gameCredits),
+        launchpadExposure: cleanNumber(body.launchpadExposure),
+        ts: eventTs,
+        syncedAt: Date.now()
+      };
+      const key = `wallet:events:${wallet}`;
+      const bucket = await kvGet(env, key, []);
+      await kvPut(env, key, mergeNewest(bucket, record, 300));
       return json({ ok: true, stored: true, record });
     }
 

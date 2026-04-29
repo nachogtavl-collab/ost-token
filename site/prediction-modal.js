@@ -62,21 +62,26 @@
     try {
       var base = (window.OST_API_BASE || '').replace(/\/$/, '');
       if (!base) return;
-      var wallet = (window.OST_WALLET_PUBKEY || (window.solana && window.solana.publicKey && window.solana.publicKey.toString && window.solana.publicKey.toString()) || 'anon');
+      var wallet = (rec && rec.wallet) ||
+        (window.OST_WALLET && window.OST_WALLET.session && window.OST_WALLET.session.publicKey && window.OST_WALLET.session.publicKey.toBase58 && window.OST_WALLET.session.publicKey.toBase58()) ||
+        window.OST_WALLET_PUBKEY ||
+        (window.solana && window.solana.publicKey && window.solana.publicKey.toString && window.solana.publicKey.toString()) ||
+        'anon';
       var price = (side === 'YES' ? Number(market.yesPriceNumber) : Number(market.noPriceNumber));
       fetch(base + '/positions', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
+        body: JSON.stringify(Object.assign({}, rec || {}, {
           wallet: wallet,
           marketId: market.id,
           marketTitle: market.title || market.question || '',
+          title: market.title || market.question || '',
           side: side,
           stake: Number(stake) || 0,
           price: Number.isFinite(price) ? price : null,
           signature: rec && rec.sig || null,
           ts: new Date().toISOString()
-        })
+        }))
       }).catch(function () { /* fire-and-forget */ });
     } catch (_) { /* never block UI */ }
   }
@@ -1108,7 +1113,6 @@
     var ignore = ev.target.closest('a[href], .prediction-market-link, .prediction-market-api-link, .prediction-market-quick-btn, [data-prediction-quick-side], [data-prediction-show-more], [data-prediction-show-less]');
     var card = ev.target.closest('.prediction-market-card[data-prediction-market-id]');
     if (!card) return;
-    if (card.closest('#predictionMarketBoard') && !explicitOpen) return;
     if (ignore && !explicitOpen) return;
     ev.preventDefault();
     ev.stopPropagation();
