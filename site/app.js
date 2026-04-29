@@ -3923,7 +3923,12 @@
   }, { threshold: 0.5 });
   $$('.knowledge-num[data-target]').forEach(el => counterObserver.observe(el));
 
-  /* ---------- LIVE PRICES — CoinGecko ---------- */
+  /* ---------- LIVE PRICES - OST API ---------- */
+  const CRYPTO_PRICE_DEFAULTS = {
+    bitcoin: { usd: 105000, usd_24h_change: 0 },
+    ethereum: { usd: 3800, usd_24h_change: 0 },
+    solana: { usd: 170, usd_24h_change: 0 }
+  };
   let prices = { bitcoin: 0, ethereum: 0, solana: 0 };
   // Expose live prices for wallet-extras.js to compute real-USD curve
   Object.defineProperty(window, '__ostPrices', { get: function () { return Object.assign({}, prices, { ost: typeof ostPrice !== 'undefined' ? ostPrice : 1 }); } });
@@ -4047,61 +4052,66 @@
   fetchFiatRates();
   setInterval(fetchFiatRates, 60000); // Update fiat every 60s
 
-  async function fetchPrices() {
-    try {
-      const url = 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=usd&include_24hr_change=true';
-      const r = await fetch(url);
-      if (!r.ok) throw new Error('API error');
-      const data = await r.json();
+  function getFallbackCryptoPrices() {
+    return {
+      bitcoin: Object.assign({}, CRYPTO_PRICE_DEFAULTS.bitcoin),
+      ethereum: Object.assign({}, CRYPTO_PRICE_DEFAULTS.ethereum),
+      solana: Object.assign({}, CRYPTO_PRICE_DEFAULTS.solana)
+    };
+  }
 
-      ['bitcoin', 'ethereum', 'solana'].forEach(coin => {
-        if (data[coin]) {
-          prices[coin] = data[coin].usd || 0;
-          const pEl = $(`#price-${coin}`);
-          const cEl = $(`#change-${coin}`);
-          if (pEl) pEl.textContent = '$' + prices[coin].toLocaleString(undefined, { maximumFractionDigits: 2 });
-          if (cEl) {
-            const ch = data[coin].usd_24h_change || 0;
-            cEl.textContent = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%';
-            cEl.className = 'chart-change ' + (ch >= 0 ? 'up' : 'down');
-          }
-        }
-      });
+  function applyCryptoPrices(data) {
+    ['bitcoin', 'ethereum', 'solana'].forEach(coin => {
+      const fallback = CRYPTO_PRICE_DEFAULTS[coin];
+      const source = (data && data[coin]) || fallback;
+      const usd = Number(source.usd);
+      const change = Number(source.usd_24h_change);
+      prices[coin] = Number.isFinite(usd) && usd > 0 ? usd : prices[coin] || fallback.usd;
 
-      // Update dynamic fiat rates for crypto
-      if (prices.bitcoin) fiatRates.BTC = 1 / prices.bitcoin;
-      if (prices.ethereum) fiatRates.ETH = 1 / prices.ethereum;
-      if (prices.solana) fiatRates.SOL = 1 / prices.solana;
-
-      // Keep OST pricing deterministic until a direct live market feed exists.
-      ostPrice = OST_BASE_PRICE;
-      window.ostPrice = ostPrice;
-      refreshOstDisplays();
-
-      // Update product OST prices
-      updateProductOSTPrices();
-      updateCalc();
-
-    } catch (e) {
-      // CoinGecko direct is CORS-blocked from github.io; the warning is
-      // not actionable for the user. Surface only once per session.
-      if (!window.__ostPriceFallbackLogged) {
-        window.__ostPriceFallbackLogged = true;
-        console.info('Price feed using cached defaults:', e && e.message ? e.message : e);
+      const pEl = $(`#price-${coin}`);
+      const cEl = $(`#change-${coin}`);
+      if (pEl) pEl.textContent = '$' + prices[coin].toLocaleString(undefined, { maximumFractionDigits: 2 });
+      if (cEl) {
+        const ch = Number.isFinite(change) ? change : 0;
+        cEl.textContent = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%';
+        cEl.className = 'chart-change ' + (ch >= 0 ? 'up' : 'down');
       }
-      // Use reasonable defaults
-      if (!prices.bitcoin) prices.bitcoin = 105000;
-      if (!prices.ethereum) prices.ethereum = 3800;
-      if (!prices.solana) prices.solana = 170;
-      fiatRates.BTC = 1 / prices.bitcoin;
-      fiatRates.ETH = 1 / prices.ethereum;
-      fiatRates.SOL = 1 / prices.solana;
-      ostPrice = OST_BASE_PRICE;
-      window.ostPrice = ostPrice;
-      refreshOstDisplays();
-      updateProductOSTPrices();
-      updateCalc();
+    });
+
+    if (prices.bitcoin) fiatRates.BTC = 1 / prices.bitcoin;
+    if (prices.ethereum) fiatRates.ETH = 1 / prices.ethereum;
+    if (prices.solana) fiatRates.SOL = 1 / prices.solana;
+
+    ostPrice = OST_BASE_PRICE;
+    window.ostPrice = ostPrice;
+    refreshOstDisplays();
+    updateProductOSTPrices();
+    updateCalc();
+  }
+
+  async function fetchPrices() {
+    const data = getFallbackCryptoPrices();
+    const apiBase = getOstApiBase();
+
+    if (apiBase) {
+      try {
+        const r = await fetch(apiBase + '/btc/price', { cache: 'no-store', headers: { accept: 'application/json' } });
+        if (!r.ok) throw new Error('OST price feed returned ' + r.status);
+        const payload = await r.json();
+        const btcUsd = Number(payload && (payload.price || payload.btcPrice));
+        if (!Number.isFinite(btcUsd) || btcUsd <= 0) throw new Error('OST price feed missing BTC price');
+        const previousBtc = prices.bitcoin;
+        data.bitcoin.usd = btcUsd;
+        data.bitcoin.usd_24h_change = previousBtc > 0 ? ((btcUsd - previousBtc) / previousBtc) * 100 : 0;
+      } catch (e) {
+        if (!window.__ostPriceFallbackLogged) {
+          window.__ostPriceFallbackLogged = true;
+          console.info('Price feed using cached defaults:', e && e.message ? e.message : e);
+        }
+      }
     }
+
+    applyCryptoPrices(data);
   }
 
   function updateProductOSTPrices() {
@@ -13657,7 +13667,7 @@
     }
 
     function buildKalshiApiUrl(item) {
-      return item.ticker ? 'https://api.elections.kalshi.com/trade-api/v2/markets/' + encodeURIComponent(item.ticker) : 'https://api.elections.kalshi.com/trade-api/v2/markets';
+      return '';
     }
 
     function mapPolymarketMarket(item) {
@@ -14315,16 +14325,7 @@
     }
 
     function fetchKalshiMarkets() {
-      return fetch('https://api.elections.kalshi.com/trade-api/v2/markets?limit=160', {
-        headers: { accept: 'application/json' }
-      }).then(function(response) {
-        if (!response.ok) throw new Error('Kalshi returned ' + response.status);
-        return response.json();
-      }).then(function(data) {
-        return extractKalshiMarkets(data).filter(function(item) {
-          return item && item.status === 'active';
-        }).map(mapKalshiMarket);
-      });
+      return Promise.resolve([]);
     }
 
     function loadPredictionMarkets() {
