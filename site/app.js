@@ -14108,8 +14108,7 @@
 
       // Prefer the deployed OST API worker (returns the already-normalised
       // /markets schema). The worker is at window.OST_API_BASE and is much
-      // faster + survives Polymarket CORS hiccups. We still fall through to
-      // the static /data snapshot if the worker is offline.
+      // faster + survives Polymarket CORS hiccups.
       var apiBase = (typeof window !== 'undefined' && window.OST_API_BASE)
         ? String(window.OST_API_BASE).replace(/\/$/, '')
         : '';
@@ -14158,40 +14157,7 @@
           })
         : Promise.reject(new Error('No OST API base configured'));
 
-      function fetchStaticSnapshot() {
-        return fetch('data/prediction-market-snapshot.json', {
-          headers: { accept: 'application/json' },
-          cache: 'no-store'
-        }).then(function(response) {
-          if (!response.ok) throw new Error('Snapshot returned ' + response.status);
-          return response.json();
-        }).then(function(snapshot) {
-          var polymarketMarkets = extractPolymarketMarkets(snapshot && snapshot.polymarket).filter(function(item) {
-            return item && item.active !== false && item.closed !== true;
-          }).map(mapPolymarketMarket);
-          var kalshiMarkets = extractKalshiMarkets(snapshot && snapshot.kalshi).filter(function(item) {
-            return item && item.status === 'active';
-          }).map(mapKalshiMarket);
-          var sourceHealth = snapshot && snapshot.sourceHealth ? snapshot.sourceHealth : null;
-          var generatedAt = snapshot && snapshot.generatedAt ? new Date(snapshot.generatedAt) : new Date();
-
-          return {
-            polymarketMarkets: polymarketMarkets,
-            kalshiMarkets: kalshiMarkets,
-            sourceHealth: {
-              polymarket: sourceHealth ? sourceHealth.polymarket !== false : polymarketMarkets.length > 0,
-              kalshi: sourceHealth ? sourceHealth.kalshi !== false : kalshiMarkets.length > 0
-            },
-            generatedAt: Number.isNaN(generatedAt.getTime()) ? new Date() : generatedAt
-          };
-        });
-      }
-
-      return workerPromise.catch(function(workerError) {
-        return fetchStaticSnapshot().catch(function() {
-          throw workerError;
-        });
-      });
+      return workerPromise;
     }
 
     function setLoadedPredictionMarkets(polymarketMarkets, kalshiMarkets, sourceHealth, updatedAt) {
