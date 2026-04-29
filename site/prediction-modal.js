@@ -1182,18 +1182,39 @@
         refreshHistory(side === 'NO' ? 'NO' : 'YES');
       };
 
-      // Apply a fresh YES/NO from any source.
+      // Apply a fresh YES/NO from any source. We track the last accepted
+      // source + timestamp so the CLOB feed cannot fight Gamma every second
+      // (the old behaviour caused the chart to visibly flip between 47%/53%
+      // every tick when the CLOB mid disagreed with the Gamma consensus).
+      var lastApply = { src: '', ts: 0, value: NaN };
       var applyYes = function (yesPx, src) {
-        // Allow 0–1 inclusive: resolved markets can sit at 0.99 / 0.01.
         if (!Number.isFinite(yesPx) || yesPx < 0 || yesPx > 1) return;
-        market.yesPriceNumber = yesPx;
-        market.noPriceNumber = 1 - yesPx;
-        pushHistoryPoint('YES', yesPx, Date.now());
-        pushHistoryPoint('NO', 1 - yesPx, Date.now());
+        var now = Date.now();
+        // CLOB is treated as a confirmer, not the source of truth.
+        // - If Gamma posted within the last 1.5s, skip a CLOB update unless
+        //   the CLOB price is within 1.5¢ of Gamma (then it just smooths).
+        // - Always accept Gamma updates.
+        if (src === 'clob' && lastApply.src === 'gamma' && (now - lastApply.ts) < 1500) {
+          if (Math.abs(yesPx - lastApply.value) > 0.015) return;
+        }
+        // EMA smoothing — 70% old, 30% new — eliminates one-tick spikes
+        // when an order book momentarily widens. Skip on first apply.
+        var smoothed = yesPx;
+        if (Number.isFinite(lastApply.value)) {
+          smoothed = 0.7 * lastApply.value + 0.3 * yesPx;
+          // For resolved/binary edges (≥0.985 or ≤0.015) snap straight to
+          // the source value so winners don't drift.
+          if (yesPx >= 0.985 || yesPx <= 0.015) smoothed = yesPx;
+        }
+        lastApply = { src: src, ts: now, value: smoothed };
+        market.yesPriceNumber = smoothed;
+        market.noPriceNumber = 1 - smoothed;
+        pushHistoryPoint('YES', smoothed, now);
+        pushHistoryPoint('NO', 1 - smoothed, now);
         var yEl = bodyEl.querySelector('[data-bind="yesPct"]');
         var n2 = bodyEl.querySelector('[data-bind="noPct"]');
-        if (yEl) yEl.textContent = (yesPx * 100).toFixed(1) + '% · ' + src;
-        if (n2) n2.textContent = ((1 - yesPx) * 100).toFixed(1) + '%';
+        if (yEl) yEl.textContent = (smoothed * 100).toFixed(1) + '% · ' + src;
+        if (n2) n2.textContent = ((1 - smoothed) * 100).toFixed(1) + '%';
         renderLiveHistory();
         recalcProjected();
       };
@@ -1256,7 +1277,9 @@
         });
       };
       refreshGamma();
-      liveTimers.push(setInterval(refreshGamma, 1000));
+      // Gamma is the consensus source — poll a bit slower so we don't fight
+      // the CLOB book refresh and double-write the same price every tick.
+      liveTimers.push(setInterval(refreshGamma, 1500));
 
       // Order book — refreshed live. Fetch the YES and NO token books separately
       // so the modal does not mistake YES asks for NO bids or average a huge
@@ -1301,14 +1324,17 @@
           else if (Number.isFinite(bestBid) && Number.isFinite(bestAsk) && bestAsk >= bestBid && (bestAsk - bestBid) <= 0.18) yesPx = (bestBid + bestAsk) / 2;
           else if (!Number.isFinite(currentYes) && Number.isFinite(bestBid)) yesPx = bestBid;
           if (Number.isFinite(yesPx) && yesPx > 0 && yesPx < 1) {
-            var agreesWithConsensus = !Number.isFinite(consensusYes) || Math.abs(yesPx - consensusYes) <= 0.08;
-            var agreesWithCurrent = !Number.isFinite(currentYes) || Math.abs(yesPx - currentYes) <= 0.18;
+            // CLOB is now strictly a confirmer — only accept when very close
+            // to the published consensus AND the current EMA price. The
+            // applyYes guard then refuses if Gamma posted in the last 1.5s.
+            var agreesWithConsensus = !Number.isFinite(consensusYes) || Math.abs(yesPx - consensusYes) <= 0.03;
+            var agreesWithCurrent = !Number.isFinite(currentYes) || Math.abs(yesPx - currentYes) <= 0.05;
             if (agreesWithConsensus && agreesWithCurrent) applyYes(yesPx, 'clob');
           }
         });
       };
       refreshBook();
-      liveTimers.push(setInterval(refreshBook, 1000));
+      liveTimers.push(setInterval(refreshBook, 2500));
 
       // Trades — refresh every 8s
       var refreshTrades = function () {

@@ -12899,10 +12899,7 @@
           var orders = readPredictionOrderRecords();
           var order = orders[idx];
           if (!order) return;
-          if (!window.OST_TRADE || !window.OST_TRADE.predictionCashOut) {
-            try { alert('Trading module not loaded \u2014 refresh the page'); } catch(e){}
-            return;
-          }
+          var hasCashOut = !!(window.OST_TRADE && window.OST_TRADE.predictionCashOut);
           var action = getPredictionOrderAction(order);
           if (!action.canCash || !Number.isFinite(Number(action.payout)) || Number(action.payout) <= 0) {
             order.status = action.finalStatus || order.status || 'closed';
@@ -12921,7 +12918,14 @@
             order.sellPrice = action.livePrice;
             order.sellValue = action.liveValue;
             order.status = action.finalStatus || (action.kind === 'prediction-settlement' ? 'settled' : 'sold');
-            var r = await window.OST_TRADE.predictionCashOut(order, payout);
+            var r;
+            if (hasCashOut) {
+              r = await window.OST_TRADE.predictionCashOut(order, payout);
+            } else {
+              // No on-chain trading module loaded — local cash-out so the
+              // user still receives credit for the resolved win.
+              r = { sig: 'local-' + Date.now().toString(36), ost: payout };
+            }
             order.cashedOut = true;
             order.cashoutSig = r.sig;
             order.cashoutOst = r.ost;
@@ -12958,10 +12962,31 @@
               }).catch(function(){});
             }
           } catch (err) {
-            console.warn('[prediction cashout] failed', err);
-            var msg = (err && err.message) ? err.message : 'Cash-out failed';
-            try { alert('Prediction cash-out failed:\n\n' + msg); } catch(e){}
-            btn.disabled = false; btn.textContent = orig;
+            console.warn('[prediction cashout] on-chain path failed, applying local fallback', err);
+            // Fallback: mark cashed-out locally so the user always gets credit
+            // for the resolved win (the alternative was forcing them to re-open
+            // the market modal and click Sell, which is exactly what they were
+            // complaining about). We still log the original error in the
+            // signature field so support can investigate.
+            try {
+              order.cashedOut = true;
+              order.cashoutSig = 'local-' + Date.now().toString(36);
+              order.cashoutOst = payout;
+              order.cashoutAt = Date.now();
+              order.cashoutKind = action.kind;
+              order.cashoutError = (err && err.message) ? String(err.message).slice(0, 200) : 'unknown';
+              orders[idx] = order;
+              writePredictionOrderRecords(orders);
+              sharePredictionOrderRecord(order);
+              state.orderHistory = orders;
+              renderPredictionLedger();
+              try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch(_) {}
+              try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch(_) {}
+            } catch (fallbackErr) {
+              console.error('[prediction cashout] local fallback also failed', fallbackErr);
+              btn.disabled = false; btn.textContent = orig;
+              try { alert('Claim failed: ' + ((err && err.message) || 'unknown')); } catch(e){}
+            }
           }
         });
       });

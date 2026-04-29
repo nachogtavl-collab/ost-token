@@ -541,4 +541,239 @@
       return submitBet({ id: marketId, title: marketId, isOst: true, yesPrice: 0.5 }, side, stake, 0.5);
     }
   };
+
+  // ==========================================================================
+  // ACTIVITY PULSE + CARD P&L + TRADE-TICKET PORTFOLIO
+  // ==========================================================================
+  // Goals (user feedback):
+  //  1. Markets feel like ghost-towns — show a live "🟢 buy 12 OST 4s ago"
+  //     pulse on each card whenever a new bet hits via /positions/recent.
+  //  2. Make the user's open-position P&L visible right on the card so they
+  //     don't have to open the modal to know if they're up or down.
+  //  3. Floating "🎯 Trade ticket" button → opens a panel listing every
+  //     market the user has an open position on, with one-click sell.
+  // --------------------------------------------------------------------------
+  (function activityAndTicket() {
+    var ACTIVITY_CSS = [
+      '@keyframes ostCardPulse { 0% { box-shadow: 0 0 0 0 rgba(124,230,168,.55); } 100% { box-shadow: 0 0 0 14px rgba(124,230,168,0); } }',
+      '.prediction-market-card.ost-card--just-traded { animation: ostCardPulse 1.2s ease-out 1; }',
+      '.ost-card-activity { display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;padding:4px 8px;border-radius:6px;background:rgba(124,230,168,.10);color:#7ce6a8;border:1px solid rgba(124,230,168,.25);margin-top:8px;width:fit-content; }',
+      '.ost-card-activity.is-no { background:rgba(255,124,138,.10);color:#ff7c8a;border-color:rgba(255,124,138,.25); }',
+      '.ost-card-pnl { display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:4px 8px;border-radius:6px;margin-top:6px;width:fit-content; }',
+      '.ost-card-pnl.is-pos { background:rgba(34,197,94,.12);color:#34d399;border:1px solid rgba(34,197,94,.30); }',
+      '.ost-card-pnl.is-neg { background:rgba(248,113,113,.12);color:#f87171;border:1px solid rgba(248,113,113,.30); }',
+      '#ost-trade-ticket-fab { position:fixed;bottom:24px;right:24px;z-index:9998;padding:12px 18px;border-radius:999px;border:none;background:linear-gradient(135deg,#7ce6a8,#22c55e);color:#031;font-weight:800;font-size:14px;cursor:pointer;box-shadow:0 8px 24px rgba(34,197,94,.35);display:none;align-items:center;gap:8px; }',
+      '#ost-trade-ticket-fab:hover { transform:translateY(-2px); }',
+      '#ost-trade-ticket-fab .ost-tt-count { background:#031;color:#7ce6a8;border-radius:999px;padding:2px 8px;font-size:11px; }',
+      '#ost-trade-ticket-modal { position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center; }',
+      '#ost-trade-ticket-modal.is-open { display:flex; }',
+      '#ost-trade-ticket-modal .ost-tt-panel { width:min(560px,92vw);max-height:80vh;overflow:auto;background:#0b1220;border:1px solid rgba(124,230,168,.25);border-radius:14px;padding:18px;color:#e2e8f0; }',
+      '#ost-trade-ticket-modal .ost-tt-row { display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid rgba(255,255,255,.06); }',
+      '#ost-trade-ticket-modal h3 { margin:0 0 12px;font-size:16px; }',
+      '#ost-trade-ticket-modal .ost-tt-close { float:right;background:none;border:none;color:#94a3b8;font-size:20px;cursor:pointer; }'
+    ].join('\n');
+    var style = document.createElement('style');
+    style.textContent = ACTIVITY_CSS;
+    document.head.appendChild(style);
+
+    function readDeskOrders() {
+      try { return JSON.parse(localStorage.getItem(TRADE_DESK_STORE_KEY) || '[]'); } catch (e) { return []; }
+    }
+    function getYesPriceFromCard(card) {
+      var fill = card.querySelector('.prediction-market-bar-fill');
+      if (fill && fill.style && fill.style.width) {
+        var pct = parseFloat(String(fill.style.width).replace('%', ''));
+        if (Number.isFinite(pct)) return pct / 100;
+      }
+      return NaN;
+    }
+
+    // ---- card P&L badge ---------------------------------------------------
+    function refreshCardPnL() {
+      var orders = readDeskOrders();
+      var openOrders = orders.filter(function (o) { return !o.cashedOut && o.status !== 'won' && o.status !== 'lost' && o.status !== 'settled'; });
+      var byMarket = Object.create(null);
+      openOrders.forEach(function (o) {
+        var k = o.marketId; if (!k) return;
+        (byMarket[k] = byMarket[k] || []).push(o);
+      });
+      $$('.prediction-market-card[data-prediction-market-id]').forEach(function (card) {
+        var id = card.getAttribute('data-prediction-market-id');
+        var existing = card.querySelector('.ost-card-pnl');
+        var positions = byMarket[id];
+        if (!positions || !positions.length) {
+          if (existing) existing.remove();
+          return;
+        }
+        var yesPx = getYesPriceFromCard(card);
+        if (!Number.isFinite(yesPx)) yesPx = 0.5;
+        var totalStake = 0, totalValue = 0;
+        positions.forEach(function (o) {
+          var stake = Number(o.stake) || 0;
+          var entry = Number(o.price) || 0.5;
+          var shares = Number(o.shares) > 0 ? Number(o.shares) : (entry > 0 ? stake / entry : 0);
+          var live = String(o.side).toLowerCase() === 'no' ? (1 - yesPx) : yesPx;
+          totalStake += stake;
+          totalValue += shares * live;
+        });
+        var pnl = totalValue - totalStake;
+        var pct = totalStake > 0 ? (pnl / totalStake) * 100 : 0;
+        var cls = pnl >= 0 ? 'is-pos' : 'is-neg';
+        var arrow = pnl >= 0 ? '\u25B2' : '\u25BC';
+        var sign = pnl >= 0 ? '+' : '\u2212';
+        var html = arrow + ' your bet ' + sign + fmt(Math.abs(pnl)) + ' OST (' + sign + Math.abs(pct).toFixed(1) + '%)';
+        if (existing) {
+          existing.className = 'ost-card-pnl ' + cls;
+          existing.textContent = html;
+        } else {
+          var el = document.createElement('div');
+          el.className = 'ost-card-pnl ' + cls;
+          el.textContent = html;
+          card.appendChild(el);
+        }
+      });
+    }
+
+    // ---- card activity pulse ---------------------------------------------
+    var seenActivity = Object.create(null);
+    function refreshActivityPulse() {
+      var feed = window.__ostSharedFeed || {};
+      Object.keys(feed).forEach(function (marketId) {
+        var rows = feed[marketId] || [];
+        if (!rows.length) return;
+        var newest = rows[0];
+        var key = (newest.signature || newest.sig || newest.ts || '') + '';
+        if (!key || seenActivity[marketId] === key) return;
+        // First time we see this market gets primed silently (no pulse on
+        // initial load — we only want fresh activity after the user opened
+        // the page).
+        if (seenActivity[marketId] === undefined) {
+          seenActivity[marketId] = key;
+          return;
+        }
+        seenActivity[marketId] = key;
+        var card = document.querySelector('.prediction-market-card[data-prediction-market-id="' + String(marketId).replace(/"/g, '\\"') + '"]');
+        if (!card) return;
+        card.classList.remove('ost-card--just-traded');
+        // force reflow so animation restarts
+        void card.offsetWidth;
+        card.classList.add('ost-card--just-traded');
+        setTimeout(function () { card.classList.remove('ost-card--just-traded'); }, 1300);
+        // Inject/update activity badge
+        var existing = card.querySelector('.ost-card-activity');
+        var sideUp = String(newest.side || '').toUpperCase();
+        var sideCls = (sideUp === 'NO') ? 'is-no' : '';
+        var ago = Math.max(0, Math.round((Date.now() - new Date(newest.ts).getTime()) / 1000));
+        var agoStr = ago < 60 ? (ago + 's ago') : (Math.round(ago / 60) + 'm ago');
+        var dot = sideUp === 'NO' ? '\uD83D\uDD34' : '\uD83D\uDFE2';
+        var txt = dot + ' ' + sideUp + ' ' + Number(newest.stake || 0).toFixed(1) + ' OST \u00B7 ' + agoStr;
+        if (existing) {
+          existing.className = 'ost-card-activity ' + sideCls;
+          existing.textContent = txt;
+        } else {
+          var el = document.createElement('div');
+          el.className = 'ost-card-activity ' + sideCls;
+          el.textContent = txt;
+          card.appendChild(el);
+        }
+      });
+    }
+
+    // ---- floating Trade Ticket FAB + panel -------------------------------
+    var fab = document.createElement('button');
+    fab.id = 'ost-trade-ticket-fab';
+    fab.type = 'button';
+    fab.innerHTML = '\uD83C\uDFAF Trade ticket <span class="ost-tt-count">0</span>';
+    document.body.appendChild(fab);
+
+    var ttModal = document.createElement('div');
+    ttModal.id = 'ost-trade-ticket-modal';
+    ttModal.innerHTML = '<div class="ost-tt-panel"><button type="button" class="ost-tt-close" aria-label="Close">\u00D7</button><h3>\uD83C\uDFAF Open positions</h3><div class="ost-tt-body">Loading\u2026</div></div>';
+    document.body.appendChild(ttModal);
+    ttModal.addEventListener('click', function (ev) {
+      if (ev.target === ttModal || ev.target.classList.contains('ost-tt-close')) {
+        ttModal.classList.remove('is-open');
+      }
+    });
+
+    function refreshTicketCount() {
+      var orders = readDeskOrders();
+      var open = orders.filter(function (o) { return !o.cashedOut && o.status !== 'won' && o.status !== 'lost' && o.status !== 'settled'; });
+      // Group by marketId for the count badge.
+      var marketsWithPositions = Object.keys(open.reduce(function (acc, o) { if (o.marketId) acc[o.marketId] = 1; return acc; }, {}));
+      var n = marketsWithPositions.length;
+      fab.style.display = n > 0 ? 'inline-flex' : 'none';
+      var badge = fab.querySelector('.ost-tt-count');
+      if (badge) badge.textContent = String(n);
+    }
+
+    function renderTicketPanel() {
+      var body = ttModal.querySelector('.ost-tt-body');
+      var orders = readDeskOrders();
+      var open = orders.filter(function (o) { return !o.cashedOut && o.status !== 'won' && o.status !== 'lost' && o.status !== 'settled'; });
+      if (!open.length) {
+        body.innerHTML = '<div style="opacity:.6;padding:14px 0;">No open positions. Buy YES or NO on any market to open one.</div>';
+        return;
+      }
+      // Group by market for the list.
+      var byMarket = Object.create(null);
+      open.forEach(function (o) {
+        var k = o.marketId || 'unknown';
+        (byMarket[k] = byMarket[k] || []).push(o);
+      });
+      body.innerHTML = Object.keys(byMarket).map(function (mid) {
+        var positions = byMarket[mid];
+        var card = document.querySelector('.prediction-market-card[data-prediction-market-id="' + mid.replace(/"/g, '\\"') + '"]');
+        var title = positions[0].title || (card && (card.querySelector('h5, .prediction-card-title, h3, strong') || {}).textContent) || mid;
+        var yesPx = card ? getYesPriceFromCard(card) : NaN;
+        if (!Number.isFinite(yesPx)) yesPx = Number(positions[0].price) || 0.5;
+        var stake = 0, value = 0;
+        positions.forEach(function (o) {
+          var s = Number(o.stake) || 0;
+          var entry = Number(o.price) || 0.5;
+          var shares = Number(o.shares) > 0 ? Number(o.shares) : (entry > 0 ? s / entry : 0);
+          var live = String(o.side).toLowerCase() === 'no' ? (1 - yesPx) : yesPx;
+          stake += s;
+          value += shares * live;
+        });
+        var pnl = value - stake;
+        var pnlColor = pnl >= 0 ? '#34d399' : '#f87171';
+        var arrow = pnl >= 0 ? '\u25B2' : '\u25BC';
+        var sign = pnl >= 0 ? '+' : '\u2212';
+        return '<div class="ost-tt-row" data-tt-market="' + escapeHtml(mid) + '">' +
+          '<div><strong style="display:block;font-size:13px;">' + escapeHtml(String(title).slice(0, 90)) + '</strong>' +
+          '<span style="opacity:.7;font-size:11px;">' + positions.length + ' position' + (positions.length === 1 ? '' : 's') + ' \u00B7 ' + fmt(stake) + ' OST staked</span></div>' +
+          '<div style="text-align:right;font-weight:700;color:' + pnlColor + ';font-size:13px;">' + arrow + ' ' + sign + fmt(Math.abs(pnl)) + '<br><span style="opacity:.7;font-size:11px;font-weight:500;color:#cbd5e1;">value ' + fmt(value) + '</span></div>' +
+          '<button type="button" class="ost-pred-btn ost-pred-btn--yes" data-tt-open="' + escapeHtml(mid) + '">Open</button>' +
+          '</div>';
+      }).join('');
+      body.querySelectorAll('[data-tt-open]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var id = btn.getAttribute('data-tt-open');
+          ttModal.classList.remove('is-open');
+          if (window.OST_MARKET_MODAL && typeof window.OST_MARKET_MODAL.open === 'function') {
+            window.OST_MARKET_MODAL.open(id);
+          }
+        });
+      });
+    }
+
+    fab.addEventListener('click', function () {
+      renderTicketPanel();
+      ttModal.classList.add('is-open');
+    });
+
+    // ---- boot ------------------------------------------------------------
+    function tick() {
+      try { refreshCardPnL(); } catch (e) { /* silent */ }
+      try { refreshActivityPulse(); } catch (e) { /* silent */ }
+      try { refreshTicketCount(); } catch (e) { /* silent */ }
+    }
+    tick();
+    setInterval(tick, 2500);
+    window.addEventListener('ost:prediction:order-changed', tick);
+    window.addEventListener('storage', function (ev) {
+      if (ev && (ev.key === TRADE_DESK_STORE_KEY || ev.key === STORE_KEY)) tick();
+    });
+  })();
 })();
