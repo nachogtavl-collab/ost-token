@@ -4083,7 +4083,12 @@
       updateCalc();
 
     } catch (e) {
-      console.warn('Price fetch failed, using defaults:', e.message);
+      // CoinGecko direct is CORS-blocked from github.io; the warning is
+      // not actionable for the user. Surface only once per session.
+      if (!window.__ostPriceFallbackLogged) {
+        window.__ostPriceFallbackLogged = true;
+        console.info('Price feed using cached defaults:', e && e.message ? e.message : e);
+      }
       // Use reasonable defaults
       if (!prices.bitcoin) prices.bitcoin = 105000;
       if (!prices.ethereum) prices.ethereum = 3800;
@@ -13936,11 +13941,16 @@
         var topicTags = market.displayTopics.slice(0, 3).map(function(topic) {
           return '<span class="prediction-market-tag">' + escapeHtml(topicLabels[topic] || topicLabels.all) + '</span>';
         }).join('');
+        var sportsRe = /\b(nfl|nba|mlb|nhl|ufc|mma|premier league|la liga|champions league|world cup|super bowl|playoff|game|match|vs\.?|wins?|defeat|knockout)\b/i;
+        var liveBadge = sportsRe.test((market.title || '') + ' ' + (market.detail || ''))
+          ? '<span class="prediction-market-live" title="Live broadcast available in market detail">● LIVE</span>'
+          : '';
         return [
           '<article class="' + articleClass + '" data-prediction-market-id="' + escapeHtml(market.id) + '" tabindex="0" style="--prediction-card-delay:' + Math.min(index * 35, 280) + 'ms">',
             '<div class="prediction-market-topline">',
               '<span class="prediction-market-source ' + sourceClass + '">' + escapeHtml(market.sourceLabel) + '</span>',
               '<span class="prediction-market-topic">' + escapeHtml(topicLabel) + '</span>',
+              liveBadge,
             '</div>',
             '<div class="prediction-market-copy">',
               (isFeatured ? '<span class="prediction-market-spotlight">' + escapeHtml(spotlightLabel) + '</span>' : ''),
@@ -14244,19 +14254,21 @@
     }
 
     function loadDirectPredictionMarkets() {
-      return Promise.allSettled([
-        fetchPolymarketMarkets(),
-        fetchKalshiMarkets()
-      ]).then(function(results) {
+      // Browser-side Kalshi fetch is permanently CORS-blocked from
+      // github.io, so we only attempt Polymarket Gamma directly here.
+      // The OST API worker is the proper Kalshi proxy when we add it.
+      return fetchPolymarketMarkets().then(function(markets) {
         setLoadedPredictionMarkets(
-          results[0].status === 'fulfilled' ? results[0].value : [],
-          results[1].status === 'fulfilled' ? results[1].value : [],
+          markets || [],
+          [],
           {
-            polymarket: results[0].status === 'fulfilled' && results[0].value.length > 0,
-            kalshi: results[1].status === 'fulfilled' && results[1].value.length > 0
+            polymarket: !!(markets && markets.length),
+            kalshi: false
           },
           new Date()
         );
+      }).catch(function() {
+        setLoadedPredictionMarkets([], [], { polymarket: false, kalshi: false }, new Date());
       });
     }
 

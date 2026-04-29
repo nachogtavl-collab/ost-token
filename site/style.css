@@ -2243,6 +2243,28 @@ nav {
   gap: 12px;
 }
 
+.prediction-market-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #fff;
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  border-radius: 999px;
+  text-transform: uppercase;
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.35), 0 4px 14px rgba(239, 68, 68, 0.25);
+  animation: ostLivePulse 1.6s ease-in-out infinite;
+  margin-left: auto;
+}
+
+@keyframes ostLivePulse {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.35), 0 4px 14px rgba(239, 68, 68, 0.25); }
+  50%      { box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.6),  0 6px 22px rgba(239, 68, 68, 0.45); }
+}
+
 .prediction-market-footer,
 .prediction-market-meta-row,
 .prediction-market-actions {
