@@ -229,6 +229,11 @@
     clearLiveTimers();
     var el = document.getElementById(MODAL_ID);
     if (!el) return;
+    var bodyEl = el.querySelector('[data-bind="body"]');
+    if (bodyEl && bodyEl.__refreshSell) {
+      try { window.removeEventListener('ost:prediction:order-changed', bodyEl.__refreshSell); } catch (_) {}
+      bodyEl.__refreshSell = null;
+    }
     el.classList.remove('is-open');
     el.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
@@ -541,6 +546,96 @@
     '</section>';
   }
 
+  // ──────────────────────────────────────────────────────────────────────
+  // SELL — own open positions on this market, with live mark-to-market
+  // and a working Sell button that settles via OST_TRADE.predictionCashOut
+  // when available, or falls back to a local cash-out + worker sync.
+  // ──────────────────────────────────────────────────────────────────────
+  function readOrders() { return readJson(ORDERS_KEY, []) || []; }
+  function writeOrders(list) {
+    try { localStorage.setItem(ORDERS_KEY, JSON.stringify((list || []).slice(0, 300))); } catch (_) {}
+  }
+  function ownWallet() {
+    try {
+      if (window.OST_WALLET && window.OST_WALLET.session && window.OST_WALLET.session.publicKey && window.OST_WALLET.session.publicKey.toBase58) {
+        return window.OST_WALLET.session.publicKey.toBase58();
+      }
+    } catch (_) {}
+    return window.OST_WALLET_PUBKEY || (window.solana && window.solana.publicKey && window.solana.publicKey.toString && window.solana.publicKey.toString()) || '';
+  }
+  function ordersForMarket(market) {
+    var id = String(market && market.id || '');
+    if (!id) return [];
+    var wallet = ownWallet();
+    return readOrders().filter(function (o) {
+      if (!o || String(o.marketId || '') !== id) return false;
+      if (o.cashedOut) return false;
+      // If a wallet is connected, only show that wallet's tickets — otherwise
+      // show all local tickets so users can still settle pre-connect orders.
+      return wallet ? !o.wallet || o.wallet === wallet : true;
+    });
+  }
+  function renderSellBlock() {
+    return '<section class="ost-modal__sell" data-bind="sellSection">' +
+      '<div class="ost-modal__sell-head">' +
+        '<h4>Your open positions on this market</h4>' +
+        '<span data-bind="sellStatus" style="opacity:.6;font-size:11px;">—</span>' +
+      '</div>' +
+      '<div data-bind="sellList" class="ost-modal__sell-list">' +
+        '<div style="opacity:.55;font-size:12px;padding:8px 0;">No open positions on this market.</div>' +
+      '</div>' +
+    '</section>';
+  }
+  function postPositionUpdate(order) {
+    try {
+      var base = (window.OST_API_BASE || '').replace(/\/$/, '');
+      if (!base) return;
+      fetch(base + '/positions', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(Object.assign({}, order, {
+          wallet: order.wallet || ownWallet() || 'anon',
+          marketTitle: order.title || order.marketTitle || '',
+          ts: order.createdAt || order.ts || Date.now()
+        }))
+      }).catch(function () {});
+    } catch (_) {}
+  }
+  function notifyOrderChanged() {
+    try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch (_) {}
+    try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {}
+  }
+  function sellOrder(order, payout, kind) {
+    // Try the on-chain settlement helper first; fall back to a local cash-out.
+    var doLocal = function () {
+      order.cashedOut = true;
+      order.cashoutOst = Number(payout) || 0;
+      order.cashoutAt = Date.now();
+      order.cashoutKind = kind || 'prediction-sell-modal';
+      order.status = 'sold';
+      var orders = readOrders();
+      var idx = orders.findIndex(function (o) {
+        return o && (o.signature || o.sig || o.id) === (order.signature || order.sig || order.id);
+      });
+      if (idx >= 0) orders[idx] = order; else orders.unshift(order);
+      writeOrders(orders);
+      postPositionUpdate(order);
+      notifyOrderChanged();
+      return Promise.resolve({ ost: Number(payout) || 0, sig: order.cashoutSig || '' });
+    };
+    if (window.OST_TRADE && typeof window.OST_TRADE.predictionCashOut === 'function') {
+      return Promise.resolve(window.OST_TRADE.predictionCashOut(order, Number(payout) || 0))
+        .then(function (r) {
+          order.cashoutSig = r && r.sig ? r.sig : order.cashoutSig;
+          return doLocal().then(function (loc) {
+            return Object.assign({}, loc, { ost: (r && Number(r.ost)) || loc.ost, sig: order.cashoutSig || loc.sig });
+          });
+        })
+        .catch(function () { return doLocal(); });
+    }
+    return doLocal();
+  }
+
   // Shared positions ticker — every OST user sees every other user's recent bets
   // ON THIS MARKET (filtered server-side fetch is global, we filter per-market here).
   function renderSharedBlock() {
@@ -617,6 +712,7 @@
                renderTradesBlock() +
              '</div>' +
              renderBetBlock(m) +
+             renderSellBlock() +
              renderSharedBlock() +
            '</div>';
   }
@@ -758,6 +854,69 @@
     }
     refreshSharedFeed();
     liveTimers.push(setInterval(refreshSharedFeed, 4000));
+
+    // ---- Sell open positions on this market (live mark-to-market) ----
+    var sellListEl = bodyEl.querySelector('[data-bind="sellList"]');
+    function refreshSellList() {
+      if (!sellListEl) return;
+      var positions = ordersForMarket(market);
+      setText(bodyEl, 'sellStatus', positions.length ? (positions.length + ' open') : 'no positions');
+      if (!positions.length) {
+        sellListEl.innerHTML = '<div style="opacity:.55;font-size:12px;padding:8px 0;">No open positions on this market. Buy YES or NO above to open one.</div>';
+        return;
+      }
+      sellListEl.innerHTML = positions.map(function (o, i) {
+        var side = String(o.side || 'yes').toLowerCase() === 'no' ? 'NO' : 'YES';
+        var sideColor = side === 'NO' ? '#ff7c8a' : '#7ce6a8';
+        var stake = Number(o.stake || 0) || 0;
+        var entryPx = Number(o.price || (side === 'NO' ? o.noPrice : o.yesPrice)) || 0;
+        var shares = Number(o.shares) > 0 ? Number(o.shares) : (entryPx > 0 ? stake / entryPx : 0);
+        var livePx = side === 'NO' ? Number(market.noPriceNumber) : Number(market.yesPriceNumber);
+        if (!Number.isFinite(livePx) || livePx <= 0) livePx = entryPx;
+        var liveValue = shares > 0 && livePx > 0 ? shares * livePx : stake;
+        var pnl = liveValue - stake;
+        var pnlColor = pnl >= 0 ? '#7ce6a8' : '#ff7c8a';
+        var pnlStr = (pnl >= 0 ? '+' : '−') + Math.abs(pnl).toFixed(2);
+        return '<div class="ost-modal__sell-row" data-sell-key="' + escapeHtml(o.signature || o.sig || o.id || ('idx-' + i)) + '" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid rgba(255,255,255,.06);">' +
+          '<span style="font-weight:700;color:' + sideColor + ';min-width:34px;">' + side + '</span>' +
+          '<span style="opacity:.85;font-size:12px;">' + stake.toFixed(2) + ' OST @ ' + (entryPx > 0 ? (entryPx * 100).toFixed(1) + '¢' : '—') + '</span>' +
+          '<span style="opacity:.85;font-size:12px;">live ' + (livePx * 100).toFixed(1) + '¢</span>' +
+          '<span style="opacity:.85;font-size:12px;">value <b>' + liveValue.toFixed(2) + '</b></span>' +
+          '<span style="font-size:12px;color:' + pnlColor + ';font-weight:700;">' + pnlStr + ' OST</span>' +
+          '<button type="button" data-act="sell" data-sell-idx="' + i + '" style="margin-left:auto;padding:5px 12px;border-radius:6px;border:none;background:#22c55e;color:#031;cursor:pointer;font-weight:700;font-size:12px;">Sell ' + liveValue.toFixed(2) + ' OST</button>' +
+        '</div>';
+      }).join('');
+      sellListEl.querySelectorAll('button[data-act="sell"]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var idx = Number(btn.getAttribute('data-sell-idx'));
+          var positions = ordersForMarket(market);
+          var order = positions[idx];
+          if (!order) return;
+          var side = String(order.side || 'yes').toLowerCase() === 'no' ? 'NO' : 'YES';
+          var entryPx = Number(order.price || (side === 'NO' ? order.noPrice : order.yesPrice)) || 0;
+          var shares = Number(order.shares) > 0 ? Number(order.shares) : (entryPx > 0 ? Number(order.stake || 0) / entryPx : 0);
+          var livePx = side === 'NO' ? Number(market.noPriceNumber) : Number(market.yesPriceNumber);
+          if (!Number.isFinite(livePx) || livePx <= 0) livePx = entryPx;
+          var payout = Math.max(0, shares * livePx);
+          if (!(payout > 0)) { toast('Cannot sell at 0¢', 'err'); return; }
+          var orig = btn.textContent;
+          btn.disabled = true; btn.textContent = '…';
+          sellOrder(order, payout, 'prediction-sell-modal')
+            .then(function (r) {
+              toast('✅ Sold ' + (Number(r.ost) || payout).toFixed(2) + ' OST' + (r.sig ? ' (' + String(r.sig).slice(0, 8) + '…)' : ''), 'ok');
+              refreshSellList();
+            })
+            .catch(function (e) {
+              btn.disabled = false; btn.textContent = orig;
+              toast('Sell failed: ' + (e && e.message || 'unknown'), 'err');
+            });
+        });
+      });
+    }
+    refreshSellList();
+    liveTimers.push(setInterval(refreshSellList, 3000));
+    bodyEl.__refreshSell = refreshSellList;
+    window.addEventListener('ost:prediction:order-changed', refreshSellList);
 
     // ---- Live BTC tile ----
     if (market.isOstNative && market.meta && market.meta.kind === 'btc5m') {

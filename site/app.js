@@ -14577,7 +14577,7 @@
       renderPredictionLedger();
     });
     loadPredictionMarkets();
-    loadTimer = window.setInterval(loadPredictionMarkets, 120000);
+    loadTimer = window.setInterval(loadPredictionMarkets, 15000);
     refreshPredictionOrderResolutions();
     resolutionTimer = window.setInterval(refreshPredictionOrderResolutions, 300000);
     // Re-sync wallet balance every 30 s so displayed OST funds stay accurate.
@@ -14591,6 +14591,13 @@
       });
     });
     window.addEventListener('ost:prediction-orders-synced', function() {
+      state.orderHistory = readPredictionOrderRecords();
+      renderPredictionLedger();
+    });
+    // Modal-driven SELL refreshes the local ledger immediately so the wallet
+    // portal portfolio + ledger reflect the cash-out without waiting for the
+    // 15 s board poll or the 5 min resolution sweep.
+    window.addEventListener('ost:prediction:order-changed', function() {
       state.orderHistory = readPredictionOrderRecords();
       renderPredictionLedger();
     });
