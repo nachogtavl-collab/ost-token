@@ -113,7 +113,7 @@
         '<div class="fh-card">' +
           '<div class="fh-card-title">🎲 Provably-Fair Arcade</div>' +
           '<div class="fh-emoji">💣🚀🎰🃏</div>' +
-          '<div class="fh-card-meta">16 HMAC-verifiable games: Mines, Crash, Dice, Plinko, table games, Keno, Slots, Scratch, Penalty and more — all paid from this same vault.</div>' +
+          '<div class="fh-card-meta">32 HMAC-verifiable games: Mines, Crash, Plinko, Roulette, Big Six, Blackjack, Baccarat, Video Poker, Craps, Sic Bo and more — all paid from this same vault.</div>' +
           '<button class="fh-btn" id="fhGoGames">Open games ↓</button>' +
         '</div>' +
         // Family grow vault pointer

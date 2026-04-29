@@ -10,7 +10,7 @@
  *   - Visualise risk with multipliers, exactly like Stake/Rainbet.
  *
  * Games shipped:
- *   • 16 provably-fair games, from quick flips to strategy tables.
+ *   • 32 provably-fair games, from quick flips to world casino tables.
  *
  * Mounts a card panel inside the existing #ostFaucetHub section.
  * ========================================================================== */
@@ -234,7 +234,7 @@
         '<div class="ostg-head">' +
           '<div>' +
             '<h3>🎲 Provably-Fair OST Arcade</h3>' +
-            '<p class="ostg-sub">Sixteen fast OST games with risk modes, cash-out decisions, table games, and instant reveals. Every outcome is HMAC-SHA256 of <code>serverSeed</code>+<code>clientSeed</code>+<code>nonce</code>.</p>' +
+            '<p class="ostg-sub">Thirty-two fast OST games with casino tables, global classics, cash-out decisions, and instant reveals. Every outcome is HMAC-SHA256 of <code>serverSeed</code>+<code>clientSeed</code>+<code>nonce</code>.</p>' +
           '</div>' +
           '<div class="ostg-balance-card">' +
             '<span class="ostg-balance-label">Chips · play balance</span>' +
@@ -257,7 +257,7 @@
           '<button class="ostg-tab" data-game="plinko">🟡 Plinko</button>' +
           '<button class="ostg-tab" data-game="limbo">🌙 Limbo</button>' +
           '<button class="ostg-tab" data-game="hilo">🃏 Hi-Lo</button>' +
-          '<button class="ostg-tab" data-game="wheel">🎡 Wheel</button>' +
+          '<button class="ostg-tab" data-game="wheel">🎡 Big Six</button>' +
           '<button class="ostg-tab" data-game="coinflip">🪙 Coinflip</button>' +
           '<button class="ostg-tab" data-game="keno">🔢 Keno</button>' +
           '<button class="ostg-tab" data-game="tower">🗼 Tower</button>' +
@@ -267,6 +267,22 @@
           '<button class="ostg-tab" data-game="baccarat">♦ Baccarat</button>' +
           '<button class="ostg-tab" data-game="scratch">🎟 Scratch</button>' +
           '<button class="ostg-tab" data-game="penalty">🥅 Penalty</button>' +
+          '<button class="ostg-tab" data-game="videopoker">🂡 Video Poker</button>' +
+          '<button class="ostg-tab" data-game="craps">🎲 Craps</button>' +
+          '<button class="ostg-tab" data-game="sicbo">⚂ Sic Bo</button>' +
+          '<button class="ostg-tab" data-game="dragontiger">🐉 Dragon Tiger</button>' +
+          '<button class="ostg-tab" data-game="andarbahar">🃏 Andar Bahar</button>' +
+          '<button class="ostg-tab" data-game="teenpatti">♣ Teen Patti</button>' +
+          '<button class="ostg-tab" data-game="threecard">♥ Three Card</button>' +
+          '<button class="ostg-tab" data-game="war">⚔ Casino War</button>' +
+          '<button class="ostg-tab" data-game="reddog">♦ Red Dog</button>' +
+          '<button class="ostg-tab" data-game="paigow">🀄 Pai Gow</button>' +
+          '<button class="ostg-tab" data-game="caribbean">🏝 Caribbean Stud</button>' +
+          '<button class="ostg-tab" data-game="bingo">🔵 Bingo</button>' +
+          '<button class="ostg-tab" data-game="pachinko">🎋 Pachinko</button>' +
+          '<button class="ostg-tab" data-game="lucky7">7️⃣ Lucky 7</button>' +
+          '<button class="ostg-tab" data-game="holdem">♠ Hold’em</button>' +
+          '<button class="ostg-tab" data-game="race">🏁 Race Book</button>' +
         '</div>' +
         '<div class="ostg-stage" id="ostgStage"></div>' +
         '<div class="ostg-history" id="ostgHistory"><span class="ostg-history-label">Recent multipliers:</span></div>' +
@@ -455,6 +471,22 @@
     if (game === 'baccarat')  return renderBaccarat(stage);
     if (game === 'scratch')   return renderScratch(stage);
     if (game === 'penalty')   return renderPenalty(stage);
+    if (game === 'videopoker') return renderVideoPoker(stage);
+    if (game === 'craps')      return renderCraps(stage);
+    if (game === 'sicbo')      return renderSicBo(stage);
+    if (game === 'dragontiger') return renderDragonTiger(stage);
+    if (game === 'andarbahar') return renderAndarBahar(stage);
+    if (game === 'teenpatti')  return renderTeenPatti(stage);
+    if (game === 'threecard')  return renderThreeCardPoker(stage);
+    if (game === 'war')        return renderCasinoWar(stage);
+    if (game === 'reddog')     return renderRedDog(stage);
+    if (game === 'paigow')     return renderPaiGow(stage);
+    if (game === 'caribbean')  return renderCaribbeanStud(stage);
+    if (game === 'bingo')      return renderBingo(stage);
+    if (game === 'pachinko')   return renderPachinko(stage);
+    if (game === 'lucky7')     return renderLucky7(stage);
+    if (game === 'holdem')     return renderHoldem(stage);
+    if (game === 'race')       return renderRaceBook(stage);
   }
 
   function pushHistory(mult) {
@@ -656,9 +688,10 @@
       '<div class="ostg-game ostg-crash">' +
         '<div class="ostg-controls">' +
           '<label>Bet (OST)<input type="number" id="crBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
-          '<label>Auto cash-out ×<input type="number" id="crAuto" min="1.01" step="0.01" value="2.00" inputmode="decimal"></label>' +
+          '<label>Auto cash-out ×<input type="number" id="crAuto" min="1.01" step="0.01" value="3.00" inputmode="decimal"></label>' +
           '<button class="ostg-btn ostg-btn-primary" id="crStart">Place bet</button>' +
           '<button class="ostg-btn ostg-btn-cash" id="crCash" disabled>Cash out</button>' +
+          '<div class="ostg-meta"><span>Peak</span> <strong id="crPeak">1.00x</strong></div>' +
         '</div>' +
         '<div class="ostg-crash-stage">' +
           '<canvas id="crCanvas" width="640" height="280"></canvas>' +
@@ -674,6 +707,7 @@
     var startBtn = document.getElementById('crStart');
     var cashBtn = document.getElementById('crCash');
     var multEl = document.getElementById('crMult');
+    var peakEl = document.getElementById('crPeak');
     var statusEl = document.getElementById('crStatus');
 
     var session = null;
@@ -695,20 +729,25 @@
       for (var x = 0; x < canvas.width; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
       for (var y = 0; y < canvas.height; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
       // curve
+      var maxMult = Math.max(3, mult, session && session.cashMult || 1, session && session.peak || 1);
+      function yFor(value) {
+        var ratio = Math.log(Math.max(1, value)) / Math.log(maxMult);
+        return h - 22 - Math.min(h - 42, ratio * (h - 46));
+      }
       ctx.beginPath();
       var w = canvas.width, h = canvas.height;
       for (var i = 0; i <= 100; i++) {
         var f = i / 100;
         var m = Math.pow(mult, f);
-        var px = f * w * 0.95 + 10;
-        var py = h - 20 - Math.min(h - 30, (m - 1) * 60);
+        var px = f * Math.min(w - 22, 10 + t * 76);
+        var py = yFor(m);
         if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
       }
       ctx.strokeStyle = crashed ? '#dc2626' : '#34d399';
       ctx.lineWidth = 3;
       ctx.stroke();
       if (session && session.cashed && session.cashMult) {
-        var cashY = h - 20 - Math.min(h - 30, (session.cashMult - 1) * 60);
+        var cashY = yFor(session.cashMult);
         ctx.setLineDash([6, 6]);
         ctx.beginPath(); ctx.moveTo(0, cashY); ctx.lineTo(w, cashY);
         ctx.strokeStyle = 'rgba(245,196,104,0.6)'; ctx.lineWidth = 2; ctx.stroke();
@@ -717,8 +756,8 @@
         ctx.fillText('cashout ' + session.cashMult.toFixed(2) + 'x', 12, Math.max(18, cashY - 8));
       }
       // rocket head
-      var fx = 0.95 * w + 10;
-      var fy = h - 20 - Math.min(h - 30, (mult - 1) * 60);
+      var fx = Math.min(w - 20, Math.max(18, 10 + t * 76));
+      var fy = yFor(mult);
       ctx.fillStyle = crashed ? '#dc2626' : '#f5c468';
       ctx.font = '28px sans-serif';
       ctx.textAlign = 'center';
@@ -734,13 +773,16 @@
       var crashAt = crashPoint(floats[0]);
       var auto = clamp(parseFloat(autoEl.value) || 0, 0, 1000000);
       if (auto > 0 && auto < 1.01) auto = 1.01;
-      session = { bet: amt, crashAt: crashAt, auto: auto, t0: performance.now(), cashed: false, cashMult: 0 };
+      session = { bet: amt, crashAt: crashAt, auto: auto, t0: performance.now(), cashed: false, cashMult: 0, peak: 1 };
+      if (peakEl) peakEl.textContent = '1.00x';
       startBtn.disabled = true; cashBtn.disabled = false; betEl.disabled = true; autoEl.disabled = true;
       statusEl.textContent = 'Flying… cash out before the multiplier explodes.';
       function tick() {
         if (!session) return;
         var elapsed = (performance.now() - session.t0) / 1000;
-        var mult = Math.pow(Math.E, 0.22 * elapsed); // faster, playable exponential
+        var mult = Math.pow(Math.E, 0.32 * elapsed); // punchier, more arcade-like exponential
+        session.peak = Math.max(session.peak || 1, mult);
+        if (peakEl) peakEl.textContent = shortMult(session.peak);
         if (mult >= session.crashAt) {
           mult = session.crashAt;
           draw(mult, elapsed, true);
@@ -758,7 +800,7 @@
           onCash(true);
         }
         multEl.textContent = mult.toFixed(2) + '×';
-        multEl.style.color = mult >= 2 ? '#86efac' : '#f8fafc';
+        multEl.style.color = mult >= 10 ? '#fca5a5' : mult >= 3 ? '#fde68a' : mult >= 2 ? '#86efac' : '#f8fafc';
         draw(mult, elapsed, false);
         raf = requestAnimationFrame(tick);
       }
@@ -900,6 +942,7 @@
           '<label>Bet (OST)<input type="number" id="plBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
           '<label>Risk<select id="plRisk"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select></label>' +
           '<label>Rows<select id="plRows"><option value="8">8</option><option value="12" selected>12</option><option value="16">16</option></select></label>' +
+          '<label>Balls<select id="plBalls"><option value="1">1</option><option value="3" selected>3</option><option value="5">5</option><option value="10">10</option></select></label>' +
           '<button class="ostg-btn ostg-btn-primary" id="plDrop">Drop ball</button>' +
         '</div>' +
         '<div class="ostg-plinko-stage">' +
@@ -912,6 +955,7 @@
     var bet = document.getElementById('plBet');
     var risk = document.getElementById('plRisk');
     var rows = document.getElementById('plRows');
+    var balls = document.getElementById('plBalls');
     var dropBtn = document.getElementById('plDrop');
     var canvas = document.getElementById('plCanvas');
     var ctx = canvas.getContext('2d');
@@ -961,30 +1005,16 @@
       if (amt === null) return;
       var res = placeBet(amt); if (!res.ok) { statusEl.textContent = res.msg; return; }
       var n = parseInt(rows.value, 10);
-      var floats = await pfFloats(n);
-      // Each row: <0.5 left, ≥0.5 right
-      var bucket = 0;
-      for (var i = 0; i < n; i++) if (floats[i] >= 0.5) bucket++;
-      // Animate — ball must visually land in the chosen bucket so the result
-      // matches what the user sees. We keep rights = bucket count so the ball
-      // ends up at column `bucket` of `n+1` buckets.
+      var ballCount = parseInt(balls.value, 10) || 1;
+      var allFloats = await pfFloats(n * ballCount);
       var topY = 30, botY = canvas.height - 40, spacingY = (botY - topY) / n;
       var pegSpacing = 28;
       var buckets = n + 1;
       var bw = canvas.width / buckets;
-      var path = [{ x: canvas.width / 2, y: topY }];
-      var x = canvas.width / 2, y = topY;
-      for (var stepIdx = 0; stepIdx < n; stepIdx++) {
-        x += (floats[stepIdx] >= 0.5 ? pegSpacing / 2 : -pegSpacing / 2);
-        y += spacingY;
-        path.push({ x: x, y: y });
-      }
-      path.push({ x: bucket * bw + bw / 2, y: botY + 18 });
-      var seg = 0;
-      var segStart = performance.now();
-      var segDur = Math.max(90, 920 / path.length);
-      setBusy([dropBtn, bet, risk, rows], true);
-      statusEl.textContent = 'Dropping through ' + n + ' rows…';
+      var perBall = amt / ballCount;
+      var totalPayout = 0;
+      var landed = [];
+      setBusy([dropBtn, bet, risk, rows, balls], true);
       function drawBall(px, py) {
         ctx.beginPath();
         ctx.arc(px, py, 8, 0, Math.PI * 2);
@@ -994,13 +1024,32 @@
         ctx.fill();
         ctx.shadowBlur = 0;
       }
-      function animate() {
+      function playBall(ballIndex) {
+        var floats = allFloats.slice(ballIndex * n, ballIndex * n + n);
+        var bucket = 0;
+        for (var i = 0; i < n; i++) if (floats[i] >= 0.5) bucket++;
+        var path = [{ x: canvas.width / 2, y: topY }];
+        var x = canvas.width / 2, y = topY;
+        for (var stepIdx = 0; stepIdx < n; stepIdx++) {
+          x += (floats[stepIdx] >= 0.5 ? pegSpacing / 2 : -pegSpacing / 2);
+          y += spacingY;
+          path.push({ x: x, y: y });
+        }
+        path.push({ x: bucket * bw + bw / 2, y: botY + 18 });
+        var seg = 0;
+        var segStart = performance.now();
+        var segDur = Math.max(62, 720 / path.length);
+        statusEl.textContent = 'Dropping ball ' + (ballIndex + 1) + '/' + ballCount + ' through ' + n + ' rows...';
+        function animate() {
         var p = Math.min(1, (performance.now() - segStart) / segDur);
         var ease = 1 - Math.pow(1 - p, 2);
         var a = path[seg], b = path[seg + 1];
         var px = a.x + (b.x - a.x) * ease;
         var py = a.y + (b.y - a.y) * ease + Math.sin(p * Math.PI) * 8;
-        paintBoard();
+        paintBoard(landed[landed.length - 1]);
+        landed.forEach(function(previousBucket) {
+          drawBall(previousBucket * bw + bw / 2, botY + 18);
+        });
         drawBall(px, py);
         if (p < 1) return requestAnimationFrame(animate);
         seg++;
@@ -1009,16 +1058,23 @@
           return requestAnimationFrame(animate);
         }
         paintBoard(bucket);
+        landed.push(bucket);
+        landed.forEach(function(previousBucket) {
+          drawBall(previousBucket * bw + bw / 2, botY + 18);
+        });
         drawBall(path[path.length - 1].x, path[path.length - 1].y);
         var mult = PLINKO_MULTS[n][risk.value][bucket];
-        var payout = amt * mult;
-        settleGame('plinko', amt, payout, mult, statusEl,
-          mult >= 1 ? '🎯 Landed on ' + mult + 'x — won ' + payout.toFixed(2) + ' OST'
-                    : '😬 Landed on ' + mult + 'x — got ' + payout.toFixed(2) + ' OST back',
+        totalPayout += perBall * mult;
+        if (ballIndex + 1 < ballCount) return setTimeout(function() { playBall(ballIndex + 1); }, 120);
+        var totalMultiplier = totalPayout / amt;
+        settleGame('plinko', amt, totalPayout, totalMultiplier, statusEl,
+          'Dropped ' + ballCount + ' ball' + (ballCount === 1 ? '' : 's') + ' · paid ' + totalPayout.toFixed(2) + ' OST at ' + shortMult(totalMultiplier) + ' total.',
           canvas.parentElement);
-        setBusy([dropBtn, bet, risk, rows], false);
+        setBusy([dropBtn, bet, risk, rows, balls], false);
+        }
+        animate();
       }
-      animate();
+      playBall(0);
     });
   }
 
@@ -1202,7 +1258,7 @@
   }
 
   // ────────────────────────────────────────────────────────────────────────
-  // WHEEL — 50 segments, configurable risk; spin and land on a multiplier.
+  // BIG SIX MONEY WHEEL — configurable multiplier wheel, distinct from roulette.
   // ────────────────────────────────────────────────────────────────────────
   var WHEEL_SEGMENTS = {
     low:    [0,1.2,1.2,1.5,1.2,0,1.2,2,1.2,0,1.5,1.2,1.2,0,1.2,1.5,0,1.2,2,1.2,0,1.2,1.5,1.2,0,1.2,1.2,1.5,0,1.2],
@@ -1221,7 +1277,7 @@
           '<div class="ostg-wheel-pin"></div>' +
           '<canvas id="whCanvas" width="360" height="360"></canvas>' +
         '</div>' +
-        '<div class="ostg-status" id="whStatus">Spin the wheel — payouts depend on which segment the pointer lands on.</div>' +
+        '<div class="ostg-status" id="whStatus">Spin the Big Six money wheel — this is a multiplier prize wheel, while Roulette stays the number wheel.</div>' +
       '</div>';
     var canvas = document.getElementById('whCanvas');
     var ctx = canvas.getContext('2d');
@@ -1955,7 +2011,7 @@
   }
 
   // ────────────────────────────────────────────────────────────────────────
-  // BLACKJACK — hit, stand, double, dealer draws to 17.
+  // BLACKJACK — simplified hit/stand table, dealer draws to 17.
   // ────────────────────────────────────────────────────────────────────────
   function renderBlackjack(stage) {
     stage.innerHTML =
@@ -1965,20 +2021,19 @@
           '<button class="ostg-btn ostg-btn-primary" id="bjDeal">Deal</button>' +
           '<button class="ostg-btn" id="bjHit" disabled>Hit</button>' +
           '<button class="ostg-btn" id="bjStand" disabled>Stand</button>' +
-          '<button class="ostg-btn ostg-btn-cash" id="bjDouble" disabled>Double</button>' +
+          '<div class="ostg-meta"><span>Goal</span> <strong>Beat 21</strong></div>' +
         '</div>' +
         '<div class="ostg-table-stage">' +
           '<div class="ostg-hand"><span>Dealer <strong id="bjDealerTotal">0</strong></span><div id="bjDealerCards" class="ostg-card-row"></div></div>' +
           '<div class="ostg-hand"><span>You <strong id="bjPlayerTotal">0</strong></span><div id="bjPlayerCards" class="ostg-card-row"></div></div>' +
         '</div>' +
-        '<div class="ostg-status" id="bjStatus">Deal two cards. Blackjack pays 2.5x, standard wins pay 1.98x.</div>' +
+        '<div class="ostg-status" id="bjStatus">Easy blackjack: deal, hit until you like your total, then stand. Natural blackjack pays 2.5x.</div>' +
       '</div>';
 
     var bet = document.getElementById('bjBet');
     var deal = document.getElementById('bjDeal');
     var hit = document.getElementById('bjHit');
     var stand = document.getElementById('bjStand');
-    var doubleBtn = document.getElementById('bjDouble');
     var dealerCards = document.getElementById('bjDealerCards');
     var playerCards = document.getElementById('bjPlayerCards');
     var dealerTotal = document.getElementById('bjDealerTotal');
@@ -2000,7 +2055,6 @@
       deal.disabled = active;
       hit.disabled = !active;
       stand.disabled = !active;
-      doubleBtn.disabled = !active || !session || session.player.length !== 2 || getBalance() < session.bet;
     }
 
     function finish(payout, multiplier, text) {
@@ -2037,7 +2091,7 @@
         if (playerScore === 21) return finish(amount * 2.5, 2.5, 'Natural blackjack! Paid ' + (amount * 2.5).toFixed(2) + ' OST.');
         return finish(0, 0, 'Dealer blackjack. Lost ' + amount.toFixed(2) + ' OST.');
       }
-      statusEl.textContent = 'Hit, stand, or double down.';
+      statusEl.textContent = 'Hit for another card or stand to let the dealer draw.';
     });
 
     hit.addEventListener('click', function () {
@@ -2045,20 +2099,10 @@
       session.player.push(drawCard());
       renderHands();
       if (blackjackValue(session.player) > 21) return finish(0, 0, 'Busted over 21. Lost ' + session.bet.toFixed(2) + ' OST.');
-      doubleBtn.disabled = true;
       statusEl.textContent = 'Card drawn. Hit again or stand.';
     });
 
     stand.addEventListener('click', function () { if (session) dealerTurn(); });
-    doubleBtn.addEventListener('click', function () {
-      if (!session || session.player.length !== 2) return;
-      if (!debit(session.bet)) { statusEl.textContent = 'Need another ' + session.bet.toFixed(2) + ' OST to double.'; return; }
-      session.bet *= 2;
-      session.player.push(drawCard());
-      renderHands();
-      if (blackjackValue(session.player) > 21) return finish(0, 0, 'Double-down bust. Lost ' + session.bet.toFixed(2) + ' OST.');
-      dealerTurn();
-    });
   }
 
   function baccaratValue(cards) {
@@ -2272,7 +2316,7 @@
           '<button class="ostg-btn ostg-btn-primary" id="pnShoot">Shoot</button>' +
           '<div class="ostg-meta"><span>Goal pays</span> <strong id="pnPay">2.25x</strong></div>' +
         '</div>' +
-        '<div class="ostg-penalty-stage">' +
+        '<div class="ostg-penalty-stage ostg-penalty-pitch">' +
           '<div class="ostg-penalty-goal"><div class="ostg-keeper" id="pnKeeper">🧤</div><div class="ostg-ball" id="pnBall">●</div><div class="ostg-net-line"></div></div>' +
           '<div class="ostg-penalty-lanes"><span>Left</span><span>Center</span><span>Right</span><span>Top</span></div>' +
         '</div>' +
@@ -2286,8 +2330,17 @@
     var pay = document.getElementById('pnPay');
     var keeper = document.getElementById('pnKeeper');
     var ball = document.getElementById('pnBall');
+    var pitch = stage.querySelector('.ostg-penalty-pitch');
     var statusEl = document.getElementById('pnStatus');
     var sides = ['left', 'center', 'right', 'top'];
+
+    function clearPenaltyPose() {
+      pitch.dataset.result = '';
+      keeper.dataset.side = '';
+      ball.dataset.side = '';
+      keeper.dataset.result = '';
+      ball.dataset.result = '';
+    }
 
     function refreshPenalty() {
       pay.textContent = shortMult(PENALTY_STYLES[style.value].multiplier);
@@ -2300,24 +2353,505 @@
       if (amount === null) return;
       var result = placeBet(amount);
       if (!result.ok) { statusEl.textContent = result.msg; return; }
+      setBusy([bet, aim, style, shoot], true);
+      clearPenaltyPose();
       var floats = await pfFloats(2);
       var shot = PENALTY_STYLES[style.value];
       var keeperSide = sides[Math.floor(floats[0] * sides.length)];
       var keeperMatched = keeperSide === aim.value;
       var scored = keeperMatched ? floats[1] < shot.beat : floats[1] < shot.accuracy;
-      setBusy([bet, aim, style, shoot], true);
+      var stopType = keeperMatched ? 'saved' : 'missed';
       keeper.dataset.side = keeperSide;
       ball.dataset.side = aim.value;
+      keeper.dataset.result = scored || stopType === 'missed' ? 'miss' : 'save';
+      ball.dataset.result = scored ? 'goal' : stopType;
+      pitch.dataset.result = scored ? 'goal' : stopType;
       statusEl.textContent = 'Shot away... keeper dives ' + keeperSide + '.';
       setTimeout(function () {
         var payout = scored ? amount * shot.multiplier : 0;
+        var lossText = stopType === 'saved' ? 'Saved by the keeper.' : 'Shot missed the frame.';
         settleGame('penalty', amount, payout, scored ? shot.multiplier : 0, statusEl,
           scored ? shot.label + ' shot scores! Paid ' + payout.toFixed(2) + ' OST at ' + shortMult(shot.multiplier) + '.'
-                 : 'Saved by the keeper. Lost ' + amount.toFixed(2) + ' OST.',
-          stage.querySelector('.ostg-penalty-stage'));
+                 : lossText + ' Lost ' + amount.toFixed(2) + ' OST.',
+          pitch);
         setBusy([bet, aim, style, shoot], false);
-        setTimeout(function () { keeper.dataset.side = ''; ball.dataset.side = ''; }, 500);
       }, 760);
+    });
+  }
+
+  function diceFace(value) {
+    return ['','⚀','⚁','⚂','⚃','⚄','⚅'][value] || String(value);
+  }
+
+  function rollDie(floatValue) {
+    return Math.floor((floatValue || 0) * 6) + 1;
+  }
+
+  function cardRankValue(card) {
+    if (!card) return 0;
+    if (card.rank === 'A') return 14;
+    return Math.min(card.order, 13);
+  }
+
+  function comparePokerScores(left, right) {
+    return Number(left && left.score || 0) - Number(right && right.score || 0);
+  }
+
+  function scoreFiveCardPoker(cards) {
+    var values = cards.map(cardRankValue).sort(function(a, b) { return b - a; });
+    var counts = {};
+    values.forEach(function(value) { counts[value] = (counts[value] || 0) + 1; });
+    var groups = Object.keys(counts).map(Number).sort(function(a, b) {
+      return counts[b] === counts[a] ? b - a : counts[b] - counts[a];
+    });
+    var unique = Object.keys(counts).map(Number).sort(function(a, b) { return b - a; });
+    var straightHigh = 0;
+    if (unique.length >= 5) {
+      for (var index = 0; index <= unique.length - 5; index++) {
+        var run = unique.slice(index, index + 5);
+        if (run[0] - run[4] === 4) { straightHigh = run[0]; break; }
+      }
+      if (!straightHigh && unique.indexOf(14) >= 0 && unique.indexOf(5) >= 0 && unique.indexOf(4) >= 0 && unique.indexOf(3) >= 0 && unique.indexOf(2) >= 0) straightHigh = 5;
+    }
+    var flush = cards.every(function(card) { return card.suit === cards[0].suit; });
+    var label = 'High card';
+    var rank = 0;
+    var kickers = values.slice();
+    if (flush && straightHigh === 14) { rank = 9; label = 'Royal flush'; kickers = [14]; }
+    else if (flush && straightHigh) { rank = 8; label = 'Straight flush'; kickers = [straightHigh]; }
+    else if (counts[groups[0]] === 4) { rank = 7; label = 'Four of a kind'; kickers = [groups[0]].concat(values.filter(function(v) { return v !== groups[0]; })); }
+    else if (counts[groups[0]] === 3 && counts[groups[1]] === 2) { rank = 6; label = 'Full house'; kickers = [groups[0], groups[1]]; }
+    else if (flush) { rank = 5; label = 'Flush'; }
+    else if (straightHigh) { rank = 4; label = 'Straight'; kickers = [straightHigh]; }
+    else if (counts[groups[0]] === 3) { rank = 3; label = 'Three of a kind'; kickers = [groups[0]].concat(values.filter(function(v) { return v !== groups[0]; })); }
+    else if (counts[groups[0]] === 2 && counts[groups[1]] === 2) { rank = 2; label = 'Two pair'; kickers = [groups[0], groups[1]].concat(values.filter(function(v) { return v !== groups[0] && v !== groups[1]; })); }
+    else if (counts[groups[0]] === 2) { rank = 1; label = 'Pair'; kickers = [groups[0]].concat(values.filter(function(v) { return v !== groups[0]; })); }
+    var score = rank * 10000000000;
+    kickers.slice(0, 5).forEach(function(value, index) { score += value * Math.pow(100, 4 - index); });
+    return { rank: rank, label: label, score: score, main: kickers[0] || 0 };
+  }
+
+  function bestPokerScore(cards) {
+    var best = null;
+    for (var a = 0; a < cards.length - 4; a++) {
+      for (var b = a + 1; b < cards.length - 3; b++) {
+        for (var c = b + 1; c < cards.length - 2; c++) {
+          for (var d = c + 1; d < cards.length - 1; d++) {
+            for (var e = d + 1; e < cards.length; e++) {
+              var score = scoreFiveCardPoker([cards[a], cards[b], cards[c], cards[d], cards[e]]);
+              if (!best || score.score > best.score) best = score;
+            }
+          }
+        }
+      }
+    }
+    return best || scoreFiveCardPoker(cards.slice(0, 5));
+  }
+
+  function scoreThreeCardPoker(cards) {
+    var values = cards.map(cardRankValue).sort(function(a, b) { return b - a; });
+    var counts = {};
+    values.forEach(function(value) { counts[value] = (counts[value] || 0) + 1; });
+    var unique = Object.keys(counts).map(Number).sort(function(a, b) { return b - a; });
+    var flush = cards.every(function(card) { return card.suit === cards[0].suit; });
+    var straight = unique.length === 3 && (unique[0] - unique[2] === 2 || (unique[0] === 14 && unique[1] === 3 && unique[2] === 2));
+    var groups = Object.keys(counts).map(Number).sort(function(a, b) { return counts[b] === counts[a] ? b - a : counts[b] - counts[a]; });
+    var rank = 0, label = 'High card', main = values[0];
+    if (straight && flush) { rank = 5; label = 'Straight flush'; main = unique[0] === 14 && unique[1] === 3 ? 3 : unique[0]; }
+    else if (counts[groups[0]] === 3) { rank = 4; label = 'Three of a kind'; main = groups[0]; }
+    else if (straight) { rank = 3; label = 'Straight'; main = unique[0] === 14 && unique[1] === 3 ? 3 : unique[0]; }
+    else if (flush) { rank = 2; label = 'Flush'; }
+    else if (counts[groups[0]] === 2) { rank = 1; label = 'Pair'; main = groups[0]; }
+    var score = rank * 1000000 + main * 10000 + values[0] * 100 + values[1];
+    return { rank: rank, label: label, score: score, main: main };
+  }
+
+  function renderQuickCasino(stage, config) {
+    stage.innerHTML =
+      '<div class="ostg-game ostg-world">' +
+        '<div class="ostg-controls">' +
+          '<label>Bet (OST)<input type="number" id="qgBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
+          (config.options && config.options.length ? '<label>' + (config.optionLabel || 'Pick') + '<select id="qgPick">' + config.options.map(function(option) { return '<option value="' + option.value + '">' + option.label + '</option>'; }).join('') + '</select></label>' : '') +
+          '<button class="ostg-btn ostg-btn-primary" id="qgPlay">' + (config.button || 'Play') + '</button>' +
+          '<div class="ostg-meta"><span>Table</span> <strong>' + config.meta + '</strong></div>' +
+        '</div>' +
+        '<div class="ostg-world-stage" id="qgResult">' + config.idle + '</div>' +
+        '<div class="ostg-status" id="qgStatus">' + config.status + '</div>' +
+      '</div>';
+    var bet = document.getElementById('qgBet');
+    var pick = document.getElementById('qgPick');
+    var play = document.getElementById('qgPlay');
+    var resultEl = document.getElementById('qgResult');
+    var statusEl = document.getElementById('qgStatus');
+    play.addEventListener('click', async function() {
+      var amount = parseBet(bet, statusEl);
+      if (amount === null) return;
+      var placed = placeBet(amount);
+      if (!placed.ok) { statusEl.textContent = placed.msg; return; }
+      setBusy([bet, pick, play], true);
+      statusEl.textContent = config.loading || 'Dealing...';
+      try {
+        var outcome = await config.resolve(amount, pick ? pick.value : '');
+        resultEl.innerHTML = outcome.html;
+        settleGame(config.id, amount, outcome.payout, outcome.multiplier, statusEl, outcome.text, resultEl);
+      } catch (error) {
+        credit(amount, config.id + '-refund');
+        statusEl.textContent = 'Round failed safely. Bet returned.';
+        console.warn('[ostg] quick casino failed', config.id, error);
+      } finally {
+        setBusy([bet, pick, play], false);
+      }
+    });
+  }
+
+  function renderDiceStrip(values) {
+    return '<div class="ostg-dice-strip">' + values.map(function(value) { return '<span>' + diceFace(value) + '</span>'; }).join('') + '</div>';
+  }
+
+  function renderCardStrip(cards) {
+    return '<div class="ostg-card-row ostg-card-row-center">' + cards.map(renderCard).join('') + '</div>';
+  }
+
+  function renderVideoPoker(stage) {
+    stage.innerHTML =
+      '<div class="ostg-game ostg-videopoker">' +
+        '<div class="ostg-controls">' +
+          '<label>Bet (OST)<input type="number" id="vpBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
+          '<button class="ostg-btn ostg-btn-primary" id="vpDeal">Deal</button>' +
+          '<button class="ostg-btn ostg-btn-cash" id="vpDraw" disabled>Draw</button>' +
+          '<div class="ostg-meta"><span>Paytable</span> <strong>Jacks or better</strong></div>' +
+        '</div>' +
+        '<div class="ostg-video-hand" id="vpHand"></div>' +
+        '<div class="ostg-status" id="vpStatus">Deal five cards, hold what you like, then draw once.</div>' +
+      '</div>';
+    var bet = document.getElementById('vpBet');
+    var deal = document.getElementById('vpDeal');
+    var draw = document.getElementById('vpDraw');
+    var handEl = document.getElementById('vpHand');
+    var statusEl = document.getElementById('vpStatus');
+    var session = null;
+    function payFor(score) {
+      if (score.rank === 9) return 250;
+      if (score.rank === 8) return 50;
+      if (score.rank === 7) return 25;
+      if (score.rank === 6) return 9;
+      if (score.rank === 5) return 6;
+      if (score.rank === 4) return 4;
+      if (score.rank === 3) return 3;
+      if (score.rank === 2) return 2;
+      if (score.rank === 1 && score.main >= 11) return 1.2;
+      return 0;
+    }
+    function paint() {
+      handEl.innerHTML = session.hand.map(function(card, index) {
+        return '<button type="button" class="ostg-hold-card ' + (session.hold[index] ? 'is-held' : '') + '" data-index="' + index + '">' + renderCard(card) + '<small>' + (session.hold[index] ? 'Held' : 'Tap hold') + '</small></button>';
+      }).join('');
+      handEl.querySelectorAll('[data-index]').forEach(function(button) {
+        button.addEventListener('click', function() {
+          if (!session || session.done) return;
+          var index = Number(button.dataset.index);
+          session.hold[index] = !session.hold[index];
+          paint();
+        });
+      });
+    }
+    deal.addEventListener('click', async function() {
+      var amount = parseBet(bet, statusEl);
+      if (amount === null) return;
+      var placed = placeBet(amount);
+      if (!placed.ok) { statusEl.textContent = placed.msg; return; }
+      session = { bet: amount, deck: createCardDeck(await pfFloats(52)), hand: [], hold: [false,false,false,false,false], done: false };
+      for (var index = 0; index < 5; index++) session.hand.push(session.deck.pop());
+      bet.disabled = true; deal.disabled = true; draw.disabled = false;
+      statusEl.textContent = 'Tap cards to hold, then draw.';
+      paint();
+    });
+    draw.addEventListener('click', function() {
+      if (!session || session.done) return;
+      for (var index = 0; index < 5; index++) if (!session.hold[index]) session.hand[index] = session.deck.pop();
+      session.done = true;
+      paint();
+      var score = scoreFiveCardPoker(session.hand);
+      var multiplier = payFor(score);
+      var payout = session.bet * multiplier;
+      settleGame('videopoker', session.bet, payout, multiplier, statusEl,
+        multiplier ? score.label + ' pays ' + shortMult(multiplier) + ' · ' + payout.toFixed(2) + ' OST.' : score.label + ' — no Jacks-or-better payout.',
+        handEl);
+      session = null; bet.disabled = false; deal.disabled = false; draw.disabled = true;
+    });
+  }
+
+  function renderCraps(stage) {
+    renderQuickCasino(stage, {
+      id: 'craps', meta: 'Pass line', button: 'Roll dice', optionLabel: 'Bet',
+      options: [{ value: 'pass', label: 'Pass line' }, { value: 'dont', label: 'Don’t pass' }, { value: 'field', label: 'Field one-roll' }],
+      idle: renderDiceStrip([1, 1]), status: 'Pass line, don’t pass, or field. Point rolls resolve automatically.',
+      resolve: async function(amount, pick) {
+        var floats = await pfFloats(24);
+        var rolls = [];
+        function nextRoll(offset) { var pair = [rollDie(floats[offset]), rollDie(floats[offset + 1])]; rolls.push(pair); return pair[0] + pair[1]; }
+        var total = nextRoll(0);
+        var multiplier = 0, text = '';
+        if (pick === 'field') {
+          multiplier = total === 2 || total === 12 ? 2.97 : ([3,4,9,10,11].indexOf(total) >= 0 ? 1.98 : 0);
+          text = multiplier ? 'Field hits on ' + total + ' for ' + shortMult(multiplier) + '.' : 'Field misses on ' + total + '.';
+        } else if (total === 7 || total === 11) {
+          multiplier = pick === 'pass' ? 1.98 : 0;
+          text = (pick === 'pass' ? 'Pass line wins' : 'Don’t pass loses') + ' on come-out ' + total + '.';
+        } else if (total === 2 || total === 3 || total === 12) {
+          multiplier = pick === 'dont' && total !== 12 ? 1.98 : (pick === 'dont' && total === 12 ? 1 : 0);
+          text = multiplier === 1 ? 'Don’t pass push on 12.' : (multiplier ? 'Don’t pass wins on ' + total + '.' : 'Pass line loses on ' + total + '.');
+        } else {
+          var point = total;
+          for (var offset = 2; offset < floats.length - 1; offset += 2) {
+            total = nextRoll(offset);
+            if (total === point || total === 7) break;
+          }
+          var passWins = total === point;
+          multiplier = pick === 'pass' ? (passWins ? 1.98 : 0) : (passWins ? 0 : 1.98);
+          text = 'Point ' + point + ', rolled ' + total + '. ' + (multiplier ? 'Ticket wins.' : 'Ticket loses.');
+        }
+        return { html: renderDiceStrip(rolls[rolls.length - 1]) + '<div class="ostg-world-note">Roll path: ' + rolls.map(function(pair) { return pair[0] + '+' + pair[1]; }).join(' → ') + '</div>', payout: amount * multiplier, multiplier: multiplier, text: text };
+      }
+    });
+  }
+
+  function renderSicBo(stage) {
+    renderQuickCasino(stage, {
+      id: 'sicbo', meta: 'Three dice', button: 'Shake dice', optionLabel: 'Bet',
+      options: [{ value: 'small', label: 'Small 4-10' }, { value: 'big', label: 'Big 11-17' }, { value: 'anytriple', label: 'Any triple 30x' }, { value: 'triple6', label: 'Triple six 150x' }, { value: 'total12', label: 'Total 12 · 6x' }],
+      idle: renderDiceStrip([1, 2, 3]), status: 'Sic Bo rolls three dice. Triples cancel small/big.',
+      resolve: async function(amount, pick) {
+        var floats = await pfFloats(3);
+        var dice = floats.map(rollDie);
+        var total = dice[0] + dice[1] + dice[2];
+        var triple = dice[0] === dice[1] && dice[1] === dice[2];
+        var multiplier = 0;
+        if (pick === 'small') multiplier = !triple && total >= 4 && total <= 10 ? 1.98 : 0;
+        if (pick === 'big') multiplier = !triple && total >= 11 && total <= 17 ? 1.98 : 0;
+        if (pick === 'anytriple') multiplier = triple ? 30 : 0;
+        if (pick === 'triple6') multiplier = dice[0] === 6 && triple ? 150 : 0;
+        if (pick === 'total12') multiplier = total === 12 ? 6 : 0;
+        return { html: renderDiceStrip(dice) + '<div class="ostg-world-note">Total ' + total + (triple ? ' · triple' : '') + '</div>', payout: amount * multiplier, multiplier: multiplier, text: multiplier ? 'Sic Bo paid ' + shortMult(multiplier) + '.' : 'Sic Bo missed on total ' + total + '.' };
+      }
+    });
+  }
+
+  function renderDragonTiger(stage) {
+    renderQuickCasino(stage, {
+      id: 'dragontiger', meta: 'Asia classic', button: 'Deal', optionLabel: 'Side',
+      options: [{ value: 'dragon', label: 'Dragon' }, { value: 'tiger', label: 'Tiger' }, { value: 'tie', label: 'Tie 8x' }],
+      idle: '<div class="ostg-versus">Dragon vs Tiger</div>', status: 'Two cards. Higher card wins; tie pays big.',
+      resolve: async function(amount, pick) {
+        var deck = createCardDeck(await pfFloats(52));
+        var dragon = deck.pop(), tiger = deck.pop();
+        var winner = cardRankValue(dragon) > cardRankValue(tiger) ? 'dragon' : cardRankValue(tiger) > cardRankValue(dragon) ? 'tiger' : 'tie';
+        var multiplier = pick === winner ? (winner === 'tie' ? 8 : 1.98) : 0;
+        return { html: '<div class="ostg-split-hands"><div><b>Dragon</b>' + renderCardStrip([dragon]) + '</div><div><b>Tiger</b>' + renderCardStrip([tiger]) + '</div></div>', payout: amount * multiplier, multiplier: multiplier, text: winner.toUpperCase() + ' wins. ' + (multiplier ? 'Paid ' + shortMult(multiplier) + '.' : 'Ticket lost.') };
+      }
+    });
+  }
+
+  function renderAndarBahar(stage) {
+    renderQuickCasino(stage, {
+      id: 'andarbahar', meta: 'India classic', button: 'Deal sides', optionLabel: 'Side',
+      options: [{ value: 'andar', label: 'Andar' }, { value: 'bahar', label: 'Bahar' }],
+      idle: '<div class="ostg-versus">Andar / Bahar</div>', status: 'A joker rank is drawn, then sides alternate until the rank appears.',
+      resolve: async function(amount, pick) {
+        var deck = createCardDeck(await pfFloats(52));
+        var joker = deck.pop();
+        var side = 'andar';
+        var trail = [];
+        while (deck.length) {
+          var card = deck.pop();
+          trail.push({ side: side, card: card });
+          if (card.rank === joker.rank) break;
+          side = side === 'andar' ? 'bahar' : 'andar';
+        }
+        var multiplier = pick === side ? 1.95 : 0;
+        return { html: '<div class="ostg-world-note">Joker rank</div>' + renderCardStrip([joker]) + '<div class="ostg-world-note">Match landed on ' + side.toUpperCase() + ' after ' + trail.length + ' cards</div>' + renderCardStrip(trail.slice(-6).map(function(item) { return item.card; })), payout: amount * multiplier, multiplier: multiplier, text: side.toUpperCase() + ' hits. ' + (multiplier ? 'Paid ' + shortMult(multiplier) + '.' : 'Ticket lost.') };
+      }
+    });
+  }
+
+  function renderTeenPatti(stage) {
+    renderQuickCasino(stage, {
+      id: 'teenpatti', meta: 'Three cards', button: 'Deal', optionLabel: 'Back',
+      options: [{ value: 'player', label: 'Player' }, { value: 'dealer', label: 'Dealer' }, { value: 'tie', label: 'Tie 8x' }],
+      idle: '<div class="ostg-versus">Teen Patti</div>', status: 'Three-card hands. Trail, pure sequence, sequence, color, pair, high card.',
+      resolve: async function(amount, pick) {
+        var deck = createCardDeck(await pfFloats(52));
+        var player = [deck.pop(), deck.pop(), deck.pop()];
+        var dealer = [deck.pop(), deck.pop(), deck.pop()];
+        var ps = scoreThreeCardPoker(player), ds = scoreThreeCardPoker(dealer);
+        var winner = comparePokerScores(ps, ds) > 0 ? 'player' : comparePokerScores(ps, ds) < 0 ? 'dealer' : 'tie';
+        var multiplier = pick === winner ? (winner === 'tie' ? 8 : 1.98) : 0;
+        return { html: '<div class="ostg-split-hands"><div><b>Player · ' + ps.label + '</b>' + renderCardStrip(player) + '</div><div><b>Dealer · ' + ds.label + '</b>' + renderCardStrip(dealer) + '</div></div>', payout: amount * multiplier, multiplier: multiplier, text: winner.toUpperCase() + ' wins Teen Patti. ' + (multiplier ? 'Paid ' + shortMult(multiplier) + '.' : 'Ticket lost.') };
+      }
+    });
+  }
+
+  function renderThreeCardPoker(stage) {
+    renderQuickCasino(stage, {
+      id: 'threecard', meta: 'Poker table', button: 'Deal', optionLabel: 'Bet',
+      options: [{ value: 'ante', label: 'Ante vs dealer' }, { value: 'pairplus', label: 'Pair Plus' }],
+      idle: '<div class="ostg-versus">Three Card Poker</div>', status: 'Ante beats dealer. Pair Plus pays only your hand strength.',
+      resolve: async function(amount, pick) {
+        var deck = createCardDeck(await pfFloats(52));
+        var player = [deck.pop(), deck.pop(), deck.pop()];
+        var dealer = [deck.pop(), deck.pop(), deck.pop()];
+        var ps = scoreThreeCardPoker(player), ds = scoreThreeCardPoker(dealer);
+        var multiplier = 0;
+        if (pick === 'ante') multiplier = comparePokerScores(ps, ds) >= 0 ? 1.98 : 0;
+        else multiplier = ps.rank >= 5 ? 40 : ps.rank === 4 ? 30 : ps.rank === 3 ? 6 : ps.rank === 2 ? 3 : ps.rank === 1 ? 1.5 : 0;
+        return { html: '<div class="ostg-split-hands"><div><b>You · ' + ps.label + '</b>' + renderCardStrip(player) + '</div><div><b>Dealer · ' + ds.label + '</b>' + renderCardStrip(dealer) + '</div></div>', payout: amount * multiplier, multiplier: multiplier, text: multiplier ? 'Three Card Poker paid ' + shortMult(multiplier) + '.' : 'No Three Card payout.' };
+      }
+    });
+  }
+
+  function renderCasinoWar(stage) {
+    renderQuickCasino(stage, {
+      id: 'war', meta: 'High card', button: 'Flip cards', optionLabel: 'Mode',
+      options: [{ value: 'play', label: 'Player high card' }], idle: '<div class="ostg-versus">Casino War</div>', status: 'Your card against the dealer. Higher card wins; tie pushes.',
+      resolve: async function(amount) {
+        var deck = createCardDeck(await pfFloats(52));
+        var player = deck.pop(), dealer = deck.pop();
+        var cmp = cardRankValue(player) - cardRankValue(dealer);
+        var multiplier = cmp > 0 ? 1.98 : cmp === 0 ? 1 : 0;
+        return { html: '<div class="ostg-split-hands"><div><b>You</b>' + renderCardStrip([player]) + '</div><div><b>Dealer</b>' + renderCardStrip([dealer]) + '</div></div>', payout: amount * multiplier, multiplier: multiplier, text: cmp > 0 ? 'You win the war.' : cmp === 0 ? 'War tie. Bet returned.' : 'Dealer wins the war.' };
+      }
+    });
+  }
+
+  function renderRedDog(stage) {
+    renderQuickCasino(stage, {
+      id: 'reddog', meta: 'Spread cards', button: 'Draw third', optionLabel: 'Bet',
+      options: [{ value: 'spread', label: 'Third card between' }], idle: '<div class="ostg-versus">Red Dog</div>', status: 'Two cards make a spread. Third card must land between them.',
+      resolve: async function(amount) {
+        var deck = createCardDeck(await pfFloats(52));
+        var first = deck.pop(), second = deck.pop(), third = deck.pop();
+        var low = Math.min(cardRankValue(first), cardRankValue(second));
+        var high = Math.max(cardRankValue(first), cardRankValue(second));
+        var spread = high - low - 1;
+        var multiplier = 0;
+        if (spread < 1) multiplier = cardRankValue(third) === high ? 11 : 1;
+        else if (cardRankValue(third) > low && cardRankValue(third) < high) multiplier = spread === 1 ? 5 : spread === 2 ? 4 : spread === 3 ? 2 : 1.5;
+        return { html: '<div class="ostg-world-note">Spread ' + Math.max(0, spread) + '</div>' + renderCardStrip([first, second, third]), payout: amount * multiplier, multiplier: multiplier, text: multiplier > 1 ? 'Red Dog hit the spread for ' + shortMult(multiplier) + '.' : multiplier === 1 ? 'Red Dog push. Bet returned.' : 'Third card missed the spread.' };
+      }
+    });
+  }
+
+  function renderPaiGow(stage) {
+    renderQuickCasino(stage, {
+      id: 'paigow', meta: 'Simplified split', button: 'Set hands', optionLabel: 'Side',
+      options: [{ value: 'player', label: 'Player' }], idle: '<div class="ostg-versus">Pai Gow Poker</div>', status: 'Auto-split four cards: best two-card high and low hands must both beat dealer.',
+      resolve: async function(amount) {
+        var deck = createCardDeck(await pfFloats(52));
+        var player = [deck.pop(), deck.pop(), deck.pop(), deck.pop()].sort(function(a, b) { return cardRankValue(b) - cardRankValue(a); });
+        var dealer = [deck.pop(), deck.pop(), deck.pop(), deck.pop()].sort(function(a, b) { return cardRankValue(b) - cardRankValue(a); });
+        var playerWinsHigh = cardRankValue(player[0]) > cardRankValue(dealer[0]);
+        var playerWinsLow = cardRankValue(player[2]) > cardRankValue(dealer[2]);
+        var multiplier = playerWinsHigh && playerWinsLow ? 1.95 : (playerWinsHigh || playerWinsLow ? 1 : 0);
+        return { html: '<div class="ostg-split-hands"><div><b>You</b>' + renderCardStrip(player) + '</div><div><b>Dealer</b>' + renderCardStrip(dealer) + '</div></div>', payout: amount * multiplier, multiplier: multiplier, text: multiplier > 1 ? 'Both Pai Gow hands win.' : multiplier === 1 ? 'One hand each. Push.' : 'Dealer wins both hands.' };
+      }
+    });
+  }
+
+  function renderCaribbeanStud(stage) {
+    renderQuickCasino(stage, {
+      id: 'caribbean', meta: 'Stud poker', button: 'Deal stud', optionLabel: 'Bet',
+      options: [{ value: 'ante', label: 'Ante' }], idle: '<div class="ostg-versus">Caribbean Stud</div>', status: 'Five-card stud against the dealer. Stronger player hands pay more.',
+      resolve: async function(amount) {
+        var deck = createCardDeck(await pfFloats(52));
+        var player = [deck.pop(), deck.pop(), deck.pop(), deck.pop(), deck.pop()];
+        var dealer = [deck.pop(), deck.pop(), deck.pop(), deck.pop(), deck.pop()];
+        var ps = scoreFiveCardPoker(player), ds = scoreFiveCardPoker(dealer);
+        var dealerQualifies = ds.rank > 0 || ds.main >= 13;
+        var multiplier = !dealerQualifies ? 1 : (comparePokerScores(ps, ds) > 0 ? Math.max(1.98, [1,1.98,2,3,4,5,7,20,50,100][ps.rank] || 1.98) : 0);
+        return { html: '<div class="ostg-split-hands"><div><b>You · ' + ps.label + '</b>' + renderCardStrip(player) + '</div><div><b>Dealer · ' + ds.label + '</b>' + renderCardStrip(dealer) + '</div></div>', payout: amount * multiplier, multiplier: multiplier, text: !dealerQualifies ? 'Dealer does not qualify. Ante returned.' : multiplier ? 'Caribbean Stud pays ' + shortMult(multiplier) + '.' : 'Dealer wins Caribbean Stud.' };
+      }
+    });
+  }
+
+  function renderBingo(stage) {
+    renderQuickCasino(stage, {
+      id: 'bingo', meta: '75-ball', button: 'Call numbers', optionLabel: 'Card',
+      options: [{ value: 'quick', label: 'Quick card' }], idle: '<div class="ostg-versus">Bingo 75</div>', status: 'Quick card gets 15 numbers. Caller draws 30.',
+      resolve: async function(amount) {
+        var numbers = [];
+        for (var number = 1; number <= 75; number++) numbers.push(number);
+        var shuffled = shuffleWithFloats(numbers, await pfFloats(75));
+        var card = shuffled.slice(0, 15).sort(function(a, b) { return a - b; });
+        var drawn = shuffled.slice(15, 45);
+        var hits = card.filter(function(number) { return drawn.indexOf(number) >= 0; }).length;
+        var multiplier = hits >= 15 ? 500 : hits >= 12 ? 25 : hits >= 10 ? 5 : hits >= 8 ? 2 : hits >= 5 ? 1.2 : 0;
+        return { html: '<div class="ostg-world-note">Hits ' + hits + '/15</div><div class="ostg-number-grid">' + card.map(function(number) { return '<span class="' + (drawn.indexOf(number) >= 0 ? 'is-hit' : '') + '">' + number + '</span>'; }).join('') + '</div>', payout: amount * multiplier, multiplier: multiplier, text: multiplier ? 'Bingo card paid ' + shortMult(multiplier) + '.' : 'Bingo missed this call.' };
+      }
+    });
+  }
+
+  function renderPachinko(stage) {
+    renderQuickCasino(stage, {
+      id: 'pachinko', meta: 'Japan peg board', button: 'Launch ball', optionLabel: 'Tray',
+      options: [{ value: 'center', label: 'Center tray' }, { value: 'edge', label: 'Edge chase' }], idle: '<div class="ostg-versus">Pachinko</div>', status: 'Ball bounces through twelve pegs into a prize pocket.',
+      resolve: async function(amount, pick) {
+        var floats = await pfFloats(12);
+        var bucket = 0;
+        floats.forEach(function(value) { if (value >= 0.5) bucket++; });
+        var centerTable = [25,8,3,1.5,0.6,0.3,0.2,0.3,0.6,1.5,3,8,25];
+        var edgeTable = [60,15,5,1.2,0.4,0.2,0.2,0.2,0.4,1.2,5,15,60];
+        var table = pick === 'edge' ? edgeTable : centerTable;
+        var multiplier = table[bucket];
+        return { html: '<div class="ostg-pachinko-lane">' + table.map(function(mult, index) { return '<span class="' + (index === bucket ? 'is-hit' : '') + '">' + shortMult(mult) + '</span>'; }).join('') + '</div>', payout: amount * multiplier, multiplier: multiplier, text: 'Pachinko landed pocket ' + bucket + ' for ' + shortMult(multiplier) + '.' };
+      }
+    });
+  }
+
+  function renderLucky7(stage) {
+    renderQuickCasino(stage, {
+      id: 'lucky7', meta: 'Two dice', button: 'Roll 7', optionLabel: 'Bet',
+      options: [{ value: 'under', label: 'Under 7' }, { value: 'seven', label: 'Exactly 7 · 5.8x' }, { value: 'over', label: 'Over 7' }], idle: renderDiceStrip([3, 4]), status: 'Two dice. Pick under, over, or exactly seven.',
+      resolve: async function(amount, pick) {
+        var floats = await pfFloats(2);
+        var dice = floats.map(rollDie);
+        var total = dice[0] + dice[1];
+        var multiplier = pick === 'seven' ? (total === 7 ? 5.8 : 0) : pick === 'under' ? (total < 7 ? 1.9 : 0) : (total > 7 ? 1.9 : 0);
+        return { html: renderDiceStrip(dice) + '<div class="ostg-world-note">Total ' + total + '</div>', payout: amount * multiplier, multiplier: multiplier, text: multiplier ? 'Lucky 7 paid ' + shortMult(multiplier) + '.' : 'Lucky 7 missed.' };
+      }
+    });
+  }
+
+  function renderHoldem(stage) {
+    renderQuickCasino(stage, {
+      id: 'holdem', meta: 'Texas Hold’em', button: 'Deal board', optionLabel: 'Back',
+      options: [{ value: 'player', label: 'Player' }, { value: 'dealer', label: 'Dealer' }], idle: '<div class="ostg-versus">Hold’em Flip</div>', status: 'Two hole cards each and a five-card board. Best seven-card poker hand wins.',
+      resolve: async function(amount, pick) {
+        var deck = createCardDeck(await pfFloats(52));
+        var player = [deck.pop(), deck.pop()];
+        var dealer = [deck.pop(), deck.pop()];
+        var board = [deck.pop(), deck.pop(), deck.pop(), deck.pop(), deck.pop()];
+        var ps = bestPokerScore(player.concat(board));
+        var ds = bestPokerScore(dealer.concat(board));
+        var winner = comparePokerScores(ps, ds) > 0 ? 'player' : comparePokerScores(ps, ds) < 0 ? 'dealer' : 'tie';
+        var multiplier = winner === 'tie' ? 1 : (pick === winner ? 1.98 : 0);
+        return { html: '<div class="ostg-world-note">Board</div>' + renderCardStrip(board) + '<div class="ostg-split-hands"><div><b>Player · ' + ps.label + '</b>' + renderCardStrip(player) + '</div><div><b>Dealer · ' + ds.label + '</b>' + renderCardStrip(dealer) + '</div></div>', payout: amount * multiplier, multiplier: multiplier, text: winner === 'tie' ? 'Hold’em tie. Bet returned.' : winner.toUpperCase() + ' wins Hold’em. ' + (multiplier ? 'Paid.' : 'Ticket lost.') };
+      }
+    });
+  }
+
+  function renderRaceBook(stage) {
+    renderQuickCasino(stage, {
+      id: 'race', meta: 'Virtual race', button: 'Start race', optionLabel: 'Runner',
+      options: [{ value: '0', label: 'Rocket Red · 2.4x' }, { value: '1', label: 'Blue Nova · 3x' }, { value: '2', label: 'Gold Drift · 4x' }, { value: '3', label: 'Night Ace · 6x' }, { value: '4', label: 'Solar Queen · 8x' }, { value: '5', label: 'Longshot 12x' }],
+      idle: '<div class="ostg-race-lanes"><span>Red</span><span>Blue</span><span>Gold</span><span>Night</span><span>Solar</span><span>Longshot</span></div>', status: 'Pick a runner. Lower-odds runners get a small speed edge; longshots can still break out.',
+      resolve: async function(amount, pick) {
+        var floats = await pfFloats(6);
+        var odds = [2.4, 3, 4, 6, 8, 12];
+        var scores = floats.map(function(value, index) { return value + (1 / odds[index]) * 0.18; });
+        var winner = scores.indexOf(Math.max.apply(Math, scores));
+        var multiplier = Number(pick) === winner ? odds[winner] : 0;
+        return { html: '<div class="ostg-race-lanes">' + scores.map(function(score, index) { return '<span class="' + (index === winner ? 'is-hit' : '') + '">' + (index + 1) + ' · ' + Math.round(score * 100) + '</span>'; }).join('') + '</div>', payout: amount * multiplier, multiplier: multiplier, text: 'Runner ' + (winner + 1) + ' wins. ' + (multiplier ? 'Paid ' + shortMult(multiplier) + '.' : 'Ticket lost.') };
+      }
     });
   }
 
@@ -2530,16 +3064,35 @@
       '.ostg-scratch-tile{aspect-ratio:1.4;border-radius:12px;background:repeating-linear-gradient(135deg,#94a3b8 0,#94a3b8 8px,#64748b 8px,#64748b 16px);border:1px solid rgba(255,255,255,.2);color:#0f172a;font-weight:900;font-size:15px;text-transform:uppercase;letter-spacing:.03em;}' +
       '.ostg-scratch-tile.is-revealed{background:linear-gradient(135deg,#172033,#0f172a);color:#cbd5e1;text-transform:none;font-size:20px;}' +
       '.ostg-scratch-tile.is-soft{color:#fde68a;border-color:#f5c468}.ostg-scratch-tile.is-big{color:#86efac;border-color:#22c55e;box-shadow:0 0 22px rgba(34,197,94,.35)}.ostg-scratch-tile.is-zero{color:#94a3b8;}' +
-      '.ostg-penalty-stage{padding:14px;border-radius:16px;background:linear-gradient(180deg,#14532d,#052e16);border:1px solid rgba(134,239,172,.18);}' +
+      '.ostg-penalty-stage{padding:14px;border-radius:16px;background:linear-gradient(180deg,#14532d,#052e16);border:1px solid rgba(134,239,172,.18);transition:border-color .2s ease,box-shadow .2s ease;}' +
+      '.ostg-penalty-stage[data-result="goal"]{border-color:rgba(34,197,94,.72);box-shadow:0 0 24px rgba(34,197,94,.2)}.ostg-penalty-stage[data-result="saved"]{border-color:rgba(96,165,250,.72);box-shadow:0 0 24px rgba(96,165,250,.2)}.ostg-penalty-stage[data-result="missed"]{border-color:rgba(245,158,11,.72);box-shadow:0 0 24px rgba(245,158,11,.18)}' +
       '.ostg-penalty-goal{position:relative;min-height:260px;border-radius:14px;overflow:hidden;background:linear-gradient(180deg,rgba(219,234,254,.18),rgba(21,128,61,.1));border:2px solid rgba(255,255,255,.42);}' +
       '.ostg-net-line{position:absolute;inset:18px 18px 92px;border:1px dashed rgba(255,255,255,.36);border-bottom:none;}' +
       '.ostg-keeper{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);font-size:42px;transition:left .42s cubic-bezier(.2,1.4,.3,1),top .42s cubic-bezier(.2,1.4,.3,1);z-index:2;}' +
       '.ostg-ball{position:absolute;left:50%;top:82%;transform:translate(-50%,-50%);width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#f8fafc;color:#111827;font-size:18px;font-weight:900;box-shadow:0 6px 12px rgba(0,0,0,.35);transition:left .62s cubic-bezier(.2,1,.2,1),top .62s cubic-bezier(.2,1,.2,1);z-index:3;}' +
       '.ostg-keeper[data-side="left"]{left:24%;top:42%}.ostg-keeper[data-side="center"]{left:50%;top:48%}.ostg-keeper[data-side="right"]{left:76%;top:42%}.ostg-keeper[data-side="top"]{left:50%;top:22%}' +
       '.ostg-ball[data-side="left"]{left:24%;top:42%}.ostg-ball[data-side="center"]{left:50%;top:50%}.ostg-ball[data-side="right"]{left:76%;top:42%}.ostg-ball[data-side="top"]{left:50%;top:20%}' +
+      '.ostg-ball[data-result="goal"][data-side="left"]{left:18%;top:18%}.ostg-ball[data-result="goal"][data-side="center"]{left:50%;top:24%}.ostg-ball[data-result="goal"][data-side="right"]{left:82%;top:18%}.ostg-ball[data-result="goal"][data-side="top"]{left:50%;top:12%}' +
+      '.ostg-ball[data-result="saved"]{background:#dbeafe;color:#1e3a8a;box-shadow:0 0 22px rgba(96,165,250,.6)}.ostg-ball[data-result="missed"]{background:#fed7aa;color:#7c2d12;box-shadow:0 0 22px rgba(245,158,11,.55)}.ostg-keeper[data-result="save"]{filter:drop-shadow(0 0 14px rgba(96,165,250,.9))}.ostg-keeper[data-result="miss"]{opacity:.7;filter:grayscale(.2)}' +
       '.ostg-penalty-lanes{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px;color:#bbf7d0;font-size:11px;text-align:center;text-transform:uppercase;letter-spacing:.05em;font-weight:800;}' +
+      '.ostg-world-stage{min-height:230px;border-radius:14px;background:radial-gradient(circle at top,rgba(56,118,252,.14),rgba(2,6,16,.86));border:1px solid rgba(255,255,255,.07);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px;text-align:center;overflow:auto;}' +
+      '.ostg-versus{font-size:clamp(1.8rem,5vw,3.4rem);font-weight:900;color:#f8fafc;text-shadow:0 0 24px rgba(245,196,104,.32);}' +
+      '.ostg-world-note{color:#cbd5e1;font-size:13px;font-weight:700;}' +
+      '.ostg-dice-strip{display:flex;gap:10px;justify-content:center;align-items:center;font-size:clamp(2.4rem,8vw,4.2rem);line-height:1;}' +
+      '.ostg-dice-strip span{filter:drop-shadow(0 10px 18px rgba(0,0,0,.35));}' +
+      '.ostg-card-row-center{justify-content:center;}' +
+      '.ostg-split-hands{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:100%;align-items:start;}' +
+      '.ostg-split-hands>div{padding:10px;border-radius:12px;background:rgba(0,0,0,.24);border:1px solid rgba(255,255,255,.08);}' +
+      '.ostg-split-hands b{display:block;color:#bfdbfe;font-size:12px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;}' +
+      '.ostg-video-hand{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;padding:14px;border-radius:14px;background:radial-gradient(circle at top,rgba(15,118,110,.14),rgba(2,6,23,.86));border:1px solid rgba(255,255,255,.07);}' +
+      '.ostg-hold-card{border:1px solid rgba(255,255,255,.16);border-radius:12px;background:rgba(0,0,0,.25);padding:8px;color:#cbd5e1;cursor:pointer;}' +
+      '.ostg-hold-card.is-held{border-color:#f5c468;box-shadow:0 0 18px rgba(245,196,104,.28)}.ostg-hold-card small{display:block;margin-top:6px;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8}.ostg-hold-card.is-held small{color:#fde68a}' +
+      '.ostg-number-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;max-width:420px;width:100%;}' +
+      '.ostg-number-grid span,.ostg-pachinko-lane span,.ostg-race-lanes span{padding:7px 8px;border-radius:8px;background:rgba(15,23,42,.92);border:1px solid rgba(148,163,184,.18);color:#cbd5e1;font-weight:800;font-size:12px;}' +
+      '.ostg-number-grid span.is-hit,.ostg-pachinko-lane span.is-hit,.ostg-race-lanes span.is-hit{background:linear-gradient(135deg,#22c55e,#15803d);color:#052e16;border-color:#86efac;box-shadow:0 0 18px rgba(34,197,94,.38);}' +
+      '.ostg-pachinko-lane,.ostg-race-lanes{display:grid;grid-template-columns:repeat(auto-fit,minmax(72px,1fr));gap:6px;width:100%;}' +
       '@media (max-width:640px){.ostg-keno-grid{grid-template-columns:repeat(5,minmax(0,1fr));}.ostg-table-stage{grid-template-columns:1fr}.ostg-slot-cell{font-size:1.8rem}.ostg-roulette-stage{min-height:300px}.ostg-penalty-goal{min-height:220px}}' +
-      '@media (max-width:520px){.ostg-section{padding:16px}.ostg-limbo-mult{font-size:2.8rem}.ostg-dice-stats{grid-template-columns:1fr}.ostg-card{width:96px;height:136px;font-size:2.8rem}.ostg-toast{right:10px;top:74px}}';
+      '@media (max-width:520px){.ostg-section{padding:16px}.ostg-limbo-mult{font-size:2.8rem}.ostg-dice-stats{grid-template-columns:1fr}.ostg-card{width:96px;height:136px;font-size:2.8rem}.ostg-toast{right:10px;top:74px}.ostg-split-hands{grid-template-columns:1fr}.ostg-play-card{width:52px;height:74px;font-size:18px}}';
     document.head.appendChild(st);
   }
 
