@@ -10,7 +10,7 @@
  *   - Visualise risk with multipliers, exactly like Stake/Rainbet.
  *
  * Games shipped:
- *   • 32 provably-fair games, from quick flips to world casino tables.
+ *   • 18 provably-fair instant games, focused on Stake/Rainbet-style originals.
  *
  * Mounts a card panel inside the existing #ostFaucetHub section.
  * ========================================================================== */
@@ -234,7 +234,7 @@
         '<div class="ostg-head">' +
           '<div>' +
             '<h3>🎲 Provably-Fair OST Arcade</h3>' +
-            '<p class="ostg-sub">Thirty-two fast OST games with casino tables, global classics, cash-out decisions, and instant reveals. Every outcome is HMAC-SHA256 of <code>serverSeed</code>+<code>clientSeed</code>+<code>nonce</code>.</p>' +
+            '<p class="ostg-sub">Eighteen fast OST originals inspired by Stake/Rainbet instant games: crash curves, towers, wheels, cases, ladders, and reveal grids. Every outcome is HMAC-SHA256 of <code>serverSeed</code>+<code>clientSeed</code>+<code>nonce</code>.</p>' +
           '</div>' +
           '<div class="ostg-balance-card">' +
             '<span class="ostg-balance-label">Chips · play balance</span>' +
@@ -261,28 +261,14 @@
           '<button class="ostg-tab" data-game="coinflip">🪙 Coinflip</button>' +
           '<button class="ostg-tab" data-game="keno">🔢 Keno</button>' +
           '<button class="ostg-tab" data-game="tower">🗼 Tower</button>' +
-          '<button class="ostg-tab" data-game="roulette">🎯 Roulette</button>' +
-          '<button class="ostg-tab" data-game="slots">🎰 Slots</button>' +
-          '<button class="ostg-tab" data-game="blackjack">♠ Blackjack</button>' +
-          '<button class="ostg-tab" data-game="baccarat">♦ Baccarat</button>' +
-          '<button class="ostg-tab" data-game="scratch">🎟 Scratch</button>' +
-          '<button class="ostg-tab" data-game="penalty">🥅 Penalty</button>' +
-          '<button class="ostg-tab" data-game="videopoker">🂡 Video Poker</button>' +
-          '<button class="ostg-tab" data-game="craps">🎲 Craps</button>' +
-          '<button class="ostg-tab" data-game="sicbo">⚂ Sic Bo</button>' +
-          '<button class="ostg-tab" data-game="dragontiger">🐉 Dragon Tiger</button>' +
-          '<button class="ostg-tab" data-game="andarbahar">🃏 Andar Bahar</button>' +
-          '<button class="ostg-tab" data-game="teenpatti">♣ Teen Patti</button>' +
-          '<button class="ostg-tab" data-game="threecard">♥ Three Card</button>' +
-          '<button class="ostg-tab" data-game="war">⚔ Casino War</button>' +
-          '<button class="ostg-tab" data-game="reddog">♦ Red Dog</button>' +
-          '<button class="ostg-tab" data-game="paigow">🀄 Pai Gow</button>' +
-          '<button class="ostg-tab" data-game="caribbean">🏝 Caribbean Stud</button>' +
-          '<button class="ostg-tab" data-game="bingo">🔵 Bingo</button>' +
-          '<button class="ostg-tab" data-game="pachinko">🎋 Pachinko</button>' +
-          '<button class="ostg-tab" data-game="lucky7">7️⃣ Lucky 7</button>' +
-          '<button class="ostg-tab" data-game="holdem">♠ Hold’em</button>' +
-          '<button class="ostg-tab" data-game="race">🏁 Race Book</button>' +
+          '<button class="ostg-tab" data-game="double">🔴 Double</button>' +
+          '<button class="ostg-tab" data-game="slide">📈 Slide</button>' +
+          '<button class="ostg-tab" data-game="pump">🎈 Pump</button>' +
+          '<button class="ostg-tab" data-game="dragontower">🐉 Dragon Tower</button>' +
+          '<button class="ostg-tab" data-game="diamonds">💎 Diamonds</button>' +
+          '<button class="ostg-tab" data-game="cases">📦 Case Battle</button>' +
+          '<button class="ostg-tab" data-game="tome">📖 Tome</button>' +
+          '<button class="ostg-tab" data-game="scarab">🪲 Scarab Spin</button>' +
         '</div>' +
         '<div class="ostg-stage" id="ostgStage"></div>' +
         '<div class="ostg-history" id="ostgHistory"><span class="ostg-history-label">Recent multipliers:</span></div>' +
@@ -465,28 +451,14 @@
     if (game === 'coinflip') return renderCoinflip(stage);
     if (game === 'keno')      return renderKeno(stage);
     if (game === 'tower')     return renderTower(stage);
-    if (game === 'roulette')  return renderRoulette(stage);
-    if (game === 'slots')     return renderSlots(stage);
-    if (game === 'blackjack') return renderBlackjack(stage);
-    if (game === 'baccarat')  return renderBaccarat(stage);
-    if (game === 'scratch')   return renderScratch(stage);
-    if (game === 'penalty')   return renderPenalty(stage);
-    if (game === 'videopoker') return renderVideoPoker(stage);
-    if (game === 'craps')      return renderCraps(stage);
-    if (game === 'sicbo')      return renderSicBo(stage);
-    if (game === 'dragontiger') return renderDragonTiger(stage);
-    if (game === 'andarbahar') return renderAndarBahar(stage);
-    if (game === 'teenpatti')  return renderTeenPatti(stage);
-    if (game === 'threecard')  return renderThreeCardPoker(stage);
-    if (game === 'war')        return renderCasinoWar(stage);
-    if (game === 'reddog')     return renderRedDog(stage);
-    if (game === 'paigow')     return renderPaiGow(stage);
-    if (game === 'caribbean')  return renderCaribbeanStud(stage);
-    if (game === 'bingo')      return renderBingo(stage);
-    if (game === 'pachinko')   return renderPachinko(stage);
-    if (game === 'lucky7')     return renderLucky7(stage);
-    if (game === 'holdem')     return renderHoldem(stage);
-    if (game === 'race')       return renderRaceBook(stage);
+    if (game === 'double')      return renderDouble(stage);
+    if (game === 'slide')       return renderSlide(stage);
+    if (game === 'pump')        return renderPump(stage);
+    if (game === 'dragontower') return renderDragonTower(stage);
+    if (game === 'diamonds')    return renderDiamonds(stage);
+    if (game === 'cases')       return renderCaseBattle(stage);
+    if (game === 'tome')        return renderTome(stage);
+    if (game === 'scarab')      return renderScarabSpin(stage);
   }
 
   function pushHistory(mult) {
@@ -2512,6 +2484,234 @@
     return '<div class="ostg-card-row ostg-card-row-center">' + cards.map(renderCard).join('') + '</div>';
   }
 
+  function renderDouble(stage) {
+    renderQuickCasino(stage, {
+      id: 'double', meta: 'Red/black 2x · green 14x', button: 'Roll double', optionLabel: 'Pick',
+      options: [
+        { value: 'red', label: 'Red · 2x' },
+        { value: 'black', label: 'Black · 2x' },
+        { value: 'green', label: 'Green · 14x' }
+      ],
+      idle: '<div class="ostg-versus">Red · Black · Green</div>', status: 'Rainbet-style double: pick a color, roll the strip, and chase the green hit.',
+      resolve: async function(amount, pick) {
+        var value = (await pfFloats(1))[0];
+        var color = value < 0.475 ? 'red' : value < 0.95 ? 'black' : 'green';
+        var multiplier = pick === color ? (color === 'green' ? 14 : 2) : 0;
+        var lanes = ['red','black','red','black','green','red','black','red','black','red','black','green','red','black'];
+        var hitIndex = Math.floor(value * lanes.length);
+        if (lanes[hitIndex] !== color) {
+          hitIndex = lanes.reduce(function(bestIndex, lane, laneIndex) {
+            if (lane !== color) return bestIndex;
+            if (bestIndex < 0 || Math.abs(laneIndex - hitIndex) < Math.abs(bestIndex - hitIndex)) return laneIndex;
+            return bestIndex;
+          }, -1);
+        }
+        return {
+          html: '<div class="ostg-double-strip">' + lanes.map(function(lane, index) { return '<span class="' + (index === hitIndex ? 'is-hit ' : '') + lane + '">' + lane + '</span>'; }).join('') + '</div><div class="ostg-world-note">Rolled ' + color.toUpperCase() + '</div>',
+          payout: amount * multiplier,
+          multiplier: multiplier,
+          text: multiplier ? 'Double hit ' + color + ' for ' + shortMult(multiplier) + '.' : 'Double rolled ' + color + '. Ticket lost.'
+        };
+      }
+    });
+  }
+
+  function renderSlide(stage) {
+    renderQuickCasino(stage, {
+      id: 'slide', meta: 'Target multiplier', button: 'Launch slide', optionLabel: 'Cashout target',
+      options: [
+        { value: '1.25', label: '1.25x' }, { value: '1.5', label: '1.50x' }, { value: '2', label: '2.00x' },
+        { value: '5', label: '5.00x' }, { value: '10', label: '10.00x' }, { value: '25', label: '25.00x' }, { value: '50', label: '50.00x' }
+      ],
+      idle: '<div class="ostg-versus">Slide</div>', status: 'Pick a target. If the provably-fair slide reaches it, you cash at that multiplier.',
+      resolve: async function(amount, pick) {
+        var target = Number(pick) || 2;
+        var value = Math.max(0.000001, (await pfFloats(1))[0]);
+        var result = Math.min(100, Math.floor((0.99 / value) * 100) / 100);
+        var multiplier = result >= target ? target : 0;
+        var cells = [1.25,1.5,2,3,5,10,25,50,100];
+        return {
+          html: '<div class="ostg-slide-meter"><strong>' + shortMult(result) + '</strong><span style="width:' + Math.min(100, result) + '%"></span></div><div class="ostg-pachinko-lane">' + cells.map(function(cell) { return '<span class="' + (cell <= result ? 'is-hit' : '') + '">' + shortMult(cell) + '</span>'; }).join('') + '</div>',
+          payout: amount * multiplier,
+          multiplier: multiplier,
+          text: multiplier ? 'Slide cleared ' + shortMult(target) + '.' : 'Slide stopped at ' + shortMult(result) + ', below your ' + shortMult(target) + ' target.'
+        };
+      }
+    });
+  }
+
+  function renderPump(stage) {
+    renderQuickCasino(stage, {
+      id: 'pump', meta: 'Balloon ladder', button: 'Pump', optionLabel: 'Pumps',
+      options: [1,2,3,4,5,6,7,8].map(function(count) {
+        var prob = (9 - count) / 9;
+        return { value: String(count), label: count + ' pumps · ' + shortMult(0.99 / prob) };
+      }),
+      idle: '<div class="ostg-versus">Pump</div>', status: 'Choose how many pumps to take. More pumps means more payout and a higher bust chance.',
+      resolve: async function(amount, pick) {
+        var target = clamp(Number(pick), 1, 8);
+        var bustAt = 1 + Math.floor((await pfFloats(1))[0] * 9);
+        var survived = target < bustAt;
+        var multiplier = survived ? 0.99 / ((9 - target) / 9) : 0;
+        return {
+          html: '<div class="ostg-pachinko-lane">' + [1,2,3,4,5,6,7,8].map(function(index) { return '<span class="' + (index <= target && survived ? 'is-hit' : (index === bustAt ? 'is-bust' : '')) + '">🎈 ' + index + '</span>'; }).join('') + '</div><div class="ostg-world-note">Bust point: pump ' + bustAt + '</div>',
+          payout: amount * multiplier,
+          multiplier: multiplier,
+          text: survived ? 'Pump survived ' + target + ' pumps for ' + shortMult(multiplier) + '.' : 'Balloon burst at pump ' + bustAt + '.'
+        };
+      }
+    });
+  }
+
+  function renderDragonTower(stage) {
+    renderQuickCasino(stage, {
+      id: 'dragontower', meta: 'Path risk tower', button: 'Climb tower', optionLabel: 'Mode',
+      options: [
+        { value: 'easy', label: 'Easy · 4 floors' },
+        { value: 'medium', label: 'Medium · 5 floors' },
+        { value: 'hard', label: 'Hard · 5 floors' }
+      ],
+      idle: '<div class="ostg-versus">Dragon Tower</div>', status: 'Climb a tower of eggs. Hit a dragon trap and the run ends.',
+      resolve: async function(amount, pick) {
+        var modes = {
+          easy: { rows: 4, cols: 4, trap: 0.18, label: 'Easy' },
+          medium: { rows: 5, cols: 3, trap: 0.28, label: 'Medium' },
+          hard: { rows: 5, cols: 2, trap: 0.42, label: 'Hard' }
+        };
+        var mode = modes[pick] || modes.easy;
+        var floats = await pfFloats(mode.rows * 2);
+        var survivedRows = 0;
+        var bustRow = -1;
+        for (var row = 0; row < mode.rows; row++) {
+          if (floats[row] < mode.trap) { bustRow = row; break; }
+          survivedRows += 1;
+        }
+        var survived = survivedRows === mode.rows;
+        var multiplier = survived ? 0.99 / Math.pow(1 - mode.trap, mode.rows) : 0;
+        var htmlRows = [];
+        for (var r = mode.rows - 1; r >= 0; r--) {
+          htmlRows.push('<div class="ostg-tower-row is-current" style="--tower-cols:' + mode.cols + '">' + Array.from({ length: mode.cols }).map(function(_, c) {
+            var picked = c === Math.floor((floats[mode.rows + r] || 0) * mode.cols);
+            var cleared = r < survivedRows || survived;
+            var cls = picked && cleared ? 'is-safe' : (picked && r === bustRow ? 'is-trap' : '');
+            return '<span class="ostg-tower-cell ' + cls + '">' + (cls === 'is-trap' ? '🐉' : picked ? '🥚' : '·') + '</span>';
+          }).join('') + '</div>');
+        }
+        return {
+          html: '<div class="ostg-tower-board">' + htmlRows.join('') + '</div><div class="ostg-world-note">' + mode.label + ' path · ' + survivedRows + '/' + mode.rows + ' floors</div>',
+          payout: amount * multiplier,
+          multiplier: multiplier,
+          text: survived ? 'Dragon Tower cleared for ' + shortMult(multiplier) + '.' : 'Dragon trap on floor ' + (bustRow + 1) + '.'
+        };
+      }
+    });
+  }
+
+  function renderDiamonds(stage) {
+    renderQuickCasino(stage, {
+      id: 'diamonds', meta: '5-gem reveal', button: 'Reveal gems', optionLabel: 'Bet',
+      options: [{ value: 'spin', label: 'Five diamonds' }],
+      idle: '<div class="ostg-versus">Diamonds</div>', status: 'Reveal five gems. Matching colors pay like the classic instant original.',
+      resolve: async function(amount) {
+        var gems = ['💎','🔷','🟢','🟣','🟡','🔴','⚪'];
+        var floats = await pfFloats(5);
+        var rolls = floats.map(function(value) { return gems[Math.floor(value * gems.length)]; });
+        var counts = {};
+        rolls.forEach(function(gem) { counts[gem] = (counts[gem] || 0) + 1; });
+        var groups = Object.keys(counts).map(function(gem) { return counts[gem]; }).sort(function(a, b) { return b - a; });
+        var multiplier = groups[0] === 5 ? 50 : groups[0] === 4 ? 10 : (groups[0] === 3 && groups[1] === 2 ? 5 : groups[0] === 3 ? 2 : (groups[0] === 2 && groups[1] === 2 ? 1.2 : 0));
+        return {
+          html: '<div class="ostg-diamond-row">' + rolls.map(function(gem) { return '<span class="' + (counts[gem] >= 3 ? 'is-hit' : '') + '">' + gem + '</span>'; }).join('') + '</div><div class="ostg-world-note">Best group: ' + groups[0] + ' matching gems</div>',
+          payout: amount * multiplier,
+          multiplier: multiplier,
+          text: multiplier ? 'Diamonds paid ' + shortMult(multiplier) + '.' : 'No diamond match this round.'
+        };
+      }
+    });
+  }
+
+  function renderCaseBattle(stage) {
+    renderQuickCasino(stage, {
+      id: 'cases', meta: 'You vs dealer', button: 'Open cases', optionLabel: 'Case',
+      options: [
+        { value: 'low', label: 'Starter case' },
+        { value: 'standard', label: 'Rain case' },
+        { value: 'high', label: 'High roller case' }
+      ],
+      idle: '<div class="ostg-versus">Case Battle</div>', status: 'Open three case drops against the dealer. Higher total wins the battle.',
+      resolve: async function(amount, pick) {
+        var tables = {
+          low: [{ n: 'Common', v: 1 }, { n: 'Rare', v: 2 }, { n: 'Epic', v: 5 }, { n: 'Gold', v: 12 }],
+          standard: [{ n: 'Common', v: 0.5 }, { n: 'Rare', v: 3 }, { n: 'Epic', v: 8 }, { n: 'Gold', v: 25 }],
+          high: [{ n: 'Dust', v: 0.2 }, { n: 'Rare', v: 4 }, { n: 'Epic', v: 15 }, { n: 'Gold', v: 60 }]
+        };
+        var table = tables[pick] || tables.standard;
+        function draw(value) {
+          var index = value < 0.56 ? 0 : value < 0.84 ? 1 : value < 0.97 ? 2 : 3;
+          return table[index];
+        }
+        var floats = await pfFloats(6);
+        var player = floats.slice(0, 3).map(draw);
+        var dealer = floats.slice(3, 6).map(draw);
+        var playerTotal = player.reduce(function(sum, item) { return sum + item.v; }, 0);
+        var dealerTotal = dealer.reduce(function(sum, item) { return sum + item.v; }, 0);
+        var multiplier = playerTotal > dealerTotal ? 1.98 : (playerTotal === dealerTotal ? 1 : 0);
+        function strip(items) { return '<div class="ostg-case-row">' + items.map(function(item) { return '<span>📦 <b>' + item.n + '</b><small>' + item.v + '</small></span>'; }).join('') + '</div>'; }
+        return {
+          html: '<div class="ostg-split-hands"><div><b>You · ' + playerTotal.toFixed(1) + '</b>' + strip(player) + '</div><div><b>Dealer · ' + dealerTotal.toFixed(1) + '</b>' + strip(dealer) + '</div></div>',
+          payout: amount * multiplier,
+          multiplier: multiplier,
+          text: playerTotal > dealerTotal ? 'Case battle won.' : playerTotal === dealerTotal ? 'Case battle tied. Bet returned.' : 'Dealer won the case battle.'
+        };
+      }
+    });
+  }
+
+  function renderTome(stage) {
+    renderQuickCasino(stage, {
+      id: 'tome', meta: 'Rune ladder', button: 'Open tome', optionLabel: 'Pages',
+      options: [2,3,4,5,6,7,8].map(function(pages) { return { value: String(pages), label: pages + ' pages · ' + shortMult(0.99 / Math.pow(0.86, pages)) }; }),
+      idle: '<div class="ostg-versus">Tome</div>', status: 'Open more rune pages for a bigger multiplier. A curse page burns the run.',
+      resolve: async function(amount, pick) {
+        var pages = clamp(Number(pick), 2, 8);
+        var floats = await pfFloats(pages);
+        var cursed = -1;
+        for (var index = 0; index < pages; index++) if (floats[index] < 0.14) { cursed = index; break; }
+        var survived = cursed < 0;
+        var multiplier = survived ? 0.99 / Math.pow(0.86, pages) : 0;
+        return {
+          html: '<div class="ostg-tome-row">' + Array.from({ length: pages }).map(function(_, index) { return '<span class="' + (cursed === index ? 'is-bust' : 'is-hit') + '">' + (cursed === index ? '☠' : 'ᚱ') + '</span>'; }).join('') + '</div>',
+          payout: amount * multiplier,
+          multiplier: multiplier,
+          text: survived ? 'Tome cleared ' + pages + ' pages for ' + shortMult(multiplier) + '.' : 'Curse page opened at page ' + (cursed + 1) + '.'
+        };
+      }
+    });
+  }
+
+  function renderScarabSpin(stage) {
+    renderQuickCasino(stage, {
+      id: 'scarab', meta: '3x3 symbol grid', button: 'Spin scarabs', optionLabel: 'Mode',
+      options: [{ value: 'normal', label: 'Normal volatility' }, { value: 'wild', label: 'Wild chase' }],
+      idle: '<div class="ostg-versus">Scarab Spin</div>', status: 'Spin a 3x3 instant grid. Scarabs and wilds build the payout.',
+      resolve: async function(amount, pick) {
+        var symbols = ['🪲','☀','🔺','💎','🌙','⚱'];
+        var floats = await pfFloats(9);
+        var grid = floats.map(function(value) { return symbols[Math.floor(value * symbols.length)]; });
+        var scarabs = grid.filter(function(symbol) { return symbol === '🪲'; }).length;
+        var diamonds = grid.filter(function(symbol) { return symbol === '💎'; }).length;
+        var multiplier = scarabs >= 6 ? 30 : scarabs >= 5 ? 12 : scarabs >= 4 ? 5 : scarabs >= 3 ? 2 : diamonds >= 4 ? 1.5 : 0;
+        if (pick === 'wild' && multiplier > 0) multiplier *= 1.35;
+        return {
+          html: '<div class="ostg-scarab-grid">' + grid.map(function(symbol) { return '<span class="' + (symbol === '🪲' || symbol === '💎' ? 'is-hit' : '') + '">' + symbol + '</span>'; }).join('') + '</div><div class="ostg-world-note">Scarabs: ' + scarabs + ' · Diamonds: ' + diamonds + '</div>',
+          payout: amount * multiplier,
+          multiplier: multiplier,
+          text: multiplier ? 'Scarab Spin paid ' + shortMult(multiplier) + '.' : 'No scarab cluster this spin.'
+        };
+      }
+    });
+  }
+
   function renderVideoPoker(stage) {
     stage.innerHTML =
       '<div class="ostg-game ostg-videopoker">' +
@@ -3090,7 +3290,23 @@
       '.ostg-number-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;max-width:420px;width:100%;}' +
       '.ostg-number-grid span,.ostg-pachinko-lane span,.ostg-race-lanes span{padding:7px 8px;border-radius:8px;background:rgba(15,23,42,.92);border:1px solid rgba(148,163,184,.18);color:#cbd5e1;font-weight:800;font-size:12px;}' +
       '.ostg-number-grid span.is-hit,.ostg-pachinko-lane span.is-hit,.ostg-race-lanes span.is-hit{background:linear-gradient(135deg,#22c55e,#15803d);color:#052e16;border-color:#86efac;box-shadow:0 0 18px rgba(34,197,94,.38);}' +
+      '.ostg-pachinko-lane span.is-bust,.ostg-tome-row span.is-bust{background:linear-gradient(135deg,#dc2626,#7f1d1d);color:#fff;border-color:#fecaca;box-shadow:0 0 18px rgba(220,38,38,.42);animation:ostg-shake .36s;}' +
       '.ostg-pachinko-lane,.ostg-race-lanes{display:grid;grid-template-columns:repeat(auto-fit,minmax(72px,1fr));gap:6px;width:100%;}' +
+      '.ostg-double-strip{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;width:100%;max-width:680px;}' +
+      '.ostg-double-strip span{padding:10px 8px;border-radius:9px;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;border:1px solid rgba(255,255,255,.14);}' +
+      '.ostg-double-strip .red{background:linear-gradient(135deg,#dc2626,#7f1d1d);color:#fee2e2}.ostg-double-strip .black{background:linear-gradient(135deg,#111827,#020617);color:#e5e7eb}.ostg-double-strip .green{background:linear-gradient(135deg,#16a34a,#065f46);color:#dcfce7}.ostg-double-strip .is-hit{outline:3px solid #f5c468;box-shadow:0 0 22px rgba(245,196,104,.5);}' +
+      '.ostg-slide-meter{position:relative;width:100%;max-width:640px;height:64px;border-radius:16px;overflow:hidden;background:linear-gradient(90deg,#14532d,#1d4ed8,#7c2d12);border:1px solid rgba(255,255,255,.12);box-shadow:inset 0 0 24px rgba(0,0,0,.35);}' +
+      '.ostg-slide-meter span{position:absolute;left:0;top:0;bottom:0;background:rgba(255,255,255,.22);border-right:2px solid #fff;}' +
+      '.ostg-slide-meter strong{position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;color:#fff;font-size:clamp(1.6rem,6vw,3rem);font-weight:900;text-shadow:0 0 24px rgba(0,0,0,.65);}' +
+      '.ostg-diamond-row,.ostg-tome-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}' +
+      '.ostg-diamond-row span,.ostg-tome-row span{width:68px;height:68px;border-radius:16px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#172033,#0f172a);border:1px solid rgba(148,163,184,.2);font-size:2rem;box-shadow:inset 0 -8px 18px rgba(0,0,0,.25);}' +
+      '.ostg-diamond-row span.is-hit,.ostg-tome-row span.is-hit{border-color:#86efac;background:linear-gradient(135deg,#14532d,#064e3b);box-shadow:0 0 20px rgba(34,197,94,.36),inset 0 -8px 18px rgba(0,0,0,.25);}' +
+      '.ostg-case-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}' +
+      '.ostg-case-row span{display:flex;flex-direction:column;align-items:center;gap:3px;min-height:76px;padding:9px;border-radius:12px;background:linear-gradient(180deg,#172033,#0f172a);border:1px solid rgba(245,196,104,.18);color:#f8fafc;font-weight:800;}' +
+      '.ostg-case-row b{margin:0;color:#fde68a;font-size:11px;}.ostg-case-row small{color:#bfdbfe;font-size:13px;font-weight:900;}' +
+      '.ostg-scarab-grid{display:grid;grid-template-columns:repeat(3,minmax(0,92px));gap:10px;justify-content:center;}' +
+      '.ostg-scarab-grid span{aspect-ratio:1;border-radius:14px;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at top,#334155,#0f172a);border:1px solid rgba(245,196,104,.16);font-size:2.2rem;box-shadow:inset 0 -10px 20px rgba(0,0,0,.24);}' +
+      '.ostg-scarab-grid span.is-hit{border-color:#f5c468;box-shadow:0 0 22px rgba(245,196,104,.36),inset 0 -10px 20px rgba(0,0,0,.24);}' +
       '@media (max-width:640px){.ostg-keno-grid{grid-template-columns:repeat(5,minmax(0,1fr));}.ostg-table-stage{grid-template-columns:1fr}.ostg-slot-cell{font-size:1.8rem}.ostg-roulette-stage{min-height:300px}.ostg-penalty-goal{min-height:220px}}' +
       '@media (max-width:520px){.ostg-section{padding:16px}.ostg-limbo-mult{font-size:2.8rem}.ostg-dice-stats{grid-template-columns:1fr}.ostg-card{width:96px;height:136px;font-size:2.8rem}.ostg-toast{right:10px;top:74px}.ostg-split-hands{grid-template-columns:1fr}.ostg-play-card{width:52px;height:74px;font-size:18px}}';
     document.head.appendChild(st);
