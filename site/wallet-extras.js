@@ -31,6 +31,40 @@
     } catch (e) {}
   }
 
+  var PLATFORM_LEDGER_KEY = 'ost.wallet.platformLedger.v1';
+  function readPlatformLedger() {
+    try { return JSON.parse(localStorage.getItem(PLATFORM_LEDGER_KEY) || '{}') || {}; }
+    catch (e) { return {}; }
+  }
+  function writePlatformLedger(ledger) {
+    try { localStorage.setItem(PLATFORM_LEDGER_KEY, JSON.stringify(ledger || {})); } catch (e) {}
+  }
+  function readGameCredits() {
+    try {
+      var bank = JSON.parse(localStorage.getItem('ost.faucet.hub.v2') || '{}') || {};
+      return Number(bank.credits || 0) || 0;
+    } catch (e) { return 0; }
+  }
+  function applyPlatformEventToLedger(event) {
+    var ledger = readPlatformLedger();
+    ledger.gameCredits = readGameCredits();
+    ledger.launchpadExposure = Number(ledger.launchpadExposure || 0) || 0;
+    var amount = Number(event && event.amount || 0) || 0;
+    if (event && event.kind === 'launchpad-buy') ledger.launchpadExposure += amount;
+    if (event && event.kind === 'launchpad-sell') ledger.launchpadExposure = Math.max(0, ledger.launchpadExposure - amount);
+    ledger.updatedAt = Date.now();
+    writePlatformLedger(ledger);
+    return ledger;
+  }
+  function enrichSnapshot(rawSnap) {
+    var event = rawSnap || {};
+    var ledger = applyPlatformEventToLedger(event);
+    return Object.assign({}, event, {
+      gameCredits: Number(ledger.gameCredits || 0) || 0,
+      launchpadExposure: Number(ledger.launchpadExposure || 0) || 0
+    });
+  }
+
   // ------------------------------------------------------------------
   // 0) Real SOL → OST swap engine (devnet co-signed)
   //    Builds an atomic Transaction:
@@ -805,11 +839,30 @@
   // ------------------------------------------------------------------
   function recordSnapshot(snap) {
     var list = loadSnapshots();
-    list.push(snap);
+    list.push(enrichSnapshot(snap));
     saveSnapshots(list);
   }
   // Expose so external modules (e.g. prediction buys in app.js) can log events.
   window.recordOstSnapshot = recordSnapshot;
+
+  window.recordOstPlatformEvent = async function recordOstPlatformEvent(event) {
+    var lastSnapshot = loadSnapshots().slice(-1)[0] || {};
+    var ostBalance = Number(lastSnapshot.ostBalance || 0) || 0;
+    var solBalance = Number(lastSnapshot.solBalance || 0) || 0;
+    try {
+      var wallet = window.OST_WALLET;
+      if (wallet && wallet.session && wallet.session.publicKey) {
+        var connection = wallet.getConnection && wallet.getConnection();
+        ostBalance = await wallet.getOstBalance(wallet.session.publicKey);
+        if (connection) {
+          solBalance = (await connection.getBalance(wallet.session.publicKey)) / solanaWeb3.LAMPORTS_PER_SOL;
+        }
+      }
+    } catch (e) {}
+    recordSnapshot(Object.assign({ ts: Date.now(), ostBalance: ostBalance, solBalance: solBalance }, event || {}));
+    refreshChartIfReady();
+    notifyTxHistory();
+  };
 
   // Periodic background snapshot so the curve fills in even without txs
   function startSnapshotPoller() {
@@ -939,15 +992,16 @@
     var pts = recent.map(function (s) {
       var sol = Number(s.solBalance) || 0;
       var ost = Number(s.ostBalance) || 0;
+      var appOst = (Number(s.gameCredits) || 0) + (Number(s.launchpadExposure) || 0);
       var v;
       if (mode === 'ost') {
-        v = ost;
+        v = ost + appOst;
       } else if (mode === 'sol') {
         v = sol;
       } else { // usd
-        v = usdToDisplayCurrency(sol * solUsd + ost * ostUsd);
+        v = usdToDisplayCurrency(sol * solUsd + (ost + appOst) * ostUsd);
       }
-      return { ts: s.ts, v: v, kind: s.kind, ost: ost, sol: sol };
+      return { ts: s.ts, v: v, kind: s.kind, ost: ost, sol: sol, gameCredits: Number(s.gameCredits) || 0, launchpadExposure: Number(s.launchpadExposure) || 0 };
     });
 
     // ── Canvas setup ──────────────────────────────────────────────────
@@ -1050,12 +1104,20 @@
     var eventColors = {
       'swap-in': '#60a5fa', 'treasury-in': '#60a5fa',
       'send': '#f87171',
-      'prediction-buy': '#fbbf24', 'prediction-cashout': '#34d399'
+      'prediction-buy': '#fbbf24', 'prediction-cashout': '#34d399',
+      'prediction-sell': '#34d399', 'prediction-settlement': '#34d399',
+      'game-win': '#34d399', 'game-loss': '#f87171', 'game-push': '#94a3b8',
+      'games-deposit': '#fbbf24', 'games-cashout': '#34d399',
+      'launchpad-buy': '#a78bfa', 'launchpad-sell': '#34d399'
     };
     var eventSymbols = {
       'swap-in': '↓', 'treasury-in': '↓',
       'send': '↑',
-      'prediction-buy': '📈', 'prediction-cashout': '💰'
+      'prediction-buy': '📈', 'prediction-cashout': '💰',
+      'prediction-sell': '↔', 'prediction-settlement': '✓',
+      'game-win': '+', 'game-loss': '-', 'game-push': '=',
+      'games-deposit': '⇣', 'games-cashout': '⇡',
+      'launchpad-buy': 'LP', 'launchpad-sell': 'LP'
     };
     pts.forEach(function (p, i) {
       if (!p.kind || p.kind === 'tick') return;
@@ -1118,7 +1180,7 @@
       var deltaStr = fmtLabel(Math.abs(delta), mode);
       var pctStr = (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
       var colr = trendUp ? '#34d399' : '#f87171';
-      var modeLabel = { ost: 'OST Balance', sol: 'SOL Balance', usd: 'Portfolio (' + getCurrencySymbol() + ')' }[mode] || mode;
+      var modeLabel = { ost: 'OST + app balance', sol: 'SOL Balance', usd: 'Portfolio (' + getCurrencySymbol() + ')' }[mode] || mode;
       var extraSol = '';
       if (mode === 'sol') {
         var sym2 = getCurrencySymbol(); var rate2 = getCurrencyRate();
@@ -1171,17 +1233,29 @@
     if (!panel) return;
     var ICONS = {
       'swap-in': '↓', 'treasury-in': '↓', 'send': '↑',
-      'prediction-buy': '📈', 'prediction-cashout': '💰', 'tick': '·'
+      'prediction-buy': '📈', 'prediction-cashout': '💰',
+      'prediction-sell': '↔', 'prediction-settlement': '✓',
+      'game-win': '+', 'game-loss': '-', 'game-push': '=',
+      'games-deposit': '⇣', 'games-cashout': '⇡',
+      'launchpad-buy': 'LP', 'launchpad-sell': 'LP', 'tick': '·'
     };
     var LABELS = {
       'swap-in': 'Swapped → OST', 'treasury-in': 'Converted → OST',
       'send': 'Sent OST', 'prediction-buy': 'Prediction buy',
-      'prediction-cashout': 'Prediction cashout', 'tick': 'Balance tick'
+      'prediction-cashout': 'Prediction cashout',
+      'prediction-sell': 'Prediction sell', 'prediction-settlement': 'Prediction settlement',
+      'game-win': 'Game win', 'game-loss': 'Game loss', 'game-push': 'Game push',
+      'games-deposit': 'Games deposit', 'games-cashout': 'Games cashout',
+      'launchpad-buy': 'Launchpad buy', 'launchpad-sell': 'Launchpad sell',
+      'tick': 'Balance tick'
     };
     var COLORS = {
       'swap-in': '#60a5fa', 'treasury-in': '#60a5fa',
       'send': '#f87171', 'prediction-buy': '#fbbf24',
-      'prediction-cashout': '#34d399', 'tick': '#475569'
+      'prediction-cashout': '#34d399', 'prediction-sell': '#34d399', 'prediction-settlement': '#34d399',
+      'game-win': '#34d399', 'game-loss': '#f87171', 'game-push': '#94a3b8',
+      'games-deposit': '#fbbf24', 'games-cashout': '#34d399',
+      'launchpad-buy': '#a78bfa', 'launchpad-sell': '#34d399', 'tick': '#475569'
     };
     function fmtTs(ts) {
       if (!ts) return '—';
@@ -1192,7 +1266,7 @@
     function fmtAmt(item) {
       var n = Number(item.amount);
       if (!Number.isFinite(n) || n <= 0) return '—';
-      var isOut = item.kind === 'send' || item.kind === 'prediction-buy';
+      var isOut = item.kind === 'send' || item.kind === 'prediction-buy' || item.kind === 'game-loss' || item.kind === 'games-deposit' || item.kind === 'launchpad-buy';
       var sign = isOut ? '−' : '+';
       var color = isOut ? '#f87171' : '#34d399';
       return '<span style="color:' + color + ';font-weight:700;">' + sign + n.toFixed(2) + ' OST</span>';
@@ -1215,7 +1289,7 @@
           label: (o.side||'?').toUpperCase() + ' · ' + String(o.title||'').substring(0,30),
           price: o.price, potentialReturn: o.potentialReturn });
         if (o.cashedOut) {
-          items.push({ ts: o.cashoutAt, kind: 'prediction-cashout', amount: o.cashoutOst,
+          items.push({ ts: o.cashoutAt, kind: o.cashoutKind || 'prediction-cashout', amount: o.cashoutOst,
             sig: o.cashoutSig, label: 'Cashout · ' + String(o.title||'').substring(0,30) });
         }
       });
@@ -1228,8 +1302,8 @@
       var totalIn = 0, totalOut = 0;
       items.forEach(function(it){
         var n = Number(it.amount) || 0;
-        if (it.kind === 'swap-in' || it.kind === 'treasury-in' || it.kind === 'prediction-cashout') totalIn += n;
-        if (it.kind === 'send' || it.kind === 'prediction-buy') totalOut += n;
+        if (it.kind === 'swap-in' || it.kind === 'treasury-in' || it.kind === 'prediction-cashout' || it.kind === 'prediction-sell' || it.kind === 'prediction-settlement' || it.kind === 'game-win' || it.kind === 'games-cashout' || it.kind === 'launchpad-sell') totalIn += n;
+        if (it.kind === 'send' || it.kind === 'prediction-buy' || it.kind === 'game-loss' || it.kind === 'games-deposit' || it.kind === 'launchpad-buy') totalOut += n;
       });
 
       var summaryHtml =

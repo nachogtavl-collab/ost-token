@@ -110,6 +110,14 @@
     } else {
       toast('-' + fmt(bet) + ' OST', 'loss');
     }
+    var net = Number(payout || 0) - Number(bet || 0);
+    recordGameLedgerEvent(net > 0 ? 'game-win' : net < 0 ? 'game-loss' : 'game-push', Math.abs(net) || Number(bet || 0), {
+      game: game,
+      bet: Number(bet || 0),
+      payout: Number(payout || 0),
+      net: net,
+      mult: Number(mult || 0)
+    });
   }
 
   function getBalance() { return Number(loadBank().credits || 0); }
@@ -136,6 +144,17 @@
     });
     var hub = document.getElementById('fhCredits');
     if (hub) hub.textContent = fmt(getBalance());
+  }
+  function recordGameLedgerEvent(kind, amount, extra) {
+    if (!window.recordOstPlatformEvent) return;
+    try {
+      window.recordOstPlatformEvent(Object.assign({
+        kind: kind,
+        amount: Number(amount || 0),
+        ts: Date.now(),
+        source: 'games'
+      }, extra || {}));
+    } catch (_) {}
   }
 
   // ────────────────────────────────────────────────────────────────────────
@@ -290,6 +309,7 @@
           var r = await window.OST_RESCUE.payoutOst(w.session.publicKey, bal, memo);
           // Debit ONLY after on-chain confirm.
           var s = loadBank(); s.credits = Math.max(0, Number(s.credits || 0) - r.ost); saveBank(s); fireBalanceChange();
+          recordGameLedgerEvent('games-cashout', r.ost, { sig: r.sig, net: Number(r.ost || 0) });
           cashBtn.textContent = '✓ Sent ' + r.ost.toFixed(2) + ' OST';
           try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {}
         } catch (e) {
@@ -386,6 +406,7 @@
         var r = await window.OST_RESCUE.userSendsOstToPool(amt, memo);
         // Local credit ONLY after on-chain confirm so failures don't grant chips.
         credit(r.ost, 'wallet-deposit');
+        recordGameLedgerEvent('games-deposit', r.ost, { sig: r.sig, net: -Number(r.ost || 0) });
         depBtn.textContent = '✓ +' + r.ost.toFixed(2) + ' OST';
         try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {}
       } catch (e) {

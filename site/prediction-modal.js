@@ -306,18 +306,33 @@
     if (market.primaryUrl && /polymarket\.com/i.test(market.primaryUrl)) return true;
     return false;
   }
-  function findPolymarketTokenId(market) {
+  function findPolymarketTokenIds(market) {
     if (!market) return null;
-    if (market.tokenId) return market.tokenId;
-    if (market.clobTokenIds && market.clobTokenIds[0]) return market.clobTokenIds[0];
+    if (market.tokenId) return [String(market.tokenId)];
+    if (market.clobTokenIds && market.clobTokenIds[0]) return market.clobTokenIds.map(String).filter(Boolean);
     if (market.raw) {
       try {
-        var t = market.raw.clobTokenIds || market.raw.outcomeTokens;
+        var t = market.raw.clobTokenIds || market.raw.outcomeTokens || market.raw.tokens;
+        if (!t && Array.isArray(market.raw.outcomes) && market.raw.outcomes.length && typeof market.raw.outcomes[0] === 'object') t = market.raw.outcomes;
+        if (!t && typeof market.raw.outcomes === 'string') {
+          var parsedOutcomes = JSON.parse(market.raw.outcomes);
+          if (Array.isArray(parsedOutcomes) && parsedOutcomes.length && typeof parsedOutcomes[0] === 'object') t = parsedOutcomes;
+        }
         if (typeof t === 'string') t = JSON.parse(t);
-        if (Array.isArray(t) && t[0]) return t[0];
+        if (Array.isArray(t)) {
+          var ids = t.map(function (token) {
+            if (token && typeof token === 'object') return String(token.tokenId || token.token_id || token.id || token.asset_id || '').trim();
+            return String(token || '').trim();
+          }).filter(function (id) { return id && id.toLowerCase() !== 'yes' && id.toLowerCase() !== 'no'; });
+          if (ids.length) return ids;
+        }
       } catch (_) {}
     }
-    return null;
+    return [];
+  }
+  function findPolymarketTokenId(market) {
+    var ids = findPolymarketTokenIds(market);
+    return ids && ids[0] ? ids[0] : null;
   }
   function fetchPolyOrderbook(tokenId) {
     if (!tokenId) return Promise.resolve(null);
@@ -327,9 +342,13 @@
     if (!marketId) return Promise.resolve(null);
     return fetchJsonResilient(pmClob('/trades', 'market=' + encodeURIComponent(marketId) + '&limit=20'));
   }
-  function fetchPolyHistory(marketId) {
-    if (!marketId) return Promise.resolve(null);
-    return fetchJsonResilient(pmData('/prices-history', 'market=' + encodeURIComponent(marketId) + '&interval=1d&fidelity=10'));
+  function fetchPolyHistory(tokenId, fallbackMarketId) {
+    if (tokenId) {
+      return fetchJsonResilient(pmClob('/prices-history', 'market=' + encodeURIComponent(tokenId) + '&interval=1d&fidelity=10'))
+        .then(function (payload) { return payload || (fallbackMarketId ? fetchJsonResilient(pmData('/prices-history', 'market=' + encodeURIComponent(fallbackMarketId) + '&interval=1d&fidelity=10')) : null); });
+    }
+    if (!fallbackMarketId) return Promise.resolve(null);
+    return fetchJsonResilient(pmData('/prices-history', 'market=' + encodeURIComponent(fallbackMarketId) + '&interval=1d&fidelity=10'));
   }
   // Gamma-api fallback — works from browsers (CORS-enabled), gives us
   // bestBid / bestAsk / lastTradePrice / volume24hr without needing CLOB.
@@ -456,7 +475,7 @@
           var now = readJson(ORDERS_KEY, []) || [];
           if (now.length > prevLen) {
             clearInterval(iv);
-            resolve(now[now.length - 1]);
+            resolve(now[0]);
             return;
           }
           if (Date.now() > deadline) {
@@ -662,6 +681,7 @@
         chartSide = b.getAttribute('data-side');
         bodyEl.querySelectorAll('[data-bind="chartToggle"] button').forEach(function (x) { x.classList.remove('is-active'); });
         b.classList.add('is-active');
+        if (typeof window.__ostRequestChartHistory === 'function') window.__ostRequestChartHistory(chartSide);
         if (typeof window.__ostChartRedraw === 'function') window.__ostChartRedraw();
       });
     });
@@ -789,29 +809,45 @@
 
     // ---- Polymarket live data ----
     if (looksLikePolymarketId(market)) {
-      var tokenId = findPolymarketTokenId(market);
-      // Correct precedence: prefer raw conditionId, then market.conditionId, fallback to market.id
+      var tokenIds = findPolymarketTokenIds(market) || [];
+      var tokenId = tokenIds[0] || findPolymarketTokenId(market);
+      var gammaMarketId = (market.raw && market.raw.id) || market.id;
+      // CLOB/data endpoints prefer conditionId; Gamma /markets/:id prefers the numeric Gamma id.
       var rawId = (market.raw && (market.raw.conditionId || market.raw.condition_id))
                || market.conditionId
                || (market.raw && market.raw.id)
                || market.id;
-      var liveHistory = [];
+      var liveHistoryBySide = { YES: [], NO: [] };
       var LIVE_HISTORY_MAX = 240;
 
-      function pushHistoryPoint(yesPx, ts) {
-        if (!Number.isFinite(yesPx) || yesPx < 0 || yesPx > 1) return;
-        liveHistory.push({ t: Number(ts) || Date.now(), p: yesPx });
-        if (liveHistory.length > LIVE_HISTORY_MAX) liveHistory = liveHistory.slice(-LIVE_HISTORY_MAX);
+      function getOutcomeConsensusYes() {
+        var op = market.outcomePrices || (market.raw && market.raw.outcomePrices);
+        if (typeof op === 'string') { try { op = JSON.parse(op); } catch (_) { op = null; } }
+        var first = Array.isArray(op) ? Number(op[0]) : NaN;
+        return Number.isFinite(first) && first >= 0 && first <= 1 ? first : NaN;
+      }
+
+      function getTokenForChartSide(side) {
+        side = side === 'NO' ? 'NO' : 'YES';
+        return side === 'NO' ? (tokenIds[1] || tokenIds[0] || tokenId) : (tokenIds[0] || tokenId);
+      }
+
+      function pushHistoryPoint(side, price, ts) {
+        side = side === 'NO' ? 'NO' : 'YES';
+        if (!Number.isFinite(price) || price < 0 || price > 1) return;
+        liveHistoryBySide[side].push({ t: Number(ts) || Date.now(), p: price });
+        if (liveHistoryBySide[side].length > LIVE_HISTORY_MAX) liveHistoryBySide[side] = liveHistoryBySide[side].slice(-LIVE_HISTORY_MAX);
       }
 
       function renderLiveHistory() {
         var canvas = bodyEl.querySelector('[data-bind="chart"]');
         if (!canvas) return;
         var side = (typeof bodyEl.__getChartSide === 'function') ? bodyEl.__getChartSide() : 'YES';
-        var pts = liveHistory.map(function (r) {
-          var p = Number(r.p);
-          return side === 'NO' ? (1 - p) : p;
-        }).filter(Number.isFinite);
+        var history = liveHistoryBySide[side] || [];
+        if (history.length < 2 && side === 'NO' && liveHistoryBySide.YES.length > 1) {
+          history = liveHistoryBySide.YES.map(function (record) { return { t: record.t, p: 1 - Number(record.p) }; });
+        }
+        var pts = history.map(function (record) { return Number(record.p); }).filter(Number.isFinite);
         if (pts.length < 2) {
           setText(bodyEl, 'chartStatus', 'waiting for ticks…');
           return;
@@ -825,8 +861,8 @@
         var overlay = [];
         try {
           var feed = (window.__ostSharedFeed && window.__ostSharedFeed[market.id]) || [];
-          var firstTs = liveHistory[0] && liveHistory[0].t || (Date.now() - 60000);
-          var lastTs  = liveHistory[liveHistory.length - 1].t || Date.now();
+          var firstTs = history[0] && history[0].t || (Date.now() - 60000);
+          var lastTs  = history[history.length - 1].t || Date.now();
           var span = Math.max(1, lastTs - firstTs);
           feed.forEach(function (b) {
             var bSide = String(b.side || '').toUpperCase();
@@ -834,11 +870,10 @@
             var bTs = new Date(b.ts).getTime();
             if (!Number.isFinite(bTs) || bTs < firstTs - 5000) return;
             var frac = Math.max(0, Math.min(1, (bTs - firstTs) / span));
-            // Plot at the price recorded on the bet (if NO, invert to NO axis).
+            // Plot at the price recorded on the same side axis.
             var px = Number(b.price);
             if (!Number.isFinite(px)) return;
-            var plotted = side === 'NO' ? (1 - px) : px;
-            overlay.push({ frac: frac, value: plotted, seed: (b.wallet || '') + ':' + bTs, color: color });
+            overlay.push({ frac: frac, value: px, seed: (b.wallet || '') + ':' + bTs, color: color });
           });
         } catch (_) {}
         drawSeries(canvas, pts, color, overlay);
@@ -849,13 +884,18 @@
       // Expose so toggle button can force a redraw without new ticks.
       window.__ostChartRedraw = renderLiveHistory;
 
+      window.__ostRequestChartHistory = function requestChartHistoryForSide(side) {
+        refreshHistory(side === 'NO' ? 'NO' : 'YES');
+      };
+
       // Apply a fresh YES/NO from any source.
       var applyYes = function (yesPx, src) {
         // Allow 0–1 inclusive: resolved markets can sit at 0.99 / 0.01.
         if (!Number.isFinite(yesPx) || yesPx < 0 || yesPx > 1) return;
         market.yesPriceNumber = yesPx;
         market.noPriceNumber = 1 - yesPx;
-        pushHistoryPoint(yesPx, Date.now());
+        pushHistoryPoint('YES', yesPx, Date.now());
+        pushHistoryPoint('NO', 1 - yesPx, Date.now());
         var yEl = bodyEl.querySelector('[data-bind="yesPct"]');
         var n2 = bodyEl.querySelector('[data-bind="noPct"]');
         if (yEl) yEl.textContent = (yesPx * 100).toFixed(1) + '% · ' + src;
@@ -864,10 +904,13 @@
         recalcProjected();
       };
 
+      var initialConsensusYes = getOutcomeConsensusYes();
+      if (Number.isFinite(initialConsensusYes)) applyYes(initialConsensusYes, 'poly');
+
       // Gamma-api refresh — works even when CLOB CORS blocks. Gives us
       // bestBid/bestAsk/lastTradePrice. Refreshed every 2s.
       var refreshGamma = function () {
-        fetchPolyGammaMarket(rawId).then(function (g) {
+        fetchPolyGammaMarket(gammaMarketId).then(function (g) {
           if (!g) return;
           // Prefer the real market consensus (outcomePrices) — falls back
           // to lastTradePrice, then mid of bid/ask. Avoids the "stuck 50%"
@@ -905,7 +948,13 @@
           if (!tokenId || rawId === market.id) {
             try {
               var t = g.clobTokenIds; if (typeof t === 'string') t = JSON.parse(t);
-              if (Array.isArray(t) && t[0]) { tokenId = String(t[0]); }
+              if (Array.isArray(t)) {
+                tokenIds = t.map(function (item) {
+                  if (item && typeof item === 'object') return String(item.tokenId || item.token_id || item.id || item.asset_id || '').trim();
+                  return String(item || '').trim();
+                }).filter(Boolean);
+                if (tokenIds[0]) tokenId = tokenIds[0];
+              }
             } catch (_) {}
             if (g.conditionId || g.condition_id) rawId = g.conditionId || g.condition_id;
             if (tokenId) refreshBook();
@@ -915,32 +964,52 @@
       refreshGamma();
       liveTimers.push(setInterval(refreshGamma, 1000));
 
-      // Order book — refreshed every 5s. Updates YES/NO prices from book mid.
+      // Order book — refreshed live. Fetch the YES and NO token books separately
+      // so the modal does not mistake YES asks for NO bids or average a huge
+      // spread back to 50% on thin markets.
       var refreshBook = function () {
-        if (!tokenId) { setText(bodyEl, 'bookStatus', 'token id unknown — book unavailable'); return; }
+        var yesBookToken = tokenIds[0] || tokenId;
+        var noBookToken = tokenIds[1] || null;
+        if (!yesBookToken) { setText(bodyEl, 'bookStatus', 'token id unknown — book unavailable'); return; }
         setText(bodyEl, 'bookStatus', 'fetching…');
-        fetchPolyOrderbook(tokenId).then(function (book) {
-          if (!book) { setText(bodyEl, 'bookStatus', 'book offline'); return; }
-          var bids = (book.bids || []).slice(0, 8);
-          var asks = (book.asks || []).slice(0, 8);
-          setText(bodyEl, 'bookStatus', 'live · ' + bids.length + 'b / ' + asks.length + 'a · ' + fmtTime(Date.now()));
+        Promise.all([
+          fetchPolyOrderbook(yesBookToken),
+          noBookToken ? fetchPolyOrderbook(noBookToken) : Promise.resolve(null)
+        ]).then(function (books) {
+          var yesBook = books[0];
+          var noBook = books[1];
+          if (!yesBook) { setText(bodyEl, 'bookStatus', 'book offline'); return; }
+          var yesBids = (yesBook.bids || []).slice(0, 8);
+          var yesAsks = (yesBook.asks || []).slice(0, 8);
+          var noBids = noBook && Array.isArray(noBook.bids)
+            ? noBook.bids.slice(0, 8)
+            : yesAsks.map(function(row) {
+                var px = 1 - Number(row && row.price);
+                return Object.assign({}, row, { price: px });
+              }).filter(function(row) { return Number.isFinite(Number(row.price)) && Number(row.price) >= 0 && Number(row.price) <= 1; });
+          setText(bodyEl, 'bookStatus', 'live · YES ' + yesBids.length + 'b / NO ' + noBids.length + 'b · ' + fmtTime(Date.now()));
           var fmtRow = function (r) {
             var px = Number(r.price), sz = Number(r.size);
             return '<div class="ost-modal__book-row"><span>' + (Number.isFinite(px) ? (px * 100).toFixed(1) + '¢' : '—') + '</span><span>' + (Number.isFinite(sz) ? sz.toFixed(0) : '—') + '</span></div>';
           };
           var yesEl = bodyEl.querySelector('[data-bind="bookYes"]');
           var noEl  = bodyEl.querySelector('[data-bind="bookNo"]');
-          if (yesEl) yesEl.innerHTML = bids.length ? bids.map(fmtRow).join('') : '<div class="ost-modal__book-empty">No bids</div>';
-          if (noEl)  noEl.innerHTML  = asks.length ? asks.map(fmtRow).join('') : '<div class="ost-modal__book-empty">No asks</div>';
-          // Live YES price = best bid (mid of best bid/ask if both available).
-          var bestBid = bids[0] && Number(bids[0].price);
-          var bestAsk = asks[0] && Number(asks[0].price);
+          if (yesEl) yesEl.innerHTML = yesBids.length ? yesBids.map(fmtRow).join('') : '<div class="ost-modal__book-empty">No YES bids</div>';
+          if (noEl)  noEl.innerHTML  = noBids.length ? noBids.map(fmtRow).join('') : '<div class="ost-modal__book-empty">No NO bids</div>';
+
+          var bestBid = yesBids[0] && Number(yesBids[0].price);
+          var bestAsk = yesAsks[0] && Number(yesAsks[0].price);
+          var bestNoBid = noBids[0] && Number(noBids[0].price);
+          var currentYes = Number(market.yesPriceNumber);
+          var consensusYes = getOutcomeConsensusYes();
           var yesPx = NaN;
-          if (Number.isFinite(bestBid) && Number.isFinite(bestAsk)) yesPx = (bestBid + bestAsk) / 2;
-          else if (Number.isFinite(bestBid)) yesPx = bestBid;
-          else if (Number.isFinite(bestAsk)) yesPx = bestAsk;
+          if (Number.isFinite(bestBid) && Number.isFinite(bestNoBid)) yesPx = (bestBid + (1 - bestNoBid)) / 2;
+          else if (Number.isFinite(bestBid) && Number.isFinite(bestAsk) && bestAsk >= bestBid && (bestAsk - bestBid) <= 0.18) yesPx = (bestBid + bestAsk) / 2;
+          else if (!Number.isFinite(currentYes) && Number.isFinite(bestBid)) yesPx = bestBid;
           if (Number.isFinite(yesPx) && yesPx > 0 && yesPx < 1) {
-            applyYes(yesPx, 'clob');
+            var agreesWithConsensus = !Number.isFinite(consensusYes) || Math.abs(yesPx - consensusYes) <= 0.08;
+            var agreesWithCurrent = !Number.isFinite(currentYes) || Math.abs(yesPx - currentYes) <= 0.18;
+            if (agreesWithConsensus && agreesWithCurrent) applyYes(yesPx, 'clob');
           }
         });
       };
@@ -979,9 +1048,11 @@
       liveTimers.push(setInterval(refreshTrades, 2000));
 
       // Price history baseline — refresh every 10s, then maintain 1s live curve.
-      var refreshHistory = function () {
+      var refreshHistory = function (sideToLoad) {
+        sideToLoad = sideToLoad === 'NO' ? 'NO' : ((typeof bodyEl.__getChartSide === 'function') ? bodyEl.__getChartSide() : 'YES');
+        var historyTokenId = getTokenForChartSide(sideToLoad);
         setText(bodyEl, 'chartStatus', 'fetching…');
-        fetchPolyHistory(rawId).then(function (h) {
+        fetchPolyHistory(historyTokenId, rawId).then(function (h) {
           if (!h) { setText(bodyEl, 'chartStatus', 'history unavailable'); return; }
           var seed = (h.history || h.prices || []).map(function (r) {
             return {
@@ -990,7 +1061,7 @@
             };
           }).filter(function (r) { return Number.isFinite(r.p) && r.p >= 0 && r.p <= 1; });
           if (seed.length >= 2) {
-            liveHistory = seed.slice(-LIVE_HISTORY_MAX);
+            liveHistoryBySide[sideToLoad] = seed.slice(-LIVE_HISTORY_MAX);
             renderLiveHistory();
           } else {
             setText(bodyEl, 'chartStatus', 'no series');
@@ -1001,7 +1072,8 @@
       liveTimers.push(setInterval(refreshHistory, 10000));
       liveTimers.push(setInterval(function () {
         if (Number.isFinite(market.yesPriceNumber) && market.yesPriceNumber > 0 && market.yesPriceNumber < 1) {
-          pushHistoryPoint(market.yesPriceNumber, Date.now());
+          pushHistoryPoint('YES', market.yesPriceNumber, Date.now());
+          pushHistoryPoint('NO', 1 - market.yesPriceNumber, Date.now());
           renderLiveHistory();
         }
       }, 1000));

@@ -2742,7 +2742,7 @@
     try {
       const existing = readPredictionOrderRecords();
       existing.unshift(record);
-      localStorage.setItem(PREDICTION_ORDERS_STORAGE_KEY, JSON.stringify(existing.slice(0, 12)));
+      localStorage.setItem(PREDICTION_ORDERS_STORAGE_KEY, JSON.stringify(existing.slice(0, 200)));
     } catch {}
   }
 
@@ -2814,18 +2814,27 @@
       signature: signature,
       sig: signature,
       ts: Date.now(),
+      status: 'open',
+      wallet: trader.toBase58(),
       source: order.source,
       marketId: order.marketId,
+      conditionId: order.conditionId || '',
       title: order.title,
       side: order.side,
       topic: order.topic,
       price: Number(order.price),
+      yesPrice: Number(order.yesPrice),
+      noPrice: Number(order.noPrice),
       stake: Number(order.stake),
+      shares: Number(order.shares) || (Number(order.price) > 0 ? Number(order.stake) / Number(order.price) : Number(order.potentialReturn || 0)),
       potentialReturn: Number(order.potentialReturn),
+      closeAtMs: Number(order.closeAtMs || 0),
+      clobTokenIds: Array.isArray(order.clobTokenIds) ? order.clobTokenIds.slice(0, 4) : [],
       sourceUrl: order.sourceUrl,
       createdAt: Date.now()
     };
     storePredictionOrderRecord(record);
+    try { window.dispatchEvent(new CustomEvent('ost:prediction-order-recorded', { detail: record })); } catch (_) {}
 
     // Fetch updated balance for UI display (best-effort — use stake-adjusted
     // fallback if the RPC hasn't propagated the debit yet).
@@ -10490,6 +10499,9 @@
           var result;
           if (tradeSide === 'buy') {
             result = await trade.memecoinBuy(currentToken.symbol, amt);
+            if (typeof window.recordOstPlatformEvent === 'function') {
+              window.recordOstPlatformEvent({ kind: 'launchpad-buy', amount: amt, token: currentToken.symbol, sig: result.sig, ts: Date.now() });
+            }
             // Simulated price impact (real on-chain transfer already done)
             currentToken.mcap += Math.floor(amt * 8);
             currentToken.curve = Math.min(Math.floor(currentToken.mcap / 690), 100);
@@ -10497,6 +10509,9 @@
             toast('✅', 'Bought ' + amt + ' OST of $' + currentToken.symbol + ' · sig ' + String(result.sig).slice(0,8));
           } else {
             result = await trade.memecoinSell(currentToken.symbol, amt);
+            if (typeof window.recordOstPlatformEvent === 'function') {
+              window.recordOstPlatformEvent({ kind: 'launchpad-sell', amount: result.ost, token: currentToken.symbol, sig: result.sig, ts: Date.now() });
+            }
             currentToken.mcap = Math.max(100, currentToken.mcap - Math.floor(amt * 5));
             currentToken.curve = Math.min(Math.floor(currentToken.mcap / 690), 100);
             activities.unshift({ user: connectedWallet ? connectedWallet.slice(0,4)+'...' : 'You', verb: 'sold', token: '$' + currentToken.symbol, amount: result.ost.toString(), type: 'sell', time: Date.now() });
@@ -11945,6 +11960,7 @@
     var stageVenueLinkEl = document.getElementById('predictionStageVenueLink');
     var stageFeedLinkEl = document.getElementById('predictionStageFeedLink');
     var loadTimer = null;
+    var resolutionTimer = null;
     var resizeFrame = null;
 
     function getPredictionDefaultVisibleCount() {
@@ -12398,6 +12414,226 @@
       tradeStatusEl.textContent = message;
     }
 
+    function findMarketForOrder(order) {
+      if (!order || !order.marketId) return null;
+      return state.markets.find(function(market) {
+        return market && market.id === order.marketId;
+      }) || null;
+    }
+
+    function getOrderEntryPrice(order) {
+      var entryPrice = Number(order && order.price);
+      var stake = Number(order && order.stake || 0);
+      var potentialReturn = Number(order && order.potentialReturn || 0);
+      if (Number.isFinite(entryPrice) && entryPrice > 0) return entryPrice;
+      if (stake > 0 && potentialReturn > 0) return stake / potentialReturn;
+      return 0;
+    }
+
+    function getOrderShares(order) {
+      var storedShares = Number(order && order.shares);
+      if (Number.isFinite(storedShares) && storedShares > 0) return storedShares;
+      var stake = Number(order && order.stake || 0);
+      var entryPrice = getOrderEntryPrice(order);
+      if (stake > 0 && entryPrice > 0) return stake / entryPrice;
+      var potentialReturn = Number(order && order.potentialReturn || 0);
+      return potentialReturn > 0 ? potentialReturn : 0;
+    }
+
+    function getLivePriceForOrder(order, market) {
+      var side = order && order.side === 'no' ? 'no' : 'yes';
+      var livePrice = market ? getMarketPrice(market, side) : NaN;
+      if (Number.isFinite(livePrice) && livePrice > 0) return livePrice;
+      if (side === 'no' && Number.isFinite(Number(order && order.finalNoPrice)) && Number(order.finalNoPrice) >= 0) return Number(order.finalNoPrice);
+      if (side === 'yes' && Number.isFinite(Number(order && order.finalYesPrice)) && Number(order.finalYesPrice) >= 0) return Number(order.finalYesPrice);
+      if (side === 'no' && Number.isFinite(Number(order && order.noPrice)) && Number(order.noPrice) > 0) return Number(order.noPrice);
+      if (side === 'yes' && Number.isFinite(Number(order && order.yesPrice)) && Number(order.yesPrice) > 0) return Number(order.yesPrice);
+      return getOrderEntryPrice(order);
+    }
+
+    function getPredictionApiBase() {
+      return (typeof window !== 'undefined' && window.OST_API_BASE)
+        ? String(window.OST_API_BASE).replace(/\/$/, '')
+        : '';
+    }
+
+    function buildGammaMarketStatusUrl(order) {
+      var apiBase = getPredictionApiBase();
+      var marketId = order && order.marketId ? String(order.marketId) : '';
+      if (!apiBase || !marketId || order.source !== 'polymarket') return '';
+      return apiBase + '/gamma/markets/' + encodeURIComponent(marketId);
+    }
+
+    function getOutcomePricesFromPayload(payload) {
+      var prices = payload && payload.outcomePrices;
+      if (typeof prices === 'string') prices = parseMaybeJson(prices);
+      if (!Array.isArray(prices)) return [];
+      return prices.map(function(value) {
+        return safeFraction(value, NaN);
+      }).filter(Number.isFinite);
+    }
+
+    function getWinningOutcomeFromPayload(payload) {
+      var candidates = [
+        payload && payload.winningOutcome,
+        payload && payload.winning_outcome,
+        payload && payload.winner,
+        payload && payload.resolution,
+        payload && payload.resolvedOutcome,
+        payload && payload.finalOutcome,
+        payload && payload.result
+      ];
+      for (var i = 0; i < candidates.length; i += 1) {
+        var text = String(candidates[i] || '').trim().toLowerCase();
+        if (!text) continue;
+        if (/^yes\b|\byes\b/.test(text)) return 'yes';
+        if (/^no\b|\bno\b/.test(text)) return 'no';
+      }
+      return '';
+    }
+
+    function resolvePredictionOrderFromPayload(order, payload) {
+      if (!order || !payload) return null;
+      var side = order.side === 'no' ? 'no' : 'yes';
+      var prices = getOutcomePricesFromPayload(payload);
+      var yesPrice = Number.isFinite(prices[0]) ? prices[0] : NaN;
+      var noPrice = Number.isFinite(prices[1]) ? prices[1] : (Number.isFinite(yesPrice) ? 1 - yesPrice : NaN);
+      var winner = getWinningOutcomeFromPayload(payload);
+      if (!winner && Number.isFinite(yesPrice) && Number.isFinite(noPrice)) {
+        if (yesPrice >= 0.985 && noPrice <= 0.015) winner = 'yes';
+        if (noPrice >= 0.985 && yesPrice <= 0.015) winner = 'no';
+      }
+      var marketClosed = payload.closed === true || payload.resolved === true || payload.archived === true;
+      var closeAtMs = Number(order.closeAtMs || toDateMs(payload.endDate || payload.endDateIso || payload.end_date || payload.end_date_iso) || 0);
+      if (!winner || (!marketClosed && !(closeAtMs > 0 && closeAtMs <= Date.now()))) return null;
+      return {
+        status: winner === side ? 'won' : 'lost',
+        finalYesPrice: Number.isFinite(yesPrice) ? yesPrice : (winner === 'yes' ? 1 : 0),
+        finalNoPrice: Number.isFinite(noPrice) ? noPrice : (winner === 'no' ? 1 : 0),
+        resolvedAt: Date.now(),
+        settlementSource: 'polymarket'
+      };
+    }
+
+    function refreshPredictionOrderResolutions() {
+      if (refreshPredictionOrderResolutions.inFlight) return Promise.resolve(false);
+      var orders = readPredictionOrderRecords();
+      var candidates = orders.map(function(order, index) {
+        var status = String(order && order.status || '').toLowerCase();
+        var closeAtMs = Number(order && order.closeAtMs || 0);
+        if (!order || order.cashedOut || order.source !== 'polymarket') return null;
+        if (status === 'won' || status === 'lost' || status === 'settled' || status === 'sold') return null;
+        if (!(closeAtMs > 0 && closeAtMs <= Date.now())) return null;
+        var url = buildGammaMarketStatusUrl(order);
+        return url ? { order: order, index: index, url: url } : null;
+      }).filter(Boolean);
+      if (!candidates.length) return Promise.resolve(false);
+
+      refreshPredictionOrderResolutions.inFlight = true;
+      return Promise.all(candidates.map(function(candidate) {
+        return fetchJsonWithTimeout(candidate.url, 6500).then(function(payload) {
+          return { candidate: candidate, payload: payload };
+        }).catch(function(error) {
+          return { candidate: candidate, error: error };
+        });
+      })).then(function(results) {
+        var changed = false;
+        results.forEach(function(result) {
+          if (!result || result.error) return;
+          var update = resolvePredictionOrderFromPayload(result.candidate.order, result.payload);
+          if (!update) return;
+          orders[result.candidate.index] = Object.assign({}, orders[result.candidate.index], update);
+          changed = true;
+        });
+        if (!changed) return false;
+        try { localStorage.setItem(PREDICTION_ORDERS_STORAGE_KEY, JSON.stringify(orders)); } catch (_) {}
+        state.orderHistory = orders;
+        renderPredictionLedger();
+        try { window.dispatchEvent(new CustomEvent('ost:prediction-resolutions-refreshed')); } catch (_) {}
+        return true;
+      }).finally(function() {
+        refreshPredictionOrderResolutions.inFlight = false;
+      });
+    }
+
+    function getPredictionOrderAction(order) {
+      var market = findMarketForOrder(order);
+      var side = order && order.side === 'no' ? 'no' : 'yes';
+      var stake = Number(order && order.stake || 0);
+      var entryPrice = getOrderEntryPrice(order);
+      var shares = getOrderShares(order);
+      var potentialReturn = Number(order && order.potentialReturn || 0);
+      if (!Number.isFinite(potentialReturn) || potentialReturn <= 0) potentialReturn = shares;
+      var livePrice = getLivePriceForOrder(order, market);
+      var liveValue = shares > 0 && livePrice > 0 ? shares * livePrice : stake;
+      var closeAtMs = Number(order && order.closeAtMs || (market && market.closeAtMs) || 0);
+      var yesPrice = market ? getMarketPrice(market, 'yes') : Number(order && order.yesPrice);
+      var isClosed = closeAtMs > 0 && closeAtMs <= Date.now();
+      var status = String(order && (order.status || order.outcome || '') || '').toLowerCase();
+      var resolved = !!(order && order.resolved) || status === 'won' || status === 'lost' || status === 'settled';
+      var won = status === 'won';
+      var lost = status === 'lost';
+
+      if (!resolved && isClosed && Number.isFinite(yesPrice)) {
+        if (yesPrice >= 0.985 || yesPrice <= 0.015) {
+          resolved = true;
+          won = (side === 'yes' && yesPrice >= 0.985) || (side === 'no' && yesPrice <= 0.015);
+          lost = !won;
+        }
+      }
+
+      if (order && order.cashedOut) {
+        return {
+          market: market,
+          side: side,
+          stake: stake,
+          entryPrice: entryPrice,
+          shares: shares,
+          livePrice: livePrice,
+          liveValue: liveValue,
+          payout: Number(order.cashoutOst || 0),
+          label: 'Paid',
+          detail: 'Paid out ' + formatOst(Number(order.cashoutOst || 0)),
+          canCash: false,
+          kind: order.cashoutKind || 'prediction-cashout'
+        };
+      }
+
+      if (resolved) {
+        return {
+          market: market,
+          side: side,
+          stake: stake,
+          entryPrice: entryPrice,
+          shares: shares,
+          livePrice: livePrice,
+          liveValue: liveValue,
+          payout: won ? potentialReturn : 0,
+          label: won ? 'Claim win' : 'Closed lost',
+          detail: won ? 'Resolved winner' : 'Resolved losing side',
+          canCash: won && potentialReturn > 0,
+          kind: 'prediction-settlement',
+          finalStatus: won ? 'won' : 'lost'
+        };
+      }
+
+      return {
+        market: market,
+        side: side,
+        stake: stake,
+        entryPrice: entryPrice,
+        shares: shares,
+        livePrice: livePrice,
+        liveValue: liveValue,
+        payout: Math.max(0, liveValue),
+        label: 'Sell position',
+        detail: market ? 'Live mark price' : 'Entry price fallback',
+        canCash: liveValue > 0,
+        kind: 'prediction-sell',
+        finalStatus: 'sold'
+      };
+    }
+
     function renderPredictionLedger() {
       if (!positionListEl) return;
       if (ledgerCountEl) ledgerCountEl.textContent = String(state.orderHistory.length);
@@ -12407,20 +12643,22 @@
       }
 
       positionListEl.innerHTML = state.orderHistory.map(function(order, idx) {
+        var action = getPredictionOrderAction(order);
         var sideLabel = order.side === 'no'
           ? t('wallet.portal.prediction.buyNo', 'NO position')
           : t('wallet.portal.prediction.buyYes', 'YES position');
-        var canCash = !order.cashedOut && Number(order.stake || 0) > 0;
+        var canCash = action.canCash && Number(order.stake || 0) > 0;
         var cashBtn = canCash
-          ? '<button class="prediction-cashout-btn" data-cashout-idx="' + idx + '" style="margin-left:auto;padding:4px 10px;border-radius:6px;background:#22c55e;color:#000;border:none;font-weight:700;cursor:pointer;font-size:12px">Cash out</button>'
-          : (order.cashedOut ? '<span style="color:#22c55e;font-weight:700;font-size:12px;margin-left:auto">\u2713 Paid out ' + formatOst(order.cashoutOst || 0) + '</span>' : '');
+          ? '<button class="prediction-cashout-btn" data-cashout-idx="' + idx + '" style="margin-left:auto;padding:4px 10px;border-radius:6px;background:#22c55e;color:#000;border:none;font-weight:700;cursor:pointer;font-size:12px">' + escapeHtml(action.label) + ' · ' + escapeHtml(formatOst(action.payout)) + '</button>'
+          : '<span style="color:' + (order.cashedOut || action.finalStatus === 'won' ? '#22c55e' : action.finalStatus === 'lost' ? '#f87171' : '#94a3b8') + ';font-weight:700;font-size:12px;margin-left:auto">' + escapeHtml(action.detail || action.label) + '</span>';
         // Per-share info: use stored price directly (side-specific), fallback to deriving from potReturn
         var stake = Number(order.stake || 0);
         var potReturn = Number(order.potentialReturn || 0);
         // order.price is the fractional price for the side that was bought (YES or NO).
-        var entryPrice = Number(order.price || 0) > 0 ? Number(order.price) : (potReturn > 0 ? stake / potReturn : 0);
-        var shares = entryPrice > 0 ? (stake / entryPrice).toFixed(2) : (potReturn > 0 ? potReturn.toFixed(2) : '\u2014');
+        var entryPrice = action.entryPrice;
+        var shares = action.shares > 0 ? action.shares.toFixed(2) : (potReturn > 0 ? potReturn.toFixed(2) : '\u2014');
         var pricePct = entryPrice > 0 ? (entryPrice * 100).toFixed(1) + '\u00a2' : '\u2014';
+        var livePricePct = action.livePrice > 0 ? (action.livePrice * 100).toFixed(1) + '\u00a2' : '\u2014';
         var sideColor = order.side === 'no' ? '#f87171' : '#34d399';
         var sideEmoji = order.side === 'no' ? '↓ NO' : '↑ YES';
         // Source badge (Kalshi green, Polymarket blue, OST native amber)
@@ -12441,7 +12679,8 @@
                 '<b>' + escapeHtml(formatOst(stake)) + '</b> staked',
                 ' \u2022 <b style="color:' + sideColor + ';">' + pricePct + '</b> ' + escapeHtml((order.side || 'yes').toUpperCase()) + ' price',
                 ' \u2022 <b>' + escapeHtml(String(shares)) + '</b> shares',
-                ' \u2022 win <b>' + escapeHtml(formatOst(potReturn)) + '</b>',
+                ' \u2022 live <b>' + escapeHtml(livePricePct) + '</b>',
+                ' \u2022 value <b>' + escapeHtml(formatOst(action.liveValue || 0)) + '</b>',
               '</span>',
               '<a class="prediction-market-api-link" href="' + escapeHtml(explorerTxUrl(order.signature)) + '" target="_blank" rel="noopener">' + escapeHtml(shortAddress(order.signature || '')) + '</a>',
               cashBtn,
@@ -12461,19 +12700,29 @@
             try { alert('Trading module not loaded \u2014 refresh the page'); } catch(e){}
             return;
           }
-          // Payout = full potentialReturn (user receives the winning amount on devnet).
-          // Falls back to stake refund if potentialReturn was not recorded.
-          var stake = Number(order.stake || 0);
-          var potReturn = Number(order.potentialReturn || 0);
-          var payout = potReturn > 0 ? potReturn : stake;
+          var action = getPredictionOrderAction(order);
+          if (!action.canCash || !Number.isFinite(Number(action.payout)) || Number(action.payout) <= 0) {
+            order.status = action.finalStatus || order.status || 'closed';
+            orders[idx] = order;
+            try { localStorage.setItem(PREDICTION_ORDERS_STORAGE_KEY, JSON.stringify(orders)); } catch(e){}
+            state.orderHistory = orders;
+            renderPredictionLedger();
+            return;
+          }
+          var payout = Number(action.payout);
           var orig = btn.textContent;
           btn.disabled = true; btn.textContent = '\u2026';
           try {
+            order.cashoutKind = action.kind;
+            order.sellPrice = action.livePrice;
+            order.sellValue = action.liveValue;
+            order.status = action.finalStatus || (action.kind === 'prediction-settlement' ? 'settled' : 'sold');
             var r = await window.OST_TRADE.predictionCashOut(order, payout);
             order.cashedOut = true;
             order.cashoutSig = r.sig;
             order.cashoutOst = r.ost;
             order.cashoutAt = Date.now();
+            order.cashoutKind = action.kind;
             orders[idx] = order;
             try { localStorage.setItem(PREDICTION_ORDERS_STORAGE_KEY, JSON.stringify(orders)); } catch(e){}
             state.orderHistory = orders;
@@ -12493,7 +12742,7 @@
                     ts: Date.now(),
                     ostBalance: bals[0],
                     solBalance: bals[1] / solanaWeb3.LAMPORTS_PER_SOL,
-                    kind: 'prediction-cashout',
+                    kind: action.kind,
                     amount: r.ost,
                     sig: r.sig
                   });
@@ -13306,7 +13555,13 @@
         // --- raw fields needed by prediction-modal.js for live data ---
         clobTokenIds: (function () {
           try {
-            var t = item.clobTokenIds || item.outcomeTokens || item.tokens || item.outcomes;
+            var t = item.clobTokenIds || item.outcomeTokens || item.tokens;
+            if (!t && Array.isArray(item.outcomes) && item.outcomes.length && typeof item.outcomes[0] === 'object') {
+              t = item.outcomes;
+            } else if (!t && typeof item.outcomes === 'string') {
+              var parsedOutcomes = JSON.parse(item.outcomes);
+              if (Array.isArray(parsedOutcomes) && parsedOutcomes.length && typeof parsedOutcomes[0] === 'object') t = parsedOutcomes;
+            }
             if (typeof t === 'string') t = JSON.parse(t);
             return Array.isArray(t) ? t.map(function(token) {
               if (token && typeof token === 'object') {
@@ -13693,34 +13948,40 @@
           })
         : Promise.reject(new Error('No OST API base configured'));
 
-      var staticPromise = fetch('data/prediction-market-snapshot.json', {
-        headers: { accept: 'application/json' },
-        cache: 'no-store'
-      }).then(function(response) {
-        if (!response.ok) throw new Error('Snapshot returned ' + response.status);
-        return response.json();
-      }).then(function(snapshot) {
-        var polymarketMarkets = extractPolymarketMarkets(snapshot && snapshot.polymarket).filter(function(item) {
-          return item && item.active !== false && item.closed !== true;
-        }).map(mapPolymarketMarket);
-        var kalshiMarkets = extractKalshiMarkets(snapshot && snapshot.kalshi).filter(function(item) {
-          return item && item.status === 'active';
-        }).map(mapKalshiMarket);
-        var sourceHealth = snapshot && snapshot.sourceHealth ? snapshot.sourceHealth : null;
-        var generatedAt = snapshot && snapshot.generatedAt ? new Date(snapshot.generatedAt) : new Date();
+      function fetchStaticSnapshot() {
+        return fetch('data/prediction-market-snapshot.json', {
+          headers: { accept: 'application/json' },
+          cache: 'no-store'
+        }).then(function(response) {
+          if (!response.ok) throw new Error('Snapshot returned ' + response.status);
+          return response.json();
+        }).then(function(snapshot) {
+          var polymarketMarkets = extractPolymarketMarkets(snapshot && snapshot.polymarket).filter(function(item) {
+            return item && item.active !== false && item.closed !== true;
+          }).map(mapPolymarketMarket);
+          var kalshiMarkets = extractKalshiMarkets(snapshot && snapshot.kalshi).filter(function(item) {
+            return item && item.status === 'active';
+          }).map(mapKalshiMarket);
+          var sourceHealth = snapshot && snapshot.sourceHealth ? snapshot.sourceHealth : null;
+          var generatedAt = snapshot && snapshot.generatedAt ? new Date(snapshot.generatedAt) : new Date();
 
-        return {
-          polymarketMarkets: polymarketMarkets,
-          kalshiMarkets: kalshiMarkets,
-          sourceHealth: {
-            polymarket: sourceHealth ? sourceHealth.polymarket !== false : polymarketMarkets.length > 0,
-            kalshi: sourceHealth ? sourceHealth.kalshi !== false : kalshiMarkets.length > 0
-          },
-          generatedAt: Number.isNaN(generatedAt.getTime()) ? new Date() : generatedAt
-        };
+          return {
+            polymarketMarkets: polymarketMarkets,
+            kalshiMarkets: kalshiMarkets,
+            sourceHealth: {
+              polymarket: sourceHealth ? sourceHealth.polymarket !== false : polymarketMarkets.length > 0,
+              kalshi: sourceHealth ? sourceHealth.kalshi !== false : kalshiMarkets.length > 0
+            },
+            generatedAt: Number.isNaN(generatedAt.getTime()) ? new Date() : generatedAt
+          };
+        });
+      }
+
+      return workerPromise.catch(function(workerError) {
+        return fetchStaticSnapshot().catch(function() {
+          throw workerError;
+        });
       });
-
-      return workerPromise.catch(function() { return staticPromise; });
     }
 
     function setLoadedPredictionMarkets(polymarketMarkets, kalshiMarkets, sourceHealth, updatedAt) {
@@ -13755,7 +14016,15 @@
         try {
           var native = window.buildOstNativeMarkets();
           if (Array.isArray(native) && native.length) {
-            markets = native.concat(markets);
+            var pinnedNative = native.filter(function(market) { return market && market.isOstNative; });
+            var featuredPlaceholders = native.filter(function(market) { return market && !market.isOstNative; });
+            var hasPricedVenueMarkets = markets.some(function(market) {
+              return market && market.source !== 'ost' && Number.isFinite(Number(market.yesPriceNumber)) && Number.isFinite(Number(market.noPriceNumber));
+            });
+            markets = pinnedNative.concat(markets);
+            if (!hasPricedVenueMarkets && featuredPlaceholders.length) {
+              markets = markets.concat(featuredPlaceholders);
+            }
           }
         } catch (e) { console.warn('[OST native markets]', e); }
       }
@@ -14066,12 +14335,18 @@
         createPredictionMarketOrder({
           source: market.source,
           marketId: market.id,
+          conditionId: market.conditionId || (market.raw && (market.raw.conditionId || market.raw.condition_id)) || '',
           title: market.title,
           topic: market.topic,
           side: state.selectedSide,
           stake: state.stake,
           price: priceFraction,
+          yesPrice: getMarketPrice(market, 'yes'),
+          noPrice: getMarketPrice(market, 'no'),
+          shares: calculateEstimatedShares(state.stake, priceFraction),
           potentialReturn: potentialReturn,
+          closeAtMs: market.closeAtMs || 0,
+          clobTokenIds: getMarketTokenIds(market),
           sourceUrl: market.primaryUrl,
           reference: Date.now().toString(36)
         }).then(function(result) {
@@ -14109,13 +14384,21 @@
     syncTradeWallet();
     loadPredictionMarkets();
     loadTimer = window.setInterval(loadPredictionMarkets, 120000);
+    refreshPredictionOrderResolutions();
+    resolutionTimer = window.setInterval(refreshPredictionOrderResolutions, 300000);
     // Re-sync wallet balance every 30 s so displayed OST funds stay accurate.
     var balancePollTimer = window.setInterval(syncTradeWallet, 30000);
     // Also refresh when a wallet connects/switches.
     window.addEventListener('ost:wallet-changed', syncTradeWallet);
+    window.addEventListener('ost:prediction-rounds-settled', function() {
+      state.orderHistory = readPredictionOrderRecords();
+      renderPredictionLedger();
+      refreshPredictionOrderResolutions();
+    });
 
     window.addEventListener('beforeunload', function() {
       if (loadTimer) window.clearInterval(loadTimer);
+      if (resolutionTimer) window.clearInterval(resolutionTimer);
       if (balancePollTimer) window.clearInterval(balancePollTimer);
       if (resizeFrame) window.cancelAnimationFrame(resizeFrame);
     });

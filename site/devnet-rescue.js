@@ -285,7 +285,7 @@
     if (!w || !w.session || !w.session.publicKey) throw new Error('Connect a wallet first');
     return payoutOst(w.session.publicKey, payoutAmount,
       JSON.stringify({
-        k: 'prediction-cashout',
+        k: orderRecord && orderRecord.cashoutKind === 'prediction-sell' ? 'prediction-sell' : 'prediction-settlement',
         market: orderRecord && orderRecord.marketId,
         side: orderRecord && orderRecord.side,
         stake: orderRecord && Number(orderRecord.stake || 0),
