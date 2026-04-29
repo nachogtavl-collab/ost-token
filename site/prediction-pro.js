@@ -27,6 +27,10 @@
     var v = (typeof window !== 'undefined' && window.OST_POLY_RELAY_URL) || '';
     return v ? String(v).replace(/\/$/, '') : '';
   }
+  function ostApiBase() {
+    var v = (typeof window !== 'undefined' && window.OST_API_BASE) || '';
+    return v ? String(v).replace(/\/$/, '') : '';
+  }
   function pmGammaUrl(path, query) {
     var base = relayBase();
     if (base) return base + '/gamma' + path + (query ? ('?' + query) : '');
@@ -642,17 +646,26 @@
     },
     markets: function () {
       // Direct fetch from Polymarket Gamma API (via relay if configured) +
-      // Kalshi public API + native OST markets.
+      // OST API worker snapshot for any proxied Kalshi rows. Never call the
+      // Kalshi public API from the browser; it is CORS-blocked and creates
+      // noisy failed requests every broadcast cycle.
+      var apiBase = ostApiBase();
+      var kalshiSnapshot = apiBase
+        ? fetch(apiBase + '/markets?limit=160', { headers: { accept: 'application/json' }, cache: 'no-store' })
+            .then(function (r) { return r.ok ? r.json() : { markets: [] }; })
+            .catch(function () { return { markets: [] }; })
+        : Promise.resolve({ markets: [] });
       return Promise.all([
         fetch(pmGammaUrl('/markets', 'limit=160&closed=false')).then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; }),
-        fetch('https://api.elections.kalshi.com/trade-api/v2/markets?limit=160').then(function (r) { return r.ok ? r.json() : { markets: [] }; }).catch(function () { return { markets: [] }; })
+        kalshiSnapshot
       ]).then(function (results) {
+        var workerMarkets = Array.isArray(results[1] && results[1].markets) ? results[1].markets : [];
         return {
           ts: Date.now(),
           relay: !!relayBase(),
           ostNative: window.buildOstNativeMarkets ? window.buildOstNativeMarkets() : [],
           polymarket: Array.isArray(results[0]) ? results[0] : (results[0].data || []),
-          kalshi: (results[1] && results[1].markets) || []
+          kalshi: workerMarkets.filter(function (m) { return m && m.source === 'kalshi'; })
         };
       });
     },

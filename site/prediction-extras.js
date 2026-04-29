@@ -562,6 +562,14 @@
       '.ost-card-pnl { display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:4px 8px;border-radius:6px;margin-top:6px;width:fit-content; }',
       '.ost-card-pnl.is-pos { background:rgba(34,197,94,.12);color:#34d399;border:1px solid rgba(34,197,94,.30); }',
       '.ost-card-pnl.is-neg { background:rgba(248,113,113,.12);color:#f87171;border:1px solid rgba(248,113,113,.30); }',
+      '.ost-market-activity-strip { display:flex;align-items:center;gap:10px;margin:10px 0 12px;padding:8px 10px;border:1px solid rgba(124,230,168,.20);border-radius:8px;background:rgba(10,18,32,.72);overflow:hidden; }',
+      '.ost-market-activity-strip__label { flex:0 0 auto;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#7ce6a8; }',
+      '.ost-market-activity-strip__track { display:flex;gap:8px;overflow:auto;scrollbar-width:none; }',
+      '.ost-market-activity-strip__track::-webkit-scrollbar { display:none; }',
+      '.ost-market-activity-chip { flex:0 0 auto;display:flex;align-items:center;gap:6px;max-width:340px;padding:5px 8px;border-radius:999px;border:1px solid rgba(124,230,168,.22);background:rgba(124,230,168,.08);color:#dfffea;font-size:11px;white-space:nowrap; }',
+      '.ost-market-activity-chip.is-no { border-color:rgba(255,124,138,.25);background:rgba(255,124,138,.08);color:#ffe1e5; }',
+      '.ost-market-activity-chip b { color:#fff; }',
+      '.ost-market-activity-empty { color:#94a3b8;font-size:11px; }',
       '#ost-trade-ticket-fab { position:fixed;bottom:24px;right:24px;z-index:9998;padding:12px 18px;border-radius:999px;border:none;background:linear-gradient(135deg,#7ce6a8,#22c55e);color:#031;font-weight:800;font-size:14px;cursor:pointer;box-shadow:0 8px 24px rgba(34,197,94,.35);display:none;align-items:center;gap:8px; }',
       '#ost-trade-ticket-fab:hover { transform:translateY(-2px); }',
       '#ost-trade-ticket-fab .ost-tt-count { background:#031;color:#7ce6a8;border-radius:999px;padding:2px 8px;font-size:11px; }',
@@ -579,6 +587,11 @@
     function readDeskOrders() {
       try { return JSON.parse(localStorage.getItem(TRADE_DESK_STORE_KEY) || '[]'); } catch (e) { return []; }
     }
+    function isOpenDeskOrder(o) {
+      if (!o || o.cashedOut) return false;
+      var status = String(o.status || o.outcome || '').toLowerCase();
+      return status !== 'won' && status !== 'lost' && status !== 'settled' && status !== 'sold' && status !== 'closed' && status !== 'paid';
+    }
     function getYesPriceFromCard(card) {
       var fill = card.querySelector('.prediction-market-bar-fill');
       if (fill && fill.style && fill.style.width) {
@@ -591,7 +604,7 @@
     // ---- card P&L badge ---------------------------------------------------
     function refreshCardPnL() {
       var orders = readDeskOrders();
-      var openOrders = orders.filter(function (o) { return !o.cashedOut && o.status !== 'won' && o.status !== 'lost' && o.status !== 'settled'; });
+      var openOrders = orders.filter(isOpenDeskOrder);
       var byMarket = Object.create(null);
       openOrders.forEach(function (o) {
         var k = o.marketId; if (!k) return;
@@ -636,6 +649,149 @@
 
     // ---- card activity pulse ---------------------------------------------
     var seenActivity = Object.create(null);
+    var latestActivityRows = [];
+
+    function marketTitleForId(marketId) {
+      var card = document.querySelector('.prediction-market-card[data-prediction-market-id="' + String(marketId).replace(/"/g, '\\"') + '"]');
+      if (!card) return marketId;
+      var titleEl = card.querySelector('h5, .prediction-card-title, h3, strong');
+      return titleEl ? titleEl.textContent.trim() : marketId;
+    }
+
+    function activityKey(row) {
+      return String(row && (row.signature || row.sig || row.id || row.ts || row.createdAt || ''));
+    }
+
+    function normalizeRecentRow(row) {
+      if (!row) return null;
+      var marketId = row.marketId || row.market_id || row.id || '';
+      if (!marketId) return null;
+      var side = String(row.side || row.outcome || row.direction || 'YES').toUpperCase();
+      if (side !== 'NO') side = 'YES';
+      var ts = row.ts || row.createdAt || row.placedAt || Date.now();
+      return {
+        marketId: marketId,
+        side: side,
+        stake: Number(row.stake || row.amount || row.size || 0) || 0,
+        price: Number(row.price || 0) || NaN,
+        wallet: row.wallet || row.walletShort || row.owner || '',
+        walletShort: row.walletShort || row.wallet || '',
+        ts: ts,
+        title: row.title || row.marketTitle || row.market_title || row.question || marketTitleForId(marketId),
+        signature: row.signature || row.sig || row.id || String(marketId) + ':' + String(ts)
+      };
+    }
+
+    function indexRecentRows(rows) {
+      var perMarket = Object.create(null);
+      latestActivityRows = rows.map(normalizeRecentRow).filter(Boolean).sort(function (a, b) {
+        return new Date(b.ts).getTime() - new Date(a.ts).getTime();
+      }).slice(0, 50);
+      latestActivityRows.forEach(function (row) {
+        (perMarket[row.marketId] = perMarket[row.marketId] || []).push(row);
+      });
+      window.__ostSharedFeed = perMarket;
+    }
+
+    function localRecentRows() {
+      return readDeskOrders().map(function (o) {
+        if (!o || !o.marketId) return null;
+        return normalizeRecentRow({
+          marketId: o.marketId,
+          side: o.side,
+          stake: o.stake,
+          price: o.price,
+          ts: o.createdAt || o.cashoutAt || Date.now(),
+          title: o.title,
+          signature: o.signature || o.id || String(o.marketId) + ':' + String(o.createdAt || '')
+        });
+      }).filter(Boolean);
+    }
+
+    function refreshRecentActivityFeed() {
+      var base = (window.OST_API_BASE || '').replace(/\/$/, '');
+      if (!base) {
+        indexRecentRows(localRecentRows());
+        renderActivityTicker();
+        return Promise.resolve(false);
+      }
+      return fetch(base + '/positions/recent?limit=50', { cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (j) {
+          var remoteRows = j && Array.isArray(j.recent) ? j.recent : [];
+          var byKey = Object.create(null);
+          remoteRows.concat(localRecentRows()).forEach(function (row) {
+            row = normalizeRecentRow(row);
+            if (!row) return;
+            byKey[activityKey(row)] = row;
+          });
+          indexRecentRows(Object.keys(byKey).map(function (k) { return byKey[k]; }));
+          renderActivityTicker();
+          return true;
+        })
+        .catch(function () {
+          indexRecentRows(localRecentRows());
+          renderActivityTicker();
+          return false;
+        });
+    }
+
+    function ensureActivityTicker() {
+      var board = document.getElementById('predictionMarketBoard');
+      if (!board) return null;
+      var existing = document.getElementById('ostMarketActivityStrip');
+      if (existing) return existing;
+      var host = document.createElement('div');
+      host.id = 'ostMarketActivityStrip';
+      host.className = 'ost-market-activity-strip';
+      host.innerHTML = '<div class="ost-market-activity-strip__label">Live OST buys</div><div class="ost-market-activity-strip__track"><span class="ost-market-activity-empty">Waiting for the next ticket...</span></div>';
+      var anchor = document.getElementById('predictionMarketTape') || document.getElementById('predictionMarketNote') || board.firstChild;
+      if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(host, anchor);
+      else board.appendChild(host);
+      return host;
+    }
+
+    function renderActivityTicker() {
+      var host = ensureActivityTicker();
+      if (!host) return;
+      var track = host.querySelector('.ost-market-activity-strip__track');
+      if (!track) return;
+      var rows = latestActivityRows.slice(0, 14);
+      if (!rows.length) {
+        track.innerHTML = '<span class="ost-market-activity-empty">No OST market buys yet. First ticket will light up here.</span>';
+        return;
+      }
+      track.innerHTML = rows.map(function (row) {
+        var sideCls = row.side === 'NO' ? ' is-no' : '';
+        var dot = row.side === 'NO' ? '\u25CF NO' : '\u25CF YES';
+        var ageTxt = formatActivityAge(row.ts);
+        var title = String(row.title || marketTitleForId(row.marketId) || row.marketId).slice(0, 58);
+        return '<button type="button" class="ost-market-activity-chip' + sideCls + '" data-activity-market="' + escapeHtml(row.marketId) + '">' +
+          '<b>' + escapeHtml(dot) + '</b>' +
+          '<span>' + fmt(row.stake, 1) + ' OST</span>' +
+          '<span>' + escapeHtml(title) + '</span>' +
+          '<span>' + escapeHtml(ageTxt) + ' ago</span>' +
+        '</button>';
+      }).join('');
+      track.querySelectorAll('[data-activity-market]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var id = btn.getAttribute('data-activity-market');
+          if (window.OST_MARKET_MODAL && typeof window.OST_MARKET_MODAL.open === 'function') window.OST_MARKET_MODAL.open(id);
+        });
+      });
+    }
+
+    function formatActivityAge(ts) {
+      var seconds = Math.max(0, Math.round((Date.now() - new Date(ts).getTime()) / 1000));
+      if (!Number.isFinite(seconds)) return 'now';
+      if (seconds < 60) return seconds + 's';
+      var minutes = Math.round(seconds / 60);
+      if (minutes < 60) return minutes + 'm';
+      var hours = Math.round(minutes / 60);
+      if (hours < 48) return hours + 'h';
+      return Math.round(hours / 24) + 'd';
+    }
+
     function refreshActivityPulse() {
       var feed = window.__ostSharedFeed || {};
       Object.keys(feed).forEach(function (marketId) {
@@ -698,7 +854,7 @@
 
     function refreshTicketCount() {
       var orders = readDeskOrders();
-      var open = orders.filter(function (o) { return !o.cashedOut && o.status !== 'won' && o.status !== 'lost' && o.status !== 'settled'; });
+      var open = orders.filter(isOpenDeskOrder);
       // Group by marketId for the count badge.
       var marketsWithPositions = Object.keys(open.reduce(function (acc, o) { if (o.marketId) acc[o.marketId] = 1; return acc; }, {}));
       var n = marketsWithPositions.length;
@@ -710,7 +866,7 @@
     function renderTicketPanel() {
       var body = ttModal.querySelector('.ost-tt-body');
       var orders = readDeskOrders();
-      var open = orders.filter(function (o) { return !o.cashedOut && o.status !== 'won' && o.status !== 'lost' && o.status !== 'settled'; });
+      var open = orders.filter(isOpenDeskOrder);
       if (!open.length) {
         body.innerHTML = '<div style="opacity:.6;padding:14px 0;">No open positions. Buy YES or NO on any market to open one.</div>';
         return;
@@ -765,15 +921,18 @@
 
     // ---- boot ------------------------------------------------------------
     function tick() {
+      try { ensureActivityTicker(); } catch (e) { /* silent */ }
       try { refreshCardPnL(); } catch (e) { /* silent */ }
       try { refreshActivityPulse(); } catch (e) { /* silent */ }
       try { refreshTicketCount(); } catch (e) { /* silent */ }
     }
+    refreshRecentActivityFeed().then(tick);
     tick();
     setInterval(tick, 2500);
-    window.addEventListener('ost:prediction:order-changed', tick);
+    setInterval(function () { refreshRecentActivityFeed().then(tick); }, 7000);
+    window.addEventListener('ost:prediction:order-changed', function () { refreshRecentActivityFeed().then(tick); });
     window.addEventListener('storage', function (ev) {
-      if (ev && (ev.key === TRADE_DESK_STORE_KEY || ev.key === STORE_KEY)) tick();
+      if (ev && (ev.key === TRADE_DESK_STORE_KEY || ev.key === STORE_KEY)) refreshRecentActivityFeed().then(tick);
     });
   })();
 })();
