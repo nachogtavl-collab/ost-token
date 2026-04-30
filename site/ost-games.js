@@ -47,6 +47,10 @@
     (elements || []).forEach(function (el) { if (el) el.disabled = !!busy; });
   }
 
+  function delay(ms) {
+    return new Promise(function (resolve) { setTimeout(resolve, ms); });
+  }
+
   function pulse(el, cls) {
     if (!el) return;
     el.classList.remove(cls);
@@ -228,13 +232,51 @@
   // ────────────────────────────────────────────────────────────────────────
   // Mount panel — appended after the existing faucet hub grid
   // ────────────────────────────────────────────────────────────────────────
+  var GAME_ORDER = ['mines', 'crash', 'dice', 'plinko', 'limbo', 'hilo', 'wheel', 'coinflip', 'keno', 'tower', 'double', 'slide', 'pump', 'dragontower', 'diamonds', 'cases', 'tome', 'scarab'];
+  var GAME_META = {
+    mines: { label: 'Mines', icon: '💣', accent: '#22c55e', accent2: '#38bdf8', tag: 'Reveal grid', stat: 'Cashout ladder', hero: '💎', symbols: ['💎', '💣', '✦'] },
+    crash: { label: 'Crash', icon: '🚀', accent: '#f97316', accent2: '#facc15', tag: 'Rocket curve', stat: 'Live cashout', hero: '🚀', symbols: ['🚀', '🔥', '×'] },
+    dice: { label: 'Dice', icon: '🎲', accent: '#38bdf8', accent2: '#22c55e', tag: 'Target roll', stat: 'Risk slider', hero: '🎲', symbols: ['⚀', '⚂', '⚅'] },
+    plinko: { label: 'Plinko', icon: '🟡', accent: '#facc15', accent2: '#fb7185', tag: 'Peg drop', stat: 'Multi-ball', hero: '🟡', symbols: ['●', '×', '↘'] },
+    limbo: { label: 'Limbo', icon: '🌙', accent: '#a78bfa', accent2: '#38bdf8', tag: 'Multiplier chase', stat: 'High target', hero: '🌙', symbols: ['×', '↑', '✦'] },
+    hilo: { label: 'Hi-Lo', icon: '🃏', accent: '#fb7185', accent2: '#facc15', tag: 'Card streak', stat: 'Compound', hero: '🃏', symbols: ['A', 'K', 'Q'] },
+    wheel: { label: 'Big Six', icon: '🎡', accent: '#fb7185', accent2: '#facc15', tag: 'Prize wheel', stat: 'Risk bands', hero: '🎡', symbols: ['0x', '2x', '12x'] },
+    coinflip: { label: 'Coinflip', icon: '🪙', accent: '#facc15', accent2: '#f97316', tag: 'Heads/Tails', stat: '1.98x', hero: '🪙', symbols: ['H', 'T', '×'] },
+    keno: { label: 'Keno', icon: '🔢', accent: '#22c55e', accent2: '#a78bfa', tag: 'Number draw', stat: '10 picks', hero: '🔢', symbols: ['7', '21', '40'] },
+    tower: { label: 'Tower', icon: '🗼', accent: '#38bdf8', accent2: '#22c55e', tag: 'Climb rows', stat: 'Trap picks', hero: '🗼', symbols: ['◇', '◆', '×'] },
+    double: { label: 'Double', icon: '🔴', accent: '#ef4444', accent2: '#22c55e', tag: 'Color strip', stat: 'Green chase', hero: '🔴', symbols: ['Red', 'Black', 'Green'] },
+    slide: { label: 'Slide', icon: '📈', accent: '#38bdf8', accent2: '#22c55e', tag: 'Target run', stat: '100x cap', hero: '📈', symbols: ['2x', '10x', '50x'] },
+    pump: { label: 'Pump', icon: '🎈', accent: '#fb7185', accent2: '#facc15', tag: 'Pressure ladder', stat: 'Bust point', hero: '🎈', symbols: ['1', '4', '8'] },
+    dragontower: { label: 'Dragon Tower', icon: '🐉', accent: '#f97316', accent2: '#22c55e', tag: 'Path tower', stat: 'Floor clear', hero: '🐉', symbols: ['🥚', '🐉', '×'] },
+    diamonds: { label: 'Diamonds', icon: '💎', accent: '#38bdf8', accent2: '#a78bfa', tag: 'Gem match', stat: '50x top', hero: '💎', symbols: ['💎', '🔷', '🟢'] },
+    cases: { label: 'Case Battle', icon: '📦', accent: '#facc15', accent2: '#fb7185', tag: 'Drop battle', stat: 'You vs dealer', hero: '📦', symbols: ['Common', 'Epic', 'Gold'] },
+    tome: { label: 'Tome', icon: '📖', accent: '#a78bfa', accent2: '#facc15', tag: 'Rune pages', stat: 'Curse risk', hero: '📖', symbols: ['ᚱ', 'ᚠ', '☠'] },
+    scarab: { label: 'Scarab Spin', icon: '🪲', accent: '#facc15', accent2: '#22c55e', tag: '3x3 symbols', stat: 'Cluster pay', hero: '🪲', symbols: ['🪲', '💎', '☀'] }
+  };
+
+  function metaFor(game) {
+    return GAME_META[game] || GAME_META.mines;
+  }
+
   var TEMPLATE =
     '<div class="container">' +
       '<div class="ostg-section" id="ostGames">' +
-        '<div class="ostg-head">' +
-          '<div>' +
-            '<h3>🎲 Provably-Fair OST Arcade</h3>' +
-            '<p class="ostg-sub">Eighteen fast OST originals inspired by Stake/Rainbet instant games: crash curves, towers, wheels, cases, ladders, and reveal grids. Every outcome is HMAC-SHA256 of <code>serverSeed</code>+<code>clientSeed</code>+<code>nonce</code>.</p>' +
+        '<div class="ostg-casino-hero" id="ostgCasinoHero">' +
+          '<div class="ostg-hero-copy">' +
+            '<span class="ostg-kicker">FAUCET FAIR GAMES</span>' +
+            '<h3><span id="ostgHeroIcon">💣</span> <span id="ostgHeroTitle">OST Arcade</span></h3>' +
+            '<div class="ostg-hero-stats">' +
+              '<span id="ostgHeroTag">Reveal grid</span>' +
+              '<span id="ostgHeroStat">Cashout ladder</span>' +
+              '<span>HMAC fair</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="ostg-hero-scene" aria-hidden="true">' +
+            '<span class="ostg-hero-token hero-a" id="ostgHeroA">💎</span>' +
+            '<span class="ostg-hero-token hero-b" id="ostgHeroB">💣</span>' +
+            '<span class="ostg-hero-token hero-c" id="ostgHeroC">✦</span>' +
+            '<span class="ostg-hero-card card-a">7</span>' +
+            '<span class="ostg-hero-card card-b">×</span>' +
           '</div>' +
           '<div class="ostg-balance-card">' +
             '<span class="ostg-balance-label">Chips · play balance</span>' +
@@ -250,6 +292,7 @@
             '</div>' +
           '</div>' +
         '</div>' +
+        '<div class="ostg-lobby-strip" id="ostgLobbyStrip"></div>' +
         '<div class="ostg-tabs" id="ostgTabs">' +
           '<button class="ostg-tab is-active" data-game="mines">💣 Mines</button>' +
           '<button class="ostg-tab" data-game="crash">🚀 Crash</button>' +
@@ -288,6 +331,7 @@
     anchor.parentElement.insertBefore(wrap, anchor.nextSibling);
     fireBalanceChange();
     bindTabs();
+    buildLobbyStrip();
     showGame('mines');
     document.getElementById('ostgFairBtn').addEventListener('click', openFairness);
     var cashBtn = document.getElementById('ostgCashBtn');
@@ -426,11 +470,102 @@
   function bindTabs() {
     document.querySelectorAll('#ostgTabs .ostg-tab').forEach(function (b) {
       b.addEventListener('click', function () {
-        document.querySelectorAll('#ostgTabs .ostg-tab').forEach(function (x) { x.classList.remove('is-active'); });
-        b.classList.add('is-active');
         showGame(b.dataset.game);
       });
     });
+  }
+
+  function buildLobbyStrip() {
+    var host = document.getElementById('ostgLobbyStrip');
+    if (!host) return;
+    host.innerHTML = GAME_ORDER.map(function (game) {
+      var meta = metaFor(game);
+      return '<button class="ostg-lobby-game" type="button" data-lobby-game="' + game + '">' +
+        '<span class="ostg-lobby-icon">' + meta.icon + '</span>' +
+        '<span><b>' + meta.label + '</b><em>' + meta.tag + '</em></span>' +
+        '<strong>' + meta.stat + '</strong>' +
+      '</button>';
+    }).join('');
+    host.querySelectorAll('[data-lobby-game]').forEach(function (button) {
+      button.addEventListener('click', function () { showGame(button.dataset.lobbyGame); });
+    });
+  }
+
+  function updateGameNav(game) {
+    var meta = metaFor(game);
+    document.querySelectorAll('#ostgTabs .ostg-tab').forEach(function (button) {
+      button.classList.toggle('is-active', button.dataset.game === game);
+    });
+    document.querySelectorAll('#ostgLobbyStrip [data-lobby-game]').forEach(function (button) {
+      button.classList.toggle('is-active', button.dataset.lobbyGame === game);
+    });
+    var hero = document.getElementById('ostgCasinoHero');
+    if (hero) {
+      hero.style.setProperty('--ostg-accent', meta.accent);
+      hero.style.setProperty('--ostg-accent-2', meta.accent2);
+    }
+    var icon = document.getElementById('ostgHeroIcon');
+    var title = document.getElementById('ostgHeroTitle');
+    var tag = document.getElementById('ostgHeroTag');
+    var stat = document.getElementById('ostgHeroStat');
+    var a = document.getElementById('ostgHeroA');
+    var b = document.getElementById('ostgHeroB');
+    var c = document.getElementById('ostgHeroC');
+    if (icon) icon.textContent = meta.icon;
+    if (title) title.textContent = meta.label;
+    if (tag) tag.textContent = meta.tag;
+    if (stat) stat.textContent = meta.stat;
+    if (a) a.textContent = meta.symbols[0];
+    if (b) b.textContent = meta.symbols[1];
+    if (c) c.textContent = meta.symbols[2];
+  }
+
+  function decorateActiveGame(game, stage) {
+    var meta = metaFor(game);
+    stage.dataset.game = game;
+    stage.style.setProperty('--ostg-accent', meta.accent);
+    stage.style.setProperty('--ostg-accent-2', meta.accent2);
+    updateGameNav(game);
+    var panel = stage.querySelector('.ostg-game');
+    if (panel && !panel.querySelector('.ostg-game-hero')) {
+      var hero = document.createElement('div');
+      hero.className = 'ostg-game-hero';
+      hero.innerHTML = '<div class="ostg-game-hero-art"><span>' + meta.hero + '</span><i></i><i></i><i></i></div>' +
+        '<div class="ostg-game-hero-text"><span>' + meta.tag + '</span><h4>' + meta.label + '</h4><p>' + meta.stat + '</p></div>' +
+        '<div class="ostg-game-hero-mults"><b>' + meta.symbols[0] + '</b><b>' + meta.symbols[1] + '</b><b>' + meta.symbols[2] + '</b></div>';
+      panel.insertBefore(hero, panel.firstChild);
+    }
+    enhanceBetControls(stage);
+  }
+
+  function enhanceBetControls(stage) {
+    var input = stage.querySelector('.ostg-controls input[id$="Bet"]');
+    if (!input) return;
+    var controls = input.closest('.ostg-controls');
+    if (!controls || controls.querySelector('.ostg-bet-tools')) return;
+    var tools = document.createElement('div');
+    tools.className = 'ostg-bet-tools';
+    tools.innerHTML = '<span>Bet size</span>' +
+      '<button type="button" data-bet-chip="0.5">0.5</button>' +
+      '<button type="button" data-bet-chip="1">1</button>' +
+      '<button type="button" data-bet-chip="5">5</button>' +
+      '<button type="button" data-bet-action="half">1/2</button>' +
+      '<button type="button" data-bet-action="double">2x</button>' +
+      '<button type="button" data-bet-action="max">Max</button>';
+    tools.addEventListener('click', function (event) {
+      var button = event.target.closest('button');
+      if (!button || input.disabled) return;
+      var current = parseFloat(input.value) || 0;
+      var next = current;
+      if (button.dataset.betChip) next = Number(button.dataset.betChip);
+      if (button.dataset.betAction === 'half') next = Math.max(0.1, current / 2);
+      if (button.dataset.betAction === 'double') next = Math.max(0.1, current * 2);
+      if (button.dataset.betAction === 'max') next = Math.max(0.1, getBalance());
+      input.value = fmt(next).replace(/\.00$/, '');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    controls.appendChild(tools);
   }
 
   function showGame(game) {
@@ -441,24 +576,26 @@
       activeGameCleanup = null;
     }
     stage.innerHTML = '';
-    if (game === 'mines')    return renderMines(stage);
-    if (game === 'crash')    return renderCrash(stage);
-    if (game === 'dice')     return renderDice(stage);
-    if (game === 'plinko')   return renderPlinko(stage);
-    if (game === 'limbo')    return renderLimbo(stage);
-    if (game === 'hilo')     return renderHiLo(stage);
-    if (game === 'wheel')    return renderWheel(stage);
-    if (game === 'coinflip') return renderCoinflip(stage);
-    if (game === 'keno')      return renderKeno(stage);
-    if (game === 'tower')     return renderTower(stage);
-    if (game === 'double')      return renderDouble(stage);
-    if (game === 'slide')       return renderSlide(stage);
-    if (game === 'pump')        return renderPump(stage);
-    if (game === 'dragontower') return renderDragonTower(stage);
-    if (game === 'diamonds')    return renderDiamonds(stage);
-    if (game === 'cases')       return renderCaseBattle(stage);
-    if (game === 'tome')        return renderTome(stage);
-    if (game === 'scarab')      return renderScarabSpin(stage);
+    if (game === 'mines') renderMines(stage);
+    else if (game === 'crash') renderCrash(stage);
+    else if (game === 'dice') renderDice(stage);
+    else if (game === 'plinko') renderPlinko(stage);
+    else if (game === 'limbo') renderLimbo(stage);
+    else if (game === 'hilo') renderHiLo(stage);
+    else if (game === 'wheel') renderWheel(stage);
+    else if (game === 'coinflip') renderCoinflip(stage);
+    else if (game === 'keno') renderKeno(stage);
+    else if (game === 'tower') renderTower(stage);
+    else if (game === 'double') renderDouble(stage);
+    else if (game === 'slide') renderSlide(stage);
+    else if (game === 'pump') renderPump(stage);
+    else if (game === 'dragontower') renderDragonTower(stage);
+    else if (game === 'diamonds') renderDiamonds(stage);
+    else if (game === 'cases') renderCaseBattle(stage);
+    else if (game === 'tome') renderTome(stage);
+    else if (game === 'scarab') renderScarabSpin(stage);
+    else renderMines(stage);
+    decorateActiveGame(game, stage);
   }
 
   function pushHistory(mult) {
@@ -2462,11 +2599,17 @@
       if (!placed.ok) { statusEl.textContent = placed.msg; return; }
       setBusy([bet, pick, play], true);
       statusEl.textContent = config.loading || 'Dealing...';
+      resultEl.classList.add('is-resolving');
+      resultEl.innerHTML = renderQuickResolving(config.id);
       try {
+        await delay(540);
         var outcome = await config.resolve(amount, pick ? pick.value : '');
+        await delay(180);
+        resultEl.classList.remove('is-resolving');
         resultEl.innerHTML = outcome.html;
         settleGame(config.id, amount, outcome.payout, outcome.multiplier, statusEl, outcome.text, resultEl);
       } catch (error) {
+        resultEl.classList.remove('is-resolving');
         credit(amount, config.id + '-refund');
         statusEl.textContent = 'Round failed safely. Bet returned.';
         console.warn('[ostg] quick casino failed', config.id, error);
@@ -2474,6 +2617,19 @@
         setBusy([bet, pick, play], false);
       }
     });
+  }
+
+  function renderQuickResolving(game) {
+    var meta = metaFor(game);
+    return '<div class="ostg-resolve-machine">' +
+      '<div class="ostg-resolve-reels">' +
+        '<span>' + meta.symbols[0] + '</span>' +
+        '<span>' + meta.symbols[1] + '</span>' +
+        '<span>' + meta.symbols[2] + '</span>' +
+      '</div>' +
+      '<div class="ostg-resolve-line"></div>' +
+      '<strong>' + meta.label + '</strong>' +
+    '</div>';
   }
 
   function renderDiceStrip(values) {
@@ -3308,7 +3464,58 @@
       '.ostg-scarab-grid span{aspect-ratio:1;border-radius:14px;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at top,#334155,#0f172a);border:1px solid rgba(245,196,104,.16);font-size:2.2rem;box-shadow:inset 0 -10px 20px rgba(0,0,0,.24);}' +
       '.ostg-scarab-grid span.is-hit{border-color:#f5c468;box-shadow:0 0 22px rgba(245,196,104,.36),inset 0 -10px 20px rgba(0,0,0,.24);}' +
       '@media (max-width:640px){.ostg-keno-grid{grid-template-columns:repeat(5,minmax(0,1fr));}.ostg-table-stage{grid-template-columns:1fr}.ostg-slot-cell{font-size:1.8rem}.ostg-roulette-stage{min-height:300px}.ostg-penalty-goal{min-height:220px}}' +
-      '@media (max-width:520px){.ostg-section{padding:16px}.ostg-limbo-mult{font-size:2.8rem}.ostg-dice-stats{grid-template-columns:1fr}.ostg-card{width:96px;height:136px;font-size:2.8rem}.ostg-toast{right:10px;top:74px}.ostg-split-hands{grid-template-columns:1fr}.ostg-play-card{width:52px;height:74px;font-size:18px}}';
+      '@media (max-width:520px){.ostg-section{padding:16px}.ostg-limbo-mult{font-size:2.8rem}.ostg-dice-stats{grid-template-columns:1fr}.ostg-card{width:96px;height:136px;font-size:2.8rem}.ostg-toast{right:10px;top:74px}.ostg-split-hands{grid-template-columns:1fr}.ostg-play-card{width:52px;height:74px;font-size:18px}}' +
+      '.ostg-section{--ostg-accent:#22c55e;--ostg-accent-2:#38bdf8;padding:18px;background:#07111f;background-image:linear-gradient(135deg,rgba(34,197,94,.14),transparent 28%),linear-gradient(225deg,rgba(251,113,133,.12),transparent 30%),linear-gradient(180deg,#111827,#050812 70%);border-color:rgba(255,255,255,.14);box-shadow:0 28px 90px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.08);overflow:hidden;}' +
+      '.ostg-section:before{content:"";position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.028) 1px,transparent 1px);background-size:34px 34px;mask-image:linear-gradient(180deg,rgba(0,0,0,.72),transparent 82%);}' +
+      '.ostg-casino-hero{position:relative;display:grid;grid-template-columns:minmax(260px,1.2fr) minmax(220px,.8fr) minmax(250px,auto);gap:16px;align-items:stretch;min-height:178px;margin-bottom:16px;padding:18px;border-radius:18px;background:linear-gradient(135deg,rgba(255,255,255,.1),rgba(255,255,255,.035));border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.12);overflow:hidden;}' +
+      '.ostg-casino-hero:after{content:"";position:absolute;left:0;right:0;bottom:0;height:4px;background:linear-gradient(90deg,var(--ostg-accent),var(--ostg-accent-2),#facc15,#fb7185);}' +
+      '.ostg-hero-copy,.ostg-balance-card,.ostg-hero-scene{position:relative;z-index:1;}' +
+      '.ostg-kicker{display:inline-flex;align-items:center;width:max-content;padding:5px 9px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:#dbeafe;font-size:11px;font-weight:900;letter-spacing:.12em;}' +
+      '.ostg-hero-copy h3{margin:10px 0 12px;font-size:clamp(2rem,4vw,3.8rem);line-height:.95;letter-spacing:0;color:#fff;text-shadow:0 10px 30px rgba(0,0,0,.45);}' +
+      '.ostg-hero-stats{display:flex;gap:8px;flex-wrap:wrap;}' +
+      '.ostg-hero-stats span{display:inline-flex;align-items:center;min-height:30px;padding:6px 10px;border-radius:10px;background:rgba(2,6,23,.58);border:1px solid rgba(255,255,255,.13);color:#e5e7eb;font-size:12px;font-weight:800;}' +
+      '.ostg-hero-scene{min-height:142px;border-radius:16px;background:linear-gradient(135deg,rgba(2,6,23,.68),rgba(15,23,42,.34));border:1px solid rgba(255,255,255,.12);overflow:hidden;}' +
+      '.ostg-hero-token,.ostg-hero-card{position:absolute;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 16px 20px rgba(0,0,0,.45));}' +
+      '.ostg-hero-token{width:70px;height:70px;border-radius:18px;background:linear-gradient(145deg,var(--ostg-accent),var(--ostg-accent-2));font-size:2rem;box-shadow:inset 0 2px 0 rgba(255,255,255,.22),inset 0 -8px 18px rgba(0,0,0,.25);animation:ostg-hero-float 3.8s ease-in-out infinite;}' +
+      '.ostg-hero-token.hero-a{left:18%;top:18%;}.ostg-hero-token.hero-b{right:15%;top:26%;animation-delay:-1.2s;}.ostg-hero-token.hero-c{left:44%;bottom:14%;animation-delay:-2s;}' +
+      '.ostg-hero-card{width:56px;height:76px;border-radius:12px;background:linear-gradient(180deg,#fff,#cbd5e1);color:#111827;font-weight:1000;font-size:1.9rem;transform:rotate(-14deg);}' +
+      '.ostg-hero-card.card-a{left:8%;bottom:12%;}.ostg-hero-card.card-b{right:8%;bottom:10%;transform:rotate(15deg);color:var(--ostg-accent);}' +
+      '@keyframes ostg-hero-float{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-12px) rotate(4deg)}}' +
+      '.ostg-balance-card{align-self:stretch;justify-content:center;align-items:flex-start;min-width:250px;padding:16px;border-radius:16px;background:linear-gradient(180deg,rgba(250,204,21,.18),rgba(15,23,42,.54));border:1px solid rgba(250,204,21,.32);box-shadow:inset 0 1px 0 rgba(255,255,255,.12);}' +
+      '.ostg-balance-amt{font-size:clamp(1.8rem,3vw,2.8rem);line-height:1;}.ostg-balance-actions{width:100%;}.ostg-balance-actions button{min-height:34px;}' +
+      '.ostg-lobby-strip{position:relative;z-index:1;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(176px,1fr);gap:10px;overflow-x:auto;padding:2px 2px 12px;margin-bottom:8px;scroll-snap-type:x mandatory;}' +
+      '.ostg-lobby-game{scroll-snap-align:start;display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;align-items:center;gap:4px 10px;min-height:86px;padding:12px;border-radius:14px;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.035));border:1px solid rgba(255,255,255,.12);color:#e5e7eb;text-align:left;cursor:pointer;transition:transform .16s ease,border-color .16s ease,background .16s ease;}' +
+      '.ostg-lobby-game:hover,.ostg-lobby-game.is-active{transform:translateY(-2px);border-color:var(--ostg-accent);background:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,.05));box-shadow:0 14px 34px rgba(0,0,0,.28);}' +
+      '.ostg-lobby-icon{grid-row:1/3;width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--ostg-accent),var(--ostg-accent-2));font-size:1.35rem;box-shadow:inset 0 -8px 16px rgba(0,0,0,.2);}' +
+      '.ostg-lobby-game b{display:block;color:#fff;font-size:14px;}.ostg-lobby-game em{display:block;color:#94a3b8;font-size:11px;font-style:normal;font-weight:700;}.ostg-lobby-game strong{grid-column:2;color:#fde68a;font-size:11px;text-transform:uppercase;letter-spacing:.06em;}' +
+      '.ostg-tabs{position:relative;z-index:1;margin-bottom:12px;padding:8px;border:1px solid rgba(255,255,255,.1);border-radius:14px;background:rgba(2,6,23,.42);}' +
+      '.ostg-tab{border-radius:10px;padding:9px 13px;background:rgba(255,255,255,.04);border:1px solid transparent;color:#cbd5e1;}.ostg-tab:hover{background:rgba(255,255,255,.08);}.ostg-tab.is-active{background:linear-gradient(135deg,var(--ostg-accent),var(--ostg-accent-2));color:#031018;border-color:rgba(255,255,255,.28);box-shadow:0 8px 22px rgba(0,0,0,.3);}' +
+      '.ostg-stage{position:relative;z-index:1;border-radius:18px;padding:12px;background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.025));border:1px solid rgba(255,255,255,.09);}' +
+      '.ostg-game{border-radius:16px;padding:14px;background:linear-gradient(180deg,rgba(15,23,42,.68),rgba(2,6,23,.82));border:1px solid rgba(255,255,255,.1);box-shadow:inset 0 1px 0 rgba(255,255,255,.07);}' +
+      '.ostg-game-hero{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;min-height:106px;padding:14px;border-radius:14px;background:linear-gradient(135deg,color-mix(in srgb,var(--ostg-accent) 24%,transparent),rgba(2,6,23,.42));border:1px solid color-mix(in srgb,var(--ostg-accent) 36%,transparent);overflow:hidden;}' +
+      '.ostg-game-hero-art{position:relative;width:92px;height:76px;border-radius:18px;background:linear-gradient(135deg,var(--ostg-accent),var(--ostg-accent-2));display:flex;align-items:center;justify-content:center;font-size:2.5rem;box-shadow:inset 0 2px 0 rgba(255,255,255,.22),inset 0 -12px 24px rgba(0,0,0,.25);}' +
+      '.ostg-game-hero-art span{animation:ostg-hero-float 3.2s ease-in-out infinite;}.ostg-game-hero-art i{position:absolute;width:10px;height:10px;border-radius:3px;background:#fff;opacity:.75;animation:ostg-chip-sweep 2.6s linear infinite;}.ostg-game-hero-art i:nth-child(2){left:12px;top:12px;animation-delay:-.7s}.ostg-game-hero-art i:nth-child(3){right:14px;top:20px;animation-delay:-1.4s}.ostg-game-hero-art i:nth-child(4){left:36px;bottom:14px;animation-delay:-2s}' +
+      '@keyframes ostg-chip-sweep{0%{transform:translateY(0) rotate(0);opacity:.18}50%{opacity:.9}100%{transform:translateY(-18px) rotate(180deg);opacity:.18}}' +
+      '.ostg-game-hero-text span{display:block;color:#bfdbfe;font-size:11px;text-transform:uppercase;letter-spacing:.12em;font-weight:900;}.ostg-game-hero-text h4{margin:3px 0 3px;color:#fff;font-size:clamp(1.5rem,3vw,2.4rem);letter-spacing:0;}.ostg-game-hero-text p{margin:0;color:#cbd5e1;font-size:13px;font-weight:700;}' +
+      '.ostg-game-hero-mults{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;}.ostg-game-hero-mults b{min-width:44px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:rgba(2,6,23,.65);border:1px solid rgba(255,255,255,.14);color:#f8fafc;font-size:13px;}' +
+      '.ostg-controls{border-radius:14px;background:rgba(2,6,23,.58);border-color:rgba(255,255,255,.12);box-shadow:inset 0 1px 0 rgba(255,255,255,.06);}.ostg-controls input,.ostg-controls select{min-height:40px;border-radius:10px;background:#050b17;border-color:rgba(255,255,255,.16);}.ostg-controls input:focus,.ostg-controls select:focus{outline:2px solid color-mix(in srgb,var(--ostg-accent) 65%,transparent);outline-offset:1px;}' +
+      '.ostg-btn{min-height:40px;border-radius:10px;background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.15);color:#e5e7eb;transition:transform .12s ease,filter .12s ease,box-shadow .12s ease;}.ostg-btn:hover:not(:disabled){transform:translateY(-1px);filter:brightness(1.08);box-shadow:0 10px 22px rgba(0,0,0,.24);}.ostg-btn-primary{background:linear-gradient(135deg,var(--ostg-accent),var(--ostg-accent-2));color:#031018;}.ostg-btn-cash{background:linear-gradient(135deg,#facc15,#fb923c);color:#1a1000;}' +
+      '.ostg-bet-tools{display:flex;align-items:end;gap:6px;flex-wrap:wrap;min-width:min(100%,330px);}.ostg-bet-tools span{flex-basis:100%;color:#94a3b8;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.07em;}.ostg-bet-tools button{min-height:32px;padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.07);color:#e5e7eb;font-weight:900;cursor:pointer;}.ostg-bet-tools button:hover{background:linear-gradient(135deg,var(--ostg-accent),var(--ostg-accent-2));color:#031018;}' +
+      '.ostg-status{border:1px solid rgba(255,255,255,.1);background:rgba(2,6,23,.62);font-weight:700;color:#e2e8f0;}' +
+      '.ostg-board-5x5{max-width:560px;gap:10px;padding:12px;border-radius:16px;background:linear-gradient(135deg,rgba(34,197,94,.11),rgba(56,189,248,.08));border:1px solid rgba(255,255,255,.1);}.ostg-tile{border-radius:12px;background:linear-gradient(145deg,#26364f,#0b1220);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),inset 0 -10px 20px rgba(0,0,0,.28),0 10px 24px rgba(0,0,0,.18);}.ostg-tile:hover:not(:disabled){transform:translateY(-3px) scale(1.03);border-color:var(--ostg-accent);}' +
+      '.ostg-crash-stage,.ostg-plinko-stage,.ostg-limbo-stage,.ostg-hilo-stage,.ostg-wheel-stage,.ostg-coin-stage,.ostg-world-stage{border-radius:16px;border:1px solid rgba(255,255,255,.12);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 18px 44px rgba(0,0,0,.24);}' +
+      '.ostg-crash-stage{background:linear-gradient(180deg,#071324,#020617);}.ostg-crash-mult{padding:8px 12px;border-radius:12px;background:rgba(2,6,23,.58);border:1px solid rgba(255,255,255,.12);}' +
+      '.ostg-dice-bar{height:36px;border:1px solid rgba(255,255,255,.18);box-shadow:inset 0 0 18px rgba(0,0,0,.32);}.ostg-dice-marker{width:5px;box-shadow:0 0 18px #fff,0 0 28px var(--ostg-accent);}.ostg-dice-result{font-size:clamp(3rem,8vw,5.6rem);text-shadow:0 0 32px color-mix(in srgb,var(--ostg-accent) 56%,transparent);}' +
+      '.ostg-plinko-stage{background:linear-gradient(180deg,rgba(250,204,21,.11),rgba(2,6,23,.78));overflow:hidden;}.ostg-plinko-stage canvas{max-height:460px;}' +
+      '.ostg-limbo-stage{min-height:280px;background:linear-gradient(135deg,rgba(167,139,250,.22),rgba(56,189,248,.08),rgba(2,6,23,.84));}.ostg-limbo-mult{font-size:clamp(4rem,12vw,7rem);}' +
+      '.ostg-hilo-stage{background:linear-gradient(135deg,rgba(251,113,133,.18),rgba(250,204,21,.1),rgba(2,6,23,.84));}.ostg-card{box-shadow:0 18px 42px rgba(0,0,0,.36),0 0 24px color-mix(in srgb,var(--ostg-accent) 24%,transparent);}' +
+      '.ostg-wheel-stage{padding:12px;background:linear-gradient(135deg,rgba(251,113,133,.14),rgba(250,204,21,.09),rgba(2,6,23,.84));}.ostg-coin-stage{background:linear-gradient(135deg,rgba(250,204,21,.16),rgba(249,115,22,.1),rgba(2,6,23,.84));}' +
+      '.ostg-keno-grid,.ostg-tower-board,.ostg-scratch-grid,.ostg-slot-grid,.ostg-table-stage,.ostg-video-hand,.ostg-world-stage{background-image:linear-gradient(135deg,color-mix(in srgb,var(--ostg-accent) 15%,transparent),rgba(2,6,23,.82));}' +
+      '.ostg-world-stage.is-resolving{overflow:hidden;}.ostg-resolve-machine{position:relative;display:grid;gap:12px;place-items:center;min-width:min(100%,480px);padding:20px;border-radius:18px;background:rgba(2,6,23,.58);border:1px solid rgba(255,255,255,.14);}.ostg-resolve-machine strong{color:#fff;font-size:18px;letter-spacing:.04em;text-transform:uppercase;}.ostg-resolve-reels{display:grid;grid-template-columns:repeat(3,minmax(64px,1fr));gap:10px;width:min(100%,360px);}.ostg-resolve-reels span{height:82px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#f8fafc,#cbd5e1);color:#111827;font-size:clamp(1.4rem,6vw,2.6rem);font-weight:1000;animation:ostg-reel-bounce .52s ease-in-out infinite;box-shadow:0 12px 24px rgba(0,0,0,.32);}.ostg-resolve-reels span:nth-child(2){animation-delay:.08s}.ostg-resolve-reels span:nth-child(3){animation-delay:.16s}.ostg-resolve-line{width:min(100%,420px);height:5px;border-radius:999px;background:linear-gradient(90deg,var(--ostg-accent),var(--ostg-accent-2),#facc15);animation:ostg-resolve-scan .76s ease-in-out infinite alternate;}' +
+      '@keyframes ostg-reel-bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}@keyframes ostg-resolve-scan{0%{transform:scaleX(.28);opacity:.55}100%{transform:scaleX(1);opacity:1}}' +
+      '.ostg-history{position:relative;z-index:1;border:1px solid rgba(255,255,255,.1);background:rgba(2,6,23,.46);}.ostg-mult-pill{min-height:24px;display:inline-flex;align-items:center;}' +
+      '@media (max-width:980px){.ostg-casino-hero{grid-template-columns:1fr 1fr}.ostg-balance-card{grid-column:1/-1}.ostg-hero-scene{min-height:132px}}' +
+      '@media (max-width:700px){.ostg-casino-hero{grid-template-columns:1fr;padding:14px}.ostg-hero-scene{min-height:118px}.ostg-lobby-strip{grid-auto-columns:minmax(150px,78vw)}.ostg-game-hero{grid-template-columns:1fr}.ostg-game-hero-mults{justify-content:flex-start}.ostg-game-hero-art{width:82px;height:68px}.ostg-stage{padding:8px}.ostg-game{padding:10px}.ostg-bet-tools{width:100%}.ostg-bet-tools button{flex:1 1 58px}.ostg-resolve-reels{grid-template-columns:repeat(3,minmax(0,1fr))}}';
     document.head.appendChild(st);
   }
 
