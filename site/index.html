@@ -16,18 +16,22 @@
   <meta property="og:site_name" content="OST Token">
   <meta property="og:image" content="https://nachogtavl-collab.github.io/ost-token/favicon.svg">
   <meta name="robots" content="index, follow">
-  <meta name="theme-color" content="#0a0a0a">
+  <meta name="theme-color" content="#00d4ff">
+  <meta name="application-name" content="OST">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="OST">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="canonical" href="https://nachogtavl-collab.github.io/ost-token/">
+  <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <link rel="apple-touch-icon" href="favicon.svg">
+  <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Egyptian+Hieroglyphs&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="style.css?v=62">
+  <link rel="stylesheet" href="style.css?v=63">
   <link rel="stylesheet" href="mobile.css?v=1">
   <link rel="stylesheet" href="polish.css?v=1">
   <link rel="stylesheet" href="compartments.css?v=1">
@@ -2746,6 +2750,19 @@
       <div class="manifesto">
         <p class="manifesto-lead" data-i18n="offline.lead">Transactions at the speed of light - even when the lights are off.</p>
         <p data-i18n="offline.text">Imagine handing someone a banknote. No bank. No internet. Just two people and value changing hands. OST brings that to the digital world.</p>
+      </div>
+
+      <div class="offline-install-card sr" id="offlineInstallCard">
+        <div class="offline-install-mark" aria-hidden="true"><span>&#9673;</span></div>
+        <div class="offline-install-copy">
+          <p class="offline-install-eyebrow">OST Offline App</p>
+          <h3>Carry OST Without Internet</h3>
+          <p>Install once while connected. The OST vision, guides, wallet education, fair games, and survival tools stay available from this device when the network disappears.</p>
+        </div>
+        <div class="offline-install-actions">
+          <button class="btn btn-primary offline-install-btn" id="install-ost-btn" type="button" hidden>Install OST App</button>
+          <span class="offline-install-status" id="ostPwaStatus" role="status">Offline cache preparing</span>
+        </div>
       </div>
 
       <div class="offline-grid">
@@ -5477,5 +5494,121 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="i18n-runtime.js?v=1"></script>
   <script src="devnet-rescue.js?v=4"></script>
   <script src="launchpad-trenches.js?v=2"></script>
+  <script>
+    (function () {
+      var deferredPrompt = null;
+      var installBtn = null;
+      var statusEl = null;
+
+      function whenReady(fn) {
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, { once: true });
+        else fn();
+      }
+
+      function pwaBasePath() {
+        return window.location.pathname.indexOf('/ost-token/') === 0 ? '/ost-token/' : '/';
+      }
+
+      function setStatus(message) {
+        if (statusEl) statusEl.textContent = message;
+      }
+
+      function collectOfflineAssetUrls() {
+        var urls = [];
+        Array.prototype.forEach.call(document.images || [], function (img) {
+          var src = img.currentSrc || img.src;
+          if (src) urls.push(src);
+        });
+        Array.prototype.forEach.call(document.querySelectorAll('video[poster], source[src], link[rel="stylesheet"], script[src]'), function (node) {
+          var src = node.getAttribute('poster') || node.src || node.href;
+          if (src) urls.push(src);
+        });
+        return Array.from(new Set(urls)).filter(function (url) {
+          return /^https?:/i.test(url) && url.indexOf('a-ads.com') === -1 && url.indexOf('click.a-ads.com') === -1;
+        }).slice(0, 180);
+      }
+
+      function warmOfflineAssets() {
+        if (!('caches' in window)) return;
+        caches.open('ost-pwa-runtime-v1').then(function (cache) {
+          collectOfflineAssetUrls().reduce(function (chain, url) {
+            return chain.then(function () {
+              return fetch(url, { mode: 'no-cors', cache: 'force-cache' })
+                .then(function (response) {
+                  if (response && (response.ok || response.type === 'opaque')) return cache.put(url, response.clone());
+                })
+                .catch(function () {});
+            });
+          }, Promise.resolve());
+        }).catch(function () {});
+      }
+
+      function scheduleOfflineWarmup() {
+        if ('requestIdleCallback' in window) window.requestIdleCallback(warmOfflineAssets, { timeout: 5000 });
+        else window.setTimeout(warmOfflineAssets, 1200);
+      }
+
+      window.addEventListener('beforeinstallprompt', function (event) {
+        event.preventDefault();
+        deferredPrompt = event;
+        whenReady(function () {
+          installBtn = installBtn || document.getElementById('install-ost-btn');
+          statusEl = statusEl || document.getElementById('ostPwaStatus');
+          if (installBtn) installBtn.hidden = false;
+          setStatus('Install available for offline access');
+        });
+      });
+
+      window.addEventListener('appinstalled', function () {
+        deferredPrompt = null;
+        if (installBtn) installBtn.hidden = true;
+        setStatus('OST is installed and offline ready');
+      });
+
+      whenReady(function () {
+        installBtn = document.getElementById('install-ost-btn');
+        statusEl = document.getElementById('ostPwaStatus');
+
+        if (installBtn) {
+          installBtn.addEventListener('click', function () {
+            if (!deferredPrompt) {
+              setStatus('Offline access is ready from this browser');
+              return;
+            }
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then(function (choice) {
+              if (choice && choice.outcome === 'accepted') installBtn.hidden = true;
+              deferredPrompt = null;
+            });
+          });
+        }
+
+        if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
+          setStatus('OST is running as an offline app');
+        } else {
+          setStatus('One online load prepares offline access');
+        }
+
+        if (!('serviceWorker' in navigator)) {
+          setStatus('Offline install is not supported in this browser');
+          return;
+        }
+
+        var basePath = pwaBasePath();
+        navigator.serviceWorker.register(basePath + 'sw.js', { scope: basePath })
+          .then(function () {
+            setStatus('Preparing offline access');
+            return navigator.serviceWorker.ready;
+          })
+          .then(function () {
+            setStatus('Offline access ready on this device');
+            scheduleOfflineWarmup();
+          })
+          .catch(function () {
+            setStatus('Offline install is blocked in this browser');
+          });
+      });
+    })();
+  </script>
 </body>
 </html>

@@ -1,0 +1,28 @@
+{
+  "name": "OST - The Next Step After Bitcoin",
+  "short_name": "OST",
+  "description": "Decentralized digital cash and uncensored internet for 8 billion humans. Works offline after install.",
+  "start_url": "/ost-token/",
+  "id": "/ost-token/",
+  "scope": "/ost-token/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#00d4ff",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/ost-token/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/ost-token/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["finance", "social", "education", "utilities"],
+  "lang": "en"
+}
