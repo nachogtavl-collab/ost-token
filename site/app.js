@@ -14254,6 +14254,27 @@
       renderPredictionBoard();
     }
 
+    function refreshOstNativePredictionMarkets() {
+      if (typeof window.buildOstNativeMarkets !== 'function') return false;
+      var native;
+      try {
+        native = window.buildOstNativeMarkets();
+      } catch (error) {
+        console.warn('[OST native markets refresh]', error);
+        return false;
+      }
+      if (!Array.isArray(native) || !native.length) return false;
+      var pinnedNative = native.filter(function(market) { return market && market.isOstNative; });
+      if (!pinnedNative.length) return false;
+      state.markets = pinnedNative.concat(state.markets.filter(function(market) {
+        return !(market && (market.isOstNative || String(market.id || '').indexOf('ost-btc5m-') === 0));
+      }));
+      state.lastUpdated = new Date();
+      try { window.__predictionState = state; } catch (_) {}
+      renderPredictionBoard();
+      return true;
+    }
+
     function loadDirectPredictionMarkets() {
       // Browser-side Kalshi fetch is permanently CORS-blocked from
       // github.io, so we only attempt Polymarket Gamma directly here.
@@ -14581,9 +14602,9 @@
       renderPredictionLedger();
     });
     loadPredictionMarkets();
-    loadTimer = window.setInterval(loadPredictionMarkets, 15000);
+    loadTimer = window.setInterval(loadPredictionMarkets, 10000);
     refreshPredictionOrderResolutions();
-    resolutionTimer = window.setInterval(refreshPredictionOrderResolutions, 300000);
+    resolutionTimer = window.setInterval(refreshPredictionOrderResolutions, 30000);
     // Re-sync wallet balance every 30 s so displayed OST funds stay accurate.
     var balancePollTimer = window.setInterval(syncTradeWallet, 30000);
     // Also refresh when a wallet connects/switches.
@@ -14609,6 +14630,9 @@
       state.orderHistory = readPredictionOrderRecords();
       renderPredictionLedger();
       refreshPredictionOrderResolutions();
+    });
+    window.addEventListener('ost:btc-spot', function() {
+      refreshOstNativePredictionMarkets();
     });
 
     window.addEventListener('beforeunload', function() {

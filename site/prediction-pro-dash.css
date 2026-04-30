@@ -69,9 +69,10 @@
 .ost-pro-tile__body { display: flex; flex-direction: column; gap: 10px; flex: 1; min-height: 0; position: relative; z-index: 1; }
 .ost-pro-tile__foot { display: flex; gap: 8px; position: relative; z-index: 1; }
 .ost-pro-tile__stats {
-  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 12px;
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 12px;
   margin: 0; padding: 0;
 }
+@media (max-width: 520px) { .ost-pro-tile__stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .ost-pro-tile__stats > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .ost-pro-tile__stats dt { font-size: 10px; opacity: 0.55; letter-spacing: 0.05em; text-transform: uppercase; }
 .ost-pro-tile__stats dd { margin: 0; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -89,6 +90,29 @@
 .ost-pro-spark {
   width: 100%; height: 50px; color: #7ce6a8; display: block;
 }
+
+.ost-pro-odds {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.ost-pro-odds span {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.045);
+  border: 1px solid rgba(255,255,255,0.08);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.ost-pro-odds span:first-child { color: #7ce6a8; }
+.ost-pro-odds span:last-child { color: #ff7c8a; }
+.ost-pro-odds strong { font-size: 14px; font-variant-numeric: tabular-nums; letter-spacing: 0; }
 
 .ost-pro-bet {
   flex: 1; appearance: none; border: 0; border-radius: 10px;

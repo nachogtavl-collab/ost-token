@@ -67,24 +67,184 @@
   // ---------------------------------------------------------------------------
   var FIVE_MIN_MS = 5 * 60 * 1000;
   var BTC_PRICE_URL = 'https://api.coinbase.com/v2/prices/BTC-USD/spot';
-  var btcLastTick = { ts: 0, price: 0 };
+  var BTC_REFRESH_MS = 2500;
+  var BTC_FEED_TIMEOUT_MS = 3000;
+  var BTC_MAX_SERIES = 240;
+  var BTC_PRICE_FEEDS = [
+    {
+      name: 'coinbase',
+      url: BTC_PRICE_URL,
+      pick: function (j) { return j && j.data && Number(j.data.amount); }
+    },
+    {
+      name: 'binance',
+      url: 'https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT',
+      pick: function (j) { return j && Number(j.price); }
+    },
+    {
+      name: 'kraken',
+      url: 'https://api.kraken.com/0/public/Ticker?pair=XBTUSD',
+      pick: function (j) {
+        try {
+          var key = Object.keys(j && j.result || {})[0];
+          return Number(j.result[key].c[0]);
+        } catch (e) { return NaN; }
+      }
+    }
+  ];
+  var btcLastTick = { ts: 0, price: 0, source: '' };
+  var btcPrevTick = { ts: 0, price: 0, source: '' };
+  var btcSeries = [];
+  var btcLastOdds = { roundId: '', yes: 0.5, previousYes: 0.5 };
 
-  function fetchBtcSpot() {
-    return fetch(BTC_PRICE_URL, { headers: { accept: 'application/json' } })
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (j) {
-        var p = j && j.data && Number(j.data.amount);
-        if (Number.isFinite(p) && p > 0) {
-          btcLastTick = { ts: Date.now(), price: p };
-        }
-        return btcLastTick;
-      })
-      .catch(function () { return btcLastTick; });
+  function clampNumber(value, min, max) {
+    return Math.min(max, Math.max(min, value));
   }
 
-  // Periodic poll so the price chart and the close-out have fresh data
-  setInterval(fetchBtcSpot, 15 * 1000);
-  fetchBtcSpot();
+  function formatUsd(value) {
+    var number = Number(value);
+    if (!Number.isFinite(number) || number <= 0) return '$--';
+    return '$' + number.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function formatSignedUsd(value) {
+    var number = Number(value);
+    if (!Number.isFinite(number)) return '--';
+    return (number >= 0 ? '+' : '-') + formatUsd(Math.abs(number));
+  }
+
+  function getBtcFeeds() {
+    var feeds = BTC_PRICE_FEEDS.slice();
+    var base = ostApiBase();
+    if (base) {
+      feeds.unshift({
+        name: 'ost-edge',
+        url: base + '/btc/price',
+        pick: function (j) { return j && Number(j.price || j.amount || j.btcUsd); }
+      });
+    }
+    return feeds;
+  }
+
+  function fetchWithTimeout(url, opts, timeoutMs) {
+    var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var timeoutId = controller ? setTimeout(function () { controller.abort(); }, timeoutMs || BTC_FEED_TIMEOUT_MS) : null;
+    return fetch(url, Object.assign({ cache: 'no-store', signal: controller ? controller.signal : undefined }, opts || {}))
+      .then(function (response) {
+        if (timeoutId) clearTimeout(timeoutId);
+        return response;
+      })
+      .catch(function (error) {
+        if (timeoutId) clearTimeout(timeoutId);
+        throw error;
+      });
+  }
+
+  function rememberBtcTick(price, source) {
+    var p = Number(price);
+    if (!Number.isFinite(p) || p <= 1000) return btcLastTick;
+    if (btcLastTick.price) btcPrevTick = btcLastTick;
+    btcLastTick = { ts: Date.now(), price: p, source: source || 'btc' };
+    btcSeries.push({ ts: btcLastTick.ts, price: p, source: btcLastTick.source });
+    if (btcSeries.length > BTC_MAX_SERIES) btcSeries = btcSeries.slice(-BTC_MAX_SERIES);
+    try { window.dispatchEvent(new CustomEvent('ost:btc-spot', { detail: Object.assign({}, btcLastTick) })); } catch (e) {}
+    return btcLastTick;
+  }
+
+  function fetchBtcSpot(options) {
+    var force = options && options.force;
+    if (!force && btcLastTick.price && Date.now() - btcLastTick.ts < 700) {
+      return Promise.resolve(Object.assign({}, btcLastTick));
+    }
+    var attempts = getBtcFeeds().map(function (feed) {
+      return fetchWithTimeout(feed.url, { headers: { accept: 'application/json' }, mode: 'cors' }, BTC_FEED_TIMEOUT_MS)
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error(feed.name + ' ' + r.status)); })
+        .then(function (j) {
+          var price = feed.pick(j);
+          if (!Number.isFinite(price) || price <= 1000) throw new Error(feed.name + ' empty price');
+          return { price: price, source: feed.name };
+        });
+    });
+    var race = Promise.any
+      ? Promise.any(attempts)
+      : attempts.reduce(function (chain, attempt) { return chain.catch(function () { return attempt; }); }, Promise.reject(new Error('no btc feed')));
+    return race
+      .then(function (result) { return Object.assign({}, rememberBtcTick(result.price, result.source)); })
+      .catch(function () { return Object.assign({}, btcLastTick, { stale: !!btcLastTick.price }); });
+  }
+
+  function estimateRecentBtcVolPct() {
+    var cutoff = Date.now() - 45000;
+    var recent = btcSeries.filter(function (point) { return point.ts >= cutoff && point.price > 0; });
+    if (recent.length < 3) return 0.025;
+    var returns = [];
+    for (var i = 1; i < recent.length; i += 1) {
+      var prev = recent[i - 1].price;
+      var next = recent[i].price;
+      if (prev > 0 && next > 0) returns.push(Math.abs((next - prev) / prev) * 100);
+    }
+    if (!returns.length) return 0.025;
+    var avg = returns.reduce(function (sum, value) { return sum + value; }, 0) / returns.length;
+    var prices = recent.map(function (point) { return point.price; });
+    var span = ((Math.max.apply(null, prices) - Math.min.apply(null, prices)) / recent[recent.length - 1].price) * 100;
+    return Math.max(0.018, Math.min(0.45, avg * 8 + span * 0.55));
+  }
+
+  function estimateBtcMomentumPct() {
+    if (btcSeries.length < 2) return 0;
+    var latest = btcSeries[btcSeries.length - 1];
+    var cutoff = latest.ts - 15000;
+    var anchor = btcSeries[0];
+    for (var i = btcSeries.length - 1; i >= 0; i -= 1) {
+      if (btcSeries[i].ts <= cutoff) { anchor = btcSeries[i]; break; }
+    }
+    if (!anchor || !anchor.price || !latest.price) return 0;
+    return ((latest.price - anchor.price) / anchor.price) * 100;
+  }
+
+  function computeBtcOdds(openPrice, livePrice, boundaries) {
+    var roundId = 'ost-btc5m-' + boundaries.openAt;
+    var previousYes = btcLastOdds.roundId === roundId && Number.isFinite(btcLastOdds.yes)
+      ? btcLastOdds.yes
+      : 0.5;
+    var yes = 0.5;
+    var delta = Number(livePrice) - Number(openPrice);
+    var deltaPct = Number.isFinite(delta) && openPrice > 0 ? (delta / openPrice) * 100 : 0;
+    if (openPrice > 0 && livePrice > 0) {
+      var msLeft = clampNumber(boundaries.closeAt - Date.now(), 0, FIVE_MIN_MS);
+      var timeLeftRatio = msLeft / FIVE_MIN_MS;
+      var volatilityPct = estimateRecentBtcVolPct();
+      var momentumPct = estimateBtcMomentumPct();
+      var scale = Math.max(0.012, volatilityPct * Math.sqrt(Math.max(timeLeftRatio, 0.08)) * 2.4);
+      var score = clampNumber((deltaPct + momentumPct * 0.22) / scale, -4.5, 4.5);
+      yes = 1 / (1 + Math.exp(-score));
+      var confidence = 0.70 + (1 - timeLeftRatio) * 0.25;
+      yes = 0.5 + (yes - 0.5) * confidence;
+      if (Math.abs(delta) < 0.25) yes = 0.5 + (yes - 0.5) * 0.35;
+      yes = clampNumber(yes, 0.03, 0.97);
+    }
+    btcLastOdds = { roundId: roundId, yes: yes, previousYes: previousYes };
+    return {
+      yes: yes,
+      no: 1 - yes,
+      previousYes: previousYes,
+      delta: delta,
+      deltaPct: deltaPct,
+      volatilityPct: estimateRecentBtcVolPct(),
+      momentumPct: estimateBtcMomentumPct()
+    };
+  }
+
+  function pollBtcMarket() {
+    fetchBtcSpot({ force: true }).then(function () {
+      try { captureRoundOpenIfNeeded(buildFiveMinBtcMarket()); } catch (e) {}
+      settleClosedRounds();
+    });
+  }
+
+  // Periodic poll so cards, charts, and close-outs all share fresh BTC data.
+  setInterval(pollBtcMarket, BTC_REFRESH_MS);
+  pollBtcMarket();
 
   function currentRoundBoundaries() {
     // Round buckets are aligned to the 5-min wall clock so ALL users see the
@@ -97,28 +257,31 @@
 
   function buildFiveMinBtcMarket(refPrice) {
     var b = currentRoundBoundaries();
-    var openPrice = refPrice || btcLastTick.price || 0;
+    var roundRecord = readRounds()[String(b.openAt)] || {};
+    var livePrice = btcLastTick.price || refPrice || roundRecord.openPrice || 0;
+    var openPrice = Number(roundRecord.openPrice) || refPrice || livePrice || 0;
+    var odds = computeBtcOdds(openPrice, livePrice, b);
     var roundId = 'ost-btc5m-' + b.openAt;
-    // Yes side: BTC price at close > price at open. Anchor 50/50 with mild
-    // momentum bias from the last 30s of price history.
-    var yesPrice = 0.5;
+    var yesPct = (odds.yes * 100).toFixed(1) + '%';
+    var noPct = (odds.no * 100).toFixed(1) + '%';
+    var sourceLabel = btcLastTick.source ? btcLastTick.source.toUpperCase() : 'BTC FEED';
     return {
       source: 'ost',
       sourceLabel: 'OST 5-min BTC',
       id: roundId,
       title: '5-min BTC: will price be UP at ' + new Date(b.closeAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + '?',
-      detail: 'Native OST market, settles automatically every 5 minutes from Coinbase BTC-USD spot. Open price: $' + (openPrice ? openPrice.toFixed(2) : '—') + '.',
+      detail: 'Native OST market priced from live BTC-USD spot. Open ' + (openPrice ? formatUsd(openPrice) : '$--') + ' · live ' + (livePrice ? formatUsd(livePrice) : '$--') + ' · ' + formatSignedUsd(odds.delta) + ' from open via ' + sourceLabel + '.',
       yesLabel: 'YES (UP)',
-      yesValue: '50%',
-      yesPriceNumber: yesPrice,
-      noLabel: 'NO (DOWN)',
-      noValue: '50%',
-      noPriceNumber: 1 - yesPrice,
+      yesValue: yesPct,
+      yesPriceNumber: odds.yes,
+      noLabel: 'NO (DOWN/SAME)',
+      noValue: noPct,
+      noPriceNumber: odds.no,
       volumeLabel: 'Round',
       volumeValue: '5 min',
       volumeNumber: 1,
       secondaryMetricLabel: 'Open',
-      secondaryMetricValue: openPrice ? '$' + openPrice.toFixed(2) : '—',
+      secondaryMetricValue: openPrice ? formatUsd(openPrice) : '--',
       secondaryMetricNumber: openPrice,
       closeText: 'Closes ' + new Date(b.closeAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       closeLabel: 'Closes',
@@ -134,14 +297,28 @@
       sortValue: Number.MAX_SAFE_INTEGER, // pin to the top
       createdAtMs: b.openAt,
       closeAtMs: b.closeAt,
-      previousYesPriceNumber: yesPrice,
-      lastPriceNumber: yesPrice,
+      previousYesPriceNumber: odds.previousYes,
+      lastPriceNumber: odds.yes,
       oneWeekPriceChangeNumber: NaN,
       oneMonthPriceChangeNumber: NaN,
       attentionScore: 999,
       isBreaking: true,
       isOstNative: true,
-      meta: { kind: 'btc5m', openPrice: openPrice, openAt: b.openAt, closeAt: b.closeAt }
+      meta: {
+        kind: 'btc5m',
+        openPrice: openPrice,
+        livePrice: livePrice,
+        openAt: b.openAt,
+        closeAt: b.closeAt,
+        priceDelta: odds.delta,
+        priceDeltaPct: odds.deltaPct,
+        yesPriceNumber: odds.yes,
+        noPriceNumber: odds.no,
+        priceSource: btcLastTick.source || '',
+        updatedAt: btcLastTick.ts || 0,
+        volatilityPct: odds.volatilityPct,
+        momentumPct: odds.momentumPct
+      }
     };
   }
 
@@ -213,11 +390,20 @@
     if (!market || !market.isOstNative || !market.meta || market.meta.kind !== 'btc5m') return;
     var rounds = readRounds();
     var key = String(market.meta.openAt);
+    var openPrice = Number(market.meta.openPrice) || btcLastTick.price || 0;
     if (!rounds[key]) {
-      rounds[key] = { openPrice: btcLastTick.price || 0, openAt: market.meta.openAt, closeAt: market.meta.closeAt };
+      rounds[key] = {
+        openPrice: openPrice,
+        openAt: market.meta.openAt,
+        closeAt: market.meta.closeAt,
+        openPriceTs: btcLastTick.ts || Date.now(),
+        openPriceSource: btcLastTick.source || ''
+      };
       writeRounds(rounds);
     } else if (!rounds[key].openPrice && btcLastTick.price) {
       rounds[key].openPrice = btcLastTick.price;
+      rounds[key].openPriceTs = btcLastTick.ts || Date.now();
+      rounds[key].openPriceSource = btcLastTick.source || '';
       writeRounds(rounds);
     }
   }
@@ -227,7 +413,9 @@
     try { captureRoundOpenIfNeeded(buildFiveMinBtcMarket()); } catch (e) {}
   }, 5000);
 
-  function settleClosedRounds() {
+  var btcSettlementInFlight = false;
+
+  function finalizeClosedBtcRounds() {
     var rounds = readRounds();
     var orders = readOrders();
     var now = Date.now();
@@ -236,10 +424,33 @@
       var r = rounds[key];
       if (r.settled) return;
       if (now < r.closeAt + 1000) return;
-      // Need a close price — use the most recent BTC tick we have
-      r.closePrice = r.closePrice || btcLastTick.price || r.openPrice;
+      var openPrice = Number(r.openPrice);
+      var closePrice = Number(btcLastTick.price);
+      if (!Number.isFinite(openPrice) || openPrice <= 0) {
+        r.settlementStatus = 'waiting-open-price';
+        changed = true;
+        return;
+      }
+      if (!Number.isFinite(closePrice) || closePrice <= 0) {
+        r.settlementStatus = 'waiting-btc-feed';
+        changed = true;
+        return;
+      }
+      var tickIsNearClose = btcLastTick.ts >= r.closeAt - 15000;
+      var roundIsOld = now - r.closeAt > 120000;
+      if (!tickIsNearClose && !roundIsOld) {
+        r.settlementStatus = 'waiting-close-tick';
+        changed = true;
+        return;
+      }
+      r.closePrice = r.closePrice || closePrice;
+      r.closePriceTs = btcLastTick.ts || now;
+      r.closePriceSource = btcLastTick.source || '';
       r.settled = true;
-      r.yesWon  = r.closePrice > r.openPrice;
+      r.settledAt = now;
+      r.settlementStatus = 'settled';
+      r.yesWon  = r.closePrice > openPrice;
+      r.tied = r.closePrice === openPrice;
       changed = true;
     });
     if (changed) writeRounds(rounds);
@@ -252,18 +463,40 @@
       var openAt = String(o.marketId.replace('ost-btc5m-', ''));
       var r = rounds[openAt];
       if (!r || !r.settled) return;
-      var won = (o.side === 'yes' && r.yesWon) || (o.side === 'no' && !r.yesWon);
+      var side = String(o.side || 'yes').toLowerCase() === 'no' ? 'no' : 'yes';
+      var won = (side === 'yes' && r.yesWon) || (side === 'no' && !r.yesWon);
       o.resolved = true;
+      o.status = won ? 'won' : 'lost';
       o.outcome = won ? 'won' : 'lost';
       o.resolvedAt = Date.now();
       o.closePrice = r.closePrice;
       o.openPrice  = r.openPrice;
+      o.finalYesPrice = r.yesWon ? 1 : 0;
+      o.finalNoPrice = r.yesWon ? 0 : 1;
+      o.settlementSource = 'ost-btc5m-' + (r.closePriceSource || 'btc-feed');
       ordersChanged = true;
     });
     if (ordersChanged) {
       writeOrders(orders);
       try { window.dispatchEvent(new CustomEvent('ost:prediction-rounds-settled')); } catch (e) {}
+      try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch (e) {}
     }
+  }
+
+  function settleClosedRounds() {
+    if (btcSettlementInFlight) return;
+    var rounds = readRounds();
+    var now = Date.now();
+    var due = Object.keys(rounds).some(function (key) {
+      var r = rounds[key];
+      return r && !r.settled && now >= Number(r.closeAt || 0) + 1000;
+    });
+    if (!due) return;
+    btcSettlementInFlight = true;
+    fetchBtcSpot({ force: true })
+      .then(finalizeClosedBtcRounds)
+      .catch(finalizeClosedBtcRounds)
+      .finally(function () { btcSettlementInFlight = false; });
   }
   setInterval(settleClosedRounds, 4000);
 
@@ -625,6 +858,7 @@
   //   OST_PREDICTION_API.subscribe(cb)                    → receive snapshots
   //   await OST_PREDICTION_API.placeBet({marketId,side,stake})
   //   OST_PREDICTION_API.btcSpot()                        → latest cached price
+  //   OST_PREDICTION_API.btcSeries()                      → recent BTC ticks
   //   OST_PREDICTION_API.fiveMinRound()                   → current btc5m round
   //   OST_PREDICTION_API.ledger()                         → user's open orders
   // ---------------------------------------------------------------------------
@@ -637,12 +871,31 @@
   setInterval(broadcast, 30000);
 
   var OST_PREDICTION_API = {
-    version: '1.0',
-    btcSpot: function () { return Promise.resolve(btcLastTick); },
+    version: '1.1',
+    btcSpot: function (options) {
+      return options && options.force
+        ? fetchBtcSpot({ force: true })
+        : Promise.resolve(Object.assign({}, btcLastTick));
+    },
+    btcSeries: function () { return btcSeries.slice(); },
     fiveMinRound: function () {
       var b = currentRoundBoundaries();
+      var market = buildFiveMinBtcMarket();
       var rounds = readRounds();
-      return Object.assign({}, rounds[String(b.openAt)] || {}, { openAt: b.openAt, closeAt: b.closeAt });
+      var rec = rounds[String(b.openAt)] || {};
+      return Object.assign({}, rec, market.meta || {}, {
+        id: market.id,
+        openAt: b.openAt,
+        closeAt: b.closeAt,
+        yesPriceNumber: market.yesPriceNumber,
+        noPriceNumber: market.noPriceNumber,
+        yesValue: market.yesValue,
+        noValue: market.noValue,
+        price: market.yesPriceNumber,
+        livePrice: market.meta && market.meta.livePrice,
+        source: market.meta && market.meta.priceSource,
+        updatedAt: market.meta && market.meta.updatedAt
+      });
     },
     markets: function () {
       // Direct fetch from Polymarket Gamma API (via relay if configured) +

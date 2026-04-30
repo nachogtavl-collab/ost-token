@@ -39,11 +39,6 @@
       pick: function (j) { return j && Number(j.price); }
     },
     {
-      name: 'coingecko',
-      url: 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd',
-      pick: function (j) { return j && j.bitcoin && Number(j.bitcoin.usd); }
-    },
-    {
       name: 'kraken',
       url: 'https://api.kraken.com/0/public/Ticker?pair=XBTUSD',
       pick: function (j) {
@@ -1060,14 +1055,37 @@
       };
       tickBtc();
       liveTimers.push(setInterval(tickBtc, 500));
+      var fetchSharedBtcTick = function () {
+        if (window.OST_PREDICTION_API && typeof window.OST_PREDICTION_API.btcSpot === 'function') {
+          return window.OST_PREDICTION_API.btcSpot({ force: true })
+            .then(function (tick) {
+              var p = tick && Number(tick.price);
+              if (!Number.isFinite(p)) throw new Error('shared BTC feed empty');
+              return { price: p, source: tick.source || '' };
+            })
+            .catch(function () {
+              return fetchBtcRace().then(function (p) { return { price: p, source: BTC_PRICE_FEEDS[BTC_FEED_INDEX].name }; });
+            });
+        }
+        return fetchBtcRace().then(function (p) { return { price: p, source: BTC_PRICE_FEEDS[BTC_FEED_INDEX].name }; });
+      };
       var fetchBtcLive = function () {
-        fetchBtcRace()
-          .then(function (p) {
+        fetchSharedBtcTick()
+          .then(function (tick) {
+            var p = tick && Number(tick.price);
             if (!Number.isFinite(p)) {
               setText(bodyEl, 'btcLive', 'feed offline');
               return;
             }
-          setText(bodyEl, 'btcLive', fmtUsd(p) + '  · ' + BTC_PRICE_FEEDS[BTC_FEED_INDEX].name);
+          var sharedRound = null;
+          try {
+            if (window.OST_PREDICTION_API && typeof window.OST_PREDICTION_API.fiveMinRound === 'function') {
+              sharedRound = window.OST_PREDICTION_API.fiveMinRound();
+            }
+          } catch (_) { sharedRound = null; }
+          if (sharedRound && Number(sharedRound.openPrice) > 0) market.meta.openPrice = Number(sharedRound.openPrice);
+          var sourceName = (sharedRound && sharedRound.source) || tick.source || BTC_PRICE_FEEDS[BTC_FEED_INDEX].name;
+          setText(bodyEl, 'btcLive', fmtUsd(p) + '  · ' + sourceName);
           // Persist open price on first tick of the round if missing.
           if (!market.meta.openPrice) {
             market.meta.openPrice = p;
@@ -1085,15 +1103,34 @@
             n.textContent = (d >= 0 ? '▲ +' : '▼ ') + fmtUsd(d) + '  (' + pct.toFixed(3) + '%)';
             n.style.color = d >= 0 ? '#7ce6a8' : '#ff7c8a';
           }
-          // Live YES/NO odds from delta sign + magnitude (0.5 + tanh(delta*100))
-          var yesProb = 0.5 + 0.5 * Math.tanh(pct * 0.6);
-          yesProb = Math.max(0.02, Math.min(0.98, yesProb));
+          var detailEl = bodyEl.querySelector('.ost-modal__detail');
+          if (detailEl) {
+            detailEl.textContent = 'Native OST market priced from live BTC-USD spot. Open ' + fmtUsd(market.meta.openPrice) + ' · live ' + fmtUsd(p) + ' · ' + (d >= 0 ? '+' : '-') + fmtUsd(Math.abs(d)) + ' from open via ' + String(sourceName || 'BTC feed').toUpperCase() + '.';
+          }
+          var yesProb = sharedRound && Number(sharedRound.yesPriceNumber);
+          if (!Number.isFinite(yesProb)) {
+            yesProb = 0.5 + 0.5 * Math.tanh(pct * 0.6);
+            yesProb = Math.max(0.02, Math.min(0.98, yesProb));
+          }
           market.yesPriceNumber = yesProb;
           market.noPriceNumber = 1 - yesProb;
           var yEl = bodyEl.querySelector('[data-bind="yesPct"]');
           var nEl2 = bodyEl.querySelector('[data-bind="noPct"]');
           if (yEl) yEl.textContent = (yesProb * 100).toFixed(1) + '%';
           if (nEl2) nEl2.textContent = ((1 - yesProb) * 100).toFixed(1) + '%';
+          try {
+            var chart = bodyEl.querySelector('[data-bind="chart"]');
+            var series = window.OST_PREDICTION_API && typeof window.OST_PREDICTION_API.btcSeries === 'function'
+              ? window.OST_PREDICTION_API.btcSeries()
+              : [];
+            var points = series.map(function (point) { return Number(point && point.price); }).filter(Number.isFinite).slice(-160);
+            if (chart && points.length > 1) {
+              chart.style.width = '100%';
+              chart.style.height = '280px';
+              drawSeries(chart, points, d >= 0 ? '#7ce6a8' : '#ff7c8a');
+              setText(bodyEl, 'chartStatus', 'live BTC · ' + points.length + ' pts · ' + fmtTime(Date.now()));
+            }
+          } catch (_) {}
           recalcProjected();
         });
       };
