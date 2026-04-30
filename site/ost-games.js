@@ -254,8 +254,33 @@
     scarab: { label: 'Scarab Spin', icon: '🪲', accent: '#facc15', accent2: '#22c55e', tag: '3x3 symbols', stat: 'Cluster pay', hero: '🪲', symbols: ['🪲', '💎', '☀'] }
   };
 
+  var GAME_ENGINE = {
+    mines: { curve: 'Manual cashout', action: 'Reveal tiles', risk: 'Mine density', edge: '99% return curve' },
+    crash: { curve: 'Live multiplier', action: 'Cash before bust', risk: 'Auto target', edge: 'Crash math' },
+    dice: { curve: 'Target slider', action: 'Roll under / over', risk: 'Win chance', edge: '99% return curve' },
+    plinko: { curve: 'Peg physics', action: 'Drop multi-ball', risk: 'Rows + volatility', edge: 'Bucket table' },
+    limbo: { curve: 'Multiplier hunt', action: 'Beat target', risk: 'Target size', edge: 'Crash math' },
+    hilo: { curve: 'Card streak', action: 'Higher / lower', risk: 'Rank odds', edge: 'Compounding ladder' },
+    wheel: { curve: 'Prize segments', action: 'Spin wheel', risk: 'Risk band', edge: 'Weighted slices' },
+    coinflip: { curve: 'Binary pick', action: 'Flip coin', risk: 'Side pick', edge: '1.98x table' },
+    keno: { curve: 'Hit table', action: 'Pick numbers', risk: 'Ticket size', edge: 'Match payouts' },
+    tower: { curve: 'Row ladder', action: 'Climb rows', risk: 'Trap columns', edge: 'Cashout ladder' },
+    double: { curve: 'Color strip', action: 'Roll strip', risk: 'Green chase', edge: '2x / 14x table' },
+    slide: { curve: 'Multiplier lane', action: 'Launch target', risk: 'Cashout target', edge: '99% curve' },
+    pump: { curve: 'Pressure ladder', action: 'Pick pump count', risk: 'Bust point', edge: 'Survival table' },
+    dragontower: { curve: 'Path tower', action: 'Clear floors', risk: 'Mode traps', edge: 'Survival table' },
+    diamonds: { curve: 'Gem groups', action: 'Reveal five', risk: 'Match density', edge: 'Group paytable' },
+    cases: { curve: 'Drop battle', action: 'Open cases', risk: 'Case tier', edge: 'Dealer duel' },
+    tome: { curve: 'Rune pages', action: 'Open pages', risk: 'Curse odds', edge: 'Survival table' },
+    scarab: { curve: 'Symbol cluster', action: 'Spin grid', risk: 'Wild mode', edge: 'Cluster paytable' }
+  };
+
   function metaFor(game) {
     return GAME_META[game] || GAME_META.mines;
+  }
+
+  function engineFor(game) {
+    return GAME_ENGINE[game] || GAME_ENGINE.mines;
   }
 
   var TEMPLATE =
@@ -466,6 +491,8 @@
   }
 
   var activeGameCleanup = null;
+  var activeGameLoadId = 0;
+  var activeGameLoadTimer = 0;
 
   function bindTabs() {
     document.querySelectorAll('#ostgTabs .ostg-tab').forEach(function (b) {
@@ -520,9 +547,45 @@
     if (c) c.textContent = meta.symbols[2];
   }
 
+  function renderGameLoading(game) {
+    var meta = metaFor(game);
+    var engine = engineFor(game);
+    return '<div class="ostg-game-loading" style="--ostg-accent:' + meta.accent + ';--ostg-accent-2:' + meta.accent2 + '">' +
+      '<div class="ostg-loader-cabinet">' +
+        '<div class="ostg-loader-reels"><span>' + meta.symbols[0] + '</span><span>' + meta.symbols[1] + '</span><span>' + meta.symbols[2] + '</span></div>' +
+        '<div class="ostg-loader-scan"></div>' +
+      '</div>' +
+      '<div class="ostg-loader-copy"><span>' + meta.tag + '</span><strong>' + meta.label + '</strong><em>' + engine.action + ' · ' + engine.risk + '</em></div>' +
+    '</div>';
+  }
+
+  function renderSelectedGame(game, stage) {
+    if (game === 'mines') renderMines(stage);
+    else if (game === 'crash') renderCrash(stage);
+    else if (game === 'dice') renderDice(stage);
+    else if (game === 'plinko') renderPlinko(stage);
+    else if (game === 'limbo') renderLimbo(stage);
+    else if (game === 'hilo') renderHiLo(stage);
+    else if (game === 'wheel') renderWheel(stage);
+    else if (game === 'coinflip') renderCoinflip(stage);
+    else if (game === 'keno') renderKeno(stage);
+    else if (game === 'tower') renderTower(stage);
+    else if (game === 'double') renderDouble(stage);
+    else if (game === 'slide') renderSlide(stage);
+    else if (game === 'pump') renderPump(stage);
+    else if (game === 'dragontower') renderDragonTower(stage);
+    else if (game === 'diamonds') renderDiamonds(stage);
+    else if (game === 'cases') renderCaseBattle(stage);
+    else if (game === 'tome') renderTome(stage);
+    else if (game === 'scarab') renderScarabSpin(stage);
+    else renderMines(stage);
+  }
+
   function decorateActiveGame(game, stage) {
     var meta = metaFor(game);
+    var engine = engineFor(game);
     stage.dataset.game = game;
+    stage.dataset.loading = 'false';
     stage.style.setProperty('--ostg-accent', meta.accent);
     stage.style.setProperty('--ostg-accent-2', meta.accent2);
     updateGameNav(game);
@@ -534,8 +597,16 @@
         '<div class="ostg-game-hero-text"><span>' + meta.tag + '</span><h4>' + meta.label + '</h4><p>' + meta.stat + '</p></div>' +
         '<div class="ostg-game-hero-mults"><b>' + meta.symbols[0] + '</b><b>' + meta.symbols[1] + '</b><b>' + meta.symbols[2] + '</b></div>';
       panel.insertBefore(hero, panel.firstChild);
+      var hud = document.createElement('div');
+      hud.className = 'ostg-game-hud';
+      hud.innerHTML = '<div><span>Engine</span><strong>' + engine.curve + '</strong></div>' +
+        '<div><span>Action</span><strong>' + engine.action + '</strong></div>' +
+        '<div><span>Risk</span><strong>' + engine.risk + '</strong></div>' +
+        '<div><span>Table</span><strong>' + engine.edge + '</strong></div>';
+      panel.insertBefore(hud, hero.nextSibling);
     }
     enhanceBetControls(stage);
+    requestAnimationFrame(function () { stage.classList.add('is-loaded'); });
   }
 
   function enhanceBetControls(stage) {
@@ -571,31 +642,29 @@
   function showGame(game) {
     var stage = document.getElementById('ostgStage');
     if (!stage) return;
+    if (GAME_ORDER.indexOf(game) < 0) game = 'mines';
     if (activeGameCleanup) {
       try { activeGameCleanup(); } catch (_) {}
       activeGameCleanup = null;
     }
-    stage.innerHTML = '';
-    if (game === 'mines') renderMines(stage);
-    else if (game === 'crash') renderCrash(stage);
-    else if (game === 'dice') renderDice(stage);
-    else if (game === 'plinko') renderPlinko(stage);
-    else if (game === 'limbo') renderLimbo(stage);
-    else if (game === 'hilo') renderHiLo(stage);
-    else if (game === 'wheel') renderWheel(stage);
-    else if (game === 'coinflip') renderCoinflip(stage);
-    else if (game === 'keno') renderKeno(stage);
-    else if (game === 'tower') renderTower(stage);
-    else if (game === 'double') renderDouble(stage);
-    else if (game === 'slide') renderSlide(stage);
-    else if (game === 'pump') renderPump(stage);
-    else if (game === 'dragontower') renderDragonTower(stage);
-    else if (game === 'diamonds') renderDiamonds(stage);
-    else if (game === 'cases') renderCaseBattle(stage);
-    else if (game === 'tome') renderTome(stage);
-    else if (game === 'scarab') renderScarabSpin(stage);
-    else renderMines(stage);
-    decorateActiveGame(game, stage);
+    activeGameLoadId += 1;
+    var loadId = activeGameLoadId;
+    if (activeGameLoadTimer) clearTimeout(activeGameLoadTimer);
+    var meta = metaFor(game);
+    stage.classList.remove('is-loaded');
+    stage.dataset.game = game;
+    stage.dataset.loading = 'true';
+    stage.style.setProperty('--ostg-accent', meta.accent);
+    stage.style.setProperty('--ostg-accent-2', meta.accent2);
+    updateGameNav(game);
+    stage.innerHTML = renderGameLoading(game);
+    activeGameLoadTimer = setTimeout(function () {
+      if (loadId !== activeGameLoadId) return;
+      activeGameLoadTimer = 0;
+      stage.innerHTML = '';
+      renderSelectedGame(game, stage);
+      decorateActiveGame(game, stage);
+    }, 260);
   }
 
   function pushHistory(mult) {
@@ -638,6 +707,7 @@
           '<label>Mines<select id="mnMines">' +
             [1,3,5,8,10,15,24].map(function(n){ return '<option value="'+n+'">'+n+'</option>'; }).join('') +
           '</select></label>' +
+          '<label>Auto cash<select id="mnAuto"><option value="0">Off</option><option value="2">2 safe</option><option value="3">3 safe</option><option value="5">5 safe</option><option value="8">8 safe</option><option value="12">12 safe</option></select></label>' +
           '<button class="ostg-btn ostg-btn-primary" id="mnStart">Place bet</button>' +
           '<button class="ostg-btn" id="mnQuick" disabled>Quick pick</button>' +
           '<button class="ostg-btn ostg-btn-cash" id="mnCash" disabled>Cash out</button>' +
@@ -650,6 +720,7 @@
 
     var bet = document.getElementById('mnBet');
     var mines = document.getElementById('mnMines');
+    var auto = document.getElementById('mnAuto');
     mines.value = '5';
     var startBtn = document.getElementById('mnStart');
     var quickBtn = document.getElementById('mnQuick');
@@ -708,6 +779,7 @@
       startBtn.disabled = true;
       quickBtn.disabled = false;
       mines.disabled = true;
+      auto.disabled = true;
       bet.disabled = true;
     }
 
@@ -733,6 +805,8 @@
         var mult = minesMultiplier(session.safeRevealed, session.mines);
         updateMeta();
         statusEl.textContent = '✅ Safe ' + session.safeRevealed + '/' + (25 - session.mines) + ' · ' + shortMult(mult);
+        var autoAt = parseInt(auto.value, 10) || 0;
+        if (autoAt && session.safeRevealed >= autoAt) return onCash();
         if (session.safeRevealed === 25 - session.mines) onCash(); // perfect clear
       }
     }
@@ -771,6 +845,7 @@
       cashBtn.disabled = true;
       cashBtn.textContent = 'Cash out';
       mines.disabled = false;
+      auto.disabled = false;
       bet.disabled = false;
       updateMeta();
     }
@@ -920,7 +995,7 @@
       if (!session || session.cashed) return;
       session.cashed = true;
       var elapsed = (performance.now() - session.t0) / 1000;
-      var mult = Math.min(session.crashAt, Math.pow(Math.E, 0.22 * elapsed));
+      var mult = Math.min(session.crashAt, Math.pow(Math.E, 0.32 * elapsed));
       session.cashMult = mult;
       var payout = session.bet * mult;
       cashBtn.disabled = true;
@@ -2575,6 +2650,24 @@
     return { rank: rank, label: label, score: score, main: main };
   }
 
+  function renderQuickIdle(config) {
+    var meta = metaFor(config.id);
+    var engine = engineFor(config.id);
+    return '<div class="ostg-quick-idle">' +
+      '<div class="ostg-quick-orbit"><span>' + meta.symbols[0] + '</span><span>' + meta.symbols[1] + '</span><span>' + meta.symbols[2] + '</span></div>' +
+      '<div class="ostg-quick-core">' + config.idle + '</div>' +
+      '<div class="ostg-quick-rails"><span>' + engine.curve + '</span><span>' + engine.action + '</span><span>' + engine.risk + '</span></div>' +
+    '</div>';
+  }
+
+  function renderQuickPreview(preview) {
+    preview = preview || {};
+    return '<span><b>Chance</b><strong>' + (preview.chance || 'Live') + '</strong></span>' +
+      '<span><b>Multiplier</b><strong>' + (preview.multiplier || 'Varies') + '</strong></span>' +
+      '<span><b>Payout</b><strong>' + (preview.payout || 'Set bet') + '</strong></span>' +
+      '<span><b>Risk</b><strong>' + (preview.risk || 'Fair draw') + '</strong></span>';
+  }
+
   function renderQuickCasino(stage, config) {
     stage.innerHTML =
       '<div class="ostg-game ostg-world">' +
@@ -2583,15 +2676,30 @@
           (config.options && config.options.length ? '<label>' + (config.optionLabel || 'Pick') + '<select id="qgPick">' + config.options.map(function(option) { return '<option value="' + option.value + '">' + option.label + '</option>'; }).join('') + '</select></label>' : '') +
           '<button class="ostg-btn ostg-btn-primary" id="qgPlay">' + (config.button || 'Play') + '</button>' +
           '<div class="ostg-meta"><span>Table</span> <strong>' + config.meta + '</strong></div>' +
+          '<div class="ostg-ticket-preview" id="qgPreview"></div>' +
         '</div>' +
-        '<div class="ostg-world-stage" id="qgResult">' + config.idle + '</div>' +
+        '<div class="ostg-world-stage" id="qgResult">' + renderQuickIdle(config) + '</div>' +
         '<div class="ostg-status" id="qgStatus">' + config.status + '</div>' +
       '</div>';
     var bet = document.getElementById('qgBet');
     var pick = document.getElementById('qgPick');
     var play = document.getElementById('qgPlay');
+    var previewEl = document.getElementById('qgPreview');
     var resultEl = document.getElementById('qgResult');
     var statusEl = document.getElementById('qgStatus');
+    function updatePreview() {
+      if (!previewEl) return;
+      var amount = parseFloat(bet.value) || 0;
+      var value = pick ? pick.value : '';
+      var preview = config.preview ? config.preview(value, amount) : { chance: 'HMAC', multiplier: config.meta, payout: amount ? fmt(amount) + ' OST base' : 'Set bet', risk: engineFor(config.id).risk };
+      previewEl.innerHTML = renderQuickPreview(preview);
+    }
+    [bet, pick].forEach(function(element) {
+      if (!element) return;
+      element.addEventListener('input', updatePreview);
+      element.addEventListener('change', updatePreview);
+    });
+    updatePreview();
     play.addEventListener('click', async function() {
       var amount = parseBet(bet, statusEl);
       if (amount === null) return;
@@ -2599,6 +2707,7 @@
       if (!placed.ok) { statusEl.textContent = placed.msg; return; }
       setBusy([bet, pick, play], true);
       statusEl.textContent = config.loading || 'Dealing...';
+      resultEl.classList.remove('is-win', 'is-soft', 'is-loss');
       resultEl.classList.add('is-resolving');
       resultEl.innerHTML = renderQuickResolving(config.id);
       try {
@@ -2606,6 +2715,7 @@
         var outcome = await config.resolve(amount, pick ? pick.value : '');
         await delay(180);
         resultEl.classList.remove('is-resolving');
+        resultEl.classList.add(outcome.payout > amount ? 'is-win' : outcome.payout > 0 ? 'is-soft' : 'is-loss');
         resultEl.innerHTML = outcome.html;
         settleGame(config.id, amount, outcome.payout, outcome.multiplier, statusEl, outcome.text, resultEl);
       } catch (error) {
@@ -2649,6 +2759,10 @@
         { value: 'green', label: 'Green · 14x' }
       ],
       idle: '<div class="ostg-versus">Red · Black · Green</div>', status: 'Rainbet-style double: pick a color, roll the strip, and chase the green hit.',
+      preview: function(pick, amount) {
+        var multiplier = pick === 'green' ? 14 : 2;
+        return { chance: pick === 'green' ? '5.00%' : '47.50%', multiplier: shortMult(multiplier), payout: fmt(amount * multiplier) + ' OST', risk: pick === 'green' ? 'Longshot' : 'Even strip' };
+      },
       resolve: async function(amount, pick) {
         var value = (await pfFloats(1))[0];
         var color = value < 0.475 ? 'red' : value < 0.95 ? 'black' : 'green';
@@ -2680,6 +2794,11 @@
         { value: '5', label: '5.00x' }, { value: '10', label: '10.00x' }, { value: '25', label: '25.00x' }, { value: '50', label: '50.00x' }
       ],
       idle: '<div class="ostg-versus">Slide</div>', status: 'Pick a target. If the provably-fair slide reaches it, you cash at that multiplier.',
+      preview: function(pick, amount) {
+        var target = Number(pick) || 2;
+        var chance = Math.min(99, 99 / target);
+        return { chance: chance.toFixed(2) + '%', multiplier: shortMult(target), payout: fmt(amount * target) + ' OST', risk: target >= 10 ? 'High chase' : 'Target lane' };
+      },
       resolve: async function(amount, pick) {
         var target = Number(pick) || 2;
         var value = Math.max(0.000001, (await pfFloats(1))[0]);
@@ -2704,6 +2823,12 @@
         return { value: String(count), label: count + ' pumps · ' + shortMult(0.99 / prob) };
       }),
       idle: '<div class="ostg-versus">Pump</div>', status: 'Choose how many pumps to take. More pumps means more payout and a higher bust chance.',
+      preview: function(pick, amount) {
+        var target = clamp(Number(pick), 1, 8);
+        var chance = ((9 - target) / 9) * 100;
+        var multiplier = 0.99 / ((9 - target) / 9);
+        return { chance: chance.toFixed(2) + '%', multiplier: shortMult(multiplier), payout: fmt(amount * multiplier) + ' OST', risk: target >= 6 ? 'Near bust' : 'Pressure' };
+      },
       resolve: async function(amount, pick) {
         var target = clamp(Number(pick), 1, 8);
         var bustAt = 1 + Math.floor((await pfFloats(1))[0] * 9);
@@ -2728,6 +2853,13 @@
         { value: 'hard', label: 'Hard · 5 floors' }
       ],
       idle: '<div class="ostg-versus">Dragon Tower</div>', status: 'Climb a tower of eggs. Hit a dragon trap and the run ends.',
+      preview: function(pick, amount) {
+        var modes = { easy: { rows: 4, trap: 0.18 }, medium: { rows: 5, trap: 0.28 }, hard: { rows: 5, trap: 0.42 } };
+        var mode = modes[pick] || modes.easy;
+        var chance = Math.pow(1 - mode.trap, mode.rows);
+        var multiplier = 0.99 / chance;
+        return { chance: (chance * 100).toFixed(2) + '%', multiplier: shortMult(multiplier), payout: fmt(amount * multiplier) + ' OST', risk: pick || 'easy' };
+      },
       resolve: async function(amount, pick) {
         var modes = {
           easy: { rows: 4, cols: 4, trap: 0.18, label: 'Easy' },
@@ -2828,6 +2960,12 @@
       id: 'tome', meta: 'Rune ladder', button: 'Open tome', optionLabel: 'Pages',
       options: [2,3,4,5,6,7,8].map(function(pages) { return { value: String(pages), label: pages + ' pages · ' + shortMult(0.99 / Math.pow(0.86, pages)) }; }),
       idle: '<div class="ostg-versus">Tome</div>', status: 'Open more rune pages for a bigger multiplier. A curse page burns the run.',
+      preview: function(pick, amount) {
+        var pages = clamp(Number(pick), 2, 8);
+        var chance = Math.pow(0.86, pages);
+        var multiplier = 0.99 / chance;
+        return { chance: (chance * 100).toFixed(2) + '%', multiplier: shortMult(multiplier), payout: fmt(amount * multiplier) + ' OST', risk: pages + ' pages' };
+      },
       resolve: async function(amount, pick) {
         var pages = clamp(Number(pick), 2, 8);
         var floats = await pfFloats(pages);
@@ -3513,9 +3651,19 @@
       '.ostg-keno-grid,.ostg-tower-board,.ostg-scratch-grid,.ostg-slot-grid,.ostg-table-stage,.ostg-video-hand,.ostg-world-stage{background-image:linear-gradient(135deg,color-mix(in srgb,var(--ostg-accent) 15%,transparent),rgba(2,6,23,.82));}' +
       '.ostg-world-stage.is-resolving{overflow:hidden;}.ostg-resolve-machine{position:relative;display:grid;gap:12px;place-items:center;min-width:min(100%,480px);padding:20px;border-radius:18px;background:rgba(2,6,23,.58);border:1px solid rgba(255,255,255,.14);}.ostg-resolve-machine strong{color:#fff;font-size:18px;letter-spacing:.04em;text-transform:uppercase;}.ostg-resolve-reels{display:grid;grid-template-columns:repeat(3,minmax(64px,1fr));gap:10px;width:min(100%,360px);}.ostg-resolve-reels span{height:82px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#f8fafc,#cbd5e1);color:#111827;font-size:clamp(1.4rem,6vw,2.6rem);font-weight:1000;animation:ostg-reel-bounce .52s ease-in-out infinite;box-shadow:0 12px 24px rgba(0,0,0,.32);}.ostg-resolve-reels span:nth-child(2){animation-delay:.08s}.ostg-resolve-reels span:nth-child(3){animation-delay:.16s}.ostg-resolve-line{width:min(100%,420px);height:5px;border-radius:999px;background:linear-gradient(90deg,var(--ostg-accent),var(--ostg-accent-2),#facc15);animation:ostg-resolve-scan .76s ease-in-out infinite alternate;}' +
       '@keyframes ostg-reel-bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}@keyframes ostg-resolve-scan{0%{transform:scaleX(.28);opacity:.55}100%{transform:scaleX(1);opacity:1}}' +
+      '.ostg-stage{transition:opacity .18s ease,transform .18s ease,border-color .18s ease;}.ostg-stage:not(.is-loaded){opacity:.94}.ostg-game-loading{min-height:360px;border-radius:18px;display:grid;grid-template-columns:minmax(220px,.72fr) 1fr;gap:18px;align-items:center;padding:18px;background:radial-gradient(circle at 24% 18%,color-mix(in srgb,var(--ostg-accent) 28%,transparent),transparent 34%),linear-gradient(135deg,rgba(2,6,23,.84),rgba(15,23,42,.72));border:1px solid color-mix(in srgb,var(--ostg-accent) 32%,rgba(255,255,255,.14));overflow:hidden;}' +
+      '.ostg-loader-cabinet{position:relative;min-height:230px;border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.025));border:1px solid rgba(255,255,255,.14);display:grid;place-items:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 18px 42px rgba(0,0,0,.28);overflow:hidden;}' +
+      '.ostg-loader-reels{display:grid;grid-template-columns:repeat(3,minmax(58px,1fr));gap:10px;width:min(100%,310px);padding:14px;}.ostg-loader-reels span{height:92px;border-radius:16px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#f8fafc,#cbd5e1);color:#111827;font-size:2.3rem;font-weight:1000;box-shadow:0 12px 24px rgba(0,0,0,.32);animation:ostg-loader-reel .64s cubic-bezier(.4,0,.2,1) infinite;}.ostg-loader-reels span:nth-child(2){animation-delay:.08s}.ostg-loader-reels span:nth-child(3){animation-delay:.16s}' +
+      '.ostg-loader-scan{position:absolute;left:10%;right:10%;bottom:22px;height:6px;border-radius:999px;background:linear-gradient(90deg,var(--ostg-accent),var(--ostg-accent-2),#facc15);animation:ostg-resolve-scan .72s ease-in-out infinite alternate;}.ostg-loader-copy{display:grid;gap:8px;align-content:center;}.ostg-loader-copy span{width:max-content;max-width:100%;padding:5px 9px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);color:#bfdbfe;font-size:11px;font-weight:1000;text-transform:uppercase;letter-spacing:.12em;}.ostg-loader-copy strong{color:#fff;font-size:clamp(2rem,5vw,4.4rem);line-height:.94;}.ostg-loader-copy em{font-style:normal;color:#e5e7eb;font-weight:800;}' +
+      '@keyframes ostg-loader-reel{0%,100%{transform:translateY(0) rotateX(0)}50%{transform:translateY(-12px) rotateX(18deg)}}' +
+      '.ostg-game-hud{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:-6px;}.ostg-game-hud div,.ostg-ticket-preview span{padding:10px;border-radius:12px;background:rgba(2,6,23,.58);border:1px solid rgba(255,255,255,.1);box-shadow:inset 0 1px 0 rgba(255,255,255,.05);}.ostg-game-hud span,.ostg-ticket-preview b{display:block;color:#94a3b8;font-size:10px;font-weight:1000;text-transform:uppercase;letter-spacing:.08em;}.ostg-game-hud strong,.ostg-ticket-preview strong{display:block;color:#fff;font-size:13px;font-weight:900;margin-top:3px;overflow-wrap:anywhere;}' +
+      '.ostg-ticket-preview{display:grid;grid-template-columns:repeat(4,minmax(86px,1fr));gap:6px;flex:1 1 440px;align-self:stretch;}.ostg-ticket-preview span{min-height:44px;}.ostg-ticket-preview strong{color:#fde68a;}' +
+      '.ostg-quick-idle{position:relative;width:100%;min-height:220px;display:grid;place-items:center;gap:12px;padding:14px;}.ostg-quick-core{position:relative;z-index:2;display:grid;place-items:center;min-height:92px;}.ostg-quick-orbit{position:absolute;inset:12px;pointer-events:none;}.ostg-quick-orbit span{position:absolute;width:58px;height:58px;border-radius:16px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--ostg-accent),var(--ostg-accent-2));box-shadow:inset 0 2px 0 rgba(255,255,255,.18),0 14px 30px rgba(0,0,0,.34);font-size:1.6rem;animation:ostg-quick-float 3.4s ease-in-out infinite;}.ostg-quick-orbit span:nth-child(1){left:8%;top:10%;}.ostg-quick-orbit span:nth-child(2){right:9%;top:18%;animation-delay:-1.1s}.ostg-quick-orbit span:nth-child(3){left:44%;bottom:4%;animation-delay:-2s}' +
+      '.ostg-quick-rails{display:flex;gap:7px;flex-wrap:wrap;justify-content:center;position:relative;z-index:2;}.ostg-quick-rails span{padding:6px 9px;border-radius:999px;background:rgba(2,6,23,.65);border:1px solid rgba(255,255,255,.12);color:#cbd5e1;font-size:11px;font-weight:900;}.ostg-world-stage.is-win{border-color:rgba(34,197,94,.48);box-shadow:0 0 36px rgba(34,197,94,.18),inset 0 1px 0 rgba(255,255,255,.08);}.ostg-world-stage.is-soft{border-color:rgba(245,196,104,.48);box-shadow:0 0 34px rgba(245,196,104,.16),inset 0 1px 0 rgba(255,255,255,.08);}.ostg-world-stage.is-loss{border-color:rgba(248,113,113,.38);box-shadow:0 0 28px rgba(248,113,113,.12),inset 0 1px 0 rgba(255,255,255,.08);}' +
+      '@keyframes ostg-quick-float{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-12px) rotate(5deg)}}' +
       '.ostg-history{position:relative;z-index:1;border:1px solid rgba(255,255,255,.1);background:rgba(2,6,23,.46);}.ostg-mult-pill{min-height:24px;display:inline-flex;align-items:center;}' +
       '@media (max-width:980px){.ostg-casino-hero{grid-template-columns:1fr 1fr}.ostg-balance-card{grid-column:1/-1}.ostg-hero-scene{min-height:132px}}' +
-      '@media (max-width:700px){.ostg-casino-hero{grid-template-columns:1fr;padding:14px}.ostg-hero-scene{min-height:118px}.ostg-lobby-strip{grid-auto-columns:minmax(150px,78vw)}.ostg-game-hero{grid-template-columns:1fr}.ostg-game-hero-mults{justify-content:flex-start}.ostg-game-hero-art{width:82px;height:68px}.ostg-stage{padding:8px}.ostg-game{padding:10px}.ostg-bet-tools{width:100%}.ostg-bet-tools button{flex:1 1 58px}.ostg-resolve-reels{grid-template-columns:repeat(3,minmax(0,1fr))}}';
+      '@media (max-width:700px){.ostg-casino-hero{grid-template-columns:1fr;padding:14px}.ostg-hero-scene{min-height:118px}.ostg-lobby-strip{grid-auto-columns:minmax(150px,78vw)}.ostg-game-hero{grid-template-columns:1fr}.ostg-game-hero-mults{justify-content:flex-start}.ostg-game-hero-art{width:82px;height:68px}.ostg-game-hud,.ostg-ticket-preview{grid-template-columns:repeat(2,minmax(0,1fr))}.ostg-game-loading{grid-template-columns:1fr;min-height:360px}.ostg-stage{padding:8px}.ostg-game{padding:10px}.ostg-bet-tools{width:100%}.ostg-bet-tools button{flex:1 1 58px}.ostg-resolve-reels{grid-template-columns:repeat(3,minmax(0,1fr))}}';
     document.head.appendChild(st);
   }
 
