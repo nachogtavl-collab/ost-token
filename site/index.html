@@ -2549,7 +2549,7 @@
           <h3 data-i18n="ai.hook.title">Running a Server, Bot, or Localhost?</h3>
           <p data-i18n="ai.hook.text">If you have a server, a bot, a localhost dev environment, or any form of automated intelligence &mdash; <strong>OST is your payment layer</strong>. Connect any AI model, any webhook, any service. Machine-to-machine payments at Solana speed with full privacy.</p>
           <div class="ai-hook-stats">
-            <div class="ai-hook-stat"><span class="ai-hook-num">11</span><span>Connectors</span></div>
+            <div class="ai-hook-stat"><span class="ai-hook-num">13</span><span>Connectors</span></div>
             <div class="ai-hook-stat"><span class="ai-hook-num">0.4s</span><span>Settlement</span></div>
             <div class="ai-hook-stat"><span class="ai-hook-num">$0</span><span>Per Transaction</span></div>
             <div class="ai-hook-stat"><span class="ai-hook-num">&infin;</span><span>Privacy</span></div>
@@ -2643,6 +2643,19 @@
             </div>
           </div>
 
+          <div class="connector-card" id="connectorGemini">
+            <div class="connector-header">
+              <span class="connector-logo">&#10024;</span>
+              <div><h4>Gemini</h4><p class="connector-type">Google Generative Language API</p></div>
+              <span class="connector-status" id="statusGemini">&#9679; Disconnected</span>
+            </div>
+            <div class="connector-fields">
+              <label>API Key<input type="password" class="connector-input" id="apiKeyGemini" placeholder="AIza..." autocomplete="off"></label>
+              <label>Model<select class="connector-select" id="modelGemini"><option value="gemini-2.0-flash">Gemini 2.0 Flash</option><option value="gemini-1.5-pro">Gemini 1.5 Pro</option><option value="gemini-1.5-flash">Gemini 1.5 Flash</option></select></label>
+              <button class="btn btn-primary btn-sm btn-connect" data-connector="gemini">Test Connection</button>
+            </div>
+          </div>
+
           <div class="connector-card" id="connectorTelegram">
             <div class="connector-header">
               <span class="connector-logo">&#128172;</span>
@@ -2689,7 +2702,7 @@
               <span class="connector-status" id="statusMCP">&#9679; Disconnected</span>
             </div>
             <div class="connector-fields">
-              <label>Server URL<input type="url" class="connector-input" id="apiKeyMCP" placeholder="http://localhost:3000/mcp"></label>
+              <label>Server URL<input type="url" class="connector-input" id="apiKeyMCP" placeholder="https://mcp.example.com/mcp"></label>
               <label>Transport<select class="connector-select" id="transportMCP"><option value="stdio">stdio</option><option value="sse">SSE (HTTP)</option><option value="streamable-http">Streamable HTTP</option></select></label>
               <button class="btn btn-primary btn-sm btn-connect" data-connector="mcp">Test Connection</button>
             </div>
@@ -2705,6 +2718,19 @@
               <label>API Key<input type="password" class="connector-input" id="apiKeyClaude" placeholder="sk-ant-..." autocomplete="off"></label>
               <label>Model<select class="connector-select" id="modelClaude"><option value="claude-opus-4-20250514">Claude Opus 4</option><option value="claude-sonnet-4-20250514">Claude Sonnet 4</option><option value="claude-3-5-haiku-20241022">Claude 3.5 Haiku</option></select></label>
               <button class="btn btn-primary btn-sm btn-connect" data-connector="claude">Test Connection</button>
+            </div>
+          </div>
+
+          <div class="connector-card" id="connectorGrok">
+            <div class="connector-header">
+              <span class="connector-logo">&#9889;</span>
+              <div><h4>Grok</h4><p class="connector-type">xAI / Chat Completions</p></div>
+              <span class="connector-status" id="statusGrok">&#9679; Disconnected</span>
+            </div>
+            <div class="connector-fields">
+              <label>API Key<input type="password" class="connector-input" id="apiKeyGrok" placeholder="xai-..." autocomplete="off"></label>
+              <label>Model<select class="connector-select" id="modelGrok"><option value="grok-beta">Grok Beta</option><option value="grok-2-latest">Grok 2 Latest</option><option value="grok-2-vision-latest">Grok Vision</option></select></label>
+              <button class="btn btn-primary btn-sm btn-connect" data-connector="grok">Test Connection</button>
             </div>
           </div>
 
@@ -2780,6 +2806,7 @@
                   <select class="connector-select" id="ghostMode">
                     <option value="simple">Simple mode &mdash; smallest viable route</option>
                     <option value="complex">Complex mode &mdash; multi-rail plan</option>
+                    <option value="autonomous">Autonomous mode &mdash; let Ghost choose, crawl, retry, and preserve history</option>
                     <option value="mesh">Mesh mode &mdash; use every connected rail</option>
                   </select>
                 </label>
@@ -2798,9 +2825,10 @@
                 <div style="display:flex;flex-wrap:wrap;gap:8px;">
                   <button class="btn btn-primary btn-sm" id="ghostComposeBtn" type="button">Compose Mission</button>
                   <button class="btn btn-outline btn-sm" id="ghostDispatchBtn" type="button">Dispatch To Mesh</button>
+                  <button class="btn btn-outline btn-sm" id="ghostSyncBtn" type="button">Sync Mesh</button>
                   <button class="btn btn-outline btn-sm" id="ghostClearBtn" type="button">Reset</button>
                 </div>
-                <p class="text-muted" style="margin:0;font-size:.82rem;line-height:1.6;">OpenAI can execute directly in-browser when connected. Closed providers and system rails still get translated, structured handoff packets so Ghost can route through relays, MCP servers, or your own backend.</p>
+                <p class="text-muted" style="margin:0;font-size:.82rem;line-height:1.6;">OpenAI can still execute directly in-browser when connected. Anthropic, Gemini, Grok, GitHub, and MCP now route through the OST worker mesh so Ghost can cross the browser/CORS boundary, preserve mission history, and share memory across instances.</p>
               </div>
             </div>
 
@@ -2818,6 +2846,17 @@
             <div style="padding:14px;border-radius:16px;border:1px solid rgba(255,255,255,0.08);background:rgba(15,23,42,0.62);">
               <div style="font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8;">Mission Output</div>
               <pre id="ghostResult" style="margin:10px 0 0;white-space:pre-wrap;word-break:break-word;color:#e2e8f0;font-size:.88rem;line-height:1.7;font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;">Ghost is waiting for a mission.</pre>
+            </div>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;align-items:start;">
+              <div style="padding:14px;border-radius:16px;border:1px solid rgba(255,255,255,0.08);background:rgba(15,23,42,0.62);">
+                <div style="font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8;">Mission History</div>
+                <pre id="ghostHistory" style="margin:10px 0 0;white-space:pre-wrap;word-break:break-word;color:#e2e8f0;font-size:.82rem;line-height:1.6;font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;">No shared Ghost missions yet.</pre>
+              </div>
+              <div style="padding:14px;border-radius:16px;border:1px solid rgba(255,255,255,0.08);background:rgba(15,23,42,0.62);">
+                <div style="font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8;">Mesh Memory</div>
+                <pre id="ghostNetworkMemory" style="margin:10px 0 0;white-space:pre-wrap;word-break:break-word;color:#e2e8f0;font-size:.82rem;line-height:1.6;font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;">No mesh memory synced yet.</pre>
+              </div>
             </div>
           </div>
         </div>

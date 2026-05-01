@@ -1,3 +1,5 @@
+import { handleGhostRequest } from './ghost.js';
+
 /**
  * OST Prediction API Server — Cloudflare Worker
  * ============================================================
@@ -568,6 +570,9 @@ export default {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
 
+    const ghostResponse = await handleGhostRequest(request, env, { path, method });
+    if (ghostResponse) return ghostResponse;
+
     // ── GET /health ──────────────────────────────────────────────────────────
     if (path === '/health' || path === '/') {
       const btcResult = await fetchBtcPrice();
@@ -608,6 +613,14 @@ export default {
           'POST /topup/claim',
           'POST /topup/crypto/verify',
           'GET  /topup/crypto/check/:intent',
+          'GET  /ghost/config',
+          'POST /ghost/relay/test',
+          'GET  /ghost/missions',
+          'POST /ghost/missions',
+          'GET  /ghost/missions/:id',
+          'POST /ghost/missions/:id/retry',
+          'GET  /ghost/mesh',
+          'POST /ghost/mesh/share',
           'GET  /launchpad/coins',
           'POST /launchpad/coins',
           'POST /launchpad/trade',

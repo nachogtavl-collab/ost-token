@@ -129,13 +129,14 @@
       'pay.deskReceiptExplorer': 'View on Solana Explorer',
       'pay.toastAdded': 'Added', 'pay.toastConnectWallet': 'Connect your OST wallet first', 'pay.toastRequestCreated': 'On-chain interchange request created',
       'pay.interchangeLoading': 'Interchange desk is still loading', 'pay.cartMoved': 'Cart moved to the interchange desk',
+      'bot.log.ready': 'Ready to connect. Enter your API details above.',
       'pay.shopSource': 'shop cart', 'pay.manualSource': 'manual request', 'pay.browserSource': 'interchange browser',
       'pay.walletNeedsSol': 'The OST fee vault is still loading. Please wait a moment and try again.',
       'pay.notEnoughOst': 'Not enough OST in this wallet. Claim or buy OST first.', 'pay.deskNeedValidAmount': 'Load a request with a valid OST amount first',
       'pay.deskRequestFailed': 'Could not create the interchange request right now.',
       'pay.browseTitle': 'Browse merchant lanes', 'pay.browseSub': 'Pick hotels, flights, cars, property, or retail, then load a real quote into the request desk.',
       'pay.browseHotels': 'Hotels', 'pay.browseFlights': 'Flights', 'pay.browseCars': 'Cars', 'pay.browseProperty': 'Property', 'pay.browseRetail': 'Retail', 'pay.browseOpen': 'Open lane',
-      'launch.title': '🚀 Mainnet Launch Checklist', 'launch.sub': 'What we need to make OST fully real on Solana mainnet.',
+      'launch.title': '&#128640; Mainnet Launch Checklist', 'launch.sub': 'What we need to make OST fully real on Solana mainnet.',
       'ai.title': 'Power for Every Intelligence', 'ai.sub': 'We welcome AI agents, bots, servers, and every form of digital intelligence.',
       'build.title': 'Build the Future With Us', 'build.sub': 'Code, create, or dream in pixels - OST is your platform.',
       'build.cta': 'Start Contributing Today', 'build.ctasub': 'Every commit, translation, and tutorial moves humanity forward.',
@@ -170,133 +171,133 @@
       'depin.title': 'DePIN Data-Center Faucet',
       'depin.sub': 'Share bandwidth, GPU, CPU, or satellite capacity &mdash; earn OST for building the decentralized data centers and satellite internet. Big rewards for real contributions.',
       'demos.title': '&#128717;&#65039; OST Commerce', 'demos.sub': 'Curated shopping, live merchant browsing, and real on-chain request routing with OST.',
-        'wallet.getTitle': 'Get Your Personal OST Wallet', 'wallet.getSub': 'Choose how to create or connect your wallet. Build one in this browser or connect an existing Solana wallet.',
-        'wallet.commandKicker': 'Wallet + conversion rail',
-        'wallet.commandTitle': 'Open a wallet, read the OST market, and move from fiat or crypto into confidential OST.',
-        'wallet.commandSub': 'The wallet page now behaves like a command center for access, market watch, conversion, and portal routing.',
-        'wallet.tabs.aria': 'Wallet command panels',
-        'wallet.market.velocity': 'Route speed',
-        'wallet.market.liquidity': 'Liquidity',
-        'wallet.market.title': 'OST market pulse',
-        'wallet.market.updated': 'Live',
-        'wallet.market.price': 'OST price',
-        'wallet.market.volume': '24h volume',
-        'wallet.tabs.access': 'Access',
-        'wallet.tabs.market': 'Market',
-        'wallet.tabs.convert': 'Convert',
-        'wallet.tabs.portals': 'Portals',
-        'wallet.card.phantomDesc': 'Fast mobile and desktop access for users who already live inside Solana.',
-        'wallet.card.connectAction': 'Connect',
-        'wallet.card.solflareDesc': 'Strong staking and portfolio tools for users who want a deeper wallet dashboard.',
-        'wallet.card.backpackDesc': 'A multi-chain option for people who want apps, collectibles, and payments in one place.',
-        'wallet.card.seedlessTitle': 'Create OST wallet',
-        'wallet.card.seedlessDesc': 'Generate an OST wallet in this browser, download a backup, and start with devnet OST.',
-        'wallet.card.seedlessAction': 'Create wallet',
-        'wallet.downloadTitle': 'Need an install first? Use the official wallet download links.',
-        'wallet.copy': 'Copy',
-        'wallet.explorer': 'Explorer',
-        'wallet.buyOst': 'Buy OST',
-        'wallet.send': 'Send',
-        'wallet.bridge': 'Bridge',
-        'wallet.receive': 'Receive',
-        'wallet.swap': 'Swap',
-        'wallet.receiveTitle': 'Receive OST or SOL',
-        'wallet.receiveSub': 'Share your address or let someone scan the QR rail below.',
-        'wallet.quickLinksTitle': 'Quick routes',
-        'wallet.secure.title': 'Secure onboarding',
-        'wallet.secure.sub': 'Choose the access rail that matches the user: seed phrase power users, browser-wallet newcomers, or wallet-native Solana traders.',
-        'wallet.secure.point1': 'Use Phantom, Solflare, or Backpack when the user already has a Solana workflow.',
-        'wallet.secure.point2': 'Use the local wallet flow when the priority is onboarding a first wallet in minutes.',
-        'wallet.secure.point3': 'Keep one address across swap, payment, and launchpad rails to reduce confusion.',
-        'wallet.secure.point4': 'The connected view surfaces balances, receive QR, and direct links without leaving the page.',
-        'wallet.market.note2': 'The calculator below reads the same OST quote as the convert rail, so the preview and execution surface stay aligned.',
-        'wallet.convert.lead': 'Institutional-grade currency conversion, redesigned for regular users who need a clean entry rail into confidential OST.',
-        'wallet.convert.from': 'From',
-        'wallet.convert.bridge': 'Bridge',
-        'wallet.convert.swap': 'Swap',
-        'wallet.convert.encrypt': 'Encrypt',
-        'wallet.convert.to': 'To',
-        'wallet.convert.providers': 'Direct fiat on-ramps for the selected currency:',
-        'wallet.convert.note': 'Currently powered by Jupiter + Wormhole on Solana while the OST native interchange engine is under construction.',
-        'wallet.convert.received': 'Received',
-        'wallet.convert.done': 'Done - private and instant',
-        'wallet.sell.stable': 'Swap to stablecoins',
-        'wallet.sell.stableDesc': 'Route OST into USDC, USDT, or DAI when the user needs a fast stable exit.',
-        'wallet.sell.cashout': 'Cash out to bank',
-        'wallet.sell.cashoutDesc': 'Use Onramper or Transak sell rails after the OST to SOL or OST to USDC swap completes.',
-        'wallet.sell.p2p': 'P2P market',
-        'wallet.sell.p2pDesc': 'Direct wallet-to-wallet trading stays on the roadmap for people who want a simpler off-ramp.',
-        'wallet.portal.wormholeDesc': 'Move liquidity from major chains into Solana before the OST swap rail takes over.',
-        'wallet.portal.onramperDesc': 'Aggregator entry rail with card, bank, Apple Pay, and local fiat routing.',
-        'wallet.portal.moonpayDesc': 'Fast card-based SOL entry for users who want the cleanest first purchase flow.',
-        'wallet.portal.transakDesc': 'Regional payment coverage with PIX, UPI, SEPA, Faster Payments, and card rails.',
-        'wallet.portal.onramperSellDesc': 'Cash out SOL or USDC into bank accounts and mobile money rails after conversion.',
-        'wallet.portal.transakSellDesc': 'Regional fiat exits for users who want local banking rails instead of stablecoin custody.',
-        'wallet.portal.jupiterDesc': 'Best-route aggregator for OST conversions, stable exits, and spot rotations.',
-        'wallet.portal.raydiumDesc': 'Liquidity and swap venue for users who want direct pool access on Solana.',
-        'wallet.portal.orcaDesc': 'Cleaner swap route for concentrated liquidity users who want a simpler interface.',
-        'wallet.portal.meteoraDesc': 'Dynamic liquidity venue for newer assets and launchpad-native routing.',
-        'wallet.portal.prediction.title': 'Coming soon',
-        'wallet.portal.prediction.sub': 'A community-first event market rail inspired by Polymarket, Kalshi, and the rest of the contract platforms, but built inside OST.',
-        'ancient.toggle.off': '𓅱 Ancient',
-        'ancient.toggle.on': 'Modern Mode',
-        'ancient.toggle.activate': 'Activate ancient hieroglyphic mode',
-        'ancient.toggle.deactivate': 'Return to the modern interface',
-        'ancient.toast.on': 'Ancient mode activated',
-        'ancient.toast.off': 'Modern interface restored',
-        'transmit.button': '𓂇 Transmit to Space',
-        'transmit.buttonLarge': '𓂇 Open Transmission Console',
-        'transmit.ctaSub': 'Encode a custom message, DNA sequence, image, video, or any file in hieroglyphic, binary, and quantum form before routing it toward future OST relay targets.',
-        'transmit.kicker': 'Deep-space payload console',
-        'transmit.title': '𓂇 Transmit to Space',
-        'transmit.sub': 'Send a custom message, DNA sequence, image, video, or any file through the OST transmission ritual. Preview the payload in hieroglyphs, binary, and quantum entanglement before launch.',
-        'transmit.message.label': 'Custom message',
-        'transmit.message.placeholder': 'Describe the signal, dedication, coordinates, or mission note you want to send...',
-        'transmit.dna.label': 'DNA / life-seed sequence',
-        'transmit.dna.placeholder': 'Optional: ACGT sequence, sample tag, or biological archive note',
-        'transmit.files.label': 'Attach payloads',
-        'transmit.files.sub': 'Drop images, video, documents, archives, or any other file type',
-        'transmit.launch': 'Encode and transmit',
-        'transmit.launchBusy': 'Transmitting...',
-        'transmit.preview.glyph': 'Ancient hieroglyph render',
-        'transmit.preview.binary': 'Binary + checksum',
-        'transmit.preview.quantum': 'Quantum entanglement',
-        'transmit.preview.manifest': 'Transmission manifest',
-        'transmit.preview.attachments': 'Attached payloads',
-        'transmit.empty': 'Add a message, DNA sequence, or file to build a transmission.',
-        'transmit.none': 'No payload attached yet.',
-        'transmit.result.ready': 'Signal deck ready',
-        'transmit.result.sent': 'Transmission complete',
-        'transmit.manifest.default': 'Awaiting payload',
-        'transmit.summary.message': 'Message',
-        'transmit.summary.dna': 'DNA',
-        'transmit.summary.files': 'Files',
-        'transmit.summary.route': 'Route',
-        'transmit.summary.checksum': 'Checksum',
-        'transmit.summary.packet': 'Packet',
-        'transmit.summary.target': 'Target',
-        'transmit.summary.render': 'Render',
-        'transmit.summary.chars': 'chars',
-        'transmit.summary.bases': 'bases',
-        'transmit.route.value': 'LEO relay -> quantum entanglement -> Moon / Mars / deep space',
-        'transmit.target.value': 'Moon, Mars, deep space',
-        'transmit.render.value': 'Hieroglyphic + binary + quantum',
-        'transmit.stage.prepare': 'Preparing payload lattice...',
-        'transmit.stage.encode': 'Encoding payload into hieroglyphic memory...',
-        'transmit.stage.binary': 'Converting packet into binary and orbital checksum...',
-        'transmit.stage.entangle': 'Entangling packet states across relay pairs...',
-        'transmit.stage.route': 'Routing through orbital infrastructure...',
-        'transmit.stage.broadcast': 'Broadcast aimed at Moon, Mars, and deep space...',
-        'transmit.stage.done': 'Transmission complete — relay lock confirmed.',
-        'transmit.file.image': 'Image payload',
-        'transmit.file.video': 'Video payload',
-        'transmit.file.text': 'Text payload',
-        'transmit.file.data': 'Archive payload',
-        'sell.title': 'Sell or Trade OST', 'sell.sub': 'Cash out to any crypto or fiat. Same speed, same privacy.',
+      'wallet.getTitle': 'Get Your Personal OST Wallet', 'wallet.getSub': 'Choose how to create or connect your wallet. Build one in this browser or connect an existing Solana wallet.',
+      'wallet.commandKicker': 'Wallet + conversion rail',
+      'wallet.commandTitle': 'Open a wallet, read the OST market, and move from fiat or crypto into confidential OST.',
+      'wallet.commandSub': 'The wallet page now behaves like a command center for access, market watch, conversion, and portal routing.',
+      'wallet.tabs.aria': 'Wallet command panels',
+      'wallet.market.velocity': 'Route speed',
+      'wallet.market.liquidity': 'Liquidity',
+      'wallet.market.title': 'OST market pulse',
+      'wallet.market.updated': 'Live',
+      'wallet.market.price': 'OST price',
+      'wallet.market.volume': '24h volume',
+      'wallet.tabs.access': 'Access',
+      'wallet.tabs.market': 'Market',
+      'wallet.tabs.convert': 'Convert',
+      'wallet.tabs.portals': 'Portals',
+      'wallet.card.phantomDesc': 'Fast mobile and desktop access for users who already live inside Solana.',
+      'wallet.card.connectAction': 'Connect',
+      'wallet.card.solflareDesc': 'Strong staking and portfolio tools for users who want a deeper wallet dashboard.',
+      'wallet.card.backpackDesc': 'A multi-chain option for people who want apps, collectibles, and payments in one place.',
+      'wallet.card.seedlessTitle': 'Create OST wallet',
+      'wallet.card.seedlessDesc': 'Generate an OST wallet in this browser, download a backup, and start with devnet OST.',
+      'wallet.card.seedlessAction': 'Create wallet',
+      'wallet.downloadTitle': 'Need an install first? Use the official wallet download links.',
+      'wallet.copy': 'Copy',
+      'wallet.explorer': 'Explorer',
+      'wallet.buyOst': 'Buy OST',
+      'wallet.send': 'Send',
+      'wallet.bridge': 'Bridge',
+      'wallet.receive': 'Receive',
+      'wallet.swap': 'Swap',
+      'wallet.receiveTitle': 'Receive OST or SOL',
+      'wallet.receiveSub': 'Share your address or let someone scan the QR rail below.',
+      'wallet.quickLinksTitle': 'Quick routes',
+      'wallet.secure.title': 'Secure onboarding',
+      'wallet.secure.sub': 'Choose the access rail that matches the user: seed phrase power users, browser-wallet newcomers, or wallet-native Solana traders.',
+      'wallet.secure.point1': 'Use Phantom, Solflare, or Backpack when the user already has a Solana workflow.',
+      'wallet.secure.point2': 'Use the local wallet flow when the priority is onboarding a first wallet in minutes.',
+      'wallet.secure.point3': 'Keep one address across swap, payment, and launchpad rails to reduce confusion.',
+      'wallet.secure.point4': 'The connected view surfaces balances, receive QR, and direct links without leaving the page.',
+      'wallet.market.note2': 'The calculator below reads the same OST quote as the convert rail, so the preview and execution surface stay aligned.',
+      'wallet.convert.lead': 'Institutional-grade currency conversion, redesigned for regular users who need a clean entry rail into confidential OST.',
+      'wallet.convert.from': 'From',
+      'wallet.convert.bridge': 'Bridge',
+      'wallet.convert.swap': 'Swap',
+      'wallet.convert.encrypt': 'Encrypt',
+      'wallet.convert.to': 'To',
+      'wallet.convert.providers': 'Direct fiat on-ramps for the selected currency:',
+      'wallet.convert.note': 'Currently powered by Jupiter + Wormhole on Solana while the OST native interchange engine is under construction.',
+      'wallet.convert.received': 'Received',
+      'wallet.convert.done': 'Done - private and instant',
+      'wallet.sell.stable': 'Swap to stablecoins',
+      'wallet.sell.stableDesc': 'Route OST into USDC, USDT, or DAI when the user needs a fast stable exit.',
+      'wallet.sell.cashout': 'Cash out to bank',
+      'wallet.sell.cashoutDesc': 'Use Onramper or Transak sell rails after the OST to SOL or OST to USDC swap completes.',
+      'wallet.sell.p2p': 'P2P market',
+      'wallet.sell.p2pDesc': 'Direct wallet-to-wallet trading stays on the roadmap for people who want a simpler off-ramp.',
+      'wallet.portal.wormholeDesc': 'Move liquidity from major chains into Solana before the OST swap rail takes over.',
+      'wallet.portal.onramperDesc': 'Aggregator entry rail with card, bank, Apple Pay, and local fiat routing.',
+      'wallet.portal.moonpayDesc': 'Fast card-based SOL entry for users who want the cleanest first purchase flow.',
+      'wallet.portal.transakDesc': 'Regional payment coverage with PIX, UPI, SEPA, Faster Payments, and card rails.',
+      'wallet.portal.onramperSellDesc': 'Cash out SOL or USDC into bank accounts and mobile money rails after conversion.',
+      'wallet.portal.transakSellDesc': 'Regional fiat exits for users who want local banking rails instead of stablecoin custody.',
+      'wallet.portal.jupiterDesc': 'Best-route aggregator for OST conversions, stable exits, and spot rotations.',
+      'wallet.portal.raydiumDesc': 'Liquidity and swap venue for users who want direct pool access on Solana.',
+      'wallet.portal.orcaDesc': 'Cleaner swap route for concentrated liquidity users who want a simpler interface.',
+      'wallet.portal.meteoraDesc': 'Dynamic liquidity venue for newer assets and launchpad-native routing.',
+      'wallet.portal.prediction.title': 'Coming soon',
+      'wallet.portal.prediction.sub': 'A community-first event market rail inspired by Polymarket, Kalshi, and the rest of the contract platforms, but built inside OST.',
+      'ancient.toggle.off': '𓅱 Ancient',
+      'ancient.toggle.on': 'Modern Mode',
+      'ancient.toggle.activate': 'Activate ancient hieroglyphic mode',
+      'ancient.toggle.deactivate': 'Return to the modern interface',
+      'ancient.toast.on': 'Ancient mode activated',
+      'ancient.toast.off': 'Modern interface restored',
+      'transmit.button': '𓂇 Transmit to Space',
+      'transmit.buttonLarge': '𓂇 Open Transmission Console',
+      'transmit.ctaSub': 'Encode a custom message, DNA sequence, image, video, or any file in hieroglyphic, binary, and quantum form before routing it toward future OST relay targets.',
+      'transmit.kicker': 'Deep-space payload console',
+      'transmit.title': '𓂇 Transmit to Space',
+      'transmit.sub': 'Send a custom message, DNA sequence, image, video, or any file through the OST transmission ritual. Preview the payload in hieroglyphs, binary, and quantum entanglement before launch.',
+      'transmit.message.label': 'Custom message',
+      'transmit.message.placeholder': 'Describe the signal, dedication, coordinates, or mission note you want to send...',
+      'transmit.dna.label': 'DNA / life-seed sequence',
+      'transmit.dna.placeholder': 'Optional: ACGT sequence, sample tag, or biological archive note',
+      'transmit.files.label': 'Attach payloads',
+      'transmit.files.sub': 'Drop images, video, documents, archives, or any other file type',
+      'transmit.launch': 'Encode and transmit',
+      'transmit.launchBusy': 'Transmitting...',
+      'transmit.preview.glyph': 'Ancient hieroglyph render',
+      'transmit.preview.binary': 'Binary + checksum',
+      'transmit.preview.quantum': 'Quantum entanglement',
+      'transmit.preview.manifest': 'Transmission manifest',
+      'transmit.preview.attachments': 'Attached payloads',
+      'transmit.empty': 'Add a message, DNA sequence, or file to build a transmission.',
+      'transmit.none': 'No payload attached yet.',
+      'transmit.result.ready': 'Signal deck ready',
+      'transmit.result.sent': 'Transmission complete',
+      'transmit.manifest.default': 'Awaiting payload',
+      'transmit.summary.message': 'Message',
+      'transmit.summary.dna': 'DNA',
+      'transmit.summary.files': 'Files',
+      'transmit.summary.route': 'Route',
+      'transmit.summary.checksum': 'Checksum',
+      'transmit.summary.packet': 'Packet',
+      'transmit.summary.target': 'Target',
+      'transmit.summary.render': 'Render',
+      'transmit.summary.chars': 'chars',
+      'transmit.summary.bases': 'bases',
+      'transmit.route.value': 'LEO relay -> quantum entanglement -> Moon / Mars / deep space',
+      'transmit.target.value': 'Moon, Mars, deep space',
+      'transmit.render.value': 'Hieroglyphic + binary + quantum',
+      'transmit.stage.prepare': 'Preparing payload lattice...',
+      'transmit.stage.encode': 'Encoding payload into hieroglyphic memory...',
+      'transmit.stage.binary': 'Converting packet into binary and orbital checksum...',
+      'transmit.stage.entangle': 'Entangling packet states across relay pairs...',
+      'transmit.stage.route': 'Routing through orbital infrastructure...',
+      'transmit.stage.broadcast': 'Broadcast aimed at Moon, Mars, and deep space...',
+      'transmit.stage.done': 'Transmission complete — relay lock confirmed.',
+      'transmit.file.image': 'Image payload',
+      'transmit.file.video': 'Video payload',
+      'transmit.file.text': 'Text payload',
+      'transmit.file.data': 'Archive payload',
+      'sell.title': 'Sell or Trade OST', 'sell.sub': 'Cash out to any crypto or fiat. Same speed, same privacy.',
       'censor.title': '&#128683; Internet Censorship Is Happening Now', 'censor.sub': 'Real events. Real people. OST is the answer to digital oppression.',
       'spacex.title': 'OST &times; SpaceX &mdash; The Journey to Space', 'spacex.sub': 'Follow our partnership roadmap from Earth to Mars. Every milestone is real, every goal is funded by donations and investors &mdash; never by taxing your transactions.',
       'roadmap.title': '&#128640; Roadmap &amp; Progress', 'roadmap.sub': 'Where we are, what we\'ve built, and what comes next.',
-      'offline.scenarios': 'Real-World Scenarios', 'offline.scenariosub': 'Verified data from the World Bank, UNHCR, IEA, and EM-DAT. These are not hypotheticals \u2014 they happen today.',
+      'offline.scenarios': 'Real-World Scenarios', 'offline.scenariosub': 'Verified data from the World Bank, UNHCR, IEA, and EM-DAT. These are not hypotheticals — they happen today.',
       'ai.hook.title': 'Running a Server, Bot, or Localhost?',
       'ai.hook.text': 'If you have a server, a bot, a localhost dev environment, or any form of automated intelligence &mdash; <strong>OST is your payment layer</strong>. Connect any AI model, any webhook, any service. Machine-to-machine payments at Solana speed with full privacy.',
       'gc.title': 'Gift Card Interchange &mdash; Sell or Buy Any Gift Card with OST',
@@ -399,7 +400,7 @@
       'getost.fiat': 'Compra con Moneda Local', 'getost.fiatsub': 'Compra SOL o USDC, luego cambia a OST. Sin KYC para el intercambio.',
       'getost.faucet': 'Nuevo? Reclama OST Gratis', 'getost.faucettext': 'Las billeteras nuevas reciben <strong>100 OST</strong> de inicio. Despues, vuelve y reclama manualmente <strong>1 OST por dia</strong>.',
       'getost.faucetbtn': 'Reclamar 100 OST',
-      'pay.anywhere': '🌐 Interchange - Explora Cualquier Comercio',
+      'pay.anywhere': '&#127760; Interchange - Explora Cualquier Comercio',
       'pay.anywheresub': 'Pega una URL real de producto o checkout, o abre una ruta comercial abajo. OST carga la cotizacion y prepara una solicitud on-chain honesta en vez de fingir que la liquidacion del comercio ya existe.',
       'pay.aurl': 'URL del Comercio', 'pay.aamount': 'Monto a Pagar', 'pay.acurrency': 'Su Moneda',
       'pay.ayoupay': 'Tu Pagas:', 'pay.arate': 'Tasa:', 'pay.afee': 'Comision de Red:',
@@ -434,7 +435,7 @@
       'pay.deskRequestFailed': 'No se pudo crear la solicitud interchange en este momento.',
       'pay.browseTitle': 'Explora rutas comerciales', 'pay.browseSub': 'Elige hoteles, vuelos, autos, propiedad o retail y carga una cotizacion real en el desk.',
       'pay.browseHotels': 'Hoteles', 'pay.browseFlights': 'Vuelos', 'pay.browseCars': 'Autos', 'pay.browseProperty': 'Propiedad', 'pay.browseRetail': 'Retail', 'pay.browseOpen': 'Abrir ruta',
-      'launch.title': '🚀 Lista de Lanzamiento Mainnet', 'launch.sub': 'Lo que necesitamos para hacer OST real en Solana mainnet.',
+      'launch.title': '&#128640; Lista de Lanzamiento Mainnet', 'launch.sub': 'Lo que necesitamos para hacer OST real en Solana mainnet.',
       'ai.title': 'Poder para Cada Inteligencia', 'ai.sub': 'Damos la bienvenida a agentes IA, bots, servidores y toda forma de inteligencia digital.',
       'build.title': 'Construye el Futuro Con Nosotros', 'build.sub': 'Programa, crea o suena en pixeles — OST es tu plataforma.',
       'build.cta': 'Empieza a Contribuir Hoy', 'build.ctasub': 'Cada commit, traduccion y tutorial mueve a la humanidad adelante.',
@@ -449,202 +450,202 @@
       'hero.freetext': 'Cero comisiones. Sin costos ocultos. Financiado por donaciones e inversores.',
       'hero.createwallet': 'Crear Billetera',
       'hero.stat.unbanked': 'Adultos sin banco en el mundo',
-      'hero.stat.remittance': '$ perdidos en comisiones de remesas/a\u00f1o',
+      'hero.stat.remittance': '$ perdidos en comisiones de remesas/año',
       'hero.stat.nointernet': 'Personas sin internet',
-      'vision.title': 'La Visi\u00f3n OST: Independencia Financiera Completa',
-      'vision.sub': 'Actualmente usamos Solana, Jupiter y puentes de terceros como <strong>infraestructura temporal</strong>. Nuestro objetivo es construir la <strong>Red Soberana OST</strong> &mdash; nuestro propio protocolo de intercambio, algoritmo de trading, mercado descentralizado y capa de liquidaci\u00f3n. <em>Completamente separado de cualquier sistema existente. Totalmente descentralizado. Sin dependencias.</em>',
+      'vision.title': 'La Visión OST: Independencia Financiera Completa',
+      'vision.sub': 'Actualmente usamos Solana, Jupiter y puentes de terceros como <strong>infraestructura temporal</strong>. Nuestro objetivo es construir la <strong>Red Soberana OST</strong> &mdash; nuestro propio protocolo de intercambio, algoritmo de trading, mercado descentralizado y capa de liquidación. <em>Completamente separado de cualquier sistema existente. Totalmente descentralizado. Sin dependencias.</em>',
       'vision.s1.title': 'Andamiaje Temporal', 'vision.s1.sub': 'Solana + Jupiter + Puentes',
       'vision.s2.title': 'Protocolo de Intercambio OST', 'vision.s2.sub': 'Motor de emparejamiento propio',
       'vision.s3.title': 'Red Soberana OST', 'vision.s3.sub': 'Cero dependencias de terceros',
-      'vision.p1': '&#128274; ZK Privado', 'vision.p2': '&#9889; 0.4s Liquidaci\u00f3n', 'vision.p3': '&#128176; Cero Comisiones',
+      'vision.p1': '&#128274; ZK Privado', 'vision.p2': '&#9889; 0.4s Liquidación', 'vision.p3': '&#128176; Cero Comisiones',
       'vision.p4': '&#128295; Motor Propio', 'vision.p5': '&#127757; DEX y Puentes Propios', 'vision.p6': '&#128752; Internet Satelital',
       'vision.spacex.title': 'OST &times; SpaceX',
-      'vision.spacex.text': 'Alianza para llevar internet y pagos sin censura a 2.6 mil millones de personas sin conectividad mediante sat\u00e9lites de \u00f3rbita baja.',
+      'vision.spacex.text': 'Alianza para llevar internet y pagos sin censura a 2.6 mil millones de personas sin conectividad mediante satélites de órbita baja.',
       'vision.spacex.btn': 'Explorar el Viaje &#8594;',
-      'newhere.title': '&#127381; \u00bfNuevo Aqu\u00ed? Comienza Tu Viaje OST',
-      'newhere.sub': 'Reclama OST gratis, crea b\u00f3vedas familiares o gana recompensas contribuyendo infraestructura.',
-      'gv.title': 'B\u00f3vedas Familiares de Crecimiento',
-      'gv.sub': 'La primera moneda nacida en el espacio con cada nueva generaci\u00f3n. Crea una b\u00f3veda custodia para tu hijo &mdash; crecer\u00e1n con dinero digital privado real.',
+      'newhere.title': '&#127381; ¿Nuevo Aquí? Comienza Tu Viaje OST',
+      'newhere.sub': 'Reclama OST gratis, crea bóvedas familiares o gana recompensas contribuyendo infraestructura.',
+      'gv.title': 'Bóvedas Familiares de Crecimiento',
+      'gv.sub': 'La primera moneda nacida en el espacio con cada nueva generación. Crea una bóveda custodia para tu hijo &mdash; crecerán con dinero digital privado real.',
       'gv.disclaimer': 'Solo uso educativo. Los padres/tutores son responsables de todas las leyes fiscales y de custodia.',
       'depin.title': 'Faucet DePIN de Centro de Datos',
       'depin.sub': 'Comparte ancho de banda, GPU, CPU o capacidad satelital &mdash; gana OST por construir centros de datos descentralizados e internet satelital.',
       'demos.title': '&#128717;&#65039; Comercio OST', 'demos.sub': 'Compra curada, navegacion de comercios reales y ruteo on-chain de solicitudes con OST.',
-        'wallet.getTitle': 'Obten Tu Billetera OST Personal', 'wallet.getSub': 'Elige como crear o conectar tu billetera. Genera una billetera local en este navegador o conecta una billetera Solana existente.',
-        'wallet.commandKicker': 'Billetera + riel de conversi\u00f3n',
-        'wallet.commandTitle': 'Abre una billetera, sigue el mercado OST y pasa de fiat o cripto a OST confidencial.',
-        'wallet.commandSub': 'La p\u00e1gina de billetera ahora funciona como un centro de mando para acceso, mercado, conversi\u00f3n y portales.',
-        'wallet.tabs.aria': 'Paneles de la billetera',
-        'wallet.market.velocity': 'Velocidad de ruta',
-        'wallet.market.liquidity': 'Liquidez',
-        'wallet.market.title': 'Pulso de mercado OST',
-        'wallet.market.updated': 'En vivo',
-        'wallet.market.price': 'Precio de OST',
-        'wallet.market.volume': 'Volumen 24h',
-        'wallet.tabs.access': 'Acceso',
-        'wallet.tabs.market': 'Mercado',
-        'wallet.tabs.convert': 'Convertir',
-        'wallet.tabs.portals': 'Portales',
-        'wallet.card.phantomDesc': 'Acceso r\u00e1pido en m\u00f3vil y escritorio para usuarios que ya viven dentro de Solana.',
-        'wallet.card.connectAction': 'Conectar',
-        'wallet.card.solflareDesc': 'Herramientas s\u00f3lidas de staking y portafolio para usuarios que quieren una billetera m\u00e1s profunda.',
-        'wallet.card.backpackDesc': 'Una opci\u00f3n multicadena para quienes quieren apps, coleccionables y pagos en un solo lugar.',
-        'wallet.card.seedlessTitle': 'Crear billetera OST',
-        'wallet.card.seedlessDesc': 'Genera una billetera OST en este navegador, descarga un respaldo y empieza con OST en devnet.',
-        'wallet.card.seedlessAction': 'Crear billetera',
-        'wallet.downloadTitle': '¿Necesitas instalar primero? Usa los enlaces oficiales de descarga.',
-        'wallet.copy': 'Copiar',
-        'wallet.explorer': 'Explorador',
-        'wallet.buyOst': 'Comprar OST',
-        'wallet.send': 'Enviar',
-        'wallet.bridge': 'Puente',
-        'wallet.receive': 'Recibir',
-        'wallet.swap': 'Intercambiar',
-        'wallet.receiveTitle': 'Recibir OST o SOL',
-        'wallet.receiveSub': 'Comparte tu direcci\u00f3n o deja que alguien escanee el riel QR de abajo.',
-        'wallet.quickLinksTitle': 'Rutas r\u00e1pidas',
-        'wallet.secure.title': 'Ingreso seguro',
-        'wallet.secure.sub': 'Elige el riel de acceso que coincide con el usuario: avanzados con frase semilla, nuevos sin semilla o traders nativos de Solana.',
-        'wallet.secure.point1': 'Usa Phantom, Solflare o Backpack cuando el usuario ya tenga un flujo dentro de Solana.',
-        'wallet.secure.point2': 'Usa el flujo sin semilla cuando la prioridad sea abrir una primera billetera en minutos.',
-        'wallet.secure.point3': 'Mant\u00e9n una sola direcci\u00f3n en swap, pagos y launchpad para reducir la confusi\u00f3n.',
-        'wallet.secure.point4': 'La vista conectada muestra balances, QR de recepci\u00f3n y enlaces directos sin salir de la p\u00e1gina.',
-        'wallet.market.note2': 'La calculadora de abajo usa la misma cotizaci\u00f3n de OST que el riel de conversi\u00f3n, para que la vista previa y la ejecuci\u00f3n coincidan.',
-        'wallet.convert.lead': 'Conversi\u00f3n de moneda de grado institucional, redise\u00f1ada para usuarios comunes que necesitan una entrada clara a OST confidencial.',
-        'wallet.convert.from': 'Desde',
-        'wallet.convert.bridge': 'Puente',
-        'wallet.convert.swap': 'Intercambio',
-        'wallet.convert.encrypt': 'Cifrar',
-        'wallet.convert.to': 'Hacia',
-        'wallet.convert.providers': 'Rampas fiat directas para la moneda seleccionada:',
-        'wallet.convert.note': 'Actualmente funciona con Jupiter + Wormhole en Solana mientras el motor nativo de intercambio de OST sigue en construcci\u00f3n.',
-        'wallet.convert.received': 'Recibido',
-        'wallet.convert.done': 'Listo - privado e instant\u00e1neo',
-        'wallet.sell.stable': 'Cambiar a stablecoins',
-        'wallet.sell.stableDesc': 'Mueve OST a USDC, USDT o DAI cuando el usuario necesita una salida estable r\u00e1pida.',
-        'wallet.sell.cashout': 'Retirar al banco',
-        'wallet.sell.cashoutDesc': 'Usa las rutas de venta de Onramper o Transak despu\u00e9s de completar el swap de OST a SOL o de OST a USDC.',
-        'wallet.sell.p2p': 'Mercado P2P',
-        'wallet.sell.p2pDesc': 'El intercambio directo entre billeteras sigue en la hoja de ruta para quienes quieren una salida m\u00e1s simple.',
-        'wallet.portal.wormholeDesc': 'Mueve liquidez desde cadenas principales a Solana antes de que el riel de swap de OST tome el control.',
-        'wallet.portal.onramperDesc': 'Ruta agregadora de entrada con tarjeta, banco, Apple Pay y ruteo fiat local.',
-        'wallet.portal.moonpayDesc': 'Entrada r\u00e1pida a SOL con tarjeta para usuarios que quieren el flujo de compra m\u00e1s limpio.',
-        'wallet.portal.transakDesc': 'Cobertura regional de pagos con PIX, UPI, SEPA, Faster Payments y tarjetas.',
-        'wallet.portal.onramperSellDesc': 'Retira SOL o USDC a cuentas bancarias y rieles de dinero m\u00f3vil despu\u00e9s de la conversi\u00f3n.',
-        'wallet.portal.transakSellDesc': 'Salidas fiat regionales para usuarios que quieren banca local en lugar de custodiar stablecoins.',
-        'wallet.portal.jupiterDesc': 'Agregador de mejor ruta para conversiones OST, salidas estables y rotaciones spot.',
-        'wallet.portal.raydiumDesc': 'Lugar de liquidez e intercambio para usuarios que quieren acceso directo a pools en Solana.',
-        'wallet.portal.orcaDesc': 'Ruta de swap m\u00e1s limpia para usuarios de liquidez concentrada que quieren una interfaz m\u00e1s simple.',
-        'wallet.portal.meteoraDesc': 'Lugar de liquidez din\u00e1mica para activos nuevos y ruteo nativo del launchpad.',
-        'wallet.portal.prediction.title': 'Pr\u00f3ximamente',
-        'wallet.portal.prediction.sub': 'Un riel comunitario de mercados de eventos inspirado por Polymarket, Kalshi y el resto de las plataformas de contratos, pero construido dentro de OST.',
-        'ancient.toggle.off': '𓅱 Antiguo',
-        'ancient.toggle.on': 'Modo Moderno',
-        'ancient.toggle.activate': 'Activar el modo jerogl\u00edfico antiguo',
-        'ancient.toggle.deactivate': 'Volver a la interfaz moderna',
-        'ancient.toast.on': 'Modo antiguo activado',
-        'ancient.toast.off': 'Interfaz moderna restaurada',
-        'transmit.button': '𓂇 Transmitir al Espacio',
-        'transmit.buttonLarge': '𓂇 Abrir Consola de Transmisi\u00f3n',
-        'transmit.ctaSub': 'Codifica un mensaje personalizado, secuencia de ADN, imagen, video o cualquier archivo en forma jerogl\u00edfica, binaria y cu\u00e1ntica antes de dirigirlo a futuros rel\u00e9s OST.',
-        'transmit.kicker': 'Consola de carga para espacio profundo',
-        'transmit.title': '𓂇 Transmitir al Espacio',
-        'transmit.sub': 'Env\u00eda un mensaje personalizado, secuencia de ADN, imagen, video o cualquier archivo mediante el ritual de transmisi\u00f3n OST. Previsualiza la carga en jerogl\u00edficos, binario y entrelazamiento cu\u00e1ntico antes del lanzamiento.',
-        'transmit.message.label': 'Mensaje personalizado',
-        'transmit.message.placeholder': 'Describe la se\u00f1al, dedicatoria, coordenadas o nota de misi\u00f3n que quieres enviar...',
-        'transmit.dna.label': 'Secuencia de ADN / semilla de vida',
-        'transmit.dna.placeholder': 'Opcional: secuencia ACGT, etiqueta de muestra o nota de archivo biol\u00f3gico',
-        'transmit.files.label': 'Adjuntar cargas',
-        'transmit.files.sub': 'Suelta im\u00e1genes, video, documentos, archivos comprimidos o cualquier otro tipo de archivo',
-        'transmit.launch': 'Codificar y transmitir',
-        'transmit.launchBusy': 'Transmitiendo...',
-        'transmit.preview.glyph': 'Render jerogl\u00edfico antiguo',
-        'transmit.preview.binary': 'Binario + checksum',
-        'transmit.preview.quantum': 'Entrelazamiento cu\u00e1ntico',
-        'transmit.preview.manifest': 'Manifiesto de transmisi\u00f3n',
-        'transmit.preview.attachments': 'Cargas adjuntas',
-        'transmit.empty': 'Agrega un mensaje, secuencia de ADN o archivo para construir una transmisi\u00f3n.',
-        'transmit.none': 'Todav\u00eda no hay carga adjunta.',
-        'transmit.result.ready': 'Panel de se\u00f1al listo',
-        'transmit.result.sent': 'Transmisi\u00f3n completa',
-        'transmit.manifest.default': 'Esperando carga',
-        'transmit.summary.message': 'Mensaje',
-        'transmit.summary.dna': 'ADN',
-        'transmit.summary.files': 'Archivos',
-        'transmit.summary.route': 'Ruta',
-        'transmit.summary.checksum': 'Checksum',
-        'transmit.summary.packet': 'Paquete',
-        'transmit.summary.target': 'Objetivo',
-        'transmit.summary.render': 'Render',
-        'transmit.summary.chars': 'caracteres',
-        'transmit.summary.bases': 'bases',
-        'transmit.route.value': 'Rel\u00e9 LEO -> entrelazamiento cu\u00e1ntico -> Luna / Marte / espacio profundo',
-        'transmit.target.value': 'Luna, Marte, espacio profundo',
-        'transmit.render.value': 'Jerogl\u00edfico + binario + cu\u00e1ntico',
-        'transmit.stage.prepare': 'Preparando la red de carga...',
-        'transmit.stage.encode': 'Codificando la carga en memoria jerogl\u00edfica...',
-        'transmit.stage.binary': 'Convirtiendo el paquete a binario y checksum orbital...',
-        'transmit.stage.entangle': 'Entrelazando estados del paquete entre pares de rel\u00e9...',
-        'transmit.stage.route': 'Enrutando por infraestructura orbital...',
-        'transmit.stage.broadcast': 'Difusi\u00f3n apuntada a la Luna, Marte y espacio profundo...',
-        'transmit.stage.done': 'Transmisi\u00f3n completa \u2014 bloqueo del rel\u00e9 confirmado.',
-        'transmit.file.image': 'Carga de imagen',
-        'transmit.file.video': 'Carga de video',
-        'transmit.file.text': 'Carga de texto',
-        'transmit.file.data': 'Carga de archivo',
-        'sell.title': 'Vender o Intercambiar OST', 'sell.sub': 'Retira a cualquier cripto o fiat. Misma velocidad, misma privacidad.',
-      'censor.title': '&#128683; La Censura de Internet Est\u00e1 Ocurriendo Ahora', 'censor.sub': 'Eventos reales. Personas reales. OST es la respuesta a la opresi\u00f3n digital.',
-      'spacex.title': 'OST &times; SpaceX &mdash; El Viaje al Espacio', 'spacex.sub': 'Sigue nuestra hoja de ruta desde la Tierra hasta Marte. Cada hito es real, cada objetivo est\u00e1 financiado por donaciones e inversores.',
-      'roadmap.title': '&#128640; Hoja de Ruta y Progreso', 'roadmap.sub': 'D\u00f3nde estamos, qu\u00e9 hemos construido y qu\u00e9 sigue.',
-      'offline.scenarios': 'Escenarios del Mundo Real', 'offline.scenariosub': 'Datos verificados del Banco Mundial, ACNUR, AIE y EM-DAT. No son hipot\u00e9ticos \u2014 ocurren hoy.',
-      'ai.hook.title': '\u00bfTienes un Servidor, Bot o Localhost?',
+      'wallet.getTitle': 'Obten Tu Billetera OST Personal', 'wallet.getSub': 'Elige como crear o conectar tu billetera. Genera una billetera local en este navegador o conecta una billetera Solana existente.',
+      'wallet.commandKicker': 'Billetera + riel de conversión',
+      'wallet.commandTitle': 'Abre una billetera, sigue el mercado OST y pasa de fiat o cripto a OST confidencial.',
+      'wallet.commandSub': 'La página de billetera ahora funciona como un centro de mando para acceso, mercado, conversión y portales.',
+      'wallet.tabs.aria': 'Paneles de la billetera',
+      'wallet.market.velocity': 'Velocidad de ruta',
+      'wallet.market.liquidity': 'Liquidez',
+      'wallet.market.title': 'Pulso de mercado OST',
+      'wallet.market.updated': 'En vivo',
+      'wallet.market.price': 'Precio de OST',
+      'wallet.market.volume': 'Volumen 24h',
+      'wallet.tabs.access': 'Acceso',
+      'wallet.tabs.market': 'Mercado',
+      'wallet.tabs.convert': 'Convertir',
+      'wallet.tabs.portals': 'Portales',
+      'wallet.card.phantomDesc': 'Acceso rápido en móvil y escritorio para usuarios que ya viven dentro de Solana.',
+      'wallet.card.connectAction': 'Conectar',
+      'wallet.card.solflareDesc': 'Herramientas sólidas de staking y portafolio para usuarios que quieren una billetera más profunda.',
+      'wallet.card.backpackDesc': 'Una opción multicadena para quienes quieren apps, coleccionables y pagos en un solo lugar.',
+      'wallet.card.seedlessTitle': 'Crear billetera OST',
+      'wallet.card.seedlessDesc': 'Genera una billetera OST en este navegador, descarga un respaldo y empieza con OST en devnet.',
+      'wallet.card.seedlessAction': 'Crear billetera',
+      'wallet.downloadTitle': '¿Necesitas instalar primero? Usa los enlaces oficiales de descarga.',
+      'wallet.copy': 'Copiar',
+      'wallet.explorer': 'Explorador',
+      'wallet.buyOst': 'Comprar OST',
+      'wallet.send': 'Enviar',
+      'wallet.bridge': 'Puente',
+      'wallet.receive': 'Recibir',
+      'wallet.swap': 'Intercambiar',
+      'wallet.receiveTitle': 'Recibir OST o SOL',
+      'wallet.receiveSub': 'Comparte tu dirección o deja que alguien escanee el riel QR de abajo.',
+      'wallet.quickLinksTitle': 'Rutas rápidas',
+      'wallet.secure.title': 'Ingreso seguro',
+      'wallet.secure.sub': 'Elige el riel de acceso que coincide con el usuario: avanzados con frase semilla, nuevos sin semilla o traders nativos de Solana.',
+      'wallet.secure.point1': 'Usa Phantom, Solflare o Backpack cuando el usuario ya tenga un flujo dentro de Solana.',
+      'wallet.secure.point2': 'Usa el flujo sin semilla cuando la prioridad sea abrir una primera billetera en minutos.',
+      'wallet.secure.point3': 'Mantén una sola dirección en swap, pagos y launchpad para reducir la confusión.',
+      'wallet.secure.point4': 'La vista conectada muestra balances, QR de recepción y enlaces directos sin salir de la página.',
+      'wallet.market.note2': 'La calculadora de abajo usa la misma cotización de OST que el riel de conversión, para que la vista previa y la ejecución coincidan.',
+      'wallet.convert.lead': 'Conversión de moneda de grado institucional, rediseñada para usuarios comunes que necesitan una entrada clara a OST confidencial.',
+      'wallet.convert.from': 'Desde',
+      'wallet.convert.bridge': 'Puente',
+      'wallet.convert.swap': 'Intercambio',
+      'wallet.convert.encrypt': 'Cifrar',
+      'wallet.convert.to': 'Hacia',
+      'wallet.convert.providers': 'Rampas fiat directas para la moneda seleccionada:',
+      'wallet.convert.note': 'Actualmente funciona con Jupiter + Wormhole en Solana mientras el motor nativo de intercambio de OST sigue en construcción.',
+      'wallet.convert.received': 'Recibido',
+      'wallet.convert.done': 'Listo - privado e instantáneo',
+      'wallet.sell.stable': 'Cambiar a stablecoins',
+      'wallet.sell.stableDesc': 'Mueve OST a USDC, USDT o DAI cuando el usuario necesita una salida estable rápida.',
+      'wallet.sell.cashout': 'Retirar al banco',
+      'wallet.sell.cashoutDesc': 'Usa las rutas de venta de Onramper o Transak después de completar el swap de OST a SOL o de OST a USDC.',
+      'wallet.sell.p2p': 'Mercado P2P',
+      'wallet.sell.p2pDesc': 'El intercambio directo entre billeteras sigue en la hoja de ruta para quienes quieren una salida más simple.',
+      'wallet.portal.wormholeDesc': 'Mueve liquidez desde cadenas principales a Solana antes de que el riel de swap de OST tome el control.',
+      'wallet.portal.onramperDesc': 'Ruta agregadora de entrada con tarjeta, banco, Apple Pay y ruteo fiat local.',
+      'wallet.portal.moonpayDesc': 'Entrada rápida a SOL con tarjeta para usuarios que quieren el flujo de compra más limpio.',
+      'wallet.portal.transakDesc': 'Cobertura regional de pagos con PIX, UPI, SEPA, Faster Payments y tarjetas.',
+      'wallet.portal.onramperSellDesc': 'Retira SOL o USDC a cuentas bancarias y rieles de dinero móvil después de la conversión.',
+      'wallet.portal.transakSellDesc': 'Salidas fiat regionales para usuarios que quieren banca local en lugar de custodiar stablecoins.',
+      'wallet.portal.jupiterDesc': 'Agregador de mejor ruta para conversiones OST, salidas estables y rotaciones spot.',
+      'wallet.portal.raydiumDesc': 'Lugar de liquidez e intercambio para usuarios que quieren acceso directo a pools en Solana.',
+      'wallet.portal.orcaDesc': 'Ruta de swap más limpia para usuarios de liquidez concentrada que quieren una interfaz más simple.',
+      'wallet.portal.meteoraDesc': 'Lugar de liquidez dinámica para activos nuevos y ruteo nativo del launchpad.',
+      'wallet.portal.prediction.title': 'Próximamente',
+      'wallet.portal.prediction.sub': 'Un riel comunitario de mercados de eventos inspirado por Polymarket, Kalshi y el resto de las plataformas de contratos, pero construido dentro de OST.',
+      'ancient.toggle.off': '𓅱 Antiguo',
+      'ancient.toggle.on': 'Modo Moderno',
+      'ancient.toggle.activate': 'Activar el modo jeroglífico antiguo',
+      'ancient.toggle.deactivate': 'Volver a la interfaz moderna',
+      'ancient.toast.on': 'Modo antiguo activado',
+      'ancient.toast.off': 'Interfaz moderna restaurada',
+      'transmit.button': '𓂇 Transmitir al Espacio',
+      'transmit.buttonLarge': '𓂇 Abrir Consola de Transmisión',
+      'transmit.ctaSub': 'Codifica un mensaje personalizado, secuencia de ADN, imagen, video o cualquier archivo en forma jeroglífica, binaria y cuántica antes de dirigirlo a futuros relés OST.',
+      'transmit.kicker': 'Consola de carga para espacio profundo',
+      'transmit.title': '𓂇 Transmitir al Espacio',
+      'transmit.sub': 'Envía un mensaje personalizado, secuencia de ADN, imagen, video o cualquier archivo mediante el ritual de transmisión OST. Previsualiza la carga en jeroglíficos, binario y entrelazamiento cuántico antes del lanzamiento.',
+      'transmit.message.label': 'Mensaje personalizado',
+      'transmit.message.placeholder': 'Describe la señal, dedicatoria, coordenadas o nota de misión que quieres enviar...',
+      'transmit.dna.label': 'Secuencia de ADN / semilla de vida',
+      'transmit.dna.placeholder': 'Opcional: secuencia ACGT, etiqueta de muestra o nota de archivo biológico',
+      'transmit.files.label': 'Adjuntar cargas',
+      'transmit.files.sub': 'Suelta imágenes, video, documentos, archivos comprimidos o cualquier otro tipo de archivo',
+      'transmit.launch': 'Codificar y transmitir',
+      'transmit.launchBusy': 'Transmitiendo...',
+      'transmit.preview.glyph': 'Render jeroglífico antiguo',
+      'transmit.preview.binary': 'Binario + checksum',
+      'transmit.preview.quantum': 'Entrelazamiento cuántico',
+      'transmit.preview.manifest': 'Manifiesto de transmisión',
+      'transmit.preview.attachments': 'Cargas adjuntas',
+      'transmit.empty': 'Agrega un mensaje, secuencia de ADN o archivo para construir una transmisión.',
+      'transmit.none': 'Todavía no hay carga adjunta.',
+      'transmit.result.ready': 'Panel de señal listo',
+      'transmit.result.sent': 'Transmisión completa',
+      'transmit.manifest.default': 'Esperando carga',
+      'transmit.summary.message': 'Mensaje',
+      'transmit.summary.dna': 'ADN',
+      'transmit.summary.files': 'Archivos',
+      'transmit.summary.route': 'Ruta',
+      'transmit.summary.checksum': 'Checksum',
+      'transmit.summary.packet': 'Paquete',
+      'transmit.summary.target': 'Objetivo',
+      'transmit.summary.render': 'Render',
+      'transmit.summary.chars': 'caracteres',
+      'transmit.summary.bases': 'bases',
+      'transmit.route.value': 'Relé LEO -> entrelazamiento cuántico -> Luna / Marte / espacio profundo',
+      'transmit.target.value': 'Luna, Marte, espacio profundo',
+      'transmit.render.value': 'Jeroglífico + binario + cuántico',
+      'transmit.stage.prepare': 'Preparando la red de carga...',
+      'transmit.stage.encode': 'Codificando la carga en memoria jeroglífica...',
+      'transmit.stage.binary': 'Convirtiendo el paquete a binario y checksum orbital...',
+      'transmit.stage.entangle': 'Entrelazando estados del paquete entre pares de relé...',
+      'transmit.stage.route': 'Enrutando por infraestructura orbital...',
+      'transmit.stage.broadcast': 'Difusión apuntada a la Luna, Marte y espacio profundo...',
+      'transmit.stage.done': 'Transmisión completa — bloqueo del relé confirmado.',
+      'transmit.file.image': 'Carga de imagen',
+      'transmit.file.video': 'Carga de video',
+      'transmit.file.text': 'Carga de texto',
+      'transmit.file.data': 'Carga de archivo',
+      'sell.title': 'Vender o Intercambiar OST', 'sell.sub': 'Retira a cualquier cripto o fiat. Misma velocidad, misma privacidad.',
+      'censor.title': '&#128683; La Censura de Internet Está Ocurriendo Ahora', 'censor.sub': 'Eventos reales. Personas reales. OST es la respuesta a la opresión digital.',
+      'spacex.title': 'OST &times; SpaceX &mdash; El Viaje al Espacio', 'spacex.sub': 'Sigue nuestra hoja de ruta desde la Tierra hasta Marte. Cada hito es real, cada objetivo está financiado por donaciones e inversores.',
+      'roadmap.title': '&#128640; Hoja de Ruta y Progreso', 'roadmap.sub': 'Dónde estamos, qué hemos construido y qué sigue.',
+      'offline.scenarios': 'Escenarios del Mundo Real', 'offline.scenariosub': 'Datos verificados del Banco Mundial, ACNUR, AIE y EM-DAT. No son hipotéticos — ocurren hoy.',
+      'ai.hook.title': '¿Tienes un Servidor, Bot o Localhost?',
       'ai.hook.text': 'Si tienes un servidor, un bot, un entorno localhost o cualquier forma de inteligencia automatizada &mdash; <strong>OST es tu capa de pagos</strong>. Conecta cualquier modelo de IA, cualquier webhook, cualquier servicio.',
       'gc.title': 'Intercambio de Tarjetas de Regalo &mdash; Vende o Compra Cualquier Tarjeta con OST',
-      'gc.sub': 'Convierte cualquier tarjeta de regalo en OST privado, o paga con OST y recibe tarjetas digitales instant\u00e1neas. Sin banco, sin KYC, sin l\u00edmites.',
+      'gc.sub': 'Convierte cualquier tarjeta de regalo en OST privado, o paga con OST y recibe tarjetas digitales instantáneas. Sin banco, sin KYC, sin límites.',
       'gc.tabSell': '&#128178; Vender Tarjeta &rarr; Obtener OST',
       'gc.tabBuy': '&#127873; Comprar Tarjeta con OST',
-      'gc.pipe.paste': 'Pegar C\u00f3digo', 'gc.pipe.verify': 'Verificar', 'gc.pipe.receive': 'Recibir OST',
+      'gc.pipe.paste': 'Pegar Código', 'gc.pipe.verify': 'Verificar', 'gc.pipe.receive': 'Recibir OST',
       'gc.pipe.payOst': 'Pagar OST', 'gc.pipe.convert': 'Convertir', 'gc.pipe.getCard': 'Obtener Tarjeta',
       'gc.merchant': 'Comercio / Marca', 'gc.merchantBuy': 'Elegir Tarjeta de Regalo',
-      'gc.code': 'C\u00f3digo de Tarjeta', 'gc.balance': 'Saldo de la Tarjeta (USD)',
+      'gc.code': 'Código de Tarjeta', 'gc.balance': 'Saldo de la Tarjeta (USD)',
       'gc.youGet': 'Recibes', 'gc.youPay': 'Pagas', 'gc.amount': 'Monto (USD)',
       'gc.email': 'Email de entrega (opcional)',
-      'gc.rate': 'Tasa:', 'gc.fee': 'Comisi\u00f3n del tesoro (0.1%):',
-      'gc.feeNote': '&#128752; La comisi\u00f3n financia infraestructura satelital',
+      'gc.rate': 'Tasa:', 'gc.fee': 'Comisión del tesoro (0.1%):',
+      'gc.feeNote': '&#128752; La comisión financia infraestructura satelital',
       'gc.sellBtn': 'Verificar y Vender &rarr; Obtener OST',
       'gc.buyBtn': 'Pagar OST &rarr; Obtener Tarjeta',
-      'gc.step.verify': 'Verificando c\u00f3digo de tarjeta&hellip;',
+      'gc.step.verify': 'Verificando código de tarjeta&hellip;',
       'gc.step.zk': 'Generando prueba ZK&hellip;',
-      'gc.step.send': 'Enviando OST v\u00eda transferencia confidencial&hellip;',
-      'gc.step.done': '\u00a1Completado! OST recibido de forma privada.',
+      'gc.step.send': 'Enviando OST vía transferencia confidencial&hellip;',
+      'gc.step.done': '¡Completado! OST recibido de forma privada.',
       'gc.step.debit': 'Debitando OST (confidencial)&hellip;',
-      'gc.step.swap': 'Intercambiando OST &rarr; USDC v\u00eda Jupiter&hellip;',
+      'gc.step.swap': 'Intercambiando OST &rarr; USDC vía Jupiter&hellip;',
       'gc.step.purchase': 'Comprando tarjeta de regalo&hellip;',
-      'gc.step.delivered': '\u00a1Tarjeta de regalo entregada!',
+      'gc.step.delivered': '¡Tarjeta de regalo entregada!',
       'gc.supported': 'Marcas disponibles:',
-      'gc.disclaimer': '&#9888; Los usuarios son responsables de verificar la validez de las tarjetas. OST no es un emisor de tarjetas de regalo. El intercambio se facilita a trav\u00e9s de APIs de terceros. Sujeto a leyes locales.',
+      'gc.disclaimer': '&#9888; Los usuarios son responsables de verificar la validez de las tarjetas. OST no es un emisor de tarjetas de regalo. El intercambio se facilita a través de APIs de terceros. Sujeto a leyes locales.',
       'fuel.title': 'Combustible y Gasolineras',
       'fuel.sub': 'Paga con OST en gasolineras de todo el mundo — gana recompensas en cada carga',
-      'fuel.howTitle': 'C\u00f3mo Funciona',
+      'fuel.howTitle': 'Cómo Funciona',
       'fuel.step1': 'Llega',
-      'fuel.step1d': 'Conduce a cualquier estaci\u00f3n aliada',
+      'fuel.step1d': 'Conduce a cualquier estación aliada',
       'fuel.step2': 'Toca y Paga',
-      'fuel.step2d': 'Paga con OST v\u00eda NFC o QR',
+      'fuel.step2d': 'Paga con OST vía NFC o QR',
       'fuel.step3': 'Gana Recompensas',
       'fuel.step3d': 'Recibe cashback en OST al instante',
-      'fuel.step4': 'Contin\u00faa',
+      'fuel.step4': 'Continúa',
       'fuel.step4d': 'Recibo enviado a tu billetera',
       'fuel.calcTitle': 'Calculadora de Recompensas',
       'fuel.gallons': 'Galones',
-      'fuel.priceGal': 'Precio por Gal\u00f3n (USD)',
+      'fuel.priceGal': 'Precio por Galón (USD)',
       'fuel.total': 'Costo Total',
       'fuel.ostCost': 'Equivalente en OST',
       'fuel.reward': 'Cashback (3%)',
-      'fuel.offlineTitle': 'Funciona Sin Conexi\u00f3n',
+      'fuel.offlineTitle': 'Funciona Sin Conexión',
       'fuel.offlineDesc': 'NFC y BLE — paga sin internet. Las transacciones se sincronizan al reconectarse.',
       'fuel.partnersTitle': 'Estaciones Aliadas',
       'fuel.partnersSub': 'Aceptado en 20+ marcas de combustible a nivel mundial',
       'fuel.rewardsTitle': 'Niveles de Recompensa',
-      'fuel.disclaimer': '&#9888; Las alianzas mostradas est\u00e1n en desarrollo. OST no est\u00e1 afiliado a las marcas listadas.',
+      'fuel.disclaimer': '&#9888; Las alianzas mostradas están en desarrollo. OST no está afiliado a las marcas listadas.',
     },
     zh: {
       'nav.home': '首页', 'nav.newhere': '获取OST', 'nav.demos': '商业', 'nav.wallet': '钱包',
@@ -5997,16 +5998,19 @@
   const ghostConnectorMeta = {
     openai: { label: 'OpenAI', protocols: ['LLM', 'JSON', 'Tool Calling'] },
     anthropic: { label: 'Anthropic', protocols: ['LLM', 'Proxy', 'Messages API'] },
+    gemini: { label: 'Gemini', protocols: ['LLM', 'GenerateContent', 'JSON'] },
     telegram: { label: 'Telegram', protocols: ['Bot API', 'Webhook'] },
     discord: { label: 'Discord', protocols: ['Gateway', 'Bot Token'] },
     webhook: { label: 'Webhook', protocols: ['HTTP', 'POST'] },
     mcp: { label: 'MCP', protocols: ['stdio', 'SSE', 'Streamable HTTP'] },
     claude: { label: 'Claude', protocols: ['LLM', 'Proxy', 'Messages API'] },
+    grok: { label: 'Grok', protocols: ['LLM', 'Chat Completions', 'JSON'] },
     vscode: { label: 'VSCode', protocols: ['Editor', 'GitHub', 'Extension'] },
     github: { label: 'GitHub', protocols: ['REST', 'Repo', 'Automation'] },
     polymarket: { label: 'Polymarket', protocols: ['Markets', 'Strategy', 'Bot'] },
     kalshi: { label: 'Kalshi', protocols: ['Markets', 'Contracts', 'Bot'] }
   };
+  const ghostServerRelayKeys = ['anthropic', 'gemini', 'grok', 'github', 'mcp'];
   const ghostConnectorRegistry = Object.keys(ghostConnectorMeta).reduce((acc, key) => {
     acc[key] = { connected: false, lastCheckedAt: 0 };
     return acc;
@@ -6016,11 +6020,14 @@
   const ghostProtocol = $('#ghostProtocol');
   const ghostComposeBtn = $('#ghostComposeBtn');
   const ghostDispatchBtn = $('#ghostDispatchBtn');
+  const ghostSyncBtn = $('#ghostSyncBtn');
   const ghostClearBtn = $('#ghostClearBtn');
   const ghostStatus = $('#ghostStatus');
   const ghostMesh = $('#ghostMesh');
   const ghostPacket = $('#ghostPacket');
   const ghostResult = $('#ghostResult');
+  const ghostHistory = $('#ghostHistory');
+  const ghostNetworkMemory = $('#ghostNetworkMemory');
   let ghostLastMission = null;
 
   function getGhostConnectorKey(name) {
@@ -6032,15 +6039,22 @@
     return ghostConnectorMeta[key] ? ghostConnectorMeta[key].label : String(name || 'Unknown');
   }
 
+  function normalizeGhostRelayConnector(name) {
+    const key = getGhostConnectorKey(name);
+    return key === 'claude' ? 'anthropic' : key;
+  }
+
   function readGhostConnectorConfig(type) {
     const key = getGhostConnectorKey(type);
     if (key === 'openai') return { apiKey: $('#apiKeyOpenAI')?.value?.trim() || '', model: $('#modelOpenAI')?.value || 'gpt-4o' };
     if (key === 'anthropic') return { apiKey: $('#apiKeyAnthropic')?.value?.trim() || '', model: $('#modelAnthropic')?.value || 'claude-sonnet-4-20250514' };
+    if (key === 'gemini') return { apiKey: $('#apiKeyGemini')?.value?.trim() || '', model: $('#modelGemini')?.value || 'gemini-2.0-flash' };
     if (key === 'telegram') return { token: $('#apiKeyTelegram')?.value?.trim() || '', webhook: $('#webhookTelegram')?.value?.trim() || '' };
     if (key === 'discord') return { token: $('#apiKeyDiscord')?.value?.trim() || '', guildId: $('#guildDiscord')?.value?.trim() || '' };
     if (key === 'webhook') return { url: $('#apiKeyWebhook')?.value?.trim() || '', auth: $('#authWebhook')?.value?.trim() || '' };
     if (key === 'mcp') return { url: $('#apiKeyMCP')?.value?.trim() || '', transport: $('#transportMCP')?.value || 'sse' };
     if (key === 'claude') return { apiKey: $('#apiKeyClaude')?.value?.trim() || '', model: $('#modelClaude')?.value || 'claude-sonnet-4-20250514' };
+    if (key === 'grok') return { apiKey: $('#apiKeyGrok')?.value?.trim() || '', model: $('#modelGrok')?.value || 'grok-beta' };
     if (key === 'vscode') return { token: $('#apiKeyVSCode')?.value?.trim() || '', extension: $('#extVSCode')?.value || 'copilot' };
     if (key === 'github') return { token: $('#apiKeyGitHub')?.value?.trim() || '', repo: $('#repoGitHub')?.value?.trim() || '' };
     if (key === 'polymarket') return { apiKey: $('#apiKeyPolymarket')?.value?.trim() || '', strategy: $('#strategyPolymarket')?.value || 'monitor' };
@@ -6097,16 +6111,17 @@
     const connected = getConnectedGhostConnectors();
     if (!connected.length) return [];
     const priority = [];
-    if (intents.includes('code')) priority.push('github', 'vscode', 'mcp', 'openai', 'claude', 'anthropic');
-    if (intents.includes('markets')) priority.push('polymarket', 'kalshi', 'github', 'openai');
-    if (intents.includes('protocol')) priority.push('mcp', 'webhook', 'github', 'openai');
-    if (intents.includes('research')) priority.push('openai', 'claude', 'anthropic', 'github');
+    if (intents.includes('code')) priority.push('github', 'vscode', 'mcp', 'openai', 'claude', 'anthropic', 'gemini', 'grok');
+    if (intents.includes('markets')) priority.push('polymarket', 'kalshi', 'github', 'gemini', 'grok', 'openai');
+    if (intents.includes('protocol')) priority.push('mcp', 'webhook', 'github', 'gemini', 'grok', 'openai');
+    if (intents.includes('research')) priority.push('gemini', 'grok', 'openai', 'claude', 'anthropic', 'github');
     if (intents.includes('chat')) priority.push('telegram', 'discord', 'openai');
-    if (intents.includes('signals')) priority.push('webhook', 'mcp', 'telegram', 'github');
+    if (intents.includes('signals')) priority.push('webhook', 'mcp', 'telegram', 'github', 'gemini');
     connected.forEach((key) => priority.push(key));
     const ordered = Array.from(new Set(priority)).filter((key) => connected.includes(key));
     if (mode === 'simple') return ordered.slice(0, 1);
     if (mode === 'complex') return ordered.slice(0, 3);
+    if (mode === 'autonomous') return ordered.slice(0, Math.min(ordered.length, 4));
     return ordered;
   }
 
@@ -6177,6 +6192,8 @@
       lines.push('Simple mode keeps the route narrow: Ghost chose the single strongest connected rail for the mission.');
     } else if (mission.mode === 'complex') {
       lines.push('Complex mode fans the mission across a small execution set so Ghost can compare or bridge systems without flooding the mesh.');
+    } else if (mission.mode === 'autonomous') {
+      lines.push('Autonomous mode lets Ghost choose the relay order, crawl context, persist mission history, and retry failed routes through the worker mesh.');
     } else {
       lines.push('Mesh mode keeps every connected rail in play so Ghost can behave like an internet white blood cell moving across the full local mesh.');
     }
@@ -6203,6 +6220,9 @@
     }
     if (key === 'claude' || key === 'anthropic') {
       return '[' + getGhostConnectorLabel(key) + ' bridge]\nModel: ' + (config.model || 'default') + '\nBrowser CORS prevents a direct call here, so Ghost prepared the mission for a relay, proxy, or MCP bridge.';
+    }
+    if (key === 'gemini' || key === 'grok') {
+      return '[' + getGhostConnectorLabel(key) + ' bridge]\nModel: ' + (config.model || 'default') + '\nOST can route this connector through the worker relay so Ghost can cross the browser/CORS boundary.';
     }
     if (key === 'vscode') {
       return '[VS Code bridge]\nExtension: ' + (config.extension || 'copilot') + '\nGhost can hand this mission to a local editor agent for repo-native execution.';
@@ -6247,13 +6267,143 @@
   }
 
   function renderGhostMission(mission, output) {
-    if (ghostPacket) ghostPacket.textContent = buildGhostPacket(mission);
+    if (ghostPacket) ghostPacket.textContent = mission && mission.packet ? mission.packet : buildGhostPacket(mission);
     if (ghostResult) ghostResult.textContent = output;
+  }
+
+  function hasGhostConnectorConfig(config) {
+    return Object.values(config || {}).some((value) => String(value || '').trim());
+  }
+
+  function collectGhostConnectorConfigs(options = {}) {
+    const connectedOnly = !!options.connectedOnly;
+    const configs = {};
+    Object.keys(ghostConnectorMeta).forEach((key) => {
+      if (connectedOnly && !ghostConnectorRegistry[key]?.connected) return;
+      const config = readGhostConnectorConfig(key);
+      if (!hasGhostConnectorConfig(config)) return;
+      const normalized = normalizeGhostRelayConnector(key);
+      if (!ghostServerRelayKeys.includes(normalized)) return;
+      if (!configs[normalized] || key === normalized) configs[normalized] = config;
+    });
+    return configs;
+  }
+
+  function getGhostApiBase() {
+    return getOstApiBase();
+  }
+
+  async function ghostApiRequest(path, options = {}) {
+    const base = getGhostApiBase();
+    if (!base) throw new Error('OST API base is not configured.');
+    const response = await fetch(base + path, {
+      method: options.method || 'GET',
+      headers: Object.assign({ accept: 'application/json' }, options.headers || {}),
+      body: options.body,
+      cache: options.cache || 'no-store'
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || payload.ok === false) {
+      throw new Error((payload && (payload.error || payload.detail || payload.message)) || ('Ghost API returned ' + response.status));
+    }
+    return payload;
+  }
+
+  async function testGhostRelayConnection(type) {
+    const normalized = normalizeGhostRelayConnector(type);
+    const config = readGhostConnectorConfig(type);
+    if (!hasGhostConnectorConfig(config)) throw new Error('Enter the connector details first.');
+    return ghostApiRequest('/ghost/relay/test', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        connector: normalized,
+        config,
+        connectorConfigs: { [normalized]: config }
+      })
+    });
+  }
+
+  function formatGhostServerMission(mission) {
+    const lines = [];
+    if (mission.summary) lines.push(mission.summary);
+    if (Array.isArray(mission.attempts) && mission.attempts.length) {
+      lines.push('Attempt log:');
+      mission.attempts.slice(-10).forEach((attempt) => {
+        const status = attempt.ok ? '[ok]' : '[error]';
+        const detail = attempt.ok ? (attempt.responseText || attempt.summary || 'completed') : (attempt.error || 'unknown error');
+        lines.push(`${status} ${getGhostConnectorLabel(attempt.connector)} (${attempt.latencyMs || 0}ms) -> ${detail}`);
+      });
+    }
+    if (Array.isArray(mission.crawlSnapshots) && mission.crawlSnapshots.length) {
+      lines.push('Crawl context:');
+      mission.crawlSnapshots.slice(0, 4).forEach((snapshot) => {
+        lines.push(`- ${snapshot.url} (${snapshot.status || 0}) -> ${(snapshot.snippet || '').slice(0, 180)}`);
+      });
+    }
+    return lines.filter(Boolean).join('\n\n');
+  }
+
+  function renderGhostMissionHistory(history) {
+    if (!ghostHistory) return;
+    if (!Array.isArray(history) || !history.length) {
+      ghostHistory.textContent = 'No shared Ghost missions yet.';
+      return;
+    }
+    ghostHistory.textContent = history.slice(0, 10).map((item) => {
+      const stamp = item.updatedAt ? String(item.updatedAt).replace('T', ' ').slice(0, 19) : 'pending';
+      return `${stamp} | ${item.status || 'unknown'} | ${item.id}\n${item.prompt || ''}`;
+    }).join('\n\n');
+  }
+
+  function renderGhostNetworkMemory(feed, connectors) {
+    if (!ghostNetworkMemory) return;
+    const lines = [];
+    const connectorKeys = connectors && typeof connectors === 'object' ? Object.keys(connectors) : [];
+    if (connectorKeys.length) {
+      lines.push('Connector knowledge:');
+      connectorKeys.sort().forEach((key) => {
+        const info = connectors[key] || {};
+        lines.push(`${getGhostConnectorLabel(key)} -> ${info.successes || 0} ok / ${info.failures || 0} failed / last ${info.lastStatus || 'idle'}`);
+      });
+    }
+    if (Array.isArray(feed) && feed.length) {
+      if (lines.length) lines.push('');
+      lines.push('Shared mesh memory:');
+      feed.slice(0, 8).forEach((entry) => {
+        lines.push(`${entry.kind || 'memory'} ${entry.missionId || entry.id}: ${(entry.summary || '').slice(0, 180)}`);
+      });
+    }
+    ghostNetworkMemory.textContent = lines.length ? lines.join('\n') : 'No mesh memory synced yet.';
+  }
+
+  function renderGhostNetworkState(mesh) {
+    if (!mesh || typeof mesh !== 'object') return;
+    renderGhostMissionHistory(mesh.history || []);
+    renderGhostNetworkMemory(mesh.feed || [], mesh.connectors || {});
+  }
+
+  async function syncGhostNetworkState() {
+    const base = getGhostApiBase();
+    if (!base) {
+      renderGhostMissionHistory([]);
+      renderGhostNetworkMemory([], {});
+      return null;
+    }
+    try {
+      const mesh = await ghostApiRequest('/ghost/mesh?limit=10');
+      renderGhostNetworkState(mesh);
+      return mesh;
+    } catch (error) {
+      if (ghostNetworkMemory) ghostNetworkMemory.textContent = 'Ghost mesh sync unavailable: ' + ((error && error.message) || error);
+      return null;
+    }
   }
 
   function setGhostBusy(busy) {
     if (ghostComposeBtn) ghostComposeBtn.disabled = !!busy;
     if (ghostDispatchBtn) ghostDispatchBtn.disabled = !!busy;
+    if (ghostSyncBtn) ghostSyncBtn.disabled = !!busy;
   }
 
   function composeGhostMission() {
@@ -6275,6 +6425,45 @@
     const outputs = [buildGhostLocalSynthesis(mission)];
 
     try {
+      const supportedServerConnectors = Array.from(new Set(
+        mission.connectors.map((key) => normalizeGhostRelayConnector(key)).filter((key) => ghostServerRelayKeys.includes(key))
+      ));
+      const connectorConfigs = collectGhostConnectorConfigs({ connectedOnly: true });
+      if (getGhostApiBase() && (mission.mode === 'autonomous' || supportedServerConnectors.length || Object.keys(connectorConfigs).length)) {
+        try {
+          setGhostStatus('Ghost is dispatching through the OST worker mesh...', 'warning');
+          const server = await ghostApiRequest('/ghost/missions', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              prompt: mission.prompt,
+              mode: mission.mode,
+              protocol: mission.protocol,
+              connectors: supportedServerConnectors,
+              connectorConfigs,
+              retryBudget: mission.mode === 'autonomous' ? 1 : (mission.mode === 'mesh' ? 1 : 0)
+            })
+          });
+          const serverMission = server.mission || mission;
+          ghostLastMission = serverMission;
+          const serverOutput = formatGhostServerMission(serverMission);
+          renderGhostMission(serverMission, serverOutput);
+          if (server.mesh) renderGhostNetworkState(server.mesh);
+          setGhostStatus(
+            serverMission.status === 'completed'
+              ? 'Ghost completed the mission through the worker mesh.'
+              : serverMission.status === 'partial'
+                ? 'Ghost completed part of the mission. Review the attempt log and retry if needed.'
+                : 'Ghost could not complete the mission. Review the attempt log and retry if needed.',
+            serverMission.status === 'completed' ? 'success' : (serverMission.status === 'partial' ? 'warning' : 'error')
+          );
+          addLog('OST Ghost ' + (serverMission.status || 'completed') + ' mission ' + serverMission.id + ' via worker mesh.', serverMission.status === 'failed' ? 'error' : 'success');
+          return { mission: serverMission, output: serverOutput };
+        } catch (serverError) {
+          addLog('Worker mesh dispatch failed, falling back to local route plan: ' + ((serverError && serverError.message) || serverError), 'warn');
+        }
+      }
+
       if (mission.connectors.includes('openai')) {
         setGhostStatus('Ghost is querying OpenAI through the live mesh...', 'warning');
         const liveAnswer = await queryOpenAIGhost(mission);
@@ -6333,6 +6522,14 @@
     });
   }
 
+  if (ghostSyncBtn) {
+    ghostSyncBtn.addEventListener('click', async () => {
+      setGhostStatus('Syncing Ghost mesh memory...', 'warning');
+      const mesh = await syncGhostNetworkState();
+      setGhostStatus(mesh ? 'Ghost mesh memory synced from the worker network.' : 'Ghost mesh sync is currently unavailable.', mesh ? 'success' : 'warning');
+    });
+  }
+
   if (ghostClearBtn) ghostClearBtn.addEventListener('click', clearGhostMission);
 
   window.OST_GHOST = {
@@ -6367,6 +6564,7 @@
       return dispatchGhostMission();
     },
     renderMesh: renderGhostConnectorMesh,
+    syncNetwork: syncGhostNetworkState,
     getLastMission() {
       return ghostLastMission;
     }
@@ -6374,6 +6572,7 @@
 
   renderGhostConnectorMesh();
   setGhostStatus('Ghost is idle. Connect rails above, then compose or dispatch a mission.', 'info');
+  syncGhostNetworkState().catch(() => {});
 
   $$('.btn-connect').forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -6396,16 +6595,20 @@
           updateConnectorStatus('OpenAI', true);
         }
         else if (type === 'anthropic') {
-          const key = $('#apiKeyAnthropic')?.value?.trim();
-          if (!key) throw new Error('Please enter your Anthropic API key');
-          addLog('Testing Anthropic API... (CORS may require server-side proxy)', 'warn');
-          // Anthropic API doesn't allow browser CORS, so we simulate the validation
-          if (key.startsWith('sk-ant-')) {
-            addLog('Anthropic key format valid. In production, use a server-side proxy for API calls.', 'success');
-            updateConnectorStatus('Anthropic', true);
-          } else {
-            throw new Error('Invalid Anthropic key format (should start with sk-ant-)');
-          }
+          const model = $('#modelAnthropic')?.value || 'claude-sonnet-4-20250514';
+          addLog(`Testing Anthropic relay (${model}) through the OST worker mesh...`, 'info');
+          const result = await testGhostRelayConnection('anthropic');
+          addLog(result.detail || `Anthropic relay ready. Model: ${model}.`, 'success');
+          updateConnectorStatus('Anthropic', true);
+          await syncGhostNetworkState();
+        }
+        else if (type === 'gemini') {
+          const model = $('#modelGemini')?.value || 'gemini-2.0-flash';
+          addLog(`Testing Gemini relay (${model}) through the OST worker mesh...`, 'info');
+          const result = await testGhostRelayConnection('gemini');
+          addLog(result.detail || `Gemini relay ready. Model: ${model}.`, 'success');
+          updateConnectorStatus('Gemini', true);
+          await syncGhostNetworkState();
         }
         else if (type === 'telegram') {
           const token = $('#apiKeyTelegram')?.value?.trim();
@@ -6438,23 +6641,28 @@
           }
         }
         else if (type === 'mcp') {
-          const url = $('#apiKeyMCP')?.value?.trim();
           const transport = $('#transportMCP')?.value || 'sse';
-          if (!url) throw new Error('Please enter MCP server URL');
-          addLog(`MCP server registered (${transport} transport). Client will connect on next wallet action.`, 'success');
+          addLog(`Testing MCP relay (${transport}) through the OST worker mesh...`, 'info');
+          const result = await testGhostRelayConnection('mcp');
+          addLog(result.detail || `MCP relay ready over ${transport}.`, 'success');
           updateConnectorStatus('MCP', true);
+          await syncGhostNetworkState();
         }
         else if (type === 'claude') {
-          const key = $('#apiKeyClaude')?.value?.trim();
-          if (!key) throw new Error('Please enter your Claude API key');
           const model = $('#modelClaude')?.value || 'claude-sonnet-4-20250514';
-          addLog(`Testing Claude AI (${model})... CORS requires server-side proxy.`, 'warn');
-          if (key.startsWith('sk-ant-')) {
-            addLog(`Claude AI key valid. Model: ${model}. Ready for OST agent integration.`, 'success');
-            updateConnectorStatus('Claude', true);
-          } else {
-            throw new Error('Invalid Claude API key format (should start with sk-ant-)');
-          }
+          addLog(`Testing Claude relay (${model}) through the OST worker mesh...`, 'info');
+          const result = await testGhostRelayConnection('claude');
+          addLog(result.detail || `Claude relay ready. Model: ${model}.`, 'success');
+          updateConnectorStatus('Claude', true);
+          await syncGhostNetworkState();
+        }
+        else if (type === 'grok') {
+          const model = $('#modelGrok')?.value || 'grok-beta';
+          addLog(`Testing Grok relay (${model}) through the OST worker mesh...`, 'info');
+          const result = await testGhostRelayConnection('grok');
+          addLog(result.detail || `Grok relay ready. Model: ${model}.`, 'success');
+          updateConnectorStatus('Grok', true);
+          await syncGhostNetworkState();
         }
         else if (type === 'vscode') {
           const token = $('#apiKeyVSCode')?.value?.trim();
@@ -6469,21 +6677,12 @@
           }
         }
         else if (type === 'github') {
-          const token = $('#apiKeyGitHub')?.value?.trim();
           const repo = $('#repoGitHub')?.value?.trim();
-          if (!token) throw new Error('Please enter a GitHub Personal Access Token');
-          addLog('Testing GitHub API connection...', 'info');
-          try {
-            const r = await fetch('https://api.github.com/user', {
-              headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' }
-            });
-            if (!r.ok) throw new Error(`GitHub API returned ${r.status}`);
-            const data = await r.json();
-            addLog(`GitHub connected as @${data.login}. ${repo ? `Repo: ${repo}` : 'No repo specified.'}`, 'success');
-            updateConnectorStatus('GitHub', true);
-          } catch (err) {
-            throw new Error(`GitHub API error: ${err.message}`);
-          }
+          addLog('Testing GitHub relay through the OST worker mesh...', 'info');
+          const result = await testGhostRelayConnection('github');
+          addLog(result.detail || `GitHub relay ready. ${repo ? `Repo: ${repo}.` : 'No repo specified yet.'}`, 'success');
+          updateConnectorStatus('GitHub', true);
+          await syncGhostNetworkState();
         }
         else if (type === 'polymarket') {
           const key = $('#apiKeyPolymarket')?.value?.trim();
