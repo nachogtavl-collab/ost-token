@@ -147,10 +147,7 @@
               <span>Exact quote</span>
               <strong id="converterWalletQuote">${fmtOst(currentQuote.ostAmount)}</strong>
             </div>
-            <svg class="converter-graph" id="converterGraph" viewBox="0 0 220 64" role="img" aria-label="OST wallet graph">
-              <path class="converter-graph-fill" id="converterGraphFill" d=""></path>
-              <polyline class="converter-graph-line" id="converterGraphLine" points=""></polyline>
-            </svg>
+            <canvas class="converter-graph" id="converterWalletCurve" width="440" height="120" aria-label="OST wallet curve mirror"></canvas>
           </div>
         </div>
 
@@ -327,20 +324,156 @@
   }
 
   function drawGraph(value) {
-    const line = $('converterGraphLine');
-    const fill = $('converterGraphFill');
-    if (!line || !fill) return;
-    const base = Math.max(Number(value) || 1, 1);
-    const points = Array.from({ length: 12 }, (_, i) => {
-      const x = (i / 11) * 220;
-      const wave = Math.sin(i * 0.85) * 6;
-      const slope = (i / 11) * 18;
-      const y = 54 - Math.min(42, 10 + slope + wave + Math.log10(base) * 4);
-      return [x.toFixed(1), Math.max(8, y).toFixed(1)];
+    var canvas = document.getElementById('converterWalletCurve');
+    if (!canvas || !canvas.getContext) return;
+
+    // Read the same snapshots that power the wallet curve in #wallet.
+    var snapshots = [];
+    try {
+      var raw = localStorage.getItem('ost.wallet.balanceHistory.v1');
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) snapshots = parsed;
+      }
+    } catch (_) { snapshots = []; }
+
+    var prices = window.OST_PRICES || {};
+    var ostUsd = Number(prices.ost) || Number(window.OST_PRICE_USD) || 0.0118;
+    var solUsdLocal = Number(prices.solana) || 150;
+
+    var points = snapshots
+      .map(function (s) {
+        if (!s) return null;
+        var ost = Number(s.ostBalance || 0) || 0;
+        var sol = Number(s.solBalance || 0) || 0;
+        var v = ost * ostUsd + sol * solUsdLocal;
+        return { ts: Number(s.ts) || 0, v: v, kind: s.kind || 'tick' };
+      })
+      .filter(function (p) { return p && Number.isFinite(p.v); });
+
+    var ctx = canvas.getContext('2d');
+    var rect = canvas.getBoundingClientRect();
+    var width = Math.max(220, Math.round(rect.width || canvas.width || 440));
+    var height = Math.max(80, Math.round(rect.height || canvas.height || 120));
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = 'rgba(5, 8, 14, 0.55)';
+    ctx.fillRect(0, 0, width, height);
+
+    var pad = { left: 10, right: 10, top: 10, bottom: 14 };
+
+    if (!points.length) {
+      // Synthetic wave that hints at the live curve experience.
+      var base = Math.max(Number(value) || 1, 1);
+      var synth = [];
+      for (var i = 0; i < 18; i += 1) {
+        var x = i / 17;
+        var wave = Math.sin(i * 0.85) * 0.08;
+        var slope = x * 0.18;
+        synth.push(0.45 + slope + wave + Math.log10(base) * 0.02);
+      }
+      drawCurve(ctx, synth.map(function (v, idx) { return { ts: idx, v: v, kind: 'tick' }; }), width, height, pad, true);
+      ctx.fillStyle = 'rgba(226,232,240,0.7)';
+      ctx.font = '600 11px Inter, sans-serif';
+      ctx.fillText('Connect a wallet for live ticks & transactions', pad.left + 4, height - 4);
+      return;
+    }
+
+    drawCurve(ctx, points, width, height, pad, false);
+  }
+
+  function drawCurve(ctx, points, width, height, pad, isSynthetic) {
+    var values = points.map(function (p) { return p.v; });
+    var minVal = Math.min.apply(null, values);
+    var maxVal = Math.max.apply(null, values);
+    var range = Math.max(maxVal - minVal, Math.abs(maxVal) || 1, 0.0001);
+    var first = values[0];
+    var last = values[values.length - 1];
+    var changePos = last >= first;
+    var lineColor = changePos ? '#34d399' : '#f5c468';
+
+    function xAt(i) { return pad.left + (i / Math.max(points.length - 1, 1)) * (width - pad.left - pad.right); }
+    function yAt(v) { return pad.top + (height - pad.top - pad.bottom) - ((v - minVal) / range) * (height - pad.top - pad.bottom); }
+
+    // Gridlines
+    [0.25, 0.5, 0.75].forEach(function (level) {
+      var yLine = pad.top + (height - pad.top - pad.bottom) * level;
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(pad.left, yLine);
+      ctx.lineTo(width - pad.right, yLine);
+      ctx.stroke();
     });
-    const pointString = points.map((p) => p.join(',')).join(' ');
-    line.setAttribute('points', pointString);
-    fill.setAttribute('d', 'M ' + pointString.replace(/ /g, ' L ') + ' L 220 64 L 0 64 Z');
+
+    // Fill
+    var fill = ctx.createLinearGradient(0, pad.top, 0, height - pad.bottom);
+    fill.addColorStop(0, changePos ? 'rgba(52,211,153,0.32)' : 'rgba(245,196,104,0.32)');
+    fill.addColorStop(1, 'rgba(109,159,255,0.02)');
+    ctx.beginPath();
+    points.forEach(function (p, i) {
+      var x = xAt(i), y = yAt(p.v);
+      if (!i) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.lineTo(xAt(points.length - 1), height - pad.bottom);
+    ctx.lineTo(xAt(0), height - pad.bottom);
+    ctx.closePath();
+    ctx.fillStyle = fill;
+    ctx.fill();
+
+    // Line
+    ctx.beginPath();
+    points.forEach(function (p, i) {
+      var x = xAt(i), y = yAt(p.v);
+      if (!i) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = lineColor;
+    ctx.stroke();
+
+    if (isSynthetic) return;
+
+    // Tick + transaction dots
+    points.forEach(function (p, i) {
+      var x = xAt(i), y = yAt(p.v);
+      if (p.kind && p.kind !== 'tick') {
+        ctx.beginPath();
+        ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#f8fafc';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x, y, 2, 0, Math.PI * 2);
+        ctx.fillStyle = lineColor;
+        ctx.fill();
+      } else {
+        ctx.beginPath();
+        ctx.arc(x, y, 1.2, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(248,250,252,0.55)';
+        ctx.fill();
+      }
+    });
+
+    // End marker
+    var lx = xAt(points.length - 1), ly = yAt(last);
+    ctx.beginPath();
+    ctx.arc(lx, ly, 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#f8fafc';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(lx, ly, 2.4, 0, Math.PI * 2);
+    ctx.fillStyle = lineColor;
+    ctx.fill();
+  }
+
+  // Re-draw the converter wallet curve whenever wallet activity updates.
+  if (typeof window !== 'undefined' && !window.__ostConverterCurveBound) {
+    window.__ostConverterCurveBound = true;
+    window.addEventListener('ost-tx-history-update', function () {
+      try { drawGraph(currentQuote && currentQuote.ostAmount); } catch (_) {}
+    });
   }
 
   function calculateOST() {

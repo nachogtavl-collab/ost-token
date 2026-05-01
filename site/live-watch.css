@@ -1,0 +1,372 @@
+/* =============================================================
+ * OST · Live Watch + Bet
+ * Modal + featured Polymarket card styling.
+ * Loaded with live-watch.js. Self-contained.
+ * ============================================================= */
+
+.live-bet-section {
+  padding: 56px 16px;
+  background: linear-gradient(180deg, rgba(5, 8, 14, 0.92), rgba(8, 12, 22, 0.96));
+  border-top: 1px solid rgba(109, 159, 255, 0.08);
+  border-bottom: 1px solid rgba(109, 159, 255, 0.08);
+}
+.live-bet-shell {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: grid;
+  gap: 18px;
+}
+.live-bet-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.live-bet-head h2 {
+  margin: 0;
+  font-size: clamp(1.4rem, 3.4vw, 2rem);
+  letter-spacing: -.01em;
+}
+.live-bet-head p {
+  margin: 4px 0 0;
+  color: var(--text-muted, #94a3b8);
+  font-size: .95rem;
+}
+.live-bet-card {
+  background: linear-gradient(135deg, rgba(109, 159, 255, 0.08), rgba(167, 139, 250, 0.06));
+  border: 1px solid rgba(109, 159, 255, 0.22);
+  border-radius: 18px;
+  padding: 22px;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 22px;
+  align-items: center;
+  box-shadow: 0 16px 40px -28px rgba(109, 159, 255, .55);
+}
+.live-bet-meta {
+  display: grid;
+  gap: 12px;
+}
+.live-bet-pill-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.live-bet-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 51, 51, 0.18);
+  border: 1px solid rgba(255, 51, 51, 0.55);
+  color: #ffb4b4;
+  font-weight: 700;
+  font-size: .8rem;
+  padding: 4px 10px;
+  border-radius: 999px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.live-bet-pill::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff3333;
+  box-shadow: 0 0 0 0 rgba(255, 51, 51, .8);
+  animation: livePulse 1.6s ease-out infinite;
+}
+@keyframes livePulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 51, 51, .8); }
+  100% { box-shadow: 0 0 0 10px rgba(255, 51, 51, 0); }
+}
+.live-bet-pill.is-quiet {
+  background: rgba(109, 159, 255, .12);
+  border-color: rgba(109, 159, 255, .35);
+  color: #d6e4ff;
+}
+.live-bet-pill.is-quiet::before {
+  background: #6d9fff;
+  animation: none;
+}
+.live-bet-title {
+  margin: 0;
+  font-size: clamp(1.15rem, 2.4vw, 1.55rem);
+  font-weight: 700;
+  line-height: 1.2;
+}
+.live-bet-sub {
+  margin: 0;
+  color: var(--text-muted, #94a3b8);
+  font-size: .92rem;
+  line-height: 1.45;
+}
+.live-bet-prices {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.live-bet-price {
+  background: rgba(15, 20, 30, .7);
+  border: 1px solid rgba(109, 159, 255, .15);
+  border-radius: 12px;
+  padding: 8px 10px;
+  text-align: center;
+}
+.live-bet-price span {
+  display: block;
+  font-size: .68rem;
+  color: #94a3b8;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+.live-bet-price strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 1.05rem;
+  color: #f8fafc;
+  font-variant-numeric: tabular-nums;
+}
+.live-bet-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.live-bet-watch-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #00d4ff, #6d9fff);
+  color: #07111e;
+  font-weight: 800;
+  border: none;
+  padding: 12px 22px;
+  border-radius: 30px;
+  cursor: pointer;
+  font-size: .95rem;
+  box-shadow: 0 12px 28px -14px rgba(0, 212, 255, .65);
+  transition: transform .15s ease;
+}
+.live-bet-watch-btn:hover { transform: translateY(-1px); }
+.live-bet-poly-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(15, 20, 30, .7);
+  color: #d6e4ff;
+  border: 1px solid rgba(109, 159, 255, .35);
+  padding: 11px 18px;
+  border-radius: 30px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: .9rem;
+}
+.live-bet-poster {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #050810;
+  aspect-ratio: 16 / 10;
+  border: 1px solid rgba(109, 159, 255, .18);
+}
+.live-bet-poster::before {
+  content: '▶';
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 3.4rem;
+  color: rgba(255, 255, 255, .92);
+  text-shadow: 0 6px 18px rgba(0, 0, 0, .55);
+  background: radial-gradient(circle at center, rgba(109, 159, 255, .25), transparent 65%);
+  pointer-events: none;
+}
+.live-bet-poster-grid {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  font-size: 2.4rem;
+  font-weight: 800;
+  color: rgba(248, 250, 252, .78);
+  background:
+    linear-gradient(135deg, rgba(109, 159, 255, .18), rgba(167, 139, 250, .14)),
+    radial-gradient(circle at 20% 30%, rgba(109, 159, 255, .35), transparent 55%),
+    radial-gradient(circle at 80% 70%, rgba(167, 139, 250, .3), transparent 55%);
+}
+.live-bet-poster-grid > span {
+  display: grid;
+  place-items: center;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+/* ===== Modal ===== */
+.live-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.96);
+  z-index: 99999;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  overflow-y: auto;
+}
+.live-modal.is-open { display: flex; }
+.live-modal-shell {
+  width: min(96vw, 1200px);
+  background: #0a0a0a;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 0 40px rgba(0, 212, 255, 0.3);
+  border: 1px solid rgba(0, 212, 255, .15);
+  max-height: 96vh;
+  display: flex;
+  flex-direction: column;
+}
+.live-modal-top {
+  background: #111;
+  padding: 14px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid #222;
+  flex-wrap: wrap;
+}
+.live-modal-title {
+  color: #fff;
+  font-size: 1.2em;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.live-modal-live-pill {
+  background: #ff3333;
+  color: #fff;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: .75em;
+  font-weight: 700;
+  letter-spacing: .04em;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.live-modal-live-pill::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 0 rgba(255, 255, 255, .8);
+  animation: livePulse 1.6s ease-out infinite;
+}
+.live-modal-close {
+  background: #ff4444;
+  color: #fff;
+  border: none;
+  padding: 9px 20px;
+  border-radius: 30px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: .9rem;
+}
+.live-modal-video-wrap {
+  padding: 14px;
+  background: #000;
+  flex: 1;
+  min-height: 0;
+}
+.live-modal-video-wrap .video-js {
+  width: 100% !important;
+  height: clamp(260px, 60vh, 580px) !important;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.live-modal-fallback {
+  display: none;
+  color: #ffb4b4;
+  background: rgba(255, 51, 51, .12);
+  border: 1px solid rgba(255, 51, 51, .3);
+  border-radius: 10px;
+  padding: 14px;
+  margin: 12px 14px 0;
+  font-size: .9rem;
+  text-align: center;
+}
+.live-modal-fallback.is-shown { display: block; }
+.live-modal-bet-bar {
+  background: #111;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  border-top: 1px solid #222;
+}
+.live-modal-bet-bar > .live-bet-bar-label {
+  color: #94a3b8;
+  font-size: .95rem;
+  margin-right: 4px;
+}
+.live-modal-bet-btn {
+  background: linear-gradient(135deg, #00d4ff, #6d9fff);
+  color: #07111e;
+  padding: 10px 22px;
+  border: none;
+  border-radius: 30px;
+  font-weight: 800;
+  cursor: pointer;
+  font-size: .9rem;
+  letter-spacing: .02em;
+}
+.live-modal-bet-btn:hover { filter: brightness(1.05); }
+.live-modal-bet-status {
+  margin-left: auto;
+  color: #00ff9f;
+  font-size: .85rem;
+  font-weight: 600;
+}
+.live-modal-toast {
+  position: absolute;
+  top: 72px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 255, 159, .15);
+  border: 1px solid rgba(0, 255, 159, .35);
+  color: #c8ffe6;
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-size: .88rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s ease;
+  z-index: 5;
+}
+.live-modal-toast.is-shown { opacity: 1; }
+
+/* ---- Mobile ---- */
+@media (max-width: 720px) {
+  .live-bet-card {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+  .live-bet-poster { order: -1; }
+  .live-modal-shell { border-radius: 14px; }
+  .live-modal-top { padding: 12px 14px; }
+  .live-modal-bet-bar { padding: 12px 14px; gap: 8px; }
+  .live-modal-bet-btn { flex: 1 1 30%; padding: 12px 8px; font-size: .85rem; }
+  .live-modal-bet-status {
+    margin-left: 0;
+    width: 100%;
+    text-align: center;
+  }
+  .live-modal-video-wrap .video-js {
+    height: 42vh !important;
+  }
+}

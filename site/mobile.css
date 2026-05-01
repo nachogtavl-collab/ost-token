@@ -4,6 +4,17 @@
  * Loaded last so it wins specificity battles without raising !important.
  * ========================================================================= */
 
+/* ---------------------------------------------------------------- Global
+ * Wallet section: the "wallet curve" (#wdPortfolioChart) is the ONLY graph
+ * that should appear in the wallet section. Hide every other chart canvas
+ * that historically lived alongside it.
+ * ------------------------------------------------------------------------ */
+#wallet .wallet-market-chart-wrap,
+#wallet #chartsRow,
+#wallet .charts-row {
+  display: none !important;
+}
+
 /* ---------------------------------------------------------------- Tablet */
 @media (max-width: 960px) {
   .hero,
@@ -57,6 +68,84 @@
     transition: none !important;
     scroll-behavior: auto !important;
   }
+
+  /* CRITICAL: many hero elements rely on `opacity:0 → animation forwards`
+   * to fade in. With animations killed above, they stay invisible and the
+   * mobile home looks empty (only the globe shows). Force them visible. */
+  .hero-content,
+  .hero-content *,
+  .hero-tag,
+  .hero h1,
+  .hero-sub,
+  .hero-actions,
+  .hero-actions .btn,
+  .hero-stats,
+  .hero-stat,
+  .hero-ticker,
+  .hero-free-banner,
+  .hero-badge-row,
+  .hero-knowledge-bar,
+  .knowledge-banner,
+  .knowledge-item,
+  .scroll-hint,
+  .ost-vision-home,
+  .vision-stage,
+  .vision-pill,
+  .vision-spacex,
+  .vision-main,
+  .vision-main * {
+    opacity: 1 !important;
+    transform: none !important;
+    visibility: visible !important;
+  }
+
+  /* Stack hero so text is on top, globe sits below at a smaller size. */
+  .hero-split {
+    flex-direction: column !important;
+    padding: 84px 14px 16px !important;
+    gap: 20px !important;
+  }
+  .hero-content {
+    text-align: center !important;
+    max-width: 100% !important;
+    flex: 1 1 100% !important;
+  }
+  .hero-globe-wrap {
+    order: 2 !important;
+    max-width: 280px !important;
+    min-height: 240px !important;
+    margin: 0 auto !important;
+  }
+
+  /* Wallet section feels cut on phones — give it the full viewport width
+   * with safe-area padding and stack any side cards. */
+  #wallet,
+  #wallet .container,
+  #wallet .wallet-command-shell,
+  #wallet .wallet-command-hero,
+  #wallet .wallet-dashboard,
+  #wallet .wallet-market-grid-shell,
+  #wallet .wallet-market-grid-main {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  #wallet .container,
+  #wallet .wallet-command-shell {
+    padding-left: max(12px, env(safe-area-inset-left)) !important;
+    padding-right: max(12px, env(safe-area-inset-right)) !important;
+  }
+  #wallet .wd-intelligence-grid,
+  #wallet .wallet-market-grid-shell,
+  #wallet .wallet-routes-grid {
+    grid-template-columns: 1fr !important;
+  }
+  #wallet .wallet-tabs {
+    overflow-x: auto !important;
+    flex-wrap: nowrap !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
   body {
     font-size: 15px;
   }
