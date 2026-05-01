@@ -147,7 +147,7 @@
               <span>Exact quote</span>
               <strong id="converterWalletQuote">${fmtOst(currentQuote.ostAmount)}</strong>
             </div>
-            <canvas class="converter-graph" id="converterWalletCurve" width="440" height="120" aria-label="OST wallet curve mirror"></canvas>
+            <canvas class="converter-graph" id="converterWalletCurve" width="440" height="120" aria-label="OST wallet curve mirror" hidden style="display:none"></canvas>
           </div>
         </div>
 
@@ -318,7 +318,8 @@
     if (receive) receive.textContent = fmtOst(currentQuote.ostAmount);
     if (rate) rate.textContent = `1 OST = ${fmtUsd(currentQuote.usdPerOst)}`;
     if (walletQuote) walletQuote.textContent = fmtOst(currentQuote.ostAmount);
-    drawGraph(currentQuote.ostAmount);
+    // Graph removed per product direction; keep stub call to preserve any external listeners.
+    // drawGraph(currentQuote.ostAmount);
     updateModalSummary();
     return currentQuote;
   }

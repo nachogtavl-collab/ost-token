@@ -251,14 +251,26 @@
   function placeQuickBet(type) {
     if (!currentStream) return;
     var label = ({ home: currentStream.home || 'Home', draw: 'Draw', away: currentStream.away || 'Away' })[type] || type;
-    if (statusEl) statusEl.textContent = '✓ 10 OST on ' + label + ' — pending devnet settlement.';
-    showToast('Quick bet routed: 10 OST · ' + label);
+    if (statusEl) statusEl.textContent = '✓ Routing to trade desk · ' + label + '…';
+    showToast('Opening OST trade desk · ' + label);
 
-    // Try to record into the existing prediction order pipeline (best-effort).
+    // Deep-link into the existing prediction trade modal (3-outcome flow).
+    try {
+      var nativeId = (window.OST_NATIVE_MARKET_IDS && window.OST_NATIVE_MARKET_IDS.eplLeedsBurnley)
+        || 'native-polymarket-epl-lee-bur-2026-05-01';
+      if (window.OST_MARKET_MODAL && typeof window.OST_MARKET_MODAL.open === 'function') {
+        window.OST_MARKET_MODAL.open(nativeId);
+        // Hand-off: leave the live modal open in the background so the user
+        // can keep watching while the trade desk pops over the top.
+        return;
+      }
+    } catch (e) { /* fall back to local record */ }
+
+    // Fallback: write a local pending order so the wallet panel reflects it.
     try {
       var record = {
         id: 'live-' + currentStream.slug + '-' + type + '-' + Date.now(),
-        marketId: 'epl-lee-bur-2026-05-01',
+        marketId: 'native-polymarket-epl-lee-bur-2026-05-01',
         market: currentStream.name,
         outcome: label,
         side: type,
@@ -307,6 +319,7 @@
       '      </div>',
       '      <div class="live-bet-actions">',
       '        <button type="button" class="live-bet-watch-btn" data-live-open="' + FEATURED_SLUG + '">▶ Watch Live + Bet</button>',
+      '        <button type="button" class="live-bet-poly-btn" data-live-buy-shares="1">Buy Shares (3-way)</button>',
       '        <a class="live-bet-poly-btn" href="' + s.polymarket + '" target="_blank" rel="noopener">Open on Polymarket ↗</a>',
       '      </div>',
       '    </div>',
@@ -321,11 +334,24 @@
   function bindGlobalDelegation() {
     document.addEventListener('click', function (event) {
       var btn = event.target.closest('[data-live-open]');
-      if (!btn) return;
-      event.preventDefault();
-      var slug = btn.getAttribute('data-live-open');
-      var stream = STREAMS[slug];
-      open(slug, stream ? stream.name : null);
+      if (btn) {
+        event.preventDefault();
+        var slug = btn.getAttribute('data-live-open');
+        var stream = STREAMS[slug];
+        open(slug, stream ? stream.name : null);
+        return;
+      }
+      var buy = event.target.closest('[data-live-buy-shares]');
+      if (buy) {
+        event.preventDefault();
+        var nativeId = (window.OST_NATIVE_MARKET_IDS && window.OST_NATIVE_MARKET_IDS.eplLeedsBurnley)
+          || 'native-polymarket-epl-lee-bur-2026-05-01';
+        if (window.OST_MARKET_MODAL && typeof window.OST_MARKET_MODAL.open === 'function') {
+          window.OST_MARKET_MODAL.open(nativeId);
+        } else {
+          window.open(STREAMS[FEATURED_SLUG].polymarket, '_blank', 'noopener');
+        }
+      }
     });
   }
 
