@@ -491,9 +491,13 @@
     var scanBtn = $('offlineVaultImportBtn');
     if (scanBtn) scanBtn.addEventListener('click', async function () {
       try {
-        if ('NDEFReader' in window) await startNfc();
-        else await startQrScan();
+        await startQrScan();
       } catch (e) { setStatus(e.message || String(e), 'warn'); }
+    });
+    var nfcBtn = $('offlineVaultNfcBtn');
+    if (nfcBtn) nfcBtn.addEventListener('click', async function () {
+      try { await startNfc(); }
+      catch (e) { setStatus(e.message || String(e), 'warn'); }
     });
     var file = $('offlineVaultFile');
     if (file) file.addEventListener('change', async function () {

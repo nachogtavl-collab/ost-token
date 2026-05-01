@@ -317,6 +317,218 @@ async function removeQueue(env, id) {
   await kvPut(env, 'topup:queue', q);
 }
 
+const USDC_MAINNET_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+const LAMPORTS_PER_SOL = 1_000_000_000;
+
+async function fetchSolUsd() {
+  const feeds = [
+    {
+      url: 'https://api.coinbase.com/v2/prices/SOL-USD/spot',
+      pick: body => body?.data?.amount && Number(body.data.amount)
+    },
+    {
+      url: 'https://api.binance.com/api/v3/ticker/price?symbol=SOLUSDT',
+      pick: body => body?.price && Number(body.price)
+    },
+    {
+      url: 'https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd',
+      pick: body => body?.solana?.usd && Number(body.solana.usd)
+    }
+  ];
+  for (const feed of feeds) {
+    try {
+      const response = await fetch(feed.url, {
+        headers: { accept: 'application/json', 'user-agent': 'OST-API/1.0' },
+        cf: { cacheTtl: 10, cacheEverything: true }
+      });
+      if (!response.ok) continue;
+      const body = await response.json();
+      const price = feed.pick(body);
+      if (Number.isFinite(price) && price > 1) return price;
+    } catch (_) {}
+  }
+  return null;
+}
+
+async function solanaRpc(env, method, params) {
+  const urls = [
+    env.SOLANA_MAINNET_RPC,
+    'https://solana-rpc.publicnode.com',
+    'https://api.mainnet-beta.solana.com'
+  ].filter(Boolean);
+  let lastError = 'rpc_unavailable';
+  for (const rpcUrl of urls) {
+    try {
+      const response = await fetch(rpcUrl, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: crypto.randomUUID(), method, params })
+      });
+      const body = await response.json().catch(() => ({}));
+      if (response.ok && !body.error) return body.result;
+      lastError = body?.error?.message || `solana_rpc_${response.status}`;
+      if (/invalid|signature|transaction/i.test(lastError) && !/blocked|rate|too many|unavailable/i.test(lastError)) {
+        throw new Error(lastError);
+      }
+    } catch (error) {
+      lastError = String(error?.message || error);
+      if (/invalid|signature|transaction/i.test(lastError) && !/blocked|rate|too many|unavailable/i.test(lastError)) {
+        throw new Error(lastError);
+      }
+    }
+  }
+  throw new Error(lastError);
+}
+
+function accountKeyAt(tx, index) {
+  const keys = tx?.transaction?.message?.accountKeys || [];
+  const key = keys[index];
+  return typeof key === 'string' ? key : key?.pubkey || '';
+}
+
+function collectParsedInstructions(tx) {
+  const instructions = [...(tx?.transaction?.message?.instructions || [])];
+  const inner = tx?.meta?.innerInstructions || [];
+  for (const group of inner) {
+    if (Array.isArray(group?.instructions)) instructions.push(...group.instructions);
+  }
+  return instructions;
+}
+
+function transactionHasMemo(tx, memo) {
+  const needle = String(memo || '').trim();
+  if (!needle) return false;
+  for (const instruction of collectParsedInstructions(tx)) {
+    const programId = String(instruction?.programId || '');
+    if (instruction?.program === 'spl-memo' || programId.startsWith('Memo')) {
+      const parsed = instruction?.parsed;
+      if (typeof parsed === 'string' && parsed.includes(needle)) return true;
+      if (parsed && typeof parsed === 'object' && String(parsed.memo || parsed.text || '').includes(needle)) return true;
+    }
+  }
+  const logs = Array.isArray(tx?.meta?.logMessages) ? tx.meta.logMessages.join('\n') : '';
+  return logs.includes(needle);
+}
+
+function sumSolLamportsTo(tx, receiver) {
+  let total = 0;
+  for (const instruction of collectParsedInstructions(tx)) {
+    const parsed = instruction?.parsed;
+    if (instruction?.program !== 'system' || !parsed || parsed.type !== 'transfer') continue;
+    const info = parsed.info || {};
+    if (String(info.destination || '') === receiver) total += Number(info.lamports || 0);
+  }
+  return total;
+}
+
+function tokenAmountFromInfo(info) {
+  const tokenAmount = info?.tokenAmount || info?.uiTokenAmount;
+  if (tokenAmount && Number.isFinite(Number(tokenAmount.uiAmount))) return Number(tokenAmount.uiAmount);
+  if (tokenAmount && tokenAmount.uiAmountString) return Number(tokenAmount.uiAmountString);
+  if (Number.isFinite(Number(info?.amount)) && Number.isFinite(Number(info?.decimals))) {
+    return Number(info.amount) / (10 ** Number(info.decimals));
+  }
+  return Number(info?.amount || 0);
+}
+
+function sumUsdcToTreasury(tx, treasuryOwner) {
+  const treasuryTokenAccounts = new Set();
+  for (const balance of tx?.meta?.postTokenBalances || []) {
+    if (balance?.mint === USDC_MAINNET_MINT && balance?.owner === treasuryOwner) {
+      const account = accountKeyAt(tx, balance.accountIndex);
+      if (account) treasuryTokenAccounts.add(account);
+    }
+  }
+  let total = 0;
+  for (const instruction of collectParsedInstructions(tx)) {
+    const parsed = instruction?.parsed;
+    const info = parsed?.info || {};
+    if (instruction?.program !== 'spl-token' || !parsed) continue;
+    if (parsed.type !== 'transfer' && parsed.type !== 'transferChecked') continue;
+    if (info.mint && info.mint !== USDC_MAINNET_MINT) continue;
+    if (!treasuryTokenAccounts.has(String(info.destination || ''))) continue;
+    const amount = tokenAmountFromInfo(info);
+    if (Number.isFinite(amount)) total += amount;
+  }
+  return total;
+}
+
+async function verifyCryptoTopupSignature(env, intent, signature) {
+  const cleanSignature = cleanText(signature, 128);
+  if (!cleanSignature) return { ok: false, error: 'missing_signature' };
+  const tx = await solanaRpc(env, 'getTransaction', [cleanSignature, {
+    encoding: 'jsonParsed',
+    commitment: 'confirmed',
+    maxSupportedTransactionVersion: 0
+  }]);
+  if (!tx) return { ok: false, error: 'transaction_not_found' };
+  if (tx?.meta?.err) return { ok: false, error: 'transaction_failed' };
+  if (!transactionHasMemo(tx, intent.memo)) return { ok: false, error: 'memo_not_found' };
+
+  const treasury = env.TREASURY_SOL_MAINNET || env.TREASURY_USDC_MAINNET || '';
+  const solLamports = sumSolLamportsTo(tx, treasury);
+  const usdcAmount = sumUsdcToTreasury(tx, treasury);
+  const usdDue = Number(intent.usd || 0);
+  const usdcPaid = usdcAmount + 0.000001 >= usdDue;
+  let solPaid = false;
+  let solUsd = null;
+  if (solLamports > 0) {
+    solUsd = await fetchSolUsd();
+    if (solUsd) {
+      const paidUsd = (solLamports / LAMPORTS_PER_SOL) * solUsd;
+      solPaid = paidUsd + 0.02 >= usdDue * 0.985;
+    }
+  }
+  if (!usdcPaid && !solPaid) {
+    return {
+      ok: false,
+      error: 'amount_too_low',
+      detail: { solLamports, usdcAmount, solUsd, usdDue }
+    };
+  }
+  return {
+    ok: true,
+    signature: cleanSignature,
+    rail: usdcPaid ? 'usdc-solana-mainnet' : 'sol-solana-mainnet',
+    solLamports,
+    usdcAmount,
+    solUsd,
+    slot: tx.slot || null
+  };
+}
+
+async function markIntentPaidFromCrypto(env, intent, verification) {
+  const signatureKey = `topup:crypto:sig:${verification.signature}`;
+  const existingIntentId = await kvGet(env, signatureKey, null);
+  if (existingIntentId && existingIntentId !== intent.id) return { ok: false, error: 'signature_already_used' };
+  intent.status = 'paid';
+  intent.cryptoRail = verification.rail;
+  intent.paymentRef = verification.signature;
+  intent.paidAt = Date.now();
+  intent.updatedAt = Date.now();
+  await saveIntent(env, intent);
+  await kvPut(env, signatureKey, intent.id, 60 * 60 * 24 * 90);
+  await pushQueue(env, intent.id);
+  return { ok: true, intent };
+}
+
+async function findCryptoTopupPayment(env, intent) {
+  const receiver = env.TREASURY_SOL_MAINNET || '';
+  if (!receiver) return null;
+  const signatures = await solanaRpc(env, 'getSignaturesForAddress', [receiver, { limit: 30 }]);
+  for (const item of signatures || []) {
+    const signature = cleanText(item?.signature, 128);
+    if (!signature) continue;
+    const used = await kvGet(env, `topup:crypto:sig:${signature}`, null);
+    if (used && used !== intent.id) continue;
+    try {
+      const verification = await verifyCryptoTopupSignature(env, intent, signature);
+      if (verification.ok) return verification;
+    } catch (_) {}
+  }
+  return null;
+}
+
 function adminAuthorized(request, env) {
   if (!env.TOPUP_ADMIN_TOKEN) return false;
   const h = request.headers.get('authorization') || '';
@@ -369,6 +581,11 @@ export default {
           'POST /launchpad/coins',
           'POST /launchpad/trade',
           'GET  /launchpad/ticks/:mint',
+          'GET  /topup/config',
+          'POST /topup/intent',
+          'POST /topup/checkout',
+          'POST /topup/crypto/verify',
+          'GET  /topup/crypto/check/:intent',
           'GET  /launchpad/coins',
           'POST /launchpad/coins',
           'POST /launchpad/trade',
@@ -876,6 +1093,51 @@ export default {
         await pushQueue(env, intent.id);
       }
       return json({ ok: true, intent });
+    }
+
+    // Public: verify a user-submitted Solana mainnet payment signature.
+    // If the transaction pays the configured treasury, includes the intent
+    // memo, and covers the tier amount, the existing dispatcher queue takes
+    // over and sends devnet OST from the funded treasury wallet.
+    if (path === '/topup/crypto/verify' && method === 'POST') {
+      if (!env.OST_KV) return json({ error: 'kv_not_configured' }, 503);
+      let body; try { body = await request.json(); } catch { return json({ error: 'invalid_json' }, 400); }
+      const intent = await loadIntent(env, body && body.intentId);
+      if (!intent) return json({ error: 'intent_not_found' }, 404);
+      if (intent.status === 'sent' || intent.status === 'paid') {
+        return json({ ok: true, status: intent.status, intent });
+      }
+      if (intent.status !== 'pending') return json({ error: 'intent_not_pending', status: intent.status }, 409);
+      let verification;
+      try {
+        verification = await verifyCryptoTopupSignature(env, intent, body && body.signature);
+      } catch (error) {
+        return json({ error: 'solana_rpc_failed', detail: cleanText(error?.message || error, 180) }, 502);
+      }
+      if (!verification.ok) return json({ error: verification.error, detail: verification.detail || null }, 400);
+      const paid = await markIntentPaidFromCrypto(env, intent, verification);
+      if (!paid.ok) return json({ error: paid.error }, 409);
+      return json({ ok: true, status: 'paid', rail: verification.rail, signature: verification.signature, intent: paid.intent });
+    }
+
+    // Public: lightweight auto-detection for SOL payments to the treasury
+    // wallet. Manual signature verification above also handles USDC transfers.
+    const cryptoCheckMatch = path.match(/^\/topup\/crypto\/check\/([^/]+)$/);
+    if (cryptoCheckMatch && method === 'GET') {
+      if (!env.OST_KV) return json({ error: 'kv_not_configured' }, 503);
+      const intent = await loadIntent(env, decodeURIComponent(cryptoCheckMatch[1]));
+      if (!intent) return json({ error: 'intent_not_found' }, 404);
+      if (intent.status !== 'pending') return json({ ok: true, status: intent.status, intent });
+      let verification = null;
+      try {
+        verification = await findCryptoTopupPayment(env, intent);
+      } catch (error) {
+        return json({ ok: true, status: 'pending', found: false, scanError: cleanText(error?.message || error, 180) });
+      }
+      if (!verification) return json({ ok: true, status: 'pending', found: false });
+      const paid = await markIntentPaidFromCrypto(env, intent, verification);
+      if (!paid.ok) return json({ error: paid.error }, 409);
+      return json({ ok: true, status: 'paid', found: true, rail: verification.rail, signature: verification.signature, intent: paid.intent });
     }
 
     // ── OFFLINE VAULT: proof sync queue ───────────────────────────────────

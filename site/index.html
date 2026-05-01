@@ -43,7 +43,7 @@
   <link rel="stylesheet" href="ost-console.css?v=1">
   <link rel="stylesheet" href="prediction-scalar.css?v=1">
   <link rel="stylesheet" href="faucet-hub.css?v=4">
-  <link rel="stylesheet" href="topup.css?v=1">
+  <link rel="stylesheet" href="topup.css?v=2">
   <link rel="stylesheet" href="offline-vault.css?v=1">
 </head>
 <body>
@@ -2763,7 +2763,7 @@
           <p>Install once while connected. The OST vision, guides, wallet education, fair games, and survival tools stay available from this device when the network disappears.</p>
         </div>
         <div class="offline-install-actions">
-          <button class="btn btn-primary offline-install-btn" id="install-ost-btn" type="button" hidden>Install OST App</button>
+          <button class="btn btn-primary offline-install-btn" id="install-ost-btn" type="button">Install OST App</button>
           <span class="offline-install-status" id="ostPwaStatus" role="status">Offline cache preparing</span>
         </div>
       </div>
@@ -2785,7 +2785,8 @@
           <div class="offline-vault-panel">
             <h4>Import bearer token</h4>
             <div class="offline-vault-actions">
-              <button class="offline-vault-btn primary" id="offlineVaultImportBtn" type="button">Scan QR / Tap NFC</button>
+              <button class="offline-vault-btn primary" id="offlineVaultImportBtn" type="button">Scan paper QR</button>
+              <button class="offline-vault-btn" id="offlineVaultNfcBtn" type="button">Tap NFC card</button>
               <label class="offline-vault-file-label" for="offlineVaultFile">Import digital file<input id="offlineVaultFile" type="file" accept=".txt,.json,application/json,text/plain"></label>
               <button class="offline-vault-btn" id="offlineVaultPasteBtn" type="button">Paste token</button>
               <button class="offline-vault-btn" id="offlineVaultLatestBtn" type="button" disabled>Import latest minted note</button>
@@ -5545,9 +5546,9 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="ost-onchain-bet.js?v=1"></script>
   <script src="ux-extras.js?v=3"></script>
   <script src="faucet-hub.js?v=12"></script>
-  <script src="topup.js?v=1"></script>
+  <script src="topup.js?v=2"></script>
   <script src="faucet-hub-ads.js?v=2"></script>
-  <script src="offline-vault.js?v=2"></script>
+  <script src="offline-vault.js?v=3"></script>
   <script src="ost-games.js?v=13"></script>
   <script src="code-academy.js?v=3"></script>
   <script src="i18n-runtime.js?v=1"></script>
@@ -5589,7 +5590,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
 
       function warmOfflineAssets() {
         if (!('caches' in window)) return;
-        caches.open('ost-pwa-runtime-v4').then(function (cache) {
+        caches.open('ost-pwa-runtime-v5').then(function (cache) {
           collectOfflineAssetUrls().reduce(function (chain, url) {
             return chain.then(function () {
               return fetch(url, { mode: 'no-cors', cache: 'force-cache' })
@@ -5629,9 +5630,11 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
         statusEl = document.getElementById('ostPwaStatus');
 
         if (installBtn) {
+          installBtn.hidden = false;
           installBtn.addEventListener('click', function () {
             if (!deferredPrompt) {
-              setStatus('Offline access is ready from this browser');
+              scheduleOfflineWarmup();
+              setStatus('Offline access is ready. Pin OST from this browser when install is available.');
               return;
             }
             deferredPrompt.prompt();

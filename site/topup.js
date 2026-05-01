@@ -26,6 +26,7 @@
   let selectedTier = null;
   let configCache  = null;
   let pollTimer    = null;
+  let activeCryptoIntent = null;
 
   // ---------- DOM helpers ----------
   const $ = (id) => document.getElementById(id);
@@ -181,8 +182,14 @@
               </div>
             </div>
             <div class="topup-status info show" id="topupCryptoNote">
-              Send the exact USD-equivalent amount and include the memo. Devnet OST is released after the on-chain payment is confirmed.
+              Send the exact USD-equivalent amount and include the memo. Devnet OST is released after the on-chain payment is verified.
             </div>
+            <div class="topup-field topup-signature-field">
+              <label for="topupPaymentSigInput">Payment transaction signature</label>
+              <input type="text" id="topupPaymentSigInput" placeholder="Paste Solana payment signature..." spellcheck="false" autocomplete="off">
+              <div class="topup-hint">The Worker verifies the signature, treasury receiver, memo, and amount before dispatch.</div>
+            </div>
+            <button class="topup-action" id="topupVerifyPaymentBtn" disabled>Verify Payment &amp; Queue OST</button>
           </div>
           <div class="topup-status" id="topupCryptoStatus"></div>
         </div>
@@ -215,6 +222,7 @@
 
     $('topupCardBtn').addEventListener('click', startStripeCheckout);
     $('topupCryptoStartBtn').addEventListener('click', startCryptoIntent);
+    $('topupVerifyPaymentBtn').addEventListener('click', verifyCryptoPayment);
   }
 
   function switchPane(name) {
@@ -263,6 +271,11 @@
       <div class="topup-summary-row"><span>Bonus OST</span><span>+ ${selectedTier.bonus.toLocaleString()}</span></div>
       <div class="topup-summary-row total"><span>You receive</span><span>${fmtOst(selectedTier.total)}</span></div>`;
     $('topupCryptoCards').style.display = 'none';
+    activeCryptoIntent = null;
+    const sigInput = $('topupPaymentSigInput');
+    const verifyBtn = $('topupVerifyPaymentBtn');
+    if (sigInput) sigInput.value = '';
+    if (verifyBtn) { verifyBtn.disabled = true; delete verifyBtn.dataset.intentId; }
     clearStatus('topupCardStatus'); clearStatus('topupCryptoStatus');
 
     const cfg = await loadConfig();
@@ -282,6 +295,7 @@
   function closeModal() {
     const o = $('topupModalOverlay');
     if (o) o.classList.remove('open');
+    activeCryptoIntent = null;
     if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
   }
   window.closeTopUpModal = closeModal;
@@ -357,8 +371,12 @@
       $('topupSolAddr').textContent  = sol;
       $('topupMemo').textContent     = intent.memo || intent.id;
       $('topupCryptoCards').style.display = 'block';
+      activeCryptoIntent = intent.id;
+      const verifyBtn = $('topupVerifyPaymentBtn');
+      if (verifyBtn) { verifyBtn.disabled = false; verifyBtn.dataset.intentId = intent.id; }
       try { sessionStorage.setItem('ostTopupIntent', intent.id); } catch (_) {}
-      pollIntent(intent.id, 'topupCryptoStatus');
+      setStatus('topupCryptoStatus', 'info', 'Payment lane open. Send SOL or USDC with the memo; OST dispatch starts after verification.');
+      pollIntent(intent.id, 'topupCryptoStatus', { crypto: true });
     } catch (e) {
       setStatus('topupCryptoStatus', 'error', String(e && e.message || e));
     } finally {
@@ -366,7 +384,44 @@
     }
   }
 
-  function pollIntent(id, statusElId) {
+  async function verifyCryptoPayment() {
+    const btn = $('topupVerifyPaymentBtn');
+    const input = $('topupPaymentSigInput');
+    const intentId = (btn && btn.dataset.intentId) || activeCryptoIntent || '';
+    const signature = (input && input.value || '').trim();
+    if (!intentId) {
+      setStatus('topupCryptoStatus', 'error', 'Create a crypto payment lane first.');
+      return;
+    }
+    if (!signature) {
+      setStatus('topupCryptoStatus', 'error', 'Paste the Solana payment signature first.');
+      return;
+    }
+    const base = API_BASE();
+    if (!base) {
+      setStatus('topupCryptoStatus', 'error', 'API base not configured.');
+      return;
+    }
+    btn.disabled = true;
+    setStatus('topupCryptoStatus', 'info', 'Verifying payment on Solana mainnet...');
+    try {
+      const r = await fetch(`${base}/topup/crypto/verify`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ intentId, signature })
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || j.error) throw new Error(j.error || ('verify_http_' + r.status));
+      setStatus('topupCryptoStatus', 'ok', 'Payment verified! Devnet OST dispatch is queued.');
+      pollIntent(intentId, 'topupCryptoStatus', { crypto: true });
+    } catch (e) {
+      setStatus('topupCryptoStatus', 'error', String(e && e.message || e));
+      btn.disabled = false;
+    }
+  }
+
+  function pollIntent(id, statusElId, opts) {
+    opts = opts || {};
     const base = API_BASE();
     if (!base) return;
     if (pollTimer) clearInterval(pollTimer);
@@ -375,6 +430,9 @@
       tries++;
       if (tries > 360) { clearInterval(pollTimer); pollTimer = null; return; } // ~30 min
       try {
+        if (opts.crypto && tries % 3 === 1) {
+          await fetch(`${base}/topup/crypto/check/${encodeURIComponent(id)}`).catch(() => null);
+        }
         const r = await fetch(`${base}/topup/status/${encodeURIComponent(id)}`);
         if (!r.ok) return;
         const j = await r.json();

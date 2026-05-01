@@ -67,11 +67,16 @@ decimals=9) using `getOrCreateAssociatedTokenAccount` + `transferChecked`,
 and reports each signature back via `/topup/admin/mark-sent`. The browser
 modal polls `/topup/status/:id` and shows the Solscan link.
 
-## 4. Crypto payments (manual confirmation for now)
+## 4. Crypto payments
 
 The crypto pane shows the treasury USDC + SOL addresses with a unique memo.
-Until a Helius/QuickNode webhook is wired up, the operator can confirm a
-crypto payment manually:
+Users can paste the Solana mainnet payment signature into the modal; the Worker
+verifies the treasury receiver, memo, and amount before marking the intent
+`paid` and pushing it into the dispatcher queue. SOL payments to the treasury
+wallet are also scanned automatically by `/topup/crypto/check/:intentId` while
+the modal is open.
+
+Manual admin confirmation remains available as a fallback:
 
 ```powershell
 $body = @{ id = "<intent-id>"; txSignature = "<mainnet-signature>" } | ConvertTo-Json

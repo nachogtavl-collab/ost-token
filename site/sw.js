@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v4';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v4';
+const CACHE_NAME = 'ost-pwa-cache-v5';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v5';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -22,7 +22,7 @@ const PRECACHE_PATHS = [
   './ost-console.css?v=1',
   './prediction-scalar.css?v=1',
   './faucet-hub.css?v=4',
-  './topup.css?v=1',
+  './topup.css?v=2',
   './offline-vault.css?v=1',
   './rpc-multiplexer.js?v=1',
   './app.js?v=101',
@@ -44,13 +44,13 @@ const PRECACHE_PATHS = [
   './ux-extras.js?v=3',
   './faucet-hub.js?v=12',
   './faucet-hub-ads.js?v=2',
-  './offline-vault.js?v=2',
+  './offline-vault.js?v=3',
   './ost-games.js?v=13',
   './code-academy.js?v=3',
   './i18n-runtime.js?v=1',
   './devnet-rescue.js?v=4',
   './launchpad-trenches.js?v=2',
-  './topup.js?v=1',
+  './topup.js?v=2',
   'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
   'https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
