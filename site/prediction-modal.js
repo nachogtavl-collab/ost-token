@@ -315,8 +315,93 @@
     if (market.primaryUrl && /polymarket\.com/i.test(market.primaryUrl)) return true;
     return false;
   }
-  function findPolymarketTokenIds(market) {
+  function normalizeOutcomeTokenIds(raw) {
+    if (typeof raw === 'string') {
+      try { raw = JSON.parse(raw); }
+      catch (_) { raw = raw ? [raw] : []; }
+    }
+    if (!Array.isArray(raw)) raw = raw == null ? [] : [raw];
+    return raw.map(function (token) {
+      if (token && typeof token === 'object') return String(token.tokenId || token.token_id || token.id || token.asset_id || '').trim();
+      return String(token || '').trim();
+    }).filter(Boolean);
+  }
+  function isBinaryOutcomeLabel(value) {
+    return /^(yes|no)$/i.test(String(value || '').trim());
+  }
+  function getModalOutcomeContracts(market) {
+    if (!market) return [];
+    var outcomes = Array.isArray(market.outcomes) ? market.outcomes : [];
+    if ((!outcomes.length || typeof outcomes[0] !== 'object') && market.raw) {
+      if (Array.isArray(market.raw.outcomes)) outcomes = market.raw.outcomes;
+      else if (typeof market.raw.outcomes === 'string') {
+        try { outcomes = JSON.parse(market.raw.outcomes); }
+        catch (_) { outcomes = []; }
+      }
+    }
+    return (Array.isArray(outcomes) ? outcomes : []).map(function (outcome, index) {
+      if (!outcome || typeof outcome !== 'object') return null;
+      var price = Number(outcome.price != null ? outcome.price : outcome.lastTradePrice);
+      if (price > 1) price = price / 100;
+      return {
+        key: String(outcome.key || outcome.outcomeKey || outcome.slug || ('outcome-' + (index + 1))).trim().toLowerCase(),
+        label: String(outcome.displayLabel || outcome.outcomeLabel || outcome.label || outcome.name || outcome.title || ('Outcome ' + (index + 1))).trim(),
+        price: Number.isFinite(price) ? Math.max(0, Math.min(1, price)) : NaN,
+        gammaMarketId: String(outcome.gammaMarketId || outcome.marketId || outcome.id || '').trim(),
+        conditionId: String(outcome.conditionId || outcome.condition_id || '').trim(),
+        clobTokenIds: normalizeOutcomeTokenIds(outcome.clobTokenIds || outcome.outcomeTokens || outcome.tokens || outcome.tokenIds || outcome.tokenId),
+        raw: outcome
+      };
+    }).filter(Boolean);
+  }
+  function hasExplicitOutcomeContracts(market) {
+    var outcomes = getModalOutcomeContracts(market);
+    if (!outcomes.length) return false;
+    if (outcomes.length > 2) return true;
+    return outcomes.some(function (outcome) {
+      return !isBinaryOutcomeLabel(outcome.key) && !isBinaryOutcomeLabel(outcome.label);
+    });
+  }
+  function getSelectedOutcomeContract(market, outcomeKey) {
+    if (!hasExplicitOutcomeContracts(market)) return null;
+    var outcomes = getModalOutcomeContracts(market);
+    var targetKey = String(outcomeKey || '').trim().toLowerCase();
+    return outcomes.find(function (outcome) { return outcome.key === targetKey; }) || outcomes[0] || null;
+  }
+  function getModalTradeContract(market, side, outcomeKey) {
+    var selectedOutcome = getSelectedOutcomeContract(market, outcomeKey);
+    if (selectedOutcome) {
+      return {
+        key: selectedOutcome.key,
+        label: selectedOutcome.label,
+        side: 'YES',
+        price: selectedOutcome.price,
+        yesPrice: selectedOutcome.price,
+        noPrice: Number.isFinite(selectedOutcome.price) ? Math.max(0, Math.min(1, 1 - selectedOutcome.price)) : NaN,
+        gammaMarketId: selectedOutcome.gammaMarketId || market.gammaMarketId || market.id || '',
+        conditionId: selectedOutcome.conditionId || market.conditionId || '',
+        clobTokenIds: selectedOutcome.clobTokenIds.slice()
+      };
+    }
+    var normalizedSide = side === 'NO' ? 'NO' : 'YES';
+    var yesPrice = Number(market && market.yesPriceNumber);
+    var noPrice = Number(market && market.noPriceNumber);
+    return {
+      key: normalizedSide.toLowerCase(),
+      label: normalizedSide,
+      side: normalizedSide,
+      price: normalizedSide === 'NO' ? noPrice : yesPrice,
+      yesPrice: yesPrice,
+      noPrice: noPrice,
+      gammaMarketId: market && (market.gammaMarketId || market.id) || '',
+      conditionId: market && market.conditionId || '',
+      clobTokenIds: normalizeOutcomeTokenIds(market && market.clobTokenIds)
+    };
+  }
+  function findPolymarketTokenIds(market, outcomeKey) {
     if (!market) return null;
+    var selectedOutcome = getSelectedOutcomeContract(market, outcomeKey);
+    if (selectedOutcome && selectedOutcome.clobTokenIds.length) return selectedOutcome.clobTokenIds.slice();
     if (market.tokenId) return [String(market.tokenId)];
     if (market.clobTokenIds && market.clobTokenIds[0]) return market.clobTokenIds.map(String).filter(Boolean);
     if (market.raw) {
@@ -339,8 +424,8 @@
     }
     return [];
   }
-  function findPolymarketTokenId(market) {
-    var ids = findPolymarketTokenIds(market);
+  function findPolymarketTokenId(market, outcomeKey) {
+    var ids = findPolymarketTokenIds(market, outcomeKey);
     return ids && ids[0] ? ids[0] : null;
   }
   function fetchPolyOrderbook(tokenId) {
@@ -454,7 +539,7 @@
   // --------------------------------------------------------------------------
   // Bet flow — drives the existing trade desk so OST cash actually moves
   // --------------------------------------------------------------------------
-  function placeBetViaTradeDesk(market, side, stake) {
+  function placeBetViaTradeDesk(market, side, stake, outcomeKey) {
     return new Promise(function (resolve, reject) {
       // Select card → set side → set stake → click action
       var card = document.querySelector('[data-prediction-market-id="' + String(market.id).replace(/"/g, '\\"') + '"]');
@@ -464,8 +549,13 @@
       setTimeout(function () {
         var sideToggle = document.getElementById('predictionOutcomeToggle');
         if (sideToggle) {
-          var sb = sideToggle.querySelector('button[data-prediction-side="' + side.toLowerCase() + '"]');
-          if (sb) sb.click();
+          if (outcomeKey) {
+            var outcomeButton = sideToggle.querySelector('button[data-prediction-outcome-key="' + String(outcomeKey).replace(/"/g, '\\"') + '"]');
+            if (outcomeButton) outcomeButton.click();
+          } else {
+            var sb = sideToggle.querySelector('button[data-prediction-side="' + side.toLowerCase() + '"]');
+            if (sb) sb.click();
+          }
         }
         var stakeInput = document.getElementById('predictionStakeInput');
         if (stakeInput) {
@@ -512,11 +602,14 @@
   }
 
   function renderPricesBlock(m) {
-    var yes = Number(m.yesPriceNumber);
-    var no = Number(m.noPriceNumber);
+    var defaultOutcome = getSelectedOutcomeContract(m, getModalOutcomeContracts(m)[0] && getModalOutcomeContracts(m)[0].key);
+    var yes = defaultOutcome ? Number(defaultOutcome.price) : Number(m.yesPriceNumber);
+    var no = defaultOutcome && Number.isFinite(defaultOutcome.price) ? 1 - Number(defaultOutcome.price) : Number(m.noPriceNumber);
+    var yesLabel = defaultOutcome ? defaultOutcome.label : (m.yesLabel || 'YES');
+    var noLabel = hasExplicitOutcomeContracts(m) ? 'Field' : (m.noLabel || 'NO');
     return '<div class="ost-modal__prices">' +
-      '<div class="ost-modal__price ost-modal__price--yes"><span>' + escapeHtml(m.yesLabel || 'YES') + '</span><strong data-bind="yesPct">' + (Number.isFinite(yes) ? Math.round(yes * 100) + '%' : '—') + '</strong></div>' +
-      '<div class="ost-modal__price ost-modal__price--no"><span>' + escapeHtml(m.noLabel || 'NO') + '</span><strong data-bind="noPct">' + (Number.isFinite(no) ? Math.round(no * 100) + '%' : '—') + '</strong></div>' +
+      '<div class="ost-modal__price ost-modal__price--yes"><span data-bind="yesLabel">' + escapeHtml(yesLabel) + '</span><strong data-bind="yesPct">' + (Number.isFinite(yes) ? Math.round(yes * 100) + '%' : '—') + '</strong></div>' +
+      '<div class="ost-modal__price ost-modal__price--no"><span data-bind="noLabel">' + escapeHtml(noLabel) + '</span><strong data-bind="noPct">' + (Number.isFinite(no) ? Math.round(no * 100) + '%' : '—') + '</strong></div>' +
     '</div>';
   }
 
@@ -648,13 +741,12 @@
 
   // Multi-outcome buttons (Trump/Harris/RFK…). Returns empty string for binary.
   function renderOutcomesBlock(m) {
-    var outs = (m.raw && Array.isArray(m.raw.outcomes)) ? m.raw.outcomes
-             : (Array.isArray(m.outcomes) ? m.outcomes : []);
+    var outs = getModalOutcomeContracts(m);
     if (!Array.isArray(outs) || outs.length <= 2) return '';
     return '<section class="ost-modal__outcomes-wrap"><h4 style="margin:0 0 8px;font-size:13px;letter-spacing:0.04em;text-transform:uppercase;color:#9ba0c8;">All outcomes</h4>' +
       '<div class="ost-modal__outcomes" data-bind="outcomesList">' +
       outs.map(function (o, i) {
-        var label = (o && o.label) || (typeof o === 'string' ? o : ('Outcome ' + (i+1)));
+        var label = (o && o.label) || ('Outcome ' + (i+1));
         var price = Number(o && o.price);
         return '<button type="button" class="ost-modal__outcome' + (i === 0 ? ' is-active' : '') + '" data-outcome-idx="' + i + '">' +
                '<span class="ost-modal__outcome-label">' + escapeHtml(label) + '</span>' +
@@ -682,13 +774,16 @@
   }
 
   function renderBetBlock(m) {
+    var multiOutcome = hasExplicitOutcomeContracts(m);
     return '<section class="ost-modal__bet">' +
       '<div class="ost-modal__bet-head"><h4>Place a bet with OST</h4></div>' +
       '<div class="ost-modal__bet-grid">' +
         '<div class="ost-modal__bet-side">' +
           '<div class="ost-modal__bet-toggle">' +
-            '<button type="button" data-side="YES" class="ost-modal__side-btn ost-modal__side-btn--yes is-active">YES</button>' +
-            '<button type="button" data-side="NO"  class="ost-modal__side-btn ost-modal__side-btn--no">NO</button>' +
+            (multiOutcome
+              ? '<button type="button" data-side="YES" class="ost-modal__side-btn ost-modal__side-btn--yes is-active">Selected outcome</button>'
+              : '<button type="button" data-side="YES" class="ost-modal__side-btn ost-modal__side-btn--yes is-active">YES</button>' +
+                '<button type="button" data-side="NO"  class="ost-modal__side-btn ost-modal__side-btn--no">NO</button>') +
           '</div>' +
         '</div>' +
         '<label class="ost-modal__bet-stake">Stake (OST)<input type="number" min="0.01" step="0.01" value="1" data-bind="stake"></label>' +
@@ -857,6 +952,21 @@
 
     // ---- Bet wiring ----
     var selectedSide = 'YES';
+    var selectedOutcomeKey = (getModalOutcomeContracts(market)[0] && getModalOutcomeContracts(market)[0].key) || '';
+    function getActiveContract() {
+      return getModalTradeContract(market, selectedSide, selectedOutcomeKey);
+    }
+    function syncActiveContractUi() {
+      var contract = getActiveContract();
+      var yesLabelEl = bodyEl.querySelector('[data-bind="yesLabel"]');
+      var noLabelEl = bodyEl.querySelector('[data-bind="noLabel"]');
+      var yesPctEl = bodyEl.querySelector('[data-bind="yesPct"]');
+      var noPctEl = bodyEl.querySelector('[data-bind="noPct"]');
+      if (yesLabelEl) yesLabelEl.textContent = contract && contract.label ? contract.label : (market.yesLabel || 'YES');
+      if (noLabelEl) noLabelEl.textContent = hasExplicitOutcomeContracts(market) ? 'Field' : (market.noLabel || 'NO');
+      if (yesPctEl) yesPctEl.textContent = Number.isFinite(contract && contract.yesPrice) ? (Number(contract.yesPrice) * 100).toFixed(1) + '%' : '—';
+      if (noPctEl) noPctEl.textContent = Number.isFinite(contract && contract.noPrice) ? (Number(contract.noPrice) * 100).toFixed(1) + '%' : '—';
+    }
     bodyEl.querySelectorAll('.ost-modal__side-btn').forEach(function (b) {
       b.addEventListener('click', function () {
         selectedSide = b.getAttribute('data-side');
@@ -871,20 +981,22 @@
     }
     function recalcProjected() {
       var s = getStake();
-      var px = selectedSide === 'YES' ? Number(market.yesPriceNumber) : Number(market.noPriceNumber);
+      var contract = getActiveContract();
+      var px = contract ? Number(contract.price) : NaN;
       if (!Number.isFinite(px) || px <= 0) px = 0.5;
       var shares = s / px;
       setText(bodyEl, 'projected', 'Win ' + shares.toFixed(2) + ' OST · risk ' + s.toFixed(2) + ' OST · @ ' + fmtCents(px));
     }
     var stakeInput = bodyEl.querySelector('[data-bind="stake"]');
     if (stakeInput) stakeInput.addEventListener('input', recalcProjected);
+    syncActiveContractUi();
     recalcProjected();
 
     bodyEl.querySelector('[data-act="placebet"]').addEventListener('click', function () {
       var s = getStake();
       if (!s) { toast('Set a stake first.', 'err'); return; }
       toast('Submitting ' + selectedSide + ' ' + s + ' OST…', 'ok');
-      placeBetViaTradeDesk(market, selectedSide, s)
+      placeBetViaTradeDesk(market, selectedSide, s, selectedOutcomeKey)
         .then(function (rec) {
           toast('✅ Bet recorded' + (rec && rec.sig ? ' (sig ' + String(rec.sig).slice(0, 8) + '…)' : '') + '. Check Open Positions below.', 'ok');
           // Share to global feed so every other OST user sees the tick live.
@@ -917,16 +1029,15 @@
         bodyEl.querySelectorAll('.ost-modal__outcome').forEach(function (x) { x.classList.remove('is-active'); });
         b.classList.add('is-active');
         var idx = Number(b.getAttribute('data-outcome-idx'));
-        var outs = (market.raw && market.raw.outcomes) || market.outcomes || [];
+        var outs = getModalOutcomeContracts(market);
         var picked = outs[idx];
-        if (picked && Number.isFinite(Number(picked.price))) {
-          // Treat picked outcome as YES for the bet ticket.
-          market.yesPriceNumber = Number(picked.price);
-          market.noPriceNumber = 1 - Number(picked.price);
-          recalcProjected();
-          var yEl = bodyEl.querySelector('[data-bind="yesPct"]');
-          if (yEl) yEl.textContent = (Number(picked.price) * 100).toFixed(1) + '% · ' + (picked.label || ('outcome ' + (idx+1)));
-        }
+        if (!picked) return;
+        selectedOutcomeKey = picked.key;
+        selectedSide = 'YES';
+        bodyEl.querySelectorAll('.ost-modal__side-btn').forEach(function (x) { x.classList.toggle('is-active', x.getAttribute('data-side') === 'YES'); });
+        syncActiveContractUi();
+        recalcProjected();
+        if (typeof bodyEl.__ostRefreshSelectedOutcome === 'function') bodyEl.__ostRefreshSelectedOutcome();
       });
     });
 
@@ -993,14 +1104,16 @@
         var stake = Number(o.stake || 0) || 0;
         var entryPx = Number(o.price || (side === 'NO' ? o.noPrice : o.yesPrice)) || 0;
         var shares = Number(o.shares) > 0 ? Number(o.shares) : (entryPx > 0 ? stake / entryPx : 0);
-        var livePx = side === 'NO' ? Number(market.noPriceNumber) : Number(market.yesPriceNumber);
+        var contract = getModalTradeContract(market, side, o.outcomeKey || '');
+        var livePx = side === 'NO' ? Number(contract && contract.noPrice) : Number(contract && contract.yesPrice);
         if (!Number.isFinite(livePx) || livePx <= 0) livePx = entryPx;
         var liveValue = shares > 0 && livePx > 0 ? shares * livePx : stake;
         var pnl = liveValue - stake;
         var pnlColor = pnl >= 0 ? '#7ce6a8' : '#ff7c8a';
         var pnlStr = (pnl >= 0 ? '+' : '−') + Math.abs(pnl).toFixed(2);
+        var sideLabel = o.outcomeLabel || (contract && contract.label) || side;
         return '<div class="ost-modal__sell-row" data-sell-key="' + escapeHtml(o.signature || o.sig || o.id || ('idx-' + i)) + '" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid rgba(255,255,255,.06);">' +
-          '<span style="font-weight:700;color:' + sideColor + ';min-width:34px;">' + side + '</span>' +
+          '<span style="font-weight:700;color:' + sideColor + ';min-width:34px;">' + escapeHtml(sideLabel) + '</span>' +
           '<span style="opacity:.85;font-size:12px;">' + stake.toFixed(2) + ' OST @ ' + (entryPx > 0 ? (entryPx * 100).toFixed(1) + '¢' : '—') + '</span>' +
           '<span style="opacity:.85;font-size:12px;">live ' + (livePx * 100).toFixed(1) + '¢</span>' +
           '<span style="opacity:.85;font-size:12px;">value <b>' + liveValue.toFixed(2) + '</b></span>' +
@@ -1017,7 +1130,8 @@
           var side = String(order.side || 'yes').toLowerCase() === 'no' ? 'NO' : 'YES';
           var entryPx = Number(order.price || (side === 'NO' ? order.noPrice : order.yesPrice)) || 0;
           var shares = Number(order.shares) > 0 ? Number(order.shares) : (entryPx > 0 ? Number(order.stake || 0) / entryPx : 0);
-          var livePx = side === 'NO' ? Number(market.noPriceNumber) : Number(market.yesPriceNumber);
+          var contract = getModalTradeContract(market, side, order.outcomeKey || '');
+          var livePx = side === 'NO' ? Number(contract && contract.noPrice) : Number(contract && contract.yesPrice);
           if (!Number.isFinite(livePx) || livePx <= 0) livePx = entryPx;
           var payout = Math.max(0, shares * livePx);
           if (!(payout > 0)) { toast('Cannot sell at 0¢', 'err'); return; }
@@ -1140,18 +1254,35 @@
 
     // ---- Polymarket live data ----
     if (looksLikePolymarketId(market)) {
-      var tokenIds = findPolymarketTokenIds(market) || [];
-      var tokenId = tokenIds[0] || findPolymarketTokenId(market);
-      var gammaMarketId = (market.raw && market.raw.id) || market.id;
+      var tokenIds = [];
+      var tokenId = '';
+      var gammaMarketId = '';
       // CLOB/data endpoints prefer conditionId; Gamma /markets/:id prefers the numeric Gamma id.
-      var rawId = (market.raw && (market.raw.conditionId || market.raw.condition_id))
-               || market.conditionId
-               || (market.raw && market.raw.id)
-               || market.id;
+      var rawId = '';
       var liveHistoryBySide = { YES: [], NO: [] };
       var LIVE_HISTORY_MAX = 240;
 
+      function syncSelectedOutcomeContext() {
+        var selectedContract = getModalTradeContract(market, selectedSide, selectedOutcomeKey);
+        tokenIds = (selectedContract && selectedContract.clobTokenIds && selectedContract.clobTokenIds.length)
+          ? selectedContract.clobTokenIds.slice()
+          : (findPolymarketTokenIds(market, selectedOutcomeKey) || []);
+        tokenId = tokenIds[0] || findPolymarketTokenId(market, selectedOutcomeKey) || '';
+        gammaMarketId = (selectedContract && selectedContract.gammaMarketId)
+          || (market.raw && market.raw.id)
+          || market.gammaMarketId
+          || market.id;
+        rawId = (selectedContract && selectedContract.conditionId)
+             || (market.raw && (market.raw.conditionId || market.raw.condition_id))
+             || market.conditionId
+             || gammaMarketId
+             || market.id;
+      }
+      syncSelectedOutcomeContext();
+
       function getOutcomeConsensusYes() {
+        var selectedContract = getModalTradeContract(market, selectedSide, selectedOutcomeKey);
+        if (selectedContract && Number.isFinite(selectedContract.yesPrice)) return Number(selectedContract.yesPrice);
         var op = market.outcomePrices || (market.raw && market.raw.outcomePrices);
         if (typeof op === 'string') { try { op = JSON.parse(op); } catch (_) { op = null; } }
         var first = Array.isArray(op) ? Number(op[0]) : NaN;
@@ -1218,6 +1349,16 @@
       window.__ostRequestChartHistory = function requestChartHistoryForSide(side) {
         refreshHistory(side === 'NO' ? 'NO' : 'YES');
       };
+      bodyEl.__ostRefreshSelectedOutcome = function () {
+        liveHistoryBySide = { YES: [], NO: [] };
+        syncSelectedOutcomeContext();
+        syncActiveContractUi();
+        refreshGamma();
+        refreshBook();
+        refreshTrades();
+        refreshHistory('YES');
+        refreshSellList();
+      };
 
       // Apply a fresh YES/NO from any source. We track the last accepted
       // source + timestamp so the CLOB feed cannot fight Gamma every second
@@ -1246,12 +1387,16 @@
         lastApply = { src: src, ts: now, value: smoothed };
         market.yesPriceNumber = smoothed;
         market.noPriceNumber = 1 - smoothed;
+        var activeOutcome = getSelectedOutcomeContract(market, selectedOutcomeKey);
+        if (activeOutcome && activeOutcome.raw) activeOutcome.raw.price = smoothed;
         pushHistoryPoint('YES', smoothed, now);
         pushHistoryPoint('NO', 1 - smoothed, now);
         var yEl = bodyEl.querySelector('[data-bind="yesPct"]');
         var n2 = bodyEl.querySelector('[data-bind="noPct"]');
         if (yEl) yEl.textContent = (smoothed * 100).toFixed(1) + '% · ' + src;
         if (n2) n2.textContent = ((1 - smoothed) * 100).toFixed(1) + '%';
+        var activeOutcomePriceEl = bodyEl.querySelector('.ost-modal__outcome.is-active .ost-modal__outcome-price');
+        if (activeOutcomePriceEl) activeOutcomePriceEl.textContent = (smoothed * 100).toFixed(1) + '¢';
         renderLiveHistory();
         recalcProjected();
       };
@@ -1278,19 +1423,6 @@
           else if (Number.isFinite(bb) && bb > 0) yesPx = bb;
           else if (Number.isFinite(ba) && ba < 1) yesPx = ba;
           applyYes(yesPx, 'gamma');
-          // Mirror multi-outcome prices live so the buttons reflect reality.
-          if (Array.isArray(op) && op.length > 1) {
-            var outs = (g.outcomes && (typeof g.outcomes === 'string' ? JSON.parse(g.outcomes) : g.outcomes)) || [];
-            var outBtns = bodyEl.querySelectorAll('.ost-modal__outcome');
-            outBtns.forEach(function (btn, i) {
-              var p = Number(op[i]);
-              if (!Number.isFinite(p)) return;
-              var pe = btn.querySelector('.ost-modal__outcome-price');
-              if (pe) pe.textContent = (p * 100).toFixed(1) + '¢';
-              var le = btn.querySelector('.ost-modal__outcome-label');
-              if (le && outs[i]) le.textContent = String(outs[i]);
-            });
-          }
           // Update header tag with live volume.
           if (Number.isFinite(Number(g.volume24hr))) {
             setText(bodyEl, 'tradesStatus', 'gamma · 24h vol $' + Math.round(Number(g.volume24hr)).toLocaleString());
@@ -1469,6 +1601,11 @@
     ev.preventDefault();
     ev.stopPropagation();
     var id = card.getAttribute('data-prediction-market-id') || '';
+    var nativeLiveId = (window.OST_NATIVE_MARKET_IDS && window.OST_NATIVE_MARKET_IDS.eplLeedsBurnley) || 'native-polymarket-epl-lee-bur-2026-05-01';
+    if (id === nativeLiveId && window.OSTLiveWatch && typeof window.OSTLiveWatch.open === 'function') {
+      window.OSTLiveWatch.open('leeds-burnley', 'Leeds United vs Burnley', { focusTrade: !!explicitOpen });
+      return;
+    }
     open(id);
   }
   document.addEventListener('click', onCardClick, true);

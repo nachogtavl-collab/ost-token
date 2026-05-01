@@ -487,7 +487,17 @@
     };
   }
 
-  window.buildOstNativeMarkets = function () {
+  var existingNativeMarketBuilder = typeof window.buildOstNativeMarkets === 'function'
+    ? window.buildOstNativeMarkets
+    : null;
+
+  function pushUniqueNativeMarket(target, seen, market) {
+    if (!market || !market.id || seen[market.id]) return;
+    seen[market.id] = true;
+    target.push(market);
+  }
+
+  function buildWalletNativeMarkets() {
     var now = Date.now();
     var DAY = 86400000;
     var prices = window.__ostPrices || {};
@@ -646,6 +656,21 @@
         closeAtMs: new Date('2027-01-15T00:00:00Z').getTime(),
       }),
     ];
+  }
+
+  window.buildOstNativeMarkets = function () {
+    var out = [];
+    var seen = Object.create(null);
+    if (existingNativeMarketBuilder) {
+      try {
+        var seeded = existingNativeMarketBuilder();
+        if (Array.isArray(seeded)) seeded.forEach(function (market) { pushUniqueNativeMarket(out, seen, market); });
+      } catch (error) {
+        console.warn('[OST wallet native markets]', error);
+      }
+    }
+    buildWalletNativeMarkets().forEach(function (market) { pushUniqueNativeMarket(out, seen, market); });
+    return out;
   };
 
   // ------------------------------------------------------------------

@@ -2807,6 +2807,9 @@
       title: position.title || position.marketTitle || 'Prediction ticket',
       topic: position.topic || '',
       side: side,
+      outcomeKey: position.outcomeKey || '',
+      outcomeLabel: position.outcomeLabel || '',
+      gammaMarketId: position.gammaMarketId || '',
       price: Number.isFinite(price) && price > 0 ? price : 0,
       yesPrice: Number(position.yesPrice),
       noPrice: Number(position.noPrice),
@@ -2978,6 +2981,9 @@
       closeAtMs: Number(order.closeAtMs || 0),
       clobTokenIds: Array.isArray(order.clobTokenIds) ? order.clobTokenIds.slice(0, 4) : [],
       sourceUrl: order.sourceUrl,
+      outcomeKey: order.outcomeKey || '',
+      outcomeLabel: order.outcomeLabel || '',
+      gammaMarketId: order.gammaMarketId || '',
       createdAt: Date.now()
     };
     storePredictionOrderRecord(record);
@@ -3014,6 +3020,13 @@
       record: record
     };
   }
+
+  window.OST_PREDICTION_API = Object.assign(window.OST_PREDICTION_API || {}, {
+    placeOrder: createPredictionMarketOrder,
+    readOrders: readPredictionOrderRecords,
+    syncOrders: syncPredictionOrdersFromRemote,
+    walletAddress: getPredictionWalletAddress
+  });
 
   async function createInterchangePaymentRequest(request) {
     if (!request || !Number.isFinite(Number(request.ostAmount)) || Number(request.ostAmount) <= 0) {
@@ -12257,6 +12270,7 @@
       topic: 'all',
       query: '',
       selectedMarketId: '',
+      selectedOutcomeKey: '',
       selectedSide: 'yes',
       stake: 25,
       visibleCount: getPredictionDefaultVisibleCount(),
@@ -12419,7 +12433,77 @@
       return clamp(number, 0, 1);
     }
 
-    function getMarketPrice(market, side) {
+    function normalizeTokenIdList(raw) {
+      if (typeof raw === 'string') raw = parseMaybeJson(raw);
+      if (!Array.isArray(raw)) raw = raw == null ? [] : [raw];
+      return raw.map(function(item) {
+        if (item && typeof item === 'object') {
+          return String(item.tokenId || item.token_id || item.id || item.asset_id || '').trim();
+        }
+        return String(item || '').trim();
+      }).filter(Boolean);
+    }
+
+    function isBinaryOutcomeLabel(value) {
+      return /^(yes|no)$/i.test(String(value || '').trim());
+    }
+
+    function getMarketOutcomeContracts(market) {
+      if (!market) return [];
+      var rawOutcomes = Array.isArray(market.outcomes) ? market.outcomes : [];
+      if ((!rawOutcomes.length || typeof rawOutcomes[0] !== 'object') && market.raw) {
+        if (Array.isArray(market.raw.outcomes)) {
+          rawOutcomes = market.raw.outcomes;
+        } else if (typeof market.raw.outcomes === 'string') {
+          rawOutcomes = parseMaybeJson(market.raw.outcomes);
+        }
+      }
+      return rawOutcomes.map(function(outcome, index) {
+        if (!outcome || typeof outcome !== 'object') return null;
+        var price = safeFraction(
+          outcome.price != null
+            ? outcome.price
+            : (outcome.yesPriceNumber != null ? outcome.yesPriceNumber : outcome.lastTradePrice),
+          NaN
+        );
+        return {
+          key: String(outcome.key || outcome.outcomeKey || outcome.slug || ('outcome-' + (index + 1))).trim().toLowerCase(),
+          label: String(outcome.displayLabel || outcome.outcomeLabel || outcome.label || outcome.name || outcome.title || ('Outcome ' + (index + 1))).trim(),
+          price: price,
+          gammaMarketId: String(outcome.gammaMarketId || outcome.marketId || outcome.id || '').trim(),
+          conditionId: String(outcome.conditionId || outcome.condition_id || '').trim(),
+          clobTokenIds: normalizeTokenIdList(outcome.clobTokenIds || outcome.outcomeTokens || outcome.tokens || outcome.tokenIds || outcome.tokenId),
+          raw: outcome
+        };
+      }).filter(Boolean);
+    }
+
+    function marketHasExplicitOutcomeContracts(market) {
+      var outcomes = getMarketOutcomeContracts(market);
+      if (!outcomes.length) return false;
+      if (outcomes.length > 2) return true;
+      return outcomes.some(function(outcome) {
+        return !isBinaryOutcomeLabel(outcome.key) && !isBinaryOutcomeLabel(outcome.label);
+      });
+    }
+
+    function getSelectedOutcomeContract(market, explicitOutcomeKey) {
+      if (!marketHasExplicitOutcomeContracts(market)) return null;
+      var outcomes = getMarketOutcomeContracts(market);
+      var targetKey = String(explicitOutcomeKey || state.selectedOutcomeKey || '').trim().toLowerCase();
+      var selected = outcomes.find(function(outcome) {
+        return outcome.key === targetKey;
+      });
+      return selected || outcomes[0] || null;
+    }
+
+    function syncSelectedOutcomeKey(market) {
+      var selected = getSelectedOutcomeContract(market);
+      state.selectedOutcomeKey = selected ? selected.key : '';
+      return selected;
+    }
+
+    function getBinaryMarketPrice(market, side) {
       if (!market) return NaN;
       if (side === 'no' && Number.isFinite(market.noPriceNumber)) return market.noPriceNumber;
       if (side !== 'no' && Number.isFinite(market.yesPriceNumber)) return market.yesPriceNumber;
@@ -12429,27 +12513,68 @@
       return numericValue / 100;
     }
 
-    function getMarketTokenIds(market) {
-      var raw = market && (market.clobTokenIds || (market.raw && (market.raw.clobTokenIds || market.raw.outcomeTokens || market.raw.tokens)));
-      if (typeof raw === 'string') raw = parseMaybeJson(raw);
-      if (!Array.isArray(raw)) return [];
-      return raw.map(function(item) {
-        if (item && typeof item === 'object') {
-          return String(item.tokenId || item.token_id || item.id || item.asset_id || '').trim();
-        }
-        return String(item || '').trim();
-      }).filter(Boolean);
+    function getMarketPrice(market, side, outcomeKey) {
+      var selectedOutcome = getSelectedOutcomeContract(market, outcomeKey);
+      if (selectedOutcome) {
+        if (!Number.isFinite(selectedOutcome.price)) return NaN;
+        return side === 'no' ? clamp(1 - selectedOutcome.price, 0, 1) : selectedOutcome.price;
+      }
+      return getBinaryMarketPrice(market, side);
     }
 
-    function getMarketHistoryToken(market, side) {
-      var ids = getMarketTokenIds(market);
+    function getRawMarketTokenIds(market) {
+      var raw = market && (market.clobTokenIds || (market.raw && (market.raw.clobTokenIds || market.raw.outcomeTokens || market.raw.tokens)));
+      return normalizeTokenIdList(raw);
+    }
+
+    function getMarketTokenIds(market, outcomeKey) {
+      var selectedOutcome = getSelectedOutcomeContract(market, outcomeKey);
+      if (selectedOutcome && selectedOutcome.clobTokenIds.length) return selectedOutcome.clobTokenIds.slice();
+      return getRawMarketTokenIds(market);
+    }
+
+    function getMarketHistoryToken(market, side, outcomeKey) {
+      var ids = getMarketTokenIds(market, outcomeKey);
       if (!ids.length) return '';
+      if (marketHasExplicitOutcomeContracts(market)) return ids[0] || '';
       return side === 'no' ? (ids[1] || ids[0]) : ids[0];
     }
 
-    function getHistoryKey(market, side) {
+    function getHistoryKey(market, side, outcomeKey) {
       if (!market) return '';
-      return [market.source || 'source', market.id || 'market', side || 'yes', getMarketHistoryToken(market, side || 'yes')].join(':');
+      var selectedOutcome = getSelectedOutcomeContract(market, outcomeKey);
+      var outcomePart = selectedOutcome ? selectedOutcome.key : (side || 'yes');
+      return [market.source || 'source', market.id || 'market', outcomePart, getMarketHistoryToken(market, side || 'yes', outcomeKey)].join(':');
+    }
+
+    function buildTradeContract(market, side, outcomeKey) {
+      if (!market) return null;
+      var selectedOutcome = getSelectedOutcomeContract(market, outcomeKey);
+      if (selectedOutcome) {
+        return {
+          key: selectedOutcome.key,
+          label: selectedOutcome.label,
+          side: 'yes',
+          price: selectedOutcome.price,
+          yesPrice: selectedOutcome.price,
+          noPrice: Number.isFinite(selectedOutcome.price) ? clamp(1 - selectedOutcome.price, 0, 1) : NaN,
+          gammaMarketId: selectedOutcome.gammaMarketId || market.gammaMarketId || '',
+          conditionId: selectedOutcome.conditionId || market.conditionId || (market.raw && (market.raw.conditionId || market.raw.condition_id)) || '',
+          clobTokenIds: getMarketTokenIds(market, selectedOutcome.key)
+        };
+      }
+      side = side === 'no' ? 'no' : 'yes';
+      return {
+        key: side,
+        label: side === 'no' ? (market.noLabel || 'No') : (market.yesLabel || 'Yes'),
+        side: side,
+        price: getBinaryMarketPrice(market, side),
+        yesPrice: getBinaryMarketPrice(market, 'yes'),
+        noPrice: getBinaryMarketPrice(market, 'no'),
+        gammaMarketId: market.gammaMarketId || '',
+        conditionId: market.conditionId || (market.raw && (market.raw.conditionId || market.raw.condition_id)) || '',
+        clobTokenIds: getRawMarketTokenIds(market)
+      };
     }
 
     function historyPointToMs(value) {
@@ -12479,8 +12604,8 @@
       });
     }
 
-    function getCachedHistory(market, side) {
-      var key = getHistoryKey(market, side || 'yes');
+    function getCachedHistory(market, side, outcomeKey) {
+      var key = getHistoryKey(market, side || 'yes', outcomeKey);
       return key && state.historyCache[key] ? state.historyCache[key] : null;
     }
 
@@ -12491,12 +12616,12 @@
       return 'https://clob.polymarket.com/prices-history?' + query;
     }
 
-    function requestMarketHistory(market, side) {
+    function requestMarketHistory(market, side, outcomeKey) {
       side = side === 'no' ? 'no' : 'yes';
       if (!market || market.source !== 'polymarket') return;
-      var tokenId = getMarketHistoryToken(market, side);
+      var tokenId = getMarketHistoryToken(market, side, outcomeKey);
       if (!tokenId) return;
-      var key = getHistoryKey(market, side);
+      var key = getHistoryKey(market, side, outcomeKey);
       if (state.historyCache[key] || state.historyLoading[key]) return;
 
       state.historyLoading[key] = true;
@@ -12679,8 +12804,13 @@
       var selected = pool.find(function(market) {
         return market.id === state.selectedMarketId;
       });
-      if (selected) return selected;
-      return pool[0] || null;
+      if (selected) {
+        syncSelectedOutcomeKey(selected);
+        return selected;
+      }
+      selected = pool[0] || null;
+      if (selected) syncSelectedOutcomeKey(selected);
+      return selected;
     }
 
     function setTradeStatus(message, tone) {
@@ -12717,7 +12847,8 @@
 
     function getLivePriceForOrder(order, market) {
       var side = order && order.side === 'no' ? 'no' : 'yes';
-      var livePrice = market ? getMarketPrice(market, side) : NaN;
+      var contract = market ? buildTradeContract(market, side, order && order.outcomeKey) : null;
+      var livePrice = contract ? Number(contract.price) : NaN;
       if (Number.isFinite(livePrice) && livePrice > 0) return livePrice;
       if (side === 'no' && Number.isFinite(Number(order && order.finalNoPrice)) && Number(order.finalNoPrice) >= 0) return Number(order.finalNoPrice);
       if (side === 'yes' && Number.isFinite(Number(order && order.finalYesPrice)) && Number(order.finalYesPrice) >= 0) return Number(order.finalYesPrice);
@@ -12734,7 +12865,7 @@
 
     function buildGammaMarketStatusUrl(order) {
       var apiBase = getPredictionApiBase();
-      var marketId = order && order.marketId ? String(order.marketId) : '';
+      var marketId = order && (order.gammaMarketId || order.marketId) ? String(order.gammaMarketId || order.marketId) : '';
       if (!apiBase || !marketId || order.source !== 'polymarket') return '';
       return apiBase + '/gamma/markets/' + encodeURIComponent(marketId);
     }
@@ -12843,7 +12974,8 @@
       var livePrice = getLivePriceForOrder(order, market);
       var liveValue = shares > 0 && livePrice > 0 ? shares * livePrice : stake;
       var closeAtMs = Number(order && order.closeAtMs || (market && market.closeAtMs) || 0);
-      var yesPrice = market ? getMarketPrice(market, 'yes') : Number(order && order.yesPrice);
+      var resolvedContract = market ? buildTradeContract(market, side, order && order.outcomeKey) : null;
+      var yesPrice = resolvedContract ? Number(resolvedContract.yesPrice) : Number(order && order.yesPrice);
       var isClosed = closeAtMs > 0 && closeAtMs <= Date.now();
       var status = String(order && (order.status || order.outcome || '') || '').toLowerCase();
       var resolved = !!(order && order.resolved) || status === 'won' || status === 'lost' || status === 'settled';
@@ -13167,12 +13299,14 @@
       var pulseCard = target.closest('[data-prediction-select-market-id]');
       if (pulseCard) {
         state.selectedMarketId = pulseCard.getAttribute('data-prediction-select-market-id') || '';
+        state.selectedOutcomeKey = '';
         renderPredictionBoard();
         return true;
       }
       var article = target.closest('.prediction-market-card[data-prediction-market-id]');
       if (!article) return false;
       state.selectedMarketId = article.getAttribute('data-prediction-market-id') || '';
+      state.selectedOutcomeKey = '';
       renderPredictionBoard();
       focusPredictionExperience('stage');
       return true;
@@ -13321,8 +13455,9 @@
         return;
       }
 
-      var chartSide = state.selectedSide === 'no' ? 'no' : 'yes';
-      var cachedHistory = getCachedHistory(market, chartSide);
+      var explicitOutcome = getSelectedOutcomeContract(market);
+      var chartSide = explicitOutcome ? 'yes' : (state.selectedSide === 'no' ? 'no' : 'yes');
+      var cachedHistory = getCachedHistory(market, chartSide, explicitOutcome ? explicitOutcome.key : '');
       var usingRealHistory = cachedHistory && cachedHistory.length > 1;
       var prepared = prepareCanvas(stageChartEl, 280);
       if (!prepared) return;
@@ -13336,9 +13471,9 @@
         ? cachedHistory.map(function(point) { return clamp(point.p * 100, 1, 99); })
         : buildPredictionSeries(market, chartSide);
       var current = points[points.length - 1];
-      var lineColor = chartSide === 'no' ? '#f87171' : '#34d399';
+      var lineColor = explicitOutcome ? '#60a5fa' : (chartSide === 'no' ? '#f87171' : '#34d399');
       var fillGradient = ctx.createLinearGradient(0, pad.top, 0, height - pad.bottom);
-      fillGradient.addColorStop(0, chartSide === 'no' ? 'rgba(248,113,113,0.22)' : 'rgba(52,211,153,0.25)');
+      fillGradient.addColorStop(0, explicitOutcome ? 'rgba(96,165,250,0.24)' : (chartSide === 'no' ? 'rgba(248,113,113,0.22)' : 'rgba(52,211,153,0.25)'));
       fillGradient.addColorStop(1, 'rgba(109,159,255,0.02)');
 
       function x(index) {
@@ -13452,6 +13587,45 @@
           '</div>'
         ].join('');
       }).join('');
+    }
+
+    function renderPredictionOutcomeSelector(market) {
+      if (!outcomeToggle) return;
+      if (!market) {
+        outcomeToggle.innerHTML = [
+          '<button class="prediction-side-btn is-active" type="button" data-prediction-side="yes">',
+            '<span>Buy Yes</span>',
+            '<strong>--</strong>',
+          '</button>',
+          '<button class="prediction-side-btn" type="button" data-prediction-side="no">',
+            '<span>Buy No</span>',
+            '<strong>--</strong>',
+          '</button>'
+        ].join('');
+        return;
+      }
+      if (marketHasExplicitOutcomeContracts(market)) {
+        var selectedOutcome = syncSelectedOutcomeKey(market);
+        outcomeToggle.innerHTML = getMarketOutcomeContracts(market).map(function(outcome) {
+          return [
+            '<button class="prediction-side-btn' + (selectedOutcome && selectedOutcome.key === outcome.key ? ' is-active' : '') + '" type="button" data-prediction-outcome-key="' + escapeHtml(outcome.key) + '">',
+              '<span>' + escapeHtml(outcome.label) + '</span>',
+              '<strong>' + escapeHtml(Number.isFinite(outcome.price) ? formatPercent(outcome.price) : '--') + '</strong>',
+            '</button>'
+          ].join('');
+        }).join('');
+        return;
+      }
+      outcomeToggle.innerHTML = [
+        '<button class="prediction-side-btn' + (state.selectedSide !== 'no' ? ' is-active' : '') + '" type="button" data-prediction-side="yes">',
+          '<span>' + escapeHtml(market.yesLabel || 'Buy Yes') + '</span>',
+          '<strong>' + escapeHtml(market.yesValue || '--') + '</strong>',
+        '</button>',
+        '<button class="prediction-side-btn' + (state.selectedSide === 'no' ? ' is-active' : '') + '" type="button" data-prediction-side="no">',
+          '<span>' + escapeHtml(market.noLabel || 'Buy No') + '</span>',
+          '<strong>' + escapeHtml(market.noValue || '--') + '</strong>',
+        '</button>'
+      ].join('');
     }
 
     function updateMarketLink(el, url, text) {
@@ -13646,20 +13820,24 @@
       if (stageTopicEl) stageTopicEl.textContent = topicLabels[market.topic] || topicLabels.all;
       if (stageTitleEl) stageTitleEl.textContent = market.title;
       if (stageDetailEl) stageDetailEl.textContent = market.detail;
-      if (stageYesPriceEl) stageYesPriceEl.textContent = market.yesValue;
-      if (stageNoPriceEl) stageNoPriceEl.textContent = market.noValue;
-      if (stageProbabilityEl) stageProbabilityEl.textContent = market.yesValue;
+      var explicitOutcome = getSelectedOutcomeContract(market);
+      var activeContract = buildTradeContract(market, state.selectedSide);
+      var chartSide = explicitOutcome ? 'yes' : (state.selectedSide === 'no' ? 'no' : 'yes');
+      var chartLabel = activeContract && activeContract.label ? activeContract.label : (chartSide === 'no' ? 'NO' : 'YES');
+      var activePrice = activeContract ? Number(activeContract.price) : getMarketPrice(market, chartSide);
+      var complementPrice = activeContract && Number.isFinite(activeContract.noPrice) ? Number(activeContract.noPrice) : getMarketPrice(market, chartSide === 'no' ? 'yes' : 'no');
+      if (stageYesPriceEl) stageYesPriceEl.textContent = Number.isFinite(activePrice) ? formatPercent(activePrice) : market.yesValue;
+      if (stageNoPriceEl) stageNoPriceEl.textContent = Number.isFinite(complementPrice) ? formatPercent(complementPrice) : market.noValue;
+      if (stageProbabilityEl) stageProbabilityEl.textContent = Number.isFinite(activePrice) ? formatPercent(activePrice) : market.yesValue;
       if (stageVolumeEl) stageVolumeEl.textContent = market.volumeValue;
       if (stageDepthEl) stageDepthEl.textContent = market.secondaryMetricValue;
       if (stageCloseEl) stageCloseEl.textContent = market.closeText;
-      var chartSide = state.selectedSide === 'no' ? 'no' : 'yes';
-      requestMarketHistory(market, chartSide);
-      var historyKey = getHistoryKey(market, chartSide);
-      var cachedHistory = getCachedHistory(market, chartSide);
+      requestMarketHistory(market, chartSide, explicitOutcome ? explicitOutcome.key : '');
+      var historyKey = getHistoryKey(market, chartSide, explicitOutcome ? explicitOutcome.key : '');
+      var cachedHistory = getCachedHistory(market, chartSide, explicitOutcome ? explicitOutcome.key : '');
       var hasRealHistory = cachedHistory && cachedHistory.length > 1;
       var isHistoryLoading = !!state.historyLoading[historyKey];
-      var chartSideLabel = chartSide === 'no' ? 'NO' : 'YES';
-      if (stageChartHeadingEl) stageChartHeadingEl.textContent = chartSideLabel + ' probability curve';
+      if (stageChartHeadingEl) stageChartHeadingEl.textContent = chartLabel + ' probability curve';
       if (stageChartCopyEl) {
         stageChartCopyEl.textContent = market.source === 'polymarket'
           ? hasRealHistory
@@ -13672,17 +13850,17 @@
           : 'Live quote shown; preview uses previous trade and venue liquidity.';
       }
       if (stageTrendEl) {
-        var trendPoints = getTrendPoints(market, chartSide);
+        var trendPoints = explicitOutcome ? 0 : getTrendPoints(market, chartSide);
         stageTrendEl.textContent = formatSignedPoints(trendPoints, 'Flat');
         stageTrendEl.className = 'prediction-stage-trend' + (trendPoints > 0 ? ' is-up' : trendPoints < 0 ? ' is-down' : '');
       }
       if (hasRealHistory) {
         if (stageAxisStartEl) stageAxisStartEl.textContent = formatAxisTime(cachedHistory[0].t, 'History');
-        if (stageAxisMidEl) stageAxisMidEl.textContent = chartSideLabel + ' token';
+        if (stageAxisMidEl) stageAxisMidEl.textContent = chartLabel + ' token';
         if (stageAxisEndEl) stageAxisEndEl.textContent = formatAxisTime(cachedHistory[cachedHistory.length - 1].t, 'Live');
       } else {
         if (stageAxisStartEl) stageAxisStartEl.textContent = formatAxisDate(market.createdAtMs, 'Opened');
-        if (stageAxisMidEl) stageAxisMidEl.textContent = chartSideLabel + ' preview';
+        if (stageAxisMidEl) stageAxisMidEl.textContent = chartLabel + ' preview';
         if (stageAxisEndEl) stageAxisEndEl.textContent = formatAxisDate(market.closeAtMs, 'Closes');
       }
       renderDepthList(depthYesEl, buildDepthRows(market, 'yes'));
@@ -13699,12 +13877,11 @@
       }
 
       if (!market) {
+        renderPredictionOutcomeSelector(null);
         if (selectedTitleEl) selectedTitleEl.textContent = t('wallet.portal.prediction.noSelection', 'No market selected');
         if (selectedDetailEl) selectedDetailEl.textContent = t('wallet.portal.prediction.noSelectionCopy', 'Choose a live contract from the board to build an OST-denominated position.');
         if (selectedSourceEl) selectedSourceEl.textContent = 'OST';
         if (selectedTopicEl) selectedTopicEl.textContent = topicLabels.all;
-        if (yesValueEl) yesValueEl.textContent = '--';
-        if (noValueEl) noValueEl.textContent = '--';
         if (estimatedSharesEl) estimatedSharesEl.textContent = '--';
         if (potentialReturnEl) potentialReturnEl.textContent = '--';
         if (entryPriceEl) entryPriceEl.textContent = '--';
@@ -13717,6 +13894,12 @@
       }
 
       var sourceClass = market.source === 'kalshi' ? 'source-kalshi' : 'source-polymarket';
+      var hasExplicitOutcomes = marketHasExplicitOutcomeContracts(market);
+      var activeContract = buildTradeContract(market, state.selectedSide);
+      var contractLabel = activeContract && activeContract.label
+        ? activeContract.label
+        : (state.selectedSide === 'no' ? (market.noLabel || 'No') : (market.yesLabel || 'Yes'));
+      renderPredictionOutcomeSelector(market);
       if (selectedSourceEl) {
         selectedSourceEl.textContent = market.sourceLabel;
         selectedSourceEl.className = 'prediction-market-source ' + sourceClass;
@@ -13724,12 +13907,9 @@
       if (selectedTopicEl) selectedTopicEl.textContent = topicLabels[market.topic] || topicLabels.all;
       if (selectedTitleEl) selectedTitleEl.textContent = market.title;
       if (selectedDetailEl) selectedDetailEl.textContent = market.detail;
-      if (yesValueEl) yesValueEl.textContent = market.yesValue;
-      if (noValueEl) noValueEl.textContent = market.noValue;
-      setChipState(outcomeToggle, 'data-prediction-side', state.selectedSide);
       setChipState(stakeQuickEl, 'data-prediction-stake', String(Math.round(Number(state.stake) || 0)));
 
-      var priceFraction = getMarketPrice(market, state.selectedSide);
+      var priceFraction = activeContract ? Number(activeContract.price) : getMarketPrice(market, state.selectedSide);
       var estimatedShares = calculateEstimatedShares(state.stake, priceFraction);
       var estimatedReturn = calculatePotentialReturn(state.stake, priceFraction);
       var payoutMultiple = Number.isFinite(priceFraction) && priceFraction > 0 ? (1 / priceFraction) : NaN;
@@ -13744,9 +13924,11 @@
       var sideTag = state.selectedSide === 'no' ? 'NO' : 'YES';
       var yesPrice = Number.isFinite(market.yesPriceNumber) ? (market.yesPriceNumber * 100).toFixed(1) + '¢' : '--';
       var noPrice = Number.isFinite(market.noPriceNumber) ? (market.noPriceNumber * 100).toFixed(1) + '¢' : '--';
-      if (sharesLabelEl) sharesLabelEl.textContent = sideTag + ' shares @ ' + (state.selectedSide === 'no' ? noPrice : yesPrice);
-      if (returnLabelEl) returnLabelEl.textContent = 'Win return (' + sideTag + ')';
-      if (entryPriceLabelEl) entryPriceLabelEl.textContent = sideTag + ' entry price';
+      if (sharesLabelEl) sharesLabelEl.textContent = hasExplicitOutcomes
+        ? (contractLabel + ' shares @ ' + (Number.isFinite(priceFraction) ? (priceFraction * 100).toFixed(1) + '¢' : '--'))
+        : (sideTag + ' shares @ ' + (state.selectedSide === 'no' ? noPrice : yesPrice));
+      if (returnLabelEl) returnLabelEl.textContent = 'Win return (' + contractLabel + ')';
+      if (entryPriceLabelEl) entryPriceLabelEl.textContent = contractLabel + ' entry price';
 
       if (estimatedSharesEl) {
         estimatedSharesEl.textContent = Number.isFinite(estimatedShares)
@@ -13774,7 +13956,9 @@
           : t('wallet.portal.prediction.tradeUnavailable', 'Unavailable');
       }
       if (settlementPathEl) {
-        settlementPathEl.textContent = market.sourceLabel + ' -> OST vault';
+        settlementPathEl.textContent = hasExplicitOutcomes
+          ? (market.sourceLabel + ' -> ' + contractLabel + ' -> OST vault')
+          : (market.sourceLabel + ' -> OST vault');
       }
 
       if (availableBalanceEl) {
@@ -13791,6 +13975,8 @@
       if (tradeActionLabelEl) {
         tradeActionLabelEl.textContent = state.placing
           ? t('wallet.portal.prediction.tradeSending', 'Sending OST order...')
+          : hasExplicitOutcomes
+            ? ('Buy ' + truncateText(contractLabel, 20) + ' with OST')
           : state.selectedSide === 'no'
             ? 'Buy No with OST'
             : 'Buy Yes with OST';
@@ -14020,7 +14206,7 @@
         if (state.source !== 'all' && market.source !== state.source) return false;
         if (state.topic !== 'all' && !market.topics.has(state.topic)) return false;
         if (state.rank === 'breaking' && !market.isBreaking) return false;
-        if (query && market.searchText.indexOf(query) === -1) return false;
+        if (query && String(market.searchText || '').indexOf(query) === -1) return false;
         return true;
       });
 
@@ -14153,8 +14339,17 @@
               '<span class="prediction-market-contract prediction-market-contract-trend">' + escapeHtml(formatSignedPoints(getTrendPoints(market), 'Flat')) + '</span>',
             '</div>',
             '<div class="prediction-market-actions">',
-              '<button type="button" class="prediction-market-quick-btn is-yes" data-prediction-quick-side="yes">Buy YES</button>',
-              '<button type="button" class="prediction-market-quick-btn is-no" data-prediction-quick-side="no">Buy NO</button>',
+              (function() {
+                var contracts = getMarketOutcomeContracts(market);
+                var hasExplicitOutcomes = marketHasExplicitOutcomeContracts(market);
+                var primary = contracts[0] || null;
+                var secondary = contracts[1] || null;
+                return hasExplicitOutcomes
+                  ? '<button type="button" class="prediction-market-quick-btn is-yes" data-prediction-quick-outcome-key="' + escapeHtml(primary ? primary.key : '') + '">' + escapeHtml(primary ? truncateText(primary.label, 16) : 'Select') + '</button>' +
+                    '<button type="button" class="prediction-market-quick-btn is-no" data-prediction-quick-outcome-key="' + escapeHtml(secondary ? secondary.key : '') + '">' + escapeHtml(secondary ? truncateText(secondary.label, 16) : 'More') + '</button>'
+                  : '<button type="button" class="prediction-market-quick-btn is-yes" data-prediction-quick-side="yes">Buy YES</button>' +
+                    '<button type="button" class="prediction-market-quick-btn is-no" data-prediction-quick-side="no">Buy NO</button>';
+              })(),
               '<button type="button" class="prediction-market-open-btn" data-prediction-open-modal="1">Details</button>',
               '<a class="prediction-market-api-link" href="' + escapeHtml(market.primaryUrl) + '" target="_blank" rel="noopener">Venue</a>',
             '</div>',
@@ -14311,6 +14506,22 @@
       return workerPromise;
     }
 
+    function normalizeNativePredictionMarket(market) {
+      if (!market || !market.isOstNative) return market;
+      if (typeof market.searchText === 'string' && market.searchText) return market;
+      var textParts = [market.title, market.detail, market.contractLabel, market.yesLabel, market.noLabel];
+      if (Array.isArray(market.displayTopics)) textParts = textParts.concat(market.displayTopics);
+      if (Array.isArray(market.outcomes)) {
+        market.outcomes.forEach(function(outcome) {
+          if (!outcome) return;
+          textParts.push(outcome.label, outcome.displayLabel, outcome.key);
+        });
+      }
+      return Object.assign({}, market, {
+        searchText: textParts.filter(Boolean).join(' ').toLowerCase()
+      });
+    }
+
     function setLoadedPredictionMarkets(polymarketMarkets, kalshiMarkets, sourceHealth, updatedAt) {
       var markets = [];
       var failures = [];
@@ -14343,7 +14554,7 @@
         try {
           var native = window.buildOstNativeMarkets();
           if (Array.isArray(native) && native.length) {
-            var pinnedNative = native.filter(function(market) { return market && market.isOstNative; });
+            var pinnedNative = native.filter(function(market) { return market && market.isOstNative; }).map(normalizeNativePredictionMarket);
             var featuredPlaceholders = native.filter(function(market) { return market && !market.isOstNative; });
             var hasPricedVenueMarkets = markets.some(function(market) {
               return market && market.source !== 'ost' && Number.isFinite(Number(market.yesPriceNumber)) && Number.isFinite(Number(market.noPriceNumber));
@@ -14390,7 +14601,7 @@
         return false;
       }
       if (!Array.isArray(native) || !native.length) return false;
-      var pinnedNative = native.filter(function(market) { return market && market.isOstNative; });
+      var pinnedNative = native.filter(function(market) { return market && market.isOstNative; }).map(normalizeNativePredictionMarket);
       if (!pinnedNative.length) return false;
       state.markets = pinnedNative.concat(state.markets.filter(function(market) {
         return !(market && (market.isOstNative || String(market.id || '').indexOf('ost-btc5m-') === 0));
@@ -14571,11 +14782,29 @@
           focusPredictionExperience('stage');
           return;
         }
+        var quickOutcomeBtn = event.target.closest('[data-prediction-quick-outcome-key]');
+        if (quickOutcomeBtn) {
+          var quickOutcomeArticle = quickOutcomeBtn.closest('.prediction-market-card[data-prediction-market-id]');
+          var quickOutcomeLabel = quickOutcomeBtn.textContent.trim();
+          if (!quickOutcomeArticle) return;
+          state.selectedMarketId = quickOutcomeArticle.getAttribute('data-prediction-market-id') || '';
+          state.selectedOutcomeKey = quickOutcomeBtn.getAttribute('data-prediction-quick-outcome-key') || '';
+          state.selectedSide = 'yes';
+          if (!Number(state.stake)) {
+            state.stake = 25;
+            if (stakeInputEl) stakeInputEl.value = '25';
+          }
+          renderPredictionBoard();
+          setTradeStatus('Selected ' + quickOutcomeLabel + '. Review stake and route the OST ticket when ready.', 'info');
+          focusPredictionExperience('trade');
+          return;
+        }
         var quickSideBtn = event.target.closest('[data-prediction-quick-side]');
         if (quickSideBtn) {
           var quickArticle = quickSideBtn.closest('.prediction-market-card[data-prediction-market-id]');
           if (!quickArticle) return;
           state.selectedMarketId = quickArticle.getAttribute('data-prediction-market-id') || '';
+          state.selectedOutcomeKey = '';
           state.selectedSide = quickSideBtn.getAttribute('data-prediction-quick-side') === 'no' ? 'no' : 'yes';
           if (!Number(state.stake)) {
             state.stake = 25;
@@ -14621,8 +14850,17 @@
 
     if (outcomeToggle) {
       outcomeToggle.addEventListener('click', function(event) {
+        var outcomeButton = event.target.closest('button[data-prediction-outcome-key]');
+        if (outcomeButton) {
+          state.selectedOutcomeKey = outcomeButton.getAttribute('data-prediction-outcome-key') || '';
+          state.selectedSide = 'yes';
+          renderPredictionTicket(getFilteredMarkets());
+          renderPredictionStage(getFilteredMarkets());
+          return;
+        }
         var button = event.target.closest('button[data-prediction-side]');
         if (!button) return;
+        state.selectedOutcomeKey = '';
         state.selectedSide = button.getAttribute('data-prediction-side') || 'yes';
         renderPredictionTicket(getFilteredMarkets());
         renderPredictionStage(getFilteredMarkets());
@@ -14663,7 +14901,8 @@
           return;
         }
 
-        var priceFraction = getMarketPrice(market, state.selectedSide);
+        var activeContract = buildTradeContract(market, state.selectedSide);
+        var priceFraction = activeContract ? Number(activeContract.price) : NaN;
         var potentialReturn = calculatePotentialReturn(state.stake, priceFraction);
         if (!Number.isFinite(priceFraction) || priceFraction <= 0 || !Number.isFinite(potentialReturn)) {
           setTradeStatus(t('wallet.portal.prediction.tradeUnavailable', 'This side is not tradeable right now.'), 'error');
@@ -14676,18 +14915,21 @@
         createPredictionMarketOrder({
           source: market.source,
           marketId: market.id,
-          conditionId: market.conditionId || (market.raw && (market.raw.conditionId || market.raw.condition_id)) || '',
-          title: market.title,
+          conditionId: activeContract && activeContract.conditionId ? activeContract.conditionId : (market.conditionId || (market.raw && (market.raw.conditionId || market.raw.condition_id)) || ''),
+          gammaMarketId: activeContract && activeContract.gammaMarketId ? activeContract.gammaMarketId : (market.gammaMarketId || ''),
+          title: activeContract && activeContract.label ? (market.title + ' · ' + activeContract.label) : market.title,
           topic: market.topic,
-          side: state.selectedSide,
+          side: activeContract && activeContract.side ? activeContract.side : state.selectedSide,
+          outcomeKey: activeContract && activeContract.key ? activeContract.key : '',
+          outcomeLabel: activeContract && activeContract.label ? activeContract.label : '',
           stake: state.stake,
           price: priceFraction,
-          yesPrice: getMarketPrice(market, 'yes'),
-          noPrice: getMarketPrice(market, 'no'),
+          yesPrice: activeContract && Number.isFinite(activeContract.yesPrice) ? activeContract.yesPrice : getMarketPrice(market, 'yes'),
+          noPrice: activeContract && Number.isFinite(activeContract.noPrice) ? activeContract.noPrice : getMarketPrice(market, 'no'),
           shares: calculateEstimatedShares(state.stake, priceFraction),
           potentialReturn: potentialReturn,
           closeAtMs: market.closeAtMs || 0,
-          clobTokenIds: getMarketTokenIds(market),
+          clobTokenIds: activeContract && activeContract.clobTokenIds ? activeContract.clobTokenIds : getMarketTokenIds(market),
           sourceUrl: market.primaryUrl,
           reference: Date.now().toString(36)
         }).then(function(result) {
@@ -14700,7 +14942,8 @@
           state.stake = 0;
           if (stakeInputEl) stakeInputEl.value = '';
           var sigShort = result && result.signature ? String(result.signature).slice(0, 10) + '…' : '';
-          setTradeStatus('✅ Position opened — staked ' + formatOst(Number(result && result.record && result.record.stake) || 0) + ' on ' + (state.selectedSide || 'yes').toUpperCase() + '. Tx: ' + sigShort + ' — see Open positions below.', 'success');
+          var openedLabel = result && result.record && result.record.outcomeLabel ? result.record.outcomeLabel : ((state.selectedSide || 'yes').toUpperCase());
+          setTradeStatus('✅ Position opened — staked ' + formatOst(Number(result && result.record && result.record.stake) || 0) + ' on ' + openedLabel + '. Tx: ' + sigShort + ' — see Open positions below.', 'success');
           toast('📈', 'Position opened — see Open positions');
           renderPredictionBoard();
           // Auto-scroll to the open positions list so the user can see the new entry

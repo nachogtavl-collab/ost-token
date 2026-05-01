@@ -365,11 +365,30 @@
     };
   }
 
+  var existingNativeMarketBuilder = typeof window.buildOstNativeMarkets === 'function'
+    ? window.buildOstNativeMarkets
+    : null;
+
+  function pushUniqueMarket(target, seen, market) {
+    if (!market || !market.id || seen[market.id]) return;
+    seen[market.id] = true;
+    target.push(market);
+  }
+
   // Public hook called by app.js setLoadedPredictionMarkets
   window.buildOstNativeMarkets = function buildOstNativeMarkets() {
     var out = [];
-    out.push(buildFiveMinBtcMarket());
-    FEATURED_SLUGS.forEach(function (e) { out.push(buildFeaturedPlaceholder(e)); });
+    var seen = Object.create(null);
+    if (existingNativeMarketBuilder) {
+      try {
+        var seeded = existingNativeMarketBuilder();
+        if (Array.isArray(seeded)) seeded.forEach(function (market) { pushUniqueMarket(out, seen, market); });
+      } catch (error) {
+        console.warn('[OST native markets]', error);
+      }
+    }
+    pushUniqueMarket(out, seen, buildFiveMinBtcMarket());
+    FEATURED_SLUGS.forEach(function (e) { pushUniqueMarket(out, seen, buildFeaturedPlaceholder(e)); });
     return out;
   };
 
@@ -974,5 +993,5 @@
       });
     }
   };
-  window.OST_PREDICTION_API = OST_PREDICTION_API;
+  window.OST_PREDICTION_API = Object.assign(window.OST_PREDICTION_API || {}, OST_PREDICTION_API);
 })();

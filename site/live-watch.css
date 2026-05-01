@@ -212,7 +212,7 @@
   align-items: center;
   justify-content: center;
   padding: 12px;
-  overflow-y: auto;
+  overflow: hidden;
 }
 .live-modal.is-open { display: flex; }
 .live-modal-shell {
@@ -279,32 +279,68 @@
 .live-modal-video-wrap {
   padding: 14px;
   background: #000;
-  flex: 0 0 auto;
   min-height: 0;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  grid-column: 1;
+  grid-row: 1;
+  border-right: 1px solid rgba(255,255,255,0.08);
+  contain: layout paint;
+}
+.live-modal-video-wrap::after {
+  content: 'Stream stays live while you trade';
+  position: absolute;
+  left: 24px;
+  bottom: 24px;
+  z-index: 3;
+  color: rgba(248,250,252,0.82);
+  background: rgba(2, 6, 23, 0.72);
+  border: 1px solid rgba(109,159,255,0.25);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  pointer-events: none;
 }
 .live-modal-body {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(360px, .85fr);
   flex: 1 1 auto;
   min-height: 0;
-  overflow-y: auto;
+  overflow: hidden;
+  background: #05070c;
 }
 .live-modal-video-wrap .video-js {
   width: 100% !important;
-  height: clamp(260px, 52vh, 540px) !important;
+  height: min(58vh, calc(96vh - 154px)) !important;
+  min-height: 260px;
   border-radius: 12px;
   overflow: hidden;
+  flex: 1 1 auto;
 }
 
 /* Embedded live market panel inside the modal */
 .live-modal-market {
-  margin: 0 14px 12px;
+  margin: 0;
   background: linear-gradient(135deg, rgba(109,159,255,0.09), rgba(167,139,250,0.07));
-  border: 1px solid rgba(109,159,255,0.22);
-  border-radius: 14px;
+  border: 0;
+  border-left: 1px solid rgba(109,159,255,0.22);
+  border-radius: 0;
   padding: 14px 16px;
   display: grid;
   gap: 12px;
+  grid-column: 2;
+  grid-row: 1;
+  min-height: 0;
+  max-height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 .live-market-head {
   display: flex;
@@ -351,6 +387,11 @@
 .live-market-outcome:hover {
   border-color: rgba(0, 212, 255, 0.55);
   transform: translateY(-1px);
+}
+.live-market-outcome.is-selected {
+  border-color: rgba(0, 212, 255, 0.85);
+  box-shadow: 0 0 0 1px rgba(0, 212, 255, 0.22), 0 14px 28px -24px rgba(0, 212, 255, 0.8);
+  background: rgba(0, 212, 255, 0.12);
 }
 .live-market-outcome-label {
   font-size: .82rem;
@@ -401,6 +442,173 @@
   padding: 8px 14px;
   border-radius: 999px;
 }
+.live-market-chart {
+  background: rgba(3, 7, 18, 0.72);
+  border: 1px solid rgba(109,159,255,0.16);
+  border-radius: 12px;
+  padding: 12px;
+  min-width: 0;
+}
+.live-market-chart-head,
+.live-market-positions-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.live-market-chart-head h5,
+.live-market-positions-head h5 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: .86rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.live-market-chart-head span,
+.live-market-positions-head span {
+  color: #94a3b8;
+  font-size: .76rem;
+  text-align: right;
+}
+.live-market-chart canvas {
+  display: block;
+  width: 100%;
+  height: 210px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.01));
+}
+.live-market-trade {
+  display: grid;
+  grid-template-columns: 1.1fr minmax(140px, .55fr) 1fr auto;
+  gap: 10px;
+  align-items: stretch;
+  background: rgba(15, 20, 30, 0.74);
+  border: 1px solid rgba(0, 212, 255, 0.18);
+  border-radius: 12px;
+  padding: 12px;
+}
+.live-market-selected,
+.live-market-stake,
+.live-market-projection {
+  background: rgba(2, 6, 23, 0.58);
+  border: 1px solid rgba(109,159,255,0.14);
+  border-radius: 10px;
+  padding: 10px;
+  min-width: 0;
+}
+.live-market-selected span,
+.live-market-stake {
+  color: #94a3b8;
+  font-size: .72rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+.live-market-selected strong {
+  display: block;
+  color: #f8fafc;
+  font-size: .98rem;
+  margin-top: 4px;
+}
+.live-market-selected em {
+  display: block;
+  color: #00d4ff;
+  font-style: normal;
+  font-size: .8rem;
+  margin-top: 2px;
+}
+.live-market-stake input {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  border: none;
+  outline: none;
+  border-radius: 8px;
+  padding: 9px 10px;
+  color: #f8fafc;
+  background: rgba(255,255,255,0.08);
+  font-size: 1rem;
+  font-weight: 800;
+}
+.live-market-projection {
+  display: flex;
+  align-items: center;
+  color: #d6e4ff;
+  font-size: .88rem;
+  line-height: 1.35;
+}
+.live-market-submit {
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #00ff9f, #00d4ff);
+  color: #03111d;
+  font-weight: 900;
+  padding: 0 18px;
+  cursor: pointer;
+  min-height: 52px;
+  white-space: nowrap;
+}
+.live-market-submit:disabled,
+.live-position-row button:disabled {
+  opacity: .6;
+  cursor: wait;
+}
+.live-market-positions {
+  background: rgba(3, 7, 18, 0.56);
+  border: 1px solid rgba(109,159,255,0.14);
+  border-radius: 12px;
+  padding: 12px;
+}
+.live-market-positions-list {
+  display: grid;
+  gap: 8px;
+}
+.live-market-empty {
+  color: #94a3b8;
+  font-size: .84rem;
+  padding: 4px 0;
+}
+.live-position-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, .9fr) auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 9px 0;
+  border-top: 1px solid rgba(255,255,255,0.07);
+}
+.live-position-row:first-child { border-top: none; }
+.live-position-row div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.live-position-row strong {
+  color: #f8fafc;
+  font-size: .88rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.live-position-row span {
+  color: #94a3b8;
+  font-size: .76rem;
+}
+.live-position-pnl {
+  font-weight: 800;
+  font-size: .82rem;
+}
+.live-position-pnl.is-up { color: #00ff9f; }
+.live-position-pnl.is-down { color: #ff7c8a; }
+.live-position-row button {
+  border: none;
+  border-radius: 999px;
+  background: #22c55e;
+  color: #03110a;
+  font-weight: 800;
+  padding: 7px 13px;
+  cursor: pointer;
+}
 .live-modal-fallback {
   display: none;
   color: #ffb4b4;
@@ -408,9 +616,15 @@
   border: 1px solid rgba(255, 51, 51, .3);
   border-radius: 10px;
   padding: 14px;
-  margin: 12px 14px 0;
+  margin: 0 28px 24px;
   font-size: .9rem;
   text-align: center;
+  grid-column: 1;
+  grid-row: 1;
+  align-self: end;
+  justify-self: center;
+  z-index: 4;
+  max-width: calc(100% - 56px);
 }
 .live-modal-fallback.is-shown { display: block; }
 .live-modal-bet-bar {
@@ -462,15 +676,28 @@
   z-index: 5;
 }
 .live-modal-toast.is-shown { opacity: 1; }
+.live-modal-toast.is-error {
+  background: rgba(255, 51, 51, .16);
+  border-color: rgba(255, 51, 51, .38);
+  color: #ffd4d4;
+}
 
 /* ---- Mobile ---- */
 @media (max-width: 720px) {
+  .live-modal {
+    align-items: stretch;
+    padding: 8px;
+  }
   .live-bet-card {
     grid-template-columns: 1fr;
     padding: 16px;
   }
   .live-bet-poster { order: -1; }
-  .live-modal-shell { border-radius: 14px; }
+  .live-modal-shell {
+    width: 100%;
+    max-height: calc(100vh - 16px);
+    border-radius: 14px;
+  }
   .live-modal-top { padding: 12px 14px; }
   .live-modal-bet-bar { padding: 12px 14px; gap: 8px; }
   .live-modal-bet-btn { flex: 1 1 30%; padding: 12px 8px; font-size: .85rem; }
@@ -479,14 +706,67 @@
     width: 100%;
     text-align: center;
   }
+  .live-modal-body {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .live-modal-video-wrap {
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    flex: 0 0 clamp(210px, 34vh, 280px);
+    height: clamp(210px, 34vh, 280px);
+    min-height: 210px;
+    border-right: 0;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    padding: 10px;
+    background: #000;
+  }
+  .live-modal-video-wrap::after {
+    left: 16px;
+    bottom: 16px;
+    font-size: .66rem;
+  }
   .live-modal-video-wrap .video-js {
-    height: 38vh !important;
+    height: 100% !important;
+    min-height: 0;
+  }
+  .live-modal-fallback {
+    grid-column: auto;
+    grid-row: auto;
+    align-self: auto;
+    justify-self: auto;
+    max-width: none;
+    margin: 10px;
   }
   .live-market-outcomes {
     grid-template-columns: 1fr;
   }
   .live-modal-market {
-    margin: 0 10px 10px;
+    margin: 0;
+    border-left: 0;
+    border-top: 1px solid rgba(109,159,255,0.22);
+    max-height: none;
+    overflow: visible;
     padding: 12px;
+  }
+  .live-market-chart canvas {
+    height: 170px;
+  }
+  .live-market-trade {
+    grid-template-columns: 1fr;
+  }
+  .live-market-submit {
+    min-height: 48px;
+  }
+  .live-position-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+  .live-position-row button {
+    width: 100%;
+    padding: 10px 13px;
   }
 }

@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v11';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v11';
+const CACHE_NAME = 'ost-pwa-cache-v20';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v20';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -25,18 +25,18 @@ const PRECACHE_PATHS = [
   './topup.css?v=4',
   './offline-vault.css?v=1',
   './rpc-multiplexer.js?v=1',
-  './app.js?v=103',
+  './app.js?v=106',
   './nuevo-laredo-gas.js?v=1',
   './shop-quickview.js?v=1',
   './interchange-live.js?v=1',
   './polish.js?v=2',
   './swap-pool.js?v=1',
-  './wallet-extras.js?v=10',
+  './wallet-extras.js?v=11',
   './compartments.js?v=1',
   './prediction-extras.js?v=7',
-  './prediction-pro.js?v=6',
+  './prediction-pro.js?v=8',
   './prediction-scalar.js?v=2',
-  './prediction-modal.js?v=17',
+  './prediction-modal.js?v=19',
   './prediction-trade-popout.js?v=1',
   './prediction-pro-dash.js?v=6',
   './ost-console.js?v=2',
@@ -51,9 +51,9 @@ const PRECACHE_PATHS = [
   './devnet-rescue.js?v=4',
   './launchpad-trenches.js?v=2',
   './topup.js?v=5',
-  './live-watch.css?v=2',
-  './live-watch.js?v=3',
-  './native-markets.js?v=1',
+  './live-watch.css?v=5',
+  './live-watch.js?v=5',
+  './native-markets.js?v=3',
   'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
   'https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
