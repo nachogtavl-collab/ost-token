@@ -1,9 +1,19 @@
 /* =============================================================
- * OST · Live Watch + Bet
+ * OST · Live Watch + Bet  (v3)
+ *
  * Self-contained module that:
- *  - Renders a featured Polymarket "live sports" card (Leeds vs Burnley).
+ *  - Renders a featured Polymarket "live sports" card (Leeds vs Burnley)
+ *    inside the markets section.
  *  - Lazy-loads Video.js + HLS playback for live HLS streams.
- *  - Surfaces a "Watch Live" modal with a quick OST bet bar.
+ *  - Surfaces a "Watch Live" modal that combines:
+ *      • the HLS player
+ *      • a live, embedded 3-outcome (Home / Draw / Away) Polymarket market
+ *      • a quick OST bet bar that deep-links into the full trade desk
+ *  - Pulls live odds from the OST Polymarket relay (gamma proxy) on open
+ *    and refreshes them every 20s while the modal is open.
+ *  - Recovers from stream disconnects: error → 480p → reconnect with
+ *    exponential backoff, and fully rebuilds the player on every open so
+ *    reopening always works.
  *
  * Public API:
  *   window.OSTLiveWatch.open(slug, name, opts?)
@@ -19,13 +29,15 @@
   var VIDEOJS_JS = 'https://vjs.zencdn.net/8.10.0/video.min.js';
   var VIDEOJS_HLS = 'https://unpkg.com/@videojs/http-streaming@3.0.0/dist/videojs-http-streaming.min.js';
 
-  // Catalog of live streams. Keyed by slug.
+  var POLY_EVENT_SLUG = 'epl-lee-bur-2026-05-01';
+
   var STREAMS = {
     'leeds-burnley': {
       name: 'Leeds United vs Burnley',
       league: 'Premier League',
       kickoff: 'May 1, 2026 · 15:00 UTC',
-      polymarket: 'https://polymarket.com/sports/epl/epl-lee-bur-2026-05-01',
+      polymarket: 'https://polymarket.com/sports/epl/' + POLY_EVENT_SLUG,
+      polymarketSlug: POLY_EVENT_SLUG,
       home: 'Leeds United',
       away: 'Burnley',
       m3u8: 'https://romoramad.s3.us-east-1.amazonaws.com/btsport.m3u8',
@@ -34,16 +46,25 @@
   };
 
   var FEATURED_SLUG = 'leeds-burnley';
+  var NATIVE_MARKET_ID = (window.OST_NATIVE_MARKET_IDS && window.OST_NATIVE_MARKET_IDS.eplLeedsBurnley)
+    || 'native-polymarket-epl-lee-bur-2026-05-01';
 
   var loaded = { css: false, js: false, hls: false };
   var loading = null;
+
   var player = null;
   var modalEl = null;
   var titleEl = null;
   var fallbackEl = null;
   var statusEl = null;
   var toastEl = null;
+  var marketPanelEl = null;
   var currentStream = null;
+  var videoUid = 0;
+
+  var reconnectTimer = null;
+  var reconnectAttempts = 0;
+  var pollingTimer = null;
 
   function loadStyle(href) {
     if (document.querySelector('link[href="' + href + '"]')) return;
@@ -81,11 +102,6 @@
         step
           .then(function () {
             loaded.js = true;
-            // videojs 8 has HLS support built-in via VHS; loading the plugin
-            // adds remote HLS quality features but is optional.
-            if (window.videojs && window.videojs.getTech && window.videojs.getTech('Html5')) {
-              return loadScript(VIDEOJS_HLS).catch(function () { /* optional */ });
-            }
             return loadScript(VIDEOJS_HLS).catch(function () { /* optional */ });
           })
           .then(function () { loaded.hls = true; resolve(); })
@@ -111,10 +127,24 @@
       '    </div>',
       '    <button type="button" class="live-modal-close" data-live-close>Close ✕</button>',
       '  </div>',
-      '  <div class="live-modal-video-wrap">',
-      '    <video id="ost-live-video-player" class="video-js vjs-default-skin vjs-big-play-centered" controls preload="auto" playsinline crossorigin="anonymous"></video>',
+      '  <div class="live-modal-body">',
+      '    <div class="live-modal-video-wrap" id="ost-live-video-wrap"></div>',
+      '    <div class="live-modal-fallback" id="ost-live-modal-fallback"></div>',
+      '    <div class="live-modal-market" id="ost-live-modal-market">',
+      '      <div class="live-market-head">',
+      '        <div>',
+      '          <span class="live-market-source">Polymarket · 3-way</span>',
+      '          <h4 id="ost-live-market-title">Match Result</h4>',
+      '        </div>',
+      '        <div class="live-market-meta" id="ost-live-market-meta">Loading live odds…</div>',
+      '      </div>',
+      '      <div class="live-market-outcomes" id="ost-live-market-outcomes"></div>',
+      '      <div class="live-market-actions">',
+      '        <button type="button" class="live-market-trade-btn" data-live-open-trade>Open full trade desk ↗</button>',
+      '        <a class="live-market-poly-link" href="' + STREAMS[FEATURED_SLUG].polymarket + '" target="_blank" rel="noopener">View on Polymarket</a>',
+      '      </div>',
+      '    </div>',
       '  </div>',
-      '  <div class="live-modal-fallback" id="ost-live-modal-fallback"></div>',
       '  <div class="live-modal-bet-bar">',
       '    <span class="live-bet-bar-label">Quick OST bet:</span>',
       '    <button type="button" class="live-modal-bet-btn" data-live-bet="home">Home</button>',
@@ -132,13 +162,18 @@
     fallbackEl = modalEl.querySelector('#ost-live-modal-fallback');
     statusEl = modalEl.querySelector('#ost-live-modal-status');
     toastEl = modalEl.querySelector('#ost-live-modal-toast');
+    marketPanelEl = modalEl.querySelector('#ost-live-modal-market');
 
     modalEl.addEventListener('click', function (event) {
-      if (event.target === modalEl) close();
+      if (event.target === modalEl) { close(); return; }
       var closeBtn = event.target.closest('[data-live-close]');
-      if (closeBtn) close();
+      if (closeBtn) { close(); return; }
       var betBtn = event.target.closest('[data-live-bet]');
-      if (betBtn) placeQuickBet(betBtn.getAttribute('data-live-bet'));
+      if (betBtn) { placeQuickBet(betBtn.getAttribute('data-live-bet')); return; }
+      var outcomeBtn = event.target.closest('[data-live-outcome]');
+      if (outcomeBtn) { placeQuickBet(outcomeBtn.getAttribute('data-live-outcome')); return; }
+      var tradeBtn = event.target.closest('[data-live-open-trade]');
+      if (tradeBtn) { openTradeModal(); }
     });
 
     document.addEventListener('keydown', function (event) {
@@ -153,13 +188,11 @@
     fallbackEl.textContent = message;
     fallbackEl.classList.add('is-shown');
   }
-
   function clearFallback() {
     if (!fallbackEl) return;
     fallbackEl.textContent = '';
     fallbackEl.classList.remove('is-shown');
   }
-
   function showToast(message) {
     if (!toastEl) return;
     toastEl.textContent = message;
@@ -169,12 +202,202 @@
   }
 
   function disposePlayer() {
-    if (player && typeof player.dispose === 'function') {
+    if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+    reconnectAttempts = 0;
+    if (player) {
       try { player.dispose(); } catch (_) {}
     }
     player = null;
+    var wrap = modalEl ? modalEl.querySelector('#ost-live-video-wrap') : null;
+    if (wrap) wrap.innerHTML = '';
   }
 
+  function buildVideoElement() {
+    var wrap = modalEl.querySelector('#ost-live-video-wrap');
+    if (!wrap) return null;
+    wrap.innerHTML = '';
+    videoUid += 1;
+    var id = 'ost-live-video-player-' + videoUid;
+    var v = document.createElement('video');
+    v.id = id;
+    v.className = 'video-js vjs-default-skin vjs-big-play-centered';
+    v.setAttribute('controls', '');
+    v.setAttribute('preload', 'auto');
+    v.setAttribute('playsinline', '');
+    v.setAttribute('crossorigin', 'anonymous');
+    wrap.appendChild(v);
+    return id;
+  }
+
+  function startStream(useBackup) {
+    if (!modalEl || !currentStream) return;
+    if (!navigator.onLine) {
+      showFallback('Offline · Stream paused. The bet desk still works on devnet.');
+      return;
+    }
+    var id = buildVideoElement();
+    if (!id) return;
+    try {
+      player = window.videojs(id, {
+        autoplay: true,
+        controls: true,
+        responsive: true,
+        fluid: false,
+        liveui: true,
+        html5: { vhs: { overrideNative: true } }
+      });
+      var src = useBackup && currentStream.m3u8_480 ? currentStream.m3u8_480 : currentStream.m3u8;
+      player.src({ src: src, type: 'application/x-mpegURL' });
+
+      player.on('error', function () { scheduleReconnect('error'); });
+      player.on('stalled', function () { scheduleReconnect('stalled'); });
+      player.on('ended', function () { scheduleReconnect('ended'); });
+      player.on('playing', function () {
+        clearFallback();
+        reconnectAttempts = 0;
+        if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+      });
+
+      player.ready(function () {
+        player.play().catch(function () { /* autoplay blocked is OK */ });
+      });
+    } catch (err) {
+      console.error('[OSTLiveWatch] videojs init failed', err);
+      showFallback('Player failed to initialize. Reconnecting…');
+      scheduleReconnect('init');
+    }
+  }
+
+  function scheduleReconnect(reason) {
+    if (!currentStream) return;
+    if (reconnectTimer) return;
+    reconnectAttempts += 1;
+    var attempt = reconnectAttempts;
+    var delay = Math.min(15000, 1500 * Math.pow(1.7, attempt - 1));
+    var useBackup = attempt >= 2 && !!currentStream.m3u8_480;
+    showFallback('Stream interrupted (' + reason + ') · reconnecting in ' + Math.round(delay / 1000) + 's' + (useBackup ? ' (480p backup)' : '') + '…');
+    reconnectTimer = setTimeout(function () {
+      reconnectTimer = null;
+      if (!modalEl || !modalEl.classList.contains('is-open')) return;
+      if (player) { try { player.dispose(); } catch (_) {} player = null; }
+      startStream(useBackup);
+    }, delay);
+  }
+
+  // ─── Live market data (Polymarket via OST relay) ─────────────
+  function relayBase() {
+    var base = window.OST_API_BASE || window.OST_POLY_RELAY_URL || '';
+    return String(base || '').replace(/\/$/, '');
+  }
+  function gammaUrl(path) {
+    var base = relayBase();
+    if (base) return base + '/gamma' + path;
+    return 'https://gamma-api.polymarket.com' + path;
+  }
+  function fetchPolymarketEvent(slug) {
+    var url = gammaUrl('/events?slug=' + encodeURIComponent(slug));
+    return fetch(url, { headers: { 'Accept': 'application/json' } })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (data) {
+        var events = Array.isArray(data) ? data : (data && data.data) || [];
+        return events && events[0] ? events[0] : null;
+      });
+  }
+  function pickOutcomesFromEvent(ev) {
+    if (!ev || !Array.isArray(ev.markets)) return null;
+    var outcomes = ev.markets
+      .filter(function (m) { return m && m.active !== false && (m.question || m.groupItemTitle); })
+      .map(function (m) {
+        var label = m.groupItemTitle || m.question || '';
+        var price = NaN;
+        try {
+          if (m.outcomePrices) {
+            var arr = typeof m.outcomePrices === 'string' ? JSON.parse(m.outcomePrices) : m.outcomePrices;
+            if (Array.isArray(arr) && arr.length) price = Number(arr[0]);
+          }
+          if (!Number.isFinite(price) && m.lastTradePrice) price = Number(m.lastTradePrice);
+        } catch (_) {}
+        return { label: label, price: price };
+      })
+      .filter(function (o) { return Number.isFinite(o.price); });
+    if (!outcomes.length) return null;
+    outcomes.sort(function (a, b) {
+      var pri = function (label) {
+        var s = String(label || '').toLowerCase();
+        if (/draw|tie/.test(s)) return 1;
+        if (/leeds|home/.test(s)) return 0;
+        if (/burnley|away/.test(s)) return 2;
+        return 3;
+      };
+      return pri(a.label) - pri(b.label);
+    });
+    return outcomes;
+  }
+  function renderMarketPanel(outcomes, meta) {
+    if (!marketPanelEl) return;
+    var listEl = marketPanelEl.querySelector('#ost-live-market-outcomes');
+    var metaEl = marketPanelEl.querySelector('#ost-live-market-meta');
+    if (metaEl) metaEl.textContent = meta || ('Live · ' + outcomes.length + ' outcomes');
+    if (!listEl) return;
+    listEl.innerHTML = outcomes.map(function (o, i) {
+      var pct = (Math.max(0, Math.min(1, o.price)) * 100).toFixed(1);
+      var key = i === 0 ? 'home' : (i === 1 ? 'draw' : 'away');
+      return '' +
+        '<button type="button" class="live-market-outcome" data-live-outcome="' + key + '">' +
+        '  <span class="live-market-outcome-label">' + escapeHtml(o.label || key.toUpperCase()) + '</span>' +
+        '  <span class="live-market-outcome-price">' + pct + '¢</span>' +
+        '  <span class="live-market-outcome-bar"><span style="width:' + pct + '%"></span></span>' +
+        '</button>';
+    }).join('');
+  }
+  function renderFallbackMarketPanel() {
+    var snap = [
+      { label: 'Leeds (Home)', price: 0.46 },
+      { label: 'Draw', price: 0.27 },
+      { label: 'Burnley (Away)', price: 0.31 }
+    ];
+    renderMarketPanel(snap, 'Snapshot odds · live feed offline');
+  }
+  function refreshMarketData() {
+    var slug = currentStream && currentStream.polymarketSlug;
+    if (!slug) { renderFallbackMarketPanel(); return; }
+    fetchPolymarketEvent(slug)
+      .then(function (ev) {
+        var outcomes = pickOutcomesFromEvent(ev);
+        if (outcomes && outcomes.length) {
+          var vol = ev && ev.volume ? ' · Vol $' + Math.round(Number(ev.volume) / 1000) + 'K' : '';
+          renderMarketPanel(outcomes, 'Live · Polymarket' + vol);
+          try {
+            var state = window.__predictionState;
+            if (state && Array.isArray(state.markets)) {
+              for (var i = 0; i < state.markets.length; i += 1) {
+                if (state.markets[i] && state.markets[i].id === NATIVE_MARKET_ID) {
+                  state.markets[i].outcomes = outcomes.map(function (o) { return { label: o.label, price: o.price }; });
+                  state.markets[i].yesPriceNumber = outcomes[0].price;
+                  state.markets[i].noPriceNumber = 1 - outcomes[0].price;
+                  state.markets[i].yesValue = (outcomes[0].price * 100).toFixed(0) + '%';
+                  state.markets[i].noValue = ((1 - outcomes[0].price) * 100).toFixed(0) + '%';
+                  break;
+                }
+              }
+            }
+          } catch (_) {}
+        } else {
+          renderFallbackMarketPanel();
+        }
+      })
+      .catch(function () { renderFallbackMarketPanel(); });
+  }
+  function startMarketPolling() {
+    refreshMarketData();
+    if (pollingTimer) clearInterval(pollingTimer);
+    pollingTimer = setInterval(refreshMarketData, 20000);
+  }
+  function stopMarketPolling() {
+    if (pollingTimer) { clearInterval(pollingTimer); pollingTimer = null; }
+  }
+
+  // ─── Modal lifecycle ─────────────────────────────────────────
   function open(slug, name, opts) {
     var stream = STREAMS[slug];
     if (!stream && opts && opts.m3u8) {
@@ -194,46 +417,14 @@
     modalEl.classList.add('is-open');
     document.body.style.overflow = 'hidden';
 
-    if (!navigator.onLine) {
-      showFallback('Offline · Stream paused. Reconnect to resume the live feed. Bet bar still works on the OST devnet.');
-      return;
-    }
+    // Always tear down before starting — prevents the "second open won't load" bug.
+    disposePlayer();
+
+    renderFallbackMarketPanel();
+    startMarketPolling();
 
     ensureVideojs()
-      .then(function () {
-        var videoEl = modalEl.querySelector('#ost-live-video-player');
-        if (!videoEl) return;
-        // Recreate video tag each open to avoid Video.js disposal artifacts.
-        var fresh = videoEl.cloneNode(false);
-        videoEl.parentNode.replaceChild(fresh, videoEl);
-        disposePlayer();
-        try {
-          player = window.videojs('ost-live-video-player', {
-            autoplay: true,
-            controls: true,
-            responsive: true,
-            fluid: false,
-            liveui: true,
-            html5: { vhs: { overrideNative: true } }
-          });
-          player.src({ src: currentStream.m3u8, type: 'application/x-mpegURL' });
-          player.on('error', function () {
-            if (currentStream.m3u8_480 && player.currentSrc() !== currentStream.m3u8_480) {
-              player.src({ src: currentStream.m3u8_480, type: 'application/x-mpegURL' });
-              player.play().catch(function () {});
-              showFallback('Switched to 480p backup feed.');
-              return;
-            }
-            showFallback('Live feed temporarily unavailable. Try reopening or check the Polymarket page for status.');
-          });
-          player.ready(function () {
-            player.play().catch(function () { /* autoplay may be blocked, controls work */ });
-          });
-        } catch (err) {
-          console.error('[OSTLiveWatch] videojs init failed', err);
-          showFallback('Player failed to initialize. Reload the page and try again.');
-        }
-      })
+      .then(function () { startStream(false); })
       .catch(function (err) {
         console.error('[OSTLiveWatch] failed to load Video.js', err);
         showFallback('Could not load video player. Check your connection and try again.');
@@ -245,52 +436,35 @@
     modalEl.classList.remove('is-open');
     document.body.style.overflow = '';
     disposePlayer();
+    stopMarketPolling();
     currentStream = null;
+  }
+
+  function openTradeModal() {
+    try {
+      if (window.OST_MARKET_MODAL && typeof window.OST_MARKET_MODAL.open === 'function') {
+        window.OST_MARKET_MODAL.open(NATIVE_MARKET_ID);
+        return;
+      }
+    } catch (_) {}
+    if (currentStream && currentStream.polymarket) {
+      window.open(currentStream.polymarket, '_blank', 'noopener');
+    }
   }
 
   function placeQuickBet(type) {
     if (!currentStream) return;
-    var label = ({ home: currentStream.home || 'Home', draw: 'Draw', away: currentStream.away || 'Away' })[type] || type;
-    if (statusEl) statusEl.textContent = '✓ Routing to trade desk · ' + label + '…';
+    var label = ({
+      home: currentStream.home || 'Home',
+      draw: 'Draw',
+      away: currentStream.away || 'Away'
+    })[type] || type;
+    if (statusEl) statusEl.textContent = '✓ Selected ' + label + ' · routing to trade desk…';
     showToast('Opening OST trade desk · ' + label);
-
-    // Deep-link into the existing prediction trade modal (3-outcome flow).
-    try {
-      var nativeId = (window.OST_NATIVE_MARKET_IDS && window.OST_NATIVE_MARKET_IDS.eplLeedsBurnley)
-        || 'native-polymarket-epl-lee-bur-2026-05-01';
-      if (window.OST_MARKET_MODAL && typeof window.OST_MARKET_MODAL.open === 'function') {
-        window.OST_MARKET_MODAL.open(nativeId);
-        // Hand-off: leave the live modal open in the background so the user
-        // can keep watching while the trade desk pops over the top.
-        return;
-      }
-    } catch (e) { /* fall back to local record */ }
-
-    // Fallback: write a local pending order so the wallet panel reflects it.
-    try {
-      var record = {
-        id: 'live-' + currentStream.slug + '-' + type + '-' + Date.now(),
-        marketId: 'native-polymarket-epl-lee-bur-2026-05-01',
-        market: currentStream.name,
-        outcome: label,
-        side: type,
-        amountOst: 10,
-        source: 'polymarket',
-        sourceUrl: currentStream.polymarket || '',
-        ts: Date.now(),
-        status: 'pending'
-      };
-      var KEY = 'ost.prediction.orders.v1';
-      var raw = localStorage.getItem(KEY);
-      var list = raw ? JSON.parse(raw) : [];
-      if (Array.isArray(list)) {
-        list.push(record);
-        localStorage.setItem(KEY, JSON.stringify(list.slice(-200)));
-      }
-      window.dispatchEvent(new CustomEvent('ost-tx-history-update'));
-    } catch (_) { /* non-fatal */ }
+    openTradeModal();
   }
 
+  // ─── Featured card on the markets page ───────────────────────
   function buildFeaturedCard(host) {
     if (!host || host.dataset.liveBetRendered === '1') return;
     host.dataset.liveBetRendered = '1';
@@ -300,7 +474,7 @@
       '  <div class="live-bet-head">',
       '    <div>',
       '      <h2>Live Watch + Bet</h2>',
-      '      <p>Stream the match in HD and route quick OST bets from the same panel.</p>',
+      '      <p>Stream the match in HD and trade the same Polymarket contract from one panel.</p>',
       '    </div>',
       '    <span class="live-bet-pill">Live now · BT Sport feed</span>',
       '  </div>',
@@ -311,7 +485,7 @@
       '        <span class="live-bet-pill is-quiet">' + s.kickoff + '</span>',
       '      </div>',
       '      <h3 class="live-bet-title">' + s.name + '</h3>',
-      '      <p class="live-bet-sub">Watch the live HLS broadcast and place 10 OST quick bets on Home, Draw, or Away. Settles against the official Polymarket result.</p>',
+      '      <p class="live-bet-sub">Watch the live HLS broadcast and route OST bets through the embedded 3-way market (Home / Draw / Away).</p>',
       '      <div class="live-bet-prices" aria-label="Current Polymarket odds (snapshot)">',
       '        <div class="live-bet-price"><span>Home</span><strong>0.46</strong></div>',
       '        <div class="live-bet-price"><span>Draw</span><strong>0.27</strong></div>',
@@ -344,14 +518,24 @@
       var buy = event.target.closest('[data-live-buy-shares]');
       if (buy) {
         event.preventDefault();
-        var nativeId = (window.OST_NATIVE_MARKET_IDS && window.OST_NATIVE_MARKET_IDS.eplLeedsBurnley)
-          || 'native-polymarket-epl-lee-bur-2026-05-01';
-        if (window.OST_MARKET_MODAL && typeof window.OST_MARKET_MODAL.open === 'function') {
-          window.OST_MARKET_MODAL.open(nativeId);
-        } else {
-          window.open(STREAMS[FEATURED_SLUG].polymarket, '_blank', 'noopener');
-        }
+        openTradeModal();
       }
+    });
+
+    // Auto-reconnect when network comes back during a live session.
+    window.addEventListener('online', function () {
+      if (modalEl && modalEl.classList.contains('is-open')) {
+        if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+        reconnectAttempts = 0;
+        if (player) { try { player.dispose(); } catch (_) {} player = null; }
+        startStream(false);
+      }
+    });
+  }
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
     });
   }
 
@@ -368,7 +552,6 @@
   }
 
   window.OSTLiveWatch = { open: open, close: close, placeQuickBet: placeQuickBet, streams: STREAMS };
-  // Back-compat aliases (the user's spec referenced these globals).
   window.watchLiveStream = function (slug, name) { open(slug, name); };
   window.closeLiveModal = close;
   window.placeQuickBet = placeQuickBet;
