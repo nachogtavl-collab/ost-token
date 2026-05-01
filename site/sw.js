@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v20';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v20';
+const CACHE_NAME = 'ost-pwa-cache-v21';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v21';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -25,7 +25,7 @@ const PRECACHE_PATHS = [
   './topup.css?v=4',
   './offline-vault.css?v=1',
   './rpc-multiplexer.js?v=1',
-  './app.js?v=106',
+  './app.js?v=107',
   './nuevo-laredo-gas.js?v=1',
   './shop-quickview.js?v=1',
   './interchange-live.js?v=1',

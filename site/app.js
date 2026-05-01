@@ -3991,10 +3991,24 @@
     ethereum: { usd: 3800, usd_24h_change: 0 },
     solana: { usd: 170, usd_24h_change: 0 }
   };
+  const OFFICIAL_PRICE_SOURCE = 'binance';
+  const OFFICIAL_PRICE_INTERVAL_MS = 10000;
+  const PRICE_HISTORY_LIMIT = 60;
+  const OFFICIAL_PRICE_SYMBOLS = {
+    bitcoin: 'BTCUSDT',
+    ethereum: 'ETHUSDT',
+    solana: 'SOLUSDT'
+  };
+  const OFFICIAL_PRICE_URL = 'https://api.binance.com/api/v3/ticker/24hr?symbols=' + encodeURIComponent(JSON.stringify([
+    OFFICIAL_PRICE_SYMBOLS.bitcoin,
+    OFFICIAL_PRICE_SYMBOLS.ethereum,
+    OFFICIAL_PRICE_SYMBOLS.solana
+  ]));
   let prices = { bitcoin: 0, ethereum: 0, solana: 0 };
+  let priceChanges = { bitcoin: 0, ethereum: 0, solana: 0 };
   // Expose live prices for wallet-extras.js to compute real-USD curve
   Object.defineProperty(window, '__ostPrices', { get: function () { return Object.assign({}, prices, { ost: typeof ostPrice !== 'undefined' ? ostPrice : 1 }); } });
-    let priceHistory = { bitcoin: [], ethereum: [], solana: [] };
+    let priceHistory = { bitcoin: [], ethereum: [], solana: [], ost: [] };
   let ostPrice = 0.0001; // Default OST price
   window.ostPrice = ostPrice;
   const OST_BASE_PRICE = 0.0001;
@@ -4122,6 +4136,70 @@
     };
   }
 
+  function getCachedCryptoPrices() {
+    const fallback = getFallbackCryptoPrices();
+    ['bitcoin', 'ethereum', 'solana'].forEach(function(coin) {
+      const cachedPrice = Number(prices[coin]);
+      const cachedChange = Number(priceChanges[coin]);
+      fallback[coin].usd = Number.isFinite(cachedPrice) && cachedPrice > 0 ? cachedPrice : fallback[coin].usd;
+      fallback[coin].usd_24h_change = Number.isFinite(cachedChange) ? cachedChange : fallback[coin].usd_24h_change;
+    });
+    return fallback;
+  }
+
+  function buildFlatPriceHistory(seedPrice) {
+    const safePrice = Number(seedPrice);
+    const value = Number.isFinite(safePrice) && safePrice > 0 ? safePrice : 1;
+    return Array.from({ length: PRICE_HISTORY_LIMIT }, function() {
+      return value;
+    });
+  }
+
+  function recordOfficialPricePoint(coin, price) {
+    const nextPrice = Number(price);
+    if (!Number.isFinite(nextPrice) || nextPrice <= 0) return;
+    if (!Array.isArray(priceHistory[coin]) || !priceHistory[coin].length) {
+      priceHistory[coin] = buildFlatPriceHistory(nextPrice);
+      return;
+    }
+    priceHistory[coin].push(nextPrice);
+    if (priceHistory[coin].length > PRICE_HISTORY_LIMIT) priceHistory[coin].shift();
+  }
+
+  async function fetchOfficialCryptoPrices() {
+    const response = await fetch(OFFICIAL_PRICE_URL, {
+      cache: 'no-store',
+      headers: { accept: 'application/json' }
+    });
+    if (!response.ok) throw new Error(OFFICIAL_PRICE_SOURCE + ' price feed returned ' + response.status);
+    const payload = await response.json();
+    if (!Array.isArray(payload) || !payload.length) {
+      throw new Error(OFFICIAL_PRICE_SOURCE + ' price feed returned no symbols');
+    }
+
+    const bySymbol = payload.reduce(function(map, entry) {
+      if (entry && entry.symbol) map[String(entry.symbol)] = entry;
+      return map;
+    }, {});
+    const data = getFallbackCryptoPrices();
+
+    Object.keys(OFFICIAL_PRICE_SYMBOLS).forEach(function(coin) {
+      const symbol = OFFICIAL_PRICE_SYMBOLS[coin];
+      const entry = bySymbol[symbol];
+      const usd = Number(entry && entry.lastPrice);
+      const change = Number(entry && entry.priceChangePercent);
+      if (!Number.isFinite(usd) || usd <= 0) {
+        throw new Error(OFFICIAL_PRICE_SOURCE + ' price feed missing ' + symbol);
+      }
+      data[coin] = {
+        usd: usd,
+        usd_24h_change: Number.isFinite(change) ? change : 0
+      };
+    });
+
+    return data;
+  }
+
   function applyCryptoPrices(data) {
     ['bitcoin', 'ethereum', 'solana'].forEach(coin => {
       const fallback = CRYPTO_PRICE_DEFAULTS[coin];
@@ -4129,12 +4207,13 @@
       const usd = Number(source.usd);
       const change = Number(source.usd_24h_change);
       prices[coin] = Number.isFinite(usd) && usd > 0 ? usd : prices[coin] || fallback.usd;
+      priceChanges[coin] = Number.isFinite(change) ? change : priceChanges[coin] || fallback.usd_24h_change;
 
       const pEl = $(`#price-${coin}`);
       const cEl = $(`#change-${coin}`);
       if (pEl) pEl.textContent = '$' + prices[coin].toLocaleString(undefined, { maximumFractionDigits: 2 });
       if (cEl) {
-        const ch = Number.isFinite(change) ? change : 0;
+        const ch = priceChanges[coin];
         cEl.textContent = (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%';
         cEl.className = 'chart-change ' + (ch >= 0 ? 'up' : 'down');
       }
@@ -4152,28 +4231,20 @@
   }
 
   async function fetchPrices() {
-    const data = getFallbackCryptoPrices();
-    const apiBase = getOstApiBase();
-
-    if (apiBase) {
-      try {
-        const r = await fetch(apiBase + '/btc/price', { cache: 'no-store', headers: { accept: 'application/json' } });
-        if (!r.ok) throw new Error('OST price feed returned ' + r.status);
-        const payload = await r.json();
-        const btcUsd = Number(payload && (payload.price || payload.btcPrice));
-        if (!Number.isFinite(btcUsd) || btcUsd <= 0) throw new Error('OST price feed missing BTC price');
-        const previousBtc = prices.bitcoin;
-        data.bitcoin.usd = btcUsd;
-        data.bitcoin.usd_24h_change = previousBtc > 0 ? ((btcUsd - previousBtc) / previousBtc) * 100 : 0;
-      } catch (e) {
-        if (!window.__ostPriceFallbackLogged) {
-          window.__ostPriceFallbackLogged = true;
-          console.info('Price feed using cached defaults:', e && e.message ? e.message : e);
-        }
+    try {
+      const data = await fetchOfficialCryptoPrices();
+      applyCryptoPrices(data);
+      ['bitcoin', 'ethereum', 'solana'].forEach(function(coin) {
+        recordOfficialPricePoint(coin, data[coin] && data[coin].usd);
+      });
+    } catch (e) {
+      if (!window.__ostPriceFallbackLogged) {
+        window.__ostPriceFallbackLogged = true;
+        console.info('Binance price feed unavailable, keeping last quote:', e && e.message ? e.message : e);
       }
+      applyCryptoPrices(getCachedCryptoPrices());
     }
-
-    applyCryptoPrices(data);
+    updateCharts();
   }
 
   function updateProductOSTPrices() {
@@ -4193,9 +4264,9 @@
     });
   }
 
-  // Fetch on load and then every 30 seconds
+  // Fetch on load and then refresh from the official Binance feed.
   fetchPrices();
-  setInterval(fetchPrices, 30000);
+  setInterval(fetchPrices, OFFICIAL_PRICE_INTERVAL_MS);
 
   /* ---------- MINI CHARTS ---------- */
   function initCharts() {
@@ -4203,7 +4274,7 @@
       const canvas = $(`#chart-${coin}`);
       if (!canvas) return;
       const seedPrice = getChartBasePrice(coin);
-      priceHistory[coin] = Array.from({ length: 60 }, () => seedPrice * (0.995 + Math.random() * 0.01));
+      priceHistory[coin] = buildFlatPriceHistory(seedPrice);
     });
   }
   initCharts();
@@ -4298,13 +4369,6 @@
       canvas.style.width = w + 'px';
       canvas.style.height = h + 'px';
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-      // Add current price with small variation
-      const baseP = getChartBasePrice(coin);
-      const volatility = 0.004;
-      const newP = baseP * (1 - volatility / 2 + Math.random() * volatility);
-      priceHistory[coin].push(newP);
-      if (priceHistory[coin].length > 60) priceHistory[coin].shift();
 
       const data = priceHistory[coin].filter(v => v > 0);
       if (data.length < 2) return;
