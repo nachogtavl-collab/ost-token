@@ -27,7 +27,8 @@ const {
   getMint,
   transferChecked
 } = require('@solana/spl-token');
-const bs58 = require('bs58');
+const bs58Module = require('bs58');
+const bs58 = bs58Module.default || bs58Module;
 
 const API_BASE   = (process.env.OST_API_BASE || '').replace(/\/+$/, '');
 const ADMIN_TOK  = process.env.TOPUP_ADMIN_TOKEN || '';

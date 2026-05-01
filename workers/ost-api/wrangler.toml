@@ -20,8 +20,8 @@ DATA_BASE  = "https://data-api.polymarket.com"
 # Public site URL Stripe uses for success/cancel redirects.
 PUBLIC_SITE_URL = "https://nachogtavl-collab.github.io/ost-token/"
 # Mainnet receivers shown in the crypto modal (override per env).
-TREASURY_USDC_MAINNET = ""
-TREASURY_SOL_MAINNET  = ""
+TREASURY_USDC_MAINNET = "Fm7ErbkWzPMpqJ2MdT2LR1oyAHNMvAQxmCXVM7KxGRrM"
+TREASURY_SOL_MAINNET  = "Fm7ErbkWzPMpqJ2MdT2LR1oyAHNMvAQxmCXVM7KxGRrM"
 # Devnet OST mint (Token-2022). Source of truth: mint-info.json.
 OST_MINT = "383pTzoZ8Gp83dzk23ZnvLcfX2Sq32TAGN48CMQu2pAJ"
 
