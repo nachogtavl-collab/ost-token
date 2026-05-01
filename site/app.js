@@ -9,7 +9,20 @@
   const $ = (s, p) => (p || document).querySelector(s);
   const $$ = (s, p) => [...(p || document).querySelectorAll(s)];
   const sleep = ms => new Promise(r => setTimeout(r, ms));
-
+  const runIdle = (callback, timeout) => {
+    if ('requestIdleCallback' in window) window.requestIdleCallback(callback, { timeout: timeout || 1200 });
+    else window.setTimeout(callback, 80);
+  };
+  let lastSafeFrame = Date.now();
+  function safeLoop(callback) {
+    const now = Date.now();
+    if (now - lastSafeFrame > 16) {
+      callback(now);
+      lastSafeFrame = now;
+    }
+    requestAnimationFrame(() => safeLoop(callback));
+  }
+  window.OSTPerformance = Object.assign(window.OSTPerformance || {}, { runIdle, safeLoop });
   /* ---------- NAV ---------- */
   const navToggle = $('#navToggle');
   const navLinks = $('#navLinks');
@@ -3556,7 +3569,7 @@
 
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
     renderer.setSize(w, h);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, window.innerWidth < 700 ? 1.25 : 2));
     canvas.style.width = '100%';
     canvas.style.height = '100%';
 
@@ -3817,9 +3830,28 @@
     });
     window.addEventListener('pointerup', () => { isDragging = false; });
 
-    // Animate
-    function animate() {
+    // Animate only while the globe is visible. This preserves the hero without
+    // burning battery when the user is in wallet, games, or offline sections.
+    let globeVisible = false;
+    let globeRunning = false;
+    let lastGlobeFrame = 0;
+    function startGlobeAnimation() {
+      if (globeRunning || document.hidden || !globeVisible) return;
+      globeRunning = true;
       requestAnimationFrame(animate);
+    }
+    function pauseGlobeAnimation() {
+      globeRunning = false;
+    }
+    function animate(frameNow) {
+      if (!globeRunning) return;
+      if (!globeVisible || document.hidden) {
+        pauseGlobeAnimation();
+        return;
+      }
+      requestAnimationFrame(animate);
+      if (frameNow && frameNow - lastGlobeFrame < 16) return;
+      lastGlobeFrame = frameNow || Date.now();
 
       // Sun position based on real UTC time (day/night)
       const now = Date.now();
@@ -3855,7 +3887,23 @@
 
       renderer.render(scene, camera);
     }
-    animate();
+
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          globeVisible = entry.isIntersecting;
+          if (globeVisible) startGlobeAnimation();
+          else pauseGlobeAnimation();
+        });
+      }, { threshold: 0.25 }).observe(wrap);
+    } else {
+      globeVisible = true;
+      startGlobeAnimation();
+    }
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) pauseGlobeAnimation();
+      else startGlobeAnimation();
+    });
 
     window.addEventListener('resize', () => {
       const sz = getSize();
@@ -3867,7 +3915,8 @@
     });
   }
 
-  initGlobe();
+  if (location.hash && location.hash !== '#home') runIdle(initGlobe, 1600);
+  else initGlobe();
 
   /* ---------- BACKGROUND PARTICLES ---------- */
   (function () {
@@ -4305,8 +4354,17 @@
     renderOstReserveChart();
   }
 
-  // Update charts every second
-  setInterval(updateCharts, 1000);
+  let walletSectionVisible = !('IntersectionObserver' in window);
+  const walletSectionForCharts = document.getElementById('wallet');
+  if (walletSectionForCharts && 'IntersectionObserver' in window) {
+    new IntersectionObserver((entries) => {
+      walletSectionVisible = entries.some((entry) => entry.isIntersecting);
+      if (walletSectionVisible && !document.hidden) updateCharts();
+    }, { threshold: 0.08 }).observe(walletSectionForCharts);
+  }
+  setInterval(() => {
+    if (!document.hidden && walletSectionVisible) updateCharts();
+  }, 1500);
   setTimeout(updateCharts, 500);
   syncOstDevnetMetrics({ force: true });
   setInterval(function() {
@@ -6513,6 +6571,7 @@
     // Poll: check if wallet just connected, update dashboard
     let lastWalletState = null;
     setInterval(() => {
+      if (document.hidden) return;
       if (connectedWallet && lastWalletState !== connectedWallet) {
         lastWalletState = connectedWallet;
         showDashboard(connectedWallet);
@@ -6520,11 +6579,12 @@
         lastWalletState = null;
         hideDashboard();
       }
-    }, 500);
+    }, 1200);
 
     // Also refresh balances every 8 s while connected so receivers see
     // incoming SOL / OST quickly (was 30 s — too slow for live transfers).
     setInterval(() => {
+      if (document.hidden) return;
       if (connectedWallet) syncJourneyUi();
     }, 8000);
 
@@ -6542,7 +6602,8 @@
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     let w, h, particles = [];
-    const COUNT = 80;
+    const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const COUNT = reduceMotion ? 0 : (window.innerWidth < 700 ? 36 : 80);
     let mouseX = -9999, mouseY = -9999;
     const ATTRACT_RADIUS = 150;
     const ATTRACT_FORCE = 0.02;
@@ -6573,7 +6634,18 @@
       });
     }
 
-    function draw() {
+    let particlesVisible = true;
+    let particleRunning = false;
+    let lastParticleFrame = 0;
+    function draw(now) {
+      if (!particleRunning) return;
+      if (!particlesVisible || document.hidden || reduceMotion) {
+        particleRunning = false;
+        return;
+      }
+      requestAnimationFrame(draw);
+      if (now && now - lastParticleFrame < 33) return;
+      lastParticleFrame = now || Date.now();
       ctx.clearRect(0, 0, w, h);
       for (let i = 0; i < particles.length; i++) {
         const p = particles[i];
@@ -6616,9 +6688,27 @@
           }
         }
       }
+    }
+    function startParticles() {
+      if (particleRunning || !particlesVisible || document.hidden || reduceMotion) return;
+      particleRunning = true;
       requestAnimationFrame(draw);
     }
-    draw();
+    function pauseParticles() { particleRunning = false; }
+    const heroSection = document.getElementById('home') || canvas;
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver((entries) => {
+        particlesVisible = entries.some((entry) => entry.isIntersecting);
+        if (particlesVisible) startParticles();
+        else pauseParticles();
+      }, { threshold: 0.12 }).observe(heroSection);
+    } else {
+      startParticles();
+    }
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) pauseParticles();
+      else startParticles();
+    });
   })();
 
   /* ================================================================== */
@@ -8561,8 +8651,11 @@
     var t = 0, phaseTimer = 0, vis = false;
 
     function animate() {
+      if (!vis || document.hidden) {
+        setTimeout(animate, 250);
+        return;
+      }
       requestAnimationFrame(animate);
-      if (!vis) return;
       var dt = 0.016;
       t += dt;
       phaseTimer += dt;

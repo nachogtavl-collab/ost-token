@@ -230,14 +230,33 @@ function mergeNewest(bucket, record, limit = 100) {
 }
 
 // ── Top-Up helpers ───────────────────────────────────────────────────────────
-// Tier table is the single source of truth (server-validated). Front-end
-// shows the same numbers but always re-validates here on intent creation.
+// Flexible value-based pricing is the source of truth. The legacy tier table is
+// kept only so older cached clients can still create valid intents.
+const TOPUP_USD_PER_OST = 0.0118;
+const TOPUP_MIN_USD = 1;
+const TOPUP_MAX_USD = 5000;
 const TOPUP_TIERS = {
   5:  { usd: 5,  ostAmount: 1200  },
   10: { usd: 10, ostAmount: 3000  },
   25: { usd: 25, ostAmount: 9000  },
   50: { usd: 50, ostAmount: 20000 }
 };
+
+function topupUsdPerOst(env) {
+  const configured = Number(env.TOPUP_USD_PER_OST);
+  return Number.isFinite(configured) && configured > 0 ? configured : TOPUP_USD_PER_OST;
+}
+
+function normalizeTopupUsd(value) {
+  const usd = Math.round(Number(value || 0) * 100) / 100;
+  if (!Number.isFinite(usd) || usd < TOPUP_MIN_USD) return null;
+  if (usd > TOPUP_MAX_USD) return null;
+  return usd;
+}
+
+function calculateTopupOst(usd, rate) {
+  return Math.floor((usd / rate) * 100) / 100;
+}
 
 function isLikelySolanaAddress(s) {
   return typeof s === 'string' && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(s.trim());
@@ -924,8 +943,19 @@ export default {
     // ── TOP-UP: real-money OST refill ───────────────────────────────────────
     // Tier table + receivers + Stripe enable flag.
     if (path === '/topup/config' && method === 'GET') {
+      const rate = topupUsdPerOst(env);
+      let solUsd = null;
+      try { solUsd = await fetchSolUsd(); } catch (_) {}
       return json({
-        tiers: Object.entries(TOPUP_TIERS).map(([id, t]) => ({ id: Number(id), usd: t.usd, ostAmount: t.ostAmount })),
+        mode: 'flexible-value',
+        pricing: {
+          usdPerOst: rate,
+          minUsd: TOPUP_MIN_USD,
+          maxUsd: TOPUP_MAX_USD,
+          suggestedUsd: [5, 10, 25, 50],
+          solUsd
+        },
+        tiers: Object.entries(TOPUP_TIERS).map(([id, t]) => ({ id: Number(id), usd: t.usd, ostAmount: calculateTopupOst(t.usd, rate) })),
         stripeEnabled: !!env.STRIPE_SECRET_KEY,
         receivers: {
           usdcMainnet: env.TREASURY_USDC_MAINNET || null,
@@ -936,12 +966,16 @@ export default {
       });
     }
 
-    // Create an intent (validated against TOPUP_TIERS).
+    // Create an exact-value intent. Legacy tier requests are converted to USD,
+    // then repriced server-side using the current flexible rate.
     if (path === '/topup/intent' && method === 'POST') {
       let body; try { body = await request.json(); } catch { return json({ error: 'invalid_json' }, 400); }
       const tierId = Number(body && body.tier);
-      const tier = TOPUP_TIERS[tierId];
-      if (!tier) return json({ error: 'invalid_tier' }, 400);
+      const legacyTier = TOPUP_TIERS[tierId];
+      const usd = normalizeTopupUsd(body && body.usd !== undefined ? body.usd : legacyTier && legacyTier.usd);
+      if (usd === null) return json({ error: 'invalid_usd_amount', minUsd: TOPUP_MIN_USD, maxUsd: TOPUP_MAX_USD }, 400);
+      const rate = topupUsdPerOst(env);
+      const ostAmount = calculateTopupOst(usd, rate);
       const wallet = String(body.wallet || '').trim();
       if (!isLikelySolanaAddress(wallet)) return json({ error: 'invalid_wallet' }, 400);
       const method2 = body.method === 'crypto' ? 'crypto' : 'stripe';
@@ -950,9 +984,10 @@ export default {
       const intent = {
         id: crypto.randomUUID(),
         memo: shortMemo(),
-        tier: tierId,
-        usd: tier.usd,
-        ostAmount: tier.ostAmount,
+        tier: legacyTier ? tierId : null,
+        usd,
+        usdPerOst: rate,
+        ostAmount,
         wallet,
         method: method2,
         status: 'pending',          // pending → paid → sent (or cancelled)
@@ -961,7 +996,7 @@ export default {
         updatedAt: Date.now()
       };
       await saveIntent(env, intent);
-      return json({ id: intent.id, memo: intent.memo, ostAmount: intent.ostAmount, status: intent.status });
+      return json({ id: intent.id, memo: intent.memo, usd: intent.usd, usdPerOst: intent.usdPerOst, ostAmount: intent.ostAmount, status: intent.status });
     }
 
     // Create a Stripe Checkout session for an existing intent.
@@ -986,9 +1021,9 @@ export default {
           quantity: 1,
           price_data: {
             currency: 'usd',
-            unit_amount: intent.usd * 100,
+            unit_amount: Math.round(Number(intent.usd || 0) * 100),
             product_data: {
-              name: `OST Top-Up — ${intent.ostAmount.toLocaleString()} OST`,
+              name: `OST Converter Hub - ${Number(intent.ostAmount || 0).toLocaleString()} OST`,
               description: `Devnet OST delivered to ${intent.wallet.slice(0, 8)}…${intent.wallet.slice(-6)}`
             }
           }

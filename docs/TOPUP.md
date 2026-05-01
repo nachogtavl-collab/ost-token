@@ -1,9 +1,11 @@
 # OST Top-Up — Real-money OST refill
 
-End users who run out of free faucet OST can pay $5 / $10 / $25 / $50 with a
-card (Stripe) or with crypto (USDC or SOL on mainnet). 100% of the funds land
-in the OST Treasury wallet; in exchange, the treasury sends devnet OST to the
-user's wallet using a `transferChecked` (Token-2022) instruction.
+End users who run out of free faucet OST can buy an exact USD value of OST from
+the **OST Converter Hub**. They enter the real value they want to spend, choose
+card (Stripe) or crypto (USDC or SOL on mainnet), and the Worker calculates the
+OST amount server-side. 100% of the funds land in the OST Treasury wallet; in
+exchange, the treasury sends devnet OST to the user's wallet using a
+`transferChecked` (Token-2022) instruction.
 
 ```
 [ Browser ] -- POST /topup/intent  -->  [ Cloudflare Worker (ost-api) ]
@@ -20,14 +22,22 @@ user's wallet using a `transferChecked` (Token-2022) instruction.
                                   POST /topup/admin/mark-sent
 ```
 
-## Tier table (server-validated)
+## Flexible value pricing (server-validated)
 
-| USD  | Base OST | Bonus | Total OST |
-|------|----------|-------|-----------|
-| $5   | 1,000    | 200   | 1,200     |
-| $10  | 2,500    | 500   | 3,000     |
-| $25  | 7,000    | 2,000 | 9,000     |
-| $50  | 15,000   | 5,000 | 20,000    |
+The Worker exposes `/topup/config` with:
+
+- `mode: "flexible-value"`
+- `pricing.usdPerOst`
+- `pricing.minUsd`
+- `pricing.maxUsd`
+- `pricing.suggestedUsd`
+- `pricing.solUsd` for SOL <-> OST quote display when a public price feed is available
+
+`POST /topup/intent` accepts `{ usd, wallet, method }` and calculates
+`ostAmount = floor((usd / usdPerOst) * 100) / 100`. The client-provided
+`ostAmount` is informational only. Legacy cached clients may still send a
+`tier`, but the Worker converts that tier to USD and reprices with the current
+flexible rate.
 
 ## 1. Set Cloudflare worker secrets
 
@@ -69,7 +79,8 @@ modal polls `/topup/status/:id` and shows the Solscan link.
 
 ## 4. Crypto payments
 
-The crypto pane shows the treasury USDC + SOL addresses with a unique memo.
+The crypto pane shows the treasury USDC + SOL addresses with a unique memo and
+the exact USD amount due.
 Users can paste the Solana mainnet payment signature into the modal; the Worker
 verifies the treasury receiver, memo, and amount before marking the intent
 `paid` and pushing it into the dispatcher queue. SOL payments to the treasury
@@ -100,5 +111,5 @@ missing secret.
 - Treasury secret key lives only on the operator machine running the dispatcher.
 - Stripe webhook signature is verified with HMAC-SHA256 on the raw body
   before any intent is marked paid.
-- Tier USD ↔ OST mapping is enforced server-side; client values are ignored.
+- Exact USD -> OST pricing is enforced server-side; client OST values are ignored.
 - `TOPUP_ADMIN_TOKEN` gates `/topup/admin/*`. Rotate it like any secret.

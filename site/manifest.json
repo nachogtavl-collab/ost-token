@@ -6,7 +6,7 @@
   "id": "/ost-token/",
   "scope": "/ost-token/",
   "display": "standalone",
-  "background_color": "#0a0a0a",
+  "background_color": "#0d0d0d",
   "theme_color": "#00d4ff",
   "orientation": "any",
   "icons": [

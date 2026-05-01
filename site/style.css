@@ -25,14 +25,22 @@
 
 /* --- RESET --- */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  min-height: 100dvh;
+  margin: 0;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  overflow-x: hidden;
+}
 body {
   font-family: var(--font);
   background: var(--bg);
   color: var(--text);
   line-height: 1.7;
   overflow-x: hidden;
-  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0;
 }
 
 /* Custom Scrollbar */
@@ -45,7 +53,16 @@ a { color: var(--accent); text-decoration: none; transition: color .2s; }
 a:hover { color: var(--accent2); }
 img { max-width: 100%; display: block; }
 button { cursor: pointer; border: none; font-family: inherit; }
-input, select { font-family: inherit; }
+button:not(.topup-modal-close),
+.nav-links a,
+.game-card,
+.topup-card,
+.topup-tier,
+.converter-tab,
+.converter-btn {
+  min-height: 48px;
+}
+input, select, textarea { font-family: inherit; font-size: 16px; }
 
 /* --- UTILITIES --- */
 .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }

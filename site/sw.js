@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v5';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v5';
+const CACHE_NAME = 'ost-pwa-cache-v8';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v8';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -10,8 +10,8 @@ const PRECACHE_PATHS = [
   './ost-logo.svg',
   './icon-192.png',
   './icon-512.png',
-  './style.css?v=63',
-  './mobile.css?v=1',
+  './style.css?v=64',
+  './mobile.css?v=6',
   './polish.css?v=1',
   './compartments.css?v=1',
   './prediction-extras.css?v=4',
@@ -22,10 +22,10 @@ const PRECACHE_PATHS = [
   './ost-console.css?v=1',
   './prediction-scalar.css?v=1',
   './faucet-hub.css?v=4',
-  './topup.css?v=2',
+  './topup.css?v=3',
   './offline-vault.css?v=1',
   './rpc-multiplexer.js?v=1',
-  './app.js?v=101',
+  './app.js?v=103',
   './nuevo-laredo-gas.js?v=1',
   './shop-quickview.js?v=1',
   './interchange-live.js?v=1',
@@ -50,7 +50,7 @@ const PRECACHE_PATHS = [
   './i18n-runtime.js?v=1',
   './devnet-rescue.js?v=4',
   './launchpad-trenches.js?v=2',
-  './topup.js?v=2',
+  './topup.js?v=3',
   'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
   'https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
