@@ -878,6 +878,56 @@ export default {
       return json({ ok: true, intent });
     }
 
+    // ── OFFLINE VAULT: proof sync queue ───────────────────────────────────
+    // Public endpoint: devices upload locally verified bearer/game proofs when
+    // they reconnect. This is the durable reconciliation queue; on-chain
+    // settlement can consume these records in a later worker/dispatcher pass.
+    if (path === '/offline-vault/sync' && method === 'POST') {
+      if (!env.OST_KV) return json({ error: 'kv_not_configured' }, 503);
+      let body; try { body = await request.json(); } catch { return json({ error: 'invalid_json' }, 400); }
+      const deviceId = cleanText(body && body.deviceId, 80) || `anon-${crypto.randomUUID()}`;
+      const events = Array.isArray(body && body.events) ? body.events.slice(0, 100) : [];
+      if (!events.length) return json({ ok: true, accepted: 0, acceptedIds: [], status: 'empty' });
+
+      const accepted = events.map((event) => ({
+        id: cleanText(event && event.id, 100) || crypto.randomUUID(),
+        kind: cleanText(event && event.kind, 80),
+        amount: cleanNumber(event && event.amount, 0),
+        ts: cleanNumber(event && event.ts, Date.now()),
+        iso: cleanText(event && event.iso, 40),
+        offline: !!(event && event.offline),
+        source: cleanText(event && event.source, 80),
+        tokenId: cleanText(event && event.tokenId, 120),
+        proof: event && event.proof ? JSON.stringify(event.proof).slice(0, 4000) : null,
+        game: cleanText(event && event.game, 80),
+        receivedAt: Date.now()
+      }));
+      const key = `offline-vault:${deviceId}`;
+      const existing = await kvGet(env, key, []);
+      const merged = accepted.reduce((bucket, record) => mergeNewest(bucket, record, 500), existing);
+      await kvPut(env, key, merged, 60 * 60 * 24 * 90);
+
+      const recent = await kvGet(env, 'offline-vault:recent', []);
+      const recentMerged = accepted.reduce((bucket, record) => mergeNewest(bucket, { ...record, deviceId }, 500), recent);
+      await kvPut(env, 'offline-vault:recent', recentMerged, 60 * 60 * 24 * 30);
+
+      return json({
+        ok: true,
+        accepted: accepted.length,
+        acceptedIds: accepted.map((e) => e.id),
+        status: 'queued_for_onchain_reconciliation',
+        deviceId
+      });
+    }
+
+    const offlineVaultStatusMatch = path.match(/^\/offline-vault\/status\/([^/]+)$/);
+    if (offlineVaultStatusMatch && method === 'GET') {
+      if (!env.OST_KV) return json({ events: [], count: 0 });
+      const deviceId = cleanText(decodeURIComponent(offlineVaultStatusMatch[1]), 80);
+      const events = await kvGet(env, `offline-vault:${deviceId}`, []);
+      return json({ deviceId, events: events.slice(0, 50), count: events.length, ts: new Date().toISOString() });
+    }
+
     return json({ error: 'not_found', message: 'Unknown endpoint. GET /health for the full endpoint list.' }, 404);
   }
 };

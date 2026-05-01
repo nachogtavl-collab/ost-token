@@ -20,6 +20,15 @@
   var STATE_KEY = 'ost.faucet.hub.v2';   // share balance with faucet-hub
   var GAMES_STATE_KEY = 'ost.games.v1';
 
+  function offlineVaultApi() {
+    return window.OSTOfflineVault || null;
+  }
+  function isOfflineVaultActive() {
+    var vault = offlineVaultApi();
+    try { return !!(vault && vault.isActive && vault.isActive()); }
+    catch (_) { return false; }
+  }
+
   function loadBank() { try { return JSON.parse(localStorage.getItem(STATE_KEY) || '{}'); } catch (_) { return {}; } }
   function saveBank(s) { try { localStorage.setItem(STATE_KEY, JSON.stringify(s)); } catch (_) {} }
   function loadGames() { try { return JSON.parse(localStorage.getItem(GAMES_STATE_KEY) || '{}'); } catch (_) { return {}; } }
@@ -124,8 +133,21 @@
     });
   }
 
-  function getBalance() { return Number(loadBank().credits || 0); }
+  function getBalance() {
+    if (isOfflineVaultActive()) {
+      var vault = offlineVaultApi();
+      try { return Number(vault && vault.getBalance ? vault.getBalance() : 0); }
+      catch (_) { return 0; }
+    }
+    return Number(loadBank().credits || 0);
+  }
   function debit(amount) {
+    if (isOfflineVaultActive()) {
+      var vault = offlineVaultApi();
+      var ok = !!(vault && vault.debit && vault.debit(amount, { source: 'ost-games', reason: 'bet' }));
+      fireBalanceChange();
+      return ok;
+    }
     var s = loadBank();
     var bal = Number(s.credits || 0);
     if (amount > bal + 1e-9) return false;
@@ -135,6 +157,12 @@
     return true;
   }
   function credit(amount, source) {
+    if (isOfflineVaultActive()) {
+      var vault = offlineVaultApi();
+      if (vault && vault.credit) vault.credit(amount, { source: source || 'game', reason: 'payout' });
+      fireBalanceChange();
+      return;
+    }
     var s = loadBank();
     s.credits = Number(s.credits || 0) + Number(amount || 0);
     s.lifetime = Number(s.lifetime || 0) + Number(amount || 0);
@@ -148,8 +176,18 @@
     });
     var hub = document.getElementById('fhCredits');
     if (hub) hub.textContent = fmt(getBalance());
+    var vault = offlineVaultApi();
+    if (vault && vault.updateUI) {
+      try { vault.updateUI(); } catch (_) {}
+    }
   }
   function recordGameLedgerEvent(kind, amount, extra) {
+    if (isOfflineVaultActive()) {
+      var vault = offlineVaultApi();
+      if (vault && vault.recordGameResult) {
+        try { vault.recordGameResult({ kind: kind, amount: Number(amount || 0), game: extra && extra.game, extra: extra || {} }); } catch (_) {}
+      }
+    }
     if (!window.recordOstPlatformEvent) return;
     try {
       window.recordOstPlatformEvent(Object.assign({
@@ -358,10 +396,18 @@
     bindTabs();
     buildLobbyStrip();
     showGame('mines');
+    window.addEventListener('ost:offline-vault-changed', fireBalanceChange);
     document.getElementById('ostgFairBtn').addEventListener('click', openFairness);
     var cashBtn = document.getElementById('ostgCashBtn');
     if (cashBtn) {
       cashBtn.addEventListener('click', async function () {
+        if (isOfflineVaultActive()) {
+          var vault = offlineVaultApi();
+          if (vault && vault.sync) {
+            try { await vault.sync(); } catch (e) { alert('Offline sync failed: ' + (e && e.message ? e.message : e)); }
+          }
+          return;
+        }
         var bal = getBalance();
         if (bal < 1) return;
         var w = window.OST_WALLET;
@@ -393,11 +439,19 @@
       });
       var sync = function () {
         var bal = getBalance();
+        if (isOfflineVaultActive()) {
+          cashBtn.disabled = false;
+          cashBtn.textContent = '🔁 Sync';
+          cashBtn.title = 'Sync offline vault proofs when online';
+          return;
+        }
+        cashBtn.textContent = '💸 Cash out';
         cashBtn.disabled = bal < 1;
         cashBtn.title = bal < 1 ? 'Need at least 1 OST to cash out' : 'Cash out ' + fmt(bal) + ' OST to your wallet';
       };
       sync();
       window.addEventListener('storage', sync);
+      window.addEventListener('ost:offline-vault-changed', sync);
       setInterval(sync, 1500);
     }
     bindWalletStatus();
@@ -418,6 +472,12 @@
     if (!dot || !text) return;
     var lastBal = null, lastAddr = null;
     async function refresh() {
+      if (isOfflineVaultActive()) {
+        dot.dataset.state = 'on';
+        text.innerHTML = 'Offline Vault active · <strong>' + fmt(getBalance()) + ' OST</strong>';
+        if (depBtn) { depBtn.disabled = false; depBtn.title = 'Import a paper, NFC, or digital bearer token'; }
+        return;
+      }
       var w = window.OST_WALLET;
       var connected = !!(w && w.session && w.session.publicKey);
       if (!connected) {
@@ -449,12 +509,19 @@
     refresh();
     setInterval(refresh, 6000);
     window.addEventListener('ost:wallet-changed', refresh);
+    window.addEventListener('ost:offline-vault-changed', refresh);
   }
 
   function bindDeposit() {
     var depBtn = document.getElementById('ostgDepositBtn');
     if (!depBtn) return;
     depBtn.addEventListener('click', async function () {
+      if (isOfflineVaultActive()) {
+        location.hash = '#offline';
+        var importBtn = document.getElementById('offlineVaultImportBtn');
+        if (importBtn) importBtn.focus();
+        return;
+      }
       var w = window.OST_WALLET;
       if (!w || !w.session || !w.session.publicKey) {
         var b = document.getElementById('connectWalletBtn'); if (b) b.click();

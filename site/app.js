@@ -10861,6 +10861,8 @@
     var selectedFmt = 'paper';
     var mintCount   = 0;
     var mintValue   = 0;
+    var latestBearerPayload = null;
+    var latestBearerText = '';
 
     /* Quick amount buttons */
     panel.querySelectorAll('.sv-q').forEach(function(btn) {
@@ -10918,12 +10920,23 @@
       advance();
     });
 
-    function showResult(amount) {
+    async function showResult(amount) {
       flowBox.style.display = 'none';
       result.style.display = 'block';
 
       /* Generate bearer hash */
       var hash = generateHash(32);
+      latestBearerPayload = null;
+      latestBearerText = '';
+      try {
+        if (window.OSTOfflineVault && window.OSTOfflineVault.createBearerToken) {
+          latestBearerPayload = await window.OSTOfflineVault.createBearerToken({ amount: amount, format: selectedFmt });
+          latestBearerText = 'OST-BEARER-V1:' + JSON.stringify(latestBearerPayload);
+          hash = latestBearerPayload.commitment || hash;
+        }
+      } catch (e) {
+        console.warn('[survival] bearer payload generation failed', e);
+      }
       bAmt.textContent = amount.toLocaleString() + ' OST';
       bHash.textContent = 'HASH: ' + hash;
 
@@ -10931,7 +10944,7 @@
       bType.textContent = labels[selectedFmt] || 'BEARER NOTE';
 
       /* Draw QR-like pattern on canvas */
-      drawQR(qrBox, hash);
+      drawQR(qrBox, latestBearerText || hash);
 
       /* Update stats */
       mintCount++;
@@ -10943,6 +10956,11 @@
       mintBtn.disabled = false;
 
       if (typeof toast === 'function') toast('\u2705', 'Survival bearer token minted — ' + amount.toLocaleString() + ' OST');
+      try {
+        window.dispatchEvent(new CustomEvent('ost:survival-token-minted', {
+          detail: { amount: amount, format: selectedFmt, type: bType.textContent, hash: hash, bearerToken: latestBearerPayload, bearerText: latestBearerText, ts: Date.now() }
+        }));
+      } catch (_) {}
     }
 
     /* Pseudo hash generator */
@@ -11073,12 +11091,27 @@
     /* Download as text file */
     var dlBtn = document.getElementById('svDownload');
     if (dlBtn) {
-      dlBtn.addEventListener('click', function() {
+      dlBtn.addEventListener('click', async function() {
+        if (!latestBearerText && window.OSTOfflineVault && window.OSTOfflineVault.createBearerToken) {
+          try {
+            var fallbackAmount = parseFloat(String(bAmt.textContent || '').replace(/[^0-9.]/g, '')) || 0;
+            if (fallbackAmount > 0) {
+              latestBearerPayload = await window.OSTOfflineVault.createBearerToken({ amount: fallbackAmount, format: selectedFmt });
+              latestBearerText = 'OST-BEARER-V1:' + JSON.stringify(latestBearerPayload);
+            }
+          } catch (e) {
+            console.warn('[survival] download payload generation failed', e);
+          }
+        }
         var content = 'OST SURVIVAL BEARER TOKEN\n';
         content += '========================\n';
         content += 'Amount: ' + bAmt.textContent + '\n';
         content += bHash.textContent + '\n';
         content += 'Type: ' + bType.textContent + '\n';
+        if (latestBearerText) {
+          content += '\nOST-BEARER-V1 PAYLOAD\n';
+          content += latestBearerText + '\n';
+        }
         content += 'Encrypted · One-time redemption · Satellite-redeemable\n';
         content += '\nWARNING: This is a bearer instrument. Whoever holds this note controls the value.\n';
         var blob = new Blob([content], { type: 'text/plain' });

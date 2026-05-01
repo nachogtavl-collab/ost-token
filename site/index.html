@@ -44,6 +44,7 @@
   <link rel="stylesheet" href="prediction-scalar.css?v=1">
   <link rel="stylesheet" href="faucet-hub.css?v=4">
   <link rel="stylesheet" href="topup.css?v=1">
+  <link rel="stylesheet" href="offline-vault.css?v=1">
 </head>
 <body>
 
@@ -2767,6 +2768,60 @@
         </div>
       </div>
 
+      <div class="offline-vault-card sr" id="offlineVault" aria-label="Offline OST Vault">
+        <div class="offline-vault-head">
+          <div>
+            <p class="offline-vault-eyebrow">Local bearer vault</p>
+            <h3>&#128274; Your Offline OST Vault</h3>
+            <p>Import a Survival Bearer Token from paper QR, NFC card, or digital file. The vault is stored encrypted on this device and can be used as the active balance for offline games.</p>
+          </div>
+          <div class="offline-vault-balance" aria-live="polite">
+            <strong id="offlineVaultBalance">0</strong>
+            <span>OST Offline</span>
+          </div>
+        </div>
+
+        <div class="offline-vault-grid">
+          <div class="offline-vault-panel">
+            <h4>Import bearer token</h4>
+            <div class="offline-vault-actions">
+              <button class="offline-vault-btn primary" id="offlineVaultImportBtn" type="button">Scan QR / Tap NFC</button>
+              <label class="offline-vault-file-label" for="offlineVaultFile">Import digital file<input id="offlineVaultFile" type="file" accept=".txt,.json,application/json,text/plain"></label>
+              <button class="offline-vault-btn" id="offlineVaultPasteBtn" type="button">Paste token</button>
+              <button class="offline-vault-btn" id="offlineVaultLatestBtn" type="button" disabled>Import latest minted note</button>
+            </div>
+            <div class="offline-vault-paste" id="offlineVaultPasteBox">
+              <textarea id="offlineVaultPasteInput" spellcheck="false" placeholder="Paste OST-BEARER-V1 JSON or the downloaded Survival Bearer Token text..."></textarea>
+              <button class="offline-vault-btn primary" id="offlineVaultPasteImportBtn" type="button">Import pasted token</button>
+            </div>
+            <div class="offline-vault-status" id="offlineVaultStatus" role="status"></div>
+          </div>
+
+          <div class="offline-vault-panel">
+            <h4>Offline game mode</h4>
+            <div class="offline-vault-metrics">
+              <div class="offline-vault-metric"><span>Tokens</span><strong id="offlineVaultTokenCount">0</strong></div>
+              <div class="offline-vault-metric"><span>Queued proofs</span><strong id="offlineVaultQueueCount">0</strong></div>
+              <div class="offline-vault-metric"><span>Mode</span><strong id="offlineVaultMode">Manual only</strong></div>
+            </div>
+            <div class="offline-vault-actions" style="margin-top:12px;">
+              <button class="offline-vault-btn primary" id="offlineVaultUseGamesBtn" type="button">Use offline vault in games</button>
+              <button class="offline-vault-btn" id="offlineVaultSyncBtn" type="button" disabled>Sync queued proofs</button>
+            </div>
+            <div class="offline-vault-log" id="offlineVaultLog">No offline vault activity yet.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="offline-vault-scan" id="offlineVaultScan" aria-hidden="true">
+        <div class="offline-vault-scan-box">
+          <video id="offlineVaultVideo" muted playsinline></video>
+          <div class="offline-vault-actions" style="margin-top:12px;">
+            <button class="offline-vault-btn" id="offlineVaultScanClose" type="button">Close scanner</button>
+          </div>
+        </div>
+      </div>
+
       <div class="offline-grid">
         <div class="offline-card glow-card sr"><div class="offline-icon-wrap"><div class="offline-icon">&#128241;</div><div class="offline-pulse"></div></div><h3 data-i18n="offline.nfc">NFC Tap-to-Pay</h3><p data-i18n="offline.nfctext">Hold phones near each other. One tap. Payment done. Like Apple Pay - but private, borderless.</p></div>
         <div class="offline-card glow-card sr"><div class="offline-icon-wrap"><div class="offline-icon">&#128247;</div><div class="offline-pulse"></div></div><h3 data-i18n="offline.qr">QR Code Scan</h3><p data-i18n="offline.qrtext">The signed payment fits in a single QR code. Show it, print it, etch it on metal.</p></div>
@@ -5469,7 +5524,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
       window.OST_API_BASE = "https://ost-api.nachogtavl.workers.dev";
       window.OST_POLY_RELAY_URL = window.OST_API_BASE;
     </script>
-    <script src="app.js?v=99"></script>
+    <script src="app.js?v=101"></script>
   <script src="nuevo-laredo-gas.js?v=1"></script>
   <script src="shop-quickview.js?v=1"></script>
   <script src="interchange-live.js?v=1"></script>
@@ -5492,7 +5547,8 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="faucet-hub.js?v=12"></script>
   <script src="topup.js?v=1"></script>
   <script src="faucet-hub-ads.js?v=2"></script>
-  <script src="ost-games.js?v=11"></script>
+  <script src="offline-vault.js?v=2"></script>
+  <script src="ost-games.js?v=13"></script>
   <script src="code-academy.js?v=3"></script>
   <script src="i18n-runtime.js?v=1"></script>
   <script src="devnet-rescue.js?v=4"></script>
@@ -5533,7 +5589,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
 
       function warmOfflineAssets() {
         if (!('caches' in window)) return;
-        caches.open('ost-pwa-runtime-v1').then(function (cache) {
+        caches.open('ost-pwa-runtime-v4').then(function (cache) {
           collectOfflineAssetUrls().reduce(function (chain, url) {
             return chain.then(function () {
               return fetch(url, { mode: 'no-cors', cache: 'force-cache' })
