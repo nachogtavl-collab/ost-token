@@ -4,6 +4,8 @@ node_modules/
 # Build artifacts
 target/
 dist/
+!workers/ost-api-pages/dist/
+!workers/ost-api-pages/dist/**
 
 # IDE
 .vs/
