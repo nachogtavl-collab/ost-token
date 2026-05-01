@@ -347,7 +347,7 @@
   }
 
   function apiBase() {
-    return (window.OST_API_BASE || window.OST_TOPUP_API || 'https://ost-api.nachogtavl.workers.dev').replace(/\/+$/, '');
+    return (window.OST_API_BASE || window.OST_TOPUP_API || 'https://ost-api-pages.pages.dev').replace(/\/+$/, '');
   }
 
   async function syncNow() {

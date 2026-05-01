@@ -290,7 +290,7 @@
   // Boot: read saved API base on page load
   (function () {
     // Default edge API endpoint (used when localStorage and inline config are absent).
-    var fallbackBase = 'https://ost-api.nachogtavl.workers.dev';
+    var fallbackBase = 'https://ost-api-pages.pages.dev';
     if (!window.OST_API_BASE) window.OST_API_BASE = fallbackBase;
     var saved = localStorage.getItem(API_BASE_KEY) || '';
     if (saved) {

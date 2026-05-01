@@ -56,7 +56,7 @@ as `TREASURY_USDC_MAINNET` and `TREASURY_SOL_MAINNET`. Edit and redeploy.
 
 In the Stripe dashboard → Developers → Webhooks → "Add endpoint":
 
-- URL: `https://ost-api.nachogtavl.workers.dev/topup/stripe/webhook`
+- URL: `https://ost-api-pages.pages.dev/topup/stripe/webhook`
 - Events: `checkout.session.completed`
 - Copy the signing secret into `STRIPE_WEBHOOK_SECRET` above.
 
@@ -66,7 +66,7 @@ The treasury private key never leaves the operator's machine.
 
 ```powershell
 npm install @solana/web3.js @solana/spl-token bs58
-$env:OST_API_BASE        = "https://ost-api.nachogtavl.workers.dev"
+$env:OST_API_BASE        = "https://ost-api-pages.pages.dev"
 $env:TOPUP_ADMIN_TOKEN   = "<same secret as the worker>"
 $env:TREASURY_SECRET_B58 = "<base58 secret key of treasury devnet wallet>"
 node scripts/topup-dispatcher.js --watch

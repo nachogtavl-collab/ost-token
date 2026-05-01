@@ -1,0 +1,19 @@
+name = "ost-api-pages"
+pages_build_output_dir = "./dist"
+compatibility_date = "2025-01-01"
+
+[placement]
+mode = "smart"
+
+[[kv_namespaces]]
+binding = "OST_KV"
+id = "fb5ef8073fd5408fa2d7336e7e0b9fd8"
+
+[vars]
+GAMMA_BASE = "https://gamma-api.polymarket.com"
+CLOB_BASE  = "https://clob.polymarket.com"
+DATA_BASE  = "https://data-api.polymarket.com"
+PUBLIC_SITE_URL = "https://nachogtavl-collab.github.io/ost-token/"
+TREASURY_USDC_MAINNET = "Fm7ErbkWzPMpqJ2MdT2LR1oyAHNMvAQxmCXVM7KxGRrM"
+TREASURY_SOL_MAINNET  = "Fm7ErbkWzPMpqJ2MdT2LR1oyAHNMvAQxmCXVM7KxGRrM"
+OST_MINT = "383pTzoZ8Gp83dzk23ZnvLcfX2Sq32TAGN48CMQu2pAJ"

@@ -7,7 +7,7 @@
  * marks each intent as `sent`.
  *
  * RUN:
- *   $env:OST_API_BASE        = "https://ost-api.nachogtavl.workers.dev"
+ *   $env:OST_API_BASE        = "https://ost-api-pages.pages.dev"
  *   $env:TOPUP_ADMIN_TOKEN   = "<same secret you set on the worker>"
  *   $env:TREASURY_SECRET_B58 = "<base58-encoded treasury secret key>"
  *   $env:DEVNET_RPC          = "https://api.devnet.solana.com"   # optional

@@ -5540,10 +5540,10 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <!-- RPC multiplexer: every Connection instance auto-fails-over and broadcast-sends.
        MUST load BEFORE app.js so all connections built by the app inherit the wrapper. -->
   <script src="rpc-multiplexer.js?v=1"></script>
-    <!-- OST API edge worker: CORS-safe Polymarket proxy, CLOB history, and shared position feed.
-      MUST load BEFORE app.js so the first market fetch uses the live worker instead of stale fallbacks. -->
+    <!-- OST API endpoint: CORS-safe Polymarket proxy, CLOB history, and shared position feed.
+      MUST load BEFORE app.js so the first market fetch uses the live API instead of stale fallbacks. -->
     <script>
-      window.OST_API_BASE = "https://ost-api.nachogtavl.workers.dev";
+      window.OST_API_BASE = "https://ost-api-pages.pages.dev";
       window.OST_POLY_RELAY_URL = window.OST_API_BASE;
     </script>
     <script src="native-markets.js?v=3"></script>
