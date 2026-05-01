@@ -1,4 +1,5 @@
 import { handleGhostRequest } from './ghost.js';
+import { handleGhostPqRequest } from './ghost-pq.js';
 
 /**
  * OST Prediction API Server — Cloudflare Worker
@@ -570,6 +571,9 @@ export default {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
 
+    const ghostPqResponse = await handleGhostPqRequest(request, env, { path, method });
+    if (ghostPqResponse) return ghostPqResponse;
+
     const ghostResponse = await handleGhostRequest(request, env, { path, method });
     if (ghostResponse) return ghostResponse;
 
@@ -621,6 +625,11 @@ export default {
           'POST /ghost/missions/:id/retry',
           'GET  /ghost/mesh',
           'POST /ghost/mesh/share',
+          'GET  /ghost/pq/policy',
+          'POST /ghost/pq/enroll',
+          'GET  /ghost/pq/devices',
+          'GET  /ghost/pq/devices/:id',
+          'POST /ghost/pq/envelope/verify',
           'GET  /launchpad/coins',
           'POST /launchpad/coins',
           'POST /launchpad/trade',

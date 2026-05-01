@@ -2858,6 +2858,53 @@
                 <pre id="ghostNetworkMemory" style="margin:10px 0 0;white-space:pre-wrap;word-break:break-word;color:#e2e8f0;font-size:.82rem;line-height:1.6;font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;">No mesh memory synced yet.</pre>
               </div>
             </div>
+
+            <div style="margin-top:18px;padding:16px;border-radius:18px;border:1px solid rgba(56,189,248,0.25);background:linear-gradient(135deg,rgba(15,23,42,0.85),rgba(8,47,73,0.55));">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                <span style="font-size:1.1rem;">🔐</span>
+                <div>
+                  <div style="font-weight:700;color:#e2e8f0;">Quantum-Resistant Mesh (Phase 1)</div>
+                  <div style="font-size:.78rem;color:#94a3b8;">Hybrid envelope: real Ed25519 today, ML-DSA / ML-KEM slot reserved for upgrade. All keys stay in this browser unless you enroll.</div>
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;align-items:end;">
+                <label style="display:flex;flex-direction:column;gap:4px;font-size:.78rem;color:#94a3b8;">
+                  Device label
+                  <input id="ghostPqLabel" type="text" placeholder="e.g. lab phone" style="padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:rgba(15,23,42,0.7);color:#e2e8f0;font-size:.85rem;" />
+                </label>
+                <label style="display:flex;flex-direction:column;gap:4px;font-size:.78rem;color:#94a3b8;">
+                  Operator enroll token
+                  <input id="ghostPqToken" type="password" placeholder="GHOST_ENROLL_TOKEN" autocomplete="off" style="padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:rgba(15,23,42,0.7);color:#e2e8f0;font-size:.85rem;" />
+                </label>
+                <label style="display:flex;flex-direction:column;gap:4px;font-size:.78rem;color:#94a3b8;">
+                  Message to sign
+                  <input id="ghostPqMessage" type="text" placeholder="Hello from the Ghost mesh." style="padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:rgba(15,23,42,0.7);color:#e2e8f0;font-size:.85rem;" />
+                </label>
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;">
+                <button class="btn btn-primary btn-sm" id="ghostPqGenerateBtn" type="button">Generate Device Key</button>
+                <button class="btn btn-outline btn-sm" id="ghostPqEnrollBtn" type="button">Enroll With Worker</button>
+                <button class="btn btn-outline btn-sm" id="ghostPqSignBtn" type="button">Sign Envelope</button>
+                <button class="btn btn-outline btn-sm" id="ghostPqVerifyBtn" type="button">Verify Via Worker</button>
+                <button class="btn btn-outline btn-sm" id="ghostPqPolicyBtn" type="button">Show PQ Policy</button>
+                <button class="btn btn-ghost btn-sm" id="ghostPqResetBtn" type="button">Wipe Device</button>
+              </div>
+              <div id="ghostPqStatus" style="margin-top:10px;font-size:.82rem;color:#cbd5e1;">Ready. Generate a device key to begin.</div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:12px;">
+                <div style="padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,0.08);background:rgba(15,23,42,0.62);">
+                  <div style="font-size:.74rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8;">Local Device</div>
+                  <pre id="ghostPqDevice" style="margin:8px 0 0;white-space:pre-wrap;word-break:break-word;color:#e2e8f0;font-size:.78rem;line-height:1.55;font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;">No device generated yet.</pre>
+                </div>
+                <div style="padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,0.08);background:rgba(15,23,42,0.62);">
+                  <div style="font-size:.74rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8;">Signed Envelope</div>
+                  <pre id="ghostPqEnvelope" style="margin:8px 0 0;white-space:pre-wrap;word-break:break-word;color:#e2e8f0;font-size:.78rem;line-height:1.55;font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;"></pre>
+                </div>
+                <div style="padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,0.08);background:rgba(15,23,42,0.62);">
+                  <div style="font-size:.74rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8;">Worker Verdict / Policy</div>
+                  <pre id="ghostPqVerify" style="margin:8px 0 0;white-space:pre-wrap;word-break:break-word;color:#e2e8f0;font-size:.78rem;line-height:1.55;font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;"></pre>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -5651,6 +5698,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
     </script>
     <script src="native-markets.js?v=3"></script>
     <script src="app.js?v=108"></script>
+    <script src="ghost-pq.js?v=1"></script>
   <script src="nuevo-laredo-gas.js?v=1"></script>
   <script src="shop-quickview.js?v=1"></script>
   <script src="interchange-live.js?v=1"></script>
