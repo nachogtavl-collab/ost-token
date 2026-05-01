@@ -229,6 +229,100 @@ function mergeNewest(bucket, record, limit = 100) {
   return next.slice(0, limit);
 }
 
+// ── Top-Up helpers ───────────────────────────────────────────────────────────
+// Tier table is the single source of truth (server-validated). Front-end
+// shows the same numbers but always re-validates here on intent creation.
+const TOPUP_TIERS = {
+  5:  { usd: 5,  ostAmount: 1200  },
+  10: { usd: 10, ostAmount: 3000  },
+  25: { usd: 25, ostAmount: 9000  },
+  50: { usd: 50, ostAmount: 20000 }
+};
+
+function isLikelySolanaAddress(s) {
+  return typeof s === 'string' && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(s.trim());
+}
+
+function shortMemo() {
+  // 12-char base32-ish memo, easy to type into a memo field.
+  const bytes = new Uint8Array(8);
+  crypto.getRandomValues(bytes);
+  return 'OST-' + Array.from(bytes, b => b.toString(36).padStart(2, '0')).join('').slice(0, 10).toUpperCase();
+}
+
+function buildPublicSiteUrl(env, request) {
+  return env.PUBLIC_SITE_URL || 'https://nachogtavl-collab.github.io/ost-token/';
+}
+
+async function stripeApi(env, path, formObj) {
+  const body = new URLSearchParams();
+  function add(prefix, value) {
+    if (value === null || value === undefined) return;
+    if (Array.isArray(value)) {
+      value.forEach((v, i) => add(`${prefix}[${i}]`, v));
+    } else if (typeof value === 'object') {
+      for (const k of Object.keys(value)) add(`${prefix}[${k}]`, value[k]);
+    } else {
+      body.append(prefix, String(value));
+    }
+  }
+  for (const k of Object.keys(formObj || {})) add(k, formObj[k]);
+  const r = await fetch(`https://api.stripe.com${path}`, {
+    method: 'POST',
+    headers: {
+      'authorization': `Bearer ${env.STRIPE_SECRET_KEY}`,
+      'content-type': 'application/x-www-form-urlencoded'
+    },
+    body
+  });
+  const j = await r.json().catch(() => ({}));
+  return { ok: r.ok, status: r.status, body: j };
+}
+
+// Verify Stripe webhook signature: header `Stripe-Signature: t=<ts>,v1=<sig>,...`
+async function verifyStripeSignature(rawBody, sigHeader, secret) {
+  if (!sigHeader || !secret) return false;
+  const parts = Object.fromEntries(sigHeader.split(',').map(p => {
+    const idx = p.indexOf('='); return [p.slice(0, idx).trim(), p.slice(idx + 1).trim()];
+  }));
+  const t = parts.t; const v1 = parts.v1;
+  if (!t || !v1) return false;
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey('raw', enc.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const macBuf = await crypto.subtle.sign('HMAC', key, enc.encode(`${t}.${rawBody}`));
+  const mac = Array.from(new Uint8Array(macBuf), b => b.toString(16).padStart(2, '0')).join('');
+  // Constant-time compare
+  if (mac.length !== v1.length) return false;
+  let diff = 0;
+  for (let i = 0; i < mac.length; i++) diff |= mac.charCodeAt(i) ^ v1.charCodeAt(i);
+  return diff === 0;
+}
+
+async function loadIntent(env, id) {
+  if (!id) return null;
+  return await kvGet(env, `topup:intent:${id}`);
+}
+async function saveIntent(env, intent) {
+  // 30-day TTL
+  await kvPut(env, `topup:intent:${intent.id}`, intent, 60 * 60 * 24 * 30);
+}
+async function pushQueue(env, id) {
+  const q = (await kvGet(env, 'topup:queue', [])).filter(x => x !== id);
+  q.unshift(id);
+  await kvPut(env, 'topup:queue', q.slice(0, 500));
+}
+async function removeQueue(env, id) {
+  const q = (await kvGet(env, 'topup:queue', [])).filter(x => x !== id);
+  await kvPut(env, 'topup:queue', q);
+}
+
+function adminAuthorized(request, env) {
+  if (!env.TOPUP_ADMIN_TOKEN) return false;
+  const h = request.headers.get('authorization') || '';
+  return h === `Bearer ${env.TOPUP_ADMIN_TOKEN}`;
+}
+
 // ── router ───────────────────────────────────────────────────────────────────
 
 export default {
@@ -608,6 +702,180 @@ export default {
       if (!env.OST_KV) return json({ ticks: [] });
       const ticks = await kvGet(env, `launchpad:ticks:${mint}`, []);
       return json({ ticks, ts: new Date().toISOString() });
+    }
+
+    // ── TOP-UP: real-money OST refill ───────────────────────────────────────
+    // Tier table + receivers + Stripe enable flag.
+    if (path === '/topup/config' && method === 'GET') {
+      return json({
+        tiers: Object.entries(TOPUP_TIERS).map(([id, t]) => ({ id: Number(id), usd: t.usd, ostAmount: t.ostAmount })),
+        stripeEnabled: !!env.STRIPE_SECRET_KEY,
+        receivers: {
+          usdcMainnet: env.TREASURY_USDC_MAINNET || null,
+          solMainnet:  env.TREASURY_SOL_MAINNET  || null
+        },
+        ostMint: env.OST_MINT || '383pTzoZ8Gp83dzk23ZnvLcfX2Sq32TAGN48CMQu2pAJ',
+        cluster: 'devnet'
+      });
+    }
+
+    // Create an intent (validated against TOPUP_TIERS).
+    if (path === '/topup/intent' && method === 'POST') {
+      let body; try { body = await request.json(); } catch { return json({ error: 'invalid_json' }, 400); }
+      const tierId = Number(body && body.tier);
+      const tier = TOPUP_TIERS[tierId];
+      if (!tier) return json({ error: 'invalid_tier' }, 400);
+      const wallet = String(body.wallet || '').trim();
+      if (!isLikelySolanaAddress(wallet)) return json({ error: 'invalid_wallet' }, 400);
+      const method2 = body.method === 'crypto' ? 'crypto' : 'stripe';
+      if (!env.OST_KV) return json({ error: 'kv_not_configured' }, 503);
+
+      const intent = {
+        id: crypto.randomUUID(),
+        memo: shortMemo(),
+        tier: tierId,
+        usd: tier.usd,
+        ostAmount: tier.ostAmount,
+        wallet,
+        method: method2,
+        status: 'pending',          // pending → paid → sent (or cancelled)
+        signature: null,
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
+      await saveIntent(env, intent);
+      return json({ id: intent.id, memo: intent.memo, ostAmount: intent.ostAmount, status: intent.status });
+    }
+
+    // Create a Stripe Checkout session for an existing intent.
+    if (path === '/topup/checkout' && method === 'POST') {
+      if (!env.STRIPE_SECRET_KEY) return json({ error: 'stripe_not_configured' }, 503);
+      let body; try { body = await request.json(); } catch { return json({ error: 'invalid_json' }, 400); }
+      const intent = await loadIntent(env, body && body.intentId);
+      if (!intent) return json({ error: 'intent_not_found' }, 404);
+      if (intent.status !== 'pending') return json({ error: 'intent_not_pending', status: intent.status }, 409);
+
+      const site = buildPublicSiteUrl(env, request);
+      const successUrl = `${site}${site.includes('?') ? '&' : '?'}topup=success&intent=${intent.id}#new-here`;
+      const cancelUrl  = `${site}${site.includes('?') ? '&' : '?'}topup=cancel&intent=${intent.id}#new-here`;
+
+      const r = await stripeApi(env, '/v1/checkout/sessions', {
+        mode: 'payment',
+        success_url: successUrl,
+        cancel_url:  cancelUrl,
+        client_reference_id: intent.id,
+        metadata: { intent_id: intent.id, wallet: intent.wallet, ost_amount: String(intent.ostAmount) },
+        'line_items': [{
+          quantity: 1,
+          price_data: {
+            currency: 'usd',
+            unit_amount: intent.usd * 100,
+            product_data: {
+              name: `OST Top-Up — ${intent.ostAmount.toLocaleString()} OST`,
+              description: `Devnet OST delivered to ${intent.wallet.slice(0, 8)}…${intent.wallet.slice(-6)}`
+            }
+          }
+        }]
+      });
+      if (!r.ok) return json({ error: 'stripe_error', detail: r.body }, 502);
+      const session = r.body;
+      // Map session → intent so the webhook can resolve it.
+      await kvPut(env, `topup:stripe:${session.id}`, intent.id, 60 * 60 * 24 * 30);
+      intent.stripeSessionId = session.id;
+      intent.updatedAt = Date.now();
+      await saveIntent(env, intent);
+      return json({ url: session.url, sessionId: session.id });
+    }
+
+    // Stripe webhook receiver. MUST verify the signature with the raw body.
+    if (path === '/topup/stripe/webhook' && method === 'POST') {
+      if (!env.STRIPE_WEBHOOK_SECRET) return json({ error: 'webhook_not_configured' }, 503);
+      const sig = request.headers.get('stripe-signature') || '';
+      const raw = await request.text();
+      const ok = await verifyStripeSignature(raw, sig, env.STRIPE_WEBHOOK_SECRET);
+      if (!ok) return json({ error: 'bad_signature' }, 400);
+      let evt; try { evt = JSON.parse(raw); } catch { return json({ error: 'bad_json' }, 400); }
+      if (evt.type === 'checkout.session.completed') {
+        const session = evt.data && evt.data.object;
+        const intentId = (session && session.client_reference_id) ||
+                         (session && session.metadata && session.metadata.intent_id) ||
+                         await kvGet(env, `topup:stripe:${session && session.id}`);
+        if (intentId) {
+          const intent = await loadIntent(env, intentId);
+          if (intent && intent.status === 'pending') {
+            intent.status = 'paid';
+            intent.paidAt = Date.now();
+            intent.updatedAt = Date.now();
+            intent.paymentRef = session.payment_intent || session.id;
+            await saveIntent(env, intent);
+            await pushQueue(env, intent.id);
+          }
+        }
+      }
+      return json({ received: true });
+    }
+
+    // Public status polling.
+    const statusMatch = path.match(/^\/topup\/status\/([^/]+)$/);
+    if (statusMatch && method === 'GET') {
+      const intent = await loadIntent(env, decodeURIComponent(statusMatch[1]));
+      if (!intent) return json({ error: 'not_found' }, 404);
+      return json({
+        id: intent.id,
+        status: intent.status,
+        ostAmount: intent.ostAmount,
+        signature: intent.signature || null,
+        wallet: intent.wallet,
+        memo: intent.memo,
+        updatedAt: intent.updatedAt
+      });
+    }
+
+    // Admin: list paid-but-not-sent intents (for the dispatcher).
+    if (path === '/topup/admin/pending' && method === 'GET') {
+      if (!adminAuthorized(request, env)) return json({ error: 'unauthorized' }, 401);
+      const ids = await kvGet(env, 'topup:queue', []);
+      const out = [];
+      for (const id of ids.slice(0, 50)) {
+        const it = await loadIntent(env, id);
+        if (it && it.status === 'paid') out.push(it);
+      }
+      return json({ pending: out, count: out.length });
+    }
+
+    // Admin: mark intent as sent (called by the dispatcher after transferChecked).
+    if (path === '/topup/admin/mark-sent' && method === 'POST') {
+      if (!adminAuthorized(request, env)) return json({ error: 'unauthorized' }, 401);
+      let body; try { body = await request.json(); } catch { return json({ error: 'invalid_json' }, 400); }
+      const intent = await loadIntent(env, body && body.id);
+      if (!intent) return json({ error: 'not_found' }, 404);
+      intent.status = 'sent';
+      intent.signature = String(body.signature || '').slice(0, 128) || null;
+      intent.sentAt = Date.now();
+      intent.updatedAt = Date.now();
+      await saveIntent(env, intent);
+      await removeQueue(env, intent.id);
+      const recent = await kvGet(env, 'topup:sent', []);
+      recent.unshift({ id: intent.id, ostAmount: intent.ostAmount, wallet: intent.wallet, signature: intent.signature, sentAt: intent.sentAt });
+      await kvPut(env, 'topup:sent', recent.slice(0, 200));
+      return json({ ok: true, intent });
+    }
+
+    // Admin: manually confirm a crypto payment (for the on-chain receivers).
+    if (path === '/topup/admin/confirm-crypto' && method === 'POST') {
+      if (!adminAuthorized(request, env)) return json({ error: 'unauthorized' }, 401);
+      let body; try { body = await request.json(); } catch { return json({ error: 'invalid_json' }, 400); }
+      const intent = await loadIntent(env, body && body.id);
+      if (!intent) return json({ error: 'not_found' }, 404);
+      if (intent.status === 'pending') {
+        intent.status = 'paid';
+        intent.paidAt = Date.now();
+        intent.updatedAt = Date.now();
+        intent.paymentRef = String(body.txSignature || '').slice(0, 128) || 'manual';
+        await saveIntent(env, intent);
+        await pushQueue(env, intent.id);
+      }
+      return json({ ok: true, intent });
     }
 
     return json({ error: 'not_found', message: 'Unknown endpoint. GET /health for the full endpoint list.' }, 404);

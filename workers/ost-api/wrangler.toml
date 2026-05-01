@@ -15,3 +15,16 @@ id = "fb5ef8073fd5408fa2d7336e7e0b9fd8"
 GAMMA_BASE = "https://gamma-api.polymarket.com"
 CLOB_BASE  = "https://clob.polymarket.com"
 DATA_BASE  = "https://data-api.polymarket.com"
+
+# ---- Top-Up (real-money OST refill) ----
+# Public site URL Stripe uses for success/cancel redirects.
+PUBLIC_SITE_URL = "https://nachogtavl-collab.github.io/ost-token/"
+# Mainnet receivers shown in the crypto modal (override per env).
+TREASURY_USDC_MAINNET = ""
+TREASURY_SOL_MAINNET  = ""
+# Devnet OST mint (Token-2022). Source of truth: mint-info.json.
+OST_MINT = "383pTzoZ8Gp83dzk23ZnvLcfX2Sq32TAGN48CMQu2pAJ"
+
+# Secrets — set via:  npx wrangler secret put STRIPE_SECRET_KEY
+#                     npx wrangler secret put STRIPE_WEBHOOK_SECRET
+#                     npx wrangler secret put TOPUP_ADMIN_TOKEN

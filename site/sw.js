@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v1';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v1';
+const CACHE_NAME = 'ost-pwa-cache-v2';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v2';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -22,6 +22,7 @@ const PRECACHE_PATHS = [
   './ost-console.css?v=1',
   './prediction-scalar.css?v=1',
   './faucet-hub.css?v=4',
+  './topup.css?v=1',
   './rpc-multiplexer.js?v=1',
   './app.js?v=99',
   './nuevo-laredo-gas.js?v=1',
@@ -47,6 +48,7 @@ const PRECACHE_PATHS = [
   './i18n-runtime.js?v=1',
   './devnet-rescue.js?v=4',
   './launchpad-trenches.js?v=2',
+  './topup.js?v=1',
   'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
   'https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',

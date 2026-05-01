@@ -43,6 +43,7 @@
   <link rel="stylesheet" href="ost-console.css?v=1">
   <link rel="stylesheet" href="prediction-scalar.css?v=1">
   <link rel="stylesheet" href="faucet-hub.css?v=4">
+  <link rel="stylesheet" href="topup.css?v=1">
 </head>
 <body>
 
@@ -304,7 +305,13 @@
         <button class="btn btn-primary btn-glow faucet-btn" id="claimFaucetBtn"><span class="pay-icon">&#9673;</span> <span data-i18n="getost.faucetbtn">Claim 100 OST Head Start</span></button>
         <div class="faucet-status" id="faucetStatus"></div>
       </div>
+!-- ============================================================ -->
+      <!-- Top-Up: real-money OST refill (Stripe + Crypto) -->
+      <!-- Rendered by topup.js. Section element is required. -->
+      <!-- ============================================================ -->
+      <section class="topup-section" id="topup-section" aria-label="Top up real OST"></section>
 
+      <
       <div class="grow-vaults-section" id="growVaults" style="margin-top:64px;">
         <div class="gv-header">
           <div class="gv-icon-ring"><span>&#128118;</span></div>
@@ -5488,6 +5495,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="ost-onchain-bet.js?v=1"></script>
   <script src="ux-extras.js?v=3"></script>
   <script src="faucet-hub.js?v=12"></script>
+  <script src="topup.js?v=1"></script>
   <script src="faucet-hub-ads.js?v=2"></script>
   <script src="ost-games.js?v=11"></script>
   <script src="code-academy.js?v=3"></script>

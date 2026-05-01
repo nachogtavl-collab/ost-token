@@ -1,0 +1,173 @@
+/* ============================================================
+   OST Top-Up — "Keep Playing" real-money OST refill
+   ============================================================
+   Pairs with topup.js. Designed to slot in after the free
+   faucet section inside #new-here. Uses the same dark + cyan
+   palette as the rest of the site.
+   ============================================================ */
+
+.topup-section {
+  margin-top: 64px;
+  padding: 36px 28px;
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.06), rgba(255, 200, 60, 0.04));
+  border: 1px solid rgba(0, 212, 255, 0.25);
+  border-radius: 20px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.topup-section::before {
+  content: "";
+  position: absolute; inset: -1px;
+  background: linear-gradient(120deg, transparent 30%, rgba(0,212,255,0.18), transparent 70%);
+  opacity: 0.35; pointer-events: none;
+  animation: topupShimmer 9s linear infinite;
+}
+@keyframes topupShimmer { from { transform: translateX(-30%);} to { transform: translateX(30%);} }
+
+.topup-section h3 {
+  font-size: 28px; margin: 0 0 8px;
+  background: linear-gradient(90deg, #00d4ff, #ffd166);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+.topup-section .topup-sub { color: #cfd8e3; max-width: 640px; margin: 0 auto 28px; line-height: 1.5; }
+
+.topup-tier-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  max-width: 880px; margin: 0 auto 26px;
+}
+.topup-tier {
+  background: rgba(10, 16, 28, 0.85);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px; padding: 20px 14px 18px;
+  cursor: pointer; transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+  position: relative;
+}
+.topup-tier:hover { transform: translateY(-3px); border-color: rgba(0,212,255,0.55); box-shadow: 0 12px 32px rgba(0,212,255,0.18); }
+.topup-tier.selected { border-color: #00d4ff; box-shadow: 0 0 0 2px rgba(0,212,255,0.35), 0 14px 36px rgba(0,212,255,0.25); }
+.topup-tier.recommended::after {
+  content: "BEST VALUE"; position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+  background: linear-gradient(90deg,#ffd166,#ff7e5f); color: #1a1004;
+  font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 999px; letter-spacing: 0.08em;
+}
+.topup-tier-price { font-size: 28px; font-weight: 700; color: #00d4ff; }
+.topup-tier-base  { font-size: 13px; color: #9aa6b3; margin-top: 4px; }
+.topup-tier-bonus { font-size: 12px; color: #ffd166; margin-top: 2px; font-weight: 600; }
+.topup-tier-total { font-size: 18px; color: #fff; margin-top: 10px; font-weight: 600; }
+.topup-tier-total small { color: #9aa6b3; font-weight: 400; font-size: 12px; }
+
+.topup-cta {
+  display: inline-flex; align-items: center; gap: 8px;
+  margin-top: 6px; padding: 14px 28px;
+  background: linear-gradient(90deg, #00d4ff, #0091c4);
+  color: #04111a; border: none; border-radius: 999px;
+  font-size: 16px; font-weight: 700; cursor: pointer;
+  box-shadow: 0 10px 30px rgba(0,212,255,0.35);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.topup-cta:hover { transform: translateY(-2px); box-shadow: 0 14px 36px rgba(0,212,255,0.45); }
+.topup-cta:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.topup-mission {
+  margin-top: 20px; padding: 14px 18px; max-width: 720px; margin-left: auto; margin-right: auto;
+  background: rgba(0,0,0,0.25); border-radius: 12px;
+  font-size: 13px; color: #b8c2cf; line-height: 1.55; border: 1px dashed rgba(255,209,102,0.25);
+}
+.topup-mission strong { color: #ffd166; }
+
+/* ---------- Modal ---------- */
+.topup-modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.78);
+  display: none; align-items: center; justify-content: center;
+  z-index: 9999; padding: 16px; backdrop-filter: blur(6px);
+}
+.topup-modal-overlay.open { display: flex; }
+.topup-modal {
+  background: #0a1320; border: 1px solid rgba(0,212,255,0.35); border-radius: 18px;
+  width: 100%; max-width: 480px; padding: 26px 22px 22px; position: relative;
+  box-shadow: 0 24px 70px rgba(0,0,0,0.6);
+  max-height: 92vh; overflow-y: auto;
+}
+.topup-modal-close {
+  position: absolute; top: 12px; right: 14px;
+  background: transparent; border: none; color: #9aa6b3;
+  font-size: 26px; cursor: pointer; line-height: 1;
+}
+.topup-modal-close:hover { color: #fff; }
+.topup-modal h4 { margin: 0 0 6px; font-size: 22px; color: #fff; }
+.topup-modal .topup-modal-sub { color: #9aa6b3; font-size: 13px; margin-bottom: 18px; }
+
+.topup-summary {
+  background: rgba(0,212,255,0.06); border: 1px solid rgba(0,212,255,0.2);
+  border-radius: 12px; padding: 14px 16px; margin-bottom: 18px; text-align: left;
+}
+.topup-summary-row { display: flex; justify-content: space-between; font-size: 14px; color: #cfd8e3; padding: 3px 0; }
+.topup-summary-row.total { color: #ffd166; font-weight: 700; border-top: 1px dashed rgba(255,255,255,0.12); margin-top: 6px; padding-top: 8px; }
+
+.topup-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+.topup-tab {
+  flex: 1; padding: 10px 12px; background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08); border-radius: 10px;
+  color: #cfd8e3; cursor: pointer; font-size: 14px; font-weight: 500;
+}
+.topup-tab.active { background: rgba(0,212,255,0.18); border-color: #00d4ff; color: #fff; }
+
+.topup-pane { display: none; }
+.topup-pane.active { display: block; }
+
+.topup-field { margin-bottom: 12px; text-align: left; }
+.topup-field label { display: block; font-size: 12px; color: #9aa6b3; margin-bottom: 4px; }
+.topup-field input {
+  width: 100%; padding: 10px 12px; background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.12); border-radius: 8px;
+  color: #fff; font-family: inherit; font-size: 13px;
+  box-sizing: border-box;
+}
+.topup-field input:focus { outline: none; border-color: #00d4ff; }
+.topup-field .topup-hint { font-size: 11px; color: #6f7a87; margin-top: 4px; }
+
+.topup-action {
+  width: 100%; padding: 13px; margin-top: 6px;
+  background: linear-gradient(90deg, #00d4ff, #0091c4);
+  color: #04111a; border: none; border-radius: 10px;
+  font-size: 15px; font-weight: 700; cursor: pointer;
+}
+.topup-action:disabled { opacity: 0.5; cursor: not-allowed; }
+.topup-action.secondary { background: rgba(255,255,255,0.08); color: #fff; }
+
+.topup-crypto-card {
+  background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px; padding: 12px 14px; margin-bottom: 12px;
+}
+.topup-crypto-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 13px; }
+.topup-crypto-row + .topup-crypto-row { margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(255,255,255,0.1); }
+.topup-crypto-label { color: #9aa6b3; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+.topup-crypto-value {
+  font-family: 'SFMono-Regular', Menlo, monospace; font-size: 12px;
+  color: #fff; word-break: break-all; text-align: right;
+}
+.topup-copy-btn {
+  background: rgba(0,212,255,0.15); color: #00d4ff;
+  border: 1px solid rgba(0,212,255,0.4); border-radius: 6px;
+  font-size: 11px; padding: 4px 9px; cursor: pointer; flex-shrink: 0;
+}
+.topup-copy-btn:hover { background: rgba(0,212,255,0.25); }
+
+.topup-status {
+  margin-top: 12px; padding: 10px 12px; border-radius: 8px;
+  font-size: 13px; display: none;
+}
+.topup-status.show { display: block; }
+.topup-status.info  { background: rgba(0,212,255,0.1); color: #9fdcff; border: 1px solid rgba(0,212,255,0.35); }
+.topup-status.warn  { background: rgba(255,209,102,0.1); color: #ffd166; border: 1px solid rgba(255,209,102,0.4); }
+.topup-status.error { background: rgba(255,80,80,0.1); color: #ff8080; border: 1px solid rgba(255,80,80,0.4); }
+.topup-status.ok    { background: rgba(80,255,160,0.08); color: #7fffaf; border: 1px solid rgba(80,255,160,0.35); }
+
+@media (max-width: 520px) {
+  .topup-section { padding: 28px 16px; }
+  .topup-section h3 { font-size: 22px; }
+  .topup-tier-price { font-size: 22px; }
+  .topup-tier-total { font-size: 15px; }
+}
