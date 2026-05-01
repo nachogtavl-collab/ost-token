@@ -5994,6 +5994,387 @@
     logBody.scrollTop = logBody.scrollHeight;
   }
 
+  const ghostConnectorMeta = {
+    openai: { label: 'OpenAI', protocols: ['LLM', 'JSON', 'Tool Calling'] },
+    anthropic: { label: 'Anthropic', protocols: ['LLM', 'Proxy', 'Messages API'] },
+    telegram: { label: 'Telegram', protocols: ['Bot API', 'Webhook'] },
+    discord: { label: 'Discord', protocols: ['Gateway', 'Bot Token'] },
+    webhook: { label: 'Webhook', protocols: ['HTTP', 'POST'] },
+    mcp: { label: 'MCP', protocols: ['stdio', 'SSE', 'Streamable HTTP'] },
+    claude: { label: 'Claude', protocols: ['LLM', 'Proxy', 'Messages API'] },
+    vscode: { label: 'VSCode', protocols: ['Editor', 'GitHub', 'Extension'] },
+    github: { label: 'GitHub', protocols: ['REST', 'Repo', 'Automation'] },
+    polymarket: { label: 'Polymarket', protocols: ['Markets', 'Strategy', 'Bot'] },
+    kalshi: { label: 'Kalshi', protocols: ['Markets', 'Contracts', 'Bot'] }
+  };
+  const ghostConnectorRegistry = Object.keys(ghostConnectorMeta).reduce((acc, key) => {
+    acc[key] = { connected: false, lastCheckedAt: 0 };
+    return acc;
+  }, {});
+  const ghostMissionInput = $('#ghostMissionInput');
+  const ghostMode = $('#ghostMode');
+  const ghostProtocol = $('#ghostProtocol');
+  const ghostComposeBtn = $('#ghostComposeBtn');
+  const ghostDispatchBtn = $('#ghostDispatchBtn');
+  const ghostClearBtn = $('#ghostClearBtn');
+  const ghostStatus = $('#ghostStatus');
+  const ghostMesh = $('#ghostMesh');
+  const ghostPacket = $('#ghostPacket');
+  const ghostResult = $('#ghostResult');
+  let ghostLastMission = null;
+
+  function getGhostConnectorKey(name) {
+    return String(name || '').trim().toLowerCase();
+  }
+
+  function getGhostConnectorLabel(name) {
+    const key = getGhostConnectorKey(name);
+    return ghostConnectorMeta[key] ? ghostConnectorMeta[key].label : String(name || 'Unknown');
+  }
+
+  function readGhostConnectorConfig(type) {
+    const key = getGhostConnectorKey(type);
+    if (key === 'openai') return { apiKey: $('#apiKeyOpenAI')?.value?.trim() || '', model: $('#modelOpenAI')?.value || 'gpt-4o' };
+    if (key === 'anthropic') return { apiKey: $('#apiKeyAnthropic')?.value?.trim() || '', model: $('#modelAnthropic')?.value || 'claude-sonnet-4-20250514' };
+    if (key === 'telegram') return { token: $('#apiKeyTelegram')?.value?.trim() || '', webhook: $('#webhookTelegram')?.value?.trim() || '' };
+    if (key === 'discord') return { token: $('#apiKeyDiscord')?.value?.trim() || '', guildId: $('#guildDiscord')?.value?.trim() || '' };
+    if (key === 'webhook') return { url: $('#apiKeyWebhook')?.value?.trim() || '', auth: $('#authWebhook')?.value?.trim() || '' };
+    if (key === 'mcp') return { url: $('#apiKeyMCP')?.value?.trim() || '', transport: $('#transportMCP')?.value || 'sse' };
+    if (key === 'claude') return { apiKey: $('#apiKeyClaude')?.value?.trim() || '', model: $('#modelClaude')?.value || 'claude-sonnet-4-20250514' };
+    if (key === 'vscode') return { token: $('#apiKeyVSCode')?.value?.trim() || '', extension: $('#extVSCode')?.value || 'copilot' };
+    if (key === 'github') return { token: $('#apiKeyGitHub')?.value?.trim() || '', repo: $('#repoGitHub')?.value?.trim() || '' };
+    if (key === 'polymarket') return { apiKey: $('#apiKeyPolymarket')?.value?.trim() || '', strategy: $('#strategyPolymarket')?.value || 'monitor' };
+    if (key === 'kalshi') return { apiKey: $('#apiKeyKalshi')?.value?.trim() || '', mode: $('#modeKalshi')?.value || 'paper' };
+    return {};
+  }
+
+  function getConnectedGhostConnectors() {
+    return Object.keys(ghostConnectorRegistry).filter((key) => ghostConnectorRegistry[key].connected);
+  }
+
+  function formatGhostConnectorList(keys) {
+    if (!keys || !keys.length) return 'none';
+    return keys.map((key) => getGhostConnectorLabel(key)).join(', ');
+  }
+
+  function setGhostStatus(text, tone = 'info') {
+    if (!ghostStatus) return;
+    ghostStatus.textContent = text || 'Ghost is idle.';
+    if (tone === 'success') ghostStatus.style.color = '#86efac';
+    else if (tone === 'error') ghostStatus.style.color = '#fca5a5';
+    else if (tone === 'warning') ghostStatus.style.color = '#fde68a';
+    else ghostStatus.style.color = '#cbd5e1';
+  }
+
+  function renderGhostConnectorMesh() {
+    if (!ghostMesh) return;
+    const connected = getConnectedGhostConnectors();
+    if (!connected.length) {
+      ghostMesh.textContent = 'No live connectors yet. Test one above to add it to Ghost\'s mesh.';
+      return;
+    }
+    ghostMesh.textContent = connected.map((key) => {
+      const meta = ghostConnectorMeta[key] || { protocols: [] };
+      const protocolLine = meta.protocols && meta.protocols.length ? meta.protocols.join(' / ') : 'generic';
+      return getGhostConnectorLabel(key) + ' -> ' + protocolLine;
+    }).join('\n');
+  }
+
+  function detectGhostIntent(prompt) {
+    const text = String(prompt || '').toLowerCase();
+    const intents = [];
+    if (/repo|code|commit|pull request|debug|build|deploy|sdk|typescript|python|rust/.test(text)) intents.push('code');
+    if (/market|trade|prediction|price|alpha|arbitrage|orderbook|kalshi|polymarket/.test(text)) intents.push('markets');
+    if (/protocol|api|http|webhook|mcp|json|binary|socket|signal/.test(text)) intents.push('protocol');
+    if (/search|current|latest|web|internet|research|google/.test(text)) intents.push('research');
+    if (/discord|telegram|chat|community|bot/.test(text)) intents.push('chat');
+    if (/satellite|mesh|radio|lora|uplink|relay/.test(text)) intents.push('signals');
+    if (!intents.length) intents.push('general');
+    return intents;
+  }
+
+  function chooseGhostConnectors(intents, mode) {
+    const connected = getConnectedGhostConnectors();
+    if (!connected.length) return [];
+    const priority = [];
+    if (intents.includes('code')) priority.push('github', 'vscode', 'mcp', 'openai', 'claude', 'anthropic');
+    if (intents.includes('markets')) priority.push('polymarket', 'kalshi', 'github', 'openai');
+    if (intents.includes('protocol')) priority.push('mcp', 'webhook', 'github', 'openai');
+    if (intents.includes('research')) priority.push('openai', 'claude', 'anthropic', 'github');
+    if (intents.includes('chat')) priority.push('telegram', 'discord', 'openai');
+    if (intents.includes('signals')) priority.push('webhook', 'mcp', 'telegram', 'github');
+    connected.forEach((key) => priority.push(key));
+    const ordered = Array.from(new Set(priority)).filter((key) => connected.includes(key));
+    if (mode === 'simple') return ordered.slice(0, 1);
+    if (mode === 'complex') return ordered.slice(0, 3);
+    return ordered;
+  }
+
+  function createGhostMissionEnvelope() {
+    const prompt = String(ghostMissionInput?.value || '').trim();
+    if (!prompt) throw new Error('Write a mission for OST Ghost first.');
+    const mode = ghostMode?.value || 'simple';
+    const protocol = ghostProtocol?.value || 'json';
+    const intents = detectGhostIntent(prompt);
+    const connectors = chooseGhostConnectors(intents, mode);
+    return {
+      id: 'ghost-' + Date.now().toString(36),
+      prompt,
+      mode,
+      protocol,
+      intents,
+      connectors,
+      createdAt: new Date().toISOString()
+    };
+  }
+
+  function toGhostBinary(text) {
+    return Array.from(String(text || '')).map((char) => char.charCodeAt(0).toString(2).padStart(8, '0')).join(' ');
+  }
+
+  function buildGhostPacket(mission) {
+    const envelope = {
+      ghost: 'OST Ghost',
+      id: mission.id,
+      mode: mission.mode,
+      intents: mission.intents,
+      connectors: mission.connectors,
+      prompt: mission.prompt,
+      createdAt: mission.createdAt
+    };
+    if (mission.protocol === 'natural') {
+      return [
+        'OST Ghost mission ' + mission.id,
+        'Mode: ' + mission.mode,
+        'Intents: ' + mission.intents.join(', '),
+        'Connectors: ' + formatGhostConnectorList(mission.connectors),
+        'Task: ' + mission.prompt
+      ].join('\n');
+    }
+    if (mission.protocol === 'http') {
+      return 'POST /ost/ghost/interoperate HTTP/1.1\nContent-Type: application/json\nX-OST-Ghost-Id: ' + mission.id + '\n\n' + JSON.stringify(envelope, null, 2);
+    }
+    if (mission.protocol === 'mcp') {
+      return JSON.stringify({ jsonrpc: '2.0', id: mission.id, method: 'ghost.interop', params: envelope }, null, 2);
+    }
+    if (mission.protocol === 'shell') {
+      const webhookUrl = $('#apiKeyWebhook')?.value?.trim() || 'https://your-webhook-endpoint';
+      return 'curl -X POST "' + webhookUrl + '" \\\n+  -H "Content-Type: application/json" \\\n+  -d ' + JSON.stringify(JSON.stringify(envelope));
+    }
+    if (mission.protocol === 'binary') {
+      return toGhostBinary(JSON.stringify(envelope));
+    }
+    return JSON.stringify(envelope, null, 2);
+  }
+
+  function buildGhostLocalSynthesis(mission) {
+    const lines = [];
+    lines.push('Ghost intent map -> ' + mission.intents.join(', '));
+    lines.push('Mode -> ' + mission.mode + '. Active mesh -> ' + formatGhostConnectorList(mission.connectors) + '.');
+    if (!mission.connectors.length) {
+      lines.push('No live external rail is connected yet. Ghost can still translate the mission into protocol packets locally, but it cannot leave the page until you connect a model, relay, or automation surface above.');
+    } else if (mission.mode === 'simple') {
+      lines.push('Simple mode keeps the route narrow: Ghost chose the single strongest connected rail for the mission.');
+    } else if (mission.mode === 'complex') {
+      lines.push('Complex mode fans the mission across a small execution set so Ghost can compare or bridge systems without flooding the mesh.');
+    } else {
+      lines.push('Mesh mode keeps every connected rail in play so Ghost can behave like an internet white blood cell moving across the full local mesh.');
+    }
+    if (mission.intents.includes('protocol')) lines.push('Protocol translation is active. Review the packet panel to see the mission translated into the selected transport.');
+    if (mission.intents.includes('markets')) lines.push('Market intent detected. Ghost will prioritize Polymarket, Kalshi, GitHub, and model rails when available.');
+    if (mission.intents.includes('code')) lines.push('Code intent detected. Ghost will prioritize GitHub, VS Code, MCP, and model rails when available.');
+    return lines.join('\n\n');
+  }
+
+  function buildGhostHandoff(type, mission) {
+    const key = getGhostConnectorKey(type);
+    const config = readGhostConnectorConfig(key);
+    if (key === 'mcp') {
+      return '[MCP handoff]\nTarget: ' + (config.url || 'unconfigured') + '\nTransport: ' + (config.transport || 'sse') + '\nPacket:\n' + JSON.stringify({ jsonrpc: '2.0', id: mission.id, method: 'ghost.interop', params: { prompt: mission.prompt, intents: mission.intents, mode: mission.mode } }, null, 2);
+    }
+    if (key === 'webhook') {
+      return '[Webhook handoff]\nEndpoint: ' + (config.url || 'unconfigured') + '\nGhost prepared a POST envelope that your server can accept and relay into any closed system.';
+    }
+    if (key === 'github') {
+      return '[GitHub handoff]\nRepo: ' + (config.repo || 'unconfigured') + '\nGhost can use GitHub as the code memory and automation rail for this mission.';
+    }
+    if (key === 'telegram' || key === 'discord') {
+      return '[' + getGhostConnectorLabel(key) + ' handoff]\nGhost can translate the mission into a bot relay packet for live operator or community routing.';
+    }
+    if (key === 'claude' || key === 'anthropic') {
+      return '[' + getGhostConnectorLabel(key) + ' bridge]\nModel: ' + (config.model || 'default') + '\nBrowser CORS prevents a direct call here, so Ghost prepared the mission for a relay, proxy, or MCP bridge.';
+    }
+    if (key === 'vscode') {
+      return '[VS Code bridge]\nExtension: ' + (config.extension || 'copilot') + '\nGhost can hand this mission to a local editor agent for repo-native execution.';
+    }
+    if (key === 'polymarket' || key === 'kalshi') {
+      return '[' + getGhostConnectorLabel(key) + ' strategy brief]\nGhost tagged the mission as market-aware and prepared it for ' + getGhostConnectorLabel(key) + ' execution or monitoring.';
+    }
+    return '[' + getGhostConnectorLabel(key) + ' handoff]\nGhost prepared a structured bridge packet for this rail.';
+  }
+
+  async function queryOpenAIGhost(mission) {
+    const config = readGhostConnectorConfig('openai');
+    if (!config.apiKey || !config.apiKey.startsWith('sk-')) throw new Error('OpenAI key is missing or invalid.');
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${config.apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: config.model || 'gpt-4o',
+        temperature: 0.2,
+        messages: [
+          {
+            role: 'system',
+            content: 'You are OST Ghost, a universal interoperability layer. Respond concisely with concrete next hops, protocol awareness, and cross-system reasoning.'
+          },
+          {
+            role: 'user',
+            content: mission.prompt
+          }
+        ]
+      })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data && data.error && data.error.message ? data.error.message : 'OpenAI API returned ' + response.status);
+    }
+    return data && data.choices && data.choices[0] && data.choices[0].message
+      ? data.choices[0].message.content
+      : 'OpenAI returned no content.';
+  }
+
+  function renderGhostMission(mission, output) {
+    if (ghostPacket) ghostPacket.textContent = buildGhostPacket(mission);
+    if (ghostResult) ghostResult.textContent = output;
+  }
+
+  function setGhostBusy(busy) {
+    if (ghostComposeBtn) ghostComposeBtn.disabled = !!busy;
+    if (ghostDispatchBtn) ghostDispatchBtn.disabled = !!busy;
+  }
+
+  function composeGhostMission() {
+    const mission = createGhostMissionEnvelope();
+    ghostLastMission = mission;
+    const summary = buildGhostLocalSynthesis(mission);
+    renderGhostMission(mission, summary);
+    setGhostStatus('Mission synthesized. Review the translated packet or dispatch it to the live mesh.', 'success');
+    addLog('OST Ghost synthesized mission ' + mission.id + '.', 'success');
+    return { mission, output: summary };
+  }
+
+  async function dispatchGhostMission() {
+    const mission = createGhostMissionEnvelope();
+    ghostLastMission = mission;
+    setGhostBusy(true);
+    setGhostStatus('Ghost is mapping the connected mesh...', 'warning');
+    addLog('OST Ghost dispatching mission ' + mission.id + ' across ' + (mission.connectors.length ? formatGhostConnectorList(mission.connectors) : 'local mode') + '.', 'info');
+    const outputs = [buildGhostLocalSynthesis(mission)];
+
+    try {
+      if (mission.connectors.includes('openai')) {
+        setGhostStatus('Ghost is querying OpenAI through the live mesh...', 'warning');
+        const liveAnswer = await queryOpenAIGhost(mission);
+        outputs.push('[OpenAI live response]\n' + liveAnswer);
+        addLog('OST Ghost received a live OpenAI response.', 'success');
+      }
+      mission.connectors.filter((key) => key !== 'openai').forEach((key) => {
+        outputs.push(buildGhostHandoff(key, mission));
+      });
+      if (!mission.connectors.length) {
+        outputs.push('No external rail is connected yet. Ghost stayed local and only produced the translated packet above.');
+      }
+      const finalOutput = outputs.join('\n\n---\n\n');
+      renderGhostMission(mission, finalOutput);
+      setGhostStatus(mission.connectors.length
+        ? 'Ghost dispatched the mission across the active mesh.'
+        : 'Ghost composed the mission locally. Connect more rails to expand reach.', mission.connectors.length ? 'success' : 'warning');
+      return { mission, output: finalOutput };
+    } finally {
+      setGhostBusy(false);
+    }
+  }
+
+  function clearGhostMission() {
+    ghostLastMission = null;
+    if (ghostMissionInput) ghostMissionInput.value = '';
+    if (ghostPacket) ghostPacket.textContent = 'Compose a mission to see Ghost\'s translated packet.';
+    if (ghostResult) ghostResult.textContent = 'Ghost is waiting for a mission.';
+    setGhostStatus('Ghost is idle. Connect rails above, then compose or dispatch a mission.', 'info');
+  }
+
+  if (ghostComposeBtn) {
+    ghostComposeBtn.addEventListener('click', () => {
+      try {
+        composeGhostMission();
+      } catch (error) {
+        const message = error && error.message ? error.message : String(error || 'Could not compose Ghost mission');
+        setGhostStatus(message, 'error');
+        if (ghostResult) ghostResult.textContent = message;
+        addLog('OST Ghost compose error: ' + message, 'error');
+      }
+    });
+  }
+
+  if (ghostDispatchBtn) {
+    ghostDispatchBtn.addEventListener('click', async () => {
+      try {
+        await dispatchGhostMission();
+      } catch (error) {
+        const message = error && error.message ? error.message : String(error || 'Could not dispatch Ghost mission');
+        setGhostStatus(message, 'error');
+        if (ghostResult) ghostResult.textContent = message;
+        addLog('OST Ghost dispatch error: ' + message, 'error');
+        setGhostBusy(false);
+      }
+    });
+  }
+
+  if (ghostClearBtn) ghostClearBtn.addEventListener('click', clearGhostMission);
+
+  window.OST_GHOST = {
+    getRegistry() {
+      return Object.keys(ghostConnectorRegistry).reduce((acc, key) => {
+        acc[key] = {
+          label: getGhostConnectorLabel(key),
+          connected: !!ghostConnectorRegistry[key].connected,
+          lastCheckedAt: ghostConnectorRegistry[key].lastCheckedAt,
+          protocols: (ghostConnectorMeta[key] && ghostConnectorMeta[key].protocols) || []
+        };
+        return acc;
+      }, {});
+    },
+    buildPacket(prompt, options = {}) {
+      if (typeof prompt === 'string' && ghostMissionInput) ghostMissionInput.value = prompt;
+      if (options.mode && ghostMode) ghostMode.value = options.mode;
+      if (options.protocol && ghostProtocol) ghostProtocol.value = options.protocol;
+      const mission = createGhostMissionEnvelope();
+      return buildGhostPacket(mission);
+    },
+    composeMission(prompt, options = {}) {
+      if (typeof prompt === 'string' && ghostMissionInput) ghostMissionInput.value = prompt;
+      if (options.mode && ghostMode) ghostMode.value = options.mode;
+      if (options.protocol && ghostProtocol) ghostProtocol.value = options.protocol;
+      return composeGhostMission();
+    },
+    dispatchMission(prompt, options = {}) {
+      if (typeof prompt === 'string' && ghostMissionInput) ghostMissionInput.value = prompt;
+      if (options.mode && ghostMode) ghostMode.value = options.mode;
+      if (options.protocol && ghostProtocol) ghostProtocol.value = options.protocol;
+      return dispatchGhostMission();
+    },
+    renderMesh: renderGhostConnectorMesh,
+    getLastMission() {
+      return ghostLastMission;
+    }
+  };
+
+  renderGhostConnectorMesh();
+  setGhostStatus('Ghost is idle. Connect rails above, then compose or dispatch a mission.', 'info');
+
   $$('.btn-connect').forEach(btn => {
     btn.addEventListener('click', async () => {
       const type = btn.getAttribute('data-connector');
@@ -6131,10 +6512,14 @@
   });
 
   function updateConnectorStatus(name, connected) {
-    const nameMap = { openai: 'OpenAI', anthropic: 'Anthropic', telegram: 'Telegram', discord: 'Discord', webhook: 'Webhook', mcp: 'MCP', claude: 'Claude', vscode: 'VSCode', github: 'GitHub', polymarket: 'Polymarket', kalshi: 'Kalshi' };
-    const displayName = nameMap[name.toLowerCase()] || name;
+    const key = getGhostConnectorKey(name);
+    const displayName = getGhostConnectorLabel(name);
     const statusEl = $(`#status${displayName}`);
     const cardEl = $(`#connector${displayName}`);
+    if (ghostConnectorRegistry[key]) {
+      ghostConnectorRegistry[key].connected = !!connected;
+      ghostConnectorRegistry[key].lastCheckedAt = Date.now();
+    }
     if (statusEl) {
       statusEl.textContent = connected ? '● Connected' : '● Disconnected';
       statusEl.className = 'connector-status' + (connected ? ' online' : '');
@@ -6142,6 +6527,7 @@
     if (cardEl) {
       cardEl.classList.toggle('connected', connected);
     }
+    renderGhostConnectorMesh();
     toast(connected ? '✅' : '❌', `${displayName}: ${connected ? 'Connected' : 'Failed'}`);
   }
 

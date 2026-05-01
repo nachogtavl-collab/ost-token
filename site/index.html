@@ -2765,6 +2765,62 @@
           <div class="log-header">&#128196; Connection Log</div>
           <div class="log-body" id="logBody"><p class="log-entry log-info">Ready to connect. Enter your API details above.</p></div>
         </div>
+
+        <div class="connector-log" id="ghostInteropPanel" style="margin-top:18px;">
+          <div class="log-header">&#128123; OST Ghost &mdash; Universal Interoperability Layer</div>
+          <div style="display:grid;gap:18px;">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;align-items:start;">
+              <label style="display:grid;gap:8px;">
+                <span style="font-size:.82rem;font-weight:700;color:#e2e8f0;letter-spacing:.08em;text-transform:uppercase;">Mission</span>
+                <textarea class="connector-input" id="ghostMissionInput" rows="6" placeholder="Ask OST Ghost to coordinate models, APIs, repos, markets, protocols, or machine-to-machine rails..."></textarea>
+              </label>
+              <div style="display:grid;gap:12px;">
+                <label>
+                  <span style="display:block;margin-bottom:8px;font-size:.82rem;font-weight:700;color:#e2e8f0;letter-spacing:.08em;text-transform:uppercase;">Mode</span>
+                  <select class="connector-select" id="ghostMode">
+                    <option value="simple">Simple mode &mdash; smallest viable route</option>
+                    <option value="complex">Complex mode &mdash; multi-rail plan</option>
+                    <option value="mesh">Mesh mode &mdash; use every connected rail</option>
+                  </select>
+                </label>
+                <label>
+                  <span style="display:block;margin-bottom:8px;font-size:.82rem;font-weight:700;color:#e2e8f0;letter-spacing:.08em;text-transform:uppercase;">Packet Format</span>
+                  <select class="connector-select" id="ghostProtocol">
+                    <option value="json">JSON envelope</option>
+                    <option value="natural">Natural language brief</option>
+                    <option value="http">HTTP request</option>
+                    <option value="mcp">MCP / JSON-RPC</option>
+                    <option value="shell">Shell webhook call</option>
+                    <option value="binary">0s and 1s</option>
+                  </select>
+                </label>
+                <div id="ghostStatus" style="font-size:.9rem;line-height:1.5;color:#cbd5e1;">Ghost is idle. Connect rails above, then compose or dispatch a mission.</div>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                  <button class="btn btn-primary btn-sm" id="ghostComposeBtn" type="button">Compose Mission</button>
+                  <button class="btn btn-outline btn-sm" id="ghostDispatchBtn" type="button">Dispatch To Mesh</button>
+                  <button class="btn btn-outline btn-sm" id="ghostClearBtn" type="button">Reset</button>
+                </div>
+                <p class="text-muted" style="margin:0;font-size:.82rem;line-height:1.6;">OpenAI can execute directly in-browser when connected. Closed providers and system rails still get translated, structured handoff packets so Ghost can route through relays, MCP servers, or your own backend.</p>
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;align-items:start;">
+              <div style="padding:14px;border-radius:16px;border:1px solid rgba(255,255,255,0.08);background:rgba(15,23,42,0.62);">
+                <div style="font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8;">Connected Mesh</div>
+                <div id="ghostMesh" style="margin-top:10px;white-space:pre-wrap;color:#e2e8f0;font-size:.88rem;line-height:1.6;">No live connectors yet. Test one above to add it to Ghost's mesh.</div>
+              </div>
+              <div style="padding:14px;border-radius:16px;border:1px solid rgba(255,255,255,0.08);background:rgba(15,23,42,0.62);">
+                <div style="font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8;">Protocol Packet</div>
+                <pre id="ghostPacket" style="margin:10px 0 0;white-space:pre-wrap;word-break:break-word;color:#bfdbfe;font-size:.82rem;line-height:1.6;font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;">Compose a mission to see Ghost's translated packet.</pre>
+              </div>
+            </div>
+
+            <div style="padding:14px;border-radius:16px;border:1px solid rgba(255,255,255,0.08);background:rgba(15,23,42,0.62);">
+              <div style="font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8;">Mission Output</div>
+              <pre id="ghostResult" style="margin:10px 0 0;white-space:pre-wrap;word-break:break-word;color:#e2e8f0;font-size:.88rem;line-height:1.7;font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;">Ghost is waiting for a mission.</pre>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
