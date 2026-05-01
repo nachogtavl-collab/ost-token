@@ -12348,7 +12348,8 @@
       lastError: '',
       historyCache: {},
       historyLoading: {},
-      historyError: {}
+      historyError: {},
+      historyRetryAt: {}
     };
 
     var rankLabels = {
@@ -12567,6 +12568,22 @@
       return selected;
     }
 
+    function pickFirstFiniteNumber(values) {
+      for (var index = 0; index < values.length; index += 1) {
+        var number = Number(values[index]);
+        if (Number.isFinite(number)) return number;
+      }
+      return NaN;
+    }
+
+    function getSelectedOutcomeRawMetric(selectedOutcome, keys) {
+      var raw = selectedOutcome && selectedOutcome.raw ? selectedOutcome.raw : null;
+      if (!raw || !Array.isArray(keys) || !keys.length) return NaN;
+      return pickFirstFiniteNumber(keys.map(function(key) {
+        return raw[key];
+      }));
+    }
+
     function getBinaryMarketPrice(market, side) {
       if (!market) return NaN;
       if (side === 'no' && Number.isFinite(market.noPriceNumber)) return market.noPriceNumber;
@@ -12602,6 +12619,14 @@
       if (!ids.length) return '';
       if (marketHasExplicitOutcomeContracts(market)) return ids[0] || '';
       return side === 'no' ? (ids[1] || ids[0]) : ids[0];
+    }
+
+    function getMarketHistoryFallbackId(market, outcomeKey) {
+      var selectedOutcome = getSelectedOutcomeContract(market, outcomeKey);
+      if (selectedOutcome) {
+        return String(selectedOutcome.gammaMarketId || selectedOutcome.conditionId || '').trim();
+      }
+      return String(market && (market.gammaMarketId || market.conditionId || (market.raw && (market.raw.id || market.raw.conditionId || market.raw.condition_id))) || '').trim();
     }
 
     function getHistoryKey(market, side, outcomeKey) {
@@ -12680,25 +12705,47 @@
       return 'https://clob.polymarket.com/prices-history?' + query;
     }
 
+    function buildDataHistoryUrl(market, outcomeKey) {
+      var marketId = getMarketHistoryFallbackId(market, outcomeKey);
+      if (!marketId) return '';
+      var query = 'market=' + encodeURIComponent(marketId) + '&interval=1d&fidelity=10';
+      var relay = (typeof window !== 'undefined' && (window.OST_POLY_RELAY_URL || window.OST_API_BASE)) || '';
+      if (relay) return String(relay).replace(/\/$/, '') + '/data/prices-history?' + query;
+      return 'https://data-api.polymarket.com/prices-history?' + query;
+    }
+
     function requestMarketHistory(market, side, outcomeKey) {
       side = side === 'no' ? 'no' : 'yes';
       if (!market || market.source !== 'polymarket') return;
       var tokenId = getMarketHistoryToken(market, side, outcomeKey);
-      if (!tokenId) return;
       var key = getHistoryKey(market, side, outcomeKey);
+      if (!key) return;
       if (state.historyCache[key] || state.historyLoading[key]) return;
+      if (state.historyRetryAt[key] && state.historyRetryAt[key] > Date.now()) return;
+
+      var primaryUrl = tokenId ? buildClobHistoryUrl(tokenId) : '';
+      var fallbackUrl = buildDataHistoryUrl(market, outcomeKey);
+      if (!primaryUrl && !fallbackUrl) return;
 
       state.historyLoading[key] = true;
       delete state.historyError[key];
-      fetchJsonWithTimeout(buildClobHistoryUrl(tokenId), 4500).then(function(payload) {
+      (primaryUrl
+        ? fetchJsonWithTimeout(primaryUrl, 4500).catch(function() {
+            return fallbackUrl ? fetchJsonWithTimeout(fallbackUrl, 4500) : null;
+          })
+        : fetchJsonWithTimeout(fallbackUrl, 4500)
+      ).then(function(payload) {
         var points = normalizeHistoryPoints(payload);
         if (points.length > 1) {
           state.historyCache[key] = points.slice(-180);
+          delete state.historyRetryAt[key];
         } else {
           state.historyError[key] = 'No venue history returned';
+          state.historyRetryAt[key] = Date.now() + 30000;
         }
       }).catch(function(error) {
         state.historyError[key] = error && error.message ? error.message : 'History unavailable';
+        state.historyRetryAt[key] = Date.now() + 30000;
       }).finally(function() {
         delete state.historyLoading[key];
         if (getSelectedMarket(getFilteredMarkets()) && getSelectedMarket(getFilteredMarkets()).id === market.id) {
@@ -13396,10 +13443,18 @@
       return (market.closeAtMs - Date.now()) / 3600000;
     }
 
-    function getTrendPoints(market, side) {
+    function getTrendPoints(market, side, outcomeKey) {
       side = side === 'no' ? 'no' : 'yes';
-      var current = getMarketPrice(market, side);
+      var current = getMarketPrice(market, side, outcomeKey);
       if (!Number.isFinite(current)) return 0;
+      var selectedOutcome = getSelectedOutcomeContract(market, outcomeKey);
+      var outcomePrevious = selectedOutcome
+        ? safeFraction(getSelectedOutcomeRawMetric(selectedOutcome, ['previousPrice', 'previousYesPriceNumber', 'prevPrice', 'lastTradePrice24h']), NaN)
+        : NaN;
+      if (Number.isFinite(outcomePrevious)) {
+        var previousOutcome = side === 'no' ? 1 - outcomePrevious : outcomePrevious;
+        return (current - previousOutcome) * 100;
+      }
       if (Number.isFinite(market.previousYesPriceNumber)) {
         var previous = side === 'no' ? 1 - market.previousYesPriceNumber : market.previousYesPriceNumber;
         return (current - previous) * 100;
@@ -13439,26 +13494,43 @@
       return Math.abs(hash);
     }
 
-    function buildPredictionSeries(market, side) {
+    function buildPredictionSeries(market, side, outcomeKey) {
       side = side === 'no' ? 'no' : 'yes';
-      var current = clamp(getMarketPrice(market, side) * 100 || 50, 1, 99);
+      var selectedOutcome = getSelectedOutcomeContract(market, outcomeKey);
+      var current = clamp(getMarketPrice(market, side, outcomeKey) * 100 || 50, 1, 99);
       // Anchor previous price to recent trend points OR a deterministic seeded
       // offset, so brand-new markets (no historical price data) still produce
       // a *moving* curve instead of a flat 50% line.
-      var seed = hashString(market.id + market.source);
+      var seed = hashString([market.id, market.source, selectedOutcome ? selectedOutcome.key : side].join(':'));
       var seededDrift = ((seed % 1000) / 1000 - 0.5) * 18; // ±9 pp
+      var previousOutcomePrice = selectedOutcome
+        ? safeFraction(getSelectedOutcomeRawMetric(selectedOutcome, ['previousPrice', 'previousYesPriceNumber', 'prevPrice', 'lastTradePrice24h']), NaN)
+        : NaN;
       var previousMarketPrice = Number.isFinite(market.previousYesPriceNumber)
         ? (side === 'no' ? 1 - market.previousYesPriceNumber : market.previousYesPriceNumber)
         : NaN;
+      if (Number.isFinite(previousOutcomePrice)) {
+        previousMarketPrice = side === 'no' ? 1 - previousOutcomePrice : previousOutcomePrice;
+      }
+      var weeklyChange = selectedOutcome
+        ? getSelectedOutcomeRawMetric(selectedOutcome, ['oneWeekPriceChangeNumber', 'oneWeekPriceChange', 'weeklyPriceChange', 'priceChange7d'])
+        : NaN;
+      var monthlyChange = selectedOutcome
+        ? getSelectedOutcomeRawMetric(selectedOutcome, ['oneMonthPriceChangeNumber', 'oneMonthPriceChange', 'monthlyPriceChange', 'priceChange30d'])
+        : NaN;
       var previous = Number.isFinite(previousMarketPrice)
         ? clamp(previousMarketPrice * 100, 1, 99)
-        : clamp(current - (getTrendPoints(market, side) || seededDrift), 1, 99);
-      var weeklyAnchor = Number.isFinite(market.oneWeekPriceChangeNumber)
-        ? clamp(current - (market.oneWeekPriceChangeNumber * (side === 'no' ? -100 : 100)), 1, 99)
-        : clamp(previous + ((seed >> 4) % 17) - 8, 1, 99);
-      var monthlyAnchor = Number.isFinite(market.oneMonthPriceChangeNumber)
-        ? clamp(current - (market.oneMonthPriceChangeNumber * (side === 'no' ? -100 : 100)), 1, 99)
-        : clamp(weeklyAnchor + ((seed >> 8) % 25) - 12, 1, 99);
+        : clamp(current - (getTrendPoints(market, side, outcomeKey) || seededDrift), 1, 99);
+      var weeklyAnchor = Number.isFinite(weeklyChange)
+        ? clamp(current - (weeklyChange * (side === 'no' ? -100 : 100)), 1, 99)
+        : Number.isFinite(market.oneWeekPriceChangeNumber)
+          ? clamp(current - (market.oneWeekPriceChangeNumber * (side === 'no' ? -100 : 100)), 1, 99)
+          : clamp(previous + ((seed >> 4) % 17) - 8, 1, 99);
+      var monthlyAnchor = Number.isFinite(monthlyChange)
+        ? clamp(current - (monthlyChange * (side === 'no' ? -100 : 100)), 1, 99)
+        : Number.isFinite(market.oneMonthPriceChangeNumber)
+          ? clamp(current - (market.oneMonthPriceChangeNumber * (side === 'no' ? -100 : 100)), 1, 99)
+          : clamp(weeklyAnchor + ((seed >> 8) % 25) - 12, 1, 99);
       // Floor volatility at 6 pp so even quiet markets visibly breathe.
       var volatility = Math.max(6, Math.min(14, Math.abs(current - previous) + Math.log10((market.volumeNumber || 0) + 10) * 1.4));
       var points = [];
@@ -13533,7 +13605,7 @@
       var chartH = height - pad.top - pad.bottom;
       var points = usingRealHistory
         ? cachedHistory.map(function(point) { return clamp(point.p * 100, 1, 99); })
-        : buildPredictionSeries(market, chartSide);
+        : buildPredictionSeries(market, chartSide, explicitOutcome ? explicitOutcome.key : '');
       var current = points[points.length - 1];
       var lineColor = explicitOutcome ? '#60a5fa' : (chartSide === 'no' ? '#f87171' : '#34d399');
       var fillGradient = ctx.createLinearGradient(0, pad.top, 0, height - pad.bottom);
@@ -13885,7 +13957,7 @@
       if (stageTitleEl) stageTitleEl.textContent = market.title;
       if (stageDetailEl) stageDetailEl.textContent = market.detail;
       var explicitOutcome = getSelectedOutcomeContract(market);
-      var activeContract = buildTradeContract(market, state.selectedSide);
+      var activeContract = buildTradeContract(market, state.selectedSide, explicitOutcome ? explicitOutcome.key : '');
       var chartSide = explicitOutcome ? 'yes' : (state.selectedSide === 'no' ? 'no' : 'yes');
       var chartLabel = activeContract && activeContract.label ? activeContract.label : (chartSide === 'no' ? 'NO' : 'YES');
       var activePrice = activeContract ? Number(activeContract.price) : getMarketPrice(market, chartSide);
@@ -13909,7 +13981,7 @@
             : isHistoryLoading
               ? 'Loading real Polymarket CLOB price history through the OST worker.'
               : state.historyError[historyKey]
-                ? 'Live Polymarket price is real; history is temporarily unavailable.'
+                ? 'Live Polymarket price is real; using an outcome-specific preview while history refreshes.'
                 : 'Live Polymarket price is real; waiting for published CLOB history.'
           : 'Live quote shown; preview uses previous trade and venue liquidity.';
       }
@@ -13959,7 +14031,7 @@
 
       var sourceClass = market.source === 'kalshi' ? 'source-kalshi' : 'source-polymarket';
       var hasExplicitOutcomes = marketHasExplicitOutcomeContracts(market);
-      var activeContract = buildTradeContract(market, state.selectedSide);
+      var activeContract = buildTradeContract(market, state.selectedSide, state.selectedOutcomeKey);
       var contractLabel = activeContract && activeContract.label
         ? activeContract.label
         : (state.selectedSide === 'no' ? (market.noLabel || 'No') : (market.yesLabel || 'Yes'));
@@ -14268,7 +14340,19 @@
       var query = state.query.trim().toLowerCase();
       var filtered = state.markets.filter(function(market) {
         if (state.source !== 'all' && market.source !== state.source) return false;
-        if (state.topic !== 'all' && !market.topics.has(state.topic)) return false;
+        if (state.topic !== 'all') {
+          var marketTopics = market.topics instanceof Set ? market.topics : buildTopicSet([
+            market.topic,
+            market.title,
+            market.detail,
+            market.contractLabel,
+            market.yesLabel,
+            market.noLabel,
+            market.searchText,
+            Array.isArray(market.displayTopics) ? market.displayTopics.join(' ') : ''
+          ].join(' '));
+          if (!marketTopics.has(state.topic)) return false;
+        }
         if (state.rank === 'breaking' && !market.isBreaking) return false;
         if (query && String(market.searchText || '').indexOf(query) === -1) return false;
         return true;
@@ -14572,7 +14656,6 @@
 
     function normalizeNativePredictionMarket(market) {
       if (!market || !market.isOstNative) return market;
-      if (typeof market.searchText === 'string' && market.searchText) return market;
       var textParts = [market.title, market.detail, market.contractLabel, market.yesLabel, market.noLabel];
       if (Array.isArray(market.displayTopics)) textParts = textParts.concat(market.displayTopics);
       if (Array.isArray(market.outcomes)) {
@@ -14581,8 +14664,13 @@
           textParts.push(outcome.label, outcome.displayLabel, outcome.key);
         });
       }
+      var searchText = textParts.filter(Boolean).join(' ').toLowerCase();
+      var topics = market.topics instanceof Set ? market.topics : buildTopicSet(searchText);
       return Object.assign({}, market, {
-        searchText: textParts.filter(Boolean).join(' ').toLowerCase()
+        topic: market.topic || pickPrimaryTopic(topics),
+        topics: topics,
+        displayTopics: Array.isArray(market.displayTopics) && market.displayTopics.length ? market.displayTopics : getDisplayTopics(topics),
+        searchText: typeof market.searchText === 'string' && market.searchText ? market.searchText : searchText
       });
     }
 
@@ -14965,7 +15053,7 @@
           return;
         }
 
-        var activeContract = buildTradeContract(market, state.selectedSide);
+        var activeContract = buildTradeContract(market, state.selectedSide, state.selectedOutcomeKey);
         var priceFraction = activeContract ? Number(activeContract.price) : NaN;
         var potentialReturn = calculatePotentialReturn(state.stake, priceFraction);
         if (!Number.isFinite(priceFraction) || priceFraction <= 0 || !Number.isFinite(potentialReturn)) {

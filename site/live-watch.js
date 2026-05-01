@@ -97,6 +97,7 @@
   var selectedOutcomeKey = 'home';
   var historyByKey = {};
   var historyLoading = {};
+  var historyRetryAt = {};
 
   function cloneOutcomeHints() {
     return POLY_OUTCOME_HINTS.map(function (outcome) {
@@ -492,7 +493,7 @@
     if (!liveOutcomes.some(function (outcome) { return outcome.key === key; })) key = 'home';
     selectedOutcomeKey = key;
     renderMarketPanel(liveOutcomes, null, true);
-    requestHistoryForSelected(true);
+    requestHistoryForSelected(false);
     if (shouldFocus) focusInlineTrade();
   }
   function focusInlineTrade() {
@@ -620,8 +621,8 @@
         if (outcomes && outcomes.length) {
           liveOutcomes = outcomes;
           var vol = ev && ev.volume ? ' · Vol ' + fmtMoney(Number(ev.volume)) : '';
+          pushLiveHistoryPoints(outcomes);
           renderMarketPanel(outcomes, 'Live · Polymarket' + vol);
-          pushLiveHistoryPoint();
           syncNativeMarketState(ev, outcomes);
         } else {
           renderFallbackMarketPanel();
@@ -636,7 +637,7 @@
     pollingTimer = setInterval(refreshMarketData, 20000);
     if (historyTimer) clearInterval(historyTimer);
     historyTimer = setInterval(function () {
-      pushLiveHistoryPoint();
+      pushLiveHistoryPoints(liveOutcomes);
       drawSelectedHistory();
     }, 3000);
     if (positionsTimer) clearInterval(positionsTimer);
@@ -657,6 +658,11 @@
       return;
     }
     if (historyLoading[key]) return;
+    if (!force && historyRetryAt[key] && historyRetryAt[key] > Date.now()) {
+      pushLiveHistoryPoint(outcome);
+      drawSelectedHistory((outcome.displayLabel || outcome.label) + ' · live share ticks');
+      return;
+    }
     var tokenId = outcome.clobTokenIds && outcome.clobTokenIds[0];
     if (!tokenId) {
       setChartStatus('No CLOB token yet · waiting for Gamma');
@@ -674,12 +680,14 @@
       .then(function (payload) {
         var points = normalizeHistoryPoints(payload);
         if (points.length > 1) historyByKey[key] = points.slice(-220);
+        delete historyRetryAt[key];
         pushLiveHistoryPoint(outcome);
         drawSelectedHistory();
       })
       .catch(function () {
+        historyRetryAt[key] = Date.now() + 30000;
         pushLiveHistoryPoint(outcome);
-        drawSelectedHistory('History offline · drawing live ticks');
+        drawSelectedHistory((outcome.displayLabel || outcome.label) + ' · live share ticks');
       })
       .finally(function () { historyLoading[key] = false; });
   }
@@ -716,6 +724,12 @@
       list.push({ t: now, p: clamp(Number(outcome.price), 0, 1) });
       historyByKey[key] = list.slice(-240);
     }
+  }
+
+  function pushLiveHistoryPoints(outcomes) {
+    (outcomes || []).forEach(function (outcome) {
+      pushLiveHistoryPoint(outcome);
+    });
   }
 
   function drawSelectedHistory(statusOverride) {
