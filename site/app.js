@@ -4805,6 +4805,18 @@
     }
   }
 
+  function getConvertUsdValue(amountValue, currencyValue) {
+    const amount = Number(amountValue) || 0;
+    const curr = String(currencyValue || '').toUpperCase();
+    if (amount <= 0) return 0;
+    if (curr === 'BTC') return amount * (prices.bitcoin || 105000);
+    if (curr === 'ETH') return amount * (prices.ethereum || 3800);
+    if (curr === 'SOL') return amount * (prices.solana || 170);
+    if (curr === 'BNB') return amount * 650;
+    if (curr === 'USDC' || curr === 'USDT' || curr === 'USD') return amount;
+    return amount / (fiatRates[curr] || 1);
+  }
+
   function updateTransferPreview() {
     if (!transferAmount || !transferFrom || !transferResult) return;
     const amount = parseFloat(transferAmount.value) || 0;
@@ -4814,14 +4826,7 @@
       resetConvertStepState();
       return;
     }
-    let usdValue;
-    if (curr === 'BTC') usdValue = amount * (prices.bitcoin || 105000);
-    else if (curr === 'ETH') usdValue = amount * (prices.ethereum || 3800);
-    else if (curr === 'SOL') usdValue = amount * (prices.solana || 170);
-    else if (['USDC', 'USDT'].includes(curr)) usdValue = amount;
-    else if (curr === 'BNB') usdValue = amount * 650;
-    else usdValue = amount / (fiatRates[curr] || 1);
-
+    const usdValue = getConvertUsdValue(amount, curr);
     const ostOut = usdValue / ostPrice;
     let formatted;
     if (ostOut >= 1e9) formatted = (ostOut / 1e9).toFixed(2) + 'B';
@@ -4831,143 +4836,442 @@
     transferResult.textContent = `≈ ${formatted} OST ($${usdValue.toLocaleString(undefined, { maximumFractionDigits: 2 })})`;
   }
 
-  if (transferAmount) transferAmount.addEventListener('input', updateTransferPreview);
+  const convertProviders = $('#convertProviders');
+  const convertProvidersLabel = convertProviders ? convertProviders.querySelector('.ct-prov-label') : null;
+  const convertProviderButtons = convertProviders ? convertProviders.querySelector('.ct-prov-btns') : null;
+  const convertTopupDesk = $('#convertTopupDesk');
+  const convertTopupStatus = $('#convertTopupStatus');
+  const convertTopupMeta = $('#convertTopupMeta');
+  const convertTopupPayBtn = $('#convertTopupPayBtn');
+  const convertTopupRefreshBtn = $('#convertTopupRefreshBtn');
+  const fiatCurrencies = ['USD','EUR','GBP','CAD','AUD','INR','BRL','MXN','JPY','KRW','TRY','NGN','ARS','EGP','IDR','PHP','THB','VND','PLN','SAR','COP','KES','CHF','SEK','CNY'];
+  let convertPendingOrder = null;
+
+  function summarizeConvertValue(value, head, tail) {
+    const text = String(value || '');
+    const start = Number(head) || 6;
+    const end = Number(tail) || 4;
+    if (!text) return 'unknown';
+    if (text.length <= start + end + 1) return text;
+    return text.slice(0, start) + '…' + text.slice(-end);
+  }
+
+  function getConvertSettlementAsset(currencyValue) {
+    return String(currencyValue || '').toUpperCase() === 'USDC' ? 'USDC' : 'SOL';
+  }
+
+  function setConvertTopupStatus(text, tone) {
+    if (!convertTopupStatus) return;
+    convertTopupStatus.textContent = text || 'No active payment order.';
+    if (tone === 'error') convertTopupStatus.style.color = '#fca5a5';
+    else if (tone === 'success') convertTopupStatus.style.color = '#86efac';
+    else if (tone === 'warning') convertTopupStatus.style.color = '#fde68a';
+    else convertTopupStatus.style.color = '#e2e8f0';
+  }
+
+  function renderConvertTopupDesk() {
+    if (!convertTopupDesk || !convertTopupMeta || !convertTopupPayBtn) return;
+    if (!convertPendingOrder || !convertPendingOrder.intent || !convertPendingOrder.intent.id) {
+      convertTopupDesk.style.display = 'none';
+      return;
+    }
+
+    const intent = convertPendingOrder.intent;
+    const settlementAsset = convertPendingOrder.settlementAsset || getConvertSettlementAsset(convertPendingOrder.sourceCurrency);
+    let settlement = null;
+    try {
+      if (window.OST_TOPUP && typeof window.OST_TOPUP.quoteSettlement === 'function' && Number(intent.usd || 0) > 0) {
+        settlement = window.OST_TOPUP.quoteSettlement(intent, settlementAsset);
+      }
+    } catch (_) {
+      settlement = null;
+    }
+
+    convertTopupDesk.style.display = 'block';
+    convertTopupPayBtn.textContent = convertPendingOrder.claimPending
+      ? 'Retry final claim sync'
+      : convertPendingOrder.mode === 'stripe'
+      ? 'Open card checkout'
+      : settlementAsset === 'USDC'
+        ? 'Pay exact USDC from wallet'
+        : 'Pay exact SOL from wallet';
+    convertTopupPayBtn.disabled = convertPendingOrder.claimPending
+      ? !connectedWalletSession || !window.OST_TOPUP
+      : convertPendingOrder.mode === 'stripe'
+      ? !convertPendingOrder.checkoutUrl
+      : !connectedWalletSession || !window.OST_TOPUP;
+    if (convertTopupRefreshBtn) convertTopupRefreshBtn.disabled = !window.OST_TOPUP;
+
+    const lines = [];
+    lines.push('Order ' + summarizeConvertValue(intent.id, 8, 6) + ' -> ' + Number(intent.ostAmount || 0).toLocaleString(undefined, { maximumFractionDigits: 2 }) + ' OST');
+    lines.push('Delivery wallet: ' + summarizeConvertValue(intent.wallet || connectedWallet || '', 8, 6));
+    if (intent.memo) lines.push('Memo: ' + intent.memo);
+    if (settlement) lines.push('Settlement now: ' + settlement.amountDisplay + ' ' + settlement.asset + ' on Solana mainnet');
+    if (convertPendingOrder.claimPending) {
+      lines.push('OST was already delivered locally. Retry the final claim sync below. Do not pay again.');
+    } else if (convertPendingOrder.mode === 'stripe') {
+      lines.push('Complete the live card checkout, then return here and refresh status if delivery does not finish automatically.');
+    } else if (fiatCurrencies.includes(String(convertPendingOrder.sourceCurrency || '').toUpperCase())) {
+      lines.push('Fund the same wallet with a card rail, then settle this exact order from the wallet below.');
+    } else if (!['SOL', 'USDC'].includes(String(convertPendingOrder.sourceCurrency || '').toUpperCase())) {
+      lines.push('This quote is locked to a real OST order. Settle it in SOL or USDC from the connected wallet.');
+    } else {
+      lines.push('This is a live treasury payment route. The same wallet signs the payment and receives devnet OST back.');
+    }
+    convertTopupMeta.textContent = lines.join('\n');
+  }
+
+  function clearConvertPendingOrder() {
+    convertPendingOrder = null;
+    if (window.OST_TOPUP && typeof window.OST_TOPUP.clearPending === 'function') {
+      window.OST_TOPUP.clearPending();
+    }
+    setConvertTopupStatus('No active payment order.', 'neutral');
+    renderConvertTopupDesk();
+  }
+
+  function rememberConvertPendingOrder(order) {
+    convertPendingOrder = order || null;
+    if (window.OST_TOPUP && typeof window.OST_TOPUP.rememberPending === 'function') {
+      if (!order || !order.intent) {
+        window.OST_TOPUP.rememberPending(null);
+      } else {
+        window.OST_TOPUP.rememberPending({
+          id: order.intent.id,
+          wallet: order.intent.wallet,
+          memo: order.intent.memo || '',
+          usd: Number(order.intent.usd || order.usdValue || 0),
+          ostAmount: Number(order.intent.ostAmount || 0),
+          mode: order.mode || 'crypto',
+          settlementAsset: order.settlementAsset || 'SOL',
+          sourceCurrency: order.sourceCurrency || '',
+          sourceAmount: Number(order.sourceAmount || 0),
+          checkoutUrl: order.checkoutUrl || '',
+          claimPending: !!order.claimPending,
+          deliverySignature: order.deliverySignature || ''
+        });
+      }
+    }
+    renderConvertTopupDesk();
+  }
+
+  function maybePromptConvertBackup() {
+    if (!connectedWalletSession || connectedWalletSession.kind !== 'local') return;
+    if (localStorage.getItem(LOCAL_WALLET_BACKUP_EXPORTED_KEY)) return;
+    toast('🔐', 'Download your browser wallet backup. Clearing browser storage will lose this wallet.');
+    refreshConvertBackupBar();
+  }
+
+  function handleConvertTopupSuccess(result, paidWith) {
+    const intent = result && result.intent ? result.intent : result;
+    if (!intent) return;
+    const payoutSig = result && result.payout && result.payout.sig
+      ? result.payout.sig
+      : intent.signature || '';
+    const ostAmount = Number(intent.ostAmount || 0);
+    transferResult.textContent = 'Received ' + ostAmount.toFixed(2) + ' OST' + (payoutSig ? ' · sig ' + String(payoutSig).slice(0, 8) + '...' : '');
+    setConvertRouteMessage((paidWith || 'Treasury payment') + ' verified and OST delivered to the connected wallet. This event now syncs through the OST API so wallet history survives refreshes and device sync.');
+    setConvertTopupStatus('Payment verified and OST delivered.', 'success');
+    toast('✅', 'Purchased ' + ostAmount.toFixed(2) + ' OST');
+    launchConfetti();
+    updateWalletBalance(connectedWallet);
+    maybePromptConvertBackup();
+    clearConvertPendingOrder();
+    updateConvertProviders();
+  }
+
+  async function refreshConvertPendingOrder() {
+    if (!convertPendingOrder || !convertPendingOrder.intent || !convertPendingOrder.intent.id || !window.OST_TOPUP) return null;
+    setConvertTopupStatus(convertPendingOrder.claimPending
+      ? 'OST was already delivered. Retrying final claim sync...'
+      : 'Checking live payment status...', 'warning');
+    const result = await window.OST_TOPUP.deliverIfPaid(convertPendingOrder.intent.id);
+    if (result && result.intent) {
+      convertPendingOrder.intent = Object.assign({}, convertPendingOrder.intent, result.intent);
+      rememberConvertPendingOrder(convertPendingOrder);
+    }
+    if (result && result.intent && result.intent.status === 'sent') {
+      handleConvertTopupSuccess(result, convertPendingOrder.settlementAsset || convertPendingOrder.sourceCurrency || 'Treasury payment');
+      return result;
+    }
+    setConvertTopupStatus(convertPendingOrder.claimPending
+      ? 'OST was already delivered locally. Final claim sync is still pending. Refresh again; do not pay twice.'
+      : 'Order created. Waiting for a verified treasury payment.', 'warning');
+    return result;
+  }
+
+  async function syncStoredConvertOrder() {
+    if (!window.OST_TOPUP || typeof window.OST_TOPUP.getPending !== 'function') return;
+    const params = new URLSearchParams(window.location.search);
+    const pending = window.OST_TOPUP.getPending();
+    const intentId = params.get('intent') || (pending && pending.id);
+    if (!intentId) return;
+    if (!convertPendingOrder || !convertPendingOrder.intent || convertPendingOrder.intent.id !== intentId) {
+      convertPendingOrder = {
+        intent: {
+          id: intentId,
+          wallet: pending && pending.wallet,
+          memo: pending && pending.memo,
+          usd: pending && pending.usd,
+          ostAmount: pending && pending.ostAmount
+        },
+        mode: (pending && pending.mode) || (params.get('topup') ? 'stripe' : 'crypto'),
+        settlementAsset: (pending && pending.settlementAsset) || 'SOL',
+        sourceCurrency: pending && pending.sourceCurrency,
+        sourceAmount: pending && pending.sourceAmount,
+        checkoutUrl: pending && pending.checkoutUrl,
+        claimPending: !!(pending && pending.claimPending),
+        deliverySignature: pending && pending.deliverySignature
+      };
+    }
+    renderConvertTopupDesk();
+    try {
+      await refreshConvertPendingOrder();
+    } catch (_) {}
+  }
+
+  if (transferAmount) transferAmount.addEventListener('input', () => {
+    if (convertPendingOrder && convertPendingOrder.intent && !convertPendingOrder.claimPending) clearConvertPendingOrder();
+    updateTransferPreview();
+  });
   if (transferFrom) transferFrom.addEventListener('change', () => {
+    if (convertPendingOrder && convertPendingOrder.intent && !convertPendingOrder.claimPending) clearConvertPendingOrder();
     updateTransferPreview();
     updateConvertProviders();
   });
 
-  // Show direct fiat buy links when a fiat currency is selected
-  const convertProviders = $('#convertProviders');
-  const fiatCurrencies = ['USD','EUR','GBP','CAD','AUD','INR','BRL','MXN','JPY','KRW','TRY','NGN','ARS','EGP','IDR','PHP','THB','VND','PLN','SAR','COP','KES','CHF','SEK'];
-  function updateConvertProviders() {
+  async function updateConvertProviders() {
     if (!convertProviders || !transferFrom) return;
-    const curr = transferFrom.value;
+    const curr = String(transferFrom.value || '').toUpperCase();
     const isFiat = fiatCurrencies.includes(curr);
-    if (transferBtnLabel) {
-      transferBtnLabel.textContent = isFiat
-        ? 'Open devnet guide'
-        : connectedWallet
-          ? (curr === 'SOL' ? 'Buy OST through OST treasury' : 'Load live swap route')
-          : 'Connect wallet to swap';
+    let topupConfig = null;
+    if (window.OST_TOPUP && typeof window.OST_TOPUP.loadConfig === 'function') {
+      try { topupConfig = await window.OST_TOPUP.loadConfig(); } catch (_) { topupConfig = null; }
     }
 
-    if (isFiat) {
-      convertProviders.style.display = 'block';
-      const onr = $('#cpOnramper');
-      const mp = $('#cpMoonPay');
-      const tr = $('#cpTransak');
-      if (onr) onr.href = 'https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=' + encodeURIComponent(curr);
-      if (mp) mp.href = 'https://www.moonpay.com/buy/sol';
-      if (tr) tr.href = 'https://global.transak.com/?cryptoCurrencyCode=SOL&fiatCurrency=' + encodeURIComponent(curr);
-      setConvertRouteMessage('Devnet OST cannot be bought directly with fiat yet. Use the faucet for live test OST, or use these provider links as the future mainnet route into SOL or USDC.');
-    } else {
-      convertProviders.style.display = 'none';
-      setConvertRouteMessage(connectedWallet
-        ? 'Your wallet can now use the live Jupiter swap route. Review the widget before approving any on-chain action.'
-        : 'Crypto routes stay in preview mode until you create or connect a wallet. Once connected, OST will load the live swap widget.');
+    if (transferBtnLabel) {
+      if (!connectedWalletSession || !connectedWalletSession.publicKey) {
+        transferBtnLabel.textContent = 'Connect wallet to buy';
+      } else if (curr === 'SOL') {
+        transferBtnLabel.textContent = 'Pay SOL for OST';
+      } else if (curr === 'USDC') {
+        transferBtnLabel.textContent = 'Pay USDC for OST';
+      } else if (isFiat && topupConfig && topupConfig.stripeEnabled) {
+        transferBtnLabel.textContent = 'Open live card checkout';
+      } else {
+        transferBtnLabel.textContent = 'Create payment order';
+      }
     }
+
+    const showFundingLinks = isFiat;
+    const showTopupDesk = !!(convertPendingOrder && convertPendingOrder.intent);
+    convertProviders.style.display = (showFundingLinks || showTopupDesk) ? 'block' : 'none';
+    if (convertProvidersLabel) convertProvidersLabel.style.display = showFundingLinks ? '' : 'none';
+    if (convertProviderButtons) convertProviderButtons.style.display = showFundingLinks ? '' : 'none';
+
+    const onr = $('#cpOnramper');
+    const mp = $('#cpMoonPay');
+    const tr = $('#cpTransak');
+    if (onr) onr.href = 'https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=' + encodeURIComponent(curr);
+    if (mp) mp.href = 'https://www.moonpay.com/buy/sol';
+    if (tr) tr.href = 'https://global.transak.com/?cryptoCurrencyCode=SOL&fiatCurrency=' + encodeURIComponent(curr);
+
+    if (convertPendingOrder && convertPendingOrder.intent) {
+      renderConvertTopupDesk();
+      return;
+    }
+
+    if (curr === 'SOL') {
+      setConvertRouteMessage(connectedWalletSession
+        ? 'This is a real SOL mainnet treasury payment. The connected wallet signs the payment and receives devnet OST back after verification.'
+        : 'Connect a wallet first. The same wallet address signs the mainnet treasury payment and receives devnet OST delivery.');
+    } else if (curr === 'USDC') {
+      setConvertRouteMessage(connectedWalletSession
+        ? 'This is a real USDC mainnet treasury payment. The connected wallet signs the token transfer and receives devnet OST back after verification.'
+        : 'Connect a wallet first. The same wallet address signs the USDC treasury payment and receives devnet OST delivery.');
+    } else if (isFiat) {
+      setConvertRouteMessage(topupConfig && topupConfig.stripeEnabled
+        ? 'Card checkout is live. OST opens a Stripe payment tied to the connected wallet and delivers devnet OST after confirmation.'
+        : 'Card rails now fund the connected wallet first. Then the same wallet settles the live OST order below in SOL or USDC.');
+    } else {
+      setConvertRouteMessage(connectedWalletSession
+        ? 'This currency is quoted live, but settlement happens in SOL or USDC from the connected wallet. OST creates a real payment order instead of pretending the route already settled.'
+        : 'Connect a wallet first, then OST will create a real payment order and show the exact SOL or USDC settlement needed.');
+    }
+  }
+
+  if (convertTopupPayBtn) {
+    convertTopupPayBtn.addEventListener('click', async () => {
+      if (!convertPendingOrder || !convertPendingOrder.intent || !convertPendingOrder.intent.id) return;
+      if (convertPendingOrder.mode === 'stripe') {
+        if (convertPendingOrder.checkoutUrl) {
+          window.open(convertPendingOrder.checkoutUrl, '_blank', 'noopener');
+          setConvertTopupStatus('Checkout reopened in a secure tab.', 'warning');
+        }
+        return;
+      }
+      if (!connectedWalletSession || !connectedWalletSession.publicKey) {
+        if (window.setWalletPanel) window.setWalletPanel('access', { scroll: true });
+        setConvertTopupStatus('Connect the payout wallet first, then settle the order.', 'error');
+        return;
+      }
+      if (!window.OST_TOPUP || typeof window.OST_TOPUP.settleIntent !== 'function') {
+        setConvertTopupStatus('Live payment rail is still loading. Refresh and try again.', 'error');
+        return;
+      }
+
+      const settlementAsset = convertPendingOrder.settlementAsset || 'SOL';
+      try {
+        if (convertPendingOrder.claimPending) {
+          setConvertTopupStatus('Retrying final claim sync...', 'warning');
+          transferResult.textContent = 'Reconnecting the completed OST order...';
+        } else {
+          setConvertTopupStatus('Signing ' + settlementAsset + ' mainnet treasury payment...', 'warning');
+          transferResult.textContent = 'Submitting ' + settlementAsset + ' treasury payment...';
+        }
+        await pulseConvertSteps(2);
+        const result = await window.OST_TOPUP.settleIntent(convertPendingOrder.intent.id, settlementAsset);
+        await pulseConvertSteps(3);
+        handleConvertTopupSuccess(result, settlementAsset);
+      } catch (error) {
+        const message = (error && error.message) || String(error || 'Treasury payment failed');
+        transferResult.textContent = 'Payment failed: ' + message;
+        setConvertRouteMessage('Could not settle the live OST order. ' + message);
+        setConvertTopupStatus(message, 'error');
+        toast('⚠', message);
+      }
+    });
+  }
+
+  if (convertTopupRefreshBtn) {
+    convertTopupRefreshBtn.addEventListener('click', async () => {
+      if (!convertPendingOrder || !convertPendingOrder.intent || !convertPendingOrder.intent.id || !window.OST_TOPUP) return;
+      try {
+        await refreshConvertPendingOrder();
+      } catch (error) {
+        const message = (error && error.message) || String(error || 'Could not refresh payment status');
+        setConvertTopupStatus(message, 'error');
+      }
+    });
   }
 
   if (transferBtn) {
     transferBtn.addEventListener('click', async () => {
       const amount = parseFloat(transferAmount?.value) || 0;
-      const curr = transferFrom?.value || 'BTC';
+      const curr = String(transferFrom?.value || 'SOL').toUpperCase();
       const isFiat = fiatCurrencies.includes(curr);
+      const usdValue = getConvertUsdValue(amount, curr);
 
-      if (amount <= 0) {
+      if (amount <= 0 || usdValue <= 0) {
         transferResult.textContent = 'Enter an amount to preview the route.';
-        setConvertRouteMessage('OST shows the estimate first. Enter an amount, then choose whether to use the faucet, provider links, or the live swap widget.');
+        setConvertRouteMessage('OST prices the order first, then opens the live payment rail tied to your wallet.');
         resetConvertStepState();
         return;
       }
 
-      if (!isFiat && !connectedWalletSession) {
+      if (!connectedWalletSession || !connectedWalletSession.publicKey) {
         if (window.setWalletPanel) window.setWalletPanel('access', { scroll: true });
-        transferResult.textContent = 'Connect a wallet first to execute a live crypto route.';
-        setConvertRouteMessage('Crypto routes stay in preview mode until a wallet is connected. Create a browser wallet or connect Phantom, Solflare, or Backpack first.');
-        toast('👛', 'Create or connect a wallet first to use the live swap route');
+        transferResult.textContent = 'Connect a wallet first to create a live OST order.';
+        setConvertRouteMessage('The converter now ties every live order to a real wallet address. Create or connect the delivery wallet first.');
+        toast('👛', 'Create or connect the payout wallet first');
         resetConvertStepState();
         return;
       }
 
-      if (isFiat) {
-        // Fiat now also routes through the universal treasury path:
-        // pool releases OST at the live FX rate and the treasury records
-        // a synthetic IOU backed by the deposited fiat.
-        if (window.OST_REAL_SWAP && typeof window.OST_REAL_SWAP.swapAny === 'function' && connectedWalletSession) {
-          try {
-            await pulseConvertSteps(2);
-            const fq = window.OST_REAL_SWAP.quoteAny(curr, amount);
-            transferResult.textContent = 'Routing ' + amount + ' ' + curr + ' → ~' + fq.ost.toFixed(2) + ' OST...';
-            const fr = await window.OST_REAL_SWAP.swapAny(curr, amount, {});
-            transferResult.textContent = 'Received ' + fr.ost.toFixed(2) + ' OST · sig ' + String(fr.sig).slice(0, 8) + '...';
-            setConvertRouteMessage('Treasury reserve created: ' + amount + ' ' + curr + ' (≈ $' + fr.usd.toFixed(2) + ') is held as backing for the ' + fr.ost.toFixed(2) + ' OST released to your wallet.');
-            toast('💱', 'Converted ' + amount + ' ' + curr + ' → ' + fr.ost.toFixed(2) + ' OST');
-            launchConfetti();
-            updateWalletBalance(connectedWallet);
-            return;
-          } catch (err) {
-            console.warn('[OST] Fiat treasury route failed, showing provider links', err);
-            transferResult.textContent = 'Treasury route failed: ' + ((err && err.message) || err);
-          }
-        }
-        // Fallback: show fiat provider links as before
-        await pulseConvertSteps(1);
-        transferResult.textContent = `Route guide ready for ${curr} → OST.`;
-        setConvertRouteMessage('Direct fiat purchase is not live on devnet. Use the faucet for test OST, or open the provider links below as the future mainnet on-ramp into SOL or USDC.');
-        if (convertProviders) {
-          convertProviders.style.display = 'block';
-          convertProviders.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
-        toast('💳', 'Devnet guide ready. Use the faucet for live test OST.');
+      if (!window.OST_TOPUP || typeof window.OST_TOPUP.createIntent !== 'function') {
+        transferResult.textContent = 'Live payment rail is still loading.';
+        setConvertRouteMessage('Refresh the page. The OST top-up client has not loaded yet.');
+        toast('⚠', 'Live payment rail is still loading');
         return;
       }
 
-      await pulseConvertSteps(2);
+      try {
+        const walletAddress = connectedWalletSession.publicKey.toBase58();
+        const settlementAsset = curr === 'USDC' ? 'USDC' : 'SOL';
 
-      // ---- Universal "any currency → OST" path through the OST treasury ----
-      // SOL still does the real atomic on-chain co-signed swap.
-      // Everything else (BTC, ETH, USDC, USDT, BNB, fiat) routes through the
-      // treasury reserve: pool releases OST at the live USD rate and we
-      // record an IOU entry backed by the deposited currency.
-      if (window.OST_REAL_SWAP && typeof window.OST_REAL_SWAP.swapAny === 'function' && window.OST_SWAP_POOL) {
-        try {
-          var q = window.OST_REAL_SWAP.quoteAny(curr, amount);
-          transferResult.textContent = 'Routing ' + amount + ' ' + curr + ' → ~' + q.ost.toFixed(2) + ' OST (rate ' + q.rate.toFixed(2) + ' OST/' + curr + ')...';
-          var result = await window.OST_REAL_SWAP.swapAny(curr, amount, { });
-          transferResult.textContent = 'Received ' + result.ost.toFixed(2) + ' OST · sig ' + String(result.sig).slice(0, 8) + '...';
-          if (result.kind === 'on-chain-swap') {
-            setConvertRouteMessage('Atomic ' + curr + ' → OST swap settled on-chain. The OST treasury now holds ' + amount + ' ' + curr + ' as backing.');
-          } else {
-            setConvertRouteMessage('Treasury reserve created: ' + amount + ' ' + curr + ' (≈ $' + result.usd.toFixed(2) + ') is now held as backing for the ' + result.ost.toFixed(2) + ' OST released to your wallet.');
-          }
-          toast('🏦', 'Converted ' + amount + ' ' + curr + ' → ' + result.ost.toFixed(2) + ' OST');
-          launchConfetti();
-          updateWalletBalance(connectedWallet);
+        if (curr === 'SOL' || curr === 'USDC') {
+          await pulseConvertSteps(1);
+          const intent = await window.OST_TOPUP.createIntent({ usd: usdValue, method: 'crypto', wallet: walletAddress });
+          rememberConvertPendingOrder({
+            intent: Object.assign({}, intent, { usd: usdValue }),
+            mode: 'crypto',
+            settlementAsset: curr,
+            sourceCurrency: curr,
+            sourceAmount: amount,
+            usdValue: usdValue
+          });
+          setConvertTopupStatus('Signing ' + curr + ' treasury payment...', 'warning');
+          transferResult.textContent = 'Authorizing ' + amount + ' ' + curr + ' on Solana mainnet...';
+          await pulseConvertSteps(2);
+          const result = await window.OST_TOPUP.settleIntent(intent.id, curr);
+          await pulseConvertSteps(3);
+          handleConvertTopupSuccess(result, curr);
           return;
-        } catch (err) {
-          console.warn('[OST] Universal swap failed', err);
-          var errMsg = (err && err.message) || String(err);
-          if (curr === 'SOL') {
-            transferResult.textContent = 'Swap failed: ' + errMsg;
-            setConvertRouteMessage('Convert could not complete: ' + errMsg + '. The fee vault covers network costs; SOL swaps still require SOL as the source asset. Claim the 100 OST head start if this is a new wallet.');
-            return;
-          } else {
-            transferResult.textContent = 'Treasury route failed: ' + errMsg;
-            setConvertRouteMessage('Could not complete the ' + curr + ' → OST conversion. ' + errMsg);
-            return;
-          }
         }
-      }
 
-      // No fallback — Convert is now the real swap path only. The free 1-OST
-      // faucet is a separate explicit action elsewhere on the page.
-      transferResult.textContent = 'Swap pool not loaded. Refresh the page and try again.';
-      setConvertRouteMessage('The OST swap pool script is not loaded yet. Refresh the page; if the issue persists the pool may be temporarily offline.');
-      toast('⚠', 'Swap pool not ready');
+        const topupConfig = await window.OST_TOPUP.loadConfig();
+        if (isFiat && topupConfig && topupConfig.stripeEnabled) {
+          await pulseConvertSteps(1);
+          const intent = await window.OST_TOPUP.createIntent({ usd: usdValue, method: 'stripe', wallet: walletAddress });
+          const checkout = await window.OST_TOPUP.createCheckout(intent.id);
+          rememberConvertPendingOrder({
+            intent: Object.assign({}, intent, { usd: usdValue }),
+            mode: 'stripe',
+            settlementAsset: 'SOL',
+            sourceCurrency: curr,
+            sourceAmount: amount,
+            usdValue: usdValue,
+            checkoutUrl: checkout.url
+          });
+          transferResult.textContent = 'Card checkout ready for ' + Number(intent.ostAmount || 0).toFixed(2) + ' OST.';
+          setConvertRouteMessage('Live Stripe checkout opened. Finish payment, then return here if you need to refresh delivery status.');
+          setConvertTopupStatus('Checkout created. Open it in a secure tab and complete payment.', 'warning');
+          window.open(checkout.url, '_blank', 'noopener');
+          toast('💳', 'Live card checkout opened');
+          updateConvertProviders();
+          return;
+        }
+
+        await pulseConvertSteps(1);
+        const intent = await window.OST_TOPUP.createIntent({ usd: usdValue, method: 'crypto', wallet: walletAddress });
+        rememberConvertPendingOrder({
+          intent: Object.assign({}, intent, { usd: usdValue }),
+          mode: 'crypto',
+          settlementAsset: settlementAsset,
+          sourceCurrency: curr,
+          sourceAmount: amount,
+          usdValue: usdValue
+        });
+        transferResult.textContent = 'Payment order ready for ' + Number(intent.ostAmount || 0).toFixed(2) + ' OST.';
+        if (isFiat) {
+          setConvertRouteMessage('Card rails now fund the connected wallet first. After funding, click the exact ' + settlementAsset + ' wallet payment button below to finish this OST purchase.');
+          toast('🧾', 'Card-linked payment order created');
+        } else {
+          setConvertRouteMessage('This source is quoted live, but the real treasury settlement happens in ' + settlementAsset + ' from the connected wallet. Use the live order below to finish the purchase.');
+          toast('🧾', 'Live payment order created');
+        }
+        setConvertTopupStatus('Payment order created. The memo and delivery wallet are now locked.', 'warning');
+        updateConvertProviders();
+      } catch (error) {
+        const message = (error && error.message) || String(error || 'Could not create the live OST order');
+        transferResult.textContent = 'Purchase failed: ' + message;
+        setConvertRouteMessage('OST could not create or settle the live payment order. ' + message);
+        setConvertTopupStatus(message, 'error');
+        toast('⚠', message);
+      }
     });
   }
+
+  window.addEventListener('ost:topup-ready', function() {
+    updateConvertProviders();
+    syncStoredConvertOrder();
+  });
+  setTimeout(function() {
+    if (window.OST_TOPUP) {
+      updateConvertProviders();
+      syncStoredConvertOrder();
+    }
+  }, 0);
 
   // ---------- CONVERT-PANEL WALLET BACKUP / RESTORE ----------
   // Surface persistence controls right in the convert panel so users never lose

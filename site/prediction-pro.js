@@ -18,7 +18,7 @@
 
   // ---------------------------------------------------------------------------
   // 0) Polymarket Relay configuration
-  //    Set window.OST_POLY_RELAY_URL = 'https://ost-poly-relay.<account>.workers.dev'
+  //    Set window.OST_POLY_RELAY_URL = 'https://<your-relay-origin>'
   //    BEFORE this script loads (or on the page) to route Polymarket reads
   //    through the OST Cloudflare Worker. Falls back to the direct Gamma API
   //    so the site still works if the relay is down or not configured.

@@ -37,7 +37,7 @@ npx wrangler deploy       # deploys to Cloudflare edge
 
 You'll see output like:
 ```
-Deployed ost-api to https://ost-api.<your-account>.workers.dev
+Deployed ost-api to a public edge origin such as https://ost-api-pages.pages.dev
 ```
 
 ### (Optional) Enable KV storage for positions
@@ -65,7 +65,7 @@ After deploying, copy your Worker URL and paste it into **index.html** before th
 
 ```html
 <!-- Set before ost-console.js / prediction-pro-dash.js -->
-<script>window.OST_API_BASE = "https://ost-api.YOUR-ACCOUNT.workers.dev";</script>
+<script>window.OST_API_BASE = "https://ost-api-pages.pages.dev";</script>
 ```
 
 Or paste it at runtime in the **OST API Console** (click "Open in console" in the Pro Dashboard).

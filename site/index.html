@@ -1984,10 +1984,10 @@
                 <div class="ct-side ct-from">
                   <label class="ct-label" data-i18n="wallet.convert.from">From</label>
                   <select class="ct-select" id="transferFrom">
-                    <option value="SOL">&#9788; Solana DEVNET (instant via OST treasury)</option>
-                    <option value="BTC">&#8383; Bitcoin (BTC)</option>
-                    <option value="ETH">&#9830; Ethereum (ETH)</option>
-                    <option value="USDC">&#9675; USDC</option>
+                    <option value="SOL">&#9788; Solana (mainnet payment - devnet OST delivery)</option>
+                    <option value="BTC">&#8383; Bitcoin (quote only - settle in SOL or USDC)</option>
+                    <option value="ETH">&#9830; Ethereum (quote only - settle in SOL or USDC)</option>
+                    <option value="USDC">&#9675; USDC on Solana (mainnet payment)</option>
                     <option value="USDT">&#9675; Tether (USDT)</option>
                     <option value="BNB">&#9830; BNB Chain</option>
                     <option value="USD">$ US Dollar</option>
@@ -2032,8 +2032,16 @@
                   <a id="cpMoonPay" href="#" target="_blank" rel="noopener" class="ct-prov-btn">&#127769; MoonPay</a>
                   <a id="cpTransak" href="#" target="_blank" rel="noopener" class="ct-prov-btn">&#128178; Transak</a>
                 </div>
+                <div id="convertTopupDesk" style="display:none;margin-top:14px;padding:14px;border-radius:14px;border:1px solid rgba(255,255,255,0.1);background:rgba(15,23,42,0.62);">
+                  <div id="convertTopupStatus" style="font-size:.88rem;font-weight:700;color:#e2e8f0;">No active payment order.</div>
+                  <div id="convertTopupMeta" style="margin-top:8px;font-size:.78rem;line-height:1.5;color:#94a3b8;white-space:pre-wrap;"></div>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+                    <button type="button" class="btn btn-primary btn-sm" id="convertTopupPayBtn">Pay from wallet</button>
+                    <button type="button" class="btn btn-outline btn-sm" id="convertTopupRefreshBtn">Refresh status</button>
+                  </div>
+                </div>
               </div>
-              <p class="ct-route-state" id="convertRouteState">Devnet mode: claim live test OST from the faucet. The providers below preview the future mainnet buy path and do not mint devnet OST directly.</p>
+              <p class="ct-route-state" id="convertRouteState">Live mode: create a treasury payment order, settle it from the connected wallet, and receive devnet OST back to that same wallet.</p>
               <p class="ct-note" data-i18n="wallet.convert.note">Currently powered by Jupiter + Wormhole on Solana while the OST native interchange engine is still under construction.</p>
             </div>
 

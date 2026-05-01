@@ -27,7 +27,7 @@
  *   npx wrangler deploy
  *
  * Then set window.OST_API_BASE on the site:
- *   <script>window.OST_API_BASE = "https://ost-api.<account>.workers.dev";</script>
+ *   <script>window.OST_API_BASE = "https://ost-api-pages.pages.dev";</script>
  */
 
 const CORS_HEADERS = {
@@ -516,7 +516,7 @@ async function verifyCryptoTopupSignature(env, intent, signature) {
   };
 }
 
-async function markIntentPaidFromCrypto(env, intent, verification) {
+async function markIntentPaidFromCrypto(env, intent, verification, options = {}) {
   const signatureKey = `topup:crypto:sig:${verification.signature}`;
   const existingIntentId = await kvGet(env, signatureKey, null);
   if (existingIntentId && existingIntentId !== intent.id) return { ok: false, error: 'signature_already_used' };
@@ -527,7 +527,9 @@ async function markIntentPaidFromCrypto(env, intent, verification) {
   intent.updatedAt = Date.now();
   await saveIntent(env, intent);
   await kvPut(env, signatureKey, intent.id, 60 * 60 * 24 * 90);
-  await pushQueue(env, intent.id);
+  if (options.enqueueDispatcher !== false) {
+    await pushQueue(env, intent.id);
+  }
   return { ok: true, intent };
 }
 
@@ -603,6 +605,7 @@ export default {
           'GET  /topup/config',
           'POST /topup/intent',
           'POST /topup/checkout',
+          'POST /topup/claim',
           'POST /topup/crypto/verify',
           'GET  /topup/crypto/check/:intent',
           'GET  /launchpad/coins',
@@ -1075,12 +1078,55 @@ export default {
       return json({
         id: intent.id,
         status: intent.status,
+        usd: intent.usd,
+        usdPerOst: intent.usdPerOst,
+        method: intent.method,
         ostAmount: intent.ostAmount,
         signature: intent.signature || null,
+        paymentRef: intent.paymentRef || null,
         wallet: intent.wallet,
         memo: intent.memo,
+        createdAt: intent.createdAt,
         updatedAt: intent.updatedAt
       });
+    }
+
+    // Public: finalize a paid intent after the client-side devnet release.
+    if (path === '/topup/claim' && method === 'POST') {
+      if (!env.OST_KV) return json({ error: 'kv_not_configured' }, 503);
+      let body; try { body = await request.json(); } catch { return json({ error: 'invalid_json' }, 400); }
+      const intent = await loadIntent(env, body && body.id);
+      if (!intent) return json({ error: 'not_found' }, 404);
+      if (intent.status === 'sent') return json({ ok: true, intent });
+      if (intent.status !== 'paid') return json({ error: 'intent_not_paid', status: intent.status }, 409);
+
+      const deliveryWallet = cleanText(body && body.wallet, 64);
+      if (deliveryWallet && intent.wallet && deliveryWallet !== intent.wallet) {
+        return json({ error: 'wallet_mismatch' }, 409);
+      }
+
+      const deliverySignature = cleanText(body && body.signature, 128);
+      if (!deliverySignature) return json({ error: 'missing_delivery_signature' }, 400);
+
+      intent.status = 'sent';
+      intent.signature = deliverySignature;
+      intent.sentAt = Date.now();
+      intent.updatedAt = Date.now();
+      intent.deliveryKind = cleanText(body && body.deliveryKind, 40) || 'client-release';
+      await saveIntent(env, intent);
+      await removeQueue(env, intent.id);
+
+      const recent = await kvGet(env, 'topup:sent', []);
+      recent.unshift({
+        id: intent.id,
+        ostAmount: intent.ostAmount,
+        wallet: intent.wallet,
+        signature: intent.signature,
+        sentAt: intent.sentAt,
+        deliveryKind: intent.deliveryKind
+      });
+      await kvPut(env, 'topup:sent', recent.slice(0, 200));
+      return json({ ok: true, intent });
     }
 
     // Admin: list paid-but-not-sent intents (for the dispatcher).
@@ -1132,8 +1178,8 @@ export default {
 
     // Public: verify a user-submitted Solana mainnet payment signature.
     // If the transaction pays the configured treasury, includes the intent
-    // memo, and covers the tier amount, the existing dispatcher queue takes
-    // over and sends devnet OST from the funded treasury wallet.
+    // memo, and covers the tier amount, the client can release devnet OST
+    // immediately and then finalize the intent via /topup/claim.
     if (path === '/topup/crypto/verify' && method === 'POST') {
       if (!env.OST_KV) return json({ error: 'kv_not_configured' }, 503);
       let body; try { body = await request.json(); } catch { return json({ error: 'invalid_json' }, 400); }
@@ -1150,7 +1196,7 @@ export default {
         return json({ error: 'solana_rpc_failed', detail: cleanText(error?.message || error, 180) }, 502);
       }
       if (!verification.ok) return json({ error: verification.error, detail: verification.detail || null }, 400);
-      const paid = await markIntentPaidFromCrypto(env, intent, verification);
+      const paid = await markIntentPaidFromCrypto(env, intent, verification, { enqueueDispatcher: false });
       if (!paid.ok) return json({ error: paid.error }, 409);
       return json({ ok: true, status: 'paid', rail: verification.rail, signature: verification.signature, intent: paid.intent });
     }
@@ -1170,7 +1216,7 @@ export default {
         return json({ ok: true, status: 'pending', found: false, scanError: cleanText(error?.message || error, 180) });
       }
       if (!verification) return json({ ok: true, status: 'pending', found: false });
-      const paid = await markIntentPaidFromCrypto(env, intent, verification);
+      const paid = await markIntentPaidFromCrypto(env, intent, verification, { enqueueDispatcher: false });
       if (!paid.ok) return json({ error: paid.error }, 409);
       return json({ ok: true, status: 'paid', found: true, rail: verification.rail, signature: verification.signature, intent: paid.intent });
     }

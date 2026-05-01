@@ -422,6 +422,506 @@
   };
 
   // ------------------------------------------------------------------
+  // 0a-ter) Real top-up client
+  // Uses the live /topup API on Pages, settles a treasury payment from the
+  // connected wallet on Solana mainnet, then releases devnet OST directly
+  // from the published devnet pool and finalizes the intent remotely.
+  // ------------------------------------------------------------------
+  var TOPUP_PENDING_KEY = 'ost.topup.pending.v1';
+  var TOPUP_CLAIMED_KEY = 'ost.topup.claimed.v1';
+  var TOPUP_MAINNET_RPC = 'https://solana-rpc.publicnode.com';
+  var TOPUP_LAMPORTS_PER_SOL = 1_000_000_000;
+  var USDC_MAINNET_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+  var SPL_TOKEN_PROGRAM_ID = new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
+  var mainnetConnection = null;
+  var topupConfigCache = { value: null, loadedAt: 0, promise: null };
+
+  function delay(ms) {
+    return new Promise(function(resolve) { setTimeout(resolve, ms); });
+  }
+
+  function readPendingTopup() {
+    try { return JSON.parse(localStorage.getItem(TOPUP_PENDING_KEY) || 'null'); }
+    catch (e) { return null; }
+  }
+
+  function writePendingTopup(state) {
+    try {
+      if (!state) localStorage.removeItem(TOPUP_PENDING_KEY);
+      else localStorage.setItem(TOPUP_PENDING_KEY, JSON.stringify(state));
+    } catch (e) {}
+  }
+
+  function readClaimedTopups() {
+    try { return JSON.parse(localStorage.getItem(TOPUP_CLAIMED_KEY) || '{}') || {}; }
+    catch (e) { return {}; }
+  }
+
+  function rememberClaimedTopup(intentId, payload) {
+    if (!intentId) return;
+    var claimed = readClaimedTopups();
+    claimed[intentId] = Object.assign({ claimedAt: Date.now() }, payload || {});
+    try { localStorage.setItem(TOPUP_CLAIMED_KEY, JSON.stringify(claimed)); } catch (e) {}
+  }
+
+  function clearPendingTopup(intentId) {
+    var current = readPendingTopup();
+    if (!intentId || (current && current.id === intentId)) writePendingTopup(null);
+  }
+
+  function rememberPendingClaim(intent, signature) {
+    var current = readPendingTopup() || {};
+    writePendingTopup(Object.assign({}, current, {
+      id: (intent && intent.id) || current.id || '',
+      wallet: (intent && intent.wallet) || current.wallet || getActiveWalletAddress() || '',
+      memo: (intent && intent.memo) || current.memo || '',
+      usd: Number((intent && intent.usd) || current.usd || 0),
+      ostAmount: Number((intent && intent.ostAmount) || current.ostAmount || 0),
+      paymentRef: (intent && intent.paymentRef) || current.paymentRef || '',
+      claimPending: true,
+      deliverySignature: signature ? String(signature) : (current.deliverySignature || '')
+    }));
+  }
+
+  function getMainnetConnection() {
+    if (!mainnetConnection && typeof solanaWeb3 !== 'undefined') {
+      mainnetConnection = new solanaWeb3.Connection(TOPUP_MAINNET_RPC, 'confirmed');
+    }
+    return mainnetConnection;
+  }
+
+  function getWalletSession() {
+    return window.OST_WALLET && window.OST_WALLET.session ? window.OST_WALLET.session : null;
+  }
+
+  async function parseTopupResponse(response) {
+    var payload = await response.json().catch(function() { return {}; });
+    if (!response.ok) {
+      var detail = payload && (payload.detail || payload.error || payload.message);
+      throw new Error(detail ? String(detail) : 'Top-up API returned ' + response.status);
+    }
+    return payload;
+  }
+
+  async function topupRequest(path, options) {
+    var base = getOstApiBase();
+    if (!base) throw new Error('OST API base is not configured');
+    var settings = options || {};
+    var headers = Object.assign({ accept: 'application/json' }, settings.headers || {});
+    if (settings.body && !headers['content-type']) headers['content-type'] = 'application/json';
+    var response = await fetch(base + path, {
+      method: settings.method || 'GET',
+      headers: headers,
+      body: settings.body,
+      cache: settings.cache || 'no-store'
+    });
+    return parseTopupResponse(response);
+  }
+
+  async function loadTopupConfig(options) {
+    var force = !!(options && options.force);
+    var now = Date.now();
+    if (!force && topupConfigCache.value && now - topupConfigCache.loadedAt < 60000) {
+      return topupConfigCache.value;
+    }
+    if (!force && topupConfigCache.promise) return topupConfigCache.promise;
+    topupConfigCache.promise = topupRequest('/topup/config').then(function(payload) {
+      topupConfigCache.value = payload;
+      topupConfigCache.loadedAt = Date.now();
+      return payload;
+    }).finally(function() {
+      topupConfigCache.promise = null;
+    });
+    return topupConfigCache.promise;
+  }
+
+  function quoteTopupSettlement(intent, asset, config) {
+    var mode = String(asset || 'SOL').toUpperCase() === 'USDC' ? 'USDC' : 'SOL';
+    var currentConfig = config || topupConfigCache.value || {};
+    if (mode === 'USDC') {
+      var usdcAmount = Math.round(Number(intent && intent.usd || 0) * 1e6) / 1e6;
+      return {
+        asset: 'USDC',
+        amount: usdcAmount,
+        amountDisplay: usdcAmount.toFixed(2)
+      };
+    }
+    var solUsd = Number(currentConfig && currentConfig.pricing && currentConfig.pricing.solUsd);
+    if (!Number.isFinite(solUsd) || solUsd <= 0) throw new Error('SOL/USD price unavailable for top-up settlement');
+    var solAmount = Number(intent && intent.usd || 0) / solUsd;
+    return {
+      asset: 'SOL',
+      amount: solAmount,
+      amountDisplay: solAmount.toFixed(6)
+    };
+  }
+
+  async function createTopupIntent(request) {
+    var wallet = String((request && request.wallet) || getActiveWalletAddress() || '').trim();
+    if (!wallet) throw new Error('Connect a wallet first');
+    var payload = await topupRequest('/topup/intent', {
+      method: 'POST',
+      body: JSON.stringify({
+        usd: Number(request && request.usd || 0),
+        wallet: wallet,
+        method: request && request.method === 'stripe' ? 'stripe' : 'crypto'
+      })
+    });
+    writePendingTopup({ id: payload.id, wallet: wallet, method: request && request.method === 'stripe' ? 'stripe' : 'crypto', createdAt: Date.now() });
+    return payload;
+  }
+
+  async function createTopupCheckout(intentId) {
+    return topupRequest('/topup/checkout', {
+      method: 'POST',
+      body: JSON.stringify({ intentId: intentId })
+    });
+  }
+
+  async function getTopupStatus(intentId) {
+    return topupRequest('/topup/status/' + encodeURIComponent(intentId));
+  }
+
+  async function claimTopupIntent(intentId, signature) {
+    return topupRequest('/topup/claim', {
+      method: 'POST',
+      body: JSON.stringify({
+        id: intentId,
+        wallet: getActiveWalletAddress(),
+        signature: signature,
+        deliveryKind: 'client-release'
+      })
+    });
+  }
+
+  async function verifyTopupSignature(intentId, signature) {
+    var lastError = null;
+    for (var attempt = 0; attempt < 6; attempt++) {
+      try {
+        return await topupRequest('/topup/crypto/verify', {
+          method: 'POST',
+          body: JSON.stringify({ intentId: intentId, signature: signature })
+        });
+      } catch (error) {
+        lastError = error;
+        var message = String(error && error.message || error || '').toLowerCase();
+        if (message.indexOf('transaction_not_found') === -1 && message.indexOf('rpc') === -1) break;
+        await delay(1500 + (attempt * 350));
+      }
+    }
+    throw lastError || new Error('Could not verify treasury payment');
+  }
+
+  function transactionError(err) {
+    if (!err) return new Error('Transaction send failed');
+    var logs = Array.isArray(err.logs) ? err.logs : [];
+    var message = err.message || 'Transaction send failed';
+    return logs.length ? new Error(message + '\n\nProgram logs:\n' + logs.join('\n')) : new Error(message);
+  }
+
+  async function sendRawWithRetry(conn, serialized) {
+    try {
+      return await conn.sendRawTransaction(serialized, {
+        skipPreflight: false,
+        preflightCommitment: 'confirmed'
+      });
+    } catch (error) {
+      var message = String(error && error.message || error || '');
+      if (message.indexOf('simulation failed') !== -1 || message.indexOf('Simulation failed') !== -1) {
+        return conn.sendRawTransaction(serialized, { skipPreflight: true });
+      }
+      throw error;
+    }
+  }
+
+  async function signAndSendOnConnection(conn, transaction) {
+    var session = getWalletSession();
+    if (!conn) throw new Error('Solana RPC unavailable');
+    if (!session || !session.publicKey) throw new Error('Connect a wallet first');
+
+    var latest = await conn.getLatestBlockhash('confirmed');
+    transaction.recentBlockhash = latest.blockhash;
+    if (!transaction.feePayer) transaction.feePayer = session.publicKey;
+
+    var signature = null;
+    try {
+      if (session.kind === 'local' && session.keypair) {
+        transaction.partialSign(session.keypair);
+        signature = await sendRawWithRetry(conn, transaction.serialize());
+      } else if (session.provider && typeof session.provider.signTransaction === 'function') {
+        var signedTransaction = await session.provider.signTransaction(transaction);
+        signature = await sendRawWithRetry(conn, signedTransaction.serialize());
+      } else if (session.provider && typeof session.provider.signAndSendTransaction === 'function') {
+        var result = await session.provider.signAndSendTransaction(transaction);
+        signature = typeof result === 'string' ? result : result && result.signature;
+      }
+    } catch (error) {
+      throw transactionError(error);
+    }
+
+    if (!signature) throw new Error('Active wallet cannot sign transactions');
+    var confirmation = await conn.confirmTransaction({
+      signature: signature,
+      blockhash: latest.blockhash,
+      lastValidBlockHeight: latest.lastValidBlockHeight
+    }, 'confirmed');
+    if (confirmation && confirmation.value && confirmation.value.err) {
+      var errText;
+      try { errText = JSON.stringify(confirmation.value.err); }
+      catch (e) { errText = String(confirmation.value.err); }
+      throw new Error('Transaction reverted on-chain: ' + errText + ' (sig ' + signature + ')');
+    }
+    return signature;
+  }
+
+  async function sendIntentWithSol(intent, config) {
+    var wallet = window.OST_WALLET;
+    var session = getWalletSession();
+    if (!wallet || !session || !session.publicKey) throw new Error('Connect a wallet first');
+    var currentConfig = config || await loadTopupConfig();
+    var treasury = currentConfig && currentConfig.receivers && currentConfig.receivers.solMainnet;
+    if (!treasury) throw new Error('Treasury SOL receiver is not configured');
+
+    var settlement = quoteTopupSettlement(intent, 'SOL', currentConfig);
+    var lamports = Math.ceil(settlement.amount * TOPUP_LAMPORTS_PER_SOL);
+    var conn = getMainnetConnection();
+    var balance = await conn.getBalance(session.publicKey);
+    if (balance < lamports + 5000) {
+      throw new Error('Need ' + (lamports / TOPUP_LAMPORTS_PER_SOL).toFixed(6) + ' SOL on Solana mainnet (have ' + (balance / TOPUP_LAMPORTS_PER_SOL).toFixed(6) + ')');
+    }
+
+    var tx = new solanaWeb3.Transaction();
+    tx.add(wallet.memoIx(intent.memo, session.publicKey));
+    tx.add(solanaWeb3.SystemProgram.transfer({
+      fromPubkey: session.publicKey,
+      toPubkey: wallet.toPublicKey(treasury),
+      lamports: lamports
+    }));
+
+    var signature = await signAndSendOnConnection(conn, tx);
+    return { asset: 'SOL', amount: settlement.amount, signature: signature };
+  }
+
+  async function sendIntentWithUsdc(intent, config) {
+    var wallet = window.OST_WALLET;
+    var session = getWalletSession();
+    if (!wallet || !session || !session.publicKey) throw new Error('Connect a wallet first');
+    var currentConfig = config || await loadTopupConfig();
+    var treasuryOwner = currentConfig && currentConfig.receivers && (currentConfig.receivers.usdcMainnet || currentConfig.receivers.solMainnet);
+    if (!treasuryOwner) throw new Error('Treasury USDC receiver is not configured');
+
+    var conn = getMainnetConnection();
+    var mintPk = wallet.toPublicKey(USDC_MAINNET_MINT);
+    var treasuryOwnerPk = wallet.toPublicKey(treasuryOwner);
+    var sourceAta = wallet.associatedAddress(mintPk, session.publicKey, false, SPL_TOKEN_PROGRAM_ID, wallet.constants.ASSOCIATED_TOKEN_PROGRAM_ID);
+    var destinationAta = wallet.associatedAddress(mintPk, treasuryOwnerPk, false, SPL_TOKEN_PROGRAM_ID, wallet.constants.ASSOCIATED_TOKEN_PROGRAM_ID);
+    var settlement = quoteTopupSettlement(intent, 'USDC', currentConfig);
+
+    var sourceBalance = await conn.getTokenAccountBalance(sourceAta).catch(function() { return null; });
+    var available = sourceBalance && sourceBalance.value ? Number(sourceBalance.value.uiAmount || sourceBalance.value.uiAmountString || 0) : 0;
+    if (available + 0.000001 < settlement.amount) {
+      throw new Error('Need ' + settlement.amount.toFixed(2) + ' USDC on Solana mainnet (have ' + available.toFixed(2) + ')');
+    }
+
+    var tx = new solanaWeb3.Transaction();
+    var destinationInfo = await conn.getAccountInfo(destinationAta);
+    if (!destinationInfo) {
+      tx.add(wallet.associatedAccountIx(
+        session.publicKey,
+        destinationAta,
+        treasuryOwnerPk,
+        mintPk,
+        SPL_TOKEN_PROGRAM_ID,
+        wallet.constants.ASSOCIATED_TOKEN_PROGRAM_ID
+      ));
+    }
+    tx.add(wallet.memoIx(intent.memo, session.publicKey));
+    tx.add(wallet.transferChecked(
+      sourceAta,
+      mintPk,
+      destinationAta,
+      session.publicKey,
+      wallet.toBaseUnits(settlement.amount, 6),
+      6,
+      SPL_TOKEN_PROGRAM_ID
+    ));
+
+    var signature = await signAndSendOnConnection(conn, tx);
+    return { asset: 'USDC', amount: settlement.amount, signature: signature };
+  }
+
+  async function recordTopupDeliverySnapshot(intent, signature) {
+    var wallet = window.OST_WALLET;
+    var session = getWalletSession();
+    if (!wallet || !session || !session.publicKey) return;
+    try {
+      var devnetConn = wallet.getConnection && wallet.getConnection();
+      var ostBalance = await wallet.getOstBalance(session.publicKey);
+      var solBalance = devnetConn ? (await devnetConn.getBalance(session.publicKey)) / TOPUP_LAMPORTS_PER_SOL : 0;
+      recordSnapshot({
+        ts: Date.now(),
+        ostBalance: ostBalance,
+        solBalance: solBalance,
+        kind: 'topup-in',
+        amount: Number(intent && intent.ostAmount || 0),
+        sig: signature,
+        topupId: intent && intent.id,
+        paymentRef: intent && intent.paymentRef || null,
+        rail: intent && intent.method || 'crypto'
+      });
+      refreshChartIfReady();
+      if (typeof notifyTxHistory === 'function') notifyTxHistory();
+    } catch (e) {}
+  }
+
+  async function deliverPaidIntent(intentLike) {
+    var wallet = window.OST_WALLET;
+    var session = getWalletSession();
+    var intent = intentLike && intentLike.intent ? intentLike.intent : intentLike;
+    if (!wallet || !session || !session.publicKey) throw new Error('Connect a wallet first');
+    if (!intent || !intent.id) throw new Error('Missing top-up intent');
+    var activeWallet = session.publicKey.toBase58();
+    if (intent.wallet && intent.wallet !== activeWallet) {
+      throw new Error('Connected wallet does not match this top-up intent');
+    }
+    if (intent.status === 'sent') {
+      rememberClaimedTopup(intent.id, {
+        signature: intent.signature || null,
+        claimedAt: intent.sentAt || Date.now(),
+        claimPending: false,
+        paymentRef: intent.paymentRef || null
+      });
+      clearPendingTopup(intent.id);
+      return { intent: intent, payout: null, delivered: false };
+    }
+    var claimed = readClaimedTopups();
+    var localClaim = claimed[intent.id];
+    if (localClaim && localClaim.signature && localClaim.claimPending) {
+      try {
+        var reconciled = await claimTopupIntent(intent.id, localClaim.signature);
+        var reconciledIntent = reconciled && reconciled.intent ? reconciled.intent : Object.assign({}, intent, { status: 'sent', signature: localClaim.signature });
+        await recordTopupDeliverySnapshot(reconciledIntent, localClaim.signature);
+        rememberClaimedTopup(intent.id, {
+          signature: localClaim.signature,
+          claimedAt: Date.now(),
+          ostAmount: Number(intent.ostAmount || 0),
+          claimPending: false,
+          paymentRef: reconciledIntent.paymentRef || intent.paymentRef || null,
+          snapshotRecorded: true
+        });
+        clearPendingTopup(intent.id);
+        return {
+          intent: reconciledIntent,
+          payout: { sig: localClaim.signature },
+          delivered: false
+        };
+      } catch (error) {
+        rememberPendingClaim(intent, localClaim.signature);
+        throw new Error('OST was already delivered, but final claim sync is still pending. Refresh to retry without paying again.');
+      }
+    }
+    if (localClaim && localClaim.signature) {
+      clearPendingTopup(intent.id);
+      return {
+        intent: Object.assign({}, intent, { status: 'sent', signature: localClaim.signature }),
+        payout: { sig: localClaim.signature },
+        delivered: false
+      };
+    }
+    if (intent.status !== 'paid') throw new Error('Top-up is still waiting for payment');
+    if (!window.OST_RESCUE || typeof window.OST_RESCUE.payoutOst !== 'function') {
+      throw new Error('OST payout vault is still loading. Refresh and try again.');
+    }
+
+    var payoutMemo = JSON.stringify({
+      k: 'ost-topup',
+      intent: intent.id,
+      usd: Number(intent.usd || 0),
+      ost: Number(intent.ostAmount || 0),
+      wallet: activeWallet,
+      t: Date.now()
+    });
+    var payout = await window.OST_RESCUE.payoutOst(session.publicKey, Number(intent.ostAmount || 0), payoutMemo);
+    var signature = payout && payout.sig ? String(payout.sig) : '';
+    var claimedPayload;
+    try {
+      claimedPayload = await claimTopupIntent(intent.id, signature);
+    } catch (error) {
+      rememberClaimedTopup(intent.id, {
+        signature: signature,
+        claimedAt: Date.now(),
+        ostAmount: Number(intent.ostAmount || 0),
+        claimPending: true,
+        paymentRef: intent.paymentRef || null,
+        snapshotRecorded: false
+      });
+      rememberPendingClaim(intent, signature);
+      throw new Error('OST was delivered, but final claim sync is still pending. Refresh to retry without paying again.');
+    }
+
+    var finalIntent = claimedPayload && claimedPayload.intent ? claimedPayload.intent : Object.assign({}, intent, { status: 'sent', signature: signature });
+    await recordTopupDeliverySnapshot(finalIntent, signature);
+    rememberClaimedTopup(intent.id, {
+      signature: signature,
+      claimedAt: Date.now(),
+      ostAmount: Number(intent.ostAmount || 0),
+      claimPending: false,
+      paymentRef: finalIntent.paymentRef || intent.paymentRef || null,
+      snapshotRecorded: true
+    });
+    clearPendingTopup(intent.id);
+
+    return {
+      intent: finalIntent,
+      payout: payout,
+      delivered: true
+    };
+  }
+
+  async function deliverIfPaid(intentId) {
+    var intent = await getTopupStatus(intentId);
+    if (intent.status === 'paid') return deliverPaidIntent(intent);
+    if (intent.status === 'sent') {
+      rememberClaimedTopup(intent.id, { signature: intent.signature || null, claimedAt: intent.sentAt || Date.now() });
+      clearPendingTopup(intent.id);
+    }
+    return { intent: intent, payout: null, delivered: false };
+  }
+
+  async function settleTopupIntent(intentId, asset) {
+    var intent = await getTopupStatus(intentId);
+    if (intent.status === 'sent') return { intent: intent, payment: null, payout: null, delivered: false };
+    if (intent.status === 'paid') return deliverPaidIntent(intent);
+
+    var config = await loadTopupConfig({ force: true });
+    var payment = String(asset || 'SOL').toUpperCase() === 'USDC'
+      ? await sendIntentWithUsdc(intent, config)
+      : await sendIntentWithSol(intent, config);
+    var verified = await verifyTopupSignature(intent.id, payment.signature);
+    var delivered = await deliverPaidIntent(verified.intent || verified);
+    return {
+      intent: delivered.intent,
+      payment: payment,
+      payout: delivered.payout,
+      delivered: delivered.delivered
+    };
+  }
+
+  window.OST_TOPUP = {
+    loadConfig: loadTopupConfig,
+    quoteSettlement: quoteTopupSettlement,
+    createIntent: createTopupIntent,
+    createCheckout: createTopupCheckout,
+    getStatus: getTopupStatus,
+    settleIntent: settleTopupIntent,
+    deliverIfPaid: deliverIfPaid,
+    rememberPending: writePendingTopup,
+    getPending: readPendingTopup,
+    clearPending: clearPendingTopup
+  };
+  try { window.dispatchEvent(new CustomEvent('ost:topup-ready')); } catch (e) {}
+
+  // ------------------------------------------------------------------
   // 0b) OST-native prediction markets (BTC up/down, World Cup, oil, US presidency, world events)
   // Surfaced on top of Polymarket + Kalshi via window.buildOstNativeMarkets()
   // BTC market uses live SOL/BTC price ticks; the rest are curated event lines.

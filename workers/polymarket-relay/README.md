@@ -6,7 +6,7 @@ A Cloudflare Worker that proxies Polymarket's public **Gamma** (events / markets
 
 ## Endpoints
 
-Base URL after deploy (example): `https://ost-poly-relay.<your-account>.workers.dev`
+Base URL after deploy (example): `https://<your-relay-origin>`
 
 | Path | Proxies | Cache TTL |
 | --- | --- | --- |

@@ -60,7 +60,7 @@
           '<div class="ost-console__left">',
             '<div class="ost-console__server-row">',
               '<label class="ost-console__label">API server</label>',
-              '<input type="url" class="ost-console__url-input" id="ostConsoleApiUrl" placeholder="https://ost-api.account.workers.dev" spellcheck="false">',
+              '<input type="url" class="ost-console__url-input" id="ostConsoleApiUrl" placeholder="https://ost-api-pages.pages.dev" spellcheck="false">',
               '<button type="button" class="ost-console__btn ost-console__btn--save" id="ostConsoleSaveUrl">Save</button>',
             '</div>',
             '<div class="ost-console__examples">',

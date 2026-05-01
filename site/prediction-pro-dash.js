@@ -209,7 +209,7 @@
       +         '<summary>How to enable</summary>'
       +         '<ol>'
       +           '<li>Deploy <code>workers/polymarket-relay</code> with <code>wrangler deploy</code>.</li>'
-      +           '<li>Add <code>&lt;script&gt;window.OST_POLY_RELAY_URL = "https://&lt;your-worker&gt;.workers.dev"&lt;/script&gt;</code> to the page.</li>'
+      +           '<li>Add <code>&lt;script&gt;window.OST_POLY_RELAY_URL = "https://&lt;your-relay-origin&gt;"&lt;/script&gt;</code> to the page.</li>'
       +           '<li>Reload — every Polymarket fetch routes through Cloudflare\'s nearest PoP.</li>'
       +         '</ol>'
       +       '</details>'
