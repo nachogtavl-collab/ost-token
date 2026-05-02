@@ -104,12 +104,25 @@
     ].join(';');
   }
 
+  function walletSlug(address) {
+    const short = shortAddress(address || 'ost-card').replace(/[^a-z0-9]/gi, '').toLowerCase();
+    return short || 'ostcard';
+  }
+
   function issuerPacket(address, amount, config) {
     const applePay = applePayState();
+    const slug = walletSlug(address);
+    const generatedAt = new Date().toISOString();
+    const serial = 'ost-' + slug + '-' + Date.now();
+    const passTypeIdentifier = 'pass.com.ost.tapcard';
+    const merchantIdentifier = 'merchant.com.ost.token';
+    const organization = 'OST';
+    const nfcMessage = address ? tapPayload(address) : null;
     return {
       version: 1,
+      bundleType: 'ost-apple-wallet-program',
       product: 'OST Tap Card',
-      generatedAt: new Date().toISOString(),
+      generatedAt,
       walletAddress: address || null,
       checkoutUsd: amount,
       network: 'Solana devnet',
@@ -119,7 +132,110 @@
         applePayWeb: applePay.label,
         webNfc: webNfcSupported()
       },
-      nfcPayload: address ? tapPayload(address) : null,
+      nfcPayload: nfcMessage,
+      issuerProgram: {
+        programName: 'OST Tap Card',
+        sponsorBank: '<required>',
+        network: '<visa-or-mastercard-required>',
+        issuerProcessor: '<required>',
+        tokenServiceProvider: '<network-tokenization-provider-required>',
+        regions: ['US'],
+        binSponsor: '<required>',
+        kycProvider: '<required>',
+        settlementAsset: 'OST',
+        settlementRail: 'Solana Token-2022 / OST mint',
+        treasuryReceiver: (config && config.receivers && config.receivers.solMainnet) || null
+      },
+      merchantWebCheckout: {
+        publicSiteUrl: PUBLIC_SITE_URL,
+        merchantIdentifier,
+        merchantDomain: 'nachogtavl-collab.github.io',
+        stripeEnabled: !!(config && config.stripeEnabled),
+        applePayWebStatus: applePay.label,
+        requiredSecrets: ['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET'],
+        domainVerification: 'Register and verify the domain in Stripe Apple Pay settings before expecting Apple Pay to surface in hosted checkout.'
+      },
+      walletPass: {
+        passTypeIdentifier,
+        teamIdentifier: '<apple-developer-team-id-required>',
+        organizationName: organization,
+        serialNumber: serial,
+        description: 'OST Tap Card',
+        logoText: 'OST',
+        foregroundColor: 'rgb(248,250,252)',
+        backgroundColor: 'rgb(7,17,31)',
+        labelColor: 'rgb(148,163,184)',
+        formatVersion: 1,
+        webServiceURL: '<issuer-wallet-web-service-url-required>',
+        authenticationToken: '<wallet-pass-auth-token-required>',
+        associatedStoreIdentifiers: [],
+        generic: {
+          primaryFields: [
+            { key: 'ost', label: 'Wallet', value: address || 'Connect wallet' }
+          ],
+          secondaryFields: [
+            { key: 'network', label: 'Network', value: 'Solana devnet' },
+            { key: 'asset', label: 'Asset', value: 'OST' }
+          ],
+          auxiliaryFields: [
+            { key: 'checkout', label: 'Checkout', value: '$' + Number(amount || 0).toFixed(2) },
+            { key: 'site', label: 'Site', value: 'nachogtavl-collab.github.io' }
+          ],
+          backFields: [
+            { key: 'mint', label: 'OST Mint', value: '383pTzoZ8Gp83dzk23ZnvLcfX2Sq32TAGN48CMQu2pAJ' },
+            { key: 'program', label: 'Program', value: 'J2jiS296YWVie1Sopb4SxcM3aJnP9aAwe6aLDhCqvGXY' },
+            { key: 'fallback', label: 'Fallback URL', value: PUBLIC_SITE_URL + '#wallet' }
+          ]
+        },
+        nfc: nfcMessage ? {
+          message: nfcMessage,
+          encryptionPublicKey: '<apple-wallet-nfc-encryption-key-required>',
+          requiresAuthentication: false
+        } : null,
+        assets: {
+          icon: 'icon-192.png',
+          logo: 'ost-logo.svg',
+          strip: '<optional-brand-strip-image>'
+        }
+      },
+      paymentPassProvisioning: {
+        feasibleFromWebsiteOnly: false,
+        requirement: 'Native issuer app or approved issuer provisioning flow required.',
+        appleEntitlements: [
+          'com.apple.developer.payment-pass-provisioning',
+          'com.apple.developer.pass-type-identifiers'
+        ],
+        requiredInputs: [
+          'issuer certificate chain',
+          'card art approved by Apple and network',
+          'encrypted card payload / activation data',
+          'primary account identifier from issuer processor',
+          'network tokenization approval'
+        ]
+      },
+      deliverables: {
+        tapPayload: nfcMessage,
+        passJsonTemplate: {
+          formatVersion: 1,
+          passTypeIdentifier,
+          serialNumber: serial,
+          teamIdentifier: '<apple-developer-team-id-required>',
+          organizationName: organization,
+          description: 'OST Tap Card',
+          logoText: 'OST',
+          foregroundColor: 'rgb(248,250,252)',
+          backgroundColor: 'rgb(7,17,31)',
+          labelColor: 'rgb(148,163,184)'
+        },
+        applePayReadinessChecklist: [
+          'Set STRIPE_SECRET_KEY on Cloudflare Pages',
+          'Set STRIPE_WEBHOOK_SECRET on Cloudflare Pages',
+          'Configure Stripe webhook for /topup/stripe/webhook',
+          'Verify nachogtavl-collab.github.io for Apple Pay in Stripe',
+          'Open hosted checkout on Safari with an Apple Wallet card present',
+          'For native card provisioning, secure issuer + network + Apple approval'
+        ]
+      },
       apple: {
         currentWebFlow: 'Stripe-hosted checkout can present Apple Pay on supported Safari when enabled by Stripe and the merchant domain is verified.',
         walletPass: 'Requires PassKit signing certificate and wallet-pass packaging.',
