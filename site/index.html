@@ -1886,6 +1886,59 @@
                 <div class="wallet-side-item" data-i18n="wallet.secure.point4">The connected view surfaces balances, receive QR, and direct links without leaving the page.</div>
               </div>
             </aside>
+
+            <aside class="wallet-side-card" id="ostAppleTapPanel">
+              <span class="wallet-side-kicker">Apple device rail</span>
+              <h3 style="margin:6px 0 8px;font-size:1.15rem;line-height:1.2;color:var(--text-light);">OST Tap Card</h3>
+              <p style="margin:0 0 12px;color:var(--text-muted);font-size:.92rem;line-height:1.55;">Real today: open Apple Pay or card checkout on supported Safari through the live Stripe rail. Real later: turning OST into a native Apple Pay payment card still requires an issuer, network tokenization, and Apple approval.</p>
+              <div style="display:grid;gap:12px;">
+                <div style="position:relative;overflow:hidden;padding:16px;border-radius:18px;background:linear-gradient(135deg,#07111f,#0f2742 58%,#124c3a);border:1px solid rgba(110,231,183,0.18);box-shadow:0 18px 40px rgba(2,6,23,0.35);">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+                    <div>
+                      <div style="font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(226,232,240,0.72);">OST Tap Card</div>
+                      <div id="ostAppleCardWallet" style="margin-top:8px;font-size:1.08rem;font-weight:700;color:#f8fafc;word-break:break-word;">Connect a wallet</div>
+                    </div>
+                    <div style="padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.08);font-size:.72rem;color:#d1fae5;">Apple rail</div>
+                  </div>
+                  <div id="ostAppleCardSubline" style="margin-top:28px;font-size:.84rem;color:rgba(226,232,240,0.8);">Stripe-hosted Apple Pay / card checkout plus tap payload packaging for Apple-device workflows.</div>
+                </div>
+
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;">
+                  <div style="padding:10px 12px;border-radius:12px;background:rgba(148,163,184,0.08);border:1px solid rgba(148,163,184,0.16);">
+                    <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);">Device</div>
+                    <div id="ostAppleDeviceState" style="margin-top:6px;font-weight:700;color:var(--text-light);">Checking...</div>
+                  </div>
+                  <div style="padding:10px 12px;border-radius:12px;background:rgba(148,163,184,0.08);border:1px solid rgba(148,163,184,0.16);">
+                    <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);">Apple Pay web</div>
+                    <div id="ostApplePayState" style="margin-top:6px;font-weight:700;color:var(--text-light);">Checking...</div>
+                  </div>
+                  <div style="padding:10px 12px;border-radius:12px;background:rgba(148,163,184,0.08);border:1px solid rgba(148,163,184,0.16);">
+                    <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);">Card rail</div>
+                    <div id="ostAppleStripeState" style="margin-top:6px;font-weight:700;color:var(--text-light);">Checking...</div>
+                  </div>
+                  <div style="padding:10px 12px;border-radius:12px;background:rgba(148,163,184,0.08);border:1px solid rgba(148,163,184,0.16);">
+                    <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);">Web NFC</div>
+                    <div id="ostAppleNfcState" style="margin-top:6px;font-weight:700;color:var(--text-light);">Checking...</div>
+                  </div>
+                </div>
+
+                <label style="display:grid;gap:6px;">
+                  <span style="font-size:.78rem;font-weight:700;color:var(--text-light);letter-spacing:.06em;text-transform:uppercase;">Apple checkout amount (USD)</span>
+                  <input id="ostAppleUsdInput" type="number" min="1" step="0.01" value="25" style="padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,0.12);background:rgba(2,6,23,0.48);color:var(--text-light);font-size:.92rem;">
+                </label>
+
+                <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                  <button class="btn btn-primary btn-sm" id="ostApplePayBtn" type="button">Open Apple Pay / Card Checkout</button>
+                  <button class="btn btn-outline btn-sm" id="ostAppleReceiveBtn" type="button">Open Receive Rail</button>
+                  <button class="btn btn-outline btn-sm" id="ostAppleCopyPayloadBtn" type="button">Copy Tap Payload</button>
+                  <button class="btn btn-outline btn-sm" id="ostApplePacketBtn" type="button">Download Issuer Packet</button>
+                </div>
+
+                <div id="ostAppleStatus" style="font-size:.84rem;color:var(--text-muted);line-height:1.5;">Waiting for wallet + payment rail state...</div>
+                <pre id="ostAppleTapPayload" style="margin:0;padding:12px;border-radius:12px;background:rgba(2,6,23,0.58);border:1px solid rgba(148,163,184,0.12);color:#cbd5e1;font-size:.76rem;line-height:1.55;white-space:pre-wrap;word-break:break-word;font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;">No wallet connected yet.</pre>
+                <div style="font-size:.78rem;color:var(--text-muted);line-height:1.55;">Important: Safari can present Apple Pay through the hosted Stripe checkout when Stripe is enabled and the domain is verified. A website alone cannot provision an arbitrary crypto card into Apple Pay or emulate a payment card over iPhone NFC.</div>
+              </div>
+            </aside>
           </div>
         </div>
 
@@ -5742,6 +5795,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="ux-extras.js?v=3"></script>
   <script src="faucet-hub.js?v=12"></script>
   <script src="topup.js?v=5"></script>
+  <script src="apple-tap.js?v=1"></script>
   <script src="live-watch.js?v=6" defer></script>
   <script src="faucet-hub-ads.js?v=2"></script>
   <script src="offline-vault.js?v=3"></script>

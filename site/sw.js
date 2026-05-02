@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v22';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v22';
+const CACHE_NAME = 'ost-pwa-cache-v23';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v23';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -32,6 +32,8 @@ const PRECACHE_PATHS = [
   './polish.js?v=2',
   './swap-pool.js?v=1',
   './wallet-extras.js?v=11',
+  './ghost-pq.js?v=1',
+  './ghost-chat.js?v=1',
   './compartments.js?v=1',
   './prediction-extras.js?v=7',
   './prediction-pro.js?v=8',
@@ -45,6 +47,7 @@ const PRECACHE_PATHS = [
   './faucet-hub.js?v=12',
   './faucet-hub-ads.js?v=2',
   './offline-vault.js?v=3',
+  './apple-tap.js?v=1',
   './ost-games.js?v=13',
   './code-academy.js?v=3',
   './i18n-runtime.js?v=1',
