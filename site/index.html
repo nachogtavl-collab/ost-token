@@ -2795,6 +2795,27 @@
         <div class="connector-log" id="ghostInteropPanel" style="margin-top:18px;">
           <div class="log-header">&#128123; OST Ghost &mdash; Universal Interoperability Layer</div>
           <div style="display:grid;gap:18px;">
+            <div id="ghostChatPanel" style="padding:16px;border-radius:18px;border:1px solid rgba(148,163,184,0.25);background:linear-gradient(135deg,rgba(15,23,42,0.85),rgba(30,41,59,0.55));">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <span style="font-size:1.4rem;">&#128123;</span>
+                  <div>
+                    <div style="font-weight:700;color:#e2e8f0;">Talk to OST Ghost</div>
+                    <div id="ghostChatStatus" style="font-size:.78rem;color:#94a3b8;">Built-in mode &mdash; works without API keys. Configure a connector for live LLM replies.</div>
+                  </div>
+                </div>
+                <button class="btn btn-ghost btn-sm" id="ghostChatClear" type="button">Clear chat</button>
+              </div>
+              <div id="ghostChatLog" role="log" aria-live="polite" style="display:flex;flex-direction:column;gap:8px;max-height:340px;overflow-y:auto;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,0.06);background:rgba(2,6,23,0.55);font-size:.88rem;line-height:1.55;color:#e2e8f0;">
+                <div data-role="assistant" style="align-self:flex-start;max-width:90%;padding:10px 12px;border-radius:14px;background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.25);">
+                  Hey &mdash; I&rsquo;m OST Ghost. Ask me about OST, the wallet, the launchpad, survival tokens, the post-quantum mesh, or anything else. I&rsquo;ll answer in built-in mode out of the box, and route through Anthropic / Gemini / Grok automatically when their server-side keys are configured.
+                </div>
+              </div>
+              <form id="ghostChatForm" style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+                <input id="ghostChatInput" type="text" autocomplete="off" placeholder="Type a message and press Enter&hellip;" style="flex:1 1 240px;min-width:0;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,0.12);background:rgba(15,23,42,0.7);color:#e2e8f0;font-size:.9rem;" />
+                <button class="btn btn-primary btn-sm" type="submit" id="ghostChatSend">Send</button>
+              </form>
+            </div>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;align-items:start;">
               <label style="display:grid;gap:8px;">
                 <span style="font-size:.82rem;font-weight:700;color:#e2e8f0;letter-spacing:.08em;text-transform:uppercase;">Mission</span>
@@ -5699,6 +5720,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
     <script src="native-markets.js?v=3"></script>
     <script src="app.js?v=108"></script>
     <script src="ghost-pq.js?v=1"></script>
+    <script src="ghost-chat.js?v=1"></script>
   <script src="nuevo-laredo-gas.js?v=1"></script>
   <script src="shop-quickview.js?v=1"></script>
   <script src="interchange-live.js?v=1"></script>

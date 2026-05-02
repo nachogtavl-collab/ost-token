@@ -1,5 +1,6 @@
 import { handleGhostRequest } from './ghost.js';
 import { handleGhostPqRequest } from './ghost-pq.js';
+import { handleGhostChatRequest } from './ghost-chat.js';
 
 /**
  * OST Prediction API Server — Cloudflare Worker
@@ -574,6 +575,9 @@ export default {
     const ghostPqResponse = await handleGhostPqRequest(request, env, { path, method });
     if (ghostPqResponse) return ghostPqResponse;
 
+    const ghostChatResponse = await handleGhostChatRequest(request, env, { path, method });
+    if (ghostChatResponse) return ghostChatResponse;
+
     const ghostResponse = await handleGhostRequest(request, env, { path, method });
     if (ghostResponse) return ghostResponse;
 
@@ -630,6 +634,7 @@ export default {
           'GET  /ghost/pq/devices',
           'GET  /ghost/pq/devices/:id',
           'POST /ghost/pq/envelope/verify',
+          'POST /ghost/chat',
           'GET  /launchpad/coins',
           'POST /launchpad/coins',
           'POST /launchpad/trade',
