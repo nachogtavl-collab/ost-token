@@ -887,11 +887,11 @@
       const intent = u.searchParams.get('intent') || (sessionStorage.getItem('ostTopupIntent') || '');
       if (!status) return;
       if (status === 'success' && intent) {
-        try { if (typeof window.toast === 'function') window.toast('OK', 'Payment received! Devnet OST is on its way.'); } catch (_) {}
+        try { if (typeof window.toast === 'function') window.toast('OK', 'Returned from checkout. Verifying payment before OST delivery.'); } catch (_) {}
         ensureModal();
         $('topupModalOverlay').classList.add('open');
         switchPane('card');
-        setStatus('topupCardStatus', 'info', 'Payment received! Waiting for devnet OST delivery...');
+        setStatus('topupCardStatus', 'info', 'Returned from checkout. Waiting for verified payment confirmation...');
         pollIntent(intent, 'topupCardStatus');
       }
       u.searchParams.delete('topup');
