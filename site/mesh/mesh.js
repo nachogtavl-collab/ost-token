@@ -11,11 +11,13 @@ import {
 } from './mesh-crypto.js?v=1';
 import { MeshRTC } from './mesh-rtc.js?v=2';
 
-const STYLE_HREF = './mesh/mesh.css?v=1';
+const STYLE_HREF = './mesh/mesh.css?v=2';
 const STORAGE_ID = 'ost_mesh_identity_v1';
 const STORAGE_ADDR = 'ost_mesh_addr_v1';
 const MAX_FILE_BYTES = 8 * 1024 * 1024;
 const DEFAULT_API_BASE = 'https://ost-api.nachogtavl.workers.dev';
+const INVITE_PREFIX = 'ost-mesh-invite:';
+const ANNOUNCE_REFRESH_MS = 45_000;
 
 function injectStyles() {
   if (document.getElementById('ost-mesh-style')) return;
@@ -58,14 +60,19 @@ function buildDOM() {
           <div class="sub">Public bundle fingerprint</div>
           <span class="pill" id="mesh-my-fpr">…</span>
         </div>
+        <div>
+          <div class="sub">Directory</div>
+          <span class="pill" id="mesh-dir-status">registering…</span>
+        </div>
         <div style="display:flex; gap:6px;">
-          <button id="mesh-copy-addr">Copy</button>
+          <button id="mesh-copy-addr">Copy address</button>
+          <button id="mesh-copy-invite">Copy invite</button>
           <button id="mesh-rotate-id">Rotate keys</button>
         </div>
       </div>
 
       <div class="ost-mesh-row">
-        <input id="mesh-peer-addr" type="text" placeholder="Peer mesh address (ost-mesh:abcd-1234…)" />
+        <input id="mesh-peer-addr" type="text" placeholder="Paste peer address or invite" />
         <button id="mesh-connect">Connect securely</button>
         <button id="mesh-listen" class="ghost">Wait for incoming</button>
       </div>
@@ -150,6 +157,55 @@ function apiBase() {
   return DEFAULT_API_BASE;
 }
 
+function normalizeAddress(value) {
+  const text = String(value || '').trim();
+  const match = text.match(/ost-mesh:[a-f0-9]{4}(?:-[a-f0-9]{4}){3}/i);
+  return match ? match[0].toLowerCase() : '';
+}
+
+function b64urlEncode(value) {
+  const bytes = new TextEncoder().encode(value);
+  let bin = '';
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function b64urlDecode(value) {
+  const padded = String(value).replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(value.length / 4) * 4, '=');
+  const bin = atob(padded);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+
+function makeInvite({ address, bundle, fingerprint }) {
+  return INVITE_PREFIX + b64urlEncode(JSON.stringify({ v: 1, address, bundle, fingerprint }));
+}
+
+function parsePeerInput(value) {
+  const text = String(value || '').trim();
+  const inviteMatch = text.match(/ost-mesh-invite:[A-Za-z0-9_-]+/);
+  if (inviteMatch) {
+    const parsed = JSON.parse(b64urlDecode(inviteMatch[0].slice(INVITE_PREFIX.length)));
+    return {
+      address: normalizeAddress(parsed.address),
+      bundle: parsed.bundle || null,
+      fingerprint: parsed.fingerprint || null,
+      via: 'invite'
+    };
+  }
+  if (text.startsWith('{')) {
+    const parsed = JSON.parse(text);
+    return {
+      address: normalizeAddress(parsed.address),
+      bundle: parsed.bundle || null,
+      fingerprint: parsed.fingerprint || null,
+      via: parsed.bundle ? 'json-invite' : 'address'
+    };
+  }
+  return { address: normalizeAddress(text), bundle: null, fingerprint: null, via: 'address' };
+}
+
 class MeshPavilion {
   constructor() {
     injectStyles();
@@ -160,6 +216,7 @@ class MeshPavilion {
     this.closeBtn  = this.root.querySelector('.ost-mesh-close');
     this.addrEl    = document.getElementById('mesh-my-addr');
     this.fprEl     = document.getElementById('mesh-my-fpr');
+    this.dirEl     = document.getElementById('mesh-dir-status');
     this.peerInput = document.getElementById('mesh-peer-addr');
     this.connectBtn= document.getElementById('mesh-connect');
     this.listenBtn = document.getElementById('mesh-listen');
@@ -186,6 +243,7 @@ class MeshPavilion {
     this.rtc = null;
     this.peerAddr = null;
     this.liveLocTimer = null;
+    this.announceTimer = null;
     this.outbox = [];
 
     this._wire();
@@ -199,19 +257,16 @@ class MeshPavilion {
     this.fpr = await fingerprint(bundle);
     this.addrEl.textContent = this.address;
     this.fprEl.textContent = this.fpr;
-    // Announce ourselves so peers can fetch our public bundle
-    this._announce().catch(() => {});
+    this._announceNow({ silent: false });
+    if (this.announceTimer) clearInterval(this.announceTimer);
+    this.announceTimer = setInterval(() => this._announceNow({ silent: true }), ANNOUNCE_REFRESH_MS);
   }
 
   _wire() {
     this.trigger.addEventListener('click', () => this.open());
     this.closeBtn.addEventListener('click', () => this.close());
-    document.getElementById('mesh-copy-addr').addEventListener('click', () => {
-      navigator.clipboard?.writeText(this.address).then(
-        () => this._setStatus('Address copied.', 'ok'),
-        () => this._setStatus('Copy blocked.', 'warn')
-      );
-    });
+    document.getElementById('mesh-copy-addr').addEventListener('click', () => this._copyAddress());
+    document.getElementById('mesh-copy-invite').addEventListener('click', () => this._copyInvite());
     document.getElementById('mesh-rotate-id').addEventListener('click', async () => {
       try { localStorage.removeItem(STORAGE_ID); } catch {}
       await this._initIdentity();
@@ -249,34 +304,80 @@ class MeshPavilion {
   }
 
   async _announce() {
-    if (!this.api) return;
-    try {
-      await fetch(this.api + '/mesh/v1/identity/announce', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          address: this.address,
-          bundle: this.publicBundle,
-          fingerprint: this.fpr
-        })
-      });
-    } catch {}
-  }
-
-  async _fetchPeerBundle(addr) {
     if (!this.api) throw new Error('no API base');
-    const r = await fetch(this.api + '/mesh/v1/identity/lookup?address=' + encodeURIComponent(addr));
-    if (!r.ok) throw new Error('peer not found in directory');
-    const data = await r.json();
-    if (!data.bundle) throw new Error('peer has no bundle');
+    const r = await fetch(this.api + '/mesh/v1/identity/announce', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        address: this.address,
+        bundle: this.publicBundle,
+        fingerprint: this.fpr
+      })
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok || data.ok === false) throw new Error(data.error || ('announce ' + r.status));
     return data;
   }
 
-  async _connectToPeer() {
-    const addr = (this.peerInput.value || '').trim();
-    if (!addr) return this._setStatus('Enter peer address.', 'warn');
+  async _announceNow({ silent } = {}) {
     try {
-      await this._preparePeerSession(addr);
+      const data = await this._announce();
+      if (this.dirEl) this.dirEl.textContent = 'live';
+      if (!silent) this._setStatus('Directory registration live. Address and invite are ready.', 'ok');
+      return data;
+    } catch (err) {
+      if (this.dirEl) this.dirEl.textContent = 'offline';
+      if (!silent) this._setStatus('Directory registration failed. Use Copy invite instead. ' + err.message, 'warn');
+      throw err;
+    }
+  }
+
+  async _copyAddress() {
+    try { await this._announceNow({ silent: true }); } catch {}
+    this._copyText(this.address, 'Address copied. Peer can paste it while this tab stays open.', 'Copy blocked.');
+  }
+
+  async _copyInvite() {
+    if (!this.publicBundle) return this._setStatus('Keys are still loading. Try again in a second.', 'warn');
+    const invite = makeInvite({
+      address: this.address,
+      bundle: this.publicBundle,
+      fingerprint: this.fpr
+    });
+    this._copyText(invite, 'Invite copied. This works even if the directory misses.', 'Copy blocked.');
+  }
+
+  _copyText(value, okMsg, failMsg) {
+    navigator.clipboard?.writeText(value).then(
+      () => this._setStatus(okMsg, 'ok'),
+      () => this._setStatus(failMsg, 'warn')
+    );
+  }
+
+  async _fetchPeerBundle(addr, fallback = null) {
+    if (!this.api) throw new Error('no API base');
+    try {
+      const r = await fetch(this.api + '/mesh/v1/identity/lookup?address=' + encodeURIComponent(addr));
+      if (!r.ok) throw new Error('lookup ' + r.status);
+      const data = await r.json();
+      if (!data.bundle) throw new Error('peer has no bundle');
+      return data;
+    } catch (err) {
+      if (fallback?.bundle) return fallback;
+      throw new Error('peer not found in directory. Ask them to open Mesh and Copy invite, then paste the invite here.');
+    }
+  }
+
+  async _connectToPeer() {
+    let peer;
+    try {
+      peer = parsePeerInput(this.peerInput.value || '');
+    } catch (err) {
+      return this._setStatus('Invalid invite: ' + err.message, 'err');
+    }
+    if (!peer.address) return this._setStatus('Paste a peer address or invite.', 'warn');
+    try {
+      await this._preparePeerSession(peer);
       this._enableMessaging();
       // Open WebRTC data channel automatically (caller role)
       this._startRTC('caller');
@@ -292,14 +393,19 @@ class MeshPavilion {
     this._startRTC('callee');
   }
 
-  async _preparePeerSession(addr) {
+  async _preparePeerSession(peerInput) {
+    const peerInfo = typeof peerInput === 'string'
+      ? { address: normalizeAddress(peerInput), bundle: null, fingerprint: null, via: 'address' }
+      : peerInput;
+    const addr = normalizeAddress(peerInfo.address);
     if (!addr) throw new Error('missing peer address');
     if (this.peerAddr === addr && this.sessionKey) return;
     this._setStatus('Looking up peer in OST directory…');
-    const peer = await this._fetchPeerBundle(addr);
+    const peer = await this._fetchPeerBundle(addr, peerInfo.bundle ? peerInfo : null);
     this.peerBundle = peer.bundle;
     const imported = await importPeerBundle(peer.bundle);
-    this._setStatus(`Peer found · fpr ${peer.fingerprint || '—'}. Deriving session key…`);
+    const via = peerInfo.bundle ? 'invite' : 'directory';
+    this._setStatus(`Peer found by ${via} · fpr ${peer.fingerprint || '—'}. Deriving session key…`);
     this.sessionKey = await deriveSessionKey(this.identity, imported.kexPub);
     this.peerAddr = addr;
     this.peerInput.value = addr;

@@ -82,6 +82,10 @@
   align-items: center;
   justify-content: space-between;
 }
+.ost-mesh-id .sub {
+  color: #6f9ec8;
+  margin-bottom: 4px;
+}
 .ost-mesh-id .pill {
   font-family: ui-monospace, Menlo, monospace;
   background: #06141f;
@@ -89,6 +93,9 @@
   border-radius: 999px;
   border: 1px solid #15324a;
   color: #7fd8ff;
+}
+.ost-mesh-id #mesh-dir-status {
+  color: #6dffb5;
 }
 .ost-mesh-id button {
   background: #0a2740;
