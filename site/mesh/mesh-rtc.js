@@ -132,9 +132,24 @@ export class MeshRTC extends EventTarget {
     if (!this._pendingOffer) throw new Error('no incoming call');
     const { sig, from } = this._pendingOffer;
     this._pendingOffer = null;
-    if (!this.pc) this.pc = this._newPC();
     this.role = 'callee';
     if (from) this.peer = from;
+
+    if (sig.call?.withMedia) {
+      try { this.dc?.close(); } catch {}
+      try { this.pc?.close(); } catch {}
+      if (this.localStream) {
+        for (const track of this.localStream.getTracks()) track.stop();
+      }
+      this.pc = null;
+      this.dc = null;
+      this.localStream = null;
+      this.remoteStream = null;
+      this._localIceBuffer = [];
+      this._suppressIce = false;
+    }
+
+    if (!this.pc) this.pc = this._newPC();
 
     if (sig.call?.withMedia) {
       this.localStream = await this._getLocalMedia({ audio, video });
@@ -190,6 +205,10 @@ export class MeshRTC extends EventTarget {
       await this.pc.setRemoteDescription({ type: 'answer', sdp: sig.sdp });
       await this._flushPendingIce();
     } else if (sig.type === 'ice' && sig.candidate) {
+      if (this._pendingOffer) {
+        this._pendingIce.push(sig.candidate);
+        return;
+      }
       if (this.pc.remoteDescription) {
         try { await this.pc.addIceCandidate(sig.candidate); } catch {}
       } else {
