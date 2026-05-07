@@ -211,14 +211,15 @@
     var quote = quoteSolToOst(solAmount);
     if (quote.ost <= 0) throw new Error('Quote too small');
 
-    // Make sure the user has enough SOL (for swap + fee + ATA rent)
+    // Make sure the user has enough SOL for the exact swap. The pool pays the
+    // transaction fee and any OST ATA rent, so no extra SOL buffer is required.
     var userLamports = await conn.getBalance(w.session.publicKey);
-    var needed = Math.round(solAmount * solanaWeb3.LAMPORTS_PER_SOL) + 5_000_000; // +0.005 SOL buffer
+    var needed = Math.round(solAmount * solanaWeb3.LAMPORTS_PER_SOL);
     if (userLamports < needed) {
       try { await w.ensureFee(w.session.publicKey); } catch (e) {}
       userLamports = await conn.getBalance(w.session.publicKey);
       if (userLamports < needed) {
-        throw new Error('Need ' + (needed / solanaWeb3.LAMPORTS_PER_SOL).toFixed(4) + ' SOL on devnet (have ' + (userLamports / solanaWeb3.LAMPORTS_PER_SOL).toFixed(4) + ')');
+        throw new Error('Need ' + (needed / solanaWeb3.LAMPORTS_PER_SOL).toFixed(6) + ' SOL on devnet (have ' + (userLamports / solanaWeb3.LAMPORTS_PER_SOL).toFixed(6) + ')');
       }
     }
 

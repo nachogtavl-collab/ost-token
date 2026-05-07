@@ -66,6 +66,21 @@
     return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 6 }) + ' SOL';
   }
 
+  function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  async function waitForSwapRail() {
+    for (let attempt = 0; attempt < 24; attempt += 1) {
+      if (window.OST_REAL_SWAP && typeof window.OST_REAL_SWAP.swapAny === 'function' &&
+          window.OST_RESCUE && typeof window.OST_RESCUE.ensureUserAta === 'function') {
+        return window.OST_REAL_SWAP;
+      }
+      await sleep(150);
+    }
+    return window.OST_REAL_SWAP || null;
+  }
+
   function clampUsd(usd) {
     const clean = Math.round(numberFrom(usd, 0) * 100) / 100;
     if (!Number.isFinite(clean)) return 0;
@@ -502,7 +517,10 @@
       if (receiveSymbol) receiveSymbol.textContent = 'SOL';
       out.textContent = fmtSol(solOut);
     } else {
-      const ostOut = rate > 0 ? (amount * solPrice) / rate : 0;
+      const liveQuote = window.OST_REAL_SWAP && typeof window.OST_REAL_SWAP.quote === 'function'
+        ? window.OST_REAL_SWAP.quote(amount)
+        : null;
+      const ostOut = liveQuote && Number.isFinite(liveQuote.ost) ? liveQuote.ost : (rate > 0 ? (amount * solPrice) / rate : 0);
       if (sendSymbol) sendSymbol.textContent = 'SOL';
       if (receiveSymbol) receiveSymbol.textContent = 'OST';
       out.textContent = fmtOst(ostOut);
@@ -544,16 +562,43 @@
     openModal('crypto');
   }
 
-  function convertSOLtoOST() {
+  async function convertSOLtoOST() {
     const amount = numberFrom($('sol-amount')?.value, 0);
+    const btn = $('converterSwapBtn');
     if (amount <= 0) {
       setStatus('converterSwapStatus', 'error', 'Enter an amount to convert first.');
       return;
     }
-    setStatus('converterSwapStatus', 'info', 'Conversion quote prepared. Use the connected wallet rail or Jupiter route to execute the swap.');
+    if (conversionDirection !== 'solToOst') {
+      setStatus('converterSwapStatus', 'warn', 'OST to SOL cash-out is not available in the devnet converter yet. Use the transfer rail or sell routes for exits.');
+      return;
+    }
+    if (!window.OST_WALLET || !window.OST_WALLET.session || !window.OST_WALLET.session.publicKey) {
+      setStatus('converterSwapStatus', 'error', 'Create or connect a wallet before converting devnet SOL to OST.');
+      return;
+    }
+    const originalText = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = 'Converting...'; }
     try {
-      document.querySelector('[data-wallet-tab="convert"]')?.click();
-    } catch (_) {}
+      const swapRail = await waitForSwapRail();
+      if (!swapRail || typeof swapRail.swapAny !== 'function') throw new Error('OST devnet swap rail is still loading. Refresh and try again.');
+      if (!window.OST_RESCUE || typeof window.OST_RESCUE.ensureUserAta !== 'function') throw new Error('OST fee vault is still loading. Please wait a moment and try again.');
+      const quote = typeof swapRail.quote === 'function' ? swapRail.quote(amount) : null;
+      setStatus('converterSwapStatus', 'info', 'Converting ' + fmtSol(amount) + ' into ' + fmtOst(quote && quote.ost) + ' on devnet...');
+      const memo = JSON.stringify({ k: 'converter-sol-to-ost', sol: amount, t: Date.now() });
+      const result = await swapRail.swapAny('SOL', amount, { memo });
+      const sig = result && result.sig ? String(result.sig) : '';
+      setStatus('converterSwapStatus', 'ok', 'Converted ' + fmtSol(amount) + ' into ' + fmtOst(result && result.ost) + '. ' +
+        (sig ? '<a href="https://solscan.io/tx/' + encodeURIComponent(sig) + '?cluster=devnet" target="_blank" rel="noopener">View tx</a>' : ''));
+      try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {}
+      try { window.dispatchEvent(new CustomEvent('ost:converter-swap-complete', { detail: result || {} })); } catch (_) {}
+      if (typeof window.syncOstWalletEventsFromRemote === 'function') window.syncOstWalletEventsFromRemote();
+      updateConversion();
+    } catch (error) {
+      setStatus('converterSwapStatus', 'error', String(error && error.message || error || 'SOL to OST conversion failed.'));
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = originalText || 'Prepare Conversion'; }
+    }
   }
 
   function prepareTransfer() {
