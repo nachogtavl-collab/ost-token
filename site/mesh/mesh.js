@@ -15,6 +15,7 @@ const STYLE_HREF = './mesh/mesh.css?v=1';
 const STORAGE_ID = 'ost_mesh_identity_v1';
 const STORAGE_ADDR = 'ost_mesh_addr_v1';
 const MAX_FILE_BYTES = 8 * 1024 * 1024;
+const DEFAULT_API_BASE = 'https://ost-api.nachogtavl.workers.dev';
 
 function injectStyles() {
   if (document.getElementById('ost-mesh-style')) return;
@@ -144,8 +145,9 @@ function getOrCreateAddress() {
 }
 
 function apiBase() {
-  if (window.OST_API_BASE) return window.OST_API_BASE;
-  return 'https://ost-api.nachogtavl.workers.dev';
+  const configured = String(window.OST_MESH_API_BASE || window.OST_API_BASE || '').replace(/\/+$/, '');
+  if (configured && !configured.includes('ost-api-pages.pages.dev')) return configured;
+  return DEFAULT_API_BASE;
 }
 
 class MeshPavilion {
