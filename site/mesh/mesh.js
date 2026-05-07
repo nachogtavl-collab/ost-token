@@ -749,8 +749,9 @@ class MeshPavilion {
   async _extendCall() {
     if (this.callState !== 'in-call') return;
     this.callEndsAt = Math.max(this.callEndsAt || Date.now(), Date.now()) + 15 * 60_000;
-    try { await this._sendCallControl('call-extend', { minutes: 15 }); } catch {}
-    try { await this.rtc?.extendCall?.(15); } catch {}
+    let sentControl = false;
+    try { sentControl = await this._sendCallControl('call-extend', { minutes: 15 }); } catch {}
+    if (!sentControl) try { await this.rtc?.extendCall?.(15); } catch {}
     this._setCallStatus('Call prolonged by 15 minutes.', 'ok');
     this._updateCallTimer();
   }

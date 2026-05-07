@@ -2,6 +2,8 @@
 import { handleGhostV2Request } from './ghost/index.js';
 import { handleMeshRequest }    from './mesh/index.js';
 
+export { MeshHub } from './mesh/hub.js';
+
 /**
  * OST Prediction API Server — Cloudflare Worker
  * ============================================================

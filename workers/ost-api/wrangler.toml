@@ -11,6 +11,14 @@ mode = "smart"
 binding = "OST_KV"
 id = "fb5ef8073fd5408fa2d7336e7e0b9fd8"
 
+[[durable_objects.bindings]]
+name = "MESH_HUB"
+class_name = "MeshHub"
+
+[[migrations]]
+tag = "mesh_hub_v1"
+new_sqlite_classes = ["MeshHub"]
+
 [vars]
 GAMMA_BASE = "https://gamma-api.polymarket.com"
 CLOB_BASE  = "https://clob.polymarket.com"

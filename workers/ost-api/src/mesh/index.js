@@ -10,6 +10,11 @@
 import { identityAnnounce, identityLookup }   from './identity.js';
 import { signalSend, signalInbox }            from './signal.js';
 
+function meshHub(env) {
+  if (!env.MESH_HUB) return null;
+  return env.MESH_HUB.get(env.MESH_HUB.idFromName('mesh-v1'));
+}
+
 const ok   = (data, status = 200) =>
   new Response(JSON.stringify(data), {
     status,
@@ -33,6 +38,15 @@ function cors(extra = {}) {
 
 export async function handleMeshRequest(request, env, { path, method }) {
   if (method === 'OPTIONS') return new Response(null, { status: 204, headers: cors() });
+
+  const hub = meshHub(env);
+  if (hub) {
+    try {
+      return await hub.fetch(request);
+    } catch (error) {
+      return err('mesh hub unavailable: ' + String(error?.message || error), 503);
+    }
+  }
 
   if (path === '/mesh/v1/health') {
     return ok({ ok: true, mesh: 'v1', ts: new Date().toISOString() });
