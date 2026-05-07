@@ -5,6 +5,24 @@
    ============================================================ */
 
 const STORAGE_KEY = 'ost_ghost_keys_v1';
+const DEFAULT_API_BASE = 'https://ost-api.nachogtavl.workers.dev';
+const FALLBACK_API_BASES = [
+  DEFAULT_API_BASE,
+  'https://ost-api-pages.pages.dev'
+];
+const RELAY_TIMEOUT_MS = 18000;
+
+function uniqueBases(values) {
+  const seen = new Set();
+  return values
+    .filter(Boolean)
+    .map((value) => String(value).replace(/\/+$/, ''))
+    .filter((value) => {
+      if (seen.has(value)) return false;
+      seen.add(value);
+      return true;
+    });
+}
 
 const PROVIDERS = {
   // OST worker relay (free path, no key required from user)
@@ -33,11 +51,13 @@ function saveKeys(keys) {
 
 export class GhostTranslator {
   constructor({ apiBase } = {}) {
-    this.apiBase = apiBase
-      || window.OST_API_BASE
-      || (location.hostname.endsWith('github.io')
-            ? 'https://ost-api.nachogtavl.workers.dev'
-            : '');
+    this.apiBases = uniqueBases([
+      apiBase,
+      window.OST_API_BASE,
+      DEFAULT_API_BASE,
+      ...FALLBACK_API_BASES
+    ]);
+    this.apiBase = this.apiBases[0] || '';
     this.keys = loadKeys();
   }
 
@@ -83,17 +103,38 @@ export class GhostTranslator {
 
   // ------- worker free relay (OST-hosted) ----------------------------
   async _workerRelay(prompt, history, onPartial) {
-    if (!this.apiBase) throw new Error('no api base');
-    const r = await fetch(this.apiBase + '/ghost/v2/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, history })
-    });
-    if (!r.ok) throw new Error('worker relay ' + r.status);
-    const data = await r.json();
-    const text = data.text || data.reply || '';
-    if (onPartial && text) onPartial(text);
-    return { text, source: data.source || 'worker' };
+    if (!this.apiBases.length) throw new Error('no api base');
+    const errors = [];
+    for (const base of this.apiBases) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), RELAY_TIMEOUT_MS);
+      try {
+        const r = await fetch(base + '/ghost/v2/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt, history }),
+          signal: controller.signal
+        });
+        if (!r.ok) throw new Error('status ' + r.status);
+        const data = await r.json();
+        const text = data.text || data.reply || '';
+        if (data.source === 'local') {
+          errors.push(base + ': worker local fallback');
+          continue;
+        }
+        if (text) {
+          if (onPartial) onPartial(text);
+          this.apiBase = base;
+          return { text, source: data.source || 'worker' };
+        }
+        errors.push(base + ': empty reply');
+      } catch (err) {
+        errors.push(base + ': ' + ((err && err.message) || 'failed'));
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+    throw new Error('worker relays failed: ' + errors.join('; '));
   }
 
   // ------- user-key direct providers ---------------------------------
@@ -197,8 +238,8 @@ export class GhostTranslator {
   // ------- local last-resort echo (so the orb is never silent) -------
   _localEcho(prompt) {
     const lines = [
-      "I'm here, but every relay refused this turn. Try again, or wire a key in settings.",
-      'Mesh quiet. Local echo: ' + prompt.slice(0, 140) + (prompt.length > 140 ? '…' : '')
+      "I'm connected locally, but the model relay did not answer this turn.",
+      'I will not fake a reply by echoing you. Retry in a moment, or use window.OST_GHOST.setKey(provider, key).'
     ];
     return { text: lines.join('\n\n'), source: 'local' };
   }

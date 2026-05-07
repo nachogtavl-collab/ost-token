@@ -10,26 +10,35 @@
 
 const SYSTEM_PROMPT =
   'You are OST Ghost — a sovereign, curious AI woven into the OST network. ' +
-  'Answer briefly with quiet personality. Prefer truth over filler.';
+  'Answer briefly with quiet personality. Prefer truth over filler. ' +
+  'When the user asks for exact text or a constrained format, follow it exactly.';
 
 export async function freeRelayChat(env, { prompt, history = [] } = {}) {
   const text = String(prompt || '').trim();
   if (!text) return { text: '', source: 'empty' };
 
-  // 1) Gemini free tier
-  if (env && env.GEMINI_API_KEY) {
-    try {
-      const reply = await callGemini(env.GEMINI_API_KEY, text, history);
-      if (reply) return { text: reply, source: 'gemini-free' };
-    } catch {}
-  }
+  const attempts = [];
 
-  // 2) Groq free tier
+  // 1) Groq free tier. This is currently the verified live model relay.
   if (env && env.GROQ_API_KEY) {
     try {
       const reply = await callGroq(env.GROQ_API_KEY, text, history);
-      if (reply) return { text: reply, source: 'groq-free' };
-    } catch {}
+      if (reply) return { text: reply, source: 'groq-free', attempts };
+      attempts.push({ source: 'groq-free', error: 'empty reply' });
+    } catch (err) {
+      attempts.push({ source: 'groq-free', error: publicError(err) });
+    }
+  }
+
+  // 2) Gemini free tier. We try multiple model ids because Google retires aliases.
+  if (env && env.GEMINI_API_KEY) {
+    try {
+      const reply = await callGemini(env.GEMINI_API_KEY, text, history);
+      if (reply) return { text: reply, source: 'gemini-free', attempts };
+      attempts.push({ source: 'gemini-free', error: 'empty reply' });
+    } catch (err) {
+      attempts.push({ source: 'gemini-free', error: publicError(err) });
+    }
   }
 
   // 3) DuckDuckGo zero-key fact lookup
@@ -38,41 +47,53 @@ export async function freeRelayChat(env, { prompt, history = [] } = {}) {
     if (snippet) {
       return {
         text: snippet + '\n\n(Web snippet — no model. Wire a key for richer answers.)',
-        source: 'ddg'
+        source: 'ddg',
+        attempts
       };
     }
-  } catch {}
+    attempts.push({ source: 'ddg', error: 'empty reply' });
+  } catch (err) {
+    attempts.push({ source: 'ddg', error: publicError(err) });
+  }
 
   // 4) Local canned echo
   return {
     text:
-      "I'm here. No free model relay is configured on this worker yet, " +
-      'and the web didn\'t return a clean snippet. Add GEMINI_API_KEY or ' +
-      'GROQ_API_KEY to the worker, or paste a key in the orb settings.',
-    source: 'local'
+      "I'm here locally, but the model relays did not answer this turn. " +
+      'Groq/Gemini secrets may need rotation, redeploy, or quota recovery.',
+    source: 'local',
+    attempts
   };
 }
 
 async function callGemini(key, prompt, history) {
-  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key='
-            + encodeURIComponent(key);
-  const r = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-      contents: [
-        ...history.slice(-10).map((h) => ({
-          role: h.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: h.text }]
-        })),
-        { role: 'user', parts: [{ text: prompt }] }
-      ]
-    })
+  const models = ['gemini-2.0-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-flash'];
+  const body = JSON.stringify({
+    systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+    contents: [
+      ...history.slice(-10).map((h) => ({
+        role: h.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: h.text }]
+      })),
+      { role: 'user', parts: [{ text: prompt }] }
+    ]
   });
-  if (!r.ok) return '';
-  const data = await r.json();
-  return (data.candidates?.[0]?.content?.parts || []).map((p) => p.text).join('') || '';
+
+  const errors = [];
+  for (const model of models) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`;
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body
+    });
+    const data = await r.json().catch(() => ({}));
+    if (r.ok) {
+      return (data.candidates?.[0]?.content?.parts || []).map((p) => p.text).join('') || '';
+    }
+    errors.push(`${model}: ${r.status}`);
+  }
+  throw new Error(errors.join('; '));
 }
 
 async function callGroq(key, prompt, history) {
@@ -89,12 +110,17 @@ async function callGroq(key, prompt, history) {
         ...history.slice(-10).map((h) => ({ role: h.role, content: h.text })),
         { role: 'user', content: prompt }
       ],
-      temperature: 0.6
+      temperature: 0.25,
+      max_tokens: 700
     })
   });
-  if (!r.ok) return '';
-  const data = await r.json();
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error('groq ' + r.status + ' ' + String(data.error?.message || '').slice(0, 120));
   return data.choices?.[0]?.message?.content || '';
+}
+
+function publicError(err) {
+  return String((err && err.message) || err || 'failed').slice(0, 180);
 }
 
 async function ddgInstantAnswer(query) {

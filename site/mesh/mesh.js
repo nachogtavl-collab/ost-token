@@ -9,11 +9,12 @@ import {
   deriveSessionKey, sealPayload, openPayload,
   sealBytes, openBytes, fingerprint
 } from './mesh-crypto.js?v=1';
-import { MeshRTC } from './mesh-rtc.js?v=1';
+import { MeshRTC } from './mesh-rtc.js?v=2';
 
 const STYLE_HREF = './mesh/mesh.css?v=1';
 const STORAGE_ID = 'ost_mesh_identity_v1';
 const STORAGE_ADDR = 'ost_mesh_addr_v1';
+const MAX_FILE_BYTES = 8 * 1024 * 1024;
 
 function injectStyles() {
   if (document.getElementById('ost-mesh-style')) return;
@@ -144,8 +145,7 @@ function getOrCreateAddress() {
 
 function apiBase() {
   if (window.OST_API_BASE) return window.OST_API_BASE;
-  if (location.hostname.endsWith('github.io')) return 'https://ost-api.nachogtavl.workers.dev';
-  return '';
+  return 'https://ost-api.nachogtavl.workers.dev';
 }
 
 class MeshPavilion {
@@ -184,6 +184,7 @@ class MeshPavilion {
     this.rtc = null;
     this.peerAddr = null;
     this.liveLocTimer = null;
+    this.outbox = [];
 
     this._wire();
     this._initIdentity().catch((err) => this._setStatus('Identity error: ' + err.message, 'err'));
@@ -273,16 +274,8 @@ class MeshPavilion {
     const addr = (this.peerInput.value || '').trim();
     if (!addr) return this._setStatus('Enter peer address.', 'warn');
     try {
-      this._setStatus('Looking up peer in OST directory…');
-      const peer = await this._fetchPeerBundle(addr);
-      this.peerBundle = peer.bundle;
-      const imported = await importPeerBundle(peer.bundle);
-      this._setStatus(`Peer found · fpr ${peer.fingerprint || '—'}. Deriving session key…`);
-      this.sessionKey = await deriveSessionKey(this.identity, imported.kexPub);
-      this.peerAddr = addr;
-      this._setStatus(`🔒 Encrypted session ready with ${addr}`, 'ok');
+      await this._preparePeerSession(addr);
       this._enableMessaging();
-      this._bubble('system', `Encrypted channel established with <code>${addr}</code> · suite ${peer.bundle.suite}`);
       // Open WebRTC data channel automatically (caller role)
       this._startRTC('caller');
     } catch (err) {
@@ -291,13 +284,25 @@ class MeshPavilion {
   }
 
   async _waitForIncoming() {
-    if (!this.peerBundle) {
-      // Wait for any incoming offer addressed to us — we still need a peer address
-      // to derive a session key, so we'll learn it from the first signaling message.
-      this._setStatus('Listening for incoming peers…');
-      this._enableMessaging();
-      this._startRTC('callee', { open: true });
-    }
+    this.peerAddr = '';
+    this.sessionKey = null;
+    this._setStatus('Listening for incoming peers…');
+    this._startRTC('callee');
+  }
+
+  async _preparePeerSession(addr) {
+    if (!addr) throw new Error('missing peer address');
+    if (this.peerAddr === addr && this.sessionKey) return;
+    this._setStatus('Looking up peer in OST directory…');
+    const peer = await this._fetchPeerBundle(addr);
+    this.peerBundle = peer.bundle;
+    const imported = await importPeerBundle(peer.bundle);
+    this._setStatus(`Peer found · fpr ${peer.fingerprint || '—'}. Deriving session key…`);
+    this.sessionKey = await deriveSessionKey(this.identity, imported.kexPub);
+    this.peerAddr = addr;
+    this.peerInput.value = addr;
+    this._setStatus(`🔒 Encrypted session ready with ${addr}`, 'ok');
+    this._bubble('system', `Encrypted channel established with <code>${escapeHtml(addr)}</code> · suite ${escapeHtml(peer.bundle.suite || 'unknown')}`);
   }
 
   _enableMessaging() {
@@ -313,10 +318,17 @@ class MeshPavilion {
 
   _startRTC(role, { withMedia = false, video = false } = {}) {
     if (this.rtc) try { this.rtc.hangup(); } catch {}
-    this.rtc = new MeshRTC({ apiBase: this.api, myAddress: this.address, peerAddress: this.peerAddr || 'pending' });
+    this.rtc = new MeshRTC({ apiBase: this.api, myAddress: this.address, peerAddress: this.peerAddr || '' });
 
     this.rtc.addEventListener('open', () => {
       this._setStatus('🔗 Direct P2P data channel open.', 'ok');
+      this._flushOutbox();
+    });
+    this.rtc.addEventListener('peer', (e) => {
+      const addr = e.detail.address;
+      this._preparePeerSession(addr)
+        .then(() => this._enableMessaging())
+        .catch((err) => this._setStatus('Incoming peer rejected: ' + err.message, 'err'));
     });
     this.rtc.addEventListener('close', () => {
       this._setStatus('Channel closed.', 'warn');
@@ -346,7 +358,7 @@ class MeshPavilion {
     if (!txt) return;
     if (!this.sessionKey) return this._setStatus('No session key.', 'err');
     const sealed = await sealPayload(this.sessionKey, { kind: 'text', text: txt, ts: Date.now() });
-    const sent = this.rtc?.send(JSON.stringify({ kind: 'enc', payload: sealed }));
+    const sent = this._sendWire(JSON.stringify({ kind: 'enc', payload: sealed }));
     this._bubble('me', escapeHtml(txt));
     this.textInput.value = '';
     if (!sent) this._bubble('system', '(buffered — channel not open yet)');
@@ -356,12 +368,13 @@ class MeshPavilion {
     const f = this.fileInput.files && this.fileInput.files[0];
     if (!f) return;
     if (!this.sessionKey) return this._setStatus('No session key.', 'err');
+    if (f.size > MAX_FILE_BYTES) return this._setStatus('File too large for v1. Keep it under 8 MB.', 'warn');
     const buf = new Uint8Array(await f.arrayBuffer());
     const sealed = await sealBytes(this.sessionKey, buf);
     const meta = { kind: 'file-meta', name: f.name, type: f.type, size: f.size };
     const sealedMeta = await sealPayload(this.sessionKey, meta);
-    this.rtc?.send(JSON.stringify({ kind: 'enc', payload: sealedMeta }));
-    this.rtc?.send(sealed.buffer);
+    this._sendWire(JSON.stringify({ kind: 'enc', payload: sealedMeta }));
+    this._sendWire(sealed.buffer);
     const url = URL.createObjectURL(f);
     if (f.type.startsWith('image/')) {
       const img = document.createElement('img'); img.src = url;
@@ -376,6 +389,7 @@ class MeshPavilion {
   }
 
   async _sendLocation(live) {
+    if (!this.sessionKey) return this._setStatus('No session key.', 'err');
     if (!navigator.geolocation) return this._setStatus('Geolocation unavailable.', 'err');
     navigator.geolocation.getCurrentPosition(async (pos) => {
       const payload = {
@@ -386,7 +400,7 @@ class MeshPavilion {
         ts: Date.now()
       };
       const sealed = await sealPayload(this.sessionKey, payload);
-      this.rtc?.send(JSON.stringify({ kind: 'enc', payload: sealed }));
+      this._sendWire(JSON.stringify({ kind: 'enc', payload: sealed }));
       const link = `https://www.openstreetmap.org/?mlat=${payload.lat}&mlon=${payload.lon}#map=15/${payload.lat}/${payload.lon}`;
       this._bubble('me',
         `📍 <a href="${link}" target="_blank" rel="noopener">${payload.lat.toFixed(4)}, ${payload.lon.toFixed(4)}</a>${live ? ' (live)' : ''}`
@@ -416,6 +430,23 @@ class MeshPavilion {
     this.videoGrid.classList.remove('is-on');
     if (this.liveLocTimer) { clearInterval(this.liveLocTimer); this.liveLocTimer = null; }
     this._setStatus('Hung up.', 'warn');
+  }
+
+  _sendWire(data) {
+    const sent = this.rtc?.send(data);
+    if (!sent) this.outbox.push(data);
+    return sent;
+  }
+
+  _flushOutbox() {
+    if (!this.outbox.length) return;
+    const pending = this.outbox.splice(0);
+    let sent = 0;
+    for (const item of pending) {
+      if (this.rtc?.send(item)) sent++;
+      else this.outbox.push(item);
+    }
+    if (sent) this._bubble('system', `Sent ${sent} queued encrypted item${sent === 1 ? '' : 's'}.`);
   }
 
   async _onPeerMessage(data) {

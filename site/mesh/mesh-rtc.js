@@ -14,14 +14,14 @@ const STUN = [
 ];
 
 const POLL_MS = 1500;
-const POLL_BUDGET_MS = 60_000;
+const POLL_BUDGET_MS = 5 * 60_000;
 
 export class MeshRTC extends EventTarget {
   constructor({ apiBase, myAddress, peerAddress }) {
     super();
     this.apiBase = apiBase;
     this.me = myAddress;
-    this.peer = peerAddress;
+    this.peer = peerAddress || '';
     this.pc = null;
     this.dc = null;
     this.localStream = null;
@@ -106,8 +106,12 @@ export class MeshRTC extends EventTarget {
     this._pollLoop({ accept: ['offer', 'ice'] });
   }
 
-  async _handleSignal(sig) {
+  async _handleSignal(sig, from) {
     if (!this.pc) return;
+    if (from && !this.peer) {
+      this.peer = from;
+      this._emit('peer', { address: from });
+    }
     if (sig.type === 'offer' && this.role === 'callee') {
       await this.pc.setRemoteDescription({ type: 'offer', sdp: sig.sdp });
       const answer = await this.pc.createAnswer();
@@ -126,14 +130,14 @@ export class MeshRTC extends EventTarget {
     while (!this._stopPolling && Date.now() - start < POLL_BUDGET_MS) {
       try {
         const r = await fetch(
-          `${this.apiBase}/mesh/v1/signal/inbox?to=${encodeURIComponent(this.me)}&from=${encodeURIComponent(this.peer)}&since=${cursor}`
+          `${this.apiBase}/mesh/v1/signal/inbox?to=${encodeURIComponent(this.me)}${this.peer ? '&from=' + encodeURIComponent(this.peer) : ''}&since=${cursor}`
         );
         if (r.ok) {
           const data = await r.json();
           for (const item of data.messages || []) {
             cursor = Math.max(cursor, item.ts || cursor);
             if (item.payload && accept.includes(item.payload.type)) {
-              await this._handleSignal(item.payload);
+              await this._handleSignal(item.payload, item.from);
             }
           }
         }
@@ -143,6 +147,7 @@ export class MeshRTC extends EventTarget {
   }
 
   async _postSignal(payload) {
+    if (!this.peer) return;
     try {
       await fetch(`${this.apiBase}/mesh/v1/signal/send`, {
         method: 'POST',
