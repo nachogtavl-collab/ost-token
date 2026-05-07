@@ -7,6 +7,7 @@
 
   var STYLE_ID = 'ost-mesh-arena-style';
   var ROOT_ID = 'ost-mesh-arena';
+  var FAIR_ENTRY_ID = 'ost-mesh-arena-fair-entry';
   var APP = 'ost-mesh-arena';
   var VERSION = 1;
   var GAME_NAMES = {
@@ -16,6 +17,7 @@
     target: 'Target 50'
   };
   var challenges = new Map();
+  var selectedGame = 'coinflip';
 
   function pavilion() {
     return window.OST_MESH && window.OST_MESH.pavilion;
@@ -98,10 +100,18 @@
     style.id = STYLE_ID;
     style.textContent = [
       '#ost-mesh-arena{border:1px solid rgba(0,212,255,.18);border-radius:14px;background:rgba(1,14,24,.76);padding:12px;margin:10px 0;display:grid;gap:10px}',
+      '#ost-mesh-arena-fair-entry{border:1px solid rgba(0,212,255,.22);border-radius:16px;background:linear-gradient(135deg,rgba(0,212,255,.12),rgba(0,255,159,.08));padding:14px;margin:12px 0;display:grid;gap:12px;color:#e8fbff}',
       '#ost-mesh-arena *{box-sizing:border-box}',
+      '#ost-mesh-arena-fair-entry *{box-sizing:border-box}',
       '.oma-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}',
       '.oma-head strong{color:#dff8ff;font-size:13px;letter-spacing:.04em;text-transform:uppercase}',
       '.oma-head span{color:#89b9ce;font-size:12px}',
+      '.oma-fair-copy{display:grid;gap:4px}.oma-fair-copy strong{font-size:15px;color:#fff}.oma-fair-copy span{font-size:12px;color:#9bcbe6;line-height:1.45}',
+      '.oma-fair-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}',
+      '.oma-fair-games{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}',
+      '@media(max-width:760px){.oma-fair-games{grid-template-columns:repeat(2,minmax(0,1fr))}}',
+      '.oma-fair-game{min-height:58px;text-align:left;border:1px solid rgba(255,255,255,.12);border-radius:12px;background:rgba(0,0,0,.22);color:#e8fbff;padding:9px;cursor:pointer}',
+      '.oma-fair-game strong{display:block;font-size:12px}.oma-fair-game span{display:block;color:#9bcbe6;font-size:11px;margin-top:3px}',
       '.oma-tabs{display:flex;gap:6px;flex-wrap:wrap}',
       '.oma-tabs button,.oma-btn{border:1px solid rgba(255,255,255,.12);border-radius:10px;background:rgba(255,255,255,.06);color:#e8fbff;padding:8px 10px;font-weight:750;font-size:12px;cursor:pointer}',
       '.oma-tabs button.is-active,.oma-btn.primary{background:linear-gradient(135deg,#00d4ff,#00ff9f);border-color:transparent;color:#03131c}',
@@ -181,22 +191,54 @@
     setInterval(refreshSharePreviews, 5000);
   }
 
+  function mountFairGamesEntry() {
+    if (document.getElementById(FAIR_ENTRY_ID)) return;
+    injectStyle();
+    var games = document.getElementById('ostGames');
+    if (!games) {
+      setTimeout(mountFairGamesEntry, 350);
+      return;
+    }
+    var entry = document.createElement('div');
+    entry.id = FAIR_ENTRY_ID;
+    entry.innerHTML = [
+      '<div class="oma-fair-top">',
+        '<div class="oma-fair-copy"><strong>Mesh multiplayer fair games</strong><span>Start encrypted peer tables from Fair Games. The playable table opens inside the existing OST Mesh panel.</span></div>',
+        '<button class="oma-btn primary" type="button" id="omaOpenMeshArena">Open in OST Mesh</button>',
+      '</div>',
+      '<div class="oma-fair-games">',
+        fairGameButton('coinflip', '50/50 table'),
+        fairGameButton('dice', 'Best roll wins'),
+        fairGameButton('highcard', 'Highest card'),
+        fairGameButton('target', 'Closest to 50'),
+      '</div>'
+    ].join('');
+    var hero = games.querySelector('.ostg-casino-hero');
+    if (hero && hero.nextSibling) games.insertBefore(entry, hero.nextSibling);
+    else games.prepend(entry);
+    entry.querySelector('#omaOpenMeshArena').addEventListener('click', function () { openMeshArena(selectedGame); });
+    entry.querySelectorAll('[data-oma-entry-game]').forEach(function (button) {
+      button.addEventListener('click', function () { openMeshArena(button.dataset.omaEntryGame); });
+    });
+  }
+
   function gameButton(key, sub) {
     return '<button class="oma-game' + (key === 'coinflip' ? ' is-active' : '') + '" type="button" data-oma-game="' + key + '"><strong>' + GAME_NAMES[key] + '</strong><span>' + sub + '</span></button>';
   }
 
+  function fairGameButton(key, sub) {
+    return '<button class="oma-fair-game" type="button" data-oma-entry-game="' + key + '"><strong>' + GAME_NAMES[key] + '</strong><span>' + sub + '</span></button>';
+  }
+
   function bind(root, p) {
-    var selectedGame = 'coinflip';
     root.querySelectorAll('[data-oma-tab]').forEach(function (button) {
       button.addEventListener('click', function () {
-        root.querySelectorAll('[data-oma-tab]').forEach(function (b) { b.classList.toggle('is-active', b === button); });
-        root.querySelectorAll('[data-oma-pane]').forEach(function (pane) { pane.classList.toggle('is-active', pane.dataset.omaPane === button.dataset.omaTab); });
+        selectTab(button.dataset.omaTab);
       });
     });
     root.querySelectorAll('[data-oma-game]').forEach(function (button) {
       button.addEventListener('click', function () {
-        selectedGame = button.dataset.omaGame;
-        root.querySelectorAll('[data-oma-game]').forEach(function (b) { b.classList.toggle('is-active', b === button); });
+        selectGame(button.dataset.omaGame);
       });
     });
     root.querySelector('#omaChallenge').addEventListener('click', function () { startChallenge(selectedGame); });
@@ -207,6 +249,37 @@
     root.querySelector('#omaOpenWallet').addEventListener('click', openWallet);
     root.querySelector('#omaSharePrediction').addEventListener('click', sharePrediction);
     root.querySelector('#omaShareCoin').addEventListener('click', shareCoin);
+  }
+
+  function selectTab(tab) {
+    var root = document.getElementById(ROOT_ID);
+    if (!root) return;
+    root.querySelectorAll('[data-oma-tab]').forEach(function (button) { button.classList.toggle('is-active', button.dataset.omaTab === tab); });
+    root.querySelectorAll('[data-oma-pane]').forEach(function (pane) { pane.classList.toggle('is-active', pane.dataset.omaPane === tab); });
+  }
+
+  function selectGame(game) {
+    if (!GAME_NAMES[game]) game = 'coinflip';
+    selectedGame = game;
+    var root = document.getElementById(ROOT_ID);
+    if (!root) return;
+    root.querySelectorAll('[data-oma-game]').forEach(function (button) { button.classList.toggle('is-active', button.dataset.omaGame === game); });
+  }
+
+  function openMeshArena(game) {
+    waitForMesh(function (p) {
+      if (window.OST_MESH && typeof window.OST_MESH.open === 'function') window.OST_MESH.open();
+      mount(p);
+      selectGame(game || selectedGame);
+      selectTab('games');
+      refreshWalletLine();
+      refreshSharePreviews();
+      setArenaStatus('Pick a table, connect a peer, then challenge them from inside OST Mesh.');
+      setTimeout(function () {
+        var root = document.getElementById(ROOT_ID);
+        if (root && root.scrollIntoView) root.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }, 80);
+    });
   }
 
   function setArenaStatus(text) {
@@ -607,8 +680,16 @@
     refresh: function () {
       refreshWalletLine();
       refreshSharePreviews();
+    },
+    open: openMeshArena,
+    focus: function (game) {
+      selectGame(game || selectedGame);
+      selectTab('games');
     }
   };
 
-  ready(function () { waitForMesh(mount); });
+  ready(function () {
+    waitForMesh(mount);
+    mountFairGamesEntry();
+  });
 })();
