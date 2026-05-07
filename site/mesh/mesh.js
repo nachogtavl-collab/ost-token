@@ -348,10 +348,13 @@ class MeshPavilion {
   }
 
   _copyText(value, okMsg, failMsg) {
-    navigator.clipboard?.writeText(value).then(
-      () => this._setStatus(okMsg, 'ok'),
-      () => this._setStatus(failMsg, 'warn')
-    );
+    if (!navigator.clipboard?.writeText) {
+      this._setStatus(failMsg + ' Clipboard API unavailable.', 'warn');
+      return;
+    }
+    navigator.clipboard.writeText(value)
+      .then(() => this._setStatus(okMsg, 'ok'))
+      .catch(() => this._setStatus(failMsg, 'warn'));
   }
 
   async _fetchPeerBundle(addr, fallback = null) {
