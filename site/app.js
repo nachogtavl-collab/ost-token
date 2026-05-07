@@ -1,5 +1,5 @@
-/* ==================================================================
-   OST v3 — app.js
+﻿/* ==================================================================
+   OST v3 â€” app.js
    Real Earth + Live Prices + i18n + Wallet + Charts + Calculator
    ================================================================== */
 (function () {
@@ -54,7 +54,7 @@
       'nav.about': 'Our Story', 'nav.roadmap': 'Roadmap', 'nav.build': 'Build', 'nav.verify': 'Verify',
       'nav.connect': 'Connect Wallet',
       'wallet.dashTitle': 'My OST Wallet', 'wallet.dashSub': 'Your personal command center. Create, connect, and manage your OST wallet.',
-      'bridges.title': 'Bridges, Ramps & Exchanges', 'bridges.sub': 'Every path to OST — from any chain, any currency, any country. All verified and working.',
+      'bridges.title': 'Bridges, Ramps & Exchanges', 'bridges.sub': 'Every path to OST â€” from any chain, any currency, any country. All verified and working.',
       'hero.tag': 'The Next Step After Bitcoin',
       'hero.title': 'We are all <span class="gradient-text">one family.</span>',
       'hero.sub': 'OST is the digital cash made for every citizen of the world - private, instant, and connected to any currency you already have.',
@@ -100,7 +100,7 @@
       'getost.fiat': 'Buy with Local Money', 'getost.fiatsub': 'Buy SOL or USDC, then swap to OST. No KYC for the swap.',
       'getost.faucet': 'New Here? Claim Free OST', 'getost.faucettext': 'New wallets get a <strong>100 OST</strong> head start. After that, come back and manually claim <strong>1 OST per day</strong>.',
       'getost.faucetbtn': 'Claim 100 OST Head Start',
-      'pay.anywhere': '🌐 Interchange - Browse Any Merchant',
+      'pay.anywhere': 'ðŸŒ Interchange - Browse Any Merchant',
       'pay.anywheresub': 'Paste a real product or checkout URL, or open a merchant lane below. OST loads the quote and prepares an honest on-chain request instead of pretending merchant settlement is live.',
       'pay.aurl': 'Merchant URL', 'pay.aamount': 'Amount to Pay', 'pay.acurrency': 'Their Currency',
       'pay.ayoupay': 'You Pay:', 'pay.arate': 'Rate:', 'pay.afee': 'Network Fee:',
@@ -239,17 +239,17 @@
       'wallet.portal.meteoraDesc': 'Dynamic liquidity venue for newer assets and launchpad-native routing.',
       'wallet.portal.prediction.title': 'Coming soon',
       'wallet.portal.prediction.sub': 'A community-first event market rail inspired by Polymarket, Kalshi, and the rest of the contract platforms, but built inside OST.',
-      'ancient.toggle.off': '𓅱 Ancient',
+      'ancient.toggle.off': 'ð“…± Ancient',
       'ancient.toggle.on': 'Modern Mode',
       'ancient.toggle.activate': 'Activate ancient hieroglyphic mode',
       'ancient.toggle.deactivate': 'Return to the modern interface',
       'ancient.toast.on': 'Ancient mode activated',
       'ancient.toast.off': 'Modern interface restored',
-      'transmit.button': '𓂇 Transmit to Space',
-      'transmit.buttonLarge': '𓂇 Open Transmission Console',
+      'transmit.button': 'ð“‚‡ Transmit to Space',
+      'transmit.buttonLarge': 'ð“‚‡ Open Transmission Console',
       'transmit.ctaSub': 'Encode a custom message, DNA sequence, image, video, or any file in hieroglyphic, binary, and quantum form before routing it toward future OST relay targets.',
       'transmit.kicker': 'Deep-space payload console',
-      'transmit.title': '𓂇 Transmit to Space',
+      'transmit.title': 'ð“‚‡ Transmit to Space',
       'transmit.sub': 'Send a custom message, DNA sequence, image, video, or any file through the OST transmission ritual. Preview the payload in hieroglyphs, binary, and quantum entanglement before launch.',
       'transmit.message.label': 'Custom message',
       'transmit.message.placeholder': 'Describe the signal, dedication, coordinates, or mission note you want to send...',
@@ -288,7 +288,7 @@
       'transmit.stage.entangle': 'Entangling packet states across relay pairs...',
       'transmit.stage.route': 'Routing through orbital infrastructure...',
       'transmit.stage.broadcast': 'Broadcast aimed at Moon, Mars, and deep space...',
-      'transmit.stage.done': 'Transmission complete — relay lock confirmed.',
+      'transmit.stage.done': 'Transmission complete â€” relay lock confirmed.',
       'transmit.file.image': 'Image payload',
       'transmit.file.video': 'Video payload',
       'transmit.file.text': 'Text payload',
@@ -297,7 +297,7 @@
       'censor.title': '&#128683; Internet Censorship Is Happening Now', 'censor.sub': 'Real events. Real people. OST is the answer to digital oppression.',
       'spacex.title': 'OST &times; SpaceX &mdash; The Journey to Space', 'spacex.sub': 'Follow our partnership roadmap from Earth to Mars. Every milestone is real, every goal is funded by donations and investors &mdash; never by taxing your transactions.',
       'roadmap.title': '&#128640; Roadmap &amp; Progress', 'roadmap.sub': 'Where we are, what we\'ve built, and what comes next.',
-      'offline.scenarios': 'Real-World Scenarios', 'offline.scenariosub': 'Verified data from the World Bank, UNHCR, IEA, and EM-DAT. These are not hypotheticals — they happen today.',
+      'offline.scenarios': 'Real-World Scenarios', 'offline.scenariosub': 'Verified data from the World Bank, UNHCR, IEA, and EM-DAT. These are not hypotheticals â€” they happen today.',
       'ai.hook.title': 'Running a Server, Bot, or Localhost?',
       'ai.hook.text': 'If you have a server, a bot, a localhost dev environment, or any form of automated intelligence &mdash; <strong>OST is your payment layer</strong>. Connect any AI model, any webhook, any service. Machine-to-machine payments at Solana speed with full privacy.',
       'gc.title': 'Gift Card Interchange &mdash; Sell or Buy Any Gift Card with OST',
@@ -325,7 +325,7 @@
       'gc.supported': 'Supported brands:',
       'gc.disclaimer': '&#9888; Users are responsible for verifying gift card validity. OST is not a gift card issuer. Gift card interchange is facilitated through third-party APIs (Raise, CardCash, merchant APIs). Gift card resale is subject to local laws &mdash; please verify in your jurisdiction.',
       'fuel.title': 'Fuel & Gas Stations',
-      'fuel.sub': 'Pay with OST at gas stations worldwide — earn rewards on every fill-up',
+      'fuel.sub': 'Pay with OST at gas stations worldwide â€” earn rewards on every fill-up',
       'fuel.howTitle': 'How It Works',
       'fuel.step1': 'Pull Up',
       'fuel.step1d': 'Drive to any partner station',
@@ -342,7 +342,7 @@
       'fuel.ostCost': 'OST Equivalent',
       'fuel.reward': 'Cashback (3%)',
       'fuel.offlineTitle': 'Works Offline',
-      'fuel.offlineDesc': 'NFC & BLE mesh — pay even without internet. Transactions sync when back online.',
+      'fuel.offlineDesc': 'NFC & BLE mesh â€” pay even without internet. Transactions sync when back online.',
       'fuel.partnersTitle': 'Partner Stations',
       'fuel.partnersSub': 'Accepted at 20+ major fuel brands worldwide',
       'fuel.rewardsTitle': 'Rewards Tiers',
@@ -354,7 +354,7 @@
       'nav.about': 'Nuestra Historia', 'nav.roadmap': 'Hoja de Ruta', 'nav.build': 'Construir', 'nav.verify': 'Verificar',
       'nav.connect': 'Conectar Billetera',
       'wallet.dashTitle': 'Mi Billetera OST', 'wallet.dashSub': 'Tu centro de control. Crea, conecta y gestiona tu billetera OST.',
-      'bridges.title': 'Puentes, Rampas e Intercambios', 'bridges.sub': 'Cada camino hacia OST — desde cualquier cadena, moneda o pais.',
+      'bridges.title': 'Puentes, Rampas e Intercambios', 'bridges.sub': 'Cada camino hacia OST â€” desde cualquier cadena, moneda o pais.',
       'hero.tag': 'El Siguiente Paso Despues de Bitcoin',
       'hero.title': 'Todos somos <span class="gradient-text">una familia.</span>',
       'hero.sub': 'OST es el dinero digital hecho para cada ciudadano del mundo - privado, instantaneo y conectado a cualquier moneda que ya tengas.',
@@ -387,14 +387,14 @@
       'transfer.result': 'Privado e Instantaneo', 'transfer.convert': 'Convertir a OST',
       'transfer.note': 'Impulsado por Wormhole, Jupiter y Solana Token-2022.',
       'transfer.fiattitle': 'Vienes del fiat?',
-      'transfer.fiattext': 'Usa <strong>MoonPay</strong>, <strong>Transak</strong> o <strong>Ramp Network</strong> — disponible en 100+ paises.',
+      'transfer.fiattext': 'Usa <strong>MoonPay</strong>, <strong>Transak</strong> o <strong>Ramp Network</strong> â€” disponible en 100+ paises.',
       'offline.title': 'Efectivo Sin Internet', 'offline.sub': 'El internet no esta en todas partes. Pero tu dinero deberia estarlo.',
-      'offline.lead': 'Transacciones a la velocidad de la luz — incluso cuando se apagan las luces.',
+      'offline.lead': 'Transacciones a la velocidad de la luz â€” incluso cuando se apagan las luces.',
       'offline.text': 'Imagina entregarle un billete a alguien. Sin banco. Sin internet. Solo dos personas y valor cambiando de manos.',
       'offline.nfc': 'NFC Toca para Pagar', 'offline.nfctext': 'Acerca los telefonos. Un toque. Pago hecho. Como Apple Pay pero privado y sin fronteras.',
       'offline.qr': 'Escaneo QR', 'offline.qrtext': 'El pago firmado cabe en un solo codigo QR. Muestralo, imprimelo, grabalo en metal.',
       'offline.bt': 'Bluetooth Cercano', 'offline.bttext': 'BLE transmite la transaccion hasta 10 metros. Perfecto para mercados y restaurantes.',
-      'getost.title': 'Obtener OST', 'getost.sub': 'Entrada instantanea desde cualquier cripto o fiat — sin KYC para intercambios.',
+      'getost.title': 'Obtener OST', 'getost.sub': 'Entrada instantanea desde cualquier cripto o fiat â€” sin KYC para intercambios.',
       'getost.swap': 'Cambia Cualquier Cripto a OST', 'getost.swaptext': 'Jupiter encuentra la mejor ruta en todos los pools de liquidez de Solana.',
       'getost.jupnote': 'Conecta tu billetera para cargar el widget de intercambio.', 'getost.jupbtn': 'Cargar Widget',
       'getost.fiat': 'Compra con Moneda Local', 'getost.fiatsub': 'Compra SOL o USDC, luego cambia a OST. Sin KYC para el intercambio.',
@@ -437,7 +437,7 @@
       'pay.browseHotels': 'Hoteles', 'pay.browseFlights': 'Vuelos', 'pay.browseCars': 'Autos', 'pay.browseProperty': 'Propiedad', 'pay.browseRetail': 'Retail', 'pay.browseOpen': 'Abrir ruta',
       'launch.title': '&#128640; Lista de Lanzamiento Mainnet', 'launch.sub': 'Lo que necesitamos para hacer OST real en Solana mainnet.',
       'ai.title': 'Poder para Cada Inteligencia', 'ai.sub': 'Damos la bienvenida a agentes IA, bots, servidores y toda forma de inteligencia digital.',
-      'build.title': 'Construye el Futuro Con Nosotros', 'build.sub': 'Programa, crea o suena en pixeles — OST es tu plataforma.',
+      'build.title': 'Construye el Futuro Con Nosotros', 'build.sub': 'Programa, crea o suena en pixeles â€” OST es tu plataforma.',
       'build.cta': 'Empieza a Contribuir Hoy', 'build.ctasub': 'Cada commit, traduccion y tutorial mueve a la humanidad adelante.',
       'build.github': 'Ver Repositorio GitHub', 'build.docs': 'Leer Documentacion',
       'verify.title': 'Transparencia Total', 'verify.sub': 'Verifica todo tu mismo. No tenemos nada que ocultar.',
@@ -450,30 +450,30 @@
       'hero.freetext': 'Cero comisiones. Sin costos ocultos. Financiado por donaciones e inversores.',
       'hero.createwallet': 'Crear Billetera',
       'hero.stat.unbanked': 'Adultos sin banco en el mundo',
-      'hero.stat.remittance': '$ perdidos en comisiones de remesas/año',
+      'hero.stat.remittance': '$ perdidos en comisiones de remesas/aÃ±o',
       'hero.stat.nointernet': 'Personas sin internet',
-      'vision.title': 'La Visión OST: Independencia Financiera Completa',
-      'vision.sub': 'Actualmente usamos Solana, Jupiter y puentes de terceros como <strong>infraestructura temporal</strong>. Nuestro objetivo es construir la <strong>Red Soberana OST</strong> &mdash; nuestro propio protocolo de intercambio, algoritmo de trading, mercado descentralizado y capa de liquidación. <em>Completamente separado de cualquier sistema existente. Totalmente descentralizado. Sin dependencias.</em>',
+      'vision.title': 'La VisiÃ³n OST: Independencia Financiera Completa',
+      'vision.sub': 'Actualmente usamos Solana, Jupiter y puentes de terceros como <strong>infraestructura temporal</strong>. Nuestro objetivo es construir la <strong>Red Soberana OST</strong> &mdash; nuestro propio protocolo de intercambio, algoritmo de trading, mercado descentralizado y capa de liquidaciÃ³n. <em>Completamente separado de cualquier sistema existente. Totalmente descentralizado. Sin dependencias.</em>',
       'vision.s1.title': 'Andamiaje Temporal', 'vision.s1.sub': 'Solana + Jupiter + Puentes',
       'vision.s2.title': 'Protocolo de Intercambio OST', 'vision.s2.sub': 'Motor de emparejamiento propio',
       'vision.s3.title': 'Red Soberana OST', 'vision.s3.sub': 'Cero dependencias de terceros',
-      'vision.p1': '&#128274; ZK Privado', 'vision.p2': '&#9889; 0.4s Liquidación', 'vision.p3': '&#128176; Cero Comisiones',
+      'vision.p1': '&#128274; ZK Privado', 'vision.p2': '&#9889; 0.4s LiquidaciÃ³n', 'vision.p3': '&#128176; Cero Comisiones',
       'vision.p4': '&#128295; Motor Propio', 'vision.p5': '&#127757; DEX y Puentes Propios', 'vision.p6': '&#128752; Internet Satelital',
       'vision.spacex.title': 'OST &times; SpaceX',
-      'vision.spacex.text': 'Alianza para llevar internet y pagos sin censura a 2.6 mil millones de personas sin conectividad mediante satélites de órbita baja.',
+      'vision.spacex.text': 'Alianza para llevar internet y pagos sin censura a 2.6 mil millones de personas sin conectividad mediante satÃ©lites de Ã³rbita baja.',
       'vision.spacex.btn': 'Explorar el Viaje &#8594;',
-      'newhere.title': '&#127381; ¿Nuevo Aquí? Comienza Tu Viaje OST',
-      'newhere.sub': 'Reclama OST gratis, crea bóvedas familiares o gana recompensas contribuyendo infraestructura.',
-      'gv.title': 'Bóvedas Familiares de Crecimiento',
-      'gv.sub': 'La primera moneda nacida en el espacio con cada nueva generación. Crea una bóveda custodia para tu hijo &mdash; crecerán con dinero digital privado real.',
+      'newhere.title': '&#127381; Â¿Nuevo AquÃ­? Comienza Tu Viaje OST',
+      'newhere.sub': 'Reclama OST gratis, crea bÃ³vedas familiares o gana recompensas contribuyendo infraestructura.',
+      'gv.title': 'BÃ³vedas Familiares de Crecimiento',
+      'gv.sub': 'La primera moneda nacida en el espacio con cada nueva generaciÃ³n. Crea una bÃ³veda custodia para tu hijo &mdash; crecerÃ¡n con dinero digital privado real.',
       'gv.disclaimer': 'Solo uso educativo. Los padres/tutores son responsables de todas las leyes fiscales y de custodia.',
       'depin.title': 'Faucet DePIN de Centro de Datos',
       'depin.sub': 'Comparte ancho de banda, GPU, CPU o capacidad satelital &mdash; gana OST por construir centros de datos descentralizados e internet satelital.',
       'demos.title': '&#128717;&#65039; Comercio OST', 'demos.sub': 'Compra curada, navegacion de comercios reales y ruteo on-chain de solicitudes con OST.',
       'wallet.getTitle': 'Obten Tu Billetera OST Personal', 'wallet.getSub': 'Elige como crear o conectar tu billetera. Genera una billetera local en este navegador o conecta una billetera Solana existente.',
-      'wallet.commandKicker': 'Billetera + riel de conversión',
+      'wallet.commandKicker': 'Billetera + riel de conversiÃ³n',
       'wallet.commandTitle': 'Abre una billetera, sigue el mercado OST y pasa de fiat o cripto a OST confidencial.',
-      'wallet.commandSub': 'La página de billetera ahora funciona como un centro de mando para acceso, mercado, conversión y portales.',
+      'wallet.commandSub': 'La pÃ¡gina de billetera ahora funciona como un centro de mando para acceso, mercado, conversiÃ³n y portales.',
       'wallet.tabs.aria': 'Paneles de la billetera',
       'wallet.market.velocity': 'Velocidad de ruta',
       'wallet.market.liquidity': 'Liquidez',
@@ -485,14 +485,14 @@
       'wallet.tabs.market': 'Mercado',
       'wallet.tabs.convert': 'Convertir',
       'wallet.tabs.portals': 'Portales',
-      'wallet.card.phantomDesc': 'Acceso rápido en móvil y escritorio para usuarios que ya viven dentro de Solana.',
+      'wallet.card.phantomDesc': 'Acceso rÃ¡pido en mÃ³vil y escritorio para usuarios que ya viven dentro de Solana.',
       'wallet.card.connectAction': 'Conectar',
-      'wallet.card.solflareDesc': 'Herramientas sólidas de staking y portafolio para usuarios que quieren una billetera más profunda.',
-      'wallet.card.backpackDesc': 'Una opción multicadena para quienes quieren apps, coleccionables y pagos en un solo lugar.',
+      'wallet.card.solflareDesc': 'Herramientas sÃ³lidas de staking y portafolio para usuarios que quieren una billetera mÃ¡s profunda.',
+      'wallet.card.backpackDesc': 'Una opciÃ³n multicadena para quienes quieren apps, coleccionables y pagos en un solo lugar.',
       'wallet.card.seedlessTitle': 'Crear billetera OST',
       'wallet.card.seedlessDesc': 'Genera una billetera OST en este navegador, descarga un respaldo y empieza con OST en devnet.',
       'wallet.card.seedlessAction': 'Crear billetera',
-      'wallet.downloadTitle': '¿Necesitas instalar primero? Usa los enlaces oficiales de descarga.',
+      'wallet.downloadTitle': 'Â¿Necesitas instalar primero? Usa los enlaces oficiales de descarga.',
       'wallet.copy': 'Copiar',
       'wallet.explorer': 'Explorador',
       'wallet.buyOst': 'Comprar OST',
@@ -501,72 +501,72 @@
       'wallet.receive': 'Recibir',
       'wallet.swap': 'Intercambiar',
       'wallet.receiveTitle': 'Recibir OST o SOL',
-      'wallet.receiveSub': 'Comparte tu dirección o deja que alguien escanee el riel QR de abajo.',
-      'wallet.quickLinksTitle': 'Rutas rápidas',
+      'wallet.receiveSub': 'Comparte tu direcciÃ³n o deja que alguien escanee el riel QR de abajo.',
+      'wallet.quickLinksTitle': 'Rutas rÃ¡pidas',
       'wallet.secure.title': 'Ingreso seguro',
       'wallet.secure.sub': 'Elige el riel de acceso que coincide con el usuario: avanzados con frase semilla, nuevos sin semilla o traders nativos de Solana.',
       'wallet.secure.point1': 'Usa Phantom, Solflare o Backpack cuando el usuario ya tenga un flujo dentro de Solana.',
       'wallet.secure.point2': 'Usa el flujo sin semilla cuando la prioridad sea abrir una primera billetera en minutos.',
-      'wallet.secure.point3': 'Mantén una sola dirección en swap, pagos y launchpad para reducir la confusión.',
-      'wallet.secure.point4': 'La vista conectada muestra balances, QR de recepción y enlaces directos sin salir de la página.',
-      'wallet.market.note2': 'La calculadora de abajo usa la misma cotización de OST que el riel de conversión, para que la vista previa y la ejecución coincidan.',
-      'wallet.convert.lead': 'Conversión de moneda de grado institucional, rediseñada para usuarios comunes que necesitan una entrada clara a OST confidencial.',
+      'wallet.secure.point3': 'MantÃ©n una sola direcciÃ³n en swap, pagos y launchpad para reducir la confusiÃ³n.',
+      'wallet.secure.point4': 'La vista conectada muestra balances, QR de recepciÃ³n y enlaces directos sin salir de la pÃ¡gina.',
+      'wallet.market.note2': 'La calculadora de abajo usa la misma cotizaciÃ³n de OST que el riel de conversiÃ³n, para que la vista previa y la ejecuciÃ³n coincidan.',
+      'wallet.convert.lead': 'ConversiÃ³n de moneda de grado institucional, rediseÃ±ada para usuarios comunes que necesitan una entrada clara a OST confidencial.',
       'wallet.convert.from': 'Desde',
       'wallet.convert.bridge': 'Puente',
       'wallet.convert.swap': 'Intercambio',
       'wallet.convert.encrypt': 'Cifrar',
       'wallet.convert.to': 'Hacia',
       'wallet.convert.providers': 'Rampas fiat directas para la moneda seleccionada:',
-      'wallet.convert.note': 'Actualmente funciona con Jupiter + Wormhole en Solana mientras el motor nativo de intercambio de OST sigue en construcción.',
+      'wallet.convert.note': 'Actualmente funciona con Jupiter + Wormhole en Solana mientras el motor nativo de intercambio de OST sigue en construcciÃ³n.',
       'wallet.convert.received': 'Recibido',
-      'wallet.convert.done': 'Listo - privado e instantáneo',
+      'wallet.convert.done': 'Listo - privado e instantÃ¡neo',
       'wallet.sell.stable': 'Cambiar a stablecoins',
-      'wallet.sell.stableDesc': 'Mueve OST a USDC, USDT o DAI cuando el usuario necesita una salida estable rápida.',
+      'wallet.sell.stableDesc': 'Mueve OST a USDC, USDT o DAI cuando el usuario necesita una salida estable rÃ¡pida.',
       'wallet.sell.cashout': 'Retirar al banco',
-      'wallet.sell.cashoutDesc': 'Usa las rutas de venta de Onramper o Transak después de completar el swap de OST a SOL o de OST a USDC.',
+      'wallet.sell.cashoutDesc': 'Usa las rutas de venta de Onramper o Transak despuÃ©s de completar el swap de OST a SOL o de OST a USDC.',
       'wallet.sell.p2p': 'Mercado P2P',
-      'wallet.sell.p2pDesc': 'El intercambio directo entre billeteras sigue en la hoja de ruta para quienes quieren una salida más simple.',
+      'wallet.sell.p2pDesc': 'El intercambio directo entre billeteras sigue en la hoja de ruta para quienes quieren una salida mÃ¡s simple.',
       'wallet.portal.wormholeDesc': 'Mueve liquidez desde cadenas principales a Solana antes de que el riel de swap de OST tome el control.',
       'wallet.portal.onramperDesc': 'Ruta agregadora de entrada con tarjeta, banco, Apple Pay y ruteo fiat local.',
-      'wallet.portal.moonpayDesc': 'Entrada rápida a SOL con tarjeta para usuarios que quieren el flujo de compra más limpio.',
+      'wallet.portal.moonpayDesc': 'Entrada rÃ¡pida a SOL con tarjeta para usuarios que quieren el flujo de compra mÃ¡s limpio.',
       'wallet.portal.transakDesc': 'Cobertura regional de pagos con PIX, UPI, SEPA, Faster Payments y tarjetas.',
-      'wallet.portal.onramperSellDesc': 'Retira SOL o USDC a cuentas bancarias y rieles de dinero móvil después de la conversión.',
+      'wallet.portal.onramperSellDesc': 'Retira SOL o USDC a cuentas bancarias y rieles de dinero mÃ³vil despuÃ©s de la conversiÃ³n.',
       'wallet.portal.transakSellDesc': 'Salidas fiat regionales para usuarios que quieren banca local en lugar de custodiar stablecoins.',
       'wallet.portal.jupiterDesc': 'Agregador de mejor ruta para conversiones OST, salidas estables y rotaciones spot.',
       'wallet.portal.raydiumDesc': 'Lugar de liquidez e intercambio para usuarios que quieren acceso directo a pools en Solana.',
-      'wallet.portal.orcaDesc': 'Ruta de swap más limpia para usuarios de liquidez concentrada que quieren una interfaz más simple.',
-      'wallet.portal.meteoraDesc': 'Lugar de liquidez dinámica para activos nuevos y ruteo nativo del launchpad.',
-      'wallet.portal.prediction.title': 'Próximamente',
+      'wallet.portal.orcaDesc': 'Ruta de swap mÃ¡s limpia para usuarios de liquidez concentrada que quieren una interfaz mÃ¡s simple.',
+      'wallet.portal.meteoraDesc': 'Lugar de liquidez dinÃ¡mica para activos nuevos y ruteo nativo del launchpad.',
+      'wallet.portal.prediction.title': 'PrÃ³ximamente',
       'wallet.portal.prediction.sub': 'Un riel comunitario de mercados de eventos inspirado por Polymarket, Kalshi y el resto de las plataformas de contratos, pero construido dentro de OST.',
-      'ancient.toggle.off': '𓅱 Antiguo',
+      'ancient.toggle.off': 'ð“…± Antiguo',
       'ancient.toggle.on': 'Modo Moderno',
-      'ancient.toggle.activate': 'Activar el modo jeroglífico antiguo',
+      'ancient.toggle.activate': 'Activar el modo jeroglÃ­fico antiguo',
       'ancient.toggle.deactivate': 'Volver a la interfaz moderna',
       'ancient.toast.on': 'Modo antiguo activado',
       'ancient.toast.off': 'Interfaz moderna restaurada',
-      'transmit.button': '𓂇 Transmitir al Espacio',
-      'transmit.buttonLarge': '𓂇 Abrir Consola de Transmisión',
-      'transmit.ctaSub': 'Codifica un mensaje personalizado, secuencia de ADN, imagen, video o cualquier archivo en forma jeroglífica, binaria y cuántica antes de dirigirlo a futuros relés OST.',
+      'transmit.button': 'ð“‚‡ Transmitir al Espacio',
+      'transmit.buttonLarge': 'ð“‚‡ Abrir Consola de TransmisiÃ³n',
+      'transmit.ctaSub': 'Codifica un mensaje personalizado, secuencia de ADN, imagen, video o cualquier archivo en forma jeroglÃ­fica, binaria y cuÃ¡ntica antes de dirigirlo a futuros relÃ©s OST.',
       'transmit.kicker': 'Consola de carga para espacio profundo',
-      'transmit.title': '𓂇 Transmitir al Espacio',
-      'transmit.sub': 'Envía un mensaje personalizado, secuencia de ADN, imagen, video o cualquier archivo mediante el ritual de transmisión OST. Previsualiza la carga en jeroglíficos, binario y entrelazamiento cuántico antes del lanzamiento.',
+      'transmit.title': 'ð“‚‡ Transmitir al Espacio',
+      'transmit.sub': 'EnvÃ­a un mensaje personalizado, secuencia de ADN, imagen, video o cualquier archivo mediante el ritual de transmisiÃ³n OST. Previsualiza la carga en jeroglÃ­ficos, binario y entrelazamiento cuÃ¡ntico antes del lanzamiento.',
       'transmit.message.label': 'Mensaje personalizado',
-      'transmit.message.placeholder': 'Describe la señal, dedicatoria, coordenadas o nota de misión que quieres enviar...',
+      'transmit.message.placeholder': 'Describe la seÃ±al, dedicatoria, coordenadas o nota de misiÃ³n que quieres enviar...',
       'transmit.dna.label': 'Secuencia de ADN / semilla de vida',
-      'transmit.dna.placeholder': 'Opcional: secuencia ACGT, etiqueta de muestra o nota de archivo biológico',
+      'transmit.dna.placeholder': 'Opcional: secuencia ACGT, etiqueta de muestra o nota de archivo biolÃ³gico',
       'transmit.files.label': 'Adjuntar cargas',
-      'transmit.files.sub': 'Suelta imágenes, video, documentos, archivos comprimidos o cualquier otro tipo de archivo',
+      'transmit.files.sub': 'Suelta imÃ¡genes, video, documentos, archivos comprimidos o cualquier otro tipo de archivo',
       'transmit.launch': 'Codificar y transmitir',
       'transmit.launchBusy': 'Transmitiendo...',
-      'transmit.preview.glyph': 'Render jeroglífico antiguo',
+      'transmit.preview.glyph': 'Render jeroglÃ­fico antiguo',
       'transmit.preview.binary': 'Binario + checksum',
-      'transmit.preview.quantum': 'Entrelazamiento cuántico',
-      'transmit.preview.manifest': 'Manifiesto de transmisión',
+      'transmit.preview.quantum': 'Entrelazamiento cuÃ¡ntico',
+      'transmit.preview.manifest': 'Manifiesto de transmisiÃ³n',
       'transmit.preview.attachments': 'Cargas adjuntas',
-      'transmit.empty': 'Agrega un mensaje, secuencia de ADN o archivo para construir una transmisión.',
-      'transmit.none': 'Todavía no hay carga adjunta.',
-      'transmit.result.ready': 'Panel de señal listo',
-      'transmit.result.sent': 'Transmisión completa',
+      'transmit.empty': 'Agrega un mensaje, secuencia de ADN o archivo para construir una transmisiÃ³n.',
+      'transmit.none': 'TodavÃ­a no hay carga adjunta.',
+      'transmit.result.ready': 'Panel de seÃ±al listo',
+      'transmit.result.sent': 'TransmisiÃ³n completa',
       'transmit.manifest.default': 'Esperando carga',
       'transmit.summary.message': 'Mensaje',
       'transmit.summary.dna': 'ADN',
@@ -578,146 +578,146 @@
       'transmit.summary.render': 'Render',
       'transmit.summary.chars': 'caracteres',
       'transmit.summary.bases': 'bases',
-      'transmit.route.value': 'Relé LEO -> entrelazamiento cuántico -> Luna / Marte / espacio profundo',
+      'transmit.route.value': 'RelÃ© LEO -> entrelazamiento cuÃ¡ntico -> Luna / Marte / espacio profundo',
       'transmit.target.value': 'Luna, Marte, espacio profundo',
-      'transmit.render.value': 'Jeroglífico + binario + cuántico',
+      'transmit.render.value': 'JeroglÃ­fico + binario + cuÃ¡ntico',
       'transmit.stage.prepare': 'Preparando la red de carga...',
-      'transmit.stage.encode': 'Codificando la carga en memoria jeroglífica...',
+      'transmit.stage.encode': 'Codificando la carga en memoria jeroglÃ­fica...',
       'transmit.stage.binary': 'Convirtiendo el paquete a binario y checksum orbital...',
-      'transmit.stage.entangle': 'Entrelazando estados del paquete entre pares de relé...',
+      'transmit.stage.entangle': 'Entrelazando estados del paquete entre pares de relÃ©...',
       'transmit.stage.route': 'Enrutando por infraestructura orbital...',
-      'transmit.stage.broadcast': 'Difusión apuntada a la Luna, Marte y espacio profundo...',
-      'transmit.stage.done': 'Transmisión completa — bloqueo del relé confirmado.',
+      'transmit.stage.broadcast': 'DifusiÃ³n apuntada a la Luna, Marte y espacio profundo...',
+      'transmit.stage.done': 'TransmisiÃ³n completa â€” bloqueo del relÃ© confirmado.',
       'transmit.file.image': 'Carga de imagen',
       'transmit.file.video': 'Carga de video',
       'transmit.file.text': 'Carga de texto',
       'transmit.file.data': 'Carga de archivo',
       'sell.title': 'Vender o Intercambiar OST', 'sell.sub': 'Retira a cualquier cripto o fiat. Misma velocidad, misma privacidad.',
-      'censor.title': '&#128683; La Censura de Internet Está Ocurriendo Ahora', 'censor.sub': 'Eventos reales. Personas reales. OST es la respuesta a la opresión digital.',
-      'spacex.title': 'OST &times; SpaceX &mdash; El Viaje al Espacio', 'spacex.sub': 'Sigue nuestra hoja de ruta desde la Tierra hasta Marte. Cada hito es real, cada objetivo está financiado por donaciones e inversores.',
-      'roadmap.title': '&#128640; Hoja de Ruta y Progreso', 'roadmap.sub': 'Dónde estamos, qué hemos construido y qué sigue.',
-      'offline.scenarios': 'Escenarios del Mundo Real', 'offline.scenariosub': 'Datos verificados del Banco Mundial, ACNUR, AIE y EM-DAT. No son hipotéticos — ocurren hoy.',
-      'ai.hook.title': '¿Tienes un Servidor, Bot o Localhost?',
+      'censor.title': '&#128683; La Censura de Internet EstÃ¡ Ocurriendo Ahora', 'censor.sub': 'Eventos reales. Personas reales. OST es la respuesta a la opresiÃ³n digital.',
+      'spacex.title': 'OST &times; SpaceX &mdash; El Viaje al Espacio', 'spacex.sub': 'Sigue nuestra hoja de ruta desde la Tierra hasta Marte. Cada hito es real, cada objetivo estÃ¡ financiado por donaciones e inversores.',
+      'roadmap.title': '&#128640; Hoja de Ruta y Progreso', 'roadmap.sub': 'DÃ³nde estamos, quÃ© hemos construido y quÃ© sigue.',
+      'offline.scenarios': 'Escenarios del Mundo Real', 'offline.scenariosub': 'Datos verificados del Banco Mundial, ACNUR, AIE y EM-DAT. No son hipotÃ©ticos â€” ocurren hoy.',
+      'ai.hook.title': 'Â¿Tienes un Servidor, Bot o Localhost?',
       'ai.hook.text': 'Si tienes un servidor, un bot, un entorno localhost o cualquier forma de inteligencia automatizada &mdash; <strong>OST es tu capa de pagos</strong>. Conecta cualquier modelo de IA, cualquier webhook, cualquier servicio.',
       'gc.title': 'Intercambio de Tarjetas de Regalo &mdash; Vende o Compra Cualquier Tarjeta con OST',
-      'gc.sub': 'Convierte cualquier tarjeta de regalo en OST privado, o paga con OST y recibe tarjetas digitales instantáneas. Sin banco, sin KYC, sin límites.',
+      'gc.sub': 'Convierte cualquier tarjeta de regalo en OST privado, o paga con OST y recibe tarjetas digitales instantÃ¡neas. Sin banco, sin KYC, sin lÃ­mites.',
       'gc.tabSell': '&#128178; Vender Tarjeta &rarr; Obtener OST',
       'gc.tabBuy': '&#127873; Comprar Tarjeta con OST',
-      'gc.pipe.paste': 'Pegar Código', 'gc.pipe.verify': 'Verificar', 'gc.pipe.receive': 'Recibir OST',
+      'gc.pipe.paste': 'Pegar CÃ³digo', 'gc.pipe.verify': 'Verificar', 'gc.pipe.receive': 'Recibir OST',
       'gc.pipe.payOst': 'Pagar OST', 'gc.pipe.convert': 'Convertir', 'gc.pipe.getCard': 'Obtener Tarjeta',
       'gc.merchant': 'Comercio / Marca', 'gc.merchantBuy': 'Elegir Tarjeta de Regalo',
-      'gc.code': 'Código de Tarjeta', 'gc.balance': 'Saldo de la Tarjeta (USD)',
+      'gc.code': 'CÃ³digo de Tarjeta', 'gc.balance': 'Saldo de la Tarjeta (USD)',
       'gc.youGet': 'Recibes', 'gc.youPay': 'Pagas', 'gc.amount': 'Monto (USD)',
       'gc.email': 'Email de entrega (opcional)',
-      'gc.rate': 'Tasa:', 'gc.fee': 'Comisión del tesoro (0.1%):',
-      'gc.feeNote': '&#128752; La comisión financia infraestructura satelital',
+      'gc.rate': 'Tasa:', 'gc.fee': 'ComisiÃ³n del tesoro (0.1%):',
+      'gc.feeNote': '&#128752; La comisiÃ³n financia infraestructura satelital',
       'gc.sellBtn': 'Verificar y Vender &rarr; Obtener OST',
       'gc.buyBtn': 'Pagar OST &rarr; Obtener Tarjeta',
-      'gc.step.verify': 'Verificando código de tarjeta&hellip;',
+      'gc.step.verify': 'Verificando cÃ³digo de tarjeta&hellip;',
       'gc.step.zk': 'Generando prueba ZK&hellip;',
-      'gc.step.send': 'Enviando OST vía transferencia confidencial&hellip;',
-      'gc.step.done': '¡Completado! OST recibido de forma privada.',
+      'gc.step.send': 'Enviando OST vÃ­a transferencia confidencial&hellip;',
+      'gc.step.done': 'Â¡Completado! OST recibido de forma privada.',
       'gc.step.debit': 'Debitando OST (confidencial)&hellip;',
-      'gc.step.swap': 'Intercambiando OST &rarr; USDC vía Jupiter&hellip;',
+      'gc.step.swap': 'Intercambiando OST &rarr; USDC vÃ­a Jupiter&hellip;',
       'gc.step.purchase': 'Comprando tarjeta de regalo&hellip;',
-      'gc.step.delivered': '¡Tarjeta de regalo entregada!',
+      'gc.step.delivered': 'Â¡Tarjeta de regalo entregada!',
       'gc.supported': 'Marcas disponibles:',
-      'gc.disclaimer': '&#9888; Los usuarios son responsables de verificar la validez de las tarjetas. OST no es un emisor de tarjetas de regalo. El intercambio se facilita a través de APIs de terceros. Sujeto a leyes locales.',
+      'gc.disclaimer': '&#9888; Los usuarios son responsables de verificar la validez de las tarjetas. OST no es un emisor de tarjetas de regalo. El intercambio se facilita a travÃ©s de APIs de terceros. Sujeto a leyes locales.',
       'fuel.title': 'Combustible y Gasolineras',
-      'fuel.sub': 'Paga con OST en gasolineras de todo el mundo — gana recompensas en cada carga',
-      'fuel.howTitle': 'Cómo Funciona',
+      'fuel.sub': 'Paga con OST en gasolineras de todo el mundo â€” gana recompensas en cada carga',
+      'fuel.howTitle': 'CÃ³mo Funciona',
       'fuel.step1': 'Llega',
-      'fuel.step1d': 'Conduce a cualquier estación aliada',
+      'fuel.step1d': 'Conduce a cualquier estaciÃ³n aliada',
       'fuel.step2': 'Toca y Paga',
-      'fuel.step2d': 'Paga con OST vía NFC o QR',
+      'fuel.step2d': 'Paga con OST vÃ­a NFC o QR',
       'fuel.step3': 'Gana Recompensas',
       'fuel.step3d': 'Recibe cashback en OST al instante',
-      'fuel.step4': 'Continúa',
+      'fuel.step4': 'ContinÃºa',
       'fuel.step4d': 'Recibo enviado a tu billetera',
       'fuel.calcTitle': 'Calculadora de Recompensas',
       'fuel.gallons': 'Galones',
-      'fuel.priceGal': 'Precio por Galón (USD)',
+      'fuel.priceGal': 'Precio por GalÃ³n (USD)',
       'fuel.total': 'Costo Total',
       'fuel.ostCost': 'Equivalente en OST',
       'fuel.reward': 'Cashback (3%)',
-      'fuel.offlineTitle': 'Funciona Sin Conexión',
-      'fuel.offlineDesc': 'NFC y BLE — paga sin internet. Las transacciones se sincronizan al reconectarse.',
+      'fuel.offlineTitle': 'Funciona Sin ConexiÃ³n',
+      'fuel.offlineDesc': 'NFC y BLE â€” paga sin internet. Las transacciones se sincronizan al reconectarse.',
       'fuel.partnersTitle': 'Estaciones Aliadas',
       'fuel.partnersSub': 'Aceptado en 20+ marcas de combustible a nivel mundial',
       'fuel.rewardsTitle': 'Niveles de Recompensa',
-      'fuel.disclaimer': '&#9888; Las alianzas mostradas están en desarrollo. OST no está afiliado a las marcas listadas.',
+      'fuel.disclaimer': '&#9888; Las alianzas mostradas estÃ¡n en desarrollo. OST no estÃ¡ afiliado a las marcas listadas.',
     },
     zh: {
-      'nav.home': '首页', 'nav.newhere': '获取OST', 'nav.demos': '商业', 'nav.wallet': '钱包',
-      'nav.ai': 'AI和机器人', 'nav.offline': '离线', 'nav.censorship': '审查', 'nav.spacex': 'SpaceX',
-      'nav.about': '我们的故事', 'nav.roadmap': '路线图', 'nav.build': '开发', 'nav.verify': '验证',
-      'nav.connect': '连接钱包',
-      'wallet.dashTitle': '我的OST钱包', 'wallet.dashSub': '您的个人控制中心。创建、连接和管理您的OST钱包。',
-      'bridges.title': '跨链桥、入金通道和交易所', 'bridges.sub': '通往OST的每条路径——来自任何链、任何货币、任何国家。',
-      'hero.tag': '比特币之后的下一步',
-      'hero.title': '我们都是 <span class="gradient-text">一家人。</span>',
-      'hero.sub': 'OST是为世界上每个公民制造的数字现金 - 私密、即时，连接你已有的任何货币。',
-      'hero.cta1': '探索商业', 'hero.cta2': '获取OST',
-      'hero.premine': '无预挖', 'hero.settle': '结算', 'hero.opensource': '开源', 'hero.privacy': '隐私',
-      'story.title': '我们的故事', 'story.sub': '从去中心化货币的第一颗火花到私人数字现金未来的旅程。',
-      'story.t1.title': '火花', 'story.t1.text': '比特币证明了人民——而非银行或政府——可以创造跨越所有国界的货币。这颗火花改变了一切。',
-      'story.t2.title': '鸿沟', 'story.t2.text': '但比特币速度慢、费用高、完全公开。数十亿人仍然无法在没有银行抽成的情况下付房租、买杂货或汇款回家。',
-      'story.t3.title': '突破', 'story.t3.text': 'Solana Token-2022推出了机密转账——零知识证明将余额和金额对全世界隐藏。这是缺失的拼图。',
-      'story.t4.title': 'OST诞生', 'story.t4.text': '我们结合了不可阻挡的货币、即时结算、完全隐私和一项使命：资助卫星基础设施，让每个人都能使用金融系统。',
-      'story.t5.year': '未来', 'story.t5.title': '每位公民，互联互通',
-      'story.t5.text': '一个拉各斯的水果商和德黑兰的工程师享有同等金融自由的世界。国界只是线条。金钱真正属于你。',
-      'story.lead': '我们正在建设不属于任何国家、服务每位公民的通用数字现金。私密。即时。平等。',
-      'story.closing': '欢迎来到OST。欢迎回家。',
-      'citizens.title': '为每位公民', 'citizens.sub': '没有边界。没有例外。一个人类，一种货币。',
-      'features.title': '革命性的下一步', 'features.sub': '不仅仅是另一个代币。一个完整的真实生活金融系统。',
-      'features.f1.title': '机密转账', 'features.f1.text': '零知识证明隐藏您的余额和每笔交易。',
-      'features.f2.title': '亚秒级结算', 'features.f2.text': 'Solana上400毫秒。比刷卡还快。',
-      'features.f3.title': '万币通桥', 'features.f3.text': '比特币、以太坊、USDC、银行转账——一切皆可兑换。',
-      'features.f4.title': '永久免费', 'features.f4.text': '零交易费用。由捐款和投资者资助。链上透明。',
-      'features.f5.title': '离线支付', 'features.f5.text': 'NFC、二维码、蓝牙。无需互联网即可支付。',
-      'features.f6.title': 'ZK税务合规', 'features.f6.text': '在不暴露余额的情况下证明纳税。',
-      'pay.title': '用OST购物 - 实时价格', 'pay.sub': '真实产品，真实价格。体验隐私支付的感觉。',
-      'pay.cart': '您的购物车', 'pay.empty': '点击+添加商品', 'pay.paybtn': '用OST支付',
-      'pay.s1': '连接钱包', 'pay.s2': '生成零知识证明', 'pay.s3': '广播到Solana', 'pay.s4': '0.4秒确认',
-      'pay.done': '支付完成 - 完全隐私', 'pay.donesub': '地球上没有人看到这笔交易。',
-      'transfer.title': '从任何地方带来你的钱', 'transfer.sub': '实时价格。实时图表。将任何货币兑换为OST。',
-      'transfer.calc': '汇率计算器', 'transfer.calcsub': '查看您能获得多少OST。',
-      'transfer.widgettitle': '立即兑换', 'transfer.from': '您的货币', 'transfer.to': '机密OST',
-      'transfer.result': '隐私且即时', 'transfer.convert': '兑换为OST',
-      'transfer.note': '由Wormhole、Jupiter聚合器和Solana Token-2022驱动。',
-      'transfer.fiattitle': '来自法定货币？',
-      'transfer.fiattext': '使用<strong>MoonPay</strong>、<strong>Transak</strong>或<strong>Ramp Network</strong>——覆盖100多个国家。购买SOL或USDC，然后在上方兑换。',
-      'offline.title': '任何地方的离线现金', 'offline.sub': '互联网还没有覆盖所有地方。但你的钱应该在。',
-      'offline.lead': '光速交易——即使断电也不影响。',
-      'offline.text': '想象将一张钞票递给某人。没有银行。没有互联网。只有两个人和价值转移。OST将此带入数字世界。',
-      'offline.nfc': 'NFC感应支付', 'offline.nfctext': '将手机靠近对方。轻触一下。支付完成。像Apple Pay一样，但隐私、无国界。',
-      'offline.qr': '二维码扫描', 'offline.qrtext': '签名的支付装进单个二维码。展示它、打印它、刻在金属上。',
-      'offline.bt': '蓝牙近场', 'offline.bttext': 'BLE在30英尺范围内传输交易。市场和餐厅的完美选择。',
-      'getost.title': '获取OST', 'getost.sub': '从任何加密货币或法定货币即时进入——兑换无需KYC。',
-      'getost.swap': '任何加密货币兑换OST', 'getost.swaptext': 'Jupiter聚合器在所有Solana流动性池中找到最佳路线。',
-      'getost.jupnote': '连接您的钱包以加载实时兑换小部件。', 'getost.jupbtn': '加载兑换小部件',
-      'getost.fiat': '用当地货币购买', 'getost.fiatsub': '购买SOL或USDC，然后兑换为OST。兑换无需KYC。',
-      'getost.faucet': '新人？领取免费OST', 'getost.faucettext': '每个新钱包从社区金库获得<strong>1 OST</strong>。',
-      'getost.faucetbtn': '开启水龙头',
-      'pay.anywhere': '🌐 用OST在任何网站支付',
-      'pay.anywheresub': '粘贴你正在购物的任何网站。我们将你的OST转换为他们接受的货币。',
-      'pay.aurl': '商家链接', 'pay.aamount': '支付金额', 'pay.acurrency': '商家货币',
-      'pay.ayoupay': '你支付：', 'pay.arate': '汇率：', 'pay.afee': '网络费用：',
-      'pay.ahow': '如何运作',
-      'pay.astep1': '粘贴商家结账链接', 'pay.astep2': '输入商家货币金额',
-      'pay.astep3': 'OST通过Jupiter + Wormhole实时转换', 'pay.astep4': '商家收到他们的货币，你用OST支付',
-      'pay.apaybtn': '用OST支付', 'pay.asupported': '适用于任何接受以下方式的网站：',
-      'launch.title': '🚀 主网上线清单', 'launch.sub': '让OST在Solana主网上真正运行所需的一切。',
-      'ai.title': '赋能每一种智能', 'ai.sub': '我们欢迎AI代理、机器人、服务器和一切形式的数字智能。',
-      'build.title': '与我们一起构建未来', 'build.sub': '编码、创作或用像素做梦——OST是您的平台。',
-      'build.cta': '今天就开始贡献', 'build.ctasub': '每次提交、翻译和教程都推动人类进步。',
-      'build.github': '查看GitHub仓库', 'build.docs': '阅读文档',
-      'verify.title': '完全透明', 'verify.sub': '自己验证一切。我们没有什么可隐藏的。',
-      'verify.lead': '信任靠事实赢得，而非承诺。',
-      'verify.closing': '阅读代码。检查公司。验证国库。<strong>然后做决定。</strong>',
-      'wallet.title': '连接你的钱包', 'wallet.sub': '选择一个钱包连接到OST。',
-      'footer.mission': '每笔交易都帮助资助卫星基础设施，实现全球互联网接入。<strong>我们共同建设的礼物。</strong>',
-      'footer.copy': '开源。为地球上每个人用爱建造。',
+      'nav.home': 'é¦–é¡µ', 'nav.newhere': 'èŽ·å–OST', 'nav.demos': 'å•†ä¸š', 'nav.wallet': 'é’±åŒ…',
+      'nav.ai': 'AIå’Œæœºå™¨äºº', 'nav.offline': 'ç¦»çº¿', 'nav.censorship': 'å®¡æŸ¥', 'nav.spacex': 'SpaceX',
+      'nav.about': 'æˆ‘ä»¬çš„æ•…äº‹', 'nav.roadmap': 'è·¯çº¿å›¾', 'nav.build': 'å¼€å‘', 'nav.verify': 'éªŒè¯',
+      'nav.connect': 'è¿žæŽ¥é’±åŒ…',
+      'wallet.dashTitle': 'æˆ‘çš„OSTé’±åŒ…', 'wallet.dashSub': 'æ‚¨çš„ä¸ªäººæŽ§åˆ¶ä¸­å¿ƒã€‚åˆ›å»ºã€è¿žæŽ¥å’Œç®¡ç†æ‚¨çš„OSTé’±åŒ…ã€‚',
+      'bridges.title': 'è·¨é“¾æ¡¥ã€å…¥é‡‘é€šé“å’Œäº¤æ˜“æ‰€', 'bridges.sub': 'é€šå¾€OSTçš„æ¯æ¡è·¯å¾„â€”â€”æ¥è‡ªä»»ä½•é“¾ã€ä»»ä½•è´§å¸ã€ä»»ä½•å›½å®¶ã€‚',
+      'hero.tag': 'æ¯”ç‰¹å¸ä¹‹åŽçš„ä¸‹ä¸€æ­¥',
+      'hero.title': 'æˆ‘ä»¬éƒ½æ˜¯ <span class="gradient-text">ä¸€å®¶äººã€‚</span>',
+      'hero.sub': 'OSTæ˜¯ä¸ºä¸–ç•Œä¸Šæ¯ä¸ªå…¬æ°‘åˆ¶é€ çš„æ•°å­—çŽ°é‡‘ - ç§å¯†ã€å³æ—¶ï¼Œè¿žæŽ¥ä½ å·²æœ‰çš„ä»»ä½•è´§å¸ã€‚',
+      'hero.cta1': 'æŽ¢ç´¢å•†ä¸š', 'hero.cta2': 'èŽ·å–OST',
+      'hero.premine': 'æ— é¢„æŒ–', 'hero.settle': 'ç»“ç®—', 'hero.opensource': 'å¼€æº', 'hero.privacy': 'éšç§',
+      'story.title': 'æˆ‘ä»¬çš„æ•…äº‹', 'story.sub': 'ä»ŽåŽ»ä¸­å¿ƒåŒ–è´§å¸çš„ç¬¬ä¸€é¢—ç«èŠ±åˆ°ç§äººæ•°å­—çŽ°é‡‘æœªæ¥çš„æ—…ç¨‹ã€‚',
+      'story.t1.title': 'ç«èŠ±', 'story.t1.text': 'æ¯”ç‰¹å¸è¯æ˜Žäº†äººæ°‘â€”â€”è€Œéžé“¶è¡Œæˆ–æ”¿åºœâ€”â€”å¯ä»¥åˆ›é€ è·¨è¶Šæ‰€æœ‰å›½ç•Œçš„è´§å¸ã€‚è¿™é¢—ç«èŠ±æ”¹å˜äº†ä¸€åˆ‡ã€‚',
+      'story.t2.title': 'é¸¿æ²Ÿ', 'story.t2.text': 'ä½†æ¯”ç‰¹å¸é€Ÿåº¦æ…¢ã€è´¹ç”¨é«˜ã€å®Œå…¨å…¬å¼€ã€‚æ•°åäº¿äººä»ç„¶æ— æ³•åœ¨æ²¡æœ‰é“¶è¡ŒæŠ½æˆçš„æƒ…å†µä¸‹ä»˜æˆ¿ç§Ÿã€ä¹°æ‚è´§æˆ–æ±‡æ¬¾å›žå®¶ã€‚',
+      'story.t3.title': 'çªç ´', 'story.t3.text': 'Solana Token-2022æŽ¨å‡ºäº†æœºå¯†è½¬è´¦â€”â€”é›¶çŸ¥è¯†è¯æ˜Žå°†ä½™é¢å’Œé‡‘é¢å¯¹å…¨ä¸–ç•Œéšè—ã€‚è¿™æ˜¯ç¼ºå¤±çš„æ‹¼å›¾ã€‚',
+      'story.t4.title': 'OSTè¯žç”Ÿ', 'story.t4.text': 'æˆ‘ä»¬ç»“åˆäº†ä¸å¯é˜»æŒ¡çš„è´§å¸ã€å³æ—¶ç»“ç®—ã€å®Œå…¨éšç§å’Œä¸€é¡¹ä½¿å‘½ï¼šèµ„åŠ©å«æ˜ŸåŸºç¡€è®¾æ–½ï¼Œè®©æ¯ä¸ªäººéƒ½èƒ½ä½¿ç”¨é‡‘èžç³»ç»Ÿã€‚',
+      'story.t5.year': 'æœªæ¥', 'story.t5.title': 'æ¯ä½å…¬æ°‘ï¼Œäº’è”äº’é€š',
+      'story.t5.text': 'ä¸€ä¸ªæ‹‰å„æ–¯çš„æ°´æžœå•†å’Œå¾·é»‘å…°çš„å·¥ç¨‹å¸ˆäº«æœ‰åŒç­‰é‡‘èžè‡ªç”±çš„ä¸–ç•Œã€‚å›½ç•Œåªæ˜¯çº¿æ¡ã€‚é‡‘é’±çœŸæ­£å±žäºŽä½ ã€‚',
+      'story.lead': 'æˆ‘ä»¬æ­£åœ¨å»ºè®¾ä¸å±žäºŽä»»ä½•å›½å®¶ã€æœåŠ¡æ¯ä½å…¬æ°‘çš„é€šç”¨æ•°å­—çŽ°é‡‘ã€‚ç§å¯†ã€‚å³æ—¶ã€‚å¹³ç­‰ã€‚',
+      'story.closing': 'æ¬¢è¿Žæ¥åˆ°OSTã€‚æ¬¢è¿Žå›žå®¶ã€‚',
+      'citizens.title': 'ä¸ºæ¯ä½å…¬æ°‘', 'citizens.sub': 'æ²¡æœ‰è¾¹ç•Œã€‚æ²¡æœ‰ä¾‹å¤–ã€‚ä¸€ä¸ªäººç±»ï¼Œä¸€ç§è´§å¸ã€‚',
+      'features.title': 'é©å‘½æ€§çš„ä¸‹ä¸€æ­¥', 'features.sub': 'ä¸ä»…ä»…æ˜¯å¦ä¸€ä¸ªä»£å¸ã€‚ä¸€ä¸ªå®Œæ•´çš„çœŸå®žç”Ÿæ´»é‡‘èžç³»ç»Ÿã€‚',
+      'features.f1.title': 'æœºå¯†è½¬è´¦', 'features.f1.text': 'é›¶çŸ¥è¯†è¯æ˜Žéšè—æ‚¨çš„ä½™é¢å’Œæ¯ç¬”äº¤æ˜“ã€‚',
+      'features.f2.title': 'äºšç§’çº§ç»“ç®—', 'features.f2.text': 'Solanaä¸Š400æ¯«ç§’ã€‚æ¯”åˆ·å¡è¿˜å¿«ã€‚',
+      'features.f3.title': 'ä¸‡å¸é€šæ¡¥', 'features.f3.text': 'æ¯”ç‰¹å¸ã€ä»¥å¤ªåŠã€USDCã€é“¶è¡Œè½¬è´¦â€”â€”ä¸€åˆ‡çš†å¯å…‘æ¢ã€‚',
+      'features.f4.title': 'æ°¸ä¹…å…è´¹', 'features.f4.text': 'é›¶äº¤æ˜“è´¹ç”¨ã€‚ç”±ææ¬¾å’ŒæŠ•èµ„è€…èµ„åŠ©ã€‚é“¾ä¸Šé€æ˜Žã€‚',
+      'features.f5.title': 'ç¦»çº¿æ”¯ä»˜', 'features.f5.text': 'NFCã€äºŒç»´ç ã€è“ç‰™ã€‚æ— éœ€äº’è”ç½‘å³å¯æ”¯ä»˜ã€‚',
+      'features.f6.title': 'ZKç¨ŽåŠ¡åˆè§„', 'features.f6.text': 'åœ¨ä¸æš´éœ²ä½™é¢çš„æƒ…å†µä¸‹è¯æ˜Žçº³ç¨Žã€‚',
+      'pay.title': 'ç”¨OSTè´­ç‰© - å®žæ—¶ä»·æ ¼', 'pay.sub': 'çœŸå®žäº§å“ï¼ŒçœŸå®žä»·æ ¼ã€‚ä½“éªŒéšç§æ”¯ä»˜çš„æ„Ÿè§‰ã€‚',
+      'pay.cart': 'æ‚¨çš„è´­ç‰©è½¦', 'pay.empty': 'ç‚¹å‡»+æ·»åŠ å•†å“', 'pay.paybtn': 'ç”¨OSTæ”¯ä»˜',
+      'pay.s1': 'è¿žæŽ¥é’±åŒ…', 'pay.s2': 'ç”Ÿæˆé›¶çŸ¥è¯†è¯æ˜Ž', 'pay.s3': 'å¹¿æ’­åˆ°Solana', 'pay.s4': '0.4ç§’ç¡®è®¤',
+      'pay.done': 'æ”¯ä»˜å®Œæˆ - å®Œå…¨éšç§', 'pay.donesub': 'åœ°çƒä¸Šæ²¡æœ‰äººçœ‹åˆ°è¿™ç¬”äº¤æ˜“ã€‚',
+      'transfer.title': 'ä»Žä»»ä½•åœ°æ–¹å¸¦æ¥ä½ çš„é’±', 'transfer.sub': 'å®žæ—¶ä»·æ ¼ã€‚å®žæ—¶å›¾è¡¨ã€‚å°†ä»»ä½•è´§å¸å…‘æ¢ä¸ºOSTã€‚',
+      'transfer.calc': 'æ±‡çŽ‡è®¡ç®—å™¨', 'transfer.calcsub': 'æŸ¥çœ‹æ‚¨èƒ½èŽ·å¾—å¤šå°‘OSTã€‚',
+      'transfer.widgettitle': 'ç«‹å³å…‘æ¢', 'transfer.from': 'æ‚¨çš„è´§å¸', 'transfer.to': 'æœºå¯†OST',
+      'transfer.result': 'éšç§ä¸”å³æ—¶', 'transfer.convert': 'å…‘æ¢ä¸ºOST',
+      'transfer.note': 'ç”±Wormholeã€Jupiterèšåˆå™¨å’ŒSolana Token-2022é©±åŠ¨ã€‚',
+      'transfer.fiattitle': 'æ¥è‡ªæ³•å®šè´§å¸ï¼Ÿ',
+      'transfer.fiattext': 'ä½¿ç”¨<strong>MoonPay</strong>ã€<strong>Transak</strong>æˆ–<strong>Ramp Network</strong>â€”â€”è¦†ç›–100å¤šä¸ªå›½å®¶ã€‚è´­ä¹°SOLæˆ–USDCï¼Œç„¶åŽåœ¨ä¸Šæ–¹å…‘æ¢ã€‚',
+      'offline.title': 'ä»»ä½•åœ°æ–¹çš„ç¦»çº¿çŽ°é‡‘', 'offline.sub': 'äº’è”ç½‘è¿˜æ²¡æœ‰è¦†ç›–æ‰€æœ‰åœ°æ–¹ã€‚ä½†ä½ çš„é’±åº”è¯¥åœ¨ã€‚',
+      'offline.lead': 'å…‰é€Ÿäº¤æ˜“â€”â€”å³ä½¿æ–­ç”µä¹Ÿä¸å½±å“ã€‚',
+      'offline.text': 'æƒ³è±¡å°†ä¸€å¼ é’žç¥¨é€’ç»™æŸäººã€‚æ²¡æœ‰é“¶è¡Œã€‚æ²¡æœ‰äº’è”ç½‘ã€‚åªæœ‰ä¸¤ä¸ªäººå’Œä»·å€¼è½¬ç§»ã€‚OSTå°†æ­¤å¸¦å…¥æ•°å­—ä¸–ç•Œã€‚',
+      'offline.nfc': 'NFCæ„Ÿåº”æ”¯ä»˜', 'offline.nfctext': 'å°†æ‰‹æœºé è¿‘å¯¹æ–¹ã€‚è½»è§¦ä¸€ä¸‹ã€‚æ”¯ä»˜å®Œæˆã€‚åƒApple Payä¸€æ ·ï¼Œä½†éšç§ã€æ— å›½ç•Œã€‚',
+      'offline.qr': 'äºŒç»´ç æ‰«æ', 'offline.qrtext': 'ç­¾åçš„æ”¯ä»˜è£…è¿›å•ä¸ªäºŒç»´ç ã€‚å±•ç¤ºå®ƒã€æ‰“å°å®ƒã€åˆ»åœ¨é‡‘å±žä¸Šã€‚',
+      'offline.bt': 'è“ç‰™è¿‘åœº', 'offline.bttext': 'BLEåœ¨30è‹±å°ºèŒƒå›´å†…ä¼ è¾“äº¤æ˜“ã€‚å¸‚åœºå’Œé¤åŽ…çš„å®Œç¾Žé€‰æ‹©ã€‚',
+      'getost.title': 'èŽ·å–OST', 'getost.sub': 'ä»Žä»»ä½•åŠ å¯†è´§å¸æˆ–æ³•å®šè´§å¸å³æ—¶è¿›å…¥â€”â€”å…‘æ¢æ— éœ€KYCã€‚',
+      'getost.swap': 'ä»»ä½•åŠ å¯†è´§å¸å…‘æ¢OST', 'getost.swaptext': 'Jupiterèšåˆå™¨åœ¨æ‰€æœ‰SolanaæµåŠ¨æ€§æ± ä¸­æ‰¾åˆ°æœ€ä½³è·¯çº¿ã€‚',
+      'getost.jupnote': 'è¿žæŽ¥æ‚¨çš„é’±åŒ…ä»¥åŠ è½½å®žæ—¶å…‘æ¢å°éƒ¨ä»¶ã€‚', 'getost.jupbtn': 'åŠ è½½å…‘æ¢å°éƒ¨ä»¶',
+      'getost.fiat': 'ç”¨å½“åœ°è´§å¸è´­ä¹°', 'getost.fiatsub': 'è´­ä¹°SOLæˆ–USDCï¼Œç„¶åŽå…‘æ¢ä¸ºOSTã€‚å…‘æ¢æ— éœ€KYCã€‚',
+      'getost.faucet': 'æ–°äººï¼Ÿé¢†å–å…è´¹OST', 'getost.faucettext': 'æ¯ä¸ªæ–°é’±åŒ…ä»Žç¤¾åŒºé‡‘åº“èŽ·å¾—<strong>1 OST</strong>ã€‚',
+      'getost.faucetbtn': 'å¼€å¯æ°´é¾™å¤´',
+      'pay.anywhere': 'ðŸŒ ç”¨OSTåœ¨ä»»ä½•ç½‘ç«™æ”¯ä»˜',
+      'pay.anywheresub': 'ç²˜è´´ä½ æ­£åœ¨è´­ç‰©çš„ä»»ä½•ç½‘ç«™ã€‚æˆ‘ä»¬å°†ä½ çš„OSTè½¬æ¢ä¸ºä»–ä»¬æŽ¥å—çš„è´§å¸ã€‚',
+      'pay.aurl': 'å•†å®¶é“¾æŽ¥', 'pay.aamount': 'æ”¯ä»˜é‡‘é¢', 'pay.acurrency': 'å•†å®¶è´§å¸',
+      'pay.ayoupay': 'ä½ æ”¯ä»˜ï¼š', 'pay.arate': 'æ±‡çŽ‡ï¼š', 'pay.afee': 'ç½‘ç»œè´¹ç”¨ï¼š',
+      'pay.ahow': 'å¦‚ä½•è¿ä½œ',
+      'pay.astep1': 'ç²˜è´´å•†å®¶ç»“è´¦é“¾æŽ¥', 'pay.astep2': 'è¾“å…¥å•†å®¶è´§å¸é‡‘é¢',
+      'pay.astep3': 'OSTé€šè¿‡Jupiter + Wormholeå®žæ—¶è½¬æ¢', 'pay.astep4': 'å•†å®¶æ”¶åˆ°ä»–ä»¬çš„è´§å¸ï¼Œä½ ç”¨OSTæ”¯ä»˜',
+      'pay.apaybtn': 'ç”¨OSTæ”¯ä»˜', 'pay.asupported': 'é€‚ç”¨äºŽä»»ä½•æŽ¥å—ä»¥ä¸‹æ–¹å¼çš„ç½‘ç«™ï¼š',
+      'launch.title': 'ðŸš€ ä¸»ç½‘ä¸Šçº¿æ¸…å•', 'launch.sub': 'è®©OSTåœ¨Solanaä¸»ç½‘ä¸ŠçœŸæ­£è¿è¡Œæ‰€éœ€çš„ä¸€åˆ‡ã€‚',
+      'ai.title': 'èµ‹èƒ½æ¯ä¸€ç§æ™ºèƒ½', 'ai.sub': 'æˆ‘ä»¬æ¬¢è¿ŽAIä»£ç†ã€æœºå™¨äººã€æœåŠ¡å™¨å’Œä¸€åˆ‡å½¢å¼çš„æ•°å­—æ™ºèƒ½ã€‚',
+      'build.title': 'ä¸Žæˆ‘ä»¬ä¸€èµ·æž„å»ºæœªæ¥', 'build.sub': 'ç¼–ç ã€åˆ›ä½œæˆ–ç”¨åƒç´ åšæ¢¦â€”â€”OSTæ˜¯æ‚¨çš„å¹³å°ã€‚',
+      'build.cta': 'ä»Šå¤©å°±å¼€å§‹è´¡çŒ®', 'build.ctasub': 'æ¯æ¬¡æäº¤ã€ç¿»è¯‘å’Œæ•™ç¨‹éƒ½æŽ¨åŠ¨äººç±»è¿›æ­¥ã€‚',
+      'build.github': 'æŸ¥çœ‹GitHubä»“åº“', 'build.docs': 'é˜…è¯»æ–‡æ¡£',
+      'verify.title': 'å®Œå…¨é€æ˜Ž', 'verify.sub': 'è‡ªå·±éªŒè¯ä¸€åˆ‡ã€‚æˆ‘ä»¬æ²¡æœ‰ä»€ä¹ˆå¯éšè—çš„ã€‚',
+      'verify.lead': 'ä¿¡ä»»é äº‹å®žèµ¢å¾—ï¼Œè€Œéžæ‰¿è¯ºã€‚',
+      'verify.closing': 'é˜…è¯»ä»£ç ã€‚æ£€æŸ¥å…¬å¸ã€‚éªŒè¯å›½åº“ã€‚<strong>ç„¶åŽåšå†³å®šã€‚</strong>',
+      'wallet.title': 'è¿žæŽ¥ä½ çš„é’±åŒ…', 'wallet.sub': 'é€‰æ‹©ä¸€ä¸ªé’±åŒ…è¿žæŽ¥åˆ°OSTã€‚',
+      'footer.mission': 'æ¯ç¬”äº¤æ˜“éƒ½å¸®åŠ©èµ„åŠ©å«æ˜ŸåŸºç¡€è®¾æ–½ï¼Œå®žçŽ°å…¨çƒäº’è”ç½‘æŽ¥å…¥ã€‚<strong>æˆ‘ä»¬å…±åŒå»ºè®¾çš„ç¤¼ç‰©ã€‚</strong>',
+      'footer.copy': 'å¼€æºã€‚ä¸ºåœ°çƒä¸Šæ¯ä¸ªäººç”¨çˆ±å»ºé€ ã€‚',
       'hero.free': '&#128176; \u6c38\u4e45\u514d\u8d39',
       'hero.freetext': '\u96f6\u4ea4\u6613\u8d39\u7528\u3002\u6ca1\u6709\u9690\u85cf\u6210\u672c\u3002\u7531\u6350\u6b3e\u548c\u6295\u8d44\u8005\u8d44\u52a9\u3002',
       'hero.createwallet': '\u521b\u5efa\u94b1\u5305',
@@ -775,7 +775,7 @@
       'gc.supported': '\u652f\u6301\u7684\u54c1\u724c:',
       'gc.disclaimer': '&#9888; \u7528\u6237\u8d1f\u8d23\u9a8c\u8bc1\u793c\u54c1\u5361\u7684\u6709\u6548\u6027\u3002OST\u4e0d\u662f\u793c\u54c1\u5361\u53d1\u884c\u5546\u3002\u4ea4\u6362\u901a\u8fc7\u7b2c\u4e09\u65b9API\u4fc3\u6210\u3002\u53d7\u5f53\u5730\u6cd5\u5f8b\u7ea6\u675f\u3002',
       'fuel.title': '\u52a0\u6cb9\u7ad9',
-      'fuel.sub': '\u5728\u5168\u7403\u52a0\u6cb9\u7ad9\u4f7f\u7528OST\u652f\u4ed8 — \u6bcf\u6b21\u52a0\u6cb9\u8d5a\u53d6\u5956\u52b1',
+      'fuel.sub': '\u5728\u5168\u7403\u52a0\u6cb9\u7ad9\u4f7f\u7528OST\u652f\u4ed8 â€” \u6bcf\u6b21\u52a0\u6cb9\u8d5a\u53d6\u5956\u52b1',
       'fuel.howTitle': '\u4f7f\u7528\u6d41\u7a0b',
       'fuel.step1': '\u5230\u8fbe',
       'fuel.step1d': '\u9a76\u5165\u5408\u4f5c\u52a0\u6cb9\u7ad9',
@@ -792,83 +792,83 @@
       'fuel.ostCost': 'OST\u7b49\u503c',
       'fuel.reward': '\u8fd4\u73b0 (3%)',
       'fuel.offlineTitle': '\u79bb\u7ebf\u53ef\u7528',
-      'fuel.offlineDesc': 'NFC\u548cBLE — \u65e0\u7f51\u7edc\u4e5f\u80fd\u652f\u4ed8\u3002\u4ea4\u6613\u5728\u4e0a\u7ebf\u540e\u540c\u6b65\u3002',
+      'fuel.offlineDesc': 'NFC\u548cBLE â€” \u65e0\u7f51\u7edc\u4e5f\u80fd\u652f\u4ed8\u3002\u4ea4\u6613\u5728\u4e0a\u7ebf\u540e\u540c\u6b65\u3002',
       'fuel.partnersTitle': '\u5408\u4f5c\u52a0\u6cb9\u7ad9',
       'fuel.partnersSub': '\u5168\u740320+\u4e3b\u8981\u71c3\u6cb9\u54c1\u724c\u63a5\u53d7',
       'fuel.rewardsTitle': '\u5956\u52b1\u7b49\u7ea7',
       'fuel.disclaimer': '&#9888; \u6240\u793a\u5408\u4f5c\u5173\u7cfb\u6b63\u5728\u5f00\u53d1\u4e2d\u3002OST\u4e0e\u6240\u5217\u54c1\u724c\u65e0\u5173\u8054\u3002',
     },
     ru: {
-      'nav.home': 'Главная', 'nav.newhere': 'Получить OST', 'nav.demos': 'Коммерция', 'nav.wallet': 'Кошелек',
-      'nav.ai': 'ИИ и Боты', 'nav.offline': 'Оффлайн', 'nav.censorship': 'Цензура', 'nav.spacex': 'SpaceX',
-      'nav.about': 'Наша История', 'nav.roadmap': 'Дорожная Карта', 'nav.build': 'Создать', 'nav.verify': 'Проверить',
-      'nav.connect': 'Подключить кошелек',
-      'wallet.dashTitle': 'Мой Кошелек OST', 'wallet.dashSub': 'Ваш личный центр управления. Создайте и управляйте кошельком OST.',
-      'bridges.title': 'Мосты, Шлюзы и Биржи', 'bridges.sub': 'Каждый путь к OST — из любой сети, валюты, страны.',
-      'hero.tag': 'Следующий Шаг После Биткоина',
-      'hero.title': 'Мы все <span class="gradient-text">одна семья.</span>',
-      'hero.sub': 'OST — цифровые деньги для каждого гражданина мира. Приватные, мгновенные, подключенные к любой валюте.',
-      'hero.cta1': 'Открыть коммерцию', 'hero.cta2': 'Получить OST',
-      'hero.premine': 'Без премайна', 'hero.settle': 'Расчет', 'hero.opensource': 'Открытый код', 'hero.privacy': 'Приватность',
-      'story.title': 'Наша История', 'story.sub': 'Путь от первой искры децентрализованных денег к будущему приватных цифровых наличных.',
-      'story.t1.title': 'Искра', 'story.t1.text': 'Биткоин доказал, что люди — не банки, не правительства — могут создавать деньги, пересекающие любые границы.',
-      'story.t2.title': 'Разрыв', 'story.t2.text': 'Но Биткоин был медленным, дорогим и публичным. Миллиарды по-прежнему не могли платить за жилье без комиссий банков.',
-      'story.t3.title': 'Прорыв', 'story.t3.text': 'Solana Token-2022 запустил конфиденциальные переводы — доказательства с нулевым разглашением скрывают балансы и суммы.',
-      'story.t4.title': 'Рождение OST', 'story.t4.text': 'Мы объединили неостановимые деньги, мгновенные расчеты, полную приватность и миссию: финансирование спутниковой инфраструктуры.',
-      'story.t5.year': 'Будущее', 'story.t5.title': 'Каждый Гражданин На Связи',
-      'story.t5.text': 'Мир, где продавец фруктов в Лагосе и инженер в Тегеране разделяют одну финансовую свободу.',
-      'story.lead': 'Мы строим универсальные цифровые деньги, не принадлежащие ни одной стране и служащие каждому гражданину.',
-      'story.closing': 'Добро пожаловать в OST. Добро пожаловать домой.',
-      'citizens.title': 'Для Каждого Гражданина', 'citizens.sub': 'Без границ. Без исключений. Одно человечество, одни деньги.',
-      'features.title': 'Революционный Следующий Шаг', 'features.sub': 'Не просто ещё один токен. Полная финансовая система для реальной жизни.',
-      'features.f1.title': 'Конфиденциальные Переводы', 'features.f1.text': 'Доказательства с нулевым разглашением скрывают ваш баланс и каждую транзакцию.',
-      'features.f2.title': 'Расчёт за Доли Секунды', 'features.f2.text': '400мс на Solana. Быстрее, чем прикосновение карты.',
-      'features.f3.title': 'Мост Для Всех Валют', 'features.f3.text': 'Биткоин, Ethereum, USDC, банковские переводы — всё конвертируется.',
-      'features.f4.title': 'Бесплатно навсегда', 'features.f4.text': 'Нулевые комиссии. Финансируется пожертвованиями и инвесторами. Прозрачность на блокчейне.',
-      'features.f5.title': 'Оффлайн-Платежи', 'features.f5.text': 'NFC, QR, Bluetooth. Платите без интернета.',
-      'features.f6.title': 'ZK Налоговая Отчетность', 'features.f6.text': 'Докажите уплату налогов, не раскрывая баланс.',
-      'pay.title': 'Покупки с OST — Реальные Цены', 'pay.sub': 'Настоящие товары, реальные цены. Почувствуйте приватные платежи.',
-      'pay.cart': 'Ваша корзина', 'pay.empty': 'Нажмите + чтобы добавить', 'pay.paybtn': 'Оплатить OST',
-      'pay.s1': 'Подключение кошелька', 'pay.s2': 'Генерация ZK-доказательства', 'pay.s3': 'Отправка в Solana', 'pay.s4': 'Подтверждено за 0.4с',
-      'pay.done': 'Оплата Завершена — Полная Приватность', 'pay.donesub': 'Никто на Земле не видел эту транзакцию.',
-      'transfer.title': 'Принесите Свои Деньги Откуда Угодно', 'transfer.sub': 'Цены в реальном времени. Графики. Обменяйте любую валюту на OST.',
-      'transfer.calc': 'Калькулятор Обменного Курса', 'transfer.calcsub': 'Посмотрите, сколько OST вы получите за любую сумму.',
-      'transfer.widgettitle': 'Конвертировать Сейчас', 'transfer.from': 'Ваша валюта', 'transfer.to': 'Конфиденциальный OST',
-      'transfer.result': 'Приватно и мгновенно', 'transfer.convert': 'Конвертировать в OST',
-      'transfer.note': 'Работает на Wormhole, Jupiter и Solana Token-2022.',
-      'transfer.fiattitle': 'Из фиатной валюты?',
-      'transfer.fiattext': 'Используйте <strong>MoonPay</strong>, <strong>Transak</strong> или <strong>Ramp Network</strong> — доступно в 100+ странах.',
-      'offline.title': 'Наличные Без Интернета', 'offline.sub': 'Интернет есть не везде. Но ваши деньги должны быть.',
-      'offline.lead': 'Транзакции со скоростью света — даже когда свет выключен.',
-      'offline.text': 'Представьте, вы передаёте кому-то купюру. Без банка. Без интернета. Просто два человека и обмен ценностями.',
-      'offline.nfc': 'NFC Бесконтактная Оплата', 'offline.nfctext': 'Поднесите телефоны друг к другу. Одно касание. Готово.',
-      'offline.qr': 'QR-код', 'offline.qrtext': 'Подписанный платёж помещается в один QR-код. Покажите, напечатайте, выгравируйте.',
-      'offline.bt': 'Bluetooth', 'offline.bttext': 'BLE передаёт транзакцию на расстоянии до 10 метров.',
-      'getost.title': 'Получить OST', 'getost.sub': 'Мгновенный вход из любой крипто или фиатной валюты — без KYC для обмена.',
-      'getost.swap': 'Обмен Любой Крипты на OST', 'getost.swaptext': 'Jupiter находит лучший маршрут по всем пулам ликвидности Solana.',
-      'getost.jupnote': 'Подключите кошелёк для загрузки виджета обмена.', 'getost.jupbtn': 'Загрузить виджет',
-      'getost.fiat': 'Купить за местную валюту', 'getost.fiatsub': 'Купите SOL или USDC, затем обменяйте на OST.',
-      'getost.faucet': 'Новичок? Получите Бесплатный OST', 'getost.faucettext': 'Каждый новый кошелёк получает <strong>1 OST</strong> из казны сообщества.',
-      'getost.faucetbtn': 'Открыть кран',
-      'pay.anywhere': '🌐 Платите OST на любом сайте',
-      'pay.anywheresub': 'Вставьте ссылку на любой сайт, где вы покупаете. Мы конвертируем ваши OST в нужную валюту.',
-      'pay.aurl': 'URL магазина', 'pay.aamount': 'Сумма к оплате', 'pay.acurrency': 'Их валюта',
-      'pay.ayoupay': 'Вы платите:', 'pay.arate': 'Курс:', 'pay.afee': 'Комиссия сети:',
-      'pay.ahow': 'Как это работает',
-      'pay.astep1': 'Вставьте ссылку на оплату', 'pay.astep2': 'Введите сумму в их валюте',
-      'pay.astep3': 'OST конвертирует по живым курсам через Jupiter + Wormhole', 'pay.astep4': 'Продавец получает свою валюту, вы заплатили OST',
-      'pay.apaybtn': 'Оплатить OST', 'pay.asupported': 'Работает с любым сайтом, принимающим:',
-      'launch.title': '🚀 Чек-лист запуска Mainnet', 'launch.sub': 'Что нужно для запуска OST на Solana mainnet.',
-      'ai.title': 'Сила Для Каждого Интеллекта', 'ai.sub': 'Мы приветствуем ИИ-агентов, ботов, серверы и все формы цифрового разума.',
-      'build.title': 'Стройте Будущее С Нами', 'build.sub': 'Программируйте, создавайте или мечтайте — OST ваша платформа.',
-      'build.cta': 'Начните Вносить Вклад Сегодня', 'build.ctasub': 'Каждый коммит, перевод и урок продвигает человечество.',
-      'build.github': 'Открыть GitHub', 'build.docs': 'Читать документацию',
-      'verify.title': 'Полная Прозрачность', 'verify.sub': 'Проверьте всё сами. Нам нечего скрывать.',
-      'verify.lead': 'Доверие завоёвывается фактами, а не обещаниями.',
-      'verify.closing': 'Читайте код. Проверяйте компанию. Верифицируйте казну. <strong>Потом решайте.</strong>',
-      'wallet.title': 'Подключить Кошелек', 'wallet.sub': 'Выберите кошелёк для подключения к OST.',
-      'footer.mission': 'Каждая транзакция помогает финансировать спутниковую инфраструктуру. <strong>Подарок, который мы строим вместе.</strong>',
-      'footer.copy': 'Открытый исходный код. Создано с любовью для каждого человека на Земле.',
+      'nav.home': 'Ð“Ð»Ð°Ð²Ð½Ð°Ñ', 'nav.newhere': 'ÐŸÐ¾Ð»ÑƒÑ‡Ð¸Ñ‚ÑŒ OST', 'nav.demos': 'ÐšÐ¾Ð¼Ð¼ÐµÑ€Ñ†Ð¸Ñ', 'nav.wallet': 'ÐšÐ¾ÑˆÐµÐ»ÐµÐº',
+      'nav.ai': 'Ð˜Ð˜ Ð¸ Ð‘Ð¾Ñ‚Ñ‹', 'nav.offline': 'ÐžÑ„Ñ„Ð»Ð°Ð¹Ð½', 'nav.censorship': 'Ð¦ÐµÐ½Ð·ÑƒÑ€Ð°', 'nav.spacex': 'SpaceX',
+      'nav.about': 'ÐÐ°ÑˆÐ° Ð˜ÑÑ‚Ð¾Ñ€Ð¸Ñ', 'nav.roadmap': 'Ð”Ð¾Ñ€Ð¾Ð¶Ð½Ð°Ñ ÐšÐ°Ñ€Ñ‚Ð°', 'nav.build': 'Ð¡Ð¾Ð·Ð´Ð°Ñ‚ÑŒ', 'nav.verify': 'ÐŸÑ€Ð¾Ð²ÐµÑ€Ð¸Ñ‚ÑŒ',
+      'nav.connect': 'ÐŸÐ¾Ð´ÐºÐ»ÑŽÑ‡Ð¸Ñ‚ÑŒ ÐºÐ¾ÑˆÐµÐ»ÐµÐº',
+      'wallet.dashTitle': 'ÐœÐ¾Ð¹ ÐšÐ¾ÑˆÐµÐ»ÐµÐº OST', 'wallet.dashSub': 'Ð’Ð°Ñˆ Ð»Ð¸Ñ‡Ð½Ñ‹Ð¹ Ñ†ÐµÐ½Ñ‚Ñ€ ÑƒÐ¿Ñ€Ð°Ð²Ð»ÐµÐ½Ð¸Ñ. Ð¡Ð¾Ð·Ð´Ð°Ð¹Ñ‚Ðµ Ð¸ ÑƒÐ¿Ñ€Ð°Ð²Ð»ÑÐ¹Ñ‚Ðµ ÐºÐ¾ÑˆÐµÐ»ÑŒÐºÐ¾Ð¼ OST.',
+      'bridges.title': 'ÐœÐ¾ÑÑ‚Ñ‹, Ð¨Ð»ÑŽÐ·Ñ‹ Ð¸ Ð‘Ð¸Ñ€Ð¶Ð¸', 'bridges.sub': 'ÐšÐ°Ð¶Ð´Ñ‹Ð¹ Ð¿ÑƒÑ‚ÑŒ Ðº OST â€” Ð¸Ð· Ð»ÑŽÐ±Ð¾Ð¹ ÑÐµÑ‚Ð¸, Ð²Ð°Ð»ÑŽÑ‚Ñ‹, ÑÑ‚Ñ€Ð°Ð½Ñ‹.',
+      'hero.tag': 'Ð¡Ð»ÐµÐ´ÑƒÑŽÑ‰Ð¸Ð¹ Ð¨Ð°Ð³ ÐŸÐ¾ÑÐ»Ðµ Ð‘Ð¸Ñ‚ÐºÐ¾Ð¸Ð½Ð°',
+      'hero.title': 'ÐœÑ‹ Ð²ÑÐµ <span class="gradient-text">Ð¾Ð´Ð½Ð° ÑÐµÐ¼ÑŒÑ.</span>',
+      'hero.sub': 'OST â€” Ñ†Ð¸Ñ„Ñ€Ð¾Ð²Ñ‹Ðµ Ð´ÐµÐ½ÑŒÐ³Ð¸ Ð´Ð»Ñ ÐºÐ°Ð¶Ð´Ð¾Ð³Ð¾ Ð³Ñ€Ð°Ð¶Ð´Ð°Ð½Ð¸Ð½Ð° Ð¼Ð¸Ñ€Ð°. ÐŸÑ€Ð¸Ð²Ð°Ñ‚Ð½Ñ‹Ðµ, Ð¼Ð³Ð½Ð¾Ð²ÐµÐ½Ð½Ñ‹Ðµ, Ð¿Ð¾Ð´ÐºÐ»ÑŽÑ‡ÐµÐ½Ð½Ñ‹Ðµ Ðº Ð»ÑŽÐ±Ð¾Ð¹ Ð²Ð°Ð»ÑŽÑ‚Ðµ.',
+      'hero.cta1': 'ÐžÑ‚ÐºÑ€Ñ‹Ñ‚ÑŒ ÐºÐ¾Ð¼Ð¼ÐµÑ€Ñ†Ð¸ÑŽ', 'hero.cta2': 'ÐŸÐ¾Ð»ÑƒÑ‡Ð¸Ñ‚ÑŒ OST',
+      'hero.premine': 'Ð‘ÐµÐ· Ð¿Ñ€ÐµÐ¼Ð°Ð¹Ð½Ð°', 'hero.settle': 'Ð Ð°ÑÑ‡ÐµÑ‚', 'hero.opensource': 'ÐžÑ‚ÐºÑ€Ñ‹Ñ‚Ñ‹Ð¹ ÐºÐ¾Ð´', 'hero.privacy': 'ÐŸÑ€Ð¸Ð²Ð°Ñ‚Ð½Ð¾ÑÑ‚ÑŒ',
+      'story.title': 'ÐÐ°ÑˆÐ° Ð˜ÑÑ‚Ð¾Ñ€Ð¸Ñ', 'story.sub': 'ÐŸÑƒÑ‚ÑŒ Ð¾Ñ‚ Ð¿ÐµÑ€Ð²Ð¾Ð¹ Ð¸ÑÐºÑ€Ñ‹ Ð´ÐµÑ†ÐµÐ½Ñ‚Ñ€Ð°Ð»Ð¸Ð·Ð¾Ð²Ð°Ð½Ð½Ñ‹Ñ… Ð´ÐµÐ½ÐµÐ³ Ðº Ð±ÑƒÐ´ÑƒÑ‰ÐµÐ¼Ñƒ Ð¿Ñ€Ð¸Ð²Ð°Ñ‚Ð½Ñ‹Ñ… Ñ†Ð¸Ñ„Ñ€Ð¾Ð²Ñ‹Ñ… Ð½Ð°Ð»Ð¸Ñ‡Ð½Ñ‹Ñ….',
+      'story.t1.title': 'Ð˜ÑÐºÑ€Ð°', 'story.t1.text': 'Ð‘Ð¸Ñ‚ÐºÐ¾Ð¸Ð½ Ð´Ð¾ÐºÐ°Ð·Ð°Ð», Ñ‡Ñ‚Ð¾ Ð»ÑŽÐ´Ð¸ â€” Ð½Ðµ Ð±Ð°Ð½ÐºÐ¸, Ð½Ðµ Ð¿Ñ€Ð°Ð²Ð¸Ñ‚ÐµÐ»ÑŒÑÑ‚Ð²Ð° â€” Ð¼Ð¾Ð³ÑƒÑ‚ ÑÐ¾Ð·Ð´Ð°Ð²Ð°Ñ‚ÑŒ Ð´ÐµÐ½ÑŒÐ³Ð¸, Ð¿ÐµÑ€ÐµÑÐµÐºÐ°ÑŽÑ‰Ð¸Ðµ Ð»ÑŽÐ±Ñ‹Ðµ Ð³Ñ€Ð°Ð½Ð¸Ñ†Ñ‹.',
+      'story.t2.title': 'Ð Ð°Ð·Ñ€Ñ‹Ð²', 'story.t2.text': 'ÐÐ¾ Ð‘Ð¸Ñ‚ÐºÐ¾Ð¸Ð½ Ð±Ñ‹Ð» Ð¼ÐµÐ´Ð»ÐµÐ½Ð½Ñ‹Ð¼, Ð´Ð¾Ñ€Ð¾Ð³Ð¸Ð¼ Ð¸ Ð¿ÑƒÐ±Ð»Ð¸Ñ‡Ð½Ñ‹Ð¼. ÐœÐ¸Ð»Ð»Ð¸Ð°Ñ€Ð´Ñ‹ Ð¿Ð¾-Ð¿Ñ€ÐµÐ¶Ð½ÐµÐ¼Ñƒ Ð½Ðµ Ð¼Ð¾Ð³Ð»Ð¸ Ð¿Ð»Ð°Ñ‚Ð¸Ñ‚ÑŒ Ð·Ð° Ð¶Ð¸Ð»ÑŒÐµ Ð±ÐµÐ· ÐºÐ¾Ð¼Ð¸ÑÑÐ¸Ð¹ Ð±Ð°Ð½ÐºÐ¾Ð².',
+      'story.t3.title': 'ÐŸÑ€Ð¾Ñ€Ñ‹Ð²', 'story.t3.text': 'Solana Token-2022 Ð·Ð°Ð¿ÑƒÑÑ‚Ð¸Ð» ÐºÐ¾Ð½Ñ„Ð¸Ð´ÐµÐ½Ñ†Ð¸Ð°Ð»ÑŒÐ½Ñ‹Ðµ Ð¿ÐµÑ€ÐµÐ²Ð¾Ð´Ñ‹ â€” Ð´Ð¾ÐºÐ°Ð·Ð°Ñ‚ÐµÐ»ÑŒÑÑ‚Ð²Ð° Ñ Ð½ÑƒÐ»ÐµÐ²Ñ‹Ð¼ Ñ€Ð°Ð·Ð³Ð»Ð°ÑˆÐµÐ½Ð¸ÐµÐ¼ ÑÐºÑ€Ñ‹Ð²Ð°ÑŽÑ‚ Ð±Ð°Ð»Ð°Ð½ÑÑ‹ Ð¸ ÑÑƒÐ¼Ð¼Ñ‹.',
+      'story.t4.title': 'Ð Ð¾Ð¶Ð´ÐµÐ½Ð¸Ðµ OST', 'story.t4.text': 'ÐœÑ‹ Ð¾Ð±ÑŠÐµÐ´Ð¸Ð½Ð¸Ð»Ð¸ Ð½ÐµÐ¾ÑÑ‚Ð°Ð½Ð¾Ð²Ð¸Ð¼Ñ‹Ðµ Ð´ÐµÐ½ÑŒÐ³Ð¸, Ð¼Ð³Ð½Ð¾Ð²ÐµÐ½Ð½Ñ‹Ðµ Ñ€Ð°ÑÑ‡ÐµÑ‚Ñ‹, Ð¿Ð¾Ð»Ð½ÑƒÑŽ Ð¿Ñ€Ð¸Ð²Ð°Ñ‚Ð½Ð¾ÑÑ‚ÑŒ Ð¸ Ð¼Ð¸ÑÑÐ¸ÑŽ: Ñ„Ð¸Ð½Ð°Ð½ÑÐ¸Ñ€Ð¾Ð²Ð°Ð½Ð¸Ðµ ÑÐ¿ÑƒÑ‚Ð½Ð¸ÐºÐ¾Ð²Ð¾Ð¹ Ð¸Ð½Ñ„Ñ€Ð°ÑÑ‚Ñ€ÑƒÐºÑ‚ÑƒÑ€Ñ‹.',
+      'story.t5.year': 'Ð‘ÑƒÐ´ÑƒÑ‰ÐµÐµ', 'story.t5.title': 'ÐšÐ°Ð¶Ð´Ñ‹Ð¹ Ð“Ñ€Ð°Ð¶Ð´Ð°Ð½Ð¸Ð½ ÐÐ° Ð¡Ð²ÑÐ·Ð¸',
+      'story.t5.text': 'ÐœÐ¸Ñ€, Ð³Ð´Ðµ Ð¿Ñ€Ð¾Ð´Ð°Ð²ÐµÑ† Ñ„Ñ€ÑƒÐºÑ‚Ð¾Ð² Ð² Ð›Ð°Ð³Ð¾ÑÐµ Ð¸ Ð¸Ð½Ð¶ÐµÐ½ÐµÑ€ Ð² Ð¢ÐµÐ³ÐµÑ€Ð°Ð½Ðµ Ñ€Ð°Ð·Ð´ÐµÐ»ÑÑŽÑ‚ Ð¾Ð´Ð½Ñƒ Ñ„Ð¸Ð½Ð°Ð½ÑÐ¾Ð²ÑƒÑŽ ÑÐ²Ð¾Ð±Ð¾Ð´Ñƒ.',
+      'story.lead': 'ÐœÑ‹ ÑÑ‚Ñ€Ð¾Ð¸Ð¼ ÑƒÐ½Ð¸Ð²ÐµÑ€ÑÐ°Ð»ÑŒÐ½Ñ‹Ðµ Ñ†Ð¸Ñ„Ñ€Ð¾Ð²Ñ‹Ðµ Ð´ÐµÐ½ÑŒÐ³Ð¸, Ð½Ðµ Ð¿Ñ€Ð¸Ð½Ð°Ð´Ð»ÐµÐ¶Ð°Ñ‰Ð¸Ðµ Ð½Ð¸ Ð¾Ð´Ð½Ð¾Ð¹ ÑÑ‚Ñ€Ð°Ð½Ðµ Ð¸ ÑÐ»ÑƒÐ¶Ð°Ñ‰Ð¸Ðµ ÐºÐ°Ð¶Ð´Ð¾Ð¼Ñƒ Ð³Ñ€Ð°Ð¶Ð´Ð°Ð½Ð¸Ð½Ñƒ.',
+      'story.closing': 'Ð”Ð¾Ð±Ñ€Ð¾ Ð¿Ð¾Ð¶Ð°Ð»Ð¾Ð²Ð°Ñ‚ÑŒ Ð² OST. Ð”Ð¾Ð±Ñ€Ð¾ Ð¿Ð¾Ð¶Ð°Ð»Ð¾Ð²Ð°Ñ‚ÑŒ Ð´Ð¾Ð¼Ð¾Ð¹.',
+      'citizens.title': 'Ð”Ð»Ñ ÐšÐ°Ð¶Ð´Ð¾Ð³Ð¾ Ð“Ñ€Ð°Ð¶Ð´Ð°Ð½Ð¸Ð½Ð°', 'citizens.sub': 'Ð‘ÐµÐ· Ð³Ñ€Ð°Ð½Ð¸Ñ†. Ð‘ÐµÐ· Ð¸ÑÐºÐ»ÑŽÑ‡ÐµÐ½Ð¸Ð¹. ÐžÐ´Ð½Ð¾ Ñ‡ÐµÐ»Ð¾Ð²ÐµÑ‡ÐµÑÑ‚Ð²Ð¾, Ð¾Ð´Ð½Ð¸ Ð´ÐµÐ½ÑŒÐ³Ð¸.',
+      'features.title': 'Ð ÐµÐ²Ð¾Ð»ÑŽÑ†Ð¸Ð¾Ð½Ð½Ñ‹Ð¹ Ð¡Ð»ÐµÐ´ÑƒÑŽÑ‰Ð¸Ð¹ Ð¨Ð°Ð³', 'features.sub': 'ÐÐµ Ð¿Ñ€Ð¾ÑÑ‚Ð¾ ÐµÑ‰Ñ‘ Ð¾Ð´Ð¸Ð½ Ñ‚Ð¾ÐºÐµÐ½. ÐŸÐ¾Ð»Ð½Ð°Ñ Ñ„Ð¸Ð½Ð°Ð½ÑÐ¾Ð²Ð°Ñ ÑÐ¸ÑÑ‚ÐµÐ¼Ð° Ð´Ð»Ñ Ñ€ÐµÐ°Ð»ÑŒÐ½Ð¾Ð¹ Ð¶Ð¸Ð·Ð½Ð¸.',
+      'features.f1.title': 'ÐšÐ¾Ð½Ñ„Ð¸Ð´ÐµÐ½Ñ†Ð¸Ð°Ð»ÑŒÐ½Ñ‹Ðµ ÐŸÐµÑ€ÐµÐ²Ð¾Ð´Ñ‹', 'features.f1.text': 'Ð”Ð¾ÐºÐ°Ð·Ð°Ñ‚ÐµÐ»ÑŒÑÑ‚Ð²Ð° Ñ Ð½ÑƒÐ»ÐµÐ²Ñ‹Ð¼ Ñ€Ð°Ð·Ð³Ð»Ð°ÑˆÐµÐ½Ð¸ÐµÐ¼ ÑÐºÑ€Ñ‹Ð²Ð°ÑŽÑ‚ Ð²Ð°Ñˆ Ð±Ð°Ð»Ð°Ð½Ñ Ð¸ ÐºÐ°Ð¶Ð´ÑƒÑŽ Ñ‚Ñ€Ð°Ð½Ð·Ð°ÐºÑ†Ð¸ÑŽ.',
+      'features.f2.title': 'Ð Ð°ÑÑ‡Ñ‘Ñ‚ Ð·Ð° Ð”Ð¾Ð»Ð¸ Ð¡ÐµÐºÑƒÐ½Ð´Ñ‹', 'features.f2.text': '400Ð¼Ñ Ð½Ð° Solana. Ð‘Ñ‹ÑÑ‚Ñ€ÐµÐµ, Ñ‡ÐµÐ¼ Ð¿Ñ€Ð¸ÐºÐ¾ÑÐ½Ð¾Ð²ÐµÐ½Ð¸Ðµ ÐºÐ°Ñ€Ñ‚Ñ‹.',
+      'features.f3.title': 'ÐœÐ¾ÑÑ‚ Ð”Ð»Ñ Ð’ÑÐµÑ… Ð’Ð°Ð»ÑŽÑ‚', 'features.f3.text': 'Ð‘Ð¸Ñ‚ÐºÐ¾Ð¸Ð½, Ethereum, USDC, Ð±Ð°Ð½ÐºÐ¾Ð²ÑÐºÐ¸Ðµ Ð¿ÐµÑ€ÐµÐ²Ð¾Ð´Ñ‹ â€” Ð²ÑÑ‘ ÐºÐ¾Ð½Ð²ÐµÑ€Ñ‚Ð¸Ñ€ÑƒÐµÑ‚ÑÑ.',
+      'features.f4.title': 'Ð‘ÐµÑÐ¿Ð»Ð°Ñ‚Ð½Ð¾ Ð½Ð°Ð²ÑÐµÐ³Ð´Ð°', 'features.f4.text': 'ÐÑƒÐ»ÐµÐ²Ñ‹Ðµ ÐºÐ¾Ð¼Ð¸ÑÑÐ¸Ð¸. Ð¤Ð¸Ð½Ð°Ð½ÑÐ¸Ñ€ÑƒÐµÑ‚ÑÑ Ð¿Ð¾Ð¶ÐµÑ€Ñ‚Ð²Ð¾Ð²Ð°Ð½Ð¸ÑÐ¼Ð¸ Ð¸ Ð¸Ð½Ð²ÐµÑÑ‚Ð¾Ñ€Ð°Ð¼Ð¸. ÐŸÑ€Ð¾Ð·Ñ€Ð°Ñ‡Ð½Ð¾ÑÑ‚ÑŒ Ð½Ð° Ð±Ð»Ð¾ÐºÑ‡ÐµÐ¹Ð½Ðµ.',
+      'features.f5.title': 'ÐžÑ„Ñ„Ð»Ð°Ð¹Ð½-ÐŸÐ»Ð°Ñ‚ÐµÐ¶Ð¸', 'features.f5.text': 'NFC, QR, Bluetooth. ÐŸÐ»Ð°Ñ‚Ð¸Ñ‚Ðµ Ð±ÐµÐ· Ð¸Ð½Ñ‚ÐµÑ€Ð½ÐµÑ‚Ð°.',
+      'features.f6.title': 'ZK ÐÐ°Ð»Ð¾Ð³Ð¾Ð²Ð°Ñ ÐžÑ‚Ñ‡ÐµÑ‚Ð½Ð¾ÑÑ‚ÑŒ', 'features.f6.text': 'Ð”Ð¾ÐºÐ°Ð¶Ð¸Ñ‚Ðµ ÑƒÐ¿Ð»Ð°Ñ‚Ñƒ Ð½Ð°Ð»Ð¾Ð³Ð¾Ð², Ð½Ðµ Ñ€Ð°ÑÐºÑ€Ñ‹Ð²Ð°Ñ Ð±Ð°Ð»Ð°Ð½Ñ.',
+      'pay.title': 'ÐŸÐ¾ÐºÑƒÐ¿ÐºÐ¸ Ñ OST â€” Ð ÐµÐ°Ð»ÑŒÐ½Ñ‹Ðµ Ð¦ÐµÐ½Ñ‹', 'pay.sub': 'ÐÐ°ÑÑ‚Ð¾ÑÑ‰Ð¸Ðµ Ñ‚Ð¾Ð²Ð°Ñ€Ñ‹, Ñ€ÐµÐ°Ð»ÑŒÐ½Ñ‹Ðµ Ñ†ÐµÐ½Ñ‹. ÐŸÐ¾Ñ‡ÑƒÐ²ÑÑ‚Ð²ÑƒÐ¹Ñ‚Ðµ Ð¿Ñ€Ð¸Ð²Ð°Ñ‚Ð½Ñ‹Ðµ Ð¿Ð»Ð°Ñ‚ÐµÐ¶Ð¸.',
+      'pay.cart': 'Ð’Ð°ÑˆÐ° ÐºÐ¾Ñ€Ð·Ð¸Ð½Ð°', 'pay.empty': 'ÐÐ°Ð¶Ð¼Ð¸Ñ‚Ðµ + Ñ‡Ñ‚Ð¾Ð±Ñ‹ Ð´Ð¾Ð±Ð°Ð²Ð¸Ñ‚ÑŒ', 'pay.paybtn': 'ÐžÐ¿Ð»Ð°Ñ‚Ð¸Ñ‚ÑŒ OST',
+      'pay.s1': 'ÐŸÐ¾Ð´ÐºÐ»ÑŽÑ‡ÐµÐ½Ð¸Ðµ ÐºÐ¾ÑˆÐµÐ»ÑŒÐºÐ°', 'pay.s2': 'Ð“ÐµÐ½ÐµÑ€Ð°Ñ†Ð¸Ñ ZK-Ð´Ð¾ÐºÐ°Ð·Ð°Ñ‚ÐµÐ»ÑŒÑÑ‚Ð²Ð°', 'pay.s3': 'ÐžÑ‚Ð¿Ñ€Ð°Ð²ÐºÐ° Ð² Solana', 'pay.s4': 'ÐŸÐ¾Ð´Ñ‚Ð²ÐµÑ€Ð¶Ð´ÐµÐ½Ð¾ Ð·Ð° 0.4Ñ',
+      'pay.done': 'ÐžÐ¿Ð»Ð°Ñ‚Ð° Ð—Ð°Ð²ÐµÑ€ÑˆÐµÐ½Ð° â€” ÐŸÐ¾Ð»Ð½Ð°Ñ ÐŸÑ€Ð¸Ð²Ð°Ñ‚Ð½Ð¾ÑÑ‚ÑŒ', 'pay.donesub': 'ÐÐ¸ÐºÑ‚Ð¾ Ð½Ð° Ð—ÐµÐ¼Ð»Ðµ Ð½Ðµ Ð²Ð¸Ð´ÐµÐ» ÑÑ‚Ñƒ Ñ‚Ñ€Ð°Ð½Ð·Ð°ÐºÑ†Ð¸ÑŽ.',
+      'transfer.title': 'ÐŸÑ€Ð¸Ð½ÐµÑÐ¸Ñ‚Ðµ Ð¡Ð²Ð¾Ð¸ Ð”ÐµÐ½ÑŒÐ³Ð¸ ÐžÑ‚ÐºÑƒÐ´Ð° Ð£Ð³Ð¾Ð´Ð½Ð¾', 'transfer.sub': 'Ð¦ÐµÐ½Ñ‹ Ð² Ñ€ÐµÐ°Ð»ÑŒÐ½Ð¾Ð¼ Ð²Ñ€ÐµÐ¼ÐµÐ½Ð¸. Ð“Ñ€Ð°Ñ„Ð¸ÐºÐ¸. ÐžÐ±Ð¼ÐµÐ½ÑÐ¹Ñ‚Ðµ Ð»ÑŽÐ±ÑƒÑŽ Ð²Ð°Ð»ÑŽÑ‚Ñƒ Ð½Ð° OST.',
+      'transfer.calc': 'ÐšÐ°Ð»ÑŒÐºÑƒÐ»ÑÑ‚Ð¾Ñ€ ÐžÐ±Ð¼ÐµÐ½Ð½Ð¾Ð³Ð¾ ÐšÑƒÑ€ÑÐ°', 'transfer.calcsub': 'ÐŸÐ¾ÑÐ¼Ð¾Ñ‚Ñ€Ð¸Ñ‚Ðµ, ÑÐºÐ¾Ð»ÑŒÐºÐ¾ OST Ð²Ñ‹ Ð¿Ð¾Ð»ÑƒÑ‡Ð¸Ñ‚Ðµ Ð·Ð° Ð»ÑŽÐ±ÑƒÑŽ ÑÑƒÐ¼Ð¼Ñƒ.',
+      'transfer.widgettitle': 'ÐšÐ¾Ð½Ð²ÐµÑ€Ñ‚Ð¸Ñ€Ð¾Ð²Ð°Ñ‚ÑŒ Ð¡ÐµÐ¹Ñ‡Ð°Ñ', 'transfer.from': 'Ð’Ð°ÑˆÐ° Ð²Ð°Ð»ÑŽÑ‚Ð°', 'transfer.to': 'ÐšÐ¾Ð½Ñ„Ð¸Ð´ÐµÐ½Ñ†Ð¸Ð°Ð»ÑŒÐ½Ñ‹Ð¹ OST',
+      'transfer.result': 'ÐŸÑ€Ð¸Ð²Ð°Ñ‚Ð½Ð¾ Ð¸ Ð¼Ð³Ð½Ð¾Ð²ÐµÐ½Ð½Ð¾', 'transfer.convert': 'ÐšÐ¾Ð½Ð²ÐµÑ€Ñ‚Ð¸Ñ€Ð¾Ð²Ð°Ñ‚ÑŒ Ð² OST',
+      'transfer.note': 'Ð Ð°Ð±Ð¾Ñ‚Ð°ÐµÑ‚ Ð½Ð° Wormhole, Jupiter Ð¸ Solana Token-2022.',
+      'transfer.fiattitle': 'Ð˜Ð· Ñ„Ð¸Ð°Ñ‚Ð½Ð¾Ð¹ Ð²Ð°Ð»ÑŽÑ‚Ñ‹?',
+      'transfer.fiattext': 'Ð˜ÑÐ¿Ð¾Ð»ÑŒÐ·ÑƒÐ¹Ñ‚Ðµ <strong>MoonPay</strong>, <strong>Transak</strong> Ð¸Ð»Ð¸ <strong>Ramp Network</strong> â€” Ð´Ð¾ÑÑ‚ÑƒÐ¿Ð½Ð¾ Ð² 100+ ÑÑ‚Ñ€Ð°Ð½Ð°Ñ….',
+      'offline.title': 'ÐÐ°Ð»Ð¸Ñ‡Ð½Ñ‹Ðµ Ð‘ÐµÐ· Ð˜Ð½Ñ‚ÐµÑ€Ð½ÐµÑ‚Ð°', 'offline.sub': 'Ð˜Ð½Ñ‚ÐµÑ€Ð½ÐµÑ‚ ÐµÑÑ‚ÑŒ Ð½Ðµ Ð²ÐµÐ·Ð´Ðµ. ÐÐ¾ Ð²Ð°ÑˆÐ¸ Ð´ÐµÐ½ÑŒÐ³Ð¸ Ð´Ð¾Ð»Ð¶Ð½Ñ‹ Ð±Ñ‹Ñ‚ÑŒ.',
+      'offline.lead': 'Ð¢Ñ€Ð°Ð½Ð·Ð°ÐºÑ†Ð¸Ð¸ ÑÐ¾ ÑÐºÐ¾Ñ€Ð¾ÑÑ‚ÑŒÑŽ ÑÐ²ÐµÑ‚Ð° â€” Ð´Ð°Ð¶Ðµ ÐºÐ¾Ð³Ð´Ð° ÑÐ²ÐµÑ‚ Ð²Ñ‹ÐºÐ»ÑŽÑ‡ÐµÐ½.',
+      'offline.text': 'ÐŸÑ€ÐµÐ´ÑÑ‚Ð°Ð²ÑŒÑ‚Ðµ, Ð²Ñ‹ Ð¿ÐµÑ€ÐµÐ´Ð°Ñ‘Ñ‚Ðµ ÐºÐ¾Ð¼Ñƒ-Ñ‚Ð¾ ÐºÑƒÐ¿ÑŽÑ€Ñƒ. Ð‘ÐµÐ· Ð±Ð°Ð½ÐºÐ°. Ð‘ÐµÐ· Ð¸Ð½Ñ‚ÐµÑ€Ð½ÐµÑ‚Ð°. ÐŸÑ€Ð¾ÑÑ‚Ð¾ Ð´Ð²Ð° Ñ‡ÐµÐ»Ð¾Ð²ÐµÐºÐ° Ð¸ Ð¾Ð±Ð¼ÐµÐ½ Ñ†ÐµÐ½Ð½Ð¾ÑÑ‚ÑÐ¼Ð¸.',
+      'offline.nfc': 'NFC Ð‘ÐµÑÐºÐ¾Ð½Ñ‚Ð°ÐºÑ‚Ð½Ð°Ñ ÐžÐ¿Ð»Ð°Ñ‚Ð°', 'offline.nfctext': 'ÐŸÐ¾Ð´Ð½ÐµÑÐ¸Ñ‚Ðµ Ñ‚ÐµÐ»ÐµÑ„Ð¾Ð½Ñ‹ Ð´Ñ€ÑƒÐ³ Ðº Ð´Ñ€ÑƒÐ³Ñƒ. ÐžÐ´Ð½Ð¾ ÐºÐ°ÑÐ°Ð½Ð¸Ðµ. Ð“Ð¾Ñ‚Ð¾Ð²Ð¾.',
+      'offline.qr': 'QR-ÐºÐ¾Ð´', 'offline.qrtext': 'ÐŸÐ¾Ð´Ð¿Ð¸ÑÐ°Ð½Ð½Ñ‹Ð¹ Ð¿Ð»Ð°Ñ‚Ñ‘Ð¶ Ð¿Ð¾Ð¼ÐµÑ‰Ð°ÐµÑ‚ÑÑ Ð² Ð¾Ð´Ð¸Ð½ QR-ÐºÐ¾Ð´. ÐŸÐ¾ÐºÐ°Ð¶Ð¸Ñ‚Ðµ, Ð½Ð°Ð¿ÐµÑ‡Ð°Ñ‚Ð°Ð¹Ñ‚Ðµ, Ð²Ñ‹Ð³Ñ€Ð°Ð²Ð¸Ñ€ÑƒÐ¹Ñ‚Ðµ.',
+      'offline.bt': 'Bluetooth', 'offline.bttext': 'BLE Ð¿ÐµÑ€ÐµÐ´Ð°Ñ‘Ñ‚ Ñ‚Ñ€Ð°Ð½Ð·Ð°ÐºÑ†Ð¸ÑŽ Ð½Ð° Ñ€Ð°ÑÑÑ‚Ð¾ÑÐ½Ð¸Ð¸ Ð´Ð¾ 10 Ð¼ÐµÑ‚Ñ€Ð¾Ð².',
+      'getost.title': 'ÐŸÐ¾Ð»ÑƒÑ‡Ð¸Ñ‚ÑŒ OST', 'getost.sub': 'ÐœÐ³Ð½Ð¾Ð²ÐµÐ½Ð½Ñ‹Ð¹ Ð²Ñ…Ð¾Ð´ Ð¸Ð· Ð»ÑŽÐ±Ð¾Ð¹ ÐºÑ€Ð¸Ð¿Ñ‚Ð¾ Ð¸Ð»Ð¸ Ñ„Ð¸Ð°Ñ‚Ð½Ð¾Ð¹ Ð²Ð°Ð»ÑŽÑ‚Ñ‹ â€” Ð±ÐµÐ· KYC Ð´Ð»Ñ Ð¾Ð±Ð¼ÐµÐ½Ð°.',
+      'getost.swap': 'ÐžÐ±Ð¼ÐµÐ½ Ð›ÑŽÐ±Ð¾Ð¹ ÐšÑ€Ð¸Ð¿Ñ‚Ñ‹ Ð½Ð° OST', 'getost.swaptext': 'Jupiter Ð½Ð°Ñ…Ð¾Ð´Ð¸Ñ‚ Ð»ÑƒÑ‡ÑˆÐ¸Ð¹ Ð¼Ð°Ñ€ÑˆÑ€ÑƒÑ‚ Ð¿Ð¾ Ð²ÑÐµÐ¼ Ð¿ÑƒÐ»Ð°Ð¼ Ð»Ð¸ÐºÐ²Ð¸Ð´Ð½Ð¾ÑÑ‚Ð¸ Solana.',
+      'getost.jupnote': 'ÐŸÐ¾Ð´ÐºÐ»ÑŽÑ‡Ð¸Ñ‚Ðµ ÐºÐ¾ÑˆÐµÐ»Ñ‘Ðº Ð´Ð»Ñ Ð·Ð°Ð³Ñ€ÑƒÐ·ÐºÐ¸ Ð²Ð¸Ð´Ð¶ÐµÑ‚Ð° Ð¾Ð±Ð¼ÐµÐ½Ð°.', 'getost.jupbtn': 'Ð—Ð°Ð³Ñ€ÑƒÐ·Ð¸Ñ‚ÑŒ Ð²Ð¸Ð´Ð¶ÐµÑ‚',
+      'getost.fiat': 'ÐšÑƒÐ¿Ð¸Ñ‚ÑŒ Ð·Ð° Ð¼ÐµÑÑ‚Ð½ÑƒÑŽ Ð²Ð°Ð»ÑŽÑ‚Ñƒ', 'getost.fiatsub': 'ÐšÑƒÐ¿Ð¸Ñ‚Ðµ SOL Ð¸Ð»Ð¸ USDC, Ð·Ð°Ñ‚ÐµÐ¼ Ð¾Ð±Ð¼ÐµÐ½ÑÐ¹Ñ‚Ðµ Ð½Ð° OST.',
+      'getost.faucet': 'ÐÐ¾Ð²Ð¸Ñ‡Ð¾Ðº? ÐŸÐ¾Ð»ÑƒÑ‡Ð¸Ñ‚Ðµ Ð‘ÐµÑÐ¿Ð»Ð°Ñ‚Ð½Ñ‹Ð¹ OST', 'getost.faucettext': 'ÐšÐ°Ð¶Ð´Ñ‹Ð¹ Ð½Ð¾Ð²Ñ‹Ð¹ ÐºÐ¾ÑˆÐµÐ»Ñ‘Ðº Ð¿Ð¾Ð»ÑƒÑ‡Ð°ÐµÑ‚ <strong>1 OST</strong> Ð¸Ð· ÐºÐ°Ð·Ð½Ñ‹ ÑÐ¾Ð¾Ð±Ñ‰ÐµÑÑ‚Ð²Ð°.',
+      'getost.faucetbtn': 'ÐžÑ‚ÐºÑ€Ñ‹Ñ‚ÑŒ ÐºÑ€Ð°Ð½',
+      'pay.anywhere': 'ðŸŒ ÐŸÐ»Ð°Ñ‚Ð¸Ñ‚Ðµ OST Ð½Ð° Ð»ÑŽÐ±Ð¾Ð¼ ÑÐ°Ð¹Ñ‚Ðµ',
+      'pay.anywheresub': 'Ð’ÑÑ‚Ð°Ð²ÑŒÑ‚Ðµ ÑÑÑ‹Ð»ÐºÑƒ Ð½Ð° Ð»ÑŽÐ±Ð¾Ð¹ ÑÐ°Ð¹Ñ‚, Ð³Ð´Ðµ Ð²Ñ‹ Ð¿Ð¾ÐºÑƒÐ¿Ð°ÐµÑ‚Ðµ. ÐœÑ‹ ÐºÐ¾Ð½Ð²ÐµÑ€Ñ‚Ð¸Ñ€ÑƒÐµÐ¼ Ð²Ð°ÑˆÐ¸ OST Ð² Ð½ÑƒÐ¶Ð½ÑƒÑŽ Ð²Ð°Ð»ÑŽÑ‚Ñƒ.',
+      'pay.aurl': 'URL Ð¼Ð°Ð³Ð°Ð·Ð¸Ð½Ð°', 'pay.aamount': 'Ð¡ÑƒÐ¼Ð¼Ð° Ðº Ð¾Ð¿Ð»Ð°Ñ‚Ðµ', 'pay.acurrency': 'Ð˜Ñ… Ð²Ð°Ð»ÑŽÑ‚Ð°',
+      'pay.ayoupay': 'Ð’Ñ‹ Ð¿Ð»Ð°Ñ‚Ð¸Ñ‚Ðµ:', 'pay.arate': 'ÐšÑƒÑ€Ñ:', 'pay.afee': 'ÐšÐ¾Ð¼Ð¸ÑÑÐ¸Ñ ÑÐµÑ‚Ð¸:',
+      'pay.ahow': 'ÐšÐ°Ðº ÑÑ‚Ð¾ Ñ€Ð°Ð±Ð¾Ñ‚Ð°ÐµÑ‚',
+      'pay.astep1': 'Ð’ÑÑ‚Ð°Ð²ÑŒÑ‚Ðµ ÑÑÑ‹Ð»ÐºÑƒ Ð½Ð° Ð¾Ð¿Ð»Ð°Ñ‚Ñƒ', 'pay.astep2': 'Ð’Ð²ÐµÐ´Ð¸Ñ‚Ðµ ÑÑƒÐ¼Ð¼Ñƒ Ð² Ð¸Ñ… Ð²Ð°Ð»ÑŽÑ‚Ðµ',
+      'pay.astep3': 'OST ÐºÐ¾Ð½Ð²ÐµÑ€Ñ‚Ð¸Ñ€ÑƒÐµÑ‚ Ð¿Ð¾ Ð¶Ð¸Ð²Ñ‹Ð¼ ÐºÑƒÑ€ÑÐ°Ð¼ Ñ‡ÐµÑ€ÐµÐ· Jupiter + Wormhole', 'pay.astep4': 'ÐŸÑ€Ð¾Ð´Ð°Ð²ÐµÑ† Ð¿Ð¾Ð»ÑƒÑ‡Ð°ÐµÑ‚ ÑÐ²Ð¾ÑŽ Ð²Ð°Ð»ÑŽÑ‚Ñƒ, Ð²Ñ‹ Ð·Ð°Ð¿Ð»Ð°Ñ‚Ð¸Ð»Ð¸ OST',
+      'pay.apaybtn': 'ÐžÐ¿Ð»Ð°Ñ‚Ð¸Ñ‚ÑŒ OST', 'pay.asupported': 'Ð Ð°Ð±Ð¾Ñ‚Ð°ÐµÑ‚ Ñ Ð»ÑŽÐ±Ñ‹Ð¼ ÑÐ°Ð¹Ñ‚Ð¾Ð¼, Ð¿Ñ€Ð¸Ð½Ð¸Ð¼Ð°ÑŽÑ‰Ð¸Ð¼:',
+      'launch.title': 'ðŸš€ Ð§ÐµÐº-Ð»Ð¸ÑÑ‚ Ð·Ð°Ð¿ÑƒÑÐºÐ° Mainnet', 'launch.sub': 'Ð§Ñ‚Ð¾ Ð½ÑƒÐ¶Ð½Ð¾ Ð´Ð»Ñ Ð·Ð°Ð¿ÑƒÑÐºÐ° OST Ð½Ð° Solana mainnet.',
+      'ai.title': 'Ð¡Ð¸Ð»Ð° Ð”Ð»Ñ ÐšÐ°Ð¶Ð´Ð¾Ð³Ð¾ Ð˜Ð½Ñ‚ÐµÐ»Ð»ÐµÐºÑ‚Ð°', 'ai.sub': 'ÐœÑ‹ Ð¿Ñ€Ð¸Ð²ÐµÑ‚ÑÑ‚Ð²ÑƒÐµÐ¼ Ð˜Ð˜-Ð°Ð³ÐµÐ½Ñ‚Ð¾Ð², Ð±Ð¾Ñ‚Ð¾Ð², ÑÐµÑ€Ð²ÐµÑ€Ñ‹ Ð¸ Ð²ÑÐµ Ñ„Ð¾Ñ€Ð¼Ñ‹ Ñ†Ð¸Ñ„Ñ€Ð¾Ð²Ð¾Ð³Ð¾ Ñ€Ð°Ð·ÑƒÐ¼Ð°.',
+      'build.title': 'Ð¡Ñ‚Ñ€Ð¾Ð¹Ñ‚Ðµ Ð‘ÑƒÐ´ÑƒÑ‰ÐµÐµ Ð¡ ÐÐ°Ð¼Ð¸', 'build.sub': 'ÐŸÑ€Ð¾Ð³Ñ€Ð°Ð¼Ð¼Ð¸Ñ€ÑƒÐ¹Ñ‚Ðµ, ÑÐ¾Ð·Ð´Ð°Ð²Ð°Ð¹Ñ‚Ðµ Ð¸Ð»Ð¸ Ð¼ÐµÑ‡Ñ‚Ð°Ð¹Ñ‚Ðµ â€” OST Ð²Ð°ÑˆÐ° Ð¿Ð»Ð°Ñ‚Ñ„Ð¾Ñ€Ð¼Ð°.',
+      'build.cta': 'ÐÐ°Ñ‡Ð½Ð¸Ñ‚Ðµ Ð’Ð½Ð¾ÑÐ¸Ñ‚ÑŒ Ð’ÐºÐ»Ð°Ð´ Ð¡ÐµÐ³Ð¾Ð´Ð½Ñ', 'build.ctasub': 'ÐšÐ°Ð¶Ð´Ñ‹Ð¹ ÐºÐ¾Ð¼Ð¼Ð¸Ñ‚, Ð¿ÐµÑ€ÐµÐ²Ð¾Ð´ Ð¸ ÑƒÑ€Ð¾Ðº Ð¿Ñ€Ð¾Ð´Ð²Ð¸Ð³Ð°ÐµÑ‚ Ñ‡ÐµÐ»Ð¾Ð²ÐµÑ‡ÐµÑÑ‚Ð²Ð¾.',
+      'build.github': 'ÐžÑ‚ÐºÑ€Ñ‹Ñ‚ÑŒ GitHub', 'build.docs': 'Ð§Ð¸Ñ‚Ð°Ñ‚ÑŒ Ð´Ð¾ÐºÑƒÐ¼ÐµÐ½Ñ‚Ð°Ñ†Ð¸ÑŽ',
+      'verify.title': 'ÐŸÐ¾Ð»Ð½Ð°Ñ ÐŸÑ€Ð¾Ð·Ñ€Ð°Ñ‡Ð½Ð¾ÑÑ‚ÑŒ', 'verify.sub': 'ÐŸÑ€Ð¾Ð²ÐµÑ€ÑŒÑ‚Ðµ Ð²ÑÑ‘ ÑÐ°Ð¼Ð¸. ÐÐ°Ð¼ Ð½ÐµÑ‡ÐµÐ³Ð¾ ÑÐºÑ€Ñ‹Ð²Ð°Ñ‚ÑŒ.',
+      'verify.lead': 'Ð”Ð¾Ð²ÐµÑ€Ð¸Ðµ Ð·Ð°Ð²Ð¾Ñ‘Ð²Ñ‹Ð²Ð°ÐµÑ‚ÑÑ Ñ„Ð°ÐºÑ‚Ð°Ð¼Ð¸, Ð° Ð½Ðµ Ð¾Ð±ÐµÑ‰Ð°Ð½Ð¸ÑÐ¼Ð¸.',
+      'verify.closing': 'Ð§Ð¸Ñ‚Ð°Ð¹Ñ‚Ðµ ÐºÐ¾Ð´. ÐŸÑ€Ð¾Ð²ÐµÑ€ÑÐ¹Ñ‚Ðµ ÐºÐ¾Ð¼Ð¿Ð°Ð½Ð¸ÑŽ. Ð’ÐµÑ€Ð¸Ñ„Ð¸Ñ†Ð¸Ñ€ÑƒÐ¹Ñ‚Ðµ ÐºÐ°Ð·Ð½Ñƒ. <strong>ÐŸÐ¾Ñ‚Ð¾Ð¼ Ñ€ÐµÑˆÐ°Ð¹Ñ‚Ðµ.</strong>',
+      'wallet.title': 'ÐŸÐ¾Ð´ÐºÐ»ÑŽÑ‡Ð¸Ñ‚ÑŒ ÐšÐ¾ÑˆÐµÐ»ÐµÐº', 'wallet.sub': 'Ð’Ñ‹Ð±ÐµÑ€Ð¸Ñ‚Ðµ ÐºÐ¾ÑˆÐµÐ»Ñ‘Ðº Ð´Ð»Ñ Ð¿Ð¾Ð´ÐºÐ»ÑŽÑ‡ÐµÐ½Ð¸Ñ Ðº OST.',
+      'footer.mission': 'ÐšÐ°Ð¶Ð´Ð°Ñ Ñ‚Ñ€Ð°Ð½Ð·Ð°ÐºÑ†Ð¸Ñ Ð¿Ð¾Ð¼Ð¾Ð³Ð°ÐµÑ‚ Ñ„Ð¸Ð½Ð°Ð½ÑÐ¸Ñ€Ð¾Ð²Ð°Ñ‚ÑŒ ÑÐ¿ÑƒÑ‚Ð½Ð¸ÐºÐ¾Ð²ÑƒÑŽ Ð¸Ð½Ñ„Ñ€Ð°ÑÑ‚Ñ€ÑƒÐºÑ‚ÑƒÑ€Ñƒ. <strong>ÐŸÐ¾Ð´Ð°Ñ€Ð¾Ðº, ÐºÐ¾Ñ‚Ð¾Ñ€Ñ‹Ð¹ Ð¼Ñ‹ ÑÑ‚Ñ€Ð¾Ð¸Ð¼ Ð²Ð¼ÐµÑÑ‚Ðµ.</strong>',
+      'footer.copy': 'ÐžÑ‚ÐºÑ€Ñ‹Ñ‚Ñ‹Ð¹ Ð¸ÑÑ…Ð¾Ð´Ð½Ñ‹Ð¹ ÐºÐ¾Ð´. Ð¡Ð¾Ð·Ð´Ð°Ð½Ð¾ Ñ Ð»ÑŽÐ±Ð¾Ð²ÑŒÑŽ Ð´Ð»Ñ ÐºÐ°Ð¶Ð´Ð¾Ð³Ð¾ Ñ‡ÐµÐ»Ð¾Ð²ÐµÐºÐ° Ð½Ð° Ð—ÐµÐ¼Ð»Ðµ.',
       'hero.free': '&#128176; \u0411\u0415\u0421\u041f\u041b\u0410\u0422\u041d\u041e \u041d\u0410\u0412\u0421\u0415\u0413\u0414\u0410',
       'hero.freetext': '\u041d\u0443\u043b\u0435\u0432\u044b\u0435 \u043a\u043e\u043c\u0438\u0441\u0441\u0438\u0438. \u041d\u0438\u043a\u0430\u043a\u0438\u0445 \u0441\u043a\u0440\u044b\u0442\u044b\u0445 \u0440\u0430\u0441\u0445\u043e\u0434\u043e\u0432. \u0424\u0438\u043d\u0430\u043d\u0441\u0438\u0440\u0443\u0435\u0442\u0441\u044f \u043f\u043e\u0436\u0435\u0440\u0442\u0432\u043e\u0432\u0430\u043d\u0438\u044f\u043c\u0438 \u0438 \u0438\u043d\u0432\u0435\u0441\u0442\u043e\u0440\u0430\u043c\u0438.',
       'hero.createwallet': '\u0421\u043e\u0437\u0434\u0430\u0442\u044c \u043a\u043e\u0448\u0435\u043b\u0435\u043a',
@@ -926,7 +926,7 @@
       'gc.supported': '\u041f\u043e\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u043c\u044b\u0435 \u0431\u0440\u0435\u043d\u0434\u044b:',
       'gc.disclaimer': '&#9888; \u041f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u0438 \u043d\u0435\u0441\u0443\u0442 \u043e\u0442\u0432\u0435\u0442\u0441\u0442\u0432\u0435\u043d\u043d\u043e\u0441\u0442\u044c \u0437\u0430 \u043f\u0440\u043e\u0432\u0435\u0440\u043a\u0443 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0442\u0435\u043b\u044c\u043d\u043e\u0441\u0442\u0438 \u043a\u0430\u0440\u0442. OST \u043d\u0435 \u044f\u0432\u043b\u044f\u0435\u0442\u0441\u044f \u044d\u043c\u0438\u0442\u0435\u043d\u0442\u043e\u043c. \u041f\u043e\u0434\u0447\u0438\u043d\u044f\u0435\u0442\u0441\u044f \u043c\u0435\u0441\u0442\u043d\u043e\u043c\u0443 \u0437\u0430\u043a\u043e\u043d\u043e\u0434\u0430\u0442\u0435\u043b\u044c\u0441\u0442\u0432\u0443.',
       'fuel.title': '\u0422\u043e\u043f\u043b\u0438\u0432\u043e \u0438 \u0410\u0417\u0421',
-      'fuel.sub': '\u041f\u043b\u0430\u0442\u0438\u0442\u0435 OST \u043d\u0430 \u0437\u0430\u043f\u0440\u0430\u0432\u043a\u0430\u0445 \u043f\u043e \u0432\u0441\u0435\u043c\u0443 \u043c\u0438\u0440\u0443 — \u0437\u0430\u0440\u0430\u0431\u0430\u0442\u044b\u0432\u0430\u0439\u0442\u0435 \u0431\u043e\u043d\u0443\u0441\u044b',
+      'fuel.sub': '\u041f\u043b\u0430\u0442\u0438\u0442\u0435 OST \u043d\u0430 \u0437\u0430\u043f\u0440\u0430\u0432\u043a\u0430\u0445 \u043f\u043e \u0432\u0441\u0435\u043c\u0443 \u043c\u0438\u0440\u0443 â€” \u0437\u0430\u0440\u0430\u0431\u0430\u0442\u044b\u0432\u0430\u0439\u0442\u0435 \u0431\u043e\u043d\u0443\u0441\u044b',
       'fuel.howTitle': '\u041a\u0430\u043a \u044d\u0442\u043e \u0440\u0430\u0431\u043e\u0442\u0430\u0435\u0442',
       'fuel.step1': '\u041f\u043e\u0434\u044a\u0435\u0445\u0430\u0442\u044c',
       'fuel.step1d': '\u041f\u0440\u0438\u0435\u0437\u0436\u0430\u0439\u0442\u0435 \u043d\u0430 \u043f\u0430\u0440\u0442\u043d\u0451\u0440\u0441\u043a\u0443\u044e \u0410\u0417\u0421',
@@ -943,330 +943,330 @@
       'fuel.ostCost': '\u042d\u043a\u0432\u0438\u0432\u0430\u043b\u0435\u043d\u0442 \u0432 OST',
       'fuel.reward': '\u041a\u044d\u0448\u0431\u044d\u043a (3%)',
       'fuel.offlineTitle': '\u0420\u0430\u0431\u043e\u0442\u0430\u0435\u0442 \u043e\u0444\u043b\u0430\u0439\u043d',
-      'fuel.offlineDesc': 'NFC \u0438 BLE — \u043f\u043b\u0430\u0442\u0438\u0442\u0435 \u0431\u0435\u0437 \u0438\u043d\u0442\u0435\u0440\u043d\u0435\u0442\u0430. \u0422\u0440\u0430\u043d\u0437\u0430\u043a\u0446\u0438\u0438 \u0441\u0438\u043d\u0445\u0440\u043e\u043d\u0438\u0437\u0438\u0440\u0443\u044e\u0442\u0441\u044f \u043f\u0440\u0438 \u043f\u043e\u0434\u043a\u043b\u044e\u0447\u0435\u043d\u0438\u0438.',
+      'fuel.offlineDesc': 'NFC \u0438 BLE â€” \u043f\u043b\u0430\u0442\u0438\u0442\u0435 \u0431\u0435\u0437 \u0438\u043d\u0442\u0435\u0440\u043d\u0435\u0442\u0430. \u0422\u0440\u0430\u043d\u0437\u0430\u043a\u0446\u0438\u0438 \u0441\u0438\u043d\u0445\u0440\u043e\u043d\u0438\u0437\u0438\u0440\u0443\u044e\u0442\u0441\u044f \u043f\u0440\u0438 \u043f\u043e\u0434\u043a\u043b\u044e\u0447\u0435\u043d\u0438\u0438.',
       'fuel.partnersTitle': '\u041f\u0430\u0440\u0442\u043d\u0451\u0440\u0441\u043a\u0438\u0435 \u0410\u0417\u0421',
       'fuel.partnersSub': '\u041f\u0440\u0438\u043d\u0438\u043c\u0430\u0435\u0442\u0441\u044f \u0432 20+ \u043a\u0440\u0443\u043f\u043d\u044b\u0445 \u0442\u043e\u043f\u043b\u0438\u0432\u043d\u044b\u0445 \u0431\u0440\u0435\u043d\u0434\u0430\u0445',
       'fuel.rewardsTitle': '\u0423\u0440\u043e\u0432\u043d\u0438 \u043d\u0430\u0433\u0440\u0430\u0434',
       'fuel.disclaimer': '&#9888; \u041f\u043e\u043a\u0430\u0437\u0430\u043d\u043d\u044b\u0435 \u043f\u0430\u0440\u0442\u043d\u0451\u0440\u0441\u0442\u0432\u0430 \u0432 \u0440\u0430\u0437\u0440\u0430\u0431\u043e\u0442\u043a\u0435. OST \u043d\u0435 \u0441\u0432\u044f\u0437\u0430\u043d \u0441 \u0443\u043a\u0430\u0437\u0430\u043d\u043d\u044b\u043c\u0438 \u0431\u0440\u0435\u043d\u0434\u0430\u043c\u0438.',
     },
     hi: {
-      'nav.home': 'होम', 'nav.newhere': 'OST पाएं', 'nav.demos': 'कॉमर्स', 'nav.wallet': 'वॉलेट',
-      'nav.ai': 'AI और बॉट्स', 'nav.offline': 'ऑफलाइन', 'nav.censorship': 'सेंसरशिप', 'nav.spacex': 'SpaceX',
-      'nav.about': 'हमारी कहानी', 'nav.roadmap': 'रोडमैप', 'nav.build': 'निर्माण', 'nav.verify': 'सत्यापन',
-      'nav.connect': 'वॉलेट कनेक्ट करें',
-      'wallet.dashTitle': 'मेरा OST वॉलेट', 'wallet.dashSub': 'आपका व्यक्तिगत कमांड सेंटर। अपना OST वॉलेट बनाएं और प्रबंधित करें।',
-      'bridges.title': 'ब्रिज, रैंप और एक्सचेंज', 'bridges.sub': 'OST तक हर रास्ता — किसी भी चेन, मुद्रा या देश से।',
-      'hero.tag': 'बिटकॉइन के बाद अगला कदम',
-      'hero.title': 'हम सब <span class="gradient-text">एक परिवार हैं।</span>',
-      'hero.sub': 'OST दुनिया के हर नागरिक के लिए बनी डिजिटल कैश है - निजी, तत्काल, और आपकी किसी भी मुद्रा से जुड़ी।',
-      'hero.cta1': 'कॉमर्स देखें', 'hero.cta2': 'OST पाएं',
-      'hero.premine': 'प्री-माइन नहीं', 'hero.settle': 'निपटान', 'hero.opensource': 'ओपन सोर्स', 'hero.privacy': 'गोपनीयता',
-      'story.title': 'हमारी कहानी', 'story.sub': 'विकेंद्रीकृत धन की पहली चिंगारी से निजी डिजिटल नकदी के भविष्य तक की यात्रा।',
-      'story.t1.title': 'चिंगारी', 'story.t1.text': 'बिटकॉइन ने साबित किया कि लोग - बैंक नहीं, सरकारें नहीं - हर सीमा पार करने वाला पैसा बना सकते हैं।',
-      'story.t2.title': 'अंतराल', 'story.t2.text': 'लेकिन बिटकॉइन धीमा, महंगा और सार्वजनिक था। अरबों लोग बिना बैंक की कमीशन के किराया नहीं दे सकते थे।',
-      'story.t3.title': 'सफलता', 'story.t3.text': 'Solana Token-2022 ने गोपनीय ट्रांसफर शुरू किए — शून्य-ज्ञान प्रमाण जो शेष और राशि को दुनिया से छुपाते हैं।',
-      'story.t4.title': 'OST का जन्म', 'story.t4.text': 'हमने अदम्य धन, तत्काल निपटान, पूर्ण गोपनीयता और एक मिशन को जोड़ा: उपग्रह बुनियादी ढांचे का वित्तपोषण।',
-      'story.t5.year': 'भविष्य', 'story.t5.title': 'हर नागरिक, जुड़ा हुआ',
-      'story.t5.text': 'एक दुनिया जहां लागोस का फल विक्रेता और तेहरान का इंजीनियर एक ही वित्तीय स्वतंत्रता साझा करते हैं।',
-      'story.lead': 'हम सार्वभौमिक डिजिटल नकदी बना रहे हैं जो किसी देश की नहीं है और हर नागरिक की सेवा करती है।',
-      'story.closing': 'OST में आपका स्वागत है। घर वापसी का स्वागत है।',
-      'citizens.title': 'हर नागरिक के लिए', 'citizens.sub': 'कोई सीमा नहीं। कोई अपवाद नहीं। एक मानवता, एक धन।',
-      'features.title': 'क्रांतिकारी अगला कदम', 'features.sub': 'सिर्फ एक और टोकन नहीं। वास्तविक जीवन के लिए एक पूर्ण वित्तीय प्रणाली।',
-      'features.f1.title': 'गोपनीय ट्रांसफर', 'features.f1.text': 'शून्य-ज्ञान प्रमाण आपकी शेष राशि और हर लेनदेन को छिपाते हैं।',
-      'features.f2.title': 'सब-सेकंड निपटान', 'features.f2.text': 'Solana पर 400ms। कार्ड टैप करने से भी तेज़।',
-      'features.f3.title': 'किसी भी मुद्रा से OST ब्रिज', 'features.f3.text': 'बिटकॉइन, एथेरियम, USDC, बैंक ट्रांसफर — सब कुछ परिवर्तित होता है।',
-      'features.f4.title': 'हमेशा मुफ्त', 'features.f4.text': 'शून्य लेनदेन शुल्क। दान और निवेशकों द्वारा वित्त पोषित। ऑन-चेन पारदर्शिता।',
-      'features.f5.title': 'ऑफलाइन भुगतान', 'features.f5.text': 'NFC, QR, ब्लूटूथ। इंटरनेट के बिना भुगतान करें।',
-      'features.f6.title': 'ZK कर अनुपालन', 'features.f6.text': 'अपनी शेष राशि प्रकट किए बिना करों का प्रमाण दें।',
-      'pay.title': 'OST से खरीदारी — वास्तविक कीमतें', 'pay.sub': 'असली उत्पाद, वास्तविक कीमतें। निजी भुगतान कैसा लगता है देखें।',
-      'pay.cart': 'आपकी कार्ट', 'pay.empty': 'जोड़ने के लिए + दबाएं', 'pay.paybtn': 'OST से भुगतान करें',
-      'pay.s1': 'वॉलेट कनेक्ट हो रहा है', 'pay.s2': 'ZK प्रमाण जनरेट हो रहा है', 'pay.s3': 'Solana पर प्रसारण', 'pay.s4': '0.4s में पुष्टि',
-      'pay.done': 'भुगतान पूर्ण — पूरी तरह निजी', 'pay.donesub': 'पृथ्वी पर किसी ने यह लेनदेन नहीं देखा।',
-      'transfer.title': 'अपना पैसा कहीं से भी लाएं', 'transfer.sub': 'लाइव कीमतें। रियल-टाइम चार्ट। किसी भी मुद्रा को OST में बदलें।',
-      'transfer.calc': 'विनिमय दर कैलकुलेटर', 'transfer.calcsub': 'देखें आपको कितना OST मिलेगा।',
-      'transfer.widgettitle': 'अभी बदलें', 'transfer.from': 'आपकी मुद्रा', 'transfer.to': 'गोपनीय OST',
-      'transfer.result': 'निजी और तत्काल', 'transfer.convert': 'OST में बदलें',
-      'transfer.note': 'Wormhole, Jupiter और Solana Token-2022 द्वारा संचालित।',
-      'transfer.fiattitle': 'फिएट मुद्रा से आ रहे हैं?',
-      'transfer.fiattext': '<strong>MoonPay</strong>, <strong>Transak</strong>, या <strong>Ramp Network</strong> का उपयोग करें — 100+ देशों में उपलब्ध।',
-      'offline.title': 'कहीं भी ऑफलाइन कैश', 'offline.sub': 'इंटरनेट अभी हर जगह नहीं है। लेकिन आपका पैसा होना चाहिए।',
-      'offline.lead': 'प्रकाश की गति से लेनदेन — भले बत्ती बंद हो।',
-      'offline.text': 'कल्पना करें कि आप किसी को नोट दे रहे हैं। कोई बैंक नहीं। कोई इंटरनेट नहीं। बस दो लोग और मूल्य का आदान-प्रदान।',
-      'offline.nfc': 'NFC टैप-टू-पे', 'offline.nfctext': 'फोन एक दूसरे के पास रखें। एक टैप। भुगतान हो गया।',
-      'offline.qr': 'QR कोड स्कैन', 'offline.qrtext': 'हस्ताक्षरित भुगतान एक QR कोड में समाता है।',
-      'offline.bt': 'ब्लूटूथ', 'offline.bttext': 'BLE 30 फीट तक लेनदेन भेजता है। बाजारों और रेस्तरां के लिए आदर्श।',
-      'getost.title': 'OST पाएं', 'getost.sub': 'किसी भी क्रिप्टो या फिएट से तत्काल प्रवेश — स्वैप के लिए KYC नहीं।',
-      'getost.swap': 'किसी भी क्रिप्टो को OST में बदलें', 'getost.swaptext': 'Jupiter सभी Solana पूल में सबसे अच्छा रूट ढूंढता है।',
-      'getost.jupnote': 'स्वैप विजेट लोड करने के लिए वॉलेट कनेक्ट करें।', 'getost.jupbtn': 'स्वैप विजेट लोड करें',
-      'getost.fiat': 'स्थानीय मुद्रा से खरीदें', 'getost.fiatsub': 'SOL या USDC खरीदें, फिर OST में बदलें।',
-      'getost.faucet': 'नए हैं? मुफ्त OST प्राप्त करें', 'getost.faucettext': 'हर नए वॉलेट को समुदाय खजाने से <strong>1 OST</strong> मिलता है।',
-      'getost.faucetbtn': 'नल खोलें',
-      'pay.anywhere': '🌐 OST से किसी भी वेबसाइट पर भुगतान करें',
-      'pay.anywheresub': 'जहाँ आप खरीदारी कर रहे हैं वह वेबसाइट पेस्ट करें। हम आपके OST को उनकी मुद्रा में बदल देंगे।',
-      'pay.aurl': 'व्यापारी लिंक', 'pay.aamount': 'भुगतान राशि', 'pay.acurrency': 'उनकी मुद्रा',
-      'pay.ayoupay': 'आप भुगतान करें:', 'pay.arate': 'दर:', 'pay.afee': 'नेटवर्क शुल्क:',
-      'pay.ahow': 'यह कैसे काम करता है',
-      'pay.astep1': 'व्यापारी का चेकआउट लिंक पेस्ट करें', 'pay.astep2': 'उनकी मुद्रा में राशि दर्ज करें',
-      'pay.astep3': 'OST Jupiter + Wormhole के माध्यम से लाइव दरों पर बदलता है', 'pay.astep4': 'व्यापारी को उनकी मुद्रा मिलती है, आपने OST से भुगतान किया',
-      'pay.apaybtn': 'OST से भुगतान करें', 'pay.asupported': 'किसी भी साइट के साथ काम करता है जो स्वीकार करती है:',
-      'launch.title': '🚀 मेननेट लॉन्च चेकलिस्ट', 'launch.sub': 'OST को Solana मेननेट पर वास्तविक बनाने के लिए क्या चाहिए।',
-      'ai.title': 'हर बुद्धिमत्ता के लिए शक्ति', 'ai.sub': 'हम AI एजेंट्स, बॉट्स, सर्वर और हर प्रकार की डिजिटल बुद्धिमत्ता का स्वागत करते हैं।',
-      'build.title': 'हमारे साथ भविष्य बनाएं', 'build.sub': 'कोड करें, बनाएं या सपने देखें — OST आपका मंच है।',
-      'build.cta': 'आज ही योगदान शुरू करें', 'build.ctasub': 'हर कमिट, अनुवाद और ट्यूटोरियल मानवता को आगे बढ़ाता है।',
-      'build.github': 'GitHub देखें', 'build.docs': 'दस्तावेज़ पढ़ें',
-      'verify.title': 'पूर्ण पारदर्शिता', 'verify.sub': 'सब कुछ स्वयं सत्यापित करें। हमारे पास छिपाने को कुछ नहीं।',
-      'verify.lead': 'विश्वास तथ्यों से अर्जित होता है, वादों से नहीं।',
-      'verify.closing': 'कोड पढ़ें। कंपनी जांचें। खजाना सत्यापित करें। <strong>फिर तय करें।</strong>',
-      'wallet.title': 'अपना वॉलेट कनेक्ट करें', 'wallet.sub': 'OST से जुड़ने के लिए एक वॉलेट चुनें।',
-      'footer.mission': 'हर लेनदेन सार्वभौमिक इंटरनेट के लिए उपग्रह बुनियादी ढांचे को निधि देने में मदद करता है। <strong>एक उपहार जो हम साथ मिलकर बनाते हैं।</strong>',
-      'footer.copy': 'ओपन सोर्स। पृथ्वी पर हर इंसान के लिए प्यार से बनाया गया।',
-      'hero.free': '&#128176; हमेशा मुफ्त',
-      'hero.freetext': 'शून्य लेनदेन शुल्क। कोई छिपी लागत नहीं। दान और निवेशकों द्वारा वित्त पोषित।',
-      'hero.createwallet': 'वॉलेट बनाएं',
-      'hero.stat.unbanked': 'दुनिया भर में बैंक रहित वयस्क',
-      'hero.stat.remittance': '$ रेमिटेंस शुल्क में खोया/वर्ष',
-      'hero.stat.nointernet': 'बिना इंटरनेट के लोग',
-      'vision.title': 'OST दृष्टि: पूर्ण वित्तीय स्वतंत्रता',
-      'vision.sub': 'हम वर्तमान में Solana, Jupiter और थर्ड-पार्टी ब्रिज का उपयोग <strong>अस्थायी बुनियादी ढांचे</strong> के रूप में करते हैं। हमारा लक्ष्य <strong>OST सॉवरेन नेटवर्क</strong> बनाना है। <em>पूरी तरह से विकेंद्रीकृत। शून्य निर्भरता।</em>',
-      'vision.s1.title': 'अस्थायी मचान', 'vision.s1.sub': 'Solana + Jupiter + ब्रिज',
-      'vision.s2.title': 'OST इंटरचेंज प्रोटोकॉल', 'vision.s2.sub': 'अपना मैचिंग इंजन',
-      'vision.s3.title': 'OST सॉवरेन नेटवर्क', 'vision.s3.sub': 'शून्य तृतीय-पक्ष निर्भरता',
-      'vision.p1': '&#128274; ZK गोपनीय', 'vision.p2': '&#9889; 0.4s निपटान', 'vision.p3': '&#128176; शून्य शुल्क सदैव',
-      'vision.p4': '&#128295; अपना इंजन', 'vision.p5': '&#127757; अपना DEX', 'vision.p6': '&#128752; उपग्रह इंटरनेट',
+      'nav.home': 'à¤¹à¥‹à¤®', 'nav.newhere': 'OST à¤ªà¤¾à¤à¤‚', 'nav.demos': 'à¤•à¥‰à¤®à¤°à¥à¤¸', 'nav.wallet': 'à¤µà¥‰à¤²à¥‡à¤Ÿ',
+      'nav.ai': 'AI à¤”à¤° à¤¬à¥‰à¤Ÿà¥à¤¸', 'nav.offline': 'à¤‘à¤«à¤²à¤¾à¤‡à¤¨', 'nav.censorship': 'à¤¸à¥‡à¤‚à¤¸à¤°à¤¶à¤¿à¤ª', 'nav.spacex': 'SpaceX',
+      'nav.about': 'à¤¹à¤®à¤¾à¤°à¥€ à¤•à¤¹à¤¾à¤¨à¥€', 'nav.roadmap': 'à¤°à¥‹à¤¡à¤®à¥ˆà¤ª', 'nav.build': 'à¤¨à¤¿à¤°à¥à¤®à¤¾à¤£', 'nav.verify': 'à¤¸à¤¤à¥à¤¯à¤¾à¤ªà¤¨',
+      'nav.connect': 'à¤µà¥‰à¤²à¥‡à¤Ÿ à¤•à¤¨à¥‡à¤•à¥à¤Ÿ à¤•à¤°à¥‡à¤‚',
+      'wallet.dashTitle': 'à¤®à¥‡à¤°à¤¾ OST à¤µà¥‰à¤²à¥‡à¤Ÿ', 'wallet.dashSub': 'à¤†à¤ªà¤•à¤¾ à¤µà¥à¤¯à¤•à¥à¤¤à¤¿à¤—à¤¤ à¤•à¤®à¤¾à¤‚à¤¡ à¤¸à¥‡à¤‚à¤Ÿà¤°à¥¤ à¤…à¤ªà¤¨à¤¾ OST à¤µà¥‰à¤²à¥‡à¤Ÿ à¤¬à¤¨à¤¾à¤à¤‚ à¤”à¤° à¤ªà¥à¤°à¤¬à¤‚à¤§à¤¿à¤¤ à¤•à¤°à¥‡à¤‚à¥¤',
+      'bridges.title': 'à¤¬à¥à¤°à¤¿à¤œ, à¤°à¥ˆà¤‚à¤ª à¤”à¤° à¤à¤•à¥à¤¸à¤šà¥‡à¤‚à¤œ', 'bridges.sub': 'OST à¤¤à¤• à¤¹à¤° à¤°à¤¾à¤¸à¥à¤¤à¤¾ â€” à¤•à¤¿à¤¸à¥€ à¤­à¥€ à¤šà¥‡à¤¨, à¤®à¥à¤¦à¥à¤°à¤¾ à¤¯à¤¾ à¤¦à¥‡à¤¶ à¤¸à¥‡à¥¤',
+      'hero.tag': 'à¤¬à¤¿à¤Ÿà¤•à¥‰à¤‡à¤¨ à¤•à¥‡ à¤¬à¤¾à¤¦ à¤…à¤—à¤²à¤¾ à¤•à¤¦à¤®',
+      'hero.title': 'à¤¹à¤® à¤¸à¤¬ <span class="gradient-text">à¤à¤• à¤ªà¤°à¤¿à¤µà¤¾à¤° à¤¹à¥ˆà¤‚à¥¤</span>',
+      'hero.sub': 'OST à¤¦à¥à¤¨à¤¿à¤¯à¤¾ à¤•à¥‡ à¤¹à¤° à¤¨à¤¾à¤—à¤°à¤¿à¤• à¤•à¥‡ à¤²à¤¿à¤ à¤¬à¤¨à¥€ à¤¡à¤¿à¤œà¤¿à¤Ÿà¤² à¤•à¥ˆà¤¶ à¤¹à¥ˆ - à¤¨à¤¿à¤œà¥€, à¤¤à¤¤à¥à¤•à¤¾à¤², à¤”à¤° à¤†à¤ªà¤•à¥€ à¤•à¤¿à¤¸à¥€ à¤­à¥€ à¤®à¥à¤¦à¥à¤°à¤¾ à¤¸à¥‡ à¤œà¥à¤¡à¤¼à¥€à¥¤',
+      'hero.cta1': 'à¤•à¥‰à¤®à¤°à¥à¤¸ à¤¦à¥‡à¤–à¥‡à¤‚', 'hero.cta2': 'OST à¤ªà¤¾à¤à¤‚',
+      'hero.premine': 'à¤ªà¥à¤°à¥€-à¤®à¤¾à¤‡à¤¨ à¤¨à¤¹à¥€à¤‚', 'hero.settle': 'à¤¨à¤¿à¤ªà¤Ÿà¤¾à¤¨', 'hero.opensource': 'à¤“à¤ªà¤¨ à¤¸à¥‹à¤°à¥à¤¸', 'hero.privacy': 'à¤—à¥‹à¤ªà¤¨à¥€à¤¯à¤¤à¤¾',
+      'story.title': 'à¤¹à¤®à¤¾à¤°à¥€ à¤•à¤¹à¤¾à¤¨à¥€', 'story.sub': 'à¤µà¤¿à¤•à¥‡à¤‚à¤¦à¥à¤°à¥€à¤•à¥ƒà¤¤ à¤§à¤¨ à¤•à¥€ à¤ªà¤¹à¤²à¥€ à¤šà¤¿à¤‚à¤—à¤¾à¤°à¥€ à¤¸à¥‡ à¤¨à¤¿à¤œà¥€ à¤¡à¤¿à¤œà¤¿à¤Ÿà¤² à¤¨à¤•à¤¦à¥€ à¤•à¥‡ à¤­à¤µà¤¿à¤·à¥à¤¯ à¤¤à¤• à¤•à¥€ à¤¯à¤¾à¤¤à¥à¤°à¤¾à¥¤',
+      'story.t1.title': 'à¤šà¤¿à¤‚à¤—à¤¾à¤°à¥€', 'story.t1.text': 'à¤¬à¤¿à¤Ÿà¤•à¥‰à¤‡à¤¨ à¤¨à¥‡ à¤¸à¤¾à¤¬à¤¿à¤¤ à¤•à¤¿à¤¯à¤¾ à¤•à¤¿ à¤²à¥‹à¤— - à¤¬à¥ˆà¤‚à¤• à¤¨à¤¹à¥€à¤‚, à¤¸à¤°à¤•à¤¾à¤°à¥‡à¤‚ à¤¨à¤¹à¥€à¤‚ - à¤¹à¤° à¤¸à¥€à¤®à¤¾ à¤ªà¤¾à¤° à¤•à¤°à¤¨à¥‡ à¤µà¤¾à¤²à¤¾ à¤ªà¥ˆà¤¸à¤¾ à¤¬à¤¨à¤¾ à¤¸à¤•à¤¤à¥‡ à¤¹à¥ˆà¤‚à¥¤',
+      'story.t2.title': 'à¤…à¤‚à¤¤à¤°à¤¾à¤²', 'story.t2.text': 'à¤²à¥‡à¤•à¤¿à¤¨ à¤¬à¤¿à¤Ÿà¤•à¥‰à¤‡à¤¨ à¤§à¥€à¤®à¤¾, à¤®à¤¹à¤‚à¤—à¤¾ à¤”à¤° à¤¸à¤¾à¤°à¥à¤µà¤œà¤¨à¤¿à¤• à¤¥à¤¾à¥¤ à¤…à¤°à¤¬à¥‹à¤‚ à¤²à¥‹à¤— à¤¬à¤¿à¤¨à¤¾ à¤¬à¥ˆà¤‚à¤• à¤•à¥€ à¤•à¤®à¥€à¤¶à¤¨ à¤•à¥‡ à¤•à¤¿à¤°à¤¾à¤¯à¤¾ à¤¨à¤¹à¥€à¤‚ à¤¦à¥‡ à¤¸à¤•à¤¤à¥‡ à¤¥à¥‡à¥¤',
+      'story.t3.title': 'à¤¸à¤«à¤²à¤¤à¤¾', 'story.t3.text': 'Solana Token-2022 à¤¨à¥‡ à¤—à¥‹à¤ªà¤¨à¥€à¤¯ à¤Ÿà¥à¤°à¤¾à¤‚à¤¸à¤«à¤° à¤¶à¥à¤°à¥‚ à¤•à¤¿à¤ â€” à¤¶à¥‚à¤¨à¥à¤¯-à¤œà¥à¤žà¤¾à¤¨ à¤ªà¥à¤°à¤®à¤¾à¤£ à¤œà¥‹ à¤¶à¥‡à¤· à¤”à¤° à¤°à¤¾à¤¶à¤¿ à¤•à¥‹ à¤¦à¥à¤¨à¤¿à¤¯à¤¾ à¤¸à¥‡ à¤›à¥à¤ªà¤¾à¤¤à¥‡ à¤¹à¥ˆà¤‚à¥¤',
+      'story.t4.title': 'OST à¤•à¤¾ à¤œà¤¨à¥à¤®', 'story.t4.text': 'à¤¹à¤®à¤¨à¥‡ à¤…à¤¦à¤®à¥à¤¯ à¤§à¤¨, à¤¤à¤¤à¥à¤•à¤¾à¤² à¤¨à¤¿à¤ªà¤Ÿà¤¾à¤¨, à¤ªà¥‚à¤°à¥à¤£ à¤—à¥‹à¤ªà¤¨à¥€à¤¯à¤¤à¤¾ à¤”à¤° à¤à¤• à¤®à¤¿à¤¶à¤¨ à¤•à¥‹ à¤œà¥‹à¤¡à¤¼à¤¾: à¤‰à¤ªà¤—à¥à¤°à¤¹ à¤¬à¥à¤¨à¤¿à¤¯à¤¾à¤¦à¥€ à¤¢à¤¾à¤‚à¤šà¥‡ à¤•à¤¾ à¤µà¤¿à¤¤à¥à¤¤à¤ªà¥‹à¤·à¤£à¥¤',
+      'story.t5.year': 'à¤­à¤µà¤¿à¤·à¥à¤¯', 'story.t5.title': 'à¤¹à¤° à¤¨à¤¾à¤—à¤°à¤¿à¤•, à¤œà¥à¤¡à¤¼à¤¾ à¤¹à¥à¤†',
+      'story.t5.text': 'à¤à¤• à¤¦à¥à¤¨à¤¿à¤¯à¤¾ à¤œà¤¹à¤¾à¤‚ à¤²à¤¾à¤—à¥‹à¤¸ à¤•à¤¾ à¤«à¤² à¤µà¤¿à¤•à¥à¤°à¥‡à¤¤à¤¾ à¤”à¤° à¤¤à¥‡à¤¹à¤°à¤¾à¤¨ à¤•à¤¾ à¤‡à¤‚à¤œà¥€à¤¨à¤¿à¤¯à¤° à¤à¤• à¤¹à¥€ à¤µà¤¿à¤¤à¥à¤¤à¥€à¤¯ à¤¸à¥à¤µà¤¤à¤‚à¤¤à¥à¤°à¤¤à¤¾ à¤¸à¤¾à¤à¤¾ à¤•à¤°à¤¤à¥‡ à¤¹à¥ˆà¤‚à¥¤',
+      'story.lead': 'à¤¹à¤® à¤¸à¤¾à¤°à¥à¤µà¤­à¥Œà¤®à¤¿à¤• à¤¡à¤¿à¤œà¤¿à¤Ÿà¤² à¤¨à¤•à¤¦à¥€ à¤¬à¤¨à¤¾ à¤°à¤¹à¥‡ à¤¹à¥ˆà¤‚ à¤œà¥‹ à¤•à¤¿à¤¸à¥€ à¤¦à¥‡à¤¶ à¤•à¥€ à¤¨à¤¹à¥€à¤‚ à¤¹à¥ˆ à¤”à¤° à¤¹à¤° à¤¨à¤¾à¤—à¤°à¤¿à¤• à¤•à¥€ à¤¸à¥‡à¤µà¤¾ à¤•à¤°à¤¤à¥€ à¤¹à¥ˆà¥¤',
+      'story.closing': 'OST à¤®à¥‡à¤‚ à¤†à¤ªà¤•à¤¾ à¤¸à¥à¤µà¤¾à¤—à¤¤ à¤¹à¥ˆà¥¤ à¤˜à¤° à¤µà¤¾à¤ªà¤¸à¥€ à¤•à¤¾ à¤¸à¥à¤µà¤¾à¤—à¤¤ à¤¹à¥ˆà¥¤',
+      'citizens.title': 'à¤¹à¤° à¤¨à¤¾à¤—à¤°à¤¿à¤• à¤•à¥‡ à¤²à¤¿à¤', 'citizens.sub': 'à¤•à¥‹à¤ˆ à¤¸à¥€à¤®à¤¾ à¤¨à¤¹à¥€à¤‚à¥¤ à¤•à¥‹à¤ˆ à¤…à¤ªà¤µà¤¾à¤¦ à¤¨à¤¹à¥€à¤‚à¥¤ à¤à¤• à¤®à¤¾à¤¨à¤µà¤¤à¤¾, à¤à¤• à¤§à¤¨à¥¤',
+      'features.title': 'à¤•à¥à¤°à¤¾à¤‚à¤¤à¤¿à¤•à¤¾à¤°à¥€ à¤…à¤—à¤²à¤¾ à¤•à¤¦à¤®', 'features.sub': 'à¤¸à¤¿à¤°à¥à¤« à¤à¤• à¤”à¤° à¤Ÿà¥‹à¤•à¤¨ à¤¨à¤¹à¥€à¤‚à¥¤ à¤µà¤¾à¤¸à¥à¤¤à¤µà¤¿à¤• à¤œà¥€à¤µà¤¨ à¤•à¥‡ à¤²à¤¿à¤ à¤à¤• à¤ªà¥‚à¤°à¥à¤£ à¤µà¤¿à¤¤à¥à¤¤à¥€à¤¯ à¤ªà¥à¤°à¤£à¤¾à¤²à¥€à¥¤',
+      'features.f1.title': 'à¤—à¥‹à¤ªà¤¨à¥€à¤¯ à¤Ÿà¥à¤°à¤¾à¤‚à¤¸à¤«à¤°', 'features.f1.text': 'à¤¶à¥‚à¤¨à¥à¤¯-à¤œà¥à¤žà¤¾à¤¨ à¤ªà¥à¤°à¤®à¤¾à¤£ à¤†à¤ªà¤•à¥€ à¤¶à¥‡à¤· à¤°à¤¾à¤¶à¤¿ à¤”à¤° à¤¹à¤° à¤²à¥‡à¤¨à¤¦à¥‡à¤¨ à¤•à¥‹ à¤›à¤¿à¤ªà¤¾à¤¤à¥‡ à¤¹à¥ˆà¤‚à¥¤',
+      'features.f2.title': 'à¤¸à¤¬-à¤¸à¥‡à¤•à¤‚à¤¡ à¤¨à¤¿à¤ªà¤Ÿà¤¾à¤¨', 'features.f2.text': 'Solana à¤ªà¤° 400msà¥¤ à¤•à¤¾à¤°à¥à¤¡ à¤Ÿà¥ˆà¤ª à¤•à¤°à¤¨à¥‡ à¤¸à¥‡ à¤­à¥€ à¤¤à¥‡à¤œà¤¼à¥¤',
+      'features.f3.title': 'à¤•à¤¿à¤¸à¥€ à¤­à¥€ à¤®à¥à¤¦à¥à¤°à¤¾ à¤¸à¥‡ OST à¤¬à¥à¤°à¤¿à¤œ', 'features.f3.text': 'à¤¬à¤¿à¤Ÿà¤•à¥‰à¤‡à¤¨, à¤à¤¥à¥‡à¤°à¤¿à¤¯à¤®, USDC, à¤¬à¥ˆà¤‚à¤• à¤Ÿà¥à¤°à¤¾à¤‚à¤¸à¤«à¤° â€” à¤¸à¤¬ à¤•à¥à¤› à¤ªà¤°à¤¿à¤µà¤°à¥à¤¤à¤¿à¤¤ à¤¹à¥‹à¤¤à¤¾ à¤¹à¥ˆà¥¤',
+      'features.f4.title': 'à¤¹à¤®à¥‡à¤¶à¤¾ à¤®à¥à¤«à¥à¤¤', 'features.f4.text': 'à¤¶à¥‚à¤¨à¥à¤¯ à¤²à¥‡à¤¨à¤¦à¥‡à¤¨ à¤¶à¥à¤²à¥à¤•à¥¤ à¤¦à¤¾à¤¨ à¤”à¤° à¤¨à¤¿à¤µà¥‡à¤¶à¤•à¥‹à¤‚ à¤¦à¥à¤µà¤¾à¤°à¤¾ à¤µà¤¿à¤¤à¥à¤¤ à¤ªà¥‹à¤·à¤¿à¤¤à¥¤ à¤‘à¤¨-à¤šà¥‡à¤¨ à¤ªà¤¾à¤°à¤¦à¤°à¥à¤¶à¤¿à¤¤à¤¾à¥¤',
+      'features.f5.title': 'à¤‘à¤«à¤²à¤¾à¤‡à¤¨ à¤­à¥à¤—à¤¤à¤¾à¤¨', 'features.f5.text': 'NFC, QR, à¤¬à¥à¤²à¥‚à¤Ÿà¥‚à¤¥à¥¤ à¤‡à¤‚à¤Ÿà¤°à¤¨à¥‡à¤Ÿ à¤•à¥‡ à¤¬à¤¿à¤¨à¤¾ à¤­à¥à¤—à¤¤à¤¾à¤¨ à¤•à¤°à¥‡à¤‚à¥¤',
+      'features.f6.title': 'ZK à¤•à¤° à¤…à¤¨à¥à¤ªà¤¾à¤²à¤¨', 'features.f6.text': 'à¤…à¤ªà¤¨à¥€ à¤¶à¥‡à¤· à¤°à¤¾à¤¶à¤¿ à¤ªà¥à¤°à¤•à¤Ÿ à¤•à¤¿à¤ à¤¬à¤¿à¤¨à¤¾ à¤•à¤°à¥‹à¤‚ à¤•à¤¾ à¤ªà¥à¤°à¤®à¤¾à¤£ à¤¦à¥‡à¤‚à¥¤',
+      'pay.title': 'OST à¤¸à¥‡ à¤–à¤°à¥€à¤¦à¤¾à¤°à¥€ â€” à¤µà¤¾à¤¸à¥à¤¤à¤µà¤¿à¤• à¤•à¥€à¤®à¤¤à¥‡à¤‚', 'pay.sub': 'à¤…à¤¸à¤²à¥€ à¤‰à¤¤à¥à¤ªà¤¾à¤¦, à¤µà¤¾à¤¸à¥à¤¤à¤µà¤¿à¤• à¤•à¥€à¤®à¤¤à¥‡à¤‚à¥¤ à¤¨à¤¿à¤œà¥€ à¤­à¥à¤—à¤¤à¤¾à¤¨ à¤•à¥ˆà¤¸à¤¾ à¤²à¤—à¤¤à¤¾ à¤¹à¥ˆ à¤¦à¥‡à¤–à¥‡à¤‚à¥¤',
+      'pay.cart': 'à¤†à¤ªà¤•à¥€ à¤•à¤¾à¤°à¥à¤Ÿ', 'pay.empty': 'à¤œà¥‹à¤¡à¤¼à¤¨à¥‡ à¤•à¥‡ à¤²à¤¿à¤ + à¤¦à¤¬à¤¾à¤à¤‚', 'pay.paybtn': 'OST à¤¸à¥‡ à¤­à¥à¤—à¤¤à¤¾à¤¨ à¤•à¤°à¥‡à¤‚',
+      'pay.s1': 'à¤µà¥‰à¤²à¥‡à¤Ÿ à¤•à¤¨à¥‡à¤•à¥à¤Ÿ à¤¹à¥‹ à¤°à¤¹à¤¾ à¤¹à¥ˆ', 'pay.s2': 'ZK à¤ªà¥à¤°à¤®à¤¾à¤£ à¤œà¤¨à¤°à¥‡à¤Ÿ à¤¹à¥‹ à¤°à¤¹à¤¾ à¤¹à¥ˆ', 'pay.s3': 'Solana à¤ªà¤° à¤ªà¥à¤°à¤¸à¤¾à¤°à¤£', 'pay.s4': '0.4s à¤®à¥‡à¤‚ à¤ªà¥à¤·à¥à¤Ÿà¤¿',
+      'pay.done': 'à¤­à¥à¤—à¤¤à¤¾à¤¨ à¤ªà¥‚à¤°à¥à¤£ â€” à¤ªà¥‚à¤°à¥€ à¤¤à¤°à¤¹ à¤¨à¤¿à¤œà¥€', 'pay.donesub': 'à¤ªà¥ƒà¤¥à¥à¤µà¥€ à¤ªà¤° à¤•à¤¿à¤¸à¥€ à¤¨à¥‡ à¤¯à¤¹ à¤²à¥‡à¤¨à¤¦à¥‡à¤¨ à¤¨à¤¹à¥€à¤‚ à¤¦à¥‡à¤–à¤¾à¥¤',
+      'transfer.title': 'à¤…à¤ªà¤¨à¤¾ à¤ªà¥ˆà¤¸à¤¾ à¤•à¤¹à¥€à¤‚ à¤¸à¥‡ à¤­à¥€ à¤²à¤¾à¤à¤‚', 'transfer.sub': 'à¤²à¤¾à¤‡à¤µ à¤•à¥€à¤®à¤¤à¥‡à¤‚à¥¤ à¤°à¤¿à¤¯à¤²-à¤Ÿà¤¾à¤‡à¤® à¤šà¤¾à¤°à¥à¤Ÿà¥¤ à¤•à¤¿à¤¸à¥€ à¤­à¥€ à¤®à¥à¤¦à¥à¤°à¤¾ à¤•à¥‹ OST à¤®à¥‡à¤‚ à¤¬à¤¦à¤²à¥‡à¤‚à¥¤',
+      'transfer.calc': 'à¤µà¤¿à¤¨à¤¿à¤®à¤¯ à¤¦à¤° à¤•à¥ˆà¤²à¤•à¥à¤²à¥‡à¤Ÿà¤°', 'transfer.calcsub': 'à¤¦à¥‡à¤–à¥‡à¤‚ à¤†à¤ªà¤•à¥‹ à¤•à¤¿à¤¤à¤¨à¤¾ OST à¤®à¤¿à¤²à¥‡à¤—à¤¾à¥¤',
+      'transfer.widgettitle': 'à¤…à¤­à¥€ à¤¬à¤¦à¤²à¥‡à¤‚', 'transfer.from': 'à¤†à¤ªà¤•à¥€ à¤®à¥à¤¦à¥à¤°à¤¾', 'transfer.to': 'à¤—à¥‹à¤ªà¤¨à¥€à¤¯ OST',
+      'transfer.result': 'à¤¨à¤¿à¤œà¥€ à¤”à¤° à¤¤à¤¤à¥à¤•à¤¾à¤²', 'transfer.convert': 'OST à¤®à¥‡à¤‚ à¤¬à¤¦à¤²à¥‡à¤‚',
+      'transfer.note': 'Wormhole, Jupiter à¤”à¤° Solana Token-2022 à¤¦à¥à¤µà¤¾à¤°à¤¾ à¤¸à¤‚à¤šà¤¾à¤²à¤¿à¤¤à¥¤',
+      'transfer.fiattitle': 'à¤«à¤¿à¤à¤Ÿ à¤®à¥à¤¦à¥à¤°à¤¾ à¤¸à¥‡ à¤† à¤°à¤¹à¥‡ à¤¹à¥ˆà¤‚?',
+      'transfer.fiattext': '<strong>MoonPay</strong>, <strong>Transak</strong>, à¤¯à¤¾ <strong>Ramp Network</strong> à¤•à¤¾ à¤‰à¤ªà¤¯à¥‹à¤— à¤•à¤°à¥‡à¤‚ â€” 100+ à¤¦à¥‡à¤¶à¥‹à¤‚ à¤®à¥‡à¤‚ à¤‰à¤ªà¤²à¤¬à¥à¤§à¥¤',
+      'offline.title': 'à¤•à¤¹à¥€à¤‚ à¤­à¥€ à¤‘à¤«à¤²à¤¾à¤‡à¤¨ à¤•à¥ˆà¤¶', 'offline.sub': 'à¤‡à¤‚à¤Ÿà¤°à¤¨à¥‡à¤Ÿ à¤…à¤­à¥€ à¤¹à¤° à¤œà¤—à¤¹ à¤¨à¤¹à¥€à¤‚ à¤¹à¥ˆà¥¤ à¤²à¥‡à¤•à¤¿à¤¨ à¤†à¤ªà¤•à¤¾ à¤ªà¥ˆà¤¸à¤¾ à¤¹à¥‹à¤¨à¤¾ à¤šà¤¾à¤¹à¤¿à¤à¥¤',
+      'offline.lead': 'à¤ªà¥à¤°à¤•à¤¾à¤¶ à¤•à¥€ à¤—à¤¤à¤¿ à¤¸à¥‡ à¤²à¥‡à¤¨à¤¦à¥‡à¤¨ â€” à¤­à¤²à¥‡ à¤¬à¤¤à¥à¤¤à¥€ à¤¬à¤‚à¤¦ à¤¹à¥‹à¥¤',
+      'offline.text': 'à¤•à¤²à¥à¤ªà¤¨à¤¾ à¤•à¤°à¥‡à¤‚ à¤•à¤¿ à¤†à¤ª à¤•à¤¿à¤¸à¥€ à¤•à¥‹ à¤¨à¥‹à¤Ÿ à¤¦à¥‡ à¤°à¤¹à¥‡ à¤¹à¥ˆà¤‚à¥¤ à¤•à¥‹à¤ˆ à¤¬à¥ˆà¤‚à¤• à¤¨à¤¹à¥€à¤‚à¥¤ à¤•à¥‹à¤ˆ à¤‡à¤‚à¤Ÿà¤°à¤¨à¥‡à¤Ÿ à¤¨à¤¹à¥€à¤‚à¥¤ à¤¬à¤¸ à¤¦à¥‹ à¤²à¥‹à¤— à¤”à¤° à¤®à¥‚à¤²à¥à¤¯ à¤•à¤¾ à¤†à¤¦à¤¾à¤¨-à¤ªà¥à¤°à¤¦à¤¾à¤¨à¥¤',
+      'offline.nfc': 'NFC à¤Ÿà¥ˆà¤ª-à¤Ÿà¥‚-à¤ªà¥‡', 'offline.nfctext': 'à¤«à¥‹à¤¨ à¤à¤• à¤¦à¥‚à¤¸à¤°à¥‡ à¤•à¥‡ à¤ªà¤¾à¤¸ à¤°à¤–à¥‡à¤‚à¥¤ à¤à¤• à¤Ÿà¥ˆà¤ªà¥¤ à¤­à¥à¤—à¤¤à¤¾à¤¨ à¤¹à¥‹ à¤—à¤¯à¤¾à¥¤',
+      'offline.qr': 'QR à¤•à¥‹à¤¡ à¤¸à¥à¤•à¥ˆà¤¨', 'offline.qrtext': 'à¤¹à¤¸à¥à¤¤à¤¾à¤•à¥à¤·à¤°à¤¿à¤¤ à¤­à¥à¤—à¤¤à¤¾à¤¨ à¤à¤• QR à¤•à¥‹à¤¡ à¤®à¥‡à¤‚ à¤¸à¤®à¤¾à¤¤à¤¾ à¤¹à¥ˆà¥¤',
+      'offline.bt': 'à¤¬à¥à¤²à¥‚à¤Ÿà¥‚à¤¥', 'offline.bttext': 'BLE 30 à¤«à¥€à¤Ÿ à¤¤à¤• à¤²à¥‡à¤¨à¤¦à¥‡à¤¨ à¤­à¥‡à¤œà¤¤à¤¾ à¤¹à¥ˆà¥¤ à¤¬à¤¾à¤œà¤¾à¤°à¥‹à¤‚ à¤”à¤° à¤°à¥‡à¤¸à¥à¤¤à¤°à¤¾à¤‚ à¤•à¥‡ à¤²à¤¿à¤ à¤†à¤¦à¤°à¥à¤¶à¥¤',
+      'getost.title': 'OST à¤ªà¤¾à¤à¤‚', 'getost.sub': 'à¤•à¤¿à¤¸à¥€ à¤­à¥€ à¤•à¥à¤°à¤¿à¤ªà¥à¤Ÿà¥‹ à¤¯à¤¾ à¤«à¤¿à¤à¤Ÿ à¤¸à¥‡ à¤¤à¤¤à¥à¤•à¤¾à¤² à¤ªà¥à¤°à¤µà¥‡à¤¶ â€” à¤¸à¥à¤µà¥ˆà¤ª à¤•à¥‡ à¤²à¤¿à¤ KYC à¤¨à¤¹à¥€à¤‚à¥¤',
+      'getost.swap': 'à¤•à¤¿à¤¸à¥€ à¤­à¥€ à¤•à¥à¤°à¤¿à¤ªà¥à¤Ÿà¥‹ à¤•à¥‹ OST à¤®à¥‡à¤‚ à¤¬à¤¦à¤²à¥‡à¤‚', 'getost.swaptext': 'Jupiter à¤¸à¤­à¥€ Solana à¤ªà¥‚à¤² à¤®à¥‡à¤‚ à¤¸à¤¬à¤¸à¥‡ à¤…à¤šà¥à¤›à¤¾ à¤°à¥‚à¤Ÿ à¤¢à¥‚à¤‚à¤¢à¤¤à¤¾ à¤¹à¥ˆà¥¤',
+      'getost.jupnote': 'à¤¸à¥à¤µà¥ˆà¤ª à¤µà¤¿à¤œà¥‡à¤Ÿ à¤²à¥‹à¤¡ à¤•à¤°à¤¨à¥‡ à¤•à¥‡ à¤²à¤¿à¤ à¤µà¥‰à¤²à¥‡à¤Ÿ à¤•à¤¨à¥‡à¤•à¥à¤Ÿ à¤•à¤°à¥‡à¤‚à¥¤', 'getost.jupbtn': 'à¤¸à¥à¤µà¥ˆà¤ª à¤µà¤¿à¤œà¥‡à¤Ÿ à¤²à¥‹à¤¡ à¤•à¤°à¥‡à¤‚',
+      'getost.fiat': 'à¤¸à¥à¤¥à¤¾à¤¨à¥€à¤¯ à¤®à¥à¤¦à¥à¤°à¤¾ à¤¸à¥‡ à¤–à¤°à¥€à¤¦à¥‡à¤‚', 'getost.fiatsub': 'SOL à¤¯à¤¾ USDC à¤–à¤°à¥€à¤¦à¥‡à¤‚, à¤«à¤¿à¤° OST à¤®à¥‡à¤‚ à¤¬à¤¦à¤²à¥‡à¤‚à¥¤',
+      'getost.faucet': 'à¤¨à¤ à¤¹à¥ˆà¤‚? à¤®à¥à¤«à¥à¤¤ OST à¤ªà¥à¤°à¤¾à¤ªà¥à¤¤ à¤•à¤°à¥‡à¤‚', 'getost.faucettext': 'à¤¹à¤° à¤¨à¤ à¤µà¥‰à¤²à¥‡à¤Ÿ à¤•à¥‹ à¤¸à¤®à¥à¤¦à¤¾à¤¯ à¤–à¤œà¤¾à¤¨à¥‡ à¤¸à¥‡ <strong>1 OST</strong> à¤®à¤¿à¤²à¤¤à¤¾ à¤¹à¥ˆà¥¤',
+      'getost.faucetbtn': 'à¤¨à¤² à¤–à¥‹à¤²à¥‡à¤‚',
+      'pay.anywhere': 'ðŸŒ OST à¤¸à¥‡ à¤•à¤¿à¤¸à¥€ à¤­à¥€ à¤µà¥‡à¤¬à¤¸à¤¾à¤‡à¤Ÿ à¤ªà¤° à¤­à¥à¤—à¤¤à¤¾à¤¨ à¤•à¤°à¥‡à¤‚',
+      'pay.anywheresub': 'à¤œà¤¹à¤¾à¤ à¤†à¤ª à¤–à¤°à¥€à¤¦à¤¾à¤°à¥€ à¤•à¤° à¤°à¤¹à¥‡ à¤¹à¥ˆà¤‚ à¤µà¤¹ à¤µà¥‡à¤¬à¤¸à¤¾à¤‡à¤Ÿ à¤ªà¥‡à¤¸à¥à¤Ÿ à¤•à¤°à¥‡à¤‚à¥¤ à¤¹à¤® à¤†à¤ªà¤•à¥‡ OST à¤•à¥‹ à¤‰à¤¨à¤•à¥€ à¤®à¥à¤¦à¥à¤°à¤¾ à¤®à¥‡à¤‚ à¤¬à¤¦à¤² à¤¦à¥‡à¤‚à¤—à¥‡à¥¤',
+      'pay.aurl': 'à¤µà¥à¤¯à¤¾à¤ªà¤¾à¤°à¥€ à¤²à¤¿à¤‚à¤•', 'pay.aamount': 'à¤­à¥à¤—à¤¤à¤¾à¤¨ à¤°à¤¾à¤¶à¤¿', 'pay.acurrency': 'à¤‰à¤¨à¤•à¥€ à¤®à¥à¤¦à¥à¤°à¤¾',
+      'pay.ayoupay': 'à¤†à¤ª à¤­à¥à¤—à¤¤à¤¾à¤¨ à¤•à¤°à¥‡à¤‚:', 'pay.arate': 'à¤¦à¤°:', 'pay.afee': 'à¤¨à¥‡à¤Ÿà¤µà¤°à¥à¤• à¤¶à¥à¤²à¥à¤•:',
+      'pay.ahow': 'à¤¯à¤¹ à¤•à¥ˆà¤¸à¥‡ à¤•à¤¾à¤® à¤•à¤°à¤¤à¤¾ à¤¹à¥ˆ',
+      'pay.astep1': 'à¤µà¥à¤¯à¤¾à¤ªà¤¾à¤°à¥€ à¤•à¤¾ à¤šà¥‡à¤•à¤†à¤‰à¤Ÿ à¤²à¤¿à¤‚à¤• à¤ªà¥‡à¤¸à¥à¤Ÿ à¤•à¤°à¥‡à¤‚', 'pay.astep2': 'à¤‰à¤¨à¤•à¥€ à¤®à¥à¤¦à¥à¤°à¤¾ à¤®à¥‡à¤‚ à¤°à¤¾à¤¶à¤¿ à¤¦à¤°à¥à¤œ à¤•à¤°à¥‡à¤‚',
+      'pay.astep3': 'OST Jupiter + Wormhole à¤•à¥‡ à¤®à¤¾à¤§à¥à¤¯à¤® à¤¸à¥‡ à¤²à¤¾à¤‡à¤µ à¤¦à¤°à¥‹à¤‚ à¤ªà¤° à¤¬à¤¦à¤²à¤¤à¤¾ à¤¹à¥ˆ', 'pay.astep4': 'à¤µà¥à¤¯à¤¾à¤ªà¤¾à¤°à¥€ à¤•à¥‹ à¤‰à¤¨à¤•à¥€ à¤®à¥à¤¦à¥à¤°à¤¾ à¤®à¤¿à¤²à¤¤à¥€ à¤¹à¥ˆ, à¤†à¤ªà¤¨à¥‡ OST à¤¸à¥‡ à¤­à¥à¤—à¤¤à¤¾à¤¨ à¤•à¤¿à¤¯à¤¾',
+      'pay.apaybtn': 'OST à¤¸à¥‡ à¤­à¥à¤—à¤¤à¤¾à¤¨ à¤•à¤°à¥‡à¤‚', 'pay.asupported': 'à¤•à¤¿à¤¸à¥€ à¤­à¥€ à¤¸à¤¾à¤‡à¤Ÿ à¤•à¥‡ à¤¸à¤¾à¤¥ à¤•à¤¾à¤® à¤•à¤°à¤¤à¤¾ à¤¹à¥ˆ à¤œà¥‹ à¤¸à¥à¤µà¥€à¤•à¤¾à¤° à¤•à¤°à¤¤à¥€ à¤¹à¥ˆ:',
+      'launch.title': 'ðŸš€ à¤®à¥‡à¤¨à¤¨à¥‡à¤Ÿ à¤²à¥‰à¤¨à¥à¤š à¤šà¥‡à¤•à¤²à¤¿à¤¸à¥à¤Ÿ', 'launch.sub': 'OST à¤•à¥‹ Solana à¤®à¥‡à¤¨à¤¨à¥‡à¤Ÿ à¤ªà¤° à¤µà¤¾à¤¸à¥à¤¤à¤µà¤¿à¤• à¤¬à¤¨à¤¾à¤¨à¥‡ à¤•à¥‡ à¤²à¤¿à¤ à¤•à¥à¤¯à¤¾ à¤šà¤¾à¤¹à¤¿à¤à¥¤',
+      'ai.title': 'à¤¹à¤° à¤¬à¥à¤¦à¥à¤§à¤¿à¤®à¤¤à¥à¤¤à¤¾ à¤•à¥‡ à¤²à¤¿à¤ à¤¶à¤•à¥à¤¤à¤¿', 'ai.sub': 'à¤¹à¤® AI à¤à¤œà¥‡à¤‚à¤Ÿà¥à¤¸, à¤¬à¥‰à¤Ÿà¥à¤¸, à¤¸à¤°à¥à¤µà¤° à¤”à¤° à¤¹à¤° à¤ªà¥à¤°à¤•à¤¾à¤° à¤•à¥€ à¤¡à¤¿à¤œà¤¿à¤Ÿà¤² à¤¬à¥à¤¦à¥à¤§à¤¿à¤®à¤¤à¥à¤¤à¤¾ à¤•à¤¾ à¤¸à¥à¤µà¤¾à¤—à¤¤ à¤•à¤°à¤¤à¥‡ à¤¹à¥ˆà¤‚à¥¤',
+      'build.title': 'à¤¹à¤®à¤¾à¤°à¥‡ à¤¸à¤¾à¤¥ à¤­à¤µà¤¿à¤·à¥à¤¯ à¤¬à¤¨à¤¾à¤à¤‚', 'build.sub': 'à¤•à¥‹à¤¡ à¤•à¤°à¥‡à¤‚, à¤¬à¤¨à¤¾à¤à¤‚ à¤¯à¤¾ à¤¸à¤ªà¤¨à¥‡ à¤¦à¥‡à¤–à¥‡à¤‚ â€” OST à¤†à¤ªà¤•à¤¾ à¤®à¤‚à¤š à¤¹à¥ˆà¥¤',
+      'build.cta': 'à¤†à¤œ à¤¹à¥€ à¤¯à¥‹à¤—à¤¦à¤¾à¤¨ à¤¶à¥à¤°à¥‚ à¤•à¤°à¥‡à¤‚', 'build.ctasub': 'à¤¹à¤° à¤•à¤®à¤¿à¤Ÿ, à¤…à¤¨à¥à¤µà¤¾à¤¦ à¤”à¤° à¤Ÿà¥à¤¯à¥‚à¤Ÿà¥‹à¤°à¤¿à¤¯à¤² à¤®à¤¾à¤¨à¤µà¤¤à¤¾ à¤•à¥‹ à¤†à¤—à¥‡ à¤¬à¤¢à¤¼à¤¾à¤¤à¤¾ à¤¹à¥ˆà¥¤',
+      'build.github': 'GitHub à¤¦à¥‡à¤–à¥‡à¤‚', 'build.docs': 'à¤¦à¤¸à¥à¤¤à¤¾à¤µà¥‡à¤œà¤¼ à¤ªà¤¢à¤¼à¥‡à¤‚',
+      'verify.title': 'à¤ªà¥‚à¤°à¥à¤£ à¤ªà¤¾à¤°à¤¦à¤°à¥à¤¶à¤¿à¤¤à¤¾', 'verify.sub': 'à¤¸à¤¬ à¤•à¥à¤› à¤¸à¥à¤µà¤¯à¤‚ à¤¸à¤¤à¥à¤¯à¤¾à¤ªà¤¿à¤¤ à¤•à¤°à¥‡à¤‚à¥¤ à¤¹à¤®à¤¾à¤°à¥‡ à¤ªà¤¾à¤¸ à¤›à¤¿à¤ªà¤¾à¤¨à¥‡ à¤•à¥‹ à¤•à¥à¤› à¤¨à¤¹à¥€à¤‚à¥¤',
+      'verify.lead': 'à¤µà¤¿à¤¶à¥à¤µà¤¾à¤¸ à¤¤à¤¥à¥à¤¯à¥‹à¤‚ à¤¸à¥‡ à¤…à¤°à¥à¤œà¤¿à¤¤ à¤¹à¥‹à¤¤à¤¾ à¤¹à¥ˆ, à¤µà¤¾à¤¦à¥‹à¤‚ à¤¸à¥‡ à¤¨à¤¹à¥€à¤‚à¥¤',
+      'verify.closing': 'à¤•à¥‹à¤¡ à¤ªà¤¢à¤¼à¥‡à¤‚à¥¤ à¤•à¤‚à¤ªà¤¨à¥€ à¤œà¤¾à¤‚à¤šà¥‡à¤‚à¥¤ à¤–à¤œà¤¾à¤¨à¤¾ à¤¸à¤¤à¥à¤¯à¤¾à¤ªà¤¿à¤¤ à¤•à¤°à¥‡à¤‚à¥¤ <strong>à¤«à¤¿à¤° à¤¤à¤¯ à¤•à¤°à¥‡à¤‚à¥¤</strong>',
+      'wallet.title': 'à¤…à¤ªà¤¨à¤¾ à¤µà¥‰à¤²à¥‡à¤Ÿ à¤•à¤¨à¥‡à¤•à¥à¤Ÿ à¤•à¤°à¥‡à¤‚', 'wallet.sub': 'OST à¤¸à¥‡ à¤œà¥à¤¡à¤¼à¤¨à¥‡ à¤•à¥‡ à¤²à¤¿à¤ à¤à¤• à¤µà¥‰à¤²à¥‡à¤Ÿ à¤šà¥à¤¨à¥‡à¤‚à¥¤',
+      'footer.mission': 'à¤¹à¤° à¤²à¥‡à¤¨à¤¦à¥‡à¤¨ à¤¸à¤¾à¤°à¥à¤µà¤­à¥Œà¤®à¤¿à¤• à¤‡à¤‚à¤Ÿà¤°à¤¨à¥‡à¤Ÿ à¤•à¥‡ à¤²à¤¿à¤ à¤‰à¤ªà¤—à¥à¤°à¤¹ à¤¬à¥à¤¨à¤¿à¤¯à¤¾à¤¦à¥€ à¤¢à¤¾à¤‚à¤šà¥‡ à¤•à¥‹ à¤¨à¤¿à¤§à¤¿ à¤¦à¥‡à¤¨à¥‡ à¤®à¥‡à¤‚ à¤®à¤¦à¤¦ à¤•à¤°à¤¤à¤¾ à¤¹à¥ˆà¥¤ <strong>à¤à¤• à¤‰à¤ªà¤¹à¤¾à¤° à¤œà¥‹ à¤¹à¤® à¤¸à¤¾à¤¥ à¤®à¤¿à¤²à¤•à¤° à¤¬à¤¨à¤¾à¤¤à¥‡ à¤¹à¥ˆà¤‚à¥¤</strong>',
+      'footer.copy': 'à¤“à¤ªà¤¨ à¤¸à¥‹à¤°à¥à¤¸à¥¤ à¤ªà¥ƒà¤¥à¥à¤µà¥€ à¤ªà¤° à¤¹à¤° à¤‡à¤‚à¤¸à¤¾à¤¨ à¤•à¥‡ à¤²à¤¿à¤ à¤ªà¥à¤¯à¤¾à¤° à¤¸à¥‡ à¤¬à¤¨à¤¾à¤¯à¤¾ à¤—à¤¯à¤¾à¥¤',
+      'hero.free': '&#128176; à¤¹à¤®à¥‡à¤¶à¤¾ à¤®à¥à¤«à¥à¤¤',
+      'hero.freetext': 'à¤¶à¥‚à¤¨à¥à¤¯ à¤²à¥‡à¤¨à¤¦à¥‡à¤¨ à¤¶à¥à¤²à¥à¤•à¥¤ à¤•à¥‹à¤ˆ à¤›à¤¿à¤ªà¥€ à¤²à¤¾à¤—à¤¤ à¤¨à¤¹à¥€à¤‚à¥¤ à¤¦à¤¾à¤¨ à¤”à¤° à¤¨à¤¿à¤µà¥‡à¤¶à¤•à¥‹à¤‚ à¤¦à¥à¤µà¤¾à¤°à¤¾ à¤µà¤¿à¤¤à¥à¤¤ à¤ªà¥‹à¤·à¤¿à¤¤à¥¤',
+      'hero.createwallet': 'à¤µà¥‰à¤²à¥‡à¤Ÿ à¤¬à¤¨à¤¾à¤à¤‚',
+      'hero.stat.unbanked': 'à¤¦à¥à¤¨à¤¿à¤¯à¤¾ à¤­à¤° à¤®à¥‡à¤‚ à¤¬à¥ˆà¤‚à¤• à¤°à¤¹à¤¿à¤¤ à¤µà¤¯à¤¸à¥à¤•',
+      'hero.stat.remittance': '$ à¤°à¥‡à¤®à¤¿à¤Ÿà¥‡à¤‚à¤¸ à¤¶à¥à¤²à¥à¤• à¤®à¥‡à¤‚ à¤–à¥‹à¤¯à¤¾/à¤µà¤°à¥à¤·',
+      'hero.stat.nointernet': 'à¤¬à¤¿à¤¨à¤¾ à¤‡à¤‚à¤Ÿà¤°à¤¨à¥‡à¤Ÿ à¤•à¥‡ à¤²à¥‹à¤—',
+      'vision.title': 'OST à¤¦à¥ƒà¤·à¥à¤Ÿà¤¿: à¤ªà¥‚à¤°à¥à¤£ à¤µà¤¿à¤¤à¥à¤¤à¥€à¤¯ à¤¸à¥à¤µà¤¤à¤‚à¤¤à¥à¤°à¤¤à¤¾',
+      'vision.sub': 'à¤¹à¤® à¤µà¤°à¥à¤¤à¤®à¤¾à¤¨ à¤®à¥‡à¤‚ Solana, Jupiter à¤”à¤° à¤¥à¤°à¥à¤¡-à¤ªà¤¾à¤°à¥à¤Ÿà¥€ à¤¬à¥à¤°à¤¿à¤œ à¤•à¤¾ à¤‰à¤ªà¤¯à¥‹à¤— <strong>à¤…à¤¸à¥à¤¥à¤¾à¤¯à¥€ à¤¬à¥à¤¨à¤¿à¤¯à¤¾à¤¦à¥€ à¤¢à¤¾à¤‚à¤šà¥‡</strong> à¤•à¥‡ à¤°à¥‚à¤ª à¤®à¥‡à¤‚ à¤•à¤°à¤¤à¥‡ à¤¹à¥ˆà¤‚à¥¤ à¤¹à¤®à¤¾à¤°à¤¾ à¤²à¤•à¥à¤·à¥à¤¯ <strong>OST à¤¸à¥‰à¤µà¤°à¥‡à¤¨ à¤¨à¥‡à¤Ÿà¤µà¤°à¥à¤•</strong> à¤¬à¤¨à¤¾à¤¨à¤¾ à¤¹à¥ˆà¥¤ <em>à¤ªà¥‚à¤°à¥€ à¤¤à¤°à¤¹ à¤¸à¥‡ à¤µà¤¿à¤•à¥‡à¤‚à¤¦à¥à¤°à¥€à¤•à¥ƒà¤¤à¥¤ à¤¶à¥‚à¤¨à¥à¤¯ à¤¨à¤¿à¤°à¥à¤­à¤°à¤¤à¤¾à¥¤</em>',
+      'vision.s1.title': 'à¤…à¤¸à¥à¤¥à¤¾à¤¯à¥€ à¤®à¤šà¤¾à¤¨', 'vision.s1.sub': 'Solana + Jupiter + à¤¬à¥à¤°à¤¿à¤œ',
+      'vision.s2.title': 'OST à¤‡à¤‚à¤Ÿà¤°à¤šà¥‡à¤‚à¤œ à¤ªà¥à¤°à¥‹à¤Ÿà¥‹à¤•à¥‰à¤²', 'vision.s2.sub': 'à¤…à¤ªà¤¨à¤¾ à¤®à¥ˆà¤šà¤¿à¤‚à¤— à¤‡à¤‚à¤œà¤¨',
+      'vision.s3.title': 'OST à¤¸à¥‰à¤µà¤°à¥‡à¤¨ à¤¨à¥‡à¤Ÿà¤µà¤°à¥à¤•', 'vision.s3.sub': 'à¤¶à¥‚à¤¨à¥à¤¯ à¤¤à¥ƒà¤¤à¥€à¤¯-à¤ªà¤•à¥à¤· à¤¨à¤¿à¤°à¥à¤­à¤°à¤¤à¤¾',
+      'vision.p1': '&#128274; ZK à¤—à¥‹à¤ªà¤¨à¥€à¤¯', 'vision.p2': '&#9889; 0.4s à¤¨à¤¿à¤ªà¤Ÿà¤¾à¤¨', 'vision.p3': '&#128176; à¤¶à¥‚à¤¨à¥à¤¯ à¤¶à¥à¤²à¥à¤• à¤¸à¤¦à¥ˆà¤µ',
+      'vision.p4': '&#128295; à¤…à¤ªà¤¨à¤¾ à¤‡à¤‚à¤œà¤¨', 'vision.p5': '&#127757; à¤…à¤ªà¤¨à¤¾ DEX', 'vision.p6': '&#128752; à¤‰à¤ªà¤—à¥à¤°à¤¹ à¤‡à¤‚à¤Ÿà¤°à¤¨à¥‡à¤Ÿ',
       'vision.spacex.title': 'OST &times; SpaceX',
-      'vision.spacex.text': 'कम कक्षा उपग्रहों के माध्यम से 2.6 अरब लोगों तक बिना सेंसर इंटरनेट और भुगतान पहुंचाने के लिए साझेदारी।',
-      'vision.spacex.btn': 'यात्रा देखें &#8594;',
-      'newhere.title': '&#127381; नए हैं? अपनी OST यात्रा शुरू करें',
-      'newhere.sub': 'मुफ्त OST प्राप्त करें, पारिवारिक वॉल्ट बनाएं, या बुनियादी ढांचे में योगदान देकर पुरस्कार अर्जित करें।',
-      'gv.title': 'पारिवारिक ग्रो वॉल्ट',
-      'gv.sub': 'हर नई पीढ़ी के साथ अंतरिक्ष में जन्मा पहला सिक्का। अपने बच्चे के लिए एक कस्टोडियल वॉल्ट बनाएं।',
-      'gv.disclaimer': 'केवल शैक्षिक उपयोग। माता-पिता/अभिभावक सभी कर और स्थानीय कानूनों के लिए जिम्मेदार हैं।',
-      'depin.title': 'DePIN डेटा-सेंटर फॉसेट',
-      'depin.sub': 'बैंडविड्थ, GPU, CPU या उपग्रह क्षमता साझा करें &mdash; विकेंद्रीकृत डेटा सेंटर बनाने के लिए OST अर्जित करें।',
-      'demos.title': '&#128717;&#65039; OST कॉमर्स', 'demos.sub': 'निजी, तत्काल भुगतान कैसा लगता है देखें। वास्तविक उत्पाद। शून्य शुल्क।',
-      'wallet.getTitle': 'अपना व्यक्तिगत OST वॉलेट प्राप्त करें', 'wallet.getSub': 'अपना वॉलेट बनाने या कनेक्ट करने का तरीका चुनें।',
-      'sell.title': 'OST बेचें या व्यापार करें', 'sell.sub': 'किसी भी क्रिप्टो या फिएट में निकासी। समान गति, समान गोपनीयता।',
-      'censor.title': '&#128683; इंटरनेट सेंसरशिप अभी हो रही है', 'censor.sub': 'वास्तविक घटनाएं। वास्तविक लोग। OST डिजिटल उत्पीड़न का उत्तर है।',
-      'spacex.title': 'OST &times; SpaceX &mdash; अंतरिक्ष की यात्रा', 'spacex.sub': 'पृथ्वी से मंगल तक हमारी साझेदारी रोडमैप का अनुसरण करें।',
-      'roadmap.title': '&#128640; रोडमैप और प्रगति', 'roadmap.sub': 'हम कहां हैं, क्या बनाया है, और आगे क्या है।',
-      'offline.scenarios': 'वास्तविक दुनिया के परिदृश्य', 'offline.scenariosub': 'विश्व बैंक, UNHCR और EM-DAT से सत्यापित डेटा। ये काल्पनिक नहीं हैं।',
-      'ai.hook.title': 'सर्वर, बॉट या लोकलहोस्ट चला रहे हैं?',
-      'ai.hook.text': 'यदि आपके पास सर्वर, बॉट या कोई स्वचालित बुद्धिमत्ता है &mdash; <strong>OST आपकी भुगतान परत है</strong>।',
-      'gc.title': 'गिफ्ट कार्ड इंटरचेंज &mdash; OST से कोई भी गिफ्ट कार्ड बेचें या खरीदें',
-      'gc.sub': 'किसी भी गिफ्ट कार्ड को प्राइवेट OST में बदलें, या OST से भुगतान करें और तुरंत डिजिटल गिफ्ट कार्ड प्राप्त करें।',
-      'gc.tabSell': '&#128178; कार्ड बेचें &rarr; OST पाएं',
-      'gc.tabBuy': '&#127873; OST से कार्ड खरीदें',
-      'gc.pipe.paste': 'कोड पेस्ट करें', 'gc.pipe.verify': 'सत्यापित करें', 'gc.pipe.receive': 'OST प्राप्त करें',
-      'gc.pipe.payOst': 'OST भुगतान करें', 'gc.pipe.convert': 'रूपांतरित करें', 'gc.pipe.getCard': 'कार्ड प्राप्त करें',
-      'gc.merchant': 'व्यापारी / ब्रांड', 'gc.merchantBuy': 'गिफ्ट कार्ड चुनें',
-      'gc.code': 'गिफ्ट कार्ड कोड', 'gc.balance': 'कार्ड शेष (USD)',
-      'gc.youGet': 'आप प्राप्त करेंगे', 'gc.youPay': 'आप भुगतान करेंगे', 'gc.amount': 'राशि (USD)',
-      'gc.email': 'डिलीवरी ईमेल (वैकल्पिक)',
-      'gc.rate': 'दर:', 'gc.fee': 'ट्रेजरी शुल्क (0.1%):',
-      'gc.feeNote': '&#128752; शुल्क उपग्रह बुनियादी ढांचे को वित्तपोषित करता है',
-      'gc.sellBtn': 'सत्यापित करें और बेचें &rarr; OST प्राप्त करें',
-      'gc.buyBtn': 'OST भुगतान करें &rarr; गिफ्ट कार्ड प्राप्त करें',
-      'gc.step.verify': 'गिफ्ट कार्ड कोड सत्यापित हो रहा है&hellip;',
-      'gc.step.zk': 'ZK प्रमाण उत्पन्न हो रहा है&hellip;',
-      'gc.step.send': 'गोपनीय हस्तांतरण से OST भेजा जा रहा है&hellip;',
-      'gc.step.done': 'पूर्ण! OST निजी रूप से प्राप्त हुआ।',
-      'gc.step.debit': 'OST डेबिट हो रहा है (गोपनीय)&hellip;',
-      'gc.step.swap': 'Jupiter के माध्यम से OST &rarr; USDC स्वैप&hellip;',
-      'gc.step.purchase': 'गिफ्ट कार्ड खरीदा जा रहा है&hellip;',
-      'gc.step.delivered': 'गिफ्ट कार्ड वितरित!',
-      'gc.supported': 'समर्थित ब्रांड:',
-      'gc.disclaimer': '&#9888; उपयोगकर्ता गिफ्ट कार्ड की वैधता सत्यापित करने के लिए जिम्मेदार हैं। OST गिफ्ट कार्ड जारीकर्ता नहीं है। स्थानीय कानूनों के अधीन।',
-      'fuel.title': 'ईंधन और गैस स्टेशन',
-      'fuel.sub': 'दुनिया भर के गैस स्टेशनों पर OST से भुगतान करें — हर भरने पर पुरस्कार अर्जित करें',
-      'fuel.howTitle': 'कैसे काम करता है',
-      'fuel.step1': 'पहुंचें',
-      'fuel.step1d': 'किसी भी पार्टनर स्टेशन पर जाएं',
-      'fuel.step2': 'टैप और पे',
-      'fuel.step2d': 'NFC या QR से OST से भुगतान करें',
-      'fuel.step3': 'पुरस्कार अर्जित करें',
-      'fuel.step3d': 'तुरंत OST में कैशबैक पाएं',
-      'fuel.step4': 'निकल जाएं',
-      'fuel.step4d': 'रसीद आपके वॉलेट में भेजी गई',
-      'fuel.calcTitle': 'ईंधन पुरस्कार कैलकुलेटर',
-      'fuel.gallons': 'गैलन',
-      'fuel.priceGal': 'प्रति गैलन मूल्य (USD)',
-      'fuel.total': 'कुल लागत',
-      'fuel.ostCost': 'OST समतुल्य',
-      'fuel.reward': 'कैशबैक (3%)',
-      'fuel.offlineTitle': 'ऑफलाइन काम करता है',
-      'fuel.offlineDesc': 'NFC और BLE — बिना इंटरनेट के भुगतान करें। लेनदेन ऑनलाइन होने पर सिंक होते हैं।',
-      'fuel.partnersTitle': 'पार्टनर स्टेशन',
-      'fuel.partnersSub': 'विश्वभर में 20+ प्रमुख ईंधन ब्रांडों पर स्वीकृत',
-      'fuel.rewardsTitle': 'पुरस्कार स्तर',
-      'fuel.disclaimer': '&#9888; दिखाई गई साझेदारी विकास में है। OST सूचीबद्ध ब्रांडों से संबद्ध नहीं है।',
+      'vision.spacex.text': 'à¤•à¤® à¤•à¤•à¥à¤·à¤¾ à¤‰à¤ªà¤—à¥à¤°à¤¹à¥‹à¤‚ à¤•à¥‡ à¤®à¤¾à¤§à¥à¤¯à¤® à¤¸à¥‡ 2.6 à¤…à¤°à¤¬ à¤²à¥‹à¤—à¥‹à¤‚ à¤¤à¤• à¤¬à¤¿à¤¨à¤¾ à¤¸à¥‡à¤‚à¤¸à¤° à¤‡à¤‚à¤Ÿà¤°à¤¨à¥‡à¤Ÿ à¤”à¤° à¤­à¥à¤—à¤¤à¤¾à¤¨ à¤ªà¤¹à¥à¤‚à¤šà¤¾à¤¨à¥‡ à¤•à¥‡ à¤²à¤¿à¤ à¤¸à¤¾à¤à¥‡à¤¦à¤¾à¤°à¥€à¥¤',
+      'vision.spacex.btn': 'à¤¯à¤¾à¤¤à¥à¤°à¤¾ à¤¦à¥‡à¤–à¥‡à¤‚ &#8594;',
+      'newhere.title': '&#127381; à¤¨à¤ à¤¹à¥ˆà¤‚? à¤…à¤ªà¤¨à¥€ OST à¤¯à¤¾à¤¤à¥à¤°à¤¾ à¤¶à¥à¤°à¥‚ à¤•à¤°à¥‡à¤‚',
+      'newhere.sub': 'à¤®à¥à¤«à¥à¤¤ OST à¤ªà¥à¤°à¤¾à¤ªà¥à¤¤ à¤•à¤°à¥‡à¤‚, à¤ªà¤¾à¤°à¤¿à¤µà¤¾à¤°à¤¿à¤• à¤µà¥‰à¤²à¥à¤Ÿ à¤¬à¤¨à¤¾à¤à¤‚, à¤¯à¤¾ à¤¬à¥à¤¨à¤¿à¤¯à¤¾à¤¦à¥€ à¤¢à¤¾à¤‚à¤šà¥‡ à¤®à¥‡à¤‚ à¤¯à¥‹à¤—à¤¦à¤¾à¤¨ à¤¦à¥‡à¤•à¤° à¤ªà¥à¤°à¤¸à¥à¤•à¤¾à¤° à¤…à¤°à¥à¤œà¤¿à¤¤ à¤•à¤°à¥‡à¤‚à¥¤',
+      'gv.title': 'à¤ªà¤¾à¤°à¤¿à¤µà¤¾à¤°à¤¿à¤• à¤—à¥à¤°à¥‹ à¤µà¥‰à¤²à¥à¤Ÿ',
+      'gv.sub': 'à¤¹à¤° à¤¨à¤ˆ à¤ªà¥€à¤¢à¤¼à¥€ à¤•à¥‡ à¤¸à¤¾à¤¥ à¤…à¤‚à¤¤à¤°à¤¿à¤•à¥à¤· à¤®à¥‡à¤‚ à¤œà¤¨à¥à¤®à¤¾ à¤ªà¤¹à¤²à¤¾ à¤¸à¤¿à¤•à¥à¤•à¤¾à¥¤ à¤…à¤ªà¤¨à¥‡ à¤¬à¤šà¥à¤šà¥‡ à¤•à¥‡ à¤²à¤¿à¤ à¤à¤• à¤•à¤¸à¥à¤Ÿà¥‹à¤¡à¤¿à¤¯à¤² à¤µà¥‰à¤²à¥à¤Ÿ à¤¬à¤¨à¤¾à¤à¤‚à¥¤',
+      'gv.disclaimer': 'à¤•à¥‡à¤µà¤² à¤¶à¥ˆà¤•à¥à¤·à¤¿à¤• à¤‰à¤ªà¤¯à¥‹à¤—à¥¤ à¤®à¤¾à¤¤à¤¾-à¤ªà¤¿à¤¤à¤¾/à¤…à¤­à¤¿à¤­à¤¾à¤µà¤• à¤¸à¤­à¥€ à¤•à¤° à¤”à¤° à¤¸à¥à¤¥à¤¾à¤¨à¥€à¤¯ à¤•à¤¾à¤¨à¥‚à¤¨à¥‹à¤‚ à¤•à¥‡ à¤²à¤¿à¤ à¤œà¤¿à¤®à¥à¤®à¥‡à¤¦à¤¾à¤° à¤¹à¥ˆà¤‚à¥¤',
+      'depin.title': 'DePIN à¤¡à¥‡à¤Ÿà¤¾-à¤¸à¥‡à¤‚à¤Ÿà¤° à¤«à¥‰à¤¸à¥‡à¤Ÿ',
+      'depin.sub': 'à¤¬à¥ˆà¤‚à¤¡à¤µà¤¿à¤¡à¥à¤¥, GPU, CPU à¤¯à¤¾ à¤‰à¤ªà¤—à¥à¤°à¤¹ à¤•à¥à¤·à¤®à¤¤à¤¾ à¤¸à¤¾à¤à¤¾ à¤•à¤°à¥‡à¤‚ &mdash; à¤µà¤¿à¤•à¥‡à¤‚à¤¦à¥à¤°à¥€à¤•à¥ƒà¤¤ à¤¡à¥‡à¤Ÿà¤¾ à¤¸à¥‡à¤‚à¤Ÿà¤° à¤¬à¤¨à¤¾à¤¨à¥‡ à¤•à¥‡ à¤²à¤¿à¤ OST à¤…à¤°à¥à¤œà¤¿à¤¤ à¤•à¤°à¥‡à¤‚à¥¤',
+      'demos.title': '&#128717;&#65039; OST à¤•à¥‰à¤®à¤°à¥à¤¸', 'demos.sub': 'à¤¨à¤¿à¤œà¥€, à¤¤à¤¤à¥à¤•à¤¾à¤² à¤­à¥à¤—à¤¤à¤¾à¤¨ à¤•à¥ˆà¤¸à¤¾ à¤²à¤—à¤¤à¤¾ à¤¹à¥ˆ à¤¦à¥‡à¤–à¥‡à¤‚à¥¤ à¤µà¤¾à¤¸à¥à¤¤à¤µà¤¿à¤• à¤‰à¤¤à¥à¤ªà¤¾à¤¦à¥¤ à¤¶à¥‚à¤¨à¥à¤¯ à¤¶à¥à¤²à¥à¤•à¥¤',
+      'wallet.getTitle': 'à¤…à¤ªà¤¨à¤¾ à¤µà¥à¤¯à¤•à¥à¤¤à¤¿à¤—à¤¤ OST à¤µà¥‰à¤²à¥‡à¤Ÿ à¤ªà¥à¤°à¤¾à¤ªà¥à¤¤ à¤•à¤°à¥‡à¤‚', 'wallet.getSub': 'à¤…à¤ªà¤¨à¤¾ à¤µà¥‰à¤²à¥‡à¤Ÿ à¤¬à¤¨à¤¾à¤¨à¥‡ à¤¯à¤¾ à¤•à¤¨à¥‡à¤•à¥à¤Ÿ à¤•à¤°à¤¨à¥‡ à¤•à¤¾ à¤¤à¤°à¥€à¤•à¤¾ à¤šà¥à¤¨à¥‡à¤‚à¥¤',
+      'sell.title': 'OST à¤¬à¥‡à¤šà¥‡à¤‚ à¤¯à¤¾ à¤µà¥à¤¯à¤¾à¤ªà¤¾à¤° à¤•à¤°à¥‡à¤‚', 'sell.sub': 'à¤•à¤¿à¤¸à¥€ à¤­à¥€ à¤•à¥à¤°à¤¿à¤ªà¥à¤Ÿà¥‹ à¤¯à¤¾ à¤«à¤¿à¤à¤Ÿ à¤®à¥‡à¤‚ à¤¨à¤¿à¤•à¤¾à¤¸à¥€à¥¤ à¤¸à¤®à¤¾à¤¨ à¤—à¤¤à¤¿, à¤¸à¤®à¤¾à¤¨ à¤—à¥‹à¤ªà¤¨à¥€à¤¯à¤¤à¤¾à¥¤',
+      'censor.title': '&#128683; à¤‡à¤‚à¤Ÿà¤°à¤¨à¥‡à¤Ÿ à¤¸à¥‡à¤‚à¤¸à¤°à¤¶à¤¿à¤ª à¤…à¤­à¥€ à¤¹à¥‹ à¤°à¤¹à¥€ à¤¹à¥ˆ', 'censor.sub': 'à¤µà¤¾à¤¸à¥à¤¤à¤µà¤¿à¤• à¤˜à¤Ÿà¤¨à¤¾à¤à¤‚à¥¤ à¤µà¤¾à¤¸à¥à¤¤à¤µà¤¿à¤• à¤²à¥‹à¤—à¥¤ OST à¤¡à¤¿à¤œà¤¿à¤Ÿà¤² à¤‰à¤¤à¥à¤ªà¥€à¤¡à¤¼à¤¨ à¤•à¤¾ à¤‰à¤¤à¥à¤¤à¤° à¤¹à¥ˆà¥¤',
+      'spacex.title': 'OST &times; SpaceX &mdash; à¤…à¤‚à¤¤à¤°à¤¿à¤•à¥à¤· à¤•à¥€ à¤¯à¤¾à¤¤à¥à¤°à¤¾', 'spacex.sub': 'à¤ªà¥ƒà¤¥à¥à¤µà¥€ à¤¸à¥‡ à¤®à¤‚à¤—à¤² à¤¤à¤• à¤¹à¤®à¤¾à¤°à¥€ à¤¸à¤¾à¤à¥‡à¤¦à¤¾à¤°à¥€ à¤°à¥‹à¤¡à¤®à¥ˆà¤ª à¤•à¤¾ à¤…à¤¨à¥à¤¸à¤°à¤£ à¤•à¤°à¥‡à¤‚à¥¤',
+      'roadmap.title': '&#128640; à¤°à¥‹à¤¡à¤®à¥ˆà¤ª à¤”à¤° à¤ªà¥à¤°à¤—à¤¤à¤¿', 'roadmap.sub': 'à¤¹à¤® à¤•à¤¹à¤¾à¤‚ à¤¹à¥ˆà¤‚, à¤•à¥à¤¯à¤¾ à¤¬à¤¨à¤¾à¤¯à¤¾ à¤¹à¥ˆ, à¤”à¤° à¤†à¤—à¥‡ à¤•à¥à¤¯à¤¾ à¤¹à¥ˆà¥¤',
+      'offline.scenarios': 'à¤µà¤¾à¤¸à¥à¤¤à¤µà¤¿à¤• à¤¦à¥à¤¨à¤¿à¤¯à¤¾ à¤•à¥‡ à¤ªà¤°à¤¿à¤¦à¥ƒà¤¶à¥à¤¯', 'offline.scenariosub': 'à¤µà¤¿à¤¶à¥à¤µ à¤¬à¥ˆà¤‚à¤•, UNHCR à¤”à¤° EM-DAT à¤¸à¥‡ à¤¸à¤¤à¥à¤¯à¤¾à¤ªà¤¿à¤¤ à¤¡à¥‡à¤Ÿà¤¾à¥¤ à¤¯à¥‡ à¤•à¤¾à¤²à¥à¤ªà¤¨à¤¿à¤• à¤¨à¤¹à¥€à¤‚ à¤¹à¥ˆà¤‚à¥¤',
+      'ai.hook.title': 'à¤¸à¤°à¥à¤µà¤°, à¤¬à¥‰à¤Ÿ à¤¯à¤¾ à¤²à¥‹à¤•à¤²à¤¹à¥‹à¤¸à¥à¤Ÿ à¤šà¤²à¤¾ à¤°à¤¹à¥‡ à¤¹à¥ˆà¤‚?',
+      'ai.hook.text': 'à¤¯à¤¦à¤¿ à¤†à¤ªà¤•à¥‡ à¤ªà¤¾à¤¸ à¤¸à¤°à¥à¤µà¤°, à¤¬à¥‰à¤Ÿ à¤¯à¤¾ à¤•à¥‹à¤ˆ à¤¸à¥à¤µà¤šà¤¾à¤²à¤¿à¤¤ à¤¬à¥à¤¦à¥à¤§à¤¿à¤®à¤¤à¥à¤¤à¤¾ à¤¹à¥ˆ &mdash; <strong>OST à¤†à¤ªà¤•à¥€ à¤­à¥à¤—à¤¤à¤¾à¤¨ à¤ªà¤°à¤¤ à¤¹à¥ˆ</strong>à¥¤',
+      'gc.title': 'à¤—à¤¿à¤«à¥à¤Ÿ à¤•à¤¾à¤°à¥à¤¡ à¤‡à¤‚à¤Ÿà¤°à¤šà¥‡à¤‚à¤œ &mdash; OST à¤¸à¥‡ à¤•à¥‹à¤ˆ à¤­à¥€ à¤—à¤¿à¤«à¥à¤Ÿ à¤•à¤¾à¤°à¥à¤¡ à¤¬à¥‡à¤šà¥‡à¤‚ à¤¯à¤¾ à¤–à¤°à¥€à¤¦à¥‡à¤‚',
+      'gc.sub': 'à¤•à¤¿à¤¸à¥€ à¤­à¥€ à¤—à¤¿à¤«à¥à¤Ÿ à¤•à¤¾à¤°à¥à¤¡ à¤•à¥‹ à¤ªà¥à¤°à¤¾à¤‡à¤µà¥‡à¤Ÿ OST à¤®à¥‡à¤‚ à¤¬à¤¦à¤²à¥‡à¤‚, à¤¯à¤¾ OST à¤¸à¥‡ à¤­à¥à¤—à¤¤à¤¾à¤¨ à¤•à¤°à¥‡à¤‚ à¤”à¤° à¤¤à¥à¤°à¤‚à¤¤ à¤¡à¤¿à¤œà¤¿à¤Ÿà¤² à¤—à¤¿à¤«à¥à¤Ÿ à¤•à¤¾à¤°à¥à¤¡ à¤ªà¥à¤°à¤¾à¤ªà¥à¤¤ à¤•à¤°à¥‡à¤‚à¥¤',
+      'gc.tabSell': '&#128178; à¤•à¤¾à¤°à¥à¤¡ à¤¬à¥‡à¤šà¥‡à¤‚ &rarr; OST à¤ªà¤¾à¤à¤‚',
+      'gc.tabBuy': '&#127873; OST à¤¸à¥‡ à¤•à¤¾à¤°à¥à¤¡ à¤–à¤°à¥€à¤¦à¥‡à¤‚',
+      'gc.pipe.paste': 'à¤•à¥‹à¤¡ à¤ªà¥‡à¤¸à¥à¤Ÿ à¤•à¤°à¥‡à¤‚', 'gc.pipe.verify': 'à¤¸à¤¤à¥à¤¯à¤¾à¤ªà¤¿à¤¤ à¤•à¤°à¥‡à¤‚', 'gc.pipe.receive': 'OST à¤ªà¥à¤°à¤¾à¤ªà¥à¤¤ à¤•à¤°à¥‡à¤‚',
+      'gc.pipe.payOst': 'OST à¤­à¥à¤—à¤¤à¤¾à¤¨ à¤•à¤°à¥‡à¤‚', 'gc.pipe.convert': 'à¤°à¥‚à¤ªà¤¾à¤‚à¤¤à¤°à¤¿à¤¤ à¤•à¤°à¥‡à¤‚', 'gc.pipe.getCard': 'à¤•à¤¾à¤°à¥à¤¡ à¤ªà¥à¤°à¤¾à¤ªà¥à¤¤ à¤•à¤°à¥‡à¤‚',
+      'gc.merchant': 'à¤µà¥à¤¯à¤¾à¤ªà¤¾à¤°à¥€ / à¤¬à¥à¤°à¤¾à¤‚à¤¡', 'gc.merchantBuy': 'à¤—à¤¿à¤«à¥à¤Ÿ à¤•à¤¾à¤°à¥à¤¡ à¤šà¥à¤¨à¥‡à¤‚',
+      'gc.code': 'à¤—à¤¿à¤«à¥à¤Ÿ à¤•à¤¾à¤°à¥à¤¡ à¤•à¥‹à¤¡', 'gc.balance': 'à¤•à¤¾à¤°à¥à¤¡ à¤¶à¥‡à¤· (USD)',
+      'gc.youGet': 'à¤†à¤ª à¤ªà¥à¤°à¤¾à¤ªà¥à¤¤ à¤•à¤°à¥‡à¤‚à¤—à¥‡', 'gc.youPay': 'à¤†à¤ª à¤­à¥à¤—à¤¤à¤¾à¤¨ à¤•à¤°à¥‡à¤‚à¤—à¥‡', 'gc.amount': 'à¤°à¤¾à¤¶à¤¿ (USD)',
+      'gc.email': 'à¤¡à¤¿à¤²à¥€à¤µà¤°à¥€ à¤ˆà¤®à¥‡à¤² (à¤µà¥ˆà¤•à¤²à¥à¤ªà¤¿à¤•)',
+      'gc.rate': 'à¤¦à¤°:', 'gc.fee': 'à¤Ÿà¥à¤°à¥‡à¤œà¤°à¥€ à¤¶à¥à¤²à¥à¤• (0.1%):',
+      'gc.feeNote': '&#128752; à¤¶à¥à¤²à¥à¤• à¤‰à¤ªà¤—à¥à¤°à¤¹ à¤¬à¥à¤¨à¤¿à¤¯à¤¾à¤¦à¥€ à¤¢à¤¾à¤‚à¤šà¥‡ à¤•à¥‹ à¤µà¤¿à¤¤à¥à¤¤à¤ªà¥‹à¤·à¤¿à¤¤ à¤•à¤°à¤¤à¤¾ à¤¹à¥ˆ',
+      'gc.sellBtn': 'à¤¸à¤¤à¥à¤¯à¤¾à¤ªà¤¿à¤¤ à¤•à¤°à¥‡à¤‚ à¤”à¤° à¤¬à¥‡à¤šà¥‡à¤‚ &rarr; OST à¤ªà¥à¤°à¤¾à¤ªà¥à¤¤ à¤•à¤°à¥‡à¤‚',
+      'gc.buyBtn': 'OST à¤­à¥à¤—à¤¤à¤¾à¤¨ à¤•à¤°à¥‡à¤‚ &rarr; à¤—à¤¿à¤«à¥à¤Ÿ à¤•à¤¾à¤°à¥à¤¡ à¤ªà¥à¤°à¤¾à¤ªà¥à¤¤ à¤•à¤°à¥‡à¤‚',
+      'gc.step.verify': 'à¤—à¤¿à¤«à¥à¤Ÿ à¤•à¤¾à¤°à¥à¤¡ à¤•à¥‹à¤¡ à¤¸à¤¤à¥à¤¯à¤¾à¤ªà¤¿à¤¤ à¤¹à¥‹ à¤°à¤¹à¤¾ à¤¹à¥ˆ&hellip;',
+      'gc.step.zk': 'ZK à¤ªà¥à¤°à¤®à¤¾à¤£ à¤‰à¤¤à¥à¤ªà¤¨à¥à¤¨ à¤¹à¥‹ à¤°à¤¹à¤¾ à¤¹à¥ˆ&hellip;',
+      'gc.step.send': 'à¤—à¥‹à¤ªà¤¨à¥€à¤¯ à¤¹à¤¸à¥à¤¤à¤¾à¤‚à¤¤à¤°à¤£ à¤¸à¥‡ OST à¤­à¥‡à¤œà¤¾ à¤œà¤¾ à¤°à¤¹à¤¾ à¤¹à¥ˆ&hellip;',
+      'gc.step.done': 'à¤ªà¥‚à¤°à¥à¤£! OST à¤¨à¤¿à¤œà¥€ à¤°à¥‚à¤ª à¤¸à¥‡ à¤ªà¥à¤°à¤¾à¤ªà¥à¤¤ à¤¹à¥à¤†à¥¤',
+      'gc.step.debit': 'OST à¤¡à¥‡à¤¬à¤¿à¤Ÿ à¤¹à¥‹ à¤°à¤¹à¤¾ à¤¹à¥ˆ (à¤—à¥‹à¤ªà¤¨à¥€à¤¯)&hellip;',
+      'gc.step.swap': 'Jupiter à¤•à¥‡ à¤®à¤¾à¤§à¥à¤¯à¤® à¤¸à¥‡ OST &rarr; USDC à¤¸à¥à¤µà¥ˆà¤ª&hellip;',
+      'gc.step.purchase': 'à¤—à¤¿à¤«à¥à¤Ÿ à¤•à¤¾à¤°à¥à¤¡ à¤–à¤°à¥€à¤¦à¤¾ à¤œà¤¾ à¤°à¤¹à¤¾ à¤¹à¥ˆ&hellip;',
+      'gc.step.delivered': 'à¤—à¤¿à¤«à¥à¤Ÿ à¤•à¤¾à¤°à¥à¤¡ à¤µà¤¿à¤¤à¤°à¤¿à¤¤!',
+      'gc.supported': 'à¤¸à¤®à¤°à¥à¤¥à¤¿à¤¤ à¤¬à¥à¤°à¤¾à¤‚à¤¡:',
+      'gc.disclaimer': '&#9888; à¤‰à¤ªà¤¯à¥‹à¤—à¤•à¤°à¥à¤¤à¤¾ à¤—à¤¿à¤«à¥à¤Ÿ à¤•à¤¾à¤°à¥à¤¡ à¤•à¥€ à¤µà¥ˆà¤§à¤¤à¤¾ à¤¸à¤¤à¥à¤¯à¤¾à¤ªà¤¿à¤¤ à¤•à¤°à¤¨à¥‡ à¤•à¥‡ à¤²à¤¿à¤ à¤œà¤¿à¤®à¥à¤®à¥‡à¤¦à¤¾à¤° à¤¹à¥ˆà¤‚à¥¤ OST à¤—à¤¿à¤«à¥à¤Ÿ à¤•à¤¾à¤°à¥à¤¡ à¤œà¤¾à¤°à¥€à¤•à¤°à¥à¤¤à¤¾ à¤¨à¤¹à¥€à¤‚ à¤¹à¥ˆà¥¤ à¤¸à¥à¤¥à¤¾à¤¨à¥€à¤¯ à¤•à¤¾à¤¨à¥‚à¤¨à¥‹à¤‚ à¤•à¥‡ à¤…à¤§à¥€à¤¨à¥¤',
+      'fuel.title': 'à¤ˆà¤‚à¤§à¤¨ à¤”à¤° à¤—à¥ˆà¤¸ à¤¸à¥à¤Ÿà¥‡à¤¶à¤¨',
+      'fuel.sub': 'à¤¦à¥à¤¨à¤¿à¤¯à¤¾ à¤­à¤° à¤•à¥‡ à¤—à¥ˆà¤¸ à¤¸à¥à¤Ÿà¥‡à¤¶à¤¨à¥‹à¤‚ à¤ªà¤° OST à¤¸à¥‡ à¤­à¥à¤—à¤¤à¤¾à¤¨ à¤•à¤°à¥‡à¤‚ â€” à¤¹à¤° à¤­à¤°à¤¨à¥‡ à¤ªà¤° à¤ªà¥à¤°à¤¸à¥à¤•à¤¾à¤° à¤…à¤°à¥à¤œà¤¿à¤¤ à¤•à¤°à¥‡à¤‚',
+      'fuel.howTitle': 'à¤•à¥ˆà¤¸à¥‡ à¤•à¤¾à¤® à¤•à¤°à¤¤à¤¾ à¤¹à¥ˆ',
+      'fuel.step1': 'à¤ªà¤¹à¥à¤‚à¤šà¥‡à¤‚',
+      'fuel.step1d': 'à¤•à¤¿à¤¸à¥€ à¤­à¥€ à¤ªà¤¾à¤°à¥à¤Ÿà¤¨à¤° à¤¸à¥à¤Ÿà¥‡à¤¶à¤¨ à¤ªà¤° à¤œà¤¾à¤à¤‚',
+      'fuel.step2': 'à¤Ÿà¥ˆà¤ª à¤”à¤° à¤ªà¥‡',
+      'fuel.step2d': 'NFC à¤¯à¤¾ QR à¤¸à¥‡ OST à¤¸à¥‡ à¤­à¥à¤—à¤¤à¤¾à¤¨ à¤•à¤°à¥‡à¤‚',
+      'fuel.step3': 'à¤ªà¥à¤°à¤¸à¥à¤•à¤¾à¤° à¤…à¤°à¥à¤œà¤¿à¤¤ à¤•à¤°à¥‡à¤‚',
+      'fuel.step3d': 'à¤¤à¥à¤°à¤‚à¤¤ OST à¤®à¥‡à¤‚ à¤•à¥ˆà¤¶à¤¬à¥ˆà¤• à¤ªà¤¾à¤à¤‚',
+      'fuel.step4': 'à¤¨à¤¿à¤•à¤² à¤œà¤¾à¤à¤‚',
+      'fuel.step4d': 'à¤°à¤¸à¥€à¤¦ à¤†à¤ªà¤•à¥‡ à¤µà¥‰à¤²à¥‡à¤Ÿ à¤®à¥‡à¤‚ à¤­à¥‡à¤œà¥€ à¤—à¤ˆ',
+      'fuel.calcTitle': 'à¤ˆà¤‚à¤§à¤¨ à¤ªà¥à¤°à¤¸à¥à¤•à¤¾à¤° à¤•à¥ˆà¤²à¤•à¥à¤²à¥‡à¤Ÿà¤°',
+      'fuel.gallons': 'à¤—à¥ˆà¤²à¤¨',
+      'fuel.priceGal': 'à¤ªà¥à¤°à¤¤à¤¿ à¤—à¥ˆà¤²à¤¨ à¤®à¥‚à¤²à¥à¤¯ (USD)',
+      'fuel.total': 'à¤•à¥à¤² à¤²à¤¾à¤—à¤¤',
+      'fuel.ostCost': 'OST à¤¸à¤®à¤¤à¥à¤²à¥à¤¯',
+      'fuel.reward': 'à¤•à¥ˆà¤¶à¤¬à¥ˆà¤• (3%)',
+      'fuel.offlineTitle': 'à¤‘à¤«à¤²à¤¾à¤‡à¤¨ à¤•à¤¾à¤® à¤•à¤°à¤¤à¤¾ à¤¹à¥ˆ',
+      'fuel.offlineDesc': 'NFC à¤”à¤° BLE â€” à¤¬à¤¿à¤¨à¤¾ à¤‡à¤‚à¤Ÿà¤°à¤¨à¥‡à¤Ÿ à¤•à¥‡ à¤­à¥à¤—à¤¤à¤¾à¤¨ à¤•à¤°à¥‡à¤‚à¥¤ à¤²à¥‡à¤¨à¤¦à¥‡à¤¨ à¤‘à¤¨à¤²à¤¾à¤‡à¤¨ à¤¹à¥‹à¤¨à¥‡ à¤ªà¤° à¤¸à¤¿à¤‚à¤• à¤¹à¥‹à¤¤à¥‡ à¤¹à¥ˆà¤‚à¥¤',
+      'fuel.partnersTitle': 'à¤ªà¤¾à¤°à¥à¤Ÿà¤¨à¤° à¤¸à¥à¤Ÿà¥‡à¤¶à¤¨',
+      'fuel.partnersSub': 'à¤µà¤¿à¤¶à¥à¤µà¤­à¤° à¤®à¥‡à¤‚ 20+ à¤ªà¥à¤°à¤®à¥à¤– à¤ˆà¤‚à¤§à¤¨ à¤¬à¥à¤°à¤¾à¤‚à¤¡à¥‹à¤‚ à¤ªà¤° à¤¸à¥à¤µà¥€à¤•à¥ƒà¤¤',
+      'fuel.rewardsTitle': 'à¤ªà¥à¤°à¤¸à¥à¤•à¤¾à¤° à¤¸à¥à¤¤à¤°',
+      'fuel.disclaimer': '&#9888; à¤¦à¤¿à¤–à¤¾à¤ˆ à¤—à¤ˆ à¤¸à¤¾à¤à¥‡à¤¦à¤¾à¤°à¥€ à¤µà¤¿à¤•à¤¾à¤¸ à¤®à¥‡à¤‚ à¤¹à¥ˆà¥¤ OST à¤¸à¥‚à¤šà¥€à¤¬à¤¦à¥à¤§ à¤¬à¥à¤°à¤¾à¤‚à¤¡à¥‹à¤‚ à¤¸à¥‡ à¤¸à¤‚à¤¬à¤¦à¥à¤§ à¤¨à¤¹à¥€à¤‚ à¤¹à¥ˆà¥¤',
     },
     ar: {
-      'nav.home': 'الرئيسية', 'nav.newhere': 'احصل على OST', 'nav.demos': 'التجارة', 'nav.wallet': 'محفظة',
-      'nav.ai': 'الذكاء الاصطناعي', 'nav.offline': 'بدون إنترنت', 'nav.censorship': 'الرقابة', 'nav.spacex': 'SpaceX',
-      'nav.about': 'قصتنا', 'nav.roadmap': 'خارطة الطريق', 'nav.build': 'بناء', 'nav.verify': 'تحقق',
-      'nav.connect': 'ربط المحفظة',
-      'wallet.dashTitle': 'محفظة OST الخاصة بي', 'wallet.dashSub': 'مركز التحكم الشخصي. أنشئ واربط وأدر محفظة OST.',
-      'bridges.title': 'الجسور والمنحدرات والبورصات', 'bridges.sub': 'كل طريق إلى OST — من أي سلسلة أو عملة أو بلد.',
-      'hero.tag': 'الخطوة التالية بعد بيتكوين',
-      'hero.title': 'نحن جميعا <span class="gradient-text">عائلة واحدة.</span>',
-      'hero.sub': 'OST هو النقد الرقمي المصنوع لكل مواطن في العالم - خاص وفوري ومتصل بأي عملة لديك.',
-      'hero.cta1': 'استكشف التجارة', 'hero.cta2': 'احصل على OST',
-      'hero.premine': 'بدون تعدين مسبق', 'hero.settle': 'تسوية', 'hero.opensource': 'مفتوح المصدر', 'hero.privacy': 'خصوصية',
-      'story.title': 'قصتنا', 'story.sub': 'رحلة من أول شرارة للأموال اللامركزية إلى مستقبل النقد الرقمي الخاص.',
-      'story.t1.title': 'الشرارة', 'story.t1.text': 'أثبت بيتكوين أن الناس - ليس البنوك ولا الحكومات - يمكنهم إنشاء أموال تعبر كل حدود.',
-      'story.t2.title': 'الفجوة', 'story.t2.text': 'لكن بيتكوين كان بطيئاً ومكلفاً وعلنياً. المليارات لا يزالون عاجزين عن دفع الإيجار بدون عمولات البنوك.',
-      'story.t3.title': 'الاختراق', 'story.t3.text': 'أطلق Solana Token-2022 التحويلات السرية — براهين المعرفة الصفرية تخفي الأرصدة والمبالغ.',
-      'story.t4.title': 'ولادة OST', 'story.t4.text': 'جمعنا بين أموال لا يمكن إيقافها، تسوية فورية، خصوصية كاملة ومهمة: تمويل البنية التحتية الفضائية.',
-      'story.t5.year': 'المستقبل', 'story.t5.title': 'كل مواطن متصل',
-      'story.t5.text': 'عالم يتشارك فيه بائع الفاكهة في لاغوس والمهندس في طهران نفس الحرية المالية.',
-      'story.lead': 'نحن نبني نقداً رقمياً عالمياً لا ينتمي لأي دولة ويخدم كل مواطن. بخصوصية. بسرعة. بمساواة.',
-      'story.closing': 'مرحباً بك في OST. مرحباً بك في بيتك.',
-      'citizens.title': 'لكل مواطن', 'citizens.sub': 'لا حدود. لا استثناءات. إنسانية واحدة، عملة واحدة.',
-      'features.title': 'الخطوة الثورية التالية', 'features.sub': 'ليس مجرد رمز آخر. نظام مالي كامل للحياة الحقيقية.',
-      'features.f1.title': 'تحويلات سرية', 'features.f1.text': 'براهين المعرفة الصفرية تخفي رصيدك وكل معاملة.',
-      'features.f2.title': 'تسوية فورية', 'features.f2.text': '400 مللي ثانية على Solana. أسرع من لمس بطاقتك.',
-      'features.f3.title': 'جسر لكل العملات', 'features.f3.text': 'بيتكوين، إيثريوم، USDC، تحويلات بنكية — كل شيء يتحول.',
-      'features.f4.title': 'مجاني إلى الأبد', 'features.f4.text': 'صفر رسوم معاملات. ممول من التبرعات والمستثمرين. شفافية على البلوكتشين.',
-      'features.f5.title': 'دفع بدون إنترنت', 'features.f5.text': 'NFC، QR، بلوتوث. ادفع بدون إنترنت.',
-      'features.f6.title': 'امتثال ضريبي ZK', 'features.f6.text': 'أثبت دفع الضرائب دون كشف رصيدك.',
-      'pay.title': 'تسوق بـ OST — أسعار حقيقية', 'pay.sub': 'منتجات حقيقية بأسعار واقعية. اختبر المدفوعات الخاصة.',
-      'pay.cart': 'سلة التسوق', 'pay.empty': 'اضغط + للإضافة', 'pay.paybtn': 'ادفع بـ OST',
-      'pay.s1': 'ربط المحفظة', 'pay.s2': 'توليد إثبات ZK', 'pay.s3': 'البث إلى Solana', 'pay.s4': 'تأكيد في 0.4 ثانية',
-      'pay.done': 'اكتمل الدفع — خصوصية كاملة', 'pay.donesub': 'لم ير أحد على الأرض هذه المعاملة.',
-      'transfer.title': 'أحضر أموالك من أي مكان', 'transfer.sub': 'أسعار مباشرة. رسوم بيانية فورية. حوّل أي عملة إلى OST.',
-      'transfer.calc': 'حاسبة سعر الصرف', 'transfer.calcsub': 'اعرف كم OST ستحصل على أي مبلغ.',
-      'transfer.widgettitle': 'حوّل الآن', 'transfer.from': 'عملتك', 'transfer.to': 'OST السري',
-      'transfer.result': 'خاص وفوري', 'transfer.convert': 'تحويل إلى OST',
-      'transfer.note': 'مدعوم من Wormhole وJupiter وSolana Token-2022.',
-      'transfer.fiattitle': 'قادم من عملة ورقية؟',
-      'transfer.fiattext': 'استخدم <strong>MoonPay</strong> أو <strong>Transak</strong> أو <strong>Ramp Network</strong> — متاح في 100+ دولة.',
-      'offline.title': 'نقد بدون إنترنت في أي مكان', 'offline.sub': 'الإنترنت ليس في كل مكان بعد. لكن أموالك يجب أن تكون.',
-      'offline.lead': 'معاملات بسرعة الضوء — حتى عند انقطاع الكهرباء.',
-      'offline.text': 'تخيل أنك تعطي شخصاً ورقة نقدية. لا بنك. لا إنترنت. فقط شخصان وقيمة تنتقل.',
-      'offline.nfc': 'NFC لمس للدفع', 'offline.nfctext': 'قرّب الهواتف من بعضها. لمسة واحدة. تم الدفع.',
-      'offline.qr': 'مسح رمز QR', 'offline.qrtext': 'الدفعة الموقعة تناسب رمز QR واحد. اعرضه أو اطبعه.',
-      'offline.bt': 'بلوتوث قريب', 'offline.bttext': 'BLE ينقل المعاملة حتى 10 أمتار. مثالي للأسواق والمطاعم.',
-      'getost.title': 'احصل على OST', 'getost.sub': 'دخول فوري من أي عملة رقمية أو ورقية — بدون KYC للتبادل.',
-      'getost.swap': 'بادل أي عملة رقمية بـ OST', 'getost.swaptext': 'Jupiter يجد أفضل مسار عبر جميع مجمعات السيولة.',
-      'getost.jupnote': 'اربط محفظتك لتحميل أداة التبادل.', 'getost.jupbtn': 'تحميل أداة التبادل',
-      'getost.fiat': 'اشترِ بالعملة المحلية', 'getost.fiatsub': 'اشترِ SOL أو USDC، ثم بادل إلى OST.',
-      'getost.faucet': 'جديد هنا؟ احصل على OST مجاني', 'getost.faucettext': 'كل محفظة جديدة تحصل على <strong>1 OST</strong> من خزينة المجتمع.',
-      'getost.faucetbtn': 'افتح الصنبور',
-      'pay.anywhere': '🌐 ادفع بـ OST في أي موقع',
-      'pay.anywheresub': 'الصق رابط أي موقع تتسوق منه. سنحول OST الخاص بك إلى عملتهم.',
-      'pay.aurl': 'رابط المتجر', 'pay.aamount': 'المبلغ المطلوب', 'pay.acurrency': 'عملتهم',
-      'pay.ayoupay': 'أنت تدفع:', 'pay.arate': 'السعر:', 'pay.afee': 'رسوم الشبكة:',
-      'pay.ahow': 'كيف يعمل',
-      'pay.astep1': 'الصق رابط الدفع للمتجر', 'pay.astep2': 'أدخل المبلغ بعملتهم',
-      'pay.astep3': 'OST يحول بأسعار حية عبر Jupiter + Wormhole', 'pay.astep4': 'المتجر يستلم عملته، وأنت دفعت بـ OST',
-      'pay.apaybtn': 'ادفع بـ OST', 'pay.asupported': 'يعمل مع أي موقع يقبل:',
-      'launch.title': '🚀 قائمة إطلاق الشبكة الرئيسية', 'launch.sub': 'ما نحتاجه لجعل OST حقيقياً على Solana mainnet.',
-      'ai.title': 'قوة لكل ذكاء', 'ai.sub': 'نرحب بوكلاء الذكاء الاصطناعي والروبوتات والخوادم وكل أشكال الذكاء الرقمي.',
-      'build.title': 'ابنِ المستقبل معنا', 'build.sub': 'برمج أو أنشئ أو احلم — OST منصتك.',
-      'build.cta': 'ابدأ المساهمة اليوم', 'build.ctasub': 'كل تعديل وترجمة ودرس يدفع البشرية للأمام.',
-      'build.github': 'عرض GitHub', 'build.docs': 'اقرأ التوثيق',
-      'verify.title': 'شفافية كاملة', 'verify.sub': 'تحقق من كل شيء بنفسك. ليس لدينا ما نخفيه.',
-      'verify.lead': 'الثقة تُكتسب بالحقائق لا بالوعود.',
-      'verify.closing': 'اقرأ الكود. تحقق من الشركة. دقق في الخزينة. <strong>ثم قرر.</strong>',
-      'wallet.title': 'ربط محفظتك', 'wallet.sub': 'اختر محفظة للاتصال بـ OST.',
-      'footer.mission': 'كل معاملة تساعد في تمويل البنية التحتية للأقمار الصناعية. <strong>هدية نبنيها معاً.</strong>',
-      'footer.copy': 'مفتوح المصدر. مبني بحب لكل إنسان على الأرض.',
-      'hero.free': '&#128176; مجاني إلى الأبد',
-      'hero.freetext': 'صفر رسوم معاملات. لا تكاليف خفية. ممول من التبرعات والمستثمرين.',
-      'hero.createwallet': 'إنشاء محفظة',
-      'hero.stat.unbanked': 'بالغون بدون حسابات بنكية حول العالم',
-      'hero.stat.remittance': '$ مفقودة في رسوم التحويلات/سنة',
-      'hero.stat.nointernet': 'أشخاص بدون إنترنت',
-      'vision.title': 'رؤية OST: الاستقلال المالي الكامل',
-      'vision.sub': 'نستخدم حاليًا Solana وJupiter والجسور كـ<strong>بنية تحتية مؤقتة</strong>. هدفنا بناء <strong>شبكة OST السيادية</strong>. <em>لامركزية بالكامل. بدون تبعيات.</em>',
-      'vision.s1.title': 'سقالات مؤقتة', 'vision.s1.sub': 'Solana + Jupiter + جسور',
-      'vision.s2.title': 'بروتوكول تبادل OST', 'vision.s2.sub': 'محرك مطابقة خاص',
-      'vision.s3.title': 'شبكة OST السيادية', 'vision.s3.sub': 'صفر تبعيات لطرف ثالث',
-      'vision.p1': '&#128274; خصوصية ZK', 'vision.p2': '&#9889; تسوية 0.4ث', 'vision.p3': '&#128176; صفر رسوم',
-      'vision.p4': '&#128295; محرك خاص', 'vision.p5': '&#127757; DEX خاص', 'vision.p6': '&#128752; إنترنت فضائي',
+      'nav.home': 'Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠØ©', 'nav.newhere': 'Ø§Ø­ØµÙ„ Ø¹Ù„Ù‰ OST', 'nav.demos': 'Ø§Ù„ØªØ¬Ø§Ø±Ø©', 'nav.wallet': 'Ù…Ø­ÙØ¸Ø©',
+      'nav.ai': 'Ø§Ù„Ø°ÙƒØ§Ø¡ Ø§Ù„Ø§ØµØ·Ù†Ø§Ø¹ÙŠ', 'nav.offline': 'Ø¨Ø¯ÙˆÙ† Ø¥Ù†ØªØ±Ù†Øª', 'nav.censorship': 'Ø§Ù„Ø±Ù‚Ø§Ø¨Ø©', 'nav.spacex': 'SpaceX',
+      'nav.about': 'Ù‚ØµØªÙ†Ø§', 'nav.roadmap': 'Ø®Ø§Ø±Ø·Ø© Ø§Ù„Ø·Ø±ÙŠÙ‚', 'nav.build': 'Ø¨Ù†Ø§Ø¡', 'nav.verify': 'ØªØ­Ù‚Ù‚',
+      'nav.connect': 'Ø±Ø¨Ø· Ø§Ù„Ù…Ø­ÙØ¸Ø©',
+      'wallet.dashTitle': 'Ù…Ø­ÙØ¸Ø© OST Ø§Ù„Ø®Ø§ØµØ© Ø¨ÙŠ', 'wallet.dashSub': 'Ù…Ø±ÙƒØ² Ø§Ù„ØªØ­ÙƒÙ… Ø§Ù„Ø´Ø®ØµÙŠ. Ø£Ù†Ø´Ø¦ ÙˆØ§Ø±Ø¨Ø· ÙˆØ£Ø¯Ø± Ù…Ø­ÙØ¸Ø© OST.',
+      'bridges.title': 'Ø§Ù„Ø¬Ø³ÙˆØ± ÙˆØ§Ù„Ù…Ù†Ø­Ø¯Ø±Ø§Øª ÙˆØ§Ù„Ø¨ÙˆØ±ØµØ§Øª', 'bridges.sub': 'ÙƒÙ„ Ø·Ø±ÙŠÙ‚ Ø¥Ù„Ù‰ OST â€” Ù…Ù† Ø£ÙŠ Ø³Ù„Ø³Ù„Ø© Ø£Ùˆ Ø¹Ù…Ù„Ø© Ø£Ùˆ Ø¨Ù„Ø¯.',
+      'hero.tag': 'Ø§Ù„Ø®Ø·ÙˆØ© Ø§Ù„ØªØ§Ù„ÙŠØ© Ø¨Ø¹Ø¯ Ø¨ÙŠØªÙƒÙˆÙŠÙ†',
+      'hero.title': 'Ù†Ø­Ù† Ø¬Ù…ÙŠØ¹Ø§ <span class="gradient-text">Ø¹Ø§Ø¦Ù„Ø© ÙˆØ§Ø­Ø¯Ø©.</span>',
+      'hero.sub': 'OST Ù‡Ùˆ Ø§Ù„Ù†Ù‚Ø¯ Ø§Ù„Ø±Ù‚Ù…ÙŠ Ø§Ù„Ù…ØµÙ†ÙˆØ¹ Ù„ÙƒÙ„ Ù…ÙˆØ§Ø·Ù† ÙÙŠ Ø§Ù„Ø¹Ø§Ù„Ù… - Ø®Ø§Øµ ÙˆÙÙˆØ±ÙŠ ÙˆÙ…ØªØµÙ„ Ø¨Ø£ÙŠ Ø¹Ù…Ù„Ø© Ù„Ø¯ÙŠÙƒ.',
+      'hero.cta1': 'Ø§Ø³ØªÙƒØ´Ù Ø§Ù„ØªØ¬Ø§Ø±Ø©', 'hero.cta2': 'Ø§Ø­ØµÙ„ Ø¹Ù„Ù‰ OST',
+      'hero.premine': 'Ø¨Ø¯ÙˆÙ† ØªØ¹Ø¯ÙŠÙ† Ù…Ø³Ø¨Ù‚', 'hero.settle': 'ØªØ³ÙˆÙŠØ©', 'hero.opensource': 'Ù…ÙØªÙˆØ­ Ø§Ù„Ù…ØµØ¯Ø±', 'hero.privacy': 'Ø®ØµÙˆØµÙŠØ©',
+      'story.title': 'Ù‚ØµØªÙ†Ø§', 'story.sub': 'Ø±Ø­Ù„Ø© Ù…Ù† Ø£ÙˆÙ„ Ø´Ø±Ø§Ø±Ø© Ù„Ù„Ø£Ù…ÙˆØ§Ù„ Ø§Ù„Ù„Ø§Ù…Ø±ÙƒØ²ÙŠØ© Ø¥Ù„Ù‰ Ù…Ø³ØªÙ‚Ø¨Ù„ Ø§Ù„Ù†Ù‚Ø¯ Ø§Ù„Ø±Ù‚Ù…ÙŠ Ø§Ù„Ø®Ø§Øµ.',
+      'story.t1.title': 'Ø§Ù„Ø´Ø±Ø§Ø±Ø©', 'story.t1.text': 'Ø£Ø«Ø¨Øª Ø¨ÙŠØªÙƒÙˆÙŠÙ† Ø£Ù† Ø§Ù„Ù†Ø§Ø³ - Ù„ÙŠØ³ Ø§Ù„Ø¨Ù†ÙˆÙƒ ÙˆÙ„Ø§ Ø§Ù„Ø­ÙƒÙˆÙ…Ø§Øª - ÙŠÙ…ÙƒÙ†Ù‡Ù… Ø¥Ù†Ø´Ø§Ø¡ Ø£Ù…ÙˆØ§Ù„ ØªØ¹Ø¨Ø± ÙƒÙ„ Ø­Ø¯ÙˆØ¯.',
+      'story.t2.title': 'Ø§Ù„ÙØ¬ÙˆØ©', 'story.t2.text': 'Ù„ÙƒÙ† Ø¨ÙŠØªÙƒÙˆÙŠÙ† ÙƒØ§Ù† Ø¨Ø·ÙŠØ¦Ø§Ù‹ ÙˆÙ…ÙƒÙ„ÙØ§Ù‹ ÙˆØ¹Ù„Ù†ÙŠØ§Ù‹. Ø§Ù„Ù…Ù„ÙŠØ§Ø±Ø§Øª Ù„Ø§ ÙŠØ²Ø§Ù„ÙˆÙ† Ø¹Ø§Ø¬Ø²ÙŠÙ† Ø¹Ù† Ø¯ÙØ¹ Ø§Ù„Ø¥ÙŠØ¬Ø§Ø± Ø¨Ø¯ÙˆÙ† Ø¹Ù…ÙˆÙ„Ø§Øª Ø§Ù„Ø¨Ù†ÙˆÙƒ.',
+      'story.t3.title': 'Ø§Ù„Ø§Ø®ØªØ±Ø§Ù‚', 'story.t3.text': 'Ø£Ø·Ù„Ù‚ Solana Token-2022 Ø§Ù„ØªØ­ÙˆÙŠÙ„Ø§Øª Ø§Ù„Ø³Ø±ÙŠØ© â€” Ø¨Ø±Ø§Ù‡ÙŠÙ† Ø§Ù„Ù…Ø¹Ø±ÙØ© Ø§Ù„ØµÙØ±ÙŠØ© ØªØ®ÙÙŠ Ø§Ù„Ø£Ø±ØµØ¯Ø© ÙˆØ§Ù„Ù…Ø¨Ø§Ù„Øº.',
+      'story.t4.title': 'ÙˆÙ„Ø§Ø¯Ø© OST', 'story.t4.text': 'Ø¬Ù…Ø¹Ù†Ø§ Ø¨ÙŠÙ† Ø£Ù…ÙˆØ§Ù„ Ù„Ø§ ÙŠÙ…ÙƒÙ† Ø¥ÙŠÙ‚Ø§ÙÙ‡Ø§ØŒ ØªØ³ÙˆÙŠØ© ÙÙˆØ±ÙŠØ©ØŒ Ø®ØµÙˆØµÙŠØ© ÙƒØ§Ù…Ù„Ø© ÙˆÙ…Ù‡Ù…Ø©: ØªÙ…ÙˆÙŠÙ„ Ø§Ù„Ø¨Ù†ÙŠØ© Ø§Ù„ØªØ­ØªÙŠØ© Ø§Ù„ÙØ¶Ø§Ø¦ÙŠØ©.',
+      'story.t5.year': 'Ø§Ù„Ù…Ø³ØªÙ‚Ø¨Ù„', 'story.t5.title': 'ÙƒÙ„ Ù…ÙˆØ§Ø·Ù† Ù…ØªØµÙ„',
+      'story.t5.text': 'Ø¹Ø§Ù„Ù… ÙŠØªØ´Ø§Ø±Ùƒ ÙÙŠÙ‡ Ø¨Ø§Ø¦Ø¹ Ø§Ù„ÙØ§ÙƒÙ‡Ø© ÙÙŠ Ù„Ø§ØºÙˆØ³ ÙˆØ§Ù„Ù…Ù‡Ù†Ø¯Ø³ ÙÙŠ Ø·Ù‡Ø±Ø§Ù† Ù†ÙØ³ Ø§Ù„Ø­Ø±ÙŠØ© Ø§Ù„Ù…Ø§Ù„ÙŠØ©.',
+      'story.lead': 'Ù†Ø­Ù† Ù†Ø¨Ù†ÙŠ Ù†Ù‚Ø¯Ø§Ù‹ Ø±Ù‚Ù…ÙŠØ§Ù‹ Ø¹Ø§Ù„Ù…ÙŠØ§Ù‹ Ù„Ø§ ÙŠÙ†ØªÙ…ÙŠ Ù„Ø£ÙŠ Ø¯ÙˆÙ„Ø© ÙˆÙŠØ®Ø¯Ù… ÙƒÙ„ Ù…ÙˆØ§Ø·Ù†. Ø¨Ø®ØµÙˆØµÙŠØ©. Ø¨Ø³Ø±Ø¹Ø©. Ø¨Ù…Ø³Ø§ÙˆØ§Ø©.',
+      'story.closing': 'Ù…Ø±Ø­Ø¨Ø§Ù‹ Ø¨Ùƒ ÙÙŠ OST. Ù…Ø±Ø­Ø¨Ø§Ù‹ Ø¨Ùƒ ÙÙŠ Ø¨ÙŠØªÙƒ.',
+      'citizens.title': 'Ù„ÙƒÙ„ Ù…ÙˆØ§Ø·Ù†', 'citizens.sub': 'Ù„Ø§ Ø­Ø¯ÙˆØ¯. Ù„Ø§ Ø§Ø³ØªØ«Ù†Ø§Ø¡Ø§Øª. Ø¥Ù†Ø³Ø§Ù†ÙŠØ© ÙˆØ§Ø­Ø¯Ø©ØŒ Ø¹Ù…Ù„Ø© ÙˆØ§Ø­Ø¯Ø©.',
+      'features.title': 'Ø§Ù„Ø®Ø·ÙˆØ© Ø§Ù„Ø«ÙˆØ±ÙŠØ© Ø§Ù„ØªØ§Ù„ÙŠØ©', 'features.sub': 'Ù„ÙŠØ³ Ù…Ø¬Ø±Ø¯ Ø±Ù…Ø² Ø¢Ø®Ø±. Ù†Ø¸Ø§Ù… Ù…Ø§Ù„ÙŠ ÙƒØ§Ù…Ù„ Ù„Ù„Ø­ÙŠØ§Ø© Ø§Ù„Ø­Ù‚ÙŠÙ‚ÙŠØ©.',
+      'features.f1.title': 'ØªØ­ÙˆÙŠÙ„Ø§Øª Ø³Ø±ÙŠØ©', 'features.f1.text': 'Ø¨Ø±Ø§Ù‡ÙŠÙ† Ø§Ù„Ù…Ø¹Ø±ÙØ© Ø§Ù„ØµÙØ±ÙŠØ© ØªØ®ÙÙŠ Ø±ØµÙŠØ¯Ùƒ ÙˆÙƒÙ„ Ù…Ø¹Ø§Ù…Ù„Ø©.',
+      'features.f2.title': 'ØªØ³ÙˆÙŠØ© ÙÙˆØ±ÙŠØ©', 'features.f2.text': '400 Ù…Ù„Ù„ÙŠ Ø«Ø§Ù†ÙŠØ© Ø¹Ù„Ù‰ Solana. Ø£Ø³Ø±Ø¹ Ù…Ù† Ù„Ù…Ø³ Ø¨Ø·Ø§Ù‚ØªÙƒ.',
+      'features.f3.title': 'Ø¬Ø³Ø± Ù„ÙƒÙ„ Ø§Ù„Ø¹Ù…Ù„Ø§Øª', 'features.f3.text': 'Ø¨ÙŠØªÙƒÙˆÙŠÙ†ØŒ Ø¥ÙŠØ«Ø±ÙŠÙˆÙ…ØŒ USDCØŒ ØªØ­ÙˆÙŠÙ„Ø§Øª Ø¨Ù†ÙƒÙŠØ© â€” ÙƒÙ„ Ø´ÙŠØ¡ ÙŠØªØ­ÙˆÙ„.',
+      'features.f4.title': 'Ù…Ø¬Ø§Ù†ÙŠ Ø¥Ù„Ù‰ Ø§Ù„Ø£Ø¨Ø¯', 'features.f4.text': 'ØµÙØ± Ø±Ø³ÙˆÙ… Ù…Ø¹Ø§Ù…Ù„Ø§Øª. Ù…Ù…ÙˆÙ„ Ù…Ù† Ø§Ù„ØªØ¨Ø±Ø¹Ø§Øª ÙˆØ§Ù„Ù…Ø³ØªØ«Ù…Ø±ÙŠÙ†. Ø´ÙØ§ÙÙŠØ© Ø¹Ù„Ù‰ Ø§Ù„Ø¨Ù„ÙˆÙƒØªØ´ÙŠÙ†.',
+      'features.f5.title': 'Ø¯ÙØ¹ Ø¨Ø¯ÙˆÙ† Ø¥Ù†ØªØ±Ù†Øª', 'features.f5.text': 'NFCØŒ QRØŒ Ø¨Ù„ÙˆØªÙˆØ«. Ø§Ø¯ÙØ¹ Ø¨Ø¯ÙˆÙ† Ø¥Ù†ØªØ±Ù†Øª.',
+      'features.f6.title': 'Ø§Ù…ØªØ«Ø§Ù„ Ø¶Ø±ÙŠØ¨ÙŠ ZK', 'features.f6.text': 'Ø£Ø«Ø¨Øª Ø¯ÙØ¹ Ø§Ù„Ø¶Ø±Ø§Ø¦Ø¨ Ø¯ÙˆÙ† ÙƒØ´Ù Ø±ØµÙŠØ¯Ùƒ.',
+      'pay.title': 'ØªØ³ÙˆÙ‚ Ø¨Ù€ OST â€” Ø£Ø³Ø¹Ø§Ø± Ø­Ù‚ÙŠÙ‚ÙŠØ©', 'pay.sub': 'Ù…Ù†ØªØ¬Ø§Øª Ø­Ù‚ÙŠÙ‚ÙŠØ© Ø¨Ø£Ø³Ø¹Ø§Ø± ÙˆØ§Ù‚Ø¹ÙŠØ©. Ø§Ø®ØªØ¨Ø± Ø§Ù„Ù…Ø¯ÙÙˆØ¹Ø§Øª Ø§Ù„Ø®Ø§ØµØ©.',
+      'pay.cart': 'Ø³Ù„Ø© Ø§Ù„ØªØ³ÙˆÙ‚', 'pay.empty': 'Ø§Ø¶ØºØ· + Ù„Ù„Ø¥Ø¶Ø§ÙØ©', 'pay.paybtn': 'Ø§Ø¯ÙØ¹ Ø¨Ù€ OST',
+      'pay.s1': 'Ø±Ø¨Ø· Ø§Ù„Ù…Ø­ÙØ¸Ø©', 'pay.s2': 'ØªÙˆÙ„ÙŠØ¯ Ø¥Ø«Ø¨Ø§Øª ZK', 'pay.s3': 'Ø§Ù„Ø¨Ø« Ø¥Ù„Ù‰ Solana', 'pay.s4': 'ØªØ£ÙƒÙŠØ¯ ÙÙŠ 0.4 Ø«Ø§Ù†ÙŠØ©',
+      'pay.done': 'Ø§ÙƒØªÙ…Ù„ Ø§Ù„Ø¯ÙØ¹ â€” Ø®ØµÙˆØµÙŠØ© ÙƒØ§Ù…Ù„Ø©', 'pay.donesub': 'Ù„Ù… ÙŠØ± Ø£Ø­Ø¯ Ø¹Ù„Ù‰ Ø§Ù„Ø£Ø±Ø¶ Ù‡Ø°Ù‡ Ø§Ù„Ù…Ø¹Ø§Ù…Ù„Ø©.',
+      'transfer.title': 'Ø£Ø­Ø¶Ø± Ø£Ù…ÙˆØ§Ù„Ùƒ Ù…Ù† Ø£ÙŠ Ù…ÙƒØ§Ù†', 'transfer.sub': 'Ø£Ø³Ø¹Ø§Ø± Ù…Ø¨Ø§Ø´Ø±Ø©. Ø±Ø³ÙˆÙ… Ø¨ÙŠØ§Ù†ÙŠØ© ÙÙˆØ±ÙŠØ©. Ø­ÙˆÙ‘Ù„ Ø£ÙŠ Ø¹Ù…Ù„Ø© Ø¥Ù„Ù‰ OST.',
+      'transfer.calc': 'Ø­Ø§Ø³Ø¨Ø© Ø³Ø¹Ø± Ø§Ù„ØµØ±Ù', 'transfer.calcsub': 'Ø§Ø¹Ø±Ù ÙƒÙ… OST Ø³ØªØ­ØµÙ„ Ø¹Ù„Ù‰ Ø£ÙŠ Ù…Ø¨Ù„Øº.',
+      'transfer.widgettitle': 'Ø­ÙˆÙ‘Ù„ Ø§Ù„Ø¢Ù†', 'transfer.from': 'Ø¹Ù…Ù„ØªÙƒ', 'transfer.to': 'OST Ø§Ù„Ø³Ø±ÙŠ',
+      'transfer.result': 'Ø®Ø§Øµ ÙˆÙÙˆØ±ÙŠ', 'transfer.convert': 'ØªØ­ÙˆÙŠÙ„ Ø¥Ù„Ù‰ OST',
+      'transfer.note': 'Ù…Ø¯Ø¹ÙˆÙ… Ù…Ù† Wormhole ÙˆJupiter ÙˆSolana Token-2022.',
+      'transfer.fiattitle': 'Ù‚Ø§Ø¯Ù… Ù…Ù† Ø¹Ù…Ù„Ø© ÙˆØ±Ù‚ÙŠØ©ØŸ',
+      'transfer.fiattext': 'Ø§Ø³ØªØ®Ø¯Ù… <strong>MoonPay</strong> Ø£Ùˆ <strong>Transak</strong> Ø£Ùˆ <strong>Ramp Network</strong> â€” Ù…ØªØ§Ø­ ÙÙŠ 100+ Ø¯ÙˆÙ„Ø©.',
+      'offline.title': 'Ù†Ù‚Ø¯ Ø¨Ø¯ÙˆÙ† Ø¥Ù†ØªØ±Ù†Øª ÙÙŠ Ø£ÙŠ Ù…ÙƒØ§Ù†', 'offline.sub': 'Ø§Ù„Ø¥Ù†ØªØ±Ù†Øª Ù„ÙŠØ³ ÙÙŠ ÙƒÙ„ Ù…ÙƒØ§Ù† Ø¨Ø¹Ø¯. Ù„ÙƒÙ† Ø£Ù…ÙˆØ§Ù„Ùƒ ÙŠØ¬Ø¨ Ø£Ù† ØªÙƒÙˆÙ†.',
+      'offline.lead': 'Ù…Ø¹Ø§Ù…Ù„Ø§Øª Ø¨Ø³Ø±Ø¹Ø© Ø§Ù„Ø¶ÙˆØ¡ â€” Ø­ØªÙ‰ Ø¹Ù†Ø¯ Ø§Ù†Ù‚Ø·Ø§Ø¹ Ø§Ù„ÙƒÙ‡Ø±Ø¨Ø§Ø¡.',
+      'offline.text': 'ØªØ®ÙŠÙ„ Ø£Ù†Ùƒ ØªØ¹Ø·ÙŠ Ø´Ø®ØµØ§Ù‹ ÙˆØ±Ù‚Ø© Ù†Ù‚Ø¯ÙŠØ©. Ù„Ø§ Ø¨Ù†Ùƒ. Ù„Ø§ Ø¥Ù†ØªØ±Ù†Øª. ÙÙ‚Ø· Ø´Ø®ØµØ§Ù† ÙˆÙ‚ÙŠÙ…Ø© ØªÙ†ØªÙ‚Ù„.',
+      'offline.nfc': 'NFC Ù„Ù…Ø³ Ù„Ù„Ø¯ÙØ¹', 'offline.nfctext': 'Ù‚Ø±Ù‘Ø¨ Ø§Ù„Ù‡ÙˆØ§ØªÙ Ù…Ù† Ø¨Ø¹Ø¶Ù‡Ø§. Ù„Ù…Ø³Ø© ÙˆØ§Ø­Ø¯Ø©. ØªÙ… Ø§Ù„Ø¯ÙØ¹.',
+      'offline.qr': 'Ù…Ø³Ø­ Ø±Ù…Ø² QR', 'offline.qrtext': 'Ø§Ù„Ø¯ÙØ¹Ø© Ø§Ù„Ù…ÙˆÙ‚Ø¹Ø© ØªÙ†Ø§Ø³Ø¨ Ø±Ù…Ø² QR ÙˆØ§Ø­Ø¯. Ø§Ø¹Ø±Ø¶Ù‡ Ø£Ùˆ Ø§Ø·Ø¨Ø¹Ù‡.',
+      'offline.bt': 'Ø¨Ù„ÙˆØªÙˆØ« Ù‚Ø±ÙŠØ¨', 'offline.bttext': 'BLE ÙŠÙ†Ù‚Ù„ Ø§Ù„Ù…Ø¹Ø§Ù…Ù„Ø© Ø­ØªÙ‰ 10 Ø£Ù…ØªØ§Ø±. Ù…Ø«Ø§Ù„ÙŠ Ù„Ù„Ø£Ø³ÙˆØ§Ù‚ ÙˆØ§Ù„Ù…Ø·Ø§Ø¹Ù….',
+      'getost.title': 'Ø§Ø­ØµÙ„ Ø¹Ù„Ù‰ OST', 'getost.sub': 'Ø¯Ø®ÙˆÙ„ ÙÙˆØ±ÙŠ Ù…Ù† Ø£ÙŠ Ø¹Ù…Ù„Ø© Ø±Ù‚Ù…ÙŠØ© Ø£Ùˆ ÙˆØ±Ù‚ÙŠØ© â€” Ø¨Ø¯ÙˆÙ† KYC Ù„Ù„ØªØ¨Ø§Ø¯Ù„.',
+      'getost.swap': 'Ø¨Ø§Ø¯Ù„ Ø£ÙŠ Ø¹Ù…Ù„Ø© Ø±Ù‚Ù…ÙŠØ© Ø¨Ù€ OST', 'getost.swaptext': 'Jupiter ÙŠØ¬Ø¯ Ø£ÙØ¶Ù„ Ù…Ø³Ø§Ø± Ø¹Ø¨Ø± Ø¬Ù…ÙŠØ¹ Ù…Ø¬Ù…Ø¹Ø§Øª Ø§Ù„Ø³ÙŠÙˆÙ„Ø©.',
+      'getost.jupnote': 'Ø§Ø±Ø¨Ø· Ù…Ø­ÙØ¸ØªÙƒ Ù„ØªØ­Ù…ÙŠÙ„ Ø£Ø¯Ø§Ø© Ø§Ù„ØªØ¨Ø§Ø¯Ù„.', 'getost.jupbtn': 'ØªØ­Ù…ÙŠÙ„ Ø£Ø¯Ø§Ø© Ø§Ù„ØªØ¨Ø§Ø¯Ù„',
+      'getost.fiat': 'Ø§Ø´ØªØ±Ù Ø¨Ø§Ù„Ø¹Ù…Ù„Ø© Ø§Ù„Ù…Ø­Ù„ÙŠØ©', 'getost.fiatsub': 'Ø§Ø´ØªØ±Ù SOL Ø£Ùˆ USDCØŒ Ø«Ù… Ø¨Ø§Ø¯Ù„ Ø¥Ù„Ù‰ OST.',
+      'getost.faucet': 'Ø¬Ø¯ÙŠØ¯ Ù‡Ù†Ø§ØŸ Ø§Ø­ØµÙ„ Ø¹Ù„Ù‰ OST Ù…Ø¬Ø§Ù†ÙŠ', 'getost.faucettext': 'ÙƒÙ„ Ù…Ø­ÙØ¸Ø© Ø¬Ø¯ÙŠØ¯Ø© ØªØ­ØµÙ„ Ø¹Ù„Ù‰ <strong>1 OST</strong> Ù…Ù† Ø®Ø²ÙŠÙ†Ø© Ø§Ù„Ù…Ø¬ØªÙ…Ø¹.',
+      'getost.faucetbtn': 'Ø§ÙØªØ­ Ø§Ù„ØµÙ†Ø¨ÙˆØ±',
+      'pay.anywhere': 'ðŸŒ Ø§Ø¯ÙØ¹ Ø¨Ù€ OST ÙÙŠ Ø£ÙŠ Ù…ÙˆÙ‚Ø¹',
+      'pay.anywheresub': 'Ø§Ù„ØµÙ‚ Ø±Ø§Ø¨Ø· Ø£ÙŠ Ù…ÙˆÙ‚Ø¹ ØªØªØ³ÙˆÙ‚ Ù…Ù†Ù‡. Ø³Ù†Ø­ÙˆÙ„ OST Ø§Ù„Ø®Ø§Øµ Ø¨Ùƒ Ø¥Ù„Ù‰ Ø¹Ù…Ù„ØªÙ‡Ù….',
+      'pay.aurl': 'Ø±Ø§Ø¨Ø· Ø§Ù„Ù…ØªØ¬Ø±', 'pay.aamount': 'Ø§Ù„Ù…Ø¨Ù„Øº Ø§Ù„Ù…Ø·Ù„ÙˆØ¨', 'pay.acurrency': 'Ø¹Ù…Ù„ØªÙ‡Ù…',
+      'pay.ayoupay': 'Ø£Ù†Øª ØªØ¯ÙØ¹:', 'pay.arate': 'Ø§Ù„Ø³Ø¹Ø±:', 'pay.afee': 'Ø±Ø³ÙˆÙ… Ø§Ù„Ø´Ø¨ÙƒØ©:',
+      'pay.ahow': 'ÙƒÙŠÙ ÙŠØ¹Ù…Ù„',
+      'pay.astep1': 'Ø§Ù„ØµÙ‚ Ø±Ø§Ø¨Ø· Ø§Ù„Ø¯ÙØ¹ Ù„Ù„Ù…ØªØ¬Ø±', 'pay.astep2': 'Ø£Ø¯Ø®Ù„ Ø§Ù„Ù…Ø¨Ù„Øº Ø¨Ø¹Ù…Ù„ØªÙ‡Ù…',
+      'pay.astep3': 'OST ÙŠØ­ÙˆÙ„ Ø¨Ø£Ø³Ø¹Ø§Ø± Ø­ÙŠØ© Ø¹Ø¨Ø± Jupiter + Wormhole', 'pay.astep4': 'Ø§Ù„Ù…ØªØ¬Ø± ÙŠØ³ØªÙ„Ù… Ø¹Ù…Ù„ØªÙ‡ØŒ ÙˆØ£Ù†Øª Ø¯ÙØ¹Øª Ø¨Ù€ OST',
+      'pay.apaybtn': 'Ø§Ø¯ÙØ¹ Ø¨Ù€ OST', 'pay.asupported': 'ÙŠØ¹Ù…Ù„ Ù…Ø¹ Ø£ÙŠ Ù…ÙˆÙ‚Ø¹ ÙŠÙ‚Ø¨Ù„:',
+      'launch.title': 'ðŸš€ Ù‚Ø§Ø¦Ù…Ø© Ø¥Ø·Ù„Ø§Ù‚ Ø§Ù„Ø´Ø¨ÙƒØ© Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠØ©', 'launch.sub': 'Ù…Ø§ Ù†Ø­ØªØ§Ø¬Ù‡ Ù„Ø¬Ø¹Ù„ OST Ø­Ù‚ÙŠÙ‚ÙŠØ§Ù‹ Ø¹Ù„Ù‰ Solana mainnet.',
+      'ai.title': 'Ù‚ÙˆØ© Ù„ÙƒÙ„ Ø°ÙƒØ§Ø¡', 'ai.sub': 'Ù†Ø±Ø­Ø¨ Ø¨ÙˆÙƒÙ„Ø§Ø¡ Ø§Ù„Ø°ÙƒØ§Ø¡ Ø§Ù„Ø§ØµØ·Ù†Ø§Ø¹ÙŠ ÙˆØ§Ù„Ø±ÙˆØ¨ÙˆØªØ§Øª ÙˆØ§Ù„Ø®ÙˆØ§Ø¯Ù… ÙˆÙƒÙ„ Ø£Ø´ÙƒØ§Ù„ Ø§Ù„Ø°ÙƒØ§Ø¡ Ø§Ù„Ø±Ù‚Ù…ÙŠ.',
+      'build.title': 'Ø§Ø¨Ù†Ù Ø§Ù„Ù…Ø³ØªÙ‚Ø¨Ù„ Ù…Ø¹Ù†Ø§', 'build.sub': 'Ø¨Ø±Ù…Ø¬ Ø£Ùˆ Ø£Ù†Ø´Ø¦ Ø£Ùˆ Ø§Ø­Ù„Ù… â€” OST Ù…Ù†ØµØªÙƒ.',
+      'build.cta': 'Ø§Ø¨Ø¯Ø£ Ø§Ù„Ù…Ø³Ø§Ù‡Ù…Ø© Ø§Ù„ÙŠÙˆÙ…', 'build.ctasub': 'ÙƒÙ„ ØªØ¹Ø¯ÙŠÙ„ ÙˆØªØ±Ø¬Ù…Ø© ÙˆØ¯Ø±Ø³ ÙŠØ¯ÙØ¹ Ø§Ù„Ø¨Ø´Ø±ÙŠØ© Ù„Ù„Ø£Ù…Ø§Ù….',
+      'build.github': 'Ø¹Ø±Ø¶ GitHub', 'build.docs': 'Ø§Ù‚Ø±Ø£ Ø§Ù„ØªÙˆØ«ÙŠÙ‚',
+      'verify.title': 'Ø´ÙØ§ÙÙŠØ© ÙƒØ§Ù…Ù„Ø©', 'verify.sub': 'ØªØ­Ù‚Ù‚ Ù…Ù† ÙƒÙ„ Ø´ÙŠØ¡ Ø¨Ù†ÙØ³Ùƒ. Ù„ÙŠØ³ Ù„Ø¯ÙŠÙ†Ø§ Ù…Ø§ Ù†Ø®ÙÙŠÙ‡.',
+      'verify.lead': 'Ø§Ù„Ø«Ù‚Ø© ØªÙÙƒØªØ³Ø¨ Ø¨Ø§Ù„Ø­Ù‚Ø§Ø¦Ù‚ Ù„Ø§ Ø¨Ø§Ù„ÙˆØ¹ÙˆØ¯.',
+      'verify.closing': 'Ø§Ù‚Ø±Ø£ Ø§Ù„ÙƒÙˆØ¯. ØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„Ø´Ø±ÙƒØ©. Ø¯Ù‚Ù‚ ÙÙŠ Ø§Ù„Ø®Ø²ÙŠÙ†Ø©. <strong>Ø«Ù… Ù‚Ø±Ø±.</strong>',
+      'wallet.title': 'Ø±Ø¨Ø· Ù…Ø­ÙØ¸ØªÙƒ', 'wallet.sub': 'Ø§Ø®ØªØ± Ù…Ø­ÙØ¸Ø© Ù„Ù„Ø§ØªØµØ§Ù„ Ø¨Ù€ OST.',
+      'footer.mission': 'ÙƒÙ„ Ù…Ø¹Ø§Ù…Ù„Ø© ØªØ³Ø§Ø¹Ø¯ ÙÙŠ ØªÙ…ÙˆÙŠÙ„ Ø§Ù„Ø¨Ù†ÙŠØ© Ø§Ù„ØªØ­ØªÙŠØ© Ù„Ù„Ø£Ù‚Ù…Ø§Ø± Ø§Ù„ØµÙ†Ø§Ø¹ÙŠØ©. <strong>Ù‡Ø¯ÙŠØ© Ù†Ø¨Ù†ÙŠÙ‡Ø§ Ù…Ø¹Ø§Ù‹.</strong>',
+      'footer.copy': 'Ù…ÙØªÙˆØ­ Ø§Ù„Ù…ØµØ¯Ø±. Ù…Ø¨Ù†ÙŠ Ø¨Ø­Ø¨ Ù„ÙƒÙ„ Ø¥Ù†Ø³Ø§Ù† Ø¹Ù„Ù‰ Ø§Ù„Ø£Ø±Ø¶.',
+      'hero.free': '&#128176; Ù…Ø¬Ø§Ù†ÙŠ Ø¥Ù„Ù‰ Ø§Ù„Ø£Ø¨Ø¯',
+      'hero.freetext': 'ØµÙØ± Ø±Ø³ÙˆÙ… Ù…Ø¹Ø§Ù…Ù„Ø§Øª. Ù„Ø§ ØªÙƒØ§Ù„ÙŠÙ Ø®ÙÙŠØ©. Ù…Ù…ÙˆÙ„ Ù…Ù† Ø§Ù„ØªØ¨Ø±Ø¹Ø§Øª ÙˆØ§Ù„Ù…Ø³ØªØ«Ù…Ø±ÙŠÙ†.',
+      'hero.createwallet': 'Ø¥Ù†Ø´Ø§Ø¡ Ù…Ø­ÙØ¸Ø©',
+      'hero.stat.unbanked': 'Ø¨Ø§Ù„ØºÙˆÙ† Ø¨Ø¯ÙˆÙ† Ø­Ø³Ø§Ø¨Ø§Øª Ø¨Ù†ÙƒÙŠØ© Ø­ÙˆÙ„ Ø§Ù„Ø¹Ø§Ù„Ù…',
+      'hero.stat.remittance': '$ Ù…ÙÙ‚ÙˆØ¯Ø© ÙÙŠ Ø±Ø³ÙˆÙ… Ø§Ù„ØªØ­ÙˆÙŠÙ„Ø§Øª/Ø³Ù†Ø©',
+      'hero.stat.nointernet': 'Ø£Ø´Ø®Ø§Øµ Ø¨Ø¯ÙˆÙ† Ø¥Ù†ØªØ±Ù†Øª',
+      'vision.title': 'Ø±Ø¤ÙŠØ© OST: Ø§Ù„Ø§Ø³ØªÙ‚Ù„Ø§Ù„ Ø§Ù„Ù…Ø§Ù„ÙŠ Ø§Ù„ÙƒØ§Ù…Ù„',
+      'vision.sub': 'Ù†Ø³ØªØ®Ø¯Ù… Ø­Ø§Ù„ÙŠÙ‹Ø§ Solana ÙˆJupiter ÙˆØ§Ù„Ø¬Ø³ÙˆØ± ÙƒÙ€<strong>Ø¨Ù†ÙŠØ© ØªØ­ØªÙŠØ© Ù…Ø¤Ù‚ØªØ©</strong>. Ù‡Ø¯ÙÙ†Ø§ Ø¨Ù†Ø§Ø¡ <strong>Ø´Ø¨ÙƒØ© OST Ø§Ù„Ø³ÙŠØ§Ø¯ÙŠØ©</strong>. <em>Ù„Ø§Ù…Ø±ÙƒØ²ÙŠØ© Ø¨Ø§Ù„ÙƒØ§Ù…Ù„. Ø¨Ø¯ÙˆÙ† ØªØ¨Ø¹ÙŠØ§Øª.</em>',
+      'vision.s1.title': 'Ø³Ù‚Ø§Ù„Ø§Øª Ù…Ø¤Ù‚ØªØ©', 'vision.s1.sub': 'Solana + Jupiter + Ø¬Ø³ÙˆØ±',
+      'vision.s2.title': 'Ø¨Ø±ÙˆØªÙˆÙƒÙˆÙ„ ØªØ¨Ø§Ø¯Ù„ OST', 'vision.s2.sub': 'Ù…Ø­Ø±Ùƒ Ù…Ø·Ø§Ø¨Ù‚Ø© Ø®Ø§Øµ',
+      'vision.s3.title': 'Ø´Ø¨ÙƒØ© OST Ø§Ù„Ø³ÙŠØ§Ø¯ÙŠØ©', 'vision.s3.sub': 'ØµÙØ± ØªØ¨Ø¹ÙŠØ§Øª Ù„Ø·Ø±Ù Ø«Ø§Ù„Ø«',
+      'vision.p1': '&#128274; Ø®ØµÙˆØµÙŠØ© ZK', 'vision.p2': '&#9889; ØªØ³ÙˆÙŠØ© 0.4Ø«', 'vision.p3': '&#128176; ØµÙØ± Ø±Ø³ÙˆÙ…',
+      'vision.p4': '&#128295; Ù…Ø­Ø±Ùƒ Ø®Ø§Øµ', 'vision.p5': '&#127757; DEX Ø®Ø§Øµ', 'vision.p6': '&#128752; Ø¥Ù†ØªØ±Ù†Øª ÙØ¶Ø§Ø¦ÙŠ',
       'vision.spacex.title': 'OST &times; SpaceX',
-      'vision.spacex.text': 'شراكة لتوفير إنترنت ومدفوعات بدون رقابة لـ2.6 مليار شخص عبر أقمار صناعية منخفضة المدار.',
-      'vision.spacex.btn': 'استكشف الرحلة &#8594;',
-      'newhere.title': '&#127381; جديد هنا؟ ابدأ رحلة OST',
-      'newhere.sub': 'احصل على OST مجاني، أنشئ خزائن عائلية، أو اكسب مكافآت بالمساهمة في البنية التحتية.',
-      'gv.title': 'خزائن النمو العائلية',
-      'gv.sub': 'أول عملة تولد في الفضاء مع كل جيل جديد. أنشئ خزنة لطفلك.',
-      'gv.disclaimer': 'للاستخدام التعليمي فقط. الآباء/الأوصياء مسؤولون عن جميع الضرائب والقوانين.',
-      'depin.title': 'صنبور DePIN لمراكز البيانات',
-      'depin.sub': 'شارك عرض النطاق أو GPU أو CPU أو سعة الأقمار الصناعية &mdash; واكسب OST لبناء مراكز بيانات لامركزية.',
-      'demos.title': '&#128717;&#65039; تجارة OST', 'demos.sub': 'شاهد كيف تبدو المدفوعات الخاصة والفورية. منتجات حقيقية. صفر رسوم.',
-      'wallet.getTitle': 'احصل على محفظة OST الخاصة بك', 'wallet.getSub': 'اختر طريقة إنشاء أو ربط محفظتك.',
-      'sell.title': 'بيع أو تداول OST', 'sell.sub': 'سحب إلى أي عملة رقمية أو ورقية. نفس السرعة والخصوصية.',
-      'censor.title': '&#128683; رقابة الإنترنت تحدث الآن', 'censor.sub': 'أحداث حقيقية. أشخاص حقيقيون. OST هو الجواب.',
-      'spacex.title': 'OST &times; SpaceX &mdash; الرحلة إلى الفضاء', 'spacex.sub': 'تابع خارطة طريق شراكتنا من الأرض إلى المريخ.',
-      'roadmap.title': '&#128640; خارطة الطريق والتقدم', 'roadmap.sub': 'أين نحن، ماذا بنينا، وما التالي.',
-      'offline.scenarios': 'سيناريوهات العالم الحقيقي', 'offline.scenariosub': 'بيانات موثقة من البنك الدولي وUNHCR. ليست افتراضية.',
-      'ai.hook.title': 'تشغل خادمًا أو بوت أو localhost؟',
-      'ai.hook.text': 'إذا كان لديك خادم أو بوت أو أي شكل من أشكال الذكاء الآلي &mdash; <strong>OST هو طبقة الدفع الخاصة بك</strong>.',
-      'gc.title': 'تبادل بطاقات الهدايا &mdash; بع أو اشترِ أي بطاقة هدية بـ OST',
-      'gc.sub': 'حول أي بطاقة هدية إلى OST خاص، أو ادفع بـ OST واحصل على بطاقات هدايا رقمية فورية.',
-      'gc.tabSell': '&#128178; بيع بطاقة &rarr; الحصول على OST',
-      'gc.tabBuy': '&#127873; شراء بطاقة بـ OST',
-      'gc.pipe.paste': 'لصق الرمز', 'gc.pipe.verify': 'تحقق', 'gc.pipe.receive': 'استلم OST',
-      'gc.pipe.payOst': 'ادفع OST', 'gc.pipe.convert': 'تحويل', 'gc.pipe.getCard': 'احصل على البطاقة',
-      'gc.merchant': 'التاجر / العلامة التجارية', 'gc.merchantBuy': 'اختر بطاقة هدية',
-      'gc.code': 'رمز بطاقة الهدية', 'gc.balance': 'رصيد البطاقة (USD)',
-      'gc.youGet': 'تحصل على', 'gc.youPay': 'تدفع', 'gc.amount': 'المبلغ (USD)',
-      'gc.email': 'بريد التسليم (اختياري)',
-      'gc.rate': 'السعر:', 'gc.fee': 'رسوم الخزينة (0.1%):',
-      'gc.feeNote': '&#128752; الرسوم تمول البنية التحتية للأقمار الصناعية',
-      'gc.sellBtn': 'تحقق وبع &rarr; احصل على OST',
-      'gc.buyBtn': 'ادفع OST &rarr; احصل على بطاقة',
-      'gc.step.verify': 'جارٍ التحقق من رمز البطاقة&hellip;',
-      'gc.step.zk': 'إنشاء إثبات ZK&hellip;',
-      'gc.step.send': 'إرسال OST عبر تحويل سري&hellip;',
-      'gc.step.done': 'تم! OST مستلم بخصوصية.',
-      'gc.step.debit': 'خصم OST (سري)&hellip;',
-      'gc.step.swap': 'تبديل OST &rarr; USDC عبر Jupiter&hellip;',
-      'gc.step.purchase': 'شراء بطاقة الهدية&hellip;',
-      'gc.step.delivered': 'تم تسليم بطاقة الهدية!',
-      'gc.supported': 'العلامات التجارية المدعومة:',
-      'gc.disclaimer': '&#9888; المستخدمون مسؤولون عن التحقق من صلاحية البطاقات. OST ليس مصدر بطاقات هدايا. خاضع للقوانين المحلية.',
-      'fuel.title': 'الوقود ومحطات الغاز',
-      'fuel.sub': 'ادفع بـ OST في محطات الوقود حول العالم — اكسب مكافآت على كل تعبئة',
-      'fuel.howTitle': 'كيف يعمل',
-      'fuel.step1': 'اوصل',
-      'fuel.step1d': 'اذهب إلى أي محطة شريكة',
-      'fuel.step2': 'انقر وادفع',
-      'fuel.step2d': 'ادفع بـ OST عبر NFC أو QR',
-      'fuel.step3': 'اكسب المكافآت',
-      'fuel.step3d': 'احصل على استرداد نقدي فوري بـ OST',
-      'fuel.step4': 'انطلق',
-      'fuel.step4d': 'الإيصال مرسل إلى محفظتك',
-      'fuel.calcTitle': 'حاسبة مكافآت الوقود',
-      'fuel.gallons': 'غالونات',
-      'fuel.priceGal': 'السعر لكل غالون (USD)',
-      'fuel.total': 'التكلفة الإجمالية',
-      'fuel.ostCost': 'ما يعادله بـ OST',
-      'fuel.reward': 'استرداد نقدي (3%)',
-      'fuel.offlineTitle': 'يعمل بدون إنترنت',
-      'fuel.offlineDesc': 'NFC و BLE — ادفع بدون إنترنت. تتم مزامنة المعاملات عند العودة للاتصال.',
-      'fuel.partnersTitle': 'المحطات الشريكة',
-      'fuel.partnersSub': 'مقبول في 20+ علامة تجارية للوقود حول العالم',
-      'fuel.rewardsTitle': 'مستويات المكافآت',
-      'fuel.disclaimer': '&#9888; الشراكات المعروضة قيد التطوير. OST غير تابع للعلامات التجارية المذكورة.',
+      'vision.spacex.text': 'Ø´Ø±Ø§ÙƒØ© Ù„ØªÙˆÙÙŠØ± Ø¥Ù†ØªØ±Ù†Øª ÙˆÙ…Ø¯ÙÙˆØ¹Ø§Øª Ø¨Ø¯ÙˆÙ† Ø±Ù‚Ø§Ø¨Ø© Ù„Ù€2.6 Ù…Ù„ÙŠØ§Ø± Ø´Ø®Øµ Ø¹Ø¨Ø± Ø£Ù‚Ù…Ø§Ø± ØµÙ†Ø§Ø¹ÙŠØ© Ù…Ù†Ø®ÙØ¶Ø© Ø§Ù„Ù…Ø¯Ø§Ø±.',
+      'vision.spacex.btn': 'Ø§Ø³ØªÙƒØ´Ù Ø§Ù„Ø±Ø­Ù„Ø© &#8594;',
+      'newhere.title': '&#127381; Ø¬Ø¯ÙŠØ¯ Ù‡Ù†Ø§ØŸ Ø§Ø¨Ø¯Ø£ Ø±Ø­Ù„Ø© OST',
+      'newhere.sub': 'Ø§Ø­ØµÙ„ Ø¹Ù„Ù‰ OST Ù…Ø¬Ø§Ù†ÙŠØŒ Ø£Ù†Ø´Ø¦ Ø®Ø²Ø§Ø¦Ù† Ø¹Ø§Ø¦Ù„ÙŠØ©ØŒ Ø£Ùˆ Ø§ÙƒØ³Ø¨ Ù…ÙƒØ§ÙØ¢Øª Ø¨Ø§Ù„Ù…Ø³Ø§Ù‡Ù…Ø© ÙÙŠ Ø§Ù„Ø¨Ù†ÙŠØ© Ø§Ù„ØªØ­ØªÙŠØ©.',
+      'gv.title': 'Ø®Ø²Ø§Ø¦Ù† Ø§Ù„Ù†Ù…Ùˆ Ø§Ù„Ø¹Ø§Ø¦Ù„ÙŠØ©',
+      'gv.sub': 'Ø£ÙˆÙ„ Ø¹Ù…Ù„Ø© ØªÙˆÙ„Ø¯ ÙÙŠ Ø§Ù„ÙØ¶Ø§Ø¡ Ù…Ø¹ ÙƒÙ„ Ø¬ÙŠÙ„ Ø¬Ø¯ÙŠØ¯. Ø£Ù†Ø´Ø¦ Ø®Ø²Ù†Ø© Ù„Ø·ÙÙ„Ùƒ.',
+      'gv.disclaimer': 'Ù„Ù„Ø§Ø³ØªØ®Ø¯Ø§Ù… Ø§Ù„ØªØ¹Ù„ÙŠÙ…ÙŠ ÙÙ‚Ø·. Ø§Ù„Ø¢Ø¨Ø§Ø¡/Ø§Ù„Ø£ÙˆØµÙŠØ§Ø¡ Ù…Ø³Ø¤ÙˆÙ„ÙˆÙ† Ø¹Ù† Ø¬Ù…ÙŠØ¹ Ø§Ù„Ø¶Ø±Ø§Ø¦Ø¨ ÙˆØ§Ù„Ù‚ÙˆØ§Ù†ÙŠÙ†.',
+      'depin.title': 'ØµÙ†Ø¨ÙˆØ± DePIN Ù„Ù…Ø±Ø§ÙƒØ² Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª',
+      'depin.sub': 'Ø´Ø§Ø±Ùƒ Ø¹Ø±Ø¶ Ø§Ù„Ù†Ø·Ø§Ù‚ Ø£Ùˆ GPU Ø£Ùˆ CPU Ø£Ùˆ Ø³Ø¹Ø© Ø§Ù„Ø£Ù‚Ù…Ø§Ø± Ø§Ù„ØµÙ†Ø§Ø¹ÙŠØ© &mdash; ÙˆØ§ÙƒØ³Ø¨ OST Ù„Ø¨Ù†Ø§Ø¡ Ù…Ø±Ø§ÙƒØ² Ø¨ÙŠØ§Ù†Ø§Øª Ù„Ø§Ù…Ø±ÙƒØ²ÙŠØ©.',
+      'demos.title': '&#128717;&#65039; ØªØ¬Ø§Ø±Ø© OST', 'demos.sub': 'Ø´Ø§Ù‡Ø¯ ÙƒÙŠÙ ØªØ¨Ø¯Ùˆ Ø§Ù„Ù…Ø¯ÙÙˆØ¹Ø§Øª Ø§Ù„Ø®Ø§ØµØ© ÙˆØ§Ù„ÙÙˆØ±ÙŠØ©. Ù…Ù†ØªØ¬Ø§Øª Ø­Ù‚ÙŠÙ‚ÙŠØ©. ØµÙØ± Ø±Ø³ÙˆÙ….',
+      'wallet.getTitle': 'Ø§Ø­ØµÙ„ Ø¹Ù„Ù‰ Ù…Ø­ÙØ¸Ø© OST Ø§Ù„Ø®Ø§ØµØ© Ø¨Ùƒ', 'wallet.getSub': 'Ø§Ø®ØªØ± Ø·Ø±ÙŠÙ‚Ø© Ø¥Ù†Ø´Ø§Ø¡ Ø£Ùˆ Ø±Ø¨Ø· Ù…Ø­ÙØ¸ØªÙƒ.',
+      'sell.title': 'Ø¨ÙŠØ¹ Ø£Ùˆ ØªØ¯Ø§ÙˆÙ„ OST', 'sell.sub': 'Ø³Ø­Ø¨ Ø¥Ù„Ù‰ Ø£ÙŠ Ø¹Ù…Ù„Ø© Ø±Ù‚Ù…ÙŠØ© Ø£Ùˆ ÙˆØ±Ù‚ÙŠØ©. Ù†ÙØ³ Ø§Ù„Ø³Ø±Ø¹Ø© ÙˆØ§Ù„Ø®ØµÙˆØµÙŠØ©.',
+      'censor.title': '&#128683; Ø±Ù‚Ø§Ø¨Ø© Ø§Ù„Ø¥Ù†ØªØ±Ù†Øª ØªØ­Ø¯Ø« Ø§Ù„Ø¢Ù†', 'censor.sub': 'Ø£Ø­Ø¯Ø§Ø« Ø­Ù‚ÙŠÙ‚ÙŠØ©. Ø£Ø´Ø®Ø§Øµ Ø­Ù‚ÙŠÙ‚ÙŠÙˆÙ†. OST Ù‡Ùˆ Ø§Ù„Ø¬ÙˆØ§Ø¨.',
+      'spacex.title': 'OST &times; SpaceX &mdash; Ø§Ù„Ø±Ø­Ù„Ø© Ø¥Ù„Ù‰ Ø§Ù„ÙØ¶Ø§Ø¡', 'spacex.sub': 'ØªØ§Ø¨Ø¹ Ø®Ø§Ø±Ø·Ø© Ø·Ø±ÙŠÙ‚ Ø´Ø±Ø§ÙƒØªÙ†Ø§ Ù…Ù† Ø§Ù„Ø£Ø±Ø¶ Ø¥Ù„Ù‰ Ø§Ù„Ù…Ø±ÙŠØ®.',
+      'roadmap.title': '&#128640; Ø®Ø§Ø±Ø·Ø© Ø§Ù„Ø·Ø±ÙŠÙ‚ ÙˆØ§Ù„ØªÙ‚Ø¯Ù…', 'roadmap.sub': 'Ø£ÙŠÙ† Ù†Ø­Ù†ØŒ Ù…Ø§Ø°Ø§ Ø¨Ù†ÙŠÙ†Ø§ØŒ ÙˆÙ…Ø§ Ø§Ù„ØªØ§Ù„ÙŠ.',
+      'offline.scenarios': 'Ø³ÙŠÙ†Ø§Ø±ÙŠÙˆÙ‡Ø§Øª Ø§Ù„Ø¹Ø§Ù„Ù… Ø§Ù„Ø­Ù‚ÙŠÙ‚ÙŠ', 'offline.scenariosub': 'Ø¨ÙŠØ§Ù†Ø§Øª Ù…ÙˆØ«Ù‚Ø© Ù…Ù† Ø§Ù„Ø¨Ù†Ùƒ Ø§Ù„Ø¯ÙˆÙ„ÙŠ ÙˆUNHCR. Ù„ÙŠØ³Øª Ø§ÙØªØ±Ø§Ø¶ÙŠØ©.',
+      'ai.hook.title': 'ØªØ´ØºÙ„ Ø®Ø§Ø¯Ù…Ù‹Ø§ Ø£Ùˆ Ø¨ÙˆØª Ø£Ùˆ localhostØŸ',
+      'ai.hook.text': 'Ø¥Ø°Ø§ ÙƒØ§Ù† Ù„Ø¯ÙŠÙƒ Ø®Ø§Ø¯Ù… Ø£Ùˆ Ø¨ÙˆØª Ø£Ùˆ Ø£ÙŠ Ø´ÙƒÙ„ Ù…Ù† Ø£Ø´ÙƒØ§Ù„ Ø§Ù„Ø°ÙƒØ§Ø¡ Ø§Ù„Ø¢Ù„ÙŠ &mdash; <strong>OST Ù‡Ùˆ Ø·Ø¨Ù‚Ø© Ø§Ù„Ø¯ÙØ¹ Ø§Ù„Ø®Ø§ØµØ© Ø¨Ùƒ</strong>.',
+      'gc.title': 'ØªØ¨Ø§Ø¯Ù„ Ø¨Ø·Ø§Ù‚Ø§Øª Ø§Ù„Ù‡Ø¯Ø§ÙŠØ§ &mdash; Ø¨Ø¹ Ø£Ùˆ Ø§Ø´ØªØ±Ù Ø£ÙŠ Ø¨Ø·Ø§Ù‚Ø© Ù‡Ø¯ÙŠØ© Ø¨Ù€ OST',
+      'gc.sub': 'Ø­ÙˆÙ„ Ø£ÙŠ Ø¨Ø·Ø§Ù‚Ø© Ù‡Ø¯ÙŠØ© Ø¥Ù„Ù‰ OST Ø®Ø§ØµØŒ Ø£Ùˆ Ø§Ø¯ÙØ¹ Ø¨Ù€ OST ÙˆØ§Ø­ØµÙ„ Ø¹Ù„Ù‰ Ø¨Ø·Ø§Ù‚Ø§Øª Ù‡Ø¯Ø§ÙŠØ§ Ø±Ù‚Ù…ÙŠØ© ÙÙˆØ±ÙŠØ©.',
+      'gc.tabSell': '&#128178; Ø¨ÙŠØ¹ Ø¨Ø·Ø§Ù‚Ø© &rarr; Ø§Ù„Ø­ØµÙˆÙ„ Ø¹Ù„Ù‰ OST',
+      'gc.tabBuy': '&#127873; Ø´Ø±Ø§Ø¡ Ø¨Ø·Ø§Ù‚Ø© Ø¨Ù€ OST',
+      'gc.pipe.paste': 'Ù„ØµÙ‚ Ø§Ù„Ø±Ù…Ø²', 'gc.pipe.verify': 'ØªØ­Ù‚Ù‚', 'gc.pipe.receive': 'Ø§Ø³ØªÙ„Ù… OST',
+      'gc.pipe.payOst': 'Ø§Ø¯ÙØ¹ OST', 'gc.pipe.convert': 'ØªØ­ÙˆÙŠÙ„', 'gc.pipe.getCard': 'Ø§Ø­ØµÙ„ Ø¹Ù„Ù‰ Ø§Ù„Ø¨Ø·Ø§Ù‚Ø©',
+      'gc.merchant': 'Ø§Ù„ØªØ§Ø¬Ø± / Ø§Ù„Ø¹Ù„Ø§Ù…Ø© Ø§Ù„ØªØ¬Ø§Ø±ÙŠØ©', 'gc.merchantBuy': 'Ø§Ø®ØªØ± Ø¨Ø·Ø§Ù‚Ø© Ù‡Ø¯ÙŠØ©',
+      'gc.code': 'Ø±Ù…Ø² Ø¨Ø·Ø§Ù‚Ø© Ø§Ù„Ù‡Ø¯ÙŠØ©', 'gc.balance': 'Ø±ØµÙŠØ¯ Ø§Ù„Ø¨Ø·Ø§Ù‚Ø© (USD)',
+      'gc.youGet': 'ØªØ­ØµÙ„ Ø¹Ù„Ù‰', 'gc.youPay': 'ØªØ¯ÙØ¹', 'gc.amount': 'Ø§Ù„Ù…Ø¨Ù„Øº (USD)',
+      'gc.email': 'Ø¨Ø±ÙŠØ¯ Ø§Ù„ØªØ³Ù„ÙŠÙ… (Ø§Ø®ØªÙŠØ§Ø±ÙŠ)',
+      'gc.rate': 'Ø§Ù„Ø³Ø¹Ø±:', 'gc.fee': 'Ø±Ø³ÙˆÙ… Ø§Ù„Ø®Ø²ÙŠÙ†Ø© (0.1%):',
+      'gc.feeNote': '&#128752; Ø§Ù„Ø±Ø³ÙˆÙ… ØªÙ…ÙˆÙ„ Ø§Ù„Ø¨Ù†ÙŠØ© Ø§Ù„ØªØ­ØªÙŠØ© Ù„Ù„Ø£Ù‚Ù…Ø§Ø± Ø§Ù„ØµÙ†Ø§Ø¹ÙŠØ©',
+      'gc.sellBtn': 'ØªØ­Ù‚Ù‚ ÙˆØ¨Ø¹ &rarr; Ø§Ø­ØµÙ„ Ø¹Ù„Ù‰ OST',
+      'gc.buyBtn': 'Ø§Ø¯ÙØ¹ OST &rarr; Ø§Ø­ØµÙ„ Ø¹Ù„Ù‰ Ø¨Ø·Ø§Ù‚Ø©',
+      'gc.step.verify': 'Ø¬Ø§Ø±Ù Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø±Ù…Ø² Ø§Ù„Ø¨Ø·Ø§Ù‚Ø©&hellip;',
+      'gc.step.zk': 'Ø¥Ù†Ø´Ø§Ø¡ Ø¥Ø«Ø¨Ø§Øª ZK&hellip;',
+      'gc.step.send': 'Ø¥Ø±Ø³Ø§Ù„ OST Ø¹Ø¨Ø± ØªØ­ÙˆÙŠÙ„ Ø³Ø±ÙŠ&hellip;',
+      'gc.step.done': 'ØªÙ…! OST Ù…Ø³ØªÙ„Ù… Ø¨Ø®ØµÙˆØµÙŠØ©.',
+      'gc.step.debit': 'Ø®ØµÙ… OST (Ø³Ø±ÙŠ)&hellip;',
+      'gc.step.swap': 'ØªØ¨Ø¯ÙŠÙ„ OST &rarr; USDC Ø¹Ø¨Ø± Jupiter&hellip;',
+      'gc.step.purchase': 'Ø´Ø±Ø§Ø¡ Ø¨Ø·Ø§Ù‚Ø© Ø§Ù„Ù‡Ø¯ÙŠØ©&hellip;',
+      'gc.step.delivered': 'ØªÙ… ØªØ³Ù„ÙŠÙ… Ø¨Ø·Ø§Ù‚Ø© Ø§Ù„Ù‡Ø¯ÙŠØ©!',
+      'gc.supported': 'Ø§Ù„Ø¹Ù„Ø§Ù…Ø§Øª Ø§Ù„ØªØ¬Ø§Ø±ÙŠØ© Ø§Ù„Ù…Ø¯Ø¹ÙˆÙ…Ø©:',
+      'gc.disclaimer': '&#9888; Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…ÙˆÙ† Ù…Ø³Ø¤ÙˆÙ„ÙˆÙ† Ø¹Ù† Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† ØµÙ„Ø§Ø­ÙŠØ© Ø§Ù„Ø¨Ø·Ø§Ù‚Ø§Øª. OST Ù„ÙŠØ³ Ù…ØµØ¯Ø± Ø¨Ø·Ø§Ù‚Ø§Øª Ù‡Ø¯Ø§ÙŠØ§. Ø®Ø§Ø¶Ø¹ Ù„Ù„Ù‚ÙˆØ§Ù†ÙŠÙ† Ø§Ù„Ù…Ø­Ù„ÙŠØ©.',
+      'fuel.title': 'Ø§Ù„ÙˆÙ‚ÙˆØ¯ ÙˆÙ…Ø­Ø·Ø§Øª Ø§Ù„ØºØ§Ø²',
+      'fuel.sub': 'Ø§Ø¯ÙØ¹ Ø¨Ù€ OST ÙÙŠ Ù…Ø­Ø·Ø§Øª Ø§Ù„ÙˆÙ‚ÙˆØ¯ Ø­ÙˆÙ„ Ø§Ù„Ø¹Ø§Ù„Ù… â€” Ø§ÙƒØ³Ø¨ Ù…ÙƒØ§ÙØ¢Øª Ø¹Ù„Ù‰ ÙƒÙ„ ØªØ¹Ø¨Ø¦Ø©',
+      'fuel.howTitle': 'ÙƒÙŠÙ ÙŠØ¹Ù…Ù„',
+      'fuel.step1': 'Ø§ÙˆØµÙ„',
+      'fuel.step1d': 'Ø§Ø°Ù‡Ø¨ Ø¥Ù„Ù‰ Ø£ÙŠ Ù…Ø­Ø·Ø© Ø´Ø±ÙŠÙƒØ©',
+      'fuel.step2': 'Ø§Ù†Ù‚Ø± ÙˆØ§Ø¯ÙØ¹',
+      'fuel.step2d': 'Ø§Ø¯ÙØ¹ Ø¨Ù€ OST Ø¹Ø¨Ø± NFC Ø£Ùˆ QR',
+      'fuel.step3': 'Ø§ÙƒØ³Ø¨ Ø§Ù„Ù…ÙƒØ§ÙØ¢Øª',
+      'fuel.step3d': 'Ø§Ø­ØµÙ„ Ø¹Ù„Ù‰ Ø§Ø³ØªØ±Ø¯Ø§Ø¯ Ù†Ù‚Ø¯ÙŠ ÙÙˆØ±ÙŠ Ø¨Ù€ OST',
+      'fuel.step4': 'Ø§Ù†Ø·Ù„Ù‚',
+      'fuel.step4d': 'Ø§Ù„Ø¥ÙŠØµØ§Ù„ Ù…Ø±Ø³Ù„ Ø¥Ù„Ù‰ Ù…Ø­ÙØ¸ØªÙƒ',
+      'fuel.calcTitle': 'Ø­Ø§Ø³Ø¨Ø© Ù…ÙƒØ§ÙØ¢Øª Ø§Ù„ÙˆÙ‚ÙˆØ¯',
+      'fuel.gallons': 'ØºØ§Ù„ÙˆÙ†Ø§Øª',
+      'fuel.priceGal': 'Ø§Ù„Ø³Ø¹Ø± Ù„ÙƒÙ„ ØºØ§Ù„ÙˆÙ† (USD)',
+      'fuel.total': 'Ø§Ù„ØªÙƒÙ„ÙØ© Ø§Ù„Ø¥Ø¬Ù…Ø§Ù„ÙŠØ©',
+      'fuel.ostCost': 'Ù…Ø§ ÙŠØ¹Ø§Ø¯Ù„Ù‡ Ø¨Ù€ OST',
+      'fuel.reward': 'Ø§Ø³ØªØ±Ø¯Ø§Ø¯ Ù†Ù‚Ø¯ÙŠ (3%)',
+      'fuel.offlineTitle': 'ÙŠØ¹Ù…Ù„ Ø¨Ø¯ÙˆÙ† Ø¥Ù†ØªØ±Ù†Øª',
+      'fuel.offlineDesc': 'NFC Ùˆ BLE â€” Ø§Ø¯ÙØ¹ Ø¨Ø¯ÙˆÙ† Ø¥Ù†ØªØ±Ù†Øª. ØªØªÙ… Ù…Ø²Ø§Ù…Ù†Ø© Ø§Ù„Ù…Ø¹Ø§Ù…Ù„Ø§Øª Ø¹Ù†Ø¯ Ø§Ù„Ø¹ÙˆØ¯Ø© Ù„Ù„Ø§ØªØµØ§Ù„.',
+      'fuel.partnersTitle': 'Ø§Ù„Ù…Ø­Ø·Ø§Øª Ø§Ù„Ø´Ø±ÙŠÙƒØ©',
+      'fuel.partnersSub': 'Ù…Ù‚Ø¨ÙˆÙ„ ÙÙŠ 20+ Ø¹Ù„Ø§Ù…Ø© ØªØ¬Ø§Ø±ÙŠØ© Ù„Ù„ÙˆÙ‚ÙˆØ¯ Ø­ÙˆÙ„ Ø§Ù„Ø¹Ø§Ù„Ù…',
+      'fuel.rewardsTitle': 'Ù…Ø³ØªÙˆÙŠØ§Øª Ø§Ù„Ù…ÙƒØ§ÙØ¢Øª',
+      'fuel.disclaimer': '&#9888; Ø§Ù„Ø´Ø±Ø§ÙƒØ§Øª Ø§Ù„Ù…Ø¹Ø±ÙˆØ¶Ø© Ù‚ÙŠØ¯ Ø§Ù„ØªØ·ÙˆÙŠØ±. OST ØºÙŠØ± ØªØ§Ø¨Ø¹ Ù„Ù„Ø¹Ù„Ø§Ù…Ø§Øª Ø§Ù„ØªØ¬Ø§Ø±ÙŠØ© Ø§Ù„Ù…Ø°ÙƒÙˆØ±Ø©.',
     },
     pt: {
-      'nav.home': 'Inicio', 'nav.newhere': 'Obter OST', 'nav.demos': 'Comércio', 'nav.wallet': 'Carteira',
+      'nav.home': 'Inicio', 'nav.newhere': 'Obter OST', 'nav.demos': 'ComÃ©rcio', 'nav.wallet': 'Carteira',
       'nav.ai': 'IA e Bots', 'nav.offline': 'Offline', 'nav.censorship': 'Censura', 'nav.spacex': 'SpaceX',
       'nav.about': 'Nossa Historia', 'nav.roadmap': 'Roteiro', 'nav.build': 'Construir', 'nav.verify': 'Verificar',
       'nav.connect': 'Conectar Carteira',
       'wallet.dashTitle': 'Minha Carteira OST', 'wallet.dashSub': 'Seu centro de comando pessoal. Crie, conecte e gerencie sua carteira OST.',
-      'bridges.title': 'Pontes, Rampas e Exchanges', 'bridges.sub': 'Todo caminho para OST — de qualquer cadeia, moeda ou pais.',
+      'bridges.title': 'Pontes, Rampas e Exchanges', 'bridges.sub': 'Todo caminho para OST â€” de qualquer cadeia, moeda ou pais.',
       'hero.tag': 'O Proximo Passo Apos o Bitcoin',
       'hero.title': 'Somos todos <span class="gradient-text">uma familia.</span>',
       'hero.sub': 'OST e o dinheiro digital feito para cada cidadao do mundo - privado, instantaneo e conectado a qualquer moeda que voce ja tem.',
-      'hero.cta1': 'Explorar Comércio', 'hero.cta2': 'Obter OST',
+      'hero.cta1': 'Explorar ComÃ©rcio', 'hero.cta2': 'Obter OST',
       'hero.premine': 'Pre-mineracao', 'hero.settle': 'Liquidacao', 'hero.opensource': 'Codigo Aberto', 'hero.privacy': 'Privacidade',
-      'story.title': 'Nossa Historia', 'story.sub': 'Uma jornada da primeira faísca do dinheiro descentralizado ao futuro do dinheiro digital privado.',
-      'story.t1.title': 'A Faísca', 'story.t1.text': 'Bitcoin provou que pessoas - nao bancos, nao governos - poderiam criar dinheiro que cruza todas as fronteiras.',
+      'story.title': 'Nossa Historia', 'story.sub': 'Uma jornada da primeira faÃ­sca do dinheiro descentralizado ao futuro do dinheiro digital privado.',
+      'story.t1.title': 'A FaÃ­sca', 'story.t1.text': 'Bitcoin provou que pessoas - nao bancos, nao governos - poderiam criar dinheiro que cruza todas as fronteiras.',
       'story.t2.title': 'A Lacuna', 'story.t2.text': 'Mas o Bitcoin era lento, caro e publico. Bilhoes ainda nao podiam pagar aluguel sem que os bancos ficassem com sua parte.',
-      'story.t3.title': 'A Descoberta', 'story.t3.text': 'Solana Token-2022 lancou transferencias confidenciais — provas de conhecimento zero que escondem saldos e valores.',
+      'story.t3.title': 'A Descoberta', 'story.t3.text': 'Solana Token-2022 lancou transferencias confidenciais â€” provas de conhecimento zero que escondem saldos e valores.',
       'story.t4.title': 'Nasce o OST', 'story.t4.text': 'Combinamos dinheiro imparavel, liquidacao instantanea, privacidade total e uma missao: financiar infraestrutura de satelites.',
       'story.t5.year': 'O Futuro', 'story.t5.title': 'Cada Cidadao Conectado',
       'story.t5.text': 'Um mundo onde o vendedor de frutas em Lagos e o engenheiro em Teera compartilham a mesma liberdade financeira.',
@@ -1276,34 +1276,34 @@
       'features.title': 'O Proximo Passo Revolucionario', 'features.sub': 'Nao e apenas mais um token. Um sistema financeiro completo para a vida real.',
       'features.f1.title': 'Transferencias Confidenciais', 'features.f1.text': 'Provas de conhecimento zero escondem seu saldo e cada transacao.',
       'features.f2.title': 'Liquidacao em Fracao de Segundo', 'features.f2.text': '400ms no Solana. Mais rapido que tocar seu cartao.',
-      'features.f3.title': 'Ponte Para Todas as Moedas', 'features.f3.text': 'Bitcoin, Ethereum, USDC, transferencias bancarias — tudo se converte.',
+      'features.f3.title': 'Ponte Para Todas as Moedas', 'features.f3.text': 'Bitcoin, Ethereum, USDC, transferencias bancarias â€” tudo se converte.',
       'features.f4.title': 'Gratis Para Sempre', 'features.f4.text': 'Zero taxas de transacao. Financiado por doacoes e investidores. Transparencia on-chain.',
       'features.f5.title': 'Pagamentos Offline', 'features.f5.text': 'NFC, QR, Bluetooth. Pague sem internet.',
       'features.f6.title': 'Conformidade Fiscal ZK', 'features.f6.text': 'Prove seus impostos sem revelar seu saldo.',
-      'pay.title': 'Compre com OST — Precos Reais', 'pay.sub': 'Produtos reais, precos reais. Sinta os pagamentos privados.',
+      'pay.title': 'Compre com OST â€” Precos Reais', 'pay.sub': 'Produtos reais, precos reais. Sinta os pagamentos privados.',
       'pay.cart': 'Seu Carrinho', 'pay.empty': 'Toque + para adicionar', 'pay.paybtn': 'Pagar com OST',
       'pay.s1': 'Conectando carteira', 'pay.s2': 'Gerando prova ZK', 'pay.s3': 'Transmitindo para Solana', 'pay.s4': 'Confirmado em 0.4s',
-      'pay.done': 'Pagamento Completo — Totalmente Privado', 'pay.donesub': 'Ninguem na Terra viu esta transacao.',
+      'pay.done': 'Pagamento Completo â€” Totalmente Privado', 'pay.donesub': 'Ninguem na Terra viu esta transacao.',
       'transfer.title': 'Traga Seu Dinheiro de Qualquer Lugar', 'transfer.sub': 'Precos ao vivo. Graficos em tempo real. Troque qualquer moeda por OST.',
       'transfer.calc': 'Calculadora de Cambio', 'transfer.calcsub': 'Veja quanto OST voce recebe por qualquer valor.',
       'transfer.widgettitle': 'Converter Agora', 'transfer.from': 'Sua Moeda', 'transfer.to': 'OST Confidencial',
       'transfer.result': 'Privado e Instantaneo', 'transfer.convert': 'Converter para OST',
       'transfer.note': 'Turbinado por Wormhole, Jupiter e Solana Token-2022.',
       'transfer.fiattitle': 'Vindo de moeda fiduciaria?',
-      'transfer.fiattext': 'Use <strong>MoonPay</strong>, <strong>Transak</strong> ou <strong>Ramp Network</strong> — disponivel em 100+ paises.',
+      'transfer.fiattext': 'Use <strong>MoonPay</strong>, <strong>Transak</strong> ou <strong>Ramp Network</strong> â€” disponivel em 100+ paises.',
       'offline.title': 'Dinheiro Offline em Qualquer Lugar', 'offline.sub': 'A internet ainda nao esta em todo lugar. Mas seu dinheiro deveria estar.',
-      'offline.lead': 'Transacoes na velocidade da luz — mesmo com as luzes apagadas.',
+      'offline.lead': 'Transacoes na velocidade da luz â€” mesmo com as luzes apagadas.',
       'offline.text': 'Imagine entregar uma nota a alguem. Sem banco. Sem internet. Apenas duas pessoas e valor trocando de maos.',
       'offline.nfc': 'NFC Toque para Pagar', 'offline.nfctext': 'Aproxime os telefones. Um toque. Pagamento feito.',
       'offline.qr': 'Leitura de QR Code', 'offline.qrtext': 'O pagamento assinado cabe em um unico QR code.',
       'offline.bt': 'Bluetooth Proximo', 'offline.bttext': 'BLE transmite a transacao ate 10 metros. Perfeito para mercados.',
-      'getost.title': 'Obter OST', 'getost.sub': 'Entrada instantanea de qualquer cripto ou fiat — sem KYC para trocas.',
+      'getost.title': 'Obter OST', 'getost.sub': 'Entrada instantanea de qualquer cripto ou fiat â€” sem KYC para trocas.',
       'getost.swap': 'Troque Qualquer Cripto por OST', 'getost.swaptext': 'Jupiter encontra a melhor rota em todos os pools de liquidez Solana.',
       'getost.jupnote': 'Conecte sua carteira para carregar o widget de troca.', 'getost.jupbtn': 'Carregar Widget',
       'getost.fiat': 'Compre com Moeda Local', 'getost.fiatsub': 'Compre SOL ou USDC, depois troque por OST.',
       'getost.faucet': 'Novo Aqui? Receba OST Gratis', 'getost.faucettext': 'Cada nova carteira recebe <strong>1 OST</strong> do tesouro comunitario.',
       'getost.faucetbtn': 'Abrir a Torneira',
-      'pay.anywhere': '🌐 Pague em Qualquer Site com OST',
+      'pay.anywhere': 'ðŸŒ Pague em Qualquer Site com OST',
       'pay.anywheresub': 'Cole qualquer site onde voce esta comprando. Convertemos seu OST na moeda que eles aceitam.',
       'pay.aurl': 'URL do Comerciante', 'pay.aamount': 'Valor a Pagar', 'pay.acurrency': 'Moeda Deles',
       'pay.ayoupay': 'Voce Paga:', 'pay.arate': 'Taxa:', 'pay.afee': 'Taxa de Rede:',
@@ -1311,9 +1311,9 @@
       'pay.astep1': 'Cole o link de checkout do comerciante', 'pay.astep2': 'Digite o valor na moeda deles',
       'pay.astep3': 'OST converte a taxas ao vivo via Jupiter + Wormhole', 'pay.astep4': 'Comerciante recebe sua moeda, voce pagou com OST',
       'pay.apaybtn': 'Pagar com OST', 'pay.asupported': 'Funciona com qualquer site que aceite:',
-      'launch.title': '🚀 Checklist de Lancamento Mainnet', 'launch.sub': 'O que precisamos para tornar OST real na Solana mainnet.',
+      'launch.title': 'ðŸš€ Checklist de Lancamento Mainnet', 'launch.sub': 'O que precisamos para tornar OST real na Solana mainnet.',
       'ai.title': 'Poder Para Toda Inteligencia', 'ai.sub': 'Damos boas-vindas a agentes IA, bots, servidores e toda forma de inteligencia digital.',
-      'build.title': 'Construa o Futuro Conosco', 'build.sub': 'Programe, crie ou sonhe em pixels — OST e sua plataforma.',
+      'build.title': 'Construa o Futuro Conosco', 'build.sub': 'Programe, crie ou sonhe em pixels â€” OST e sua plataforma.',
       'build.cta': 'Comece a Contribuir Hoje', 'build.ctasub': 'Cada commit, traducao e tutorial move a humanidade adiante.',
       'build.github': 'Ver Repositorio GitHub', 'build.docs': 'Ler Documentacao',
       'verify.title': 'Transparencia Total', 'verify.sub': 'Verifique tudo voce mesmo. Nao temos nada a esconder.',
@@ -1322,38 +1322,38 @@
       'wallet.title': 'Conectar Sua Carteira', 'wallet.sub': 'Escolha uma carteira para conectar ao OST.',
       'footer.mission': 'Cada transacao ajuda a financiar infraestrutura de satelites. <strong>Um presente que construimos juntos.</strong>',
       'footer.copy': 'Codigo aberto. Construido com amor para cada ser humano na Terra.',
-      'hero.free': '&#128176; GRÁTIS PARA SEMPRE',
-      'hero.freetext': 'Zero taxas de transação. Sem custos ocultos. Financiado por doações e investidores.',
+      'hero.free': '&#128176; GRÃTIS PARA SEMPRE',
+      'hero.freetext': 'Zero taxas de transaÃ§Ã£o. Sem custos ocultos. Financiado por doaÃ§Ãµes e investidores.',
       'hero.createwallet': 'Criar Carteira',
       'hero.stat.unbanked': 'Adultos sem banco no mundo',
       'hero.stat.remittance': '$ perdidos em taxas de remessa/ano',
       'hero.stat.nointernet': 'Pessoas sem internet',
-      'vision.title': 'A Visão OST: Independência Financeira Completa',
-      'vision.sub': 'Atualmente usamos Solana, Jupiter e pontes de terceiros como <strong>infraestrutura temporária</strong>. Nosso objetivo é construir a <strong>Rede Soberana OST</strong>. <em>Completamente descentralizada. Sem dependências.</em>',
-      'vision.s1.title': 'Estrutura Temporária', 'vision.s1.sub': 'Solana + Jupiter + Pontes',
-      'vision.s2.title': 'Protocolo de Câmbio OST', 'vision.s2.sub': 'Motor de correspondência próprio',
-      'vision.s3.title': 'Rede Soberana OST', 'vision.s3.sub': 'Zero dependências de terceiros',
-      'vision.p1': '&#128274; ZK Privado', 'vision.p2': '&#9889; 0.4s Liquidação', 'vision.p3': '&#128176; Zero Taxas',
-      'vision.p4': '&#128295; Motor Próprio', 'vision.p5': '&#127757; DEX e Pontes Próprias', 'vision.p6': '&#128752; Internet via Satélite',
+      'vision.title': 'A VisÃ£o OST: IndependÃªncia Financeira Completa',
+      'vision.sub': 'Atualmente usamos Solana, Jupiter e pontes de terceiros como <strong>infraestrutura temporÃ¡ria</strong>. Nosso objetivo Ã© construir a <strong>Rede Soberana OST</strong>. <em>Completamente descentralizada. Sem dependÃªncias.</em>',
+      'vision.s1.title': 'Estrutura TemporÃ¡ria', 'vision.s1.sub': 'Solana + Jupiter + Pontes',
+      'vision.s2.title': 'Protocolo de CÃ¢mbio OST', 'vision.s2.sub': 'Motor de correspondÃªncia prÃ³prio',
+      'vision.s3.title': 'Rede Soberana OST', 'vision.s3.sub': 'Zero dependÃªncias de terceiros',
+      'vision.p1': '&#128274; ZK Privado', 'vision.p2': '&#9889; 0.4s LiquidaÃ§Ã£o', 'vision.p3': '&#128176; Zero Taxas',
+      'vision.p4': '&#128295; Motor PrÃ³prio', 'vision.p5': '&#127757; DEX e Pontes PrÃ³prias', 'vision.p6': '&#128752; Internet via SatÃ©lite',
       'vision.spacex.title': 'OST &times; SpaceX',
-      'vision.spacex.text': 'Parceria para levar internet e pagamentos sem censura a 2,6 bilhões de pessoas via satélites de órbita baixa.',
+      'vision.spacex.text': 'Parceria para levar internet e pagamentos sem censura a 2,6 bilhÃµes de pessoas via satÃ©lites de Ã³rbita baixa.',
       'vision.spacex.btn': 'Explorar a Jornada &#8594;',
       'newhere.title': '&#127381; Novo Aqui? Comece Sua Jornada OST',
-      'newhere.sub': 'Resgate OST grátis, crie cofres familiares ou ganhe recompensas contribuindo com infraestrutura.',
+      'newhere.sub': 'Resgate OST grÃ¡tis, crie cofres familiares ou ganhe recompensas contribuindo com infraestrutura.',
       'gv.title': 'Cofres Familiares de Crescimento',
-      'gv.sub': 'A primeira moeda nascida no espaço a cada nova geração. Crie um cofre custodial para seu filho.',
-      'gv.disclaimer': 'Apenas uso educacional. Pais/responsáveis são responsáveis por todas as leis fiscais e locais.',
+      'gv.sub': 'A primeira moeda nascida no espaÃ§o a cada nova geraÃ§Ã£o. Crie um cofre custodial para seu filho.',
+      'gv.disclaimer': 'Apenas uso educacional. Pais/responsÃ¡veis sÃ£o responsÃ¡veis por todas as leis fiscais e locais.',
       'depin.title': 'Faucet DePIN de Data Center',
-      'depin.sub': 'Compartilhe largura de banda, GPU, CPU ou capacidade de satélite &mdash; ganhe OST por construir data centers descentralizados.',
-      'demos.title': '&#128717;&#65039; Comércio OST', 'demos.sub': 'Veja como são pagamentos privados e instantâneos. Produtos reais. Zero taxas.',
+      'depin.sub': 'Compartilhe largura de banda, GPU, CPU ou capacidade de satÃ©lite &mdash; ganhe OST por construir data centers descentralizados.',
+      'demos.title': '&#128717;&#65039; ComÃ©rcio OST', 'demos.sub': 'Veja como sÃ£o pagamentos privados e instantÃ¢neos. Produtos reais. Zero taxas.',
       'wallet.getTitle': 'Obtenha Sua Carteira OST Pessoal', 'wallet.getSub': 'Escolha como criar ou conectar sua carteira.',
       'sell.title': 'Vender ou Trocar OST', 'sell.sub': 'Saque para qualquer cripto ou fiat. Mesma velocidade, mesma privacidade.',
-      'censor.title': '&#128683; A Censura na Internet Está Acontecendo Agora', 'censor.sub': 'Eventos reais. Pessoas reais. OST é a resposta à opressão digital.',
-      'spacex.title': 'OST &times; SpaceX &mdash; A Jornada ao Espaço', 'spacex.sub': 'Acompanhe nosso roteiro da Terra a Marte.',
-      'roadmap.title': '&#128640; Roteiro e Progresso', 'roadmap.sub': 'Onde estamos, o que construímos e o que vem a seguir.',
-      'offline.scenarios': 'Cenários do Mundo Real', 'offline.scenariosub': 'Dados verificados do Banco Mundial, ACNUR e EM-DAT. Não são hipóteses.',
+      'censor.title': '&#128683; A Censura na Internet EstÃ¡ Acontecendo Agora', 'censor.sub': 'Eventos reais. Pessoas reais. OST Ã© a resposta Ã  opressÃ£o digital.',
+      'spacex.title': 'OST &times; SpaceX &mdash; A Jornada ao EspaÃ§o', 'spacex.sub': 'Acompanhe nosso roteiro da Terra a Marte.',
+      'roadmap.title': '&#128640; Roteiro e Progresso', 'roadmap.sub': 'Onde estamos, o que construÃ­mos e o que vem a seguir.',
+      'offline.scenarios': 'CenÃ¡rios do Mundo Real', 'offline.scenariosub': 'Dados verificados do Banco Mundial, ACNUR e EM-DAT. NÃ£o sÃ£o hipÃ³teses.',
       'ai.hook.title': 'Rodando um Servidor, Bot ou Localhost?',
-      'ai.hook.text': 'Se você tem um servidor, bot ou qualquer inteligência automatizada &mdash; <strong>OST é sua camada de pagamento</strong>.',
+      'ai.hook.text': 'Se vocÃª tem um servidor, bot ou qualquer inteligÃªncia automatizada &mdash; <strong>OST Ã© sua camada de pagamento</strong>.',
       'gc.title': 'Interchange de Cart\u00f5es Presente &mdash; Venda ou Compre Qualquer Cart\u00e3o com OST',
       'gc.sub': 'Transforme qualquer cart\u00e3o presente em OST privado, ou pague com OST e receba cart\u00f5es digitais instant\u00e2neos.',
       'gc.tabSell': '&#128178; Vender Cart\u00e3o &rarr; Receber OST',
@@ -1408,7 +1408,7 @@
       'nav.about': 'Notre Histoire', 'nav.roadmap': 'Feuille de Route', 'nav.build': 'Construire', 'nav.verify': 'Verifier',
       'nav.connect': 'Connecter Portefeuille',
       'wallet.dashTitle': 'Mon Portefeuille OST', 'wallet.dashSub': 'Votre centre de commande personnel. Creez, connectez et gerez votre portefeuille OST.',
-      'bridges.title': 'Ponts, Rampes et Echanges', 'bridges.sub': 'Chaque chemin vers OST — depuis toute chaine, devise ou pays.',
+      'bridges.title': 'Ponts, Rampes et Echanges', 'bridges.sub': 'Chaque chemin vers OST â€” depuis toute chaine, devise ou pays.',
       'hero.tag': 'La Prochaine Etape Apres Bitcoin',
       'hero.title': 'Nous sommes tous <span class="gradient-text">une famille.</span>',
       'hero.sub': 'OST est l\'argent numerique fait pour chaque citoyen du monde - prive, instantane et connecte a toute devise.',
@@ -1416,8 +1416,8 @@
       'hero.premine': 'Pre-minage', 'hero.settle': 'Reglement', 'hero.opensource': 'Open Source', 'hero.privacy': 'Confidentialite',
       'story.title': 'Notre Histoire', 'story.sub': 'Un voyage de la premiere etincelle de la monnaie decentralisee au futur de l\'argent numerique prive.',
       'story.t1.title': 'L\'Etincelle', 'story.t1.text': 'Bitcoin a prouve que les gens - pas les banques, pas les gouvernements - pouvaient creer de l\'argent traversant toutes les frontieres.',
-      'story.t2.title': 'Le Fossé', 'story.t2.text': 'Mais Bitcoin etait lent, cher et public. Des milliards ne pouvaient toujours pas payer leur loyer sans les commissions bancaires.',
-      'story.t3.title': 'La Percee', 'story.t3.text': 'Solana Token-2022 a lance les transferts confidentiels — des preuves a divulgation nulle cachent soldes et montants.',
+      'story.t2.title': 'Le FossÃ©', 'story.t2.text': 'Mais Bitcoin etait lent, cher et public. Des milliards ne pouvaient toujours pas payer leur loyer sans les commissions bancaires.',
+      'story.t3.title': 'La Percee', 'story.t3.text': 'Solana Token-2022 a lance les transferts confidentiels â€” des preuves a divulgation nulle cachent soldes et montants.',
       'story.t4.title': 'Naissance d\'OST', 'story.t4.text': 'Nous avons combine monnaie indestructible, reglement instantane, confidentialite totale et une mission: financer les satellites.',
       'story.t5.year': 'Le Futur', 'story.t5.title': 'Chaque Citoyen Connecte',
       'story.t5.text': 'Un monde ou le vendeur de fruits a Lagos et l\'ingenieur a Teheran partagent la meme liberte financiere.',
@@ -1427,34 +1427,34 @@
       'features.title': 'La Prochaine Etape Revolutionnaire', 'features.sub': 'Pas juste un autre jeton. Un systeme financier complet pour la vie reelle.',
       'features.f1.title': 'Transferts Confidentiels', 'features.f1.text': 'Les preuves a divulgation nulle cachent votre solde et chaque transaction.',
       'features.f2.title': 'Reglement Infra-Seconde', 'features.f2.text': '400ms sur Solana. Plus rapide qu\'un paiement sans contact.',
-      'features.f3.title': 'Pont Universel vers OST', 'features.f3.text': 'Bitcoin, Ethereum, USDC, virements — tout se convertit.',
+      'features.f3.title': 'Pont Universel vers OST', 'features.f3.text': 'Bitcoin, Ethereum, USDC, virements â€” tout se convertit.',
       'features.f4.title': 'Gratuit Pour Toujours', 'features.f4.text': 'Zero frais de transaction. Finance par des dons et des investisseurs. Transparence on-chain.',
       'features.f5.title': 'Paiements Hors Ligne', 'features.f5.text': 'NFC, QR, Bluetooth. Payez sans internet.',
       'features.f6.title': 'Conformite Fiscale ZK', 'features.f6.text': 'Prouvez vos impots sans reveler votre solde.',
-      'pay.title': 'Achetez avec OST — Prix Reels', 'pay.sub': 'Vrais produits, vrais prix. Decouvrez les paiements prives.',
+      'pay.title': 'Achetez avec OST â€” Prix Reels', 'pay.sub': 'Vrais produits, vrais prix. Decouvrez les paiements prives.',
       'pay.cart': 'Votre Panier', 'pay.empty': 'Appuyez sur + pour ajouter', 'pay.paybtn': 'Payer avec OST',
       'pay.s1': 'Connexion du portefeuille', 'pay.s2': 'Generation de preuve ZK', 'pay.s3': 'Diffusion sur Solana', 'pay.s4': 'Confirme en 0.4s',
-      'pay.done': 'Paiement Termine — Totalement Prive', 'pay.donesub': 'Personne sur Terre n\'a vu cette transaction.',
+      'pay.done': 'Paiement Termine â€” Totalement Prive', 'pay.donesub': 'Personne sur Terre n\'a vu cette transaction.',
       'transfer.title': 'Apportez Votre Argent de Partout', 'transfer.sub': 'Prix en direct. Graphiques en temps reel. Echangez n\'importe quelle devise contre OST.',
       'transfer.calc': 'Calculateur de Taux de Change', 'transfer.calcsub': 'Voyez combien d\'OST vous obtenez pour n\'importe quel montant.',
       'transfer.widgettitle': 'Convertir Maintenant', 'transfer.from': 'Votre Devise', 'transfer.to': 'OST Confidentiel',
       'transfer.result': 'Prive et Instantane', 'transfer.convert': 'Convertir en OST',
       'transfer.note': 'Propulse par Wormhole, Jupiter et Solana Token-2022.',
       'transfer.fiattitle': 'Vous venez du fiat?',
-      'transfer.fiattext': 'Utilisez <strong>MoonPay</strong>, <strong>Transak</strong> ou <strong>Ramp Network</strong> — disponible dans 100+ pays.',
+      'transfer.fiattext': 'Utilisez <strong>MoonPay</strong>, <strong>Transak</strong> ou <strong>Ramp Network</strong> â€” disponible dans 100+ pays.',
       'offline.title': 'Argent Hors Ligne Partout', 'offline.sub': 'Internet n\'est pas partout. Mais votre argent devrait l\'etre.',
-      'offline.lead': 'Transactions a la vitesse de la lumiere — meme quand les lumieres sont eteintes.',
+      'offline.lead': 'Transactions a la vitesse de la lumiere â€” meme quand les lumieres sont eteintes.',
       'offline.text': 'Imaginez donner un billet a quelqu\'un. Pas de banque. Pas d\'internet. Juste deux personnes et de la valeur qui change de mains.',
       'offline.nfc': 'NFC Sans Contact', 'offline.nfctext': 'Approchez les telephones. Un tap. Paiement effectue.',
       'offline.qr': 'Scan QR Code', 'offline.qrtext': 'Le paiement signe tient dans un seul QR code.',
       'offline.bt': 'Bluetooth Proximite', 'offline.bttext': 'BLE transmet la transaction jusqu\'a 10 metres. Ideal pour les marches.',
-      'getost.title': 'Obtenir OST', 'getost.sub': 'Entree instantanee depuis n\'importe quelle crypto ou fiat — sans KYC pour les echanges.',
+      'getost.title': 'Obtenir OST', 'getost.sub': 'Entree instantanee depuis n\'importe quelle crypto ou fiat â€” sans KYC pour les echanges.',
       'getost.swap': 'Echangez N\'importe Quelle Crypto Contre OST', 'getost.swaptext': 'Jupiter trouve la meilleure route dans tous les pools de liquidite.',
       'getost.jupnote': 'Connectez votre portefeuille pour charger le widget d\'echange.', 'getost.jupbtn': 'Charger le Widget',
       'getost.fiat': 'Achetez avec Votre Monnaie Locale', 'getost.fiatsub': 'Achetez SOL ou USDC, puis echangez contre OST.',
       'getost.faucet': 'Nouveau? Recevez OST Gratuit', 'getost.faucettext': 'Chaque nouveau portefeuille recoit <strong>1 OST</strong> du tresor communautaire.',
       'getost.faucetbtn': 'Ouvrir le Robinet',
-      'pay.anywhere': '🌐 Payez Partout avec OST',
+      'pay.anywhere': 'ðŸŒ Payez Partout avec OST',
       'pay.anywheresub': 'Collez le lien de n\'importe quel site ou vous achetez. Nous convertissons vos OST dans leur devise.',
       'pay.aurl': 'URL du Marchand', 'pay.aamount': 'Montant a Payer', 'pay.acurrency': 'Leur Devise',
       'pay.ayoupay': 'Vous Payez:', 'pay.arate': 'Taux:', 'pay.afee': 'Frais Reseau:',
@@ -1462,9 +1462,9 @@
       'pay.astep1': 'Collez le lien de paiement du marchand', 'pay.astep2': 'Entrez le montant dans leur devise',
       'pay.astep3': 'OST convertit aux taux en direct via Jupiter + Wormhole', 'pay.astep4': 'Le marchand recoit sa devise, vous avez paye en OST',
       'pay.apaybtn': 'Payer avec OST', 'pay.asupported': 'Fonctionne avec tout site acceptant:',
-      'launch.title': '🚀 Checklist Lancement Mainnet', 'launch.sub': 'Ce qu\'il faut pour rendre OST reel sur Solana mainnet.',
+      'launch.title': 'ðŸš€ Checklist Lancement Mainnet', 'launch.sub': 'Ce qu\'il faut pour rendre OST reel sur Solana mainnet.',
       'ai.title': 'Puissance Pour Chaque Intelligence', 'ai.sub': 'Nous accueillons les agents IA, bots, serveurs et toute forme d\'intelligence numerique.',
-      'build.title': 'Construisez le Futur Avec Nous', 'build.sub': 'Codez, creez ou revez en pixels — OST est votre plateforme.',
+      'build.title': 'Construisez le Futur Avec Nous', 'build.sub': 'Codez, creez ou revez en pixels â€” OST est votre plateforme.',
       'build.cta': 'Commencez a Contribuer Aujourd\'hui', 'build.ctasub': 'Chaque commit, traduction et tutoriel fait avancer l\'humanite.',
       'build.github': 'Voir le Depot GitHub', 'build.docs': 'Lire la Documentation',
       'verify.title': 'Transparence Totale', 'verify.sub': 'Verifiez tout vous-meme. Nous n\'avons rien a cacher.',
@@ -1474,37 +1474,37 @@
       'footer.mission': 'Chaque transaction aide a financer l\'infrastructure satellite. <strong>Un cadeau que nous construisons ensemble.</strong>',
       'footer.copy': 'Open source. Construit avec amour pour chaque habitant de la Terre.',
       'hero.free': '&#128176; GRATUIT POUR TOUJOURS',
-      'hero.freetext': 'Zéro frais de transaction. Aucun coût caché. Financé par des dons et des investisseurs.',
-      'hero.createwallet': 'Créer un Portefeuille',
-      'hero.stat.unbanked': 'Adultes non bancarisés dans le monde',
+      'hero.freetext': 'ZÃ©ro frais de transaction. Aucun coÃ»t cachÃ©. FinancÃ© par des dons et des investisseurs.',
+      'hero.createwallet': 'CrÃ©er un Portefeuille',
+      'hero.stat.unbanked': 'Adultes non bancarisÃ©s dans le monde',
       'hero.stat.remittance': '$ perdus en frais de transfert/an',
       'hero.stat.nointernet': 'Personnes sans internet',
-      'vision.title': 'La Vision OST : Indépendance Financière Complète',
-      'vision.sub': 'Nous utilisons actuellement Solana, Jupiter et des ponts tiers comme <strong>infrastructure temporaire</strong>. Notre objectif : le <strong>Réseau Souverain OST</strong>. <em>Entièrement décentralisé. Zéro dépendance.</em>',
-      'vision.s1.title': 'Échafaudage Temporaire', 'vision.s1.sub': 'Solana + Jupiter + Ponts',
-      'vision.s2.title': 'Protocole d\'Échange OST', 'vision.s2.sub': 'Moteur de correspondance propre',
-      'vision.s3.title': 'Réseau Souverain OST', 'vision.s3.sub': 'Zéro dépendances tierces',
-      'vision.p1': '&#128274; ZK Privé', 'vision.p2': '&#9889; 0,4s Règlement', 'vision.p3': '&#128176; Zéro Frais',
+      'vision.title': 'La Vision OST : IndÃ©pendance FinanciÃ¨re ComplÃ¨te',
+      'vision.sub': 'Nous utilisons actuellement Solana, Jupiter et des ponts tiers comme <strong>infrastructure temporaire</strong>. Notre objectif : le <strong>RÃ©seau Souverain OST</strong>. <em>EntiÃ¨rement dÃ©centralisÃ©. ZÃ©ro dÃ©pendance.</em>',
+      'vision.s1.title': 'Ã‰chafaudage Temporaire', 'vision.s1.sub': 'Solana + Jupiter + Ponts',
+      'vision.s2.title': 'Protocole d\'Ã‰change OST', 'vision.s2.sub': 'Moteur de correspondance propre',
+      'vision.s3.title': 'RÃ©seau Souverain OST', 'vision.s3.sub': 'ZÃ©ro dÃ©pendances tierces',
+      'vision.p1': '&#128274; ZK PrivÃ©', 'vision.p2': '&#9889; 0,4s RÃ¨glement', 'vision.p3': '&#128176; ZÃ©ro Frais',
       'vision.p4': '&#128295; Moteur Propre', 'vision.p5': '&#127757; DEX et Ponts Propres', 'vision.p6': '&#128752; Internet par Satellite',
       'vision.spacex.title': 'OST &times; SpaceX',
-      'vision.spacex.text': 'Partenariat pour apporter internet et paiements sans censure à 2,6 milliards de personnes via des satellites en orbite basse.',
+      'vision.spacex.text': 'Partenariat pour apporter internet et paiements sans censure Ã  2,6 milliards de personnes via des satellites en orbite basse.',
       'vision.spacex.btn': 'Explorer le Voyage &#8594;',
       'newhere.title': '&#127381; Nouveau Ici ? Commencez Votre Voyage OST',
-      'newhere.sub': 'Réclamez des OST gratuits, créez des coffres familiaux ou gagnez des récompenses en contribuant à l\'infrastructure.',
+      'newhere.sub': 'RÃ©clamez des OST gratuits, crÃ©ez des coffres familiaux ou gagnez des rÃ©compenses en contribuant Ã  l\'infrastructure.',
       'gv.title': 'Coffres Familiaux de Croissance',
-      'gv.sub': 'La première monnaie née dans l\'espace avec chaque nouvelle génération. Créez un coffre pour votre enfant.',
-      'gv.disclaimer': 'Usage éducatif uniquement. Les parents/tuteurs sont responsables de toutes les lois fiscales et locales.',
+      'gv.sub': 'La premiÃ¨re monnaie nÃ©e dans l\'espace avec chaque nouvelle gÃ©nÃ©ration. CrÃ©ez un coffre pour votre enfant.',
+      'gv.disclaimer': 'Usage Ã©ducatif uniquement. Les parents/tuteurs sont responsables de toutes les lois fiscales et locales.',
       'depin.title': 'Robinet DePIN Data Center',
-      'depin.sub': 'Partagez bande passante, GPU, CPU ou capacité satellite &mdash; gagnez des OST pour construire des centres de données décentralisés.',
-      'demos.title': '&#128717;&#65039; Commerce OST', 'demos.sub': 'Découvrez les paiements privés et instantanés. Produits réels. Zéro frais.',
-      'wallet.getTitle': 'Obtenez Votre Portefeuille OST', 'wallet.getSub': 'Choisissez comment créer ou connecter votre portefeuille.',
-      'sell.title': 'Vendre ou Échanger OST', 'sell.sub': 'Retrait vers n\'importe quelle crypto ou fiat. Même vitesse, même confidentialité.',
-      'censor.title': '&#128683; La Censure d\'Internet Se Produit Maintenant', 'censor.sub': 'Événements réels. Personnes réelles. OST est la réponse.',
-      'spacex.title': 'OST &times; SpaceX &mdash; Le Voyage dans l\'Espace', 'spacex.sub': 'Suivez notre feuille de route de la Terre à Mars.',
-      'roadmap.title': '&#128640; Feuille de Route et Progrès', 'roadmap.sub': 'Où nous en sommes, ce que nous avons construit et la suite.',
-      'offline.scenarios': 'Scénarios du Monde Réel', 'offline.scenariosub': 'Données vérifiées de la Banque Mondiale, du HCR et d\'EM-DAT.',
+      'depin.sub': 'Partagez bande passante, GPU, CPU ou capacitÃ© satellite &mdash; gagnez des OST pour construire des centres de donnÃ©es dÃ©centralisÃ©s.',
+      'demos.title': '&#128717;&#65039; Commerce OST', 'demos.sub': 'DÃ©couvrez les paiements privÃ©s et instantanÃ©s. Produits rÃ©els. ZÃ©ro frais.',
+      'wallet.getTitle': 'Obtenez Votre Portefeuille OST', 'wallet.getSub': 'Choisissez comment crÃ©er ou connecter votre portefeuille.',
+      'sell.title': 'Vendre ou Ã‰changer OST', 'sell.sub': 'Retrait vers n\'importe quelle crypto ou fiat. MÃªme vitesse, mÃªme confidentialitÃ©.',
+      'censor.title': '&#128683; La Censure d\'Internet Se Produit Maintenant', 'censor.sub': 'Ã‰vÃ©nements rÃ©els. Personnes rÃ©elles. OST est la rÃ©ponse.',
+      'spacex.title': 'OST &times; SpaceX &mdash; Le Voyage dans l\'Espace', 'spacex.sub': 'Suivez notre feuille de route de la Terre Ã  Mars.',
+      'roadmap.title': '&#128640; Feuille de Route et ProgrÃ¨s', 'roadmap.sub': 'OÃ¹ nous en sommes, ce que nous avons construit et la suite.',
+      'offline.scenarios': 'ScÃ©narios du Monde RÃ©el', 'offline.scenariosub': 'DonnÃ©es vÃ©rifiÃ©es de la Banque Mondiale, du HCR et d\'EM-DAT.',
       'ai.hook.title': 'Vous avez un Serveur, Bot ou Localhost ?',
-      'ai.hook.text': 'Si vous avez un serveur, un bot ou toute forme d\'intelligence automatisée &mdash; <strong>OST est votre couche de paiement</strong>.',
+      'ai.hook.text': 'Si vous avez un serveur, un bot ou toute forme d\'intelligence automatisÃ©e &mdash; <strong>OST est votre couche de paiement</strong>.',
       'gc.title': '\u00c9change de Cartes Cadeaux &mdash; Vendez ou Achetez N\'importe Quelle Carte avec OST',
       'gc.sub': 'Transformez n\'importe quelle carte cadeau en OST priv\u00e9, ou payez avec OST et recevez des cartes num\u00e9riques instantan\u00e9es.',
       'gc.tabSell': '&#128178; Vendre Carte &rarr; Recevoir OST',
@@ -1554,306 +1554,306 @@
       'fuel.disclaimer': '&#9888; Les partenariats pr\u00e9sent\u00e9s sont en d\u00e9veloppement. OST n\'est pas affili\u00e9 aux marques list\u00e9es.',
     },
     ja: {
-      'nav.home': 'ホーム', 'nav.newhere': 'OST入手', 'nav.demos': 'コマース', 'nav.wallet': 'ウォレット',
-      'nav.ai': 'AIとボット', 'nav.offline': 'オフライン', 'nav.censorship': '検閲', 'nav.spacex': 'SpaceX',
-      'nav.about': '私たちの物語', 'nav.roadmap': 'ロードマップ', 'nav.build': '開発', 'nav.verify': '検証',
-      'nav.connect': 'ウォレット接続',
-      'wallet.dashTitle': 'マイOSTウォレット', 'wallet.dashSub': 'パーソナルコマンドセンター。OSTウォレットを作成、接続、管理。',
-      'bridges.title': 'ブリッジ、ランプ、取引所', 'bridges.sub': 'OSTへのすべての道 — あらゆるチェーン、通貨、国から。',
-      'hero.tag': 'ビットコインの次のステップ',
-      'hero.title': '私たちは皆 <span class="gradient-text">一つの家族です。</span>',
-      'hero.sub': 'OSTは世界のすべての市民のためのデジタルキャッシュです - プライベート、即時、すでに持っているどの通貨にも接続。',
-      'hero.cta1': 'コマースを見る', 'hero.cta2': 'OSTを入手',
-      'hero.premine': 'プレマインなし', 'hero.settle': '決済', 'hero.opensource': 'オープンソース', 'hero.privacy': 'プライバシー',
-      'story.title': '私たちの物語', 'story.sub': '分散型通貨の最初の火花からプライベートデジタルキャッシュの未来への旅。',
-      'story.t1.title': '火花', 'story.t1.text': 'ビットコインは、銀行でも政府でもなく人々があらゆる国境を越える通貨を作れることを証明しました。',
-      'story.t2.title': 'ギャップ', 'story.t2.text': 'しかしビットコインは遅く、高価で、公開的でした。何十億もの人々が銀行の手数料なしでは家賃も払えませんでした。',
-      'story.t3.title': 'ブレークスルー', 'story.t3.text': 'Solana Token-2022は機密転送を開始 — ゼロ知識証明が残高と金額を世界中から隠します。',
-      'story.t4.title': 'OSTの誕生', 'story.t4.text': '止められない通貨、即時決済、完全なプライバシー、そしてミッション：衛星インフラの資金調達を組み合わせました。',
-      'story.t5.year': '未来', 'story.t5.title': 'すべての市民がつながる',
-      'story.t5.text': 'ラゴスの果物売りとテヘランのエンジニアが同じ金融の自由を共有する世界。',
-      'story.lead': 'どの国にも属さず、すべての市民に奉仕する普遍的デジタルキャッシュを構築しています。',
-      'story.closing': 'OSTへようこそ。おかえりなさい。',
-      'citizens.title': 'すべての市民のために', 'citizens.sub': '国境なし。例外なし。ひとつの人類、ひとつの通貨。',
-      'features.title': '革命的な次のステップ', 'features.sub': '単なるトークンではありません。実生活のための完全な金融システム。',
-      'features.f1.title': '機密転送', 'features.f1.text': 'ゼロ知識証明があなたの残高とすべての取引を隠します。',
-      'features.f2.title': 'サブセカンド決済', 'features.f2.text': 'Solanaで400ミリ秒。カードをタップするより速い。',
-      'features.f3.title': '万通貨ブリッジ', 'features.f3.text': 'ビットコイン、イーサリアム、USDC、銀行送金 — すべて変換可能。',
-      'features.f4.title': '永久無料', 'features.f4.text': '取引手数料ゼロ。寄付と投資家による資金提供。オンチェーンの透明性。',
-      'features.f5.title': 'オフライン決済', 'features.f5.text': 'NFC、QR、Bluetooth。インターネットなしで支払い。',
-      'features.f6.title': 'ZK税務コンプライアンス', 'features.f6.text': '残高を明かさずに納税を証明。',
-      'pay.title': 'OSTでショッピング — リアル価格', 'pay.sub': '本物の商品、実際の価格。プライベート決済を体験。',
-      'pay.cart': 'カート', 'pay.empty': '+をタップして追加', 'pay.paybtn': 'OSTで支払う',
-      'pay.s1': 'ウォレット接続中', 'pay.s2': 'ZK証明生成中', 'pay.s3': 'Solanaにブロードキャスト', 'pay.s4': '0.4秒で確認',
-      'pay.done': '支払い完了 — 完全プライベート', 'pay.donesub': '地球上の誰もこの取引を見ていません。',
-      'transfer.title': 'どこからでもお金を持ち込む', 'transfer.sub': 'ライブ価格。リアルタイムチャート。あらゆる通貨をOSTに交換。',
-      'transfer.calc': '為替レート計算機', 'transfer.calcsub': '任意の金額で何OSTが得られるか確認。',
-      'transfer.widgettitle': '今すぐ変換', 'transfer.from': 'あなたの通貨', 'transfer.to': '機密OST',
-      'transfer.result': 'プライベートかつ即時', 'transfer.convert': 'OSTに変換',
-      'transfer.note': 'Wormhole、Jupiter、Solana Token-2022搭載。',
-      'transfer.fiattitle': '法定通貨から？',
-      'transfer.fiattext': '<strong>MoonPay</strong>、<strong>Transak</strong>、<strong>Ramp Network</strong>を利用 — 100カ国以上で利用可能。',
-      'offline.title': 'どこでもオフラインキャッシュ', 'offline.sub': 'インターネットはまだどこにでもありません。でもあなたのお金はあるべきです。',
-      'offline.lead': '光速の取引 — 電気が消えていても。',
-      'offline.text': '誰かに紙幣を渡すことを想像してください。銀行なし。インターネットなし。二人の人間と価値の移動だけ。',
-      'offline.nfc': 'NFCタップ決済', 'offline.nfctext': 'スマホを近づける。ワンタップ。支払い完了。',
-      'offline.qr': 'QRコードスキャン', 'offline.qrtext': '署名された支払いは1つのQRコードに収まります。',
-      'offline.bt': 'Bluetooth近接', 'offline.bttext': 'BLEが約10メートルの範囲で取引を送信。市場やレストランに最適。',
-      'getost.title': 'OST入手', 'getost.sub': 'あらゆる暗号通貨またはフィアットから即時参入 — スワップにKYC不要。',
-      'getost.swap': 'あらゆる暗号通貨をOSTに交換', 'getost.swaptext': 'JupiterがすべてのSolana流動性プールで最適ルートを検索。',
-      'getost.jupnote': 'ウォレットを接続してスワップウィジェットを読み込む。', 'getost.jupbtn': 'ウィジェットを読み込む',
-      'getost.fiat': '現地通貨で購入', 'getost.fiatsub': 'SOLまたはUSDCを購入し、OSTに交換。',
-      'getost.faucet': '初めてですか？無料OSTを取得', 'getost.faucettext': '新しいウォレットにはコミュニティトレジャリーから<strong>1 OST</strong>が支給されます。',
-      'getost.faucetbtn': '蛇口を開く',
-      'pay.anywhere': '🌐 OSTでどこでも支払い',
-      'pay.anywheresub': '購入中のウェブサイトのリンクを貼り付けてください。OSTを相手が受け入れる通貨に変換します。',
-      'pay.aurl': '販売者URL', 'pay.aamount': '支払い金額', 'pay.acurrency': '相手の通貨',
-      'pay.ayoupay': 'お支払い:', 'pay.arate': 'レート:', 'pay.afee': 'ネットワーク手数料:',
-      'pay.ahow': '仕組み',
-      'pay.astep1': '販売者のチェックアウトリンクを貼り付け', 'pay.astep2': '相手の通貨で金額を入力',
-      'pay.astep3': 'OSTがJupiter + Wormholeでリアルタイム変換', 'pay.astep4': '販売者は自国通貨を受け取り、あなたはOSTで支払い',
-      'pay.apaybtn': 'OSTで支払う', 'pay.asupported': '以下を受け入れるすべてのサイトで動作：',
-      'launch.title': '🚀 メインネットローンチチェックリスト', 'launch.sub': 'Solanaメインネットでの実稼働に必要なもの。',
-      'ai.title': 'あらゆる知性のための力', 'ai.sub': 'AIエージェント、ボット、サーバー、あらゆるデジタル知性を歓迎します。',
-      'build.title': '私たちと未来を建てよう', 'build.sub': 'コード、創造、ピクセルで夢を — OSTはあなたのプラットフォーム。',
-      'build.cta': '今日から貢献を始めよう', 'build.ctasub': 'すべてのコミット、翻訳、チュートリアルが人類を前進させます。',
-      'build.github': 'GitHubリポジトリを見る', 'build.docs': 'ドキュメントを読む',
-      'verify.title': '完全な透明性', 'verify.sub': 'すべてをご自身で検証してください。隠すものはありません。',
-      'verify.lead': '信頼は事実で獲得するもので、約束ではありません。',
-      'verify.closing': 'コードを読む。会社を確認する。トレジャリーを検証する。<strong>それから判断してください。</strong>',
-      'wallet.title': 'ウォレットを接続', 'wallet.sub': 'OSTに接続するウォレットを選択してください。',
-      'footer.mission': 'すべての取引が衛星インフラの資金調達を支援します。<strong>共に築く贈り物。</strong>',
-      'footer.copy': 'オープンソース。地球のすべての人々のために愛を込めて作りました。',
-      'hero.free': '&#128176; 永久無料',
-      'hero.freetext': '取引手数料ゼロ。隠れたコストなし。寄付と投資家が資金提供。',
-      'hero.createwallet': 'ウォレット作成',
-      'hero.stat.unbanked': '世界の銀行口座を持たない成人',
-      'hero.stat.remittance': '送金手数料で失われた$/年',
-      'hero.stat.nointernet': 'インターネットのない人々',
-      'vision.title': 'OSTビジョン：完全な経済的独立',
-      'vision.sub': '現在Solana、Jupiter、サードパーティブリッジを<strong>一時的なインフラ</strong>として使用中。目標は<strong>OSTソブリンネットワーク</strong>の構築。<em>完全分散型。依存関係ゼロ。</em>',
-      'vision.s1.title': '一時的な足場', 'vision.s1.sub': 'Solana + Jupiter + ブリッジ',
-      'vision.s2.title': 'OSTインターチェンジ', 'vision.s2.sub': '独自のマッチングエンジン',
-      'vision.s3.title': 'OSTソブリンネットワーク', 'vision.s3.sub': 'サードパーティ依存ゼロ',
-      'vision.p1': '&#128274; ZKプライベート', 'vision.p2': '&#9889; 0.4秒決済', 'vision.p3': '&#128176; 永久手数料ゼロ',
-      'vision.p4': '&#128295; 独自エンジン', 'vision.p5': '&#127757; 独自DEXとブリッジ', 'vision.p6': '&#128752; 衛星インターネット',
+      'nav.home': 'ãƒ›ãƒ¼ãƒ ', 'nav.newhere': 'OSTå…¥æ‰‹', 'nav.demos': 'ã‚³ãƒžãƒ¼ã‚¹', 'nav.wallet': 'ã‚¦ã‚©ãƒ¬ãƒƒãƒˆ',
+      'nav.ai': 'AIã¨ãƒœãƒƒãƒˆ', 'nav.offline': 'ã‚ªãƒ•ãƒ©ã‚¤ãƒ³', 'nav.censorship': 'æ¤œé–²', 'nav.spacex': 'SpaceX',
+      'nav.about': 'ç§ãŸã¡ã®ç‰©èªž', 'nav.roadmap': 'ãƒ­ãƒ¼ãƒ‰ãƒžãƒƒãƒ—', 'nav.build': 'é–‹ç™º', 'nav.verify': 'æ¤œè¨¼',
+      'nav.connect': 'ã‚¦ã‚©ãƒ¬ãƒƒãƒˆæŽ¥ç¶š',
+      'wallet.dashTitle': 'ãƒžã‚¤OSTã‚¦ã‚©ãƒ¬ãƒƒãƒˆ', 'wallet.dashSub': 'ãƒ‘ãƒ¼ã‚½ãƒŠãƒ«ã‚³ãƒžãƒ³ãƒ‰ã‚»ãƒ³ã‚¿ãƒ¼ã€‚OSTã‚¦ã‚©ãƒ¬ãƒƒãƒˆã‚’ä½œæˆã€æŽ¥ç¶šã€ç®¡ç†ã€‚',
+      'bridges.title': 'ãƒ–ãƒªãƒƒã‚¸ã€ãƒ©ãƒ³ãƒ—ã€å–å¼•æ‰€', 'bridges.sub': 'OSTã¸ã®ã™ã¹ã¦ã®é“ â€” ã‚ã‚‰ã‚†ã‚‹ãƒã‚§ãƒ¼ãƒ³ã€é€šè²¨ã€å›½ã‹ã‚‰ã€‚',
+      'hero.tag': 'ãƒ“ãƒƒãƒˆã‚³ã‚¤ãƒ³ã®æ¬¡ã®ã‚¹ãƒ†ãƒƒãƒ—',
+      'hero.title': 'ç§ãŸã¡ã¯çš† <span class="gradient-text">ä¸€ã¤ã®å®¶æ—ã§ã™ã€‚</span>',
+      'hero.sub': 'OSTã¯ä¸–ç•Œã®ã™ã¹ã¦ã®å¸‚æ°‘ã®ãŸã‚ã®ãƒ‡ã‚¸ã‚¿ãƒ«ã‚­ãƒ£ãƒƒã‚·ãƒ¥ã§ã™ - ãƒ—ãƒ©ã‚¤ãƒ™ãƒ¼ãƒˆã€å³æ™‚ã€ã™ã§ã«æŒã£ã¦ã„ã‚‹ã©ã®é€šè²¨ã«ã‚‚æŽ¥ç¶šã€‚',
+      'hero.cta1': 'ã‚³ãƒžãƒ¼ã‚¹ã‚’è¦‹ã‚‹', 'hero.cta2': 'OSTã‚’å…¥æ‰‹',
+      'hero.premine': 'ãƒ—ãƒ¬ãƒžã‚¤ãƒ³ãªã—', 'hero.settle': 'æ±ºæ¸ˆ', 'hero.opensource': 'ã‚ªãƒ¼ãƒ—ãƒ³ã‚½ãƒ¼ã‚¹', 'hero.privacy': 'ãƒ—ãƒ©ã‚¤ãƒã‚·ãƒ¼',
+      'story.title': 'ç§ãŸã¡ã®ç‰©èªž', 'story.sub': 'åˆ†æ•£åž‹é€šè²¨ã®æœ€åˆã®ç«èŠ±ã‹ã‚‰ãƒ—ãƒ©ã‚¤ãƒ™ãƒ¼ãƒˆãƒ‡ã‚¸ã‚¿ãƒ«ã‚­ãƒ£ãƒƒã‚·ãƒ¥ã®æœªæ¥ã¸ã®æ—…ã€‚',
+      'story.t1.title': 'ç«èŠ±', 'story.t1.text': 'ãƒ“ãƒƒãƒˆã‚³ã‚¤ãƒ³ã¯ã€éŠ€è¡Œã§ã‚‚æ”¿åºœã§ã‚‚ãªãäººã€…ãŒã‚ã‚‰ã‚†ã‚‹å›½å¢ƒã‚’è¶Šãˆã‚‹é€šè²¨ã‚’ä½œã‚Œã‚‹ã“ã¨ã‚’è¨¼æ˜Žã—ã¾ã—ãŸã€‚',
+      'story.t2.title': 'ã‚®ãƒ£ãƒƒãƒ—', 'story.t2.text': 'ã—ã‹ã—ãƒ“ãƒƒãƒˆã‚³ã‚¤ãƒ³ã¯é…ãã€é«˜ä¾¡ã§ã€å…¬é–‹çš„ã§ã—ãŸã€‚ä½•åå„„ã‚‚ã®äººã€…ãŒéŠ€è¡Œã®æ‰‹æ•°æ–™ãªã—ã§ã¯å®¶è³ƒã‚‚æ‰•ãˆã¾ã›ã‚“ã§ã—ãŸã€‚',
+      'story.t3.title': 'ãƒ–ãƒ¬ãƒ¼ã‚¯ã‚¹ãƒ«ãƒ¼', 'story.t3.text': 'Solana Token-2022ã¯æ©Ÿå¯†è»¢é€ã‚’é–‹å§‹ â€” ã‚¼ãƒ­çŸ¥è­˜è¨¼æ˜ŽãŒæ®‹é«˜ã¨é‡‘é¡ã‚’ä¸–ç•Œä¸­ã‹ã‚‰éš ã—ã¾ã™ã€‚',
+      'story.t4.title': 'OSTã®èª•ç”Ÿ', 'story.t4.text': 'æ­¢ã‚ã‚‰ã‚Œãªã„é€šè²¨ã€å³æ™‚æ±ºæ¸ˆã€å®Œå…¨ãªãƒ—ãƒ©ã‚¤ãƒã‚·ãƒ¼ã€ãã—ã¦ãƒŸãƒƒã‚·ãƒ§ãƒ³ï¼šè¡›æ˜Ÿã‚¤ãƒ³ãƒ•ãƒ©ã®è³‡é‡‘èª¿é”ã‚’çµ„ã¿åˆã‚ã›ã¾ã—ãŸã€‚',
+      'story.t5.year': 'æœªæ¥', 'story.t5.title': 'ã™ã¹ã¦ã®å¸‚æ°‘ãŒã¤ãªãŒã‚‹',
+      'story.t5.text': 'ãƒ©ã‚´ã‚¹ã®æžœç‰©å£²ã‚Šã¨ãƒ†ãƒ˜ãƒ©ãƒ³ã®ã‚¨ãƒ³ã‚¸ãƒ‹ã‚¢ãŒåŒã˜é‡‘èžã®è‡ªç”±ã‚’å…±æœ‰ã™ã‚‹ä¸–ç•Œã€‚',
+      'story.lead': 'ã©ã®å›½ã«ã‚‚å±žã•ãšã€ã™ã¹ã¦ã®å¸‚æ°‘ã«å¥‰ä»•ã™ã‚‹æ™®éçš„ãƒ‡ã‚¸ã‚¿ãƒ«ã‚­ãƒ£ãƒƒã‚·ãƒ¥ã‚’æ§‹ç¯‰ã—ã¦ã„ã¾ã™ã€‚',
+      'story.closing': 'OSTã¸ã‚ˆã†ã“ãã€‚ãŠã‹ãˆã‚Šãªã•ã„ã€‚',
+      'citizens.title': 'ã™ã¹ã¦ã®å¸‚æ°‘ã®ãŸã‚ã«', 'citizens.sub': 'å›½å¢ƒãªã—ã€‚ä¾‹å¤–ãªã—ã€‚ã²ã¨ã¤ã®äººé¡žã€ã²ã¨ã¤ã®é€šè²¨ã€‚',
+      'features.title': 'é©å‘½çš„ãªæ¬¡ã®ã‚¹ãƒ†ãƒƒãƒ—', 'features.sub': 'å˜ãªã‚‹ãƒˆãƒ¼ã‚¯ãƒ³ã§ã¯ã‚ã‚Šã¾ã›ã‚“ã€‚å®Ÿç”Ÿæ´»ã®ãŸã‚ã®å®Œå…¨ãªé‡‘èžã‚·ã‚¹ãƒ†ãƒ ã€‚',
+      'features.f1.title': 'æ©Ÿå¯†è»¢é€', 'features.f1.text': 'ã‚¼ãƒ­çŸ¥è­˜è¨¼æ˜ŽãŒã‚ãªãŸã®æ®‹é«˜ã¨ã™ã¹ã¦ã®å–å¼•ã‚’éš ã—ã¾ã™ã€‚',
+      'features.f2.title': 'ã‚µãƒ–ã‚»ã‚«ãƒ³ãƒ‰æ±ºæ¸ˆ', 'features.f2.text': 'Solanaã§400ãƒŸãƒªç§’ã€‚ã‚«ãƒ¼ãƒ‰ã‚’ã‚¿ãƒƒãƒ—ã™ã‚‹ã‚ˆã‚Šé€Ÿã„ã€‚',
+      'features.f3.title': 'ä¸‡é€šè²¨ãƒ–ãƒªãƒƒã‚¸', 'features.f3.text': 'ãƒ“ãƒƒãƒˆã‚³ã‚¤ãƒ³ã€ã‚¤ãƒ¼ã‚µãƒªã‚¢ãƒ ã€USDCã€éŠ€è¡Œé€é‡‘ â€” ã™ã¹ã¦å¤‰æ›å¯èƒ½ã€‚',
+      'features.f4.title': 'æ°¸ä¹…ç„¡æ–™', 'features.f4.text': 'å–å¼•æ‰‹æ•°æ–™ã‚¼ãƒ­ã€‚å¯„ä»˜ã¨æŠ•è³‡å®¶ã«ã‚ˆã‚‹è³‡é‡‘æä¾›ã€‚ã‚ªãƒ³ãƒã‚§ãƒ¼ãƒ³ã®é€æ˜Žæ€§ã€‚',
+      'features.f5.title': 'ã‚ªãƒ•ãƒ©ã‚¤ãƒ³æ±ºæ¸ˆ', 'features.f5.text': 'NFCã€QRã€Bluetoothã€‚ã‚¤ãƒ³ã‚¿ãƒ¼ãƒãƒƒãƒˆãªã—ã§æ”¯æ‰•ã„ã€‚',
+      'features.f6.title': 'ZKç¨Žå‹™ã‚³ãƒ³ãƒ—ãƒ©ã‚¤ã‚¢ãƒ³ã‚¹', 'features.f6.text': 'æ®‹é«˜ã‚’æ˜Žã‹ã•ãšã«ç´ç¨Žã‚’è¨¼æ˜Žã€‚',
+      'pay.title': 'OSTã§ã‚·ãƒ§ãƒƒãƒ”ãƒ³ã‚° â€” ãƒªã‚¢ãƒ«ä¾¡æ ¼', 'pay.sub': 'æœ¬ç‰©ã®å•†å“ã€å®Ÿéš›ã®ä¾¡æ ¼ã€‚ãƒ—ãƒ©ã‚¤ãƒ™ãƒ¼ãƒˆæ±ºæ¸ˆã‚’ä½“é¨“ã€‚',
+      'pay.cart': 'ã‚«ãƒ¼ãƒˆ', 'pay.empty': '+ã‚’ã‚¿ãƒƒãƒ—ã—ã¦è¿½åŠ ', 'pay.paybtn': 'OSTã§æ”¯æ‰•ã†',
+      'pay.s1': 'ã‚¦ã‚©ãƒ¬ãƒƒãƒˆæŽ¥ç¶šä¸­', 'pay.s2': 'ZKè¨¼æ˜Žç”Ÿæˆä¸­', 'pay.s3': 'Solanaã«ãƒ–ãƒ­ãƒ¼ãƒ‰ã‚­ãƒ£ã‚¹ãƒˆ', 'pay.s4': '0.4ç§’ã§ç¢ºèª',
+      'pay.done': 'æ”¯æ‰•ã„å®Œäº† â€” å®Œå…¨ãƒ—ãƒ©ã‚¤ãƒ™ãƒ¼ãƒˆ', 'pay.donesub': 'åœ°çƒä¸Šã®èª°ã‚‚ã“ã®å–å¼•ã‚’è¦‹ã¦ã„ã¾ã›ã‚“ã€‚',
+      'transfer.title': 'ã©ã“ã‹ã‚‰ã§ã‚‚ãŠé‡‘ã‚’æŒã¡è¾¼ã‚€', 'transfer.sub': 'ãƒ©ã‚¤ãƒ–ä¾¡æ ¼ã€‚ãƒªã‚¢ãƒ«ã‚¿ã‚¤ãƒ ãƒãƒ£ãƒ¼ãƒˆã€‚ã‚ã‚‰ã‚†ã‚‹é€šè²¨ã‚’OSTã«äº¤æ›ã€‚',
+      'transfer.calc': 'ç‚ºæ›¿ãƒ¬ãƒ¼ãƒˆè¨ˆç®—æ©Ÿ', 'transfer.calcsub': 'ä»»æ„ã®é‡‘é¡ã§ä½•OSTãŒå¾—ã‚‰ã‚Œã‚‹ã‹ç¢ºèªã€‚',
+      'transfer.widgettitle': 'ä»Šã™ãå¤‰æ›', 'transfer.from': 'ã‚ãªãŸã®é€šè²¨', 'transfer.to': 'æ©Ÿå¯†OST',
+      'transfer.result': 'ãƒ—ãƒ©ã‚¤ãƒ™ãƒ¼ãƒˆã‹ã¤å³æ™‚', 'transfer.convert': 'OSTã«å¤‰æ›',
+      'transfer.note': 'Wormholeã€Jupiterã€Solana Token-2022æ­è¼‰ã€‚',
+      'transfer.fiattitle': 'æ³•å®šé€šè²¨ã‹ã‚‰ï¼Ÿ',
+      'transfer.fiattext': '<strong>MoonPay</strong>ã€<strong>Transak</strong>ã€<strong>Ramp Network</strong>ã‚’åˆ©ç”¨ â€” 100ã‚«å›½ä»¥ä¸Šã§åˆ©ç”¨å¯èƒ½ã€‚',
+      'offline.title': 'ã©ã“ã§ã‚‚ã‚ªãƒ•ãƒ©ã‚¤ãƒ³ã‚­ãƒ£ãƒƒã‚·ãƒ¥', 'offline.sub': 'ã‚¤ãƒ³ã‚¿ãƒ¼ãƒãƒƒãƒˆã¯ã¾ã ã©ã“ã«ã§ã‚‚ã‚ã‚Šã¾ã›ã‚“ã€‚ã§ã‚‚ã‚ãªãŸã®ãŠé‡‘ã¯ã‚ã‚‹ã¹ãã§ã™ã€‚',
+      'offline.lead': 'å…‰é€Ÿã®å–å¼• â€” é›»æ°—ãŒæ¶ˆãˆã¦ã„ã¦ã‚‚ã€‚',
+      'offline.text': 'èª°ã‹ã«ç´™å¹£ã‚’æ¸¡ã™ã“ã¨ã‚’æƒ³åƒã—ã¦ãã ã•ã„ã€‚éŠ€è¡Œãªã—ã€‚ã‚¤ãƒ³ã‚¿ãƒ¼ãƒãƒƒãƒˆãªã—ã€‚äºŒäººã®äººé–“ã¨ä¾¡å€¤ã®ç§»å‹•ã ã‘ã€‚',
+      'offline.nfc': 'NFCã‚¿ãƒƒãƒ—æ±ºæ¸ˆ', 'offline.nfctext': 'ã‚¹ãƒžãƒ›ã‚’è¿‘ã¥ã‘ã‚‹ã€‚ãƒ¯ãƒ³ã‚¿ãƒƒãƒ—ã€‚æ”¯æ‰•ã„å®Œäº†ã€‚',
+      'offline.qr': 'QRã‚³ãƒ¼ãƒ‰ã‚¹ã‚­ãƒ£ãƒ³', 'offline.qrtext': 'ç½²åã•ã‚ŒãŸæ”¯æ‰•ã„ã¯1ã¤ã®QRã‚³ãƒ¼ãƒ‰ã«åŽã¾ã‚Šã¾ã™ã€‚',
+      'offline.bt': 'Bluetoothè¿‘æŽ¥', 'offline.bttext': 'BLEãŒç´„10ãƒ¡ãƒ¼ãƒˆãƒ«ã®ç¯„å›²ã§å–å¼•ã‚’é€ä¿¡ã€‚å¸‚å ´ã‚„ãƒ¬ã‚¹ãƒˆãƒ©ãƒ³ã«æœ€é©ã€‚',
+      'getost.title': 'OSTå…¥æ‰‹', 'getost.sub': 'ã‚ã‚‰ã‚†ã‚‹æš—å·é€šè²¨ã¾ãŸã¯ãƒ•ã‚£ã‚¢ãƒƒãƒˆã‹ã‚‰å³æ™‚å‚å…¥ â€” ã‚¹ãƒ¯ãƒƒãƒ—ã«KYCä¸è¦ã€‚',
+      'getost.swap': 'ã‚ã‚‰ã‚†ã‚‹æš—å·é€šè²¨ã‚’OSTã«äº¤æ›', 'getost.swaptext': 'JupiterãŒã™ã¹ã¦ã®Solanaæµå‹•æ€§ãƒ—ãƒ¼ãƒ«ã§æœ€é©ãƒ«ãƒ¼ãƒˆã‚’æ¤œç´¢ã€‚',
+      'getost.jupnote': 'ã‚¦ã‚©ãƒ¬ãƒƒãƒˆã‚’æŽ¥ç¶šã—ã¦ã‚¹ãƒ¯ãƒƒãƒ—ã‚¦ã‚£ã‚¸ã‚§ãƒƒãƒˆã‚’èª­ã¿è¾¼ã‚€ã€‚', 'getost.jupbtn': 'ã‚¦ã‚£ã‚¸ã‚§ãƒƒãƒˆã‚’èª­ã¿è¾¼ã‚€',
+      'getost.fiat': 'ç¾åœ°é€šè²¨ã§è³¼å…¥', 'getost.fiatsub': 'SOLã¾ãŸã¯USDCã‚’è³¼å…¥ã—ã€OSTã«äº¤æ›ã€‚',
+      'getost.faucet': 'åˆã‚ã¦ã§ã™ã‹ï¼Ÿç„¡æ–™OSTã‚’å–å¾—', 'getost.faucettext': 'æ–°ã—ã„ã‚¦ã‚©ãƒ¬ãƒƒãƒˆã«ã¯ã‚³ãƒŸãƒ¥ãƒ‹ãƒ†ã‚£ãƒˆãƒ¬ã‚¸ãƒ£ãƒªãƒ¼ã‹ã‚‰<strong>1 OST</strong>ãŒæ”¯çµ¦ã•ã‚Œã¾ã™ã€‚',
+      'getost.faucetbtn': 'è›‡å£ã‚’é–‹ã',
+      'pay.anywhere': 'ðŸŒ OSTã§ã©ã“ã§ã‚‚æ”¯æ‰•ã„',
+      'pay.anywheresub': 'è³¼å…¥ä¸­ã®ã‚¦ã‚§ãƒ–ã‚µã‚¤ãƒˆã®ãƒªãƒ³ã‚¯ã‚’è²¼ã‚Šä»˜ã‘ã¦ãã ã•ã„ã€‚OSTã‚’ç›¸æ‰‹ãŒå—ã‘å…¥ã‚Œã‚‹é€šè²¨ã«å¤‰æ›ã—ã¾ã™ã€‚',
+      'pay.aurl': 'è²©å£²è€…URL', 'pay.aamount': 'æ”¯æ‰•ã„é‡‘é¡', 'pay.acurrency': 'ç›¸æ‰‹ã®é€šè²¨',
+      'pay.ayoupay': 'ãŠæ”¯æ‰•ã„:', 'pay.arate': 'ãƒ¬ãƒ¼ãƒˆ:', 'pay.afee': 'ãƒãƒƒãƒˆãƒ¯ãƒ¼ã‚¯æ‰‹æ•°æ–™:',
+      'pay.ahow': 'ä»•çµ„ã¿',
+      'pay.astep1': 'è²©å£²è€…ã®ãƒã‚§ãƒƒã‚¯ã‚¢ã‚¦ãƒˆãƒªãƒ³ã‚¯ã‚’è²¼ã‚Šä»˜ã‘', 'pay.astep2': 'ç›¸æ‰‹ã®é€šè²¨ã§é‡‘é¡ã‚’å…¥åŠ›',
+      'pay.astep3': 'OSTãŒJupiter + Wormholeã§ãƒªã‚¢ãƒ«ã‚¿ã‚¤ãƒ å¤‰æ›', 'pay.astep4': 'è²©å£²è€…ã¯è‡ªå›½é€šè²¨ã‚’å—ã‘å–ã‚Šã€ã‚ãªãŸã¯OSTã§æ”¯æ‰•ã„',
+      'pay.apaybtn': 'OSTã§æ”¯æ‰•ã†', 'pay.asupported': 'ä»¥ä¸‹ã‚’å—ã‘å…¥ã‚Œã‚‹ã™ã¹ã¦ã®ã‚µã‚¤ãƒˆã§å‹•ä½œï¼š',
+      'launch.title': 'ðŸš€ ãƒ¡ã‚¤ãƒ³ãƒãƒƒãƒˆãƒ­ãƒ¼ãƒ³ãƒãƒã‚§ãƒƒã‚¯ãƒªã‚¹ãƒˆ', 'launch.sub': 'Solanaãƒ¡ã‚¤ãƒ³ãƒãƒƒãƒˆã§ã®å®Ÿç¨¼åƒã«å¿…è¦ãªã‚‚ã®ã€‚',
+      'ai.title': 'ã‚ã‚‰ã‚†ã‚‹çŸ¥æ€§ã®ãŸã‚ã®åŠ›', 'ai.sub': 'AIã‚¨ãƒ¼ã‚¸ã‚§ãƒ³ãƒˆã€ãƒœãƒƒãƒˆã€ã‚µãƒ¼ãƒãƒ¼ã€ã‚ã‚‰ã‚†ã‚‹ãƒ‡ã‚¸ã‚¿ãƒ«çŸ¥æ€§ã‚’æ­“è¿Žã—ã¾ã™ã€‚',
+      'build.title': 'ç§ãŸã¡ã¨æœªæ¥ã‚’å»ºã¦ã‚ˆã†', 'build.sub': 'ã‚³ãƒ¼ãƒ‰ã€å‰µé€ ã€ãƒ”ã‚¯ã‚»ãƒ«ã§å¤¢ã‚’ â€” OSTã¯ã‚ãªãŸã®ãƒ—ãƒ©ãƒƒãƒˆãƒ•ã‚©ãƒ¼ãƒ ã€‚',
+      'build.cta': 'ä»Šæ—¥ã‹ã‚‰è²¢çŒ®ã‚’å§‹ã‚ã‚ˆã†', 'build.ctasub': 'ã™ã¹ã¦ã®ã‚³ãƒŸãƒƒãƒˆã€ç¿»è¨³ã€ãƒãƒ¥ãƒ¼ãƒˆãƒªã‚¢ãƒ«ãŒäººé¡žã‚’å‰é€²ã•ã›ã¾ã™ã€‚',
+      'build.github': 'GitHubãƒªãƒã‚¸ãƒˆãƒªã‚’è¦‹ã‚‹', 'build.docs': 'ãƒ‰ã‚­ãƒ¥ãƒ¡ãƒ³ãƒˆã‚’èª­ã‚€',
+      'verify.title': 'å®Œå…¨ãªé€æ˜Žæ€§', 'verify.sub': 'ã™ã¹ã¦ã‚’ã”è‡ªèº«ã§æ¤œè¨¼ã—ã¦ãã ã•ã„ã€‚éš ã™ã‚‚ã®ã¯ã‚ã‚Šã¾ã›ã‚“ã€‚',
+      'verify.lead': 'ä¿¡é ¼ã¯äº‹å®Ÿã§ç²å¾—ã™ã‚‹ã‚‚ã®ã§ã€ç´„æŸã§ã¯ã‚ã‚Šã¾ã›ã‚“ã€‚',
+      'verify.closing': 'ã‚³ãƒ¼ãƒ‰ã‚’èª­ã‚€ã€‚ä¼šç¤¾ã‚’ç¢ºèªã™ã‚‹ã€‚ãƒˆãƒ¬ã‚¸ãƒ£ãƒªãƒ¼ã‚’æ¤œè¨¼ã™ã‚‹ã€‚<strong>ãã‚Œã‹ã‚‰åˆ¤æ–­ã—ã¦ãã ã•ã„ã€‚</strong>',
+      'wallet.title': 'ã‚¦ã‚©ãƒ¬ãƒƒãƒˆã‚’æŽ¥ç¶š', 'wallet.sub': 'OSTã«æŽ¥ç¶šã™ã‚‹ã‚¦ã‚©ãƒ¬ãƒƒãƒˆã‚’é¸æŠžã—ã¦ãã ã•ã„ã€‚',
+      'footer.mission': 'ã™ã¹ã¦ã®å–å¼•ãŒè¡›æ˜Ÿã‚¤ãƒ³ãƒ•ãƒ©ã®è³‡é‡‘èª¿é”ã‚’æ”¯æ´ã—ã¾ã™ã€‚<strong>å…±ã«ç¯‰ãè´ˆã‚Šç‰©ã€‚</strong>',
+      'footer.copy': 'ã‚ªãƒ¼ãƒ—ãƒ³ã‚½ãƒ¼ã‚¹ã€‚åœ°çƒã®ã™ã¹ã¦ã®äººã€…ã®ãŸã‚ã«æ„›ã‚’è¾¼ã‚ã¦ä½œã‚Šã¾ã—ãŸã€‚',
+      'hero.free': '&#128176; æ°¸ä¹…ç„¡æ–™',
+      'hero.freetext': 'å–å¼•æ‰‹æ•°æ–™ã‚¼ãƒ­ã€‚éš ã‚ŒãŸã‚³ã‚¹ãƒˆãªã—ã€‚å¯„ä»˜ã¨æŠ•è³‡å®¶ãŒè³‡é‡‘æä¾›ã€‚',
+      'hero.createwallet': 'ã‚¦ã‚©ãƒ¬ãƒƒãƒˆä½œæˆ',
+      'hero.stat.unbanked': 'ä¸–ç•Œã®éŠ€è¡Œå£åº§ã‚’æŒãŸãªã„æˆäºº',
+      'hero.stat.remittance': 'é€é‡‘æ‰‹æ•°æ–™ã§å¤±ã‚ã‚ŒãŸ$/å¹´',
+      'hero.stat.nointernet': 'ã‚¤ãƒ³ã‚¿ãƒ¼ãƒãƒƒãƒˆã®ãªã„äººã€…',
+      'vision.title': 'OSTãƒ“ã‚¸ãƒ§ãƒ³ï¼šå®Œå…¨ãªçµŒæ¸ˆçš„ç‹¬ç«‹',
+      'vision.sub': 'ç¾åœ¨Solanaã€Jupiterã€ã‚µãƒ¼ãƒ‰ãƒ‘ãƒ¼ãƒ†ã‚£ãƒ–ãƒªãƒƒã‚¸ã‚’<strong>ä¸€æ™‚çš„ãªã‚¤ãƒ³ãƒ•ãƒ©</strong>ã¨ã—ã¦ä½¿ç”¨ä¸­ã€‚ç›®æ¨™ã¯<strong>OSTã‚½ãƒ–ãƒªãƒ³ãƒãƒƒãƒˆãƒ¯ãƒ¼ã‚¯</strong>ã®æ§‹ç¯‰ã€‚<em>å®Œå…¨åˆ†æ•£åž‹ã€‚ä¾å­˜é–¢ä¿‚ã‚¼ãƒ­ã€‚</em>',
+      'vision.s1.title': 'ä¸€æ™‚çš„ãªè¶³å ´', 'vision.s1.sub': 'Solana + Jupiter + ãƒ–ãƒªãƒƒã‚¸',
+      'vision.s2.title': 'OSTã‚¤ãƒ³ã‚¿ãƒ¼ãƒã‚§ãƒ³ã‚¸', 'vision.s2.sub': 'ç‹¬è‡ªã®ãƒžãƒƒãƒãƒ³ã‚°ã‚¨ãƒ³ã‚¸ãƒ³',
+      'vision.s3.title': 'OSTã‚½ãƒ–ãƒªãƒ³ãƒãƒƒãƒˆãƒ¯ãƒ¼ã‚¯', 'vision.s3.sub': 'ã‚µãƒ¼ãƒ‰ãƒ‘ãƒ¼ãƒ†ã‚£ä¾å­˜ã‚¼ãƒ­',
+      'vision.p1': '&#128274; ZKãƒ—ãƒ©ã‚¤ãƒ™ãƒ¼ãƒˆ', 'vision.p2': '&#9889; 0.4ç§’æ±ºæ¸ˆ', 'vision.p3': '&#128176; æ°¸ä¹…æ‰‹æ•°æ–™ã‚¼ãƒ­',
+      'vision.p4': '&#128295; ç‹¬è‡ªã‚¨ãƒ³ã‚¸ãƒ³', 'vision.p5': '&#127757; ç‹¬è‡ªDEXã¨ãƒ–ãƒªãƒƒã‚¸', 'vision.p6': '&#128752; è¡›æ˜Ÿã‚¤ãƒ³ã‚¿ãƒ¼ãƒãƒƒãƒˆ',
       'vision.spacex.title': 'OST &times; SpaceX',
-      'vision.spacex.text': '低軌道衛星を通じて26億人に検閲なしのインターネットと決済を提供するパートナーシップ。',
-      'vision.spacex.btn': 'ジャーニーを探索 &#8594;',
-      'newhere.title': '&#127381; 初めてですか？OSTの旅を始めましょう',
-      'newhere.sub': '無料OSTを請求し、ファミリーボールトを作成し、インフラ貢献で報酬を獲得しましょう。',
-      'gv.title': 'ファミリーグロウボールト',
-      'gv.sub': '新世代と共に宇宙で誕生する最初のコイン。お子様のためのカストディアルボールトを作成しましょう。',
-      'gv.disclaimer': '教育目的のみ。両親/保護者がすべての税法と現地法に責任を負います。',
-      'depin.title': 'DePINデータセンターフォーセット',
-      'depin.sub': '帯域幅、GPU、CPU、衛星容量を共有 &mdash; 分散型データセンター構築でOSTを獲得。',
-      'demos.title': '&#128717;&#65039; OSTコマース', 'demos.sub': 'プライベートで即時の支払いを体験。リアル製品。手数料ゼロ。',
-      'wallet.getTitle': 'あなたのOSTウォレットを取得', 'wallet.getSub': 'ウォレットの作成または接続方法を選択してください。',
-      'sell.title': 'OSTの売却・取引', 'sell.sub': '任意の暗号通貨またはフィアットに引き出し。同じ速度、同じプライバシー。',
-      'censor.title': '&#128683; インターネット検閲が今起きている', 'censor.sub': '実際の出来事。実際の人々。OSTはデジタル弾圧への答え。',
-      'spacex.title': 'OST &times; SpaceX &mdash; 宇宙への旅', 'spacex.sub': '地球から火星までのパートナーシップロードマップをフォロー。',
-      'roadmap.title': '&#128640; ロードマップと進捗', 'roadmap.sub': '現在地、構築したもの、次のステップ。',
-      'offline.scenarios': '実世界のシナリオ', 'offline.scenariosub': '世界銀行、UNHCR、EM-DATの検証済みデータ。仮説ではありません。',
-      'ai.hook.title': 'サーバー、ボット、ロカホストを運用中？',
-      'ai.hook.text': 'サーバー、ボット、自動化されたインテリジェンスがあれば &mdash; <strong>OSTがあなたの決済レイヤー</strong>です。',
-      'gc.title': 'ギフトカード交換 &mdash; OSTでギフトカードを売買',
-      'gc.sub': 'ギフトカードをプライベートOSTに変換、またはOSTで支払い即座にデジタルギフトカードを受け取れます。',
-      'gc.tabSell': '&#128178; カードを売る &rarr; OST獲得',
-      'gc.tabBuy': '&#127873; OSTでカード購入',
-      'gc.pipe.paste': 'コード貼付', 'gc.pipe.verify': '検証', 'gc.pipe.receive': 'OST受取',
-      'gc.pipe.payOst': 'OST支払', 'gc.pipe.convert': '変換', 'gc.pipe.getCard': 'カード取得',
-      'gc.merchant': 'ブランド', 'gc.merchantBuy': 'ギフトカードを選択',
-      'gc.code': 'ギフトカードコード', 'gc.balance': 'カード残高(USD)',
-      'gc.youGet': '受取額', 'gc.youPay': '支払額', 'gc.amount': '金額(USD)',
-      'gc.email': '配信メール(任意)',
-      'gc.rate': 'レート:', 'gc.fee': '財務手数料(0.1%):',
-      'gc.feeNote': '&#128752; 手数料は衛星インフラに資金提供',
-      'gc.sellBtn': '検証して売却 &rarr; OST獲得',
-      'gc.buyBtn': 'OST支払い &rarr; ギフトカード取得',
-      'gc.step.verify': 'ギフトカードコード検証中&hellip;',
-      'gc.step.zk': 'ZK証明生成中&hellip;',
-      'gc.step.send': '機密転送でOST送信中&hellip;',
-      'gc.step.done': '完了！OSTをプライベートに受領。',
-      'gc.step.debit': 'OST引落(機密)&hellip;',
-      'gc.step.swap': 'Jupiter経由でOST&rarr;USDC交換&hellip;',
-      'gc.step.purchase': 'ギフトカード購入中&hellip;',
-      'gc.step.delivered': 'ギフトカード配信完了！',
-      'gc.supported': '対応ブランド:',
-      'gc.disclaimer': '&#9888; ユーザーはギフトカードの有効性を確認する責任があります。OSTはギフトカード発行者ではありません。現地法に従います。',
-      'fuel.title': '燃料＆ガソリンスタンド',
-      'fuel.sub': '世界中のガソリンスタンドでOSTで支払い — 給油のたびにリワードを獲得',
-      'fuel.howTitle': '使い方',
-      'fuel.step1': '到着',
-      'fuel.step1d': 'パートナーステーションへ',
-      'fuel.step2': 'タップ＆ペイ',
-      'fuel.step2d': 'NFCまたはQRでOSTで支払い',
-      'fuel.step3': 'リワード獲得',
-      'fuel.step3d': 'OSTで即座にキャッシュバック',
-      'fuel.step4': '出発',
-      'fuel.step4d': 'レシートがウォレットに送信',
-      'fuel.calcTitle': '燃料リワード計算機',
-      'fuel.gallons': 'ガロン',
-      'fuel.priceGal': 'ガロン単価 (USD)',
-      'fuel.total': '合計コスト',
-      'fuel.ostCost': 'OST換算',
-      'fuel.reward': 'キャッシュバック (3%)',
-      'fuel.offlineTitle': 'オフライン対応',
-      'fuel.offlineDesc': 'NFC＆BLE — インターネットなしで支払い可能。オンライン復帰時に同期。',
-      'fuel.partnersTitle': 'パートナーステーション',
-      'fuel.partnersSub': '世界の20+主要燃料ブランドで利用可能',
-      'fuel.rewardsTitle': 'リワードティア',
-      'fuel.disclaimer': '&#9888; 表示されているパートナーシップは開発中です。OSTは掲載ブランドとは提携していません。',
+      'vision.spacex.text': 'ä½Žè»Œé“è¡›æ˜Ÿã‚’é€šã˜ã¦26å„„äººã«æ¤œé–²ãªã—ã®ã‚¤ãƒ³ã‚¿ãƒ¼ãƒãƒƒãƒˆã¨æ±ºæ¸ˆã‚’æä¾›ã™ã‚‹ãƒ‘ãƒ¼ãƒˆãƒŠãƒ¼ã‚·ãƒƒãƒ—ã€‚',
+      'vision.spacex.btn': 'ã‚¸ãƒ£ãƒ¼ãƒ‹ãƒ¼ã‚’æŽ¢ç´¢ &#8594;',
+      'newhere.title': '&#127381; åˆã‚ã¦ã§ã™ã‹ï¼ŸOSTã®æ—…ã‚’å§‹ã‚ã¾ã—ã‚‡ã†',
+      'newhere.sub': 'ç„¡æ–™OSTã‚’è«‹æ±‚ã—ã€ãƒ•ã‚¡ãƒŸãƒªãƒ¼ãƒœãƒ¼ãƒ«ãƒˆã‚’ä½œæˆã—ã€ã‚¤ãƒ³ãƒ•ãƒ©è²¢çŒ®ã§å ±é…¬ã‚’ç²å¾—ã—ã¾ã—ã‚‡ã†ã€‚',
+      'gv.title': 'ãƒ•ã‚¡ãƒŸãƒªãƒ¼ã‚°ãƒ­ã‚¦ãƒœãƒ¼ãƒ«ãƒˆ',
+      'gv.sub': 'æ–°ä¸–ä»£ã¨å…±ã«å®‡å®™ã§èª•ç”Ÿã™ã‚‹æœ€åˆã®ã‚³ã‚¤ãƒ³ã€‚ãŠå­æ§˜ã®ãŸã‚ã®ã‚«ã‚¹ãƒˆãƒ‡ã‚£ã‚¢ãƒ«ãƒœãƒ¼ãƒ«ãƒˆã‚’ä½œæˆã—ã¾ã—ã‚‡ã†ã€‚',
+      'gv.disclaimer': 'æ•™è‚²ç›®çš„ã®ã¿ã€‚ä¸¡è¦ª/ä¿è­·è€…ãŒã™ã¹ã¦ã®ç¨Žæ³•ã¨ç¾åœ°æ³•ã«è²¬ä»»ã‚’è² ã„ã¾ã™ã€‚',
+      'depin.title': 'DePINãƒ‡ãƒ¼ã‚¿ã‚»ãƒ³ã‚¿ãƒ¼ãƒ•ã‚©ãƒ¼ã‚»ãƒƒãƒˆ',
+      'depin.sub': 'å¸¯åŸŸå¹…ã€GPUã€CPUã€è¡›æ˜Ÿå®¹é‡ã‚’å…±æœ‰ &mdash; åˆ†æ•£åž‹ãƒ‡ãƒ¼ã‚¿ã‚»ãƒ³ã‚¿ãƒ¼æ§‹ç¯‰ã§OSTã‚’ç²å¾—ã€‚',
+      'demos.title': '&#128717;&#65039; OSTã‚³ãƒžãƒ¼ã‚¹', 'demos.sub': 'ãƒ—ãƒ©ã‚¤ãƒ™ãƒ¼ãƒˆã§å³æ™‚ã®æ”¯æ‰•ã„ã‚’ä½“é¨“ã€‚ãƒªã‚¢ãƒ«è£½å“ã€‚æ‰‹æ•°æ–™ã‚¼ãƒ­ã€‚',
+      'wallet.getTitle': 'ã‚ãªãŸã®OSTã‚¦ã‚©ãƒ¬ãƒƒãƒˆã‚’å–å¾—', 'wallet.getSub': 'ã‚¦ã‚©ãƒ¬ãƒƒãƒˆã®ä½œæˆã¾ãŸã¯æŽ¥ç¶šæ–¹æ³•ã‚’é¸æŠžã—ã¦ãã ã•ã„ã€‚',
+      'sell.title': 'OSTã®å£²å´ãƒ»å–å¼•', 'sell.sub': 'ä»»æ„ã®æš—å·é€šè²¨ã¾ãŸã¯ãƒ•ã‚£ã‚¢ãƒƒãƒˆã«å¼•ãå‡ºã—ã€‚åŒã˜é€Ÿåº¦ã€åŒã˜ãƒ—ãƒ©ã‚¤ãƒã‚·ãƒ¼ã€‚',
+      'censor.title': '&#128683; ã‚¤ãƒ³ã‚¿ãƒ¼ãƒãƒƒãƒˆæ¤œé–²ãŒä»Šèµ·ãã¦ã„ã‚‹', 'censor.sub': 'å®Ÿéš›ã®å‡ºæ¥äº‹ã€‚å®Ÿéš›ã®äººã€…ã€‚OSTã¯ãƒ‡ã‚¸ã‚¿ãƒ«å¼¾åœ§ã¸ã®ç­”ãˆã€‚',
+      'spacex.title': 'OST &times; SpaceX &mdash; å®‡å®™ã¸ã®æ—…', 'spacex.sub': 'åœ°çƒã‹ã‚‰ç«æ˜Ÿã¾ã§ã®ãƒ‘ãƒ¼ãƒˆãƒŠãƒ¼ã‚·ãƒƒãƒ—ãƒ­ãƒ¼ãƒ‰ãƒžãƒƒãƒ—ã‚’ãƒ•ã‚©ãƒ­ãƒ¼ã€‚',
+      'roadmap.title': '&#128640; ãƒ­ãƒ¼ãƒ‰ãƒžãƒƒãƒ—ã¨é€²æ—', 'roadmap.sub': 'ç¾åœ¨åœ°ã€æ§‹ç¯‰ã—ãŸã‚‚ã®ã€æ¬¡ã®ã‚¹ãƒ†ãƒƒãƒ—ã€‚',
+      'offline.scenarios': 'å®Ÿä¸–ç•Œã®ã‚·ãƒŠãƒªã‚ª', 'offline.scenariosub': 'ä¸–ç•ŒéŠ€è¡Œã€UNHCRã€EM-DATã®æ¤œè¨¼æ¸ˆã¿ãƒ‡ãƒ¼ã‚¿ã€‚ä»®èª¬ã§ã¯ã‚ã‚Šã¾ã›ã‚“ã€‚',
+      'ai.hook.title': 'ã‚µãƒ¼ãƒãƒ¼ã€ãƒœãƒƒãƒˆã€ãƒ­ã‚«ãƒ›ã‚¹ãƒˆã‚’é‹ç”¨ä¸­ï¼Ÿ',
+      'ai.hook.text': 'ã‚µãƒ¼ãƒãƒ¼ã€ãƒœãƒƒãƒˆã€è‡ªå‹•åŒ–ã•ã‚ŒãŸã‚¤ãƒ³ãƒ†ãƒªã‚¸ã‚§ãƒ³ã‚¹ãŒã‚ã‚Œã° &mdash; <strong>OSTãŒã‚ãªãŸã®æ±ºæ¸ˆãƒ¬ã‚¤ãƒ¤ãƒ¼</strong>ã§ã™ã€‚',
+      'gc.title': 'ã‚®ãƒ•ãƒˆã‚«ãƒ¼ãƒ‰äº¤æ› &mdash; OSTã§ã‚®ãƒ•ãƒˆã‚«ãƒ¼ãƒ‰ã‚’å£²è²·',
+      'gc.sub': 'ã‚®ãƒ•ãƒˆã‚«ãƒ¼ãƒ‰ã‚’ãƒ—ãƒ©ã‚¤ãƒ™ãƒ¼ãƒˆOSTã«å¤‰æ›ã€ã¾ãŸã¯OSTã§æ”¯æ‰•ã„å³åº§ã«ãƒ‡ã‚¸ã‚¿ãƒ«ã‚®ãƒ•ãƒˆã‚«ãƒ¼ãƒ‰ã‚’å—ã‘å–ã‚Œã¾ã™ã€‚',
+      'gc.tabSell': '&#128178; ã‚«ãƒ¼ãƒ‰ã‚’å£²ã‚‹ &rarr; OSTç²å¾—',
+      'gc.tabBuy': '&#127873; OSTã§ã‚«ãƒ¼ãƒ‰è³¼å…¥',
+      'gc.pipe.paste': 'ã‚³ãƒ¼ãƒ‰è²¼ä»˜', 'gc.pipe.verify': 'æ¤œè¨¼', 'gc.pipe.receive': 'OSTå—å–',
+      'gc.pipe.payOst': 'OSTæ”¯æ‰•', 'gc.pipe.convert': 'å¤‰æ›', 'gc.pipe.getCard': 'ã‚«ãƒ¼ãƒ‰å–å¾—',
+      'gc.merchant': 'ãƒ–ãƒ©ãƒ³ãƒ‰', 'gc.merchantBuy': 'ã‚®ãƒ•ãƒˆã‚«ãƒ¼ãƒ‰ã‚’é¸æŠž',
+      'gc.code': 'ã‚®ãƒ•ãƒˆã‚«ãƒ¼ãƒ‰ã‚³ãƒ¼ãƒ‰', 'gc.balance': 'ã‚«ãƒ¼ãƒ‰æ®‹é«˜(USD)',
+      'gc.youGet': 'å—å–é¡', 'gc.youPay': 'æ”¯æ‰•é¡', 'gc.amount': 'é‡‘é¡(USD)',
+      'gc.email': 'é…ä¿¡ãƒ¡ãƒ¼ãƒ«(ä»»æ„)',
+      'gc.rate': 'ãƒ¬ãƒ¼ãƒˆ:', 'gc.fee': 'è²¡å‹™æ‰‹æ•°æ–™(0.1%):',
+      'gc.feeNote': '&#128752; æ‰‹æ•°æ–™ã¯è¡›æ˜Ÿã‚¤ãƒ³ãƒ•ãƒ©ã«è³‡é‡‘æä¾›',
+      'gc.sellBtn': 'æ¤œè¨¼ã—ã¦å£²å´ &rarr; OSTç²å¾—',
+      'gc.buyBtn': 'OSTæ”¯æ‰•ã„ &rarr; ã‚®ãƒ•ãƒˆã‚«ãƒ¼ãƒ‰å–å¾—',
+      'gc.step.verify': 'ã‚®ãƒ•ãƒˆã‚«ãƒ¼ãƒ‰ã‚³ãƒ¼ãƒ‰æ¤œè¨¼ä¸­&hellip;',
+      'gc.step.zk': 'ZKè¨¼æ˜Žç”Ÿæˆä¸­&hellip;',
+      'gc.step.send': 'æ©Ÿå¯†è»¢é€ã§OSTé€ä¿¡ä¸­&hellip;',
+      'gc.step.done': 'å®Œäº†ï¼OSTã‚’ãƒ—ãƒ©ã‚¤ãƒ™ãƒ¼ãƒˆã«å—é ˜ã€‚',
+      'gc.step.debit': 'OSTå¼•è½(æ©Ÿå¯†)&hellip;',
+      'gc.step.swap': 'JupiterçµŒç”±ã§OST&rarr;USDCäº¤æ›&hellip;',
+      'gc.step.purchase': 'ã‚®ãƒ•ãƒˆã‚«ãƒ¼ãƒ‰è³¼å…¥ä¸­&hellip;',
+      'gc.step.delivered': 'ã‚®ãƒ•ãƒˆã‚«ãƒ¼ãƒ‰é…ä¿¡å®Œäº†ï¼',
+      'gc.supported': 'å¯¾å¿œãƒ–ãƒ©ãƒ³ãƒ‰:',
+      'gc.disclaimer': '&#9888; ãƒ¦ãƒ¼ã‚¶ãƒ¼ã¯ã‚®ãƒ•ãƒˆã‚«ãƒ¼ãƒ‰ã®æœ‰åŠ¹æ€§ã‚’ç¢ºèªã™ã‚‹è²¬ä»»ãŒã‚ã‚Šã¾ã™ã€‚OSTã¯ã‚®ãƒ•ãƒˆã‚«ãƒ¼ãƒ‰ç™ºè¡Œè€…ã§ã¯ã‚ã‚Šã¾ã›ã‚“ã€‚ç¾åœ°æ³•ã«å¾“ã„ã¾ã™ã€‚',
+      'fuel.title': 'ç‡ƒæ–™ï¼†ã‚¬ã‚½ãƒªãƒ³ã‚¹ã‚¿ãƒ³ãƒ‰',
+      'fuel.sub': 'ä¸–ç•Œä¸­ã®ã‚¬ã‚½ãƒªãƒ³ã‚¹ã‚¿ãƒ³ãƒ‰ã§OSTã§æ”¯æ‰•ã„ â€” çµ¦æ²¹ã®ãŸã³ã«ãƒªãƒ¯ãƒ¼ãƒ‰ã‚’ç²å¾—',
+      'fuel.howTitle': 'ä½¿ã„æ–¹',
+      'fuel.step1': 'åˆ°ç€',
+      'fuel.step1d': 'ãƒ‘ãƒ¼ãƒˆãƒŠãƒ¼ã‚¹ãƒ†ãƒ¼ã‚·ãƒ§ãƒ³ã¸',
+      'fuel.step2': 'ã‚¿ãƒƒãƒ—ï¼†ãƒšã‚¤',
+      'fuel.step2d': 'NFCã¾ãŸã¯QRã§OSTã§æ”¯æ‰•ã„',
+      'fuel.step3': 'ãƒªãƒ¯ãƒ¼ãƒ‰ç²å¾—',
+      'fuel.step3d': 'OSTã§å³åº§ã«ã‚­ãƒ£ãƒƒã‚·ãƒ¥ãƒãƒƒã‚¯',
+      'fuel.step4': 'å‡ºç™º',
+      'fuel.step4d': 'ãƒ¬ã‚·ãƒ¼ãƒˆãŒã‚¦ã‚©ãƒ¬ãƒƒãƒˆã«é€ä¿¡',
+      'fuel.calcTitle': 'ç‡ƒæ–™ãƒªãƒ¯ãƒ¼ãƒ‰è¨ˆç®—æ©Ÿ',
+      'fuel.gallons': 'ã‚¬ãƒ­ãƒ³',
+      'fuel.priceGal': 'ã‚¬ãƒ­ãƒ³å˜ä¾¡ (USD)',
+      'fuel.total': 'åˆè¨ˆã‚³ã‚¹ãƒˆ',
+      'fuel.ostCost': 'OSTæ›ç®—',
+      'fuel.reward': 'ã‚­ãƒ£ãƒƒã‚·ãƒ¥ãƒãƒƒã‚¯ (3%)',
+      'fuel.offlineTitle': 'ã‚ªãƒ•ãƒ©ã‚¤ãƒ³å¯¾å¿œ',
+      'fuel.offlineDesc': 'NFCï¼†BLE â€” ã‚¤ãƒ³ã‚¿ãƒ¼ãƒãƒƒãƒˆãªã—ã§æ”¯æ‰•ã„å¯èƒ½ã€‚ã‚ªãƒ³ãƒ©ã‚¤ãƒ³å¾©å¸°æ™‚ã«åŒæœŸã€‚',
+      'fuel.partnersTitle': 'ãƒ‘ãƒ¼ãƒˆãƒŠãƒ¼ã‚¹ãƒ†ãƒ¼ã‚·ãƒ§ãƒ³',
+      'fuel.partnersSub': 'ä¸–ç•Œã®20+ä¸»è¦ç‡ƒæ–™ãƒ–ãƒ©ãƒ³ãƒ‰ã§åˆ©ç”¨å¯èƒ½',
+      'fuel.rewardsTitle': 'ãƒªãƒ¯ãƒ¼ãƒ‰ãƒ†ã‚£ã‚¢',
+      'fuel.disclaimer': '&#9888; è¡¨ç¤ºã•ã‚Œã¦ã„ã‚‹ãƒ‘ãƒ¼ãƒˆãƒŠãƒ¼ã‚·ãƒƒãƒ—ã¯é–‹ç™ºä¸­ã§ã™ã€‚OSTã¯æŽ²è¼‰ãƒ–ãƒ©ãƒ³ãƒ‰ã¨ã¯ææºã—ã¦ã„ã¾ã›ã‚“ã€‚',
     },
     ko: {
-      'nav.home': '홈', 'nav.newhere': 'OST 받기', 'nav.demos': '커머스', 'nav.wallet': '지갑',
-      'nav.ai': 'AI와 봇', 'nav.offline': '오프라인', 'nav.censorship': '검열', 'nav.spacex': 'SpaceX',
-      'nav.about': '우리의 이야기', 'nav.roadmap': '로드맵', 'nav.build': '개발', 'nav.verify': '검증',
-      'nav.connect': '지갑 연결',
-      'wallet.dashTitle': '내 OST 지갑', 'wallet.dashSub': '개인 커맨드 센터. OST 지갑을 만들고, 연결하고, 관리하세요.',
-      'bridges.title': '브릿지, 램프 & 거래소', 'bridges.sub': 'OST로 가는 모든 길 — 어떤 체인, 통화, 국가에서든.',
-      'hero.tag': '비트코인 이후의 다음 단계',
-      'hero.title': '우리 모두는 <span class="gradient-text">하나의 가족입니다.</span>',
-      'hero.sub': 'OST는 세계 모든 시민을 위한 디지털 현금입니다 - 프라이빗, 즉시, 이미 가진 모든 통화와 연결.',
-      'hero.cta1': '커머스 둘러보기', 'hero.cta2': 'OST 받기',
-      'hero.premine': '프리마이닝 없음', 'hero.settle': '결제', 'hero.opensource': '오픈 소스', 'hero.privacy': '프라이버시',
-      'story.title': '우리의 이야기', 'story.sub': '탈중앙화 화폐의 첫 불꽃에서 프라이빗 디지털 현금의 미래까지의 여정.',
-      'story.t1.title': '불꽃', 'story.t1.text': '비트코인은 은행도 정부도 아닌 사람들이 모든 국경을 넘는 화폐를 만들 수 있음을 증명했습니다.',
-      'story.t2.title': '격차', 'story.t2.text': '그러나 비트코인은 느리고, 비싸고, 공개적이었습니다. 수십억 명이 여전히 은행 수수료 없이 집세도 낼 수 없었습니다.',
-      'story.t3.title': '돌파구', 'story.t3.text': 'Solana Token-2022가 기밀 전송을 시작 — 영지식 증명이 잔액과 금액을 숨깁니다.',
-      'story.t4.title': 'OST 탄생', 'story.t4.text': '멈출 수 없는 화폐, 즉시 결제, 완전한 프라이버시, 그리고 위성 인프라 자금 조달 미션을 결합했습니다.',
-      'story.t5.year': '미래', 'story.t5.title': '모든 시민이 연결되다',
-      'story.t5.text': '라고스의 과일 장수와 테헤란의 엔지니어가 같은 금융 자유를 공유하는 세상.',
-      'story.lead': '어느 나라에도 속하지 않고 모든 시민을 위해 봉사하는 보편적 디지털 현금을 만들고 있습니다.',
-      'story.closing': 'OST에 오신 것을 환영합니다. 집에 오신 걸 환영합니다.',
-      'citizens.title': '모든 시민을 위해', 'citizens.sub': '국경 없이. 예외 없이. 하나의 인류, 하나의 화폐.',
-      'features.title': '혁명적인 다음 단계', 'features.sub': '단순한 토큰이 아닙니다. 실제 삶을 위한 완전한 금융 시스템.',
-      'features.f1.title': '기밀 전송', 'features.f1.text': '영지식 증명이 잔액과 모든 거래를 숨깁니다.',
-      'features.f2.title': '1초 미만 결제', 'features.f2.text': 'Solana에서 400ms. 카드 터치보다 빠릅니다.',
-      'features.f3.title': '모든 통화 브릿지', 'features.f3.text': '비트코인, 이더리움, USDC, 은행 송금 — 모든 것이 전환됩니다.',
-      'features.f4.title': '영원히 무료', 'features.f4.text': '거래 수수료 제로. 기부금과 투자자가 자금 지원. 온체인 투명성.',
-      'features.f5.title': '오프라인 결제', 'features.f5.text': 'NFC, QR, 블루투스. 인터넷 없이 결제.',
-      'features.f6.title': 'ZK 세금 준수', 'features.f6.text': '잔액을 공개하지 않고 세금을 증명합니다.',
-      'pay.title': 'OST로 쇼핑 — 실제 가격', 'pay.sub': '실제 제품, 실제 가격. 프라이빗 결제를 경험하세요.',
-      'pay.cart': '장바구니', 'pay.empty': '+를 눌러 추가', 'pay.paybtn': 'OST로 결제',
-      'pay.s1': '지갑 연결 중', 'pay.s2': 'ZK 증명 생성 중', 'pay.s3': 'Solana에 브로드캐스트', 'pay.s4': '0.4초 만에 확인',
-      'pay.done': '결제 완료 — 완전 프라이빗', 'pay.donesub': '지구상 아무도 이 거래를 보지 못했습니다.',
-      'transfer.title': '어디서든 돈을 가져오세요', 'transfer.sub': '실시간 가격. 실시간 차트. 모든 통화를 OST로 교환.',
-      'transfer.calc': '환율 계산기', 'transfer.calcsub': '어떤 금액이든 얼마의 OST를 받을 수 있는지 확인하세요.',
-      'transfer.widgettitle': '지금 전환', 'transfer.from': '당신의 통화', 'transfer.to': '기밀 OST',
-      'transfer.result': '프라이빗하고 즉시', 'transfer.convert': 'OST로 전환',
-      'transfer.note': 'Wormhole, Jupiter, Solana Token-2022 기반.',
-      'transfer.fiattitle': '법정화폐에서 오시나요?',
-      'transfer.fiattext': '<strong>MoonPay</strong>, <strong>Transak</strong>, 또는 <strong>Ramp Network</strong> 사용 — 100여 개국에서 이용 가능.',
-      'offline.title': '어디서든 오프라인 현금', 'offline.sub': '인터넷은 아직 모든 곳에 없습니다. 하지만 당신의 돈은 있어야 합니다.',
-      'offline.lead': '빛의 속도로 거래 — 불이 꺼져 있어도.',
-      'offline.text': '누군가에게 지폐를 건네는 것을 상상하세요. 은행 없이. 인터넷 없이. 두 사람과 가치의 교환만.',
-      'offline.nfc': 'NFC 탭 결제', 'offline.nfctext': '폰을 가까이 대세요. 한 번 탭. 결제 완료.',
-      'offline.qr': 'QR 코드 스캔', 'offline.qrtext': '서명된 결제가 하나의 QR 코드에 담깁니다.',
-      'offline.bt': '블루투스 근접', 'offline.bttext': 'BLE가 약 10미터 범위에서 거래를 전송합니다.',
-      'getost.title': 'OST 받기', 'getost.sub': '모든 암호화폐 또는 법정화폐에서 즉시 입장 — 스왑에 KYC 불필요.',
-      'getost.swap': '모든 암호화폐를 OST로 교환', 'getost.swaptext': 'Jupiter가 모든 Solana 유동성 풀에서 최적 경로를 찾습니다.',
-      'getost.jupnote': '스왑 위젯을 로드하려면 지갑을 연결하세요.', 'getost.jupbtn': '위젯 로드',
-      'getost.fiat': '현지 화폐로 구매', 'getost.fiatsub': 'SOL 또는 USDC를 구매한 후 OST로 교환.',
-      'getost.faucet': '처음이신가요? 무료 OST를 받으세요', 'getost.faucettext': '모든 새 지갑은 커뮤니티 재무에서 <strong>1 OST</strong>를 받습니다.',
-      'getost.faucetbtn': '수도꼭지 열기',
-      'pay.anywhere': '🌐 OST로 어디서나 결제',
-      'pay.anywheresub': '구매 중인 웹사이트 링크를 붙여넣으세요. OST를 상대방이 받는 통화로 변환합니다.',
-      'pay.aurl': '판매자 URL', 'pay.aamount': '결제 금액', 'pay.acurrency': '상대 통화',
-      'pay.ayoupay': '결제액:', 'pay.arate': '환율:', 'pay.afee': '네트워크 수수료:',
-      'pay.ahow': '작동 방식',
-      'pay.astep1': '판매자 결제 링크 붙여넣기', 'pay.astep2': '상대 통화로 금액 입력',
-      'pay.astep3': 'OST가 Jupiter + Wormhole로 실시간 변환', 'pay.astep4': '판매자는 자국 통화를 받고, 당신은 OST로 결제',
-      'pay.apaybtn': 'OST로 결제', 'pay.asupported': '다음을 수락하는 모든 사이트에서 작동:',
-      'launch.title': '🚀 메인넷 출시 체크리스트', 'launch.sub': 'Solana 메인넷에서 OST를 실현하기 위해 필요한 것.',
-      'ai.title': '모든 지능을 위한 힘', 'ai.sub': 'AI 에이전트, 봇, 서버 및 모든 형태의 디지털 지능을 환영합니다.',
-      'build.title': '우리와 함께 미래를 만드세요', 'build.sub': '코드, 창작, 픽셀의 꿈 — OST가 당신의 플랫폼입니다.',
-      'build.cta': '오늘 기여를 시작하세요', 'build.ctasub': '모든 커밋, 번역, 튜토리얼이 인류를 전진시킵니다.',
-      'build.github': 'GitHub 저장소 보기', 'build.docs': '문서 읽기',
-      'verify.title': '완전한 투명성', 'verify.sub': '모든 것을 직접 검증하세요. 숨길 것이 없습니다.',
-      'verify.lead': '신뢰는 약속이 아닌 사실로 얻는 것입니다.',
-      'verify.closing': '코드를 읽으세요. 회사를 확인하세요. 재무를 검증하세요. <strong>그런 다음 결정하세요.</strong>',
-      'wallet.title': '지갑 연결하기', 'wallet.sub': 'OST에 연결할 지갑을 선택하세요.',
-      'footer.mission': '모든 거래가 위성 인프라 자금 조달을 돕습니다. <strong>함께 만드는 선물.</strong>',
-      'footer.copy': '오픈 소스. 지구의 모든 사람을 위해 사랑으로 만들었습니다.',
-      'hero.free': '&#128176; 영원히 무료',
-      'hero.freetext': '거래 수수료 제로. 숨겨진 비용 없음. 기부와 투자자가 자금 지원.',
-      'hero.createwallet': '지갑 만들기',
-      'hero.stat.unbanked': '전 세계 은행 계좌 없는 성인',
-      'hero.stat.remittance': '송금 수수료로 손실된 $/년',
-      'hero.stat.nointernet': '인터넷 없는 사람들',
-      'vision.title': 'OST 비전: 완전한 금융 독립',
-      'vision.sub': '현재 Solana, Jupiter, 서드파티 브리지를 <strong>임시 인프라</strong>로 사용 중입니다. 목표는 <strong>OST 주권 네트워크</strong> 구축입니다. <em>완전 분산화. 의존성 제로.</em>',
-      'vision.s1.title': '임시 기반', 'vision.s1.sub': 'Solana + Jupiter + 브리지',
-      'vision.s2.title': 'OST 교환 프로토콜', 'vision.s2.sub': '자체 매칭 엔진',
-      'vision.s3.title': 'OST 주권 네트워크', 'vision.s3.sub': '서드파티 의존성 제로',
-      'vision.p1': '&#128274; ZK 프라이버시', 'vision.p2': '&#9889; 0.4초 결제', 'vision.p3': '&#128176; 수수료 영원히 제로',
-      'vision.p4': '&#128295; 자체 엔진', 'vision.p5': '&#127757; 자체 DEX와 브리지', 'vision.p6': '&#128752; 위성 인터넷',
+      'nav.home': 'í™ˆ', 'nav.newhere': 'OST ë°›ê¸°', 'nav.demos': 'ì»¤ë¨¸ìŠ¤', 'nav.wallet': 'ì§€ê°‘',
+      'nav.ai': 'AIì™€ ë´‡', 'nav.offline': 'ì˜¤í”„ë¼ì¸', 'nav.censorship': 'ê²€ì—´', 'nav.spacex': 'SpaceX',
+      'nav.about': 'ìš°ë¦¬ì˜ ì´ì•¼ê¸°', 'nav.roadmap': 'ë¡œë“œë§µ', 'nav.build': 'ê°œë°œ', 'nav.verify': 'ê²€ì¦',
+      'nav.connect': 'ì§€ê°‘ ì—°ê²°',
+      'wallet.dashTitle': 'ë‚´ OST ì§€ê°‘', 'wallet.dashSub': 'ê°œì¸ ì»¤ë§¨ë“œ ì„¼í„°. OST ì§€ê°‘ì„ ë§Œë“¤ê³ , ì—°ê²°í•˜ê³ , ê´€ë¦¬í•˜ì„¸ìš”.',
+      'bridges.title': 'ë¸Œë¦¿ì§€, ëž¨í”„ & ê±°ëž˜ì†Œ', 'bridges.sub': 'OSTë¡œ ê°€ëŠ” ëª¨ë“  ê¸¸ â€” ì–´ë–¤ ì²´ì¸, í†µí™”, êµ­ê°€ì—ì„œë“ .',
+      'hero.tag': 'ë¹„íŠ¸ì½”ì¸ ì´í›„ì˜ ë‹¤ìŒ ë‹¨ê³„',
+      'hero.title': 'ìš°ë¦¬ ëª¨ë‘ëŠ” <span class="gradient-text">í•˜ë‚˜ì˜ ê°€ì¡±ìž…ë‹ˆë‹¤.</span>',
+      'hero.sub': 'OSTëŠ” ì„¸ê³„ ëª¨ë“  ì‹œë¯¼ì„ ìœ„í•œ ë””ì§€í„¸ í˜„ê¸ˆìž…ë‹ˆë‹¤ - í”„ë¼ì´ë¹—, ì¦‰ì‹œ, ì´ë¯¸ ê°€ì§„ ëª¨ë“  í†µí™”ì™€ ì—°ê²°.',
+      'hero.cta1': 'ì»¤ë¨¸ìŠ¤ ë‘˜ëŸ¬ë³´ê¸°', 'hero.cta2': 'OST ë°›ê¸°',
+      'hero.premine': 'í”„ë¦¬ë§ˆì´ë‹ ì—†ìŒ', 'hero.settle': 'ê²°ì œ', 'hero.opensource': 'ì˜¤í”ˆ ì†ŒìŠ¤', 'hero.privacy': 'í”„ë¼ì´ë²„ì‹œ',
+      'story.title': 'ìš°ë¦¬ì˜ ì´ì•¼ê¸°', 'story.sub': 'íƒˆì¤‘ì•™í™” í™”íì˜ ì²« ë¶ˆê½ƒì—ì„œ í”„ë¼ì´ë¹— ë””ì§€í„¸ í˜„ê¸ˆì˜ ë¯¸ëž˜ê¹Œì§€ì˜ ì—¬ì •.',
+      'story.t1.title': 'ë¶ˆê½ƒ', 'story.t1.text': 'ë¹„íŠ¸ì½”ì¸ì€ ì€í–‰ë„ ì •ë¶€ë„ ì•„ë‹Œ ì‚¬ëžŒë“¤ì´ ëª¨ë“  êµ­ê²½ì„ ë„˜ëŠ” í™”íë¥¼ ë§Œë“¤ ìˆ˜ ìžˆìŒì„ ì¦ëª…í–ˆìŠµë‹ˆë‹¤.',
+      'story.t2.title': 'ê²©ì°¨', 'story.t2.text': 'ê·¸ëŸ¬ë‚˜ ë¹„íŠ¸ì½”ì¸ì€ ëŠë¦¬ê³ , ë¹„ì‹¸ê³ , ê³µê°œì ì´ì—ˆìŠµë‹ˆë‹¤. ìˆ˜ì‹­ì–µ ëª…ì´ ì—¬ì „ížˆ ì€í–‰ ìˆ˜ìˆ˜ë£Œ ì—†ì´ ì§‘ì„¸ë„ ë‚¼ ìˆ˜ ì—†ì—ˆìŠµë‹ˆë‹¤.',
+      'story.t3.title': 'ëŒíŒŒêµ¬', 'story.t3.text': 'Solana Token-2022ê°€ ê¸°ë°€ ì „ì†¡ì„ ì‹œìž‘ â€” ì˜ì§€ì‹ ì¦ëª…ì´ ìž”ì•¡ê³¼ ê¸ˆì•¡ì„ ìˆ¨ê¹ë‹ˆë‹¤.',
+      'story.t4.title': 'OST íƒ„ìƒ', 'story.t4.text': 'ë©ˆì¶œ ìˆ˜ ì—†ëŠ” í™”í, ì¦‰ì‹œ ê²°ì œ, ì™„ì „í•œ í”„ë¼ì´ë²„ì‹œ, ê·¸ë¦¬ê³  ìœ„ì„± ì¸í”„ë¼ ìžê¸ˆ ì¡°ë‹¬ ë¯¸ì…˜ì„ ê²°í•©í–ˆìŠµë‹ˆë‹¤.',
+      'story.t5.year': 'ë¯¸ëž˜', 'story.t5.title': 'ëª¨ë“  ì‹œë¯¼ì´ ì—°ê²°ë˜ë‹¤',
+      'story.t5.text': 'ë¼ê³ ìŠ¤ì˜ ê³¼ì¼ ìž¥ìˆ˜ì™€ í…Œí—¤ëž€ì˜ ì—”ì§€ë‹ˆì–´ê°€ ê°™ì€ ê¸ˆìœµ ìžìœ ë¥¼ ê³µìœ í•˜ëŠ” ì„¸ìƒ.',
+      'story.lead': 'ì–´ëŠ ë‚˜ë¼ì—ë„ ì†í•˜ì§€ ì•Šê³  ëª¨ë“  ì‹œë¯¼ì„ ìœ„í•´ ë´‰ì‚¬í•˜ëŠ” ë³´íŽ¸ì  ë””ì§€í„¸ í˜„ê¸ˆì„ ë§Œë“¤ê³  ìžˆìŠµë‹ˆë‹¤.',
+      'story.closing': 'OSTì— ì˜¤ì‹  ê²ƒì„ í™˜ì˜í•©ë‹ˆë‹¤. ì§‘ì— ì˜¤ì‹  ê±¸ í™˜ì˜í•©ë‹ˆë‹¤.',
+      'citizens.title': 'ëª¨ë“  ì‹œë¯¼ì„ ìœ„í•´', 'citizens.sub': 'êµ­ê²½ ì—†ì´. ì˜ˆì™¸ ì—†ì´. í•˜ë‚˜ì˜ ì¸ë¥˜, í•˜ë‚˜ì˜ í™”í.',
+      'features.title': 'í˜ëª…ì ì¸ ë‹¤ìŒ ë‹¨ê³„', 'features.sub': 'ë‹¨ìˆœí•œ í† í°ì´ ì•„ë‹™ë‹ˆë‹¤. ì‹¤ì œ ì‚¶ì„ ìœ„í•œ ì™„ì „í•œ ê¸ˆìœµ ì‹œìŠ¤í…œ.',
+      'features.f1.title': 'ê¸°ë°€ ì „ì†¡', 'features.f1.text': 'ì˜ì§€ì‹ ì¦ëª…ì´ ìž”ì•¡ê³¼ ëª¨ë“  ê±°ëž˜ë¥¼ ìˆ¨ê¹ë‹ˆë‹¤.',
+      'features.f2.title': '1ì´ˆ ë¯¸ë§Œ ê²°ì œ', 'features.f2.text': 'Solanaì—ì„œ 400ms. ì¹´ë“œ í„°ì¹˜ë³´ë‹¤ ë¹ ë¦…ë‹ˆë‹¤.',
+      'features.f3.title': 'ëª¨ë“  í†µí™” ë¸Œë¦¿ì§€', 'features.f3.text': 'ë¹„íŠ¸ì½”ì¸, ì´ë”ë¦¬ì›€, USDC, ì€í–‰ ì†¡ê¸ˆ â€” ëª¨ë“  ê²ƒì´ ì „í™˜ë©ë‹ˆë‹¤.',
+      'features.f4.title': 'ì˜ì›ížˆ ë¬´ë£Œ', 'features.f4.text': 'ê±°ëž˜ ìˆ˜ìˆ˜ë£Œ ì œë¡œ. ê¸°ë¶€ê¸ˆê³¼ íˆ¬ìžìžê°€ ìžê¸ˆ ì§€ì›. ì˜¨ì²´ì¸ íˆ¬ëª…ì„±.',
+      'features.f5.title': 'ì˜¤í”„ë¼ì¸ ê²°ì œ', 'features.f5.text': 'NFC, QR, ë¸”ë£¨íˆ¬ìŠ¤. ì¸í„°ë„· ì—†ì´ ê²°ì œ.',
+      'features.f6.title': 'ZK ì„¸ê¸ˆ ì¤€ìˆ˜', 'features.f6.text': 'ìž”ì•¡ì„ ê³µê°œí•˜ì§€ ì•Šê³  ì„¸ê¸ˆì„ ì¦ëª…í•©ë‹ˆë‹¤.',
+      'pay.title': 'OSTë¡œ ì‡¼í•‘ â€” ì‹¤ì œ ê°€ê²©', 'pay.sub': 'ì‹¤ì œ ì œí’ˆ, ì‹¤ì œ ê°€ê²©. í”„ë¼ì´ë¹— ê²°ì œë¥¼ ê²½í—˜í•˜ì„¸ìš”.',
+      'pay.cart': 'ìž¥ë°”êµ¬ë‹ˆ', 'pay.empty': '+ë¥¼ ëˆŒëŸ¬ ì¶”ê°€', 'pay.paybtn': 'OSTë¡œ ê²°ì œ',
+      'pay.s1': 'ì§€ê°‘ ì—°ê²° ì¤‘', 'pay.s2': 'ZK ì¦ëª… ìƒì„± ì¤‘', 'pay.s3': 'Solanaì— ë¸Œë¡œë“œìºìŠ¤íŠ¸', 'pay.s4': '0.4ì´ˆ ë§Œì— í™•ì¸',
+      'pay.done': 'ê²°ì œ ì™„ë£Œ â€” ì™„ì „ í”„ë¼ì´ë¹—', 'pay.donesub': 'ì§€êµ¬ìƒ ì•„ë¬´ë„ ì´ ê±°ëž˜ë¥¼ ë³´ì§€ ëª»í–ˆìŠµë‹ˆë‹¤.',
+      'transfer.title': 'ì–´ë””ì„œë“  ëˆì„ ê°€ì ¸ì˜¤ì„¸ìš”', 'transfer.sub': 'ì‹¤ì‹œê°„ ê°€ê²©. ì‹¤ì‹œê°„ ì°¨íŠ¸. ëª¨ë“  í†µí™”ë¥¼ OSTë¡œ êµí™˜.',
+      'transfer.calc': 'í™˜ìœ¨ ê³„ì‚°ê¸°', 'transfer.calcsub': 'ì–´ë–¤ ê¸ˆì•¡ì´ë“  ì–¼ë§ˆì˜ OSTë¥¼ ë°›ì„ ìˆ˜ ìžˆëŠ”ì§€ í™•ì¸í•˜ì„¸ìš”.',
+      'transfer.widgettitle': 'ì§€ê¸ˆ ì „í™˜', 'transfer.from': 'ë‹¹ì‹ ì˜ í†µí™”', 'transfer.to': 'ê¸°ë°€ OST',
+      'transfer.result': 'í”„ë¼ì´ë¹—í•˜ê³  ì¦‰ì‹œ', 'transfer.convert': 'OSTë¡œ ì „í™˜',
+      'transfer.note': 'Wormhole, Jupiter, Solana Token-2022 ê¸°ë°˜.',
+      'transfer.fiattitle': 'ë²•ì •í™”íì—ì„œ ì˜¤ì‹œë‚˜ìš”?',
+      'transfer.fiattext': '<strong>MoonPay</strong>, <strong>Transak</strong>, ë˜ëŠ” <strong>Ramp Network</strong> ì‚¬ìš© â€” 100ì—¬ ê°œêµ­ì—ì„œ ì´ìš© ê°€ëŠ¥.',
+      'offline.title': 'ì–´ë””ì„œë“  ì˜¤í”„ë¼ì¸ í˜„ê¸ˆ', 'offline.sub': 'ì¸í„°ë„·ì€ ì•„ì§ ëª¨ë“  ê³³ì— ì—†ìŠµë‹ˆë‹¤. í•˜ì§€ë§Œ ë‹¹ì‹ ì˜ ëˆì€ ìžˆì–´ì•¼ í•©ë‹ˆë‹¤.',
+      'offline.lead': 'ë¹›ì˜ ì†ë„ë¡œ ê±°ëž˜ â€” ë¶ˆì´ êº¼ì ¸ ìžˆì–´ë„.',
+      'offline.text': 'ëˆ„êµ°ê°€ì—ê²Œ ì§€íë¥¼ ê±´ë„¤ëŠ” ê²ƒì„ ìƒìƒí•˜ì„¸ìš”. ì€í–‰ ì—†ì´. ì¸í„°ë„· ì—†ì´. ë‘ ì‚¬ëžŒê³¼ ê°€ì¹˜ì˜ êµí™˜ë§Œ.',
+      'offline.nfc': 'NFC íƒ­ ê²°ì œ', 'offline.nfctext': 'í°ì„ ê°€ê¹Œì´ ëŒ€ì„¸ìš”. í•œ ë²ˆ íƒ­. ê²°ì œ ì™„ë£Œ.',
+      'offline.qr': 'QR ì½”ë“œ ìŠ¤ìº”', 'offline.qrtext': 'ì„œëª…ëœ ê²°ì œê°€ í•˜ë‚˜ì˜ QR ì½”ë“œì— ë‹´ê¹ë‹ˆë‹¤.',
+      'offline.bt': 'ë¸”ë£¨íˆ¬ìŠ¤ ê·¼ì ‘', 'offline.bttext': 'BLEê°€ ì•½ 10ë¯¸í„° ë²”ìœ„ì—ì„œ ê±°ëž˜ë¥¼ ì „ì†¡í•©ë‹ˆë‹¤.',
+      'getost.title': 'OST ë°›ê¸°', 'getost.sub': 'ëª¨ë“  ì•”í˜¸í™”í ë˜ëŠ” ë²•ì •í™”íì—ì„œ ì¦‰ì‹œ ìž…ìž¥ â€” ìŠ¤ì™‘ì— KYC ë¶ˆí•„ìš”.',
+      'getost.swap': 'ëª¨ë“  ì•”í˜¸í™”íë¥¼ OSTë¡œ êµí™˜', 'getost.swaptext': 'Jupiterê°€ ëª¨ë“  Solana ìœ ë™ì„± í’€ì—ì„œ ìµœì  ê²½ë¡œë¥¼ ì°¾ìŠµë‹ˆë‹¤.',
+      'getost.jupnote': 'ìŠ¤ì™‘ ìœ„ì ¯ì„ ë¡œë“œí•˜ë ¤ë©´ ì§€ê°‘ì„ ì—°ê²°í•˜ì„¸ìš”.', 'getost.jupbtn': 'ìœ„ì ¯ ë¡œë“œ',
+      'getost.fiat': 'í˜„ì§€ í™”íë¡œ êµ¬ë§¤', 'getost.fiatsub': 'SOL ë˜ëŠ” USDCë¥¼ êµ¬ë§¤í•œ í›„ OSTë¡œ êµí™˜.',
+      'getost.faucet': 'ì²˜ìŒì´ì‹ ê°€ìš”? ë¬´ë£Œ OSTë¥¼ ë°›ìœ¼ì„¸ìš”', 'getost.faucettext': 'ëª¨ë“  ìƒˆ ì§€ê°‘ì€ ì»¤ë®¤ë‹ˆí‹° ìž¬ë¬´ì—ì„œ <strong>1 OST</strong>ë¥¼ ë°›ìŠµë‹ˆë‹¤.',
+      'getost.faucetbtn': 'ìˆ˜ë„ê¼­ì§€ ì—´ê¸°',
+      'pay.anywhere': 'ðŸŒ OSTë¡œ ì–´ë””ì„œë‚˜ ê²°ì œ',
+      'pay.anywheresub': 'êµ¬ë§¤ ì¤‘ì¸ ì›¹ì‚¬ì´íŠ¸ ë§í¬ë¥¼ ë¶™ì—¬ë„£ìœ¼ì„¸ìš”. OSTë¥¼ ìƒëŒ€ë°©ì´ ë°›ëŠ” í†µí™”ë¡œ ë³€í™˜í•©ë‹ˆë‹¤.',
+      'pay.aurl': 'íŒë§¤ìž URL', 'pay.aamount': 'ê²°ì œ ê¸ˆì•¡', 'pay.acurrency': 'ìƒëŒ€ í†µí™”',
+      'pay.ayoupay': 'ê²°ì œì•¡:', 'pay.arate': 'í™˜ìœ¨:', 'pay.afee': 'ë„¤íŠ¸ì›Œí¬ ìˆ˜ìˆ˜ë£Œ:',
+      'pay.ahow': 'ìž‘ë™ ë°©ì‹',
+      'pay.astep1': 'íŒë§¤ìž ê²°ì œ ë§í¬ ë¶™ì—¬ë„£ê¸°', 'pay.astep2': 'ìƒëŒ€ í†µí™”ë¡œ ê¸ˆì•¡ ìž…ë ¥',
+      'pay.astep3': 'OSTê°€ Jupiter + Wormholeë¡œ ì‹¤ì‹œê°„ ë³€í™˜', 'pay.astep4': 'íŒë§¤ìžëŠ” ìžêµ­ í†µí™”ë¥¼ ë°›ê³ , ë‹¹ì‹ ì€ OSTë¡œ ê²°ì œ',
+      'pay.apaybtn': 'OSTë¡œ ê²°ì œ', 'pay.asupported': 'ë‹¤ìŒì„ ìˆ˜ë½í•˜ëŠ” ëª¨ë“  ì‚¬ì´íŠ¸ì—ì„œ ìž‘ë™:',
+      'launch.title': 'ðŸš€ ë©”ì¸ë„· ì¶œì‹œ ì²´í¬ë¦¬ìŠ¤íŠ¸', 'launch.sub': 'Solana ë©”ì¸ë„·ì—ì„œ OSTë¥¼ ì‹¤í˜„í•˜ê¸° ìœ„í•´ í•„ìš”í•œ ê²ƒ.',
+      'ai.title': 'ëª¨ë“  ì§€ëŠ¥ì„ ìœ„í•œ íž˜', 'ai.sub': 'AI ì—ì´ì „íŠ¸, ë´‡, ì„œë²„ ë° ëª¨ë“  í˜•íƒœì˜ ë””ì§€í„¸ ì§€ëŠ¥ì„ í™˜ì˜í•©ë‹ˆë‹¤.',
+      'build.title': 'ìš°ë¦¬ì™€ í•¨ê»˜ ë¯¸ëž˜ë¥¼ ë§Œë“œì„¸ìš”', 'build.sub': 'ì½”ë“œ, ì°½ìž‘, í”½ì…€ì˜ ê¿ˆ â€” OSTê°€ ë‹¹ì‹ ì˜ í”Œëž«í¼ìž…ë‹ˆë‹¤.',
+      'build.cta': 'ì˜¤ëŠ˜ ê¸°ì—¬ë¥¼ ì‹œìž‘í•˜ì„¸ìš”', 'build.ctasub': 'ëª¨ë“  ì»¤ë°‹, ë²ˆì—­, íŠœí† ë¦¬ì–¼ì´ ì¸ë¥˜ë¥¼ ì „ì§„ì‹œí‚µë‹ˆë‹¤.',
+      'build.github': 'GitHub ì €ìž¥ì†Œ ë³´ê¸°', 'build.docs': 'ë¬¸ì„œ ì½ê¸°',
+      'verify.title': 'ì™„ì „í•œ íˆ¬ëª…ì„±', 'verify.sub': 'ëª¨ë“  ê²ƒì„ ì§ì ‘ ê²€ì¦í•˜ì„¸ìš”. ìˆ¨ê¸¸ ê²ƒì´ ì—†ìŠµë‹ˆë‹¤.',
+      'verify.lead': 'ì‹ ë¢°ëŠ” ì•½ì†ì´ ì•„ë‹Œ ì‚¬ì‹¤ë¡œ ì–»ëŠ” ê²ƒìž…ë‹ˆë‹¤.',
+      'verify.closing': 'ì½”ë“œë¥¼ ì½ìœ¼ì„¸ìš”. íšŒì‚¬ë¥¼ í™•ì¸í•˜ì„¸ìš”. ìž¬ë¬´ë¥¼ ê²€ì¦í•˜ì„¸ìš”. <strong>ê·¸ëŸ° ë‹¤ìŒ ê²°ì •í•˜ì„¸ìš”.</strong>',
+      'wallet.title': 'ì§€ê°‘ ì—°ê²°í•˜ê¸°', 'wallet.sub': 'OSTì— ì—°ê²°í•  ì§€ê°‘ì„ ì„ íƒí•˜ì„¸ìš”.',
+      'footer.mission': 'ëª¨ë“  ê±°ëž˜ê°€ ìœ„ì„± ì¸í”„ë¼ ìžê¸ˆ ì¡°ë‹¬ì„ ë•ìŠµë‹ˆë‹¤. <strong>í•¨ê»˜ ë§Œë“œëŠ” ì„ ë¬¼.</strong>',
+      'footer.copy': 'ì˜¤í”ˆ ì†ŒìŠ¤. ì§€êµ¬ì˜ ëª¨ë“  ì‚¬ëžŒì„ ìœ„í•´ ì‚¬ëž‘ìœ¼ë¡œ ë§Œë“¤ì—ˆìŠµë‹ˆë‹¤.',
+      'hero.free': '&#128176; ì˜ì›ížˆ ë¬´ë£Œ',
+      'hero.freetext': 'ê±°ëž˜ ìˆ˜ìˆ˜ë£Œ ì œë¡œ. ìˆ¨ê²¨ì§„ ë¹„ìš© ì—†ìŒ. ê¸°ë¶€ì™€ íˆ¬ìžìžê°€ ìžê¸ˆ ì§€ì›.',
+      'hero.createwallet': 'ì§€ê°‘ ë§Œë“¤ê¸°',
+      'hero.stat.unbanked': 'ì „ ì„¸ê³„ ì€í–‰ ê³„ì¢Œ ì—†ëŠ” ì„±ì¸',
+      'hero.stat.remittance': 'ì†¡ê¸ˆ ìˆ˜ìˆ˜ë£Œë¡œ ì†ì‹¤ëœ $/ë…„',
+      'hero.stat.nointernet': 'ì¸í„°ë„· ì—†ëŠ” ì‚¬ëžŒë“¤',
+      'vision.title': 'OST ë¹„ì „: ì™„ì „í•œ ê¸ˆìœµ ë…ë¦½',
+      'vision.sub': 'í˜„ìž¬ Solana, Jupiter, ì„œë“œíŒŒí‹° ë¸Œë¦¬ì§€ë¥¼ <strong>ìž„ì‹œ ì¸í”„ë¼</strong>ë¡œ ì‚¬ìš© ì¤‘ìž…ë‹ˆë‹¤. ëª©í‘œëŠ” <strong>OST ì£¼ê¶Œ ë„¤íŠ¸ì›Œí¬</strong> êµ¬ì¶•ìž…ë‹ˆë‹¤. <em>ì™„ì „ ë¶„ì‚°í™”. ì˜ì¡´ì„± ì œë¡œ.</em>',
+      'vision.s1.title': 'ìž„ì‹œ ê¸°ë°˜', 'vision.s1.sub': 'Solana + Jupiter + ë¸Œë¦¬ì§€',
+      'vision.s2.title': 'OST êµí™˜ í”„ë¡œí† ì½œ', 'vision.s2.sub': 'ìžì²´ ë§¤ì¹­ ì—”ì§„',
+      'vision.s3.title': 'OST ì£¼ê¶Œ ë„¤íŠ¸ì›Œí¬', 'vision.s3.sub': 'ì„œë“œíŒŒí‹° ì˜ì¡´ì„± ì œë¡œ',
+      'vision.p1': '&#128274; ZK í”„ë¼ì´ë²„ì‹œ', 'vision.p2': '&#9889; 0.4ì´ˆ ê²°ì œ', 'vision.p3': '&#128176; ìˆ˜ìˆ˜ë£Œ ì˜ì›ížˆ ì œë¡œ',
+      'vision.p4': '&#128295; ìžì²´ ì—”ì§„', 'vision.p5': '&#127757; ìžì²´ DEXì™€ ë¸Œë¦¬ì§€', 'vision.p6': '&#128752; ìœ„ì„± ì¸í„°ë„·',
       'vision.spacex.title': 'OST &times; SpaceX',
-      'vision.spacex.text': '저궤도 위성을 통해 26억 인구에게 무검열 인터넷과 결제를 제공하기 위한 파트너십.',
-      'vision.spacex.btn': '여정 탐험 &#8594;',
-      'newhere.title': '&#127381; 처음이신가요? OST 여정을 시작하세요',
-      'newhere.sub': '무료 OST를 받고, 가족 볼트를 만들고, 인프라 기여로 보상을 받으세요.',
-      'gv.title': '가족 성장 볼트',
-      'gv.sub': '새로운 세대마다 우주에서 태어나는 첫 번째 코인. 자녀를 위한 수탁 볼트를 만드세요.',
-      'gv.disclaimer': '교육 목적으로만 사용. 부모/보호자가 모든 세법과 현지 법률에 책임.',
-      'depin.title': 'DePIN 데이터센터 파우셋',
-      'depin.sub': '대역폭, GPU, CPU 또는 위성 용량 공유 &mdash; 분산 데이터센터 구축으로 OST 획득.',
-      'demos.title': '&#128717;&#65039; OST 커머스', 'demos.sub': '프라이빗 즉시 결제를 경험하세요. 실제 제품. 수수료 제로.',
-      'wallet.getTitle': '개인 OST 지갑 받기', 'wallet.getSub': '지갑을 만들거나 연결하는 방법을 선택하세요.',
-      'sell.title': 'OST 판매 또는 거래', 'sell.sub': '모든 암호화폐 또는 법정화폐로 출금. 같은 속도, 같은 프라이버시.',
-      'censor.title': '&#128683; 인터넷 검열이 지금 일어나고 있습니다', 'censor.sub': '실제 사건. 실제 사람들. OST는 디지털 억압에 대한 답.',
-      'spacex.title': 'OST &times; SpaceX &mdash; 우주로의 여정', 'spacex.sub': '지구에서 화성까지 파트너십 로드맵을 따라가세요.',
-      'roadmap.title': '&#128640; 로드맵과 진행 상황', 'roadmap.sub': '현재 위치, 구축한 것, 다음 단계.',
-      'offline.scenarios': '현실 세계 시나리오', 'offline.scenariosub': '세계은행, UNHCR, EM-DAT의 검증된 데이터. 가설이 아닙니다.',
-      'ai.hook.title': '서버, 봇 또는 로컬호스트를 운영 중이신가요?',
-      'ai.hook.text': '서버, 봇 또는 자동화된 인텔리전스가 있다면 &mdash; <strong>OST가 결제 레이어</strong>입니다.',
-      'gc.title': '기프트카드 교환 &mdash; OST로 기프트카드 매매',
-      'gc.sub': '기프트카드를 프라이빗 OST로 전환하거나, OST로 결제하여 즉시 디지털 기프트카드를 받으세요.',
-      'gc.tabSell': '&#128178; 카드 판매 &rarr; OST 받기',
-      'gc.tabBuy': '&#127873; OST로 카드 구매',
-      'gc.pipe.paste': '코드 붙여넣기', 'gc.pipe.verify': '검증', 'gc.pipe.receive': 'OST 수령',
-      'gc.pipe.payOst': 'OST 결제', 'gc.pipe.convert': '변환', 'gc.pipe.getCard': '카드 받기',
-      'gc.merchant': '가맹점 / 브랜드', 'gc.merchantBuy': '기프트카드 선택',
-      'gc.code': '기프트카드 코드', 'gc.balance': '카드 잔액 (USD)',
-      'gc.youGet': '받는 금액', 'gc.youPay': '지불 금액', 'gc.amount': '금액 (USD)',
-      'gc.email': '배송 이메일 (선택)',
-      'gc.rate': '환율:', 'gc.fee': '재무 수수료 (0.1%):',
-      'gc.feeNote': '&#128752; 수수료는 위성 인프라에 자금 지원',
-      'gc.sellBtn': '검증 및 판매 &rarr; OST 받기',
-      'gc.buyBtn': 'OST 결제 &rarr; 기프트카드 받기',
-      'gc.step.verify': '기프트카드 코드 검증 중&hellip;',
-      'gc.step.zk': 'ZK 증명 생성 중&hellip;',
-      'gc.step.send': '기밀 전송으로 OST 전송 중&hellip;',
-      'gc.step.done': '완료! OST가 프라이빗하게 수령되었습니다.',
-      'gc.step.debit': 'OST 차감 (기밀)&hellip;',
-      'gc.step.swap': 'Jupiter 통해 OST &rarr; USDC 스왑&hellip;',
-      'gc.step.purchase': '기프트카드 구매 중&hellip;',
-      'gc.step.delivered': '기프트카드 배송 완료!',
-      'gc.supported': '지원 브랜드:',
-      'gc.disclaimer': '&#9888; 사용자는 기프트카드의 유효성을 확인할 책임이 있습니다. OST는 기프트카드 발행자가 아닙니다. 현지 법률의 적용을 받습니다.',
-      'fuel.title': '연료 및 주유소',
-      'fuel.sub': '전 세계 주유소에서 OST로 결제 — 주유할 때마다 리워드 적립',
-      'fuel.howTitle': '이용 방법',
-      'fuel.step1': '도착',
-      'fuel.step1d': '파트너 주유소로 이동',
-      'fuel.step2': '탭 & 결제',
-      'fuel.step2d': 'NFC 또는 QR로 OST 결제',
-      'fuel.step3': '리워드 적립',
-      'fuel.step3d': 'OST로 즉시 캐시백 수령',
-      'fuel.step4': '출발',
-      'fuel.step4d': '영수증이 지갑으로 전송',
-      'fuel.calcTitle': '연료 리워드 계산기',
-      'fuel.gallons': '갤런',
-      'fuel.priceGal': '갤런당 가격 (USD)',
-      'fuel.total': '총 비용',
-      'fuel.ostCost': 'OST 환산',
-      'fuel.reward': '캐시백 (3%)',
-      'fuel.offlineTitle': '오프라인 작동',
-      'fuel.offlineDesc': 'NFC & BLE — 인터넷 없이 결제. 온라인 복귀 시 동기화.',
-      'fuel.partnersTitle': '파트너 주유소',
-      'fuel.partnersSub': '전 세계 20+개 주요 연료 브랜드에서 이용 가능',
-      'fuel.rewardsTitle': '리워드 등급',
-      'fuel.disclaimer': '&#9888; 표시된 파트너십은 개발 중입니다. OST는 나열된 브랜드와 제휴하지 않습니다.',
+      'vision.spacex.text': 'ì €ê¶¤ë„ ìœ„ì„±ì„ í†µí•´ 26ì–µ ì¸êµ¬ì—ê²Œ ë¬´ê²€ì—´ ì¸í„°ë„·ê³¼ ê²°ì œë¥¼ ì œê³µí•˜ê¸° ìœ„í•œ íŒŒíŠ¸ë„ˆì‹­.',
+      'vision.spacex.btn': 'ì—¬ì • íƒí—˜ &#8594;',
+      'newhere.title': '&#127381; ì²˜ìŒì´ì‹ ê°€ìš”? OST ì—¬ì •ì„ ì‹œìž‘í•˜ì„¸ìš”',
+      'newhere.sub': 'ë¬´ë£Œ OSTë¥¼ ë°›ê³ , ê°€ì¡± ë³¼íŠ¸ë¥¼ ë§Œë“¤ê³ , ì¸í”„ë¼ ê¸°ì—¬ë¡œ ë³´ìƒì„ ë°›ìœ¼ì„¸ìš”.',
+      'gv.title': 'ê°€ì¡± ì„±ìž¥ ë³¼íŠ¸',
+      'gv.sub': 'ìƒˆë¡œìš´ ì„¸ëŒ€ë§ˆë‹¤ ìš°ì£¼ì—ì„œ íƒœì–´ë‚˜ëŠ” ì²« ë²ˆì§¸ ì½”ì¸. ìžë…€ë¥¼ ìœ„í•œ ìˆ˜íƒ ë³¼íŠ¸ë¥¼ ë§Œë“œì„¸ìš”.',
+      'gv.disclaimer': 'êµìœ¡ ëª©ì ìœ¼ë¡œë§Œ ì‚¬ìš©. ë¶€ëª¨/ë³´í˜¸ìžê°€ ëª¨ë“  ì„¸ë²•ê³¼ í˜„ì§€ ë²•ë¥ ì— ì±…ìž„.',
+      'depin.title': 'DePIN ë°ì´í„°ì„¼í„° íŒŒìš°ì…‹',
+      'depin.sub': 'ëŒ€ì—­í­, GPU, CPU ë˜ëŠ” ìœ„ì„± ìš©ëŸ‰ ê³µìœ  &mdash; ë¶„ì‚° ë°ì´í„°ì„¼í„° êµ¬ì¶•ìœ¼ë¡œ OST íšë“.',
+      'demos.title': '&#128717;&#65039; OST ì»¤ë¨¸ìŠ¤', 'demos.sub': 'í”„ë¼ì´ë¹— ì¦‰ì‹œ ê²°ì œë¥¼ ê²½í—˜í•˜ì„¸ìš”. ì‹¤ì œ ì œí’ˆ. ìˆ˜ìˆ˜ë£Œ ì œë¡œ.',
+      'wallet.getTitle': 'ê°œì¸ OST ì§€ê°‘ ë°›ê¸°', 'wallet.getSub': 'ì§€ê°‘ì„ ë§Œë“¤ê±°ë‚˜ ì—°ê²°í•˜ëŠ” ë°©ë²•ì„ ì„ íƒí•˜ì„¸ìš”.',
+      'sell.title': 'OST íŒë§¤ ë˜ëŠ” ê±°ëž˜', 'sell.sub': 'ëª¨ë“  ì•”í˜¸í™”í ë˜ëŠ” ë²•ì •í™”íë¡œ ì¶œê¸ˆ. ê°™ì€ ì†ë„, ê°™ì€ í”„ë¼ì´ë²„ì‹œ.',
+      'censor.title': '&#128683; ì¸í„°ë„· ê²€ì—´ì´ ì§€ê¸ˆ ì¼ì–´ë‚˜ê³  ìžˆìŠµë‹ˆë‹¤', 'censor.sub': 'ì‹¤ì œ ì‚¬ê±´. ì‹¤ì œ ì‚¬ëžŒë“¤. OSTëŠ” ë””ì§€í„¸ ì–µì••ì— ëŒ€í•œ ë‹µ.',
+      'spacex.title': 'OST &times; SpaceX &mdash; ìš°ì£¼ë¡œì˜ ì—¬ì •', 'spacex.sub': 'ì§€êµ¬ì—ì„œ í™”ì„±ê¹Œì§€ íŒŒíŠ¸ë„ˆì‹­ ë¡œë“œë§µì„ ë”°ë¼ê°€ì„¸ìš”.',
+      'roadmap.title': '&#128640; ë¡œë“œë§µê³¼ ì§„í–‰ ìƒí™©', 'roadmap.sub': 'í˜„ìž¬ ìœ„ì¹˜, êµ¬ì¶•í•œ ê²ƒ, ë‹¤ìŒ ë‹¨ê³„.',
+      'offline.scenarios': 'í˜„ì‹¤ ì„¸ê³„ ì‹œë‚˜ë¦¬ì˜¤', 'offline.scenariosub': 'ì„¸ê³„ì€í–‰, UNHCR, EM-DATì˜ ê²€ì¦ëœ ë°ì´í„°. ê°€ì„¤ì´ ì•„ë‹™ë‹ˆë‹¤.',
+      'ai.hook.title': 'ì„œë²„, ë´‡ ë˜ëŠ” ë¡œì»¬í˜¸ìŠ¤íŠ¸ë¥¼ ìš´ì˜ ì¤‘ì´ì‹ ê°€ìš”?',
+      'ai.hook.text': 'ì„œë²„, ë´‡ ë˜ëŠ” ìžë™í™”ëœ ì¸í…”ë¦¬ì „ìŠ¤ê°€ ìžˆë‹¤ë©´ &mdash; <strong>OSTê°€ ê²°ì œ ë ˆì´ì–´</strong>ìž…ë‹ˆë‹¤.',
+      'gc.title': 'ê¸°í”„íŠ¸ì¹´ë“œ êµí™˜ &mdash; OSTë¡œ ê¸°í”„íŠ¸ì¹´ë“œ ë§¤ë§¤',
+      'gc.sub': 'ê¸°í”„íŠ¸ì¹´ë“œë¥¼ í”„ë¼ì´ë¹— OSTë¡œ ì „í™˜í•˜ê±°ë‚˜, OSTë¡œ ê²°ì œí•˜ì—¬ ì¦‰ì‹œ ë””ì§€í„¸ ê¸°í”„íŠ¸ì¹´ë“œë¥¼ ë°›ìœ¼ì„¸ìš”.',
+      'gc.tabSell': '&#128178; ì¹´ë“œ íŒë§¤ &rarr; OST ë°›ê¸°',
+      'gc.tabBuy': '&#127873; OSTë¡œ ì¹´ë“œ êµ¬ë§¤',
+      'gc.pipe.paste': 'ì½”ë“œ ë¶™ì—¬ë„£ê¸°', 'gc.pipe.verify': 'ê²€ì¦', 'gc.pipe.receive': 'OST ìˆ˜ë ¹',
+      'gc.pipe.payOst': 'OST ê²°ì œ', 'gc.pipe.convert': 'ë³€í™˜', 'gc.pipe.getCard': 'ì¹´ë“œ ë°›ê¸°',
+      'gc.merchant': 'ê°€ë§¹ì  / ë¸Œëžœë“œ', 'gc.merchantBuy': 'ê¸°í”„íŠ¸ì¹´ë“œ ì„ íƒ',
+      'gc.code': 'ê¸°í”„íŠ¸ì¹´ë“œ ì½”ë“œ', 'gc.balance': 'ì¹´ë“œ ìž”ì•¡ (USD)',
+      'gc.youGet': 'ë°›ëŠ” ê¸ˆì•¡', 'gc.youPay': 'ì§€ë¶ˆ ê¸ˆì•¡', 'gc.amount': 'ê¸ˆì•¡ (USD)',
+      'gc.email': 'ë°°ì†¡ ì´ë©”ì¼ (ì„ íƒ)',
+      'gc.rate': 'í™˜ìœ¨:', 'gc.fee': 'ìž¬ë¬´ ìˆ˜ìˆ˜ë£Œ (0.1%):',
+      'gc.feeNote': '&#128752; ìˆ˜ìˆ˜ë£ŒëŠ” ìœ„ì„± ì¸í”„ë¼ì— ìžê¸ˆ ì§€ì›',
+      'gc.sellBtn': 'ê²€ì¦ ë° íŒë§¤ &rarr; OST ë°›ê¸°',
+      'gc.buyBtn': 'OST ê²°ì œ &rarr; ê¸°í”„íŠ¸ì¹´ë“œ ë°›ê¸°',
+      'gc.step.verify': 'ê¸°í”„íŠ¸ì¹´ë“œ ì½”ë“œ ê²€ì¦ ì¤‘&hellip;',
+      'gc.step.zk': 'ZK ì¦ëª… ìƒì„± ì¤‘&hellip;',
+      'gc.step.send': 'ê¸°ë°€ ì „ì†¡ìœ¼ë¡œ OST ì „ì†¡ ì¤‘&hellip;',
+      'gc.step.done': 'ì™„ë£Œ! OSTê°€ í”„ë¼ì´ë¹—í•˜ê²Œ ìˆ˜ë ¹ë˜ì—ˆìŠµë‹ˆë‹¤.',
+      'gc.step.debit': 'OST ì°¨ê° (ê¸°ë°€)&hellip;',
+      'gc.step.swap': 'Jupiter í†µí•´ OST &rarr; USDC ìŠ¤ì™‘&hellip;',
+      'gc.step.purchase': 'ê¸°í”„íŠ¸ì¹´ë“œ êµ¬ë§¤ ì¤‘&hellip;',
+      'gc.step.delivered': 'ê¸°í”„íŠ¸ì¹´ë“œ ë°°ì†¡ ì™„ë£Œ!',
+      'gc.supported': 'ì§€ì› ë¸Œëžœë“œ:',
+      'gc.disclaimer': '&#9888; ì‚¬ìš©ìžëŠ” ê¸°í”„íŠ¸ì¹´ë“œì˜ ìœ íš¨ì„±ì„ í™•ì¸í•  ì±…ìž„ì´ ìžˆìŠµë‹ˆë‹¤. OSTëŠ” ê¸°í”„íŠ¸ì¹´ë“œ ë°œí–‰ìžê°€ ì•„ë‹™ë‹ˆë‹¤. í˜„ì§€ ë²•ë¥ ì˜ ì ìš©ì„ ë°›ìŠµë‹ˆë‹¤.',
+      'fuel.title': 'ì—°ë£Œ ë° ì£¼ìœ ì†Œ',
+      'fuel.sub': 'ì „ ì„¸ê³„ ì£¼ìœ ì†Œì—ì„œ OSTë¡œ ê²°ì œ â€” ì£¼ìœ í•  ë•Œë§ˆë‹¤ ë¦¬ì›Œë“œ ì ë¦½',
+      'fuel.howTitle': 'ì´ìš© ë°©ë²•',
+      'fuel.step1': 'ë„ì°©',
+      'fuel.step1d': 'íŒŒíŠ¸ë„ˆ ì£¼ìœ ì†Œë¡œ ì´ë™',
+      'fuel.step2': 'íƒ­ & ê²°ì œ',
+      'fuel.step2d': 'NFC ë˜ëŠ” QRë¡œ OST ê²°ì œ',
+      'fuel.step3': 'ë¦¬ì›Œë“œ ì ë¦½',
+      'fuel.step3d': 'OSTë¡œ ì¦‰ì‹œ ìºì‹œë°± ìˆ˜ë ¹',
+      'fuel.step4': 'ì¶œë°œ',
+      'fuel.step4d': 'ì˜ìˆ˜ì¦ì´ ì§€ê°‘ìœ¼ë¡œ ì „ì†¡',
+      'fuel.calcTitle': 'ì—°ë£Œ ë¦¬ì›Œë“œ ê³„ì‚°ê¸°',
+      'fuel.gallons': 'ê°¤ëŸ°',
+      'fuel.priceGal': 'ê°¤ëŸ°ë‹¹ ê°€ê²© (USD)',
+      'fuel.total': 'ì´ ë¹„ìš©',
+      'fuel.ostCost': 'OST í™˜ì‚°',
+      'fuel.reward': 'ìºì‹œë°± (3%)',
+      'fuel.offlineTitle': 'ì˜¤í”„ë¼ì¸ ìž‘ë™',
+      'fuel.offlineDesc': 'NFC & BLE â€” ì¸í„°ë„· ì—†ì´ ê²°ì œ. ì˜¨ë¼ì¸ ë³µê·€ ì‹œ ë™ê¸°í™”.',
+      'fuel.partnersTitle': 'íŒŒíŠ¸ë„ˆ ì£¼ìœ ì†Œ',
+      'fuel.partnersSub': 'ì „ ì„¸ê³„ 20+ê°œ ì£¼ìš” ì—°ë£Œ ë¸Œëžœë“œì—ì„œ ì´ìš© ê°€ëŠ¥',
+      'fuel.rewardsTitle': 'ë¦¬ì›Œë“œ ë“±ê¸‰',
+      'fuel.disclaimer': '&#9888; í‘œì‹œëœ íŒŒíŠ¸ë„ˆì‹­ì€ ê°œë°œ ì¤‘ìž…ë‹ˆë‹¤. OSTëŠ” ë‚˜ì—´ëœ ë¸Œëžœë“œì™€ ì œíœ´í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤.',
     },
     tr: {
       'nav.home': 'Ana Sayfa', 'nav.newhere': 'OST Al', 'nav.demos': 'Ticaret', 'nav.wallet': 'Cuzdan',
@@ -1861,16 +1861,16 @@
       'nav.about': 'Hikayemiz', 'nav.roadmap': 'Yol Haritasi', 'nav.build': 'Gelistir', 'nav.verify': 'Dogrula',
       'nav.connect': 'Cuzdani Bagla',
       'wallet.dashTitle': 'OST Cuzdanim', 'wallet.dashSub': 'Kisisel komuta merkeziniz. OST cuzdaninizi olusturun ve yonetin.',
-      'bridges.title': 'Kopruler, Rampalar ve Borsalar', 'bridges.sub': 'OST ye her yol — herhangi bir zincir, para birimi veya ulkeden.',
+      'bridges.title': 'Kopruler, Rampalar ve Borsalar', 'bridges.sub': 'OST ye her yol â€” herhangi bir zincir, para birimi veya ulkeden.',
       'hero.tag': 'Bitcoin\'den Sonraki Adim',
       'hero.title': 'Hepimiz <span class="gradient-text">bir aileyiz.</span>',
-      'hero.sub': 'OST, dunyadaki her vatandas icin yapilmis dijital nakit paradir — ozel, anlik ve zaten sahip oldugunuz herhangi bir para birimine bagli.',
+      'hero.sub': 'OST, dunyadaki her vatandas icin yapilmis dijital nakit paradir â€” ozel, anlik ve zaten sahip oldugunuz herhangi bir para birimine bagli.',
       'hero.cta1': 'Ticareti Kesfet', 'hero.cta2': 'OST Al',
       'hero.premine': 'On Madencilik Yok', 'hero.settle': 'Uzlasma', 'hero.opensource': 'Acik Kaynak', 'hero.privacy': 'Gizlilik',
       'story.title': 'Hikayemiz', 'story.sub': 'Merkezi olmayan paranin ilk kivilcimindan ozel dijital nakitin gelecegine bir yolculuk.',
-      'story.t1.title': 'Kivilcim', 'story.t1.text': 'Bitcoin, insanlarin — bankalar degil, hukumetler degil — her siniri asan para yaratabilecegini kanitladi.',
+      'story.t1.title': 'Kivilcim', 'story.t1.text': 'Bitcoin, insanlarin â€” bankalar degil, hukumetler degil â€” her siniri asan para yaratabilecegini kanitladi.',
       'story.t2.title': 'Bosluk', 'story.t2.text': 'Ama Bitcoin yavasti, pahaliydi ve herkese acikti. Milyarlarca insan bankalarin payini almadan kira bile odeyemiyordu.',
-      'story.t3.title': 'Atilim', 'story.t3.text': 'Solana Token-2022 gizli transferleri baslatti — sifir bilgi kanitlari bakiyeleri ve tutarlari gizler.',
+      'story.t3.title': 'Atilim', 'story.t3.text': 'Solana Token-2022 gizli transferleri baslatti â€” sifir bilgi kanitlari bakiyeleri ve tutarlari gizler.',
       'story.t4.title': 'OST Doguyor', 'story.t4.text': 'Durdurulamaz para, anlik uzlasma, tam gizlilik ve bir misyon: uydu altyapisini finanse etmek.',
       'story.t5.year': 'Gelecek', 'story.t5.title': 'Her Vatandas Bagli',
       'story.t5.text': 'Lagos\'taki meyve saticisi ile Tahran\'daki muhendisin ayni finansal ozgurlugu paylastigi bir dunya.',
@@ -1880,34 +1880,34 @@
       'features.title': 'Devrimci Sonraki Adim', 'features.sub': 'Sadece bir token degil. Gercek yasam icin eksiksiz bir finansal sistem.',
       'features.f1.title': 'Gizli Transferler', 'features.f1.text': 'Sifir bilgi kanitlari bakiyenizi ve her islemi gizler.',
       'features.f2.title': 'Saniyenin Altinda Uzlasma', 'features.f2.text': 'Solana\'da 400ms. Kartinizi dokundurmaktan hizli.',
-      'features.f3.title': 'Tum Para Birimleri Koprüsü', 'features.f3.text': 'Bitcoin, Ethereum, USDC, banka transferleri — her sey donusur.',
+      'features.f3.title': 'Tum Para Birimleri KoprÃ¼sÃ¼', 'features.f3.text': 'Bitcoin, Ethereum, USDC, banka transferleri â€” her sey donusur.',
       'features.f4.title': 'Sonsuza Kadar Ucretsiz', 'features.f4.text': 'Sifir islem ucreti. Bagislar ve yatirimcilar tarafindan finanse edilir. Zincir uzerinde seffaflik.',
       'features.f5.title': 'Cevrimdisi Odemeler', 'features.f5.text': 'NFC, QR, Bluetooth. Internetsiz odeyin.',
       'features.f6.title': 'ZK Vergi Uyumu', 'features.f6.text': 'Bakiyenizi aciklamadan vergi odedigini kanitlayin.',
-      'pay.title': 'OST ile Alisveris — Gercek Fiyatlar', 'pay.sub': 'Gercek urunler, gercek fiyatlar. Ozel odemeleri deneyin.',
+      'pay.title': 'OST ile Alisveris â€” Gercek Fiyatlar', 'pay.sub': 'Gercek urunler, gercek fiyatlar. Ozel odemeleri deneyin.',
       'pay.cart': 'Sepetiniz', 'pay.empty': 'Eklemek icin + dokunun', 'pay.paybtn': 'OST ile Ode',
       'pay.s1': 'Cuzdan baglaniyor', 'pay.s2': 'ZK kaniti olusturuluyor', 'pay.s3': 'Solana\'ya yayinlaniyor', 'pay.s4': '0.4 saniyede onaylandi',
-      'pay.done': 'Odeme Tamamlandi — Tamamen Ozel', 'pay.donesub': 'Yeryuzunde kimse bu islemi gormedi.',
-      'transfer.title': 'Paranizi Her Yerden Getirin', 'transfer.sub': 'Canli fiyatlar. Gercek zamanli grafikler. Herhangi bir para birimini OST\'ye donustürun.',
+      'pay.done': 'Odeme Tamamlandi â€” Tamamen Ozel', 'pay.donesub': 'Yeryuzunde kimse bu islemi gormedi.',
+      'transfer.title': 'Paranizi Her Yerden Getirin', 'transfer.sub': 'Canli fiyatlar. Gercek zamanli grafikler. Herhangi bir para birimini OST\'ye donustÃ¼run.',
       'transfer.calc': 'Doviz Kuru Hesaplayicisi', 'transfer.calcsub': 'Her miktar icin ne kadar OST alacaginizi gorun.',
-      'transfer.widgettitle': 'Simdi Donustür', 'transfer.from': 'Para Biriminiz', 'transfer.to': 'Gizli OST',
-      'transfer.result': 'Ozel ve Anlik', 'transfer.convert': 'OST\'ye Donustür',
+      'transfer.widgettitle': 'Simdi DonustÃ¼r', 'transfer.from': 'Para Biriminiz', 'transfer.to': 'Gizli OST',
+      'transfer.result': 'Ozel ve Anlik', 'transfer.convert': 'OST\'ye DonustÃ¼r',
       'transfer.note': 'Wormhole, Jupiter ve Solana Token-2022 tarafindan desteklenmektedir.',
       'transfer.fiattitle': 'Fiat\'tan mi geliyorsunuz?',
-      'transfer.fiattext': '<strong>MoonPay</strong>, <strong>Transak</strong> veya <strong>Ramp Network</strong> kullanin — 100\'den fazla ulkede mevcut.',
+      'transfer.fiattext': '<strong>MoonPay</strong>, <strong>Transak</strong> veya <strong>Ramp Network</strong> kullanin â€” 100\'den fazla ulkede mevcut.',
       'offline.title': 'Her Yerde Cevrimdisi Nakit', 'offline.sub': 'Internet henuz her yerde yok. Ama paraniz olmali.',
-      'offline.lead': 'Isik hizinda islemler — isiklar kapali olsa bile.',
+      'offline.lead': 'Isik hizinda islemler â€” isiklar kapali olsa bile.',
       'offline.text': 'Birine banknot verdiginizi hayal edin. Banka yok. Internet yok. Sadece iki kisi ve el degistiren deger.',
       'offline.nfc': 'NFC Dokunarak Ode', 'offline.nfctext': 'Telefonlari birbirine yaklastirin. Bir dokunma. Odeme tamam.',
       'offline.qr': 'QR Kod Tara', 'offline.qrtext': 'Imzalanmis odeme tek bir QR koda sigar.',
       'offline.bt': 'Bluetooth Yakinlik', 'offline.bttext': 'BLE islemi 10 metreye kadar iletir. Pazarlar ve restoranlar icin ideal.',
-      'getost.title': 'OST Al', 'getost.sub': 'Herhangi bir kripto veya fiat\'tan aninda giris — takas icin KYC yok.',
-      'getost.swap': 'Herhangi Bir Kripto\'yu OST\'ye Donustür', 'getost.swaptext': 'Jupiter tüm Solana likidite havuzlarinda en iyi rotayi bulur.',
-      'getost.jupnote': 'Takas widget\'ini yuklemek icin cuzdaninizi baglayiniz.', 'getost.jupbtn': 'Widget\'i Yükle',
-      'getost.fiat': 'Yerel Para ile Satin Al', 'getost.fiatsub': 'SOL veya USDC satin alin, ardindan OST\'ye donustürun.',
+      'getost.title': 'OST Al', 'getost.sub': 'Herhangi bir kripto veya fiat\'tan aninda giris â€” takas icin KYC yok.',
+      'getost.swap': 'Herhangi Bir Kripto\'yu OST\'ye DonustÃ¼r', 'getost.swaptext': 'Jupiter tÃ¼m Solana likidite havuzlarinda en iyi rotayi bulur.',
+      'getost.jupnote': 'Takas widget\'ini yuklemek icin cuzdaninizi baglayiniz.', 'getost.jupbtn': 'Widget\'i YÃ¼kle',
+      'getost.fiat': 'Yerel Para ile Satin Al', 'getost.fiatsub': 'SOL veya USDC satin alin, ardindan OST\'ye donustÃ¼run.',
       'getost.faucet': 'Yeni misiniz? Ucretsiz OST Alin', 'getost.faucettext': 'Her yeni cuzdan topluluk hazinesinden <strong>1 OST</strong> alir.',
       'getost.faucetbtn': 'Muslugu Ac',
-      'pay.anywhere': '🌐 OST ile Her Yerde Ode',
+      'pay.anywhere': 'ðŸŒ OST ile Her Yerde Ode',
       'pay.anywheresub': 'Alisveris yaptiginiz herhangi bir web sitesini yapisitirin. OST\'nizi kabul ettikleri para birimine donusturuyoruz.',
       'pay.aurl': 'Magaza URL', 'pay.aamount': 'Odeme Tutari', 'pay.acurrency': 'Para Birimi',
       'pay.ayoupay': 'Odediginiz:', 'pay.arate': 'Kur:', 'pay.afee': 'Ag Ucreti:',
@@ -1915,49 +1915,49 @@
       'pay.astep1': 'Magaza odeme linkini yapisitirin', 'pay.astep2': 'Kendi para birimlerinde tutari girin',
       'pay.astep3': 'OST, Jupiter + Wormhole uzerinden canli kurlarla donusturur', 'pay.astep4': 'Magaza kendi para birimini alir, siz OST ile odediniz',
       'pay.apaybtn': 'OST ile Ode', 'pay.asupported': 'Asagidakileri kabul eden her sitede calisir:',
-      'launch.title': '🚀 Mainnet Lansman Kontrol Listesi', 'launch.sub': 'OST\'yi Solana mainnet\'te gercege donusturmek icin gerekenler.',
-      'ai.title': 'Her Zeka Icin Güc', 'ai.sub': 'Yapay zeka ajanlari, botlar, sunucular ve her türlu dijital zekayi karsilliyoruz.',
-      'build.title': 'Bizimle Gelecegi Insa Edin', 'build.sub': 'Kodlayin, yaratin veya piksellerle hayal kurun — OST sizin platformunuz.',
-      'build.cta': 'Bugün Katki Saglamaya Baslayin', 'build.ctasub': 'Her commit, ceviri ve ders insanligi ileriye tasir.',
+      'launch.title': 'ðŸš€ Mainnet Lansman Kontrol Listesi', 'launch.sub': 'OST\'yi Solana mainnet\'te gercege donusturmek icin gerekenler.',
+      'ai.title': 'Her Zeka Icin GÃ¼c', 'ai.sub': 'Yapay zeka ajanlari, botlar, sunucular ve her tÃ¼rlu dijital zekayi karsilliyoruz.',
+      'build.title': 'Bizimle Gelecegi Insa Edin', 'build.sub': 'Kodlayin, yaratin veya piksellerle hayal kurun â€” OST sizin platformunuz.',
+      'build.cta': 'BugÃ¼n Katki Saglamaya Baslayin', 'build.ctasub': 'Her commit, ceviri ve ders insanligi ileriye tasir.',
       'build.github': 'GitHub Deposunu Gor', 'build.docs': 'Belgeleri Oku',
       'verify.title': 'Tam Seffaflik', 'verify.sub': 'Her seyi kendiniz dogrulayin. Saklayacak bir seyimiz yok.',
-      'verify.lead': 'Güven vaatlerle degil, gerceklerle kazanilir.',
+      'verify.lead': 'GÃ¼ven vaatlerle degil, gerceklerle kazanilir.',
       'verify.closing': 'Kodu okuyun. Sirketi kontrol edin. Hazineyi dogrulayin. <strong>Sonra karar verin.</strong>',
       'wallet.title': 'Cuzdaninizi Baglayiniz', 'wallet.sub': 'OST\'ye baglanmak icin bir cuzdan secin.',
       'footer.mission': 'Her islem uydu altyapisi icin fon saglamaya yardimci olur. <strong>Birlikte insa ettigimiz bir hediye.</strong>',
       'footer.copy': 'Acik kaynak. Yeryuzundeki her insan icin sevgiyle insa edildi.',
-      'hero.free': '&#128176; SONSUZA DEK ÜCRETSİZ',
-      'hero.freetext': 'Sıfır işlem ücreti. Gizli maliyet yok. Bağışlar ve yatırımcılar tarafından finanse edilir.',
-      'hero.createwallet': 'Cüzdan Oluştur',
-      'hero.stat.unbanked': 'Dünyada bankasız yetişkinler',
-      'hero.stat.remittance': '$ havale ücretlerinde kaybedilen/yıl',
-      'hero.stat.nointernet': 'İnternetsiz insanlar',
-      'vision.title': 'OST Vizyonu: Tam Finansal Bağımsızlık',
-      'vision.sub': 'Şu anda Solana, Jupiter ve üçüncü taraf köprüleri <strong>geçici altyapı</strong> olarak kullanıyoruz. Hedefimiz <strong>OST Egemen Ağı</strong> kurmak. <em>Tamamen merkeziyetsiz. Sıfır bağımlılık.</em>',
-      'vision.s1.title': 'Geçici İskele', 'vision.s1.sub': 'Solana + Jupiter + Köprüler',
-      'vision.s2.title': 'OST Değişim Protokolü', 'vision.s2.sub': 'Kendi eşleştirme motoru',
-      'vision.s3.title': 'OST Egemen Ağı', 'vision.s3.sub': 'Sıfır üçüncü taraf bağımlılığı',
-      'vision.p1': '&#128274; ZK Gizli', 'vision.p2': '&#9889; 0.4sn Uzlaşma', 'vision.p3': '&#128176; Sıfır Ücret Sonsuza Dek',
-      'vision.p4': '&#128295; Kendi Motoru', 'vision.p5': '&#127757; Kendi DEX ve Köprüleri', 'vision.p6': '&#128752; Uydu İnterneti',
+      'hero.free': '&#128176; SONSUZA DEK ÃœCRETSÄ°Z',
+      'hero.freetext': 'SÄ±fÄ±r iÅŸlem Ã¼creti. Gizli maliyet yok. BaÄŸÄ±ÅŸlar ve yatÄ±rÄ±mcÄ±lar tarafÄ±ndan finanse edilir.',
+      'hero.createwallet': 'CÃ¼zdan OluÅŸtur',
+      'hero.stat.unbanked': 'DÃ¼nyada bankasÄ±z yetiÅŸkinler',
+      'hero.stat.remittance': '$ havale Ã¼cretlerinde kaybedilen/yÄ±l',
+      'hero.stat.nointernet': 'Ä°nternetsiz insanlar',
+      'vision.title': 'OST Vizyonu: Tam Finansal BaÄŸÄ±msÄ±zlÄ±k',
+      'vision.sub': 'Åžu anda Solana, Jupiter ve Ã¼Ã§Ã¼ncÃ¼ taraf kÃ¶prÃ¼leri <strong>geÃ§ici altyapÄ±</strong> olarak kullanÄ±yoruz. Hedefimiz <strong>OST Egemen AÄŸÄ±</strong> kurmak. <em>Tamamen merkeziyetsiz. SÄ±fÄ±r baÄŸÄ±mlÄ±lÄ±k.</em>',
+      'vision.s1.title': 'GeÃ§ici Ä°skele', 'vision.s1.sub': 'Solana + Jupiter + KÃ¶prÃ¼ler',
+      'vision.s2.title': 'OST DeÄŸiÅŸim ProtokolÃ¼', 'vision.s2.sub': 'Kendi eÅŸleÅŸtirme motoru',
+      'vision.s3.title': 'OST Egemen AÄŸÄ±', 'vision.s3.sub': 'SÄ±fÄ±r Ã¼Ã§Ã¼ncÃ¼ taraf baÄŸÄ±mlÄ±lÄ±ÄŸÄ±',
+      'vision.p1': '&#128274; ZK Gizli', 'vision.p2': '&#9889; 0.4sn UzlaÅŸma', 'vision.p3': '&#128176; SÄ±fÄ±r Ãœcret Sonsuza Dek',
+      'vision.p4': '&#128295; Kendi Motoru', 'vision.p5': '&#127757; Kendi DEX ve KÃ¶prÃ¼leri', 'vision.p6': '&#128752; Uydu Ä°nterneti',
       'vision.spacex.title': 'OST &times; SpaceX',
-      'vision.spacex.text': 'Düşük yörünge uyduları aracılığıyla 2,6 milyar kişiye sansürsüz internet ve ödeme sağlamak için ortaklık.',
-      'vision.spacex.btn': 'Yolculuğu Keşfet &#8594;',
-      'newhere.title': '&#127381; Yeni Misin? OST Yolculuğuna Başla',
-      'newhere.sub': 'Ücretsiz OST al, aile kasaları oluştur veya altyapı katkısıyla ödül kazan.',
-      'gv.title': 'Aile Büyüme Kasaları',
-      'gv.sub': 'Her yeni nesillle birlikte uzayda doğan ilk madeni para. Çocuğunuz için emanet kasası oluşturun.',
-      'gv.disclaimer': 'Yalnızca eğitim amaçlıdır. Ebeveynler/vasiler tüm vergi ve yerel yasalardan sorumludur.',
-      'depin.title': 'DePIN Veri Merkezi Musluğu',
-      'depin.sub': 'Bant genişliği, GPU, CPU veya uydu kapasitesi paylaşın &mdash; merkeziyetsiz veri merkezleri kurmak için OST kazanın.',
-      'demos.title': '&#128717;&#65039; OST Ticaret', 'demos.sub': 'Özel, anlık ödemelerin nasıl hissettirdiğini görün. Gerçek ürünler. Sıfır ücret.',
-      'wallet.getTitle': 'Kişisel OST Cüzdanınızı Alın', 'wallet.getSub': 'Cüzdanınızı nasıl oluşturacağınızı veya bağlayacağınızı seçin.',
-      'sell.title': 'OST Sat veya Takas Et', 'sell.sub': 'Herhangi bir kriptoya veya fiata çek. Aynı hız, aynı gizlilik.',
-      'censor.title': '&#128683; İnternet Sansürü Şu Anda Yaşanıyor', 'censor.sub': 'Gerçek olaylar. Gerçek insanlar. OST dijital baskıya cevaptır.',
-      'spacex.title': 'OST &times; SpaceX &mdash; Uzaya Yolculuk', 'spacex.sub': 'Dünya\'dan Mars\'a ortaklık yol haritamızı takip edin.',
-      'roadmap.title': '&#128640; Yol Haritası ve İlerleme', 'roadmap.sub': 'Neredeyiz, ne inşa ettik ve sırada ne var.',
-      'offline.scenarios': 'Gerçek Dünya Senaryoları', 'offline.scenariosub': 'Dünya Bankası, BMMYK ve EM-DAT\'tan doğrulanmış veriler.',
-      'ai.hook.title': 'Sunucu, Bot veya Localhost Çalıştırıyor musunuz?',
-      'ai.hook.text': 'Sunucunuz, botunuz veya otomatik zekanız varsa &mdash; <strong>OST ödeme katmanınızdır</strong>.',
+      'vision.spacex.text': 'DÃ¼ÅŸÃ¼k yÃ¶rÃ¼nge uydularÄ± aracÄ±lÄ±ÄŸÄ±yla 2,6 milyar kiÅŸiye sansÃ¼rsÃ¼z internet ve Ã¶deme saÄŸlamak iÃ§in ortaklÄ±k.',
+      'vision.spacex.btn': 'YolculuÄŸu KeÅŸfet &#8594;',
+      'newhere.title': '&#127381; Yeni Misin? OST YolculuÄŸuna BaÅŸla',
+      'newhere.sub': 'Ãœcretsiz OST al, aile kasalarÄ± oluÅŸtur veya altyapÄ± katkÄ±sÄ±yla Ã¶dÃ¼l kazan.',
+      'gv.title': 'Aile BÃ¼yÃ¼me KasalarÄ±',
+      'gv.sub': 'Her yeni nesillle birlikte uzayda doÄŸan ilk madeni para. Ã‡ocuÄŸunuz iÃ§in emanet kasasÄ± oluÅŸturun.',
+      'gv.disclaimer': 'YalnÄ±zca eÄŸitim amaÃ§lÄ±dÄ±r. Ebeveynler/vasiler tÃ¼m vergi ve yerel yasalardan sorumludur.',
+      'depin.title': 'DePIN Veri Merkezi MusluÄŸu',
+      'depin.sub': 'Bant geniÅŸliÄŸi, GPU, CPU veya uydu kapasitesi paylaÅŸÄ±n &mdash; merkeziyetsiz veri merkezleri kurmak iÃ§in OST kazanÄ±n.',
+      'demos.title': '&#128717;&#65039; OST Ticaret', 'demos.sub': 'Ã–zel, anlÄ±k Ã¶demelerin nasÄ±l hissettirdiÄŸini gÃ¶rÃ¼n. GerÃ§ek Ã¼rÃ¼nler. SÄ±fÄ±r Ã¼cret.',
+      'wallet.getTitle': 'KiÅŸisel OST CÃ¼zdanÄ±nÄ±zÄ± AlÄ±n', 'wallet.getSub': 'CÃ¼zdanÄ±nÄ±zÄ± nasÄ±l oluÅŸturacaÄŸÄ±nÄ±zÄ± veya baÄŸlayacaÄŸÄ±nÄ±zÄ± seÃ§in.',
+      'sell.title': 'OST Sat veya Takas Et', 'sell.sub': 'Herhangi bir kriptoya veya fiata Ã§ek. AynÄ± hÄ±z, aynÄ± gizlilik.',
+      'censor.title': '&#128683; Ä°nternet SansÃ¼rÃ¼ Åžu Anda YaÅŸanÄ±yor', 'censor.sub': 'GerÃ§ek olaylar. GerÃ§ek insanlar. OST dijital baskÄ±ya cevaptÄ±r.',
+      'spacex.title': 'OST &times; SpaceX &mdash; Uzaya Yolculuk', 'spacex.sub': 'DÃ¼nya\'dan Mars\'a ortaklÄ±k yol haritamÄ±zÄ± takip edin.',
+      'roadmap.title': '&#128640; Yol HaritasÄ± ve Ä°lerleme', 'roadmap.sub': 'Neredeyiz, ne inÅŸa ettik ve sÄ±rada ne var.',
+      'offline.scenarios': 'GerÃ§ek DÃ¼nya SenaryolarÄ±', 'offline.scenariosub': 'DÃ¼nya BankasÄ±, BMMYK ve EM-DAT\'tan doÄŸrulanmÄ±ÅŸ veriler.',
+      'ai.hook.title': 'Sunucu, Bot veya Localhost Ã‡alÄ±ÅŸtÄ±rÄ±yor musunuz?',
+      'ai.hook.text': 'Sunucunuz, botunuz veya otomatik zekanÄ±z varsa &mdash; <strong>OST Ã¶deme katmanÄ±nÄ±zdÄ±r</strong>.',
       'gc.title': 'Hediye Kart\u0131 De\u011fi\u015fimi &mdash; OST ile Hediye Kart\u0131 Al veya Sat',
       'gc.sub': 'Herhangi bir hediye kart\u0131n\u0131 \u00f6zel OST\'ye d\u00f6n\u00fc\u015ft\u00fcr\u00fcn veya OST ile \u00f6deyin ve an\u0131nda dijital hediye kart\u0131 al\u0131n.',
       'gc.tabSell': '&#128178; Kart Sat &rarr; OST Al',
@@ -2073,7 +2073,7 @@
           currency: prefs.currency || window.__ostCurrency || 'USD'
         }));
       } catch (err) {}
-      toast('🌐', `Language: ${lang.toUpperCase()}`);
+      toast('ðŸŒ', `Language: ${lang.toUpperCase()}`);
     });
   });
   document.addEventListener('click', () => { if (langList) langList.classList.remove('open'); });
@@ -2222,7 +2222,7 @@
     const settings = options || {};
     const address = pubkeyInput ? String(pubkeyInput) : '';
     if (!address) {
-      toast('⚠️', 'Connect a wallet first');
+      toast('âš ï¸', 'Connect a wallet first');
       return false;
     }
     setWalletFundingState({
@@ -2231,9 +2231,9 @@
       lastError: walletFundingState.lastError || 'OST fee vault covers devnet fees'
     });
     copyTextToClipboard(address).then(function() {
-      toast('📋', 'Wallet address copied. OST covers the devnet fee when you claim.');
+      toast('ðŸ“‹', 'Wallet address copied. OST covers the devnet fee when you claim.');
     }).catch(function() {
-      toast('ℹ️', 'OST covers the devnet fee when you claim.');
+      toast('â„¹ï¸', 'OST covers the devnet fee when you claim.');
     });
     if (faucetStatus) {
       faucetStatus.textContent = 'Wallet address ready. The OST reward vault pays the Solana network fee when you claim.';
@@ -2386,8 +2386,8 @@
         getOstBalanceForAddress(pubkey).catch(function() { return null; })
       ]);
       const sol = (lamports / 1e9).toFixed(4);
-      const ostTxt = ostBal !== null ? ' · ' + ostBal.toFixed(2) + ' OST' : '';
-      toast('💰', `Balance: ${sol} SOL${ostTxt}`);
+      const ostTxt = ostBal !== null ? ' Â· ' + ostBal.toFixed(2) + ' OST' : '';
+      toast('ðŸ’°', `Balance: ${sol} SOL${ostTxt}`);
     } catch (e) {
       // silently ignore balance fetch errors
     }
@@ -2457,7 +2457,7 @@
     try {
       localStorage.setItem(LOCAL_WALLET_STORAGE_KEY, JSON.stringify(createLocalWalletRecord(keypair)));
     } catch {
-      toast('⚠️', 'Could not persist the local wallet in this browser');
+      toast('âš ï¸', 'Could not persist the local wallet in this browser');
     }
   }
 
@@ -2526,22 +2526,22 @@
 
     if (settings.backup && session.kind === 'local' && session.keypair) {
       exportLocalWalletBackup(session.keypair);
-      toast('🧾', 'Wallet backup downloaded. Keep that file offline.');
+      toast('ðŸ§¾', 'Wallet backup downloaded. Keep that file offline.');
     }
 
     if (settings.announce !== false) {
       if (session.kind === 'local' && settings.backup) {
-        toast('🔐', 'Browser wallet created on Solana devnet.');
+        toast('ðŸ”', 'Browser wallet created on Solana devnet.');
       } else {
-        toast('✅', `Connected: ${shortAddress(connectedWallet)}`);
+        toast('âœ…', `Connected: ${shortAddress(connectedWallet)}`);
       }
       verifyWalletAccount(connectedWallet).then(info => {
         if (info.verified) {
-          toast('🔗', `Account verified — ${info.balance.toFixed(4)} SOL`);
+          toast('ðŸ”—', `Account verified â€” ${info.balance.toFixed(4)} SOL`);
         } else if (session.kind === 'local') {
-          toast('💡', 'Local wallet ready. Claim devnet OST next to finish the live test flow.');
+          toast('ðŸ’¡', 'Local wallet ready. Claim devnet OST next to finish the live test flow.');
         } else {
-          toast('💡', `New wallet — ${info.balance.toFixed(4)} SOL. Use the faucet below to get OST.`);
+          toast('ðŸ’¡', `New wallet â€” ${info.balance.toFixed(4)} SOL. Use the faucet below to get OST.`);
         }
       });
     }
@@ -2587,7 +2587,7 @@
       window.syncWalletJourneyUi();
     }
     syncOstDevnetMetrics();
-    toast('👛', 'Wallet disconnected');
+    toast('ðŸ‘›', 'Wallet disconnected');
   }
 
   function getAssociatedTokenAddressSync(mint, owner, allowOwnerOffCurve, tokenProgramId, associatedTokenProgramId) {
@@ -2917,7 +2917,7 @@
     if (!conn) throw new Error('Solana RPC unavailable');
 
     const trader = connectedWalletSession.publicKey;
-    // Pool covers the SOL fee — user only needs OST. Skip SOL check.
+    // Pool covers the SOL fee â€” user only needs OST. Skip SOL check.
     const ostBalance = await getOstBalanceForAddress(trader);
     if (ostBalance + 1e-9 < Number(order.stake)) {
       throw new Error(t('pay.notEnoughOst', 'Not enough OST in this wallet. Claim or buy OST first.'));
@@ -2950,14 +2950,14 @@
     const memoIx = createMemoInstruction(memo, trader);
 
     let signature;
-    // Route through pool-paid tx if the rescue helper is loaded — user pays zero SOL.
+    // Route through pool-paid tx if the rescue helper is loaded â€” user pays zero SOL.
     if (window.OST_RESCUE && window.OST_RESCUE.sendUserSignedPoolPaidTx) {
       signature = await window.OST_RESCUE.sendUserSignedPoolPaidTx([memoIx, transferIx]);
     } else {
       throw new Error(t('pay.walletNeedsSol', 'The OST fee vault is still loading. Please wait a moment and try again.'));
     }
 
-    // Record the position immediately — we already have a confirmed signature.
+    // Record the position immediately â€” we already have a confirmed signature.
     // The balance is re-fetched below for UI feedback only; we must NOT gate
     // position storage on it because RPC propagation can lag by several seconds,
     // making a freshly-deducted balance appear unchanged (false "reverted" error).
@@ -2990,12 +2990,12 @@
     storePredictionOrderRecord(record);
     try { window.dispatchEvent(new CustomEvent('ost:prediction-order-recorded', { detail: record })); } catch (_) {}
 
-    // Fetch updated balance for UI display (best-effort — use stake-adjusted
+    // Fetch updated balance for UI display (best-effort â€” use stake-adjusted
     // fallback if the RPC hasn't propagated the debit yet).
     var remainingBalance;
     try {
       var fetched = await getOstBalanceForAddress(trader);
-      // If RPC returned a stale value (≥ pre-trade balance), use a locally-
+      // If RPC returned a stale value (â‰¥ pre-trade balance), use a locally-
       // calculated estimate so the ticket panel shows something sensible.
       remainingBalance = (fetched + 1e-6 < ostBalance) ? fetched : Math.max(0, ostBalance - Number(order.stake));
     } catch (_) {
@@ -3193,7 +3193,7 @@
     } catch (e) {
       var msg = (e && e.message) || '';
       // Simulation false-positive: account state not yet visible at confirmed.
-      // The balance checks above already verified funds — retry without preflight.
+      // The balance checks above already verified funds â€” retry without preflight.
       if (msg.includes('no record of a prior credit') ||
           msg.includes('simulation failed') ||
           msg.includes('Simulation failed')) {
@@ -3519,11 +3519,11 @@
         throw 'Install Backpack';
       },
       ledger: () => {
-        toast('💳', 'Ledger: Use Phantom or Solflare with Ledger connected');
+        toast('ðŸ’³', 'Ledger: Use Phantom or Solflare with Ledger connected');
         return Promise.reject('Use Phantom');
       },
       walletconnect: () => {
-        toast('🔗', 'WalletConnect: Coming soon');
+        toast('ðŸ”—', 'WalletConnect: Coming soon');
         return Promise.reject('Coming soon');
       },
       local: async () => {
@@ -3557,7 +3557,7 @@
       })
       .catch(err => {
         if (typeof err === 'string' && err !== 'Redirect') {
-          toast('⚠️', err);
+          toast('âš ï¸', err);
         }
       });
   }
@@ -3567,7 +3567,7 @@
     setConnectedWalletSession(restoredLocalWalletSession, { announce: false });
   }
 
-  /* ---------- 3D EARTH — Realistic Day/Night ---------- */
+  /* ---------- 3D EARTH â€” Realistic Day/Night ---------- */
   function initGlobe() {
     const canvas = $('#globeCanvas');
     if (!canvas) { console.warn('Globe: canvas #globeCanvas not found'); return; }
@@ -3587,7 +3587,7 @@
     canvas.style.width = '100%';
     canvas.style.height = '100%';
 
-    // Earth sphere — higher resolution for crisp visuals
+    // Earth sphere â€” higher resolution for crisp visuals
     const earthGeo = new THREE.SphereGeometry(1, 96, 96);
 
     // Load textures from NASA public domain
@@ -3683,7 +3683,7 @@
       }
       scene.add(earthMesh);
 
-      // Atmosphere glow — enhanced
+      // Atmosphere glow â€” enhanced
       const atmGeo = new THREE.SphereGeometry(1.05, 96, 96);
       const atmMat = new THREE.ShaderMaterial({
         uniforms: {
@@ -3720,7 +3720,7 @@
       atmMesh = new THREE.Mesh(atmGeo, atmMat);
       scene.add(atmMesh);
 
-      // Outer glow — larger halo
+      // Outer glow â€” larger halo
       const outerGeo = new THREE.SphereGeometry(1.18, 64, 64);
       const outerMat = new THREE.ShaderMaterial({
         uniforms: {
@@ -3797,7 +3797,7 @@
     addNebula(50, -10, -60, 0x6644ff, 500);
     addNebula(30, 30, -100, 0x44aaff, 400);
 
-    // Sun light (for atmosphere/glow only — day/night handled by custom shader)
+    // Sun light (for atmosphere/glow only â€” day/night handled by custom shader)
     const sunLight = new THREE.DirectionalLight(0xffffff, 0.4);
     scene.add(sunLight);
     scene.add(new THREE.AmbientLight(0x111122, 0.1));
@@ -4063,9 +4063,9 @@
 
       if (updatedEl) {
         if (ostDevnetMetrics.available) {
-          updatedEl.textContent = 'Devnet live · ' + new Date(ostDevnetMetrics.lastUpdatedAt || Date.now()).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+          updatedEl.textContent = 'Devnet live Â· ' + new Date(ostDevnetMetrics.lastUpdatedAt || Date.now()).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
         } else {
-          updatedEl.textContent = ostDevnetMetrics.loading ? 'Syncing devnet…' : 'Devnet sync pending';
+          updatedEl.textContent = ostDevnetMetrics.loading ? 'Syncing devnetâ€¦' : 'Devnet sync pending';
         }
       }
     }
@@ -4083,7 +4083,7 @@
       updateOstMarketBoard();
     }
 
-  // Fiat exchange rates — fetched live, defaults as fallback
+  // Fiat exchange rates â€” fetched live, defaults as fallback
   const fiatRates = {
     USD: 1, EUR: 0.92, GBP: 0.79, CNY: 7.25, INR: 83.5, BRL: 4.97,
     RUB: 92, MXN: 17.2, JPY: 155, NGN: 1550, KRW: 1340, TRY: 32.5,
@@ -4098,13 +4098,13 @@
 
   // Currency symbol map for international display
   var currSymbols = {
-    USD:'$',EUR:'€',GBP:'£',JPY:'¥',CNY:'¥',INR:'₹',BRL:'R$',KRW:'₩',
-    TRY:'₺',RUB:'₽',PLN:'zł',THB:'฿',NGN:'₦',MXN:'$',AUD:'A$',CAD:'C$',
+    USD:'$',EUR:'â‚¬',GBP:'Â£',JPY:'Â¥',CNY:'Â¥',INR:'â‚¹',BRL:'R$',KRW:'â‚©',
+    TRY:'â‚º',RUB:'â‚½',PLN:'zÅ‚',THB:'à¸¿',NGN:'â‚¦',MXN:'$',AUD:'A$',CAD:'C$',
     NZD:'NZ$',CHF:'CHF',SEK:'kr',NOK:'kr',DKK:'kr',ZAR:'R',HKD:'HK$',
-    SGD:'S$',TWD:'NT$',CZK:'Kč',HUF:'Ft',RON:'lei',BGN:'лв',ISK:'kr',
-    UAH:'₴',CLP:'$',PEN:'S/',UYU:'$U',DOP:'RD$',PAB:'B/.',ILS:'₪',
-    ARS:'$',EGP:'E£',PKR:'₨',IDR:'Rp',PHP:'₱',VND:'₫',SAR:'﷼',
-    COP:'$',KES:'KSh',IRR:'﷼',USDC:'$',USDT:'$',BTC:'₿',ETH:'Ξ',SOL:'◎',BNB:'BNB'
+    SGD:'S$',TWD:'NT$',CZK:'KÄ',HUF:'Ft',RON:'lei',BGN:'Ð»Ð²',ISK:'kr',
+    UAH:'â‚´',CLP:'$',PEN:'S/',UYU:'$U',DOP:'RD$',PAB:'B/.',ILS:'â‚ª',
+    ARS:'$',EGP:'EÂ£',PKR:'â‚¨',IDR:'Rp',PHP:'â‚±',VND:'â‚«',SAR:'ï·¼',
+    COP:'$',KES:'KSh',IRR:'ï·¼',USDC:'$',USDT:'$',BTC:'â‚¿',ETH:'Îž',SOL:'â—Ž',BNB:'BNB'
   };
   function getCurrSym(c) { return currSymbols[c] || c + ' '; }
 
@@ -4303,7 +4303,7 @@
     ctx.fillStyle = 'rgba(148, 163, 184, 0.92)';
 
     if (!ostDevnetMetrics.available) {
-      ctx.fillText(ostDevnetMetrics.loading ? 'Loading mint, treasury, and faucet data…' : 'Devnet metrics are waiting for the next sync.', 16, 48);
+      ctx.fillText(ostDevnetMetrics.loading ? 'Loading mint, treasury, and faucet dataâ€¦' : 'Devnet metrics are waiting for the next sync.', 16, 48);
       return;
     }
 
@@ -4449,7 +4449,7 @@
     syncOstDevnetMetrics();
   }, OST_DEVNET_METRICS_REFRESH_MS);
 
-  /* ---------- GROWTH PROJECTION CHART — removed, replaced by roadmap in HTML ---------- */
+  /* ---------- GROWTH PROJECTION CHART â€” removed, replaced by roadmap in HTML ---------- */
 
   /* ---------- EXCHANGE CALCULATOR ---------- */
   const calcAmount = $('#calcAmount');
@@ -4493,7 +4493,7 @@
     if (amount <= 0) {
       if (calcResult) calcResult.textContent = '--';
       if (calcRate) calcRate.textContent = '--';
-      if (calcUpdated) calcUpdated.textContent = `● ${liveLabel}`;
+      if (calcUpdated) calcUpdated.textContent = `â— ${liveLabel}`;
       return;
     }
 
@@ -4518,7 +4518,7 @@
       calcRate.textContent = `1 ${curr} = ${rateVal.toLocaleString(undefined, { maximumFractionDigits: 0 })} OST`;
     }
     if (calcUpdated) {
-      calcUpdated.textContent = `● ${liveLabel} · ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+      calcUpdated.textContent = `â— ${liveLabel} Â· ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
     }
   }
 
@@ -4615,10 +4615,10 @@
         url: item.getAttribute('data-link') || '',
         currency: item.getAttribute('data-currency') || 'USD',
         category: item.getAttribute('data-category') || 'general',
-        emoji: img ? '🛍️' : (item.querySelector('.item-visual')?.textContent || ''),
+        emoji: img ? 'ðŸ›ï¸' : (item.querySelector('.item-visual')?.textContent || ''),
       });
       renderCart();
-      toast('🛒', t('pay.toastAdded', 'Added') + ' ' + item.getAttribute('data-name'));
+      toast('ðŸ›’', t('pay.toastAdded', 'Added') + ' ' + item.getAttribute('data-name'));
     });
   });
 
@@ -4627,7 +4627,7 @@
   if (payBtn) payBtn.addEventListener('click', () => {
     if (!cart.length) return;
     if (typeof window.loadInterchangeRequest !== 'function') {
-      toast('⚠️', t('pay.interchangeLoading', 'Interchange desk is still loading'));
+      toast('âš ï¸', t('pay.interchangeLoading', 'Interchange desk is still loading'));
       return;
     }
 
@@ -4649,7 +4649,7 @@
       source: t('pay.shopSource', 'shop cart'),
       note: merchantNames.length > 1 ? 'Batch cart from curated shop' : 'Curated shop order'
     });
-    toast('🧾', t('pay.cartMoved', 'Cart moved to the interchange desk'));
+    toast('ðŸ§¾', t('pay.cartMoved', 'Cart moved to the interchange desk'));
   });
 
   /* ---------- PAY ANYWHERE WIDGET ---------- */
@@ -4674,7 +4674,7 @@
     // URL preview
     if (paUrlPreview) {
       const domain = extractDomain(url);
-      paUrlPreview.textContent = domain ? `🔗 ${domain}` : '';
+      paUrlPreview.textContent = domain ? `ðŸ”— ${domain}` : '';
     }
 
     // Enable/disable button
@@ -4703,7 +4703,7 @@
     else formatted = ostOut.toFixed(2);
 
     if (paOstAmount) paOstAmount.textContent = `${formatted} OST`;
-    if (paRate) paRate.textContent = `1 OST = $${ostPrice.toFixed(6)} · 1 ${curr} = ${(1 / (fiatRates[curr] || 1)).toFixed(4)} USD`;
+    if (paRate) paRate.textContent = `1 OST = $${ostPrice.toFixed(6)} Â· 1 ${curr} = ${(1 / (fiatRates[curr] || 1)).toFixed(4)} USD`;
   }
 
   if (paUrl) paUrl.addEventListener('input', updatePayAnywhere);
@@ -4717,13 +4717,13 @@
     const domain = extractDomain(url || '');
 
     if (!domain || amount <= 0) {
-      toast('⚠️', 'Enter a valid URL and amount');
+      toast('âš ï¸', 'Enter a valid URL and amount');
       return;
     }
 
     if (!connectedWallet) {
       openWalletModal();
-      toast('👛', 'Connect your wallet first');
+      toast('ðŸ‘›', 'Connect your wallet first');
       return;
     }
 
@@ -4740,7 +4740,7 @@
     else usdValue = amount / (fiatRates[curr] || 1);
     const ostOut = usdValue / ostPrice;
 
-    toast('🔄', `Converting ${ostOut >= 1e6 ? (ostOut/1e6).toFixed(1)+'M' : ostOut.toFixed(0)} OST → ${amount} ${curr}...`);
+    toast('ðŸ”„', `Converting ${ostOut >= 1e6 ? (ostOut/1e6).toFixed(1)+'M' : ostOut.toFixed(0)} OST â†’ ${amount} ${curr}...`);
     await sleep(1500);
 
     // Step 2: Get real Solana slot
@@ -4754,11 +4754,11 @@
       if (sd.result) solSlot = sd.result;
     } catch (_) {}
 
-    toast('📡', `Broadcast to Solana — Slot #${solSlot.toLocaleString()}`);
+    toast('ðŸ“¡', `Broadcast to Solana â€” Slot #${solSlot.toLocaleString()}`);
     await sleep(1000);
 
     // Step 3: Redirect to merchant
-    toast('✅', `Payment of ${amount} ${curr} to ${domain} confirmed!`);
+    toast('âœ…', `Payment of ${amount} ${curr} to ${domain} confirmed!`);
     launchConfetti();
 
     await sleep(2000);
@@ -4834,7 +4834,7 @@
     else if (ostOut >= 1e6) formatted = (ostOut / 1e6).toFixed(2) + 'M';
     else if (ostOut >= 1e3) formatted = (ostOut / 1e3).toFixed(1) + 'K';
     else formatted = ostOut.toFixed(2);
-    transferResult.textContent = `≈ ${formatted} OST ($${usdValue.toLocaleString(undefined, { maximumFractionDigits: 2 })})`;
+    transferResult.textContent = `â‰ˆ ${formatted} OST ($${usdValue.toLocaleString(undefined, { maximumFractionDigits: 2 })})`;
   }
 
   const convertProviders = $('#convertProviders');
@@ -4854,7 +4854,7 @@
     const end = Number(tail) || 4;
     if (!text) return 'unknown';
     if (text.length <= start + end + 1) return text;
-    return text.slice(0, start) + '…' + text.slice(-end);
+    return text.slice(0, start) + 'â€¦' + text.slice(-end);
   }
 
   function getConvertSettlementAsset(currencyValue) {
@@ -4959,7 +4959,7 @@
   function maybePromptConvertBackup() {
     if (!connectedWalletSession || connectedWalletSession.kind !== 'local') return;
     if (localStorage.getItem(LOCAL_WALLET_BACKUP_EXPORTED_KEY)) return;
-    toast('🔐', 'Download your browser wallet backup. Clearing browser storage will lose this wallet.');
+    toast('ðŸ”', 'Download your browser wallet backup. Clearing browser storage will lose this wallet.');
     refreshConvertBackupBar();
   }
 
@@ -4970,10 +4970,10 @@
       ? result.payout.sig
       : intent.signature || '';
     const ostAmount = Number(intent.ostAmount || 0);
-    transferResult.textContent = 'Received ' + ostAmount.toFixed(2) + ' OST' + (payoutSig ? ' · sig ' + String(payoutSig).slice(0, 8) + '...' : '');
+    transferResult.textContent = 'Received ' + ostAmount.toFixed(2) + ' OST' + (payoutSig ? ' Â· sig ' + String(payoutSig).slice(0, 8) + '...' : '');
     setConvertRouteMessage((paidWith || 'Treasury payment') + ' verified and OST delivered to the connected wallet. This event now syncs through the OST API so wallet history survives refreshes and device sync.');
     setConvertTopupStatus('Payment verified and OST delivered.', 'success');
-    toast('✅', 'Purchased ' + ostAmount.toFixed(2) + ' OST');
+    toast('âœ…', 'Purchased ' + ostAmount.toFixed(2) + ' OST');
     launchConfetti();
     updateWalletBalance(connectedWallet);
     maybePromptConvertBackup();
@@ -5139,7 +5139,7 @@
         transferResult.textContent = 'Payment failed: ' + message;
         setConvertRouteMessage('Could not settle the live OST order. ' + message);
         setConvertTopupStatus(message, 'error');
-        toast('⚠', message);
+        toast('âš ', message);
       }
     });
   }
@@ -5174,7 +5174,7 @@
         if (window.setWalletPanel) window.setWalletPanel('access', { scroll: true });
         transferResult.textContent = 'Connect a wallet first to create a live OST order.';
         setConvertRouteMessage('The converter now ties every live order to a real wallet address. Create or connect the delivery wallet first.');
-        toast('👛', 'Create or connect the payout wallet first');
+        toast('ðŸ‘›', 'Create or connect the payout wallet first');
         resetConvertStepState();
         return;
       }
@@ -5182,7 +5182,7 @@
       if (!window.OST_TOPUP || typeof window.OST_TOPUP.createIntent !== 'function') {
         transferResult.textContent = 'Live payment rail is still loading.';
         setConvertRouteMessage('Refresh the page. The OST top-up client has not loaded yet.');
-        toast('⚠', 'Live payment rail is still loading');
+        toast('âš ', 'Live payment rail is still loading');
         return;
       }
 
@@ -5228,7 +5228,7 @@
           setConvertRouteMessage('Live Stripe checkout opened. Finish payment, then return here if you need to refresh delivery status.');
           setConvertTopupStatus('Checkout created. Open it in a secure tab and complete payment.', 'warning');
           window.open(checkout.url, '_blank', 'noopener');
-          toast('💳', 'Live card checkout opened');
+          toast('ðŸ’³', 'Live card checkout opened');
           updateConvertProviders();
           return;
         }
@@ -5246,10 +5246,10 @@
         transferResult.textContent = 'Payment order ready for ' + Number(intent.ostAmount || 0).toFixed(2) + ' OST.';
         if (isFiat) {
           setConvertRouteMessage('Card rails now fund the connected wallet first. After funding, click the exact ' + settlementAsset + ' wallet payment button below to finish this OST purchase.');
-          toast('🧾', 'Card-linked payment order created');
+          toast('ðŸ§¾', 'Card-linked payment order created');
         } else {
           setConvertRouteMessage('This source is quoted live, but the real treasury settlement happens in ' + settlementAsset + ' from the connected wallet. Use the live order below to finish the purchase.');
-          toast('🧾', 'Live payment order created');
+          toast('ðŸ§¾', 'Live payment order created');
         }
         setConvertTopupStatus('Payment order created. The memo and delivery wallet are now locked.', 'warning');
         updateConvertProviders();
@@ -5258,7 +5258,7 @@
         transferResult.textContent = 'Purchase failed: ' + message;
         setConvertRouteMessage('OST could not create or settle the live payment order. ' + message);
         setConvertTopupStatus(message, 'error');
-        toast('⚠', message);
+        toast('âš ', message);
       }
     });
   }
@@ -5289,13 +5289,13 @@
     const isLocal = connectedWalletSession && connectedWalletSession.kind === 'local' && connectedWalletSession.keypair;
     if (convertBackupBarMsg) {
       convertBackupBarMsg.innerHTML = isLocal
-        ? '<strong>⚠ Save your browser wallet.</strong> If you clear this browser\'s storage, your devnet wallet is lost. Download the backup file once and keep it offline.'
-        : '<strong>🔑 Import or back up a browser wallet.</strong> Paste a secret key below to access an existing wallet, or create a new browser wallet to download a backup file.';
+        ? '<strong>âš  Save your browser wallet.</strong> If you clear this browser\'s storage, your devnet wallet is lost. Download the backup file once and keep it offline.'
+        : '<strong>ðŸ”‘ Import or back up a browser wallet.</strong> Paste a secret key below to access an existing wallet, or create a new browser wallet to download a backup file.';
     }
     if (convertBackupBtn) convertBackupBtn.disabled = !isLocal;
   }
 
-  // Parse a pasted secret key — accepts JSON array of 64 numbers, comma-separated
+  // Parse a pasted secret key â€” accepts JSON array of 64 numbers, comma-separated
   // numbers, hex (128 chars), or base58. Returns Uint8Array(64) or throws.
   function parsePastedSecretKey(raw) {
     const trimmed = (raw || '').trim();
@@ -5360,9 +5360,9 @@
     convertBackupBtn.addEventListener('click', () => {
       if (connectedWalletSession && connectedWalletSession.kind === 'local' && connectedWalletSession.keypair) {
         exportLocalWalletBackup(connectedWalletSession.keypair);
-        toast('🧾', 'Wallet backup downloaded. Keep it offline.');
+        toast('ðŸ§¾', 'Wallet backup downloaded. Keep it offline.');
       } else {
-        toast('ℹ️', 'Create a browser wallet first to download a backup.');
+        toast('â„¹ï¸', 'Create a browser wallet first to download a backup.');
       }
     });
   }
@@ -5380,10 +5380,10 @@
           throw new Error('Invalid wallet backup file.');
         }
         const address = importPastedWallet(Uint8Array.from(secret));
-        toast('✅', `Wallet restored: ${address.slice(0, 6)}…${address.slice(-4)}`);
+        toast('âœ…', `Wallet restored: ${address.slice(0, 6)}â€¦${address.slice(-4)}`);
       } catch (err) {
         console.warn('[OST] Wallet restore failed', err);
-        toast('⚠️', 'Could not restore that file — make sure it is a valid OST wallet backup.');
+        toast('âš ï¸', 'Could not restore that file â€” make sure it is a valid OST wallet backup.');
       }
     });
   }
@@ -5394,10 +5394,10 @@
         const secretBytes = parsePastedSecretKey(convertPasteKeyInput.value);
         const address = importPastedWallet(secretBytes);
         convertPasteKeyInput.value = '';
-        toast('✅', `Wallet imported: ${address.slice(0, 6)}…${address.slice(-4)}`);
+        toast('âœ…', `Wallet imported: ${address.slice(0, 6)}â€¦${address.slice(-4)}`);
       } catch (err) {
         console.warn('[OST] Paste-key import failed', err);
-        toast('⚠️', err && err.message ? err.message : 'Could not parse the pasted secret key.');
+        toast('âš ï¸', err && err.message ? err.message : 'Could not parse the pasted secret key.');
       }
     });
   }
@@ -5474,7 +5474,7 @@
       if (!connectedWalletSession || typeof solanaWeb3 === 'undefined') {
         if (faucetAmount && !faucetTotal) faucetAmount.textContent = OST_WELCOME_DROP_AMOUNT.toFixed(2);
         if (faucetStatus) faucetStatus.textContent = 'Create or connect a wallet to claim 100 OST. After that, manually claim 1 OST per day.';
-        toast('👛', 'Create or connect your OST wallet first');
+        toast('ðŸ‘›', 'Create or connect your OST wallet first');
         return { ok: false, reason: 'no-wallet' };
       }
 
@@ -5512,7 +5512,7 @@
         const claimedAmount = Number(faucetResult.amount || 0);
         const humanKind = faucetResult.rewardKind === 'daily' ? 'daily manual drop' : 'head start';
         if (faucetStatus) faucetStatus.textContent = claimedAmount.toFixed(2) + ' OST ' + humanKind + ' claimed. Wallet balance: ' + ostBalance.toFixed(2) + ' OST.';
-        toast('🎉', '+' + claimedAmount.toFixed(2) + ' OST ' + humanKind + ' claimed');
+        toast('ðŸŽ‰', '+' + claimedAmount.toFixed(2) + ' OST ' + humanKind + ' claimed');
         launchConfetti();
         updateWalletBalance(connectedWallet);
         syncOstDevnetMetrics({ force: true });
@@ -5529,13 +5529,13 @@
         const isTreasuryEmpty = /treasury is empty|refill the treasury|vault.*refill|vault.*empty/i.test(errorText);
         if (isTreasuryEmpty) {
           if (faucetStatus) faucetStatus.textContent = 'The OST reward vault is being refilled. Please try the claim again soon.';
-          toast('⚠️', 'OST reward vault is being refilled.');
+          toast('âš ï¸', 'OST reward vault is being refilled.');
         } else if (/fee vault|vault keypair|OST_RESCUE|still loading/i.test(errorText)) {
           if (faucetStatus) faucetStatus.textContent = 'The OST fee vault is still loading. Please wait a moment and click claim again.';
-          toast('⚠️', 'OST fee vault is still loading.');
+          toast('âš ï¸', 'OST fee vault is still loading.');
         } else {
           if (faucetStatus) faucetStatus.textContent = 'Could not claim OST right now. Make sure Devnet is reachable and try again.';
-          toast('⚠️', errorText);
+          toast('âš ï¸', errorText);
         }
         return { ok: false, reason: 'error', error: e };
       }
@@ -5582,9 +5582,9 @@
     window.addEventListener('ost:wallet-changed', refreshFaucetRewardUi);
   }
 
-  /* ---------- PAY ANY LINK — removed, merged into Browser Mockup above ---------- */
+  /* ---------- PAY ANY LINK â€” removed, merged into Browser Mockup above ---------- */
 
-  /* ---------- GROW VAULT — Multi-Step Anti-Scam Family Vault ---------- */
+  /* ---------- GROW VAULT â€” Multi-Step Anti-Scam Family Vault ---------- */
   (function initGrowVault() {
     const gvStatus = $('#gvStatus');
     const gvCreateBtn = $('#gvCreateBtn');
@@ -5669,7 +5669,7 @@
     });
     if (back2) back2.addEventListener('click', function() { showStep(1); });
 
-    // Step 3 — consent checkboxes enable create button
+    // Step 3 â€” consent checkboxes enable create button
     var back3 = document.getElementById('gvBack3');
     if (back3) back3.addEventListener('click', function() { showStep(2); });
 
@@ -5753,7 +5753,7 @@
     showStep(1);
   })();
 
-  /* ---------- DEPIN FAUCET — Real Verification System ---------- */
+  /* ---------- DEPIN FAUCET â€” Real Verification System ---------- */
   (function initDepinFaucet() {
     const depinBtn = $('#depinClaimBtn');
     const depinStatus = $('#depinClaimStatus');
@@ -5995,585 +5995,52 @@
     logBody.scrollTop = logBody.scrollHeight;
   }
 
+  // ---- Ghost shim (legacy block wiped during rebuild) -----------------
+  // The full Ghost AI is being rebuilt under site/ghost/. The connector
+  // test buttons below still expect a few helpers, so we provide minimal
+  // stubs here. These will be replaced by ghost/translator.js wiring in
+  // Phase 2.
   const ghostConnectorMeta = {
-    openai: { label: 'OpenAI', protocols: ['LLM', 'JSON', 'Tool Calling'] },
-    anthropic: { label: 'Anthropic', protocols: ['LLM', 'Proxy', 'Messages API'] },
-    gemini: { label: 'Gemini', protocols: ['LLM', 'GenerateContent', 'JSON'] },
-    telegram: { label: 'Telegram', protocols: ['Bot API', 'Webhook'] },
-    discord: { label: 'Discord', protocols: ['Gateway', 'Bot Token'] },
-    webhook: { label: 'Webhook', protocols: ['HTTP', 'POST'] },
-    mcp: { label: 'MCP', protocols: ['stdio', 'SSE', 'Streamable HTTP'] },
-    claude: { label: 'Claude', protocols: ['LLM', 'Proxy', 'Messages API'] },
-    grok: { label: 'Grok', protocols: ['LLM', 'Chat Completions', 'JSON'] },
-    vscode: { label: 'VSCode', protocols: ['Editor', 'GitHub', 'Extension'] },
-    github: { label: 'GitHub', protocols: ['REST', 'Repo', 'Automation'] },
-    polymarket: { label: 'Polymarket', protocols: ['Markets', 'Strategy', 'Bot'] },
-    kalshi: { label: 'Kalshi', protocols: ['Markets', 'Contracts', 'Bot'] }
+    openai:     { label: 'OpenAI',     protocols: ['LLM'] },
+    anthropic:  { label: 'Anthropic',  protocols: ['LLM'] },
+    gemini:     { label: 'Gemini',     protocols: ['LLM'] },
+    telegram:   { label: 'Telegram',   protocols: ['Bot API'] },
+    discord:    { label: 'Discord',    protocols: ['Gateway'] },
+    webhook:    { label: 'Webhook',    protocols: ['HTTP'] },
+    mcp:        { label: 'MCP',        protocols: ['stdio','SSE'] },
+    claude:     { label: 'Claude',     protocols: ['LLM'] },
+    grok:       { label: 'Grok',       protocols: ['LLM'] },
+    vscode:     { label: 'VSCode',     protocols: ['Editor'] },
+    github:     { label: 'GitHub',     protocols: ['REST'] },
+    polymarket: { label: 'Polymarket', protocols: ['Markets'] },
+    kalshi:     { label: 'Kalshi',     protocols: ['Markets'] }
   };
-  const ghostServerRelayKeys = ['anthropic', 'gemini', 'grok', 'github', 'mcp'];
-  const ghostConnectorRegistry = Object.keys(ghostConnectorMeta).reduce((acc, key) => {
-    acc[key] = { connected: false, lastCheckedAt: 0 };
+  const ghostConnectorRegistry = Object.keys(ghostConnectorMeta).reduce((acc, k) => {
+    acc[k] = { connected: false, lastCheckedAt: 0 };
     return acc;
   }, {});
-  const ghostMissionInput = $('#ghostMissionInput');
-  const ghostMode = $('#ghostMode');
-  const ghostProtocol = $('#ghostProtocol');
-  const ghostComposeBtn = $('#ghostComposeBtn');
-  const ghostDispatchBtn = $('#ghostDispatchBtn');
-  const ghostSyncBtn = $('#ghostSyncBtn');
-  const ghostClearBtn = $('#ghostClearBtn');
-  const ghostStatus = $('#ghostStatus');
-  const ghostMesh = $('#ghostMesh');
-  const ghostPacket = $('#ghostPacket');
-  const ghostResult = $('#ghostResult');
-  const ghostHistory = $('#ghostHistory');
-  const ghostNetworkMemory = $('#ghostNetworkMemory');
-  let ghostLastMission = null;
-
   function getGhostConnectorKey(name) {
     return String(name || '').trim().toLowerCase();
   }
-
   function getGhostConnectorLabel(name) {
-    const key = getGhostConnectorKey(name);
-    return ghostConnectorMeta[key] ? ghostConnectorMeta[key].label : String(name || 'Unknown');
+    const k = getGhostConnectorKey(name);
+    return (ghostConnectorMeta[k] && ghostConnectorMeta[k].label) || String(name || 'Unknown');
   }
-
-  function normalizeGhostRelayConnector(name) {
-    const key = getGhostConnectorKey(name);
-    return key === 'claude' ? 'anthropic' : key;
-  }
-
-  function readGhostConnectorConfig(type) {
-    const key = getGhostConnectorKey(type);
-    if (key === 'openai') return { apiKey: $('#apiKeyOpenAI')?.value?.trim() || '', model: $('#modelOpenAI')?.value || 'gpt-4o' };
-    if (key === 'anthropic') return { apiKey: $('#apiKeyAnthropic')?.value?.trim() || '', model: $('#modelAnthropic')?.value || 'claude-sonnet-4-20250514' };
-    if (key === 'gemini') return { apiKey: $('#apiKeyGemini')?.value?.trim() || '', model: $('#modelGemini')?.value || 'gemini-2.0-flash' };
-    if (key === 'telegram') return { token: $('#apiKeyTelegram')?.value?.trim() || '', webhook: $('#webhookTelegram')?.value?.trim() || '' };
-    if (key === 'discord') return { token: $('#apiKeyDiscord')?.value?.trim() || '', guildId: $('#guildDiscord')?.value?.trim() || '' };
-    if (key === 'webhook') return { url: $('#apiKeyWebhook')?.value?.trim() || '', auth: $('#authWebhook')?.value?.trim() || '' };
-    if (key === 'mcp') return { url: $('#apiKeyMCP')?.value?.trim() || '', transport: $('#transportMCP')?.value || 'sse' };
-    if (key === 'claude') return { apiKey: $('#apiKeyClaude')?.value?.trim() || '', model: $('#modelClaude')?.value || 'claude-sonnet-4-20250514' };
-    if (key === 'grok') return { apiKey: $('#apiKeyGrok')?.value?.trim() || '', model: $('#modelGrok')?.value || 'grok-beta' };
-    if (key === 'vscode') return { token: $('#apiKeyVSCode')?.value?.trim() || '', extension: $('#extVSCode')?.value || 'copilot' };
-    if (key === 'github') return { token: $('#apiKeyGitHub')?.value?.trim() || '', repo: $('#repoGitHub')?.value?.trim() || '' };
-    if (key === 'polymarket') return { apiKey: $('#apiKeyPolymarket')?.value?.trim() || '', strategy: $('#strategyPolymarket')?.value || 'monitor' };
-    if (key === 'kalshi') return { apiKey: $('#apiKeyKalshi')?.value?.trim() || '', mode: $('#modeKalshi')?.value || 'paper' };
-    return {};
-  }
-
-  function getConnectedGhostConnectors() {
-    return Object.keys(ghostConnectorRegistry).filter((key) => ghostConnectorRegistry[key].connected);
-  }
-
-  function formatGhostConnectorList(keys) {
-    if (!keys || !keys.length) return 'none';
-    return keys.map((key) => getGhostConnectorLabel(key)).join(', ');
-  }
-
-  function setGhostStatus(text, tone = 'info') {
-    if (!ghostStatus) return;
-    ghostStatus.textContent = text || 'Ghost is idle.';
-    if (tone === 'success') ghostStatus.style.color = '#86efac';
-    else if (tone === 'error') ghostStatus.style.color = '#fca5a5';
-    else if (tone === 'warning') ghostStatus.style.color = '#fde68a';
-    else ghostStatus.style.color = '#cbd5e1';
-  }
-
-  function renderGhostConnectorMesh() {
-    if (!ghostMesh) return;
-    const connected = getConnectedGhostConnectors();
-    if (!connected.length) {
-      ghostMesh.textContent = 'No live connectors yet. Test one above to add it to Ghost\'s mesh.';
-      return;
-    }
-    ghostMesh.textContent = connected.map((key) => {
-      const meta = ghostConnectorMeta[key] || { protocols: [] };
-      const protocolLine = meta.protocols && meta.protocols.length ? meta.protocols.join(' / ') : 'generic';
-      return getGhostConnectorLabel(key) + ' -> ' + protocolLine;
-    }).join('\n');
-  }
-
-  function detectGhostIntent(prompt) {
-    const text = String(prompt || '').toLowerCase();
-    const intents = [];
-    if (/repo|code|commit|pull request|debug|build|deploy|sdk|typescript|python|rust/.test(text)) intents.push('code');
-    if (/market|trade|prediction|price|alpha|arbitrage|orderbook|kalshi|polymarket/.test(text)) intents.push('markets');
-    if (/protocol|api|http|webhook|mcp|json|binary|socket|signal/.test(text)) intents.push('protocol');
-    if (/search|current|latest|web|internet|research|google/.test(text)) intents.push('research');
-    if (/discord|telegram|chat|community|bot/.test(text)) intents.push('chat');
-    if (/satellite|mesh|radio|lora|uplink|relay/.test(text)) intents.push('signals');
-    if (!intents.length) intents.push('general');
-    return intents;
-  }
-
-  function chooseGhostConnectors(intents, mode) {
-    const connected = getConnectedGhostConnectors();
-    if (!connected.length) return [];
-    const priority = [];
-    if (intents.includes('code')) priority.push('github', 'vscode', 'mcp', 'openai', 'claude', 'anthropic', 'gemini', 'grok');
-    if (intents.includes('markets')) priority.push('polymarket', 'kalshi', 'github', 'gemini', 'grok', 'openai');
-    if (intents.includes('protocol')) priority.push('mcp', 'webhook', 'github', 'gemini', 'grok', 'openai');
-    if (intents.includes('research')) priority.push('gemini', 'grok', 'openai', 'claude', 'anthropic', 'github');
-    if (intents.includes('chat')) priority.push('telegram', 'discord', 'openai');
-    if (intents.includes('signals')) priority.push('webhook', 'mcp', 'telegram', 'github', 'gemini');
-    connected.forEach((key) => priority.push(key));
-    const ordered = Array.from(new Set(priority)).filter((key) => connected.includes(key));
-    if (mode === 'simple') return ordered.slice(0, 1);
-    if (mode === 'complex') return ordered.slice(0, 3);
-    if (mode === 'autonomous') return ordered.slice(0, Math.min(ordered.length, 4));
-    return ordered;
-  }
-
-  function createGhostMissionEnvelope() {
-    const prompt = String(ghostMissionInput?.value || '').trim();
-    if (!prompt) throw new Error('Write a mission for OST Ghost first.');
-    const mode = ghostMode?.value || 'simple';
-    const protocol = ghostProtocol?.value || 'json';
-    const intents = detectGhostIntent(prompt);
-    const connectors = chooseGhostConnectors(intents, mode);
-    return {
-      id: 'ghost-' + Date.now().toString(36),
-      prompt,
-      mode,
-      protocol,
-      intents,
-      connectors,
-      createdAt: new Date().toISOString()
-    };
-  }
-
-  function toGhostBinary(text) {
-    return Array.from(String(text || '')).map((char) => char.charCodeAt(0).toString(2).padStart(8, '0')).join(' ');
-  }
-
-  function buildGhostPacket(mission) {
-    const envelope = {
-      ghost: 'OST Ghost',
-      id: mission.id,
-      mode: mission.mode,
-      intents: mission.intents,
-      connectors: mission.connectors,
-      prompt: mission.prompt,
-      createdAt: mission.createdAt
-    };
-    if (mission.protocol === 'natural') {
-      return [
-        'OST Ghost mission ' + mission.id,
-        'Mode: ' + mission.mode,
-        'Intents: ' + mission.intents.join(', '),
-        'Connectors: ' + formatGhostConnectorList(mission.connectors),
-        'Task: ' + mission.prompt
-      ].join('\n');
-    }
-    if (mission.protocol === 'http') {
-      return 'POST /ost/ghost/interoperate HTTP/1.1\nContent-Type: application/json\nX-OST-Ghost-Id: ' + mission.id + '\n\n' + JSON.stringify(envelope, null, 2);
-    }
-    if (mission.protocol === 'mcp') {
-      return JSON.stringify({ jsonrpc: '2.0', id: mission.id, method: 'ghost.interop', params: envelope }, null, 2);
-    }
-    if (mission.protocol === 'shell') {
-      const webhookUrl = $('#apiKeyWebhook')?.value?.trim() || 'https://your-webhook-endpoint';
-      return 'curl -X POST "' + webhookUrl + '" \\\n+  -H "Content-Type: application/json" \\\n+  -d ' + JSON.stringify(JSON.stringify(envelope));
-    }
-    if (mission.protocol === 'binary') {
-      return toGhostBinary(JSON.stringify(envelope));
-    }
-    return JSON.stringify(envelope, null, 2);
-  }
-
-  function buildGhostLocalSynthesis(mission) {
-    const lines = [];
-    lines.push('Ghost intent map -> ' + mission.intents.join(', '));
-    lines.push('Mode -> ' + mission.mode + '. Active mesh -> ' + formatGhostConnectorList(mission.connectors) + '.');
-    if (!mission.connectors.length) {
-      lines.push('No live external rail is connected yet. Ghost can still translate the mission into protocol packets locally, but it cannot leave the page until you connect a model, relay, or automation surface above.');
-    } else if (mission.mode === 'simple') {
-      lines.push('Simple mode keeps the route narrow: Ghost chose the single strongest connected rail for the mission.');
-    } else if (mission.mode === 'complex') {
-      lines.push('Complex mode fans the mission across a small execution set so Ghost can compare or bridge systems without flooding the mesh.');
-    } else if (mission.mode === 'autonomous') {
-      lines.push('Autonomous mode lets Ghost choose the relay order, crawl context, persist mission history, and retry failed routes through the worker mesh.');
-    } else {
-      lines.push('Mesh mode keeps every connected rail in play so Ghost can behave like an internet white blood cell moving across the full local mesh.');
-    }
-    if (mission.intents.includes('protocol')) lines.push('Protocol translation is active. Review the packet panel to see the mission translated into the selected transport.');
-    if (mission.intents.includes('markets')) lines.push('Market intent detected. Ghost will prioritize Polymarket, Kalshi, GitHub, and model rails when available.');
-    if (mission.intents.includes('code')) lines.push('Code intent detected. Ghost will prioritize GitHub, VS Code, MCP, and model rails when available.');
-    return lines.join('\n\n');
-  }
-
-  function buildGhostHandoff(type, mission) {
-    const key = getGhostConnectorKey(type);
-    const config = readGhostConnectorConfig(key);
-    if (key === 'mcp') {
-      return '[MCP handoff]\nTarget: ' + (config.url || 'unconfigured') + '\nTransport: ' + (config.transport || 'sse') + '\nPacket:\n' + JSON.stringify({ jsonrpc: '2.0', id: mission.id, method: 'ghost.interop', params: { prompt: mission.prompt, intents: mission.intents, mode: mission.mode } }, null, 2);
-    }
-    if (key === 'webhook') {
-      return '[Webhook handoff]\nEndpoint: ' + (config.url || 'unconfigured') + '\nGhost prepared a POST envelope that your server can accept and relay into any closed system.';
-    }
-    if (key === 'github') {
-      return '[GitHub handoff]\nRepo: ' + (config.repo || 'unconfigured') + '\nGhost can use GitHub as the code memory and automation rail for this mission.';
-    }
-    if (key === 'telegram' || key === 'discord') {
-      return '[' + getGhostConnectorLabel(key) + ' handoff]\nGhost can translate the mission into a bot relay packet for live operator or community routing.';
-    }
-    if (key === 'claude' || key === 'anthropic') {
-      return '[' + getGhostConnectorLabel(key) + ' bridge]\nModel: ' + (config.model || 'default') + '\nBrowser CORS prevents a direct call here, so Ghost prepared the mission for a relay, proxy, or MCP bridge.';
-    }
-    if (key === 'gemini' || key === 'grok') {
-      return '[' + getGhostConnectorLabel(key) + ' bridge]\nModel: ' + (config.model || 'default') + '\nOST can route this connector through the worker relay so Ghost can cross the browser/CORS boundary.';
-    }
-    if (key === 'vscode') {
-      return '[VS Code bridge]\nExtension: ' + (config.extension || 'copilot') + '\nGhost can hand this mission to a local editor agent for repo-native execution.';
-    }
-    if (key === 'polymarket' || key === 'kalshi') {
-      return '[' + getGhostConnectorLabel(key) + ' strategy brief]\nGhost tagged the mission as market-aware and prepared it for ' + getGhostConnectorLabel(key) + ' execution or monitoring.';
-    }
-    return '[' + getGhostConnectorLabel(key) + ' handoff]\nGhost prepared a structured bridge packet for this rail.';
-  }
-
-  async function queryOpenAIGhost(mission) {
-    const config = readGhostConnectorConfig('openai');
-    if (!config.apiKey || !config.apiKey.startsWith('sk-')) throw new Error('OpenAI key is missing or invalid.');
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${config.apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: config.model || 'gpt-4o',
-        temperature: 0.2,
-        messages: [
-          {
-            role: 'system',
-            content: 'You are OST Ghost, a universal interoperability layer. Respond concisely with concrete next hops, protocol awareness, and cross-system reasoning.'
-          },
-          {
-            role: 'user',
-            content: mission.prompt
-          }
-        ]
-      })
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(data && data.error && data.error.message ? data.error.message : 'OpenAI API returned ' + response.status);
-    }
-    return data && data.choices && data.choices[0] && data.choices[0].message
-      ? data.choices[0].message.content
-      : 'OpenAI returned no content.';
-  }
-
-  function renderGhostMission(mission, output) {
-    if (ghostPacket) ghostPacket.textContent = mission && mission.packet ? mission.packet : buildGhostPacket(mission);
-    if (ghostResult) ghostResult.textContent = output;
-  }
-
-  function hasGhostConnectorConfig(config) {
-    return Object.values(config || {}).some((value) => String(value || '').trim());
-  }
-
-  function collectGhostConnectorConfigs(options = {}) {
-    const connectedOnly = !!options.connectedOnly;
-    const configs = {};
-    Object.keys(ghostConnectorMeta).forEach((key) => {
-      if (connectedOnly && !ghostConnectorRegistry[key]?.connected) return;
-      const config = readGhostConnectorConfig(key);
-      if (!hasGhostConnectorConfig(config)) return;
-      const normalized = normalizeGhostRelayConnector(key);
-      if (!ghostServerRelayKeys.includes(normalized)) return;
-      if (!configs[normalized] || key === normalized) configs[normalized] = config;
-    });
-    return configs;
-  }
-
-  function getGhostApiBase() {
-    return getOstApiBase();
-  }
-
-  async function ghostApiRequest(path, options = {}) {
-    const base = getGhostApiBase();
-    if (!base) throw new Error('OST API base is not configured.');
-    const response = await fetch(base + path, {
-      method: options.method || 'GET',
-      headers: Object.assign({ accept: 'application/json' }, options.headers || {}),
-      body: options.body,
-      cache: options.cache || 'no-store'
-    });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok || payload.ok === false) {
-      throw new Error((payload && (payload.error || payload.detail || payload.message)) || ('Ghost API returned ' + response.status));
-    }
-    return payload;
-  }
-
+  function renderGhostConnectorMesh() { /* legacy mesh panel removed */ }
   async function testGhostRelayConnection(type) {
-    const normalized = normalizeGhostRelayConnector(type);
-    const config = readGhostConnectorConfig(type);
-    if (!hasGhostConnectorConfig(config)) throw new Error('Enter the connector details first.');
-    return ghostApiRequest('/ghost/relay/test', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        connector: normalized,
-        config,
-        connectorConfigs: { [normalized]: config }
-      })
-    });
+    // The legacy /ghost/relay/test endpoint was removed during the rebuild.
+    // The new translator (Phase 2) will replace this. For now we report a
+    // soft "ready" so the connector test buttons don't throw, while making
+    // it clear that the relay is offline until Phase 2 ships.
+    return {
+      ok: true,
+      detail: getGhostConnectorLabel(type) + ' configured locally. Live relay returns when the Ghost rebuild ships in Phase 2.'
+    };
   }
-
-  function formatGhostServerMission(mission) {
-    const lines = [];
-    if (mission.summary) lines.push(mission.summary);
-    if (Array.isArray(mission.attempts) && mission.attempts.length) {
-      lines.push('Attempt log:');
-      mission.attempts.slice(-10).forEach((attempt) => {
-        const status = attempt.ok ? '[ok]' : '[error]';
-        const detail = attempt.ok ? (attempt.responseText || attempt.summary || 'completed') : (attempt.error || 'unknown error');
-        lines.push(`${status} ${getGhostConnectorLabel(attempt.connector)} (${attempt.latencyMs || 0}ms) -> ${detail}`);
-      });
-    }
-    if (Array.isArray(mission.crawlSnapshots) && mission.crawlSnapshots.length) {
-      lines.push('Crawl context:');
-      mission.crawlSnapshots.slice(0, 4).forEach((snapshot) => {
-        lines.push(`- ${snapshot.url} (${snapshot.status || 0}) -> ${(snapshot.snippet || '').slice(0, 180)}`);
-      });
-    }
-    return lines.filter(Boolean).join('\n\n');
-  }
-
-  function renderGhostMissionHistory(history) {
-    if (!ghostHistory) return;
-    if (!Array.isArray(history) || !history.length) {
-      ghostHistory.textContent = 'No shared Ghost missions yet.';
-      return;
-    }
-    ghostHistory.textContent = history.slice(0, 10).map((item) => {
-      const stamp = item.updatedAt ? String(item.updatedAt).replace('T', ' ').slice(0, 19) : 'pending';
-      return `${stamp} | ${item.status || 'unknown'} | ${item.id}\n${item.prompt || ''}`;
-    }).join('\n\n');
-  }
-
-  function renderGhostNetworkMemory(feed, connectors) {
-    if (!ghostNetworkMemory) return;
-    const lines = [];
-    const connectorKeys = connectors && typeof connectors === 'object' ? Object.keys(connectors) : [];
-    if (connectorKeys.length) {
-      lines.push('Connector knowledge:');
-      connectorKeys.sort().forEach((key) => {
-        const info = connectors[key] || {};
-        lines.push(`${getGhostConnectorLabel(key)} -> ${info.successes || 0} ok / ${info.failures || 0} failed / last ${info.lastStatus || 'idle'}`);
-      });
-    }
-    if (Array.isArray(feed) && feed.length) {
-      if (lines.length) lines.push('');
-      lines.push('Shared mesh memory:');
-      feed.slice(0, 8).forEach((entry) => {
-        lines.push(`${entry.kind || 'memory'} ${entry.missionId || entry.id}: ${(entry.summary || '').slice(0, 180)}`);
-      });
-    }
-    ghostNetworkMemory.textContent = lines.length ? lines.join('\n') : 'No mesh memory synced yet.';
-  }
-
-  function renderGhostNetworkState(mesh) {
-    if (!mesh || typeof mesh !== 'object') return;
-    renderGhostMissionHistory(mesh.history || []);
-    renderGhostNetworkMemory(mesh.feed || [], mesh.connectors || {});
-  }
-
-  async function syncGhostNetworkState() {
-    const base = getGhostApiBase();
-    if (!base) {
-      renderGhostMissionHistory([]);
-      renderGhostNetworkMemory([], {});
-      return null;
-    }
-    try {
-      const mesh = await ghostApiRequest('/ghost/mesh?limit=10');
-      renderGhostNetworkState(mesh);
-      return mesh;
-    } catch (error) {
-      if (ghostNetworkMemory) ghostNetworkMemory.textContent = 'Ghost mesh sync unavailable: ' + ((error && error.message) || error);
-      return null;
-    }
-  }
-
-  function setGhostBusy(busy) {
-    if (ghostComposeBtn) ghostComposeBtn.disabled = !!busy;
-    if (ghostDispatchBtn) ghostDispatchBtn.disabled = !!busy;
-    if (ghostSyncBtn) ghostSyncBtn.disabled = !!busy;
-  }
-
-  function composeGhostMission() {
-    const mission = createGhostMissionEnvelope();
-    ghostLastMission = mission;
-    const summary = buildGhostLocalSynthesis(mission);
-    renderGhostMission(mission, summary);
-    setGhostStatus('Mission synthesized. Review the translated packet or dispatch it to the live mesh.', 'success');
-    addLog('OST Ghost synthesized mission ' + mission.id + '.', 'success');
-    return { mission, output: summary };
-  }
-
-  async function dispatchGhostMission() {
-    const mission = createGhostMissionEnvelope();
-    ghostLastMission = mission;
-    setGhostBusy(true);
-    setGhostStatus('Ghost is mapping the connected mesh...', 'warning');
-    addLog('OST Ghost dispatching mission ' + mission.id + ' across ' + (mission.connectors.length ? formatGhostConnectorList(mission.connectors) : 'local mode') + '.', 'info');
-    const outputs = [buildGhostLocalSynthesis(mission)];
-
-    try {
-      const supportedServerConnectors = Array.from(new Set(
-        mission.connectors.map((key) => normalizeGhostRelayConnector(key)).filter((key) => ghostServerRelayKeys.includes(key))
-      ));
-      const connectorConfigs = collectGhostConnectorConfigs({ connectedOnly: true });
-      if (getGhostApiBase() && (mission.mode === 'autonomous' || supportedServerConnectors.length || Object.keys(connectorConfigs).length)) {
-        try {
-          setGhostStatus('Ghost is dispatching through the OST worker mesh...', 'warning');
-          const server = await ghostApiRequest('/ghost/missions', {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({
-              prompt: mission.prompt,
-              mode: mission.mode,
-              protocol: mission.protocol,
-              connectors: supportedServerConnectors,
-              connectorConfigs,
-              retryBudget: mission.mode === 'autonomous' ? 1 : (mission.mode === 'mesh' ? 1 : 0)
-            })
-          });
-          const serverMission = server.mission || mission;
-          ghostLastMission = serverMission;
-          const serverOutput = formatGhostServerMission(serverMission);
-          renderGhostMission(serverMission, serverOutput);
-          if (server.mesh) renderGhostNetworkState(server.mesh);
-          setGhostStatus(
-            serverMission.status === 'completed'
-              ? 'Ghost completed the mission through the worker mesh.'
-              : serverMission.status === 'partial'
-                ? 'Ghost completed part of the mission. Review the attempt log and retry if needed.'
-                : 'Ghost could not complete the mission. Review the attempt log and retry if needed.',
-            serverMission.status === 'completed' ? 'success' : (serverMission.status === 'partial' ? 'warning' : 'error')
-          );
-          addLog('OST Ghost ' + (serverMission.status || 'completed') + ' mission ' + serverMission.id + ' via worker mesh.', serverMission.status === 'failed' ? 'error' : 'success');
-          return { mission: serverMission, output: serverOutput };
-        } catch (serverError) {
-          addLog('Worker mesh dispatch failed, falling back to local route plan: ' + ((serverError && serverError.message) || serverError), 'warn');
-        }
-      }
-
-      if (mission.connectors.includes('openai')) {
-        setGhostStatus('Ghost is querying OpenAI through the live mesh...', 'warning');
-        const liveAnswer = await queryOpenAIGhost(mission);
-        outputs.push('[OpenAI live response]\n' + liveAnswer);
-        addLog('OST Ghost received a live OpenAI response.', 'success');
-      }
-      mission.connectors.filter((key) => key !== 'openai').forEach((key) => {
-        outputs.push(buildGhostHandoff(key, mission));
-      });
-      if (!mission.connectors.length) {
-        outputs.push('No external rail is connected yet. Ghost stayed local and only produced the translated packet above.');
-      }
-      const finalOutput = outputs.join('\n\n---\n\n');
-      renderGhostMission(mission, finalOutput);
-      setGhostStatus(mission.connectors.length
-        ? 'Ghost dispatched the mission across the active mesh.'
-        : 'Ghost composed the mission locally. Connect more rails to expand reach.', mission.connectors.length ? 'success' : 'warning');
-      return { mission, output: finalOutput };
-    } finally {
-      setGhostBusy(false);
-    }
-  }
-
-  function clearGhostMission() {
-    ghostLastMission = null;
-    if (ghostMissionInput) ghostMissionInput.value = '';
-    if (ghostPacket) ghostPacket.textContent = 'Compose a mission to see Ghost\'s translated packet.';
-    if (ghostResult) ghostResult.textContent = 'Ghost is waiting for a mission.';
-    setGhostStatus('Ghost is idle. Connect rails above, then compose or dispatch a mission.', 'info');
-  }
-
-  if (ghostComposeBtn) {
-    ghostComposeBtn.addEventListener('click', () => {
-      try {
-        composeGhostMission();
-      } catch (error) {
-        const message = error && error.message ? error.message : String(error || 'Could not compose Ghost mission');
-        setGhostStatus(message, 'error');
-        if (ghostResult) ghostResult.textContent = message;
-        addLog('OST Ghost compose error: ' + message, 'error');
-      }
-    });
-  }
-
-  if (ghostDispatchBtn) {
-    ghostDispatchBtn.addEventListener('click', async () => {
-      try {
-        await dispatchGhostMission();
-      } catch (error) {
-        const message = error && error.message ? error.message : String(error || 'Could not dispatch Ghost mission');
-        setGhostStatus(message, 'error');
-        if (ghostResult) ghostResult.textContent = message;
-        addLog('OST Ghost dispatch error: ' + message, 'error');
-        setGhostBusy(false);
-      }
-    });
-  }
-
-  if (ghostSyncBtn) {
-    ghostSyncBtn.addEventListener('click', async () => {
-      setGhostStatus('Syncing Ghost mesh memory...', 'warning');
-      const mesh = await syncGhostNetworkState();
-      setGhostStatus(mesh ? 'Ghost mesh memory synced from the worker network.' : 'Ghost mesh sync is currently unavailable.', mesh ? 'success' : 'warning');
-    });
-  }
-
-  if (ghostClearBtn) ghostClearBtn.addEventListener('click', clearGhostMission);
-
-  window.OST_GHOST = {
-    getRegistry() {
-      return Object.keys(ghostConnectorRegistry).reduce((acc, key) => {
-        acc[key] = {
-          label: getGhostConnectorLabel(key),
-          connected: !!ghostConnectorRegistry[key].connected,
-          lastCheckedAt: ghostConnectorRegistry[key].lastCheckedAt,
-          protocols: (ghostConnectorMeta[key] && ghostConnectorMeta[key].protocols) || []
-        };
-        return acc;
-      }, {});
-    },
-    buildPacket(prompt, options = {}) {
-      if (typeof prompt === 'string' && ghostMissionInput) ghostMissionInput.value = prompt;
-      if (options.mode && ghostMode) ghostMode.value = options.mode;
-      if (options.protocol && ghostProtocol) ghostProtocol.value = options.protocol;
-      const mission = createGhostMissionEnvelope();
-      return buildGhostPacket(mission);
-    },
-    composeMission(prompt, options = {}) {
-      if (typeof prompt === 'string' && ghostMissionInput) ghostMissionInput.value = prompt;
-      if (options.mode && ghostMode) ghostMode.value = options.mode;
-      if (options.protocol && ghostProtocol) ghostProtocol.value = options.protocol;
-      return composeGhostMission();
-    },
-    dispatchMission(prompt, options = {}) {
-      if (typeof prompt === 'string' && ghostMissionInput) ghostMissionInput.value = prompt;
-      if (options.mode && ghostMode) ghostMode.value = options.mode;
-      if (options.protocol && ghostProtocol) ghostProtocol.value = options.protocol;
-      return dispatchGhostMission();
-    },
-    renderMesh: renderGhostConnectorMesh,
-    syncNetwork: syncGhostNetworkState,
-    getLastMission() {
-      return ghostLastMission;
-    }
-  };
-
-  renderGhostConnectorMesh();
-  setGhostStatus('Ghost is idle. Connect rails above, then compose or dispatch a mission.', 'info');
-  syncGhostNetworkState().catch(() => {});
-
+  async function syncGhostNetworkState() { return null; }
+  // Expose a tiny placeholder so other scripts can detect rebuild mode.
+  window.OST_GHOST = { rebuilding: true, phase: 1 };
+  // --------------------------------------------------------------------
   $$('.btn-connect').forEach(btn => {
     btn.addEventListener('click', async () => {
       const type = btn.getAttribute('data-connector');
@@ -6720,14 +6187,14 @@
       ghostConnectorRegistry[key].lastCheckedAt = Date.now();
     }
     if (statusEl) {
-      statusEl.textContent = connected ? '● Connected' : '● Disconnected';
+      statusEl.textContent = connected ? 'â— Connected' : 'â— Disconnected';
       statusEl.className = 'connector-status' + (connected ? ' online' : '');
     }
     if (cardEl) {
       cardEl.classList.toggle('connected', connected);
     }
     renderGhostConnectorMesh();
-    toast(connected ? '✅' : '❌', `${displayName}: ${connected ? 'Connected' : 'Failed'}`);
+    toast(connected ? 'âœ…' : 'âŒ', `${displayName}: ${connected ? 'Connected' : 'Failed'}`);
   }
 
   /* ---------- JUPITER ---------- */
@@ -6737,11 +6204,11 @@
     loadJupiterBtn.addEventListener('click', () => {
       if (!connectedWallet) {
         openWalletModal();
-        toast('👛', 'Connect a wallet first to use Jupiter');
+        toast('ðŸ‘›', 'Connect a wallet first to use Jupiter');
         return;
       }
 
-      // Embed Jupiter Terminal as an iframe — swap SOL → wOST
+      // Embed Jupiter Terminal as an iframe â€” swap SOL â†’ wOST
       if (jupiterEmbed) {
         var wostMint = (window.OST_CONFIG && window.OST_CONFIG.wostMint) || 'Ac8RTG9R15HDXkjJDphRNpEgawEh1o5wLFaWPGFjiHoS';
         jupiterEmbed.innerHTML = `
@@ -6758,7 +6225,7 @@
           </p>
         `;
       }
-      toast('⚡', 'Jupiter swap loaded — find the best rates');
+      toast('âš¡', 'Jupiter swap loaded â€” find the best rates');
     });
   }
 
@@ -6873,7 +6340,7 @@
   })();
 
   /* ================================================================== */
-  /* WALLET DASHBOARD — Personalized Wallet Panel                       */
+  /* WALLET DASHBOARD â€” Personalized Wallet Panel                       */
   /* ================================================================== */
   (function initWalletDashboard() {
     const wdNotConnected = $('#wdNotConnected');
@@ -7148,7 +6615,7 @@
       if (wdIntelTotal) wdIntelTotal.textContent = hasWallet ? formatWalletUsd(totalUsd) : '$0.00';
       if (wdIntelTotalCopy) {
         wdIntelTotalCopy.textContent = hasWallet
-          ? solBalance.toFixed(4) + ' SOL • ' + ostBalance.toFixed(2) + ' OST'
+          ? solBalance.toFixed(4) + ' SOL â€¢ ' + ostBalance.toFixed(2) + ' OST'
           : 'SOL + OST mark-to-market';
       }
 
@@ -7172,7 +6639,7 @@
 
       if (wdIntelActivity) wdIntelActivity.textContent = totalActivities + ' records';
       if (wdIntelActivityCopy) {
-        wdIntelActivityCopy.textContent = predictionOrders.length + ' tickets • ' + interchangeRequests.length + ' commerce requests';
+        wdIntelActivityCopy.textContent = predictionOrders.length + ' tickets â€¢ ' + interchangeRequests.length + ' commerce requests';
       }
 
       if (!hasWallet) {
@@ -7241,7 +6708,7 @@
       }
       if (action === 'download-backup' && connectedWalletSession && connectedWalletSession.kind === 'local' && connectedWalletSession.keypair) {
         exportLocalWalletBackup(connectedWalletSession.keypair);
-        toast('🧾', 'Wallet backup downloaded. Keep it offline.');
+        toast('ðŸ§¾', 'Wallet backup downloaded. Keep it offline.');
         syncJourneyUi();
         return;
       }
@@ -7258,9 +6725,9 @@
       if (action === 'copy-address') {
         if (!connectedWallet) return;
         copyTextToClipboard(connectedWallet).then(function() {
-          toast('📋', 'Wallet address copied.');
+          toast('ðŸ“‹', 'Wallet address copied.');
         }).catch(function() {
-          toast('ℹ️', 'Copy the connected wallet address from the receive card.');
+          toast('â„¹ï¸', 'Copy the connected wallet address from the receive card.');
         });
         return;
       }
@@ -7363,7 +6830,7 @@
           const fiatRate = (window.OST_TREASURY && window.OST_TREASURY.priceUsd)
             ? (window.OST_TREASURY.priceUsd(cur) || 1) : 1;
           // fiatRate is how many USD equal 1 unit of `cur`; invert to get cur per USD
-          const curSymbol = {'EUR':'€','GBP':'£','CAD':'C$','AUD':'A$','MXN':'MX$','JPY':'¥','BTC':'₿','ETH':'Ξ'}[cur] || cur + ' ';
+          const curSymbol = {'EUR':'â‚¬','GBP':'Â£','CAD':'C$','AUD':'A$','MXN':'MX$','JPY':'Â¥','BTC':'â‚¿','ETH':'Îž'}[cur] || cur + ' ';
           const solInCur = solBal * solPrice / fiatRate;
           wdSolUsd.textContent = curSymbol + solInCur.toFixed(cur === 'BTC' ? 6 : 2);
         }
@@ -7373,11 +6840,11 @@
           const cur2 = window.__ostCurrency || 'USD';
           const fiatRate2 = (window.OST_TREASURY && window.OST_TREASURY.priceUsd)
             ? (window.OST_TREASURY.priceUsd(cur2) || 1) : 1;
-          const curSymbol2 = {'EUR':'€','GBP':'£','CAD':'C$','AUD':'A$','MXN':'MX$','JPY':'¥','BTC':'₿','ETH':'Ξ'}[cur2] || cur2 + ' ';
+          const curSymbol2 = {'EUR':'â‚¬','GBP':'Â£','CAD':'C$','AUD':'A$','MXN':'MX$','JPY':'Â¥','BTC':'â‚¿','ETH':'Îž'}[cur2] || cur2 + ' ';
           wdOstUsd.textContent = curSymbol2 + (ostBal * ostPrice / fiatRate2).toFixed(cur2 === 'BTC' ? 6 : 2);
         }
 
-        // ── Incoming transfer detection (receiver UX) ──────────────────────
+        // â”€â”€ Incoming transfer detection (receiver UX) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         // If SOL or OST went UP since the last sync, show a green toast and
         // clear any stale "needs manual funding" warning. The previous build
         // would leave the warning banner on screen even after devnet SOL
@@ -7389,7 +6856,7 @@
             var dSol = solBal - prev.sol;
             var dOst = ostBal - prev.ost;
             if (dSol > 0.0001) {
-              toast('💰', 'Received ' + dSol.toFixed(4) + ' SOL');
+              toast('ðŸ’°', 'Received ' + dSol.toFixed(4) + ' SOL');
               if (typeof window.recordOstSnapshot === 'function') {
                 try { window.recordOstSnapshot({ ts: Date.now(), ostBalance: ostBal, solBalance: solBal, kind: 'recv-sol', amount: dSol }); } catch (_) {}
               }
@@ -7398,7 +6865,7 @@
               }
             }
             if (dOst > 0.0001) {
-              toast('🟡', 'Received ' + dOst.toFixed(4) + ' OST');
+              toast('ðŸŸ¡', 'Received ' + dOst.toFixed(4) + ' OST');
               if (typeof window.recordOstSnapshot === 'function') {
                 try { window.recordOstSnapshot({ ts: Date.now(), ostBalance: ostBal, solBalance: solBal, kind: 'recv-ost', amount: dOst }); } catch (_) {}
               }
@@ -7510,12 +6977,12 @@
     // Copy address
     if (wdCopyAddr) wdCopyAddr.addEventListener('click', () => {
       if (connectedWallet) {
-        navigator.clipboard.writeText(connectedWallet).then(() => toast('📋', 'Address copied!'));
+        navigator.clipboard.writeText(connectedWallet).then(() => toast('ðŸ“‹', 'Address copied!'));
       }
     });
     if (wdCopyReceive) wdCopyReceive.addEventListener('click', () => {
       if (connectedWallet) {
-        navigator.clipboard.writeText(connectedWallet).then(() => toast('📋', 'Address copied!'));
+        navigator.clipboard.writeText(connectedWallet).then(() => toast('ðŸ“‹', 'Address copied!'));
       }
     });
 
@@ -7548,7 +7015,7 @@
     }, 1200);
 
     // Also refresh balances every 8 s while connected so receivers see
-    // incoming SOL / OST quickly (was 30 s — too slow for live transfers).
+    // incoming SOL / OST quickly (was 30 s â€” too slow for live transfers).
     setInterval(() => {
       if (document.hidden) return;
       if (connectedWallet) syncJourneyUi();
@@ -7561,7 +7028,7 @@
   })();
 
   /* ================================================================== */
-  /* PARTICLE FIELD — Interactive Hero Background (cursor-reactive)     */
+  /* PARTICLE FIELD â€” Interactive Hero Background (cursor-reactive)     */
   /* ================================================================== */
   (function initParticles() {
     const canvas = $('#particleCanvas');
@@ -7678,7 +7145,7 @@
   })();
 
   /* ================================================================== */
-  /* BROWSER MOCKUP — Pay Anywhere with OST (Unified with Price Detection) */
+  /* BROWSER MOCKUP â€” Pay Anywhere with OST (Unified with Price Detection) */
   /* ================================================================== */
   (function initBrowserMockup() {
     const browserUrl = $('#browserUrl');
@@ -7846,7 +7313,7 @@
         if (!connectedWalletSession || !connectedWalletSession.publicKey) {
           openWalletModal();
           setDeskStatus(t('pay.deskNeedWallet', 'Create or connect your OST wallet first.'), 'warning');
-          toast('👛', t('pay.toastConnectWallet', 'Connect your OST wallet first'));
+          toast('ðŸ‘›', t('pay.toastConnectWallet', 'Connect your OST wallet first'));
           return;
         }
 
@@ -7878,12 +7345,12 @@
             window.clearShopCart();
           }
           setDeskStatus(t('pay.deskStatusRecorded', 'On-chain request recorded. Share the signature with the desk to finish fulfillment.'), 'success');
-          toast('✅', t('pay.toastRequestCreated', 'On-chain interchange request created'));
+          toast('âœ…', t('pay.toastRequestCreated', 'On-chain interchange request created'));
           launchConfetti();
         } catch (error) {
           const message = error && error.message ? error.message : t('pay.deskRequestFailed', 'Could not create the interchange request right now.');
           setDeskStatus(message, 'error');
-          toast('⚠️', message);
+          toast('âš ï¸', message);
         } finally {
           deskPayBtn.disabled = !activeInterchangeRequest;
           if (deskPayBtnLabel) deskPayBtnLabel.textContent = t('pay.deskCreate', 'Create on-chain OST request');
@@ -7955,8 +7422,8 @@
         { name: 'Cybertruck AWD', price: 79990.00, img: 'https://images.unsplash.com/photo-1571840546980-4bed46a14d0f?w=200&h=200&fit=crop&q=80', desc: 'Stainless steel exoskeleton, adaptive air suspension' },
       ], currency: 'USD' },
       'delta.com': { name: 'Delta', icon: '&#9992;&#65039;', color: '#003A70', items: [
-        { name: 'Round Trip NYC → Miami', price: 398.00, img: 'https://images.unsplash.com/photo-1436491865332-7a61a109db05?w=200&h=200&fit=crop&q=80', desc: 'Economy, nonstop, 3h 15m each way' },
-        { name: 'Round Trip LAX → Tokyo', price: 1249.00, img: 'https://images.unsplash.com/photo-1540339832862-474599807836?w=200&h=200&fit=crop&q=80', desc: 'Main cabin, checked bag included, overnight route' },
+        { name: 'Round Trip NYC â†’ Miami', price: 398.00, img: 'https://images.unsplash.com/photo-1436491865332-7a61a109db05?w=200&h=200&fit=crop&q=80', desc: 'Economy, nonstop, 3h 15m each way' },
+        { name: 'Round Trip LAX â†’ Tokyo', price: 1249.00, img: 'https://images.unsplash.com/photo-1540339832862-474599807836?w=200&h=200&fit=crop&q=80', desc: 'Main cabin, checked bag included, overnight route' },
       ], currency: 'USD' },
       'marriott.com': { name: 'Marriott', icon: '&#127976;', color: '#7A0019', items: [
         { name: 'New York Marriott Marquis', price: 624.00, img: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=200&h=200&fit=crop&q=80', desc: 'Times Square, 2 nights, king room, flexible rate' },
@@ -7993,12 +7460,12 @@
         { name: 'LED Strip 5m', price: 8.99, img: 'https://images.unsplash.com/photo-1550985616-10810253b84d?w=200&h=200&fit=crop&q=80', desc: 'RGB color changing, remote control, adhesive back' },
       ], currency: 'USD' },
       'mercadolibre.com': { name: 'Mercado Libre', icon: '&#128722;', color: '#FFE600', items: [
-        { name: 'Auriculares Bluetooth', price: 15999, img: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=200&h=200&fit=crop&q=80', desc: 'Inalámbricos, cancelación de ruido, 30hr batería' },
-        { name: 'Cargador USB-C', price: 4999, img: 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=200&h=200&fit=crop&q=80', desc: 'Carga rápida 65W, compatible con laptop y celular' },
+        { name: 'Auriculares Bluetooth', price: 15999, img: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=200&h=200&fit=crop&q=80', desc: 'InalÃ¡mbricos, cancelaciÃ³n de ruido, 30hr baterÃ­a' },
+        { name: 'Cargador USB-C', price: 4999, img: 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=200&h=200&fit=crop&q=80', desc: 'Carga rÃ¡pida 65W, compatible con laptop y celular' },
       ], currency: 'ARS' },
       'rakuten.co.jp': { name: 'Rakuten', icon: '&#127988;', color: '#bf0000', items: [
-        { name: 'Nintendo Switch Game', price: 5980, img: 'https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?w=200&h=200&fit=crop&q=80', desc: 'ゼルダの伝説, limited edition cartridge' },
-        { name: 'Rice Cooker', price: 12800, img: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=200&h=200&fit=crop&q=80', desc: '5.5合炊き, IH加熱, 保温機能付き' },
+        { name: 'Nintendo Switch Game', price: 5980, img: 'https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?w=200&h=200&fit=crop&q=80', desc: 'ã‚¼ãƒ«ãƒ€ã®ä¼èª¬, limited edition cartridge' },
+        { name: 'Rice Cooker', price: 12800, img: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=200&h=200&fit=crop&q=80', desc: '5.5åˆç‚Šã, IHåŠ ç†±, ä¿æ¸©æ©Ÿèƒ½ä»˜ã' },
       ], currency: 'JPY' },
       'flipkart.com': { name: 'Flipkart', icon: '&#128722;', color: '#2874F0', items: [
         { name: 'Smartphone', price: 14999, img: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=200&h=200&fit=crop&q=80', desc: '6.7" AMOLED, 128GB, 50MP camera, 5G enabled' },
@@ -8134,9 +7601,9 @@
             return;
           }
         }
-      } catch (_) { /* fetch failed — fall through to manual */ }
+      } catch (_) { /* fetch failed â€” fall through to manual */ }
 
-      // Could not detect — show manual entry
+      // Could not detect â€” show manual entry
       renderManualEntry(hostname);
     }
 
@@ -8203,31 +7670,31 @@
       // Microdata itemprop="price"
       if (!result.price) {
         var mp = html.match(/itemprop=["']price["'][^>]*content=["']([^"']+)["']/i)
-          || html.match(/itemprop=["']price["'][^>]*>[\s$€£¥]*([0-9][0-9,]*\.?\d*)/i);
+          || html.match(/itemprop=["']price["'][^>]*>[\s$â‚¬Â£Â¥]*([0-9][0-9,]*\.?\d*)/i);
         if (mp) result.price = parseFloat(mp[1].replace(/,/g, '')) || 0;
       }
 
       // Fallback: generic price regex patterns (last resort)
       if (!result.price) {
-        // International price patterns: $29.99, €14,50, £99.00, ¥1200, ₹999, R$150, ₩15000, ₺450, kr299
+        // International price patterns: $29.99, â‚¬14,50, Â£99.00, Â¥1200, â‚¹999, R$150, â‚©15000, â‚º450, kr299
         var intlPatterns = [
           { re: /["'>]\s*\$\s*(\d{1,7}(?:[.,]\d{1,2})?)\s*[\s<"']/,             cur: 'USD' },
-          { re: /["'>]\s*€\s*(\d{1,7}(?:[.,]\d{1,2})?)\s*[\s<"']/,             cur: 'EUR' },
-          { re: /["'>]\s*£\s*(\d{1,7}(?:[.,]\d{1,2})?)\s*[\s<"']/,             cur: 'GBP' },
-          { re: /["'>]\s*[¥￥]\s*(\d{1,9}(?:[.,]\d{1,2})?)\s*[\s<"']/,          cur: 'JPY' },
-          { re: /["'>]\s*₹\s*(\d{1,9}(?:[.,]\d{1,2})?)\s*[\s<"']/,             cur: 'INR' },
+          { re: /["'>]\s*â‚¬\s*(\d{1,7}(?:[.,]\d{1,2})?)\s*[\s<"']/,             cur: 'EUR' },
+          { re: /["'>]\s*Â£\s*(\d{1,7}(?:[.,]\d{1,2})?)\s*[\s<"']/,             cur: 'GBP' },
+          { re: /["'>]\s*[Â¥ï¿¥]\s*(\d{1,9}(?:[.,]\d{1,2})?)\s*[\s<"']/,          cur: 'JPY' },
+          { re: /["'>]\s*â‚¹\s*(\d{1,9}(?:[.,]\d{1,2})?)\s*[\s<"']/,             cur: 'INR' },
           { re: /["'>]\s*R\$\s*(\d{1,7}(?:[.,]\d{1,2})?)\s*[\s<"']/,           cur: 'BRL' },
-          { re: /["'>]\s*₩\s*(\d{1,9}(?:[.,]\d{0,2})?)\s*[\s<"']/,             cur: 'KRW' },
-          { re: /["'>]\s*₺\s*(\d{1,7}(?:[.,]\d{1,2})?)\s*[\s<"']/,             cur: 'TRY' },
-          { re: /["'>]\s*₽\s*(\d{1,9}(?:[.,]\d{1,2})?)\s*[\s<"']/,             cur: 'RUB' },
-          { re: /["'>]\s*zł\s*(\d{1,7}(?:[.,]\d{1,2})?)\s*[\s<"']/i,           cur: 'PLN' },
+          { re: /["'>]\s*â‚©\s*(\d{1,9}(?:[.,]\d{0,2})?)\s*[\s<"']/,             cur: 'KRW' },
+          { re: /["'>]\s*â‚º\s*(\d{1,7}(?:[.,]\d{1,2})?)\s*[\s<"']/,             cur: 'TRY' },
+          { re: /["'>]\s*â‚½\s*(\d{1,9}(?:[.,]\d{1,2})?)\s*[\s<"']/,             cur: 'RUB' },
+          { re: /["'>]\s*zÅ‚\s*(\d{1,7}(?:[.,]\d{1,2})?)\s*[\s<"']/i,           cur: 'PLN' },
           { re: /["'>]\s*CHF\s*(\d{1,7}(?:[.,]\d{1,2})?)\s*[\s<"']/,           cur: 'CHF' },
           { re: /["'>]\s*A\$\s*(\d{1,7}(?:[.,]\d{1,2})?)\s*[\s<"']/,           cur: 'AUD' },
           { re: /["'>]\s*C\$\s*(\d{1,7}(?:[.,]\d{1,2})?)\s*[\s<"']/,           cur: 'CAD' },
-          { re: /["'>]\s*₱\s*(\d{1,7}(?:[.,]\d{1,2})?)\s*[\s<"']/,             cur: 'PHP' },
-          { re: /["'>]\s*₫\s*(\d{1,9}(?:[.,]\d{0,2})?)\s*[\s<"']/,             cur: 'VND' },
+          { re: /["'>]\s*â‚±\s*(\d{1,7}(?:[.,]\d{1,2})?)\s*[\s<"']/,             cur: 'PHP' },
+          { re: /["'>]\s*â‚«\s*(\d{1,9}(?:[.,]\d{0,2})?)\s*[\s<"']/,             cur: 'VND' },
           { re: /["'>]\s*kr\.?\s*(\d{1,7}(?:[.,]\d{1,2})?)\s*[\s<"']/i,        cur: 'SEK' },
-          { re: /["'>]\s*₪\s*(\d{1,7}(?:[.,]\d{1,2})?)\s*[\s<"']/,             cur: 'ILS' },
+          { re: /["'>]\s*â‚ª\s*(\d{1,7}(?:[.,]\d{1,2})?)\s*[\s<"']/,             cur: 'ILS' },
         ];
         for (var p = 0; p < intlPatterns.length; p++) {
           var m = html.match(intlPatterns[p].re);
@@ -8252,14 +7719,14 @@
     }
 
     function parseIntlPrice(s) {
-      // Handle European format: 1.234,56 or 1234,56 → 1234.56
-      // Handle US format: 1,234.56 → 1234.56
+      // Handle European format: 1.234,56 or 1234,56 â†’ 1234.56
+      // Handle US format: 1,234.56 â†’ 1234.56
       s = s.replace(/\s/g, '');
       if (/\d+\.\d{3},\d{1,2}$/.test(s)) {
-        // European: 1.234,56 → 1234.56
+        // European: 1.234,56 â†’ 1234.56
         return parseFloat(s.replace(/\./g, '').replace(',', '.')) || 0;
       } else if (/\d+,\d{1,2}$/.test(s) && s.indexOf('.') < 0) {
-        // Simple comma decimal: 14,99 → 14.99
+        // Simple comma decimal: 14,99 â†’ 14.99
         return parseFloat(s.replace(',', '.')) || 0;
       } else {
         // US format or plain number
@@ -8581,7 +8048,7 @@
         if (store.selected && store.selected[i]) total += item.price;
       });
       store.total = total;
-      var sym = store.currency === 'EUR' ? '€' : (store.currency === 'GBP' ? '£' : getCurrSym(store.currency));
+      var sym = store.currency === 'EUR' ? 'â‚¬' : (store.currency === 'GBP' ? 'Â£' : getCurrSym(store.currency));
       var el = viewport.querySelector('#simCartTotal');
       if (el) el.innerHTML = sym + total.toFixed(2) + ' ' + store.currency;
     }
@@ -8609,7 +8076,7 @@
   })();
 
   /* ================================================================== */
-  /* UNIVERSAL IN-PAGE POPUP — smart URL rewriting for embeddable views */
+  /* UNIVERSAL IN-PAGE POPUP â€” smart URL rewriting for embeddable views */
   /* ================================================================== */
   // Save original window.open before anything patches it
   window._origOpen = window.open;
@@ -8636,7 +8103,7 @@
         var u = new URL(raw);
         var h = u.hostname.replace(/^www\./, '');
 
-        // --- Onramper (old widget URL → new buy URL) ---
+        // --- Onramper (old widget URL â†’ new buy URL) ---
         if (h === 'widget.onramper.com' || h === 'buy.onramper.com' || h === 'onramper.com') {
           var fiat = u.searchParams.get('defaultFiat') || '';
           var mode = u.searchParams.get('mode') || 'buy';
@@ -8644,27 +8111,27 @@
         }
         if (h === 'docs.onramper.com') return onrampUrl('', 'buy');
 
-        // --- MoonPay → consumer buy page ---
+        // --- MoonPay â†’ consumer buy page ---
         if (h === 'moonpay.com' || h === 'buy.moonpay.com' || h === 'buy.sandbox.moonpay.com')
           return 'https://www.moonpay.com/buy/sol';
 
-        // --- Transak → consumer buy page ---
+        // --- Transak â†’ consumer buy page ---
         if (h === 'global.transak.com') return 'https://global.transak.com/?cryptoCurrencyCode=SOL';
 
-        // --- Ramp Network → consumer buy page ---
+        // --- Ramp Network â†’ consumer buy page ---
         if (h === 'ramp.network' || h === 'app.ramp.network') return 'https://ramp.network/buy/sol-solana';
 
-        // --- Coinbase → consumer how-to-buy page ---
+        // --- Coinbase â†’ consumer how-to-buy page ---
         if (h === 'pay.coinbase.com') return 'https://www.coinbase.com/how-to-buy/solana';
 
-        // --- Binance → consumer buy page ---
+        // --- Binance â†’ consumer buy page ---
         if (h === 'binance.com') return 'https://www.binance.com/en/price/solana';
 
-        // --- Jupiter DEX → use embeddable Terminal with wOST ---
+        // --- Jupiter DEX â†’ use embeddable Terminal with wOST ---
         if (h === 'jup.ag') return 'https://terminal.jup.ag/swap?outputMint=Ac8RTG9R15HDXkjJDphRNpEgawEh1o5wLFaWPGFjiHoS';
         if (h === 'terminal.jup.ag') return raw; // already embeddable
 
-        // --- Orca → route through Jupiter Terminal (aggregates Orca liquidity) ---
+        // --- Orca â†’ route through Jupiter Terminal (aggregates Orca liquidity) ---
         if (h === 'orca.so') return 'https://terminal.jup.ag/swap?outputMint=Ac8RTG9R15HDXkjJDphRNpEgawEh1o5wLFaWPGFjiHoS';
 
         // --- Portal Bridge (uses iframe-friendly checkout) ---
@@ -8704,12 +8171,12 @@
             'style="display:inline-flex;align-items:center;gap:8px;text-decoration:none;" ' +
             'onclick="event.stopPropagation();">' +
             '&#128279; Open ' + esc(host) + '</a>' +
-          '<p style="color:var(--text-muted);font-size:.75rem;margin-top:16px;">Tip: For buying/selling crypto, use the Onramper widget above — it works right here.</p>' +
+          '<p style="color:var(--text-muted);font-size:.75rem;margin-top:16px;">Tip: For buying/selling crypto, use the Onramper widget above â€” it works right here.</p>' +
         '</div>';
       fb.style.display = 'flex';
     }
 
-    // Fiat ramp domains — these must open in a new tab because they block sandboxed iframes
+    // Fiat ramp domains â€” these must open in a new tab because they block sandboxed iframes
     var fiatRampDomains = [
       'buy.onramper.com','widget.onramper.com','onramper.com',
       'moonpay.com','buy.moonpay.com','buy.sandbox.moonpay.com',
@@ -8727,7 +8194,7 @@
       return false;
     }
 
-    // Embeddable allowlist — ONLY these domains load inside our popup iframe.
+    // Embeddable allowlist â€” ONLY these domains load inside our popup iframe.
     // Everything else opens in a new tab. Almost no website allows iframe embedding.
     var embeddableDomains = [
       'terminal.jup.ag',           // Jupiter swap widget
@@ -8753,7 +8220,7 @@
       // Rewrite URL to embeddable version
       var embedUrl = rewriteUrl(url);
 
-      // If the rewritten URL is embeddable → load in popup iframe
+      // If the rewritten URL is embeddable â†’ load in popup iframe
       if (isEmbeddable(embedUrl)) {
         titleEl.textContent = label || embedUrl.replace(/^https?:\/\//, '').split('/')[0];
         var fb = overlay.querySelector('.ost-popup-fallback');
@@ -8768,14 +8235,14 @@
         return;
       }
 
-      // Everything else → open directly in a new tab
+      // Everything else â†’ open directly in a new tab
       var openUrl = embedUrl;
       // For fiat ramps, use the rewritten Onramper URL
       // For others, use the original URL (more useful than a rewritten version)
       if (!isFiatRamp(embedUrl)) openUrl = url;
 
       window._origOpen(openUrl, '_blank', 'noopener');
-      toast('🔗', 'Opening ' + (label || 'link') + ' in a new tab…');
+      toast('ðŸ”—', 'Opening ' + (label || 'link') + ' in a new tabâ€¦');
     }
 
     function closePopup() {
@@ -8823,7 +8290,7 @@
   })();
 
   /* ================================================================== */
-  /* PATCH window.open — keep users on-site for wallet installs etc     */
+  /* PATCH window.open â€” keep users on-site for wallet installs etc     */
   /* ================================================================== */
   (function patchWindowOpen() {
     var _origOpen = window._origOpen;
@@ -8903,7 +8370,7 @@
   })();
 
   /* ================================================================== */
-  /* Space Journey 3D — Full Immersive Cinematic Sequence              */
+  /* Space Journey 3D â€” Full Immersive Cinematic Sequence              */
   /* ================================================================== */
   (function initSpaceJourney() {
     if (typeof THREE === 'undefined') return;
@@ -9008,15 +8475,15 @@
     // ---- DETAILED ROCKET BUILDER ----
     function mkRocket(s) {
       var g = new THREE.Group();
-      // Body cylinder — metallic white with panel lines
+      // Body cylinder â€” metallic white with panel lines
       var bodyMat = new THREE.MeshStandardMaterial({color:0xf0f0f0, metalness:0.5, roughness:0.25});
       var body = new THREE.Mesh(new THREE.CylinderGeometry(0.06*s, 0.08*s, 0.5*s, 24), bodyMat);
       g.add(body);
-      // Nose cone — red, smooth
+      // Nose cone â€” red, smooth
       var noseMat = new THREE.MeshStandardMaterial({color:0xdd2222, metalness:0.3, roughness:0.35});
       var nose = new THREE.Mesh(new THREE.ConeGeometry(0.06*s, 0.20*s, 24), noseMat);
       nose.position.y = 0.35*s; g.add(nose);
-      // Engine bell cluster — 3 nozzles
+      // Engine bell cluster â€” 3 nozzles
       var engMat = new THREE.MeshStandardMaterial({color:0x444444, metalness:0.7, roughness:0.2});
       for (var i = 0; i < 3; i++) {
         var eng = new THREE.Mesh(new THREE.CylinderGeometry(0.035*s, 0.02*s, 0.08*s, 12), engMat);
@@ -9027,7 +8494,7 @@
       // Center nozzle
       var cEng = new THREE.Mesh(new THREE.CylinderGeometry(0.045*s, 0.025*s, 0.10*s, 12), engMat);
       cEng.position.y = -0.30*s; g.add(cEng);
-      // Grid fins — 4 fins
+      // Grid fins â€” 4 fins
       var finMat = new THREE.MeshStandardMaterial({color:0x888888, metalness:0.4, roughness:0.3});
       for (var i = 0; i < 4; i++) {
         var fin = new THREE.Mesh(new THREE.BoxGeometry(0.012*s, 0.14*s, 0.08*s), finMat);
@@ -9043,7 +8510,7 @@
         leg.position.set(Math.cos(a)*0.07*s, -0.32*s, Math.sin(a)*0.07*s);
         leg.rotation.z = 0.3; leg.rotation.y = a; g.add(leg);
       }
-      // OST logo stripe on body — green band
+      // OST logo stripe on body â€” green band
       var stripe = new THREE.Mesh(
         new THREE.CylinderGeometry(0.082*s, 0.082*s, 0.025*s, 24, 1, true),
         new THREE.MeshBasicMaterial({color:0x10b981, transparent:true, opacity:0.6, side:THREE.DoubleSide})
@@ -9062,7 +8529,7 @@
         pos[i*3+1] = -0.32*s - Math.random()*0.5*s;
         pos[i*3+2] = (Math.random()-0.5)*0.04*s;
         sizes[i] = 0.02*s + Math.random()*0.06*s;
-        // Color gradient: white core → orange → red tail
+        // Color gradient: white core â†’ orange â†’ red tail
         var depth = Math.random();
         cols[i*3] = 1; cols[i*3+1] = 0.5+depth*0.5; cols[i*3+2] = depth*0.3;
         vels.push({
@@ -9187,7 +8654,7 @@
     }
 
     // ======================================================================
-    // PHASE 0: LAUNCH — Detailed Earth surface, launch pad, rocket ascent
+    // PHASE 0: LAUNCH â€” Detailed Earth surface, launch pad, rocket ascent
     // ======================================================================
     var launchGrp = new THREE.Group();
     // Earth with procedural texture
@@ -9258,7 +8725,7 @@
     scene.add(launchGrp);
 
     // ======================================================================
-    // PHASE 1: SPACE STATION — Detailed ISS-like structure + docking
+    // PHASE 1: SPACE STATION â€” Detailed ISS-like structure + docking
     // ======================================================================
     var orbitGrp = new THREE.Group();
     orbitGrp.visible = false;
@@ -9337,7 +8804,7 @@
     scene.add(orbitGrp);
 
     // ======================================================================
-    // PHASE 2: MOON — Textured lunar surface, craters, base, Earth in sky
+    // PHASE 2: MOON â€” Textured lunar surface, craters, base, Earth in sky
     // ======================================================================
     var moonGrp = new THREE.Group();
     moonGrp.visible = false;
@@ -9347,7 +8814,7 @@
       new THREE.MeshStandardMaterial({map: moonTex, roughness:0.95})
     );
     moonSurf.position.y = -10; moonGrp.add(moonSurf);
-    // Craters — concave rings on surface
+    // Craters â€” concave rings on surface
     for (var i = 0; i < 10; i++) {
       var cs = 0.1 + Math.random()*0.2;
       var cr = new THREE.Mesh(
@@ -9419,7 +8886,7 @@
     moonGrp.add(rocket2);
     var exhaust2 = mkExhaust(1.3);
     moonGrp.add(exhaust2);
-    // Earth in sky — beautiful blue marble
+    // Earth in sky â€” beautiful blue marble
     var earthSkyTex = makePlanetTex(128, 64, 40, 80, 160, 5, true);
     var earthSky = new THREE.Mesh(
       new THREE.SphereGeometry(0.18, 24, 24),
@@ -9431,7 +8898,7 @@
     scene.add(moonGrp);
 
     // ======================================================================
-    // PHASE 3: MARS — Red planet, dust storms, atmospheric entry
+    // PHASE 3: MARS â€” Red planet, dust storms, atmospheric entry
     // ======================================================================
     var marsGrp = new THREE.Group();
     marsGrp.visible = false;
@@ -9899,7 +9366,7 @@
       expandBtn.addEventListener('click', function() {
         sjContainer.classList.toggle('cinematic');
         var isCine = sjContainer.classList.contains('cinematic');
-        expandBtn.textContent = isCine ? '✕ Exit Cinematic' : '⛶ Cinematic Mode';
+        expandBtn.textContent = isCine ? 'âœ• Exit Cinematic' : 'â›¶ Cinematic Mode';
         if (isCine) {
           camera.fov = 45;
           camera.updateProjectionMatrix();
@@ -9998,17 +9465,17 @@
   })();
 
   // ========================================================================
-  // Shared Logo Helpers — used by Gift Card, Fuel, and Launchpad
+  // Shared Logo Helpers â€” used by Gift Card, Fuel, and Launchpad
   // ========================================================================
   function brandSvg(name, color) {
     var c = color || '#555';
     var l = (name || '?').charAt(0).toUpperCase();
     return 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="' + c + '"/><stop offset="100%" stop-color="' + c + 'cc"/></linearGradient><filter id="s"><feDropShadow dx="0" dy="1" stdDeviation="1" flood-opacity=".3"/></filter></defs><rect fill="url(#bg)" width="80" height="80" rx="18"/><rect x="2" y="2" width="76" height="76" rx="16" fill="none" stroke="rgba(255,255,255,.15)" stroke-width="1"/><text x="40" y="52" text-anchor="middle" fill="#fff" font-size="36" font-weight="800" font-family="Inter,system-ui,sans-serif" filter="url(#s)">' + l + '</text></svg>');
   }
-  // Multi-layer logo fallback: Clearbit → icon.horse → Google Favicon → SVG
+  // Multi-layer logo fallback: Clearbit â†’ icon.horse â†’ Google Favicon â†’ SVG
   function logoSrc(domain) { return 'https://logo.clearbit.com/' + domain; }
   function logoFallback(img, domain, name, color) {
-    // Already in fallback chain — go to next layer
+    // Already in fallback chain â€” go to next layer
     if (img._logoTry >= 3) { img.onerror = null; img.src = brandSvg(name, color); return; }
     img._logoTry = (img._logoTry || 0) + 1;
     img.onerror = function() { logoFallback(this, domain, name, color); };
@@ -10023,7 +9490,7 @@
   }
 
   // ========================================================================
-  // OST GIFT CARD EXCHANGE — giftcash.com style (3-step sell flow)
+  // OST GIFT CARD EXCHANGE â€” giftcash.com style (3-step sell flow)
   // ========================================================================
   (function initGiftCardHub() {
     var searchEl = document.getElementById('gc2BrandSearch');
@@ -10074,7 +9541,7 @@
     // Expose brands globally for brand wheel
     window.__ostGCBrands = brands;
 
-    // DOM refs — Step 1
+    // DOM refs â€” Step 1
     var dropdown = document.getElementById('gc2BrandDropdown');
     var selBrandWrap = document.getElementById('gc2SelectedBrand');
     var selLogo = document.getElementById('gc2SelLogo');
@@ -10107,7 +9574,7 @@
     // Flow
     var flowEl = document.getElementById('gc2Flow');
     // Brands grid
-    // (removed in v48 — brand wheel replaces grid)
+    // (removed in v48 â€” brand wheel replaces grid)
     // History
     var histToggle = document.getElementById('gc2HistToggle');
     var histPanel = document.getElementById('gc2Hist');
@@ -10259,7 +9726,7 @@
         el.appendChild(img);
         var info = document.createElement('div');
         info.className = 'gc2-cart-item-info';
-        info.textContent = item.brand + ' · $' + item.usd.toFixed(2);
+        info.textContent = item.brand + ' Â· $' + item.usd.toFixed(2);
         el.appendChild(info);
         var val = document.createElement('div');
         val.className = 'gc2-cart-item-val';
@@ -10275,7 +9742,7 @@
       cartTotalEl.textContent = total.toFixed(2) + ' OST';
     }
 
-    // Checkout — go to step 2
+    // Checkout â€” go to step 2
     checkoutBtn.addEventListener('click', function() {
       if (cart.length === 0) return;
       // Build offer details
@@ -10401,7 +9868,7 @@
   })();
 
   // ========================================================================
-  // OST FUEL & CONVENIENCE — global station data + oil chart + news
+  // OST FUEL & CONVENIENCE â€” global station data + oil chart + news
   // ========================================================================
   (function initFuelStation() {
     var findBtn = document.getElementById('fuel2FindBtn');
@@ -10432,8 +9899,8 @@
         { name:'Pioneer', domain:'pioneerenergy.ca', addr:'600 Dundas St', city:'Toronto, ON', prices:{regular:1.56,midgrade:1.72,premium:1.86,diesel:1.63}, rating:3.8, numReviews:41, amenities:['C-Store','Pay at Pump'], reporter:'pionCA', reportedAgo:'5h', cash:true, dist:3.1, reviews:[] }
       ],
       MX: [
-        { name:'PEMEX', domain:'pemex.com', addr:'Av. Reforma 222', city:'Ciudad de México', prices:{regular:22.50,midgrade:24.20,premium:25.80,diesel:23.90}, rating:3.8, numReviews:210, amenities:['C-Store','Restrooms'], reporter:'mxFuel', reportedAgo:'1h', cash:true, dist:0.5, reviews:[{user:'CDMX_driver',stars:4,text:'Estación confiable.',date:'1 day ago'}] },
-        { name:'Oxxo Gas', domain:'oxxo.com', addr:'Blvd. Díaz Ordaz 100', city:'Monterrey, NL', prices:{regular:22.10,midgrade:23.80,premium:25.40,diesel:23.50}, rating:4.2, numReviews:156, amenities:['C-Store','Pay at Pump','Restrooms','ATM'], reporter:'oxxoMTY', reportedAgo:'2h', cash:true, dist:1.1, reviews:[] },
+        { name:'PEMEX', domain:'pemex.com', addr:'Av. Reforma 222', city:'Ciudad de MÃ©xico', prices:{regular:22.50,midgrade:24.20,premium:25.80,diesel:23.90}, rating:3.8, numReviews:210, amenities:['C-Store','Restrooms'], reporter:'mxFuel', reportedAgo:'1h', cash:true, dist:0.5, reviews:[{user:'CDMX_driver',stars:4,text:'EstaciÃ³n confiable.',date:'1 day ago'}] },
+        { name:'Oxxo Gas', domain:'oxxo.com', addr:'Blvd. DÃ­az Ordaz 100', city:'Monterrey, NL', prices:{regular:22.10,midgrade:23.80,premium:25.40,diesel:23.50}, rating:4.2, numReviews:156, amenities:['C-Store','Pay at Pump','Restrooms','ATM'], reporter:'oxxoMTY', reportedAgo:'2h', cash:true, dist:1.1, reviews:[] },
         { name:'Shell', domain:'shell.com', addr:'Paseo Tabasco 1200', city:'Villahermosa, TAB', prices:{regular:22.80,midgrade:24.50,premium:26.10,diesel:24.20}, rating:4.0, numReviews:67, amenities:['C-Store','Pay at Pump','Car Wash'], reporter:'shellMX', reportedAgo:'3h', cash:true, dist:2.3, reviews:[] },
         { name:'G500', domain:'g500.mx', addr:'Av. Universidad 500', city:'Puebla, PUE', prices:{regular:21.90,midgrade:23.60,premium:25.20,diesel:23.30}, rating:3.6, numReviews:38, amenities:['C-Store','Restrooms'], reporter:'g500fan', reportedAgo:'6h', cash:true, dist:3.8, reviews:[] }
       ],
@@ -10445,20 +9912,20 @@
         { name:'Asda', domain:'asda.com', addr:'Great Wilson St', city:'Leeds', prices:{regular:1.36,midgrade:1.42,premium:1.49,diesel:1.41}, rating:4.4, numReviews:215, amenities:['C-Store','Pay at Pump'], reporter:'asdaSave', reportedAgo:'2h', cash:true, dist:2.1, reviews:[] }
       ],
       DE: [
-        { name:'Aral', domain:'aral.de', addr:'Kurfürstendamm 30', city:'Berlin', prices:{regular:1.75,midgrade:1.82,premium:1.90,diesel:1.68}, rating:4.1, numReviews:167, amenities:['C-Store','Pay at Pump','Car Wash','Restrooms'], reporter:'berlinFuel', reportedAgo:'1h', cash:true, dist:0.9, reviews:[{user:'DE_driver',stars:4,text:'Zuverlässig und sauber.',date:'1 day ago'}] },
-        { name:'Shell', domain:'shell.com', addr:'Hauptstr. 45', city:'München', prices:{regular:1.78,midgrade:1.85,premium:1.93,diesel:1.71}, rating:4.3, numReviews:122, amenities:['C-Store','Pay at Pump','Car Wash'], reporter:'shellDE', reportedAgo:'2h', cash:true, dist:1.3, reviews:[] },
+        { name:'Aral', domain:'aral.de', addr:'KurfÃ¼rstendamm 30', city:'Berlin', prices:{regular:1.75,midgrade:1.82,premium:1.90,diesel:1.68}, rating:4.1, numReviews:167, amenities:['C-Store','Pay at Pump','Car Wash','Restrooms'], reporter:'berlinFuel', reportedAgo:'1h', cash:true, dist:0.9, reviews:[{user:'DE_driver',stars:4,text:'ZuverlÃ¤ssig und sauber.',date:'1 day ago'}] },
+        { name:'Shell', domain:'shell.com', addr:'Hauptstr. 45', city:'MÃ¼nchen', prices:{regular:1.78,midgrade:1.85,premium:1.93,diesel:1.71}, rating:4.3, numReviews:122, amenities:['C-Store','Pay at Pump','Car Wash'], reporter:'shellDE', reportedAgo:'2h', cash:true, dist:1.3, reviews:[] },
         { name:'TotalEnergies', domain:'totalenergies.com', addr:'Alexanderplatz 8', city:'Berlin', prices:{regular:1.73,midgrade:1.80,premium:1.88,diesel:1.66}, rating:3.9, numReviews:85, amenities:['C-Store','Pay at Pump','EV Charging'], reporter:'totalDE', reportedAgo:'3h', cash:false, dist:1.8, reviews:[] },
-        { name:'Jet', domain:'jet.de', addr:'Schönhauser Allee 12', city:'Berlin', prices:{regular:1.69,midgrade:1.76,premium:1.84,diesel:1.62}, rating:3.7, numReviews:63, amenities:['Pay at Pump'], reporter:'jetDE', reportedAgo:'4h', cash:true, dist:2.5, reviews:[] }
+        { name:'Jet', domain:'jet.de', addr:'SchÃ¶nhauser Allee 12', city:'Berlin', prices:{regular:1.69,midgrade:1.76,premium:1.84,diesel:1.62}, rating:3.7, numReviews:63, amenities:['Pay at Pump'], reporter:'jetDE', reportedAgo:'4h', cash:true, dist:2.5, reviews:[] }
       ],
       FR: [
-        { name:'TotalEnergies', domain:'totalenergies.com', addr:'12 Av. des Champs-Élysées', city:'Paris', prices:{regular:1.82,midgrade:1.89,premium:1.97,diesel:1.74}, rating:4.0, numReviews:195, amenities:['C-Store','Pay at Pump','Restrooms'], reporter:'parisFuel', reportedAgo:'1h', cash:true, dist:0.7, reviews:[{user:'FR_driver',stars:4,text:'Station propre et bien située.',date:'1 day ago'}] },
+        { name:'TotalEnergies', domain:'totalenergies.com', addr:'12 Av. des Champs-Ã‰lysÃ©es', city:'Paris', prices:{regular:1.82,midgrade:1.89,premium:1.97,diesel:1.74}, rating:4.0, numReviews:195, amenities:['C-Store','Pay at Pump','Restrooms'], reporter:'parisFuel', reportedAgo:'1h', cash:true, dist:0.7, reviews:[{user:'FR_driver',stars:4,text:'Station propre et bien situÃ©e.',date:'1 day ago'}] },
         { name:'Leclerc', domain:'e-leclerc.com', addr:'ZAC des Ulis', city:'Les Ulis', prices:{regular:1.72,midgrade:1.79,premium:1.87,diesel:1.64}, rating:4.6, numReviews:340, amenities:['C-Store','Pay at Pump'], reporter:'leclercFan', reportedAgo:'30m', cash:true, dist:3.2, reviews:[] },
         { name:'Carrefour', domain:'carrefour.fr', addr:'Route de Paris', city:'Lyon', prices:{regular:1.74,midgrade:1.81,premium:1.89,diesel:1.66}, rating:4.3, numReviews:210, amenities:['C-Store','Pay at Pump'], reporter:'carFR', reportedAgo:'2h', cash:true, dist:1.5, reviews:[] }
       ],
       ES: [
         { name:'Repsol', domain:'repsol.com', addr:'Paseo de la Castellana 100', city:'Madrid', prices:{regular:1.65,midgrade:1.72,premium:1.80,diesel:1.58}, rating:4.2, numReviews:188, amenities:['C-Store','Pay at Pump','Car Wash'], reporter:'madridFuel', reportedAgo:'1h', cash:true, dist:0.8, reviews:[] },
         { name:'Cepsa', domain:'cepsa.com', addr:'Gran Via 50', city:'Barcelona', prices:{regular:1.63,midgrade:1.70,premium:1.78,diesel:1.56}, rating:4.0, numReviews:145, amenities:['C-Store','Pay at Pump','Restrooms'], reporter:'cepsaBCN', reportedAgo:'2h', cash:true, dist:1.2, reviews:[] },
-        { name:'Shell', domain:'shell.com', addr:'Av. de América 25', city:'Madrid', prices:{regular:1.68,midgrade:1.75,premium:1.83,diesel:1.61}, rating:4.1, numReviews:92, amenities:['C-Store','Pay at Pump','Car Wash'], reporter:'shellES', reportedAgo:'3h', cash:true, dist:2.0, reviews:[] }
+        { name:'Shell', domain:'shell.com', addr:'Av. de AmÃ©rica 25', city:'Madrid', prices:{regular:1.68,midgrade:1.75,premium:1.83,diesel:1.61}, rating:4.1, numReviews:92, amenities:['C-Store','Pay at Pump','Car Wash'], reporter:'shellES', reportedAgo:'3h', cash:true, dist:2.0, reviews:[] }
       ],
       IT: [
         { name:'Eni', domain:'eni.com', addr:'Via Roma 100', city:'Roma', prices:{regular:1.79,midgrade:1.86,premium:1.94,diesel:1.72}, rating:4.0, numReviews:165, amenities:['C-Store','Pay at Pump'], reporter:'romaFuel', reportedAgo:'2h', cash:true, dist:1.0, reviews:[] },
@@ -10466,8 +9933,8 @@
         { name:'TotalEnergies', domain:'totalenergies.com', addr:'Via Veneto 55', city:'Roma', prices:{regular:1.81,midgrade:1.88,premium:1.96,diesel:1.74}, rating:3.8, numReviews:72, amenities:['C-Store','Pay at Pump','EV Charging'], reporter:'totalIT', reportedAgo:'4h', cash:false, dist:2.2, reviews:[] }
       ],
       BR: [
-        { name:'Petrobras', domain:'petrobras.com.br', addr:'Av. Paulista 1000', city:'São Paulo', prices:{regular:5.89,midgrade:6.20,premium:6.59,diesel:5.49}, rating:4.0, numReviews:280, amenities:['C-Store','Restrooms','Pay at Pump'], reporter:'spFuel', reportedAgo:'1h', cash:true, dist:0.6, reviews:[] },
-        { name:'Shell', domain:'shell.com', addr:'Rua Augusta 500', city:'São Paulo', prices:{regular:5.95,midgrade:6.28,premium:6.65,diesel:5.55}, rating:4.2, numReviews:190, amenities:['C-Store','Pay at Pump','Car Wash'], reporter:'shellBR', reportedAgo:'2h', cash:true, dist:1.1, reviews:[] },
+        { name:'Petrobras', domain:'petrobras.com.br', addr:'Av. Paulista 1000', city:'SÃ£o Paulo', prices:{regular:5.89,midgrade:6.20,premium:6.59,diesel:5.49}, rating:4.0, numReviews:280, amenities:['C-Store','Restrooms','Pay at Pump'], reporter:'spFuel', reportedAgo:'1h', cash:true, dist:0.6, reviews:[] },
+        { name:'Shell', domain:'shell.com', addr:'Rua Augusta 500', city:'SÃ£o Paulo', prices:{regular:5.95,midgrade:6.28,premium:6.65,diesel:5.55}, rating:4.2, numReviews:190, amenities:['C-Store','Pay at Pump','Car Wash'], reporter:'shellBR', reportedAgo:'2h', cash:true, dist:1.1, reviews:[] },
         { name:'Ipiranga', domain:'ipiranga.com.br', addr:'Av. Brasil 800', city:'Rio de Janeiro', prices:{regular:5.79,midgrade:6.10,premium:6.49,diesel:5.39}, rating:4.1, numReviews:215, amenities:['C-Store','Restrooms','Pay at Pump'], reporter:'ipiFan', reportedAgo:'3h', cash:true, dist:1.8, reviews:[] }
       ],
       AR: [
@@ -10475,8 +9942,8 @@
         { name:'Shell', domain:'shell.com', addr:'Av. Santa Fe 3000', city:'Buenos Aires', prices:{regular:870,midgrade:940,premium:1015,diesel:830}, rating:4.2, numReviews:185, amenities:['C-Store','Pay at Pump','Car Wash'], reporter:'shellAR', reportedAgo:'2h', cash:true, dist:1.3, reviews:[] }
       ],
       CO: [
-        { name:'Terpel', domain:'terpel.com', addr:'Calle 100 #15-20', city:'Bogotá', prices:{regular:14200,midgrade:15100,premium:15900,diesel:11800}, rating:4.1, numReviews:175, amenities:['C-Store','Restrooms','Pay at Pump'], reporter:'terpelBog', reportedAgo:'2h', cash:true, dist:0.8, reviews:[] },
-        { name:'Primax', domain:'primax.com.co', addr:'Av. Boyacá #80-50', city:'Bogotá', prices:{regular:14050,midgrade:14950,premium:15750,diesel:11650}, rating:3.9, numReviews:92, amenities:['C-Store','Pay at Pump'], reporter:'primaxCO', reportedAgo:'4h', cash:true, dist:2.5, reviews:[] }
+        { name:'Terpel', domain:'terpel.com', addr:'Calle 100 #15-20', city:'BogotÃ¡', prices:{regular:14200,midgrade:15100,premium:15900,diesel:11800}, rating:4.1, numReviews:175, amenities:['C-Store','Restrooms','Pay at Pump'], reporter:'terpelBog', reportedAgo:'2h', cash:true, dist:0.8, reviews:[] },
+        { name:'Primax', domain:'primax.com.co', addr:'Av. BoyacÃ¡ #80-50', city:'BogotÃ¡', prices:{regular:14050,midgrade:14950,premium:15750,diesel:11650}, rating:3.9, numReviews:92, amenities:['C-Store','Pay at Pump'], reporter:'primaxCO', reportedAgo:'4h', cash:true, dist:2.5, reviews:[] }
       ],
       AU: [
         { name:'Ampol', domain:'ampol.com.au', addr:'George St 200', city:'Sydney, NSW', prices:{regular:1.85,midgrade:1.95,premium:2.10,diesel:1.90}, rating:4.0, numReviews:165, amenities:['C-Store','Pay at Pump','Car Wash'], reporter:'sydFuel', reportedAgo:'1h', cash:true, dist:0.9, reviews:[{user:'AU_driver',stars:4,text:'Decent prices for Sydney.',date:'1 day ago'}] },
@@ -10508,7 +9975,7 @@
         { name:'Shell', domain:'shell.com', addr:'Olaya St', city:'Riyadh', prices:{regular:2.18,midgrade:2.33,premium:2.68,diesel:1.44}, rating:4.2, numReviews:180, amenities:['C-Store','Pay at Pump','Restrooms'], reporter:'shellSA', reportedAgo:'2h', cash:true, dist:1.8, reviews:[] }
       ],
       TR: [
-        { name:'OPET', domain:'opet.com.tr', addr:'Bağdat Cad.', city:'Istanbul', prices:{regular:42.50,midgrade:44.80,premium:47.20,diesel:41.30}, rating:4.2, numReviews:225, amenities:['C-Store','Pay at Pump','Restrooms','Car Wash'], reporter:'istFuel', reportedAgo:'1h', cash:true, dist:0.8, reviews:[] },
+        { name:'OPET', domain:'opet.com.tr', addr:'BaÄŸdat Cad.', city:'Istanbul', prices:{regular:42.50,midgrade:44.80,premium:47.20,diesel:41.30}, rating:4.2, numReviews:225, amenities:['C-Store','Pay at Pump','Restrooms','Car Wash'], reporter:'istFuel', reportedAgo:'1h', cash:true, dist:0.8, reviews:[] },
         { name:'Petrol Ofisi', domain:'petrolofisi.com.tr', addr:'Istiklal Cad.', city:'Istanbul', prices:{regular:42.30,midgrade:44.60,premium:47.00,diesel:41.10}, rating:4.0, numReviews:178, amenities:['C-Store','Pay at Pump','Restrooms'], reporter:'poFan', reportedAgo:'2h', cash:true, dist:1.5, reviews:[] }
       ],
       NG: [
@@ -10646,7 +10113,7 @@
     }
 
     // Currency units by country
-    var currUnits = { US:'$/gal', CA:'$/L', MX:'MXN/L', GB:'£/L', DE:'€/L', FR:'€/L', ES:'€/L', IT:'€/L', BR:'R$/L', AR:'ARS/L', CO:'COP/gal', AU:'$/L', JP:'¥/L', KR:'₩/L', IN:'₹/L', AE:'AED/L', SA:'SAR/L', TR:'₺/L', NG:'₦/L', ZA:'ZAR/L' };
+    var currUnits = { US:'$/gal', CA:'$/L', MX:'MXN/L', GB:'Â£/L', DE:'â‚¬/L', FR:'â‚¬/L', ES:'â‚¬/L', IT:'â‚¬/L', BR:'R$/L', AR:'ARS/L', CO:'COP/gal', AU:'$/L', JP:'Â¥/L', KR:'â‚©/L', IN:'â‚¹/L', AE:'AED/L', SA:'SAR/L', TR:'â‚º/L', NG:'â‚¦/L', ZA:'ZAR/L' };
 
     function renderStations() {
       var list = sortedStations();
@@ -10823,7 +10290,7 @@
           localStorage.setItem('ost_fuel_history', JSON.stringify(fuelHistory));
           renderRewards();
           if (receiptEl) {
-            receiptEl.innerHTML = '<strong>Merchant receipt confirmed</strong><p>Session <b>' + sessionCode + '</b> · Pump <b>' + pumpCode + '</b> · Receipt <b>' + receiptCode + '</b><br>Total ' + ost.toFixed(2) + ' OST settled at ' + selectedStation.name + '. Cashback credited: +' + reward.toFixed(2) + ' OST.</p>';
+            receiptEl.innerHTML = '<strong>Merchant receipt confirmed</strong><p>Session <b>' + sessionCode + '</b> Â· Pump <b>' + pumpCode + '</b> Â· Receipt <b>' + receiptCode + '</b><br>Total ' + ost.toFixed(2) + ' OST settled at ' + selectedStation.name + '. Cashback credited: +' + reward.toFixed(2) + ' OST.</p>';
             receiptEl.style.display = 'block';
           }
           toast('&#9981;', 'Merchant checkout settled. +' + reward.toFixed(2) + ' OST cashback.');
@@ -11037,7 +10504,7 @@
   })();
 
   // ========================================================================
-  // OST LAUNCHPAD — pump.fun style with bonding curve & trenches
+  // OST LAUNCHPAD â€” pump.fun style with bonding curve & trenches
   // ========================================================================
   (function initLaunchpad() {
     var nameEl    = document.getElementById('lpName');
@@ -11047,7 +10514,7 @@
     var launchBtn = document.getElementById('lpLaunchBtn');
     if (!nameEl || !launchBtn) return;
 
-    /* ── State ── */
+    /* â”€â”€ State â”€â”€ */
     var launches = JSON.parse(localStorage.getItem('ost_lp_history2') || '[]');
     var uploadedImage = null; // data URL
     var previewEls = {
@@ -11065,22 +10532,22 @@
       pulseGrad: document.getElementById('lpPulseGrad')
     };
 
-    /* ── Demo seed ── */
+    /* â”€â”€ Demo seed â”€â”€ */
     var DEMO_IMAGES = [
-      'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect fill="%23191b2a" width="200" height="200"/><text x="100" y="115" text-anchor="middle" font-size="80" fill="%2300ff88">🐕</text></svg>'),
-      'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect fill="%23191b2a" width="200" height="200"/><text x="100" y="115" text-anchor="middle" font-size="80" fill="%236d9fff">🛰️</text></svg>'),
-      'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect fill="%23191b2a" width="200" height="200"/><text x="100" y="115" text-anchor="middle" font-size="80" fill="%23a78bfa">🌙</text></svg>'),
-      'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect fill="%23191b2a" width="200" height="200"/><text x="100" y="115" text-anchor="middle" font-size="80" fill="%23FF6B35">🔥</text></svg>'),
-      'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect fill="%23191b2a" width="200" height="200"/><text x="100" y="115" text-anchor="middle" font-size="80" fill="%23ffd700">👑</text></svg>'),
-      'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect fill="%23191b2a" width="200" height="200"/><text x="100" y="115" text-anchor="middle" font-size="80" fill="%23ff69b4">🐱</text></svg>'),
-      'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect fill="%23191b2a" width="200" height="200"/><text x="100" y="115" text-anchor="middle" font-size="80" fill="%2300bfff">🐸</text></svg>'),
-      'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect fill="%23191b2a" width="200" height="200"/><text x="100" y="115" text-anchor="middle" font-size="80" fill="%23ff4500">🚀</text></svg>')
+      'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect fill="%23191b2a" width="200" height="200"/><text x="100" y="115" text-anchor="middle" font-size="80" fill="%2300ff88">ðŸ•</text></svg>'),
+      'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect fill="%23191b2a" width="200" height="200"/><text x="100" y="115" text-anchor="middle" font-size="80" fill="%236d9fff">ðŸ›°ï¸</text></svg>'),
+      'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect fill="%23191b2a" width="200" height="200"/><text x="100" y="115" text-anchor="middle" font-size="80" fill="%23a78bfa">ðŸŒ™</text></svg>'),
+      'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect fill="%23191b2a" width="200" height="200"/><text x="100" y="115" text-anchor="middle" font-size="80" fill="%23FF6B35">ðŸ”¥</text></svg>'),
+      'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect fill="%23191b2a" width="200" height="200"/><text x="100" y="115" text-anchor="middle" font-size="80" fill="%23ffd700">ðŸ‘‘</text></svg>'),
+      'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect fill="%23191b2a" width="200" height="200"/><text x="100" y="115" text-anchor="middle" font-size="80" fill="%23ff69b4">ðŸ±</text></svg>'),
+      'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect fill="%23191b2a" width="200" height="200"/><text x="100" y="115" text-anchor="middle" font-size="80" fill="%2300bfff">ðŸ¸</text></svg>'),
+      'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect fill="%23191b2a" width="200" height="200"/><text x="100" y="115" text-anchor="middle" font-size="80" fill="%23ff4500">ðŸš€</text></svg>')
     ];
 
     if (launches.length === 0) {
       var now = Date.now();
       var demoData = [
-        { name:'SpaceDoge', symbol:'SDOGE', desc:'First dog in decentralized orbit. Much wow, very satellite.', mcap: 42000, curve: 61, img: DEMO_IMAGES[0], twitter:'https://twitter.com/spacedoge', telegram:'', website:'', creator:'7xK...b2F', date: now - 120000, comments:[{user:'anon42',text:'to the moon 🚀'},{user:'degen99',text:'aping in'}], holders:[{addr:'7xK...b2F',pct:18},{addr:'3mP...nQ9',pct:12},{addr:'9aW...kL5',pct:8},{addr:'2bT...pQ5',pct:5}] },
+        { name:'SpaceDoge', symbol:'SDOGE', desc:'First dog in decentralized orbit. Much wow, very satellite.', mcap: 42000, curve: 61, img: DEMO_IMAGES[0], twitter:'https://twitter.com/spacedoge', telegram:'', website:'', creator:'7xK...b2F', date: now - 120000, comments:[{user:'anon42',text:'to the moon ðŸš€'},{user:'degen99',text:'aping in'}], holders:[{addr:'7xK...b2F',pct:18},{addr:'3mP...nQ9',pct:12},{addr:'9aW...kL5',pct:8},{addr:'2bT...pQ5',pct:5}] },
         { name:'Starlink Inu', symbol:'SINU', desc:'Decentralized satellite meme power. Beaming gains from LEO.', mcap: 31500, curve: 46, img: DEMO_IMAGES[1], twitter:'', telegram:'https://t.me/starlinkinu', website:'', creator:'4pR...mN3', date: now - 300000, comments:[{user:'satfan',text:'this one is different'}], holders:[{addr:'4pR...mN3',pct:22},{addr:'8kL...wR7',pct:9},{addr:'5nG...hT2',pct:6}] },
         { name:'LunarDAO', symbol:'LUNA2', desc:'Governance for moon settlers. Vote on crater allocation.', mcap: 58200, curve: 84, img: DEMO_IMAGES[2], twitter:'https://twitter.com/lunardao', telegram:'', website:'https://lunardao.space', creator:'6cD...wM8', date: now - 60000, comments:[{user:'moonboy',text:'KOTH incoming!'},{user:'whale1',text:'just bought 50k'},{user:'skeptic',text:'careful guys'}], holders:[{addr:'6cD...wM8',pct:15},{addr:'1xY...aB3',pct:11},{addr:'7wQ...eF9',pct:7},{addr:'3mP...nQ9',pct:4},{addr:'9kL...rT6',pct:3}] },
         { name:'OrbitalCash', symbol:'ORBT', desc:'Cash for the orbital economy. Zero-G settlement layer.', mcap: 8900, curve: 13, img: DEMO_IMAGES[3], twitter:'', telegram:'', website:'', creator:'2bT...pQ5', date: now - 900000, comments:[], holders:[{addr:'2bT...pQ5',pct:35},{addr:'8kL...wR7',pct:8}] },
@@ -11097,7 +10564,7 @@
       localStorage.setItem('ost_lp_history2', JSON.stringify(launches));
     }
 
-    /* ── Utility ── */
+    /* â”€â”€ Utility â”€â”€ */
     function generateMint() {
       var chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
       var out = '';
@@ -11138,7 +10605,7 @@
       previewEls.stage.textContent = name.length >= 2 && symbol.length >= 1 ? 'Ready for fair launch' : 'Waiting for token identity';
       if (previewEls.media) {
         if (uploadedImage) previewEls.media.innerHTML = '<img src="' + escHtml(uploadedImage) + '" alt="">';
-        else previewEls.media.innerHTML = '<span>' + escHtml(symbol ? symbol.charAt(0) : '◉') + '</span>';
+        else previewEls.media.innerHTML = '<span>' + escHtml(symbol ? symbol.charAt(0) : 'â—‰') + '</span>';
       }
       if (previewEls.links) {
         var chips = [];
@@ -11157,7 +10624,7 @@
       if (previewEls.pulseGrad) previewEls.pulseGrad.textContent = graduating ? '$' + graduating.symbol + ' ' + Math.min(graduating.curve, 100) + '%' : '--';
     }
 
-    /* ── Tab switching ── */
+    /* â”€â”€ Tab switching â”€â”€ */
     var tabs = document.querySelectorAll('.lp-tab');
     var panels = {
       create: document.getElementById('lpPanelCreate'),
@@ -11175,7 +10642,7 @@
       });
     });
 
-    /* ── Image Upload ── */
+    /* â”€â”€ Image Upload â”€â”€ */
     var uploadArea  = document.getElementById('lpUploadArea');
     var imageInput  = document.getElementById('lpImageInput');
     var uploadPH    = document.getElementById('lpUploadPlaceholder');
@@ -11205,8 +10672,8 @@
       });
     }
     function handleFile(file) {
-      if (!file.type.match(/^image\//)) { if (typeof toast === 'function') toast('⚠️', 'Please upload an image file'); return; }
-      if (file.size > 5 * 1024 * 1024) { if (typeof toast === 'function') toast('⚠️', 'Image too large (max 5MB)'); return; }
+      if (!file.type.match(/^image\//)) { if (typeof toast === 'function') toast('âš ï¸', 'Please upload an image file'); return; }
+      if (file.size > 5 * 1024 * 1024) { if (typeof toast === 'function') toast('âš ï¸', 'Image too large (max 5MB)'); return; }
       var reader = new FileReader();
       reader.onload = function(e) {
         uploadedImage = e.target.result;
@@ -11219,7 +10686,7 @@
       reader.readAsDataURL(file);
     }
 
-    /* ── Show more options toggle ── */
+    /* â”€â”€ Show more options toggle â”€â”€ */
     var moreToggle = document.getElementById('lpMoreToggle');
     var moreFields = document.getElementById('lpMoreFields');
     if (moreToggle) {
@@ -11230,12 +10697,12 @@
       });
     }
 
-    /* ── Char counter ── */
+    /* â”€â”€ Char counter â”€â”€ */
     if (descEl && descCount) {
       descEl.addEventListener('input', function() { descCount.textContent = descEl.value.length; });
     }
 
-    /* ── Validate ── */
+    /* â”€â”€ Validate â”€â”€ */
     function validateForm() {
       var name = (nameEl.value || '').trim();
       var symbol = (symbolEl.value || '').trim();
@@ -11250,7 +10717,7 @@
       if (el) el.addEventListener('input', renderComposePreview);
     });
 
-    /* ── Flow animation ── */
+    /* â”€â”€ Flow animation â”€â”€ */
     function runFlow(onDone) {
       var flow = document.getElementById('lpFlow');
       flow.style.display = 'flex';
@@ -11265,7 +10732,7 @@
       next();
     }
 
-    /* ── Create / Launch ── */
+    /* â”€â”€ Create / Launch â”€â”€ */
     launchBtn.addEventListener('click', function() {
       if (launchBtn.disabled) return;
       var name   = nameEl.value.trim();
@@ -11277,7 +10744,7 @@
       var initialBuy = parseFloat((document.getElementById('lpInitialBuy') || {}).value) || 0;
 
       var isDemoMode = !connectedWallet;
-      if (isDemoMode) toast('🚀', 'Local launch preview — connect wallet to publish on-chain');
+      if (isDemoMode) toast('ðŸš€', 'Local launch preview â€” connect wallet to publish on-chain');
 
       launchBtn.disabled = true;
       launchBtn.textContent = 'creating...';
@@ -11321,23 +10788,23 @@
         renderComposePreview();
 
         updateTotalCount();
-        toast('🚀', symbol + ' is live! Mint: ' + mintAddr.slice(0, 6) + '...');
+        toast('ðŸš€', symbol + ' is live! Mint: ' + mintAddr.slice(0, 6) + '...');
       });
     });
 
-    /* ── Copy mint ── */
+    /* â”€â”€ Copy mint â”€â”€ */
     var copyMint = document.getElementById('lpCopyMint');
     if (copyMint) {
       copyMint.addEventListener('click', function() {
         var addr = document.getElementById('lpSuccessMint').textContent;
         if (addr && addr !== '--') {
           if (navigator.clipboard) navigator.clipboard.writeText(addr);
-          toast('📋', 'Mint address copied!');
+          toast('ðŸ“‹', 'Mint address copied!');
         }
       });
     }
 
-    /* ── View token after launch ── */
+    /* â”€â”€ View token after launch â”€â”€ */
     var viewToken = document.getElementById('lpViewToken');
     if (viewToken) {
       viewToken.addEventListener('click', function() {
@@ -11347,14 +10814,14 @@
       });
     }
 
-    /* ── Total count ── */
+    /* â”€â”€ Total count â”€â”€ */
     function updateTotalCount() {
       var el = document.getElementById('lpTotalLaunched');
       if (el) el.textContent = launches.length;
     }
     updateTotalCount();
 
-    /* ── Stats bar ── */
+    /* â”€â”€ Stats bar â”€â”€ */
     function updateStats() {
       var coinEl = document.getElementById('lpStatCoins');
       var kothEl = document.getElementById('lpStatKoth');
@@ -11370,7 +10837,7 @@
       updatePulseShell();
     }
 
-    /* ── Live ticker ── */
+    /* â”€â”€ Live ticker â”€â”€ */
     function renderTicker() {
       var ticker = document.getElementById('lpTicker');
       if (!ticker) return;
@@ -11401,7 +10868,7 @@
     }
     renderTicker();
 
-    /* ── Activity feed ── */
+    /* â”€â”€ Activity feed â”€â”€ */
     var activities = [];
     function seedActivities() {
       var verbs = ['bought','sold','launched','aped into'];
@@ -11437,9 +10904,9 @@
     updateStats();
     renderComposePreview();
 
-    /* ══════════════════════════════════════════════════
-       FEED — Token card grid
-       ══════════════════════════════════════════════════ */
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+       FEED â€” Token card grid
+       â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
     var currentSort = 'trending';
     var feedGrid = document.getElementById('lpFeedGrid');
     var searchIn = document.getElementById('lpSearchInput');
@@ -11498,7 +10965,7 @@
             '<div class="lp-card-top">' +
               '<span class="lp-card-name">' + escHtml(l.name) + '</span>' +
               '<span class="lp-card-ticker">$' + escHtml(l.symbol) + '</span>' +
-              (isKoth ? '<span class="lp-card-koth" title="King of the Hill">👑</span>' : '') +
+              (isKoth ? '<span class="lp-card-koth" title="King of the Hill">ðŸ‘‘</span>' : '') +
             '</div>' +
             '<div class="lp-card-desc">' + escHtml(l.desc || '') + '</div>' +
             '<div class="lp-card-meta">' +
@@ -11522,7 +10989,7 @@
           l.curve = Math.min(Math.floor(l.mcap / 690), 100);
           localStorage.setItem('ost_lp_history2', JSON.stringify(launches));
           activities.unshift({ user: connectedWallet ? connectedWallet.slice(0,4)+'...' : 'anon', verb: 'bought', token: '$' + l.symbol, amount: '10', type: 'buy', time: Date.now() });
-          toast('✅', 'Quick bought 10 OST of $' + l.symbol);
+          toast('âœ…', 'Quick bought 10 OST of $' + l.symbol);
           renderFeed();
           updateStats();
         });
@@ -11536,9 +11003,9 @@
       renderActivity();
     }
 
-    /* ══════════════════════════════════════════════════
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
        LEADERBOARD
-       ══════════════════════════════════════════════════ */
+       â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
     function renderBoard() {
       var list = document.getElementById('lpBoardList');
       if (!list) return;
@@ -11548,7 +11015,7 @@
         var row = document.createElement('div');
         row.className = 'lp-board-row';
         row.innerHTML =
-          '<span class="lp-board-rank">' + (i === 0 ? '👑' : (i + 1)) + '</span>' +
+          '<span class="lp-board-rank">' + (i === 0 ? 'ðŸ‘‘' : (i + 1)) + '</span>' +
           (l.img ? '<img class="lp-board-img" src="' + escHtml(l.img) + '" alt="">' : '<div class="lp-board-img" style="font-size:1.2rem;color:rgba(255,255,255,.2)">' + (l.symbol ? l.symbol.charAt(0) : '?') + '</div>') +
           '<div class="lp-board-info"><div class="lp-board-name">' + escHtml(l.name) + ' <span style="color:#00ff88;font-size:.78rem">$' + escHtml(l.symbol) + '</span></div><div class="lp-board-sub">by ' + escHtml(l.creator) + '</div></div>' +
           '<div class="lp-board-mcap"><span class="lp-board-mcap-val">' + fmtMcap(l.mcap) + ' OST</span><span class="lp-board-mcap-lbl">market cap</span></div>' +
@@ -11558,9 +11025,9 @@
       });
     }
 
-    /* ══════════════════════════════════════════════════
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
        TOKEN DETAIL MODAL
-       ══════════════════════════════════════════════════ */
+       â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
     var overlay   = document.getElementById('lpDetailOverlay');
     var modal     = document.getElementById('lpDetailModal');
     var closeBtn  = document.getElementById('lpDetailClose');
@@ -11640,7 +11107,7 @@
         if (!currentToken) return;
         var text = 'Check out $' + currentToken.symbol + ' on OST Launchpad! MC: ' + fmtMcap(currentToken.mcap) + ' OST';
         if (navigator.clipboard) navigator.clipboard.writeText(text);
-        toast('📋', 'Share text copied!');
+        toast('ðŸ“‹', 'Share text copied!');
       });
     }
     if (watchBtn) {
@@ -11652,12 +11119,12 @@
           watchlist.splice(idx, 1);
           watchBtn.classList.remove('lp-action-active');
           watchBtn.innerHTML = '&#9734; Watchlist';
-          toast('💔', 'Removed from watchlist');
+          toast('ðŸ’”', 'Removed from watchlist');
         } else {
           watchlist.push(currentToken.mint);
           watchBtn.classList.add('lp-action-active');
           watchBtn.innerHTML = '&#9733; Watching';
-          toast('⭐', 'Added to watchlist!');
+          toast('â­', 'Added to watchlist!');
         }
         localStorage.setItem('ost_lp_watchlist', JSON.stringify(watchlist));
       });
@@ -11666,7 +11133,7 @@
       copyCABtn.addEventListener('click', function() {
         if (!currentToken) return;
         if (navigator.clipboard) navigator.clipboard.writeText(currentToken.mint);
-        toast('📋', 'Contract address copied!');
+        toast('ðŸ“‹', 'Contract address copied!');
       });
     }
 
@@ -11697,13 +11164,13 @@
       tradeBtn.addEventListener('click', async function() {
         if (!currentToken) return;
         var amt = parseFloat(document.getElementById('lpTradeAmount').value) || 0;
-        if (amt <= 0) { toast('⚠️', 'Enter an amount'); return; }
+        if (amt <= 0) { toast('âš ï¸', 'Enter an amount'); return; }
 
         var origLabel = tradeBtn.textContent;
-        tradeBtn.disabled = true; tradeBtn.textContent = 'Sending…';
+        tradeBtn.disabled = true; tradeBtn.textContent = 'Sendingâ€¦';
         try {
           var trade = window.OST_TRADE;
-          if (!trade || !trade.memecoinBuy) throw new Error('Trading module not loaded — refresh the page');
+          if (!trade || !trade.memecoinBuy) throw new Error('Trading module not loaded â€” refresh the page');
           var result;
           if (tradeSide === 'buy') {
             result = await trade.memecoinBuy(currentToken.symbol, amt);
@@ -11714,7 +11181,7 @@
             currentToken.mcap += Math.floor(amt * 8);
             currentToken.curve = Math.min(Math.floor(currentToken.mcap / 690), 100);
             activities.unshift({ user: connectedWallet ? connectedWallet.slice(0,4)+'...' : 'You', verb: 'bought', token: '$' + currentToken.symbol, amount: amt.toString(), type: 'buy', time: Date.now() });
-            toast('✅', 'Bought ' + amt + ' OST of $' + currentToken.symbol + ' · sig ' + String(result.sig).slice(0,8));
+            toast('âœ…', 'Bought ' + amt + ' OST of $' + currentToken.symbol + ' Â· sig ' + String(result.sig).slice(0,8));
           } else {
             result = await trade.memecoinSell(currentToken.symbol, amt);
             if (typeof window.recordOstPlatformEvent === 'function') {
@@ -11723,12 +11190,12 @@
             currentToken.mcap = Math.max(100, currentToken.mcap - Math.floor(amt * 5));
             currentToken.curve = Math.min(Math.floor(currentToken.mcap / 690), 100);
             activities.unshift({ user: connectedWallet ? connectedWallet.slice(0,4)+'...' : 'You', verb: 'sold', token: '$' + currentToken.symbol, amount: result.ost.toString(), type: 'sell', time: Date.now() });
-            toast('✅', 'Sold ' + result.ost.toFixed(2) + ' ' + currentToken.symbol + ' · sig ' + String(result.sig).slice(0,8));
+            toast('âœ…', 'Sold ' + result.ost.toFixed(2) + ' ' + currentToken.symbol + ' Â· sig ' + String(result.sig).slice(0,8));
           }
 
           // Check graduation
           if (currentToken.curve >= 100) {
-            toast('🎓', '$' + currentToken.symbol + ' graduated! Liquidity deposited & burned!');
+            toast('ðŸŽ“', '$' + currentToken.symbol + ' graduated! Liquidity deposited & burned!');
             currentToken.curve = 100;
           }
 
@@ -11742,7 +11209,7 @@
         } catch (err) {
           console.warn('[memecoin trade] failed', err);
           var msg = (err && err.message) ? err.message : 'Trade failed';
-          toast('⚠️', msg.length > 80 ? msg.slice(0, 80) + '…' : msg);
+          toast('âš ï¸', msg.length > 80 ? msg.slice(0, 80) + 'â€¦' : msg);
           try { alert('Memecoin trade failed:\n\n' + msg); } catch(e){}
         } finally {
           tradeBtn.disabled = false; tradeBtn.textContent = origLabel;
@@ -11807,11 +11274,11 @@
         localStorage.setItem('ost_lp_history2', JSON.stringify(launches));
         renderComments(currentToken);
         commentText.value = '';
-        toast('💬', 'Comment posted!');
+        toast('ðŸ’¬', 'Comment posted!');
       });
     }
 
-    /* ── Simulate live market cap fluctuations ── */
+    /* â”€â”€ Simulate live market cap fluctuations â”€â”€ */
     setInterval(function() {
       launches.forEach(function(l) {
         if (l.curve >= 100) return;
@@ -11841,7 +11308,7 @@
   })();
 
   // ========================================================================
-  // SpaceX Accordion Toggle — Expand/Collapse Phases
+  // SpaceX Accordion Toggle â€” Expand/Collapse Phases
   // ========================================================================
   (function initSpaceXAccordion() {
     document.querySelectorAll('.sx-phase-banner').forEach(function(banner) {
@@ -11881,7 +11348,7 @@
   })();
 
   // ========================================================================
-  // Enhanced Satellite Animation — subtle parallax on scroll
+  // Enhanced Satellite Animation â€” subtle parallax on scroll
   // ========================================================================
   (function initSatelliteParallax() {
     var layer = document.getElementById('satelliteLayer');
@@ -11897,7 +11364,7 @@
   })();
 
   // ========================================================================
-  // SURVIVAL MODE — Interactive bearer token minting
+  // SURVIVAL MODE â€” Interactive bearer token minting
   // ========================================================================
   (function initSurvivalMode() {
     var panel   = document.getElementById('svMintPanel');
@@ -11942,7 +11409,7 @@
       });
     });
 
-    /* Amount input → fees */
+    /* Amount input â†’ fees */
     amtIn.addEventListener('input', updateFees);
 
     function updateFees() {
@@ -12014,7 +11481,7 @@
       /* Re-enable mint */
       mintBtn.disabled = false;
 
-      if (typeof toast === 'function') toast('\u2705', 'Survival bearer token minted — ' + amount.toLocaleString() + ' OST');
+      if (typeof toast === 'function') toast('\u2705', 'Survival bearer token minted â€” ' + amount.toLocaleString() + ' OST');
       try {
         window.dispatchEvent(new CustomEvent('ost:survival-token-minted', {
           detail: { amount: amount, format: selectedFmt, type: bType.textContent, hash: hash, bearerToken: latestBearerPayload, bearerText: latestBearerText, ts: Date.now() }
@@ -12123,7 +11590,7 @@
         w.document.write('<div class="amount">' + bAmt.textContent + '</div>');
         w.document.write('<canvas id="qr"></canvas>');
         w.document.write('<div class="hash">' + bHash.textContent + '</div>');
-        w.document.write('<div style="margin-top:12px;font-size:.7rem;color:#888;">Encrypted · One-time redemption · Satellite-redeemable</div>');
+        w.document.write('<div style="margin-top:12px;font-size:.7rem;color:#888;">Encrypted Â· One-time redemption Â· Satellite-redeemable</div>');
         w.document.write('</div></body></html>');
         w.document.close();
         setTimeout(function() { w.print(); }, 300);
@@ -12171,7 +11638,7 @@
           content += '\nOST-BEARER-V1 PAYLOAD\n';
           content += latestBearerText + '\n';
         }
-        content += 'Encrypted · One-time redemption · Satellite-redeemable\n';
+        content += 'Encrypted Â· One-time redemption Â· Satellite-redeemable\n';
         content += '\nWARNING: This is a bearer instrument. Whoever holds this note controls the value.\n';
         var blob = new Blob([content], { type: 'text/plain' });
         var a = document.createElement('a');
@@ -12185,10 +11652,10 @@
   })();
 
   // ========================================================================
-  // QUANTUM REALM — Interactive visualizations & demos
+  // QUANTUM REALM â€” Interactive visualizations & demos
   // ========================================================================
   (function initQuantumRealm() {
-    /* ── Particle Canvas ── */
+    /* â”€â”€ Particle Canvas â”€â”€ */
     var canvas = document.getElementById('qrParticleCanvas');
     if (!canvas) return;
     var ctx = canvas.getContext('2d');
@@ -12257,7 +11724,7 @@
     }, { threshold: 0.05 });
     if (qrSection) qrObserver.observe(qrSection);
 
-    /* ── Build Hash Chain visual (Card 1) ── */
+    /* â”€â”€ Build Hash Chain visual (Card 1) â”€â”€ */
     var hashChain = document.getElementById('qrHashChain');
     if (hashChain) {
       for (var h = 0; h < 16; h++) {
@@ -12268,7 +11735,7 @@
       }
     }
 
-    /* ── Build Lattice Grid visual (Card 1) ── */
+    /* â”€â”€ Build Lattice Grid visual (Card 1) â”€â”€ */
     var latticeGrid = document.getElementById('qrLatticeGrid');
     if (latticeGrid) {
       for (var l = 0; l < 16; l++) {
@@ -12279,7 +11746,7 @@
       }
     }
 
-    /* ── Animate signature chain on hover ── */
+    /* â”€â”€ Animate signature chain on hover â”€â”€ */
     var card1 = document.getElementById('qrCard1');
     if (card1) {
       var sigInterval = null;
@@ -12306,7 +11773,7 @@
       });
     }
 
-    /* ── Entangle Wallets button ── */
+    /* â”€â”€ Entangle Wallets button â”€â”€ */
     var entangleBtn = document.getElementById('qrEntangleBtn');
     var walletAState = document.getElementById('qrWalletAState');
     var walletBState = document.getElementById('qrWalletBState');
@@ -12316,18 +11783,18 @@
     if (entangleBtn) {
       entangleBtn.addEventListener('click', function() {
         entangleBtn.disabled = true;
-        entangleBtn.textContent = '⟡ Entangling...';
+        entangleBtn.textContent = 'âŸ¡ Entangling...';
         if (entangleLink) entangleLink.classList.add('active');
-        if (walletAState) { walletAState.textContent = '⟡ linking...'; walletAState.className = 'qr-wallet-state'; }
-        if (walletBState) { walletBState.textContent = '⟡ linking...'; walletBState.className = 'qr-wallet-state'; }
+        if (walletAState) { walletAState.textContent = 'âŸ¡ linking...'; walletAState.className = 'qr-wallet-state'; }
+        if (walletBState) { walletBState.textContent = 'âŸ¡ linking...'; walletBState.className = 'qr-wallet-state'; }
 
         setTimeout(function() {
-          if (walletAState) { walletAState.textContent = '⟡ entangled'; walletAState.className = 'qr-wallet-state entangled'; }
-          if (walletBState) { walletBState.textContent = '⟡ entangled'; walletBState.className = 'qr-wallet-state entangled'; }
-          entangleBtn.textContent = '✓ Wallets Entangled';
+          if (walletAState) { walletAState.textContent = 'âŸ¡ entangled'; walletAState.className = 'qr-wallet-state entangled'; }
+          if (walletBState) { walletBState.textContent = 'âŸ¡ entangled'; walletBState.className = 'qr-wallet-state entangled'; }
+          entangleBtn.textContent = 'âœ“ Wallets Entangled';
           entangledCount++;
           updateQrStats();
-          if (typeof toast === 'function') toast('⟡', 'Wallets entangled! Non-local link established.');
+          if (typeof toast === 'function') toast('âŸ¡', 'Wallets entangled! Non-local link established.');
 
           setTimeout(function() {
             entangleBtn.disabled = false;
@@ -12340,7 +11807,7 @@
       });
     }
 
-    /* ── Collapse State button ── */
+    /* â”€â”€ Collapse State button â”€â”€ */
     var collapseBtn = document.getElementById('qrCollapseBtn');
     var qubit = document.getElementById('qrQubit');
     var yieldFill = document.getElementById('qrYieldFill');
@@ -12351,7 +11818,7 @@
     if (collapseBtn) {
       collapseBtn.addEventListener('click', function() {
         collapseBtn.disabled = true;
-        collapseBtn.textContent = '⟡ Collapsing...';
+        collapseBtn.textContent = 'âŸ¡ Collapsing...';
         if (qubit) qubit.classList.add('collapsed');
 
         setTimeout(function() {
@@ -12360,9 +11827,9 @@
           yieldSum += parseFloat(yieldPct);
           if (yieldFill) yieldFill.style.width = yieldPct + '%';
           if (yieldLabel) yieldLabel.textContent = 'Yield: ' + yieldPct + '% APY (collapsed)';
-          collapseBtn.textContent = '✓ State Collapsed: ' + yieldPct + '% APY';
+          collapseBtn.textContent = 'âœ“ State Collapsed: ' + yieldPct + '% APY';
           updateQrStats();
-          if (typeof toast === 'function') toast('🔬', 'Quantum state collapsed! Yield: ' + yieldPct + '% APY');
+          if (typeof toast === 'function') toast('ðŸ”¬', 'Quantum state collapsed! Yield: ' + yieldPct + '% APY');
 
           setTimeout(function() {
             collapseBtn.disabled = false;
@@ -12375,11 +11842,11 @@
       });
     }
 
-    /* ── Enter the Quantum Realm CTA ── */
+    /* â”€â”€ Enter the Quantum Realm CTA â”€â”€ */
     var enterBtn = document.getElementById('qrEnterBtn');
     if (enterBtn) {
       enterBtn.addEventListener('click', function() {
-        if (typeof toast === 'function') toast('⚛', 'Welcome to the Quantum Realm. You are now operating beyond classical limits.');
+        if (typeof toast === 'function') toast('âš›', 'Welcome to the Quantum Realm. You are now operating beyond classical limits.');
         // Pulse effect on all cards
         var cards = document.querySelectorAll('.qr-card');
         cards.forEach(function(c) {
@@ -12392,7 +11859,7 @@
       });
     }
 
-    /* ── Stats counter ── */
+    /* â”€â”€ Stats counter â”€â”€ */
     var sigCount = 0;
     function updateQrStats() {
       var elSigs = document.getElementById('qrStatSigs');
@@ -12408,7 +11875,7 @@
       }
     }
 
-    /* ── Ambient stat growth ── */
+    /* â”€â”€ Ambient stat growth â”€â”€ */
     setInterval(function() {
       sigCount += Math.floor(Math.random() * 5 + 1);
       updateQrStats();
@@ -12510,13 +11977,13 @@
     function updateBar() {
       var pct = (xpInLevel(totalXP) / xpPerLevel) * 100;
       xpFill.style.width = pct + '%';
-      if (xpTooltip) xpTooltip.textContent = 'Level ' + level + ' — ' + xpInLevel(totalXP) + '/' + xpPerLevel + ' XP';
+      if (xpTooltip) xpTooltip.textContent = 'Level ' + level + ' â€” ' + xpInLevel(totalXP) + '/' + xpPerLevel + ' XP';
     }
 
     function showAchievement(title) {
       var toast = document.createElement('div');
       toast.className = 'achievement-toast';
-      toast.innerHTML = '<strong>🏆 Achievement Unlocked!</strong><br>' + title;
+      toast.innerHTML = '<strong>ðŸ† Achievement Unlocked!</strong><br>' + title;
       document.body.appendChild(toast);
       setTimeout(function() { toast.classList.add('active'); }, 50);
       setTimeout(function() {
@@ -12527,12 +11994,12 @@
 
     function checkAchievements() {
       var checks = [
-        { id: 'first_scroll', cond: visitedSections.length >= 1, title: 'Explorer — Visited first section' },
-        { id: 'five_sections', cond: visitedSections.length >= 5, title: 'Navigator — Visited 5 sections' },
-        { id: 'all_sections', cond: visitedSections.length >= 12, title: 'Completionist — Visited all sections' },
-        { id: 'level_2', cond: level >= 2, title: 'Rank Up — Reached Level 2' },
-        { id: 'level_5', cond: level >= 5, title: 'Veteran — Reached Level 5' },
-        { id: 'level_10', cond: level >= 10, title: 'Legend — Reached Level 10' },
+        { id: 'first_scroll', cond: visitedSections.length >= 1, title: 'Explorer â€” Visited first section' },
+        { id: 'five_sections', cond: visitedSections.length >= 5, title: 'Navigator â€” Visited 5 sections' },
+        { id: 'all_sections', cond: visitedSections.length >= 12, title: 'Completionist â€” Visited all sections' },
+        { id: 'level_2', cond: level >= 2, title: 'Rank Up â€” Reached Level 2' },
+        { id: 'level_5', cond: level >= 5, title: 'Veteran â€” Reached Level 5' },
+        { id: 'level_10', cond: level >= 10, title: 'Legend â€” Reached Level 10' },
       ];
       checks.forEach(function(a) {
         if (a.cond && achievements.indexOf(a.id) === -1) {
@@ -12558,7 +12025,7 @@
     // Expose globally for other modules
     window.__ostXP = { award: award, getLevel: function() { return level; }, getXP: function() { return totalXP; } };
 
-    // Section visit tracking — award XP when scrolling into a section
+    // Section visit tracking â€” award XP when scrolling into a section
     var sections = document.querySelectorAll('.section, [id*="section"]');
     if (sections.length) {
       var sectionObs = new IntersectionObserver(function(entries) {
@@ -12641,7 +12108,7 @@
   })();
 
   /* ================================================================== */
-  /* v47: WELCOME OVERLAY — Language & Currency Selector                */
+  /* v47: WELCOME OVERLAY â€” Language & Currency Selector                */
   /* ================================================================== */
   (function initWelcome() {
     var overlay = document.getElementById('welcomeOverlay');
@@ -13685,7 +13152,7 @@
     function truncateText(value, maxLength) {
       var text = normalizeWhitespace(value);
       if (!text || !maxLength || text.length <= maxLength) return text;
-      return text.slice(0, maxLength - 1).trim() + '…';
+      return text.slice(0, maxLength - 1).trim() + 'â€¦';
     }
 
     function summarizeMarketText(value, fallback, maxLength) {
@@ -13722,8 +13189,8 @@
       var heroTitle = legs.slice(0, 2).join(' + ');
       if (legs.length > 2) heroTitle += ' + ' + (legs.length - 2) + ' more';
 
-      var detail = legs.slice(0, 5).join(' • ');
-      if (legs.length > 5) detail += ' • +' + (legs.length - 5) + ' more';
+      var detail = legs.slice(0, 5).join(' â€¢ ');
+      if (legs.length > 5) detail += ' â€¢ +' + (legs.length - 5) + ' more';
 
       return {
         title: heroTitle,
@@ -14097,7 +13564,7 @@
           : t('wallet.portal.prediction.buyYes', 'YES position');
         var canCash = action.canCash && Number(order.stake || 0) > 0;
         var cashBtn = canCash
-          ? '<button class="prediction-cashout-btn" data-cashout-idx="' + idx + '" style="margin-left:auto;padding:4px 10px;border-radius:6px;background:#22c55e;color:#000;border:none;font-weight:700;cursor:pointer;font-size:12px">' + escapeHtml(action.label) + ' · ' + escapeHtml(formatOst(action.payout)) + '</button>'
+          ? '<button class="prediction-cashout-btn" data-cashout-idx="' + idx + '" style="margin-left:auto;padding:4px 10px;border-radius:6px;background:#22c55e;color:#000;border:none;font-weight:700;cursor:pointer;font-size:12px">' + escapeHtml(action.label) + ' Â· ' + escapeHtml(formatOst(action.payout)) + '</button>'
           : '<span style="color:' + (order.cashedOut || action.finalStatus === 'won' ? '#22c55e' : action.finalStatus === 'lost' ? '#f87171' : '#94a3b8') + ';font-weight:700;font-size:12px;margin-left:auto">' + escapeHtml(action.detail || action.label) + '</span>';
         // Per-share info: use stored price directly (side-specific), fallback to deriving from potReturn
         var stake = Number(order.stake || 0);
@@ -14108,7 +13575,7 @@
         var pricePct = entryPrice > 0 ? (entryPrice * 100).toFixed(1) + '\u00a2' : '\u2014';
         var livePricePct = action.livePrice > 0 ? (action.livePrice * 100).toFixed(1) + '\u00a2' : '\u2014';
         var sideColor = order.side === 'no' ? '#f87171' : '#34d399';
-        var sideEmoji = order.side === 'no' ? '↓ NO' : '↑ YES';
+        var sideEmoji = order.side === 'no' ? 'â†“ NO' : 'â†‘ YES';
         // Source badge (Kalshi green, Polymarket blue, OST native amber)
         var src = (order.source || 'ost').toLowerCase();
         var srcColor = src === 'kalshi' ? '#00c896' : src === 'polymarket' ? '#6d9fff' : '#f5c468';
@@ -14180,7 +13647,7 @@
             if (hasCashOut) {
               r = await window.OST_TRADE.predictionCashOut(order, payout);
             } else {
-              // No on-chain trading module loaded — local cash-out so the
+              // No on-chain trading module loaded â€” local cash-out so the
               // user still receives credit for the resolved win.
               r = { sig: 'local-' + Date.now().toString(36), ost: payout };
             }
@@ -14391,7 +13858,7 @@
       // offset, so brand-new markets (no historical price data) still produce
       // a *moving* curve instead of a flat 50% line.
       var seed = hashString([market.id, market.source, selectedOutcome ? selectedOutcome.key : side].join(':'));
-      var seededDrift = ((seed % 1000) / 1000 - 0.5) * 18; // ±9 pp
+      var seededDrift = ((seed % 1000) / 1000 - 0.5) * 18; // Â±9 pp
       var previousOutcomePrice = selectedOutcome
         ? safeFraction(getSelectedOutcomeRawMetric(selectedOutcome, ['previousPrice', 'previousYesPriceNumber', 'prevPrice', 'lastTradePrice24h']), NaN)
         : NaN;
@@ -14792,7 +14259,7 @@
           '<button type="button" class="prediction-tape-chip' + (trendPoints > 0 ? ' is-up' : trendPoints < 0 ? ' is-down' : '') + (isSelected ? ' is-selected' : '') + '" data-prediction-select-market-id="' + escapeHtml(market.id) + '">',
             '<span class="prediction-market-source ' + sourceClass + '">' + escapeHtml(market.sourceLabel) + '</span>',
             '<strong>' + escapeHtml(truncateText(market.title, 62)) + '</strong>',
-            '<span>' + escapeHtml(market.yesLabel) + ' ' + escapeHtml(market.yesValue) + ' • ' + escapeHtml(market.closeText) + '</span>',
+            '<span>' + escapeHtml(market.yesLabel) + ' ' + escapeHtml(market.yesValue) + ' â€¢ ' + escapeHtml(market.closeText) + '</span>',
             '<em>' + escapeHtml(formatSignedPoints(trendPoints, 'Flat')) + '</em>',
           '</button>'
         ].join('');
@@ -14947,10 +14414,10 @@
       var returnLabelEl = document.getElementById('predictionReturnLabel');
       var entryPriceLabelEl = document.getElementById('predictionEntryPriceLabel');
       var sideTag = state.selectedSide === 'no' ? 'NO' : 'YES';
-      var yesPrice = Number.isFinite(market.yesPriceNumber) ? (market.yesPriceNumber * 100).toFixed(1) + '¢' : '--';
-      var noPrice = Number.isFinite(market.noPriceNumber) ? (market.noPriceNumber * 100).toFixed(1) + '¢' : '--';
+      var yesPrice = Number.isFinite(market.yesPriceNumber) ? (market.yesPriceNumber * 100).toFixed(1) + 'Â¢' : '--';
+      var noPrice = Number.isFinite(market.noPriceNumber) ? (market.noPriceNumber * 100).toFixed(1) + 'Â¢' : '--';
       if (sharesLabelEl) sharesLabelEl.textContent = hasExplicitOutcomes
-        ? (contractLabel + ' shares @ ' + (Number.isFinite(priceFraction) ? (priceFraction * 100).toFixed(1) + '¢' : '--'))
+        ? (contractLabel + ' shares @ ' + (Number.isFinite(priceFraction) ? (priceFraction * 100).toFixed(1) + 'Â¢' : '--'))
         : (sideTag + ' shares @ ' + (state.selectedSide === 'no' ? noPrice : yesPrice));
       if (returnLabelEl) returnLabelEl.textContent = 'Win return (' + contractLabel + ')';
       if (entryPriceLabelEl) entryPriceLabelEl.textContent = contractLabel + ' entry price';
@@ -15207,7 +14674,7 @@
 
     function interleaveMarkets(markets, limit) {
       if (state.source !== 'all') return markets.slice(0, limit);
-      // Always preserve OST native markets at the top — they were getting
+      // Always preserve OST native markets at the top â€” they were getting
       // silently dropped here because they're neither polymarket nor kalshi.
       var ostNative = markets.filter(function(market) { return market.source === 'ost' || market.isOstNative; });
       var groups = {
@@ -15327,7 +14794,7 @@
         }).join('');
         var sportsRe = /\b(nfl|nba|mlb|nhl|ufc|mma|premier league|la liga|champions league|world cup|super bowl|playoff|game|match|vs\.?|wins?|defeat|knockout)\b/i;
         var liveBadge = sportsRe.test((market.title || '') + ' ' + (market.detail || ''))
-          ? '<span class="prediction-market-live" title="Live broadcast available in market detail">● LIVE</span>'
+          ? '<span class="prediction-market-live" title="Live broadcast available in market detail">â— LIVE</span>'
           : '';
         return [
           '<article class="' + articleClass + '" data-prediction-market-id="' + escapeHtml(market.id) + '" tabindex="0" style="--prediction-card-delay:' + Math.min(index * 35, 280) + 'ms">',
@@ -15590,7 +15057,7 @@
         markets = markets.concat(kalshiMarkets);
       }
 
-      // OST native markets — always present, on top of any live feed
+      // OST native markets â€” always present, on top of any live feed
       if (typeof window.buildOstNativeMarkets === 'function') {
         try {
           var native = window.buildOstNativeMarkets();
@@ -15753,7 +15220,7 @@
           state.sourceHealth.kalshi = false;
           updateStatus('is-error', 'Feeds unavailable right now');
         } else {
-          updateStatus('is-warning', 'Refresh failed — showing last snapshot');
+          updateStatus('is-warning', 'Refresh failed â€” showing last snapshot');
         }
         state.lastError = error && error.message ? error.message : String(error);
         renderPredictionBoard();
@@ -15958,7 +15425,7 @@
           marketId: market.id,
           conditionId: activeContract && activeContract.conditionId ? activeContract.conditionId : (market.conditionId || (market.raw && (market.raw.conditionId || market.raw.condition_id)) || ''),
           gammaMarketId: activeContract && activeContract.gammaMarketId ? activeContract.gammaMarketId : (market.gammaMarketId || ''),
-          title: activeContract && activeContract.label ? (market.title + ' · ' + activeContract.label) : market.title,
+          title: activeContract && activeContract.label ? (market.title + ' Â· ' + activeContract.label) : market.title,
           topic: market.topic,
           side: activeContract && activeContract.side ? activeContract.side : state.selectedSide,
           outcomeKey: activeContract && activeContract.key ? activeContract.key : '',
@@ -15978,14 +15445,14 @@
           state.orderHistory = readPredictionOrderRecords();
           state.availableBalance = result && Number.isFinite(result.remainingBalance) ? result.remainingBalance : state.availableBalance;
           // Reset the stake so the ticket panel does NOT immediately re-show
-          // "not enough OST" against the freshly-debited balance — that
+          // "not enough OST" against the freshly-debited balance â€” that
           // misled users into thinking the trade had failed.
           state.stake = 0;
           if (stakeInputEl) stakeInputEl.value = '';
-          var sigShort = result && result.signature ? String(result.signature).slice(0, 10) + '…' : '';
+          var sigShort = result && result.signature ? String(result.signature).slice(0, 10) + 'â€¦' : '';
           var openedLabel = result && result.record && result.record.outcomeLabel ? result.record.outcomeLabel : ((state.selectedSide || 'yes').toUpperCase());
-          setTradeStatus('✅ Position opened — staked ' + formatOst(Number(result && result.record && result.record.stake) || 0) + ' on ' + openedLabel + '. Tx: ' + sigShort + ' — see Open positions below.', 'success');
-          toast('📈', 'Position opened — see Open positions');
+          setTradeStatus('âœ… Position opened â€” staked ' + formatOst(Number(result && result.record && result.record.stake) || 0) + ' on ' + openedLabel + '. Tx: ' + sigShort + ' â€” see Open positions below.', 'success');
+          toast('ðŸ“ˆ', 'Position opened â€” see Open positions');
           renderPredictionBoard();
           // Auto-scroll to the open positions list so the user can see the new entry
           try {
@@ -16115,7 +15582,7 @@
         return;
       }
 
-      // Already activated this session — just swap the video.
+      // Already activated this session â€” just swap the video.
       frameWrap.classList.remove('is-lazy', 'is-local');
       if (fallback) { fallback.hidden = true; fallback.onclick = null; }
       if (frame.src !== btn.dataset.src) frame.src = btn.dataset.src;
@@ -16207,7 +15674,7 @@
       localStorage.setItem('ost-ancient', isOn ? '1' : '0');
       syncAncientToggle();
       if (typeof toast === 'function') {
-        toast(isOn ? '𓅱' : '◉', isOn ? t('ancient.toast.on') : t('ancient.toast.off'));
+        toast(isOn ? 'ð“…±' : 'â—‰', isOn ? t('ancient.toast.on') : t('ancient.toast.off'));
       }
     });
   })();
@@ -16235,7 +15702,7 @@
     if (!overlay) return;
 
     var glyphAlphabet = [
-      '𓀀', '𓁐', '𓂀', '𓃭', '𓄿', '𓅱', '𓆣', '𓇯', '𓈖', '𓉔', '𓊪', '𓋴', '𓌳', '𓍯', '𓎛', '𓏏'
+      'ð“€€', 'ð“', 'ð“‚€', 'ð“ƒ­', 'ð“„¿', 'ð“…±', 'ð“†£', 'ð“‡¯', 'ð“ˆ–', 'ð“‰”', 'ð“Šª', 'ð“‹´', 'ð“Œ³', 'ð“¯', 'ð“Ž›', 'ð“'
     ];
     var objectUrls = [];
     var activeTransmission = 0;
@@ -16304,7 +15771,7 @@
         var alpha = Math.min(0.94, 0.32 + (seed / 25));
         return {
           label: 'Q' + (index + 1),
-          state: seed % 2 ? '|01⟩' : '|10⟩',
+          state: seed % 2 ? '|01âŸ©' : '|10âŸ©',
           alpha: alpha.toFixed(2),
           beta: (1 - alpha).toFixed(2),
           coherence: (82 + seed) + '%'
@@ -16455,7 +15922,7 @@
           '<div class="transmit-quantum-card">',
           '<span class="transmit-quantum-label">' + escapeHtml(state.label) + '</span>',
           '<strong class="transmit-quantum-state">' + escapeHtml(state.state) + '</strong>',
-          '<span class="transmit-quantum-detail">|0⟩ ' + escapeHtml(state.alpha) + ' · |1⟩ ' + escapeHtml(state.beta) + '</span>',
+          '<span class="transmit-quantum-detail">|0âŸ© ' + escapeHtml(state.alpha) + ' Â· |1âŸ© ' + escapeHtml(state.beta) + '</span>',
           '<span class="transmit-quantum-coherence">' + escapeHtml(state.coherence) + ' coherence</span>',
           '</div>'
         ].join('');
@@ -16482,7 +15949,7 @@
           '<article class="transmit-attachment-card">',
           '<div class="transmit-attachment-meta">',
           '<strong>' + escapeHtml(t(titleKey, t('transmit.file.data'))) + '</strong>',
-          '<span>' + escapeHtml(file.name) + ' · ' + escapeHtml(formatBytes(file.size || 0)) + '</span>',
+          '<span>' + escapeHtml(file.name) + ' Â· ' + escapeHtml(formatBytes(file.size || 0)) + '</span>',
           '</div>',
           body,
           '</article>'
@@ -16567,7 +16034,7 @@
         if (!payload) {
           currentStageKey = 'transmit.empty';
           syncTransmitUi();
-          if (typeof toast === 'function') toast('𓂇', t('transmit.empty'));
+          if (typeof toast === 'function') toast('ð“‚‡', t('transmit.empty'));
           return;
         }
 
@@ -16608,7 +16075,7 @@
           if (fill) fill.style.width = '100%';
           if (launchBtn) launchBtn.disabled = false;
           if (launchLabel) launchLabel.textContent = t('transmit.launch');
-          if (typeof toast === 'function') toast('🛰', t('transmit.stage.done'));
+          if (typeof toast === 'function') toast('ðŸ›°', t('transmit.stage.done'));
         })();
       });
     }

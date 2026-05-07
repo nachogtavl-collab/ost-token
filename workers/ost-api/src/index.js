@@ -1,6 +1,5 @@
-import { handleGhostRequest } from './ghost.js';
-import { handleGhostPqRequest } from './ghost-pq.js';
-import { handleGhostChatRequest } from './ghost-chat.js';
+// Ghost AI v2 — sovereign rebuild. Mounts at /ghost/v2/*
+import { handleGhostV2Request } from './ghost/index.js';
 
 /**
  * OST Prediction API Server — Cloudflare Worker
@@ -572,14 +571,12 @@ export default {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
 
-    const ghostPqResponse = await handleGhostPqRequest(request, env, { path, method });
-    if (ghostPqResponse) return ghostPqResponse;
-
-    const ghostChatResponse = await handleGhostChatRequest(request, env, { path, method });
-    if (ghostChatResponse) return ghostChatResponse;
-
-    const ghostResponse = await handleGhostRequest(request, env, { path, method });
-    if (ghostResponse) return ghostResponse;
+    // Ghost router (Phase 2) will be wired here.
+    if (path.startsWith('/ghost/')) {
+      const ghostV2 = await handleGhostV2Request(request, env, { path, method });
+      if (ghostV2) return ghostV2;
+      return json({ error: 'unknown ghost endpoint', path }, { status: 404 });
+    }
 
     // ── GET /health ──────────────────────────────────────────────────────────
     if (path === '/health' || path === '/') {
@@ -621,20 +618,20 @@ export default {
           'POST /topup/claim',
           'POST /topup/crypto/verify',
           'GET  /topup/crypto/check/:intent',
-          'GET  /ghost/config',
-          'POST /ghost/relay/test',
-          'GET  /ghost/missions',
-          'POST /ghost/missions',
-          'GET  /ghost/missions/:id',
-          'POST /ghost/missions/:id/retry',
-          'GET  /ghost/mesh',
-          'POST /ghost/mesh/share',
-          'GET  /ghost/pq/policy',
-          'POST /ghost/pq/enroll',
-          'GET  /ghost/pq/devices',
-          'GET  /ghost/pq/devices/:id',
-          'POST /ghost/pq/envelope/verify',
-          'POST /ghost/chat',
+          'POST /ghost/v2/chat',
+          'POST /ghost/v2/proxy/anthropic',
+          'POST /ghost/v2/mesh/announce',
+          'GET  /ghost/v2/mesh/peers',
+          'POST /ghost/v2/mesh/broadcast',
+          'POST /ghost/v2/memory/save',
+          'GET  /ghost/v2/memory/recent',
+          'POST /ghost/v2/chat',
+          'POST /ghost/v2/proxy/anthropic',
+          'POST /ghost/v2/mesh/announce',
+          'GET  /ghost/v2/mesh/peers',
+          'POST /ghost/v2/mesh/broadcast',
+          'POST /ghost/v2/memory/save',
+          'GET  /ghost/v2/memory/recent',
           'GET  /launchpad/coins',
           'POST /launchpad/coins',
           'POST /launchpad/trade',
