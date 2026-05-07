@@ -359,12 +359,12 @@ class MeshPavilion {
     this.liveBtn.addEventListener('click', () => this._toggleLiveLocation());
     this.voiceBtn.addEventListener('click', () => this._startCall(false));
     this.videoBtn.addEventListener('click', () => this._startCall(true));
-    this.hangBtn.addEventListener('click', () => this._hangup());
+    this.hangBtn.addEventListener('click', () => this._hangup({ restoreData: false }));
     this.acceptAudioBtn.addEventListener('click', () => this._acceptIncomingCall(false));
     this.acceptVideoBtn.addEventListener('click', () => this._acceptIncomingCall(true));
     this.declineCallBtn.addEventListener('click', () => this._declineIncomingCall());
     this.extendCallBtn.addEventListener('click', () => this._extendCall());
-    this.endCallBtn.addEventListener('click', () => this._hangup());
+    this.endCallBtn.addEventListener('click', () => this._hangup({ restoreData: true }));
   }
 
   open()  { this.root.classList.add('is-open'); }
@@ -515,6 +515,7 @@ class MeshPavilion {
 
     this.rtc.addEventListener('open', () => {
       this._setStatus('🔗 Direct P2P data channel open.', 'ok');
+      if (this.peerAddr && this.sessionKey) this._enableMessaging();
       if (this.callState === 'calling' || this.callState === 'answering') this._markCallConnected(video);
       this._flushOutbox();
     });
@@ -547,10 +548,7 @@ class MeshPavilion {
       this._setCallStatus('Call declined: ' + (e.detail.reason || 'declined'), 'warn');
       this._resetCallState();
     });
-    this.rtc.addEventListener('call-end', (e) => {
-      this._setCallStatus('Call ended: ' + (e.detail.reason || 'ended'), 'warn');
-      this._resetCallState();
-    });
+    this.rtc.addEventListener('call-end', (e) => this._handleRemoteCallEnd(e.detail.reason || 'ended'));
     this.rtc.addEventListener('call-extend', (e) => {
       const minutes = Number(e.detail.minutes || 15);
       this.callEndsAt = Math.max(this.callEndsAt || Date.now(), Date.now()) + minutes * 60_000;
@@ -822,7 +820,22 @@ class MeshPavilion {
     this.remoteVid.srcObject = null;
   }
 
-  async _hangup() {
+  _restoreDataSessionAfterCall(role) {
+    if (!this.peerAddr || !this.sessionKey) return;
+    this._setStatus('Restoring encrypted message channel…');
+    this._startRTC(role, { passive: role !== 'caller' });
+  }
+
+  async _handleRemoteCallEnd(reason = 'ended') {
+    const hadCall = this.callState !== 'idle' || this.videoGrid.classList.contains('is-on');
+    if (!hadCall) return;
+    this._setCallStatus('Call ended: ' + reason, 'warn');
+    try { await this.rtc?.hangup?.({ notify: false }); } catch {}
+    this._resetCallState();
+    this._restoreDataSessionAfterCall('callee');
+  }
+
+  async _hangup({ restoreData = false } = {}) {
     const rtc = this.rtc;
     const wasCalling = this.callState !== 'idle';
     if (wasCalling) {
@@ -838,7 +851,11 @@ class MeshPavilion {
     if (this.liveLocTimer) { clearInterval(this.liveLocTimer); this.liveLocTimer = null; }
     this.liveBtn.textContent = '🛰 Live location';
     this._resetCallState();
-    this._setStatus('Hung up.', 'warn');
+    if (restoreData && wasCalling) {
+      this._restoreDataSessionAfterCall('caller');
+    } else {
+      this._setStatus('Hung up.', 'warn');
+    }
     this._setCallStatus('No active call');
   }
 
@@ -946,7 +963,7 @@ class MeshPavilion {
         const msg = JSON.parse(data);
         if (msg.kind === 'enc' && this.sessionKey) {
           const inner = await openPayload(this.sessionKey, msg.payload);
-          this._renderIncoming(inner);
+          await this._renderIncoming(inner);
         }
       } else if (data instanceof ArrayBuffer && this.sessionKey) {
         await this._receiveFileChunk(new Uint8Array(data));
@@ -973,7 +990,7 @@ class MeshPavilion {
     this.incomingFile = null;
   }
 
-  _renderIncoming(inner) {
+  async _renderIncoming(inner) {
     if (inner.kind === 'text') {
       this._bubble('peer', escapeHtml(inner.text));
     } else if (inner.kind === 'file-start' || inner.kind === 'file-meta') {
@@ -993,9 +1010,7 @@ class MeshPavilion {
       this._setCallStatus(`Call prolonged by ${minutes} minutes.`, 'ok');
       this._updateCallTimer();
     } else if (inner.kind === 'call-end') {
-      this._setCallStatus('Call ended: ' + (inner.reason || 'ended'), 'warn');
-      try { this.rtc?.hangup?.({ notify: false }); } catch {}
-      this._resetCallState();
+      await this._handleRemoteCallEnd(inner.reason || 'ended');
     } else {
       this._bubble('peer', '<em>(unknown payload)</em>');
     }
