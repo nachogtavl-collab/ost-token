@@ -32,6 +32,8 @@ export class MeshRTC extends EventTarget {
     this._stopPolling = false;
     this._pendingOffer = null;
     this._pendingIce = [];
+    this._localIceBuffer = [];
+    this._suppressIce = false;
     this._callId = null;
   }
 
@@ -43,6 +45,10 @@ export class MeshRTC extends EventTarget {
     const pc = new RTCPeerConnection({ iceServers: STUN });
     pc.onicecandidate = (e) => {
       if (e.candidate) {
+        if (this._suppressIce) {
+          this._localIceBuffer.push(e.candidate.toJSON());
+          return;
+        }
         this._postSignal({ type: 'ice', candidate: e.candidate.toJSON() });
       }
     };
@@ -91,13 +97,19 @@ export class MeshRTC extends EventTarget {
     this._bindDataChannel(dc);
 
     const offer = await this.pc.createOffer();
-    await this.pc.setLocalDescription(offer);
-    await this._waitForIceGathering();
-    await this._postSignal({
-      type: 'offer',
-      sdp: this.pc.localDescription.sdp,
-      call: { id: this._callId, withMedia, video, ts: Date.now() }
-    });
+    this._suppressIce = true;
+    try {
+      await this.pc.setLocalDescription(offer);
+      await this._waitForIceGathering();
+      await this._postSignal({
+        type: 'offer',
+        sdp: this.pc.localDescription.sdp,
+        call: { id: this._callId, withMedia, video, ts: Date.now() }
+      });
+    } finally {
+      this._localIceBuffer = [];
+      this._suppressIce = false;
+    }
 
     this._pollLoop();
   }
@@ -197,9 +209,15 @@ export class MeshRTC extends EventTarget {
     await this.pc.setRemoteDescription({ type: 'offer', sdp: sig.sdp });
     await this._flushPendingIce();
     const answer = await this.pc.createAnswer();
-    await this.pc.setLocalDescription(answer);
-    await this._waitForIceGathering();
-    await this._postSignal({ type: 'answer', sdp: this.pc.localDescription.sdp, call: sig.call || null });
+    this._suppressIce = true;
+    try {
+      await this.pc.setLocalDescription(answer);
+      await this._waitForIceGathering();
+      await this._postSignal({ type: 'answer', sdp: this.pc.localDescription.sdp, call: sig.call || null });
+    } finally {
+      this._localIceBuffer = [];
+      this._suppressIce = false;
+    }
   }
 
   async _waitForIceGathering() {
