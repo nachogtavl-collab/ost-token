@@ -377,8 +377,8 @@ export class MeshRTC extends EventTarget {
     return true;
   }
 
-  hangup({ notify = false } = {}) {
-    if (notify) this._postSignal({ type: 'call-end', reason: 'ended', ts: Date.now(), call: this._signalCall() });
+  async hangup({ notify = false } = {}) {
+    if (notify) await this._postSignal({ type: 'call-end', reason: 'ended', ts: Date.now(), call: this._signalCall() });
     this._stopPolling = true;
     try { this.dc && this.dc.close(); } catch {}
     try { this.pc && this.pc.close(); } catch {}

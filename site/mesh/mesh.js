@@ -9,7 +9,7 @@ import {
   deriveSessionKey, sealPayload, openPayload,
   sealBytes, openBytes, fingerprint
 } from './mesh-crypto.js?v=1';
-import { MeshRTC } from './mesh-rtc.js?v=8';
+import { MeshRTC } from './mesh-rtc.js?v=9';
 
 const STYLE_HREF = './mesh/mesh.css?v=3';
 const STORAGE_ID = 'ost_mesh_identity_v1';
@@ -530,7 +530,13 @@ class MeshPavilion {
     this.rtc.addEventListener('state', (e) => {
       const s = e.detail.state;
       if (s === 'connected')      this._setStatus('🔗 P2P connected.', 'ok');
-      else if (s === 'failed')    this._setStatus('P2P failed (no relay yet).', 'err');
+      else if (s === 'failed') {
+        this._setStatus('P2P failed (no relay yet).', 'err');
+        if (this.callState !== 'idle') {
+          this._setCallStatus('Call connection lost.', 'warn');
+          this._resetCallState();
+        }
+      }
       else if (s === 'connecting') this._setStatus('P2P connecting…');
     });
     this.rtc.addEventListener('incoming-call', (e) => this._showIncomingCall(e.detail));
@@ -690,6 +696,14 @@ class MeshPavilion {
     this._sendWire(JSON.stringify({ kind: 'enc', payload: sealed }));
   }
 
+  async _sendCallControl(kind, payload = {}) {
+    if (!this.sessionKey || !this.rtc?.isOpen?.()) return false;
+    const sealed = await sealPayload(this.sessionKey, { kind, ...payload, ts: Date.now() });
+    const wire = JSON.stringify({ kind: 'enc', payload: sealed });
+    if (this.rtc?.sendReliable) return this.rtc.sendReliable(wire);
+    return this._sendWire(wire);
+  }
+
   async _startCall(video) {
     if (!this.peerAddr) return this._setStatus('Connect to a peer first.', 'warn');
     this.callState = 'calling';
@@ -717,6 +731,7 @@ class MeshPavilion {
     this._setCallControls('answering');
     try {
       await this.rtc.acceptIncoming({ audio: true, video });
+      this.pendingIncomingCall = null;
       this._markCallConnected(video);
     } catch (err) {
       this.callState = 'idle';
@@ -736,6 +751,7 @@ class MeshPavilion {
   async _extendCall() {
     if (this.callState !== 'in-call') return;
     this.callEndsAt = Math.max(this.callEndsAt || Date.now(), Date.now()) + 15 * 60_000;
+    try { await this._sendCallControl('call-extend', { minutes: 15 }); } catch {}
     try { await this.rtc?.extendCall?.(15); } catch {}
     this._setCallStatus('Call prolonged by 15 minutes.', 'ok');
     this._updateCallTimer();
@@ -806,8 +822,18 @@ class MeshPavilion {
     this.remoteVid.srcObject = null;
   }
 
-  _hangup() {
-    if (this.rtc) try { this.rtc.hangup({ notify: true }); } catch {}
+  async _hangup() {
+    const rtc = this.rtc;
+    const wasCalling = this.callState !== 'idle';
+    if (wasCalling) {
+      try { await this._sendCallControl('call-end', { reason: 'ended' }); } catch {}
+    }
+    if (rtc) {
+      try {
+        if (wasCalling && rtc.endCall) await rtc.endCall('ended');
+        else await rtc.hangup({ notify: wasCalling });
+      } catch {}
+    }
     this.videoGrid.classList.remove('is-on');
     if (this.liveLocTimer) { clearInterval(this.liveLocTimer); this.liveLocTimer = null; }
     this.liveBtn.textContent = '🛰 Live location';
@@ -961,6 +987,15 @@ class MeshPavilion {
     } else if (inner.kind === 'location-live-stop') {
       this._bubble('system', 'Peer stopped live location.');
       this.peerLiveBubble = null;
+    } else if (inner.kind === 'call-extend') {
+      const minutes = Number(inner.minutes || 15);
+      this.callEndsAt = Math.max(this.callEndsAt || Date.now(), Date.now()) + minutes * 60_000;
+      this._setCallStatus(`Call prolonged by ${minutes} minutes.`, 'ok');
+      this._updateCallTimer();
+    } else if (inner.kind === 'call-end') {
+      this._setCallStatus('Call ended: ' + (inner.reason || 'ended'), 'warn');
+      try { this.rtc?.hangup?.({ notify: false }); } catch {}
+      this._resetCallState();
     } else {
       this._bubble('peer', '<em>(unknown payload)</em>');
     }

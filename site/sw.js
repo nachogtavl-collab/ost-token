@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v36';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v36';
+const CACHE_NAME = 'ost-pwa-cache-v37';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v37';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -40,9 +40,9 @@ const PRECACHE_PATHS = [
   './ghost/recursive.js?v=1',
   './ghost/signal.js?v=1',
   './ghost/ghost.css?v=1',
-  './mesh/mesh.js?v=11',
+  './mesh/mesh.js?v=12',
   './mesh/mesh-crypto.js?v=1',
-  './mesh/mesh-rtc.js?v=8',
+  './mesh/mesh-rtc.js?v=9',
   './mesh/mesh.css?v=3',
   './compartments.js?v=1',
   './prediction-extras.js?v=7',
