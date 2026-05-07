@@ -45,8 +45,9 @@ export class MeshRTC extends EventTarget {
     return this._callId ? { id: this._callId, ...extra } : extra;
   }
 
-  _signalMatches(sig) {
+  _signalMatches(sig, { requireActiveCall = false } = {}) {
     const incomingId = sig?.call?.id || '';
+    if (requireActiveCall && incomingId && !this._callId) return false;
     return !incomingId || !this._callId || incomingId === this._callId;
   }
 
@@ -260,14 +261,14 @@ export class MeshRTC extends EventTarget {
         this._pendingIce.push(pending);
       }
     } else if (sig.type === 'call-decline') {
-      if (!this._signalMatches(sig)) return;
+      if (!this._signalMatches(sig, { requireActiveCall: true })) return;
       this._emit('call-decline', { reason: sig.reason || 'declined' });
     } else if (sig.type === 'call-end') {
-      if (!this._signalMatches(sig)) return;
+      if (!this._signalMatches(sig, { requireActiveCall: true })) return;
       this._emit('call-end', { reason: sig.reason || 'ended' });
       this.hangup({ notify: false });
     } else if (sig.type === 'call-extend') {
-      if (!this._signalMatches(sig)) return;
+      if (!this._signalMatches(sig, { requireActiveCall: true })) return;
       this._emit('call-extend', { minutes: sig.minutes || 15 });
     }
   }
