@@ -15,6 +15,8 @@ const STUN = [
 
 const POLL_MS = 1500;
 const POLL_BUDGET_MS = 5 * 60_000;
+const BUFFER_HIGH_WATER = 1024 * 1024;
+const BUFFER_LOW_WATER = 256 * 1024;
 
 export class MeshRTC extends EventTarget {
   constructor({ apiBase, myAddress, peerAddress }) {
@@ -28,6 +30,9 @@ export class MeshRTC extends EventTarget {
     this.remoteStream = null;
     this.role = null;
     this._stopPolling = false;
+    this._pendingOffer = null;
+    this._pendingIce = [];
+    this._callId = null;
   }
 
   _emit(type, detail) {
@@ -43,6 +48,7 @@ export class MeshRTC extends EventTarget {
     };
     pc.onconnectionstatechange = () => {
       this._emit('state', { state: pc.connectionState });
+      if (pc.connectionState === 'connected') this._emit('call-connected', {});
     };
     pc.ondatachannel = (e) => {
       this._bindDataChannel(e.channel);
@@ -65,16 +71,18 @@ export class MeshRTC extends EventTarget {
     dc.onmessage = (e) => this._emit('message', { data: e.data });
   }
 
+  isOpen() {
+    return !!this.dc && this.dc.readyState === 'open';
+  }
+
   /** Start as caller — creates data channel and offer, polls for answer. */
   async call({ withMedia = false, video = false } = {}) {
     this.role = 'caller';
+    this._callId = crypto.randomUUID?.() || String(Date.now());
     this.pc = this._newPC();
 
     if (withMedia) {
-      this.localStream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video
-      });
+      this.localStream = await this._getLocalMedia({ audio: true, video });
       for (const t of this.localStream.getTracks()) this.pc.addTrack(t, this.localStream);
       this._emit('local-stream', { stream: this.localStream });
     }
@@ -84,9 +92,13 @@ export class MeshRTC extends EventTarget {
 
     const offer = await this.pc.createOffer();
     await this.pc.setLocalDescription(offer);
-    await this._postSignal({ type: 'offer', sdp: offer.sdp });
+    await this._postSignal({
+      type: 'offer',
+      sdp: offer.sdp,
+      call: { id: this._callId, withMedia, video, ts: Date.now() }
+    });
 
-    this._pollLoop({ accept: ['answer', 'ice'] });
+    this._pollLoop();
   }
 
   /** Start as callee — waits for offer, returns answer. */
@@ -95,15 +107,51 @@ export class MeshRTC extends EventTarget {
     this.pc = this._newPC();
 
     if (withMedia) {
-      this.localStream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video
-      });
+      this.localStream = await this._getLocalMedia({ audio: true, video });
       for (const t of this.localStream.getTracks()) this.pc.addTrack(t, this.localStream);
       this._emit('local-stream', { stream: this.localStream });
     }
 
-    this._pollLoop({ accept: ['offer', 'ice'] });
+    this._pollLoop();
+  }
+
+  async acceptIncoming({ audio = true, video = false } = {}) {
+    if (!this._pendingOffer) throw new Error('no incoming call');
+    const { sig, from } = this._pendingOffer;
+    this._pendingOffer = null;
+    if (!this.pc) this.pc = this._newPC();
+    this.role = 'callee';
+    if (from) this.peer = from;
+
+    if (sig.call?.withMedia) {
+      this.localStream = await this._getLocalMedia({ audio, video });
+      for (const t of this.localStream.getTracks()) this.pc.addTrack(t, this.localStream);
+      this._emit('local-stream', { stream: this.localStream });
+    }
+
+    await this._answerOffer(sig);
+  }
+
+  async declineIncoming(reason = 'declined') {
+    const pending = this._pendingOffer;
+    this._pendingOffer = null;
+    if (pending?.from) this.peer = pending.from;
+    await this._postSignal({ type: 'call-decline', reason, call: pending?.sig?.call || null });
+    this._emit('call-decline', { reason });
+  }
+
+  async extendCall(minutes = 15) {
+    await this._postSignal({ type: 'call-extend', minutes, ts: Date.now(), call: { id: this._callId } });
+  }
+
+  async endCall(reason = 'ended') {
+    await this._postSignal({ type: 'call-end', reason, ts: Date.now(), call: { id: this._callId } });
+    this.hangup({ notify: false });
+  }
+
+  async _getLocalMedia(constraints) {
+    if (!navigator.mediaDevices?.getUserMedia) throw new Error('camera/microphone unavailable');
+    return navigator.mediaDevices.getUserMedia(constraints);
   }
 
   async _handleSignal(sig, from) {
@@ -112,19 +160,55 @@ export class MeshRTC extends EventTarget {
       this.peer = from;
       this._emit('peer', { address: from });
     }
-    if (sig.type === 'offer' && this.role === 'callee') {
-      await this.pc.setRemoteDescription({ type: 'offer', sdp: sig.sdp });
-      const answer = await this.pc.createAnswer();
-      await this.pc.setLocalDescription(answer);
-      await this._postSignal({ type: 'answer', sdp: answer.sdp });
+    if (sig.type === 'offer') {
+      if (sig.call?.withMedia) {
+        this._pendingOffer = { sig, from };
+        this._callId = sig.call.id || this._callId;
+        this._emit('incoming-call', {
+          from,
+          video: !!sig.call.video,
+          withMedia: true,
+          call: sig.call
+        });
+        return;
+      }
+      await this._answerOffer(sig);
     } else if (sig.type === 'answer' && this.role === 'caller') {
       await this.pc.setRemoteDescription({ type: 'answer', sdp: sig.sdp });
+      await this._flushPendingIce();
     } else if (sig.type === 'ice' && sig.candidate) {
-      try { await this.pc.addIceCandidate(sig.candidate); } catch {}
+      if (this.pc.remoteDescription) {
+        try { await this.pc.addIceCandidate(sig.candidate); } catch {}
+      } else {
+        this._pendingIce.push(sig.candidate);
+      }
+    } else if (sig.type === 'call-decline') {
+      this._emit('call-decline', { reason: sig.reason || 'declined' });
+    } else if (sig.type === 'call-end') {
+      this._emit('call-end', { reason: sig.reason || 'ended' });
+      this.hangup({ notify: false });
+    } else if (sig.type === 'call-extend') {
+      this._emit('call-extend', { minutes: sig.minutes || 15 });
     }
   }
 
-  async _pollLoop({ accept }) {
+  async _answerOffer(sig) {
+    await this.pc.setRemoteDescription({ type: 'offer', sdp: sig.sdp });
+    await this._flushPendingIce();
+    const answer = await this.pc.createAnswer();
+    await this.pc.setLocalDescription(answer);
+    await this._postSignal({ type: 'answer', sdp: answer.sdp, call: sig.call || null });
+  }
+
+  async _flushPendingIce() {
+    if (!this.pc?.remoteDescription || !this._pendingIce.length) return;
+    const pending = this._pendingIce.splice(0);
+    for (const candidate of pending) {
+      try { await this.pc.addIceCandidate(candidate); } catch {}
+    }
+  }
+
+  async _pollLoop() {
     const start = Date.now();
     let cursor = 0;
     while (!this._stopPolling && Date.now() - start < POLL_BUDGET_MS) {
@@ -136,7 +220,7 @@ export class MeshRTC extends EventTarget {
           const data = await r.json();
           for (const item of data.messages || []) {
             cursor = Math.max(cursor, item.ts || cursor);
-            if (item.payload && accept.includes(item.payload.type)) {
+            if (item.payload) {
               await this._handleSignal(item.payload, item.from);
             }
           }
@@ -163,7 +247,26 @@ export class MeshRTC extends EventTarget {
     return true;
   }
 
-  hangup() {
+  async sendReliable(bytesOrString) {
+    if (!this.dc || this.dc.readyState !== 'open') return false;
+    while (this.dc.bufferedAmount > BUFFER_HIGH_WATER) {
+      await new Promise((resolve) => {
+        const done = () => {
+          this.dc?.removeEventListener?.('bufferedamountlow', done);
+          resolve();
+        };
+        this.dc.bufferedAmountLowThreshold = BUFFER_LOW_WATER;
+        this.dc.addEventListener?.('bufferedamountlow', done, { once: true });
+        setTimeout(done, 250);
+      });
+      if (!this.dc || this.dc.readyState !== 'open') return false;
+    }
+    this.dc.send(bytesOrString);
+    return true;
+  }
+
+  hangup({ notify = false } = {}) {
+    if (notify) this._postSignal({ type: 'call-end', reason: 'ended', ts: Date.now(), call: { id: this._callId } });
     this._stopPolling = true;
     try { this.dc && this.dc.close(); } catch {}
     try { this.pc && this.pc.close(); } catch {}
@@ -172,6 +275,8 @@ export class MeshRTC extends EventTarget {
     }
     this.dc = null;
     this.pc = null;
+    this._pendingOffer = null;
+    this._pendingIce = [];
     this._emit('hangup', {});
   }
 }

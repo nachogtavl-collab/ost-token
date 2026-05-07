@@ -9,15 +9,18 @@ import {
   deriveSessionKey, sealPayload, openPayload,
   sealBytes, openBytes, fingerprint
 } from './mesh-crypto.js?v=1';
-import { MeshRTC } from './mesh-rtc.js?v=2';
+import { MeshRTC } from './mesh-rtc.js?v=3';
 
-const STYLE_HREF = './mesh/mesh.css?v=2';
+const STYLE_HREF = './mesh/mesh.css?v=3';
 const STORAGE_ID = 'ost_mesh_identity_v1';
 const STORAGE_ADDR = 'ost_mesh_addr_v1';
-const MAX_FILE_BYTES = 8 * 1024 * 1024;
+const MAX_FILE_BYTES = 32 * 1024 * 1024;
+const MEDIA_CHUNK_BYTES = 16 * 1024;
 const DEFAULT_API_BASE = 'https://ost-api.nachogtavl.workers.dev';
 const INVITE_PREFIX = 'ost-mesh-invite:';
 const ANNOUNCE_REFRESH_MS = 45_000;
+const LIVE_LOCATION_INTERVAL_MS = 10_000;
+const DEFAULT_CALL_MINUTES = 30;
 
 function injectStyles() {
   if (document.getElementById('ost-mesh-style')) return;
@@ -79,6 +82,21 @@ function buildDOM() {
 
       <div class="ost-mesh-status" id="mesh-status">Idle.</div>
 
+      <div class="ost-mesh-callbar" id="mesh-callbar">
+        <div>
+          <div class="sub">Call status</div>
+          <strong id="mesh-call-title">No active call</strong>
+          <span id="mesh-call-timer">00:00</span>
+        </div>
+        <div class="ost-mesh-call-actions">
+          <button id="mesh-call-accept-audio" hidden>Accept voice</button>
+          <button id="mesh-call-accept-video" hidden>Accept video</button>
+          <button id="mesh-call-decline" hidden>Decline</button>
+          <button id="mesh-call-extend" disabled>Prolong +15m</button>
+          <button id="mesh-call-end" disabled>End call</button>
+        </div>
+      </div>
+
       <div class="ost-mesh-stage">
         <div class="ost-mesh-video-grid" id="mesh-video">
           <video id="mesh-local-video" autoplay muted playsinline></video>
@@ -92,11 +110,11 @@ function buildDOM() {
         <div class="ost-mesh-tools">
           <input type="file" id="mesh-file" accept="image/*,video/*" hidden />
           <button id="mesh-attach" disabled>📎 Photo / Video</button>
-          <button id="mesh-loc" disabled>📍 Location</button>
+          <button id="mesh-loc" disabled>📍 Share map</button>
           <button id="mesh-live" disabled>🛰 Live location</button>
-          <button id="mesh-voice" disabled>📞 Voice</button>
-          <button id="mesh-video-call" disabled>📹 Video</button>
-          <button id="mesh-hangup" class="ghost" disabled>⛔ Hang up</button>
+          <button id="mesh-voice" disabled>📞 Start voice</button>
+          <button id="mesh-video-call" disabled>📹 Start video</button>
+          <button id="mesh-hangup" class="ghost" disabled>⛔ End session</button>
         </div>
       </div>
     </div>
@@ -206,6 +224,46 @@ function parsePeerInput(value) {
   return { address: normalizeAddress(text), bundle: null, fingerprint: null, via: 'address' };
 }
 
+function makeId(prefix = 'mesh') {
+  return prefix + '-' + (crypto.randomUUID?.() || (Date.now().toString(36) + Math.random().toString(36).slice(2)));
+}
+
+function formatBytes(bytes) {
+  if (!Number.isFinite(bytes)) return '0 B';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function formatClock(ms) {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const mins = Math.floor(total / 60).toString().padStart(2, '0');
+  const secs = (total % 60).toString().padStart(2, '0');
+  return `${mins}:${secs}`;
+}
+
+function mapEmbedUrl(lat, lon) {
+  const pad = 0.01;
+  const bbox = [lon - pad, lat - pad, lon + pad, lat + pad]
+    .map((n) => n.toFixed(6))
+    .join('%2C');
+  return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat.toFixed(6)}%2C${lon.toFixed(6)}`;
+}
+
+function mapOpenUrl(lat, lon) {
+  return `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=16/${lat}/${lon}`;
+}
+
+function concatChunks(chunks, total) {
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    out.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return out;
+}
+
 class MeshPavilion {
   constructor() {
     injectStyles();
@@ -231,6 +289,14 @@ class MeshPavilion {
     this.voiceBtn  = document.getElementById('mesh-voice');
     this.videoBtn  = document.getElementById('mesh-video-call');
     this.hangBtn   = document.getElementById('mesh-hangup');
+    this.callBar   = document.getElementById('mesh-callbar');
+    this.callTitle = document.getElementById('mesh-call-title');
+    this.callTimer = document.getElementById('mesh-call-timer');
+    this.acceptAudioBtn = document.getElementById('mesh-call-accept-audio');
+    this.acceptVideoBtn = document.getElementById('mesh-call-accept-video');
+    this.declineCallBtn = document.getElementById('mesh-call-decline');
+    this.extendCallBtn = document.getElementById('mesh-call-extend');
+    this.endCallBtn = document.getElementById('mesh-call-end');
     this.videoGrid = document.getElementById('mesh-video');
     this.localVid  = document.getElementById('mesh-local-video');
     this.remoteVid = document.getElementById('mesh-remote-video');
@@ -243,7 +309,15 @@ class MeshPavilion {
     this.rtc = null;
     this.peerAddr = null;
     this.liveLocTimer = null;
+    this.localLiveBubble = null;
+    this.peerLiveBubble = null;
     this.announceTimer = null;
+    this.callState = 'idle';
+    this.callStartedAt = 0;
+    this.callEndsAt = 0;
+    this.callTimerId = null;
+    this.pendingIncomingCall = null;
+    this.incomingFile = null;
     this.outbox = [];
 
     this._wire();
@@ -260,6 +334,7 @@ class MeshPavilion {
     this._announceNow({ silent: false });
     if (this.announceTimer) clearInterval(this.announceTimer);
     this.announceTimer = setInterval(() => this._announceNow({ silent: true }), ANNOUNCE_REFRESH_MS);
+    if (!this.rtc) this._startRTC('callee', { passive: true });
   }
 
   _wire() {
@@ -285,6 +360,11 @@ class MeshPavilion {
     this.voiceBtn.addEventListener('click', () => this._startCall(false));
     this.videoBtn.addEventListener('click', () => this._startCall(true));
     this.hangBtn.addEventListener('click', () => this._hangup());
+    this.acceptAudioBtn.addEventListener('click', () => this._acceptIncomingCall(false));
+    this.acceptVideoBtn.addEventListener('click', () => this._acceptIncomingCall(true));
+    this.declineCallBtn.addEventListener('click', () => this._declineIncomingCall());
+    this.extendCallBtn.addEventListener('click', () => this._extendCall());
+    this.endCallBtn.addEventListener('click', () => this._hangup());
   }
 
   open()  { this.root.classList.add('is-open'); }
@@ -301,6 +381,7 @@ class MeshPavilion {
     else div.appendChild(html);
     this.feedEl.appendChild(div);
     this.feedEl.scrollTop = this.feedEl.scrollHeight;
+    return div;
   }
 
   async _announce() {
@@ -425,14 +506,16 @@ class MeshPavilion {
     this.voiceBtn.disabled = false;
     this.videoBtn.disabled = false;
     this.hangBtn.disabled = false;
+    if (this.callState === 'idle') this._setCallControls('idle');
   }
 
-  _startRTC(role, { withMedia = false, video = false } = {}) {
-    if (this.rtc) try { this.rtc.hangup(); } catch {}
+  _startRTC(role, { withMedia = false, video = false, passive = false } = {}) {
+    if (this.rtc) try { this.rtc.hangup({ notify: false }); } catch {}
     this.rtc = new MeshRTC({ apiBase: this.api, myAddress: this.address, peerAddress: this.peerAddr || '' });
 
     this.rtc.addEventListener('open', () => {
       this._setStatus('🔗 Direct P2P data channel open.', 'ok');
+      if (this.callState === 'calling' || this.callState === 'answering') this._markCallConnected(video);
       this._flushOutbox();
     });
     this.rtc.addEventListener('peer', (e) => {
@@ -450,6 +533,26 @@ class MeshPavilion {
       else if (s === 'failed')    this._setStatus('P2P failed (no relay yet).', 'err');
       else if (s === 'connecting') this._setStatus('P2P connecting…');
     });
+    this.rtc.addEventListener('incoming-call', (e) => this._showIncomingCall(e.detail));
+    this.rtc.addEventListener('call-connected', () => {
+      if (this.callState === 'calling' || this.callState === 'answering') this._markCallConnected(video);
+    });
+    this.rtc.addEventListener('call-decline', (e) => {
+      this._setCallStatus('Call declined: ' + (e.detail.reason || 'declined'), 'warn');
+      this._resetCallState();
+    });
+    this.rtc.addEventListener('call-end', (e) => {
+      this._setCallStatus('Call ended: ' + (e.detail.reason || 'ended'), 'warn');
+      this._resetCallState();
+    });
+    this.rtc.addEventListener('call-extend', (e) => {
+      const minutes = Number(e.detail.minutes || 15);
+      this.callEndsAt = Math.max(this.callEndsAt || Date.now(), Date.now()) + minutes * 60_000;
+      this._setCallStatus(`Call prolonged by ${minutes} minutes.`, 'ok');
+    });
+    this.rtc.addEventListener('hangup', () => {
+      this.videoGrid.classList.remove('is-on');
+    });
     this.rtc.addEventListener('message', (e) => this._onPeerMessage(e.detail.data));
     this.rtc.addEventListener('local-stream', (e) => {
       this.localVid.srcObject = e.detail.stream;
@@ -460,8 +563,17 @@ class MeshPavilion {
       this.videoGrid.classList.add('is-on');
     });
 
-    if (role === 'caller') this.rtc.call({ withMedia, video });
-    else                    this.rtc.listen({ withMedia, video });
+    const started = role === 'caller'
+      ? this.rtc.call({ withMedia, video })
+      : this.rtc.listen({ withMedia, video });
+    started.catch((err) => {
+      this._setStatus('RTC error: ' + err.message, 'err');
+      if (withMedia) {
+        this._resetCallState();
+        this._setCallStatus('Media permission failed: ' + err.message, 'err');
+      }
+      if (!passive) this._bubble('system', 'RTC error: ' + escapeHtml(err.message));
+    });
   }
 
   async _sendText() {
@@ -479,74 +591,316 @@ class MeshPavilion {
     const f = this.fileInput.files && this.fileInput.files[0];
     if (!f) return;
     if (!this.sessionKey) return this._setStatus('No session key.', 'err');
-    if (f.size > MAX_FILE_BYTES) return this._setStatus('File too large for v1. Keep it under 8 MB.', 'warn');
-    const buf = new Uint8Array(await f.arrayBuffer());
-    const sealed = await sealBytes(this.sessionKey, buf);
-    const meta = { kind: 'file-meta', name: f.name, type: f.type, size: f.size };
-    const sealedMeta = await sealPayload(this.sessionKey, meta);
-    this._sendWire(JSON.stringify({ kind: 'enc', payload: sealedMeta }));
-    this._sendWire(sealed.buffer);
-    const url = URL.createObjectURL(f);
-    if (f.type.startsWith('image/')) {
-      const img = document.createElement('img'); img.src = url;
-      this._bubble('me', img);
-    } else if (f.type.startsWith('video/')) {
-      const vid = document.createElement('video'); vid.src = url; vid.controls = true;
-      this._bubble('me', vid);
-    } else {
-      this._bubble('me', `📎 ${f.name} (${(f.size/1024).toFixed(1)} KB)`);
+    if (!this.rtc?.isOpen?.()) return this._setStatus('Open the P2P channel before sending media.', 'warn');
+    if (f.size > MAX_FILE_BYTES) return this._setStatus(`File too large. Keep media under ${formatBytes(MAX_FILE_BYTES)}.`, 'warn');
+    try {
+      const transferId = makeId('media');
+      const progress = this._bubble('system', `Preparing ${escapeHtml(f.name)} (${formatBytes(f.size)})…`);
+      const buf = new Uint8Array(await f.arrayBuffer());
+      const sealed = await sealBytes(this.sessionKey, buf);
+      const chunks = Math.ceil(sealed.byteLength / MEDIA_CHUNK_BYTES);
+      const meta = {
+        kind: 'file-start',
+        transferId,
+        name: f.name,
+        type: f.type || 'application/octet-stream',
+        size: f.size,
+        sealedSize: sealed.byteLength,
+        chunks,
+        chunkBytes: MEDIA_CHUNK_BYTES,
+        ts: Date.now()
+      };
+      const sealedMeta = await sealPayload(this.sessionKey, meta);
+      await this._sendWireAsync(JSON.stringify({ kind: 'enc', payload: sealedMeta }));
+
+      for (let offset = 0, index = 0; offset < sealed.byteLength; offset += MEDIA_CHUNK_BYTES, index++) {
+        const chunk = sealed.slice(offset, offset + MEDIA_CHUNK_BYTES);
+        await this._sendWireAsync(chunk.buffer);
+        if (index % 16 === 0 || index + 1 === chunks) {
+          progress.textContent = `Sending ${f.name}: ${Math.round(((index + 1) / chunks) * 100)}%`;
+        }
+      }
+
+      progress.textContent = `Sent ${f.name} (${formatBytes(f.size)}).`;
+      this._renderMediaPreview(f, 'me');
+      this.fileInput.value = '';
+    } catch (err) {
+      this._setStatus('Media send failed: ' + err.message, 'err');
+      this._bubble('system', 'Media send failed: ' + escapeHtml(err.message));
     }
-    this.fileInput.value = '';
   }
 
   async _sendLocation(live) {
-    if (!this.sessionKey) return this._setStatus('No session key.', 'err');
-    if (!navigator.geolocation) return this._setStatus('Geolocation unavailable.', 'err');
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-      const payload = {
-        kind: live ? 'location-live' : 'location-ping',
-        lat: pos.coords.latitude,
-        lon: pos.coords.longitude,
-        acc: pos.coords.accuracy,
-        ts: Date.now()
-      };
-      const sealed = await sealPayload(this.sessionKey, payload);
-      this._sendWire(JSON.stringify({ kind: 'enc', payload: sealed }));
-      const link = `https://www.openstreetmap.org/?mlat=${payload.lat}&mlon=${payload.lon}#map=15/${payload.lat}/${payload.lon}`;
-      this._bubble('me',
-        `📍 <a href="${link}" target="_blank" rel="noopener">${payload.lat.toFixed(4)}, ${payload.lon.toFixed(4)}</a>${live ? ' (live)' : ''}`
-      );
-    }, (err) => this._setStatus('Geo error: ' + err.message, 'err'));
+    if (!this.sessionKey) {
+      this._setStatus('No session key.', 'err');
+      throw new Error('No session key');
+    }
+    if (!navigator.geolocation) {
+      this._setStatus('Geolocation unavailable.', 'err');
+      throw new Error('Geolocation unavailable');
+    }
+    return new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(async (pos) => {
+        try {
+          const payload = {
+            kind: live ? 'location-live' : 'location-ping',
+            lat: pos.coords.latitude,
+            lon: pos.coords.longitude,
+            acc: pos.coords.accuracy,
+            ts: Date.now()
+          };
+          const sealed = await sealPayload(this.sessionKey, payload);
+          this._sendWire(JSON.stringify({ kind: 'enc', payload: sealed }));
+          this._renderLocation(payload, 'me');
+          resolve(payload);
+        } catch (err) {
+          reject(err);
+        }
+      }, (err) => {
+        this._setStatus('Geo error: ' + err.message, 'err');
+        reject(err);
+      }, {
+        enableHighAccuracy: true,
+        timeout: 12_000,
+        maximumAge: 5_000
+      });
+    });
   }
 
-  _toggleLiveLocation() {
+  async _toggleLiveLocation() {
     if (this.liveLocTimer) {
       clearInterval(this.liveLocTimer);
       this.liveLocTimer = null;
       this.liveBtn.textContent = '🛰 Live location';
+      this._sendLiveStop().catch(() => {});
+      this._setStatus('Live location stopped.', 'warn');
       return;
     }
-    this._sendLocation(true);
-    this.liveLocTimer = setInterval(() => this._sendLocation(true), 5000);
-    this.liveBtn.textContent = '🛰 Stop live';
+    try {
+      await this._sendLocation(true);
+      this.liveLocTimer = setInterval(() => this._sendLocation(true).catch(() => {}), LIVE_LOCATION_INTERVAL_MS);
+      this.liveBtn.textContent = '🛰 Stop live';
+      this._setStatus('Live location sharing started.', 'ok');
+    } catch {}
+  }
+
+  async _sendLiveStop() {
+    if (!this.sessionKey) return;
+    const sealed = await sealPayload(this.sessionKey, { kind: 'location-live-stop', ts: Date.now() });
+    this._sendWire(JSON.stringify({ kind: 'enc', payload: sealed }));
   }
 
   async _startCall(video) {
     if (!this.peerAddr) return this._setStatus('Connect to a peer first.', 'warn');
+    this.callState = 'calling';
+    this.callStartedAt = 0;
+    this.callEndsAt = Date.now() + DEFAULT_CALL_MINUTES * 60_000;
+    this._setCallStatus(`Calling ${this.peerAddr} by ${video ? 'video' : 'voice'}…`, 'ok');
+    this._setCallControls('calling');
     this._startRTC('caller', { withMedia: true, video });
   }
 
+  _showIncomingCall(detail) {
+    this.pendingIncomingCall = detail;
+    this.callState = 'ringing';
+    const mode = detail.video ? 'video' : 'voice';
+    this._setCallStatus(`Incoming ${mode} call from ${detail.from || 'peer'}.`, 'warn');
+    this._setCallControls('ringing', detail.video);
+    this.open();
+  }
+
+  async _acceptIncomingCall(video) {
+    if (!this.rtc?.acceptIncoming) return this._setCallStatus('No incoming call to accept.', 'warn');
+    this.callState = 'answering';
+    this.callEndsAt = Date.now() + DEFAULT_CALL_MINUTES * 60_000;
+    this._setCallStatus(`Accepting ${video ? 'video' : 'voice'} call…`, 'ok');
+    this._setCallControls('answering');
+    try {
+      await this.rtc.acceptIncoming({ audio: true, video });
+      this._markCallConnected(video);
+    } catch (err) {
+      this.callState = 'idle';
+      this._setCallStatus('Call accept failed: ' + err.message, 'err');
+      this._setCallControls('idle');
+    }
+  }
+
+  async _declineIncomingCall() {
+    try { await this.rtc?.declineIncoming?.('declined'); } catch {}
+    this.pendingIncomingCall = null;
+    this.callState = 'idle';
+    this._setCallStatus('Incoming call declined.', 'warn');
+    this._setCallControls('idle');
+  }
+
+  async _extendCall() {
+    if (this.callState !== 'in-call') return;
+    this.callEndsAt = Math.max(this.callEndsAt || Date.now(), Date.now()) + 15 * 60_000;
+    try { await this.rtc?.extendCall?.(15); } catch {}
+    this._setCallStatus('Call prolonged by 15 minutes.', 'ok');
+    this._updateCallTimer();
+  }
+
+  _markCallConnected(video) {
+    if (this.callState === 'in-call') return;
+    this.callState = 'in-call';
+    this.callStartedAt = Date.now();
+    this.callEndsAt = Date.now() + DEFAULT_CALL_MINUTES * 60_000;
+    this._setCallStatus(`${video ? 'Video' : 'Voice'} call live.`, 'ok');
+    this._setCallControls('in-call');
+    this._startCallTimer();
+  }
+
+  _setCallStatus(text, kind = '') {
+    this.callTitle.innerHTML = kind ? `<span class="${kind}">${escapeHtml(text)}</span>` : escapeHtml(text);
+  }
+
+  _setCallControls(mode, incomingVideo = false) {
+    const ringing = mode === 'ringing';
+    this.acceptAudioBtn.hidden = !ringing;
+    this.acceptVideoBtn.hidden = !ringing || !incomingVideo;
+    this.declineCallBtn.hidden = !ringing;
+    this.extendCallBtn.disabled = mode !== 'in-call';
+    this.endCallBtn.disabled = mode !== 'in-call' && mode !== 'calling' && mode !== 'answering';
+    this.voiceBtn.disabled = mode !== 'idle' || !this.peerAddr;
+    this.videoBtn.disabled = mode !== 'idle' || !this.peerAddr;
+  }
+
+  _startCallTimer() {
+    this._stopCallTimer();
+    this._updateCallTimer();
+    this.callTimerId = setInterval(() => this._updateCallTimer(), 1000);
+  }
+
+  _updateCallTimer() {
+    if (this.callState !== 'in-call') {
+      this.callTimer.textContent = '00:00';
+      return;
+    }
+    const elapsed = formatClock(Date.now() - this.callStartedAt);
+    const remainingMs = (this.callEndsAt || Date.now()) - Date.now();
+    if (remainingMs <= 0) {
+      this._hangup();
+      this._setCallStatus('Call ended. Use Prolong before the timer expires next time.', 'warn');
+      return;
+    }
+    const remaining = formatClock(remainingMs);
+    this.callTimer.textContent = `${elapsed} · ${remaining} left`;
+  }
+
+  _stopCallTimer() {
+    if (this.callTimerId) clearInterval(this.callTimerId);
+    this.callTimerId = null;
+  }
+
+  _resetCallState() {
+    this.callState = 'idle';
+    this.pendingIncomingCall = null;
+    this.callStartedAt = 0;
+    this.callEndsAt = 0;
+    this._stopCallTimer();
+    this.callTimer.textContent = '00:00';
+    this._setCallControls('idle');
+    this.videoGrid.classList.remove('is-on');
+    this.localVid.srcObject = null;
+    this.remoteVid.srcObject = null;
+  }
+
   _hangup() {
-    if (this.rtc) try { this.rtc.hangup(); } catch {}
+    if (this.rtc) try { this.rtc.hangup({ notify: true }); } catch {}
     this.videoGrid.classList.remove('is-on');
     if (this.liveLocTimer) { clearInterval(this.liveLocTimer); this.liveLocTimer = null; }
+    this.liveBtn.textContent = '🛰 Live location';
+    this._resetCallState();
     this._setStatus('Hung up.', 'warn');
+    this._setCallStatus('No active call');
   }
 
   _sendWire(data) {
     const sent = this.rtc?.send(data);
     if (!sent) this.outbox.push(data);
     return sent;
+  }
+
+  async _sendWireAsync(data) {
+    if (this.rtc?.sendReliable) {
+      const sent = await this.rtc.sendReliable(data);
+      if (!sent) throw new Error('P2P channel is not open');
+      return true;
+    }
+    if (!this._sendWire(data)) throw new Error('P2P channel is not open');
+    return true;
+  }
+
+  _renderMediaPreview(fileOrBlob, role, meta = {}) {
+    const type = meta.type || fileOrBlob.type || '';
+    const name = meta.name || fileOrBlob.name || 'media';
+    const size = meta.size || fileOrBlob.size || 0;
+    const url = URL.createObjectURL(fileOrBlob);
+    const wrap = document.createElement('div');
+    wrap.className = 'ost-mesh-media-card';
+    const label = document.createElement('div');
+    label.className = 'ost-mesh-media-meta';
+    label.textContent = `${name} · ${formatBytes(size)}`;
+    if (type.startsWith('image/')) {
+      const img = document.createElement('img');
+      img.src = url;
+      img.alt = name;
+      wrap.appendChild(img);
+    } else if (type.startsWith('video/')) {
+      const vid = document.createElement('video');
+      vid.src = url;
+      vid.controls = true;
+      vid.playsInline = true;
+      wrap.appendChild(vid);
+    }
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = name;
+    link.textContent = type.startsWith('image/') || type.startsWith('video/') ? 'Open / download' : `Download ${name}`;
+    wrap.appendChild(label);
+    wrap.appendChild(link);
+    this._bubble(role, wrap);
+  }
+
+  _renderLocation(payload, role) {
+    const live = payload.kind === 'location-live';
+    const card = this._makeLocationCard(payload, role);
+    if (live) {
+      const existing = role === 'me' ? this.localLiveBubble : this.peerLiveBubble;
+      if (existing) {
+        existing.innerHTML = '';
+        existing.appendChild(card);
+        this.feedEl.scrollTop = this.feedEl.scrollHeight;
+        return existing;
+      }
+      const bubble = this._bubble(role, card);
+      if (role === 'me') this.localLiveBubble = bubble;
+      else this.peerLiveBubble = bubble;
+      return bubble;
+    }
+    return this._bubble(role, card);
+  }
+
+  _makeLocationCard(payload, role) {
+    const card = document.createElement('div');
+    card.className = 'ost-mesh-map-card';
+    const title = payload.kind === 'location-live'
+      ? `${role === 'me' ? 'Your' : 'Peer'} live location`
+      : `${role === 'me' ? 'Your' : 'Peer'} location`;
+    card.innerHTML = `
+      <div class="ost-mesh-map-head">
+        <strong>${escapeHtml(title)}</strong>
+        <span>${new Date(payload.ts || Date.now()).toLocaleTimeString()}</span>
+      </div>
+      <iframe title="OST Mesh shared map" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="${mapEmbedUrl(payload.lat, payload.lon)}"></iframe>
+      <div class="ost-mesh-map-meta">
+        <span>${payload.lat.toFixed(5)}, ${payload.lon.toFixed(5)}</span>
+        <span>±${Math.round(payload.acc || 0)}m</span>
+        <a href="${mapOpenUrl(payload.lat, payload.lon)}" target="_blank" rel="noopener">Open map</a>
+      </div>
+    `;
+    return card;
   }
 
   _flushOutbox() {
@@ -568,39 +922,45 @@ class MeshPavilion {
           const inner = await openPayload(this.sessionKey, msg.payload);
           this._renderIncoming(inner);
         }
-      } else if (data instanceof ArrayBuffer && this.sessionKey && this._pendingFile) {
-        const bytes = await openBytes(this.sessionKey, new Uint8Array(data));
-        const blob = new Blob([bytes], { type: this._pendingFile.type || 'application/octet-stream' });
-        const url = URL.createObjectURL(blob);
-        if ((this._pendingFile.type || '').startsWith('image/')) {
-          const img = document.createElement('img'); img.src = url;
-          this._bubble('peer', img);
-        } else if ((this._pendingFile.type || '').startsWith('video/')) {
-          const vid = document.createElement('video'); vid.src = url; vid.controls = true;
-          this._bubble('peer', vid);
-        } else {
-          const a = document.createElement('a'); a.href = url; a.download = this._pendingFile.name || 'file';
-          a.textContent = '📎 ' + (this._pendingFile.name || 'file');
-          this._bubble('peer', a);
-        }
-        this._pendingFile = null;
+      } else if (data instanceof ArrayBuffer && this.sessionKey) {
+        await this._receiveFileChunk(new Uint8Array(data));
       }
     } catch (err) {
       this._bubble('system', '⚠ decrypt failed: ' + err.message);
     }
   }
 
+  async _receiveFileChunk(chunk) {
+    if (!this.incomingFile) return;
+    const transfer = this.incomingFile;
+    transfer.chunks.push(chunk);
+    transfer.received += chunk.byteLength;
+    const pct = Math.min(100, Math.round((transfer.received / transfer.meta.sealedSize) * 100));
+    transfer.progress.textContent = `Receiving ${transfer.meta.name}: ${pct}%`;
+    if (transfer.received < transfer.meta.sealedSize) return;
+
+    const sealed = concatChunks(transfer.chunks, transfer.received).slice(0, transfer.meta.sealedSize);
+    const bytes = await openBytes(this.sessionKey, sealed);
+    const blob = new Blob([bytes], { type: transfer.meta.type || 'application/octet-stream' });
+    transfer.progress.textContent = `Received ${transfer.meta.name} (${formatBytes(transfer.meta.size)}).`;
+    this._renderMediaPreview(blob, 'peer', transfer.meta);
+    this.incomingFile = null;
+  }
+
   _renderIncoming(inner) {
     if (inner.kind === 'text') {
       this._bubble('peer', escapeHtml(inner.text));
-    } else if (inner.kind === 'file-meta') {
-      this._pendingFile = inner;
-      this._bubble('system', `Receiving ${inner.name} (${(inner.size/1024).toFixed(1)} KB)…`);
+    } else if (inner.kind === 'file-start' || inner.kind === 'file-meta') {
+      const meta = inner.kind === 'file-meta'
+        ? { ...inner, sealedSize: inner.size || 0, chunks: 1 }
+        : inner;
+      const progress = this._bubble('system', `Receiving ${escapeHtml(meta.name)} (${formatBytes(meta.size)})…`);
+      this.incomingFile = { meta, progress, chunks: [], received: 0 };
     } else if (inner.kind === 'location-ping' || inner.kind === 'location-live') {
-      const link = `https://www.openstreetmap.org/?mlat=${inner.lat}&mlon=${inner.lon}#map=15/${inner.lat}/${inner.lon}`;
-      this._bubble('peer',
-        `📍 <a href="${link}" target="_blank" rel="noopener">${inner.lat.toFixed(4)}, ${inner.lon.toFixed(4)}</a>${inner.kind === 'location-live' ? ' (live)' : ''}`
-      );
+      this._renderLocation(inner, 'peer');
+    } else if (inner.kind === 'location-live-stop') {
+      this._bubble('system', 'Peer stopped live location.');
+      this.peerLiveBubble = null;
     } else {
       this._bubble('peer', '<em>(unknown payload)</em>');
     }

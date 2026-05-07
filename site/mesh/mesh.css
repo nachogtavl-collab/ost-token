@@ -154,6 +154,55 @@
 .ost-mesh-status .warn  { color: #ffd066; }
 .ost-mesh-status .err   { color: #ff7777; }
 
+.ost-mesh-callbar {
+  border: 1px solid #163049;
+  border-radius: 12px;
+  background: rgba(5, 15, 25, 0.76);
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.ost-mesh-callbar .sub {
+  color: #6f9ec8;
+  font-size: 11px;
+  margin-bottom: 3px;
+}
+.ost-mesh-callbar strong {
+  display: inline-block;
+  color: #d8eaff;
+  margin-right: 10px;
+  font-size: 13px;
+}
+.ost-mesh-callbar strong .ok { color: #6dffb5; }
+.ost-mesh-callbar strong .warn { color: #ffd066; }
+.ost-mesh-callbar strong .err { color: #ff7777; }
+#mesh-call-timer {
+  font-family: ui-monospace, Menlo, monospace;
+  color: #7fd8ff;
+  font-size: 12px;
+}
+.ost-mesh-call-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.ost-mesh-call-actions button {
+  background: #0a2740;
+  border: 1px solid #134466;
+  color: #b9e3ff;
+  border-radius: 999px;
+  padding: 7px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.ost-mesh-call-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .ost-mesh-feed {
   flex: 1 1 auto;
   overflow-y: auto;
@@ -199,6 +248,43 @@
   display: block;
 }
 .ost-mesh-bubble a { color: inherit; text-decoration: underline; }
+
+.ost-mesh-media-card {
+  display: grid;
+  gap: 8px;
+  min-width: min(320px, 70vw);
+}
+.ost-mesh-media-card img,
+.ost-mesh-media-card video {
+  max-height: 360px;
+  object-fit: contain;
+  background: #02080f;
+}
+.ost-mesh-media-meta {
+  font-size: 12px;
+  opacity: 0.85;
+}
+.ost-mesh-map-card {
+  width: min(420px, 72vw);
+  display: grid;
+  gap: 8px;
+}
+.ost-mesh-map-head,
+.ost-mesh-map-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+.ost-mesh-map-card iframe {
+  width: 100%;
+  height: 220px;
+  border: 1px solid #15324a;
+  border-radius: 10px;
+  background: #06141f;
+}
 
 .ost-mesh-compose {
   display: flex;
@@ -250,4 +336,9 @@
 @media (max-width: 600px) {
   .ost-mesh-shell { padding: 14px; }
   .ost-mesh-row button { padding: 10px 14px; }
+  .ost-mesh-bubble { max-width: 92%; }
+  .ost-mesh-map-card,
+  .ost-mesh-media-card { width: 100%; min-width: 0; }
+  .ost-mesh-map-card iframe { height: 190px; }
+  .ost-mesh-call-actions button { flex: 1 1 auto; }
 }
