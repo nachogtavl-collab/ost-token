@@ -92,9 +92,10 @@ export class MeshRTC extends EventTarget {
 
     const offer = await this.pc.createOffer();
     await this.pc.setLocalDescription(offer);
+    await this._waitForIceGathering();
     await this._postSignal({
       type: 'offer',
-      sdp: offer.sdp,
+      sdp: this.pc.localDescription.sdp,
       call: { id: this._callId, withMedia, video, ts: Date.now() }
     });
 
@@ -197,7 +198,23 @@ export class MeshRTC extends EventTarget {
     await this._flushPendingIce();
     const answer = await this.pc.createAnswer();
     await this.pc.setLocalDescription(answer);
-    await this._postSignal({ type: 'answer', sdp: answer.sdp, call: sig.call || null });
+    await this._waitForIceGathering();
+    await this._postSignal({ type: 'answer', sdp: this.pc.localDescription.sdp, call: sig.call || null });
+  }
+
+  async _waitForIceGathering() {
+    if (!this.pc || this.pc.iceGatheringState === 'complete') return;
+    await new Promise((resolve) => {
+      const done = () => {
+        this.pc?.removeEventListener?.('icegatheringstatechange', onChange);
+        resolve();
+      };
+      const onChange = () => {
+        if (!this.pc || this.pc.iceGatheringState === 'complete') done();
+      };
+      this.pc.addEventListener?.('icegatheringstatechange', onChange);
+      setTimeout(done, 2200);
+    });
   }
 
   async _flushPendingIce() {

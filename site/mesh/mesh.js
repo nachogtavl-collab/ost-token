@@ -9,7 +9,7 @@ import {
   deriveSessionKey, sealPayload, openPayload,
   sealBytes, openBytes, fingerprint
 } from './mesh-crypto.js?v=1';
-import { MeshRTC } from './mesh-rtc.js?v=3';
+import { MeshRTC } from './mesh-rtc.js?v=4';
 
 const STYLE_HREF = './mesh/mesh.css?v=3';
 const STORAGE_ID = 'ost_mesh_identity_v1';
