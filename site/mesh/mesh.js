@@ -721,6 +721,16 @@ class MeshPavilion {
     this._sendWire(JSON.stringify({ kind: 'enc', payload: sealed }));
   }
 
+  async sendAppPayload(payload = {}) {
+    if (!this.sessionKey) throw new Error('No encrypted Mesh session is ready');
+    const sealed = await sealPayload(this.sessionKey, {
+      ...payload,
+      kind: 'mesh-app',
+      ts: Date.now()
+    });
+    return this._sendWire(JSON.stringify({ kind: 'enc', payload: sealed }));
+  }
+
   async _sendCallControl(kind, payload = {}) {
     if (!this.sessionKey || !this.rtc?.isOpen?.()) return false;
     const sealed = await sealPayload(this.sessionKey, { kind, ...payload, ts: Date.now() });
@@ -1020,6 +1030,13 @@ class MeshPavilion {
   }
 
   async _renderIncoming(inner) {
+    const appEvent = new CustomEvent('ost:mesh-payload', {
+      cancelable: true,
+      detail: { payload: inner, pavilion: this }
+    });
+    window.dispatchEvent(appEvent);
+    if (appEvent.defaultPrevented) return;
+
     if (inner.kind === 'text') {
       this._bubble('peer', escapeHtml(inner.text));
     } else if (inner.kind === 'file-start' || inner.kind === 'file-meta') {
