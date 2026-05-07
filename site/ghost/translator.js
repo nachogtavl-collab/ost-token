@@ -36,7 +36,7 @@ export class GhostTranslator {
     this.apiBase = apiBase
       || window.OST_API_BASE
       || (location.hostname.endsWith('github.io')
-            ? 'https://ost-api-pages.pages.dev'
+            ? 'https://ost-api.nachogtavl.workers.dev'
             : '');
     this.keys = loadKeys();
   }
