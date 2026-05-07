@@ -509,6 +509,18 @@ class MeshPavilion {
     if (this.callState === 'idle') this._setCallControls('idle');
   }
 
+  _disableMessaging() {
+    this.textInput.value = '';
+    this.textInput.disabled = true;
+    this.sendBtn.disabled = true;
+    this.attachBtn.disabled = true;
+    this.locBtn.disabled = true;
+    this.liveBtn.disabled = true;
+    this.voiceBtn.disabled = true;
+    this.videoBtn.disabled = true;
+    this.hangBtn.disabled = true;
+  }
+
   _startRTC(role, { withMedia = false, video = false, passive = false } = {}) {
     if (this.rtc) try { this.rtc.hangup({ notify: false }); } catch {}
     this.rtc = new MeshRTC({ apiBase: this.api, myAddress: this.address, peerAddress: this.peerAddr || '' });
@@ -855,6 +867,11 @@ class MeshPavilion {
     if (restoreData && wasCalling) {
       this._restoreDataSessionAfterCall('caller');
     } else {
+      this.peerAddr = null;
+      this.peerBundle = null;
+      this.sessionKey = null;
+      this.outbox = [];
+      this._disableMessaging();
       this._setStatus('Hung up.', 'warn');
     }
     this._setCallStatus('No active call');
