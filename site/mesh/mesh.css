@@ -1,0 +1,246 @@
+/* mesh/mesh.css — OST Mesh Pavilion */
+
+#ost-mesh-pavilion {
+  position: fixed;
+  inset: 0;
+  z-index: 999500;
+  background: rgba(2, 6, 14, 0.92);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  display: none;
+  align-items: stretch;
+  justify-content: center;
+  font-family: 'Inter', system-ui, sans-serif;
+  color: #d8eaff;
+}
+#ost-mesh-pavilion.is-open { display: flex; }
+
+#ost-mesh-trigger {
+  position: fixed;
+  right: 18px;
+  bottom: 92px;
+  z-index: 999400;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 212, 255, 0.55);
+  background: radial-gradient(circle at 30% 30%, #0a3a55, #02101c);
+  color: #00d4ff;
+  font-size: 22px;
+  cursor: pointer;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5), 0 0 18px rgba(0, 212, 255, 0.35);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+#ost-mesh-trigger:hover { transform: scale(1.06); }
+#ost-mesh-trigger::before { content: '⌬'; }
+
+.ost-mesh-shell {
+  width: min(960px, 100%);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 22px clamp(16px, 4vw, 40px);
+  gap: 16px;
+  overflow: hidden;
+}
+.ost-mesh-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.ost-mesh-head h2 {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #00d4ff;
+}
+.ost-mesh-head .sub {
+  font-size: 12px;
+  color: #6f9ec8;
+}
+.ost-mesh-close {
+  background: transparent;
+  border: 1px solid #1f3b55;
+  color: #d8eaff;
+  border-radius: 999px;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+}
+
+.ost-mesh-id {
+  border: 1px solid #163049;
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: rgba(8, 18, 30, 0.7);
+  font-size: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+  justify-content: space-between;
+}
+.ost-mesh-id .pill {
+  font-family: ui-monospace, Menlo, monospace;
+  background: #06141f;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid #15324a;
+  color: #7fd8ff;
+}
+.ost-mesh-id button {
+  background: #0a2740;
+  border: 1px solid #134466;
+  color: #b9e3ff;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.ost-mesh-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ost-mesh-row input[type="text"] {
+  flex: 1 1 220px;
+  background: #06141f;
+  border: 1px solid #15324a;
+  color: #d8eaff;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 14px;
+}
+.ost-mesh-row button {
+  background: linear-gradient(135deg, #00b8e6, #0085c2);
+  color: #001120;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 18px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 13px;
+}
+.ost-mesh-row button.ghost {
+  background: transparent;
+  border: 1px solid #1f4866;
+  color: #b9e3ff;
+}
+
+.ost-mesh-stage {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
+.ost-mesh-status {
+  font-size: 12px;
+  color: #7aa9d6;
+  letter-spacing: 0.04em;
+}
+.ost-mesh-status .ok    { color: #6dffb5; }
+.ost-mesh-status .warn  { color: #ffd066; }
+.ost-mesh-status .err   { color: #ff7777; }
+
+.ost-mesh-feed {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  background: rgba(4, 12, 20, 0.7);
+  border: 1px solid #122a40;
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 200px;
+}
+.ost-mesh-bubble {
+  max-width: 78%;
+  padding: 10px 14px;
+  border-radius: 16px;
+  font-size: 14px;
+  line-height: 1.4;
+  word-wrap: break-word;
+}
+.ost-mesh-bubble.me {
+  align-self: flex-end;
+  background: linear-gradient(135deg, #00b8e6, #0085c2);
+  color: #001120;
+}
+.ost-mesh-bubble.peer {
+  align-self: flex-start;
+  background: #0d2236;
+  color: #d8eaff;
+  border: 1px solid #173754;
+}
+.ost-mesh-bubble.system {
+  align-self: center;
+  background: transparent;
+  color: #6f9ec8;
+  font-size: 12px;
+  font-style: italic;
+}
+.ost-mesh-bubble img,
+.ost-mesh-bubble video {
+  max-width: 100%;
+  border-radius: 10px;
+  display: block;
+}
+.ost-mesh-bubble a { color: inherit; text-decoration: underline; }
+
+.ost-mesh-compose {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.ost-mesh-compose input[type="text"] {
+  flex: 1;
+  background: #06141f;
+  border: 1px solid #15324a;
+  color: #d8eaff;
+  border-radius: 999px;
+  padding: 12px 16px;
+  font-size: 14px;
+}
+.ost-mesh-tools {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.ost-mesh-tools button {
+  background: #0a2740;
+  border: 1px solid #134466;
+  color: #b9e3ff;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.ost-mesh-video-grid {
+  display: none;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  background: #02080f;
+  border: 1px solid #122a40;
+  border-radius: 12px;
+  padding: 8px;
+}
+.ost-mesh-video-grid.is-on { display: grid; }
+.ost-mesh-video-grid video {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+@media (max-width: 600px) {
+  .ost-mesh-shell { padding: 14px; }
+  .ost-mesh-row button { padding: 10px 14px; }
+}

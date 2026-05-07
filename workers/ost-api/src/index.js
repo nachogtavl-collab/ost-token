@@ -1,5 +1,6 @@
 // Ghost AI v2 — sovereign rebuild. Mounts at /ghost/v2/*
 import { handleGhostV2Request } from './ghost/index.js';
+import { handleMeshRequest }    from './mesh/index.js';
 
 /**
  * OST Prediction API Server — Cloudflare Worker
@@ -578,6 +579,11 @@ export default {
       return json({ error: 'unknown ghost endpoint', path }, { status: 404 });
     }
 
+    // OST Mesh — quantum-ready P2P signaling + identity directory.
+    if (path.startsWith('/mesh/')) {
+      return handleMeshRequest(request, env, { path, method });
+    }
+
     // ── GET /health ──────────────────────────────────────────────────────────
     if (path === '/health' || path === '/') {
       const btcResult = await fetchBtcPrice();
@@ -618,20 +624,13 @@ export default {
           'POST /topup/claim',
           'POST /topup/crypto/verify',
           'GET  /topup/crypto/check/:intent',
-          'POST /ghost/v2/chat',
-          'POST /ghost/v2/proxy/anthropic',
-          'POST /ghost/v2/mesh/announce',
-          'GET  /ghost/v2/mesh/peers',
-          'POST /ghost/v2/mesh/broadcast',
           'POST /ghost/v2/memory/save',
           'GET  /ghost/v2/memory/recent',
-          'POST /ghost/v2/chat',
-          'POST /ghost/v2/proxy/anthropic',
-          'POST /ghost/v2/mesh/announce',
-          'GET  /ghost/v2/mesh/peers',
-          'POST /ghost/v2/mesh/broadcast',
-          'POST /ghost/v2/memory/save',
-          'GET  /ghost/v2/memory/recent',
+          'GET  /mesh/v1/health',
+          'POST /mesh/v1/identity/announce',
+          'GET  /mesh/v1/identity/lookup',
+          'POST /mesh/v1/signal/send',
+          'GET  /mesh/v1/signal/inbox',
           'GET  /launchpad/coins',
           'POST /launchpad/coins',
           'POST /launchpad/trade',

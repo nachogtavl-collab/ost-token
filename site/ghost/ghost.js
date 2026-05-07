@@ -5,7 +5,7 @@
    ============================================================ */
 
 import { GhostOrb }        from './orb.js?v=1';
-import { GhostTranslator } from './translator.js?v=1';
+import { GhostTranslator } from './translator.js?v=2';
 import { GhostCore }       from './core.js?v=1';
 import { GhostMesh }       from './mesh.js?v=1';
 import { GhostRecursive }  from './recursive.js?v=1';
