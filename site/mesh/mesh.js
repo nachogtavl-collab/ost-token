@@ -319,6 +319,7 @@ class MeshPavilion {
     this.pendingIncomingCall = null;
     this.incomingFile = null;
     this.outbox = [];
+    this.replacingRTC = false;
 
     this._wire();
     this._initIdentity().catch((err) => this._setStatus('Identity error: ' + err.message, 'err'));
@@ -521,8 +522,20 @@ class MeshPavilion {
     this.hangBtn.disabled = true;
   }
 
+  _clearMessagingSession() {
+    this.peerAddr = null;
+    this.peerBundle = null;
+    this.sessionKey = null;
+    this.outbox = [];
+    this._disableMessaging();
+  }
+
   _startRTC(role, { withMedia = false, video = false, passive = false } = {}) {
-    if (this.rtc) try { this.rtc.hangup({ notify: false }); } catch {}
+    if (this.rtc) {
+      this.replacingRTC = true;
+      try { this.rtc.hangup({ notify: false }); } catch {}
+      this.replacingRTC = false;
+    }
     this.rtc = new MeshRTC({ apiBase: this.api, myAddress: this.address, peerAddress: this.peerAddr || '' });
 
     this.rtc.addEventListener('open', () => {
@@ -537,8 +550,10 @@ class MeshPavilion {
         .then(() => this._enableMessaging())
         .catch((err) => this._setStatus('Incoming peer rejected: ' + err.message, 'err'));
     });
-    this.rtc.addEventListener('close', () => {
+    this.rtc.addEventListener('close', (e) => {
+      if (e.currentTarget !== this.rtc || this.replacingRTC) return;
       this._setStatus('Channel closed.', 'warn');
+      if (this.callState === 'idle') this._clearMessagingSession();
     });
     this.rtc.addEventListener('state', (e) => {
       const s = e.detail.state;
@@ -867,11 +882,7 @@ class MeshPavilion {
     if (restoreData && wasCalling) {
       this._restoreDataSessionAfterCall('caller');
     } else {
-      this.peerAddr = null;
-      this.peerBundle = null;
-      this.sessionKey = null;
-      this.outbox = [];
-      this._disableMessaging();
+      this._clearMessagingSession();
       this._setStatus('Hung up.', 'warn');
     }
     this._setCallStatus('No active call');
