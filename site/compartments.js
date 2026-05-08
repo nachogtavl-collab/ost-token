@@ -58,10 +58,10 @@
 
   var state = {
     active: null,
-    focusMode: true,
+    focusMode: false,
     settings: loadSettings()
   };
-  if (state.settings.focusMode === false) state.focusMode = false;
+  if (state.settings.focusMode === true && state.settings.focusModeUserSet === true && !isMobileViewport()) state.focusMode = true;
   if (isMobileViewport()) state.focusMode = false;
 
   // -------------------------------------------------------------- Build dock
@@ -214,6 +214,7 @@
     }
     state.focusMode = !state.focusMode;
     state.settings.focusMode = state.focusMode;
+    state.settings.focusModeUserSet = true;
     saveSettings(state.settings);
     var toggle = document.getElementById('ostFocusToggle');
     if (toggle) {
@@ -285,6 +286,10 @@
 
   // -------------------------------------------------------------- First-visit guide
   function showGuide() {
+    if (!state.focusMode) {
+      try { localStorage.setItem(GUIDE_KEY, '1'); } catch (e) {}
+      return;
+    }
     if (isMobileViewport()) {
       try { localStorage.setItem(GUIDE_KEY, '1'); } catch (e) {}
       return;
@@ -363,7 +368,7 @@
       saveSettings(state.settings);
     }
 
-    // Default to the mobile-friendly Home launcher unless the URL asks for a section.
+    // Keep the full page accessible by default, while still tracking the current section.
     var hash = (location.hash || '').replace(/^#/, '').split('?')[0].split('/')[0];
     var def = SECTIONS.find(function (s) { return s.id === hash; });
     if (def) state.active = def.id;
@@ -398,6 +403,7 @@
     showAll: function () {
       state.focusMode = false;
       state.settings.focusMode = false;
+      state.settings.focusModeUserSet = true;
       saveSettings(state.settings);
       applyFocusClasses();
     },

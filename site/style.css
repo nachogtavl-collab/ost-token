@@ -192,6 +192,56 @@ nav {
 /* Mobile Toggle */
 .nav-toggle { display: none; background: none; color: var(--text); font-size: 1.5rem; }
 
+@media (min-width: 821px) {
+  html { scroll-padding-top: 88px; }
+  body { padding-right: 68px; }
+  nav { overflow: visible; }
+  .nav-inner {
+    min-height: 64px;
+    height: auto;
+    gap: 12px;
+  }
+  .nav-links {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    scrollbar-width: thin;
+    padding: 8px 2px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .nav-links::-webkit-scrollbar { height: 4px; }
+  .nav-links::-webkit-scrollbar-thumb { background: rgba(109,159,255,.38); border-radius: 999px; }
+  .nav-links a {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px;
+    white-space: nowrap;
+  }
+  .nav-right {
+    flex: 0 0 auto;
+    min-width: max-content;
+  }
+  section[id] { scroll-margin-top: 92px; }
+  .hero { min-height: 100svh; }
+}
+
+@media (min-width: 821px) and (max-width: 1180px) {
+  .nav-inner { padding: 0 14px; }
+  .nav-links { gap: 4px; }
+  .nav-links a { padding: 6px 10px; font-size: .8rem; }
+  .wallet-btn { padding: 8px 12px; }
+  .ancient-toggle { max-width: 118px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+
+@media (min-width: 1440px) {
+  .container { max-width: 1320px; }
+  .hero-split { max-width: 1500px; }
+}
+
 /* --- HERO --- */
 .hero {
   position: relative; min-height: 100vh; display: flex; flex-direction: column;

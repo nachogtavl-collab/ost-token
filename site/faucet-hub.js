@@ -862,6 +862,10 @@
   // ============================================================
   async function onCashout() {
     var s = load();
+    if (Number(s.cashoutLockUntil || 0) > Date.now()) {
+      pop('Cash-out already syncing. Wait a moment.');
+      return;
+    }
     var amount = Number(s.credits || 0);
     if (amount < MIN_PAYOUT) { pop('Earn at least ' + MIN_PAYOUT + ' OST first'); return; }
     var w = window.OST_WALLET;
@@ -882,6 +886,8 @@
     var btn = document.getElementById('fhCashout');
     btn.disabled = true; var prev = btn.textContent; btn.textContent = 'Sending…';
     try {
+      s.cashoutLockUntil = Date.now() + 2 * 60 * 1000;
+      save(s);
       // Use the pool-paid payout API: pool covers the SOL fee and (if needed)
       // the user's OST ATA rent. The user's wallet does not need any devnet SOL.
       if (!window.OST_RESCUE || !window.OST_RESCUE.payoutOst) {
@@ -897,14 +903,29 @@
       var s2 = load();
       s2.credits = Math.max(0, Number(s2.credits || 0) - toSend);
       s2.lastCashout = Date.now();
+      delete s2.cashoutLockUntil;
       save(s2);
       pop('+' + toSend.toFixed(2) + ' OST sent!');
       vaultDrop();
       btn.textContent = '✓ Sent · ' + String(sig).slice(0, 8) + '…';
+      if (typeof window.recordOstPlatformEvent === 'function') {
+        window.recordOstPlatformEvent({
+          kind: 'faucet-hub-cashout',
+          source: 'faucet-hub',
+          amount: toSend,
+          sig: sig,
+          label: 'Rewards vault cash-out',
+          token: 'OST',
+          gameCredits: Number(s2.credits || 0)
+        });
+      }
       try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch(e) {}
       setTimeout(function(){ btn.textContent = prev; refreshUi(); }, 4500);
     } catch (err) {
       console.warn('[fh] cashout failed', err);
+      var s3 = load();
+      delete s3.cashoutLockUntil;
+      save(s3);
       var msg = (err && err.message) ? err.message : 'Cash-out failed';
       // Show the real error so the user knows what to fix
       pop(msg.length > 60 ? msg.slice(0, 60) + '…' : msg);

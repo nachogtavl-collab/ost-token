@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v49';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v49';
+const CACHE_NAME = 'ost-pwa-cache-v50';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v50';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -10,10 +10,10 @@ const PRECACHE_PATHS = [
   './ost-logo.svg',
   './icon-192.png',
   './icon-512.png',
-  './style.css?v=64',
+  './style.css?v=65',
   './mobile.css?v=7',
   './polish.css?v=1',
-  './compartments.css?v=1',
+  './compartments.css?v=2',
   './prediction-extras.css?v=4',
   './prediction-pro.css?v=1',
   './prediction-modal.css?v=3',
@@ -26,7 +26,7 @@ const PRECACHE_PATHS = [
   './offline-vault.css?v=1',
   './mobile-shell.css?v=2',
   './rpc-multiplexer.js?v=1',
-  './app.js?v=110',
+  './app.js?v=111',
   './nuevo-laredo-gas.js?v=1',
   './shop-quickview.js?v=1',
   './interchange-live.js?v=1',
@@ -48,7 +48,7 @@ const PRECACHE_PATHS = [
   './mesh/mesh-crypto.js?v=1',
   './mesh/mesh-rtc.js?v=10',
   './mesh/mesh.css?v=3',
-  './compartments.js?v=3',
+  './compartments.js?v=4',
   './prediction-extras.js?v=7',
   './prediction-pro.js?v=8',
   './prediction-scalar.js?v=2',
@@ -59,7 +59,7 @@ const PRECACHE_PATHS = [
   './ost-onchain-bet.js?v=1',
   './ux-extras.js?v=5',
   './mobile-shell.js?v=2',
-  './faucet-hub.js?v=12',
+  './faucet-hub.js?v=13',
   './faucet-hub-ads.js?v=2',
   './offline-vault.js?v=3',
   './apple-tap.js?v=1',

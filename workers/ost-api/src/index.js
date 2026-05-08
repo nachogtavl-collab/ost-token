@@ -235,6 +235,208 @@ function mergeNewest(bucket, record, limit = 100) {
   return next.slice(0, limit);
 }
 
+const FAUCET_WELCOME_AMOUNT = 100;
+const FAUCET_DAILY_AMOUNT = 1;
+const FAUCET_DAILY_MS = 24 * 60 * 60 * 1000;
+const FAUCET_RESERVATION_MS = 2 * 60 * 1000;
+
+function normalizeFaucetWallet(value) {
+  const wallet = cleanText(value || '', 64);
+  return isLikelySolanaAddress(wallet) ? wallet : '';
+}
+
+function publicFaucetState(record, now = Date.now()) {
+  const state = record || {};
+  const welcomeClaimedAt = cleanNumber(state.welcomeClaimedAt, 0) || 0;
+  const lastDailyClaimAt = cleanNumber(state.lastDailyClaimAt || welcomeClaimedAt, 0) || 0;
+  const nextDailyClaimAt = welcomeClaimedAt ? lastDailyClaimAt + FAUCET_DAILY_MS : 0;
+  const pending = state.pendingReservation && state.pendingReservation.expiresAt > now
+    ? state.pendingReservation
+    : null;
+  return {
+    wallet: cleanText(state.wallet || '', 64),
+    welcomeClaimed: welcomeClaimedAt > 0,
+    welcomeClaimedAt,
+    welcomeAmount: cleanNumber(state.welcomeAmount, 0) || 0,
+    lastDailyClaimAt,
+    nextDailyClaimAt,
+    dailyReady: welcomeClaimedAt > 0 && now >= nextDailyClaimAt,
+    dailyClaimCount: cleanNumber(state.dailyClaimCount, 0) || 0,
+    totalClaimed: cleanNumber(state.totalClaimed, 0) || 0,
+    lastSignature: cleanText(state.lastSignature || '', 128),
+    lastReservationId: cleanText(state.lastReservationId || '', 80),
+    updatedAt: cleanNumber(state.updatedAt, 0) || 0,
+    pendingReservation: pending ? {
+      id: cleanText(pending.id || '', 80),
+      kind: cleanText(pending.kind || '', 16),
+      amount: cleanNumber(pending.amount, 0) || 0,
+      expiresAt: cleanNumber(pending.expiresAt, 0) || 0
+    } : null
+  };
+}
+
+function faucetWalletKey(wallet) {
+  return `faucet:v1:wallet:${wallet}`;
+}
+
+async function recordFaucetWalletEvent(env, event) {
+  if (!env.OST_KV || !event || !event.wallet) return;
+  const record = {
+    id: cleanText(event.id || event.sig || crypto.randomUUID(), 160),
+    wallet: cleanText(event.wallet, 64),
+    kind: cleanText(event.kind || 'faucet-claim', 48),
+    amount: cleanNumber(event.amount, 0) || 0,
+    sig: cleanText(event.sig || event.signature || '', 128),
+    source: 'faucet-gate',
+    label: cleanText(event.label || 'OST faucet claim', 200),
+    token: 'OST',
+    ts: cleanNumber(event.ts, Date.now()) || Date.now(),
+    syncedAt: Date.now()
+  };
+  const key = `wallet:events:${record.wallet}`;
+  const bucket = await kvGet(env, key, []);
+  await kvPut(env, key, mergeNewest(bucket, record, 300));
+}
+
+export class FaucetGate {
+  constructor(state, env) {
+    this.state = state;
+    this.env = env;
+  }
+
+  async fetch(request) {
+    return this.state.blockConcurrencyWhile(() => this.handle(request));
+  }
+
+  async readWallet(wallet) {
+    const raw = await this.state.storage.get(faucetWalletKey(wallet));
+    const now = Date.now();
+    const record = Object.assign({ wallet }, raw || {});
+    if (record.pendingReservation && record.pendingReservation.expiresAt <= now) {
+      delete record.pendingReservation;
+      await this.state.storage.put(faucetWalletKey(wallet), record);
+    }
+    return record;
+  }
+
+  async writeWallet(wallet, record) {
+    await this.state.storage.put(faucetWalletKey(wallet), record);
+  }
+
+  async handle(request) {
+    const url = new URL(request.url);
+    const path = url.pathname.replace(/\/$/, '') || '/';
+    const method = request.method;
+    if (method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS_HEADERS });
+
+    const stateMatch = path.match(/^\/faucet\/v1\/state\/([^/]+)$/);
+    if (stateMatch && method === 'GET') {
+      const wallet = normalizeFaucetWallet(decodeURIComponent(stateMatch[1]));
+      if (!wallet) return json({ error: 'invalid_wallet' }, 400);
+      const record = await this.readWallet(wallet);
+      return json({ ok: true, state: publicFaucetState(record) }, 200, { 'cache-control': 'no-store' });
+    }
+
+    if (path === '/faucet/v1/reserve' && method === 'POST') {
+      let body;
+      try { body = await request.json(); } catch (_) { return json({ error: 'invalid_json' }, 400); }
+      const wallet = normalizeFaucetWallet(body && body.wallet);
+      if (!wallet) return json({ error: 'invalid_wallet' }, 400);
+      const now = Date.now();
+      const record = await this.readWallet(wallet);
+      const current = publicFaucetState(record, now);
+      if (current.pendingReservation) {
+        return json({ ok: false, error: 'claim_in_progress', state: current }, 409, { 'cache-control': 'no-store' });
+      }
+      let kind = 'welcome';
+      let amount = FAUCET_WELCOME_AMOUNT;
+      if (current.welcomeClaimed) {
+        if (!current.dailyReady) {
+          return json({ ok: false, error: 'cooldown', state: current, nextDailyClaimAt: current.nextDailyClaimAt }, 409, { 'cache-control': 'no-store' });
+        }
+        kind = 'daily';
+        amount = FAUCET_DAILY_AMOUNT;
+      }
+      const reservation = {
+        id: crypto.randomUUID(),
+        wallet,
+        kind,
+        amount,
+        reservedAt: now,
+        expiresAt: now + FAUCET_RESERVATION_MS
+      };
+      record.pendingReservation = reservation;
+      record.updatedAt = now;
+      await this.writeWallet(wallet, record);
+      await this.state.storage.put(`faucet:v1:reservation:${reservation.id}`, reservation);
+      return json({ ok: true, reservationId: reservation.id, kind, amount, expiresAt: reservation.expiresAt, state: publicFaucetState(record, now) }, 200, { 'cache-control': 'no-store' });
+    }
+
+    if (path === '/faucet/v1/commit' && method === 'POST') {
+      let body;
+      try { body = await request.json(); } catch (_) { return json({ error: 'invalid_json' }, 400); }
+      const wallet = normalizeFaucetWallet(body && body.wallet);
+      const reservationId = cleanText(body && body.reservationId, 80);
+      const signature = cleanText(body && (body.signature || body.sig), 128);
+      if (!wallet || !reservationId || !signature) return json({ error: 'missing_fields', required: ['wallet', 'reservationId', 'signature'] }, 400);
+      const now = Date.now();
+      const record = await this.readWallet(wallet);
+      if (record.lastReservationId === reservationId) {
+        return json({ ok: true, state: publicFaucetState(record, now), idempotent: true }, 200, { 'cache-control': 'no-store' });
+      }
+      const pending = record.pendingReservation;
+      if (!pending || pending.id !== reservationId) return json({ error: 'reservation_not_active', state: publicFaucetState(record, now) }, 409);
+      if (pending.expiresAt <= now) {
+        delete record.pendingReservation;
+        await this.writeWallet(wallet, record);
+        return json({ error: 'reservation_expired', state: publicFaucetState(record, now) }, 409);
+      }
+      const amount = Math.min(cleanNumber(body && body.amount, pending.amount) || pending.amount, pending.amount);
+      record.totalClaimed = (cleanNumber(record.totalClaimed, 0) || 0) + amount;
+      record.lastSignature = signature;
+      record.lastReservationId = reservationId;
+      record.updatedAt = now;
+      if (pending.kind === 'welcome') {
+        record.welcomeClaimedAt = record.welcomeClaimedAt || now;
+        record.welcomeAmount = record.welcomeAmount || amount;
+        record.lastDailyClaimAt = record.lastDailyClaimAt || now;
+      } else {
+        record.lastDailyClaimAt = now;
+        record.dailyClaimCount = (cleanNumber(record.dailyClaimCount, 0) || 0) + 1;
+      }
+      delete record.pendingReservation;
+      await this.writeWallet(wallet, record);
+      await recordFaucetWalletEvent(this.env, {
+        id: reservationId,
+        wallet,
+        kind: pending.kind === 'welcome' ? 'faucet-welcome' : 'faucet-daily',
+        amount,
+        sig: signature,
+        label: pending.kind === 'welcome' ? '100 OST head start' : 'Daily 1 OST faucet',
+        ts: now
+      });
+      return json({ ok: true, state: publicFaucetState(record, now) }, 200, { 'cache-control': 'no-store' });
+    }
+
+    if (path === '/faucet/v1/cancel' && method === 'POST') {
+      let body;
+      try { body = await request.json(); } catch (_) { return json({ error: 'invalid_json' }, 400); }
+      const wallet = normalizeFaucetWallet(body && body.wallet);
+      const reservationId = cleanText(body && body.reservationId, 80);
+      if (!wallet || !reservationId) return json({ error: 'missing_fields', required: ['wallet', 'reservationId'] }, 400);
+      const record = await this.readWallet(wallet);
+      if (record.pendingReservation && record.pendingReservation.id === reservationId) {
+        delete record.pendingReservation;
+        record.updatedAt = Date.now();
+        await this.writeWallet(wallet, record);
+      }
+      return json({ ok: true, state: publicFaucetState(record) }, 200, { 'cache-control': 'no-store' });
+    }
+
+    return json({ error: 'unknown_faucet_endpoint', path }, 404);
+  }
+}
+
 // ── Top-Up helpers ───────────────────────────────────────────────────────────
 // Flexible value-based pricing is the source of truth. The legacy tier table is
 // kept only so older cached clients can still create valid intents.
@@ -586,6 +788,13 @@ export default {
       return handleMeshRequest(request, env, { path, method });
     }
 
+    // OST Faucet Gate — shared per-wallet faucet state + anti-double-claim reservations.
+    if (path.startsWith('/faucet/v1/')) {
+      if (!env.FAUCET_GATE) return json({ error: 'faucet_gate_not_configured' }, 503);
+      const id = env.FAUCET_GATE.idFromName('global');
+      return env.FAUCET_GATE.get(id).fetch(request);
+    }
+
     // ── GET /health ──────────────────────────────────────────────────────────
     if (path === '/health' || path === '/') {
       const btcResult = await fetchBtcPrice();
@@ -624,6 +833,10 @@ export default {
           'POST /topup/intent',
           'POST /topup/checkout',
           'POST /topup/claim',
+          'GET  /faucet/v1/state/:wallet',
+          'POST /faucet/v1/reserve',
+          'POST /faucet/v1/commit',
+          'POST /faucet/v1/cancel',
           'POST /topup/crypto/verify',
           'GET  /topup/crypto/check/:intent',
           'POST /ghost/v2/memory/save',

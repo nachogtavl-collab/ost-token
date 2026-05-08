@@ -27,6 +27,21 @@
 }
 .ost-dock::-webkit-scrollbar { display: none; }
 
+@media (min-width: 821px) {
+  body:not(.ost-focus-mode) .ost-breadcrumb {
+    display: none;
+  }
+
+  body:not(.ost-focus-mode) .ost-dock {
+    opacity: 0.88;
+  }
+
+  body:not(.ost-focus-mode) .ost-dock:hover,
+  body:not(.ost-focus-mode) .ost-dock:focus-within {
+    opacity: 1;
+  }
+}
+
 .ost-dock-btn {
   position: relative;
   display: flex;

@@ -2105,6 +2105,7 @@
   const OST_DAILY_DROP_AMOUNT = 1;
   const OST_DAILY_DROP_MS = 24 * 60 * 60 * 1000;
   const OST_REWARD_CLAIMS_STORAGE_KEY = 'ost.reward.claims.v1';
+  const OST_FAUCET_REMOTE_SYNC_MS = 30000;
   const OST_DEVNET_METRICS_REFRESH_MS = 120000;
   const LOCAL_WALLET_STORAGE_KEY = 'ost.localWallet.v1';
   const LOCAL_WALLET_BACKUP_EXPORTED_KEY = 'ost.localWallet.backupExportedAt';
@@ -2134,6 +2135,7 @@
     walletAddress: '',
     lastError: ''
   };
+  let faucetRemoteSync = { wallet: '', at: 0, inFlight: null };
   window.OST_CONFIG = OST_CONFIG;
 
   // Initialize Solana connection
@@ -2561,6 +2563,15 @@
       window.syncWalletJourneyUi();
     }
     syncOstDevnetMetrics();
+    setTimeout(function() {
+      syncRewardClaimsFromRemote(connectedWallet, { force: true }).then(function() {
+        try { refreshFaucetRewardUi(); } catch (_) {}
+      });
+      try {
+        if (typeof window.syncOstWalletEventsFromRemote === 'function') window.syncOstWalletEventsFromRemote();
+        if (typeof window.syncOstPredictionOrdersFromRemote === 'function') window.syncOstPredictionOrdersFromRemote();
+      } catch (_) {}
+    }, 0);
   }
 
   function disconnectConnectedWallet() {
@@ -3298,6 +3309,101 @@
     try { localStorage.setItem(OST_REWARD_CLAIMS_STORAGE_KEY, JSON.stringify(claims)); } catch (e) {}
   }
 
+  function applyRemoteRewardClaimState(walletAddress, remoteState) {
+    const walletKey = String(walletAddress || remoteState && remoteState.wallet || '').trim();
+    if (!walletKey || !remoteState) return getRewardClaimForWallet(walletKey);
+    const claims = loadRewardClaims();
+    const current = claims[walletKey] || {};
+    const next = Object.assign({}, current, {
+      walletAddress: walletKey,
+      totalClaimed: Math.max(Number(current.totalClaimed || 0), Number(remoteState.totalClaimed || 0)),
+      updatedAt: Math.max(Number(current.updatedAt || 0), Number(remoteState.updatedAt || 0), Date.now()),
+      lastSignature: remoteState.lastSignature || current.lastSignature || ''
+    });
+    if (remoteState.welcomeClaimed || Number(remoteState.welcomeClaimedAt || 0) > 0) {
+      next.welcomeClaimedAt = Number(remoteState.welcomeClaimedAt || current.welcomeClaimedAt || Date.now());
+      next.welcomeAmount = Number(remoteState.welcomeAmount || current.welcomeAmount || OST_WELCOME_DROP_AMOUNT);
+    }
+    if (Number(remoteState.lastDailyClaimAt || 0) > 0) next.lastDailyClaimAt = Number(remoteState.lastDailyClaimAt);
+    if (Number(remoteState.dailyClaimCount || 0) > Number(current.dailyClaimCount || 0)) next.dailyClaimCount = Number(remoteState.dailyClaimCount || 0);
+    if (remoteState.pendingReservation && Number(remoteState.pendingReservation.expiresAt || 0) > Date.now()) {
+      next.pendingReservation = remoteState.pendingReservation;
+    } else {
+      delete next.pendingReservation;
+    }
+    claims[walletKey] = next;
+    saveRewardClaims(claims);
+    return getRewardClaimForWallet(walletKey);
+  }
+
+  function currentRewardWalletAddress() {
+    try {
+      if (connectedWalletSession && connectedWalletSession.publicKey) return connectedWalletSession.publicKey.toBase58();
+      if (connectedWallet) return connectedWallet;
+      if (window.OST_WALLET && window.OST_WALLET.session && window.OST_WALLET.session.publicKey) return window.OST_WALLET.session.publicKey.toBase58();
+    } catch {}
+    return '';
+  }
+
+  async function faucetGateRequest(path, body) {
+    const base = getOstApiBase();
+    if (!base) return { ok: false, error: 'api_not_configured' };
+    const response = await fetch(base + path, {
+      method: body ? 'POST' : 'GET',
+      headers: body ? { 'content-type': 'application/json', accept: 'application/json' } : { accept: 'application/json' },
+      body: body ? JSON.stringify(body) : undefined,
+      cache: 'no-store'
+    });
+    const payload = await response.json().catch(function() { return {}; });
+    if (!response.ok) return Object.assign({ ok: false, httpStatus: response.status }, payload || {});
+    return payload || { ok: true };
+  }
+
+  function syncRewardClaimsFromRemote(walletAddress, options) {
+    const walletKey = String(walletAddress || currentRewardWalletAddress() || '').trim();
+    const settings = options || {};
+    const now = Date.now();
+    if (!walletKey || !getOstApiBase()) return Promise.resolve(false);
+    if (!settings.force && faucetRemoteSync.wallet === walletKey && faucetRemoteSync.inFlight) return faucetRemoteSync.inFlight;
+    if (!settings.force && faucetRemoteSync.wallet === walletKey && now - faucetRemoteSync.at < OST_FAUCET_REMOTE_SYNC_MS) return Promise.resolve(false);
+    faucetRemoteSync.wallet = walletKey;
+    faucetRemoteSync.inFlight = faucetGateRequest('/faucet/v1/state/' + encodeURIComponent(walletKey))
+      .then(function(payload) {
+        if (payload && payload.state) {
+          applyRemoteRewardClaimState(walletKey, payload.state);
+          faucetRemoteSync.at = Date.now();
+          try { window.dispatchEvent(new CustomEvent('ost:faucet-state-synced', { detail: payload.state })); } catch {}
+          return true;
+        }
+        return false;
+      })
+      .catch(function() { return false; })
+      .finally(function() { faucetRemoteSync.inFlight = null; });
+    return faucetRemoteSync.inFlight;
+  }
+
+  async function reserveRemoteFaucetClaim(walletAddress) {
+    const payload = await faucetGateRequest('/faucet/v1/reserve', { wallet: walletAddress });
+    if (payload && payload.state) applyRemoteRewardClaimState(walletAddress, payload.state);
+    return payload;
+  }
+
+  async function commitRemoteFaucetClaim(walletAddress, reservationId, signature, amount) {
+    const payload = await faucetGateRequest('/faucet/v1/commit', {
+      wallet: walletAddress,
+      reservationId,
+      signature,
+      amount
+    });
+    if (payload && payload.state) applyRemoteRewardClaimState(walletAddress, payload.state);
+    return payload;
+  }
+
+  function cancelRemoteFaucetClaim(walletAddress, reservationId) {
+    if (!walletAddress || !reservationId) return Promise.resolve(false);
+    return faucetGateRequest('/faucet/v1/cancel', { wallet: walletAddress, reservationId }).catch(function() { return false; });
+  }
+
   function getRewardClaimForWallet(walletAddress) {
     const claims = loadRewardClaims();
     const key = String(walletAddress || '').trim();
@@ -3305,6 +3411,9 @@
     const welcomeClaimedAt = Number(claim.welcomeClaimedAt || 0);
     const lastDailyClaimAt = Number(claim.lastDailyClaimAt || welcomeClaimedAt || 0);
     const nextDailyClaimAt = welcomeClaimedAt ? lastDailyClaimAt + OST_DAILY_DROP_MS : 0;
+    const pendingReservation = claim.pendingReservation && Number(claim.pendingReservation.expiresAt || 0) > Date.now()
+      ? claim.pendingReservation
+      : null;
     return {
       key,
       raw: claim,
@@ -3312,6 +3421,7 @@
       welcomeClaimedAt,
       lastDailyClaimAt,
       nextDailyClaimAt,
+      pendingReservation,
       dailyReady: welcomeClaimedAt > 0 && Date.now() >= nextDailyClaimAt,
       totalClaimed: Number(claim.totalClaimed || 0),
       dailyClaimCount: Number(claim.dailyClaimCount || 0)
@@ -3364,7 +3474,14 @@
       return;
     }
     const walletAddress = connectedWalletSession.publicKey.toBase58();
+    syncRewardClaimsFromRemote(walletAddress);
     const state = getRewardClaimForWallet(walletAddress);
+    if (state.pendingReservation) {
+      faucetBtn.disabled = true;
+      label.textContent = 'Claim Syncing...';
+      if (faucetStatus) faucetStatus.textContent = 'This wallet already has a faucet claim syncing. It will unlock automatically if the transaction does not finish.';
+      return;
+    }
     if (!state.welcomeClaimed) {
       faucetBtn.disabled = false;
       label.textContent = 'Claim 100 OST Head Start';
@@ -3391,10 +3508,27 @@
 
     const claimer = connectedWalletSession.publicKey;
     const walletAddress = claimer.toBase58();
+    await syncRewardClaimsFromRemote(walletAddress, { force: true });
     const state = getRewardClaimForWallet(walletAddress);
     let kind = 'welcome';
     let amount = OST_WELCOME_DROP_AMOUNT;
-    if (state.welcomeClaimed) {
+    let reservation = null;
+    if (getOstApiBase()) {
+      const gate = await reserveRemoteFaucetClaim(walletAddress);
+      if (!gate || gate.ok === false) {
+        if (gate && gate.error === 'cooldown') {
+          const remoteState = getRewardClaimForWallet(walletAddress);
+          return { claimed: false, cooldown: true, nextDailyClaimAt: remoteState.nextDailyClaimAt, balance: await getOstBalanceForAddress(claimer) };
+        }
+        if (gate && gate.error === 'claim_in_progress') {
+          throw new Error('A faucet claim is already syncing for this wallet. Wait a minute and refresh on any device.');
+        }
+        throw new Error('Faucet gate is temporarily unavailable. Claims are paused to prevent duplicate farming.');
+      }
+      reservation = gate;
+      kind = gate.kind || kind;
+      amount = Number(gate.amount || amount);
+    } else if (state.welcomeClaimed) {
       if (!state.dailyReady) {
         return { claimed: false, cooldown: true, nextDailyClaimAt: state.nextDailyClaimAt, balance: await getOstBalanceForAddress(claimer) };
       }
@@ -3413,10 +3547,29 @@
       throw new Error('Reward vault is being refilled. Try again in a moment.');
     }
 
-    const memo = JSON.stringify({ k: 'ost-new-here', kind, amount, wallet: walletAddress, t: Date.now() });
-    const payout = await window.OST_RESCUE.payoutOst(claimer, amount, memo);
+    let payout = null;
+    try {
+      const memo = JSON.stringify({
+        k: 'ost-new-here',
+        kind,
+        amount,
+        wallet: walletAddress,
+        reservation: reservation && reservation.reservationId || '',
+        t: Date.now()
+      });
+      payout = await window.OST_RESCUE.payoutOst(claimer, amount, memo);
+    } catch (error) {
+      if (reservation && reservation.reservationId) cancelRemoteFaucetClaim(walletAddress, reservation.reservationId);
+      throw error;
+    }
     const actualAmount = Number(payout && payout.ost || amount);
     writeRewardClaim(walletAddress, { kind, amount: actualAmount, signature: payout && payout.sig });
+    if (reservation && reservation.reservationId) {
+      const committed = await commitRemoteFaucetClaim(walletAddress, reservation.reservationId, payout && payout.sig, actualAmount);
+      if (!committed || committed.ok === false) {
+        console.warn('[OST] Faucet gate commit pending', committed);
+      }
+    }
     return { claimed: true, rewardKind: kind, amount: actualAmount, signature: payout && payout.sig, balance: await getOstBalanceForAddress(claimer) };
   }
 
@@ -5513,6 +5666,22 @@
         const humanKind = faucetResult.rewardKind === 'daily' ? 'daily manual drop' : 'head start';
         if (faucetStatus) faucetStatus.textContent = claimedAmount.toFixed(2) + ' OST ' + humanKind + ' claimed. Wallet balance: ' + ostBalance.toFixed(2) + ' OST.';
         toast('ðŸŽ‰', '+' + claimedAmount.toFixed(2) + ' OST ' + humanKind + ' claimed');
+        try {
+          if (typeof window.recordOstSnapshot === 'function') {
+            const conn = getSolanaConnection();
+            const solBalance = conn ? (await conn.getBalance(connectedWalletSession.publicKey)) / solanaWeb3.LAMPORTS_PER_SOL : 0;
+            window.recordOstSnapshot({
+              ts: Date.now(),
+              ostBalance,
+              solBalance,
+              kind: faucetResult.rewardKind === 'daily' ? 'faucet-daily' : 'faucet-welcome',
+              amount: claimedAmount,
+              sig: faucetResult.signature || '',
+              source: 'faucet-gate'
+            });
+          }
+          if (typeof window.syncOstWalletEventsFromRemote === 'function') window.syncOstWalletEventsFromRemote();
+        } catch (_) {}
         launchConfetti();
         updateWalletBalance(connectedWallet);
         syncOstDevnetMetrics({ force: true });
@@ -5530,6 +5699,9 @@
         if (isTreasuryEmpty) {
           if (faucetStatus) faucetStatus.textContent = 'The OST reward vault is being refilled. Please try the claim again soon.';
           toast('âš ï¸', 'OST reward vault is being refilled.');
+        } else if (/faucet gate|claim is already syncing|duplicate farming/i.test(errorText)) {
+          if (faucetStatus) faucetStatus.textContent = errorText;
+          toast('âš ï¸', errorText);
         } else if (/fee vault|vault keypair|OST_RESCUE|still loading/i.test(errorText)) {
           if (faucetStatus) faucetStatus.textContent = 'The OST fee vault is still loading. Please wait a moment and click claim again.';
           toast('âš ï¸', 'OST fee vault is still loading.');
@@ -5549,6 +5721,9 @@
   }
 
   window.runOstFaucetFlow = runOstFaucetFlow;
+  window.syncOstFaucetStateFromRemote = function(walletAddress) {
+    return syncRewardClaimsFromRemote(walletAddress || currentRewardWalletAddress(), { force: true });
+  };
 
   // Expose primitives needed by wallet-extras.js (real send/receive/portfolio)
   window.OST_WALLET = {
@@ -5579,7 +5754,10 @@
     });
     refreshFaucetRewardUi();
     setInterval(refreshFaucetRewardUi, 1000);
-    window.addEventListener('ost:wallet-changed', refreshFaucetRewardUi);
+    window.addEventListener('ost:wallet-changed', function() {
+      syncRewardClaimsFromRemote(currentRewardWalletAddress(), { force: true }).then(refreshFaucetRewardUi);
+    });
+    window.addEventListener('ost:faucet-state-synced', refreshFaucetRewardUi);
   }
 
   /* ---------- PAY ANY LINK â€” removed, merged into Browser Mockup above ---------- */
