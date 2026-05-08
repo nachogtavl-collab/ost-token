@@ -47,28 +47,10 @@
   function unblockInitialMobileAccess() {
     if (!isMobileShell()) return;
     try {
-      var prefs = JSON.parse(localStorage.getItem('ost_prefs') || '{}');
-      localStorage.setItem('ost_prefs', JSON.stringify({
-        lang: prefs.lang || document.documentElement.getAttribute('data-lang') || 'en',
-        currency: prefs.currency || window.__ostCurrency || 'USD'
-      }));
-      sessionStorage.setItem('ost.welcome.seen.session', '1');
       localStorage.setItem('ost.tour.completed', '1');
       localStorage.setItem('ost.compartments.guideSeen.v1', '1');
       localStorage.setItem('ost.compartments.v1', JSON.stringify(Object.assign({}, JSON.parse(localStorage.getItem('ost.compartments.v1') || '{}'), { focusMode: false })));
     } catch (_) {}
-
-    var welcome = document.getElementById('welcomeOverlay');
-    if (welcome) {
-      welcome.classList.add('hidden');
-      welcome.setAttribute('aria-hidden', 'true');
-      welcome.style.display = 'none';
-      welcome.style.visibility = 'hidden';
-      welcome.style.opacity = '0';
-      welcome.style.pointerEvents = 'none';
-      welcome.style.position = 'static';
-      welcome.style.zIndex = '-1';
-    }
 
     document.querySelectorAll('.ost-guide-overlay, .ost-tour.is-open').forEach(function (overlay) {
       overlay.classList.remove('is-open');
@@ -186,9 +168,7 @@
       trade.classList.toggle('ost-mobile-fab', mobile);
       trade.classList.toggle('ost-mobile-fab--trade', mobile);
       if (!trade.getAttribute('aria-label')) trade.setAttribute('aria-label', 'Open trade ticket');
-      if (originalTradeLabel == null) originalTradeLabel = trade.textContent;
-      if (mobile) trade.textContent = 'Trade';
-      else if (originalTradeLabel) trade.textContent = originalTradeLabel;
+      if (originalTradeLabel == null) originalTradeLabel = trade.innerHTML;
     }
   }
 

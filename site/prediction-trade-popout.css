@@ -8,14 +8,14 @@
 /* The aside is now a popable floating panel — hidden by default. */
 .prediction-trade-desk.ost-tradepop {
   position: fixed;
-  right: 24px;
-  bottom: 24px;
+  left: 24px;
+  right: auto;
+  bottom: 96px;
   top: auto;
-  left: auto;
   width: min(380px, calc(100vw - 32px));
-  max-height: calc(100vh - 48px);
+  max-height: calc(100vh - 132px);
   overflow-y: auto;
-  z-index: 2147483645; /* one below the market modal */
+  z-index: 999300;
   display: none;
   border-radius: 18px;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(108, 230, 164, 0.18);
@@ -41,6 +41,7 @@ body.ost-modal-open .prediction-trade-desk.ost-tradepop { display: none !importa
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   cursor: grab;
   user-select: none;
+  touch-action: none;
 }
 .ost-tradepop__header:active { cursor: grabbing; }
 .ost-tradepop__grip {
@@ -71,12 +72,13 @@ body.ost-modal-open .prediction-trade-desk.ost-tradepop { display: none !importa
 }
 .ost-tradepop__close:hover { background: rgba(255, 124, 138, 0.25); transform: rotate(90deg); }
 
-/* Floating launcher button (fixed bottom-right of the viewport) */
+/* Floating launcher button. Lives in the left lane so Ghost AI owns bottom-right. */
 .ost-tradepop__launcher {
   position: fixed;
-  right: 22px;
+  left: 22px;
+  right: auto;
   bottom: 22px;
-  z-index: 2147483644;
+  z-index: 999290;
   appearance: none;
   border: 0;
   cursor: pointer;
@@ -89,8 +91,13 @@ body.ost-modal-open .prediction-trade-desk.ost-tradepop { display: none !importa
   letter-spacing: 0.04em;
   box-shadow: 0 12px 28px rgba(52, 199, 129, 0.35);
   transition: transform 120ms ease, filter 120ms ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 .ost-tradepop__launcher:hover { transform: translateY(-1px); filter: brightness(1.05); }
+.ost-tradepop__icon { flex: 0 0 auto; }
+.ost-tradepop__text { white-space: nowrap; }
 .ost-tradepop__launcher.is-active {
   background: linear-gradient(135deg, #ffd980, #f5b637);
   box-shadow: 0 12px 28px rgba(245, 182, 55, 0.35);
@@ -118,9 +125,22 @@ body.ost-modal-open .prediction-trade-desk.ost-tradepop { display: none !importa
 @media (max-width: 720px) {
   .prediction-trade-desk.ost-tradepop {
     right: 8px;
-    bottom: 8px;
+    bottom: calc(var(--ost-mobile-dock-h, 78px) + env(safe-area-inset-bottom) + 84px);
     left: 8px;
     width: auto;
+    max-height: calc(100dvh - var(--ost-mobile-dock-h, 78px) - env(safe-area-inset-bottom) - 112px);
   }
-  .ost-tradepop__launcher { right: 12px; bottom: 12px; padding: 10px 14px; font-size: 12px; }
+  .ost-tradepop__launcher {
+    left: max(14px, env(safe-area-inset-left));
+    right: auto;
+    bottom: calc(var(--ost-mobile-dock-h, 78px) + env(safe-area-inset-bottom) + 18px);
+    padding: 0 14px;
+    height: var(--ost-mobile-fab-size, 54px);
+    min-width: 86px;
+    font-size: 12px;
+    border-radius: 18px;
+  }
+  .ost-tradepop__text { font-size: 0; }
+  .ost-tradepop__text::after { content: 'Trade'; font-size: 12px; }
+  .ost-tradepop__launcher.is-active .ost-tradepop__text::after { content: 'Hide'; }
 }

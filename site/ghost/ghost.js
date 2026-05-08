@@ -13,8 +13,8 @@ import { GhostSignal }     from './signal.js?v=1';
 
 const STYLE_HREF = (() => {
   const el = document.querySelector('script[src*="ghost/ghost.js"]');
-  if (!el) return 'ghost/ghost.css?v=1';
-  return el.src.replace(/ghost\.js(\?.*)?$/, 'ghost.css?v=1');
+  if (!el) return 'ghost/ghost.css?v=2';
+  return el.src.replace(/ghost\.js(\?.*)?$/, 'ghost.css?v=2');
 })();
 
 function injectStyles() {
@@ -33,8 +33,19 @@ function buildDOM() {
   const trigger = document.createElement('button');
   trigger.id = 'ghost-summon-trigger';
   trigger.type = 'button';
-  trigger.setAttribute('aria-label', 'Summon Ghost');
-  trigger.title = 'Summon Ghost';
+  trigger.setAttribute('aria-label', 'Open Ghost AI assistant');
+  trigger.title = 'Open Ghost AI assistant';
+  trigger.innerHTML = `
+    <span class="ghost-trigger__orb" aria-hidden="true">
+      <span class="ghost-trigger__core"></span>
+      <span class="ghost-trigger__ring"></span>
+    </span>
+    <span class="ghost-trigger__copy">
+      <strong>Ghost AI</strong>
+      <span>Ask OST</span>
+    </span>
+    <span class="ghost-trigger__status" aria-hidden="true"></span>
+  `;
   document.body.appendChild(trigger);
 
   // Full-viewport circle
@@ -116,7 +127,9 @@ class SummoningCircle {
   }
 
   open() {
+    document.body.classList.add('ost-ghost-open');
     this.root.classList.add('is-open');
+    window.dispatchEvent(new CustomEvent('ghost:open'));
     this.orb.start();
     this.orb.setState({ intensity: 0.4 });
     setTimeout(() => this.input.focus(), 120);
@@ -125,6 +138,8 @@ class SummoningCircle {
 
   close() {
     this.root.classList.remove('is-open');
+    document.body.classList.remove('ost-ghost-open');
+    window.dispatchEvent(new CustomEvent('ghost:close'));
     this.orb.setState({ intensity: 0, listen: 0, speak: 0 });
     setTimeout(() => this.orb.stop(), 800);
   }

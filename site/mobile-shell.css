@@ -8,6 +8,7 @@
 :root {
   --ost-mobile-dock-h: 78px;
   --ost-mobile-fab-size: 54px;
+  --ost-mobile-ghost-w: clamp(132px, 38vw, 164px);
   --ost-mobile-gap: 12px;
   --ost-mobile-bg: #050914;
   --ost-mobile-panel: rgba(8, 14, 26, 0.94);
@@ -54,7 +55,6 @@
     touch-action: manipulation;
   }
 
-  .welcome-overlay,
   .ost-guide-overlay,
   .ost-tour {
     display: none !important;
@@ -66,6 +66,17 @@
   body.ost-mobile-shell.ost-focus-mode,
   body.ost-mobile-shell {
     overflow-y: auto !important;
+  }
+
+  body.ost-mobile-shell .welcome-overlay:not(.hidden) {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    position: fixed !important;
+    z-index: 1000500 !important;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   body.ost-mobile-shell .ost-section-hidden,
@@ -539,12 +550,13 @@
 
   #ghost-summon-trigger {
     right: max(14px, env(safe-area-inset-right)) !important;
-    width: var(--ost-mobile-fab-size) !important;
+    width: var(--ost-mobile-ghost-w) !important;
     height: var(--ost-mobile-fab-size) !important;
+    border-radius: 18px !important;
   }
 
   #ost-mesh-trigger {
-    right: calc(max(14px, env(safe-area-inset-right)) + var(--ost-mobile-fab-size) + 12px) !important;
+    right: calc(max(14px, env(safe-area-inset-right)) + var(--ost-mobile-ghost-w) + 12px) !important;
     width: var(--ost-mobile-fab-size) !important;
     height: var(--ost-mobile-fab-size) !important;
   }

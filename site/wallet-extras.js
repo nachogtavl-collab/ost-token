@@ -1517,7 +1517,7 @@
   // ── Currency helpers ──────────────────────────────────────────────────
   function getCurrencySymbol() {
     var cur = (window.__ostCurrency || 'USD').toUpperCase();
-    return { EUR: '€', GBP: '£', CAD: 'C$', AUD: 'A$', MXN: 'MX$', JPY: '¥', BTC: '₿', ETH: 'Ξ' }[cur] || '$';
+    return { EUR: '€', GBP: '£', CAD: 'C$', AUD: 'A$', MXN: 'MX$', BRL: 'R$', JPY: '¥', CNY: '¥', RUB: '₽', INR: '₹', KRW: '₩', TRY: '₺', AED: 'د.إ', SAR: 'SAR ', BTC: '₿', ETH: 'Ξ' }[cur] || '$';
   }
   function getCurrencyRate() {
     // priceUsd(cur) returns USD per 1 unit of cur (e.g. EUR→1.09).

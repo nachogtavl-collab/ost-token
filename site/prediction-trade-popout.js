@@ -37,6 +37,36 @@
     try { localStorage.setItem(POS_KEY, JSON.stringify(cur)); } catch (_) {}
   }
 
+  function rectsOverlap(a, b, pad) {
+    if (!a || !b) return false;
+    pad = pad || 0;
+    return !(a.right + pad < b.left || b.right + pad < a.left || a.bottom + pad < b.top || b.bottom + pad < a.top);
+  }
+
+  function placeSafely(desk) {
+    if (!desk || !desk.classList.contains('is-open')) return;
+    var narrow = false;
+    try { narrow = window.matchMedia && window.matchMedia('(max-width: 720px)').matches; } catch (_) {}
+    if (narrow) {
+      desk.style.left = '';
+      desk.style.top = '';
+      desk.style.right = '';
+      desk.style.bottom = '';
+      return;
+    }
+    var orb = document.getElementById('ghost-summon-trigger');
+    if (!orb) return;
+    var deskRect = desk.getBoundingClientRect();
+    var orbRect = orb.getBoundingClientRect();
+    if (rectsOverlap(deskRect, orbRect, 18)) {
+      desk.style.left = '24px';
+      desk.style.top = 'auto';
+      desk.style.right = 'auto';
+      desk.style.bottom = '96px';
+      writePos({ left: null, top: null });
+    }
+  }
+
   function ensurePopout() {
     var desk = document.getElementById('predictionTradeDesk');
     if (!desk) return null;
@@ -66,27 +96,30 @@
     }
     if (pos.open) desk.classList.add('is-open');
 
-    // Drag.
+    // Drag with pointer support, including touch screens.
     var dragging = false, sx = 0, sy = 0, ox = 0, oy = 0;
-    header.addEventListener('mousedown', function (ev) {
+    header.addEventListener('pointerdown', function (ev) {
       if (ev.target.closest('.ost-tradepop__close')) return;
+      if (ev.button != null && ev.button !== 0) return;
       dragging = true;
       var rect = desk.getBoundingClientRect();
       sx = ev.clientX; sy = ev.clientY;
       ox = rect.left; oy = rect.top;
       document.body.style.userSelect = 'none';
+      if (header.setPointerCapture && ev.pointerId != null) header.setPointerCapture(ev.pointerId);
       ev.preventDefault();
     });
-    document.addEventListener('mousemove', function (ev) {
+    document.addEventListener('pointermove', function (ev) {
       if (!dragging) return;
-      var nx = Math.max(8, Math.min(window.innerWidth - 60, ox + (ev.clientX - sx)));
-      var ny = Math.max(8, Math.min(window.innerHeight - 60, oy + (ev.clientY - sy)));
+      var rect = desk.getBoundingClientRect();
+      var nx = Math.max(8, Math.min(window.innerWidth - Math.min(120, rect.width), ox + (ev.clientX - sx)));
+      var ny = Math.max(8, Math.min(window.innerHeight - 80, oy + (ev.clientY - sy)));
       desk.style.left = nx + 'px';
       desk.style.top = ny + 'px';
       desk.style.right = 'auto';
       desk.style.bottom = 'auto';
     });
-    document.addEventListener('mouseup', function () {
+    document.addEventListener('pointerup', function () {
       if (!dragging) return;
       dragging = false;
       document.body.style.userSelect = '';
@@ -104,12 +137,15 @@
     if (!desk) return;
     if (document.body.classList.contains('ost-modal-open')) return; // don't fight the modal
     desk.classList.add('is-open');
+    document.body.classList.add('ost-tradepop-open');
     writePos({ open: true });
     syncLauncher(true);
+    requestAnimationFrame(function () { placeSafely(desk); });
   }
   function close() {
     var desk = document.getElementById('predictionTradeDesk');
     if (desk) desk.classList.remove('is-open');
+    document.body.classList.remove('ost-tradepop-open');
     writePos({ open: false });
     syncLauncher(false);
   }
@@ -119,7 +155,7 @@
   }
 
   // --------------------------------------------------------------------------
-  // Launcher button — injected into the prediction section header.
+  // Launcher button — fixed in the trade lane, outside page stacking contexts.
   // --------------------------------------------------------------------------
   function ensureLauncher() {
     if (document.getElementById('ostTradePopLauncher')) return;
@@ -134,7 +170,7 @@
     btn.id = 'ostTradePopLauncher';
     btn.type = 'button';
     btn.className = 'ost-tradepop__launcher';
-    btn.innerHTML = '<span aria-hidden="true">🎯</span> Trade ticket';
+    btn.innerHTML = '<span class="ost-tradepop__icon" aria-hidden="true">🎯</span><span class="ost-tradepop__text">Trade ticket</span>';
     btn.title = 'Open the OST trade ticket as a floating, draggable panel';
     btn.addEventListener('click', toggle);
     document.body.appendChild(btn);
@@ -145,8 +181,8 @@
     if (!btn) return;
     btn.classList.toggle('is-active', !!open);
     btn.innerHTML = open
-      ? '<span aria-hidden="true">▾</span> Hide ticket'
-      : '<span aria-hidden="true">🎯</span> Trade ticket';
+      ? '<span class="ost-tradepop__icon" aria-hidden="true">▾</span><span class="ost-tradepop__text">Hide ticket</span>'
+      : '<span class="ost-tradepop__icon" aria-hidden="true">🎯</span><span class="ost-tradepop__text">Trade ticket</span>';
   }
 
   // --------------------------------------------------------------------------
@@ -165,6 +201,10 @@
     var btn = document.getElementById('ostTradePopLauncher');
     if (btn) btn.style.display = '';
     if (prevOpenState) open();
+  });
+
+  window.addEventListener('ghost:open', function () {
+    close();
   });
 
   // --------------------------------------------------------------------------
@@ -187,8 +227,13 @@
   // Boot
   // --------------------------------------------------------------------------
   function boot() {
-    ensurePopout();
+    var desk = ensurePopout();
     ensureLauncher();
+    if (desk && desk.classList.contains('is-open')) {
+      document.body.classList.add('ost-tradepop-open');
+      syncLauncher(true);
+      requestAnimationFrame(function () { placeSafely(desk); });
+    }
     watchTradeAction();
   }
 
