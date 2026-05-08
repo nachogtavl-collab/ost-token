@@ -23,8 +23,27 @@
     { id: 'offline',     label: 'Offline',       icon: '📡', desc: 'NFC, QR, Bluetooth — pay without internet' },
     { id: 'citizens',    label: 'Citizens',      icon: '🌍', desc: 'Global map · 15 countries · unbanked rails' },
     { id: 'censorship',  label: 'Free Press',    icon: '📰', desc: 'Live news + censorship awareness' },
-    { id: 'spacex',      label: 'SpaceX',        icon: '🚀', desc: 'Journey to space · interplanetary roadmap' }
+    { id: 'spacex',      label: 'SpaceX',        icon: '🚀', desc: 'Journey to space · interplanetary roadmap' },
+    { id: 'about',       label: 'Mission',       icon: '🎯', desc: 'OST purpose and three pillars' },
+    { id: 'story',       label: 'Story',         icon: '📖', desc: 'The real timeline behind OST' },
+    { id: 'roadmap',     label: 'Roadmap',       icon: '🧭', desc: 'Progress, launch checklist, and next milestones' },
+    { id: 'build',       label: 'Build',         icon: '🛠️', desc: 'Developers, creators, bounties, and contribution lanes' },
+    { id: 'launchpad',   label: 'Launchpad',     icon: '🚀', desc: 'Create and discover OST-native coins' },
+    { id: 'survival',    label: 'Survival',      icon: '⚠️', desc: 'Offline and post-disaster bearer cash' },
+    { id: 'quantum-realm', label: 'Quantum',     icon: '⚛️', desc: 'Quantum-resistant and future-facing research' },
+    { id: 'legacy',      label: 'Legacy',        icon: '🧬', desc: 'Extinction-proof long-term preservation' },
+    { id: 'transparency', label: 'Verify',       icon: '🔍', desc: 'Contracts, repo, treasury, and public proof' }
   ];
+
+  function isMobileViewport() {
+    try {
+      if (window.matchMedia && window.matchMedia('(max-width: 820px), (pointer: coarse) and (max-width: 1024px)').matches) return true;
+    } catch (e) {}
+    var widths = [window.innerWidth || 9999];
+    if (window.screen && window.screen.width) widths.push(window.screen.width);
+    if (window.visualViewport && window.visualViewport.width) widths.push(window.visualViewport.width);
+    return Math.min.apply(Math, widths) <= 820;
+  }
 
   function $(s, root) { return (root || document).querySelector(s); }
   function $$(s, root) { return Array.prototype.slice.call((root || document).querySelectorAll(s)); }
@@ -43,6 +62,7 @@
     settings: loadSettings()
   };
   if (state.settings.focusMode === false) state.focusMode = false;
+  if (isMobileViewport()) state.focusMode = false;
 
   // -------------------------------------------------------------- Build dock
   var dock, breadcrumb, breadcrumbIcon, breadcrumbLabel, breadcrumbToggle;
@@ -113,6 +133,11 @@
   }
 
   function applyFocusClasses() {
+    if (isMobileViewport() && state.focusMode) {
+      state.focusMode = false;
+      state.settings.focusMode = false;
+      saveSettings(state.settings);
+    }
     var present = SECTIONS.map(function (s) { return s.id; });
     SECTIONS.forEach(function (s) {
       var el = getSectionEl(s.id);
@@ -180,6 +205,13 @@
   }
 
   function toggleFocusMode() {
+    if (isMobileViewport()) {
+      state.focusMode = false;
+      state.settings.focusMode = false;
+      saveSettings(state.settings);
+      applyFocusClasses();
+      return;
+    }
     state.focusMode = !state.focusMode;
     state.settings.focusMode = state.focusMode;
     saveSettings(state.settings);
@@ -253,6 +285,10 @@
 
   // -------------------------------------------------------------- First-visit guide
   function showGuide() {
+    if (isMobileViewport()) {
+      try { localStorage.setItem(GUIDE_KEY, '1'); } catch (e) {}
+      return;
+    }
     if (localStorage.getItem(GUIDE_KEY)) return;
     var pages = [
       {
@@ -321,6 +357,12 @@
 
   // -------------------------------------------------------------- Boot
   function boot() {
+    if (isMobileViewport()) {
+      state.focusMode = false;
+      state.settings.focusMode = false;
+      saveSettings(state.settings);
+    }
+
     // Default to the mobile-friendly Home launcher unless the URL asks for a section.
     var hash = (location.hash || '').replace(/^#/, '').split('?')[0].split('/')[0];
     var def = SECTIONS.find(function (s) { return s.id === hash; });
@@ -338,6 +380,9 @@
 
     // React to manual hash changes (back/forward buttons)
     window.addEventListener('hashchange', syncFromHash);
+    window.addEventListener('resize', function () {
+      applyFocusClasses();
+    });
   }
 
   if (document.readyState === 'loading') {
@@ -350,6 +395,12 @@
   window.OST_COMPARTMENTS = {
     activate: activateSection,
     toggleFocus: toggleFocusMode,
+    showAll: function () {
+      state.focusMode = false;
+      state.settings.focusMode = false;
+      saveSettings(state.settings);
+      applyFocusClasses();
+    },
     sections: SECTIONS,
     get active() { return state.active; },
     get focusMode() { return state.focusMode; }

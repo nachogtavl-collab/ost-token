@@ -2,6 +2,16 @@
 (function () {
   'use strict';
 
+  function isPhoneLike() {
+    try {
+      if (window.matchMedia && window.matchMedia('(max-width: 820px), (pointer: coarse) and (max-width: 1024px)').matches) return true;
+    } catch (e) {}
+    var widths = [window.innerWidth || 9999];
+    if (window.screen && window.screen.width) widths.push(window.screen.width);
+    if (window.visualViewport && window.visualViewport.width) widths.push(window.visualViewport.width);
+    return Math.min.apply(Math, widths) <= 820;
+  }
+
   // ------------------ Mobile request-desktop toggle ------------------------
   function mountMobileBar() {
     if (document.getElementById('ost-mobile-bar')) return;
@@ -37,9 +47,6 @@
       bar.querySelectorAll('button[data-mode]').forEach(function (b) {
         b.classList.toggle('is-active', b.getAttribute('data-mode') === mode);
       });
-    }
-    function isPhoneLike() {
-      return window.matchMedia && window.matchMedia('(max-width: 820px), (pointer: coarse) and (max-width: 1024px)').matches;
     }
   }
 
@@ -220,6 +227,10 @@
   }
 
   function maybeAutoStart() {
+    if (isPhoneLike()) {
+      try { localStorage.setItem('ost.tour.completed', '1'); } catch (e) {}
+      return;
+    }
     if (localStorage.getItem('ost.tour.completed')) return;
     // Wait for the welcome overlay (and any other auto-popups) to be closed
     // before starting the tour, so they don't stack on top of each other.
@@ -236,6 +247,7 @@
     var tries = 0;
     var iv = setInterval(function () {
       tries++;
+      if (localStorage.getItem('ost.tour.completed')) { clearInterval(iv); return; }
       if (!popupVisible()) { clearInterval(iv); startTour(); return; }
       if (tries > 120) { clearInterval(iv); } // give up after ~60s
     }, 500);

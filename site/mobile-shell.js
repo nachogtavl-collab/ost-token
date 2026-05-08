@@ -21,6 +21,44 @@
     if (isMobileShell()) meta.setAttribute('content', MOBILE_VIEWPORT);
   }
 
+  function unblockInitialMobileAccess() {
+    if (!isMobileShell()) return;
+    try {
+      var prefs = JSON.parse(localStorage.getItem('ost_prefs') || '{}');
+      localStorage.setItem('ost_prefs', JSON.stringify({
+        lang: prefs.lang || document.documentElement.getAttribute('data-lang') || 'en',
+        currency: prefs.currency || window.__ostCurrency || 'USD'
+      }));
+      sessionStorage.setItem('ost.welcome.seen.session', '1');
+      localStorage.setItem('ost.tour.completed', '1');
+      localStorage.setItem('ost.compartments.guideSeen.v1', '1');
+      localStorage.setItem('ost.compartments.v1', JSON.stringify(Object.assign({}, JSON.parse(localStorage.getItem('ost.compartments.v1') || '{}'), { focusMode: false })));
+    } catch (_) {}
+
+    var welcome = document.getElementById('welcomeOverlay');
+    if (welcome) {
+      welcome.classList.add('hidden');
+      welcome.setAttribute('aria-hidden', 'true');
+      welcome.style.display = 'none';
+      welcome.style.pointerEvents = 'none';
+    }
+
+    document.querySelectorAll('.ost-guide-overlay, .ost-tour.is-open').forEach(function (overlay) {
+      overlay.classList.remove('is-open');
+      overlay.style.display = 'none';
+      overlay.setAttribute('aria-hidden', 'true');
+    });
+
+    document.querySelectorAll('.ost-section-hidden').forEach(function (section) {
+      section.classList.remove('ost-section-hidden');
+    });
+    if (window.OST_COMPARTMENTS && typeof window.OST_COMPARTMENTS.showAll === 'function') {
+      window.OST_COMPARTMENTS.showAll();
+    } else if (window.OST_COMPARTMENTS && window.OST_COMPARTMENTS.focusMode && typeof window.OST_COMPARTMENTS.toggleFocus === 'function') {
+      window.OST_COMPARTMENTS.toggleFocus();
+    }
+  }
+
   function activateSection(id, tab) {
     if (!id) return;
     if (window.OST_COMPARTMENTS && typeof window.OST_COMPARTMENTS.activate === 'function') {
@@ -96,6 +134,7 @@
         if (localStorage.getItem('ost.viewport') === 'desktop') localStorage.setItem('ost.viewport', 'mobile');
       } catch (_) {}
       setViewport();
+      unblockInitialMobileAccess();
     }
 
     var mesh = document.querySelector('#ost-mesh-trigger');
@@ -124,6 +163,7 @@
   }
 
   function boot() {
+    unblockInitialMobileAccess();
     mountMobileHome();
     tuneFloatingControls();
     window.addEventListener('resize', function () {

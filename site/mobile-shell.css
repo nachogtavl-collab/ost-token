@@ -54,6 +54,29 @@
     touch-action: manipulation;
   }
 
+  .welcome-overlay,
+  .ost-guide-overlay,
+  .ost-tour {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
+  body.ost-mobile-shell.ost-focus-mode,
+  body.ost-mobile-shell {
+    overflow-y: auto !important;
+  }
+
+  body.ost-mobile-shell .ost-section-hidden,
+  body.ost-mobile-shell .ost-section-active,
+  body.ost-mobile-shell section[id] {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
   body.ost-mobile-shell * {
     min-width: 0;
     max-width: 100%;

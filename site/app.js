@@ -12129,6 +12129,16 @@
       }
     }
 
+    function isMobileWelcomeBypass() {
+      try {
+        if (window.matchMedia && window.matchMedia('(max-width: 820px), (pointer: coarse) and (max-width: 1024px)').matches) return true;
+      } catch (e) {}
+      var widths = [window.innerWidth || 9999];
+      if (window.screen && window.screen.width) widths.push(window.screen.width);
+      if (window.visualViewport && window.visualViewport.width) widths.push(window.visualViewport.width);
+      return Math.min.apply(Math, widths) <= 820;
+    }
+
     function setSelectedButton(selector, attribute, value, activeClass) {
       overlay.querySelectorAll(selector).forEach(function(btn) {
         btn.classList.toggle(activeClass, btn.getAttribute(attribute) === value);
@@ -12168,6 +12178,18 @@
 
     setSelectedButton('.wel-lang-btn', 'data-lang', selectedLang, 'wel-lang-active');
     setSelectedButton('.wel-curr-btn', 'data-curr', selectedCurrency, 'wel-curr-active');
+
+    if (isMobileWelcomeBypass()) {
+      syncStoredPrefs(selectedLang, selectedCurrency);
+      rememberWelcomeSeen();
+      if (typeof applyTranslations === 'function') applyTranslations(selectedLang);
+      syncNavLanguage(selectedLang);
+      window.__ostCurrency = selectedCurrency;
+      overlay.classList.add('hidden');
+      overlay.setAttribute('aria-hidden', 'true');
+      overlay.style.display = 'none';
+      return;
+    }
 
     if (prefs.lang && prefs.currency && hasSeenWelcomeThisSession()) {
       overlay.classList.add('hidden');
