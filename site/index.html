@@ -21,6 +21,94 @@
         window.setTimeout(applyViewportFit, 250);
       })();
     </script>
+  <style id="ost-mobile-fastboot-style">
+    @media (max-width: 820px), (pointer: coarse) and (max-width: 1024px) {
+      #welcomeOverlay.welcome-overlay,
+      .ost-guide-overlay,
+      .ost-tour {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+      }
+
+      html.ost-mobile-fastboot,
+      html.ost-mobile-fastboot body {
+        min-width: 0 !important;
+        overflow-x: hidden !important;
+      }
+
+      html.ost-mobile-fastboot .welcome-overlay,
+      html.ost-mobile-fastboot .ost-guide-overlay,
+      html.ost-mobile-fastboot .ost-tour {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+      }
+    }
+  </style>
+  <script>
+    (function () {
+      function mobileLike() {
+        try {
+          if (window.matchMedia && window.matchMedia('(max-width: 820px), (pointer: coarse) and (max-width: 1024px)').matches) return true;
+        } catch (e) {}
+        try {
+          var ua = navigator.userAgent || '';
+          if (/Android|iPhone|iPad|iPod|IEMobile|Opera Mini|Mobile/i.test(ua)) return true;
+          if (navigator.maxTouchPoints > 1 && window.screen && Math.min(window.screen.width || 9999, window.screen.height || 9999) <= 1366) return true;
+        } catch (e) {}
+        try {
+          var widths = [window.innerWidth || 9999];
+          if (window.visualViewport && window.visualViewport.width) widths.push(window.visualViewport.width);
+          if (window.screen && window.screen.width) widths.push(window.screen.width);
+          return Math.min.apply(Math, widths) <= 820;
+        } catch (e) {}
+        return false;
+      }
+
+      if (!mobileLike()) return;
+      document.documentElement.classList.add('ost-mobile-fastboot');
+      window.OST_MOBILE_FASTBOOT = true;
+      try {
+        localStorage.setItem('ost_prefs', JSON.stringify({ lang: document.documentElement.getAttribute('data-lang') || 'en', currency: window.__ostCurrency || 'USD' }));
+        sessionStorage.setItem('ost.welcome.seen.session', '1');
+        localStorage.setItem('ost.tour.completed', '1');
+        localStorage.setItem('ost.compartments.guideSeen.v1', '1');
+      } catch (e) {}
+
+      function releaseMobileOverlays() {
+        var released = false;
+        var welcome = document.getElementById('welcomeOverlay');
+        if (welcome) {
+          welcome.classList.add('hidden');
+          welcome.setAttribute('aria-hidden', 'true');
+          welcome.style.display = 'none';
+          welcome.style.pointerEvents = 'none';
+          released = true;
+        }
+        document.querySelectorAll('.ost-guide-overlay, .ost-tour.is-open').forEach(function (overlay) {
+          overlay.classList.remove('is-open');
+          overlay.setAttribute('aria-hidden', 'true');
+          overlay.style.display = 'none';
+        });
+        return released;
+      }
+
+      var observer = null;
+      if ('MutationObserver' in window) {
+        observer = new MutationObserver(function () {
+          if (releaseMobileOverlays()) observer.disconnect();
+        });
+        observer.observe(document.documentElement, { childList: true, subtree: true });
+      }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', releaseMobileOverlays, { once: true });
+      window.setTimeout(releaseMobileOverlays, 0);
+      window.setTimeout(releaseMobileOverlays, 400);
+      window.setTimeout(function () { if (observer) observer.disconnect(); releaseMobileOverlays(); }, 2500);
+    })();
+  </script>
   <title>OST &mdash; The Next Step After Bitcoin</title>
   <meta name="description" content="Private digital cash for every brother and sister on Earth. Seamless transfers from any crypto or real currency.">
   <meta property="og:title" content="OST &mdash; The Next Step After Bitcoin">
@@ -5540,6 +5628,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`âœ… Tx: </s
     </div>
   </div>
 
+  <script src="mobile-shell.js?v=3"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <!-- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        Buffer + Node-globals polyfill â€” REQUIRED by @solana/web3.js.
@@ -5796,7 +5885,6 @@ console.<span class="code-fn">log</span>(<span class="code-str">`âœ… Tx: </s
   <!-- On-chain betting (devnet program ost_betting) -->
   <script src="ost-onchain-bet.js?v=1"></script>
   <script src="ux-extras.js?v=5"></script>
-  <script src="mobile-shell.js?v=2"></script>
   <script src="faucet-hub.js?v=13"></script>
   <script src="topup.js?v=7"></script>
   <script src="apple-tap.js?v=1"></script>

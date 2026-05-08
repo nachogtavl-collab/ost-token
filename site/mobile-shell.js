@@ -7,8 +7,20 @@
   var mq = window.matchMedia ? window.matchMedia(MOBILE_QUERY) : { matches: false, addEventListener: null };
   var originalTradeLabel = null;
 
+  function hasMobileSignal() {
+    if (window.OST_MOBILE_FASTBOOT) return true;
+    try {
+      if (window.innerWidth && window.innerWidth <= 820) return true;
+      if (window.visualViewport && window.visualViewport.width && window.visualViewport.width <= 820) return true;
+      if (window.screen && Math.min(window.screen.width || 9999, window.screen.height || 9999) <= 820) return true;
+      if (navigator.maxTouchPoints > 1 && window.screen && Math.min(window.screen.width || 9999, window.screen.height || 9999) <= 1366) return true;
+      if (/Android|iPhone|iPad|iPod|IEMobile|Opera Mini|Mobile/i.test(navigator.userAgent || '')) return true;
+    } catch (_) {}
+    return false;
+  }
+
   function isMobileShell() {
-    return !!(mq && mq.matches);
+    return !!((mq && mq.matches) || hasMobileSignal());
   }
 
   function setViewport() {
@@ -163,6 +175,12 @@
   }
 
   function boot() {
+    if (boot._started) {
+      unblockInitialMobileAccess();
+      tuneFloatingControls();
+      return;
+    }
+    boot._started = true;
     unblockInitialMobileAccess();
     mountMobileHome();
     tuneFloatingControls();
@@ -177,13 +195,20 @@
       mq.addListener(tuneFloatingControls);
     }
 
-    var observer = new MutationObserver(function () { tuneFloatingControls(); });
+    var observer = new MutationObserver(function () {
+      window.clearTimeout(boot._observerTimer);
+      boot._observerTimer = window.setTimeout(tuneFloatingControls, 120);
+    });
     observer.observe(document.body, { childList: true, subtree: true });
     window.setTimeout(tuneFloatingControls, 600);
     window.setTimeout(tuneFloatingControls, 1800);
   }
 
   setViewport();
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
+  if (document.body) boot();
+  else if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
   else boot();
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
+  window.setTimeout(unblockInitialMobileAccess, 0);
+  window.setTimeout(unblockInitialMobileAccess, 500);
 })();
