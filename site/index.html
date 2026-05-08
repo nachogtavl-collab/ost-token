@@ -29,7 +29,9 @@
     }
 
     html.ost-mobile-fastboot .ost-guide-overlay,
-    html.ost-mobile-fastboot .ost-tour {
+    html.ost-mobile-fastboot .ost-tour,
+    html.ost-mobile-fastboot #ostMobileHome,
+    html.ost-mobile-fastboot .ost-mobile-home {
       display: none !important;
       visibility: hidden !important;
       opacity: 0 !important;
@@ -54,7 +56,9 @@
       }
 
       html.ost-mobile-fastboot .ost-guide-overlay,
-      html.ost-mobile-fastboot .ost-tour {
+      html.ost-mobile-fastboot .ost-tour,
+      html.ost-mobile-fastboot #ostMobileHome,
+      html.ost-mobile-fastboot .ost-mobile-home {
         display: none !important;
         visibility: hidden !important;
         opacity: 0 !important;
@@ -102,13 +106,14 @@
 
       function releaseMobileOverlays() {
         var released = false;
-        document.querySelectorAll('.ost-guide-overlay, .ost-tour').forEach(function (overlay) {
+        document.querySelectorAll('.ost-guide-overlay, .ost-tour, #ostMobileHome, .ost-mobile-home').forEach(function (overlay) {
           overlay.classList.remove('is-open');
           overlay.setAttribute('aria-hidden', 'true');
           overlay.style.display = 'none';
           overlay.style.visibility = 'hidden';
           overlay.style.opacity = '0';
           overlay.style.pointerEvents = 'none';
+          if (overlay.id === 'ostMobileHome' || overlay.classList.contains('ost-mobile-home')) overlay.remove();
           released = true;
         });
         return released;
@@ -171,7 +176,7 @@
   <link rel="stylesheet" href="offline-vault.css?v=1">
   <link rel="stylesheet" href="stock-market.css?v=1">
   <link rel="stylesheet" href="live-watch.css?v=5">
-  <link rel="stylesheet" href="mobile-shell.css?v=6">
+  <link rel="stylesheet" href="mobile-shell.css?v=7">
 </head>
 <body>
 
@@ -5650,7 +5655,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`âœ… Tx: </s
     </div>
   </div>
 
-  <script src="mobile-shell.js?v=7"></script>
+  <script src="mobile-shell.js?v=8"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <!-- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        Buffer + Node-globals polyfill â€” REQUIRED by @solana/web3.js.
@@ -5882,7 +5887,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`âœ… Tx: </s
       window.OST_POLY_RELAY_URL = window.OST_API_BASE;
     </script>
     <script src="native-markets.js?v=3"></script>
-    <script src="app.js?v=116"></script>
+    <script src="app.js?v=117"></script>
     <!-- Ghost AI Summoning Circle (rebuild) -->
     <script type="module" src="ghost/ghost.js?v=4"></script>
     <script type="module" src="mesh/mesh.js?v=20"></script>

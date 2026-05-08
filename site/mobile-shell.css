@@ -20,7 +20,10 @@
 }
 
 .ost-mobile-home {
-  display: none;
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 .ost-guide-overlay,
@@ -267,7 +270,10 @@
   }
 
   .ost-mobile-home {
-    display: grid;
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
     gap: 12px;
     padding: 14px;
     border: 1px solid rgba(148, 219, 255, 0.18);
@@ -663,6 +669,8 @@
   }
 
   #ost-mobile-bar [data-tour-restart],
+  body.ost-mobile-shell #ostMobileHome,
+  body.ost-mobile-shell .ost-mobile-home,
   body.ost-mobile-shell .ost-tour,
   body.ost-mobile-shell .ost-tour.is-open,
   body.ost-mobile-shell .ost-guide-overlay {
