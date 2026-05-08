@@ -21,8 +21,7 @@
     bar.className = 'ost-mobile-bar';
     bar.innerHTML =
       '<button type="button" data-mode="mobile">📱 Mobile</button>' +
-      '<button type="button" data-mode="desktop">🖥 Desktop</button>' +
-      '<button type="button" data-tour-restart title="Restart guide">❓</button>';
+      '<button type="button" data-mode="desktop">🖥 Desktop</button>';
     document.body.appendChild(bar);
     var saved = localStorage.getItem('ost.viewport') || 'mobile';
     if (isPhoneLike() && saved === 'desktop') saved = 'mobile';
@@ -30,8 +29,6 @@
     bar.addEventListener('click', function (ev) {
       var btn = ev.target.closest('button[data-mode]');
       if (btn) { apply(btn.getAttribute('data-mode')); return; }
-      var t = ev.target.closest('[data-tour-restart]');
-      if (t) { localStorage.removeItem('ost.tour.completed'); startTour(); }
     });
     function apply(mode) {
       if (isPhoneLike() && mode === 'desktop') mode = 'mobile';
@@ -162,6 +159,11 @@
   }
 
   function startTour() {
+    if (isPhoneLike()) {
+      try { localStorage.setItem('ost.tour.completed', '1'); } catch (e) {}
+      if (tourEl) closeTour();
+      return;
+    }
     tourIdx = 0;
     ensureTour().classList.add('is-open');
     ensureTour().setAttribute('aria-hidden', 'false');

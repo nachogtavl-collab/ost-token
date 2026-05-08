@@ -656,10 +656,20 @@
   }
 
   .ost-tour.is-open {
-    position: fixed;
-    inset: 0;
-    z-index: 9800;
-    display: block;
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
+  #ost-mobile-bar [data-tour-restart],
+  body.ost-mobile-shell .ost-tour,
+  body.ost-mobile-shell .ost-tour.is-open,
+  body.ost-mobile-shell .ost-guide-overlay {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
   }
 
   .ost-tour__veil {

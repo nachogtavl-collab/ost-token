@@ -59,6 +59,11 @@
       overlay.style.opacity = '0';
       overlay.style.pointerEvents = 'none';
       overlay.setAttribute('aria-hidden', 'true');
+      if (overlay.classList.contains('ost-tour')) overlay.remove();
+    });
+
+    document.querySelectorAll('#ost-mobile-bar [data-tour-restart]').forEach(function (button) {
+      button.remove();
     });
 
     var popup = document.getElementById('ostPopupOverlay');

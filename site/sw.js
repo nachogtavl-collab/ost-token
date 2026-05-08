@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v58';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v58';
+const CACHE_NAME = 'ost-pwa-cache-v59';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v59';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -25,7 +25,7 @@ const PRECACHE_PATHS = [
   './topup.css?v=4',
   './offline-vault.css?v=1',
   './stock-market.css?v=1',
-  './mobile-shell.css?v=5',
+  './mobile-shell.css?v=6',
   './rpc-multiplexer.js?v=1',
   './app.js?v=116',
   './nuevo-laredo-gas.js?v=1',
@@ -58,8 +58,8 @@ const PRECACHE_PATHS = [
   './prediction-pro-dash.js?v=6',
   './ost-console.js?v=2',
   './ost-onchain-bet.js?v=1',
-  './ux-extras.js?v=6',
-  './mobile-shell.js?v=6',
+  './ux-extras.js?v=7',
+  './mobile-shell.js?v=7',
   './faucet-hub.js?v=13',
   './faucet-hub-ads.js?v=2',
   './offline-vault.js?v=3',
