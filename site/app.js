@@ -12536,12 +12536,13 @@
     }
 
     function suppressPostWelcomeOverlays() {
+      var welcomeVisible = overlay && !overlay.classList.contains('hidden') && overlay.getAttribute('aria-hidden') !== 'true';
       try {
         localStorage.setItem('ost.tour.completed', '1');
         localStorage.setItem('ost.compartments.guideSeen.v1', '1');
       } catch (e) {}
 
-      document.querySelectorAll('.ost-tour.is-open, .ost-guide-overlay').forEach(function(layer) {
+      document.querySelectorAll('.ost-tour, .ost-guide-overlay').forEach(function(layer) {
         layer.classList.remove('is-open');
         layer.setAttribute('aria-hidden', 'true');
         layer.style.display = 'none';
@@ -12552,13 +12553,36 @@
 
       var popup = document.getElementById('ostPopupOverlay');
       var popupFrame = document.getElementById('ostPopupFrame');
-      if (popup && popup.classList.contains('open') && (!popupFrame || !popupFrame.getAttribute('src'))) {
+      var popupTitle = document.getElementById('ostPopupTitle');
+      var popupSrc = popupFrame && popupFrame.getAttribute('src');
+      var popupLooksEmpty = !popupSrc || popupSrc === 'about:blank' || (popupTitle && /^loading/i.test((popupTitle.textContent || '').trim()));
+      if (popup && (popup.classList.contains('open') || popup.style.display === 'flex') && popupLooksEmpty) {
         popup.classList.remove('open');
         popup.setAttribute('aria-hidden', 'true');
+        popup.style.display = '';
         if (popupFrame) popupFrame.src = '';
       }
-      document.body.style.overflow = '';
+
+      if (!welcomeVisible && !document.querySelector('.wallet-modal.open, .map-modal.open, .ost-modal-overlay.ost-modal-open, .topup-modal-overlay.open, .transmit-overlay.open, .live-watch-modal.is-open')) {
+        document.body.style.overflow = '';
+      }
     }
+
+    function armPostWelcomeOverlayGuard() {
+      var delays = [0, 120, 350, 800, 1500, 3000, 6000, 10000];
+      delays.forEach(function(delay) { setTimeout(suppressPostWelcomeOverlays, delay); });
+      if (!('MutationObserver' in window)) return;
+      var started = Date.now();
+      var observer = new MutationObserver(function() {
+        suppressPostWelcomeOverlays();
+        if (Date.now() - started > 12000) observer.disconnect();
+      });
+      observer.observe(document.body || document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style', 'aria-hidden'] });
+      setTimeout(function() { observer.disconnect(); }, 12500);
+    }
+
+    window.OST_SUPPRESS_BLOCKERS = suppressPostWelcomeOverlays;
+    armPostWelcomeOverlayGuard();
 
     function showWelcome() {
       clearOverlayInlineState();

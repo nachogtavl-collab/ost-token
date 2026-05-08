@@ -52,7 +52,7 @@
       localStorage.setItem('ost.compartments.v1', JSON.stringify(Object.assign({}, JSON.parse(localStorage.getItem('ost.compartments.v1') || '{}'), { focusMode: false })));
     } catch (_) {}
 
-    document.querySelectorAll('.ost-guide-overlay, .ost-tour.is-open').forEach(function (overlay) {
+    document.querySelectorAll('.ost-guide-overlay, .ost-tour').forEach(function (overlay) {
       overlay.classList.remove('is-open');
       overlay.style.display = 'none';
       overlay.style.visibility = 'hidden';
@@ -60,6 +60,15 @@
       overlay.style.pointerEvents = 'none';
       overlay.setAttribute('aria-hidden', 'true');
     });
+
+    var popup = document.getElementById('ostPopupOverlay');
+    var popupFrame = document.getElementById('ostPopupFrame');
+    if (popup && popup.classList.contains('open') && (!popupFrame || !popupFrame.getAttribute('src'))) {
+      popup.classList.remove('open');
+      popup.setAttribute('aria-hidden', 'true');
+      if (popupFrame) popupFrame.src = '';
+      document.body.style.overflow = '';
+    }
 
     document.querySelectorAll('.ost-section-hidden').forEach(function (section) {
       section.classList.remove('ost-section-hidden');
