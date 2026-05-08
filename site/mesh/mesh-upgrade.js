@@ -119,8 +119,8 @@
         '<div class="omu-snippets" id="omuSnippets"></div>',
       '</div>'
     ].join('');
-    var row = p.root.querySelector('.ost-mesh-row');
-    if (row && row.parentNode) row.parentNode.insertBefore(panel, row);
+    var stage = p.root.querySelector('.ost-mesh-stage');
+    if (stage && stage.parentNode) stage.parentNode.insertBefore(panel, stage.nextSibling);
     else p.root.querySelector('.ost-mesh-shell').appendChild(panel);
     bindPanel(p, panel);
     renderContacts(p);
@@ -218,7 +218,13 @@
         if (!contact) return;
         p.peerInput.value = contact.address;
         p.open();
-        setStatus(p, 'Contact loaded. Press Connect securely when they are online.', 'ok');
+        if (p.peerInput && typeof p.peerInput.focus === 'function') {
+          try { p.peerInput.focus({ preventScroll: true }); }
+          catch (_) { p.peerInput.focus(); }
+        }
+        var row = p.root && p.root.querySelector('.ost-mesh-row');
+        if (row && typeof row.scrollIntoView === 'function') row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setStatus(p, 'Contact loaded in the peer address field. Press Connect securely when they are online.', 'ok');
       });
     });
   }

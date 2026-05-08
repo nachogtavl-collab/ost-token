@@ -11,7 +11,7 @@ import {
 } from './mesh-crypto.js?v=1';
 import { MeshRTC } from './mesh-rtc.js?v=10';
 
-const STYLE_HREF = './mesh/mesh.css?v=3';
+const STYLE_HREF = './mesh/mesh.css?v=4';
 const STORAGE_ID = 'ost_mesh_identity_v1';
 const STORAGE_ADDR = 'ost_mesh_addr_v1';
 const MAX_FILE_BYTES = 32 * 1024 * 1024;
@@ -44,6 +44,8 @@ function buildDOM() {
   root.id = 'ost-mesh-pavilion';
   root.setAttribute('role', 'dialog');
   root.setAttribute('aria-modal', 'true');
+  root.setAttribute('aria-hidden', 'true');
+  root.tabIndex = -1;
   root.innerHTML = `
     <div class="ost-mesh-shell">
       <div class="ost-mesh-head">
@@ -270,6 +272,7 @@ class MeshPavilion {
     buildDOM();
 
     this.root      = document.getElementById('ost-mesh-pavilion');
+    this.shell     = this.root.querySelector('.ost-mesh-shell');
     this.trigger   = document.getElementById('ost-mesh-trigger');
     this.closeBtn  = this.root.querySelector('.ost-mesh-close');
     this.addrEl    = document.getElementById('mesh-my-addr');
@@ -368,8 +371,19 @@ class MeshPavilion {
     this.endCallBtn.addEventListener('click', () => this._hangup({ restoreData: true }));
   }
 
-  open()  { this.root.classList.add('is-open'); }
-  close() { this.root.classList.remove('is-open'); }
+  open()  {
+    this.root.classList.add('is-open');
+    this.root.setAttribute('aria-hidden', 'false');
+    this.root.scrollTop = 0;
+    if (typeof this.root.focus === 'function') {
+      try { this.root.focus({ preventScroll: true }); }
+      catch (_) { this.root.focus(); }
+    }
+  }
+  close() {
+    this.root.classList.remove('is-open');
+    this.root.setAttribute('aria-hidden', 'true');
+  }
 
   _setStatus(msg, kind = '') {
     this.statusEl.innerHTML = kind ? `<span class="${kind}">${msg}</span>` : msg;

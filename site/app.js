@@ -8422,6 +8422,7 @@
     }
 
     function openPopup(url, label) {
+      if (!url) return;
       // Rewrite URL to embeddable version
       var embedUrl = rewriteUrl(url);
 
@@ -8433,6 +8434,7 @@
         frame.style.display = '';
         frame.src = embedUrl;
         overlay.classList.add('open');
+        overlay.setAttribute('aria-hidden', 'false');
         document.body.style.overflow = 'hidden';
         // Safety fallback in case even these fail
         var loadTimer = setTimeout(function() { showFallbackCard(url, label); }, 5000);
@@ -8452,6 +8454,7 @@
 
     function closePopup() {
       overlay.classList.remove('open');
+      overlay.setAttribute('aria-hidden', 'true');
       frame.src = '';
       frame.style.display = '';
       var fb = overlay.querySelector('.ost-popup-fallback');
@@ -12532,6 +12535,31 @@
       });
     }
 
+    function suppressPostWelcomeOverlays() {
+      try {
+        localStorage.setItem('ost.tour.completed', '1');
+        localStorage.setItem('ost.compartments.guideSeen.v1', '1');
+      } catch (e) {}
+
+      document.querySelectorAll('.ost-tour.is-open, .ost-guide-overlay').forEach(function(layer) {
+        layer.classList.remove('is-open');
+        layer.setAttribute('aria-hidden', 'true');
+        layer.style.display = 'none';
+        layer.style.visibility = 'hidden';
+        layer.style.opacity = '0';
+        layer.style.pointerEvents = 'none';
+      });
+
+      var popup = document.getElementById('ostPopupOverlay');
+      var popupFrame = document.getElementById('ostPopupFrame');
+      if (popup && popup.classList.contains('open') && (!popupFrame || !popupFrame.getAttribute('src'))) {
+        popup.classList.remove('open');
+        popup.setAttribute('aria-hidden', 'true');
+        if (popupFrame) popupFrame.src = '';
+      }
+      document.body.style.overflow = '';
+    }
+
     function showWelcome() {
       clearOverlayInlineState();
       overlay.classList.remove('hidden');
@@ -12543,6 +12571,7 @@
     function hideWelcome(fade) {
       document.body.classList.remove('ost-welcome-open');
       overlay.setAttribute('aria-hidden', 'true');
+      suppressPostWelcomeOverlays();
       if (!fade) {
         overlay.classList.add('hidden');
         clearOverlayInlineState();
@@ -12604,6 +12633,7 @@
 
     if (prefs.lang && prefs.currency && hasCurrentWelcomeVersion()) {
       rememberWelcomeSeen();
+      suppressPostWelcomeOverlays();
       hideWelcome(false);
       return;
     }

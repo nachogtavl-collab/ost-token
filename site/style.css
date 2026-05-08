@@ -4276,6 +4276,7 @@ nav {
   align-items: center; justify-content: center;
 }
 .ost-popup-overlay.open { display: flex; }
+.ost-popup-overlay[aria-hidden="true"] { display: none !important; }
 .ost-popup {
   width: 94vw; max-width: 900px; height: 85vh;
   background: var(--surface); border: 1px solid var(--border);

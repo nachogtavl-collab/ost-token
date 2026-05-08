@@ -155,7 +155,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Egyptian+Hieroglyphs&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="style.css?v=67">
+  <link rel="stylesheet" href="style.css?v=68">
   <link rel="stylesheet" href="mobile.css?v=7">
   <link rel="stylesheet" href="polish.css?v=1">
   <link rel="stylesheet" href="compartments.css?v=2">
@@ -5559,11 +5559,11 @@ console.<span class="code-fn">log</span>(<span class="code-str">`âœ… Tx: </s
   <div id="toastContainer" class="toast-container"></div>
 
   <!-- Universal In-Page Popup (iframe overlay for external services) -->
-  <div class="ost-popup-overlay" id="ostPopupOverlay">
+  <div class="ost-popup-overlay" id="ostPopupOverlay" aria-hidden="true">
     <div class="ost-popup">
       <div class="ost-popup-header">
         <span class="ost-popup-title" id="ostPopupTitle">Loading...</span>
-        <button class="ost-popup-close" id="ostPopupClose">&times;</button>
+        <button class="ost-popup-close" id="ostPopupClose" type="button" aria-label="Close popup">&times;</button>
       </div>
       <iframe id="ostPopupFrame" class="ost-popup-frame" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation" allow="accelerometer; autoplay; camera; gyroscope; payment; microphone; clipboard-write" loading="lazy"></iframe>
     </div>
@@ -5881,10 +5881,10 @@ console.<span class="code-fn">log</span>(<span class="code-str">`âœ… Tx: </s
       window.OST_POLY_RELAY_URL = window.OST_API_BASE;
     </script>
     <script src="native-markets.js?v=3"></script>
-    <script src="app.js?v=113"></script>
+    <script src="app.js?v=114"></script>
     <!-- Ghost AI Summoning Circle (rebuild) -->
     <script type="module" src="ghost/ghost.js?v=4"></script>
-    <script type="module" src="mesh/mesh.js?v=18"></script>
+    <script type="module" src="mesh/mesh.js?v=19"></script>
     <script type="module" src="mesh/veil.js?v=1"></script>
     <script type="module" src="mesh/mesh-play.js?v=3"></script>
   <script src="nuevo-laredo-gas.js?v=1"></script>
@@ -5905,7 +5905,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`âœ… Tx: </s
   <script src="ost-console.js?v=2"></script>
   <!-- On-chain betting (devnet program ost_betting) -->
   <script src="ost-onchain-bet.js?v=1"></script>
-  <script src="ux-extras.js?v=5"></script>
+  <script src="ux-extras.js?v=6"></script>
   <script src="faucet-hub.js?v=13"></script>
   <script src="topup.js?v=7"></script>
   <script src="apple-tap.js?v=1"></script>
@@ -5916,7 +5916,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`âœ… Tx: </s
   <script src="code-academy.js?v=3"></script>
   <script src="i18n-runtime.js?v=1"></script>
   <script src="devnet-rescue.js?v=4"></script>
-  <script src="mesh/mesh-upgrade.js?v=1"></script>
+  <script src="mesh/mesh-upgrade.js?v=2"></script>
   <script src="launchpad-trenches.js?v=3"></script>
   <script src="stock-market.js?v=1"></script>
   <script>
