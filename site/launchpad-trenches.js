@@ -318,7 +318,7 @@
 
   // ── Hook the existing "create coin" form to also publish to the worker ────
   function hookCreateForm() {
-    var btn = document.getElementById('lpCreateBtn') || document.querySelector('[data-act="lp-create"]');
+    var btn = document.getElementById('lpLaunchBtn') || document.getElementById('lpCreateBtn') || document.querySelector('[data-act="lp-create"]');
     if (!btn || btn.__ostHooked) return;
     btn.__ostHooked = true;
     btn.addEventListener('click', function () {
@@ -328,14 +328,14 @@
         if (!base) return;
         try {
           var hist = JSON.parse(localStorage.getItem('ost_lp_history2') || '[]');
-          var latest = hist && hist[0];
+          var latest = hist && hist.slice().sort(function(a, b) { return Number(b.date || b.createdAt || 0) - Number(a.date || a.createdAt || 0); })[0];
           if (!latest || latest.__synced) return;
           fetch(base + '/launchpad/coins', {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
             body: JSON.stringify({
               name: latest.name, symbol: latest.symbol || latest.ticker, desc: latest.desc,
-              image: latest.image, twitter: latest.twitter, telegram: latest.telegram,
+              image: latest.image || latest.img, twitter: latest.twitter, telegram: latest.telegram,
               website: latest.website,
               creator: window.OST_WALLET_PUBKEY || 'anon',
               mcap: latest.mcap || 100, curve: latest.curve || 1, supply: latest.supply || 1_000_000_000

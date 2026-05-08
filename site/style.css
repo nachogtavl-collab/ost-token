@@ -9275,6 +9275,132 @@ select.sim-input { cursor: pointer; }
   }
 }
 
+/* Market usability repair: keep prediction data visible and non-overlapping. */
+.prediction-market-board,
+.prediction-market-shell,
+.prediction-market-main,
+.prediction-market-card,
+.prediction-trade-desk,
+.prediction-market-stage,
+.prediction-stage-chart-card,
+.prediction-depth-card {
+  min-width: 0;
+}
+
+.prediction-market-topline,
+.prediction-market-meta-row,
+.prediction-market-footer,
+.prediction-market-actions,
+.prediction-selected-topline,
+.prediction-position-row-meta,
+.prediction-stage-topline,
+.prediction-stage-panel-head {
+  flex-wrap: wrap;
+}
+
+.prediction-market-source,
+.prediction-market-topic,
+.prediction-market-contract,
+.prediction-market-tag,
+.prediction-pulse-meta span,
+.prediction-tape-chip span,
+.prediction-tape-chip em,
+.prediction-market-metric strong,
+.prediction-market-stat strong,
+.prediction-trade-stat strong,
+.prediction-position-row strong,
+.prediction-position-row span,
+.prediction-position-row a,
+.prediction-selected-card h6,
+.prediction-selected-card p,
+.prediction-trade-status,
+.prediction-market-load-card strong {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.prediction-trade-desk {
+  top: 92px;
+  max-height: calc(100vh - 116px);
+}
+
+.prediction-market-card {
+  min-height: 360px;
+}
+
+.prediction-market-card h5,
+.prediction-market-card p,
+.prediction-stage-copy h5,
+.prediction-stage-copy p,
+.prediction-pulse-card strong,
+.prediction-pulse-card p {
+  overflow-wrap: anywhere;
+}
+
+.prediction-market-price-grid,
+.prediction-market-meta-row,
+.prediction-trade-metrics,
+.prediction-trade-breakdown,
+.prediction-trade-receipt-grid,
+.prediction-stage-stats,
+.prediction-depth-columns {
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+}
+
+.prediction-stage-body {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.prediction-depth-list {
+  max-height: 310px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.prediction-market-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+}
+
+@media (max-width: 720px) {
+  .prediction-market-side-stack,
+  .prediction-market-pulse-wrap,
+  .prediction-depth-card,
+  .prediction-market-card p,
+  .prediction-market-tags,
+  .prediction-market-price-grid,
+  .prediction-market-meta-row,
+  .prediction-market-footer {
+    display: grid;
+  }
+
+  .prediction-market-card p,
+  .prediction-market-hero-copy p,
+  .prediction-stage-copy p,
+  .prediction-trade-head p,
+  .prediction-selected-card p {
+    display: block;
+    line-clamp: unset;
+    -webkit-line-clamp: unset;
+    -webkit-box-orient: initial;
+    overflow: visible;
+  }
+
+  .prediction-market-actions,
+  .prediction-stage-stats,
+  .prediction-trade-metrics,
+  .prediction-trade-breakdown,
+  .prediction-trade-receipt-grid,
+  .prediction-depth-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .prediction-market-card {
+    min-height: 0;
+  }
+}
+
 /* ================================================================== */
 /* v48: STORE TAB NAVIGATION                                         */
 /* ================================================================== */

@@ -3040,6 +3040,31 @@
     walletAddress: getPredictionWalletAddress
   });
 
+  window.OST_TRADE = Object.assign(window.OST_TRADE || {}, {
+    memecoinBuy: function(symbol, amount) {
+      const cleanSymbol = String(symbol || 'MEME').replace(/[^a-z0-9_.$-]/gi, '').slice(0, 16).toUpperCase() || 'MEME';
+      const stake = Number(amount || 0);
+      return createPredictionMarketOrder({
+        source: 'launchpad',
+        marketId: 'launchpad:' + cleanSymbol,
+        title: '$' + cleanSymbol + ' fair-launch buy',
+        side: 'yes',
+        topic: 'memecoin',
+        price: 1,
+        yesPrice: 1,
+        noPrice: 0,
+        stake: stake,
+        shares: stake,
+        potentialReturn: stake,
+        sourceUrl: location.href.split('#')[0] + '#launchpad',
+        reference: cleanSymbol + ':' + Date.now()
+      });
+    },
+    memecoinSell: function() {
+      throw new Error('Memecoin sell settlement needs verified holder balances. Buys are live; sells stay locked until the holder ledger is server-verified.');
+    }
+  });
+
   async function createInterchangePaymentRequest(request) {
     if (!request || !Number.isFinite(Number(request.ostAmount)) || Number(request.ostAmount) <= 0) {
       throw new Error(t('pay.deskNeedValidAmount', 'Load a request with a valid OST amount first'));
@@ -10762,6 +10787,119 @@
       return Math.floor(diff / 86400) + 'd ago';
     }
     function escHtml(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+    function launchpadApiBase() {
+      return window.OST_API_BASE ? String(window.OST_API_BASE).replace(/\/$/, '') : '';
+    }
+    function getLaunchpadTrader() {
+      try {
+        if (connectedWallet) return connectedWallet;
+        if (connectedWalletSession && connectedWalletSession.publicKey) return connectedWalletSession.publicKey.toBase58();
+        if (window.OST_WALLET && window.OST_WALLET.session && window.OST_WALLET.session.publicKey) return window.OST_WALLET.session.publicKey.toBase58();
+      } catch (e) {}
+      return '';
+    }
+    function normalizeRemoteLaunchpadCoin(c) {
+      if (!c) return null;
+      return {
+        name: String(c.name || 'Unnamed').slice(0, 64),
+        symbol: String(c.symbol || 'MEME').toUpperCase().slice(0, 12),
+        desc: String(c.desc || ''),
+        mcap: Number(c.mcap || 100) || 100,
+        curve: Math.max(0, Math.min(100, Number(c.curve || 0) || 0)),
+        img: c.img || c.image || '',
+        image: c.image || c.img || '',
+        twitter: c.twitter || '',
+        telegram: c.telegram || '',
+        website: c.website || '',
+        mint: c.mint || c.id || generateMint(),
+        supply: Number(c.supply || 1000000000) || 1000000000,
+        creator: c.creator || 'anon',
+        date: Number(c.date || c.createdAt || Date.now()) || Date.now(),
+        createdAt: Number(c.createdAt || c.date || Date.now()) || Date.now(),
+        trades: Number(c.trades || 0) || 0,
+        comments: Array.isArray(c.comments) ? c.comments : [],
+        holders: Array.isArray(c.holders) && c.holders.length ? c.holders : [{ addr: c.creator || 'anon', pct: 100 }],
+        remoteSynced: true
+      };
+    }
+    function mergeRemoteLaunchpadCoins(remoteCoins) {
+      if (!Array.isArray(remoteCoins) || !remoteCoins.length) return false;
+      var byMint = new Map();
+      launches.forEach(function(item) { if (item && item.mint) byMint.set(item.mint, item); });
+      remoteCoins.map(normalizeRemoteLaunchpadCoin).filter(Boolean).forEach(function(remote) {
+        var current = byMint.get(remote.mint);
+        byMint.set(remote.mint, Object.assign({}, current || {}, remote, {
+          comments: current && current.comments && current.comments.length ? current.comments : remote.comments,
+          holders: remote.holders && remote.holders.length ? remote.holders : current && current.holders || []
+        }));
+      });
+      launches = Array.from(byMint.values()).sort(function(a, b) { return Number(b.date || b.createdAt || 0) - Number(a.date || a.createdAt || 0); });
+      localStorage.setItem('ost_lp_history2', JSON.stringify(launches));
+      return true;
+    }
+    async function syncLaunchpadFromRemote() {
+      var base = launchpadApiBase();
+      if (!base || syncLaunchpadFromRemote.inFlight) return false;
+      syncLaunchpadFromRemote.inFlight = true;
+      try {
+        var response = await fetch(base + '/launchpad/coins', { cache: 'no-store', headers: { accept: 'application/json' } });
+        var payload = response.ok ? await response.json() : null;
+        if (payload && mergeRemoteLaunchpadCoins(payload.coins)) {
+          renderTicker();
+          renderFeed();
+          renderBoard();
+          updateStats();
+          updateTotalCount();
+          return true;
+        }
+      } catch (e) {}
+      finally { syncLaunchpadFromRemote.inFlight = false; }
+      return false;
+    }
+    function publishLaunchToRemote(launch) {
+      var base = launchpadApiBase();
+      if (!base || !launch) return Promise.resolve(null);
+      return fetch(base + '/launchpad/coins', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', accept: 'application/json' },
+        body: JSON.stringify({
+          name: launch.name,
+          symbol: launch.symbol,
+          desc: launch.desc,
+          image: launch.image || launch.img,
+          twitter: launch.twitter,
+          telegram: launch.telegram,
+          website: launch.website,
+          creator: getLaunchpadTrader() || launch.creator || 'anon',
+          mcap: launch.mcap,
+          curve: launch.curve,
+          supply: launch.supply
+        })
+      }).then(function(r) { return r.ok ? r.json() : null; }).then(function(payload) {
+        if (payload && payload.coin) {
+          var remote = normalizeRemoteLaunchpadCoin(payload.coin);
+          if (remote) Object.assign(launch, remote);
+          localStorage.setItem('ost_lp_history2', JSON.stringify(launches));
+          syncLaunchpadFromRemote();
+        }
+        return payload;
+      }).catch(function() { return null; });
+    }
+    function postLaunchpadTradeRemote(token, side, amount, signature) {
+      var base = launchpadApiBase();
+      if (!base || !token || !token.mint) return Promise.resolve(null);
+      return fetch(base + '/launchpad/trade', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', accept: 'application/json' },
+        body: JSON.stringify({
+          mint: token.mint,
+          side: side,
+          amount: amount,
+          trader: getLaunchpadTrader() || 'anon',
+          signature: signature || ''
+        })
+      }).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; });
+    }
     function renderComposePreview() {
       if (!previewEls.name) return;
       var twitterEl = document.getElementById('lpTwitter');
@@ -10942,8 +11080,15 @@
           comments: [],
           holders: [{ addr: connectedWallet ? connectedWallet.slice(0,4)+'...'+connectedWallet.slice(-4) : 'anon', pct: 100 }]
         };
-        launches.push(launch);
+        launches.unshift(launch);
         localStorage.setItem('ost_lp_history2', JSON.stringify(launches));
+        publishLaunchToRemote(launch).then(function() {
+          renderTicker();
+          renderFeed();
+          renderBoard();
+          updateStats();
+          updateTotalCount();
+        });
 
         document.getElementById('lpSuccessName').textContent = name;
         document.getElementById('lpSuccessSymbol').textContent = '$' + symbol;
@@ -11161,15 +11306,34 @@
             '</div>' +
           '</div>';
         // Quick buy handler
-        card.querySelector('.lp-card-quick').addEventListener('click', function(e) {
+        card.querySelector('.lp-card-quick').addEventListener('click', async function(e) {
           e.stopPropagation();
-          l.mcap += Math.floor(10 * 8);
-          l.curve = Math.min(Math.floor(l.mcap / 690), 100);
-          localStorage.setItem('ost_lp_history2', JSON.stringify(launches));
-          activities.unshift({ user: connectedWallet ? connectedWallet.slice(0,4)+'...' : 'anon', verb: 'bought', token: '$' + l.symbol, amount: '10', type: 'buy', time: Date.now() });
-          toast('âœ…', 'Quick bought 10 OST of $' + l.symbol);
-          renderFeed();
-          updateStats();
+          var btn = e.currentTarget;
+          var oldText = btn.textContent;
+          btn.disabled = true;
+          btn.textContent = 'Sending...';
+          try {
+            var trade = window.OST_TRADE;
+            if (!trade || !trade.memecoinBuy) throw new Error('Trading module not loaded. Refresh and connect a wallet.');
+            var result = await trade.memecoinBuy(l.symbol, 10);
+            var remote = await postLaunchpadTradeRemote(l, 'buy', 10, result && result.signature || result && result.sig || '');
+            if (remote && remote.coin) Object.assign(l, normalizeRemoteLaunchpadCoin(remote.coin));
+            else {
+              l.mcap += Math.floor(10 * 8);
+              l.curve = Math.min(Math.floor(l.mcap / 690), 100);
+            }
+            localStorage.setItem('ost_lp_history2', JSON.stringify(launches));
+            activities.unshift({ user: connectedWallet ? connectedWallet.slice(0,4)+'...' : 'anon', verb: 'bought', token: '$' + l.symbol, amount: '10', type: 'buy', time: Date.now() });
+            toast('âœ…', 'Quick bought 10 OST of $' + l.symbol);
+            renderFeed();
+            renderTicker();
+            updateStats();
+          } catch (err) {
+            toast('âš ï¸', err && err.message ? err.message : 'Trade failed');
+          } finally {
+            btn.disabled = false;
+            btn.textContent = oldText;
+          }
         });
         card.querySelector('.lp-card-view').addEventListener('click', function(e) {
           e.stopPropagation();
@@ -11352,23 +11516,32 @@
           var result;
           if (tradeSide === 'buy') {
             result = await trade.memecoinBuy(currentToken.symbol, amt);
+            var buySig = result && (result.sig || result.signature) || '';
             if (typeof window.recordOstPlatformEvent === 'function') {
-              window.recordOstPlatformEvent({ kind: 'launchpad-buy', amount: amt, token: currentToken.symbol, sig: result.sig, ts: Date.now() });
+              window.recordOstPlatformEvent({ kind: 'launchpad-buy', amount: amt, token: currentToken.symbol, sig: buySig, ts: Date.now() });
             }
-            // Simulated price impact (real on-chain transfer already done)
-            currentToken.mcap += Math.floor(amt * 8);
-            currentToken.curve = Math.min(Math.floor(currentToken.mcap / 690), 100);
+            var remoteBuy = await postLaunchpadTradeRemote(currentToken, 'buy', amt, buySig);
+            if (remoteBuy && remoteBuy.coin) Object.assign(currentToken, normalizeRemoteLaunchpadCoin(remoteBuy.coin));
+            else {
+              currentToken.mcap += Math.floor(amt * 8);
+              currentToken.curve = Math.min(Math.floor(currentToken.mcap / 690), 100);
+            }
             activities.unshift({ user: connectedWallet ? connectedWallet.slice(0,4)+'...' : 'You', verb: 'bought', token: '$' + currentToken.symbol, amount: amt.toString(), type: 'buy', time: Date.now() });
-            toast('âœ…', 'Bought ' + amt + ' OST of $' + currentToken.symbol + ' Â· sig ' + String(result.sig).slice(0,8));
+            toast('âœ…', 'Bought ' + amt + ' OST of $' + currentToken.symbol + ' Â· sig ' + String(buySig).slice(0,8));
           } else {
             result = await trade.memecoinSell(currentToken.symbol, amt);
+            var sellSig = result && (result.sig || result.signature) || '';
             if (typeof window.recordOstPlatformEvent === 'function') {
-              window.recordOstPlatformEvent({ kind: 'launchpad-sell', amount: result.ost, token: currentToken.symbol, sig: result.sig, ts: Date.now() });
+              window.recordOstPlatformEvent({ kind: 'launchpad-sell', amount: result.ost, token: currentToken.symbol, sig: sellSig, ts: Date.now() });
             }
-            currentToken.mcap = Math.max(100, currentToken.mcap - Math.floor(amt * 5));
-            currentToken.curve = Math.min(Math.floor(currentToken.mcap / 690), 100);
+            var remoteSell = await postLaunchpadTradeRemote(currentToken, 'sell', amt, sellSig);
+            if (remoteSell && remoteSell.coin) Object.assign(currentToken, normalizeRemoteLaunchpadCoin(remoteSell.coin));
+            else {
+              currentToken.mcap = Math.max(100, currentToken.mcap - Math.floor(amt * 5));
+              currentToken.curve = Math.min(Math.floor(currentToken.mcap / 690), 100);
+            }
             activities.unshift({ user: connectedWallet ? connectedWallet.slice(0,4)+'...' : 'You', verb: 'sold', token: '$' + currentToken.symbol, amount: result.ost.toString(), type: 'sell', time: Date.now() });
-            toast('âœ…', 'Sold ' + result.ost.toFixed(2) + ' ' + currentToken.symbol + ' Â· sig ' + String(result.sig).slice(0,8));
+            toast('âœ…', 'Sold ' + result.ost.toFixed(2) + ' ' + currentToken.symbol + ' Â· sig ' + String(sellSig).slice(0,8));
           }
 
           // Check graduation
@@ -11383,6 +11556,10 @@
           document.getElementById('lpDetailCurveFill').style.width = Math.min(currentToken.curve, 100) + '%';
           document.getElementById('lpTradeAmount').value = '';
           localStorage.setItem('ost_lp_history2', JSON.stringify(launches));
+          renderFeed();
+          renderTicker();
+          renderBoard();
+          updateStats();
           try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch(e){}
         } catch (err) {
           console.warn('[memecoin trade] failed', err);
@@ -11456,8 +11633,14 @@
       });
     }
 
-    /* â”€â”€ Simulate live market cap fluctuations â”€â”€ */
+    syncLaunchpadFromRemote();
+
+    /* â”€â”€ Simulate live market cap fluctuations only when the shared API is offline â”€â”€ */
     setInterval(function() {
+      if (launchpadApiBase()) {
+        syncLaunchpadFromRemote();
+        return;
+      }
       launches.forEach(function(l) {
         if (l.curve >= 100) return;
         var change = Math.floor((Math.random() - 0.45) * l.mcap * 0.03);

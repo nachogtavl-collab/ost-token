@@ -240,6 +240,156 @@ const FAUCET_DAILY_AMOUNT = 1;
 const FAUCET_DAILY_MS = 24 * 60 * 60 * 1000;
 const FAUCET_RESERVATION_MS = 2 * 60 * 1000;
 
+const STOCK_UNIVERSE = [
+  { symbol: 'AAPL', name: 'Apple Inc.', exchange: 'NASDAQ', sector: 'Technology', currency: 'USD' },
+  { symbol: 'MSFT', name: 'Microsoft Corp.', exchange: 'NASDAQ', sector: 'Technology', currency: 'USD' },
+  { symbol: 'NVDA', name: 'NVIDIA Corp.', exchange: 'NASDAQ', sector: 'Semiconductors', currency: 'USD' },
+  { symbol: 'TSLA', name: 'Tesla Inc.', exchange: 'NASDAQ', sector: 'Automotive', currency: 'USD' },
+  { symbol: 'AMZN', name: 'Amazon.com Inc.', exchange: 'NASDAQ', sector: 'Consumer', currency: 'USD' },
+  { symbol: 'META', name: 'Meta Platforms Inc.', exchange: 'NASDAQ', sector: 'Technology', currency: 'USD' },
+  { symbol: 'GOOGL', name: 'Alphabet Inc.', exchange: 'NASDAQ', sector: 'Technology', currency: 'USD' },
+  { symbol: 'AMD', name: 'Advanced Micro Devices', exchange: 'NASDAQ', sector: 'Semiconductors', currency: 'USD' },
+  { symbol: 'JPM', name: 'JPMorgan Chase & Co.', exchange: 'NYSE', sector: 'Financials', currency: 'USD' },
+  { symbol: 'V', name: 'Visa Inc.', exchange: 'NYSE', sector: 'Payments', currency: 'USD' },
+  { symbol: 'KO', name: 'Coca-Cola Co.', exchange: 'NYSE', sector: 'Consumer staples', currency: 'USD' },
+  { symbol: 'SPY', name: 'SPDR S&P 500 ETF', exchange: 'NYSE Arca', sector: 'Index ETF', currency: 'USD' },
+  { symbol: 'QQQ', name: 'Invesco QQQ Trust', exchange: 'NASDAQ', sector: 'Index ETF', currency: 'USD' },
+  { symbol: 'DIA', name: 'SPDR Dow Jones Industrial Average ETF', exchange: 'NYSE Arca', sector: 'Index ETF', currency: 'USD' }
+];
+
+function normalizeStockSymbol(value) {
+  return cleanText(value || '', 16).replace(/[^a-z0-9.-]/gi, '').toUpperCase();
+}
+
+function stockMeta(symbol) {
+  return STOCK_UNIVERSE.find(item => item.symbol === symbol) || { symbol, name: symbol, exchange: 'US', sector: 'Equity', currency: 'USD' };
+}
+
+function stooqSymbol(symbol) {
+  return normalizeStockSymbol(symbol).replace(/\./g, '-').toLowerCase() + '.us';
+}
+
+function yahooSymbol(symbol) {
+  return normalizeStockSymbol(symbol).replace(/\./g, '-');
+}
+
+function parseCsvRows(text) {
+  return String(text || '').trim().split(/\r?\n/).filter(Boolean).map(line => line.split(',').map(cell => cell.trim()));
+}
+
+function parseStockQuoteCsv(text, symbol) {
+  const rows = parseCsvRows(text);
+  if (rows.length < 2) return null;
+  const headers = rows[0].map(h => h.toLowerCase());
+  const row = rows[1];
+  const get = name => row[headers.indexOf(name)] || '';
+  const close = cleanNumber(get('close'));
+  const open = cleanNumber(get('open'));
+  const high = cleanNumber(get('high'));
+  const low = cleanNumber(get('low'));
+  if (!Number.isFinite(close) || close <= 0) return null;
+  const previous = Number.isFinite(open) && open > 0 ? open : close;
+  const change = close - previous;
+  const meta = stockMeta(symbol);
+  return {
+    symbol,
+    name: meta.name,
+    exchange: meta.exchange,
+    sector: meta.sector,
+    currency: meta.currency || 'USD',
+    price: close,
+    open: Number.isFinite(open) ? open : null,
+    high: Number.isFinite(high) ? high : null,
+    low: Number.isFinite(low) ? low : null,
+    volume: cleanNumber(get('volume'), 0) || 0,
+    change,
+    changePct: previous ? change / previous * 100 : 0,
+    asOf: [get('date'), get('time')].filter(Boolean).join(' '),
+    source: 'stooq-public'
+  };
+}
+
+async function fetchStockQuote(symbol) {
+  const clean = normalizeStockSymbol(symbol);
+  if (!clean) return null;
+  const response = await fetch(`https://stooq.com/q/l/?s=${encodeURIComponent(stooqSymbol(clean))}&f=sd2t2ohlcv&h&e=csv`, {
+    headers: { accept: 'text/csv', 'user-agent': 'OST-Stock-Mirror/1.0' },
+    cf: { cacheTtl: 20, cacheEverything: true }
+  });
+  if (!response.ok) return null;
+  return parseStockQuoteCsv(await response.text(), clean);
+}
+
+async function fetchStockHistory(symbol) {
+  const clean = normalizeStockSymbol(symbol);
+  if (!clean) return { history: [], source: 'none' };
+
+  const chartResponse = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol(clean))}?range=1y&interval=1d&includePrePost=false`, {
+    headers: { accept: 'application/json', 'user-agent': 'OST-Stock-Mirror/1.0' },
+    cf: { cacheTtl: 60 * 15, cacheEverything: true }
+  });
+  if (chartResponse.ok) {
+    try {
+      const payload = await chartResponse.json();
+      const result = payload && payload.chart && Array.isArray(payload.chart.result) ? payload.chart.result[0] : null;
+      const timestamps = result && Array.isArray(result.timestamp) ? result.timestamp : [];
+      const quote = result && result.indicators && Array.isArray(result.indicators.quote) ? result.indicators.quote[0] : null;
+      const history = timestamps.map((timestamp, index) => ({
+        date: new Date(Number(timestamp) * 1000).toISOString().slice(0, 10),
+        open: cleanNumber(quote && quote.open && quote.open[index]),
+        high: cleanNumber(quote && quote.high && quote.high[index]),
+        low: cleanNumber(quote && quote.low && quote.low[index]),
+        close: cleanNumber(quote && quote.close && quote.close[index]),
+        volume: cleanNumber(quote && quote.volume && quote.volume[index], 0) || 0
+      })).filter(point => point.date && Number.isFinite(point.close)).slice(-260);
+      if (history.length) return { history, source: 'yahoo-chart-public' };
+    } catch (_) {}
+  }
+
+  const csvResponse = await fetch(`https://stooq.com/q/d/l/?s=${encodeURIComponent(stooqSymbol(clean))}&i=d`, {
+    headers: { accept: 'text/csv', 'user-agent': 'OST-Stock-Mirror/1.0' },
+    cf: { cacheTtl: 60 * 15, cacheEverything: true }
+  });
+  if (!csvResponse.ok) return { history: [], source: 'unavailable' };
+  const rows = parseCsvRows(await csvResponse.text());
+  if (rows.length < 2) return { history: [], source: 'unavailable' };
+  const headers = rows[0].map(h => h.toLowerCase());
+  const idx = name => headers.indexOf(name);
+  const history = rows.slice(1).map(row => ({
+    date: row[idx('date')] || '',
+    open: cleanNumber(row[idx('open')]),
+    high: cleanNumber(row[idx('high')]),
+    low: cleanNumber(row[idx('low')]),
+    close: cleanNumber(row[idx('close')]),
+    volume: cleanNumber(row[idx('volume')], 0) || 0
+  })).filter(point => point.date && Number.isFinite(point.close)).slice(-260);
+  return { history, source: history.length ? 'stooq-public' : 'unavailable' };
+}
+
+async function recordStockWalletEvent(env, order) {
+  if (!env.OST_KV || !order || !order.wallet) return;
+  const record = {
+    id: order.id,
+    wallet: order.wallet,
+    kind: 'stock-mirror-order',
+    amount: cleanNumber(order.ostStake, 0) || 0,
+    sig: cleanText(order.signature || '', 128),
+    source: 'stock-mirror',
+    label: `${order.side.toUpperCase()} ${order.symbol} stock mirror`,
+    token: 'OST',
+    marketId: order.symbol,
+    title: order.name,
+    side: order.side,
+    price: order.price,
+    potentialReturn: order.notionalUsd,
+    ts: order.createdAt,
+    syncedAt: Date.now()
+  };
+  const key = `wallet:events:${record.wallet}`;
+  const bucket = await kvGet(env, key, []);
+  await kvPut(env, key, mergeNewest(bucket, record, 300));
+}
+
 function normalizeFaucetWallet(value) {
   const wallet = cleanText(value || '', 64);
   return isLikelySolanaAddress(wallet) ? wallet : '';
@@ -829,6 +979,12 @@ export default {
           'POST /launchpad/coins',
           'POST /launchpad/trade',
           'GET  /launchpad/ticks/:mint',
+          'GET  /stocks/universe',
+          'GET  /stocks/quotes',
+          'GET  /stocks/:symbol',
+          'GET  /stocks/:symbol/history',
+          'GET  /stocks/orders/:wallet',
+          'POST /stocks/orders',
           'GET  /topup/config',
           'POST /topup/intent',
           'POST /topup/checkout',
@@ -1151,7 +1307,7 @@ export default {
     if (path === '/launchpad/trade' && method === 'POST') {
       let body;
       try { body = await request.json(); } catch (_) { return json({ error: 'invalid_json' }, 400); }
-      const { mint, side, amount, trader } = body || {};
+      const { mint, side, amount, trader, signature } = body || {};
       if (!mint || !side || !Number.isFinite(Number(amount))) return json({ error: 'missing_fields', required: ['mint', 'side', 'amount'] }, 400);
       if (!env.OST_KV) return json({ ok: true, stored: false, note: 'KV not configured' });
       const coins = await kvGet(env, 'launchpad:coins', []);
@@ -1169,8 +1325,30 @@ export default {
       await kvPut(env, 'launchpad:coins', coins);
       const tickKey = `launchpad:ticks:${mint}`;
       const ticks = (await kvGet(env, tickKey, [])).slice(0, 199);
-      ticks.unshift({ side, amount: amt, mcap: c.mcap, trader: trader ? String(trader).slice(0, 8) + '…' : 'anon', ts: Date.now() });
+      const traderWallet = cleanText(trader || '', 64);
+      const cleanSignature = cleanText(signature || body.sig || '', 128);
+      ticks.unshift({ side, amount: amt, mcap: c.mcap, trader: traderWallet ? traderWallet.slice(0, 8) + '…' : 'anon', wallet: traderWallet, sig: cleanSignature, ts: Date.now() });
       await kvPut(env, tickKey, ticks, 60 * 60 * 24 * 7);
+      if (traderWallet) {
+        const event = {
+          id: cleanSignature || crypto.randomUUID(),
+          wallet: traderWallet,
+          kind: side === 'sell' ? 'launchpad-sell' : 'launchpad-buy',
+          amount: amt,
+          sig: cleanSignature,
+          source: 'launchpad',
+          label: `${side === 'sell' ? 'Sell' : 'Buy'} $${c.symbol}`,
+          token: cleanText(c.symbol || '', 32),
+          marketId: c.mint,
+          title: c.name,
+          side: cleanText(side || '', 16),
+          price: cleanNumber(c.mcap, 0),
+          ts: Date.now()
+        };
+        const walletKey = `wallet:events:${traderWallet}`;
+        const walletEvents = await kvGet(env, walletKey, []);
+        await kvPut(env, walletKey, mergeNewest(walletEvents, event, 300));
+      }
       return json({ ok: true, coin: c });
     }
     const tickMatch = path.match(/^\/launchpad\/ticks\/([^/]+)$/);
@@ -1179,6 +1357,85 @@ export default {
       if (!env.OST_KV) return json({ ticks: [] });
       const ticks = await kvGet(env, `launchpad:ticks:${mint}`, []);
       return json({ ticks, ts: new Date().toISOString() });
+    }
+
+    // -- STOCK MIRROR: public quote/history relay + OST-denominated orders ----
+    if (path === '/stocks/universe' && method === 'GET') {
+      return json({ universe: STOCK_UNIVERSE, count: STOCK_UNIVERSE.length, ts: new Date().toISOString() }, 200, { 'cache-control': 'public, max-age=300' });
+    }
+    if (path === '/stocks/quotes' && method === 'GET') {
+      const rawSymbols = cleanText(url.searchParams.get('symbols') || '', 300)
+        .split(',')
+        .map(normalizeStockSymbol)
+        .filter(Boolean);
+      const symbols = (rawSymbols.length ? rawSymbols : STOCK_UNIVERSE.slice(0, 10).map(item => item.symbol)).slice(0, 24);
+      const quotes = (await Promise.all(symbols.map(fetchStockQuote))).filter(Boolean);
+      return json({ quotes, count: quotes.length, ts: new Date().toISOString(), source: 'stooq-public' }, 200, { 'cache-control': 'public, max-age=20' });
+    }
+    const stockHistoryMatch = path.match(/^\/stocks\/([^/]+)\/history$/);
+    if (stockHistoryMatch && method === 'GET') {
+      const symbol = normalizeStockSymbol(decodeURIComponent(stockHistoryMatch[1]));
+      if (!symbol) return json({ error: 'invalid_symbol' }, 400);
+      const result = await fetchStockHistory(symbol);
+      return json({ symbol, history: result.history, count: result.history.length, ts: new Date().toISOString(), source: result.source }, 200, { 'cache-control': 'public, max-age=900' });
+    }
+    const stockQuoteMatch = path.match(/^\/stocks\/([^/]+)$/);
+    if (stockQuoteMatch && method === 'GET') {
+      const symbol = normalizeStockSymbol(decodeURIComponent(stockQuoteMatch[1]));
+      if (!symbol) return json({ error: 'invalid_symbol' }, 400);
+      const quote = await fetchStockQuote(symbol);
+      if (!quote) return json({ error: 'quote_unavailable', symbol }, 502);
+      return json({ quote, ts: new Date().toISOString() }, 200, { 'cache-control': 'public, max-age=20' });
+    }
+    const stockOrdersMatch = path.match(/^\/stocks\/orders\/([^/]+)$/);
+    if (stockOrdersMatch && method === 'GET') {
+      const wallet = cleanText(decodeURIComponent(stockOrdersMatch[1]), 64);
+      if (!wallet) return json({ error: 'invalid_wallet' }, 400);
+      if (!env.OST_KV) return json({ orders: [], note: 'KV not configured', wallet });
+      const limit = Math.min(200, Number(url.searchParams.get('limit') || 100));
+      const orders = await kvGet(env, `stocks:orders:${wallet}`, []);
+      return json({ orders: orders.slice(0, limit), wallet, ts: new Date().toISOString() }, 200, { 'cache-control': 'no-store' });
+    }
+    if (path === '/stocks/orders' && method === 'POST') {
+      let body;
+      try { body = await request.json(); } catch (_) { return json({ error: 'invalid_json' }, 400); }
+      const wallet = cleanText(body && body.wallet, 64);
+      const symbol = normalizeStockSymbol(body && body.symbol);
+      const side = String(body && body.side || '').toLowerCase() === 'sell' ? 'sell' : 'buy';
+      const ostStake = cleanNumber(body && body.ostStake, 0) || 0;
+      const quote = await fetchStockQuote(symbol).catch(() => null);
+      const price = cleanNumber(body && body.price, quote && quote.price) || (quote && quote.price) || 0;
+      if (!wallet || !symbol || !ostStake || ostStake <= 0 || !price) return json({ error: 'missing_fields', required: ['wallet', 'symbol', 'ostStake', 'price'] }, 400);
+      if (!env.OST_KV) return json({ ok: true, stored: false, note: 'KV not configured' });
+      const meta = stockMeta(symbol);
+      const order = {
+        id: cleanText(body.id || body.signature || crypto.randomUUID(), 160),
+        wallet,
+        symbol,
+        name: cleanText(body.name || meta.name, 120),
+        exchange: cleanText(body.exchange || meta.exchange, 40),
+        sector: cleanText(body.sector || meta.sector, 60),
+        side,
+        price,
+        shares: cleanNumber(body && body.shares, price > 0 ? cleanNumber(body && body.notionalUsd, 0) / price : 0) || 0,
+        notionalUsd: cleanNumber(body && body.notionalUsd, 0) || 0,
+        ostStake,
+        brokerCurrency: cleanText(body && body.brokerCurrency || 'USD', 8),
+        signature: cleanText(body && (body.signature || body.sig), 128),
+        status: cleanText(body && body.status || 'ost-mirror-open', 32),
+        settlement: 'OST devnet vault mirror; broker execution requires regulated KYC relay',
+        quoteSource: quote && quote.source || 'client',
+        quoteAsOf: quote && quote.asOf || '',
+        createdAt: toMs(body && (body.createdAt || body.ts)),
+        syncedAt: Date.now()
+      };
+      const walletKey = `stocks:orders:${wallet}`;
+      const walletOrders = await kvGet(env, walletKey, []);
+      await kvPut(env, walletKey, mergeNewest(walletOrders, order, 200));
+      const recent = await kvGet(env, 'stocks:orders:recent', []);
+      await kvPut(env, 'stocks:orders:recent', mergeNewest(recent, order, 200), 60 * 60 * 24 * 14);
+      await recordStockWalletEvent(env, order);
+      return json({ ok: true, stored: true, order });
     }
 
     // ── TOP-UP: real-money OST refill ───────────────────────────────────────

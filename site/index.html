@@ -49,7 +49,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Egyptian+Hieroglyphs&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="style.css?v=65">
+  <link rel="stylesheet" href="style.css?v=66">
   <link rel="stylesheet" href="mobile.css?v=7">
   <link rel="stylesheet" href="polish.css?v=1">
   <link rel="stylesheet" href="compartments.css?v=2">
@@ -63,6 +63,7 @@
   <link rel="stylesheet" href="faucet-hub.css?v=4">
   <link rel="stylesheet" href="topup.css?v=4">
   <link rel="stylesheet" href="offline-vault.css?v=1">
+  <link rel="stylesheet" href="stock-market.css?v=1">
   <link rel="stylesheet" href="live-watch.css?v=5">
   <link rel="stylesheet" href="mobile-shell.css?v=2">
 </head>
@@ -131,6 +132,7 @@
         <a href="#new-here" data-i18n="nav.newhere">Get OST</a>
           <a href="#commerce" data-i18n="nav.demos">Commerce</a>
         <a href="#wallet" data-i18n="nav.wallet">Wallet</a>
+          <a href="#stock-market">Stocks</a>
         <a href="#ai" data-i18n="nav.ai">AI &amp; Bots</a>
         <a href="#offline" data-i18n="nav.offline">Offline</a>
         <a href="#censorship" data-i18n="nav.censorship">Censorship</a>
@@ -2582,6 +2584,138 @@
             <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=NGN" target="_blank" rel="noopener" class="fiat-pill">NGN</a>
             <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=JPY" target="_blank" rel="noopener" class="fiat-pill">JPY</a>
             <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=KRW" target="_blank" rel="noopener" class="fiat-pill">KRW</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================== -->
+  <!-- OST STOCK MARKET MIRROR                                             -->
+  <!-- ================================================================== -->
+  <section id="stock-market" class="section section-space stock-market">
+    <div class="container stock-shell">
+      <div class="stock-topbar">
+        <div>
+          <span class="stock-kicker">Public equity mirror</span>
+          <div class="stock-title-row">
+            <h2>OST Stock Market</h2>
+            <span class="stock-status" id="smStatus">Starting stock relay...</span>
+          </div>
+        </div>
+        <div class="stock-controls">
+          <input type="search" class="stock-search" id="smSymbolSearch" placeholder="AAPL, NVDA, SPY" aria-label="Search stock symbols">
+          <button type="button" class="stock-refresh" id="smRefresh">Refresh</button>
+        </div>
+      </div>
+
+      <div class="stock-chip-row" aria-label="Stock market lanes">
+        <button type="button" class="stock-chip is-active" data-stock-sector="all">All</button>
+        <button type="button" class="stock-chip" data-stock-sector="tech">Technology</button>
+        <button type="button" class="stock-chip" data-stock-sector="indexes">Indexes</button>
+        <button type="button" class="stock-chip" data-stock-sector="value">Value</button>
+      </div>
+
+      <div class="stock-grid">
+        <div class="stock-panel">
+          <div class="stock-panel-head">
+            <div>
+              <h3>Market board</h3>
+              <p>Live public quotes from the OST edge relay, priced for OST-denominated mirror tickets.</p>
+            </div>
+            <div class="stock-range-row" aria-label="Chart range">
+              <button type="button" class="stock-chip is-active">1Y</button>
+              <button type="button" class="stock-chip">Daily</button>
+            </div>
+          </div>
+          <div class="stock-quote-grid" id="smQuoteGrid">
+            <div class="stock-empty">Loading public stock quotes...</div>
+          </div>
+          <div class="stock-chart-card">
+            <div class="stock-chart-head">
+              <div class="stock-selected">
+                <h3 id="smSelectedTitle">Select a stock</h3>
+                <div class="stock-muted" id="smSelectedMeta">Public quote relay</div>
+                <div class="stock-selected-price">
+                  <strong id="smSelectedPrice">--</strong>
+                  <span id="smSelectedChange">--</span>
+                </div>
+              </div>
+              <span class="stock-kicker">Stooq public data</span>
+            </div>
+            <canvas class="stock-chart" id="smChart" width="860" height="280" aria-label="Stock price chart"></canvas>
+            <div class="stock-depth-grid">
+              <div class="stock-metric"><span>Open</span><strong id="smMetricOpen">--</strong></div>
+              <div class="stock-metric"><span>High</span><strong id="smMetricHigh">--</strong></div>
+              <div class="stock-metric"><span>Low</span><strong id="smMetricLow">--</strong></div>
+              <div class="stock-metric"><span>Volume</span><strong id="smMetricVolume">--</strong></div>
+            </div>
+          </div>
+        </div>
+
+        <aside class="stock-ticket" aria-label="OST stock order ticket">
+          <div class="stock-ticket-head">
+            <div>
+              <span class="stock-kicker">OST ticket</span>
+              <h3>Mirror order</h3>
+              <p>Settlement records on OST devnet. Broker execution requires a regulated KYC relay.</p>
+            </div>
+          </div>
+          <div class="stock-side-row" aria-label="Stock side selector">
+            <button type="button" class="stock-side-btn is-active" data-stock-side="buy">Buy</button>
+            <button type="button" class="stock-side-btn" data-stock-side="sell">Sell</button>
+          </div>
+          <label>OST stake
+            <input type="number" min="1" step="1" id="smOstStake" value="25" inputmode="decimal">
+          </label>
+          <div class="stock-quick-row">
+            <button type="button" class="stock-chip" data-stock-stake="25">25 OST</button>
+            <button type="button" class="stock-chip" data-stock-stake="100">100 OST</button>
+            <button type="button" class="stock-chip" data-stock-stake="250">250 OST</button>
+            <button type="button" class="stock-chip" data-stock-stake="1000">1K OST</button>
+          </div>
+          <label>Broker currency
+            <select id="smBrokerCurrency">
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+              <option value="GBP">GBP</option>
+              <option value="CAD">CAD</option>
+              <option value="JPY">JPY</option>
+            </select>
+          </label>
+          <div class="stock-ticket-summary">
+            <div class="stock-metric"><span>Symbol</span><strong id="smTicketSymbol">--</strong></div>
+            <div class="stock-metric"><span>Last price</span><strong id="smTicketPrice">--</strong></div>
+            <div class="stock-metric"><span>USD notional</span><strong id="smEstNotional">--</strong></div>
+            <div class="stock-metric"><span>Mirror shares</span><strong id="smEstShares">--</strong></div>
+          </div>
+          <div class="stock-order-status" id="smOrderStatus">Connect a wallet to place an OST-settled stock mirror order.</div>
+          <button type="button" class="stock-order-btn" id="smOrderBtn">Place OST stock ticket</button>
+        </aside>
+      </div>
+
+      <div class="stock-lower-grid">
+        <div class="stock-positions">
+          <div class="stock-position-head">
+            <h3>Mirror positions</h3>
+            <span class="stock-kicker">Cross-device</span>
+          </div>
+          <div class="stock-position-list" id="smPositionsList">
+            <div class="stock-empty">Connect a wallet to mirror stock orders across devices.</div>
+          </div>
+        </div>
+        <div class="stock-rail">
+          <div class="stock-rail-head">
+            <div>
+              <h3>Currency relay</h3>
+              <p>OST and SOL quote against broker-accepted currencies while real securities execution waits for regulated rails.</p>
+            </div>
+          </div>
+          <div class="stock-rail-grid">
+            <div class="stock-rail-row"><span>OST/USD quote</span><strong id="smRailOstUsd">--</strong></div>
+            <div class="stock-rail-row"><span>SOL/USD quote</span><strong id="smRailSolUsd">--</strong></div>
+            <div class="stock-rail-row"><span>Data relay</span><strong>Public equities</strong></div>
+            <div class="stock-rail-row"><span>Execution relay</span><strong>KYC broker required</strong></div>
           </div>
         </div>
       </div>
@@ -5637,7 +5771,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`âœ… Tx: </s
       window.OST_POLY_RELAY_URL = window.OST_API_BASE;
     </script>
     <script src="native-markets.js?v=3"></script>
-    <script src="app.js?v=111"></script>
+    <script src="app.js?v=112"></script>
     <!-- Ghost AI Summoning Circle (rebuild) -->
     <script type="module" src="ghost/ghost.js?v=3"></script>
     <script type="module" src="mesh/mesh.js?v=18"></script>
@@ -5674,7 +5808,8 @@ console.<span class="code-fn">log</span>(<span class="code-str">`âœ… Tx: </s
   <script src="i18n-runtime.js?v=1"></script>
   <script src="devnet-rescue.js?v=4"></script>
   <script src="mesh/mesh-upgrade.js?v=1"></script>
-  <script src="launchpad-trenches.js?v=2"></script>
+  <script src="launchpad-trenches.js?v=3"></script>
+  <script src="stock-market.js?v=1"></script>
   <script>
     (function () {
       var deferredPrompt = null;
