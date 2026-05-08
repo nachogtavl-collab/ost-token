@@ -155,7 +155,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Egyptian+Hieroglyphs&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="style.css?v=68">
+  <link rel="stylesheet" href="style.css?v=69">
   <link rel="stylesheet" href="mobile.css?v=7">
   <link rel="stylesheet" href="polish.css?v=1">
   <link rel="stylesheet" href="compartments.css?v=2">
@@ -178,6 +178,7 @@
   <!-- ===== FIRST-VISIT: Language & Currency Selector ===== -->
   <div class="welcome-overlay" id="welcomeOverlay" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle" aria-describedby="welcomeIntro">
     <div class="welcome-modal" tabindex="-1">
+      <button type="button" class="wel-skip-x" id="welSkip" title="Skip and enter site" aria-label="Skip welcome and enter site">&times;</button>
       <div class="welcome-header">
         <span class="welcome-logo"><span class="logo-icon">&#9673;</span> OST</span>
         <h2 id="welcomeTitle">Welcome &mdash; Choose Your Preferences</h2>
@@ -5881,7 +5882,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`âœ… Tx: </s
       window.OST_POLY_RELAY_URL = window.OST_API_BASE;
     </script>
     <script src="native-markets.js?v=3"></script>
-    <script src="app.js?v=115"></script>
+    <script src="app.js?v=116"></script>
     <!-- Ghost AI Summoning Circle (rebuild) -->
     <script type="module" src="ghost/ghost.js?v=4"></script>
     <script type="module" src="mesh/mesh.js?v=20"></script>

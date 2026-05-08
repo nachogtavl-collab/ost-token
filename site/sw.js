@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v57';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v57';
+const CACHE_NAME = 'ost-pwa-cache-v58';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v58';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -10,7 +10,7 @@ const PRECACHE_PATHS = [
   './ost-logo.svg',
   './icon-192.png',
   './icon-512.png',
-  './style.css?v=68',
+  './style.css?v=69',
   './mobile.css?v=7',
   './polish.css?v=1',
   './compartments.css?v=2',
@@ -27,7 +27,7 @@ const PRECACHE_PATHS = [
   './stock-market.css?v=1',
   './mobile-shell.css?v=5',
   './rpc-multiplexer.js?v=1',
-  './app.js?v=115',
+  './app.js?v=116',
   './nuevo-laredo-gas.js?v=1',
   './shop-quickview.js?v=1',
   './interchange-live.js?v=1',

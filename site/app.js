@@ -12584,6 +12584,58 @@
     window.OST_SUPPRESS_BLOCKERS = suppressPostWelcomeOverlays;
     armPostWelcomeOverlayGuard();
 
+    /* Global escape hatch — users can ALWAYS dismiss any blocking overlay
+       by pressing Escape, and any URL like ?nopopup=1 wipes them on load. */
+    function nukeAllBlockingOverlays() {
+      try {
+        // Universal popup
+        var pop = document.getElementById('ostPopupOverlay');
+        if (pop) {
+          pop.classList.remove('open');
+          pop.setAttribute('aria-hidden', 'true');
+          var pf = document.getElementById('ostPopupFrame');
+          if (pf) pf.src = '';
+        }
+        // Wallet / map / topup / transmit / live-watch / vault / mesh upgrades
+        document.querySelectorAll(
+          '.wallet-modal.open, .map-modal.open, .ost-modal-overlay.ost-modal-open,' +
+          ' .topup-modal-overlay.open, .transmit-overlay.open, .live-watch-modal.is-open,' +
+          ' #offlineVaultScan.open, .ost-tour, .ost-guide-overlay'
+        ).forEach(function(el) {
+          el.classList.remove('open', 'ost-modal-open', 'is-open');
+          el.setAttribute('aria-hidden', 'true');
+          el.style.display = 'none';
+        });
+        suppressPostWelcomeOverlays();
+        document.body.style.overflow = '';
+        document.body.classList.remove('ost-welcome-open');
+      } catch (e) {}
+    }
+    window.OST_NUKE_OVERLAYS = nukeAllBlockingOverlays;
+
+    document.addEventListener('keydown', function(ev) {
+      if (ev.key === 'Escape') {
+        // Don't fight a focused input
+        var ae = document.activeElement;
+        if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName) && ae.type !== 'button') return;
+        nukeAllBlockingOverlays();
+      }
+    }, true);
+
+    try {
+      var qp = new URLSearchParams(location.search);
+      if (qp.has('nopopup') || qp.has('reset')) {
+        if (qp.has('reset')) {
+          try {
+            ['ost-ancient', 'ost-ancient.userPicked', 'ost.tour.completed', 'ost.compartments.guideSeen.v1']
+              .forEach(function(k) { localStorage.removeItem(k); });
+          } catch (e) {}
+        }
+        setTimeout(nukeAllBlockingOverlays, 50);
+        setTimeout(nukeAllBlockingOverlays, 800);
+      }
+    } catch (e) {}
+
     function showWelcome() {
       clearOverlayInlineState();
       overlay.classList.remove('hidden');
@@ -12719,6 +12771,22 @@
         window.__ostXP.award(10, 'Set preferences');
       }
     });
+
+    // Skip — accept defaults and let users into the site immediately so they
+    // are never trapped behind the welcome gate.
+    var welSkipBtn = document.getElementById('welSkip');
+    if (welSkipBtn) {
+      welSkipBtn.addEventListener('click', function() {
+        try {
+          syncStoredPrefs(selectedLang || 'en', selectedCurrency || 'USD');
+          rememberWelcomeSeen();
+        } catch (e) {}
+        if (typeof applyTranslations === 'function') applyTranslations(selectedLang || 'en');
+        syncNavLanguage(selectedLang || 'en');
+        window.__ostCurrency = selectedCurrency || 'USD';
+        hideWelcome(true);
+      });
+    }
   })();
 
   /* ================================================================== */
@@ -16156,14 +16224,34 @@
 
     window.syncAncientModeUi = syncAncientToggle;
 
-    if (localStorage.getItem('ost-ancient') === '1') {
+    /* Modern Mode default migration (v2): everyone defaults to modern.
+       Users who explicitly opt-in to Ancient via the toggle stay opted-in
+       (we tag a userPicked flag from that moment forward). */
+    try {
+      var MODE_MIGRATION_KEY = 'ost.mode.migration.v2';
+      if (localStorage.getItem(MODE_MIGRATION_KEY) !== '1') {
+        localStorage.setItem('ost-ancient', '0');
+        localStorage.removeItem('ost-ancient.userPicked');
+        localStorage.setItem(MODE_MIGRATION_KEY, '1');
+      }
+    } catch (e) {}
+
+    var ancientUserPicked = false;
+    try { ancientUserPicked = localStorage.getItem('ost-ancient.userPicked') === '1'; } catch (e) {}
+
+    if (ancientUserPicked && localStorage.getItem('ost-ancient') === '1') {
       document.documentElement.classList.add('ancient-mode');
+    } else {
+      document.documentElement.classList.remove('ancient-mode');
     }
     syncAncientToggle();
 
     toggle.addEventListener('click', function() {
       var isOn = document.documentElement.classList.toggle('ancient-mode');
-      localStorage.setItem('ost-ancient', isOn ? '1' : '0');
+      try {
+        localStorage.setItem('ost-ancient', isOn ? '1' : '0');
+        localStorage.setItem('ost-ancient.userPicked', '1');
+      } catch (e) {}
       syncAncientToggle();
       if (typeof toast === 'function') {
         toast(isOn ? 'ð“…±' : 'â—‰', isOn ? t('ancient.toast.on') : t('ancient.toast.off'));
