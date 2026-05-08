@@ -22,6 +22,24 @@
       })();
     </script>
   <style id="ost-mobile-fastboot-style">
+    html.ost-mobile-fastboot,
+    html.ost-mobile-fastboot body {
+      min-width: 0 !important;
+      overflow-x: hidden !important;
+    }
+
+    html.ost-mobile-fastboot #welcomeOverlay,
+    html.ost-mobile-fastboot .welcome-overlay,
+    html.ost-mobile-fastboot .ost-guide-overlay,
+    html.ost-mobile-fastboot .ost-tour {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+      position: static !important;
+      z-index: -1 !important;
+    }
+
     @media (max-width: 820px), (pointer: coarse) and (max-width: 1024px) {
       #welcomeOverlay.welcome-overlay,
       .ost-guide-overlay,
@@ -45,34 +63,45 @@
         visibility: hidden !important;
         opacity: 0 !important;
         pointer-events: none !important;
+        position: static !important;
+        z-index: -1 !important;
       }
     }
   </style>
   <script>
     (function () {
-      function mobileLike() {
+      var mobileUserAgent = /Android|iPhone|iPad|iPod|IEMobile|Opera Mini|Mobile|Silk/i;
+
+      function getWidthFloor() {
+        var widths = [];
+        if (window.innerWidth) widths.push(window.innerWidth);
+        if (window.visualViewport && window.visualViewport.width) widths.push(window.visualViewport.width);
+        if (window.screen && window.screen.width) widths.push(window.screen.width);
+        if (window.screen && window.screen.availWidth) widths.push(window.screen.availWidth);
+        return widths.length ? Math.min.apply(Math, widths) : 9999;
+      }
+
+      function mobileSignal() {
         try {
+          if (window.OST_MOBILE_FASTBOOT) return true;
           if (window.matchMedia && window.matchMedia('(max-width: 820px), (pointer: coarse) and (max-width: 1024px)').matches) return true;
+          if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches && getWidthFloor() <= 1024) return true;
         } catch (e) {}
         try {
-          var ua = navigator.userAgent || '';
-          if (/Android|iPhone|iPad|iPod|IEMobile|Opera Mini|Mobile/i.test(ua)) return true;
-          if (navigator.maxTouchPoints > 1 && window.screen && Math.min(window.screen.width || 9999, window.screen.height || 9999) <= 1366) return true;
-        } catch (e) {}
-        try {
-          var widths = [window.innerWidth || 9999];
-          if (window.visualViewport && window.visualViewport.width) widths.push(window.visualViewport.width);
-          if (window.screen && window.screen.width) widths.push(window.screen.width);
-          return Math.min.apply(Math, widths) <= 820;
+          var widthFloor = getWidthFloor();
+          if (widthFloor <= 820) return true;
+          if (navigator.maxTouchPoints > 1 && widthFloor <= 1180) return true;
+          if (mobileUserAgent.test(navigator.userAgent || '')) return true;
         } catch (e) {}
         return false;
       }
 
-      if (!mobileLike()) return;
+      if (!mobileSignal()) return;
       document.documentElement.classList.add('ost-mobile-fastboot');
       window.OST_MOBILE_FASTBOOT = true;
       try {
-        localStorage.setItem('ost_prefs', JSON.stringify({ lang: document.documentElement.getAttribute('data-lang') || 'en', currency: window.__ostCurrency || 'USD' }));
+        var prefs = JSON.parse(localStorage.getItem('ost_prefs') || '{}');
+        localStorage.setItem('ost_prefs', JSON.stringify({ lang: prefs.lang || document.documentElement.getAttribute('data-lang') || 'en', currency: prefs.currency || window.__ostCurrency || 'USD' }));
         sessionStorage.setItem('ost.welcome.seen.session', '1');
         localStorage.setItem('ost.tour.completed', '1');
         localStorage.setItem('ost.compartments.guideSeen.v1', '1');
@@ -85,13 +114,20 @@
           welcome.classList.add('hidden');
           welcome.setAttribute('aria-hidden', 'true');
           welcome.style.display = 'none';
+          welcome.style.visibility = 'hidden';
+          welcome.style.opacity = '0';
           welcome.style.pointerEvents = 'none';
+          welcome.style.position = 'static';
+          welcome.style.zIndex = '-1';
           released = true;
         }
-        document.querySelectorAll('.ost-guide-overlay, .ost-tour.is-open').forEach(function (overlay) {
+        document.querySelectorAll('.ost-guide-overlay, .ost-tour').forEach(function (overlay) {
           overlay.classList.remove('is-open');
           overlay.setAttribute('aria-hidden', 'true');
           overlay.style.display = 'none';
+          overlay.style.visibility = 'hidden';
+          overlay.style.opacity = '0';
+          overlay.style.pointerEvents = 'none';
         });
         return released;
       }
@@ -5628,7 +5664,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`âœ… Tx: </s
     </div>
   </div>
 
-  <script src="mobile-shell.js?v=3"></script>
+  <script src="mobile-shell.js?v=4"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <!-- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        Buffer + Node-globals polyfill â€” REQUIRED by @solana/web3.js.
