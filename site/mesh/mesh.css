@@ -21,6 +21,20 @@
 }
 #ost-mesh-pavilion.is-open { display: flex; }
 
+#ost-mesh-pavilion button,
+#ost-mesh-pavilion input {
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+#ost-mesh-pavilion button {
+  min-height: 44px;
+  touch-action: manipulation;
+  white-space: normal;
+  line-height: 1.15;
+  text-align: center;
+}
+
 #ost-mesh-trigger {
   position: fixed;
   right: 18px;
@@ -73,8 +87,8 @@
   border: 1px solid #1f3b55;
   color: #d8eaff;
   border-radius: 999px;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   cursor: pointer;
 }
 
@@ -105,6 +119,12 @@
 .ost-mesh-id #mesh-dir-status {
   color: #6dffb5;
 }
+.ost-mesh-id-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  min-width: min(100%, 380px);
+}
 .ost-mesh-id button {
   background: #0a2740;
   border: 1px solid #134466;
@@ -113,12 +133,14 @@
   border-radius: 999px;
   cursor: pointer;
   font-size: 12px;
+  width: 100%;
 }
 
 .ost-mesh-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto auto;
   gap: 8px;
-  flex-wrap: wrap;
+  align-items: stretch;
 }
 .ost-mesh-row input[type="text"] {
   flex: 1 1 220px;
@@ -138,6 +160,7 @@
   font-weight: 600;
   cursor: pointer;
   font-size: 13px;
+  min-width: 132px;
 }
 .ost-mesh-row button.ghost {
   background: transparent;
@@ -193,9 +216,11 @@
   font-size: 12px;
 }
 .ost-mesh-call-actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
   gap: 6px;
-  flex-wrap: wrap;
+  flex: 1 1 320px;
+  min-width: min(100%, 520px);
 }
 .ost-mesh-call-actions button {
   background: #0a2740;
@@ -205,6 +230,7 @@
   padding: 7px 10px;
   font-size: 12px;
   cursor: pointer;
+  width: 100%;
 }
 .ost-mesh-call-actions button:disabled {
   opacity: 0.45;
@@ -296,9 +322,10 @@
 }
 
 .ost-mesh-compose {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
-  align-items: center;
+  align-items: stretch;
 }
 .ost-mesh-compose input[type="text"] {
   flex: 1;
@@ -309,10 +336,21 @@
   padding: 12px 16px;
   font-size: 14px;
 }
+.ost-mesh-compose button {
+  background: linear-gradient(135deg, #00b8e6, #0085c2);
+  color: #001120;
+  border: none;
+  border-radius: 999px;
+  padding: 12px 18px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 13px;
+  min-width: 88px;
+}
 .ost-mesh-tools {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 8px;
 }
 .ost-mesh-tools button {
   background: #0a2740;
@@ -322,6 +360,17 @@
   padding: 8px 12px;
   font-size: 12px;
   cursor: pointer;
+  width: 100%;
+}
+.ost-mesh-tools button.ghost {
+  background: transparent;
+  border-color: #1f4866;
+  color: #b9e3ff;
+}
+.ost-mesh-compose button:disabled,
+.ost-mesh-tools button:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
 }
 
 .ost-mesh-video-grid {
@@ -356,6 +405,11 @@
   .ost-mesh-id {
     align-items: stretch;
   }
+  .ost-mesh-id-actions {
+    grid-template-columns: 1fr;
+    width: 100%;
+    min-width: 0;
+  }
   .ost-mesh-id .pill {
     display: block;
     max-width: 100%;
@@ -368,14 +422,20 @@
     display: grid;
     grid-template-columns: 1fr;
   }
-  .ost-mesh-row button { padding: 10px 14px; }
+  .ost-mesh-row button { padding: 10px 14px; min-width: 0; width: 100%; }
+  .ost-mesh-compose button { min-width: 0; width: 100%; }
   .ost-mesh-stage { min-height: 0; }
   .ost-mesh-feed { max-height: none; min-height: 240px; }
   .ost-mesh-bubble { max-width: 92%; }
   .ost-mesh-tools,
-  .ost-mesh-call-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ost-mesh-call-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); min-width: 0; width: 100%; }
   .ost-mesh-map-card,
   .ost-mesh-media-card { width: 100%; min-width: 0; }
   .ost-mesh-map-card iframe { height: 190px; }
   .ost-mesh-call-actions button { flex: 1 1 auto; }
+}
+
+@media (max-width: 380px) {
+  .ost-mesh-tools,
+  .ost-mesh-call-actions { grid-template-columns: 1fr; }
 }

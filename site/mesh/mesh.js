@@ -11,7 +11,7 @@ import {
 } from './mesh-crypto.js?v=1';
 import { MeshRTC } from './mesh-rtc.js?v=10';
 
-const STYLE_HREF = './mesh/mesh.css?v=4';
+const STYLE_HREF = './mesh/mesh.css?v=5';
 const STORAGE_ID = 'ost_mesh_identity_v1';
 const STORAGE_ADDR = 'ost_mesh_addr_v1';
 const MAX_FILE_BYTES = 32 * 1024 * 1024;
@@ -69,7 +69,7 @@ function buildDOM() {
           <div class="sub">Directory</div>
           <span class="pill" id="mesh-dir-status">registering…</span>
         </div>
-        <div style="display:flex; gap:6px;">
+        <div class="ost-mesh-id-actions">
           <button id="mesh-copy-addr">Copy address</button>
           <button id="mesh-copy-invite">Copy invite</button>
           <button id="mesh-rotate-id">Rotate keys</button>

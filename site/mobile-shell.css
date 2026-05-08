@@ -607,7 +607,7 @@
   #ost-mesh-pavilion .ost-mesh-shell {
     width: 100%;
     max-width: 100%;
-    padding: calc(14px + env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)) !important;
+    padding: calc(14px + env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) calc(110px + env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)) !important;
     gap: 12px;
   }
 
@@ -623,11 +623,18 @@
   }
 
   .ost-mesh-compose {
-    position: sticky;
-    bottom: 0;
+    position: static !important;
+    bottom: auto !important;
+    z-index: auto !important;
     padding: 10px;
     background: rgba(3, 9, 18, 0.94);
     border: 1px solid rgba(127, 216, 255, 0.14);
+  }
+
+  .ost-mesh-id-actions,
+  .ost-mesh-tools,
+  .ost-mesh-call-actions {
+    width: 100%;
   }
 
   .ost-mesh-compose input[type="text"] {
