@@ -321,11 +321,11 @@
 
   // -------------------------------------------------------------- Boot
   function boot() {
-    // Default to wallet section if no hash, but Home if first ever visit
+    // Default to the mobile-friendly Home launcher unless the URL asks for a section.
     var hash = (location.hash || '').replace(/^#/, '').split('?')[0].split('/')[0];
     var def = SECTIONS.find(function (s) { return s.id === hash; });
     if (def) state.active = def.id;
-    else state.active = localStorage.getItem(GUIDE_KEY) ? 'wallet' : 'home';
+    else state.active = 'home';
 
     buildDock();
     buildBreadcrumb();

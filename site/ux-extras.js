@@ -5,6 +5,7 @@
   // ------------------ Mobile request-desktop toggle ------------------------
   function mountMobileBar() {
     if (document.getElementById('ost-mobile-bar')) return;
+    var mobileViewportContent = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
     var bar = document.createElement('div');
     bar.id = 'ost-mobile-bar';
     bar.className = 'ost-mobile-bar';
@@ -14,6 +15,7 @@
       '<button type="button" data-tour-restart title="Restart guide">❓</button>';
     document.body.appendChild(bar);
     var saved = localStorage.getItem('ost.viewport') || 'mobile';
+    if (isPhoneLike() && saved === 'desktop') saved = 'mobile';
     apply(saved);
     bar.addEventListener('click', function (ev) {
       var btn = ev.target.closest('button[data-mode]');
@@ -22,18 +24,22 @@
       if (t) { localStorage.removeItem('ost.tour.completed'); startTour(); }
     });
     function apply(mode) {
+      if (isPhoneLike() && mode === 'desktop') mode = 'mobile';
       localStorage.setItem('ost.viewport', mode);
       var meta = document.querySelector('meta[name="viewport"]');
       if (mode === 'desktop') {
         document.body.classList.add('ost-force-desktop');
-        if (meta) meta.setAttribute('content', 'width=1280, initial-scale=0.4');
+        if (meta) meta.setAttribute('content', mobileViewportContent);
       } else {
         document.body.classList.remove('ost-force-desktop');
-        if (meta) meta.setAttribute('content', 'width=device-width, initial-scale=1.0');
+        if (meta) meta.setAttribute('content', mobileViewportContent);
       }
       bar.querySelectorAll('button[data-mode]').forEach(function (b) {
         b.classList.toggle('is-active', b.getAttribute('data-mode') === mode);
       });
+    }
+    function isPhoneLike() {
+      return window.matchMedia && window.matchMedia('(max-width: 820px), (pointer: coarse) and (max-width: 1024px)').matches;
     }
   }
 
