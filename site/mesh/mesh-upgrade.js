@@ -16,6 +16,9 @@
     'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js',
     'https://unpkg.com/jsqr@1.4.0/dist/jsQR.js'
   ];
+  var AVATAR_MAX_PUBLIC = 56000;
+  var AVATAR_THUMB_MAX_PUBLIC = 18000;
+  var AVATAR_QR_MAX_PUBLIC = 1350;
   var scanStream = null;
   var scanRunId = 0;
   var qrDecoderPromise = null;
@@ -99,9 +102,41 @@
     return new TextDecoder().decode(bytes);
   }
 
+  function validImageSource(value) {
+    var src = String(value || '').trim();
+    if (!src) return '';
+    if (/^data:image\//i.test(src)) {
+      var comma = src.indexOf(',');
+      if (comma < 16 || src.length - comma < 64) return '';
+      var head = src.slice(0, comma);
+      var body = src.slice(comma + 1);
+      if (/;base64/i.test(head)) {
+        if (!/^[A-Za-z0-9+/]+=*$/.test(body) || body.length % 4 === 1) return '';
+        if (src.length >= 23990 && src.length <= 24010) return '';
+      }
+      return src;
+    }
+    if (/^(https?:|blob:|\.\/|\/)/i.test(src)) return src;
+    return '';
+  }
+
+  function boundedAvatar(value, maxLength) {
+    var src = validImageSource(value);
+    if (!src) return '';
+    return src.length <= maxLength ? src : '';
+  }
+
   function publicProfile(profile, options) {
+    profile = profile || {};
     options = options || {};
-    var avatar = options.includeAvatar ? profileAvatar(profile) : '';
+    var qrOnly = !!options.qrOnly;
+    var fullAvatar = options.includeAvatar && !qrOnly ? boundedAvatar(profile && profile.avatar, AVATAR_MAX_PUBLIC) : '';
+    var thumbAvatar = options.includeAvatar ? boundedAvatar(profile && profile.avatarThumb, qrOnly ? AVATAR_QR_MAX_PUBLIC : AVATAR_THUMB_MAX_PUBLIC) : '';
+    var qrAvatar = options.includeAvatar ? boundedAvatar(profile && profile.avatarQr, AVATAR_QR_MAX_PUBLIC) : '';
+    if (!qrAvatar && thumbAvatar && thumbAvatar.length <= AVATAR_QR_MAX_PUBLIC) qrAvatar = thumbAvatar;
+    if (qrOnly && qrAvatar) thumbAvatar = qrAvatar;
+    if (!thumbAvatar && fullAvatar && fullAvatar.length <= AVATAR_THUMB_MAX_PUBLIC) thumbAvatar = fullAvatar;
+    if (!fullAvatar && thumbAvatar) fullAvatar = thumbAvatar;
     return {
       nickname: String(profile.nickname || '').slice(0, 32),
       handle: String(profile.handle || '').slice(0, 32),
@@ -109,15 +144,21 @@
       bio: String(profile.bio || '').slice(0, 220),
       wallet: String(profile.wallet || '').slice(0, 96),
       address: normalizeAddress(profile.address),
-      avatar: String(avatar || '').slice(0, 24000),
-      avatarThumb: String((profile && profile.avatarThumb) || avatar || '').slice(0, 24000),
+      avatar: fullAvatar,
+      avatarThumb: thumbAvatar,
+      avatarQr: qrAvatar,
       updatedAt: profile.updatedAt || Date.now()
     };
   }
 
-  function profileAvatar(profile) {
+  function profileAvatar(profile, preferFull) {
     if (!profile) return '';
-    return String(profile.avatarThumb || profile.avatar || '');
+    var candidates = preferFull ? [profile.avatar, profile.avatarThumb, profile.avatarQr] : [profile.avatarThumb, profile.avatarQr, profile.avatar];
+    for (var i = 0; i < candidates.length; i++) {
+      var src = validImageSource(candidates[i]);
+      if (src) return src;
+    }
+    return '';
   }
 
   function defaultProfile(p) {
@@ -132,6 +173,7 @@
       address: address,
       avatar: saved.avatar || '',
       avatarThumb: saved.avatarThumb || '',
+      avatarQr: saved.avatarQr || '',
       updatedAt: saved.updatedAt || Date.now()
     };
   }
@@ -141,12 +183,48 @@
     return (text.split(/\s+/).map(function (part) { return part.charAt(0); }).join('').slice(0, 2) || 'OM').toUpperCase();
   }
 
-  function avatarHtml(profile, sizeClass) {
-    var avatar = profileAvatar(profile);
+  function avatarHtml(profile, sizeClass, options) {
+    options = options || {};
+    var avatar = profileAvatar(profile, !!options.preferFull);
+    var fallback = profileAvatar(profile, !options.preferFull);
+    if (fallback === avatar) fallback = '';
+    var initialText = initials(profile || {});
     if (avatar) {
-      return '<span class="omu-avatar ' + (sizeClass || '') + '"><img src="' + escapeHtml(avatar) + '" alt=""></span>';
+      return '<span class="omu-avatar ' + (sizeClass || '') + '" data-initials="' + escapeHtml(initialText) + '"><img src="' + escapeHtml(avatar) + '" data-omu-alt-src="' + escapeHtml(fallback) + '" alt=""></span>';
     }
-    return '<span class="omu-avatar ' + (sizeClass || '') + '"><b>' + escapeHtml(initials(profile || {})) + '</b></span>';
+    return '<span class="omu-avatar ' + (sizeClass || '') + '" data-initials="' + escapeHtml(initialText) + '"><b>' + escapeHtml(initialText) + '</b></span>';
+  }
+
+  function repairAvatarImage(img) {
+    if (!img || img.__omuRepairing) return;
+    var alt = validImageSource(img.getAttribute('data-omu-alt-src') || '');
+    if (alt && img.src !== alt) {
+      img.__omuRepairing = true;
+      img.src = alt;
+      window.setTimeout(function () { img.__omuRepairing = false; }, 0);
+      return;
+    }
+    var parent = img.closest && img.closest('.omu-avatar');
+    if (!parent) return;
+    var initialText = parent.getAttribute('data-initials') || 'OM';
+    parent.classList.add('is-broken');
+    parent.innerHTML = '<b>' + escapeHtml(initialText) + '</b>';
+  }
+
+  function wireAvatarFallbacks(root) {
+    if (!root || root.__omuAvatarFallbacks) return;
+    root.__omuAvatarFallbacks = true;
+    root.addEventListener('error', function (event) {
+      if (event.target && event.target.matches && event.target.matches('.omu-avatar img')) repairAvatarImage(event.target);
+    }, true);
+  }
+
+  function avatarButtonHtml(profile) {
+    var avatar = profileAvatar(profile, true);
+    var fallback = profileAvatar(profile, false);
+    if (fallback === avatar) fallback = '';
+    var initialText = initials(profile || {});
+    return '<button type="button" class="omu-avatar" id="omuAvatarButton" aria-label="Select profile picture" data-initials="' + escapeHtml(initialText) + '">' + (avatar ? '<img src="' + escapeHtml(avatar) + '" data-omu-alt-src="' + escapeHtml(fallback) + '" alt="">' : '<b>' + escapeHtml(initialText) + '</b>') + '</button>';
   }
 
   function inviteFor(p, profile) {
@@ -159,6 +237,7 @@
       fingerprint: p.fpr || '',
       profile: publicProfile(sourceProfile, { includeAvatar: true })
     };
+    if (JSON.stringify(payload).length > 1800) payload.profile = publicProfile(sourceProfile, { includeAvatar: true, qrOnly: true });
     if (JSON.stringify(payload).length > 1800) payload.profile = publicProfile(sourceProfile, { includeAvatar: false });
     return INVITE_PREFIX + b64urlEncode(JSON.stringify(payload));
   }
@@ -177,8 +256,9 @@
         profile: profile,
         nick: profile.nickname || profile.handle || short(parsed.address),
         wallet: profile.wallet || '',
-        avatar: profile.avatar || profile.avatarThumb || '',
-        avatarThumb: profile.avatarThumb || profile.avatar || '',
+        avatar: profile.avatar || profile.avatarThumb || profile.avatarQr || '',
+        avatarThumb: profile.avatarThumb || profile.avatarQr || profile.avatar || '',
+        avatarQr: profile.avatarQr || '',
         status: profile.status || ''
       };
     }
@@ -193,8 +273,9 @@
         profile: prof,
         nick: obj.nick || prof.nickname || short(obj.address),
         wallet: obj.wallet || prof.wallet || '',
-        avatar: obj.avatar || obj.avatarThumb || prof.avatar || prof.avatarThumb || '',
-        avatarThumb: obj.avatarThumb || prof.avatarThumb || obj.avatar || prof.avatar || '',
+        avatar: obj.avatar || obj.avatarThumb || prof.avatar || prof.avatarThumb || prof.avatarQr || '',
+        avatarThumb: obj.avatarThumb || prof.avatarThumb || obj.avatarQr || prof.avatarQr || obj.avatar || prof.avatar || '',
+        avatarQr: obj.avatarQr || prof.avatarQr || '',
         status: obj.status || prof.status || ''
       };
     }
@@ -288,7 +369,7 @@
       '.ost-mesh-upgrade{border:1px solid rgba(127,216,255,.16);border-radius:16px;background:linear-gradient(180deg,rgba(8,18,30,.86),rgba(3,10,18,.78));padding:12px;display:grid;gap:12px;color:#dff8ff}',
       '.omu-social-head{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0}.omu-social-head strong{display:block;color:#fff;font-size:13px;letter-spacing:.04em;text-transform:uppercase}.omu-social-head span{display:block;color:#8ebbd5;font-size:12px}.omu-social-toggle{border:1px solid rgba(255,255,255,.12);border-radius:10px;background:rgba(255,255,255,.07);color:#e8fbff;padding:8px 10px;font-weight:800;font-size:12px;min-height:38px}.omu-body{display:grid;gap:12px;min-width:0}.ost-mesh-upgrade.is-collapsed{gap:0}.ost-mesh-upgrade.is-collapsed .omu-body{display:none}',
       '.ost-mesh-upgrade *{box-sizing:border-box}.omu-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:10px}.omu-card{border:1px solid rgba(255,255,255,.1);border-radius:14px;background:rgba(255,255,255,.045);padding:10px;display:grid;gap:9px;min-width:0}.omu-card h3{margin:0;color:#fff;font-size:13px;letter-spacing:.04em;text-transform:uppercase}.omu-card p{margin:0;color:#8ebbd5;font-size:12px;line-height:1.4}',
-      '.omu-profile-social{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center}.omu-avatar{width:74px;height:74px;border-radius:24px;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;background:linear-gradient(145deg,#0d5b7d,#10243d);border:1px solid rgba(127,216,255,.32);box-shadow:0 12px 28px rgba(0,0,0,.28);color:#dff8ff;flex:0 0 auto}.omu-avatar img{width:100%;height:100%;object-fit:cover}.omu-avatar b{font-size:22px}.omu-avatar.sm{width:46px;height:46px;border-radius:16px}.omu-profile-meta{display:grid;gap:3px;min-width:0}.omu-profile-meta strong{color:#fff;font-size:16px;overflow:hidden;text-overflow:ellipsis}.omu-profile-meta span{font-size:12px;color:#7fd8ff;overflow:hidden;text-overflow:ellipsis}.omu-wallet-pill{font-family:ui-monospace,Menlo,monospace;color:#9fffd0;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+      '.omu-profile-social{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center}.omu-avatar{width:74px;height:74px;border-radius:24px;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;background:linear-gradient(145deg,#0d5b7d,#10243d);border:1px solid rgba(127,216,255,.32);box-shadow:0 12px 28px rgba(0,0,0,.28);color:#dff8ff;flex:0 0 auto}.omu-avatar img{width:100%;height:100%;object-fit:cover}.omu-avatar b{font-size:22px}.omu-avatar.is-broken{background:linear-gradient(145deg,#16415b,#16223a)}.omu-avatar.sm{width:46px;height:46px;border-radius:16px}.omu-profile-meta{display:grid;gap:3px;min-width:0}.omu-profile-meta strong{color:#fff;font-size:16px;overflow:hidden;text-overflow:ellipsis}.omu-profile-meta span{font-size:12px;color:#7fd8ff;overflow:hidden;text-overflow:ellipsis}.omu-wallet-pill{font-family:ui-monospace,Menlo,monospace;color:#9fffd0;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.omu-alert-state{font-size:11px;color:#9bcbe6;line-height:1.35}',
       '.omu-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.omu-row input,.omu-row textarea{flex:1 1 150px;min-width:0;border:1px solid rgba(255,255,255,.14);border-radius:11px;background:#06141f;color:#d8eaff;padding:10px;font:inherit;font-size:13px}.omu-row textarea{min-height:48px;resize:vertical}.omu-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(108px,1fr));gap:7px}.omu-actions button,.omu-contact button,.omu-snippet button,.omu-scan-actions button{border:1px solid rgba(255,255,255,.12);border-radius:11px;background:rgba(255,255,255,.07);color:#e8fbff;padding:9px;font-weight:750;font-size:12px;cursor:pointer;min-height:42px;white-space:normal;line-height:1.15}.omu-actions button.primary,.omu-contact button.primary,.omu-scan-actions button.primary{background:linear-gradient(135deg,#00d4ff,#00ff9f);border-color:transparent;color:#03131c}',
       '.omu-list{display:grid;gap:8px;max-height:230px;overflow:auto}.omu-contact{display:grid;grid-template-columns:auto minmax(0,1fr);gap:9px;align-items:center;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:9px;background:rgba(0,0,0,.17)}.omu-contact-main{display:grid;gap:2px;min-width:0}.omu-contact strong{display:block;color:#fff;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.omu-contact span{display:block;color:#8ebbd5;font-family:ui-monospace,Menlo,monospace;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.omu-contact-actions{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(74px,1fr));gap:6px}.omu-empty{border:1px dashed rgba(127,216,255,.22);border-radius:14px;padding:12px;color:#8ebbd5;font-size:12px;text-align:center}',
       '.omu-snippets{display:grid;grid-template-columns:repeat(auto-fit,minmax(142px,1fr));gap:8px}.omu-snippet{position:relative;border:1px solid rgba(127,216,255,.2);border-radius:16px;background:linear-gradient(150deg,rgba(0,212,255,.17),rgba(167,139,250,.11));padding:10px;min-height:86px;overflow:hidden;display:grid;gap:8px}.omu-snippet:before{content:"";position:absolute;inset:-40%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);transform:rotate(18deg);animation:omu-snap-sheen 4s linear infinite}.omu-snippet-text{position:relative;color:#fff;font-weight:800;font-size:13px;line-height:1.3}.omu-snippet-actions{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:6px}.omu-snippet-actions button{min-height:36px;padding:7px;font-size:11px}',
@@ -317,14 +398,15 @@
         '<div class="omu-card">',
           '<h3>Social profile</h3>',
           '<div class="omu-profile-social">',
-            '<button type="button" class="omu-avatar" id="omuAvatarButton" aria-label="Select profile picture">' + (profileAvatar(profile) ? '<img src="' + escapeHtml(profileAvatar(profile)) + '" alt="">' : '<b>' + escapeHtml(initials(profile)) + '</b>') + '</button>',
+            avatarButtonHtml(profile),
             '<div class="omu-profile-meta"><strong id="omuProfileName">' + escapeHtml(profile.nickname) + '</strong><span id="omuProfileStatus">' + escapeHtml(profile.status) + '</span><div class="omu-wallet-pill" id="omuWalletPill">' + escapeHtml(profile.wallet || 'No wallet connected yet') + '</div></div>',
           '</div>',
           '<input type="file" id="omuAvatarFile" accept="image/*" hidden>',
           '<div class="omu-row"><input id="omuNick" maxlength="32" placeholder="Display name" value="' + escapeHtml(profile.nickname) + '"><input id="omuHandle" maxlength="32" placeholder="@handle" value="' + escapeHtml(profile.handle || '') + '"></div>',
           '<div class="omu-row"><input id="omuStatus" maxlength="80" placeholder="Status" value="' + escapeHtml(profile.status) + '"></div>',
           '<div class="omu-row"><textarea id="omuBio" maxlength="220" placeholder="Bio everyone can see">' + escapeHtml(profile.bio) + '</textarea></div>',
-          '<div class="omu-actions"><button class="primary" type="button" id="omuSaveProfile">Save</button><button type="button" id="omuSyncWallet">Sync wallet</button><button type="button" id="omuPostProfile">Post profile</button><button type="button" id="omuShowQr">My QR</button></div>',
+          '<div class="omu-actions"><button class="primary" type="button" id="omuSaveProfile">Save</button><button type="button" id="omuSyncWallet">Sync wallet</button><button type="button" id="omuPostProfile">Post profile</button><button type="button" id="omuShowQr">My QR</button><button type="button" id="omuEnableAlerts">Enable alerts</button></div>',
+          '<div class="omu-alert-state" id="omuAlertState"></div>',
         '</div>',
         '<div class="omu-card">',
           '<h3>Add people</h3>',
@@ -353,6 +435,7 @@
   }
 
   function bindPanel(p, panel) {
+    wireAvatarFallbacks(panel);
     var toggle = panel.querySelector('#omuTogglePanel');
     if (toggle) toggle.addEventListener('click', function () {
       var collapsed = panel.classList.toggle('is-collapsed');
@@ -365,6 +448,7 @@
     panel.querySelector('#omuSyncWallet').addEventListener('click', function () { syncWalletToProfile(p); });
     panel.querySelector('#omuPostProfile').addEventListener('click', function () { postProfile(p); });
     panel.querySelector('#omuShowQr').addEventListener('click', function () { showOwnQr(p); });
+    panel.querySelector('#omuEnableAlerts').addEventListener('click', function () { requestAlerts(p, panel); });
     panel.querySelector('#omuScanQr').addEventListener('click', function () { startQrScan(p); });
     panel.querySelector('#omuSavePeerInput').addEventListener('click', function () { importInviteText(p, valueOf('omuInviteText')); });
     panel.querySelector('#omuAddContact').addEventListener('click', function () { saveCurrentPeer(p); });
@@ -376,6 +460,30 @@
     ['omuNick', 'omuHandle', 'omuStatus'].forEach(function (id) {
       var el = panel.querySelector('#' + id);
       if (el) el.addEventListener('input', function () { updateProfilePreview(collectProfile(p)); });
+    });
+    updateAlertsButton(panel);
+  }
+
+  function updateAlertsButton(panel) {
+    panel = panel || document.getElementById('ostMeshUpgrade');
+    if (!panel) return;
+    var button = panel.querySelector('#omuEnableAlerts');
+    var state = panel.querySelector('#omuAlertState');
+    var api = window.OST_NOTIFY;
+    var permission = api && api.permission ? api.permission() : (!('Notification' in window) ? 'unsupported' : Notification.permission);
+    var enabled = !!(api && api.enabled && api.enabled());
+    if (button) button.textContent = enabled && permission === 'granted' ? 'Alerts on' : 'Enable alerts';
+    if (state) state.textContent = permission === 'unsupported' ? 'Alerts unavailable in this browser.' : permission === 'granted' && enabled ? 'Alerts ready.' : 'Alerts are off.';
+  }
+
+  function requestAlerts(p, panel) {
+    if (!window.OST_NOTIFY || !window.OST_NOTIFY.request) {
+      setStatus(p, 'Notifications are still loading. Try again in a moment.', 'warn');
+      return;
+    }
+    window.OST_NOTIFY.request().then(function (permission) {
+      updateAlertsButton(panel);
+      setStatus(p, permission === 'granted' ? 'OST Mesh alerts enabled on this device.' : 'Alerts were not enabled.', permission === 'granted' ? 'ok' : 'warn');
     });
   }
 
@@ -395,14 +503,20 @@
       address: p && p.address || saved.address || '',
       avatar: saved.avatar || '',
       avatarThumb: saved.avatarThumb || '',
+      avatarQr: saved.avatarQr || '',
       updatedAt: Date.now()
     };
   }
 
   function updateProfilePreview(profile) {
     var avatarButton = document.getElementById('omuAvatarButton');
-    var avatar = profileAvatar(profile);
-    if (avatarButton) avatarButton.innerHTML = avatar ? '<img src="' + escapeHtml(avatar) + '" alt="">' : '<b>' + escapeHtml(initials(profile)) + '</b>';
+    var avatar = profileAvatar(profile, true);
+    var fallback = profileAvatar(profile, false);
+    if (fallback === avatar) fallback = '';
+    if (avatarButton) {
+      avatarButton.setAttribute('data-initials', initials(profile));
+      avatarButton.innerHTML = avatar ? '<img src="' + escapeHtml(avatar) + '" data-omu-alt-src="' + escapeHtml(fallback) + '" alt="">' : '<b>' + escapeHtml(initials(profile)) + '</b>';
+    }
     var name = document.getElementById('omuProfileName');
     var status = document.getElementById('omuProfileStatus');
     var wallet = document.getElementById('omuWalletPill');
@@ -416,6 +530,7 @@
     var profile = collectProfile(p);
     profile.avatar = previous.avatar || profile.avatar || '';
     profile.avatarThumb = previous.avatarThumb || profile.avatarThumb || '';
+    profile.avatarQr = previous.avatarQr || profile.avatarQr || '';
     writeJson(PROFILE_KEY, profile);
     updateProfilePreview(profile);
     setStatus(p, message || 'Profile saved.', 'ok');
@@ -434,33 +549,58 @@
       if (!file || !/^image\//.test(file.type || '')) return reject(new Error('Choose an image file.'));
       var reader = new FileReader();
       reader.onerror = function () { reject(new Error('Could not read image.')); };
-      reader.onload = function () {
-        var img = new Image();
-        img.onerror = function () { reject(new Error('Could not load image.')); };
-        img.onload = function () {
-          var max = maxSize || 480;
-          var scale = Math.min(1, max / Math.max(img.width, img.height));
-          var canvas = document.createElement('canvas');
-          canvas.width = Math.max(1, Math.round(img.width * scale));
-          canvas.height = Math.max(1, Math.round(img.height * scale));
-          var ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          resolve(canvas.toDataURL('image/jpeg', quality || 0.82));
-        };
-        img.src = String(reader.result || '');
-      };
+      reader.onload = function () { resizeImageSource(String(reader.result || ''), maxSize, quality).then(resolve).catch(reject); };
       reader.readAsDataURL(file);
     });
   }
 
+  function resizeImageSource(source, maxSize, quality) {
+    return new Promise(function (resolve, reject) {
+      var img = new Image();
+      img.onerror = function () { reject(new Error('Could not load image.')); };
+      img.onload = function () {
+        var max = maxSize || 480;
+        var scale = Math.min(1, max / Math.max(img.width, img.height));
+        var canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', quality || 0.78));
+      };
+      img.src = source;
+    });
+  }
+
+  function ensureAvatarThumb(p) {
+    var profile = defaultProfile(p);
+    var source = validImageSource(profile.avatar) || validImageSource(profile.avatarThumb) || '';
+    if (!source) return Promise.resolve(profile);
+    var tasks = [];
+    if (!validImageSource(profile.avatarThumb)) {
+      tasks.push(resizeImageSource(source, 72, 0.64).then(function (thumb) { profile.avatarThumb = thumb; }));
+    }
+    if (!validImageSource(profile.avatarQr)) {
+      tasks.push(resizeImageSource(source, 34, 0.42).then(function (qr) { profile.avatarQr = qr; }));
+    }
+    if (!tasks.length) return Promise.resolve(profile);
+    return Promise.all(tasks).then(function () {
+      profile.updatedAt = Date.now();
+      writeJson(PROFILE_KEY, profile);
+      updateProfilePreview(profile);
+      return profile;
+    }).catch(function () { return profile; });
+  }
+
   function handleAvatarFile(p, file) {
-    Promise.all([imageToDataUrl(file, 480, 0.82), imageToDataUrl(file, 96, 0.72)]).then(function (images) {
+    Promise.all([imageToDataUrl(file, 420, 0.78), imageToDataUrl(file, 72, 0.64), imageToDataUrl(file, 34, 0.42)]).then(function (images) {
       var profile = collectProfile(p);
       profile.avatar = images[0];
       profile.avatarThumb = images[1];
+      profile.avatarQr = images[2];
       writeJson(PROFILE_KEY, profile);
       updateProfilePreview(profile);
-      setStatus(p, 'Profile picture saved and included in your Mesh QR.', 'ok');
+      setStatus(p, 'Profile picture saved and ready to sync.', 'ok');
     }).catch(function (err) { setStatus(p, err.message, 'err'); });
   }
 
@@ -481,11 +621,12 @@
   }
 
   async function postProfile(p) {
-    var profile = saveProfile(p, 'Profile saved.');
+    saveProfile(p, 'Profile saved.');
     if (!p || !p.sessionKey || typeof p.sendAppPayload !== 'function') {
       return setStatus(p, 'Connect to a peer before posting your profile.', 'warn');
     }
     try {
+      var profile = await ensureAvatarThumb(p);
       await p.sendAppPayload({ app: APP, v: 2, type: 'profile.card', profile: publicProfile(profile, { includeAvatar: true }) });
       renderProfileCard(p, profile, 'me');
       setStatus(p, 'Profile posted to peer.', 'ok');
@@ -500,11 +641,11 @@
     p.__meshSocialProfileSyncKey = syncKey;
     window.setTimeout(function () {
       if (!p.sessionKey || !p.peerAddr) return;
-      p.sendAppPayload({ app: APP, v: 2, type: 'profile.card', profile: publicProfile(defaultProfile(p), { includeAvatar: true }) })
-        .then(function (sent) {
-          if (sent === false && p._setStatus) p._setStatus('Profile card queued until Mesh channel opens.', 'warn');
-        })
-        .catch(function () {});
+      ensureAvatarThumb(p).then(function (freshProfile) {
+        return p.sendAppPayload({ app: APP, v: 2, type: 'profile.card', profile: publicProfile(freshProfile, { includeAvatar: true }) });
+      }).then(function (sent) {
+        if (sent === false && p._setStatus) p._setStatus('Profile card queued until Mesh channel opens.', 'warn');
+      }).catch(function () {});
     }, 450);
   }
 
@@ -513,6 +654,7 @@
     var card = document.createElement('div');
     card.className = 'omu-profile-card';
     card.innerHTML = avatarHtml(profile, 'sm') + '<div><strong>' + escapeHtml(profile.nickname || 'Mesh profile') + '</strong><span>' + escapeHtml(profile.status || '') + '</span><br><code>' + escapeHtml(profile.wallet || profile.address || '') + '</code></div><p>' + escapeHtml(profile.bio || '') + '</p>';
+    wireAvatarFallbacks(card);
     p._bubble(role, card);
     if (role === 'peer') saveContact({ address: profile.address, nick: profile.nickname || profile.handle, wallet: profile.wallet, status: profile.status, avatar: profile.avatar || profile.avatarThumb, avatarThumb: profile.avatarThumb || profile.avatar, profile: profile });
   }
@@ -530,8 +672,9 @@
     profile.status = profile.status || contact.status || existing && existing.status || '';
     profile.bio = profile.bio || contact.bio || existing && existing.bio || '';
     profile.wallet = profile.wallet || contact.wallet || existing && existing.wallet || '';
-    profile.avatar = profile.avatar || contact.avatar || contact.avatarThumb || existing && (existing.avatar || existing.avatarThumb) || '';
-    profile.avatarThumb = profile.avatarThumb || contact.avatarThumb || contact.avatar || existing && (existing.avatarThumb || existing.avatar) || '';
+    profile.avatar = profile.avatar || contact.avatar || contact.avatarThumb || contact.avatarQr || existing && (existing.avatar || existing.avatarThumb || existing.avatarQr) || '';
+    profile.avatarThumb = profile.avatarThumb || contact.avatarThumb || contact.avatarQr || contact.avatar || existing && (existing.avatarThumb || existing.avatarQr || existing.avatar) || '';
+    profile.avatarQr = profile.avatarQr || contact.avatarQr || existing && existing.avatarQr || '';
     profile.updatedAt = profile.updatedAt || contact.updatedAt || Date.now();
     var next = Object.assign({}, existing || {}, contact, { address: address, profile: profile, updatedAt: Date.now() });
     next.nick = next.nick || profile.nickname || short(address);
@@ -539,8 +682,9 @@
     next.status = next.status || profile.status || '';
     next.bio = next.bio || profile.bio || '';
     next.wallet = next.wallet || profile.wallet || '';
-    next.avatar = next.avatar || profile.avatar || profile.avatarThumb || '';
-    next.avatarThumb = next.avatarThumb || profile.avatarThumb || profile.avatar || '';
+    next.avatar = next.avatar || profile.avatar || profile.avatarThumb || profile.avatarQr || '';
+    next.avatarThumb = next.avatarThumb || profile.avatarThumb || profile.avatarQr || profile.avatar || '';
+    next.avatarQr = next.avatarQr || profile.avatarQr || '';
     if (existing) Object.assign(existing, next);
     else list.unshift(next);
     writeJson(CONTACTS_KEY, list.slice(0, 120));
@@ -614,6 +758,7 @@
     modal.className = 'omu-profile-modal';
     modal.innerHTML = '<div class="omu-profile-panel"><div id="omuProfileView"></div><div class="omu-actions"><button class="primary" type="button" id="omuProfileConnect">Connect</button><button type="button" id="omuProfileLoad">Load</button><button type="button" id="omuProfileQr">QR</button><button type="button" id="omuProfileClose">Close</button></div></div>';
     (p && p.root ? p.root : document.body).appendChild(modal);
+    wireAvatarFallbacks(modal);
     modal.querySelector('#omuProfileClose').addEventListener('click', function () { modal.classList.remove('is-open'); });
     modal.addEventListener('click', function (event) { if (event.target === modal) modal.classList.remove('is-open'); });
     return modal;
@@ -624,7 +769,7 @@
     var profile = contact.profile || contact || {};
     var address = normalizeAddress(contact.address || profile.address);
     modal.__contact = contact;
-    modal.querySelector('#omuProfileView').innerHTML = '<div class="omu-profile-view">' + avatarHtml(profile, '') + '<div><h3>' + escapeHtml(profile.nickname || contact.nick || 'Mesh profile') + '</h3><span>' + escapeHtml(profile.handle || contact.handle || short(address)) + '</span><span>' + escapeHtml(profile.status || contact.status || '') + '</span><code>' + escapeHtml(profile.wallet || contact.wallet || address || '') + '</code></div></div><p>' + escapeHtml(profile.bio || contact.bio || 'No bio shared yet. Connect to this contact and their profile will sync automatically.') + '</p>';
+    modal.querySelector('#omuProfileView').innerHTML = '<div class="omu-profile-view">' + avatarHtml(profile, '', { preferFull: true }) + '<div><h3>' + escapeHtml(profile.nickname || contact.nick || 'Mesh profile') + '</h3><span>' + escapeHtml(profile.handle || contact.handle || short(address)) + '</span><span>' + escapeHtml(profile.status || contact.status || '') + '</span><code>' + escapeHtml(profile.wallet || contact.wallet || address || '') + '</code></div></div><p>' + escapeHtml(profile.bio || contact.bio || 'No bio shared yet. Connect to this contact and their profile will sync automatically.') + '</p>';
     modal.querySelector('#omuProfileConnect').onclick = function () { modal.classList.remove('is-open'); connectContact(p, contact); };
     modal.querySelector('#omuProfileLoad').onclick = function () { modal.classList.remove('is-open'); loadContact(p, contact); };
     modal.querySelector('#omuProfileQr').onclick = function () { showContactQr(p, contact); };
@@ -642,9 +787,12 @@
   }
 
   function copyInvite(p) {
-    var invite = inviteFor(p, saveProfile(p, 'Profile saved into invite.'));
-    if (!invite) return setStatus(p, 'Mesh keys are still loading. Try again in a second.', 'warn');
-    copyText(invite, function () { setStatus(p, 'Invite copied with your profile card.', 'ok'); });
+    saveProfile(p, 'Profile saved into invite.');
+    ensureAvatarThumb(p).then(function (profile) {
+      var invite = inviteFor(p, profile);
+      if (!invite) return setStatus(p, 'Mesh keys are still loading. Try again in a second.', 'warn');
+      copyText(invite, function () { setStatus(p, 'Invite copied with your profile card.', 'ok'); });
+    });
   }
 
   function copyText(value, done) {
@@ -660,9 +808,12 @@
   }
 
   function showOwnQr(p) {
-    var invite = inviteFor(p, saveProfile(p, 'Profile saved into QR.'));
-    if (!invite) return setStatus(p, 'Mesh keys are still loading. Try again in a second.', 'warn');
-    showQrModal(p, invite, 'My OST Mesh QR');
+    saveProfile(p, 'Profile saved into QR.');
+    ensureAvatarThumb(p).then(function (profile) {
+      var invite = inviteFor(p, profile);
+      if (!invite) return setStatus(p, 'Mesh keys are still loading. Try again in a second.', 'warn');
+      showQrModal(p, invite, 'My OST Mesh QR');
+    });
   }
 
   function showContactQr(p, contact) {
@@ -814,10 +965,16 @@
     updateProfilePreview(defaultProfile(p));
   }
 
-  function notify(title, body, tag) {
+  function notify(title, body, tag, kind, options) {
+    options = options || {};
+    options.tag = tag || options.tag || 'ost-mesh';
+    if (window.OST_NOTIFY && window.OST_NOTIFY.mesh) {
+      window.OST_NOTIFY.mesh(kind || 'mesh', title, body, options);
+      return;
+    }
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
     try {
-      var note = new Notification(title, { body: body, tag: tag || 'ost-mesh', renotify: true });
+      var note = new Notification(title, { body: body, tag: tag || 'ost-mesh', renotify: true, icon: 'icon-192.png', badge: 'icon-192.png' });
       note.onclick = function () {
         try { window.focus(); } catch (_) {}
         var p = pavilion();
@@ -841,16 +998,31 @@
     var originalResetCall = p._resetCallState && p._resetCallState.bind(p);
     var originalSetControls = p._setCallControls && p._setCallControls.bind(p);
     var originalEnableMessaging = p._enableMessaging && p._enableMessaging.bind(p);
+    var originalPreparePeerSession = p._preparePeerSession && p._preparePeerSession.bind(p);
+
+    if (originalPreparePeerSession) p._preparePeerSession = function (peerInput) {
+      var incomingAddress = typeof peerInput === 'string' ? normalizeAddress(peerInput) : '';
+      if (incomingAddress && p.__meshSocialPeerAttemptKey !== incomingAddress) {
+        p.__meshSocialPeerAttemptKey = incomingAddress;
+        notify('OST Mesh peer request', short(incomingAddress) + ' is trying to connect.', 'ost-mesh-peer-attempt', 'peer', { force: true });
+      }
+      return originalPreparePeerSession(peerInput);
+    };
 
     if (originalEnableMessaging) p._enableMessaging = function () {
       var result = originalEnableMessaging();
       syncProfileToPeer(p);
+      var peerKey = p.peerAddr || 'peer';
+      if (p.__meshSocialPeerNotifyKey !== peerKey) {
+        p.__meshSocialPeerNotifyKey = peerKey;
+        notify('OST Mesh peer connected', short(peerKey) + ' is encrypted and ready.', 'ost-mesh-peer', 'peer');
+      }
       return result;
     };
 
     if (originalShowIncoming) p._showIncomingCall = function (detail) {
       setCallClasses(p, 'ringing');
-      notify('Incoming OST Mesh call', (detail && detail.video ? 'Video' : 'Voice') + ' call from ' + ((detail && detail.from) || 'peer'), 'ost-mesh-call');
+      notify('Incoming OST Mesh call', (detail && detail.video ? 'Video' : 'Voice') + ' call from ' + ((detail && detail.from) || 'peer'), 'ost-mesh-call', detail && detail.video ? 'video-call' : 'call', { force: true, requireInteraction: true });
       return originalShowIncoming(detail);
     };
     if (originalMarkConnected) p._markCallConnected = function (video) {
@@ -885,7 +1057,7 @@
       if (payload.kind === 'text') {
         logSignal('message', String(payload.text || '').slice(0, 120));
         renderSignals();
-        notify('OST Mesh message', String(payload.text || '').slice(0, 120), 'ost-mesh-message');
+        notify('OST Mesh message', String(payload.text || '').slice(0, 120), 'ost-mesh-message', 'message');
         return;
       }
       if (payload.kind !== 'mesh-app' || payload.app !== APP) return;
@@ -894,7 +1066,7 @@
         renderProfileCard(p, payload.profile || {}, 'peer');
         logSignal('profile', ((payload.profile && payload.profile.nickname) || 'Peer') + ' shared a profile');
         renderSignals();
-        notify('OST Mesh profile', ((payload.profile && payload.profile.nickname) || 'Peer') + ' shared a profile', 'ost-mesh-profile');
+        notify('OST Mesh profile', ((payload.profile && payload.profile.nickname) || 'Peer') + ' shared a profile', 'ost-mesh-profile', 'peer');
       }
     });
   }
@@ -907,7 +1079,11 @@
         saveContact: saveContact,
         scanQr: function () { startQrScan(p); },
         showQr: function () { showOwnQr(p); },
-        invite: function () { return inviteFor(p, defaultProfile(p)); }
+        invite: function () { return inviteFor(p, defaultProfile(p)); },
+        notify: notify
+      };
+      window.OST_MESH_NOTIFY = function (kind, title, body, options) {
+        notify(title, body, options && options.tag, kind, options || {});
       };
     });
   });

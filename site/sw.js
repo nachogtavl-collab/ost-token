@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v67';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v67';
+const CACHE_NAME = 'ost-pwa-cache-v69';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v69';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -27,6 +27,7 @@ const PRECACHE_PATHS = [
   './stock-market.css?v=1',
   './mobile-shell.css?v=10',
   './rpc-multiplexer.js?v=1',
+  './ost-notifications.js?v=2',
   './app.js?v=118',
   './nuevo-laredo-gas.js?v=1',
   './shop-quickview.js?v=1',
@@ -44,8 +45,8 @@ const PRECACHE_PATHS = [
   './ghost/ghost.css?v=2',
   './mesh/mesh.js?v=25',
   './mesh/veil.js?v=1',
-  './mesh/mesh-play.js?v=7',
-  './mesh/mesh-upgrade.js?v=8',
+  './mesh/mesh-play.js?v=8',
+  './mesh/mesh-upgrade.js?v=9',
   './mesh/mesh-crypto.js?v=1',
   './mesh/mesh-rtc.js?v=10',
   './mesh/mesh.css?v=9',
@@ -184,4 +185,57 @@ self.addEventListener('fetch', (event) => {
   }
 
   event.respondWith(shouldNetworkFirst(request) ? networkFirstResponse(request) : cacheFirstResponse(request));
+});
+
+function notificationPayload(data = {}) {
+  return {
+    title: data.title || 'OST Mesh',
+    options: {
+      body: data.body || '',
+      icon: data.icon || './icon-192.png',
+      badge: data.badge || './icon-192.png',
+      tag: data.tag || 'ost-mesh',
+      renotify: true,
+      requireInteraction: !!data.requireInteraction,
+      vibrate: data.vibrate || [90, 45, 90],
+      data: {
+        url: data.url || './?openMesh=1',
+        type: data.type || 'mesh'
+      },
+      actions: data.actions || [{ action: 'open', title: 'Open OST Mesh' }]
+    }
+  };
+}
+
+self.addEventListener('message', (event) => {
+  const data = event.data || {};
+  if (data.type !== 'ost-notify') return;
+  const payload = notificationPayload(data);
+  event.waitUntil(self.registration.showNotification(payload.title, payload.options));
+});
+
+self.addEventListener('push', (event) => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; }
+  catch (_) {
+    try { data = { title: 'OST Mesh', body: event.data ? event.data.text() : '' }; } catch (__) { data = {}; }
+  }
+  const payload = notificationPayload(data);
+  event.waitUntil(self.registration.showNotification(payload.title, payload.options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = new URL(event.notification.data && event.notification.data.url || './?openMesh=1', scopeUrl).toString();
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url.startsWith(scopeUrl.origin) && 'focus' in client) {
+          client.postMessage({ type: 'ost-open-mesh', url: targetUrl });
+          return client.focus();
+        }
+      }
+      return clients.openWindow(targetUrl);
+    })
+  );
 });

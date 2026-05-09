@@ -21,6 +21,7 @@
   var incomingChallenges = new Set();
   var selectedGame = 'coinflip';
   var knownPeerWallet = '';
+  var activeVisual = null;
 
   function pavilion() {
     return window.OST_MESH && window.OST_MESH.pavilion;
@@ -134,6 +135,14 @@
     if (p && p._setStatus) p._setStatus(text, 'ok');
   }
 
+  function notifyArena(type, title, body, options) {
+    options = options || {};
+    if (window.OST_NOTIFY && window.OST_NOTIFY.mesh) return window.OST_NOTIFY.mesh(type || 'challenge', title, body, options);
+    if (window.OST_MESH_NOTIFY) return window.OST_MESH_NOTIFY(type || 'challenge', title, body, options);
+    try { window.dispatchEvent(new CustomEvent('ost:mesh-notify', { detail: { type: type || 'challenge', title: title, body: body, options: options } })); } catch (_) {}
+    return Promise.resolve(false);
+  }
+
   function injectStyle() {
     if (document.getElementById(STYLE_ID)) return;
     var style = document.createElement('style');
@@ -168,18 +177,26 @@
       '.oma-card{border:1px solid rgba(255,255,255,.1);border-radius:12px;background:rgba(255,255,255,.045);padding:10px;display:grid;gap:8px;color:#dff8ff}',
       '.oma-card h4{margin:0;font-size:13px;color:#fff}.oma-card p{margin:0;color:#9bcbe6;font-size:12px;line-height:1.45}',
       '.oma-card code{word-break:break-all;color:#9fffd0}',
-      '.oma-table{position:relative;min-height:190px;border:1px solid rgba(94,234,212,.2);border-radius:16px;background:radial-gradient(circle at 50% 0%,rgba(94,234,212,.18),transparent 36%),linear-gradient(180deg,rgba(5,18,32,.94),rgba(1,8,18,.96));overflow:hidden;padding:14px;display:grid;gap:12px}',
+      '.oma-table{position:relative;min-height:370px;border:1px solid rgba(94,234,212,.22);border-radius:16px;background:radial-gradient(circle at 50% 0%,rgba(94,234,212,.18),transparent 36%),linear-gradient(180deg,rgba(5,18,32,.94),rgba(1,8,18,.96));overflow:hidden;padding:14px;display:grid;gap:12px}',
       '.oma-table:before{content:"";position:absolute;inset:auto -20% -42% -20%;height:76%;background:radial-gradient(ellipse at center,rgba(0,255,159,.18),rgba(0,212,255,.06) 42%,transparent 70%);pointer-events:none}',
       '.oma-table-top{position:relative;display:flex;justify-content:space-between;gap:10px;align-items:center}.oma-table-top strong{color:#fff;font-size:14px}.oma-table-top span{color:#9bcbe6;font-size:12px}',
-      '.oma-table-board{position:relative;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;min-height:96px}.oma-seat{border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(255,255,255,.055);padding:10px;display:grid;gap:5px;text-align:center}.oma-seat b{color:#fff;font-size:12px}.oma-seat small{color:#9bcbe6}.oma-versus{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#00d4ff,#00ff9f);color:#02111c;font-weight:900;box-shadow:0 0 28px rgba(0,255,159,.22)}',
-      '.oma-piece-row{position:relative;display:flex;justify-content:center;gap:8px;flex-wrap:wrap}.oma-piece{width:50px;height:50px;border-radius:14px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.16);background:rgba(0,0,0,.26);color:#fff;font-size:22px;font-weight:900;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}',
-      '.oma-piece.coin{border-radius:50%;background:linear-gradient(145deg,#ffe28a,#f59e0b);color:#2d1700;animation:oma-flip 1.05s ease-in-out infinite}.oma-piece.dice{background:linear-gradient(145deg,#e0f2fe,#38bdf8);color:#061018}.oma-piece.card{width:42px;height:58px;border-radius:8px;background:#f8fafc;color:#0f172a}.oma-piece.target{border-radius:50%;background:radial-gradient(circle,#fff 0 14%,#ef4444 15% 30%,#fff 31% 48%,#38bdf8 49% 68%,#111827 69%)}',
-      '.oma-table.is-final .oma-piece{animation:none}.oma-result-banner{position:relative;border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(255,255,255,.06);padding:10px;color:#dff8ff;font-size:12px;line-height:1.45}.oma-result-banner strong{color:#fff}',
+      '.oma-table-board{position:relative;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;min-height:74px}.oma-seat{border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(255,255,255,.055);padding:10px;display:grid;gap:5px;text-align:center}.oma-seat b{color:#fff;font-size:12px}.oma-seat small{color:#9bcbe6}.oma-versus{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#00d4ff,#00ff9f);color:#02111c;font-weight:900;box-shadow:0 0 28px rgba(0,255,159,.22)}',
+      '.oma-scene{position:relative;min-height:230px;border:1px solid rgba(255,255,255,.11);border-radius:18px;background:radial-gradient(circle at 50% 18%,rgba(255,255,255,.12),transparent 27%),linear-gradient(180deg,rgba(13,28,46,.72),rgba(3,9,18,.96));overflow:hidden;perspective:900px;isolation:isolate}',
+      '.oma-scene:before{content:"";position:absolute;inset:0;background:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);background-size:28px 28px;mask-image:linear-gradient(180deg,rgba(0,0,0,.65),transparent);pointer-events:none}',
+      '.oma-three-canvas{position:relative;z-index:2;width:100%;height:230px;display:block;border-radius:18px}',
+      '.oma-scene-fallback{position:absolute;inset:0;z-index:1;display:grid;place-items:center;padding:18px;transition:opacity .22s ease}.oma-scene.is-three .oma-scene-fallback{opacity:0;pointer-events:none}',
+      '.oma-scene-title{position:absolute;left:12px;right:12px;bottom:10px;z-index:3;display:flex;justify-content:space-between;gap:8px;color:#c7f7ff;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;text-shadow:0 1px 8px rgba(0,0,0,.65)}',
+      '.oma-css-visual{position:relative;display:flex;align-items:center;justify-content:center;gap:24px;min-height:168px;width:100%;transform-style:preserve-3d}.oma-css-coin{width:108px;height:108px;border-radius:50%;position:relative;transform-style:preserve-3d;animation:oma-coin-spin 1.25s cubic-bezier(.38,.02,.2,1) infinite}.oma-css-coin:before,.oma-css-coin:after{content:attr(data-face);position:absolute;inset:0;border-radius:50%;display:grid;place-items:center;font-size:34px;font-weight:950;color:#3a2100;background:radial-gradient(circle at 32% 28%,#fff5bf,#f8c14b 42%,#b46b00);border:5px solid #ffe08a;box-shadow:inset 0 5px 12px rgba(255,255,255,.32),0 18px 34px rgba(0,0,0,.36)}.oma-css-coin:after{content:attr(data-back);transform:translateZ(-9px) rotateY(180deg);background:radial-gradient(circle at 32% 28%,#dbf9ff,#4fd1ff 42%,#075985);color:#03131c;border-color:#8be9ff}.oma-css-coin:before{transform:translateZ(9px)}',
+      '.oma-css-die{width:88px;height:88px;border-radius:18px;display:grid;place-items:center;transform-style:preserve-3d;transform:rotateX(58deg) rotateZ(-28deg);animation:oma-die-tumble 1.35s ease-in-out infinite;background:linear-gradient(145deg,#f8fbff,#77d9ff);color:#061018;border:1px solid rgba(255,255,255,.75);box-shadow:inset 0 9px 14px rgba(255,255,255,.5),0 22px 36px rgba(0,0,0,.35)}.oma-css-die b{font-size:34px}.oma-css-die.peer{background:linear-gradient(145deg,#fff7ed,#f97316)}',
+      '.oma-css-card{width:88px;height:124px;border-radius:13px;display:grid;place-items:center;transform-style:preserve-3d;animation:oma-card-flip 1.55s ease-in-out infinite;background:#f8fafc;color:#0f172a;border:1px solid rgba(255,255,255,.9);box-shadow:0 20px 38px rgba(0,0,0,.35)}.oma-css-card b{font-size:32px}.oma-css-card.peer{color:#7c2d12}.oma-css-card.back{background:linear-gradient(135deg,#13324d,#0e7490);color:#dff8ff}',
+      '.oma-css-target{position:relative;width:178px;height:178px;border-radius:50%;animation:oma-pulse-target 1.6s ease-in-out infinite;background:radial-gradient(circle,#fff 0 9%,#ef4444 10% 22%,#fff 23% 38%,#38bdf8 39% 58%,#111827 59% 72%,#f59e0b 73%);box-shadow:0 24px 42px rgba(0,0,0,.4),inset 0 0 0 1px rgba(255,255,255,.2)}.oma-target-marker{position:absolute;width:26px;height:26px;border-radius:50%;transform:translate(-50%,-50%);border:2px solid rgba(255,255,255,.85);box-shadow:0 9px 16px rgba(0,0,0,.35)}.oma-target-marker.you{background:#00ff9f}.oma-target-marker.peer{background:#f97316}',
+      '.oma-table.is-final .oma-css-coin,.oma-table.is-final .oma-css-die,.oma-table.is-final .oma-css-card,.oma-table.is-final .oma-css-target{animation-duration:2.6s}.oma-result-banner{position:relative;border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(255,255,255,.06);padding:10px;color:#dff8ff;font-size:12px;line-height:1.45}.oma-result-banner strong{color:#fff}',
       '.oma-balance-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}@media(max-width:760px){.oma-balance-strip{grid-template-columns:repeat(2,minmax(0,1fr))}}.oma-balance-tile{border:1px solid rgba(255,255,255,.1);border-radius:12px;background:rgba(255,255,255,.045);padding:10px;display:grid;gap:3px}.oma-balance-tile span{color:#9bcbe6;font-size:11px}.oma-balance-tile strong{color:#fff;font-size:14px}',
       '.oma-wallet-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}@media(max-width:760px){.oma-wallet-actions{grid-template-columns:repeat(2,minmax(0,1fr))}}.oma-wallet-actions button{border:1px solid rgba(255,255,255,.12);border-radius:12px;background:rgba(255,255,255,.07);color:#e8fbff;padding:10px;font-weight:800;cursor:pointer;text-align:left}.oma-wallet-actions button.primary{background:linear-gradient(135deg,#00d4ff,#00ff9f);color:#03131c;border-color:transparent}',
-      '@media(max-width:760px){#ost-mesh-arena{padding:9px;gap:8px;border-radius:12px}.oma-head{gap:7px}.oma-head strong,.oma-fair-copy strong{font-size:12px}.oma-head span,.oma-fair-copy span{font-size:11px;line-height:1.35}.oma-tabs button,.oma-btn,.oma-actions button,.oma-wallet-actions button{min-height:38px;padding:7px 8px;font-size:11px;border-radius:9px}.oma-grid,.oma-fair-games{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.oma-game,.oma-fair-game{min-height:48px;padding:8px;border-radius:10px}.oma-game strong,.oma-fair-game strong{font-size:11px}.oma-game span,.oma-fair-game span{font-size:10px}.oma-card{padding:8px;border-radius:10px}.oma-form{gap:7px}.oma-field input,.oma-field select{min-height:38px;padding:8px}.oma-table{min-height:150px;padding:10px;border-radius:12px}.oma-table-board{grid-template-columns:1fr;min-height:0}.oma-seat{padding:8px}.oma-versus{width:34px;height:34px;margin:auto}.oma-piece{width:40px;height:40px;border-radius:11px;font-size:18px}.oma-balance-strip,.oma-wallet-actions{grid-template-columns:repeat(2,minmax(0,1fr))}}',
-      '@media(max-width:380px){.oma-grid,.oma-fair-games,.oma-balance-strip,.oma-wallet-actions{grid-template-columns:1fr 1fr}.oma-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.oma-share-row{grid-template-columns:1fr}.oma-table-top{align-items:flex-start}.oma-piece-row{gap:6px}.oma-piece{width:36px;height:36px;font-size:16px}}',
-      '@keyframes oma-flip{0%,100%{transform:rotateY(0) translateY(0)}50%{transform:rotateY(180deg) translateY(-8px)}}',
+      '@media(max-width:760px){#ost-mesh-arena{padding:9px;gap:8px;border-radius:12px}.oma-head{gap:7px}.oma-head strong,.oma-fair-copy strong{font-size:12px}.oma-head span,.oma-fair-copy span{font-size:11px;line-height:1.35}.oma-tabs button,.oma-btn,.oma-actions button,.oma-wallet-actions button{min-height:38px;padding:7px 8px;font-size:11px;border-radius:9px}.oma-grid,.oma-fair-games{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.oma-game,.oma-fair-game{min-height:48px;padding:8px;border-radius:10px}.oma-game strong,.oma-fair-game strong{font-size:11px}.oma-game span,.oma-fair-game span{font-size:10px}.oma-card{padding:8px;border-radius:10px}.oma-form{gap:7px}.oma-field input,.oma-field select{min-height:38px;padding:8px}.oma-table{min-height:320px;padding:10px;border-radius:12px}.oma-table-board{grid-template-columns:1fr;min-height:0}.oma-seat{padding:8px}.oma-versus{width:34px;height:34px;margin:auto}.oma-scene{min-height:190px}.oma-three-canvas{height:190px}.oma-css-visual{gap:14px;min-height:140px}.oma-css-coin{width:82px;height:82px}.oma-css-die{width:68px;height:68px;border-radius:14px}.oma-css-card{width:68px;height:96px}.oma-css-target{width:136px;height:136px}.oma-balance-strip,.oma-wallet-actions{grid-template-columns:repeat(2,minmax(0,1fr))}}',
+      '@media(max-width:380px){.oma-grid,.oma-fair-games,.oma-balance-strip,.oma-wallet-actions{grid-template-columns:1fr 1fr}.oma-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.oma-share-row{grid-template-columns:1fr}.oma-table-top{align-items:flex-start}.oma-css-visual{gap:10px}.oma-scene-title{font-size:10px}}',
+      '@media(prefers-reduced-motion:reduce){.oma-css-coin,.oma-css-die,.oma-css-card,.oma-css-target{animation:none}}',
+      '@keyframes oma-coin-spin{0%{transform:rotateY(0) rotateX(8deg) translateY(0)}48%{transform:rotateY(760deg) rotateX(18deg) translateY(-22px)}100%{transform:rotateY(1440deg) rotateX(8deg) translateY(0)}}@keyframes oma-die-tumble{0%,100%{transform:rotateX(58deg) rotateZ(-28deg) translateY(0)}50%{transform:rotateX(305deg) rotateZ(180deg) translateY(-16px)}}@keyframes oma-card-flip{0%,100%{transform:rotateY(-16deg) translateY(0)}50%{transform:rotateY(176deg) translateY(-10px)}}@keyframes oma-pulse-target{0%,100%{transform:rotateX(0) scale(1)}50%{transform:rotateX(9deg) scale(1.03)}}',
       '.oma-actions{display:flex;gap:6px;flex-wrap:wrap}.oma-actions button{border:1px solid rgba(255,255,255,.12);border-radius:9px;background:rgba(255,255,255,.07);color:#e8fbff;padding:7px 9px;font-weight:750;cursor:pointer}',
       '.oma-actions button.primary{background:#00ff9f;color:#03131c;border-color:transparent}',
       '.oma-log{display:grid;gap:8px;max-height:260px;overflow:auto}',
@@ -380,21 +397,315 @@
     var stake = (state && state.stake) || { amount: Number(document.getElementById('omaStakeAmount')?.value || 0) || 0, asset: 'OST' };
     var label = GAME_NAMES[game] || 'Fair game';
     var phaseText = phase || 'Choose a table, connect a peer, then lock the stake before reveal.';
-    var pieces = gamePieces(game, result);
+    stopActiveVisual();
     table.classList.toggle('is-final', !!result);
     table.innerHTML = [
       '<div class="oma-table-top"><div><strong>' + escapeHtml(label) + '</strong><br><span>' + escapeHtml(phaseText) + '</span></div><span>' + escapeHtml(amountText(stake)) + '</span></div>',
       '<div class="oma-table-board"><div class="oma-seat"><b>You</b><small>' + escapeHtml(short(walletAddress()) || 'link wallet') + '</small></div><div class="oma-versus">VS</div><div class="oma-seat"><b>Peer</b><small>' + escapeHtml(short(knownPeerWallet) || 'waiting') + '</small></div></div>',
-      '<div class="oma-piece-row">' + pieces + '</div>',
+      gameScene(game, result),
       result ? '<div class="oma-result-banner"><strong>' + escapeHtml(result.detail) + '</strong><br>Proof hash <code>' + escapeHtml(String(digest || '').slice(0, 24)) + '...</code></div>' : ''
     ].join('');
+    activateVisual(table, game, result);
   }
 
-  function gamePieces(game, result) {
-    if (game === 'dice') return '<span class="oma-piece dice">' + escapeHtml(result && result.challenger || '...') + '</span><span class="oma-piece dice">' + escapeHtml(result && result.opponent || '...') + '</span>';
-    if (game === 'highcard') return '<span class="oma-piece card">' + escapeHtml(result && result.challenger || '?') + '</span><span class="oma-piece card">' + escapeHtml(result && result.opponent || '?') + '</span>';
-    if (game === 'target') return '<span class="oma-piece target">' + escapeHtml(result && result.challenger || '') + '</span><span class="oma-piece target">' + escapeHtml(result && result.opponent || '') + '</span>';
-    return '<span class="oma-piece coin">' + escapeHtml(result && result.coin || 'OST') + '</span>';
+  function gameScene(game, result) {
+    var labels = gameSceneLabels(game, result);
+    return '<div class="oma-scene" data-oma-visual="' + escapeHtml(game) + '"><canvas class="oma-three-canvas" aria-hidden="true"></canvas><div class="oma-scene-fallback">' + fallbackVisual(game, result) + '</div><div class="oma-scene-title"><span>' + escapeHtml(labels.left) + '</span><span>' + escapeHtml(labels.right) + '</span></div></div>';
+  }
+
+  function gameSceneLabels(game, result) {
+    if (game === 'dice') return { left: 'Your dice ' + (result ? result.challenger : 'rolling'), right: 'Peer dice ' + (result ? result.opponent : 'rolling') };
+    if (game === 'highcard') return { left: 'Your card ' + (result ? result.challenger : 'hidden'), right: 'Peer card ' + (result ? result.opponent : 'hidden') };
+    if (game === 'target') return { left: 'You ' + (result ? result.challenger : 'aiming'), right: 'Peer ' + (result ? result.opponent : 'aiming') };
+    return { left: 'Heads', right: 'Tails' };
+  }
+
+  function fallbackVisual(game, result) {
+    if (game === 'dice') {
+      return '<div class="oma-css-visual"><span class="oma-css-die"><b>' + escapeHtml(result ? result.challenger : '?') + '</b></span><span class="oma-css-die peer"><b>' + escapeHtml(result ? result.opponent : '?') + '</b></span></div>';
+    }
+    if (game === 'highcard') {
+      return '<div class="oma-css-visual"><span class="oma-css-card ' + (result ? '' : 'back') + '"><b>' + escapeHtml(result ? result.challenger : 'OST') + '</b></span><span class="oma-css-card peer ' + (result ? '' : 'back') + '"><b>' + escapeHtml(result ? result.opponent : 'OST') + '</b></span></div>';
+    }
+    if (game === 'target') {
+      return '<div class="oma-css-visual"><div class="oma-css-target"><span class="oma-target-marker you" style="' + targetMarkerStyle(result && result.challenger, 0) + '"></span><span class="oma-target-marker peer" style="' + targetMarkerStyle(result && result.opponent, 1) + '"></span></div></div>';
+    }
+    var coin = result && result.coin ? String(result.coin).toUpperCase() : 'OST';
+    var back = coin === 'H' ? 'T' : 'H';
+    return '<div class="oma-css-visual"><span class="oma-css-coin" data-face="' + escapeHtml(coin) + '" data-back="' + escapeHtml(back) + '"></span></div>';
+  }
+
+  function targetMarkerStyle(value, lane) {
+    var number = Number(value);
+    if (!Number.isFinite(number)) return 'left:50%;top:' + (lane ? 60 : 40) + '%';
+    var left = Math.max(12, Math.min(88, 50 + ((number - 50) * 0.72)));
+    var top = lane ? 58 : 42;
+    return 'left:' + left.toFixed(1) + '%;top:' + top + '%';
+  }
+
+  function stopActiveVisual() {
+    if (activeVisual && typeof activeVisual.stop === 'function') activeVisual.stop();
+    activeVisual = null;
+  }
+
+  function activateVisual(table, game, result) {
+    var sceneEl = table && table.querySelector('[data-oma-visual]');
+    var canvas = sceneEl && sceneEl.querySelector('.oma-three-canvas');
+    var THREE = window.THREE;
+    if (!sceneEl || !canvas || !THREE || !THREE.WebGLRenderer) return;
+    try {
+      var renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true, preserveDrawingBuffer: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+      if (THREE.sRGBEncoding) renderer.outputEncoding = THREE.sRGBEncoding;
+      var scene = new THREE.Scene();
+      var camera = new THREE.PerspectiveCamera(35, 1, 0.1, 100);
+      camera.position.set(0, 0.34, 5.2);
+      camera.lookAt(0, 0, 0);
+      scene.add(new THREE.AmbientLight(0xb8f7ff, 0.62));
+      var key = new THREE.DirectionalLight(0xffffff, 0.9);
+      key.position.set(3.2, 4.5, 5.4);
+      scene.add(key);
+      var fill = new THREE.PointLight(0x00ff9f, 0.7, 8);
+      fill.position.set(-2.8, 1.7, 2.4);
+      scene.add(fill);
+      addThreeFloor(THREE, scene);
+      var visual = createThreeGame(THREE, scene, game, result);
+      var frame = 0;
+      var stopped = false;
+      function resize() {
+        var rect = sceneEl.getBoundingClientRect();
+        var width = Math.max(220, Math.floor(rect.width || canvas.clientWidth || 320));
+        var height = Math.max(170, Math.floor(rect.height || canvas.clientHeight || 220));
+        renderer.setSize(width, height, false);
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+      }
+      function animate(now) {
+        if (stopped) return;
+        if (visual && visual.userData && typeof visual.userData.animate === 'function') visual.userData.animate(now / 1000);
+        renderer.render(scene, camera);
+        frame = requestAnimationFrame(animate);
+      }
+      resize();
+      var observer = window.ResizeObserver ? new ResizeObserver(resize) : null;
+      if (observer) observer.observe(sceneEl);
+      window.addEventListener('resize', resize);
+      sceneEl.classList.add('is-three');
+      activeVisual = {
+        stop: function () {
+          stopped = true;
+          cancelAnimationFrame(frame);
+          window.removeEventListener('resize', resize);
+          if (observer) observer.disconnect();
+          disposeThreeScene(scene);
+          renderer.dispose();
+        }
+      };
+      frame = requestAnimationFrame(animate);
+    } catch (_) {
+      sceneEl.classList.remove('is-three');
+      stopActiveVisual();
+    }
+  }
+
+  function addThreeFloor(THREE, scene) {
+    var floor = new THREE.Mesh(
+      new THREE.CircleGeometry(2.55, 72),
+      new THREE.MeshStandardMaterial({ color: 0x082236, metalness: 0.25, roughness: 0.56, transparent: true, opacity: 0.72 })
+    );
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = -1.05;
+    scene.add(floor);
+  }
+
+  function createThreeGame(THREE, scene, game, result) {
+    var group = new THREE.Group();
+    scene.add(group);
+    if (game === 'dice') createThreeDice(THREE, group, result);
+    else if (game === 'highcard') createThreeCards(THREE, group, result);
+    else if (game === 'target') createThreeTarget(THREE, group, result);
+    else createThreeCoin(THREE, group, result);
+    return group;
+  }
+
+  function createThreeCoin(THREE, group, result) {
+    var edge = new THREE.MeshStandardMaterial({ color: 0xb7791f, metalness: 0.8, roughness: 0.24 });
+    var heads = new THREE.MeshStandardMaterial({ map: makeCoinTexture(THREE, 'H', '#ffe08a', '#b7791f'), metalness: 0.55, roughness: 0.18 });
+    var tails = new THREE.MeshStandardMaterial({ map: makeCoinTexture(THREE, 'T', '#7dd3fc', '#075985'), metalness: 0.48, roughness: 0.2 });
+    var coin = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 0.16, 72), [edge, heads, tails]);
+    coin.rotation.x = Math.PI / 2;
+    group.add(coin);
+    group.userData.animate = function (t) {
+      coin.position.y = result ? Math.sin(t * 2.2) * 0.035 : Math.sin(t * 5.6) * 0.18;
+      coin.rotation.x = Math.PI / 2 + (result ? Math.sin(t * 2.2) * 0.06 : t * 8.2);
+      coin.rotation.y = result && result.coin === 'T' ? Math.PI : (result ? 0 : t * 2.4);
+    };
+  }
+
+  function createThreeDice(THREE, group, result) {
+    var a = makeDieMesh(THREE, result && result.challenger, false);
+    var b = makeDieMesh(THREE, result && result.opponent, true);
+    a.position.x = -0.78;
+    b.position.x = 0.78;
+    group.add(a, b);
+    group.userData.animate = function (t) {
+      [a, b].forEach(function (die, index) {
+        die.position.y = result ? 0 : Math.sin(t * 5 + index) * 0.16;
+        die.rotation.x = result ? 0.62 : t * (2.7 + index * 0.3);
+        die.rotation.y = result ? (index ? -0.38 : 0.38) : t * (3.1 + index * 0.25);
+        die.rotation.z = result ? (index ? 0.18 : -0.18) : t * 1.6;
+      });
+    };
+  }
+
+  function makeDieMesh(THREE, value, peer) {
+    var material = new THREE.MeshStandardMaterial({ map: makeDiceTexture(THREE, value || '?', peer), metalness: 0.12, roughness: 0.38 });
+    return new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.78, 0.78), [material, material, material, material, material, material]);
+  }
+
+  function createThreeCards(THREE, group, result) {
+    var you = makeCardMesh(THREE, result && result.challenger, false, !result);
+    var peer = makeCardMesh(THREE, result && result.opponent, true, !result);
+    you.position.x = -0.72;
+    peer.position.x = 0.72;
+    you.rotation.z = -0.08;
+    peer.rotation.z = 0.08;
+    group.add(you, peer);
+    group.userData.animate = function (t) {
+      [you, peer].forEach(function (card, index) {
+        card.position.y = result ? 0 : Math.sin(t * 3.4 + index) * 0.08;
+        card.rotation.y = result ? (index ? -0.18 : 0.18) : Math.sin(t * 4.4 + index) * 1.8;
+      });
+    };
+  }
+
+  function makeCardMesh(THREE, value, peer, back) {
+    var material = new THREE.MeshStandardMaterial({ map: makeCardTexture(THREE, value || 'OST', peer, back), side: THREE.DoubleSide, metalness: 0.05, roughness: 0.32 });
+    return new THREE.Mesh(new THREE.PlaneGeometry(0.84, 1.18), material);
+  }
+
+  function createThreeTarget(THREE, group, result) {
+    var board = new THREE.Mesh(new THREE.PlaneGeometry(2.25, 2.25), new THREE.MeshStandardMaterial({ map: makeTargetTexture(THREE), side: THREE.DoubleSide, metalness: 0.08, roughness: 0.42 }));
+    group.add(board);
+    var you = makeMarkerMesh(THREE, 0x00ff9f);
+    var peer = makeMarkerMesh(THREE, 0xf97316);
+    group.add(you, peer);
+    group.userData.animate = function (t) {
+      placeTargetMarker(you, result && result.challenger, 0, t);
+      placeTargetMarker(peer, result && result.opponent, 1, t);
+      board.rotation.z = Math.sin(t * 0.9) * 0.018;
+    };
+  }
+
+  function makeMarkerMesh(THREE, color) {
+    return new THREE.Mesh(new THREE.SphereGeometry(0.095, 24, 16), new THREE.MeshStandardMaterial({ color: color, metalness: 0.38, roughness: 0.26 }));
+  }
+
+  function placeTargetMarker(marker, value, lane, t) {
+    var number = Number(value);
+    if (!Number.isFinite(number)) {
+      var angle = t * 1.9 + lane * Math.PI;
+      marker.position.set(Math.cos(angle) * 0.65, Math.sin(angle) * 0.42, 0.14);
+      return;
+    }
+    marker.position.set(Math.max(-1.05, Math.min(1.05, (number - 50) / 50 * 1.05)), lane ? -0.28 : 0.28, 0.14);
+  }
+
+  function makeCoinTexture(THREE, label, light, dark) {
+    return canvasTexture(THREE, function (ctx, size) {
+      var gradient = ctx.createRadialGradient(size * 0.34, size * 0.3, 8, size * 0.5, size * 0.5, size * 0.5);
+      gradient.addColorStop(0, '#ffffff');
+      gradient.addColorStop(0.32, light);
+      gradient.addColorStop(1, dark);
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(size / 2, size / 2, size * 0.46, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.lineWidth = 12;
+      ctx.strokeStyle = 'rgba(255,255,255,.5)';
+      ctx.stroke();
+      ctx.fillStyle = '#08111c';
+      ctx.font = '900 96px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, size / 2, size / 2 + 4);
+    });
+  }
+
+  function makeDiceTexture(THREE, value, peer) {
+    return canvasTexture(THREE, function (ctx, size) {
+      ctx.fillStyle = peer ? '#fed7aa' : '#e0f2fe';
+      roundRect(ctx, 18, 18, size - 36, size - 36, 28);
+      ctx.fill();
+      ctx.fillStyle = '#061018';
+      ctx.font = '900 112px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(value), size / 2, size / 2 + 4);
+    });
+  }
+
+  function makeCardTexture(THREE, value, peer, back) {
+    return canvasTexture(THREE, function (ctx, size) {
+      ctx.fillStyle = back ? '#0e7490' : '#f8fafc';
+      roundRect(ctx, 24, 12, size - 48, size - 24, 22);
+      ctx.fill();
+      ctx.strokeStyle = back ? '#7dd3fc' : '#0f172a';
+      ctx.lineWidth = 8;
+      ctx.stroke();
+      ctx.fillStyle = back ? '#dff8ff' : (peer ? '#9a3412' : '#0f172a');
+      ctx.font = '900 84px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(value), size / 2, size / 2 + 2);
+      ctx.font = '700 24px Arial';
+      ctx.fillText(peer ? 'PEER' : 'YOU', size / 2, size - 34);
+    });
+  }
+
+  function makeTargetTexture(THREE) {
+    return canvasTexture(THREE, function (ctx, size) {
+      var rings = [['#f59e0b', 0.48], ['#111827', 0.39], ['#38bdf8', 0.3], ['#ffffff', 0.2], ['#ef4444', 0.12], ['#ffffff', 0.055]];
+      rings.forEach(function (ring) {
+        ctx.fillStyle = ring[0];
+        ctx.beginPath();
+        ctx.arc(size / 2, size / 2, size * ring[1], 0, Math.PI * 2);
+        ctx.fill();
+      });
+    });
+  }
+
+  function canvasTexture(THREE, draw) {
+    var canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 256;
+    var ctx = canvas.getContext('2d');
+    draw(ctx, 256);
+    var texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+    return texture;
+  }
+
+  function roundRect(ctx, x, y, width, height, radius) {
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.arcTo(x + width, y, x + width, y + height, radius);
+    ctx.arcTo(x + width, y + height, x, y + height, radius);
+    ctx.arcTo(x, y + height, x, y, radius);
+    ctx.arcTo(x, y, x + width, y, radius);
+    ctx.closePath();
+  }
+
+  function disposeThreeScene(scene) {
+    scene.traverse(function (object) {
+      if (object.geometry && object.geometry.dispose) object.geometry.dispose();
+      var materials = Array.isArray(object.material) ? object.material : [object.material];
+      materials.forEach(function (material) {
+        if (!material) return;
+        if (material.map && material.map.dispose) material.map.dispose();
+        if (material.dispose) material.dispose();
+      });
+    });
   }
 
   function requireWalletAddress() {
@@ -598,6 +909,7 @@
     state.peerWallet = payload.wallet || '';
     state.peerDeposit = payload.deposit || null;
     if (state.peerWallet) knownPeerWallet = state.peerWallet;
+    notifyArena('challenge', 'OST Mesh game accepted', 'Peer locked the stake and accepted ' + (GAME_NAMES[state.game] || 'the game') + '.', { force: true, tag: 'ost-mesh-game-accept-' + state.id });
     await sendPayload('game.reveal', { id: state.id, secret: state.ownSecret, wallet: state.ownWallet }, { reliable: true, timeoutMs: 30000 });
     updateGameTable(state, 'Peer stake locked. Revealing seeds now.');
     gameLog(makeCard('Peer accepted', 'Your seed was revealed. Waiting for peer reveal.'));
@@ -714,6 +1026,7 @@
     }
     incomingChallenges.add(payload.id);
     if (payload.wallet) knownPeerWallet = payload.wallet;
+    notifyArena('challenge', 'OST Mesh challenge', (payload.gameLabel || GAME_NAMES[payload.game] || 'Game') + ' for ' + amountText(payload.stake) + '.', { force: true, requireInteraction: true, tag: 'ost-mesh-challenge-' + payload.id });
     updateGameTable({ game: payload.game, stake: payload.stake || { amount: 0, asset: 'OST' }, peerWallet: payload.wallet || '' }, 'Incoming challenge. Accepting locks your matching stake first.');
     var card = makeCard('Game challenge', escapeHtml(payload.gameLabel || GAME_NAMES[payload.game] || 'Game') + ' for <strong>' + escapeHtml(amountText(payload.stake)) + '</strong><br>Peer commit: <code>' + escapeHtml(String(payload.commit || '').slice(0, 16)) + '...</code>');
     var actions = document.createElement('div');
