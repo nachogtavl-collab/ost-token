@@ -142,8 +142,8 @@
       var bar = document.createElement('div');
       bar.className = 'ost-pred-actions';
       bar.innerHTML = [
-        '<button type="button" class="ost-pred-btn" data-ost-pred-action="info">ℹ Info</button>',
-        '<button type="button" class="ost-pred-btn" data-ost-pred-action="graph">📈 Graph</button>',
+        '<button type="button" class="ost-pred-btn ost-icon-btn" data-ost-pred-action="info"><span data-icon="info"></span> Info</button>',
+        '<button type="button" class="ost-pred-btn ost-icon-btn" data-ost-pred-action="graph"><span data-icon="trending-up"></span> Graph</button>',
         '<button type="button" class="ost-pred-btn ost-pred-btn--yes" data-ost-pred-action="bet-yes">Bet YES</button>',
         '<button type="button" class="ost-pred-btn ost-pred-btn--no" data-ost-pred-action="bet-no">Bet NO</button>'
       ].join('');

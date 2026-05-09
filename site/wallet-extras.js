@@ -1932,10 +1932,10 @@
 
       var summaryHtml =
         '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;">' +
-        _chip('↓ Received', totalIn.toFixed(2) + ' OST', '#34d399') +
-        _chip('↑ Sent/Bet', totalOut.toFixed(2) + ' OST', '#f87171') +
-        _chip('📈 Open positions', openPositions.length, '#fbbf24') +
-        _chip('📋 Total events', items.length, '#94a3b8') +
+        _chip('Received', totalIn.toFixed(2) + ' OST', '#34d399') +
+        _chip('Sent / Bet', totalOut.toFixed(2) + ' OST', '#f87171') +
+        _chip('Open positions', openPositions.length, '#fbbf24') +
+        _chip('Total events', items.length, '#94a3b8') +
         '</div>';
 
       if (!items.length) {

@@ -11881,3 +11881,13 @@ html.ancient-mode .hero-tag {
   }
 }
 
+
+/* ============================================================
+   OST modern icon system (icons.js)
+   ============================================================ */
+.ost-icon { display:inline-block; vertical-align:-0.18em; flex:none; }
+.ost-icon-btn { display:inline-flex; align-items:center; gap:8px; }
+.ost-icon-btn .ost-icon { width:1em; height:1em; }
+button .ost-icon, a .ost-icon, .pill .ost-icon { vertical-align:-0.18em; }
+.ost-icon-lead { display:inline-flex; align-items:center; justify-content:center; width:1.7em; height:1.7em; border-radius:8px; background:rgba(120,180,255,0.08); color:#bfdbfe; }
+

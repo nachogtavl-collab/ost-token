@@ -112,12 +112,12 @@ function buildDOM() {
           </div>
           <div class="ost-mesh-tools">
             <input type="file" id="mesh-file" accept="image/*,video/*" hidden />
-            <button id="mesh-attach" disabled>📎 Photo / Video</button>
-            <button id="mesh-loc" disabled>📍 Share map</button>
-            <button id="mesh-live" disabled>🛰 Live location</button>
-            <button id="mesh-voice" disabled>📞 Start voice</button>
-            <button id="mesh-video-call" disabled>📹 Start video</button>
-            <button id="mesh-hangup" class="ghost" disabled>⛔ End session</button>
+            <button id="mesh-attach" class="ost-icon-btn" disabled><span data-icon="paperclip"></span> Photo / Video</button>
+            <button id="mesh-loc" class="ost-icon-btn" disabled><span data-icon="pin"></span> Share map</button>
+            <button id="mesh-live" class="ost-icon-btn" disabled><span data-icon="satellite"></span> Live location</button>
+            <button id="mesh-voice" class="ost-icon-btn" disabled><span data-icon="phone"></span> Start voice</button>
+            <button id="mesh-video-call" class="ost-icon-btn" disabled><span data-icon="video"></span> Start video</button>
+            <button id="mesh-hangup" class="ghost ost-icon-btn" disabled><span data-icon="phone-off"></span> End session</button>
           </div>
         </div>
       </div>
@@ -557,7 +557,7 @@ class MeshPavilion {
     this.sessionKey = await deriveSessionKey(this.identity, imported.kexPub);
     this.peerAddr = addr;
     this.peerInput.value = addr;
-    this._setStatus(`🔒 Encrypted session ready with ${addr}`, 'ok');
+    this._setStatus(`Encrypted session ready with ${addr}`, 'ok');
     this._bubble('system', `Encrypted channel established with <code>${escapeHtml(addr)}</code> · suite ${escapeHtml(peer.bundle.suite || 'unknown')}`);
   }
 
@@ -602,7 +602,7 @@ class MeshPavilion {
     this.rtc = new MeshRTC({ apiBase: this.api, myAddress: this.address, peerAddress: this.peerAddr || '' });
 
     this.rtc.addEventListener('open', () => {
-      this._setStatus('🔗 Direct P2P data channel open.', 'ok');
+      this._setStatus('Direct P2P data channel open.', 'ok');
       if (this.peerAddr && this.sessionKey) this._enableMessaging();
       if (this.callState === 'calling' || this.callState === 'answering') this._markCallConnected(video);
       this._flushOutbox();
@@ -620,7 +620,7 @@ class MeshPavilion {
     });
     this.rtc.addEventListener('state', (e) => {
       const s = e.detail.state;
-      if (s === 'connected')      this._setStatus('🔗 P2P connected.', 'ok');
+      if (s === 'connected')      this._setStatus('P2P connected.', 'ok');
       else if (s === 'failed') {
         this._setStatus('P2P failed (no relay yet).', 'err');
         if (this.callState !== 'idle') {
@@ -765,7 +765,7 @@ class MeshPavilion {
     if (this.liveLocTimer) {
       clearInterval(this.liveLocTimer);
       this.liveLocTimer = null;
-      this.liveBtn.textContent = '🛰 Live location';
+      this.liveBtn.innerHTML = (window.OST_ICON ? window.OST_ICON('satellite') : '') + ' Live location';
       this._sendLiveStop().catch(() => {});
       this._setStatus('Live location stopped.', 'warn');
       return;
@@ -773,7 +773,7 @@ class MeshPavilion {
     try {
       await this._sendLocation(true);
       this.liveLocTimer = setInterval(() => this._sendLocation(true).catch(() => {}), LIVE_LOCATION_INTERVAL_MS);
-      this.liveBtn.textContent = '🛰 Stop live';
+      this.liveBtn.innerHTML = (window.OST_ICON ? window.OST_ICON('satellite') : '') + ' Stop live';
       this._setStatus('Live location sharing started.', 'ok');
     } catch {}
   }
@@ -999,7 +999,7 @@ class MeshPavilion {
     }
     this.videoGrid.classList.remove('is-on');
     if (this.liveLocTimer) { clearInterval(this.liveLocTimer); this.liveLocTimer = null; }
-    this.liveBtn.textContent = '🛰 Live location';
+    this.liveBtn.innerHTML = (window.OST_ICON ? window.OST_ICON('satellite') : '') + ' Live location';
     this._resetCallState();
     if (restoreData && wasCalling) {
       this._restoreDataSessionAfterCall('caller');
@@ -1120,7 +1120,7 @@ class MeshPavilion {
         await this._receiveFileChunk(new Uint8Array(data));
       }
     } catch (err) {
-      this._bubble('system', '⚠ decrypt failed: ' + err.message);
+      this._bubble('system', 'decrypt failed: ' + err.message);
     }
   }
 

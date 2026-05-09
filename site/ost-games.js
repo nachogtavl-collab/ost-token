@@ -272,25 +272,32 @@
   // ────────────────────────────────────────────────────────────────────────
   var GAME_ORDER = ['mines', 'crash', 'dice', 'plinko', 'limbo', 'hilo', 'wheel', 'coinflip', 'keno', 'tower', 'double', 'slide', 'pump', 'dragontower', 'diamonds', 'cases', 'tome', 'scarab'];
   var GAME_META = {
-    mines: { label: 'Mines', icon: '💣', accent: '#22c55e', accent2: '#38bdf8', tag: 'Reveal grid', stat: 'Cashout ladder', hero: '💎', symbols: ['💎', '💣', '✦'] },
-    crash: { label: 'Crash', icon: '🚀', accent: '#f97316', accent2: '#facc15', tag: 'Rocket curve', stat: 'Live cashout', hero: '🚀', symbols: ['🚀', '🔥', '×'] },
-    dice: { label: 'Dice', icon: '🎲', accent: '#38bdf8', accent2: '#22c55e', tag: 'Target roll', stat: 'Risk slider', hero: '🎲', symbols: ['⚀', '⚂', '⚅'] },
-    plinko: { label: 'Plinko', icon: '🟡', accent: '#facc15', accent2: '#fb7185', tag: 'Peg drop', stat: 'Multi-ball', hero: '🟡', symbols: ['●', '×', '↘'] },
-    limbo: { label: 'Limbo', icon: '🌙', accent: '#a78bfa', accent2: '#38bdf8', tag: 'Multiplier chase', stat: 'High target', hero: '🌙', symbols: ['×', '↑', '✦'] },
-    hilo: { label: 'Hi-Lo', icon: '🃏', accent: '#fb7185', accent2: '#facc15', tag: 'Card streak', stat: 'Compound', hero: '🃏', symbols: ['A', 'K', 'Q'] },
-    wheel: { label: 'Big Six', icon: '🎡', accent: '#fb7185', accent2: '#facc15', tag: 'Prize wheel', stat: 'Risk bands', hero: '🎡', symbols: ['0x', '2x', '12x'] },
-    coinflip: { label: 'Coinflip', icon: '🪙', accent: '#facc15', accent2: '#f97316', tag: 'Heads/Tails', stat: '1.98x', hero: '🪙', symbols: ['H', 'T', '×'] },
-    keno: { label: 'Keno', icon: '🔢', accent: '#22c55e', accent2: '#a78bfa', tag: 'Number draw', stat: '10 picks', hero: '🔢', symbols: ['7', '21', '40'] },
-    tower: { label: 'Tower', icon: '🗼', accent: '#38bdf8', accent2: '#22c55e', tag: 'Climb rows', stat: 'Trap picks', hero: '🗼', symbols: ['◇', '◆', '×'] },
-    double: { label: 'Double', icon: '🔴', accent: '#ef4444', accent2: '#22c55e', tag: 'Color strip', stat: 'Green chase', hero: '🔴', symbols: ['Red', 'Black', 'Green'] },
-    slide: { label: 'Slide', icon: '📈', accent: '#38bdf8', accent2: '#22c55e', tag: 'Target run', stat: '100x cap', hero: '📈', symbols: ['2x', '10x', '50x'] },
-    pump: { label: 'Pump', icon: '🎈', accent: '#fb7185', accent2: '#facc15', tag: 'Pressure ladder', stat: 'Bust point', hero: '🎈', symbols: ['1', '4', '8'] },
-    dragontower: { label: 'Dragon Tower', icon: '🐉', accent: '#f97316', accent2: '#22c55e', tag: 'Path tower', stat: 'Floor clear', hero: '🐉', symbols: ['🥚', '🐉', '×'] },
-    diamonds: { label: 'Diamonds', icon: '💎', accent: '#38bdf8', accent2: '#a78bfa', tag: 'Gem match', stat: '50x top', hero: '💎', symbols: ['💎', '🔷', '🟢'] },
-    cases: { label: 'Case Battle', icon: '📦', accent: '#facc15', accent2: '#fb7185', tag: 'Drop battle', stat: 'You vs dealer', hero: '📦', symbols: ['Common', 'Epic', 'Gold'] },
-    tome: { label: 'Tome', icon: '📖', accent: '#a78bfa', accent2: '#facc15', tag: 'Rune pages', stat: 'Curse risk', hero: '📖', symbols: ['ᚱ', 'ᚠ', '☠'] },
-    scarab: { label: 'Scarab Spin', icon: '🪲', accent: '#facc15', accent2: '#22c55e', tag: '3x3 symbols', stat: 'Cluster pay', hero: '🪲', symbols: ['🪲', '💎', '☀'] }
+    mines: { label: 'Mines', icon: '💣', iconName: 'bomb', accent: '#22c55e', accent2: '#38bdf8', tag: 'Reveal grid', stat: 'Cashout ladder', hero: '💎', symbols: ['◆', '●', '✦'] },
+    crash: { label: 'Crash', icon: '🚀', iconName: 'rocket', accent: '#f97316', accent2: '#facc15', tag: 'Rocket curve', stat: 'Live cashout', hero: '🚀', symbols: ['↗', '⤴', '×'] },
+    dice: { label: 'Dice', icon: '🎲', iconName: 'dice', accent: '#38bdf8', accent2: '#22c55e', tag: 'Target roll', stat: 'Risk slider', hero: '🎲', symbols: ['⚀', '⚂', '⚅'] },
+    plinko: { label: 'Plinko', icon: '●', iconName: 'coin', accent: '#facc15', accent2: '#fb7185', tag: 'Peg drop', stat: 'Multi-ball', hero: '●', symbols: ['●', '×', '↘'] },
+    limbo: { label: 'Limbo', icon: '✦', iconName: 'sparkles', accent: '#a78bfa', accent2: '#38bdf8', tag: 'Multiplier chase', stat: 'High target', hero: '✦', symbols: ['×', '↑', '✦'] },
+    hilo: { label: 'Hi-Lo', icon: '♠', iconName: 'star', accent: '#fb7185', accent2: '#facc15', tag: 'Card streak', stat: 'Compound', hero: '♠', symbols: ['A', 'K', 'Q'] },
+    wheel: { label: 'Big Six', icon: '○', iconName: 'pie-chart', accent: '#fb7185', accent2: '#facc15', tag: 'Prize wheel', stat: 'Risk bands', hero: '○', symbols: ['0x', '2x', '12x'] },
+    coinflip: { label: 'Coinflip', icon: '●', iconName: 'coin', accent: '#facc15', accent2: '#f97316', tag: 'Heads/Tails', stat: '1.98x', hero: '●', symbols: ['H', 'T', '×'] },
+    keno: { label: 'Keno', icon: '#', iconName: 'list', accent: '#22c55e', accent2: '#a78bfa', tag: 'Number draw', stat: '10 picks', hero: '#', symbols: ['7', '21', '40'] },
+    tower: { label: 'Tower', icon: '△', iconName: 'tower', accent: '#38bdf8', accent2: '#22c55e', tag: 'Climb rows', stat: 'Trap picks', hero: '△', symbols: ['◇', '◆', '×'] },
+    double: { label: 'Double', icon: '●', iconName: 'target', accent: '#ef4444', accent2: '#22c55e', tag: 'Color strip', stat: 'Green chase', hero: '●', symbols: ['Red', 'Black', 'Green'] },
+    slide: { label: 'Slide', icon: '↗', iconName: 'trending-up', accent: '#38bdf8', accent2: '#22c55e', tag: 'Target run', stat: '100x cap', hero: '↗', symbols: ['2x', '10x', '50x'] },
+    pump: { label: 'Pump', icon: '○', iconName: 'flame', accent: '#fb7185', accent2: '#facc15', tag: 'Pressure ladder', stat: 'Bust point', hero: '○', symbols: ['1', '4', '8'] },
+    dragontower: { label: 'Dragon Tower', icon: '△', iconName: 'tower', accent: '#f97316', accent2: '#22c55e', tag: 'Path tower', stat: 'Floor clear', hero: '△', symbols: ['○', '◆', '×'] },
+    diamonds: { label: 'Diamonds', icon: '◆', iconName: 'sparkles', accent: '#38bdf8', accent2: '#a78bfa', tag: 'Gem match', stat: '50x top', hero: '◆', symbols: ['◆', '◈', '○'] },
+    cases: { label: 'Case Battle', icon: '▣', iconName: 'package', accent: '#facc15', accent2: '#fb7185', tag: 'Drop battle', stat: 'You vs dealer', hero: '▣', symbols: ['Common', 'Epic', 'Gold'] },
+    tome: { label: 'Tome', icon: '✎', iconName: 'book', accent: '#a78bfa', accent2: '#facc15', tag: 'Rune pages', stat: 'Curse risk', hero: '✎', symbols: ['ᚱ', 'ᚠ', '☠'] },
+    scarab: { label: 'Scarab Spin', icon: '✦', iconName: 'sparkles', accent: '#facc15', accent2: '#22c55e', tag: '3x3 symbols', stat: 'Cluster pay', hero: '✦', symbols: ['◆', '◆', '☀'] }
   };
+
+  function gameIconHTML(meta, size) {
+    if (window.OST_ICON && meta && meta.iconName) {
+      return window.OST_ICON(meta.iconName, { size: size || 18 });
+    }
+    return (meta && meta.icon) || '';
+  }
 
   var GAME_ENGINE = {
     mines: { curve: 'Manual cashout', action: 'Reveal tiles', risk: 'Mine density', edge: '99% return curve' },
@@ -327,7 +334,7 @@
         '<div class="ostg-casino-hero" id="ostgCasinoHero">' +
           '<div class="ostg-hero-copy">' +
             '<span class="ostg-kicker">FAUCET FAIR GAMES</span>' +
-            '<h3><span id="ostgHeroIcon">💣</span> <span id="ostgHeroTitle">OST Arcade</span></h3>' +
+            '<h3><span id="ostgHeroIcon">' + (window.OST_ICON ? window.OST_ICON('bomb', { size: 22 }) : '') + '</span> <span id="ostgHeroTitle">OST Arcade</span></h3>' +
             '<div class="ostg-hero-stats">' +
               '<span id="ostgHeroTag">Reveal grid</span>' +
               '<span id="ostgHeroStat">Cashout ladder</span>' +
@@ -335,8 +342,8 @@
             '</div>' +
           '</div>' +
           '<div class="ostg-hero-scene" aria-hidden="true">' +
-            '<span class="ostg-hero-token hero-a" id="ostgHeroA">💎</span>' +
-            '<span class="ostg-hero-token hero-b" id="ostgHeroB">💣</span>' +
+            '<span class="ostg-hero-token hero-a" id="ostgHeroA">◆</span>' +
+            '<span class="ostg-hero-token hero-b" id="ostgHeroB">●</span>' +
             '<span class="ostg-hero-token hero-c" id="ostgHeroC">✦</span>' +
             '<span class="ostg-hero-card card-a">7</span>' +
             '<span class="ostg-hero-card card-b">×</span>' +
@@ -349,32 +356,18 @@
               '<span id="ostgWalletText">Wallet: not connected</span>' +
             '</div>' +
             '<div class="ostg-balance-actions">' +
-              '<button class="ostg-deposit-btn" id="ostgDepositBtn" type="button" title="Move OST from your real wallet into the play balance">⬇ Deposit</button>' +
-              '<button class="ostg-cash-btn" id="ostgCashBtn" type="button" title="Send earned OST to your real wallet">💸 Cash out</button>' +
-              '<button class="ostg-fair-btn" id="ostgFairBtn" type="button">🔐 Fairness</button>' +
+              '<button class="ostg-deposit-btn ost-icon-btn" id="ostgDepositBtn" type="button" title="Move OST from your real wallet into the play balance"><span data-icon="download"></span> Deposit</button>' +
+              '<button class="ostg-cash-btn ost-icon-btn" id="ostgCashBtn" type="button" title="Send earned OST to your real wallet"><span data-icon="send"></span> Cash out</button>' +
+              '<button class="ostg-fair-btn ost-icon-btn" id="ostgFairBtn" type="button"><span data-icon="shield"></span> Fairness</button>' +
             '</div>' +
           '</div>' +
         '</div>' +
         '<div class="ostg-lobby-strip" id="ostgLobbyStrip"></div>' +
         '<div class="ostg-tabs" id="ostgTabs">' +
-          '<button class="ostg-tab is-active" data-game="mines">💣 Mines</button>' +
-          '<button class="ostg-tab" data-game="crash">🚀 Crash</button>' +
-          '<button class="ostg-tab" data-game="dice">🎲 Dice</button>' +
-          '<button class="ostg-tab" data-game="plinko">🟡 Plinko</button>' +
-          '<button class="ostg-tab" data-game="limbo">🌙 Limbo</button>' +
-          '<button class="ostg-tab" data-game="hilo">🃏 Hi-Lo</button>' +
-          '<button class="ostg-tab" data-game="wheel">🎡 Big Six</button>' +
-          '<button class="ostg-tab" data-game="coinflip">🪙 Coinflip</button>' +
-          '<button class="ostg-tab" data-game="keno">🔢 Keno</button>' +
-          '<button class="ostg-tab" data-game="tower">🗼 Tower</button>' +
-          '<button class="ostg-tab" data-game="double">🔴 Double</button>' +
-          '<button class="ostg-tab" data-game="slide">📈 Slide</button>' +
-          '<button class="ostg-tab" data-game="pump">🎈 Pump</button>' +
-          '<button class="ostg-tab" data-game="dragontower">🐉 Dragon Tower</button>' +
-          '<button class="ostg-tab" data-game="diamonds">💎 Diamonds</button>' +
-          '<button class="ostg-tab" data-game="cases">📦 Case Battle</button>' +
-          '<button class="ostg-tab" data-game="tome">📖 Tome</button>' +
-          '<button class="ostg-tab" data-game="scarab">🪲 Scarab Spin</button>' +
+          GAME_ORDER.map(function (g) {
+            var m = GAME_META[g] || {};
+            return '<button class="ostg-tab' + (g === 'mines' ? ' is-active' : '') + ' ost-icon-btn" data-game="' + g + '">' + gameIconHTML(m, 16) + ' ' + m.label + '</button>';
+          }).join('') +
         '</div>' +
         '<div class="ostg-stage" id="ostgStage"></div>' +
         '<div class="ostg-history" id="ostgHistory"><span class="ostg-history-label">Recent multipliers:</span></div>' +
@@ -575,7 +568,7 @@
     host.innerHTML = GAME_ORDER.map(function (game) {
       var meta = metaFor(game);
       return '<button class="ostg-lobby-game" type="button" data-lobby-game="' + game + '">' +
-        '<span class="ostg-lobby-icon">' + meta.icon + '</span>' +
+        '<span class="ostg-lobby-icon">' + gameIconHTML(meta, 22) + '</span>' +
         '<span><b>' + meta.label + '</b><em>' + meta.tag + '</em></span>' +
         '<strong>' + meta.stat + '</strong>' +
       '</button>';
@@ -605,7 +598,7 @@
     var a = document.getElementById('ostgHeroA');
     var b = document.getElementById('ostgHeroB');
     var c = document.getElementById('ostgHeroC');
-    if (icon) icon.textContent = meta.icon;
+    if (icon) icon.innerHTML = gameIconHTML(meta, 24);
     if (title) title.textContent = meta.label;
     if (tag) tag.textContent = meta.tag;
     if (stat) stat.textContent = meta.stat;
