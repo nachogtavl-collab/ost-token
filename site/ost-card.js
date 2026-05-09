@@ -197,6 +197,7 @@
       +   '<button class="btn btn-primary btn-sm" id="ostCardAppleBtn" type="button">Add to Apple Wallet</button>'
       +   '<button class="btn btn-primary btn-sm" id="ostCardGoogleBtn" type="button">Add to Google Wallet</button>'
       +   '<button class="btn btn-outline btn-sm" id="ostCardShortcutBtn" type="button">Install iOS Shortcut</button>'
+      +   '<button class="btn btn-primary btn-sm" id="ostCardTicketBtn" type="button">◉ Show tap-to-pay ticket</button>'
       +   '<button class="btn btn-outline btn-sm" id="ostCardNfcBtn" type="button">Write to NFC tag</button>'
       +   '<button class="btn btn-outline btn-sm" id="ostCardShareBtn" type="button">Share card link</button>'
       +   '<button class="btn btn-outline btn-sm" id="ostCardOpenBtn" type="button">Open full card</button>'
@@ -207,6 +208,8 @@
     $('ostCardAppleBtn').addEventListener('click', addToAppleWallet);
     $('ostCardGoogleBtn').addEventListener('click', addToGoogleWallet);
     $('ostCardShortcutBtn').addEventListener('click', installShortcut);
+    var ticketBtn = $('ostCardTicketBtn');
+    if (ticketBtn) ticketBtn.addEventListener('click', function () { showTicketView(); });
     $('ostCardNfcBtn').addEventListener('click', writeNfcTag);
     $('ostCardShareBtn').addEventListener('click', shareCardLink);
     $('ostCardOpenBtn').addEventListener('click', function () { openFullCard(); });
@@ -305,30 +308,95 @@
     setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
   }
 
+  // Build a real Apple PassKit pass.json with the NFC payload field.
+  // Any signing relay that holds a valid Pass Type ID certificate can take
+  // this object, add manifest.json + signature, and zip it into a real
+  // .pkpass that Apple Wallet recognises and exposes over NFC.
+  function buildApplePassJson(profile, amountUsd) {
+    var address = walletAddress();
+    var landing = cardLandingUrl(profile, amountUsd);
+    var ost = Number(state.ostBalance) || 0;
+    var usdPerOst = Number(state.usdPerOst) || DEFAULT_OST_USD;
+    var balanceUsd = ost * usdPerOst;
+    return {
+      formatVersion: 1,
+      passTypeIdentifier: 'pass.com.ost.card',
+      teamIdentifier: 'OSTTEAMID',
+      organizationName: 'OST',
+      description: 'OST Card - universal OST tap pass',
+      serialNumber: profile.cardId,
+      logoText: 'OST',
+      foregroundColor: 'rgb(248, 250, 252)',
+      backgroundColor: 'rgb(11, 61, 46)',
+      labelColor: 'rgb(187, 247, 208)',
+      barcodes: [{
+        format: 'PKBarcodeFormatQR',
+        message: landing,
+        messageEncoding: 'iso-8859-1',
+        altText: '@' + (profile.handle || '')
+      }],
+      // The real NFC payload Apple Wallet will broadcast on tap.
+      // PassKit accepts only ISO 14443-4 strings up to 64 bytes by default;
+      // 'requiresAuthentication' false makes the tap work without unlock.
+      nfc: {
+        message: landing.length > 64 ? PUBLIC_SITE_URL + '?card=' + address : landing,
+        encryptionPublicKey: '',
+        requiresAuthentication: false
+      },
+      generic: {
+        primaryFields:   [{ key: 'balance', label: 'Balance', value: ost.toFixed(2) + ' OST' }],
+        secondaryFields: [
+          { key: 'usd',    label: 'USD',    value: '$' + balanceUsd.toFixed(2) },
+          { key: 'handle', label: 'Handle', value: '@' + (profile.handle || '') }
+        ],
+        auxiliaryFields: [
+          { key: 'network', label: 'Network', value: String(window.OST_NETWORK || 'devnet') },
+          { key: 'amount',  label: 'Tap',     value: '$' + Number(amountUsd).toFixed(2) }
+        ],
+        backFields: [
+          { key: 'wallet',  label: 'Wallet address', value: address },
+          { key: 'meshHandle', label: 'Mesh handle', value: profile.meshHandle || profile.handle || '' },
+          { key: 'cardId',  label: 'Card ID',     value: profile.cardId },
+          { key: 'landing', label: 'Open in browser', value: landing },
+          { key: 'note',    label: 'About',       value: 'Tap to open the live OST Card with current balance, USD value, and a Pay button. Phase 1 today: scannable QR + NFC URL. Phase 2 (mainnet): real Apple Pay payment card.' }
+        ]
+      },
+      associatedStoreIdentifiers: [],
+      webServiceURL: '',
+      authenticationToken: ''
+    };
+  }
+
   async function addToAppleWallet() {
     var profile = ensureProfile();
     if (!profile) { setStatus('Connect a wallet first \u2014 the card needs a real OST address.', 'error'); return; }
     var amount = readAmount();
     var payload = passPayload(profile, amount);
+    var passJson = buildApplePassJson(profile, amount);
+    payload.passJson = passJson; // ship the real PassKit body for the relay to sign
     setStatus('Requesting signed Apple Wallet pass from relay...', 'warning');
     var result = await tryServerPass('apple', payload);
     if (result && result.ok && result.kind === 'pkpass') {
       downloadFile('ost-card-' + profile.cardId + '.pkpass', result.blob, 'application/vnd.apple.pkpass');
-      setStatus('OST Card pass downloaded. Open it on your iPhone to add it to Apple Wallet.', 'success');
+      setStatus('OST Card pass downloaded. Open it on your iPhone to add it to Apple Wallet \u2014 the NFC chip will broadcast your card URL on tap.', 'success');
       return;
     }
     if (result && result.ok && result.kind === 'json' && result.json && result.json.url) {
       window.location.href = result.json.url; return;
     }
-    // Fallback: ship the unsigned payload + iOS Shortcut path (works today,
-    // no PassKit signing required). User uses Shortcuts to open the landing
-    // page from a double-press of the side / Action button.
-    downloadFile('ost-card-' + profile.cardId + '.json', JSON.stringify(payload, null, 2), 'application/json');
+    // No signing relay yet. Ship the real PassKit pass.json + a clear note.
+    // The user (or any partner) can plug in a signing service such as
+    // PassKit, Walletmoon, or a self-hosted node-passkit-generator running
+    // an Apple Pass Type ID cert ($99 / yr Apple Developer account) and
+    // POST this exact JSON to receive a signed .pkpass.
+    downloadFile('ost-card-' + profile.cardId + '.pass.json', JSON.stringify(passJson, null, 2), 'application/json');
     var platform = detectPlatform();
     setStatus(platform.isIos
-      ? 'Apple Wallet relay not enabled yet. Card payload downloaded \u2014 use "Install iOS Shortcut" to make a double-tap of the Action / Back-Tap open your OST Card instantly.'
-      : 'Apple Wallet relay not enabled yet. Card payload downloaded for the issuer integration step. The iOS Shortcut path works today on any iPhone.',
+      ? 'Real Apple Wallet NFC card requires an Apple Pass Type ID certificate. Pass body downloaded \u2014 plug your signing relay into window.OST_CARD_ENDPOINTS.apple. Meanwhile, "Show tap-to-pay ticket" works on every iPhone today.'
+      : 'PassKit pass.json downloaded ready for an Apple-cert-holding relay. Set window.OST_CARD_ENDPOINTS.apple to your signer endpoint to enable one-tap install.',
       'warning');
+    // Surface the working today path immediately so the user is never stuck.
+    if (platform.isIos) showTicketView();
   }
 
   async function addToGoogleWallet() {
@@ -430,19 +498,12 @@
     var profile = ensureProfile();
     if (!profile) { setStatus('Connect a wallet first.', 'error'); return; }
     var landing = cardLandingUrl(profile, readAmount());
-    var ep = endpoints();
-    if (ep.shortcut) {
-      var u = ep.shortcut + '?landing=' + encodeURIComponent(landing) + '&handle=' + encodeURIComponent(profile.handle || '');
-      try { window.location.href = 'shortcuts://import-shortcut?url=' + encodeURIComponent(u) + '&name=OST%20Card'; } catch (_) {}
-      setTimeout(function () {
-        if (window.openOstPopup) window.openOstPopup(u, 'OST Card \u2014 iOS Shortcut');
-        else window.open(u, '_blank', 'noopener');
-      }, 800);
-      setStatus('Opening signed iOS Shortcut. After install, assign it to Action Button / Back Tap.', 'success');
-      return;
-    }
+    // Note: shortcuts://import-shortcut?url=... only accepts iCloud-hosted
+    // signed .shortcut files. Until the relay returns a real signed shortcut,
+    // attempting that deep link makes iOS show 'invalid URL'. Skip it and
+    // ship the manual recipe modal that works on every iPhone today.
     showShortcutModal(profile, landing);
-    setStatus('Follow the steps in the popup to bind OST Card to a one-tap gesture.', 'success');
+    setStatus('Follow the 30-second recipe in the popup to bind OST Card to Action Button or Back Tap.', 'success');
   }
 
   async function writeNfcTag() {
@@ -451,13 +512,16 @@
     var landing = cardLandingUrl(profile, readAmount());
     var platform = detectPlatform();
     if (typeof window.NDEFReader === 'undefined') {
-      if (platform.isIos) {
-        setStatus('iPhone cannot WRITE NFC tags from a web page, but iOS reads them natively. Program the tag from any Android device or NFC Tools, then tap with iPhone to open the OST Card.', 'warning');
-      } else if (platform.isMacSafari) {
-        setStatus('Mac Safari cannot write NFC tags. Use Share \u2192 AirDrop or print the QR.', 'warning');
-      } else {
-        setStatus('Web NFC needs Android Chrome 89+. Use the QR / share fallback.', 'warning');
-      }
+      // No Web NFC writer (every iPhone, Mac Safari, desktop). Open the
+      // ticket view so the user can scan / share / pay right now without a
+      // physical tag - same UX a paper ticket would give.
+      var why = platform.isIos
+        ? 'iPhone web cannot WRITE NFC tags, but it reads them natively. Showing a tap-to-pay ticket instead - any iPhone Camera or NFC reader can open it.'
+        : platform.isMacSafari
+          ? 'Mac Safari cannot write NFC tags. Showing a scannable ticket you can AirDrop or print.'
+          : 'Web NFC needs Android Chrome 89+. Showing the scannable ticket fallback.';
+      setStatus(why, 'warning');
+      showTicketView();
       return;
     }
     try {
@@ -469,7 +533,8 @@
       ] });
       setStatus('OST Card written to tag. Tapping it on any iPhone or Android opens the live card with current OST balance + USD.', 'success');
     } catch (error) {
-      setStatus('NFC write failed: ' + ((error && error.message) || 'unknown') + '.', 'error');
+      setStatus('NFC write failed: ' + ((error && error.message) || 'unknown') + '. Showing the scannable ticket fallback.', 'error');
+      showTicketView();
     }
   }
 
@@ -489,6 +554,122 @@
       setStatus('Card link copied to clipboard: ' + landing, 'success');
     } catch (_) {
       setStatus('Card link: ' + landing, 'warning');
+    }
+  }
+
+  // Fullscreen scannable ticket - works on every iPhone today without
+  // PassKit signing. Looks like an Apple Wallet card, has a giant QR + the
+  // NFC URL prominently displayed. Any iPhone Camera, NFC tap on a programmed
+  // tag, or another phone's reader will open the live OST Card landing page
+  // with the current balance + Pay button.
+  function showTicketView() {
+    try {
+      var profile = ensureProfile();
+      if (!profile) {
+        setStatus('Connect a wallet first.', 'error');
+        try { if (window.toast) window.toast('\u26A0', 'Connect a wallet to show your tap-to-pay ticket.'); } catch (_) {}
+        return;
+      }
+      var address = walletAddress();
+      var amount = readAmount();
+      var landing = cardLandingUrl(profile, amount);
+      var handle  = profile.handle || deriveHandle(address);
+      var ost     = Number(state.ostBalance) || 0;
+      var usd     = ost * (Number(state.usdPerOst) || DEFAULT_OST_USD);
+      var prev = document.getElementById('ostCardTicketView');
+      if (prev) prev.remove();
+      var overlay = document.createElement('div');
+      overlay.id = 'ostCardTicketView';
+      overlay.style.cssText = [
+        'position:fixed','inset:0','z-index:2147483647',
+        'background:radial-gradient(120% 80% at 50% 0%,#0b3d2e 0%,#020617 60%,#000 100%)',
+        'display:flex','flex-direction:column','align-items:center','justify-content:flex-start',
+        'padding:max(16px,env(safe-area-inset-top)) 16px max(16px,env(safe-area-inset-bottom))',
+        'overflow:auto','color:#f8fafc'
+      ].join(';');
+      overlay.innerHTML = ''
+        + '<div style="display:flex;width:100%;max-width:460px;justify-content:space-between;align-items:center;margin-bottom:14px;">'
+        +   '<div style="font-size:.78rem;letter-spacing:.18em;text-transform:uppercase;color:#bbf7d0;">OST Tap Ticket</div>'
+        +   '<button id="ostTicketCloseBtn" type="button" aria-label="Close" style="background:rgba(255,255,255,0.08);border:0;color:#f8fafc;border-radius:999px;width:36px;height:36px;font-size:1.1rem;cursor:pointer;">\u2715</button>'
+        + '</div>'
+        + '<div style="width:100%;max-width:460px;border-radius:28px;overflow:hidden;background:linear-gradient(160deg,#020617 0%,#0f172a 45%,#0b3d2e 100%);border:1px solid rgba(110,231,183,0.32);box-shadow:0 40px 80px rgba(2,6,23,0.7);padding:22px;display:grid;gap:18px;">'
+        +   '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">'
+        +     '<div>'
+        +       '<div style="font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:rgba(226,232,240,0.7);">OST Card</div>'
+        +       '<div style="margin-top:6px;font-size:1.45rem;font-weight:800;letter-spacing:.02em;">@' + handle + '</div>'
+        +     '</div>'
+        +     '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">'
+        +       '<div title="NFC ready" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:rgba(110,231,183,0.16);color:#bbf7d0;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;">'
+        +         '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7c4 0 7 3 7 7"/><path d="M3 11c2 0 4 2 4 4"/><path d="M9 4c6 0 11 5 11 11"/></svg>'
+        +         'NFC + QR'
+        +       '</div>'
+        +       '<div style="font-size:.65rem;color:rgba(226,232,240,0.6);">' + (String(window.OST_NETWORK || 'devnet')) + '</div>'
+        +     '</div>'
+        +   '</div>'
+        +   '<div style="display:flex;justify-content:center;background:#fff;padding:18px;border-radius:20px;">'
+        +     '<img alt="Tap to pay QR" src="' + qrUrl(landing, 600) + '" style="width:min(360px,72vw);height:min(360px,72vw);display:block;" />'
+        +   '</div>'
+        +   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
+        +     '<div style="background:rgba(2,6,23,0.45);border:1px solid rgba(148,163,184,0.18);border-radius:14px;padding:12px;">'
+        +       '<div style="font-size:.66rem;text-transform:uppercase;letter-spacing:.12em;color:rgba(226,232,240,0.6);">Balance</div>'
+        +       '<div style="margin-top:4px;font-size:1.2rem;font-weight:800;">' + ost.toFixed(2) + ' OST</div>'
+        +       '<div style="font-size:.78rem;color:#bbf7d0;">~ $' + usd.toFixed(2) + '</div>'
+        +     '</div>'
+        +     '<div style="background:rgba(2,6,23,0.45);border:1px solid rgba(148,163,184,0.18);border-radius:14px;padding:12px;">'
+        +       '<div style="font-size:.66rem;text-transform:uppercase;letter-spacing:.12em;color:rgba(226,232,240,0.6);">Tap amount</div>'
+        +       '<div style="margin-top:4px;font-size:1.2rem;font-weight:800;">$' + Number(amount).toFixed(2) + '</div>'
+        +       '<div style="font-size:.78rem;color:rgba(226,232,240,0.7);">USD</div>'
+        +     '</div>'
+        +   '</div>'
+        +   '<div style="font-size:.72rem;color:rgba(226,232,240,0.7);word-break:break-all;font-family:\'SFMono-Regular\',Consolas,Menlo,monospace;text-align:center;">' + address + '</div>'
+        + '</div>'
+        + '<div style="margin-top:18px;width:100%;max-width:460px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center;">'
+        +   '<button id="ostTicketShareBtn" type="button" class="btn btn-primary btn-sm">Share / AirDrop</button>'
+        +   '<button id="ostTicketCopyBtn" type="button" class="btn btn-outline btn-sm">Copy URL</button>'
+        +   '<button id="ostTicketWriteNfcBtn" type="button" class="btn btn-outline btn-sm">Write to NFC tag</button>'
+        +   '<button id="ostTicketPrintBtn" type="button" class="btn btn-outline btn-sm">Print</button>'
+        + '</div>'
+        + '<p style="margin:14px 14px 0;max-width:460px;text-align:center;font-size:.78rem;line-height:1.5;color:rgba(226,232,240,0.7);">'
+        +   'Hold this screen up to any iPhone Camera or use the iPhone Control Center NFC Reader. To make a physical NFC card / wristband, tap <b>Write to NFC tag</b> from any Android device with this screen open.'
+        + '</p>';
+      document.body.appendChild(overlay);
+      function close() { overlay.remove(); }
+      var closeBtn = document.getElementById('ostTicketCloseBtn');
+      if (closeBtn) closeBtn.addEventListener('click', close);
+      var shareBtn = document.getElementById('ostTicketShareBtn');
+      if (shareBtn) shareBtn.addEventListener('click', function () {
+        if (navigator.share) {
+          navigator.share({ title: 'OST Card', text: 'OST Card @' + handle, url: landing }).catch(function () {});
+        } else {
+          window.open(landing, '_blank', 'noopener');
+        }
+      });
+      var copyBtn = document.getElementById('ostTicketCopyBtn');
+      if (copyBtn) copyBtn.addEventListener('click', function () {
+        try {
+          if (navigator.clipboard) navigator.clipboard.writeText(landing).then(function () { copyBtn.textContent = 'Copied'; setTimeout(function () { copyBtn.textContent = 'Copy URL'; }, 1500); });
+        } catch (_) {}
+      });
+      var nfcBtn = document.getElementById('ostTicketWriteNfcBtn');
+      if (nfcBtn) nfcBtn.addEventListener('click', function () { writeNfcTag(); });
+      var printBtn = document.getElementById('ostTicketPrintBtn');
+      if (printBtn) printBtn.addEventListener('click', function () {
+        try {
+          var w = window.open('', '_blank');
+          if (!w) return;
+          w.document.write('<html><head><title>OST Card</title></head><body style="margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui;">'
+            + '<h2>OST Card &mdash; @' + handle + '</h2>'
+            + '<img src="' + qrUrl(landing, 700) + '" style="width:480px;height:480px;" />'
+            + '<p style="font-family:monospace;font-size:11px;max-width:520px;word-break:break-all;text-align:center;">' + landing + '</p>'
+            + '<script>window.onload=function(){setTimeout(function(){window.print();},400);};<\/script>'
+            + '</body></html>');
+          w.document.close();
+        } catch (_) {}
+      });
+      console.log('[ost-card] showTicketView rendered for', address);
+    } catch (err) {
+      console.error('[ost-card] showTicketView failed:', err);
+      try { if (window.toast) window.toast('\u26A0', 'Ticket open failed: ' + ((err && err.message) || err)); } catch (_) {}
     }
   }
 
