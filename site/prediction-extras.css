@@ -102,7 +102,7 @@
 /* ========== Mobile request-desktop bar + tour ========== */
 .ost-mobile-bar {
   position: fixed; bottom: 8px; left: 50%; transform: translateX(-50%);
-  display: none; gap: 8px; z-index: 9000;
+  display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; gap: 8px; z-index: -1;
   background: rgba(8, 14, 30, 0.92); border: 1px solid rgba(125, 200, 255, 0.25);
   border-radius: 999px; padding: 6px 8px; backdrop-filter: blur(8px);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
@@ -112,8 +112,8 @@
   padding: 8px 14px; border-radius: 999px; font-size: 12px; font-weight: 600; cursor: pointer;
 }
 .ost-mobile-bar button.is-active { background: rgba(125, 200, 255, 0.2); color: #fff; }
-@media (max-width: 780px) { .ost-mobile-bar { display: inline-flex; } }
-body.ost-force-desktop .ost-mobile-bar { display: inline-flex !important; }
+@media (max-width: 780px) { .ost-mobile-bar { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; } }
+body.ost-force-desktop .ost-mobile-bar { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
 body.ost-force-desktop { min-width: 1280px; }
 
 /* Mobile responsiveness fixes */
@@ -184,7 +184,7 @@ body.ost-force-desktop { min-width: 1280px; }
   position: fixed; inset: 0; z-index: 10050; display: none;
   pointer-events: none;
 }
-.ost-tour.is-open { display: block; }
+.ost-tour.is-open { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
 .ost-tour__veil {
   position: absolute; inset: 0;
   background: rgba(2, 6, 23, 0.55);

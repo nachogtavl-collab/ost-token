@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v60';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v60';
+const CACHE_NAME = 'ost-pwa-cache-v61';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v61';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -14,7 +14,7 @@ const PRECACHE_PATHS = [
   './mobile.css?v=7',
   './polish.css?v=1',
   './compartments.css?v=2',
-  './prediction-extras.css?v=4',
+  './prediction-extras.css?v=5',
   './prediction-pro.css?v=1',
   './prediction-modal.css?v=3',
   './prediction-trade-popout.css?v=3',
@@ -25,9 +25,9 @@ const PRECACHE_PATHS = [
   './topup.css?v=4',
   './offline-vault.css?v=1',
   './stock-market.css?v=1',
-  './mobile-shell.css?v=7',
+  './mobile-shell.css?v=8',
   './rpc-multiplexer.js?v=1',
-  './app.js?v=117',
+  './app.js?v=118',
   './nuevo-laredo-gas.js?v=1',
   './shop-quickview.js?v=1',
   './interchange-live.js?v=1',
@@ -58,8 +58,8 @@ const PRECACHE_PATHS = [
   './prediction-pro-dash.js?v=6',
   './ost-console.js?v=2',
   './ost-onchain-bet.js?v=1',
-  './ux-extras.js?v=7',
-  './mobile-shell.js?v=8',
+  './ux-extras.js?v=8',
+  './mobile-shell.js?v=9',
   './faucet-hub.js?v=13',
   './faucet-hub-ads.js?v=2',
   './offline-vault.js?v=3',
@@ -140,6 +140,26 @@ async function cacheFirstResponse(request) {
   }
 }
 
+async function networkFirstResponse(request) {
+  try {
+    const networkResponse = await fetch(request, { cache: 'no-store' });
+    await putInCache(RUNTIME_CACHE, request, networkResponse);
+    return networkResponse;
+  } catch (_) {
+    return (await caches.match(request)) || Response.error();
+  }
+}
+
+function shouldNetworkFirst(request) {
+  try {
+    const url = new URL(request.url);
+    if (url.origin !== scopeUrl.origin) return false;
+    return /\.(?:html|css|js)$/i.test(url.pathname) || url.pathname === scopeUrl.pathname || url.pathname.endsWith('/');
+  } catch (_) {
+    return false;
+  }
+}
+
 self.addEventListener('install', (event) => {
   event.waitUntil(precache().then(() => self.skipWaiting()));
 });
@@ -163,5 +183,5 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  event.respondWith(cacheFirstResponse(request));
+  event.respondWith(shouldNetworkFirst(request) ? networkFirstResponse(request) : cacheFirstResponse(request));
 });

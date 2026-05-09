@@ -19,7 +19,9 @@
   --ost-mobile-blue: #67b7ff;
 }
 
-.ost-mobile-home {
+.ost-mobile-home,
+#ost-mobile-bar,
+.ost-mobile-bar {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;
@@ -533,7 +535,10 @@
     top: calc(66px + env(safe-area-inset-top));
     right: max(10px, env(safe-area-inset-right));
     z-index: 9600;
-    display: flex;
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
     gap: 6px;
     padding: 6px;
     border-radius: 16px;
@@ -669,6 +674,8 @@
   }
 
   #ost-mobile-bar [data-tour-restart],
+  body.ost-mobile-shell #ost-mobile-bar,
+  body.ost-mobile-shell .ost-mobile-bar,
   body.ost-mobile-shell #ostMobileHome,
   body.ost-mobile-shell .ost-mobile-home,
   body.ost-mobile-shell .ost-tour,

@@ -14,6 +14,11 @@
 
   // ------------------ Mobile request-desktop toggle ------------------------
   function mountMobileBar() {
+    try {
+      var oldBar = document.getElementById('ost-mobile-bar');
+      if (oldBar) oldBar.remove();
+    } catch (e) {}
+    return;
     if (document.getElementById('ost-mobile-bar')) return;
     var mobileViewportContent = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
     var bar = document.createElement('div');
@@ -159,11 +164,9 @@
   }
 
   function startTour() {
-    if (isPhoneLike()) {
-      try { localStorage.setItem('ost.tour.completed', '1'); } catch (e) {}
-      if (tourEl) closeTour();
-      return;
-    }
+    try { localStorage.setItem('ost.tour.completed', '1'); } catch (e) {}
+    if (tourEl) closeTour();
+    return;
     tourIdx = 0;
     ensureTour().classList.add('is-open');
     ensureTour().setAttribute('aria-hidden', 'false');
@@ -319,6 +322,7 @@
   window.OST_UX = {
     startTour: startTour,
     setViewport: function (mode) {
+      document.body.classList.toggle('ost-force-desktop', mode === 'desktop' && !isPhoneLike());
       var b = document.querySelector('#ost-mobile-bar [data-mode="' + mode + '"]');
       if (b) b.click();
     }

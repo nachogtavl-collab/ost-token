@@ -12542,14 +12542,14 @@
         localStorage.setItem('ost.compartments.guideSeen.v1', '1');
       } catch (e) {}
 
-      document.querySelectorAll('.ost-tour, .ost-guide-overlay, #ostMobileHome, .ost-mobile-home').forEach(function(layer) {
+      document.querySelectorAll('.ost-tour, .ost-guide-overlay, #ost-mobile-bar, .ost-mobile-bar, #ostMobileHome, .ost-mobile-home').forEach(function(layer) {
         layer.classList.remove('is-open');
         layer.setAttribute('aria-hidden', 'true');
         layer.style.display = 'none';
         layer.style.visibility = 'hidden';
         layer.style.opacity = '0';
         layer.style.pointerEvents = 'none';
-        if (layer.id === 'ostMobileHome' || layer.classList.contains('ost-mobile-home')) layer.remove();
+        if (layer.id === 'ostMobileHome' || layer.id === 'ost-mobile-bar' || layer.classList.contains('ost-mobile-home') || layer.classList.contains('ost-mobile-bar')) layer.remove();
       });
 
       var popup = document.getElementById('ostPopupOverlay');
@@ -12601,12 +12601,12 @@
         document.querySelectorAll(
           '.wallet-modal.open, .map-modal.open, .ost-modal-overlay.ost-modal-open,' +
           ' .topup-modal-overlay.open, .transmit-overlay.open, .live-watch-modal.is-open,' +
-          ' #offlineVaultScan.open, .ost-tour, .ost-guide-overlay, #ostMobileHome, .ost-mobile-home'
+          ' #offlineVaultScan.open, .ost-tour, .ost-guide-overlay, #ost-mobile-bar, .ost-mobile-bar, #ostMobileHome, .ost-mobile-home'
         ).forEach(function(el) {
           el.classList.remove('open', 'ost-modal-open', 'is-open');
           el.setAttribute('aria-hidden', 'true');
           el.style.display = 'none';
-          if (el.id === 'ostMobileHome' || el.classList.contains('ost-mobile-home')) el.remove();
+          if (el.id === 'ostMobileHome' || el.id === 'ost-mobile-bar' || el.classList.contains('ost-mobile-home') || el.classList.contains('ost-mobile-bar')) el.remove();
         });
         suppressPostWelcomeOverlays();
         document.body.style.overflow = '';

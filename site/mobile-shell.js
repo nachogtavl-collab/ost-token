@@ -52,14 +52,14 @@
       localStorage.setItem('ost.compartments.v1', JSON.stringify(Object.assign({}, JSON.parse(localStorage.getItem('ost.compartments.v1') || '{}'), { focusMode: false })));
     } catch (_) {}
 
-    document.querySelectorAll('.ost-guide-overlay, .ost-tour, #ostMobileHome, .ost-mobile-home').forEach(function (overlay) {
+    document.querySelectorAll('.ost-guide-overlay, .ost-tour, #ost-mobile-bar, .ost-mobile-bar, #ostMobileHome, .ost-mobile-home').forEach(function (overlay) {
       overlay.classList.remove('is-open');
       overlay.style.display = 'none';
       overlay.style.visibility = 'hidden';
       overlay.style.opacity = '0';
       overlay.style.pointerEvents = 'none';
       overlay.setAttribute('aria-hidden', 'true');
-      if (overlay.classList.contains('ost-tour') || overlay.id === 'ostMobileHome' || overlay.classList.contains('ost-mobile-home')) overlay.remove();
+      if (overlay.classList.contains('ost-tour') || overlay.id === 'ost-mobile-bar' || overlay.classList.contains('ost-mobile-bar') || overlay.id === 'ostMobileHome' || overlay.classList.contains('ost-mobile-home')) overlay.remove();
     });
 
     document.querySelectorAll('#ost-mobile-bar [data-tour-restart]').forEach(function (button) {

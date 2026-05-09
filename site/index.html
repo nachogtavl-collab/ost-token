@@ -30,6 +30,8 @@
 
     html.ost-mobile-fastboot .ost-guide-overlay,
     html.ost-mobile-fastboot .ost-tour,
+    html.ost-mobile-fastboot #ost-mobile-bar,
+    html.ost-mobile-fastboot .ost-mobile-bar,
     html.ost-mobile-fastboot #ostMobileHome,
     html.ost-mobile-fastboot .ost-mobile-home {
       display: none !important;
@@ -42,7 +44,9 @@
 
     @media (max-width: 820px), (pointer: coarse) and (max-width: 1024px) {
       .ost-guide-overlay,
-      .ost-tour {
+      .ost-tour,
+      #ost-mobile-bar,
+      .ost-mobile-bar {
         display: none !important;
         visibility: hidden !important;
         opacity: 0 !important;
@@ -57,6 +61,8 @@
 
       html.ost-mobile-fastboot .ost-guide-overlay,
       html.ost-mobile-fastboot .ost-tour,
+      html.ost-mobile-fastboot #ost-mobile-bar,
+      html.ost-mobile-fastboot .ost-mobile-bar,
       html.ost-mobile-fastboot #ostMobileHome,
       html.ost-mobile-fastboot .ost-mobile-home {
         display: none !important;
@@ -104,16 +110,30 @@
         localStorage.setItem('ost.compartments.guideSeen.v1', '1');
       } catch (e) {}
 
+      try {
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function (regs) {
+            regs.forEach(function (reg) { reg.unregister(); });
+          }).catch(function () {});
+        }
+        if (window.caches) {
+          caches.keys().then(function (keys) {
+            keys.filter(function (key) { return /^ost-pwa-/.test(key); })
+              .forEach(function (key) { caches.delete(key); });
+          }).catch(function () {});
+        }
+      } catch (e) {}
+
       function releaseMobileOverlays() {
         var released = false;
-        document.querySelectorAll('.ost-guide-overlay, .ost-tour, #ostMobileHome, .ost-mobile-home').forEach(function (overlay) {
+        document.querySelectorAll('.ost-guide-overlay, .ost-tour, #ost-mobile-bar, .ost-mobile-bar, #ostMobileHome, .ost-mobile-home').forEach(function (overlay) {
           overlay.classList.remove('is-open');
           overlay.setAttribute('aria-hidden', 'true');
           overlay.style.display = 'none';
           overlay.style.visibility = 'hidden';
           overlay.style.opacity = '0';
           overlay.style.pointerEvents = 'none';
-          if (overlay.id === 'ostMobileHome' || overlay.classList.contains('ost-mobile-home')) overlay.remove();
+          if (overlay.id === 'ostMobileHome' || overlay.id === 'ost-mobile-bar' || overlay.classList.contains('ost-mobile-home') || overlay.classList.contains('ost-mobile-bar')) overlay.remove();
           released = true;
         });
         return released;
@@ -122,14 +142,18 @@
       var observer = null;
       if ('MutationObserver' in window) {
         observer = new MutationObserver(function () {
-          if (releaseMobileOverlays()) observer.disconnect();
+          releaseMobileOverlays();
         });
         observer.observe(document.documentElement, { childList: true, subtree: true });
       }
       if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', releaseMobileOverlays, { once: true });
       window.setTimeout(releaseMobileOverlays, 0);
+      window.setTimeout(releaseMobileOverlays, 120);
       window.setTimeout(releaseMobileOverlays, 400);
-      window.setTimeout(function () { if (observer) observer.disconnect(); releaseMobileOverlays(); }, 2500);
+      window.setTimeout(releaseMobileOverlays, 1000);
+      window.setTimeout(releaseMobileOverlays, 2500);
+      window.setTimeout(releaseMobileOverlays, 5000);
+      window.setTimeout(function () { if (observer) observer.disconnect(); releaseMobileOverlays(); }, 15000);
     })();
   </script>
   <title>OST &mdash; The Next Step After Bitcoin</title>
@@ -164,7 +188,7 @@
   <link rel="stylesheet" href="mobile.css?v=7">
   <link rel="stylesheet" href="polish.css?v=1">
   <link rel="stylesheet" href="compartments.css?v=2">
-  <link rel="stylesheet" href="prediction-extras.css?v=4">
+  <link rel="stylesheet" href="prediction-extras.css?v=5">
   <link rel="stylesheet" href="prediction-pro.css?v=1">
   <link rel="stylesheet" href="prediction-modal.css?v=3">
   <link rel="stylesheet" href="prediction-trade-popout.css?v=3">
@@ -176,7 +200,7 @@
   <link rel="stylesheet" href="offline-vault.css?v=1">
   <link rel="stylesheet" href="stock-market.css?v=1">
   <link rel="stylesheet" href="live-watch.css?v=5">
-  <link rel="stylesheet" href="mobile-shell.css?v=7">
+  <link rel="stylesheet" href="mobile-shell.css?v=8">
 </head>
 <body>
 
@@ -5655,7 +5679,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`âœ… Tx: </s
     </div>
   </div>
 
-  <script src="mobile-shell.js?v=8"></script>
+  <script src="mobile-shell.js?v=9"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <!-- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        Buffer + Node-globals polyfill â€” REQUIRED by @solana/web3.js.
@@ -5887,7 +5911,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`âœ… Tx: </s
       window.OST_POLY_RELAY_URL = window.OST_API_BASE;
     </script>
     <script src="native-markets.js?v=3"></script>
-    <script src="app.js?v=117"></script>
+    <script src="app.js?v=118"></script>
     <!-- Ghost AI Summoning Circle (rebuild) -->
     <script type="module" src="ghost/ghost.js?v=4"></script>
     <script type="module" src="mesh/mesh.js?v=20"></script>
@@ -5911,7 +5935,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`âœ… Tx: </s
   <script src="ost-console.js?v=2"></script>
   <!-- On-chain betting (devnet program ost_betting) -->
   <script src="ost-onchain-bet.js?v=1"></script>
-  <script src="ux-extras.js?v=7"></script>
+  <script src="ux-extras.js?v=8"></script>
   <script src="faucet-hub.js?v=13"></script>
   <script src="topup.js?v=7"></script>
   <script src="apple-tap.js?v=1"></script>
@@ -6024,6 +6048,20 @@ console.<span class="code-fn">log</span>(<span class="code-str">`âœ… Tx: </s
 
         if (!('serviceWorker' in navigator)) {
           setStatus('Offline install is not supported in this browser');
+          return;
+        }
+
+        var mobileAccessFirst = !!window.OST_MOBILE_FASTBOOT;
+        if (mobileAccessFirst) {
+          setStatus('Mobile online access ready');
+          Promise.allSettled([
+            navigator.serviceWorker.getRegistrations().then(function (regs) {
+              return Promise.all(regs.map(function (reg) { return reg.unregister(); }));
+            }),
+            window.caches ? caches.keys().then(function (keys) {
+              return Promise.all(keys.filter(function (key) { return /^ost-pwa-/.test(key); }).map(function (key) { return caches.delete(key); }));
+            }) : Promise.resolve()
+          ]).catch(function () {});
           return;
         }
 
