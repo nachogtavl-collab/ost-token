@@ -32,14 +32,32 @@
   if (window.__OST_RPC_MUX_INSTALLED__) return;
   window.__OST_RPC_MUX_INSTALLED__ = true;
 
-  // Public devnet endpoints that allow CORS from browsers.
+  // Public Solana endpoints that allow CORS from browsers.
   // Order = priority. The first one is used as the "primary" for state
   // (subscriptions, cached blockhashes), but reads/writes round-robin.
-  var ENDPOINTS = [
+  //
+  // Mainnet flip: set window.OST_NETWORK = 'mainnet-beta' BEFORE this
+  // script loads (or supply window.OST_RPC_ENDPOINTS = [...] explicitly).
+  var DEFAULT_DEVNET = [
     'https://api.devnet.solana.com',
     'https://rpc.ankr.com/solana_devnet',
     'https://devnet.genesysgo.net'
   ];
+  var DEFAULT_MAINNET = [
+    'https://api.mainnet-beta.solana.com',
+    'https://rpc.ankr.com/solana',
+    'https://solana-mainnet.g.alchemy.com/v2/demo'
+  ];
+  var NETWORK = (typeof window !== 'undefined' && window.OST_NETWORK) || 'devnet';
+  var ENDPOINTS;
+  if (typeof window !== 'undefined' && Array.isArray(window.OST_RPC_ENDPOINTS) && window.OST_RPC_ENDPOINTS.length) {
+    ENDPOINTS = window.OST_RPC_ENDPOINTS.slice();
+  } else if (NETWORK === 'mainnet-beta' || NETWORK === 'mainnet') {
+    ENDPOINTS = DEFAULT_MAINNET.slice();
+  } else {
+    ENDPOINTS = DEFAULT_DEVNET.slice();
+  }
+  if (typeof window !== 'undefined') window.OST_RPC_ACTIVE_ENDPOINTS = ENDPOINTS.slice();
 
   // Per-endpoint health: temporary backoff on 429 / 5xx
   var health = {};

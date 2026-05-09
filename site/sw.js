@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v77';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v77';
+const CACHE_NAME = 'ost-pwa-cache-v78';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v78';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -26,9 +26,9 @@ const PRECACHE_PATHS = [
   './offline-vault.css?v=1',
   './stock-market.css?v=1',
   './mobile-shell.css?v=10',
-  './rpc-multiplexer.js?v=1',
+  './rpc-multiplexer.js?v=2',
   './ost-notifications.js?v=2',
-  './app.js?v=121',
+  './app.js?v=122',
   './icons.js?v=1',
   './nuevo-laredo-gas.js?v=1',
   './shop-quickview.js?v=1',
@@ -79,6 +79,7 @@ const PRECACHE_PATHS = [
   './native-markets.js?v=3',
   './redesign.css?v=1',
   './redesign.js?v=1',
+  './mainnet-audit.js?v=1',
   'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
   'https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',

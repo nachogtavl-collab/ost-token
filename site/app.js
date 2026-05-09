@@ -2131,13 +2131,39 @@
   let solanaConnection = null;
 
   // OST Program & Network Config
-  const OST_CONFIG = {
+  // ────────────────────────────────────────────────────────────────────
+  // MAINNET FLIP: set the following BEFORE app.js loads (in index.html):
+  //   window.OST_NETWORK = 'mainnet-beta';
+  //   window.OST_MAINNET_CONFIG = {
+  //     programId: '<mainnet program>',
+  //     mint:      '<mainnet OST mint>',
+  //     wostMint:  '<mainnet wOST mint>',
+  //     rpcUrl:    'https://api.mainnet-beta.solana.com'
+  //   };
+  // window.OST_NETWORK_AUDIT picks this up at boot and warns loudly if a
+  // mainnet flip is requested but addresses are still placeholders.
+  // ────────────────────────────────────────────────────────────────────
+  const OST_DEVNET_DEFAULTS = {
     programId: 'J2jiS296YWVie1Sopb4SxcM3aJnP9aAwe6aLDhCqvGXY',
     mint: '383pTzoZ8Gp83dzk23ZnvLcfX2Sq32TAGN48CMQu2pAJ',
     wostMint: 'Ac8RTG9R15HDXkjJDphRNpEgawEh1o5wLFaWPGFjiHoS',
     network: 'devnet',
     rpcUrl: 'https://api.devnet.solana.com'
   };
+  const __OST_OVERRIDE_NET = (typeof window !== 'undefined' && window.OST_NETWORK) || '';
+  const __OST_MAINNET_CFG = (typeof window !== 'undefined' && window.OST_MAINNET_CONFIG) || null;
+  const OST_CONFIG = (function () {
+    if ((__OST_OVERRIDE_NET === 'mainnet-beta' || __OST_OVERRIDE_NET === 'mainnet') && __OST_MAINNET_CFG) {
+      return {
+        programId: __OST_MAINNET_CFG.programId || OST_DEVNET_DEFAULTS.programId,
+        mint:      __OST_MAINNET_CFG.mint      || OST_DEVNET_DEFAULTS.mint,
+        wostMint:  __OST_MAINNET_CFG.wostMint  || OST_DEVNET_DEFAULTS.wostMint,
+        network:   'mainnet-beta',
+        rpcUrl:    __OST_MAINNET_CFG.rpcUrl    || 'https://api.mainnet-beta.solana.com'
+      };
+    }
+    return Object.assign({}, OST_DEVNET_DEFAULTS);
+  })();
   const TOKEN_2022_PROGRAM_ID = new solanaWeb3.PublicKey('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb');
   const ASSOCIATED_TOKEN_PROGRAM_ID = new solanaWeb3.PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
   const MEMO_PROGRAM_ID = new solanaWeb3.PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');
