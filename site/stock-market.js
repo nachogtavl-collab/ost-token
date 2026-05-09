@@ -4,6 +4,9 @@
 
   var DEFAULT_SYMBOLS = ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'AMZN', 'META', 'GOOGL', 'AMD', 'JPM', 'V', 'KO', 'SPY', 'QQQ', 'DIA'];
   var STORAGE_WATCHLIST = 'ost.stock.watchlist.v1';
+  // Sensible default OST/USD price so that conversion math is meaningful even
+  // when the topup config is offline. The relay overrides this when reachable.
+  var DEFAULT_OST_USD = 1.00;
   var state = {
     symbols: DEFAULT_SYMBOLS.slice(),
     quotes: [],
@@ -13,9 +16,10 @@
     side: 'buy',
     ostStake: 25,
     brokerCurrency: 'USD',
-    usdPerOst: 0.01,
+    usdPerOst: DEFAULT_OST_USD,
     solUsd: 0,
     placing: false,
+    closingId: '',
     orders: []
   };
 
@@ -86,10 +90,15 @@
       var response = await fetch(base + '/topup/config', { cache: 'no-store' });
       var payload = response.ok ? await response.json() : null;
       if (payload && payload.pricing) {
-        state.usdPerOst = Number(payload.pricing.usdPerOst || state.usdPerOst) || state.usdPerOst;
-        state.solUsd = Number(payload.pricing.solUsd || 0) || 0;
+        var nextOst = Number(payload.pricing.usdPerOst);
+        if (Number.isFinite(nextOst) && nextOst > 0) state.usdPerOst = nextOst;
+        var nextSol = Number(payload.pricing.solUsd);
+        if (Number.isFinite(nextSol) && nextSol > 0) state.solUsd = nextSol;
       }
-    } catch (error) {}
+      if (!Number.isFinite(state.usdPerOst) || state.usdPerOst <= 0) state.usdPerOst = DEFAULT_OST_USD;
+    } catch (error) {
+      if (!Number.isFinite(state.usdPerOst) || state.usdPerOst <= 0) state.usdPerOst = DEFAULT_OST_USD;
+    }
   }
 
   async function loadQuotes() {
@@ -270,6 +279,22 @@
     ctx.fillText(fmtMoney(min), pad, height - 8);
   }
 
+  function openPositionsForSymbol(symbol) {
+    if (!symbol) return [];
+    return state.orders.filter(function (order) {
+      if (!order || !order.symbol) return false;
+      var sideOk = String(order.side || '').toLowerCase() === 'buy';
+      var statusOk = String(order.status || '').toLowerCase().indexOf('close') === -1;
+      return order.symbol === symbol && sideOk && statusOk;
+    });
+  }
+
+  function totalOpenStakeForSymbol(symbol) {
+    return openPositionsForSymbol(symbol).reduce(function (sum, order) {
+      return sum + (Number(order.ostStake) || 0);
+    }, 0);
+  }
+
   function renderTicket() {
     var quote = state.selectedQuote;
     var stakeInput = $('smOstStake');
@@ -282,7 +307,42 @@
     if ($('smRailOstUsd')) $('smRailOstUsd').textContent = '$' + Number(state.usdPerOst || 0).toFixed(4) + ' per OST';
     if ($('smRailSolUsd')) $('smRailSolUsd').textContent = state.solUsd ? fmtMoney(state.solUsd) + ' per SOL' : 'SOL quote pending';
     var orderButton = $('smOrderBtn');
-    if (orderButton) orderButton.disabled = state.placing || !quote;
+    if (orderButton) {
+      var symbol = quote ? quote.symbol : '';
+      if (state.side === 'sell') {
+        var openCount = openPositionsForSymbol(symbol).length;
+        orderButton.textContent = openCount
+          ? 'Close ' + openCount + ' open ' + symbol + ' position' + (openCount === 1 ? '' : 's')
+          : 'No open ' + (symbol || 'position') + ' to close';
+        orderButton.disabled = state.placing || !quote || openCount === 0;
+      } else {
+        orderButton.textContent = 'Place OST stock ticket';
+        orderButton.disabled = state.placing || !quote;
+      }
+    }
+  }
+
+  function liveQuoteFor(symbol) {
+    if (!symbol) return null;
+    return state.quotes.find(function (quote) { return quote && quote.symbol === symbol; }) || null;
+  }
+
+  function estimatePnl(order) {
+    var live = liveQuoteFor(order.symbol);
+    var entry = Number(order.price) || 0;
+    var shares = Number(order.shares) || 0;
+    var stake = Number(order.ostStake) || 0;
+    if (!live || entry <= 0 || shares <= 0) return { pctText: '--', ostDelta: 0, ostText: '--' };
+    var nowPrice = Number(live.price) || entry;
+    var move = (nowPrice - entry) / entry;
+    var ostDelta = stake * move;
+    var pct = move * 100;
+    var sign = pct >= 0 ? '+' : '';
+    return {
+      pctText: sign + pct.toFixed(2) + '%',
+      ostDelta: ostDelta,
+      ostText: (ostDelta >= 0 ? '+' : '') + ostDelta.toFixed(3) + ' OST'
+    };
   }
 
   function renderOrders() {
@@ -296,14 +356,98 @@
       list.innerHTML = '<div class="stock-empty">No OST stock mirror orders yet.</div>';
       return;
     }
-    list.innerHTML = state.orders.slice(0, 40).map(function(order) {
-      var explorer = order.signature ? 'https://explorer.solana.com/tx/' + encodeURIComponent(order.signature) + '?cluster=devnet' : '';
-      return '<div class="stock-position-row">' +
-        '<div class="stock-position-top"><strong>' + esc(order.side.toUpperCase()) + ' ' + esc(order.symbol) + '</strong><span>' + esc(fmtMoney(order.notionalUsd)) + '</span></div>' +
+    var explorerCluster = (window.OST_NETWORK === 'mainnet-beta') ? '' : '?cluster=devnet';
+    list.innerHTML = state.orders.slice(0, 60).map(function(order) {
+      var sideRaw = String(order.side || '').toLowerCase();
+      var status = String(order.status || '').toLowerCase();
+      var isClosed = status.indexOf('close') !== -1 || sideRaw === 'sell';
+      var explorer = order.signature ? 'https://explorer.solana.com/tx/' + encodeURIComponent(order.signature) + explorerCluster : '';
+      var pnl = !isClosed ? estimatePnl(order) : null;
+      var orderId = order.id || order.signature || (order.symbol + ':' + order.createdAt);
+      var closingThis = state.closingId === orderId;
+      var pnlBlock = pnl
+        ? '<div class="stock-position-meta"><span>P/L now</span><span class="' + (pnl.ostDelta >= 0 ? 'stock-change-up' : 'stock-change-down') + '">' + esc(pnl.pctText) + ' / ' + esc(pnl.ostText) + '</span></div>'
+        : '';
+      var actionBlock = '';
+      if (!isClosed) {
+        actionBlock = '<button type="button" class="stock-order-btn" data-stock-close="' + esc(orderId) + '"' + (closingThis ? ' disabled' : '') + ' style="margin-top:8px;padding:8px 14px;font-size:.82rem;">' + (closingThis ? 'Closing...' : 'Sell / Close position') + '</button>';
+      } else {
+        actionBlock = '<span class="stock-kicker" style="opacity:.7;">Closed</span>';
+      }
+      return '<div class="stock-position-row" data-stock-order="' + esc(orderId) + '">' +
+        '<div class="stock-position-top"><strong>' + esc((order.side || '').toUpperCase()) + ' ' + esc(order.symbol) + '</strong><span>' + esc(fmtMoney(order.notionalUsd)) + '</span></div>' +
         '<div class="stock-position-meta"><span>' + esc(fmtNumber(order.shares, 5)) + ' mirror shares @ ' + esc(fmtMoney(order.price)) + '</span><span>' + esc(fmtNumber(order.ostStake, 2)) + ' OST</span></div>' +
-        (explorer ? '<a href="' + explorer + '" target="_blank" rel="noopener">View devnet ticket</a>' : '') +
+        pnlBlock +
+        (explorer ? '<a href="' + explorer + '" target="_blank" rel="noopener">View settlement ticket</a>' : '') +
+        actionBlock +
       '</div>';
     }).join('');
+    list.querySelectorAll('[data-stock-close]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        closePosition(button.getAttribute('data-stock-close'));
+      });
+    });
+  }
+
+  async function closePosition(orderId) {
+    if (!orderId || state.closingId) return;
+    var order = state.orders.find(function (entry) {
+      var entryId = entry.id || entry.signature || (entry.symbol + ':' + entry.createdAt);
+      return entryId === orderId;
+    });
+    if (!order) return;
+    var wallet = getWalletAddress();
+    if (!wallet) {
+      setOrderStatus('Connect an OST wallet before closing positions.', 'is-error');
+      return;
+    }
+    state.closingId = orderId;
+    renderOrders();
+    setOrderStatus('Closing ' + order.symbol + ' mirror position...');
+    var live = liveQuoteFor(order.symbol);
+    var pnl = estimatePnl(order);
+    var entryPrice = Number(order.price) || 0;
+    var nowPrice = live ? Number(live.price) : entryPrice;
+    var shares = Number(order.shares) || 0;
+    var notionalUsd = nowPrice * shares;
+    var base = apiBase();
+    try {
+      if (base) {
+        var response = await fetch(base + '/stocks/orders', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            wallet: wallet,
+            symbol: order.symbol,
+            name: order.name || order.symbol,
+            exchange: order.exchange || 'US',
+            sector: order.sector || '',
+            side: 'sell',
+            price: nowPrice,
+            shares: shares,
+            notionalUsd: notionalUsd,
+            ostStake: Number(order.ostStake) || 0,
+            brokerCurrency: order.brokerCurrency || state.brokerCurrency,
+            signature: '',
+            status: 'ost-mirror-closed',
+            linkedOrderId: order.id || order.signature || '',
+            pnlOst: pnl.ostDelta,
+            createdAt: Date.now()
+          })
+        });
+        if (!response.ok) throw new Error('Close ticket relay returned ' + response.status);
+      }
+      // Mirror locally so the row updates even when the relay is offline.
+      order.status = 'ost-mirror-closed';
+      setOrderStatus(order.symbol + ' position closed. Estimated ' + pnl.ostText + ' (' + pnl.pctText + ').', pnl.ostDelta >= 0 ? 'is-success' : 'is-error');
+      try { window.dispatchEvent(new CustomEvent('ost:stock-position-closed', { detail: { symbol: order.symbol, pnlOst: pnl.ostDelta } })); } catch (_) {}
+    } catch (error) {
+      setOrderStatus(error && error.message ? error.message : 'Could not close position.', 'is-error');
+    } finally {
+      state.closingId = '';
+      await loadOrders();
+      renderTicket();
+    }
   }
 
   async function placeOrder() {
@@ -312,6 +456,26 @@
     if (!quote) return;
     if (!wallet) {
       setOrderStatus('Connect an OST wallet before placing a stock mirror order.', 'is-error');
+      return;
+    }
+    // SELL flow: route to the close-position handler against the user's open
+    // positions for this symbol. Selling without holdings is a no-op.
+    if (state.side === 'sell') {
+      var openOrders = openPositionsForSymbol(quote.symbol);
+      if (!openOrders.length) {
+        setOrderStatus('No open ' + quote.symbol + ' position to sell. Buy mirror shares first.', 'is-error');
+        return;
+      }
+      var targetStake = Math.max(1, Number(state.ostStake) || 0);
+      var remaining = targetStake;
+      // Close oldest-first until we cover the requested OST stake.
+      var ordered = openOrders.slice().sort(function (a, b) { return (a.createdAt || 0) - (b.createdAt || 0); });
+      for (var index = 0; index < ordered.length && remaining > 0; index++) {
+        var entry = ordered[index];
+        var entryId = entry.id || entry.signature || (entry.symbol + ':' + entry.createdAt);
+        await closePosition(entryId);
+        remaining -= Number(entry.ostStake) || 0;
+      }
       return;
     }
     if (!window.OST_PREDICTION_API || typeof window.OST_PREDICTION_API.placeOrder !== 'function') {
@@ -328,7 +492,7 @@
         source: 'stock-mirror',
         marketId: quote.symbol,
         title: quote.name + ' stock mirror',
-        side: state.side === 'sell' ? 'no' : 'yes',
+        side: 'yes',
         topic: 'stocks',
         price: Math.max(0.000001, Number(quote.price || 1)),
         yesPrice: Math.max(0.000001, Number(quote.price || 1)),

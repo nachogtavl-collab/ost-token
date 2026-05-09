@@ -426,7 +426,14 @@
   }
 
   async function startNfc() {
-    if (!('NDEFReader' in window)) throw new Error('Web NFC is not available in this browser. Use file or paste import.');
+    if (!('NDEFReader' in window)) {
+      var ua = navigator.userAgent || '';
+      var isIos = /iPhone|iPad|iPod/i.test(ua);
+      var hint = isIos
+        ? 'Web NFC is unavailable on iPhone. iPhones can still READ a tag programmed with the bearer payload \u2014 use the Tap-to-Pay tag from another device, or import via paste / digital file.'
+        : 'Web NFC requires Android Chrome 89+. Use file or paste import on this browser.';
+      throw new Error(hint);
+    }
     var reader = new NDEFReader();
     await reader.scan();
     setStatus('NFC scan active. Tap an OST bearer card.', '');

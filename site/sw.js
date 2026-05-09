@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v78';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v78';
+const CACHE_NAME = 'ost-pwa-cache-v79';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v79';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -65,14 +65,14 @@ const PRECACHE_PATHS = [
   './mobile-shell.js?v=9',
   './faucet-hub.js?v=13',
   './faucet-hub-ads.js?v=2',
-  './offline-vault.js?v=3',
-  './apple-tap.js?v=1',
+  './offline-vault.js?v=4',
+  './apple-tap.js?v=2',
   './ost-games.js?v=15',
   './code-academy.js?v=3',
   './i18n-runtime.js?v=3',
   './devnet-rescue.js?v=4',
   './launchpad-trenches.js?v=3',
-  './stock-market.js?v=1',
+  './stock-market.js?v=2',
   './topup.js?v=7',
   './live-watch.css?v=5',
   './live-watch.js?v=6',
