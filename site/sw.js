@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v62';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v62';
+const CACHE_NAME = 'ost-pwa-cache-v63';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v63';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -10,7 +10,7 @@ const PRECACHE_PATHS = [
   './ost-logo.svg',
   './icon-192.png',
   './icon-512.png',
-  './style.css?v=69',
+  './style.css?v=70',
   './mobile.css?v=7',
   './polish.css?v=1',
   './compartments.css?v=2',
@@ -25,7 +25,7 @@ const PRECACHE_PATHS = [
   './topup.css?v=4',
   './offline-vault.css?v=1',
   './stock-market.css?v=1',
-  './mobile-shell.css?v=8',
+  './mobile-shell.css?v=9',
   './rpc-multiplexer.js?v=1',
   './app.js?v=118',
   './nuevo-laredo-gas.js?v=1',
@@ -42,13 +42,13 @@ const PRECACHE_PATHS = [
   './ghost/recursive.js?v=1',
   './ghost/signal.js?v=1',
   './ghost/ghost.css?v=2',
-  './mesh/mesh.js?v=21',
+  './mesh/mesh.js?v=22',
   './mesh/veil.js?v=1',
-  './mesh/mesh-play.js?v=3',
-  './mesh/mesh-upgrade.js?v=4',
+  './mesh/mesh-play.js?v=4',
+  './mesh/mesh-upgrade.js?v=5',
   './mesh/mesh-crypto.js?v=1',
   './mesh/mesh-rtc.js?v=10',
-  './mesh/mesh.css?v=6',
+  './mesh/mesh.css?v=7',
   './compartments.js?v=4',
   './prediction-extras.js?v=7',
   './prediction-pro.js?v=8',
@@ -64,7 +64,7 @@ const PRECACHE_PATHS = [
   './faucet-hub-ads.js?v=2',
   './offline-vault.js?v=3',
   './apple-tap.js?v=1',
-  './ost-games.js?v=13',
+  './ost-games.js?v=14',
   './code-academy.js?v=3',
   './i18n-runtime.js?v=1',
   './devnet-rescue.js?v=4',

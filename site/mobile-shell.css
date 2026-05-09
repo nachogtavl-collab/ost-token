@@ -142,6 +142,73 @@
     letter-spacing: 0 !important;
   }
 
+
+  /* Mobile density pass for dense OST tools. */
+  html,
+  body {
+    overflow-x: hidden !important;
+  }
+
+  main,
+  section,
+  .container,
+  .wallet-command-shell,
+  .wallet-dashboard,
+  .converter-hub,
+  .prediction-market-board,
+  .prediction-market-shell,
+  .prediction-market-stage,
+  .ostg-section,
+  .ostg-stage,
+  .ostg-game,
+  #ost-mesh-pavilion,
+  #ost-mesh-arena,
+  .ost-mesh-upgrade {
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .prediction-market-board *,
+  .ostg-section *,
+  #ost-mesh-pavilion * {
+    min-width: 0;
+  }
+
+  .section-title,
+  .wallet-command-copy h2,
+  .wallet-command-copy p,
+  .converter-head h2,
+  .converter-head p,
+  .prediction-market-copy h4,
+  .prediction-market-card h5,
+  .prediction-stage-copy h5,
+  .ostg-hero-copy h3,
+  .ostg-game-hero-text h4 {
+    max-width: 100% !important;
+    letter-spacing: 0 !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    writing-mode: horizontal-tb !important;
+  }
+
+  .ostg-tab,
+  .ostg-btn,
+  .ostg-lobby-game,
+  .oma-btn,
+  .oma-game,
+  .oma-fair-game,
+  .prediction-market-quick-btn,
+  .prediction-market-open-btn,
+  .wallet-tab-btn,
+  .converter-tab,
+  .store-tab,
+  .demo-tab {
+    min-height: 40px !important;
+    padding-top: 7px !important;
+    padding-bottom: 7px !important;
+    line-height: 1.15 !important;
+  }
   h2 {
     font-size: clamp(1.46rem, 6.2vw, 2.05rem) !important;
     line-height: 1.12 !important;

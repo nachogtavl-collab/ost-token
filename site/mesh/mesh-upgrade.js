@@ -192,6 +192,7 @@
     style.id = STYLE_ID;
     style.textContent = [
       '.ost-mesh-upgrade{border:1px solid rgba(127,216,255,.16);border-radius:16px;background:linear-gradient(180deg,rgba(8,18,30,.86),rgba(3,10,18,.78));padding:12px;display:grid;gap:12px;color:#dff8ff}',
+      '.omu-social-head{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0}.omu-social-head strong{display:block;color:#fff;font-size:13px;letter-spacing:.04em;text-transform:uppercase}.omu-social-head span{display:block;color:#8ebbd5;font-size:12px}.omu-social-toggle{border:1px solid rgba(255,255,255,.12);border-radius:10px;background:rgba(255,255,255,.07);color:#e8fbff;padding:8px 10px;font-weight:800;font-size:12px;min-height:38px}.omu-body{display:grid;gap:12px;min-width:0}.ost-mesh-upgrade.is-collapsed{gap:0}.ost-mesh-upgrade.is-collapsed .omu-body{display:none}',
       '.ost-mesh-upgrade *{box-sizing:border-box}.omu-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:10px}.omu-card{border:1px solid rgba(255,255,255,.1);border-radius:14px;background:rgba(255,255,255,.045);padding:10px;display:grid;gap:9px;min-width:0}.omu-card h3{margin:0;color:#fff;font-size:13px;letter-spacing:.04em;text-transform:uppercase}.omu-card p{margin:0;color:#8ebbd5;font-size:12px;line-height:1.4}',
       '.omu-profile-social{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center}.omu-avatar{width:74px;height:74px;border-radius:24px;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;background:linear-gradient(145deg,#0d5b7d,#10243d);border:1px solid rgba(127,216,255,.32);box-shadow:0 12px 28px rgba(0,0,0,.28);color:#dff8ff;flex:0 0 auto}.omu-avatar img{width:100%;height:100%;object-fit:cover}.omu-avatar b{font-size:22px}.omu-avatar.sm{width:46px;height:46px;border-radius:16px}.omu-profile-meta{display:grid;gap:3px;min-width:0}.omu-profile-meta strong{color:#fff;font-size:16px;overflow:hidden;text-overflow:ellipsis}.omu-profile-meta span{font-size:12px;color:#7fd8ff;overflow:hidden;text-overflow:ellipsis}.omu-wallet-pill{font-family:ui-monospace,Menlo,monospace;color:#9fffd0;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
       '.omu-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.omu-row input,.omu-row textarea{flex:1 1 150px;min-width:0;border:1px solid rgba(255,255,255,.14);border-radius:11px;background:#06141f;color:#d8eaff;padding:10px;font:inherit;font-size:13px}.omu-row textarea{min-height:48px;resize:vertical}.omu-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(108px,1fr));gap:7px}.omu-actions button,.omu-contact button,.omu-snippet button,.omu-scan-actions button{border:1px solid rgba(255,255,255,.12);border-radius:11px;background:rgba(255,255,255,.07);color:#e8fbff;padding:9px;font-weight:750;font-size:12px;cursor:pointer;min-height:42px;white-space:normal;line-height:1.15}.omu-actions button.primary,.omu-contact button.primary,.omu-scan-actions button.primary{background:linear-gradient(135deg,#00d4ff,#00ff9f);border-color:transparent;color:#03131c}',
@@ -199,7 +200,7 @@
       '.omu-snippets{display:grid;grid-template-columns:repeat(auto-fit,minmax(142px,1fr));gap:8px}.omu-snippet{position:relative;border:1px solid rgba(127,216,255,.2);border-radius:16px;background:linear-gradient(150deg,rgba(0,212,255,.17),rgba(167,139,250,.11));padding:10px;min-height:86px;overflow:hidden;display:grid;gap:8px}.omu-snippet:before{content:"";position:absolute;inset:-40%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);transform:rotate(18deg);animation:omu-snap-sheen 4s linear infinite}.omu-snippet-text{position:relative;color:#fff;font-weight:800;font-size:13px;line-height:1.3}.omu-snippet-actions{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:6px}.omu-snippet-actions button{min-height:36px;padding:7px;font-size:11px}',
       '.omu-signals{display:grid;gap:6px;max-height:128px;overflow:auto}.omu-signal{display:flex;gap:8px;align-items:flex-start;color:#9fbfd8;font-size:12px}.omu-signal:before{content:"";width:7px;height:7px;margin-top:5px;border-radius:50%;background:#5eead4;box-shadow:0 0 12px rgba(94,234,212,.72);animation:omu-pulse 1.8s ease-in-out infinite}.omu-qr-modal{position:fixed;inset:0;z-index:1000300;background:rgba(2,6,14,.86);display:none;align-items:center;justify-content:center;padding:14px}.omu-qr-modal.is-open{display:flex}.omu-qr-panel{width:min(420px,100%);border:1px solid rgba(127,216,255,.22);border-radius:18px;background:#06111d;padding:14px;display:grid;gap:10px;color:#dff8ff;box-shadow:0 24px 80px rgba(0,0,0,.55)}.omu-qr-panel video{width:100%;max-height:54vh;border-radius:14px;background:#000}.omu-qr-box{display:grid;place-items:center;gap:9px}.omu-qr-box img{width:240px;height:240px;border-radius:14px;background:#fff;padding:8px}.omu-qr-panel textarea{width:100%;min-height:80px;border:1px solid rgba(255,255,255,.14);border-radius:12px;background:#020a12;color:#dff8ff;padding:10px;font:12px ui-monospace,Menlo,monospace}.omu-scan-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}',
       '.ost-mesh-callbar.is-ringing{animation:omu-ring 1s ease-in-out infinite;border-color:rgba(251,191,36,.55);box-shadow:0 0 24px rgba(251,191,36,.12)}.ost-mesh-callbar.is-live{border-color:rgba(52,211,153,.45);box-shadow:0 0 28px rgba(52,211,153,.12)}#ost-mesh-pavilion.ost-mesh-ringing .ost-mesh-shell{box-shadow:inset 0 0 0 1px rgba(251,191,36,.24)}#ost-mesh-pavilion.ost-mesh-in-call .ost-mesh-video-grid.is-on video{box-shadow:0 0 0 1px rgba(94,234,212,.28),0 18px 48px rgba(0,0,0,.38)}.omu-profile-card{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:center}.omu-profile-card strong{color:#fff}.omu-profile-card code{color:#9fffd0;word-break:break-all;font-size:11px}.omu-profile-card p{grid-column:1/-1;margin:0;color:#b8d7ea}',
-      '@media(max-width:760px){.omu-grid{grid-template-columns:1fr}.omu-contact-actions{grid-template-columns:repeat(2,minmax(0,1fr))}.omu-actions,.omu-snippets{grid-template-columns:repeat(2,minmax(0,1fr))}.omu-profile-social{grid-template-columns:1fr;text-align:center}.omu-avatar{margin:auto}.omu-scan-actions{grid-template-columns:1fr}}@media(max-width:380px){.omu-actions,.omu-snippets,.omu-contact-actions{grid-template-columns:1fr}}',
+      '@media(max-width:760px){.ost-mesh-upgrade{padding:10px;border-radius:14px}.omu-body{gap:10px}.omu-grid{grid-template-columns:1fr}.omu-card{padding:9px;border-radius:12px}.omu-contact-actions{grid-template-columns:repeat(2,minmax(0,1fr))}.omu-actions,.omu-snippets{grid-template-columns:repeat(2,minmax(0,1fr))}.omu-profile-social{grid-template-columns:1fr;text-align:center}.omu-avatar{width:60px;height:60px;border-radius:18px;margin:auto}.omu-list{max-height:174px}.omu-signals{max-height:96px}.omu-scan-actions{grid-template-columns:1fr}}@media(max-width:380px){.omu-actions,.omu-snippets,.omu-contact-actions{grid-template-columns:1fr}}',
       '@keyframes omu-ring{0%,100%{transform:translateY(0)}50%{transform:translateY(-1px)}}@keyframes omu-pulse{0%,100%{opacity:.45;transform:scale(.9)}50%{opacity:1;transform:scale(1.18)}}@keyframes omu-snap-sheen{0%{transform:translateX(-80%) rotate(18deg)}100%{transform:translateX(80%) rotate(18deg)}}'
     ].join('\n');
     document.head.appendChild(style);
@@ -212,8 +213,11 @@
     var profile = defaultProfile(p);
     var panel = document.createElement('div');
     panel.id = 'ostMeshUpgrade';
-    panel.className = 'ost-mesh-upgrade';
+    var compact = !!(window.matchMedia && window.matchMedia('(max-width: 760px)').matches);
+    panel.className = 'ost-mesh-upgrade' + (compact ? ' is-collapsed' : '');
     panel.innerHTML = [
+      '<div class="omu-social-head"><div><strong>Mesh social</strong><span>Profile, QR, contacts, saved texts</span></div><button class="omu-social-toggle" type="button" id="omuTogglePanel" aria-expanded="' + (compact ? 'false' : 'true') + '">' + (compact ? 'Open' : 'Hide') + '</button></div>',
+      '<div class="omu-body" id="omuBody">',
       '<div class="omu-grid">',
         '<div class="omu-card">',
           '<h3>Social profile</h3>',
@@ -241,6 +245,7 @@
         '<h3>Saved texts</h3>',
         '<div class="omu-actions"><button class="primary" type="button" id="omuSaveText">Save typed text</button><button type="button" id="omuClearTexts">Clear saved</button></div>',
         '<div class="omu-snippets" id="omuSnippets"></div>',
+      '</div>',
       '</div>'
     ].join('');
     var stage = p.root.querySelector('.ost-mesh-stage');
@@ -251,6 +256,12 @@
   }
 
   function bindPanel(p, panel) {
+    var toggle = panel.querySelector('#omuTogglePanel');
+    if (toggle) toggle.addEventListener('click', function () {
+      var collapsed = panel.classList.toggle('is-collapsed');
+      toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      toggle.textContent = collapsed ? 'Open' : 'Hide';
+    });
     panel.querySelector('#omuAvatarButton').addEventListener('click', function () { panel.querySelector('#omuAvatarFile').click(); });
     panel.querySelector('#omuAvatarFile').addEventListener('change', function (event) { handleAvatarFile(p, event.target.files && event.target.files[0]); });
     panel.querySelector('#omuSaveProfile').addEventListener('click', function () { saveProfile(p, 'Profile saved.'); });

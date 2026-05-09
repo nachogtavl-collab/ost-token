@@ -22,7 +22,8 @@
 #ost-mesh-pavilion.is-open { display: flex; }
 
 #ost-mesh-pavilion button,
-#ost-mesh-pavilion input {
+#ost-mesh-pavilion input,
+#ost-mesh-pavilion textarea {
   box-sizing: border-box;
   min-width: 0;
   max-width: 100%;
@@ -68,6 +69,7 @@
   box-sizing: border-box;
 }
 .ost-mesh-head {
+  order: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -95,6 +97,7 @@
 }
 
 .ost-mesh-id {
+  order: 2;
   border: 1px solid #163049;
   border-radius: 14px;
   padding: 12px 14px;
@@ -139,6 +142,7 @@
 }
 
 .ost-mesh-row {
+  order: 3;
   display: grid;
   grid-template-columns: minmax(220px, 1fr) auto auto;
   gap: 8px;
@@ -171,6 +175,9 @@
 }
 
 .ost-mesh-stage {
+  order: 4;
+  position: relative;
+  z-index: 2;
   flex: 0 1 auto;
   display: flex;
   flex-direction: column;
@@ -178,6 +185,17 @@
   min-height: min(480px, 52vh);
   min-width: 0;
 }
+
+#ost-mesh-arena,
+.ost-mesh-upgrade {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  max-width: 100%;
+}
+
+#ost-mesh-arena { order: 5; }
+.ost-mesh-upgrade { order: 6; }
 
 .ost-mesh-status {
   font-size: 12px;
@@ -431,7 +449,7 @@
   .ost-mesh-row button { padding: 10px 14px; min-width: 0; width: 100%; }
   .ost-mesh-compose button { min-width: 0; width: 100%; }
   .ost-mesh-stage { min-height: 0; }
-  .ost-mesh-feed { max-height: none; min-height: 240px; }
+  .ost-mesh-feed { max-height: 36dvh; min-height: 190px; }
   .ost-mesh-bubble { max-width: 92%; }
   .ost-mesh-tools,
   .ost-mesh-call-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); min-width: 0; width: 100%; gap: 8px; }
