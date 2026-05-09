@@ -11,7 +11,7 @@ import {
 } from './mesh-crypto.js?v=1';
 import { MeshRTC } from './mesh-rtc.js?v=10';
 
-const STYLE_HREF = './mesh/mesh.css?v=7';
+const STYLE_HREF = './mesh/mesh.css?v=8';
 const STORAGE_ID = 'ost_mesh_identity_v1';
 const STORAGE_ADDR = 'ost_mesh_addr_v1';
 const MAX_FILE_BYTES = 32 * 1024 * 1024;
@@ -323,6 +323,7 @@ class MeshPavilion {
     this.incomingFile = null;
     this.outbox = [];
     this.replacingRTC = false;
+    this.pageScrollLock = null;
 
     this._wire();
     this._initIdentity().catch((err) => this._setStatus('Identity error: ' + err.message, 'err'));
@@ -372,9 +373,10 @@ class MeshPavilion {
   }
 
   open()  {
+    this._lockPageScroll();
     this.root.classList.add('is-open');
     this.root.setAttribute('aria-hidden', 'false');
-    this.root.scrollTop = 0;
+    if (this.shell) this.shell.scrollTop = 0;
     if (typeof this.root.focus === 'function') {
       try { this.root.focus({ preventScroll: true }); }
       catch (_) { this.root.focus(); }
@@ -383,6 +385,51 @@ class MeshPavilion {
   close() {
     this.root.classList.remove('is-open');
     this.root.setAttribute('aria-hidden', 'true');
+    this._unlockPageScroll();
+  }
+
+  _lockPageScroll() {
+    if (this.pageScrollLock) return;
+    const doc = document.documentElement;
+    const body = document.body;
+    const scrollY = window.scrollY || doc.scrollTop || 0;
+    this.pageScrollLock = {
+      scrollY,
+      htmlOverflow: doc.style.overflow,
+      bodyOverflow: body.style.overflow,
+      bodyPosition: body.style.position,
+      bodyTop: body.style.top,
+      bodyLeft: body.style.left,
+      bodyRight: body.style.right,
+      bodyWidth: body.style.width
+    };
+    doc.classList.add('ost-mesh-scroll-lock');
+    body.classList.add('ost-mesh-scroll-lock');
+    doc.style.overflow = 'hidden';
+    body.style.overflow = 'hidden';
+    body.style.position = 'fixed';
+    body.style.top = `-${scrollY}px`;
+    body.style.left = '0';
+    body.style.right = '0';
+    body.style.width = '100%';
+  }
+
+  _unlockPageScroll() {
+    if (!this.pageScrollLock) return;
+    const doc = document.documentElement;
+    const body = document.body;
+    const lock = this.pageScrollLock;
+    doc.classList.remove('ost-mesh-scroll-lock');
+    body.classList.remove('ost-mesh-scroll-lock');
+    doc.style.overflow = lock.htmlOverflow;
+    body.style.overflow = lock.bodyOverflow;
+    body.style.position = lock.bodyPosition;
+    body.style.top = lock.bodyTop;
+    body.style.left = lock.bodyLeft;
+    body.style.right = lock.bodyRight;
+    body.style.width = lock.bodyWidth;
+    this.pageScrollLock = null;
+    window.scrollTo(0, lock.scrollY || 0);
   }
 
   _setStatus(msg, kind = '') {

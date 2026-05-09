@@ -138,7 +138,7 @@
     var style = document.createElement('style');
     style.id = STYLE_ID;
     style.textContent = [
-      '#ost-mesh-arena{order:5;position:relative;z-index:1;max-width:100%;overflow:hidden;border:1px solid rgba(0,212,255,.18);border-radius:14px;background:rgba(1,14,24,.76);padding:12px;margin:10px 0;display:grid;gap:10px}',
+      '#ost-mesh-arena{order:4;position:relative;z-index:auto;max-width:100%;overflow:hidden;border:1px solid rgba(0,212,255,.18);border-radius:14px;background:rgba(1,14,24,.76);padding:12px;margin:10px 0;display:grid;gap:10px;isolation:isolate}',
       '#ost-mesh-arena-fair-entry{border:1px solid rgba(0,212,255,.22);border-radius:16px;background:linear-gradient(135deg,rgba(0,212,255,.12),rgba(0,255,159,.08));padding:14px;margin:12px 0;display:grid;gap:12px;color:#e8fbff;max-width:100%;overflow:hidden}',
       '#ost-mesh-arena *{box-sizing:border-box}',
       '#ost-mesh-arena-fair-entry *{box-sizing:border-box}',

@@ -3,6 +3,9 @@
 #ost-mesh-pavilion {
   position: fixed;
   inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  max-height: 100dvh;
   z-index: 999500;
   background: rgba(2, 6, 14, 0.92);
   backdrop-filter: blur(18px) saturate(140%);
@@ -10,16 +13,21 @@
   display: none;
   align-items: stretch;
   justify-content: center;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden;
   padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
   box-sizing: border-box;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: none;
+  touch-action: none;
   font-family: 'Inter', system-ui, sans-serif;
   color: #d8eaff;
 }
 #ost-mesh-pavilion.is-open { display: flex; }
+
+html.ost-mesh-scroll-lock,
+body.ost-mesh-scroll-lock {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+}
 
 #ost-mesh-pavilion button,
 #ost-mesh-pavilion input,
@@ -59,13 +67,18 @@
 
 .ost-mesh-shell {
   width: min(960px, 100%);
-  min-height: 100%;
-  height: auto;
+  min-height: 0;
+  height: calc(100dvh - 24px);
+  max-height: calc(100dvh - 24px);
   display: flex;
   flex-direction: column;
   padding: 22px clamp(16px, 4vw, 40px);
   gap: 16px;
-  overflow: visible;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   box-sizing: border-box;
 }
 .ost-mesh-head {
@@ -175,9 +188,9 @@
 }
 
 .ost-mesh-stage {
-  order: 4;
+  order: 5;
   position: relative;
-  z-index: 2;
+  z-index: auto;
   flex: 0 1 auto;
   display: flex;
   flex-direction: column;
@@ -189,12 +202,12 @@
 #ost-mesh-arena,
 .ost-mesh-upgrade {
   position: relative;
-  z-index: 1;
+  z-index: auto;
   min-width: 0;
   max-width: 100%;
 }
 
-#ost-mesh-arena { order: 5; }
+#ost-mesh-arena { order: 4; }
 .ost-mesh-upgrade { order: 6; }
 
 .ost-mesh-status {
@@ -261,6 +274,9 @@
 .ost-mesh-feed {
   flex: 1 1 auto;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   max-height: clamp(220px, 42vh, 520px);
   background: rgba(4, 12, 20, 0.7);
   border: 1px solid #122a40;
@@ -420,8 +436,12 @@
   .ost-mesh-shell {
     width: 100%;
     min-height: 100dvh;
-    height: auto;
+    height: 100dvh;
+    max-height: 100dvh;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
     padding: max(14px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) calc(94px + env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
     gap: 12px;
   }
