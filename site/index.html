@@ -1766,6 +1766,7 @@
           <button class="wallet-tab-btn" data-wallet-panel-target="market" data-i18n="wallet.tabs.market">Market</button>
           <button class="wallet-tab-btn" data-wallet-panel-target="convert" data-i18n="wallet.tabs.convert">Convert</button>
           <button class="wallet-tab-btn" data-wallet-panel-target="portals" data-i18n="wallet.tabs.portals">Portals</button>
+          <button class="wallet-tab-btn" data-wallet-panel-target="predict" data-i18n="wallet.tabs.predict">Predict</button>
         </div>
 
         <div class="wallet-tab-panel is-active" id="wallet-panel-access">
@@ -2344,374 +2345,6 @@
               <p data-i18n="wallet.portal.meteoraDesc">Dynamic liquidity venue for newer assets and launchpad-native routing.</p>
               <span class="wallet-portal-meta">DLMM &bull; Dynamic Pools &bull; Auto-compound</span>
             </a>
-              <div class="prediction-market-board" id="predictionMarketBoard">
-                <div class="prediction-market-head">
-                  <div class="prediction-market-copy">
-                    <span class="wallet-portal-kicker" id="predictionMarketKicker">Predict with OST</span>
-                    <h4 id="predictionMarketHeading">Prediction venue</h4>
-                    <p id="predictionMarketIntro">Scan live Polymarket and Kalshi markets, read the tape, inspect the ladder, and route an OST ticket without leaving the wallet rail.</p>
-                    <div class="prediction-market-venue-row">
-                      <span class="prediction-venue-pill">Polymarket-style tape</span>
-                      <span class="prediction-venue-pill">Kalshi-style ladder</span>
-                      <span class="prediction-venue-pill">OST wallet execution</span>
-                    </div>
-                  </div>
-
-                  <div class="prediction-market-hero-card" id="predictionMarketHero">
-                    <div class="prediction-market-hero-topline">
-                      <span class="prediction-market-contract" id="predictionHeroRank">Trending</span>
-                      <span class="prediction-market-source source-polymarket" id="predictionHeroSource">Live venue</span>
-                      <span class="prediction-market-topic" id="predictionHeroTopic">All markets</span>
-                    </div>
-
-                    <div class="prediction-market-hero-copy">
-                      <span class="prediction-market-hero-label">Live market spotlight</span>
-                      <h5 id="predictionHeroTitle">Select a lead market</h5>
-                      <p id="predictionHeroDetail">We surface the lead contract here so the tape, ladder, and OST trade desk stay locked on one live market at a time.</p>
-                    </div>
-
-                    <div class="prediction-market-hero-price-grid">
-                      <div class="prediction-market-hero-price is-yes">
-                        <span>Yes share</span>
-                        <strong id="predictionHeroYesPrice">--</strong>
-                      </div>
-                      <div class="prediction-market-hero-price is-no">
-                        <span>No share</span>
-                        <strong id="predictionHeroNoPrice">--</strong>
-                      </div>
-                    </div>
-
-                    <div class="prediction-market-hero-metrics">
-                      <div class="prediction-market-hero-metric">
-                        <span>Implied yes</span>
-                        <strong id="predictionHeroProbability">--</strong>
-                      </div>
-                      <div class="prediction-market-hero-metric">
-                        <span>24h volume</span>
-                        <strong id="predictionHeroVolume">--</strong>
-                      </div>
-                      <div class="prediction-market-hero-metric">
-                        <span>Depth</span>
-                        <strong id="predictionHeroDepth">--</strong>
-                      </div>
-                      <div class="prediction-market-hero-metric">
-                        <span>Closes</span>
-                        <strong id="predictionHeroClose">--</strong>
-                      </div>
-                      <div class="prediction-market-hero-metric">
-                        <span>Momentum</span>
-                        <strong id="predictionHeroMomentum">--</strong>
-                      </div>
-                    </div>
-
-                    <div class="prediction-market-hero-actions">
-                      <a href="#" target="_blank" rel="noopener" class="prediction-market-link" id="predictionHeroVenueLink">Open venue</a>
-                      <a href="#" target="_blank" rel="noopener" class="prediction-market-api-link" id="predictionHeroFeedLink">Open feed</a>
-                    </div>
-                  </div>
-
-                  <div class="prediction-market-side">
-                    <div class="prediction-market-badge" id="predictionMarketStatus">Loading live feeds...</div>
-                    <div class="prediction-market-updated" id="predictionMarketUpdated">Waiting for first refresh</div>
-                    <div class="prediction-market-side-stack">
-                      <div class="prediction-market-side-card">
-                        <span>Venue parity</span>
-                        <strong>Polymarket + Kalshi</strong>
-                        <p>Live pricing, ranking, and one market board instead of a static prediction widget.</p>
-                      </div>
-                      <div class="prediction-market-side-card">
-                        <span>Execution rail</span>
-                        <strong>OST order path</strong>
-                        <p>Stay on the same page from venue scan to Yes or No sizing and ticket routing.</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="prediction-market-controls">
-                  <div class="prediction-market-source-toggle" id="predictionSourceToggle" aria-label="Prediction market source filter">
-                    <button class="prediction-chip is-active" type="button" data-prediction-source="all">All venues</button>
-                    <button class="prediction-chip" type="button" data-prediction-source="ost">OST Native</button>
-                    <button class="prediction-chip" type="button" data-prediction-source="polymarket">Polymarket</button>
-                    <button class="prediction-chip" type="button" data-prediction-source="kalshi">Kalshi</button>
-                  </div>
-
-                  <div class="prediction-market-rank-toggle" id="predictionRankToggle" aria-label="Prediction market ranking filter">
-                    <button class="prediction-chip" type="button" data-prediction-rank="all">All markets</button>
-                    <button class="prediction-chip is-active" type="button" data-prediction-rank="trending">Trending</button>
-                    <button class="prediction-chip" type="button" data-prediction-rank="breaking">Breaking</button>
-                    <button class="prediction-chip" type="button" data-prediction-rank="new">New</button>
-                  </div>
-
-                  <div class="prediction-market-topic-toggle" id="predictionTopicToggle" aria-label="Prediction market topic filter">
-                    <button class="prediction-chip is-active" type="button" data-prediction-topic="all">All markets</button>
-                    <button class="prediction-chip" type="button" data-prediction-topic="politics">Politics</button>
-                    <button class="prediction-chip" type="button" data-prediction-topic="sports">Sports</button>
-                    <button class="prediction-chip" type="button" data-prediction-topic="crypto">Crypto</button>
-                    <button class="prediction-chip" type="button" data-prediction-topic="esports">Esports</button>
-                    <button class="prediction-chip" type="button" data-prediction-topic="iran">Iran</button>
-                    <button class="prediction-chip" type="button" data-prediction-topic="finance">Finance</button>
-                    <button class="prediction-chip" type="button" data-prediction-topic="geopolitics">Geopolitics</button>
-                    <button class="prediction-chip" type="button" data-prediction-topic="tech">Tech</button>
-                    <button class="prediction-chip" type="button" data-prediction-topic="culture">Culture</button>
-                    <button class="prediction-chip" type="button" data-prediction-topic="economy">Economy</button>
-                    <button class="prediction-chip" type="button" data-prediction-topic="weather">Weather</button>
-                    <button class="prediction-chip" type="button" data-prediction-topic="mentions">Mentions</button>
-                    <button class="prediction-chip" type="button" data-prediction-topic="elections">Elections</button>
-                  </div>
-
-                  <div class="prediction-market-search-row">
-                    <label class="prediction-market-search">
-                      <span class="prediction-market-search-label" id="predictionSearchLabel">Search any contract</span>
-                      <input type="search" id="predictionMarketSearch" class="prediction-market-search-input" placeholder="Bitcoin, Trump, NBA, inflation, Nvidia, weather, election..." aria-label="Search live prediction contracts">
-                    </label>
-                    <button type="button" class="btn btn-outline btn-sm prediction-refresh-btn" id="predictionMarketRefresh">Refresh</button>
-                  </div>
-                </div>
-
-                <div class="prediction-market-summary" id="predictionMarketSummary">
-                  <div class="prediction-market-stat">
-                    <span id="predictionStatMarketsLabel">Markets loaded</span>
-                    <strong id="predictionMarketCount">0</strong>
-                  </div>
-                  <div class="prediction-market-stat">
-                    <span id="predictionStatSourcesLabel">Live sources</span>
-                    <strong id="predictionSourceCount">0 / 2</strong>
-                  </div>
-                  <div class="prediction-market-stat">
-                    <span id="predictionStatBtcLabel">Breaking now</span>
-                    <strong id="predictionBtcCount">0</strong>
-                  </div>
-                </div>
-
-                <div class="prediction-market-tape" id="predictionMarketTape">
-                  <div class="prediction-tape-empty">Loading venue tape...</div>
-                </div>
-
-                <div class="prediction-market-note" id="predictionMarketNote">
-                  Public venue feeds expose live prices, change anchors, and liquidity. The curve and ladder reflect that data directly without inventing candles or settlement.
-                </div>
-
-                <div class="prediction-market-pulse-wrap">
-                  <div class="prediction-market-pulse-head">
-                    <div>
-                      <strong id="predictionPulseHeading">Market pulse</strong>
-                      <p id="predictionPulseCopy">Lead contracts, fastest movers, and the markets closing soonest across both venues.</p>
-                    </div>
-                    <span class="prediction-market-updated" id="predictionPulseMeta">Click a tile to load the stage and trade desk.</span>
-                  </div>
-
-                  <div class="prediction-market-pulse" id="predictionMarketPulse">
-                    <div class="prediction-pulse-empty">Loading market pulse...</div>
-                  </div>
-                </div>
-
-                <section class="live-bet-section" id="live-bet" aria-label="Live Watch and Bet"></section>
-
-                <div class="prediction-market-shell">
-                  <div class="prediction-market-main">
-                    <section class="prediction-market-stage" id="predictionMarketStage">
-                      <div class="prediction-stage-head">
-                        <div class="prediction-stage-copy">
-                          <div class="prediction-stage-topline">
-                            <span class="prediction-market-contract" id="predictionStageRank">Trending</span>
-                            <span class="prediction-market-source source-polymarket" id="predictionStageSource">Polymarket</span>
-                            <span class="prediction-market-topic" id="predictionStageTopic">All markets</span>
-                          </div>
-                          <h5 id="predictionStageTitle">Select a live market</h5>
-                          <p id="predictionStageDetail">Choose a live contract to inspect the live probability curve, price ladder, share pricing, and OST ticket details before you commit.</p>
-                        </div>
-
-                        <div class="prediction-stage-stats">
-                          <div class="prediction-market-stat prediction-stage-stat">
-                            <span>Yes share</span>
-                            <strong id="predictionStageYesPrice">--</strong>
-                          </div>
-                          <div class="prediction-market-stat prediction-stage-stat">
-                            <span>No share</span>
-                            <strong id="predictionStageNoPrice">--</strong>
-                          </div>
-                          <div class="prediction-market-stat prediction-stage-stat">
-                            <span>Implied yes</span>
-                            <strong id="predictionStageProbability">--</strong>
-                          </div>
-                          <div class="prediction-market-stat prediction-stage-stat">
-                            <span>24h volume</span>
-                            <strong id="predictionStageVolume">--</strong>
-                          </div>
-                          <div class="prediction-market-stat prediction-stage-stat">
-                            <span>Depth</span>
-                            <strong id="predictionStageDepth">--</strong>
-                          </div>
-                          <div class="prediction-market-stat prediction-stage-stat">
-                            <span>Closes</span>
-                            <strong id="predictionStageClose">--</strong>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div class="prediction-stage-body">
-                        <div class="prediction-stage-chart-card">
-                          <div class="prediction-stage-panel-head">
-                            <div>
-                              <strong id="predictionStageChartHeading">Live probability curve</strong>
-                              <p id="predictionStageChartCopy">Anchored to current share pricing, recent venue changes, and source liquidity.</p>
-                            </div>
-                            <span class="prediction-stage-trend" id="predictionStageTrend">Flat</span>
-                          </div>
-                          <canvas id="predictionStageChart" class="prediction-stage-chart" width="860" height="280" aria-label="Prediction market probability chart"></canvas>
-                          <div class="prediction-stage-axis">
-                            <span id="predictionStageAxisStart">Opened --</span>
-                            <span id="predictionStageAxisMid">Live now</span>
-                            <span id="predictionStageAxisEnd">Closes --</span>
-                          </div>
-                        </div>
-
-                        <div class="prediction-depth-card">
-                          <div class="prediction-stage-panel-head">
-                            <div>
-                              <strong id="predictionDepthHeading">Order depth map</strong>
-                              <p id="predictionDepthCopy">Quote bands shaped from live venue pricing and available depth.</p>
-                            </div>
-                          </div>
-
-                          <div class="prediction-depth-columns">
-                            <div>
-                              <span class="prediction-depth-label" id="predictionDepthYesLabel">Yes depth</span>
-                              <div class="prediction-depth-list" id="predictionDepthYes">
-                                <div class="prediction-depth-empty">Waiting for a live contract.</div>
-                              </div>
-                            </div>
-                            <div>
-                              <span class="prediction-depth-label" id="predictionDepthNoLabel">No depth</span>
-                              <div class="prediction-depth-list" id="predictionDepthNo">
-                                <div class="prediction-depth-empty">Waiting for a live contract.</div>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div class="prediction-stage-links">
-                            <a href="#" target="_blank" rel="noopener" class="prediction-market-link" id="predictionStageVenueLink">Open venue</a>
-                            <a href="#" target="_blank" rel="noopener" class="prediction-market-api-link" id="predictionStageFeedLink">Open feed</a>
-                          </div>
-                        </div>
-                      </div>
-                    </section>
-
-                    <div class="prediction-market-grid" id="predictionMarketList">
-                      <div class="prediction-market-empty-card">Loading live prediction markets...</div>
-                    </div>
-                  </div>
-
-                  <aside class="prediction-trade-desk" id="predictionTradeDesk">
-                    <div class="prediction-trade-head">
-                      <span class="wallet-portal-kicker" id="predictionTradeKicker">Trade with OST</span>
-                      <h5 id="predictionTradeHeading">Build an OST ticket</h5>
-                      <p id="predictionTradeCopy">Pick a live contract, choose Yes or No, review your share pricing, then commit OST directly from your wallet into the market vault.</p>
-                    </div>
-
-                    <div class="prediction-selected-card" id="predictionSelectedCard">
-                      <div class="prediction-selected-topline">
-                        <span class="prediction-market-source source-polymarket" id="predictionSelectedSource">Polymarket</span>
-                        <span class="prediction-market-topic" id="predictionSelectedTopic">All markets</span>
-                      </div>
-                      <h6 id="predictionSelectedTitle">No market selected</h6>
-                      <p id="predictionSelectedDetail">Choose a live contract from the board to build an OST-denominated position.</p>
-                    </div>
-
-                    <div class="prediction-outcome-toggle" id="predictionOutcomeToggle" aria-label="Prediction outcome selector">
-                      <button class="prediction-side-btn is-active" type="button" data-prediction-side="yes">
-                        <span id="predictionOutcomeYesLabel">Buy Yes</span>
-                        <strong id="predictionOutcomeYesValue">--</strong>
-                      </button>
-                      <button class="prediction-side-btn" type="button" data-prediction-side="no">
-                        <span id="predictionOutcomeNoLabel">Buy No</span>
-                        <strong id="predictionOutcomeNoValue">--</strong>
-                      </button>
-                    </div>
-
-                    <label class="prediction-stake-field" for="predictionStakeInput">
-                      <span class="prediction-market-search-label" id="predictionStakeLabel">Stake in OST</span>
-                      <input type="number" min="1" step="1" inputmode="decimal" id="predictionStakeInput" class="prediction-market-search-input" value="25" placeholder="25">
-                    </label>
-
-                    <div class="prediction-stake-quick" id="predictionStakeQuick">
-                      <button class="prediction-chip is-active" type="button" data-prediction-stake="25">25 OST</button>
-                      <button class="prediction-chip" type="button" data-prediction-stake="50">50 OST</button>
-                      <button class="prediction-chip" type="button" data-prediction-stake="100">100 OST</button>
-                      <button class="prediction-chip" type="button" data-prediction-stake="250">250 OST</button>
-                    </div>
-
-                    <div class="prediction-trade-metrics" id="predictionTradeMetrics">
-                      <div class="prediction-market-stat prediction-trade-stat">
-                        <span id="predictionAvailableLabel">Available OST</span>
-                        <strong id="predictionAvailableBalance">Connect wallet</strong>
-                      </div>
-                      <div class="prediction-market-stat prediction-trade-stat">
-                        <span id="predictionSharesLabel">Est. shares</span>
-                        <strong id="predictionEstimatedShares">--</strong>
-                      </div>
-                      <div class="prediction-market-stat prediction-trade-stat">
-                        <span id="predictionReturnLabel">Est. win return</span>
-                        <strong id="predictionPotentialReturn">--</strong>
-                      </div>
-                    </div>
-
-                    <div class="prediction-trade-breakdown" id="predictionTradeBreakdown">
-                      <div class="prediction-market-stat prediction-trade-stat">
-                        <span id="predictionEntryPriceLabel">Entry price</span>
-                        <strong id="predictionEntryPrice">--</strong>
-                      </div>
-                      <div class="prediction-market-stat prediction-trade-stat">
-                        <span id="predictionMultipleLabel">Payout multiple</span>
-                        <strong id="predictionPayoutMultiple">--</strong>
-                      </div>
-                      <div class="prediction-market-stat prediction-trade-stat">
-                        <span id="predictionWinNetLabel">Net if right</span>
-                        <strong id="predictionWinNet">--</strong>
-                      </div>
-                      <div class="prediction-market-stat prediction-trade-stat">
-                        <span id="predictionSettleLabel">Settlement path</span>
-                        <strong id="predictionSettlementPath">Wallet -> OST vault</strong>
-                      </div>
-                    </div>
-
-                    <div class="prediction-trade-status is-info" id="predictionTradeStatus">Connect your OST wallet to place a market ticket.</div>
-
-                    <button type="button" class="btn btn-primary prediction-trade-action" id="predictionTradeAction">
-                      <span id="predictionTradeActionLabel">Place OST order</span>
-                    </button>
-
-                    <div class="prediction-trade-receipt" id="predictionTradeReceipt" hidden>
-                      <div class="prediction-trade-receipt-head">
-                        <span class="wallet-portal-kicker" id="predictionReceiptKicker">Recorded on devnet</span>
-                        <h6 id="predictionReceiptTitle">Latest market ticket</h6>
-                      </div>
-                      <div class="prediction-trade-receipt-grid">
-                        <div class="prediction-market-metric">
-                          <span id="predictionReceiptSignatureLabel">Signature</span>
-                          <strong id="predictionReceiptSignature">--</strong>
-                        </div>
-                        <div class="prediction-market-metric">
-                          <span id="predictionReceiptStakeLabel">OST committed</span>
-                          <strong id="predictionReceiptStake">--</strong>
-                        </div>
-                      </div>
-                      <a href="#" target="_blank" rel="noopener" class="prediction-market-link" id="predictionReceiptExplorer">View on Solana Explorer</a>
-                    </div>
-
-                    <div class="prediction-position-ledger">
-                      <div class="prediction-position-ledger-head">
-                        <span class="wallet-portal-kicker" id="predictionLedgerKicker">Recent positions</span>
-                        <strong id="predictionLedgerCount">0</strong>
-                      </div>
-                      <div class="prediction-position-list" id="predictionPositionList">
-                        <div class="prediction-position-empty">No OST market tickets recorded yet.</div>
-                      </div>
-                    </div>
-                  </aside>
-                </div>
-            </div>
           </div>
 
           <div class="wallet-region-row">
@@ -2724,6 +2357,377 @@
             <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=JPY" target="_blank" rel="noopener" class="fiat-pill">JPY</a>
             <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy&defaultFiat=KRW" target="_blank" rel="noopener" class="fiat-pill">KRW</a>
           </div>
+        </div>
+
+        <div class="wallet-tab-panel" id="wallet-panel-predict" hidden>
+          <div class="prediction-market-board" id="predictionMarketBoard">
+            <div class="prediction-market-head">
+              <div class="prediction-market-copy">
+                <span class="wallet-portal-kicker" id="predictionMarketKicker">Predict with OST</span>
+                <h4 id="predictionMarketHeading">Prediction venue</h4>
+                <p id="predictionMarketIntro">Scan live Polymarket and Kalshi markets, read the tape, inspect the ladder, and route an OST ticket without leaving the wallet rail.</p>
+                <div class="prediction-market-venue-row">
+                  <span class="prediction-venue-pill">Polymarket-style tape</span>
+                  <span class="prediction-venue-pill">Kalshi-style ladder</span>
+                  <span class="prediction-venue-pill">OST wallet execution</span>
+                </div>
+              </div>
+
+              <div class="prediction-market-hero-card" id="predictionMarketHero">
+                <div class="prediction-market-hero-topline">
+                  <span class="prediction-market-contract" id="predictionHeroRank">Trending</span>
+                  <span class="prediction-market-source source-polymarket" id="predictionHeroSource">Live venue</span>
+                  <span class="prediction-market-topic" id="predictionHeroTopic">All markets</span>
+                </div>
+
+                <div class="prediction-market-hero-copy">
+                  <span class="prediction-market-hero-label">Live market spotlight</span>
+                  <h5 id="predictionHeroTitle">Select a lead market</h5>
+                  <p id="predictionHeroDetail">We surface the lead contract here so the tape, ladder, and OST trade desk stay locked on one live market at a time.</p>
+                </div>
+
+                <div class="prediction-market-hero-price-grid">
+                  <div class="prediction-market-hero-price is-yes">
+                    <span>Yes share</span>
+                    <strong id="predictionHeroYesPrice">--</strong>
+                  </div>
+                  <div class="prediction-market-hero-price is-no">
+                    <span>No share</span>
+                    <strong id="predictionHeroNoPrice">--</strong>
+                  </div>
+                </div>
+
+                <div class="prediction-market-hero-metrics">
+                  <div class="prediction-market-hero-metric">
+                    <span>Implied yes</span>
+                    <strong id="predictionHeroProbability">--</strong>
+                  </div>
+                  <div class="prediction-market-hero-metric">
+                    <span>24h volume</span>
+                    <strong id="predictionHeroVolume">--</strong>
+                  </div>
+                  <div class="prediction-market-hero-metric">
+                    <span>Depth</span>
+                    <strong id="predictionHeroDepth">--</strong>
+                  </div>
+                  <div class="prediction-market-hero-metric">
+                    <span>Closes</span>
+                    <strong id="predictionHeroClose">--</strong>
+                  </div>
+                  <div class="prediction-market-hero-metric">
+                    <span>Momentum</span>
+                    <strong id="predictionHeroMomentum">--</strong>
+                  </div>
+                </div>
+
+                <div class="prediction-market-hero-actions">
+                  <a href="#" target="_blank" rel="noopener" class="prediction-market-link" id="predictionHeroVenueLink">Open venue</a>
+                  <a href="#" target="_blank" rel="noopener" class="prediction-market-api-link" id="predictionHeroFeedLink">Open feed</a>
+                </div>
+              </div>
+
+              <div class="prediction-market-side">
+                <div class="prediction-market-badge" id="predictionMarketStatus">Loading live feeds...</div>
+                <div class="prediction-market-updated" id="predictionMarketUpdated">Waiting for first refresh</div>
+                <div class="prediction-market-side-stack">
+                  <div class="prediction-market-side-card">
+                    <span>Venue parity</span>
+                    <strong>Polymarket + Kalshi</strong>
+                    <p>Live pricing, ranking, and one market board instead of a static prediction widget.</p>
+                  </div>
+                  <div class="prediction-market-side-card">
+                    <span>Execution rail</span>
+                    <strong>OST order path</strong>
+                    <p>Stay on the same page from venue scan to Yes or No sizing and ticket routing.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="prediction-market-controls">
+              <div class="prediction-market-source-toggle" id="predictionSourceToggle" aria-label="Prediction market source filter">
+                <button class="prediction-chip is-active" type="button" data-prediction-source="all">All venues</button>
+                <button class="prediction-chip" type="button" data-prediction-source="ost">OST Native</button>
+                <button class="prediction-chip" type="button" data-prediction-source="polymarket">Polymarket</button>
+                <button class="prediction-chip" type="button" data-prediction-source="kalshi">Kalshi</button>
+              </div>
+
+              <div class="prediction-market-rank-toggle" id="predictionRankToggle" aria-label="Prediction market ranking filter">
+                <button class="prediction-chip" type="button" data-prediction-rank="all">All markets</button>
+                <button class="prediction-chip is-active" type="button" data-prediction-rank="trending">Trending</button>
+                <button class="prediction-chip" type="button" data-prediction-rank="breaking">Breaking</button>
+                <button class="prediction-chip" type="button" data-prediction-rank="new">New</button>
+              </div>
+
+              <div class="prediction-market-topic-toggle" id="predictionTopicToggle" aria-label="Prediction market topic filter">
+                <button class="prediction-chip is-active" type="button" data-prediction-topic="all">All markets</button>
+                <button class="prediction-chip" type="button" data-prediction-topic="politics">Politics</button>
+                <button class="prediction-chip" type="button" data-prediction-topic="sports">Sports</button>
+                <button class="prediction-chip" type="button" data-prediction-topic="crypto">Crypto</button>
+                <button class="prediction-chip" type="button" data-prediction-topic="esports">Esports</button>
+                <button class="prediction-chip" type="button" data-prediction-topic="iran">Iran</button>
+                <button class="prediction-chip" type="button" data-prediction-topic="finance">Finance</button>
+                <button class="prediction-chip" type="button" data-prediction-topic="geopolitics">Geopolitics</button>
+                <button class="prediction-chip" type="button" data-prediction-topic="tech">Tech</button>
+                <button class="prediction-chip" type="button" data-prediction-topic="culture">Culture</button>
+                <button class="prediction-chip" type="button" data-prediction-topic="economy">Economy</button>
+                <button class="prediction-chip" type="button" data-prediction-topic="weather">Weather</button>
+                <button class="prediction-chip" type="button" data-prediction-topic="mentions">Mentions</button>
+                <button class="prediction-chip" type="button" data-prediction-topic="elections">Elections</button>
+              </div>
+
+              <div class="prediction-market-search-row">
+                <label class="prediction-market-search">
+                  <span class="prediction-market-search-label" id="predictionSearchLabel">Search any contract</span>
+                  <input type="search" id="predictionMarketSearch" class="prediction-market-search-input" placeholder="Bitcoin, Trump, NBA, inflation, Nvidia, weather, election..." aria-label="Search live prediction contracts">
+                </label>
+                <button type="button" class="btn btn-outline btn-sm prediction-refresh-btn" id="predictionMarketRefresh">Refresh</button>
+              </div>
+            </div>
+
+            <div class="prediction-market-summary" id="predictionMarketSummary">
+              <div class="prediction-market-stat">
+                <span id="predictionStatMarketsLabel">Markets loaded</span>
+                <strong id="predictionMarketCount">0</strong>
+              </div>
+              <div class="prediction-market-stat">
+                <span id="predictionStatSourcesLabel">Live sources</span>
+                <strong id="predictionSourceCount">0 / 2</strong>
+              </div>
+              <div class="prediction-market-stat">
+                <span id="predictionStatBtcLabel">Breaking now</span>
+                <strong id="predictionBtcCount">0</strong>
+              </div>
+            </div>
+
+            <div class="prediction-market-tape" id="predictionMarketTape">
+              <div class="prediction-tape-empty">Loading venue tape...</div>
+            </div>
+
+            <div class="prediction-market-note" id="predictionMarketNote">
+              Public venue feeds expose live prices, change anchors, and liquidity. The curve and ladder reflect that data directly without inventing candles or settlement.
+            </div>
+
+            <div class="prediction-market-pulse-wrap">
+              <div class="prediction-market-pulse-head">
+                <div>
+                  <strong id="predictionPulseHeading">Market pulse</strong>
+                  <p id="predictionPulseCopy">Lead contracts, fastest movers, and the markets closing soonest across both venues.</p>
+                </div>
+                <span class="prediction-market-updated" id="predictionPulseMeta">Click a tile to load the stage and trade desk.</span>
+              </div>
+
+              <div class="prediction-market-pulse" id="predictionMarketPulse">
+                <div class="prediction-pulse-empty">Loading market pulse...</div>
+              </div>
+            </div>
+
+            <section class="live-bet-section" id="live-bet" aria-label="Live Watch and Bet"></section>
+
+            <div class="prediction-market-shell">
+              <div class="prediction-market-main">
+                <section class="prediction-market-stage" id="predictionMarketStage">
+                  <div class="prediction-stage-head">
+                    <div class="prediction-stage-copy">
+                      <div class="prediction-stage-topline">
+                        <span class="prediction-market-contract" id="predictionStageRank">Trending</span>
+                        <span class="prediction-market-source source-polymarket" id="predictionStageSource">Polymarket</span>
+                        <span class="prediction-market-topic" id="predictionStageTopic">All markets</span>
+                      </div>
+                      <h5 id="predictionStageTitle">Select a live market</h5>
+                      <p id="predictionStageDetail">Choose a live contract to inspect the live probability curve, price ladder, share pricing, and OST ticket details before you commit.</p>
+                    </div>
+
+                    <div class="prediction-stage-stats">
+                      <div class="prediction-market-stat prediction-stage-stat">
+                        <span>Yes share</span>
+                        <strong id="predictionStageYesPrice">--</strong>
+                      </div>
+                      <div class="prediction-market-stat prediction-stage-stat">
+                        <span>No share</span>
+                        <strong id="predictionStageNoPrice">--</strong>
+                      </div>
+                      <div class="prediction-market-stat prediction-stage-stat">
+                        <span>Implied yes</span>
+                        <strong id="predictionStageProbability">--</strong>
+                      </div>
+                      <div class="prediction-market-stat prediction-stage-stat">
+                        <span>24h volume</span>
+                        <strong id="predictionStageVolume">--</strong>
+                      </div>
+                      <div class="prediction-market-stat prediction-stage-stat">
+                        <span>Depth</span>
+                        <strong id="predictionStageDepth">--</strong>
+                      </div>
+                      <div class="prediction-market-stat prediction-stage-stat">
+                        <span>Closes</span>
+                        <strong id="predictionStageClose">--</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="prediction-stage-body">
+                    <div class="prediction-stage-chart-card">
+                      <div class="prediction-stage-panel-head">
+                        <div>
+                          <strong id="predictionStageChartHeading">Live probability curve</strong>
+                          <p id="predictionStageChartCopy">Anchored to current share pricing, recent venue changes, and source liquidity.</p>
+                        </div>
+                        <span class="prediction-stage-trend" id="predictionStageTrend">Flat</span>
+                      </div>
+                      <canvas id="predictionStageChart" class="prediction-stage-chart" width="860" height="280" aria-label="Prediction market probability chart"></canvas>
+                      <div class="prediction-stage-axis">
+                        <span id="predictionStageAxisStart">Opened --</span>
+                        <span id="predictionStageAxisMid">Live now</span>
+                        <span id="predictionStageAxisEnd">Closes --</span>
+                      </div>
+                    </div>
+
+                    <div class="prediction-depth-card">
+                      <div class="prediction-stage-panel-head">
+                        <div>
+                          <strong id="predictionDepthHeading">Order depth map</strong>
+                          <p id="predictionDepthCopy">Quote bands shaped from live venue pricing and available depth.</p>
+                        </div>
+                      </div>
+
+                      <div class="prediction-depth-columns">
+                        <div>
+                          <span class="prediction-depth-label" id="predictionDepthYesLabel">Yes depth</span>
+                          <div class="prediction-depth-list" id="predictionDepthYes">
+                            <div class="prediction-depth-empty">Waiting for a live contract.</div>
+                          </div>
+                        </div>
+                        <div>
+                          <span class="prediction-depth-label" id="predictionDepthNoLabel">No depth</span>
+                          <div class="prediction-depth-list" id="predictionDepthNo">
+                            <div class="prediction-depth-empty">Waiting for a live contract.</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="prediction-stage-links">
+                        <a href="#" target="_blank" rel="noopener" class="prediction-market-link" id="predictionStageVenueLink">Open venue</a>
+                        <a href="#" target="_blank" rel="noopener" class="prediction-market-api-link" id="predictionStageFeedLink">Open feed</a>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <div class="prediction-market-grid" id="predictionMarketList">
+                  <div class="prediction-market-empty-card">Loading live prediction markets...</div>
+                </div>
+              </div>
+
+              <aside class="prediction-trade-desk" id="predictionTradeDesk">
+                <div class="prediction-trade-head">
+                  <span class="wallet-portal-kicker" id="predictionTradeKicker">Trade with OST</span>
+                  <h5 id="predictionTradeHeading">Build an OST ticket</h5>
+                  <p id="predictionTradeCopy">Pick a live contract, choose Yes or No, review your share pricing, then commit OST directly from your wallet into the market vault.</p>
+                </div>
+
+                <div class="prediction-selected-card" id="predictionSelectedCard">
+                  <div class="prediction-selected-topline">
+                    <span class="prediction-market-source source-polymarket" id="predictionSelectedSource">Polymarket</span>
+                    <span class="prediction-market-topic" id="predictionSelectedTopic">All markets</span>
+                  </div>
+                  <h6 id="predictionSelectedTitle">No market selected</h6>
+                  <p id="predictionSelectedDetail">Choose a live contract from the board to build an OST-denominated position.</p>
+                </div>
+
+                <div class="prediction-outcome-toggle" id="predictionOutcomeToggle" aria-label="Prediction outcome selector">
+                  <button class="prediction-side-btn is-active" type="button" data-prediction-side="yes">
+                    <span id="predictionOutcomeYesLabel">Buy Yes</span>
+                    <strong id="predictionOutcomeYesValue">--</strong>
+                  </button>
+                  <button class="prediction-side-btn" type="button" data-prediction-side="no">
+                    <span id="predictionOutcomeNoLabel">Buy No</span>
+                    <strong id="predictionOutcomeNoValue">--</strong>
+                  </button>
+                </div>
+
+                <label class="prediction-stake-field" for="predictionStakeInput">
+                  <span class="prediction-market-search-label" id="predictionStakeLabel">Stake in OST</span>
+                  <input type="number" min="1" step="1" inputmode="decimal" id="predictionStakeInput" class="prediction-market-search-input" value="25" placeholder="25">
+                </label>
+
+                <div class="prediction-stake-quick" id="predictionStakeQuick">
+                  <button class="prediction-chip is-active" type="button" data-prediction-stake="25">25 OST</button>
+                  <button class="prediction-chip" type="button" data-prediction-stake="50">50 OST</button>
+                  <button class="prediction-chip" type="button" data-prediction-stake="100">100 OST</button>
+                  <button class="prediction-chip" type="button" data-prediction-stake="250">250 OST</button>
+                </div>
+
+                <div class="prediction-trade-metrics" id="predictionTradeMetrics">
+                  <div class="prediction-market-stat prediction-trade-stat">
+                    <span id="predictionAvailableLabel">Available OST</span>
+                    <strong id="predictionAvailableBalance">Connect wallet</strong>
+                  </div>
+                  <div class="prediction-market-stat prediction-trade-stat">
+                    <span id="predictionSharesLabel">Est. shares</span>
+                    <strong id="predictionEstimatedShares">--</strong>
+                  </div>
+                  <div class="prediction-market-stat prediction-trade-stat">
+                    <span id="predictionReturnLabel">Est. win return</span>
+                    <strong id="predictionPotentialReturn">--</strong>
+                  </div>
+                </div>
+
+                <div class="prediction-trade-breakdown" id="predictionTradeBreakdown">
+                  <div class="prediction-market-stat prediction-trade-stat">
+                    <span id="predictionEntryPriceLabel">Entry price</span>
+                    <strong id="predictionEntryPrice">--</strong>
+                  </div>
+                  <div class="prediction-market-stat prediction-trade-stat">
+                    <span id="predictionMultipleLabel">Payout multiple</span>
+                    <strong id="predictionPayoutMultiple">--</strong>
+                  </div>
+                  <div class="prediction-market-stat prediction-trade-stat">
+                    <span id="predictionWinNetLabel">Net if right</span>
+                    <strong id="predictionWinNet">--</strong>
+                  </div>
+                  <div class="prediction-market-stat prediction-trade-stat">
+                    <span id="predictionSettleLabel">Settlement path</span>
+                    <strong id="predictionSettlementPath">Wallet -> OST vault</strong>
+                  </div>
+                </div>
+
+                <div class="prediction-trade-status is-info" id="predictionTradeStatus">Connect your OST wallet to place a market ticket.</div>
+
+                <button type="button" class="btn btn-primary prediction-trade-action" id="predictionTradeAction">
+                  <span id="predictionTradeActionLabel">Place OST order</span>
+                </button>
+
+                <div class="prediction-trade-receipt" id="predictionTradeReceipt" hidden>
+                  <div class="prediction-trade-receipt-head">
+                    <span class="wallet-portal-kicker" id="predictionReceiptKicker">Recorded on devnet</span>
+                    <h6 id="predictionReceiptTitle">Latest market ticket</h6>
+                  </div>
+                  <div class="prediction-trade-receipt-grid">
+                    <div class="prediction-market-metric">
+                      <span id="predictionReceiptSignatureLabel">Signature</span>
+                      <strong id="predictionReceiptSignature">--</strong>
+                    </div>
+                    <div class="prediction-market-metric">
+                      <span id="predictionReceiptStakeLabel">OST committed</span>
+                      <strong id="predictionReceiptStake">--</strong>
+                    </div>
+                  </div>
+                  <a href="#" target="_blank" rel="noopener" class="prediction-market-link" id="predictionReceiptExplorer">View on Solana Explorer</a>
+                </div>
+
+                <div class="prediction-position-ledger">
+                  <div class="prediction-position-ledger-head">
+                    <span class="wallet-portal-kicker" id="predictionLedgerKicker">Recent positions</span>
+                    <strong id="predictionLedgerCount">0</strong>
+                  </div>
+                  <div class="prediction-position-list" id="predictionPositionList">
+                    <div class="prediction-position-empty">No OST market tickets recorded yet.</div>
+                  </div>
+                </div>
+              </aside>
+            </div>
+        </div>
         </div>
       </div>
     </div>
