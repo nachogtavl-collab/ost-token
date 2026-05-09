@@ -12,7 +12,13 @@
   var SNIPPETS_OLD_KEY = 'ost.mesh.snippets.v1';
   var SIGNALS_KEY = 'ost.mesh.signals.v1';
   var INVITE_PREFIX = 'ost-mesh-invite:';
+  var QR_DECODER_URLS = [
+    'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js',
+    'https://unpkg.com/jsqr@1.4.0/dist/jsQR.js'
+  ];
   var scanStream = null;
+  var scanRunId = 0;
+  var qrDecoderPromise = null;
 
   function ready(fn) {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, { once: true });
@@ -183,7 +189,82 @@
   }
 
   function qrUrl(value) {
-    return 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=10&data=' + encodeURIComponent(value || '');
+    return 'https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=16&ecc=M&data=' + encodeURIComponent(value || '');
+  }
+
+  function loadQrDecoder() {
+    if (window.jsQR) return Promise.resolve(window.jsQR);
+    if (qrDecoderPromise) return qrDecoderPromise;
+    qrDecoderPromise = new Promise(function (resolve, reject) {
+      var index = 0;
+      function tryNext() {
+        if (window.jsQR) return resolve(window.jsQR);
+        if (index >= QR_DECODER_URLS.length) return reject(new Error('QR decoder could not load.'));
+        var script = document.createElement('script');
+        script.async = true;
+        script.src = QR_DECODER_URLS[index++];
+        script.onload = function () {
+          if (window.jsQR) resolve(window.jsQR);
+          else tryNext();
+        };
+        script.onerror = function () {
+          if (script.parentNode) script.parentNode.removeChild(script);
+          tryNext();
+        };
+        document.head.appendChild(script);
+      }
+      tryNext();
+    }).catch(function (err) {
+      qrDecoderPromise = null;
+      throw err;
+    });
+    return qrDecoderPromise;
+  }
+
+  function decodeQrFrame(video, canvas, ctx, jsQr) {
+    if (!video || !jsQr || video.readyState < 2) return '';
+    var sourceWidth = video.videoWidth || 0;
+    var sourceHeight = video.videoHeight || 0;
+    if (!sourceWidth || !sourceHeight) return '';
+    var scale = Math.min(1, 960 / Math.max(sourceWidth, sourceHeight));
+    var width = Math.max(1, Math.round(sourceWidth * scale));
+    var height = Math.max(1, Math.round(sourceHeight * scale));
+    if (canvas.width !== width) canvas.width = width;
+    if (canvas.height !== height) canvas.height = height;
+    ctx.drawImage(video, 0, 0, width, height);
+    var image = ctx.getImageData(0, 0, width, height);
+    var code = jsQr(image.data, width, height, { inversionAttempts: 'attemptBoth' });
+    return code && code.data ? String(code.data) : '';
+  }
+
+  function startQrDecodeLoop(p, video, hint, runId, detector, jsQr) {
+    var canvas = document.createElement('canvas');
+    var ctx = canvas.getContext('2d', { willReadFrequently: true });
+    var lastJsDecode = 0;
+    async function loop(time) {
+      if (runId !== scanRunId || !scanStream) return;
+      var raw = '';
+      if (detector) {
+        try {
+          var codes = await detector.detect(video);
+          if (codes && codes.length) raw = codes[0].rawValue || '';
+        } catch (_) {
+          detector = null;
+        }
+      }
+      if (!raw && jsQr && ctx && (!lastJsDecode || time - lastJsDecode > 110)) {
+        lastJsDecode = time;
+        try { raw = decodeQrFrame(video, canvas, ctx, jsQr); } catch (_) {}
+      }
+      if (raw) {
+        stopQrScan();
+        importInviteText(p, raw);
+        return;
+      }
+      if (hint && runId === scanRunId) hint.textContent = 'Scanning. Hold the QR steady inside the camera view.';
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
   }
 
   function injectStyle() {
@@ -198,7 +279,7 @@
       '.omu-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.omu-row input,.omu-row textarea{flex:1 1 150px;min-width:0;border:1px solid rgba(255,255,255,.14);border-radius:11px;background:#06141f;color:#d8eaff;padding:10px;font:inherit;font-size:13px}.omu-row textarea{min-height:48px;resize:vertical}.omu-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(108px,1fr));gap:7px}.omu-actions button,.omu-contact button,.omu-snippet button,.omu-scan-actions button{border:1px solid rgba(255,255,255,.12);border-radius:11px;background:rgba(255,255,255,.07);color:#e8fbff;padding:9px;font-weight:750;font-size:12px;cursor:pointer;min-height:42px;white-space:normal;line-height:1.15}.omu-actions button.primary,.omu-contact button.primary,.omu-scan-actions button.primary{background:linear-gradient(135deg,#00d4ff,#00ff9f);border-color:transparent;color:#03131c}',
       '.omu-list{display:grid;gap:8px;max-height:230px;overflow:auto}.omu-contact{display:grid;grid-template-columns:auto minmax(0,1fr);gap:9px;align-items:center;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:9px;background:rgba(0,0,0,.17)}.omu-contact-main{display:grid;gap:2px;min-width:0}.omu-contact strong{display:block;color:#fff;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.omu-contact span{display:block;color:#8ebbd5;font-family:ui-monospace,Menlo,monospace;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.omu-contact-actions{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.omu-empty{border:1px dashed rgba(127,216,255,.22);border-radius:14px;padding:12px;color:#8ebbd5;font-size:12px;text-align:center}',
       '.omu-snippets{display:grid;grid-template-columns:repeat(auto-fit,minmax(142px,1fr));gap:8px}.omu-snippet{position:relative;border:1px solid rgba(127,216,255,.2);border-radius:16px;background:linear-gradient(150deg,rgba(0,212,255,.17),rgba(167,139,250,.11));padding:10px;min-height:86px;overflow:hidden;display:grid;gap:8px}.omu-snippet:before{content:"";position:absolute;inset:-40%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);transform:rotate(18deg);animation:omu-snap-sheen 4s linear infinite}.omu-snippet-text{position:relative;color:#fff;font-weight:800;font-size:13px;line-height:1.3}.omu-snippet-actions{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:6px}.omu-snippet-actions button{min-height:36px;padding:7px;font-size:11px}',
-      '.omu-signals{display:grid;gap:6px;max-height:128px;overflow:auto}.omu-signal{display:flex;gap:8px;align-items:flex-start;color:#9fbfd8;font-size:12px}.omu-signal:before{content:"";width:7px;height:7px;margin-top:5px;border-radius:50%;background:#5eead4;box-shadow:0 0 12px rgba(94,234,212,.72);animation:omu-pulse 1.8s ease-in-out infinite}.omu-qr-modal{position:fixed;inset:0;z-index:1000300;background:rgba(2,6,14,.86);display:none;align-items:center;justify-content:center;padding:14px}.omu-qr-modal.is-open{display:flex}.omu-qr-panel{width:min(420px,100%);border:1px solid rgba(127,216,255,.22);border-radius:18px;background:#06111d;padding:14px;display:grid;gap:10px;color:#dff8ff;box-shadow:0 24px 80px rgba(0,0,0,.55)}.omu-qr-panel video{width:100%;max-height:54vh;border-radius:14px;background:#000}.omu-qr-box{display:grid;place-items:center;gap:9px}.omu-qr-box img{width:240px;height:240px;border-radius:14px;background:#fff;padding:8px}.omu-qr-panel textarea{width:100%;min-height:80px;border:1px solid rgba(255,255,255,.14);border-radius:12px;background:#020a12;color:#dff8ff;padding:10px;font:12px ui-monospace,Menlo,monospace}.omu-scan-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}',
+      '.omu-signals{display:grid;gap:6px;max-height:128px;overflow:auto}.omu-signal{display:flex;gap:8px;align-items:flex-start;color:#9fbfd8;font-size:12px}.omu-signal:before{content:"";width:7px;height:7px;margin-top:5px;border-radius:50%;background:#5eead4;box-shadow:0 0 12px rgba(94,234,212,.72);animation:omu-pulse 1.8s ease-in-out infinite}.omu-qr-modal{position:fixed;inset:0;z-index:1000300;background:rgba(2,6,14,.86);display:none;align-items:center;justify-content:center;padding:14px}.omu-qr-modal.is-open{display:flex}.omu-qr-panel{width:min(420px,100%);border:1px solid rgba(127,216,255,.22);border-radius:18px;background:#06111d;padding:14px;display:grid;gap:10px;color:#dff8ff;box-shadow:0 24px 80px rgba(0,0,0,.55)}.omu-qr-panel video{width:100%;max-height:54vh;border-radius:14px;background:#000}.omu-qr-box{display:grid;place-items:center;gap:9px}.omu-qr-box img{width:min(320px,86vw);height:auto;aspect-ratio:1;border-radius:14px;background:#fff;padding:8px}.omu-qr-panel textarea{width:100%;min-height:80px;border:1px solid rgba(255,255,255,.14);border-radius:12px;background:#020a12;color:#dff8ff;padding:10px;font:12px ui-monospace,Menlo,monospace}.omu-scan-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}',
       '.ost-mesh-callbar.is-ringing{animation:omu-ring 1s ease-in-out infinite;border-color:rgba(251,191,36,.55);box-shadow:0 0 24px rgba(251,191,36,.12)}.ost-mesh-callbar.is-live{border-color:rgba(52,211,153,.45);box-shadow:0 0 28px rgba(52,211,153,.12)}#ost-mesh-pavilion.ost-mesh-ringing .ost-mesh-shell{box-shadow:inset 0 0 0 1px rgba(251,191,36,.24)}#ost-mesh-pavilion.ost-mesh-in-call .ost-mesh-video-grid.is-on video{box-shadow:0 0 0 1px rgba(94,234,212,.28),0 18px 48px rgba(0,0,0,.38)}.omu-profile-card{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:center}.omu-profile-card strong{color:#fff}.omu-profile-card code{color:#9fffd0;word-break:break-all;font-size:11px}.omu-profile-card p{grid-column:1/-1;margin:0;color:#b8d7ea}',
       '@media(max-width:760px){.ost-mesh-upgrade{padding:10px;border-radius:14px}.omu-body{gap:10px}.omu-grid{grid-template-columns:1fr}.omu-card{padding:9px;border-radius:12px}.omu-contact-actions{grid-template-columns:repeat(2,minmax(0,1fr))}.omu-actions,.omu-snippets{grid-template-columns:repeat(2,minmax(0,1fr))}.omu-profile-social{grid-template-columns:1fr;text-align:center}.omu-avatar{width:60px;height:60px;border-radius:18px;margin:auto}.omu-list{max-height:174px}.omu-signals{max-height:96px}.omu-scan-actions{grid-template-columns:1fr}}@media(max-width:380px){.omu-actions,.omu-snippets,.omu-contact-actions{grid-template-columns:1fr}}',
       '@keyframes omu-ring{0%,100%{transform:translateY(0)}50%{transform:translateY(-1px)}}@keyframes omu-pulse{0%,100%{opacity:.45;transform:scale(.9)}50%{opacity:1;transform:scale(1.18)}}@keyframes omu-snap-sheen{0%{transform:translateX(-80%) rotate(18deg)}100%{transform:translateX(80%) rotate(18deg)}}'
@@ -533,6 +614,10 @@
   }
 
   async function startQrScan(p) {
+    scanRunId += 1;
+    if (scanStream) scanStream.getTracks().forEach(function (track) { track.stop(); });
+    scanStream = null;
+    var runId = scanRunId;
     var modal = ensureQrModal(p);
     modal.classList.add('is-open');
     modal.querySelector('#omuQrTitle').textContent = 'Scan OST Mesh QR';
@@ -550,27 +635,23 @@
       video.srcObject = scanStream;
       video.hidden = false;
       await video.play();
-      if (!('BarcodeDetector' in window)) {
-        hint.textContent = 'Camera opened. This browser cannot decode QR automatically, so paste the invite text below.';
-        return;
+      var detector = null;
+      if ('BarcodeDetector' in window) {
+        try { detector = new BarcodeDetector({ formats: ['qr_code'] }); } catch (_) { detector = null; }
       }
-      var detector = new BarcodeDetector({ formats: ['qr_code'] });
-      var stopped = false;
-      async function loop() {
-        if (stopped || !scanStream) return;
-        try {
-          var codes = await detector.detect(video);
-          if (codes && codes.length) {
-            stopped = true;
-            var raw = codes[0].rawValue || '';
-            stopQrScan();
-            importInviteText(p, raw);
-            return;
-          }
-        } catch (_) {}
-        requestAnimationFrame(loop);
+      hint.textContent = detector ? 'Camera opened. QR scanner is active.' : 'Camera opened. Loading mobile QR decoder...';
+      var jsQr = null;
+      try { jsQr = await loadQrDecoder(); }
+      catch (decoderErr) {
+        if (!detector) {
+          hint.textContent = 'Camera opened, but the QR decoder could not load. Check connection and try Scan QR again.';
+          setStatus(p, decoderErr.message, 'warn');
+          return;
+        }
       }
-      loop();
+      if (runId !== scanRunId || !scanStream) return;
+      hint.textContent = jsQr ? 'Camera opened. Mobile QR decoder ready.' : 'Camera opened. Native QR scanner ready.';
+      startQrDecodeLoop(p, video, hint, runId, detector, jsQr);
     } catch (err) {
       hint.textContent = 'Camera permission failed: ' + err.message + '. Paste an invite instead.';
       setStatus(p, 'Camera permission failed: ' + err.message, 'warn');
@@ -578,8 +659,15 @@
   }
 
   function stopQrScan() {
+    scanRunId += 1;
     var modal = document.getElementById('omuQrModal');
     if (modal) modal.classList.remove('is-open');
+    var video = document.getElementById('omuQrVideo');
+    if (video) {
+      try { video.pause(); } catch (_) {}
+      try { video.srcObject = null; } catch (_) {}
+      video.hidden = true;
+    }
     if (scanStream) scanStream.getTracks().forEach(function (track) { track.stop(); });
     scanStream = null;
   }
