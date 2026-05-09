@@ -330,7 +330,9 @@
       '</div>'
     ].join('');
     var stage = p.root.querySelector('.ost-mesh-stage');
-    if (stage && stage.parentNode) stage.parentNode.insertBefore(panel, stage.nextSibling);
+    var session = p.root.querySelector('.ost-mesh-session');
+    if (session && session.parentNode) session.parentNode.insertBefore(panel, session.nextSibling);
+    else if (stage && stage.parentNode) stage.parentNode.insertBefore(panel, stage.nextSibling);
     else p.root.querySelector('.ost-mesh-shell').appendChild(panel);
     bindPanel(p, panel);
     renderAll(p);

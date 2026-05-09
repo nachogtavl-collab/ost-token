@@ -682,6 +682,16 @@
     align-items: stretch;
   }
 
+  body.ost-mesh-scroll-lock .ost-dock,
+  body.ost-mesh-scroll-lock #ost-mobile-bar,
+  body.ost-mesh-scroll-lock .ost-mobile-bar,
+  body.ost-mesh-scroll-lock #ghost-input-ring {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
   #ost-mesh-pavilion .ost-mesh-shell {
     width: 100%;
     max-width: 100%;

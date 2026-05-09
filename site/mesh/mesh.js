@@ -11,7 +11,7 @@ import {
 } from './mesh-crypto.js?v=1';
 import { MeshRTC } from './mesh-rtc.js?v=10';
 
-const STYLE_HREF = './mesh/mesh.css?v=8';
+const STYLE_HREF = './mesh/mesh.css?v=9';
 const STORAGE_ID = 'ost_mesh_identity_v1';
 const STORAGE_ADDR = 'ost_mesh_addr_v1';
 const MAX_FILE_BYTES = 32 * 1024 * 1024;
@@ -99,24 +99,26 @@ function buildDOM() {
         </div>
       </div>
 
-      <div class="ost-mesh-stage">
-        <div class="ost-mesh-video-grid" id="mesh-video">
-          <video id="mesh-local-video" autoplay muted playsinline></video>
-          <video id="mesh-remote-video" autoplay playsinline></video>
-        </div>
-        <div class="ost-mesh-feed" id="mesh-feed"></div>
-        <div class="ost-mesh-compose">
-          <input id="mesh-text" type="text" placeholder="Encrypted message…" disabled />
-          <button id="mesh-send" disabled>Send</button>
-        </div>
-        <div class="ost-mesh-tools">
-          <input type="file" id="mesh-file" accept="image/*,video/*" hidden />
-          <button id="mesh-attach" disabled>📎 Photo / Video</button>
-          <button id="mesh-loc" disabled>📍 Share map</button>
-          <button id="mesh-live" disabled>🛰 Live location</button>
-          <button id="mesh-voice" disabled>📞 Start voice</button>
-          <button id="mesh-video-call" disabled>📹 Start video</button>
-          <button id="mesh-hangup" class="ghost" disabled>⛔ End session</button>
+      <div class="ost-mesh-session" id="mesh-session">
+        <div class="ost-mesh-stage">
+          <div class="ost-mesh-video-grid" id="mesh-video">
+            <video id="mesh-local-video" autoplay muted playsinline></video>
+            <video id="mesh-remote-video" autoplay playsinline></video>
+          </div>
+          <div class="ost-mesh-feed" id="mesh-feed"></div>
+          <div class="ost-mesh-compose">
+            <input id="mesh-text" type="text" placeholder="Encrypted message…" disabled />
+            <button id="mesh-send" disabled>Send</button>
+          </div>
+          <div class="ost-mesh-tools">
+            <input type="file" id="mesh-file" accept="image/*,video/*" hidden />
+            <button id="mesh-attach" disabled>📎 Photo / Video</button>
+            <button id="mesh-loc" disabled>📍 Share map</button>
+            <button id="mesh-live" disabled>🛰 Live location</button>
+            <button id="mesh-voice" disabled>📞 Start voice</button>
+            <button id="mesh-video-call" disabled>📹 Start video</button>
+            <button id="mesh-hangup" class="ghost" disabled>⛔ End session</button>
+          </div>
         </div>
       </div>
     </div>
