@@ -791,7 +791,56 @@ class MeshPavilion {
       kind: 'mesh-app',
       ts: Date.now()
     });
-    return this._sendWire(JSON.stringify({ kind: 'enc', payload: sealed }));
+    const wire = JSON.stringify({ kind: 'enc', payload: sealed });
+    return this._sendWire(wire);
+  }
+
+  async sendAppPayloadReliable(payload = {}, options = {}) {
+    if (!this.sessionKey) throw new Error('No encrypted Mesh session is ready');
+    await this.waitForDataChannel({ timeoutMs: options.timeoutMs || 18000, reconnect: options.reconnect !== false });
+    const sealed = await sealPayload(this.sessionKey, {
+      ...payload,
+      kind: 'mesh-app',
+      ts: Date.now()
+    });
+    const sent = await this._sendWireAsync(JSON.stringify({ kind: 'enc', payload: sealed }));
+    if (!sent) throw new Error('Encrypted Mesh channel is not open');
+    return true;
+  }
+
+  async waitForDataChannel(options = {}) {
+    const timeoutMs = Math.max(1000, Number(options.timeoutMs || 12000));
+    if (this.rtc?.isOpen?.()) return true;
+    if (options.reconnect && this.peerAddr) {
+      const state = this.rtc?.dc?.readyState || '';
+      if (!this.rtc || state === 'closed' || state === 'closing') {
+        this._setStatus('Reopening encrypted Mesh data channel...', 'warn');
+        this._startRTC('caller', { passive: true });
+      }
+    }
+    const rtc = this.rtc;
+    if (!rtc) throw new Error('Connect to a Mesh peer first');
+    await new Promise((resolve, reject) => {
+      let done = false;
+      const finish = (err) => {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        rtc.removeEventListener('open', onOpen);
+        rtc.removeEventListener('close', onClose);
+        if (err) reject(err);
+        else resolve();
+      };
+      const onOpen = () => finish();
+      const onClose = () => {
+        if (!this.rtc?.isOpen?.()) this._setStatus('Mesh data channel closed while sending.', 'warn');
+      };
+      const timer = setTimeout(() => finish(new Error('Mesh peer channel is not open. Keep both phones on OST Mesh, reconnect, then retry.')), timeoutMs);
+      rtc.addEventListener('open', onOpen, { once: true });
+      rtc.addEventListener('close', onClose);
+    });
+    if (!this.rtc?.isOpen?.()) throw new Error('Mesh peer channel is not open. Keep both phones on OST Mesh, reconnect, then retry.');
+    return true;
   }
 
   async _sendCallControl(kind, payload = {}) {

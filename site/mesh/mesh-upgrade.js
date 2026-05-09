@@ -101,6 +101,7 @@
 
   function publicProfile(profile, options) {
     options = options || {};
+    var avatar = options.includeAvatar ? profileAvatar(profile) : '';
     return {
       nickname: String(profile.nickname || '').slice(0, 32),
       handle: String(profile.handle || '').slice(0, 32),
@@ -108,9 +109,15 @@
       bio: String(profile.bio || '').slice(0, 220),
       wallet: String(profile.wallet || '').slice(0, 96),
       address: normalizeAddress(profile.address),
-      avatar: options.includeAvatar ? String(profile.avatar || '').slice(0, 140000) : '',
+      avatar: String(avatar || '').slice(0, 24000),
+      avatarThumb: String((profile && profile.avatarThumb) || avatar || '').slice(0, 24000),
       updatedAt: profile.updatedAt || Date.now()
     };
+  }
+
+  function profileAvatar(profile) {
+    if (!profile) return '';
+    return String(profile.avatarThumb || profile.avatar || '');
   }
 
   function defaultProfile(p) {
@@ -124,6 +131,7 @@
       wallet: walletAddress() || saved.wallet || '',
       address: address,
       avatar: saved.avatar || '',
+      avatarThumb: saved.avatarThumb || '',
       updatedAt: saved.updatedAt || Date.now()
     };
   }
@@ -134,21 +142,24 @@
   }
 
   function avatarHtml(profile, sizeClass) {
-    if (profile && profile.avatar) {
-      return '<span class="omu-avatar ' + (sizeClass || '') + '"><img src="' + escapeHtml(profile.avatar) + '" alt=""></span>';
+    var avatar = profileAvatar(profile);
+    if (avatar) {
+      return '<span class="omu-avatar ' + (sizeClass || '') + '"><img src="' + escapeHtml(avatar) + '" alt=""></span>';
     }
     return '<span class="omu-avatar ' + (sizeClass || '') + '"><b>' + escapeHtml(initials(profile || {})) + '</b></span>';
   }
 
   function inviteFor(p, profile) {
     if (!p || !p.address || !p.publicBundle) return '';
+    var sourceProfile = profile || defaultProfile(p);
     var payload = {
       v: 2,
       address: p.address,
       bundle: p.publicBundle,
       fingerprint: p.fpr || '',
-      profile: publicProfile(profile || defaultProfile(p), { includeAvatar: false })
+      profile: publicProfile(sourceProfile, { includeAvatar: true })
     };
+    if (JSON.stringify(payload).length > 1800) payload.profile = publicProfile(sourceProfile, { includeAvatar: false });
     return INVITE_PREFIX + b64urlEncode(JSON.stringify(payload));
   }
 
@@ -166,7 +177,8 @@
         profile: profile,
         nick: profile.nickname || profile.handle || short(parsed.address),
         wallet: profile.wallet || '',
-        avatar: profile.avatar || '',
+        avatar: profile.avatar || profile.avatarThumb || '',
+        avatarThumb: profile.avatarThumb || profile.avatar || '',
         status: profile.status || ''
       };
     }
@@ -181,7 +193,8 @@
         profile: prof,
         nick: obj.nick || prof.nickname || short(obj.address),
         wallet: obj.wallet || prof.wallet || '',
-        avatar: obj.avatar || prof.avatar || '',
+        avatar: obj.avatar || obj.avatarThumb || prof.avatar || prof.avatarThumb || '',
+        avatarThumb: obj.avatarThumb || prof.avatarThumb || obj.avatar || prof.avatar || '',
         status: obj.status || prof.status || ''
       };
     }
@@ -277,9 +290,10 @@
       '.ost-mesh-upgrade *{box-sizing:border-box}.omu-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:10px}.omu-card{border:1px solid rgba(255,255,255,.1);border-radius:14px;background:rgba(255,255,255,.045);padding:10px;display:grid;gap:9px;min-width:0}.omu-card h3{margin:0;color:#fff;font-size:13px;letter-spacing:.04em;text-transform:uppercase}.omu-card p{margin:0;color:#8ebbd5;font-size:12px;line-height:1.4}',
       '.omu-profile-social{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center}.omu-avatar{width:74px;height:74px;border-radius:24px;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;background:linear-gradient(145deg,#0d5b7d,#10243d);border:1px solid rgba(127,216,255,.32);box-shadow:0 12px 28px rgba(0,0,0,.28);color:#dff8ff;flex:0 0 auto}.omu-avatar img{width:100%;height:100%;object-fit:cover}.omu-avatar b{font-size:22px}.omu-avatar.sm{width:46px;height:46px;border-radius:16px}.omu-profile-meta{display:grid;gap:3px;min-width:0}.omu-profile-meta strong{color:#fff;font-size:16px;overflow:hidden;text-overflow:ellipsis}.omu-profile-meta span{font-size:12px;color:#7fd8ff;overflow:hidden;text-overflow:ellipsis}.omu-wallet-pill{font-family:ui-monospace,Menlo,monospace;color:#9fffd0;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
       '.omu-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.omu-row input,.omu-row textarea{flex:1 1 150px;min-width:0;border:1px solid rgba(255,255,255,.14);border-radius:11px;background:#06141f;color:#d8eaff;padding:10px;font:inherit;font-size:13px}.omu-row textarea{min-height:48px;resize:vertical}.omu-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(108px,1fr));gap:7px}.omu-actions button,.omu-contact button,.omu-snippet button,.omu-scan-actions button{border:1px solid rgba(255,255,255,.12);border-radius:11px;background:rgba(255,255,255,.07);color:#e8fbff;padding:9px;font-weight:750;font-size:12px;cursor:pointer;min-height:42px;white-space:normal;line-height:1.15}.omu-actions button.primary,.omu-contact button.primary,.omu-scan-actions button.primary{background:linear-gradient(135deg,#00d4ff,#00ff9f);border-color:transparent;color:#03131c}',
-      '.omu-list{display:grid;gap:8px;max-height:230px;overflow:auto}.omu-contact{display:grid;grid-template-columns:auto minmax(0,1fr);gap:9px;align-items:center;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:9px;background:rgba(0,0,0,.17)}.omu-contact-main{display:grid;gap:2px;min-width:0}.omu-contact strong{display:block;color:#fff;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.omu-contact span{display:block;color:#8ebbd5;font-family:ui-monospace,Menlo,monospace;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.omu-contact-actions{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.omu-empty{border:1px dashed rgba(127,216,255,.22);border-radius:14px;padding:12px;color:#8ebbd5;font-size:12px;text-align:center}',
+      '.omu-list{display:grid;gap:8px;max-height:230px;overflow:auto}.omu-contact{display:grid;grid-template-columns:auto minmax(0,1fr);gap:9px;align-items:center;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:9px;background:rgba(0,0,0,.17)}.omu-contact-main{display:grid;gap:2px;min-width:0}.omu-contact strong{display:block;color:#fff;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.omu-contact span{display:block;color:#8ebbd5;font-family:ui-monospace,Menlo,monospace;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.omu-contact-actions{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(74px,1fr));gap:6px}.omu-empty{border:1px dashed rgba(127,216,255,.22);border-radius:14px;padding:12px;color:#8ebbd5;font-size:12px;text-align:center}',
       '.omu-snippets{display:grid;grid-template-columns:repeat(auto-fit,minmax(142px,1fr));gap:8px}.omu-snippet{position:relative;border:1px solid rgba(127,216,255,.2);border-radius:16px;background:linear-gradient(150deg,rgba(0,212,255,.17),rgba(167,139,250,.11));padding:10px;min-height:86px;overflow:hidden;display:grid;gap:8px}.omu-snippet:before{content:"";position:absolute;inset:-40%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);transform:rotate(18deg);animation:omu-snap-sheen 4s linear infinite}.omu-snippet-text{position:relative;color:#fff;font-weight:800;font-size:13px;line-height:1.3}.omu-snippet-actions{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:6px}.omu-snippet-actions button{min-height:36px;padding:7px;font-size:11px}',
       '.omu-signals{display:grid;gap:6px;max-height:128px;overflow:auto}.omu-signal{display:flex;gap:8px;align-items:flex-start;color:#9fbfd8;font-size:12px}.omu-signal:before{content:"";width:7px;height:7px;margin-top:5px;border-radius:50%;background:#5eead4;box-shadow:0 0 12px rgba(94,234,212,.72);animation:omu-pulse 1.8s ease-in-out infinite}.omu-qr-modal{position:fixed;inset:0;z-index:1000300;background:rgba(2,6,14,.86);display:none;align-items:center;justify-content:center;padding:14px}.omu-qr-modal.is-open{display:flex}.omu-qr-panel{width:min(420px,100%);border:1px solid rgba(127,216,255,.22);border-radius:18px;background:#06111d;padding:14px;display:grid;gap:10px;color:#dff8ff;box-shadow:0 24px 80px rgba(0,0,0,.55)}.omu-qr-panel video{width:100%;max-height:54vh;border-radius:14px;background:#000}.omu-qr-box{display:grid;place-items:center;gap:9px}.omu-qr-box img{width:min(320px,86vw);height:auto;aspect-ratio:1;border-radius:14px;background:#fff;padding:8px}.omu-qr-panel textarea{width:100%;min-height:80px;border:1px solid rgba(255,255,255,.14);border-radius:12px;background:#020a12;color:#dff8ff;padding:10px;font:12px ui-monospace,Menlo,monospace}.omu-scan-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}',
+      '.omu-profile-modal{position:fixed;inset:0;z-index:1000310;background:rgba(2,6,14,.86);display:none;align-items:center;justify-content:center;padding:14px}.omu-profile-modal.is-open{display:flex}.omu-profile-panel{width:min(460px,100%);border:1px solid rgba(127,216,255,.22);border-radius:18px;background:#06111d;padding:14px;display:grid;gap:12px;color:#dff8ff;box-shadow:0 24px 80px rgba(0,0,0,.55)}.omu-profile-view{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center}.omu-profile-view .omu-avatar{width:86px;height:86px;border-radius:26px}.omu-profile-view h3{margin:0;color:#fff;font-size:18px}.omu-profile-view span{display:block;color:#8ebbd5;font-size:12px}.omu-profile-panel p{margin:0;color:#b8d7ea;font-size:13px;line-height:1.45}.omu-profile-panel code{color:#9fffd0;word-break:break-all;font-size:11px}',
       '.ost-mesh-callbar.is-ringing{animation:omu-ring 1s ease-in-out infinite;border-color:rgba(251,191,36,.55);box-shadow:0 0 24px rgba(251,191,36,.12)}.ost-mesh-callbar.is-live{border-color:rgba(52,211,153,.45);box-shadow:0 0 28px rgba(52,211,153,.12)}#ost-mesh-pavilion.ost-mesh-ringing .ost-mesh-shell{box-shadow:inset 0 0 0 1px rgba(251,191,36,.24)}#ost-mesh-pavilion.ost-mesh-in-call .ost-mesh-video-grid.is-on video{box-shadow:0 0 0 1px rgba(94,234,212,.28),0 18px 48px rgba(0,0,0,.38)}.omu-profile-card{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:center}.omu-profile-card strong{color:#fff}.omu-profile-card code{color:#9fffd0;word-break:break-all;font-size:11px}.omu-profile-card p{grid-column:1/-1;margin:0;color:#b8d7ea}',
       '@media(max-width:760px){.ost-mesh-upgrade{padding:10px;border-radius:14px}.omu-body{gap:10px}.omu-grid{grid-template-columns:1fr}.omu-card{padding:9px;border-radius:12px}.omu-contact-actions{grid-template-columns:repeat(2,minmax(0,1fr))}.omu-actions,.omu-snippets{grid-template-columns:repeat(2,minmax(0,1fr))}.omu-profile-social{grid-template-columns:1fr;text-align:center}.omu-avatar{width:60px;height:60px;border-radius:18px;margin:auto}.omu-list{max-height:174px}.omu-signals{max-height:96px}.omu-scan-actions{grid-template-columns:1fr}}@media(max-width:380px){.omu-actions,.omu-snippets,.omu-contact-actions{grid-template-columns:1fr}}',
       '@keyframes omu-ring{0%,100%{transform:translateY(0)}50%{transform:translateY(-1px)}}@keyframes omu-pulse{0%,100%{opacity:.45;transform:scale(.9)}50%{opacity:1;transform:scale(1.18)}}@keyframes omu-snap-sheen{0%{transform:translateX(-80%) rotate(18deg)}100%{transform:translateX(80%) rotate(18deg)}}'
@@ -303,7 +317,7 @@
         '<div class="omu-card">',
           '<h3>Social profile</h3>',
           '<div class="omu-profile-social">',
-            '<button type="button" class="omu-avatar" id="omuAvatarButton" aria-label="Select profile picture">' + (profile.avatar ? '<img src="' + escapeHtml(profile.avatar) + '" alt="">' : '<b>' + escapeHtml(initials(profile)) + '</b>') + '</button>',
+            '<button type="button" class="omu-avatar" id="omuAvatarButton" aria-label="Select profile picture">' + (profileAvatar(profile) ? '<img src="' + escapeHtml(profileAvatar(profile)) + '" alt="">' : '<b>' + escapeHtml(initials(profile)) + '</b>') + '</button>',
             '<div class="omu-profile-meta"><strong id="omuProfileName">' + escapeHtml(profile.nickname) + '</strong><span id="omuProfileStatus">' + escapeHtml(profile.status) + '</span><div class="omu-wallet-pill" id="omuWalletPill">' + escapeHtml(profile.wallet || 'No wallet connected yet') + '</div></div>',
           '</div>',
           '<input type="file" id="omuAvatarFile" accept="image/*" hidden>',
@@ -380,13 +394,15 @@
       wallet: walletAddress() || saved.wallet || '',
       address: p && p.address || saved.address || '',
       avatar: saved.avatar || '',
+      avatarThumb: saved.avatarThumb || '',
       updatedAt: Date.now()
     };
   }
 
   function updateProfilePreview(profile) {
     var avatarButton = document.getElementById('omuAvatarButton');
-    if (avatarButton) avatarButton.innerHTML = profile.avatar ? '<img src="' + escapeHtml(profile.avatar) + '" alt="">' : '<b>' + escapeHtml(initials(profile)) + '</b>';
+    var avatar = profileAvatar(profile);
+    if (avatarButton) avatarButton.innerHTML = avatar ? '<img src="' + escapeHtml(avatar) + '" alt="">' : '<b>' + escapeHtml(initials(profile)) + '</b>';
     var name = document.getElementById('omuProfileName');
     var status = document.getElementById('omuProfileStatus');
     var wallet = document.getElementById('omuWalletPill');
@@ -399,6 +415,7 @@
     var previous = defaultProfile(p);
     var profile = collectProfile(p);
     profile.avatar = previous.avatar || profile.avatar || '';
+    profile.avatarThumb = previous.avatarThumb || profile.avatarThumb || '';
     writeJson(PROFILE_KEY, profile);
     updateProfilePreview(profile);
     setStatus(p, message || 'Profile saved.', 'ok');
@@ -412,7 +429,7 @@
     updateProfilePreview(profile);
   }
 
-  function imageToDataUrl(file) {
+  function imageToDataUrl(file, maxSize, quality) {
     return new Promise(function (resolve, reject) {
       if (!file || !/^image\//.test(file.type || '')) return reject(new Error('Choose an image file.'));
       var reader = new FileReader();
@@ -421,14 +438,14 @@
         var img = new Image();
         img.onerror = function () { reject(new Error('Could not load image.')); };
         img.onload = function () {
-          var max = 480;
+          var max = maxSize || 480;
           var scale = Math.min(1, max / Math.max(img.width, img.height));
           var canvas = document.createElement('canvas');
           canvas.width = Math.max(1, Math.round(img.width * scale));
           canvas.height = Math.max(1, Math.round(img.height * scale));
           var ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          resolve(canvas.toDataURL('image/jpeg', 0.82));
+          resolve(canvas.toDataURL('image/jpeg', quality || 0.82));
         };
         img.src = String(reader.result || '');
       };
@@ -437,9 +454,10 @@
   }
 
   function handleAvatarFile(p, file) {
-    imageToDataUrl(file).then(function (dataUrl) {
+    Promise.all([imageToDataUrl(file, 480, 0.82), imageToDataUrl(file, 96, 0.72)]).then(function (images) {
       var profile = collectProfile(p);
-      profile.avatar = dataUrl;
+      profile.avatar = images[0];
+      profile.avatarThumb = images[1];
       writeJson(PROFILE_KEY, profile);
       updateProfilePreview(profile);
       setStatus(p, 'Profile picture saved and included in your Mesh QR.', 'ok');
@@ -474,13 +492,29 @@
     } catch (err) { setStatus(p, err.message, 'err'); }
   }
 
+  function syncProfileToPeer(p) {
+    if (!p || !p.sessionKey || !p.peerAddr || typeof p.sendAppPayload !== 'function') return;
+    var profile = defaultProfile(p);
+    var syncKey = p.peerAddr + ':' + String(profile.updatedAt || '') + ':' + String(profileAvatar(profile).length || 0);
+    if (p.__meshSocialProfileSyncKey === syncKey) return;
+    p.__meshSocialProfileSyncKey = syncKey;
+    window.setTimeout(function () {
+      if (!p.sessionKey || !p.peerAddr) return;
+      p.sendAppPayload({ app: APP, v: 2, type: 'profile.card', profile: publicProfile(defaultProfile(p), { includeAvatar: true }) })
+        .then(function (sent) {
+          if (sent === false && p._setStatus) p._setStatus('Profile card queued until Mesh channel opens.', 'warn');
+        })
+        .catch(function () {});
+    }, 450);
+  }
+
   function renderProfileCard(p, profile, role) {
     if (!p || !p._bubble) return;
     var card = document.createElement('div');
     card.className = 'omu-profile-card';
     card.innerHTML = avatarHtml(profile, 'sm') + '<div><strong>' + escapeHtml(profile.nickname || 'Mesh profile') + '</strong><span>' + escapeHtml(profile.status || '') + '</span><br><code>' + escapeHtml(profile.wallet || profile.address || '') + '</code></div><p>' + escapeHtml(profile.bio || '') + '</p>';
     p._bubble(role, card);
-    if (role === 'peer') saveContact({ address: profile.address, nick: profile.nickname || profile.handle, wallet: profile.wallet, status: profile.status, avatar: profile.avatar, profile: profile });
+    if (role === 'peer') saveContact({ address: profile.address, nick: profile.nickname || profile.handle, wallet: profile.wallet, status: profile.status, avatar: profile.avatar || profile.avatarThumb, avatarThumb: profile.avatarThumb || profile.avatar, profile: profile });
   }
 
   function saveContact(contact) {
@@ -489,8 +523,24 @@
     var list = readFirst([CONTACTS_KEY, CONTACTS_OLD_KEY], []);
     if (!Array.isArray(list)) list = [];
     var existing = list.find(function (item) { return normalizeAddress(item.address) === address; });
-    var next = Object.assign({}, existing || {}, contact, { address: address, updatedAt: Date.now() });
-    next.nick = next.nick || (next.profile && next.profile.nickname) || short(address);
+    var profile = Object.assign({}, existing && existing.profile || {}, contact.profile || {});
+    profile.address = address;
+    profile.nickname = profile.nickname || contact.nick || contact.nickname || existing && existing.nick || short(address);
+    profile.handle = profile.handle || contact.handle || existing && existing.handle || '';
+    profile.status = profile.status || contact.status || existing && existing.status || '';
+    profile.bio = profile.bio || contact.bio || existing && existing.bio || '';
+    profile.wallet = profile.wallet || contact.wallet || existing && existing.wallet || '';
+    profile.avatar = profile.avatar || contact.avatar || contact.avatarThumb || existing && (existing.avatar || existing.avatarThumb) || '';
+    profile.avatarThumb = profile.avatarThumb || contact.avatarThumb || contact.avatar || existing && (existing.avatarThumb || existing.avatar) || '';
+    profile.updatedAt = profile.updatedAt || contact.updatedAt || Date.now();
+    var next = Object.assign({}, existing || {}, contact, { address: address, profile: profile, updatedAt: Date.now() });
+    next.nick = next.nick || profile.nickname || short(address);
+    next.handle = next.handle || profile.handle || '';
+    next.status = next.status || profile.status || '';
+    next.bio = next.bio || profile.bio || '';
+    next.wallet = next.wallet || profile.wallet || '';
+    next.avatar = next.avatar || profile.avatar || profile.avatarThumb || '';
+    next.avatarThumb = next.avatarThumb || profile.avatarThumb || profile.avatar || '';
     if (existing) Object.assign(existing, next);
     else list.unshift(next);
     writeJson(CONTACTS_KEY, list.slice(0, 120));
@@ -526,18 +576,20 @@
     }
     box.innerHTML = list.map(function (contact, index) {
       var profile = contact.profile || contact;
-      return '<div class="omu-contact" data-contact-card="' + index + '">' + avatarHtml(profile, 'sm') + '<div class="omu-contact-main"><strong>' + escapeHtml(contact.nick || profile.nickname || short(contact.address)) + '</strong><span>' + escapeHtml(short(contact.address)) + '</span><span>' + escapeHtml(contact.status || profile.status || contact.wallet || '') + '</span></div><div class="omu-contact-actions"><button class="primary" type="button" data-contact-action="connect" data-index="' + index + '">Connect</button><button type="button" data-contact-action="load" data-index="' + index + '">Load</button><button type="button" data-contact-action="qr" data-index="' + index + '">QR</button><button type="button" data-contact-action="delete" data-index="' + index + '">Delete</button></div></div>';
+      return '<div class="omu-contact" data-contact-card="' + index + '">' + avatarHtml(profile, 'sm') + '<div class="omu-contact-main"><strong>' + escapeHtml(contact.nick || profile.nickname || short(contact.address)) + '</strong><span>' + escapeHtml(short(contact.address)) + '</span><span>' + escapeHtml(contact.status || profile.status || contact.wallet || '') + '</span></div><div class="omu-contact-actions"><button class="primary" type="button" data-contact-action="connect" data-index="' + index + '">Connect</button><button type="button" data-contact-action="profile" data-index="' + index + '">Profile</button><button type="button" data-contact-action="load" data-index="' + index + '">Load</button><button type="button" data-contact-action="qr" data-index="' + index + '">QR</button><button type="button" data-contact-action="delete" data-index="' + index + '">Delete</button></div></div>';
     }).join('');
   }
 
   function handleContactClick(p, event) {
     var button = event.target.closest('[data-contact-action]');
-    if (!button) return;
     var list = readFirst([CONTACTS_KEY, CONTACTS_OLD_KEY], []);
-    var contact = list[Number(button.dataset.index)];
+    var index = button ? Number(button.dataset.index) : Number((event.target.closest('[data-contact-card]') || {}).dataset.contactCard);
+    var contact = list[index];
     if (!contact) return;
+    if (!button) return showContactProfile(p, contact);
     var action = button.dataset.contactAction;
     if (action === 'connect') return connectContact(p, contact);
+    if (action === 'profile') return showContactProfile(p, contact);
     if (action === 'load') return loadContact(p, contact);
     if (action === 'qr') return showContactQr(p, contact);
     if (action === 'delete') {
@@ -552,6 +604,33 @@
     if (p && p.peerInput) p.peerInput.value = contact.invite || contact.address;
     if (p && p.open) p.open();
     setStatus(p, 'Contact loaded. Tap Connect securely when they are online.', 'ok');
+  }
+
+  function ensureProfileModal(p) {
+    var modal = document.getElementById('omuProfileModal');
+    if (modal) return modal;
+    modal = document.createElement('div');
+    modal.id = 'omuProfileModal';
+    modal.className = 'omu-profile-modal';
+    modal.innerHTML = '<div class="omu-profile-panel"><div id="omuProfileView"></div><div class="omu-actions"><button class="primary" type="button" id="omuProfileConnect">Connect</button><button type="button" id="omuProfileLoad">Load</button><button type="button" id="omuProfileQr">QR</button><button type="button" id="omuProfileClose">Close</button></div></div>';
+    (p && p.root ? p.root : document.body).appendChild(modal);
+    modal.querySelector('#omuProfileClose').addEventListener('click', function () { modal.classList.remove('is-open'); });
+    modal.addEventListener('click', function (event) { if (event.target === modal) modal.classList.remove('is-open'); });
+    return modal;
+  }
+
+  function showContactProfile(p, contact) {
+    var modal = ensureProfileModal(p);
+    var profile = contact.profile || contact || {};
+    var address = normalizeAddress(contact.address || profile.address);
+    modal.__contact = contact;
+    modal.querySelector('#omuProfileView').innerHTML = '<div class="omu-profile-view">' + avatarHtml(profile, '') + '<div><h3>' + escapeHtml(profile.nickname || contact.nick || 'Mesh profile') + '</h3><span>' + escapeHtml(profile.handle || contact.handle || short(address)) + '</span><span>' + escapeHtml(profile.status || contact.status || '') + '</span><code>' + escapeHtml(profile.wallet || contact.wallet || address || '') + '</code></div></div><p>' + escapeHtml(profile.bio || contact.bio || 'No bio shared yet. Connect to this contact and their profile will sync automatically.') + '</p>';
+    modal.querySelector('#omuProfileConnect').onclick = function () { modal.classList.remove('is-open'); connectContact(p, contact); };
+    modal.querySelector('#omuProfileLoad').onclick = function () { modal.classList.remove('is-open'); loadContact(p, contact); };
+    modal.querySelector('#omuProfileQr').onclick = function () { showContactQr(p, contact); };
+    modal.classList.add('is-open');
+    if (p && p.open) p.open();
+    setStatus(p, 'Contact profile opened.', 'ok');
   }
 
   async function connectContact(p, contact) {
@@ -761,6 +840,13 @@
     var originalMarkConnected = p._markCallConnected && p._markCallConnected.bind(p);
     var originalResetCall = p._resetCallState && p._resetCallState.bind(p);
     var originalSetControls = p._setCallControls && p._setCallControls.bind(p);
+    var originalEnableMessaging = p._enableMessaging && p._enableMessaging.bind(p);
+
+    if (originalEnableMessaging) p._enableMessaging = function () {
+      var result = originalEnableMessaging();
+      syncProfileToPeer(p);
+      return result;
+    };
 
     if (originalShowIncoming) p._showIncomingCall = function (detail) {
       setCallClasses(p, 'ringing');

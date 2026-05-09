@@ -18,6 +18,7 @@
     target: 'Target 50'
   };
   var challenges = new Map();
+  var incomingChallenges = new Set();
   var selectedGame = 'coinflip';
   var knownPeerWallet = '';
 
@@ -438,11 +439,49 @@
     return result;
   }
 
-  async function sendPayload(type, data) {
+  async function sendPayload(type, data, options) {
+    options = options || {};
     var p = pavilion();
     if (!p || !p.peerAddr || !p.sessionKey) throw new Error('Connect to a Mesh peer first');
+    var payload = Object.assign({ app: APP, v: VERSION, type: type }, data || {});
+    if (options.reliable !== false && typeof p.sendAppPayloadReliable === 'function') {
+      return p.sendAppPayloadReliable(payload, { timeoutMs: options.timeoutMs || 24000, reconnect: options.reconnect !== false });
+    }
     if (typeof p.sendAppPayload !== 'function') throw new Error('Mesh app payload support is not loaded');
-    return p.sendAppPayload(Object.assign({ app: APP, v: VERSION, type: type }, data || {}));
+    var sent = await p.sendAppPayload(payload);
+    if (options.reliable !== false && sent === false) throw new Error('Mesh peer channel is not open. Keep both users in OST Mesh, reconnect, then retry.');
+    return sent;
+  }
+
+  async function ensureGameChannel() {
+    var p = pavilion();
+    if (!p || !p.peerAddr || !p.sessionKey) throw new Error('Connect to a Mesh peer first');
+    if (typeof p.waitForDataChannel === 'function') {
+      setArenaStatus('Checking encrypted peer channel before locking stake...');
+      await p.waitForDataChannel({ timeoutMs: 18000, reconnect: true });
+    } else if (!p.rtc || !p.rtc.isOpen || !p.rtc.isOpen()) {
+      throw new Error('Mesh peer channel is not open. Reconnect before locking stake.');
+    }
+    return true;
+  }
+
+  function retryCard(title, body, label, fn) {
+    var card = makeCard(title, body);
+    var actions = document.createElement('div');
+    actions.className = 'oma-actions';
+    var retry = document.createElement('button');
+    retry.className = 'primary';
+    retry.textContent = label || 'Retry signal';
+    retry.addEventListener('click', function () {
+      retry.disabled = true;
+      Promise.resolve(fn()).catch(function (err) {
+        setArenaStatus(err.message);
+        retry.disabled = false;
+      });
+    });
+    actions.appendChild(retry);
+    card.appendChild(actions);
+    return card;
   }
 
   async function startChallenge(game) {
@@ -468,8 +507,9 @@
     challenges.set(id, state);
     try {
       state.ownWallet = requireWalletAddress();
+      await ensureGameChannel();
       state.ownDeposit = await depositStake(state);
-      await sendPayload('game.challenge', {
+      var challengePayload = {
         id: id,
         game: game,
         gameLabel: GAME_NAMES[game],
@@ -477,50 +517,88 @@
         commit: commit,
         wallet: state.ownWallet,
         deposit: state.ownDeposit
-      });
+      };
+      await sendPayload('game.challenge', challengePayload, { reliable: true, timeoutMs: 30000 });
       updateGameTable(state, 'Stake locked. Waiting for peer to lock and accept.');
       gameLog(makeCard('Challenge sent', GAME_NAMES[game] + ' for ' + escapeHtml(amountText(state.stake)) + '. Stake is locked before reveal.'));
       setArenaStatus('Challenge sent over the encrypted Mesh channel.');
     } catch (err) {
-      challenges.delete(id);
+      if (state.ownDeposit) {
+        updateGameTable(state, 'Stake is locked, but the challenge signal did not reach the peer. Reconnect and retry the signal.');
+        gameLog(retryCard('Challenge signal not delivered', 'Your stake is already locked. Do not lock again; reconnect Mesh and retry only the challenge signal.', 'Retry challenge signal', function () {
+          return sendPayload('game.challenge', {
+            id: state.id,
+            game: state.game,
+            gameLabel: GAME_NAMES[state.game],
+            stake: state.stake,
+            commit: state.ownCommit,
+            wallet: state.ownWallet,
+            deposit: state.ownDeposit
+          }, { reliable: true, timeoutMs: 30000 }).then(function () {
+            updateGameTable(state, 'Stake locked. Waiting for peer to lock and accept.');
+            setArenaStatus('Challenge signal resent.');
+          });
+        }));
+      } else {
+        challenges.delete(id);
+      }
       setArenaStatus(err.message);
     }
   }
 
   async function acceptChallenge(payload) {
-    var secret = randomHex(32);
-    var commit = await sha256Hex(secret);
-    var state = {
-      id: payload.id,
-      role: 'opponent',
-      game: payload.game,
-      stake: payload.stake || { amount: 0, asset: 'OST' },
-      ownSecret: secret,
-      ownCommit: commit,
-      ownWallet: walletAddress(),
-      peerCommit: payload.commit,
-      peerSecret: '',
-      peerWallet: payload.wallet || '',
-      ownDeposit: null,
-      peerDeposit: payload.deposit || null
-    };
+    var state = challenges.get(payload.id);
+    if (!state || state.role !== 'opponent') {
+      var secret = randomHex(32);
+      var commit = await sha256Hex(secret);
+      state = {
+        id: payload.id,
+        role: 'opponent',
+        game: payload.game,
+        stake: payload.stake || { amount: 0, asset: 'OST' },
+        ownSecret: secret,
+        ownCommit: commit,
+        ownWallet: walletAddress(),
+        peerCommit: payload.commit,
+        peerSecret: '',
+        peerWallet: payload.wallet || '',
+        ownDeposit: null,
+        peerDeposit: payload.deposit || null
+      };
+      challenges.set(payload.id, state);
+    } else {
+      state.peerCommit = state.peerCommit || payload.commit || '';
+      state.peerWallet = state.peerWallet || payload.wallet || '';
+      state.peerDeposit = state.peerDeposit || payload.deposit || null;
+    }
     if (state.peerWallet) knownPeerWallet = state.peerWallet;
-    challenges.set(payload.id, state);
     state.ownWallet = requireWalletAddress();
-    state.ownDeposit = await depositStake(state);
-    await sendPayload('game.accept', { id: payload.id, commit: commit, wallet: state.ownWallet, deposit: state.ownDeposit });
+    await ensureGameChannel();
+    if (!state.ownDeposit) state.ownDeposit = await depositStake(state);
+    try {
+      await sendPayload('game.accept', { id: payload.id, commit: state.ownCommit, wallet: state.ownWallet, deposit: state.ownDeposit }, { reliable: true, timeoutMs: 30000 });
+    } catch (err) {
+      updateGameTable(state, 'Stake is locked, but the accept signal did not reach the challenger. Reconnect and retry the accept signal.');
+      gameLog(retryCard('Accept signal not delivered', 'Your stake is already locked. Do not lock again; reconnect Mesh and retry only the accept signal.', 'Retry accept signal', function () { return acceptChallenge(payload); }));
+      throw err;
+    }
     updateGameTable(state, 'Both stakes locked. Waiting for the challenger seed reveal.');
-    gameLog(makeCard('Challenge accepted', 'Both players locked the stake before the reveal. Your commit is <code>' + escapeHtml(commit.slice(0, 16)) + '...</code>.'));
+    incomingChallenges.delete(payload.id);
+    gameLog(makeCard('Challenge accepted', 'Both players locked the stake before the reveal. Your commit is <code>' + escapeHtml(state.ownCommit.slice(0, 16)) + '...</code>.'));
   }
 
   async function handleGameAccept(payload) {
     var state = challenges.get(payload.id);
-    if (!state || state.role !== 'challenger') return;
+    if (!state || state.role !== 'challenger') {
+      gameLog(makeCard('Accept could not attach', 'Peer accepted a challenge that is no longer active on this device. Ask them to keep the stake proof and start a fresh round.'));
+      setArenaStatus('Received an accept for an unknown challenge.');
+      return;
+    }
     state.peerCommit = payload.commit || '';
     state.peerWallet = payload.wallet || '';
     state.peerDeposit = payload.deposit || null;
     if (state.peerWallet) knownPeerWallet = state.peerWallet;
-    await sendPayload('game.reveal', { id: state.id, secret: state.ownSecret, wallet: state.ownWallet });
+    await sendPayload('game.reveal', { id: state.id, secret: state.ownSecret, wallet: state.ownWallet }, { reliable: true, timeoutMs: 30000 });
     updateGameTable(state, 'Peer stake locked. Revealing seeds now.');
     gameLog(makeCard('Peer accepted', 'Your seed was revealed. Waiting for peer reveal.'));
   }
@@ -540,7 +618,7 @@
     state.peerWallet = payload.wallet || state.peerWallet || '';
     if (state.peerWallet) knownPeerWallet = state.peerWallet;
     if (state.role === 'opponent') {
-      await sendPayload('game.reveal', { id: state.id, secret: state.ownSecret, wallet: state.ownWallet });
+      await sendPayload('game.reveal', { id: state.id, secret: state.ownSecret, wallet: state.ownWallet }, { reliable: true, timeoutMs: 30000 });
     }
     await finalizeGame(state);
   }
@@ -621,6 +699,20 @@
   }
 
   function renderIncomingChallenge(payload) {
+    var p = pavilion();
+    if (p && p.open) p.open();
+    if (!document.getElementById(ROOT_ID) && p) mount(p);
+    var existing = challenges.get(payload.id);
+    if (existing && existing.role === 'opponent' && existing.ownDeposit) {
+      setArenaStatus('Challenge signal repeated. Resending your locked accept signal.');
+      acceptChallenge(payload).catch(function (err) { setArenaStatus(err.message); });
+      return;
+    }
+    if (incomingChallenges.has(payload.id)) {
+      setArenaStatus('This challenge is already open. Accept it or decline it.');
+      return;
+    }
+    incomingChallenges.add(payload.id);
     if (payload.wallet) knownPeerWallet = payload.wallet;
     updateGameTable({ game: payload.game, stake: payload.stake || { amount: 0, asset: 'OST' }, peerWallet: payload.wallet || '' }, 'Incoming challenge. Accepting locks your matching stake first.');
     var card = makeCard('Game challenge', escapeHtml(payload.gameLabel || GAME_NAMES[payload.game] || 'Game') + ' for <strong>' + escapeHtml(amountText(payload.stake)) + '</strong><br>Peer commit: <code>' + escapeHtml(String(payload.commit || '').slice(0, 16)) + '...</code>');
@@ -635,7 +727,7 @@
     });
     var decline = document.createElement('button');
     decline.textContent = 'Decline';
-    decline.addEventListener('click', function () { sendPayload('game.decline', { id: payload.id }).catch(function () {}); card.remove(); });
+    decline.addEventListener('click', function () { incomingChallenges.delete(payload.id); sendPayload('game.decline', { id: payload.id }, { reliable: false }).catch(function () {}); card.remove(); });
     actions.appendChild(accept);
     actions.appendChild(decline);
     card.appendChild(actions);
