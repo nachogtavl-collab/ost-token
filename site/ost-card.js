@@ -347,6 +347,85 @@
     setStatus('Google Wallet relay not enabled yet. Card payload downloaded \u2014 it can also be opened with the share sheet to add a home-screen shortcut on Android.', 'warning');
   }
 
+  function showShortcutModal(profile, landing) {
+    var existing = document.getElementById('ostCardShortcutModal');
+    if (existing) existing.remove();
+    var platform = detectPlatform();
+    var modal = document.createElement('div');
+    modal.id = 'ostCardShortcutModal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(2,6,23,0.92);display:flex;align-items:center;justify-content:center;padding:18px;';
+    var iosSteps = ''
+      + '<ol style="margin:0;padding-left:20px;display:grid;gap:6px;font-size:.86rem;line-height:1.5;color:#e2e8f0;">'
+      +   '<li>Open the <b>Shortcuts</b> app on this iPhone.</li>'
+      +   '<li>Tap <b>+</b> &rarr; <b>Add Action</b> &rarr; search <b>Open URL</b>.</li>'
+      +   '<li>Paste the link below into the URL field.</li>'
+      +   '<li>Tap the title at the top, rename to <b>OST Card</b>, save.</li>'
+      +   '<li>Settings &rarr; <b>Action Button</b> (15 Pro+) or <b>Accessibility &rarr; Touch &rarr; Back Tap</b> &rarr; bind to <b>Run Shortcut &rarr; OST Card</b>.</li>'
+      + '</ol>';
+    var androidSteps = ''
+      + '<ol style="margin:0;padding-left:20px;display:grid;gap:6px;font-size:.86rem;line-height:1.5;color:#e2e8f0;">'
+      +   '<li>Tap <b>Open landing page now</b> below.</li>'
+      +   '<li>In Chrome, tap menu &rarr; <b>Add to Home screen</b>.</li>'
+      +   '<li>Long-press the icon &rarr; bind to a <b>quick gesture</b> in Settings &rarr; Gestures (where supported).</li>'
+      + '</ol>';
+    var pcSteps = ''
+      + '<ol style="margin:0;padding-left:20px;display:grid;gap:6px;font-size:.86rem;line-height:1.5;color:#e2e8f0;">'
+      +   '<li>Bookmark the link below for instant access.</li>'
+      +   '<li>Or scan the QR with your phone to install the shortcut there.</li>'
+      + '</ol>';
+    var steps = platform.isIos ? iosSteps : platform.isAndroid ? androidSteps : pcSteps;
+    var heading = platform.isIos ? 'Add OST Card to Action Button / Back Tap'
+                : platform.isAndroid ? 'Add OST Card shortcut on Android'
+                : 'Install OST Card shortcut';
+    var safeUrl = landing.replace(/"/g, '&quot;');
+    modal.innerHTML = ''
+      + '<div style="max-width:460px;width:100%;background:#0f172a;border:1px solid rgba(110,231,183,0.28);border-radius:20px;padding:22px;display:grid;gap:14px;color:#f8fafc;">'
+      +   '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">'
+      +     '<h3 style="margin:0;font-size:1.05rem;">' + heading + '</h3>'
+      +     '<button id="ostShortcutCloseBtn" type="button" style="background:transparent;color:#94a3b8;border:0;font-size:1.4rem;cursor:pointer;line-height:1;">&times;</button>'
+      +   '</div>'
+      +   steps
+      +   '<div style="display:flex;align-items:center;gap:10px;background:rgba(2,6,23,0.55);border:1px solid rgba(148,163,184,0.18);border-radius:12px;padding:10px 12px;">'
+      +     '<input id="ostShortcutUrl" readonly value="' + safeUrl + '" style="flex:1;background:transparent;color:#e2e8f0;border:0;font-family:Consolas,Menlo,monospace;font-size:.78rem;outline:none;" />'
+      +     '<button id="ostShortcutCopyBtn" type="button" class="btn btn-outline btn-sm">Copy</button>'
+      +   '</div>'
+      +   '<div style="display:flex;flex-wrap:wrap;gap:8px;">'
+      +     '<button id="ostShortcutOpenBtn" type="button" class="btn btn-primary btn-sm">Open landing page now</button>'
+      +     (platform.isIos ? '<button id="ostShortcutTryAppBtn" type="button" class="btn btn-outline btn-sm">Open Shortcuts app</button>' : '')
+      +     '<button id="ostShortcutQrBtn" type="button" class="btn btn-outline btn-sm">Show QR</button>'
+      +   '</div>'
+      +   '<div id="ostShortcutQrWrap" style="display:none;justify-content:center;"><img alt="OST Card QR" src="' + qrUrl(landing, 220) + '" style="width:200px;height:200px;border-radius:14px;background:#fff;padding:8px;" /></div>'
+      +   '<p style="margin:0;font-size:.74rem;color:#94a3b8;line-height:1.45;">A signed .shortcut file requires Apple\u2019s relay; until then this manual recipe takes 30 seconds and works on every iPhone.</p>'
+      + '</div>';
+    document.body.appendChild(modal);
+    function close() { modal.remove(); }
+    modal.addEventListener('click', function (ev) { if (ev.target === modal) close(); });
+    var closeBtn = document.getElementById('ostShortcutCloseBtn');
+    if (closeBtn) closeBtn.addEventListener('click', close);
+    var copyBtn = document.getElementById('ostShortcutCopyBtn');
+    if (copyBtn) copyBtn.addEventListener('click', function () {
+      var input = document.getElementById('ostShortcutUrl');
+      if (!input) return;
+      input.select();
+      try {
+        if (navigator.clipboard) navigator.clipboard.writeText(input.value).then(function () { copyBtn.textContent = 'Copied'; setTimeout(function () { copyBtn.textContent = 'Copy'; }, 1500); });
+        else { document.execCommand('copy'); copyBtn.textContent = 'Copied'; setTimeout(function () { copyBtn.textContent = 'Copy'; }, 1500); }
+      } catch (_) {}
+    });
+    var openBtn = document.getElementById('ostShortcutOpenBtn');
+    if (openBtn) openBtn.addEventListener('click', function () { window.open(landing, '_blank', 'noopener'); });
+    var tryApp = document.getElementById('ostShortcutTryAppBtn');
+    if (tryApp) tryApp.addEventListener('click', function () {
+      try { window.location.href = 'shortcuts://create-shortcut'; } catch (_) {}
+    });
+    var qrBtn = document.getElementById('ostShortcutQrBtn');
+    if (qrBtn) qrBtn.addEventListener('click', function () {
+      var wrap = document.getElementById('ostShortcutQrWrap');
+      if (!wrap) return;
+      wrap.style.display = wrap.style.display === 'none' ? 'flex' : 'none';
+    });
+  }
+
   async function installShortcut() {
     var profile = ensureProfile();
     if (!profile) { setStatus('Connect a wallet first.', 'error'); return; }
@@ -354,22 +433,16 @@
     var ep = endpoints();
     if (ep.shortcut) {
       var u = ep.shortcut + '?landing=' + encodeURIComponent(landing) + '&handle=' + encodeURIComponent(profile.handle || '');
-      if (window.openOstPopup) window.openOstPopup(u, 'OST Card \u2014 iOS Shortcut');
-      else window.open(u, '_blank', 'noopener');
-      setStatus('Opening signed iOS Shortcut. After install, assign it to Action Button / Back Tap to open OST Card on a double-press.', 'success');
+      try { window.location.href = 'shortcuts://import-shortcut?url=' + encodeURIComponent(u) + '&name=OST%20Card'; } catch (_) {}
+      setTimeout(function () {
+        if (window.openOstPopup) window.openOstPopup(u, 'OST Card \u2014 iOS Shortcut');
+        else window.open(u, '_blank', 'noopener');
+      }, 800);
+      setStatus('Opening signed iOS Shortcut. After install, assign it to Action Button / Back Tap.', 'success');
       return;
     }
-    var manifest = {
-      schema: 'ost-card.shortcut.v1',
-      name: 'OST Card',
-      open: landing,
-      bind: ['action-button', 'back-tap-double', 'home-screen'],
-      guide: SHORTCUT_GUIDE
-    };
-    downloadFile('ost-card-shortcut.json', JSON.stringify(manifest, null, 2), 'application/json');
-    if (window.openOstPopup) window.openOstPopup(SHORTCUT_GUIDE, 'iOS Shortcut guide');
-    else window.open(SHORTCUT_GUIDE, '_blank', 'noopener');
-    setStatus('Shortcut manifest saved. Follow the Apple guide to bind a "Open URL \u2192 ' + landing + '" shortcut to Action Button or double Back Tap.', 'warning');
+    showShortcutModal(profile, landing);
+    setStatus('Follow the steps in the popup to bind OST Card to a one-tap gesture.', 'success');
   }
 
   async function writeNfcTag() {
@@ -420,53 +493,96 @@
   }
 
   function openFullCard(walletOverride, amountOverride) {
-    var profile = ensureProfile();
-    var address = walletOverride || (profile && profile.wallet);
-    if (!address) { setStatus('Connect a wallet first.', 'error'); return; }
-    var amount = amountOverride || readAmount();
-    var modal = $('ostCardFullView');
-    if (modal) modal.remove();
-    modal = document.createElement('div');
-    modal.id = 'ostCardFullView';
-    modal.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(2,6,23,0.92);display:flex;align-items:center;justify-content:center;padding:18px;';
-    var ost = Number(state.ostBalance) || 0;
-    var usd = ost * (Number(state.usdPerOst) || DEFAULT_OST_USD);
-    var landing = cardLandingUrl(profile || { wallet: address, handle: deriveHandle(address) }, amount);
-    var handle = (profile && profile.handle) || deriveHandle(address);
-    modal.innerHTML = ''
-      + '<div style="max-width:420px;width:100%;display:grid;gap:14px;">'
-      +   '<div style="position:relative;overflow:hidden;padding:24px;border-radius:24px;background:linear-gradient(135deg,#020617,#0f172a 55%,#0b3d2e);border:1px solid rgba(110,231,183,0.28);box-shadow:0 36px 80px rgba(2,6,23,0.6);color:#f8fafc;">'
-      +     '<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
-      +       '<div>'
-      +         '<div style="font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:rgba(226,232,240,0.7);">OST Card</div>'
-      +         '<div style="margin-top:6px;font-size:1.34rem;font-weight:800;">@' + handle + '</div>'
-      +       '</div>'
-      +       '<div style="padding:6px 10px;border-radius:999px;background:rgba(110,231,183,0.18);color:#bbf7d0;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;">' + (String(window.OST_NETWORK || 'devnet')) + '</div>'
-      +     '</div>'
-      +     '<div style="margin-top:18px;display:flex;align-items:center;gap:14px;">'
-      +       '<img alt="OST Card QR" src="' + qrUrl(landing, 260) + '" style="width:128px;height:128px;border-radius:16px;background:#fff;padding:8px;" />'
-      +       '<div style="flex:1;">'
-      +         '<div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:rgba(226,232,240,0.6);">Balance</div>'
-      +         '<div style="font-size:1.6rem;font-weight:800;">' + ost.toFixed(2) + ' OST</div>'
-      +         '<div style="font-size:.95rem;color:#bbf7d0;">~ $' + usd.toFixed(2) + ' USD</div>'
-      +         '<div style="margin-top:8px;font-size:.78rem;color:rgba(226,232,240,0.7);">Pay request: $' + Number(amount).toFixed(2) + '</div>'
-      +       '</div>'
-      +     '</div>'
-      +     '<div style="margin-top:18px;font-size:.74rem;color:rgba(226,232,240,0.7);word-break:break-all;font-family:\'SFMono-Regular\',Consolas,Menlo,monospace;">' + address + '</div>'
-      +   '</div>'
-      +   '<div style="display:flex;gap:8px;justify-content:center;">'
-      +     '<button class="btn btn-primary btn-sm" id="ostCardFullPay" type="button">Pay with OST</button>'
-      +     '<button class="btn btn-outline btn-sm" id="ostCardFullClose" type="button">Close</button>'
-      +   '</div>'
-      + '</div>';
-    document.body.appendChild(modal);
-    $('ostCardFullClose').onclick = function () { modal.remove(); };
-    $('ostCardFullPay').onclick = function () {
-      try { window.OST_TAP_PAY = { to: address, amountUsd: amount, asset: 'OST' }; } catch (_) {}
-      try { window.dispatchEvent(new CustomEvent('ost:tap-pay-link', { detail: { to: address, amountUsd: amount } })); } catch (_) {}
-      if (window.setWalletPanel) window.setWalletPanel('access', { scroll: true });
-      modal.remove();
-    };
+    try {
+      var profile = ensureProfile();
+      var address = walletOverride || (profile && profile.wallet);
+      if (!address) {
+        setStatus('Connect a wallet first.', 'error');
+        // Surface a visible toast even when the inline status row is not on screen.
+        try { if (window.toast) window.toast('\u26A0', 'Connect a wallet to open the OST Card.'); } catch (_) {}
+        if (window.setWalletPanel) try { window.setWalletPanel('access', { scroll: true }); } catch (_) {}
+        return;
+      }
+      var amount = amountOverride || readAmount();
+      var prev = document.getElementById('ostCardFullView');
+      if (prev) prev.remove();
+      var modal = document.createElement('div');
+      modal.id = 'ostCardFullView';
+      modal.style.cssText = 'position:fixed;inset:0;z-index:2147483646;background:rgba(2,6,23,0.92);display:flex;align-items:center;justify-content:center;padding:18px;backdrop-filter:blur(6px);';
+      var ost = Number(state.ostBalance) || 0;
+      var usd = ost * (Number(state.usdPerOst) || DEFAULT_OST_USD);
+      var landing = cardLandingUrl(profile || { wallet: address, handle: deriveHandle(address) }, amount);
+      var handle = (profile && profile.handle) || deriveHandle(address);
+      modal.innerHTML = ''
+        + '<div style="max-width:420px;width:100%;display:grid;gap:14px;">'
+        +   '<div style="position:relative;overflow:hidden;padding:24px;border-radius:24px;background:linear-gradient(135deg,#020617,#0f172a 55%,#0b3d2e);border:1px solid rgba(110,231,183,0.28);box-shadow:0 36px 80px rgba(2,6,23,0.6);color:#f8fafc;">'
+        +     '<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
+        +       '<div>'
+        +         '<div style="font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:rgba(226,232,240,0.7);">OST Card</div>'
+        +         '<div style="margin-top:6px;font-size:1.34rem;font-weight:800;">@' + handle + '</div>'
+        +       '</div>'
+        +       '<div style="padding:6px 10px;border-radius:999px;background:rgba(110,231,183,0.18);color:#bbf7d0;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;">' + (String(window.OST_NETWORK || 'devnet')) + '</div>'
+        +     '</div>'
+        +     '<div style="margin-top:18px;display:flex;align-items:center;gap:14px;">'
+        +       '<img alt="OST Card QR" src="' + qrUrl(landing, 260) + '" style="width:128px;height:128px;border-radius:16px;background:#fff;padding:8px;" />'
+        +       '<div style="flex:1;">'
+        +         '<div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:rgba(226,232,240,0.6);">Balance</div>'
+        +         '<div style="font-size:1.6rem;font-weight:800;">' + ost.toFixed(2) + ' OST</div>'
+        +         '<div style="font-size:.95rem;color:#bbf7d0;">~ $' + usd.toFixed(2) + ' USD</div>'
+        +         '<div style="margin-top:8px;font-size:.78rem;color:rgba(226,232,240,0.7);">Pay request: $' + Number(amount).toFixed(2) + '</div>'
+        +       '</div>'
+        +     '</div>'
+        +     '<div style="margin-top:18px;font-size:.74rem;color:rgba(226,232,240,0.7);word-break:break-all;font-family:\'SFMono-Regular\',Consolas,Menlo,monospace;">' + address + '</div>'
+        +   '</div>'
+        +   '<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">'
+        +     '<button class="btn btn-primary btn-sm" id="ostCardFullPay" type="button">Pay with OST</button>'
+        +     '<button class="btn btn-outline btn-sm" id="ostCardFullCopy" type="button">Copy link</button>'
+        +     '<button class="btn btn-outline btn-sm" id="ostCardFullClose" type="button">Close</button>'
+        +   '</div>'
+        + '</div>';
+      document.body.appendChild(modal);
+      function close() { modal.remove(); }
+      modal.addEventListener('click', function (ev) { if (ev.target === modal) close(); });
+      var closeBtn = document.getElementById('ostCardFullClose');
+      if (closeBtn) closeBtn.addEventListener('click', close);
+      var copyBtn = document.getElementById('ostCardFullCopy');
+      if (copyBtn) copyBtn.addEventListener('click', function () {
+        try {
+          if (navigator.clipboard) navigator.clipboard.writeText(landing).then(function () { copyBtn.textContent = 'Copied'; setTimeout(function () { copyBtn.textContent = 'Copy link'; }, 1500); });
+          else window.open(landing, '_blank', 'noopener');
+        } catch (_) { window.open(landing, '_blank', 'noopener'); }
+      });
+      var payBtn = document.getElementById('ostCardFullPay');
+      if (payBtn) payBtn.addEventListener('click', function () {
+        try { window.OST_TAP_PAY = { to: address, amountUsd: amount, asset: 'OST' }; } catch (_) {}
+        try { window.dispatchEvent(new CustomEvent('ost:tap-pay-link', { detail: { to: address, amountUsd: amount } })); } catch (_) {}
+        if (window.setWalletPanel) try { window.setWalletPanel('access', { scroll: true }); } catch (_) {}
+        close();
+      });
+      console.log('[ost-card] openFullCard rendered for', address);
+    } catch (err) {
+      console.error('[ost-card] openFullCard failed:', err);
+      try { if (window.toast) window.toast('\u26A0', 'OST Card open failed: ' + ((err && err.message) || err)); } catch (_) {}
+    }
+  }
+
+  function ensureFloatingLauncher() {
+    if (document.getElementById('ostCardFloatingBtn')) return;
+    var btn = document.createElement('button');
+    btn.id = 'ostCardFloatingBtn';
+    btn.type = 'button';
+    btn.title = 'Open OST Card';
+    btn.innerHTML = '\u25C9 OST Card';
+    btn.style.cssText = [
+      'position:fixed','right:14px','bottom:74px','z-index:2147483645',
+      'padding:10px 14px','border-radius:999px','border:1px solid rgba(110,231,183,0.4)',
+      'background:linear-gradient(135deg,#0b3d2e,#0f172a)','color:#bbf7d0',
+      'font:700 12px/1 system-ui,sans-serif','cursor:pointer',
+      'box-shadow:0 10px 30px rgba(2,6,23,0.55)','letter-spacing:.04em'
+    ].join(';');
+    btn.addEventListener('click', function () { openFullCard(); });
+    if (document.body) document.body.appendChild(btn);
+    else document.addEventListener('DOMContentLoaded', function () { document.body.appendChild(btn); });
   }
 
   function applyCardLanding() {
@@ -491,6 +607,7 @@
 
   function init() {
     ensureCardUi();
+    ensureFloatingLauncher();
     ensureProfile();
     bind();
     reload();
