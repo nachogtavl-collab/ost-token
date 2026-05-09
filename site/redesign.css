@@ -1,0 +1,441 @@
+/* ============================================================
+   redesign.css — OST Phase 3 modern UI overlay (loaded last)
+   Adds polished typography, refined cards/buttons/inputs,
+   per-section accent rails, and a mobile-first responsive
+   sweep on top of the existing stylesheet without rewriting it.
+   ============================================================ */
+
+:root {
+  --ost-r-radius: 14px;
+  --ost-r-radius-lg: 22px;
+  --ost-r-shadow: 0 12px 36px rgba(0, 0, 0, 0.42), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --ost-r-shadow-hover: 0 18px 48px rgba(0, 0, 0, 0.52), 0 0 0 1px rgba(0, 212, 255, 0.32);
+  --ost-r-border: rgba(255, 255, 255, 0.08);
+  --ost-r-border-strong: rgba(0, 212, 255, 0.36);
+  --ost-r-bg-card: rgba(8, 18, 28, 0.78);
+  --ost-r-bg-glass: linear-gradient(160deg, rgba(8, 22, 36, 0.82) 0%, rgba(4, 12, 22, 0.92) 100%);
+  --ost-r-accent: #00d4ff;
+  --ost-r-accent-soft: rgba(0, 212, 255, 0.16);
+  --ost-r-accent-strong: linear-gradient(135deg, #00d4ff 0%, #7b5cff 100%);
+  --ost-r-text: #e8f4ff;
+  --ost-r-text-soft: #9fbacb;
+  --ost-r-touch: 44px;
+}
+
+/* ---------- Section heading polish (works for every section id) ---------- */
+.section h2,
+.section .section-title,
+.hero h1,
+.hero h2 {
+  font-family: 'Playfair Display', 'Inter', system-ui, sans-serif;
+  letter-spacing: -0.01em;
+  line-height: 1.12;
+}
+
+.section h2 {
+  position: relative;
+  padding-bottom: 14px;
+  margin-bottom: 24px;
+}
+.section h2::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 56px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--ost-r-accent-strong);
+  box-shadow: 0 0 18px rgba(0, 212, 255, 0.45);
+}
+
+/* ---------- Per-section accent rails (top hairline) ---------- */
+#wallet, #commerce, #stock-market, #ai, #offline, #censorship, #spacex,
+#story, #about, #roadmap, #build, #launchpad, #survival, #quantum-realm,
+#legacy, #transparency, #new-here {
+  position: relative;
+  isolation: isolate;
+}
+#wallet::before, #commerce::before, #stock-market::before, #ai::before,
+#offline::before, #censorship::before, #spacex::before, #story::before,
+#about::before, #roadmap::before, #build::before, #launchpad::before,
+#survival::before, #quantum-realm::before, #legacy::before,
+#transparency::before, #new-here::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(0, 212, 255, 0.45) 30%,
+    rgba(123, 92, 255, 0.45) 70%,
+    transparent 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Distinct accent tints */
+#wallet      { --section-tint: #00d4ff; }
+#commerce    { --section-tint: #ffb454; }
+#stock-market{ --section-tint: #5cf2c4; }
+#ai          { --section-tint: #c79bff; }
+#offline     { --section-tint: #7bd1ff; }
+#censorship  { --section-tint: #ff7a7a; }
+#spacex      { --section-tint: #d6e4ff; }
+#story       { --section-tint: #ffd066; }
+#roadmap     { --section-tint: #66ffd2; }
+#build       { --section-tint: #9bf08f; }
+#launchpad   { --section-tint: #ff85c2; }
+#survival    { --section-tint: #ffae54; }
+#quantum-realm{ --section-tint: #b58dff; }
+#legacy      { --section-tint: #d4af37; }
+#transparency{ --section-tint: #80ffaa; }
+#new-here    { --section-tint: #00d4ff; }
+
+/* ---------- Card polish (touches existing card patterns) ---------- */
+.card,
+.feature-card,
+.story-card,
+.knowledge-card,
+.spacex-card,
+.censorship-card,
+.ai-card,
+.offline-card,
+.survival-card,
+.legacy-card,
+.quantum-card,
+.roadmap-card,
+.build-card,
+.launchpad-card,
+.commerce-card,
+.shop-card,
+.gas-card,
+.giftcard-card,
+.interchange-card,
+.faucet-card,
+.wallet-tile,
+.transparency-card,
+.stock-card {
+  background: var(--ost-r-bg-glass) !important;
+  border: 1px solid var(--ost-r-border) !important;
+  border-radius: var(--ost-r-radius) !important;
+  box-shadow: var(--ost-r-shadow) !important;
+  transition: transform 220ms cubic-bezier(.2,.7,.2,1),
+              box-shadow 220ms cubic-bezier(.2,.7,.2,1),
+              border-color 220ms cubic-bezier(.2,.7,.2,1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.card:hover,
+.feature-card:hover,
+.story-card:hover,
+.knowledge-card:hover,
+.spacex-card:hover,
+.censorship-card:hover,
+.ai-card:hover,
+.offline-card:hover,
+.survival-card:hover,
+.legacy-card:hover,
+.quantum-card:hover,
+.roadmap-card:hover,
+.build-card:hover,
+.launchpad-card:hover,
+.commerce-card:hover,
+.shop-card:hover,
+.gas-card:hover,
+.giftcard-card:hover,
+.interchange-card:hover,
+.faucet-card:hover,
+.wallet-tile:hover,
+.transparency-card:hover,
+.stock-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--ost-r-border-strong) !important;
+  box-shadow: var(--ost-r-shadow-hover) !important;
+}
+
+/* ---------- Buttons polish (does not override .btn-primary look entirely) ---------- */
+.btn,
+button.btn,
+.wallet-btn,
+.fiat-pill,
+.knowledge-cta {
+  border-radius: 12px !important;
+  letter-spacing: 0.01em;
+  font-weight: 600;
+  transition: transform 180ms cubic-bezier(.2,.7,.2,1),
+              box-shadow 180ms cubic-bezier(.2,.7,.2,1),
+              filter 180ms;
+  min-height: var(--ost-r-touch);
+  padding-inline: 18px;
+}
+.btn:not(:disabled):hover,
+button.btn:not(:disabled):hover,
+.wallet-btn:not(:disabled):hover,
+.knowledge-cta:not(:disabled):hover {
+  transform: translateY(-1px);
+  filter: brightness(1.06);
+}
+.btn:active, button.btn:active { transform: translateY(0); filter: brightness(0.97); }
+
+/* ---------- Inputs polish ---------- */
+input[type=text],
+input[type=number],
+input[type=email],
+input[type=search],
+input[type=password],
+select,
+textarea {
+  background: rgba(4, 14, 24, 0.65) !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+  color: var(--ost-r-text) !important;
+  border-radius: 10px !important;
+  min-height: var(--ost-r-touch);
+  padding: 10px 14px;
+  transition: border-color 180ms, box-shadow 180ms, background 180ms;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none !important;
+  border-color: var(--ost-r-accent) !important;
+  box-shadow: 0 0 0 3px var(--ost-r-accent-soft) !important;
+  background: rgba(4, 18, 30, 0.85) !important;
+}
+
+/* ---------- Nav polish ---------- */
+#nav {
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  background: linear-gradient(180deg, rgba(2, 8, 14, 0.86), rgba(2, 8, 14, 0.62)) !important;
+  border-bottom: 1px solid rgba(0, 212, 255, 0.14) !important;
+}
+#nav .logo { font-weight: 700; letter-spacing: 0.02em; }
+#nav .nav-links a {
+  position: relative;
+  padding: 8px 12px;
+  border-radius: 10px;
+  transition: color 160ms, background 160ms;
+}
+#nav .nav-links a:hover {
+  color: #fff !important;
+  background: var(--ost-r-accent-soft);
+}
+#nav .nav-links a.active::after {
+  content: '';
+  position: absolute;
+  left: 12px; right: 12px; bottom: 4px;
+  height: 2px; border-radius: 2px;
+  background: var(--ost-r-accent-strong);
+}
+
+.wallet-btn .ost-icon,
+.lang-trigger .ost-icon,
+.nav-toggle .ost-icon {
+  vertical-align: -3px;
+  margin-right: 6px;
+}
+
+/* ---------- Wallet panels (Access / Market / Convert / Portals / Predict) ---------- */
+#wallet .wallet-tab-list,
+#wallet .wallet-tabs,
+#wallet [role="tablist"] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px;
+  background: rgba(4, 14, 24, 0.55);
+  border: 1px solid var(--ost-r-border);
+  border-radius: 14px;
+  margin-bottom: 18px;
+}
+#wallet .wallet-tab,
+#wallet .wallet-tab-trigger,
+#wallet [role="tab"] {
+  flex: 1 1 auto;
+  min-height: var(--ost-r-touch);
+  border-radius: 10px !important;
+  font-weight: 600;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  color: var(--ost-r-text-soft) !important;
+  transition: background 180ms, color 180ms, border-color 180ms;
+}
+#wallet .wallet-tab[aria-selected="true"],
+#wallet .wallet-tab.is-active,
+#wallet [role="tab"][aria-selected="true"] {
+  background: var(--ost-r-accent-soft) !important;
+  color: #fff !important;
+  border-color: var(--ost-r-border-strong) !important;
+  box-shadow: inset 0 0 0 1px rgba(0, 212, 255, 0.18);
+}
+.wallet-tab-panel {
+  animation: ost-fade-up 280ms cubic-bezier(.2,.7,.2,1);
+}
+@keyframes ost-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- Prediction board (lives on Wallet > Predict tab) polish ---------- */
+.prediction-market-board {
+  border-radius: var(--ost-r-radius-lg) !important;
+  border: 1px solid var(--ost-r-border) !important;
+  background: var(--ost-r-bg-glass) !important;
+  box-shadow: var(--ost-r-shadow) !important;
+  padding: 18px;
+}
+.prediction-market-hero-card {
+  border-radius: var(--ost-r-radius) !important;
+  border: 1px solid var(--ost-r-border-strong) !important;
+}
+.prediction-venue-pill {
+  border: 1px solid rgba(0, 212, 255, 0.28);
+  background: rgba(0, 212, 255, 0.08);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #b8eaff;
+}
+
+/* Hide stray prediction widget from non-wallet anchor (legacy slot) */
+.section:not(#wallet) .prediction-market-board[data-stale="true"] { display: none; }
+
+/* ---------- Commerce / Shop / Gas / Giftcards / Interchange ---------- */
+#commerce .commerce-grid,
+#commerce .shop-grid,
+#commerce .interchange-grid,
+#commerce .giftcard-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+.shop-card .price,
+.giftcard-card .denomination,
+.gas-card .gallon-price {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--ost-r-accent);
+}
+
+/* ---------- Stock market polish ---------- */
+.stock-market-section .stock-grid,
+#stock-market .stock-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+/* ---------- Faucet hub & Get OST polish ---------- */
+#new-here .knowledge-grid,
+.faucet-hub-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+/* ---------- Hero polish ---------- */
+.hero h1 {
+  background: linear-gradient(135deg, #ffffff 0%, #b8eaff 50%, #c79bff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 18px rgba(0, 212, 255, 0.18));
+}
+
+/* ---------- Mobile first sweep ---------- */
+@media (max-width: 880px) {
+  .section { padding-inline: 16px; }
+  .section h2 { font-size: clamp(1.4rem, 5.4vw, 2.2rem); }
+  .hero h1   { font-size: clamp(1.9rem, 7vw, 3.2rem); }
+  .hero p, .section p { font-size: 0.96rem; line-height: 1.55; }
+
+  #nav .nav-inner { padding-inline: 12px; }
+  #nav .nav-links {
+    position: fixed;
+    inset: 64px 12px auto 12px;
+    flex-direction: column;
+    gap: 4px;
+    padding: 14px;
+    border-radius: 16px;
+    background: rgba(2, 8, 14, 0.96);
+    border: 1px solid var(--ost-r-border-strong);
+    box-shadow: var(--ost-r-shadow-hover);
+    transform: translateY(-12px);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 220ms, opacity 220ms;
+    z-index: 9999;
+    max-height: calc(100vh - 80px);
+    overflow-y: auto;
+  }
+  #nav.is-mobile-open .nav-links {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+  #nav .nav-links a {
+    min-height: var(--ost-r-touch);
+    display: flex;
+    align-items: center;
+    padding: 12px 14px;
+    border-radius: 10px;
+  }
+
+  .wallet-btn .wallet-text { display: none; }
+  .wallet-btn { padding-inline: 12px; }
+
+  /* Force any stray full-width board to fit */
+  .prediction-market-board,
+  .wallet-tab-panel { padding: 14px; }
+
+  /* Bigger touch targets on cards */
+  .card a, .feature-card a, .story-card a { padding: 6px 4px; }
+}
+
+@media (max-width: 480px) {
+  #nav .lang-code { display: none; }
+  #nav .ancient-toggle { padding: 8px; font-size: 11px; }
+  .hero { padding-block: 32px 24px; }
+  .section { padding-block: 36px; }
+}
+
+/* Avoid horizontal scroll caused by long cards on mobile */
+html, body { max-width: 100%; overflow-x: hidden; }
+
+/* ---------- Mesh / Veil / Ghost surface polish (keeps existing layout) ---------- */
+#ghost-summon-trigger {
+  border-radius: 18px !important;
+  box-shadow: var(--ost-r-shadow) !important;
+  border: 1px solid var(--ost-r-border-strong) !important;
+}
+#ghost-summon-trigger:hover { transform: translateY(-2px); box-shadow: var(--ost-r-shadow-hover) !important; }
+#ghost-summon-trigger.has-whisper {
+  animation: ost-ghost-whisper-pulse 1.4s ease-in-out infinite;
+}
+@keyframes ost-ghost-whisper-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 212, 255, 0.45), var(--ost-r-shadow); }
+  50%      { box-shadow: 0 0 0 12px rgba(0, 212, 255, 0), var(--ost-r-shadow); }
+}
+
+#ost-veil-status-pill {
+  border-radius: 999px !important;
+  border: 1px solid var(--ost-r-border-strong) !important;
+}
+
+/* Ghost transcript line spacing */
+#ghost-transcript .ghost-line {
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin: 6px 0;
+  background: rgba(4, 14, 24, 0.55);
+  border: 1px solid var(--ost-r-border);
+}
+#ghost-transcript .ghost-line.user { border-color: rgba(0, 212, 255, 0.32); }
+#ghost-transcript .ghost-line.peer { border-color: rgba(123, 92, 255, 0.32); }
+#ghost-transcript .ghost-line.system { opacity: 0.85; font-size: 0.92em; }
+
+/* ---------- Reduced motion respect ---------- */
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}

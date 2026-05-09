@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v76';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v76';
+const CACHE_NAME = 'ost-pwa-cache-v77';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v77';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -77,6 +77,8 @@ const PRECACHE_PATHS = [
   './live-watch.css?v=5',
   './live-watch.js?v=6',
   './native-markets.js?v=3',
+  './redesign.css?v=1',
+  './redesign.js?v=1',
   'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
   'https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
