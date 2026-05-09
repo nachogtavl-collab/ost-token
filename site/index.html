@@ -3158,58 +3158,16 @@
         </div>
       </div>
 
-      <div class="offline-vault-card sr" id="offlineVault" aria-label="Offline OST Vault">
-        <div class="offline-vault-head">
-          <div>
-            <p class="offline-vault-eyebrow">Local bearer vault</p>
-            <h3>&#128274; Your Offline OST Vault</h3>
-            <p>Import a Survival Bearer Token from paper QR, NFC card, or digital file. The vault is stored encrypted on this device and can be used as the active balance for offline games.</p>
-          </div>
-          <div class="offline-vault-balance" aria-live="polite">
-            <strong id="offlineVaultBalance">0</strong>
-            <span>OST Offline</span>
-          </div>
+      <div class="offline-install-card sr" id="offlineSurvivalVaultCallout">
+        <div class="offline-install-mark" aria-hidden="true"><span>&#128274;</span></div>
+        <div class="offline-install-copy">
+          <p class="offline-install-eyebrow">Unified vault</p>
+          <h3>Offline OST now lives in one Survival Vault</h3>
+          <p>Mint bearer notes, import paper QR / NFC / digital files, and use that same balance in offline fair games from the Survival OST section.</p>
         </div>
-
-        <div class="offline-vault-grid">
-          <div class="offline-vault-panel">
-            <h4>Import bearer token</h4>
-            <div class="offline-vault-actions">
-              <button class="offline-vault-btn primary" id="offlineVaultImportBtn" type="button">Scan paper QR</button>
-              <button class="offline-vault-btn" id="offlineVaultNfcBtn" type="button">Tap NFC card</button>
-              <label class="offline-vault-file-label" for="offlineVaultFile">Import digital file<input id="offlineVaultFile" type="file" accept=".txt,.json,application/json,text/plain"></label>
-              <button class="offline-vault-btn" id="offlineVaultPasteBtn" type="button">Paste token</button>
-              <button class="offline-vault-btn" id="offlineVaultLatestBtn" type="button" disabled>Import latest minted note</button>
-            </div>
-            <div class="offline-vault-paste" id="offlineVaultPasteBox">
-              <textarea id="offlineVaultPasteInput" spellcheck="false" placeholder="Paste OST-BEARER-V1 JSON or the downloaded Survival Bearer Token text..."></textarea>
-              <button class="offline-vault-btn primary" id="offlineVaultPasteImportBtn" type="button">Import pasted token</button>
-            </div>
-            <div class="offline-vault-status" id="offlineVaultStatus" role="status"></div>
-          </div>
-
-          <div class="offline-vault-panel">
-            <h4>Offline game mode</h4>
-            <div class="offline-vault-metrics">
-              <div class="offline-vault-metric"><span>Tokens</span><strong id="offlineVaultTokenCount">0</strong></div>
-              <div class="offline-vault-metric"><span>Queued proofs</span><strong id="offlineVaultQueueCount">0</strong></div>
-              <div class="offline-vault-metric"><span>Mode</span><strong id="offlineVaultMode">Manual only</strong></div>
-            </div>
-            <div class="offline-vault-actions" style="margin-top:12px;">
-              <button class="offline-vault-btn primary" id="offlineVaultUseGamesBtn" type="button">Use offline vault in games</button>
-              <button class="offline-vault-btn" id="offlineVaultSyncBtn" type="button" disabled>Sync queued proofs</button>
-            </div>
-            <div class="offline-vault-log" id="offlineVaultLog">No offline vault activity yet.</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="offline-vault-scan" id="offlineVaultScan" aria-hidden="true">
-        <div class="offline-vault-scan-box">
-          <video id="offlineVaultVideo" muted playsinline></video>
-          <div class="offline-vault-actions" style="margin-top:12px;">
-            <button class="offline-vault-btn" id="offlineVaultScanClose" type="button">Close scanner</button>
-          </div>
+        <div class="offline-install-actions">
+          <a class="btn btn-primary offline-install-btn" href="#survival">Open Survival OST Vault</a>
+          <span class="offline-install-status" role="status">One offline coin, one local balance</span>
         </div>
       </div>
 
@@ -4877,8 +4835,8 @@ console.<span class="code-fn">log</span>(<span class="code-str">`âœ… Tx: </s
     <div class="container">
       <div class="sv-header">
         <div class="sv-icon-ring"><span>&#9888;&#65039;</span></div>
-        <h2 class="section-title">Survive the Fall</h2>
-        <p class="section-subtitle">The only coin engineered to function when the internet dies, electronics fail, and civilization reboots. OST becomes physical, untraceable, bearer cash.</p>
+        <h2 class="section-title">Unified Offline / Survival OST Coin</h2>
+        <p class="section-subtitle">Mint one offline OST bearer coin for long-term survival, everyday paper or NFC handoff, and provably fair offline games. One vault, one local balance, one redemption path when the network returns.</p>
         <div class="sv-badges">
           <span class="sv-badge sv-badge-red">&#128680; Catastrophe-Ready</span>
           <span class="sv-badge">&#128196; Paper Bearer Notes</span>
@@ -4977,8 +4935,8 @@ console.<span class="code-fn">log</span>(<span class="code-str">`âœ… Tx: </s
       <!-- Mint Survival Token â€” Interactive Tool -->
       <div class="sv-mint-panel" id="svMintPanel">
         <div class="sv-mint-head">
-          <h3>&#9888;&#65039; Mint Survival Bearer Token</h3>
-          <p class="text-muted">Create offline-ready bearer notes from your OST balance. Print them, store them, hand them out.</p>
+          <h3>&#9888;&#65039; Mint Offline Survival OST</h3>
+          <p class="text-muted">Create one OST-BEARER-V1 coin you can print, store on NFC, save as a file, or import into the same local vault used by offline fair games.</p>
         </div>
 
         <div class="sv-mint-form">
@@ -5018,7 +4976,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`âœ… Tx: </s
           </div>
 
           <button class="sv-mint-btn" id="svMintBtn" disabled>
-            <span class="sv-btn-icon">&#9888;&#65039;</span> Mint Survival Token
+            <span class="sv-btn-icon">&#9888;&#65039;</span> Mint Offline OST Coin
           </button>
         </div>
 
@@ -5035,8 +4993,8 @@ console.<span class="code-fn">log</span>(<span class="code-str">`âœ… Tx: </s
         <div class="sv-result" id="svResult" style="display:none">
           <div class="sv-result-head">
             <div class="sv-result-icon">&#127881;</div>
-            <h4>Survival Bearer Token Minted</h4>
-            <p class="text-muted">This token is now offline-ready. Print it, store it, hand it off.</p>
+            <h4>Offline Survival OST Minted</h4>
+            <p class="text-muted">This bearer coin is now offline-ready. Print it, store it, hand it off, or import it into the local game vault below.</p>
           </div>
 
           <div class="sv-bearer-card" id="svBearerCard">
@@ -5061,14 +5019,69 @@ console.<span class="code-fn">log</span>(<span class="code-str">`âœ… Tx: </s
             <button class="sv-action-btn" id="svDownload">&#128190; Download Digital File</button>
           </div>
 
-          <button class="sv-mint-another" id="svMintAnother">&#10010; Mint Another Token</button>
+          <button class="sv-mint-another" id="svMintAnother">&#10010; Mint Another Offline Coin</button>
+        </div>
+      </div>
+
+      <div class="offline-vault-card sr" id="offlineVault" aria-label="Unified Offline Survival OST Vault">
+        <div class="offline-vault-head">
+          <div>
+            <p class="offline-vault-eyebrow">Unified offline / survival vault</p>
+            <h3>&#128274; Your Survival OST Vault</h3>
+            <p>Mint or import one OST-BEARER-V1 coin from paper QR, NFC card, or digital file. The encrypted local vault below is the same balance used by offline fair games and the same proof queue that syncs when internet returns.</p>
+          </div>
+          <div class="offline-vault-balance" aria-live="polite">
+            <strong id="offlineVaultBalance">0</strong>
+            <span>OST Offline</span>
+          </div>
+        </div>
+
+        <div class="offline-vault-grid">
+          <div class="offline-vault-panel">
+            <h4>Mint / import bearer coin</h4>
+            <div class="offline-vault-actions">
+              <button class="offline-vault-btn primary" id="offlineVaultImportBtn" type="button">Scan paper QR</button>
+              <button class="offline-vault-btn" id="offlineVaultNfcBtn" type="button">Tap NFC card</button>
+              <label class="offline-vault-file-label" for="offlineVaultFile">Import digital file<input id="offlineVaultFile" type="file" accept=".txt,.json,application/json,text/plain"></label>
+              <button class="offline-vault-btn" id="offlineVaultPasteBtn" type="button">Paste token</button>
+              <button class="offline-vault-btn" id="offlineVaultLatestBtn" type="button" disabled>Import latest minted coin</button>
+            </div>
+            <div class="offline-vault-paste" id="offlineVaultPasteBox">
+              <textarea id="offlineVaultPasteInput" spellcheck="false" placeholder="Paste OST-BEARER-V1 JSON or the downloaded Survival OST coin text..."></textarea>
+              <button class="offline-vault-btn primary" id="offlineVaultPasteImportBtn" type="button">Import pasted coin</button>
+            </div>
+            <div class="offline-vault-status" id="offlineVaultStatus" role="status"></div>
+          </div>
+
+          <div class="offline-vault-panel">
+            <h4>Offline fair games balance</h4>
+            <div class="offline-vault-metrics">
+              <div class="offline-vault-metric"><span>Coins</span><strong id="offlineVaultTokenCount">0</strong></div>
+              <div class="offline-vault-metric"><span>Queued proofs</span><strong id="offlineVaultQueueCount">0</strong></div>
+              <div class="offline-vault-metric"><span>Mode</span><strong id="offlineVaultMode">Manual import</strong></div>
+            </div>
+            <div class="offline-vault-actions" style="margin-top:12px;">
+              <button class="offline-vault-btn primary" id="offlineVaultUseGamesBtn" type="button">Use survival vault in games</button>
+              <button class="offline-vault-btn" id="offlineVaultSyncBtn" type="button" disabled>Sync queued proofs</button>
+            </div>
+            <div class="offline-vault-log" id="offlineVaultLog">No survival vault activity yet.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="offline-vault-scan" id="offlineVaultScan" aria-hidden="true">
+        <div class="offline-vault-scan-box">
+          <video id="offlineVaultVideo" muted playsinline></video>
+          <div class="offline-vault-actions" style="margin-top:12px;">
+            <button class="offline-vault-btn" id="offlineVaultScanClose" type="button">Close scanner</button>
+          </div>
         </div>
       </div>
 
       <!-- Survival Stats -->
       <div class="sv-stats">
-        <div class="sv-stat"><span class="sv-stat-val" id="svTotalMinted">0</span><span class="sv-stat-lbl">Tokens Minted</span></div>
-        <div class="sv-stat"><span class="sv-stat-val" id="svTotalValue">0 OST</span><span class="sv-stat-lbl">Total Value Locked</span></div>
+        <div class="sv-stat"><span class="sv-stat-val" id="svTotalMinted">0</span><span class="sv-stat-lbl">Offline Coins Minted</span></div>
+        <div class="sv-stat"><span class="sv-stat-val" id="svTotalValue">0 OST</span><span class="sv-stat-lbl">Offline Value Minted</span></div>
         <div class="sv-stat"><span class="sv-stat-val">0.1%</span><span class="sv-stat-lbl">Vault Fee</span></div>
         <div class="sv-stat"><span class="sv-stat-val">&#8734;</span><span class="sv-stat-lbl">Offline Lifetime</span></div>
       </div>
@@ -5918,14 +5931,14 @@ console.<span class="code-fn">log</span>(<span class="code-str">`âœ… Tx: </s
     </script>
     <script src="native-markets.js?v=3"></script>
     <script src="icons.js?v=1"></script>
-    <script src="app.js?v=122"></script>
+    <script src="app.js?v=124"></script>
     <!-- Ghost AI Summoning Circle (rebuild) -->
     <script type="module" src="ghost/ghost.js?v=5"></script>
     <script type="module" src="mesh/mesh.js?v=26"></script>
     <script type="module" src="mesh/veil.js?v=1"></script>
     <script type="module" src="mesh/mesh-play.js?v=8"></script>
   <script src="nuevo-laredo-gas.js?v=1"></script>
-  <script src="shop-quickview.js?v=1"></script>
+  <script src="shop-quickview.js?v=2"></script>
   <script src="interchange-live.js?v=1"></script>
   <script src="polish.js?v=2"></script>
   <script src="swap-pool.js?v=1"></script>
@@ -5949,10 +5962,10 @@ console.<span class="code-fn">log</span>(<span class="code-str">`âœ… Tx: </s
   <script src="ost-card.js?v=3" defer></script>
   <script src="live-watch.js?v=6" defer></script>
   <script src="faucet-hub-ads.js?v=2"></script>
-  <script src="offline-vault.js?v=4"></script>
+  <script src="offline-vault.js?v=5"></script>
   <script src="ost-games.js?v=15"></script>
   <script src="code-academy.js?v=3"></script>
-  <script src="i18n-runtime.js?v=3"></script>
+  <script src="i18n-runtime.js?v=4"></script>
   <script src="devnet-rescue.js?v=4"></script>
   <script src="ost-notifications.js?v=2"></script>
   <script src="mesh/mesh-upgrade.js?v=9"></script>

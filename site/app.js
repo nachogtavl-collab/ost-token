@@ -4347,7 +4347,7 @@
   // Currency symbol map for international display
   var currSymbols = {
     USD:'$',EUR:'â‚¬',GBP:'Â£',JPY:'Â¥',CNY:'Â¥',INR:'â‚¹',BRL:'R$',KRW:'â‚©',
-    TRY:'â‚º',RUB:'â‚½',PLN:'zÅ‚',THB:'à¸¿',NGN:'â‚¦',MXN:'$',AUD:'A$',CAD:'C$',
+    TRY:'â‚º',RUB:'â‚½',PLN:'zÅ‚',THB:'à¸¿',NGN:'â‚¦',MXN:'MX$',AUD:'A$',CAD:'C$',
     NZD:'NZ$',CHF:'CHF',SEK:'kr',NOK:'kr',DKK:'kr',ZAR:'R',HKD:'HK$',
     SGD:'S$',TWD:'NT$',CZK:'KÄ',HUF:'Ft',RON:'lei',BGN:'Ð»Ð²',ISK:'kr',
     UAH:'â‚´',CLP:'$',PEN:'S/',UYU:'$U',DOP:'RD$',PAB:'B/.',ILS:'â‚ª',
@@ -4355,6 +4355,85 @@
     COP:'$',KES:'KSh',IRR:'ï·¼',USDC:'$',USDT:'$',BTC:'â‚¿',ETH:'Îž',SOL:'â—Ž',BNB:'BNB'
   };
   function getCurrSym(c) { return currSymbols[c] || c + ' '; }
+
+  function getStoredPrimaryCurrency() {
+    try {
+      var prefs = JSON.parse(localStorage.getItem('ost_prefs') || '{}');
+      return String((prefs && prefs.currency) || window.__ostCurrency || 'USD').toUpperCase();
+    } catch (_) {
+      return String(window.__ostCurrency || 'USD').toUpperCase();
+    }
+  }
+
+  function getPrimaryCurrency() {
+    return getStoredPrimaryCurrency() || 'USD';
+  }
+
+  function currencyDecimals(currency, amount) {
+    currency = String(currency || 'USD').toUpperCase();
+    if (currency === 'BTC' || currency === 'ETH') return 6;
+    if (currency === 'JPY' || currency === 'KRW' || currency === 'VND') return 0;
+    if (Number(amount || 0) >= 100000) return 0;
+    return 2;
+  }
+
+  function usdToCurrencyAmount(usdValue, currency) {
+    currency = String(currency || getPrimaryCurrency()).toUpperCase();
+    var usd = Number(usdValue) || 0;
+    if (currency === 'USD' || currency === 'USDC' || currency === 'USDT') return usd;
+    if (currency === 'BTC') return usd / (prices.bitcoin || 105000);
+    if (currency === 'ETH') return usd / (prices.ethereum || 3800);
+    if (currency === 'SOL') return usd / (prices.solana || 170);
+    return usd * (fiatRates[currency] || 1);
+  }
+
+  function formatFiatFromUsd(usdValue, currency) {
+    var curr = String(currency || getPrimaryCurrency()).toUpperCase();
+    var converted = usdToCurrencyAmount(usdValue, curr);
+    var decimals = currencyDecimals(curr, converted);
+    var formatted = converted.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    return getCurrSym(curr) + formatted + (curr === 'USD' ? '' : ' ' + curr);
+  }
+
+  function setCurrencySelectValue(id, currency) {
+    var el = document.getElementById(id);
+    if (!el || !currency) return false;
+    var hasOption = Array.prototype.some.call(el.options || [], function(option) {
+      return String(option.value || '').toUpperCase() === currency;
+    });
+    if (!hasOption) return false;
+    el.value = currency;
+    return true;
+  }
+
+  function applyPrimaryCurrency(currency, options) {
+    options = options || {};
+    var curr = String(currency || getPrimaryCurrency() || 'USD').toUpperCase();
+    window.__ostCurrency = curr;
+    document.documentElement.setAttribute('data-currency', curr);
+    if (options.persist !== false) {
+      try {
+        var prefs = JSON.parse(localStorage.getItem('ost_prefs') || '{}');
+        prefs.currency = curr;
+        localStorage.setItem('ost_prefs', JSON.stringify(prefs));
+      } catch (_) {}
+    }
+    ['calcCurrency', 'transferFrom', 'paCurrency', 'gc2Currency', 'smBrokerCurrency'].forEach(function(id) {
+      setCurrencySelectValue(id, curr);
+    });
+    try { updateProductOSTPrices(); } catch (_) {}
+    try { renderCart(); } catch (_) {}
+    try { updateCalc(); } catch (_) {}
+    try { updatePayAnywhere(); } catch (_) {}
+    try { updateTransferPreview(); } catch (_) {}
+    try { updateConvertProviders(); } catch (_) {}
+    try { window.dispatchEvent(new CustomEvent('ost:currencychange', { detail: { currency: curr } })); } catch (_) {}
+    return curr;
+  }
+
+  window.OST_SET_PRIMARY_CURRENCY = applyPrimaryCurrency;
+  window.OST_FORMAT_PRIMARY_FIAT = formatFiatFromUsd;
+  window.OST_UPDATE_PRODUCT_PRICES = updateProductOSTPrices;
 
   async function fetchFiatRates() {
     try {
@@ -4367,7 +4446,7 @@
           if (k === 'BTC' || k === 'ETH' || k === 'SOL') return; // crypto handled separately
           if (data.rates[k] !== undefined) fiatRates[k] = data.rates[k];
         });
-        updateCalc();
+        applyPrimaryCurrency(getPrimaryCurrency(), { persist: false, silent: true });
       }
     } catch (e) {
       console.warn('Fiat rate fetch failed, using defaults:', e.message);
@@ -4499,8 +4578,11 @@
   function updateProductOSTPrices() {
     $$('.store-item').forEach(item => {
       const usd = parseFloat(item.getAttribute('data-price'));
+      if (!Number.isFinite(usd)) return;
       const ost = usd / ostPrice;
+      const fiatEl = item.querySelector('.item-usd');
       const ostEl = item.querySelector('.item-ost');
+      if (fiatEl) fiatEl.textContent = formatFiatFromUsd(usd);
       if (ostEl) {
         if (ost >= 1e6) {
           ostEl.textContent = (ost / 1e6).toFixed(1) + 'M OST';
@@ -4776,14 +4858,13 @@
   /* ---------- MINI STORE / CART ---------- */
   let cart = [];
   const storeCatalogMeta = $('#storeCatalogMeta');
-  const storeItems = $$('.store-item');
   const storeFilterChips = $$('.store-filter-chip');
   let activeStoreFilter = 'all';
 
   function applyStoreFilter(filter = activeStoreFilter) {
     activeStoreFilter = filter;
     let visibleCount = 0;
-    storeItems.forEach(item => {
+    $$('.store-item').forEach(item => {
       const categories = (item.getAttribute('data-category') || '').split(/\s+/).filter(Boolean);
       const isVisible = filter === 'all' || categories.includes(filter);
       item.classList.toggle('store-item-hidden', !isVisible);
@@ -4819,7 +4900,7 @@
     if (cart.length === 0) {
       cartItems.innerHTML = '<p class="cart-empty">' + esc(t('pay.empty', 'Tap + to add items')) + '</p>';
       cartBadge.textContent = '0';
-      cartTotal.textContent = '$0.00 - 0 OST';
+      cartTotal.textContent = formatFiatFromUsd(0) + ' - 0 OST';
       payBtn.disabled = true;
       return;
     }
@@ -4829,14 +4910,14 @@
       total += item.price;
       return `<div class="cart-item">
         <span class="cart-item-name">${esc(item.emoji)} ${esc(item.name)}</span>
-        <span class="cart-item-price">$${item.price.toFixed(2)}</span>
+        <span class="cart-item-price">${esc(formatFiatFromUsd(item.price))}</span>
         <button class="cart-item-remove" data-idx="${i}">&times;</button>
       </div>`;
     }).join('');
 
     const ostTotal = total / ostPrice;
     cartBadge.textContent = cart.length;
-    cartTotal.textContent = `$${total.toFixed(2)} - ${ostTotal >= 1e6 ? (ostTotal / 1e6).toFixed(1) + 'M' : ostTotal.toFixed(0)} OST`;
+    cartTotal.textContent = formatFiatFromUsd(total) + ' - ' + (ostTotal >= 1e6 ? (ostTotal / 1e6).toFixed(1) + 'M' : ostTotal.toFixed(0)) + ' OST';
     payBtn.disabled = false;
 
     $$('.cart-item-remove', cartItems).forEach(btn => {
@@ -4852,23 +4933,34 @@
     renderCart();
   };
 
-  $$('.btn-add').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const item = btn.closest('.store-item');
-      const img = item.querySelector('.item-img');
-      cart.push({
-        name: item.getAttribute('data-name'),
-        price: parseFloat(item.getAttribute('data-price')),
-        merchant: item.getAttribute('data-merchant') || 'Merchant',
-        url: item.getAttribute('data-link') || '',
-        currency: item.getAttribute('data-currency') || 'USD',
-        category: item.getAttribute('data-category') || 'general',
-        emoji: img ? 'ðŸ›ï¸' : (item.querySelector('.item-visual')?.textContent || ''),
-      });
-      renderCart();
-      toast('ðŸ›’', t('pay.toastAdded', 'Added') + ' ' + item.getAttribute('data-name'));
+  function addStoreItemToCart(item) {
+    if (!item) return;
+    const price = parseFloat(item.getAttribute('data-price'));
+    if (!Number.isFinite(price)) return;
+    const img = item.querySelector('.item-img');
+    cart.push({
+      name: item.getAttribute('data-name'),
+      price,
+      merchant: item.getAttribute('data-merchant') || 'Merchant',
+      url: item.getAttribute('data-link') || '',
+      currency: item.getAttribute('data-currency') || 'USD',
+      category: item.getAttribute('data-category') || 'general',
+      emoji: img ? 'ðŸ›ï¸' : (item.querySelector('.item-visual')?.textContent || ''),
     });
-  });
+    renderCart();
+    toast('ðŸ›’', t('pay.toastAdded', 'Added') + ' ' + item.getAttribute('data-name'));
+  }
+
+  const storeProductsGrid = $('#storeProducts');
+  if (storeProductsGrid) {
+    storeProductsGrid.addEventListener('click', event => {
+      const btn = event.target.closest('.btn-add');
+      if (!btn || !storeProductsGrid.contains(btn)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      addStoreItemToCart(btn.closest('.store-item'));
+    });
+  }
 
   /* Pay Button */
   const payBtn = $('#payBtn');
@@ -4881,17 +4973,20 @@
 
     const merchantNames = [...new Set(cart.map(item => item.merchant).filter(Boolean))];
     const firstUrl = cart.find(item => item.url)?.url || '';
+    const requestCurrency = getPrimaryCurrency();
+    const totalUsd = cart.reduce((sum, item) => sum + item.price, 0);
+    const requestAmount = usdToCurrencyAmount(totalUsd, requestCurrency);
     window.loadInterchangeRequest({
       merchant: merchantNames.length === 1 ? merchantNames[0] : 'OST Interchange Desk',
       merchantUrl: merchantNames.length === 1 ? firstUrl : '',
-      amount: cart.reduce((sum, item) => sum + item.price, 0),
-      currency: cart[0]?.currency || 'USD',
+      amount: requestAmount,
+      currency: requestCurrency,
       items: cart.map(item => ({
         name: item.name,
-        price: item.price,
+        price: usdToCurrencyAmount(item.price, requestCurrency),
         merchant: item.merchant || 'Merchant',
         url: item.url || '',
-        currency: item.currency || 'USD',
+        currency: requestCurrency,
         category: item.category || 'general'
       })),
       source: t('pay.shopSource', 'shop cart'),
@@ -5082,7 +5177,7 @@
     else if (ostOut >= 1e6) formatted = (ostOut / 1e6).toFixed(2) + 'M';
     else if (ostOut >= 1e3) formatted = (ostOut / 1e3).toFixed(1) + 'K';
     else formatted = ostOut.toFixed(2);
-    transferResult.textContent = `â‰ˆ ${formatted} OST ($${usdValue.toLocaleString(undefined, { maximumFractionDigits: 2 })})`;
+    transferResult.textContent = `â‰ˆ ${formatted} OST (${formatFiatFromUsd(usdValue)})`;
   }
 
   const convertProviders = $('#convertProviders');
@@ -12772,7 +12867,8 @@
       syncNavLanguage(prefs.lang);
     }
     if (prefs.currency) {
-      window.__ostCurrency = prefs.currency;
+      if (typeof applyPrimaryCurrency === 'function') applyPrimaryCurrency(prefs.currency, { persist: false, silent: true });
+      else window.__ostCurrency = prefs.currency;
     }
 
     setSelectedButton('.wel-lang-btn', 'data-lang', selectedLang, 'wel-lang-active');
@@ -12796,6 +12892,7 @@
         if (!currencyTouched) {
           selectedCurrency = detectPreferredCurrency(selectedLang);
           setSelectedButton('.wel-curr-btn', 'data-curr', selectedCurrency, 'wel-curr-active');
+          if (typeof applyPrimaryCurrency === 'function') applyPrimaryCurrency(selectedCurrency, { persist: false, silent: true });
         }
         if (typeof applyTranslations === 'function') applyTranslations(selectedLang);
         syncNavLanguage(selectedLang);
@@ -12809,6 +12906,7 @@
         btn.classList.add('wel-curr-active');
         selectedCurrency = btn.dataset.curr;
         currencyTouched = true;
+        if (typeof applyPrimaryCurrency === 'function') applyPrimaryCurrency(selectedCurrency, { persist: false, silent: true });
       });
     });
 
@@ -12836,7 +12934,8 @@
       syncNavLanguage(selectedLang);
 
       // Apply currency
-      window.__ostCurrency = selectedCurrency;
+      if (typeof applyPrimaryCurrency === 'function') applyPrimaryCurrency(selectedCurrency, { persist: false });
+      else window.__ostCurrency = selectedCurrency;
 
       hideWelcome(true);
 
@@ -12856,7 +12955,8 @@
         } catch (e) {}
         if (typeof applyTranslations === 'function') applyTranslations(selectedLang || 'en');
         syncNavLanguage(selectedLang || 'en');
-        window.__ostCurrency = selectedCurrency || 'USD';
+        if (typeof applyPrimaryCurrency === 'function') applyPrimaryCurrency(selectedCurrency || 'USD', { persist: false });
+        else window.__ostCurrency = selectedCurrency || 'USD';
         hideWelcome(true);
       });
     }

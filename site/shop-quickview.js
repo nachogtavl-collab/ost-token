@@ -64,6 +64,20 @@
   ];
 
   function fmt(n) { return n.toLocaleString('en-US', { maximumFractionDigits: 2 }); }
+  function formatFiat(n) {
+    if (typeof window.OST_FORMAT_PRIMARY_FIAT === 'function') {
+      try { return window.OST_FORMAT_PRIMARY_FIAT(n); } catch (_) {}
+    }
+    return '$' + fmt(n);
+  }
+  function formatOst(n) {
+    var unitUsd = Number(window.ostPrice) || 0.0001;
+    var ost = n / unitUsd;
+    if (!Number.isFinite(ost)) return '-- OST';
+    if (ost >= 1e6) return (ost / 1e6).toFixed(1) + 'M OST';
+    if (ost >= 1000) return (ost / 1000).toFixed(1) + 'K OST';
+    return ost.toFixed(0) + ' OST';
+  }
 
   function injectExtras() {
     var grid = document.getElementById('storeProducts');
@@ -88,7 +102,7 @@
             return '<span class="item-tag">' + esc(cap(c)) + '</span>';
           }).join('') + '</div>' +
           '<span class="item-source">' + esc(p.merchant) + ' <a href="' + esc(p.link) + '" target="_blank" rel="noopener" class="item-link">' + esc(domain(p.link)) + '</a></span>' +
-          '<span class="item-price"><span class="item-usd">$' + fmt(p.price) + '</span> &middot; <span class="item-ost">-- OST</span></span>' +
+          '<span class="item-price"><span class="item-usd">' + esc(formatFiat(p.price)) + '</span> &middot; <span class="item-ost">' + esc(formatOst(p.price)) + '</span></span>' +
         '</div>' +
         '<button class="btn-add" aria-label="Add">+</button>';
       grid.appendChild(div);
@@ -96,6 +110,9 @@
     // Update catalog meta
     var meta = document.getElementById('storeCatalogMeta');
     if (meta) meta.textContent = grid.children.length + ' live listings';
+    if (typeof window.OST_UPDATE_PRODUCT_PRICES === 'function') window.OST_UPDATE_PRODUCT_PRICES();
+    if (typeof window.syncStoreCatalogUi === 'function') window.syncStoreCatalogUi();
+    if (typeof window.OST_TRANSLATE_NODE === 'function') window.OST_TRANSLATE_NODE(grid);
   }
 
   function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
@@ -160,9 +177,8 @@
     document.getElementById('sqvName').textContent = item.name;
     document.getElementById('sqvMerchant').textContent = item.merchant + ' · ' + (item.category || '').split(' ').map(cap).join(' · ');
     document.getElementById('sqvDesc').textContent = item.desc;
-    document.getElementById('sqvUsd').textContent = '$' + fmt(item.price);
-    var ostUnitUsd = (window.OST_TREASURY && window.OST_TREASURY.priceUsd) ? (window.OST_TREASURY.priceUsd('USD') || 0.05) : 0.05;
-    document.getElementById('sqvOst').textContent = (item.price / ostUnitUsd).toFixed(0) + ' OST';
+    document.getElementById('sqvUsd').textContent = formatFiat(item.price);
+    document.getElementById('sqvOst').textContent = formatOst(item.price);
     document.getElementById('sqvOpen').href = item.link;
     document.getElementById('sqvStatus').textContent = '';
 
