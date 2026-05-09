@@ -145,16 +145,49 @@
       });
   }
   // Race all BTC feeds simultaneously — return whichever answers first.
+  // BTC_LOCKED_FEED keeps the chosen source stable for the lifetime of the
+  // current 5-min round; flipping between coinbase/binance/kraken every tick
+  // produced visible 30¢ price discrepancies on the share chart.
+  var BTC_LOCKED_FEED = null;       // index of the locked feed
+  var BTC_LOCKED_ROUND = 0;         // openAt of the round the lock belongs to
+  function lockBtcFeedForRound(roundOpenAt) {
+    if (Number.isFinite(roundOpenAt) && roundOpenAt !== BTC_LOCKED_ROUND) {
+      BTC_LOCKED_FEED = null;
+      BTC_LOCKED_ROUND = roundOpenAt;
+    }
+  }
+  function fetchBtcSingle(idx) {
+    var feed = BTC_PRICE_FEEDS[idx];
+    if (!feed) return Promise.reject(new Error('feed missing'));
+    return fetchWithTimeout(feed.url, { headers: { accept: 'application/json' }, mode: 'cors' })
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+      .then(function (j) {
+        var p = feed.pick(j);
+        if (!Number.isFinite(p) || p < 1000) return Promise.reject();
+        return p;
+      });
+  }
   function fetchBtcRace() {
-    var racePromises = BTC_PRICE_FEEDS.map(function (feed, i) {
-      return fetchWithTimeout(feed.url, { headers: { accept: 'application/json' }, mode: 'cors' })
-        .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
-        .then(function (j) {
-          var p = feed.pick(j);
-          if (!Number.isFinite(p) || p < 1000) return Promise.reject();
-          BTC_FEED_INDEX = i;
-          return p;
+    // Stay on the locked feed for the round if it still answers.
+    if (BTC_LOCKED_FEED != null) {
+      return fetchBtcSingle(BTC_LOCKED_FEED)
+        .then(function (p) { BTC_FEED_INDEX = BTC_LOCKED_FEED; return p; })
+        .catch(function () {
+          // Locked feed went offline — fall through to a fresh race and
+          // re-lock on the new winner.
+          BTC_LOCKED_FEED = null;
+          return raceAllFeeds();
         });
+    }
+    return raceAllFeeds();
+  }
+  function raceAllFeeds() {
+    var racePromises = BTC_PRICE_FEEDS.map(function (feed, i) {
+      return fetchBtcSingle(i).then(function (p) {
+        if (BTC_LOCKED_FEED == null) BTC_LOCKED_FEED = i;
+        BTC_FEED_INDEX = i;
+        return p;
+      });
     });
     return Promise.any
       ? Promise.any(racePromises)
@@ -1159,6 +1192,7 @@
 
     // ---- Live BTC tile ----
     if (market.isOstNative && market.meta && market.meta.kind === 'btc5m') {
+      lockBtcFeedForRound(market.meta.openAt);
       var tickBtc = function () {
         var msLeft = Math.max(0, market.meta.closeAt - Date.now());
         var mm = Math.floor(msLeft / 60000), ss = Math.floor((msLeft % 60000) / 1000);
@@ -1539,14 +1573,21 @@
       // Price history baseline — refresh every 10s, then maintain 1s live curve.
       var refreshHistory = function (sideToLoad) {
         sideToLoad = sideToLoad === 'NO' ? 'NO' : ((typeof bodyEl.__getChartSide === 'function') ? bodyEl.__getChartSide() : 'YES');
-        var historyTokenId = getTokenForChartSide(sideToLoad);
+        var yesToken = tokenIds[0] || tokenId;
+        var noToken = tokenIds[1] || null;
+        var historyTokenId = sideToLoad === 'NO' ? (noToken || yesToken) : yesToken;
+        // If the NO token is missing or identical to YES, the upstream history
+        // endpoint returns the same series for both — which is exactly what
+        // produced the "YES and NO graph look the same" bug. Mirror YES (1−p)
+        // instead so users see a proper inverse curve.
+        var mustMirror = sideToLoad === 'NO' && (!noToken || noToken === yesToken);
         setText(bodyEl, 'chartStatus', 'fetching…');
         fetchPolyHistory(historyTokenId, rawId).then(function (h) {
           if (!h) { setText(bodyEl, 'chartStatus', 'history unavailable'); return; }
           var seed = (h.history || h.prices || []).map(function (r) {
             return {
               t: Number(r.t || r.time || Date.now()),
-              p: Number(r.p || r.price)
+              p: mustMirror ? 1 - Number(r.p || r.price) : Number(r.p || r.price)
             };
           }).filter(function (r) { return Number.isFinite(r.p) && r.p >= 0 && r.p <= 1; });
           if (seed.length >= 2) {

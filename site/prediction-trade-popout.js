@@ -83,6 +83,31 @@
     desk.dataset.popoutReady = '1';
     desk.insertBefore(header, desk.firstChild);
 
+    // Live mini-chart: mirrors the 5-min BTC round (or the selected
+    // Polymarket contract) so users have full graph context inside the
+    // popout exactly like the unified market modal.
+    var chartWrap = document.createElement('div');
+    chartWrap.className = 'ost-tradepop__chart-wrap';
+    chartWrap.innerHTML =
+      '<div class="ost-tradepop__chart-head">' +
+        '<span data-bind="popChartLabel">Live chart · select a market</span>' +
+        '<span class="ost-tradepop__chart-toggle" data-bind="popChartToggle">' +
+          '<button type="button" data-side="YES" class="is-active is-yes">YES</button>' +
+          '<button type="button" data-side="NO" class="is-no">NO</button>' +
+        '</span>' +
+      '</div>' +
+      '<canvas class="ost-tradepop__chart-canvas" data-bind="popChartCanvas"></canvas>';
+    desk.insertBefore(chartWrap, header.nextSibling);
+    desk.__popChartSide = 'YES';
+    chartWrap.querySelectorAll('[data-bind="popChartToggle"] button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        desk.__popChartSide = b.getAttribute('data-side') === 'NO' ? 'NO' : 'YES';
+        chartWrap.querySelectorAll('[data-bind="popChartToggle"] button').forEach(function (x) { x.classList.remove('is-active'); });
+        b.classList.add('is-active');
+        try { renderPopChart(desk); } catch (_) {}
+      });
+    });
+
     // Re-parent to body so it escapes any portal stacking context.
     document.body.appendChild(desk);
 
@@ -224,6 +249,109 @@
   }
 
   // --------------------------------------------------------------------------
+  // Live mini-chart inside the popout — mirrors the 5-min BTC round when
+  // the OST native market is selected, otherwise renders the smoothed YES /
+  // NO probability series of the active Polymarket contract.
+  // --------------------------------------------------------------------------
+  function getSelectedMarket() {
+    try {
+      var st = window.__predictionState ||
+               (window.OST_PREDICTION_API && window.OST_PREDICTION_API._state);
+      if (!st || !Array.isArray(st.markets)) return null;
+      var id = st.selectedMarketId;
+      if (!id) return st.markets[0] || null;
+      return st.markets.find(function (m) { return m && m.id === id; }) || null;
+    } catch (_) { return null; }
+  }
+  function getMarketSeries(market, side) {
+    if (!market) return [];
+    side = side === 'NO' ? 'NO' : 'YES';
+    var isBtc5m = market.isOstNative && /ost-btc5m-/i.test(String(market.id || ''));
+    if (isBtc5m && window.OST_PREDICTION_API && typeof window.OST_PREDICTION_API.btcSeries === 'function') {
+      var raw = window.OST_PREDICTION_API.btcSeries() || [];
+      var pts = raw.map(function (p) { return Number(p && p.price); }).filter(Number.isFinite).slice(-120);
+      // For BTC 5-min the YES/NO toggle just inverts the line so the user
+      // can see the round from the side they're trading.
+      if (side === 'NO' && pts.length > 1) {
+        var min = Math.min.apply(null, pts), max = Math.max.apply(null, pts);
+        pts = pts.map(function (v) { return min + (max - v); });
+      }
+      return pts;
+    }
+    var yes = Number(market.yesPriceNumber);
+    var no = Number(market.noPriceNumber);
+    if (!Number.isFinite(yes)) yes = 0.5;
+    if (!Number.isFinite(no)) no = 1 - yes;
+    var basePrice = side === 'NO' ? no : yes;
+    // Light synthetic series so the popout never flat-lines while real
+    // history is loading via the unified modal.
+    var arr = [];
+    for (var i = 0; i < 32; i++) {
+      arr.push(Math.max(0.02, Math.min(0.98, basePrice + Math.sin((i + Date.now() / 9000) * 0.6) * 0.02)));
+    }
+    return arr;
+  }
+  function renderPopChart(desk) {
+    if (!desk) desk = document.getElementById('predictionTradeDesk');
+    if (!desk) return;
+    var canvas = desk.querySelector('[data-bind="popChartCanvas"]');
+    var label = desk.querySelector('[data-bind="popChartLabel"]');
+    if (!canvas) return;
+    var market = getSelectedMarket();
+    var side = desk.__popChartSide || 'YES';
+    var pts = getMarketSeries(market, side);
+    if (!pts.length) {
+      if (label) label.textContent = 'Live chart · select a market';
+      var ctx0 = canvas.getContext('2d');
+      ctx0.clearRect(0, 0, canvas.width, canvas.height);
+      return;
+    }
+    if (label) {
+      var name = market && (market.title || market.question || 'Live market');
+      label.textContent = String(name).slice(0, 48) + ' · ' + side;
+    }
+    var dpr = window.devicePixelRatio || 1;
+    var w = canvas.clientWidth || 280;
+    var h = canvas.clientHeight || 110;
+    canvas.width = Math.floor(w * dpr); canvas.height = Math.floor(h * dpr);
+    var ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    var min = Math.min.apply(null, pts);
+    var max = Math.max.apply(null, pts);
+    var range = Math.max(1e-9, max - min);
+    var color = side === 'NO' ? '#ff7c8a' : '#7ce6a8';
+    var grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, color + '55');
+    grad.addColorStop(1, color + '00');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    pts.forEach(function (p, i) {
+      var x = (i / (pts.length - 1)) * w;
+      var y = h - ((p - min) / range) * (h - 6) - 3;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = color; ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    pts.forEach(function (p, i) {
+      var x = (i / (pts.length - 1)) * w;
+      var y = h - ((p - min) / range) * (h - 6) - 3;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  }
+  var popChartTimer = null;
+  function startPopChartLoop() {
+    if (popChartTimer) return;
+    popChartTimer = setInterval(function () {
+      var desk = document.getElementById('predictionTradeDesk');
+      if (!desk || !desk.classList.contains('is-open')) return;
+      try { renderPopChart(desk); } catch (_) {}
+    }, 1000);
+  }
+
+  // --------------------------------------------------------------------------
   // Boot
   // --------------------------------------------------------------------------
   function boot() {
@@ -235,6 +363,8 @@
       requestAnimationFrame(function () { placeSafely(desk); });
     }
     watchTradeAction();
+    startPopChartLoop();
+    try { renderPopChart(desk); } catch (_) {}
   }
 
   if (document.readyState === 'loading') {

@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v73';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v73';
+const CACHE_NAME = 'ost-pwa-cache-v75';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v75';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -10,7 +10,7 @@ const PRECACHE_PATHS = [
   './ost-logo.svg',
   './icon-192.png',
   './icon-512.png',
-  './style.css?v=73',
+  './style.css?v=75',
   './mobile.css?v=7',
   './polish.css?v=1',
   './compartments.css?v=2',
@@ -28,7 +28,7 @@ const PRECACHE_PATHS = [
   './mobile-shell.css?v=10',
   './rpc-multiplexer.js?v=1',
   './ost-notifications.js?v=2',
-  './app.js?v=120',
+  './app.js?v=121',
   './icons.js?v=1',
   './nuevo-laredo-gas.js?v=1',
   './shop-quickview.js?v=1',
@@ -54,9 +54,9 @@ const PRECACHE_PATHS = [
   './compartments.js?v=4',
   './prediction-extras.js?v=8',
   './prediction-pro.js?v=8',
-  './prediction-scalar.js?v=2',
-  './prediction-modal.js?v=19',
-  './prediction-trade-popout.js?v=2',
+  './prediction-scalar.js?v=3',
+  './prediction-modal.js?v=20',
+  './prediction-trade-popout.js?v=3',
   './prediction-pro-dash.js?v=6',
   './ost-console.js?v=2',
   './ost-onchain-bet.js?v=1',

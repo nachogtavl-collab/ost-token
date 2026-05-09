@@ -304,6 +304,38 @@
       if (encoded) raw = JSON.parse(decodeURIComponent(encoded));
     } catch (_) { raw = null; }
     if (!raw && card._predictionMarket) raw = card._predictionMarket;
+    // Look up the canonical market record from app.js state via the card id —
+    // app.js renders `data-prediction-market-id` on every card and exposes the
+    // full market list on `window.__predictionState.markets`. This is how we
+    // detect Polymarket grouped/multi-outcome events (Trump/Harris/RFK,
+    // tournament winners) plus scalar/date range markets without forcing
+    // app.js to embed full JSON in every DOM node.
+    if (!raw) {
+      var lookupId = card.getAttribute('data-prediction-market-id') ||
+                     card.getAttribute('data-market-id') ||
+                     (card.dataset && card.dataset.predictionMarketId) ||
+                     '';
+      try {
+        var st = window.__predictionState ||
+                 (window.OST_PREDICTION_API && window.OST_PREDICTION_API._state);
+        if (lookupId && st && Array.isArray(st.markets)) {
+          raw = st.markets.find(function (mk) { return mk && mk.id === lookupId; }) || null;
+          // Polymarket grouped-event payloads stash the per-leg outcomes inside
+          // raw.polymarketEvent.markets — promote them so classifyOutcomes sees
+          // a >2 outcome list and builds bucket UI for the picker.
+          if (raw && (!Array.isArray(raw.outcomes) || raw.outcomes.length < 3) && raw.raw && raw.raw.polymarketEvent && Array.isArray(raw.raw.polymarketEvent.markets) && raw.raw.polymarketEvent.markets.length > 2) {
+            var legs = raw.raw.polymarketEvent.markets.map(function (leg) {
+              return {
+                key: leg.key || leg.id || leg.groupItemTitle,
+                label: leg.groupItemTitle || leg.label || leg.title || ('Leg ' + (leg.id || '')),
+                price: Number(leg.price != null ? leg.price : (leg.outcomePrices && JSON.parse(typeof leg.outcomePrices === 'string' ? leg.outcomePrices : JSON.stringify(leg.outcomePrices))[0])) || 0
+              };
+            });
+            raw = Object.assign({}, raw, { outcomes: legs });
+          }
+        }
+      } catch (_) {}
+    }
     if (!raw) return;
     var norm = normalizeMarket(raw);
     if (!norm || norm.marketType === 'binary') return;
@@ -322,18 +354,26 @@
 
   function observeCards() {
     if (!document.body) { setTimeout(observeCards, 200); return; }
-    document.querySelectorAll('[data-prediction-card], .prediction-card, .market-card').forEach(tryEnhanceCard);
+    document.querySelectorAll('[data-prediction-card], .prediction-card, .market-card, .prediction-market-card[data-prediction-market-id]').forEach(tryEnhanceCard);
     var mo = new MutationObserver(function (muts) {
       for (var i = 0; i < muts.length; i++) {
         for (var j = 0; j < muts[i].addedNodes.length; j++) {
           var n = muts[i].addedNodes[j];
           if (!(n instanceof HTMLElement)) continue;
-          if (n.matches && n.matches('[data-prediction-card], .prediction-card, .market-card')) tryEnhanceCard(n);
-          n.querySelectorAll && n.querySelectorAll('[data-prediction-card], .prediction-card, .market-card').forEach(tryEnhanceCard);
+          if (n.matches && n.matches('[data-prediction-card], .prediction-card, .market-card, .prediction-market-card[data-prediction-market-id]')) tryEnhanceCard(n);
+          n.querySelectorAll && n.querySelectorAll('[data-prediction-card], .prediction-card, .market-card, .prediction-market-card[data-prediction-market-id]').forEach(tryEnhanceCard);
         }
       }
     });
     mo.observe(document.body, { childList: true, subtree: true });
+    // Markets often arrive after the initial DOM scan — re-run when the
+    // prediction list re-renders or when app.js dispatches an order-changed
+    // event (which it does after every live refresh).
+    var rescan = function () {
+      document.querySelectorAll('.prediction-market-card[data-prediction-market-id]:not([data-ost-scalar-ready])').forEach(tryEnhanceCard);
+    };
+    window.addEventListener('ost:prediction:markets-updated', rescan);
+    window.addEventListener('ost:prediction:order-changed', rescan);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', observeCards);
   else observeCards();
