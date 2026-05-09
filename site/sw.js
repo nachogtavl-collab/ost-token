@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v69';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v69';
+const CACHE_NAME = 'ost-pwa-cache-v71';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v71';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -10,7 +10,7 @@ const PRECACHE_PATHS = [
   './ost-logo.svg',
   './icon-192.png',
   './icon-512.png',
-  './style.css?v=70',
+  './style.css?v=72',
   './mobile.css?v=7',
   './polish.css?v=1',
   './compartments.css?v=2',
@@ -28,7 +28,7 @@ const PRECACHE_PATHS = [
   './mobile-shell.css?v=10',
   './rpc-multiplexer.js?v=1',
   './ost-notifications.js?v=2',
-  './app.js?v=118',
+  './app.js?v=120',
   './nuevo-laredo-gas.js?v=1',
   './shop-quickview.js?v=1',
   './interchange-live.js?v=1',
@@ -67,7 +67,7 @@ const PRECACHE_PATHS = [
   './apple-tap.js?v=1',
   './ost-games.js?v=14',
   './code-academy.js?v=3',
-  './i18n-runtime.js?v=1',
+  './i18n-runtime.js?v=3',
   './devnet-rescue.js?v=4',
   './launchpad-trenches.js?v=3',
   './stock-market.js?v=1',

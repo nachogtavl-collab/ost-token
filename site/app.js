@@ -538,6 +538,42 @@
       'wallet.portal.meteoraDesc': 'Lugar de liquidez dinÃ¡mica para activos nuevos y ruteo nativo del launchpad.',
       'wallet.portal.prediction.title': 'PrÃ³ximamente',
       'wallet.portal.prediction.sub': 'Un riel comunitario de mercados de eventos inspirado por Polymarket, Kalshi y el resto de las plataformas de contratos, pero construido dentro de OST.',
+      'wallet.portal.prediction.noClose': 'Sin hora de cierre',
+      'wallet.portal.prediction.now': 'Cerrando ahora',
+      'wallet.portal.prediction.inMinutes': 'Cierra en ',
+      'wallet.portal.prediction.inHours': 'Cierra en ',
+      'wallet.portal.prediction.inDays': 'Cierra en ',
+      'wallet.portal.prediction.ago': 'atrás',
+      'wallet.portal.prediction.kalshiTitle': 'Mercado de Kalshi',
+      'wallet.portal.prediction.kalshiDetail': 'Contrato de evento en vivo conectado desde Kalshi.',
+      'wallet.portal.prediction.noTickets': 'Aún no hay tickets de mercado OST registrados.',
+      'wallet.portal.prediction.buyNo': 'Posición NO',
+      'wallet.portal.prediction.buyYes': 'Posición SÍ',
+      'wallet.portal.prediction.noSelection': 'No hay mercado seleccionado',
+      'wallet.portal.prediction.noSelectionCopy': 'Elige un contrato en vivo del tablero para crear una posición denominada en OST.',
+      'wallet.portal.prediction.tradeSelectPrompt': 'Selecciona primero un contrato en vivo.',
+      'wallet.portal.prediction.tradeUnavailable': 'No disponible',
+      'wallet.portal.prediction.connectWalletPrompt': 'Conecta tu billetera',
+      'wallet.portal.prediction.tradeSending': 'Enviando orden OST...',
+      'wallet.portal.prediction.tradePending': 'Enviando un ticket real de mercado OST a la bóveda de predicción...',
+      'wallet.portal.prediction.tradeWalletNeeded': 'Conecta tu billetera OST para colocar un ticket de mercado.',
+      'wallet.portal.prediction.tradeNotEnough': 'Esta billetera no tiene suficiente OST para ese monto.',
+      'wallet.portal.prediction.tradeReady': 'Listo para enviar esta posición a la bóveda de predicción OST.',
+      'wallet.portal.prediction.tradeFailed': 'No se pudo colocar la orden del mercado de predicción ahora.',
+      'wallet.portal.prediction.polyDetail': 'Contrato sí/no en vivo conectado directamente desde Polymarket.',
+      'wallet.portal.prediction.yesLabel': 'Sí',
+      'wallet.portal.prediction.noLabel': 'No',
+      'wallet.portal.prediction.yesAskLabel': 'Oferta Sí',
+      'wallet.portal.prediction.noAskLabel': 'Oferta No',
+      'wallet.portal.prediction.volumeLabel': 'Volumen',
+      'wallet.portal.prediction.liquidityLabel': 'Liquidez',
+      'wallet.portal.prediction.openInterestLabel': 'Interés abierto',
+      'wallet.portal.prediction.closeLabel': 'Cierra',
+      'wallet.portal.prediction.openFeed': 'Abrir feed',
+      'wallet.portal.prediction.openVenue': 'Abrir mercado',
+      'wallet.portal.prediction.binaryContract': 'Contrato binario',
+      'wallet.portal.prediction.eventContract': 'Contrato de evento',
+      'wallet.portal.prediction.loadingBoard': 'Cargando mercados de predicción en vivo...',
       'ancient.toggle.off': 'ð“…± Antiguo',
       'ancient.toggle.on': 'Modo Moderno',
       'ancient.toggle.activate': 'Activar el modo jeroglÃ­fico antiguo',
@@ -2037,6 +2073,7 @@
 
     document.documentElement.setAttribute('data-lang', currentLang);
     document.documentElement.lang = currentLang;
+    try { localStorage.setItem('ost.lang', currentLang); } catch (err) {}
 
     if (typeof window.syncAncientModeUi === 'function') window.syncAncientModeUi();
     if (typeof window.syncTransmitUi === 'function') window.syncTransmitUi();
@@ -2044,6 +2081,10 @@
     if (typeof window.syncStoreCatalogUi === 'function') window.syncStoreCatalogUi();
     if (typeof window.syncInterchangeBrowserUi === 'function') window.syncInterchangeBrowserUi();
     if (typeof window.syncPredictionMarketBoardUi === 'function') window.syncPredictionMarketBoardUi();
+    try { window.dispatchEvent(new CustomEvent('ost:languagechange', { detail: { lang: currentLang } })); } catch (err) {}
+    if (currentLang === 'es' && typeof window.OST_TRANSLATE_NODE === 'function') {
+      window.setTimeout(function () { window.OST_TRANSLATE_NODE(document.body); }, 0);
+    }
   }
   window.applyTranslations = applyTranslations;
 
@@ -2072,6 +2113,7 @@
           lang,
           currency: prefs.currency || window.__ostCurrency || 'USD'
         }));
+        localStorage.setItem('ost.lang', lang);
       } catch (err) {}
       toast('ðŸŒ', `Language: ${lang.toUpperCase()}`);
     });
@@ -12673,6 +12715,7 @@
         });
         localStorage.setItem('ost_prefs', JSON.stringify(prefs));
         localStorage.setItem(WELCOME_PREFS_VERSION_KEY, WELCOME_PREFS_VERSION);
+        localStorage.setItem('ost.lang', prefs.lang);
       } catch (e) {}
     }
 
@@ -12728,6 +12771,8 @@
           selectedCurrency = detectPreferredCurrency(selectedLang);
           setSelectedButton('.wel-curr-btn', 'data-curr', selectedCurrency, 'wel-curr-active');
         }
+        if (typeof applyTranslations === 'function') applyTranslations(selectedLang);
+        syncNavLanguage(selectedLang);
       });
     });
 
@@ -13301,6 +13346,12 @@
       container.querySelectorAll('button[' + attr + ']').forEach(function(btn) {
         btn.classList.toggle('is-active', btn.getAttribute(attr) === value);
       });
+    }
+
+    function translatePredictionBoardNow() {
+      if (!String(currentLang || '').toLowerCase().startsWith('es')) return;
+      if (typeof window.OST_TRANSLATE_NODE !== 'function') return;
+      window.OST_TRANSLATE_NODE(document.getElementById('predictionMarketBoard') || listEl);
     }
 
     function clamp(value, min, max) {
@@ -15328,6 +15379,7 @@
         renderPredictionTicket(filteredMarkets);
         renderPredictionLedger();
         renderLatestReceipt();
+        translatePredictionBoardNow();
         return;
       }
 
@@ -15439,6 +15491,7 @@
       renderPredictionTicket(filteredMarkets);
       renderPredictionLedger();
       renderLatestReceipt();
+      translatePredictionBoardNow();
     }
 
     function syncPredictionMarketBoardUi() {
