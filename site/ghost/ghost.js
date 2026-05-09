@@ -10,6 +10,7 @@ import { GhostCore }       from './core.js?v=1';
 import { GhostMesh }       from './mesh.js?v=1';
 import { GhostRecursive }  from './recursive.js?v=1';
 import { GhostSignal }     from './signal.js?v=1';
+import { GhostAwareness }  from './awareness.js?v=1';
 
 const STYLE_HREF = (() => {
   const el = document.querySelector('script[src*="ghost/ghost.js"]');
@@ -91,9 +92,14 @@ class SummoningCircle {
     this.mesh       = new GhostMesh({ apiBase: this.translator.apiBase });
     this.recursive  = new GhostRecursive();
     this.signal     = new GhostSignal();
+    this.awareness  = new GhostAwareness({
+      onWhisper: (entry) => this._onMeshWhisper(entry),
+      onChange:  (snap)  => this._onAwarenessChange(snap)
+    });
 
     this.history = [];
     this.busy = false;
+    this._lastAwarenessAnnounce = '';
 
     this._wire();
 
@@ -148,6 +154,49 @@ class SummoningCircle {
     if (this.statusPill) this.statusPill.textContent = text;
   }
 
+  _buildAwarenessContext() {
+    try { return this.awareness ? this.awareness.buildContextMessage() : ''; }
+    catch { return ''; }
+  }
+
+  _onAwarenessChange(snap) {
+    try {
+      const summary = this.awareness.describe();
+      if (this.statusPill && this.root && this.root.classList.contains('is-open')) {
+        this.statusPill.title = summary;
+      }
+      // Whisper a short heads-up only when the circle is open and the
+      // change is meaningful (peer connect / fair game appearing).
+      if (!this.root || !this.root.classList.contains('is-open')) return;
+      const key = `${snap.pavilion.peerAddr}|${snap.pavilion.rtcOpen}|${snap.games.open}|${snap.veil.active}`;
+      if (key === this._lastAwarenessAnnounce) return;
+      this._lastAwarenessAnnounce = key;
+      this._appendLine('system', 'mesh: ' + summary);
+    } catch {}
+  }
+
+  _onMeshWhisper(entry) {
+    try {
+      const tag = entry.shortFrom ? `[mesh ${entry.shortFrom}] ` : '[mesh peer] ';
+      this._appendLine('peer', tag + entry.text);
+      this.history.push({ role: 'user', text: `(mesh whisper from ${entry.shortFrom || 'peer'}): ${entry.text}` });
+      this.recursive.remember({ role: 'user', text: entry.text, source: 'mesh-whisper', from: entry.from }).catch(() => {});
+      if (!this.root || !this.root.classList.contains('is-open')) {
+        if (this.trigger) {
+          this.trigger.classList.add('has-whisper');
+          setTimeout(() => this.trigger && this.trigger.classList.remove('has-whisper'), 6000);
+        }
+      }
+    } catch {}
+  }
+
+  async whisperToPeer(text) {
+    if (!this.awareness) throw new Error('Ghost awareness offline');
+    await this.awareness.whisper(text);
+    this._appendLine('user', '› whisper to peer: ' + text);
+    return true;
+  }
+
   _appendLine(role, text) {
     const div = document.createElement('div');
     div.className = 'ghost-line ' + role;
@@ -168,9 +217,12 @@ class SummoningCircle {
     let reply = '';
     let source = 'unknown';
     try {
+      const ctx = this._buildAwarenessContext();
+      const baseHistory = this.history.slice(-12);
+      const history = ctx ? [{ role: 'system', text: ctx }, ...baseHistory] : baseHistory;
       const res = await this.translator.respond({
         prompt,
-        history: this.history.slice(-12)
+        history
       });
       reply = (res && res.text) || '';
       source = (res && res.source) || 'unknown';
@@ -203,7 +255,12 @@ function boot() {
     forgetMemory: () => circle.recursive.forget(),
     reflect: () => circle.recursive.reflect(circle.translator),
     capabilities: () => circle.signal.capabilities(),
-    loadLocalModel: () => circle.core.load()
+    loadLocalModel: () => circle.core.load(),
+    awareness: circle.awareness,
+    meshStatus: () => circle.awareness ? circle.awareness.status() : null,
+    meshDescribe: () => circle.awareness ? circle.awareness.describe() : '',
+    whisper: (text) => circle.whisperToPeer(text),
+    refreshAwareness: () => circle.awareness && circle.awareness.refresh()
   };
   window.dispatchEvent(new CustomEvent('ghost:ready'));
 }

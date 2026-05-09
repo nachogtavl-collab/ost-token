@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v75';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v75';
+const CACHE_NAME = 'ost-pwa-cache-v76';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v76';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -36,13 +36,14 @@ const PRECACHE_PATHS = [
   './polish.js?v=2',
   './swap-pool.js?v=1',
   './wallet-extras.js?v=14',
-  './ghost/ghost.js?v=4',
+  './ghost/ghost.js?v=5',
   './ghost/orb.js?v=1',
   './ghost/translator.js?v=3',
   './ghost/core.js?v=1',
   './ghost/mesh.js?v=1',
   './ghost/recursive.js?v=1',
   './ghost/signal.js?v=1',
+  './ghost/awareness.js?v=1',
   './ghost/ghost.css?v=2',
   './mesh/mesh.js?v=26',
   './mesh/veil.js?v=1',
