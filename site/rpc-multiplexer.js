@@ -63,10 +63,17 @@
   var health = {};
   ENDPOINTS.forEach(function (e) { health[e] = { failuresUntil: 0, lastErr: '' }; });
 
-  function isUsable(ep) { return Date.now() >= health[ep].failuresUntil; }
+  function ensureHealth(ep) {
+    if (!ep) ep = ENDPOINTS[0];
+    if (!health[ep]) health[ep] = { failuresUntil: 0, lastErr: '' };
+    return health[ep];
+  }
+
+  function isUsable(ep) { return Date.now() >= ensureHealth(ep).failuresUntil; }
   function markFailed(ep, err) {
-    health[ep].failuresUntil = Date.now() + 8000; // 8s cooldown
-    health[ep].lastErr = (err && err.message) || String(err || '');
+    var h = ensureHealth(ep);
+    h.failuresUntil = Date.now() + 8000; // 8s cooldown
+    h.lastErr = (err && err.message) || String(err || '');
   }
   function activeEndpoints() {
     var ok = ENDPOINTS.filter(isUsable);
@@ -108,7 +115,7 @@
         try {
           var res = await orig.apply(conn, args);
           // Success — clear backoff
-          health[ep].failuresUntil = 0;
+          ensureHealth(ep).failuresUntil = 0;
           return res;
         } catch (e) {
           var msg = (e && e.message) || String(e);
@@ -160,7 +167,7 @@
         origSendRaw.call(conn, rawTx, options).then(function (sig) {
           if (settled) return;
           settled = true;
-          health[ep].failuresUntil = 0;
+          ensureHealth(ep).failuresUntil = 0;
           try { console.log('[OST RPC] tx broadcast accepted by', ep, sig.slice(0, 8) + '…'); } catch (_) {}
           resolve(sig);
         }).catch(function (e) {
@@ -242,7 +249,7 @@
   // ────────────────────────────────────────────────────────────────────────
   window.OST_RPC_STATUS = function () {
     var rows = ENDPOINTS.map(function (ep) {
-      var h = health[ep];
+      var h = ensureHealth(ep);
       var until = h.failuresUntil > Date.now() ? ('⏳ ' + Math.ceil((h.failuresUntil - Date.now()) / 1000) + 's') : '✅ ready';
       return ep.padEnd(50) + ' ' + until + (h.lastErr ? ' (last err: ' + h.lastErr.slice(0, 80) + ')' : '');
     });
