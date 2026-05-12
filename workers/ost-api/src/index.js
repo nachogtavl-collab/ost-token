@@ -957,7 +957,7 @@ async function findCryptoTopupPayment(env, intent) {
   const cluster = topupCluster(env);
   const receiver = topupSolReceiver(env, cluster) || '';
   if (!receiver) return null;
-  const signatures = await solanaRpc(env, 'getSignaturesForAddress', [receiver, { limit: 30 }], { cluster });
+  const signatures = await solanaRpc(env, 'getSignaturesForAddress', [receiver, { limit: 120 }], { cluster });
   for (const item of signatures || []) {
     const signature = cleanText(item?.signature, 128);
     if (!signature) continue;

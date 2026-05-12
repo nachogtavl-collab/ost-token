@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v92';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v92';
+const CACHE_NAME = 'ost-pwa-cache-v93';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v93';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -36,7 +36,7 @@ const PRECACHE_PATHS = [
   './interchange-live.js?v=1',
   './polish.js?v=2',
   './swap-pool.js?v=1',
-  './wallet-extras.js?v=16',
+  './wallet-extras.js?v=17',
   './ghost/ghost.js?v=5',
   './ghost/orb.js?v=1',
   './ghost/translator.js?v=3',

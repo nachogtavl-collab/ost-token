@@ -486,6 +486,21 @@
     }));
   }
 
+  function rememberPendingPayment(intent, signature) {
+    if (!intent || !intent.id || !signature) return;
+    var current = readPendingTopup() || {};
+    writePendingTopup(Object.assign({}, current, {
+      id: intent.id,
+      wallet: intent.wallet || current.wallet || getActiveWalletAddress() || '',
+      memo: intent.memo || current.memo || '',
+      usd: Number(intent.usd || current.usd || 0),
+      ostAmount: Number(intent.ostAmount || current.ostAmount || 0),
+      paymentRef: String(signature),
+      method: intent.method || current.method || 'crypto',
+      createdAt: current.createdAt || Date.now()
+    }));
+  }
+
   function normalizeTopupCluster(cluster) {
     var raw = String(cluster || '').toLowerCase();
     return (raw === 'mainnet-beta' || raw === 'mainnet') ? 'mainnet-beta' : 'devnet';
@@ -964,6 +979,22 @@
   async function deliverIfPaid(intentId) {
     var intent = await getTopupStatus(intentId);
     if (intent.status === 'paid') return deliverPaidIntent(intent);
+    if (intent.status === 'pending') {
+      var pending = readPendingTopup();
+      var pendingSig = '';
+      if (pending && pending.id === intentId) {
+        pendingSig = String(pending.paymentRef || pending.deliverySignature || '').trim();
+      }
+      if (pendingSig) {
+        var verified = await verifyTopupSignature(intentId, pendingSig).catch(function() { return null; });
+        if (verified && !verified.pendingVerification) {
+          var verifiedIntent = verified.intent || verified;
+          if (verifiedIntent && (verifiedIntent.status === 'paid' || verifiedIntent.status === 'sent')) {
+            return deliverPaidIntent(verifiedIntent);
+          }
+        }
+      }
+    }
     if (intent.status === 'sent') {
       rememberClaimedTopup(intent.id, { signature: intent.signature || null, claimedAt: intent.sentAt || Date.now() });
       clearPendingTopup(intent.id);
@@ -980,6 +1011,9 @@
     var payment = String(asset || 'SOL').toUpperCase() === 'USDC'
       ? await sendIntentWithUsdc(intent, config)
       : await sendIntentWithSol(intent, config);
+    if (payment && payment.signature) {
+      rememberPendingPayment(intent, payment.signature);
+    }
     var verified = await verifyTopupSignature(intent.id, payment.signature);
     if (verified && verified.pendingVerification) {
       return {
