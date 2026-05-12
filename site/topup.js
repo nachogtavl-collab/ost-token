@@ -27,6 +27,15 @@
   let configCache = null;
   let pollTimer = null;
   let activeCryptoIntent = null;
+
+  function normalizeClusterName(cluster) {
+    const raw = String(cluster || '').toLowerCase();
+    return (raw === 'mainnet-beta' || raw === 'mainnet') ? 'mainnet' : 'devnet';
+  }
+
+  function clusterLabel(cfg) {
+    return normalizeClusterName(cfg && cfg.cluster) === 'mainnet' ? 'Solana mainnet' : 'Solana devnet';
+  }
   let currentQuote = quoteFromUsd(10);
   let activeConverterTab = 'buy';
   let conversionDirection = 'solToOst';
@@ -665,14 +674,14 @@
             <div class="topup-crypto-card">
               <div class="topup-crypto-row">
                 <div>
-                  <div class="topup-crypto-label">USDC - Solana mainnet</div>
+                  <div class="topup-crypto-label">USDC - Solana network</div>
                   <div class="topup-crypto-value" id="topupUsdcAddr">&mdash;</div>
                 </div>
                 <button class="topup-copy-btn" data-copy="topupUsdcAddr">Copy</button>
               </div>
               <div class="topup-crypto-row">
                 <div>
-                  <div class="topup-crypto-label">SOL - Solana mainnet</div>
+                  <div class="topup-crypto-label">SOL - Solana network</div>
                   <div class="topup-crypto-value" id="topupSolAddr">&mdash;</div>
                 </div>
                 <button class="topup-copy-btn" data-copy="topupSolAddr">Copy</button>
@@ -841,8 +850,13 @@
     try {
       const cfg = await loadConfig();
       const intent = await createIntent('crypto', wallet);
-      const usdc = (cfg.receivers && cfg.receivers.usdcMainnet) || 'Treasury address not configured';
-      const sol = (cfg.receivers && cfg.receivers.solMainnet) || 'Treasury address not configured';
+      const useMainnet = normalizeClusterName(cfg && cfg.cluster) === 'mainnet';
+      const usdc = useMainnet
+        ? ((cfg.receivers && (cfg.receivers.usdcMainnet || cfg.receivers.usdcDevnet)) || 'Treasury address not configured')
+        : ((cfg.receivers && (cfg.receivers.usdcDevnet || cfg.receivers.usdcMainnet)) || 'Treasury address not configured');
+      const sol = useMainnet
+        ? ((cfg.receivers && (cfg.receivers.solMainnet || cfg.receivers.solDevnet)) || 'Treasury address not configured')
+        : ((cfg.receivers && (cfg.receivers.solDevnet || cfg.receivers.solMainnet)) || 'Treasury address not configured');
       $('topupUsdcAddr').textContent = usdc;
       $('topupSolAddr').textContent = sol;
       $('topupMemo').textContent = intent.memo || intent.id;
@@ -879,7 +893,9 @@
       return;
     }
     btn.disabled = true;
-    setStatus('topupCryptoStatus', 'info', 'Verifying payment on Solana mainnet...');
+    let cfg = null;
+    try { cfg = await loadConfig(); } catch (_) { cfg = null; }
+    setStatus('topupCryptoStatus', 'info', 'Verifying payment on ' + clusterLabel(cfg) + '...');
     try {
       const r = await fetch(`${base}/topup/crypto/verify`, {
         method: 'POST',

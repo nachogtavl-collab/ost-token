@@ -695,7 +695,53 @@ async function removeQueue(env, id) {
 }
 
 const USDC_MAINNET_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+const USDC_DEVNET_MINT = '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU';
 const LAMPORTS_PER_SOL = 1_000_000_000;
+
+function normalizeSolanaCluster(raw) {
+  const value = String(raw || '').toLowerCase();
+  return (value === 'mainnet' || value === 'mainnet-beta') ? 'mainnet-beta' : 'devnet';
+}
+
+function topupCluster(env) {
+  return normalizeSolanaCluster(env.TOPUP_SOLANA_CLUSTER || env.SOLANA_CLUSTER || 'devnet');
+}
+
+function topupSolReceiver(env, cluster) {
+  const isMainnet = normalizeSolanaCluster(cluster) === 'mainnet-beta';
+  return isMainnet
+    ? (env.TREASURY_SOL_MAINNET || env.TREASURY_SOL_DEVNET || '')
+    : (env.TREASURY_SOL_DEVNET || env.TREASURY_SOL_MAINNET || '');
+}
+
+function topupUsdcReceiver(env, cluster) {
+  const isMainnet = normalizeSolanaCluster(cluster) === 'mainnet-beta';
+  return isMainnet
+    ? (env.TREASURY_USDC_MAINNET || env.TREASURY_USDC_DEVNET || topupSolReceiver(env, cluster))
+    : (env.TREASURY_USDC_DEVNET || env.TREASURY_USDC_MAINNET || topupSolReceiver(env, cluster));
+}
+
+function topupUsdcMint(env, cluster) {
+  const configured = env.TOPUP_USDC_MINT || env.USDC_MINT || '';
+  if (configured) return configured;
+  return normalizeSolanaCluster(cluster) === 'mainnet-beta' ? USDC_MAINNET_MINT : USDC_DEVNET_MINT;
+}
+
+function topupRpcUrls(env, cluster) {
+  const isMainnet = normalizeSolanaCluster(cluster) === 'mainnet-beta';
+  if (isMainnet) {
+    return [
+      env.SOLANA_MAINNET_RPC,
+      'https://solana-rpc.publicnode.com',
+      'https://api.mainnet-beta.solana.com'
+    ].filter(Boolean);
+  }
+  return [
+    env.SOLANA_DEVNET_RPC,
+    'https://api.devnet.solana.com',
+    'https://rpc.ankr.com/solana_devnet'
+  ].filter(Boolean);
+}
 
 async function fetchSolUsd() {
   const feeds = [
@@ -727,12 +773,9 @@ async function fetchSolUsd() {
   return null;
 }
 
-async function solanaRpc(env, method, params) {
-  const urls = [
-    env.SOLANA_MAINNET_RPC,
-    'https://solana-rpc.publicnode.com',
-    'https://api.mainnet-beta.solana.com'
-  ].filter(Boolean);
+async function solanaRpc(env, method, params, options = {}) {
+  const cluster = normalizeSolanaCluster(options.cluster || topupCluster(env));
+  const urls = topupRpcUrls(env, cluster);
   let lastError = 'rpc_unavailable';
   for (const rpcUrl of urls) {
     try {
@@ -808,10 +851,10 @@ function tokenAmountFromInfo(info) {
   return Number(info?.amount || 0);
 }
 
-function sumUsdcToTreasury(tx, treasuryOwner) {
+function sumUsdcToTreasury(tx, treasuryOwner, usdcMint) {
   const treasuryTokenAccounts = new Set();
   for (const balance of tx?.meta?.postTokenBalances || []) {
-    if (balance?.mint === USDC_MAINNET_MINT && balance?.owner === treasuryOwner) {
+    if (balance?.mint === usdcMint && balance?.owner === treasuryOwner) {
       const account = accountKeyAt(tx, balance.accountIndex);
       if (account) treasuryTokenAccounts.add(account);
     }
@@ -822,7 +865,7 @@ function sumUsdcToTreasury(tx, treasuryOwner) {
     const info = parsed?.info || {};
     if (instruction?.program !== 'spl-token' || !parsed) continue;
     if (parsed.type !== 'transfer' && parsed.type !== 'transferChecked') continue;
-    if (info.mint && info.mint !== USDC_MAINNET_MINT) continue;
+    if (info.mint && info.mint !== usdcMint) continue;
     if (!treasuryTokenAccounts.has(String(info.destination || ''))) continue;
     const amount = tokenAmountFromInfo(info);
     if (Number.isFinite(amount)) total += amount;
@@ -831,20 +874,22 @@ function sumUsdcToTreasury(tx, treasuryOwner) {
 }
 
 async function verifyCryptoTopupSignature(env, intent, signature) {
+  const cluster = topupCluster(env);
+  const usdcMint = topupUsdcMint(env, cluster);
   const cleanSignature = cleanText(signature, 128);
   if (!cleanSignature) return { ok: false, error: 'missing_signature' };
   const tx = await solanaRpc(env, 'getTransaction', [cleanSignature, {
     encoding: 'jsonParsed',
     commitment: 'confirmed',
     maxSupportedTransactionVersion: 0
-  }]);
+  }], { cluster });
   if (!tx) return { ok: false, error: 'transaction_not_found' };
   if (tx?.meta?.err) return { ok: false, error: 'transaction_failed' };
   if (!transactionHasMemo(tx, intent.memo)) return { ok: false, error: 'memo_not_found' };
 
-  const treasury = env.TREASURY_SOL_MAINNET || env.TREASURY_USDC_MAINNET || '';
+  const treasury = topupSolReceiver(env, cluster) || topupUsdcReceiver(env, cluster) || '';
   const solLamports = sumSolLamportsTo(tx, treasury);
-  const usdcAmount = sumUsdcToTreasury(tx, treasury);
+  const usdcAmount = sumUsdcToTreasury(tx, topupUsdcReceiver(env, cluster), usdcMint);
   const usdDue = Number(intent.usd || 0);
   const usdcPaid = usdcAmount + 0.000001 >= usdDue;
   let solPaid = false;
@@ -866,7 +911,9 @@ async function verifyCryptoTopupSignature(env, intent, signature) {
   return {
     ok: true,
     signature: cleanSignature,
-    rail: usdcPaid ? 'usdc-solana-mainnet' : 'sol-solana-mainnet',
+    rail: usdcPaid
+      ? ('usdc-solana-' + (cluster === 'mainnet-beta' ? 'mainnet' : 'devnet'))
+      : ('sol-solana-' + (cluster === 'mainnet-beta' ? 'mainnet' : 'devnet')),
     solLamports,
     usdcAmount,
     solUsd,
@@ -892,9 +939,10 @@ async function markIntentPaidFromCrypto(env, intent, verification, options = {})
 }
 
 async function findCryptoTopupPayment(env, intent) {
-  const receiver = env.TREASURY_SOL_MAINNET || '';
+  const cluster = topupCluster(env);
+  const receiver = topupSolReceiver(env, cluster) || '';
   if (!receiver) return null;
-  const signatures = await solanaRpc(env, 'getSignaturesForAddress', [receiver, { limit: 30 }]);
+  const signatures = await solanaRpc(env, 'getSignaturesForAddress', [receiver, { limit: 30 }], { cluster });
   for (const item of signatures || []) {
     const signature = cleanText(item?.signature, 128);
     if (!signature) continue;
@@ -1441,6 +1489,9 @@ export default {
     // ── TOP-UP: real-money OST refill ───────────────────────────────────────
     // Tier table + receivers + Stripe enable flag.
     if (path === '/topup/config' && method === 'GET') {
+      const cluster = topupCluster(env);
+      const usdcReceiver = topupUsdcReceiver(env, cluster);
+      const solReceiver = topupSolReceiver(env, cluster);
       const rate = topupUsdPerOst(env);
       let solUsd = null;
       try { solUsd = await fetchSolUsd(); } catch (_) {}
@@ -1456,11 +1507,14 @@ export default {
         tiers: Object.entries(TOPUP_TIERS).map(([id, t]) => ({ id: Number(id), usd: t.usd, ostAmount: calculateTopupOst(t.usd, rate) })),
         stripeEnabled: !!env.STRIPE_SECRET_KEY,
         receivers: {
-          usdcMainnet: env.TREASURY_USDC_MAINNET || null,
-          solMainnet:  env.TREASURY_SOL_MAINNET  || null
+          usdcMainnet: env.TREASURY_USDC_MAINNET || usdcReceiver || null,
+          solMainnet:  env.TREASURY_SOL_MAINNET  || solReceiver || null,
+          usdcDevnet: env.TREASURY_USDC_DEVNET || usdcReceiver || null,
+          solDevnet:  env.TREASURY_SOL_DEVNET  || solReceiver || null
         },
         ostMint: env.OST_MINT || '383pTzoZ8Gp83dzk23ZnvLcfX2Sq32TAGN48CMQu2pAJ',
-        cluster: 'devnet'
+        usdcMint: topupUsdcMint(env, cluster),
+        cluster
       });
     }
 

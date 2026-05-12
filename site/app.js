@@ -5250,7 +5250,7 @@
     lines.push('Order ' + summarizeConvertValue(intent.id, 8, 6) + ' -> ' + Number(intent.ostAmount || 0).toLocaleString(undefined, { maximumFractionDigits: 2 }) + ' OST');
     lines.push('Delivery wallet: ' + summarizeConvertValue(intent.wallet || connectedWallet || '', 8, 6));
     if (intent.memo) lines.push('Memo: ' + intent.memo);
-    if (settlement) lines.push('Settlement now: ' + settlement.amountDisplay + ' ' + settlement.asset + ' on Solana mainnet');
+    if (settlement) lines.push('Settlement now: ' + settlement.amountDisplay + ' ' + settlement.asset + ' on ' + getConvertRailNetworkLabel());
     if (convertPendingOrder.claimPending) {
       lines.push('OST was already delivered locally. Retry the final claim sync below. Do not pay again.');
     } else if (convertPendingOrder.mode === 'stripe') {
@@ -5263,6 +5263,11 @@
       lines.push('This is a live treasury payment route. The same wallet signs the payment and receives devnet OST back.');
     }
     convertTopupMeta.textContent = lines.join('\n');
+  }
+
+  function getConvertRailNetworkLabel() {
+    const network = String(window.OST_NETWORK || 'devnet').toLowerCase();
+    return (network === 'mainnet-beta' || network === 'mainnet') ? 'Solana mainnet' : 'Solana devnet';
   }
 
   function clearConvertPendingOrder() {
@@ -5427,11 +5432,11 @@
 
     if (curr === 'SOL') {
       setConvertRouteMessage(connectedWalletSession
-        ? 'This is a real SOL mainnet treasury payment. The connected wallet signs the payment and receives devnet OST back after verification.'
-        : 'Connect a wallet first. The same wallet address signs the mainnet treasury payment and receives devnet OST delivery.');
+        ? 'This is a real SOL treasury payment on ' + getConvertRailNetworkLabel() + '. The connected wallet signs the payment and receives devnet OST back after verification.'
+        : 'Connect a wallet first. The same wallet address signs the treasury payment on ' + getConvertRailNetworkLabel() + ' and receives devnet OST delivery.');
     } else if (curr === 'USDC') {
       setConvertRouteMessage(connectedWalletSession
-        ? 'This is a real USDC mainnet treasury payment. The connected wallet signs the token transfer and receives devnet OST back after verification.'
+        ? 'This is a real USDC treasury payment on ' + getConvertRailNetworkLabel() + '. The connected wallet signs the token transfer and receives devnet OST back after verification.'
         : 'Connect a wallet first. The same wallet address signs the USDC treasury payment and receives devnet OST delivery.');
     } else if (isFiat) {
       setConvertRouteMessage(topupConfig && topupConfig.stripeEnabled
@@ -5470,7 +5475,7 @@
           setConvertTopupStatus('Retrying final claim sync...', 'warning');
           transferResult.textContent = 'Reconnecting the completed OST order...';
         } else {
-          setConvertTopupStatus('Signing ' + settlementAsset + ' mainnet treasury payment...', 'warning');
+          setConvertTopupStatus('Signing ' + settlementAsset + ' treasury payment on ' + getConvertRailNetworkLabel() + '...', 'warning');
           transferResult.textContent = 'Submitting ' + settlementAsset + ' treasury payment...';
         }
         await pulseConvertSteps(2);
@@ -5544,8 +5549,8 @@
             sourceAmount: amount,
             usdValue: usdValue
           });
-          setConvertTopupStatus('Signing ' + curr + ' treasury payment...', 'warning');
-          transferResult.textContent = 'Authorizing ' + amount + ' ' + curr + ' on Solana mainnet...';
+          setConvertTopupStatus('Signing ' + curr + ' treasury payment on ' + getConvertRailNetworkLabel() + '...', 'warning');
+          transferResult.textContent = 'Authorizing ' + amount + ' ' + curr + ' on ' + getConvertRailNetworkLabel() + '...';
           await pulseConvertSteps(2);
           const result = await window.OST_TOPUP.settleIntent(intent.id, curr);
           await pulseConvertSteps(3);

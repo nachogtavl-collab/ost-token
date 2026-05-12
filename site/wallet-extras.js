@@ -425,16 +425,18 @@
   // ------------------------------------------------------------------
   // 0a-ter) Real top-up client
   // Uses the live /topup API on Pages, settles a treasury payment from the
-  // connected wallet on Solana mainnet, then releases devnet OST directly
+  // connected wallet on the configured Solana cluster, then releases devnet OST
   // from the published devnet pool and finalizes the intent remotely.
   // ------------------------------------------------------------------
   var TOPUP_PENDING_KEY = 'ost.topup.pending.v1';
   var TOPUP_CLAIMED_KEY = 'ost.topup.claimed.v1';
+  var TOPUP_DEVNET_RPC = 'https://api.devnet.solana.com';
   var TOPUP_MAINNET_RPC = 'https://solana-rpc.publicnode.com';
   var TOPUP_LAMPORTS_PER_SOL = 1_000_000_000;
+  var USDC_DEVNET_MINT = '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU';
   var USDC_MAINNET_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
   var SPL_TOKEN_PROGRAM_ID = new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
-  var mainnetConnection = null;
+  var topupConnections = {};
   var topupConfigCache = { value: null, loadedAt: 0, promise: null };
 
   function delay(ms) {
@@ -484,11 +486,57 @@
     }));
   }
 
-  function getMainnetConnection() {
-    if (!mainnetConnection && typeof solanaWeb3 !== 'undefined') {
-      mainnetConnection = new solanaWeb3.Connection(TOPUP_MAINNET_RPC, 'confirmed');
+  function normalizeTopupCluster(cluster) {
+    var raw = String(cluster || '').toLowerCase();
+    return (raw === 'mainnet-beta' || raw === 'mainnet') ? 'mainnet-beta' : 'devnet';
+  }
+
+  function resolveTopupCluster(config) {
+    var fromConfig = config && config.cluster;
+    var fromWindow = typeof window !== 'undefined' ? window.OST_NETWORK : '';
+    return normalizeTopupCluster(fromConfig || fromWindow || 'devnet');
+  }
+
+  function topupNetworkLabel(config) {
+    return resolveTopupCluster(config) === 'mainnet-beta' ? 'Solana mainnet' : 'Solana devnet';
+  }
+
+  function resolveTopupRpc(config) {
+    var cfgRpc = config && (config.solanaRpc || config.rpcUrl || (config.rpc && config.rpc.solana));
+    if (cfgRpc) return String(cfgRpc);
+    return resolveTopupCluster(config) === 'mainnet-beta' ? TOPUP_MAINNET_RPC : TOPUP_DEVNET_RPC;
+  }
+
+  function getTopupConnection(config) {
+    if (typeof solanaWeb3 === 'undefined') return null;
+    var rpcUrl = resolveTopupRpc(config);
+    if (!topupConnections[rpcUrl]) {
+      topupConnections[rpcUrl] = new solanaWeb3.Connection(rpcUrl, 'confirmed');
     }
-    return mainnetConnection;
+    return topupConnections[rpcUrl];
+  }
+
+  function pickTopupReceiver(config, kind) {
+    var receivers = config && config.receivers ? config.receivers : {};
+    var isMainnet = resolveTopupCluster(config) === 'mainnet-beta';
+    if (kind === 'usdc') {
+      return isMainnet
+        ? (receivers.usdcMainnet || receivers.usdcDevnet || '')
+        : (receivers.usdcDevnet || receivers.usdcMainnet || '');
+    }
+    return isMainnet
+      ? (receivers.solMainnet || receivers.solDevnet || '')
+      : (receivers.solDevnet || receivers.solMainnet || '');
+  }
+
+  function resolveUsdcMint(config) {
+    var configured = config && (
+      config.usdcMint ||
+      config.usdcMintAddress ||
+      (config.mints && (config.mints.usdc || config.mints.USDC))
+    );
+    if (configured) return String(configured);
+    return resolveTopupCluster(config) === 'mainnet-beta' ? USDC_MAINNET_MINT : USDC_DEVNET_MINT;
   }
 
   function getWalletSession() {
@@ -680,15 +728,15 @@
     var session = getWalletSession();
     if (!wallet || !session || !session.publicKey) throw new Error('Connect a wallet first');
     var currentConfig = config || await loadTopupConfig();
-    var treasury = currentConfig && currentConfig.receivers && currentConfig.receivers.solMainnet;
+    var treasury = pickTopupReceiver(currentConfig, 'sol');
     if (!treasury) throw new Error('Treasury SOL receiver is not configured');
 
     var settlement = quoteTopupSettlement(intent, 'SOL', currentConfig);
     var lamports = Math.ceil(settlement.amount * TOPUP_LAMPORTS_PER_SOL);
-    var conn = getMainnetConnection();
+    var conn = getTopupConnection(currentConfig);
     var balance = await conn.getBalance(session.publicKey);
     if (balance < lamports + 5000) {
-      throw new Error('Need ' + (lamports / TOPUP_LAMPORTS_PER_SOL).toFixed(6) + ' SOL on Solana mainnet (have ' + (balance / TOPUP_LAMPORTS_PER_SOL).toFixed(6) + ')');
+      throw new Error('Need ' + (lamports / TOPUP_LAMPORTS_PER_SOL).toFixed(6) + ' SOL on ' + topupNetworkLabel(currentConfig) + ' (have ' + (balance / TOPUP_LAMPORTS_PER_SOL).toFixed(6) + ')');
     }
 
     var tx = new solanaWeb3.Transaction();
@@ -708,11 +756,11 @@
     var session = getWalletSession();
     if (!wallet || !session || !session.publicKey) throw new Error('Connect a wallet first');
     var currentConfig = config || await loadTopupConfig();
-    var treasuryOwner = currentConfig && currentConfig.receivers && (currentConfig.receivers.usdcMainnet || currentConfig.receivers.solMainnet);
+    var treasuryOwner = pickTopupReceiver(currentConfig, 'usdc') || pickTopupReceiver(currentConfig, 'sol');
     if (!treasuryOwner) throw new Error('Treasury USDC receiver is not configured');
 
-    var conn = getMainnetConnection();
-    var mintPk = wallet.toPublicKey(USDC_MAINNET_MINT);
+    var conn = getTopupConnection(currentConfig);
+    var mintPk = wallet.toPublicKey(resolveUsdcMint(currentConfig));
     var treasuryOwnerPk = wallet.toPublicKey(treasuryOwner);
     var sourceAta = wallet.associatedAddress(mintPk, session.publicKey, false, SPL_TOKEN_PROGRAM_ID, wallet.constants.ASSOCIATED_TOKEN_PROGRAM_ID);
     var destinationAta = wallet.associatedAddress(mintPk, treasuryOwnerPk, false, SPL_TOKEN_PROGRAM_ID, wallet.constants.ASSOCIATED_TOKEN_PROGRAM_ID);
@@ -721,7 +769,7 @@
     var sourceBalance = await conn.getTokenAccountBalance(sourceAta).catch(function() { return null; });
     var available = sourceBalance && sourceBalance.value ? Number(sourceBalance.value.uiAmount || sourceBalance.value.uiAmountString || 0) : 0;
     if (available + 0.000001 < settlement.amount) {
-      throw new Error('Need ' + settlement.amount.toFixed(2) + ' USDC on Solana mainnet (have ' + available.toFixed(2) + ')');
+      throw new Error('Need ' + settlement.amount.toFixed(2) + ' USDC on ' + topupNetworkLabel(currentConfig) + ' (have ' + available.toFixed(2) + ')');
     }
 
     var tx = new solanaWeb3.Transaction();
