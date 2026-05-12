@@ -903,7 +903,16 @@
         body: JSON.stringify({ intentId, signature })
       });
       const j = await r.json().catch(() => ({}));
-      if (!r.ok || j.error) throw new Error(j.error || ('verify_http_' + r.status));
+      if (!r.ok || j.error) {
+        const retryableNotFound = j && j.error === 'transaction_not_found' && j.detail && j.detail.retryable;
+        if (retryableNotFound) {
+          setStatus('topupCryptoStatus', 'info', 'Payment signature submitted. Solana devnet is still indexing this tx, we will keep checking automatically...');
+          pollIntent(intentId, 'topupCryptoStatus', { crypto: true });
+          btn.disabled = false;
+          return;
+        }
+        throw new Error(j.error || ('verify_http_' + r.status));
+      }
       setStatus('topupCryptoStatus', 'ok', 'Payment verified! Devnet OST dispatch is queued.');
       pollIntent(intentId, 'topupCryptoStatus', { crypto: true });
     } catch (e) {

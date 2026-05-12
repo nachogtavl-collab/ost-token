@@ -878,12 +878,27 @@ async function verifyCryptoTopupSignature(env, intent, signature) {
   const usdcMint = topupUsdcMint(env, cluster);
   const cleanSignature = cleanText(signature, 128);
   if (!cleanSignature) return { ok: false, error: 'missing_signature' };
-  const tx = await solanaRpc(env, 'getTransaction', [cleanSignature, {
-    encoding: 'jsonParsed',
-    commitment: 'confirmed',
-    maxSupportedTransactionVersion: 0
-  }], { cluster });
-  if (!tx) return { ok: false, error: 'transaction_not_found' };
+  let tx = null;
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const statusRes = await solanaRpc(env, 'getSignatureStatuses', [[cleanSignature], { searchTransactionHistory: true }], { cluster });
+    const status = statusRes?.value?.[0] || null;
+    if (status?.err) return { ok: false, error: 'transaction_failed' };
+    if (!status && attempt >= 2) {
+      return { ok: false, error: 'transaction_not_found', detail: { retryable: true } };
+    }
+
+    const commitment = status?.confirmationStatus === 'finalized' ? 'finalized' : 'confirmed';
+    tx = await solanaRpc(env, 'getTransaction', [cleanSignature, {
+      encoding: 'jsonParsed',
+      commitment,
+      maxSupportedTransactionVersion: 0
+    }], { cluster });
+    if (tx) break;
+    if (attempt < 7) {
+      await new Promise((resolve) => setTimeout(resolve, 450 + attempt * 200));
+    }
+  }
+  if (!tx) return { ok: false, error: 'transaction_not_found', detail: { retryable: true } };
   if (tx?.meta?.err) return { ok: false, error: 'transaction_failed' };
   if (!transactionHasMemo(tx, intent.memo)) return { ok: false, error: 'memo_not_found' };
 
