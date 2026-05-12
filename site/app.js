@@ -5232,8 +5232,11 @@
     }
 
     convertTopupDesk.style.display = 'block';
+    const verificationPending = !convertPendingOrder.claimPending && !!(convertPendingOrder.paymentRef || convertPendingOrder.deliverySignature);
     convertTopupPayBtn.textContent = convertPendingOrder.claimPending
       ? 'Retry final claim sync'
+      : verificationPending
+      ? 'Verification pending (use Refresh)'
       : convertPendingOrder.mode === 'stripe'
       ? 'Open card checkout'
       : settlementAsset === 'USDC'
@@ -5241,6 +5244,8 @@
         : 'Pay exact SOL from wallet';
     convertTopupPayBtn.disabled = convertPendingOrder.claimPending
       ? !connectedWalletSession || !window.OST_TOPUP
+      : verificationPending
+      ? true
       : convertPendingOrder.mode === 'stripe'
       ? !convertPendingOrder.checkoutUrl
       : !connectedWalletSession || !window.OST_TOPUP;
@@ -5253,6 +5258,8 @@
     if (settlement) lines.push('Settlement now: ' + settlement.amountDisplay + ' ' + settlement.asset + ' on ' + getConvertRailNetworkLabel());
     if (convertPendingOrder.claimPending) {
       lines.push('OST was already delivered locally. Retry the final claim sync below. Do not pay again.');
+    } else if (verificationPending) {
+      lines.push('Treasury payment already submitted. Verification is pending; use Refresh status below and do not sign another payment.');
     } else if (convertPendingOrder.mode === 'stripe') {
       lines.push('Complete the live card checkout, then return here and refresh status if delivery does not finish automatically.');
     } else if (fiatCurrencies.includes(String(convertPendingOrder.sourceCurrency || '').toUpperCase())) {
@@ -5291,6 +5298,7 @@
           memo: order.intent.memo || '',
           usd: Number(order.intent.usd || order.usdValue || 0),
           ostAmount: Number(order.intent.ostAmount || 0),
+          paymentRef: order.paymentRef || order.deliverySignature || '',
           mode: order.mode || 'crypto',
           settlementAsset: order.settlementAsset || 'SOL',
           sourceCurrency: order.sourceCurrency || '',
@@ -5370,7 +5378,8 @@
         sourceAmount: pending && pending.sourceAmount,
         checkoutUrl: pending && pending.checkoutUrl,
         claimPending: !!(pending && pending.claimPending),
-        deliverySignature: pending && pending.deliverySignature
+        deliverySignature: pending && pending.deliverySignature,
+        paymentRef: pending && pending.paymentRef
       };
     }
     renderConvertTopupDesk();
@@ -5469,6 +5478,12 @@
         return;
       }
 
+      if (!convertPendingOrder.claimPending && (convertPendingOrder.paymentRef || convertPendingOrder.deliverySignature)) {
+        setConvertTopupStatus('Verification is still pending for the submitted payment. Refresh status instead of signing again.', 'warning');
+        try { await refreshConvertPendingOrder(); } catch (_) {}
+        return;
+      }
+
       const settlementAsset = convertPendingOrder.settlementAsset || 'SOL';
       try {
         if (convertPendingOrder.claimPending) {
@@ -5481,6 +5496,8 @@
         await pulseConvertSteps(2);
         const result = await window.OST_TOPUP.settleIntent(convertPendingOrder.intent.id, settlementAsset);
         if (result && result.pendingVerification) {
+          convertPendingOrder.paymentRef = (result.payment && result.payment.signature) || convertPendingOrder.paymentRef || '';
+          rememberConvertPendingOrder(convertPendingOrder);
           transferResult.textContent = 'Payment submitted. Waiting for devnet confirmation indexing...';
           setConvertRouteMessage('Treasury payment was sent. Solana devnet is indexing the signature; OST delivery will complete automatically once verification lands.');
           setConvertTopupStatus('Payment submitted. Verification pending, do not pay again.', 'warning');
@@ -5554,13 +5571,16 @@
             settlementAsset: curr,
             sourceCurrency: curr,
             sourceAmount: amount,
-            usdValue: usdValue
+            usdValue: usdValue,
+            paymentRef: ''
           });
           setConvertTopupStatus('Signing ' + curr + ' treasury payment on ' + getConvertRailNetworkLabel() + '...', 'warning');
           transferResult.textContent = 'Authorizing ' + amount + ' ' + curr + ' on ' + getConvertRailNetworkLabel() + '...';
           await pulseConvertSteps(2);
           const result = await window.OST_TOPUP.settleIntent(intent.id, curr);
           if (result && result.pendingVerification) {
+            convertPendingOrder.paymentRef = (result.payment && result.payment.signature) || convertPendingOrder.paymentRef || '';
+            rememberConvertPendingOrder(convertPendingOrder);
             transferResult.textContent = 'Payment submitted. Waiting for devnet confirmation indexing...';
             setConvertRouteMessage('Treasury payment was sent. Solana devnet is indexing the signature; OST delivery will complete automatically once verification lands.');
             setConvertTopupStatus('Payment submitted. Verification pending, do not pay again.', 'warning');
@@ -5584,7 +5604,8 @@
             sourceCurrency: curr,
             sourceAmount: amount,
             usdValue: usdValue,
-            checkoutUrl: checkout.url
+            checkoutUrl: checkout.url,
+            paymentRef: ''
           });
           transferResult.textContent = 'Card checkout ready for ' + Number(intent.ostAmount || 0).toFixed(2) + ' OST.';
           setConvertRouteMessage('Live Stripe checkout opened. Finish payment, then return here if you need to refresh delivery status.');
@@ -5603,7 +5624,8 @@
           settlementAsset: settlementAsset,
           sourceCurrency: curr,
           sourceAmount: amount,
-          usdValue: usdValue
+          usdValue: usdValue,
+          paymentRef: ''
         });
         transferResult.textContent = 'Payment order ready for ' + Number(intent.ostAmount || 0).toFixed(2) + ' OST.';
         if (isFiat) {
