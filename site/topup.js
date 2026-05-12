@@ -904,7 +904,7 @@
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok || j.error) {
-        const retryableNotFound = j && j.error === 'transaction_not_found' && j.detail && j.detail.retryable;
+        const retryableNotFound = j && j.error === 'transaction_not_found';
         if (retryableNotFound) {
           setStatus('topupCryptoStatus', 'info', 'Payment signature submitted. Solana devnet is still indexing this tx, we will keep checking automatically...');
           pollIntent(intentId, 'topupCryptoStatus', { crypto: true });

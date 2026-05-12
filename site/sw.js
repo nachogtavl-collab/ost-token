@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v90';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v90';
+const CACHE_NAME = 'ost-pwa-cache-v91';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v91';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -77,7 +77,7 @@ const PRECACHE_PATHS = [
   './devnet-rescue.js?v=4',
   './launchpad-trenches.js?v=3',
   './stock-market.js?v=3',
-  './topup.js?v=9',
+  './topup.js?v=10',
   './live-watch.css?v=5',
   './live-watch.js?v=6',
   './native-markets.js?v=3',
