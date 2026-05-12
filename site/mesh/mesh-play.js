@@ -528,32 +528,93 @@
     return group;
   }
 
+  // Smooth easing helpers used by physics-style game animations.
+  function easeOutCubic(k) { return 1 - Math.pow(1 - k, 3); }
+  function easeOutQuart(k) { return 1 - Math.pow(1 - k, 4); }
+  function smoothStep(k) { k = Math.max(0, Math.min(1, k)); return k * k * (3 - 2 * k); }
+
   function createThreeCoin(THREE, group, result) {
     var edge = new THREE.MeshStandardMaterial({ color: 0xb7791f, metalness: 0.8, roughness: 0.24 });
     var heads = new THREE.MeshStandardMaterial({ map: makeCoinTexture(THREE, 'H', '#ffe08a', '#b7791f'), metalness: 0.55, roughness: 0.18 });
     var tails = new THREE.MeshStandardMaterial({ map: makeCoinTexture(THREE, 'T', '#7dd3fc', '#075985'), metalness: 0.48, roughness: 0.2 });
     var coin = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 0.16, 72), [edge, heads, tails]);
-    coin.rotation.x = Math.PI / 2;
+    // Base rest orientation: cylinder axis vertical so heads (group 1) faces camera/up.
+    coin.rotation.z = 0;
     group.add(coin);
+    var t0 = null;
+    var DUR = 2.6;
+    // Heads (group 1) is the +Y face; flipping by an odd number of half-turns about X reveals tails.
+    var landTails = !!(result && result.coin === 'T');
+    var halfTurns = 9 + (landTails ? 1 : 0); // odd vs even ensures correct face up
+    var totalAngle = halfTurns * Math.PI;
     group.userData.animate = function (t) {
-      coin.position.y = result ? Math.sin(t * 2.2) * 0.035 : Math.sin(t * 5.6) * 0.18;
-      coin.rotation.x = Math.PI / 2 + (result ? Math.sin(t * 2.2) * 0.06 : t * 8.2);
-      coin.rotation.y = result && result.coin === 'T' ? Math.PI : (result ? 0 : t * 2.4);
+      if (t0 == null) t0 = t;
+      var dt = t - t0;
+      if (!result) {
+        // Hover & tumble until result lands
+        coin.position.y = 0.18 + Math.sin(dt * 4.2) * 0.18;
+        coin.rotation.x = dt * 7.5;
+        coin.rotation.z = Math.sin(dt * 2.0) * 0.12;
+        return;
+      }
+      var u = Math.min(dt / DUR, 1);
+      // Vertical parabola: tossed up, returns to table.
+      var arc = 4 * u * (1 - u);
+      coin.position.y = arc * 1.6 - 0.05 * easeOutCubic(u);
+      // Angular position: ease-out so spin slows and lands on the correct face.
+      var ang = totalAngle * easeOutQuart(u);
+      coin.rotation.x = ang;
+      // Wobble subsides as it settles.
+      coin.rotation.z = (1 - easeOutCubic(u)) * Math.sin(dt * 18) * 0.18;
+      if (u >= 1) {
+        var w = dt - DUR;
+        var damp = Math.exp(-w * 3.2);
+        coin.position.y = Math.abs(Math.sin(w * 14)) * damp * 0.06;
+        coin.rotation.x = totalAngle + Math.sin(w * 12) * damp * 0.05;
+        coin.rotation.z = Math.sin(w * 10) * damp * 0.04;
+      }
     };
   }
 
   function createThreeDice(THREE, group, result) {
-    var a = makeDieMesh(THREE, result && result.challenger, false);
-    var b = makeDieMesh(THREE, result && result.opponent, true);
-    a.position.x = -0.78;
-    b.position.x = 0.78;
-    group.add(a, b);
+    var dieA = makeDieMesh(THREE, result && result.challenger, false);
+    var dieB = makeDieMesh(THREE, result && result.opponent, true);
+    dieA.position.x = -0.85;
+    dieB.position.x = 0.85;
+    group.add(dieA, dieB);
+    var t0 = null;
+    // Per-die settle target rotations (random-feeling but deterministic per side).
+    var settleA = { x: 0.55, y: 0.42, z: -0.18 };
+    var settleB = { x: 0.55, y: -0.38, z: 0.22 };
+    var DUR = 2.4;
     group.userData.animate = function (t) {
-      [a, b].forEach(function (die, index) {
-        die.position.y = result ? 0 : Math.sin(t * 5 + index) * 0.16;
-        die.rotation.x = result ? 0.62 : t * (2.7 + index * 0.3);
-        die.rotation.y = result ? (index ? -0.38 : 0.38) : t * (3.1 + index * 0.25);
-        die.rotation.z = result ? (index ? 0.18 : -0.18) : t * 1.6;
+      if (t0 == null) t0 = t;
+      var dt = t - t0;
+      if (!result) {
+        [dieA, dieB].forEach(function (die, i) {
+          die.position.y = 0.45 + Math.sin(dt * 5.4 + i * 1.3) * 0.22;
+          die.rotation.x = dt * (3.2 + i * 0.4);
+          die.rotation.y = dt * (2.7 + i * 0.3);
+          die.rotation.z = dt * (1.8 + i * 0.2);
+        });
+        return;
+      }
+      var u = Math.min(dt / DUR, 1);
+      var arc = 4 * u * (1 - u);
+      [dieA, dieB].forEach(function (die, i) {
+        var settle = i ? settleB : settleA;
+        die.position.y = arc * (1.4 - i * 0.15);
+        // Phase 1: tumble fast; ease into final orientation.
+        var spin = (1 - easeOutQuart(u));
+        die.rotation.x = settle.x + spin * (3.5 + i * 0.5) * Math.sin(dt * 4 + i);
+        die.rotation.y = settle.y + spin * (3.0 + i * 0.4) * Math.cos(dt * 3.4 + i);
+        die.rotation.z = settle.z + spin * 1.6 * Math.sin(dt * 2.6 + i);
+        if (u >= 1) {
+          var w = dt - DUR;
+          var damp = Math.exp(-w * 4) * 0.05;
+          die.position.y = Math.abs(Math.sin(w * 16)) * damp * 1.4;
+          die.rotation.z = settle.z + Math.sin(w * 11) * damp;
+        }
       });
     };
   }
@@ -564,17 +625,53 @@
   }
 
   function createThreeCards(THREE, group, result) {
-    var you = makeCardMesh(THREE, result && result.challenger, false, !result);
-    var peer = makeCardMesh(THREE, result && result.opponent, true, !result);
-    you.position.x = -0.72;
-    peer.position.x = 0.72;
-    you.rotation.z = -0.08;
-    peer.rotation.z = 0.08;
+    // Two cards: dealt face-down, slide into place, then flip face-up to reveal.
+    var you = makeCardMesh(THREE, result && result.challenger, false, true);
+    var peer = makeCardMesh(THREE, result && result.opponent, true, true);
+    var youFace = makeCardFaceMesh(THREE, result && result.challenger, false);
+    var peerFace = makeCardFaceMesh(THREE, result && result.opponent, true);
+    // Stack face on the front of each card to reveal after flip without swapping textures.
+    youFace.position.z = 0.001;
+    peerFace.position.z = 0.001;
+    you.add(youFace);
+    peer.add(peerFace);
     group.add(you, peer);
+    var t0 = null;
+    var DEAL = 0.7;
+    var FLIP = 1.2;
     group.userData.animate = function (t) {
-      [you, peer].forEach(function (card, index) {
-        card.position.y = result ? 0 : Math.sin(t * 3.4 + index) * 0.08;
-        card.rotation.y = result ? (index ? -0.18 : 0.18) : Math.sin(t * 4.4 + index) * 1.8;
+      if (t0 == null) t0 = t;
+      var dt = t - t0;
+      if (!result) {
+        // Cards glide in place, gently swaying face-down.
+        [you, peer].forEach(function (card, i) {
+          var sign = i ? 1 : -1;
+          card.position.x = sign * (0.78 + Math.sin(dt * 1.4 + i) * 0.04);
+          card.position.y = Math.sin(dt * 1.8 + i) * 0.05;
+          card.rotation.y = Math.PI; // face-down (back showing)
+          card.rotation.z = sign * 0.05 + Math.sin(dt * 1.6 + i) * 0.04;
+        });
+        return;
+      }
+      [you, peer].forEach(function (card, i) {
+        var sign = i ? 1 : -1;
+        // Phase 1: deal in from outside.
+        var d = Math.min(dt / DEAL, 1);
+        var dealEase = easeOutCubic(d);
+        card.position.x = sign * (1.6 * (1 - dealEase) + 0.78 * dealEase);
+        card.position.y = (1 - dealEase) * 0.45;
+        card.rotation.z = sign * 0.05 * dealEase;
+        // Phase 2: flip face-up after deal completes.
+        var f = Math.max(0, Math.min((dt - DEAL) / FLIP, 1));
+        var flipEase = smoothStep(f);
+        // Lift while flipping for tactile feel.
+        card.position.y += Math.sin(f * Math.PI) * 0.18;
+        card.rotation.y = Math.PI * (1 - flipEase); // PI -> 0 (back -> face)
+        if (f >= 1) {
+          var w = dt - DEAL - FLIP;
+          var damp = Math.exp(-w * 3) * 0.04;
+          card.rotation.z = sign * 0.05 + Math.sin(w * 9) * damp;
+        }
       });
     };
   }
@@ -584,24 +681,65 @@
     return new THREE.Mesh(new THREE.PlaneGeometry(0.84, 1.18), material);
   }
 
+  function makeCardFaceMesh(THREE, value, peer) {
+    var material = new THREE.MeshStandardMaterial({ map: makeCardTexture(THREE, value || 'OST', peer, false), side: THREE.FrontSide, metalness: 0.05, roughness: 0.32, transparent: true });
+    return new THREE.Mesh(new THREE.PlaneGeometry(0.84, 1.18), material);
+  }
+
   function createThreeTarget(THREE, group, result) {
     var board = new THREE.Mesh(new THREE.PlaneGeometry(2.25, 2.25), new THREE.MeshStandardMaterial({ map: makeTargetTexture(THREE), side: THREE.DoubleSide, metalness: 0.08, roughness: 0.42 }));
     group.add(board);
     var you = makeMarkerMesh(THREE, 0x00ff9f);
     var peer = makeMarkerMesh(THREE, 0xf97316);
     group.add(you, peer);
+    var t0 = null;
+    var DUR = 1.6;
     group.userData.animate = function (t) {
-      placeTargetMarker(you, result && result.challenger, 0, t);
-      placeTargetMarker(peer, result && result.opponent, 1, t);
-      board.rotation.z = Math.sin(t * 0.9) * 0.018;
+      if (t0 == null) t0 = t;
+      var dt = t - t0;
+      board.rotation.z = Math.sin(dt * 0.9) * 0.018;
+      if (!result) {
+        // Markers orbit board while waiting for reveal.
+        var aA = dt * 2.2;
+        var aB = dt * 2.2 + Math.PI;
+        you.position.set(Math.cos(aA) * 0.7, 0.4 + Math.sin(aA * 1.3) * 0.18, 0.18);
+        peer.position.set(Math.cos(aB) * 0.7, -0.4 + Math.sin(aB * 1.3) * 0.18, 0.18);
+        return;
+      }
+      placeTargetMarkerPhys(you, result.challenger, 0, dt, DUR);
+      placeTargetMarkerPhys(peer, result.opponent, 1, dt, DUR);
     };
   }
 
   function makeMarkerMesh(THREE, color) {
-    return new THREE.Mesh(new THREE.SphereGeometry(0.095, 24, 16), new THREE.MeshStandardMaterial({ color: color, metalness: 0.38, roughness: 0.26 }));
+    return new THREE.Mesh(new THREE.SphereGeometry(0.105, 24, 16), new THREE.MeshStandardMaterial({ color: color, metalness: 0.38, roughness: 0.26, emissive: color, emissiveIntensity: 0.18 }));
+  }
+
+  function placeTargetMarkerPhys(marker, value, lane, dt, DUR) {
+    var number = Number(value);
+    if (!Number.isFinite(number)) {
+      marker.position.set(0, lane ? -0.4 : 0.4, 0.18);
+      return;
+    }
+    var u = Math.min(dt / DUR, 1);
+    var ease = easeOutCubic(u);
+    var startX = lane ? 1.6 : -1.6;
+    var endX = Math.max(-1.05, Math.min(1.05, (number - 50) / 50 * 1.05));
+    var endY = lane ? -0.28 : 0.28;
+    // Dart-throw: travel sideways while arcing.
+    marker.position.x = startX + (endX - startX) * ease;
+    marker.position.y = (lane ? -0.4 : 0.4) + (endY - (lane ? -0.4 : 0.4)) * ease;
+    var arc = 4 * u * (1 - u);
+    marker.position.z = 0.18 + arc * 0.55;
+    if (u >= 1) {
+      var w = dt - DUR;
+      var damp = Math.exp(-w * 5) * 0.06;
+      marker.position.z = 0.18 + Math.abs(Math.sin(w * 14)) * damp;
+    }
   }
 
   function placeTargetMarker(marker, value, lane, t) {
+    // Backwards-compat helper retained for any external callers.
     var number = Number(value);
     if (!Number.isFinite(number)) {
       var angle = t * 1.9 + lane * Math.PI;

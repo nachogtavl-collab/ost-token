@@ -372,7 +372,7 @@
       '.omu-profile-social{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center}.omu-avatar{width:74px;height:74px;border-radius:24px;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;background:linear-gradient(145deg,#0d5b7d,#10243d);border:1px solid rgba(127,216,255,.32);box-shadow:0 12px 28px rgba(0,0,0,.28);color:#dff8ff;flex:0 0 auto}.omu-avatar img{width:100%;height:100%;object-fit:cover}.omu-avatar b{font-size:22px}.omu-avatar.is-broken{background:linear-gradient(145deg,#16415b,#16223a)}.omu-avatar.sm{width:46px;height:46px;border-radius:16px}.omu-profile-meta{display:grid;gap:3px;min-width:0}.omu-profile-meta strong{color:#fff;font-size:16px;overflow:hidden;text-overflow:ellipsis}.omu-profile-meta span{font-size:12px;color:#7fd8ff;overflow:hidden;text-overflow:ellipsis}.omu-wallet-pill{font-family:ui-monospace,Menlo,monospace;color:#9fffd0;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.omu-alert-state{font-size:11px;color:#9bcbe6;line-height:1.35}',
       '.omu-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.omu-row input,.omu-row textarea{flex:1 1 150px;min-width:0;border:1px solid rgba(255,255,255,.14);border-radius:11px;background:#06141f;color:#d8eaff;padding:10px;font:inherit;font-size:13px}.omu-row textarea{min-height:48px;resize:vertical}.omu-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(108px,1fr));gap:7px}.omu-actions button,.omu-contact button,.omu-snippet button,.omu-scan-actions button{border:1px solid rgba(255,255,255,.12);border-radius:11px;background:rgba(255,255,255,.07);color:#e8fbff;padding:9px;font-weight:750;font-size:12px;cursor:pointer;min-height:42px;white-space:normal;line-height:1.15}.omu-actions button.primary,.omu-contact button.primary,.omu-scan-actions button.primary{background:linear-gradient(135deg,#00d4ff,#00ff9f);border-color:transparent;color:#03131c}',
       '.omu-list{display:grid;gap:8px;max-height:230px;overflow:auto}.omu-contact{display:grid;grid-template-columns:auto minmax(0,1fr);gap:9px;align-items:center;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:9px;background:rgba(0,0,0,.17)}.omu-contact-main{display:grid;gap:2px;min-width:0}.omu-contact strong{display:block;color:#fff;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.omu-contact span{display:block;color:#8ebbd5;font-family:ui-monospace,Menlo,monospace;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.omu-contact-actions{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(74px,1fr));gap:6px}.omu-empty{border:1px dashed rgba(127,216,255,.22);border-radius:14px;padding:12px;color:#8ebbd5;font-size:12px;text-align:center}',
-      '.omu-snippets{display:grid;grid-template-columns:repeat(auto-fit,minmax(142px,1fr));gap:8px}.omu-snippet{position:relative;border:1px solid rgba(127,216,255,.2);border-radius:16px;background:linear-gradient(150deg,rgba(0,212,255,.17),rgba(167,139,250,.11));padding:10px;min-height:86px;overflow:hidden;display:grid;gap:8px}.omu-snippet:before{content:"";position:absolute;inset:-40%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);transform:rotate(18deg);animation:omu-snap-sheen 4s linear infinite}.omu-snippet-text{position:relative;color:#fff;font-weight:800;font-size:13px;line-height:1.3}.omu-snippet-actions{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:6px}.omu-snippet-actions button{min-height:36px;padding:7px;font-size:11px}',
+      '.omu-snippets{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}.omu-snippet{position:relative;border:1px solid rgba(127,216,255,.2);border-radius:16px;background:linear-gradient(150deg,rgba(0,212,255,.17),rgba(167,139,250,.11));padding:10px;min-height:96px;overflow:hidden;display:grid;gap:6px}.omu-snippet.is-pinned{border-color:rgba(255,221,87,.55);background:linear-gradient(150deg,rgba(255,221,87,.18),rgba(0,212,255,.12))}.omu-snippet:before{content:"";position:absolute;inset:-40%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);transform:rotate(18deg);animation:omu-snap-sheen 4s linear infinite}.omu-snippet-text{position:relative;color:#fff;font-weight:800;font-size:13px;line-height:1.3}.omu-snippet-meta{position:relative;font-size:10px;color:#9bcbe6;letter-spacing:.04em;text-transform:uppercase}.omu-snippet.is-pinned .omu-snippet-meta{color:#ffe08a}.omu-snippet-actions{position:relative;display:grid;grid-template-columns:repeat(auto-fit,minmax(54px,1fr));gap:6px}.omu-snippet-actions button{min-height:34px;padding:6px;font-size:11px}',
       '.omu-signals{display:grid;gap:6px;max-height:128px;overflow:auto}.omu-signal{display:flex;gap:8px;align-items:flex-start;color:#9fbfd8;font-size:12px}.omu-signal:before{content:"";width:7px;height:7px;margin-top:5px;border-radius:50%;background:#5eead4;box-shadow:0 0 12px rgba(94,234,212,.72);animation:omu-pulse 1.8s ease-in-out infinite}.omu-qr-modal{position:fixed;inset:0;z-index:1000300;background:rgba(2,6,14,.86);display:none;align-items:center;justify-content:center;padding:14px}.omu-qr-modal.is-open{display:flex}.omu-qr-panel{width:min(420px,100%);border:1px solid rgba(127,216,255,.22);border-radius:18px;background:#06111d;padding:14px;display:grid;gap:10px;color:#dff8ff;box-shadow:0 24px 80px rgba(0,0,0,.55)}.omu-qr-panel video{width:100%;max-height:54vh;border-radius:14px;background:#000}.omu-qr-box{display:grid;place-items:center;gap:9px}.omu-qr-box img{width:min(320px,86vw);height:auto;aspect-ratio:1;border-radius:14px;background:#fff;padding:8px}.omu-qr-panel textarea{width:100%;min-height:80px;border:1px solid rgba(255,255,255,.14);border-radius:12px;background:#020a12;color:#dff8ff;padding:10px;font:12px ui-monospace,Menlo,monospace}.omu-scan-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}',
       '.omu-profile-modal{position:fixed;inset:0;z-index:1000310;background:rgba(2,6,14,.86);display:none;align-items:center;justify-content:center;padding:14px}.omu-profile-modal.is-open{display:flex}.omu-profile-panel{width:min(460px,100%);border:1px solid rgba(127,216,255,.22);border-radius:18px;background:#06111d;padding:14px;display:grid;gap:12px;color:#dff8ff;box-shadow:0 24px 80px rgba(0,0,0,.55)}.omu-profile-view{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center}.omu-profile-view .omu-avatar{width:86px;height:86px;border-radius:26px}.omu-profile-view h3{margin:0;color:#fff;font-size:18px}.omu-profile-view span{display:block;color:#8ebbd5;font-size:12px}.omu-profile-panel p{margin:0;color:#b8d7ea;font-size:13px;line-height:1.45}.omu-profile-panel code{color:#9fffd0;word-break:break-all;font-size:11px}',
       '.ost-mesh-callbar.is-ringing{animation:omu-ring 1s ease-in-out infinite;border-color:rgba(251,191,36,.55);box-shadow:0 0 24px rgba(251,191,36,.12)}.ost-mesh-callbar.is-live{border-color:rgba(52,211,153,.45);box-shadow:0 0 28px rgba(52,211,153,.12)}#ost-mesh-pavilion.ost-mesh-ringing .ost-mesh-shell{box-shadow:inset 0 0 0 1px rgba(251,191,36,.24)}#ost-mesh-pavilion.ost-mesh-in-call .ost-mesh-video-grid.is-on video{box-shadow:0 0 0 1px rgba(94,234,212,.28),0 18px 48px rgba(0,0,0,.38)}.omu-profile-card{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:center}.omu-profile-card strong{color:#fff}.omu-profile-card code{color:#9fffd0;word-break:break-all;font-size:11px}.omu-profile-card p{grid-column:1/-1;margin:0;color:#b8d7ea}',
@@ -904,39 +904,98 @@
     scanStream = null;
   }
 
+  var SNIPPET_TTL_MS = 24 * 60 * 60 * 1000; // Saved texts auto-erase after 24h unless pinned.
+
+  function snippetExpired(item) {
+    if (!item || item.pinned) return false;
+    var expiresAt = Number(item.expiresAt) || ((Number(item.ts) || 0) + SNIPPET_TTL_MS);
+    return expiresAt > 0 && expiresAt <= Date.now();
+  }
+
+  function purgeExpiredSnippets() {
+    var list = readFirst([SNIPPETS_KEY, SNIPPETS_OLD_KEY], []);
+    if (!Array.isArray(list) || !list.length) return list || [];
+    var kept = list.filter(function (item) { return !snippetExpired(item); });
+    if (kept.length !== list.length) writeJson(SNIPPETS_KEY, kept);
+    return kept;
+  }
+
+  function snippetTimeLabel(item) {
+    if (!item) return '';
+    if (item.pinned) return 'Pinned';
+    var ts = Number(item.ts) || Date.now();
+    var expiresAt = Number(item.expiresAt) || (ts + SNIPPET_TTL_MS);
+    var ms = expiresAt - Date.now();
+    if (ms <= 0) return 'Expiring';
+    var hours = Math.floor(ms / 3600000);
+    var mins = Math.floor((ms % 3600000) / 60000);
+    if (hours >= 1) return hours + 'h ' + mins + 'm left';
+    return mins + 'm left';
+  }
+
   function saveTypedText(p) {
     var text = p && p.textInput ? String(p.textInput.value || '').trim() : '';
     if (!text) text = valueOf('omuInviteText');
     if (!text) return setStatus(p, 'Type a message before saving it.', 'warn');
-    var list = readFirst([SNIPPETS_KEY, SNIPPETS_OLD_KEY], []);
+    var list = purgeExpiredSnippets();
     if (!Array.isArray(list)) list = [];
-    list.unshift({ text: text, ts: Date.now(), tint: Math.floor(Math.random() * 5) });
+    var ts = Date.now();
+    list.unshift({ text: text, ts: ts, expiresAt: ts + SNIPPET_TTL_MS, pinned: false, tint: Math.floor(Math.random() * 5) });
     writeJson(SNIPPETS_KEY, list.slice(0, 36));
     renderSnippets(p);
-    setStatus(p, 'Saved text added.', 'ok');
+    setStatus(p, 'Saved text added. It auto-erases in 24h unless you pin it.', 'ok');
   }
 
   function renderSnippets(p) {
     var box = document.getElementById('omuSnippets');
     if (!box) return;
-    var list = readFirst([SNIPPETS_KEY, SNIPPETS_OLD_KEY], []);
+    var list = purgeExpiredSnippets();
     if (!Array.isArray(list) || !list.length) {
-      box.innerHTML = '<div class="omu-empty">No saved texts yet. Type a message in Mesh, then save it here.</div>';
+      box.innerHTML = '<div class="omu-empty">No saved texts yet. Type a message in Mesh, then save it here. Saved texts auto-erase in 24h unless pinned.</div>';
       return;
     }
     box.innerHTML = list.map(function (item, index) {
-      return '<div class="omu-snippet" data-snippet-card="' + index + '"><div class="omu-snippet-text">' + escapeHtml(String(item.text || '').slice(0, 120)) + '</div><div class="omu-snippet-actions"><button type="button" data-snippet-action="send" data-index="' + index + '">Send</button><button type="button" data-snippet-action="load" data-index="' + index + '">Load</button></div></div>';
+      var pinClass = item.pinned ? ' is-pinned' : '';
+      var pinLabel = item.pinned ? 'Unpin' : 'Pin';
+      return '<div class="omu-snippet' + pinClass + '" data-snippet-card="' + index + '">' +
+        '<div class="omu-snippet-text">' + escapeHtml(String(item.text || '').slice(0, 160)) + '</div>' +
+        '<div class="omu-snippet-meta">' + escapeHtml(snippetTimeLabel(item)) + '</div>' +
+        '<div class="omu-snippet-actions">' +
+          '<button type="button" data-snippet-action="send" data-index="' + index + '">Send</button>' +
+          '<button type="button" data-snippet-action="load" data-index="' + index + '">Load</button>' +
+          '<button type="button" data-snippet-action="pin" data-index="' + index + '">' + pinLabel + '</button>' +
+          '<button type="button" data-snippet-action="delete" data-index="' + index + '">Delete</button>' +
+        '</div></div>';
     }).join('');
   }
 
   function handleSnippetClick(p, event) {
     var button = event.target.closest('[data-snippet-action]');
     if (!button) return;
-    var list = readFirst([SNIPPETS_KEY, SNIPPETS_OLD_KEY], []);
-    var item = list[Number(button.dataset.index)];
-    if (!item || !p || !p.textInput) return;
+    var list = purgeExpiredSnippets();
+    var index = Number(button.dataset.index);
+    var item = list[index];
+    if (!item) return renderSnippets(p);
+    var action = button.dataset.snippetAction;
+    if (action === 'pin') {
+      item.pinned = !item.pinned;
+      if (item.pinned) item.expiresAt = 0;
+      else item.expiresAt = Date.now() + SNIPPET_TTL_MS;
+      writeJson(SNIPPETS_KEY, list);
+      renderSnippets(p);
+      setStatus(p, item.pinned ? 'Pinned. This text will not auto-erase.' : 'Unpinned. Will erase in 24h.', 'ok');
+      return;
+    }
+    if (action === 'delete') {
+      list.splice(index, 1);
+      writeJson(SNIPPETS_KEY, list);
+      renderSnippets(p);
+      setStatus(p, 'Saved text removed.', 'warn');
+      return;
+    }
+    if (!p || !p.textInput) return;
     p.textInput.value = item.text || '';
-    if (button.dataset.snippetAction === 'send') {
+    if (action === 'send') {
       if (p.sessionKey && typeof p._sendText === 'function') p._sendText();
       else setStatus(p, 'Saved text loaded. Connect before sending.', 'warn');
     } else {
@@ -1075,6 +1134,15 @@
     bindPayloads();
     waitForMesh(function (p) {
       mountPanel(p);
+      // Auto-erase saved texts older than 24h every minute (unless pinned).
+      try {
+        purgeExpiredSnippets();
+        setInterval(function () {
+          var before = (readFirst([SNIPPETS_KEY, SNIPPETS_OLD_KEY], []) || []).length;
+          var after = purgeExpiredSnippets().length;
+          if (before !== after) renderSnippets(p);
+        }, 60000);
+      } catch (_) {}
       window.OST_MESH_SOCIAL = {
         saveContact: saveContact,
         scanQr: function () { startQrScan(p); },
