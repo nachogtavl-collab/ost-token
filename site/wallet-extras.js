@@ -486,7 +486,7 @@
     }));
   }
 
-  function rememberPendingPayment(intent, signature) {
+  function rememberPendingPayment(intent, signature, payment) {
     if (!intent || !intent.id || !signature) return;
     var current = readPendingTopup() || {};
     writePendingTopup(Object.assign({}, current, {
@@ -496,6 +496,8 @@
       usd: Number(intent.usd || current.usd || 0),
       ostAmount: Number(intent.ostAmount || current.ostAmount || 0),
       paymentRef: String(signature),
+      paymentAsset: (payment && payment.asset) || current.paymentAsset || 'SOL',
+      paymentAmount: Number((payment && payment.amount) || current.paymentAmount || 0),
       method: intent.method || current.method || 'crypto',
       createdAt: current.createdAt || Date.now()
     }));
@@ -571,6 +573,12 @@
       }
       if (apiError === 'transaction_not_found') {
         throw new Error('transaction_not_found');
+      }
+      if (apiError === 'amount_too_low') {
+        throw new Error('amount_too_low');
+      }
+      if (apiError === 'memo_not_found') {
+        throw new Error('memo_not_found');
       }
       var detail = payload && (payload.detail || payload.error || payload.message);
       throw new Error(detail ? String(detail) : 'Top-up API returned ' + response.status);
@@ -708,6 +716,94 @@
       };
     }
     throw lastError || new Error('Could not verify treasury payment');
+  }
+
+  function collectTopupInstructions(tx) {
+    var out = [];
+    try {
+      var top = tx && tx.transaction && tx.transaction.message && tx.transaction.message.instructions;
+      if (Array.isArray(top)) out = out.concat(top);
+      var inner = tx && tx.meta && tx.meta.innerInstructions;
+      if (Array.isArray(inner)) {
+        inner.forEach(function(group) {
+          if (group && Array.isArray(group.instructions)) out = out.concat(group.instructions);
+        });
+      }
+    } catch (e) {}
+    return out;
+  }
+
+  function topupTransactionHasMemo(tx, memo) {
+    var needle = String(memo || '').trim();
+    if (!needle) return false;
+    var instructions = collectTopupInstructions(tx);
+    for (var i = 0; i < instructions.length; i += 1) {
+      var instruction = instructions[i] || {};
+      var programId = String(instruction.programId || '');
+      if (instruction.program !== 'spl-memo' && programId.indexOf('Memo') !== 0) continue;
+      var parsed = instruction.parsed;
+      if (typeof parsed === 'string' && parsed.indexOf(needle) !== -1) return true;
+      if (parsed && typeof parsed === 'object' && String(parsed.memo || parsed.text || '').indexOf(needle) !== -1) return true;
+    }
+    var logs = Array.isArray(tx && tx.meta && tx.meta.logMessages) ? tx.meta.logMessages.join('\n') : '';
+    return logs.indexOf(needle) !== -1;
+  }
+
+  function sumTopupSolLamportsTo(tx, receiver) {
+    var total = 0;
+    collectTopupInstructions(tx).forEach(function(instruction) {
+      var parsed = instruction && instruction.parsed;
+      var info = parsed && parsed.info || {};
+      if (!instruction || instruction.program !== 'system' || !parsed || parsed.type !== 'transfer') return;
+      if (String(info.destination || '') === receiver) total += Number(info.lamports || 0);
+    });
+    return total;
+  }
+
+  async function fetchTopupTransaction(conn, signature) {
+    for (var attempt = 0; attempt < 18; attempt += 1) {
+      var status = null;
+      try {
+        var statusRes = await conn.getSignatureStatuses([signature], { searchTransactionHistory: true });
+        status = statusRes && statusRes.value && statusRes.value[0];
+      } catch (e) {}
+      if (status && status.err) throw new Error('Payment transaction failed on-chain');
+      var tx = null;
+      try {
+        if (typeof conn.getParsedTransaction === 'function') {
+          tx = await conn.getParsedTransaction(signature, { commitment: 'confirmed', maxSupportedTransactionVersion: 0 });
+        }
+      } catch (e1) {
+        try { tx = await conn.getTransaction(signature, { commitment: 'confirmed', maxSupportedTransactionVersion: 0 }); } catch (e2) {}
+      }
+      if (tx) return tx;
+      await delay(700 + attempt * 180);
+    }
+    return null;
+  }
+
+  async function verifySubmittedTopupPayment(intent, payment, config) {
+    if (!intent || !intent.id || !payment || !payment.signature) return null;
+    var currentConfig = config || await loadTopupConfig({ force: true });
+    var asset = String(payment.asset || 'SOL').toUpperCase();
+    if (asset !== 'SOL') return null;
+    var treasury = pickTopupReceiver(currentConfig, 'sol');
+    if (!treasury) throw new Error('Treasury SOL receiver is not configured');
+    var conn = getTopupConnection(currentConfig);
+    var tx = await fetchTopupTransaction(conn, payment.signature);
+    if (!tx) return null;
+    if (tx.meta && tx.meta.err) throw new Error('Payment transaction failed on-chain');
+    if (!topupTransactionHasMemo(tx, intent.memo)) throw new Error('Payment memo was not found on the submitted transaction');
+    var paidLamports = sumTopupSolLamportsTo(tx, treasury);
+    var expectedAmount = Number(payment.amount || 0);
+    if (!Number.isFinite(expectedAmount) || expectedAmount <= 0) {
+      expectedAmount = quoteTopupSettlement(intent, 'SOL', currentConfig).amount;
+    }
+    var expectedLamports = Math.max(1, Math.ceil(expectedAmount * TOPUP_LAMPORTS_PER_SOL));
+    if (paidLamports + 2 < expectedLamports) {
+      throw new Error('Submitted SOL payment is below the locked settlement amount');
+    }
+    return { ok: true, signature: payment.signature, paidLamports: paidLamports, expectedLamports: expectedLamports, tx: tx };
   }
 
   function transactionError(err) {
@@ -976,6 +1072,67 @@
     };
   }
 
+  async function deliverLocallyVerifiedPayment(intent, payment) {
+    var wallet = window.OST_WALLET;
+    var session = getWalletSession();
+    if (!wallet || !session || !session.publicKey) throw new Error('Connect a wallet first');
+    if (!intent || !intent.id) throw new Error('Missing top-up intent');
+    var activeWallet = session.publicKey.toBase58();
+    if (intent.wallet && intent.wallet !== activeWallet) {
+      throw new Error('Connected wallet does not match this top-up intent');
+    }
+    var claimed = readClaimedTopups();
+    var localClaim = claimed[intent.id];
+    if (localClaim && localClaim.signature) {
+      clearPendingTopup(intent.id);
+      return {
+        intent: Object.assign({}, intent, { status: 'sent', signature: localClaim.signature, paymentRef: localClaim.paymentRef || payment.signature }),
+        payment: payment,
+        payout: { sig: localClaim.signature },
+        delivered: false,
+        localVerified: true
+      };
+    }
+    if (!window.OST_RESCUE || typeof window.OST_RESCUE.payoutOst !== 'function') {
+      throw new Error('OST payout vault is still loading. Refresh and try again.');
+    }
+
+    var payoutMemo = JSON.stringify({
+      k: 'ost-topup-local-verified',
+      intent: intent.id,
+      payment: payment.signature,
+      usd: Number(intent.usd || 0),
+      ost: Number(intent.ostAmount || 0),
+      wallet: activeWallet,
+      t: Date.now()
+    });
+    var payout = await window.OST_RESCUE.payoutOst(session.publicKey, Number(intent.ostAmount || 0), payoutMemo);
+    var payoutSig = payout && payout.sig ? String(payout.sig) : '';
+    var finalIntent = Object.assign({}, intent, {
+      status: 'sent',
+      signature: payoutSig,
+      paymentRef: payment.signature,
+      sentAt: Date.now(),
+      deliveryKind: 'client-local-verified'
+    });
+    try {
+      var claimedPayload = await claimTopupIntent(intent.id, payoutSig);
+      if (claimedPayload && claimedPayload.intent) finalIntent = claimedPayload.intent;
+    } catch (e) {}
+    await recordTopupDeliverySnapshot(finalIntent, payoutSig);
+    rememberClaimedTopup(intent.id, {
+      signature: payoutSig,
+      claimedAt: Date.now(),
+      ostAmount: Number(intent.ostAmount || 0),
+      claimPending: false,
+      paymentRef: payment.signature,
+      localVerified: true,
+      snapshotRecorded: true
+    });
+    clearPendingTopup(intent.id);
+    return { intent: finalIntent, payment: payment, payout: payout, delivered: true, localVerified: true };
+  }
+
   async function deliverIfPaid(intentId) {
     var intent = await getTopupStatus(intentId);
     if (intent.status === 'paid') return deliverPaidIntent(intent);
@@ -992,6 +1149,16 @@
           if (verifiedIntent && (verifiedIntent.status === 'paid' || verifiedIntent.status === 'sent')) {
             return deliverPaidIntent(verifiedIntent);
           }
+        }
+        var config = await loadTopupConfig({ force: true });
+        var payment = {
+          asset: (pending && pending.paymentAsset) || (pending && pending.settlementAsset) || 'SOL',
+          amount: Number((pending && pending.paymentAmount) || 0),
+          signature: pendingSig
+        };
+        var localVerification = await verifySubmittedTopupPayment(intent, payment, config).catch(function() { return null; });
+        if (localVerification && localVerification.ok) {
+          return deliverLocallyVerifiedPayment(intent, payment);
         }
       }
     }
@@ -1012,9 +1179,22 @@
       ? await sendIntentWithUsdc(intent, config)
       : await sendIntentWithSol(intent, config);
     if (payment && payment.signature) {
-      rememberPendingPayment(intent, payment.signature);
+      rememberPendingPayment(intent, payment.signature, payment);
     }
-    var verified = await verifyTopupSignature(intent.id, payment.signature);
+    var verified = null;
+    var verifyError = null;
+    try {
+      verified = await verifyTopupSignature(intent.id, payment.signature);
+    } catch (error) {
+      verifyError = error;
+    }
+    if (verifyError || (verified && verified.pendingVerification)) {
+      var localVerification = await verifySubmittedTopupPayment(intent, payment, config).catch(function() { return null; });
+      if (localVerification && localVerification.ok) {
+        return deliverLocallyVerifiedPayment(intent, payment);
+      }
+      if (verifyError) throw verifyError;
+    }
     if (verified && verified.pendingVerification) {
       return {
         intent: verified.intent || intent,

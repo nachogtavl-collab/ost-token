@@ -5299,6 +5299,8 @@
           usd: Number(order.intent.usd || order.usdValue || 0),
           ostAmount: Number(order.intent.ostAmount || 0),
           paymentRef: order.paymentRef || order.deliverySignature || '',
+          paymentAsset: order.paymentAsset || order.settlementAsset || 'SOL',
+          paymentAmount: Number(order.paymentAmount || 0),
           mode: order.mode || 'crypto',
           settlementAsset: order.settlementAsset || 'SOL',
           sourceCurrency: order.sourceCurrency || '',
@@ -5379,7 +5381,9 @@
         checkoutUrl: pending && pending.checkoutUrl,
         claimPending: !!(pending && pending.claimPending),
         deliverySignature: pending && pending.deliverySignature,
-        paymentRef: pending && pending.paymentRef
+        paymentRef: pending && pending.paymentRef,
+        paymentAsset: pending && pending.paymentAsset,
+        paymentAmount: pending && pending.paymentAmount
       };
     }
     renderConvertTopupDesk();
@@ -5497,6 +5501,8 @@
         const result = await window.OST_TOPUP.settleIntent(convertPendingOrder.intent.id, settlementAsset);
         if (result && result.pendingVerification) {
           convertPendingOrder.paymentRef = (result.payment && result.payment.signature) || convertPendingOrder.paymentRef || '';
+          convertPendingOrder.paymentAsset = (result.payment && result.payment.asset) || convertPendingOrder.paymentAsset || settlementAsset;
+          convertPendingOrder.paymentAmount = Number((result.payment && result.payment.amount) || convertPendingOrder.paymentAmount || 0);
           rememberConvertPendingOrder(convertPendingOrder);
           transferResult.textContent = 'Payment submitted. Waiting for devnet confirmation indexing...';
           setConvertRouteMessage('Treasury payment was sent. Solana devnet is indexing the signature; OST delivery will complete automatically once verification lands.');
@@ -5580,6 +5586,8 @@
           const result = await window.OST_TOPUP.settleIntent(intent.id, curr);
           if (result && result.pendingVerification) {
             convertPendingOrder.paymentRef = (result.payment && result.payment.signature) || convertPendingOrder.paymentRef || '';
+            convertPendingOrder.paymentAsset = (result.payment && result.payment.asset) || convertPendingOrder.paymentAsset || curr;
+            convertPendingOrder.paymentAmount = Number((result.payment && result.payment.amount) || convertPendingOrder.paymentAmount || 0);
             rememberConvertPendingOrder(convertPendingOrder);
             transferResult.textContent = 'Payment submitted. Waiting for devnet confirmation indexing...';
             setConvertRouteMessage('Treasury payment was sent. Solana devnet is indexing the signature; OST delivery will complete automatically once verification lands.');
