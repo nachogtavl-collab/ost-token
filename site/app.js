@@ -5480,6 +5480,13 @@
         }
         await pulseConvertSteps(2);
         const result = await window.OST_TOPUP.settleIntent(convertPendingOrder.intent.id, settlementAsset);
+        if (result && result.pendingVerification) {
+          transferResult.textContent = 'Payment submitted. Waiting for devnet confirmation indexing...';
+          setConvertRouteMessage('Treasury payment was sent. Solana devnet is indexing the signature; OST delivery will complete automatically once verification lands.');
+          setConvertTopupStatus('Payment submitted. Verification pending, do not pay again.', 'warning');
+          updateConvertProviders();
+          return;
+        }
         await pulseConvertSteps(3);
         handleConvertTopupSuccess(result, settlementAsset);
       } catch (error) {
@@ -5553,6 +5560,13 @@
           transferResult.textContent = 'Authorizing ' + amount + ' ' + curr + ' on ' + getConvertRailNetworkLabel() + '...';
           await pulseConvertSteps(2);
           const result = await window.OST_TOPUP.settleIntent(intent.id, curr);
+          if (result && result.pendingVerification) {
+            transferResult.textContent = 'Payment submitted. Waiting for devnet confirmation indexing...';
+            setConvertRouteMessage('Treasury payment was sent. Solana devnet is indexing the signature; OST delivery will complete automatically once verification lands.');
+            setConvertTopupStatus('Payment submitted. Verification pending, do not pay again.', 'warning');
+            updateConvertProviders();
+            return;
+          }
           await pulseConvertSteps(3);
           handleConvertTopupSuccess(result, curr);
           return;

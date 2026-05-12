@@ -546,6 +546,17 @@
   async function parseTopupResponse(response) {
     var payload = await response.json().catch(function() { return {}; });
     if (!response.ok) {
+      var apiError = payload && payload.error ? String(payload.error) : '';
+      if (apiError === 'invalid_usd_amount') {
+        var minUsd = Number(payload && payload.minUsd);
+        var maxUsd = Number(payload && payload.maxUsd);
+        var minText = Number.isFinite(minUsd) ? ('$' + minUsd.toFixed(2)) : '$1.00';
+        var maxText = Number.isFinite(maxUsd) ? ('$' + maxUsd.toFixed(2)) : '$5000.00';
+        throw new Error('Top-up amount must be between ' + minText + ' and ' + maxText + '.');
+      }
+      if (apiError === 'transaction_not_found') {
+        throw new Error('transaction_not_found');
+      }
       var detail = payload && (payload.detail || payload.error || payload.message);
       throw new Error(detail ? String(detail) : 'Top-up API returned ' + response.status);
     }
@@ -608,10 +619,23 @@
   async function createTopupIntent(request) {
     var wallet = String((request && request.wallet) || getActiveWalletAddress() || '').trim();
     if (!wallet) throw new Error('Connect a wallet first');
+    var config = await loadTopupConfig();
+    var minUsd = Number(config && config.pricing && config.pricing.minUsd);
+    var maxUsd = Number(config && config.pricing && config.pricing.maxUsd);
+    if (!Number.isFinite(minUsd) || minUsd <= 0) minUsd = 1;
+    if (!Number.isFinite(maxUsd) || maxUsd <= minUsd) maxUsd = 5000;
+    var usd = Number(request && request.usd);
+    if (!Number.isFinite(usd) || usd <= 0) {
+      throw new Error('Could not price that payment amount right now. Try again in a moment.');
+    }
+    usd = Math.round(usd * 100) / 100;
+    if (usd < minUsd || usd > maxUsd) {
+      throw new Error('Top-up amount must be between $' + minUsd.toFixed(2) + ' and $' + maxUsd.toFixed(2) + '.');
+    }
     var payload = await topupRequest('/topup/intent', {
       method: 'POST',
       body: JSON.stringify({
-        usd: Number(request && request.usd || 0),
+        usd: usd,
         wallet: wallet,
         method: request && request.method === 'stripe' ? 'stripe' : 'crypto'
       })
@@ -657,6 +681,16 @@
         if (message.indexOf('transaction_not_found') === -1 && message.indexOf('rpc') === -1) break;
         await delay(1500 + (attempt * 350));
       }
+    }
+    var retryMessage = String(lastError && lastError.message || lastError || '').toLowerCase();
+    if (retryMessage.indexOf('transaction_not_found') !== -1) {
+      var current = await getTopupStatus(intentId).catch(function() { return { id: intentId, status: 'pending' }; });
+      return {
+        ok: true,
+        status: current && current.status ? current.status : 'pending',
+        pendingVerification: true,
+        intent: current
+      };
     }
     throw lastError || new Error('Could not verify treasury payment');
   }
@@ -947,6 +981,15 @@
       ? await sendIntentWithUsdc(intent, config)
       : await sendIntentWithSol(intent, config);
     var verified = await verifyTopupSignature(intent.id, payment.signature);
+    if (verified && verified.pendingVerification) {
+      return {
+        intent: verified.intent || intent,
+        payment: payment,
+        payout: null,
+        delivered: false,
+        pendingVerification: true
+      };
+    }
     var delivered = await deliverPaidIntent(verified.intent || verified);
     return {
       intent: delivered.intent,
