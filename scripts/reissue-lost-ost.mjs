@@ -76,8 +76,73 @@ const seen = new Set();
 
 async function ensureUserAta(owner) {
   const ata = getAssociatedTokenAddressSync(OST_MINT, owner, true, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
-  try { await getAccount(conn, ata, "confirmed", TOKEN_2022_PROGRAM_ID); return { ata, exists: true }; }
+  try {
+    const account = await getAccount(conn, ata, "confirmed", TOKEN_2022_PROGRAM_ID);
+    return { ata, exists: true, amount: account.amount };
+  }
   catch (_) { return { ata, exists: false }; }
+}
+
+function decimalToRawAmount(value, decimals) {
+  const places = Math.max(0, Number(decimals) || 0);
+  let text = String(value || "0");
+  if (/e/i.test(text)) text = Number(value || 0).toFixed(places);
+  const [wholePart = "0", fractionPart = ""] = text.split(".");
+  const whole = wholePart.replace(/[^0-9]/g, "") || "0";
+  let fraction = fractionPart.replace(/[^0-9]/g, "").slice(0, places);
+  while (fraction.length < places) fraction += "0";
+  const scale = BigInt(10) ** BigInt(places);
+  return BigInt(whole) * scale + BigInt(fraction || "0");
+}
+
+function rawToOstText(raw, decimals) {
+  const places = Math.max(0, Number(decimals) || 0);
+  const scale = BigInt(10) ** BigInt(places);
+  const value = BigInt(raw || 0);
+  const whole = value / scale;
+  const fraction = (value % scale).toString().padStart(places, "0").replace(/0+$/, "");
+  return whole.toString() + (fraction ? `.${fraction}` : "");
+}
+
+async function readTokenRawBalance(ata) {
+  try {
+    const account = await getAccount(conn, ata, "confirmed", TOKEN_2022_PROGRAM_ID);
+    return account.amount;
+  } catch (_) {
+    return BigInt(0);
+  }
+}
+
+async function confirmSignature(sig, bh) {
+  let primaryErr = null;
+  try {
+    const res = await conn.confirmTransaction({ signature: sig, blockhash: bh.blockhash, lastValidBlockHeight: bh.lastValidBlockHeight }, "confirmed");
+    if (res?.value?.err) throw new Error("On-chain failure: " + JSON.stringify(res.value.err));
+    return { ok: true };
+  } catch (e) { primaryErr = e; }
+
+  for (let attempt = 0; attempt < 6; attempt++) {
+    await new Promise(r => setTimeout(r, 700 + attempt * 300));
+    const st = await conn.getSignatureStatuses([sig], { searchTransactionHistory: true });
+    const entry = st?.value?.[0];
+    if (entry?.err) return { ok: false, error: "On-chain failure: " + JSON.stringify(entry.err), sig };
+    if (entry && (entry.confirmationStatus === "confirmed" || entry.confirmationStatus === "finalized")) return { ok: true };
+  }
+  return { ok: false, error: "could not confirm reissue: " + (primaryErr?.message || primaryErr), sig };
+}
+
+async function verifyTokenBalanceDelta(ata, beforeRaw, expectedRaw) {
+  let lastRaw = beforeRaw;
+  for (let attempt = 0; attempt < 10; attempt++) {
+    lastRaw = await readTokenRawBalance(ata);
+    if (lastRaw - beforeRaw >= expectedRaw) return { ok: true, deltaRaw: lastRaw - beforeRaw };
+    await new Promise(r => setTimeout(r, 700 + attempt * 300));
+  }
+  const receivedRaw = lastRaw > beforeRaw ? lastRaw - beforeRaw : BigInt(0);
+  return {
+    ok: false,
+    error: `signature confirmed, but wallet balance increased by only ${rawToOstText(receivedRaw, DECIMALS)} OST of ${rawToOstText(expectedRaw, DECIMALS)} OST owed`
+  };
 }
 
 function memoIx(text, signer) {
@@ -92,8 +157,9 @@ async function reissueOne(item) {
   const owner = new PublicKey(item.wallet);
   const amt = Number(item.ostAmount);
   if (!Number.isFinite(amt) || amt <= 0) return { ok: false, error: "invalid amount" };
-  const raw = BigInt(Math.round(amt * Math.pow(10, DECIMALS)));
-  const { ata, exists } = await ensureUserAta(owner);
+  const raw = decimalToRawAmount(item.ostAmount, DECIMALS);
+  const { ata, exists, amount } = await ensureUserAta(owner);
+  const beforeRaw = exists ? BigInt(amount || 0) : BigInt(0);
 
   const ixs = [ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 5_000 })];
   if (!exists) {
@@ -110,22 +176,11 @@ async function reissueOne(item) {
 
   const sig = await conn.sendRawTransaction(tx.serialize(), { skipPreflight: false, maxRetries: 5 });
 
-  // verify-or-throw, mirrors the patched sendPoolOnlyTx
-  let primaryErr = null;
-  try {
-    const res = await conn.confirmTransaction({ signature: sig, blockhash: bh.blockhash, lastValidBlockHeight: bh.lastValidBlockHeight }, "confirmed");
-    if (res?.value?.err) throw new Error("On-chain failure: " + JSON.stringify(res.value.err));
-    return { ok: true, sig };
-  } catch (e) { primaryErr = e; }
-
-  for (let attempt = 0; attempt < 6; attempt++) {
-    await new Promise(r => setTimeout(r, 700 + attempt * 300));
-    const st = await conn.getSignatureStatuses([sig], { searchTransactionHistory: true });
-    const entry = st?.value?.[0];
-    if (entry?.err) return { ok: false, error: "On-chain failure: " + JSON.stringify(entry.err), sig };
-    if (entry && (entry.confirmationStatus === "confirmed" || entry.confirmationStatus === "finalized")) return { ok: true, sig };
-  }
-  return { ok: false, error: "could not confirm reissue: " + (primaryErr?.message || primaryErr), sig };
+  const confirmed = await confirmSignature(sig, bh);
+  if (!confirmed.ok) return confirmed;
+  const verified = await verifyTokenBalanceDelta(ata, beforeRaw, raw);
+  if (!verified.ok) return { ...verified, sig };
+  return { ok: true, sig, receivedOst: rawToOstText(verified.deltaRaw, DECIMALS) };
 }
 
 function logAudit(payload) {

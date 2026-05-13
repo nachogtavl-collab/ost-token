@@ -101,6 +101,7 @@
     var receipts = readStorageJson(PAYOUT_RECEIPTS_KEY, {});
     var receipt = receipts && receipts[id];
     if (!receipt || !receipt.sig) return null;
+    if (receipt.verified !== true) return null;
     if (receipt.wallet && wallet && receipt.wallet !== wallet) return null;
     if (Math.abs(Number(receipt.ost || 0) - Number(amount || 0)) > 0.000000001) return null;
     return receipt;
@@ -188,6 +189,48 @@
       var lam = await conn.getBalance(pk);
       return lam / solanaWeb3.LAMPORTS_PER_SOL;
     }).catch(function () { return 0; });
+  }
+
+  function decimalToRawAmount(value, decimals) {
+    var places = Math.max(0, Number(decimals) || 0);
+    var text = String(value || '0');
+    if (/e/i.test(text)) text = Number(value || 0).toFixed(places);
+    var parts = text.split('.');
+    var whole = String(parts[0] || '0').replace(/[^0-9]/g, '') || '0';
+    var fraction = String(parts[1] || '').replace(/[^0-9]/g, '').slice(0, places);
+    while (fraction.length < places) fraction += '0';
+    var scale = BigInt(10) ** BigInt(places);
+    return BigInt(whole) * scale + BigInt(fraction || '0');
+  }
+
+  function rawToOstText(raw, decimals) {
+    var places = Math.max(0, Number(decimals) || 0);
+    var scale = BigInt(10) ** BigInt(places);
+    var value = BigInt(raw || 0);
+    var whole = value / scale;
+    var fraction = (value % scale).toString().padStart(places, '0').replace(/0+$/, '');
+    return whole.toString() + (fraction ? ('.' + fraction) : '');
+  }
+
+  async function getTokenRawBalance(ataInput) {
+    var ata = (ataInput && ataInput.toBase58) ? ataInput : new solanaWeb3.PublicKey(ataInput);
+    return withRpc('token-raw-balance', async function (conn) {
+      var bal = await conn.getTokenAccountBalance(ata);
+      return BigInt(bal && bal.value && bal.value.amount || '0');
+    }).catch(function () { return BigInt(0); });
+  }
+
+  async function verifyTokenBalanceDelta(ata, beforeRaw, expectedRaw, decimals, label) {
+    var lastRaw = beforeRaw;
+    for (var attempt = 0; attempt < 10; attempt += 1) {
+      lastRaw = await getTokenRawBalance(ata);
+      if (lastRaw - beforeRaw >= expectedRaw) {
+        return { beforeRaw: beforeRaw, afterRaw: lastRaw, deltaRaw: lastRaw - beforeRaw };
+      }
+      await new Promise(function (resolve) { setTimeout(resolve, 650 + attempt * 300); });
+    }
+    var received = lastRaw > beforeRaw ? lastRaw - beforeRaw : BigInt(0);
+    throw new Error((label || 'Payout') + ' signature confirmed, but recipient balance increased by only ' + rawToOstText(received, decimals) + ' OST of ' + rawToOstText(expectedRaw, decimals) + ' OST owed. Keeping payout pending.');
   }
 
   // -----------------------------------------------------------------------
@@ -466,10 +509,12 @@
 
       // Pool pays for the user's ATA rent if missing.
       var userAta = await ensureUserOstAtaPoolPaid(to);
+      var expectedRaw = decimalToRawAmount(amt, c.OST_TOKEN_DECIMALS);
+      var beforeUserRaw = await getTokenRawBalance(userAta);
 
       var ixs = [
         w.transferChecked(poolAta, mintPk, userAta, pool.publicKey,
-          w.toBaseUnits(amt, c.OST_TOKEN_DECIMALS), c.OST_TOKEN_DECIMALS, c.TOKEN_2022_PROGRAM_ID)
+          expectedRaw, c.OST_TOKEN_DECIMALS, c.TOKEN_2022_PROGRAM_ID)
       ];
       if (memoText) ixs.push(w.memoIx(String(memoText), pool.publicKey));
 
@@ -478,13 +523,14 @@
       var sig;
       try {
         sig = await sendPoolOnlyTx(ixs);
+        await verifyTokenBalanceDelta(userAta, beforeUserRaw, expectedRaw, c.OST_TOKEN_DECIMALS, 'OST payout');
       } catch (err) {
         rememberPendingPayout(payoutId, { wallet: walletStr, ostAmount: amt, memo: memoSummary, error: (err && err.message) ? String(err.message).slice(0, 240) : 'unknown', stage: 'send-failed' });
         logPayoutAudit({ id: payoutId, stage: 'failure', wallet: walletStr, kind: 'payout', ostAmount: amt, memo: memoSummary, error: (err && err.message) ? String(err.message).slice(0, 240) : 'unknown', ref: payoutRefFromMemo(memoText) });
         throw err;
       }
       clearPendingPayout(payoutId);
-      rememberPayoutReceipt(payoutId, { wallet: walletStr, ost: amt, sig: sig, memo: memoSummary, ref: payoutRefFromMemo(memoText) });
+      rememberPayoutReceipt(payoutId, { wallet: walletStr, ost: amt, sig: sig, memo: memoSummary, ref: payoutRefFromMemo(memoText), verified: true });
       logPayoutAudit({ id: payoutId, stage: 'result', wallet: walletStr, kind: 'payout', ostAmount: amt, memo: memoSummary, sig: sig, ref: payoutRefFromMemo(memoText) });
       return { sig: sig, ost: amt, auditId: payoutId };
     })();

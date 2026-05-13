@@ -131,14 +131,74 @@ const PAYOUT_KINDS = new Set([
 
 async function fetchWalletClaims(wallet) {
   const r = await fetch(`${API}/wallet/events/${wallet}?limit=500`).catch(() => null);
-  if (!r || !r.ok) return [];
-  const j = await r.json().catch(() => ({}));
-  return (j.events || []).filter(e => {
+  const j = r && r.ok ? await r.json().catch(() => ({})) : {};
+  const eventClaims = (j.events || []).filter(e => {
     if (!e || Number(e.amount || 0) <= 0) return false;
     if ((e.ts || 0) < sinceTs) return false;
     const kind = String(e.kind || e.source || "").toLowerCase();
     return PAYOUT_KINDS.has(kind);
-  });
+  }).map(e => ({ ...e, amount: Number(e.amount || 0), sourceLedger: "wallet-events" }));
+
+  const auditClaims = await fetchWalletAuditClaims(wallet);
+  const merged = [];
+  const seen = new Set();
+  for (const claim of [...eventClaims, ...auditClaims]) {
+    const amount = Number(claim.amount || 0);
+    const sig = String(claim.sig || claim.signature || "");
+    const key = sig || `${claim.sourceLedger || "claim"}:${claim.kind || claim.source || "unknown"}:${amount.toFixed(9)}:${Math.floor(Number(claim.ts || 0) / 30000)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(claim);
+  }
+  return merged;
+}
+
+async function fetchWalletAuditClaims(wallet) {
+  const r = await fetch(`${API}/wallet/payouts/${wallet}`).catch(() => null);
+  if (!r || !r.ok) return [];
+  const j = await r.json().catch(() => ({}));
+  return (j.payouts || []).filter(e => {
+    if (!e || String(e.stage || "") !== "result") return false;
+    if (Number(e.ostAmount || 0) <= 0) return false;
+    if ((e.ts || 0) < sinceTs) return false;
+    return true;
+  }).map(e => ({
+    kind: e.kind || "payout-audit",
+    amount: Number(e.ostAmount || 0),
+    sig: e.sig || "",
+    ts: Number(e.ts || 0),
+    label: e.memo || "",
+    auditId: e.id || "",
+    sourceLedger: "payout-audit"
+  }));
+}
+
+function findBestPayout(onChain, used, claim, amount, ts) {
+  const claimSig = String(claim.sig || claim.signature || "");
+  if (claimSig) {
+    const bySig = onChain.find((p, idx) => !used.has(idx) && p.sig === claimSig);
+    if (bySig) return { payout: bySig, index: onChain.indexOf(bySig) };
+  }
+  const exact = onChain.find((p, idx) =>
+    !used.has(idx) &&
+    Math.abs(p.ostAmount - amount) < 0.0001 &&
+    Math.abs(p.ts - ts) < 5 * 60 * 1000
+  );
+  if (exact) return { payout: exact, index: onChain.indexOf(exact) };
+
+  let partial = null;
+  let partialIndex = -1;
+  for (let idx = 0; idx < onChain.length; idx++) {
+    const payout = onChain[idx];
+    if (used.has(idx)) continue;
+    if (Math.abs(payout.ts - ts) > 5 * 60 * 1000) continue;
+    if (payout.ostAmount <= 0 || payout.ostAmount >= amount - 0.0001) continue;
+    if (!partial || payout.ostAmount > partial.ostAmount) {
+      partial = payout;
+      partialIndex = idx;
+    }
+  }
+  return partial ? { payout: partial, index: partialIndex } : null;
 }
 
 async function fetchAllAffectedWallets() {
@@ -193,21 +253,22 @@ async function fetchAllAffectedWallets() {
     for (const cl of claims) {
       const amt = Number(cl.amount || 0);
       const ts = Number(cl.ts || 0);
-      const match = onChain.find((p, idx) =>
-        !used.has(idx) &&
-        Math.abs(p.ostAmount - amt) < 0.0001 &&
-        Math.abs(p.ts - ts) < 5 * 60 * 1000
-      );
-      if (match) {
-        used.add(onChain.indexOf(match));
-      } else {
+      const match = findBestPayout(onChain, used, cl, amt, ts);
+      const paidAmount = match ? Number(match.payout.ostAmount || 0) : 0;
+      if (match) used.add(match.index);
+      if (paidAmount + 0.0001 < amt) {
+        const owedAmount = Number((amt - paidAmount).toFixed(9));
         lost.push({
           wallet: w,
           kind: cl.kind || cl.source || "unknown",
-          ostAmount: amt,
+          ostAmount: owedAmount,
+          expectedOstAmount: amt,
+          paidOstAmount: Number(paidAmount.toFixed(9)),
           claimSig: cl.sig || "",
           claimTs: ts,
           claimTsIso: ts ? new Date(ts).toISOString() : "",
+          auditId: cl.auditId || "",
+          sourceLedger: cl.sourceLedger || "wallet-events",
           memo: cl.label || cl.memo || ""
         });
       }

@@ -10,7 +10,10 @@
     "deploy:devnet": "anchor deploy --provider.cluster devnet",
     "deploy:betting:devnet": "powershell -ExecutionPolicy Bypass -File ./deploy-betting-devnet.ps1",
     "deploy:localnet": "anchor deploy --provider.cluster localnet",
-    "fund:treasury": "ts-node scripts/fund-faucet-treasury.ts"
+    "fund:treasury": "ts-node scripts/fund-faucet-treasury.ts",
+    "fund:pool": "ts-node scripts/fund-pool.ts",
+    "vault:check": "ts-node scripts/ensure-vault-funded.ts",
+    "vault:refill": "ts-node scripts/ensure-vault-funded.ts --confirm"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.0",
