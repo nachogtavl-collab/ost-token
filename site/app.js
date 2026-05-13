@@ -8006,7 +8006,7 @@
             currentStore = {
               name: parsed.title || hostname,
               icon: '&#128722;', color: '#6d9fff',
-              items: [{ name: parsed.title || 'Product', price: parsed.price, img: parsed.image ? '<img src="' + esc(parsed.image) + '" style="width:48px;height:48px;object-fit:cover;border-radius:8px;" onerror="this.outerHTML=\'&#128722;\'">' : '&#128722;' }],
+              items: [{ name: parsed.title || 'Product', price: parsed.price, img: parsed.image ? '<img alt="" src="' + esc(parsed.image) + '" style="width:48px;height:48px;object-fit:cover;border-radius:8px;" onerror="this.outerHTML=\'&#128722;\'">' : '&#128722;' }],
               currency: parsed.currency || 'USD',
               url: fetchUrl,
               total: parsed.price,
@@ -8190,7 +8190,7 @@
                          ostAmount.toFixed(2);
 
       var imageHtml = parsed.image ?
-        '<img src="' + esc(parsed.image) + '" style="width:80px;height:80px;object-fit:cover;border-radius:12px;border:1px solid var(--border);" onerror="this.outerHTML=\'<span style=font-size:3rem>&#128722;</span>\'">' :
+        '<img alt="' + esc(parsed.title || 'Product image') + '" src="' + esc(parsed.image) + '" style="width:80px;height:80px;object-fit:cover;border-radius:12px;border:1px solid var(--border);" onerror="this.outerHTML=\'<span style=font-size:3rem>&#128722;</span>\'">' :
         '<span style="font-size:3rem;">&#128722;</span>';
 
       viewport.innerHTML =
@@ -11388,7 +11388,7 @@
           var change = ((Math.random() - 0.4) * 15).toFixed(1);
           var up = parseFloat(change) >= 0;
           items += '<span class="lp-ticker-item" data-mint="' + escHtml(l.mint) + '">' +
-            (l.img ? '<img class="lp-ticker-img" src="' + escHtml(l.img) + '">' : '') +
+            (l.img ? '<img alt="" class="lp-ticker-img" src="' + escHtml(l.img) + '">' : '') +
             '<span class="lp-ticker-name">$' + escHtml(l.symbol) + '</span>' +
             '<span class="lp-ticker-price">' + fmtMcap(l.mcap) + '</span>' +
             '<span class="' + (up ? 'lp-ticker-change-up' : 'lp-ticker-change-down') + '">' + (up ? '+' : '') + change + '%</span>' +
@@ -11601,7 +11601,7 @@
       document.getElementById('lpDetailDesc').textContent = token.desc || '';
 
       var imgEl = document.getElementById('lpDetailImg');
-      if (token.img) imgEl.innerHTML = '<img src="' + escHtml(token.img) + '">';
+      if (token.img) imgEl.innerHTML = '<img alt="' + escHtml(token.symbol || 'Token') + ' logo" src="' + escHtml(token.img) + '">';
       else imgEl.innerHTML = '<span style="font-size:2rem;color:rgba(255,255,255,.15)">' + (token.symbol ? token.symbol.charAt(0) : '?') + '</span>';
 
       /* Socials */

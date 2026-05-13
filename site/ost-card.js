@@ -663,7 +663,7 @@
           if (!w) return;
           w.document.write('<html><head><title>OST Card</title></head><body style="margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui;">'
             + '<h2>OST Card &mdash; @' + handle + '</h2>'
-            + '<img src="' + qrUrl(landing, 700) + '" style="width:480px;height:480px;" />'
+            + '<img alt="OST Card QR code" src="' + qrUrl(landing, 700) + '" style="width:480px;height:480px;" />'
             + '<p style="font-family:monospace;font-size:11px;max-width:520px;word-break:break-all;text-align:center;">' + landing + '</p>'
             + '<script>window.onload=function(){setTimeout(function(){window.print();},400);};<\/script>'
             + '</body></html>');

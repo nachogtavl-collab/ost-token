@@ -798,6 +798,8 @@
         var c = document.createElement('button');
         c.className = 'ostg-tile';
         c.dataset.idx = String(i);
+        c.type = 'button';
+        c.setAttribute('aria-label', 'Mines tile ' + (i + 1) + ' of 25, hidden');
         c.addEventListener('click', onPick);
         c.disabled = !session;
         board.appendChild(c);
@@ -853,6 +855,7 @@
       if (session.minePositions.has(idx)) {
         tile.classList.add('mine');
         tile.innerHTML = '<span>💣</span>';
+        tile.setAttribute('aria-label', 'Mines tile ' + (idx + 1) + ', mine');
         pulse(tile, 'ostg-tile-pop');
         revealAll();
         settleGame('mines', session.bet, 0, 0, statusEl, '💥 Hit a mine. Lost ' + fmt(session.bet) + ' OST.', board);
@@ -861,6 +864,7 @@
         session.safeRevealed += 1;
         tile.classList.add('safe');
         tile.innerHTML = '<span>💎</span>';
+        tile.setAttribute('aria-label', 'Mines tile ' + (idx + 1) + ', safe gem');
         pulse(tile, 'ostg-tile-pop');
         var mult = minesMultiplier(session.safeRevealed, session.mines);
         updateMeta();
@@ -885,6 +889,7 @@
         if (session.minePositions.has(i) && !t.classList.contains('mine')) {
           t.classList.add('mine-reveal');
           t.innerHTML = '<span>💣</span>';
+          t.setAttribute('aria-label', 'Mines tile ' + (i + 1) + ', revealed mine');
         }
       });
     }
