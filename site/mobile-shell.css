@@ -5,6 +5,22 @@
    coordinated safe area for docks, popouts, toasts, and floating actions.
    ========================================================================== */
 
+/* iOS auto-zoom guard: when a focused control's font-size < 16px, mobile
+   Safari zooms in and never zooms back, leaving the page locked at a small
+   sub-viewport. Force every form control to >= 16px on iOS / iPadOS. The
+   @supports(-webkit-touch-callout) selector matches Safari mobile only so we
+   do not change desktop typography. */
+@supports (-webkit-touch-callout: none) {
+  input,
+  select,
+  textarea,
+  [contenteditable="true"] {
+    font-size: 16px !important;
+  }
+  /* Stop the same fields from being zoomed by the implicit text-size-adjust */
+  html { -webkit-text-size-adjust: 100% !important; text-size-adjust: 100% !important; }
+}
+
 :root {
   --ost-mobile-dock-h: 78px;
   --ost-mobile-fab-size: 54px;

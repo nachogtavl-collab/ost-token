@@ -156,6 +156,52 @@
       window.setTimeout(function () { if (observer) observer.disconnect(); releaseMobileOverlays(); }, 15000);
     })();
   </script>
+  <script>
+    /* iOS keyboard / pinch-zoom recovery.
+       When the user taps an input on iOS the page can stay shrunk after blur
+       because Safari leaves visualViewport.scale > 1. We:
+         (a) snap the page back to top + reset transient scale on blur,
+         (b) listen to visualViewport "resize" so when the keyboard closes the
+             body height is restored and any locked scroll position is cleared,
+         (c) re-apply the meta viewport so a stale scale gets reset. */
+    (function () {
+      if (!('ontouchend' in window)) return;
+      var vp = window.visualViewport;
+      var meta = document.querySelector('meta[name="viewport"]');
+      var baseContent = meta ? meta.getAttribute('content') : null;
+      function nudgeViewport() {
+        if (!meta) return;
+        try {
+          // toggle to a no-zoom variant then back: forces Safari to recompute scale
+          meta.setAttribute('content', baseContent + ', maximum-scale=1');
+          window.setTimeout(function () { meta.setAttribute('content', baseContent); }, 80);
+        } catch (e) {}
+      }
+      function recoverFromKeyboard() {
+        // If visualViewport.scale > 1.01 we are stuck zoomed in — reset.
+        if (vp && vp.scale > 1.01) nudgeViewport();
+        // Restore any scrollY drift from keyboard push.
+        try { window.scrollTo({ top: window.scrollY, left: 0, behavior: 'instant' }); } catch (e) {}
+      }
+      document.addEventListener('focusout', function (e) {
+        var t = e.target;
+        if (!t) return;
+        var tag = (t.tagName || '').toLowerCase();
+        if (tag !== 'input' && tag !== 'textarea' && tag !== 'select' && t.getAttribute && t.getAttribute('contenteditable') !== 'true') return;
+        // give the keyboard time to dismiss, then restore
+        window.setTimeout(recoverFromKeyboard, 120);
+        window.setTimeout(recoverFromKeyboard, 380);
+      }, true);
+      if (vp) {
+        vp.addEventListener('resize', function () {
+          // keyboard closed when viewport height returns to ~window.innerHeight
+          if (vp.height >= window.innerHeight - 4) recoverFromKeyboard();
+        });
+      }
+      // Hard recovery via 3-finger tap on the body (accessibility escape hatch)
+      document.addEventListener('gestureend', function () { window.setTimeout(nudgeViewport, 60); }, { passive: true });
+    })();
+  </script>
   <title>OST &mdash; The Next Step After Bitcoin</title>
   <meta name="description" content="Private digital cash for every brother and sister on Earth. Seamless transfers from any crypto or real currency.">
   <meta property="og:title" content="OST &mdash; The Next Step After Bitcoin">
@@ -201,7 +247,7 @@
   <link rel="stylesheet" href="redesign.css?v=1">
   <link rel="stylesheet" href="stock-market.css?v=1">
   <link rel="stylesheet" href="live-watch.css?v=5">
-  <link rel="stylesheet" href="mobile-shell.css?v=11">
+  <link rel="stylesheet" href="mobile-shell.css?v=12">
   <link rel="stylesheet" href="mobile-shrink.css?v=1">
 </head>
 <body>
