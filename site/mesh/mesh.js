@@ -11,7 +11,7 @@ import {
 } from './mesh-crypto.js?v=1';
 import { MeshRTC } from './mesh-rtc.js?v=10';
 
-const STYLE_HREF = './mesh/mesh.css?v=11';
+const STYLE_HREF = './mesh/mesh.css?v=12';
 const STORAGE_ID = 'ost_mesh_identity_v1';
 const STORAGE_ADDR = 'ost_mesh_addr_v1';
 const MAX_FILE_BYTES = 32 * 1024 * 1024;
@@ -21,6 +21,10 @@ const INVITE_PREFIX = 'ost-mesh-invite:';
 const ANNOUNCE_REFRESH_MS = 45_000;
 const LIVE_LOCATION_INTERVAL_MS = 10_000;
 const DEFAULT_CALL_MINUTES = 30;
+const CHAT_PREFIX = 'ost.mesh.chat.v1.';
+const CHAT_MAX_ENTRIES = 400;
+const LAST_PEER_KEY = 'ost.mesh.lastPeer.v1';
+const QR_API = 'https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=12&data=';
 
 function injectStyles() {
   if (document.getElementById('ost-mesh-style')) return;
@@ -72,14 +76,31 @@ function buildDOM() {
         <div class="ost-mesh-id-actions">
           <button id="mesh-copy-addr">Copy address</button>
           <button id="mesh-copy-invite">Copy invite</button>
-          <button id="mesh-rotate-id">Rotate keys</button>
+          <button id="mesh-show-qr">Show QR</button>
+          <button id="mesh-scan-qr" class="ghost">Scan QR</button>
+          <button id="mesh-rotate-id" class="ghost">Rotate keys</button>
         </div>
       </div>
 
       <div class="ost-mesh-row">
-        <input id="mesh-peer-addr" type="text" placeholder="Paste peer address or invite" />
+        <input id="mesh-peer-addr" type="text" placeholder="Paste peer address, invite, or scan QR" />
         <button id="mesh-connect">Connect securely</button>
         <button id="mesh-listen" class="ghost">Wait for incoming</button>
+        <button id="mesh-clear-history" class="ghost" title="Clear stored chat history with this peer">Clear chat</button>
+      </div>
+
+      <div id="mesh-qr-modal" class="ost-mesh-qr-modal" aria-hidden="true">
+        <div class="ost-mesh-qr-card">
+          <div class="ost-mesh-qr-head">
+            <strong id="mesh-qr-title">Your invite QR</strong>
+            <button id="mesh-qr-close" type="button" aria-label="Close">×</button>
+          </div>
+          <div id="mesh-qr-body" class="ost-mesh-qr-body"></div>
+          <div class="ost-mesh-qr-actions">
+            <button id="mesh-qr-copy" type="button">Copy invite text</button>
+            <button id="mesh-qr-share" type="button" class="ghost">Share…</button>
+          </div>
+        </div>
       </div>
 
       <div class="ost-mesh-status" id="mesh-status">Idle.</div>
@@ -349,6 +370,20 @@ class MeshPavilion {
     this.closeBtn.addEventListener('click', () => this.close());
     document.getElementById('mesh-copy-addr').addEventListener('click', () => this._copyAddress());
     document.getElementById('mesh-copy-invite').addEventListener('click', () => this._copyInvite());
+    const showQrBtn = document.getElementById('mesh-show-qr');
+    if (showQrBtn) showQrBtn.addEventListener('click', () => this._showInviteQR());
+    const scanQrBtn = document.getElementById('mesh-scan-qr');
+    if (scanQrBtn) scanQrBtn.addEventListener('click', () => this._openQRScanner());
+    const clearChatBtn = document.getElementById('mesh-clear-history');
+    if (clearChatBtn) clearChatBtn.addEventListener('click', () => this._clearStoredChat());
+    const qrCloseBtn = document.getElementById('mesh-qr-close');
+    if (qrCloseBtn) qrCloseBtn.addEventListener('click', () => this._closeQRModal());
+    const qrModal = document.getElementById('mesh-qr-modal');
+    if (qrModal) qrModal.addEventListener('click', (e) => { if (e.target === qrModal) this._closeQRModal(); });
+    const qrCopyBtn = document.getElementById('mesh-qr-copy');
+    if (qrCopyBtn) qrCopyBtn.addEventListener('click', () => this._copyInvite());
+    const qrShareBtn = document.getElementById('mesh-qr-share');
+    if (qrShareBtn) qrShareBtn.addEventListener('click', () => this._shareInvite());
     document.getElementById('mesh-rotate-id').addEventListener('click', async () => {
       try { localStorage.removeItem(STORAGE_ID); } catch {}
       await this._initIdentity();
@@ -383,6 +418,15 @@ class MeshPavilion {
       try { this.root.focus({ preventScroll: true }); }
       catch (_) { this.root.focus(); }
     }
+    // Auto-restore the last peer's chat history so the conversation is
+    // linear across reloads / re-opens, even before reconnecting.
+    try {
+      const last = localStorage.getItem(LAST_PEER_KEY);
+      if (last && this.peerInput && !this.peerInput.value) {
+        this.peerInput.value = last;
+        this._replayChatHistory(last);
+      }
+    } catch (_) {}
   }
   close() {
     this.root.classList.remove('is-open');
@@ -557,8 +601,149 @@ class MeshPavilion {
     this.sessionKey = await deriveSessionKey(this.identity, imported.kexPub);
     this.peerAddr = addr;
     this.peerInput.value = addr;
+    try { localStorage.setItem(LAST_PEER_KEY, addr); } catch (_) {}
     this._setStatus(`Encrypted session ready with ${addr}`, 'ok');
+    this._replayChatHistory(addr);
     this._bubble('system', `Encrypted channel established with <code>${escapeHtml(addr)}</code> · suite ${escapeHtml(peer.bundle.suite || 'unknown')}`);
+  }
+
+  /* ----- Chat persistence (linear conversation history per peer) ----- */
+  _chatKey(addr) { return CHAT_PREFIX + String(addr || this.peerAddr || ''); }
+  _loadChat(addr) {
+    try { const v = JSON.parse(localStorage.getItem(this._chatKey(addr)) || '[]'); return Array.isArray(v) ? v : []; }
+    catch (_) { return []; }
+  }
+  _saveChat(addr, list) {
+    try {
+      const trimmed = list.slice(-CHAT_MAX_ENTRIES);
+      localStorage.setItem(this._chatKey(addr), JSON.stringify(trimmed));
+    } catch (_) {}
+  }
+  _persistEntry(role, kind, payload) {
+    if (!this.peerAddr) return;
+    const list = this._loadChat(this.peerAddr);
+    list.push({ role, kind, payload, ts: Date.now() });
+    this._saveChat(this.peerAddr, list);
+  }
+  _replayChatHistory(addr) {
+    if (!this.feedEl) return;
+    const entries = this._loadChat(addr);
+    if (!entries.length) return;
+    this.feedEl.innerHTML = '';
+    this._bubble('system', `<em>↻ Restored ${entries.length} message${entries.length === 1 ? '' : 's'} with <code>${escapeHtml(addr)}</code></em>`);
+    for (const e of entries) {
+      try {
+        if (e.kind === 'text') {
+          this._bubble(e.role, `<span class="ts">${new Date(e.ts).toLocaleTimeString()}</span> ${escapeHtml(e.payload && e.payload.text || '')}`);
+        } else if (e.kind === 'location') {
+          const card = this._makeLocationCard(e.payload, e.role);
+          this._bubble(e.role, card);
+        } else if (e.kind === 'system') {
+          this._bubble('system', String(e.payload && e.payload.html || ''));
+        }
+      } catch (_) {}
+    }
+  }
+  _clearStoredChat() {
+    const addr = this.peerAddr || (this.peerInput && this.peerInput.value) || '';
+    if (!addr) { this._setStatus('No peer selected.', 'warn'); return; }
+    if (!confirm('Clear stored chat history with ' + addr + '?')) return;
+    try { localStorage.removeItem(this._chatKey(addr)); } catch (_) {}
+    if (this.feedEl) this.feedEl.innerHTML = '';
+    this._bubble('system', `<em>Chat history cleared.</em>`);
+    this._setStatus('Chat history cleared.', 'ok');
+  }
+
+  /* ----- QR generation + scanning ----- */
+  _showInviteQR() {
+    if (!this.publicBundle) { this._setStatus('Keys still loading…', 'warn'); return; }
+    const invite = makeInvite({ address: this.address, bundle: this.publicBundle, fingerprint: this.fpr });
+    const modal = document.getElementById('mesh-qr-modal');
+    const body = document.getElementById('mesh-qr-body');
+    const title = document.getElementById('mesh-qr-title');
+    if (!modal || !body) return;
+    title.textContent = 'Your invite QR';
+    body.innerHTML = `
+      <img src="${QR_API}${encodeURIComponent(invite)}" alt="OST Mesh invite QR" loading="lazy" />
+      <p class="ost-mesh-qr-hint">Have your peer scan this with their phone camera (or use Scan QR here).</p>
+      <textarea readonly class="ost-mesh-qr-text">${escapeHtml(invite)}</textarea>
+    `;
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+  }
+  _closeQRModal() {
+    const modal = document.getElementById('mesh-qr-modal');
+    if (!modal) return;
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden', 'true');
+    if (this._qrScanStop) { try { this._qrScanStop(); } catch (_) {} this._qrScanStop = null; }
+  }
+  async _openQRScanner() {
+    const modal = document.getElementById('mesh-qr-modal');
+    const body = document.getElementById('mesh-qr-body');
+    const title = document.getElementById('mesh-qr-title');
+    if (!modal || !body) return;
+    title.textContent = 'Scan peer QR';
+    body.innerHTML = '<div class="ost-mesh-qr-scan"><video id="mesh-qr-video" autoplay playsinline muted></video><p class="ost-mesh-qr-hint">Point at a peer\'s invite QR, or upload an image.</p><label class="ost-mesh-qr-upload">Upload QR image<input type="file" id="mesh-qr-file" accept="image/*" hidden /></label></div>';
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+    const video = document.getElementById('mesh-qr-video');
+    const fileInput = document.getElementById('mesh-qr-file');
+    if (fileInput) fileInput.addEventListener('change', () => this._scanQRFromFile(fileInput.files && fileInput.files[0]));
+    if (!('BarcodeDetector' in window)) {
+      this._setStatus('Live QR scan not supported on this browser. Use Upload QR image.', 'warn');
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      video.srcObject = stream;
+      const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
+      let stopped = false;
+      this._qrScanStop = () => { stopped = true; stream.getTracks().forEach((t) => t.stop()); };
+      const tick = async () => {
+        if (stopped) return;
+        try {
+          const codes = await detector.detect(video);
+          if (codes && codes[0] && codes[0].rawValue) {
+            this._handleScannedInvite(codes[0].rawValue);
+            return;
+          }
+        } catch (_) {}
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    } catch (err) {
+      this._setStatus('Camera blocked: ' + err.message + '. Use Upload QR image.', 'warn');
+    }
+  }
+  async _scanQRFromFile(file) {
+    if (!file) return;
+    if (!('BarcodeDetector' in window)) { this._setStatus('QR decode not supported in this browser.', 'err'); return; }
+    try {
+      const bmp = await createImageBitmap(file);
+      const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
+      const codes = await detector.detect(bmp);
+      if (!codes || !codes[0]) { this._setStatus('No QR detected in image.', 'warn'); return; }
+      this._handleScannedInvite(codes[0].rawValue);
+    } catch (err) {
+      this._setStatus('QR decode failed: ' + err.message, 'err');
+    }
+  }
+  _handleScannedInvite(value) {
+    if (!value) return;
+    if (this.peerInput) this.peerInput.value = value;
+    this._closeQRModal();
+    this._setStatus('QR scanned — connecting…', 'ok');
+    this._connectToPeer();
+  }
+  async _shareInvite() {
+    if (!this.publicBundle) return;
+    const invite = makeInvite({ address: this.address, bundle: this.publicBundle, fingerprint: this.fpr });
+    if (navigator.share) {
+      try { await navigator.share({ title: 'OST Mesh invite', text: invite }); return; }
+      catch (_) {}
+    }
+    this._copyInvite();
   }
 
   _enableMessaging() {
@@ -676,7 +861,8 @@ class MeshPavilion {
     if (!this.sessionKey) return this._setStatus('No session key.', 'err');
     const sealed = await sealPayload(this.sessionKey, { kind: 'text', text: txt, ts: Date.now() });
     const sent = this._sendWire(JSON.stringify({ kind: 'enc', payload: sealed }));
-    this._bubble('me', escapeHtml(txt));
+    this._bubble('me', `<span class="ts">${new Date().toLocaleTimeString()}</span> ${escapeHtml(txt)}`);
+    this._persistEntry('me', 'text', { text: txt });
     this.textInput.value = '';
     if (!sent) this._bubble('system', '(buffered — channel not open yet)');
   }
@@ -1060,6 +1246,9 @@ class MeshPavilion {
   _renderLocation(payload, role) {
     const live = payload.kind === 'location-live';
     const card = this._makeLocationCard(payload, role);
+    // Persist every location ping so the chat keeps a linear trail and the
+    // recipient can see past pins after the live session ends.
+    this._persistEntry(role, 'location', payload);
     if (live) {
       const existing = role === 'me' ? this.localLiveBubble : this.peerLiveBubble;
       if (existing) {
@@ -1150,7 +1339,8 @@ class MeshPavilion {
     if (appEvent.defaultPrevented) return;
 
     if (inner.kind === 'text') {
-      this._bubble('peer', escapeHtml(inner.text));
+      this._bubble('peer', `<span class="ts">${new Date(inner.ts || Date.now()).toLocaleTimeString()}</span> ${escapeHtml(inner.text)}`);
+      this._persistEntry('peer', 'text', { text: inner.text });
     } else if (inner.kind === 'file-start' || inner.kind === 'file-meta') {
       const meta = inner.kind === 'file-meta'
         ? { ...inner, sealedSize: inner.size || 0, chunks: 1 }
