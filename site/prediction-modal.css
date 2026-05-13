@@ -86,11 +86,87 @@
   padding: 12px 14px; border-radius: 12px;
   background: linear-gradient(135deg, rgba(255,167,38,0.10), rgba(255,217,128,0.04));
   border: 1px solid rgba(255, 167, 38, 0.3);
+  transition: border-color .25s ease, box-shadow .25s ease, background .25s ease;
 }
 @media (max-width: 720px) { .ost-modal__btc { grid-template-columns: repeat(2, 1fr); } }
 .ost-modal__btc-row { display: flex; flex-direction: column; gap: 2px; }
 .ost-modal__btc-row span { font-size: 10px; opacity: 0.6; letter-spacing: 0.06em; text-transform: uppercase; }
 .ost-modal__btc-row strong { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; color: #ffd980; }
+
+/* Hero variant — used for the 5-min BTC market: huge live price + countdown */
+.ost-modal__btc--hero { display: block; padding: 14px 16px; }
+.ost-modal__btc-hero {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding-bottom: 12px; margin-bottom: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.ost-modal__btc-hero-live, .ost-modal__btc-hero-clock { display: flex; flex-direction: column; gap: 2px; }
+.ost-modal__btc-hero-live span, .ost-modal__btc-hero-clock span {
+  font-size: 11px; opacity: 0.65; letter-spacing: 0.08em; text-transform: uppercase;
+}
+.ost-modal__btc-hero-live strong {
+  font-size: 28px; font-weight: 800; font-variant-numeric: tabular-nums;
+  color: #ffd980; letter-spacing: -0.01em;
+  transition: color .18s ease, text-shadow .25s ease, transform .18s ease;
+}
+.ost-modal__btc-hero-live strong.is-up   { color: #7ce6a8; text-shadow: 0 0 14px rgba(124,230,168,.45); transform: translateY(-1px); }
+.ost-modal__btc-hero-live strong.is-down { color: #ff7c8a; text-shadow: 0 0 14px rgba(255,124,138,.45); transform: translateY(1px); }
+.ost-modal__btc-hero-live em {
+  font-style: normal; font-size: 13px; opacity: 0.85; font-variant-numeric: tabular-nums;
+}
+.ost-modal__btc-hero-clock { text-align: right; }
+.ost-modal__btc-hero-clock strong {
+  font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; color: #ffd980;
+}
+.ost-modal__btc-hero-clock strong.is-urgent {
+  color: #ff7c8a; animation: ost-modal-pulse 0.8s ease-in-out infinite;
+}
+.ost-modal__btc-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.ost-modal__btc.is-up   { border-color: rgba(124,230,168,0.55); box-shadow: 0 0 0 1px rgba(124,230,168,.18) inset, 0 8px 28px rgba(124,230,168,.12); }
+.ost-modal__btc.is-down { border-color: rgba(255,124,138,0.55); box-shadow: 0 0 0 1px rgba(255,124,138,.18) inset, 0 8px 28px rgba(255,124,138,.12); }
+@keyframes ost-modal-pulse { 0%,100%{ opacity:1; transform:scale(1);} 50%{ opacity:.65; transform:scale(1.04);} }
+@media (max-width: 720px) {
+  .ost-modal__btc--hero { padding: 16px; }
+  .ost-modal__btc-hero { gap: 10px; padding-bottom: 10px; margin-bottom: 10px; }
+  .ost-modal__btc-hero-live strong { font-size: 34px; }
+  .ost-modal__btc-hero-clock strong { font-size: 28px; }
+  .ost-modal__btc-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .ost-modal__btc-row strong { font-size: 18px; }
+}
+
+/* Live aggregate P/L bar — sits above the per-position list */
+.ost-modal__live-pl {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+  padding: 12px 14px; margin: 8px 0 10px; border-radius: 12px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+  transition: border-color .25s ease, background .25s ease, box-shadow .25s ease;
+}
+.ost-modal__live-pl-cell { display: flex; flex-direction: column; gap: 2px; }
+.ost-modal__live-pl-cell span { font-size: 10px; opacity: 0.6; letter-spacing: 0.08em; text-transform: uppercase; }
+.ost-modal__live-pl-cell strong {
+  font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums;
+  transition: color .2s ease;
+}
+.ost-modal__live-pl.is-up {
+  background: linear-gradient(135deg, rgba(124,230,168,0.12), rgba(124,230,168,0.04));
+  border-color: rgba(124,230,168,0.45);
+  box-shadow: 0 0 0 1px rgba(124,230,168,.12) inset;
+}
+.ost-modal__live-pl.is-up [data-bind="livePlPnl"] { color: #7ce6a8; }
+.ost-modal__live-pl.is-down {
+  background: linear-gradient(135deg, rgba(255,124,138,0.12), rgba(255,124,138,0.04));
+  border-color: rgba(255,124,138,0.45);
+  box-shadow: 0 0 0 1px rgba(255,124,138,.12) inset;
+}
+.ost-modal__live-pl.is-down [data-bind="livePlPnl"] { color: #ff7c8a; }
+@media (max-width: 720px) {
+  .ost-modal__live-pl {
+    position: sticky; top: 0; z-index: 6;
+    padding: 14px; gap: 8px;
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  }
+  .ost-modal__live-pl-cell strong { font-size: 22px; }
+}
 
 /* Prices --------------------------------------------------------------- */
 .ost-modal__prices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -103,6 +179,15 @@
 .ost-modal__price--no  { border-color: rgba(255,124,138,0.35); background: rgba(255,124,138,0.07); }
 .ost-modal__price span { font-size: 11px; opacity: 0.7; letter-spacing: 0.05em; text-transform: uppercase; }
 .ost-modal__price strong { font-size: 26px; font-variant-numeric: tabular-nums; }
+@media (max-width: 720px) {
+  .ost-modal__price { padding: 16px; min-height: 64px; }
+  .ost-modal__price strong { font-size: 32px; }
+  .ost-modal__sell-row { flex-wrap: wrap; gap: 8px 10px !important; padding: 10px 0 !important; }
+  .ost-modal__sell-row > button[data-act="sell"] {
+    width: 100%; margin-left: 0 !important; min-height: 44px; font-size: 14px !important;
+    border-radius: 10px !important;
+  }
+}
 
 /* Chart ---------------------------------------------------------------- */
 .ost-modal__chart {

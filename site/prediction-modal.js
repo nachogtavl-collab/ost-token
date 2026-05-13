@@ -658,11 +658,23 @@
 
   function renderBtcBlock(m) {
     if (!m.isOstNative || !m.meta || m.meta.kind !== 'btc5m') return '';
-    return '<section class="ost-modal__btc">' +
-      '<div class="ost-modal__btc-row"><span>5-min round</span><strong data-bind="btcCountdown">--:--</strong></div>' +
-      '<div class="ost-modal__btc-row"><span>Open price</span><strong data-bind="btcOpen">' + (m.meta.openPrice ? fmtUsd(m.meta.openPrice) : '—') + '</strong></div>' +
-      '<div class="ost-modal__btc-row"><span>Live BTC</span><strong data-bind="btcLive">—</strong></div>' +
-      '<div class="ost-modal__btc-row"><span>Δ from open</span><strong data-bind="btcDelta">—</strong></div>' +
+    return '<section class="ost-modal__btc ost-modal__btc--hero">' +
+      '<div class="ost-modal__btc-hero">' +
+        '<div class="ost-modal__btc-hero-live">' +
+          '<span>Live BTC</span>' +
+          '<strong data-bind="btcLive">—</strong>' +
+          '<em data-bind="btcDelta">—</em>' +
+        '</div>' +
+        '<div class="ost-modal__btc-hero-clock">' +
+          '<span>Round closes in</span>' +
+          '<strong data-bind="btcCountdown">--:--</strong>' +
+        '</div>' +
+      '</div>' +
+      '<div class="ost-modal__btc-grid">' +
+        '<div class="ost-modal__btc-row"><span>Open price</span><strong data-bind="btcOpen">' + (m.meta.openPrice ? fmtUsd(m.meta.openPrice) : '—') + '</strong></div>' +
+        '<div class="ost-modal__btc-row"><span>YES odds</span><strong data-bind="yesPct">—</strong></div>' +
+        '<div class="ost-modal__btc-row"><span>NO odds</span><strong data-bind="noPct">—</strong></div>' +
+      '</div>' +
     '</section>';
   }
 
@@ -715,6 +727,11 @@
       '<div class="ost-modal__sell-head">' +
         '<h4>Your open positions on this market</h4>' +
         '<span data-bind="sellStatus" style="opacity:.6;font-size:11px;">—</span>' +
+      '</div>' +
+      '<div class="ost-modal__live-pl" data-bind="livePlBar" hidden>' +
+        '<div class="ost-modal__live-pl-cell"><span>Stake</span><strong data-bind="livePlStake">0.00</strong></div>' +
+        '<div class="ost-modal__live-pl-cell"><span>Now worth</span><strong data-bind="livePlValue">0.00</strong></div>' +
+        '<div class="ost-modal__live-pl-cell"><span>P/L</span><strong data-bind="livePlPnl">+0.00</strong></div>' +
       '</div>' +
       '<div data-bind="sellList" class="ost-modal__sell-list">' +
         '<div style="opacity:.55;font-size:12px;padding:8px 0;">No open positions on this market.</div>' +
@@ -1137,9 +1154,34 @@
       if (!sellListEl) return;
       var positions = ordersForMarket(market);
       setText(bodyEl, 'sellStatus', positions.length ? (positions.length + ' open') : 'no positions');
+      var plBar = bodyEl.querySelector('[data-bind="livePlBar"]');
       if (!positions.length) {
         sellListEl.innerHTML = '<div style="opacity:.55;font-size:12px;padding:8px 0;">No open positions on this market. Buy YES or NO above to open one.</div>';
+        if (plBar) plBar.hidden = true;
         return;
+      }
+      // ---- Aggregate live P/L across all open positions on this market ----
+      var totalStake = 0, totalValue = 0;
+      positions.forEach(function (o) {
+        var side = String(o.side || 'yes').toLowerCase() === 'no' ? 'NO' : 'YES';
+        var stake = Number(o.stake || 0) || 0;
+        var entryPx = Number(o.price || (side === 'NO' ? o.noPrice : o.yesPrice)) || 0;
+        var shares = Number(o.shares) > 0 ? Number(o.shares) : (entryPx > 0 ? stake / entryPx : 0);
+        var contract = getModalTradeContract(market, side, o.outcomeKey || '');
+        var livePx = side === 'NO' ? Number(contract && contract.noPrice) : Number(contract && contract.yesPrice);
+        if (!Number.isFinite(livePx) || livePx <= 0) livePx = entryPx;
+        totalStake += stake;
+        totalValue += shares > 0 && livePx > 0 ? shares * livePx : stake;
+      });
+      var totalPnl = totalValue - totalStake;
+      if (plBar) {
+        plBar.hidden = false;
+        plBar.classList.toggle('is-up', totalPnl > 0.0001);
+        plBar.classList.toggle('is-down', totalPnl < -0.0001);
+        setText(bodyEl, 'livePlStake', totalStake.toFixed(2) + ' OST');
+        setText(bodyEl, 'livePlValue', totalValue.toFixed(2) + ' OST');
+        var pnlEl = bodyEl.querySelector('[data-bind="livePlPnl"]');
+        if (pnlEl) pnlEl.textContent = (totalPnl >= 0 ? '+' : '−') + Math.abs(totalPnl).toFixed(2) + ' OST';
       }
       sellListEl.innerHTML = positions.map(function (o, i) {
         var side = String(o.side || 'yes').toLowerCase() === 'no' ? 'NO' : 'YES';
@@ -1193,7 +1235,7 @@
       });
     }
     refreshSellList();
-    liveTimers.push(setInterval(refreshSellList, 3000));
+    liveTimers.push(setInterval(refreshSellList, 1000));
     bodyEl.__refreshSell = refreshSellList;
     window.addEventListener('ost:prediction:order-changed', refreshSellList);
 
@@ -1203,16 +1245,42 @@
     // ---- Live BTC tile ----
     if (market.isOstNative && market.meta && market.meta.kind === 'btc5m') {
       lockBtcFeedForRound(market.meta.openAt);
+      // Track last rendered price so we can flash green/red on every real tick
+      // — mobile users want to see the money moving every second.
+      var lastRenderedPrice = 0;
+      var flashTimer = null;
+      function flashPrice(direction) {
+        var liveEl = bodyEl.querySelector('[data-bind="btcLive"]');
+        var btcSection = bodyEl.querySelector('.ost-modal__btc');
+        if (!liveEl) return;
+        liveEl.classList.remove('is-up', 'is-down');
+        if (btcSection) btcSection.classList.remove('is-up', 'is-down');
+        if (direction === 'up' || direction === 'down') {
+          liveEl.classList.add('is-' + direction);
+          if (btcSection) btcSection.classList.add('is-' + direction);
+        }
+        if (flashTimer) clearTimeout(flashTimer);
+        flashTimer = setTimeout(function () {
+          liveEl.classList.remove('is-up', 'is-down');
+          if (btcSection) btcSection.classList.remove('is-up', 'is-down');
+        }, 700);
+      }
       var tickBtc = function () {
         var msLeft = Math.max(0, market.meta.closeAt - Date.now());
         var mm = Math.floor(msLeft / 60000), ss = Math.floor((msLeft % 60000) / 1000);
         setText(bodyEl, 'btcCountdown', mm + ':' + (ss < 10 ? '0' : '') + ss);
+        // urgency cue when <30s remain
+        var pulseEl = bodyEl.querySelector('[data-bind="btcCountdown"]');
+        if (pulseEl) {
+          if (msLeft > 0 && msLeft <= 30000) pulseEl.classList.add('is-urgent');
+          else pulseEl.classList.remove('is-urgent');
+        }
         var rec = (readJson(ROUND_KEY, {})[String(market.meta.openAt)] || {});
         if (rec.openPrice && !market.meta.openPrice) market.meta.openPrice = rec.openPrice;
         setText(bodyEl, 'btcOpen', market.meta.openPrice ? fmtUsd(market.meta.openPrice) : '—');
       };
       tickBtc();
-      liveTimers.push(setInterval(tickBtc, 500));
+      liveTimers.push(setInterval(tickBtc, 200));
       var fetchSharedBtcTick = function () {
         if (window.OST_PREDICTION_API && typeof window.OST_PREDICTION_API.btcSpot === 'function') {
           return window.OST_PREDICTION_API.btcSpot({ force: true })
@@ -1243,6 +1311,12 @@
           } catch (_) { sharedRound = null; }
           if (sharedRound && Number(sharedRound.openPrice) > 0) market.meta.openPrice = Number(sharedRound.openPrice);
           var sourceName = (sharedRound && sharedRound.source) || tick.source || BTC_PRICE_FEEDS[BTC_FEED_INDEX].name;
+          // Flash green/red whenever the price actually moves so mobile users
+          // see the money moving on every real tick.
+          if (lastRenderedPrice && p !== lastRenderedPrice) {
+            flashPrice(p > lastRenderedPrice ? 'up' : 'down');
+          }
+          lastRenderedPrice = p;
           setText(bodyEl, 'btcLive', fmtUsd(p) + '  · ' + sourceName);
           // Persist open price on first tick of the round if missing.
           if (!market.meta.openPrice) {
@@ -1290,10 +1364,13 @@
             }
           } catch (_) {}
           recalcProjected();
+          // Live mark-to-market on the user's open positions for this market —
+          // moves the P/L row in lock-step with every BTC tick.
+          try { if (typeof bodyEl.__refreshSell === 'function') bodyEl.__refreshSell(); } catch (_) {}
         });
       };
       fetchBtcLive();
-      liveTimers.push(setInterval(fetchBtcLive, 5000));
+      liveTimers.push(setInterval(fetchBtcLive, 1000));
     }
 
     // ---- Polymarket live data ----

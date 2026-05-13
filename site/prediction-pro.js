@@ -67,9 +67,10 @@
   // ---------------------------------------------------------------------------
   var FIVE_MIN_MS = 5 * 60 * 1000;
   var BTC_PRICE_URL = 'https://api.coinbase.com/v2/prices/BTC-USD/spot';
-  var BTC_REFRESH_MS = 15000;
+  var BTC_REFRESH_MS = 1000;          // live tick cadence for the shared BTC stream
+  var BTC_DEDUPE_MS  = 800;           // dedupe identical prints inside this window
   var BTC_FEED_TIMEOUT_MS = 3000;
-  var BTC_MAX_SERIES = 240;
+  var BTC_MAX_SERIES = 600;           // ~10 min of 1Hz history for the chart
   var BTC_PRICE_FEEDS = [
     {
       name: 'coinbase',
@@ -164,7 +165,7 @@
     var p = Number(price);
     if (!Number.isFinite(p) || p <= 1000) return btcLastTick;
     var now = Date.now();
-    if (btcLastTick.price === p && now - btcLastTick.ts < BTC_REFRESH_MS) {
+    if (btcLastTick.price === p && now - btcLastTick.ts < BTC_DEDUPE_MS) {
       btcLastTick = { ts: now, price: p, source: source || btcLastTick.source || 'btc' };
       try { window.dispatchEvent(new CustomEvent('ost:btc-spot', { detail: Object.assign({}, btcLastTick) })); } catch (e) {}
       return btcLastTick;
