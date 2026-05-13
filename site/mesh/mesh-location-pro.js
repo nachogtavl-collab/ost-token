@@ -338,13 +338,13 @@
       '  #mlpModal h3{font-size:16px}',
       '  #mlpModal .mlp-sub{font-size:11px;margin-bottom:8px}',
       '  #mlpModal .mlp-modes{grid-template-columns:1fr}',
-      '  .mlp-status{left:8px;right:auto;top:auto;bottom:calc(76px + env(safe-area-inset-bottom));transform:none;max-width:50vw;font-size:11px;padding:6px 9px;border-radius:999px;box-shadow:0 8px 22px rgba(0,0,0,.3)}',
+      '  .mlp-status{left:8px;right:auto;top:auto;bottom:calc(76px + env(safe-area-inset-bottom));transform:none;max-width:calc(100vw - 20px);font-size:11px;padding:6px 9px;border-radius:999px;box-shadow:0 8px 22px rgba(0,0,0,.3);white-space:nowrap}',
       '  .mlp-status .meta{display:none}',
       '  .mlp-status .txt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
       '  .mlp-status .stop{padding:3px 8px}',
-      '  .mlp-peer{width:auto;max-width:calc(50vw - 12px);right:8px;bottom:calc(76px + env(safe-area-inset-bottom));border-radius:999px;padding:7px 9px;box-shadow:0 8px 22px rgba(0,0,0,.3)}',
+      '  .mlp-peer{width:auto;max-width:calc(100vw - 20px);right:8px;bottom:calc(116px + env(safe-area-inset-bottom));border-radius:999px;padding:7px 9px;box-shadow:0 8px 22px rgba(0,0,0,.3)}',
       '  .mlp-peer .row1{margin:0;gap:6px;cursor:pointer}',
-      '  .mlp-peer .name{max-width:22vw;font-size:11px}',
+      '  .mlp-peer .name{max-width:calc(100vw - 152px);font-size:11px}',
       '  .mlp-peer .badge{font-size:9px;padding:2px 5px}',
       '  .mlp-peer .close{font-size:12px;padding:1px 4px}',
       '  .mlp-peer:not(.is-expanded) .grid,.mlp-peer:not(.is-expanded) .acts{display:none}',
@@ -353,10 +353,10 @@
       '  .mlp-peer.is-expanded .name{max-width:none;font-size:12px}',
       '  .mlp-peer.is-expanded .grid{display:grid}',
       '  .mlp-peer.is-expanded .acts{display:flex}',
-      '  .mlp-nudge{bottom:calc(78px + env(safe-area-inset-bottom));font-size:11px;max-width:calc(100vw - 24px)}',
+      '  .mlp-nudge{bottom:calc(164px + env(safe-area-inset-bottom));font-size:11px;max-width:calc(100vw - 24px);border-radius:14px}',
       '  body.ost-mesh-scroll-lock .mlp-status{bottom:calc(14px + env(safe-area-inset-bottom))}',
-      '  body.ost-mesh-scroll-lock .mlp-peer{bottom:calc(14px + env(safe-area-inset-bottom))}',
-      '  body.ost-mesh-scroll-lock .mlp-nudge{bottom:calc(16px + env(safe-area-inset-bottom))}',
+      '  body.ost-mesh-scroll-lock .mlp-peer{bottom:calc(58px + env(safe-area-inset-bottom))}',
+      '  body.ost-mesh-scroll-lock .mlp-nudge{bottom:calc(108px + env(safe-area-inset-bottom))}',
       '}'
     ].join('');
     var s = document.createElement('style');
@@ -679,7 +679,7 @@
       var lastDeny = state.lastDeniedModalAt || 0;
       if (nowMs() - lastDeny > DENIED_MODAL_COOLDOWN_MS) {
         state.lastDeniedModalAt = nowMs();
-        try { showSoftNudge('Location is blocked. Tap Live & last-step when you want to update permission.'); } catch (e) {}
+        try { showSoftNudge('Location is blocked. Tap Live & last-step to update permission.'); } catch (e) {}
       }
     }
   }
