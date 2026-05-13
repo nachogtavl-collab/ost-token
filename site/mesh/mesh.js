@@ -11,7 +11,7 @@ import {
 } from './mesh-crypto.js?v=1';
 import { MeshRTC } from './mesh-rtc.js?v=10';
 
-const STYLE_HREF = './mesh/mesh.css?v=13';
+const STYLE_HREF = './mesh/mesh.css?v=14';
 const STORAGE_ID = 'ost_mesh_identity_v1';
 const STORAGE_ADDR = 'ost_mesh_addr_v1';
 const MAX_FILE_BYTES = 32 * 1024 * 1024;
@@ -25,6 +25,16 @@ const CHAT_PREFIX = 'ost.mesh.chat.v1.';
 const CHAT_MAX_ENTRIES = 400;
 const LAST_PEER_KEY = 'ost.mesh.lastPeer.v1';
 const QR_API = 'https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=12&data=';
+
+function makeMessageId(address = 'mesh') {
+  try {
+    const rnd = crypto.getRandomValues(new Uint8Array(8));
+    const hex = Array.from(rnd).map((b) => b.toString(16).padStart(2, '0')).join('');
+    return `${address}:${Date.now().toString(36)}:${hex}`;
+  } catch (_) {
+    return `${address}:${Date.now().toString(36)}:${Math.random().toString(36).slice(2)}`;
+  }
+}
 
 function injectStyles() {
   if (document.getElementById('ost-mesh-style')) return;
@@ -84,16 +94,16 @@ function buildDOM() {
 
       <div class="ost-mesh-row">
         <input id="mesh-peer-addr" type="text" placeholder="Paste peer address, invite, or scan QR" />
-        <button id="mesh-connect">Connect securely</button>
-        <button id="mesh-listen" class="ghost">Wait for incoming</button>
-        <button id="mesh-chats" class="ghost" title="All conversations">💬 Chats</button>
-        <button id="mesh-clear-history" class="ghost" title="Clear stored chat history with this peer">Clear chat</button>
+        <button id="mesh-connect">Connect live</button>
+        <button id="mesh-listen" class="ghost">Receive live</button>
+        <button id="mesh-chats" class="ghost" title="All conversations">All chats</button>
+        <button id="mesh-clear-history" class="ghost" title="Clear stored chat history with this peer">Clear this chat</button>
       </div>
 
       <div id="mesh-chats-modal" class="ost-mesh-qr-modal" aria-hidden="true">
         <div class="ost-mesh-qr-card" style="max-width:520px">
           <div class="ost-mesh-qr-head">
-            <strong>All conversations</strong>
+            <strong>Chats</strong>
             <button id="mesh-chats-close" type="button" aria-label="Close">×</button>
           </div>
           <div id="mesh-chats-body" class="ost-mesh-chats-body"></div>
@@ -607,26 +617,32 @@ class MeshPavilion {
     this._startRTC('callee');
   }
 
-  async _preparePeerSession(peerInput) {
+  async _preparePeerSession(peerInput, options = {}) {
+    const replay = options.replay !== false;
+    const bubble = options.bubble !== false;
+    const status = options.status !== false;
     const peerInfo = typeof peerInput === 'string'
       ? { address: normalizeAddress(peerInput), bundle: null, fingerprint: null, via: 'address' }
       : peerInput;
     const addr = normalizeAddress(peerInfo.address);
     if (!addr) throw new Error('missing peer address');
-    if (this.peerAddr === addr && this.sessionKey) return;
-    this._setStatus('Looking up peer in OST directory…');
+    if (this.peerAddr === addr && this.sessionKey) {
+      if (replay) this._replayChatHistory(addr);
+      return;
+    }
+    if (status) this._setStatus('Looking up peer in OST directory…');
     const peer = await this._fetchPeerBundle(addr, peerInfo.bundle ? peerInfo : null);
     this.peerBundle = peer.bundle;
     const imported = await importPeerBundle(peer.bundle);
     const via = peerInfo.bundle ? 'invite' : 'directory';
-    this._setStatus(`Peer found by ${via} · fpr ${peer.fingerprint || '—'}. Deriving session key…`);
+    if (status) this._setStatus(`Peer found by ${via} · fpr ${peer.fingerprint || '—'}. Deriving session key…`);
     this.sessionKey = await deriveSessionKey(this.identity, imported.kexPub);
     this.peerAddr = addr;
     this.peerInput.value = addr;
     try { localStorage.setItem(LAST_PEER_KEY, addr); } catch (_) {}
-    this._setStatus(`Encrypted session ready with ${addr}`, 'ok');
-    this._replayChatHistory(addr);
-    this._bubble('system', `Encrypted channel established with <code>${escapeHtml(addr)}</code> · suite ${escapeHtml(peer.bundle.suite || 'unknown')}`);
+    if (status) this._setStatus(`Encrypted session ready with ${addr}`, 'ok');
+    if (replay) this._replayChatHistory(addr);
+    if (bubble) this._bubble('system', `Encrypted channel established with <code>${escapeHtml(addr)}</code> · suite ${escapeHtml(peer.bundle.suite || 'unknown')}`);
   }
 
   /* ----- Chat persistence (linear conversation history per peer) ----- */
@@ -641,11 +657,14 @@ class MeshPavilion {
       localStorage.setItem(this._chatKey(addr), JSON.stringify(trimmed));
     } catch (_) {}
   }
-  _persistEntry(role, kind, payload) {
-    if (!this.peerAddr) return;
-    const list = this._loadChat(this.peerAddr);
-    list.push({ role, kind, payload, ts: Date.now() });
-    this._saveChat(this.peerAddr, list);
+  _persistEntry(role, kind, payload, addr = this.peerAddr) {
+    if (!addr) return false;
+    const list = this._loadChat(addr);
+    const id = payload && payload.id;
+    if (id && list.some((entry) => entry && entry.kind === kind && entry.payload && entry.payload.id === id)) return false;
+    list.push({ role, kind, payload, ts: (payload && payload.ts) || Date.now() });
+    this._saveChat(addr, list);
+    return true;
   }
   _replayChatHistory(addr) {
     if (!this.feedEl) return;
@@ -705,7 +724,7 @@ class MeshPavilion {
     if (!modal || !body) return;
     const chats = this._enumerateChats();
     if (!chats.length) {
-      body.innerHTML = '<p style="opacity:.7;font-size:13px;margin:12px 0">No conversations yet — paste a peer address or scan a QR to start one.</p>';
+      body.innerHTML = '<p class="ost-mesh-chat-empty">No conversations yet.</p>';
     } else {
       body.innerHTML = chats.map((c) => {
         const when = c.lastTs ? new Date(c.lastTs).toLocaleString() : '';
@@ -714,7 +733,7 @@ class MeshPavilion {
         return `<button class="ost-mesh-chat-row" data-addr="${escapeHtml(c.addr)}">
           <div class="ost-mesh-chat-head"><strong>${escapeHtml(c.addr)}</strong><span>${escapeHtml(when)}</span></div>
           <div class="ost-mesh-chat-prev">${escapeHtml(who)}${preview}</div>
-          <div class="ost-mesh-chat-count">${c.count} message${c.count === 1 ? '' : 's'}</div>
+          <div class="ost-mesh-chat-count">${c.count} message${c.count === 1 ? '' : 's'} · open thread</div>
         </button>`;
       }).join('');
       body.querySelectorAll('.ost-mesh-chat-row').forEach((btn) => {
@@ -734,13 +753,34 @@ class MeshPavilion {
     modal.classList.remove('is-open');
     modal.setAttribute('aria-hidden', 'true');
   }
-  _openChat(addr) {
+  async _openChat(addr) {
     if (!addr) return;
+    const switching = this.peerAddr && this.peerAddr !== addr;
+    if (switching && this.rtc) {
+      try { await this.rtc.hangup?.({ notify: false }); } catch (_) {}
+      this.rtc = null;
+      this.outbox = [];
+    }
     if (this.peerInput) this.peerInput.value = addr;
     if (this.feedEl) this.feedEl.innerHTML = '';
+    this.localLiveBubble = null;
+    this.peerLiveBubble = null;
     try { localStorage.setItem(LAST_PEER_KEY, addr); } catch (_) {}
     this._replayChatHistory(addr);
-    this._setStatus(`Loaded conversation with ${addr}. Tap "Connect securely" to resume the encrypted channel.`, 'ok');
+    this._disableMessaging();
+    this._setStatus(`Opening chat with ${addr}…`);
+    try {
+      await this._preparePeerSession(addr, { replay: false, bubble: false, status: false });
+      if (this.rtc?.isOpen?.() && this.peerAddr === addr) {
+        this._enableMessaging();
+        this._setStatus(`Live chat ready with ${addr}.`, 'ok');
+      } else {
+        this._enableTextOnly();
+        this._setStatus(`Ready to message ${addr}.`, 'ok');
+      }
+    } catch (err) {
+      this._setStatus('Could not load peer keys for this chat: ' + err.message, 'err');
+    }
   }
 
   /* ----- Offline DM relay (store-and-forward via OST signaling API) ----- */
@@ -814,15 +854,15 @@ class MeshPavilion {
     this.sessionKey = key;
     try {
       if (inner.kind === 'text') {
-        this._persistEntry('peer', 'text', { text: inner.text });
+        const saved = this._persistEntry('peer', 'text', { id: inner.id, text: inner.text, ts: inner.ts }, fromAddr);
         // If the open feed is showing this sender, render it live.
-        if (prevPeer === fromAddr || (this.peerInput && this.peerInput.value === fromAddr)) {
+        if (saved && (prevPeer === fromAddr || (this.peerInput && this.peerInput.value === fromAddr))) {
           this._bubble('peer', `<span class="ts">${new Date(inner.ts || Date.now()).toLocaleTimeString()}</span> ${escapeHtml(inner.text)}`);
-        } else {
+        } else if (saved) {
           this._setStatus(`📬 New offline message from ${fromAddr}. Open Chats to view.`, 'ok');
         }
       } else if (inner.kind === 'location-ping' || inner.kind === 'location-live') {
-        this._persistEntry('peer', 'location', inner);
+        this._persistEntry('peer', 'location', inner, fromAddr);
         if (prevPeer === fromAddr) this._renderLocation(inner, 'peer');
       }
     } finally {
@@ -936,6 +976,17 @@ class MeshPavilion {
     if (this.callState === 'idle') this._setCallControls('idle');
   }
 
+  _enableTextOnly() {
+    this.textInput.disabled = false;
+    this.sendBtn.disabled = false;
+    this.attachBtn.disabled = true;
+    this.locBtn.disabled = true;
+    this.liveBtn.disabled = true;
+    this.voiceBtn.disabled = true;
+    this.videoBtn.disabled = true;
+    this.hangBtn.disabled = true;
+  }
+
   _disableMessaging() {
     this.textInput.value = '';
     this.textInput.disabled = true;
@@ -1037,11 +1088,13 @@ class MeshPavilion {
     const txt = (this.textInput.value || '').trim();
     if (!txt) return;
     if (!this.sessionKey) return this._setStatus('No session key.', 'err');
-    const sealed = await sealPayload(this.sessionKey, { kind: 'text', text: txt, ts: Date.now() });
+    const messageId = makeMessageId(this.address);
+    const sentAt = Date.now();
+    const sealed = await sealPayload(this.sessionKey, { kind: 'text', id: messageId, text: txt, ts: sentAt });
     const wire = JSON.stringify({ kind: 'enc', payload: sealed });
     const sent = this._sendWire(wire);
     this._bubble('me', `<span class="ts">${new Date().toLocaleTimeString()}</span> ${escapeHtml(txt)}`);
-    this._persistEntry('me', 'text', { text: txt });
+    this._persistEntry('me', 'text', { id: messageId, text: txt, ts: sentAt });
     this.textInput.value = '';
     if (!sent && this.peerAddr) {
       // Channel not open — relay through OST signaling so the peer gets it on next poll.
@@ -1530,8 +1583,8 @@ class MeshPavilion {
     if (appEvent.defaultPrevented) return;
 
     if (inner.kind === 'text') {
-      this._bubble('peer', `<span class="ts">${new Date(inner.ts || Date.now()).toLocaleTimeString()}</span> ${escapeHtml(inner.text)}`);
-      this._persistEntry('peer', 'text', { text: inner.text });
+      const saved = this._persistEntry('peer', 'text', { id: inner.id, text: inner.text, ts: inner.ts });
+      if (saved) this._bubble('peer', `<span class="ts">${new Date(inner.ts || Date.now()).toLocaleTimeString()}</span> ${escapeHtml(inner.text)}`);
     } else if (inner.kind === 'file-start' || inner.kind === 'file-meta') {
       const meta = inner.kind === 'file-meta'
         ? { ...inner, sealedSize: inner.size || 0, chunks: 1 }

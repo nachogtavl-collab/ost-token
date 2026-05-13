@@ -185,7 +185,7 @@ body.ost-mesh-scroll-lock .ost-mobile-home {
 .ost-mesh-row {
   order: 3;
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) auto auto;
+  grid-template-columns: minmax(220px, 1fr) repeat(4, minmax(108px, auto));
   gap: 8px;
   align-items: stretch;
 }
@@ -573,6 +573,7 @@ body.ost-mesh-scroll-lock .ost-mobile-home {
 .ost-mesh-qr-upload{display:inline-block;margin-top:8px;background:rgba(255,255,255,.06);border:1px dashed rgba(127,216,255,.32);color:#cfeaff;padding:8px 14px;border-radius:10px;cursor:pointer;font-size:12px}
 
 .ost-mesh-chats-body{padding:8px 12px 14px;display:flex;flex-direction:column;gap:8px;max-height:70vh;overflow:auto}
+.ost-mesh-chat-empty{opacity:.72;font-size:13px;margin:12px 0;text-align:center;color:#bddff2}
 .ost-mesh-chat-row{display:block;text-align:left;background:#0a132c;border:1px solid #1c2a52;border-radius:12px;padding:10px 12px;color:#dde6ff;cursor:pointer;font:inherit}
 .ost-mesh-chat-row:hover{border-color:#5ad7ff}
 .ost-mesh-chat-head{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:#bcc9ee}
