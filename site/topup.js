@@ -134,19 +134,36 @@
     if (el) { el.className = 'topup-status'; el.textContent = ''; }
   }
 
-  async function loadConfig() {
-    if (configCache) return configCache;
+  async function loadConfig(opts) {
+    var force = opts && opts.force;
+    if (configCache && !force) {
+      // Cache stale > 30s? Trigger a background refresh so the next caller
+      // sees a fresh SOL/USD snapshot without blocking the current quote.
+      var age = Date.now() - (configCache.__loadedAt || 0);
+      if (age > 30000 && !loadConfig.__refreshing) {
+        loadConfig.__refreshing = true;
+        loadConfig({ force: true }).finally(function () { loadConfig.__refreshing = false; });
+      }
+      return configCache;
+    }
     const base = API_BASE();
     if (!base) {
-      configCache = { stripeEnabled: false, receivers: {}, pricing: { usdPerOst: DEFAULT_USD_PER_OST, solUsd: DEFAULT_SOL_USD } };
+      configCache = { stripeEnabled: false, receivers: {}, pricing: { usdPerOst: DEFAULT_USD_PER_OST, solUsd: DEFAULT_SOL_USD }, __loadedAt: Date.now() };
       return configCache;
     }
     try {
-      const r = await fetch(`${base}/topup/config`);
+      // Cache-bust so the worker's 10s edge cache doesn't pin us to a stale
+      // SOL/USD price across the conversion lifecycle.
+      const r = await fetch(`${base}/topup/config?cb=` + Date.now(), { cache: 'no-store' });
       if (!r.ok) throw new Error('config_http_' + r.status);
-      configCache = await r.json();
+      const data = await r.json();
+      data.__loadedAt = Date.now();
+      configCache = data;
+      try { window.dispatchEvent(new CustomEvent('ost:topup-config', { detail: data })); } catch (_) {}
     } catch (_) {
-      configCache = { stripeEnabled: false, receivers: {}, pricing: { usdPerOst: DEFAULT_USD_PER_OST, solUsd: DEFAULT_SOL_USD } };
+      if (!configCache) {
+        configCache = { stripeEnabled: false, receivers: {}, pricing: { usdPerOst: DEFAULT_USD_PER_OST, solUsd: DEFAULT_SOL_USD }, __loadedAt: Date.now() };
+      }
     }
     return configCache;
   }
@@ -589,13 +606,29 @@
     const originalText = btn ? btn.textContent : '';
     if (btn) { btn.disabled = true; btn.textContent = 'Converting...'; }
     try {
+      // Force a fresh /topup/config fetch so the on-chain swap uses the
+      // exact SOL/USD price the user sees in the UI quote (and so the
+      // memo records the snapshot rate). Without this, a long-open page
+      // could swap against a 30-min stale SOL price and credit far less
+      // OST than the visible quote promised.
+      try { await loadConfig({ force: true }); updateConversion(); } catch (_) {}
       const swapRail = await waitForSwapRail();
       if (!swapRail || typeof swapRail.swapAny !== 'function') throw new Error('OST devnet swap rail is still loading. Refresh and try again.');
       if (!window.OST_RESCUE || typeof window.OST_RESCUE.ensureUserAta !== 'function') throw new Error('OST fee vault is still loading. Please wait a moment and try again.');
+      const snapSolUsd = solUsd();
+      const snapOstUsd = usdPerOst();
+      const expectedOst = snapOstUsd > 0 ? (amount * snapSolUsd) / snapOstUsd : 0;
       const quote = typeof swapRail.quote === 'function' ? swapRail.quote(amount) : null;
-      setStatus('converterSwapStatus', 'info', 'Converting ' + fmtSol(amount) + ' into ' + fmtOst(quote && quote.ost) + ' on devnet...');
-      const memo = JSON.stringify({ k: 'converter-sol-to-ost', sol: amount, t: Date.now() });
-      const result = await swapRail.swapAny('SOL', amount, { memo });
+      setStatus('converterSwapStatus', 'info', 'Converting ' + fmtSol(amount) + ' (~$' + (amount * snapSolUsd).toFixed(2) + ' @ $' + snapSolUsd.toFixed(2) + '/SOL) into ~' + fmtOst(expectedOst) + ' on devnet...');
+      const memo = JSON.stringify({
+        k: 'converter-sol-to-ost',
+        sol: amount,
+        solUsd: Number(snapSolUsd.toFixed(4)),
+        ostUsd: Number(snapOstUsd.toFixed(6)),
+        expectedOst: Number(expectedOst.toFixed(4)),
+        t: Date.now()
+      });
+      const result = await swapRail.swapAny('SOL', amount, { memo, snapSolUsd: snapSolUsd, snapOstUsd: snapOstUsd, expectedOst: expectedOst });
       const sig = result && result.sig ? String(result.sig) : '';
       setStatus('converterSwapStatus', 'ok', 'Converted ' + fmtSol(amount) + ' into ' + fmtOst(result && result.ost) + '. ' +
         (sig ? '<a href="https://solscan.io/tx/' + encodeURIComponent(sig) + '?cluster=devnet" target="_blank" rel="noopener">View tx</a>' : ''));
@@ -632,6 +665,26 @@
   window.buyWithCard = buyWithCard;
   window.buyWithCrypto = buyWithCrypto;
   window.convertSOLtoOST = convertSOLtoOST;
+
+  // Public façade so other modules (wallet-extras, swap-resilient) can read
+  // the SAME live SOL/USD and OST/USD prices the UI quote uses. This is the
+  // single source of truth for SOL→OST conversion math; without it the
+  // on-chain swap rail may default to stale fallback constants and credit
+  // far less OST than the user saw quoted.
+  window.OST_TOPUP = {
+    usdPerOst: usdPerOst,
+    solUsd: solUsd,
+    minUsd: minUsd,
+    maxUsd: maxUsd,
+    config: function () { return configCache; },
+    refreshConfig: function () { return loadConfig({ force: true }); },
+    quoteFromUsd: quoteFromUsd
+  };
+  // Keep config fresh in the background so quotes never go stale beyond ~30s.
+  setInterval(function () {
+    if (document.hidden) return;
+    loadConfig({ force: true }).catch(function () {});
+  }, 30000);
   window.selectTopUp = (usd) => {
     const input = $('fiat-amount');
     if (input) input.value = Number(usd || 10).toFixed(2);

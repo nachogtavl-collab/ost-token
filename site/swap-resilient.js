@@ -106,12 +106,16 @@
       var v = Number(window.OST_TOPUP.usdPerOst());
       if (Number.isFinite(v) && v > 0) return v;
     }
-    return 0.10; // sane default matching topup.js fallback
+    return 0.0118; // matches topup.js DEFAULT_USD_PER_OST
   }
   function priceUsdSol() {
+    if (window.OST_TOPUP && typeof window.OST_TOPUP.solUsd === 'function') {
+      var t = Number(window.OST_TOPUP.solUsd());
+      if (Number.isFinite(t) && t > 0) return t;
+    }
     var p = window.__ostPrices || {};
     var v = Number(p.solana);
-    return (Number.isFinite(v) && v > 0) ? v : 86.6;
+    return (Number.isFinite(v) && v > 0) ? v : 150;
   }
 
   function quoteOstToSol(ostAmount) {

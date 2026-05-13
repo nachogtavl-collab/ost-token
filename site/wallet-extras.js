@@ -160,14 +160,34 @@
   //    The swap pool keypair is published in site/swap-pool.js (devnet ONLY).
   // ------------------------------------------------------------------
   function getLiveSolUsd() {
+    // Source of truth ranking: (1) the live /topup/config price the UI is
+    // showing in the quote — guarantees the on-chain swap matches what the
+    // user just saw; (2) the global price tracker (`__ostPrices`) which is
+    // populated by app.js Binance poll; (3) a safe last-resort default.
+    try {
+      if (window.OST_TOPUP && typeof window.OST_TOPUP.solUsd === 'function') {
+        var liveTop = Number(window.OST_TOPUP.solUsd());
+        if (Number.isFinite(liveTop) && liveTop > 0) return liveTop;
+      }
+    } catch (e) {}
     var p = window.__ostPrices || {};
     if (Number.isFinite(p.solana) && p.solana > 0) return p.solana;
-    return 86.6; // sane fallback ~ April 2026
+    return 150; // sane fallback for May 2026 — much closer to spot than 86.6
   }
   function getLiveOstUsd() {
+    // Same ranking: prefer the topup worker price (which is what the UI
+    // quote displays — typically 0.0118). Fall back to `__ostPrices.ost`,
+    // and finally to the topup default. NEVER default to 1, which would
+    // collapse the SOL→OST rate by ~85x and credit "far less OST".
+    try {
+      if (window.OST_TOPUP && typeof window.OST_TOPUP.usdPerOst === 'function') {
+        var liveTop = Number(window.OST_TOPUP.usdPerOst());
+        if (Number.isFinite(liveTop) && liveTop > 0) return liveTop;
+      }
+    } catch (e) {}
     var p = window.__ostPrices || {};
-    if (Number.isFinite(p.ost) && p.ost > 0) return p.ost;
-    return 1;
+    if (Number.isFinite(p.ost) && p.ost > 0 && p.ost < 100) return p.ost;
+    return 0.0118; // matches topup.js DEFAULT_USD_PER_OST
   }
 
   function quoteSolToOst(solAmount) {
@@ -300,7 +320,7 @@
   function priceUsd(currency) {
     var p = window.__ostPrices || {};
     var c = String(currency || '').toUpperCase();
-    if (c === 'SOL') return Number.isFinite(p.solana) && p.solana > 0 ? p.solana : 86.6;
+    if (c === 'SOL') return getLiveSolUsd();
     if (c === 'BTC') return Number.isFinite(p.bitcoin) && p.bitcoin > 0 ? p.bitcoin : 105000;
     if (c === 'ETH') return Number.isFinite(p.ethereum) && p.ethereum > 0 ? p.ethereum : 3800;
     if (c === 'BNB') return 650;
