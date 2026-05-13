@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v134';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v118';
+const CACHE_NAME = 'ost-pwa-cache-v135';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v119';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -10,7 +10,7 @@ const PRECACHE_PATHS = [
   './ost-logo.svg',
   './icon-192.png',
   './icon-512.png',
-  './style.css?v=75',
+  './style.css?v=76',
   './mobile.css?v=7',
   './polish.css?v=1',
   './compartments.css?v=2',
@@ -58,7 +58,7 @@ const PRECACHE_PATHS = [
   './mesh/games/pool8.js?v=1',
   './mesh/games/cuppong.js?v=1',
   './mesh/games/minigolf.js?v=1',
-  './mesh/mesh-social-x.js?v=2',
+  './mesh/mesh-social-x.js?v=3',
   './mesh/mesh-location-pro.js?v=7',
   './mesh/mesh-crypto.js?v=1',
   './mesh/mesh-rtc.js?v=10',

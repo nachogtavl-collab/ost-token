@@ -5839,11 +5839,15 @@ select.sim-input { cursor: pointer; }
   .vision-stage-arrow { transform: rotate(90deg); padding: 2px 0; }
 }
 
-.vision-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.vision-pills { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
 .vision-pill {
   padding: 6px 14px; font-size: .78rem; font-weight: 600;
   background: var(--surface); border: 1px solid var(--border);
   border-radius: 20px; color: var(--text); white-space: nowrap;
+}
+@media (max-width: 480px) {
+  .vision-pills { flex-direction: column; align-items: stretch; gap: 6px; }
+  .vision-pill { white-space: normal; text-align: center; padding: 8px 12px; }
 }
 .vision-spacex {
   flex: 1; min-width: 220px;
@@ -8645,10 +8649,12 @@ select.sim-input { cursor: pointer; }
 }
 .welcome-header { text-align: center; margin-bottom: 28px; }
 .welcome-header .welcome-logo { font-size: 1.4rem; font-weight: 700; color: var(--accent, #6d9fff); }
-.welcome-header h2 { font-size: 1.3rem; margin: 12px 0 6px; color: #fff; }
+.welcome-header h1,
+.welcome-header h2 { font-size: 1.3rem; margin: 12px 0 6px; color: #fff; line-height: 1.3; font-weight: 700; }
 .welcome-header p { color: var(--text-muted, #aeb7c8); font-size: .88rem; }
 
-.welcome-step h3 { font-size: 1rem; margin-bottom: 14px; color: #fff; }
+.welcome-step h2,
+.welcome-step h3 { font-size: 1rem; margin-bottom: 14px; color: #fff; font-weight: 600; }
 
 .welcome-lang-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
 .wel-lang-btn {
@@ -9283,6 +9289,7 @@ select.sim-input { cursor: pointer; }
   }
 
   .welcome-header { margin-bottom: 20px; }
+  .welcome-header h1,
   .welcome-header h2 { font-size: 1.16rem; }
   .welcome-lang-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -11976,7 +11983,7 @@ button .ost-icon, a .ost-icon, .pill .ost-icon { vertical-align:-0.18em; }
   letter-spacing: .02em;
 }
 
-/* Dedicated predict panel — gives the surface room and a header band */
+/* Dedicated predict panel ï¿½ gives the surface room and a header band */
 #wallet-panel-predict {
   padding: 8px 0 0;
 }

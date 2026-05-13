@@ -393,6 +393,7 @@
     if (!img) {
       img = document.createElement('img');
       img.className = 'bg';
+      img.alt = '';
       frame.insertBefore(img, frame.firstChild);
     }
     img.src = dataUrl;
