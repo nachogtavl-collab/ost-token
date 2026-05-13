@@ -1156,6 +1156,9 @@ export default {
           'POST /positions',
           'GET  /wallet/events/:wallet',
           'POST /wallet/events',
+          'POST /wallet/payouts',
+          'GET  /wallet/payouts/recent',
+          'GET  /wallet/payouts/:wallet',
           'GET  /launchpad/coins',
           'POST /launchpad/coins',
           'POST /launchpad/trade',
@@ -2000,6 +2003,70 @@ export default {
       const deviceId = cleanText(decodeURIComponent(offlineVaultStatusMatch[1]), 80);
       const events = await kvGet(env, `offline-vault:${deviceId}`, []);
       return json({ deviceId, events: events.slice(0, 50), count: events.length, ts: new Date().toISOString() });
+    }
+
+    // ── Payout audit ledger ──────────────────────────────────────────────────
+    // Every client-side payout (faucet cash-out, prediction sell, top-up
+    // claim, stock sell, fair-game win) writes an "intent" entry here BEFORE
+    // signing the on-chain tx, then writes the result afterwards. If the
+    // browser crashes between intent + result, the unresolved intent stays
+    // visible so support / scripts can reconcile lost OST.
+    if (path === '/wallet/payouts' && method === 'POST') {
+      let body;
+      try { body = await request.json(); } catch (_) { return json({ error: 'invalid_json' }, 400); }
+      const wallet = cleanText(body && body.wallet, 64);
+      if (!wallet) return json({ error: 'missing_wallet' }, 400);
+      if (!env.OST_KV) return json({ ok: true, stored: false });
+      const stage = cleanText(body && body.stage || 'intent', 16); // 'intent' | 'result' | 'failure'
+      const id = cleanText(body && body.id || crypto.randomUUID(), 80);
+      const record = {
+        id,
+        wallet,
+        walletShort: wallet.slice(0, 4) + '…' + wallet.slice(-4),
+        stage,
+        kind: cleanText(body.kind || 'payout', 32),     // faucet|prediction|topup|stock|game
+        ostAmount: cleanNumber(body.ostAmount, 0),
+        memo: cleanText(body.memo || '', 240),
+        sig: cleanText(body.sig || body.signature || '', 128),
+        error: cleanText(body.error || '', 240),
+        ref: cleanText(body.ref || '', 128),            // intent id, market id, etc.
+        ts: Date.now()
+      };
+      const walletKey = `payouts:${wallet}`;
+      const bucket = await kvGet(env, walletKey, []);
+      // Replace prior entry with same id (intent → result) instead of duplicating
+      const existingIdx = bucket.findIndex(e => e && e.id === id);
+      if (existingIdx >= 0) {
+        bucket[existingIdx] = Object.assign({}, bucket[existingIdx], record, { history: (bucket[existingIdx].history || []).concat([{ stage: bucket[existingIdx].stage, ts: bucket[existingIdx].ts }]).slice(-5) });
+      } else {
+        bucket.unshift(record);
+      }
+      // Cap per-wallet history at 200 entries.
+      if (bucket.length > 200) bucket.length = 200;
+      await kvPut(env, walletKey, bucket, 60 * 60 * 24 * 30);
+      // Global tail (newest 500) for support dashboards
+      const tail = await kvGet(env, 'payouts:tail', []);
+      tail.unshift({ wallet, walletShort: record.walletShort, kind: record.kind, stage, ostAmount: record.ostAmount, sig: record.sig, error: record.error, ts: record.ts, id });
+      if (tail.length > 500) tail.length = 500;
+      await kvPut(env, 'payouts:tail', tail, 60 * 60 * 24 * 14);
+      return json({ ok: true, stored: true, record });
+    }
+
+    if (path === '/wallet/payouts/recent' && method === 'GET') {
+      if (!env.OST_KV) return json({ recent: [], note: 'KV not configured' });
+      const limit = Math.min(200, Number(url.searchParams.get('limit') || 50));
+      const tail = await kvGet(env, 'payouts:tail', []);
+      return json({ recent: tail.slice(0, limit), ts: new Date().toISOString() }, 200, { 'cache-control': 'no-store' });
+    }
+
+    const walletPayoutsMatch = path.match(/^\/wallet\/payouts\/([^/]+)$/);
+    if (walletPayoutsMatch && method === 'GET') {
+      const wallet = decodeURIComponent(walletPayoutsMatch[1]);
+      if (!env.OST_KV) return json({ payouts: [], wallet, note: 'KV not configured' });
+      const bucket = await kvGet(env, `payouts:${wallet}`, []);
+      const onlyOpen = url.searchParams.get('open') === '1';
+      const filtered = onlyOpen ? bucket.filter(e => e && e.stage === 'intent') : bucket;
+      return json({ payouts: filtered, wallet, count: filtered.length, ts: new Date().toISOString() }, 200, { 'cache-control': 'no-store' });
     }
 
     // ── Bot / autonomous AI trader API ───────────────────────────────────────

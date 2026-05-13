@@ -145,12 +145,55 @@
     } catch (e) {
       throw await unpackSendError(e);
     }
-    await built.conn.confirmTransaction({
-      signature: sig,
-      blockhash: built.blockhash.blockhash,
-      lastValidBlockHeight: built.blockhash.lastValidBlockHeight
-    }, 'confirmed').catch(function () {});
-    return sig;
+    // CRITICAL — DO NOT silently swallow confirmation errors.
+    // The previous version did `.catch(function () {})` here, which made
+    // every caller (faucet cash-out, prediction sell, top-up claim, stock
+    // sell, fair-game wins) believe the payout succeeded even when the
+    // transaction never landed on-chain. Users had their credits debited
+    // and the OST never arrived in their wallet ("lost to unknown").
+    var primaryErr = null;
+    try {
+      var res = await built.conn.confirmTransaction({
+        signature: sig,
+        blockhash: built.blockhash.blockhash,
+        lastValidBlockHeight: built.blockhash.lastValidBlockHeight
+      }, 'confirmed');
+      if (res && res.value && res.value.err) {
+        throw new Error('On-chain failure: ' + JSON.stringify(res.value.err));
+      }
+      return sig;
+    } catch (e) {
+      primaryErr = e;
+    }
+    // Confirmation failed (timeout, RPC drop, websocket loss). Cross-check
+    // by polling getSignatureStatuses across all RPCs — the tx may actually
+    // have landed even though the websocket subscription died.
+    var lastStatus = null;
+    for (var attempt = 0; attempt < 8; attempt++) {
+      for (var i = 0; i < RPC_ENDPOINTS.length; i++) {
+        var conn = makeConn(RPC_ENDPOINTS[i]);
+        if (!conn) continue;
+        try {
+          var sres = await conn.getSignatureStatuses([sig], { searchTransactionHistory: true });
+          var entry = sres && sres.value && sres.value[0];
+          if (entry) {
+            lastStatus = entry;
+            if (entry.err) throw new Error('On-chain failure: ' + JSON.stringify(entry.err));
+            if (entry.confirmationStatus === 'confirmed' || entry.confirmationStatus === 'finalized') {
+              return sig;
+            }
+          }
+        } catch (statusErr) {
+          if (statusErr && /On-chain failure/i.test(statusErr.message || '')) throw statusErr;
+        }
+      }
+      // small back-off between sweeps so a slow leader doesn't false-negative
+      await new Promise(function (r) { setTimeout(r, 600 + attempt * 250); });
+    }
+    var summary = lastStatus
+      ? 'last status=' + (lastStatus.confirmationStatus || 'unknown')
+      : 'no status from any RPC';
+    throw new Error('Payout could not be confirmed on-chain (' + summary + '): ' + (primaryErr && primaryErr.message ? primaryErr.message : primaryErr));
   }
 
   // Pool pays SOL fee + partial-signs first; user wallet signs to authorise
@@ -207,6 +250,26 @@
   // -----------------------------------------------------------------------
   // 5) PAYOUT OST  (pool → user, zero-SOL UX)
   // -----------------------------------------------------------------------
+  // Best-effort audit log → Cloudflare worker. Posts an "intent" before the
+  // on-chain transfer and a "result"/"failure" after, so support / scripts
+  // can reconcile any OST that disappears mid-flight.
+  function ostApiBaseSafe() {
+    try { return (window.OST_API_BASE || '').replace(/\/+$/, ''); } catch (_) { return ''; }
+  }
+  function logPayoutAudit(payload) {
+    try {
+      var base = ostApiBaseSafe();
+      if (!base) return;
+      // navigator.sendBeacon survives page unload — use it when available so
+      // intents written right before navigation still arrive.
+      var body = JSON.stringify(payload);
+      if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+        try { navigator.sendBeacon(base + '/wallet/payouts', new Blob([body], { type: 'application/json' })); return; } catch (_) {}
+      }
+      fetch(base + '/wallet/payouts', { method: 'POST', headers: { 'content-type': 'application/json' }, body: body, keepalive: true }).catch(function () {});
+    } catch (_) {}
+  }
+
   async function payoutOst(toPubkeyInput, amountOst, memoText) {
     var w = window.OST_WALLET; if (!w) throw new Error('Wallet helpers not loaded');
     var c = w.constants;
@@ -231,8 +294,23 @@
         w.toBaseUnits(toSend, c.OST_TOKEN_DECIMALS), c.OST_TOKEN_DECIMALS, c.TOKEN_2022_PROGRAM_ID)
     ];
     if (memoText) ixs.push(w.memoIx(String(memoText), pool.publicKey));
-    var sig = await sendPoolOnlyTx(ixs);
-    return { sig: sig, ost: toSend };
+
+    var auditId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : ('payout-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10));
+    var walletStr = '';
+    try { walletStr = to.toBase58(); } catch (_) {}
+    var memoSummary = '';
+    try { memoSummary = String(memoText || '').slice(0, 200); } catch (_) {}
+    logPayoutAudit({ id: auditId, stage: 'intent', wallet: walletStr, kind: 'payout', ostAmount: toSend, memo: memoSummary });
+
+    var sig;
+    try {
+      sig = await sendPoolOnlyTx(ixs);
+    } catch (err) {
+      logPayoutAudit({ id: auditId, stage: 'failure', wallet: walletStr, kind: 'payout', ostAmount: toSend, memo: memoSummary, error: (err && err.message) ? String(err.message).slice(0, 240) : 'unknown' });
+      throw err;
+    }
+    logPayoutAudit({ id: auditId, stage: 'result', wallet: walletStr, kind: 'payout', ostAmount: toSend, memo: memoSummary, sig: sig });
+    return { sig: sig, ost: toSend, auditId: auditId };
   }
 
   // -----------------------------------------------------------------------
