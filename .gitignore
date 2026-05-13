@@ -35,3 +35,4 @@ test-results/
 playwright-report/
 *.tmp.spec.js
 .last-run.json
+reports/
