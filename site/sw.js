@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ost-pwa-cache-v112';
+const CACHE_NAME = 'ost-pwa-cache-v113';
 const RUNTIME_CACHE = 'ost-pwa-runtime-v99';
 const CACHE_PREFIX = 'ost-pwa-';
 

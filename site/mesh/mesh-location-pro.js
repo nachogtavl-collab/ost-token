@@ -132,7 +132,20 @@
     });
   }
   function mapsUrl(lat, lon) {
+    // Apple Maps on iOS for native deep-link, Google Maps elsewhere.
+    if (isIOS()) return 'https://maps.apple.com/?q=' + encodeURIComponent(lat + ',' + lon) + '&ll=' + lat + ',' + lon;
     return 'https://www.google.com/maps?q=' + encodeURIComponent(lat + ',' + lon);
+  }
+
+  // ============== iOS / platform helpers ==============
+  function isIOS() {
+    var ua = navigator.userAgent || '';
+    // iPad on iOS 13+ reports as Mac — check touch points to distinguish.
+    return /iPad|iPhone|iPod/.test(ua) || (ua.indexOf('Mac') >= 0 && navigator.maxTouchPoints > 1);
+  }
+  function isStandalonePWA() {
+    return (window.navigator.standalone === true) ||
+           (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
   }
 
   // ============== state ==============
@@ -148,9 +161,15 @@
     if (document.getElementById('mesh-location-pro-style')) return;
     var css = [
       // ---- modal
-      '#mlpModal{position:fixed;inset:0;background:rgba(4,8,18,.7);display:none;align-items:center;justify-content:center;z-index:99999;backdrop-filter:blur(8px)}',
+      '#mlpModal{position:fixed;inset:0;background:rgba(4,8,18,.7);display:none;align-items:center;justify-content:center;z-index:99999;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}',
       '#mlpModal.is-open{display:flex}',
-      '#mlpModal .mlp-card{width:min(460px,94vw);background:#0b1226;border:1px solid #243561;border-radius:18px;padding:18px;color:#dde6ff;box-shadow:0 24px 60px rgba(0,0,0,.55)}',
+      '#mlpModal .mlp-card{width:min(460px,94vw);max-height:calc(100vh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow-y:auto;-webkit-overflow-scrolling:touch;background:#0b1226;border:1px solid #243561;border-radius:18px;padding:18px;color:#dde6ff;box-shadow:0 24px 60px rgba(0,0,0,.55)}',
+      '#mlpModal button,#mlpModal select,#mlpModal input{font-family:inherit;-webkit-tap-highlight-color:transparent;touch-action:manipulation}',
+      '#mlpModal input[type=checkbox]{min-width:18px;min-height:18px}',
+      '#mlpModal .mlp-mode{min-height:44px}',
+      '#mlpModal .mlp-foot button{min-height:44px;padding:10px 16px}',
+      '#mlpModal .mlp-deny{background:#3a230b;border:1px solid #7a5524;color:#ffd1a3;padding:10px;border-radius:10px;font-size:12px;line-height:1.4;margin-top:10px;display:none}',
+      '#mlpModal .mlp-deny.is-on{display:block}',
       '#mlpModal h3{margin:0 0 4px 0;font-size:18px}',
       '#mlpModal .mlp-sub{font-size:12px;color:#8aa0d0;margin-bottom:12px}',
       '#mlpModal label{display:block;font-size:12px;color:#9fb1dd;margin:10px 0 4px}',
@@ -167,13 +186,13 @@
       '#mlpModal .mlp-go{background:linear-gradient(135deg,#5ad7ff,#7c5cff);color:#02112a;font-weight:700}',
       '#mlpModal .mlp-stop{background:#ff5e6c;color:#fff}',
       '#mlpModal .mlp-trace{background:#322054;color:#fff}',
-      // ---- status pill (mine)
-      '.mlp-status{position:fixed;left:50%;top:18px;transform:translateX(-50%);background:#0b1226;border:1px solid #5ad7ff;color:#e6ecff;padding:8px 14px;border-radius:999px;font-size:12px;z-index:99998;display:none;box-shadow:0 8px 24px rgba(0,0,0,.45);max-width:92vw}',
+      // ---- status pill (mine) — iOS notch safe
+      '.mlp-status{position:fixed;left:50%;top:calc(18px + env(safe-area-inset-top));transform:translateX(-50%);background:#0b1226;border:1px solid #5ad7ff;color:#e6ecff;padding:8px 14px;border-radius:999px;font-size:12px;z-index:99998;display:none;box-shadow:0 8px 24px rgba(0,0,0,.45);max-width:calc(100vw - 24px);-webkit-tap-highlight-color:transparent}',
       '.mlp-status.is-on{display:flex;align-items:center;gap:8px}',
       '.mlp-status .meta{opacity:.85;font-size:11px}',
       '.mlp-status .stop{background:#ff5e6c;color:#fff;border:0;border-radius:999px;padding:3px 10px;cursor:pointer;font-weight:600;font-size:11px}',
-      // ---- peer panel
-      '.mlp-peer{position:fixed;right:14px;bottom:14px;width:min(320px,92vw);background:#0b1226;border:1px solid #243561;border-radius:14px;padding:12px;color:#dde6ff;font-size:12px;z-index:99997;display:none;box-shadow:0 16px 40px rgba(0,0,0,.5)}',
+      // ---- peer panel — iOS home-indicator safe
+      '.mlp-peer{position:fixed;right:max(14px,env(safe-area-inset-right));bottom:calc(14px + env(safe-area-inset-bottom));width:min(320px,92vw);background:#0b1226;border:1px solid #243561;border-radius:14px;padding:12px;color:#dde6ff;font-size:12px;z-index:99997;display:none;box-shadow:0 16px 40px rgba(0,0,0,.5);-webkit-tap-highlight-color:transparent;touch-action:manipulation}',
       '.mlp-peer.is-on{display:block}',
       '.mlp-peer .row1{display:flex;align-items:center;gap:8px;margin-bottom:6px}',
       '.mlp-peer .dot{width:10px;height:10px;border-radius:50%;background:#5ad7ff;box-shadow:0 0 0 4px rgba(90,215,255,.18)}',
@@ -233,6 +252,7 @@
           '<input type="checkbox" id="mlpHighAcc" checked>' +
           '<label for="mlpHighAcc" style="margin:0">High-accuracy GNSS (uses more battery)</label>' +
         '</div>' +
+        '<div class="mlp-deny" id="mlpDeny"></div>' +
         '<div class="mlp-foot">' +
           '<button class="mlp-cancel" type="button" id="mlpCancel">Cancel</button>' +
           '<button class="mlp-trace" type="button" id="mlpTrace" title="Ask the peer for their last known position">Trace peer</button>' +
@@ -283,6 +303,19 @@
       });
       modal.querySelector('#mlpAllowTrace').checked = s.allowTrace !== false;
       modal.querySelector('#mlpHighAcc').checked = s.highAcc !== false;
+    }
+    // iOS-specific guidance
+    var deny = modal.querySelector('#mlpDeny');
+    deny.classList.remove('is-on');
+    deny.innerHTML = '';
+    if (state.lastGeoError === 'denied') {
+      deny.innerHTML = isIOS()
+        ? '⚠ Location is blocked for this site. On iPhone open <strong>Settings → Safari → Location</strong> (or <strong>Settings → Privacy → Location Services → Safari</strong>) and choose <strong>Ask</strong> or <strong>Allow</strong>, then reload.'
+        : '⚠ Location permission was denied. Open the site permissions in your browser address bar and re-enable Location.';
+      deny.classList.add('is-on');
+    } else if (isIOS() && !isStandalonePWA()) {
+      deny.innerHTML = '💡 Tip: tap <strong>Share → Add to Home Screen</strong> to install OST. iOS keeps GPS warmer in installed PWAs and lets the share survive switching apps briefly.';
+      deny.classList.add('is-on');
     }
     modal.classList.add('is-open');
   }
@@ -398,7 +431,11 @@
     heartbeat: null,
     lastBroadcast: null,    // {fix, ts}
     visHandler: null,
-    pageHideHandler: null
+    pageShowHandler: null,
+    pageHideHandler: null,
+    wakeLock: null,
+    wakeLockReleaseHandler: null,
+    lastGeoError: null      // 'denied' | 'unavailable' | 'timeout' | null
   };
 
   function pavilion() { return (window.OST_MESH && window.OST_MESH.pavilion) || null; }
@@ -455,12 +492,23 @@
   }
 
   function onWatchPos(pos) {
+    state.lastGeoError = null;
     var fix = fixFromPosition(pos);
     saveLastFix(fix);
     refreshStatusPill();
     if (shouldBroadcast(fix)) broadcastFix(fix, { live: true });
   }
-  function onWatchErr(/* err */) { /* swallow — keep watching */ }
+  function onWatchErr(err) {
+    if (!err) return;
+    if (err.code === 1) state.lastGeoError = 'denied';
+    else if (err.code === 2) state.lastGeoError = 'unavailable';
+    else if (err.code === 3) state.lastGeoError = 'timeout';
+    // On iOS Safari, PERMISSION_DENIED kills the watch — stop sharing and surface UI.
+    if (err.code === 1 && loadSession()) {
+      stopShare('denied');
+      try { openModal(); } catch (e) {}
+    }
+  }
 
   function startWatch() {
     if (state.watchId != null) return;
@@ -530,9 +578,30 @@
     state.visHandler = function () {
       var s = loadSession(); if (!s) return;
       if (document.visibilityState === 'visible') {
+        // iOS Safari almost always suspends watchPosition when the tab is hidden
+        // (and after a backgrounded PWA returns). Restart the watch and force a
+        // one-shot capture so the peer sees the freshest fix immediately.
+        stopWatch();
         startWatch();
+        captureOnce().then(function (fix) {
+          if (shouldBroadcast(fix)) broadcastFix(fix, { live: true });
+        }).catch(function () {});
+        requestWakeLock();
       } else if (s.mode !== 'background') {
         stopWatch();
+        releaseWakeLock();
+      }
+    };
+    state.pageShowHandler = function (ev) {
+      // bfcache restore on iOS — watch handle is dead, restart everything.
+      var s = loadSession(); if (!s) return;
+      if (ev && ev.persisted) {
+        stopWatch();
+        startWatch();
+        startHeartbeat();
+        scheduleExpire();
+        requestWakeLock();
+        refreshStatusPill();
       }
     };
     state.pageHideHandler = function () {
@@ -542,7 +611,7 @@
       if (fix) {
         try { broadcastFix(fix, { live: true, stopAfter: false }); } catch (e) {}
       }
-      // Hand off to SW for periodic background sync (Chrome installed PWA).
+      // Hand off to SW for periodic background sync (Chrome installed PWA — iOS Safari ignores).
       if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
         try {
           navigator.serviceWorker.controller.postMessage({
@@ -557,17 +626,38 @@
       } catch (e) {}
     };
     document.addEventListener('visibilitychange', state.visHandler);
+    window.addEventListener('pageshow', state.pageShowHandler);
     window.addEventListener('pagehide', state.pageHideHandler);
     window.addEventListener('beforeunload', state.pageHideHandler);
   }
   function detachLifecycle() {
     if (state.visHandler) document.removeEventListener('visibilitychange', state.visHandler);
+    if (state.pageShowHandler) window.removeEventListener('pageshow', state.pageShowHandler);
     if (state.pageHideHandler) {
       window.removeEventListener('pagehide', state.pageHideHandler);
       window.removeEventListener('beforeunload', state.pageHideHandler);
     }
     state.visHandler = null;
+    state.pageShowHandler = null;
     state.pageHideHandler = null;
+  }
+
+  // ============== Wake Lock (keeps screen + GNSS warm on foreground share) ==============
+  function requestWakeLock() {
+    if (!('wakeLock' in navigator) || state.wakeLock) return;
+    var s = loadSession(); if (!s || s.mode !== 'foreground') return;
+    try {
+      navigator.wakeLock.request('screen').then(function (lock) {
+        state.wakeLock = lock;
+        state.wakeLockReleaseHandler = function () { state.wakeLock = null; };
+        try { lock.addEventListener('release', state.wakeLockReleaseHandler); } catch (e) {}
+      }).catch(function () {});
+    } catch (e) {}
+  }
+  function releaseWakeLock() {
+    if (!state.wakeLock) return;
+    try { state.wakeLock.release(); } catch (e) {}
+    state.wakeLock = null;
   }
 
   // ============== start / stop ==============
@@ -585,14 +675,16 @@
     };
     saveSession(session);
     state.lastBroadcast = null;
+    state.lastGeoError = null;
     attachLifecycle();
     captureOnce().then(function (fix) {
       broadcastFix(fix, { live: true });
-    }).catch(function () {});
+    }).catch(function (err) { onWatchErr(err); });
     startWatch();
     startHeartbeat();
     scheduleExpire();
     refreshStatusPill();
+    requestWakeLock();
     // Try periodic background sync (Chrome installed PWA only)
     try {
       navigator.serviceWorker && navigator.serviceWorker.ready.then(function (reg) {
@@ -622,6 +714,7 @@
     }
     saveSession(null);
     state.lastBroadcast = null;
+    releaseWakeLock();
     refreshStatusPill();
     var pill = document.getElementById('mlpStatus');
     if (pill) pill.classList.remove('is-on');
@@ -795,6 +888,7 @@
         startHeartbeat();
         scheduleExpire();
         refreshStatusPill();
+        requestWakeLock();
       }
     }
   }
