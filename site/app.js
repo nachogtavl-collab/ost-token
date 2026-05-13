@@ -9892,15 +9892,17 @@
     var l = (name || '?').charAt(0).toUpperCase();
     return 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="' + c + '"/><stop offset="100%" stop-color="' + c + 'cc"/></linearGradient><filter id="s"><feDropShadow dx="0" dy="1" stdDeviation="1" flood-opacity=".3"/></filter></defs><rect fill="url(#bg)" width="80" height="80" rx="18"/><rect x="2" y="2" width="76" height="76" rx="16" fill="none" stroke="rgba(255,255,255,.15)" stroke-width="1"/><text x="40" y="52" text-anchor="middle" fill="#fff" font-size="36" font-weight="800" font-family="Inter,system-ui,sans-serif" filter="url(#s)">' + l + '</text></svg>');
   }
-  // Multi-layer logo fallback: Google Favicon (primary) → icon.horse → SVG
+  // Local brand logo fallback avoids third-party favicon 404s on mobile.
   // (Clearbit free tier shut down 2024; do not request it.)
-  function logoSrc(domain) { return 'https://icons.duckduckgo.com/ip3/' + domain + '.ico'; }
+  function logoSrc(domain) {
+    var label = String(domain || '?').replace(/^www\./, '').split('.')[0] || '?';
+    return brandSvg(label, '#2563eb');
+  }
   function logoFallback(img, domain, name, color) {
-    if (img._logoTry >= 3) { img.onerror = null; img.src = brandSvg(name, color); return; }
+    if (img._logoTry >= 2) { img.onerror = null; img.src = brandSvg(name, color); return; }
     img._logoTry = (img._logoTry || 0) + 1;
     img.onerror = function() { logoFallback(this, domain, name, color); };
-    if (img._logoTry === 1) { img.src = 'https://www.google.com/s2/favicons?domain=' + domain + '&sz=128'; }
-    else if (img._logoTry === 2) { img.src = 'https://icon.horse/icon/' + domain; }
+    if (img._logoTry === 1) { img.src = 'https://icon.horse/icon/' + encodeURIComponent(domain); }
     else { img.onerror = null; img.src = brandSvg(name, color); }
   }
   // Safe OST price getter with fallback
@@ -13053,15 +13055,15 @@
     // Use globally exposed brand data from initGiftCardHub
     var gcBrands = window.__ostGCBrands || [];
 
-    function logoUrl(domain) {
-      return 'https://www.google.com/s2/favicons?domain=' + domain + '&sz=128';
+    function logoUrl(domain, name, color) {
+      return brandSvg(name || domain, color || '#2563eb');
     }
 
     gcBrands.forEach(function(b) {
       var item = document.createElement('div');
       item.className = 'gc2-wheel-item';
       item.dataset.brand = b.name;
-      item.innerHTML = '<img src="' + logoUrl(b.domain) + '" alt="' + b.name + '" onerror="this.style.display=\'none\'"><span>' + b.name + '</span>';
+      item.innerHTML = '<img src="' + logoUrl(b.domain, b.name, b.color) + '" alt="' + b.name + '"><span>' + b.name + '</span>';
       item.addEventListener('click', function() {
         var searchEl = document.getElementById('gc2BrandSearch');
         if (searchEl) {
@@ -13239,15 +13241,15 @@
       ZA: ['Engen','Shell','Sasol']
     };
 
-    function logoUrl(domain) {
-      return 'https://www.google.com/s2/favicons?domain=' + domain + '&sz=128';
+    function logoUrl(domain, name) {
+      return brandSvg(name || domain, '#2563eb');
     }
 
     stationBrands.forEach(function(b) {
       var item = document.createElement('div');
       item.className = 'fuel2-wheel-item';
       item.dataset.brand = b.name;
-      item.innerHTML = '<img src="' + logoUrl(b.domain) + '" alt="' + b.name + '" onerror="this.style.display=\'none\'"><span>' + b.name + '</span>';
+      item.innerHTML = '<img src="' + logoUrl(b.domain, b.name) + '" alt="' + b.name + '"><span>' + b.name + '</span>';
       item.addEventListener('click', function() {
         var searchEl = document.getElementById('fuel2SearchLoc');
         if (searchEl) {

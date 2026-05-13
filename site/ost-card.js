@@ -18,7 +18,7 @@
   var STORAGE_PROFILE = 'ost.card.profile.v1';
   var STORAGE_AMOUNT = 'ost.card.amount.v1';
   var DEFAULT_OST_USD = 1.00;
-  var PUBLIC_SITE_URL = 'https://nachogtavl-collab.github.io/ost-token/';
+  var PUBLIC_SITE_URL = window.OST_PUBLIC_SITE_URL || defaultPublicSiteUrl();
   var SHORTCUT_GUIDE = 'https://support.apple.com/guide/shortcuts/run-shortcut-from-back-tap-or-action-button-apdc7307b8b5/ios';
 
   var state = {
@@ -27,6 +27,11 @@
     refreshing: false,
     bound: false
   };
+
+  function defaultPublicSiteUrl() {
+    try { return new URL('.', window.location.href).toString(); }
+    catch (_) { return 'https://nachogtavl-collab.github.io/ost-token/'; }
+  }
 
   function $(id) { return document.getElementById(id); }
 

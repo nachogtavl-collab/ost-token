@@ -13,7 +13,7 @@
  *   POST ${OST_API_BASE}/launchpad/coins         → publish a new fair-launch
  *   POST ${OST_API_BASE}/launchpad/trade         → buy/sell on the bonding curve
  *
- * Soft-fails when the worker is unreachable (falls back to local demo data).
+ * Shows a clear API-unavailable state when the worker is unreachable.
  * ============================================================================ */
 (function () {
   'use strict';
@@ -146,6 +146,14 @@
         var coin = coins.find(function (c) { return (c.mint || c.id) === mint; });
         if (coin) openTradePopup(coin);
       });
+    });
+  }
+
+  function renderUnavailable(el, message) {
+    if (!el) return;
+    ['fresh', 'hot', 'grad'].forEach(function (kind) {
+      var node = el.querySelector('[data-bind="' + kind + '"]');
+      if (node) node.innerHTML = '<div class="ost-trench__empty">' + escapeHtml(message) + '</div>';
     });
   }
 
@@ -303,9 +311,12 @@
     var el = ensureTrenches();
     if (!el) return;
     var base = apiBase();
-    if (!base) return;
+    if (!base) {
+      renderUnavailable(el, 'Launchpad API is not configured on this deployment.');
+      return;
+    }
     fetch(base + '/launchpad/coins', { cache: 'no-store' })
-      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error('launchpad_http_' + r.status)); })
       .then(function (j) {
         var coins = (j && Array.isArray(j.coins)) ? j.coins : [];
         var c = classify(coins);
@@ -313,7 +324,7 @@
         renderColumn(el.querySelector('[data-bind="hot"]'),   c.hot,   'hot');
         renderColumn(el.querySelector('[data-bind="grad"]'),  c.grad,  'grad');
       })
-      .catch(function () { /* silent */ });
+      .catch(function () { renderUnavailable(el, 'Launchpad API is offline right now.'); });
   }
 
   // ── Hook the existing "create coin" form to also publish to the worker ────

@@ -24,15 +24,11 @@
   // ---- CONFIG (edit after you sign up) -----------------------------------
   var ADSTERRA_ZONE = ''; // e.g. '12345678' from your Adsterra zone dashboard
   var A_ADS_UNIT    = '2435726'; // A-Ads unit — live (BTC payouts daily)
-  // OST AD TREASURY VAULT (devnet) — ad revenue lands here off-chain, the
-  // sweep script then converts → SOL → refills the swap pool ATA. Keep this
-  // SEPARATE from the swap pool keypair so revenue accounting is clean.
+  // OST AD TREASURY VAULT (devnet) — set a real public key after running
+  // scripts/init-ad-treasury.ts. Keep this separate from the swap pool keypair.
   var AD_TREASURY = {
     cluster: 'devnet',
-    // Devnet placeholder — replace with the real vault publickey after you
-    // run scripts/init-ad-treasury.ts. The dashboard reads from the same
-    // key so users can see incoming revenue → outgoing OST in real time.
-    publicKey: 'AdTreasur1PlaceholderKey1111111111111111111',
+    publicKey: window.OST_AD_TREASURY_PUBKEY || '',
     btcPayoutAddress: '',     // set in Adsterra/A-Ads dashboard
     usdtPayoutAddress: '',    // TRC20/ERC20 — set in PropellerAds/Coinzilla
     note: 'All ad revenue is reconciled weekly: BTC/USDT → SOL via Jupiter → swap pool refill.'
@@ -135,7 +131,7 @@
 
   // ----- Public AD provider used by faucet-hub.js -------------------------
   window.OST_AD_PROVIDER = {
-    name: ADSTERRA_ZONE ? 'adsterra' : 'fallback',
+    name: ADSTERRA_ZONE ? 'adsterra' : (A_ADS_UNIT ? 'a-ads-banner-only' : 'unconfigured'),
     treasury: AD_TREASURY,
     show: function (cb) {
       // Track view server-side to prevent self-click farming. When you
@@ -149,7 +145,10 @@
         localStorage.setItem(key, String(cur + 1));
       } catch (e) {}
       if (ADSTERRA_ZONE) showAdsterra(cb);
-      else cb(true); // dev mode: pretend the ad finished
+      else {
+        console.warn('[ads] Rewarded video zone is not configured; no rewarded ad credit issued.');
+        cb(false);
+      }
     }
   };
 
@@ -191,7 +190,7 @@
           '<div class="fh-card"><div class="fh-card-title">Your lifetime OST earned</div><div class="fh-streak-num">' + lifetime + '</div><div class="fh-card-meta">Includes faucet, spins, taps, ads, tasks</div></div>' +
           '<div class="fh-card"><div class="fh-card-title">Your pending credits</div><div class="fh-streak-num">' + pending + '</div><div class="fh-card-meta">Cash out from the hub above</div></div>' +
           '<div class="fh-card" style="grid-column:span 2;"><div class="fh-card-title">OST AD TREASURY (vault)</div>' +
-            '<div style="font-family:monospace;font-size:0.85rem;word-break:break-all;background:rgba(0,0,0,0.25);padding:8px 10px;border-radius:8px;">' + AD_TREASURY.publicKey + '</div>' +
+            '<div style="font-family:monospace;font-size:0.85rem;word-break:break-all;background:rgba(0,0,0,0.25);padding:8px 10px;border-radius:8px;">' + (AD_TREASURY.publicKey || 'Treasury vault not configured') + '</div>' +
             '<div class="fh-card-meta">' + AD_TREASURY.note + '</div>' +
           '</div>' +
         '</div>' +

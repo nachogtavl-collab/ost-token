@@ -1,8 +1,7 @@
 /* ==========================================================================
  * OST · Interchange live merchant pulse + URL parser popup
  * Adds:
- *   - A live ticker of fake-but-realistic merchant settlements scrolling
- *     across the top of the Interchange tab (real interactions feel).
+ *   - A sample merchant route ticker across the top of the Interchange tab.
  *   - A "Paste a checkout URL" quick-popup that parses the URL, extracts the
  *     merchant + product hint, and pipes it into the existing #deskStatus.
  *   - A handful of one-click sample carts (Apple, Marriott, Tesla, Uber)
@@ -47,7 +46,7 @@
     st.id = 'ixLiveStyle';
     st.textContent =
       '.ix-live-ticker{margin:14px 0;padding:8px 0;border:1px solid rgba(120,180,255,0.18);border-radius:12px;background:linear-gradient(90deg,rgba(15,18,30,0.6),rgba(8,11,22,0.85));overflow:hidden;position:relative;}' +
-      '.ix-live-ticker::before{content:"LIVE";position:absolute;left:10px;top:50%;transform:translateY(-50%);background:#dc2626;color:#fff;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.06em;z-index:2;box-shadow:0 0 12px rgba(220,38,38,0.5);animation:ix-blink 1.4s infinite;}' +
+      '.ix-live-ticker::before{content:"SAMPLE";position:absolute;left:10px;top:50%;transform:translateY(-50%);background:#334155;color:#fff;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.06em;z-index:2;box-shadow:0 0 12px rgba(51,65,85,0.5);}' +
       '.ix-live-track{display:flex;gap:28px;padding-left:60px;animation:ix-scroll 38s linear infinite;white-space:nowrap;}' +
       '.ix-live-item{color:#cbd5e1;font-size:13px;}' +
       '.ix-live-item strong{color:#f5c468;}' +
@@ -77,7 +76,7 @@
       return '<span class="ix-live-item">' +
         '<strong>' + s.merchant + '</strong> · ' + s.city +
         ' <span class="ix-arrow">→</span> ' + sym + s.amount.toLocaleString() +
-        ' · settled in ' + ost + ' OST</span>';
+        ' · sample quote ' + ost + ' OST</span>';
     }
 
     // Render twice for seamless scroll
@@ -93,7 +92,7 @@
       section.insertBefore(ticker, section.firstChild);
     }
 
-    // Periodically rotate fresh entries in
+    // Periodically rotate sample entries in.
     setInterval(function () {
       var next = SAMPLE_MERCHANTS[Math.floor(Math.random() * SAMPLE_MERCHANTS.length)];
       var fresh = Object.assign({}, next, { amount: +(next.amount * (0.85 + Math.random() * 0.3)).toFixed(2) });

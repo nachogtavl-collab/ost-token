@@ -45,8 +45,7 @@
   ];
   var DEFAULT_MAINNET = [
     'https://api.mainnet-beta.solana.com',
-    'https://rpc.ankr.com/solana',
-    'https://solana-mainnet.g.alchemy.com/v2/demo'
+    'https://rpc.ankr.com/solana'
   ];
   var NETWORK = (typeof window !== 'undefined' && window.OST_NETWORK) || 'devnet';
   var ENDPOINTS;

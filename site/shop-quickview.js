@@ -6,7 +6,7 @@
  *     and a "Add to cart" / "Open merchant" pair.
  *   - Extra products injected at runtime so the catalog has more variety
  *     without bloating the static HTML.
- *   - Live "X people viewing" counter for the popup (real-feel interaction).
+ *   - Honest listing status for the popup.
  * ========================================================================== */
 (function () {
   'use strict';
@@ -128,7 +128,7 @@
     modal.innerHTML =
       '<div id="sqvCard" style="background:linear-gradient(180deg,#10131e,#0a0d18);border:1px solid rgba(120,180,255,0.22);border-radius:20px;max-width:720px;width:100%;max-height:88vh;overflow:auto;box-shadow:0 30px 80px rgba(0,0,0,0.65);">' +
         '<div style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.07);">' +
-          '<div style="display:flex;align-items:center;gap:10px;"><span style="width:8px;height:8px;background:#34d399;border-radius:50%;animation:mx-pulse 1.2s infinite;"></span><span id="sqvViewers" style="color:#cbd5e1;font-size:12px;">— viewers right now</span></div>' +
+          '<div style="display:flex;align-items:center;gap:10px;"><span style="width:8px;height:8px;background:#34d399;border-radius:50%;animation:mx-pulse 1.2s infinite;"></span><span id="sqvViewers" style="color:#cbd5e1;font-size:12px;">Merchant listing</span></div>' +
           '<button id="sqvClose" style="background:transparent;border:none;color:#94a3b8;font-size:1.6rem;cursor:pointer;line-height:1;">×</button>' +
         '</div>' +
         '<div style="display:grid;grid-template-columns:1fr;gap:0;">' +
@@ -190,15 +190,10 @@
     modal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
 
-    // Live "viewers" counter — feels real
-    var viewers = 8 + Math.floor(Math.random() * 24);
     var vEl = document.getElementById('sqvViewers');
-    vEl.textContent = viewers + ' people viewing now';
+    vEl.textContent = 'Verified merchant link';
     if (viewersTimer) clearInterval(viewersTimer);
-    viewersTimer = setInterval(function () {
-      viewers = Math.max(3, viewers + (Math.random() < 0.5 ? -1 : 1));
-      vEl.textContent = viewers + ' people viewing now';
-    }, 2400);
+    viewersTimer = null;
   }
 
   function closeModal() {

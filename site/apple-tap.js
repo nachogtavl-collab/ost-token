@@ -206,7 +206,7 @@
       +   '<img id="ostAppleNfcQr" alt="OST tap-to-pay QR" width="160" height="160" style="border-radius:12px;background:#fff;padding:8px;min-width:160px;">'
       +   '<div style="display:grid;gap:6px;font-size:.78rem;color:rgba(226,232,240,0.78);word-break:break-all;">'
       +     '<span style="color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;font-size:.68rem;">Tap / scan opens</span>'
-      +     '<a id="ostAppleNfcUrl" href="#" style="color:#7dd3fc;text-decoration:none;"></a>'
+      +     '<a id="ostAppleNfcUrl" href="#connectWalletBtn" style="color:#7dd3fc;text-decoration:none;"></a>'
       +   '</div>'
       + '</div>'
       + '<div style="display:flex;flex-wrap:wrap;gap:8px;">'
@@ -283,7 +283,7 @@
     var url = payUrl(address, amount);
     if (qrImg) qrImg.src = qrImageUrl(url, 320);
     if (urlEl) {
-      urlEl.href = address ? url : '#';
+      urlEl.href = address ? url : '#connectWalletBtn';
       urlEl.textContent = address ? url : 'Connect a wallet to generate a pay link';
     }
     if (badge) {
