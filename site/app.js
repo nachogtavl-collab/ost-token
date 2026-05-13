@@ -10056,6 +10056,7 @@
       searchEl.style.display = 'none';
       selBrandWrap.style.display = 'flex';
       selLogo.src = logoSrc(b.domain);
+      selLogo.alt = b.name + ' logo';
       selLogo.onerror = function() { logoFallback(this, b.domain, b.name, b.color); };
       selName.textContent = b.name;
       var selRate = document.getElementById('gc2SelRate');
@@ -10141,6 +10142,7 @@
         el.className = 'gc2-cart-item';
         var img = document.createElement('img');
         img.src = logoSrc(item.domain);
+        img.alt = (item.brand || 'Brand') + ' logo';
         img.onerror = function() { logoFallback(this, item.domain, item.brand, item.color); };
         el.appendChild(img);
         var info = document.createElement('div');
@@ -10266,6 +10268,7 @@
         el.className = 'gc2-hx';
         var img = document.createElement('img');
         img.src = logoSrc(tx.domain || '');
+        img.alt = (tx.brand || 'Brand') + ' logo';
         img.onerror = function() { logoFallback(this, tx.domain || '', tx.brand || '?', '#00c853'); };
         el.appendChild(img);
         el.innerHTML += '<div class="gc2-hx-info"><div class="gc2-hx-name">' + (tx.brand || '?') + '</div><div class="gc2-hx-date">' + (tx.date || '') + '</div></div>' +
@@ -10468,6 +10471,7 @@
         tab.dataset.brand = s.name;
         var img = document.createElement('img');
         img.src = logoSrc(s.domain);
+        img.alt = s.name + ' logo';
         img.onerror = function() { logoFallback(this, s.domain, s.name, '#0071CE'); };
         tab.appendChild(img);
         tab.appendChild(document.createTextNode(s.name));

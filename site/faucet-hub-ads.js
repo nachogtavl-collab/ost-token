@@ -53,7 +53,7 @@
       var div = document.createElement('div');
       div.id = s.id;
       div.style.cssText = 'margin:14px auto;text-align:center;max-width:' + s.w + 'px;';
-      div.innerHTML = '<iframe data-aa="' + A_ADS_UNIT + '" src="//ad.a-ads.com/' + A_ADS_UNIT + '?size=' + s.w + 'x' + s.h + '" ' +
+      div.innerHTML = '<iframe title="A-Ads sponsored banner" data-aa="' + A_ADS_UNIT + '" src="//ad.a-ads.com/' + A_ADS_UNIT + '?size=' + s.w + 'x' + s.h + '" ' +
         'style="width:' + s.w + 'px;height:' + s.h + 'px;border:0;padding:0;overflow:hidden;background-color:transparent;" ' +
         'scrolling="no" allow="autoplay"></iframe>' +
         '<div style="font-size:0.7rem;opacity:0.5;margin-top:4px;">Ad revenue funds OST treasury · <a href="#fhRevDashboard" style="color:inherit;">see dashboard</a></div>';
@@ -112,7 +112,7 @@
     var bg = document.createElement('div');
     bg.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10070;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#fff;';
     bg.innerHTML = '<div style="width:min(720px,92vw);height:min(420px,60vh);background:#000;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;">' +
-      '<iframe src="https://www.profitableratecpm.com/' + zone + '/index.html" style="width:100%;height:100%;border:0;"></iframe>' +
+      '<iframe title="Sponsored video ad" src="https://www.profitableratecpm.com/' + zone + '/index.html" style="width:100%;height:100%;border:0;"></iframe>' +
       '</div>' +
       '<div style="margin-top:14px;font-size:1.1rem;">Ad playing… <span id="fhAdSec">' + seconds + '</span>s remaining</div>' +
       '<button id="fhAdClose" style="margin-top:10px;padding:8px 18px;border-radius:10px;border:0;background:#444;color:#fff;cursor:pointer;" disabled>Close</button>';
