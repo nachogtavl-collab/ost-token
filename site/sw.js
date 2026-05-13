@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ost-pwa-cache-v110';
+const CACHE_NAME = 'ost-pwa-cache-v111';
 const RUNTIME_CACHE = 'ost-pwa-runtime-v99';
 const CACHE_PREFIX = 'ost-pwa-';
 
@@ -217,11 +217,40 @@ function notificationPayload(data = {}) {
   };
 }
 
+// In-memory cache of the user's most recent location fix, set by the page
+// before unload so background sync handlers can replay it. Survives only as
+// long as the SW is alive — for true persistence the page also writes to
+// localStorage and re-hydrates on next load.
+let __ostLastLocation = null;
+
 self.addEventListener('message', (event) => {
   const data = event.data || {};
-  if (data.type !== 'ost-notify') return;
-  const payload = notificationPayload(data);
-  event.waitUntil(self.registration.showNotification(payload.title, payload.options));
+  if (data.type === 'ost-notify') {
+    const payload = notificationPayload(data);
+    event.waitUntil(self.registration.showNotification(payload.title, payload.options));
+    return;
+  }
+  if (data.type === 'ost-location-cache' && data.fix) {
+    __ostLastLocation = { fix: data.fix, session: data.session || null, cachedAt: Date.now() };
+  }
+});
+
+async function broadcastLocationPing(reason) {
+  const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+  const msg = { type: 'ost-location-bg-tick', reason: reason, fix: __ostLastLocation && __ostLastLocation.fix, ts: Date.now() };
+  clients.forEach((c) => { try { c.postMessage(msg); } catch (e) {} });
+}
+
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'ost-location-ping') {
+    event.waitUntil(broadcastLocationPing('sync'));
+  }
+});
+
+self.addEventListener('periodicsync', (event) => {
+  if (event.tag === 'ost-location-periodic') {
+    event.waitUntil(broadcastLocationPing('periodic'));
+  }
 });
 
 self.addEventListener('push', (event) => {
