@@ -11,7 +11,7 @@ import {
 } from './mesh-crypto.js?v=1';
 import { MeshRTC } from './mesh-rtc.js?v=10';
 
-const STYLE_HREF = './mesh/mesh.css?v=12';
+const STYLE_HREF = './mesh/mesh.css?v=13';
 const STORAGE_ID = 'ost_mesh_identity_v1';
 const STORAGE_ADDR = 'ost_mesh_addr_v1';
 const MAX_FILE_BYTES = 32 * 1024 * 1024;
@@ -86,7 +86,18 @@ function buildDOM() {
         <input id="mesh-peer-addr" type="text" placeholder="Paste peer address, invite, or scan QR" />
         <button id="mesh-connect">Connect securely</button>
         <button id="mesh-listen" class="ghost">Wait for incoming</button>
+        <button id="mesh-chats" class="ghost" title="All conversations">💬 Chats</button>
         <button id="mesh-clear-history" class="ghost" title="Clear stored chat history with this peer">Clear chat</button>
+      </div>
+
+      <div id="mesh-chats-modal" class="ost-mesh-qr-modal" aria-hidden="true">
+        <div class="ost-mesh-qr-card" style="max-width:520px">
+          <div class="ost-mesh-qr-head">
+            <strong>All conversations</strong>
+            <button id="mesh-chats-close" type="button" aria-label="Close">×</button>
+          </div>
+          <div id="mesh-chats-body" class="ost-mesh-chats-body"></div>
+        </div>
       </div>
 
       <div id="mesh-qr-modal" class="ost-mesh-qr-modal" aria-hidden="true">
@@ -376,6 +387,12 @@ class MeshPavilion {
     if (scanQrBtn) scanQrBtn.addEventListener('click', () => this._openQRScanner());
     const clearChatBtn = document.getElementById('mesh-clear-history');
     if (clearChatBtn) clearChatBtn.addEventListener('click', () => this._clearStoredChat());
+    const chatsBtn = document.getElementById('mesh-chats');
+    if (chatsBtn) chatsBtn.addEventListener('click', () => this._openChatsList());
+    const chatsClose = document.getElementById('mesh-chats-close');
+    if (chatsClose) chatsClose.addEventListener('click', () => this._closeChatsList());
+    const chatsModal = document.getElementById('mesh-chats-modal');
+    if (chatsModal) chatsModal.addEventListener('click', (e) => { if (e.target === chatsModal) this._closeChatsList(); });
     const qrCloseBtn = document.getElementById('mesh-qr-close');
     if (qrCloseBtn) qrCloseBtn.addEventListener('click', () => this._closeQRModal());
     const qrModal = document.getElementById('mesh-qr-modal');
@@ -429,6 +446,9 @@ class MeshPavilion {
         this._replayChatHistory(addr);
       }
     } catch (_) {}
+    // Always begin polling the offline DM relay so messages from any peer
+    // arrive even when no WebRTC channel is open.
+    try { this._startRelayPoller(); } catch (_) {}
   }
   close() {
     this.root.classList.remove('is-open');
@@ -656,6 +676,162 @@ class MeshPavilion {
     this._setStatus('Chat history cleared.', 'ok');
   }
 
+  /* ----- Conversations list (across all peers, online or not) ----- */
+  _enumerateChats() {
+    const out = [];
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k || !k.startsWith(CHAT_PREFIX)) continue;
+        const addr = k.slice(CHAT_PREFIX.length);
+        if (!addr) continue;
+        let entries = [];
+        try { entries = JSON.parse(localStorage.getItem(k) || '[]') || []; } catch (_) {}
+        if (!entries.length) continue;
+        const last = entries[entries.length - 1];
+        let preview = '';
+        if (last.kind === 'text') preview = (last.payload && last.payload.text) || '';
+        else if (last.kind === 'location') preview = '📍 location';
+        else preview = `(${last.kind})`;
+        out.push({ addr, count: entries.length, lastTs: last.ts || 0, lastRole: last.role, preview });
+      }
+    } catch (_) {}
+    out.sort((a, b) => (b.lastTs || 0) - (a.lastTs || 0));
+    return out;
+  }
+  _openChatsList() {
+    const modal = document.getElementById('mesh-chats-modal');
+    const body  = document.getElementById('mesh-chats-body');
+    if (!modal || !body) return;
+    const chats = this._enumerateChats();
+    if (!chats.length) {
+      body.innerHTML = '<p style="opacity:.7;font-size:13px;margin:12px 0">No conversations yet — paste a peer address or scan a QR to start one.</p>';
+    } else {
+      body.innerHTML = chats.map((c) => {
+        const when = c.lastTs ? new Date(c.lastTs).toLocaleString() : '';
+        const who = c.lastRole === 'me' ? 'You: ' : (c.lastRole === 'peer' ? '' : '');
+        const preview = escapeHtml(String(c.preview || '').slice(0, 80));
+        return `<button class="ost-mesh-chat-row" data-addr="${escapeHtml(c.addr)}">
+          <div class="ost-mesh-chat-head"><strong>${escapeHtml(c.addr)}</strong><span>${escapeHtml(when)}</span></div>
+          <div class="ost-mesh-chat-prev">${escapeHtml(who)}${preview}</div>
+          <div class="ost-mesh-chat-count">${c.count} message${c.count === 1 ? '' : 's'}</div>
+        </button>`;
+      }).join('');
+      body.querySelectorAll('.ost-mesh-chat-row').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const addr = btn.getAttribute('data-addr') || '';
+          this._closeChatsList();
+          this._openChat(addr);
+        });
+      });
+    }
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+  }
+  _closeChatsList() {
+    const modal = document.getElementById('mesh-chats-modal');
+    if (!modal) return;
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden', 'true');
+  }
+  _openChat(addr) {
+    if (!addr) return;
+    if (this.peerInput) this.peerInput.value = addr;
+    if (this.feedEl) this.feedEl.innerHTML = '';
+    try { localStorage.setItem(LAST_PEER_KEY, addr); } catch (_) {}
+    this._replayChatHistory(addr);
+    this._setStatus(`Loaded conversation with ${addr}. Tap "Connect securely" to resume the encrypted channel.`, 'ok');
+  }
+
+  /* ----- Offline DM relay (store-and-forward via OST signaling API) ----- */
+  async _relayEnvelope(toAddr, wireString) {
+    if (!toAddr || !wireString) return false;
+    try {
+      const res = await fetch(this.api + '/mesh/v1/signal/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: this.address,
+          to: toAddr,
+          payload: { type: 'dm-relay', wire: wireString, ts: Date.now() }
+        })
+      });
+      return !!(res && res.ok);
+    } catch (_) { return false; }
+  }
+  _startRelayPoller() {
+    if (this._relayPoller) return;
+    this._relaySeen = this._relaySeen || new Set();
+    this._relayCursor = this._relayCursor || 0;
+    const tick = async () => {
+      if (!this.address || !this.api) return;
+      try {
+        const url = `${this.api}/mesh/v1/signal/inbox?to=${encodeURIComponent(this.address)}&since=${this._relayCursor || 0}`;
+        const r = await fetch(url);
+        if (!r.ok) return;
+        const data = await r.json();
+        const messages = (data && data.messages) || [];
+        for (const item of messages) {
+          this._relayCursor = Math.max(this._relayCursor || 0, item.ts || 0);
+          const pl = item.payload || {};
+          if (pl.type !== 'dm-relay' || !pl.wire) continue;
+          const sigKey = (item.from || '') + ':' + (item.ts || 0);
+          if (this._relaySeen.has(sigKey)) continue;
+          this._relaySeen.add(sigKey);
+          await this._handleRelayedDM(item.from, pl.wire);
+        }
+      } catch (_) {}
+    };
+    this._relayPoller = setInterval(tick, 7000);
+    setTimeout(tick, 250);
+  }
+  _stopRelayPoller() {
+    if (this._relayPoller) { clearInterval(this._relayPoller); this._relayPoller = null; }
+  }
+  async _handleRelayedDM(fromAddr, wireString) {
+    if (!fromAddr || !wireString) return;
+    let wire;
+    try { wire = JSON.parse(wireString); } catch (_) { return; }
+    if (!wire || wire.kind !== 'enc' || !wire.payload) return;
+    // Ensure we have a session key for this sender (derive on demand).
+    let key = null;
+    if (this.peerAddr === fromAddr && this.sessionKey) {
+      key = this.sessionKey;
+    } else {
+      try {
+        const peer = await this._fetchPeerBundle(fromAddr, null);
+        const imported = await importPeerBundle(peer.bundle);
+        key = await deriveSessionKey(this.identity, imported.kexPub);
+      } catch (_) { return; }
+    }
+    let inner;
+    try { inner = await openPayload(key, wire.payload); } catch (_) { return; }
+    if (!inner) return;
+    // Persist into the sender's chat so it shows up under "Chats".
+    const prevPeer = this.peerAddr;
+    const prevKey = this.sessionKey;
+    this.peerAddr = fromAddr;
+    this.sessionKey = key;
+    try {
+      if (inner.kind === 'text') {
+        this._persistEntry('peer', 'text', { text: inner.text });
+        // If the open feed is showing this sender, render it live.
+        if (prevPeer === fromAddr || (this.peerInput && this.peerInput.value === fromAddr)) {
+          this._bubble('peer', `<span class="ts">${new Date(inner.ts || Date.now()).toLocaleTimeString()}</span> ${escapeHtml(inner.text)}`);
+        } else {
+          this._setStatus(`📬 New offline message from ${fromAddr}. Open Chats to view.`, 'ok');
+        }
+      } else if (inner.kind === 'location-ping' || inner.kind === 'location-live') {
+        this._persistEntry('peer', 'location', inner);
+        if (prevPeer === fromAddr) this._renderLocation(inner, 'peer');
+      }
+    } finally {
+      // Restore prior session if it was different.
+      this.peerAddr = prevPeer;
+      this.sessionKey = prevKey;
+    }
+  }
+
   /* ----- QR generation + scanning ----- */
   _showInviteQR() {
     if (!this.publicBundle) { this._setStatus('Keys still loading…', 'warn'); return; }
@@ -862,11 +1038,18 @@ class MeshPavilion {
     if (!txt) return;
     if (!this.sessionKey) return this._setStatus('No session key.', 'err');
     const sealed = await sealPayload(this.sessionKey, { kind: 'text', text: txt, ts: Date.now() });
-    const sent = this._sendWire(JSON.stringify({ kind: 'enc', payload: sealed }));
+    const wire = JSON.stringify({ kind: 'enc', payload: sealed });
+    const sent = this._sendWire(wire);
     this._bubble('me', `<span class="ts">${new Date().toLocaleTimeString()}</span> ${escapeHtml(txt)}`);
     this._persistEntry('me', 'text', { text: txt });
     this.textInput.value = '';
-    if (!sent) this._bubble('system', '(buffered — channel not open yet)');
+    if (!sent && this.peerAddr) {
+      // Channel not open — relay through OST signaling so the peer gets it on next poll.
+      this._relayEnvelope(this.peerAddr, wire).then((ok) => {
+        if (ok) this._bubble('system', '<em>✍️ Sent through offline relay — peer will receive next time they’re online.</em>');
+        else this._bubble('system', '<em>(buffered locally — will retry on next connect)</em>');
+      });
+    }
   }
 
   async _sendFile() {
