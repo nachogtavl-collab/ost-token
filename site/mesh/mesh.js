@@ -422,9 +422,11 @@ class MeshPavilion {
     // linear across reloads / re-opens, even before reconnecting.
     try {
       const last = localStorage.getItem(LAST_PEER_KEY);
-      if (last && this.peerInput && !this.peerInput.value) {
-        this.peerInput.value = last;
-        this._replayChatHistory(last);
+      const current = (this.peerInput && this.peerInput.value) || '';
+      const addr = current || last || this.peerAddr || '';
+      if (addr) {
+        if (this.peerInput && !this.peerInput.value) this.peerInput.value = addr;
+        this._replayChatHistory(addr);
       }
     } catch (_) {}
   }
@@ -1359,9 +1361,34 @@ class MeshPavilion {
       this._updateCallTimer();
     } else if (inner.kind === 'call-end') {
       await this._handleRemoteCallEnd(inner.reason || 'ended');
+    } else if (inner.kind === 'mesh-app') {
+      // Generic app payload (fair-games, mesh-location-pro, social, groups, etc.).
+      // The CustomEvent above already gave subscribers a chance to handle it.
+      // Render a friendly inline card for known apps so users see something in chat.
+      this._renderAppPayload(inner);
     } else {
-      this._bubble('peer', '<em>(unknown payload)</em>');
+      this._bubble('system', '<em>(received an encrypted payload this client cannot display yet)</em>');
     }
+  }
+
+  _renderAppPayload(inner) {
+    try {
+      if (inner.app === 'mesh-location-pro' && inner.type === 'fix' && inner.fix) {
+        const live = inner.live !== false;
+        const locPayload = {
+          kind: live ? 'location-live' : 'location-ping',
+          lat: inner.fix.lat, lon: inner.fix.lon, acc: inner.fix.acc, ts: inner.fix.ts || Date.now()
+        };
+        this._renderLocation(locPayload, 'peer');
+        try {
+          if (window.OST_MESH_LOCATION && typeof window.OST_MESH_LOCATION.showPeerPanel === 'function') {
+            window.OST_MESH_LOCATION.showPeerPanel();
+          }
+        } catch (_) {}
+      } else if (inner.app === 'mesh-location-pro' && inner.type === 'stop') {
+        this._bubble('system', '<em>Peer stopped sharing live location.</em>');
+      }
+    } catch (_) {}
   }
 }
 
