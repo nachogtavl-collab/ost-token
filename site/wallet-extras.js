@@ -243,7 +243,8 @@
       }
     }
 
-    // Check pool OST; cap the payout to available balance (never throw on low).
+    // Check pool OST. The user must receive the full quoted OST amount or the
+    // swap must fail before any local success state is written.
     var poolOst = 0;
     try {
       var poolAcct = await conn.getTokenAccountBalance(poolAta);
@@ -252,7 +253,18 @@
       throw new Error('Swap pool not initialised on devnet. Admin must run init-swap-pool.ts first.');
     }
     if (poolOst <= 0) throw new Error('OST vault is empty — admin must run init-swap-pool.ts to top it up.');
-    var toSendOst = Math.min(quote.ost, Math.floor(poolOst * 100) / 100);
+    var rescueConfig = window.OST_RESCUE && typeof window.OST_RESCUE.vaultConfig === 'function'
+      ? window.OST_RESCUE.vaultConfig()
+      : {};
+    var minReserve = Number(rescueConfig && rescueConfig.minReserve);
+    if (!Number.isFinite(minReserve) || minReserve < 0) minReserve = 100000;
+    if (poolOst + 0.000000001 < quote.ost) {
+      throw new Error('OST vault needs refill before this swap can deliver the full ' + quote.ost.toFixed(4) + ' OST quote. No partial swap was sent.');
+    }
+    if (minReserve > 0 && poolOst - quote.ost < minReserve) {
+      throw new Error('OST vault is protecting its shared payout reserve. Try a smaller swap or wait for refill.');
+    }
+    var toSendOst = quote.ost;
 
     // Pool pays the SOL tx fee; user only signs the SOL-transfer instruction.
     // ATA creation (if missing) is handled by OST_RESCUE with pool paying rent.
@@ -385,7 +397,7 @@
     if (quote.ost <= 0) throw new Error('Quote too small (' + quote.ost.toFixed(6) + ' OST)');
 
     // Use OST_RESCUE.payoutOst for non-SOL deposits: pool pays all fees,
-    // user needs zero devnet SOL. Caps the payout to actual pool balance.
+    // user needs zero devnet SOL. The helper requires a full payout.
     if (!window.OST_RESCUE || !window.OST_RESCUE.payoutOst) {
       throw new Error('Vault helper not loaded — refresh the page.');
     }

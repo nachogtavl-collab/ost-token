@@ -495,14 +495,26 @@
       btn.outerHTML = '<span class="ost-bet-claimed">✓ ' + fmt(bet.payoutIfWin) + ' OST claimed</span>';
       if (window.OST_WALLET && typeof window.OST_WALLET.refresh === 'function') window.OST_WALLET.refresh();
     };
-    // Try to call the swap pool reverse path; otherwise mark claimed locally.
+    var failClaim = function (error) {
+      btn.disabled = false;
+      btn.textContent = 'Claim ' + fmt(bet.payoutIfWin) + ' OST';
+      btn.title = (error && error.message) || 'OST payout vault is still loading.';
+    };
+    // Try to call the live payout path; never mark claimed unless it confirms.
     try {
+      if (window.OST_TRADE && typeof window.OST_TRADE.predictionCashOut === 'function') {
+        window.OST_TRADE.predictionCashOut(bet, bet.payoutIfWin).then(function (result) {
+          if (result && result.sig) bet.signature = result.sig;
+          doClaim();
+        }).catch(failClaim);
+        return;
+      }
       if (window.OST_REAL_SWAP && typeof window.OST_REAL_SWAP.payout === 'function') {
-        window.OST_REAL_SWAP.payout(bet.payoutIfWin).then(doClaim).catch(doClaim);
+        window.OST_REAL_SWAP.payout(bet.payoutIfWin).then(doClaim).catch(failClaim);
         return;
       }
     } catch (e) {}
-    setTimeout(doClaim, 600);
+    failClaim(new Error('OST payout vault is still loading. Try again in a moment.'));
   }
 
   // Mount a "My bets" tab in the prediction board

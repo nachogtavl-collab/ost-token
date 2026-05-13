@@ -176,6 +176,11 @@
       tokens = supply - s0;
       amt = curveCost(s0, supply, supply);
     }
+    if (!window.OST_RESCUE || typeof window.OST_RESCUE.userSendsOstToPool !== 'function') {
+      throw new Error('OST launchpad vault is still loading. Try again in a moment.');
+    }
+    var buyMemo = JSON.stringify({ k: 'launchpad-buy', mint: coin.mint, symbol: coin.symbol, ost: amt, trader: trader });
+    var buySettlement = await window.OST_RESCUE.userSendsOstToPool(amt, buyMemo);
     coin.tokensSold = s0 + tokens;
     coin.trades = (Number(coin.trades) || 0) + 1;
     recomputeRegistryFields(coin);
@@ -190,7 +195,7 @@
     saveHoldings(all);
     updateCoin(coin);
 
-    var sig = sigShort();
+    var sig = buySettlement && buySettlement.sig || sigShort();
     recordTrade({ ts: Date.now(), trader: trader, mint: coin.mint, symbol: coin.symbol, side: 'buy', ost: amt, tokens: tokens, price: coin.price, mcap: coin.mcap, sig: sig });
     try {
       window.dispatchEvent(new CustomEvent('ost:lp-trade', { detail: { side: 'buy', coin: coin, ost: amt, tokens: tokens, sig: sig } }));
@@ -216,6 +221,13 @@
     var s1 = coin.tokensSold;
     var s0 = Math.max(0, s1 - tokens);
     var ostOut = curveCost(s0, s1, coin.supply);
+    if (!window.OST_RESCUE || typeof window.OST_RESCUE.payoutOst !== 'function') {
+      throw new Error('OST launchpad payout vault is still loading. Try again in a moment.');
+    }
+    var sellMemo = JSON.stringify({ k: 'launchpad-sell', mint: coin.mint, symbol: coin.symbol, ost: ostOut, tokens: tokens, trader: trader });
+    var sellSettlement = await window.OST_RESCUE.payoutOst(trader, ostOut, sellMemo, {
+      idempotencyKey: 'launchpad-sell:' + trader + ':' + coin.mint + ':' + tokens.toFixed(6) + ':' + s1.toFixed(6)
+    });
     coin.tokensSold = s0;
     coin.trades = (Number(coin.trades) || 0) + 1;
     recomputeRegistryFields(coin);
@@ -230,7 +242,7 @@
     saveHoldings(all);
     updateCoin(coin);
 
-    var sig = sigShort();
+    var sig = sellSettlement && sellSettlement.sig || sigShort();
     recordTrade({ ts: Date.now(), trader: trader, mint: coin.mint, symbol: coin.symbol, side: 'sell', ost: ostOut, tokens: tokens, price: coin.price, mcap: coin.mcap, sig: sig });
     try {
       window.dispatchEvent(new CustomEvent('ost:lp-trade', { detail: { side: 'sell', coin: coin, ost: ostOut, tokens: tokens, sig: sig } }));

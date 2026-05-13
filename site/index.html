@@ -5989,13 +5989,13 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="interchange-live.js?v=2"></script>
   <script src="polish.js?v=2"></script>
   <script src="swap-pool.js?v=1"></script>
-  <script src="wallet-extras.js?v=19"></script>
+  <script src="wallet-extras.js?v=20"></script>
   <script src="compartments.js?v=4"></script>
-  <script src="prediction-extras.js?v=8"></script>
+  <script src="prediction-extras.js?v=9"></script>
   <script src="prediction-pro.js?v=13"></script>
   <script src="prediction-scalar.js?v=3"></script>
   <link rel="stylesheet" href="prediction-modal.css?v=4">
-  <script src="prediction-modal.js?v=25"></script>
+  <script src="prediction-modal.js?v=26"></script>
   <script src="prediction-trade-popout.js?v=3"></script>
   <script src="prediction-pro-dash.js?v=9"></script>
   <!-- OST API edge worker (Cloudflare). Set before ost-console / pro-dash use it. -->
@@ -6013,7 +6013,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="ost-games.js?v=17"></script>
   <script src="code-academy.js?v=3"></script>
   <script src="i18n-runtime.js?v=4"></script>
-  <script src="devnet-rescue.js?v=5"></script>
+  <script src="devnet-rescue.js?v=6"></script>
   <script src="ost-notifications.js?v=2"></script>
   <script src="mesh/mesh-upgrade.js?v=11"></script>
   <script src="mesh/mesh-link.js?v=2" defer></script>
@@ -6028,9 +6028,9 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="mesh/mesh-group-markets.js?v=2"></script>
   <script src="mesh/mesh-location-pro.js?v=7"></script>
   <script src="launchpad-trenches.js?v=4"></script>
-  <script src="launchpad-engine.js?v=1" defer></script>
+  <script src="launchpad-engine.js?v=2" defer></script>
   <script src="swap-resilient.js?v=2" defer></script>
-  <script src="stock-market.js?v=3"></script>
+  <script src="stock-market.js?v=4"></script>
   <script src="redesign.js?v=1" defer></script>
   <script src="mainnet-audit.js?v=1" defer></script>
   <script>
@@ -6069,7 +6069,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
 
       function warmOfflineAssets() {
         if (!('caches' in window)) return;
-        caches.open('ost-pwa-runtime-v8').then(function (cache) {
+        caches.open('ost-pwa-runtime-v117').then(function (cache) {
           collectOfflineAssetUrls().reduce(function (chain, url) {
             return chain.then(function () {
               return fetch(url, { mode: 'no-cors', cache: 'force-cache' })

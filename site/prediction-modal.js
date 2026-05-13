@@ -876,7 +876,7 @@
     try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {}
   }
   function sellOrder(order, payout, kind) {
-    // Try the on-chain settlement helper first; fall back to a local cash-out.
+    // Positive payouts must land on-chain before the ticket is marked sold.
     var doLocal = function () {
       order.cashedOut = true;
       order.cashoutOst = Number(payout) || 0;
@@ -893,17 +893,19 @@
       notifyOrderChanged();
       return Promise.resolve({ ost: Number(payout) || 0, sig: order.cashoutSig || '' });
     };
+    if (!(Number(payout) > 0)) return doLocal();
     if (window.OST_TRADE && typeof window.OST_TRADE.predictionCashOut === 'function') {
       return Promise.resolve(window.OST_TRADE.predictionCashOut(order, Number(payout) || 0))
         .then(function (r) {
-          order.cashoutSig = r && r.sig ? r.sig : order.cashoutSig;
+          if (!r || !r.sig) throw new Error('Payout was not confirmed on-chain.');
+          if (Number(r.ost || 0) + 0.000000001 < Number(payout || 0)) throw new Error('Payout was not fully funded.');
+          order.cashoutSig = r.sig;
           return doLocal().then(function (loc) {
             return Object.assign({}, loc, { ost: (r && Number(r.ost)) || loc.ost, sig: order.cashoutSig || loc.sig });
           });
-        })
-        .catch(function () { return doLocal(); });
+        });
     }
-    return doLocal();
+    return Promise.reject(new Error('OST settlement vault is still loading. Try again in a moment.'));
   }
 
   // Shared positions ticker — every OST user sees every other user's recent bets

@@ -542,10 +542,10 @@
           cashoutKind: 'stock-mirror-sell'
         }), payout);
       } catch (error) {
-        return { ost: payout, sig: 'local-' + Date.now().toString(36), localOnly: true, error: error && error.message ? error.message : 'cashout failed' };
+        throw new Error(error && error.message ? error.message : 'OST stock payout failed.');
       }
     }
-    return { ost: payout, sig: 'local-' + Date.now().toString(36), localOnly: true };
+    throw new Error('OST settlement vault is still loading. Try again in a moment.');
   }
 
   async function closePosition(orderId) {
@@ -570,7 +570,16 @@
     var notionalUsd = nowPrice * shares;
     order.exitPrice = nowPrice;
     var pnl = estimatePnl(order);
-    var payout = await settleClosePayout(order, pnl.payoutOst);
+    var payout;
+    try {
+      payout = await settleClosePayout(order, pnl.payoutOst);
+    } catch (error) {
+      state.closingId = '';
+      setOrderStatus(error && error.message ? error.message : 'Stock payout failed. Position remains open.', 'is-error');
+      renderOrders();
+      renderTicket();
+      return;
+    }
     var closeId = 'stock-close-' + orderId + '-' + Date.now().toString(36);
     var closeRecord = normalizeOrder({
       id: closeId,

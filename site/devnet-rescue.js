@@ -24,6 +24,115 @@
   ];
   var rpcIndex = 0;
   var rpcConnections = {};
+  var PAYOUT_RECEIPTS_KEY = 'ost.payout.receipts.v1';
+  var PAYOUT_PENDING_KEY = 'ost.payout.pending.v1';
+  var payoutLocks = {};
+
+  function numberSetting(name, fallback) {
+    var value = Number(window[name]);
+    return Number.isFinite(value) && value >= 0 ? value : fallback;
+  }
+
+  function vaultConfig() {
+    return {
+      minReserve: numberSetting('OST_VAULT_MIN_RESERVE', 100000),
+      lowWater: numberSetting('OST_VAULT_LOW_WATER', 1000000),
+      maxSinglePayout: numberSetting('OST_MAX_SINGLE_PAYOUT', 10000000)
+    };
+  }
+
+  function formatOstAmount(value) {
+    var number = Number(value);
+    if (!Number.isFinite(number)) return '0';
+    return number.toLocaleString(undefined, { maximumFractionDigits: number >= 100 ? 2 : 6 });
+  }
+
+  function readStorageJson(key, fallback) {
+    try {
+      var parsed = JSON.parse(localStorage.getItem(key) || 'null');
+      return parsed == null ? fallback : parsed;
+    } catch (_) {
+      return fallback;
+    }
+  }
+
+  function writeStorageJson(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch (_) {}
+  }
+
+  function stableHash(value) {
+    var text = String(value || '');
+    var hash = 2166136261;
+    for (var index = 0; index < text.length; index += 1) {
+      hash ^= text.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+    return ('00000000' + (hash >>> 0).toString(16)).slice(-8);
+  }
+
+  function cleanPayoutId(value) {
+    var text = String(value || '').replace(/[^a-z0-9_.:-]/gi, '-').slice(0, 72);
+    return text || ('payout-' + Date.now().toString(36));
+  }
+
+  function payoutRefFromMemo(memoText) {
+    var raw = String(memoText || '');
+    try {
+      var parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        return [
+          parsed.k || parsed.kind || '',
+          parsed.intent || parsed.reservation || parsed.id || parsed.market || parsed.payment || '',
+          parsed.game || parsed.token || parsed.cur || '',
+          parsed.side || parsed.role || ''
+        ].join('|');
+      }
+    } catch (_) {}
+    return raw.slice(0, 180);
+  }
+
+  function buildPayoutId(wallet, amount, memoText, options) {
+    if (options && options.idempotencyKey) return cleanPayoutId(options.idempotencyKey);
+    var ref = payoutRefFromMemo(memoText);
+    return cleanPayoutId('pay-' + stableHash([wallet, Number(amount || 0).toFixed(9), ref].join('|')));
+  }
+
+  function getPayoutReceipt(id, wallet, amount) {
+    var receipts = readStorageJson(PAYOUT_RECEIPTS_KEY, {});
+    var receipt = receipts && receipts[id];
+    if (!receipt || !receipt.sig) return null;
+    if (receipt.wallet && wallet && receipt.wallet !== wallet) return null;
+    if (Math.abs(Number(receipt.ost || 0) - Number(amount || 0)) > 0.000000001) return null;
+    return receipt;
+  }
+
+  function rememberPayoutReceipt(id, receipt) {
+    var receipts = readStorageJson(PAYOUT_RECEIPTS_KEY, {});
+    receipts[id] = Object.assign({ at: Date.now() }, receipt || {});
+    var keys = Object.keys(receipts).sort(function (a, b) { return Number(receipts[b].at || 0) - Number(receipts[a].at || 0); });
+    if (keys.length > 200) {
+      keys.slice(200).forEach(function (key) { delete receipts[key]; });
+    }
+    writeStorageJson(PAYOUT_RECEIPTS_KEY, receipts);
+  }
+
+  function rememberPendingPayout(id, payload) {
+    var pending = readStorageJson(PAYOUT_PENDING_KEY, {});
+    pending[id] = Object.assign({ id: id, at: Date.now() }, payload || {});
+    writeStorageJson(PAYOUT_PENDING_KEY, pending);
+  }
+
+  function clearPendingPayout(id) {
+    var pending = readStorageJson(PAYOUT_PENDING_KEY, {});
+    if (pending && pending[id]) {
+      delete pending[id];
+      writeStorageJson(PAYOUT_PENDING_KEY, pending);
+    }
+  }
+
+  function pendingPayouts() {
+    return readStorageJson(PAYOUT_PENDING_KEY, {});
+  }
 
   function makeConn(url) {
     if (!rpcConnections[url]) {
@@ -135,6 +244,44 @@
     }
   }
 
+  async function confirmSentTransaction(sig, built, label) {
+    var primaryErr = null;
+    try {
+      var res = await built.conn.confirmTransaction({
+        signature: sig,
+        blockhash: built.blockhash.blockhash,
+        lastValidBlockHeight: built.blockhash.lastValidBlockHeight
+      }, 'confirmed');
+      if (res && res.value && res.value.err) {
+        throw new Error('On-chain failure: ' + JSON.stringify(res.value.err));
+      }
+      return sig;
+    } catch (e) {
+      primaryErr = e;
+    }
+    var lastStatus = null;
+    for (var attempt = 0; attempt < 8; attempt++) {
+      for (var i = 0; i < RPC_ENDPOINTS.length; i++) {
+        var conn = makeConn(RPC_ENDPOINTS[i]);
+        if (!conn) continue;
+        try {
+          var sres = await conn.getSignatureStatuses([sig], { searchTransactionHistory: true });
+          var entry = sres && sres.value && sres.value[0];
+          if (entry) {
+            lastStatus = entry;
+            if (entry.err) throw new Error('On-chain failure: ' + JSON.stringify(entry.err));
+            if (entry.confirmationStatus === 'confirmed' || entry.confirmationStatus === 'finalized') return sig;
+          }
+        } catch (statusErr) {
+          if (statusErr && /On-chain failure/i.test(statusErr.message || '')) throw statusErr;
+        }
+      }
+      await new Promise(function (r) { setTimeout(r, 600 + attempt * 250); });
+    }
+    var summary = lastStatus ? 'last status=' + (lastStatus.confirmationStatus || 'unknown') : 'no status from any RPC';
+    throw new Error((label || 'Transaction') + ' could not be confirmed on-chain (' + summary + '): ' + (primaryErr && primaryErr.message ? primaryErr.message : primaryErr));
+  }
+
   // Pool-only tx: pool is the only signer.
   async function sendPoolOnlyTx(instructions) {
     var built = await buildPoolPaidTx(instructions);
@@ -218,12 +365,16 @@
     } else if (session.provider && typeof session.provider.signAndSendTransaction === 'function') {
       // Provider handles send; just return the signature.
       var res = await session.provider.signAndSendTransaction(built.tx);
-      return typeof res === 'string' ? res : (res && res.signature);
+      var providerSig = typeof res === 'string' ? res : (res && res.signature);
+      if (providerSig) await confirmSentTransaction(providerSig, built, 'Wallet-signed transaction');
+      return providerSig;
     } else {
       throw new Error('Wallet cannot sign transactions');
     }
     try {
-      return await sendRawSafe(built.conn, serialized);
+      var sig = await sendRawSafe(built.conn, serialized);
+      await confirmSentTransaction(sig, built, 'Wallet-signed transaction');
+      return sig;
     } catch (e) {
       throw await unpackSendError(e);
     }
@@ -270,47 +421,76 @@
     } catch (_) {}
   }
 
-  async function payoutOst(toPubkeyInput, amountOst, memoText) {
+  async function payoutOst(toPubkeyInput, amountOst, memoText, options) {
     var w = window.OST_WALLET; if (!w) throw new Error('Wallet helpers not loaded');
     var c = w.constants;
     var amt = Number(amountOst);
     if (!Number.isFinite(amt) || amt <= 0) throw new Error('Invalid payout amount');
 
-    var poolBal = await getPoolOstBalance();
-    if (poolBal <= 0) throw new Error('Vault is being refilled. Try again in a moment.');
-    var toSend = Math.min(amt, Math.floor(poolBal * 100) / 100);
-    if (toSend < 0.01) throw new Error('Vault temporarily empty.');
-
     var to = (toPubkeyInput && toPubkeyInput.toBase58) ? toPubkeyInput : new solanaWeb3.PublicKey(toPubkeyInput);
-    var pool = loadPoolKeypair();
-    var mintPk = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.mint);
-    var poolAta = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.ata);
-
-    // Pool pays for the user's ATA rent if missing.
-    var userAta = await ensureUserOstAtaPoolPaid(to);
-
-    var ixs = [
-      w.transferChecked(poolAta, mintPk, userAta, pool.publicKey,
-        w.toBaseUnits(toSend, c.OST_TOKEN_DECIMALS), c.OST_TOKEN_DECIMALS, c.TOKEN_2022_PROGRAM_ID)
-    ];
-    if (memoText) ixs.push(w.memoIx(String(memoText), pool.publicKey));
-
-    var auditId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : ('payout-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10));
     var walletStr = '';
     try { walletStr = to.toBase58(); } catch (_) {}
     var memoSummary = '';
     try { memoSummary = String(memoText || '').slice(0, 200); } catch (_) {}
-    logPayoutAudit({ id: auditId, stage: 'intent', wallet: walletStr, kind: 'payout', ostAmount: toSend, memo: memoSummary });
+    var payoutId = buildPayoutId(walletStr, amt, memoText, options || {});
+    var prior = getPayoutReceipt(payoutId, walletStr, amt);
+    if (prior) return { sig: prior.sig, ost: Number(prior.ost || amt), auditId: payoutId, idempotent: true };
+    if (payoutLocks[payoutId]) return payoutLocks[payoutId];
 
-    var sig;
-    try {
-      sig = await sendPoolOnlyTx(ixs);
-    } catch (err) {
-      logPayoutAudit({ id: auditId, stage: 'failure', wallet: walletStr, kind: 'payout', ostAmount: toSend, memo: memoSummary, error: (err && err.message) ? String(err.message).slice(0, 240) : 'unknown' });
-      throw err;
-    }
-    logPayoutAudit({ id: auditId, stage: 'result', wallet: walletStr, kind: 'payout', ostAmount: toSend, memo: memoSummary, sig: sig });
-    return { sig: sig, ost: toSend, auditId: auditId };
+    payoutLocks[payoutId] = (async function () {
+      var cfg = vaultConfig();
+      if (cfg.maxSinglePayout > 0 && amt > cfg.maxSinglePayout) {
+        var capError = 'Payout ' + formatOstAmount(amt) + ' OST exceeds the automatic vault limit of ' + formatOstAmount(cfg.maxSinglePayout) + ' OST. No balance was changed; support must approve or split this settlement.';
+        rememberPendingPayout(payoutId, { wallet: walletStr, ostAmount: amt, memo: memoSummary, error: capError, stage: 'manual-review' });
+        logPayoutAudit({ id: payoutId, stage: 'failure', wallet: walletStr, kind: 'payout', ostAmount: amt, memo: memoSummary, error: capError, ref: payoutRefFromMemo(memoText) });
+        throw new Error(capError);
+      }
+
+      var poolBal = await getPoolOstBalance();
+      if (poolBal + 0.000000001 < amt) {
+        var emptyError = 'OST payout vault needs refill before paying ' + formatOstAmount(amt) + ' OST. No partial payout was sent or recorded; try again shortly.';
+        rememberPendingPayout(payoutId, { wallet: walletStr, ostAmount: amt, poolBalance: poolBal, memo: memoSummary, error: emptyError, stage: 'awaiting-refill' });
+        logPayoutAudit({ id: payoutId, stage: 'failure', wallet: walletStr, kind: 'payout', ostAmount: amt, memo: memoSummary, error: emptyError, ref: payoutRefFromMemo(memoText) });
+        throw new Error(emptyError);
+      }
+      if (cfg.minReserve > 0 && poolBal - amt < cfg.minReserve) {
+        var reserveError = 'OST payout vault is protecting its shared reserve. Needs ' + formatOstAmount(amt) + ' OST with ' + formatOstAmount(cfg.minReserve) + ' OST kept online; current vault is ' + formatOstAmount(poolBal) + ' OST. No partial payout was sent.';
+        rememberPendingPayout(payoutId, { wallet: walletStr, ostAmount: amt, poolBalance: poolBal, memo: memoSummary, error: reserveError, stage: 'reserve-protected' });
+        logPayoutAudit({ id: payoutId, stage: 'failure', wallet: walletStr, kind: 'payout', ostAmount: amt, memo: memoSummary, error: reserveError, ref: payoutRefFromMemo(memoText) });
+        throw new Error(reserveError);
+      }
+
+      var pool = loadPoolKeypair();
+      var mintPk = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.mint);
+      var poolAta = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.ata);
+
+      // Pool pays for the user's ATA rent if missing.
+      var userAta = await ensureUserOstAtaPoolPaid(to);
+
+      var ixs = [
+        w.transferChecked(poolAta, mintPk, userAta, pool.publicKey,
+          w.toBaseUnits(amt, c.OST_TOKEN_DECIMALS), c.OST_TOKEN_DECIMALS, c.TOKEN_2022_PROGRAM_ID)
+      ];
+      if (memoText) ixs.push(w.memoIx(String(memoText), pool.publicKey));
+
+      logPayoutAudit({ id: payoutId, stage: 'intent', wallet: walletStr, kind: 'payout', ostAmount: amt, memo: memoSummary, ref: payoutRefFromMemo(memoText) });
+
+      var sig;
+      try {
+        sig = await sendPoolOnlyTx(ixs);
+      } catch (err) {
+        rememberPendingPayout(payoutId, { wallet: walletStr, ostAmount: amt, memo: memoSummary, error: (err && err.message) ? String(err.message).slice(0, 240) : 'unknown', stage: 'send-failed' });
+        logPayoutAudit({ id: payoutId, stage: 'failure', wallet: walletStr, kind: 'payout', ostAmount: amt, memo: memoSummary, error: (err && err.message) ? String(err.message).slice(0, 240) : 'unknown', ref: payoutRefFromMemo(memoText) });
+        throw err;
+      }
+      clearPendingPayout(payoutId);
+      rememberPayoutReceipt(payoutId, { wallet: walletStr, ost: amt, sig: sig, memo: memoSummary, ref: payoutRefFromMemo(memoText) });
+      logPayoutAudit({ id: payoutId, stage: 'result', wallet: walletStr, kind: 'payout', ostAmount: amt, memo: memoSummary, sig: sig, ref: payoutRefFromMemo(memoText) });
+      return { sig: sig, ost: amt, auditId: payoutId };
+    })();
+
+    try { return await payoutLocks[payoutId]; }
+    finally { delete payoutLocks[payoutId]; }
   }
 
   // -----------------------------------------------------------------------
@@ -361,15 +541,18 @@
   async function predictionCashOut(orderRecord, payoutAmount) {
     var w = window.OST_WALLET;
     if (!w || !w.session || !w.session.publicKey) throw new Error('Connect a wallet first');
+    var orderId = orderRecord && (orderRecord.signature || orderRecord.sig || orderRecord.remoteId || orderRecord.id || '');
     return payoutOst(w.session.publicKey, payoutAmount,
       JSON.stringify({
         k: orderRecord && orderRecord.cashoutKind === 'prediction-sell' ? 'prediction-sell' : 'prediction-settlement',
+        id: orderId,
         market: orderRecord && orderRecord.marketId,
         side: orderRecord && orderRecord.side,
         stake: orderRecord && Number(orderRecord.stake || 0),
         payout: Number(payoutAmount),
         t: Date.now()
-      })
+      }),
+      { idempotencyKey: 'prediction-cashout:' + (orderId || stableHash(JSON.stringify(orderRecord || {}))) + ':' + Number(payoutAmount || 0).toFixed(9) }
     );
   }
 
@@ -401,6 +584,8 @@
     rpc: { get: getRpc, rotate: rotateRpc, endpoints: RPC_ENDPOINTS, withRpc: withRpc },
     poolBalance: getPoolOstBalance,
     poolSolBalance: getPoolSolBalance,
+    pendingPayouts: pendingPayouts,
+    vaultConfig: vaultConfig,
     ensureUserAta: ensureUserOstAtaPoolPaid,
     buildPoolPaidTx: buildPoolPaidTx,
     sendPoolOnlyTx: sendPoolOnlyTx,
