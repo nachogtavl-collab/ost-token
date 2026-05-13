@@ -91,7 +91,22 @@
           return Number(j.result[key].c[0]);
         } catch (e) { return NaN; }
       }
+    },
+    {
+      // CoinGecko ships permissive CORS headers, so it works as a last-resort
+      // public feed when Coinbase / Binance / Kraken are blocked by the
+      // user's network or region. Without it the modal would lock at 50/50.
+      name: 'coingecko',
+      url: 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&precision=2',
+      pick: function (j) { return j && j.bitcoin && Number(j.bitcoin.usd); }
     }
+  ];
+  // CORS proxies used as a final fallback when every direct feed fails. The
+  // 5-min BTC equation needs a live price to escape the cold 50/50 default,
+  // so we pay one extra hop rather than display a static market.
+  var BTC_CORS_PROXIES = [
+    'https://corsproxy.io/?url=',
+    'https://api.allorigins.win/raw?url='
   ];
   var btcLastTick = { ts: 0, price: 0, source: '' };
   var btcPrevTick = { ts: 0, price: 0, source: '' };
@@ -164,9 +179,30 @@
       });
   }
 
+  // Wrap fetchBtcFeed with a CORS-proxy retry chain. If a user's network or
+  // region blocks the direct exchange API, the equation would otherwise stay
+  // pinned at 50/50 because btcLastTick.price never moves off zero.
+  function fetchBtcFeedResilient(feed) {
+    return fetchBtcFeed(feed).catch(function (firstError) {
+      var attempt = function (idx) {
+        if (idx >= BTC_CORS_PROXIES.length) return Promise.reject(firstError);
+        var proxiedUrl = BTC_CORS_PROXIES[idx] + encodeURIComponent(feed.url);
+        return fetchWithTimeout(proxiedUrl, { headers: { accept: 'application/json' } }, BTC_FEED_TIMEOUT_MS)
+          .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error(feed.name + ' proxy ' + r.status)); })
+          .then(function (j) {
+            var price = feed.pick(j);
+            if (!Number.isFinite(price) || price <= 1000) throw new Error(feed.name + ' proxy empty');
+            return { price: price, source: feed.name + '*' };
+          })
+          .catch(function () { return attempt(idx + 1); });
+      };
+      return attempt(0);
+    });
+  }
+
   function tryBtcFeeds(feeds, index, lastError) {
     if (index >= feeds.length) return Promise.reject(lastError || new Error('no btc feed'));
-    return fetchBtcFeed(feeds[index]).catch(function (error) {
+    return fetchBtcFeedResilient(feeds[index]).catch(function (error) {
       if (feeds[index].name === btcPreferredSource) btcPreferredSource = '';
       return tryBtcFeeds(feeds, index + 1, error);
     });
@@ -196,10 +232,24 @@
     }
     return tryBtcFeeds(orderedBtcFeeds(), 0)
       .then(function (result) {
-        btcPreferredSource = result.source || btcPreferredSource;
+        btcPreferredSource = result.source && result.source.replace(/\*$/, '') || btcPreferredSource;
         return Object.assign({}, rememberBtcTick(result.price, result.source));
       })
-      .catch(function () { return Object.assign({}, btcLastTick, { stale: !!btcLastTick.price }); });
+      .catch(function () {
+        // Last-ditch fallback: borrow whatever BTC quote app.js already has
+        // cached so the 5-min market can leave the cold 50/50 default even
+        // when every public feed (and proxy) is unreachable.
+        try {
+          var fallbackPx = (typeof window !== 'undefined'
+            && window.__ostPrices && Number(window.__ostPrices.bitcoin))
+            || (typeof window !== 'undefined' && Number(window.OST_BTC_FALLBACK_PRICE))
+            || 0;
+          if (Number.isFinite(fallbackPx) && fallbackPx > 1000) {
+            return Object.assign({}, rememberBtcTick(fallbackPx, 'cache'));
+          }
+        } catch (_) {}
+        return Object.assign({}, btcLastTick, { stale: !!btcLastTick.price });
+      });
   }
 
   function estimateRecentBtcVolPct() {
