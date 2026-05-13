@@ -115,16 +115,9 @@
   }
 
   function getBtcFeeds() {
-    var feeds = BTC_PRICE_FEEDS.slice();
-    var base = ostApiBase();
-    if (base) {
-      feeds.unshift({
-        name: 'ost-edge',
-        url: base + '/btc/price',
-        pick: function (j) { return j && Number(j.price || j.amount || j.btcUsd); }
-      });
-    }
-    return feeds;
+    // OST edge worker /btc/price isn't deployed yet \u2014 calling it spams 404s,
+    // so we rely solely on public CORS-safe exchange feeds.
+    return BTC_PRICE_FEEDS.slice();
   }
 
   function fetchWithTimeout(url, opts, timeoutMs) {

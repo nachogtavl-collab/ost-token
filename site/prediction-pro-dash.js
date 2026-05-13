@@ -109,14 +109,12 @@
         })
         .catch(function () { /* keep last value */ });
     }
-    var apiBase = (window.OST_API_BASE || '').replace(/\/$/, '');
-    // Race all feeds simultaneously for fastest possible response
-    var feeds = apiBase
-      ? [{ url: apiBase + '/btc/price', pick: function (j) { return j && Number(j.price); } }]
-      : [
-          { url: BTC_PRICE_URL, pick: function (j) { return j && j.data && Number(j.data.amount); } },
-          { url: 'https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT', pick: function (j) { return j && Number(j.price); } }
-        ];
+    // Public CORS-safe feeds only. The optional OST edge worker /btc/price
+    // endpoint isn't deployed yet — calling it spams the console with 404s.
+    var feeds = [
+      { url: BTC_PRICE_URL, pick: function (j) { return j && j.data && Number(j.data.amount); } },
+      { url: 'https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT', pick: function (j) { return j && Number(j.price); } }
+    ];
     var racePromises = feeds.map(function (f) {
       return fetchTimeout(f.url, { headers: { accept: 'application/json' } })
         .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
@@ -544,10 +542,11 @@
       refreshLocalState();
       paintBtc(root); paintApi(root);
     }, 1000);
-    // 800ms BTC price tick — real-time accuracy
+    // 15s BTC price tick — keeps the dashboard fresh without flooding
+    // public exchange APIs or the console with rate-limit errors.
     setInterval(function () {
       refreshBtc().then(function () { paintBtc(root); });
-    }, 800);
+    }, 15000);
     // 30s relay health tick
     setInterval(function () { refreshRelay().then(function () { paintRelay(root); }); }, 30000);
     // 60s scalar discovery
