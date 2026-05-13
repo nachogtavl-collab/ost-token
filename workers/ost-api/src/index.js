@@ -105,6 +105,122 @@ async function fetchBtcPrice() {
   return null;
 }
 
+// ── Canonical BTC round state ────────────────────────────────────────────────
+// The worker is the SINGLE SOURCE OF TRUTH for the 5-min BTC round so that
+// every browser sees the IDENTICAL openPrice, livePrice, and YES/NO odds.
+// Without this, two users who happen to hit Coinbase / Binance / Kraken at
+// slightly different ms can lock different open prices and get wildly
+// different YES/NO numbers (~80¢ vs ~50¢ on the exact same round).
+const BTC_TICK_RING_MAX = 600;          // ~10 min of 1Hz ticks per round bucket
+const BTC_LIVE_TTL_S = 60 * 30;         // shared "latest tick" cache TTL
+
+async function lockRoundOpenPrice(env, round, price, source) {
+  if (!env.OST_KV || !Number.isFinite(price) || price <= 0) return null;
+  const key = `round:${round.openAt}`;
+  const existing = await kvGet(env, key, null);
+  if (existing && Number.isFinite(Number(existing.openPrice)) && Number(existing.openPrice) > 0) {
+    // Open price already locked for this round — never overwrite.
+    return existing;
+  }
+  const record = {
+    openAt: round.openAt,
+    closeAt: round.closeAt,
+    openPrice: price,
+    openPriceSource: source || '',
+    openPriceTs: Date.now(),
+    lockedBy: 'worker'
+  };
+  // 2h TTL is long enough to cover settlement after close + late-arriving bots.
+  await kvPut(env, key, record, 60 * 60 * 2);
+  return record;
+}
+
+async function appendBtcTick(env, round, price, source) {
+  if (!env.OST_KV || !Number.isFinite(price) || price <= 0) return;
+  const ringKey = `btc:ticks:${round.openAt}`;
+  const ring = await kvGet(env, ringKey, []);
+  const last = ring.length ? ring[ring.length - 1] : null;
+  // Dedupe identical prints inside 800ms — same guard the client used to apply.
+  const now = Date.now();
+  if (last && last.p === price && now - last.t < 800) return;
+  ring.push({ t: now, p: price, s: source || '' });
+  if (ring.length > BTC_TICK_RING_MAX) ring.splice(0, ring.length - BTC_TICK_RING_MAX);
+  await kvPut(env, ringKey, ring, 60 * 60 * 1);
+  // Also keep a "latest tick" pointer so cached requests resolve in 1 KV read.
+  await kvPut(env, 'btc:latest', { t: now, p: price, s: source || '', round: round.openAt }, BTC_LIVE_TTL_S);
+}
+
+// Deterministic 5-min BTC YES/NO equation. SAME inputs => SAME outputs across
+// every client and bot. No Math.random, no per-client volatility window.
+//   openPrice  : USD locked at the start of the round
+//   livePrice  : latest USD tick
+//   msLeft     : ms until round close (clamped 0 .. 5 min)
+function serverComputeBtcOdds(openPrice, livePrice, msLeft) {
+  const FIVE = 5 * 60 * 1000;
+  if (!Number.isFinite(openPrice) || !Number.isFinite(livePrice) || openPrice <= 0 || livePrice <= 0) {
+    return { yes: 0.5, no: 0.5, deltaPct: 0, delta: 0, scale: 0 };
+  }
+  const left = Math.max(0, Math.min(FIVE, Number(msLeft) || 0));
+  const elapsedRatio = 1 - (left / FIVE);
+  const remainingRatio = left / FIVE;
+  const delta = livePrice - openPrice;
+  const deltaPct = (delta / openPrice) * 100;
+  // Reference 5-min realised vol on BTC ~ 0.22% (1-sigma). Sqrt-time scaling
+  // shrinks the band as the round progresses so a 0.10% move late in the
+  // round becomes much more decisive than the same move at t=0.
+  const scale = 0.22 * Math.sqrt(Math.max(remainingRatio, 0.05));
+  const z = deltaPct / Math.max(scale, 0.001);
+  let yes = 1 / (1 + Math.exp(-z));
+  // Confidence ramp: at t=0 odds are pulled hard toward 0.5; at t=close they
+  // commit to the directional probability.
+  const confidence = 0.55 + 0.40 * elapsedRatio;
+  yes = 0.5 + (yes - 0.5) * confidence;
+  yes = Math.max(0.02, Math.min(0.98, yes));
+  return { yes, no: 1 - yes, deltaPct, delta, scale };
+}
+
+async function buildCanonicalBtcRound(env, opts) {
+  const round = currentRound();
+  const wantFresh = opts && opts.refresh !== false;
+  let latest = await kvGet(env, 'btc:latest', null);
+  const stale = !latest || (Date.now() - Number(latest.t || 0) > 1500) || (Number(latest.round) !== round.openAt);
+  if (wantFresh && stale) {
+    const live = await fetchBtcPrice();
+    if (live) {
+      latest = { t: Date.now(), p: live.price, s: live.source, round: round.openAt };
+      await lockRoundOpenPrice(env, round, live.price, live.source);
+      await appendBtcTick(env, round, live.price, live.source);
+    }
+  }
+  const stored = await kvGet(env, `round:${round.openAt}`, null);
+  const openPrice = Number(stored && stored.openPrice) || (latest && Number(latest.p)) || 0;
+  // First call of a fresh round and we just got the live price — that price IS
+  // the open price by definition.
+  if (latest && openPrice && !stored) {
+    await lockRoundOpenPrice(env, round, openPrice, latest.s || '');
+  }
+  const livePrice = (latest && Number(latest.p)) || openPrice;
+  const odds = serverComputeBtcOdds(openPrice, livePrice, round.msLeft);
+  return {
+    id: round.id,
+    openAt: round.openAt,
+    closeAt: round.closeAt,
+    msLeft: round.msLeft,
+    openPrice: openPrice || null,
+    openPriceSource: stored && stored.openPriceSource || '',
+    openPriceTs: stored && stored.openPriceTs || null,
+    livePrice: livePrice || null,
+    livePriceSource: latest && latest.s || '',
+    livePriceTs: latest && Number(latest.t) || null,
+    yesPriceNumber: odds.yes,
+    noPriceNumber: odds.no,
+    deltaPct: odds.deltaPct,
+    delta: odds.delta,
+    scale: odds.scale,
+    canonical: true
+  };
+}
+
 // ── Polymarket helpers ────────────────────────────────────────────────────────
 
 async function polyGamma(env, path, query = '') {
@@ -1025,6 +1141,8 @@ export default {
         endpoints: [
           'GET  /health',
           'GET  /btc/price',
+          'GET  /btc/round',
+          'GET  /btc/ticks',
           'GET  /btc/history',
           'GET  /markets',
           'GET  /markets/:id',
@@ -1068,25 +1186,72 @@ export default {
           'GET  /launchpad/coins',
           'POST /launchpad/coins',
           'POST /launchpad/trade',
-          'GET  /launchpad/ticks/:mint'
+          'GET  /launchpad/ticks/:mint',
+          'GET  /bot/v1/health',
+          'GET  /bot/v1/markets',
+          'GET  /bot/v1/markets/:id',
+          'GET  /bot/v1/btc/round',
+          'GET  /bot/v1/quote/:id',
+          'GET  /bot/v1/positions/:wallet',
+          'POST /bot/v1/order',
+          'POST /bot/v1/order/cashout'
         ]
       });
     }
 
     // ── GET /btc/price ───────────────────────────────────────────────────────
+    // Canonical live price. ALL clients pull from here so they see identical
+    // numbers; the worker also locks the round open price + appends to the
+    // shared tick ring on every call.
     if (path === '/btc/price' && method === 'GET') {
       const result = await fetchBtcPrice();
-      if (!result) return json({ error: 'all_feeds_failed', price: null }, 503);
+      if (!result) {
+        // Surface the cached latest so the chart doesn't go blank when a
+        // single upstream blip happens.
+        const cached = await kvGet(env, 'btc:latest', null);
+        if (cached) return json({ price: cached.p, currency: 'USD', source: cached.s || 'cached', stale: true, round: currentRound(), ts: new Date(cached.t).toISOString() }, 200, { 'cache-control': 'no-store' });
+        return json({ error: 'all_feeds_failed', price: null }, 503);
+      }
       const round = currentRound();
-      // Record as round open price if this is the first fetch of the round
-      const roundKey = `round:${round.openAt}`;
-      const existing = await kvGet(env, roundKey);
-      if (!existing) await kvPut(env, roundKey, { openAt: round.openAt, openPrice: result.price, closeAt: round.closeAt }, 3600);
+      await lockRoundOpenPrice(env, round, result.price, result.source);
+      await appendBtcTick(env, round, result.price, result.source);
       return json({
         price: result.price,
         currency: 'USD',
         source: result.source,
         round,
+        ts: new Date().toISOString()
+      }, 200, { 'cache-control': 'no-store' });
+    }
+
+    // ── GET /btc/round ───────────────────────────────────────────────────────
+    // Single source of truth for the 5-min BTC round. Every browser/bot in the
+    // SAME round MUST get the SAME openPrice + livePrice + yesPriceNumber here.
+    // Resolves the "user A sees 80¢ NO, user B sees 50¢ NO" discrepancy.
+    if (path === '/btc/round' && method === 'GET') {
+      const refresh = url.searchParams.get('refresh') !== '0';
+      const data = await buildCanonicalBtcRound(env, { refresh });
+      return json(data, 200, { 'cache-control': 'no-store' });
+    }
+
+    // ── GET /btc/ticks ───────────────────────────────────────────────────────
+    // Shared tick ring for the chart. Every client renders the SAME ticks so
+    // the BTC line and YES/NO probability line line up across all devices.
+    // Optional ?openAt=<ms> selects a specific round bucket; default = current.
+    if (path === '/btc/ticks' && method === 'GET') {
+      const openAtParam = Number(url.searchParams.get('openAt'));
+      const round = Number.isFinite(openAtParam) && openAtParam > 0
+        ? { openAt: Math.floor(openAtParam / FIVE_MIN_MS) * FIVE_MIN_MS, closeAt: Math.floor(openAtParam / FIVE_MIN_MS) * FIVE_MIN_MS + FIVE_MIN_MS }
+        : currentRound();
+      const since = Number(url.searchParams.get('since')) || 0;
+      const ringKey = `btc:ticks:${round.openAt}`;
+      const ring = await kvGet(env, ringKey, []);
+      const ticks = since > 0 ? ring.filter(t => Number(t.t) > since) : ring;
+      return json({
+        openAt: round.openAt,
+        closeAt: round.closeAt,
+        ticks,
+        count: ticks.length,
         ts: new Date().toISOString()
       }, 200, { 'cache-control': 'no-store' });
     }
@@ -1108,9 +1273,11 @@ export default {
 
     // ── GET /rounds/current ──────────────────────────────────────────────────
     if (path === '/rounds/current' && method === 'GET') {
-      const round = currentRound();
-      const stored = await kvGet(env, `round:${round.openAt}`);
-      return json({ ...round, openPrice: stored?.openPrice ?? null, ts: new Date().toISOString() });
+      // Return the canonical round so two browsers always see identical odds
+      // and identical open price. Same payload as /btc/round, kept under both
+      // paths for back-compat with older site builds.
+      const data = await buildCanonicalBtcRound(env, { refresh: true });
+      return json({ ...data, ts: new Date().toISOString() }, 200, { 'cache-control': 'no-store' });
     }
 
     // ── POST /rounds/open-price ──────────────────────────────────────────────
@@ -1833,6 +2000,201 @@ export default {
       const deviceId = cleanText(decodeURIComponent(offlineVaultStatusMatch[1]), 80);
       const events = await kvGet(env, `offline-vault:${deviceId}`, []);
       return json({ deviceId, events: events.slice(0, 50), count: events.length, ts: new Date().toISOString() });
+    }
+
+    // ── Bot / autonomous AI trader API ───────────────────────────────────────
+    // Public, documented surface so external bots can buy / sell / hold /
+    // re-buy / arbitrage in OST prediction markets without driving the UI.
+    // Auth: pass header `x-ost-bot-key`. The default public key is enabled
+    // unless BOT_API_KEY is set in worker secrets, so anyone can smoke-test
+    // the API in dev with a single header.
+    if (path.startsWith('/bot/v1/')) {
+      const expectedKey = (env.BOT_API_KEY || 'ost-bot-public-test-key');
+      const presentedKey = request.headers.get('x-ost-bot-key') || url.searchParams.get('botKey') || '';
+      const sub = path.slice('/bot/v1'.length);
+
+      if (sub === '/health' && method === 'GET') {
+        return json({
+          ok: true,
+          service: 'ost-bot-api',
+          version: '1.0',
+          authRequired: !!env.BOT_API_KEY,
+          docs: {
+            markets: 'GET /bot/v1/markets — Polymarket + OST native markets',
+            market:  'GET /bot/v1/markets/:id — single market with book + odds',
+            btcRound:'GET /bot/v1/btc/round — canonical 5-min BTC round',
+            quote:   'GET /bot/v1/quote/:id?side=yes&stake=10 — price + expected payout',
+            buy:     'POST /bot/v1/order — body {wallet, marketId, side, stake, price, signature?}',
+            cashout: 'POST /bot/v1/order/cashout — body {wallet, orderId, signature, payoutOst}',
+            positions: 'GET /bot/v1/positions/:wallet'
+          },
+          ts: new Date().toISOString()
+        }, 200, { 'cache-control': 'no-store' });
+      }
+
+      // Reject unauthenticated bot calls EXCEPT /health (so docs are reachable).
+      if (presentedKey !== expectedKey) {
+        return json({ error: 'unauthorized', message: 'Pass x-ost-bot-key header. See /bot/v1/health for docs.' }, 401);
+      }
+
+      if (sub === '/markets' && method === 'GET') {
+        const limit = Math.min(200, Number(url.searchParams.get('limit') || 60));
+        const raw = await polyGamma(env, '/markets', `limit=${limit}&closed=false`);
+        const markets = (Array.isArray(raw) ? raw : raw?.markets || []).map(normaliseMarket);
+        const btcRound = await buildCanonicalBtcRound(env, { refresh: false });
+        const ostNative = btcRound.openPrice ? [{
+          id: btcRound.id,
+          source: 'ost',
+          title: '5-min BTC: will price be UP at close?',
+          isOstNative: true,
+          openPrice: btcRound.openPrice,
+          livePrice: btcRound.livePrice,
+          yesPriceNumber: btcRound.yesPriceNumber,
+          noPriceNumber: btcRound.noPriceNumber,
+          closeAtMs: btcRound.closeAt,
+          msLeft: btcRound.msLeft
+        }] : [];
+        return json({ markets: ostNative.concat(markets), count: ostNative.length + markets.length, ts: new Date().toISOString() }, 200, { 'cache-control': 'no-store' });
+      }
+
+      const botMktMatch = sub.match(/^\/markets\/([^/]+)$/);
+      if (botMktMatch && method === 'GET') {
+        const id = decodeURIComponent(botMktMatch[1]);
+        if (id.indexOf('ost-btc5m-') === 0) {
+          const r = await buildCanonicalBtcRound(env, { refresh: true });
+          return json({ market: r, source: 'ost-native' }, 200, { 'cache-control': 'no-store' });
+        }
+        const [gmkt, book] = await Promise.all([
+          polyGamma(env, `/markets/${encodeURIComponent(id)}`),
+          polyClob(env, '/book', `token_id=${encodeURIComponent(id)}`)
+        ]);
+        if (!gmkt) return json({ error: 'market_not_found', id }, 404);
+        return json({ market: normaliseMarket(gmkt), book: book || null, source: 'polymarket', ts: new Date().toISOString() }, 200, { 'cache-control': 'no-store' });
+      }
+
+      if (sub === '/btc/round' && method === 'GET') {
+        const r = await buildCanonicalBtcRound(env, { refresh: true });
+        return json(r, 200, { 'cache-control': 'no-store' });
+      }
+
+      const quoteMatch = sub.match(/^\/quote\/([^/]+)$/);
+      if (quoteMatch && method === 'GET') {
+        const id = decodeURIComponent(quoteMatch[1]);
+        const side = (url.searchParams.get('side') || 'yes').toLowerCase() === 'no' ? 'NO' : 'YES';
+        const stake = Math.max(0, Number(url.searchParams.get('stake')) || 0);
+        let price = 0.5;
+        if (id.indexOf('ost-btc5m-') === 0) {
+          const r = await buildCanonicalBtcRound(env, { refresh: true });
+          price = side === 'NO' ? r.noPriceNumber : r.yesPriceNumber;
+        } else {
+          const gmkt = await polyGamma(env, `/markets/${encodeURIComponent(id)}`);
+          if (!gmkt) return json({ error: 'market_not_found', id }, 404);
+          const m = normaliseMarket(gmkt);
+          price = side === 'NO' ? m.noPriceNumber : m.yesPriceNumber;
+        }
+        const shares = price > 0 ? stake / price : 0;
+        const expectedPayout = shares; // 1 OST per winning share
+        return json({
+          marketId: id,
+          side,
+          price,
+          stake,
+          shares,
+          expectedPayout,
+          expectedReturn: expectedPayout - stake,
+          ts: new Date().toISOString()
+        }, 200, { 'cache-control': 'no-store' });
+      }
+
+      const botPosMatch = sub.match(/^\/positions\/([^/]+)$/);
+      if (botPosMatch && method === 'GET') {
+        const wallet = decodeURIComponent(botPosMatch[1]);
+        if (!env.OST_KV) return json({ positions: [], note: 'KV not configured', wallet });
+        const positions = await kvGet(env, `positions:${wallet}`, []);
+        return json({ positions, wallet, count: positions.length, ts: new Date().toISOString() }, 200, { 'cache-control': 'no-store' });
+      }
+
+      if (sub === '/order' && method === 'POST') {
+        let body;
+        try { body = await request.json(); } catch (_) { return json({ error: 'invalid_json' }, 400); }
+        const wallet = cleanText(body && body.wallet, 64);
+        const marketId = cleanText(body && body.marketId, 128);
+        const side = String((body && body.side) || 'yes').toUpperCase().slice(0, 8);
+        const stake = Number(body && body.stake);
+        if (!wallet || !marketId || !Number.isFinite(stake) || stake <= 0) {
+          return json({ error: 'missing_fields', required: ['wallet', 'marketId', 'side', 'stake'] }, 400);
+        }
+        // Resolve a fair quote price right now so the bot can't backdate.
+        let price = Number(body && body.price);
+        if (!Number.isFinite(price) || price <= 0 || price >= 1) {
+          if (marketId.indexOf('ost-btc5m-') === 0) {
+            const r = await buildCanonicalBtcRound(env, { refresh: true });
+            price = side === 'NO' ? r.noPriceNumber : r.yesPriceNumber;
+          } else {
+            const gmkt = await polyGamma(env, `/markets/${encodeURIComponent(marketId)}`);
+            if (!gmkt) return json({ error: 'market_not_found', marketId }, 404);
+            const m = normaliseMarket(gmkt);
+            price = side === 'NO' ? m.noPriceNumber : m.yesPriceNumber;
+          }
+        }
+        const createdAt = Date.now();
+        const id = cleanText(body.id || body.signature || `bot-${createdAt}-${Math.random().toString(36).slice(2, 10)}`, 128);
+        const record = {
+          id,
+          wallet,
+          walletShort: wallet.slice(0, 4) + '…' + wallet.slice(-4),
+          marketId,
+          marketTitle: cleanText(body.marketTitle || body.title || marketId, 200),
+          title: cleanText(body.title || body.marketTitle || marketId, 200),
+          side,
+          stake,
+          price,
+          shares: price > 0 ? stake / price : 0,
+          potentialReturn: price > 0 ? stake / price : stake,
+          source: 'bot',
+          channel: cleanText(body.channel || 'bot-api', 32),
+          signature: cleanText(body.signature || '', 128),
+          sig: cleanText(body.signature || '', 128),
+          createdAt,
+          ts: new Date(createdAt).toISOString(),
+          status: 'open',
+          syncedAt: createdAt
+        };
+        if (env.OST_KV) {
+          const walletKey = `positions:${wallet}`;
+          const walletBucket = await kvGet(env, walletKey, []);
+          await kvPut(env, walletKey, mergeNewest(walletBucket, record, 200));
+          const recent = await kvGet(env, 'positions:recent', []);
+          await kvPut(env, 'positions:recent', mergeNewest(recent, record, 100), 60 * 60 * 24 * 7);
+        }
+        return json({ ok: true, order: record, stored: !!env.OST_KV }, 200, { 'cache-control': 'no-store' });
+      }
+
+      if (sub === '/order/cashout' && method === 'POST') {
+        let body;
+        try { body = await request.json(); } catch (_) { return json({ error: 'invalid_json' }, 400); }
+        const wallet = cleanText(body && body.wallet, 64);
+        const orderId = cleanText(body && body.orderId, 128);
+        if (!wallet || !orderId) return json({ error: 'missing_fields', required: ['wallet', 'orderId'] }, 400);
+        if (!env.OST_KV) return json({ error: 'kv_not_configured' }, 503);
+        const walletKey = `positions:${wallet}`;
+        const walletBucket = await kvGet(env, walletKey, []);
+        const idx = walletBucket.findIndex(p => p && (p.id === orderId || p.signature === orderId));
+        if (idx < 0) return json({ error: 'order_not_found', orderId }, 404);
+        const order = walletBucket[idx];
+        order.status = 'cashed-out';
+        order.cashedOut = true;
+        order.cashoutKind = cleanText(body.cashoutKind || 'bot-cashout', 40);
+        order.cashoutSig = cleanText(body.signature || '', 128);
+        order.cashoutOst = cleanNumber(body.payoutOst, order.potentialReturn);
+        order.cashoutAt = Date.now();
+        order.resolvedAt = Date.now();
+        walletBucket[idx] = order;
+        await kvPut(env, walletKey, walletBucket);
+        return json({ ok: true, order }, 200, { 'cache-control': 'no-store' });
+      }
+
+      return json({ error: 'unknown_bot_endpoint', path, hint: 'GET /bot/v1/health for docs' }, 404);
     }
 
     return json({ error: 'not_found', message: 'Unknown endpoint. GET /health for the full endpoint list.' }, 404);

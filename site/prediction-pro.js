@@ -98,6 +98,17 @@
   var btcSeries = [];
   var btcPreferredSource = '';
   var btcLastOdds = { roundId: '', yes: 0.5, previousYes: 0.5 };
+  // Canonical round snapshot from the OST worker — when present, ALL clients
+  // see the same openPrice + livePrice + yesProb regardless of which exchange
+  // their browser would have hit. This kills the cross-user discrepancy
+  // where one user saw NO at 80¢ and another saw NO at 50¢ on the same round.
+  var canonicalRound = null;            // last successful /btc/round payload
+  var canonicalRoundFetchedAt = 0;
+  var canonicalTicksSeededFor = 0;      // openAt of the round whose ticks we've seeded
+
+  function canonicalRoundIsFresh() {
+    return canonicalRound && (Date.now() - canonicalRoundFetchedAt < 4500);
+  }
 
   function clampNumber(value, min, max) {
     return Math.min(max, Math.max(min, value));
@@ -256,10 +267,76 @@
   function pollBtcMarket() {
     // Skip polling when the page is hidden to avoid flooding public APIs.
     if (typeof document !== 'undefined' && document.hidden) return;
-    fetchBtcSpot({ force: true }).then(function () {
-      try { captureRoundOpenIfNeeded(buildFiveMinBtcMarket()); } catch (e) {}
-      settleClosedRounds();
-    });
+    // Canonical worker round is the SOURCE OF TRUTH. Try it first; only fall
+    // back to direct exchange polls if the worker is unreachable so the chart
+    // never goes blank.
+    fetchCanonicalRound()
+      .then(function (round) {
+        if (round && Number.isFinite(Number(round.livePrice)) && round.livePrice > 0) {
+          // Mirror the canonical live price into the local cache + series so
+          // every consumer (cards, modal, OST_PREDICTION_API) reads identical
+          // numbers across all browsers.
+          rememberBtcTick(Number(round.livePrice), round.livePriceSource || 'ost-canonical');
+          captureRoundOpenIfNeeded(buildFiveMinBtcMarket());
+          maybeSeedTickHistory(round.openAt);
+          settleClosedRounds();
+          return;
+        }
+        // Worker round had no live price (cold start) — keep the public-feed
+        // waterfall so the UI stays alive.
+        return fetchBtcSpot({ force: true }).then(function () {
+          try { captureRoundOpenIfNeeded(buildFiveMinBtcMarket()); } catch (e) {}
+          settleClosedRounds();
+        });
+      })
+      .catch(function () {
+        return fetchBtcSpot({ force: true }).then(function () {
+          try { captureRoundOpenIfNeeded(buildFiveMinBtcMarket()); } catch (e) {}
+          settleClosedRounds();
+        });
+      });
+  }
+
+  function fetchCanonicalRound() {
+    var apiBase = ostApiBase();
+    if (!apiBase) return Promise.resolve(null);
+    return fetch(apiBase + '/btc/round', { headers: { accept: 'application/json' }, cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        if (!data || !Number.isFinite(Number(data.openAt))) return null;
+        canonicalRound = data;
+        canonicalRoundFetchedAt = Date.now();
+        try { window.__OST_CANONICAL_BTC_ROUND = data; } catch (_) {}
+        try { window.dispatchEvent(new CustomEvent('ost:btc-round', { detail: data })); } catch (_) {}
+        return data;
+      })
+      .catch(function () { return null; });
+  }
+
+  // Seed the local BTC tick series with the SHARED ring from the worker the
+  // first time we see a new round id, so two users opening the modal see
+  // the same chart even if one of them just landed on the page.
+  function maybeSeedTickHistory(openAt) {
+    if (!openAt || canonicalTicksSeededFor === openAt) return;
+    var apiBase = ostApiBase();
+    if (!apiBase) return;
+    canonicalTicksSeededFor = openAt;
+    fetch(apiBase + '/btc/ticks?openAt=' + encodeURIComponent(openAt), { headers: { accept: 'application/json' }, cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        if (!j || !Array.isArray(j.ticks) || !j.ticks.length) return;
+        // Replace local series for this round with the canonical ring so
+        // every device renders the IDENTICAL chart line.
+        var seeded = j.ticks
+          .filter(function (t) { return Number.isFinite(Number(t && t.p)) && Number(t.p) > 1000; })
+          .map(function (t) { return { ts: Number(t.t) || Date.now(), price: Number(t.p), source: t.s || 'ost-canonical' }; });
+        if (!seeded.length) return;
+        btcSeries = seeded.slice(-BTC_MAX_SERIES);
+        var last = seeded[seeded.length - 1];
+        btcLastTick = { ts: last.ts, price: last.price, source: last.source };
+        try { window.dispatchEvent(new CustomEvent('ost:btc-spot', { detail: Object.assign({}, btcLastTick) })); } catch (_) {}
+      })
+      .catch(function () { /* keep local series */ });
   }
 
   // Periodic poll so cards, charts, and close-outs all share fresh BTC data.
@@ -278,9 +355,31 @@
   function buildFiveMinBtcMarket(refPrice) {
     var b = currentRoundBoundaries();
     var roundRecord = readRounds()[String(b.openAt)] || {};
-    var livePrice = btcLastTick.price || refPrice || roundRecord.openPrice || 0;
-    var openPrice = Number(roundRecord.openPrice) || refPrice || livePrice || 0;
-    var odds = computeBtcOdds(openPrice, livePrice, b);
+    // Prefer the canonical worker round when it matches the current bucket so
+    // EVERY browser sees the same openPrice + livePrice + YES/NO.
+    var canon = canonicalRoundIsFresh() && canonicalRound && Number(canonicalRound.openAt) === b.openAt
+      ? canonicalRound
+      : null;
+    var livePrice = (canon && Number(canon.livePrice)) || btcLastTick.price || refPrice || roundRecord.openPrice || 0;
+    var openPrice = (canon && Number(canon.openPrice)) || Number(roundRecord.openPrice) || refPrice || livePrice || 0;
+    var odds;
+    if (canon && Number.isFinite(Number(canon.yesPriceNumber))) {
+      var yes = Math.max(0.02, Math.min(0.98, Number(canon.yesPriceNumber)));
+      var prevYes = btcLastOdds.roundId === ('ost-btc5m-' + b.openAt) && Number.isFinite(btcLastOdds.yes) ? btcLastOdds.yes : yes;
+      btcLastOdds = { roundId: 'ost-btc5m-' + b.openAt, yes: yes, previousYes: prevYes };
+      odds = {
+        yes: yes,
+        no: 1 - yes,
+        previousYes: prevYes,
+        delta: Number(canon.delta) || (livePrice - openPrice),
+        deltaPct: Number(canon.deltaPct) || (openPrice > 0 ? ((livePrice - openPrice) / openPrice) * 100 : 0),
+        volatilityPct: 0,
+        momentumPct: 0,
+        canonical: true
+      };
+    } else {
+      odds = computeBtcOdds(openPrice, livePrice, b);
+    }
     var roundId = 'ost-btc5m-' + b.openAt;
     var yesPct = (odds.yes * 100).toFixed(1) + '%';
     var noPct = (odds.no * 100).toFixed(1) + '%';
@@ -429,15 +528,24 @@
     if (!market || !market.isOstNative || !market.meta || market.meta.kind !== 'btc5m') return;
     var rounds = readRounds();
     var key = String(market.meta.openAt);
-    var openPrice = Number(market.meta.openPrice) || btcLastTick.price || 0;
+    // Canonical worker openPrice always wins over any local first-tick capture.
+    var canonOpen = canonicalRoundIsFresh() && canonicalRound && Number(canonicalRound.openAt) === market.meta.openAt
+      ? Number(canonicalRound.openPrice) || 0
+      : 0;
+    var openPrice = canonOpen || Number(market.meta.openPrice) || btcLastTick.price || 0;
     if (!rounds[key]) {
       rounds[key] = {
         openPrice: openPrice,
         openAt: market.meta.openAt,
         closeAt: market.meta.closeAt,
         openPriceTs: btcLastTick.ts || Date.now(),
-        openPriceSource: btcLastTick.source || ''
+        openPriceSource: (canonOpen ? 'ost-canonical' : (btcLastTick.source || ''))
       };
+      writeRounds(rounds);
+    } else if (canonOpen && rounds[key].openPrice !== canonOpen) {
+      // Reconcile any earlier locally-captured open price to the canonical one.
+      rounds[key].openPrice = canonOpen;
+      rounds[key].openPriceSource = 'ost-canonical';
       writeRounds(rounds);
     } else if (!rounds[key].openPrice && btcLastTick.price) {
       rounds[key].openPrice = btcLastTick.price;
@@ -928,6 +1036,8 @@
         : Promise.resolve(Object.assign({}, btcLastTick));
     },
     btcSeries: function () { return btcSeries.slice(); },
+    canonicalRound: function () { return canonicalRoundIsFresh() ? Object.assign({}, canonicalRound) : null; },
+    refreshCanonicalRound: function () { return fetchCanonicalRound(); },
     fiveMinRound: function () {
       var b = currentRoundBoundaries();
       var market = buildFiveMinBtcMarket();

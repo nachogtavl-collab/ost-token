@@ -44,7 +44,7 @@ function jsonResponse(body, init = {}) {
   });
 }
 
-async function proxyToUpstream(upstreamUrl, ttl, request) {
+async function proxyToUpstream(upstreamUrl, ttl, request, ctx) {
   // Use Cloudflare's edge cache so repeated requests within the TTL
   // window are served from the same PoP without an upstream fetch.
   const cacheKey = new Request(upstreamUrl, { method: 'GET' });
@@ -54,42 +54,95 @@ async function proxyToUpstream(upstreamUrl, ttl, request) {
     const headers = new Headers(cached.headers);
     Object.entries(CORS).forEach(([k, v]) => headers.set(k, v));
     headers.set('x-relay-cache', 'HIT');
+    // Stale-while-revalidate: if the cached entry is older than its TTL,
+    // refresh it in the background so the next caller still sees a HIT but
+    // with fresh data. Best-effort — never blocks the current response.
+    const ageHeader = Number(headers.get('age')) || 0;
+    if (ctx && ageHeader >= ttl) {
+      try {
+        ctx.waitUntil(refreshUpstream(upstreamUrl, ttl, cache, cacheKey));
+        headers.set('x-relay-cache', 'HIT-REVALIDATING');
+      } catch (_) { /* ignore */ }
+    }
     return new Response(cached.body, { status: cached.status, headers });
   }
 
-  let upstream;
+  // Request coalescing — if another request for the SAME upstream URL is
+  // already in flight, await its promise instead of firing a duplicate.
+  // This protects upstream APIs when 200 users open the same market at once.
+  const inflight = INFLIGHT.get(upstreamUrl);
+  if (inflight) {
+    const sharedResp = await inflight;
+    return cloneRelayResponse(sharedResp, 'COALESCED');
+  }
+
+  const fetchPromise = (async () => {
+    let upstream;
+    try {
+      upstream = await fetch(upstreamUrl, {
+        method: 'GET',
+        headers: {
+          accept: 'application/json',
+          'user-agent': 'OST-PolyRelay/1.0'
+        },
+        cf: {
+          cacheTtl: ttl,
+          cacheEverything: true
+        }
+      });
+    } catch (err) {
+      return jsonResponse({ error: 'upstream_fetch_failed', message: String(err && err.message || err) }, { status: 502 });
+    }
+
+    const body = await upstream.arrayBuffer();
+    const respHeaders = new Headers();
+    respHeaders.set('content-type', upstream.headers.get('content-type') || 'application/json; charset=utf-8');
+    respHeaders.set('cache-control', `public, max-age=${ttl}, s-maxage=${ttl}`);
+    respHeaders.set('x-relay-cache', 'MISS');
+    respHeaders.set('x-relay-upstream', upstreamUrl);
+    Object.entries(CORS).forEach(([k, v]) => respHeaders.set(k, v));
+
+    const out = new Response(body, { status: upstream.status, headers: respHeaders });
+    if (upstream.ok) ctxCachePut(cache, cacheKey, out.clone());
+    return out;
+  })();
+
+  INFLIGHT.set(upstreamUrl, fetchPromise);
   try {
-    upstream = await fetch(upstreamUrl, {
+    const resp = await fetchPromise;
+    return resp;
+  } finally {
+    // Allow the same URL to be re-fetched after this promise settles.
+    INFLIGHT.delete(upstreamUrl);
+  }
+}
+
+// In-flight fetch dedupe map. Key = upstream URL, value = pending Response.
+const INFLIGHT = new Map();
+
+function cloneRelayResponse(resp, marker) {
+  const headers = new Headers(resp.headers);
+  Object.entries(CORS).forEach(([k, v]) => headers.set(k, v));
+  if (marker) headers.set('x-relay-cache', marker);
+  return new Response(resp.clone().body, { status: resp.status, headers });
+}
+
+async function refreshUpstream(upstreamUrl, ttl, cache, cacheKey) {
+  try {
+    const upstream = await fetch(upstreamUrl, {
       method: 'GET',
-      headers: {
-        accept: 'application/json',
-        'user-agent': 'OST-PolyRelay/1.0'
-      },
-      cf: {
-        cacheTtl: ttl,
-        cacheEverything: true
-      }
+      headers: { accept: 'application/json', 'user-agent': 'OST-PolyRelay/1.0' },
+      cf: { cacheTtl: ttl, cacheEverything: true }
     });
-  } catch (err) {
-    return jsonResponse({ error: 'upstream_fetch_failed', message: String(err && err.message || err) }, { status: 502 });
-  }
-
-  // Forward the body but rewrite headers to add CORS + cache hint.
-  const body = await upstream.arrayBuffer();
-  const respHeaders = new Headers();
-  respHeaders.set('content-type', upstream.headers.get('content-type') || 'application/json; charset=utf-8');
-  respHeaders.set('cache-control', `public, max-age=${ttl}, s-maxage=${ttl}`);
-  respHeaders.set('x-relay-cache', 'MISS');
-  respHeaders.set('x-relay-upstream', upstreamUrl);
-  Object.entries(CORS).forEach(([k, v]) => respHeaders.set(k, v));
-
-  const out = new Response(body, { status: upstream.status, headers: respHeaders });
-  // Only cache successful responses
-  if (upstream.ok) {
-    // Don't await — ship to client first, populate cache in the background
-    ctxCachePut(cache, cacheKey, out.clone());
-  }
-  return out;
+    if (!upstream.ok) return;
+    const body = await upstream.arrayBuffer();
+    const respHeaders = new Headers();
+    respHeaders.set('content-type', upstream.headers.get('content-type') || 'application/json; charset=utf-8');
+    respHeaders.set('cache-control', `public, max-age=${ttl}, s-maxage=${ttl}`);
+    respHeaders.set('x-relay-cache', 'BACKGROUND-REFRESH');
+    Object.entries(CORS).forEach(([k, v]) => respHeaders.set(k, v));
+    await cache.put(cacheKey, new Response(body, { status: upstream.status, headers: respHeaders }));
+  } catch (_) { /* ignore */ }
 }
 
 function ctxCachePut(cache, key, resp) {
@@ -98,7 +151,7 @@ function ctxCachePut(cache, key, resp) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
     if (request.method === 'OPTIONS') {
@@ -112,10 +165,11 @@ export default {
       return jsonResponse({
         ok: true,
         service: 'ost-poly-relay',
-        version: '1.0',
+        version: '1.1',
         readonly: true,
         upstreams: { gamma: env.GAMMA_BASE, clob: env.CLOB_BASE, data: env.DATA_BASE },
         endpoints: ROUTES.map(r => String(r.match)),
+        features: ['edge-cache', 'request-coalescing', 'stale-while-revalidate', 'cors'],
         ts: new Date().toISOString(),
         edge: request.cf && request.cf.colo ? request.cf.colo : 'unknown'
       });
@@ -125,7 +179,7 @@ export default {
       const m = route.match.exec(url.pathname);
       if (!m) continue;
       const upstreamUrl = route.to(m, env, url.searchParams.toString());
-      return proxyToUpstream(upstreamUrl, route.ttl, request);
+      return proxyToUpstream(upstreamUrl, route.ttl, request, ctx);
     }
 
     return jsonResponse({ error: 'not_found', message: 'Unknown relay path. See /health for the list of routes.' }, { status: 404 });

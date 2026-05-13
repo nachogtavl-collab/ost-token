@@ -579,6 +579,124 @@
     }
   }
 
+  // Combined chart: BTC USD price line (left axis) + YES/NO probability line
+  // (right axis) overlaid on a single canvas. Replaces the old "toggle between
+  // ticks and points" UX so users see BOTH series move in lock-step.
+  //   pricePoints  : array of BTC USD numbers (the "ticks" graph)
+  //   probPoints   : array of probabilities 0..1 aligned to pricePoints index
+  //                  (the "points" graph). Pass null to skip the overlay.
+  //   overlay      : optional bet-glyph markers anchored to the price line
+  function drawCombinedSeries(canvas, pricePoints, probPoints, options) {
+    if (!canvas) return;
+    var opts = options || {};
+    var ctx = canvas.getContext('2d');
+    var dpr = window.devicePixelRatio || 1;
+    var w = canvas.clientWidth || 600;
+    var h = canvas.clientHeight || 220;
+    canvas.width = Math.floor(w * dpr); canvas.height = Math.floor(h * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+
+    var prices = (pricePoints || []).map(Number).filter(Number.isFinite);
+    var probs = (probPoints || []).map(Number).filter(function (v) { return Number.isFinite(v) && v >= 0 && v <= 1; });
+    if (prices.length < 2 && probs.length < 2) return;
+
+    // Grid
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 1;
+    for (var i = 1; i < 4; i++) {
+      var y = (i / 4) * h;
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+    }
+    // Mid-line for probability axis (50%)
+    ctx.strokeStyle = 'rgba(255, 217, 128, 0.20)'; ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // ---- BTC USD price line (left axis, green/red by direction) ----
+    if (prices.length >= 2) {
+      var pmin = Math.min.apply(null, prices), pmax = Math.max.apply(null, prices);
+      var latest = prices[prices.length - 1];
+      var natural = pmax - pmin;
+      var minimumRange = Math.abs(latest) >= 1000 ? Math.abs(latest) * 0.0012 : Math.max(Math.abs(latest) * 0.01, 0.0025);
+      var range = Math.max(1e-9, natural, minimumRange);
+      if (range > natural) {
+        var center = natural > 0 ? (pmin + pmax) / 2 : latest;
+        pmin = center - range / 2;
+        pmax = center + range / 2;
+      }
+      var dir = latest >= prices[0] ? 'up' : 'down';
+      var priceColor = opts.priceColor || (dir === 'up' ? '#7ce6a8' : '#ff7c8a');
+      // Filled area
+      var grad = ctx.createLinearGradient(0, 0, 0, h);
+      grad.addColorStop(0, priceColor + '40'); grad.addColorStop(1, priceColor + '00');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      prices.forEach(function (p, i) {
+        var x = (i / (prices.length - 1)) * w;
+        var py = h - ((p - pmin) / range) * (h - 12) - 6;
+        if (i === 0) ctx.moveTo(x, py); else ctx.lineTo(x, py);
+      });
+      ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.closePath(); ctx.fill();
+      // Line
+      ctx.strokeStyle = priceColor; ctx.lineWidth = 2;
+      ctx.beginPath();
+      prices.forEach(function (p, i) {
+        var x = (i / (prices.length - 1)) * w;
+        var py = h - ((p - pmin) / range) * (h - 12) - 6;
+        if (i === 0) ctx.moveTo(x, py); else ctx.lineTo(x, py);
+      });
+      ctx.stroke();
+      // Latest price label (left axis)
+      ctx.fillStyle = priceColor; ctx.font = '11px system-ui, sans-serif'; ctx.textAlign = 'left';
+      ctx.fillText('$' + latest.toFixed(2), 6, 14);
+      ctx.fillStyle = 'rgba(255,255,255,0.45)';
+      ctx.fillText('$' + pmin.toFixed(2), 6, h - 6);
+    }
+
+    // ---- YES probability line (right axis, fixed 0..1) ----
+    if (probs.length >= 2) {
+      var probColor = opts.probColor || '#ffd980';
+      ctx.strokeStyle = probColor; ctx.lineWidth = 2;
+      ctx.setLineDash([2, 3]);
+      ctx.beginPath();
+      probs.forEach(function (p, i) {
+        var x = (i / (probs.length - 1)) * w;
+        var py = h - p * (h - 12) - 6;
+        if (i === 0) ctx.moveTo(x, py); else ctx.lineTo(x, py);
+      });
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // Right-axis labels
+      var lastProb = probs[probs.length - 1];
+      ctx.fillStyle = probColor; ctx.font = '11px system-ui, sans-serif'; ctx.textAlign = 'right';
+      ctx.fillText('YES ' + (lastProb * 100).toFixed(1) + '%', w - 6, 14);
+      ctx.fillStyle = 'rgba(255,255,255,0.45)';
+      ctx.fillText('100%', w - 6, 14 + 14);
+      ctx.fillText('0%', w - 6, h - 6);
+    }
+
+    // Bet-tick overlay anchored to the price line
+    if (Array.isArray(opts.overlay) && opts.overlay.length && prices.length >= 2) {
+      var pmin2 = Math.min.apply(null, prices), pmax2 = Math.max.apply(null, prices);
+      var latest2 = prices[prices.length - 1];
+      var natural2 = pmax2 - pmin2;
+      var min2 = Math.abs(latest2) >= 1000 ? Math.abs(latest2) * 0.0012 : Math.max(Math.abs(latest2) * 0.01, 0.0025);
+      var range2 = Math.max(1e-9, natural2, min2);
+      if (range2 > natural2) {
+        var c2 = natural2 > 0 ? (pmin2 + pmax2) / 2 : latest2;
+        pmin2 = c2 - range2 / 2;
+        pmax2 = c2 + range2 / 2;
+      }
+      opts.overlay.forEach(function (o) {
+        if (!Number.isFinite(o.frac) || !Number.isFinite(o.value)) return;
+        var x = Math.max(8, Math.min(w - 8, o.frac * w));
+        var py = h - ((o.value - pmin2) / range2) * (h - 12) - 6;
+        py = Math.max(8, Math.min(h - 8, py));
+        drawBetGlyph(ctx, x, py, o.color || '#cbd1f0', o.seed);
+      });
+    }
+  }
+
   // --------------------------------------------------------------------------
   // Bet flow — drives the existing trade desk so OST cash actually moves
   // --------------------------------------------------------------------------
@@ -1363,12 +1481,41 @@
             var series = window.OST_PREDICTION_API && typeof window.OST_PREDICTION_API.btcSeries === 'function'
               ? window.OST_PREDICTION_API.btcSeries()
               : [];
-            var points = series.map(function (point) { return Number(point && point.price); }).filter(Number.isFinite).slice(-160);
-            if (chart && points.length > 1) {
+            // Build aligned points arrays for the combined chart:
+            //   prices[i]  = BTC USD at tick i
+            //   probs[i]   = YES probability AT THAT BTC PRICE using the
+            //                canonical openPrice + msLeft so two devices that
+            //                replay the same ticks compute the same overlay.
+            var canonRound = (window.OST_PREDICTION_API && typeof window.OST_PREDICTION_API.canonicalRound === 'function')
+              ? window.OST_PREDICTION_API.canonicalRound() : null;
+            var openPx = (canonRound && Number(canonRound.openPrice)) || Number(market.meta.openPrice) || 0;
+            var prices = [];
+            var probs = [];
+            series.slice(-160).forEach(function (point) {
+              var pp = Number(point && point.price);
+              if (!Number.isFinite(pp)) return;
+              prices.push(pp);
+              if (openPx > 0) {
+                var dPct = ((pp - openPx) / openPx) * 100;
+                // Same shape as the worker's serverComputeBtcOdds, simplified
+                // to match the rendered direction without per-client noise.
+                var ms = Math.max(0, market.meta.closeAt - (Number(point.ts) || Date.now()));
+                var rem = Math.max(0.05, ms / (5 * 60 * 1000));
+                var scale = 0.22 * Math.sqrt(rem);
+                var z = dPct / Math.max(scale, 0.001);
+                var yes = 1 / (1 + Math.exp(-z));
+                var elapsed = 1 - rem;
+                yes = 0.5 + (yes - 0.5) * (0.55 + 0.40 * elapsed);
+                probs.push(Math.max(0.02, Math.min(0.98, yes)));
+              } else {
+                probs.push(0.5);
+              }
+            });
+            if (chart && (prices.length > 1 || probs.length > 1)) {
               chart.style.width = '100%';
               chart.style.height = '280px';
-              drawSeries(chart, points, d >= 0 ? '#7ce6a8' : '#ff7c8a');
-              setText(bodyEl, 'chartStatus', 'live BTC · ' + points.length + ' pts · ' + fmtTime(Date.now()));
+              drawCombinedSeries(chart, prices, probs, { priceColor: d >= 0 ? '#7ce6a8' : '#ff7c8a', probColor: '#ffd980' });
+              setText(bodyEl, 'chartStatus', 'live BTC ' + prices.length + ' pts · YES overlay · ' + fmtTime(Date.now()));
             }
           } catch (_) {}
           recalcProjected();
