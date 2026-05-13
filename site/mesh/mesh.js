@@ -1248,9 +1248,15 @@ class MeshPavilion {
   _renderLocation(payload, role) {
     const live = payload.kind === 'location-live';
     const card = this._makeLocationCard(payload, role);
-    // Persist every location ping so the chat keeps a linear trail and the
-    // recipient can see past pins after the live session ends.
-    this._persistEntry(role, 'location', payload);
+    // Persist every ping; for live ticks throttle to ~30s/role to avoid bloat.
+    const now = Date.now();
+    this._lastLocPersist = this._lastLocPersist || {};
+    const lastKey = role + ':' + (live ? 'live' : 'ping');
+    const lastTs = this._lastLocPersist[lastKey] || 0;
+    if (!live || now - lastTs > 30_000) {
+      this._persistEntry(role, 'location', payload);
+      this._lastLocPersist[lastKey] = now;
+    }
     if (live) {
       const existing = role === 'me' ? this.localLiveBubble : this.peerLiveBubble;
       if (existing) {

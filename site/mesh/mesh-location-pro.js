@@ -51,12 +51,17 @@
   var PEER_KEY    = 'ost.mesh.locationPro.peerFix.v2';
 
   var TRACE_REPLY_TIMEOUT_MS = 8000;
-  var HEARTBEAT_MS           = 30 * 1000;
-  var MIN_BROADCAST_MS       = 8 * 1000;     // never spam more than every 8s
-  var MAX_BROADCAST_MS       = 45 * 1000;    // always send at least once per 45s while live
-  var MIN_BROADCAST_DIST_M   = 12;           // ~one parking spot
-  var STALE_FIX_FORCE_MS     = 60 * 1000;
-  var BG_MAX_BROADCAST_MS    = 90 * 1000;    // background mode slower keepalive
+  var HEARTBEAT_MS           = 12 * 1000;     // faster keepalive
+  var MIN_BROADCAST_MS       = 3 * 1000;      // up to ~20 ticks/min while moving
+  var MAX_BROADCAST_MS       = 18 * 1000;    // always send at least once per 18s while live
+  var MIN_BROADCAST_DIST_M   = 5;             // 5 m sensitivity (sidewalk steps)
+  var STALE_FIX_FORCE_MS     = 30 * 1000;
+  var BG_MAX_BROADCAST_MS    = 35 * 1000;     // background mode keepalive (faster)
+  var TRACE_HISTORY_KEY      = 'ost.mesh.locationPro.traceHistory.v3';
+  var TRACE_HISTORY_MAX      = 240;           // ~20 min of 5s ticks per peer
+  var TRACE_HISTORY_MIN_DT_MS = 4000;
+  var TRACE_HISTORY_MIN_D_M   = 4;
+  var DENIED_MODAL_COOLDOWN_MS = 60 * 1000;
 
   var DURATIONS = [
     { id: '15m', label: '15 minutes', ms: 15 * 60 * 1000 },
@@ -156,6 +161,104 @@
   function loadPeerFix()  { return readJson(PEER_KEY, null); }
   function savePeerFix(f) { if (f) writeJson(PEER_KEY, f); else delJson(PEER_KEY); }
 
+  // ---- last-step trail (own + per-peer breadcrumbs)
+  function loadTraceHistory() {
+    var v = readJson(TRACE_HISTORY_KEY, null);
+    if (!v || typeof v !== 'object') return { own: [], peers: {} };
+    if (!Array.isArray(v.own)) v.own = [];
+    if (!v.peers || typeof v.peers !== 'object') v.peers = {};
+    return v;
+  }
+  function saveTraceHistory(h) { writeJson(TRACE_HISTORY_KEY, h); }
+  function pushTrail(list, fix) {
+    if (!fix || fix.lat == null || fix.lon == null) return list;
+    var last = list.length ? list[list.length - 1] : null;
+    if (last) {
+      var dt = (fix.ts || nowMs()) - (last.ts || 0);
+      var dist = haversine(last, fix);
+      if (dt < TRACE_HISTORY_MIN_DT_MS && (dist == null || dist < TRACE_HISTORY_MIN_D_M)) return list;
+    }
+    list.push({ lat: fix.lat, lon: fix.lon, acc: fix.acc, spd: fix.spd, hdg: fix.hdg, ts: fix.ts || nowMs() });
+    if (list.length > TRACE_HISTORY_MAX) list.splice(0, list.length - TRACE_HISTORY_MAX);
+    return list;
+  }
+  function recordOwnStep(fix) {
+    var h = loadTraceHistory();
+    h.own = pushTrail(h.own, fix);
+    saveTraceHistory(h);
+  }
+  function recordPeerStep(peerKey, fix) {
+    if (!peerKey) return;
+    var h = loadTraceHistory();
+    h.peers[peerKey] = pushTrail(h.peers[peerKey] || [], fix);
+    saveTraceHistory(h);
+  }
+  function ownTrail() { return loadTraceHistory().own || []; }
+  function peerTrail(peerKey) { var h = loadTraceHistory(); return (peerKey && h.peers[peerKey]) || []; }
+
+  // ---- last-step trail viewer (free OpenStreetMap + Leaflet, no API key)
+  function buildTrailHtml(myTrail, peerTrail, peerName) {
+    var myJson  = JSON.stringify(myTrail || []);
+    var pJson   = JSON.stringify(peerTrail || []);
+    var labelMe = JSON.stringify('You');
+    var labelP  = JSON.stringify(peerName || 'Peer');
+    return [
+      '<!doctype html><html><head><meta charset="utf-8">',
+      '<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">',
+      '<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />',
+      '<style>html,body,#m{margin:0;padding:0;height:100%;background:#02060f;color:#dde6ff;font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif}',
+      '.legend{position:absolute;top:8px;left:8px;background:rgba(11,18,38,.92);border:1px solid #243561;color:#dde6ff;padding:6px 10px;border-radius:10px;font-size:12px;z-index:1000;line-height:1.5}',
+      '.legend .sw{display:inline-block;width:12px;height:3px;vertical-align:middle;margin-right:6px}</style>',
+      '</head><body><div id="m"></div>',
+      '<div class="legend"><div><span class="sw" style="background:#5ad7ff"></span>', escapeHtml(peerName || 'Peer'), '</div>',
+      '<div><span class="sw" style="background:#ffb454"></span>You</div></div>',
+      '<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>',
+      '<script>(function(){',
+      'var my=', myJson, ',pr=', pJson, ',labelMe=', labelMe, ',labelP=', labelP, ';',
+      'var map=L.map("m",{zoomControl:true}).setView([0,0],2);',
+      'L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"\u00a9 OpenStreetMap"}).addTo(map);',
+      'function line(arr,color){if(!arr.length)return null;var pts=arr.map(function(p){return[p.lat,p.lon];});var pl=L.polyline(pts,{color:color,weight:4,opacity:.85}).addTo(map);var last=arr[arr.length-1];L.circleMarker([last.lat,last.lon],{radius:7,color:color,fillColor:color,fillOpacity:.9}).addTo(map);return pl;}',
+      'var b=null;var pr1=line(pr,"#5ad7ff");var my1=line(my,"#ffb454");',
+      'var bounds=[];if(pr.length)pr.forEach(function(p){bounds.push([p.lat,p.lon]);});if(my.length)my.forEach(function(p){bounds.push([p.lat,p.lon]);});',
+      'if(bounds.length){map.fitBounds(bounds,{padding:[24,24],maxZoom:17});}',
+      '})();<\/script></body></html>'
+    ].join('');
+  }
+  function ensureTrailViewer() {
+    var el = document.getElementById('mlpTrail'); if (el) return el;
+    el = document.createElement('div'); el.id = 'mlpTrail';
+    el.innerHTML =
+      '<div class="mlp-trail-card">' +
+        '<div class="mlp-trail-head">' +
+          '<strong>Last-step path</strong>' +
+          '<button class="mlp-trail-close" type="button">Close</button>' +
+        '</div>' +
+        '<div class="mlp-trail-map"><iframe sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>' +
+        '<div class="mlp-trail-foot"><span class="mlp-trail-meta">—</span><span>Tiles \u00a9 OpenStreetMap contributors \u00b7 free, no tracking</span></div>' +
+      '</div>';
+    document.body.appendChild(el);
+    el.addEventListener('click', function (e) { if (e.target === el) el.classList.remove('is-on'); });
+    el.querySelector('.mlp-trail-close').addEventListener('click', function () { el.classList.remove('is-on'); });
+    return el;
+  }
+  function openTrailViewer() {
+    var el = ensureTrailViewer();
+    var p = pavilion();
+    var key = (p && p.peerAddr) || 'peer';
+    var pTrail = peerTrail(key);
+    var mTrail = ownTrail();
+    if (!pTrail.length && !mTrail.length) {
+      el.querySelector('.mlp-trail-meta').textContent = 'No breadcrumbs yet \u2014 share live or trace the peer first.';
+    } else {
+      el.querySelector('.mlp-trail-meta').textContent =
+        'Peer steps: ' + pTrail.length + ' \u00b7 your steps: ' + mTrail.length;
+    }
+    var html = buildTrailHtml(mTrail, pTrail, key);
+    var iframe = el.querySelector('iframe');
+    iframe.srcdoc = html;
+    el.classList.add('is-on');
+  }
+
   // ============== styles ==============
   function injectStyle() {
     if (document.getElementById('mesh-location-pro-style')) return;
@@ -213,7 +316,23 @@
       // ---- pills used in chat bubbles
       '.mlp-pill{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:2px 8px;border-radius:999px;background:#0e1c44;color:#9be4ff;border:1px solid #244e7a;margin-left:6px}',
       '.mlp-pill.bg{color:#ffd1a3;border-color:#7a5524;background:#3a230b}',
-      '.mlp-pill.trace{color:#ffb3ff;border-color:#7a2480;background:#39103a}'
+      '.mlp-pill.trace{color:#ffb3ff;border-color:#7a2480;background:#39103a}',
+      // ---- last-step trail viewer
+      '#mlpTrail{position:fixed;inset:0;background:rgba(4,8,18,.85);display:none;align-items:center;justify-content:center;z-index:99999;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}',
+      '#mlpTrail.is-on{display:flex}',
+      '#mlpTrail .mlp-trail-card{width:min(720px,96vw);height:min(80vh,720px);background:#0b1226;border:1px solid #243561;border-radius:16px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.6)}',
+      '#mlpTrail .mlp-trail-head{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #1c2a52;color:#dde6ff;font-size:13px}',
+      '#mlpTrail .mlp-trail-head strong{flex:1}',
+      '#mlpTrail .mlp-trail-head button{background:#1a2447;color:#cdd9f5;border:0;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12px;min-height:36px}',
+      '#mlpTrail .mlp-trail-map{flex:1;position:relative;background:#02060f}',
+      '#mlpTrail iframe{border:0;width:100%;height:100%;display:block;background:#02060f}',
+      '#mlpTrail .mlp-trail-foot{padding:8px 14px;border-top:1px solid #1c2a52;color:#9fb1dd;font-size:11px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}',
+      // ---- mobile overlap fixes (when Mesh is open / mobile dock is visible)
+      '@media (max-width: 720px){',
+      '  .mlp-status{top:calc(8px + env(safe-area-inset-top));font-size:11px;padding:6px 10px}',
+      '  .mlp-peer{width:calc(100vw - 16px);right:8px;bottom:calc(76px + env(safe-area-inset-bottom))}',
+      '  body.ost-mesh-scroll-lock .mlp-peer{bottom:calc(14px + env(safe-area-inset-bottom))}',
+      '}'
     ].join('');
     var s = document.createElement('style');
     s.id = 'mesh-location-pro-style';
@@ -371,6 +490,7 @@
       '<div class="acts">' +
         '<a class="primary maps" target="_blank" rel="noopener">Open in Maps</a>' +
         '<button class="trace">Trace last step</button>' +
+        '<button class="path">Path</button>' +
         '<button class="shareback">Share back</button>' +
       '</div>';
     document.body.appendChild(el);
@@ -385,6 +505,7 @@
         setTimeout(function () { b.disabled = false; b.textContent = 'Trace last step'; }, 1600);
       });
     });
+    el.querySelector('.path').addEventListener('click', function () { openTrailViewer(); });
     el.querySelector('.shareback').addEventListener('click', function () { openModal(); });
     return el;
   }
@@ -480,6 +601,7 @@
     };
     try { p.sendAppPayload(msg); } catch (e) {}
     state.lastBroadcast = { fix: fix, ts: nowMs() };
+    try { recordOwnStep(fix); } catch (e) {}
     // mirror in our chat bubble using existing renderer
     if (typeof p._renderLocation === 'function') {
       try {
@@ -503,10 +625,14 @@
     if (err.code === 1) state.lastGeoError = 'denied';
     else if (err.code === 2) state.lastGeoError = 'unavailable';
     else if (err.code === 3) state.lastGeoError = 'timeout';
-    // On iOS Safari, PERMISSION_DENIED kills the watch — stop sharing and surface UI.
+    // On iOS Safari, PERMISSION_DENIED kills the watch — stop sharing and surface UI ONCE.
     if (err.code === 1 && loadSession()) {
       stopShare('denied');
-      try { openModal(); } catch (e) {}
+      var lastDeny = state.lastDeniedModalAt || 0;
+      if (nowMs() - lastDeny > DENIED_MODAL_COOLDOWN_MS) {
+        state.lastDeniedModalAt = nowMs();
+        try { openModal(); } catch (e) {}
+      }
     }
   }
 
@@ -518,8 +644,8 @@
     try {
       state.watchId = navigator.geolocation.watchPosition(onWatchPos, onWatchErr, {
         enableHighAccuracy: highAcc,
-        timeout: 15000,
-        maximumAge: 2000
+        timeout: 12000,
+        maximumAge: 1000
       });
     } catch (e) {}
   }
@@ -538,7 +664,7 @@
         saveLastFix(fix);
         resolve(fix);
       }, function (err) { reject(err); }, {
-        enableHighAccuracy: true, timeout: 12000, maximumAge: 5000
+        enableHighAccuracy: true, timeout: 9000, maximumAge: 1500
       });
     });
   }
@@ -758,7 +884,8 @@
       try { p.sendAppPayload({ app: APP, type: 'trace.rep', reqId: payload.reqId, denied: !allow, fix: null, ts: nowMs() }); } catch (e) {}
       return;
     }
-    try { p.sendAppPayload({ app: APP, type: 'trace.rep', reqId: payload.reqId, fix: fix, stale: nowMs() - fix.ts, ts: nowMs() }); } catch (e) {}
+    var trail = ownTrail().slice(-60); // last ~5 min worth of breadcrumbs
+    try { p.sendAppPayload({ app: APP, type: 'trace.rep', reqId: payload.reqId, fix: fix, trail: trail, stale: nowMs() - fix.ts, ts: nowMs() }); } catch (e) {}
   }
 
   function handleTraceRep(payload) {
@@ -775,6 +902,14 @@
         mode: 'trace', stale: payload.stale,
         name: pavilion() && pavilion().peerAddr
       });
+      // Backfill peer trail with reported breadcrumbs (so we can draw the last-step path).
+      if (Array.isArray(payload.trail) && payload.trail.length) {
+        try {
+          var pp2 = pavilion();
+          var key2 = (pp2 && pp2.peerAddr) || 'peer';
+          payload.trail.forEach(function (step) { recordPeerStep(key2, step); });
+        } catch (e) {}
+      }
       var p = pavilion();
       if (p && typeof p._renderLocation === 'function') {
         try {
@@ -800,6 +935,11 @@
       name: rec.name || null,
       receivedAt: nowMs()
     });
+    try {
+      var pp = pavilion();
+      var key = (rec.name) || (pp && pp.peerAddr) || 'peer';
+      recordPeerStep(key, rec.fix);
+    } catch (e) {}
     refreshPeerPanel();
   }
 
@@ -918,6 +1058,7 @@
     lastFix: loadLastFix,
     peerFix: loadPeerFix,
     requestTrace: requestTrace,
+    viewTrail: openTrailViewer,
     showPeerPanel: function () { var el = ensurePeerPanel(); if (loadPeerFix()) el.classList.add('is-on'); },
     hidePeerPanel: function () { var el = document.getElementById('mlpPeer'); if (el) el.classList.remove('is-on'); }
   };
