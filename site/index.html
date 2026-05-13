@@ -553,19 +553,19 @@
             <div class="gv-step-header"><span class="gv-step-num">1</span> Guardian Information</div>
             <div class="gv-form-row">
               <label class="gv-form-label">Guardian Full Legal Name <span class="gv-req">*</span></label>
-              <input type="text" class="gv-form-input" id="gvGuardianName" placeholder="As shown on government ID" maxlength="100" autocomplete="name">
+              <input type="text" class="gv-form-input" id="gvGuardianName" placeholder="As shown on government ID" maxlength="100" autocomplete="name" aria-label="As shown on government ID">
             </div>
             <div class="gv-form-row">
               <label class="gv-form-label">Guardian Email <span class="gv-req">*</span></label>
-              <input type="email" class="gv-form-input" id="gvGuardianEmail" placeholder="guardian@email.com" maxlength="120" autocomplete="email">
+              <input type="email" class="gv-form-input" id="gvGuardianEmail" placeholder="guardian@email.com" maxlength="120" autocomplete="email" aria-label="guardian@email.com">
             </div>
             <div class="gv-form-row">
               <label class="gv-form-label">Wallet Address (optional)</label>
-              <input type="text" class="gv-form-input" id="gvWalletAddr" placeholder="Connect wallet later" readonly>
+              <input type="text" class="gv-form-input" id="gvWalletAddr" placeholder="Connect wallet later" readonly aria-label="Connect wallet later">
             </div>
             <div class="gv-form-row">
               <label class="gv-form-label">Country of Residence <span class="gv-req">*</span></label>
-              <select class="gv-form-input gv-form-select" id="gvCountry">
+              <select class="gv-form-input gv-form-select" id="gvCountry" aria-label="Country">
                 <option value="">Select country...</option>
                 <option value="US">United States</option><option value="CA">Canada</option><option value="GB">United Kingdom</option>
                 <option value="DE">Germany</option><option value="FR">France</option><option value="AU">Australia</option>
@@ -583,7 +583,7 @@
             <div class="gv-step-header"><span class="gv-step-num">2</span> Child Information</div>
             <div class="gv-form-row">
               <label class="gv-form-label">Child&rsquo;s First Name <span class="gv-req">*</span></label>
-              <input type="text" class="gv-form-input" id="gvChildName" placeholder="First name only" maxlength="50">
+              <input type="text" class="gv-form-input" id="gvChildName" placeholder="First name only" maxlength="50" aria-label="First name only">
             </div>
             <div class="gv-form-row">
               <label class="gv-form-label">Child&rsquo;s Date of Birth <span class="gv-req">*</span></label>
@@ -591,7 +591,7 @@
             </div>
             <div class="gv-form-row">
               <label class="gv-form-label">Relationship to Child <span class="gv-req">*</span></label>
-              <select class="gv-form-input gv-form-select" id="gvRelationship">
+              <select class="gv-form-input gv-form-select" id="gvRelationship" aria-label="Relationship to child">
                 <option value="">Select relationship...</option>
                 <option value="parent">Parent</option>
                 <option value="grandparent">Grandparent</option>
@@ -610,7 +610,7 @@
             <div class="gv-step-header"><span class="gv-step-num">3</span> Verification &amp; Consent</div>
             <div class="gv-form-row">
               <label class="gv-form-label">Security Question <span class="gv-req">*</span></label>
-              <select class="gv-form-input gv-form-select" id="gvSecQuestion">
+              <select class="gv-form-input gv-form-select" id="gvSecQuestion" aria-label="Security question">
                 <option value="">Select a security question...</option>
                 <option value="pet">What was the name of your first pet?</option>
                 <option value="school">What elementary school did you attend?</option>
@@ -620,15 +620,15 @@
             </div>
             <div class="gv-form-row">
               <label class="gv-form-label">Security Answer <span class="gv-req">*</span></label>
-              <input type="text" class="gv-form-input" id="gvSecAnswer" placeholder="Your answer" maxlength="100">
+              <input type="text" class="gv-form-input" id="gvSecAnswer" placeholder="Your answer" maxlength="100" aria-label="Your answer">
             </div>
             <div class="gv-form-row">
               <label class="gv-form-label">Set Vault PIN (4&ndash;6 digits) <span class="gv-req">*</span></label>
-              <input type="password" class="gv-form-input" id="gvPin" placeholder="&#8226;&#8226;&#8226;&#8226;" maxlength="6" pattern="[0-9]{4,6}" inputmode="numeric">
+              <input type="password" class="gv-form-input" id="gvPin" placeholder="&#8226;&#8226;&#8226;&#8226;" maxlength="6" pattern="[0-9]{4,6}" inputmode="numeric" aria-label="&#8226;&#8226;&#8226;&#8226;">
             </div>
             <div class="gv-form-row">
               <label class="gv-form-label">Confirm Vault PIN <span class="gv-req">*</span></label>
-              <input type="password" class="gv-form-input" id="gvPinConfirm" placeholder="&#8226;&#8226;&#8226;&#8226;" maxlength="6" pattern="[0-9]{4,6}" inputmode="numeric">
+              <input type="password" class="gv-form-input" id="gvPinConfirm" placeholder="&#8226;&#8226;&#8226;&#8226;" maxlength="6" pattern="[0-9]{4,6}" inputmode="numeric" aria-label="&#8226;&#8226;&#8226;&#8226;">
             </div>
             <div class="gv-consent-checks">
               <label class="gv-consent-row">
@@ -732,7 +732,7 @@
 
           <div class="depin-form-row">
             <label class="depin-form-label">Resource Type <span class="gv-req">*</span></label>
-            <select class="depin-form-input" id="depinResourceType">
+            <select class="depin-form-input" id="depinResourceType" aria-label="DePIN resource type">
               <option value="">Select resource...</option>
               <option value="bandwidth">&#128246; Bandwidth (ISP upload sharing)</option>
               <option value="gpu">&#127918; GPU (CUDA/OpenCL compute)</option>
@@ -760,17 +760,17 @@
                 <input type="radio" name="depinProofType" value="api"> API Key / Node ID
               </label>
             </div>
-            <input type="text" class="depin-form-input" id="depinProofValue" placeholder="Paste URL, node ID, or upload path...">
+            <input type="text" class="depin-form-input" id="depinProofValue" placeholder="Paste URL, node ID, or upload path..." aria-label="Paste URL, node ID, or upload path...">
           </div>
 
           <div class="depin-form-row depin-form-hidden" id="depinWalletSection">
             <label class="depin-form-label">Your Solana Wallet <span class="gv-req">*</span></label>
-            <input type="text" class="depin-form-input" id="depinWalletAddr" placeholder="Connect wallet above" readonly>
+            <input type="text" class="depin-form-input" id="depinWalletAddr" placeholder="Connect wallet above" readonly aria-label="Connect wallet above">
           </div>
 
           <div class="depin-form-row depin-form-hidden" id="depinLocationSection">
             <label class="depin-form-label">Node Location (city, country)</label>
-            <input type="text" class="depin-form-input" id="depinLocation" placeholder="e.g. Austin, TX, USA" maxlength="100">
+            <input type="text" class="depin-form-input" id="depinLocation" placeholder="e.g. Austin, TX, USA" maxlength="100" aria-label="e.g. Austin, TX, USA">
           </div>
 
           <div class="depin-verify-status" id="depinVerifyStatus"></div>
@@ -1048,7 +1048,7 @@
             <div class="browser-dots"><span></span><span></span><span></span></div>
             <div class="browser-bar">
               <span class="browser-lock">&#128274;</span>
-              <input type="url" id="browserUrl" class="browser-url-input" placeholder="Paste any product URL &mdash; amazon.com/dp/B0..., nike.com/product/..., any website" autocomplete="off">
+              <input type="url" id="browserUrl" class="browser-url-input" placeholder="Paste any product URL &mdash; amazon.com/dp/B0..., nike.com/product/..., any website" autocomplete="off" aria-label="Paste any product URL &mdash; amazon.com/dp/B0..., nike.com/product/..., any website">
               <button class="browser-go" id="browserGo">Go &#8594;</button>
             </div>
             <div class="browser-ost-badge">&#9673; OST Interchange Active</div>
@@ -1106,13 +1106,13 @@
           <div class="pay-anywhere-form" style="margin-top:16px;">
             <div class="pa-field">
               <label for="paUrl" data-i18n="pay.aurl">Merchant URL</label>
-              <input type="url" id="paUrl" class="pa-input" placeholder="https://amazon.com/cart/checkout" autocomplete="off">
+              <input type="url" id="paUrl" class="pa-input" placeholder="https://amazon.com/cart/checkout" autocomplete="off" aria-label="https://amazon.com/cart/checkout">
               <span class="pa-url-preview" id="paUrlPreview"></span>
             </div>
             <div class="pa-row">
               <div class="pa-field pa-field-half">
                 <label for="paAmount" data-i18n="pay.aamount">Amount to Pay</label>
-                <input type="number" id="paAmount" class="pa-input" placeholder="0.00" min="0" step="any">
+                <input type="number" id="paAmount" class="pa-input" placeholder="0.00" min="0" step="any" aria-label="0.00">
               </div>
               <div class="pa-field pa-field-half">
                 <label for="paCurrency" data-i18n="pay.acurrency">Their Currency</label>
@@ -1280,7 +1280,7 @@
                 <label class="gc2-label">&#127991; Select Brand</label>
                 <div class="gc2-brand-search-wrap">
                   <span class="gc2-search-icon">&#128269;</span>
-                  <input type="text" id="gc2BrandSearch" class="gc2-inp gc2-inp-search" placeholder="Search 32+ brands..." autocomplete="off">
+                  <input type="text" id="gc2BrandSearch" class="gc2-inp gc2-inp-search" placeholder="Search 32+ brands..." autocomplete="off" aria-label="Search 32+ brands...">
                   <div class="gc2-brand-dropdown" id="gc2BrandDropdown"></div>
                 </div>
                 <div class="gc2-selected-brand" id="gc2SelectedBrand" style="display:none">
@@ -1295,14 +1295,14 @@
               <div class="gc2-field">
                 <label class="gc2-label">&#128179; Card Balance</label>
                 <div class="gc2-balance-row">
-                  <select id="gc2Currency" class="gc2-currency-sel">
+                  <select id="gc2Currency" class="gc2-currency-sel" aria-label="Gift card currency">
                     <option value="USD">$ USD</option><option value="EUR">&euro; EUR</option><option value="GBP">&pound; GBP</option>
                     <option value="CAD">$ CAD</option><option value="AUD">$ AUD</option><option value="MXN">$ MXN</option>
                     <option value="BRL">R$ BRL</option><option value="JPY">&yen; JPY</option>
                     <option value="INR">&#8377; INR</option><option value="KRW">&#8361; KRW</option>
                     <option value="TRY">&#8378; TRY</option><option value="AED">AED</option>
                   </select>
-                  <input type="number" id="gc2Balance" class="gc2-inp gc2-inp-balance" placeholder="0.00" min="1" max="10000" step="0.01">
+                  <input type="number" id="gc2Balance" class="gc2-inp gc2-inp-balance" placeholder="0.00" min="1" max="10000" step="0.01" aria-label="0.00">
                 </div>
                 <div class="gc2-quicks">
                   <button class="gc2-q" data-amt="25">$25</button>
@@ -1318,7 +1318,7 @@
               <div class="gc2-field">
                 <label class="gc2-label">&#128273; Card Code</label>
                 <div class="gc2-code-input-wrap">
-                  <input type="text" id="gc2Code" class="gc2-inp gc2-inp-code" placeholder="XXXX-XXXX-XXXX-XXXX" maxlength="19" autocomplete="off" spellcheck="false">
+                  <input type="text" id="gc2Code" class="gc2-inp gc2-inp-code" placeholder="XXXX-XXXX-XXXX-XXXX" maxlength="19" autocomplete="off" spellcheck="false" aria-label="XXXX-XXXX-XXXX-XXXX">
                   <span class="gc2-code-status" id="gc2CodeStatus"></span>
                 </div>
                 <div class="gc2-code-hint">Enter 16 digits. Dashes are added automatically.</div>
@@ -1327,7 +1327,7 @@
               <!-- Card PIN (optional) -->
               <div class="gc2-field">
                 <label class="gc2-label">&#128274; PIN <span class="gc2-opt">(if applicable)</span></label>
-                <input type="text" id="gc2Pin" class="gc2-inp" placeholder="4-8 digit PIN" maxlength="8" autocomplete="off">
+                <input type="text" id="gc2Pin" class="gc2-inp" placeholder="4-8 digit PIN" maxlength="8" autocomplete="off" aria-label="4-8 digit PIN">
               </div>
 
               <button class="gc2-offer-btn" id="gc2GetOffer" disabled>&#9889; Get Instant Offer</button>
@@ -1466,7 +1466,7 @@
               <!-- Country Selector -->
               <div class="fuel2-country-row">
                 <label class="fuel2-country-label">&#127758; Country:</label>
-                <select id="fuel2Country" class="fuel2-country-sel">
+                <select id="fuel2Country" class="fuel2-country-sel" aria-label="Country">
                   <option value="US">&#127482;&#127480; United States</option>
                   <option value="CA">&#127464;&#127462; Canada</option>
                   <option value="MX">&#127474;&#127485; Mexico</option>
@@ -1491,7 +1491,7 @@
               </div>
 
               <div class="fuel2-search-bar">
-                <input type="text" id="fuel2SearchLoc" class="fuel2-loc-input" placeholder="&#128269; Search city, zip, or station name...">
+                <input type="text" id="fuel2SearchLoc" class="fuel2-loc-input" placeholder="&#128269; Search city, zip, or station name..." aria-label="&#128269; Search city, zip, or station name...">
                 <button class="fuel2-find-btn" id="fuel2FindBtn">Find Stations</button>
               </div>
               <div class="fuel2-fuel-tabs">
@@ -1577,12 +1577,12 @@
             <div class="fuel2-det-pay">
               <div class="fuel2-det-section-title">&#128176; Merchant Checkout with OST</div>
               <div class="fuel2-det-session-grid">
-                <div class="fuel2-pf"><label>Merchant Session</label><input type="text" id="fuel2DetSession" class="fuel2-det-inp" placeholder="Scan QR or enter station code"></div>
-                <div class="fuel2-pf"><label>Pump / Bay</label><input type="text" id="fuel2DetPump" class="fuel2-det-inp" placeholder="04"></div>
+                <div class="fuel2-pf"><label>Merchant Session</label><input type="text" id="fuel2DetSession" class="fuel2-det-inp" placeholder="Scan QR or enter station code" aria-label="Scan QR or enter station code"></div>
+                <div class="fuel2-pf"><label>Pump / Bay</label><input type="text" id="fuel2DetPump" class="fuel2-det-inp" placeholder="04" aria-label="04"></div>
               </div>
               <div class="fuel2-det-pay-fields">
-                <div class="fuel2-pf"><label>Fuel Quantity</label><input type="number" id="fuel2DetGal" class="fuel2-det-inp" placeholder="15" min="1" max="999" step="any"></div>
-                <div class="fuel2-pf"><label>Price/unit</label><input type="number" id="fuel2DetPrice" class="fuel2-det-inp" placeholder="3.50" min="0.01" max="20" step="0.01" readonly></div>
+                <div class="fuel2-pf"><label>Fuel Quantity</label><input type="number" id="fuel2DetGal" class="fuel2-det-inp" placeholder="15" min="1" max="999" step="any" aria-label="15"></div>
+                <div class="fuel2-pf"><label>Price/unit</label><input type="number" id="fuel2DetPrice" class="fuel2-det-inp" placeholder="3.50" min="0.01" max="20" step="0.01" readonly aria-label="3.50"></div>
               </div>
               <div class="fuel2-det-merchant-note">Use a station QR, POS session, or clerk-issued code to bind the fill to a real checkout flow before you authorize OST.</div>
               <div class="fuel2-det-ost-swap">
@@ -1606,7 +1606,7 @@
               <div class="fuel2-det-section-title">Reviews</div>
               <div class="fuel2-det-reviews" id="fuel2DetReviews"></div>
               <div class="fuel2-det-review-form">
-                <input type="text" id="fuel2ReviewText" class="fuel2-det-inp fuel2-review-inp" placeholder="Write a review...">
+                <input type="text" id="fuel2ReviewText" class="fuel2-det-inp fuel2-review-inp" placeholder="Write a review..." aria-label="Write a review...">
                 <div class="fuel2-review-stars" id="fuel2ReviewStars">
                   <span data-star="1">&#9734;</span><span data-star="2">&#9734;</span><span data-star="3">&#9734;</span><span data-star="4">&#9734;</span><span data-star="5">&#9734;</span>
                 </div>
@@ -1616,11 +1616,11 @@
             <div class="fuel2-det-section">
               <div class="fuel2-det-section-title">Report a Price</div>
               <div class="fuel2-report-row">
-                <select id="fuel2ReportFuel" class="fuel2-det-inp fuel2-report-sel">
+                <select id="fuel2ReportFuel" class="fuel2-det-inp fuel2-report-sel" aria-label="Fuel type to report">
                   <option value="regular">Regular</option><option value="midgrade">Midgrade</option>
                   <option value="premium">Premium</option><option value="diesel">Diesel</option>
                 </select>
-                <input type="number" id="fuel2ReportPrice" class="fuel2-det-inp" placeholder="$0.00" min="0.01" max="20" step="0.01">
+                <input type="number" id="fuel2ReportPrice" class="fuel2-det-inp" placeholder="$0.00" min="0.01" max="20" step="0.01" aria-label="$0.00">
                 <button class="fuel2-report-btn" id="fuel2ReportBtn">Report</button>
               </div>
             </div>
@@ -2117,8 +2117,8 @@
                 <p class="text-muted" data-i18n="transfer.calcsub">See how much OST you get for any amount.</p>
                 <div class="calc-row">
                   <div class="calc-input-group">
-                    <input type="number" id="calcAmount" class="calc-input" placeholder="100" min="0" step="any" value="100">
-                    <select id="calcCurrency" class="calc-select">
+                    <input type="number" id="calcAmount" class="calc-input" placeholder="100" min="0" step="any" value="100" aria-label="100">
+                    <select id="calcCurrency" class="calc-select" aria-label="Currency">
                       <option value="USD">USD ($)</option>
                       <option value="EUR">EUR</option>
                       <option value="GBP">GBP</option>
@@ -2181,7 +2181,7 @@
               <div class="ct-body">
                 <div class="ct-side ct-from">
                   <label class="ct-label" data-i18n="wallet.convert.from">From</label>
-                  <select class="ct-select" id="transferFrom">
+                  <select class="ct-select" id="transferFrom" aria-label="Transfer source wallet">
                     <option value="SOL">&#9788; Solana (mainnet payment - devnet OST delivery)</option>
                     <option value="BTC">&#8383; Bitcoin (quote only - settle in SOL or USDC)</option>
                     <option value="ETH">&#9830; Ethereum (quote only - settle in SOL or USDC)</option>
@@ -2198,7 +2198,7 @@
                     <option value="NGN">&#8358; Nigerian Naira</option>
                     <option value="MXN">$ Mexican Peso</option>
                   </select>
-                  <input type="number" class="ct-amount" id="transferAmount" placeholder="0.00" min="0" step="any">
+                  <input type="number" class="ct-amount" id="transferAmount" placeholder="0.00" min="0" step="any" aria-label="0.00">
                   <div id="transferQuote" class="ct-quote" style="font-size:.78rem;color:#94a3b8;margin-top:6px;min-height:16px;"></div>
                 </div>
                 <div class="ct-middle">
@@ -2650,7 +2650,7 @@
 
                 <label class="prediction-stake-field" for="predictionStakeInput">
                   <span class="prediction-market-search-label" id="predictionStakeLabel">Stake in OST</span>
-                  <input type="number" min="1" step="1" inputmode="decimal" id="predictionStakeInput" class="prediction-market-search-input" value="25" placeholder="25">
+                  <input type="number" min="1" step="1" inputmode="decimal" id="predictionStakeInput" class="prediction-market-search-input" value="25" placeholder="25" aria-label="25">
                 </label>
 
                 <div class="prediction-stake-quick" id="predictionStakeQuick">
@@ -2957,7 +2957,7 @@
               <span class="connector-status" id="statusOpenAI">&#9679; Disconnected</span>
             </div>
             <div class="connector-fields">
-              <label>API Key<input type="password" class="connector-input" id="apiKeyOpenAI" placeholder="sk-..." autocomplete="off"></label>
+              <label>API Key<input type="password" class="connector-input" id="apiKeyOpenAI" placeholder="sk-..." autocomplete="off" aria-label="sk-..."></label>
               <label>Model<select class="connector-select" id="modelOpenAI"><option value="gpt-4o">GPT-4o</option><option value="gpt-4o-mini">GPT-4o Mini</option><option value="gpt-4-turbo">GPT-4 Turbo</option><option value="gpt-3.5-turbo">GPT-3.5 Turbo</option></select></label>
               <button class="btn btn-primary btn-sm btn-connect" data-connector="openai">Test Connection</button>
             </div>
@@ -2970,7 +2970,7 @@
               <span class="connector-status" id="statusAnthropic">&#9679; Disconnected</span>
             </div>
             <div class="connector-fields">
-              <label>API Key<input type="password" class="connector-input" id="apiKeyAnthropic" placeholder="sk-ant-..." autocomplete="off"></label>
+              <label>API Key<input type="password" class="connector-input" id="apiKeyAnthropic" placeholder="sk-ant-..." autocomplete="off" aria-label="sk-ant-..."></label>
               <label>Model<select class="connector-select" id="modelAnthropic"><option value="claude-sonnet-4-20250514">Claude Sonnet 4</option><option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option><option value="claude-3-haiku-20240307">Claude 3 Haiku</option></select></label>
               <button class="btn btn-primary btn-sm btn-connect" data-connector="anthropic">Test Connection</button>
             </div>
@@ -2983,7 +2983,7 @@
               <span class="connector-status" id="statusGemini">&#9679; Disconnected</span>
             </div>
             <div class="connector-fields">
-              <label>API Key<input type="password" class="connector-input" id="apiKeyGemini" placeholder="AIza..." autocomplete="off"></label>
+              <label>API Key<input type="password" class="connector-input" id="apiKeyGemini" placeholder="AIza..." autocomplete="off" aria-label="AIza..."></label>
               <label>Model<select class="connector-select" id="modelGemini"><option value="gemini-2.0-flash">Gemini 2.0 Flash</option><option value="gemini-1.5-pro">Gemini 1.5 Pro</option><option value="gemini-1.5-flash">Gemini 1.5 Flash</option></select></label>
               <button class="btn btn-primary btn-sm btn-connect" data-connector="gemini">Test Connection</button>
             </div>
@@ -2996,8 +2996,8 @@
               <span class="connector-status" id="statusTelegram">&#9679; Disconnected</span>
             </div>
             <div class="connector-fields">
-              <label>Bot Token<input type="password" class="connector-input" id="apiKeyTelegram" placeholder="123456:ABC-DEF..." autocomplete="off"></label>
-              <label>Webhook URL<input type="url" class="connector-input" id="webhookTelegram" placeholder="https://your-server.com/webhook"></label>
+              <label>Bot Token<input type="password" class="connector-input" id="apiKeyTelegram" placeholder="123456:ABC-DEF..." autocomplete="off" aria-label="123456:ABC-DEF..."></label>
+              <label>Webhook URL<input type="url" class="connector-input" id="webhookTelegram" placeholder="https://your-server.com/webhook" aria-label="https://your-server.com/webhook"></label>
               <button class="btn btn-primary btn-sm btn-connect" data-connector="telegram">Test Connection</button>
             </div>
           </div>
@@ -3009,8 +3009,8 @@
               <span class="connector-status" id="statusDiscord">&#9679; Disconnected</span>
             </div>
             <div class="connector-fields">
-              <label>Bot Token<input type="password" class="connector-input" id="apiKeyDiscord" placeholder="MTk..." autocomplete="off"></label>
-              <label>Guild ID<input type="text" class="connector-input" id="guildDiscord" placeholder="123456789012345678"></label>
+              <label>Bot Token<input type="password" class="connector-input" id="apiKeyDiscord" placeholder="MTk..." autocomplete="off" aria-label="MTk..."></label>
+              <label>Guild ID<input type="text" class="connector-input" id="guildDiscord" placeholder="123456789012345678" aria-label="123456789012345678"></label>
               <button class="btn btn-primary btn-sm btn-connect" data-connector="discord">Test Connection</button>
             </div>
           </div>
@@ -3022,8 +3022,8 @@
               <span class="connector-status" id="statusWebhook">&#9679; Disconnected</span>
             </div>
             <div class="connector-fields">
-              <label>Endpoint URL<input type="url" class="connector-input" id="apiKeyWebhook" placeholder="https://api.yourservice.com/ost"></label>
-              <label>Auth Header<input type="text" class="connector-input" id="authWebhook" placeholder="Bearer your-token-here"></label>
+              <label>Endpoint URL<input type="url" class="connector-input" id="apiKeyWebhook" placeholder="https://api.yourservice.com/ost" aria-label="https://api.yourservice.com/ost"></label>
+              <label>Auth Header<input type="text" class="connector-input" id="authWebhook" placeholder="Bearer your-token-here" aria-label="Bearer your-token-here"></label>
               <button class="btn btn-primary btn-sm btn-connect" data-connector="webhook">Test Connection</button>
             </div>
           </div>
@@ -3035,7 +3035,7 @@
               <span class="connector-status" id="statusMCP">&#9679; Disconnected</span>
             </div>
             <div class="connector-fields">
-              <label>Server URL<input type="url" class="connector-input" id="apiKeyMCP" placeholder="https://mcp.example.com/mcp"></label>
+              <label>Server URL<input type="url" class="connector-input" id="apiKeyMCP" placeholder="https://mcp.example.com/mcp" aria-label="https://mcp.example.com/mcp"></label>
               <label>Transport<select class="connector-select" id="transportMCP"><option value="stdio">stdio</option><option value="sse">SSE (HTTP)</option><option value="streamable-http">Streamable HTTP</option></select></label>
               <button class="btn btn-primary btn-sm btn-connect" data-connector="mcp">Test Connection</button>
             </div>
@@ -3048,7 +3048,7 @@
               <span class="connector-status" id="statusClaude">&#9679; Disconnected</span>
             </div>
             <div class="connector-fields">
-              <label>API Key<input type="password" class="connector-input" id="apiKeyClaude" placeholder="sk-ant-..." autocomplete="off"></label>
+              <label>API Key<input type="password" class="connector-input" id="apiKeyClaude" placeholder="sk-ant-..." autocomplete="off" aria-label="sk-ant-..."></label>
               <label>Model<select class="connector-select" id="modelClaude"><option value="claude-opus-4-20250514">Claude Opus 4</option><option value="claude-sonnet-4-20250514">Claude Sonnet 4</option><option value="claude-3-5-haiku-20241022">Claude 3.5 Haiku</option></select></label>
               <button class="btn btn-primary btn-sm btn-connect" data-connector="claude">Test Connection</button>
             </div>
@@ -3061,7 +3061,7 @@
               <span class="connector-status" id="statusGrok">&#9679; Disconnected</span>
             </div>
             <div class="connector-fields">
-              <label>API Key<input type="password" class="connector-input" id="apiKeyGrok" placeholder="xai-..." autocomplete="off"></label>
+              <label>API Key<input type="password" class="connector-input" id="apiKeyGrok" placeholder="xai-..." autocomplete="off" aria-label="xai-..."></label>
               <label>Model<select class="connector-select" id="modelGrok"><option value="grok-beta">Grok Beta</option><option value="grok-2-latest">Grok 2 Latest</option><option value="grok-2-vision-latest">Grok Vision</option></select></label>
               <button class="btn btn-primary btn-sm btn-connect" data-connector="grok">Test Connection</button>
             </div>
@@ -3074,7 +3074,7 @@
               <span class="connector-status" id="statusVSCode">&#9679; Disconnected</span>
             </div>
             <div class="connector-fields">
-              <label>GitHub Token<input type="password" class="connector-input" id="apiKeyVSCode" placeholder="ghp_..." autocomplete="off"></label>
+              <label>GitHub Token<input type="password" class="connector-input" id="apiKeyVSCode" placeholder="ghp_..." autocomplete="off" aria-label="ghp_..."></label>
               <label>Extension<select class="connector-select" id="extVSCode"><option value="copilot">GitHub Copilot</option><option value="copilot-chat">Copilot Chat</option><option value="cline">Cline</option><option value="continue">Continue</option></select></label>
               <button class="btn btn-primary btn-sm btn-connect" data-connector="vscode">Test Connection</button>
             </div>
@@ -3087,8 +3087,8 @@
               <span class="connector-status" id="statusGitHub">&#9679; Disconnected</span>
             </div>
             <div class="connector-fields">
-              <label>Personal Access Token<input type="password" class="connector-input" id="apiKeyGitHub" placeholder="ghp_..." autocomplete="off"></label>
-              <label>Repository<input type="text" class="connector-input" id="repoGitHub" placeholder="owner/repo"></label>
+              <label>Personal Access Token<input type="password" class="connector-input" id="apiKeyGitHub" placeholder="ghp_..." autocomplete="off" aria-label="ghp_..."></label>
+              <label>Repository<input type="text" class="connector-input" id="repoGitHub" placeholder="owner/repo" aria-label="owner/repo"></label>
               <button class="btn btn-primary btn-sm btn-connect" data-connector="github">Test Connection</button>
             </div>
           </div>
@@ -3100,7 +3100,7 @@
               <span class="connector-status" id="statusPolymarket">&#9679; Disconnected</span>
             </div>
             <div class="connector-fields">
-              <label>API Key<input type="password" class="connector-input" id="apiKeyPolymarket" placeholder="Your Polymarket API key" autocomplete="off"></label>
+              <label>API Key<input type="password" class="connector-input" id="apiKeyPolymarket" placeholder="Your Polymarket API key" autocomplete="off" aria-label="Your Polymarket API key"></label>
               <label>Strategy<select class="connector-select" id="strategyPolymarket"><option value="auto-trade">Auto Trade</option><option value="signal-only">Signal Only</option><option value="monitor">Monitor Markets</option></select></label>
               <button class="btn btn-primary btn-sm btn-connect" data-connector="polymarket">Test Connection</button>
             </div>
@@ -3113,7 +3113,7 @@
               <span class="connector-status" id="statusKalshi">&#9679; Disconnected</span>
             </div>
             <div class="connector-fields">
-              <label>API Key<input type="password" class="connector-input" id="apiKeyKalshi" placeholder="Your Kalshi API key" autocomplete="off"></label>
+              <label>API Key<input type="password" class="connector-input" id="apiKeyKalshi" placeholder="Your Kalshi API key" autocomplete="off" aria-label="Your Kalshi API key"></label>
               <label>Mode<select class="connector-select" id="modeKalshi"><option value="live">Live Trading</option><option value="paper">Paper Trading</option><option value="analytics">Analytics Only</option></select></label>
               <button class="btn btn-primary btn-sm btn-connect" data-connector="kalshi">Test Connection</button>
             </div>
@@ -4579,13 +4579,13 @@ console.<span class="code-fn">log</span>(<span class="code-str">`âœ… Tx: </s
             <!-- Name -->
             <div class="lp-field">
               <label class="lp-label">name</label>
-              <input type="text" id="lpName" class="lp-input" placeholder="e.g. SpaceDoge" maxlength="32" autocomplete="off">
+              <input type="text" id="lpName" class="lp-input" placeholder="e.g. SpaceDoge" maxlength="32" autocomplete="off" aria-label="e.g. SpaceDoge">
             </div>
 
             <!-- Ticker -->
             <div class="lp-field">
               <label class="lp-label">ticker</label>
-              <input type="text" id="lpSymbol" class="lp-input" placeholder="e.g. SDOGE" maxlength="10" autocomplete="off" style="text-transform:uppercase;">
+              <input type="text" id="lpSymbol" class="lp-input" placeholder="e.g. SDOGE" maxlength="10" autocomplete="off" style="text-transform:uppercase;" aria-label="e.g. SDOGE">
             </div>
 
             <!-- Section: Details -->
@@ -4594,7 +4594,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`âœ… Tx: </s
             <!-- Description -->
             <div class="lp-field">
               <label class="lp-label">description</label>
-              <textarea id="lpDesc" class="lp-input lp-textarea" rows="3" placeholder="Tell people what your coin is about..." maxlength="500"></textarea>
+              <textarea id="lpDesc" class="lp-input lp-textarea" rows="3" placeholder="Tell people what your coin is about..." maxlength="500" aria-label="Tell people what your coin is about..."></textarea>
               <span class="lp-char-count"><span id="lpDescCount">0</span>/500</span>
             </div>
 
@@ -4603,15 +4603,15 @@ console.<span class="code-fn">log</span>(<span class="code-str">`âœ… Tx: </s
             <div class="lp-more-fields" id="lpMoreFields" style="display:none">
               <div class="lp-field">
                 <label class="lp-label">&#128038; twitter link</label>
-                <input type="url" id="lpTwitter" class="lp-input" placeholder="https://twitter.com/..." autocomplete="off">
+                <input type="url" id="lpTwitter" class="lp-input" placeholder="https://twitter.com/..." autocomplete="off" aria-label="https://twitter.com/...">
               </div>
               <div class="lp-field">
                 <label class="lp-label">&#128172; telegram link</label>
-                <input type="url" id="lpTelegram" class="lp-input" placeholder="https://t.me/..." autocomplete="off">
+                <input type="url" id="lpTelegram" class="lp-input" placeholder="https://t.me/..." autocomplete="off" aria-label="https://t.me/...">
               </div>
               <div class="lp-field">
                 <label class="lp-label">&#127760; website</label>
-                <input type="url" id="lpWebsite" class="lp-input" placeholder="https://..." autocomplete="off">
+                <input type="url" id="lpWebsite" class="lp-input" placeholder="https://..." autocomplete="off" aria-label="https://...">
               </div>
             </div>
 
@@ -4623,7 +4623,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`âœ… Tx: </s
               <label class="lp-label">initial buy (optional)</label>
               <p class="lp-field-hint text-muted">Tip: buying a small amount helps prevent snipers</p>
               <div class="lp-buy-row">
-                <input type="number" id="lpInitialBuy" class="lp-input" placeholder="0.0" min="0" step="0.01">
+                <input type="number" id="lpInitialBuy" class="lp-input" placeholder="0.0" min="0" step="0.01" aria-label="0.0">
                 <span class="lp-buy-denom">OST</span>
               </div>
               <div class="lp-buy-presets">
@@ -4733,7 +4733,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`âœ… Tx: </s
             <button class="lp-sort" data-sort="graduating">&#127891; Graduating</button>
           </div>
           <div class="lp-feed-search">
-            <input type="text" id="lpSearchInput" class="lp-input lp-search-in" placeholder="Search tokens...">
+            <input type="text" id="lpSearchInput" class="lp-input lp-search-in" placeholder="Search tokens..." aria-label="Search tokens...">
           </div>
         </div>
         <!-- Token card grid -->
@@ -4793,7 +4793,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`âœ… Tx: </s
           </div>
           <div class="lp-trade-form">
             <div class="lp-trade-row">
-              <input type="number" id="lpTradeAmount" class="lp-input" placeholder="0.0" min="0" step="0.01">
+              <input type="number" id="lpTradeAmount" class="lp-input" placeholder="0.0" min="0" step="0.01" aria-label="0.0">
               <span class="lp-trade-denom" id="lpTradeDenom">OST</span>
             </div>
             <div class="lp-trade-presets">
@@ -4817,7 +4817,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`âœ… Tx: </s
           <div class="lp-detail-section" id="lpDetailComments" style="display:none">
             <div class="lp-comments-list" id="lpCommentsList"></div>
             <div class="lp-comment-input">
-              <input type="text" id="lpCommentText" class="lp-input" placeholder="post a reply..." maxlength="280">
+              <input type="text" id="lpCommentText" class="lp-input" placeholder="post a reply..." maxlength="280" aria-label="post a reply...">
               <button class="lp-comment-send" id="lpCommentSend">post</button>
             </div>
           </div>
@@ -4943,7 +4943,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`âœ… Tx: </s
           <div class="sv-mint-row">
             <div class="sv-mint-field">
               <label class="sv-label">Amount (OST)</label>
-              <input type="number" id="svAmount" class="sv-input" placeholder="100" min="1" max="1000000" step="1">
+              <input type="number" id="svAmount" class="sv-input" placeholder="100" min="1" max="1000000" step="1" aria-label="100">
               <div class="sv-quicks">
                 <button class="sv-q" data-amt="10">10</button>
                 <button class="sv-q" data-amt="50">50</button>
@@ -4965,7 +4965,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`âœ… Tx: </s
 
           <div class="sv-mint-field">
             <label class="sv-label">Secret Passphrase (optional &mdash; adds encryption layer)</label>
-            <input type="password" id="svPassphrase" class="sv-input" placeholder="Leave blank for standard bearer note" autocomplete="off">
+            <input type="password" id="svPassphrase" class="sv-input" placeholder="Leave blank for standard bearer note" autocomplete="off" aria-label="Leave blank for standard bearer note">
           </div>
 
           <div class="sv-fee-box">
@@ -5047,7 +5047,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`âœ… Tx: </s
               <button class="offline-vault-btn" id="offlineVaultLatestBtn" type="button" disabled>Import latest minted coin</button>
             </div>
             <div class="offline-vault-paste" id="offlineVaultPasteBox">
-              <textarea id="offlineVaultPasteInput" spellcheck="false" placeholder="Paste OST-BEARER-V1 JSON or the downloaded Survival OST coin text..."></textarea>
+              <textarea id="offlineVaultPasteInput" spellcheck="false" placeholder="Paste OST-BEARER-V1 JSON or the downloaded Survival OST coin text..." aria-label="Paste OST-BEARER-V1 JSON or the downloaded Survival OST coin text..."></textarea>
               <button class="offline-vault-btn primary" id="offlineVaultPasteImportBtn" type="button">Import pasted coin</button>
             </div>
             <div class="offline-vault-status" id="offlineVaultStatus" role="status"></div>
@@ -5633,12 +5633,12 @@ console.<span class="code-fn">log</span>(<span class="code-str">`âœ… Tx: </s
         <div class="transmit-compose">
           <label class="transmit-field">
             <span class="transmit-field-label" data-i18n="transmit.message.label">Custom message</span>
-            <textarea id="transmitMessage" class="transmit-textarea" rows="4" data-i18n-placeholder="transmit.message.placeholder" placeholder="Describe the signal, dedication, coordinates, or mission note you want to send..."></textarea>
+            <textarea id="transmitMessage" class="transmit-textarea" rows="4" data-i18n-placeholder="transmit.message.placeholder" placeholder="Describe the signal, dedication, coordinates, or mission note you want to send..." aria-label="transmit.message.placeholder"></textarea>
           </label>
 
           <label class="transmit-field">
             <span class="transmit-field-label" data-i18n="transmit.dna.label">DNA / life-seed sequence</span>
-            <textarea id="transmitDna" class="transmit-textarea transmit-textarea-dna" rows="4" spellcheck="false" data-i18n-placeholder="transmit.dna.placeholder" placeholder="Optional: ACGT sequence, sample tag, or biological archive note"></textarea>
+            <textarea id="transmitDna" class="transmit-textarea transmit-textarea-dna" rows="4" spellcheck="false" data-i18n-placeholder="transmit.dna.placeholder" placeholder="Optional: ACGT sequence, sample tag, or biological archive note" aria-label="transmit.dna.placeholder"></textarea>
           </label>
 
           <label class="transmit-dropzone" for="transmitFiles">
@@ -5931,7 +5931,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`âœ… Tx: </s
     </script>
     <script src="native-markets.js?v=3"></script>
     <script src="icons.js?v=1"></script>
-    <script src="app.js?v=132"></script>
+    <script src="app.js?v=133"></script>
     <!-- Ghost AI Summoning Circle (rebuild) -->
     <script type="module" src="ghost/ghost.js?v=5"></script>
     <script type="module" src="mesh/mesh.js?v=28"></script>
