@@ -448,9 +448,20 @@
   }
 
   // Snapshot the current 5-min round each tick so we always have an "open" price.
+  // Tightened from 5s → 1s so the dashboard's "Open price" cell never lags
+  // more than one tick behind the live BTC feed.
   setInterval(function () {
     try { captureRoundOpenIfNeeded(buildFiveMinBtcMarket()); } catch (e) {}
-  }, 5000);
+  }, 1000);
+
+  // Also snapshot opportunistically on every fresh BTC tick so a brand-new
+  // round captures its open price the instant the first tick lands instead
+  // of waiting up to a full second.
+  try {
+    window.addEventListener('ost:btc-spot', function () {
+      try { captureRoundOpenIfNeeded(buildFiveMinBtcMarket()); } catch (e) {}
+    });
+  } catch (e) {}
 
   var btcSettlementInFlight = false;
 

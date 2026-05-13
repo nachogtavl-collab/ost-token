@@ -542,8 +542,23 @@
       refreshLocalState();
       paintBtc(root); paintApi(root);
     }, 1000);
+    // Subscribe to the shared 1Hz BTC tick stream produced by prediction-pro.js.
+    // This makes the dashboard mirror Polymarket-style instant price updates
+    // without each module hammering the exchange APIs independently.
+    window.addEventListener('ost:btc-spot', function (ev) {
+      var detail = ev && ev.detail;
+      var p = detail && Number(detail.price);
+      if (!Number.isFinite(p) || p <= 0) return;
+      state.btcPrev = state.btcPrice || p;
+      state.btcPrice = p;
+      state.btcSource = detail.source || state.btcSource || '';
+      state.btcUpdatedAt = detail.ts || Date.now();
+      rememberBtcDashboardPrice(p);
+      paintBtc(root);
+    });
     // 15s BTC price tick — pauses when tab is hidden or dashboard is offscreen
     // to avoid flooding public exchange APIs and console with errors.
+    // Acts as a backup in case the ost:btc-spot stream stops.
     function isDashboardVisible() {
       if (document.hidden) return false;
       try {
@@ -555,6 +570,8 @@
     }
     setInterval(function () {
       if (!isDashboardVisible()) return;
+      // Only top up if the live BTC feed has gone silent for >5s.
+      if (state.btcUpdatedAt && (Date.now() - state.btcUpdatedAt) < 5000) return;
       refreshBtc().then(function () { paintBtc(root); });
     }, 15000);
     // 30s relay health tick

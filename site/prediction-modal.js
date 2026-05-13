@@ -1122,6 +1122,11 @@
           if (typeof window.__ostChartRedraw === 'function') {
             try { window.__ostChartRedraw(); } catch (_) {}
           }
+          // Re-paint the depth + recent-trades panels so live OST flow on
+          // this market shows up alongside the upstream Polymarket data.
+          // Multiple users in the same market now actually see each other.
+          try { if (typeof bodyEl.__renderOstNativeBook === 'function') bodyEl.__renderOstNativeBook(); } catch (_) {}
+          try { if (typeof bodyEl.__renderTradesTable === 'function') bodyEl.__renderTradesTable(); } catch (_) {}
           if (!sharedListEl) return;
           // Filter the side ribbon to ONLY this market's bets — users were
           // getting confused seeing trades from unrelated markets.
@@ -1146,7 +1151,10 @@
         .catch(function () { /* silent */ });
     }
     refreshSharedFeed();
-    liveTimers.push(setInterval(refreshSharedFeed, 4000));
+    // Tighter refresh (1.5s) so cross-user OST bets surface in the ticker
+    // and the book/trades panels almost in real time. The /positions/recent
+    // endpoint is cached at the worker so this is cheap.
+    liveTimers.push(setInterval(refreshSharedFeed, 1500));
 
     // ---- Sell open positions on this market (live mark-to-market) ----
     var sellListEl = bodyEl.querySelector('[data-bind="sellList"]');
@@ -1511,7 +1519,14 @@
         var activeOutcome = getSelectedOutcomeContract(market, selectedOutcomeKey);
         if (activeOutcome && activeOutcome.raw) activeOutcome.raw.price = smoothed;
         pushHistoryPoint('YES', smoothed, now);
-        pushHistoryPoint('NO', 1 - smoothed, now);
+        // Only mirror into NO history when no distinct NO token exists; with
+        // a real NO token the refreshBook callback feeds NO from its own
+        // best-bid and we must not pollute that with `1 − YES`.
+        var __noTok = (Array.isArray(tokenIds) && tokenIds[1]) || null;
+        var __yesTok = (Array.isArray(tokenIds) && tokenIds[0]) || tokenId;
+        if (!__noTok || __noTok === __yesTok) {
+          pushHistoryPoint('NO', 1 - smoothed, now);
+        }
         var yEl = bodyEl.querySelector('[data-bind="yesPct"]');
         var n2 = bodyEl.querySelector('[data-bind="noPct"]');
         if (yEl) yEl.textContent = (smoothed * 100).toFixed(1) + '% · ' + src;
@@ -1603,10 +1618,20 @@
           var noEl  = bodyEl.querySelector('[data-bind="bookNo"]');
           if (yesEl) yesEl.innerHTML = yesBids.length ? yesBids.map(fmtRow).join('') : '<div class="ost-modal__book-empty">No YES bids</div>';
           if (noEl)  noEl.innerHTML  = noBids.length ? noBids.map(fmtRow).join('') : '<div class="ost-modal__book-empty">No NO bids</div>';
+          // Re-overlay live OST native bids on top of the freshly-painted
+          // upstream rows so the depth panel always reflects what other
+          // OST users are doing in this exact market.
+          try { if (typeof bodyEl.__renderOstNativeBook === 'function') bodyEl.__renderOstNativeBook(); } catch (_) {}
 
           var bestBid = yesBids[0] && Number(yesBids[0].price);
           var bestAsk = yesAsks[0] && Number(yesAsks[0].price);
           var bestNoBid = noBids[0] && Number(noBids[0].price);
+          // When the upstream exposes a distinct NO token, push that book's
+          // best bid into the NO history series so the YES/NO toggle shows
+          // genuinely independent curves (not just `1 − YES`).
+          if (noBookToken && Number.isFinite(bestNoBid) && bestNoBid > 0 && bestNoBid < 1) {
+            try { pushHistoryPoint('NO', bestNoBid, Date.now()); } catch (_) {}
+          }
           var currentYes = Number(market.yesPriceNumber);
           var consensusYes = getOutcomeConsensusYes();
           var yesPx = NaN;
@@ -1626,32 +1651,113 @@
       refreshBook();
       liveTimers.push(setInterval(refreshBook, 2500));
 
-      // Trades — refresh every 8s
+      // ---- Live OST native flow → merged into depth + recent ticks ----
+      // Reads the same /positions/recent feed as the shared ticker and
+      // surfaces it in the order-depth panel and the recent-trades table
+      // so users in the same market always see each other's actions.
+      function ostFlowForMarket() {
+        try {
+          var bag = window.__ostSharedFeed || {};
+          var arr = (bag[market.id] || []).slice();
+          arr.sort(function (a, b) {
+            return (new Date(b.ts).getTime() || 0) - (new Date(a.ts).getTime() || 0);
+          });
+          return arr;
+        } catch (_) { return []; }
+      }
+      function renderOstNativeBook() {
+        var yesEl = bodyEl.querySelector('[data-bind="bookYes"]');
+        var noEl  = bodyEl.querySelector('[data-bind="bookNo"]');
+        if (!yesEl && !noEl) return;
+        var flow = ostFlowForMarket();
+        if (!flow.length) return;
+        // Aggregate OST stake by side at each ¢ bucket so identical-price
+        // bets compress into one row (real-book style).
+        var yesAgg = {}, noAgg = {};
+        flow.forEach(function (b) {
+          var stake = Number(b.stake) || 0;
+          var px = Number(b.price);
+          if (!stake || !Number.isFinite(px) || px <= 0 || px >= 1) return;
+          var bucket = (Math.round(px * 1000) / 10).toFixed(1); // 0.1¢ buckets
+          var sideUp = String(b.side || '').toUpperCase();
+          var bag = /YES|BUY|UP/.test(sideUp) ? yesAgg : noAgg;
+          bag[bucket] = (bag[bucket] || 0) + stake;
+        });
+        function renderRows(target, bag, emptyLabel) {
+          if (!target) return;
+          var entries = Object.keys(bag).map(function (k) { return { p: Number(k) / 100, sz: bag[k] }; });
+          if (!entries.length) return; // keep upstream rows
+          entries.sort(function (a, b) { return b.p - a.p; });
+          var existing = target.innerHTML.indexOf('book-empty') >= 0 ? '' : target.innerHTML;
+          var ostRows = entries.slice(0, 6).map(function (r) {
+            return '<div class="ost-modal__book-row" style="background:rgba(124,230,168,0.07);">' +
+              '<span>' + (r.p * 100).toFixed(1) + '¢ · OST</span>' +
+              '<span>' + r.sz.toFixed(2) + '</span>' +
+            '</div>';
+          }).join('');
+          target.innerHTML = ostRows + existing;
+          // Update status hint so users know native flow is live.
+          var statusKey = target === bodyEl.querySelector('[data-bind="bookYes"]') ? 'bookStatus' : null;
+          if (statusKey) setText(bodyEl, statusKey, 'live · ' + entries.length + ' OST bid' + (entries.length === 1 ? '' : 's') + ' · ' + fmtTime(Date.now()));
+        }
+        renderRows(yesEl, yesAgg, 'No YES OST bids');
+        renderRows(noEl, noAgg, 'No NO OST bids');
+      }
+      // Expose so refreshSharedFeed can call it on every poll.
+      bodyEl.__renderOstNativeBook = renderOstNativeBook;
+
+      // Trades — refresh every 2s; merge OST native flow on top so users
+      // in the same market see each other's bets, not just upstream prints.
+      function buildTradeRow(side, color, ts, px, sz, walletShort) {
+        var label = walletShort ? (escapeHtml(side) + ' · ' + escapeHtml(walletShort)) : escapeHtml(side || '—');
+        return '<tr>' +
+          '<td>' + escapeHtml(fmtTime(ts)) + '</td>' +
+          '<td style="color:' + color + ';font-weight:700;">' + label + '</td>' +
+          '<td>' + (Number.isFinite(px) ? (px * 100).toFixed(1) + '¢' : '—') + '</td>' +
+          '<td>' + (Number.isFinite(sz) ? sz.toFixed(2) : '—') + '</td>' +
+        '</tr>';
+      }
+      var lastUpstreamTrades = [];
+      function renderTradesTable() {
+        var body = bodyEl.querySelector('[data-bind="tradesBody"]');
+        if (!body) return;
+        var ostRows = ostFlowForMarket().slice(0, 12).map(function (b) {
+          var side = String(b.side || '').toUpperCase();
+          var color = /YES|BUY|UP/.test(side) ? '#7ce6a8' : '#ff7c8a';
+          var ts = new Date(b.ts).getTime() || Date.now();
+          var px = Number(b.price);
+          var sz = Number(b.stake);
+          var ws = b.walletShort || (b.wallet ? String(b.wallet).slice(0, 4) + '…' : 'OST');
+          return buildTradeRow(side + ' · OST', color, ts, px, sz, ws);
+        });
+        var upstreamRows = (lastUpstreamTrades || []).slice(0, 18 - Math.min(ostRows.length, 12)).map(function (t) {
+          var side = (t.side || t.outcome || '').toString().toUpperCase();
+          var color = /YES|BUY/i.test(side) ? '#7ce6a8' : '#ff7c8a';
+          var px = Number(t.price);
+          var sz = Number(t.size || t.amount);
+          var rawTs = Number(t.timestamp || t.match_time || t.ts);
+          var ts = rawTs > 1e12 ? rawTs : rawTs * 1000;
+          return buildTradeRow(side, color, ts, px, sz);
+        });
+        var combined = ostRows.concat(upstreamRows);
+        if (!combined.length) {
+          body.innerHTML = '<tr><td colspan="4" style="text-align:center;opacity:0.6;">No recent trades available</td></tr>';
+          setText(bodyEl, 'tradesStatus', 'no ticks');
+          return;
+        }
+        body.innerHTML = combined.join('');
+        var label = ostRows.length
+          ? ('live · ' + ostRows.length + ' OST + ' + (lastUpstreamTrades || []).length + ' venue · ' + fmtTime(Date.now()))
+          : ('live · ' + (lastUpstreamTrades || []).length + ' · ' + fmtTime(Date.now()));
+        setText(bodyEl, 'tradesStatus', label);
+      }
+      // Expose so refreshSharedFeed can repaint without a fresh upstream fetch.
+      bodyEl.__renderTradesTable = renderTradesTable;
       var refreshTrades = function () {
         setText(bodyEl, 'tradesStatus', 'fetching…');
         fetchPolyTrades(rawId).then(function (trades) {
-          var body = bodyEl.querySelector('[data-bind="tradesBody"]');
-          if (!body) return;
-          if (!trades || !Array.isArray(trades) || !trades.length) {
-            body.innerHTML = '<tr><td colspan="4" style="text-align:center;opacity:0.6;">No recent trades available</td></tr>';
-            setText(bodyEl, 'tradesStatus', 'no ticks');
-            return;
-          }
-          setText(bodyEl, 'tradesStatus', 'live · ' + trades.length + ' · ' + fmtTime(Date.now()));
-          body.innerHTML = trades.slice(0, 18).map(function (t) {
-            var side = (t.side || t.outcome || '').toString().toUpperCase();
-            var color = /YES|BUY/i.test(side) ? '#7ce6a8' : '#ff7c8a';
-            var px = Number(t.price);
-            var sz = Number(t.size || t.amount);
-            var rawTs = Number(t.timestamp || t.match_time || t.ts);
-            var ts = rawTs > 1e12 ? rawTs : rawTs * 1000;
-            return '<tr>' +
-              '<td>' + escapeHtml(fmtTime(ts)) + '</td>' +
-              '<td style="color:' + color + ';font-weight:700;">' + escapeHtml(side || '—') + '</td>' +
-              '<td>' + (Number.isFinite(px) ? (px * 100).toFixed(1) + '¢' : '—') + '</td>' +
-              '<td>' + (Number.isFinite(sz) ? sz.toFixed(1) : '—') + '</td>' +
-            '</tr>';
-          }).join('');
+          lastUpstreamTrades = (trades && Array.isArray(trades)) ? trades : [];
+          renderTradesTable();
         });
       };
       refreshTrades();
@@ -1686,11 +1792,26 @@
         });
       };
       refreshHistory();
-      liveTimers.push(setInterval(refreshHistory, 10000));
+      // Pre-fetch the NO series too so users see distinct YES vs NO data
+      // the instant they toggle, instead of seeing a placeholder mirror.
+      refreshHistory('NO');
+      // Periodically refresh BOTH sides so the NO curve stays as authentic
+      // as YES when the upstream exposes a distinct NO token id.
+      liveTimers.push(setInterval(function () {
+        refreshHistory('YES');
+        refreshHistory('NO');
+      }, 10000));
       liveTimers.push(setInterval(function () {
         if (Number.isFinite(market.yesPriceNumber) && market.yesPriceNumber > 0 && market.yesPriceNumber < 1) {
           pushHistoryPoint('YES', market.yesPriceNumber, Date.now());
-          pushHistoryPoint('NO', 1 - market.yesPriceNumber, Date.now());
+          // Only push the mirrored NO point if there is no distinct NO token
+          // (otherwise we pollute the real NO series with a 1−YES inverse
+          // and the YES/NO toggle ends up showing identical-looking curves).
+          var noToken = tokenIds[1] || null;
+          var yesToken = tokenIds[0] || tokenId;
+          if (!noToken || noToken === yesToken) {
+            pushHistoryPoint('NO', 1 - market.yesPriceNumber, Date.now());
+          }
           renderLiveHistory();
         }
       }, 1000));
