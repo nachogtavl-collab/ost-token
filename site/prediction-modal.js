@@ -1293,7 +1293,7 @@
         });
       };
       fetchBtcLive();
-      liveTimers.push(setInterval(fetchBtcLive, 800));
+      liveTimers.push(setInterval(fetchBtcLive, 5000));
     }
 
     // ---- Polymarket live data ----

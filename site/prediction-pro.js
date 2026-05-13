@@ -67,7 +67,7 @@
   // ---------------------------------------------------------------------------
   var FIVE_MIN_MS = 5 * 60 * 1000;
   var BTC_PRICE_URL = 'https://api.coinbase.com/v2/prices/BTC-USD/spot';
-  var BTC_REFRESH_MS = 2500;
+  var BTC_REFRESH_MS = 15000;
   var BTC_FEED_TIMEOUT_MS = 3000;
   var BTC_MAX_SERIES = 240;
   var BTC_PRICE_FEEDS = [
@@ -253,6 +253,8 @@
   }
 
   function pollBtcMarket() {
+    // Skip polling when the page is hidden to avoid flooding public APIs.
+    if (typeof document !== 'undefined' && document.hidden) return;
     fetchBtcSpot({ force: true }).then(function () {
       try { captureRoundOpenIfNeeded(buildFiveMinBtcMarket()); } catch (e) {}
       settleClosedRounds();

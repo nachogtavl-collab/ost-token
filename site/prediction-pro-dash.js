@@ -542,9 +542,19 @@
       refreshLocalState();
       paintBtc(root); paintApi(root);
     }, 1000);
-    // 15s BTC price tick — keeps the dashboard fresh without flooding
-    // public exchange APIs or the console with rate-limit errors.
+    // 15s BTC price tick — pauses when tab is hidden or dashboard is offscreen
+    // to avoid flooding public exchange APIs and console with errors.
+    function isDashboardVisible() {
+      if (document.hidden) return false;
+      try {
+        var r = root.getBoundingClientRect();
+        if (r.width === 0 || r.height === 0) return false;
+        if (r.bottom < -200 || r.top > (window.innerHeight || 0) + 200) return false;
+      } catch (e) { /* ignore */ }
+      return true;
+    }
     setInterval(function () {
+      if (!isDashboardVisible()) return;
       refreshBtc().then(function () { paintBtc(root); });
     }, 15000);
     // 30s relay health tick

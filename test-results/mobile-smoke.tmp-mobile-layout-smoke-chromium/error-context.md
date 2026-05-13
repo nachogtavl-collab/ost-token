@@ -1,0 +1,4217 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: mobile-smoke.tmp.spec.js >> mobile layout smoke
+- Location: mobile-smoke.tmp.spec.js:36:1
+
+# Error details
+
+```
+Error: [
+  {
+    "name": "Mesh contacts profile accessible",
+    "ok": false,
+    "error": "locator.click: Timeout 9000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: /Contacts/i })\u001b[22m\n\u001b[2m    - locator resolved to <button type=\"button\" class=\"msx-tab\" data-msx-tab=\"contacts\">Contacts</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <div class=\"ost-mesh-shell\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <button disabled id=\"mesh-hangup\" class=\"ghost ost-icon-btn\">…</button> from <div id=\"mesh-session\" class=\"ost-mesh-session\">…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <div data-msx-ready=\"1\" id=\"ostMeshUpgrade\" class=\"ost-mesh-upgrade has-msx\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m  2 × retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m      - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div class=\"ost-mesh-shell\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m  3 × retrying click action\u001b[22m\n\u001b[2m      - waiting 500ms\u001b[22m\n\u001b[2m      - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <button disabled id=\"mesh-hangup\" class=\"ghost ost-icon-btn\">…</button> from <div id=\"mesh-session\" class=\"ost-mesh-session\">…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 500ms\u001b[22m\n\u001b[2m      - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div data-msx-ready=\"1\" id=\"ostMeshUpgrade\" class=\"ost-mesh-upgrade has-msx\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 500ms\u001b[22m\n\u001b[2m      - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div class=\"ost-mesh-shell\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 500ms\u001b[22m\n\u001b[2m      - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div class=\"ost-mesh-shell\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting 500ms\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <button disabled id=\"mesh-hangup\" class=\"ghost ost-icon-btn\">…</button> from <div id=\"mesh-session\" class=\"ost-mesh-session\">…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting 500ms\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <div data-msx-ready=\"1\" id=\"ostMeshUpgrade\" class=\"ost-mesh-upgrade has-msx\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting 500ms\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <div class=\"ost-mesh-shell\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting 500ms\u001b[22m\n"
+  },
+  {
+    "name": "Survival controls",
+    "ok": false,
+    "error": "locator.click: Error: strict mode violation: locator('#survival').getByRole('button', { name: /Paper QR/i }) resolved to 2 elements:\n    1) <button data-fmt=\"paper\" class=\"sv-fmt sv-fmt-active\">📄 Paper QR</button> aka getByRole('button', { name: '📄 Paper QR' })\n    2) <button type=\"button\" id=\"offlineVaultImportBtn\" class=\"offline-vault-btn primary\">Scan paper QR</button> aka getByRole('button', { name: 'Scan paper QR' })\n\nCall log:\n\u001b[2m  - waiting for locator('#survival').getByRole('button', { name: /Paper QR/i })\u001b[22m\n"
+  }
+]
+
+expect(received).toEqual(expected) // deep equality
+
+- Expected  -  1
++ Received  + 99
+
+- Array []
++ Array [
++   Object {
++     "error": "locator.click: Timeout 9000ms exceeded.
++ Call log:
++   - waiting for getByRole('button', { name: /Contacts/i })
++     - locator resolved to <button type=\"button\" class=\"msx-tab\" data-msx-tab=\"contacts\">Contacts</button>
++   - attempting click action
++     - waiting for element to be visible, enabled and stable
++     - element is visible, enabled and stable
++     - scrolling into view if needed
++     - done scrolling
++     - <div class=\"ost-mesh-shell\">…</div> intercepts pointer events
++   - retrying click action
++     - waiting for element to be visible, enabled and stable
++     - element is visible, enabled and stable
++     - scrolling into view if needed
++     - done scrolling
++     - <button disabled id=\"mesh-hangup\" class=\"ghost ost-icon-btn\">…</button> from <div id=\"mesh-session\" class=\"ost-mesh-session\">…</div> subtree intercepts pointer events
++   - retrying click action
++     - waiting 20ms
++     - waiting for element to be visible, enabled and stable
++     - element is visible, enabled and stable
++     - scrolling into view if needed
++     - done scrolling
++     - <div data-msx-ready=\"1\" id=\"ostMeshUpgrade\" class=\"ost-mesh-upgrade has-msx\">…</div> intercepts pointer events
++   2 × retrying click action
++       - waiting 100ms
++       - waiting for element to be visible, enabled and stable
++       - element is visible, enabled and stable
++       - scrolling into view if needed
++       - done scrolling
++       - <div class=\"ost-mesh-shell\">…</div> intercepts pointer events
++   3 × retrying click action
++       - waiting 500ms
++       - waiting for element to be visible, enabled and stable
++       - element is visible, enabled and stable
++       - scrolling into view if needed
++       - done scrolling
++       - <button disabled id=\"mesh-hangup\" class=\"ghost ost-icon-btn\">…</button> from <div id=\"mesh-session\" class=\"ost-mesh-session\">…</div> subtree intercepts pointer events
++     - retrying click action
++       - waiting 500ms
++       - waiting for element to be visible, enabled and stable
++       - element is visible, enabled and stable
++       - scrolling into view if needed
++       - done scrolling
++       - <div data-msx-ready=\"1\" id=\"ostMeshUpgrade\" class=\"ost-mesh-upgrade has-msx\">…</div> intercepts pointer events
++     - retrying click action
++       - waiting 500ms
++       - waiting for element to be visible, enabled and stable
++       - element is visible, enabled and stable
++       - scrolling into view if needed
++       - done scrolling
++       - <div class=\"ost-mesh-shell\">…</div> intercepts pointer events
++     - retrying click action
++       - waiting 500ms
++       - waiting for element to be visible, enabled and stable
++       - element is visible, enabled and stable
++       - scrolling into view if needed
++       - done scrolling
++       - <div class=\"ost-mesh-shell\">…</div> intercepts pointer events
++   - retrying click action
++     - waiting 500ms
++     - waiting for element to be visible, enabled and stable
++     - element is visible, enabled and stable
++     - scrolling into view if needed
++     - done scrolling
++     - <button disabled id=\"mesh-hangup\" class=\"ghost ost-icon-btn\">…</button> from <div id=\"mesh-session\" class=\"ost-mesh-session\">…</div> subtree intercepts pointer events
++   - retrying click action
++     - waiting 500ms
++     - waiting for element to be visible, enabled and stable
++     - element is visible, enabled and stable
++     - scrolling into view if needed
++     - done scrolling
++     - <div data-msx-ready=\"1\" id=\"ostMeshUpgrade\" class=\"ost-mesh-upgrade has-msx\">…</div> intercepts pointer events
++   - retrying click action
++     - waiting 500ms
++     - waiting for element to be visible, enabled and stable
++     - element is visible, enabled and stable
++     - scrolling into view if needed
++     - done scrolling
++     - <div class=\"ost-mesh-shell\">…</div> intercepts pointer events
++   - retrying click action
++     - waiting 500ms
++ ",
++     "name": "Mesh contacts profile accessible",
++     "ok": false,
++   },
++   Object {
++     "error": "locator.click: Error: strict mode violation: locator('#survival').getByRole('button', { name: /Paper QR/i }) resolved to 2 elements:
++     1) <button data-fmt=\"paper\" class=\"sv-fmt sv-fmt-active\">📄 Paper QR</button> aka getByRole('button', { name: '📄 Paper QR' })
++     2) <button type=\"button\" id=\"offlineVaultImportBtn\" class=\"offline-vault-btn primary\">Scan paper QR</button> aka getByRole('button', { name: 'Scan paper QR' })
++
++ Call log:
++   - waiting for locator('#survival').getByRole('button', { name: /Paper QR/i })
++ ",
++     "name": "Survival controls",
++     "ok": false,
++   },
++ ]
+```
+
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e3]:
+      - link "◉ OST 🧬🍰" [ref=e4] [cursor=pointer]:
+        - /url: "#home"
+        - generic [ref=e5]: ◉
+        - text: OST
+        - generic "Legacy Mode Activated" [ref=e6]: 🧬🍰
+      - generic [ref=e7]:
+        - button "Activate ancient hieroglyphic mode" [ref=e8] [cursor=pointer]:
+          - generic [ref=e9]: ð“…± Ancient
+        - button "Connect Wallet" [ref=e10] [cursor=pointer]:
+          - img "Wallet" [ref=e12]
+        - button "Language" [ref=e17] [cursor=pointer]:
+          - img "Language" [ref=e19]
+        - button "Menu" [ref=e22] [cursor=pointer]:
+          - img "Menu" [ref=e23]
+  - generic: Level 2 â€” 15/100 XP
+  - generic [ref=e24]:
+    - generic [ref=e26]:
+      - generic [ref=e27]:
+        - generic [ref=e28]: Live on Solana
+        - generic [ref=e30]: Est. 2025 · Panama
+      - paragraph [ref=e31]: The Next Step After Bitcoin
+      - heading "We are all one family." [level=1] [ref=e32]
+      - paragraph [ref=e33]: OST is the digital cash made for every citizen of the world - private, instant, and connected to any currency you already have.
+      - generic [ref=e34]:
+        - generic [ref=e35]: 💰 FREE FOREVER
+        - generic [ref=e36]: Zero transaction fees. No hidden costs. Funded by donations & investors.
+      - generic [ref=e37]:
+        - link "Explore Commerce" [ref=e38] [cursor=pointer]:
+          - /url: "#commerce"
+        - link "Get OST Now" [ref=e39] [cursor=pointer]:
+          - /url: "#new-here"
+        - link "Create Wallet" [ref=e40] [cursor=pointer]:
+          - /url: "#wallet"
+        - button "ð“‚‡ Transmit to Space" [ref=e41] [cursor=pointer]
+      - generic [ref=e42]:
+        - generic [ref=e43]:
+          - generic [ref=e44]: "0"
+          - text: Pre-mine
+        - generic [ref=e45]:
+          - generic [ref=e46]: <0.4s
+          - text: Settlement
+        - generic [ref=e47]:
+          - generic [ref=e48]: 100%
+          - text: Open Source
+        - generic [ref=e49]:
+          - generic [ref=e50]: ∞
+          - text: Privacy
+      - generic [ref=e51]:
+        - generic [ref=e52]: "OST Price:"
+        - generic [ref=e53]: $0.000100
+        - generic [ref=e54]: Preview quote
+      - generic [ref=e55]:
+        - text: "Devnet (Slot 461,968,405) · Program:"
+        - link "J2ji...GXQY" [ref=e57] [cursor=pointer]:
+          - /url: https://explorer.solana.com/address/J2jiS296YWVie1Sopb4SxcM3aJnP9aAwe6aLDhCqvGXY?cluster=devnet
+    - generic [ref=e61]:
+      - generic [ref=e62]:
+        - generic [ref=e63]: "0"
+        - generic [ref=e64]: Unbanked adults worldwide
+      - generic [ref=e65]:
+        - generic [ref=e66]: "0"
+        - generic [ref=e67]: $ lost to remittance fees/year
+      - generic [ref=e68]:
+        - generic [ref=e69]: "0"
+        - generic [ref=e70]: People without internet
+    - generic [ref=e75]:
+      - generic [ref=e76]:
+        - 'heading "The OST Vision: Complete Financial Independence" [level=3] [ref=e77]'
+        - paragraph [ref=e78]:
+          - text: We currently use Solana, Jupiter, and third-party bridges as
+          - strong [ref=e79]: temporary infrastructure
+          - text: . Our goal is to build the
+          - strong [ref=e80]: OST Sovereign Network
+          - text: — our own interchange protocol, trading algorithm, decentralized market, faucet system, and settlement layer.
+          - emphasis [ref=e81]: Completely separate from any existing system. Fully decentralized. No dependencies.
+        - generic [ref=e82]:
+          - generic [ref=e83]:
+            - generic [ref=e84]: Now
+            - generic [ref=e85]: ⚙️
+            - heading "Temporary Scaffolding" [level=4] [ref=e86]
+            - paragraph [ref=e87]: Solana + Jupiter + Bridges
+          - generic [ref=e88]: ➔
+          - generic [ref=e89]:
+            - generic [ref=e90]: Next
+            - generic [ref=e91]: 🔧
+            - heading "OST Interchange Protocol" [level=4] [ref=e92]
+            - paragraph [ref=e93]: Own matching engine & trading algorithm
+          - generic [ref=e94]: ➔
+          - generic [ref=e95]:
+            - generic [ref=e96]: Goal
+            - generic [ref=e97]: 🌟
+            - heading "OST Sovereign Network" [level=4] [ref=e98]
+            - paragraph [ref=e99]: Zero third-party dependencies
+        - generic [ref=e100]:
+          - generic [ref=e101]: 🔒 ZK Private
+          - generic [ref=e102]: ⚡ 0.4s Settlement
+          - generic [ref=e103]: 💰 Zero Fees Forever
+          - generic [ref=e104]: 🔧 Own Matching Engine
+          - generic [ref=e105]: 🌍 Own DEX & Bridges
+          - generic [ref=e106]: 🛰 Satellite Internet
+      - generic [ref=e107]:
+        - generic [ref=e108]: 🚀
+        - heading "OST × SpaceX" [level=4] [ref=e109]
+        - paragraph [ref=e110]: Partnering to bring uncensored internet and payments to 2.6 billion people without connectivity via low-earth orbit satellites.
+        - link "Explore the Journey →" [ref=e111] [cursor=pointer]:
+          - /url: "#spacex"
+  - generic [ref=e112]:
+    - generic [ref=e113]:
+      - heading "🆕 New Here? Start Your OST Journey" [level=2] [ref=e114]
+      - paragraph [ref=e115]: Claim a 100 OST head start, create family vault plans, or earn rewards by learning and contributing.
+      - generic [ref=e116]:
+        - heading "New Here? Claim Free OST" [level=3] [ref=e117]
+        - paragraph [ref=e118]:
+          - text: New wallets get a
+          - strong [ref=e119]: 100 OST
+          - text: head start. After that, come back and manually claim
+          - strong [ref=e120]: 1 OST per day
+          - text: .
+        - generic [ref=e125]:
+          - generic [ref=e126]: "100.00"
+          - generic [ref=e127]: OST
+        - button "◉ Claim 100 OST Head Start" [ref=e128] [cursor=pointer]:
+          - generic [ref=e129]: ◉
+          - generic [ref=e130]: Claim 100 OST Head Start
+        - generic [ref=e131]: Create or connect a wallet to claim 100 OST. After that, manually claim 1 OST per day.
+      - region "OST converter hub" [ref=e132]:
+        - generic [ref=e133]:
+          - generic [ref=e134]:
+            - generic [ref=e135]:
+              - paragraph [ref=e136]: Central command center
+              - heading "OST Converter Hub" [level=3] [ref=e137]
+              - paragraph [ref=e138]: Buy, convert, transfer, and fill OST by exact value from one clean wallet rail.
+            - generic "Wallet area and balance graph" [ref=e139]:
+              - generic [ref=e140]:
+                - generic [ref=e141]: Wallet
+                - strong [ref=e142]: Connect wallet
+              - generic [ref=e143]:
+                - generic [ref=e144]: Exact quote
+                - strong [ref=e145]: 847.45 OST
+          - tablist "OST converter actions" [ref=e146]:
+            - button "Buy with Fiat" [ref=e147] [cursor=pointer]
+            - button "Convert SOL" [ref=e148] [cursor=pointer]
+            - button "Transfer" [ref=e149] [cursor=pointer]
+          - generic [ref=e150]:
+            - generic [ref=e151]:
+              - generic [ref=e152]:
+                - generic [ref=e153]: You Pay (USD)
+                - spinbutton "You Pay (USD)" [ref=e154]: "10"
+              - generic [ref=e155]:
+                - generic [ref=e156]: You Receive
+                - strong [ref=e157]: 847.45 OST
+            - generic [ref=e158]:
+              - generic [ref=e159]:
+                - text: "Rate:"
+                - strong [ref=e160]: 1 OST = $0.01
+              - generic [ref=e161]: Live pricing from OST API
+            - generic [ref=e162]:
+              - button "$5.00" [ref=e163] [cursor=pointer]
+              - button "$10.00" [ref=e164] [cursor=pointer]
+              - button "$25.00" [ref=e165] [cursor=pointer]
+              - button "$50.00" [ref=e166] [cursor=pointer]
+            - generic [ref=e167]:
+              - generic [ref=e168]: Wallet to receive OST
+              - textbox "Wallet to receive OST" [ref=e169]:
+                - /placeholder: Paste your Solana wallet...
+            - generic [ref=e170]:
+              - button "Pay with Card" [ref=e171] [cursor=pointer]
+              - button "Pay with Crypto" [ref=e172] [cursor=pointer]
+            - paragraph [ref=e173]:
+              - text: 100% of proceeds go directly to the
+              - strong [ref=e174]: OST Treasury
+              - text: (developer main holding) to build uncensored internet, satellite coverage, and zero-fee infrastructure.
+              - strong [ref=e175]: Thank you for supporting the mission!
+      - generic [ref=e176]:
+        - generic [ref=e177]:
+          - generic [ref=e179]: 👶
+          - heading "Family Grow Vaults" [level=3] [ref=e180]
+          - paragraph [ref=e181]: Create a Grow Vault plan for your child now, even before wallet sign-in works. Link a wallet later and keep the milestone drops organized.
+        - generic [ref=e182]:
+          - generic [ref=e185]:
+            - generic [ref=e186]: Birth
+            - generic [ref=e187]: 10.0 OST
+            - generic [ref=e188]: “Born in space”
+          - generic [ref=e191]:
+            - generic [ref=e192]: Age 1
+            - generic [ref=e193]: 5.0 OST
+            - generic [ref=e194]: “First orbit”
+          - generic [ref=e197]:
+            - generic [ref=e198]: Age 5
+            - generic [ref=e199]: 15.0 OST
+            - generic [ref=e200]: “Kindergarten explorer”
+          - generic [ref=e203]:
+            - generic [ref=e204]: Age 10
+            - generic [ref=e205]: 25.0 OST
+            - generic [ref=e206]: “Junior astronaut”
+          - generic [ref=e209]:
+            - generic [ref=e210]: Age 13
+            - generic [ref=e211]: 50.0 OST
+            - generic [ref=e212]: “Teen pioneer”
+          - generic [ref=e215]:
+            - generic [ref=e216]: Age 16
+            - generic [ref=e217]: 75.0 OST
+            - generic [ref=e218]: “Cadet”
+          - generic [ref=e221]:
+            - generic [ref=e222]: Age 18
+            - generic [ref=e223]: 100.0 OST
+            - generic [ref=e224]: “Full citizen of the OST universe”
+        - button "🔒 Create a Grow Vault" [ref=e225] [cursor=pointer]
+        - generic [ref=e226]:
+          - generic [ref=e227]: ⚠️
+          - paragraph [ref=e228]:
+            - strong [ref=e229]: Educational use only. Parents/guardians are responsible for all tax, custody, and local laws regarding gifts to minors.
+            - text: Parents/guardians are responsible for all tax, custody, and local laws regarding gifts to minors. OST is not investment advice. Parental consent required for all child accounts.
+      - generic [ref=e230]:
+        - generic [ref=e231]:
+          - generic [ref=e233]: 🛰
+          - heading "DePIN Data-Center Faucet" [level=3] [ref=e234]
+          - paragraph [ref=e235]: Share bandwidth, GPU, CPU, or satellite capacity — earn OST for building the decentralized data centers and satellite internet. Big rewards for real contributions.
+        - generic [ref=e236]:
+          - generic [ref=e237]:
+            - generic [ref=e238]: 📶
+            - generic [ref=e239]: Bandwidth
+            - generic [ref=e240]: 500 OST/day
+            - generic [ref=e241]: ⚡ 0.35 OST/min
+          - generic [ref=e242]:
+            - generic [ref=e243]: 🎮
+            - generic [ref=e244]: GPU
+            - generic [ref=e245]: 2,500 OST/day
+            - generic [ref=e246]: ⚡ 1.74 OST/min
+          - generic [ref=e247]:
+            - generic [ref=e248]: 💻
+            - generic [ref=e249]: CPU
+            - generic [ref=e250]: 1,000 OST/day
+            - generic [ref=e251]: ⚡ 0.69 OST/min
+          - generic [ref=e252]:
+            - generic [ref=e253]: 💾
+            - generic [ref=e254]: Storage
+            - generic [ref=e255]: 500 OST/day
+            - generic [ref=e256]: ⚡ 0.35 OST/min
+          - generic [ref=e257]:
+            - generic [ref=e258]: 📡
+            - generic [ref=e259]: LoRa/5G
+            - generic [ref=e260]: 10 OST/day
+            - generic [ref=e261]: ⚡ 0.007 OST/min
+          - generic [ref=e262]:
+            - generic [ref=e263]: 🛰
+            - generic [ref=e264]: Satellite
+            - generic [ref=e265]: 50,000 OST/day
+            - generic [ref=e266]: ⚡ 34.72 OST/min
+          - generic [ref=e267]:
+            - generic [ref=e268]: 🏭
+            - generic [ref=e269]: Data Center
+            - generic [ref=e270]: 100,000 OST/day
+            - generic [ref=e271]: ⚡ 69.44 OST/min
+          - paragraph [ref=e272]: 📈 Rewards decrease as OST price appreciates — early contributors earn the most.
+        - button "🛰 Claim DePIN Reward" [ref=e273] [cursor=pointer]
+    - generic [ref=e274]:
+      - generic [ref=e276]:
+        - heading "🎰 OST Rewards Vault" [level=3] [ref=e277]
+        - paragraph [ref=e278]: Earn bonus OST through provably-fair games and the Code Academy. Cash out to your real wallet whenever you hit the minimum.
+        - generic [ref=e279]:
+          - generic [ref=e280]: Your earned bonus credits · paid from on-chain rewards vault
+          - generic [ref=e281]:
+            - strong [ref=e282]: "0.00"
+            - text: OST
+            - button "Cash out from vault" [disabled] [ref=e283]
+            - link "🔗 view rewards vault" [ref=e284] [cursor=pointer]:
+              - /url: https://explorer.solana.com/address/5b5DBGw1DocFqFaDxukRxEv46kKGXwQQNDRkHBAwAiGK?cluster=devnet
+        - generic [ref=e285]:
+          - generic [ref=e286]:
+            - generic [ref=e287]: 🎁 New User + Daily OST
+            - generic [ref=e288]: 100 -> 1
+            - button "Claim in New Here" [ref=e289] [cursor=pointer]
+            - generic [ref=e290]: First wallet gets a 100 OST head start. After that, the user must manually claim 1 OST per day.
+          - generic [ref=e291]:
+            - generic [ref=e292]: 💻 Learn to Code · earn OST
+            - generic [ref=e293]: ⌨️🧑‍💻
+            - button "Open Code Academy" [ref=e294] [cursor=pointer]
+            - generic [ref=e295]: Kid-friendly lessons start at zero, explain every line, and grow from tiny wins into real projects.
+          - generic [ref=e296]:
+            - generic [ref=e297]: 🔥 Current Streak
+            - generic [ref=e298]:
+              - generic [ref=e299]: 🔥
+              - text: 0 days
+            - generic [ref=e300]: Play any provably-fair game once a day to grow your streak.
+          - generic [ref=e301]:
+            - generic [ref=e302]: 🎲 Provably-Fair Arcade
+            - generic [ref=e303]: 💣🚀🎡💎
+            - generic [ref=e304]: "18 HMAC-verifiable instant originals inspired by Stake/Rainbet: Mines, Crash, Plinko, Double, Slide, Pump, Dragon Tower, Case Battle, Scarab Spin and more — all paid from this same vault."
+            - button "Open games ↓" [ref=e305] [cursor=pointer]
+          - generic [ref=e306]:
+            - generic [ref=e307]: 👶 Family Grow Vault
+            - generic [ref=e308]: 🔒🌱
+            - button "Create vault plan" [ref=e309] [cursor=pointer]
+            - generic [ref=e310]: Parents can create a local vault plan even before wallet sign-in works, then link it later.
+      - generic [ref=e311]:
+        - iframe [ref=e312]:
+          - generic [active] [ref=f4e1]:
+            - link [ref=f4e3] [cursor=pointer]:
+              - /url: https://a-ads.com/campaigns/new?source_id=2435726&source_type=ad_unit&partner=2435726&utm_source=AADS&utm_medium=advertisehere
+            - link "Anuncia en este espacio publicitario Crea una campaña en 5 minutos aads.com" [ref=f4e4] [cursor=pointer]:
+              - /url: https://click.a-ads.com/2435726/87291/
+              - table [ref=f4e5]:
+                - rowgroup [ref=f4e6]:
+                  - row "Anuncia en este espacio publicitario Crea una campaña en 5 minutos aads.com" [ref=f4e7]:
+                    - cell "Anuncia en este espacio publicitario Crea una campaña en 5 minutos aads.com" [ref=f4e8]
+        - generic [ref=e313]:
+          - text: Ad revenue funds OST treasury ·
+          - link "see dashboard" [ref=e314] [cursor=pointer]:
+            - /url: "#fhRevDashboard"
+    - generic [ref=e317]:
+      - heading "📊 Ad Revenue → OST Loop" [level=3] [ref=e318]
+      - paragraph [ref=e319]: "Public dashboard: every cent we earn from ads converts to SOL → refills the swap pool → cashes out as OST to users. Vault retained funds satellites, legacy research, and quantum projects."
+      - generic [ref=e320]:
+        - generic [ref=e321]:
+          - generic [ref=e322]: Your ad views today
+          - generic [ref=e323]: "0"
+          - generic [ref=e324]: "Daily cap: 20 views · resets at 00:00 UTC"
+        - generic [ref=e325]:
+          - generic [ref=e326]: Your lifetime OST earned
+          - generic [ref=e327]: "0.00"
+          - generic [ref=e328]: Includes faucet, spins, taps, ads, tasks
+        - generic [ref=e329]:
+          - generic [ref=e330]: Your pending credits
+          - generic [ref=e331]: "0.00"
+          - generic [ref=e332]: Cash out from the hub above
+        - generic [ref=e333]:
+          - generic [ref=e334]: OST AD TREASURY (vault)
+          - generic [ref=e335]: AdTreasur1PlaceholderKey1111111111111111111
+          - generic [ref=e336]: "All ad revenue is reconciled weekly: BTC/USDT → SOL via Jupiter → swap pool refill."
+      - table [ref=e338]:
+        - rowgroup [ref=e339]:
+          - row "Status Network Payout" [ref=e340]:
+            - columnheader "Status" [ref=e341]
+            - columnheader "Network" [ref=e342]
+            - columnheader "Payout" [ref=e343]
+        - rowgroup [ref=e344]:
+          - row "○ awaiting key Adsterra (rewarded video) BTC/USDT · Net-7" [ref=e345]:
+            - cell "○ awaiting key" [ref=e346]
+            - cell "Adsterra (rewarded video)" [ref=e347]:
+              - link "Adsterra (rewarded video)" [ref=e348] [cursor=pointer]:
+                - /url: https://adsterra.com/publishers
+            - cell "BTC/USDT · Net-7" [ref=e349]
+          - row "● LIVE A-Ads (banner) BTC · daily" [ref=e350]:
+            - cell "● LIVE" [ref=e351]
+            - cell "A-Ads (banner)" [ref=e352]:
+              - link "A-Ads (banner)" [ref=e353] [cursor=pointer]:
+                - /url: https://a-ads.com
+            - cell "BTC · daily" [ref=e354]
+          - row "○ awaiting key PropellerAds (popunder) USDT · $5 min" [ref=e355]:
+            - cell "○ awaiting key" [ref=e356]
+            - cell "PropellerAds (popunder)" [ref=e357]:
+              - link "PropellerAds (popunder)" [ref=e358] [cursor=pointer]:
+                - /url: https://propellerads.com
+            - cell "USDT · $5 min" [ref=e359]
+          - row "○ awaiting key Coinzilla (display) BTC/ETH/USDT" [ref=e360]:
+            - cell "○ awaiting key" [ref=e361]
+            - cell "Coinzilla (display)" [ref=e362]:
+              - link "Coinzilla (display)" [ref=e363] [cursor=pointer]:
+                - /url: https://coinzilla.com
+            - cell "BTC/ETH/USDT" [ref=e364]
+          - row "○ awaiting key CoinAd (premium) BTC · invite" [ref=e365]:
+            - cell "○ awaiting key" [ref=e366]
+            - cell "CoinAd (premium)" [ref=e367]:
+              - link "CoinAd (premium)" [ref=e368] [cursor=pointer]:
+                - /url: https://coinad.com
+            - cell "BTC · invite" [ref=e369]
+          - row "○ awaiting key Bitmedia.io (display) BTC · $100 min" [ref=e370]:
+            - cell "○ awaiting key" [ref=e371]
+            - cell "Bitmedia.io (display)" [ref=e372]:
+              - link "Bitmedia.io (display)" [ref=e373] [cursor=pointer]:
+                - /url: https://bitmedia.io
+            - cell "BTC · $100 min" [ref=e374]
+          - row "○ awaiting key AdGate Media (rewarded) USDT · S2S" [ref=e375]:
+            - cell "○ awaiting key" [ref=e376]
+            - cell "AdGate Media (rewarded)" [ref=e377]:
+              - link "AdGate Media (rewarded)" [ref=e378] [cursor=pointer]:
+                - /url: https://adgatemedia.com
+            - cell "USDT · S2S" [ref=e379]
+          - row "○ awaiting key Pollfish / CPX (surveys) USD · S2S" [ref=e380]:
+            - cell "○ awaiting key" [ref=e381]
+            - cell "Pollfish / CPX (surveys)" [ref=e382]:
+              - link "Pollfish / CPX (surveys)" [ref=e383] [cursor=pointer]:
+                - /url: https://www.pollfish.com
+            - cell "USD · S2S" [ref=e384]
+      - paragraph [ref=e385]:
+        - text: "Affiliate partners with crypto payouts:"
+        - link "Binance" [ref=e386] [cursor=pointer]:
+          - /url: https://accounts.binance.com/register?ref=
+        - text: ·
+        - link "Bybit" [ref=e387] [cursor=pointer]:
+          - /url: https://www.bybit.com/invite
+        - text: ·
+        - link "OKX" [ref=e388] [cursor=pointer]:
+          - /url: https://www.okx.com/join
+        - text: ·
+        - link "KuCoin" [ref=e389] [cursor=pointer]:
+          - /url: https://www.kucoin.com/r/
+        - text: ·
+        - link "Bitget" [ref=e390] [cursor=pointer]:
+          - /url: https://partners.bitget.com
+        - text: ·
+        - link "Ledger" [ref=e391] [cursor=pointer]:
+          - /url: https://shop.ledger.com
+        - text: ·
+        - link "Trezor" [ref=e392] [cursor=pointer]:
+          - /url: https://trezor.io/affiliate
+        - text: ·
+        - link "Phantom" [ref=e393] [cursor=pointer]:
+          - /url: https://phantom.app
+      - paragraph [ref=e394]:
+        - text: "DePIN micro-task partners:"
+        - link "Toloka" [ref=e395] [cursor=pointer]:
+          - /url: https://toloka.ai
+        - text: ·
+        - link "Scale AI" [ref=e396] [cursor=pointer]:
+          - /url: https://scale.com
+        - text: ·
+        - link "Ocean Protocol" [ref=e397] [cursor=pointer]:
+          - /url: https://oceanprotocol.com
+        - text: ·
+        - link "Grass.io" [ref=e398] [cursor=pointer]:
+          - /url: https://grass.io
+    - generic [ref=e401]:
+      - generic [ref=e402]:
+        - generic [ref=e403]:
+          - generic [ref=e404]: FAUCET FAIR GAMES
+          - heading "Crash" [level=3] [ref=e405]:
+            - img [ref=e407]
+            - text: Crash
+          - generic [ref=e412]:
+            - generic [ref=e413]: Rocket curve
+            - generic [ref=e414]: Live cashout
+            - generic [ref=e415]: HMAC fair
+        - generic [ref=e416]:
+          - generic [ref=e417]: Chips · play balance
+          - generic [ref=e418]:
+            - strong [ref=e419]: "0.00"
+            - text: OST
+          - generic [ref=e422]:
+            - link "Connect wallet" [ref=e423] [cursor=pointer]:
+              - /url: "#"
+            - text: to deposit real OST
+          - generic [ref=e424]:
+            - button "Deposit" [disabled] [ref=e425]:
+              - img [ref=e427]
+              - text: Deposit
+            - button "💸 Cash out" [disabled] [ref=e430]
+            - button "Fairness" [ref=e431] [cursor=pointer]:
+              - img [ref=e433]
+              - text: Fairness
+      - generic [ref=e435]:
+        - generic [ref=e436]:
+          - generic [ref=e437]:
+            - strong [ref=e438]: Mesh multiplayer fair games
+            - generic [ref=e439]: Start encrypted peer tables from Fair Games. The playable table opens inside the existing OST Mesh panel.
+          - button "Open in OST Mesh" [ref=e440] [cursor=pointer]
+        - generic [ref=e441]:
+          - button "Coin Flip 50/50 table" [ref=e442] [cursor=pointer]:
+            - strong [ref=e443]: Coin Flip
+            - generic [ref=e444]: 50/50 table
+          - button "Dice Duel Best roll wins" [ref=e445] [cursor=pointer]:
+            - strong [ref=e446]: Dice Duel
+            - generic [ref=e447]: Best roll wins
+          - button "High Card Highest card" [ref=e448] [cursor=pointer]:
+            - strong [ref=e449]: High Card
+            - generic [ref=e450]: Highest card
+          - button "Target 50 Closest to 50" [ref=e451] [cursor=pointer]:
+            - strong [ref=e452]: Target 50
+            - generic [ref=e453]: Closest to 50
+      - generic [ref=e454]:
+        - button "Mines Reveal grid Cashout ladder" [ref=e455] [cursor=pointer]:
+          - img [ref=e457]
+          - generic [ref=e461]:
+            - generic [ref=e462]: Mines
+            - emphasis [ref=e463]: Reveal grid
+          - strong [ref=e464]: Cashout ladder
+        - button "Crash Rocket curve Live cashout" [ref=e465] [cursor=pointer]:
+          - img [ref=e467]
+          - generic [ref=e472]:
+            - generic [ref=e473]: Crash
+            - emphasis [ref=e474]: Rocket curve
+          - strong [ref=e475]: Live cashout
+        - button "Dice Target roll Risk slider" [ref=e476] [cursor=pointer]:
+          - img [ref=e478]
+          - generic [ref=e480]:
+            - generic [ref=e481]: Dice
+            - emphasis [ref=e482]: Target roll
+          - strong [ref=e483]: Risk slider
+        - button "Plinko Peg drop Multi-ball" [ref=e484] [cursor=pointer]:
+          - img [ref=e486]
+          - generic [ref=e489]:
+            - generic [ref=e490]: Plinko
+            - emphasis [ref=e491]: Peg drop
+          - strong [ref=e492]: Multi-ball
+        - button "Limbo Multiplier chase High target" [ref=e493] [cursor=pointer]:
+          - img [ref=e495]
+          - generic [ref=e497]:
+            - generic [ref=e498]: Limbo
+            - emphasis [ref=e499]: Multiplier chase
+          - strong [ref=e500]: High target
+        - button "Hi-Lo Card streak Compound" [ref=e501] [cursor=pointer]:
+          - img [ref=e503]
+          - generic [ref=e505]:
+            - generic [ref=e506]: Hi-Lo
+            - emphasis [ref=e507]: Card streak
+          - strong [ref=e508]: Compound
+        - button "Big Six Prize wheel Risk bands" [ref=e509] [cursor=pointer]:
+          - img [ref=e511]
+          - generic [ref=e514]:
+            - generic [ref=e515]: Big Six
+            - emphasis [ref=e516]: Prize wheel
+          - strong [ref=e517]: Risk bands
+        - button "Coinflip Heads/Tails 1.98x" [ref=e518] [cursor=pointer]:
+          - img [ref=e520]
+          - generic [ref=e523]:
+            - generic [ref=e524]: Coinflip
+            - emphasis [ref=e525]: Heads/Tails
+          - strong [ref=e526]: 1.98x
+        - button "Keno Number draw 10 picks" [ref=e527] [cursor=pointer]:
+          - img [ref=e529]
+          - generic [ref=e530]:
+            - generic [ref=e531]: Keno
+            - emphasis [ref=e532]: Number draw
+          - strong [ref=e533]: 10 picks
+        - button "Tower Climb rows Trap picks" [ref=e534] [cursor=pointer]:
+          - img [ref=e536]
+          - generic [ref=e539]:
+            - generic [ref=e540]: Tower
+            - emphasis [ref=e541]: Climb rows
+          - strong [ref=e542]: Trap picks
+        - button "Double Color strip Green chase" [ref=e543] [cursor=pointer]:
+          - img [ref=e545]
+          - generic [ref=e549]:
+            - generic [ref=e550]: Double
+            - emphasis [ref=e551]: Color strip
+          - strong [ref=e552]: Green chase
+        - button "Slide Target run 100x cap" [ref=e553] [cursor=pointer]:
+          - img [ref=e555]
+          - generic [ref=e558]:
+            - generic [ref=e559]: Slide
+            - emphasis [ref=e560]: Target run
+          - strong [ref=e561]: 100x cap
+        - button "Pump Pressure ladder Bust point" [ref=e562] [cursor=pointer]:
+          - img [ref=e564]
+          - generic [ref=e566]:
+            - generic [ref=e567]: Pump
+            - emphasis [ref=e568]: Pressure ladder
+          - strong [ref=e569]: Bust point
+        - button "Dragon Tower Path tower Floor clear" [ref=e570] [cursor=pointer]:
+          - img [ref=e572]
+          - generic [ref=e575]:
+            - generic [ref=e576]: Dragon Tower
+            - emphasis [ref=e577]: Path tower
+          - strong [ref=e578]: Floor clear
+        - button "Diamonds Gem match 50x top" [ref=e579] [cursor=pointer]:
+          - img [ref=e581]
+          - generic [ref=e583]:
+            - generic [ref=e584]: Diamonds
+            - emphasis [ref=e585]: Gem match
+          - strong [ref=e586]: 50x top
+        - button "Case Battle Drop battle You vs dealer" [ref=e587] [cursor=pointer]:
+          - img [ref=e589]
+          - generic [ref=e593]:
+            - generic [ref=e594]: Case Battle
+            - emphasis [ref=e595]: Drop battle
+          - strong [ref=e596]: You vs dealer
+        - button "Tome Rune pages Curse risk" [ref=e597] [cursor=pointer]:
+          - img [ref=e599]
+          - generic [ref=e602]:
+            - generic [ref=e603]: Tome
+            - emphasis [ref=e604]: Rune pages
+          - strong [ref=e605]: Curse risk
+        - button "Scarab Spin 3x3 symbols Cluster pay" [ref=e606] [cursor=pointer]:
+          - img [ref=e608]
+          - generic [ref=e610]:
+            - generic [ref=e611]: Scarab Spin
+            - emphasis [ref=e612]: 3x3 symbols
+          - strong [ref=e613]: Cluster pay
+      - generic [ref=e614]:
+        - button "Mines" [ref=e615] [cursor=pointer]:
+          - img [ref=e616]
+          - text: Mines
+        - button "Crash" [ref=e620] [cursor=pointer]:
+          - img [ref=e621]
+          - text: Crash
+        - button "Dice" [ref=e626] [cursor=pointer]:
+          - img [ref=e627]
+          - text: Dice
+        - button "Plinko" [ref=e629] [cursor=pointer]:
+          - img [ref=e630]
+          - text: Plinko
+        - button "Limbo" [ref=e633] [cursor=pointer]:
+          - img [ref=e634]
+          - text: Limbo
+        - button "Hi-Lo" [ref=e636] [cursor=pointer]:
+          - img [ref=e637]
+          - text: Hi-Lo
+        - button "Big Six" [ref=e639] [cursor=pointer]:
+          - img [ref=e640]
+          - text: Big Six
+        - button "Coinflip" [ref=e643] [cursor=pointer]:
+          - img [ref=e644]
+          - text: Coinflip
+        - button "Keno" [ref=e647] [cursor=pointer]:
+          - img [ref=e648]
+          - text: Keno
+        - button "Tower" [ref=e649] [cursor=pointer]:
+          - img [ref=e650]
+          - text: Tower
+        - button "Double" [ref=e653] [cursor=pointer]:
+          - img [ref=e654]
+          - text: Double
+        - button "Slide" [ref=e658] [cursor=pointer]:
+          - img [ref=e659]
+          - text: Slide
+        - button "Pump" [ref=e662] [cursor=pointer]:
+          - img [ref=e663]
+          - text: Pump
+        - button "Dragon Tower" [ref=e665] [cursor=pointer]:
+          - img [ref=e666]
+          - text: Dragon Tower
+        - button "Diamonds" [ref=e669] [cursor=pointer]:
+          - img [ref=e670]
+          - text: Diamonds
+        - button "Case Battle" [ref=e672] [cursor=pointer]:
+          - img [ref=e673]
+          - text: Case Battle
+        - button "Tome" [ref=e677] [cursor=pointer]:
+          - img [ref=e678]
+          - text: Tome
+        - button "Scarab Spin" [ref=e681] [cursor=pointer]:
+          - img [ref=e682]
+          - text: Scarab Spin
+      - generic [ref=e685]:
+        - generic [ref=e687]:
+          - generic [ref=e688]: Rocket curve
+          - heading "Crash" [level=4] [ref=e689]
+          - paragraph [ref=e690]: Live cashout
+        - generic [ref=e691]:
+          - generic [ref=e692]:
+            - text: Bet (OST)
+            - spinbutton "Bet (OST)" [ref=e693]: "1"
+          - generic [ref=e694]:
+            - text: Auto cash-out ×
+            - spinbutton "Auto cash-out ×" [ref=e695]: "3.00"
+          - button "Place bet" [ref=e696] [cursor=pointer]
+          - button "Cash out" [disabled] [ref=e697]
+          - generic [ref=e698]:
+            - generic [ref=e699]: Peak
+            - strong [ref=e700]: 1.00x
+          - generic [ref=e701]:
+            - generic [ref=e702]: Bet size
+            - button "0.5" [ref=e703] [cursor=pointer]
+            - button "1" [ref=e704] [cursor=pointer]
+            - button "5" [ref=e705] [cursor=pointer]
+            - button "1/2" [ref=e706] [cursor=pointer]
+            - button "2x" [ref=e707] [cursor=pointer]
+            - button "Max" [ref=e708] [cursor=pointer]
+        - generic [ref=e711]: 1.00×
+        - generic [ref=e712]: Set your bet and your auto cash-out target. Watch the rocket — cash out before it crashes.
+      - generic [ref=e714]: "Recent multipliers:"
+  - generic [ref=e716]:
+    - heading "🛍️ OST Commerce" [level=2] [ref=e717]
+    - paragraph [ref=e718]: Curated shopping, live merchant browsing, and real on-chain request routing with OST.
+    - generic [ref=e719]:
+      - button "🛒 Shop" [ref=e720] [cursor=pointer]:
+        - generic [ref=e721]: 🛒
+        - generic [ref=e722]: Shop
+      - button "🏦 Interchange" [ref=e723] [cursor=pointer]:
+        - generic [ref=e724]: 🏦
+        - generic [ref=e725]: Interchange
+      - button "🎁 Gift Cards" [ref=e726] [cursor=pointer]:
+        - generic [ref=e727]: 🎁
+        - generic [ref=e728]: Gift Cards
+      - button "⛽ Gas Station" [ref=e729] [cursor=pointer]:
+        - generic [ref=e730]: ⛽
+        - generic [ref=e731]: Gas Station
+    - text: ✓ ✓ ✓ ✓ ✓ ✓ ✓ ✓ ✓ ✓ ✓ ✓ ✓ ✓ ✓ ✓ ✓ ✓ ✓ ✓ ✓ ✓ ✓ ✓
+    - generic [ref=e732]:
+      - generic [ref=e733]:
+        - generic [ref=e735]: ◉
+        - heading "Curated Shop - Live Listings" [level=3] [ref=e736]
+        - paragraph [ref=e737]: Build a cart from real products, then send it to the interchange desk for a live OST request.
+        - generic [ref=e738]:
+          - generic [ref=e739]: ZK-Private
+          - generic [ref=e741]: Sub-Second
+          - generic [ref=e743]: Live Prices
+      - generic [ref=e745]:
+        - generic [ref=e746]:
+          - generic [ref=e747]: Curated lanes
+          - paragraph [ref=e748]: Build a cart from live products, flights, hotels, vehicles, and property listings, then move it into the OST desk.
+        - generic [ref=e749]: 21 live listings
+      - generic [ref=e750]:
+        - button "All" [ref=e751] [cursor=pointer]
+        - button "Tech" [ref=e752] [cursor=pointer]
+        - button "Fashion" [ref=e753] [cursor=pointer]
+        - button "Travel" [ref=e754] [cursor=pointer]
+        - button "Flights" [ref=e755] [cursor=pointer]
+        - button "Hotels" [ref=e756] [cursor=pointer]
+        - button "Cars" [ref=e757] [cursor=pointer]
+        - button "Property" [ref=e758] [cursor=pointer]
+        - button "Food" [ref=e759] [cursor=pointer]
+      - generic [ref=e760]:
+        - generic [ref=e761]:
+          - img "Starbucks Coffee" [ref=e762]
+          - generic [ref=e763]:
+            - generic [ref=e764]: Caramel Macchiato
+            - generic [ref=e765]: Espresso, vanilla, steamed milk & caramel drizzle
+            - generic [ref=e766]:
+              - generic [ref=e767]: Food
+              - generic [ref=e768]: Cafe
+            - generic [ref=e769]:
+              - text: Starbucks
+              - link "starbucks.com" [ref=e770] [cursor=pointer]:
+                - /url: https://www.starbucks.com
+            - generic [ref=e771]: $6.45 · 64.5K OST
+          - button "Add" [ref=e772] [cursor=pointer]: +
+        - generic [ref=e773]:
+          - img "Nike Air Max 90" [ref=e774]
+          - generic [ref=e775]:
+            - generic [ref=e776]: Air Max 90
+            - generic [ref=e777]: Iconic running silhouette. Visible Air cushioning.
+            - generic [ref=e778]:
+              - generic [ref=e779]: Fashion
+              - generic [ref=e780]: Footwear
+            - generic [ref=e781]:
+              - text: Nike
+              - link "nike.com" [ref=e782] [cursor=pointer]:
+                - /url: https://www.nike.com
+            - generic [ref=e783]: $185.00 · 1.9M OST
+          - button "Add" [ref=e784] [cursor=pointer]: +
+        - generic [ref=e785]:
+          - img "iPhone 16 Pro" [ref=e786]
+          - generic [ref=e787]:
+            - generic [ref=e788]: iPhone 16 Pro
+            - generic [ref=e789]: A18 Pro chip, 48MP camera, titanium design
+            - generic [ref=e790]:
+              - generic [ref=e791]: Tech
+              - generic [ref=e792]: Mobile
+            - generic [ref=e793]:
+              - text: Apple
+              - link "apple.com" [ref=e794] [cursor=pointer]:
+                - /url: https://www.apple.com
+            - generic [ref=e795]: $999.00 · 10.0M OST
+          - button "Add" [ref=e796] [cursor=pointer]: +
+        - generic [ref=e797]:
+          - img "Tesla Model Y" [ref=e798]
+          - generic [ref=e799]:
+            - generic [ref=e800]: Model Y Long Range
+            - generic [ref=e801]: AWD, 310mi range, 0-60 in 4.8s, autopilot
+            - generic [ref=e802]:
+              - generic [ref=e803]: Cars
+              - generic [ref=e804]: EV
+            - generic [ref=e805]:
+              - text: Tesla
+              - link "tesla.com" [ref=e806] [cursor=pointer]:
+                - /url: https://www.tesla.com
+            - generic [ref=e807]: $52,990.00 · 529.9M OST
+          - button "Add" [ref=e808] [cursor=pointer]: +
+        - generic [ref=e809]:
+          - img "Miami Beach Condo" [ref=e810]
+          - generic [ref=e811]:
+            - generic [ref=e812]: Miami Beach Condo 2BR
+            - generic [ref=e813]: Ocean view, 1,200 sqft, pool, gym, parking
+            - generic [ref=e814]:
+              - generic [ref=e815]: Property
+              - generic [ref=e816]: Real Estate
+            - generic [ref=e817]:
+              - text: Zillow
+              - link "zillow.com" [ref=e818] [cursor=pointer]:
+                - /url: https://www.zillow.com
+            - generic [ref=e819]: $485,000 · 4850.0M OST
+          - button "Add" [ref=e820] [cursor=pointer]: +
+        - generic [ref=e821]:
+          - img "Delta Airlines Flight" [ref=e822]
+          - generic [ref=e823]:
+            - generic [ref=e824]: Round Trip NYC â†’ Miami
+            - generic [ref=e825]: Economy, nonstop, 3h 15m each way
+            - generic [ref=e826]:
+              - generic [ref=e827]: Flights
+              - generic [ref=e828]: Travel
+            - generic [ref=e829]:
+              - text: Delta Airlines
+              - link "delta.com" [ref=e830] [cursor=pointer]:
+                - /url: https://www.delta.com
+            - generic [ref=e831]: $398.00 · 4.0M OST
+          - button "Add" [ref=e832] [cursor=pointer]: +
+        - generic [ref=e833]:
+          - img "Marriott Hotel" [ref=e834]
+          - generic [ref=e835]:
+            - generic [ref=e836]: New York Marriott Marquis
+            - generic [ref=e837]: Times Square, 2 nights, king room, flexible rate
+            - generic [ref=e838]:
+              - generic [ref=e839]: Hotels
+              - generic [ref=e840]: Travel
+            - generic [ref=e841]:
+              - text: Marriott
+              - link "marriott.com" [ref=e842] [cursor=pointer]:
+                - /url: https://www.marriott.com
+            - generic [ref=e843]: $624.00 · 6.2M OST
+          - button "Add" [ref=e844] [cursor=pointer]: +
+        - generic [ref=e845]:
+          - img "MacBook Air M3" [ref=e846]
+          - generic [ref=e847]:
+            - generic [ref=e848]: MacBook Air M3
+            - generic [ref=e849]: 15" Liquid Retina, 18hr battery, 8-core GPU
+            - generic [ref=e850]:
+              - generic [ref=e851]: Tech
+              - generic [ref=e852]: Laptop
+            - generic [ref=e853]:
+              - text: Apple
+              - link "apple.com" [ref=e854] [cursor=pointer]:
+                - /url: https://www.apple.com/macbook-air/
+            - generic [ref=e855]: $1,299.00 · 13.0M OST
+          - button "Add" [ref=e856] [cursor=pointer]: +
+        - generic [ref=e857]:
+          - img "PS5 Console" [ref=e858]
+          - generic [ref=e859]:
+            - generic [ref=e860]: PS5 Console
+            - generic [ref=e861]: 4K gaming, 825GB SSD, DualSense controller
+            - generic [ref=e862]:
+              - generic [ref=e863]: Tech
+              - generic [ref=e864]: Gaming
+            - generic [ref=e865]:
+              - text: Sony
+              - link "playstation.com" [ref=e866] [cursor=pointer]:
+                - /url: https://direct.playstation.com
+            - generic [ref=e867]: $499.99 · 5.0M OST
+          - button "Add" [ref=e868] [cursor=pointer]: +
+        - generic [ref=e869]:
+          - img "Sony WH-1000XM5" [ref=e870]
+          - generic [ref=e871]:
+            - generic [ref=e872]: Sony WH-1000XM5
+            - generic [ref=e873]: Industry-leading noise cancellation, 30hr battery, multipoint Bluetooth
+            - generic [ref=e875]: Tech
+            - generic [ref=e876]:
+              - text: Sony
+              - link "electronics.sony.com" [ref=e877] [cursor=pointer]:
+                - /url: https://electronics.sony.com/audio/headphones/all-headphones/p/wh1000xm5-b
+            - generic [ref=e878]: $399.00 · 4.0M OST
+          - button "Add" [ref=e879] [cursor=pointer]: +
+        - generic [ref=e880]:
+          - img "Patagonia Nano Puff" [ref=e881]
+          - generic [ref=e882]:
+            - generic [ref=e883]: Patagonia Nano Puff
+            - generic [ref=e884]: Recycled-polyester insulation, packable, water-resistant shell
+            - generic [ref=e886]: Fashion
+            - generic [ref=e887]:
+              - text: Patagonia
+              - link "patagonia.com" [ref=e888] [cursor=pointer]:
+                - /url: https://www.patagonia.com/product/mens-nano-puff-jacket/84212.html
+            - generic [ref=e889]: $239.00 · 2.4M OST
+          - button "Add" [ref=e890] [cursor=pointer]: +
+        - generic [ref=e891]:
+          - img "Le Creuset Dutch Oven 5.5qt" [ref=e892]
+          - generic [ref=e893]:
+            - generic [ref=e894]: Le Creuset Dutch Oven 5.5qt
+            - generic [ref=e895]: Enameled cast iron, lifetime warranty, oven-safe to 500°F
+            - generic [ref=e897]: Food
+            - generic [ref=e898]:
+              - text: Le Creuset
+              - link "lecreuset.com" [ref=e899] [cursor=pointer]:
+                - /url: https://www.lecreuset.com/round-dutch-oven/L2502.html
+            - generic [ref=e900]: $369.00 · 3.7M OST
+          - button "Add" [ref=e901] [cursor=pointer]: +
+        - generic [ref=e902]:
+          - img "Lego Technic Bugatti" [ref=e903]
+          - generic [ref=e904]:
+            - generic [ref=e905]: Lego Technic Bugatti
+            - generic [ref=e906]: 3,599 pieces, working W16 engine model, 8-speed gearbox
+            - generic [ref=e908]: Tech
+            - generic [ref=e909]:
+              - text: Lego
+              - link "lego.com" [ref=e910] [cursor=pointer]:
+                - /url: https://www.lego.com/en-us/product/bugatti-chiron-42083
+            - generic [ref=e911]: $449.99 · 4.5M OST
+          - button "Add" [ref=e912] [cursor=pointer]: +
+        - generic [ref=e913]:
+          - img "Airbnb · Tulum Cenote Villa" [ref=e914]
+          - generic [ref=e915]:
+            - generic [ref=e916]: Airbnb · Tulum Cenote Villa
+            - generic [ref=e917]: 3 nights · private cenote · jungle deck · 4 guests
+            - generic [ref=e918]:
+              - generic [ref=e919]: Travel
+              - generic [ref=e920]: Hotel
+            - generic [ref=e921]:
+              - text: Airbnb
+              - link "airbnb.com" [ref=e922] [cursor=pointer]:
+                - /url: https://www.airbnb.com/s/Tulum--Mexico/homes
+            - generic [ref=e923]: $845.00 · 8.4M OST
+          - button "Add" [ref=e924] [cursor=pointer]: +
+        - generic [ref=e925]:
+          - img "Aeromexico CDMX → NYC" [ref=e926]
+          - generic [ref=e927]:
+            - generic [ref=e928]: Aeromexico CDMX → NYC
+            - generic [ref=e929]: Round-trip economy · 1 stop · 8h 35m total
+            - generic [ref=e930]:
+              - generic [ref=e931]: Travel
+              - generic [ref=e932]: Flight
+            - generic [ref=e933]:
+              - text: Aeromexico
+              - link "aeromexico.com" [ref=e934] [cursor=pointer]:
+                - /url: https://www.aeromexico.com/
+            - generic [ref=e935]: $412.00 · 4.1M OST
+          - button "Add" [ref=e936] [cursor=pointer]: +
+        - generic [ref=e937]:
+          - img "Ford F-150 Lightning XLT" [ref=e938]
+          - generic [ref=e939]:
+            - generic [ref=e940]: Ford F-150 Lightning XLT
+            - generic [ref=e941]: 320mi range, 580hp, dual e-motor AWD, mega power frunk
+            - generic [ref=e943]: Car
+            - generic [ref=e944]:
+              - text: Ford
+              - link "ford.com" [ref=e945] [cursor=pointer]:
+                - /url: https://www.ford.com/trucks/f150/f150-lightning/
+            - generic [ref=e946]: $56,995.00 · 570.0M OST
+          - button "Add" [ref=e947] [cursor=pointer]: +
+        - generic [ref=e948]:
+          - img "Casa Tulum Beachfront 3BR" [ref=e949]
+          - generic [ref=e950]:
+            - generic [ref=e951]: Casa Tulum Beachfront 3BR
+            - generic [ref=e952]: 320 m² · pool · cenote rights · turnkey rental program
+            - generic [ref=e954]: Property
+            - generic [ref=e955]:
+              - text: Sotheby's
+              - link "sothebysrealty.com" [ref=e956] [cursor=pointer]:
+                - /url: https://www.sothebysrealty.com/eng/sales/mex
+            - generic [ref=e957]: $1,240,000 · 12400.0M OST
+          - button "Add" [ref=e958] [cursor=pointer]: +
+        - generic [ref=e959]:
+          - img "iPad Pro 13\" M4" [ref=e960]
+          - generic [ref=e961]:
+            - generic [ref=e962]: iPad Pro 13" M4
+            - generic [ref=e963]: M4 chip, Tandem OLED, ProMotion 120Hz, 256GB
+            - generic [ref=e965]: Tech
+            - generic [ref=e966]:
+              - text: Apple
+              - link "apple.com" [ref=e967] [cursor=pointer]:
+                - /url: https://www.apple.com/shop/buy-ipad/ipad-pro
+            - generic [ref=e968]: $1,299.00 · 13.0M OST
+          - button "Add" [ref=e969] [cursor=pointer]: +
+        - generic [ref=e970]:
+          - img "Yeezy Boost 350 V2" [ref=e971]
+          - generic [ref=e972]:
+            - generic [ref=e973]: Yeezy Boost 350 V2
+            - generic [ref=e974]: Primeknit upper, full-length BOOST midsole
+            - generic [ref=e976]: Fashion
+            - generic [ref=e977]:
+              - text: Adidas
+              - link "adidas.com" [ref=e978] [cursor=pointer]:
+                - /url: https://www.adidas.com/us/yeezy
+            - generic [ref=e979]: $230.00 · 2.3M OST
+          - button "Add" [ref=e980] [cursor=pointer]: +
+        - generic [ref=e981]:
+          - img "Tacos al Pastor · Pujol delivery" [ref=e982]
+          - generic [ref=e983]:
+            - generic [ref=e984]: Tacos al Pastor · Pujol delivery
+            - generic [ref=e985]: 12 tacos · housemade tortillas · CDMX delivery
+            - generic [ref=e987]: Food
+            - generic [ref=e988]:
+              - text: Pujol
+              - link "pujol.com.mx" [ref=e989] [cursor=pointer]:
+                - /url: https://pujol.com.mx/
+            - generic [ref=e990]: $38.00 · 380.0K OST
+          - button "Add" [ref=e991] [cursor=pointer]: +
+        - generic [ref=e992]:
+          - img "GTA VI Pre-Order (Standard)" [ref=e993]
+          - generic [ref=e994]:
+            - generic [ref=e995]: GTA VI Pre-Order (Standard)
+            - generic [ref=e996]: Digital pre-order · PS5/XSX · early-bonus content
+            - generic [ref=e998]: Tech
+            - generic [ref=e999]:
+              - text: Rockstar
+              - link "rockstargames.com" [ref=e1000] [cursor=pointer]:
+                - /url: https://www.rockstargames.com/VI
+            - generic [ref=e1001]: $69.99 · 699.9K OST
+          - button "Add" [ref=e1002] [cursor=pointer]: +
+      - generic [ref=e1003]:
+        - generic [ref=e1004]:
+          - generic [ref=e1005]: 🛍️
+          - generic [ref=e1006]: Your Cart
+          - generic [ref=e1007]: "1"
+        - generic [ref=e1009]:
+          - generic [ref=e1010]: "ðŸ›\x8dï¸\x8f Starbucks Caramel Macchiato"
+          - generic [ref=e1011]: $6.45
+          - button "×" [ref=e1012] [cursor=pointer]
+        - generic [ref=e1013]:
+          - generic [ref=e1014]:
+            - generic [ref=e1015]: Total
+            - generic [ref=e1016]: $6.45 - 64500 OST
+          - button "◉ Review in OST Desk" [ref=e1017] [cursor=pointer]:
+            - generic [ref=e1018]: ◉
+            - generic [ref=e1019]: Review in OST Desk
+    - text: LIVE
+  - generic [ref=e1021]:
+    - heading "My OST Wallet" [level=2] [ref=e1022]
+    - paragraph [ref=e1023]: Your personal command center. Create, connect, and manage your OST wallet.
+    - generic [ref=e1024]:
+      - generic [ref=e1025]:
+        - generic [ref=e1026]:
+          - generic [ref=e1027]: Wallet + conversion rail
+          - heading "Open a wallet, read the OST market, and move from fiat or crypto into confidential OST." [level=3] [ref=e1028]
+          - paragraph [ref=e1029]: The wallet page now behaves like a command center for access, market watch, conversion, and portal routing.
+          - generic [ref=e1030]:
+            - generic [ref=e1031]:
+              - generic [ref=e1032]: Faucet claims
+              - strong [ref=e1033]: "3"
+            - generic [ref=e1034]:
+              - generic [ref=e1035]: Treasury reserve
+              - strong [ref=e1036]: 1.50M OST
+        - generic [ref=e1037]:
+          - generic [ref=e1038]:
+            - generic [ref=e1039]: OST devnet pulse
+            - generic [ref=e1040]: Devnet live Â· 8:07 PM
+          - generic [ref=e1041]:
+            - generic [ref=e1042]:
+              - generic [ref=e1043]: Faucet amount
+              - strong [ref=e1044]: 100 OST
+              - emphasis [ref=e1045]: 3 wallets served - 100 OST start
+            - generic [ref=e1046]:
+              - generic [ref=e1047]: Minted supply
+              - strong [ref=e1048]: 1.01B OST
+      - tablist "Wallet command panels" [ref=e1049]:
+        - tab "Access" [selected] [ref=e1050] [cursor=pointer]
+        - tab "Market" [ref=e1051] [cursor=pointer]
+        - tab "Convert" [ref=e1052] [cursor=pointer]
+        - tab "Portals" [ref=e1053] [cursor=pointer]
+        - tab "Predict" [ref=e1054] [cursor=pointer]:
+          - img [ref=e1056]
+          - text: Predict
+      - tabpanel [ref=e1060]:
+        - generic [ref=e1061]:
+          - generic [ref=e1062]:
+            - generic [ref=e1063]:
+              - generic [ref=e1064]:
+                - generic [ref=e1065]: Devnet onboarding rail
+                - generic [ref=e1066]: Awaiting wallet
+                - heading "Connect a wallet to start on devnet" [level=4] [ref=e1067]
+                - paragraph [ref=e1068]: Create a browser wallet or connect an existing Solana wallet. OST covers the devnet network fees and guides you into your first balance.
+              - generic [ref=e1069]:
+                - article [ref=e1070]:
+                  - generic [ref=e1071]: "01"
+                  - generic [ref=e1072]:
+                    - strong [ref=e1073]: Wallet access
+                    - paragraph [ref=e1074]: Choose create wallet or connect an existing address.
+                - article [ref=e1075]:
+                  - generic [ref=e1076]: "02"
+                  - generic [ref=e1077]:
+                    - strong [ref=e1078]: Backup / verify
+                    - paragraph [ref=e1079]: Backup or verification starts right after the wallet session is open.
+                - article [ref=e1080]:
+                  - generic [ref=e1081]: "03"
+                  - generic [ref=e1082]:
+                    - strong [ref=e1083]: Fee coverage
+                    - paragraph [ref=e1084]: The OST fee vault sponsors Solana network fees for onboarding.
+                - article [ref=e1085]:
+                  - generic [ref=e1086]: "04"
+                  - generic [ref=e1087]:
+                    - strong [ref=e1088]: OST ready
+                    - paragraph [ref=e1089]: Claim 100 OST once the wallet is ready.
+              - generic [ref=e1090]:
+                - button "Create browser wallet" [ref=e1091] [cursor=pointer]
+                - button "Use extension wallet" [ref=e1092] [cursor=pointer]
+            - generic [ref=e1093]:
+              - generic [ref=e1094]:
+                - generic [ref=e1095]:
+                  - generic [ref=e1096]: Wallet intelligence
+                  - heading "Address, funds, and execution health" [level=4] [ref=e1097]
+                  - paragraph [ref=e1098]: Create or connect a wallet to unlock a live address, balance curve, and route readiness across OST rails.
+                - generic [ref=e1099]: Awaiting wallet
+              - generic [ref=e1100]:
+                - generic [ref=e1101]:
+                  - generic [ref=e1102]: Live address
+                  - strong [ref=e1103]: Connect wallet
+                  - paragraph [ref=e1104]: No wallet session yet
+                - generic [ref=e1105]:
+                  - generic [ref=e1106]: Total wallet value
+                  - strong [ref=e1107]: $0.00
+                  - paragraph [ref=e1108]: SOL + OST mark-to-market
+                - generic [ref=e1109]:
+                  - generic [ref=e1110]: 24h move
+                  - strong [ref=e1111]: "--"
+                  - paragraph [ref=e1112]: Waiting for live holdings
+                - generic [ref=e1113]:
+                  - generic [ref=e1114]: Execution routes
+                  - strong [ref=e1115]: 0 live / 7 linked
+                  - paragraph [ref=e1116]: Wallet, devnet swap, fiat, bridge, and prediction rails
+                - generic [ref=e1117]:
+                  - generic [ref=e1118]: Recorded activity
+                  - strong [ref=e1119]: 0 records
+                  - paragraph [ref=e1120]: 0 tickets â€¢ 0 commerce requests
+                - generic [ref=e1121]:
+                  - generic [ref=e1122]: Funding status
+                  - strong [ref=e1123]: Not ready
+                  - paragraph [ref=e1124]: Fees are covered once a wallet is connected
+              - generic [ref=e1125]:
+                - generic [ref=e1126]:
+                  - generic [ref=e1127]:
+                    - strong [ref=e1128]: Wallet curve
+                    - paragraph [ref=e1129]: Your live wallet curve combines current SOL and OST holdings with the latest market tape.
+                  - generic [ref=e1130]:
+                    - generic [ref=e1131]:
+                      - button "OST" [ref=e1132] [cursor=pointer]
+                      - button "SOL" [ref=e1133] [cursor=pointer]
+                      - button "USD" [ref=e1134] [cursor=pointer]
+                    - generic [ref=e1135]: Waiting for funds
+                - generic "Wallet portfolio chart" [ref=e1137]
+                - generic [ref=e1138]:
+                  - generic [ref=e1139]: â€”
+                  - generic [ref=e1140]: â€”
+                  - generic [ref=e1141]: Now
+                - generic [ref=e1142]:
+                  - generic [ref=e1143]:
+                    - generic [ref=e1144]:
+                      - generic [ref=e1145]: Received
+                      - generic [ref=e1146]: 0.00 OST
+                    - generic [ref=e1147]:
+                      - generic [ref=e1148]: Sent / Bet
+                      - generic [ref=e1149]: 0.00 OST
+                    - generic [ref=e1150]:
+                      - generic [ref=e1151]: Open positions
+                      - generic [ref=e1152]: "0"
+                    - generic [ref=e1153]:
+                      - generic [ref=e1154]: Total events
+                      - generic [ref=e1155]: "0"
+                  - paragraph [ref=e1156]: No transactions yet — make a swap or prediction to start your history.
+              - generic [ref=e1157]:
+                - article [ref=e1158]:
+                  - generic [ref=e1159]: Locked
+                  - strong [ref=e1160]: Wallet hold rail
+                  - paragraph [ref=e1161]: Create or connect a wallet to hold OST while the fee vault sponsors devnet network costs.
+                - article [ref=e1162]:
+                  - generic [ref=e1163]: Needs wallet
+                  - strong [ref=e1164]: Devnet buy + swap
+                  - paragraph [ref=e1165]: Live once a wallet is connected and routed into OST through the sponsored vault rail.
+                - article [ref=e1166]:
+                  - generic [ref=e1167]: Preview rails
+                  - strong [ref=e1168]: Bridge + fiat portals
+                  - paragraph [ref=e1169]: Wormhole, Onramper, MoonPay, and Transak stay linked here as the mainnet entry and exit stack.
+                - article [ref=e1170]:
+                  - generic [ref=e1171]: Needs OST
+                  - strong [ref=e1172]: Prediction vault
+                  - paragraph [ref=e1173]: Place live devnet market tickets after this wallet is holding OST.
+            - generic [ref=e1174]:
+              - generic [ref=e1175]: 👛
+              - heading "Get Your Personal OST Wallet" [level=3] [ref=e1176]
+              - paragraph [ref=e1177]: Choose how to create or connect your wallet. Build one in this browser or connect an existing Solana wallet.
+              - generic [ref=e1178]:
+                - generic [ref=e1179]:
+                  - generic [ref=e1180]: 👻
+                  - heading "Phantom" [level=4] [ref=e1181]
+                  - paragraph [ref=e1182]: Fast mobile and desktop access for users who already live inside Solana.
+                  - button "Connect" [ref=e1183] [cursor=pointer]
+                - generic [ref=e1184]:
+                  - generic [ref=e1185]: ☀️
+                  - heading "Solflare" [level=4] [ref=e1186]
+                  - paragraph [ref=e1187]: Strong staking and portfolio tools for users who want a deeper wallet dashboard.
+                  - button "Connect" [ref=e1188] [cursor=pointer]
+                - generic [ref=e1189]:
+                  - generic [ref=e1190]: 🎒
+                  - heading "Backpack" [level=4] [ref=e1191]
+                  - paragraph [ref=e1192]: A multi-chain option for people who want apps, collectibles, and payments in one place.
+                  - button "Connect" [ref=e1193] [cursor=pointer]
+                - generic [ref=e1194]:
+                  - generic [ref=e1195]: 🔑
+                  - heading "Create OST wallet" [level=4] [ref=e1196]
+                  - paragraph [ref=e1197]: Generate an OST wallet in this browser, download a backup, and start with devnet OST.
+                  - button "Create wallet" [ref=e1198] [cursor=pointer]
+              - generic [ref=e1199]:
+                - paragraph [ref=e1200]: Need an install first? Use the official wallet download links.
+                - generic [ref=e1201]:
+                  - link "👻 Phantom" [ref=e1202] [cursor=pointer]:
+                    - /url: https://phantom.app/download
+                  - link "☀️ Solflare" [ref=e1203] [cursor=pointer]:
+                    - /url: https://solflare.com/download
+                  - link "🎒 Backpack" [ref=e1204] [cursor=pointer]:
+                    - /url: https://www.backpack.app/download
+                  - link "📱 Mobile" [ref=e1205] [cursor=pointer]:
+                    - /url: https://phantom.app/download
+          - complementary [ref=e1206]:
+            - generic [ref=e1207]: Secure onboarding
+            - paragraph [ref=e1208]: "Choose the access rail that matches the user: seed phrase power users, browser-wallet newcomers, or wallet-native Solana traders."
+            - generic [ref=e1209]:
+              - generic [ref=e1210]: Use Phantom, Solflare, or Backpack when the user already has a Solana workflow.
+              - generic [ref=e1211]: Use the local wallet flow when the priority is onboarding a first wallet in minutes.
+              - generic [ref=e1212]: Keep one address across swap, payment, and launchpad rails to reduce confusion.
+              - generic [ref=e1213]: The connected view surfaces balances, receive QR, and direct links without leaving the page.
+          - complementary [ref=e1214]:
+            - generic [ref=e1215]: Apple device rail
+            - heading "OST Tap Card" [level=3] [ref=e1216]
+            - paragraph [ref=e1217]: "Real today: open Apple Pay or card checkout on supported Safari through the live Stripe rail. Real later: turning OST into a native Apple Pay payment card still requires an issuer, network tokenization, and Apple approval."
+            - generic [ref=e1218]:
+              - generic [ref=e1219]:
+                - generic [ref=e1220]:
+                  - generic [ref=e1221]:
+                    - generic [ref=e1222]: OST Tap Card
+                    - generic [ref=e1223]: Connect a wallet
+                  - generic [ref=e1224]: Apple rail
+                - generic [ref=e1225]: Connect or create a wallet first, then this card packages its tap payload and opens hosted checkout.
+              - generic [ref=e1226]:
+                - generic [ref=e1227]:
+                  - generic [ref=e1228]: Device
+                  - generic [ref=e1229]: Desktop / Other
+                - generic [ref=e1230]:
+                  - generic [ref=e1231]: Apple Pay web
+                  - generic [ref=e1232]: Unavailable
+                - generic [ref=e1233]:
+                  - generic [ref=e1234]: Card rail
+                  - generic [ref=e1235]: Onramper fallback
+                - generic [ref=e1236]:
+                  - generic [ref=e1237]: Web NFC
+                  - generic [ref=e1238]: QR + Share fallback
+              - generic [ref=e1239]:
+                - generic [ref=e1240]: Apple checkout amount (USD)
+                - spinbutton "Apple checkout amount (USD)" [ref=e1241]: "25"
+              - generic [ref=e1242]:
+                - button "Open Card Checkout (Onramper)" [disabled] [ref=e1243] [cursor=pointer]
+                - button "Open Receive Rail" [ref=e1244] [cursor=pointer]
+                - button "Copy Tap Payload" [ref=e1245] [cursor=pointer]
+                - button "Download Issuer Packet" [ref=e1246] [cursor=pointer]
+              - generic [ref=e1247]: Connect a wallet first. Apple Pay top-ups, the tap payload, and the QR / NFC link all bind to your real OST receive address.
+              - generic [ref=e1248]: No wallet connected yet.
+              - generic [ref=e1249]:
+                - generic [ref=e1250]:
+                  - strong [ref=e1251]: Universal tap-to-pay
+                  - generic [ref=e1252]: QR + Share
+                - paragraph [ref=e1253]: Connect a wallet first. The QR / NFC payload will then point at your real OST receive address.
+                - generic [ref=e1254]:
+                  - img "OST tap-to-pay QR" [ref=e1255]
+                  - generic [ref=e1256]:
+                    - generic [ref=e1257]: Tap / scan opens
+                    - link "Connect a wallet to generate a pay link" [ref=e1258] [cursor=pointer]:
+                      - /url: "#"
+                - generic [ref=e1259]:
+                  - button "Share / AirDrop" [ref=e1260] [cursor=pointer]
+                  - button "Copy pay link" [ref=e1261] [cursor=pointer]
+                  - button "Write to NFC tag" [disabled] [ref=e1262] [cursor=pointer]
+              - generic [ref=e1263]: "Important: Safari can present Apple Pay through the hosted Stripe checkout when Stripe is enabled and the domain is verified. A website alone cannot provision an arbitrary crypto card into Apple Pay or emulate a payment card over iPhone NFC."
+            - generic [ref=e1264]:
+              - generic [ref=e1265]:
+                - generic [ref=e1266]: OST Card — tap ticket
+                - heading "Open your OST Tap Ticket" [level=3] [ref=e1267]
+                - paragraph [ref=e1268]: Links your wallet + OST Mesh handle to a scannable iPhone-friendly ticket. Wallet pass downloads only work when a signed Apple / Google relay is configured.
+              - generic [ref=e1269]:
+                - generic [ref=e1270]:
+                  - generic [ref=e1271]:
+                    - generic [ref=e1272]: OST Card
+                    - generic [ref=e1273]: Connect wallet
+                  - generic [ref=e1274]: Devnet
+                - generic [ref=e1275]:
+                  - img "OST Card QR" [ref=e1276]
+                  - generic [ref=e1277]:
+                    - generic [ref=e1278]: Balance
+                    - generic [ref=e1279]: 0.00 OST
+                    - generic [ref=e1280]: ~ $0.00 USD
+                - generic [ref=e1281]: Connect a wallet to mint card
+              - generic [ref=e1282]:
+                - generic [ref=e1283]: Default tap amount (USD)
+                - spinbutton "Default tap amount (USD)" [ref=e1284]: "25"
+              - generic [ref=e1285]:
+                - button "Open iPhone tap ticket" [ref=e1286] [cursor=pointer]
+                - button "Create iOS Shortcut" [ref=e1287] [cursor=pointer]
+                - button "Download Apple pass body" [ref=e1288] [cursor=pointer]
+                - button "Download Google pass body" [ref=e1289] [cursor=pointer]
+                - button "Write to NFC tag" [ref=e1290] [cursor=pointer]
+                - button "Share card link" [ref=e1291] [cursor=pointer]
+                - button "Open full card" [ref=e1292] [cursor=pointer]
+              - generic [ref=e1293]: Connect a wallet first.
+      - text: ▶ Click for live data, depth, ticks & bet Click for live data, depth, ticks & bet Click for live data, depth, ticks & bet Click for live data, depth, ticks & bet Click for live data, depth, ticks & bet
+  - generic [ref=e1295]:
+    - generic [ref=e1296]:
+      - generic [ref=e1297]:
+        - generic [ref=e1298]: Public equity mirror
+        - generic [ref=e1299]:
+          - heading "OST Stock Market" [level=2] [ref=e1300]
+          - generic [ref=e1301]: Live public stock quotes online via stooq-public.
+      - generic [ref=e1302]:
+        - searchbox "Search stock symbols" [ref=e1303]: MSFT
+        - button "Refresh" [ref=e1304] [cursor=pointer]
+    - generic "Stock market lanes" [ref=e1305]:
+      - button "All" [ref=e1306] [cursor=pointer]
+      - button "Technology" [ref=e1307] [cursor=pointer]
+      - button "Indexes" [ref=e1308] [cursor=pointer]
+      - button "Value" [ref=e1309] [cursor=pointer]
+    - generic [ref=e1310]:
+      - generic [ref=e1311]:
+        - generic [ref=e1312]:
+          - generic [ref=e1313]:
+            - heading "Market board" [level=3] [ref=e1314]
+            - paragraph [ref=e1315]: Live public quotes from the OST edge relay, priced for OST-denominated mirror tickets.
+          - generic "Chart range" [ref=e1316]:
+            - button "1Y" [ref=e1317] [cursor=pointer]
+            - button "Daily" [ref=e1318] [cursor=pointer]
+        - generic [ref=e1319]:
+          - button "AAPL NASDAQ Apple Inc. $294.87 $2.31 / +0.79%" [ref=e1320] [cursor=pointer]:
+            - generic [ref=e1321]:
+              - strong [ref=e1322]: AAPL
+              - generic [ref=e1323]: NASDAQ
+            - generic [ref=e1324]: Apple Inc.
+            - strong [ref=e1325]: $294.87
+            - generic [ref=e1326]: $2.31 / +0.79%
+          - button "MSFT NASDAQ Microsoft Corp. $407.75 $-6.73 / -1.62%" [ref=e1327] [cursor=pointer]:
+            - generic [ref=e1328]:
+              - strong [ref=e1329]: MSFT
+              - generic [ref=e1330]: NASDAQ
+            - generic [ref=e1331]: Microsoft Corp.
+            - strong [ref=e1332]: $407.75
+            - generic [ref=e1333]: $-6.73 / -1.62%
+          - button "NVDA NASDAQ NVIDIA Corp. $220.87 $2.33 / +1.06%" [ref=e1334] [cursor=pointer]:
+            - generic [ref=e1335]:
+              - strong [ref=e1336]: NVDA
+              - generic [ref=e1337]: NASDAQ
+            - generic [ref=e1338]: NVIDIA Corp.
+            - strong [ref=e1339]: $220.87
+            - generic [ref=e1340]: $2.33 / +1.06%
+          - button "TSLA NASDAQ Tesla Inc. $433.44 $-7.97 / -1.81%" [ref=e1341] [cursor=pointer]:
+            - generic [ref=e1342]:
+              - strong [ref=e1343]: TSLA
+              - generic [ref=e1344]: NASDAQ
+            - generic [ref=e1345]: Tesla Inc.
+            - strong [ref=e1346]: $433.44
+            - generic [ref=e1347]: $-7.97 / -1.81%
+          - button "AMZN NASDAQ Amazon.com Inc. $265.82 $-0.89 / -0.33%" [ref=e1348] [cursor=pointer]:
+            - generic [ref=e1349]:
+              - strong [ref=e1350]: AMZN
+              - generic [ref=e1351]: NASDAQ
+            - generic [ref=e1352]: Amazon.com Inc.
+            - strong [ref=e1353]: $265.82
+            - generic [ref=e1354]: $-0.89 / -0.33%
+          - button "META NASDAQ Meta Platforms Inc. $603.10 $8.28 / +1.39%" [ref=e1355] [cursor=pointer]:
+            - generic [ref=e1356]:
+              - strong [ref=e1357]: META
+              - generic [ref=e1358]: NASDAQ
+            - generic [ref=e1359]: Meta Platforms Inc.
+            - strong [ref=e1360]: $603.10
+            - generic [ref=e1361]: $8.28 / +1.39%
+          - button "GOOGL NASDAQ Alphabet Inc. $387.35 $0.01 / +0.00%" [ref=e1362] [cursor=pointer]:
+            - generic [ref=e1363]:
+              - strong [ref=e1364]: GOOGL
+              - generic [ref=e1365]: NASDAQ
+            - generic [ref=e1366]: Alphabet Inc.
+            - strong [ref=e1367]: $387.35
+            - generic [ref=e1368]: $0.01 / +0.00%
+          - button "AMD NASDAQ Advanced Micro Devices $448.29 $-0.96 / -0.21%" [ref=e1369] [cursor=pointer]:
+            - generic [ref=e1370]:
+              - strong [ref=e1371]: AMD
+              - generic [ref=e1372]: NASDAQ
+            - generic [ref=e1373]: Advanced Micro Devices
+            - strong [ref=e1374]: $448.29
+            - generic [ref=e1375]: $-0.96 / -0.21%
+          - button "JPM NYSE JPMorgan Chase & Co. $304.88 $4.68 / +1.56%" [ref=e1376] [cursor=pointer]:
+            - generic [ref=e1377]:
+              - strong [ref=e1378]: JPM
+              - generic [ref=e1379]: NYSE
+            - generic [ref=e1380]: JPMorgan Chase & Co.
+            - strong [ref=e1381]: $304.88
+            - generic [ref=e1382]: $4.68 / +1.56%
+          - button "V NYSE Visa Inc. $326.42 $2.10 / +0.65%" [ref=e1383] [cursor=pointer]:
+            - generic [ref=e1384]:
+              - strong [ref=e1385]: V
+              - generic [ref=e1386]: NYSE
+            - generic [ref=e1387]: Visa Inc.
+            - strong [ref=e1388]: $326.42
+            - generic [ref=e1389]: $2.10 / +0.65%
+          - button "KO NYSE Coca-Cola Co. $80.03 $1.03 / +1.30%" [ref=e1390] [cursor=pointer]:
+            - generic [ref=e1391]:
+              - strong [ref=e1392]: KO
+              - generic [ref=e1393]: NYSE
+            - generic [ref=e1394]: Coca-Cola Co.
+            - strong [ref=e1395]: $80.03
+            - generic [ref=e1396]: $1.03 / +1.30%
+          - button "SPY NYSE Arca SPDR S&P 500 ETF $738.17 $1.28 / +0.17%" [ref=e1397] [cursor=pointer]:
+            - generic [ref=e1398]:
+              - strong [ref=e1399]: SPY
+              - generic [ref=e1400]: NYSE Arca
+            - generic [ref=e1401]: SPDR S&P 500 ETF
+            - strong [ref=e1402]: $738.17
+            - generic [ref=e1403]: $1.28 / +0.17%
+          - button "QQQ NASDAQ Invesco QQQ Trust $707.24 $-0.98 / -0.14%" [ref=e1404] [cursor=pointer]:
+            - generic [ref=e1405]:
+              - strong [ref=e1406]: QQQ
+              - generic [ref=e1407]: NASDAQ
+            - generic [ref=e1408]: Invesco QQQ Trust
+            - strong [ref=e1409]: $707.24
+            - generic [ref=e1410]: $-0.98 / -0.14%
+          - button "DIA NYSE Arca SPDR Dow Jones Industrial Average ETF $497.89 $1.38 / +0.28%" [ref=e1411] [cursor=pointer]:
+            - generic [ref=e1412]:
+              - strong [ref=e1413]: DIA
+              - generic [ref=e1414]: NYSE Arca
+            - generic [ref=e1415]: SPDR Dow Jones Industrial Average ETF
+            - strong [ref=e1416]: $497.89
+            - generic [ref=e1417]: $1.38 / +0.28%
+        - generic [ref=e1418]:
+          - generic [ref=e1419]:
+            - generic [ref=e1420]:
+              - heading "AAPL - Apple Inc." [level=3] [ref=e1421]
+              - generic [ref=e1422]: NASDAQ / Technology / 2026-05-12 22:00:19 / STOOQ-PUBLIC
+              - generic [ref=e1423]:
+                - strong [ref=e1424]: $294.87
+                - generic [ref=e1425]: $2.31 / +0.79%
+            - generic [ref=e1426]: Stooq public data
+          - generic "Stock price chart" [ref=e1427]
+          - generic [ref=e1428]:
+            - generic [ref=e1429]:
+              - generic [ref=e1430]: Open
+              - strong [ref=e1431]: $292.56
+            - generic [ref=e1432]:
+              - generic [ref=e1433]: High
+              - strong [ref=e1434]: $295.27
+            - generic [ref=e1435]:
+              - generic [ref=e1436]: Low
+              - strong [ref=e1437]: $292.56
+            - generic [ref=e1438]:
+              - generic [ref=e1439]: Volume
+              - strong [ref=e1440]: 45.68M
+      - complementary "OST stock order ticket" [ref=e1441]:
+        - generic [ref=e1443]:
+          - generic [ref=e1444]: OST ticket
+          - heading "Mirror order" [level=3] [ref=e1445]
+          - paragraph [ref=e1446]: Settlement records on OST devnet. Broker execution requires a regulated KYC relay.
+        - generic "Stock side selector" [ref=e1447]:
+          - button "Buy" [ref=e1448] [cursor=pointer]
+          - button "Sell" [ref=e1449] [cursor=pointer]
+        - generic [ref=e1450]:
+          - text: OST stake
+          - spinbutton "OST stake" [ref=e1451]: "25"
+        - generic [ref=e1452]:
+          - button "25 OST" [ref=e1453] [cursor=pointer]
+          - button "100 OST" [ref=e1454] [cursor=pointer]
+          - button "250 OST" [ref=e1455] [cursor=pointer]
+          - button "1K OST" [ref=e1456] [cursor=pointer]
+        - generic [ref=e1457]:
+          - text: Broker currency
+          - combobox "Broker currency" [ref=e1458]:
+            - option "USD" [selected]
+            - option "EUR"
+            - option "GBP"
+            - option "CAD"
+            - option "JPY"
+        - generic [ref=e1459]:
+          - generic [ref=e1460]:
+            - generic [ref=e1461]: Symbol
+            - strong [ref=e1462]: AAPL
+          - generic [ref=e1463]:
+            - generic [ref=e1464]: Last price
+            - strong [ref=e1465]: $294.87
+          - generic [ref=e1466]:
+            - generic [ref=e1467]: USD notional
+            - strong [ref=e1468]: $0.30
+          - generic [ref=e1469]:
+            - generic [ref=e1470]: Mirror shares
+            - strong [ref=e1471]: "0.001"
+        - generic [ref=e1472]: Connect a wallet to place an OST-settled stock mirror order.
+        - button "No open AAPL to close" [disabled] [ref=e1473]
+    - generic [ref=e1474]:
+      - generic [ref=e1475]:
+        - generic [ref=e1476]:
+          - heading "Mirror positions" [level=3] [ref=e1477]
+          - generic [ref=e1478]: Cross-device
+        - generic [ref=e1480]: Connect a wallet to mirror stock orders across devices.
+      - generic [ref=e1481]:
+        - generic [ref=e1483]:
+          - heading "Currency relay" [level=3] [ref=e1484]
+          - paragraph [ref=e1485]: OST and SOL quote against broker-accepted currencies while real securities execution waits for regulated rails.
+        - generic [ref=e1486]:
+          - generic [ref=e1487]:
+            - generic [ref=e1488]: OST/USD quote
+            - strong [ref=e1489]: $0.0118 per OST
+          - generic [ref=e1490]:
+            - generic [ref=e1491]: SOL/USD quote
+            - strong [ref=e1492]: $94.65 per SOL
+          - generic [ref=e1493]:
+            - generic [ref=e1494]: Data relay
+            - strong [ref=e1495]: Public equities
+          - generic [ref=e1496]:
+            - generic [ref=e1497]: Execution relay
+            - strong [ref=e1498]: KYC broker required
+  - generic [ref=e1500]:
+    - generic [ref=e1501]: 🤖 Machine Intelligence
+    - heading "Power for Every Intelligence" [level=2] [ref=e1502]
+    - paragraph [ref=e1503]: Deploy AI agents, servers, and market bots with OST as the confidential settlement layer.
+    - generic [ref=e1506]:
+      - generic [ref=e1507]: 🚀
+      - heading "Running a Server, Bot, or Localhost?" [level=3] [ref=e1508]
+      - paragraph [ref=e1509]:
+        - text: If you have a server, a bot, a localhost dev environment, or any form of automated intelligence —
+        - strong [ref=e1510]: OST is your payment layer
+        - text: . Connect any AI model, any webhook, any service. Machine-to-machine payments at Solana speed with full privacy.
+      - generic [ref=e1511]:
+        - generic [ref=e1512]:
+          - generic [ref=e1513]: "13"
+          - generic [ref=e1514]: Connectors
+        - generic [ref=e1515]:
+          - generic [ref=e1516]: 0.4s
+          - generic [ref=e1517]: Settlement
+        - generic [ref=e1518]:
+          - generic [ref=e1519]: $0
+          - generic [ref=e1520]: Per Transaction
+        - generic [ref=e1521]:
+          - generic [ref=e1522]: ∞
+          - generic [ref=e1523]: Privacy
+      - generic [ref=e1524]:
+        - generic [ref=e1525]: 💻 Localhost
+        - generic [ref=e1526]: 🖥️ VPS/Cloud
+        - generic [ref=e1527]: 🤖 AI Agents
+        - generic [ref=e1528]: 💬 Chat Bots
+        - generic [ref=e1529]: 🔌 Webhooks
+        - generic [ref=e1530]: 🛠️ MCP Servers
+        - generic [ref=e1531]: 📈 Trading Bots
+        - generic [ref=e1532]: 🎮 GPU Compute
+    - generic [ref=e1533]:
+      - generic [ref=e1534]:
+        - generic [ref=e1535]:
+          - generic [ref=e1536]: Agent runtime
+          - generic [ref=e1537]: Confidential settlement rail
+        - heading "Give bots one place to quote, swap, settle, meter API usage, and move treasury capital in OST." [level=3] [ref=e1538]
+        - code [ref=e1540]: "agent.connect({ rails: ['wallet', 'swap', 'prediction', 'depin'], settlement: 'confidential_ost', budget: '250000 OST', policy: 'risk-aware' });"
+        - generic [ref=e1541]:
+          - generic [ref=e1542]: REST
+          - generic [ref=e1543]: WebSocket
+          - generic [ref=e1544]: MCP
+          - generic [ref=e1545]: Webhooks
+          - generic [ref=e1546]: TypeScript
+      - generic [ref=e1547]:
+        - generic [ref=e1548]:
+          - generic [ref=e1549]: What builders can deploy
+          - generic [ref=e1550]: From localhost to live servers
+        - generic [ref=e1551]:
+          - generic [ref=e1552]:
+            - strong [ref=e1553]: Swap bots
+            - generic [ref=e1554]: Route inventory into OST, quote against live markets, and rebalance on every trigger.
+          - generic [ref=e1555]:
+            - strong [ref=e1556]: Mining / compute
+            - generic [ref=e1557]: Pay GPU, CPU, bandwidth, and node contributors in OST with programmable reward logic.
+          - generic [ref=e1558]:
+            - strong [ref=e1559]: Arbitrage
+            - generic [ref=e1560]: Scan exchanges, payment rails, and tokenized stock venues for spread capture without exposing balances.
+          - generic [ref=e1561]:
+            - strong [ref=e1562]: Prediction systems
+            - generic [ref=e1563]: Wire Polymarket, Kalshi, and custom event engines into OST-denominated agent strategies.
+          - generic [ref=e1564]:
+            - strong [ref=e1565]: Treasury operators
+            - generic [ref=e1566]: Let assistants manage recurring payouts, alerts, and execution policies across wallets and services.
+    - generic [ref=e1572]: 🤖
+    - generic [ref=e1573]:
+      - generic [ref=e1574]:
+        - generic [ref=e1575]: 🤖
+        - heading "AI Agents" [level=3] [ref=e1576]
+        - paragraph [ref=e1577]: Autonomous agents can hold, send, and receive OST. Any LLM with function calling can integrate in minutes.
+      - generic [ref=e1578]:
+        - generic [ref=e1579]: 🔌
+        - heading "API-First" [level=3] [ref=e1580]
+        - paragraph [ref=e1581]: REST, WebSocket, TypeScript SDK. Full programmatic control over wallets, transfers, and confidential operations.
+      - generic [ref=e1582]:
+        - generic [ref=e1583]: 🖥️
+        - heading "Server-to-Server" [level=3] [ref=e1584]
+        - paragraph [ref=e1585]: Machine-to-machine payments at Solana speed. Microservice billing, API metering, inter-agent commerce.
+      - generic [ref=e1586]:
+        - generic [ref=e1587]: 🧠
+        - heading "Smart Assistants" [level=3] [ref=e1588]
+        - paragraph [ref=e1589]: Let your AI manage payments, recurring transfers, and budget allocation with full privacy guarantees.
+      - generic [ref=e1590]:
+        - generic [ref=e1591]: 🔗
+        - heading "MCP & Tool Use" [level=3] [ref=e1592]
+        - paragraph [ref=e1593]: Compatible with Model Context Protocol, OpenAI function calling, and Anthropic tool use out of the box.
+      - generic [ref=e1594]:
+        - generic [ref=e1595]: 🛡️
+        - heading "Privacy for Machines" [level=3] [ref=e1596]
+        - paragraph [ref=e1597]: Confidential transfers protect AI the same as humans. No surveillance. No data harvesting.
+    - generic [ref=e1598]:
+      - heading "🔌 Connect Your Bot or AI" [level=3] [ref=e1599]
+      - paragraph [ref=e1600]: Plug any AI agent, chatbot, or server into the OST network. Test API connectivity, webhook rails, and prediction-market execution paths below.
+      - generic [ref=e1601]:
+        - generic [ref=e1602]:
+          - generic [ref=e1603]:
+            - generic [ref=e1604]: 🧠
+            - generic [ref=e1605]:
+              - heading "OpenAI" [level=4] [ref=e1606]
+              - paragraph [ref=e1607]: GPT-4o / Assistants API
+            - generic [ref=e1608]: ● Disconnected
+          - generic [ref=e1609]:
+            - generic [ref=e1610]:
+              - text: API Key
+              - textbox "API Key" [ref=e1611]:
+                - /placeholder: sk-...
+            - generic [ref=e1612]:
+              - text: Model
+              - combobox "Model" [ref=e1613]:
+                - option "GPT-4o" [selected]
+                - option "GPT-4o Mini"
+                - option "GPT-4 Turbo"
+                - option "GPT-3.5 Turbo"
+            - button "Test Connection" [ref=e1614] [cursor=pointer]
+        - generic [ref=e1615]:
+          - generic [ref=e1616]:
+            - generic [ref=e1617]: 🌠
+            - generic [ref=e1618]:
+              - heading "Anthropic" [level=4] [ref=e1619]
+              - paragraph [ref=e1620]: Claude / Messages API
+            - generic [ref=e1621]: ● Disconnected
+          - generic [ref=e1622]:
+            - generic [ref=e1623]:
+              - text: API Key
+              - textbox "API Key" [ref=e1624]:
+                - /placeholder: sk-ant-...
+            - generic [ref=e1625]:
+              - text: Model
+              - combobox "Model" [ref=e1626]:
+                - option "Claude Sonnet 4" [selected]
+                - option "Claude 3.5 Sonnet"
+                - option "Claude 3 Haiku"
+            - button "Test Connection" [ref=e1627] [cursor=pointer]
+        - generic [ref=e1628]:
+          - generic [ref=e1629]:
+            - generic [ref=e1630]: ✨
+            - generic [ref=e1631]:
+              - heading "Gemini" [level=4] [ref=e1632]
+              - paragraph [ref=e1633]: Google Generative Language API
+            - generic [ref=e1634]: ● Disconnected
+          - generic [ref=e1635]:
+            - generic [ref=e1636]:
+              - text: API Key
+              - textbox "API Key" [ref=e1637]:
+                - /placeholder: AIza...
+            - generic [ref=e1638]:
+              - text: Model
+              - combobox "Model" [ref=e1639]:
+                - option "Gemini 2.0 Flash" [selected]
+                - option "Gemini 1.5 Pro"
+                - option "Gemini 1.5 Flash"
+            - button "Test Connection" [ref=e1640] [cursor=pointer]
+        - generic [ref=e1641]:
+          - generic [ref=e1642]:
+            - generic [ref=e1643]: 💬
+            - generic [ref=e1644]:
+              - heading "Telegram Bot" [level=4] [ref=e1645]
+              - paragraph [ref=e1646]: Bot API / Webhook
+            - generic [ref=e1647]: ● Disconnected
+          - generic [ref=e1648]:
+            - generic [ref=e1649]:
+              - text: Bot Token
+              - textbox "Bot Token" [ref=e1650]:
+                - /placeholder: 123456:ABC-DEF...
+            - generic [ref=e1651]:
+              - text: Webhook URL
+              - textbox "Webhook URL" [ref=e1652]:
+                - /placeholder: https://your-server.com/webhook
+            - button "Test Connection" [ref=e1653] [cursor=pointer]
+        - generic [ref=e1654]:
+          - generic [ref=e1655]:
+            - generic [ref=e1656]: 🎮
+            - generic [ref=e1657]:
+              - heading "Discord Bot" [level=4] [ref=e1658]
+              - paragraph [ref=e1659]: Bot Token / Gateway
+            - generic [ref=e1660]: ● Disconnected
+          - generic [ref=e1661]:
+            - generic [ref=e1662]:
+              - text: Bot Token
+              - textbox "Bot Token" [ref=e1663]:
+                - /placeholder: MTk...
+            - generic [ref=e1664]:
+              - text: Guild ID
+              - textbox "Guild ID" [ref=e1665]:
+                - /placeholder: "123456789012345678"
+            - button "Test Connection" [ref=e1666] [cursor=pointer]
+        - generic [ref=e1667]:
+          - generic [ref=e1668]:
+            - generic [ref=e1669]: 🔗
+            - generic [ref=e1670]:
+              - heading "Custom Webhook" [level=4] [ref=e1671]
+              - paragraph [ref=e1672]: Any server or service
+            - generic [ref=e1673]: ● Disconnected
+          - generic [ref=e1674]:
+            - generic [ref=e1675]:
+              - text: Endpoint URL
+              - textbox "Endpoint URL" [ref=e1676]:
+                - /placeholder: https://api.yourservice.com/ost
+            - generic [ref=e1677]:
+              - text: Auth Header
+              - textbox "Auth Header" [ref=e1678]:
+                - /placeholder: Bearer your-token-here
+            - button "Test Connection" [ref=e1679] [cursor=pointer]
+        - generic [ref=e1680]:
+          - generic [ref=e1681]:
+            - generic [ref=e1682]: 🛠️
+            - generic [ref=e1683]:
+              - heading "MCP Server" [level=4] [ref=e1684]
+              - paragraph [ref=e1685]: Model Context Protocol
+            - generic [ref=e1686]: ● Disconnected
+          - generic [ref=e1687]:
+            - generic [ref=e1688]:
+              - text: Server URL
+              - textbox "Server URL" [ref=e1689]:
+                - /placeholder: https://mcp.example.com/mcp
+            - generic [ref=e1690]:
+              - text: Transport
+              - combobox "Transport" [ref=e1691]:
+                - option "stdio" [selected]
+                - option "SSE (HTTP)"
+                - option "Streamable HTTP"
+            - button "Test Connection" [ref=e1692] [cursor=pointer]
+        - generic [ref=e1693]:
+          - generic [ref=e1694]:
+            - generic [ref=e1695]: 🤖
+            - generic [ref=e1696]:
+              - heading "Claude AI" [level=4] [ref=e1697]
+              - paragraph [ref=e1698]: Anthropic Claude / claude.ai
+            - generic [ref=e1699]: ● Disconnected
+          - generic [ref=e1700]:
+            - generic [ref=e1701]:
+              - text: API Key
+              - textbox "API Key" [ref=e1702]:
+                - /placeholder: sk-ant-...
+            - generic [ref=e1703]:
+              - text: Model
+              - combobox "Model" [ref=e1704]:
+                - option "Claude Opus 4" [selected]
+                - option "Claude Sonnet 4"
+                - option "Claude 3.5 Haiku"
+            - button "Test Connection" [ref=e1705] [cursor=pointer]
+        - generic [ref=e1706]:
+          - generic [ref=e1707]:
+            - generic [ref=e1708]: ⚡
+            - generic [ref=e1709]:
+              - heading "Grok" [level=4] [ref=e1710]
+              - paragraph [ref=e1711]: xAI / Chat Completions
+            - generic [ref=e1712]: ● Disconnected
+          - generic [ref=e1713]:
+            - generic [ref=e1714]:
+              - text: API Key
+              - textbox "API Key" [ref=e1715]:
+                - /placeholder: xai-...
+            - generic [ref=e1716]:
+              - text: Model
+              - combobox "Model" [ref=e1717]:
+                - option "Grok Beta" [selected]
+                - option "Grok 2 Latest"
+                - option "Grok Vision"
+            - button "Test Connection" [ref=e1718] [cursor=pointer]
+        - generic [ref=e1719]:
+          - generic [ref=e1720]:
+            - generic [ref=e1721]: 💻
+            - generic [ref=e1722]:
+              - heading "VS Code / Copilot" [level=4] [ref=e1723]
+              - paragraph [ref=e1724]: AI Coding Assistant
+            - generic [ref=e1725]: ● Disconnected
+          - generic [ref=e1726]:
+            - generic [ref=e1727]:
+              - text: GitHub Token
+              - textbox "GitHub Token" [ref=e1728]:
+                - /placeholder: ghp_...
+            - generic [ref=e1729]:
+              - text: Extension
+              - combobox "Extension" [ref=e1730]:
+                - option "GitHub Copilot" [selected]
+                - option "Copilot Chat"
+                - option "Cline"
+                - option "Continue"
+            - button "Test Connection" [ref=e1731] [cursor=pointer]
+        - generic [ref=e1732]:
+          - generic [ref=e1733]:
+            - generic [ref=e1734]: 🐙
+            - generic [ref=e1735]:
+              - heading "GitHub" [level=4] [ref=e1736]
+              - paragraph [ref=e1737]: Actions / API Integration
+            - generic [ref=e1738]: ● Disconnected
+          - generic [ref=e1739]:
+            - generic [ref=e1740]:
+              - text: Personal Access Token
+              - textbox "Personal Access Token" [ref=e1741]:
+                - /placeholder: ghp_...
+            - generic [ref=e1742]:
+              - text: Repository
+              - textbox "Repository" [ref=e1743]:
+                - /placeholder: owner/repo
+            - button "Test Connection" [ref=e1744] [cursor=pointer]
+        - generic [ref=e1745]:
+          - generic [ref=e1746]:
+            - generic [ref=e1747]: 📈
+            - generic [ref=e1748]:
+              - heading "Polymarket" [level=4] [ref=e1749]
+              - paragraph [ref=e1750]: Prediction Market Bot
+            - generic [ref=e1751]: ● Disconnected
+          - generic [ref=e1752]:
+            - generic [ref=e1753]:
+              - text: API Key
+              - textbox "API Key" [ref=e1754]:
+                - /placeholder: Your Polymarket API key
+            - generic [ref=e1755]:
+              - text: Strategy
+              - combobox "Strategy" [ref=e1756]:
+                - option "Auto Trade" [selected]
+                - option "Signal Only"
+                - option "Monitor Markets"
+            - button "Test Connection" [ref=e1757] [cursor=pointer]
+        - generic [ref=e1758]:
+          - generic [ref=e1759]:
+            - generic [ref=e1760]: 🎲
+            - generic [ref=e1761]:
+              - heading "Kalshi" [level=4] [ref=e1762]
+              - paragraph [ref=e1763]: Event Contracts Bot
+            - generic [ref=e1764]: ● Disconnected
+          - generic [ref=e1765]:
+            - generic [ref=e1766]:
+              - text: API Key
+              - textbox "API Key" [ref=e1767]:
+                - /placeholder: Your Kalshi API key
+            - generic [ref=e1768]:
+              - text: Mode
+              - combobox "Mode" [ref=e1769]:
+                - option "Live Trading" [selected]
+                - option "Paper Trading"
+                - option "Analytics Only"
+            - button "Test Connection" [ref=e1770] [cursor=pointer]
+      - generic [ref=e1771]:
+        - generic [ref=e1772]: 📄 Connection Log
+        - paragraph [ref=e1774]: Ready to connect. Enter your API details above.
+  - generic [ref=e1776]:
+    - heading "Offline Cash Anywhere" [level=2] [ref=e1777]
+    - paragraph [ref=e1778]: The internet isn't everywhere yet. But your money should be.
+    - generic [ref=e1779]:
+      - paragraph [ref=e1780]: Transactions at the speed of light - even when the lights are off.
+      - paragraph [ref=e1781]: Imagine handing someone a banknote. No bank. No internet. Just two people and value changing hands. OST brings that to the digital world.
+    - generic [ref=e1782]:
+      - generic [ref=e1784]: ◉
+      - generic [ref=e1785]:
+        - paragraph [ref=e1786]: OST Offline App
+        - heading "Carry OST Without Internet" [level=3] [ref=e1787]
+        - paragraph [ref=e1788]: Install once while connected. The OST vision, guides, wallet education, fair games, and survival tools stay available from this device when the network disappears.
+      - generic [ref=e1789]:
+        - button "Install OST App" [ref=e1790] [cursor=pointer]
+        - status [ref=e1791]: Mobile online access ready
+    - generic [ref=e1792]:
+      - generic [ref=e1794]: 🔒
+      - generic [ref=e1795]:
+        - paragraph [ref=e1796]: Unified vault
+        - heading "Offline OST now lives in one Survival Vault" [level=3] [ref=e1797]
+        - paragraph [ref=e1798]: Mint bearer notes, import paper QR / NFC / digital files, and use that same balance in offline fair games from the Survival OST section.
+      - generic [ref=e1799]:
+        - link "Open Survival OST Vault" [ref=e1800] [cursor=pointer]:
+          - /url: "#survival"
+        - status [ref=e1801]: One offline coin, one local balance
+    - generic [ref=e1802]:
+      - generic [ref=e1803]:
+        - generic [ref=e1805]: 📱
+        - heading "NFC Tap-to-Pay" [level=3] [ref=e1807]
+        - paragraph [ref=e1808]: Hold phones near each other. One tap. Payment done. Like Apple Pay - but private, borderless.
+      - generic [ref=e1809]:
+        - generic [ref=e1811]: 📷
+        - heading "QR Code Scan" [level=3] [ref=e1813]
+        - paragraph [ref=e1814]: The signed payment fits in a single QR code. Show it, print it, etch it on metal.
+      - generic [ref=e1815]:
+        - generic [ref=e1817]: 📡
+        - heading "Bluetooth Nearby" [level=3] [ref=e1819]
+        - paragraph [ref=e1820]: BLE beams the transaction up to 30 feet. Perfect for markets and restaurants.
+    - heading "Real-World Scenarios" [level=3] [ref=e1821]
+    - paragraph [ref=e1822]: Verified data from the World Bank, UNHCR, IEA, and EM-DAT. These are not hypotheticals â€” they happen today.
+    - generic [ref=e1823]:
+      - generic [ref=e1824]:
+        - generic [ref=e1825]:
+          - generic [ref=e1828]:
+            - generic [ref=e1829]: "-47.00 OST"
+            - generic [ref=e1830]: Sending...
+          - generic [ref=e1836]:
+            - generic [ref=e1837]: +47.00 OST
+            - generic [ref=e1838]: Received ✓
+        - heading "🌏 Market Vendor in Lagos" [level=4] [ref=e1839]
+        - paragraph [ref=e1840]: Amina sells tomatoes at Balogun Market. Cell towers are overloaded. She holds her phone near the buyer's â€” OST transfers via NFC in 0.3 seconds. No bank. No internet. No fees. She made $47 today â€” every cent is hers.
+        - generic [ref=e1841]:
+          - text: 60% of Nigerians are unbanked â€”
+          - emphasis [ref=e1842]: World Bank Global Findex 2021
+      - generic [ref=e1843]:
+        - generic [ref=e1870]: Syncs when online
+        - heading "🏔️ Mountain Village in Nepal" [level=4] [ref=e1871]
+        - paragraph [ref=e1872]: Deepak's village has no cell tower and no bank within 60km. A trekking tourist pays for tea by showing a QR code. Deepak scans it with his basic smartphone. The signed transaction is stored locally and syncs when he walks to town next Tuesday.
+        - generic [ref=e1873]:
+          - text: 2.6B people lack internet â€”
+          - emphasis [ref=e1874]: ITU 2023 Facts & Figures
+      - generic [ref=e1875]:
+        - generic [ref=e1876]:
+          - generic [ref=e1881]: ❌ No Signal
+          - generic [ref=e1882]:
+            - generic [ref=e1883]: 📱
+            - generic [ref=e1889]: 📱
+        - heading "🌊 Disaster Zone â€” Earthquake Response" [level=4] [ref=e1890]
+        - paragraph [ref=e1891]: An earthquake knocks out power and cell towers in Turkey. Aid workers distribute pre-loaded OST wallets via BLE. Survivors buy water and medicine from local vendors â€” all without a single server online. When connectivity returns, everything settles on-chain.
+        - generic [ref=e1892]:
+          - text: $335B in disaster losses in 2023 â€”
+          - emphasis [ref=e1893]: Swiss Re Institute
+      - generic [ref=e1894]:
+        - generic [ref=e1895]:
+          - generic [ref=e1896]:
+            - generic [ref=e1897]:
+              - generic [ref=e1898]: 🇲🇽
+              - generic [ref=e1899]: Mexico
+            - generic [ref=e1900]:
+              - generic [ref=e1901]: ◉
+              - generic [ref=e1902]: $15.99 saved
+            - generic [ref=e1903]:
+              - generic [ref=e1904]: 🇺🇸
+              - generic [ref=e1905]: USA
+          - generic [ref=e1906]:
+            - generic [ref=e1907]: "Western Union: $16 + 2 days"
+            - generic [ref=e1908]: "OST: $0.01 + instant"
+        - 'heading "💰 Remittance: Mexico ↔ USA" [level=4] [ref=e1909]'
+        - paragraph [ref=e1910]: Carlos works construction in Texas. Every Friday, he sends $200 to his mother in Oaxaca. Western Union charges $16 and takes 2 days. With OST, the transfer is instant, private, and costs under $0.01. His mother receives every cent on her phone.
+        - generic [ref=e1911]:
+          - text: $63B sent to Mexico yearly â€”
+          - emphasis [ref=e1912]: Banco de MÃ©xico 2023
+      - generic [ref=e1913]:
+        - generic [ref=e1914]:
+          - generic [ref=e1915]:
+            - generic [ref=e1918]: 💡
+            - generic [ref=e1919]: GRID DOWN
+          - generic [ref=e1920]:
+            - generic [ref=e1921]: 📱
+            - generic [ref=e1923]: 📱
+            - generic [ref=e1925]: 📱
+        - heading "⚡ Power Outage â€” Grid Down Payments" [level=4] [ref=e1926]
+        - paragraph [ref=e1927]: A blackout hits Caracas for 72 hours. ATMs are dead, card machines offline, banks closed. Maria needs groceries. Her neighborhood creates an ad-hoc BLE mesh â€” phones relay OST payments hop by hop. When power returns, all transactions settle on Solana.
+        - generic [ref=e1928]:
+          - text: 1B+ people face unreliable power â€”
+          - emphasis [ref=e1929]: IEA World Energy Outlook 2023
+      - generic [ref=e1930]:
+        - generic [ref=e1931]:
+          - generic [ref=e1932]:
+            - generic [ref=e1934]: 🚶
+            - generic [ref=e1935]:
+              - generic [ref=e1936]: 🔒
+              - generic [ref=e1937]: $2,340 OST
+          - generic [ref=e1938]: ✓ No documents needed
+        - heading "🌎 Refugee â€” Carry Wealth Anywhere" [level=4] [ref=e1939]
+        - paragraph [ref=e1940]: Youssef flees conflict with nothing but his phone. His bank account is frozen, his cash was confiscated. But his OST wallet holds his life savings â€” encrypted, memorizable as a seed phrase, invisible to border guards. In the new country, he rebuilds immediately.
+        - generic [ref=e1941]:
+          - text: 117M forcibly displaced â€”
+          - emphasis [ref=e1942]: UNHCR Global Trends 2024
+  - generic [ref=e1944]:
+    - heading "For Every Citizen" [level=2] [ref=e1945]
+    - paragraph [ref=e1946]: No borders. No exceptions. One humanity, one money.
+    - generic [ref=e1947]:
+      - generic [ref=e1948]:
+        - img "Great Wall of China" [ref=e1950]
+        - generic [ref=e1951]:
+          - generic [ref=e1952]: 🇨🇳
+          - heading "China" [level=3] [ref=e1953]
+          - paragraph [ref=e1954]: Ancient tradition meets digital innovation
+          - paragraph [ref=e1955]: From the Silk Road to the blockchain - 5,000 years of trade meets private digital cash. 1.4 billion people, $17.7T GDP, and the world's largest mobile payments market.
+          - generic [ref=e1956]:
+            - generic [ref=e1957]: 💲 $17.7T GDP
+            - generic [ref=e1958]: 📱 900M mobile pay users
+          - generic [ref=e1959]: 🏮 🐉 ⛩️
+          - button "View China on map" [ref=e1960] [cursor=pointer]: 🌎 Explore Map
+      - generic [ref=e1961]:
+        - img "Taj Mahal India" [ref=e1963]
+        - generic [ref=e1964]:
+          - generic [ref=e1965]: 🇮🇳
+          - heading "India" [level=3] [ref=e1966]
+          - paragraph [ref=e1967]: A billion dreams, one borderless currency
+          - paragraph [ref=e1968]: Affordable remittances and private savings for 1.4 billion people. India receives $125B in remittances yearly - more than any country on Earth. UPI processes 10B+ transactions monthly.
+          - generic [ref=e1969]:
+            - generic [ref=e1970]: 💰 $125B remittances/yr
+            - generic [ref=e1971]: 📈 10B+ UPI txns/mo
+          - generic [ref=e1972]: 🦷 ☝️ 🎆
+          - button "View India on map" [ref=e1973] [cursor=pointer]: 🌎 Explore Map
+      - generic [ref=e1974]:
+        - img "Lagos Nigeria" [ref=e1976]
+        - generic [ref=e1977]:
+          - generic [ref=e1978]: 🇳🇬
+          - heading "Nigeria" [level=3] [ref=e1979]
+          - paragraph [ref=e1980]: Leading Africa's financial revolution
+          - paragraph [ref=e1981]: Lagos to London in milliseconds, not days. Nigeria has the highest crypto adoption rate in Africa. 60% of the population is unbanked - but 80% have mobile phones.
+          - generic [ref=e1982]:
+            - generic [ref=e1983]: 📱 80% have phones
+            - generic [ref=e1984]: 💵 7.9% avg remit fee
+          - generic [ref=e1985]: 🥁 🌴 ✊
+          - button "View Nigeria on map" [ref=e1986] [cursor=pointer]: 🌎 Explore Map
+      - generic [ref=e1987]:
+        - img "Rio de Janeiro Brazil" [ref=e1989]
+        - generic [ref=e1990]:
+          - generic [ref=e1991]: 🇧🇷
+          - heading "Brazil" [level=3] [ref=e1992]
+          - paragraph [ref=e1993]: From the Amazon to the blockchain
+          - paragraph [ref=e1994]: A nation that invented Pix deserves private instant payments. Pix revolutionized finance for 150M users - OST adds privacy and cross-border capability.
+          - generic [ref=e1995]:
+            - generic [ref=e1996]: ⚡ 150M Pix users
+            - generic [ref=e1997]: 🌎 5th largest population
+          - generic [ref=e1998]: ☕ 🎶 🌿
+          - button "View Brazil on map" [ref=e1999] [cursor=pointer]: 🌎 Explore Map
+      - generic [ref=e2000]:
+        - img "Mexico City" [ref=e2002]
+        - generic [ref=e2003]:
+          - generic [ref=e2004]: 🇲🇽
+          - heading "Mexico" [level=3] [ref=e2005]
+          - paragraph [ref=e2006]: Bridging two continents
+          - paragraph [ref=e2007]: Remittances shouldn't take 3 days and 8% fees. Mexico receives $63B annually from workers abroad - OST makes it instant and nearly free.
+          - generic [ref=e2008]:
+            - generic [ref=e2009]: 💰 $63B remittances/yr
+            - generic [ref=e2010]: 💵 3-8% lost to fees
+          - generic [ref=e2011]: 🌮 🎸 🦅
+          - button "View Mexico on map" [ref=e2012] [cursor=pointer]: 🌎 Explore Map
+      - generic [ref=e2013]:
+        - img "Moscow Russia" [ref=e2015]
+        - generic [ref=e2016]:
+          - generic [ref=e2017]: 🇷🇺
+          - heading "Russia" [level=3] [ref=e2018]
+          - paragraph [ref=e2019]: From Moscow to the digital frontier
+          - paragraph [ref=e2020]: When banking fails you, you innovate. Russia spans 11 time zones - 146 million people who understand that financial sovereignty matters more than any institution.
+          - generic [ref=e2021]:
+            - generic [ref=e2022]: 🌏 11 time zones
+            - generic [ref=e2023]: 💻 12% crypto adoption
+          - generic [ref=e2024]: 🏔️ 🎭 ❄️
+          - button "View Russia on map" [ref=e2025] [cursor=pointer]: 🌎 Explore Map
+      - generic [ref=e2026]:
+        - img "Isfahan Iran" [ref=e2028]
+        - generic [ref=e2029]:
+          - generic [ref=e2030]: 🇮🇷
+          - heading "Iran" [level=3] [ref=e2031]
+          - paragraph [ref=e2032]: Ancient Persia, digital future
+          - paragraph [ref=e2033]: The cradle of civilization doesn't need permission to trade. 85 million people cut off from SWIFT deserve the same financial access as everyone else.
+          - generic [ref=e2034]:
+            - generic [ref=e2035]: 🏛️ 7,000 yrs of trade
+            - generic [ref=e2036]: 🔒 SWIFT excluded
+          - generic [ref=e2037]: 🌹 📜 🕌
+          - button "View Iran on map" [ref=e2038] [cursor=pointer]: 🌎 Explore Map
+      - generic [ref=e2039]:
+        - img "Bali Indonesia" [ref=e2041]
+        - generic [ref=e2042]:
+          - generic [ref=e2043]: 🇮🇩
+          - heading "Indonesia" [level=3] [ref=e2044]
+          - paragraph [ref=e2045]: 17,000 islands, one currency
+          - paragraph [ref=e2046]: Digital cash that works offline. Island to island, neighbor to neighbor. 270 million people across an archipelago where many islands lack banking infrastructure.
+          - generic [ref=e2047]:
+            - generic [ref=e2048]: 🏝️ 17,000 islands
+            - generic [ref=e2049]: 💲 51% unbanked
+          - generic [ref=e2050]: 🌺 🏝️ 🎭
+          - button "View Indonesia on map" [ref=e2051] [cursor=pointer]: 🌎 Explore Map
+      - generic [ref=e2052]:
+        - img "Istanbul Turkey" [ref=e2054]
+        - generic [ref=e2055]:
+          - generic [ref=e2056]: 🇹🇷
+          - heading "Turkey" [level=3] [ref=e2057]
+          - paragraph [ref=e2058]: Where East meets West
+          - paragraph [ref=e2059]: Istanbul bridged continents for millennia. With lira inflation above 60% in 2023, Turkey has the highest per-capita crypto ownership in the region.
+          - generic [ref=e2060]:
+            - generic [ref=e2061]: 📈 60%+ inflation
+            - generic [ref=e2062]: 💲 16% own crypto
+          - generic [ref=e2063]: 🕌 🧿 🌙
+          - button "View Turkey on map" [ref=e2064] [cursor=pointer]: 🌎 Explore Map
+      - generic [ref=e2065]:
+        - img "Pyramids Egypt" [ref=e2067]
+        - generic [ref=e2068]:
+          - generic [ref=e2069]: 🇪🇬
+          - heading "Egypt" [level=3] [ref=e2070]
+          - paragraph [ref=e2071]: Civilization renewed
+          - paragraph [ref=e2072]: Builders of the pyramids built for eternity. 105 million people - and one of the fastest-growing crypto adoption rates in MENA. OST builds financial sovereignty.
+          - generic [ref=e2073]:
+            - generic [ref=e2074]: 🏛️ 5,000 yr civilization
+            - generic [ref=e2075]: 📈 3x crypto growth
+          - generic [ref=e2076]: 🏛️ ☀️ 🐫
+          - button "View Egypt on map" [ref=e2077] [cursor=pointer]: 🌎 Explore Map
+      - generic [ref=e2078]:
+        - img "Tokyo Japan" [ref=e2080]
+        - generic [ref=e2081]:
+          - generic [ref=e2082]: 🇯🇵
+          - heading "Japan" [level=3] [ref=e2083]
+          - paragraph [ref=e2084]: Precision meets privacy
+          - paragraph [ref=e2085]: Digital culture gets the digital cash it deserves. Japan was the first country to legally recognize Bitcoin. 125 million people, $4.9T GDP, and a deep respect for privacy.
+          - generic [ref=e2086]:
+            - generic [ref=e2087]: 📱 1st to legalize BTC
+            - generic [ref=e2088]: 💰 $4.9T GDP
+          - generic [ref=e2089]: 🗾 🌸 ⛩️
+          - button "View Japan on map" [ref=e2090] [cursor=pointer]: 🌎 Explore Map
+      - generic [ref=e2091]:
+        - img "Kenya landscape" [ref=e2093]
+        - generic [ref=e2094]:
+          - generic [ref=e2095]: 🇰🇪
+          - heading "Kenya" [level=3] [ref=e2096]
+          - paragraph [ref=e2097]: Mobile money reborn
+          - paragraph [ref=e2098]: Kenya invented M-Pesa and proved that phones can replace banks. 33 million M-Pesa users process $30B annually. OST is the next evolution - private, borderless, yours.
+          - generic [ref=e2099]:
+            - generic [ref=e2100]: 📱 33M M-Pesa users
+            - generic [ref=e2101]: 💲 $30B annual volume
+          - generic [ref=e2102]: 🦁 🌍 📱
+          - button "View Kenya on map" [ref=e2103] [cursor=pointer]: 🌎 Explore Map
+    - generic:
+      - generic:
+        - button "×"
+        - heading "Country" [level=3]
+        - iframe [ref=e2104]:
+          
+        - paragraph: OST works everywhere. No borders, no exceptions.
+  - generic [ref=e2106]:
+    - generic [ref=e2107]: 🚫 Active Threat
+    - heading "Internet Censorship Is Happening Now" [level=2] [ref=e2108]
+    - paragraph [ref=e2109]: Real events. Real people. OST is the answer to digital oppression.
+    - generic [ref=e2110]:
+      - generic [ref=e2111]: Critical â€” Full shutdowns
+      - generic [ref=e2113]: High â€” Heavy filtering
+      - generic [ref=e2115]: Medium â€” Content regulation
+      - generic [ref=e2117]: 55+ countries affected • 2.6B people without free internet
+    - generic [ref=e2118]:
+      - generic [ref=e2119]:
+        - heading "Live Censorship News" [level=4] [ref=e2121]
+        - generic [ref=e2122]: Updated 08:07 PM
+      - generic [ref=e2123]:
+        - generic [ref=e2124]:
+          - generic [ref=e2125]: 08:04 PM
+          - generic [ref=e2126]:
+            - strong [ref=e2127]: "Russia:"
+            - text: Russia blocks additional VPN services, restricts access to Western platforms
+          - link "OONI" [ref=e2129] [cursor=pointer]:
+            - /url: https://ooni.org
+        - generic [ref=e2130]:
+          - generic [ref=e2131]: 07:56 PM
+          - generic [ref=e2132]:
+            - strong [ref=e2133]: "Cuba:"
+            - text: Cuba restricts mobile internet access during civil demonstrations
+          - link "OONI" [ref=e2135] [cursor=pointer]:
+            - /url: https://ooni.org
+        - generic [ref=e2136]:
+          - generic [ref=e2137]: 07:48 PM
+          - generic [ref=e2138]:
+            - strong [ref=e2139]: "China:"
+            - text: "China's Great Firewall updates: new AI-powered deep packet inspection deployed"
+          - link "Freedom House" [ref=e2141] [cursor=pointer]:
+            - /url: https://freedomhouse.org
+        - generic [ref=e2142]:
+          - generic [ref=e2143]: 07:40 PM
+          - generic [ref=e2144]:
+            - strong [ref=e2145]: "Egypt:"
+            - text: Egypt blocks news websites and messaging apps, censorship expanding
+          - link "EFF" [ref=e2147] [cursor=pointer]:
+            - /url: https://eff.org
+        - generic [ref=e2148]:
+          - generic [ref=e2149]: 07:32 PM
+          - generic [ref=e2150]:
+            - strong [ref=e2151]: "Myanmar:"
+            - text: Myanmar junta orders telecom shutdowns in conflict zones
+          - link "Access Now" [ref=e2153] [cursor=pointer]:
+            - /url: https://www.accessnow.org
+        - generic [ref=e2154]:
+          - generic [ref=e2155]: 07:24 PM
+          - generic [ref=e2156]:
+            - strong [ref=e2157]: "Venezuela:"
+            - text: Venezuela restricts social media and streaming platforms nationwide
+          - link "IPYS" [ref=e2159] [cursor=pointer]:
+            - /url: https://ipysvenezuela.org
+    - generic [ref=e2160]:
+      - generic [ref=e2161]:
+        - generic [ref=e2162]:
+          - img "EU parliament" [ref=e2163]
+          - generic [ref=e2164]: Medium
+          - generic [ref=e2165]: 🇪🇺
+          - heading "European Union â€” Content Regulation" [level=4] [ref=e2166]
+          - paragraph [ref=e2167]:
+            - text: The EU Digital Services Act (2024) requires platforms to remove "illegal content" within hours â€” but the definition varies by country. Content legal in Portugal gets censored in Poland.
+            - strong [ref=e2168]: A European citizen cannot freely access content legal 500km away.
+          - generic [ref=e2169]: "Source: EU Digital Services Act, Regulation 2022/2065"
+        - generic [ref=e2170]:
+          - img "Russia censorship" [ref=e2171]
+          - generic [ref=e2172]: Critical
+          - generic [ref=e2173]: 🇷🇺
+          - heading "Russia â€” Full Information Lockdown" [level=4] [ref=e2174]
+          - paragraph [ref=e2175]:
+            - text: Since 2022, Russia blocked Twitter, Facebook, Instagram, and all independent news. VPN usage skyrocketed but ISPs fined $50K+ for not blocking them. Sovereign internet law routes all traffic through government nodes.
+            - strong [ref=e2176]: 145 million people see only state-approved information.
+          - generic [ref=e2177]: "Source: Freedom House \"Freedom on the Net 2024\""
+        - generic [ref=e2178]:
+          - img "Iran protests" [ref=e2179]
+          - generic [ref=e2180]: Critical
+          - generic [ref=e2181]: 🇮🇷
+          - heading "Iran â€” Complete Internet Shutdowns" [level=4] [ref=e2182]
+          - paragraph [ref=e2183]:
+            - text: During the 2022â€“2023 Mahsa Amini protests, Iran killed internet for 80+ million people for weeks. Authorities blocked Tor, Signal, and most VPNs. Bank accounts of protesters frozen instantly.
+            - strong [ref=e2184]: No internet = no protest, no evidence, no money.
+          - generic [ref=e2185]: "Source: NetBlocks, OONI Explorer"
+        - generic [ref=e2186]:
+          - img "China Great Wall" [ref=e2187]
+          - generic [ref=e2188]: Critical
+          - generic [ref=e2189]: 🇨🇳
+          - heading "China â€” The Great Firewall" [level=4] [ref=e2190]
+          - paragraph [ref=e2191]:
+            - text: 1.4 billion people cannot access Google, YouTube, Wikipedia, or WhatsApp. Deep packet inspection kills VPN connections. WeChat messages surveilled, activists tracked in real-time.
+            - strong [ref=e2192]: The most sophisticated censorship machine ever built.
+          - generic [ref=e2193]: "Source: Citizen Lab, University of Toronto"
+        - generic [ref=e2194]:
+          - img "India" [ref=e2195]
+          - generic [ref=e2196]: High
+          - generic [ref=e2197]: 🇮🇳
+          - heading "India â€” Kashmir Blackout" [level=4] [ref=e2198]
+          - paragraph [ref=e2199]: India imposed the longest-ever democracy internet shutdown in Kashmir â€” 552 days without full connectivity (2019â€“2021). In 2023, India led the world with 116 internet shutdowns in a single year.
+          - generic [ref=e2200]: "Source: Access Now \"#KeepItOn\" Report 2024"
+        - generic [ref=e2201]:
+          - img "Myanmar" [ref=e2202]
+          - generic [ref=e2203]: Critical
+          - generic [ref=e2204]: 🇲🇲
+          - heading "Myanmar â€” Military Junta Control" [level=4] [ref=e2205]
+          - paragraph [ref=e2206]:
+            - text: After the 2021 coup, Myanmar's military throttled internet to near-zero, banned VPNs, arrested journalists. Mobile data cut in conflict zones. 54 million people lost access to uncensored news.
+            - strong [ref=e2207]: OST's offline payment system was designed for exactly this.
+          - generic [ref=e2208]: "Source: Reporters Without Borders, IODA"
+      - generic [ref=e2209]:
+        - heading "🛰 OST's Answer" [level=4] [ref=e2210]
+        - paragraph [ref=e2211]: Satellite-backed, decentralized internet + offline-capable payments. Zero fees. When every other system fails, OST still works.
+    - generic [ref=e2212]:
+      - heading "🌎 For Every Citizen â€” Protected From Censorship" [level=3] [ref=e2214]
+      - paragraph [ref=e2215]: OST's satellite-backed payment infrastructure ensures that every citizen â€” from Tehran to Yangon, from Cairo to Moscow â€” can transact freely, privately, and without government interference.
+      - generic [ref=e2216]:
+        - generic [ref=e2217]:
+          - generic [ref=e2218]: 2.6B
+          - generic [ref=e2219]: Without Internet
+        - generic [ref=e2220]:
+          - generic [ref=e2221]: 55+
+          - generic [ref=e2222]: Countries Censored
+        - generic [ref=e2223]:
+          - generic [ref=e2224]: $0
+          - generic [ref=e2225]: Transaction Fees
+      - link "🌎 See All Countries" [ref=e2226] [cursor=pointer]:
+        - /url: "#citizens"
+  - generic [ref=e2228]:
+    - generic [ref=e2229]:
+      - generic [ref=e2231]:
+        - generic [ref=e2233]: 🚀
+        - heading "OST × SpaceX — The Journey to Space" [level=2] [ref=e2234]
+        - paragraph [ref=e2235]: Follow our partnership roadmap from Earth to Mars. Every milestone is real, every goal is funded by donations and investors — never by taxing your transactions.
+        - generic [ref=e2236]:
+          - link "Open 3D journey" [ref=e2237] [cursor=pointer]:
+            - /url: "#spaceJourney3d"
+          - link "Read official updates" [ref=e2238] [cursor=pointer]:
+            - /url: https://www.spacex.com/updates/
+        - generic [ref=e2239]:
+          - generic [ref=e2240]:
+            - strong [ref=e2241]: "4"
+            - generic [ref=e2242]: journey phases
+          - generic [ref=e2243]:
+            - strong [ref=e2244]: LEO
+            - generic [ref=e2245]: rideshare path
+          - generic [ref=e2246]:
+            - strong [ref=e2247]: $0
+            - generic [ref=e2248]: user fees funding model
+      - generic [ref=e2249]:
+        - generic [ref=e2250]:
+          - iframe [ref=e2251]:
+            
+          - button "▶ Watch video" [ref=e2252] [cursor=pointer]:
+            - generic [ref=e2253]: ▶ Watch video
+          - generic [ref=e2254]:
+            - generic [ref=e2255]: Crew transfer
+            - heading "Crew-2" [level=3] [ref=e2256]
+            - paragraph [ref=e2257]: Recurring launch cadence and orbital handoff visuals for the active transport stack.
+        - generic [ref=e2258]:
+          - button "Falcon Heavy Launch energy" [ref=e2259] [cursor=pointer]:
+            - generic [ref=e2260]: Falcon Heavy
+            - generic [ref=e2261]: Launch energy
+          - button "Demo-2 Orbit operations" [ref=e2262] [cursor=pointer]:
+            - generic [ref=e2263]: Demo-2
+            - generic [ref=e2264]: Orbit operations
+          - button "Crew-2 Cadence" [ref=e2265] [cursor=pointer]:
+            - generic [ref=e2266]: Crew-2
+            - generic [ref=e2267]: Cadence
+        - generic [ref=e2268]:
+          - link "Open official source" [ref=e2269] [cursor=pointer]:
+            - /url: https://www.youtube.com/watch?v=lW07SN3YoLI
+          - button "Pause auto-cycle" [ref=e2270] [cursor=pointer]
+    - generic [ref=e2271]:
+      - generic:
+        - generic: EARTH DEPARTURE
+      - button "⛶ Cinematic Mode" [ref=e2273] [cursor=pointer]
+      - generic:
+        - generic:
+          - generic:
+            - generic: ALT
+            - text: 0 km
+          - generic:
+            - generic: VEL
+            - text: 0 km/s
+        - generic:
+          - generic: "MISSION: EARTH DEPARTURE"
+          - generic: IGNITION SEQUENCE
+        - generic:
+          - generic:
+            - generic: FUEL
+            - text: 100%
+          - generic:
+            - generic: DIST
+            - text: 0 AU
+      - generic [ref=e2274]:
+        - button "🚀 Launch" [ref=e2275] [cursor=pointer]
+        - button "🛰 Space Station" [ref=e2276] [cursor=pointer]
+        - button "🌙 Moon" [ref=e2277] [cursor=pointer]
+        - button "🌌 Mars" [ref=e2278] [cursor=pointer]
+      - generic [ref=e2279]: Phase 1 — Rocket Launch from Earth
+    - generic [ref=e2280]:
+      - generic [ref=e2283]: 🚀
+      - generic [ref=e2286]:
+        - generic [ref=e2287] [cursor=pointer]:
+          - generic [ref=e2288]: 🌏
+          - generic [ref=e2290]:
+            - heading "🚀 Launch" [level=4] [ref=e2291]
+            - paragraph [ref=e2292]: Earth — Supplier Application
+            - generic [ref=e2293]: Phase 1 Complete ✓
+        - generic [ref=e2294] [cursor=pointer]:
+          - generic [ref=e2295]: 🛰
+          - generic [ref=e2297]:
+            - heading "🛰 Space Station" [level=4] [ref=e2298]
+            - paragraph [ref=e2299]: LEO Orbit — CubeSat Rideshare
+            - generic [ref=e2300]: Phase 2-3 · Refueling
+        - generic [ref=e2301] [cursor=pointer]:
+          - generic [ref=e2302]: 🌙
+          - generic [ref=e2304]:
+            - heading "🌙 Moon Landing" [level=4] [ref=e2305]
+            - paragraph [ref=e2306]: Mesh Network — Uncensored Internet
+            - generic [ref=e2307]: Phase 3 · Refueling
+        - generic [ref=e2308] [cursor=pointer]:
+          - generic [ref=e2309]: 🌌
+          - generic [ref=e2311]:
+            - heading "🌌 Mars Landing" [level=4] [ref=e2312]
+            - paragraph [ref=e2313]: Multi-Planetary Payments
+            - generic [ref=e2314]: Phase 4 · Final Destination
+    - generic [ref=e2315]:
+      - generic [ref=e2316]:
+        - generic [ref=e2318]: 🚀
+        - heading "OST × Starlink — Satellite DePIN Partnership" [level=3] [ref=e2319]
+        - paragraph [ref=e2320]: Satellite infrastructure is funded entirely by donations and investors. OST is designed to complement Starlink’s coverage in censored or remote areas — nationless technology, coded for space. Zero fees for users, forever.
+      - generic [ref=e2321]:
+        - generic [ref=e2322] [cursor=pointer]:
+          - heading "Phase 1 — Entry Point" [level=4] [ref=e2324]
+          - generic [ref=e2325]: Week 1 • COMPLETE ✓
+          - text: ▾
+        - generic [ref=e2326]:
+          - generic [ref=e2327]:
+            - generic [ref=e2328]: ✅
+            - generic [ref=e2329]:
+              - heading "Live Website & GitHub Repo" [level=4] [ref=e2330]
+              - paragraph [ref=e2331]:
+                - text: Production site deployed at
+                - link "nachogtavl-collab.github.io/ost-token" [ref=e2332] [cursor=pointer]:
+                  - /url: https://nachogtavl-collab.github.io/ost-token/
+                - text: . Open-source repo with full manifesto, 25-instruction Anchor program, SDK, and deployment scripts.
+              - generic [ref=e2333]: Live
+          - generic [ref=e2334]:
+            - generic [ref=e2335]: ✅
+            - generic [ref=e2336]:
+              - heading "DePIN Faucet & Community Rewards" [level=4] [ref=e2337]
+              - paragraph [ref=e2338]: "DePIN faucet live on devnet with 7 reward categories: Bandwidth (500), GPU (2.5K), CPU (1K), Storage (500), LoRa/5G (10), Satellite (50K), Data Center (100K OST/day). Rewards decrease as price appreciates. Zero fees forever."
+              - generic [ref=e2339]: On-chain
+          - generic [ref=e2340]:
+            - generic [ref=e2341]: ✅
+            - generic [ref=e2342]:
+              - heading "SpaceX Supplier Application" [level=4] [ref=e2343]
+              - paragraph [ref=e2344]: Formal application prepared for SpaceX Supplier Portal on behalf of Adventure. DePIN funding layer — satellite transit micropayments, bandwidth settlements, and open-source payment infrastructure.
+              - generic [ref=e2345]: Application Ready
+          - generic [ref=e2346]:
+            - generic [ref=e2347]: ✅
+            - generic [ref=e2348]:
+              - heading "X (Twitter) Visibility Campaign" [level=4] [ref=e2349]
+              - paragraph [ref=e2350]: "30-day campaign plan created with daily threads tagging @SpaceX @Starlink @elonmusk. Value-first content: DePIN architecture, technical deep dives, Mars payment design, community engagement strategy."
+              - generic [ref=e2351]: Campaign Ready
+          - generic [ref=e2352]:
+            - generic [ref=e2353]: ✅
+            - generic [ref=e2354]:
+              - heading "One-Pager & Pitch Deck" [level=4] [ref=e2355]
+              - paragraph [ref=e2356]: "11-slide PowerPoint pitch deck created: problem, solution, technical architecture, SpaceX alignment, precedents, tokenomics, roadmap, progress tracker, and partnership ask."
+              - generic [ref=e2357]: Deck Created
+      - generic [ref=e2358]:
+        - generic [ref=e2359] [cursor=pointer]:
+          - heading "Phase 2 — Prove It" [level=4] [ref=e2361]
+          - generic [ref=e2362]: Month 0–3 • IN PROGRESS
+          - text: ▾
+        - generic [ref=e2363]:
+          - generic [ref=e2364]:
+            - generic [ref=e2365]: 🟡
+            - generic [ref=e2366]:
+              - heading "Mainnet Launch & First 1,000 Users" [level=4] [ref=e2367]
+              - paragraph [ref=e2368]: Deploy to Solana mainnet, seed initial liquidity, onboard first 1,000 wallets holding OST. Fully free service from day one.
+              - generic [ref=e2369]: After Mainnet
+          - generic [ref=e2370]:
+            - generic [ref=e2371]: 🟡
+            - generic [ref=e2372]:
+              - heading "DePIN Rewards Flowing" [level=4] [ref=e2373]
+              - paragraph [ref=e2374]: Activate DePIN faucet on mainnet. First bandwidth/GPU/satellite contributors receiving real OST rewards from treasury.
+              - generic [ref=e2375]: After Mainnet
+          - generic [ref=e2376]:
+            - generic [ref=e2377]: 🟡
+            - generic [ref=e2378]:
+              - heading "Daily X Content & Community" [level=4] [ref=e2379]
+              - paragraph [ref=e2380]: "Consistent value-first posts: architecture updates, DePIN node stats, treasury transparency reports. Target: 10K+ impressions/week."
+              - generic [ref=e2381]: Month 1
+      - generic [ref=e2382]:
+        - generic [ref=e2383] [cursor=pointer]:
+          - heading "Phase 3 — Partnership" [level=4] [ref=e2385]
+          - generic [ref=e2386]: Month 3–6
+          - text: ▾
+        - generic:
+          - generic [ref=e2387]:
+            - generic [ref=e2388]: 🟡
+            - generic [ref=e2389]:
+              - heading "SpaceX Supplier Review" [level=4] [ref=e2390]
+              - paragraph [ref=e2391]: "Follow up on supplier application. Present traction data: active users, treasury volume, DePIN node count. SpaceX responds to serious proposals with working products."
+              - generic [ref=e2392]: Month 3
+          - generic [ref=e2393]:
+            - generic [ref=e2394]: 🟡
+            - generic [ref=e2395]:
+              - heading "Starlink Enterprise Program" [level=4] [ref=e2396]
+              - paragraph [ref=e2397]: Apply for Starlink Business/Enterprise tier. Propose OST as a micropayment layer for bandwidth allocation, or a DePIN coordination add-on for ground stations.
+              - generic [ref=e2398]: Month 4
+          - generic [ref=e2399]:
+            - generic [ref=e2400]: 🟡
+            - generic [ref=e2401]:
+              - heading "X Corp Payments Integration" [level=4] [ref=e2402]
+              - paragraph [ref=e2403]: Pitch OST as a private, offline-ready payment rail for X (Twitter) in censored regions. Crypto P2P payments inside X for markets where traditional payment rails are blocked.
+              - generic [ref=e2404]: Month 5
+      - generic [ref=e2405]:
+        - generic [ref=e2406] [cursor=pointer]:
+          - heading "Phase 4 — Space Launch" [level=4] [ref=e2408]
+          - generic [ref=e2409]: Month 6–18
+          - text: ▾
+        - generic:
+          - generic [ref=e2410]:
+            - generic [ref=e2411]: 🟡
+            - generic [ref=e2412]:
+              - heading "SpaceX Rideshare Nano-Satellite" [level=4] [ref=e2413]
+              - paragraph [ref=e2414]: Book a Transporter rideshare slot (~$275K for 50kg CubeSat). Deploy OST mesh node in LEO orbit — like Spacecoin & WISeSat did in 2025–2026.
+              - generic [ref=e2415]: Month 8+
+          - generic [ref=e2416]:
+            - generic [ref=e2417]: 🟡
+            - generic [ref=e2418]:
+              - heading "OST Mesh Network — Uncensored Internet" [level=4] [ref=e2419]
+              - paragraph [ref=e2420]: Ground station + LEO satellite nodes form a mesh extending uncensored internet to censored zones. Treasury-funded. Open hardware specs.
+              - generic [ref=e2421]: Month 12+
+          - generic [ref=e2422]:
+            - generic [ref=e2423]: 🟡
+            - generic [ref=e2424]:
+              - heading "Multi-Planetary Payment Infrastructure" [level=4] [ref=e2425]
+              - paragraph [ref=e2426]: Mars-ready payment protocol with latency-tolerant consensus. Offline tap-to-pay, Grow Accounts for kids who will live on Mars. The final step.
+              - generic [ref=e2427]: Month 18+
+      - generic [ref=e2428]:
+        - heading "Proven Path — Projects That Already Did This" [level=4] [ref=e2429]
+        - generic [ref=e2430]:
+          - generic [ref=e2431]:
+            - generic [ref=e2432]: 🛰
+            - strong [ref=e2433]: Spacecoin
+            - paragraph [ref=e2434]: DePIN token → launched satellite on SpaceX rideshare → government partnerships & token swaps (2025–2026)
+          - generic [ref=e2435]:
+            - generic [ref=e2436]: 📡
+            - strong [ref=e2437]: WISeSat / WISeKey
+            - paragraph [ref=e2438]: 21st LEO satellite on SpaceX (March 2026) with quantum/DePIN focus — started as a small builder
+          - generic [ref=e2439]:
+            - generic [ref=e2440]: 💰
+            - strong [ref=e2441]: X Corp Payments
+            - paragraph [ref=e2442]: Expanding crypto integration — OST could power uncensored P2P payments inside X for restricted regions
+      - generic [ref=e2443]:
+        - blockquote [ref=e2444]: “OST is completely free to use — zero transaction fees, forever. Funded by donations and investors, not by taxing users. Designed to fund open DePIN satellites that extend uncensored internet to the places Starlink can’t reach yet. Offline tap-to-pay, Grow Accounts for kids who will live on Mars. Open-source and nationless by design.”
+        - generic [ref=e2445]: — OST Manifesto
+  - generic [ref=e2447]:
+    - generic [ref=e2448]: 🎯 Our Purpose
+    - heading "Our Mission" [level=2] [ref=e2449]
+    - paragraph [ref=e2450]: Three pillars. One story. A thesis for the future of money and internet.
+    - generic [ref=e2451]:
+      - generic [ref=e2452]:
+        - generic [ref=e2453]: 🔒
+        - generic [ref=e2455]: 🌐
+        - generic [ref=e2457]: 🛰
+      - heading "The Three Pillars of OST" [level=3] [ref=e2459]
+      - generic [ref=e2460]:
+        - generic [ref=e2461]:
+          - img "Financial sovereignty" [ref=e2462]
+          - generic [ref=e2463]:
+            - heading "🔒 Financial Sovereignty" [level=4] [ref=e2464]
+            - paragraph [ref=e2465]: No bank, government, or corporation can freeze your OST. Your keys, your money. Zero-knowledge proofs make every transaction invisible to the world.
+            - generic [ref=e2466]:
+              - generic [ref=e2467]: ZK Proofs
+              - generic [ref=e2468]: Self Custody
+              - generic [ref=e2469]: $0 Fees
+        - generic [ref=e2470]:
+          - img "Uncensored internet" [ref=e2471]
+          - generic [ref=e2472]:
+            - heading "🌐 Uncensored Internet" [level=4] [ref=e2473]
+            - paragraph [ref=e2474]: OST funds satellite infrastructure so anyone â€” from a student in Tehran to a journalist in Myanmar â€” can access the internet without government permission. No filters. No kill switches.
+            - generic [ref=e2475]:
+              - generic [ref=e2476]: LEO Satellites
+              - generic [ref=e2477]: Mesh Network
+              - generic [ref=e2478]: Anti-Censorship
+        - generic [ref=e2479]:
+          - img "Universal access" [ref=e2480]
+          - generic [ref=e2481]:
+            - heading "🛰 Universal Access" [level=4] [ref=e2482]
+            - paragraph [ref=e2483]: Satellite infrastructure funded by donations and investors â€” not fees. Low-earth orbit satellites bring internet + financial access to 2.6 billion people currently offline.
+            - generic [ref=e2484]:
+              - generic [ref=e2485]: 2.6B Offline
+              - generic [ref=e2486]: NFC Payments
+              - generic [ref=e2487]: BLE Transfer
+    - generic [ref=e2488]:
+      - heading "The Decentralization Thesis" [level=3] [ref=e2489]
+      - paragraph [ref=e2490]: Governments are seizing control of money and the internet. We're building the alternative they can't shut down.
+      - generic [ref=e2491]:
+        - generic [ref=e2492]:
+          - generic [ref=e2493]:
+            - img "Decentralized finance" [ref=e2494]
+            - generic [ref=e2495]: 💰 Currency
+          - heading "Decentralize Money" [level=3] [ref=e2496]
+          - paragraph [ref=e2497]: For 5,000 years, governments controlled money. Printing it when convenient, devaluing it when desperate. Central banks in 2023 held $28.5 trillion in reserves while 1.4 billion adults had no bank account at all.
+          - generic [ref=e2498]:
+            - generic [ref=e2499]:
+              - generic [ref=e2500]: 3000 BC
+              - generic [ref=e2501]: Sumer invents coined money under state control
+            - generic [ref=e2502]:
+              - generic [ref=e2503]: "1971"
+              - generic [ref=e2504]: Nixon ends the gold standard — money is now faith alone
+            - generic [ref=e2505]:
+              - generic [ref=e2506]: "2008"
+              - generic [ref=e2507]: Banks collapse. Governments print $4.5T to bail them out
+            - generic [ref=e2508]:
+              - generic [ref=e2509]: "2009"
+              - generic [ref=e2510]: "Bitcoin: the first money no government controls"
+            - generic [ref=e2511]:
+              - generic [ref=e2512]: "2025"
+              - generic [ref=e2513]: "OST: private, instant money for 8 billion citizens"
+          - generic [ref=e2514]:
+            - generic [ref=e2515]:
+              - generic [ref=e2516]: $28.5T
+              - text: Central bank reserves
+            - generic [ref=e2517]:
+              - generic [ref=e2518]: 1,400%
+              - text: USD inflation since 1971
+            - generic [ref=e2519]:
+              - generic [ref=e2520]: "0"
+              - text: OST controlled by any entity
+          - paragraph [ref=e2521]: “Give me control of a nation's money supply, and I care not who makes its laws.” — Mayer Amschel Rothschild
+        - generic [ref=e2522]:
+          - generic [ref=e2523]:
+            - img "Internet infrastructure" [ref=e2524]
+            - generic [ref=e2525]: 🌐 Internet
+          - heading "Decentralize the Internet" [level=3] [ref=e2526]
+          - paragraph [ref=e2527]: The internet was born decentralized — packets routing freely between universities. Then corporations captured it, and governments learned they could switch it off. Today, billions of people see only what their government allows.
+          - generic [ref=e2528]:
+            - generic [ref=e2529]:
+              - generic [ref=e2530]: "1969"
+              - generic [ref=e2531]: "ARPANET: 4 nodes, no central authority"
+            - generic [ref=e2532]:
+              - generic [ref=e2533]: "1991"
+              - generic [ref=e2534]: "Tim Berners-Lee: “This is for everyone”"
+            - generic [ref=e2535]:
+              - generic [ref=e2536]: 2010s
+              - generic [ref=e2537]: 5 Big Tech companies capture 72% of web traffic
+            - generic [ref=e2538]:
+              - generic [ref=e2539]: "2024"
+              - generic [ref=e2540]: 55 countries shut down or censored internet
+            - generic [ref=e2541]:
+              - generic [ref=e2542]: "2025"
+              - generic [ref=e2543]: OST funds satellite internet for the unconnected
+          - generic [ref=e2544]:
+            - generic [ref=e2545]:
+              - generic [ref=e2546]: 2.6B
+              - text: People without internet
+            - generic [ref=e2547]:
+              - generic [ref=e2548]: 55+
+              - text: Countries censored internet in 2024
+            - generic [ref=e2549]:
+              - generic [ref=e2550]: $0
+              - text: Transaction fees — free forever
+          - paragraph [ref=e2551]: “The internet treats censorship as damage and routes around it.” — John Gilmore
+  - generic [ref=e2553]:
+    - heading "Our Story" [level=2] [ref=e2554]
+    - paragraph [ref=e2555]: A journey from the first spark of decentralized money to the future of private digital cash.
+    - generic [ref=e2556]:
+      - generic [ref=e2560]:
+        - img "Bitcoin genesis" [ref=e2561]
+        - generic [ref=e2562]:
+          - generic [ref=e2563]: "2009"
+          - heading "The Spark" [level=3] [ref=e2564]
+          - paragraph [ref=e2565]: Bitcoin proved that people - not banks, not governments - could create money that crosses every border. The spark changed everything.
+          - generic [ref=e2566]:
+            - generic [ref=e2567]:
+              - generic [ref=e2568]: $2T+
+              - generic [ref=e2569]: Bitcoin market cap by 2024
+            - generic [ref=e2570]:
+              - generic [ref=e2571]: 500M+
+              - generic [ref=e2572]: Global crypto users
+          - paragraph [ref=e2573]: "On January 3, 2009, Satoshi Nakamoto mined the genesis block with a hidden message from the London Times: “Chancellor on brink of second bailout for banks.” It was a declaration of independence from a broken financial system. Bitcoin showed the world that peer-to-peer digital value was possible — without middlemen, without borders, without permission. By 2024, the network had processed over $15 trillion in transactions. But Bitcoin had a fatal flaw: every transaction was public forever."
+      - generic [ref=e2576]:
+        - img "Global payments" [ref=e2577]
+        - generic [ref=e2578]:
+          - generic [ref=e2579]: 2015–2023
+          - heading "The Gap" [level=3] [ref=e2580]
+          - paragraph [ref=e2581]: But Bitcoin was slow, expensive, and public. Billions still couldn't pay rent, buy groceries, or send money home without banks taking their cut.
+          - generic [ref=e2582]:
+            - generic [ref=e2583]:
+              - generic [ref=e2584]: $48B
+              - generic [ref=e2585]: Remittance fees lost per year
+            - generic [ref=e2586]:
+              - generic [ref=e2587]: 1.4B
+              - generic [ref=e2588]: Adults without a bank account
+          - paragraph [ref=e2589]: "The World Bank reports the average cost to send $200 across borders is 6.2% — that's $48 billion drained from the world's poorest families every year. In Sub-Saharan Africa, fees average 7.9%. A worker in Dubai sending money home to Lagos loses a week's groceries in transfer fees alone. Bitcoin's 10-minute blocks, $2-50 fees, and fully public ledger made it useless for daily payments. Every chain that followed — Ethereum, Cardano, Avalanche — had the same problem: your balance is public. Your transactions are tracked. The gap between promise and reality was enormous."
+      - generic [ref=e2592]:
+        - img "Zero knowledge cryptography" [ref=e2593]
+        - generic [ref=e2594]:
+          - generic [ref=e2595]: "2024"
+          - heading "The Breakthrough" [level=3] [ref=e2596]
+          - paragraph [ref=e2597]: Solana Token-2022 launched confidential transfers - zero-knowledge proofs that hide balances and amounts from the entire world. The missing piece.
+          - generic [ref=e2598]:
+            - generic [ref=e2599]:
+              - generic [ref=e2600]: 0.4s
+              - generic [ref=e2601]: Solana finality time
+            - generic [ref=e2602]:
+              - generic [ref=e2603]: $0
+              - generic [ref=e2604]: Zero transaction fees
+          - paragraph [ref=e2605]: Solana's Token-2022 program introduced ElGamal encryption and zero-knowledge range proofs at the protocol level. For the first time, a high-throughput blockchain could process confidential transactions — hiding sender, receiver, and amount — at 65,000 TPS with sub-second finality. Zero fees, funded by donations and investors. This wasn't an academic paper. It was production-ready code deployed on mainnet. A developer in Mexico City saw this and started coding at 2 AM.
+      - generic [ref=e2608]:
+        - img "Earth from space" [ref=e2609]
+        - generic [ref=e2610]:
+          - generic [ref=e2611]: 2025 — Present
+          - heading "OST Is Born" [level=3] [ref=e2612]
+          - paragraph [ref=e2613]: "We combined unstoppable money, instant settlement, total privacy, and a mission: fund satellite infrastructure so every human can access the financial system."
+          - generic [ref=e2614]:
+            - generic [ref=e2615]:
+              - generic [ref=e2616]: "22"
+              - generic [ref=e2617]: On-chain instructions
+            - generic [ref=e2618]:
+              - generic [ref=e2619]: "0"
+              - generic [ref=e2620]: Pre-mine or team allocation
+          - paragraph [ref=e2621]:
+            - strong [ref=e2622]: "The real numbers:"
+            - text: "OST was built by a single developer from Mexico, incorporated as a legal entity in Panama. No venture capital. No pre-mine. No insider allocations. The program was written in Rust using the Anchor framework — 25 instructions covering confidential_mint, confidential_transfer, dao_propose, dao_vote, satellite_fund, zk_tax_proof, auto_delegate, and more. The program binary is 572KB. Every instruction is open source. OST charges zero transaction fees — the service is free forever, funded by donations and investors. Program ID:"
+            - code [ref=e2623]: J2jiS296YWVie1Sopb4SxcM3aJnP9aAwe6aLDhCqvGXY
+            - text: ". Mint:"
+            - code [ref=e2624]: 44R8tYQYza1EEuiAriYs5NHnbGBeX8tLPTdu3zH7wLsz
+            - text: . Everything is verifiable on-chain right now.
+      - generic [ref=e2627]:
+        - img "Future city" [ref=e2628]
+        - generic [ref=e2629]:
+          - generic [ref=e2630]: The Future
+          - heading "Every Citizen, Connected" [level=3] [ref=e2631]
+          - paragraph [ref=e2632]: A world where the fruit seller in Lagos and the engineer in Tehran share the same financial freedom. Where borders are just lines. Where money is truly yours.
+          - generic [ref=e2633]:
+            - generic [ref=e2634]:
+              - generic [ref=e2635]: 8B
+              - generic [ref=e2636]: People on Earth
+            - generic [ref=e2637]:
+              - generic [ref=e2638]: ∞
+              - generic [ref=e2639]: No borders. Ever.
+          - paragraph [ref=e2640]: The endgame is not just a better payment app. It's the end of financial borders entirely. OST is designed to become the universal settlement layer — Earth-side for daily payments, space-side for satellite operations and eventual interplanetary commerce. Satellite infrastructure is funded entirely by donations and investors — never by taxing users. OST is free to use, forever. The constellation brings uncensored internet to every corner of Earth, including the 2.6 billion still offline. When humanity builds bases on Mars and the Moon, they won't be using SWIFT or correspondent banking. They'll need a currency that works without Earth infrastructure — a currency like OST. This isn't a pitch. It's a plan. The code is written. The mission is funded by people who believe in it.
+    - generic [ref=e2641]:
+      - paragraph [ref=e2642]: We are building universal digital cash that belongs to no country and serves every citizen. Privately. Instantly. Equally.
+      - paragraph [ref=e2643]: Welcome to OST. Welcome home.
+  - generic [ref=e2645]:
+    - generic [ref=e2646]: 🎯 Live Progress
+    - heading "Roadmap & Progress" [level=2] [ref=e2647]
+    - paragraph [ref=e2648]: Where we are, what we've built, and what comes next.
+    - generic [ref=e2649]:
+      - generic [ref=e2650]:
+        - generic [ref=e2651]: "01"
+        - generic [ref=e2652]: 💫
+        - heading "Foundation" [level=4] [ref=e2653]
+        - text: Q1â€“Q2 2025
+        - generic [ref=e2654]: ✅ Complete
+        - list [ref=e2655]:
+          - listitem [ref=e2656]: "Anchor smart contract: 25 instructions"
+          - listitem [ref=e2657]: Token-2022 mint + confidential transfers
+          - listitem [ref=e2658]: "TypeScript SDK: 22 builders"
+          - listitem [ref=e2659]: "Website: 3D globe, live prices, 11 langs"
+          - listitem [ref=e2660]: Panama S.A. registered
+          - listitem [ref=e2661]: Deployed to devnet
+      - generic [ref=e2662]:
+        - generic [ref=e2663]: "02"
+        - generic [ref=e2664]: 🚀
+        - heading "Live Network" [level=4] [ref=e2665]
+        - text: Q3â€“Q4 2025
+        - generic [ref=e2666]: ⚫ In Progress
+        - list [ref=e2667]:
+          - listitem [ref=e2668]: Deploy to Solana mainnet-beta
+          - listitem [ref=e2669]: Security audit (external firm)
+          - listitem [ref=e2670]: Jupiter DEX listing
+          - listitem [ref=e2671]: CoinGecko & CoinMarketCap
+          - listitem [ref=e2672]: First 1,000 wallets
+      - generic [ref=e2673]:
+        - generic [ref=e2674]: "03"
+        - generic [ref=e2675]: 🌎
+        - heading "Adoption" [level=4] [ref=e2676]
+        - text: "2026"
+        - generic [ref=e2677]: ⚪ Planned
+        - list [ref=e2678]:
+          - listitem [ref=e2679]: Mobile app (iOS + Android)
+          - listitem [ref=e2680]: Offline NFC/BLE payments live
+          - listitem [ref=e2681]: First merchant integrations
+          - listitem [ref=e2682]: OST Interchange Protocol v1
+          - listitem [ref=e2683]: First governance vote
+      - generic [ref=e2684]:
+        - generic [ref=e2685]: "04"
+        - generic [ref=e2686]: 🛰
+        - heading "Sovereign" [level=4] [ref=e2687]
+        - text: 2027â€“28
+        - generic [ref=e2688]: ⚪ Planned
+        - list [ref=e2689]:
+          - listitem [ref=e2690]: OST Decentralized Exchange
+          - listitem [ref=e2691]: OST Cross-Chain Bridge
+          - listitem [ref=e2692]: Independent price discovery
+          - listitem [ref=e2693]: Payment gateway API
+      - generic [ref=e2694]:
+        - generic [ref=e2695]: "05"
+        - generic [ref=e2696]: 🛸
+        - heading "Independence" [level=4] [ref=e2697]
+        - text: 2029+
+        - generic [ref=e2698]: ⚪ Vision
+        - list [ref=e2699]:
+          - listitem [ref=e2700]: OST Sovereign Network
+          - listitem [ref=e2701]: Own consensus mechanism
+          - listitem [ref=e2702]: Satellite constellation operational
+          - listitem [ref=e2703]: Interplanetary settlement layer
+      - generic [ref=e2704]:
+        - generic [ref=e2705]: "06"
+        - generic [ref=e2706]: 🧬
+        - heading "Legacy Mode" [level=4] [ref=e2707]
+        - text: 2030â€“2050
+        - generic [ref=e2708]: 🔬 Research
+        - list [ref=e2709]:
+          - listitem [ref=e2710]: Biological quantum computing R&D
+          - listitem [ref=e2711]: DNA-encoded OST balances
+          - listitem [ref=e2712]: Physical bearer tokens (metal/stone/glass)
+          - listitem [ref=e2713]: Lunar & Mars seed data payloads
+          - listitem [ref=e2714]: Natural megastructure prototypes
+      - generic [ref=e2715]:
+        - generic [ref=e2716]: "07"
+        - generic [ref=e2717]: 🌈
+        - heading "Extinction-Proof" [level=4] [ref=e2718]
+        - text: 2050â€“2100+
+        - generic [ref=e2719]: ⚖ Eternal
+        - list [ref=e2720]:
+          - listitem [ref=e2721]: Self-replicating living monuments
+          - listitem [ref=e2722]: Crystal lattice & coral ledgers
+          - listitem [ref=e2723]: Deep-space radio/laser transmissions
+          - listitem [ref=e2724]: Hieroglyphic + binary genesis broadcast
+          - listitem [ref=e2725]: Post-human rediscovery protocol
+    - generic [ref=e2726]:
+      - generic [ref=e2727]:
+        - generic [ref=e2728]: "22"
+        - generic [ref=e2729]: On-Chain Instructions
+      - generic [ref=e2730]:
+        - generic [ref=e2731]: $0
+        - generic [ref=e2732]: Transaction Fees Forever
+      - generic [ref=e2733]:
+        - generic [ref=e2734]: "11"
+        - generic [ref=e2735]: Languages Supported
+    - paragraph [ref=e2736]: We don't predict prices. We ship code. The service is free. The market decides the rest.
+    - generic [ref=e2738]:
+      - heading "🚀 Mainnet Launch Checklist" [level=3] [ref=e2739]
+      - paragraph [ref=e2740]: What we need to make OST fully real on Solana mainnet.
+      - generic [ref=e2741]: 11 of 16 complete (69%)
+      - generic [ref=e2744]:
+        - generic [ref=e2745]:
+          - generic [ref=e2746]: ✅
+          - generic [ref=e2747]:
+            - heading "Anchor Smart Contract" [level=4] [ref=e2748]
+            - paragraph [ref=e2749]: "25 on-chain instructions: mint, transfer, confidential deposit/withdraw, DAO governance, satellite funding, auto-delegation, ZK tax compliance, family grow vaults, DePIN faucet."
+            - generic [ref=e2750]: Complete
+        - generic [ref=e2751]:
+          - generic [ref=e2752]: ✅
+          - generic [ref=e2753]:
+            - heading "TypeScript SDK" [level=4] [ref=e2754]
+            - paragraph [ref=e2755]: Full client library with all 22 instruction builders, account deserializers, and PDA helpers.
+            - generic [ref=e2756]: Complete
+        - generic [ref=e2757]:
+          - generic [ref=e2758]: ✅
+          - generic [ref=e2759]:
+            - heading "Website & Frontend" [level=4] [ref=e2760]
+            - paragraph [ref=e2761]: Production website with 3D globe, live prices, wallet connect, interchange, 11 languages, AI connector panel, SpaceX partnership strategy.
+            - generic [ref=e2762]: Complete
+        - generic [ref=e2763]:
+          - generic [ref=e2764]: ✅
+          - generic [ref=e2765]:
+            - heading "Security Audit" [level=4] [ref=e2766]
+            - paragraph [ref=e2767]: Internal code review complete. Simplified CT instructions to event emitters — client SDK handles Token-2022 directly for maximum safety.
+            - generic [ref=e2768]: Reviewed
+        - generic [ref=e2769]:
+          - generic [ref=e2770]: ✅
+          - generic [ref=e2771]:
+            - heading "Program Compiled" [level=4] [ref=e2772]
+            - paragraph [ref=e2773]:
+              - text: "Anchor program built successfully (572KB BPF binary). 25 instructions verified. Program ID:"
+              - code [ref=e2774]: J2ji...vGXY
+            - generic [ref=e2775]: Built & Ready
+        - generic [ref=e2776]:
+          - generic [ref=e2777]: ✅
+          - generic [ref=e2778]:
+            - heading "Token Mint Creation" [level=4] [ref=e2779]
+            - paragraph [ref=e2780]:
+              - text: "SPL Token-2022 mint with confidential transfer extension. Mint:"
+              - code [ref=e2781]: 383p...2pAJ
+              - text: . 1B supply, 9 decimals.
+            - generic [ref=e2782]: Created On-Chain
+        - generic [ref=e2783]:
+          - generic [ref=e2784]: ✅
+          - generic [ref=e2785]:
+            - heading "Devnet Deployment" [level=4] [ref=e2786]
+            - paragraph [ref=e2787]:
+              - text: Program deployed to Solana devnet. Mint and treasury initialized on-chain. Verified on
+              - link "Solana Explorer" [ref=e2788] [cursor=pointer]:
+                - /url: https://explorer.solana.com/address/J2jiS296YWVie1Sopb4SxcM3aJnP9aAwe6aLDhCqvGXY?cluster=devnet
+              - text: .
+            - generic [ref=e2789]: Deployed
+        - generic [ref=e2790]:
+          - generic [ref=e2791]: ✅
+          - generic [ref=e2792]:
+            - heading "wOST Wrapper Token" [level=4] [ref=e2793]
+            - paragraph [ref=e2794]:
+              - text: Standard SPL wrapper (
+              - code [ref=e2795]: Ac8R...iHoS
+              - text: ) for AMM/DEX compatibility. Enables Raydium pools and Jupiter routing without Token-2022 friction.
+            - generic [ref=e2796]: Created
+        - generic [ref=e2797]:
+          - generic [ref=e2798]: ✅
+          - generic [ref=e2799]:
+            - heading "Token Metadata On-Chain" [level=4] [ref=e2800]
+            - paragraph [ref=e2801]: "Metaplex metadata set: name, symbol, logo URI, and JSON metadata hosted on GitHub Pages. Renders correctly in wallets and explorers."
+            - generic [ref=e2802]: Set
+        - generic [ref=e2803]:
+          - generic [ref=e2804]: ✅
+          - generic [ref=e2805]:
+            - heading "Liquidity Pool — Raydium" [level=4] [ref=e2806]
+            - paragraph [ref=e2807]: wOST/SOL pool seeded on Raydium (100K wOST + 1 SOL). AMM pool active on devnet. Enables price discovery and swap routing.
+            - generic [ref=e2808]: Pool Live
+        - generic [ref=e2809]:
+          - generic [ref=e2810]: ✅
+          - generic [ref=e2811]:
+            - heading "DAO Treasury Wallet" [level=4] [ref=e2812]
+            - paragraph [ref=e2813]: Treasury PDA + token account created on-chain. Receives donations and investor contributions for satellite infrastructure funding. Zero transaction fees.
+            - generic [ref=e2814]: Active
+        - generic [ref=e2815]:
+          - generic [ref=e2816]: 🟡
+          - generic [ref=e2817]:
+            - heading "Mainnet Deployment" [level=4] [ref=e2818]
+            - paragraph [ref=e2819]: Redeploy verified program to Solana mainnet-beta. Requires ~2.5 SOL for program rent. Initialize mainnet mint, treasury, and metadata.
+            - generic [ref=e2820]: Next Step
+        - generic [ref=e2821]:
+          - generic [ref=e2822]: 🟡
+          - generic [ref=e2823]:
+            - heading "Mainnet Liquidity Seeding" [level=4] [ref=e2824]
+            - paragraph [ref=e2825]: Create wOST/SOL Raydium CLMM pool on mainnet with initial liquidity. Required for Jupiter routing and real-time pricing.
+            - generic [ref=e2826]: After Deploy
+        - generic [ref=e2827]:
+          - generic [ref=e2828]: 🟡
+          - generic [ref=e2829]:
+            - heading "Jupiter Strict List" [level=4] [ref=e2830]
+            - paragraph [ref=e2831]: Submit wOST to Jupiter verified token list. Requires on-chain metadata, sufficient liquidity, and community validation via governance vote.
+            - generic [ref=e2832]: After Liquidity
+        - generic [ref=e2833]:
+          - generic [ref=e2834]: 🟡
+          - generic [ref=e2835]:
+            - heading "CoinGecko / CoinMarketCap" [level=4] [ref=e2836]
+            - paragraph [ref=e2837]: Register for live price tracking. Submit contract address, official links, logo, supply data, and 7-day trading volume proof.
+            - generic [ref=e2838]: After Jupiter
+        - generic [ref=e2839]:
+          - generic [ref=e2840]: 🟡
+          - generic [ref=e2841]:
+            - heading "External Security Audit" [level=4] [ref=e2842]
+            - paragraph [ref=e2843]: Commission third-party audit from a reputable firm (OtterSec, Neodyme, or Halborn). Required for institutional trust and exchange listings.
+            - generic [ref=e2844]: Pre-Mainnet
+  - generic [ref=e2846]:
+    - generic [ref=e2847]: 🛠️ Open Source
+    - heading "Build the Future With Us" [level=2] [ref=e2848]
+    - paragraph [ref=e2849]: Ship wallets, payment rails, agent runtimes, and launch tools on top of OST.
+    - generic [ref=e2850]:
+      - generic [ref=e2851]:
+        - generic [ref=e2852]: Ship real modules
+        - heading "The repo already spans contract, SDK, launchpad, AI surfaces, and contributor workflows." [level=3] [ref=e2853]
+        - generic [ref=e2854]:
+          - generic [ref=e2855]:
+            - strong [ref=e2856]: "25"
+            - generic [ref=e2857]: contract instructions
+          - generic [ref=e2858]:
+            - strong [ref=e2859]: "22"
+            - generic [ref=e2860]: SDK builders
+          - generic [ref=e2861]:
+            - strong [ref=e2862]: "0"
+            - generic [ref=e2863]: user fees
+          - generic [ref=e2864]:
+            - strong [ref=e2865]: "3"
+            - generic [ref=e2866]: high-leverage fronts
+        - generic [ref=e2867]:
+          - generic [ref=e2868]:
+            - generic [ref=e2869]: "01"
+            - generic [ref=e2870]:
+              - strong [ref=e2871]: Merchant rails
+              - paragraph [ref=e2872]: Checkout sessions, receipts, and wallet-powered payment gateways for real-world OST usage.
+          - generic [ref=e2873]:
+            - generic [ref=e2874]: "02"
+            - generic [ref=e2875]:
+              - strong [ref=e2876]: Agent middleware
+              - paragraph [ref=e2877]: API metering, bot wallets, and execution policies for servers, MCP tools, and trading systems.
+          - generic [ref=e2878]:
+            - generic [ref=e2879]: "03"
+            - generic [ref=e2880]:
+              - strong [ref=e2881]: Launch tooling
+              - paragraph [ref=e2882]: Curves, ranking, moderation, analytics, and better creator onboarding for the OST launchpad.
+          - generic [ref=e2883]:
+            - generic [ref=e2884]: "04"
+            - generic [ref=e2885]:
+              - strong [ref=e2886]: Mainnet readiness
+              - paragraph [ref=e2887]: Audit, liquidity, observability, and docs that turn prototypes into production surfaces.
+      - generic [ref=e2888]:
+        - generic [ref=e2889]: Builder loop
+        - heading "Pick a lane, ship a slice, and plug it into the same open stack the site already demonstrates." [level=3] [ref=e2890]
+        - generic [ref=e2891]:
+          - generic [ref=e2892]:
+            - strong [ref=e2893]: Anchor core
+            - generic [ref=e2894]: Confidential transfer, mint, governance, satellite, and faucet rails.
+          - generic [ref=e2895]:
+            - strong [ref=e2896]: TypeScript SDK
+            - generic [ref=e2897]: Client builders, wallet flows, swap surfaces, and app integrations.
+          - generic [ref=e2898]:
+            - strong [ref=e2899]: Frontend apps
+            - generic [ref=e2900]: Merchant checkout, AI control plane, launchpad, wallet, and payment surfaces.
+          - generic [ref=e2901]:
+            - strong [ref=e2902]: Infra & content
+            - generic [ref=e2903]: Localization, docs, runbooks, analytics, tutorials, and ops.
+        - generic [ref=e2904]:
+          - generic [ref=e2905]: Rust
+          - generic [ref=e2906]: Anchor
+          - generic [ref=e2907]: TypeScript
+          - generic [ref=e2908]: Wallet UX
+          - generic [ref=e2909]: AI Ops
+          - generic [ref=e2910]: DePIN
+    - generic [ref=e2911]:
+      - generic [ref=e2912]:
+        - generic [ref=e2917]: ost-sdk â€” TypeScript
+        - code [ref=e2919]: "import { OstClient, ConfidentialTransfer } from '@ost/sdk'; const client = new OstClient({ network: 'mainnet' }); // Send a confidential transfer â€” fully private const tx = await client.confidentialTransfer({ to: '9xQe...buyer_wallet', amount: 1000, memo: 'Payment for services', }); console.log(`âœ… Tx: ${tx.signature}`); // Settlement: ~400ms | Fee: $0 (free) | Privacy: 100%"
+      - generic [ref=e2920]:
+        - generic [ref=e2925]: Anchor â€” Rust
+        - code [ref=e2927]: "use anchor_lang::prelude::*; use ost_program::{confidential_mint, private_transfer}; // 25 on-chain instructions, fully auditable pub fn handle_payment( ctx: Context<PaymentAccounts>, amount: u64, proof: ZKProof, ) -> Result<()> { private_transfer(ctx, amount, proof)?; emit!(PaymentEvent { amount, ts: Clock::get()?.unix_timestamp }); Ok(()) }"
+    - generic [ref=e2928]:
+      - generic [ref=e2929]:
+        - img "Developer coding" [ref=e2930]
+        - generic [ref=e2931]:
+          - heading "💻 Developers" [level=3] [ref=e2932]
+          - paragraph [ref=e2933]: Open-source Anchor SDK, TypeScript client, 25 on-chain instructions. Build payment apps, DeFi protocols, or privacy tools.
+          - generic [ref=e2934]:
+            - generic [ref=e2935]: ★ 25 instructions
+            - generic [ref=e2936]: 📚 Full docs
+            - generic [ref=e2937]: 🏆 Bounties
+          - generic [ref=e2938]:
+            - generic [ref=e2939]: Rust
+            - generic [ref=e2940]: TypeScript
+            - generic [ref=e2941]: Anchor
+            - generic [ref=e2942]: Solana
+      - generic [ref=e2943]:
+        - img "Designer workspace" [ref=e2944]
+        - generic [ref=e2945]:
+          - heading "🎨 Artists & Designers" [level=3] [ref=e2946]
+          - paragraph [ref=e2947]: Create themes, design wallets, build visual experiences for millions of users worldwide.
+          - generic [ref=e2948]:
+            - generic [ref=e2949]: 🎨 Design system
+            - generic [ref=e2950]: 🌐 11 languages
+            - generic [ref=e2951]: 🚀 Global reach
+          - generic [ref=e2952]:
+            - generic [ref=e2953]: UI/UX
+            - generic [ref=e2954]: Branding
+            - generic [ref=e2955]: Motion
+      - generic [ref=e2956]:
+        - img "Team collaboration" [ref=e2957]
+        - generic [ref=e2958]:
+          - heading "📝 Writers & Translators" [level=3] [ref=e2959]
+          - paragraph [ref=e2960]: Help us speak every language on Earth. Document, translate, educate â€” reach the unbanked.
+          - generic [ref=e2961]:
+            - generic [ref=e2962]: 🌐 11+ languages
+            - generic [ref=e2963]: 📄 i18n system
+            - generic [ref=e2964]: 🎓 Tutorials
+          - generic [ref=e2965]:
+            - generic [ref=e2966]: Docs
+            - generic [ref=e2967]: i18n
+            - generic [ref=e2968]: Blog
+      - generic [ref=e2969]:
+        - img "Content creation" [ref=e2970]
+        - generic [ref=e2971]:
+          - heading "🎥 Content Creators" [level=3] [ref=e2972]
+          - paragraph [ref=e2973]: Tutorials, reviews, documentaries. Show the world what private digital cash looks like.
+          - generic [ref=e2974]:
+            - generic [ref=e2975]: 🎬 Video guides
+            - generic [ref=e2976]: 🎙️ Podcasts
+            - generic [ref=e2977]: 📰 Articles
+          - generic [ref=e2978]:
+            - generic [ref=e2979]: YouTube
+            - generic [ref=e2980]: Podcast
+            - generic [ref=e2981]: Social
+      - generic [ref=e2982]:
+        - img "Server infrastructure" [ref=e2983]
+        - generic [ref=e2984]:
+          - heading "🏗️ Infrastructure" [level=3] [ref=e2985]
+          - paragraph [ref=e2986]: Run validators, deploy dApps, build payment gateways and bridge infrastructure.
+          - generic [ref=e2987]:
+            - generic [ref=e2988]: 🕒 99.9% uptime
+            - generic [ref=e2989]: ⚡ <400ms blocks
+            - generic [ref=e2990]: 🔒 Secure
+          - generic [ref=e2991]:
+            - generic [ref=e2992]: DevOps
+            - generic [ref=e2993]: Solana
+            - generic [ref=e2994]: DePIN
+      - generic [ref=e2995]:
+        - img "Community meetup" [ref=e2996]
+        - generic [ref=e2997]:
+          - heading "🤝 Community Leaders" [level=3] [ref=e2998]
+          - paragraph [ref=e2999]: Organize meetups, lead local chapters, grow adoption in your neighborhood and country.
+          - generic [ref=e3000]:
+            - generic [ref=e3001]: 🌎 195 countries
+            - generic [ref=e3002]: 🙋 Local chapters
+            - generic [ref=e3003]: 💪 Grants
+          - generic [ref=e3004]:
+            - generic [ref=e3005]: Events
+            - generic [ref=e3006]: Growth
+            - generic [ref=e3007]: DAO
+    - generic [ref=e3008]:
+      - heading "Start Contributing Today" [level=3] [ref=e3009]
+      - paragraph [ref=e3010]: Every commit, translation, and tutorial moves humanity forward.
+      - generic [ref=e3011]:
+        - generic [ref=e3012]:
+          - text: ★
+          - img "NVIDIA RTX 5090 GPU" [ref=e3013]
+          - generic [ref=e3014]: 💻 NVIDIA RTX 5090 GPU
+          - text: Best DePIN Infrastructure Node — top-tier GPU to power your rig
+        - generic [ref=e3015]:
+          - text: ★
+          - img "Apple A19 Pro Chip" [ref=e3016]
+          - generic [ref=e3017]: 📱 Apple A19 Pro Chip
+          - text: Best Mobile Wallet App — next-gen Apple silicon for development
+        - generic [ref=e3018]:
+          - text: ★
+          - img "24K Gold Cylinder" [ref=e3019]
+          - generic [ref=e3020]: 🏆 24K Gold Cylinder
+          - text: Most Impactful Community Leader — solid gold collectible trophy
+        - generic [ref=e3021]:
+          - text: ★
+          - img "2026 Corvette ZR1X" [ref=e3022]
+          - generic [ref=e3023]: 🚗 2026 Corvette ZR1X
+          - text: Grand Prize — Best OST Integration wins the supercar
+        - generic [ref=e3024]:
+          - generic [ref=e3025]: $10,000
+          - text: Payment Gateway Module
+        - generic [ref=e3026]:
+          - generic [ref=e3027]: $5,000
+          - text: SDK Integration Plugin
+        - generic [ref=e3028]:
+          - generic [ref=e3029]: $3,000
+          - text: New Language Translation Pack
+        - generic [ref=e3030]:
+          - generic [ref=e3031]: $2,500
+          - text: Mobile Wallet UI Design
+        - generic [ref=e3032]:
+          - generic [ref=e3033]: $2,000
+          - text: Video Tutorial Series
+        - generic [ref=e3034]:
+          - generic [ref=e3035]: $1,500
+          - text: Offline Payment Rail
+      - generic [ref=e3036]:
+        - link "View GitHub Repo" [ref=e3037] [cursor=pointer]:
+          - /url: https://github.com/nachogtavl-collab/ost-token
+        - link "Read the Docs" [ref=e3038] [cursor=pointer]:
+          - /url: https://github.com/nachogtavl-collab/ost-token/wiki
+  - generic [ref=e3040]:
+    - generic [ref=e3041]:
+      - generic [ref=e3042]:
+        - generic [ref=e3043]: Creator economy
+        - heading "Launch fast, inspect curves clearly, and route attention into the tokens actually moving." [level=2] [ref=e3044]
+        - paragraph [ref=e3045]: The launchpad now pairs a fast launch form with live market context, clearer curve pressure, and direct jumps into create, trending, and leaderboard modes.
+        - generic [ref=e3046]:
+          - button "Start a coin" [ref=e3047] [cursor=pointer]
+          - button "See trending" [ref=e3048] [cursor=pointer]
+          - button "Open leaderboard" [ref=e3049] [cursor=pointer]
+      - generic [ref=e3051]:
+        - generic [ref=e3052]:
+          - generic [ref=e3053]: Launch fee
+          - strong [ref=e3054]: 0 OST
+          - paragraph [ref=e3055]: Fair-launch positioning without a front-loaded creator tax.
+        - generic [ref=e3056]:
+          - generic [ref=e3057]: Graduation
+          - strong [ref=e3058]: 69K OST
+          - paragraph [ref=e3059]: Liquidity deposits and burn target remain visible from the first screen.
+        - generic [ref=e3060]:
+          - generic [ref=e3061]: Media
+          - strong [ref=e3062]: Image or video
+          - paragraph [ref=e3063]: Listings surface richer identity assets before the first trade even lands.
+        - generic [ref=e3064]:
+          - generic [ref=e3065]: Views
+          - strong [ref=e3066]: Create / Feed / Board
+          - paragraph [ref=e3067]: Switch between launching, scanning flow, and leaderboard confirmation instantly.
+    - generic [ref=e3068]:
+      - generic [ref=e3070]: ◉ OST pump
+      - generic [ref=e3071]:
+        - button "Create" [ref=e3072] [cursor=pointer]
+        - button "Trending" [ref=e3073] [cursor=pointer]
+        - button "Leaderboard" [ref=e3074] [cursor=pointer]
+      - generic [ref=e3075]: 8 coins launched
+    - generic [ref=e3076]:
+      - generic [ref=e3077]:
+        - generic [ref=e3078]: "8"
+        - generic [ref=e3079]: Coins
+      - generic [ref=e3080]:
+        - generic [ref=e3081]: $LUNA2
+        - generic [ref=e3082]: KOTH
+      - generic [ref=e3083]:
+        - generic [ref=e3084]: 221.3K
+        - generic [ref=e3085]: Total TVL
+      - generic [ref=e3086]:
+        - generic [ref=e3087]: "0"
+        - generic [ref=e3088]: Graduated
+    - generic [ref=e3089]:
+      - generic [ref=e3090]:
+        - generic [ref=e3091]: Market pulse
+        - heading "Read the curve before you press create." [level=3] [ref=e3092]
+        - generic [ref=e3093]:
+          - generic [ref=e3094]:
+            - generic [ref=e3095]: Hot runner
+            - strong [ref=e3096]: $LUNA2
+          - generic [ref=e3097]:
+            - generic [ref=e3098]: Fresh mint
+            - strong [ref=e3099]: $LUNA2
+          - generic [ref=e3100]:
+            - generic [ref=e3101]: Near graduation
+            - strong [ref=e3102]: $LUNA2 84%
+      - generic [ref=e3103]:
+        - generic [ref=e3104]: OST fair-launch rules
+        - generic [ref=e3105]:
+          - generic [ref=e3106]:
+            - strong [ref=e3107]: No presale
+            - generic [ref=e3108]: Everyone enters on the same bonding curve.
+          - generic [ref=e3109]:
+            - strong [ref=e3110]: 0 OST launch fee
+            - generic [ref=e3111]: Creators pay attention, not a front-loaded tax.
+          - generic [ref=e3112]:
+            - strong [ref=e3113]: 69K graduation
+            - generic [ref=e3114]: Liquidity deposit and burn target stays visible the entire time.
+    - generic [ref=e3115]:
+      - generic [ref=e3116]:
+        - heading "👑 King of the Hill" [level=3] [ref=e3117]
+        - paragraph [ref=e3118]: The token with the highest bonding curve progress becomes King. First to graduate wins.
+      - generic [ref=e3119]:
+        - generic [ref=e3120] [cursor=pointer]:
+          - generic [ref=e3121]: ðŸ‘‘
+          - generic [ref=e3122]:
+            - generic [ref=e3123]: LunarDAO $LUNA2
+            - generic [ref=e3124]: by 6cD...wM8
+          - generic [ref=e3125]:
+            - generic [ref=e3126]: 58.2K OST
+            - text: market cap
+        - generic [ref=e3130] [cursor=pointer]:
+          - generic [ref=e3131]: "2"
+          - generic [ref=e3132]:
+            - generic [ref=e3133]: SpaceDoge $SDOGE
+            - generic [ref=e3134]: by 7xK...b2F
+          - generic [ref=e3135]:
+            - generic [ref=e3136]: 42.0K OST
+            - text: market cap
+        - generic [ref=e3140] [cursor=pointer]:
+          - generic [ref=e3141]: "3"
+          - generic [ref=e3142]:
+            - generic [ref=e3143]: PepeOST $POST
+            - generic [ref=e3144]: by 3mP...nQ9
+          - generic [ref=e3145]:
+            - generic [ref=e3146]: 37.8K OST
+            - text: market cap
+        - generic [ref=e3150] [cursor=pointer]:
+          - generic [ref=e3151]: "4"
+          - generic [ref=e3152]:
+            - generic [ref=e3153]: Starlink Inu $SINU
+            - generic [ref=e3154]: by 4pR...mN3
+          - generic [ref=e3155]:
+            - generic [ref=e3156]: 31.5K OST
+            - text: market cap
+        - generic [ref=e3160] [cursor=pointer]:
+          - generic [ref=e3161]: "5"
+          - generic [ref=e3162]:
+            - generic [ref=e3163]: ZeroGravity $0GRV
+            - generic [ref=e3164]: by 9aW...hJ7
+          - generic [ref=e3165]:
+            - generic [ref=e3166]: 22.1K OST
+            - text: market cap
+        - generic [ref=e3170] [cursor=pointer]:
+          - generic [ref=e3171]: "6"
+          - generic [ref=e3172]:
+            - generic [ref=e3173]: CatOnSolana $MEOW
+            - generic [ref=e3174]: by 5nG...hT2
+          - generic [ref=e3175]:
+            - generic [ref=e3176]: 15.6K OST
+            - text: market cap
+        - generic [ref=e3180] [cursor=pointer]:
+          - generic [ref=e3181]: "7"
+          - generic [ref=e3182]:
+            - generic [ref=e3183]: OrbitalCash $ORBT
+            - generic [ref=e3184]: by 2bT...pQ5
+          - generic [ref=e3185]:
+            - generic [ref=e3186]: 8.9K OST
+            - text: market cap
+        - generic [ref=e3190] [cursor=pointer]:
+          - generic [ref=e3191]: "8"
+          - generic [ref=e3192]:
+            - generic [ref=e3193]: RocketFuel $FUEL
+            - generic [ref=e3194]: by 8kL...wR7
+          - generic [ref=e3195]:
+            - generic [ref=e3196]: 5.2K OST
+            - text: market cap
+    - generic [ref=e3200]: ⚠ Memecoins are highly speculative. Launches created here stay local until a connected Solana wallet signs and funds the mint on Solana. DYOR.
+  - generic [ref=e3202]:
+    - generic [ref=e3203]:
+      - generic [ref=e3205]: ⚠️
+      - heading "Unified Offline / Survival OST Coin" [level=2] [ref=e3206]
+      - paragraph [ref=e3207]: Mint one offline OST bearer coin for long-term survival, everyday paper or NFC handoff, and provably fair offline games. One vault, one local balance, one redemption path when the network returns.
+      - generic [ref=e3208]:
+        - generic [ref=e3209]: 🚨 Catastrophe-Ready
+        - generic [ref=e3210]: 📄 Paper Bearer Notes
+        - generic [ref=e3211]: 💳 Air-Gapped NFC
+        - generic [ref=e3212]: 🛰 Satellite Redemption
+        - generic [ref=e3213]: ⚡ LoRa Mesh Relay
+    - generic [ref=e3214]:
+      - generic [ref=e3215]:
+        - generic [ref=e3216]: ⚡
+        - generic [ref=e3217]: EMP / Solar Flare
+      - generic [ref=e3218]:
+        - generic [ref=e3219]: 🌐
+        - generic [ref=e3220]: Global Internet Kill
+      - generic [ref=e3221]:
+        - generic [ref=e3222]: 💡
+        - generic [ref=e3223]: Grid Collapse
+      - generic [ref=e3224]:
+        - generic [ref=e3225]: 💥
+        - generic [ref=e3226]: Cyber-War
+      - generic [ref=e3227]:
+        - generic [ref=e3228]: 🌌
+        - generic [ref=e3229]: Mars Colony Init
+    - generic [ref=e3230]:
+      - generic [ref=e3231]:
+        - generic [ref=e3232]: 📄
+        - heading "Paper Bearer Notes" [level=3] [ref=e3233]
+        - paragraph [ref=e3234]: Mint QR-coded bearer tokens you can print, hand off, and trade like physical cash. No phone, no battery, no internet. Each note carries encrypted proof of value + a one-time redemption hash.
+        - list [ref=e3235]:
+          - listitem [ref=e3236]: ✔ Transferable by hand — like real banknotes
+          - listitem [ref=e3237]: ✔ Print on any home printer or copy by hand
+          - listitem [ref=e3238]: "✔ Encrypted: useless without the secret key"
+          - listitem [ref=e3239]: ✔ Denominated in OST — any amount
+      - generic [ref=e3240]:
+        - generic [ref=e3241]: 💳
+        - heading "Air-Gapped NFC Cards" [level=3] [ref=e3242]
+        - paragraph [ref=e3243]: Store OST on passive NFC tags or cold-storage smart cards. Tap-to-verify with any NFC reader. No internet needed — the value lives on the physical card.
+        - list [ref=e3244]:
+          - listitem [ref=e3245]: ✔ Works without power (passive NFC)
+          - listitem [ref=e3246]: ✔ Tamper-evident seal with hash verification
+          - listitem [ref=e3247]: "✔ Stackable: load multiple denominations"
+          - listitem [ref=e3248]: ✔ Survives water, fire (metal NFC tags)
+      - generic [ref=e3249]:
+        - generic [ref=e3250]: 🛰
+        - heading "Satellite Redemption" [level=3] [ref=e3251]
+        - paragraph [ref=e3252]: When any node — Solana, OST mesh, or LEO satellite — comes back online, bearer tokens auto-settle on-chain. The 0.1% fee funds satellite rebuilding.
+        - list [ref=e3253]:
+          - listitem [ref=e3254]: ✔ Redemption queued locally until network returns
+          - listitem [ref=e3255]: ✔ LoRa/Bluetooth mesh bridges gaps
+          - listitem [ref=e3256]: ✔ Satellite constellation provides last-resort uplink
+          - listitem [ref=e3257]: ✔ Zero-knowledge proof preserves privacy on redemption
+    - generic [ref=e3258]:
+      - heading "🔒 How Survival Tokens Work" [level=3] [ref=e3259]
+      - generic [ref=e3260]:
+        - generic [ref=e3261]:
+          - generic [ref=e3262]: "1"
+          - generic [ref=e3263]:
+            - strong [ref=e3264]: Lock OST into bearer vault
+            - paragraph [ref=e3265]: Debit your wallet balance into an on-chain escrow. A unique hash is generated. The tokens are now “burned” from the public ledger.
+        - generic [ref=e3266]:
+          - generic [ref=e3267]: "2"
+          - generic [ref=e3268]:
+            - strong [ref=e3269]: Generate offline bearer token
+            - paragraph [ref=e3270]: A QR code (or NFC payload) containing the encrypted hash + amount + one-time secret is created. This is your physical money.
+        - generic [ref=e3271]:
+          - generic [ref=e3272]: "3"
+          - generic [ref=e3273]:
+            - strong [ref=e3274]: Transfer freely — no network needed
+            - paragraph [ref=e3275]: Hand the paper note to someone. Show the QR. Tap the NFC card. The recipient now holds the value. No internet, no phone, no verification step required.
+        - generic [ref=e3276]:
+          - generic [ref=e3277]: "4"
+          - generic [ref=e3278]:
+            - strong [ref=e3279]: Redeem when civilization reboots
+            - paragraph [ref=e3280]: Scan the bearer token into any OST client. The vault unlocks, the hash is burned, and the OST credits your wallet. 0.1% fee funds satellite infrastructure rebuilding.
+    - generic [ref=e3281]:
+      - generic [ref=e3282]:
+        - heading "⚠️ Mint Offline Survival OST" [level=3] [ref=e3283]
+        - paragraph [ref=e3284]: Create one OST-BEARER-V1 coin you can print, store on NFC, save as a file, or import into the same local vault used by offline fair games.
+      - generic [ref=e3285]:
+        - generic [ref=e3286]:
+          - generic [ref=e3287]:
+            - generic [ref=e3288]: Amount (OST)
+            - spinbutton [ref=e3289]: "100"
+            - generic [ref=e3290]:
+              - button "10" [ref=e3291] [cursor=pointer]
+              - button "50" [ref=e3292] [cursor=pointer]
+              - button "100" [ref=e3293] [cursor=pointer]
+              - button "500" [ref=e3294] [cursor=pointer]
+              - button "1K" [ref=e3295] [cursor=pointer]
+              - button "10K" [ref=e3296] [cursor=pointer]
+          - generic [ref=e3297]:
+            - generic [ref=e3298]: Output Format
+            - generic [ref=e3299]:
+              - button "📄 Paper QR" [ref=e3300] [cursor=pointer]
+              - button "💳 NFC Card" [ref=e3301] [cursor=pointer]
+              - button "📱 Digital File" [ref=e3302] [cursor=pointer]
+        - generic [ref=e3303]:
+          - generic [ref=e3304]: Secret Passphrase (optional — adds encryption layer)
+          - textbox "Leave blank for standard bearer note" [ref=e3305]
+        - generic [ref=e3306]:
+          - generic [ref=e3307]:
+            - generic [ref=e3308]: Bearer Amount
+            - generic [ref=e3309]: 100 OST
+          - generic [ref=e3310]:
+            - generic [ref=e3311]: Vault Lock Fee
+            - generic [ref=e3312]: 0.1%
+          - generic [ref=e3313]:
+            - generic [ref=e3314]: Redemption Fee (later)
+            - generic [ref=e3315]: 0.1% → 🛰 Satellite Fund
+          - generic [ref=e3316]:
+            - generic [ref=e3317]: Total Debit
+            - generic [ref=e3318]: 100.1 OST
+        - button "⚠️ Mint Offline OST Coin" [ref=e3319] [cursor=pointer]
+    - generic "Unified Offline Survival OST Vault" [ref=e3320]:
+      - generic [ref=e3321]:
+        - generic [ref=e3322]:
+          - paragraph [ref=e3323]: Unified offline / survival vault
+          - heading "🔒 Your Survival OST Vault" [level=3] [ref=e3324]
+          - paragraph [ref=e3325]: Mint or import one OST-BEARER-V1 coin from paper QR, NFC card, or digital file. The encrypted local vault below is the same balance used by offline fair games and the same proof queue that syncs when internet returns.
+        - generic [ref=e3326]:
+          - strong [ref=e3327]: "0"
+          - generic [ref=e3328]: OST Offline
+      - generic [ref=e3329]:
+        - generic [ref=e3330]:
+          - heading "Mint / import bearer coin" [level=4] [ref=e3331]
+          - generic [ref=e3332]:
+            - button "Scan paper QR" [ref=e3333] [cursor=pointer]
+            - button "Tap NFC card" [ref=e3334] [cursor=pointer]
+            - generic [ref=e3335] [cursor=pointer]: Import digital file
+            - button "Paste token" [ref=e3336] [cursor=pointer]
+            - button "Import latest minted coin" [disabled] [ref=e3337]
+          - status [ref=e3338]: Survival OST vault ready. Mint or import a bearer coin to play fair offline games.
+        - generic [ref=e3339]:
+          - heading "Offline fair games balance" [level=4] [ref=e3340]
+          - generic [ref=e3341]:
+            - generic [ref=e3342]:
+              - generic [ref=e3343]: Coins
+              - strong [ref=e3344]: "0"
+            - generic [ref=e3345]:
+              - generic [ref=e3346]: Queued proofs
+              - strong [ref=e3347]: "0"
+            - generic [ref=e3348]:
+              - generic [ref=e3349]: Mode
+              - strong [ref=e3350]: Manual import
+          - generic [ref=e3351]:
+            - button "Use survival vault in games" [ref=e3352] [cursor=pointer]
+            - button "Sync queued proofs" [disabled] [ref=e3353]
+          - generic [ref=e3355]: No survival vault activity yet.
+    - generic [ref=e3356]:
+      - generic [ref=e3357]:
+        - generic [ref=e3358]: "0"
+        - generic [ref=e3359]: Offline Coins Minted
+      - generic [ref=e3360]:
+        - generic [ref=e3361]: 0 OST
+        - generic [ref=e3362]: Offline Value Minted
+      - generic [ref=e3363]:
+        - generic [ref=e3364]: 0.1%
+        - generic [ref=e3365]: Vault Fee
+      - generic [ref=e3366]:
+        - generic [ref=e3367]: ∞
+        - generic [ref=e3368]: Offline Lifetime
+    - generic [ref=e3369]:
+      - heading "📡 LoRa / Bluetooth Mesh Recovery Network" [level=3] [ref=e3370]
+      - paragraph [ref=e3371]: Even during a total internet blackout, OST bearer tokens can propagate via short-range radio mesh. LoRa gateways relay transactions hop-by-hop until a satellite uplink is found.
+      - generic [ref=e3372]:
+        - generic [ref=e3373]:
+          - generic [ref=e3374]: 📱
+          - generic [ref=e3375]: Phone
+        - generic [ref=e3376]: — LoRa —
+        - generic [ref=e3377]:
+          - generic [ref=e3378]: 📡
+          - generic [ref=e3379]: Gateway
+        - generic [ref=e3380]: — LoRa —
+        - generic [ref=e3381]:
+          - generic [ref=e3382]: 📡
+          - generic [ref=e3383]: Relay
+        - generic [ref=e3384]: — 🛰 —
+        - generic [ref=e3385]:
+          - generic [ref=e3386]: 🛰
+          - generic [ref=e3387]: Satellite
+        - generic [ref=e3388]: — 🌎 —
+        - generic [ref=e3389]:
+          - generic [ref=e3390]: ◉
+          - generic [ref=e3391]: Solana
+    - generic [ref=e3392]:
+      - heading "🌐 Why This Matters" [level=4] [ref=e3393]
+      - generic [ref=e3394]:
+        - generic [ref=e3395]:
+          - generic [ref=e3396]: 💰
+          - strong [ref=e3397]: Real Physical Cash
+          - paragraph [ref=e3398]: For the first time, a cryptocurrency can be held as a physical bearer instrument — like a gold coin, but digital, encrypted, and redeemable on any future network.
+        - generic [ref=e3399]:
+          - generic [ref=e3400]: 🌍
+          - strong [ref=e3401]: 2.6B Offline People
+          - paragraph [ref=e3402]: Right now, 2.6 billion people have zero internet. Survival tokens + LoRa mesh mean they can use OST today — not “someday when Starlink reaches them.”
+        - generic [ref=e3403]:
+          - generic [ref=e3404]: 🚀
+          - strong [ref=e3405]: Mars-Ready Currency
+          - paragraph [ref=e3406]: A Mars colony can’t wait 20 minutes for a blockchain confirmation from Earth. Bearer tokens settle locally and sync on the next available uplink.
+    - generic [ref=e3407]: ⚠ Survival bearer tokens are experimental. This flow currently generates local bearer previews while on-chain vault locking is under development. Bearer tokens are irreversible once transferred — treat them like cash.
+  - generic [ref=e3409]:
+    - generic [ref=e3410]:
+      - generic [ref=e3411]: ⚛ PRE-QUANTUM CURRENCY
+      - heading "Welcome to the Quantum Realm" [level=2] [ref=e3412]
+      - paragraph [ref=e3413]:
+        - text: OST isn’t just quantum-
+        - emphasis [ref=e3414]: resistant
+        - text: . It’s
+        - strong [ref=e3415]: native to the quantum world
+        - text: from day one — the first currency designed for a post-classical universe.
+    - generic [ref=e3416]:
+      - generic [ref=e3417]:
+        - generic [ref=e3418]: 🔐
+        - heading "Quantum-Proof Signatures" [level=3] [ref=e3419]
+        - paragraph [ref=e3420]:
+          - text: Every OST transaction is shielded by
+          - strong [ref=e3421]: Winternitz One-Time Signatures
+          - text: and
+          - strong [ref=e3422]: lattice-based Dilithium
+          - text: — unbreakable by any quantum computer, present or future.
+        - generic [ref=e3423]:
+          - generic [ref=e3424]:
+            - generic [ref=e3426]: WOTS+
+            - generic [ref=e3444]: +
+            - generic [ref=e3446]: Dilithium
+          - list [ref=e3464]:
+            - listitem [ref=e3465]: ✓ Hash-based OTS — zero algebraic assumptions
+            - listitem [ref=e3466]: ✓ NIST PQC Round 3 finalist (CRYSTALS-Dilithium)
+            - listitem [ref=e3467]: "✓ Hybrid mode: classical + post-quantum layered"
+            - listitem [ref=e3468]: "✓ Forward-secure: past transactions stay safe forever"
+      - generic [ref=e3469]:
+        - generic [ref=e3470]: ⚖
+        - heading "Entangled Transfers" [level=3] [ref=e3471]
+        - paragraph [ref=e3472]:
+          - text: Two wallets, instantly linked — like quantum entanglement. Send OST that settles
+          - strong [ref=e3473]: simultaneously on both ends
+          - text: ", with non-local finality and zero round-trips."
+        - generic [ref=e3474]:
+          - generic [ref=e3475]:
+            - generic [ref=e3476]:
+              - generic [ref=e3477]: 👛
+              - generic [ref=e3478]: Wallet A
+              - generic [ref=e3479]: âŸ¡ linking...
+            - generic [ref=e3483]:
+              - generic [ref=e3484]: 👛
+              - generic [ref=e3485]: Wallet B
+              - generic [ref=e3486]: âŸ¡ linking...
+          - button "âŸ¡ Entangling..." [disabled] [ref=e3487] [cursor=pointer]: âŸ¡ Entangling...
+          - list [ref=e3488]:
+            - listitem [ref=e3489]: ✓ Non-local settlement — no sequential confirmations
+            - listitem [ref=e3490]: ✓ Entangled key pairs via Kyber key encapsulation
+            - listitem [ref=e3491]: "✓ Atomic swap guarantee: both settle or neither does"
+            - listitem [ref=e3492]: ✓ Perfect for cross-chain & cross-planet transfers
+      - generic [ref=e3493]:
+        - generic [ref=e3494]: ∞
+        - heading "Non-Linear Money" [level=3] [ref=e3495]
+        - paragraph [ref=e3496]:
+          - text: Your balance exists in
+          - strong [ref=e3497]: superposition
+          - text: — unresolved until observed. Probabilistic yields. Collapsed privacy. Money that behaves like quantum matter.
+        - generic [ref=e3498]:
+          - generic [ref=e3499]:
+            - generic [ref=e3500]:
+              - generic [ref=e3502]: "|ψ⟩"
+              - generic [ref=e3503]: α|0⟩ + β|1⟩
+            - generic [ref=e3505]: "Yield: superposed"
+          - button "âŸ¡ Collapsing..." [disabled] [ref=e3506] [cursor=pointer]: âŸ¡ Collapsing...
+          - list [ref=e3507]:
+            - listitem [ref=e3508]: ✓ Superposition privacy — balances unresolvable until measured
+            - listitem [ref=e3509]: "✓ Probabilistic yield: 3–12% APY based on quantum entropy"
+            - listitem [ref=e3510]: ✓ Non-linear fee curves — no fixed gas, quantum-adaptive
+            - listitem [ref=e3511]: "✓ Observer effect: mere inspection changes the state"
+    - generic [ref=e3512]:
+      - generic [ref=e3513]:
+        - generic [ref=e3514]: "15"
+        - text: Quantum Signatures
+      - generic [ref=e3515]:
+        - generic [ref=e3516]: "0"
+        - text: Entangled Pairs
+      - generic [ref=e3517]:
+        - generic [ref=e3518]: 0%
+        - text: Mean Yield (APY)
+      - generic [ref=e3519]:
+        - generic [ref=e3520]: 100%
+        - text: Coherence
+    - generic [ref=e3521]:
+      - paragraph [ref=e3522]:
+        - text: Classical money was built for a classical world.
+        - text: OST is built for what comes next.
+      - button "⚛ Enter the Quantum Realm" [ref=e3523] [cursor=pointer]
+    - generic [ref=e3524]: ⚖ Quantum realm features are forward-looking innovations. Winternitz OTS and lattice-based cryptography are real post-quantum standards (NIST SP 800-208). “Entangled transfers” and “superposition privacy” are metaphorical descriptions of novel cryptographic protocols under active R&D.
+  - generic [ref=e3526]:
+    - generic [ref=e3527]: 🧬 Legacy Mode Activated
+    - heading "OST Is Built to Survive Extinction" [level=2] [ref=e3528]
+    - paragraph [ref=e3529]: When electricity, internet, and civilization fall, OST continues. The first currency with a multi-layered post-extinction survival strategy.
+    - generic [ref=e3530]:
+      - heading "⚠️ The Vulnerability Every Crypto Ignores" [level=3] [ref=e3531]
+      - paragraph [ref=e3532]: Every cryptocurrency â€” Bitcoin, Ethereum, Solana, and yes, OST â€” depends on electricity grids, internet backbones, data centers, and physical hardware. A Younger Dryas-style climate collapse, global EMP, solar superstorm, or cyber-war that wipes out satellites and chips would erase the blockchain, the wallets, the private keys, and the entire record of who owns what.
+      - generic [ref=e3533]:
+        - generic [ref=e3534]:
+          - generic [ref=e3535]: 100%
+          - text: of crypto needs electricity
+        - generic [ref=e3536]:
+          - generic [ref=e3537]: "0"
+          - text: coins survive total grid loss
+        - generic [ref=e3538]:
+          - generic [ref=e3539]: 12,000
+          - text: years since last Younger Dryas
+        - generic [ref=e3540]:
+          - generic [ref=e3541]: "1859"
+          - text: Carrington Event (last solar superstorm)
+    - heading "🛰 Three Survival Layers" [level=3] [ref=e3542]
+    - paragraph [ref=e3543]: Short-term practicality. Medium-term research. Long-term eternity.
+    - generic [ref=e3544]:
+      - generic [ref=e3545]:
+        - img "Cold storage" [ref=e3546]
+        - generic [ref=e3547]: 2026â€“2030
+        - generic [ref=e3548]:
+          - heading "💫 Practical Redundancy" [level=4] [ref=e3549]
+          - paragraph [ref=e3550]: Systems we can build today to survive regional catastrophes, grid failures, and internet outages.
+          - list [ref=e3551]:
+            - listitem [ref=e3552]:
+              - strong [ref=e3553]: Multi-chain mirroring
+              - text: â€” Deploy OST on quantum-resistant L1s (Kaspa, IOTA, future lattice chains). If Solana dies, OST lives.
+            - listitem [ref=e3554]:
+              - strong [ref=e3555]: Air-gapped cold storage
+              - text: "â€” Physical bearer notes: paper QR codes + NFC cards, buried in vaults across 6 continents."
+            - listitem [ref=e3556]:
+              - strong [ref=e3557]: Survival Bearer Tokens
+              - text: â€” Metal coins, etched stone tablets, and laser-etched glass with hieroglyphic + quantum-encoded OST balances. Zero electricity needed.
+            - listitem [ref=e3558]:
+              - strong [ref=e3559]: Satellite seed payloads
+              - text: â€” Treasury-funded payloads on lunar/Mars missions carrying encrypted OST keys, smart-contract source, and the full manifesto.
+          - generic [ref=e3560]:
+            - generic [ref=e3561]: Multi-Chain
+            - generic [ref=e3562]: NFC Cards
+            - generic [ref=e3563]: Metal Coins
+            - generic [ref=e3564]: Moon Vault
+      - generic [ref=e3565]:
+        - img "DNA biology" [ref=e3566]
+        - generic [ref=e3567]: 2030â€“2060
+        - generic [ref=e3568]:
+          - heading "🧬 Biological Quantum Computing" [level=4] [ref=e3569]
+          - paragraph [ref=e3570]: Living systems that store and process OST data without silicon, without electricity, without civilization.
+          - list [ref=e3571]:
+            - listitem [ref=e3572]:
+              - strong [ref=e3573]: Photosynthetic quantum processors
+              - text: â€” Harness quantum coherence in chlorophyll complexes and microtubules for biological computation.
+            - listitem [ref=e3574]:
+              - strong [ref=e3575]: DNA-encoded balances
+              - text: â€” OST account states written into synthetic DNA sequences that self-replicate inside engineered organisms.
+            - listitem [ref=e3576]:
+              - strong [ref=e3577]: Protein-structure wallets
+              - text: â€” Private keys encoded as specific protein folds. Readable via quantum spectroscopy. Self-repairing via cellular machinery.
+            - listitem [ref=e3578]:
+              - strong [ref=e3579]: Bacterial consensus networks
+              - text: â€” Engineered bacteria colonies that reach consensus on ledger state through quorum sensing â€” nature's own proof-of-stake.
+          - generic [ref=e3580]:
+            - generic [ref=e3581]: DNA Storage
+            - generic [ref=e3582]: Bio-Quantum
+            - generic [ref=e3583]: Protein Keys
+            - generic [ref=e3584]: Living Ledger
+      - generic [ref=e3585]:
+        - img "Deep space nebula" [ref=e3586]
+        - generic [ref=e3587]: 2060â€“2100+
+        - generic [ref=e3588]:
+          - heading "🌈 Natural Megastructures & Deep-Space Broadcast" [level=4] [ref=e3589]
+          - paragraph [ref=e3590]: Permanent, non-electronic ledgers that last tens of thousands of years â€” readable by any future intelligence.
+          - list [ref=e3591]:
+            - listitem [ref=e3592]:
+              - strong [ref=e3593]: Living monuments
+              - text: â€” Self-replicating coral-like reefs and crystal lattices that encode the full OST ledger in molecular patterns.
+            - listitem [ref=e3594]:
+              - strong [ref=e3595]: Geological data storage
+              - text: â€” Engineered stone tablets with data encoded at the atomic level. Survives fire, flood, ice ages, and continental drift.
+            - listitem [ref=e3596]:
+              - strong [ref=e3597]: Deep-space genesis broadcast
+              - text: â€” Ongoing radio + laser transmissions of the OST genesis message in hieroglyphs, binary, and quantum-encoded formats aimed at the Moon, Mars, and deep space.
+            - listitem [ref=e3598]:
+              - strong [ref=e3599]: Rediscovery protocol
+              - text: â€” Instructions encoded in universal mathematics (prime sequences, golden ratio, fundamental constants) teaching any intelligence how to reconstruct OST from biological or natural substrates.
+          - generic [ref=e3600]:
+            - generic [ref=e3601]: Crystal Ledger
+            - generic [ref=e3602]: Coral Reef
+            - generic [ref=e3603]: Radio Broadcast
+            - generic [ref=e3604]: Hieroglyphs
+    - generic [ref=e3605]:
+      - 'heading "🎓 Treasury Allocation: Legacy Research Fund" [level=3] [ref=e3606]'
+      - paragraph [ref=e3607]:
+        - text: We propose allocating
+        - strong [ref=e3608]: 20% of all future treasury fees
+        - text: to Legacy Research â€” biological quantum computing, natural megastructures, and post-extinction survival technology.
+      - generic [ref=e3612]:
+        - generic [ref=e3613]: ✅ 87% Approve
+        - generic [ref=e3614]: ❌ 13% Oppose
+        - generic [ref=e3615]: "📊 Governance Vote #001"
+      - generic [ref=e3616]:
+        - generic [ref=e3617]:
+          - generic [ref=e3618]: 8%
+          - text: Bio-Quantum R&D
+        - generic [ref=e3619]:
+          - generic [ref=e3620]: 5%
+          - text: Physical Bearer Tokens
+        - generic [ref=e3621]:
+          - generic [ref=e3622]: 4%
+          - text: Deep-Space Payloads
+        - generic [ref=e3623]:
+          - generic [ref=e3624]: 3%
+          - text: Megastructure Prototypes
+    - generic [ref=e3625]:
+      - generic [ref=e3626]: 🧬🧠🍰
+      - paragraph [ref=e3627]: Hieroglyph + DNA Helix + Quantum Wave
+      - paragraph [ref=e3628]: The Legacy Mode symbol represents the fusion of ancient knowledge systems, biological data storage, and quantum mechanics â€” three layers of survival that transcend any single civilization.
+    - paragraph [ref=e3630]: "\"Money that survives the death of civilization isn't money anymore. It's a message. OST is the message that future intelligence â€” human or otherwise â€” will find and understand.\""
+    - generic [ref=e3631]: ⚖ Legacy Mode features represent a long-term research vision. Short-term physical bearer tokens and multi-chain deployment are actionable now. Biological quantum computing and natural megastructures are active research frontiers in synthetic biology, quantum information theory, and materials science.
+    - generic [ref=e3632]:
+      - button "ð“‚‡ Open Transmission Console" [ref=e3633] [cursor=pointer]
+      - paragraph [ref=e3634]: Encode a custom message, DNA sequence, image, video, or any file in hieroglyphic, binary, and quantum form before routing it toward future OST relay targets.
+  - generic [ref=e3636]:
+    - generic [ref=e3637]: 🔒 Fully Verifiable
+    - heading "Full Transparency" [level=2] [ref=e3638]
+    - paragraph [ref=e3639]: Verify everything yourself. We have nothing to hide.
+    - generic [ref=e3640]:
+      - generic [ref=e3641]:
+        - generic [ref=e3642]: 🔗
+        - generic [ref=e3643]: 1,247
+        - generic [ref=e3644]: On-Chain Transactions
+      - generic [ref=e3645]:
+        - generic [ref=e3646]: 💰
+        - generic [ref=e3647]: 1,000,000,000
+        - generic [ref=e3648]: Total Supply (OST)
+      - generic [ref=e3649]:
+        - generic [ref=e3650]: 🔐
+        - generic [ref=e3651]: "25"
+        - generic [ref=e3652]: On-Chain Instructions
+      - generic [ref=e3653]:
+        - generic [ref=e3654]: 🛡️
+        - generic [ref=e3655]: $0
+        - generic [ref=e3656]: Fees Forever
+    - generic [ref=e3657]:
+      - heading "📜 Trust Manifesto" [level=3] [ref=e3658]
+      - paragraph [ref=e3659]: Trust is earned with facts, not promises.
+      - generic [ref=e3660]:
+        - generic [ref=e3661]:
+          - generic [ref=e3662]: ✅
+          - generic [ref=e3663]:
+            - strong [ref=e3664]: No pre-mine. No hidden allocations. No "team tokens."
+            - paragraph [ref=e3665]: Every token minted through the public confidential_mint instruction.
+        - generic [ref=e3666]:
+          - generic [ref=e3667]: ✅
+          - generic [ref=e3668]:
+            - strong [ref=e3669]: Open source from day one.
+            - paragraph [ref=e3670]: Every line of Rust, TypeScript, and HTML on GitHub. Find a flaw? Open a PR.
+        - generic [ref=e3671]:
+          - generic [ref=e3672]: ✅
+          - generic [ref=e3673]:
+            - strong [ref=e3674]: Real company, real founder.
+            - paragraph [ref=e3675]: Panama S.A. operated by a builder from Mexico. Company docs are public.
+        - generic [ref=e3676]:
+          - generic [ref=e3677]: ✅
+          - generic [ref=e3678]:
+            - strong [ref=e3679]: The space story is real.
+            - paragraph [ref=e3680]: Satellites funded by donations & investors. Every disbursement voted publicly.
+    - generic [ref=e3681]:
+      - generic [ref=e3682]:
+        - img "GitHub code" [ref=e3684]
+        - generic [ref=e3685]:
+          - generic [ref=e3686]: 📂
+          - heading "GitHub â€” Full Source Code" [level=4] [ref=e3687]
+          - paragraph [ref=e3688]: MIT licensed. Anchor smart contract (25 instructions), TypeScript SDK, full website. Every commit public and auditable.
+          - generic [ref=e3689]:
+            - generic [ref=e3690]: Rust
+            - generic [ref=e3691]: TypeScript
+            - generic [ref=e3692]: Solana
+            - generic [ref=e3693]: MIT License
+          - link "🔗 View Repository" [ref=e3694] [cursor=pointer]:
+            - /url: https://github.com/nachogtavl-collab/ost-token
+      - generic [ref=e3695]:
+        - img "Company documents" [ref=e3697]
+        - generic [ref=e3698]:
+          - generic [ref=e3699]: 🏛️
+          - heading "Company Registration" [level=4] [ref=e3700]
+          - paragraph [ref=e3701]: Panama S.A. â€” legally incorporated. Registration filings, articles of incorporation, and director information publicly accessible.
+          - generic [ref=e3702]:
+            - generic [ref=e3703]: Panama S.A.
+            - generic [ref=e3704]: Legal Entity
+            - generic [ref=e3705]: Public Filings
+          - link "📄 View Documents" [ref=e3706] [cursor=pointer]:
+            - /url: https://github.com/nachogtavl-collab/ost-token/wiki/Company
+      - generic [ref=e3707]:
+        - img "Blockchain explorer" [ref=e3709]
+        - generic [ref=e3710]:
+          - generic [ref=e3711]: 🔍
+          - heading "On-Chain Treasury" [level=4] [ref=e3712]
+          - paragraph [ref=e3713]: Every donation, governance vote, and disbursement visible on Solana Explorer. PDA-controlled â€” no single person can drain funds.
+          - generic [ref=e3714]:
+            - generic [ref=e3715]: Solana Devnet
+            - generic [ref=e3716]: PDA Secured
+            - generic [ref=e3717]: DAO Governed
+          - link "🔎 View on Explorer" [ref=e3718] [cursor=pointer]:
+            - /url: https://explorer.solana.com/address/J2jiS296YWVie1Sopb4SxcM3aJnP9aAwe6aLDhCqvGXY?cluster=devnet
+    - generic [ref=e3719]:
+      - heading "📋 Verification Timeline" [level=3] [ref=e3720]
+      - generic [ref=e3721]:
+        - generic [ref=e3724]:
+          - text: Q1 2025
+          - strong [ref=e3725]: Anchor Contract Compiled
+          - paragraph [ref=e3726]: 572KB BPF binary. 25 instructions verified.
+        - generic [ref=e3729]:
+          - text: Q1 2025
+          - strong [ref=e3730]: Devnet Deployment
+          - paragraph [ref=e3731]: Program + mint + treasury live on Solana devnet.
+        - generic [ref=e3734]:
+          - text: Q2 2025
+          - strong [ref=e3735]: Internal Security Review
+          - paragraph [ref=e3736]: CT instructions simplified to event emitters. SDK handles Token-2022 directly.
+        - generic [ref=e3739]:
+          - text: Q2 2025
+          - strong [ref=e3740]: wOST Wrapper Created
+          - paragraph [ref=e3741]: SPL wrapper for AMM/DEX compatibility. Enables Raydium pools and Jupiter routing.
+        - generic [ref=e3744]:
+          - text: Q3 2025
+          - strong [ref=e3745]: External Security Audit
+          - paragraph [ref=e3746]: Third-party audit from OtterSec, Neodyme, or Halborn.
+        - generic [ref=e3749]:
+          - text: Q4 2025
+          - strong [ref=e3750]: Mainnet Deployment
+          - paragraph [ref=e3751]: Verified program deployed to Solana mainnet-beta.
+    - generic [ref=e3752]:
+      - heading "🔐 Contract Addresses" [level=3] [ref=e3753]
+      - generic [ref=e3754]:
+        - generic [ref=e3755]:
+          - generic [ref=e3756]: Program ID
+          - code [ref=e3757]: J2jiS296YWVie1Sopb4SxcM3aJnP9aAwe6aLDhCqvGXY
+          - generic [ref=e3758]: Devnet
+        - generic [ref=e3759]:
+          - generic [ref=e3760]: OST Mint
+          - code [ref=e3761]: 383pTzoZ8Gp83dzk23ZnvLcfX2Sq32TAGN48CMQu2pAJ
+          - generic [ref=e3762]: Token-2022
+        - generic [ref=e3763]:
+          - generic [ref=e3764]: wOST Wrapper
+          - code [ref=e3765]: Ac8R...iHoS
+          - generic [ref=e3766]: SPL Token
+    - paragraph [ref=e3767]:
+      - text: Read the code. Check the company. Verify the treasury.
+      - strong [ref=e3768]: Then decide.
+  - contentinfo [ref=e3769]:
+    - generic [ref=e3770]:
+      - paragraph [ref=e3772]:
+        - text: Every transaction helps fund satellite infrastructure for universal internet access.
+        - strong [ref=e3773]: A gift we build together.
+      - generic [ref=e3774]:
+        - generic [ref=e3775]:
+          - generic [ref=e3776]: ◉
+          - text: OST
+        - paragraph [ref=e3777]: Open source. Built with love for every human on Earth.
+        - generic [ref=e3778]:
+          - link "GitHub" [ref=e3779] [cursor=pointer]:
+            - /url: https://github.com/nachogtavl-collab/ost-token
+          - link "Manifesto" [ref=e3780] [cursor=pointer]:
+            - /url: "#about"
+          - link "Get OST" [ref=e3781] [cursor=pointer]:
+            - /url: "#new-here"
+          - link "Contribute" [ref=e3782] [cursor=pointer]:
+            - /url: "#build"
+  - generic:
+    - generic:
+      - button "Close transmit console": ×
+      - generic:
+        - paragraph: Deep-space payload console
+        - heading "ð“‚‡ Transmit to Space" [level=3]
+        - paragraph: Send a custom message, DNA sequence, image, video, or any file through the OST transmission ritual. Preview the payload in hieroglyphs, binary, and quantum entanglement before launch.
+      - generic:
+        - generic:
+          - generic:
+            - generic: Custom message
+            - textbox "Custom message":
+              - /placeholder: Describe the signal, dedication, coordinates, or mission note you want to send...
+          - generic:
+            - generic: DNA / life-seed sequence
+            - textbox "DNA / life-seed sequence":
+              - /placeholder: "Optional: ACGT sequence, sample tag, or biological archive note"
+          - generic:
+            - generic: Attach payloads
+            - generic: Drop images, video, documents, archives, or any other file type
+          - generic:
+            - generic: No payload attached yet.
+          - button "Encode and transmit":
+            - generic: Encode and transmit
+        - generic:
+          - generic:
+            - generic:
+              - generic: Ancient hieroglyph render
+              - generic: Signal deck ready
+            - generic: "ð“\x8f\x8fð“„¿ð“†£ð“\x8f\x8fð“ƒð“ˆ–ð“Šª"
+            - generic:
+              - generic:
+                - generic: Binary + checksum
+                - generic: 01001111 01010011 01010100 01111100 01000110 00110001 01000110 01000001 00110110 00110011 01000110 00111001
+              - generic:
+                - generic: Quantum entanglement
+                - generic:
+                  - generic:
+                    - generic: Q1
+                    - strong: "|01âŸ©"
+                    - generic: "|0âŸ© 0.92 Â· |1âŸ© 0.08"
+                    - generic: 97% coherence
+                  - generic:
+                    - generic: Q2
+                    - strong: "|01âŸ©"
+                    - generic: "|0âŸ© 0.36 Â· |1âŸ© 0.64"
+                    - generic: 83% coherence
+                  - generic:
+                    - generic: Q3
+                    - strong: "|01âŸ©"
+                    - generic: "|0âŸ© 0.92 Â· |1âŸ© 0.08"
+                    - generic: 97% coherence
+                  - generic:
+                    - generic: Q4
+                    - strong: "|10âŸ©"
+                    - generic: "|0âŸ© 0.72 Â· |1âŸ© 0.28"
+                    - generic: 92% coherence
+                  - generic:
+                    - generic: Q5
+                    - strong: "|10âŸ©"
+                    - generic: "|0âŸ© 0.56 Â· |1âŸ© 0.44"
+                    - generic: 88% coherence
+                  - generic:
+                    - generic: Q6
+                    - strong: "|01âŸ©"
+                    - generic: "|0âŸ© 0.44 Â· |1âŸ© 0.56"
+                    - generic: 85% coherence
+            - generic: Add a message, DNA sequence, or file to build a transmission.
+          - generic:
+            - generic:
+              - generic: Transmission manifest
+              - generic: Awaiting payload
+            - generic:
+              - generic:
+                - generic: Message
+                - strong: "0"
+              - generic:
+                - generic: DNA
+                - strong: "0"
+              - generic:
+                - generic: Files
+                - strong: "0"
+            - generic:
+              - generic:
+                - generic: Route
+                - strong: LEO relay -> quantum entanglement -> Moon / Mars / deep space
+              - generic:
+                - generic: Checksum
+                - strong: F1FA63F9
+              - generic:
+                - generic: Packet
+                - strong: 3 B
+              - generic:
+                - generic: Target
+                - strong: Moon, Mars, deep space
+              - generic:
+                - generic: Render
+                - strong: Hieroglyphic + binary + quantum
+            - generic:
+              - generic: Attached payloads
+              - generic:
+                - generic:
+                  - paragraph: No payload attached yet.
+  - button "Open trade ticket" [ref=e3783] [cursor=pointer]:
+    - generic [ref=e3784]: 🎯
+    - generic [ref=e3785]: Trade ticketTrade
+  - button "Open Ghost AI assistant" [ref=e3786] [cursor=pointer]:
+    - generic [ref=e3790]:
+      - strong [ref=e3791]: Ghost AI
+      - generic [ref=e3792]: Ask OST
+  - button "Open OST Mesh" [ref=e3794] [cursor=pointer]: ⌬
+  - text: OST H
+  - status:
+    - generic:
+      - strong: OST Veil
+      - generic: Mesh node active
+  - button "OST Tap Ticket" [ref=e3795] [cursor=pointer]
+  - navigation "OST quick navigation" [ref=e3796]:
+    - button "Home" [ref=e3797] [cursor=pointer]:
+      - generic [ref=e3798]: 🏠
+      - text: Home
+    - button "Get OST" [ref=e3799] [cursor=pointer]:
+      - generic [ref=e3800]: 🎁
+      - generic [ref=e3801]: Start
+      - text: Get OST
+    - button "Spend OST" [ref=e3802] [cursor=pointer]:
+      - generic [ref=e3803]: 🛒
+      - text: Spend OST
+    - button "Wallet" [ref=e3804] [cursor=pointer]:
+      - generic [ref=e3805]: 👛
+      - generic [ref=e3806]: Live
+      - text: Wallet
+    - button "AI Agents" [ref=e3807] [cursor=pointer]:
+      - generic [ref=e3808]: 🤖
+      - text: AI Agents
+    - button "Offline" [ref=e3809] [cursor=pointer]:
+      - generic [ref=e3810]: 📡
+      - text: Offline
+    - button "Citizens" [ref=e3811] [cursor=pointer]:
+      - generic [ref=e3812]: 🌍
+      - text: Citizens
+    - button "Free Press" [ref=e3813] [cursor=pointer]:
+      - generic [ref=e3814]: 📰
+      - text: Free Press
+    - button "SpaceX" [ref=e3815] [cursor=pointer]:
+      - generic [ref=e3816]: 🚀
+      - text: SpaceX
+    - button "Mission" [ref=e3817] [cursor=pointer]:
+      - generic [ref=e3818]: 🎯
+      - text: Mission
+    - button "Story" [ref=e3819] [cursor=pointer]:
+      - generic [ref=e3820]: 📖
+      - text: Story
+    - button "Roadmap" [ref=e3821] [cursor=pointer]:
+      - generic [ref=e3822]: 🧭
+      - text: Roadmap
+    - button "Build" [ref=e3823] [cursor=pointer]:
+      - generic [ref=e3824]: 🛠️
+      - text: Build
+    - button "Launchpad" [ref=e3825] [cursor=pointer]:
+      - generic [ref=e3826]: 🚀
+      - text: Launchpad
+    - button "Survival" [ref=e3827] [cursor=pointer]:
+      - generic [ref=e3828]: ⚠️
+      - text: Survival
+    - button "Quantum" [ref=e3829] [cursor=pointer]:
+      - generic [ref=e3830]: ⚛️
+      - text: Quantum
+    - button "Legacy" [ref=e3831] [cursor=pointer]:
+      - generic [ref=e3832]: 🧬
+      - text: Legacy
+    - button "Verify" [ref=e3833] [cursor=pointer]:
+      - generic [ref=e3834]: 🔍
+      - text: Verify
+    - button [ref=e3836] [cursor=pointer]:
+      - generic [ref=e3837]: 🎯
+  - generic [ref=e3838]:
+    - iframe [ref=e3839]:
+      - generic [active] [ref=f5e1]:
+        - link [ref=f5e3] [cursor=pointer]:
+          - /url: https://a-ads.com/campaigns/new?source_id=2435726&source_type=ad_unit&partner=2435726&utm_source=AADS&utm_medium=advertisehere
+        - link "Advertise in this ad space Create a campaign in just 5 minutes aads.com" [ref=f5e4] [cursor=pointer]:
+          - /url: https://click.a-ads.com/2435726/2/
+          - table [ref=f5e5]:
+            - rowgroup [ref=f5e6]:
+              - row "Advertise in this ad space Create a campaign in just 5 minutes aads.com" [ref=f5e7]:
+                - cell "Advertise in this ad space Create a campaign in just 5 minutes aads.com" [ref=f5e8]
+    - generic [ref=e3840]:
+      - text: Ad revenue funds OST treasury ·
+      - link "see dashboard" [ref=e3841] [cursor=pointer]:
+        - /url: "#fhRevDashboard"
+  - generic [ref=e3842]:
+    - strong [ref=e3843]: "ðŸ\x8f† Achievement Unlocked!"
+    - text: Level 2 Reached!
+  - generic [ref=e3844]:
+    - strong [ref=e3845]: "ðŸ\x8f† Achievement Unlocked!"
+    - text: Rank Up â€” Reached Level 2
+```
+
+# Test source
+
+```ts
+  185 |   });
+  186 | 
+  187 |   await record('Mesh opens and stacks', async () => {
+  188 |     await page.evaluate(() => window.OST_MESH?.open?.());
+  189 |     await page.waitForSelector('#ost-mesh-pavilion.is-open .ost-mesh-session', { timeout: 12000 });
+  190 |     await page.waitForTimeout(800);
+  191 |     return await page.evaluate(() => {
+  192 |       const root = document.querySelector('#ost-mesh-pavilion');
+  193 |       const session = document.querySelector('.ost-mesh-session');
+  194 |       const grid = session ? getComputedStyle(session).gridTemplateColumns : null;
+  195 |       const chromeHidden = ['.ost-dock', '#ghost-input-ring', '.ost-tradepop__launcher', '#ostCardFloatingBtn'].map((selector) => {
+  196 |         const el = document.querySelector(selector);
+  197 |         if (!el) return [selector, true, 'missing'];
+  198 |         const cs = getComputedStyle(el);
+  199 |         return [selector, cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0', `${cs.display}/${cs.visibility}/${cs.opacity}`];
+  200 |       });
+  201 |       return {
+  202 |         grid,
+  203 |         rootOverflow: root ? root.scrollWidth - root.clientWidth : null,
+  204 |         pageOverflow: document.documentElement.scrollWidth - innerWidth,
+  205 |         chromeHidden,
+  206 |         socialTabs: Array.from(document.querySelectorAll('.msx-tabs button')).map((button) => button.textContent.trim()).slice(0, 8)
+  207 |       };
+  208 |     });
+  209 |   });
+  210 | 
+  211 |   await record('Mesh contacts profile accessible', async () => {
+  212 |     await page.getByRole('button', { name: /Contacts/i }).click();
+  213 |     await page.waitForTimeout(600);
+  214 |     const text = await page.locator('#ost-mesh-pavilion').textContent();
+  215 |     await page.getByRole('button', { name: /Profile/i }).click();
+  216 |     await page.waitForTimeout(600);
+  217 |     return { contactsVisible: /Contacts|Invite|peer|contact/i.test(text), profileVisible: /Profile|Bio|avatar|picture|QR/i.test(await page.locator('#ost-mesh-pavilion').textContent()) };
+  218 |   });
+  219 | 
+  220 |   await record('OST Card modal', async () => {
+  221 |     await page.evaluate(() => window.OST_MESH?.close?.()).catch(() => {});
+  222 |     await page.keyboard.press('Escape').catch(() => {});
+  223 |     await page.locator('#ostCardFloatingBtn').click();
+  224 |     await page.waitForTimeout(800);
+  225 |     return await page.evaluate(() => /OST Card|Apple Wallet|Google Wallet|tap-to-pay/i.test(document.body.textContent || ''));
+  226 |   });
+  227 | 
+  228 |   await record('Ghost launcher', async () => {
+  229 |     const ghost = page.getByRole('button', { name: /Open Ghost AI assistant/i });
+  230 |     await ghost.click({ timeout: 8000 });
+  231 |     await page.waitForTimeout(700);
+  232 |     const closeBox = await page.locator('#ghost-close').boundingBox();
+  233 |     await page.locator('#ghost-close').click();
+  234 |     await expect(page.locator('#ghost-summoning-circle')).not.toHaveClass(/is-open/);
+  235 |     return { opened: await page.evaluate(() => /Ghost AI|Ask OST|assistant/i.test(document.body.textContent || '')), closeBox };
+  236 |   });
+  237 | 
+  238 |   await record('Launchpad tabs', async () => {
+  239 |     await page.locator('#launchpad').scrollIntoViewIfNeeded();
+  240 |     await page.getByRole('button', { name: /Trending/i }).first().click();
+  241 |     await page.getByRole('button', { name: /Leaderboard/i }).first().click();
+  242 |     return await page.locator('#launchpad').textContent({ timeout: 8000 }).then((text) => /Coins|Leaderboard|TVL/i.test(text));
+  243 |   });
+  244 | 
+  245 |   await record('Survival controls', async () => {
+  246 |     await page.locator('#survival').scrollIntoViewIfNeeded();
+  247 |     await page.locator('#survival').getByRole('button', { name: /^100$/ }).click();
+  248 |     await page.locator('#survival').getByRole('button', { name: /Paper QR/i }).click();
+  249 |     return await page.locator('#survival').textContent({ timeout: 8000 }).then((text) => /100|Paper QR|Bearer/i.test(text));
+  250 |   });
+  251 | 
+  252 |   await record('Quantum buttons', async () => {
+  253 |     await page.locator('#quantum-realm').scrollIntoViewIfNeeded();
+  254 |     await page.getByRole('button', { name: /Entangle Wallets/i }).click();
+  255 |     await page.getByRole('button', { name: /Collapse State/i }).click();
+  256 |     return await page.locator('#quantum-realm').textContent({ timeout: 8000 }).then((text) => /Entangled|Coherence|Quantum/i.test(text));
+  257 |   });
+  258 | 
+  259 |   const finalAudit = await page.evaluate(({ ACTION_SELECTORS }) => {
+  260 |     const labelFor = (el) => String(el.getAttribute('aria-label') || el.textContent || el.value || el.placeholder || el.id || el.className || el.tagName || '').replace(/\s+/g, ' ').trim().slice(0, 90);
+  261 |     const rectOf = (el) => {
+  262 |       const rect = el.getBoundingClientRect();
+  263 |       return { left: Math.round(rect.left), top: Math.round(rect.top), right: Math.round(rect.right), bottom: Math.round(rect.bottom), width: Math.round(rect.width), height: Math.round(rect.height) };
+  264 |     };
+  265 |     const visible = (el) => {
+  266 |       const rect = el.getBoundingClientRect();
+  267 |       const style = getComputedStyle(el);
+  268 |       return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none' && Number(style.opacity || 1) !== 0;
+  269 |     };
+  270 |     const clickables = Array.from(document.querySelectorAll(ACTION_SELECTORS)).filter((el) => visible(el));
+  271 |     const tiny = clickables.map((el) => ({ label: labelFor(el), tag: el.tagName.toLowerCase(), rect: rectOf(el), disabled: !!el.disabled })).filter((item) => !item.disabled && (item.rect.width < 34 || item.rect.height < 34)).slice(0, 40);
+  272 |     return {
+  273 |       overflowX: document.documentElement.scrollWidth - innerWidth,
+  274 |       meshOpen: !!document.querySelector('#ost-mesh-pavilion.is-open'),
+  275 |       tiny,
+  276 |       consoleErrors: []
+  277 |     };
+  278 |   }, { ACTION_SELECTORS });
+  279 | 
+  280 |   console.log('INTERACTIONS', JSON.stringify(interactions, null, 2));
+  281 |   console.log('FINAL_AUDIT', JSON.stringify(finalAudit, null, 2));
+  282 |   console.log('CONSOLE_ERRORS', JSON.stringify(consoleErrors.slice(0, 30), null, 2));
+  283 | 
+  284 |   const failed = interactions.filter((item) => !item.ok);
+> 285 |   expect(failed, JSON.stringify(failed, null, 2)).toEqual([]);
+      |                                                   ^ Error: [
+  286 |   expect(finalAudit.overflowX).toBeLessThanOrEqual(2);
+  287 | });
+  288 | 
+```
