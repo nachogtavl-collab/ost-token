@@ -543,37 +543,37 @@
       'wallet.portal.prediction.inMinutes': 'Cierra en ',
       'wallet.portal.prediction.inHours': 'Cierra en ',
       'wallet.portal.prediction.inDays': 'Cierra en ',
-      'wallet.portal.prediction.ago': 'atrás',
+      'wallet.portal.prediction.ago': 'atrï¿½s',
       'wallet.portal.prediction.kalshiTitle': 'Mercado de Kalshi',
       'wallet.portal.prediction.kalshiDetail': 'Contrato de evento en vivo conectado desde Kalshi.',
-      'wallet.portal.prediction.noTickets': 'Aún no hay tickets de mercado OST registrados.',
-      'wallet.portal.prediction.buyNo': 'Posición NO',
-      'wallet.portal.prediction.buyYes': 'Posición SÍ',
+      'wallet.portal.prediction.noTickets': 'Aï¿½n no hay tickets de mercado OST registrados.',
+      'wallet.portal.prediction.buyNo': 'Posiciï¿½n NO',
+      'wallet.portal.prediction.buyYes': 'Posiciï¿½n Sï¿½',
       'wallet.portal.prediction.noSelection': 'No hay mercado seleccionado',
-      'wallet.portal.prediction.noSelectionCopy': 'Elige un contrato en vivo del tablero para crear una posición denominada en OST.',
+      'wallet.portal.prediction.noSelectionCopy': 'Elige un contrato en vivo del tablero para crear una posiciï¿½n denominada en OST.',
       'wallet.portal.prediction.tradeSelectPrompt': 'Selecciona primero un contrato en vivo.',
       'wallet.portal.prediction.tradeUnavailable': 'No disponible',
       'wallet.portal.prediction.connectWalletPrompt': 'Conecta tu billetera',
       'wallet.portal.prediction.tradeSending': 'Enviando orden OST...',
-      'wallet.portal.prediction.tradePending': 'Enviando un ticket real de mercado OST a la bóveda de predicción...',
+      'wallet.portal.prediction.tradePending': 'Enviando un ticket real de mercado OST a la bï¿½veda de predicciï¿½n...',
       'wallet.portal.prediction.tradeWalletNeeded': 'Conecta tu billetera OST para colocar un ticket de mercado.',
       'wallet.portal.prediction.tradeNotEnough': 'Esta billetera no tiene suficiente OST para ese monto.',
-      'wallet.portal.prediction.tradeReady': 'Listo para enviar esta posición a la bóveda de predicción OST.',
-      'wallet.portal.prediction.tradeFailed': 'No se pudo colocar la orden del mercado de predicción ahora.',
-      'wallet.portal.prediction.polyDetail': 'Contrato sí/no en vivo conectado directamente desde Polymarket.',
-      'wallet.portal.prediction.yesLabel': 'Sí',
+      'wallet.portal.prediction.tradeReady': 'Listo para enviar esta posiciï¿½n a la bï¿½veda de predicciï¿½n OST.',
+      'wallet.portal.prediction.tradeFailed': 'No se pudo colocar la orden del mercado de predicciï¿½n ahora.',
+      'wallet.portal.prediction.polyDetail': 'Contrato sï¿½/no en vivo conectado directamente desde Polymarket.',
+      'wallet.portal.prediction.yesLabel': 'Sï¿½',
       'wallet.portal.prediction.noLabel': 'No',
-      'wallet.portal.prediction.yesAskLabel': 'Oferta Sí',
+      'wallet.portal.prediction.yesAskLabel': 'Oferta Sï¿½',
       'wallet.portal.prediction.noAskLabel': 'Oferta No',
       'wallet.portal.prediction.volumeLabel': 'Volumen',
       'wallet.portal.prediction.liquidityLabel': 'Liquidez',
-      'wallet.portal.prediction.openInterestLabel': 'Interés abierto',
+      'wallet.portal.prediction.openInterestLabel': 'Interï¿½s abierto',
       'wallet.portal.prediction.closeLabel': 'Cierra',
       'wallet.portal.prediction.openFeed': 'Abrir feed',
       'wallet.portal.prediction.openVenue': 'Abrir mercado',
       'wallet.portal.prediction.binaryContract': 'Contrato binario',
       'wallet.portal.prediction.eventContract': 'Contrato de evento',
-      'wallet.portal.prediction.loadingBoard': 'Cargando mercados de predicción en vivo...',
+      'wallet.portal.prediction.loadingBoard': 'Cargando mercados de predicciï¿½n en vivo...',
       'ancient.toggle.off': 'ð“…± Antiguo',
       'ancient.toggle.on': 'Modo Moderno',
       'ancient.toggle.activate': 'Activar el modo jeroglÃ­fico antiguo',
@@ -9894,12 +9894,13 @@
   }
   // Multi-layer logo fallback: Google Favicon (primary) â†’ icon.horse â†’ SVG
   // (Clearbit free tier shut down 2024; do not request it.)
-  function logoSrc(domain) { return 'https://www.google.com/s2/favicons?domain=' + domain + '&sz=128'; }
+  function logoSrc(domain) { return 'https://icons.duckduckgo.com/ip3/' + domain + '.ico'; }
   function logoFallback(img, domain, name, color) {
-    if (img._logoTry >= 2) { img.onerror = null; img.src = brandSvg(name, color); return; }
+    if (img._logoTry >= 3) { img.onerror = null; img.src = brandSvg(name, color); return; }
     img._logoTry = (img._logoTry || 0) + 1;
     img.onerror = function() { logoFallback(this, domain, name, color); };
-    if (img._logoTry === 1) { img.src = 'https://icon.horse/icon/' + domain; }
+    if (img._logoTry === 1) { img.src = 'https://www.google.com/s2/favicons?domain=' + domain + '&sz=128'; }
+    else if (img._logoTry === 2) { img.src = 'https://icon.horse/icon/' + domain; }
     else { img.onerror = null; img.src = brandSvg(name, color); }
   }
   // Safe OST price getter with fallback
@@ -12800,7 +12801,7 @@
     window.OST_SUPPRESS_BLOCKERS = suppressPostWelcomeOverlays;
     armPostWelcomeOverlayGuard();
 
-    /* Global escape hatch — users can ALWAYS dismiss any blocking overlay
+    /* Global escape hatch ï¿½ users can ALWAYS dismiss any blocking overlay
        by pressing Escape, and any URL like ?nopopup=1 wipes them on load. */
     function nukeAllBlockingOverlays() {
       try {
@@ -12996,7 +12997,7 @@
       }
     });
 
-    // Skip — accept defaults and let users into the site immediately so they
+    // Skip ï¿½ accept defaults and let users into the site immediately so they
     // are never trapped behind the welcome gate.
     var welSkipBtn = document.getElementById('welSkip');
     if (welSkipBtn) {
