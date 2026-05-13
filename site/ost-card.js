@@ -1,4 +1,4 @@
-/* OST Card — universal wallet pass linked to wallet + OST Mesh handle.
+/* OST Card — universal tap ticket linked to wallet + OST Mesh handle.
  * Phase 1 (today, no mainnet rail): users on iPhone / Android / PC can
  *   - generate a personal OST Card (handle + wallet + live OST/USD)
  *   - save it to Apple Wallet via signed .pkpass when the relay exposes it,
@@ -6,7 +6,7 @@
  *   - save it to Google Wallet via signed JWT when the relay exposes it,
  *     fall back to a saveable JSON + share sheet
  *   - write the card payload to a Web NFC tag (Android) so an iPhone tap
- *     opens the OST Card landing page (`?card=<wallet>#card`) automatically
+ *     opens the OST Card landing page (`?ostCard=1&card=<wallet>`) automatically
  *   - install an iOS Shortcut that opens the same landing page from a
  *     double-tap of the side / Action button
  * Phase 2 (mainnet): swap the landing-page card view for a real Apple Pay /
@@ -36,11 +36,10 @@
 
   function endpoints() {
     var ep = window.OST_CARD_ENDPOINTS || {};
-    var base = apiBase();
     return {
-      apple: ep.apple || (base ? base + '/passes/apple' : ''),
-      google: ep.google || (base ? base + '/passes/google' : ''),
-      shortcut: ep.shortcut || (base ? base + '/passes/shortcut' : '')
+      apple: ep.apple || '',
+      google: ep.google || '',
+      shortcut: ep.shortcut || ''
     };
   }
 
@@ -114,10 +113,9 @@
 
   function cardLandingUrl(profile, amountUsd) {
     var u = new URL(PUBLIC_SITE_URL);
-    u.searchParams.set('card', profile.wallet);
-    if (profile.handle) u.searchParams.set('handle', profile.handle);
+    u.searchParams.set('ostCard', '1');
+    u.searchParams.set('card', profile.wallet || walletAddress());
     if (amountUsd) u.searchParams.set('amount', String(amountUsd));
-    u.hash = '#card';
     return u.toString();
   }
 
@@ -167,9 +165,9 @@
     section.style.cssText = 'margin-top:18px;padding-top:18px;border-top:1px solid rgba(148,163,184,0.16);display:grid;gap:14px;';
     section.innerHTML = ''
       + '<div>'
-      +   '<span class="wallet-side-kicker">OST Card \u2014 universal pass</span>'
-      +   '<h3 style="margin:6px 0 6px;font-size:1.08rem;color:var(--text-light);">Add OST Card to Apple / Google / NFC</h3>'
-      +   '<p style="margin:0;color:var(--text-muted);font-size:.88rem;line-height:1.55;">Links your wallet + OST Mesh handle to a saveable card. Phase 1 today: tag + landing-page card. Phase 2 (mainnet): real Apple Pay / Google Pay payment card.</p>'
+      +   '<span class="wallet-side-kicker">OST Card \u2014 tap ticket</span>'
+      +   '<h3 style="margin:6px 0 6px;font-size:1.08rem;color:var(--text-light);">Open your OST Tap Ticket</h3>'
+      +   '<p style="margin:0;color:var(--text-muted);font-size:.88rem;line-height:1.55;">Links your wallet + OST Mesh handle to a scannable iPhone-friendly ticket. Wallet pass downloads only work when a signed Apple / Google relay is configured.</p>'
       + '</div>'
       + '<div id="ostCardPreview" style="position:relative;overflow:hidden;padding:18px;border-radius:20px;background:linear-gradient(135deg,#020617,#0f172a 55%,#0b3d2e);border:1px solid rgba(110,231,183,0.22);box-shadow:0 22px 48px rgba(2,6,23,0.45);color:#f8fafc;display:grid;gap:14px;">'
       +   '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">'
@@ -194,10 +192,10 @@
       +   '<input id="ostCardAmountInput" type="number" min="1" step="0.01" value="25" style="padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,0.12);background:rgba(2,6,23,0.5);color:var(--text-light);font-size:.92rem;">'
       + '</label>'
       + '<div style="display:flex;flex-wrap:wrap;gap:8px;">'
-      +   '<button class="btn btn-primary btn-sm" id="ostCardAppleBtn" type="button">Add to Apple Wallet</button>'
-      +   '<button class="btn btn-primary btn-sm" id="ostCardGoogleBtn" type="button">Add to Google Wallet</button>'
-      +   '<button class="btn btn-outline btn-sm" id="ostCardShortcutBtn" type="button">Install iOS Shortcut</button>'
-      +   '<button class="btn btn-primary btn-sm" id="ostCardTicketBtn" type="button">◉ Show tap-to-pay ticket</button>'
+      +   '<button class="btn btn-primary btn-sm" id="ostCardTicketBtn" type="button">Open iPhone tap ticket</button>'
+      +   '<button class="btn btn-outline btn-sm" id="ostCardShortcutBtn" type="button">Create iOS Shortcut</button>'
+      +   '<button class="btn btn-outline btn-sm" id="ostCardAppleBtn" type="button">Download Apple pass body</button>'
+      +   '<button class="btn btn-outline btn-sm" id="ostCardGoogleBtn" type="button">Download Google pass body</button>'
       +   '<button class="btn btn-outline btn-sm" id="ostCardNfcBtn" type="button">Write to NFC tag</button>'
       +   '<button class="btn btn-outline btn-sm" id="ostCardShareBtn" type="button">Share card link</button>'
       +   '<button class="btn btn-outline btn-sm" id="ostCardOpenBtn" type="button">Open full card</button>'
@@ -240,6 +238,10 @@
     }
     var amount = readAmount();
     var landing = cardLandingUrl(profile, amount);
+    var appleBtn = $('ostCardAppleBtn');
+    var googleBtn = $('ostCardGoogleBtn');
+    if (appleBtn) appleBtn.textContent = window.OST_CARD_ENDPOINTS && window.OST_CARD_ENDPOINTS.apple ? 'Add signed Apple Wallet pass' : 'Download Apple pass body';
+    if (googleBtn) googleBtn.textContent = window.OST_CARD_ENDPOINTS && window.OST_CARD_ENDPOINTS.google ? 'Add signed Google Wallet pass' : 'Download Google pass body';
     if ($('ostCardHandle')) $('ostCardHandle').textContent = '@' + (profile.handle || deriveHandle(address));
     if ($('ostCardWalletRow')) $('ostCardWalletRow').textContent = address;
     var ost = Number(state.ostBalance) || 0;
@@ -339,7 +341,7 @@
       // PassKit accepts only ISO 14443-4 strings up to 64 bytes by default;
       // 'requiresAuthentication' false makes the tap work without unlock.
       nfc: {
-        message: landing.length > 64 ? PUBLIC_SITE_URL + '?card=' + address : landing,
+        message: landing.length > 64 ? PUBLIC_SITE_URL + '?ostCard=1&card=' + encodeURIComponent(address) : landing,
         encryptionPublicKey: '',
         requiresAuthentication: false
       },
@@ -374,11 +376,12 @@
     var payload = passPayload(profile, amount);
     var passJson = buildApplePassJson(profile, amount);
     payload.passJson = passJson; // ship the real PassKit body for the relay to sign
-    setStatus('Requesting signed Apple Wallet pass from relay...', 'warning');
+    var hasSigner = !!(window.OST_CARD_ENDPOINTS && window.OST_CARD_ENDPOINTS.apple);
+    setStatus(hasSigner ? 'Requesting signed Apple Wallet pass from relay...' : 'No Apple Wallet signer configured. Downloading the pass body instead.', 'warning');
     var result = await tryServerPass('apple', payload);
     if (result && result.ok && result.kind === 'pkpass') {
       downloadFile('ost-card-' + profile.cardId + '.pkpass', result.blob, 'application/vnd.apple.pkpass');
-      setStatus('OST Card pass downloaded. Open it on your iPhone to add it to Apple Wallet \u2014 the NFC chip will broadcast your card URL on tap.', 'success');
+      setStatus('Signed OST Card pass downloaded. Open it on your iPhone to add it to Apple Wallet.', 'success');
       return;
     }
     if (result && result.ok && result.kind === 'json' && result.json && result.json.url) {
@@ -392,7 +395,7 @@
     downloadFile('ost-card-' + profile.cardId + '.pass.json', JSON.stringify(passJson, null, 2), 'application/json');
     var platform = detectPlatform();
     setStatus(platform.isIos
-      ? 'Real Apple Wallet NFC card requires an Apple Pass Type ID certificate. Pass body downloaded \u2014 plug your signing relay into window.OST_CARD_ENDPOINTS.apple. Meanwhile, "Show tap-to-pay ticket" works on every iPhone today.'
+      ? 'Real Apple Wallet install requires an Apple Pass Type ID certificate. Pass body downloaded. Use the iPhone tap ticket or Shortcut URL today.'
       : 'PassKit pass.json downloaded ready for an Apple-cert-holding relay. Set window.OST_CARD_ENDPOINTS.apple to your signer endpoint to enable one-tap install.',
       'warning');
     // Surface the working today path immediately so the user is never stuck.
@@ -403,7 +406,8 @@
     var profile = ensureProfile();
     if (!profile) { setStatus('Connect a wallet first.', 'error'); return; }
     var payload = passPayload(profile, readAmount());
-    setStatus('Requesting Google Wallet save link from relay...', 'warning');
+    var hasSigner = !!(window.OST_CARD_ENDPOINTS && window.OST_CARD_ENDPOINTS.google);
+    setStatus(hasSigner ? 'Requesting Google Wallet save link from relay...' : 'No Google Wallet signer configured. Downloading the pass body instead.', 'warning');
     var result = await tryServerPass('google', payload);
     if (result && result.ok && result.kind === 'json' && result.json && result.json.saveUrl) {
       if (window.openOstPopup) window.openOstPopup(result.json.saveUrl, 'OST Card \u2014 Google Wallet');
@@ -412,7 +416,7 @@
       return;
     }
     downloadFile('ost-card-' + profile.cardId + '-google.json', JSON.stringify(payload, null, 2), 'application/json');
-    setStatus('Google Wallet relay not enabled yet. Card payload downloaded \u2014 it can also be opened with the share sheet to add a home-screen shortcut on Android.', 'warning');
+    setStatus('Google Wallet relay is not enabled. Card payload downloaded; share the tap ticket or add the landing URL to your home screen today.', 'warning');
   }
 
   function showShortcutModal(profile, landing) {
@@ -426,7 +430,7 @@
       + '<ol style="margin:0;padding-left:20px;display:grid;gap:6px;font-size:.86rem;line-height:1.5;color:#e2e8f0;">'
       +   '<li>Open the <b>Shortcuts</b> app on this iPhone.</li>'
       +   '<li>Tap <b>+</b> &rarr; <b>Add Action</b> &rarr; search <b>Open URL</b>.</li>'
-      +   '<li>Paste the link below into the URL field.</li>'
+      +   '<li>Paste the clean HTTPS link below into the URL field.</li>'
       +   '<li>Tap the title at the top, rename to <b>OST Card</b>, save.</li>'
       +   '<li>Settings &rarr; <b>Action Button</b> (15 Pro+) or <b>Accessibility &rarr; Touch &rarr; Back Tap</b> &rarr; bind to <b>Run Shortcut &rarr; OST Card</b>.</li>'
       + '</ol>';
@@ -463,7 +467,7 @@
       +     '<button id="ostShortcutQrBtn" type="button" class="btn btn-outline btn-sm">Show QR</button>'
       +   '</div>'
       +   '<div id="ostShortcutQrWrap" style="display:none;justify-content:center;"><img alt="OST Card QR" src="' + qrUrl(landing, 220) + '" style="width:200px;height:200px;border-radius:14px;background:#fff;padding:8px;" /></div>'
-      +   '<p style="margin:0;font-size:.74rem;color:#94a3b8;line-height:1.45;">A signed .shortcut file requires Apple\u2019s relay; until then this manual recipe takes 30 seconds and works on every iPhone.</p>'
+      +   '<p style="margin:0;font-size:.74rem;color:#94a3b8;line-height:1.45;">This URL intentionally has no hash fragment, so Apple Shortcuts Open URL accepts it as a normal web link.</p>'
       + '</div>';
     document.body.appendChild(modal);
     function close() { modal.remove(); }
@@ -503,7 +507,7 @@
     // attempting that deep link makes iOS show 'invalid URL'. Skip it and
     // ship the manual recipe modal that works on every iPhone today.
     showShortcutModal(profile, landing);
-    setStatus('Follow the 30-second recipe in the popup to bind OST Card to Action Button or Back Tap.', 'success');
+    setStatus('Follow the recipe in the popup to bind the clean OST Card URL to Action Button or Back Tap.', 'success');
   }
 
   async function writeNfcTag() {
@@ -752,8 +756,9 @@
     var btn = document.createElement('button');
     btn.id = 'ostCardFloatingBtn';
     btn.type = 'button';
-    btn.title = 'Open OST Card';
-    btn.innerHTML = '\u25C9 OST Card';
+    btn.title = 'Open OST Tap Ticket';
+    btn.setAttribute('aria-label', 'Open OST Card');
+    btn.innerHTML = 'OST Tap Ticket';
     btn.style.cssText = [
       'position:fixed','right:14px','bottom:74px','z-index:2147483645',
       'padding:10px 14px','border-radius:999px','border:1px solid rgba(110,231,183,0.4)',
@@ -769,8 +774,8 @@
   function applyCardLanding() {
     try {
       var params = new URLSearchParams(location.search);
-      var address = (params.get('card') || '').trim();
-      if (!address) return;
+      var address = (params.get('card') || params.get('wallet') || '').trim();
+      if (!address && params.get('ostCard') !== '1') return;
       var amount = Number(params.get('amount')) || 25;
       // Wait until balance/quote loaded before showing the modal so numbers are real.
       setTimeout(function () { openFullCard(address, amount); }, 600);
