@@ -29,6 +29,30 @@ body.ost-mesh-scroll-lock {
   overscroll-behavior: none !important;
 }
 
+html.ost-mesh-scroll-lock .ost-dock,
+body.ost-mesh-scroll-lock .ost-dock,
+html.ost-mesh-scroll-lock #ost-mobile-bar,
+body.ost-mesh-scroll-lock #ost-mobile-bar,
+html.ost-mesh-scroll-lock .ost-mobile-bar,
+body.ost-mesh-scroll-lock .ost-mobile-bar,
+html.ost-mesh-scroll-lock #ghost-input-ring,
+body.ost-mesh-scroll-lock #ghost-input-ring,
+html.ost-mesh-scroll-lock #ghost-summon-trigger,
+body.ost-mesh-scroll-lock #ghost-summon-trigger,
+html.ost-mesh-scroll-lock .ost-tradepop__launcher,
+body.ost-mesh-scroll-lock .ost-tradepop__launcher,
+html.ost-mesh-scroll-lock #ostCardFloatingBtn,
+body.ost-mesh-scroll-lock #ostCardFloatingBtn,
+html.ost-mesh-scroll-lock #ostMobileHome,
+body.ost-mesh-scroll-lock #ostMobileHome,
+html.ost-mesh-scroll-lock .ost-mobile-home,
+body.ost-mesh-scroll-lock .ost-mobile-home {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
 #ost-mesh-pavilion button,
 #ost-mesh-pavilion input,
 #ost-mesh-pavilion textarea {
@@ -452,7 +476,7 @@ body.ost-mesh-scroll-lock {
   object-fit: cover;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 1024px) {
   #ost-mesh-pavilion {
     padding: 0;
     align-items: stretch;
