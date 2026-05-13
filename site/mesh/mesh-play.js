@@ -1116,6 +1116,24 @@
     actions.appendChild(details);
     card.appendChild(actions);
     gameLog(card);
+    // FairGameFxHook: announce settled outcome so the FX polish layer can
+    // play sounds, haptics, confetti and inject a Rematch button. Pure
+    // event dispatch — no behaviour change here.
+    try {
+      window.dispatchEvent(new CustomEvent('ost:fair-game-settled', {
+        detail: {
+          id: state.id,
+          game: state.game,
+          gameLabel: GAME_NAMES[state.game] || state.game,
+          didWin: didWin,
+          stake: { amount: Number(state.stake.amount || 0), asset: state.stake.asset || 'OST' },
+          peerWallet: state.peerWallet || '',
+          ownWallet: state.ownWallet || '',
+          digest: digest,
+          card: card
+        }
+      }));
+    } catch (_) {}
   }
 
   function resolveGame(game, digest) {
