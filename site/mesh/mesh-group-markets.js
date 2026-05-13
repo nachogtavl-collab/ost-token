@@ -1,5 +1,5 @@
 /*
- * mesh-group-markets.js
+ * mesh-group-markets.js  (v2 — selfAddress aligned with mesh-social-x via pavilion())
  * --------------------------------------------------------------
  * OST's answer to iOS 26 Messages polls: stake-backed peer
  * prediction markets that live INSIDE existing mesh group chats.
@@ -42,6 +42,8 @@
 
   function selfAddress() {
     try {
+      var p = pavilion();
+      if (p && p.address) return p.address;
       if (window.OST_WALLET && typeof window.OST_WALLET.address === 'function') return window.OST_WALLET.address() || 'local';
       var pk = localStorage.getItem('ost.mesh.publicKey');
       if (pk) return pk;
@@ -49,7 +51,20 @@
     return 'local';
   }
   function selfNick() {
-    try { return localStorage.getItem('ost.mesh.nick') || ''; } catch (e) { return ''; }
+    try {
+      var keys = ['ost.mesh.profile.v1', 'ost.mesh.profile', 'ost.profile.v1'];
+      for (var i = 0; i < keys.length; i++) {
+        var raw = localStorage.getItem(keys[i]);
+        if (!raw) continue;
+        try {
+          var obj = JSON.parse(raw);
+          if (obj && (obj.nickname || obj.handle)) return obj.nickname || obj.handle;
+        } catch (e) {}
+      }
+      var nick = localStorage.getItem('ost.mesh.nick');
+      if (nick) return nick;
+    } catch (e) {}
+    return 'You';
   }
 
   // ---------- Wallet (faucet hub credits) ----------
