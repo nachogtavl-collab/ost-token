@@ -83,6 +83,15 @@
       .catch(function (e) { clearTimeout(tid); throw e; });
   }
 
+  function rememberBtcDashboardPrice(price) {
+    var p = Number(price);
+    if (!Number.isFinite(p) || p <= 0) return;
+    var last = state.btcSeries[state.btcSeries.length - 1];
+    if (last === p) return;
+    state.btcSeries.push(p);
+    if (state.btcSeries.length > 150) state.btcSeries.shift();
+  }
+
   // ---------------------------------------------------------------------------
   // Data fetchers
   // ---------------------------------------------------------------------------
@@ -96,8 +105,7 @@
           state.btcPrice = p;
           state.btcSource = tick.source || state.btcSource || '';
           state.btcUpdatedAt = tick.ts || Date.now();
-          state.btcSeries.push(p);
-          if (state.btcSeries.length > 150) state.btcSeries.shift();
+          rememberBtcDashboardPrice(p);
         })
         .catch(function () { /* keep last value */ });
     }
@@ -126,8 +134,7 @@
         state.btcPrice = p;
         state.btcSource = 'direct';
         state.btcUpdatedAt = Date.now();
-        state.btcSeries.push(p);
-        if (state.btcSeries.length > 150) state.btcSeries.shift();
+        rememberBtcDashboardPrice(p);
       })
       .catch(function () { /* all feeds failed — keep last value */ });
   }
@@ -315,7 +322,14 @@
     if (!poly || state.btcSeries.length < 2) return;
     var s = state.btcSeries;
     var min = Math.min.apply(null, s), max = Math.max.apply(null, s);
-    var range = max - min || 1;
+    var naturalRange = max - min;
+    var latest = s[s.length - 1] || state.btcPrice || 1;
+    var range = Math.max(naturalRange, Math.abs(latest) * 0.0012, 1);
+    if (range > naturalRange) {
+      var center = naturalRange > 0 ? (min + max) / 2 : latest;
+      min = center - range / 2;
+      max = center + range / 2;
+    }
     var w = 200, h = 50;
     var step = w / (s.length - 1);
     var pts = s.map(function (p, i) {

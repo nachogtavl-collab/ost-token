@@ -95,6 +95,7 @@
   var btcLastTick = { ts: 0, price: 0, source: '' };
   var btcPrevTick = { ts: 0, price: 0, source: '' };
   var btcSeries = [];
+  var btcPreferredSource = '';
   var btcLastOdds = { roundId: '', yes: 0.5, previousYes: 0.5 };
 
   function clampNumber(value, min, max) {
@@ -140,11 +141,43 @@
       });
   }
 
+  function orderedBtcFeeds() {
+    var feeds = getBtcFeeds();
+    if (!btcPreferredSource) return feeds;
+    var preferred = feeds.filter(function (feed) { return feed.name === btcPreferredSource; });
+    var fallback = feeds.filter(function (feed) { return feed.name !== btcPreferredSource; });
+    return preferred.concat(fallback);
+  }
+
+  function fetchBtcFeed(feed) {
+    return fetchWithTimeout(feed.url, { headers: { accept: 'application/json' }, mode: 'cors' }, BTC_FEED_TIMEOUT_MS)
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error(feed.name + ' ' + r.status)); })
+      .then(function (j) {
+        var price = feed.pick(j);
+        if (!Number.isFinite(price) || price <= 1000) throw new Error(feed.name + ' empty price');
+        return { price: price, source: feed.name };
+      });
+  }
+
+  function tryBtcFeeds(feeds, index, lastError) {
+    if (index >= feeds.length) return Promise.reject(lastError || new Error('no btc feed'));
+    return fetchBtcFeed(feeds[index]).catch(function (error) {
+      if (feeds[index].name === btcPreferredSource) btcPreferredSource = '';
+      return tryBtcFeeds(feeds, index + 1, error);
+    });
+  }
+
   function rememberBtcTick(price, source) {
     var p = Number(price);
     if (!Number.isFinite(p) || p <= 1000) return btcLastTick;
+    var now = Date.now();
+    if (btcLastTick.price === p && now - btcLastTick.ts < BTC_REFRESH_MS) {
+      btcLastTick = { ts: now, price: p, source: source || btcLastTick.source || 'btc' };
+      try { window.dispatchEvent(new CustomEvent('ost:btc-spot', { detail: Object.assign({}, btcLastTick) })); } catch (e) {}
+      return btcLastTick;
+    }
     if (btcLastTick.price) btcPrevTick = btcLastTick;
-    btcLastTick = { ts: Date.now(), price: p, source: source || 'btc' };
+    btcLastTick = { ts: now, price: p, source: source || 'btc' };
     btcSeries.push({ ts: btcLastTick.ts, price: p, source: btcLastTick.source });
     if (btcSeries.length > BTC_MAX_SERIES) btcSeries = btcSeries.slice(-BTC_MAX_SERIES);
     try { window.dispatchEvent(new CustomEvent('ost:btc-spot', { detail: Object.assign({}, btcLastTick) })); } catch (e) {}
@@ -156,20 +189,11 @@
     if (!force && btcLastTick.price && Date.now() - btcLastTick.ts < 700) {
       return Promise.resolve(Object.assign({}, btcLastTick));
     }
-    var attempts = getBtcFeeds().map(function (feed) {
-      return fetchWithTimeout(feed.url, { headers: { accept: 'application/json' }, mode: 'cors' }, BTC_FEED_TIMEOUT_MS)
-        .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error(feed.name + ' ' + r.status)); })
-        .then(function (j) {
-          var price = feed.pick(j);
-          if (!Number.isFinite(price) || price <= 1000) throw new Error(feed.name + ' empty price');
-          return { price: price, source: feed.name };
-        });
-    });
-    var race = Promise.any
-      ? Promise.any(attempts)
-      : attempts.reduce(function (chain, attempt) { return chain.catch(function () { return attempt; }); }, Promise.reject(new Error('no btc feed')));
-    return race
-      .then(function (result) { return Object.assign({}, rememberBtcTick(result.price, result.source)); })
+    return tryBtcFeeds(orderedBtcFeeds(), 0)
+      .then(function (result) {
+        btcPreferredSource = result.source || btcPreferredSource;
+        return Object.assign({}, rememberBtcTick(result.price, result.source));
+      })
       .catch(function () { return Object.assign({}, btcLastTick, { stale: !!btcLastTick.price }); });
   }
 

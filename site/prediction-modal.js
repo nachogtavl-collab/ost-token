@@ -528,8 +528,18 @@
     canvas.width = Math.floor(w * dpr); canvas.height = Math.floor(h * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
+    points = points.map(Number).filter(Number.isFinite);
+    if (points.length < 2) return;
     var min = Math.min.apply(null, points), max = Math.max.apply(null, points);
-    var range = Math.max(1e-9, max - min);
+    var latest = points[points.length - 1];
+    var naturalRange = max - min;
+    var minimumRange = Math.abs(latest) >= 1000 ? Math.abs(latest) * 0.0012 : Math.max(Math.abs(latest) * 0.01, 0.0025);
+    var range = Math.max(1e-9, naturalRange, minimumRange);
+    if (range > naturalRange) {
+      var center = naturalRange > 0 ? (min + max) / 2 : latest;
+      min = center - range / 2;
+      max = center + range / 2;
+    }
     // Grid
     ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 1;
     for (var i = 1; i < 4; i++) {
