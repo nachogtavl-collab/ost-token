@@ -61,7 +61,8 @@
   var TRACE_HISTORY_MAX      = 240;           // ~20 min of 5s ticks per peer
   var TRACE_HISTORY_MIN_DT_MS = 4000;
   var TRACE_HISTORY_MIN_D_M   = 4;
-  var DENIED_MODAL_COOLDOWN_MS = 60 * 1000;
+  var DENIED_MODAL_COOLDOWN_MS = 5 * 60 * 1000;
+  var SOFT_NUDGE_MS = 5200;
 
   var DURATIONS = [
     { id: '15m', label: '15 minutes', ms: 15 * 60 * 1000 },
@@ -317,6 +318,9 @@
       '.mlp-pill{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:2px 8px;border-radius:999px;background:#0e1c44;color:#9be4ff;border:1px solid #244e7a;margin-left:6px}',
       '.mlp-pill.bg{color:#ffd1a3;border-color:#7a5524;background:#3a230b}',
       '.mlp-pill.trace{color:#ffb3ff;border-color:#7a2480;background:#39103a}',
+      // ---- soft nudge (permission / tracker hints without modal pressure)
+      '.mlp-nudge{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(18px);opacity:0;pointer-events:none;z-index:99999;background:rgba(11,18,38,.92);border:1px solid rgba(90,215,255,.38);color:#e6ecff;border-radius:999px;padding:9px 14px;font-size:12px;line-height:1.25;max-width:min(520px,calc(100vw - 24px));box-shadow:0 12px 30px rgba(0,0,0,.38);transition:opacity .18s ease,transform .18s ease}',
+      '.mlp-nudge.is-on{opacity:1;transform:translateX(-50%) translateY(0)}',
       // ---- last-step trail viewer
       '#mlpTrail{position:fixed;inset:0;background:rgba(4,8,18,.85);display:none;align-items:center;justify-content:center;z-index:99999;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}',
       '#mlpTrail.is-on{display:flex}',
@@ -329,9 +333,30 @@
       '#mlpTrail .mlp-trail-foot{padding:8px 14px;border-top:1px solid #1c2a52;color:#9fb1dd;font-size:11px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}',
       // ---- mobile overlap fixes (when Mesh is open / mobile dock is visible)
       '@media (max-width: 720px){',
-      '  .mlp-status{top:calc(8px + env(safe-area-inset-top));font-size:11px;padding:6px 10px}',
-      '  .mlp-peer{width:calc(100vw - 16px);right:8px;bottom:calc(76px + env(safe-area-inset-bottom))}',
+      '  #mlpModal{align-items:flex-end;justify-content:center;background:rgba(4,8,18,.28);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);padding:0}',
+      '  #mlpModal .mlp-card{width:100vw;max-height:min(76vh,620px);border-radius:18px 18px 0 0;border-left:0;border-right:0;border-bottom:0;padding:14px 14px calc(14px + env(safe-area-inset-bottom));box-shadow:0 -14px 34px rgba(0,0,0,.42)}',
+      '  #mlpModal h3{font-size:16px}',
+      '  #mlpModal .mlp-sub{font-size:11px;margin-bottom:8px}',
+      '  #mlpModal .mlp-modes{grid-template-columns:1fr}',
+      '  .mlp-status{left:8px;right:auto;top:auto;bottom:calc(76px + env(safe-area-inset-bottom));transform:none;max-width:50vw;font-size:11px;padding:6px 9px;border-radius:999px;box-shadow:0 8px 22px rgba(0,0,0,.3)}',
+      '  .mlp-status .meta{display:none}',
+      '  .mlp-status .txt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+      '  .mlp-status .stop{padding:3px 8px}',
+      '  .mlp-peer{width:auto;max-width:calc(50vw - 12px);right:8px;bottom:calc(76px + env(safe-area-inset-bottom));border-radius:999px;padding:7px 9px;box-shadow:0 8px 22px rgba(0,0,0,.3)}',
+      '  .mlp-peer .row1{margin:0;gap:6px;cursor:pointer}',
+      '  .mlp-peer .name{max-width:22vw;font-size:11px}',
+      '  .mlp-peer .badge{font-size:9px;padding:2px 5px}',
+      '  .mlp-peer .close{font-size:12px;padding:1px 4px}',
+      '  .mlp-peer:not(.is-expanded) .grid,.mlp-peer:not(.is-expanded) .acts{display:none}',
+      '  .mlp-peer.is-expanded{width:calc(100vw - 16px);max-width:calc(100vw - 16px);border-radius:14px;padding:12px;left:8px;right:8px}',
+      '  .mlp-peer.is-expanded .row1{margin-bottom:6px}',
+      '  .mlp-peer.is-expanded .name{max-width:none;font-size:12px}',
+      '  .mlp-peer.is-expanded .grid{display:grid}',
+      '  .mlp-peer.is-expanded .acts{display:flex}',
+      '  .mlp-nudge{bottom:calc(78px + env(safe-area-inset-bottom));font-size:11px;max-width:calc(100vw - 24px)}',
+      '  body.ost-mesh-scroll-lock .mlp-status{bottom:calc(14px + env(safe-area-inset-bottom))}',
       '  body.ost-mesh-scroll-lock .mlp-peer{bottom:calc(14px + env(safe-area-inset-bottom))}',
+      '  body.ost-mesh-scroll-lock .mlp-nudge{bottom:calc(16px + env(safe-area-inset-bottom))}',
       '}'
     ].join('');
     var s = document.createElement('style');
@@ -443,6 +468,25 @@
     if (modal) modal.classList.remove('is-open');
   }
 
+  function ensureNudge() {
+    var el = document.getElementById('mlpNudge');
+    if (el) return el;
+    el = document.createElement('div');
+    el.id = 'mlpNudge';
+    el.className = 'mlp-nudge';
+    el.setAttribute('role', 'status');
+    el.setAttribute('aria-live', 'polite');
+    document.body.appendChild(el);
+    return el;
+  }
+  function showSoftNudge(message) {
+    var el = ensureNudge();
+    el.textContent = message || '';
+    el.classList.add('is-on');
+    clearTimeout(state.nudgeTimer);
+    state.nudgeTimer = setTimeout(function () { el.classList.remove('is-on'); }, SOFT_NUDGE_MS);
+  }
+
   // ============== status pill (me) ==============
   function ensureStatusPill() {
     var el = document.getElementById('mlpStatus');
@@ -495,6 +539,10 @@
       '</div>';
     document.body.appendChild(el);
     el.querySelector('.close').addEventListener('click', function () { el.classList.remove('is-on'); });
+    el.querySelector('.row1').addEventListener('click', function (ev) {
+      if (ev.target && ev.target.closest && ev.target.closest('.close')) return;
+      el.classList.toggle('is-expanded');
+    });
     el.querySelector('.trace').addEventListener('click', function () {
       var b = el.querySelector('.trace');
       b.disabled = true; b.textContent = 'Tracing…';
@@ -631,7 +679,7 @@
       var lastDeny = state.lastDeniedModalAt || 0;
       if (nowMs() - lastDeny > DENIED_MODAL_COOLDOWN_MS) {
         state.lastDeniedModalAt = nowMs();
-        try { openModal(); } catch (e) {}
+        try { showSoftNudge('Location is blocked. Tap Live & last-step when you want to update permission.'); } catch (e) {}
       }
     }
   }
