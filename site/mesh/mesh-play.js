@@ -1489,7 +1489,44 @@
     focus: function (game) {
       selectGame(game || selectedGame);
       selectTab('games');
-    }
+    },
+    // ArenaLinkBridge: cross-service entry points used by mesh-link.js + contacts
+    sendOstTo: function (address, amount, note) {
+      if (!address) throw new Error('Send-to address is required.');
+      openMeshArena();
+      selectTab('wallet');
+      knownPeerWallet = String(address);
+      var amt = Number(amount || 0);
+      if (Number.isFinite(amt) && amt > 0) {
+        return directSendOst(String(address), amt, note || 'OST Mesh direct payment');
+      }
+      setArenaStatus('Peer wallet primed. Set an amount and tap "Send OST to peer".');
+      return Promise.resolve(null);
+    },
+    requestPayment: function (amount, asset, note) {
+      openMeshArena();
+      selectTab('wallet');
+      try { sendPaymentRequest({ amount: amount, asset: asset || 'OST', note: note }); }
+      catch (err) { setArenaStatus(err && err.message ? err.message : 'Could not send request.'); }
+      return true;
+    },
+    challenge: function (address, game) {
+      openMeshArena();
+      selectGame(game || selectedGame);
+      selectTab('games');
+      if (address) knownPeerWallet = String(address);
+      setArenaStatus('Connect to the peer in OST Mesh, then tap "Challenge" on the game card.');
+      return true;
+    },
+    share: function (kind /*, opts */) {
+      openMeshArena();
+      selectTab('share');
+      if (kind === 'prediction' || kind === 'market') return sharePrediction();
+      if (kind === 'coin' || kind === 'memecoin' || kind === 'launchpad') return shareCoin();
+      if (kind === 'address' || kind === 'receive') return shareReceiveAddress();
+      return false;
+    },
+    setKnownPeerWallet: function (address) { if (address) knownPeerWallet = String(address); }
   };
 
   ready(function () {

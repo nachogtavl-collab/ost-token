@@ -720,7 +720,7 @@
     }
     box.innerHTML = list.map(function (contact, index) {
       var profile = contact.profile || contact;
-      return '<div class="omu-contact" data-contact-card="' + index + '">' + avatarHtml(profile, 'sm') + '<div class="omu-contact-main"><strong>' + escapeHtml(contact.nick || profile.nickname || short(contact.address)) + '</strong><span>' + escapeHtml(short(contact.address)) + '</span><span>' + escapeHtml(contact.status || profile.status || contact.wallet || '') + '</span></div><div class="omu-contact-actions"><button class="primary" type="button" data-contact-action="connect" data-index="' + index + '">Connect</button><button type="button" data-contact-action="profile" data-index="' + index + '">Profile</button><button type="button" data-contact-action="load" data-index="' + index + '">Load</button><button type="button" data-contact-action="qr" data-index="' + index + '">QR</button><button type="button" data-contact-action="delete" data-index="' + index + '">Delete</button></div></div>';
+      return '<div class="omu-contact" data-contact-card="' + index + '">' + avatarHtml(profile, 'sm') + '<div class="omu-contact-main"><strong>' + escapeHtml(contact.nick || profile.nickname || short(contact.address)) + '</strong><span>' + escapeHtml(short(contact.address)) + '</span><span>' + escapeHtml(contact.status || profile.status || contact.wallet || '') + '</span></div><div class="omu-contact-actions"><button class="primary" type="button" data-contact-action="connect" data-index="' + index + '">Connect</button><button type="button" data-contact-action="profile" data-index="' + index + '">Profile</button><button type="button" data-contact-action="sendost" data-index="' + index + '">Send OST</button><button type="button" data-contact-action="challenge" data-index="' + index + '">Challenge</button><button type="button" data-contact-action="load" data-index="' + index + '">Load</button><button type="button" data-contact-action="qr" data-index="' + index + '">QR</button><button type="button" data-contact-action="delete" data-index="' + index + '">Delete</button></div></div>';
     }).join('');
   }
 
@@ -734,6 +734,8 @@
     var action = button.dataset.contactAction;
     if (action === 'connect') return connectContact(p, contact);
     if (action === 'profile') return showContactProfile(p, contact);
+    if (action === 'sendost') return sendOstToContact(p, contact);
+    if (action === 'challenge') return challengeContact(p, contact);
     if (action === 'load') return loadContact(p, contact);
     if (action === 'qr') return showContactQr(p, contact);
     if (action === 'delete') {
@@ -750,13 +752,50 @@
     setStatus(p, 'Contact loaded. Tap Connect securely when they are online.', 'ok');
   }
 
+  // ContactSendOst: route a contact's saved wallet through Mesh Arena's direct send.
+  function sendOstToContact(p, contact) {
+    var address = String((contact && (contact.wallet || (contact.profile && contact.profile.wallet))) || '').trim();
+    if (!address) {
+      loadContact(p, contact);
+      return setStatus(p, 'No OST wallet saved for this contact yet. Connect to sync their profile.', 'warn');
+    }
+    var raw = '';
+    try { raw = window.prompt('Send OST to ' + (contact.nick || (contact.profile && contact.profile.nickname) || 'this contact') + '\n\nAmount in OST:', '1'); }
+    catch (_) { raw = ''; }
+    if (raw == null) return;
+    var amount = Number(String(raw).replace(',', '.'));
+    if (!Number.isFinite(amount) || amount <= 0) return setStatus(p, 'Enter a positive OST amount.', 'warn');
+    var arena = window.OST_MESH_ARENA;
+    if (!arena || typeof arena.sendOstTo !== 'function') {
+      setStatus(p, 'OST Mesh Arena is still loading. Try again in a moment.', 'warn');
+      return;
+    }
+    setStatus(p, 'Opening Arena to send OST...', 'ok');
+    Promise.resolve(arena.sendOstTo(address, amount, 'OST Mesh contact send'))
+      .then(function () { setStatus(p, 'OST send queued through Mesh Arena.', 'ok'); })
+      .catch(function (err) { setStatus(p, 'Send failed: ' + (err && err.message ? err.message : err), 'err'); });
+  }
+
+  // ContactChallenge: open Arena Games tab pre-targeted at a saved contact.
+  function challengeContact(p, contact) {
+    loadContact(p, contact);
+    var arena = window.OST_MESH_ARENA;
+    if (arena && typeof arena.challenge === 'function') {
+      arena.challenge(String((contact && (contact.wallet || (contact.profile && contact.profile.wallet))) || ''));
+      setStatus(p, 'Arena ready. Tap Connect to ' + (contact.nick || 'this contact') + ' then challenge.', 'ok');
+      return;
+    }
+    if (arena && typeof arena.open === 'function') { arena.open(); return; }
+    setStatus(p, 'OST Mesh Arena is still loading. Try again in a moment.', 'warn');
+  }
+
   function ensureProfileModal(p) {
     var modal = document.getElementById('omuProfileModal');
     if (modal) return modal;
     modal = document.createElement('div');
     modal.id = 'omuProfileModal';
     modal.className = 'omu-profile-modal';
-    modal.innerHTML = '<div class="omu-profile-panel"><div id="omuProfileView"></div><div class="omu-actions"><button class="primary" type="button" id="omuProfileConnect">Connect</button><button type="button" id="omuProfileLoad">Load</button><button type="button" id="omuProfileQr">QR</button><button type="button" id="omuProfileClose">Close</button></div></div>';
+    modal.innerHTML = '<div class="omu-profile-panel"><div id="omuProfileView"></div><div class="omu-actions"><button class="primary" type="button" id="omuProfileConnect">Connect</button><button type="button" id="omuProfileSendOst">Send OST</button><button type="button" id="omuProfileChallenge">Challenge</button><button type="button" id="omuProfileLoad">Load</button><button type="button" id="omuProfileQr">QR</button><button type="button" id="omuProfileClose">Close</button></div></div>';
     (p && p.root ? p.root : document.body).appendChild(modal);
     wireAvatarFallbacks(modal);
     modal.querySelector('#omuProfileClose').addEventListener('click', function () { modal.classList.remove('is-open'); });
@@ -770,6 +809,10 @@
     var address = normalizeAddress(contact.address || profile.address);
     modal.__contact = contact;
     modal.querySelector('#omuProfileView').innerHTML = '<div class="omu-profile-view">' + avatarHtml(profile, '', { preferFull: true }) + '<div><h3>' + escapeHtml(profile.nickname || contact.nick || 'Mesh profile') + '</h3><span>' + escapeHtml(profile.handle || contact.handle || short(address)) + '</span><span>' + escapeHtml(profile.status || contact.status || '') + '</span><code>' + escapeHtml(profile.wallet || contact.wallet || address || '') + '</code></div></div><p>' + escapeHtml(profile.bio || contact.bio || 'No bio shared yet. Connect to this contact and their profile will sync automatically.') + '</p>';
+    var sendBtn = modal.querySelector('#omuProfileSendOst');
+    var challengeBtn = modal.querySelector('#omuProfileChallenge');
+    if (sendBtn) sendBtn.onclick = function () { modal.classList.remove('is-open'); sendOstToContact(p, contact); };
+    if (challengeBtn) challengeBtn.onclick = function () { modal.classList.remove('is-open'); challengeContact(p, contact); };
     modal.querySelector('#omuProfileConnect').onclick = function () { modal.classList.remove('is-open'); connectContact(p, contact); };
     modal.querySelector('#omuProfileLoad').onclick = function () { modal.classList.remove('is-open'); loadContact(p, contact); };
     modal.querySelector('#omuProfileQr').onclick = function () { showContactQr(p, contact); };
