@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v130';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v114';
+const CACHE_NAME = 'ost-pwa-cache-v131';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v115';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -50,7 +50,13 @@ const PRECACHE_PATHS = [
   './mesh/veil.js?v=1',
   './mesh/mesh-play.js?v=10',
   './mesh/mesh-upgrade.js?v=11',
-  './mesh/mesh-link.js?v=1',
+  './mesh/mesh-link.js?v=2',
+  './mesh/mesh-games.js?v=1',
+  './mesh/games/tictactoe.js?v=1',
+  './mesh/games/chess.js?v=1',
+  './mesh/games/pool8.js?v=1',
+  './mesh/games/cuppong.js?v=1',
+  './mesh/games/minigolf.js?v=1',
   './mesh/mesh-social-x.js?v=2',
   './mesh/mesh-location-pro.js?v=7',
   './mesh/mesh-crypto.js?v=1',
