@@ -29,3 +29,9 @@ desktop.ini
 # Environment
 .env
 .env.local
+
+# Playwright test outputs
+test-results/
+playwright-report/
+*.tmp.spec.js
+.last-run.json
