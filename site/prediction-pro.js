@@ -79,7 +79,7 @@
     },
     {
       name: 'binance',
-      url: 'https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT',
+      url: 'https://data-api.binance.vision/api/v3/ticker/price?symbol=BTCUSDT',
       pick: function (j) { return j && Number(j.price); }
     },
     {

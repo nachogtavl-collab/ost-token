@@ -4248,7 +4248,7 @@
     ethereum: 'ETHUSDT',
     solana: 'SOLUSDT'
   };
-  const OFFICIAL_PRICE_URL = 'https://api.binance.com/api/v3/ticker/24hr?symbols=' + encodeURIComponent(JSON.stringify([
+  const OFFICIAL_PRICE_URL = 'https://data-api.binance.vision/api/v3/ticker/24hr?symbols=' + encodeURIComponent(JSON.stringify([
     OFFICIAL_PRICE_SYMBOLS.bitcoin,
     OFFICIAL_PRICE_SYMBOLS.ethereum,
     OFFICIAL_PRICE_SYMBOLS.solana

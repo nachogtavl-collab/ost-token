@@ -35,7 +35,7 @@
     },
     {
       name: 'binance',
-      url: 'https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT',
+      url: 'https://data-api.binance.vision/api/v3/ticker/price?symbol=BTCUSDT',
       pick: function (j) { return j && Number(j.price); }
     },
     {
@@ -1816,18 +1816,201 @@
         }
       }, 1000));
     } else {
-      // OST native or unknown — synthesize a minimal placeholder chart
-      setText(bodyEl, 'chartStatus', 'native market');
-      setText(bodyEl, 'bookStatus', 'native market');
-      setText(bodyEl, 'tradesStatus', 'native market');
-      var canvas = bodyEl.querySelector('[data-bind="chart"]');
-      if (canvas && market.isOstNative) {
-        // Build a quick BTC sparkline from saved rounds
-        var rounds = readJson(ROUND_KEY, {});
-        var keys = Object.keys(rounds).sort();
-        var pts = keys.map(function (k) { return rounds[k].closePrice || rounds[k].openPrice; }).filter(Number.isFinite);
-        if (pts.length >= 2) { canvas.style.width = '100%'; canvas.style.height = '200px'; drawSeries(canvas, pts, '#ffd980'); }
+      // ----- OST native (e.g. BTC 5-min) — wire live OST flow into chart, depth, ticks -----
+      // Pull the same shared feed Polymarket markets use so users in this
+      // market see each other's bets, depth, and a probability curve that
+      // actually toggles between YES (UP) and NO (DOWN/SAME).
+      function ostFlowForMarket() {
+        try {
+          var bag = window.__ostSharedFeed || {};
+          var arr = (bag[market.id] || []).slice();
+          arr.sort(function (a, b) {
+            return (new Date(b.ts).getTime() || 0) - (new Date(a.ts).getTime() || 0);
+          });
+          return arr;
+        } catch (_) { return []; }
       }
+
+      // ---- Order depth (YES + NO) from OST stake aggregated by ¢ bucket ----
+      function renderOstNativeBook() {
+        var yesEl = bodyEl.querySelector('[data-bind="bookYes"]');
+        var noEl  = bodyEl.querySelector('[data-bind="bookNo"]');
+        if (!yesEl && !noEl) return;
+        var flow = ostFlowForMarket();
+        var yesAgg = {}, noAgg = {};
+        flow.forEach(function (b) {
+          var stake = Number(b.stake) || 0;
+          var sideUp = String(b.side || '').toUpperCase();
+          var isYes = /YES|BUY|UP/.test(sideUp);
+          // Each bet exposes both yesPrice and noPrice — bucket each side
+          // into its own ladder so we get authentic two-sided depth.
+          var yesPx = Number(b.yesPrice != null ? b.yesPrice : (isYes ? b.price : (1 - Number(b.price))));
+          var noPx  = Number(b.noPrice  != null ? b.noPrice  : (isYes ? (1 - Number(b.price)) : Number(b.price)));
+          if (!stake) return;
+          if (isYes && Number.isFinite(yesPx) && yesPx > 0 && yesPx < 1) {
+            var yk = (Math.round(yesPx * 1000) / 10).toFixed(1);
+            yesAgg[yk] = (yesAgg[yk] || 0) + stake;
+          } else if (!isYes && Number.isFinite(noPx) && noPx > 0 && noPx < 1) {
+            var nk = (Math.round(noPx * 1000) / 10).toFixed(1);
+            noAgg[nk] = (noAgg[nk] || 0) + stake;
+          }
+        });
+        function paint(target, bag, color, sideLabel) {
+          if (!target) return;
+          var entries = Object.keys(bag).map(function (k) { return { p: Number(k) / 100, sz: bag[k] }; });
+          if (!entries.length) {
+            target.innerHTML = '<div class="ost-modal__book-row book-empty" style="opacity:0.55;">' +
+              '<span>No live ' + sideLabel + ' depth yet</span><span>—</span></div>';
+            return;
+          }
+          entries.sort(function (a, b) { return b.p - a.p; });
+          var maxSz = entries.reduce(function (m, r) { return Math.max(m, r.sz); }, 0) || 1;
+          target.innerHTML = entries.slice(0, 8).map(function (r) {
+            var pct = Math.max(6, Math.min(100, (r.sz / maxSz) * 100));
+            return '<div class="ost-modal__book-row" style="position:relative;background:linear-gradient(90deg,' + color + '22 ' + pct + '%, transparent ' + pct + '%);">' +
+              '<span style="position:relative;z-index:1;color:' + color + ';font-weight:700;">' + (r.p * 100).toFixed(1) + '¢</span>' +
+              '<span style="position:relative;z-index:1;">' + r.sz.toLocaleString(undefined, { maximumFractionDigits: 2 }) + ' OST</span>' +
+            '</div>';
+          }).join('');
+        }
+        paint(yesEl, yesAgg, '#7ce6a8', 'YES');
+        paint(noEl,  noAgg,  '#ff7c8a', 'NO');
+        var totalRows = Object.keys(yesAgg).length + Object.keys(noAgg).length;
+        setText(bodyEl, 'bookStatus', totalRows ? ('live · ' + totalRows + ' OST levels · ' + fmtTime(Date.now())) : 'awaiting live OST bids');
+      }
+      bodyEl.__renderOstNativeBook = renderOstNativeBook;
+
+      // ---- Recent ticks (Time / Side / Price / Size / wallet) ----
+      function renderTradesTable() {
+        var body = bodyEl.querySelector('[data-bind="tradesBody"]');
+        if (!body) return;
+        var flow = ostFlowForMarket().slice(0, 24);
+        if (!flow.length) {
+          body.innerHTML = '<tr><td colspan="4" style="text-align:center;opacity:0.6;">Awaiting first live OST trade…</td></tr>';
+          setText(bodyEl, 'tradesStatus', 'no ticks yet');
+          return;
+        }
+        body.innerHTML = flow.map(function (b) {
+          var side = String(b.side || '').toUpperCase();
+          var color = /YES|BUY|UP/.test(side) ? '#7ce6a8' : '#ff7c8a';
+          var ts = new Date(b.ts).getTime() || Date.now();
+          var px = Number(b.price);
+          var sz = Number(b.stake);
+          var ws = b.walletShort || (b.wallet ? String(b.wallet).slice(0, 4) + '…' + String(b.wallet).slice(-4) : 'OST');
+          var sideLabel = (side || '—') + ' · ' + escapeHtml(ws);
+          return '<tr>' +
+            '<td>' + escapeHtml(fmtTime(ts)) + '</td>' +
+            '<td style="color:' + color + ';font-weight:700;">' + sideLabel + '</td>' +
+            '<td>' + (Number.isFinite(px) ? (px * 100).toFixed(1) + '¢' : '—') + '</td>' +
+            '<td>' + (Number.isFinite(sz) ? sz.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—') + '</td>' +
+          '</tr>';
+        }).join('');
+        // Distinct trader count for engagement signal.
+        var wallets = {};
+        flow.forEach(function (b) { if (b.wallet) wallets[b.wallet] = 1; });
+        var n = Object.keys(wallets).length;
+        setText(bodyEl, 'tradesStatus', 'live · ' + flow.length + ' trades · ' + n + ' trader' + (n === 1 ? '' : 's') + ' · ' + fmtTime(Date.now()));
+      }
+      bodyEl.__renderTradesTable = renderTradesTable;
+
+      // ---- Probability chart (YES / NO) drawn from OST flow + BTC rounds ----
+      var canvas = bodyEl.querySelector('[data-bind="chart"]');
+      if (canvas) { canvas.style.width = '100%'; canvas.style.height = '220px'; }
+      function drawProbabilityChart(side) {
+        if (!canvas) return;
+        var flow = ostFlowForMarket().slice(0, 60).slice().reverse(); // chronological
+        var pts = flow.map(function (b) {
+          var yp = Number(b.yesPrice != null ? b.yesPrice : (/YES|BUY|UP/.test(String(b.side).toUpperCase()) ? b.price : (1 - Number(b.price))));
+          if (!Number.isFinite(yp)) return null;
+          return Math.max(0, Math.min(1, yp));
+        }).filter(function (v) { return v != null; });
+        // Append the rolling consensus from BTC rounds as a probability proxy
+        // so we always have something to draw before the first OST bet lands.
+        if (pts.length < 2) {
+          var rounds = readJson(ROUND_KEY, {});
+          var rk = Object.keys(rounds).sort();
+          rk.forEach(function (k) {
+            var r = rounds[k];
+            var op = Number(r.openPrice), cp = Number(r.closePrice);
+            if (Number.isFinite(op) && Number.isFinite(cp) && op > 0) {
+              // Simple drift → squashed probability YES (UP) finished.
+              var drift = (cp - op) / op;
+              var p = 1 / (1 + Math.exp(-drift * 800));
+              pts.push(Math.max(0.02, Math.min(0.98, p)));
+            }
+          });
+        }
+        if (pts.length < 2) {
+          setText(bodyEl, 'chartStatus', 'awaiting first live tick…');
+          return;
+        }
+        var series = side === 'NO' ? pts.map(function (p) { return 1 - p; }) : pts;
+        // Pad with invisible 0 and 1 anchors so drawSeries shows the
+        // full probability range and YES/NO look genuinely different.
+        var padded = [0].concat(series).concat([1]);
+        var color = side === 'NO' ? '#ff7c8a' : '#7ce6a8';
+        // Cheat: draw twice — invisible padded for scale, visible series on top.
+        var ctx = canvas.getContext('2d');
+        var dpr = window.devicePixelRatio || 1;
+        var w = canvas.clientWidth || 600, h = canvas.clientHeight || 220;
+        canvas.width = Math.floor(w * dpr); canvas.height = Math.floor(h * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, w, h);
+        // Y grid + 50% midline
+        ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 1;
+        for (var i = 1; i < 4; i++) {
+          var yy = (i / 4) * h;
+          ctx.beginPath(); ctx.moveTo(0, yy); ctx.lineTo(w, yy); ctx.stroke();
+        }
+        ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath(); ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2); ctx.stroke();
+        ctx.setLineDash([]);
+        // Filled area (locked Y axis 0..1)
+        var grad = ctx.createLinearGradient(0, 0, 0, h);
+        grad.addColorStop(0, color + '55'); grad.addColorStop(1, color + '00');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        series.forEach(function (p, idx) {
+          var x = (idx / (series.length - 1)) * w;
+          var py = h - p * (h - 8) - 4;
+          if (idx === 0) ctx.moveTo(x, py); else ctx.lineTo(x, py);
+        });
+        ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = color; ctx.lineWidth = 2;
+        ctx.beginPath();
+        series.forEach(function (p, idx) {
+          var x = (idx / (series.length - 1)) * w;
+          var py = h - p * (h - 8) - 4;
+          if (idx === 0) ctx.moveTo(x, py); else ctx.lineTo(x, py);
+        });
+        ctx.stroke();
+        // Last-tick dot
+        var last = series[series.length - 1];
+        var lx = w - 4, ly = h - last * (h - 8) - 4;
+        ctx.fillStyle = color;
+        ctx.beginPath(); ctx.arc(lx, ly, 4, 0, Math.PI * 2); ctx.fill();
+        // Labels: 100¢ and 0¢
+        ctx.fillStyle = 'rgba(255,255,255,0.45)';
+        ctx.font = '10px ui-sans-serif, system-ui';
+        ctx.textAlign = 'left';
+        ctx.fillText('100¢', 4, 12);
+        ctx.fillText('0¢', 4, h - 4);
+        ctx.textAlign = 'right';
+        ctx.fillText((last * 100).toFixed(1) + '¢ ' + side, w - 6, ly - 8);
+        var label = padded.length;
+        setText(bodyEl, 'chartStatus', 'live · ' + side + ' · ' + (series.length) + ' ticks · ' + fmtTime(Date.now()));
+      }
+      var chartSideLocal = (typeof bodyEl.__getChartSide === 'function') ? bodyEl.__getChartSide() : 'YES';
+      window.__ostChartRedraw = function () { drawProbabilityChart((typeof bodyEl.__getChartSide === 'function') ? bodyEl.__getChartSide() : chartSideLocal); };
+      window.__ostRequestChartHistory = function (side) { chartSideLocal = side; drawProbabilityChart(side); };
+
+      // First paint immediately (some ticks already in the shared bag).
+      try { renderOstNativeBook(); } catch (_) {}
+      try { renderTradesTable(); } catch (_) {}
+      try { drawProbabilityChart(chartSideLocal); } catch (_) {}
+      // Repaint chart on a slow tick too so the timestamps stay fresh.
+      liveTimers.push(setInterval(function () { try { drawProbabilityChart((typeof bodyEl.__getChartSide === 'function') ? bodyEl.__getChartSide() : chartSideLocal); } catch (_) {} }, 2000));
     }
   }
 

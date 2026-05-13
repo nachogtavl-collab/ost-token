@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v126';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v110';
+const CACHE_NAME = 'ost-pwa-cache-v127';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v111';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [

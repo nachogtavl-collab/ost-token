@@ -113,7 +113,7 @@
     // endpoint isn't deployed yet — calling it spams the console with 404s.
     var feeds = [
       { url: BTC_PRICE_URL, pick: function (j) { return j && j.data && Number(j.data.amount); } },
-      { url: 'https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT', pick: function (j) { return j && Number(j.price); } }
+      { url: 'https://data-api.binance.vision/api/v3/ticker/price?symbol=BTCUSDT', pick: function (j) { return j && Number(j.price); } }
     ];
     var racePromises = feeds.map(function (f) {
       return fetchTimeout(f.url, { headers: { accept: 'application/json' } })
