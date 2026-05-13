@@ -48,7 +48,7 @@
     var style = document.createElement('style');
     style.id = STYLE_ID;
     style.textContent = [
-      '#ostMeshUpgrade.has-msx{padding:0;border-radius:18px;overflow:hidden;background:linear-gradient(180deg,#0b1a2c,#02080f)}',
+      '#ostMeshUpgrade.has-msx{flex:0 0 auto;padding:0;border-radius:18px;overflow:hidden;background:linear-gradient(180deg,#0b1a2c,#02080f)}',
       '#ostMeshUpgrade.has-msx .omu-social-head{padding:12px 14px 6px;border-bottom:1px solid rgba(127,216,255,.14)}',
       '.msx-tabs{display:flex;gap:4px;padding:8px 10px;background:rgba(0,0,0,.42);border-bottom:1px solid rgba(127,216,255,.12);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}.msx-tabs::-webkit-scrollbar{display:none}',
       '.msx-tab{flex:0 0 auto;border:1px solid rgba(255,255,255,.08);border-radius:999px;background:rgba(255,255,255,.04);color:#dff8ff;padding:8px 14px;font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;display:inline-flex;align-items:center;gap:6px;min-height:34px}',
@@ -153,6 +153,9 @@
     panel.classList.add('has-msx');
     var body = panel.querySelector('#omuBody');
     if (!body) return;
+    panel.classList.remove('is-collapsed');
+    var togglePanel = panel.querySelector('#omuTogglePanel');
+    if (togglePanel) { togglePanel.setAttribute('aria-expanded', 'true'); togglePanel.textContent = 'Hide'; }
     // Build tab strip
     var tabs = document.createElement('div');
     tabs.className = 'msx-tabs';

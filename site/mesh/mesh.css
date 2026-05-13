@@ -23,6 +23,10 @@
 }
 #ost-mesh-pavilion.is-open { display: flex; }
 
+#ost-mesh-pavilion .ost-mesh-shell > * {
+  flex-shrink: 0;
+}
+
 html.ost-mesh-scroll-lock,
 body.ost-mesh-scroll-lock {
   overflow: hidden !important;
