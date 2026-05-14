@@ -67,10 +67,18 @@
   // ---------------------------------------------------------------------------
   var FIVE_MIN_MS = 5 * 60 * 1000;
   var BTC_PRICE_URL = 'https://data-api.binance.vision/api/v3/ticker/price?symbol=BTCUSDT';
-  var BTC_REFRESH_MS = 700;           // live tick cadence for the shared BTC stream
-  var BTC_DEDUPE_MS  = 800;           // dedupe identical prints inside this window
+  var BTC_REFRESH_MS = 450;           // live tick cadence for the shared BTC stream
+  var BTC_DEDUPE_MS  = 300;           // dedupe identical prints inside this window
   var BTC_FEED_TIMEOUT_MS = 3000;
-  var BTC_MAX_SERIES = 600;           // ~10 min of 1Hz history for the chart
+  var BTC_MAX_SERIES = 900;           // ~7.5 min of sub-second history for the chart
+  var BTC_WS_URLS = [
+    'wss://stream.binance.com:9443/ws/btcusdt@trade',
+    'wss://data-stream.binance.vision/ws/btcusdt@trade'
+  ];
+  var btcWs = null;
+  var btcWsIndex = 0;
+  var btcWsReconnectTimer = 0;
+  var btcWsLastTickAt = 0;
   var BTC_PRICE_FEEDS = [
     {
       name: 'binance',
@@ -183,6 +191,17 @@
     market.meta = market.meta || {};
     market.meta.fairYesPriceNumber = baseYes;
     market.meta.fairNoPriceNumber = 1 - baseYes;
+    if (market && market.meta && /btc\s*-?\s*5m|btc5m/i.test(String(market.meta.kind || ''))) {
+      if (state) {
+        market.marketState = state;
+        market.meta.marketState = state;
+        market.meta.openYesStake = Number(state.openYesStake) || 0;
+        market.meta.openNoStake = Number(state.openNoStake) || 0;
+        market.meta.openYesShares = Number(state.openYesShares) || 0;
+        market.meta.openNoShares = Number(state.openNoShares) || 0;
+      }
+      return market;
+    }
     if (!state || !Number.isFinite(yes) || !Number.isFinite(no)) return market;
     market.marketState = state;
     market.yesPriceNumber = Math.max(0.02, Math.min(0.98, yes));
@@ -210,6 +229,7 @@
   function refreshNativeBtcMarketState(market) {
     var apiBase = ostApiBase();
     if (!apiBase || !market || !market.id || !market.isOstNative) return Promise.resolve(null);
+    if (market.meta && /btc\s*-?\s*5m|btc5m/i.test(String(market.meta.kind || ''))) return Promise.resolve(cachedNativeMarketState(market.id));
     var now = Date.now();
     if (nativeMarketStateInFlight[market.id]) return nativeMarketStateInFlight[market.id];
     if (now - (nativeMarketStateLastFetch[market.id] || 0) < 650) return Promise.resolve(cachedNativeMarketState(market.id));
@@ -251,8 +271,8 @@
   }
 
   function getBtcFeeds() {
-    // OST edge worker /btc/price isn't deployed yet \u2014 calling it spams 404s,
-    // so we rely solely on public CORS-safe exchange feeds.
+    // HTTP feeds are fallback only. The primary live path is the Binance trade
+    // WebSocket below, while the OST worker remains the canonical round source.
     return BTC_PRICE_FEEDS.slice();
   }
 
@@ -357,10 +377,67 @@
     return btcLastTick;
   }
 
+  function parseBtcWsPrice(event) {
+    try {
+      var data = JSON.parse(event && event.data || '{}');
+      var price = Number(data.p != null ? data.p : (data.c != null ? data.c : data.price));
+      return Number.isFinite(price) && price > 1000 ? price : NaN;
+    } catch (_) {
+      return NaN;
+    }
+  }
+
+  function scheduleBtcWebSocketReconnect(delayMs) {
+    if (btcWsReconnectTimer) return;
+    btcWsReconnectTimer = setTimeout(function () {
+      btcWsReconnectTimer = 0;
+      startBtcWebSocket();
+    }, delayMs || 900);
+  }
+
+  function startBtcWebSocket() {
+    if (typeof WebSocket === 'undefined' || !BTC_WS_URLS.length) return;
+    if (btcWs && (btcWs.readyState === WebSocket.OPEN || btcWs.readyState === WebSocket.CONNECTING)) return;
+    var url = BTC_WS_URLS[btcWsIndex % BTC_WS_URLS.length];
+    try {
+      btcWs = new WebSocket(url);
+      btcWs.onopen = function () { btcWsLastTickAt = Date.now(); };
+      btcWs.onmessage = function (event) {
+        var price = parseBtcWsPrice(event);
+        if (!Number.isFinite(price)) return;
+        btcWsLastTickAt = Date.now();
+        rememberBtcTick(price, 'binance-ws');
+        try { publishBtcMarketUpdate('binance-ws'); } catch (_) {}
+      };
+      btcWs.onerror = function () { try { btcWs.close(); } catch (_) {} };
+      btcWs.onclose = function () {
+        btcWs = null;
+        btcWsIndex += 1;
+        scheduleBtcWebSocketReconnect(1000 + Math.min(4000, btcWsIndex * 350));
+      };
+    } catch (_) {
+      btcWs = null;
+      btcWsIndex += 1;
+      scheduleBtcWebSocketReconnect(1500);
+    }
+  }
+
+  function keepBtcWebSocketFresh() {
+    if (typeof WebSocket === 'undefined') return;
+    if (typeof document !== 'undefined' && document.hidden) return;
+    if (!btcWs || btcWs.readyState === WebSocket.CLOSED || btcWs.readyState === WebSocket.CLOSING) {
+      startBtcWebSocket();
+      return;
+    }
+    if (btcWsLastTickAt && Date.now() - btcWsLastTickAt > 4500) {
+      try { btcWs.close(); } catch (_) {}
+    }
+  }
+
   function fetchBtcSpot(options) {
     var force = options && options.force;
     var directOnly = options && options.directOnly;
-    if (!force && btcLastTick.price && Date.now() - btcLastTick.ts < 700) {
+    if (!force && btcLastTick.price && Date.now() - btcLastTick.ts < 350) {
       return Promise.resolve(Object.assign({}, btcLastTick));
     }
     if (directOnly) return fetchDirectBtcSpot();
@@ -420,13 +497,16 @@
       var timeLeftRatio = msLeft / FIVE_MIN_MS;
       var volatilityPct = estimateRecentBtcVolPct();
       var momentumPct = estimateBtcMomentumPct();
-      var scale = Math.max(0.012, volatilityPct * Math.sqrt(Math.max(timeLeftRatio, 0.08)) * 2.4);
-      var score = clampNumber((deltaPct + momentumPct * 0.22) / scale, -4.5, 4.5);
+      var expectedMovePct = Math.max(0.006, volatilityPct * Math.sqrt(Math.max(timeLeftRatio, 0.015)) * 1.35);
+      var closePressure = 1 + (1 - timeLeftRatio) * 1.85;
+      var score = clampNumber(((deltaPct + momentumPct * 0.16) / expectedMovePct) * closePressure, -5.2, 5.2);
       yes = 1 / (1 + Math.exp(-score));
-      var confidence = 0.70 + (1 - timeLeftRatio) * 0.25;
+      var confidence = 0.56 + (1 - timeLeftRatio) * 0.39;
       yes = 0.5 + (yes - 0.5) * confidence;
-      if (Math.abs(delta) < 0.25) yes = 0.5 + (yes - 0.5) * 0.35;
-      yes = clampNumber(yes, 0.03, 0.97);
+      var nearTieUsd = Math.max(0.2, openPrice * 0.000006);
+      if (Math.abs(delta) < nearTieUsd) yes = 0.5 + (yes - 0.5) * 0.25;
+      var edgeCap = timeLeftRatio > 0.85 ? 0.82 : (timeLeftRatio > 0.5 ? 0.9 : 0.975);
+      yes = clampNumber(yes, 1 - edgeCap, edgeCap);
     }
     btcLastOdds = { roundId: roundId, yes: yes, previousYes: previousYes };
     return {
@@ -540,7 +620,9 @@
 
   // Periodic poll so cards, charts, and close-outs all share fresh BTC data.
   setInterval(pollBtcMarket, BTC_REFRESH_MS);
+  setInterval(keepBtcWebSocketFresh, 2500);
   pollBtcMarket();
+  startBtcWebSocket();
 
   function currentRoundBoundaries() {
     if (canonicalRoundIsFresh() && canonicalRound && Number(canonicalRound.openAt) && Number(canonicalRound.closeAt) && Number(canonicalRound.closeAt) > Date.now()) {
@@ -557,39 +639,33 @@
   function buildFiveMinBtcMarket(refPrice) {
     var b = currentRoundBoundaries();
     var roundRecord = readRounds()[String(b.openAt)] || {};
-    // Prefer the canonical worker round when it matches the current bucket so
-    // EVERY browser sees the same openPrice + livePrice + YES/NO.
+    // Canonical worker round owns open/close and price-to-beat. The freshest
+    // Binance trade tick owns the live price so the UI can move sub-second.
     var canon = canonicalRoundIsFresh() && canonicalRound && Number(canonicalRound.openAt) === b.openAt
       ? canonicalRound
       : null;
-    var canonOpenPrice = canon && Number(canon.openPrice);
+    var canonOpenPrice = canon && Number(canon.priceToBeat || canon.openPrice);
     var canonLiveTrusted = canon && canonicalRoundHasHotLivePrice(canon);
     var canonLivePrice = canonLiveTrusted ? Number(canon.livePrice) : NaN;
-    var livePrice = (Number.isFinite(canonLivePrice) && canonLivePrice > 0 ? canonLivePrice : 0) || btcLastTick.price || refPrice || roundRecord.openPrice || 0;
+    var canonLiveTs = Number(canon && (canon.livePriceTs || canon.updatedAt)) || 0;
+    var localLiveFresh = Number.isFinite(Number(btcLastTick.price)) && Number(btcLastTick.price) > 1000
+      && (!canonLiveTs || btcLastTick.ts >= canonLiveTs - 50 || Date.now() - btcLastTick.ts < 1200);
+    var livePrice = localLiveFresh
+      ? Number(btcLastTick.price)
+      : ((Number.isFinite(canonLivePrice) && canonLivePrice > 0 ? canonLivePrice : 0) || btcLastTick.price || refPrice || roundRecord.openPrice || 0);
+    var liveSource = localLiveFresh
+      ? (btcLastTick.source || 'binance-ws')
+      : ((canonLiveTrusted && canon && (canon.livePriceSource || canon.source)) || btcLastTick.source || (canon && (canon.livePriceSource || canon.source)) || 'BTC FEED');
+    var liveTs = localLiveFresh
+      ? btcLastTick.ts
+      : ((canonLiveTrusted && canon && Number(canon.livePriceTs)) || btcLastTick.ts || (canon && Number(canon.livePriceTs)) || 0);
     var openPrice = (Number.isFinite(canonOpenPrice) && canonOpenPrice > 0 ? canonOpenPrice : 0) || Number(roundRecord.openPrice) || 0;
-    var useCanonicalOdds = canonLiveTrusted && Number.isFinite(Number(canon.yesPriceNumber)) && Number.isFinite(canonOpenPrice) && canonOpenPrice > 0;
-    var odds;
-    if (useCanonicalOdds) {
-      var yes = Math.max(0.02, Math.min(0.98, Number(canon.yesPriceNumber)));
-      var prevYes = btcLastOdds.roundId === ('ost-btc5m-' + b.openAt) && Number.isFinite(btcLastOdds.yes) ? btcLastOdds.yes : yes;
-      btcLastOdds = { roundId: 'ost-btc5m-' + b.openAt, yes: yes, previousYes: prevYes };
-      odds = {
-        yes: yes,
-        no: 1 - yes,
-        previousYes: prevYes,
-        delta: Number(canon.delta) || (livePrice - openPrice),
-        deltaPct: Number(canon.deltaPct) || (openPrice > 0 ? ((livePrice - openPrice) / openPrice) * 100 : 0),
-        volatilityPct: 0,
-        momentumPct: 0,
-        canonical: true
-      };
-    } else {
-      odds = computeBtcOdds(openPrice, livePrice, b);
-    }
+    var odds = computeBtcOdds(openPrice, livePrice, b);
+    odds.canonical = !!canon;
     var roundId = 'ost-btc5m-' + b.openAt;
     var yesPct = (odds.yes * 100).toFixed(1) + '%';
     var noPct = (odds.no * 100).toFixed(1) + '%';
-    var sourceLabel = (canonLiveTrusted && canon && (canon.livePriceSource || canon.source)) || btcLastTick.source || (canon && (canon.livePriceSource || canon.source)) || 'BTC FEED';
+    var sourceLabel = liveSource || 'BTC FEED';
     sourceLabel = String(sourceLabel).toUpperCase();
     var priceToBeat = openPrice;
     var priceToBeatText = priceToBeat ? formatUsd(priceToBeat) : '$--';
@@ -647,8 +723,8 @@
         priceDeltaPct: odds.deltaPct,
         yesPriceNumber: odds.yes,
         noPriceNumber: odds.no,
-        priceSource: (canonLiveTrusted && canon && (canon.livePriceSource || canon.source)) || btcLastTick.source || (canon && (canon.livePriceSource || canon.source)) || '',
-        updatedAt: (canonLiveTrusted && canon && Number(canon.livePriceTs)) || btcLastTick.ts || (canon && Number(canon.livePriceTs)) || 0,
+        priceSource: liveSource || '',
+        updatedAt: liveTs || 0,
         volatilityPct: odds.volatilityPct,
         momentumPct: odds.momentumPct
       }
@@ -1271,18 +1347,22 @@
       var market = buildFiveMinBtcMarket();
       var rounds = readRounds();
       var rec = rounds[String(b.openAt)] || {};
-      return Object.assign({}, rec, market.meta || {}, {
-        id: market.id,
+      market.meta = Object.assign({}, rec, market.meta || {}, {
         openAt: b.openAt,
         closeAt: b.closeAt,
-        yesPriceNumber: market.yesPriceNumber,
-        noPriceNumber: market.noPriceNumber,
-        yesValue: market.yesValue,
-        noValue: market.noValue,
-        price: market.yesPriceNumber,
         livePrice: market.meta && market.meta.livePrice,
         source: market.meta && market.meta.priceSource,
         updatedAt: market.meta && market.meta.updatedAt
+      });
+      return Object.assign({}, market, {
+        openAt: b.openAt,
+        closeAt: b.closeAt,
+        openPrice: market.meta.openPrice,
+        livePrice: market.meta.livePrice,
+        source: market.meta.priceSource,
+        updatedAt: market.meta.updatedAt,
+        price: market.yesPriceNumber,
+        meta: market.meta
       });
     },
     markets: function () {

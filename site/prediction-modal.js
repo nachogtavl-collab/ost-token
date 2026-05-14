@@ -95,6 +95,15 @@
   function canonicalRoundMatchesMarket(market, round) {
     return !!(market && market.meta && round && Number(market.meta.openAt) === Number(round.openAt));
   }
+  function isFastBtcMarket(market) {
+    var id = String(market && market.id || '');
+    var kind = String(market && market.meta && market.meta.kind || '');
+    return /^ost-btc5m-/.test(id) || /btc\s*-?\s*5m|btc5m/i.test(kind);
+  }
+  function isOstNativeMarket(market) {
+    var id = String(market && market.id || '');
+    return !!(market && (market.isOstNative || market.source === 'ost' || /^ost-|^native-/i.test(id)));
+  }
   function canonicalBtcRoundIsHot(round) {
     var price = Number(round && round.livePrice);
     if (!Number.isFinite(price) || price <= 1000) return false;
@@ -168,6 +177,15 @@
   }
   function applyNativeMarketState(market, state) {
     if (!market || !state) return null;
+    market.meta = market.meta || {};
+    if (isFastBtcMarket(market)) {
+      market.marketState = Object.assign({}, market.marketState || {}, state);
+      market.meta.marketState = market.marketState;
+      window.__ostNativeMarketState = window.__ostNativeMarketState || {};
+      window.__ostNativeMarketState[market.id] = market.marketState;
+      try { window.dispatchEvent(new CustomEvent('ost:native-market-state', { detail: { marketId: market.id, state: market.marketState } })); } catch (_) {}
+      return market.marketState;
+    }
     var yes = Number(state.yesPriceNumber);
     var no = Number(state.noPriceNumber);
     if (!Number.isFinite(yes) || !Number.isFinite(no)) return null;
@@ -176,7 +194,6 @@
     market.baseNoPriceNumber = Number.isFinite(Number(state.baseNoPrice)) ? Number(state.baseNoPrice) : 1 - market.baseYesPriceNumber;
     market.yesPriceNumber = Math.max(0.01, Math.min(0.99, yes));
     market.noPriceNumber = Math.max(0.01, Math.min(0.99, no));
-    market.meta = market.meta || {};
     market.meta.marketState = market.marketState;
     window.__ostNativeMarketState = window.__ostNativeMarketState || {};
     window.__ostNativeMarketState[market.id] = market.marketState;
@@ -186,6 +203,7 @@
   function fetchNativeMarketState(market, baseYesOverride) {
     var base = ostApiBase();
     if (!base || !market || !market.id || !market.isOstNative) return Promise.resolve(null);
+    if (isFastBtcMarket(market)) return Promise.resolve(null);
     var baseYes = nativeBaseYesInput(market, baseYesOverride);
     return fetch(base + '/markets/state/' + encodeURIComponent(market.id) + '?baseYes=' + encodeURIComponent(baseYes), { cache: 'no-store' })
       .then(function (r) { return r && r.ok ? r.json() : null; })
@@ -719,6 +737,11 @@
       [record && record.marketId, record && record.conditionId, record && record.wallet, record && record.side, record && record.stake, record && (record.ts || record.createdAt)].join(':');
   }
   function recordMatchesMarket(record, market) {
+    if (!record || !market) return false;
+    var marketId = String(market.id || '').trim();
+    var recordMarketId = String(record.marketId || '').trim();
+    if (marketId && recordMarketId === marketId) return true;
+    if (isOstNativeMarket(market)) return false;
     var marketAliases = marketAliasList(market);
     if (!marketAliases.length) return false;
     var recordAliases = flowRecordAliasList(record);
@@ -782,17 +805,18 @@
   function buildSharedFlowIndex(remoteRecords, activeMarket) {
     var index = {};
     dedupeFlowRecords(remoteRecords || []).forEach(function (raw) {
-      var normalized = normalizeFlowRecord(null, raw, '', 'remote');
+      if (activeMarket && !recordMatchesMarket(raw, activeMarket)) return;
+      var normalized = normalizeFlowRecord(activeMarket || null, raw, '', 'remote');
       if (!normalized) return;
       addFlowToIndex(index, normalized);
-      if (activeMarket && recordMatchesMarket(normalized, activeMarket)) {
+      if (activeMarket) {
         marketAliasList(activeMarket).forEach(function (alias) { (index[alias] = index[alias] || []).push(normalized); });
       }
     });
     try {
       dedupeFlowRecords(readOrders()).forEach(function (raw) {
         if (activeMarket && !recordMatchesMarket(raw, activeMarket)) return;
-        var normalized = normalizeFlowRecord(activeMarket, raw, '', 'local');
+        var normalized = normalizeFlowRecord(activeMarket || null, raw, '', 'local');
         if (!normalized) return;
         addFlowToIndex(index, normalized);
         if (activeMarket) {
@@ -822,11 +846,9 @@
   }
   function optimisticallyMergeFlowRecord(market, record) {
     try {
-      var current = window.__ostSharedFeed || {};
       var index = buildSharedFlowIndex([], market);
-      Object.keys(current).forEach(function (key) { index[key] = (index[key] || []).concat(current[key] || []); });
       var normalized = normalizeFlowRecord(market, record, record && record.outcomeKey, 'local');
-      if (normalized) {
+      if (normalized && recordMatchesMarket(normalized, market)) {
         addFlowToIndex(index, normalized);
         marketAliasList(market).forEach(function (alias) { (index[alias] = index[alias] || []).push(normalized); });
       }
@@ -2058,21 +2080,34 @@
       liveTimers.push(setInterval(tickBtc, 200));
       var fetchSharedBtcTick = function () {
         return fetchCanonicalBtcRound().then(function (round) {
-          if (canonicalRoundMatchesMarket(market, round)) {
-            applyCanonicalBtcRoundToMarket(market, round);
-            var canonicalPrice = Number(round.livePrice);
-            if (Number.isFinite(canonicalPrice) && canonicalPrice > 1000 && canonicalBtcRoundIsHot(round)) {
-              return { price: canonicalPrice, source: round.livePriceSource || round.source || 'ost-canonical', round: round };
+          var api = window.OST_PREDICTION_API;
+          var cachedTickPromise = api && typeof api.btcSpot === 'function'
+            ? Promise.resolve(api.btcSpot())
+            : Promise.resolve(null);
+          return cachedTickPromise.then(function (cachedTick) {
+            var cachedPrice = Number(cachedTick && cachedTick.price);
+            var cachedTs = Number(cachedTick && (cachedTick.ts || cachedTick.updatedAt)) || 0;
+            var roundTs = Number(round && (round.livePriceTs || round.updatedAt)) || 0;
+            var cachedFresh = Number.isFinite(cachedPrice) && cachedPrice > 1000 && (!cachedTs || Date.now() - cachedTs < 1500);
+            if (cachedFresh && (!roundTs || cachedTs >= roundTs - 50 || Date.now() - cachedTs < 900)) {
+              return { price: cachedPrice, source: cachedTick.source || 'binance-ws', round: round || cachedCanonicalBtcRound() };
             }
-          }
-          if (window.OST_PREDICTION_API && typeof window.OST_PREDICTION_API.btcSpot === 'function') {
-            return window.OST_PREDICTION_API.btcSpot({ force: true, directOnly: true }).then(function (tick) {
-              var p = tick && Number(tick.price);
-              if (!Number.isFinite(p)) throw new Error('shared BTC feed empty');
-              return { price: p, source: tick.source || '', round: round || cachedCanonicalBtcRound() };
-            });
-          }
-          return fetchBtcRace().then(function (p) { return { price: p, source: BTC_PRICE_FEEDS[BTC_FEED_INDEX].name }; });
+            if (canonicalRoundMatchesMarket(market, round)) {
+              applyCanonicalBtcRoundToMarket(market, round);
+              var canonicalPrice = Number(round.livePrice);
+              if (Number.isFinite(canonicalPrice) && canonicalPrice > 1000 && canonicalBtcRoundIsHot(round)) {
+                return { price: canonicalPrice, source: round.livePriceSource || round.source || 'ost-canonical', round: round };
+              }
+            }
+            if (api && typeof api.btcSpot === 'function') {
+              return api.btcSpot({ force: true, directOnly: true }).then(function (tick) {
+                var p = tick && Number(tick.price);
+                if (!Number.isFinite(p)) throw new Error('shared BTC feed empty');
+                return { price: p, source: tick.source || '', round: round || cachedCanonicalBtcRound() };
+              });
+            }
+            return fetchBtcRace().then(function (p) { return { price: p, source: BTC_PRICE_FEEDS[BTC_FEED_INDEX].name }; });
+          });
         }).catch(function () {
           return fetchBtcRace().then(function (p) { return { price: p, source: BTC_PRICE_FEEDS[BTC_FEED_INDEX].name }; });
         });
@@ -2152,7 +2187,7 @@
       };
       hydrateCanonicalBtcTicks(market, bodyEl);
       fetchBtcLive();
-      liveTimers.push(setInterval(fetchBtcLive, 1000));
+      liveTimers.push(setInterval(fetchBtcLive, 450));
     }
 
     // ---- Polymarket live data ----

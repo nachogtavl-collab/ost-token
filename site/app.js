@@ -16440,6 +16440,15 @@
       state.orderHistory = readPredictionOrderRecords();
       renderPredictionLedger();
     });
+    window.addEventListener('ost:prediction-order-recorded', function(event) {
+      var record = event && event.detail;
+      state.orderHistory = readPredictionOrderRecords();
+      if (record && record.marketId) state.selectedMarketId = String(record.marketId);
+      if (record) state.latestReceipt = record;
+      renderPredictionTicket(getFilteredMarkets());
+      renderLatestReceipt();
+      renderPredictionLedger();
+    });
     // Modal-driven SELL refreshes the local ledger immediately so the wallet
     // portal portfolio + ledger reflect the cash-out without waiting for the
     // 15 s board poll or the 5 min resolution sweep.
