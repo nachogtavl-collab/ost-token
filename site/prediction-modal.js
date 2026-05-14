@@ -1228,6 +1228,66 @@
     });
   }
 
+  function placeBetDirectly(market, side, stake, outcomeKey) {
+    var api = window.OST_PREDICTION_API;
+    if (!api || typeof api.placeOrder !== 'function') {
+      return Promise.reject(new Error('Direct OST order API is not loaded yet.'));
+    }
+    if (market && market.isOstNative && market.meta && market.meta.closeAt && Date.now() >= Number(market.meta.closeAt)) {
+      return Promise.reject(new Error('This 5-minute round just closed. Loading the next round...'));
+    }
+    var requestedSide = String(side || 'YES').toUpperCase() === 'NO' ? 'NO' : 'YES';
+    var contract = getModalTradeContract(market, requestedSide, outcomeKey || '');
+    var contractSide = contract && contract.side ? String(contract.side).toUpperCase() : requestedSide;
+    var sideForOrder = contractSide.toLowerCase();
+    var price = Number(contract && contract.price);
+    if (!Number.isFinite(price) || price <= 0) {
+      price = contractSide === 'NO' ? Number(market && market.noPriceNumber) : Number(market && market.yesPriceNumber);
+    }
+    var yesPrice = Number(contract && contract.yesPrice);
+    var noPrice = Number(contract && contract.noPrice);
+    if (!Number.isFinite(yesPrice)) yesPrice = Number(market && market.yesPriceNumber);
+    if (!Number.isFinite(noPrice)) noPrice = Number(market && market.noPriceNumber);
+    if (!Number.isFinite(noPrice) && Number.isFinite(yesPrice)) noPrice = 1 - yesPrice;
+    if (!Number.isFinite(yesPrice) && Number.isFinite(noPrice)) yesPrice = 1 - noPrice;
+    if (!Number.isFinite(price) || price <= 0) {
+      return Promise.reject(new Error('Live share price is still loading. Try again in a moment.'));
+    }
+    var numericStake = Number(stake) || 0;
+    var shares = numericStake / price;
+    return Promise.resolve(api.placeOrder({
+      source: market.source || (market.isOstNative ? 'ost' : 'polymarket'),
+      marketId: market.id,
+      conditionId: (contract && contract.conditionId) || market.conditionId || (market.raw && (market.raw.conditionId || market.raw.condition_id)) || '',
+      gammaMarketId: (contract && contract.gammaMarketId) || market.gammaMarketId || (market.raw && market.raw.id) || '',
+      title: contract && contract.label && contract.label !== requestedSide ? (market.title + ' - ' + contract.label) : (market.title || market.question || 'Prediction ticket'),
+      topic: market.topic || '',
+      side: sideForOrder,
+      outcomeKey: (contract && contract.key) || outcomeKey || '',
+      outcomeLabel: (contract && contract.label) || requestedSide,
+      stake: numericStake,
+      price: price,
+      yesPrice: yesPrice,
+      noPrice: noPrice,
+      shares: shares,
+      potentialReturn: shares,
+      closeAtMs: market.closeAtMs || (market.meta && market.meta.closeAt) || 0,
+      clobTokenIds: contract && contract.clobTokenIds ? contract.clobTokenIds.slice(0, 4) : normalizeOutcomeTokenIds(market.clobTokenIds).slice(0, 4),
+      sourceUrl: market.primaryUrl || market.sourceUrl || location.href.split('#')[0],
+      reference: Date.now().toString(36)
+    })).then(function (result) {
+      return result && result.record ? result.record : result;
+    });
+  }
+
+  function placeBet(market, side, stake, outcomeKey) {
+    return placeBetDirectly(market, side, stake, outcomeKey)
+      .catch(function (directError) {
+        if (!directError || !/Direct OST order API/i.test(String(directError.message || ''))) throw directError;
+        return placeBetViaTradeDesk(market, side, stake, outcomeKey);
+      });
+  }
+
   // --------------------------------------------------------------------------
   // Render market detail
   // --------------------------------------------------------------------------
@@ -1644,6 +1704,7 @@
   function open(marketIdOrObj) {
     var market = (marketIdOrObj && typeof marketIdOrObj === 'object') ? marketIdOrObj : findMarket(marketIdOrObj);
     if (!market) { console.warn('[ost-modal] no market for', marketIdOrObj); return; }
+    clearLiveTimers();
 
     openModal(renderSkeleton(market));
     var modal = ensureModal();
@@ -1722,7 +1783,7 @@
       if (!s) { toast('Set a stake first.', 'err'); return; }
       toast('Submitting ' + selectedSide + ' ' + s + ' OST…', 'ok');
       (market.isOstNative ? withTimeout(refreshNativeMarketState(market, bodyEl), 1200, null) : Promise.resolve())
-        .then(function () { return placeBetViaTradeDesk(market, selectedSide, s, selectedOutcomeKey); })
+        .then(function () { return placeBet(market, selectedSide, s, selectedOutcomeKey); })
         .then(function (rec) {
           toast('✅ Bet recorded' + (rec && rec.sig ? ' (sig ' + String(rec.sig).slice(0, 8) + '…)' : '') + '. Check Open Positions below.', 'ok');
           // Share to global feed so every other OST user sees the tick live.
@@ -1923,8 +1984,60 @@
           if (btcSection) btcSection.classList.remove('is-up', 'is-down');
         }, 700);
       }
+      var roundRolloverStarted = false;
+      function openCanonicalBtcRound(round) {
+        if (!round || !Number(round.openAt) || !Number(round.closeAt)) return false;
+        if (Number(round.openAt) === Number(market.meta.openAt)) return false;
+        if (Number(round.closeAt) <= Date.now() - 1000) return false;
+        var openPrice = Number(round.priceToBeat || round.openPrice);
+        var livePrice = Number(round.livePrice);
+        var yes = Number(round.yesPriceNumber);
+        var no = Number(round.noPriceNumber);
+        var id = round.marketId || round.roundId || ('ost-btc5m-' + Number(round.openAt));
+        var next = findMarket(id);
+        if (!next || !next.meta || Number(next.meta.openAt) !== Number(round.openAt)) {
+          next = {
+            id: id,
+            source: 'ost',
+            isOstNative: true,
+            title: 'BTC 5 Minute Up or Down',
+            question: 'Will BTC close above ' + (Number.isFinite(openPrice) ? fmtUsd(openPrice) : 'the price to beat') + ' at round close?',
+            topic: 'BTC',
+            outcomes: ['YES', 'NO'],
+            yesPriceNumber: Number.isFinite(yes) ? yes : 0.5,
+            noPriceNumber: Number.isFinite(no) ? no : (Number.isFinite(yes) ? 1 - yes : 0.5),
+            baseYesPriceNumber: Number.isFinite(yes) ? yes : 0.5,
+            baseNoPriceNumber: Number.isFinite(no) ? no : (Number.isFinite(yes) ? 1 - yes : 0.5),
+            closeAtMs: Number(round.closeAt),
+            meta: {
+              kind: 'btc-5m',
+              openAt: Number(round.openAt),
+              closeAt: Number(round.closeAt),
+              openPrice: Number.isFinite(openPrice) ? openPrice : 0,
+              priceToBeat: Number.isFinite(openPrice) ? openPrice : 0,
+              livePrice: Number.isFinite(livePrice) ? livePrice : 0
+            }
+          };
+        }
+        applyCanonicalBtcRoundToMarket(next, round);
+        open(next);
+        return true;
+      }
       var tickBtc = function () {
-        var msLeft = Math.max(0, market.meta.closeAt - Date.now());
+        var rawMsLeft = Number(market.meta.closeAt) - Date.now();
+        if (rawMsLeft <= 0) {
+          setText(bodyEl, 'btcCountdown', 'loading next');
+          if (!roundRolloverStarted) {
+            roundRolloverStarted = true;
+            fetchCanonicalBtcRound().then(function (round) {
+              if (!openCanonicalBtcRound(round)) {
+                setTimeout(function () { roundRolloverStarted = false; }, 1000);
+              }
+            }).catch(function () { setTimeout(function () { roundRolloverStarted = false; }, 1000); });
+          }
+          return;
+        }
+        var msLeft = Math.max(0, rawMsLeft);
         var mm = Math.floor(msLeft / 60000), ss = Math.floor((msLeft % 60000) / 1000);
         setText(bodyEl, 'btcCountdown', mm + ':' + (ss < 10 ? '0' : '') + ss);
         // urgency cue when <30s remain
@@ -1987,18 +2100,13 @@
           }
           lastRenderedPrice = p;
           setText(bodyEl, 'btcLive', fmtUsd(p) + '  · ' + sourceName);
-          // Local fallback only when the shared worker round is unavailable.
-          if (!market.meta.openPrice && !canonicalRoundMatchesMarket(market, sharedRound)) {
-            market.meta.openPrice = p;
-            try {
-              var rounds = readJson(ROUND_KEY, {});
-              rounds[String(market.meta.openAt)] = Object.assign({}, rounds[String(market.meta.openAt)] || {}, { openPrice: p });
-              localStorage.setItem(ROUND_KEY, JSON.stringify(rounds));
-            } catch (_) {}
-            setText(bodyEl, 'btcOpen', fmtUsd(market.meta.priceToBeat || market.meta.openPrice || p));
-            setText(bodyEl, 'btcEquation', 'YES wins if BTC closes above ' + fmtUsd(market.meta.priceToBeat || market.meta.openPrice || p) + '; NO wins if BTC closes at or below ' + fmtUsd(market.meta.priceToBeat || market.meta.openPrice || p) + '.');
+          var beatPrice = Number(market.meta.priceToBeat || market.meta.openPrice || 0);
+          if (!(beatPrice > 0)) {
+            setText(bodyEl, 'btcOpen', 'loading');
+            setText(bodyEl, 'btcEquation', 'Loading the canonical Binance price to beat...');
+            setText(bodyEl, 'btcLive', fmtUsd(p) + ' - ' + sourceName);
+            return;
           }
-          var beatPrice = market.meta.priceToBeat || market.meta.openPrice || p;
           setText(bodyEl, 'btcOpen', fmtUsd(beatPrice));
           setText(bodyEl, 'btcEquation', 'YES wins if BTC closes above ' + fmtUsd(beatPrice) + '; NO wins if BTC closes at or below ' + fmtUsd(beatPrice) + '.');
           var d = p - beatPrice;

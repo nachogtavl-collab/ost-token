@@ -5942,7 +5942,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
     </script>
     <script src="native-markets.js?v=3"></script>
     <script src="icons.js?v=1"></script>
-    <script src="app.js?v=145"></script>
+    <script src="app.js?v=146"></script>
     <!-- Ghost AI Summoning Circle (rebuild) -->
     <script type="module" src="ghost/ghost.js?v=6"></script>
     <script type="module" src="mesh/mesh.js?v=33"></script>
@@ -5957,10 +5957,10 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="wallet-extras.js?v=22"></script>
   <script src="compartments.js?v=5"></script>
   <script src="prediction-extras.js?v=10"></script>
-  <script src="prediction-pro.js?v=19"></script>
+  <script src="prediction-pro.js?v=20"></script>
   <script src="prediction-scalar.js?v=3"></script>
   <link rel="stylesheet" href="prediction-modal.css?v=4">
-  <script src="prediction-modal.js?v=34"></script>
+  <script src="prediction-modal.js?v=35"></script>
   <script src="prediction-trade-popout.js?v=3"></script>
   <script src="prediction-pro-dash.js?v=10"></script>
   <!-- OST API edge worker (Cloudflare). Set before ost-console / pro-dash use it. -->
@@ -6034,7 +6034,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
 
       function warmOfflineAssets() {
         if (!('caches' in window)) return;
-        caches.open('ost-pwa-runtime-v118').then(function (cache) {
+        caches.open('ost-pwa-runtime-v147').then(function (cache) {
           collectOfflineAssetUrls().reduce(function (chain, url) {
             return chain.then(function () {
               return fetch(url, { mode: 'no-cors', cache: 'force-cache' })

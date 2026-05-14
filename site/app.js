@@ -4620,6 +4620,17 @@
   // Fetch on load and then refresh from the official Binance feed.
   fetchPrices();
   setInterval(fetchPrices, OFFICIAL_PRICE_INTERVAL_MS);
+  window.addEventListener('ost:btc-spot', function(event) {
+    const tickPrice = Number(event && event.detail && event.detail.price);
+    if (!Number.isFinite(tickPrice) || tickPrice <= 0) return;
+    prices.bitcoin = tickPrice;
+    fiatRates.BTC = 1 / tickPrice;
+    recordOfficialPricePoint('bitcoin', tickPrice);
+    const pEl = $('#price-bitcoin');
+    if (pEl) pEl.textContent = '$' + tickPrice.toLocaleString(undefined, { maximumFractionDigits: 2 });
+    updateCharts();
+    updateCalc();
+  });
 
   /* ---------- MINI CHARTS ---------- */
   function initCharts() {
@@ -16118,7 +16129,7 @@
     }
 
     function loadPredictionMarkets() {
-      if (state.loading) return;
+      if (state.loading || state.placing) return;
       state.loading = true;
       state.lastError = '';
       updateStatus('', 'Loading live feeds...');

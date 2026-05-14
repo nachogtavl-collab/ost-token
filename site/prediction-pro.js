@@ -543,8 +543,11 @@
   pollBtcMarket();
 
   function currentRoundBoundaries() {
+    if (canonicalRoundIsFresh() && canonicalRound && Number(canonicalRound.openAt) && Number(canonicalRound.closeAt) && Number(canonicalRound.closeAt) > Date.now()) {
+      return { openAt: Number(canonicalRound.openAt), closeAt: Number(canonicalRound.closeAt) };
+    }
     // Round buckets are aligned to the 5-min wall clock so ALL users see the
-    // same round id and the same close time — important for auto-settlement.
+    // same round id and the same close time - important for auto-settlement.
     var now = Date.now();
     var openAt  = Math.floor(now / FIVE_MIN_MS) * FIVE_MIN_MS;
     var closeAt = openAt + FIVE_MIN_MS;
@@ -563,7 +566,7 @@
     var canonLiveTrusted = canon && canonicalRoundHasHotLivePrice(canon);
     var canonLivePrice = canonLiveTrusted ? Number(canon.livePrice) : NaN;
     var livePrice = (Number.isFinite(canonLivePrice) && canonLivePrice > 0 ? canonLivePrice : 0) || btcLastTick.price || refPrice || roundRecord.openPrice || 0;
-    var openPrice = (Number.isFinite(canonOpenPrice) && canonOpenPrice > 0 ? canonOpenPrice : 0) || Number(roundRecord.openPrice) || refPrice || livePrice || 0;
+    var openPrice = (Number.isFinite(canonOpenPrice) && canonOpenPrice > 0 ? canonOpenPrice : 0) || Number(roundRecord.openPrice) || 0;
     var useCanonicalOdds = canonLiveTrusted && Number.isFinite(Number(canon.yesPriceNumber)) && Number.isFinite(canonOpenPrice) && canonOpenPrice > 0;
     var odds;
     if (useCanonicalOdds) {
@@ -761,7 +764,7 @@
     var canonOpen = canonicalRoundIsFresh() && canonicalRound && Number(canonicalRound.openAt) === market.meta.openAt
       ? Number(canonicalRound.openPrice) || 0
       : 0;
-    var openPrice = canonOpen || Number(market.meta.openPrice) || btcLastTick.price || 0;
+    var openPrice = canonOpen || Number(market.meta.openPrice) || 0;
     var existingOpen = Number(rounds[key] && rounds[key].openPrice);
     var shouldWrite = !rounds[key] || !existingOpen || (canonOpen && Math.abs(existingOpen - canonOpen) > 0.01);
     if (shouldWrite) {
@@ -771,7 +774,7 @@
         openAt: market.meta.openAt,
         closeAt: market.meta.closeAt,
         openPriceTs: (canonicalRound && Number(canonicalRound.openPriceTs)) || btcLastTick.ts || Date.now(),
-        openPriceSource: (canonOpen ? 'ost-canonical' : (btcLastTick.source || ''))
+        openPriceSource: (canonOpen ? 'ost-canonical' : (openPrice ? (btcLastTick.source || '') : 'pending-ost-canonical'))
       };
       writeRounds(rounds);
     }
