@@ -239,7 +239,11 @@
         price: Number.isFinite(price) ? price : null,
         yesPrice: Number.isFinite(contract && contract.yesPrice) ? Number(contract.yesPrice) : null,
         noPrice: Number.isFinite(contract && contract.noPrice) ? Number(contract.noPrice) : null,
+        shares: Number(rec && rec.shares) || (Number.isFinite(price) && price > 0 ? (Number(stake) || 0) / price : 0),
+        potentialReturn: Number(rec && rec.potentialReturn) || (Number.isFinite(price) && price > 0 ? (Number(stake) || 0) / price : 0),
         baseYesPrice: nativeBaseYesInput(market),
+        flowAction: 'buy',
+        tradeAction: 'buy',
         outcomeKey: (contract && contract.key) || outcomeKey || (rec && rec.outcomeKey) || '',
         outcomeLabel: (contract && contract.label) || (rec && rec.outcomeLabel) || sideUp,
         clobTokenIds: contract && contract.clobTokenIds ? contract.clobTokenIds.slice() : normalizeOutcomeTokenIds(market.clobTokenIds),
@@ -258,6 +262,9 @@
       }).then(function (r) { return r && r.ok ? r.json() : null; })
         .then(function (j) {
           if (j && j.marketState) applyNativeMarketState(market, j.marketState);
+          if (j && j.record) optimisticallyMergeFlowRecord(market, j.record);
+          if (j && j.flowRecord) optimisticallyMergeFlowRecord(market, j.flowRecord);
+          if (bodyEl && typeof bodyEl.__syncNativeQuoteUi === 'function') bodyEl.__syncNativeQuoteUi();
         })
         .catch(function () { /* fire-and-forget */ });
     } catch (_) { /* never block UI */ }
@@ -1348,7 +1355,9 @@
       }).then(function (r) { return r && r.ok ? r.json() : null; })
         .then(function (j) {
           if (market && j && j.marketState) applyNativeMarketState(market, j.marketState);
+          if (market && j && j.record) optimisticallyMergeFlowRecord(market, j.record);
           if (market && j && j.flowRecord) optimisticallyMergeFlowRecord(market, j.flowRecord);
+          if (market && bodyEl && typeof bodyEl.__syncNativeQuoteUi === 'function') bodyEl.__syncNativeQuoteUi();
         })
         .catch(function () {});
     } catch (_) {}
@@ -1769,13 +1778,13 @@
     function refreshSharedFeed() {
       var base = (window.OST_API_BASE || '').replace(/\/$/, '');
       if (!base) { applySharedFeed([]); return; }
-      fetch(base + '/positions/recent?limit=50', { cache: 'no-store' })
+      fetch(base + '/positions/recent?marketId=' + encodeURIComponent(market.id || '') + '&limit=120', { cache: 'no-store' })
         .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (j) { applySharedFeed(j && Array.isArray(j.recent) ? j.recent : []); })
         .catch(function () { applySharedFeed([]); });
     }
     refreshSharedFeed();
-    liveTimers.push(setInterval(refreshSharedFeed, 1500));
+    liveTimers.push(setInterval(refreshSharedFeed, 1000));
 
     // ---- Sell open positions on this market (live mark-to-market) ----
     var sellListEl = bodyEl.querySelector('[data-bind="sellList"]');
@@ -2295,8 +2304,7 @@
       // so users in the same market always see each other's actions.
       function ostFlowForMarket() {
         try {
-          var bag = window.__ostSharedFeed || {};
-          var arr = (bag[market.id] || []).slice();
+          var arr = getFlowForMarket(market, selectedOutcomeKey).slice();
           arr.sort(function (a, b) {
             return (new Date(b.ts).getTime() || 0) - (new Date(a.ts).getTime() || 0);
           });
@@ -2462,8 +2470,7 @@
       // actually toggles between YES (UP) and NO (DOWN/SAME).
       function ostFlowForMarket() {
         try {
-          var bag = window.__ostSharedFeed || {};
-          var arr = (bag[market.id] || []).slice();
+          var arr = getFlowForMarket(market, selectedOutcomeKey).slice();
           arr.sort(function (a, b) {
             return (new Date(b.ts).getTime() || 0) - (new Date(a.ts).getTime() || 0);
           });
@@ -2479,6 +2486,7 @@
         var flow = ostFlowForMarket();
         var yesAgg = {}, noAgg = {};
         flow.forEach(function (b) {
+          var action = String(b.flowAction || b.tradeAction || b.action || '').toLowerCase() === 'sell' || isClosedFlowRecord(b) ? 'sell' : 'buy';
           var stake = Number(b.stake) || 0;
           var sideUp = String(b.side || '').toUpperCase();
           var isYes = /YES|BUY|UP/.test(sideUp);
@@ -2489,15 +2497,26 @@
           if (!stake) return;
           if (isYes && Number.isFinite(yesPx) && yesPx > 0 && yesPx < 1) {
             var yk = (Math.round(yesPx * 1000) / 10).toFixed(1);
-            yesAgg[yk] = (yesAgg[yk] || 0) + stake;
+            yesAgg[yk] = yesAgg[yk] || { buy: 0, sell: 0 };
+            yesAgg[yk][action] += stake;
           } else if (!isYes && Number.isFinite(noPx) && noPx > 0 && noPx < 1) {
             var nk = (Math.round(noPx * 1000) / 10).toFixed(1);
-            noAgg[nk] = (noAgg[nk] || 0) + stake;
+            noAgg[nk] = noAgg[nk] || { buy: 0, sell: 0 };
+            noAgg[nk][action] += stake;
           }
         });
         function paint(target, bag, color, sideLabel) {
           if (!target) return;
-          var entries = Object.keys(bag).map(function (k) { return { p: Number(k) / 100, sz: bag[k] }; });
+          var entries = Object.keys(bag).map(function (k) {
+            var row = bag[k] || { buy: 0, sell: 0 };
+            return { p: Number(k) / 100, buy: Number(row.buy) || 0, sell: Number(row.sell) || 0, sz: (Number(row.buy) || 0) + (Number(row.sell) || 0) };
+          });
+          var state = market && market.marketState;
+          if (state) {
+            var q = sideLabel === 'YES' ? Number(market.yesPriceNumber) : Number(market.noPriceNumber);
+            var stateStake = sideLabel === 'YES' ? Number(state.openYesStake) : Number(state.openNoStake);
+            if (Number.isFinite(q) && q > 0 && q < 1 && Number.isFinite(stateStake) && stateStake > 0) entries.unshift({ p: q, buy: stateStake, sell: 0, sz: stateStake, stateRow: true });
+          }
           if (!entries.length) {
             target.innerHTML = '<div class="ost-modal__book-row book-empty" style="opacity:0.55;">' +
               '<span>No live ' + sideLabel + ' depth yet</span><span>—</span></div>';
@@ -2508,8 +2527,8 @@
           target.innerHTML = entries.slice(0, 8).map(function (r) {
             var pct = Math.max(6, Math.min(100, (r.sz / maxSz) * 100));
             return '<div class="ost-modal__book-row" style="position:relative;background:linear-gradient(90deg,' + color + '22 ' + pct + '%, transparent ' + pct + '%);">' +
-              '<span style="position:relative;z-index:1;color:' + color + ';font-weight:700;">' + (r.p * 100).toFixed(1) + '¢</span>' +
-              '<span style="position:relative;z-index:1;">' + r.sz.toLocaleString(undefined, { maximumFractionDigits: 2 }) + ' OST</span>' +
+              '<span style="position:relative;z-index:1;color:' + color + ';font-weight:700;">' + (r.p * 100).toFixed(1) + '¢' + (r.stateRow ? ' · open' : '') + '</span>' +
+              '<span style="position:relative;z-index:1;">' + (r.buy ? ('B ' + r.buy.toLocaleString(undefined, { maximumFractionDigits: 2 })) : '') + (r.sell ? (' / S ' + r.sell.toLocaleString(undefined, { maximumFractionDigits: 2 })) : '') + ' OST</span>' +
             '</div>';
           }).join('');
         }
@@ -2532,12 +2551,13 @@
         }
         body.innerHTML = flow.map(function (b) {
           var side = String(b.side || '').toUpperCase();
+          var isSell = String(b.flowAction || b.tradeAction || b.action || '').toLowerCase() === 'sell' || isClosedFlowRecord(b);
           var color = /YES|BUY|UP/.test(side) ? '#7ce6a8' : '#ff7c8a';
           var ts = new Date(b.ts).getTime() || Date.now();
           var px = Number(b.price);
           var sz = Number(b.stake);
           var ws = b.walletShort || (b.wallet ? String(b.wallet).slice(0, 4) + '…' + String(b.wallet).slice(-4) : 'OST');
-          var sideLabel = (side || '—') + ' · ' + escapeHtml(ws);
+          var sideLabel = (isSell ? 'SELL ' : 'BUY ') + (side || '—') + ' · ' + escapeHtml(ws);
           return '<tr>' +
             '<td>' + escapeHtml(fmtTime(ts)) + '</td>' +
             '<td style="color:' + color + ';font-weight:700;">' + sideLabel + '</td>' +
@@ -2597,6 +2617,8 @@
             });
             var liveYes = Number(sharedRound && sharedRound.yesPriceNumber);
             if (Number.isFinite(liveYes) && liveYes > 0 && liveYes < 1) btcPts.push(Math.max(0.02, Math.min(0.98, liveYes)));
+            var stateYes = Number(market && market.marketState && market.marketState.yesPriceNumber);
+            if (Number.isFinite(stateYes) && stateYes > 0 && stateYes < 1) btcPts.push(Math.max(0.02, Math.min(0.98, stateYes)));
           } catch (_) {}
           if (btcPts.length >= 2) pts = btcPts;
         }

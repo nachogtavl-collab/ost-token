@@ -447,6 +447,9 @@ const NATIVE_MARKET_LIQUIDITY_SHARES = 750;
 const NATIVE_MARKET_LIQUIDITY_OST = 500;
 const NATIVE_MARKET_MAX_SHARE_IMPACT = 0.32;
 const NATIVE_MARKET_MAX_STAKE_IMPACT = 0.08;
+const NATIVE_MARKET_STATE_MEMORY = new Map();
+const POSITION_RECENT_MEMORY = [];
+const POSITION_RECENT_MEMORY_LIMIT = 300;
 
 function clampNativeProbability(value) {
   const probability = cleanProbability(value);
@@ -463,6 +466,63 @@ function isOstNativeMarketId(marketId, source) {
 
 function nativeMarketStateKey(marketId) {
   return 'market:state:' + cleanText(marketId, 128);
+}
+
+function clonePlain(value) {
+  if (!value || typeof value !== 'object') return value;
+  try { return JSON.parse(JSON.stringify(value)); } catch (_) { return Object.assign({}, value); }
+}
+
+function rememberNativeMarketStateHot(state) {
+  if (!state || !state.marketId) return null;
+  const marketId = cleanText(state.marketId, 128);
+  const copy = clonePlain(Object.assign({}, state, { marketId, hotAt: Date.now() }));
+  NATIVE_MARKET_STATE_MEMORY.set(marketId, copy);
+  if (NATIVE_MARKET_STATE_MEMORY.size > 250) {
+    const firstKey = NATIVE_MARKET_STATE_MEMORY.keys().next().value;
+    if (firstKey) NATIVE_MARKET_STATE_MEMORY.delete(firstKey);
+  }
+  return clonePlain(copy);
+}
+
+function readNativeMarketStateHot(marketId) {
+  const cleanMarketId = cleanText(marketId, 128);
+  const state = NATIVE_MARKET_STATE_MEMORY.get(cleanMarketId);
+  if (!state) return null;
+  const hotAt = cleanNumber(state.hotAt, state.updatedAt || 0) || 0;
+  if (hotAt && Date.now() - hotAt > NATIVE_MARKET_STATE_TTL_S * 1000) {
+    NATIVE_MARKET_STATE_MEMORY.delete(cleanMarketId);
+    return null;
+  }
+  return clonePlain(state);
+}
+
+function recentPositionKey(record) {
+  return cleanText(record && (record.signature || record.sig || record.id || [record.wallet, record.marketId, record.side, record.createdAt, record.ts].join(':')), 180);
+}
+
+function rememberRecentPositionHot(record) {
+  if (!record) return;
+  const key = recentPositionKey(record);
+  for (let i = POSITION_RECENT_MEMORY.length - 1; i >= 0; i--) {
+    if (recentPositionKey(POSITION_RECENT_MEMORY[i]) === key) POSITION_RECENT_MEMORY.splice(i, 1);
+  }
+  POSITION_RECENT_MEMORY.unshift(clonePlain(Object.assign({}, record, { hotAt: Date.now() })));
+  if (POSITION_RECENT_MEMORY.length > POSITION_RECENT_MEMORY_LIMIT) POSITION_RECENT_MEMORY.length = POSITION_RECENT_MEMORY_LIMIT;
+}
+
+function mergeRecentPositionRows(kvRows) {
+  const seen = new Set();
+  const rows = [];
+  POSITION_RECENT_MEMORY.concat(Array.isArray(kvRows) ? kvRows : []).forEach(record => {
+    if (!record) return;
+    const key = recentPositionKey(record);
+    if (key && seen.has(key)) return;
+    if (key) seen.add(key);
+    rows.push(record);
+  });
+  rows.sort((left, right) => (cleanNumber(right?.createdAt, 0) || toMs(right?.ts) || cleanNumber(right?.hotAt, 0) || 0) - (cleanNumber(left?.createdAt, 0) || toMs(left?.ts) || cleanNumber(left?.hotAt, 0) || 0));
+  return rows;
 }
 
 function defaultNativeMarketState(marketId) {
@@ -635,6 +695,8 @@ async function nativeBaseYesForMarket(env, marketId, fallbackBaseYes) {
 
 async function loadNativeMarketState(env, marketId) {
   const cleanMarketId = cleanText(marketId, 128);
+  const hot = readNativeMarketStateHot(cleanMarketId);
+  if (hot) return normalizeNativeMarketState(hot, cleanMarketId);
   if (!env.OST_KV) return defaultNativeMarketState(cleanMarketId);
   return normalizeNativeMarketState(await kvGet(env, nativeMarketStateKey(cleanMarketId), null), cleanMarketId);
 }
@@ -645,19 +707,24 @@ function publicNativeMarketState(state) {
 }
 
 async function getNativeMarketState(env, marketId, fallbackBaseYes) {
+  const hubState = await getNativeMarketStateFromHub(env, marketId, fallbackBaseYes);
+  if (hubState) return hubState;
   const state = await loadNativeMarketState(env, marketId);
   state.baseYesPrice = await nativeBaseYesForMarket(env, state.marketId, fallbackBaseYes != null ? fallbackBaseYes : state.baseYesPrice);
   state.updatedAt = state.updatedAt ? state.updatedAt : Date.now();
   const quoted = quoteNativeMarketState(state, state.baseYesPrice);
   Object.assign(state, quoted);
+  rememberNativeMarketStateHot(state);
   if (env.OST_KV) await kvPut(env, nativeMarketStateKey(state.marketId), state, NATIVE_MARKET_STATE_TTL_S);
   return publicNativeMarketState(state);
 }
 
 async function applyNativePositionToMarketState(env, positionRecord, fallbackBaseYes) {
-  if (!env.OST_KV) return null;
   if (!positionRecord) return null;
   if (!isOstNativeMarketId(positionRecord.marketId, positionRecord.source)) return null;
+  const hubState = await applyNativePositionToMarketStateHub(env, positionRecord, fallbackBaseYes);
+  if (hubState) return hubState;
+  if (!env.OST_KV) return null;
   const state = await loadNativeMarketState(env, positionRecord.marketId);
   const positionKey = nativePositionKey(positionRecord);
   const previousImpact = state.orders[positionKey] ? state.orders[positionKey] : null;
@@ -670,6 +737,7 @@ async function applyNativePositionToMarketState(env, positionRecord, fallbackBas
   const quoted = quoteNativeMarketState(state, state.baseYesPrice);
   Object.assign(state, quoted);
   pruneNativeMarketOrders(state);
+  rememberNativeMarketStateHot(state);
   await kvPut(env, nativeMarketStateKey(state.marketId), state, NATIVE_MARKET_STATE_TTL_S);
   return publicNativeMarketState(state);
 }
@@ -682,6 +750,160 @@ function mergeNewest(bucket, record, limit = 100) {
     : current;
   next.unshift(record);
   return next.slice(0, limit);
+}
+
+function nativeMarketHubStub(env) {
+  if (!env || !env.NATIVE_MARKET_HUB) return null;
+  try {
+    const id = env.NATIVE_MARKET_HUB.idFromName('ost-native-market-hub-v1');
+    return env.NATIVE_MARKET_HUB.get(id);
+  } catch (_) {
+    return null;
+  }
+}
+
+async function nativeMarketHubJson(env, path, init) {
+  const stub = nativeMarketHubStub(env);
+  if (!stub) return null;
+  try {
+    const response = await stub.fetch('https://ost-native-market-hub.local' + path, init || {});
+    if (!response || !response.ok) return null;
+    return await response.json();
+  } catch (_) {
+    return null;
+  }
+}
+
+async function getNativeMarketStateFromHub(env, marketId, fallbackBaseYes) {
+  const cleanMarketId = cleanText(marketId, 128);
+  if (!cleanMarketId) return null;
+  const params = new URLSearchParams();
+  if (fallbackBaseYes != null) params.set('baseYes', String(fallbackBaseYes));
+  const payload = await nativeMarketHubJson(env, '/state/' + encodeURIComponent(cleanMarketId) + (params.toString() ? '?' + params.toString() : ''));
+  const state = payload && payload.state;
+  if (!state) return null;
+  rememberNativeMarketStateHot(state);
+  return state;
+}
+
+async function applyNativePositionToMarketStateHub(env, positionRecord, fallbackBaseYes) {
+  if (!positionRecord || !isOstNativeMarketId(positionRecord.marketId, positionRecord.source)) return null;
+  const payload = await nativeMarketHubJson(env, '/position', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ record: positionRecord, fallbackBaseYes })
+  });
+  const state = payload && payload.marketState;
+  if (!state) return null;
+  rememberNativeMarketStateHot(state);
+  if (payload.flowRecord) rememberRecentPositionHot(payload.flowRecord);
+  return state;
+}
+
+async function getNativeRecentPositionsFromHub(env, marketId, limit) {
+  const params = new URLSearchParams();
+  if (marketId) params.set('marketId', marketId);
+  if (limit) params.set('limit', String(limit));
+  const payload = await nativeMarketHubJson(env, '/recent' + (params.toString() ? '?' + params.toString() : ''));
+  return payload && Array.isArray(payload.recent) ? payload.recent : null;
+}
+
+export class NativeMarketHub {
+  constructor(state, env) {
+    this.state = state;
+    this.env = env;
+  }
+
+  async fetch(request) {
+    return this.state.blockConcurrencyWhile(() => this.handle(request));
+  }
+
+  async readMarket(marketId) {
+    const cleanMarketId = cleanText(marketId, 128);
+    const raw = await this.state.storage.get(nativeMarketStateKey(cleanMarketId));
+    return normalizeNativeMarketState(raw, cleanMarketId);
+  }
+
+  async writeMarket(state) {
+    const cleanMarketId = cleanText(state && state.marketId, 128);
+    if (!cleanMarketId) return;
+    await this.state.storage.put(nativeMarketStateKey(cleanMarketId), state);
+  }
+
+  async quoteMarket(marketId, fallbackBaseYes) {
+    const state = await this.readMarket(marketId);
+    state.baseYesPrice = await nativeBaseYesForMarket(this.env, state.marketId, fallbackBaseYes != null ? fallbackBaseYes : state.baseYesPrice);
+    state.updatedAt = state.updatedAt ? state.updatedAt : Date.now();
+    const quoted = quoteNativeMarketState(state, state.baseYesPrice);
+    Object.assign(state, quoted);
+    await this.writeMarket(state);
+    return publicNativeMarketState(state);
+  }
+
+  async recordRecent(record) {
+    if (!record) return;
+    const bucket = await this.state.storage.get('positions:recent') || [];
+    await this.state.storage.put('positions:recent', mergeNewest(bucket, record, POSITION_RECENT_MEMORY_LIMIT));
+  }
+
+  async applyPosition(record, fallbackBaseYes) {
+    if (!record || !isOstNativeMarketId(record.marketId, record.source)) return null;
+    const state = await this.readMarket(record.marketId);
+    const positionKey = nativePositionKey(record);
+    const previousImpact = state.orders[positionKey] ? state.orders[positionKey] : null;
+    if (previousImpact) applyNativeStateDelta(state, previousImpact, -1);
+    const nextImpact = nativePositionImpact(record);
+    applyNativeStateDelta(state, nextImpact, 1);
+    state.orders[positionKey] = nextImpact;
+    state.baseYesPrice = await nativeBaseYesForMarket(this.env, state.marketId, fallbackBaseYes != null ? fallbackBaseYes : state.baseYesPrice);
+    state.updatedAt = Date.now();
+    const quoted = quoteNativeMarketState(state, state.baseYesPrice);
+    Object.assign(state, quoted);
+    pruneNativeMarketOrders(state);
+    await this.writeMarket(state);
+    const flowRecord = recentFlowRecordForPosition(record);
+    await this.recordRecent(flowRecord);
+    return { marketState: publicNativeMarketState(state), flowRecord: flowRecord !== record ? flowRecord : null };
+  }
+
+  async readRecent(marketId, limit) {
+    const cleanMarketId = cleanText(marketId || '', 128);
+    const rows = await this.state.storage.get('positions:recent') || [];
+    const filtered = cleanMarketId ? rows.filter(record => cleanText(record?.marketId || '', 128) === cleanMarketId) : rows;
+    return filtered.slice(0, Math.min(200, cleanNumber(limit, 60) || 60));
+  }
+
+  async handle(request) {
+    const url = new URL(request.url);
+    const path = url.pathname.replace(/\/$/, '') || '/';
+    const method = request.method;
+    if (method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS_HEADERS });
+
+    const stateMatch = path.match(/^\/state\/([^/]+)$/);
+    if (stateMatch && method === 'GET') {
+      const marketId = decodeURIComponent(stateMatch[1]);
+      const baseYes = cleanProbability(url.searchParams.get('baseYes'));
+      const state = await this.quoteMarket(marketId, baseYes);
+      return json({ ok: true, marketId, state, ts: new Date().toISOString() }, 200, { 'cache-control': 'no-store' });
+    }
+
+    if (path === '/position' && method === 'POST') {
+      let body;
+      try { body = await request.json(); } catch (_) { return json({ error: 'invalid_json' }, 400); }
+      const result = await this.applyPosition(body && body.record, body && body.fallbackBaseYes);
+      if (!result) return json({ ok: false, error: 'not_native' }, 400);
+      return json(Object.assign({ ok: true }, result), 200, { 'cache-control': 'no-store' });
+    }
+
+    if (path === '/recent' && method === 'GET') {
+      const marketId = cleanText(url.searchParams.get('marketId') || '', 128);
+      const limit = Math.min(200, cleanNumber(url.searchParams.get('limit'), 60) || 60);
+      const recent = await this.readRecent(marketId, limit);
+      return json({ ok: true, recent, marketId: marketId || null, ts: new Date().toISOString() }, 200, { 'cache-control': 'no-store' });
+    }
+
+    return json({ error: 'not_found' }, 404);
+  }
 }
 
 function recentFlowRecordForPosition(record) {
@@ -1628,7 +1850,7 @@ export default {
       if (!Array.isArray(ring)) ring = [];
       const isCurrentRound = round.openAt === currentRound().openAt;
       const lastTick = ring.length ? ring[ring.length - 1] : null;
-      if (isCurrentRound && (!ring.length || Date.now() - Number(lastTick && lastTick.t || 0) > 2000)) {
+      if (isCurrentRound && (!ring.length || Date.now() - Number(lastTick && lastTick.t || 0) > 800)) {
         const snapshot = await buildCanonicalBtcRound(env, { refresh: true });
         const livePrice = Number(snapshot && snapshot.livePrice);
         if (Number.isFinite(livePrice) && livePrice > 0) {
@@ -1814,10 +2036,16 @@ export default {
     // Powers the shared "Recent ticks" ribbon so every user sees what every
     // other OST user just bought, on which market, at what price.
     if (path === '/positions/recent' && method === 'GET') {
-      const limit = Math.min(50, Number(url.searchParams.get('limit') || 30));
+      const limit = Math.min(200, Number(url.searchParams.get('limit') || 60));
+      const marketIdFilter = cleanText(url.searchParams.get('marketId') || '', 128);
       if (!env.OST_KV) return json({ recent: [], note: 'KV not configured' });
+      const hubRows = await getNativeRecentPositionsFromHub(env, marketIdFilter, limit);
       const recent = await kvGet(env, 'positions:recent', []);
-      return json({ recent: recent.slice(0, limit), ts: new Date().toISOString() }, 200, { 'cache-control': 'no-store' });
+      const rows = mergeRecentPositionRows((Array.isArray(hubRows) ? hubRows : []).concat(recent));
+      const filteredRows = marketIdFilter
+        ? rows.filter(record => cleanText(record?.marketId || '', 128) === marketIdFilter)
+        : rows;
+      return json({ recent: filteredRows.slice(0, limit), marketId: marketIdFilter || null, ts: new Date().toISOString() }, 200, { 'cache-control': 'no-store' });
     }
 
     // ── GET /positions/:wallet ────────────────────────────────────────────────
@@ -1898,6 +2126,7 @@ export default {
       // Global recent feed (keep last 100)
       const recent = await kvGet(env, 'positions:recent', []);
       const flowRecord = recentFlowRecordForPosition(record);
+      rememberRecentPositionHot(flowRecord);
       await kvPut(env, 'positions:recent', mergeNewest(recent, flowRecord, 100), 60 * 60 * 24 * 7);
       const marketState = await applyNativePositionToMarketState(env, record, nativeMarketStateBefore ? nativeMarketStateBefore.baseYesPrice : null);
       return json({ ok: true, stored: true, record, marketState, flowRecord: flowRecord !== record ? flowRecord : null });

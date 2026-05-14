@@ -19,6 +19,10 @@ class_name = "MeshHub"
 name = "FAUCET_GATE"
 class_name = "FaucetGate"
 
+[[durable_objects.bindings]]
+name = "NATIVE_MARKET_HUB"
+class_name = "NativeMarketHub"
+
 [[migrations]]
 tag = "mesh_hub_v1"
 new_sqlite_classes = ["MeshHub"]
@@ -26,6 +30,10 @@ new_sqlite_classes = ["MeshHub"]
 [[migrations]]
 tag = "faucet_gate_v1"
 new_sqlite_classes = ["FaucetGate"]
+
+[[migrations]]
+tag = "native_market_hub_v1"
+new_sqlite_classes = ["NativeMarketHub"]
 
 [vars]
 GAMMA_BASE = "https://gamma-api.polymarket.com"

@@ -67,7 +67,7 @@
   // ---------------------------------------------------------------------------
   var FIVE_MIN_MS = 5 * 60 * 1000;
   var BTC_PRICE_URL = 'https://data-api.binance.vision/api/v3/ticker/price?symbol=BTCUSDT';
-  var BTC_REFRESH_MS = 1000;          // live tick cadence for the shared BTC stream
+  var BTC_REFRESH_MS = 700;           // live tick cadence for the shared BTC stream
   var BTC_DEDUPE_MS  = 800;           // dedupe identical prints inside this window
   var BTC_FEED_TIMEOUT_MS = 3000;
   var BTC_MAX_SERIES = 600;           // ~10 min of 1Hz history for the chart
@@ -126,6 +126,9 @@
   var canonicalRoundFetchedAt = 0;
   var canonicalTicksSeededFor = 0;      // openAt of the round whose ticks we've seeded
   var canonicalTicksLoadingFor = 0;
+  var nativeMarketStateById = {};
+  var nativeMarketStateLastFetch = {};
+  var nativeMarketStateInFlight = {};
 
   function canonicalRoundIsFresh() {
     return canonicalRound && (Date.now() - canonicalRoundFetchedAt < 4500);
@@ -145,6 +148,90 @@
     var open = Number(round && (round.priceToBeat || round.openPrice));
     if (Number.isFinite(open) && open > 1000 && Math.abs(live - open) < 0.000001) return false;
     return true;
+  }
+
+  function rememberNativeMarketState(marketId, state) {
+    if (!marketId || !state) return null;
+    nativeMarketStateById[marketId] = Object.assign({}, state, { cachedAt: Date.now() });
+    try {
+      window.__ostNativeMarketState = window.__ostNativeMarketState || {};
+      window.__ostNativeMarketState[marketId] = nativeMarketStateById[marketId];
+      window.dispatchEvent(new CustomEvent('ost:native-market-state', { detail: { marketId: marketId, state: nativeMarketStateById[marketId] } }));
+    } catch (_) {}
+    return nativeMarketStateById[marketId];
+  }
+
+  function cachedNativeMarketState(marketId) {
+    var state = nativeMarketStateById[marketId];
+    try {
+      if (!state && window.__ostNativeMarketState) state = window.__ostNativeMarketState[marketId];
+    } catch (_) {}
+    return state || null;
+  }
+
+  function applyNativeMarketStateToBtcMarket(market, fairYes) {
+    var state = cachedNativeMarketState(market && market.id);
+    var yes = Number(state && state.yesPriceNumber);
+    var no = Number(state && state.noPriceNumber);
+    var baseYes = Number(fairYes);
+    if (!Number.isFinite(baseYes)) baseYes = Number(market && market.yesPriceNumber);
+    if (!Number.isFinite(baseYes)) baseYes = 0.5;
+    market.baseYesPriceNumber = baseYes;
+    market.baseNoPriceNumber = 1 - baseYes;
+    market.fairYesPriceNumber = baseYes;
+    market.fairNoPriceNumber = 1 - baseYes;
+    market.meta = market.meta || {};
+    market.meta.fairYesPriceNumber = baseYes;
+    market.meta.fairNoPriceNumber = 1 - baseYes;
+    if (!state || !Number.isFinite(yes) || !Number.isFinite(no)) return market;
+    market.marketState = state;
+    market.yesPriceNumber = Math.max(0.02, Math.min(0.98, yes));
+    market.noPriceNumber = Math.max(0.02, Math.min(0.98, no));
+    market.yesValue = (market.yesPriceNumber * 100).toFixed(1) + '%';
+    market.noValue = (market.noPriceNumber * 100).toFixed(1) + '%';
+    market.lastPriceNumber = market.yesPriceNumber;
+    market.meta.marketState = state;
+    market.meta.baseYesPrice = Number(state.baseYesPrice);
+    market.meta.yesPriceNumber = market.yesPriceNumber;
+    market.meta.noPriceNumber = market.noPriceNumber;
+    market.meta.shareImpact = Number(state.shareImpact) || 0;
+    market.meta.stakeImpact = Number(state.stakeImpact) || 0;
+    market.meta.totalImpact = Number(state.totalImpact) || (market.yesPriceNumber - baseYes);
+    market.meta.openYesStake = Number(state.openYesStake) || 0;
+    market.meta.openNoStake = Number(state.openNoStake) || 0;
+    market.meta.openYesShares = Number(state.openYesShares) || 0;
+    market.meta.openNoShares = Number(state.openNoShares) || 0;
+    market.secondaryMetricLabel = 'OST depth impact';
+    market.secondaryMetricValue = (market.meta.totalImpact >= 0 ? '+' : '') + (market.meta.totalImpact * 100).toFixed(1) + ' pts';
+    market.secondaryMetricNumber = Math.abs(market.meta.totalImpact);
+    return market;
+  }
+
+  function refreshNativeBtcMarketState(market) {
+    var apiBase = ostApiBase();
+    if (!apiBase || !market || !market.id || !market.isOstNative) return Promise.resolve(null);
+    var now = Date.now();
+    if (nativeMarketStateInFlight[market.id]) return nativeMarketStateInFlight[market.id];
+    if (now - (nativeMarketStateLastFetch[market.id] || 0) < 650) return Promise.resolve(cachedNativeMarketState(market.id));
+    nativeMarketStateLastFetch[market.id] = now;
+    var baseYes = Number(market.meta && market.meta.fairYesPriceNumber);
+    if (!Number.isFinite(baseYes)) baseYes = Number(market.fairYesPriceNumber || market.baseYesPriceNumber || market.yesPriceNumber || 0.5);
+    nativeMarketStateInFlight[market.id] = fetch(apiBase + '/markets/state/' + encodeURIComponent(market.id) + '?baseYes=' + encodeURIComponent(baseYes), { headers: { accept: 'application/json' }, cache: 'no-store' })
+      .then(function (r) { return r && r.ok ? r.json() : null; })
+      .then(function (j) {
+        var state = j && (j.state || j.marketState);
+        if (!state) return null;
+        rememberNativeMarketState(market.id, state);
+        try {
+          window.dispatchEvent(new CustomEvent('ost:btc-market-updated', {
+            detail: { reason: 'native-market-state', tick: Object.assign({}, btcLastTick), market: buildFiveMinBtcMarket() }
+          }));
+        } catch (_) {}
+        return state;
+      })
+      .catch(function () { return null; })
+      .then(function (state) { delete nativeMarketStateInFlight[market.id]; return state; });
+    return nativeMarketStateInFlight[market.id];
   }
 
   function clampNumber(value, min, max) {
@@ -365,6 +452,7 @@
         }
       }));
     } catch (e) {}
+    refreshNativeBtcMarketState(market);
     return market;
   }
   function pollBtcMarket() {
@@ -503,7 +591,7 @@
     var priceToBeat = openPrice;
     var priceToBeatText = priceToBeat ? formatUsd(priceToBeat) : '$--';
     var equation = 'YES wins if BTC closes above ' + priceToBeatText + '; NO wins if BTC closes at or below ' + priceToBeatText + '.';
-    return {
+    var market = {
       source: 'ost',
       sourceLabel: 'OST 5-min BTC',
       id: roundId,
@@ -562,6 +650,7 @@
         momentumPct: odds.momentumPct
       }
     };
+    return applyNativeMarketStateToBtcMarket(market, odds.yes);
   }
 
   function buildFeaturedPlaceholder(entry) {
