@@ -63,24 +63,29 @@
   // ---------------------------------------------------------------------------
   // 2) 5-min BTC OST native market (the headline attraction)
   //    Auto opens a fresh round every 5 minutes. Settles deterministically
-  //    when the round closes using the latest Coinbase BTC-USD price tick.
+  //    when the round closes using the latest Binance BTC-USDT price tick.
   // ---------------------------------------------------------------------------
   var FIVE_MIN_MS = 5 * 60 * 1000;
-  var BTC_PRICE_URL = 'https://api.coinbase.com/v2/prices/BTC-USD/spot';
+  var BTC_PRICE_URL = 'https://data-api.binance.vision/api/v3/ticker/price?symbol=BTCUSDT';
   var BTC_REFRESH_MS = 1000;          // live tick cadence for the shared BTC stream
   var BTC_DEDUPE_MS  = 800;           // dedupe identical prints inside this window
   var BTC_FEED_TIMEOUT_MS = 3000;
   var BTC_MAX_SERIES = 600;           // ~10 min of 1Hz history for the chart
   var BTC_PRICE_FEEDS = [
     {
-      name: 'coinbase',
+      name: 'binance',
       url: BTC_PRICE_URL,
-      pick: function (j) { return j && j.data && Number(j.data.amount); }
+      pick: function (j) { return j && Number(j.price); }
     },
     {
-      name: 'binance',
-      url: 'https://data-api.binance.vision/api/v3/ticker/price?symbol=BTCUSDT',
+      name: 'binance-us',
+      url: 'https://api.binance.us/api/v3/ticker/price?symbol=BTCUSDT',
       pick: function (j) { return j && Number(j.price); }
+    },
+    {
+      name: 'coinbase',
+      url: 'https://api.coinbase.com/v2/prices/BTC-USD/spot',
+      pick: function (j) { return j && j.data && Number(j.data.amount); }
     },
     {
       name: 'kraken',
@@ -124,6 +129,22 @@
 
   function canonicalRoundIsFresh() {
     return canonicalRound && (Date.now() - canonicalRoundFetchedAt < 4500);
+  }
+
+  function isBinanceSource(source) {
+    return /binance/i.test(String(source || ''));
+  }
+
+  function canonicalRoundHasHotLivePrice(round) {
+    var live = Number(round && round.livePrice);
+    if (!Number.isFinite(live) || live <= 1000) return false;
+    var source = (round && (round.livePriceSource || round.source)) || '';
+    if (isBinanceSource(source)) return true;
+    var ts = Number(round && (round.livePriceTs || round.updatedAt)) || 0;
+    if (!ts || Date.now() - ts > 2500) return false;
+    var open = Number(round && (round.priceToBeat || round.openPrice));
+    if (Number.isFinite(open) && open > 1000 && Math.abs(live - open) < 0.000001) return false;
+    return true;
   }
 
   function clampNumber(value, min, max) {
@@ -171,7 +192,7 @@
   }
 
   function fetchBtcFeed(feed) {
-    return fetchWithTimeout(feed.url, { headers: { accept: 'application/json' }, mode: 'cors' }, BTC_FEED_TIMEOUT_MS)
+    return fetchWithTimeout(feed.url, { headers: { accept: 'application/json', 'cache-control': 'no-cache' }, mode: 'cors' }, BTC_FEED_TIMEOUT_MS)
       .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error(feed.name + ' ' + r.status)); })
       .then(function (j) {
         var price = feed.pick(j);
@@ -209,30 +230,8 @@
     });
   }
 
-  function rememberBtcTick(price, source) {
-    var p = Number(price);
-    if (!Number.isFinite(p) || p <= 1000) return btcLastTick;
-    var now = Date.now();
-    if (btcLastTick.price === p && now - btcLastTick.ts < BTC_DEDUPE_MS) {
-      btcLastTick = { ts: now, price: p, source: source || btcLastTick.source || 'btc' };
-      try { window.dispatchEvent(new CustomEvent('ost:btc-spot', { detail: Object.assign({}, btcLastTick) })); } catch (e) {}
-      return btcLastTick;
-    }
-    if (btcLastTick.price) btcPrevTick = btcLastTick;
-    btcLastTick = { ts: now, price: p, source: source || 'btc' };
-    btcSeries.push({ ts: btcLastTick.ts, price: p, source: btcLastTick.source });
-    if (btcSeries.length > BTC_MAX_SERIES) btcSeries = btcSeries.slice(-BTC_MAX_SERIES);
-    try { window.dispatchEvent(new CustomEvent('ost:btc-spot', { detail: Object.assign({}, btcLastTick) })); } catch (e) {}
-    return btcLastTick;
-  }
-
-  function fetchBtcSpot(options) {
-    var force = options && options.force;
-    if (!force && btcLastTick.price && Date.now() - btcLastTick.ts < 700) {
-      return Promise.resolve(Object.assign({}, btcLastTick));
-    }
-    var fetchDirectSpot = function () {
-      return tryBtcFeeds(orderedBtcFeeds(), 0)
+  function fetchDirectBtcSpot() {
+    return tryBtcFeeds(orderedBtcFeeds(), 0)
       .then(function (result) {
         btcPreferredSource = result.source && result.source.replace(/\*$/, '') || btcPreferredSource;
         return Object.assign({}, rememberBtcTick(result.price, result.source));
@@ -252,19 +251,44 @@
         } catch (_) {}
         return Object.assign({}, btcLastTick, { stale: !!btcLastTick.price });
       });
-    };
+  }
+
+  function rememberBtcTick(price, source) {
+    var p = Number(price);
+    if (!Number.isFinite(p) || p <= 1000) return btcLastTick;
+    var now = Date.now();
+    if (btcLastTick.price === p && now - btcLastTick.ts < BTC_DEDUPE_MS) {
+      btcLastTick = { ts: now, price: p, source: source || btcLastTick.source || 'btc' };
+      try { window.dispatchEvent(new CustomEvent('ost:btc-spot', { detail: Object.assign({}, btcLastTick) })); } catch (e) {}
+      return btcLastTick;
+    }
+    if (btcLastTick.price) btcPrevTick = btcLastTick;
+    btcLastTick = { ts: now, price: p, source: source || 'btc' };
+    btcSeries.push({ ts: btcLastTick.ts, price: p, source: btcLastTick.source });
+    if (btcSeries.length > BTC_MAX_SERIES) btcSeries = btcSeries.slice(-BTC_MAX_SERIES);
+    try { window.dispatchEvent(new CustomEvent('ost:btc-spot', { detail: Object.assign({}, btcLastTick) })); } catch (e) {}
+    return btcLastTick;
+  }
+
+  function fetchBtcSpot(options) {
+    var force = options && options.force;
+    var directOnly = options && options.directOnly;
+    if (!force && btcLastTick.price && Date.now() - btcLastTick.ts < 700) {
+      return Promise.resolve(Object.assign({}, btcLastTick));
+    }
+    if (directOnly) return fetchDirectBtcSpot();
     if (ostApiBase()) {
       return fetchCanonicalRound()
         .then(function (round) {
           var p = round && Number(round.livePrice);
-          if (Number.isFinite(p) && p > 1000) {
+          if (Number.isFinite(p) && p > 1000 && canonicalRoundHasHotLivePrice(round)) {
             return Object.assign({}, rememberBtcTick(p, round.livePriceSource || 'ost-canonical'));
           }
-          return fetchDirectSpot();
+          return fetchDirectBtcSpot();
         })
-        .catch(fetchDirectSpot);
+        .catch(fetchDirectBtcSpot);
     }
-    return fetchDirectSpot();
+    return fetchDirectBtcSpot();
   }
 
   function estimateRecentBtcVolPct() {
@@ -351,7 +375,7 @@
     // never goes blank.
     fetchCanonicalRound()
       .then(function (round) {
-        if (round && Number.isFinite(Number(round.livePrice)) && round.livePrice > 0) {
+        if (round && Number.isFinite(Number(round.livePrice)) && round.livePrice > 0 && canonicalRoundHasHotLivePrice(round)) {
           // Mirror the canonical live price into the local cache + series so
           // every consumer (cards, modal, OST_PREDICTION_API) reads identical
           // numbers across all browsers.
@@ -362,14 +386,16 @@
           return;
         }
         // Worker round had no live price (cold start) — keep the public-feed
-        // waterfall so the UI stays alive.
-        return fetchBtcSpot({ force: true }).then(function () {
-          try { publishBtcMarketUpdate('direct-feed'); } catch (e) {}
+        // waterfall so the UI stays alive. This also covers static canonical
+        // one-tick rounds from an old worker deploy.
+        if (round && Number.isFinite(Number(round.openAt))) maybeSeedTickHistory(round.openAt);
+        return fetchBtcSpot({ force: true, directOnly: true }).then(function () {
+          try { publishBtcMarketUpdate(round ? 'direct-binance-canonical-open' : 'direct-feed'); } catch (e) {}
           settleClosedRounds();
         });
       })
       .catch(function () {
-        return fetchBtcSpot({ force: true }).then(function () {
+        return fetchBtcSpot({ force: true, directOnly: true }).then(function () {
           try { publishBtcMarketUpdate('direct-feed'); } catch (e) {}
           settleClosedRounds();
         });
@@ -396,7 +422,7 @@
   // first time we see a new round id, so two users opening the modal see
   // the same chart even if one of them just landed on the page.
   function maybeSeedTickHistory(openAt) {
-    if (!openAt || canonicalTicksSeededFor === openAt || canonicalTicksLoadingFor === openAt) return;
+    if (!openAt || (canonicalTicksSeededFor === openAt && btcSeries.length >= 2) || canonicalTicksLoadingFor === openAt) return;
     var apiBase = ostApiBase();
     if (!apiBase) return;
     canonicalTicksLoadingFor = openAt;
@@ -410,6 +436,10 @@
           .filter(function (t) { return Number.isFinite(Number(t && t.p)) && Number(t.p) > 1000; })
           .map(function (t) { return { ts: Number(t.t) || Date.now(), price: Number(t.p), source: t.s || 'ost-canonical' }; });
         if (!seeded.length) return;
+        if (seeded.length < 2) {
+          canonicalTicksSeededFor = 0;
+          return;
+        }
         btcSeries = seeded.slice(-BTC_MAX_SERIES);
         var last = seeded[seeded.length - 1];
         btcLastTick = { ts: last.ts, price: last.price, source: last.source };
@@ -442,10 +472,11 @@
       ? canonicalRound
       : null;
     var canonOpenPrice = canon && Number(canon.openPrice);
-    var canonLivePrice = canon && Number(canon.livePrice);
+    var canonLiveTrusted = canon && canonicalRoundHasHotLivePrice(canon);
+    var canonLivePrice = canonLiveTrusted ? Number(canon.livePrice) : NaN;
     var livePrice = (Number.isFinite(canonLivePrice) && canonLivePrice > 0 ? canonLivePrice : 0) || btcLastTick.price || refPrice || roundRecord.openPrice || 0;
     var openPrice = (Number.isFinite(canonOpenPrice) && canonOpenPrice > 0 ? canonOpenPrice : 0) || Number(roundRecord.openPrice) || refPrice || livePrice || 0;
-    var useCanonicalOdds = canon && Number.isFinite(Number(canon.yesPriceNumber)) && Number.isFinite(canonOpenPrice) && canonOpenPrice > 0;
+    var useCanonicalOdds = canonLiveTrusted && Number.isFinite(Number(canon.yesPriceNumber)) && Number.isFinite(canonOpenPrice) && canonOpenPrice > 0;
     var odds;
     if (useCanonicalOdds) {
       var yes = Math.max(0.02, Math.min(0.98, Number(canon.yesPriceNumber)));
@@ -467,7 +498,7 @@
     var roundId = 'ost-btc5m-' + b.openAt;
     var yesPct = (odds.yes * 100).toFixed(1) + '%';
     var noPct = (odds.no * 100).toFixed(1) + '%';
-    var sourceLabel = (canon && (canon.livePriceSource || canon.source)) || btcLastTick.source || 'BTC FEED';
+    var sourceLabel = (canonLiveTrusted && canon && (canon.livePriceSource || canon.source)) || btcLastTick.source || (canon && (canon.livePriceSource || canon.source)) || 'BTC FEED';
     sourceLabel = String(sourceLabel).toUpperCase();
     var priceToBeat = openPrice;
     var priceToBeatText = priceToBeat ? formatUsd(priceToBeat) : '$--';
@@ -498,10 +529,10 @@
       topics: new Set(['crypto', 'all']),
       displayTopics: ['crypto'],
       searchText: 'btc bitcoin 5min five-minute ost native ' + roundId,
-      primaryUrl: 'https://www.coinbase.com/price/bitcoin',
+      primaryUrl: 'https://www.binance.com/en/trade/BTC_USDT',
       secondaryUrl: BTC_PRICE_URL,
       secondaryLabel: 'Price feed',
-      primaryLabel: 'Open Coinbase',
+      primaryLabel: 'Open Binance',
       contractLabel: 'OST native · 5-min round',
       sortValue: Number.MAX_SAFE_INTEGER, // pin to the top
       createdAtMs: b.openAt,
@@ -525,8 +556,8 @@
         priceDeltaPct: odds.deltaPct,
         yesPriceNumber: odds.yes,
         noPriceNumber: odds.no,
-        priceSource: (canon && (canon.livePriceSource || canon.source)) || btcLastTick.source || '',
-        updatedAt: (canon && Number(canon.livePriceTs)) || btcLastTick.ts || 0,
+        priceSource: (canonLiveTrusted && canon && (canon.livePriceSource || canon.source)) || btcLastTick.source || (canon && (canon.livePriceSource || canon.source)) || '',
+        updatedAt: (canonLiveTrusted && canon && Number(canon.livePriceTs)) || btcLastTick.ts || (canon && Number(canon.livePriceTs)) || 0,
         volatilityPct: odds.volatilityPct,
         momentumPct: odds.momentumPct
       }
@@ -1137,7 +1168,7 @@
     version: '1.1',
     btcSpot: function (options) {
       return options && options.force
-        ? fetchBtcSpot({ force: true })
+        ? fetchBtcSpot({ force: true, directOnly: !!options.directOnly })
         : Promise.resolve(Object.assign({}, btcLastTick));
     },
     btcSeries: function () { return btcSeries.slice(); },

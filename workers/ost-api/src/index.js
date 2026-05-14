@@ -65,7 +65,7 @@ function currentRound() {
     openAt,
     closeAt: openAt + FIVE_MIN_MS,
     msLeft: openAt + FIVE_MIN_MS - now,
-    description: '5-minute BTC-USD direction market. Settles on Coinbase spot at close.'
+    description: '5-minute BTC-USDT direction market. Settles on Binance spot at close.'
   };
 }
 
@@ -73,14 +73,19 @@ function currentRound() {
 
 const BTC_FEEDS = [
   {
-    name: 'coinbase',
-    url: 'https://api.coinbase.com/v2/prices/BTC-USD/spot',
-    pick: j => j?.data?.amount && Number(j.data.amount)
-  },
-  {
     name: 'binance',
     url: 'https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT',
     pick: j => j?.price && Number(j.price)
+  },
+  {
+    name: 'binance-vision',
+    url: 'https://data-api.binance.vision/api/v3/ticker/price?symbol=BTCUSDT',
+    pick: j => j?.price && Number(j.price)
+  },
+  {
+    name: 'coinbase',
+    url: 'https://api.coinbase.com/v2/prices/BTC-USD/spot',
+    pick: j => j?.data?.amount && Number(j.data.amount)
   },
   {
     name: 'coingecko',
@@ -93,8 +98,13 @@ async function fetchBtcPrice() {
   for (const feed of BTC_FEEDS) {
     try {
       const r = await fetch(feed.url, {
-        headers: { accept: 'application/json', 'user-agent': 'OST-API/1.0' },
-        cf: { cacheTtl: 4, cacheEverything: true }
+        headers: {
+          accept: 'application/json',
+          'cache-control': 'no-cache, no-store, max-age=0',
+          pragma: 'no-cache',
+          'user-agent': 'OST-API/1.0'
+        },
+        cf: { cacheTtl: 0 }
       });
       if (!r.ok) continue;
       const j = await r.json();
@@ -113,6 +123,60 @@ async function fetchBtcPrice() {
 // different YES/NO numbers (~80¢ vs ~50¢ on the exact same round).
 const BTC_TICK_RING_MAX = 600;          // ~10 min of 1Hz ticks per round bucket
 const BTC_LIVE_TTL_S = 60 * 30;         // shared "latest tick" cache TTL
+const BTC_LIVE_REFRESH_MS = 650;        // keep Binance stream hot without stale 50/50 rounds
+const BTC_ROUND_OPEN_MEMORY = new Map();
+
+async function storeRoundOpenPrice(env, round, price, source, ts) {
+  if (!env.OST_KV || !Number.isFinite(price) || price <= 0) return null;
+  const record = {
+    openAt: round.openAt,
+    closeAt: round.closeAt,
+    openPrice: price,
+    openPriceSource: source || '',
+    openPriceTs: Number(ts) || Date.now(),
+    lockedBy: 'worker'
+  };
+  await kvPut(env, `round:${round.openAt}`, record, 60 * 60 * 2);
+  return record;
+}
+
+async function fetchBtcRoundOpenPrice(round) {
+  const cached = BTC_ROUND_OPEN_MEMORY.get(round.openAt);
+  if (cached && Number.isFinite(Number(cached.price)) && Number(cached.price) > 0) return cached;
+  const urls = [
+    `https://data-api.binance.vision/api/v3/klines?symbol=BTCUSDT&interval=5m&startTime=${round.openAt}&limit=1`,
+    `https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=5m&startTime=${round.openAt}&limit=1`
+  ];
+  for (const url of urls) {
+    try {
+      const r = await fetch(url, {
+        headers: {
+          accept: 'application/json',
+          'cache-control': 'no-cache, no-store, max-age=0',
+          pragma: 'no-cache',
+          'user-agent': 'OST-API/1.0'
+        },
+        cf: { cacheTtl: 0 }
+      });
+      if (!r.ok) continue;
+      const rows = await r.json();
+      const row = Array.isArray(rows) ? rows[0] : null;
+      const openTime = Number(row && row[0]);
+      const openPrice = Number(row && row[1]);
+      if (openTime === round.openAt && Number.isFinite(openPrice) && openPrice > 1000) {
+        const source = url.includes('binance.vision') ? 'binance-kline' : 'binance-kline-api';
+        const record = { price: openPrice, source, t: openTime };
+        BTC_ROUND_OPEN_MEMORY.set(round.openAt, record);
+        if (BTC_ROUND_OPEN_MEMORY.size > 6) {
+          const oldest = Array.from(BTC_ROUND_OPEN_MEMORY.keys()).sort((a, b) => a - b)[0];
+          BTC_ROUND_OPEN_MEMORY.delete(oldest);
+        }
+        return record;
+      }
+    } catch (_) { /* try next */ }
+  }
+  return null;
+}
 
 async function lockRoundOpenPrice(env, round, price, source) {
   if (!env.OST_KV || !Number.isFinite(price) || price <= 0) return null;
@@ -122,17 +186,8 @@ async function lockRoundOpenPrice(env, round, price, source) {
     // Open price already locked for this round — never overwrite.
     return existing;
   }
-  const record = {
-    openAt: round.openAt,
-    closeAt: round.closeAt,
-    openPrice: price,
-    openPriceSource: source || '',
-    openPriceTs: Date.now(),
-    lockedBy: 'worker'
-  };
   // 2h TTL is long enough to cover settlement after close + late-arriving bots.
-  await kvPut(env, key, record, 60 * 60 * 2);
-  return record;
+  return storeRoundOpenPrice(env, round, price, source, Date.now());
 }
 
 async function appendBtcTick(env, round, price, source) {
@@ -179,12 +234,24 @@ function serverComputeBtcOdds(openPrice, livePrice, msLeft) {
   return { yes, no: 1 - yes, deltaPct, delta, scale };
 }
 
+function btcRoundHasHotLivePrice(round) {
+  const live = Number(round?.livePrice);
+  if (!Number.isFinite(live) || live <= 1000) return false;
+  const source = String(round?.livePriceSource || round?.source || '');
+  if (/binance/i.test(source)) return true;
+  const ts = Number(round?.livePriceTs || 0);
+  if (!ts || Date.now() - ts > 2500) return false;
+  const open = Number(round?.priceToBeat || round?.openPrice);
+  if (Number.isFinite(open) && open > 1000 && Math.abs(live - open) < 0.000001) return false;
+  return true;
+}
+
 async function buildCanonicalBtcRound(env, opts) {
   const round = currentRound();
   const wantFresh = opts && opts.refresh !== false;
   let latest = await kvGet(env, 'btc:latest', null);
   const latestIsCurrentRound = latest && Number(latest.round) === round.openAt;
-  const stale = !latest || !latestIsCurrentRound || (Date.now() - Number(latest.t || 0) > 1500);
+  const stale = !latest || !latestIsCurrentRound || (Date.now() - Number(latest.t || 0) > BTC_LIVE_REFRESH_MS);
   if (wantFresh && stale) {
     const live = await fetchBtcPrice();
     if (live) {
@@ -195,7 +262,14 @@ async function buildCanonicalBtcRound(env, opts) {
   }
   const currentLatest = latest && Number(latest.round) === round.openAt ? latest : null;
   let stored = await kvGet(env, `round:${round.openAt}`, null);
-  const openPrice = Number(stored && stored.openPrice) || (currentLatest && Number(currentLatest.p)) || 0;
+  const roundOpen = await fetchBtcRoundOpenPrice(round);
+  if (roundOpen && Number.isFinite(Number(roundOpen.price)) && Number(roundOpen.price) > 0) {
+    const storedOpen = Number(stored && stored.openPrice);
+    if (!Number.isFinite(storedOpen) || Math.abs(storedOpen - Number(roundOpen.price)) > 0.000001 || stored.openPriceSource !== roundOpen.source) {
+      stored = await storeRoundOpenPrice(env, round, Number(roundOpen.price), roundOpen.source, roundOpen.t) || stored;
+    }
+  }
+  const openPrice = (roundOpen && Number(roundOpen.price)) || Number(stored && stored.openPrice) || (currentLatest && Number(currentLatest.p)) || 0;
   // First call of a fresh round and we just got the live price — that price IS
   // the open price by definition.
   if (currentLatest && openPrice && !stored) {
@@ -203,6 +277,8 @@ async function buildCanonicalBtcRound(env, opts) {
   }
   const livePrice = (currentLatest && Number(currentLatest.p)) || openPrice;
   const odds = serverComputeBtcOdds(openPrice, livePrice, round.msLeft);
+  const openPriceSource = (roundOpen && roundOpen.source) || stored && stored.openPriceSource || '';
+  const openPriceTs = (roundOpen && Number(roundOpen.t)) || stored && stored.openPriceTs || null;
   return {
     id: round.id,
     openAt: round.openAt,
@@ -210,8 +286,8 @@ async function buildCanonicalBtcRound(env, opts) {
     msLeft: round.msLeft,
     openPrice: openPrice || null,
     priceToBeat: openPrice || null,
-    openPriceSource: stored && stored.openPriceSource || '',
-    openPriceTs: stored && stored.openPriceTs || null,
+    openPriceSource,
+    openPriceTs,
     livePrice: livePrice || null,
     livePriceSource: currentLatest && currentLatest.s || '',
     livePriceTs: currentLatest && Number(currentLatest.t) || null,
@@ -550,7 +626,7 @@ async function nativeBaseYesForMarket(env, marketId, fallbackBaseYes) {
       if (openAt === current.openAt) {
         const round = await buildCanonicalBtcRound(env, { refresh: true });
         const roundYes = clampNativeProbability(round ? round.yesPriceNumber : null);
-        if (roundYes != null) baseYes = roundYes;
+        if (roundYes != null && btcRoundHasHotLivePrice(round)) baseYes = roundYes;
       }
     }
   }
@@ -1568,6 +1644,33 @@ export default {
         } else {
           const refreshedRing = await kvGet(env, ringKey, []);
           ring = Array.isArray(refreshedRing) ? refreshedRing : [];
+        }
+      }
+      if (isCurrentRound && ring.length < 2) {
+        const snapshot = await buildCanonicalBtcRound(env, { refresh: true });
+        const openPrice = Number(snapshot && (snapshot.priceToBeat || snapshot.openPrice));
+        const livePrice = Number(snapshot && snapshot.livePrice) || openPrice;
+        const liveTs = Number(snapshot && snapshot.livePriceTs) || Date.now();
+        const synthetic = [];
+        if (Number.isFinite(openPrice) && openPrice > 1000) {
+          synthetic.push({ t: round.openAt, p: openPrice, s: snapshot.openPriceSource || 'binance-kline' });
+        }
+        if (Number.isFinite(livePrice) && livePrice > 1000) {
+          synthetic.push({ t: Math.max(round.openAt + 1, liveTs), p: livePrice, s: snapshot.livePriceSource || snapshot.source || 'binance' });
+        }
+        if (synthetic.length) {
+          const seen = new Set();
+          ring = ring.concat(synthetic)
+            .filter(t => Number.isFinite(Number(t && t.t)) && Number.isFinite(Number(t && t.p)) && Number(t.p) > 1000)
+            .sort((a, b) => Number(a.t) - Number(b.t))
+            .filter(t => {
+              const key = `${Number(t.t)}:${Number(t.p)}`;
+              if (seen.has(key)) return false;
+              seen.add(key);
+              return true;
+            })
+            .slice(-BTC_TICK_RING_MAX);
+          await kvPut(env, ringKey, ring, 60 * 60 * 1);
         }
       }
       const ticks = since > 0 ? ring.filter(t => Number(t.t) > since) : ring;

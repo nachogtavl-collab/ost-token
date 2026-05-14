@@ -12,7 +12,7 @@
    * For Polymarket markets: pulls REAL data from the relay (or direct
      Polymarket APIs as fallback): orderbook depth, recent trades, price
      history. No more synthetic numbers.
-   * For OST native 5-min BTC: live countdown + Coinbase spot tick.
+    * For OST native 5-min BTC: live countdown + Binance spot tick.
    * Bet buttons certify the full path: select market in trade desk →
      set side → set stake → fire trade action. Success/failure shown
      inside the modal (not a clipped toast).
@@ -29,14 +29,19 @@
   // BTC price feeds — try in order, all browser-CORS-safe.
   var BTC_PRICE_FEEDS = [
     {
-      name: 'coinbase',
-      url: 'https://api.coinbase.com/v2/prices/BTC-USD/spot',
-      pick: function (j) { return j && j.data && Number(j.data.amount); }
-    },
-    {
       name: 'binance',
       url: 'https://data-api.binance.vision/api/v3/ticker/price?symbol=BTCUSDT',
       pick: function (j) { return j && Number(j.price); }
+    },
+    {
+      name: 'binance-us',
+      url: 'https://api.binance.us/api/v3/ticker/price?symbol=BTCUSDT',
+      pick: function (j) { return j && Number(j.price); }
+    },
+    {
+      name: 'coinbase',
+      url: 'https://api.coinbase.com/v2/prices/BTC-USD/spot',
+      pick: function (j) { return j && j.data && Number(j.data.amount); }
     },
     {
       name: 'kraken',
@@ -89,6 +94,17 @@
   }
   function canonicalRoundMatchesMarket(market, round) {
     return !!(market && market.meta && round && Number(market.meta.openAt) === Number(round.openAt));
+  }
+  function canonicalBtcRoundIsHot(round) {
+    var price = Number(round && round.livePrice);
+    if (!Number.isFinite(price) || price <= 1000) return false;
+    var source = String(round && (round.livePriceSource || round.source) || '');
+    if (/binance/i.test(source)) return true;
+    var ts = Number(round && (round.livePriceTs || round.updatedAt)) || 0;
+    if (!ts || Date.now() - ts > 2500) return false;
+    var open = Number(round && (round.priceToBeat || round.openPrice));
+    if (Number.isFinite(open) && open > 1000 && Math.abs(price - open) < 0.000001) return false;
+    return true;
   }
   function applyCanonicalBtcRoundToMarket(market, round) {
     if (!canonicalRoundMatchesMarket(market, round)) return null;
@@ -181,6 +197,15 @@
       if (applied && bodyEl && typeof bodyEl.__syncNativeQuoteUi === 'function') bodyEl.__syncNativeQuoteUi();
       return applied;
     }).catch(function () { return null; });
+  }
+  function withTimeout(promise, ms, fallback) {
+    var done = false;
+    return Promise.race([
+      Promise.resolve(promise).then(function (value) { done = true; return value; }, function () { done = true; return fallback; }),
+      new Promise(function (resolve) {
+        setTimeout(function () { if (!done) resolve(fallback); }, ms || 1200);
+      })
+    ]);
   }
   function isClosedFlowRecord(record) {
     var status = String(record && (record.status || record.outcome) || '').toLowerCase();
@@ -303,7 +328,7 @@
   }
   // Race all BTC feeds simultaneously — return whichever answers first.
   // BTC_LOCKED_FEED keeps the chosen source stable for the lifetime of the
-  // current 5-min round; flipping between coinbase/binance/kraken every tick
+  // current 5-min round; flipping between binance/coinbase/kraken every tick
   // produced visible 30¢ price discrepancies on the share chart.
   var BTC_LOCKED_FEED = null;       // index of the locked feed
   var BTC_LOCKED_ROUND = 0;         // openAt of the round the lock belongs to
@@ -316,7 +341,7 @@
   function fetchBtcSingle(idx) {
     var feed = BTC_PRICE_FEEDS[idx];
     if (!feed) return Promise.reject(new Error('feed missing'));
-    return fetchWithTimeout(feed.url, { headers: { accept: 'application/json' }, mode: 'cors' })
+    return fetchWithTimeout(feed.url, { headers: { accept: 'application/json', 'cache-control': 'no-cache' }, mode: 'cors', cache: 'no-store' })
       .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
       .then(function (j) {
         var p = feed.pick(j);
@@ -1667,14 +1692,13 @@
       var s = getStake();
       if (!s) { toast('Set a stake first.', 'err'); return; }
       toast('Submitting ' + selectedSide + ' ' + s + ' OST…', 'ok');
-      (market.isOstNative ? refreshNativeMarketState(market, bodyEl) : Promise.resolve())
+      (market.isOstNative ? withTimeout(refreshNativeMarketState(market, bodyEl), 1200, null) : Promise.resolve())
         .then(function () { return placeBetViaTradeDesk(market, selectedSide, s, selectedOutcomeKey); })
         .then(function (rec) {
           toast('✅ Bet recorded' + (rec && rec.sig ? ' (sig ' + String(rec.sig).slice(0, 8) + '…)' : '') + '. Check Open Positions below.', 'ok');
           // Share to global feed so every other OST user sees the tick live.
           shareBetGlobally(market, selectedSide, s, rec, selectedOutcomeKey);
-          // Auto-close after 2.5s so user can see positions
-          setTimeout(closeModal, 2500);
+          bodyEl.__syncNativeQuoteUi && bodyEl.__syncNativeQuoteUi();
         })
         .catch(function (err) {
           toast('⚠️ ' + (err && err.message ? err.message : 'Bet failed'), 'err');
@@ -1895,15 +1919,15 @@
           if (canonicalRoundMatchesMarket(market, round)) {
             applyCanonicalBtcRoundToMarket(market, round);
             var canonicalPrice = Number(round.livePrice);
-            if (Number.isFinite(canonicalPrice) && canonicalPrice > 1000) {
+            if (Number.isFinite(canonicalPrice) && canonicalPrice > 1000 && canonicalBtcRoundIsHot(round)) {
               return { price: canonicalPrice, source: round.livePriceSource || round.source || 'ost-canonical', round: round };
             }
           }
           if (window.OST_PREDICTION_API && typeof window.OST_PREDICTION_API.btcSpot === 'function') {
-            return window.OST_PREDICTION_API.btcSpot({ force: true }).then(function (tick) {
+            return window.OST_PREDICTION_API.btcSpot({ force: true, directOnly: true }).then(function (tick) {
               var p = tick && Number(tick.price);
               if (!Number.isFinite(p)) throw new Error('shared BTC feed empty');
-              return { price: p, source: tick.source || '' };
+              return { price: p, source: tick.source || '', round: round || cachedCanonicalBtcRound() };
             });
           }
           return fetchBtcRace().then(function (p) { return { price: p, source: BTC_PRICE_FEEDS[BTC_FEED_INDEX].name }; });
@@ -1959,7 +1983,7 @@
           if (detailEl) {
             detailEl.textContent = 'Price to beat: ' + fmtUsd(market.meta.priceToBeat || market.meta.openPrice) + '. Live BTC ' + fmtUsd(p) + ' is ' + (d >= 0 ? '+' : '-') + fmtUsd(Math.abs(d)) + ' from the beat via ' + String(sourceName || 'BTC feed').toUpperCase() + '. YES wins if close is above the price to beat; NO wins if close is at or below it.';
           }
-          var yesProb = sharedRound && Number(sharedRound.yesPriceNumber);
+          var yesProb = sharedRound && canonicalBtcRoundIsHot(sharedRound) && Number(sharedRound.yesPriceNumber);
           if (!Number.isFinite(yesProb)) {
             yesProb = 0.5 + 0.5 * Math.tanh(pct * 0.6);
             yesProb = Math.max(0.02, Math.min(0.98, yesProb));
