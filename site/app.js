@@ -13502,6 +13502,10 @@
     var loadTimer = null;
     var resolutionTimer = null;
     var resizeFrame = null;
+    var nativeRefreshTimer = null;
+    var nativeRefreshLastAt = 0;
+    var pendingOstBtcMarket = null;
+    var NATIVE_MARKET_RENDER_MIN_MS = 650;
 
     function getPredictionDefaultVisibleCount() {
       return window.matchMedia && window.matchMedia('(max-width: 720px)').matches ? 5 : 8;
@@ -15367,7 +15371,8 @@
       if (tradeHeadingEl) tradeHeadingEl.textContent = 'Build an OST ticket';
       if (tradeCopyEl) tradeCopyEl.textContent = 'Choose the live side, size the order, and route an OST-denominated ticket from the same market board into the devnet settlement vault.';
       if (tradeActionBtn) {
-        tradeActionBtn.disabled = state.loading || state.placing || !connectedWalletSession || !connectedWalletSession.publicKey || !canTradeSelection || !hasSufficientBalance;
+        var loadingBlocksTrade = state.loading && !(market && market.isOstNative);
+        tradeActionBtn.disabled = loadingBlocksTrade || state.placing || !connectedWalletSession || !connectedWalletSession.publicKey || !canTradeSelection || !hasSufficientBalance;
       }
       if (tradeActionLabelEl) {
         tradeActionLabelEl.textContent = state.placing
@@ -16003,10 +16008,45 @@
         updateStatus('is-error', 'Feeds unavailable right now');
       }
 
-      renderPredictionBoard();
+      renderOstNativeRefresh({ light: isPredictionInteractionActive() });
     }
 
-    function refreshOstNativePredictionMarkets() {
+    function isOstBtcMarketId(id) {
+      return String(id || '').indexOf('ost-btc5m-') === 0;
+    }
+
+    function isPredictionModalOpen() {
+      var modal = document.getElementById('ost-market-modal');
+      return !!(modal && modal.classList.contains('is-open'));
+    }
+
+    function isPredictionInteractionActive() {
+      if (isPredictionModalOpen()) return true;
+      var active = document.activeElement;
+      return !!(active && active.closest && active.closest('#predictionTradeDesk, #predictionMarketList, #predictionMarketStage'));
+    }
+
+    function renderOstNativeLightRefresh() {
+      var filteredMarkets = getFilteredMarkets();
+      updateSummary(filteredMarkets);
+      if (isPredictionInteractionActive() || !state.selectedMarketId || isOstBtcMarketId(state.selectedMarketId)) {
+        renderPredictionHero(filteredMarkets);
+        renderPredictionStage(filteredMarkets);
+        renderPredictionTicket(filteredMarkets);
+        renderLatestReceipt();
+      }
+    }
+
+    function renderOstNativeRefresh(options) {
+      if ((options && options.light) || isPredictionInteractionActive()) {
+        renderOstNativeLightRefresh();
+      } else {
+        renderPredictionBoard();
+      }
+    }
+
+    function refreshOstNativePredictionMarkets(options) {
+      options = options || {};
       if (typeof window.buildOstNativeMarkets !== 'function') return false;
       var native;
       try {
@@ -16021,9 +16061,13 @@
       state.markets = pinnedNative.concat(state.markets.filter(function(market) {
         return !(market && (market.isOstNative || String(market.id || '').indexOf('ost-btc5m-') === 0));
       }));
+      var selectedExists = state.markets.some(function(market) { return market && market.id === state.selectedMarketId; });
+      if ((!state.selectedMarketId || isOstBtcMarketId(state.selectedMarketId) || !selectedExists) && pinnedNative[0] && pinnedNative[0].id) {
+        state.selectedMarketId = pinnedNative[0].id;
+      }
       state.lastUpdated = new Date();
       try { window.__predictionState = state; } catch (_) {}
-      renderPredictionBoard();
+      renderOstNativeRefresh(options);
       return true;
     }
 
@@ -16033,7 +16077,7 @@
       return !!(market && ((market.meta && market.meta.kind === 'btc5m') || String(market.id || '').indexOf('ost-btc5m-') === 0));
     }
 
-    function applyOstBtcMarketUpdate(nextMarket) {
+    function applyOstBtcMarketUpdate(nextMarket, options) {
       if (!isOstBtcMarket(nextMarket)) return false;
       var normalized = normalizeNativePredictionMarket(nextMarket);
       var replaced = false;
@@ -16049,8 +16093,25 @@
       }
       state.lastUpdated = new Date();
       try { window.__predictionState = state; } catch (_) {}
-      renderPredictionBoard();
+      renderOstNativeRefresh(options || {});
       return true;
+    }
+
+    function scheduleOstNativePredictionRefresh(nextMarket) {
+      if (nextMarket) pendingOstBtcMarket = nextMarket;
+      if (nativeRefreshTimer) return;
+      var wait = Math.max(0, NATIVE_MARKET_RENDER_MIN_MS - (Date.now() - nativeRefreshLastAt));
+      nativeRefreshTimer = window.setTimeout(function() {
+        nativeRefreshTimer = null;
+        nativeRefreshLastAt = Date.now();
+        var market = pendingOstBtcMarket;
+        pendingOstBtcMarket = null;
+        if (market) {
+          applyOstBtcMarketUpdate(market, { light: true });
+        } else {
+          refreshOstNativePredictionMarkets({ light: true });
+        }
+      }, wait);
     }
 
     window.addEventListener('ost:btc-market-updated', function(event) {
@@ -16060,7 +16121,7 @@
           market = (window.buildOstNativeMarkets() || []).filter(isOstBtcMarket)[0];
         } catch (_) { market = null; }
       }
-      applyOstBtcMarketUpdate(market);
+      scheduleOstNativePredictionRefresh(market);
     });
 
     function loadDirectPredictionMarkets() {
@@ -16133,7 +16194,11 @@
       state.loading = true;
       state.lastError = '';
       updateStatus('', 'Loading live feeds...');
-      renderPredictionBoard();
+      if (isPredictionInteractionActive() || isOstBtcMarketId(state.selectedMarketId)) {
+        renderOstNativeLightRefresh();
+      } else {
+        renderPredictionBoard();
+      }
 
       var loadTask = window.location.protocol === 'file:'
         ? loadDirectPredictionMarkets()
@@ -16166,10 +16231,10 @@
           updateStatus('is-warning', 'Refresh failed — showing last snapshot');
         }
         state.lastError = error && error.message ? error.message : String(error);
-        renderPredictionBoard();
+        renderOstNativeRefresh({ light: isPredictionInteractionActive() || isOstBtcMarketId(state.selectedMarketId) });
       }).finally(function() {
         state.loading = false;
-        renderPredictionBoard();
+        renderOstNativeRefresh({ light: isPredictionInteractionActive() || isOstBtcMarketId(state.selectedMarketId) });
       });
     }
 
@@ -16387,21 +16452,17 @@
           state.latestReceipt = result && result.record ? result.record : null;
           state.orderHistory = readPredictionOrderRecords();
           state.availableBalance = result && Number.isFinite(result.remainingBalance) ? result.remainingBalance : state.availableBalance;
-          // Reset the stake so the ticket panel does NOT immediately re-show
-          // "not enough OST" against the freshly-debited balance — that
-          // misled users into thinking the trade had failed.
-          state.stake = 0;
-          if (stakeInputEl) stakeInputEl.value = '';
+          state.selectedMarketId = result && result.record && result.record.marketId ? String(result.record.marketId) : state.selectedMarketId;
+          var remaining = result && Number.isFinite(result.remainingBalance) ? result.remainingBalance : state.availableBalance;
+          var nextStake = Number.isFinite(remaining) ? Math.min(Number(state.stake) || 25, Math.max(0, remaining)) : (Number(state.stake) || 25);
+          state.stake = nextStake > 0 ? nextStake : 0;
+          if (stakeInputEl) stakeInputEl.value = state.stake ? String(state.stake) : '';
           var sigShort = result && result.signature ? String(result.signature).slice(0, 10) + '…' : '';
           var openedLabel = result && result.record && result.record.outcomeLabel ? result.record.outcomeLabel : ((state.selectedSide || 'yes').toUpperCase());
-          setTradeStatus('✅ Position opened — staked ' + formatOst(Number(result && result.record && result.record.stake) || 0) + ' on ' + openedLabel + '. Tx: ' + sigShort + ' — see Open positions below.', 'success');
-          toast('📈', 'Position opened — see Open positions');
+          var successMessage = '✅ Position opened — staked ' + formatOst(Number(result && result.record && result.record.stake) || 0) + ' on ' + openedLabel + '. Tx: ' + sigShort + '. Live BTC round stays open.';
+          toast('📈', 'Position opened');
           renderPredictionBoard();
-          // Auto-scroll to the open positions list so the user can see the new entry
-          try {
-            var posEl = document.getElementById('predictionPositions') || document.getElementById('predictionPositionList');
-            if (posEl && posEl.scrollIntoView) posEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          } catch (_) {}
+          setTradeStatus(successMessage, 'success');
         }).catch(function(error) {
           setTradeStatus(error && error.message ? error.message : t('wallet.portal.prediction.tradeFailed', 'Could not place the prediction market order right now.'), 'error');
         }).finally(function() {
@@ -16462,7 +16523,7 @@
       refreshPredictionOrderResolutions();
     });
     window.addEventListener('ost:btc-spot', function() {
-      refreshOstNativePredictionMarkets();
+      scheduleOstNativePredictionRefresh();
     });
 
     window.addEventListener('focus', function() {
@@ -16489,6 +16550,7 @@
       if (resolutionTimer) window.clearInterval(resolutionTimer);
       if (balancePollTimer) window.clearInterval(balancePollTimer);
       if (resizeFrame) window.cancelAnimationFrame(resizeFrame);
+      if (nativeRefreshTimer) window.clearTimeout(nativeRefreshTimer);
     });
   })();
 
