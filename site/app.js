@@ -2950,6 +2950,18 @@
     } catch {}
   }
 
+  function recordVaultRetainedLoss(event) {
+    var amount = Number(event && (event.amount != null ? event.amount : event.retainedOst));
+    if (!Number.isFinite(amount) || amount <= 0) return;
+    try {
+      if (typeof window.recordOstVaultRetainedLoss === 'function') {
+        window.recordOstVaultRetainedLoss(event);
+      } else if (typeof window.recordOstPlatformEvent === 'function') {
+        window.recordOstPlatformEvent(Object.assign({ kind: 'vault-retained-loss', vaultFlow: 'retained-loss', source: 'vault' }, event || {}, { amount: amount, retainedOst: amount }));
+      }
+    } catch (_) {}
+  }
+
   function shareLocalPredictionOrdersToRemote(options) {
     const settings = options || {};
     const base = getOstApiBase();
@@ -3035,28 +3047,15 @@
       if (!sourceInfo) throw new Error('This wallet does not have an OST token account yet. Claim or receive OST first.');
     }
 
-    const deskAccounts = await ensurePredictionDeskVaultAccount();
     const memo = buildPredictionOrderMemo(order);
-    const amountBaseUnits = decimalAmountToBaseUnits(Number(order.stake), OST_TOKEN_DECIMALS);
-
-    const transferIx = createTransferCheckedInstruction(
-      sourceAta,
-      mintPk,
-      deskAccounts.vaultTokenAccount,
-      trader,
-      amountBaseUnits,
-      OST_TOKEN_DECIMALS,
-      TOKEN_2022_PROGRAM_ID
-    );
-    const memoIx = createMemoInstruction(memo, trader);
-
-    let signature;
-    // Route through pool-paid tx if the rescue helper is loaded — user pays zero SOL.
-    if (window.OST_RESCUE && window.OST_RESCUE.sendUserSignedPoolPaidTx) {
-      signature = await window.OST_RESCUE.sendUserSignedPoolPaidTx([memoIx, transferIx]);
-    } else {
-      throw new Error(t('pay.walletNeedsSol', 'The OST fee vault is still loading. Please wait a moment and try again.'));
+    if (!window.OST_RESCUE || typeof window.OST_RESCUE.userSendsOstToPool !== 'function') {
+      throw new Error(t('pay.walletNeedsSol', 'The OST settlement vault is still loading. Please wait a moment and try again.'));
     }
+    // Fund the same payout pool that pays winners; retained losses therefore
+    // stay in the live vault instead of being stranded in a separate desk ATA.
+    const settlement = await window.OST_RESCUE.userSendsOstToPool(Number(order.stake), memo);
+    const signature = settlement && (settlement.sig || settlement.signature) || '';
+    const vaultTokenAccount = window.OST_SWAP_POOL && window.OST_SWAP_POOL.ata ? String(window.OST_SWAP_POOL.ata) : '';
 
     // Record the position immediately — we already have a confirmed signature.
     // The balance is re-fetched below for UI feedback only; we must NOT gate
@@ -3086,8 +3085,9 @@
       outcomeKey: order.outcomeKey || '',
       outcomeLabel: order.outcomeLabel || '',
       gammaMarketId: order.gammaMarketId || '',
-      vaultTokenAccount: deskAccounts.vaultTokenAccount.toBase58(),
-      settlementVault: deskAccounts.vaultTokenAccount.toBase58(),
+      vaultTokenAccount: vaultTokenAccount,
+      settlementVault: vaultTokenAccount,
+      vaultFlow: 'stake-in',
       createdAt: Date.now()
     };
     storePredictionOrderRecord(record);
@@ -3120,7 +3120,7 @@
     return {
       signature: signature,
       remainingBalance: remainingBalance,
-      vaultTokenAccount: deskAccounts.vaultTokenAccount.toBase58(),
+      vaultTokenAccount: vaultTokenAccount,
       record: record
     };
   }
@@ -14460,6 +14460,25 @@
           var action = getPredictionOrderAction(order);
           if (!action.canCash || !Number.isFinite(Number(action.payout)) || Number(action.payout) <= 0) {
             order.status = action.finalStatus || order.status || 'closed';
+            if (action.finalStatus === 'lost' && !order.vaultRetainedAt) {
+              var lostStake = Math.max(0, Number(order.stake || action.stake || 0) || 0);
+              if (lostStake > 0) {
+                order.vaultRetainedAt = Date.now();
+                order.vaultRetainedOst = lostStake;
+                recordVaultRetainedLoss({
+                  source: 'prediction',
+                  subKind: 'prediction-resolved-loss',
+                  amount: lostStake,
+                  retainedOst: lostStake,
+                  stake: Number(order.stake || 0) || 0,
+                  payoutOst: 0,
+                  marketId: order.marketId || '',
+                  title: order.title || '',
+                  side: order.side || '',
+                  linkedId: order.signature || order.sig || order.id || ''
+                });
+              }
+            }
             orders[idx] = order;
             writePredictionOrderRecords(orders);
             sharePredictionOrderRecord(order);
@@ -14488,6 +14507,24 @@
             order.cashoutOst = r.ost;
             order.cashoutAt = Date.now();
             order.cashoutKind = action.kind;
+            var retained = Math.max(0, Number(order.stake || action.stake || 0) - Number(r.ost || payout || 0));
+            if (retained > 0 && !order.vaultRetainedAt) {
+              order.vaultRetainedAt = Date.now();
+              order.vaultRetainedOst = retained;
+              recordVaultRetainedLoss({
+                source: 'prediction',
+                subKind: action.kind === 'prediction-settlement' ? 'prediction-settlement-shortfall' : 'prediction-sell-loss',
+                amount: retained,
+                retainedOst: retained,
+                stake: Number(order.stake || 0) || 0,
+                payoutOst: Number(r.ost || payout || 0) || 0,
+                marketId: order.marketId || '',
+                title: order.title || '',
+                side: order.side || '',
+                linkedId: order.signature || order.sig || order.id || '',
+                sig: r.sig || ''
+              });
+            }
             orders[idx] = order;
             writePredictionOrderRecords(orders);
             sharePredictionOrderRecord(order);
@@ -14532,6 +14569,24 @@
               order.cashoutAt = Date.now();
               order.cashoutKind = action.kind;
               order.cashoutError = (err && err.message) ? String(err.message).slice(0, 200) : 'unknown';
+              var fallbackRetained = Math.max(0, Number(order.stake || action.stake || 0) - Number(payout || 0));
+              if (fallbackRetained > 0 && !order.vaultRetainedAt) {
+                order.vaultRetainedAt = Date.now();
+                order.vaultRetainedOst = fallbackRetained;
+                recordVaultRetainedLoss({
+                  source: 'prediction',
+                  subKind: action.kind === 'prediction-settlement' ? 'prediction-settlement-shortfall' : 'prediction-sell-loss',
+                  amount: fallbackRetained,
+                  retainedOst: fallbackRetained,
+                  stake: Number(order.stake || 0) || 0,
+                  payoutOst: Number(payout || 0) || 0,
+                  marketId: order.marketId || '',
+                  title: order.title || '',
+                  side: order.side || '',
+                  linkedId: order.signature || order.sig || order.id || '',
+                  error: order.cashoutError
+                });
+              }
               orders[idx] = order;
               writePredictionOrderRecords(orders);
               sharePredictionOrderRecord(order);

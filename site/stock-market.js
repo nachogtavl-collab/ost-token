@@ -653,6 +653,26 @@
       order.pnlPct = pnl.pctText;
       order.cashoutOst = closeRecord.cashoutOst;
       order.cashoutSig = closeRecord.cashoutSig;
+      var retained = Math.max(0, Number(order.ostStake || 0) - Number(closeRecord.cashoutOst || 0));
+      if (retained > 0 && !order.vaultRetainedAt && typeof window.recordOstVaultRetainedLoss === 'function') {
+        order.vaultRetainedAt = Date.now();
+        order.vaultRetainedOst = retained;
+        try {
+          window.recordOstVaultRetainedLoss({
+            source: 'stock-mirror',
+            subKind: 'stock-close-loss',
+            amount: retained,
+            retainedOst: retained,
+            stake: Number(order.ostStake || 0) || 0,
+            payoutOst: Number(closeRecord.cashoutOst || 0) || 0,
+            token: order.symbol,
+            marketId: 'stock:' + order.symbol,
+            title: order.name || order.symbol,
+            linkedId: order.id || order.signature || '',
+            sig: closeRecord.cashoutSig || ''
+          });
+        } catch (_) {}
+      }
       upsertLocalOrder(order);
       upsertLocalOrder(closeRecord);
       setOrderStatus(relayError + order.symbol + ' sold at ' + fmtMoney(nowPrice) + '. ' + (payout && payout.localOnly ? 'Local close recorded. ' : '') + 'P/L ' + pnl.ostText + ' (' + pnl.pctText + ').', pnl.ostDelta >= 0 ? 'is-success' : 'is-error');

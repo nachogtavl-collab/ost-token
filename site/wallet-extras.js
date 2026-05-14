@@ -1818,6 +1818,23 @@
     notifyTxHistory();
   };
 
+  window.recordOstVaultRetainedLoss = function recordOstVaultRetainedLoss(event) {
+    var amount = Number(event && (event.amount != null ? event.amount : event.retainedOst));
+    if (!Number.isFinite(amount) || amount <= 0) return Promise.resolve(false);
+    return window.recordOstPlatformEvent(Object.assign({
+      kind: 'vault-retained-loss',
+      source: 'vault',
+      vaultFlow: 'retained-loss',
+      vault: 'ost-payout-pool',
+      amount: amount,
+      retainedOst: amount,
+      ts: Date.now()
+    }, event || {}, {
+      amount: amount,
+      retainedOst: amount
+    }));
+  };
+
   // Periodic background snapshot so the curve fills in even without txs
   function startSnapshotPoller() {
     var w = window.OST_WALLET;

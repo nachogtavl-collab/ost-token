@@ -1379,6 +1379,26 @@
       if (Number.isFinite(Number(sale.sellValue))) order.sellValue = Number(sale.sellValue);
       else order.sellValue = Number(payout) || 0;
       if (Number.isFinite(Number(sale.shares))) order.sellShares = Number(sale.shares);
+      var retained = Math.max(0, Number(order.stake || 0) - Number(payout || 0));
+      if (retained > 0 && !order.vaultRetainedAt && typeof window.recordOstVaultRetainedLoss === 'function') {
+        order.vaultRetainedAt = Date.now();
+        order.vaultRetainedOst = retained;
+        try {
+          window.recordOstVaultRetainedLoss({
+            source: 'prediction',
+            subKind: 'prediction-sell-loss',
+            amount: retained,
+            retainedOst: retained,
+            stake: Number(order.stake || 0) || 0,
+            payoutOst: Number(payout || 0) || 0,
+            marketId: order.marketId || (market && market.id) || '',
+            title: order.title || order.marketTitle || (market && market.title) || '',
+            side: order.side || '',
+            linkedId: order.signature || order.sig || order.id || '',
+            sig: order.cashoutSig || ''
+          });
+        } catch (_) {}
+      }
       var sellTick = market ? sellFlowRecord(order, market, payout, sale) : null;
       var orders = readOrders();
       var idx = orders.findIndex(function (o) {

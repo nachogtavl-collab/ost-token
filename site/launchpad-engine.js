@@ -234,6 +234,8 @@
 
     var all = loadHoldings();
     var ratio = pos.tokens > 0 ? tokens / pos.tokens : 0;
+    var costBasisSold = Math.max(0, Number(pos.costOst || 0) * ratio);
+    var retained = Math.max(0, costBasisSold - ostOut);
     pos.costOst = Math.max(0, pos.costOst - pos.costOst * ratio);
     pos.tokens = Math.max(0, pos.tokens - tokens);
     all[trader] = all[trader] || {};
@@ -249,6 +251,23 @@
     } catch (_) {}
     if (typeof window.recordOstPlatformEvent === 'function') {
       window.recordOstPlatformEvent({ kind: 'launchpad-sell', amount: ostOut, token: coin.symbol, sig: sig, ts: Date.now(), source: 'launchpad' });
+    }
+    if (retained > 0 && typeof window.recordOstVaultRetainedLoss === 'function') {
+      try {
+        window.recordOstVaultRetainedLoss({
+          source: 'launchpad',
+          subKind: 'launchpad-sell-loss',
+          amount: retained,
+          retainedOst: retained,
+          stake: costBasisSold,
+          payoutOst: ostOut,
+          token: coin.symbol,
+          marketId: coin.mint,
+          title: coin.name || coin.symbol,
+          linkedId: 'launchpad-sell:' + trader + ':' + coin.mint + ':' + tokens.toFixed(6),
+          sig: sig
+        });
+      } catch (_) {}
     }
     return { ok: true, ost: ostOut, tokens: tokens, price: coin.price, mcap: coin.mcap, curve: coin.curve, sig: sig, signature: sig };
   }

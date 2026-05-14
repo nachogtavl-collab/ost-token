@@ -131,6 +131,20 @@
       net: net,
       mult: Number(mult || 0)
     });
+    if (net < 0 && typeof window.recordOstVaultRetainedLoss === 'function') {
+      try {
+        window.recordOstVaultRetainedLoss({
+          source: 'games',
+          subKind: 'fair-game-loss',
+          amount: Math.abs(net),
+          retainedOst: Math.abs(net),
+          game: game,
+          bet: Number(bet || 0),
+          payoutOst: Number(payout || 0),
+          mult: Number(mult || 0)
+        });
+      } catch (_) {}
+    }
   }
 
   function getBalance() {
