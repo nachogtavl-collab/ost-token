@@ -230,7 +230,8 @@
     if (!force && btcLastTick.price && Date.now() - btcLastTick.ts < 700) {
       return Promise.resolve(Object.assign({}, btcLastTick));
     }
-    return tryBtcFeeds(orderedBtcFeeds(), 0)
+    var fetchDirectSpot = function () {
+      return tryBtcFeeds(orderedBtcFeeds(), 0)
       .then(function (result) {
         btcPreferredSource = result.source && result.source.replace(/\*$/, '') || btcPreferredSource;
         return Object.assign({}, rememberBtcTick(result.price, result.source));
@@ -250,6 +251,19 @@
         } catch (_) {}
         return Object.assign({}, btcLastTick, { stale: !!btcLastTick.price });
       });
+    };
+    if (ostApiBase()) {
+      return fetchCanonicalRound()
+        .then(function (round) {
+          var p = round && Number(round.livePrice);
+          if (Number.isFinite(p) && p > 1000) {
+            return Object.assign({}, rememberBtcTick(p, round.livePriceSource || 'ost-canonical'));
+          }
+          return fetchDirectSpot();
+        })
+        .catch(fetchDirectSpot);
+    }
+    return fetchDirectSpot();
   }
 
   function estimateRecentBtcVolPct() {
@@ -569,6 +583,24 @@
   function readOrders()  { try { return JSON.parse(localStorage.getItem(ORDERS_KEY) || '[]'); } catch (e) { return []; } }
   function writeOrders(o) { try { localStorage.setItem(ORDERS_KEY, JSON.stringify(o.slice(0, 200))); } catch (e) {} }
 
+  function shareSettledOrder(order) {
+    try {
+      var base = ostApiBase();
+      var wallet = order && (order.wallet || (window.OST_PREDICTION_API && window.OST_PREDICTION_API.walletAddress && window.OST_PREDICTION_API.walletAddress()));
+      if (!base || !wallet || !order || !order.marketId) return;
+      fetch(base + '/positions', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(Object.assign({}, order, {
+          wallet: wallet,
+          marketTitle: order.title || order.marketTitle || '',
+          signature: order.signature || order.sig || order.id || '',
+          ts: order.createdAt || order.ts || order.resolvedAt || Date.now()
+        }))
+      }).catch(function () {});
+    } catch (e) {}
+  }
+
   // Track open price + close price per round id so settlement is consistent
   var ROUND_KEY = 'ost.prediction.btc5m.rounds.v1';
   function readRounds()  { try { return JSON.parse(localStorage.getItem(ROUND_KEY) || '{}'); } catch (e) { return {}; } }
@@ -665,6 +697,7 @@
 
     // Mark winning open orders as cashable
     var ordersChanged = false;
+    var settledOrders = [];
     orders.forEach(function (o) {
       if (o.cashedOut || o.resolved) return;
       if (!o.marketId || o.marketId.indexOf('ost-btc5m-') !== 0) return;
@@ -683,9 +716,11 @@
       o.finalNoPrice = r.yesWon ? 0 : 1;
       o.settlementSource = 'ost-btc5m-' + (r.closePriceSource || 'btc-feed');
       ordersChanged = true;
+      settledOrders.push(o);
     });
     if (ordersChanged) {
       writeOrders(orders);
+      settledOrders.forEach(shareSettledOrder);
       try { window.dispatchEvent(new CustomEvent('ost:prediction-rounds-settled')); } catch (e) {}
       try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch (e) {}
     }

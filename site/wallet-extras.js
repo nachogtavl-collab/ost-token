@@ -47,8 +47,11 @@
   }
   function applyPlatformEventToLedger(event) {
     var ledger = readPlatformLedger();
-    var eventGameCredits = Number(event && event.gameCredits);
-    ledger.gameCredits = Number.isFinite(eventGameCredits) ? eventGameCredits : readGameCredits();
+    var rawGameCredits = event && event.gameCredits;
+    var hasGameCredits = rawGameCredits !== null && rawGameCredits !== undefined && rawGameCredits !== '';
+    var eventGameCredits = Number(rawGameCredits);
+    if (hasGameCredits && Number.isFinite(eventGameCredits)) ledger.gameCredits = eventGameCredits;
+    else if (!Number.isFinite(Number(ledger.gameCredits))) ledger.gameCredits = readGameCredits();
     ledger.launchpadExposure = Number(ledger.launchpadExposure || 0) || 0;
     var amount = Number(event && event.amount || 0) || 0;
     var eventLaunchpadExposure = Number(event && event.launchpadExposure);

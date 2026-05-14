@@ -4,34 +4,11 @@
 
   var MOBILE_QUERY = '(max-width: 820px), (pointer: coarse) and (max-width: 1024px)';
   var MOBILE_VIEWPORT = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
-  var MOBILE_UA_RE = /Android|iPhone|iPad|iPod|IEMobile|Opera Mini|Mobile|Silk/i;
   var mq = window.matchMedia ? window.matchMedia(MOBILE_QUERY) : { matches: false, addEventListener: null };
   var originalTradeLabel = null;
 
-  function getMobileWidthFloor() {
-    var widths = [];
-    if (window.innerWidth) widths.push(window.innerWidth);
-    if (window.visualViewport && window.visualViewport.width) widths.push(window.visualViewport.width);
-    if (window.screen && window.screen.width) widths.push(window.screen.width);
-    if (window.screen && window.screen.availWidth) widths.push(window.screen.availWidth);
-    return widths.length ? Math.min.apply(Math, widths) : 9999;
-  }
-
-  function hasMobileSignal() {
-    if (window.OST_MOBILE_FASTBOOT) return true;
-    try {
-      if (mq && mq.matches) return true;
-      var widthFloor = getMobileWidthFloor();
-      if (widthFloor <= 820) return true;
-      if (navigator.maxTouchPoints > 1 && widthFloor <= 1180) return true;
-      if (MOBILE_UA_RE.test(navigator.userAgent || '')) return true;
-      if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches && widthFloor <= 1024) return true;
-    } catch (_) {}
-    return false;
-  }
-
   function isMobileShell() {
-    return hasMobileSignal();
+    return !!(mq && mq.matches);
   }
 
   function setViewport() {
@@ -47,33 +24,30 @@
   function unblockInitialMobileAccess() {
     if (!isMobileShell()) return;
     try {
+      var prefs = JSON.parse(localStorage.getItem('ost_prefs') || '{}');
+      localStorage.setItem('ost_prefs', JSON.stringify({
+        lang: prefs.lang || document.documentElement.getAttribute('data-lang') || 'en',
+        currency: prefs.currency || window.__ostCurrency || 'USD'
+      }));
+      sessionStorage.setItem('ost.welcome.seen.session', '1');
       localStorage.setItem('ost.tour.completed', '1');
       localStorage.setItem('ost.compartments.guideSeen.v1', '1');
       localStorage.setItem('ost.compartments.v1', JSON.stringify(Object.assign({}, JSON.parse(localStorage.getItem('ost.compartments.v1') || '{}'), { focusMode: false })));
     } catch (_) {}
 
-    document.querySelectorAll('.ost-guide-overlay, .ost-tour, #ost-mobile-bar, .ost-mobile-bar, #ostMobileHome, .ost-mobile-home').forEach(function (overlay) {
+    var welcome = document.getElementById('welcomeOverlay');
+    if (welcome) {
+      welcome.classList.add('hidden');
+      welcome.setAttribute('aria-hidden', 'true');
+      welcome.style.display = 'none';
+      welcome.style.pointerEvents = 'none';
+    }
+
+    document.querySelectorAll('.ost-guide-overlay, .ost-tour.is-open').forEach(function (overlay) {
       overlay.classList.remove('is-open');
       overlay.style.display = 'none';
-      overlay.style.visibility = 'hidden';
-      overlay.style.opacity = '0';
-      overlay.style.pointerEvents = 'none';
       overlay.setAttribute('aria-hidden', 'true');
-      if (overlay.classList.contains('ost-tour') || overlay.id === 'ost-mobile-bar' || overlay.classList.contains('ost-mobile-bar') || overlay.id === 'ostMobileHome' || overlay.classList.contains('ost-mobile-home')) overlay.remove();
     });
-
-    document.querySelectorAll('#ost-mobile-bar [data-tour-restart]').forEach(function (button) {
-      button.remove();
-    });
-
-    var popup = document.getElementById('ostPopupOverlay');
-    var popupFrame = document.getElementById('ostPopupFrame');
-    if (popup && popup.classList.contains('open') && (!popupFrame || !popupFrame.getAttribute('src'))) {
-      popup.classList.remove('open');
-      popup.setAttribute('aria-hidden', 'true');
-      if (popupFrame) popupFrame.src = '';
-      document.body.style.overflow = '';
-    }
 
     document.querySelectorAll('.ost-section-hidden').forEach(function (section) {
       section.classList.remove('ost-section-hidden');
@@ -103,7 +77,6 @@
   }
 
   function mountMobileHome() {
-    return;
     if (document.getElementById('ostMobileHome')) return;
     var heroCopy = document.querySelector('#home .hero-content');
     if (!heroCopy) return;
@@ -183,7 +156,9 @@
       trade.classList.toggle('ost-mobile-fab', mobile);
       trade.classList.toggle('ost-mobile-fab--trade', mobile);
       if (!trade.getAttribute('aria-label')) trade.setAttribute('aria-label', 'Open trade ticket');
-      if (originalTradeLabel == null) originalTradeLabel = trade.innerHTML;
+      if (originalTradeLabel == null) originalTradeLabel = trade.textContent;
+      if (mobile) trade.textContent = 'Trade';
+      else if (originalTradeLabel) trade.textContent = originalTradeLabel;
     }
   }
 
@@ -208,10 +183,7 @@
       mq.addListener(tuneFloatingControls);
     }
 
-    var observer = new MutationObserver(function () {
-      window.clearTimeout(boot._observerTimer);
-      boot._observerTimer = window.setTimeout(tuneFloatingControls, 120);
-    });
+    var observer = new MutationObserver(function () { tuneFloatingControls(); });
     observer.observe(document.body, { childList: true, subtree: true });
     window.setTimeout(tuneFloatingControls, 600);
     window.setTimeout(tuneFloatingControls, 1800);

@@ -418,7 +418,10 @@
           var memo = JSON.stringify({ k: 'games-cashout', ost: bal, t: Date.now() });
           var r = await window.OST_RESCUE.payoutOst(w.session.publicKey, bal, memo);
           // Debit ONLY after on-chain confirm.
-          var s = loadBank(); s.credits = Math.max(0, Number(s.credits || 0) - r.ost); saveBank(s); fireBalanceChange();
+          var s = loadBank();
+          var remaining = Math.max(0, Number(s.credits || 0) - Number(r.ost || 0));
+          s.credits = Number(r.ost || 0) + 0.000001 >= bal ? 0 : remaining;
+          saveBank(s); fireBalanceChange();
           recordGameLedgerEvent('games-cashout', r.ost, { sig: r.sig, net: Number(r.ost || 0) });
           cashBtn.textContent = '✓ Sent ' + r.ost.toFixed(2) + ' OST';
           try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {}

@@ -14,8 +14,8 @@ import { GhostAwareness }  from './awareness.js?v=1';
 
 const STYLE_HREF = (() => {
   const el = document.querySelector('script[src*="ghost/ghost.js"]');
-  if (!el) return 'ghost/ghost.css?v=2';
-  return el.src.replace(/ghost\.js(\?.*)?$/, 'ghost.css?v=2');
+  if (!el) return 'ghost/ghost.css?v=3';
+  return el.src.replace(/ghost\.js(\?.*)?$/, 'ghost.css?v=3');
 })();
 
 function injectStyles() {

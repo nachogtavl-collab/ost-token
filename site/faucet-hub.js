@@ -24,7 +24,7 @@
   var STREAK_RESET_MS   = 48 * 3600 * 1000;
 
   function load() { try { return JSON.parse(localStorage.getItem(STATE_KEY) || '{}'); } catch (e) { return {}; } }
-  function save(s){ try { localStorage.setItem(STATE_KEY, JSON.stringify(s)); } catch (e) {} }
+  function save(s){ try { if (s && typeof s === 'object') s.updatedAt = Date.now(); localStorage.setItem(STATE_KEY, JSON.stringify(s)); } catch (e) {} }
   function fmt(n) { return Number(n || 0).toFixed(2); }
   function fmtCD(ms) {
     if (ms <= 0) return 'Ready!';
@@ -41,6 +41,64 @@
     requestAnimationFrame(function(){ el.classList.add('fh-pop-show'); });
     setTimeout(function(){ el.classList.remove('fh-pop-show'); setTimeout(function(){ el.remove(); }, 400); }, 1500);
   }
+  function getActiveWalletAddress() {
+    try {
+      if (window.OST_WALLET && window.OST_WALLET.session && window.OST_WALLET.session.publicKey && window.OST_WALLET.session.publicKey.toBase58) return window.OST_WALLET.session.publicKey.toBase58();
+      if (window.OST_WALLET_PUBKEY) return String(window.OST_WALLET_PUBKEY);
+      if (window.solana && window.solana.publicKey && window.solana.publicKey.toString) return window.solana.publicKey.toString();
+    } catch (e) {}
+    return '';
+  }
+  function loadPlatformLedger() { try { return JSON.parse(localStorage.getItem('ost.wallet.platformLedger.v1') || '{}') || {}; } catch (e) { return {}; } }
+  function broadcastVaultBalanceChanged() {
+    try { window.dispatchEvent(new CustomEvent('ost:faucet-hub-balance', { detail: load() })); } catch (e) {}
+  }
+  function recordRewardsCredit(detail) {
+    var amount = Number(detail && detail.credits);
+    if (!Number.isFinite(amount) || amount <= 0) return;
+    var total = Number(detail && detail.total);
+    if (!Number.isFinite(total)) total = Number(load().credits || 0) || 0;
+    if (typeof window.recordOstPlatformEvent === 'function') {
+      try {
+        window.recordOstPlatformEvent({
+          kind: 'rewards-vault-credit',
+          source: String(detail && detail.source || 'faucet-hub').slice(0, 48),
+          amount: amount,
+          label: 'Rewards vault credit',
+          token: 'OST',
+          gameCredits: total,
+          ts: Date.now()
+        });
+      } catch (e) {}
+    }
+  }
+  function syncVaultFromPlatformLedger() {
+    if (!getActiveWalletAddress()) return false;
+    var ledger = loadPlatformLedger();
+    var rawCredits = ledger.gameCredits;
+    if (rawCredits === null || rawCredits === undefined || rawCredits === '') return false;
+    var remoteCredits = Number(rawCredits);
+    if (!Number.isFinite(remoteCredits)) return false;
+    remoteCredits = Math.max(0, remoteCredits);
+    var s = load();
+    var localCredits = Number(s.credits || 0) || 0;
+    if (Math.abs(localCredits - remoteCredits) < 0.000001) return false;
+    s.credits = remoteCredits;
+    s.remoteWallet = getActiveWalletAddress();
+    s.remoteSyncedAt = Date.now();
+    save(s);
+    refreshUi();
+    broadcastVaultBalanceChanged();
+    return true;
+  }
+  function syncVaultFromRemote() {
+    if (typeof window.syncOstWalletEventsFromRemote === 'function') {
+      try {
+        return window.syncOstWalletEventsFromRemote().then(function () { return syncVaultFromPlatformLedger(); });
+      } catch (e) {}
+    }
+    return Promise.resolve(syncVaultFromPlatformLedger());
+  }
   function award(credits, source) {
     var s = load();
     s.credits = Number(s.credits || 0) + Number(credits || 0);
@@ -49,6 +107,7 @@
     pop('+' + Number(credits).toFixed(2) + ' OST');
     vaultDrop();
     refreshUi();
+    broadcastVaultBalanceChanged();
     try { window.dispatchEvent(new CustomEvent('ost-faucet-hub-award', { detail: { credits: credits, source: source, total: s.credits }})); } catch(e) {}
   }
   function vaultDrop() {
@@ -138,6 +197,8 @@
     anchor.closest('.container').parentElement.appendChild(wrap);
     bind();
     refreshUi();
+    syncVaultFromPlatformLedger();
+    setTimeout(syncVaultFromRemote, 1000);
     setInterval(refreshUi, 1000);
   }
 
@@ -901,10 +962,12 @@
 
       // Persist new state — only after the on-chain confirm so failures keep credits
       var s2 = load();
-      s2.credits = Math.max(0, Number(s2.credits || 0) - toSend);
+      var remaining = Math.max(0, Number(s2.credits || 0) - toSend);
+      s2.credits = toSend + 0.000001 >= amount ? 0 : remaining;
       s2.lastCashout = Date.now();
       delete s2.cashoutLockUntil;
       save(s2);
+      broadcastVaultBalanceChanged();
       pop('+' + toSend.toFixed(2) + ' OST sent!');
       vaultDrop();
       btn.textContent = '✓ Sent · ' + String(sig).slice(0, 8) + '…';
@@ -935,11 +998,28 @@
     }
   }
 
+  window.addEventListener('ost-faucet-hub-award', function (event) {
+    recordRewardsCredit(event && event.detail || {});
+  });
+  window.addEventListener('ost:wallet-events-synced', function () {
+    syncVaultFromPlatformLedger();
+  });
+  window.addEventListener('ost-tx-history-update', function () {
+    setTimeout(syncVaultFromPlatformLedger, 0);
+  });
+  window.addEventListener('ost:wallet-changed', function () {
+    setTimeout(syncVaultFromRemote, 0);
+  });
+  setInterval(function () {
+    syncVaultFromPlatformLedger();
+  }, 15000);
+
   window.OST_FAUCET_HUB = {
     state: load,
     award: award,
     cashout: onCashout,
-    refresh: refreshUi
+    refresh: refreshUi,
+    sync: syncVaultFromRemote
   };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount);

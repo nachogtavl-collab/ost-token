@@ -1,7 +1,7 @@
 /* ============================================================
- * OST Survival Offline Vault
+ * OST Offline Vault
  * ============================================================
- * Unified local bearer-token vault for survival OST coins and PWA offline play.
+ * Local bearer-token vault for PWA offline play.
  *
  * What is live in this file:
  * - IndexedDB vault storage, encrypted with Web Crypto AES-GCM.
@@ -293,7 +293,7 @@
       format: token.format
     });
     await saveVault();
-    setStatus('Imported ' + fmt(token.amount) + ' OST into the Survival OST vault.', 'ok');
+    setStatus('Imported ' + fmt(token.amount) + ' OST into the offline vault.', 'ok');
     return token;
   }
 
@@ -357,7 +357,7 @@
       return { ok: false, offline: true };
     }
     if (!vault.syncQueue.length) {
-      setStatus('Survival OST vault already synced.', 'ok');
+      setStatus('Offline vault already synced.', 'ok');
       return { ok: true, accepted: 0 };
     }
     var batch = vault.syncQueue.slice(0, 100);
@@ -398,9 +398,9 @@
     var queue = $('offlineVaultQueueCount');
     if (queue) queue.textContent = String(vault.syncQueue.length);
     var mode = $('offlineVaultMode');
-    if (mode) mode.textContent = vault.active ? 'Active in games' : 'Manual import';
+    if (mode) mode.textContent = vault.active ? 'Active in games' : 'Manual only';
     var useBtn = $('offlineVaultUseGamesBtn');
-    if (useBtn) useBtn.textContent = vault.active ? 'Use faucet balance in games' : 'Use survival vault in games';
+    if (useBtn) useBtn.textContent = vault.active ? 'Use faucet balance in games' : 'Use offline vault in games';
     var syncBtn = $('offlineVaultSyncBtn');
     if (syncBtn) syncBtn.disabled = !vault.syncQueue.length;
     var log = $('offlineVaultLog');
@@ -408,7 +408,7 @@
       var rows = vault.ledger.slice(0, 5).map(function (e) {
         return '<div><strong>' + e.kind.replace(/-/g, ' ') + '</strong> · ' + fmt(e.amount) + ' OST · ' + new Date(e.ts).toLocaleTimeString() + '</div>';
       });
-      log.innerHTML = rows.length ? rows.join('') : '<div>No survival vault activity yet.</div>';
+      log.innerHTML = rows.length ? rows.join('') : '<div>No offline vault activity yet.</div>';
     }
   }
 
@@ -426,14 +426,7 @@
   }
 
   async function startNfc() {
-    if (!('NDEFReader' in window)) {
-      var ua = navigator.userAgent || '';
-      var isIos = /iPhone|iPad|iPod/i.test(ua);
-      var hint = isIos
-        ? 'Web NFC is unavailable on iPhone. iPhones can still READ a tag programmed with the bearer payload \u2014 use the Tap-to-Pay tag from another device, or import via paste / digital file.'
-        : 'Web NFC requires Android Chrome 89+. Use file or paste import on this browser.';
-      throw new Error(hint);
-    }
+    if (!('NDEFReader' in window)) throw new Error('Web NFC is not available in this browser. Use file or paste import.');
     var reader = new NDEFReader();
     await reader.scan();
     setStatus('NFC scan active. Tap an OST bearer card.', '');
@@ -485,7 +478,7 @@
   }
 
   async function importLatestMinted() {
-    if (!lastMintedPreview) throw new Error('Mint an Offline Survival OST coin first.');
+    if (!lastMintedPreview) throw new Error('Mint a Survival Bearer Token first.');
     if (lastMintedPreview.bearerText) {
       await importBearerText(lastMintedPreview.bearerText, 'survival-mint-event');
       return;
@@ -524,7 +517,7 @@
       await ensureReady();
       vault.active = !vault.active;
       await saveVault();
-      setStatus(vault.active ? 'Survival OST vault is now the active fair-games balance.' : 'Games are back on faucet play balance.', vault.active ? 'ok' : 'warn');
+      setStatus(vault.active ? 'Offline vault is now the active game balance.' : 'Games are back on faucet play balance.', vault.active ? 'ok' : 'warn');
     });
     var syncBtn = $('offlineVaultSyncBtn');
     if (syncBtn) syncBtn.addEventListener('click', function () { syncNow().catch(function (e) { setStatus(e.message || String(e), 'error'); }); });
@@ -536,14 +529,14 @@
       lastMintedPreview = event.detail || null;
       var btn = $('offlineVaultLatestBtn');
       if (btn) btn.disabled = !lastMintedPreview;
-      if (lastMintedPreview) setStatus('Offline Survival OST minted. You can import the latest coin into this same vault.', 'ok');
+      if (lastMintedPreview) setStatus('Survival token minted. You can import the latest note into this offline vault.', 'ok');
     });
   }
 
   function mount() {
     bindUi();
     ensureReady().then(function () {
-      setStatus(navigator.onLine ? 'Survival OST vault ready. Mint or import a bearer coin to play fair offline games.' : 'Survival OST vault ready without internet.', 'ok');
+      setStatus(navigator.onLine ? 'Offline vault ready. Import a bearer token to play with local OST.' : 'Offline vault ready without internet.', 'ok');
     }).catch(function (e) { setStatus(e.message || String(e), 'error'); });
   }
 

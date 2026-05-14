@@ -2206,6 +2206,7 @@
     lastError: ''
   };
   let faucetRemoteSync = { wallet: '', at: 0, inFlight: null };
+  let predictionOrderShareAllLastAt = 0;
   window.OST_CONFIG = OST_CONFIG;
 
   // Initialize Solana connection
@@ -2949,6 +2950,21 @@
     } catch {}
   }
 
+  function shareLocalPredictionOrdersToRemote(options) {
+    const settings = options || {};
+    const base = getOstApiBase();
+    const wallet = getPredictionWalletAddress();
+    const now = Date.now();
+    if (!base || !wallet) return false;
+    if (!settings.force && now - predictionOrderShareAllLastAt < 15000) return false;
+    predictionOrderShareAllLastAt = now;
+    readPredictionOrderRecords()
+      .filter(function(order) { return order && order.marketId && (!order.wallet || order.wallet === wallet); })
+      .slice(0, 80)
+      .forEach(function(order) { sharePredictionOrderRecord(Object.assign({}, order, { wallet: order.wallet || wallet })); });
+    return true;
+  }
+
   function syncPredictionOrdersFromRemote() {
     const base = getOstApiBase();
     const wallet = getPredictionWalletAddress();
@@ -2959,9 +2975,13 @@
       .then(function(payload) {
         const remote = Array.isArray(payload && payload.positions) ? payload.positions : [];
         const normalized = remote.map(function(position) { return normalizeRemotePredictionPosition(position, wallet); }).filter(Boolean);
-        if (!normalized.length) return false;
+        if (!normalized.length) {
+          shareLocalPredictionOrdersToRemote();
+          return false;
+        }
         const before = readPredictionOrderRecords().length;
         mergePredictionOrderRecords(normalized);
+        shareLocalPredictionOrdersToRemote();
         try { window.dispatchEvent(new CustomEvent('ost:prediction-orders-synced')); } catch {}
         return readPredictionOrderRecords().length !== before;
       })
@@ -16288,6 +16308,7 @@
     // Also refresh when a wallet connects/switches.
     window.addEventListener('ost:wallet-changed', function() {
       syncTradeWallet();
+      shareLocalPredictionOrdersToRemote({ force: true });
       syncPredictionOrdersFromRemote().then(function() {
         state.orderHistory = readPredictionOrderRecords();
         renderPredictionLedger();
@@ -16311,6 +16332,25 @@
     });
     window.addEventListener('ost:btc-spot', function() {
       refreshOstNativePredictionMarkets();
+    });
+
+    window.addEventListener('focus', function() {
+      syncPredictionOrdersFromRemote().then(function() {
+        state.orderHistory = readPredictionOrderRecords();
+        renderPredictionLedger();
+      });
+    });
+    document.addEventListener('visibilitychange', function() {
+      if (document.hidden) return;
+      syncPredictionOrdersFromRemote().then(function() {
+        state.orderHistory = readPredictionOrderRecords();
+        renderPredictionLedger();
+      });
+    });
+    window.addEventListener('storage', function(event) {
+      if (event && event.key && event.key !== PREDICTION_ORDERS_STORAGE_KEY) return;
+      state.orderHistory = readPredictionOrderRecords();
+      renderPredictionLedger();
     });
 
     window.addEventListener('beforeunload', function() {

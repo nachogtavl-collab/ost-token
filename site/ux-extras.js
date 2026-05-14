@@ -14,11 +14,6 @@
 
   // ------------------ Mobile request-desktop toggle ------------------------
   function mountMobileBar() {
-    try {
-      var oldBar = document.getElementById('ost-mobile-bar');
-      if (oldBar) oldBar.remove();
-    } catch (e) {}
-    return;
     if (document.getElementById('ost-mobile-bar')) return;
     var mobileViewportContent = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
     var bar = document.createElement('div');
@@ -26,7 +21,8 @@
     bar.className = 'ost-mobile-bar';
     bar.innerHTML =
       '<button type="button" data-mode="mobile">📱 Mobile</button>' +
-      '<button type="button" data-mode="desktop">🖥 Desktop</button>';
+      '<button type="button" data-mode="desktop">🖥 Desktop</button>' +
+      '<button type="button" data-tour-restart title="Restart guide">❓</button>';
     document.body.appendChild(bar);
     var saved = localStorage.getItem('ost.viewport') || 'mobile';
     if (isPhoneLike() && saved === 'desktop') saved = 'mobile';
@@ -34,6 +30,8 @@
     bar.addEventListener('click', function (ev) {
       var btn = ev.target.closest('button[data-mode]');
       if (btn) { apply(btn.getAttribute('data-mode')); return; }
+      var t = ev.target.closest('[data-tour-restart]');
+      if (t) { localStorage.removeItem('ost.tour.completed'); startTour(); }
     });
     function apply(mode) {
       if (isPhoneLike() && mode === 'desktop') mode = 'mobile';
@@ -103,12 +101,10 @@
     if (tourEl) return tourEl;
     tourEl = document.createElement('div');
     tourEl.className = 'ost-tour';
-    tourEl.setAttribute('aria-hidden', 'true');
     tourEl.innerHTML =
       '<div class="ost-tour__veil"></div>' +
       '<div class="ost-tour__pulse" style="display:none"></div>' +
       '<div class="ost-tour__card">' +
-        '<button type="button" class="ost-tour__close" aria-label="Close tour" style="position:absolute;top:10px;right:10px;width:34px;height:34px;border-radius:999px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#f8fbff;font-size:20px;line-height:1;cursor:pointer;">&times;</button>' +
         '<div class="ost-tour__step"></div>' +
         '<h2 class="ost-tour__title"></h2>' +
         '<div class="ost-tour__body"></div>' +
@@ -119,7 +115,6 @@
       '</div>';
     document.body.appendChild(tourEl);
     tourEl.querySelector('.ost-tour__skip').addEventListener('click', closeTour);
-    tourEl.querySelector('.ost-tour__close').addEventListener('click', closeTour);
     tourEl.querySelector('.ost-tour__veil').addEventListener('click', function () { /* keep open, force interaction */ });
     tourEl.querySelector('.ost-tour__next').addEventListener('click', function () {
       tourIdx++;
@@ -164,18 +159,13 @@
   }
 
   function startTour() {
-    try { localStorage.setItem('ost.tour.completed', '1'); } catch (e) {}
-    if (tourEl) closeTour();
-    return;
     tourIdx = 0;
     ensureTour().classList.add('is-open');
-    ensureTour().setAttribute('aria-hidden', 'false');
     renderStep();
   }
   function closeTour() {
     if (!tourEl) return;
     tourEl.classList.remove('is-open');
-    tourEl.setAttribute('aria-hidden', 'true');
     localStorage.setItem('ost.tour.completed', '1');
   }
 
@@ -237,7 +227,30 @@
   }
 
   function maybeAutoStart() {
-    try { localStorage.setItem('ost.tour.completed', '1'); } catch (e) {}
+    if (isPhoneLike()) {
+      try { localStorage.setItem('ost.tour.completed', '1'); } catch (e) {}
+      return;
+    }
+    if (localStorage.getItem('ost.tour.completed')) return;
+    // Wait for the welcome overlay (and any other auto-popups) to be closed
+    // before starting the tour, so they don't stack on top of each other.
+    function popupVisible() {
+      var sels = ['.welcome-overlay', '.ost-popup-overlay', '#ostPopupOverlay', '.map-modal.is-open', '.ost-modal-overlay.is-open'];
+      for (var i = 0; i < sels.length; i++) {
+        var el = document.querySelector(sels[i]);
+        if (!el) continue;
+        var cs = window.getComputedStyle(el);
+        if (cs.display !== 'none' && cs.visibility !== 'hidden' && Number(cs.opacity) > 0.01) return true;
+      }
+      return false;
+    }
+    var tries = 0;
+    var iv = setInterval(function () {
+      tries++;
+      if (localStorage.getItem('ost.tour.completed')) { clearInterval(iv); return; }
+      if (!popupVisible()) { clearInterval(iv); startTour(); return; }
+      if (tries > 120) { clearInterval(iv); } // give up after ~60s
+    }, 500);
   }
 
   // ------------------ Runtime i18n fallback for missing keys ----------------
@@ -322,7 +335,6 @@
   window.OST_UX = {
     startTour: startTour,
     setViewport: function (mode) {
-      document.body.classList.toggle('ost-force-desktop', mode === 'desktop' && !isPhoneLike());
       var b = document.querySelector('#ost-mobile-bar [data-mode="' + mode + '"]');
       if (b) b.click();
     }

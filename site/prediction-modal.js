@@ -1478,48 +1478,9 @@
           var nEl2 = bodyEl.querySelector('[data-bind="noPct"]');
           if (yEl) yEl.textContent = (yesProb * 100).toFixed(1) + '%';
           if (nEl2) nEl2.textContent = ((1 - yesProb) * 100).toFixed(1) + '%';
-          try {
-            var chart = bodyEl.querySelector('[data-bind="chart"]');
-            var series = window.OST_PREDICTION_API && typeof window.OST_PREDICTION_API.btcSeries === 'function'
-              ? window.OST_PREDICTION_API.btcSeries()
-              : [];
-            // Build aligned points arrays for the combined chart:
-            //   prices[i]  = BTC USD at tick i
-            //   probs[i]   = YES probability AT THAT BTC PRICE using the
-            //                canonical openPrice + msLeft so two devices that
-            //                replay the same ticks compute the same overlay.
-            var canonRound = (window.OST_PREDICTION_API && typeof window.OST_PREDICTION_API.canonicalRound === 'function')
-              ? window.OST_PREDICTION_API.canonicalRound() : null;
-            var openPx = (canonRound && Number(canonRound.openPrice)) || Number(market.meta.openPrice) || 0;
-            var prices = [];
-            var probs = [];
-            series.slice(-160).forEach(function (point) {
-              var pp = Number(point && point.price);
-              if (!Number.isFinite(pp)) return;
-              prices.push(pp);
-              if (openPx > 0) {
-                var dPct = ((pp - openPx) / openPx) * 100;
-                // Same shape as the worker's serverComputeBtcOdds, simplified
-                // to match the rendered direction without per-client noise.
-                var ms = Math.max(0, market.meta.closeAt - (Number(point.ts) || Date.now()));
-                var rem = Math.max(0.05, ms / (5 * 60 * 1000));
-                var scale = 0.22 * Math.sqrt(rem);
-                var z = dPct / Math.max(scale, 0.001);
-                var yes = 1 / (1 + Math.exp(-z));
-                var elapsed = 1 - rem;
-                yes = 0.5 + (yes - 0.5) * (0.55 + 0.40 * elapsed);
-                probs.push(Math.max(0.02, Math.min(0.98, yes)));
-              } else {
-                probs.push(0.5);
-              }
-            });
-            if (chart && (prices.length > 1 || probs.length > 1)) {
-              chart.style.width = '100%';
-              chart.style.height = '280px';
-              drawCombinedSeries(chart, prices, probs, { priceColor: d >= 0 ? '#7ce6a8' : '#ff7c8a', probColor: '#ffd980' });
-              setText(bodyEl, 'chartStatus', 'live BTC ' + prices.length + ' pts · YES overlay · ' + fmtTime(Date.now()));
-            }
-          } catch (_) {}
+          if (typeof window.__ostChartRedraw === 'function') {
+            try { window.__ostChartRedraw(); } catch (_) {}
+          }
           recalcProjected();
           // Live mark-to-market on the user's open positions for this market —
           // moves the P/L row in lock-step with every BTC tick.
@@ -1584,7 +1545,8 @@
         if (!canvas) return;
         var side = (typeof bodyEl.__getChartSide === 'function') ? bodyEl.__getChartSide() : 'YES';
         var history = liveHistoryBySide[side] || [];
-        if (history.length < 2 && side === 'NO' && liveHistoryBySide.YES.length > 1) {
+        var hasDistinctNoToken = !!(tokenIds[1] && tokenIds[1] !== (tokenIds[0] || tokenId));
+        if (history.length < 2 && side === 'NO' && !hasDistinctNoToken && liveHistoryBySide.YES.length > 1) {
           history = liveHistoryBySide.YES.map(function (record) { return { t: record.t, p: 1 - Number(record.p) }; });
         }
         var pts = history.map(function (record) { return Number(record.p); }).filter(Number.isFinite);
@@ -2073,6 +2035,40 @@
           if (!Number.isFinite(yp)) return null;
           return Math.max(0, Math.min(1, yp));
         }).filter(function (v) { return v != null; });
+        var isBtc5m = market.isOstNative && market.meta && market.meta.kind === 'btc5m';
+        if (isBtc5m) {
+          var sharedRound = null;
+          try {
+            if (window.OST_PREDICTION_API && typeof window.OST_PREDICTION_API.fiveMinRound === 'function') {
+              sharedRound = window.OST_PREDICTION_API.fiveMinRound();
+            }
+          } catch (_) { sharedRound = null; }
+          if (sharedRound && Number(sharedRound.openPrice) > 0) market.meta.openPrice = Number(sharedRound.openPrice);
+          var openPx = Number(market.meta.openPrice) || (sharedRound && Number(sharedRound.openPrice)) || 0;
+          var closeAt = Number(market.meta.closeAt || (sharedRound && sharedRound.closeAt) || Date.now());
+          var btcPts = [];
+          try {
+            var rawSeries = window.OST_PREDICTION_API && typeof window.OST_PREDICTION_API.btcSeries === 'function'
+              ? window.OST_PREDICTION_API.btcSeries()
+              : [];
+            rawSeries.slice(-160).forEach(function (point) {
+              var pp = Number(point && (point.price != null ? point.price : point.p));
+              if (!Number.isFinite(pp) || pp <= 1000 || openPx <= 0) return;
+              var dPct = ((pp - openPx) / openPx) * 100;
+              var ms = Math.max(0, closeAt - (Number(point && (point.ts || point.t)) || Date.now()));
+              var rem = Math.max(0.05, ms / FIVE_MIN_MS);
+              var scale = 0.22 * Math.sqrt(rem);
+              var z = dPct / Math.max(scale, 0.001);
+              var yes = 1 / (1 + Math.exp(-z));
+              var elapsed = 1 - rem;
+              yes = 0.5 + (yes - 0.5) * (0.55 + 0.40 * elapsed);
+              btcPts.push(Math.max(0.02, Math.min(0.98, yes)));
+            });
+            var liveYes = Number(sharedRound && sharedRound.yesPriceNumber);
+            if (Number.isFinite(liveYes) && liveYes > 0 && liveYes < 1) btcPts.push(Math.max(0.02, Math.min(0.98, liveYes)));
+          } catch (_) {}
+          if (btcPts.length >= 2) pts = btcPts;
+        }
         // Append the rolling consensus from BTC rounds as a probability proxy
         // so we always have something to draw before the first OST bet lands.
         if (pts.length < 2) {
