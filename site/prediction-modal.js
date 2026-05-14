@@ -2175,7 +2175,7 @@
     if (existing && existing.classList.contains('is-open')) return;
     // Don't hijack links or quick-trade controls inside the wallet venue.
     var explicitOpen = ev.target.closest('[data-prediction-open-modal]');
-    var ignore = ev.target.closest('a[href], .prediction-market-link, .prediction-market-api-link, .prediction-market-quick-btn, [data-prediction-quick-side], [data-prediction-show-more], [data-prediction-show-less]');
+    var ignore = ev.target.closest('a[href], button, input, select, textarea, [role="button"], .prediction-market-link, .prediction-market-api-link, .prediction-market-quick-btn, [data-prediction-quick-side], [data-prediction-show-more], [data-prediction-show-less], [data-cashout-idx], .prediction-cashout-btn, [data-ost-bet-claim], [data-ost-bet-open], .ost-pred-btn, .ost-bet-row__actions, [data-tt-open], .ost-tt-close');
     var card = ev.target.closest('.prediction-market-card[data-prediction-market-id]');
     if (!card) return;
     if (ignore && !explicitOpen) return;

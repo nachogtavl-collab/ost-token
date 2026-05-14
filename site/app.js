@@ -14358,7 +14358,7 @@
           : t('wallet.portal.prediction.buyYes', 'YES position');
         var canCash = action.canCash && Number(order.stake || 0) > 0;
         var cashBtn = canCash
-          ? '<button class="prediction-cashout-btn" data-cashout-idx="' + idx + '" style="margin-left:auto;padding:4px 10px;border-radius:6px;background:#22c55e;color:#000;border:none;font-weight:700;cursor:pointer;font-size:12px">' + escapeHtml(action.label) + ' · ' + escapeHtml(formatOst(action.payout)) + '</button>'
+          ? '<button type="button" class="prediction-cashout-btn" data-cashout-idx="' + idx + '" style="margin-left:auto;padding:4px 10px;border-radius:6px;background:#22c55e;color:#000;border:none;font-weight:700;cursor:pointer;font-size:12px">' + escapeHtml(action.label) + ' · ' + escapeHtml(formatOst(action.payout)) + '</button>'
           : '<span style="color:' + (order.cashedOut || action.finalStatus === 'won' ? '#22c55e' : action.finalStatus === 'lost' ? '#f87171' : '#94a3b8') + ';font-weight:700;font-size:12px;margin-left:auto">' + escapeHtml(action.detail || action.label) + '</span>';
         // Per-share info: use stored price directly (side-specific), fallback to deriving from potReturn
         var stake = Number(order.stake || 0);
@@ -14413,7 +14413,12 @@
 
       // Wire cash-out buttons
       positionListEl.querySelectorAll('[data-cashout-idx]').forEach(function(btn) {
-        btn.addEventListener('click', async function() {
+        btn.addEventListener('click', async function(event) {
+          if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+          }
           var idx = Number(btn.getAttribute('data-cashout-idx'));
           var orders = readPredictionOrderRecords();
           var order = orders[idx];
