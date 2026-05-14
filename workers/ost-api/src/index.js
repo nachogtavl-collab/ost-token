@@ -1265,14 +1265,25 @@ export default {
       const since = Number(url.searchParams.get('since')) || 0;
       const ringKey = `btc:ticks:${round.openAt}`;
       let ring = await kvGet(env, ringKey, []);
+      if (!Array.isArray(ring)) ring = [];
       const isCurrentRound = round.openAt === currentRound().openAt;
       const lastTick = ring.length ? ring[ring.length - 1] : null;
       if (isCurrentRound && (!ring.length || Date.now() - Number(lastTick && lastTick.t || 0) > 2000)) {
         const snapshot = await buildCanonicalBtcRound(env, { refresh: true });
-        ring = await kvGet(env, ringKey, []);
-        if (!ring.length && snapshot && Number.isFinite(Number(snapshot.livePrice))) {
-          await appendBtcTick(env, round, Number(snapshot.livePrice), snapshot.livePriceSource || 'ost-canonical');
-          ring = await kvGet(env, ringKey, []);
+        const livePrice = Number(snapshot && snapshot.livePrice);
+        if (Number.isFinite(livePrice) && livePrice > 0) {
+          const liveSource = snapshot.livePriceSource || 'ost-canonical';
+          await appendBtcTick(env, round, livePrice, liveSource);
+          const refreshedRing = await kvGet(env, ringKey, []);
+          if (Array.isArray(refreshedRing) && refreshedRing.length) {
+            ring = refreshedRing;
+          } else {
+            const syntheticTick = { t: Number(snapshot.livePriceTs) || Date.now(), p: livePrice, s: liveSource };
+            ring = ring.concat([syntheticTick]).slice(-BTC_TICK_RING_MAX);
+          }
+        } else {
+          const refreshedRing = await kvGet(env, ringKey, []);
+          ring = Array.isArray(refreshedRing) ? refreshedRing : [];
         }
       }
       const ticks = since > 0 ? ring.filter(t => Number(t.t) > since) : ring;
