@@ -446,10 +446,10 @@
   }
 
   .ost-mobile-home {
-    display: none !important;
-    visibility: hidden !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
+    display: grid !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
     gap: 12px;
     padding: 14px;
     border: 1px solid rgba(148, 219, 255, 0.18);
@@ -894,8 +894,6 @@
   #ost-mobile-bar [data-tour-restart],
   body.ost-mobile-shell #ost-mobile-bar,
   body.ost-mobile-shell .ost-mobile-bar,
-  body.ost-mobile-shell #ostMobileHome,
-  body.ost-mobile-shell .ost-mobile-home,
   body.ost-mobile-shell .ost-tour,
   body.ost-mobile-shell .ost-tour.is-open,
   body.ost-mobile-shell .ost-guide-overlay {

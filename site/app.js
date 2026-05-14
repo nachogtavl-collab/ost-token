@@ -12733,6 +12733,27 @@
       }
     }
 
+    function mobileGuidesDisabled() {
+      try {
+        return !!(window.OST_MOBILE_FASTBOOT || (window.OST_MOBILE && typeof window.OST_MOBILE.shouldSkipGuides === 'function' && window.OST_MOBILE.shouldSkipGuides()));
+      } catch (e) {
+        return !!window.OST_MOBILE_FASTBOOT;
+      }
+    }
+
+    function applyMobileWelcomeDefaults() {
+      if (!mobileGuidesDisabled()) return;
+      if (window.OST_MOBILE && typeof window.OST_MOBILE.applyAccessDefaults === 'function') {
+        window.OST_MOBILE.applyAccessDefaults();
+        return;
+      }
+      try {
+        sessionStorage.setItem(WELCOME_SESSION_KEY, '1');
+        localStorage.setItem('ost.tour.completed', '1');
+        localStorage.setItem('ost.compartments.guideSeen.v1', '1');
+      } catch (e) {}
+    }
+
     function setSelectedButton(selector, attribute, value, activeClass) {
       overlay.querySelectorAll(selector).forEach(function(btn) {
         btn.classList.toggle(activeClass, btn.getAttribute(attribute) === value);
@@ -12775,20 +12796,7 @@
 
     function suppressPostWelcomeOverlays() {
       var welcomeVisible = overlay && !overlay.classList.contains('hidden') && overlay.getAttribute('aria-hidden') !== 'true';
-      try {
-        localStorage.setItem('ost.tour.completed', '1');
-        localStorage.setItem('ost.compartments.guideSeen.v1', '1');
-      } catch (e) {}
-
-      document.querySelectorAll('.ost-tour, .ost-guide-overlay, #ost-mobile-bar, .ost-mobile-bar, #ostMobileHome, .ost-mobile-home').forEach(function(layer) {
-        layer.classList.remove('is-open');
-        layer.setAttribute('aria-hidden', 'true');
-        layer.style.display = 'none';
-        layer.style.visibility = 'hidden';
-        layer.style.opacity = '0';
-        layer.style.pointerEvents = 'none';
-        if (layer.id === 'ostMobileHome' || layer.id === 'ost-mobile-bar' || layer.classList.contains('ost-mobile-home') || layer.classList.contains('ost-mobile-bar')) layer.remove();
-      });
+      if (mobileGuidesDisabled()) applyMobileWelcomeDefaults();
 
       var popup = document.getElementById('ostPopupOverlay');
       var popupFrame = document.getElementById('ostPopupFrame');
@@ -12808,16 +12816,10 @@
     }
 
     function armPostWelcomeOverlayGuard() {
-      var delays = [0, 120, 350, 800, 1500, 3000, 6000, 10000];
-      delays.forEach(function(delay) { setTimeout(suppressPostWelcomeOverlays, delay); });
-      if (!('MutationObserver' in window)) return;
-      var started = Date.now();
-      var observer = new MutationObserver(function() {
-        suppressPostWelcomeOverlays();
-        if (Date.now() - started > 12000) observer.disconnect();
-      });
-      observer.observe(document.body || document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style', 'aria-hidden'] });
-      setTimeout(function() { observer.disconnect(); }, 12500);
+      suppressPostWelcomeOverlays();
+      window.addEventListener('ost:mobile-fastboot', suppressPostWelcomeOverlays);
+      document.addEventListener('ost:welcome-closed', suppressPostWelcomeOverlays);
+      document.addEventListener('ost:tour-closed', suppressPostWelcomeOverlays);
     }
 
     window.OST_SUPPRESS_BLOCKERS = suppressPostWelcomeOverlays;
@@ -12839,12 +12841,11 @@
         document.querySelectorAll(
           '.wallet-modal.open, .map-modal.open, .ost-modal-overlay.ost-modal-open,' +
           ' .topup-modal-overlay.open, .transmit-overlay.open, .live-watch-modal.is-open,' +
-          ' #offlineVaultScan.open, .ost-tour, .ost-guide-overlay, #ost-mobile-bar, .ost-mobile-bar, #ostMobileHome, .ost-mobile-home'
+          ' #offlineVaultScan.open, .ost-tour, .ost-guide-overlay'
         ).forEach(function(el) {
           el.classList.remove('open', 'ost-modal-open', 'is-open');
           el.setAttribute('aria-hidden', 'true');
           el.style.display = 'none';
-          if (el.id === 'ostMobileHome' || el.id === 'ost-mobile-bar' || el.classList.contains('ost-mobile-home') || el.classList.contains('ost-mobile-bar')) el.remove();
         });
         suppressPostWelcomeOverlays();
         document.body.style.overflow = '';
@@ -12888,6 +12889,7 @@
       document.body.classList.remove('ost-welcome-open');
       overlay.setAttribute('aria-hidden', 'true');
       suppressPostWelcomeOverlays();
+      try { document.dispatchEvent(new CustomEvent('ost:welcome-closed')); } catch (e) {}
       if (!fade) {
         overlay.classList.add('hidden');
         clearOverlayInlineState();
@@ -12948,6 +12950,15 @@
 
     setSelectedButton('.wel-lang-btn', 'data-lang', selectedLang, 'wel-lang-active');
     setSelectedButton('.wel-curr-btn', 'data-curr', selectedCurrency, 'wel-curr-active');
+
+    if (mobileGuidesDisabled()) {
+      applyMobileWelcomeDefaults();
+      syncStoredPrefs(selectedLang || 'en', selectedCurrency || 'USD');
+      rememberWelcomeSeen();
+      suppressPostWelcomeOverlays();
+      hideWelcome(false);
+      return;
+    }
 
     if (prefs.lang && prefs.currency && hasCurrentWelcomeVersion()) {
       rememberWelcomeSeen();

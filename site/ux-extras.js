@@ -3,6 +3,7 @@
   'use strict';
 
   function isPhoneLike() {
+    if (window.OST_MOBILE && typeof window.OST_MOBILE.isMobile === 'function') return window.OST_MOBILE.isMobile();
     try {
       if (window.matchMedia && window.matchMedia('(max-width: 820px), (pointer: coarse) and (max-width: 1024px)').matches) return true;
     } catch (e) {}
@@ -12,8 +13,25 @@
     return Math.min.apply(Math, widths) <= 820;
   }
 
+  function guidesDisabled() {
+    try {
+      return !!(window.OST_MOBILE_FASTBOOT || (window.OST_MOBILE && typeof window.OST_MOBILE.shouldSkipGuides === 'function' && window.OST_MOBILE.shouldSkipGuides()));
+    } catch (e) {
+      return !!window.OST_MOBILE_FASTBOOT;
+    }
+  }
+
+  function markGuideCompleted() {
+    if (window.OST_MOBILE && typeof window.OST_MOBILE.markGuidesSeen === 'function') {
+      window.OST_MOBILE.markGuidesSeen();
+      return;
+    }
+    try { localStorage.setItem('ost.tour.completed', '1'); } catch (e) {}
+  }
+
   // ------------------ Mobile request-desktop toggle ------------------------
   function mountMobileBar() {
+    if (guidesDisabled()) { markGuideCompleted(); return; }
     if (document.getElementById('ost-mobile-bar')) return;
     var mobileViewportContent = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
     var bar = document.createElement('div');
@@ -98,6 +116,7 @@
   var tourIdx = 0;
 
   function ensureTour() {
+    if (guidesDisabled()) { markGuideCompleted(); return null; }
     if (tourEl) return tourEl;
     tourEl = document.createElement('div');
     tourEl.className = 'ost-tour';
@@ -132,6 +151,7 @@
   function renderStep() {
     var s = TOUR_STEPS[tourIdx];
     var el = ensureTour();
+    if (!el) return;
     el.querySelector('.ost-tour__step').textContent = 'Step ' + (tourIdx + 1) + ' of ' + TOUR_STEPS.length;
     el.querySelector('.ost-tour__title').innerHTML = s.title;
     el.querySelector('.ost-tour__body').innerHTML = s.body;
@@ -159,14 +179,19 @@
   }
 
   function startTour() {
+    if (guidesDisabled()) { markGuideCompleted(); return false; }
     tourIdx = 0;
-    ensureTour().classList.add('is-open');
+    var el = ensureTour();
+    if (!el) return false;
+    el.classList.add('is-open');
     renderStep();
+    return true;
   }
   function closeTour() {
     if (!tourEl) return;
     tourEl.classList.remove('is-open');
     localStorage.setItem('ost.tour.completed', '1');
+    try { document.dispatchEvent(new CustomEvent('ost:tour-closed')); } catch (e) {}
   }
 
   // ------------------ Treasury Reserves panel ------------------------------
@@ -227,8 +252,8 @@
   }
 
   function maybeAutoStart() {
-    if (isPhoneLike()) {
-      try { localStorage.setItem('ost.tour.completed', '1'); } catch (e) {}
+    if (guidesDisabled() || isPhoneLike()) {
+      markGuideCompleted();
       return;
     }
     if (localStorage.getItem('ost.tour.completed')) return;
@@ -319,7 +344,7 @@
   function boot() {
     // Suppress the older 3-step compartments guide so users only see the new deep tour.
     try { localStorage.setItem('ost.compartments.guideSeen.v1', '1'); } catch (e) {}
-    mountMobileBar();
+    if (!guidesDisabled()) mountMobileBar();
     mountTreasuryPanel();
     watchLangChanges();
     setTimeout(autoTranslate, 1500);
@@ -337,6 +362,7 @@
     setViewport: function (mode) {
       var b = document.querySelector('#ost-mobile-bar [data-mode="' + mode + '"]');
       if (b) b.click();
+      else if (window.OST_MOBILE && typeof window.OST_MOBILE.applyViewport === 'function') window.OST_MOBILE.applyViewport();
     }
   };
 })();

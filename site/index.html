@@ -3,24 +3,101 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <script>
-      (function () {
-        var viewportContent = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
-        function applyViewportFit() {
-          var viewport = document.querySelector('meta[name="viewport"]');
-          if (viewport && viewport.getAttribute('content') !== viewportContent) {
-            viewport.setAttribute('content', viewportContent);
-          }
+  <script>
+    (function () {
+      var MOBILE_QUERY = '(max-width: 820px), (pointer: coarse) and (max-width: 1024px)';
+      var MOBILE_VIEWPORT = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
+      var MOBILE_UA_RE = /Android|iPhone|iPad|iPod|IEMobile|Opera Mini|Mobile|Silk/i;
+
+      function mediaMatches(query) {
+        try { return !!(window.matchMedia && window.matchMedia(query).matches); }
+        catch (e) { return false; }
+      }
+
+      function getWidthFloor() {
+        var widths = [];
+        if (window.innerWidth) widths.push(window.innerWidth);
+        if (window.visualViewport && window.visualViewport.width) widths.push(window.visualViewport.width);
+        if (window.screen && window.screen.width) widths.push(window.screen.width);
+        if (window.screen && window.screen.availWidth) widths.push(window.screen.availWidth);
+        return widths.length ? Math.min.apply(Math, widths) : 9999;
+      }
+
+      function isMobile() {
+        if (window.OST_MOBILE_FASTBOOT) return true;
+        if (mediaMatches(MOBILE_QUERY)) return true;
+        var widthFloor = getWidthFloor();
+        if (widthFloor <= 820) return true;
+        if (mediaMatches('(pointer: coarse)') && widthFloor <= 1024) return true;
+        try {
+          if (navigator.maxTouchPoints > 1 && widthFloor <= 1180) return true;
+          if (MOBILE_UA_RE.test(navigator.userAgent || '')) return true;
+        } catch (e) {}
+        return false;
+      }
+
+      function applyViewport() {
+        var viewport = document.querySelector('meta[name="viewport"]');
+        if (!viewport) {
+          viewport = document.createElement('meta');
+          viewport.setAttribute('name', 'viewport');
+          document.head.appendChild(viewport);
         }
-        applyViewportFit();
-        if (document.readyState === 'loading') {
-          document.addEventListener('DOMContentLoaded', applyViewportFit, { once: true });
-        }
-        window.addEventListener('load', applyViewportFit, { once: true });
-        window.setTimeout(applyViewportFit, 0);
-        window.setTimeout(applyViewportFit, 250);
-      })();
-    </script>
+        if (viewport.getAttribute('content') !== MOBILE_VIEWPORT) viewport.setAttribute('content', MOBILE_VIEWPORT);
+      }
+
+      function markGuidesSeen() {
+        try {
+          localStorage.setItem('ost.tour.completed', '1');
+          localStorage.setItem('ost.compartments.guideSeen.v1', '1');
+        } catch (e) {}
+      }
+
+      function applyAccessDefaults() {
+        markGuidesSeen();
+        try {
+          var prefs = JSON.parse(localStorage.getItem('ost_prefs') || '{}') || {};
+          var next = {
+            lang: prefs.lang || document.documentElement.getAttribute('data-lang') || 'en',
+            currency: prefs.currency || window.__ostCurrency || 'USD',
+            welcomeVersion: prefs.welcomeVersion || 'readable-gate-v1'
+          };
+          localStorage.setItem('ost_prefs', JSON.stringify(next));
+          localStorage.setItem('ost.welcome.version', next.welcomeVersion);
+          sessionStorage.setItem('ost.welcome.seen.session', '1');
+          var compartments = JSON.parse(localStorage.getItem('ost.compartments.v1') || '{}') || {};
+          compartments.focusMode = false;
+          localStorage.setItem('ost.compartments.v1', JSON.stringify(compartments));
+        } catch (e) {}
+      }
+
+      function applyFastboot() {
+        applyViewport();
+        if (!isMobile()) return false;
+        document.documentElement.classList.add('ost-mobile-fastboot');
+        window.OST_MOBILE_FASTBOOT = true;
+        applyAccessDefaults();
+        try { window.dispatchEvent(new CustomEvent('ost:mobile-fastboot', { detail: { mobile: true } })); } catch (e) {}
+        return true;
+      }
+
+      window.OST_MOBILE = {
+        query: MOBILE_QUERY,
+        viewportContent: MOBILE_VIEWPORT,
+        getWidthFloor: getWidthFloor,
+        isMobile: isMobile,
+        applyViewport: applyViewport,
+        markGuidesSeen: markGuidesSeen,
+        applyAccessDefaults: applyAccessDefaults,
+        shouldSkipGuides: function () { return !!window.OST_MOBILE_FASTBOOT || isMobile(); },
+        applyFastboot: applyFastboot
+      };
+
+      applyFastboot();
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyFastboot, { once: true });
+      window.addEventListener('load', applyViewport, { once: true });
+    })();
+  </script>
   <style id="ost-mobile-fastboot-style">
     html.ost-mobile-fastboot,
     html.ost-mobile-fastboot body {
@@ -28,25 +105,18 @@
       overflow-x: hidden !important;
     }
 
+    html.ost-mobile-fastboot #welcomeOverlay,
     html.ost-mobile-fastboot .ost-guide-overlay,
-    html.ost-mobile-fastboot .ost-tour,
-    html.ost-mobile-fastboot #ost-mobile-bar,
-    html.ost-mobile-fastboot .ost-mobile-bar,
-    html.ost-mobile-fastboot #ostMobileHome,
-    html.ost-mobile-fastboot .ost-mobile-home {
+    html.ost-mobile-fastboot .ost-tour {
       display: none !important;
       visibility: hidden !important;
       opacity: 0 !important;
       pointer-events: none !important;
-      position: static !important;
-      z-index: -1 !important;
     }
 
     @media (max-width: 820px), (pointer: coarse) and (max-width: 1024px) {
       .ost-guide-overlay,
-      .ost-tour,
-      #ost-mobile-bar,
-      .ost-mobile-bar {
+      .ost-tour {
         display: none !important;
         visibility: hidden !important;
         opacity: 0 !important;
@@ -58,148 +128,43 @@
         min-width: 0 !important;
         overflow-x: hidden !important;
       }
-
-      html.ost-mobile-fastboot .ost-guide-overlay,
-      html.ost-mobile-fastboot .ost-tour,
-      html.ost-mobile-fastboot #ost-mobile-bar,
-      html.ost-mobile-fastboot .ost-mobile-bar,
-      html.ost-mobile-fastboot #ostMobileHome,
-      html.ost-mobile-fastboot .ost-mobile-home {
-        display: none !important;
-        visibility: hidden !important;
-        opacity: 0 !important;
-        pointer-events: none !important;
-        position: static !important;
-        z-index: -1 !important;
-      }
     }
   </style>
   <script>
-    (function () {
-      var mobileUserAgent = /Android|iPhone|iPad|iPod|IEMobile|Opera Mini|Mobile|Silk/i;
-
-      function getWidthFloor() {
-        var widths = [];
-        if (window.innerWidth) widths.push(window.innerWidth);
-        if (window.visualViewport && window.visualViewport.width) widths.push(window.visualViewport.width);
-        if (window.screen && window.screen.width) widths.push(window.screen.width);
-        if (window.screen && window.screen.availWidth) widths.push(window.screen.availWidth);
-        return widths.length ? Math.min.apply(Math, widths) : 9999;
-      }
-
-      function mobileSignal() {
-        try {
-          if (window.OST_MOBILE_FASTBOOT) return true;
-          if (window.matchMedia && window.matchMedia('(max-width: 820px), (pointer: coarse) and (max-width: 1024px)').matches) return true;
-          if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches && getWidthFloor() <= 1024) return true;
-        } catch (e) {}
-        try {
-          var widthFloor = getWidthFloor();
-          if (widthFloor <= 820) return true;
-          if (navigator.maxTouchPoints > 1 && widthFloor <= 1180) return true;
-          if (mobileUserAgent.test(navigator.userAgent || '')) return true;
-        } catch (e) {}
-        return false;
-      }
-
-      if (!mobileSignal()) return;
-      document.documentElement.classList.add('ost-mobile-fastboot');
-      window.OST_MOBILE_FASTBOOT = true;
-      try {
-        localStorage.setItem('ost.tour.completed', '1');
-        localStorage.setItem('ost.compartments.guideSeen.v1', '1');
-      } catch (e) {}
-
-      try {
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.getRegistrations().then(function (regs) {
-            regs.forEach(function (reg) { reg.unregister(); });
-          }).catch(function () {});
-        }
-        if (window.caches) {
-          caches.keys().then(function (keys) {
-            keys.filter(function (key) { return /^ost-pwa-/.test(key); })
-              .forEach(function (key) { caches.delete(key); });
-          }).catch(function () {});
-        }
-      } catch (e) {}
-
-      function releaseMobileOverlays() {
-        var released = false;
-        document.querySelectorAll('.ost-guide-overlay, .ost-tour, #ost-mobile-bar, .ost-mobile-bar, #ostMobileHome, .ost-mobile-home').forEach(function (overlay) {
-          overlay.classList.remove('is-open');
-          overlay.setAttribute('aria-hidden', 'true');
-          overlay.style.display = 'none';
-          overlay.style.visibility = 'hidden';
-          overlay.style.opacity = '0';
-          overlay.style.pointerEvents = 'none';
-          if (overlay.id === 'ostMobileHome' || overlay.id === 'ost-mobile-bar' || overlay.classList.contains('ost-mobile-home') || overlay.classList.contains('ost-mobile-bar')) overlay.remove();
-          released = true;
-        });
-        return released;
-      }
-
-      var observer = null;
-      if ('MutationObserver' in window) {
-        observer = new MutationObserver(function () {
-          releaseMobileOverlays();
-        });
-        observer.observe(document.documentElement, { childList: true, subtree: true });
-      }
-      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', releaseMobileOverlays, { once: true });
-      window.setTimeout(releaseMobileOverlays, 0);
-      window.setTimeout(releaseMobileOverlays, 120);
-      window.setTimeout(releaseMobileOverlays, 400);
-      window.setTimeout(releaseMobileOverlays, 1000);
-      window.setTimeout(releaseMobileOverlays, 2500);
-      window.setTimeout(releaseMobileOverlays, 5000);
-      window.setTimeout(function () { if (observer) observer.disconnect(); releaseMobileOverlays(); }, 15000);
-    })();
-  </script>
-  <script>
-    /* iOS keyboard / pinch-zoom recovery.
-       When the user taps an input on iOS the page can stay shrunk after blur
-       because Safari leaves visualViewport.scale > 1. We:
-         (a) snap the page back to top + reset transient scale on blur,
-         (b) listen to visualViewport "resize" so when the keyboard closes the
-             body height is restored and any locked scroll position is cleared,
-         (c) re-apply the meta viewport so a stale scale gets reset. */
+    /* iOS keyboard recovery without disabling pinch zoom. */
     (function () {
       if (!('ontouchend' in window)) return;
       var vp = window.visualViewport;
-      var meta = document.querySelector('meta[name="viewport"]');
-      var baseContent = meta ? meta.getAttribute('content') : null;
-      function nudgeViewport() {
-        if (!meta) return;
-        try {
-          // toggle to a no-zoom variant then back: forces Safari to recompute scale
-          meta.setAttribute('content', baseContent + ', maximum-scale=1');
-          window.setTimeout(function () { meta.setAttribute('content', baseContent); }, 80);
-        } catch (e) {}
+
+      function applyViewport() {
+        if (window.OST_MOBILE && typeof window.OST_MOBILE.applyViewport === 'function') {
+          window.OST_MOBILE.applyViewport();
+          return;
+        }
+        var meta = document.querySelector('meta[name="viewport"]');
+        if (meta) meta.setAttribute('content', 'width=device-width, initial-scale=1.0, viewport-fit=cover');
       }
+
       function recoverFromKeyboard() {
-        // If visualViewport.scale > 1.01 we are stuck zoomed in — reset.
-        if (vp && vp.scale > 1.01) nudgeViewport();
-        // Restore any scrollY drift from keyboard push.
+        applyViewport();
         try { window.scrollTo({ top: window.scrollY, left: 0, behavior: 'instant' }); } catch (e) {}
       }
+
       document.addEventListener('focusout', function (e) {
         var t = e.target;
         if (!t) return;
         var tag = (t.tagName || '').toLowerCase();
         if (tag !== 'input' && tag !== 'textarea' && tag !== 'select' && t.getAttribute && t.getAttribute('contenteditable') !== 'true') return;
-        // give the keyboard time to dismiss, then restore
         window.setTimeout(recoverFromKeyboard, 120);
         window.setTimeout(recoverFromKeyboard, 380);
       }, true);
+
       if (vp) {
         vp.addEventListener('resize', function () {
-          // keyboard closed when viewport height returns to ~window.innerHeight
           if (vp.height >= window.innerHeight - 4) recoverFromKeyboard();
         });
       }
-      // Hard recovery via 3-finger tap on the body (accessibility escape hatch)
-      document.addEventListener('gestureend', function () { window.setTimeout(nudgeViewport, 60); }, { passive: true });
+      document.addEventListener('gestureend', function () { window.setTimeout(applyViewport, 60); }, { passive: true });
     })();
   </script>
   <title>OST &mdash; The Next Step After Bitcoin</title>
@@ -247,7 +212,7 @@
   <link rel="stylesheet" href="redesign.css?v=1">
   <link rel="stylesheet" href="stock-market.css?v=1">
   <link rel="stylesheet" href="live-watch.css?v=5">
-  <link rel="stylesheet" href="mobile-shell.css?v=12">
+  <link rel="stylesheet" href="mobile-shell.css?v=13">
   <link rel="stylesheet" href="mobile-shrink.css?v=1">
 </head>
 <body>
@@ -5744,7 +5709,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
     </div>
   </div>
 
-  <script src="mobile-shell.js?v=10"></script>
+  <script src="mobile-shell.js?v=11"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <!-- ──────────────────────────────────────────────────────────────────
        Buffer + Node-globals polyfill — REQUIRED by @solana/web3.js.
@@ -5977,7 +5942,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
     </script>
     <script src="native-markets.js?v=3"></script>
     <script src="icons.js?v=1"></script>
-    <script src="app.js?v=142"></script>
+    <script src="app.js?v=143"></script>
     <!-- Ghost AI Summoning Circle (rebuild) -->
     <script type="module" src="ghost/ghost.js?v=6"></script>
     <script type="module" src="mesh/mesh.js?v=33"></script>
@@ -5990,7 +5955,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="polish.js?v=2"></script>
   <script src="swap-pool.js?v=1"></script>
   <script src="wallet-extras.js?v=21"></script>
-  <script src="compartments.js?v=4"></script>
+  <script src="compartments.js?v=5"></script>
   <script src="prediction-extras.js?v=10"></script>
   <script src="prediction-pro.js?v=15"></script>
   <script src="prediction-scalar.js?v=3"></script>
@@ -6002,7 +5967,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="ost-console.js?v=2"></script>
   <!-- On-chain betting (devnet program ost_betting) -->
   <script src="ost-onchain-bet.js?v=1"></script>
-  <script src="ux-extras.js?v=9"></script>
+  <script src="ux-extras.js?v=10"></script>
   <script src="faucet-hub.js?v=15"></script>
   <script src="topup.js?v=11"></script>
   <script src="apple-tap.js?v=3"></script>
@@ -6135,20 +6100,9 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
           return;
         }
 
-        var mobileAccessFirst = !!window.OST_MOBILE_FASTBOOT;
-        if (mobileAccessFirst) {
+        if (window.OST_MOBILE_FASTBOOT) {
           setStatus('Mobile online access ready');
-          Promise.allSettled([
-            navigator.serviceWorker.getRegistrations().then(function (regs) {
-              return Promise.all(regs.map(function (reg) { return reg.unregister(); }));
-            }),
-            window.caches ? caches.keys().then(function (keys) {
-              return Promise.all(keys.filter(function (key) { return /^ost-pwa-/.test(key); }).map(function (key) { return caches.delete(key); }));
-            }) : Promise.resolve()
-          ]).catch(function () {});
-          return;
         }
-
         var basePath = pwaBasePath();
         navigator.serviceWorker.register(basePath + 'sw.js', { scope: basePath })
           .then(function () {

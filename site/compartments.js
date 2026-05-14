@@ -36,6 +36,7 @@
   ];
 
   function isMobileViewport() {
+    if (window.OST_MOBILE && typeof window.OST_MOBILE.isMobile === 'function') return window.OST_MOBILE.isMobile();
     try {
       if (window.matchMedia && window.matchMedia('(max-width: 820px), (pointer: coarse) and (max-width: 1024px)').matches) return true;
     } catch (e) {}
@@ -381,7 +382,8 @@
     applyFocusClasses();
 
     // First-time guide
-    setTimeout(showGuide, 800);
+    if (document.readyState === 'complete') showGuide();
+    else window.addEventListener('load', showGuide, { once: true });
 
     // React to manual hash changes (back/forward buttons)
     window.addEventListener('hashchange', syncFromHash);
@@ -393,7 +395,7 @@
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot);
   } else {
-    setTimeout(boot, 0);
+    boot();
   }
 
   // Public surface for other scripts (e.g. polish.js could trigger compartment changes)
