@@ -3086,6 +3086,8 @@
       outcomeKey: order.outcomeKey || '',
       outcomeLabel: order.outcomeLabel || '',
       gammaMarketId: order.gammaMarketId || '',
+      vaultTokenAccount: deskAccounts.vaultTokenAccount.toBase58(),
+      settlementVault: deskAccounts.vaultTokenAccount.toBase58(),
       createdAt: Date.now()
     };
     storePredictionOrderRecord(record);
@@ -14957,6 +14959,13 @@
       el.classList.toggle('is-disabled', !url || url === '#');
     }
 
+    function setMetricText(valueEl, label, value) {
+      if (!valueEl) return;
+      valueEl.textContent = value;
+      var labelEl = valueEl.previousElementSibling;
+      if (labelEl) labelEl.textContent = label;
+    }
+
     function renderPredictionHero(filteredMarkets) {
       var market = getSelectedMarket(filteredMarkets);
       if (!market) {
@@ -14971,8 +14980,8 @@
         if (heroYesPriceEl) heroYesPriceEl.textContent = '--';
         if (heroNoPriceEl) heroNoPriceEl.textContent = '--';
         if (heroProbabilityEl) heroProbabilityEl.textContent = '--';
-        if (heroVolumeEl) heroVolumeEl.textContent = '--';
-        if (heroDepthEl) heroDepthEl.textContent = '--';
+        setMetricText(heroVolumeEl, '24h volume', '--');
+        setMetricText(heroDepthEl, 'Depth', '--');
         if (heroCloseEl) heroCloseEl.textContent = '--';
         if (heroMomentumEl) heroMomentumEl.textContent = 'Flat';
         updateMarketLink(heroVenueLinkEl, '', 'Open venue');
@@ -14992,8 +15001,8 @@
       if (heroYesPriceEl) heroYesPriceEl.textContent = market.yesValue;
       if (heroNoPriceEl) heroNoPriceEl.textContent = market.noValue;
       if (heroProbabilityEl) heroProbabilityEl.textContent = market.yesValue;
-      if (heroVolumeEl) heroVolumeEl.textContent = market.volumeValue;
-      if (heroDepthEl) heroDepthEl.textContent = market.secondaryMetricValue;
+      setMetricText(heroVolumeEl, market.volumeLabel || '24h volume', market.volumeValue);
+      setMetricText(heroDepthEl, market.secondaryMetricLabel || 'Depth', market.secondaryMetricValue);
       if (heroCloseEl) heroCloseEl.textContent = market.closeText;
       if (heroMomentumEl) heroMomentumEl.textContent = formatSignedPoints(getTrendPoints(market), 'Flat');
       updateMarketLink(heroVenueLinkEl, market.primaryUrl, market.primaryLabel);
@@ -15116,8 +15125,8 @@
         if (stageYesPriceEl) stageYesPriceEl.textContent = '--';
         if (stageNoPriceEl) stageNoPriceEl.textContent = '--';
         if (stageProbabilityEl) stageProbabilityEl.textContent = '--';
-        if (stageVolumeEl) stageVolumeEl.textContent = '--';
-        if (stageDepthEl) stageDepthEl.textContent = '--';
+        setMetricText(stageVolumeEl, '24h volume', '--');
+        setMetricText(stageDepthEl, 'Depth', '--');
         if (stageCloseEl) stageCloseEl.textContent = '--';
         if (stageChartCopyEl) stageChartCopyEl.textContent = 'Anchored to current share pricing, recent venue changes, and source liquidity.';
         if (stageChartHeadingEl) stageChartHeadingEl.textContent = 'Live probability curve';
@@ -15151,8 +15160,8 @@
       if (stageYesPriceEl) stageYesPriceEl.textContent = Number.isFinite(activePrice) ? formatPercent(activePrice) : market.yesValue;
       if (stageNoPriceEl) stageNoPriceEl.textContent = Number.isFinite(complementPrice) ? formatPercent(complementPrice) : market.noValue;
       if (stageProbabilityEl) stageProbabilityEl.textContent = Number.isFinite(activePrice) ? formatPercent(activePrice) : market.yesValue;
-      if (stageVolumeEl) stageVolumeEl.textContent = market.volumeValue;
-      if (stageDepthEl) stageDepthEl.textContent = market.secondaryMetricValue;
+      setMetricText(stageVolumeEl, market.volumeLabel || '24h volume', market.volumeValue);
+      setMetricText(stageDepthEl, market.secondaryMetricLabel || 'Depth', market.secondaryMetricValue);
       if (stageCloseEl) stageCloseEl.textContent = market.closeText;
       requestMarketHistory(market, chartSide, explicitOutcome ? explicitOutcome.key : '');
       var historyKey = getHistoryKey(market, chartSide, explicitOutcome ? explicitOutcome.key : '');
@@ -15951,6 +15960,42 @@
       renderPredictionBoard();
       return true;
     }
+
+
+
+    function isOstBtcMarket(market) {
+      return !!(market && ((market.meta && market.meta.kind === 'btc5m') || String(market.id || '').indexOf('ost-btc5m-') === 0));
+    }
+
+    function applyOstBtcMarketUpdate(nextMarket) {
+      if (!isOstBtcMarket(nextMarket)) return false;
+      var normalized = normalizeNativePredictionMarket(nextMarket);
+      var replaced = false;
+      state.markets = [normalized].concat((state.markets || []).filter(function(market) {
+        if (isOstBtcMarket(market)) {
+          replaced = true;
+          return false;
+        }
+        return true;
+      }));
+      if (!state.selectedMarketId || String(state.selectedMarketId || '').indexOf('ost-btc5m-') === 0 || (!replaced && !getSelectedMarket(getFilteredMarkets()))) {
+        state.selectedMarketId = normalized.id;
+      }
+      state.lastUpdated = new Date();
+      try { window.__predictionState = state; } catch (_) {}
+      renderPredictionBoard();
+      return true;
+    }
+
+    window.addEventListener('ost:btc-market-updated', function(event) {
+      var market = event && event.detail && event.detail.market;
+      if (!market && typeof window.buildOstNativeMarkets === 'function') {
+        try {
+          market = (window.buildOstNativeMarkets() || []).filter(isOstBtcMarket)[0];
+        } catch (_) { market = null; }
+      }
+      applyOstBtcMarketUpdate(market);
+    });
 
     function loadDirectPredictionMarkets() {
       // Browser-side Kalshi fetch is permanently CORS-blocked from

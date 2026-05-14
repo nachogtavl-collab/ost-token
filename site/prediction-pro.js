@@ -131,7 +131,7 @@
 
   function formatUsd(value) {
     var number = Number(value);
-    if (!Number.isFinite(number) || number <= 0) return '$--';
+    if (!Number.isFinite(number) || number < 0) return '$--';
     return '$' + number.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
@@ -328,6 +328,20 @@
     };
   }
 
+  function publishBtcMarketUpdate(reason) {
+    var market = buildFiveMinBtcMarket();
+    captureRoundOpenIfNeeded(market);
+    try {
+      window.dispatchEvent(new CustomEvent('ost:btc-market-updated', {
+        detail: {
+          reason: reason || 'btc-tick',
+          tick: Object.assign({}, btcLastTick),
+          market: market
+        }
+      }));
+    } catch (e) {}
+    return market;
+  }
   function pollBtcMarket() {
     // Skip polling when the page is hidden to avoid flooding public APIs.
     if (typeof document !== 'undefined' && document.hidden) return;
@@ -341,7 +355,7 @@
           // every consumer (cards, modal, OST_PREDICTION_API) reads identical
           // numbers across all browsers.
           rememberBtcTick(Number(round.livePrice), round.livePriceSource || 'ost-canonical');
-          captureRoundOpenIfNeeded(buildFiveMinBtcMarket());
+          publishBtcMarketUpdate('canonical-round');
           maybeSeedTickHistory(round.openAt);
           settleClosedRounds();
           return;
@@ -349,13 +363,13 @@
         // Worker round had no live price (cold start) — keep the public-feed
         // waterfall so the UI stays alive.
         return fetchBtcSpot({ force: true }).then(function () {
-          try { captureRoundOpenIfNeeded(buildFiveMinBtcMarket()); } catch (e) {}
+          try { publishBtcMarketUpdate('direct-feed'); } catch (e) {}
           settleClosedRounds();
         });
       })
       .catch(function () {
         return fetchBtcSpot({ force: true }).then(function () {
-          try { captureRoundOpenIfNeeded(buildFiveMinBtcMarket()); } catch (e) {}
+          try { publishBtcMarketUpdate('direct-feed'); } catch (e) {}
           settleClosedRounds();
         });
       });
@@ -425,9 +439,12 @@
       ? canonicalRound
       : null;
     var livePrice = (canon && Number(canon.livePrice)) || btcLastTick.price || refPrice || roundRecord.openPrice || 0;
-    var openPrice = (canon && Number(canon.openPrice)) || Number(roundRecord.openPrice) || refPrice || livePrice || 0;
+    var openPrice = Number(roundRecord.openPrice) || (canon && Number(canon.openPrice)) || refPrice || livePrice || 0;
+    var localOpenPrice = Number(roundRecord.openPrice);
+    var canonOpenPrice = canon && Number(canon.openPrice);
+    var useCanonicalOdds = canon && Number.isFinite(Number(canon.yesPriceNumber)) && (!Number.isFinite(localOpenPrice) || localOpenPrice <= 0 || Math.abs(localOpenPrice - Number(canonOpenPrice || 0)) < 0.01);
     var odds;
-    if (canon && Number.isFinite(Number(canon.yesPriceNumber))) {
+    if (useCanonicalOdds) {
       var yes = Math.max(0.02, Math.min(0.98, Number(canon.yesPriceNumber)));
       var prevYes = btcLastOdds.roundId === ('ost-btc5m-' + b.openAt) && Number.isFinite(btcLastOdds.yes) ? btcLastOdds.yes : yes;
       btcLastOdds = { roundId: 'ost-btc5m-' + b.openAt, yes: yes, previousYes: prevYes };
@@ -448,22 +465,27 @@
     var yesPct = (odds.yes * 100).toFixed(1) + '%';
     var noPct = (odds.no * 100).toFixed(1) + '%';
     var sourceLabel = btcLastTick.source ? btcLastTick.source.toUpperCase() : 'BTC FEED';
+    var priceToBeat = openPrice;
+    var priceToBeatText = priceToBeat ? formatUsd(priceToBeat) : '$--';
+    var equation = 'YES wins if BTC closes above ' + priceToBeatText + '; NO wins if BTC closes at or below ' + priceToBeatText + '.';
     return {
       source: 'ost',
       sourceLabel: 'OST 5-min BTC',
       id: roundId,
       title: '5-min BTC: will price be UP at ' + new Date(b.closeAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + '?',
-      detail: 'Native OST market priced from live BTC-USD spot. Open ' + (openPrice ? formatUsd(openPrice) : '$--') + ' · live ' + (livePrice ? formatUsd(livePrice) : '$--') + ' · ' + formatSignedUsd(odds.delta) + ' from open via ' + sourceLabel + '.',
+      detail: 'Price to beat: ' + priceToBeatText + '. Live BTC ' + (livePrice ? formatUsd(livePrice) : '$--') + ' is ' + formatSignedUsd(odds.delta) + ' from the beat via ' + sourceLabel + '. ' + equation,
       yesLabel: 'YES (UP)',
       yesValue: yesPct,
       yesPriceNumber: odds.yes,
       noLabel: 'NO (DOWN/SAME)',
       noValue: noPct,
       noPriceNumber: odds.no,
+      priceToBeat: priceToBeat,
+      equation: equation,
       volumeLabel: 'Round',
       volumeValue: '5 min',
       volumeNumber: 1,
-      secondaryMetricLabel: 'Open',
+      secondaryMetricLabel: 'Price to beat',
       secondaryMetricValue: openPrice ? formatUsd(openPrice) : '--',
       secondaryMetricNumber: openPrice,
       closeText: 'Closes ' + new Date(b.closeAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -490,9 +512,11 @@
       meta: {
         kind: 'btc5m',
         openPrice: openPrice,
+        priceToBeat: priceToBeat,
         livePrice: livePrice,
         openAt: b.openAt,
         closeAt: b.closeAt,
+        equation: equation,
         priceDelta: odds.delta,
         priceDeltaPct: odds.deltaPct,
         yesPriceNumber: odds.yes,
@@ -610,11 +634,13 @@
     if (!market || !market.isOstNative || !market.meta || market.meta.kind !== 'btc5m') return;
     var rounds = readRounds();
     var key = String(market.meta.openAt);
-    // Canonical worker openPrice always wins over any local first-tick capture.
+    // Preserve the first price this browser captured for the round. The worker
+    // can cold-start with openPrice === livePrice, which would pin every round
+    // at 50/50 if we reconciled it on each tick.
     var canonOpen = canonicalRoundIsFresh() && canonicalRound && Number(canonicalRound.openAt) === market.meta.openAt
       ? Number(canonicalRound.openPrice) || 0
       : 0;
-    var openPrice = canonOpen || Number(market.meta.openPrice) || btcLastTick.price || 0;
+    var openPrice = Number(market.meta.openPrice) || canonOpen || btcLastTick.price || 0;
     if (!rounds[key]) {
       rounds[key] = {
         openPrice: openPrice,
@@ -624,10 +650,10 @@
         openPriceSource: (canonOpen ? 'ost-canonical' : (btcLastTick.source || ''))
       };
       writeRounds(rounds);
-    } else if (canonOpen && rounds[key].openPrice !== canonOpen) {
-      // Reconcile any earlier locally-captured open price to the canonical one.
-      rounds[key].openPrice = canonOpen;
-      rounds[key].openPriceSource = 'ost-canonical';
+    } else if (!rounds[key].openPrice && openPrice) {
+      rounds[key].openPrice = openPrice;
+      rounds[key].openPriceTs = btcLastTick.ts || Date.now();
+      rounds[key].openPriceSource = canonOpen && openPrice === canonOpen ? 'ost-canonical' : (btcLastTick.source || '');
       writeRounds(rounds);
     } else if (!rounds[key].openPrice && btcLastTick.price) {
       rounds[key].openPrice = btcLastTick.price;
@@ -641,7 +667,7 @@
   // Tightened from 5s → 1s so the dashboard's "Open price" cell never lags
   // more than one tick behind the live BTC feed.
   setInterval(function () {
-    try { captureRoundOpenIfNeeded(buildFiveMinBtcMarket()); } catch (e) {}
+    try { publishBtcMarketUpdate('direct-feed'); } catch (e) {}
   }, 1000);
 
   // Also snapshot opportunistically on every fresh BTC tick so a brand-new
@@ -649,7 +675,7 @@
   // of waiting up to a full second.
   try {
     window.addEventListener('ost:btc-spot', function () {
-      try { captureRoundOpenIfNeeded(buildFiveMinBtcMarket()); } catch (e) {}
+      try { publishBtcMarketUpdate('direct-feed'); } catch (e) {}
     });
   } catch (e) {}
 
@@ -1183,38 +1209,66 @@
     },
     settledRounds: function () { return readRounds(); },
     placeBet: function (req) {
-      // External bots reuse the SAME on-chain path as the UI — they must
+      // External bots reuse the SAME on-chain path as the UI - they must
       // pass an already-connected wallet (Phantom / Backpack) by calling
       // window.connectWallet first, otherwise we can't sign.
       if (!req || !req.marketId || !req.side || !Number.isFinite(Number(req.stake))) {
         return Promise.reject(new Error('placeBet requires { marketId, side, stake }'));
       }
-      // Find the market in the rendered DOM so we have its current price
-      var card = document.querySelector('[data-prediction-market-id="' + String(req.marketId).replace(/"/g, '\\"') + '"]');
+      var marketId = String(req.marketId);
+      var side = String(req.side).toLowerCase() === 'no' ? 'no' : 'yes';
+      var card = document.querySelector('[data-prediction-market-id="' + marketId.replace(/"/g, '\\"') + '"]');
       if (!card) return Promise.reject(new Error('Market not loaded in current snapshot'));
-      // Click the card to select it, then drive the trade desk
       card.click();
       var sideToggle = document.getElementById('predictionOutcomeToggle');
       if (sideToggle) {
-        var sb = sideToggle.querySelector('button[data-prediction-side="' + req.side + '"]');
+        var sb = sideToggle.querySelector('button[data-prediction-side="' + side + '"]');
         if (sb) sb.click();
       }
       var stakeInput = document.getElementById('predictionStakeInput');
       if (stakeInput) {
         stakeInput.value = String(req.stake);
         stakeInput.dispatchEvent(new Event('input', { bubbles: true }));
+        stakeInput.dispatchEvent(new Event('change', { bubbles: true }));
       }
       return new Promise(function (resolve, reject) {
         var actionBtn = document.getElementById('predictionTradeAction') || document.querySelector('[data-prediction-trade-action]');
         if (!actionBtn) return reject(new Error('Trade action button not found'));
-        // Resolve when ledger gains a new entry
+        var done = false;
+        var iv = null;
+        var timeout = null;
+        function cleanup() {
+          if (iv) clearInterval(iv);
+          if (timeout) clearTimeout(timeout);
+          try { window.removeEventListener('ost:prediction-order-recorded', onRecorded); } catch (e) {}
+        }
+        function finish(record) {
+          if (done) return;
+          done = true;
+          cleanup();
+          resolve(record);
+        }
+        function fail(error) {
+          if (done) return;
+          done = true;
+          cleanup();
+          reject(error);
+        }
+        function onRecorded(event) {
+          var record = event && event.detail;
+          if (!record || String(record.marketId || '') !== marketId) return;
+          finish(record);
+        }
         var prev = OST_PREDICTION_API.ledger().length;
-        var deadline = Date.now() + 30000;
+        try { window.addEventListener('ost:prediction-order-recorded', onRecorded); } catch (e) {}
         actionBtn.click();
-        var iv = setInterval(function () {
+        timeout = setTimeout(function () { fail(new Error('Bet timed out')); }, 45000);
+        iv = setInterval(function () {
           var now = OST_PREDICTION_API.ledger();
-          if (now.length > prev) { clearInterval(iv); resolve(now[0]); return; }
-          if (Date.now() > deadline) { clearInterval(iv); reject(new Error('Bet timed out')); }
+          if (now.length > prev) {
+            var latest = now.filter(function (order) { return order && String(order.marketId || '') === marketId; })[0] || now[0];
+            finish(latest);
+          }
         }, 500);
       });
     }

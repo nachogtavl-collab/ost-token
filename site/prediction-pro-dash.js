@@ -183,8 +183,9 @@
       +       '</div>'
       +       '<dl class="ost-pro-tile__stats">'
       +         '<div><dt>Round opens</dt><dd data-bind="openAt">—</dd></div>'
-      +         '<div><dt>Open price</dt><dd data-bind="openPrice">—</dd></div>'
-      +         '<div><dt>Feed</dt><dd data-bind="btcSource">—</dd></div>'
+      +         '<div><dt>Price to beat</dt><dd data-bind="openPrice">—</dd></div>'
+      +         '<div><dt>Feed</dt><dd data-bind="btcSource">--</dd></div>'
+      +         '<div><dt>Equation</dt><dd data-bind="equation">--</dd></div>'
       +         '<div><dt>You staked</dt><dd data-bind="userStake">—</dd></div>'
       +       '</dl>'
       +     '</div>'
@@ -276,8 +277,8 @@
       if (window.OST_PREDICTION_API && typeof window.OST_PREDICTION_API.fiveMinRound === 'function') apiRound = window.OST_PREDICTION_API.fiveMinRound();
     } catch (_) { apiRound = null; }
     if (apiRound && apiRound.openAt) rd = { openAt: apiRound.openAt, closeAt: apiRound.closeAt, id: apiRound.id || ('ost-btc5m-' + apiRound.openAt) };
-    var rec = Object.assign({}, state.rounds[String(rd.openAt)] || {}, apiRound || {});
-    var openPrice = Number(rec.openPrice) || state.btcPrice;
+    var rec = Object.assign({}, apiRound || {}, state.rounds[String(rd.openAt)] || {});
+    var openPrice = Number(rec.priceToBeat || rec.openPrice) || state.btcPrice;
     var msLeft = rd.closeAt - Date.now();
     var yesOdds = Number(rec.yesPriceNumber);
     var noOdds = Number(rec.noPriceNumber);
@@ -292,13 +293,14 @@
     if (deltaEl && state.btcPrice && openPrice) {
       var d = state.btcPrice - openPrice;
       var pct = (d / openPrice) * 100;
-      deltaEl.textContent = (d >= 0 ? '▲ +' : '▼ ') + fmtUsd(d) + '  (' + pct.toFixed(2) + '%)';
+      deltaEl.textContent = (d >= 0 ? '▲ +' : '▼ ') + fmtUsd(Math.abs(d)) + '  (' + pct.toFixed(2) + '%)';
       deltaEl.classList.toggle('is-up',   d >= 0);
       deltaEl.classList.toggle('is-down', d <  0);
     }
     setText(root, 'openAt',    new Date(rd.openAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
     setText(root, 'openPrice', openPrice ? fmtUsd(openPrice) : '—');
     setText(root, 'btcSource', (rec.source || state.btcSource || 'direct').toString().toUpperCase());
+    setText(root, 'equation', rec.equation || ('YES > ' + fmtUsd(openPrice) + '; NO <= ' + fmtUsd(openPrice)));
     setText(root, 'yesOdds', fmtCents(yesOdds));
     setText(root, 'noOdds', fmtCents(noOdds));
     var yesBtn = root.querySelector('[data-bet="YES"]');
@@ -429,7 +431,7 @@
       window.OST_MARKET_MODAL.open({
         id: rd.id,
         title: '5-min BTC: will price be UP at ' + new Date(rd.closeAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + '?',
-        detail: 'Native OST market. Settles automatically every 5 minutes from the shared BTC-USD exchange feed.',
+        detail: 'Price to beat: ' + fmtUsd(Number(rec.priceToBeat || rec.openPrice || state.btcPrice) || 0) + '. YES wins if BTC closes above the price to beat; NO wins if it closes at or below it.',
         sourceLabel: 'OST 5-min BTC',
         source: 'ost',
         yesLabel: 'YES (UP)', noLabel: 'NO (DOWN/SAME)',
@@ -439,7 +441,7 @@
         primaryUrl: 'https://www.coinbase.com/price/bitcoin',
         primaryLabel: 'Open Coinbase',
         isOstNative: true,
-        meta: { kind: 'btc5m', openAt: rd.openAt, closeAt: rd.closeAt, openPrice: rec.openPrice || state.btcPrice, livePrice: state.btcPrice, yesPriceNumber: yesOdds, noPriceNumber: noOdds, priceSource: rec.source || state.btcSource || '' }
+        meta: { kind: 'btc5m', openAt: rd.openAt, closeAt: rd.closeAt, openPrice: rec.priceToBeat || rec.openPrice || state.btcPrice, priceToBeat: rec.priceToBeat || rec.openPrice || state.btcPrice, livePrice: state.btcPrice, yesPriceNumber: yesOdds, noPriceNumber: noOdds, equation: rec.equation || ('YES wins if BTC closes above ' + fmtUsd(Number(rec.priceToBeat || rec.openPrice || state.btcPrice) || 0) + '; NO wins if BTC closes at or below ' + fmtUsd(Number(rec.priceToBeat || rec.openPrice || state.btcPrice) || 0) + '.'), priceSource: rec.source || state.btcSource || '' }
       });
       // Pre-select the side the user clicked
       setTimeout(function () {
