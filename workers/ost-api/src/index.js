@@ -183,7 +183,8 @@ async function buildCanonicalBtcRound(env, opts) {
   const round = currentRound();
   const wantFresh = opts && opts.refresh !== false;
   let latest = await kvGet(env, 'btc:latest', null);
-  const stale = !latest || (Date.now() - Number(latest.t || 0) > 1500) || (Number(latest.round) !== round.openAt);
+  const latestIsCurrentRound = latest && Number(latest.round) === round.openAt;
+  const stale = !latest || !latestIsCurrentRound || (Date.now() - Number(latest.t || 0) > 1500);
   if (wantFresh && stale) {
     const live = await fetchBtcPrice();
     if (live) {
@@ -192,14 +193,15 @@ async function buildCanonicalBtcRound(env, opts) {
       await appendBtcTick(env, round, live.price, live.source);
     }
   }
-  const stored = await kvGet(env, `round:${round.openAt}`, null);
-  const openPrice = Number(stored && stored.openPrice) || (latest && Number(latest.p)) || 0;
+  const currentLatest = latest && Number(latest.round) === round.openAt ? latest : null;
+  let stored = await kvGet(env, `round:${round.openAt}`, null);
+  const openPrice = Number(stored && stored.openPrice) || (currentLatest && Number(currentLatest.p)) || 0;
   // First call of a fresh round and we just got the live price — that price IS
   // the open price by definition.
-  if (latest && openPrice && !stored) {
-    await lockRoundOpenPrice(env, round, openPrice, latest.s || '');
+  if (currentLatest && openPrice && !stored) {
+    stored = await lockRoundOpenPrice(env, round, openPrice, currentLatest.s || '') || stored;
   }
-  const livePrice = (latest && Number(latest.p)) || openPrice;
+  const livePrice = (currentLatest && Number(currentLatest.p)) || openPrice;
   const odds = serverComputeBtcOdds(openPrice, livePrice, round.msLeft);
   return {
     id: round.id,
@@ -207,11 +209,13 @@ async function buildCanonicalBtcRound(env, opts) {
     closeAt: round.closeAt,
     msLeft: round.msLeft,
     openPrice: openPrice || null,
+    priceToBeat: openPrice || null,
     openPriceSource: stored && stored.openPriceSource || '',
     openPriceTs: stored && stored.openPriceTs || null,
     livePrice: livePrice || null,
-    livePriceSource: latest && latest.s || '',
-    livePriceTs: latest && Number(latest.t) || null,
+    livePriceSource: currentLatest && currentLatest.s || '',
+    livePriceTs: currentLatest && Number(currentLatest.t) || null,
+    source: currentLatest && currentLatest.s || stored && stored.openPriceSource || '',
     yesPriceNumber: odds.yes,
     noPriceNumber: odds.no,
     deltaPct: odds.deltaPct,
@@ -343,7 +347,12 @@ function cleanNumber(value, fallback = null) {
 
 function cleanProbability(value) {
   const number = Number(value);
-  return Number.isFinite(number) ? Math.max(0, Math.min(1, number)) : null;
+  if (!Number.isFinite(number)) return null;
+  let normalized = number;
+  if (number > 1) {
+    if (number <= 100) normalized = number / 100;
+  }
+  return Math.max(0, Math.min(1, normalized));
 }
 
 function inferBinaryPrices(side, price, yesPrice, noPrice) {
@@ -357,6 +366,238 @@ function inferBinaryPrices(side, price, yesPrice, noPrice) {
   return { price: selected, yesPrice: yes, noPrice: no };
 }
 
+const NATIVE_MARKET_STATE_TTL_S = 60 * 60 * 6;
+const NATIVE_MARKET_LIQUIDITY_SHARES = 750;
+const NATIVE_MARKET_LIQUIDITY_OST = 500;
+const NATIVE_MARKET_MAX_SHARE_IMPACT = 0.32;
+const NATIVE_MARKET_MAX_STAKE_IMPACT = 0.08;
+
+function clampNativeProbability(value) {
+  const probability = cleanProbability(value);
+  return probability == null ? null : Math.max(0.02, Math.min(0.98, probability));
+}
+
+function isOstNativeMarketId(marketId, source) {
+  const marketText = String(marketId == null ? '' : marketId);
+  const sourceText = String(source == null ? '' : source).toLowerCase();
+  if (marketText.indexOf('ost-btc5m-') === 0) return true;
+  if (sourceText === 'ost') return true;
+  return sourceText === 'ost-native';
+}
+
+function nativeMarketStateKey(marketId) {
+  return 'market:state:' + cleanText(marketId, 128);
+}
+
+function defaultNativeMarketState(marketId) {
+  return {
+    marketId: cleanText(marketId, 128),
+    openYesShares: 0,
+    openNoShares: 0,
+    openYesStake: 0,
+    openNoStake: 0,
+    baseYesPrice: 0.5,
+    liquidityShares: NATIVE_MARKET_LIQUIDITY_SHARES,
+    liquidityOst: NATIVE_MARKET_LIQUIDITY_OST,
+    orders: {},
+    updatedAt: 0
+  };
+}
+
+function normalizeNativeMarketState(state, marketId) {
+  let raw = {};
+  if (state) {
+    if (typeof state === 'object') raw = state;
+  }
+  const normalized = Object.assign(defaultNativeMarketState(marketId), raw);
+  normalized.marketId = cleanText(normalized.marketId ? normalized.marketId : marketId, 128);
+  normalized.openYesShares = Math.max(0, cleanNumber(normalized.openYesShares, 0));
+  normalized.openNoShares = Math.max(0, cleanNumber(normalized.openNoShares, 0));
+  normalized.openYesStake = Math.max(0, cleanNumber(normalized.openYesStake, 0));
+  normalized.openNoStake = Math.max(0, cleanNumber(normalized.openNoStake, 0));
+  const baseYes = clampNativeProbability(normalized.baseYesPrice);
+  normalized.baseYesPrice = baseYes == null ? 0.5 : baseYes;
+  normalized.liquidityShares = Math.max(100, cleanNumber(normalized.liquidityShares, NATIVE_MARKET_LIQUIDITY_SHARES));
+  normalized.liquidityOst = Math.max(100, cleanNumber(normalized.liquidityOst, NATIVE_MARKET_LIQUIDITY_OST));
+  let orders = {};
+  if (normalized.orders) {
+    if (typeof normalized.orders === 'object') {
+      if (!Array.isArray(normalized.orders)) orders = normalized.orders;
+    }
+  }
+  normalized.orders = orders;
+  normalized.updatedAt = cleanNumber(normalized.updatedAt, 0);
+  return normalized;
+}
+
+function nativePositionKey(positionRecord) {
+  if (positionRecord) {
+    const keys = ['id', 'signature', 'sig', 'txid', 'txHash'];
+    for (const key of keys) {
+      if (positionRecord[key]) return cleanText(positionRecord[key], 180);
+    }
+  }
+  const fallbackParts = [
+    positionRecord ? positionRecord.wallet : '',
+    positionRecord ? positionRecord.marketId : '',
+    positionRecord ? positionRecord.side : '',
+    positionRecord ? positionRecord.createdAt : '',
+    positionRecord ? positionRecord.ts : ''
+  ];
+  return cleanText(fallbackParts.join(':'), 180);
+}
+
+function positionIsClosed(positionRecord) {
+  if (!positionRecord) return false;
+  const status = String(positionRecord.status ? positionRecord.status : (positionRecord.outcome ? positionRecord.outcome : '')).toLowerCase();
+  if (positionRecord.cashedOut) return true;
+  if (positionRecord.resolved) return true;
+  if (Number(positionRecord.cashoutAt ? positionRecord.cashoutAt : 0) > 0) return true;
+  return ['sold', 'cashed-out', 'settled', 'won', 'lost', 'closed', 'resolved'].indexOf(status) >= 0;
+}
+function nativePositionImpact(positionRecord) {
+  const side = String(positionRecord ? positionRecord.side : '').toUpperCase() === 'NO' ? 'NO' : 'YES';
+  const stake = Math.max(0, cleanNumber(positionRecord ? positionRecord.stake : 0, 0));
+  const selectedPrice = cleanProbability(positionRecord ? positionRecord.price : null);
+  const yesPrice = cleanProbability(positionRecord ? positionRecord.yesPrice : null);
+  const noPrice = cleanProbability(positionRecord ? positionRecord.noPrice : null);
+  let sidePrice = selectedPrice == null ? 0 : selectedPrice;
+  if (side === 'NO') {
+    if (noPrice != null) sidePrice = noPrice;
+  } else if (yesPrice != null) {
+    sidePrice = yesPrice;
+  }
+  let shares = Math.max(0, cleanNumber(positionRecord ? positionRecord.shares : 0, 0));
+  if (!(shares > 0)) {
+    if (stake > 0) {
+      if (sidePrice > 0) shares = stake / sidePrice;
+    }
+  }
+  const isOpen = !positionIsClosed(positionRecord);
+  return {
+    side,
+    stake,
+    shares,
+    price: sidePrice,
+    status: cleanText(positionRecord ? positionRecord.status : (isOpen ? 'open' : 'closed'), 32),
+    openYesShares: isOpen ? (side === 'YES' ? shares : 0) : 0,
+    openNoShares: isOpen ? (side === 'NO' ? shares : 0) : 0,
+    openYesStake: isOpen ? (side === 'YES' ? stake : 0) : 0,
+    openNoStake: isOpen ? (side === 'NO' ? stake : 0) : 0,
+    updatedAt: Date.now()
+  };
+}
+
+function applyNativeStateDelta(state, impact, direction) {
+  state.openYesShares = Math.max(0, cleanNumber(state.openYesShares, 0) + direction * cleanNumber(impact ? impact.openYesShares : 0, 0));
+  state.openNoShares = Math.max(0, cleanNumber(state.openNoShares, 0) + direction * cleanNumber(impact ? impact.openNoShares : 0, 0));
+  state.openYesStake = Math.max(0, cleanNumber(state.openYesStake, 0) + direction * cleanNumber(impact ? impact.openYesStake : 0, 0));
+  state.openNoStake = Math.max(0, cleanNumber(state.openNoStake, 0) + direction * cleanNumber(impact ? impact.openNoStake : 0, 0));
+}
+
+function quoteNativeMarketState(state, baseYesPrice) {
+  const baseInput = baseYesPrice != null ? baseYesPrice : state.baseYesPrice;
+  const clampedBase = clampNativeProbability(baseInput);
+  const baseYes = clampedBase == null ? 0.5 : clampedBase;
+  const openYesShares = cleanNumber(state.openYesShares, 0);
+  const openNoShares = cleanNumber(state.openNoShares, 0);
+  const openYesStake = cleanNumber(state.openYesStake, 0);
+  const openNoStake = cleanNumber(state.openNoStake, 0);
+  const liquidityShares = Math.max(100, cleanNumber(state.liquidityShares, NATIVE_MARKET_LIQUIDITY_SHARES));
+  const liquidityOst = Math.max(100, cleanNumber(state.liquidityOst, NATIVE_MARKET_LIQUIDITY_OST));
+  const netShares = openYesShares - openNoShares;
+  const netStake = openYesStake - openNoStake;
+  const shareImpact = Math.tanh(netShares / liquidityShares) * NATIVE_MARKET_MAX_SHARE_IMPACT;
+  const stakeImpact = Math.tanh(netStake / liquidityOst) * NATIVE_MARKET_MAX_STAKE_IMPACT;
+  const clampedYes = clampNativeProbability(baseYes + shareImpact + stakeImpact);
+  const yesPriceNumber = clampedYes == null ? 0.5 : clampedYes;
+  const orderSource = state.orders ? state.orders : {};
+  return {
+    baseYesPrice: baseYes,
+    baseNoPrice: 1 - baseYes,
+    yesPriceNumber,
+    noPriceNumber: 1 - yesPriceNumber,
+    openYesShares,
+    openNoShares,
+    openYesStake,
+    openNoStake,
+    netShares,
+    netStake,
+    liquidityShares,
+    liquidityOst,
+    shareImpact,
+    stakeImpact,
+    totalImpact: yesPriceNumber - baseYes,
+    orderCount: Object.keys(orderSource).length,
+    updatedAt: state.updatedAt ? state.updatedAt : Date.now()
+  };
+}
+
+function pruneNativeMarketOrders(state) {
+  const orders = state.orders ? state.orders : {};
+  const keys = Object.keys(orders);
+  if (keys.length <= 500) return;
+  keys.sort((leftKey, rightKey) => cleanNumber(orders[rightKey] ? orders[rightKey].updatedAt : 0, 0) - cleanNumber(orders[leftKey] ? orders[leftKey].updatedAt : 0, 0));
+  keys.slice(500).forEach(key => { delete orders[key]; });
+}
+async function nativeBaseYesForMarket(env, marketId, fallbackBaseYes) {
+  let baseYes = clampNativeProbability(fallbackBaseYes);
+  const marketText = String(marketId == null ? '' : marketId);
+  if (marketText.indexOf('ost-btc5m-') === 0) {
+    const openAt = Number(marketText.replace('ost-btc5m-', ''));
+    const current = currentRound();
+    if (Number.isFinite(openAt)) {
+      if (openAt === current.openAt) {
+        const round = await buildCanonicalBtcRound(env, { refresh: true });
+        const roundYes = clampNativeProbability(round ? round.yesPriceNumber : null);
+        if (roundYes != null) baseYes = roundYes;
+      }
+    }
+  }
+  return baseYes == null ? 0.5 : baseYes;
+}
+
+async function loadNativeMarketState(env, marketId) {
+  const cleanMarketId = cleanText(marketId, 128);
+  if (!env.OST_KV) return defaultNativeMarketState(cleanMarketId);
+  return normalizeNativeMarketState(await kvGet(env, nativeMarketStateKey(cleanMarketId), null), cleanMarketId);
+}
+
+function publicNativeMarketState(state) {
+  const quoted = quoteNativeMarketState(state, state.baseYesPrice);
+  return Object.assign({ marketId: state.marketId }, quoted);
+}
+
+async function getNativeMarketState(env, marketId, fallbackBaseYes) {
+  const state = await loadNativeMarketState(env, marketId);
+  state.baseYesPrice = await nativeBaseYesForMarket(env, state.marketId, fallbackBaseYes != null ? fallbackBaseYes : state.baseYesPrice);
+  state.updatedAt = state.updatedAt ? state.updatedAt : Date.now();
+  const quoted = quoteNativeMarketState(state, state.baseYesPrice);
+  Object.assign(state, quoted);
+  if (env.OST_KV) await kvPut(env, nativeMarketStateKey(state.marketId), state, NATIVE_MARKET_STATE_TTL_S);
+  return publicNativeMarketState(state);
+}
+
+async function applyNativePositionToMarketState(env, positionRecord, fallbackBaseYes) {
+  if (!env.OST_KV) return null;
+  if (!positionRecord) return null;
+  if (!isOstNativeMarketId(positionRecord.marketId, positionRecord.source)) return null;
+  const state = await loadNativeMarketState(env, positionRecord.marketId);
+  const positionKey = nativePositionKey(positionRecord);
+  const previousImpact = state.orders[positionKey] ? state.orders[positionKey] : null;
+  if (previousImpact) applyNativeStateDelta(state, previousImpact, -1);
+  const nextImpact = nativePositionImpact(positionRecord);
+  applyNativeStateDelta(state, nextImpact, 1);
+  state.orders[positionKey] = nextImpact;
+  state.baseYesPrice = await nativeBaseYesForMarket(env, state.marketId, fallbackBaseYes != null ? fallbackBaseYes : state.baseYesPrice);
+  state.updatedAt = Date.now();
+  const quoted = quoteNativeMarketState(state, state.baseYesPrice);
+  Object.assign(state, quoted);
+  pruneNativeMarketOrders(state);
+  await kvPut(env, nativeMarketStateKey(state.marketId), state, NATIVE_MARKET_STATE_TTL_S);
+  return publicNativeMarketState(state);
+}
+
 function mergeNewest(bucket, record, limit = 100) {
   const key = record.signature || record.sig || record.id;
   const current = Array.isArray(bucket) ? bucket : [];
@@ -365,6 +606,49 @@ function mergeNewest(bucket, record, limit = 100) {
     : current;
   next.unshift(record);
   return next.slice(0, limit);
+}
+
+function recentFlowRecordForPosition(record) {
+  if (!record || !positionIsClosed(record)) return record;
+  const positionKey = nativePositionKey(record);
+  const closedAt = cleanNumber(record.cashoutAt, 0) || cleanNumber(record.resolvedAt, 0) || cleanNumber(record.syncedAt, 0) || Date.now();
+  const side = String(record.side || '').toUpperCase() === 'NO' ? 'NO' : 'YES';
+  const sellPrice = clampNativeProbability(record.sellPrice != null ? record.sellPrice : record.price);
+  let yesPrice = clampNativeProbability(record.finalYesPrice != null ? record.finalYesPrice : record.yesPrice);
+  let noPrice = clampNativeProbability(record.finalNoPrice != null ? record.finalNoPrice : record.noPrice);
+  if (sellPrice != null) {
+    if (side === 'NO') {
+      noPrice = sellPrice;
+      if (yesPrice == null) yesPrice = 1 - sellPrice;
+    } else {
+      yesPrice = sellPrice;
+      if (noPrice == null) noPrice = 1 - sellPrice;
+    }
+  }
+  const selectedPrice = side === 'NO' ? noPrice : yesPrice;
+  const sellValue = cleanNumber(record.sellValue, null) ?? cleanNumber(record.cashoutOst, null) ?? cleanNumber(record.potentialReturn, null) ?? cleanNumber(record.stake, 0);
+  const cashoutSig = cleanText(record.cashoutSig || '', 128);
+  return Object.assign({}, record, {
+    id: cleanText(`sell:${positionKey}:${closedAt}`, 180),
+    signature: cashoutSig || null,
+    sig: cashoutSig || null,
+    relatedPositionId: cleanText(record.id || record.signature || record.sig || positionKey, 128),
+    flowAction: 'sell',
+    tradeAction: 'sell',
+    action: 'sell',
+    status: 'sold',
+    side,
+    price: selectedPrice != null ? selectedPrice : record.price,
+    yesPrice: yesPrice != null ? yesPrice : record.yesPrice,
+    noPrice: noPrice != null ? noPrice : record.noPrice,
+    stake: sellValue,
+    amount: sellValue,
+    sellValue,
+    shares: cleanNumber(record.shares, 0),
+    ts: new Date(closedAt).toISOString(),
+    createdAt: closedAt,
+    syncedAt: Date.now()
+  });
 }
 
 const FAUCET_WELCOME_AMOUNT = 100;
@@ -1376,6 +1660,15 @@ export default {
         200, { 'cache-control': 'public, max-age=5' });
     }
 
+
+    // -- GET /markets/state/:id - OST native market-maker state ---------------
+    const nativeStateMatch = path.match(/^\/markets\/state\/([^/]+)$/);
+    if (nativeStateMatch && method === 'GET') {
+      const marketId = decodeURIComponent(nativeStateMatch[1]);
+      const baseYes = cleanProbability(url.searchParams.get('baseYes'));
+      const state = await getNativeMarketState(env, marketId, baseYes);
+      return json({ ok: true, marketId, state, ts: new Date().toISOString() }, 200, { 'cache-control': 'no-store' });
+    }
     // ── GET /markets/:id  ────────────────────────────────────────────────────
     const mktMatch = path.match(/^\/markets\/([^/]+)$/);
     if (mktMatch && method === 'GET') {
@@ -1443,7 +1736,22 @@ export default {
       }
       if (!env.OST_KV) return json({ ok: true, stored: false, note: 'KV not configured — position not persisted server-side' });
       const createdAt = toMs(body.createdAt || ts);
-      const inferredPrices = inferBinaryPrices(side, price, body.yesPrice, body.noPrice);
+      const nativeMarketStateBefore = isOstNativeMarketId(marketId, body.source)
+        ? await getNativeMarketState(env, String(marketId), body.baseYesPrice != null ? body.baseYesPrice : body.fairYesPrice)
+        : null;
+      const nativeOpenPosition = nativeMarketStateBefore ? !positionIsClosed(body) : false;
+      const nativeQuotePrice = nativeOpenPosition
+        ? (String(side).toUpperCase() === 'NO' ? nativeMarketStateBefore.noPriceNumber : nativeMarketStateBefore.yesPriceNumber)
+        : price;
+      const inferredPrices = nativeOpenPosition
+        ? inferBinaryPrices(side, nativeQuotePrice, nativeMarketStateBefore.yesPriceNumber, nativeMarketStateBefore.noPriceNumber)
+        : inferBinaryPrices(side, price, body.yesPrice, body.noPrice);
+      const inferredShares = nativeOpenPosition
+        ? (inferredPrices.price > 0 ? Number(stake) / inferredPrices.price : cleanNumber(body.shares))
+        : cleanNumber(body.shares);
+      const inferredPotentialReturn = nativeOpenPosition
+        ? (inferredShares > 0 ? inferredShares : cleanNumber(body.potentialReturn))
+        : cleanNumber(body.potentialReturn);
       const record = {
         id: cleanText(body.id || signature || crypto.randomUUID(), 128),
         wallet: String(wallet).slice(0, 64),
@@ -1459,8 +1767,8 @@ export default {
         price: inferredPrices.price,
         yesPrice: inferredPrices.yesPrice,
         noPrice: inferredPrices.noPrice,
-        shares: cleanNumber(body.shares),
-        potentialReturn: cleanNumber(body.potentialReturn),
+        shares: inferredShares,
+        potentialReturn: inferredPotentialReturn,
         closeAtMs: cleanNumber(body.closeAtMs, 0),
         clobTokenIds: Array.isArray(body.clobTokenIds) ? body.clobTokenIds.map(v => cleanText(v, 128)).slice(0, 8) : [],
         sourceUrl: cleanText(body.sourceUrl || '', 500),
@@ -1473,6 +1781,8 @@ export default {
         cashoutSig: cleanText(body.cashoutSig || '', 128),
         cashoutOst: cleanNumber(body.cashoutOst),
         cashoutAt: cleanNumber(body.cashoutAt, 0),
+        sellPrice: cleanNumber(body.sellPrice),
+        sellValue: cleanNumber(body.sellValue),
         finalYesPrice: cleanNumber(body.finalYesPrice),
         finalNoPrice: cleanNumber(body.finalNoPrice),
         resolvedAt: cleanNumber(body.resolvedAt, 0),
@@ -1484,8 +1794,10 @@ export default {
       await kvPut(env, walletKey, mergeNewest(walletBucket, record, 100));
       // Global recent feed (keep last 100)
       const recent = await kvGet(env, 'positions:recent', []);
-      await kvPut(env, 'positions:recent', mergeNewest(recent, record, 100), 60 * 60 * 24 * 7);
-      return json({ ok: true, stored: true, record });
+      const flowRecord = recentFlowRecordForPosition(record);
+      await kvPut(env, 'positions:recent', mergeNewest(recent, flowRecord, 100), 60 * 60 * 24 * 7);
+      const marketState = await applyNativePositionToMarketState(env, record, nativeMarketStateBefore ? nativeMarketStateBefore.baseYesPrice : null);
+      return json({ ok: true, stored: true, record, marketState, flowRecord: flowRecord !== record ? flowRecord : null });
     }
 
     // ── GET /wallet/events/:wallet ──────────────────────────────────────────
@@ -2147,6 +2459,7 @@ export default {
         const raw = await polyGamma(env, '/markets', `limit=${limit}&closed=false`);
         const markets = (Array.isArray(raw) ? raw : raw?.markets || []).map(normaliseMarket);
         const btcRound = await buildCanonicalBtcRound(env, { refresh: false });
+        const nativeState = btcRound && btcRound.openPrice ? await getNativeMarketState(env, btcRound.id, btcRound.yesPriceNumber) : null;
         const ostNative = btcRound.openPrice ? [{
           id: btcRound.id,
           source: 'ost',
@@ -2154,8 +2467,9 @@ export default {
           isOstNative: true,
           openPrice: btcRound.openPrice,
           livePrice: btcRound.livePrice,
-          yesPriceNumber: btcRound.yesPriceNumber,
-          noPriceNumber: btcRound.noPriceNumber,
+          yesPriceNumber: nativeState ? nativeState.yesPriceNumber : btcRound.yesPriceNumber,
+          noPriceNumber: nativeState ? nativeState.noPriceNumber : btcRound.noPriceNumber,
+          marketState: nativeState,
           closeAtMs: btcRound.closeAt,
           msLeft: btcRound.msLeft
         }] : [];
@@ -2167,7 +2481,8 @@ export default {
         const id = decodeURIComponent(botMktMatch[1]);
         if (id.indexOf('ost-btc5m-') === 0) {
           const r = await buildCanonicalBtcRound(env, { refresh: true });
-          return json({ market: r, source: 'ost-native' }, 200, { 'cache-control': 'no-store' });
+          const state = await getNativeMarketState(env, id, r && r.yesPriceNumber);
+          return json({ market: Object.assign({}, r, state, { marketState: state }), source: 'ost-native' }, 200, { 'cache-control': 'no-store' });
         }
         const [gmkt, book] = await Promise.all([
           polyGamma(env, `/markets/${encodeURIComponent(id)}`),
@@ -2189,7 +2504,7 @@ export default {
         const stake = Math.max(0, Number(url.searchParams.get('stake')) || 0);
         let price = 0.5;
         if (id.indexOf('ost-btc5m-') === 0) {
-          const r = await buildCanonicalBtcRound(env, { refresh: true });
+          const r = await getNativeMarketState(env, id, url.searchParams.get('baseYes'));
           price = side === 'NO' ? r.noPriceNumber : r.yesPriceNumber;
         } else {
           const gmkt = await polyGamma(env, `/markets/${encodeURIComponent(id)}`);
@@ -2230,7 +2545,12 @@ export default {
           return json({ error: 'missing_fields', required: ['wallet', 'marketId', 'side', 'stake'] }, 400);
         }
         // Resolve a fair quote price right now so the bot can't backdate.
-        let price = Number(body && body.price);
+        const nativeMarketStateBefore = isOstNativeMarketId(marketId, body && body.source)
+          ? await getNativeMarketState(env, marketId, body && (body.baseYesPrice != null ? body.baseYesPrice : body.fairYesPrice))
+          : null;
+        let price = nativeMarketStateBefore
+          ? (side === 'NO' ? nativeMarketStateBefore.noPriceNumber : nativeMarketStateBefore.yesPriceNumber)
+          : Number(body && body.price);
         if (!Number.isFinite(price) || price <= 0 || price >= 1) {
           if (marketId.indexOf('ost-btc5m-') === 0) {
             const r = await buildCanonicalBtcRound(env, { refresh: true });
@@ -2242,7 +2562,9 @@ export default {
             price = side === 'NO' ? m.noPriceNumber : m.yesPriceNumber;
           }
         }
-        const inferredPrices = inferBinaryPrices(side, price, body && body.yesPrice, body && body.noPrice);
+        const inferredPrices = nativeMarketStateBefore
+          ? inferBinaryPrices(side, price, nativeMarketStateBefore.yesPriceNumber, nativeMarketStateBefore.noPriceNumber)
+          : inferBinaryPrices(side, price, body && body.yesPrice, body && body.noPrice);
         price = inferredPrices.price;
         const createdAt = Date.now();
         const id = cleanText(body.id || body.signature || `bot-${createdAt}-${Math.random().toString(36).slice(2, 10)}`, 128);
@@ -2276,7 +2598,8 @@ export default {
           const recent = await kvGet(env, 'positions:recent', []);
           await kvPut(env, 'positions:recent', mergeNewest(recent, record, 100), 60 * 60 * 24 * 7);
         }
-        return json({ ok: true, order: record, stored: !!env.OST_KV }, 200, { 'cache-control': 'no-store' });
+        const marketState = await applyNativePositionToMarketState(env, record, nativeMarketStateBefore ? nativeMarketStateBefore.baseYesPrice : null);
+        return json({ ok: true, order: record, stored: !!env.OST_KV, marketState }, 200, { 'cache-control': 'no-store' });
       }
 
       if (sub === '/order/cashout' && method === 'POST') {
@@ -2300,7 +2623,11 @@ export default {
         order.resolvedAt = Date.now();
         walletBucket[idx] = order;
         await kvPut(env, walletKey, walletBucket);
-        return json({ ok: true, order }, 200, { 'cache-control': 'no-store' });
+        const marketState = await applyNativePositionToMarketState(env, order, order.yesPrice);
+        const recent = await kvGet(env, 'positions:recent', []);
+        const flowRecord = recentFlowRecordForPosition(order);
+        await kvPut(env, 'positions:recent', mergeNewest(recent, flowRecord, 100), 60 * 60 * 24 * 7);
+        return json({ ok: true, order, marketState, flowRecord: flowRecord !== order ? flowRecord : null }, 200, { 'cache-control': 'no-store' });
       }
 
       return json({ error: 'unknown_bot_endpoint', path, hint: 'GET /bot/v1/health for docs' }, 404);

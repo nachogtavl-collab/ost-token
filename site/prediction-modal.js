@@ -51,6 +51,143 @@
   // Track timers for the currently-open modal so we can stop them on close.
   var liveTimers = [];
 
+  function ostApiBase() {
+    return String(window.OST_API_BASE || '').replace(/\/$/, '');
+  }
+  function cachedCanonicalBtcRound() {
+    try {
+      if (window.OST_PREDICTION_API && typeof window.OST_PREDICTION_API.canonicalRound === 'function') {
+        var apiRound = window.OST_PREDICTION_API.canonicalRound();
+        if (apiRound && Number.isFinite(Number(apiRound.openAt))) return apiRound;
+      }
+    } catch (_) {}
+    try {
+      if (window.__OST_CANONICAL_BTC_ROUND && Number.isFinite(Number(window.__OST_CANONICAL_BTC_ROUND.openAt))) {
+        return window.__OST_CANONICAL_BTC_ROUND;
+      }
+    } catch (_) {}
+    return null;
+  }
+  function fetchCanonicalBtcRound() {
+    try {
+      if (window.OST_PREDICTION_API && typeof window.OST_PREDICTION_API.refreshCanonicalRound === 'function') {
+        return Promise.resolve(window.OST_PREDICTION_API.refreshCanonicalRound()).then(function (round) {
+          return round && Number.isFinite(Number(round.openAt)) ? round : null;
+        });
+      }
+    } catch (_) {}
+    var base = ostApiBase();
+    if (!base) return Promise.resolve(null);
+    return fetch(base + '/btc/round', { headers: { accept: 'application/json' }, cache: 'no-store' })
+      .then(function (r) { return r && r.ok ? r.json() : null; })
+      .then(function (round) {
+        if (!round || !Number.isFinite(Number(round.openAt))) return null;
+        try { window.__OST_CANONICAL_BTC_ROUND = round; } catch (_) {}
+        return round;
+      })
+      .catch(function () { return null; });
+  }
+  function canonicalRoundMatchesMarket(market, round) {
+    return !!(market && market.meta && round && Number(market.meta.openAt) === Number(round.openAt));
+  }
+  function applyCanonicalBtcRoundToMarket(market, round) {
+    if (!canonicalRoundMatchesMarket(market, round)) return null;
+    var openPrice = Number(round.priceToBeat || round.openPrice);
+    var livePrice = Number(round.livePrice);
+    var yes = Number(round.yesPriceNumber);
+    var no = Number(round.noPriceNumber);
+    market.meta = market.meta || {};
+    market.meta.openAt = Number(round.openAt) || market.meta.openAt;
+    market.meta.closeAt = Number(round.closeAt) || market.meta.closeAt;
+    if (Number.isFinite(openPrice) && openPrice > 0) {
+      market.meta.openPrice = openPrice;
+      market.meta.priceToBeat = openPrice;
+      market.priceToBeat = openPrice;
+    }
+    if (Number.isFinite(livePrice) && livePrice > 0) market.meta.livePrice = livePrice;
+    if (Number.isFinite(yes) && yes > 0 && yes < 1) {
+      market.baseYesPriceNumber = yes;
+      market.baseNoPriceNumber = Number.isFinite(no) ? no : 1 - yes;
+    }
+    market.closeAtMs = Number(round.closeAt) || market.closeAtMs;
+    return round;
+  }
+  function cachedBtcTicksForRound(openAt) {
+    try {
+      var bag = window.__ostBtcTicksByRound || {};
+      var rows = bag[String(openAt)] || [];
+      return Array.isArray(rows) ? rows.slice() : [];
+    } catch (_) { return []; }
+  }
+  function hydrateCanonicalBtcTicks(market, bodyEl) {
+    var base = ostApiBase();
+    var openAt = Number(market && market.meta && market.meta.openAt);
+    if (!base || !Number.isFinite(openAt) || openAt <= 0) return Promise.resolve([]);
+    window.__ostBtcTicksByRound = window.__ostBtcTicksByRound || {};
+    return fetch(base + '/btc/ticks?openAt=' + encodeURIComponent(openAt), { headers: { accept: 'application/json' }, cache: 'no-store' })
+      .then(function (r) { return r && r.ok ? r.json() : null; })
+      .then(function (j) {
+        var ticks = j && Array.isArray(j.ticks) ? j.ticks : [];
+        var rows = ticks.map(function (tick) {
+          return { ts: Number(tick && tick.t) || Date.now(), price: Number(tick && tick.p), source: tick && tick.s || 'ost-canonical' };
+        }).filter(function (tick) { return Number.isFinite(tick.price) && tick.price > 1000; });
+        if (rows.length) {
+          window.__ostBtcTicksByRound[String(openAt)] = rows.slice(-240);
+          try { if (typeof window.__ostChartRedraw === 'function') window.__ostChartRedraw(); } catch (_) {}
+          try { if (bodyEl && typeof bodyEl.__syncNativeQuoteUi === 'function') bodyEl.__syncNativeQuoteUi(); } catch (_) {}
+        }
+        return rows;
+      })
+      .catch(function () { return []; });
+  }
+  function nativeBaseYesInput(market, override) {
+    var explicit = Number(override);
+    if (Number.isFinite(explicit)) return explicit;
+    var base = Number(market && (market.baseYesPriceNumber != null ? market.baseYesPriceNumber : market.baseYesPrice));
+    if (Number.isFinite(base)) return base;
+    var stateBase = Number(market && market.marketState && market.marketState.baseYesPrice);
+    if (Number.isFinite(stateBase)) return stateBase;
+    var yes = Number(market && market.yesPriceNumber);
+    return Number.isFinite(yes) ? yes : 0.5;
+  }
+  function applyNativeMarketState(market, state) {
+    if (!market || !state) return null;
+    var yes = Number(state.yesPriceNumber);
+    var no = Number(state.noPriceNumber);
+    if (!Number.isFinite(yes) || !Number.isFinite(no)) return null;
+    market.marketState = Object.assign({}, market.marketState || {}, state);
+    market.baseYesPriceNumber = Number.isFinite(Number(state.baseYesPrice)) ? Number(state.baseYesPrice) : nativeBaseYesInput(market);
+    market.baseNoPriceNumber = Number.isFinite(Number(state.baseNoPrice)) ? Number(state.baseNoPrice) : 1 - market.baseYesPriceNumber;
+    market.yesPriceNumber = Math.max(0.01, Math.min(0.99, yes));
+    market.noPriceNumber = Math.max(0.01, Math.min(0.99, no));
+    market.meta = market.meta || {};
+    market.meta.marketState = market.marketState;
+    window.__ostNativeMarketState = window.__ostNativeMarketState || {};
+    window.__ostNativeMarketState[market.id] = market.marketState;
+    try { window.dispatchEvent(new CustomEvent('ost:native-market-state', { detail: { marketId: market.id, state: market.marketState } })); } catch (_) {}
+    return market.marketState;
+  }
+  function fetchNativeMarketState(market, baseYesOverride) {
+    var base = ostApiBase();
+    if (!base || !market || !market.id || !market.isOstNative) return Promise.resolve(null);
+    var baseYes = nativeBaseYesInput(market, baseYesOverride);
+    return fetch(base + '/markets/state/' + encodeURIComponent(market.id) + '?baseYes=' + encodeURIComponent(baseYes), { cache: 'no-store' })
+      .then(function (r) { return r && r.ok ? r.json() : null; })
+      .then(function (j) { return j && (j.state || j.marketState) || null; });
+  }
+  function refreshNativeMarketState(market, bodyEl, baseYesOverride) {
+    return fetchNativeMarketState(market, baseYesOverride).then(function (state) {
+      var applied = applyNativeMarketState(market, state);
+      if (applied && bodyEl && typeof bodyEl.__syncNativeQuoteUi === 'function') bodyEl.__syncNativeQuoteUi();
+      return applied;
+    }).catch(function () { return null; });
+  }
+  function isClosedFlowRecord(record) {
+    var status = String(record && (record.status || record.outcome) || '').toLowerCase();
+    return !!(record && (record.cashedOut || record.resolved || Number(record.cashoutAt || 0) > 0 || ['sold', 'cashed-out', 'closed', 'settled', 'resolved', 'won', 'lost'].indexOf(status) >= 0));
+  }
+
+
   // Push a freshly-placed bet to the global ost-api positions feed so every
   // other OST user sees it in their "Live OST flow" ticker.
   function shareBetGlobally(market, side, stake, rec, outcomeKey) {
@@ -77,6 +214,7 @@
         price: Number.isFinite(price) ? price : null,
         yesPrice: Number.isFinite(contract && contract.yesPrice) ? Number(contract.yesPrice) : null,
         noPrice: Number.isFinite(contract && contract.noPrice) ? Number(contract.noPrice) : null,
+        baseYesPrice: nativeBaseYesInput(market),
         outcomeKey: (contract && contract.key) || outcomeKey || (rec && rec.outcomeKey) || '',
         outcomeLabel: (contract && contract.label) || (rec && rec.outcomeLabel) || sideUp,
         clobTokenIds: contract && contract.clobTokenIds ? contract.clobTokenIds.slice() : normalizeOutcomeTokenIds(market.clobTokenIds),
@@ -92,7 +230,11 @@
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(payload)
-      }).catch(function () { /* fire-and-forget */ });
+      }).then(function (r) { return r && r.ok ? r.json() : null; })
+        .then(function (j) {
+          if (j && j.marketState) applyNativeMarketState(market, j.marketState);
+        })
+        .catch(function () { /* fire-and-forget */ });
     } catch (_) { /* never block UI */ }
   }
 
@@ -277,6 +419,10 @@
       try { window.removeEventListener('ost:prediction:order-changed', bodyEl.__refreshSell); } catch (_) {}
       bodyEl.__refreshSell = null;
     }
+    if (bodyEl && bodyEl.__nativeStateListener) {
+      try { window.removeEventListener('ost:native-market-state', bodyEl.__nativeStateListener); } catch (_) {}
+      bodyEl.__nativeStateListener = null;
+    }
     if (bodyEl && bodyEl.__broadcastHls) {
       try { bodyEl.__broadcastHls.destroy(); } catch (_) {}
       bodyEl.__broadcastHls = null;
@@ -450,6 +596,51 @@
     var n = Number(value);
     return Number.isFinite(n) ? Math.max(0, Math.min(1, n)) : NaN;
   }
+  function sellFlowRecord(order, market, payout, sale) {
+    if (!order) return null;
+    sale = sale || {};
+    var side = String(order.side || sale.side || 'YES').toUpperCase() === 'NO' ? 'NO' : 'YES';
+    var cashoutAt = Number(order.cashoutAt || sale.cashoutAt || Date.now()) || Date.now();
+    var baseKey = String(order.id || order.signature || order.sig || order.txid || order.createdAt || cashoutAt);
+    var price = clampProbability(sale.sellPrice != null ? sale.sellPrice : (order.sellPrice != null ? order.sellPrice : order.price));
+    var yesPrice = clampProbability(sale.finalYesPrice != null ? sale.finalYesPrice : (order.finalYesPrice != null ? order.finalYesPrice : order.yesPrice));
+    var noPrice = clampProbability(sale.finalNoPrice != null ? sale.finalNoPrice : (order.finalNoPrice != null ? order.finalNoPrice : order.noPrice));
+    if (Number.isFinite(price)) {
+      if (side === 'NO') {
+        noPrice = price;
+        if (!Number.isFinite(yesPrice)) yesPrice = 1 - price;
+      } else {
+        yesPrice = price;
+        if (!Number.isFinite(noPrice)) noPrice = 1 - price;
+      }
+    }
+    var selectedPrice = side === 'NO' ? noPrice : yesPrice;
+    var sellValue = Number(sale.sellValue != null ? sale.sellValue : payout);
+    if (!Number.isFinite(sellValue)) sellValue = Number(order.cashoutOst || order.sellValue || order.potentialReturn || order.stake || 0) || 0;
+    return Object.assign({}, order, {
+      id: 'sell:' + baseKey + ':' + cashoutAt,
+      signature: order.cashoutSig || '',
+      sig: order.cashoutSig || '',
+      relatedPositionId: baseKey,
+      flowAction: 'sell',
+      tradeAction: 'sell',
+      action: 'sell',
+      status: 'sold',
+      side: side,
+      price: Number.isFinite(selectedPrice) ? selectedPrice : null,
+      yesPrice: Number.isFinite(yesPrice) ? yesPrice : null,
+      noPrice: Number.isFinite(noPrice) ? noPrice : null,
+      stake: sellValue,
+      amount: sellValue,
+      sellPrice: Number.isFinite(selectedPrice) ? selectedPrice : null,
+      sellValue: sellValue,
+      shares: Number(sale.shares || order.shares || 0) || 0,
+      ts: new Date(cashoutAt).toISOString(),
+      createdAt: cashoutAt,
+      marketId: order.marketId || (market && market.id) || '',
+      marketTitle: order.marketTitle || order.title || (market && (market.title || market.question)) || ''
+    });
+  }
   function addAlias(list, value) {
     var text = String(value == null ? '' : value).trim();
     if (text && list.indexOf(text) < 0) list.push(text);
@@ -514,7 +705,9 @@
   function normalizeFlowRecord(market, record, outcomeKey, origin) {
     if (!record) return null;
     var side = normalizeFlowSide(record.side || record.outcome || record.action);
-    var price = clampProbability(record.price != null ? record.price : record.entryPrice);
+    var actionText = String(record.flowAction || record.tradeAction || record.action || '').toLowerCase();
+    var isSell = actionText === 'sell' || isClosedFlowRecord(record);
+    var price = clampProbability(isSell && record.sellPrice != null ? record.sellPrice : (record.price != null ? record.price : record.entryPrice));
     var yesPrice = clampProbability(record.yesPrice != null ? record.yesPrice : record.yes_price);
     var noPrice = clampProbability(record.noPrice != null ? record.noPrice : record.no_price);
     var contract = market ? getModalTradeContract(market, side, record.outcomeKey || outcomeKey || '') : null;
@@ -528,10 +721,11 @@
       marketId: record.marketId || (market && market.id) || '',
       marketTitle: record.marketTitle || record.title || (market && (market.title || market.question)) || '',
       side: side,
-      stake: Number(record.stake || record.amount || record.size) || 0,
+      stake: Number(isSell ? (record.sellValue || record.cashoutOst || record.stake || record.amount || record.size) : (record.stake || record.amount || record.size)) || 0,
       price: Number.isFinite(price) ? price : null,
       yesPrice: Number.isFinite(yesPrice) ? yesPrice : null,
       noPrice: Number.isFinite(noPrice) ? noPrice : null,
+      flowAction: isSell ? 'sell' : (actionText || 'buy'),
       outcomeKey: record.outcomeKey || (contract && contract.key) || '',
       outcomeLabel: record.outcomeLabel || (contract && contract.label) || side,
       walletShort: record.walletShort || (record.wallet ? String(record.wallet).slice(0, 4) + '...' + String(record.wallet).slice(-4) : ''),
@@ -1113,7 +1307,7 @@
       '</div>' +
     '</section>';
   }
-  function postPositionUpdate(order) {
+  function postPositionUpdate(order, market) {
     try {
       var base = (window.OST_API_BASE || '').replace(/\/$/, '');
       if (!base) return;
@@ -1123,16 +1317,22 @@
         body: JSON.stringify(Object.assign({}, order, {
           wallet: order.wallet || ownWallet() || 'anon',
           marketTitle: order.title || order.marketTitle || '',
-          ts: order.createdAt || order.ts || Date.now()
+          ts: order.createdAt || order.ts || Date.now(),
+          baseYesPrice: market ? nativeBaseYesInput(market) : null
         }))
-      }).catch(function () {});
+      }).then(function (r) { return r && r.ok ? r.json() : null; })
+        .then(function (j) {
+          if (market && j && j.marketState) applyNativeMarketState(market, j.marketState);
+          if (market && j && j.flowRecord) optimisticallyMergeFlowRecord(market, j.flowRecord);
+        })
+        .catch(function () {});
     } catch (_) {}
   }
   function notifyOrderChanged() {
     try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch (_) {}
     try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {}
   }
-  function sellOrder(order, payout, kind) {
+  function sellOrder(order, payout, kind, market, sale) {
     // Positive payouts must land on-chain before the ticket is marked sold.
     var doLocal = function () {
       order.cashedOut = true;
@@ -1140,13 +1340,20 @@
       order.cashoutAt = Date.now();
       order.cashoutKind = kind || 'prediction-sell-modal';
       order.status = 'sold';
+      sale = sale || {};
+      if (Number.isFinite(Number(sale.sellPrice))) order.sellPrice = Number(sale.sellPrice);
+      if (Number.isFinite(Number(sale.sellValue))) order.sellValue = Number(sale.sellValue);
+      else order.sellValue = Number(payout) || 0;
+      if (Number.isFinite(Number(sale.shares))) order.sellShares = Number(sale.shares);
+      var sellTick = market ? sellFlowRecord(order, market, payout, sale) : null;
       var orders = readOrders();
       var idx = orders.findIndex(function (o) {
         return o && (o.signature || o.sig || o.id) === (order.signature || order.sig || order.id);
       });
       if (idx >= 0) orders[idx] = order; else orders.unshift(order);
       writeOrders(orders);
-      postPositionUpdate(order);
+      if (sellTick) optimisticallyMergeFlowRecord(market, sellTick);
+      postPositionUpdate(order, market);
       notifyOrderChanged();
       return Promise.resolve({ ost: Number(payout) || 0, sig: order.cashoutSig || '' });
     };
@@ -1225,6 +1432,7 @@
         '</div>' +
         '<label class="ost-modal__bet-stake">Stake (OST)<input type="number" min="0.01" step="0.01" value="1" data-bind="stake"></label>' +
         '<output class="ost-modal__bet-projected" data-bind="projected">—</output>' +
+
         '<button type="button" class="ost-modal__bet-action" data-act="placebet">Place bet</button>' +
       '</div>' +
       (m.primaryUrl ? '<a class="ost-modal__bet-venue" href="' + escapeHtml(m.primaryUrl) + '" target="_blank" rel="noopener">Open on ' + escapeHtml(m.sourceLabel || 'venue') + ' ↗</a>' : '') +
@@ -1429,11 +1637,38 @@
     syncActiveContractUi();
     recalcProjected();
 
+    bodyEl.__syncNativeQuoteUi = function () {
+      syncActiveContractUi();
+      recalcProjected();
+      try { if (typeof bodyEl.__renderOstNativeBook === 'function') bodyEl.__renderOstNativeBook(); } catch (_) {}
+      try { if (typeof bodyEl.__renderTradesTable === 'function') bodyEl.__renderTradesTable(); } catch (_) {}
+      try { if (typeof window.__ostChartRedraw === 'function') window.__ostChartRedraw(); } catch (_) {}
+      try { if (typeof bodyEl.__refreshSell === 'function') bodyEl.__refreshSell(); } catch (_) {}
+    };
+    bodyEl.__nativeStateListener = function (event) {
+      var detail = event && event.detail || {};
+      if (String(detail.marketId || '') !== String(market.id || '')) return;
+      if (detail.state && detail.state !== market.marketState) {
+        var state = detail.state;
+        var yes = Number(state.yesPriceNumber);
+        var no = Number(state.noPriceNumber);
+        if (Number.isFinite(yes) && Number.isFinite(no)) {
+          market.marketState = state;
+          market.yesPriceNumber = yes;
+          market.noPriceNumber = no;
+        }
+      }
+      bodyEl.__syncNativeQuoteUi();
+    };
+    try { window.addEventListener('ost:native-market-state', bodyEl.__nativeStateListener); } catch (_) {}
+    if (market.isOstNative) refreshNativeMarketState(market, bodyEl);
+
     bodyEl.querySelector('[data-act="placebet"]').addEventListener('click', function () {
       var s = getStake();
       if (!s) { toast('Set a stake first.', 'err'); return; }
       toast('Submitting ' + selectedSide + ' ' + s + ' OST…', 'ok');
-      placeBetViaTradeDesk(market, selectedSide, s, selectedOutcomeKey)
+      (market.isOstNative ? refreshNativeMarketState(market, bodyEl) : Promise.resolve())
+        .then(function () { return placeBetViaTradeDesk(market, selectedSide, s, selectedOutcomeKey); })
         .then(function (rec) {
           toast('✅ Bet recorded' + (rec && rec.sig ? ' (sig ' + String(rec.sig).slice(0, 8) + '…)' : '') + '. Check Open Positions below.', 'ok');
           // Share to global feed so every other OST user sees the tick live.
@@ -1495,12 +1730,13 @@
       }
       sharedListEl.innerHTML = thisMarketBets.map(function (r) {
         var sideClass = /YES|BUY/i.test(r.side) ? 'is-yes' : 'is-no';
+        var isSell = String(r.flowAction || r.tradeAction || r.action || '').toLowerCase() === 'sell' || isClosedFlowRecord(r);
         var ago = Math.max(0, Math.round((Date.now() - new Date(r.ts).getTime()) / 1000));
         var agoStr = ago < 60 ? (ago + 's ago') : (Math.round(ago / 60) + 'm ago');
         var pxTxt = Number.isFinite(Number(r.price)) ? ' @ ' + (Number(r.price) * 100).toFixed(1) + 'c' : '';
         return '<div class="ost-modal__shared-row ' + sideClass + '">' +
           '<span class="ost-modal__shared-wallet">' + escapeHtml(r.walletShort || (r.wallet || 'anon').slice(0, 4) + '...') + '</span>' +
-          '<span class="ost-modal__shared-side">' + escapeHtml(r.outcomeLabel || r.side) + '</span>' +
+          '<span class="ost-modal__shared-side">' + escapeHtml((isSell ? 'SELL ' : 'BUY ') + (r.outcomeLabel || r.side)) + '</span>' +
           '<span class="ost-modal__shared-stake">' + Number(r.stake || 0).toFixed(2) + ' OST' + pxTxt + '</span>' +
           '<span class="ost-modal__shared-time">' + agoStr + '</span>' +
         '</div>';
@@ -1591,7 +1827,7 @@
           if (!(payout > 0)) { toast('Cannot sell at 0¢', 'err'); return; }
           var orig = btn.textContent;
           btn.disabled = true; btn.textContent = '…';
-          sellOrder(order, payout, 'prediction-sell-modal')
+          sellOrder(order, payout, 'prediction-sell-modal', market, { sellPrice: livePx, sellValue: payout, shares: shares })
             .then(function (r) {
               toast('✅ Sold ' + (Number(r.ost) || payout).toFixed(2) + ' OST' + (r.sig ? ' (' + String(r.sig).slice(0, 8) + '…)' : ''), 'ok');
               refreshSellList();
@@ -1644,25 +1880,36 @@
           if (msLeft > 0 && msLeft <= 30000) pulseEl.classList.add('is-urgent');
           else pulseEl.classList.remove('is-urgent');
         }
-        var rec = (readJson(ROUND_KEY, {})[String(market.meta.openAt)] || {});
-        if (rec.openPrice && !market.meta.openPrice) market.meta.openPrice = rec.openPrice;
-        setText(bodyEl, 'btcOpen', market.meta.openPrice ? fmtUsd(market.meta.openPrice) : '—');
+        var cachedRound = cachedCanonicalBtcRound();
+        if (canonicalRoundMatchesMarket(market, cachedRound)) applyCanonicalBtcRoundToMarket(market, cachedRound);
+        if (!market.meta.openPrice) {
+          var rec = (readJson(ROUND_KEY, {})[String(market.meta.openAt)] || {});
+          if (rec.openPrice) market.meta.openPrice = rec.openPrice;
+        }
+        setText(bodyEl, 'btcOpen', market.meta.priceToBeat || market.meta.openPrice ? fmtUsd(market.meta.priceToBeat || market.meta.openPrice) : '—');
       };
       tickBtc();
       liveTimers.push(setInterval(tickBtc, 200));
       var fetchSharedBtcTick = function () {
-        if (window.OST_PREDICTION_API && typeof window.OST_PREDICTION_API.btcSpot === 'function') {
-          return window.OST_PREDICTION_API.btcSpot({ force: true })
-            .then(function (tick) {
+        return fetchCanonicalBtcRound().then(function (round) {
+          if (canonicalRoundMatchesMarket(market, round)) {
+            applyCanonicalBtcRoundToMarket(market, round);
+            var canonicalPrice = Number(round.livePrice);
+            if (Number.isFinite(canonicalPrice) && canonicalPrice > 1000) {
+              return { price: canonicalPrice, source: round.livePriceSource || round.source || 'ost-canonical', round: round };
+            }
+          }
+          if (window.OST_PREDICTION_API && typeof window.OST_PREDICTION_API.btcSpot === 'function') {
+            return window.OST_PREDICTION_API.btcSpot({ force: true }).then(function (tick) {
               var p = tick && Number(tick.price);
               if (!Number.isFinite(p)) throw new Error('shared BTC feed empty');
               return { price: p, source: tick.source || '' };
-            })
-            .catch(function () {
-              return fetchBtcRace().then(function (p) { return { price: p, source: BTC_PRICE_FEEDS[BTC_FEED_INDEX].name }; });
             });
-        }
-        return fetchBtcRace().then(function (p) { return { price: p, source: BTC_PRICE_FEEDS[BTC_FEED_INDEX].name }; });
+          }
+          return fetchBtcRace().then(function (p) { return { price: p, source: BTC_PRICE_FEEDS[BTC_FEED_INDEX].name }; });
+        }).catch(function () {
+          return fetchBtcRace().then(function (p) { return { price: p, source: BTC_PRICE_FEEDS[BTC_FEED_INDEX].name }; });
+        });
       };
       var fetchBtcLive = function () {
         fetchSharedBtcTick()
@@ -1672,15 +1919,12 @@
               setText(bodyEl, 'btcLive', 'feed offline');
               return;
             }
-          var sharedRound = null;
-          try {
-            if (window.OST_PREDICTION_API && typeof window.OST_PREDICTION_API.fiveMinRound === 'function') {
-              sharedRound = window.OST_PREDICTION_API.fiveMinRound();
-            }
-          } catch (_) { sharedRound = null; }
-          var storedRound = (readJson(ROUND_KEY, {})[String(market.meta.openAt)] || {});
-          if (!market.meta.openPrice && Number(storedRound.openPrice) > 0) market.meta.openPrice = Number(storedRound.openPrice);
-          if (!market.meta.openPrice && sharedRound && Number(sharedRound.priceToBeat || sharedRound.openPrice) > 0) market.meta.openPrice = Number(sharedRound.priceToBeat || sharedRound.openPrice);
+          var sharedRound = canonicalRoundMatchesMarket(market, tick && tick.round) ? tick.round : cachedCanonicalBtcRound();
+          if (canonicalRoundMatchesMarket(market, sharedRound)) applyCanonicalBtcRoundToMarket(market, sharedRound);
+          if (!market.meta.openPrice) {
+            var storedRound = (readJson(ROUND_KEY, {})[String(market.meta.openAt)] || {});
+            if (Number(storedRound.openPrice) > 0) market.meta.openPrice = Number(storedRound.openPrice);
+          }
           market.meta.priceToBeat = Number(market.meta.priceToBeat || market.meta.openPrice || 0);
           var sourceName = (sharedRound && sharedRound.source) || tick.source || BTC_PRICE_FEEDS[BTC_FEED_INDEX].name;
           // Flash green/red whenever the price actually moves so mobile users
@@ -1690,8 +1934,8 @@
           }
           lastRenderedPrice = p;
           setText(bodyEl, 'btcLive', fmtUsd(p) + '  · ' + sourceName);
-          // Persist open price on first tick of the round if missing.
-          if (!market.meta.openPrice) {
+          // Local fallback only when the shared worker round is unavailable.
+          if (!market.meta.openPrice && !canonicalRoundMatchesMarket(market, sharedRound)) {
             market.meta.openPrice = p;
             try {
               var rounds = readJson(ROUND_KEY, {});
@@ -1720,23 +1964,32 @@
             yesProb = 0.5 + 0.5 * Math.tanh(pct * 0.6);
             yesProb = Math.max(0.02, Math.min(0.98, yesProb));
           }
+          market.baseYesPriceNumber = yesProb;
+          market.baseNoPriceNumber = 1 - yesProb;
           market.yesPriceNumber = yesProb;
           market.noPriceNumber = 1 - yesProb;
-          var yEl = bodyEl.querySelector('[data-bind="yesPct"]');
-          var nEl2 = bodyEl.querySelector('[data-bind="noPct"]');
-          if (yEl) yEl.textContent = (yesProb * 100).toFixed(1) + '%';
-          if (nEl2) nEl2.textContent = ((1 - yesProb) * 100).toFixed(1) + '%';
-          if (typeof window.__ostChartRedraw === 'function') {
-            try { window.__ostChartRedraw(); } catch (_) {}
+          function paintNativeBtcQuote() {
+            var liveYes = Number(market.yesPriceNumber);
+            if (!Number.isFinite(liveYes)) liveYes = yesProb;
+            var liveNo = Number(market.noPriceNumber);
+            if (!Number.isFinite(liveNo)) liveNo = 1 - liveYes;
+            var yEl = bodyEl.querySelector('[data-bind="yesPct"]');
+            var nEl2 = bodyEl.querySelector('[data-bind="noPct"]');
+            if (yEl) yEl.textContent = (liveYes * 100).toFixed(1) + '%';
+            if (nEl2) nEl2.textContent = (liveNo * 100).toFixed(1) + '%';
+            if (typeof window.__ostChartRedraw === 'function') {
+              try { window.__ostChartRedraw(); } catch (_) {}
+            }
+            try { if (typeof bodyEl.__renderOstNativeBook === 'function') bodyEl.__renderOstNativeBook(); } catch (_) {}
+            try { if (typeof bodyEl.__renderTradesTable === 'function') bodyEl.__renderTradesTable(); } catch (_) {}
+            recalcProjected();
+            try { if (typeof bodyEl.__refreshSell === 'function') bodyEl.__refreshSell(); } catch (_) {}
           }
-          try { if (typeof bodyEl.__renderOstNativeBook === 'function') bodyEl.__renderOstNativeBook(); } catch (_) {}
-          try { if (typeof bodyEl.__renderTradesTable === 'function') bodyEl.__renderTradesTable(); } catch (_) {}
-          recalcProjected();
-          // Live mark-to-market on the user's open positions for this market —
-          // moves the P/L row in lock-step with every BTC tick.
-          try { if (typeof bodyEl.__refreshSell === 'function') bodyEl.__refreshSell(); } catch (_) {}
+          paintNativeBtcQuote();
+          refreshNativeMarketState(market, bodyEl, yesProb).then(paintNativeBtcQuote);
         });
       };
+      hydrateCanonicalBtcTicks(market, bodyEl);
       fetchBtcLive();
       liveTimers.push(setInterval(fetchBtcLive, 1000));
     }
@@ -2036,6 +2289,8 @@
         // bets compress into one row (real-book style).
         var yesAgg = {}, noAgg = {};
         flow.forEach(function (b) {
+          var isSell = String(b.flowAction || b.tradeAction || b.action || '').toLowerCase() === 'sell' || isClosedFlowRecord(b);
+          if (isSell) return;
           var stake = Number(b.stake) || 0;
           var px = Number(b.price);
           if (!stake || !Number.isFinite(px) || px <= 0 || px >= 1) return;
@@ -2084,12 +2339,13 @@
         if (!body) return;
         var ostRows = ostFlowForMarket().slice(0, 12).map(function (b) {
           var side = String(b.side || '').toUpperCase();
+          var isSell = String(b.flowAction || b.tradeAction || b.action || '').toLowerCase() === 'sell' || isClosedFlowRecord(b);
           var color = /YES|BUY|UP/.test(side) ? '#7ce6a8' : '#ff7c8a';
           var ts = new Date(b.ts).getTime() || Date.now();
           var px = Number(b.price);
           var sz = Number(b.stake);
           var ws = b.walletShort || (b.wallet ? String(b.wallet).slice(0, 4) + '…' : 'OST');
-          return buildTradeRow(side + ' · OST', color, ts, px, sz, ws);
+          return buildTradeRow((isSell ? 'SELL ' : 'BUY ') + side + ' · OST', color, ts, px, sz, ws);
         });
         var upstreamRows = (lastUpstreamTrades || []).slice(0, 18 - Math.min(ostRows.length, 12)).map(function (t) {
           var side = (t.side || t.outcome || '').toString().toUpperCase();
@@ -2286,15 +2542,12 @@
         }).filter(function (v) { return v != null; });
         var isBtc5m = market.isOstNative && market.meta && market.meta.kind === 'btc5m';
         if (isBtc5m) {
-          var sharedRound = null;
-          try {
-            if (window.OST_PREDICTION_API && typeof window.OST_PREDICTION_API.fiveMinRound === 'function') {
-              sharedRound = window.OST_PREDICTION_API.fiveMinRound();
-            }
-          } catch (_) { sharedRound = null; }
-          var storedRound = (readJson(ROUND_KEY, {})[String(market.meta.openAt)] || {});
-          if (!market.meta.openPrice && Number(storedRound.openPrice) > 0) market.meta.openPrice = Number(storedRound.openPrice);
-          if (!market.meta.openPrice && sharedRound && Number(sharedRound.priceToBeat || sharedRound.openPrice) > 0) market.meta.openPrice = Number(sharedRound.priceToBeat || sharedRound.openPrice);
+          var sharedRound = cachedCanonicalBtcRound();
+          if (canonicalRoundMatchesMarket(market, sharedRound)) applyCanonicalBtcRoundToMarket(market, sharedRound);
+          if (!market.meta.openPrice) {
+            var storedRound = (readJson(ROUND_KEY, {})[String(market.meta.openAt)] || {});
+            if (Number(storedRound.openPrice) > 0) market.meta.openPrice = Number(storedRound.openPrice);
+          }
           market.meta.priceToBeat = Number(market.meta.priceToBeat || market.meta.openPrice || 0);
           var openPx = Number(market.meta.priceToBeat || market.meta.openPrice) || (sharedRound && Number(sharedRound.priceToBeat || sharedRound.openPrice)) || 0;
           var closeAt = Number(market.meta.closeAt || (sharedRound && sharedRound.closeAt) || Date.now());
@@ -2303,6 +2556,8 @@
             var rawSeries = window.OST_PREDICTION_API && typeof window.OST_PREDICTION_API.btcSeries === 'function'
               ? window.OST_PREDICTION_API.btcSeries()
               : [];
+            var sharedTicks = cachedBtcTicksForRound(market.meta.openAt);
+            if (sharedTicks.length >= 2) rawSeries = sharedTicks;
             rawSeries.slice(-160).forEach(function (point) {
               var pp = Number(point && (point.price != null ? point.price : point.p));
               if (!Number.isFinite(pp) || pp <= 1000 || openPx <= 0) return;

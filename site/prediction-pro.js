@@ -120,6 +120,7 @@
   var canonicalRound = null;            // last successful /btc/round payload
   var canonicalRoundFetchedAt = 0;
   var canonicalTicksSeededFor = 0;      // openAt of the round whose ticks we've seeded
+  var canonicalTicksLoadingFor = 0;
 
   function canonicalRoundIsFresh() {
     return canonicalRound && (Date.now() - canonicalRoundFetchedAt < 4500);
@@ -395,10 +396,10 @@
   // first time we see a new round id, so two users opening the modal see
   // the same chart even if one of them just landed on the page.
   function maybeSeedTickHistory(openAt) {
-    if (!openAt || canonicalTicksSeededFor === openAt) return;
+    if (!openAt || canonicalTicksSeededFor === openAt || canonicalTicksLoadingFor === openAt) return;
     var apiBase = ostApiBase();
     if (!apiBase) return;
-    canonicalTicksSeededFor = openAt;
+    canonicalTicksLoadingFor = openAt;
     fetch(apiBase + '/btc/ticks?openAt=' + encodeURIComponent(openAt), { headers: { accept: 'application/json' }, cache: 'no-store' })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (j) {
@@ -412,9 +413,11 @@
         btcSeries = seeded.slice(-BTC_MAX_SERIES);
         var last = seeded[seeded.length - 1];
         btcLastTick = { ts: last.ts, price: last.price, source: last.source };
+        canonicalTicksSeededFor = openAt;
         try { window.dispatchEvent(new CustomEvent('ost:btc-spot', { detail: Object.assign({}, btcLastTick) })); } catch (_) {}
       })
-      .catch(function () { /* keep local series */ });
+      .catch(function () { /* keep local series */ })
+      .then(function () { if (canonicalTicksLoadingFor === openAt) canonicalTicksLoadingFor = 0; });
   }
 
   // Periodic poll so cards, charts, and close-outs all share fresh BTC data.
@@ -438,11 +441,11 @@
     var canon = canonicalRoundIsFresh() && canonicalRound && Number(canonicalRound.openAt) === b.openAt
       ? canonicalRound
       : null;
-    var livePrice = (canon && Number(canon.livePrice)) || btcLastTick.price || refPrice || roundRecord.openPrice || 0;
-    var openPrice = Number(roundRecord.openPrice) || (canon && Number(canon.openPrice)) || refPrice || livePrice || 0;
-    var localOpenPrice = Number(roundRecord.openPrice);
     var canonOpenPrice = canon && Number(canon.openPrice);
-    var useCanonicalOdds = canon && Number.isFinite(Number(canon.yesPriceNumber)) && (!Number.isFinite(localOpenPrice) || localOpenPrice <= 0 || Math.abs(localOpenPrice - Number(canonOpenPrice || 0)) < 0.01);
+    var canonLivePrice = canon && Number(canon.livePrice);
+    var livePrice = (Number.isFinite(canonLivePrice) && canonLivePrice > 0 ? canonLivePrice : 0) || btcLastTick.price || refPrice || roundRecord.openPrice || 0;
+    var openPrice = (Number.isFinite(canonOpenPrice) && canonOpenPrice > 0 ? canonOpenPrice : 0) || Number(roundRecord.openPrice) || refPrice || livePrice || 0;
+    var useCanonicalOdds = canon && Number.isFinite(Number(canon.yesPriceNumber)) && Number.isFinite(canonOpenPrice) && canonOpenPrice > 0;
     var odds;
     if (useCanonicalOdds) {
       var yes = Math.max(0.02, Math.min(0.98, Number(canon.yesPriceNumber)));
@@ -464,7 +467,8 @@
     var roundId = 'ost-btc5m-' + b.openAt;
     var yesPct = (odds.yes * 100).toFixed(1) + '%';
     var noPct = (odds.no * 100).toFixed(1) + '%';
-    var sourceLabel = btcLastTick.source ? btcLastTick.source.toUpperCase() : 'BTC FEED';
+    var sourceLabel = (canon && (canon.livePriceSource || canon.source)) || btcLastTick.source || 'BTC FEED';
+    sourceLabel = String(sourceLabel).toUpperCase();
     var priceToBeat = openPrice;
     var priceToBeatText = priceToBeat ? formatUsd(priceToBeat) : '$--';
     var equation = 'YES wins if BTC closes above ' + priceToBeatText + '; NO wins if BTC closes at or below ' + priceToBeatText + '.';
@@ -521,8 +525,8 @@
         priceDeltaPct: odds.deltaPct,
         yesPriceNumber: odds.yes,
         noPriceNumber: odds.no,
-        priceSource: btcLastTick.source || '',
-        updatedAt: btcLastTick.ts || 0,
+        priceSource: (canon && (canon.livePriceSource || canon.source)) || btcLastTick.source || '',
+        updatedAt: (canon && Number(canon.livePriceTs)) || btcLastTick.ts || 0,
         volatilityPct: odds.volatilityPct,
         momentumPct: odds.momentumPct
       }
@@ -634,31 +638,21 @@
     if (!market || !market.isOstNative || !market.meta || market.meta.kind !== 'btc5m') return;
     var rounds = readRounds();
     var key = String(market.meta.openAt);
-    // Preserve the first price this browser captured for the round. The worker
-    // can cold-start with openPrice === livePrice, which would pin every round
-    // at 50/50 if we reconciled it on each tick.
     var canonOpen = canonicalRoundIsFresh() && canonicalRound && Number(canonicalRound.openAt) === market.meta.openAt
       ? Number(canonicalRound.openPrice) || 0
       : 0;
-    var openPrice = Number(market.meta.openPrice) || canonOpen || btcLastTick.price || 0;
-    if (!rounds[key]) {
+    var openPrice = canonOpen || Number(market.meta.openPrice) || btcLastTick.price || 0;
+    var existingOpen = Number(rounds[key] && rounds[key].openPrice);
+    var shouldWrite = !rounds[key] || !existingOpen || (canonOpen && Math.abs(existingOpen - canonOpen) > 0.01);
+    if (shouldWrite) {
       rounds[key] = {
         openPrice: openPrice,
+        priceToBeat: openPrice,
         openAt: market.meta.openAt,
         closeAt: market.meta.closeAt,
-        openPriceTs: btcLastTick.ts || Date.now(),
+        openPriceTs: (canonicalRound && Number(canonicalRound.openPriceTs)) || btcLastTick.ts || Date.now(),
         openPriceSource: (canonOpen ? 'ost-canonical' : (btcLastTick.source || ''))
       };
-      writeRounds(rounds);
-    } else if (!rounds[key].openPrice && openPrice) {
-      rounds[key].openPrice = openPrice;
-      rounds[key].openPriceTs = btcLastTick.ts || Date.now();
-      rounds[key].openPriceSource = canonOpen && openPrice === canonOpen ? 'ost-canonical' : (btcLastTick.source || '');
-      writeRounds(rounds);
-    } else if (!rounds[key].openPrice && btcLastTick.price) {
-      rounds[key].openPrice = btcLastTick.price;
-      rounds[key].openPriceTs = btcLastTick.ts || Date.now();
-      rounds[key].openPriceSource = btcLastTick.source || '';
       writeRounds(rounds);
     }
   }
