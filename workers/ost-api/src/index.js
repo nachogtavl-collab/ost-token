@@ -341,6 +341,22 @@ function cleanNumber(value, fallback = null) {
   return Number.isFinite(number) ? number : fallback;
 }
 
+function cleanProbability(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.max(0, Math.min(1, number)) : null;
+}
+
+function inferBinaryPrices(side, price, yesPrice, noPrice) {
+  const sideUp = String(side || '').toUpperCase() === 'NO' ? 'NO' : 'YES';
+  let selected = cleanProbability(price);
+  let yes = cleanProbability(yesPrice);
+  let no = cleanProbability(noPrice);
+  if (yes == null && selected != null) yes = sideUp === 'NO' ? 1 - selected : selected;
+  if (no == null && selected != null) no = sideUp === 'NO' ? selected : 1 - selected;
+  if (selected == null) selected = sideUp === 'NO' ? no : yes;
+  return { price: selected, yesPrice: yes, noPrice: no };
+}
+
 function mergeNewest(bucket, record, limit = 100) {
   const key = record.signature || record.sig || record.id;
   const current = Array.isArray(bucket) ? bucket : [];
@@ -1248,7 +1264,17 @@ export default {
         : currentRound();
       const since = Number(url.searchParams.get('since')) || 0;
       const ringKey = `btc:ticks:${round.openAt}`;
-      const ring = await kvGet(env, ringKey, []);
+      let ring = await kvGet(env, ringKey, []);
+      const isCurrentRound = round.openAt === currentRound().openAt;
+      const lastTick = ring.length ? ring[ring.length - 1] : null;
+      if (isCurrentRound && (!ring.length || Date.now() - Number(lastTick && lastTick.t || 0) > 2000)) {
+        const snapshot = await buildCanonicalBtcRound(env, { refresh: true });
+        ring = await kvGet(env, ringKey, []);
+        if (!ring.length && snapshot && Number.isFinite(Number(snapshot.livePrice))) {
+          await appendBtcTick(env, round, Number(snapshot.livePrice), snapshot.livePriceSource || 'ost-canonical');
+          ring = await kvGet(env, ringKey, []);
+        }
+      }
       const ticks = since > 0 ? ring.filter(t => Number(t.t) > since) : ring;
       return json({
         openAt: round.openAt,
@@ -1406,6 +1432,7 @@ export default {
       }
       if (!env.OST_KV) return json({ ok: true, stored: false, note: 'KV not configured — position not persisted server-side' });
       const createdAt = toMs(body.createdAt || ts);
+      const inferredPrices = inferBinaryPrices(side, price, body.yesPrice, body.noPrice);
       const record = {
         id: cleanText(body.id || signature || crypto.randomUUID(), 128),
         wallet: String(wallet).slice(0, 64),
@@ -1418,9 +1445,9 @@ export default {
         source: cleanText(body.source || 'polymarket', 32),
         side: String(side).toUpperCase().slice(0, 32),
         stake: Number(stake),
-        price: Number.isFinite(Number(price)) ? Number(price) : null,
-        yesPrice: cleanNumber(body.yesPrice),
-        noPrice: cleanNumber(body.noPrice),
+        price: inferredPrices.price,
+        yesPrice: inferredPrices.yesPrice,
+        noPrice: inferredPrices.noPrice,
         shares: cleanNumber(body.shares),
         potentialReturn: cleanNumber(body.potentialReturn),
         closeAtMs: cleanNumber(body.closeAtMs, 0),
@@ -2204,6 +2231,8 @@ export default {
             price = side === 'NO' ? m.noPriceNumber : m.yesPriceNumber;
           }
         }
+        const inferredPrices = inferBinaryPrices(side, price, body && body.yesPrice, body && body.noPrice);
+        price = inferredPrices.price;
         const createdAt = Date.now();
         const id = cleanText(body.id || body.signature || `bot-${createdAt}-${Math.random().toString(36).slice(2, 10)}`, 128);
         const record = {
@@ -2216,6 +2245,8 @@ export default {
           side,
           stake,
           price,
+          yesPrice: inferredPrices.yesPrice,
+          noPrice: inferredPrices.noPrice,
           shares: price > 0 ? stake / price : 0,
           potentialReturn: price > 0 ? stake / price : stake,
           source: 'bot',

@@ -53,30 +53,45 @@
 
   // Push a freshly-placed bet to the global ost-api positions feed so every
   // other OST user sees it in their "Live OST flow" ticker.
-  function shareBetGlobally(market, side, stake, rec) {
+  function shareBetGlobally(market, side, stake, rec, outcomeKey) {
     try {
       var base = (window.OST_API_BASE || '').replace(/\/$/, '');
-      if (!base) return;
       var wallet = (rec && rec.wallet) ||
         (window.OST_WALLET && window.OST_WALLET.session && window.OST_WALLET.session.publicKey && window.OST_WALLET.session.publicKey.toBase58 && window.OST_WALLET.session.publicKey.toBase58()) ||
         window.OST_WALLET_PUBKEY ||
         (window.solana && window.solana.publicKey && window.solana.publicKey.toString && window.solana.publicKey.toString()) ||
         'anon';
-      var price = (side === 'YES' ? Number(market.yesPriceNumber) : Number(market.noPriceNumber));
+      var contract = getModalTradeContract(market, side, outcomeKey || (rec && rec.outcomeKey) || '');
+      var sideUp = String(side || (contract && contract.side) || 'YES').toUpperCase() === 'NO' ? 'NO' : 'YES';
+      var price = Number(rec && rec.price);
+      if (!Number.isFinite(price)) price = Number(contract && contract.price);
+      var payload = Object.assign({}, rec || {}, {
+        wallet: wallet,
+        marketId: market.id,
+        conditionId: (contract && contract.conditionId) || market.conditionId || (market.raw && (market.raw.conditionId || market.raw.condition_id)) || '',
+        gammaMarketId: (contract && contract.gammaMarketId) || market.gammaMarketId || (market.raw && market.raw.id) || '',
+        marketTitle: market.title || market.question || '',
+        title: market.title || market.question || '',
+        side: sideUp,
+        stake: Number(stake) || 0,
+        price: Number.isFinite(price) ? price : null,
+        yesPrice: Number.isFinite(contract && contract.yesPrice) ? Number(contract.yesPrice) : null,
+        noPrice: Number.isFinite(contract && contract.noPrice) ? Number(contract.noPrice) : null,
+        outcomeKey: (contract && contract.key) || outcomeKey || (rec && rec.outcomeKey) || '',
+        outcomeLabel: (contract && contract.label) || (rec && rec.outcomeLabel) || sideUp,
+        clobTokenIds: contract && contract.clobTokenIds ? contract.clobTokenIds.slice() : normalizeOutcomeTokenIds(market.clobTokenIds),
+        source: market.source || (market.isOstNative ? 'ost-native' : 'polymarket'),
+        topic: market.topic || '',
+        closeAtMs: market.closeAtMs || (market.meta && market.meta.closeAt) || 0,
+        signature: rec && (rec.signature || rec.sig || rec.id) || null,
+        ts: rec && (rec.ts || rec.createdAt) || new Date().toISOString()
+      });
+      optimisticallyMergeFlowRecord(market, payload);
+      if (!base) return;
       fetch(base + '/positions', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(Object.assign({}, rec || {}, {
-          wallet: wallet,
-          marketId: market.id,
-          marketTitle: market.title || market.question || '',
-          title: market.title || market.question || '',
-          side: side,
-          stake: Number(stake) || 0,
-          price: Number.isFinite(price) ? price : null,
-          signature: rec && rec.sig || null,
-          ts: new Date().toISOString()
-        }))
+        body: JSON.stringify(payload)
       }).catch(function () { /* fire-and-forget */ });
     } catch (_) { /* never block UI */ }
   }
@@ -430,6 +445,222 @@
       conditionId: market && market.conditionId || '',
       clobTokenIds: normalizeOutcomeTokenIds(market && market.clobTokenIds)
     };
+  }
+  function clampProbability(value) {
+    var n = Number(value);
+    return Number.isFinite(n) ? Math.max(0, Math.min(1, n)) : NaN;
+  }
+  function addAlias(list, value) {
+    var text = String(value == null ? '' : value).trim();
+    if (text && list.indexOf(text) < 0) list.push(text);
+  }
+  function marketAliasList(market) {
+    var aliases = [];
+    if (!market) return aliases;
+    addAlias(aliases, market.id);
+    addAlias(aliases, market.marketId);
+    addAlias(aliases, market.conditionId || market.condition_id);
+    addAlias(aliases, market.gammaMarketId);
+    normalizeOutcomeTokenIds(market.clobTokenIds).forEach(function (id) { addAlias(aliases, id); });
+    if (market.raw) {
+      addAlias(aliases, market.raw.id);
+      addAlias(aliases, market.raw.conditionId || market.raw.condition_id);
+      addAlias(aliases, market.raw.gammaMarketId);
+      normalizeOutcomeTokenIds(market.raw.clobTokenIds || market.raw.outcomeTokens || market.raw.tokens).forEach(function (id) { addAlias(aliases, id); });
+    }
+    getModalOutcomeContracts(market).forEach(function (outcome) {
+      addAlias(aliases, outcome.gammaMarketId);
+      addAlias(aliases, outcome.conditionId);
+      (outcome.clobTokenIds || []).forEach(function (id) { addAlias(aliases, id); });
+    });
+    return aliases;
+  }
+  function flowRecordAliasList(record) {
+    var aliases = [];
+    if (!record) return aliases;
+    addAlias(aliases, record.marketId);
+    addAlias(aliases, record.conditionId || record.condition_id);
+    addAlias(aliases, record.gammaMarketId);
+    addAlias(aliases, record.id && String(record.id).indexOf('ost-btc5m-') === 0 ? record.id : '');
+    normalizeOutcomeTokenIds(record.clobTokenIds || record.outcomeTokens || record.tokens || record.tokenIds || record.tokenId).forEach(function (id) { addAlias(aliases, id); });
+    return aliases;
+  }
+  function isYesFlowSide(side) {
+    return /^(YES|BUY|UP|LONG)$/i.test(String(side || '').trim());
+  }
+  function normalizeFlowSide(side) {
+    return isYesFlowSide(side) ? 'YES' : 'NO';
+  }
+  function flowRecordKey(record) {
+    return String(record && (record.signature || record.sig || record.id || record.txid || record.txHash) || '') ||
+      [record && record.marketId, record && record.conditionId, record && record.wallet, record && record.side, record && record.stake, record && (record.ts || record.createdAt)].join(':');
+  }
+  function recordMatchesMarket(record, market) {
+    var marketAliases = marketAliasList(market);
+    if (!marketAliases.length) return false;
+    var recordAliases = flowRecordAliasList(record);
+    return recordAliases.some(function (alias) { return marketAliases.indexOf(alias) >= 0; });
+  }
+  function recordMatchesOutcome(record, market, outcomeKey) {
+    if (!hasExplicitOutcomeContracts(market)) return true;
+    var selected = getSelectedOutcomeContract(market, outcomeKey);
+    if (!selected) return true;
+    var recKey = String(record && (record.outcomeKey || record.key) || '').trim().toLowerCase();
+    var recLabel = String(record && (record.outcomeLabel || record.label) || '').trim().toLowerCase();
+    if (!recKey && !recLabel) return true;
+    var selectedLabel = String(selected.label || '').trim().toLowerCase();
+    return recKey === selected.key || recLabel === selectedLabel || recLabel === selected.key;
+  }
+  function normalizeFlowRecord(market, record, outcomeKey, origin) {
+    if (!record) return null;
+    var side = normalizeFlowSide(record.side || record.outcome || record.action);
+    var price = clampProbability(record.price != null ? record.price : record.entryPrice);
+    var yesPrice = clampProbability(record.yesPrice != null ? record.yesPrice : record.yes_price);
+    var noPrice = clampProbability(record.noPrice != null ? record.noPrice : record.no_price);
+    var contract = market ? getModalTradeContract(market, side, record.outcomeKey || outcomeKey || '') : null;
+    if (!Number.isFinite(yesPrice) && Number.isFinite(price)) yesPrice = side === 'YES' ? price : 1 - price;
+    if (!Number.isFinite(noPrice) && Number.isFinite(price)) noPrice = side === 'NO' ? price : 1 - price;
+    if (!Number.isFinite(yesPrice) && contract && Number.isFinite(contract.yesPrice)) yesPrice = Number(contract.yesPrice);
+    if (!Number.isFinite(noPrice) && contract && Number.isFinite(contract.noPrice)) noPrice = Number(contract.noPrice);
+    if (!Number.isFinite(price)) price = side === 'NO' ? noPrice : yesPrice;
+    var ts = record.ts || record.createdAt || record.syncedAt || Date.now();
+    return Object.assign({}, record, {
+      marketId: record.marketId || (market && market.id) || '',
+      marketTitle: record.marketTitle || record.title || (market && (market.title || market.question)) || '',
+      side: side,
+      stake: Number(record.stake || record.amount || record.size) || 0,
+      price: Number.isFinite(price) ? price : null,
+      yesPrice: Number.isFinite(yesPrice) ? yesPrice : null,
+      noPrice: Number.isFinite(noPrice) ? noPrice : null,
+      outcomeKey: record.outcomeKey || (contract && contract.key) || '',
+      outcomeLabel: record.outcomeLabel || (contract && contract.label) || side,
+      walletShort: record.walletShort || (record.wallet ? String(record.wallet).slice(0, 4) + '...' + String(record.wallet).slice(-4) : ''),
+      ts: ts,
+      origin: origin || record.origin || 'remote'
+    });
+  }
+  function dedupeFlowRecords(records) {
+    var seen = {};
+    return (records || []).filter(function (record) {
+      var key = flowRecordKey(record);
+      if (seen[key]) return false;
+      seen[key] = 1;
+      return true;
+    });
+  }
+  function addFlowToIndex(index, record) {
+    var aliases = flowRecordAliasList(record);
+    if (!aliases.length && record && record.marketId) addAlias(aliases, record.marketId);
+    aliases.forEach(function (alias) { (index[alias] = index[alias] || []).push(record); });
+  }
+  function buildSharedFlowIndex(remoteRecords, activeMarket) {
+    var index = {};
+    dedupeFlowRecords(remoteRecords || []).forEach(function (raw) {
+      var normalized = normalizeFlowRecord(null, raw, '', 'remote');
+      if (!normalized) return;
+      addFlowToIndex(index, normalized);
+      if (activeMarket && recordMatchesMarket(normalized, activeMarket)) {
+        marketAliasList(activeMarket).forEach(function (alias) { (index[alias] = index[alias] || []).push(normalized); });
+      }
+    });
+    try {
+      dedupeFlowRecords(readOrders()).forEach(function (raw) {
+        if (activeMarket && !recordMatchesMarket(raw, activeMarket)) return;
+        var normalized = normalizeFlowRecord(activeMarket, raw, '', 'local');
+        if (!normalized) return;
+        addFlowToIndex(index, normalized);
+        if (activeMarket) {
+          marketAliasList(activeMarket).forEach(function (alias) { (index[alias] = index[alias] || []).push(normalized); });
+        }
+      });
+    } catch (_) {}
+    Object.keys(index).forEach(function (key) { index[key] = dedupeFlowRecords(index[key]); });
+    return index;
+  }
+  function getFlowForMarket(market, outcomeKey) {
+    var rows = [];
+    var bag = window.__ostSharedFeed || {};
+    marketAliasList(market).forEach(function (alias) {
+      if (Array.isArray(bag[alias])) rows = rows.concat(bag[alias].slice());
+    });
+    try {
+      readOrders().forEach(function (record) { if (recordMatchesMarket(record, market)) rows.push(record); });
+    } catch (_) {}
+    rows = dedupeFlowRecords(rows).map(function (record) {
+      return normalizeFlowRecord(market, record, outcomeKey, record && record.origin);
+    }).filter(function (record) {
+      return record && recordMatchesMarket(record, market) && recordMatchesOutcome(record, market, outcomeKey);
+    });
+    rows.sort(function (a, b) { return (new Date(b.ts).getTime() || 0) - (new Date(a.ts).getTime() || 0); });
+    return rows;
+  }
+  function optimisticallyMergeFlowRecord(market, record) {
+    try {
+      var current = window.__ostSharedFeed || {};
+      var index = buildSharedFlowIndex([], market);
+      Object.keys(current).forEach(function (key) { index[key] = (index[key] || []).concat(current[key] || []); });
+      var normalized = normalizeFlowRecord(market, record, record && record.outcomeKey, 'local');
+      if (normalized) {
+        addFlowToIndex(index, normalized);
+        marketAliasList(market).forEach(function (alias) { (index[alias] = index[alias] || []).push(normalized); });
+      }
+      Object.keys(index).forEach(function (key) { index[key] = dedupeFlowRecords(index[key]); });
+      window.__ostSharedFeed = index;
+      if (typeof window.__ostChartRedraw === 'function') window.__ostChartRedraw();
+    } catch (_) {}
+  }
+  function getMarketQuotePrices(market, outcomeKey) {
+    var yesContract = getModalTradeContract(market, 'YES', outcomeKey || '');
+    var noContract = getModalTradeContract(market, 'NO', outcomeKey || '');
+    var yes = clampProbability(yesContract && yesContract.yesPrice);
+    var no = clampProbability(noContract && noContract.noPrice);
+    if (!Number.isFinite(yes)) yes = clampProbability(market && market.yesPriceNumber);
+    if (!Number.isFinite(no)) no = clampProbability(market && market.noPriceNumber);
+    if (!Number.isFinite(no) && Number.isFinite(yes)) no = 1 - yes;
+    if (!Number.isFinite(yes) && Number.isFinite(no)) yes = 1 - no;
+    if (!Number.isFinite(yes)) yes = 0.5;
+    if (!Number.isFinite(no)) no = 1 - yes;
+    return { yes: yes, no: no };
+  }
+  function bookListLooksEmpty(target) {
+    if (!target) return true;
+    var text = String(target.textContent || '').trim();
+    return !target.children.length || text === '-' || text === '—' || /No .*bids|No live|book unavailable|awaiting/i.test(text) || target.innerHTML.indexOf('book-empty') >= 0;
+  }
+  function renderQuoteDepthFallback(bodyEl, market, outcomeKey, force) {
+    var yesEl = bodyEl.querySelector('[data-bind="bookYes"]');
+    var noEl = bodyEl.querySelector('[data-bind="bookNo"]');
+    if (!force && !bookListLooksEmpty(yesEl) && !bookListLooksEmpty(noEl)) return false;
+    var q = getMarketQuotePrices(market, outcomeKey);
+    function row(price, color, label) {
+      return '<div class="ost-modal__book-row book-empty" style="opacity:.9;background:rgba(255,255,255,.035);">' +
+        '<span style="color:' + color + ';font-weight:700;">' + fmtCents(price) + ' ' + label + '</span>' +
+        '<span>live quote</span>' +
+      '</div>';
+    }
+    if (yesEl && (force || bookListLooksEmpty(yesEl))) yesEl.innerHTML = row(q.yes, '#7ce6a8', 'quote');
+    if (noEl && (force || bookListLooksEmpty(noEl))) noEl.innerHTML = row(q.no, '#ff7c8a', 'quote');
+    setText(bodyEl, 'bookStatus', 'quote live - awaiting OST depth - ' + fmtTime(Date.now()));
+    return true;
+  }
+  function renderQuoteTradesFallback(bodyEl, market, outcomeKey, statusText) {
+    var body = bodyEl.querySelector('[data-bind="tradesBody"]');
+    if (!body) return false;
+    var q = getMarketQuotePrices(market, outcomeKey);
+    var now = fmtTime(Date.now());
+    body.innerHTML = '<tr>' +
+      '<td>' + escapeHtml(now) + '</td>' +
+      '<td style="color:#7ce6a8;font-weight:700;">YES quote</td>' +
+      '<td>' + fmtCents(q.yes) + '</td>' +
+      '<td>market</td>' +
+    '</tr><tr>' +
+      '<td>' + escapeHtml(now) + '</td>' +
+      '<td style="color:#ff7c8a;font-weight:700;">NO quote</td>' +
+      '<td>' + fmtCents(q.no) + '</td>' +
+      '<td>market</td>' +
+    '</tr>';
+    setText(bodyEl, 'tradesStatus', (statusText || 'quote - awaiting OST trades') + ' - ' + now);
+    return true;
   }
   function findPolymarketTokenIds(market, outcomeKey) {
     if (!market) return null;
@@ -1206,7 +1437,7 @@
         .then(function (rec) {
           toast('✅ Bet recorded' + (rec && rec.sig ? ' (sig ' + String(rec.sig).slice(0, 8) + '…)' : '') + '. Check Open Positions below.', 'ok');
           // Share to global feed so every other OST user sees the tick live.
-          shareBetGlobally(market, selectedSide, s, rec);
+          shareBetGlobally(market, selectedSide, s, rec, selectedOutcomeKey);
           // Auto-close after 2.5s so user can see positions
           setTimeout(closeModal, 2500);
         })
@@ -1249,57 +1480,41 @@
 
     // ---- Shared positions feed (cross-user ticker) ----
     var sharedListEl = bodyEl.querySelector('[data-bind="sharedList"]');
+    function applySharedFeed(recentRows) {
+      window.__ostSharedFeed = buildSharedFlowIndex(recentRows || [], market);
+      if (typeof window.__ostChartRedraw === 'function') {
+        try { window.__ostChartRedraw(); } catch (_) {}
+      }
+      try { if (typeof bodyEl.__renderOstNativeBook === 'function') bodyEl.__renderOstNativeBook(); } catch (_) {}
+      try { if (typeof bodyEl.__renderTradesTable === 'function') bodyEl.__renderTradesTable(); } catch (_) {}
+      if (!sharedListEl) return;
+      var thisMarketBets = getFlowForMarket(market, selectedOutcomeKey).slice(0, 12);
+      if (!thisMarketBets.length) {
+        sharedListEl.innerHTML = '<div style="opacity:0.55;font-size:11px;">No OST bets on this market yet - be the first.</div>';
+        return;
+      }
+      sharedListEl.innerHTML = thisMarketBets.map(function (r) {
+        var sideClass = /YES|BUY/i.test(r.side) ? 'is-yes' : 'is-no';
+        var ago = Math.max(0, Math.round((Date.now() - new Date(r.ts).getTime()) / 1000));
+        var agoStr = ago < 60 ? (ago + 's ago') : (Math.round(ago / 60) + 'm ago');
+        var pxTxt = Number.isFinite(Number(r.price)) ? ' @ ' + (Number(r.price) * 100).toFixed(1) + 'c' : '';
+        return '<div class="ost-modal__shared-row ' + sideClass + '">' +
+          '<span class="ost-modal__shared-wallet">' + escapeHtml(r.walletShort || (r.wallet || 'anon').slice(0, 4) + '...') + '</span>' +
+          '<span class="ost-modal__shared-side">' + escapeHtml(r.outcomeLabel || r.side) + '</span>' +
+          '<span class="ost-modal__shared-stake">' + Number(r.stake || 0).toFixed(2) + ' OST' + pxTxt + '</span>' +
+          '<span class="ost-modal__shared-time">' + agoStr + '</span>' +
+        '</div>';
+      }).join('');
+    }
     function refreshSharedFeed() {
       var base = (window.OST_API_BASE || '').replace(/\/$/, '');
-      if (!base) return;
+      if (!base) { applySharedFeed([]); return; }
       fetch(base + '/positions/recent?limit=50', { cache: 'no-store' })
         .then(function (r) { return r.ok ? r.json() : null; })
-        .then(function (j) {
-          if (!j || !Array.isArray(j.recent)) return;
-          // Index per-market for the chart overlay (only same-market ticks).
-          window.__ostSharedFeed = window.__ostSharedFeed || {};
-          var perMarket = {};
-          j.recent.forEach(function (b) {
-            var k = b.marketId; if (!k) return;
-            (perMarket[k] = perMarket[k] || []).push(b);
-          });
-          window.__ostSharedFeed = perMarket;
-          // Trigger a chart redraw so newly-arrived bets appear as glyphs.
-          if (typeof window.__ostChartRedraw === 'function') {
-            try { window.__ostChartRedraw(); } catch (_) {}
-          }
-          // Re-paint the depth + recent-trades panels so live OST flow on
-          // this market shows up alongside the upstream Polymarket data.
-          // Multiple users in the same market now actually see each other.
-          try { if (typeof bodyEl.__renderOstNativeBook === 'function') bodyEl.__renderOstNativeBook(); } catch (_) {}
-          try { if (typeof bodyEl.__renderTradesTable === 'function') bodyEl.__renderTradesTable(); } catch (_) {}
-          if (!sharedListEl) return;
-          // Filter the side ribbon to ONLY this market's bets — users were
-          // getting confused seeing trades from unrelated markets.
-          var thisMarketBets = (perMarket[market.id] || []).slice(0, 12);
-          if (!thisMarketBets.length) {
-            sharedListEl.innerHTML = '<div style="opacity:0.55;font-size:11px;">No OST bets on this market yet — be the first.</div>';
-            return;
-          }
-          sharedListEl.innerHTML = thisMarketBets.map(function (r) {
-            var sideClass = /YES|BUY/i.test(r.side) ? 'is-yes' : 'is-no';
-            var ago = Math.max(0, Math.round((Date.now() - new Date(r.ts).getTime()) / 1000));
-            var agoStr = ago < 60 ? (ago + 's ago') : (Math.round(ago / 60) + 'm ago');
-            var pxTxt = Number.isFinite(Number(r.price)) ? ' @ ' + (Number(r.price) * 100).toFixed(1) + '¢' : '';
-            return '<div class="ost-modal__shared-row ' + sideClass + '">' +
-              '<span class="ost-modal__shared-wallet">' + escapeHtml(r.walletShort || (r.wallet || 'anon').slice(0, 4) + '…') + '</span>' +
-              '<span class="ost-modal__shared-side">' + escapeHtml(r.side) + '</span>' +
-              '<span class="ost-modal__shared-stake">' + Number(r.stake).toFixed(2) + ' OST' + pxTxt + '</span>' +
-              '<span class="ost-modal__shared-time">' + agoStr + '</span>' +
-            '</div>';
-          }).join('');
-        })
-        .catch(function () { /* silent */ });
+        .then(function (j) { applySharedFeed(j && Array.isArray(j.recent) ? j.recent : []); })
+        .catch(function () { applySharedFeed([]); });
     }
     refreshSharedFeed();
-    // Tighter refresh (1.5s) so cross-user OST bets surface in the ticker
-    // and the book/trades panels almost in real time. The /positions/recent
-    // endpoint is cached at the worker so this is cheap.
     liveTimers.push(setInterval(refreshSharedFeed, 1500));
 
     // ---- Sell open positions on this market (live mark-to-market) ----
@@ -1514,6 +1729,8 @@
           if (typeof window.__ostChartRedraw === 'function') {
             try { window.__ostChartRedraw(); } catch (_) {}
           }
+          try { if (typeof bodyEl.__renderOstNativeBook === 'function') bodyEl.__renderOstNativeBook(); } catch (_) {}
+          try { if (typeof bodyEl.__renderTradesTable === 'function') bodyEl.__renderTradesTable(); } catch (_) {}
           recalcProjected();
           // Live mark-to-market on the user's open positions for this market —
           // moves the P/L row in lock-step with every BTC tick.
@@ -1736,7 +1953,7 @@
       var refreshBook = function () {
         var yesBookToken = tokenIds[0] || tokenId;
         var noBookToken = tokenIds[1] || null;
-        if (!yesBookToken) { setText(bodyEl, 'bookStatus', 'token id unknown — book unavailable'); return; }
+        if (!yesBookToken) { renderQuoteDepthFallback(bodyEl, market, selectedOutcomeKey, true); return; }
         setText(bodyEl, 'bookStatus', 'fetching…');
         Promise.all([
           fetchPolyOrderbook(yesBookToken),
@@ -1744,7 +1961,7 @@
         ]).then(function (books) {
           var yesBook = books[0];
           var noBook = books[1];
-          if (!yesBook) { setText(bodyEl, 'bookStatus', 'book offline'); return; }
+          if (!yesBook) { renderQuoteDepthFallback(bodyEl, market, selectedOutcomeKey, false); return; }
           var yesBids = (yesBook.bids || []).slice(0, 8);
           var yesAsks = (yesBook.asks || []).slice(0, 8);
           var noBids = noBook && Array.isArray(noBook.bids)
@@ -1814,7 +2031,7 @@
         var noEl  = bodyEl.querySelector('[data-bind="bookNo"]');
         if (!yesEl && !noEl) return;
         var flow = ostFlowForMarket();
-        if (!flow.length) return;
+        if (!flow.length) { renderQuoteDepthFallback(bodyEl, market, selectedOutcomeKey, false); return; }
         // Aggregate OST stake by side at each ¢ bucket so identical-price
         // bets compress into one row (real-book style).
         var yesAgg = {}, noAgg = {};
@@ -1885,8 +2102,7 @@
         });
         var combined = ostRows.concat(upstreamRows);
         if (!combined.length) {
-          body.innerHTML = '<tr><td colspan="4" style="text-align:center;opacity:0.6;">No recent trades available</td></tr>';
-          setText(bodyEl, 'tradesStatus', 'no ticks');
+          renderQuoteTradesFallback(bodyEl, market, selectedOutcomeKey, 'quote - awaiting venue ticks');
           return;
         }
         body.innerHTML = combined.join('');
@@ -2020,7 +2236,8 @@
         paint(yesEl, yesAgg, '#7ce6a8', 'YES');
         paint(noEl,  noAgg,  '#ff7c8a', 'NO');
         var totalRows = Object.keys(yesAgg).length + Object.keys(noAgg).length;
-        setText(bodyEl, 'bookStatus', totalRows ? ('live · ' + totalRows + ' OST levels · ' + fmtTime(Date.now())) : 'awaiting live OST bids');
+        if (!totalRows) { renderQuoteDepthFallback(bodyEl, market, selectedOutcomeKey, true); return; }
+        setText(bodyEl, 'bookStatus', 'live · ' + totalRows + ' OST levels · ' + fmtTime(Date.now()));
       }
       bodyEl.__renderOstNativeBook = renderOstNativeBook;
 
@@ -2030,8 +2247,7 @@
         if (!body) return;
         var flow = ostFlowForMarket().slice(0, 24);
         if (!flow.length) {
-          body.innerHTML = '<tr><td colspan="4" style="text-align:center;opacity:0.6;">Awaiting first live OST trade…</td></tr>';
-          setText(bodyEl, 'tradesStatus', 'no ticks yet');
+          renderQuoteTradesFallback(bodyEl, market, selectedOutcomeKey, 'quote - awaiting live OST trade');
           return;
         }
         body.innerHTML = flow.map(function (b) {
@@ -2122,8 +2338,10 @@
           });
         }
         if (pts.length < 2) {
-          setText(bodyEl, 'chartStatus', 'awaiting first live tick…');
-          return;
+          var quote = getMarketQuotePrices(market, selectedOutcomeKey);
+          var liveYesQuote = Number(quote.yes);
+          if (!Number.isFinite(liveYesQuote)) liveYesQuote = 0.5;
+          pts = [liveYesQuote, liveYesQuote];
         }
         var series = side === 'NO' ? pts.map(function (p) { return 1 - p; }) : pts;
         // Pad with invisible 0 and 1 anchors so drawSeries shows the
