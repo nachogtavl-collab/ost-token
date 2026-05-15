@@ -57,6 +57,9 @@
   var liveTimers = [];
   var nativeStateFetchAt = {};
   var nativeStateInFlight = {};
+  var nativeStateInFlightBase = {};
+  var NATIVE_STATE_BASE_TOLERANCE = 0.005;
+  var NATIVE_STATE_REFRESH_MS = 1200;
 
   function ostApiBase() {
     return String(window.OST_API_BASE || '').replace(/\/$/, '');
@@ -119,7 +122,9 @@
   }
   function applyCanonicalBtcRoundToMarket(market, round) {
     if (!canonicalRoundMatchesMarket(market, round)) return null;
-    var openPrice = Number(round.priceToBeat || round.openPrice);
+    var openPrice = Number(round.openPrice);
+    var priceToBeat = Number(round.priceToBeat);
+    if (!Number.isFinite(priceToBeat) || priceToBeat <= 0) priceToBeat = Number.isFinite(openPrice) && openPrice > 0 ? openPrice : Number(round.priceToBeat || round.openPrice);
     var livePrice = Number(round.livePrice);
     var yes = Number(round.yesPriceNumber);
     var no = Number(round.noPriceNumber);
@@ -128,16 +133,92 @@
     market.meta.closeAt = Number(round.closeAt) || market.meta.closeAt;
     if (Number.isFinite(openPrice) && openPrice > 0) {
       market.meta.openPrice = openPrice;
-      market.meta.priceToBeat = openPrice;
-      market.priceToBeat = openPrice;
+    }
+    if (Number.isFinite(priceToBeat) && priceToBeat > 0) {
+      market.meta.priceToBeat = priceToBeat;
+      market.priceToBeat = priceToBeat;
     }
     if (Number.isFinite(livePrice) && livePrice > 0) market.meta.livePrice = livePrice;
     if (Number.isFinite(yes) && yes > 0 && yes < 1) {
       market.baseYesPriceNumber = yes;
       market.baseNoPriceNumber = Number.isFinite(no) ? no : 1 - yes;
+      market.fairYesPriceNumber = yes;
+      market.fairNoPriceNumber = Number.isFinite(no) ? no : 1 - yes;
+      market.meta.fairYesPriceNumber = yes;
+      market.meta.fairNoPriceNumber = Number.isFinite(no) ? no : 1 - yes;
     }
+    if (Number.isFinite(livePrice) && livePrice > 0) market.meta.updatedAt = Number(round.livePriceTs || round.updatedAt) || Date.now();
+    market.meta.priceSource = round.livePriceSource || round.source || market.meta.priceSource || '';
     market.closeAtMs = Number(round.closeAt) || market.closeAtMs;
     return round;
+  }
+  function computeFastBtcYesProbability(market, livePrice, round, updatedAt) {
+    var p = Number(livePrice);
+    var beat = Number(market && market.meta && (market.meta.priceToBeat || market.meta.openPrice));
+    if (!Number.isFinite(p) || p <= 1000 || !Number.isFinite(beat) || beat <= 0) return NaN;
+    var roundLive = Number(round && round.livePrice);
+    var roundTs = Number(round && (round.livePriceTs || round.updatedAt)) || 0;
+    var liveTs = Number(updatedAt) || Date.now();
+    var roundYes = Number(round && round.yesPriceNumber);
+    var canUseRoundOdds = canonicalBtcRoundIsHot(round)
+      && Number.isFinite(roundYes)
+      && roundYes > 0
+      && roundYes < 1
+      && Number.isFinite(roundLive)
+      && Math.abs(roundLive - p) < 0.01
+      && (!roundTs || !liveTs || Math.abs(liveTs - roundTs) < 250);
+    if (canUseRoundOdds) return Math.max(0.02, Math.min(0.98, roundYes));
+    var closeAt = Number(market && market.meta && market.meta.closeAt) || (Date.now() + FIVE_MIN_MS);
+    var pct = ((p - beat) / beat) * 100;
+    var msLeft = Math.max(0, Math.min(FIVE_MIN_MS, closeAt - Date.now()));
+    var remRatio = msLeft / FIVE_MIN_MS;
+    var elapsedRatio = 1 - remRatio;
+    var scale = 0.10 * Math.sqrt(Math.max(remRatio, 0.04));
+    var z = Math.max(-8, Math.min(8, pct / Math.max(scale, 0.001)));
+    var yes = 1 / (1 + Math.exp(-z));
+    var confidence = 0.65 + 0.32 * elapsedRatio;
+    yes = 0.5 + (yes - 0.5) * confidence;
+    return Math.max(0.02, Math.min(0.98, yes));
+  }
+  function syncFastBtcMarketQuote(market, livePrice, source, round, updatedAt) {
+    if (!isFastBtcMarket(market)) return NaN;
+    market.meta = market.meta || {};
+    if (canonicalRoundMatchesMarket(market, round)) applyCanonicalBtcRoundToMarket(market, round);
+    if (!market.meta.openPrice) {
+      var storedRound = (readJson(ROUND_KEY, {})[String(market.meta.openAt)] || {});
+      if (Number(storedRound.openPrice) > 0) market.meta.openPrice = Number(storedRound.openPrice);
+      if (Number(storedRound.priceToBeat) > 0 && !market.meta.priceToBeat) market.meta.priceToBeat = Number(storedRound.priceToBeat);
+    }
+    var p = Number(livePrice);
+    if (Number.isFinite(p) && p > 1000) market.meta.livePrice = p;
+    else p = Number(market.meta.livePrice);
+    var beat = Number(market.meta.priceToBeat || market.meta.openPrice || 0);
+    if (!(beat > 0) || !(p > 1000)) return NaN;
+    market.meta.priceToBeat = beat;
+    market.priceToBeat = beat;
+    market.meta.priceSource = source || market.meta.priceSource || '';
+    market.meta.updatedAt = Number(updatedAt) || Date.now();
+    market.meta.equation = 'YES wins if BTC closes above ' + fmtUsd(beat) + '; NO wins if BTC closes at or below ' + fmtUsd(beat) + '.';
+    market.equation = market.meta.equation;
+    market.meta.priceDelta = p - beat;
+    market.meta.priceDeltaPct = beat > 0 ? ((p - beat) / beat) * 100 : 0;
+    var yesProb = computeFastBtcYesProbability(market, p, round, updatedAt);
+    if (!Number.isFinite(yesProb)) return NaN;
+    market.baseYesPriceNumber = yesProb;
+    market.baseNoPriceNumber = 1 - yesProb;
+    market.fairYesPriceNumber = yesProb;
+    market.fairNoPriceNumber = 1 - yesProb;
+    market.yesPriceNumber = yesProb;
+    market.noPriceNumber = 1 - yesProb;
+    market.yesValue = (yesProb * 100).toFixed(1) + '%';
+    market.noValue = ((1 - yesProb) * 100).toFixed(1) + '%';
+    market.meta.fairYesPriceNumber = yesProb;
+    market.meta.fairNoPriceNumber = 1 - yesProb;
+    market.meta.yesPriceNumber = yesProb;
+    market.meta.noPriceNumber = 1 - yesProb;
+    market.meta.tradableYesPriceNumber = yesProb;
+    market.meta.tradableNoPriceNumber = 1 - yesProb;
+    return yesProb;
   }
   function cachedBtcTicksForRound(openAt) {
     try {
@@ -186,9 +267,19 @@
     market.marketState = Object.assign({}, market.marketState || {}, state);
     market.baseYesPriceNumber = Number.isFinite(Number(state.baseYesPrice)) ? Number(state.baseYesPrice) : nativeBaseYesInput(market);
     market.baseNoPriceNumber = Number.isFinite(Number(state.baseNoPrice)) ? Number(state.baseNoPrice) : 1 - market.baseYesPriceNumber;
+    market.fairYesPriceNumber = market.baseYesPriceNumber;
+    market.fairNoPriceNumber = market.baseNoPriceNumber;
     market.yesPriceNumber = Math.max(0.01, Math.min(0.99, yes));
     market.noPriceNumber = Math.max(0.01, Math.min(0.99, no));
     market.meta.marketState = market.marketState;
+    market.meta.baseYesPrice = market.baseYesPriceNumber;
+    market.meta.baseNoPrice = market.baseNoPriceNumber;
+    market.meta.fairYesPriceNumber = market.baseYesPriceNumber;
+    market.meta.fairNoPriceNumber = market.baseNoPriceNumber;
+    market.meta.yesPriceNumber = market.yesPriceNumber;
+    market.meta.noPriceNumber = market.noPriceNumber;
+    market.meta.tradableYesPriceNumber = market.yesPriceNumber;
+    market.meta.tradableNoPriceNumber = market.noPriceNumber;
     window.__ostNativeMarketState = window.__ostNativeMarketState || {};
     window.__ostNativeMarketState[market.id] = market.marketState;
     try { window.dispatchEvent(new CustomEvent('ost:native-market-state', { detail: { marketId: market.id, state: market.marketState } })); } catch (_) {}
@@ -198,19 +289,36 @@
     var base = ostApiBase();
     if (!base || !market || !market.id || !market.isOstNative) return Promise.resolve(null);
     var baseYes = nativeBaseYesInput(market, baseYesOverride);
-    if (nativeStateInFlight[market.id]) return nativeStateInFlight[market.id];
+    if (nativeStateInFlight[market.id]) {
+      var pendingBase = Number(nativeStateInFlightBase[market.id]);
+      if (!Number.isFinite(pendingBase) || Math.abs(pendingBase - baseYes) < NATIVE_STATE_BASE_TOLERANCE) return nativeStateInFlight[market.id];
+    }
     if (Date.now() - (nativeStateFetchAt[market.id] || 0) < 650) {
       try {
         var cached = window.__ostNativeMarketState && window.__ostNativeMarketState[market.id];
-        if (cached) return Promise.resolve(cached);
+        var cachedBase = Number(cached && cached.baseYesPrice);
+        if (cached && (!Number.isFinite(cachedBase) || Math.abs(cachedBase - baseYes) < NATIVE_STATE_BASE_TOLERANCE)) return Promise.resolve(cached);
       } catch (_) {}
     }
     nativeStateFetchAt[market.id] = Date.now();
+    nativeStateInFlightBase[market.id] = baseYes;
     nativeStateInFlight[market.id] = fetch(base + '/markets/state/' + encodeURIComponent(market.id) + '?baseYes=' + encodeURIComponent(baseYes), { cache: 'no-store' })
       .then(function (r) { return r && r.ok ? r.json() : null; })
       .then(function (j) { return j && (j.state || j.marketState) || null; })
-      .then(function (state) { delete nativeStateInFlight[market.id]; return state; })
-      .catch(function (error) { delete nativeStateInFlight[market.id]; throw error; });
+      .then(function (state) {
+        if (nativeStateInFlightBase[market.id] === baseYes) {
+          delete nativeStateInFlight[market.id];
+          delete nativeStateInFlightBase[market.id];
+        }
+        return state;
+      })
+      .catch(function (error) {
+        if (nativeStateInFlightBase[market.id] === baseYes) {
+          delete nativeStateInFlight[market.id];
+          delete nativeStateInFlightBase[market.id];
+        }
+        throw error;
+      });
     return nativeStateInFlight[market.id];
   }
   function refreshNativeMarketState(market, bodyEl, baseYesOverride) {
@@ -555,7 +663,7 @@ liveTimers.forEach(function (t) {
       var rounds = readJson(ROUND_KEY, {});
       var rd = rounds[String(openAt)] || {};
       rec.isOstNative = true;
-      rec.meta = { kind: 'btc5m', openAt: openAt, closeAt: openAt + FIVE_MIN_MS, openPrice: rd.openPrice || 0 };
+      rec.meta = { kind: 'btc5m', openAt: openAt, closeAt: openAt + FIVE_MIN_MS, openPrice: rd.openPrice || 0, priceToBeat: rd.priceToBeat || rd.openPrice || 0 };
     }
     return rec;
   }
@@ -639,8 +747,12 @@ liveTimers.forEach(function (t) {
       };
     }
     var normalizedSide = side === 'NO' ? 'NO' : 'YES';
-    var yesPrice = Number(market && market.yesPriceNumber);
-    var noPrice = Number(market && market.noPriceNumber);
+    var yesPrice = Number(market && market.meta && (market.meta.tradableYesPriceNumber != null ? market.meta.tradableYesPriceNumber : market.meta.yesPriceNumber));
+    var noPrice = Number(market && market.meta && (market.meta.tradableNoPriceNumber != null ? market.meta.tradableNoPriceNumber : market.meta.noPriceNumber));
+    if (!Number.isFinite(yesPrice)) yesPrice = Number(market && market.yesPriceNumber);
+    if (!Number.isFinite(noPrice)) noPrice = Number(market && market.noPriceNumber);
+    if (!Number.isFinite(noPrice) && Number.isFinite(yesPrice)) noPrice = 1 - yesPrice;
+    if (!Number.isFinite(yesPrice) && Number.isFinite(noPrice)) yesPrice = 1 - noPrice;
     return {
       key: normalizedSide.toLowerCase(),
       label: normalizedSide,
@@ -1334,17 +1446,29 @@ liveTimers.forEach(function (t) {
     return withTimeout(fetchCanonicalBtcRound(), 900, null)
       .then(function (round) {
         if (canonicalRoundMatchesMarket(market, round)) applyCanonicalBtcRoundToMarket(market, round);
-        var fairYes = Number(market && (market.baseYesPriceNumber != null ? market.baseYesPriceNumber : market.yesPriceNumber));
         var spotRefresh = api && typeof api.btcSpot === 'function'
           ? withTimeout(api.btcSpot({ force: true }), 700, null)
           : Promise.resolve(null);
-        var nativeRefresh = withTimeout(refreshNativeMarketState(market, null, fairYes), 900, null);
-        return Promise.all([spotRefresh, nativeRefresh]).then(function () { return market; });
+        return Promise.resolve(spotRefresh).then(function (tick) {
+          var cachedRound = canonicalRoundMatchesMarket(market, round) ? round : cachedCanonicalBtcRound();
+          var tickPrice = Number(tick && tick.price);
+          var livePrice = Number.isFinite(tickPrice) && tickPrice > 1000 ? tickPrice : Number(cachedRound && cachedRound.livePrice);
+          var source = (tick && tick.source) || (cachedRound && (cachedRound.livePriceSource || cachedRound.source)) || (market.meta && market.meta.priceSource) || '';
+          var updatedAt = Number(tick && (tick.ts || tick.updatedAt)) || Number(cachedRound && (cachedRound.livePriceTs || cachedRound.updatedAt)) || Date.now();
+          var fairYes = syncFastBtcMarketQuote(market, livePrice, source, cachedRound, updatedAt);
+          if (!Number.isFinite(fairYes)) fairYes = Number(market && (market.fairYesPriceNumber != null ? market.fairYesPriceNumber : market.yesPriceNumber));
+          return withTimeout(refreshNativeMarketState(market, null, fairYes), 900, null).then(function () { return market; });
+        });
       })
       .catch(function () { return market; });
   }
 
   function placeBet(market, side, stake, outcomeKey) {
+    var api = window.OST_PREDICTION_API;
+    if (isFastBtcMarket(market) && api && typeof api.placeBet === 'function') {
+      var sideKey = String(side || 'YES').toUpperCase() === 'NO' ? 'no' : 'yes';
+      return Promise.resolve(api.placeBet({ marketId: market.id, side: sideKey, stake: stake }));
+    }
     return refreshMarketQuoteBeforeBet(market).then(function (freshMarket) {
       return placeBetDirectly(freshMarket || market, side, stake, outcomeKey);
     })
@@ -1745,7 +1869,7 @@ liveTimers.forEach(function (t) {
     return '<header class="ost-modal__header">' + renderHeaderBlock(m) + '</header>' +
            '<div class="ost-modal__main">' +
              renderBtcBlock(m) +
-             renderPricesBlock(m) +
+             (isFastBtcMarket(m) ? '' : renderPricesBlock(m)) +
              renderOutcomesBlock(m) +
              renderChartBlock() +
              renderBroadcastBlock(m) +
@@ -1760,8 +1884,7 @@ liveTimers.forEach(function (t) {
   }
 
   function setText(scope, key, val) {
-    var n = scope.querySelector('[data-bind="' + key + '"]');
-    if (n) n.textContent = val;
+    scope.querySelectorAll('[data-bind="' + key + '"]').forEach(function (n) { n.textContent = val; });
   }
 
   // --------------------------------------------------------------------------
@@ -2027,11 +2150,16 @@ liveTimers.forEach(function (t) {
     try { wireBroadcast(bodyEl, market); } catch (e) { console.warn('[ost-modal] broadcast wire failed', e); }
 
     // ---- Live BTC tile ----
-    if (market.isOstNative && market.meta && market.meta.kind === 'btc5m') {
+    if (market.isOstNative && isFastBtcMarket(market)) {
+      market.meta = market.meta || {};
+      market.meta.kind = 'btc5m';
       lockBtcFeedForRound(market.meta.openAt);
       // Track last rendered price so we can flash green/red on every real tick
       // — mobile users want to see the money moving every second.
       var lastRenderedPrice = 0;
+      var lastNativeQuoteBase = NaN;
+      var lastNativeQuoteFetchAt = 0;
+      var nativeQuoteRefreshInFlight = false;
       var flashTimer = null;
       function flashPrice(direction) {
         var liveEl = bodyEl.querySelector('[data-bind="btcLive"]');
@@ -2054,7 +2182,9 @@ liveTimers.forEach(function (t) {
         if (!round || !Number(round.openAt) || !Number(round.closeAt)) return false;
         if (Number(round.openAt) === Number(market.meta.openAt)) return false;
         if (Number(round.closeAt) <= Date.now() - 1000) return false;
-        var openPrice = Number(round.priceToBeat || round.openPrice);
+        var openPrice = Number(round.openPrice);
+        var priceToBeat = Number(round.priceToBeat);
+        if (!Number.isFinite(priceToBeat) || priceToBeat <= 0) priceToBeat = Number.isFinite(openPrice) && openPrice > 0 ? openPrice : Number(round.priceToBeat || round.openPrice);
         var livePrice = Number(round.livePrice);
         var yes = Number(round.yesPriceNumber);
         var no = Number(round.noPriceNumber);
@@ -2075,11 +2205,11 @@ liveTimers.forEach(function (t) {
             baseNoPriceNumber: Number.isFinite(no) ? no : (Number.isFinite(yes) ? 1 - yes : 0.5),
             closeAtMs: Number(round.closeAt),
             meta: {
-              kind: 'btc-5m',
+              kind: 'btc5m',
               openAt: Number(round.openAt),
               closeAt: Number(round.closeAt),
               openPrice: Number.isFinite(openPrice) ? openPrice : 0,
-              priceToBeat: Number.isFinite(openPrice) ? openPrice : 0,
+              priceToBeat: Number.isFinite(priceToBeat) ? priceToBeat : 0,
               livePrice: Number.isFinite(livePrice) ? livePrice : 0
             }
           };
@@ -2132,27 +2262,27 @@ liveTimers.forEach(function (t) {
           var cachedTs = Number(cachedTick && (cachedTick.ts || cachedTick.updatedAt)) || 0;
           var cachedFresh = Number.isFinite(cachedPrice) && cachedPrice > 1000 && (!cachedTs || Date.now() - cachedTs < 1500);
           if (cachedFresh) {
-            return { price: cachedPrice, source: cachedTick.source || 'binance-ws', round: cachedRound };
+            return { price: cachedPrice, source: cachedTick.source || 'binance-ws', ts: cachedTs || Date.now(), round: cachedRound };
           }
           return fetchCanonicalBtcRound().then(function (round) {
             if (canonicalRoundMatchesMarket(market, round)) {
               applyCanonicalBtcRoundToMarket(market, round);
               var canonicalPrice = Number(round.livePrice);
               if (Number.isFinite(canonicalPrice) && canonicalPrice > 1000 && canonicalBtcRoundIsHot(round)) {
-                return { price: canonicalPrice, source: round.livePriceSource || round.source || 'ost-canonical', round: round };
+                return { price: canonicalPrice, source: round.livePriceSource || round.source || 'ost-canonical', ts: Number(round.livePriceTs || round.updatedAt) || Date.now(), round: round };
               }
             }
             if (api && typeof api.btcSpot === 'function') {
               return api.btcSpot({ force: true, directOnly: true }).then(function (tick) {
                 var p = tick && Number(tick.price);
                 if (!Number.isFinite(p)) throw new Error('shared BTC feed empty');
-                return { price: p, source: tick.source || '', round: round || cachedRound };
+                return { price: p, source: tick.source || '', ts: Number(tick && (tick.ts || tick.updatedAt)) || Date.now(), round: round || cachedRound };
               });
             }
-            return fetchBtcRace().then(function (p) { return { price: p, source: BTC_PRICE_FEEDS[BTC_FEED_INDEX].name }; });
+            return fetchBtcRace().then(function (p) { return { price: p, source: BTC_PRICE_FEEDS[BTC_FEED_INDEX].name, ts: Date.now() }; });
           });
         }).catch(function () {
-          return fetchBtcRace().then(function (p) { return { price: p, source: BTC_PRICE_FEEDS[BTC_FEED_INDEX].name }; });
+          return fetchBtcRace().then(function (p) { return { price: p, source: BTC_PRICE_FEEDS[BTC_FEED_INDEX].name, ts: Date.now() }; });
         });
       };
       var fetchBtcLive = function () {
@@ -2164,13 +2294,9 @@ liveTimers.forEach(function (t) {
               return;
             }
           var sharedRound = canonicalRoundMatchesMarket(market, tick && tick.round) ? tick.round : cachedCanonicalBtcRound();
-          if (canonicalRoundMatchesMarket(market, sharedRound)) applyCanonicalBtcRoundToMarket(market, sharedRound);
-          if (!market.meta.openPrice) {
-            var storedRound = (readJson(ROUND_KEY, {})[String(market.meta.openAt)] || {});
-            if (Number(storedRound.openPrice) > 0) market.meta.openPrice = Number(storedRound.openPrice);
-          }
-          market.meta.priceToBeat = Number(market.meta.priceToBeat || market.meta.openPrice || 0);
-          var sourceName = (sharedRound && sharedRound.source) || tick.source || BTC_PRICE_FEEDS[BTC_FEED_INDEX].name;
+          var sourceName = tick.source || (sharedRound && (sharedRound.livePriceSource || sharedRound.source)) || BTC_PRICE_FEEDS[BTC_FEED_INDEX].name;
+          var tickTs = Number(tick && (tick.ts || tick.updatedAt)) || Number(sharedRound && (sharedRound.livePriceTs || sharedRound.updatedAt)) || Date.now();
+          var yesProb = syncFastBtcMarketQuote(market, p, sourceName, sharedRound, tickTs);
           // Flash green/red whenever the price actually moves so mobile users
           // see the money moving on every real tick.
           if (lastRenderedPrice && p !== lastRenderedPrice) {
@@ -2186,9 +2312,9 @@ liveTimers.forEach(function (t) {
             return;
           }
           setText(bodyEl, 'btcOpen', fmtUsd(beatPrice));
-          setText(bodyEl, 'btcEquation', 'YES wins if BTC closes above ' + fmtUsd(beatPrice) + '; NO wins if BTC closes at or below ' + fmtUsd(beatPrice) + '.');
-          var d = p - beatPrice;
-          var pct = beatPrice > 0 ? (d / beatPrice) * 100 : 0;
+          setText(bodyEl, 'btcEquation', market.meta.equation || ('YES wins if BTC closes above ' + fmtUsd(beatPrice) + '; NO wins if BTC closes at or below ' + fmtUsd(beatPrice) + '.'));
+          var d = Number.isFinite(Number(market.meta.priceDelta)) ? Number(market.meta.priceDelta) : (p - beatPrice);
+          var pct = Number.isFinite(Number(market.meta.priceDeltaPct)) ? Number(market.meta.priceDeltaPct) : (beatPrice > 0 ? (d / beatPrice) * 100 : 0);
           var n = bodyEl.querySelector('[data-bind="btcDelta"]');
           if (n) {
             n.textContent = (d >= 0 ? '▲ +' : '▼ ') + fmtUsd(Math.abs(d)) + '  (' + pct.toFixed(3) + '%)';
@@ -2198,26 +2324,6 @@ liveTimers.forEach(function (t) {
           if (detailEl) {
             detailEl.textContent = 'Price to beat: ' + fmtUsd(market.meta.priceToBeat || market.meta.openPrice) + '. Live BTC ' + fmtUsd(p) + ' is ' + (d >= 0 ? '+' : '-') + fmtUsd(Math.abs(d)) + ' from the beat via ' + String(sourceName || 'BTC feed').toUpperCase() + '. YES wins if close is above the price to beat; NO wins if close is at or below it.';
           }
-          var yesProb = sharedRound && canonicalBtcRoundIsHot(sharedRound) && Number(sharedRound.yesPriceNumber);
-          if (!Number.isFinite(yesProb)) {
-            // Mirror the worker's serverComputeBtcOdds: 0.10% reference vol
-            // with sqrt-time scaling + 0.65→0.97 confidence ramp. This makes
-            // the YES/NO actually react to small intra-round moves instead
-            // of looking pinned at 50% for typical 5-min BTC drift.
-            var msLeftFallback = Math.max(0, Math.min(FIVE_MIN_MS, Number(market.meta.closeAt) - Date.now()));
-            var remRatio = msLeftFallback / FIVE_MIN_MS;
-            var elapsedRatio = 1 - remRatio;
-            var scale = 0.10 * Math.sqrt(Math.max(remRatio, 0.04));
-            var z = Math.max(-8, Math.min(8, pct / Math.max(scale, 0.001)));
-            yesProb = 1 / (1 + Math.exp(-z));
-            var confidence = 0.65 + 0.32 * elapsedRatio;
-            yesProb = 0.5 + (yesProb - 0.5) * confidence;
-            yesProb = Math.max(0.02, Math.min(0.98, yesProb));
-          }
-          market.baseYesPriceNumber = yesProb;
-          market.baseNoPriceNumber = 1 - yesProb;
-          market.yesPriceNumber = yesProb;
-          market.noPriceNumber = 1 - yesProb;
           function paintNativeBtcQuote() {
             var liveYes = Number(market.yesPriceNumber);
             if (!Number.isFinite(liveYes)) liveYes = yesProb;
@@ -2236,7 +2342,21 @@ liveTimers.forEach(function (t) {
             try { if (typeof bodyEl.__refreshSell === 'function') bodyEl.__refreshSell(); } catch (_) {}
           }
           paintNativeBtcQuote();
-          refreshNativeMarketState(market, bodyEl, yesProb).then(paintNativeBtcQuote);
+          var shouldRefreshNative = Number.isFinite(yesProb)
+            && !nativeQuoteRefreshInFlight
+            && (!lastNativeQuoteFetchAt
+              || Date.now() - lastNativeQuoteFetchAt > NATIVE_STATE_REFRESH_MS
+              || !Number.isFinite(lastNativeQuoteBase)
+              || Math.abs(yesProb - lastNativeQuoteBase) > NATIVE_STATE_BASE_TOLERANCE);
+          if (shouldRefreshNative) {
+            lastNativeQuoteBase = yesProb;
+            lastNativeQuoteFetchAt = Date.now();
+            nativeQuoteRefreshInFlight = true;
+            refreshNativeMarketState(market, bodyEl, yesProb).then(function () {
+              nativeQuoteRefreshInFlight = false;
+              paintNativeBtcQuote();
+            });
+          }
         });
       };
       hydrateCanonicalBtcTicks(market, bodyEl);

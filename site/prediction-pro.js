@@ -137,6 +137,8 @@
   var nativeMarketStateById = {};
   var nativeMarketStateLastFetch = {};
   var nativeMarketStateInFlight = {};
+  var nativeMarketStateInFlightBase = {};
+  var NATIVE_STATE_BASE_TOLERANCE = 0.005;
 
   function canonicalRoundIsFresh() {
     return canonicalRound && (Date.now() - canonicalRoundFetchedAt < 4500);
@@ -229,11 +231,19 @@
     var apiBase = ostApiBase();
     if (!apiBase || !market || !market.id || !market.isOstNative) return Promise.resolve(null);
     var now = Date.now();
-    if (nativeMarketStateInFlight[market.id]) return nativeMarketStateInFlight[market.id];
-    if (now - (nativeMarketStateLastFetch[market.id] || 0) < 650) return Promise.resolve(cachedNativeMarketState(market.id));
-    nativeMarketStateLastFetch[market.id] = now;
     var baseYes = Number(market.meta && market.meta.fairYesPriceNumber);
     if (!Number.isFinite(baseYes)) baseYes = Number(market.fairYesPriceNumber || market.baseYesPriceNumber || market.yesPriceNumber || 0.5);
+    if (nativeMarketStateInFlight[market.id]) {
+      var pendingBase = Number(nativeMarketStateInFlightBase[market.id]);
+      if (!Number.isFinite(pendingBase) || Math.abs(pendingBase - baseYes) < NATIVE_STATE_BASE_TOLERANCE) return nativeMarketStateInFlight[market.id];
+    }
+    if (now - (nativeMarketStateLastFetch[market.id] || 0) < 650) {
+      var cachedState = cachedNativeMarketState(market.id);
+      var cachedBase = Number(cachedState && cachedState.baseYesPrice);
+      if (cachedState && (!Number.isFinite(cachedBase) || Math.abs(cachedBase - baseYes) < NATIVE_STATE_BASE_TOLERANCE)) return Promise.resolve(cachedState);
+    }
+    nativeMarketStateLastFetch[market.id] = now;
+    nativeMarketStateInFlightBase[market.id] = baseYes;
     nativeMarketStateInFlight[market.id] = fetch(apiBase + '/markets/state/' + encodeURIComponent(market.id) + '?baseYes=' + encodeURIComponent(baseYes), { headers: { accept: 'application/json' }, cache: 'no-store' })
       .then(function (r) { return r && r.ok ? r.json() : null; })
       .then(function (j) {
@@ -248,7 +258,13 @@
         return state;
       })
       .catch(function () { return null; })
-      .then(function (state) { delete nativeMarketStateInFlight[market.id]; return state; });
+      .then(function (state) {
+        if (nativeMarketStateInFlightBase[market.id] === baseYes) {
+          delete nativeMarketStateInFlight[market.id];
+          delete nativeMarketStateInFlightBase[market.id];
+        }
+        return state;
+      });
     return nativeMarketStateInFlight[market.id];
   }
 
