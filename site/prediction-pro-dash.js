@@ -410,7 +410,7 @@
     t._timer = setTimeout(function () { t.hidden = true; }, 4500);
   }
 
-  function placeBet(root, side) {
+  function currentDashboardRoundRecord() {
     var rd = currentRound();
     var rec = state.rounds[String(rd.openAt)] || {};
     try {
@@ -423,26 +423,35 @@
     var noOdds = Number(rec.noPriceNumber);
     if (!Number.isFinite(yesOdds)) yesOdds = Number.isFinite(state.yesOdds) ? state.yesOdds : 0.5;
     if (!Number.isFinite(noOdds)) noOdds = Number.isFinite(state.noOdds) ? state.noOdds : 1 - yesOdds;
-    // Open the unified market modal (preferred UX) — the user gets full
-    // context: live BTC, countdown, depth, ticks, bet panel.
+    return { rd: rd, rec: rec, yesOdds: yesOdds, noOdds: noOdds };
+  }
+
+  function buildDashboardBtcMarket(roundRecord) {
+    var rd = roundRecord.rd;
+    var rec = roundRecord.rec;
+    var yesOdds = roundRecord.yesOdds;
+    var noOdds = roundRecord.noOdds;
+    return {
+      id: rd.id,
+      title: '5-min BTC: will price be UP at ' + new Date(rd.closeAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + '?',
+      detail: 'Price to beat: ' + fmtUsd(Number(rec.priceToBeat || rec.openPrice || state.btcPrice) || 0) + '. YES wins if BTC closes above the price to beat; NO wins if it closes at or below it.',
+      sourceLabel: 'OST 5-min BTC',
+      source: 'ost',
+      yesLabel: 'YES (UP)', noLabel: 'NO (DOWN/SAME)',
+      yesPriceNumber: yesOdds, noPriceNumber: noOdds,
+      closeText: 'Closes ' + new Date(rd.closeAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      contractLabel: 'OST native · 5-min round',
+      primaryUrl: 'https://www.coinbase.com/price/bitcoin',
+      primaryLabel: 'Open Coinbase',
+      isOstNative: true,
+      meta: { kind: 'btc5m', openAt: rd.openAt, closeAt: rd.closeAt, openPrice: rec.priceToBeat || rec.openPrice || state.btcPrice, priceToBeat: rec.priceToBeat || rec.openPrice || state.btcPrice, livePrice: state.btcPrice, yesPriceNumber: yesOdds, noPriceNumber: noOdds, equation: rec.equation || ('YES wins if BTC closes above ' + fmtUsd(Number(rec.priceToBeat || rec.openPrice || state.btcPrice) || 0) + '; NO wins if BTC closes at or below ' + fmtUsd(Number(rec.priceToBeat || rec.openPrice || state.btcPrice) || 0) + '.'), priceSource: rec.source || state.btcSource || '' }
+    };
+  }
+
+  function openBtcModal(root, side) {
+    var roundRecord = currentDashboardRoundRecord();
     if (window.OST_MARKET_MODAL && typeof window.OST_MARKET_MODAL.open === 'function') {
-      // Build a synthetic OST native market record so the modal can render
-      // even if the card hasn't been injected into the list yet.
-      window.OST_MARKET_MODAL.open({
-        id: rd.id,
-        title: '5-min BTC: will price be UP at ' + new Date(rd.closeAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + '?',
-        detail: 'Price to beat: ' + fmtUsd(Number(rec.priceToBeat || rec.openPrice || state.btcPrice) || 0) + '. YES wins if BTC closes above the price to beat; NO wins if it closes at or below it.',
-        sourceLabel: 'OST 5-min BTC',
-        source: 'ost',
-        yesLabel: 'YES (UP)', noLabel: 'NO (DOWN/SAME)',
-        yesPriceNumber: yesOdds, noPriceNumber: noOdds,
-        closeText: 'Closes ' + new Date(rd.closeAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        contractLabel: 'OST native · 5-min round',
-        primaryUrl: 'https://www.coinbase.com/price/bitcoin',
-        primaryLabel: 'Open Coinbase',
-        isOstNative: true,
-        meta: { kind: 'btc5m', openAt: rd.openAt, closeAt: rd.closeAt, openPrice: rec.priceToBeat || rec.openPrice || state.btcPrice, priceToBeat: rec.priceToBeat || rec.openPrice || state.btcPrice, livePrice: state.btcPrice, yesPriceNumber: yesOdds, noPriceNumber: noOdds, equation: rec.equation || ('YES wins if BTC closes above ' + fmtUsd(Number(rec.priceToBeat || rec.openPrice || state.btcPrice) || 0) + '; NO wins if BTC closes at or below ' + fmtUsd(Number(rec.priceToBeat || rec.openPrice || state.btcPrice) || 0) + '.'), priceSource: rec.source || state.btcSource || '' }
-      });
+      window.OST_MARKET_MODAL.open(buildDashboardBtcMarket(roundRecord));
       // Pre-select the side the user clicked
       setTimeout(function () {
         var modal = document.getElementById('ost-market-modal');
@@ -453,6 +462,44 @@
       return;
     }
     showToast(root, 'Market modal not loaded — refresh the page.', 'err');
+  }
+
+  function placeBet(root, side) {
+    var api = window.OST_PREDICTION_API;
+    if (!api || typeof api.placeBet !== 'function') {
+      showToast(root, 'OST prediction API still loading — try again in a moment.', 'err');
+      return;
+    }
+    var stakeEl = root.querySelector('[data-bind="stake"]');
+    var stake = Math.max(0, parseFloat(stakeEl && stakeEl.value) || 0);
+    if (!(stake > 0)) {
+      showToast(root, 'Enter an OST stake first.', 'err');
+      return;
+    }
+    var roundRecord = currentDashboardRoundRecord();
+    var sideKey = String(side || 'YES').toUpperCase() === 'NO' ? 'no' : 'yes';
+    var buttons = Array.prototype.slice.call(root.querySelectorAll('[data-bet]'));
+    buttons.forEach(function (button) { button.disabled = true; button.classList.add('is-loading'); });
+    showToast(root, 'Submitting ' + (sideKey === 'no' ? 'DOWN' : 'UP') + ' at the live quote...', 'ok');
+    var refresh = typeof api.refreshFiveMinRound === 'function' ? api.refreshFiveMinRound() : Promise.resolve();
+    Promise.resolve(refresh)
+      .catch(function () { return null; })
+      .then(function () {
+        var latest = currentDashboardRoundRecord();
+        return api.placeBet({ marketId: latest.rd.id || roundRecord.rd.id, side: sideKey, stake: stake });
+      })
+      .then(function (record) {
+        refreshLocalState();
+        var price = Number(record && record.price);
+        showToast(root, 'Position opened at ' + (Number.isFinite(price) ? fmtCents(price) : 'the live quote') + '.', 'ok');
+        paintBtc(root);
+      })
+      .catch(function (error) {
+        showToast(root, error && error.message ? error.message : 'Bet failed. Try again.', 'err');
+      })
+      .then(function () {
+        buttons.forEach(function (button) { button.disabled = false; button.classList.remove('is-loading'); });
+      });
   }
 
   function copySnippet(root) {
@@ -472,7 +519,7 @@
     if (btcTile) {
       btcTile.addEventListener('click', function (ev) {
         if (ev.target.closest('[data-bet], input, label, button')) return;
-        placeBet(root, 'YES'); // opens modal; user picks side inside
+        openBtcModal(root, 'YES');
       });
       btcTile.style.cursor = 'pointer';
     }

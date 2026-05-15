@@ -125,6 +125,12 @@
 .ost-pro-bet--no  { background: linear-gradient(135deg, #ff7c8a, #e85565); box-shadow: 0 6px 14px rgba(255,124,138,0.25); color: #fff; }
 .ost-pro-bet:hover { transform: translateY(-1px); filter: brightness(1.05); }
 .ost-pro-bet:active { transform: translateY(0); filter: brightness(0.95); }
+.ost-pro-bet:disabled, .ost-pro-bet.is-loading {
+  cursor: wait;
+  opacity: 0.68;
+  transform: none;
+  filter: saturate(0.7);
+}
 
 .ost-pro-bet-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .ost-pro-bet-row label { display: flex; flex-direction: column; gap: 2px; font-size: 11px; opacity: 0.7; letter-spacing: 0.04em; text-transform: uppercase; }

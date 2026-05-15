@@ -191,17 +191,6 @@
     market.meta = market.meta || {};
     market.meta.fairYesPriceNumber = baseYes;
     market.meta.fairNoPriceNumber = 1 - baseYes;
-    if (market && market.meta && /btc\s*-?\s*5m|btc5m/i.test(String(market.meta.kind || ''))) {
-      if (state) {
-        market.marketState = state;
-        market.meta.marketState = state;
-        market.meta.openYesStake = Number(state.openYesStake) || 0;
-        market.meta.openNoStake = Number(state.openNoStake) || 0;
-        market.meta.openYesShares = Number(state.openYesShares) || 0;
-        market.meta.openNoShares = Number(state.openNoShares) || 0;
-      }
-      return market;
-    }
     if (!state || !Number.isFinite(yes) || !Number.isFinite(no)) return market;
     market.marketState = state;
     market.yesPriceNumber = Math.max(0.02, Math.min(0.98, yes));
@@ -220,6 +209,16 @@
     market.meta.openNoStake = Number(state.openNoStake) || 0;
     market.meta.openYesShares = Number(state.openYesShares) || 0;
     market.meta.openNoShares = Number(state.openNoShares) || 0;
+    if (market && market.meta && /btc\s*-?\s*5m|btc5m/i.test(String(market.meta.kind || ''))) {
+      market.meta.tradableYesPriceNumber = market.yesPriceNumber;
+      market.meta.tradableNoPriceNumber = market.noPriceNumber;
+      market.meta.fairYesPriceNumber = baseYes;
+      market.meta.fairNoPriceNumber = 1 - baseYes;
+      market.secondaryMetricLabel = 'OST quote impact';
+      market.secondaryMetricValue = (market.meta.totalImpact >= 0 ? '+' : '') + (market.meta.totalImpact * 100).toFixed(1) + ' pts';
+      market.secondaryMetricNumber = Math.abs(market.meta.totalImpact);
+      return market;
+    }
     market.secondaryMetricLabel = 'OST depth impact';
     market.secondaryMetricValue = (market.meta.totalImpact >= 0 ? '+' : '') + (market.meta.totalImpact * 100).toFixed(1) + ' pts';
     market.secondaryMetricNumber = Math.abs(market.meta.totalImpact);
@@ -229,7 +228,6 @@
   function refreshNativeBtcMarketState(market) {
     var apiBase = ostApiBase();
     if (!apiBase || !market || !market.id || !market.isOstNative) return Promise.resolve(null);
-    if (market.meta && /btc\s*-?\s*5m|btc5m/i.test(String(market.meta.kind || ''))) return Promise.resolve(cachedNativeMarketState(market.id));
     var now = Date.now();
     if (nativeMarketStateInFlight[market.id]) return nativeMarketStateInFlight[market.id];
     if (now - (nativeMarketStateLastFetch[market.id] || 0) < 650) return Promise.resolve(cachedNativeMarketState(market.id));
@@ -1350,6 +1348,83 @@
   setTimeout(triggerReload, 800);
   setTimeout(triggerReload, 3000);
 
+  function isFiveMinBtcMarketId(value) {
+    return /^ost-btc5m-/i.test(String(value || '')) || String(value || '') === 'ost-btc5m';
+  }
+
+  function buildFiveMinBtcOrderPayload(req) {
+    req = req || {};
+    var side = String(req.side || 'yes').toLowerCase() === 'no' ? 'no' : 'yes';
+    var stake = Number(req.stake);
+    if (!Number.isFinite(stake) || stake <= 0) throw new Error('placeBet requires a positive OST stake');
+    var market = buildFiveMinBtcMarket();
+    var fairYes = Number(market.fairYesPriceNumber || market.baseYesPriceNumber || market.meta && market.meta.fairYesPriceNumber || market.yesPriceNumber);
+    if (!Number.isFinite(fairYes)) fairYes = Number(market.yesPriceNumber);
+    market = applyNativeMarketStateToBtcMarket(market, fairYes);
+    var yesPrice = Number(market.yesPriceNumber);
+    var noPrice = Number(market.noPriceNumber);
+    if (!Number.isFinite(yesPrice) && Number.isFinite(fairYes)) yesPrice = fairYes;
+    if (!Number.isFinite(noPrice) && Number.isFinite(yesPrice)) noPrice = 1 - yesPrice;
+    var price = side === 'no' ? noPrice : yesPrice;
+    if (!Number.isFinite(price) || price <= 0) throw new Error('Live BTC share price is still loading. Try again in a moment.');
+    var label = side === 'no' ? (market.noLabel || 'NO (DOWN/SAME)') : (market.yesLabel || 'YES (UP)');
+    return {
+      source: 'ost',
+      marketId: market.id,
+      conditionId: '',
+      gammaMarketId: '',
+      title: market.title,
+      topic: market.topic || 'crypto',
+      side: side,
+      outcomeKey: side,
+      outcomeLabel: label,
+      stake: stake,
+      price: price,
+      yesPrice: yesPrice,
+      noPrice: noPrice,
+      shares: stake / price,
+      potentialReturn: stake / price,
+      closeAtMs: market.closeAtMs || (market.meta && market.meta.closeAt) || 0,
+      clobTokenIds: [],
+      sourceUrl: market.primaryUrl || location.href.split('#')[0],
+      baseYesPrice: Number.isFinite(fairYes) ? fairYes : yesPrice,
+      fairYesPrice: Number.isFinite(fairYes) ? fairYes : yesPrice,
+      fairNoPrice: Number.isFinite(fairYes) ? 1 - fairYes : noPrice,
+      tradableYesPrice: yesPrice,
+      tradableNoPrice: noPrice,
+      openAt: market.meta && market.meta.openAt,
+      closeAt: market.meta && market.meta.closeAt,
+      openPrice: market.meta && market.meta.openPrice,
+      priceToBeat: market.meta && market.meta.priceToBeat,
+      livePrice: market.meta && market.meta.livePrice,
+      quoteSource: market.meta && market.meta.priceSource,
+      quotedAt: Date.now(),
+      reference: Date.now().toString(36)
+    };
+  }
+
+  function refreshFiveMinBtcQuote() {
+    return fetchCanonicalRound()
+      .then(function () { return fetchBtcSpot({ force: true }).catch(function () { return null; }); })
+      .then(function () {
+        var market = buildFiveMinBtcMarket();
+        return refreshNativeBtcMarketState(market).then(function () { return buildFiveMinBtcMarket(); });
+      })
+      .catch(function () { return buildFiveMinBtcMarket(); });
+  }
+
+  function placeFiveMinBtcBetDirect(req) {
+    if (!window.OST_PREDICTION_API || typeof window.OST_PREDICTION_API.placeOrder !== 'function') {
+      return Promise.reject(new Error('Direct OST order API is not loaded yet.'));
+    }
+    return refreshFiveMinBtcQuote().then(function () {
+      var payload = buildFiveMinBtcOrderPayload(req);
+      return window.OST_PREDICTION_API.placeOrder(payload).then(function (result) {
+        return result && result.record ? result.record : result;
+      });
+    });
+  }
+
   // ---------------------------------------------------------------------------
   // 6) Public bot / arbitrage API — read-only feed access + place ticket
   // ---------------------------------------------------------------------------
@@ -1380,6 +1455,7 @@
     btcSeries: function () { return btcSeries.slice(); },
     canonicalRound: function () { return canonicalRoundIsFresh() ? Object.assign({}, canonicalRound) : null; },
     refreshCanonicalRound: function () { return fetchCanonicalRound(); },
+    refreshFiveMinRound: function () { return refreshFiveMinBtcQuote(); },
     fiveMinRound: function () {
       var b = currentRoundBoundaries();
       var market = buildFiveMinBtcMarket();
@@ -1452,6 +1528,9 @@
       }
       var marketId = String(req.marketId);
       var side = String(req.side).toLowerCase() === 'no' ? 'no' : 'yes';
+      if (isFiveMinBtcMarketId(marketId)) {
+        return placeFiveMinBtcBetDirect(Object.assign({}, req, { side: side }));
+      }
       var card = document.querySelector('[data-prediction-market-id="' + marketId.replace(/"/g, '\\"') + '"]');
       if (!card) return Promise.reject(new Error('Market not loaded in current snapshot'));
       card.click();

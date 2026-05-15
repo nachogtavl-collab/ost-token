@@ -368,3 +368,73 @@
 .ost-modal__shared-market { color:#cbd1f0; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .ost-modal__shared-time { color:#6b7099; font-size:10px; }
 @keyframes ostFadeIn { from { opacity:0; transform: translateY(-4px); } to { opacity:1; transform:none; } }
+
+@media (max-width: 720px) {
+  .ost-modal {
+    align-items: stretch;
+    justify-content: center;
+    padding: max(6px, env(safe-area-inset-top)) 6px max(6px, env(safe-area-inset-bottom));
+  }
+  .ost-modal__panel {
+    width: min(100%, 680px);
+    max-height: calc(100dvh - max(12px, env(safe-area-inset-top)) - max(12px, env(safe-area-inset-bottom)));
+    padding: 14px 12px 12px;
+    border-radius: 10px;
+    font-size: 13px;
+  }
+  .ost-modal__close {
+    top: 8px;
+    right: 8px;
+    width: 32px;
+    height: 32px;
+    font-size: 18px;
+  }
+  .ost-modal__main { gap: 10px; }
+  .ost-modal__two-col { gap: 10px; }
+  .ost-modal__tags { gap: 4px; margin-bottom: 6px; }
+  .ost-modal__tag { padding: 2px 7px; border-radius: 6px; font-size: 9px; letter-spacing: 0.04em; }
+  .ost-modal__title { font-size: 18px; line-height: 1.2; margin-bottom: 4px; padding-right: 36px; }
+  .ost-modal__detail { font-size: 11px; line-height: 1.35; }
+  .ost-modal__btc--hero { padding: 10px; }
+  .ost-modal__btc-hero { gap: 8px; padding-bottom: 8px; margin-bottom: 8px; }
+  .ost-modal__btc-hero-live span, .ost-modal__btc-hero-clock span { font-size: 9px; letter-spacing: 0.05em; }
+  .ost-modal__btc-hero-live strong { font-size: 22px; letter-spacing: 0; }
+  .ost-modal__btc-hero-live em { font-size: 11px; }
+  .ost-modal__btc-hero-clock strong { font-size: 20px; }
+  .ost-modal__btc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .ost-modal__btc-row span { font-size: 9px; letter-spacing: 0.04em; }
+  .ost-modal__btc-row strong { font-size: 12px; line-height: 1.25; overflow-wrap: anywhere; }
+  .ost-modal__prices { gap: 8px; }
+  .ost-modal__price { padding: 9px 10px; min-height: 52px; border-radius: 8px; }
+  .ost-modal__price span { font-size: 9px; letter-spacing: 0.04em; }
+  .ost-modal__price strong { font-size: 22px; }
+  .ost-modal__chart { padding: 9px 10px 7px; border-radius: 8px; }
+  .ost-modal__chart-head, .ost-modal__book-head, .ost-modal__trades-head { margin-bottom: 6px; align-items: center; gap: 8px; }
+  .ost-modal__chart-head h4, .ost-modal__book-head h4, .ost-modal__trades-head h4 { font-size: 10px; letter-spacing: 0.04em; }
+  .ost-modal__chart-head span, .ost-modal__book-head span, .ost-modal__trades-head span { font-size: 9px; }
+  .ost-modal__chart-toggle { margin-left: 6px; border-radius: 6px; }
+  .ost-modal__chart-toggle button { padding: 3px 8px; font-size: 10px; }
+  .ost-modal__chart canvas { height: 150px; }
+  .ost-modal__book, .ost-modal__trades, .ost-modal__sell, .ost-modal__shared, .ost-modal__bet { padding: 9px 10px; border-radius: 8px; }
+  .ost-modal__book-cols { gap: 8px; }
+  .ost-modal__book-list { min-height: 116px; max-height: 138px; }
+  .ost-modal__book-row { padding: 3px 6px; font-size: 10px; }
+  .ost-modal__trades-scroll { min-height: 126px; max-height: 154px; }
+  .ost-modal__trades-table { font-size: 10px; }
+  .ost-modal__trades-table th, .ost-modal__trades-table td { padding: 4px 5px; }
+  .ost-modal__bet-head h4 { font-size: 10px; margin-bottom: 7px; }
+  .ost-modal__bet-grid { grid-template-columns: 1fr; gap: 8px; }
+  .ost-modal__bet-toggle, .ost-modal__side-btn, .ost-modal__bet-action { width: 100%; }
+  .ost-modal__side-btn { padding: 8px 10px; font-size: 12px; }
+  .ost-modal__bet-stake { font-size: 9px; }
+  .ost-modal__bet-stake input { padding: 8px 10px; font-size: 13px; }
+  .ost-modal__bet-projected { font-size: 11px; }
+  .ost-modal__bet-action { padding: 10px 12px; font-size: 12px; border-radius: 8px; }
+  .ost-modal__shared-list { max-height: 112px; gap: 4px; }
+  .ost-modal__shared-row { padding: 5px 7px; gap: 6px; font-size: 10px; }
+  .ost-modal__outcomes { grid-template-columns: 1fr; gap: 6px; margin: 8px 0; }
+  .ost-modal__outcome { padding: 8px 10px; border-radius: 8px; }
+  .ost-modal__outcome-label { font-size: 11px; }
+  .ost-modal__live-pl { position: static; padding: 8px 10px; gap: 6px; }
+  .ost-modal__live-pl-cell strong { font-size: 14px; }
+}

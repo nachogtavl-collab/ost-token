@@ -55,6 +55,8 @@
 
   // Track timers for the currently-open modal so we can stop them on close.
   var liveTimers = [];
+  var nativeStateFetchAt = {};
+  var nativeStateInFlight = {};
 
   function ostApiBase() {
     return String(window.OST_API_BASE || '').replace(/\/$/, '');
@@ -178,14 +180,6 @@
   function applyNativeMarketState(market, state) {
     if (!market || !state) return null;
     market.meta = market.meta || {};
-    if (isFastBtcMarket(market)) {
-      market.marketState = Object.assign({}, market.marketState || {}, state);
-      market.meta.marketState = market.marketState;
-      window.__ostNativeMarketState = window.__ostNativeMarketState || {};
-      window.__ostNativeMarketState[market.id] = market.marketState;
-      try { window.dispatchEvent(new CustomEvent('ost:native-market-state', { detail: { marketId: market.id, state: market.marketState } })); } catch (_) {}
-      return market.marketState;
-    }
     var yes = Number(state.yesPriceNumber);
     var no = Number(state.noPriceNumber);
     if (!Number.isFinite(yes) || !Number.isFinite(no)) return null;
@@ -203,11 +197,21 @@
   function fetchNativeMarketState(market, baseYesOverride) {
     var base = ostApiBase();
     if (!base || !market || !market.id || !market.isOstNative) return Promise.resolve(null);
-    if (isFastBtcMarket(market)) return Promise.resolve(null);
     var baseYes = nativeBaseYesInput(market, baseYesOverride);
-    return fetch(base + '/markets/state/' + encodeURIComponent(market.id) + '?baseYes=' + encodeURIComponent(baseYes), { cache: 'no-store' })
+    if (nativeStateInFlight[market.id]) return nativeStateInFlight[market.id];
+    if (Date.now() - (nativeStateFetchAt[market.id] || 0) < 650) {
+      try {
+        var cached = window.__ostNativeMarketState && window.__ostNativeMarketState[market.id];
+        if (cached) return Promise.resolve(cached);
+      } catch (_) {}
+    }
+    nativeStateFetchAt[market.id] = Date.now();
+    nativeStateInFlight[market.id] = fetch(base + '/markets/state/' + encodeURIComponent(market.id) + '?baseYes=' + encodeURIComponent(baseYes), { cache: 'no-store' })
       .then(function (r) { return r && r.ok ? r.json() : null; })
-      .then(function (j) { return j && (j.state || j.marketState) || null; });
+      .then(function (j) { return j && (j.state || j.marketState) || null; })
+      .then(function (state) { delete nativeStateInFlight[market.id]; return state; })
+      .catch(function (error) { delete nativeStateInFlight[market.id]; throw error; });
+    return nativeStateInFlight[market.id];
   }
   function refreshNativeMarketState(market, bodyEl, baseYesOverride) {
     return fetchNativeMarketState(market, baseYesOverride).then(function (state) {
@@ -1284,6 +1288,9 @@ liveTimers.forEach(function (t) {
     }
     var numericStake = Number(stake) || 0;
     var shares = numericStake / price;
+    var baseYes = Number(market && (market.baseYesPriceNumber != null ? market.baseYesPriceNumber : market.fairYesPriceNumber));
+    if (!Number.isFinite(baseYes) && market && market.meta) baseYes = Number(market.meta.fairYesPriceNumber != null ? market.meta.fairYesPriceNumber : market.meta.baseYesPrice);
+    if (!Number.isFinite(baseYes)) baseYes = Number.isFinite(yesPrice) ? yesPrice : price;
     return Promise.resolve(api.placeOrder({
       source: market.source || (market.isOstNative ? 'ost' : 'polymarket'),
       marketId: market.id,
@@ -1303,14 +1310,44 @@ liveTimers.forEach(function (t) {
       closeAtMs: market.closeAtMs || (market.meta && market.meta.closeAt) || 0,
       clobTokenIds: contract && contract.clobTokenIds ? contract.clobTokenIds.slice(0, 4) : normalizeOutcomeTokenIds(market.clobTokenIds).slice(0, 4),
       sourceUrl: market.primaryUrl || market.sourceUrl || location.href.split('#')[0],
+      baseYesPrice: baseYes,
+      fairYesPrice: baseYes,
+      fairNoPrice: 1 - baseYes,
+      tradableYesPrice: yesPrice,
+      tradableNoPrice: noPrice,
+      quotedAt: Date.now(),
+      quoteSource: market.meta && market.meta.priceSource || '',
+      openAt: market.meta && market.meta.openAt,
+      closeAt: market.meta && market.meta.closeAt,
+      openPrice: market.meta && market.meta.openPrice,
+      priceToBeat: market.meta && market.meta.priceToBeat,
+      livePrice: market.meta && market.meta.livePrice,
       reference: Date.now().toString(36)
     })).then(function (result) {
       return result && result.record ? result.record : result;
     });
   }
 
+  function refreshMarketQuoteBeforeBet(market) {
+    if (!isFastBtcMarket(market)) return Promise.resolve(market);
+    var api = window.OST_PREDICTION_API || {};
+    return fetchCanonicalBtcRound()
+      .then(function (round) {
+        if (canonicalRoundMatchesMarket(market, round)) applyCanonicalBtcRoundToMarket(market, round);
+        if (api && typeof api.btcSpot === 'function') return api.btcSpot({ force: true }).catch(function () { return null; });
+        return null;
+      })
+      .then(function () {
+        var fairYes = Number(market && (market.baseYesPriceNumber != null ? market.baseYesPriceNumber : market.yesPriceNumber));
+        return refreshNativeMarketState(market, null, fairYes).then(function () { return market; });
+      })
+      .catch(function () { return market; });
+  }
+
   function placeBet(market, side, stake, outcomeKey) {
-    return placeBetDirectly(market, side, stake, outcomeKey)
+    return refreshMarketQuoteBeforeBet(market).then(function (freshMarket) {
+      return placeBetDirectly(freshMarket || market, side, stake, outcomeKey);
+    })
       .catch(function (directError) {
         if (!directError || !/Direct OST order API/i.test(String(directError.message || ''))) throw directError;
         return placeBetViaTradeDesk(market, side, stake, outcomeKey);

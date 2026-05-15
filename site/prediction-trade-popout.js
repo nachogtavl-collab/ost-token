@@ -263,19 +263,38 @@
       return st.markets.find(function (m) { return m && m.id === id; }) || null;
     } catch (_) { return null; }
   }
+  function btcProbabilityFromPoint(price, round, ts) {
+    var beat = Number(round && (round.priceToBeat || round.openPrice));
+    var closeAt = Number(round && (round.closeAt || round.closeAtMs));
+    if (!Number.isFinite(price) || price <= 1000 || !Number.isFinite(beat) || beat <= 0) return NaN;
+    var dPct = ((price - beat) / beat) * 100;
+    var msLeft = Math.max(0, Math.min(5 * 60 * 1000, closeAt - (Number(ts) || Date.now())));
+    var remRatio = msLeft / (5 * 60 * 1000);
+    var elapsedRatio = 1 - remRatio;
+    var scale = 0.10 * Math.sqrt(Math.max(remRatio, 0.04));
+    var z = Math.max(-8, Math.min(8, dPct / Math.max(scale, 0.001)));
+    var yes = 1 / (1 + Math.exp(-z));
+    yes = 0.5 + (yes - 0.5) * (0.65 + 0.32 * elapsedRatio);
+    return Math.max(0.02, Math.min(0.98, yes));
+  }
   function getMarketSeries(market, side) {
     if (!market) return [];
     side = side === 'NO' ? 'NO' : 'YES';
     var isBtc5m = market.isOstNative && /ost-btc5m-/i.test(String(market.id || ''));
     if (isBtc5m && window.OST_PREDICTION_API && typeof window.OST_PREDICTION_API.btcSeries === 'function') {
       var raw = window.OST_PREDICTION_API.btcSeries() || [];
-      var pts = raw.map(function (p) { return Number(p && p.price); }).filter(Number.isFinite).slice(-120);
-      // For BTC 5-min the YES/NO toggle just inverts the line so the user
-      // can see the round from the side they're trading.
-      if (side === 'NO' && pts.length > 1) {
-        var min = Math.min.apply(null, pts), max = Math.max.apply(null, pts);
-        pts = pts.map(function (v) { return min + (max - v); });
-      }
+      var round = null;
+      try {
+        if (typeof window.OST_PREDICTION_API.fiveMinRound === 'function') round = window.OST_PREDICTION_API.fiveMinRound();
+      } catch (_) { round = market; }
+      round = round || market;
+      var pts = raw.slice(-140).map(function (point) {
+        return btcProbabilityFromPoint(Number(point && point.price), round, point && (point.ts || point.t));
+      }).filter(Number.isFinite);
+      var liveYes = Number(round && (round.yesPriceNumber != null ? round.yesPriceNumber : market.yesPriceNumber));
+      if (Number.isFinite(liveYes) && liveYes > 0 && liveYes < 1) pts.push(liveYes);
+      if (pts.length === 1) pts.unshift(pts[0]);
+      if (side === 'NO') pts = pts.map(function (v) { return 1 - v; });
       return pts;
     }
     var yes = Number(market.yesPriceNumber);
@@ -319,8 +338,19 @@
     ctx.clearRect(0, 0, w, h);
     var min = Math.min.apply(null, pts);
     var max = Math.max.apply(null, pts);
+    var isProbability = min >= 0 && max <= 1;
+    if (isProbability) { min = 0; max = 1; }
     var range = Math.max(1e-9, max - min);
     var color = side === 'NO' ? '#ff7c8a' : '#7ce6a8';
+    if (isProbability) {
+      ctx.strokeStyle = 'rgba(255,255,255,.14)';
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(0, h / 2);
+      ctx.lineTo(w, h / 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
     var grad = ctx.createLinearGradient(0, 0, 0, h);
     grad.addColorStop(0, color + '55');
     grad.addColorStop(1, color + '00');
@@ -340,6 +370,13 @@
       if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
     });
     ctx.stroke();
+    if (isProbability) {
+      var last = pts[pts.length - 1];
+      ctx.fillStyle = color;
+      ctx.font = '10px system-ui, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText((last * 100).toFixed(1) + '% ' + side, w - 6, 12);
+    }
   }
   var popChartTimer = null;
   function startPopChartLoop() {

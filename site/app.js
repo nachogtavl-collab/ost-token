@@ -3085,6 +3085,18 @@
       outcomeKey: order.outcomeKey || '',
       outcomeLabel: order.outcomeLabel || '',
       gammaMarketId: order.gammaMarketId || '',
+      baseYesPrice: Number(order.baseYesPrice),
+      fairYesPrice: Number(order.fairYesPrice),
+      fairNoPrice: Number(order.fairNoPrice),
+      tradableYesPrice: Number(order.tradableYesPrice),
+      tradableNoPrice: Number(order.tradableNoPrice),
+      quotedAt: Number(order.quotedAt || Date.now()),
+      quoteSource: order.quoteSource || '',
+      openAt: Number(order.openAt || 0),
+      closeAt: Number(order.closeAt || 0),
+      openPrice: Number(order.openPrice),
+      priceToBeat: Number(order.priceToBeat),
+      livePrice: Number(order.livePrice),
       vaultTokenAccount: vaultTokenAccount,
       settlementVault: vaultTokenAccount,
       vaultFlow: 'stake-in',
@@ -15762,8 +15774,11 @@
                 return hasExplicitOutcomes
                   ? '<button type="button" class="prediction-market-quick-btn is-yes" data-prediction-quick-outcome-key="' + escapeHtml(primary ? primary.key : '') + '">' + escapeHtml(primary ? truncateText(primary.label, 16) : 'Select') + '</button>' +
                     '<button type="button" class="prediction-market-quick-btn is-no" data-prediction-quick-outcome-key="' + escapeHtml(secondary ? secondary.key : '') + '">' + escapeHtml(secondary ? truncateText(secondary.label, 16) : 'More') + '</button>'
-                  : '<button type="button" class="prediction-market-quick-btn is-yes" data-prediction-quick-side="yes">Buy YES</button>' +
-                    '<button type="button" class="prediction-market-quick-btn is-no" data-prediction-quick-side="no">Buy NO</button>';
+                  : isOstBtcMarket(market)
+                    ? '<button type="button" class="prediction-market-quick-btn is-yes" data-prediction-quick-side="yes">Bet UP</button>' +
+                      '<button type="button" class="prediction-market-quick-btn is-no" data-prediction-quick-side="no">Bet DOWN</button>'
+                    : '<button type="button" class="prediction-market-quick-btn is-yes" data-prediction-quick-side="yes">Buy YES</button>' +
+                      '<button type="button" class="prediction-market-quick-btn is-no" data-prediction-quick-side="no">Buy NO</button>';
               })(),
               '<button type="button" class="prediction-market-open-btn" data-prediction-open-modal="1">Details</button>',
               '<a class="prediction-market-api-link" href="' + escapeHtml(market.primaryUrl) + '" target="_blank" rel="noopener">Venue</a>',
@@ -16327,8 +16342,14 @@
             if (stakeInputEl) stakeInputEl.value = '25';
           }
           renderPredictionBoard();
-          setTradeStatus('Selected ' + state.selectedSide.toUpperCase() + '. Review stake and route the OST ticket when ready.', 'info');
-          focusPredictionExperience('trade');
+          var selectedQuickMarket = getSelectedMarket(getFilteredMarkets());
+          if (isOstBtcMarket(selectedQuickMarket)) {
+            setTradeStatus('Submitting ' + state.selectedSide.toUpperCase() + ' at the live BTC quote...', 'warning');
+            submitPredictionOrderFromSelection().catch(function() {});
+          } else {
+            setTradeStatus('Selected ' + state.selectedSide.toUpperCase() + '. Review stake and route the OST ticket when ready.', 'info');
+            focusPredictionExperience('trade');
+          }
           return;
         }
         var openModalBtn = event.target.closest('[data-prediction-open-modal]');
@@ -16409,68 +16430,107 @@
       });
     }
 
+    function refreshSelectedMarketForTrade(market) {
+      if (!market || !isOstBtcMarket(market)) return Promise.resolve(market);
+      var api = window.OST_PREDICTION_API || {};
+      var refresh = typeof api.refreshFiveMinRound === 'function'
+        ? api.refreshFiveMinRound()
+        : (typeof api.fiveMinRound === 'function' ? Promise.resolve(api.fiveMinRound()) : Promise.resolve(market));
+      return Promise.resolve(refresh).then(function(fresh) {
+        if (!fresh || !fresh.id) return market;
+        applyOstBtcMarketUpdate(fresh, { light: true });
+        return getSelectedMarket(getFilteredMarkets()) || fresh;
+      }).catch(function() { return market; });
+    }
+
+    function buildPredictionOrderRequest(market) {
+      var activeContract = buildTradeContract(market, state.selectedSide, state.selectedOutcomeKey);
+      var priceFraction = activeContract ? Number(activeContract.price) : NaN;
+      var potentialReturn = calculatePotentialReturn(state.stake, priceFraction);
+      if (!Number.isFinite(priceFraction) || priceFraction <= 0 || !Number.isFinite(potentialReturn)) {
+        throw new Error(t('wallet.portal.prediction.tradeUnavailable', 'This side is not tradeable right now.'));
+      }
+      var baseYes = Number(market.baseYesPriceNumber != null ? market.baseYesPriceNumber : market.fairYesPriceNumber);
+      if (!Number.isFinite(baseYes) && market.meta) baseYes = Number(market.meta.fairYesPriceNumber != null ? market.meta.fairYesPriceNumber : market.meta.baseYesPrice);
+      if (!Number.isFinite(baseYes)) baseYes = Number(market.yesPriceNumber);
+      var yesPrice = activeContract && Number.isFinite(activeContract.yesPrice) ? activeContract.yesPrice : getMarketPrice(market, 'yes');
+      var noPrice = activeContract && Number.isFinite(activeContract.noPrice) ? activeContract.noPrice : getMarketPrice(market, 'no');
+      return {
+        source: market.source,
+        marketId: market.id,
+        conditionId: activeContract && activeContract.conditionId ? activeContract.conditionId : (market.conditionId || (market.raw && (market.raw.conditionId || market.raw.condition_id)) || ''),
+        gammaMarketId: activeContract && activeContract.gammaMarketId ? activeContract.gammaMarketId : (market.gammaMarketId || ''),
+        title: activeContract && activeContract.label ? (market.title + ' · ' + activeContract.label) : market.title,
+        topic: market.topic,
+        side: activeContract && activeContract.side ? activeContract.side : state.selectedSide,
+        outcomeKey: activeContract && activeContract.key ? activeContract.key : '',
+        outcomeLabel: activeContract && activeContract.label ? activeContract.label : '',
+        stake: state.stake,
+        price: priceFraction,
+        yesPrice: yesPrice,
+        noPrice: noPrice,
+        shares: calculateEstimatedShares(state.stake, priceFraction),
+        potentialReturn: potentialReturn,
+        closeAtMs: market.closeAtMs || 0,
+        clobTokenIds: activeContract && activeContract.clobTokenIds ? activeContract.clobTokenIds : getMarketTokenIds(market),
+        sourceUrl: market.primaryUrl,
+        baseYesPrice: Number.isFinite(baseYes) ? baseYes : yesPrice,
+        fairYesPrice: Number.isFinite(baseYes) ? baseYes : yesPrice,
+        fairNoPrice: Number.isFinite(baseYes) ? 1 - baseYes : noPrice,
+        tradableYesPrice: yesPrice,
+        tradableNoPrice: noPrice,
+        quotedAt: Date.now(),
+        quoteSource: market.meta && market.meta.priceSource || '',
+        openAt: market.meta && market.meta.openAt,
+        closeAt: market.meta && market.meta.closeAt,
+        openPrice: market.meta && market.meta.openPrice,
+        priceToBeat: market.meta && market.meta.priceToBeat,
+        livePrice: market.meta && market.meta.livePrice,
+        reference: Date.now().toString(36)
+      };
+    }
+
+    function submitPredictionOrderFromSelection() {
+      var market = getSelectedMarket(getFilteredMarkets());
+      if (!market) {
+        setTradeStatus(t('wallet.portal.prediction.tradeSelectPrompt', 'Select a live contract first.'), 'error');
+        return Promise.reject(new Error('No market selected'));
+      }
+      state.placing = true;
+      renderPredictionTicket(getFilteredMarkets());
+      return refreshSelectedMarketForTrade(market).then(function(freshMarket) {
+        var orderRequest = buildPredictionOrderRequest(freshMarket || market);
+        return createPredictionMarketOrder(orderRequest);
+      }).then(function(result) {
+        state.latestReceipt = result && result.record ? result.record : null;
+        state.orderHistory = readPredictionOrderRecords();
+        state.availableBalance = result && Number.isFinite(result.remainingBalance) ? result.remainingBalance : state.availableBalance;
+        state.selectedMarketId = result && result.record && result.record.marketId ? String(result.record.marketId) : state.selectedMarketId;
+        var remaining = result && Number.isFinite(result.remainingBalance) ? result.remainingBalance : state.availableBalance;
+        var nextStake = Number.isFinite(remaining) ? Math.min(Number(state.stake) || 25, Math.max(0, remaining)) : (Number(state.stake) || 25);
+        state.stake = nextStake > 0 ? nextStake : 0;
+        if (stakeInputEl) stakeInputEl.value = state.stake ? String(state.stake) : '';
+        var sigShort = result && result.signature ? String(result.signature).slice(0, 10) + '…' : '';
+        var openedLabel = result && result.record && result.record.outcomeLabel ? result.record.outcomeLabel : ((state.selectedSide || 'yes').toUpperCase());
+        var successMessage = '✅ Position opened — staked ' + formatOst(Number(result && result.record && result.record.stake) || 0) + ' on ' + openedLabel + '. Tx: ' + sigShort + '. Live BTC round stays open.';
+        toast('📈', 'Position opened');
+        renderPredictionBoard();
+        setTradeStatus(successMessage, 'success');
+        return result;
+      }).catch(function(error) {
+        setTradeStatus(error && error.message ? error.message : t('wallet.portal.prediction.tradeFailed', 'Could not place the prediction market order right now.'), 'error');
+        throw error;
+      }).finally(function() {
+        state.placing = false;
+        renderPredictionTicket(getFilteredMarkets());
+        renderLatestReceipt();
+        renderPredictionLedger();
+      });
+    }
+
     if (tradeActionBtn) {
       tradeActionBtn.addEventListener('click', function() {
-        var market = getSelectedMarket(getFilteredMarkets());
-        if (!market) {
-          setTradeStatus(t('wallet.portal.prediction.tradeSelectPrompt', 'Select a live contract first.'), 'error');
-          return;
-        }
-
-        var activeContract = buildTradeContract(market, state.selectedSide, state.selectedOutcomeKey);
-        var priceFraction = activeContract ? Number(activeContract.price) : NaN;
-        var potentialReturn = calculatePotentialReturn(state.stake, priceFraction);
-        if (!Number.isFinite(priceFraction) || priceFraction <= 0 || !Number.isFinite(potentialReturn)) {
-          setTradeStatus(t('wallet.portal.prediction.tradeUnavailable', 'This side is not tradeable right now.'), 'error');
-          return;
-        }
-
-        state.placing = true;
-        renderPredictionTicket(getFilteredMarkets());
-
-        createPredictionMarketOrder({
-          source: market.source,
-          marketId: market.id,
-          conditionId: activeContract && activeContract.conditionId ? activeContract.conditionId : (market.conditionId || (market.raw && (market.raw.conditionId || market.raw.condition_id)) || ''),
-          gammaMarketId: activeContract && activeContract.gammaMarketId ? activeContract.gammaMarketId : (market.gammaMarketId || ''),
-          title: activeContract && activeContract.label ? (market.title + ' · ' + activeContract.label) : market.title,
-          topic: market.topic,
-          side: activeContract && activeContract.side ? activeContract.side : state.selectedSide,
-          outcomeKey: activeContract && activeContract.key ? activeContract.key : '',
-          outcomeLabel: activeContract && activeContract.label ? activeContract.label : '',
-          stake: state.stake,
-          price: priceFraction,
-          yesPrice: activeContract && Number.isFinite(activeContract.yesPrice) ? activeContract.yesPrice : getMarketPrice(market, 'yes'),
-          noPrice: activeContract && Number.isFinite(activeContract.noPrice) ? activeContract.noPrice : getMarketPrice(market, 'no'),
-          shares: calculateEstimatedShares(state.stake, priceFraction),
-          potentialReturn: potentialReturn,
-          closeAtMs: market.closeAtMs || 0,
-          clobTokenIds: activeContract && activeContract.clobTokenIds ? activeContract.clobTokenIds : getMarketTokenIds(market),
-          sourceUrl: market.primaryUrl,
-          reference: Date.now().toString(36)
-        }).then(function(result) {
-          state.latestReceipt = result && result.record ? result.record : null;
-          state.orderHistory = readPredictionOrderRecords();
-          state.availableBalance = result && Number.isFinite(result.remainingBalance) ? result.remainingBalance : state.availableBalance;
-          state.selectedMarketId = result && result.record && result.record.marketId ? String(result.record.marketId) : state.selectedMarketId;
-          var remaining = result && Number.isFinite(result.remainingBalance) ? result.remainingBalance : state.availableBalance;
-          var nextStake = Number.isFinite(remaining) ? Math.min(Number(state.stake) || 25, Math.max(0, remaining)) : (Number(state.stake) || 25);
-          state.stake = nextStake > 0 ? nextStake : 0;
-          if (stakeInputEl) stakeInputEl.value = state.stake ? String(state.stake) : '';
-          var sigShort = result && result.signature ? String(result.signature).slice(0, 10) + '…' : '';
-          var openedLabel = result && result.record && result.record.outcomeLabel ? result.record.outcomeLabel : ((state.selectedSide || 'yes').toUpperCase());
-          var successMessage = '✅ Position opened — staked ' + formatOst(Number(result && result.record && result.record.stake) || 0) + ' on ' + openedLabel + '. Tx: ' + sigShort + '. Live BTC round stays open.';
-          toast('📈', 'Position opened');
-          renderPredictionBoard();
-          setTradeStatus(successMessage, 'success');
-        }).catch(function(error) {
-          setTradeStatus(error && error.message ? error.message : t('wallet.portal.prediction.tradeFailed', 'Could not place the prediction market order right now.'), 'error');
-        }).finally(function() {
-          state.placing = false;
-          renderPredictionTicket(getFilteredMarkets());
-          renderLatestReceipt();
-          renderPredictionLedger();
-        });
+        submitPredictionOrderFromSelection().catch(function() {});
       });
     }
 
