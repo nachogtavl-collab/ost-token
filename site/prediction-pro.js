@@ -129,10 +129,8 @@
   var btcLastOdds = { roundId: '', yes: 0.5, previousYes: 0.5 };
   var btcLastRoundPublishKey = '';
   var btcLastPublishedMarketKey = '';
-  // Canonical round snapshot from the OST worker — when present, ALL clients
-  // see the same openPrice + livePrice + yesProb regardless of which exchange
-  // their browser would have hit. This kills the cross-user discrepancy
-  // where one user saw NO at 80¢ and another saw NO at 50¢ on the same round.
+  // Canonical round snapshot from the OST worker. It owns the round/open price;
+  // a fresh Binance WebSocket trade tick owns the live price when it is flowing.
   var canonicalRound = null;            // last successful /btc/round payload
   var canonicalRoundFetchedAt = 0;
   var canonicalTicksSeededFor = 0;      // openAt of the round whose ticks we've seeded
@@ -150,6 +148,20 @@
 
   function isBinanceSource(source) {
     return /binance/i.test(String(source || ''));
+  }
+
+  function isBinanceWsSource(source) {
+    return /binance-ws/i.test(String(source || ''));
+  }
+
+  function freshBinanceWsTick(maxAgeMs) {
+    var age = Number(maxAgeMs) || BTC_LOCAL_TICK_FRESH_MS;
+    var price = Number(btcLastTick && btcLastTick.price);
+    var ts = Number(btcLastTick && btcLastTick.ts) || 0;
+    if (!Number.isFinite(price) || price <= 1000 || !ts) return null;
+    if (!isBinanceWsSource(btcLastTick.source)) return null;
+    if (Date.now() - ts > age) return null;
+    return Object.assign({}, btcLastTick);
   }
 
   function canonicalRoundHasHotLivePrice(round) {
@@ -455,6 +467,8 @@
   function fetchBtcSpot(options) {
     var force = options && options.force;
     var directOnly = options && options.directOnly;
+    var wsTick = freshBinanceWsTick(2500);
+    if (wsTick) return Promise.resolve(wsTick);
     if (!force && btcLastTick.price && Date.now() - btcLastTick.ts < BTC_LOCAL_TICK_FRESH_MS) {
       return Promise.resolve(Object.assign({}, btcLastTick));
     }
@@ -462,6 +476,8 @@
     if (ostApiBase()) {
       return fetchCanonicalRound()
         .then(function (round) {
+          var latestWsTick = freshBinanceWsTick(2500);
+          if (latestWsTick) return latestWsTick;
           var p = round && Number(round.livePrice);
           if (Number.isFinite(p) && p > 1000 && canonicalRoundHasHotLivePrice(round)) {
             return Object.assign({}, rememberBtcTick(p, round.livePriceSource || 'ost-canonical'));
@@ -591,18 +607,22 @@
   function pollBtcMarket() {
     // Skip polling when the page is hidden to avoid flooding public APIs.
     if (typeof document !== 'undefined' && document.hidden) return;
-    // Canonical worker round is the SOURCE OF TRUTH. Try it first; only fall
-    // back to direct exchange polls if the worker is unreachable so the chart
-    // never goes blank.
+    // Keep the canonical round fresh for open/close data, while preserving a
+    // live Binance WebSocket tick as the primary live price source.
     fetchCanonicalRound()
       .then(function (round) {
         if (round && Number.isFinite(Number(round.livePrice)) && round.livePrice > 0 && canonicalRoundHasHotLivePrice(round)) {
-          // Mirror the canonical live price into the local cache + series so
-          // every consumer (cards, modal, OST_PREDICTION_API) reads identical
-          // numbers across all browsers.
+          maybeSeedTickHistory(round.openAt);
+          var wsTick = freshBinanceWsTick(2500);
+          if (wsTick) {
+            publishBtcMarketUpdate('binance-ws-primary');
+            settleClosedRounds();
+            return;
+          }
+          // Mirror the canonical live price only when the Binance WebSocket is
+          // not currently flowing, so REST/worker ticks cannot replace a live trade tick.
           rememberBtcTick(Number(round.livePrice), round.livePriceSource || 'ost-canonical');
           publishBtcMarketUpdate('canonical-round');
-          maybeSeedTickHistory(round.openAt);
           settleClosedRounds();
           return;
         }
@@ -661,9 +681,19 @@
           canonicalTicksSeededFor = 0;
           return;
         }
+        var wsTick = freshBinanceWsTick(2500);
         btcSeries = seeded.slice(-BTC_MAX_SERIES);
-        var last = seeded[seeded.length - 1];
-        btcLastTick = { ts: last.ts, price: last.price, source: last.source };
+        if (wsTick) {
+          var lastSeeded = seeded[seeded.length - 1];
+          if (!lastSeeded || wsTick.ts > lastSeeded.ts || Math.abs(wsTick.price - lastSeeded.price) > 0.000001) {
+            btcSeries.push({ ts: wsTick.ts, price: wsTick.price, source: wsTick.source || 'binance-ws' });
+            if (btcSeries.length > BTC_MAX_SERIES) btcSeries = btcSeries.slice(-BTC_MAX_SERIES);
+          }
+          btcLastTick = wsTick;
+        } else {
+          var last = seeded[seeded.length - 1];
+          btcLastTick = { ts: last.ts, price: last.price, source: last.source };
+        }
         canonicalTicksSeededFor = openAt;
         try { window.dispatchEvent(new CustomEvent('ost:btc-spot', { detail: Object.assign({}, btcLastTick) })); } catch (_) {}
       })
