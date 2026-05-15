@@ -125,19 +125,82 @@ const BTC_TICK_RING_MAX = 600;          // ~10 min of 1Hz ticks per round bucket
 const BTC_LIVE_TTL_S = 60 * 30;         // shared "latest tick" cache TTL
 const BTC_LIVE_REFRESH_MS = 650;        // keep Binance stream hot without stale 50/50 rounds
 const BTC_ROUND_OPEN_MEMORY = new Map();
+const BTC_PRIOR_DRIFT_MEMORY = new Map();
+// Forward-projection blend factor — priceToBeat = openPrice * (1 + driftBlend * priorDrift).
+// Half-mean-revert: assume the next 5 min will repeat ~50% of the last 5 min's drift.
+const BTC_DRIFT_BLEND = 0.5;
+// Cap projection so a one-off 5-min spike can't push priceToBeat absurdly far
+// from the open price (locks the round into a guaranteed YES/NO).
+const BTC_DRIFT_CAP_PCT = 0.30;
 
-async function storeRoundOpenPrice(env, round, price, source, ts) {
+async function storeRoundOpenPrice(env, round, price, source, ts, priceToBeat) {
   if (!env.OST_KV || !Number.isFinite(price) || price <= 0) return null;
+  const beat = Number.isFinite(priceToBeat) && priceToBeat > 0 ? priceToBeat : price;
   const record = {
     openAt: round.openAt,
     closeAt: round.closeAt,
     openPrice: price,
+    priceToBeat: beat,
+    priceToBeatSource: beat === price ? 'open' : 'projected-5m-drift',
     openPriceSource: source || '',
     openPriceTs: Number(ts) || Date.now(),
     lockedBy: 'worker'
   };
   await kvPut(env, `round:${round.openAt}`, record, 60 * 60 * 2);
   return record;
+}
+
+// Fetch the prior 5-min Binance kline so we can project a forward priceToBeat
+// instead of using the raw open price (which leaves YES/NO pinned for users
+// when BTC trends one way for several minutes). Returns drift fraction
+// (priorClose - priorOpen)/priorOpen, or 0 if unavailable.
+async function fetchBtcPrior5mDrift(round) {
+  const cached = BTC_PRIOR_DRIFT_MEMORY.get(round.openAt);
+  if (cached !== undefined) return cached;
+  const priorOpenAt = round.openAt - 5 * 60 * 1000;
+  const urls = [
+    `https://data-api.binance.vision/api/v3/klines?symbol=BTCUSDT&interval=5m&startTime=${priorOpenAt}&limit=1`,
+    `https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=5m&startTime=${priorOpenAt}&limit=1`
+  ];
+  for (const url of urls) {
+    try {
+      const r = await fetch(url, {
+        headers: {
+          accept: 'application/json',
+          'cache-control': 'no-cache, no-store, max-age=0',
+          pragma: 'no-cache',
+          'user-agent': 'OST-API/1.0'
+        },
+        cf: { cacheTtl: 0 }
+      });
+      if (!r.ok) continue;
+      const rows = await r.json();
+      const row = Array.isArray(rows) ? rows[0] : null;
+      const openTime = Number(row && row[0]);
+      const op = Number(row && row[1]);
+      const cp = Number(row && row[4]);
+      if (openTime === priorOpenAt && Number.isFinite(op) && op > 1000 && Number.isFinite(cp) && cp > 0) {
+        const drift = (cp - op) / op;
+        BTC_PRIOR_DRIFT_MEMORY.set(round.openAt, drift);
+        if (BTC_PRIOR_DRIFT_MEMORY.size > 8) {
+          const oldest = Array.from(BTC_PRIOR_DRIFT_MEMORY.keys()).sort((a, b) => a - b)[0];
+          BTC_PRIOR_DRIFT_MEMORY.delete(oldest);
+        }
+        return drift;
+      }
+    } catch (_) { /* try next */ }
+  }
+  BTC_PRIOR_DRIFT_MEMORY.set(round.openAt, 0);
+  return 0;
+}
+
+function projectPriceToBeat(openPrice, priorDrift) {
+  if (!Number.isFinite(openPrice) || openPrice <= 0) return openPrice;
+  if (!Number.isFinite(priorDrift) || priorDrift === 0) return openPrice;
+  const blended = priorDrift * BTC_DRIFT_BLEND;
+  const cap = BTC_DRIFT_CAP_PCT / 100; // 0.003 → ±0.3%
+  const clamped = Math.max(-cap, Math.min(cap, blended));
+  return openPrice * (1 + clamped);
 }
 
 async function fetchBtcRoundOpenPrice(round) {
@@ -184,10 +247,25 @@ async function lockRoundOpenPrice(env, round, price, source) {
   const existing = await kvGet(env, key, null);
   if (existing && Number.isFinite(Number(existing.openPrice)) && Number(existing.openPrice) > 0) {
     // Open price already locked for this round — never overwrite.
+    // Backfill priceToBeat once if a previous worker version locked the
+    // round before the projected target existed.
+    if (!(Number.isFinite(Number(existing.priceToBeat)) && Number(existing.priceToBeat) > 0)) {
+      const drift = await fetchBtcPrior5mDrift(round);
+      const beat = projectPriceToBeat(Number(existing.openPrice), drift);
+      const patched = {
+        ...existing,
+        priceToBeat: beat,
+        priceToBeatSource: beat === Number(existing.openPrice) ? 'open' : 'projected-5m-drift'
+      };
+      await kvPut(env, key, patched, 60 * 60 * 2);
+      return patched;
+    }
     return existing;
   }
   // 2h TTL is long enough to cover settlement after close + late-arriving bots.
-  return storeRoundOpenPrice(env, round, price, source, Date.now());
+  const drift = await fetchBtcPrior5mDrift(round);
+  const beat = projectPriceToBeat(price, drift);
+  return storeRoundOpenPrice(env, round, price, source, Date.now(), beat);
 }
 
 async function appendBtcTick(env, round, price, source) {
@@ -210,25 +288,28 @@ async function appendBtcTick(env, round, price, source) {
 //   openPrice  : USD locked at the start of the round
 //   livePrice  : latest USD tick
 //   msLeft     : ms until round close (clamped 0 .. 5 min)
-function serverComputeBtcOdds(openPrice, livePrice, msLeft) {
+function serverComputeBtcOdds(openPrice, livePrice, msLeft, priceToBeat) {
   const FIVE = 5 * 60 * 1000;
   if (!Number.isFinite(openPrice) || !Number.isFinite(livePrice) || openPrice <= 0 || livePrice <= 0) {
     return { yes: 0.5, no: 0.5, deltaPct: 0, delta: 0, scale: 0 };
   }
+  const beat = Number.isFinite(priceToBeat) && priceToBeat > 0 ? priceToBeat : openPrice;
   const left = Math.max(0, Math.min(FIVE, Number(msLeft) || 0));
   const elapsedRatio = 1 - (left / FIVE);
   const remainingRatio = left / FIVE;
-  const delta = livePrice - openPrice;
-  const deltaPct = (delta / openPrice) * 100;
-  // Reference 5-min realised vol on BTC ~ 0.22% (1-sigma). Sqrt-time scaling
-  // shrinks the band as the round progresses so a 0.10% move late in the
-  // round becomes much more decisive than the same move at t=0.
-  const scale = 0.22 * Math.sqrt(Math.max(remainingRatio, 0.05));
+  const delta = livePrice - beat;
+  const deltaPct = (delta / beat) * 100;
+  // Reference 5-min realised vol on BTC ~ 0.10% (tightened from 0.22 so the
+  // probability actually reacts to small intra-round moves instead of
+  // hugging 50/50). Sqrt-time scaling still shrinks the band as the round
+  // progresses so late ticks decide harder than early ones.
+  const scale = 0.10 * Math.sqrt(Math.max(remainingRatio, 0.04));
   const z = deltaPct / Math.max(scale, 0.001);
   let yes = 1 / (1 + Math.exp(-z));
-  // Confidence ramp: at t=0 odds are pulled hard toward 0.5; at t=close they
-  // commit to the directional probability.
-  const confidence = 0.55 + 0.40 * elapsedRatio;
+  // Confidence ramp: start at 0.65 (was 0.55) so users see the price react
+  // immediately, climb to 0.97 by close so a clearly winning side can lock
+  // near the cap rather than getting capped at 0.95.
+  const confidence = 0.65 + 0.32 * elapsedRatio;
   yes = 0.5 + (yes - 0.5) * confidence;
   yes = Math.max(0.02, Math.min(0.98, yes));
   return { yes, no: 1 - yes, deltaPct, delta, scale };
@@ -275,8 +356,13 @@ async function buildCanonicalBtcRound(env, opts) {
   if (currentLatest && openPrice && !stored) {
     stored = await lockRoundOpenPrice(env, round, openPrice, currentLatest.s || '') || stored;
   }
+  // Forward-projected price-to-beat (locked at round open). Falls back to
+  // openPrice if the prior-kline fetch failed or the round was locked by an
+  // older worker version with no projection field.
+  const storedBeat = Number(stored && stored.priceToBeat);
+  const priceToBeat = Number.isFinite(storedBeat) && storedBeat > 0 ? storedBeat : openPrice;
   const livePrice = (currentLatest && Number(currentLatest.p)) || openPrice;
-  const odds = serverComputeBtcOdds(openPrice, livePrice, round.msLeft);
+  const odds = serverComputeBtcOdds(openPrice, livePrice, round.msLeft, priceToBeat);
   const openPriceSource = (roundOpen && roundOpen.source) || stored && stored.openPriceSource || '';
   const openPriceTs = (roundOpen && Number(roundOpen.t)) || stored && stored.openPriceTs || null;
   return {
@@ -285,7 +371,8 @@ async function buildCanonicalBtcRound(env, opts) {
     closeAt: round.closeAt,
     msLeft: round.msLeft,
     openPrice: openPrice || null,
-    priceToBeat: openPrice || null,
+    priceToBeat: priceToBeat || openPrice || null,
+    priceToBeatSource: (stored && stored.priceToBeatSource) || (priceToBeat && priceToBeat !== openPrice ? 'projected-5m-drift' : 'open'),
     openPriceSource,
     openPriceTs,
     livePrice: livePrice || null,

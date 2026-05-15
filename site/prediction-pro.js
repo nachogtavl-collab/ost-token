@@ -67,8 +67,8 @@
   // ---------------------------------------------------------------------------
   var FIVE_MIN_MS = 5 * 60 * 1000;
   var BTC_PRICE_URL = 'https://data-api.binance.vision/api/v3/ticker/price?symbol=BTCUSDT';
-  var BTC_REFRESH_MS = 450;           // live tick cadence for the shared BTC stream
-  var BTC_DEDUPE_MS  = 300;           // dedupe identical prints inside this window
+  var BTC_REFRESH_MS = 250;           // tighter live tick cadence (was 450) so price feels live
+  var BTC_DEDUPE_MS  = 200;           // dedupe identical prints inside this window (was 300)
   var BTC_FEED_TIMEOUT_MS = 3000;
   var BTC_MAX_SERIES = 900;           // ~7.5 min of sub-second history for the chart
   var BTC_WS_URLS = [
@@ -484,29 +484,56 @@
     return ((latest.price - anchor.price) / anchor.price) * 100;
   }
 
-  function computeBtcOdds(openPrice, livePrice, boundaries) {
+  // Local fallback for the forward-projected price-to-beat when the canonical
+  // worker round hasn't filled in `priceToBeat`. Half-mean-revert blend of the
+  // last ~5 min observed drift, capped at +/-0.30%, so the price-to-beat sits
+  // near where BTC is most likely to land at round close instead of pinning
+  // YES/NO once price drifts away from the bare open price.
+  function projectLocalPriceToBeat(openPrice) {
+    if (!Number.isFinite(openPrice) || openPrice <= 0) return 0;
+    if (btcSeries.length < 4) return openPrice;
+    var latest = btcSeries[btcSeries.length - 1];
+    var cutoff = latest.ts - (5 * 60 * 1000);
+    var anchor = null;
+    for (var i = 0; i < btcSeries.length; i += 1) {
+      if (btcSeries[i].ts >= cutoff) { anchor = btcSeries[i]; break; }
+    }
+    if (!anchor) anchor = btcSeries[0];
+    if (!anchor || !anchor.price || !latest.price) return openPrice;
+    var drift = (latest.price - anchor.price) / anchor.price;
+    var blended = drift * 0.5;
+    var cap = 0.30 / 100;
+    if (blended > cap) blended = cap;
+    if (blended < -cap) blended = -cap;
+    return openPrice * (1 + blended);
+  }
+
+  function computeBtcOdds(openPrice, livePrice, boundaries, priceToBeat) {
     var roundId = 'ost-btc5m-' + boundaries.openAt;
     var previousYes = btcLastOdds.roundId === roundId && Number.isFinite(btcLastOdds.yes)
       ? btcLastOdds.yes
       : 0.5;
     var yes = 0.5;
-    var delta = Number(livePrice) - Number(openPrice);
-    var deltaPct = Number.isFinite(delta) && openPrice > 0 ? (delta / openPrice) * 100 : 0;
-    if (openPrice > 0 && livePrice > 0) {
+    // Use the projected price-to-beat (locked at round open) for delta. Falls
+    // back to openPrice when the worker hasn't projected one yet.
+    var beat = Number(priceToBeat);
+    if (!Number.isFinite(beat) || beat <= 0) beat = Number(openPrice);
+    var delta = Number(livePrice) - beat;
+    var deltaPct = Number.isFinite(delta) && beat > 0 ? (delta / beat) * 100 : 0;
+    if (beat > 0 && livePrice > 0) {
       var msLeft = clampNumber(boundaries.closeAt - Date.now(), 0, FIVE_MIN_MS);
       var timeLeftRatio = msLeft / FIVE_MIN_MS;
-      var volatilityPct = estimateRecentBtcVolPct();
-      var momentumPct = estimateBtcMomentumPct();
-      var expectedMovePct = Math.max(0.006, volatilityPct * Math.sqrt(Math.max(timeLeftRatio, 0.015)) * 1.35);
-      var closePressure = 1 + (1 - timeLeftRatio) * 1.85;
-      var score = clampNumber(((deltaPct + momentumPct * 0.16) / expectedMovePct) * closePressure, -5.2, 5.2);
-      yes = 1 / (1 + Math.exp(-score));
-      var confidence = 0.56 + (1 - timeLeftRatio) * 0.39;
+      var elapsedRatio = 1 - timeLeftRatio;
+      // Match the worker's tightened band so client + canonical odds agree.
+      // 0.10% reference vol with sqrt-time scaling is much more reactive than
+      // the previous 0.22% volatility + momentum blend, which left the
+      // probability nearly pinned at 50/50 for typical 5-min BTC moves.
+      var scale = 0.10 * Math.sqrt(Math.max(timeLeftRatio, 0.04));
+      var z = clampNumber(deltaPct / Math.max(scale, 0.001), -8, 8);
+      yes = 1 / (1 + Math.exp(-z));
+      var confidence = 0.65 + 0.32 * elapsedRatio;
       yes = 0.5 + (yes - 0.5) * confidence;
-      var nearTieUsd = Math.max(0.2, openPrice * 0.000006);
-      if (Math.abs(delta) < nearTieUsd) yes = 0.5 + (yes - 0.5) * 0.25;
-      var edgeCap = timeLeftRatio > 0.85 ? 0.82 : (timeLeftRatio > 0.5 ? 0.9 : 0.975);
-      yes = clampNumber(yes, 1 - edgeCap, edgeCap);
+      yes = clampNumber(yes, 0.02, 0.98);
     }
     btcLastOdds = { roundId: roundId, yes: yes, previousYes: previousYes };
     return {
@@ -644,7 +671,8 @@
     var canon = canonicalRoundIsFresh() && canonicalRound && Number(canonicalRound.openAt) === b.openAt
       ? canonicalRound
       : null;
-    var canonOpenPrice = canon && Number(canon.priceToBeat || canon.openPrice);
+    var canonOpenPrice = canon && Number(canon.openPrice);
+    var canonPriceToBeat = canon && Number(canon.priceToBeat);
     var canonLiveTrusted = canon && canonicalRoundHasHotLivePrice(canon);
     var canonLivePrice = canonLiveTrusted ? Number(canon.livePrice) : NaN;
     var canonLiveTs = Number(canon && (canon.livePriceTs || canon.updatedAt)) || 0;
@@ -660,14 +688,20 @@
       ? btcLastTick.ts
       : ((canonLiveTrusted && canon && Number(canon.livePriceTs)) || btcLastTick.ts || (canon && Number(canon.livePriceTs)) || 0);
     var openPrice = (Number.isFinite(canonOpenPrice) && canonOpenPrice > 0 ? canonOpenPrice : 0) || Number(roundRecord.openPrice) || 0;
-    var odds = computeBtcOdds(openPrice, livePrice, b);
+    // Forward-projected price-to-beat. Trust canonical when present so all
+    // users agree; otherwise fall back to local projection from recent BTC
+    // drift, finally to openPrice if nothing else is available.
+    var priceToBeat = (Number.isFinite(canonPriceToBeat) && canonPriceToBeat > 0 ? canonPriceToBeat : 0)
+      || Number(roundRecord.priceToBeat)
+      || projectLocalPriceToBeat(openPrice)
+      || openPrice;
+    var odds = computeBtcOdds(openPrice, livePrice, b, priceToBeat);
     odds.canonical = !!canon;
     var roundId = 'ost-btc5m-' + b.openAt;
     var yesPct = (odds.yes * 100).toFixed(1) + '%';
     var noPct = (odds.no * 100).toFixed(1) + '%';
     var sourceLabel = liveSource || 'BTC FEED';
     sourceLabel = String(sourceLabel).toUpperCase();
-    var priceToBeat = openPrice;
     var priceToBeatText = priceToBeat ? formatUsd(priceToBeat) : '$--';
     var equation = 'YES wins if BTC closes above ' + priceToBeatText + '; NO wins if BTC closes at or below ' + priceToBeatText + '.';
     var market = {
@@ -840,13 +874,17 @@
     var canonOpen = canonicalRoundIsFresh() && canonicalRound && Number(canonicalRound.openAt) === market.meta.openAt
       ? Number(canonicalRound.openPrice) || 0
       : 0;
+    var canonBeat = canonicalRoundIsFresh() && canonicalRound && Number(canonicalRound.openAt) === market.meta.openAt
+      ? Number(canonicalRound.priceToBeat) || 0
+      : 0;
     var openPrice = canonOpen || Number(market.meta.openPrice) || 0;
+    var priceToBeat = canonBeat || Number(market.meta.priceToBeat) || projectLocalPriceToBeat(openPrice) || openPrice;
     var existingOpen = Number(rounds[key] && rounds[key].openPrice);
     var shouldWrite = !rounds[key] || !existingOpen || (canonOpen && Math.abs(existingOpen - canonOpen) > 0.01);
     if (shouldWrite) {
       rounds[key] = {
         openPrice: openPrice,
-        priceToBeat: openPrice,
+        priceToBeat: priceToBeat,
         openAt: market.meta.openAt,
         closeAt: market.meta.closeAt,
         openPriceTs: (canonicalRound && Number(canonicalRound.openPriceTs)) || btcLastTick.ts || Date.now(),

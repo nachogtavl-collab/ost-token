@@ -417,8 +417,15 @@
     return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   }
   function clearLiveTimers() {
-    liveTimers.forEach(function (t) { try { clearInterval(t); } catch (_) {} });
-    liveTimers = [];
+liveTimers.forEach(function (t) {
+  try {
+    if (t && typeof t === 'object' && typeof t.removeOnClose === 'function') {
+      t.removeOnClose();
+    } else {
+      clearInterval(t);
+    }
+  } catch (_) {}
+});
   }
 
   // --------------------------------------------------------------------------
@@ -2157,7 +2164,18 @@
           }
           var yesProb = sharedRound && canonicalBtcRoundIsHot(sharedRound) && Number(sharedRound.yesPriceNumber);
           if (!Number.isFinite(yesProb)) {
-            yesProb = 0.5 + 0.5 * Math.tanh(pct * 0.6);
+            // Mirror the worker's serverComputeBtcOdds: 0.10% reference vol
+            // with sqrt-time scaling + 0.65→0.97 confidence ramp. This makes
+            // the YES/NO actually react to small intra-round moves instead
+            // of looking pinned at 50% for typical 5-min BTC drift.
+            var msLeftFallback = Math.max(0, Math.min(FIVE_MIN_MS, Number(market.meta.closeAt) - Date.now()));
+            var remRatio = msLeftFallback / FIVE_MIN_MS;
+            var elapsedRatio = 1 - remRatio;
+            var scale = 0.10 * Math.sqrt(Math.max(remRatio, 0.04));
+            var z = Math.max(-8, Math.min(8, pct / Math.max(scale, 0.001)));
+            yesProb = 1 / (1 + Math.exp(-z));
+            var confidence = 0.65 + 0.32 * elapsedRatio;
+            yesProb = 0.5 + (yesProb - 0.5) * confidence;
             yesProb = Math.max(0.02, Math.min(0.98, yesProb));
           }
           market.baseYesPriceNumber = yesProb;
@@ -2187,7 +2205,28 @@
       };
       hydrateCanonicalBtcTicks(market, bodyEl);
       fetchBtcLive();
-      liveTimers.push(setInterval(fetchBtcLive, 450));
+      // Tighter cadence (was 450ms) so the live BTC price + share % updates
+      // feel sub-second on every interaction.
+      liveTimers.push(setInterval(fetchBtcLive, 150));
+      // Re-render immediately on every fresh BTC tick so the live price and
+      // share % follow the WebSocket / canonical feed without waiting for
+      // the next poll. Throttled to avoid double-painting on bursty ticks.
+      var lastSpotPaintAt = 0;
+      var spotListener = function () {
+        var now = Date.now();
+        if (now - lastSpotPaintAt < 60) return;
+        lastSpotPaintAt = now;
+        try { fetchBtcLive(); } catch (_) {}
+      };
+      try { window.addEventListener('ost:btc-spot', spotListener); } catch (_) {}
+      var marketUpdateListener = function () {
+        try { fetchBtcLive(); } catch (_) {}
+      };
+      try { window.addEventListener('ost:btc-market-updated', marketUpdateListener); } catch (_) {}
+      liveTimers.push({ removeOnClose: function () {
+        try { window.removeEventListener('ost:btc-spot', spotListener); } catch (_) {}
+        try { window.removeEventListener('ost:btc-market-updated', marketUpdateListener); } catch (_) {}
+      } });
     }
 
     // ---- Polymarket live data ----
@@ -2770,12 +2809,14 @@
               if (!Number.isFinite(pp) || pp <= 1000 || openPx <= 0) return;
               var dPct = ((pp - openPx) / openPx) * 100;
               var ms = Math.max(0, closeAt - (Number(point && (point.ts || point.t)) || Date.now()));
-              var rem = Math.max(0.05, ms / FIVE_MIN_MS);
-              var scale = 0.22 * Math.sqrt(rem);
-              var z = dPct / Math.max(scale, 0.001);
+              var rem = Math.max(0.04, ms / FIVE_MIN_MS);
+              // Match the worker / pro equation so the historical chart
+              // line agrees with the live YES/NO percentage rendered above.
+              var scale = 0.10 * Math.sqrt(rem);
+              var z = Math.max(-8, Math.min(8, dPct / Math.max(scale, 0.001)));
               var yes = 1 / (1 + Math.exp(-z));
               var elapsed = 1 - rem;
-              yes = 0.5 + (yes - 0.5) * (0.55 + 0.40 * elapsed);
+              yes = 0.5 + (yes - 0.5) * (0.65 + 0.32 * elapsed);
               btcPts.push(Math.max(0.02, Math.min(0.98, yes)));
             });
             var liveYes = Number(sharedRound && sharedRound.yesPriceNumber);
