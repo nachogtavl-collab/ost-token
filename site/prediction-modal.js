@@ -2122,19 +2122,19 @@ liveTimers.forEach(function (t) {
       tickBtc();
       liveTimers.push(setInterval(tickBtc, 200));
       var fetchSharedBtcTick = function () {
-        return fetchCanonicalBtcRound().then(function (round) {
-          var api = window.OST_PREDICTION_API;
-          var cachedTickPromise = api && typeof api.btcSpot === 'function'
-            ? Promise.resolve(api.btcSpot())
-            : Promise.resolve(null);
-          return cachedTickPromise.then(function (cachedTick) {
-            var cachedPrice = Number(cachedTick && cachedTick.price);
-            var cachedTs = Number(cachedTick && (cachedTick.ts || cachedTick.updatedAt)) || 0;
-            var roundTs = Number(round && (round.livePriceTs || round.updatedAt)) || 0;
-            var cachedFresh = Number.isFinite(cachedPrice) && cachedPrice > 1000 && (!cachedTs || Date.now() - cachedTs < 1500);
-            if (cachedFresh && (!roundTs || cachedTs >= roundTs - 50 || Date.now() - cachedTs < 900)) {
-              return { price: cachedPrice, source: cachedTick.source || 'binance-ws', round: round || cachedCanonicalBtcRound() };
-            }
+        var api = window.OST_PREDICTION_API;
+        var cachedRound = cachedCanonicalBtcRound();
+        var cachedTickPromise = api && typeof api.btcSpot === 'function'
+          ? Promise.resolve(api.btcSpot()).catch(function () { return null; })
+          : Promise.resolve(null);
+        return cachedTickPromise.then(function (cachedTick) {
+          var cachedPrice = Number(cachedTick && cachedTick.price);
+          var cachedTs = Number(cachedTick && (cachedTick.ts || cachedTick.updatedAt)) || 0;
+          var cachedFresh = Number.isFinite(cachedPrice) && cachedPrice > 1000 && (!cachedTs || Date.now() - cachedTs < 1500);
+          if (cachedFresh) {
+            return { price: cachedPrice, source: cachedTick.source || 'binance-ws', round: cachedRound };
+          }
+          return fetchCanonicalBtcRound().then(function (round) {
             if (canonicalRoundMatchesMarket(market, round)) {
               applyCanonicalBtcRoundToMarket(market, round);
               var canonicalPrice = Number(round.livePrice);
@@ -2146,7 +2146,7 @@ liveTimers.forEach(function (t) {
               return api.btcSpot({ force: true, directOnly: true }).then(function (tick) {
                 var p = tick && Number(tick.price);
                 if (!Number.isFinite(p)) throw new Error('shared BTC feed empty');
-                return { price: p, source: tick.source || '', round: round || cachedCanonicalBtcRound() };
+                return { price: p, source: tick.source || '', round: round || cachedRound };
               });
             }
             return fetchBtcRace().then(function (p) { return { price: p, source: BTC_PRICE_FEEDS[BTC_FEED_INDEX].name }; });
@@ -2241,9 +2241,10 @@ liveTimers.forEach(function (t) {
       };
       hydrateCanonicalBtcTicks(market, bodyEl);
       fetchBtcLive();
-      // Tighter cadence (was 450ms) so the live BTC price + share % updates
-      // feel sub-second on every interaction.
-      liveTimers.push(setInterval(fetchBtcLive, 150));
+      // The WebSocket/shared tick event below paints immediately. This
+      // fallback stays sub-second without hammering the canonical Worker on
+      // mobile when the event stream is already fresh.
+      liveTimers.push(setInterval(fetchBtcLive, 500));
       // Re-render immediately on every fresh BTC tick so the live price and
       // share % follow the WebSocket / canonical feed without waiting for
       // the next poll. Throttled to avoid double-painting on bursty ticks.
