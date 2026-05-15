@@ -1331,15 +1331,15 @@ liveTimers.forEach(function (t) {
   function refreshMarketQuoteBeforeBet(market) {
     if (!isFastBtcMarket(market)) return Promise.resolve(market);
     var api = window.OST_PREDICTION_API || {};
-    return fetchCanonicalBtcRound()
+    return withTimeout(fetchCanonicalBtcRound(), 900, null)
       .then(function (round) {
         if (canonicalRoundMatchesMarket(market, round)) applyCanonicalBtcRoundToMarket(market, round);
-        if (api && typeof api.btcSpot === 'function') return api.btcSpot({ force: true }).catch(function () { return null; });
-        return null;
-      })
-      .then(function () {
         var fairYes = Number(market && (market.baseYesPriceNumber != null ? market.baseYesPriceNumber : market.yesPriceNumber));
-        return refreshNativeMarketState(market, null, fairYes).then(function () { return market; });
+        var spotRefresh = api && typeof api.btcSpot === 'function'
+          ? withTimeout(api.btcSpot({ force: true }), 700, null)
+          : Promise.resolve(null);
+        var nativeRefresh = withTimeout(refreshNativeMarketState(market, null, fairYes), 900, null);
+        return Promise.all([spotRefresh, nativeRefresh]).then(function () { return market; });
       })
       .catch(function () { return market; });
   }

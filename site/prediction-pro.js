@@ -1404,11 +1404,11 @@
   }
 
   function refreshFiveMinBtcQuote() {
-    return fetchCanonicalRound()
-      .then(function () { return fetchBtcSpot({ force: true }).catch(function () { return null; }); })
+    return withSoftTimeout(fetchCanonicalRound(), 900, null)
+      .then(function () { return withSoftTimeout(fetchBtcSpot({ force: true }), 900, null); })
       .then(function () {
         var market = buildFiveMinBtcMarket();
-        return refreshNativeBtcMarketState(market).then(function () { return buildFiveMinBtcMarket(); });
+        return withSoftTimeout(refreshNativeBtcMarketState(market), 900, null).then(function () { return buildFiveMinBtcMarket(); });
       })
       .catch(function () { return buildFiveMinBtcMarket(); });
   }
@@ -1423,6 +1423,14 @@
         return result && result.record ? result.record : result;
       });
     });
+  }
+
+  function withSoftTimeout(promise, ms, fallback) {
+    var done = false;
+    return Promise.race([
+      Promise.resolve(promise).then(function (value) { done = true; return value; }, function () { done = true; return fallback; }),
+      new Promise(function (resolve) { setTimeout(function () { if (!done) resolve(fallback); }, ms || 1200); })
+    ]);
   }
 
   // ---------------------------------------------------------------------------
