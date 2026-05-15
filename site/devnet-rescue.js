@@ -35,9 +35,10 @@
 
   function vaultConfig() {
     return {
-      minReserve: numberSetting('OST_VAULT_MIN_RESERVE', 100000),
-      lowWater: numberSetting('OST_VAULT_LOW_WATER', 1000000),
-      maxSinglePayout: numberSetting('OST_MAX_SINGLE_PAYOUT', 10000000)
+      minReserve: numberSetting('OST_VAULT_MIN_RESERVE', 0),
+      lowWater: numberSetting('OST_VAULT_LOW_WATER', 1000000000),
+      targetReserve: numberSetting('OST_VAULT_TARGET_RESERVE', 10000000000),
+      maxSinglePayout: numberSetting('OST_MAX_SINGLE_PAYOUT', 1000000000)
     };
   }
 
@@ -650,9 +651,10 @@
     patchEnsureFee();
     console.log('[rescue v2] pool-paid OST flows active. Endpoints:', RPC_ENDPOINTS.length);
     Promise.all([getPoolOstBalance(), getPoolSolBalance()]).then(function (r) {
+      var cfg = vaultConfig();
       console.log('[rescue v2] pool: ' + r[0].toLocaleString() + ' OST · ' + r[1].toFixed(3) + ' SOL');
-      if (r[0] < 1000) {
-        console.warn('[rescue v2] POOL LOW — admin must run: npx ts-node scripts/init-swap-pool.ts');
+      if (r[0] < cfg.lowWater) {
+        console.warn('[rescue v2] POOL LOW — admin must run: npm run vault:refill');
       }
     }).catch(function () {});
   }

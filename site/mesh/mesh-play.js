@@ -1116,6 +1116,30 @@
     actions.appendChild(details);
     card.appendChild(actions);
     gameLog(card);
+    if (!didWin) {
+      var lostStake = Math.max(0, Number(state.stake && state.stake.amount || 0) || 0);
+      if (lostStake > 0) {
+        recordFairGame('loss', { id: state.id, game: state.game, amount: lostStake, asset: 'OST', winner: winnerWallet, loser: loserWallet, digest: digest });
+        if (typeof window.recordOstVaultRetainedLoss === 'function') {
+          try {
+            window.recordOstVaultRetainedLoss({
+              source: 'mesh-fair-game',
+              subKind: 'fair-game-loss',
+              amount: lostStake,
+              retainedOst: lostStake,
+              stake: lostStake,
+              payoutOst: 0,
+              game: state.game,
+              linkedId: state.id,
+              winner: winnerWallet,
+              loser: loserWallet,
+              digest: digest
+            });
+          } catch (_) {}
+        }
+        if (typeof window.notifyOstTxHistory === 'function') window.notifyOstTxHistory();
+      }
+    }
     // FairGameFxHook: announce settled outcome so the FX polish layer can
     // play sounds, haptics, confetti and inject a Rematch button. Pure
     // event dispatch — no behaviour change here.

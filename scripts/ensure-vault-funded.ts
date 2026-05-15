@@ -94,16 +94,15 @@ async function main() {
   console.log("Mode      :", confirm ? "LIVE refill enabled" : "DRY-RUN");
   console.log("");
 
-  if (currentRaw >= lowWaterRaw) {
-    console.log("OK: vault is above low-water. No refill needed.");
-    return;
-  }
   if (currentRaw >= targetRaw) {
     console.log("OK: vault is already at or above target. No refill needed.");
     return;
   }
 
   const refillRaw = targetRaw - currentRaw;
+  if (currentRaw >= lowWaterRaw) {
+    console.log("Top-off available: vault is above low-water but below target.");
+  }
   console.log("Refill needed:", rawToOstText(refillRaw, TOKEN_DECIMALS), "OST");
   if (!confirm) {
     console.log("Dry-run only. Re-run with --confirm to mint this refill.");

@@ -127,6 +127,8 @@
   var btcSeries = [];
   var btcPreferredSource = '';
   var btcLastOdds = { roundId: '', yes: 0.5, previousYes: 0.5 };
+  var btcLastRoundPublishKey = '';
+  var btcLastPublishedMarketKey = '';
   // Canonical round snapshot from the OST worker — when present, ALL clients
   // see the same openPrice + livePrice + yesProb regardless of which exchange
   // their browser would have hit. This kills the cross-user discrepancy
@@ -529,7 +531,7 @@
     var previousYes = btcLastOdds.roundId === roundId && Number.isFinite(btcLastOdds.yes)
       ? btcLastOdds.yes
       : 0.5;
-    var yes = 0.5;
+    var yes = Number.isFinite(previousYes) ? previousYes : 0.5;
     // Use the projected price-to-beat (locked at round open) for delta. Falls
     // back to openPrice when the worker hasn't projected one yet.
     var beat = Number(priceToBeat);
@@ -566,6 +568,14 @@
   function publishBtcMarketUpdate(reason) {
     var market = buildFiveMinBtcMarket();
     captureRoundOpenIfNeeded(market);
+    var publishKey = [
+      market && market.id || '',
+      btcLastTick.ts || 0,
+      Number(market && market.yesPriceNumber || 0).toFixed(6),
+      Number(market && market.noPriceNumber || 0).toFixed(6)
+    ].join(':');
+    if (publishKey && publishKey === btcLastPublishedMarketKey) return market;
+    btcLastPublishedMarketKey = publishKey;
     try {
       window.dispatchEvent(new CustomEvent('ost:btc-market-updated', {
         detail: {
@@ -911,11 +921,18 @@
     }
   }
 
-  // Snapshot the current 5-min round each tick so we always have an "open" price.
-  // Tightened from 5s → 1s so the dashboard's "Open price" cell never lags
-  // more than one tick behind the live BTC feed.
+  // Keep the round open-price captured without repainting a synthetic quote
+  // every second. The UI now moves from real websocket/canonical ticks only.
   setInterval(function () {
-    try { publishBtcMarketUpdate('direct-feed'); } catch (e) {}
+    try {
+      var market = buildFiveMinBtcMarket();
+      var key = market && market.id ? market.id + ':' + (btcLastTick.ts || 0) : '';
+      if (key && key !== btcLastRoundPublishKey && Date.now() - (btcLastTick.ts || 0) < 3500) {
+        btcLastRoundPublishKey = key;
+        publishBtcMarketUpdate('live-round-tick');
+      }
+      settleClosedRounds();
+    } catch (e) {}
   }, 1000);
 
   // Also snapshot opportunistically on every fresh BTC tick so a brand-new
@@ -989,6 +1006,31 @@
       o.finalYesPrice = r.yesWon ? 1 : 0;
       o.finalNoPrice = r.yesWon ? 0 : 1;
       o.settlementSource = 'ost-btc5m-' + (r.closePriceSource || 'btc-feed');
+      if (!won && !o.vaultRetainedAt) {
+        var retained = Math.max(0, Number(o.stake || o.amount || 0) || 0);
+        if (retained > 0) {
+          o.vaultRetainedAt = Date.now();
+          o.vaultRetainedOst = retained;
+          if (typeof window.recordOstVaultRetainedLoss === 'function') {
+            try {
+              window.recordOstVaultRetainedLoss({
+                source: 'prediction',
+                subKind: 'prediction-btc5m-loss',
+                amount: retained,
+                retainedOst: retained,
+                stake: Number(o.stake || 0) || 0,
+                payoutOst: 0,
+                wallet: o.wallet || '',
+                marketId: o.marketId || '',
+                title: o.title || o.marketTitle || '',
+                side: o.side || '',
+                linkedId: o.signature || o.sig || o.id || '',
+                settlementSource: o.settlementSource
+              });
+            } catch (_) {}
+          }
+        }
+      }
       ordersChanged = true;
       settledOrders.push(o);
     });

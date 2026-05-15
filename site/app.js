@@ -2962,6 +2962,50 @@
     } catch (_) {}
   }
 
+  function markPredictionOrderVaultLoss(order, extra) {
+    if (!order || order.vaultRetainedAt) return false;
+    var amount = Math.max(0, Number(order.stake || order.amount || 0) || 0);
+    if (!amount) return false;
+    order.vaultRetainedAt = Date.now();
+    order.vaultRetainedOst = amount;
+    recordVaultRetainedLoss(Object.assign({
+      source: 'prediction',
+      subKind: 'prediction-resolved-loss',
+      amount: amount,
+      retainedOst: amount,
+      stake: Number(order.stake || 0) || 0,
+      payoutOst: 0,
+      wallet: order.wallet || getPredictionWalletAddress() || '',
+      marketId: order.marketId || '',
+      title: order.title || order.marketTitle || '',
+      side: order.side || '',
+      linkedId: order.signature || order.sig || order.id || ''
+    }, extra || {}));
+    return true;
+  }
+
+  function reconcilePredictionVaultLossRecords() {
+    var orders = readPredictionOrderRecords();
+    var changed = false;
+    orders.forEach(function(order) {
+      if (!order || order.cashedOut || order.vaultRetainedAt) return;
+      var status = String(order.status || order.outcome || '').toLowerCase();
+      if (status !== 'lost') return;
+      if (markPredictionOrderVaultLoss(order, {
+        subKind: 'prediction-loss-reconciliation',
+        settlementSource: order.settlementSource || 'local-ledger'
+      })) {
+        sharePredictionOrderRecord(order);
+        changed = true;
+      }
+    });
+    if (changed) {
+      writePredictionOrderRecords(orders);
+      if (typeof window.notifyOstTxHistory === 'function') window.notifyOstTxHistory();
+    }
+    return orders;
+  }
+
   function shareLocalPredictionOrdersToRemote(options) {
     const settings = options || {};
     const base = getOstApiBase();
@@ -14270,6 +14314,9 @@
           var update = resolvePredictionOrderFromPayload(result.candidate.order, result.payload);
           if (!update) return;
           orders[result.candidate.index] = Object.assign({}, orders[result.candidate.index], update);
+          if (update.status === 'lost') {
+            markPredictionOrderVaultLoss(orders[result.candidate.index], { settlementSource: update.settlementSource || 'polymarket' });
+          }
           sharePredictionOrderRecord(orders[result.candidate.index]);
           changed = true;
         });
@@ -16539,7 +16586,7 @@
     syncPredictionMarketBoardUi();
     syncTradeWallet();
     syncPredictionOrdersFromRemote().then(function() {
-      state.orderHistory = readPredictionOrderRecords();
+      state.orderHistory = reconcilePredictionVaultLossRecords();
       renderPredictionLedger();
     });
     loadPredictionMarkets();
@@ -16553,12 +16600,12 @@
       syncTradeWallet();
       shareLocalPredictionOrdersToRemote({ force: true });
       syncPredictionOrdersFromRemote().then(function() {
-        state.orderHistory = readPredictionOrderRecords();
+        state.orderHistory = reconcilePredictionVaultLossRecords();
         renderPredictionLedger();
       });
     });
     window.addEventListener('ost:prediction-orders-synced', function() {
-      state.orderHistory = readPredictionOrderRecords();
+      state.orderHistory = reconcilePredictionVaultLossRecords();
       renderPredictionLedger();
     });
     window.addEventListener('ost:prediction-order-recorded', function(event) {
@@ -16574,11 +16621,11 @@
     // portal portfolio + ledger reflect the cash-out without waiting for the
     // 15 s board poll or the 5 min resolution sweep.
     window.addEventListener('ost:prediction:order-changed', function() {
-      state.orderHistory = readPredictionOrderRecords();
+      state.orderHistory = reconcilePredictionVaultLossRecords();
       renderPredictionLedger();
     });
     window.addEventListener('ost:prediction-rounds-settled', function() {
-      state.orderHistory = readPredictionOrderRecords();
+      state.orderHistory = reconcilePredictionVaultLossRecords();
       renderPredictionLedger();
       refreshPredictionOrderResolutions();
     });
@@ -16588,20 +16635,20 @@
 
     window.addEventListener('focus', function() {
       syncPredictionOrdersFromRemote().then(function() {
-        state.orderHistory = readPredictionOrderRecords();
+        state.orderHistory = reconcilePredictionVaultLossRecords();
         renderPredictionLedger();
       });
     });
     document.addEventListener('visibilitychange', function() {
       if (document.hidden) return;
       syncPredictionOrdersFromRemote().then(function() {
-        state.orderHistory = readPredictionOrderRecords();
+        state.orderHistory = reconcilePredictionVaultLossRecords();
         renderPredictionLedger();
       });
     });
     window.addEventListener('storage', function(event) {
       if (event && event.key && event.key !== PREDICTION_ORDERS_STORAGE_KEY) return;
-      state.orderHistory = readPredictionOrderRecords();
+      state.orderHistory = reconcilePredictionVaultLossRecords();
       renderPredictionLedger();
     });
 
