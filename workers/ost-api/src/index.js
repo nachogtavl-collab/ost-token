@@ -347,7 +347,12 @@ async function buildCanonicalBtcRound(env, opts) {
   if (roundOpen && Number.isFinite(Number(roundOpen.price)) && Number(roundOpen.price) > 0) {
     const storedOpen = Number(stored && stored.openPrice);
     if (!Number.isFinite(storedOpen) || Math.abs(storedOpen - Number(roundOpen.price)) > 0.000001 || stored.openPriceSource !== roundOpen.source) {
-      stored = await storeRoundOpenPrice(env, round, Number(roundOpen.price), roundOpen.source, roundOpen.t) || stored;
+      let beat = Number(stored && stored.priceToBeat);
+      if (!Number.isFinite(beat) || beat <= 0) {
+        const drift = await fetchBtcPrior5mDrift(round);
+        beat = projectPriceToBeat(Number(roundOpen.price), drift);
+      }
+      stored = await storeRoundOpenPrice(env, round, Number(roundOpen.price), roundOpen.source, roundOpen.t, beat) || stored;
     }
   }
   const openPrice = (roundOpen && Number(roundOpen.price)) || Number(stored && stored.openPrice) || (currentLatest && Number(currentLatest.p)) || 0;
@@ -1957,7 +1962,7 @@ export default {
       }
       if (isCurrentRound && ring.length < 2) {
         const snapshot = await buildCanonicalBtcRound(env, { refresh: true });
-        const openPrice = Number(snapshot && (snapshot.priceToBeat || snapshot.openPrice));
+        const openPrice = Number(snapshot && snapshot.openPrice);
         const livePrice = Number(snapshot && snapshot.livePrice) || openPrice;
         const liveTs = Number(snapshot && snapshot.livePriceTs) || Date.now();
         const synthetic = [];

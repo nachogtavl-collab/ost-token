@@ -278,7 +278,7 @@
     } catch (_) { apiRound = null; }
     if (apiRound && apiRound.openAt) rd = { openAt: apiRound.openAt, closeAt: apiRound.closeAt, id: apiRound.id || ('ost-btc5m-' + apiRound.openAt) };
     var rec = Object.assign({}, apiRound || {}, state.rounds[String(rd.openAt)] || {});
-    var openPrice = Number(rec.priceToBeat || rec.openPrice) || state.btcPrice;
+    var priceToBeat = Number(rec.priceToBeat || rec.openPrice) || state.btcPrice;
     var msLeft = rd.closeAt - Date.now();
     var yesOdds = Number(rec.yesPriceNumber);
     var noOdds = Number(rec.noPriceNumber);
@@ -290,17 +290,17 @@
     setText(root, 'countdown', fmtTime(msLeft));
     setText(root, 'btcPrice', fmtUsd(state.btcPrice));
     var deltaEl = root.querySelector('[data-bind="btcDelta"]');
-    if (deltaEl && state.btcPrice && openPrice) {
-      var d = state.btcPrice - openPrice;
-      var pct = (d / openPrice) * 100;
+    if (deltaEl && state.btcPrice && priceToBeat) {
+      var d = state.btcPrice - priceToBeat;
+      var pct = (d / priceToBeat) * 100;
       deltaEl.textContent = (d >= 0 ? '▲ +' : '▼ ') + fmtUsd(Math.abs(d)) + '  (' + pct.toFixed(2) + '%)';
       deltaEl.classList.toggle('is-up',   d >= 0);
       deltaEl.classList.toggle('is-down', d <  0);
     }
     setText(root, 'openAt',    new Date(rd.openAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-    setText(root, 'openPrice', openPrice ? fmtUsd(openPrice) : '—');
+    setText(root, 'openPrice', priceToBeat ? fmtUsd(priceToBeat) : '—');
     setText(root, 'btcSource', (rec.source || state.btcSource || 'direct').toString().toUpperCase());
-    setText(root, 'equation', rec.equation || ('YES > ' + fmtUsd(openPrice) + '; NO <= ' + fmtUsd(openPrice)));
+    setText(root, 'equation', rec.equation || ('YES > ' + fmtUsd(priceToBeat) + '; NO <= ' + fmtUsd(priceToBeat)));
     setText(root, 'yesOdds', fmtCents(yesOdds));
     setText(root, 'noOdds', fmtCents(noOdds));
     var yesBtn = root.querySelector('[data-bet="YES"]');
@@ -444,7 +444,7 @@
       primaryUrl: 'https://www.coinbase.com/price/bitcoin',
       primaryLabel: 'Open Coinbase',
       isOstNative: true,
-      meta: { kind: 'btc5m', openAt: rd.openAt, closeAt: rd.closeAt, openPrice: rec.priceToBeat || rec.openPrice || state.btcPrice, priceToBeat: rec.priceToBeat || rec.openPrice || state.btcPrice, livePrice: state.btcPrice, yesPriceNumber: yesOdds, noPriceNumber: noOdds, equation: rec.equation || ('YES wins if BTC closes above ' + fmtUsd(Number(rec.priceToBeat || rec.openPrice || state.btcPrice) || 0) + '; NO wins if BTC closes at or below ' + fmtUsd(Number(rec.priceToBeat || rec.openPrice || state.btcPrice) || 0) + '.'), priceSource: rec.source || state.btcSource || '' }
+      meta: { kind: 'btc5m', openAt: rd.openAt, closeAt: rd.closeAt, openPrice: rec.openPrice || state.btcPrice, priceToBeat: rec.priceToBeat || rec.openPrice || state.btcPrice, livePrice: state.btcPrice, yesPriceNumber: yesOdds, noPriceNumber: noOdds, equation: rec.equation || ('YES wins if BTC closes above ' + fmtUsd(Number(rec.priceToBeat || rec.openPrice || state.btcPrice) || 0) + '; NO wins if BTC closes at or below ' + fmtUsd(Number(rec.priceToBeat || rec.openPrice || state.btcPrice) || 0) + '.'), priceSource: rec.source || state.btcSource || '' }
     };
   }
 

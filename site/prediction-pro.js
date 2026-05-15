@@ -67,8 +67,9 @@
   // ---------------------------------------------------------------------------
   var FIVE_MIN_MS = 5 * 60 * 1000;
   var BTC_PRICE_URL = 'https://data-api.binance.vision/api/v3/ticker/price?symbol=BTCUSDT';
-  var BTC_REFRESH_MS = 250;           // tighter live tick cadence (was 450) so price feels live
+  var BTC_REFRESH_MS = 1500;          // canonical worker cadence; WebSocket ticks keep the UI live between polls
   var BTC_DEDUPE_MS  = 200;           // dedupe identical prints inside this window (was 300)
+  var BTC_LOCAL_TICK_FRESH_MS = 1500;
   var BTC_FEED_TIMEOUT_MS = 3000;
   var BTC_MAX_SERIES = 900;           // ~7.5 min of sub-second history for the chart
   var BTC_WS_URLS = [
@@ -139,6 +140,7 @@
   var nativeMarketStateInFlight = {};
   var nativeMarketStateInFlightBase = {};
   var NATIVE_STATE_BASE_TOLERANCE = 0.005;
+  var NATIVE_STATE_REFRESH_MS = 3000;
 
   function canonicalRoundIsFresh() {
     return canonicalRound && (Date.now() - canonicalRoundFetchedAt < 4500);
@@ -237,7 +239,7 @@
       var pendingBase = Number(nativeMarketStateInFlightBase[market.id]);
       if (!Number.isFinite(pendingBase) || Math.abs(pendingBase - baseYes) < NATIVE_STATE_BASE_TOLERANCE) return nativeMarketStateInFlight[market.id];
     }
-    if (now - (nativeMarketStateLastFetch[market.id] || 0) < 650) {
+    if (now - (nativeMarketStateLastFetch[market.id] || 0) < NATIVE_STATE_REFRESH_MS) {
       var cachedState = cachedNativeMarketState(market.id);
       var cachedBase = Number(cachedState && cachedState.baseYesPrice);
       if (cachedState && (!Number.isFinite(cachedBase) || Math.abs(cachedBase - baseYes) < NATIVE_STATE_BASE_TOLERANCE)) return Promise.resolve(cachedState);
@@ -451,7 +453,7 @@
   function fetchBtcSpot(options) {
     var force = options && options.force;
     var directOnly = options && options.directOnly;
-    if (!force && btcLastTick.price && Date.now() - btcLastTick.ts < 350) {
+    if (!force && btcLastTick.price && Date.now() - btcLastTick.ts < BTC_LOCAL_TICK_FRESH_MS) {
       return Promise.resolve(Object.assign({}, btcLastTick));
     }
     if (directOnly) return fetchDirectBtcSpot();
@@ -701,7 +703,8 @@
     var liveTs = localLiveFresh
       ? btcLastTick.ts
       : ((canonLiveTrusted && canon && Number(canon.livePriceTs)) || btcLastTick.ts || (canon && Number(canon.livePriceTs)) || 0);
-    var openPrice = (Number.isFinite(canonOpenPrice) && canonOpenPrice > 0 ? canonOpenPrice : 0) || Number(roundRecord.openPrice) || 0;
+    var localOpenFallback = Number.isFinite(livePrice) && livePrice > 1000 ? livePrice : 0;
+    var openPrice = (Number.isFinite(canonOpenPrice) && canonOpenPrice > 0 ? canonOpenPrice : 0) || Number(roundRecord.openPrice) || localOpenFallback || 0;
     // Forward-projected price-to-beat. Trust canonical when present so all
     // users agree; otherwise fall back to local projection from recent BTC
     // drift, finally to openPrice if nothing else is available.
@@ -736,8 +739,8 @@
       volumeValue: '5 min',
       volumeNumber: 1,
       secondaryMetricLabel: 'Price to beat',
-      secondaryMetricValue: openPrice ? formatUsd(openPrice) : '--',
-      secondaryMetricNumber: openPrice,
+      secondaryMetricValue: priceToBeat ? formatUsd(priceToBeat) : '--',
+      secondaryMetricNumber: priceToBeat,
       closeText: 'Closes ' + new Date(b.closeAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       closeLabel: 'Closes',
       topic: 'crypto',

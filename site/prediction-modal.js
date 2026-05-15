@@ -59,7 +59,7 @@
   var nativeStateInFlight = {};
   var nativeStateInFlightBase = {};
   var NATIVE_STATE_BASE_TOLERANCE = 0.005;
-  var NATIVE_STATE_REFRESH_MS = 1200;
+  var NATIVE_STATE_REFRESH_MS = 3000;
 
   function ostApiBase() {
     return String(window.OST_API_BASE || '').replace(/\/$/, '');
