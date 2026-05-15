@@ -1848,8 +1848,7 @@ liveTimers.forEach(function (t) {
       var s = getStake();
       if (!s) { toast('Set a stake first.', 'err'); return; }
       toast('Submitting ' + selectedSide + ' ' + s + ' OST…', 'ok');
-      (market.isOstNative ? withTimeout(refreshNativeMarketState(market, bodyEl), 1200, null) : Promise.resolve())
-        .then(function () { return placeBet(market, selectedSide, s, selectedOutcomeKey); })
+      placeBet(market, selectedSide, s, selectedOutcomeKey)
         .then(function (rec) {
           toast('✅ Bet recorded' + (rec && rec.sig ? ' (sig ' + String(rec.sig).slice(0, 8) + '…)' : '') + '. Check Open Positions below.', 'ok');
           // Share to global feed so every other OST user sees the tick live.
