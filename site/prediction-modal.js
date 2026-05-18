@@ -258,9 +258,38 @@
     var yes = Number(market && market.yesPriceNumber);
     return Number.isFinite(yes) ? yes : 0.5;
   }
+
+  function nativePressureTools() {
+    try { return window.OST_NATIVE_MARKET_PRESSURE || null; } catch (_) { return null; }
+  }
+
+  function quoteNativeStateWithPressure(market, state, baseYes) {
+    var tools = nativePressureTools();
+    if (!market || !state || !tools || typeof tools.quote !== 'function') return state;
+    try { return tools.quote(market.id, state, baseYes); } catch (_) { return state; }
+  }
+
+  function confirmNativeStatePressure(market, state) {
+    var tools = nativePressureTools();
+    if (!market || !state || state.localPressureApplied || !tools || typeof tools.confirm !== 'function') return;
+    try { tools.confirm(market.id, state); } catch (_) {}
+  }
+
+  function rememberNativePressure(record) {
+    var tools = nativePressureTools();
+    if (!record || !tools || typeof tools.remember !== 'function') return null;
+    try { return tools.remember(record); } catch (_) { return null; }
+  }
+
+  function syncNativeQuoteBody(bodyEl) {
+    try { if (bodyEl && typeof bodyEl.__syncNativeQuoteUi === 'function') bodyEl.__syncNativeQuoteUi(); } catch (_) {}
+  }
+
   function applyNativeMarketState(market, state) {
     if (!market || !state) return null;
     market.meta = market.meta || {};
+    confirmNativeStatePressure(market, state);
+    state = quoteNativeStateWithPressure(market, state, nativeBaseYesInput(market, state.baseYesPrice));
     var yes = Number(state.yesPriceNumber);
     var no = Number(state.noPriceNumber);
     if (!Number.isFinite(yes) || !Number.isFinite(no)) return null;
@@ -345,7 +374,7 @@
 
   // Push a freshly-placed bet to the global ost-api positions feed so every
   // other OST user sees it in their "Live OST flow" ticker.
-  function shareBetGlobally(market, side, stake, rec, outcomeKey) {
+  function shareBetGlobally(market, side, stake, rec, outcomeKey, bodyEl) {
     try {
       var base = (window.OST_API_BASE || '').replace(/\/$/, '');
       var wallet = (rec && rec.wallet) ||
@@ -384,6 +413,8 @@
         ts: rec && (rec.ts || rec.createdAt) || new Date().toISOString()
       });
       optimisticallyMergeFlowRecord(market, payload);
+      rememberNativePressure(payload);
+      syncNativeQuoteBody(bodyEl);
       if (!base) return;
       fetch(base + '/positions', {
         method: 'POST',
@@ -394,7 +425,7 @@
           if (j && j.marketState) applyNativeMarketState(market, j.marketState);
           if (j && j.record) optimisticallyMergeFlowRecord(market, j.record);
           if (j && j.flowRecord) optimisticallyMergeFlowRecord(market, j.flowRecord);
-          if (bodyEl && typeof bodyEl.__syncNativeQuoteUi === 'function') bodyEl.__syncNativeQuoteUi();
+          syncNativeQuoteBody(bodyEl);
         })
         .catch(function () { /* fire-and-forget */ });
     } catch (_) { /* never block UI */ }
@@ -1589,34 +1620,37 @@ liveTimers.forEach(function (t) {
       '</div>' +
     '</section>';
   }
-  function postPositionUpdate(order, market) {
+  function postPositionUpdate(order, market, bodyEl) {
     try {
       var base = (window.OST_API_BASE || '').replace(/\/$/, '');
+      var payload = Object.assign({}, order, {
+        wallet: order.wallet || ownWallet() || 'anon',
+        marketTitle: order.title || order.marketTitle || '',
+        ts: order.createdAt || order.ts || Date.now(),
+        baseYesPrice: market ? nativeBaseYesInput(market) : null
+      });
+      rememberNativePressure(payload);
+      syncNativeQuoteBody(bodyEl);
       if (!base) return;
       fetch(base + '/positions', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(Object.assign({}, order, {
-          wallet: order.wallet || ownWallet() || 'anon',
-          marketTitle: order.title || order.marketTitle || '',
-          ts: order.createdAt || order.ts || Date.now(),
-          baseYesPrice: market ? nativeBaseYesInput(market) : null
-        }))
+        body: JSON.stringify(payload)
       }).then(function (r) { return r && r.ok ? r.json() : null; })
         .then(function (j) {
           if (market && j && j.marketState) applyNativeMarketState(market, j.marketState);
           if (market && j && j.record) optimisticallyMergeFlowRecord(market, j.record);
           if (market && j && j.flowRecord) optimisticallyMergeFlowRecord(market, j.flowRecord);
-          if (market && bodyEl && typeof bodyEl.__syncNativeQuoteUi === 'function') bodyEl.__syncNativeQuoteUi();
+          syncNativeQuoteBody(bodyEl);
         })
         .catch(function () {});
     } catch (_) {}
   }
-  function notifyOrderChanged() {
-    try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch (_) {}
+  function notifyOrderChanged(order, market) {
+    try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed', { detail: { order: order || null, marketId: order && order.marketId || (market && market.id) || '' } })); } catch (_) {}
     try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {}
   }
-  function sellOrder(order, payout, kind, market, sale) {
+  function sellOrder(order, payout, kind, market, sale, bodyEl) {
     // Positive payouts must land on-chain before the ticket is marked sold.
     var doLocal = function () {
       order.cashedOut = true;
@@ -1657,8 +1691,8 @@ liveTimers.forEach(function (t) {
       if (idx >= 0) orders[idx] = order; else orders.unshift(order);
       writeOrders(orders);
       if (sellTick) optimisticallyMergeFlowRecord(market, sellTick);
-      postPositionUpdate(order, market);
-      notifyOrderChanged();
+      postPositionUpdate(order, market, bodyEl);
+      notifyOrderChanged(order, market);
       return Promise.resolve({ ost: Number(payout) || 0, sig: order.cashoutSig || '' });
     };
     if (!(Number(payout) > 0)) return doLocal();
@@ -1975,7 +2009,7 @@ liveTimers.forEach(function (t) {
         .then(function (rec) {
           toast('✅ Bet recorded' + (rec && rec.sig ? ' (sig ' + String(rec.sig).slice(0, 8) + '…)' : '') + '. Check Open Positions below.', 'ok');
           // Share to global feed so every other OST user sees the tick live.
-          shareBetGlobally(market, selectedSide, s, rec, selectedOutcomeKey);
+          shareBetGlobally(market, selectedSide, s, rec, selectedOutcomeKey, bodyEl);
           bodyEl.__syncNativeQuoteUi && bodyEl.__syncNativeQuoteUi();
         })
         .catch(function (err) {
@@ -2129,7 +2163,7 @@ liveTimers.forEach(function (t) {
           if (!(payout > 0)) { toast('Cannot sell at 0¢', 'err'); return; }
           var orig = btn.textContent;
           btn.disabled = true; btn.textContent = '…';
-          sellOrder(order, payout, 'prediction-sell-modal', market, { sellPrice: livePx, sellValue: payout, shares: shares })
+          sellOrder(order, payout, 'prediction-sell-modal', market, { sellPrice: livePx, sellValue: payout, shares: shares }, bodyEl)
             .then(function (r) {
               toast('✅ Sold ' + (Number(r.ost) || payout).toFixed(2) + ' OST' + (r.sig ? ' (' + String(r.sig).slice(0, 8) + '…)' : ''), 'ok');
               refreshSellList();

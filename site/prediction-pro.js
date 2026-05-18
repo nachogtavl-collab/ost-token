@@ -141,6 +141,11 @@
   var nativeMarketStateInFlightBase = {};
   var NATIVE_STATE_BASE_TOLERANCE = 0.005;
   var NATIVE_STATE_REFRESH_MS = 3000;
+  var NATIVE_LOCAL_PRESSURE_TTL_MS = 45000;
+  var NATIVE_MARKET_LIQUIDITY_SHARES = 750;
+  var NATIVE_MARKET_LIQUIDITY_OST = 500;
+  var NATIVE_MARKET_MAX_SHARE_IMPACT = 0.32;
+  var NATIVE_MARKET_MAX_STAKE_IMPACT = 0.08;
 
   function canonicalRoundIsFresh() {
     return canonicalRound && (Date.now() - canonicalRoundFetchedAt < 4500);
@@ -164,6 +169,236 @@
     return Object.assign({}, btcLastTick);
   }
 
+  function nativePressureStore() {
+    try {
+      window.__ostNativeLocalPressure = window.__ostNativeLocalPressure || {};
+      return window.__ostNativeLocalPressure;
+    } catch (_) {
+      return {};
+    }
+  }
+
+  function cleanNativeNumber(value, fallback) {
+    var number = Number(value);
+    return Number.isFinite(number) ? number : (Number(fallback) || 0);
+  }
+
+  function cleanNativeProbability(value) {
+    var number = Number(value);
+    if (!Number.isFinite(number)) return null;
+    if (number > 1 && number <= 100) number = number / 100;
+    return Math.max(0, Math.min(1, number));
+  }
+
+  function clampNativeQuoteProbability(value) {
+    var probability = cleanNativeProbability(value);
+    return probability == null ? null : Math.max(0.02, Math.min(0.98, probability));
+  }
+
+  function isOstNativeMarketIdentifier(marketId, source) {
+    var marketText = String(marketId == null ? '' : marketId);
+    var sourceText = String(source == null ? '' : source).toLowerCase();
+    return marketText.indexOf('ost-btc5m-') === 0 || marketText === 'ost-btc5m' || sourceText === 'ost' || sourceText === 'ost-native';
+  }
+
+  function nativePressureMarketId(record) {
+    return String(record && (record.marketId || record.id) || '').trim();
+  }
+
+  function nativePressureRecordKey(record) {
+    if (!record) return '';
+    return String(record.signature || record.sig || record.remoteId || record.id || [record.wallet || '', record.marketId || '', record.side || '', record.createdAt || record.ts || ''].join(':'));
+  }
+
+  function nativePressureRecordTime(record) {
+    var raw = record && (record.cashoutAt || record.resolvedAt || record.syncedAt || record.createdAt || record.ts || record.quotedAt);
+    var number = Number(raw);
+    if (Number.isFinite(number) && number > 0) return number < 100000000000 ? number * 1000 : number;
+    var parsed = Date.parse(raw);
+    return Number.isFinite(parsed) ? parsed : Date.now();
+  }
+
+  function nativePressureSide(record) {
+    return String(record && record.side || '').toUpperCase() === 'NO' || String(record && record.side || '').toLowerCase() === 'no' ? 'NO' : 'YES';
+  }
+
+  function nativePositionIsClosed(record) {
+    var status = String(record && (record.status || record.outcome) || '').toLowerCase();
+    return !!(record && (record.cashedOut || record.resolved || Number(record.cashoutAt || 0) > 0 || ['sold', 'cashed-out', 'settled', 'won', 'lost', 'closed', 'resolved'].indexOf(status) >= 0));
+  }
+
+  function nativePositionImpact(record, forceOpen) {
+    var side = nativePressureSide(record);
+    var isOpen = forceOpen || !nativePositionIsClosed(record);
+    var stake = Math.max(0, cleanNativeNumber(record && (record.stake != null ? record.stake : record.amount), 0));
+    var selectedPrice = cleanNativeProbability(record && (record.price != null ? record.price : record.entryPrice));
+    var yesPrice = cleanNativeProbability(record && (record.yesPrice != null ? record.yesPrice : record.tradableYesPrice));
+    var noPrice = cleanNativeProbability(record && (record.noPrice != null ? record.noPrice : record.tradableNoPrice));
+    var sidePrice = selectedPrice == null ? 0 : selectedPrice;
+    if (side === 'NO' && noPrice != null) sidePrice = noPrice;
+    if (side === 'YES' && yesPrice != null) sidePrice = yesPrice;
+    var shares = Math.max(0, cleanNativeNumber(record && record.shares, 0));
+    if (!(shares > 0) && stake > 0 && sidePrice > 0) shares = stake / sidePrice;
+    return {
+      openYesShares: isOpen && side === 'YES' ? shares : 0,
+      openNoShares: isOpen && side === 'NO' ? shares : 0,
+      openYesStake: isOpen && side === 'YES' ? stake : 0,
+      openNoStake: isOpen && side === 'NO' ? stake : 0
+    };
+  }
+
+  function nativeStateCanCoverPending(state, pending) {
+    if (!state || !pending || pending.direction < 0) return true;
+    var impact = pending.impact || {};
+    if (impact.openYesShares > 0) return cleanNativeNumber(state.openYesShares, 0) + 1e-6 >= impact.openYesShares * 0.9;
+    if (impact.openNoShares > 0) return cleanNativeNumber(state.openNoShares, 0) + 1e-6 >= impact.openNoShares * 0.9;
+    if (impact.openYesStake > 0) return cleanNativeNumber(state.openYesStake, 0) + 1e-6 >= impact.openYesStake * 0.9;
+    if (impact.openNoStake > 0) return cleanNativeNumber(state.openNoStake, 0) + 1e-6 >= impact.openNoStake * 0.9;
+    return true;
+  }
+
+  function confirmNativeLocalPressure(marketId, state) {
+    if (!marketId || !state || state.localPressureApplied) return false;
+    var store = nativePressureStore();
+    var bucket = store[marketId];
+    if (!bucket || !bucket.records) return false;
+    var updatedAt = cleanNativeNumber(state.updatedAt || state.cachedAt, 0);
+    if (updatedAt && updatedAt < 100000000000) updatedAt *= 1000;
+    var now = Date.now();
+    var changed = false;
+    Object.keys(bucket.records).forEach(function (key) {
+      var pending = bucket.records[key];
+      if (!pending) return;
+      var expired = now - cleanNativeNumber(pending.ts, now) > NATIVE_LOCAL_PRESSURE_TTL_MS;
+      var confirmed = updatedAt && updatedAt + 1500 >= cleanNativeNumber(pending.recordTs, pending.ts) && nativeStateCanCoverPending(state, pending);
+      if (expired || confirmed) {
+        delete bucket.records[key];
+        changed = true;
+      }
+    });
+    return changed;
+  }
+
+  function rememberNativeLocalPressureRecord(record) {
+    var marketId = nativePressureMarketId(record);
+    if (!marketId || !isOstNativeMarketIdentifier(marketId, record && record.source)) return null;
+    var key = nativePressureRecordKey(record);
+    if (!key) return null;
+    var store = nativePressureStore();
+    var bucket = store[marketId] = store[marketId] || { records: {} };
+    var isClosing = nativePositionIsClosed(record);
+    if (isClosing && bucket.records[key] && bucket.records[key].direction > 0) {
+      delete bucket.records[key];
+      return { marketId: marketId, key: key, changed: true };
+    }
+    var impact = nativePositionImpact(record, isClosing);
+    var hasImpact = impact.openYesShares || impact.openNoShares || impact.openYesStake || impact.openNoStake;
+    if (!hasImpact) return null;
+    bucket.records[key] = {
+      key: key,
+      direction: isClosing ? -1 : 1,
+      impact: impact,
+      ts: Date.now(),
+      recordTs: nativePressureRecordTime(record)
+    };
+    return { marketId: marketId, key: key, changed: true };
+  }
+
+  function baseNativeStateForQuote(marketId, state, baseYes) {
+    var source = state && state.localPressureApplied ? {
+      marketId: state.marketId || marketId,
+      openYesShares: state.serverOpenYesShares,
+      openNoShares: state.serverOpenNoShares,
+      openYesStake: state.serverOpenYesStake,
+      openNoStake: state.serverOpenNoStake,
+      liquidityShares: state.liquidityShares,
+      liquidityOst: state.liquidityOst,
+      orderCount: state.serverOrderCount != null ? state.serverOrderCount : state.orderCount,
+      updatedAt: state.serverUpdatedAt || state.updatedAt,
+      baseYesPrice: state.serverBaseYesPrice != null ? state.serverBaseYesPrice : state.baseYesPrice
+    } : (state || {});
+    var base = clampNativeQuoteProbability(baseYes != null ? baseYes : source.baseYesPrice);
+    if (base == null) base = 0.5;
+    return {
+      marketId: source.marketId || marketId,
+      openYesShares: Math.max(0, cleanNativeNumber(source.openYesShares, 0)),
+      openNoShares: Math.max(0, cleanNativeNumber(source.openNoShares, 0)),
+      openYesStake: Math.max(0, cleanNativeNumber(source.openYesStake, 0)),
+      openNoStake: Math.max(0, cleanNativeNumber(source.openNoStake, 0)),
+      liquidityShares: Math.max(100, cleanNativeNumber(source.liquidityShares, NATIVE_MARKET_LIQUIDITY_SHARES)),
+      liquidityOst: Math.max(100, cleanNativeNumber(source.liquidityOst, NATIVE_MARKET_LIQUIDITY_OST)),
+      orderCount: Math.max(0, cleanNativeNumber(source.orderCount, 0)),
+      updatedAt: cleanNativeNumber(source.updatedAt, 0),
+      baseYesPrice: base
+    };
+  }
+
+  function quoteNativeMarketStateWithLocalPressure(marketId, state, baseYes) {
+    if (!marketId) return state || null;
+    var baseState = baseNativeStateForQuote(marketId, state, baseYes);
+    var store = nativePressureStore();
+    var bucket = store[marketId];
+    var now = Date.now();
+    var pendingCount = 0;
+    var localNetShares = 0;
+    var localNetStake = 0;
+    if (bucket && bucket.records) {
+      Object.keys(bucket.records).forEach(function (key) {
+        var pending = bucket.records[key];
+        if (!pending || now - cleanNativeNumber(pending.ts, now) > NATIVE_LOCAL_PRESSURE_TTL_MS) {
+          delete bucket.records[key];
+          return;
+        }
+        var direction = pending.direction < 0 ? -1 : 1;
+        var impact = pending.impact || {};
+        baseState.openYesShares = Math.max(0, baseState.openYesShares + direction * cleanNativeNumber(impact.openYesShares, 0));
+        baseState.openNoShares = Math.max(0, baseState.openNoShares + direction * cleanNativeNumber(impact.openNoShares, 0));
+        baseState.openYesStake = Math.max(0, baseState.openYesStake + direction * cleanNativeNumber(impact.openYesStake, 0));
+        baseState.openNoStake = Math.max(0, baseState.openNoStake + direction * cleanNativeNumber(impact.openNoStake, 0));
+        localNetShares += direction * (cleanNativeNumber(impact.openYesShares, 0) - cleanNativeNumber(impact.openNoShares, 0));
+        localNetStake += direction * (cleanNativeNumber(impact.openYesStake, 0) - cleanNativeNumber(impact.openNoStake, 0));
+        pendingCount += 1;
+      });
+    }
+    var netShares = baseState.openYesShares - baseState.openNoShares;
+    var netStake = baseState.openYesStake - baseState.openNoStake;
+    var shareImpact = Math.tanh(netShares / baseState.liquidityShares) * NATIVE_MARKET_MAX_SHARE_IMPACT;
+    var stakeImpact = Math.tanh(netStake / baseState.liquidityOst) * NATIVE_MARKET_MAX_STAKE_IMPACT;
+    var yesPrice = clampNativeQuoteProbability(baseState.baseYesPrice + shareImpact + stakeImpact);
+    if (yesPrice == null) yesPrice = 0.5;
+    return Object.assign({}, state || {}, baseState, {
+      baseNoPrice: 1 - baseState.baseYesPrice,
+      yesPriceNumber: yesPrice,
+      noPriceNumber: 1 - yesPrice,
+      netShares: netShares,
+      netStake: netStake,
+      shareImpact: shareImpact,
+      stakeImpact: stakeImpact,
+      totalImpact: yesPrice - baseState.baseYesPrice,
+      localPressureApplied: pendingCount > 0,
+      localPendingCount: pendingCount,
+      localNetShares: localNetShares,
+      localNetStake: localNetStake,
+      serverOpenYesShares: (state && state.localPressureApplied) ? cleanNativeNumber(state.serverOpenYesShares, 0) : cleanNativeNumber(state && state.openYesShares, 0),
+      serverOpenNoShares: (state && state.localPressureApplied) ? cleanNativeNumber(state.serverOpenNoShares, 0) : cleanNativeNumber(state && state.openNoShares, 0),
+      serverOpenYesStake: (state && state.localPressureApplied) ? cleanNativeNumber(state.serverOpenYesStake, 0) : cleanNativeNumber(state && state.openYesStake, 0),
+      serverOpenNoStake: (state && state.localPressureApplied) ? cleanNativeNumber(state.serverOpenNoStake, 0) : cleanNativeNumber(state && state.openNoStake, 0),
+      serverOrderCount: state && state.localPressureApplied ? state.serverOrderCount : cleanNativeNumber(state && state.orderCount, 0),
+      serverUpdatedAt: state && state.localPressureApplied ? state.serverUpdatedAt : cleanNativeNumber(state && state.updatedAt, 0),
+      serverBaseYesPrice: state && state.localPressureApplied ? state.serverBaseYesPrice : cleanNativeNumber(state && state.baseYesPrice, baseState.baseYesPrice),
+      updatedAt: pendingCount > 0 ? now : baseState.updatedAt
+    });
+  }
+
+  window.OST_NATIVE_MARKET_PRESSURE = Object.assign(window.OST_NATIVE_MARKET_PRESSURE || {}, {
+    remember: rememberNativeLocalPressureRecord,
+    confirm: confirmNativeLocalPressure,
+    quote: quoteNativeMarketStateWithLocalPressure
+  });
+  window.__ostRememberNativeMarketPressure = rememberNativeLocalPressureRecord;
+  window.__ostConfirmNativeMarketPressure = confirmNativeLocalPressure;
+  window.__ostQuoteNativeMarketWithLocalPressure = quoteNativeMarketStateWithLocalPressure;
+
   function canonicalRoundHasHotLivePrice(round) {
     var live = Number(round && round.livePrice);
     if (!Number.isFinite(live) || live <= 1000) return false;
@@ -178,6 +413,7 @@
 
   function rememberNativeMarketState(marketId, state) {
     if (!marketId || !state) return null;
+    confirmNativeLocalPressure(marketId, state);
     nativeMarketStateById[marketId] = Object.assign({}, state, { cachedAt: Date.now() });
     try {
       window.__ostNativeMarketState = window.__ostNativeMarketState || {};
@@ -190,18 +426,22 @@
   function cachedNativeMarketState(marketId) {
     var state = nativeMarketStateById[marketId];
     try {
-      if (!state && window.__ostNativeMarketState) state = window.__ostNativeMarketState[marketId];
+      var shared = window.__ostNativeMarketState && window.__ostNativeMarketState[marketId];
+      var stateUpdatedAt = Number(state && (state.updatedAt || state.cachedAt)) || 0;
+      var sharedUpdatedAt = Number(shared && (shared.updatedAt || shared.cachedAt)) || 0;
+      if (!state || (shared && sharedUpdatedAt >= stateUpdatedAt)) state = shared;
     } catch (_) {}
     return state || null;
   }
 
   function applyNativeMarketStateToBtcMarket(market, fairYes) {
-    var state = cachedNativeMarketState(market && market.id);
-    var yes = Number(state && state.yesPriceNumber);
-    var no = Number(state && state.noPriceNumber);
     var baseYes = Number(fairYes);
     if (!Number.isFinite(baseYes)) baseYes = Number(market && market.yesPriceNumber);
     if (!Number.isFinite(baseYes)) baseYes = 0.5;
+    var rawState = cachedNativeMarketState(market && market.id);
+    var state = quoteNativeMarketStateWithLocalPressure(market && market.id, rawState, baseYes);
+    var yes = Number(state && state.yesPriceNumber);
+    var no = Number(state && state.noPriceNumber);
     market.baseYesPriceNumber = baseYes;
     market.baseNoPriceNumber = 1 - baseYes;
     market.fairYesPriceNumber = baseYes;
@@ -227,6 +467,7 @@
     market.meta.openNoStake = Number(state.openNoStake) || 0;
     market.meta.openYesShares = Number(state.openYesShares) || 0;
     market.meta.openNoShares = Number(state.openNoShares) || 0;
+    market.meta.localPendingCount = Number(state.localPendingCount) || 0;
     if (market && market.meta && /btc\s*-?\s*5m|btc5m/i.test(String(market.meta.kind || ''))) {
       market.meta.tradableYesPriceNumber = market.yesPriceNumber;
       market.meta.tradableNoPriceNumber = market.noPriceNumber;
@@ -265,7 +506,7 @@
       .then(function (j) {
         var state = j && (j.state || j.marketState);
         if (!state) return null;
-        rememberNativeMarketState(market.id, state);
+        state = rememberNativeMarketState(market.id, state) || state;
         try {
           window.dispatchEvent(new CustomEvent('ost:btc-market-updated', {
             detail: { reason: 'native-market-state', tick: Object.assign({}, btcLastTick), market: buildFiveMinBtcMarket() }
@@ -283,6 +524,44 @@
       });
     return nativeMarketStateInFlight[market.id];
   }
+
+  function publishNativeLocalPressureUpdate(marketId, reason) {
+    if (!marketId) return;
+    nativeMarketStateLastFetch[marketId] = 0;
+    var market = null;
+    try { market = buildFiveMinBtcMarket(); } catch (_) { market = null; }
+    if (market && market.id === marketId) {
+      try {
+        if (market.marketState) {
+          window.dispatchEvent(new CustomEvent('ost:native-market-state', { detail: { marketId: marketId, state: market.marketState, reason: reason || 'local-pressure' } }));
+        }
+      } catch (_) {}
+      try {
+        window.dispatchEvent(new CustomEvent('ost:btc-market-updated', {
+          detail: { reason: reason || 'local-pressure', tick: Object.assign({}, btcLastTick), market: market }
+        }));
+      } catch (_) {}
+      try { withSoftTimeout(refreshNativeBtcMarketState(market), 1800, null); } catch (_) {}
+    }
+  }
+
+  function latestNativeOrderForPressure() {
+    try {
+      return readOrders().filter(function (order) {
+        return order && isOstNativeMarketIdentifier(order.marketId, order.source) && Date.now() - nativePressureRecordTime(order) < 15000;
+      })[0] || null;
+    } catch (_) { return null; }
+  }
+
+  function onNativePressureOrderEvent(event) {
+    var detail = event && event.detail;
+    var record = detail && (detail.record || detail.order || detail.position) || detail || latestNativeOrderForPressure();
+    var result = rememberNativeLocalPressureRecord(record);
+    if (result && result.changed) publishNativeLocalPressureUpdate(result.marketId, event && event.type || 'prediction-order');
+  }
+
+  try { window.addEventListener('ost:prediction-order-recorded', onNativePressureOrderEvent); } catch (_) {}
+  try { window.addEventListener('ost:prediction:order-changed', onNativePressureOrderEvent); } catch (_) {}
 
   function clampNumber(value, min, max) {
     return Math.min(max, Math.max(min, value));
@@ -1511,7 +1790,10 @@
     return refreshFiveMinBtcQuote().then(function () {
       var payload = buildFiveMinBtcOrderPayload(req);
       return window.OST_PREDICTION_API.placeOrder(payload).then(function (result) {
-        return result && result.record ? result.record : result;
+        var record = result && result.record ? result.record : result;
+        var pressure = rememberNativeLocalPressureRecord(record);
+        if (pressure && pressure.changed) publishNativeLocalPressureUpdate(pressure.marketId, 'place-bet-direct');
+        return record;
       });
     });
   }

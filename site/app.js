@@ -2946,6 +2946,21 @@
           signature: record.signature || record.sig || '',
           ts: record.createdAt || record.ts || Date.now()
         }))
+      }).then(function(response) {
+        return response && response.ok ? response.json() : null;
+      }).then(function(payload) {
+        var marketState = payload && payload.marketState;
+        if (!marketState) return;
+        try {
+          if (window.OST_NATIVE_MARKET_PRESSURE && typeof window.OST_NATIVE_MARKET_PRESSURE.confirm === 'function') {
+            window.OST_NATIVE_MARKET_PRESSURE.confirm(record.marketId, marketState);
+          }
+        } catch {}
+        try {
+          window.__ostNativeMarketState = window.__ostNativeMarketState || {};
+          window.__ostNativeMarketState[record.marketId] = marketState;
+          window.dispatchEvent(new CustomEvent('ost:native-market-state', { detail: { marketId: record.marketId, state: marketState, record: record } }));
+        } catch {}
       }).catch(function() {});
     } catch {}
   }
@@ -14210,8 +14225,36 @@
       return potentialReturn > 0 ? potentialReturn : 0;
     }
 
+    function getNativeLivePriceForOrder(order, side) {
+      if (!order || !order.marketId) return NaN;
+      var marketId = String(order.marketId || '');
+      var sideKey = side === 'no' ? 'no' : 'yes';
+      try {
+        if (marketId.indexOf('ost-btc5m-') === 0 && window.OST_PREDICTION_API && typeof window.OST_PREDICTION_API.fiveMinRound === 'function') {
+          var round = window.OST_PREDICTION_API.fiveMinRound();
+          if (round && String(round.id || round.marketId || '') === marketId) {
+            var roundPrice = sideKey === 'no' ? Number(round.noPriceNumber) : Number(round.yesPriceNumber);
+            if (Number.isFinite(roundPrice) && roundPrice > 0) return roundPrice;
+          }
+        }
+      } catch (_) {}
+      try {
+        var nativeState = window.__ostNativeMarketState && window.__ostNativeMarketState[marketId];
+        if (nativeState) {
+          if (window.OST_NATIVE_MARKET_PRESSURE && typeof window.OST_NATIVE_MARKET_PRESSURE.quote === 'function') {
+            nativeState = window.OST_NATIVE_MARKET_PRESSURE.quote(marketId, nativeState, nativeState.baseYesPrice || order.baseYesPrice || order.fairYesPrice);
+          }
+          var statePrice = sideKey === 'no' ? Number(nativeState.noPriceNumber) : Number(nativeState.yesPriceNumber);
+          if (Number.isFinite(statePrice) && statePrice > 0) return statePrice;
+        }
+      } catch (_) {}
+      return NaN;
+    }
+
     function getLivePriceForOrder(order, market) {
       var side = order && order.side === 'no' ? 'no' : 'yes';
+      var nativeLivePrice = getNativeLivePriceForOrder(order, side);
+      if (Number.isFinite(nativeLivePrice) && nativeLivePrice > 0) return nativeLivePrice;
       var contract = market ? buildTradeContract(market, side, order && order.outcomeKey) : null;
       var livePrice = contract ? Number(contract.price) : NaN;
       if (Number.isFinite(livePrice) && livePrice > 0) return livePrice;
@@ -14558,6 +14601,7 @@
             sharePredictionOrderRecord(order);
             state.orderHistory = orders;
             renderPredictionLedger();
+            try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed', { detail: { order: order, marketId: order.marketId || '' } })); } catch(_) {}
             return;
           }
           var payout = Number(action.payout);
@@ -14604,6 +14648,7 @@
             sharePredictionOrderRecord(order);
             state.orderHistory = orders;
             renderPredictionLedger();
+            try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed', { detail: { order: order, marketId: order.marketId || '' } })); } catch(e){}
             try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch(e){}
             if (typeof window.notifyOstTxHistory === 'function') window.notifyOstTxHistory();
             // Record balance snapshot for wallet chart and refresh trade desk balance
@@ -14666,7 +14711,7 @@
               sharePredictionOrderRecord(order);
               state.orderHistory = orders;
               renderPredictionLedger();
-              try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch(_) {}
+              try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed', { detail: { order: order, marketId: order.marketId || '' } })); } catch(_) {}
               try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch(_) {}
             } catch (fallbackErr) {
               console.error('[prediction cashout] local fallback also failed', fallbackErr);
@@ -16184,6 +16229,15 @@
         } catch (_) { market = null; }
       }
       scheduleOstNativePredictionRefresh(market);
+      state.orderHistory = reconcilePredictionVaultLossRecords();
+      renderPredictionLedger();
+    });
+
+    window.addEventListener('ost:native-market-state', function(event) {
+      var marketId = event && event.detail && event.detail.marketId;
+      if (marketId && isOstBtcMarketId(marketId)) scheduleOstNativePredictionRefresh();
+      state.orderHistory = reconcilePredictionVaultLossRecords();
+      renderPredictionLedger();
     });
 
     function loadDirectPredictionMarkets() {
