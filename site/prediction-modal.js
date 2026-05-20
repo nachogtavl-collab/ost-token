@@ -1520,6 +1520,30 @@
       return Promise.reject(new Error('This 5-minute round just closed. Loading the next round...'));
     }
     var requestedSide = String(side || 'YES').toUpperCase() === 'NO' ? 'NO' : 'YES';
+
+    // Mobile clients often reach this path before the centralized OST share state
+    // has finished loading. Instead of rejecting outright, fetch the live state
+    // here so the buy can proceed using the same authoritative quote that the
+    // arbitrage / pressure pricing depends on.
+    function ensureNativeAskReady() {
+      if (!market || !market.isOstNative) return Promise.resolve();
+      var existing = market.marketState || (market.meta && market.meta.marketState) || null;
+      var ask = requestedSide === 'NO'
+        ? Number(existing && (existing.noAskPriceNumber != null ? existing.noAskPriceNumber : existing.noPriceNumber))
+        : Number(existing && (existing.yesAskPriceNumber != null ? existing.yesAskPriceNumber : existing.yesPriceNumber));
+      if (existing && Number.isFinite(ask) && ask > 0) return Promise.resolve();
+      return withTimeout(
+        refreshNativeMarketState(market, null, nativeBaseYesInput(market)),
+        5000,
+        null
+      );
+    }
+
+    return ensureNativeAskReady().then(function () { return placeBetDirectlyResolved(market, side, stake, outcomeKey, requestedSide); });
+  }
+
+  function placeBetDirectlyResolved(market, side, stake, outcomeKey, requestedSide) {
+    var api = window.OST_PREDICTION_API;
     var contract = getModalTradeContract(market, requestedSide, outcomeKey || '');
     if (market && market.isOstNative) {
       var state = market.marketState || (market.meta && market.meta.marketState) || null;
@@ -1590,7 +1614,9 @@
   function refreshMarketQuoteBeforeBet(market) {
     if (!isFastBtcMarket(market)) {
       if (isOstNativeMarket(market)) {
-        return withTimeout(refreshNativeMarketState(market, null, nativeBaseYesInput(market)), 1200, null).then(function () { return market; });
+        // 4.5 s gives the centralized worker fetch room to land on slow mobile
+        // links — placeBetDirectly retries the fetch internally if it still misses.
+        return withTimeout(refreshNativeMarketState(market, null, nativeBaseYesInput(market)), 4500, null).then(function () { return market; });
       }
       return Promise.resolve(market);
     }

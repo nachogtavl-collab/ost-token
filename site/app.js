@@ -16697,11 +16697,16 @@
           renderPredictionTicket(getFilteredMarkets());
         }
       }, 8000);
-      return rejectAfterTimeout(
-        refreshSelectedMarketForTrade(market),
-        3500,
-        'Live quote refresh took too long. Try again in a moment.'
-      ).then(function(freshMarket) {
+      // Non-fatal quote refresh: race for a fresh quote, but if the upstream
+      // is slow (mobile) fall through to the last known centralized snapshot
+      // so the buy is never blocked by a transient feed lag.
+      var quoteTimeout = new Promise(function(resolve) {
+        window.setTimeout(function() { resolve(market); }, 6000);
+      });
+      return Promise.race([
+        Promise.resolve(refreshSelectedMarketForTrade(market)).catch(function() { return market; }),
+        quoteTimeout
+      ]).then(function(freshMarket) {
         var orderRequest = buildPredictionOrderRequest(freshMarket || market);
         return createPredictionMarketOrder(orderRequest);
       }).then(function(result) {
