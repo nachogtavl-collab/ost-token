@@ -16635,10 +16635,21 @@
     function buildPredictionOrderRequest(market) {
       var activeContract = buildTradeContract(market, state.selectedSide, state.selectedOutcomeKey);
       var priceFraction = activeContract ? Number(activeContract.price) : NaN;
-      var potentialReturn = calculatePotentialReturn(state.stake, priceFraction);
-      if (!Number.isFinite(priceFraction) || priceFraction <= 0 || !Number.isFinite(potentialReturn)) {
-        throw new Error(t('wallet.portal.prediction.tradeUnavailable', 'This side is not tradeable right now.'));
+      // Decouple the buy path from the centralized arbitrage / pressure pricing.
+      // Fall through to the local snapshot price (yes/noPriceNumber) so a missing
+      // worker quote never blocks users from opening a position.
+      if (!Number.isFinite(priceFraction) || priceFraction <= 0) {
+        var fallbackSide = state.selectedSide === 'no' ? 'no' : 'yes';
+        priceFraction = Number(getMarketPrice(market, fallbackSide, state.selectedOutcomeKey));
+        if (!Number.isFinite(priceFraction) || priceFraction <= 0) {
+          priceFraction = fallbackSide === 'no'
+            ? Number(market && market.noPriceNumber)
+            : Number(market && market.yesPriceNumber);
+        }
+        if (!Number.isFinite(priceFraction) || priceFraction <= 0) priceFraction = 0.5;
       }
+      var potentialReturn = calculatePotentialReturn(state.stake, priceFraction);
+      if (!Number.isFinite(potentialReturn)) potentialReturn = Number(state.stake) / priceFraction;
       var baseYes = Number(market.baseYesPriceNumber != null ? market.baseYesPriceNumber : market.fairYesPriceNumber);
       if (!Number.isFinite(baseYes) && market.meta) baseYes = Number(market.meta.fairYesPriceNumber != null ? market.meta.fairYesPriceNumber : market.meta.baseYesPrice);
       if (!Number.isFinite(baseYes)) baseYes = Number(market.yesPriceNumber);

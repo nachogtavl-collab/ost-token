@@ -1545,18 +1545,21 @@
   function placeBetDirectlyResolved(market, side, stake, outcomeKey, requestedSide) {
     var api = window.OST_PREDICTION_API;
     var contract = getModalTradeContract(market, requestedSide, outcomeKey || '');
-    if (market && market.isOstNative) {
-      var state = market.marketState || (market.meta && market.meta.marketState) || null;
-      var ask = requestedSide === 'NO'
-        ? Number(state && (state.noAskPriceNumber != null ? state.noAskPriceNumber : state.noPriceNumber))
-        : Number(state && (state.yesAskPriceNumber != null ? state.yesAskPriceNumber : state.yesPriceNumber));
-      if (!state || !Number.isFinite(ask) || ask <= 0) {
-        return Promise.reject(new Error('Centralized OST share price is still loading. Try again in a moment.'));
-      }
-    }
+    // The arbitrage / pressure pricing engine is OPTIONAL on the buy path.
+    // If the centralized share inventory hasn't landed yet, fall through to
+    // the local snapshot price so the user is never blocked from buying.
     var contractSide = contract && contract.side ? String(contract.side).toUpperCase() : requestedSide;
     var sideForOrder = contractSide.toLowerCase();
     var price = Number(contract && contract.price);
+    if (market && market.isOstNative) {
+      var state = market.marketState || (market.meta && market.meta.marketState) || null;
+      var stateAsk = requestedSide === 'NO'
+        ? Number(state && (state.noAskPriceNumber != null ? state.noAskPriceNumber : state.noPriceNumber))
+        : Number(state && (state.yesAskPriceNumber != null ? state.yesAskPriceNumber : state.yesPriceNumber));
+      if (state && Number.isFinite(stateAsk) && stateAsk > 0 && (!Number.isFinite(price) || price <= 0)) {
+        price = stateAsk;
+      }
+    }
     if (!Number.isFinite(price) || price <= 0) {
       price = contractSide === 'NO' ? Number(market && market.noPriceNumber) : Number(market && market.yesPriceNumber);
     }
@@ -1567,7 +1570,12 @@
     if (!Number.isFinite(noPrice) && Number.isFinite(yesPrice)) noPrice = 1 - yesPrice;
     if (!Number.isFinite(yesPrice) && Number.isFinite(noPrice)) yesPrice = 1 - noPrice;
     if (!Number.isFinite(price) || price <= 0) {
-      return Promise.reject(new Error('Live share price is still loading. Try again in a moment.'));
+      // Last-resort fallback: a 50/50 quote keeps the buy alive if every upstream
+      // price source is missing. Applied loss/gain still settles against the
+      // centralized state when it becomes available.
+      price = 0.5;
+      if (!Number.isFinite(yesPrice)) yesPrice = 0.5;
+      if (!Number.isFinite(noPrice)) noPrice = 0.5;
     }
     var numericStake = Number(stake) || 0;
     var shares = numericStake / price;
