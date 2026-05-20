@@ -78,6 +78,64 @@
     });
   }
 
+  function withRescueTimeout(promise, timeoutMs, message) {
+    var timeoutId = null;
+    var timedOut = false;
+    var timer = new Promise(function (_, reject) {
+      timeoutId = setTimeout(function () {
+        timedOut = true;
+        reject(new Error(message || 'OST request timed out'));
+      }, timeoutMs || 10000);
+    });
+    return Promise.race([Promise.resolve(promise), timer]).then(function (value) {
+      if (timeoutId && !timedOut) clearTimeout(timeoutId);
+      return value;
+    }, function (error) {
+      if (timeoutId && !timedOut) clearTimeout(timeoutId);
+      throw error;
+    });
+  }
+
+  function walletAddressString(pubkeyInput) {
+    try {
+      if (pubkeyInput && typeof pubkeyInput.toBase58 === 'function') return pubkeyInput.toBase58();
+      return String(pubkeyInput || '');
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function cachedSpendBalance(pubkeyInput) {
+    var wallet = walletAddressString(pubkeyInput);
+    if (!wallet) return null;
+    try {
+      var cache = window.__ostPredictionBalanceCache && window.__ostPredictionBalanceCache[wallet];
+      var balance = Number(cache && cache.balance);
+      if (cache && Number.isFinite(balance) && balance >= 0 && (!cache.ts || Date.now() - Number(cache.ts) < 10 * 60 * 1000)) {
+        return balance;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  async function resolveSpendBalance(w, pubkeyInput) {
+    var cached = cachedSpendBalance(pubkeyInput);
+    try {
+      var fetched = await withRescueTimeout(
+        w.getOstBalance(pubkeyInput),
+        numberSetting('OST_SPEND_BALANCE_TIMEOUT_MS', 7000),
+        'OST balance refresh timed out'
+      );
+      var balance = Number(fetched);
+      if (Number.isFinite(balance) && balance > 0) return { balance: balance, source: 'rpc' };
+      if (Number.isFinite(balance) && balance === 0 && cached !== null && cached > 0) return { balance: cached, source: 'cache' };
+      if (Number.isFinite(balance) && balance === 0) return { balance: 0, source: 'untrusted-zero' };
+    } catch (_) {
+      if (cached !== null) return { balance: cached, source: 'cache' };
+    }
+    return { balance: null, source: 'unknown' };
+  }
+
   function vaultConfig() {
     return {
       minReserve: numberSetting('OST_VAULT_MIN_RESERVE', 0),
@@ -443,7 +501,7 @@
       serialized = signed.serialize();
     } else if (session.provider && typeof session.provider.signAndSendTransaction === 'function') {
       // Provider handles send; just return the signature.
-      var res = await session.provider.signAndSendTransaction(built.tx, fastSendOptions());
+      var res = await waitForWalletApproval(session.provider.signAndSendTransaction(built.tx, fastSendOptions()), 'Wallet signature');
       var providerSig = typeof res === 'string' ? res : (res && res.signature);
       if (providerSig) await confirmSentTransaction(providerSig, built, 'Wallet-signed transaction');
       return providerSig;
@@ -584,8 +642,10 @@
     var amt = Number(amountOst);
     if (!Number.isFinite(amt) || amt <= 0) throw new Error('Enter a valid OST amount');
 
-    var userBal = await w.getOstBalance(w.session.publicKey);
-    if (userBal + 1e-9 < amt) throw new Error('Not enough OST in wallet');
+    var balanceCheck = await resolveSpendBalance(w, w.session.publicKey);
+    if (balanceCheck && balanceCheck.source === 'rpc' && balanceCheck.balance + 1e-9 < amt) {
+      throw new Error('Not enough OST in wallet');
+    }
 
     var mintPk = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.mint);
     var poolAta = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.ata);

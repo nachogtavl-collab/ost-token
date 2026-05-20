@@ -1496,17 +1496,29 @@
         if (!actionBtn) return fail(new Error('Trade desk button not found.'));
         var prevLedger = readJson(ORDERS_KEY, []) || [];
         var prevLen = prevLedger.length;
-        actionBtn.click();
-        timeout = setTimeout(function () {
-          fail(new Error('Bet submitted - check the open positions list below for confirmation.'));
-        }, 45000);
-        iv = setInterval(function () {
-          var now = readJson(ORDERS_KEY, []) || [];
-          if (now.length > prevLen) {
-            var latest = now.filter(function (order) { return order && String(order.marketId || '') === String(market.id || ''); })[0] || now[0];
-            finish(latest);
+        function watchLedger() {
+          timeout = setTimeout(function () {
+            fail(new Error('Wallet approval or network confirmation is still pending. Check Open Positions after the wallet closes.'));
+          }, 90000);
+          iv = setInterval(function () {
+            var now = readJson(ORDERS_KEY, []) || [];
+            if (now.length > prevLen) {
+              var latest = now.filter(function (order) { return order && String(order.marketId || '') === String(market.id || ''); })[0] || now[0];
+              finish(latest);
+            }
+          }, 600);
+        }
+        if (actionBtn.disabled) {
+          var statusEl = document.getElementById('predictionTradeStatus');
+          var statusText = statusEl && statusEl.textContent ? statusEl.textContent.trim() : '';
+          if (/waiting|sending|approval|confirmation|pending/i.test(statusText)) {
+            watchLedger();
+            return;
           }
-        }, 600);
+          return fail(new Error(statusText || 'Trade desk is not ready yet.'));
+        }
+        actionBtn.click();
+        watchLedger();
       }, 80);
     });
   }
@@ -2155,7 +2167,7 @@
       placeBetButton.setAttribute('aria-busy', 'true');
       placeBetButton.textContent = 'Submitting...';
       slowTimer = setTimeout(function () {
-        if (placeBetPending) toast('Still waiting for wallet approval or share-state confirmation...', 'ok');
+        if (placeBetPending) toast('Wallet approval or network confirmation is still open. Keep this screen up.', 'ok');
       }, 8000);
       function resetPlaceBetButton() {
         if (slowTimer) clearTimeout(slowTimer);

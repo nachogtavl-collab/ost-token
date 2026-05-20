@@ -3146,6 +3146,110 @@
     });
   }
 
+  function predictionAddressString(pubkeyInput) {
+    try {
+      if (pubkeyInput && typeof pubkeyInput.toBase58 === 'function') return pubkeyInput.toBase58();
+      return String(pubkeyInput || '');
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function normalizeOstBalanceValue(value) {
+    var balance = Number(value);
+    return Number.isFinite(balance) && balance >= 0 ? balance : null;
+  }
+
+  function rememberPredictionBalanceHint(pubkeyInput, balance, source) {
+    var wallet = predictionAddressString(pubkeyInput);
+    var normalized = normalizeOstBalanceValue(balance);
+    if (!wallet || normalized === null) return normalized;
+    try {
+      window.__ostPredictionBalanceCache = window.__ostPredictionBalanceCache || {};
+      window.__ostPredictionBalanceCache[wallet] = {
+        balance: normalized,
+        source: source || 'rpc',
+        ts: Date.now()
+      };
+    } catch (_) {}
+    return normalized;
+  }
+
+  function getPredictionBalanceHint(pubkeyInput, order) {
+    var wallet = predictionAddressString(pubkeyInput);
+    var newest = null;
+    function consider(value, source, ts) {
+      var normalized = normalizeOstBalanceValue(value);
+      if (normalized === null) return;
+      var stamp = Number(ts || Date.now());
+      if (!newest || stamp >= newest.ts) newest = { balance: normalized, source: source || 'hint', ts: stamp };
+    }
+    try {
+      if (order) {
+        var hintWallet = order.balanceHintWallet || order.wallet || '';
+        if (!hintWallet || !wallet || String(hintWallet) === wallet) {
+          consider(order.balanceHint, 'order', order.balanceHintAt || order.quotedAt || Date.now());
+          consider(order.availableBalance, 'order', order.balanceHintAt || order.quotedAt || Date.now());
+        }
+      }
+      var cache = window.__ostPredictionBalanceCache && wallet ? window.__ostPredictionBalanceCache[wallet] : null;
+      if (cache && (!cache.ts || Date.now() - Number(cache.ts) < 10 * 60 * 1000)) {
+        consider(cache.balance, cache.source || 'cache', cache.ts);
+      }
+    } catch (_) {}
+    return newest;
+  }
+
+  async function getOstBalanceForAddressStrict(pubkeyInput) {
+    const conn = getSolanaConnection();
+    if (!conn) throw new Error('Solana RPC unavailable');
+    const owner = toPublicKey(pubkeyInput);
+    const mintPk = new solanaWeb3.PublicKey(OST_CONFIG.mint);
+    const ata = getAssociatedTokenAddressSync(mintPk, owner, false, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
+    const ataInfo = await conn.getAccountInfo(ata);
+    return decodeTokenBalance(ataInfo);
+  }
+
+  async function resolvePredictionOrderBalance(trader, order) {
+    var hint = getPredictionBalanceHint(trader, order);
+    try {
+      var fetched = await withPredictionTimeout(
+        getOstBalanceForAddressStrict(trader),
+        12000,
+        'Prediction wallet balance refresh timed out.'
+      );
+      var balance = normalizeOstBalanceValue(fetched);
+      if (balance !== null) {
+        if (balance === 0 && hint && hint.balance > 0) {
+          return { balance: hint.balance, source: hint.source || 'cache', stale: true };
+        }
+        rememberPredictionBalanceHint(trader, balance, 'rpc');
+        return { balance: balance, source: 'rpc', stale: false };
+      }
+    } catch (error) {
+      if (hint && hint.balance !== null) {
+        return { balance: hint.balance, source: hint.source || 'cache', stale: true, error: error };
+      }
+      return { balance: null, source: 'unknown', stale: true, error: error };
+    }
+    if (hint && hint.balance !== null) return { balance: hint.balance, source: hint.source || 'cache', stale: true };
+    return { balance: null, source: 'unknown', stale: true };
+  }
+
+  function normalizePredictionSpendError(error) {
+    var message = error && error.message ? String(error.message) : String(error || '');
+    if (/not enough ost|insufficient|custom program error: 0x1|attempt to debit|debit an account/i.test(message)) {
+      return new Error(t('pay.notEnoughOst', 'Not enough OST in this wallet. Claim or buy OST first.'));
+    }
+    if (/rejected|denied|cancel/i.test(message)) {
+      return new Error('Wallet approval was cancelled. No OST was moved.');
+    }
+    if (/wallet signature.*timed out|wallet approval.*timed out/i.test(message)) {
+      return new Error('Wallet approval timed out. Reopen the wallet prompt and try again; no OST was moved.');
+    }
+    return error && error.message ? error : new Error(message || 'Prediction order failed before the wallet transaction completed.');
+  }
+
   async function ensurePredictionDeskVaultAccount() {
     return ensureInterchangeDeskVaultAccount();
   }
@@ -3163,12 +3267,9 @@
 
     const trader = connectedWalletSession.publicKey;
     // Pool covers the SOL fee — user only needs OST. Skip SOL check.
-    const ostBalance = await withPredictionTimeout(
-      getOstBalanceForAddress(trader),
-      8000,
-      'Wallet OST balance is still loading. Reopen the wallet and try again.'
-    );
-    if (ostBalance + 1e-9 < Number(order.stake)) {
+    const balanceCheck = await resolvePredictionOrderBalance(trader, order);
+    const ostBalance = normalizeOstBalanceValue(balanceCheck && balanceCheck.balance);
+    if (ostBalance !== null && ostBalance + 1e-9 < Number(order.stake)) {
       throw new Error(t('pay.notEnoughOst', 'Not enough OST in this wallet. Claim or buy OST first.'));
     }
 
@@ -3193,7 +3294,12 @@
     }
     // Fund the same payout pool that pays winners; retained losses therefore
     // stay in the live vault instead of being stranded in a separate desk ATA.
-    const settlement = await window.OST_RESCUE.userSendsOstToPool(Number(order.stake), memo);
+    let settlement;
+    try {
+      settlement = await window.OST_RESCUE.userSendsOstToPool(Number(order.stake), memo);
+    } catch (settlementError) {
+      throw normalizePredictionSpendError(settlementError);
+    }
     const signature = settlement && (settlement.sig || settlement.signature) || '';
     const vaultTokenAccount = window.OST_SWAP_POOL && window.OST_SWAP_POOL.ata ? String(window.OST_SWAP_POOL.ata) : '';
 
@@ -3267,18 +3373,31 @@
 
     // Fetch updated balance for UI display (best-effort — use stake-adjusted
     // fallback if the RPC hasn't propagated the debit yet).
-    var remainingBalance;
+    var remainingBalance = null;
+    var preTradeBalance = ostBalance;
     try {
-      var fetched = await getOstBalanceForAddress(trader);
+      var fetched = await withPredictionTimeout(
+        getOstBalanceForAddressStrict(trader),
+        6500,
+        'Prediction balance refresh timed out.'
+      );
+      fetched = normalizeOstBalanceValue(fetched);
       // If RPC returned a stale value (≥ pre-trade balance), use a locally-
       // calculated estimate so the ticket panel shows something sensible.
-      remainingBalance = (fetched + 1e-6 < ostBalance) ? fetched : Math.max(0, ostBalance - Number(order.stake));
+      if (fetched !== null) {
+        remainingBalance = (preTradeBalance !== null && fetched + 1e-6 >= preTradeBalance)
+          ? Math.max(0, preTradeBalance - Number(order.stake))
+          : fetched;
+      }
     } catch (_) {
-      remainingBalance = Math.max(0, ostBalance - Number(order.stake));
+      var fallbackHint = getPredictionBalanceHint(trader, order);
+      var fallbackBalance = preTradeBalance !== null ? preTradeBalance : (fallbackHint && fallbackHint.balance !== null ? fallbackHint.balance : null);
+      remainingBalance = fallbackBalance !== null ? Math.max(0, fallbackBalance - Number(order.stake)) : null;
     }
+    if (remainingBalance !== null) rememberPredictionBalanceHint(trader, remainingBalance, 'prediction-spend');
     // Update the wallet portfolio chart + transaction history list immediately.
     try {
-      if (window.OST_WALLET && window.OST_WALLET.session) {
+      if (window.OST_WALLET && window.OST_WALLET.session && remainingBalance !== null) {
         var solBal = (await conn.getBalance(trader)) / solanaWeb3.LAMPORTS_PER_SOL;
         if (typeof window.recordOstSnapshot === 'function') {
           window.recordOstSnapshot({
@@ -3399,13 +3518,7 @@
 
   async function getOstBalanceForAddress(pubkeyInput) {
     try {
-      const conn = getSolanaConnection();
-      if (!conn) return 0;
-      const owner = toPublicKey(pubkeyInput);
-      const mintPk = new solanaWeb3.PublicKey(OST_CONFIG.mint);
-      const ata = getAssociatedTokenAddressSync(mintPk, owner, false, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
-      const ataInfo = await conn.getAccountInfo(ata);
-      return decodeTokenBalance(ataInfo);
+      return await getOstBalanceForAddressStrict(pubkeyInput);
     } catch {
       return 0;
     }
@@ -13698,6 +13811,8 @@
       visibleCount: getPredictionDefaultVisibleCount(),
       loading: false,
       placing: false,
+      placingPromise: null,
+      placingStartedAt: 0,
       availableBalance: null,
       orderHistory: readPredictionOrderRecords(),
       latestReceipt: null,
@@ -14833,26 +14948,27 @@
 
       var pubkey = connectedWalletSession.publicKey;
       var prevBalance = state.availableBalance;
-      return getOstBalanceForAddress(pubkey).then(function(balance) {
+      return getOstBalanceForAddressStrict(pubkey).then(function(balance) {
         // If RPC returned 0 but the user previously had OST, the devnet node may
         // still be propagating the latest block.  Retry once after 2 s to avoid
         // showing a false "not enough OST" gate while the balance catches up.
         if (balance === 0 && prevBalance !== null && prevBalance > 0) {
           return new Promise(function(resolve) {
             setTimeout(function() {
-              getOstBalanceForAddress(pubkey).then(resolve).catch(function() { resolve(0); });
+              getOstBalanceForAddressStrict(pubkey).then(resolve).catch(function() { resolve(prevBalance); });
             }, 2000);
           });
         }
         return balance;
       }).then(function(balance) {
         state.availableBalance = balance;
+        rememberPredictionBalanceHint(pubkey, balance, 'trade-desk');
         renderPredictionTicket(getFilteredMarkets());
         return balance;
       }).catch(function() {
-        state.availableBalance = 0;
+        state.availableBalance = Number.isFinite(prevBalance) ? prevBalance : null;
         renderPredictionTicket(getFilteredMarkets());
-        return 0;
+        return state.availableBalance;
       });
     }
 
@@ -16666,6 +16782,9 @@
         outcomeKey: activeContract && activeContract.key ? activeContract.key : '',
         outcomeLabel: activeContract && activeContract.label ? activeContract.label : '',
         stake: state.stake,
+        balanceHint: state.availableBalance,
+        balanceHintWallet: connectedWalletSession && connectedWalletSession.publicKey ? connectedWalletSession.publicKey.toBase58() : '',
+        balanceHintAt: Date.now(),
         price: priceFraction,
         yesPrice: yesPrice,
         noPrice: noPrice,
@@ -16692,8 +16811,13 @@
 
     function submitPredictionOrderFromSelection() {
       if (state.placing) {
-        setTradeStatus('An OST order is already waiting for wallet approval or share-state confirmation.', 'warning');
-        return Promise.reject(new Error('Prediction order already in progress'));
+        setTradeStatus('This OST order is still waiting for wallet approval or network confirmation.', 'warning');
+        if (state.placingPromise && Date.now() - Number(state.placingStartedAt || 0) < 120000) {
+          return state.placingPromise;
+        }
+        state.placing = false;
+        state.placingPromise = null;
+        state.placingStartedAt = 0;
       }
       var market = getSelectedMarket(getFilteredMarkets());
       if (!market) {
@@ -16701,10 +16825,11 @@
         return Promise.reject(new Error('No market selected'));
       }
       state.placing = true;
+      state.placingStartedAt = Date.now();
       renderPredictionTicket(getFilteredMarkets());
       var placingNoticeTimer = window.setTimeout(function() {
         if (state.placing) {
-          setTradeStatus('Waiting for wallet approval and the centralized share inventory...', 'warning');
+          setTradeStatus('Waiting for wallet approval or on-chain confirmation. Share inventory will sync in the background.', 'warning');
           renderPredictionTicket(getFilteredMarkets());
         }
       }, 8000);
@@ -16714,7 +16839,7 @@
       var quoteTimeout = new Promise(function(resolve) {
         window.setTimeout(function() { resolve(market); }, 6000);
       });
-      return Promise.race([
+      var placingPromise = Promise.race([
         Promise.resolve(refreshSelectedMarketForTrade(market)).catch(function() { return market; }),
         quoteTimeout
       ]).then(function(freshMarket) {
@@ -16739,14 +16864,25 @@
       }).catch(function(error) {
         setTradeStatus(error && error.message ? error.message : t('wallet.portal.prediction.tradeFailed', 'Could not place the prediction market order right now.'), 'error');
         throw error;
-      }).finally(function() {
+      });
+      state.placingPromise = placingPromise;
+      return placingPromise.finally(function() {
         if (placingNoticeTimer) window.clearTimeout(placingNoticeTimer);
-        state.placing = false;
+        if (state.placingPromise === placingPromise) {
+          state.placing = false;
+          state.placingPromise = null;
+          state.placingStartedAt = 0;
+        }
         renderPredictionTicket(getFilteredMarkets());
         renderLatestReceipt();
         renderPredictionLedger();
       });
     }
+
+    window.OST_PREDICTION_API = Object.assign(window.OST_PREDICTION_API || {}, {
+      submitSelection: submitPredictionOrderFromSelection,
+      currentOrderPromise: function() { return state.placingPromise || null; }
+    });
 
     if (tradeActionBtn) {
       tradeActionBtn.addEventListener('click', function() {
