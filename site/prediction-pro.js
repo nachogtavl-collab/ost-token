@@ -67,10 +67,10 @@
   // ---------------------------------------------------------------------------
   var FIVE_MIN_MS = 5 * 60 * 1000;
   var BTC_PRICE_URL = 'https://data-api.binance.vision/api/v3/ticker/price?symbol=BTCUSDT';
-  var BTC_REFRESH_MS = 1500;          // canonical worker cadence; WebSocket ticks keep the UI live between polls
+  var BTC_REFRESH_MS = 850;           // canonical worker cadence; stays below 1s for shared quotes
   var BTC_DEDUPE_MS  = 200;           // dedupe identical prints inside this window (was 300)
-  var BTC_LOCAL_TICK_FRESH_MS = 1500;
-  var BTC_FEED_TIMEOUT_MS = 3000;
+  var BTC_LOCAL_TICK_FRESH_MS = 900;
+  var BTC_FEED_TIMEOUT_MS = 2200;
   var BTC_MAX_SERIES = 900;           // ~7.5 min of sub-second history for the chart
   var BTC_WS_URLS = [
     'wss://stream.binance.com:9443/ws/btcusdt@trade',
@@ -140,15 +140,15 @@
   var nativeMarketStateInFlight = {};
   var nativeMarketStateInFlightBase = {};
   var NATIVE_STATE_BASE_TOLERANCE = 0.005;
-  var NATIVE_STATE_REFRESH_MS = 3000;
-  var NATIVE_LOCAL_PRESSURE_TTL_MS = 45000;
+  var NATIVE_STATE_REFRESH_MS = 750;
+  var NATIVE_LOCAL_PRESSURE_TTL_MS = 8000;
   var NATIVE_MARKET_LIQUIDITY_SHARES = 750;
   var NATIVE_MARKET_LIQUIDITY_OST = 500;
   var NATIVE_MARKET_MAX_SHARE_IMPACT = 0.32;
   var NATIVE_MARKET_MAX_STAKE_IMPACT = 0.08;
 
   function canonicalRoundIsFresh() {
-    return canonicalRound && (Date.now() - canonicalRoundFetchedAt < 4500);
+    return canonicalRound && (Date.now() - canonicalRoundFetchedAt < 1500);
   }
 
   function isBinanceSource(source) {
@@ -700,7 +700,7 @@
     var force = options && options.force;
     var directOnly = options && options.directOnly;
     var wsTick = freshBinanceWsTick(2500);
-    if (wsTick) return Promise.resolve(wsTick);
+    if (directOnly && wsTick) return Promise.resolve(wsTick);
     if (!force && btcLastTick.price && Date.now() - btcLastTick.ts < BTC_LOCAL_TICK_FRESH_MS) {
       return Promise.resolve(Object.assign({}, btcLastTick));
     }
@@ -714,6 +714,7 @@
           if (Number.isFinite(p) && p > 1000 && canonicalRoundHasHotLivePrice(round)) {
             return Object.assign({}, rememberBtcTick(p, round.livePriceSource || 'ost-canonical'));
           }
+          if (wsTick) return wsTick;
           return fetchDirectBtcSpot();
         })
         .catch(fetchDirectBtcSpot);
@@ -1229,6 +1230,8 @@
       if (r.settled) return;
       if (now < r.closeAt + 1000) return;
       var openPrice = Number(r.openPrice);
+      var priceToBeat = Number(r.priceToBeat);
+      if (!Number.isFinite(priceToBeat) || priceToBeat <= 0) priceToBeat = openPrice;
       var closePrice = Number(btcLastTick.price);
       if (!Number.isFinite(openPrice) || openPrice <= 0) {
         r.settlementStatus = 'waiting-open-price';
@@ -1253,8 +1256,8 @@
       r.settled = true;
       r.settledAt = now;
       r.settlementStatus = 'settled';
-      r.yesWon  = r.closePrice > openPrice;
-      r.tied = r.closePrice === openPrice;
+      r.yesWon  = r.closePrice > priceToBeat;
+      r.tied = r.closePrice === priceToBeat;
       changed = true;
     });
     if (changed) writeRounds(rounds);
@@ -1787,12 +1790,26 @@
   //   OST_PREDICTION_API.ledger()                         → user's open orders
   // ---------------------------------------------------------------------------
   var subscribers = [];
+  var broadcastInFlight = false;
+  var broadcastTimer = 0;
   function broadcast() {
+    if (!subscribers.length) return;
+    if (broadcastInFlight) return;
+    broadcastInFlight = true;
     OST_PREDICTION_API.markets().then(function (m) {
       subscribers.forEach(function (cb) { try { cb(m); } catch (e) {} });
-    });
+    }).catch(function () {}).then(function () { broadcastInFlight = false; });
   }
-  setInterval(broadcast, 30000);
+  function scheduleBroadcast(delay) {
+    if (broadcastTimer) return;
+    broadcastTimer = setTimeout(function () {
+      broadcastTimer = 0;
+      broadcast();
+    }, delay || 120);
+  }
+  setInterval(broadcast, 1200);
+  try { window.addEventListener('ost:btc-market-updated', function () { scheduleBroadcast(80); }); } catch (_) {}
+  try { window.addEventListener('ost:native-market-state', function () { scheduleBroadcast(80); }); } catch (_) {}
 
   var OST_PREDICTION_API = {
     version: '1.1',
@@ -1862,6 +1879,7 @@
     subscribe: function (cb) {
       if (typeof cb !== 'function') return function () {};
       subscribers.push(cb);
+      scheduleBroadcast(0);
       return function () { subscribers = subscribers.filter(function (x) { return x !== cb; }); };
     },
     ledger: function () {

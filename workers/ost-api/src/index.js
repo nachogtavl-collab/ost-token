@@ -115,6 +115,30 @@ async function fetchBtcPrice() {
   return null;
 }
 
+async function fetchBtcPriceFast(timeoutMs = 520) {
+  const attempts = BTC_FEEDS.map(async feed => {
+    const r = await fetchWithDeadline(feed.url, {
+      headers: {
+        accept: 'application/json',
+        'cache-control': 'no-cache, no-store, max-age=0',
+        pragma: 'no-cache',
+        'user-agent': 'OST-API/1.0'
+      },
+      cf: { cacheTtl: 0 }
+    }, timeoutMs);
+    if (!r.ok) throw new Error(feed.name + ' ' + r.status);
+    const j = await r.json();
+    const price = feed.pick(j);
+    if (!Number.isFinite(price) || price <= 1000) throw new Error(feed.name + ' empty price');
+    return { price, source: feed.name };
+  });
+  const results = await Promise.allSettled(attempts);
+  for (const result of results) {
+    if (result.status === 'fulfilled' && result.value) return result.value;
+  }
+  return null;
+}
+
 // ── Canonical BTC round state ────────────────────────────────────────────────
 // The worker is the SINGLE SOURCE OF TRUTH for the 5-min BTC round so that
 // every browser sees the IDENTICAL openPrice, livePrice, and YES/NO odds.
@@ -124,6 +148,8 @@ async function fetchBtcPrice() {
 const BTC_TICK_RING_MAX = 600;          // ~10 min of 1Hz ticks per round bucket
 const BTC_LIVE_TTL_S = 60 * 30;         // shared "latest tick" cache TTL
 const BTC_LIVE_REFRESH_MS = 650;        // keep Binance stream hot without stale 50/50 rounds
+const BTC_DO_SNAPSHOT_CACHE_MS = 250;   // sub-second shared cache inside the Durable Object
+const BTC_DO_TICK_MIN_GAP_MS = 550;
 const BTC_ROUND_OPEN_MEMORY = new Map();
 const BTC_PRIOR_DRIFT_MEMORY = new Map();
 // Forward-projection blend factor — priceToBeat = openPrice * (1 + driftBlend * priorDrift).
@@ -239,6 +265,52 @@ async function fetchBtcRoundOpenPrice(round) {
     } catch (_) { /* try next */ }
   }
   return null;
+}
+
+async function fetchBtcPrior5mDriftFast(round, timeoutMs = 180) {
+  return Promise.race([
+    fetchBtcPrior5mDrift(round).catch(() => 0),
+    new Promise(resolve => setTimeout(() => resolve(0), timeoutMs))
+  ]);
+}
+
+async function fetchBtcRoundOpenPriceFast(round, timeoutMs = 520) {
+  const cached = BTC_ROUND_OPEN_MEMORY.get(round.openAt);
+  if (cached && Number.isFinite(Number(cached.price)) && Number(cached.price) > 0) return cached;
+  const urls = [
+    `https://data-api.binance.vision/api/v3/klines?symbol=BTCUSDT&interval=5m&startTime=${round.openAt}&limit=1`,
+    `https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=5m&startTime=${round.openAt}&limit=1`
+  ];
+  const attempts = urls.map(async url => {
+    const r = await fetchWithDeadline(url, {
+      headers: {
+        accept: 'application/json',
+        'cache-control': 'no-cache, no-store, max-age=0',
+        pragma: 'no-cache',
+        'user-agent': 'OST-API/1.0'
+      },
+      cf: { cacheTtl: 0 }
+    }, timeoutMs);
+    if (!r.ok) throw new Error('kline ' + r.status);
+    const rows = await r.json();
+    const row = Array.isArray(rows) ? rows[0] : null;
+    const openTime = Number(row && row[0]);
+    const openPrice = Number(row && row[1]);
+    if (openTime !== round.openAt || !Number.isFinite(openPrice) || openPrice <= 1000) throw new Error('kline empty');
+    const source = url.includes('binance.vision') ? 'binance-kline' : 'binance-kline-api';
+    const record = { price: openPrice, source, t: openTime };
+    BTC_ROUND_OPEN_MEMORY.set(round.openAt, record);
+    if (BTC_ROUND_OPEN_MEMORY.size > 6) {
+      const oldest = Array.from(BTC_ROUND_OPEN_MEMORY.keys()).sort((a, b) => a - b)[0];
+      BTC_ROUND_OPEN_MEMORY.delete(oldest);
+    }
+    return record;
+  });
+  try {
+    return Promise.any ? await Promise.any(attempts) : await attempts[0].catch(() => attempts[1]);
+  } catch (_) {
+    return null;
+  }
 }
 
 async function lockRoundOpenPrice(env, round, price, source) {
@@ -928,7 +1000,7 @@ async function nativeBaseYesForMarket(env, marketId, fallbackBaseYes) {
     const current = currentRound();
     if (Number.isFinite(openAt)) {
       if (openAt === current.openAt) {
-        const round = await buildCanonicalBtcRound(env, { refresh: true });
+        const round = await getCanonicalBtcRound(env, { refresh: true });
         const roundYes = clampNativeProbability(round ? round.yesPriceNumber : null);
         if (roundYes != null && btcRoundHasHotLivePrice(round)) baseYes = roundYes;
       }
@@ -1018,6 +1090,55 @@ async function nativeMarketHubJson(env, path, init) {
   }
 }
 
+function normalizeHubBtcRound(payload) {
+  if (!payload || typeof payload !== 'object') return null;
+  const source = payload.round && Number.isFinite(Number(payload.round.openAt))
+    ? Object.assign({}, payload, payload.round)
+    : payload;
+  if (!Number.isFinite(Number(source.openAt))) return null;
+  const openAt = Number(source.openAt);
+  const closeAt = Number(source.closeAt) || openAt + FIVE_MIN_MS;
+  const openPrice = cleanNumber(source.openPrice, null);
+  const priceToBeat = cleanNumber(source.priceToBeat, openPrice);
+  const livePrice = cleanNumber(source.livePrice, openPrice);
+  return Object.assign({}, source, {
+    id: cleanText(source.id || source.marketId || `ost-btc5m-${openAt}`, 128),
+    marketId: cleanText(source.marketId || source.id || `ost-btc5m-${openAt}`, 128),
+    openAt,
+    closeAt,
+    msLeft: Math.max(0, closeAt - Date.now()),
+    openPrice,
+    priceToBeat,
+    openPriceSource: cleanText(source.openPriceSource || source.openSource || '', 64),
+    openPriceTs: cleanNumber(source.openPriceTs, null),
+    livePrice,
+    livePriceSource: cleanText(source.livePriceSource || source.liveSource || source.source || '', 64),
+    livePriceTs: cleanNumber(source.livePriceTs || source.liveTs, null),
+    source: cleanText(source.source || source.livePriceSource || source.liveSource || source.openPriceSource || source.openSource || '', 64),
+    yesPriceNumber: clampNativeProbability(source.yesPriceNumber) ?? 0.5,
+    noPriceNumber: clampNativeProbability(source.noPriceNumber) ?? 0.5,
+    canonical: true
+  });
+}
+
+async function getCanonicalBtcRound(env, opts = {}) {
+  const refresh = opts.refresh !== false;
+  const hubPath = '/btc/round' + (refresh ? '' : '?refresh=0');
+  const hubRound = normalizeHubBtcRound(await nativeMarketHubJson(env, hubPath));
+  if (hubRound) return hubRound;
+  return buildCanonicalBtcRound(env, opts);
+}
+
+async function getCanonicalBtcTicks(env, openAt, since, opts = {}) {
+  const params = new URLSearchParams();
+  if (Number.isFinite(Number(openAt)) && Number(openAt) > 0) params.set('openAt', String(Math.floor(Number(openAt) / FIVE_MIN_MS) * FIVE_MIN_MS));
+  if (Number.isFinite(Number(since)) && Number(since) > 0) params.set('since', String(Number(since)));
+  if (opts.refresh === false) params.set('refresh', '0');
+  const payload = await nativeMarketHubJson(env, '/btc/ticks' + (params.toString() ? '?' + params.toString() : ''));
+  if (!payload || !Array.isArray(payload.ticks)) return null;
+  return payload;
+}
+
 async function getNativeMarketStateFromHub(env, marketId, fallbackBaseYes) {
   const cleanMarketId = cleanText(marketId, 128);
   if (!cleanMarketId) return null;
@@ -1056,6 +1177,8 @@ export class NativeMarketHub {
   constructor(state, env) {
     this.state = state;
     this.env = env;
+    this.btcSnapshotCache = null;
+    this.btcSnapshotCacheAt = 0;
   }
 
   async fetch(request) {
@@ -1074,9 +1197,209 @@ export class NativeMarketHub {
     await this.state.storage.put(nativeMarketStateKey(cleanMarketId), state);
   }
 
+  emptyBtcState(round) {
+    return {
+      roundOpenAt: round.openAt,
+      roundCloseAt: round.closeAt,
+      openPrice: 0,
+      priceToBeat: 0,
+      priceToBeatSource: '',
+      openPriceSource: '',
+      openPriceTs: 0,
+      livePrice: 0,
+      livePriceSource: '',
+      livePriceTs: 0,
+      ticks: []
+    };
+  }
+
+  async readBtcState(round) {
+    const stored = await this.state.storage.get('btc:state');
+    const base = this.emptyBtcState(round);
+    return Object.assign(base, stored || {}, {
+      roundOpenAt: cleanNumber(stored && stored.roundOpenAt, base.roundOpenAt) || base.roundOpenAt,
+      roundCloseAt: cleanNumber(stored && stored.roundCloseAt, base.roundCloseAt) || base.roundCloseAt,
+      ticks: Array.isArray(stored && stored.ticks) ? stored.ticks : []
+    });
+  }
+
+  async writeBtcState(state) {
+    await this.state.storage.put('btc:state', state);
+  }
+
+  appendBtcStateTick(state, price, source, ts) {
+    const p = Number(price);
+    if (!Number.isFinite(p) || p <= 1000) return;
+    const tickTs = Number(ts) || Date.now();
+    const ticks = Array.isArray(state.ticks) ? state.ticks : [];
+    const last = ticks.length ? ticks[ticks.length - 1] : null;
+    if (last && Number(last.p) === p && tickTs - Number(last.t || 0) < BTC_DO_TICK_MIN_GAP_MS) return;
+    ticks.push({ t: tickTs, p, s: source || '' });
+    if (ticks.length > BTC_TICK_RING_MAX) ticks.splice(0, ticks.length - BTC_TICK_RING_MAX);
+    state.ticks = ticks;
+  }
+
+  async rolloverBtcStateIfNeeded(state, round) {
+    if (state.roundOpenAt === round.openAt) return state;
+    if (state.roundOpenAt && Number(state.openPrice) > 1000) {
+      const beat = Number(state.priceToBeat) > 1000 ? Number(state.priceToBeat) : Number(state.openPrice);
+      const closePrice = Number(state.livePrice) > 1000 ? Number(state.livePrice) : 0;
+      await this.state.storage.put(`btc:round:${state.roundOpenAt}`, {
+        openAt: state.roundOpenAt,
+        closeAt: state.roundCloseAt,
+        openPrice: state.openPrice,
+        priceToBeat: beat,
+        openPriceSource: state.openPriceSource || '',
+        openPriceTs: state.openPriceTs || 0,
+        closePrice: closePrice || null,
+        closeSource: state.livePriceSource || '',
+        settledAt: Date.now(),
+        yesWon: closePrice ? closePrice > beat : null,
+        tied: closePrice ? closePrice === beat : null
+      });
+      await this.state.storage.put(`btc:ticks:${state.roundOpenAt}`, Array.isArray(state.ticks) ? state.ticks.slice(-BTC_TICK_RING_MAX) : []);
+    }
+    return this.emptyBtcState(round);
+  }
+
+  async refreshBtcState(force) {
+    const round = currentRound();
+    let state = await this.readBtcState(round);
+    state = await this.rolloverBtcStateIfNeeded(state, round);
+    const now = Date.now();
+
+    const hasKlineOpen = /kline/i.test(String(state.openPriceSource || ''));
+    const liveStale = !Number(state.livePrice) || Number(state.livePrice) <= 1000 || now - Number(state.livePriceTs || 0) > BTC_LIVE_REFRESH_MS;
+    const needsOpen = !Number(state.openPrice) || Number(state.openPrice) <= 1000 || !hasKlineOpen;
+    const [roundOpen, live] = await Promise.all([
+      needsOpen ? fetchBtcRoundOpenPriceFast(round) : Promise.resolve(null),
+      (force || liveStale) ? fetchBtcPriceFast() : Promise.resolve(null)
+    ]);
+    if (roundOpen && Number(roundOpen.price) > 1000) {
+      const drift = await fetchBtcPrior5mDriftFast(round);
+      state.openPrice = Number(roundOpen.price);
+      state.openPriceSource = roundOpen.source || 'binance-kline';
+      state.openPriceTs = Number(roundOpen.t) || round.openAt;
+      state.priceToBeat = projectPriceToBeat(state.openPrice, drift);
+      state.priceToBeatSource = state.priceToBeat === state.openPrice ? 'open' : 'projected-5m-drift';
+    }
+    if (live && Number(live.price) > 1000) {
+      state.livePrice = Number(live.price);
+      state.livePriceSource = live.source || 'binance';
+      state.livePriceTs = now;
+      this.appendBtcStateTick(state, state.livePrice, state.livePriceSource, state.livePriceTs);
+      if ((!Number(state.openPrice) || Number(state.openPrice) <= 1000) && now - round.openAt < 5000) {
+        const drift = await fetchBtcPrior5mDriftFast(round);
+        state.openPrice = state.livePrice;
+        state.openPriceSource = `${state.livePriceSource}-provisional`;
+        state.openPriceTs = state.livePriceTs;
+        state.priceToBeat = projectPriceToBeat(state.openPrice, drift);
+        state.priceToBeatSource = state.priceToBeat === state.openPrice ? 'open-provisional' : 'projected-5m-drift-provisional';
+      }
+    }
+
+    if (Number(state.openPrice) > 1000 && (!Number(state.priceToBeat) || Number(state.priceToBeat) <= 1000)) {
+      const drift = await fetchBtcPrior5mDriftFast(round);
+      state.priceToBeat = projectPriceToBeat(Number(state.openPrice), drift);
+      state.priceToBeatSource = state.priceToBeat === Number(state.openPrice) ? 'open' : 'projected-5m-drift';
+    }
+    if ((!Number(state.livePrice) || Number(state.livePrice) <= 1000) && Number(state.openPrice) > 1000) {
+      state.livePrice = Number(state.openPrice);
+      state.livePriceSource = state.openPriceSource || 'open-price';
+      state.livePriceTs = state.openPriceTs || now;
+      this.appendBtcStateTick(state, state.livePrice, state.livePriceSource, state.livePriceTs);
+    }
+
+    state.roundOpenAt = round.openAt;
+    state.roundCloseAt = round.closeAt;
+    await this.writeBtcState(state);
+    return state;
+  }
+
+  async btcSnapshot(opts = {}) {
+    const refresh = opts.refresh !== false;
+    const now = Date.now();
+    if (!opts.force && this.btcSnapshotCache && now - this.btcSnapshotCacheAt < BTC_DO_SNAPSHOT_CACHE_MS) {
+      return this.btcSnapshotCache;
+    }
+    const state = await this.refreshBtcState(!!opts.force || refresh);
+    const round = currentRound();
+    const openPrice = Number(state.openPrice) > 1000 ? Number(state.openPrice) : null;
+    const priceToBeat = Number(state.priceToBeat) > 1000 ? Number(state.priceToBeat) : openPrice;
+    const livePrice = Number(state.livePrice) > 1000 ? Number(state.livePrice) : openPrice;
+    const odds = serverComputeBtcOdds(openPrice || 0, livePrice || 0, round.msLeft, priceToBeat || openPrice || 0);
+    const payload = {
+      ok: true,
+      id: round.id,
+      marketId: round.id,
+      openAt: round.openAt,
+      closeAt: round.closeAt,
+      msLeft: round.msLeft,
+      openPrice,
+      priceToBeat,
+      priceToBeatSource: state.priceToBeatSource || (priceToBeat && priceToBeat !== openPrice ? 'projected-5m-drift' : 'open'),
+      openPriceSource: state.openPriceSource || '',
+      openPriceTs: state.openPriceTs || null,
+      livePrice,
+      livePriceSource: state.livePriceSource || '',
+      livePriceTs: state.livePriceTs || null,
+      source: state.livePriceSource || state.openPriceSource || '',
+      yesPriceNumber: odds.yes,
+      noPriceNumber: odds.no,
+      deltaPct: odds.deltaPct,
+      delta: odds.delta,
+      scale: odds.scale,
+      ticks: Array.isArray(state.ticks) ? state.ticks.slice(-120) : [],
+      canonical: true,
+      hub: 'native-market-hub'
+    };
+    this.btcSnapshotCache = payload;
+    this.btcSnapshotCacheAt = Date.now();
+    return payload;
+  }
+
+  async btcTicks(openAt, since, refresh) {
+    const current = currentRound();
+    const cleanOpenAt = Number.isFinite(Number(openAt)) && Number(openAt) > 0
+      ? Math.floor(Number(openAt) / FIVE_MIN_MS) * FIVE_MIN_MS
+      : current.openAt;
+    let ticks = [];
+    if (cleanOpenAt === current.openAt) {
+      const snap = await this.btcSnapshot({ refresh: refresh !== false });
+      ticks = Array.isArray(snap.ticks) ? snap.ticks.slice() : [];
+    } else {
+      ticks = await this.state.storage.get(`btc:ticks:${cleanOpenAt}`) || [];
+    }
+    const filtered = Number(since) > 0 ? ticks.filter(t => Number(t && t.t) > Number(since)) : ticks;
+    return {
+      ok: true,
+      openAt: cleanOpenAt,
+      closeAt: cleanOpenAt + FIVE_MIN_MS,
+      ticks: filtered,
+      count: filtered.length,
+      ts: new Date().toISOString(),
+      hub: 'native-market-hub'
+    };
+  }
+
+  async nativeBaseYesForMarket(marketId, fallbackBaseYes) {
+    let baseYes = clampNativeProbability(fallbackBaseYes);
+    const marketText = String(marketId == null ? '' : marketId);
+    if (marketText.indexOf('ost-btc5m-') === 0) {
+      const openAt = Number(marketText.replace('ost-btc5m-', ''));
+      const current = currentRound();
+      if (Number.isFinite(openAt) && openAt === current.openAt) {
+        const round = await this.btcSnapshot({ refresh: true });
+        const roundYes = clampNativeProbability(round && round.yesPriceNumber);
+        if (roundYes != null && btcRoundHasHotLivePrice(round)) baseYes = roundYes;
+      }
+    }
+    return baseYes == null ? 0.5 : baseYes;
+  }
+
   async quoteMarket(marketId, fallbackBaseYes) {
     const state = await this.readMarket(marketId);
-    state.baseYesPrice = await nativeBaseYesForMarket(this.env, state.marketId, fallbackBaseYes != null ? fallbackBaseYes : state.baseYesPrice);
+    state.baseYesPrice = await this.nativeBaseYesForMarket(state.marketId, fallbackBaseYes != null ? fallbackBaseYes : state.baseYesPrice);
     state.updatedAt = state.updatedAt ? state.updatedAt : Date.now();
     const quoted = quoteNativeMarketState(state, state.baseYesPrice);
     Object.assign(state, quoted);
@@ -1099,7 +1422,7 @@ export class NativeMarketHub {
     const nextImpact = nativePositionImpact(record);
     applyNativeStateDelta(state, nextImpact, 1);
     state.orders[positionKey] = nextImpact;
-    state.baseYesPrice = await nativeBaseYesForMarket(this.env, state.marketId, fallbackBaseYes != null ? fallbackBaseYes : state.baseYesPrice);
+    state.baseYesPrice = await this.nativeBaseYesForMarket(state.marketId, fallbackBaseYes != null ? fallbackBaseYes : state.baseYesPrice);
     state.updatedAt = Date.now();
     const quoted = quoteNativeMarketState(state, state.baseYesPrice);
     Object.assign(state, quoted);
@@ -1122,6 +1445,20 @@ export class NativeMarketHub {
     const path = url.pathname.replace(/\/$/, '') || '/';
     const method = request.method;
     if (method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS_HEADERS });
+
+    if ((path === '/btc/round' || path === '/snapshot') && method === 'GET') {
+      const refresh = url.searchParams.get('refresh') !== '0';
+      return json(await this.btcSnapshot({ refresh }), 200, { 'cache-control': 'no-store' });
+    }
+
+    if (path === '/btc/ticks' && method === 'GET') {
+      const refresh = url.searchParams.get('refresh') !== '0';
+      return json(await this.btcTicks(url.searchParams.get('openAt'), url.searchParams.get('since'), refresh), 200, { 'cache-control': 'no-store' });
+    }
+
+    if (path === '/poke' && method === 'POST') {
+      return json(await this.btcSnapshot({ refresh: true, force: true }), 200, { 'cache-control': 'no-store' });
+    }
 
     const stateMatch = path.match(/^\/state\/([^/]+)$/);
     if (stateMatch && method === 'GET') {
@@ -2049,6 +2386,22 @@ export default {
     // numbers; the worker also locks the round open price + appends to the
     // shared tick ring on every call.
     if (path === '/btc/price' && method === 'GET') {
+      const canonical = await getCanonicalBtcRound(env, { refresh: true });
+      if (canonical && Number(canonical.livePrice) > 1000) {
+        return json({
+          price: Number(canonical.livePrice),
+          currency: 'USD',
+          source: canonical.livePriceSource || canonical.source || 'ost-canonical',
+          round: {
+            id: canonical.id,
+            openAt: canonical.openAt,
+            closeAt: canonical.closeAt,
+            msLeft: canonical.msLeft
+          },
+          canonical: true,
+          ts: new Date(Number(canonical.livePriceTs) || Date.now()).toISOString()
+        }, 200, { 'cache-control': 'no-store' });
+      }
       const result = await fetchBtcPrice();
       if (!result) {
         // Surface the cached latest so the chart doesn't go blank when a
@@ -2075,7 +2428,7 @@ export default {
     // Resolves the "user A sees 80¢ NO, user B sees 50¢ NO" discrepancy.
     if (path === '/btc/round' && method === 'GET') {
       const refresh = url.searchParams.get('refresh') !== '0';
-      const data = await buildCanonicalBtcRound(env, { refresh });
+      const data = await getCanonicalBtcRound(env, { refresh });
       return json(data, 200, { 'cache-control': 'no-store' });
     }
 
@@ -2089,6 +2442,8 @@ export default {
         ? { openAt: Math.floor(openAtParam / FIVE_MIN_MS) * FIVE_MIN_MS, closeAt: Math.floor(openAtParam / FIVE_MIN_MS) * FIVE_MIN_MS + FIVE_MIN_MS }
         : currentRound();
       const since = Number(url.searchParams.get('since')) || 0;
+      const hubTicks = await getCanonicalBtcTicks(env, round.openAt, since, { refresh: round.openAt === currentRound().openAt });
+      if (hubTicks) return json(hubTicks, 200, { 'cache-control': 'no-store' });
       const ringKey = `btc:ticks:${round.openAt}`;
       let ring = await kvGet(env, ringKey, []);
       if (!Array.isArray(ring)) ring = [];
@@ -2169,7 +2524,7 @@ export default {
       // Return the canonical round so two browsers always see identical odds
       // and identical open price. Same payload as /btc/round, kept under both
       // paths for back-compat with older site builds.
-      const data = await buildCanonicalBtcRound(env, { refresh: true });
+      const data = await getCanonicalBtcRound(env, { refresh: true });
       return json({ ...data, ts: new Date().toISOString() }, 200, { 'cache-control': 'no-store' });
     }
 
@@ -3092,7 +3447,7 @@ export default {
         const active = await fetchActiveMarkets(env, limit);
         const raw = active.raw;
         const markets = (Array.isArray(raw) ? raw : raw?.markets || []).map(normaliseMarket);
-        const btcRound = await buildCanonicalBtcRound(env, { refresh: false });
+        const btcRound = await getCanonicalBtcRound(env, { refresh: false });
         const nativeState = btcRound && btcRound.openPrice ? await getNativeMarketState(env, btcRound.id, btcRound.yesPriceNumber) : null;
         const ostNative = btcRound.openPrice ? [{
           id: btcRound.id,
@@ -3114,7 +3469,7 @@ export default {
       if (botMktMatch && method === 'GET') {
         const id = decodeURIComponent(botMktMatch[1]);
         if (id.indexOf('ost-btc5m-') === 0) {
-          const r = await buildCanonicalBtcRound(env, { refresh: true });
+          const r = await getCanonicalBtcRound(env, { refresh: true });
           const state = await getNativeMarketState(env, id, r && r.yesPriceNumber);
           return json({ market: Object.assign({}, r, state, { marketState: state }), source: 'ost-native' }, 200, { 'cache-control': 'no-store' });
         }
@@ -3132,7 +3487,7 @@ export default {
       }
 
       if (sub === '/btc/round' && method === 'GET') {
-        const r = await buildCanonicalBtcRound(env, { refresh: true });
+        const r = await getCanonicalBtcRound(env, { refresh: true });
         return json(r, 200, { 'cache-control': 'no-store' });
       }
 
@@ -3210,7 +3565,7 @@ export default {
           : Number(body && body.price);
         if (!Number.isFinite(price) || price <= 0 || price >= 1) {
           if (marketId.indexOf('ost-btc5m-') === 0) {
-            const r = await buildCanonicalBtcRound(env, { refresh: true });
+            const r = await getCanonicalBtcRound(env, { refresh: true });
             price = side === 'NO' ? r.noPriceNumber : r.yesPriceNumber;
           } else {
             const detail = await fetchMarketDetail(env, marketId);

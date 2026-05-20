@@ -2995,7 +2995,16 @@
           window.__ostNativeMarketState[record.marketId] = marketState;
           window.dispatchEvent(new CustomEvent('ost:native-market-state', { detail: { marketId: record.marketId, state: marketState, record: record } }));
         } catch {}
-      }).catch(function() {});
+      }).catch(function(error) {
+        console.warn('[prediction order sync] failed', error && error.message || error);
+        const retryCount = Number(record.__remoteRetryCount || 0);
+        if (retryCount < 3) {
+          setTimeout(function() {
+            sharePredictionOrderRecord(Object.assign({}, record, { __remoteRetryCount: retryCount + 1 }));
+          }, 2500 * (retryCount + 1));
+        }
+        try { window.dispatchEvent(new CustomEvent('ost:position-sync-failed', { detail: { record, error } })); } catch {}
+      });
     } catch {}
   }
 
@@ -14708,49 +14717,21 @@
               }).catch(function(){});
             }
           } catch (err) {
-            console.warn('[prediction cashout] on-chain path failed, applying local fallback', err);
-            // Fallback: mark cashed-out locally so the user always gets credit
-            // for the resolved win (the alternative was forcing them to re-open
-            // the market modal and click Sell, which is exactly what they were
-            // complaining about). We still log the original error in the
-            // signature field so support can investigate.
-            try {
-              order.cashedOut = true;
-              order.cashoutSig = 'local-' + Date.now().toString(36);
-              order.cashoutOst = payout;
-              order.cashoutAt = Date.now();
-              order.cashoutKind = action.kind;
-              order.cashoutError = (err && err.message) ? String(err.message).slice(0, 200) : 'unknown';
-              var fallbackRetained = Math.max(0, Number(order.stake || action.stake || 0) - Number(payout || 0));
-              if (fallbackRetained > 0 && !order.vaultRetainedAt) {
-                order.vaultRetainedAt = Date.now();
-                order.vaultRetainedOst = fallbackRetained;
-                recordVaultRetainedLoss({
-                  source: 'prediction',
-                  subKind: action.kind === 'prediction-settlement' ? 'prediction-settlement-shortfall' : 'prediction-sell-loss',
-                  amount: fallbackRetained,
-                  retainedOst: fallbackRetained,
-                  stake: Number(order.stake || 0) || 0,
-                  payoutOst: Number(payout || 0) || 0,
-                  marketId: order.marketId || '',
-                  title: order.title || '',
-                  side: order.side || '',
-                  linkedId: order.signature || order.sig || order.id || '',
-                  error: order.cashoutError
-                });
-              }
-              orders[idx] = order;
-              writePredictionOrderRecords(orders);
-              sharePredictionOrderRecord(order);
-              state.orderHistory = orders;
-              renderPredictionLedger();
-              try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed', { detail: { order: order, marketId: order.marketId || '' } })); } catch(_) {}
-              try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch(_) {}
-            } catch (fallbackErr) {
-              console.error('[prediction cashout] local fallback also failed', fallbackErr);
-              btn.disabled = false; btn.textContent = orig;
-              try { alert('Claim failed: ' + ((err && err.message) || 'unknown')); } catch(e){}
-            }
+            console.warn('[prediction cashout] on-chain path failed; keeping ticket retryable', err);
+            order.cashoutError = (err && err.message) ? String(err.message).slice(0, 240) : 'unknown';
+            order.cashoutPending = true;
+            order.cashoutKind = action.kind;
+            order.status = action.kind === 'prediction-settlement' ? (action.finalStatus || order.status || 'won') : 'open';
+            orders[idx] = order;
+            writePredictionOrderRecords(orders);
+            sharePredictionOrderRecord(order);
+            state.orderHistory = orders;
+            renderPredictionLedger();
+            try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed', { detail: { order: order, marketId: order.marketId || '' } })); } catch(_) {}
+            try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch(_) {}
+            btn.disabled = false;
+            btn.textContent = orig;
+            try { alert('Claim failed on-chain: ' + order.cashoutError + '\nNo local payout was recorded. You can retry this claim.'); } catch(e){}
           }
         });
       });

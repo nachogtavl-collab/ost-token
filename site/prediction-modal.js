@@ -59,7 +59,8 @@
   var nativeStateInFlight = {};
   var nativeStateInFlightBase = {};
   var NATIVE_STATE_BASE_TOLERANCE = 0.005;
-  var NATIVE_STATE_REFRESH_MS = 3000;
+  var NATIVE_STATE_REFRESH_MS = 750;
+  var POSITION_SYNC_RETRY_KEY = 'ost.prediction.position.sync.retry.v1';
 
   function ostApiBase() {
     return String(window.OST_API_BASE || '').replace(/\/$/, '');
@@ -333,7 +334,7 @@
       var pendingBase = Number(nativeStateInFlightBase[market.id]);
       if (!Number.isFinite(pendingBase) || Math.abs(pendingBase - baseYes) < NATIVE_STATE_BASE_TOLERANCE) return nativeStateInFlight[market.id];
     }
-    if (Date.now() - (nativeStateFetchAt[market.id] || 0) < 650) {
+    if (Date.now() - (nativeStateFetchAt[market.id] || 0) < 450) {
       try {
         var cached = window.__ostNativeMarketState && window.__ostNativeMarketState[market.id];
         var cachedBase = Number(cached && cached.baseYesPrice);
@@ -377,6 +378,78 @@
       })
     ]);
   }
+
+  function readPositionSyncQueue() {
+    try {
+      var rows = JSON.parse(localStorage.getItem(POSITION_SYNC_RETRY_KEY) || '[]');
+      return Array.isArray(rows) ? rows : [];
+    } catch (_) { return []; }
+  }
+
+  function writePositionSyncQueue(rows) {
+    try { localStorage.setItem(POSITION_SYNC_RETRY_KEY, JSON.stringify((rows || []).slice(0, 80))); } catch (_) {}
+  }
+
+  function positionSyncKey(payload) {
+    return String(payload && (payload.signature || payload.sig || payload.id || [payload.wallet || '', payload.marketId || '', payload.side || '', payload.createdAt || payload.ts || ''].join(':')) || '');
+  }
+
+  function rememberPositionSyncFailure(payload, error) {
+    if (!payload || !payload.marketId) return;
+    var key = positionSyncKey(payload);
+    var rows = readPositionSyncQueue().filter(function (row) { return positionSyncKey(row && row.payload) !== key; });
+    rows.unshift({ payload: payload, error: String(error && error.message || error || 'sync failed').slice(0, 180), retryAt: Date.now() + 2500, tries: 0, queuedAt: Date.now() });
+    writePositionSyncQueue(rows);
+    try { window.dispatchEvent(new CustomEvent('ost:position-sync-failed', { detail: { payload: payload, error: error } })); } catch (_) {}
+  }
+
+  function postPositionToWorker(payload, onOk) {
+    var base = (window.OST_API_BASE || '').replace(/\/$/, '');
+    if (!base) {
+      rememberPositionSyncFailure(payload, 'OST API unavailable');
+      return Promise.resolve(null);
+    }
+    return fetch(base + '/positions', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).then(function (r) {
+      if (r && r.ok) return r.json();
+      return (r ? r.text() : Promise.resolve('')).then(function (text) {
+        throw new Error('position sync failed (' + (r && r.status || 'network') + ')' + (text ? ': ' + text.slice(0, 120) : ''));
+      });
+    }).then(function (j) {
+      if (typeof onOk === 'function') onOk(j);
+      return j;
+    }).catch(function (error) {
+      rememberPositionSyncFailure(payload, error);
+      throw error;
+    });
+  }
+
+  var positionSyncFlushInFlight = false;
+  function flushPositionSyncQueue() {
+    if (positionSyncFlushInFlight) return;
+    var rows = readPositionSyncQueue();
+    var due = rows.filter(function (row) { return !row.retryAt || row.retryAt <= Date.now(); });
+    if (!due.length) return;
+    positionSyncFlushInFlight = true;
+    var remaining = rows.filter(function (row) { return row.retryAt && row.retryAt > Date.now(); });
+    var chain = Promise.resolve();
+    due.slice(0, 8).forEach(function (row) {
+      chain = chain.then(function () {
+        return postPositionToWorker(row.payload).catch(function () {
+          row.tries = Number(row.tries || 0) + 1;
+          row.retryAt = Date.now() + Math.min(30000, 2500 * Math.max(1, row.tries));
+          remaining.push(row);
+        });
+      });
+    });
+    chain.then(function () { writePositionSyncQueue(remaining); }).finally(function () { positionSyncFlushInFlight = false; });
+  }
+  setInterval(flushPositionSyncQueue, 5000);
+  try { window.addEventListener('online', flushPositionSyncQueue); } catch (_) {}
+  setTimeout(flushPositionSyncQueue, 1200);
   function isClosedFlowRecord(record) {
     var status = String(record && (record.status || record.outcome) || '').toLowerCase();
     return !!(record && (record.cashedOut || record.resolved || Number(record.cashoutAt || 0) > 0 || ['sold', 'cashed-out', 'closed', 'settled', 'resolved', 'won', 'lost'].indexOf(status) >= 0));
@@ -387,7 +460,6 @@
   // other OST user sees it in their "Live OST flow" ticker.
   function shareBetGlobally(market, side, stake, rec, outcomeKey, bodyEl) {
     try {
-      var base = (window.OST_API_BASE || '').replace(/\/$/, '');
       var wallet = (rec && rec.wallet) ||
         (window.OST_WALLET && window.OST_WALLET.session && window.OST_WALLET.session.publicKey && window.OST_WALLET.session.publicKey.toBase58 && window.OST_WALLET.session.publicKey.toBase58()) ||
         window.OST_WALLET_PUBKEY ||
@@ -426,19 +498,14 @@
       optimisticallyMergeFlowRecord(market, payload);
       rememberNativePressure(payload);
       syncNativeQuoteBody(bodyEl);
-      if (!base) return;
-      fetch(base + '/positions', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(payload)
-      }).then(function (r) { return r && r.ok ? r.json() : null; })
-        .then(function (j) {
+      postPositionToWorker(payload, function (j) {
           if (j && j.marketState) applyNativeMarketState(market, j.marketState);
           if (j && j.record) optimisticallyMergeFlowRecord(market, j.record);
           if (j && j.flowRecord) optimisticallyMergeFlowRecord(market, j.flowRecord);
           syncNativeQuoteBody(bodyEl);
-        })
-        .catch(function () { /* fire-and-forget */ });
+        }).catch(function (error) {
+          try { toast('Bet recorded. Live market sync is retrying: ' + String(error && error.message || 'worker unavailable').slice(0, 90), 'err'); } catch (_) {}
+        });
     } catch (_) { /* never block UI */ }
   }
 
@@ -1658,7 +1725,6 @@ liveTimers.forEach(function (t) {
   }
   function postPositionUpdate(order, market, bodyEl) {
     try {
-      var base = (window.OST_API_BASE || '').replace(/\/$/, '');
       var payload = Object.assign({}, order, {
         wallet: order.wallet || ownWallet() || 'anon',
         marketTitle: order.title || order.marketTitle || '',
@@ -1667,19 +1733,12 @@ liveTimers.forEach(function (t) {
       });
       rememberNativePressure(payload);
       syncNativeQuoteBody(bodyEl);
-      if (!base) return;
-      fetch(base + '/positions', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(payload)
-      }).then(function (r) { return r && r.ok ? r.json() : null; })
-        .then(function (j) {
+      postPositionToWorker(payload, function (j) {
           if (market && j && j.marketState) applyNativeMarketState(market, j.marketState);
           if (market && j && j.record) optimisticallyMergeFlowRecord(market, j.record);
           if (market && j && j.flowRecord) optimisticallyMergeFlowRecord(market, j.flowRecord);
           syncNativeQuoteBody(bodyEl);
-        })
-        .catch(function () {});
+        }).catch(function () {});
     } catch (_) {}
   }
   function notifyOrderChanged(order, market) {
