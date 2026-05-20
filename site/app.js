@@ -2212,7 +2212,7 @@
   // Initialize Solana connection
   function getSolanaConnection() {
     if (!solanaConnection && typeof solanaWeb3 !== 'undefined') {
-      solanaConnection = new solanaWeb3.Connection(OST_CONFIG.rpcUrl, 'confirmed');
+      solanaConnection = new solanaWeb3.Connection(OST_CONFIG.rpcUrl, 'processed');
     }
     return solanaConnection;
   }
@@ -2744,6 +2744,40 @@
       keys: signerPubkey ? [{ pubkey: toPublicKey(signerPubkey), isSigner: true, isWritable: false }] : [],
       data: textEncoder.encode(String(memoText || ''))
     });
+  }
+
+  function solanaFastLane() {
+    try { return window.OST_SOLANA_FAST || null; } catch (_) { return null; }
+  }
+
+  function solanaFastSendOptions(extra) {
+    const fast = solanaFastLane();
+    if (fast && typeof fast.sendOptions === 'function') return fast.sendOptions(extra || {});
+    return Object.assign({ skipPreflight: true, preflightCommitment: 'processed', maxRetries: 3 }, extra || {});
+  }
+
+  async function getLatestBlockhashFast(conn) {
+    const fast = solanaFastLane();
+    if (fast && typeof fast.getLatestBlockhash === 'function') return fast.getLatestBlockhash(conn);
+    return conn.getLatestBlockhash('processed');
+  }
+
+  function applySolanaFastLane(transaction) {
+    const fast = solanaFastLane();
+    if (fast && typeof fast.applyPriorityFees === 'function') fast.applyPriorityFees(transaction);
+    return transaction;
+  }
+
+  async function confirmSolanaFast(conn, signature, latest) {
+    const fast = solanaFastLane();
+    const result = fast && typeof fast.confirm === 'function'
+      ? await fast.confirm(conn, signature, latest)
+      : await conn.confirmTransaction(latest && latest.blockhash ? {
+          signature,
+          blockhash: latest.blockhash,
+          lastValidBlockHeight: latest.lastValidBlockHeight
+        } : signature, 'processed');
+    return result;
   }
 
   function sanitizeMemoChunk(value, maxLength) {
@@ -3328,9 +3362,10 @@
     // Preserve any existing blockhash/feePayer/partial signatures (e.g. when the
     // OST swap pool has already co-signed the transaction). Overwriting the
     // blockhash invalidates the pool's signature and silently breaks every swap.
+    applySolanaFastLane(transaction);
     let latest = null;
     if (!transaction.recentBlockhash) {
-      latest = await conn.getLatestBlockhash('confirmed');
+      latest = await getLatestBlockhashFast(conn);
       transaction.recentBlockhash = latest.blockhash;
     }
     if (!transaction.feePayer) {
@@ -3344,7 +3379,7 @@
         transaction.partialSign(connectedWalletSession.keypair);
         signature = await _sendRaw(conn, transaction.serialize());
       } else if (connectedWalletSession.provider && typeof connectedWalletSession.provider.signAndSendTransaction === 'function') {
-        const result = await connectedWalletSession.provider.signAndSendTransaction(transaction);
+        const result = await connectedWalletSession.provider.signAndSendTransaction(transaction, solanaFastSendOptions());
         signature = typeof result === 'string' ? result : result && result.signature;
       } else if (connectedWalletSession.provider && typeof connectedWalletSession.provider.signTransaction === 'function') {
         const signedTransaction = await connectedWalletSession.provider.signTransaction(transaction);
@@ -3356,18 +3391,9 @@
 
     if (!signature) throw new Error('Active wallet cannot sign transactions');
     if (!latest) {
-      try { latest = await conn.getLatestBlockhash('confirmed'); } catch (_) {}
+      try { latest = await getLatestBlockhashFast(conn); } catch (_) {}
     }
-    let confirmRes = null;
-    if (latest) {
-      confirmRes = await conn.confirmTransaction({
-        signature,
-        blockhash: latest.blockhash,
-        lastValidBlockHeight: latest.lastValidBlockHeight
-      }, 'confirmed');
-    } else {
-      confirmRes = await conn.confirmTransaction(signature, 'confirmed');
-    }
+    const confirmRes = await confirmSolanaFast(conn, signature, latest);
     // Surface on-chain failures: a confirmed tx can still have reverted with err.
     if (confirmRes && confirmRes.value && confirmRes.value.err) {
       var errStr;
@@ -3385,10 +3411,7 @@
   // ---------------------------------------------------------------------------
   async function _sendRaw(conn, serialized) {
     try {
-      return await conn.sendRawTransaction(serialized, {
-        skipPreflight: false,
-        preflightCommitment: 'confirmed'
-      });
+      return await conn.sendRawTransaction(serialized, solanaFastSendOptions());
     } catch (e) {
       var msg = (e && e.message) || '';
       // Simulation false-positive: account state not yet visible at confirmed.
@@ -3396,7 +3419,7 @@
       if (msg.includes('no record of a prior credit') ||
           msg.includes('simulation failed') ||
           msg.includes('Simulation failed')) {
-        return conn.sendRawTransaction(serialized, { skipPreflight: true });
+        return conn.sendRawTransaction(serialized, solanaFastSendOptions({ skipPreflight: true }));
       }
       throw e;
     }
@@ -6077,6 +6100,11 @@
     ensureAta: ensureOstAssociatedTokenAccount,
     ensureFee: ensureWalletFeeBalance,
     sign: signAndSendTransaction,
+    fastLane: solanaFastLane,
+    fastSendOptions: solanaFastSendOptions,
+    fastBlockhash: getLatestBlockhashFast,
+    fastConfirm: confirmSolanaFast,
+    applyFastLane: applySolanaFastLane,
     transferChecked: createTransferCheckedInstruction,
     associatedAddress: getAssociatedTokenAddressSync,
     associatedAccountIx: createAssociatedTokenAccountInstruction,
@@ -14233,7 +14261,10 @@
         if (marketId.indexOf('ost-btc5m-') === 0 && window.OST_PREDICTION_API && typeof window.OST_PREDICTION_API.fiveMinRound === 'function') {
           var round = window.OST_PREDICTION_API.fiveMinRound();
           if (round && String(round.id || round.marketId || '') === marketId) {
-            var roundPrice = sideKey === 'no' ? Number(round.noPriceNumber) : Number(round.yesPriceNumber);
+            var roundState = round.marketState || (round.meta && round.meta.marketState) || null;
+            var roundPrice = sideKey === 'no'
+              ? Number((roundState && roundState.noBidPriceNumber) != null ? roundState.noBidPriceNumber : (round.meta && round.meta.noBidPriceNumber) != null ? round.meta.noBidPriceNumber : round.noPriceNumber)
+              : Number((roundState && roundState.yesBidPriceNumber) != null ? roundState.yesBidPriceNumber : (round.meta && round.meta.yesBidPriceNumber) != null ? round.meta.yesBidPriceNumber : round.yesPriceNumber);
             if (Number.isFinite(roundPrice) && roundPrice > 0) return roundPrice;
           }
         }
@@ -14244,7 +14275,9 @@
           if (window.OST_NATIVE_MARKET_PRESSURE && typeof window.OST_NATIVE_MARKET_PRESSURE.quote === 'function') {
             nativeState = window.OST_NATIVE_MARKET_PRESSURE.quote(marketId, nativeState, nativeState.baseYesPrice || order.baseYesPrice || order.fairYesPrice);
           }
-          var statePrice = sideKey === 'no' ? Number(nativeState.noPriceNumber) : Number(nativeState.yesPriceNumber);
+          var statePrice = sideKey === 'no'
+            ? Number(nativeState.noBidPriceNumber != null ? nativeState.noBidPriceNumber : nativeState.noPriceNumber)
+            : Number(nativeState.yesBidPriceNumber != null ? nativeState.yesBidPriceNumber : nativeState.yesPriceNumber);
           if (Number.isFinite(statePrice) && statePrice > 0) return statePrice;
         }
       } catch (_) {}

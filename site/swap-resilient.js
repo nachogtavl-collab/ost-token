@@ -184,7 +184,9 @@
       }), w.session.publicKey));
     }
     tx.feePayer = pool.publicKey;
-    var bh = await conn.getLatestBlockhash('confirmed');
+    if (w.applyFastLane) w.applyFastLane(tx);
+    else if (window.OST_SOLANA_FAST && window.OST_SOLANA_FAST.applyPriorityFees) window.OST_SOLANA_FAST.applyPriorityFees(tx);
+    var bh = w.fastBlockhash ? await w.fastBlockhash(conn) : await conn.getLatestBlockhash('processed');
     tx.recentBlockhash = bh.blockhash;
     tx.partialSign(pool);          // pool signs as feePayer + system source
     var sig = await w.sign(tx);    // user signs as token authority

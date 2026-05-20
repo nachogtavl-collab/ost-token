@@ -33,6 +33,32 @@
     return Number.isFinite(value) && value >= 0 ? value : fallback;
   }
 
+  function fastLane() { try { return window.OST_SOLANA_FAST || null; } catch (_) { return null; } }
+  function fastSendOptions(extra) {
+    var fast = fastLane();
+    if (fast && typeof fast.sendOptions === 'function') return fast.sendOptions(extra || {});
+    return Object.assign({ skipPreflight: true, preflightCommitment: 'processed', maxRetries: 3 }, extra || {});
+  }
+  function applyFastLane(tx) {
+    var fast = fastLane();
+    if (fast && typeof fast.applyPriorityFees === 'function') fast.applyPriorityFees(tx);
+    return tx;
+  }
+  async function fastBlockhash(conn) {
+    var fast = fastLane();
+    if (fast && typeof fast.getLatestBlockhash === 'function') return fast.getLatestBlockhash(conn);
+    return conn.getLatestBlockhash('processed');
+  }
+  async function fastConfirm(conn, signature, latest) {
+    var fast = fastLane();
+    if (fast && typeof fast.confirm === 'function') return fast.confirm(conn, signature, latest);
+    return conn.confirmTransaction(latest && latest.blockhash ? {
+      signature: signature,
+      blockhash: latest.blockhash,
+      lastValidBlockHeight: latest.lastValidBlockHeight
+    } : signature, 'processed');
+  }
+
   function vaultConfig() {
     return {
       minReserve: numberSetting('OST_VAULT_MIN_RESERVE', 0),
@@ -138,7 +164,7 @@
 
   function makeConn(url) {
     if (!rpcConnections[url]) {
-      try { rpcConnections[url] = new solanaWeb3.Connection(url, 'confirmed'); }
+      try { rpcConnections[url] = new solanaWeb3.Connection(url, 'processed'); }
       catch (e) { return null; }
     }
     return rpcConnections[url];
@@ -245,7 +271,8 @@
     var tx = new solanaWeb3.Transaction();
     instructions.forEach(function (ix) { if (ix) tx.add(ix); });
     tx.feePayer = pool.publicKey;
-    var bh = await conn.getLatestBlockhash('confirmed');
+    applyFastLane(tx);
+    var bh = await fastBlockhash(conn);
     tx.recentBlockhash = bh.blockhash;
     tx.lastValidBlockHeight = bh.lastValidBlockHeight;
     return { tx: tx, pool: pool, conn: conn, blockhash: bh };
@@ -272,17 +299,14 @@
   // simulation false-positives ("no record of a prior credit").
   async function sendRawSafe(conn, serialized) {
     try {
-      return await conn.sendRawTransaction(serialized, {
-        skipPreflight: false,
-        preflightCommitment: 'confirmed'
-      });
+      return await conn.sendRawTransaction(serialized, fastSendOptions());
     } catch (e) {
       var msg = (e && e.message) || '';
       if (msg.includes('no record of a prior credit') ||
           msg.includes('simulation failed') ||
           msg.includes('Simulation failed')) {
         // Balance was verified before this call — safe to skip stale simulation.
-        return conn.sendRawTransaction(serialized, { skipPreflight: true });
+        return conn.sendRawTransaction(serialized, fastSendOptions({ skipPreflight: true }));
       }
       throw await unpackSendError(e);
     }
@@ -291,11 +315,7 @@
   async function confirmSentTransaction(sig, built, label) {
     var primaryErr = null;
     try {
-      var res = await built.conn.confirmTransaction({
-        signature: sig,
-        blockhash: built.blockhash.blockhash,
-        lastValidBlockHeight: built.blockhash.lastValidBlockHeight
-      }, 'confirmed');
+      var res = await fastConfirm(built.conn, sig, built.blockhash);
       if (res && res.value && res.value.err) {
         throw new Error('On-chain failure: ' + JSON.stringify(res.value.err));
       }
@@ -314,7 +334,7 @@
           if (entry) {
             lastStatus = entry;
             if (entry.err) throw new Error('On-chain failure: ' + JSON.stringify(entry.err));
-            if (entry.confirmationStatus === 'confirmed' || entry.confirmationStatus === 'finalized') return sig;
+            if (entry.confirmationStatus === 'processed' || entry.confirmationStatus === 'confirmed' || entry.confirmationStatus === 'finalized') return sig;
           }
         } catch (statusErr) {
           if (statusErr && /On-chain failure/i.test(statusErr.message || '')) throw statusErr;
@@ -344,11 +364,7 @@
     // and the OST never arrived in their wallet ("lost to unknown").
     var primaryErr = null;
     try {
-      var res = await built.conn.confirmTransaction({
-        signature: sig,
-        blockhash: built.blockhash.blockhash,
-        lastValidBlockHeight: built.blockhash.lastValidBlockHeight
-      }, 'confirmed');
+      var res = await fastConfirm(built.conn, sig, built.blockhash);
       if (res && res.value && res.value.err) {
         throw new Error('On-chain failure: ' + JSON.stringify(res.value.err));
       }
@@ -370,7 +386,7 @@
           if (entry) {
             lastStatus = entry;
             if (entry.err) throw new Error('On-chain failure: ' + JSON.stringify(entry.err));
-            if (entry.confirmationStatus === 'confirmed' || entry.confirmationStatus === 'finalized') {
+            if (entry.confirmationStatus === 'processed' || entry.confirmationStatus === 'confirmed' || entry.confirmationStatus === 'finalized') {
               return sig;
             }
           }
@@ -408,7 +424,7 @@
       serialized = signed.serialize();
     } else if (session.provider && typeof session.provider.signAndSendTransaction === 'function') {
       // Provider handles send; just return the signature.
-      var res = await session.provider.signAndSendTransaction(built.tx);
+      var res = await session.provider.signAndSendTransaction(built.tx, fastSendOptions());
       var providerSig = typeof res === 'string' ? res : (res && res.signature);
       if (providerSig) await confirmSentTransaction(providerSig, built, 'Wallet-signed transaction');
       return providerSig;

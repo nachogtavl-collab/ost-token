@@ -43,7 +43,33 @@
   var DEFAULT_RPC =
     (window.OST_SOLANA_RPC && String(window.OST_SOLANA_RPC)) ||
     (clusterApiUrl ? clusterApiUrl('devnet') : 'https://api.devnet.solana.com');
-  var connection = new Connection(DEFAULT_RPC, 'confirmed');
+  var connection = new Connection(DEFAULT_RPC, 'processed');
+
+  function fastLane() { try { return window.OST_SOLANA_FAST || null; } catch (_) { return null; } }
+  function fastSendOptions(extra) {
+    var fast = fastLane();
+    if (fast && typeof fast.sendOptions === 'function') return fast.sendOptions(extra || {});
+    return Object.assign({ skipPreflight: true, preflightCommitment: 'processed', maxRetries: 3 }, extra || {});
+  }
+  function applyFastLane(tx) {
+    var fast = fastLane();
+    if (fast && typeof fast.applyPriorityFees === 'function') fast.applyPriorityFees(tx);
+    return tx;
+  }
+  async function fastBlockhash(conn) {
+    var fast = fastLane();
+    if (fast && typeof fast.getLatestBlockhash === 'function') return fast.getLatestBlockhash(conn);
+    return conn.getLatestBlockhash('processed');
+  }
+  async function fastConfirm(conn, signature, latest) {
+    var fast = fastLane();
+    if (fast && typeof fast.confirm === 'function') return fast.confirm(conn, signature, latest);
+    return conn.confirmTransaction(latest && latest.blockhash ? {
+      signature: signature,
+      blockhash: latest.blockhash,
+      lastValidBlockHeight: latest.lastValidBlockHeight
+    } : signature, 'processed');
+  }
 
   // -------------------------------------------------------------------------
   // Helpers
@@ -202,25 +228,20 @@
     var tx = new Transaction();
     for (var i = 0; i < instructions.length; i++) tx.add(instructions[i]);
     tx.feePayer = payer;
-    var bh = await connection.getLatestBlockhash('confirmed');
+    applyFastLane(tx);
+    var bh = await fastBlockhash(connection);
     tx.recentBlockhash = bh.blockhash;
 
     if (typeof wallet.signAndSendTransaction === 'function') {
-      var res = await wallet.signAndSendTransaction(tx);
+      var res = await wallet.signAndSendTransaction(tx, fastSendOptions());
       var sig = (res && res.signature) || res;
-      await connection.confirmTransaction(
-        { signature: sig, blockhash: bh.blockhash, lastValidBlockHeight: bh.lastValidBlockHeight },
-        'confirmed'
-      );
+      await fastConfirm(connection, sig, bh);
       return sig;
     }
     if (typeof wallet.signTransaction === 'function') {
       var signed = await wallet.signTransaction(tx);
-      var sig2 = await connection.sendRawTransaction(signed.serialize());
-      await connection.confirmTransaction(
-        { signature: sig2, blockhash: bh.blockhash, lastValidBlockHeight: bh.lastValidBlockHeight },
-        'confirmed'
-      );
+      var sig2 = await connection.sendRawTransaction(signed.serialize(), fastSendOptions());
+      await fastConfirm(connection, sig2, bh);
       return sig2;
     }
     throw new Error('Wallet does not support signing transactions.');

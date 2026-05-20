@@ -334,60 +334,7 @@
   }
 
   function quoteNativeMarketStateWithLocalPressure(marketId, state, baseYes) {
-    if (!marketId) return state || null;
-    var baseState = baseNativeStateForQuote(marketId, state, baseYes);
-    var store = nativePressureStore();
-    var bucket = store[marketId];
-    var now = Date.now();
-    var pendingCount = 0;
-    var localNetShares = 0;
-    var localNetStake = 0;
-    if (bucket && bucket.records) {
-      Object.keys(bucket.records).forEach(function (key) {
-        var pending = bucket.records[key];
-        if (!pending || now - cleanNativeNumber(pending.ts, now) > NATIVE_LOCAL_PRESSURE_TTL_MS) {
-          delete bucket.records[key];
-          return;
-        }
-        var direction = pending.direction < 0 ? -1 : 1;
-        var impact = pending.impact || {};
-        baseState.openYesShares = Math.max(0, baseState.openYesShares + direction * cleanNativeNumber(impact.openYesShares, 0));
-        baseState.openNoShares = Math.max(0, baseState.openNoShares + direction * cleanNativeNumber(impact.openNoShares, 0));
-        baseState.openYesStake = Math.max(0, baseState.openYesStake + direction * cleanNativeNumber(impact.openYesStake, 0));
-        baseState.openNoStake = Math.max(0, baseState.openNoStake + direction * cleanNativeNumber(impact.openNoStake, 0));
-        localNetShares += direction * (cleanNativeNumber(impact.openYesShares, 0) - cleanNativeNumber(impact.openNoShares, 0));
-        localNetStake += direction * (cleanNativeNumber(impact.openYesStake, 0) - cleanNativeNumber(impact.openNoStake, 0));
-        pendingCount += 1;
-      });
-    }
-    var netShares = baseState.openYesShares - baseState.openNoShares;
-    var netStake = baseState.openYesStake - baseState.openNoStake;
-    var shareImpact = Math.tanh(netShares / baseState.liquidityShares) * NATIVE_MARKET_MAX_SHARE_IMPACT;
-    var stakeImpact = Math.tanh(netStake / baseState.liquidityOst) * NATIVE_MARKET_MAX_STAKE_IMPACT;
-    var yesPrice = clampNativeQuoteProbability(baseState.baseYesPrice + shareImpact + stakeImpact);
-    if (yesPrice == null) yesPrice = 0.5;
-    return Object.assign({}, state || {}, baseState, {
-      baseNoPrice: 1 - baseState.baseYesPrice,
-      yesPriceNumber: yesPrice,
-      noPriceNumber: 1 - yesPrice,
-      netShares: netShares,
-      netStake: netStake,
-      shareImpact: shareImpact,
-      stakeImpact: stakeImpact,
-      totalImpact: yesPrice - baseState.baseYesPrice,
-      localPressureApplied: pendingCount > 0,
-      localPendingCount: pendingCount,
-      localNetShares: localNetShares,
-      localNetStake: localNetStake,
-      serverOpenYesShares: (state && state.localPressureApplied) ? cleanNativeNumber(state.serverOpenYesShares, 0) : cleanNativeNumber(state && state.openYesShares, 0),
-      serverOpenNoShares: (state && state.localPressureApplied) ? cleanNativeNumber(state.serverOpenNoShares, 0) : cleanNativeNumber(state && state.openNoShares, 0),
-      serverOpenYesStake: (state && state.localPressureApplied) ? cleanNativeNumber(state.serverOpenYesStake, 0) : cleanNativeNumber(state && state.openYesStake, 0),
-      serverOpenNoStake: (state && state.localPressureApplied) ? cleanNativeNumber(state.serverOpenNoStake, 0) : cleanNativeNumber(state && state.openNoStake, 0),
-      serverOrderCount: state && state.localPressureApplied ? state.serverOrderCount : cleanNativeNumber(state && state.orderCount, 0),
-      serverUpdatedAt: state && state.localPressureApplied ? state.serverUpdatedAt : cleanNativeNumber(state && state.updatedAt, 0),
-      serverBaseYesPrice: state && state.localPressureApplied ? state.serverBaseYesPrice : cleanNativeNumber(state && state.baseYesPrice, baseState.baseYesPrice),
-      updatedAt: pendingCount > 0 ? now : baseState.updatedAt
-    });
+    return state || null;
   }
 
   window.OST_NATIVE_MARKET_PRESSURE = Object.assign(window.OST_NATIVE_MARKET_PRESSURE || {}, {
@@ -460,6 +407,12 @@
     market.meta.baseYesPrice = Number(state.baseYesPrice);
     market.meta.yesPriceNumber = market.yesPriceNumber;
     market.meta.noPriceNumber = market.noPriceNumber;
+    market.meta.yesAskPriceNumber = Number(state.yesAskPriceNumber != null ? state.yesAskPriceNumber : market.yesPriceNumber);
+    market.meta.noAskPriceNumber = Number(state.noAskPriceNumber != null ? state.noAskPriceNumber : market.noPriceNumber);
+    market.meta.yesBidPriceNumber = Number(state.yesBidPriceNumber != null ? state.yesBidPriceNumber : market.yesPriceNumber);
+    market.meta.noBidPriceNumber = Number(state.noBidPriceNumber != null ? state.noBidPriceNumber : market.noPriceNumber);
+    market.meta.vaultSpread = Number(state.vaultSpread || state.vaultEdge || 0) || 0;
+    market.meta.sellHaircut = Number(state.sellHaircut || 0) || 0;
     market.meta.shareImpact = Number(state.shareImpact) || 0;
     market.meta.stakeImpact = Number(state.stakeImpact) || 0;
     market.meta.totalImpact = Number(state.totalImpact) || (market.yesPriceNumber - baseYes);
@@ -1012,14 +965,21 @@
     var canonLivePrice = canonLiveTrusted ? Number(canon.livePrice) : NaN;
     var canonLiveTs = Number(canon && (canon.livePriceTs || canon.updatedAt)) || 0;
     var localLiveFresh = Number.isFinite(Number(btcLastTick.price)) && Number(btcLastTick.price) > 1000
+      && !canonLiveTrusted
       && (!canonLiveTs || btcLastTick.ts >= canonLiveTs - 50 || Date.now() - btcLastTick.ts < 1200);
-    var livePrice = localLiveFresh
+    var livePrice = canonLiveTrusted
+      ? canonLivePrice
+      : localLiveFresh
       ? Number(btcLastTick.price)
       : ((Number.isFinite(canonLivePrice) && canonLivePrice > 0 ? canonLivePrice : 0) || btcLastTick.price || refPrice || roundRecord.openPrice || 0);
-    var liveSource = localLiveFresh
+    var liveSource = canonLiveTrusted
+      ? (canon && (canon.livePriceSource || canon.source) || 'ost-canonical')
+      : localLiveFresh
       ? (btcLastTick.source || 'binance-ws')
       : ((canonLiveTrusted && canon && (canon.livePriceSource || canon.source)) || btcLastTick.source || (canon && (canon.livePriceSource || canon.source)) || 'BTC FEED');
-    var liveTs = localLiveFresh
+    var liveTs = canonLiveTrusted
+      ? (canon && Number(canon.livePriceTs || canon.updatedAt) || 0)
+      : localLiveFresh
       ? btcLastTick.ts
       : ((canonLiveTrusted && canon && Number(canon.livePriceTs)) || btcLastTick.ts || (canon && Number(canon.livePriceTs)) || 0);
     var localOpenFallback = Number.isFinite(livePrice) && livePrice > 1000 ? livePrice : 0;
@@ -1032,6 +992,10 @@
       || projectLocalPriceToBeat(openPrice)
       || openPrice;
     var odds = computeBtcOdds(openPrice, livePrice, b, priceToBeat);
+    if (canonLiveTrusted && canon && Number.isFinite(Number(canon.yesPriceNumber))) {
+      odds.yes = Math.max(0.02, Math.min(0.98, Number(canon.yesPriceNumber)));
+      odds.no = Number.isFinite(Number(canon.noPriceNumber)) ? Math.max(0.02, Math.min(0.98, Number(canon.noPriceNumber))) : 1 - odds.yes;
+    }
     odds.canonical = !!canon;
     var roundId = 'ost-btc5m-' + b.openAt;
     var yesPct = (odds.yes * 100).toFixed(1) + '%';
@@ -1731,6 +1695,10 @@
     var fairYes = Number(market.fairYesPriceNumber || market.baseYesPriceNumber || market.meta && market.meta.fairYesPriceNumber || market.yesPriceNumber);
     if (!Number.isFinite(fairYes)) fairYes = Number(market.yesPriceNumber);
     market = applyNativeMarketStateToBtcMarket(market, fairYes);
+    var marketState = market.marketState || (market.meta && market.meta.marketState) || null;
+    if (!marketState || !Number.isFinite(Number(marketState.yesAskPriceNumber != null ? marketState.yesAskPriceNumber : marketState.yesPriceNumber))) {
+      throw new Error('Centralized OST share price is still loading. Try again in a moment.');
+    }
     var yesPrice = Number(market.yesPriceNumber);
     var noPrice = Number(market.noPriceNumber);
     if (!Number.isFinite(yesPrice) && Number.isFinite(fairYes)) yesPrice = fairYes;

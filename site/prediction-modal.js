@@ -190,6 +190,11 @@
       if (Number(storedRound.priceToBeat) > 0 && !market.meta.priceToBeat) market.meta.priceToBeat = Number(storedRound.priceToBeat);
     }
     var p = Number(livePrice);
+    if (canonicalRoundMatchesMarket(market, round) && canonicalBtcRoundIsHot(round)) {
+      p = Number(round.livePrice);
+      source = round.livePriceSource || round.source || source;
+      updatedAt = Number(round.livePriceTs || round.updatedAt) || updatedAt;
+    }
     if (Number.isFinite(p) && p > 1000) market.meta.livePrice = p;
     else p = Number(market.meta.livePrice);
     var beat = Number(market.meta.priceToBeat || market.meta.openPrice || 0);
@@ -309,6 +314,12 @@
     market.meta.noPriceNumber = market.noPriceNumber;
     market.meta.tradableYesPriceNumber = market.yesPriceNumber;
     market.meta.tradableNoPriceNumber = market.noPriceNumber;
+    market.meta.yesAskPriceNumber = Number(state.yesAskPriceNumber != null ? state.yesAskPriceNumber : market.yesPriceNumber);
+    market.meta.noAskPriceNumber = Number(state.noAskPriceNumber != null ? state.noAskPriceNumber : market.noPriceNumber);
+    market.meta.yesBidPriceNumber = Number(state.yesBidPriceNumber != null ? state.yesBidPriceNumber : market.yesPriceNumber);
+    market.meta.noBidPriceNumber = Number(state.noBidPriceNumber != null ? state.noBidPriceNumber : market.noPriceNumber);
+    market.meta.vaultSpread = Number(state.vaultSpread || state.vaultEdge || 0) || 0;
+    market.meta.sellHaircut = Number(state.sellHaircut || 0) || 0;
     window.__ostNativeMarketState = window.__ostNativeMarketState || {};
     window.__ostNativeMarketState[market.id] = market.marketState;
     try { window.dispatchEvent(new CustomEvent('ost:native-market-state', { detail: { marketId: market.id, state: market.marketState } })); } catch (_) {}
@@ -795,6 +806,17 @@ liveTimers.forEach(function (t) {
       conditionId: market && market.conditionId || '',
       clobTokenIds: normalizeOutcomeTokenIds(market && market.clobTokenIds)
     };
+  }
+  function getNativeSellQuotePrice(market, side, fallback) {
+    var sideKey = String(side || '').toUpperCase() === 'NO' ? 'NO' : 'YES';
+    var price = NaN;
+    if (market && market.isOstNative) {
+      var state = market.marketState || (window.__ostNativeMarketState && window.__ostNativeMarketState[market.id]) || null;
+      if (state) price = sideKey === 'NO' ? Number(state.noBidPriceNumber) : Number(state.yesBidPriceNumber);
+      if (!Number.isFinite(price) && market.meta) price = sideKey === 'NO' ? Number(market.meta.noBidPriceNumber) : Number(market.meta.yesBidPriceNumber);
+    }
+    if (!Number.isFinite(price) || price <= 0) price = Number(fallback);
+    return Number.isFinite(price) && price > 0 ? price : NaN;
   }
   function clampProbability(value) {
     var n = Number(value);
@@ -1414,6 +1436,15 @@ liveTimers.forEach(function (t) {
     }
     var requestedSide = String(side || 'YES').toUpperCase() === 'NO' ? 'NO' : 'YES';
     var contract = getModalTradeContract(market, requestedSide, outcomeKey || '');
+    if (market && market.isOstNative) {
+      var state = market.marketState || (market.meta && market.meta.marketState) || null;
+      var ask = requestedSide === 'NO'
+        ? Number(state && (state.noAskPriceNumber != null ? state.noAskPriceNumber : state.noPriceNumber))
+        : Number(state && (state.yesAskPriceNumber != null ? state.yesAskPriceNumber : state.yesPriceNumber));
+      if (!state || !Number.isFinite(ask) || ask <= 0) {
+        return Promise.reject(new Error('Centralized OST share price is still loading. Try again in a moment.'));
+      }
+    }
     var contractSide = contract && contract.side ? String(contract.side).toUpperCase() : requestedSide;
     var sideForOrder = contractSide.toLowerCase();
     var price = Number(contract && contract.price);
@@ -1472,7 +1503,12 @@ liveTimers.forEach(function (t) {
   }
 
   function refreshMarketQuoteBeforeBet(market) {
-    if (!isFastBtcMarket(market)) return Promise.resolve(market);
+    if (!isFastBtcMarket(market)) {
+      if (isOstNativeMarket(market)) {
+        return withTimeout(refreshNativeMarketState(market, null, nativeBaseYesInput(market)), 1200, null).then(function () { return market; });
+      }
+      return Promise.resolve(market);
+    }
     var api = window.OST_PREDICTION_API || {};
     return withTimeout(fetchCanonicalBtcRound(), 900, null)
       .then(function (round) {
@@ -1987,14 +2023,7 @@ liveTimers.forEach(function (t) {
       var detail = event && event.detail || {};
       if (String(detail.marketId || '') !== String(market.id || '')) return;
       if (detail.state && detail.state !== market.marketState) {
-        var state = detail.state;
-        var yes = Number(state.yesPriceNumber);
-        var no = Number(state.noPriceNumber);
-        if (Number.isFinite(yes) && Number.isFinite(no)) {
-          market.marketState = state;
-          market.yesPriceNumber = yes;
-          market.noPriceNumber = no;
-        }
+        applyNativeMarketState(market, detail.state);
       }
       bodyEl.__syncNativeQuoteUi();
     };
@@ -2110,6 +2139,7 @@ liveTimers.forEach(function (t) {
         var shares = Number(o.shares) > 0 ? Number(o.shares) : (entryPx > 0 ? stake / entryPx : 0);
         var contract = getModalTradeContract(market, side, o.outcomeKey || '');
         var livePx = side === 'NO' ? Number(contract && contract.noPrice) : Number(contract && contract.yesPrice);
+        livePx = getNativeSellQuotePrice(market, side, livePx);
         if (!Number.isFinite(livePx) || livePx <= 0) livePx = entryPx;
         totalStake += stake;
         totalValue += shares > 0 && livePx > 0 ? shares * livePx : stake;
@@ -2132,6 +2162,7 @@ liveTimers.forEach(function (t) {
         var shares = Number(o.shares) > 0 ? Number(o.shares) : (entryPx > 0 ? stake / entryPx : 0);
         var contract = getModalTradeContract(market, side, o.outcomeKey || '');
         var livePx = side === 'NO' ? Number(contract && contract.noPrice) : Number(contract && contract.yesPrice);
+        livePx = getNativeSellQuotePrice(market, side, livePx);
         if (!Number.isFinite(livePx) || livePx <= 0) livePx = entryPx;
         var liveValue = shares > 0 && livePx > 0 ? shares * livePx : stake;
         var pnl = liveValue - stake;
@@ -2158,6 +2189,7 @@ liveTimers.forEach(function (t) {
           var shares = Number(order.shares) > 0 ? Number(order.shares) : (entryPx > 0 ? Number(order.stake || 0) / entryPx : 0);
           var contract = getModalTradeContract(market, side, order.outcomeKey || '');
           var livePx = side === 'NO' ? Number(contract && contract.noPrice) : Number(contract && contract.yesPrice);
+          livePx = getNativeSellQuotePrice(market, side, livePx);
           if (!Number.isFinite(livePx) || livePx <= 0) livePx = entryPx;
           var payout = Math.max(0, shares * livePx);
           if (!(payout > 0)) { toast('Cannot sell at 0¢', 'err'); return; }

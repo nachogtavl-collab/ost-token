@@ -397,29 +397,42 @@ async function buildCanonicalBtcRound(env, opts) {
 
 async function polyGamma(env, path, query = '') {
   const url = `${env.GAMMA_BASE}${path}${query ? '?' + query : ''}`;
-  const r = await fetch(url, {
+  const r = await fetchWithDeadline(url, {
     headers: { accept: 'application/json', 'user-agent': 'OST-API/1.0' },
     cf: { cacheTtl: 5, cacheEverything: true }
-  });
+  }, 4500);
   return r.ok ? r.json() : null;
 }
 
 async function polyClob(env, path, query = '') {
   const url = `${env.CLOB_BASE}${path}${query ? '?' + query : ''}`;
-  const r = await fetch(url, {
+  const r = await fetchWithDeadline(url, {
     headers: { accept: 'application/json', 'user-agent': 'OST-API/1.0' },
     cf: { cacheTtl: 2, cacheEverything: true }
-  });
+  }, 4000);
   return r.ok ? r.json() : null;
 }
 
 async function polyData(env, path, query = '') {
   const url = `${env.DATA_BASE}${path}${query ? '?' + query : ''}`;
-  const r = await fetch(url, {
+  const r = await fetchWithDeadline(url, {
     headers: { accept: 'application/json', 'user-agent': 'OST-API/1.0' },
     cf: { cacheTtl: 30, cacheEverything: true }
-  });
+  }, 5000);
   return r.ok ? r.json() : null;
+}
+
+async function fetchWithDeadline(url, init, timeoutMs = 4500) {
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timeoutId = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+  try {
+    return await fetch(url, {
+      ...(init || {}),
+      signal: controller ? controller.signal : undefined
+    });
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
 }
 
 // Normalise a raw Polymarket market record into our schema.
@@ -496,6 +509,63 @@ async function kvPut(env, key, value, expirationTtl = null) {
   catch (_) { return false; }
 }
 
+const ACTIVE_MARKETS_MEMORY = new Map();
+const MARKET_DETAIL_MEMORY = new Map();
+
+async function fetchActiveMarkets(env, limit) {
+  const cleanLimit = Math.max(1, Math.min(200, Number(limit) || 60));
+  const cacheKey = `markets:active:${cleanLimit}`;
+  try {
+    const raw = await polyGamma(env, '/markets', `limit=${cleanLimit}&closed=false`);
+    const rows = Array.isArray(raw) ? raw : raw && raw.markets || [];
+    if (Array.isArray(rows) && rows.length) {
+      const payload = { raw, ts: Date.now() };
+      ACTIVE_MARKETS_MEMORY.set(cacheKey, payload);
+      if (ACTIVE_MARKETS_MEMORY.size > 12) {
+        const firstKey = ACTIVE_MARKETS_MEMORY.keys().next().value;
+        if (firstKey) ACTIVE_MARKETS_MEMORY.delete(firstKey);
+      }
+      await kvPut(env, cacheKey, payload, 60 * 10);
+      return { raw, stale: false, source: 'gamma' };
+    }
+  } catch (_) {}
+
+  const hot = ACTIVE_MARKETS_MEMORY.get(cacheKey);
+  if (hot && hot.raw) return { raw: hot.raw, stale: true, source: 'memory', cachedAt: hot.ts || 0 };
+
+  const cached = await kvGet(env, cacheKey, null);
+  if (cached && cached.raw) return { raw: cached.raw, stale: true, source: 'kv', cachedAt: cached.ts || 0 };
+
+  return { raw: null, stale: false, source: 'none' };
+}
+
+async function fetchMarketDetail(env, id) {
+  const cleanId = cleanText(id, 128);
+  if (!cleanId) return { raw: null, stale: false, source: 'none' };
+  const cacheKey = `markets:detail:${cleanId}`;
+  try {
+    const raw = await polyGamma(env, `/markets/${encodeURIComponent(cleanId)}`);
+    if (raw && typeof raw === 'object') {
+      const payload = { raw, ts: Date.now() };
+      MARKET_DETAIL_MEMORY.set(cacheKey, payload);
+      if (MARKET_DETAIL_MEMORY.size > 160) {
+        const firstKey = MARKET_DETAIL_MEMORY.keys().next().value;
+        if (firstKey) MARKET_DETAIL_MEMORY.delete(firstKey);
+      }
+      await kvPut(env, cacheKey, payload, 60 * 30);
+      return { raw, stale: false, source: 'gamma' };
+    }
+  } catch (_) {}
+
+  const hot = MARKET_DETAIL_MEMORY.get(cacheKey);
+  if (hot && hot.raw) return { raw: hot.raw, stale: true, source: 'memory', cachedAt: hot.ts || 0 };
+
+  const cached = await kvGet(env, cacheKey, null);
+  if (cached && cached.raw) return { raw: cached.raw, stale: true, source: 'kv', cachedAt: cached.ts || 0 };
+
+  return { raw: null, stale: false, source: 'none' };
+}
+
 function toMs(value) {
   if (!value) return Date.now();
   const n = Number(value);
@@ -539,6 +609,12 @@ const NATIVE_MARKET_LIQUIDITY_SHARES = 750;
 const NATIVE_MARKET_LIQUIDITY_OST = 500;
 const NATIVE_MARKET_MAX_SHARE_IMPACT = 0.32;
 const NATIVE_MARKET_MAX_STAKE_IMPACT = 0.08;
+const NATIVE_MARKET_BASE_SPREAD = 0.06;
+const NATIVE_MARKET_MAX_SPREAD = 0.16;
+const NATIVE_MARKET_IMBALANCE_SPREAD = 0.07;
+const NATIVE_MARKET_ACTIVITY_SPREAD = 0.03;
+const NATIVE_MARKET_CROWDED_SIDE_PENALTY = 0.05;
+const NATIVE_MARKET_SELL_HAIRCUT = 0.015;
 const NATIVE_MARKET_STATE_MEMORY = new Map();
 const POSITION_RECENT_MEMORY = [];
 const POSITION_RECENT_MEMORY_LIMIT = 300;
@@ -548,10 +624,22 @@ function clampNativeProbability(value) {
   return probability == null ? null : Math.max(0.02, Math.min(0.98, probability));
 }
 
+function clampNativeTradeProbability(value) {
+  const probability = cleanProbability(value);
+  return probability == null ? null : Math.max(0.01, Math.min(0.99, probability));
+}
+
+function clampNativeSpread(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return NATIVE_MARKET_BASE_SPREAD;
+  return Math.max(NATIVE_MARKET_BASE_SPREAD, Math.min(NATIVE_MARKET_MAX_SPREAD, number));
+}
+
 function isOstNativeMarketId(marketId, source) {
   const marketText = String(marketId == null ? '' : marketId);
   const sourceText = String(source == null ? '' : source).toLowerCase();
   if (marketText.indexOf('ost-btc5m-') === 0) return true;
+  if (marketText.indexOf('native-') === 0) return true;
   if (sourceText === 'ost') return true;
   return sourceText === 'ost-native';
 }
@@ -738,13 +826,42 @@ function quoteNativeMarketState(state, baseYesPrice) {
   const shareImpact = Math.tanh(netShares / liquidityShares) * NATIVE_MARKET_MAX_SHARE_IMPACT;
   const stakeImpact = Math.tanh(netStake / liquidityOst) * NATIVE_MARKET_MAX_STAKE_IMPACT;
   const clampedYes = clampNativeProbability(baseYes + shareImpact + stakeImpact);
-  const yesPriceNumber = clampedYes == null ? 0.5 : clampedYes;
+  const midYesPriceNumber = clampedYes == null ? 0.5 : clampedYes;
+  const midNoPriceNumber = 1 - midYesPriceNumber;
+  const shareImbalance = liquidityShares > 0 ? netShares / liquidityShares : 0;
+  const stakeImbalance = liquidityOst > 0 ? netStake / liquidityOst : 0;
+  const imbalanceSignal = Math.tanh((shareImbalance + stakeImbalance) / 2);
+  const imbalancePressure = Math.tanh(Math.max(Math.abs(shareImbalance), Math.abs(stakeImbalance)));
+  const activityPressure = Math.tanh((openYesStake + openNoStake) / Math.max(1, liquidityOst * 2));
+  const vaultSpread = clampNativeSpread(
+    NATIVE_MARKET_BASE_SPREAD +
+    imbalancePressure * NATIVE_MARKET_IMBALANCE_SPREAD +
+    activityPressure * NATIVE_MARKET_ACTIVITY_SPREAD
+  );
+  const halfSpread = vaultSpread / 2;
+  const yesCrowdPenalty = Math.max(0, imbalanceSignal) * NATIVE_MARKET_CROWDED_SIDE_PENALTY;
+  const noCrowdPenalty = Math.max(0, -imbalanceSignal) * NATIVE_MARKET_CROWDED_SIDE_PENALTY;
+  const sellHaircut = NATIVE_MARKET_SELL_HAIRCUT + vaultSpread * 0.25;
+  const yesAskPriceNumber = clampNativeTradeProbability(midYesPriceNumber + halfSpread + yesCrowdPenalty) ?? 0.5;
+  const noAskPriceNumber = clampNativeTradeProbability(midNoPriceNumber + halfSpread + noCrowdPenalty) ?? 0.5;
+  const rawYesBid = clampNativeTradeProbability(midYesPriceNumber - halfSpread - sellHaircut - yesCrowdPenalty) ?? 0.01;
+  const rawNoBid = clampNativeTradeProbability(midNoPriceNumber - halfSpread - sellHaircut - noCrowdPenalty) ?? 0.01;
+  const yesBidPriceNumber = Math.max(0.01, Math.min(rawYesBid, yesAskPriceNumber - 0.01));
+  const noBidPriceNumber = Math.max(0.01, Math.min(rawNoBid, noAskPriceNumber - 0.01));
   const orderSource = state.orders ? state.orders : {};
   return {
     baseYesPrice: baseYes,
     baseNoPrice: 1 - baseYes,
-    yesPriceNumber,
-    noPriceNumber: 1 - yesPriceNumber,
+    fairYesPriceNumber: midYesPriceNumber,
+    fairNoPriceNumber: midNoPriceNumber,
+    yesPriceNumber: yesAskPriceNumber,
+    noPriceNumber: noAskPriceNumber,
+    yesAskPriceNumber,
+    noAskPriceNumber,
+    yesBidPriceNumber,
+    noBidPriceNumber,
+    yesMidPriceNumber: midYesPriceNumber,
+    noMidPriceNumber: midNoPriceNumber,
     openYesShares,
     openNoShares,
     openYesStake,
@@ -755,10 +872,45 @@ function quoteNativeMarketState(state, baseYesPrice) {
     liquidityOst,
     shareImpact,
     stakeImpact,
-    totalImpact: yesPriceNumber - baseYes,
+    totalImpact: midYesPriceNumber - baseYes,
+    quoteImpact: yesAskPriceNumber - baseYes,
+    vaultSpread,
+    vaultEdge: vaultSpread,
+    sellHaircut,
+    imbalanceSignal,
+    imbalancePressure,
+    activityPressure,
+    yesCrowdPenalty,
+    noCrowdPenalty,
     orderCount: Object.keys(orderSource).length,
     updatedAt: state.updatedAt ? state.updatedAt : Date.now()
   };
+}
+
+function nativeTradePriceFromState(state, side, action) {
+  if (!state) return null;
+  const sideKey = String(side || '').toUpperCase() === 'NO' ? 'NO' : 'YES';
+  const actionKey = String(action || 'buy').toLowerCase();
+  let value = null;
+  if (actionKey === 'sell' || actionKey === 'cashout') {
+    value = sideKey === 'NO' ? state.noBidPriceNumber : state.yesBidPriceNumber;
+  } else if (actionKey === 'mid' || actionKey === 'fair') {
+    value = sideKey === 'NO' ? state.noMidPriceNumber : state.yesMidPriceNumber;
+  } else {
+    value = sideKey === 'NO'
+      ? (state.noAskPriceNumber != null ? state.noAskPriceNumber : state.noPriceNumber)
+      : (state.yesAskPriceNumber != null ? state.yesAskPriceNumber : state.yesPriceNumber);
+  }
+  const price = cleanProbability(value);
+  return price == null ? null : Math.max(0.01, Math.min(0.99, price));
+}
+
+function positionIsSellCashout(positionRecord) {
+  if (!positionRecord || !positionIsClosed(positionRecord)) return false;
+  const status = String(positionRecord.status || positionRecord.outcome || '').toLowerCase();
+  const kind = String(positionRecord.cashoutKind || positionRecord.flowAction || positionRecord.tradeAction || positionRecord.action || '').toLowerCase();
+  if (status === 'won' || status === 'lost' || status === 'settled' || status === 'resolved') return false;
+  return status === 'sold' || status === 'cashed-out' || kind.indexOf('sell') >= 0 || kind.indexOf('cashout') >= 0;
 }
 
 function pruneNativeMarketOrders(state) {
@@ -2027,10 +2179,18 @@ export default {
       try { body = await request.json(); } catch (_) { return json({ error: 'invalid_json' }, 400); }
       const { openAt, openPrice } = body || {};
       if (!openAt || !Number.isFinite(Number(openPrice))) return json({ error: 'missing_fields', required: ['openAt', 'openPrice'] }, 400);
-      const key = `round:${openAt}`;
-      const existing = await kvGet(env, key, {});
-      await kvPut(env, key, { ...existing, openAt: Number(openAt), openPrice: Number(openPrice) });
-      return json({ ok: true, openAt, openPrice });
+      const cleanOpenAt = Math.floor(Number(openAt) / FIVE_MIN_MS) * FIVE_MIN_MS;
+      const round = { id: `ost-btc5m-${cleanOpenAt}`, openAt: cleanOpenAt, closeAt: cleanOpenAt + FIVE_MIN_MS, msLeft: Math.max(0, cleanOpenAt + FIVE_MIN_MS - Date.now()) };
+      const existing = await kvGet(env, `round:${round.openAt}`, null);
+      if (existing && Number.isFinite(Number(existing.openPrice)) && Number(existing.openPrice) > 0) {
+        return json({ ok: true, openAt: round.openAt, openPrice: existing.openPrice, priceToBeat: existing.priceToBeat || existing.openPrice, source: existing.openPriceSource || 'locked', locked: true }, 200, { 'cache-control': 'no-store' });
+      }
+      const roundOpen = await fetchBtcRoundOpenPrice(round);
+      const serverPrice = roundOpen && Number.isFinite(Number(roundOpen.price)) && Number(roundOpen.price) > 0
+        ? Number(roundOpen.price)
+        : Number(openPrice);
+      const stored = await lockRoundOpenPrice(env, round, serverPrice, roundOpen && roundOpen.source || 'client-fallback');
+      return json({ ok: true, openAt: round.openAt, openPrice: stored && stored.openPrice || serverPrice, priceToBeat: stored && stored.priceToBeat || serverPrice, source: stored && stored.openPriceSource || 'client-fallback', locked: true }, 200, { 'cache-control': 'no-store' });
     }
 
     // ── /gamma/* /clob/* /data/* — transparent CORS-safe Polymarket proxy ──
@@ -2070,11 +2230,12 @@ export default {
     // ── GET /markets ─────────────────────────────────────────────────────────
     if (path === '/markets' && method === 'GET') {
       const limit = Number(url.searchParams.get('limit') || 60);
-      const raw = await polyGamma(env, '/markets', `limit=${limit}&closed=false`);
-      if (!raw) return json({ error: 'upstream_failed', markets: [] }, 502);
+      const active = await fetchActiveMarkets(env, limit);
+      const raw = active.raw;
+      if (!raw) return json({ error: 'upstream_failed', markets: [] }, 502, { 'cache-control': 'no-store' });
       const markets = (Array.isArray(raw) ? raw : raw.markets || []).map(normaliseMarket);
-      return json({ markets, count: markets.length, ts: new Date().toISOString() },
-        200, { 'cache-control': 'public, max-age=5' });
+      return json({ markets, count: markets.length, stale: !!active.stale, source: active.source, cachedAt: active.cachedAt || null, ts: new Date().toISOString() },
+        200, { 'cache-control': 'no-store' });
     }
 
 
@@ -2090,8 +2251,9 @@ export default {
     const mktMatch = path.match(/^\/markets\/([^/]+)$/);
     if (mktMatch && method === 'GET') {
       const id = decodeURIComponent(mktMatch[1]);
-      const [gmkt, book, trades, history] = await Promise.all([
-        polyGamma(env, `/markets/${encodeURIComponent(id)}`),
+      const detail = await fetchMarketDetail(env, id);
+      const gmkt = detail.raw;
+      const [book, trades, history] = await Promise.all([
         polyClob(env, '/book', `token_id=${encodeURIComponent(id)}`),
         polyClob(env, '/trades', `market=${encodeURIComponent(id)}&limit=20`),
         polyData(env, '/prices-history', `market=${encodeURIComponent(id)}&interval=1d&fidelity=10`)
@@ -2102,8 +2264,11 @@ export default {
         book: book || null,
         trades: (Array.isArray(trades) ? trades : trades?.data || []).slice(0, 20),
         history: (history?.history || history?.prices || []).map(p => ({ t: p.t || p.time, p: Number(p.p || p.price) })),
+        stale: !!detail.stale,
+        source: detail.source,
+        cachedAt: detail.cachedAt || null,
         ts: new Date().toISOString()
-      });
+      }, 200, { 'cache-control': 'no-store' });
     }
 
     // ── GET /markets/:id/book ─────────────────────────────────────────────────
@@ -2162,19 +2327,39 @@ export default {
       const nativeMarketStateBefore = isOstNativeMarketId(marketId, body.source)
         ? await getNativeMarketState(env, String(marketId), body.baseYesPrice != null ? body.baseYesPrice : body.fairYesPrice)
         : null;
+      const sideUp = String(side).toUpperCase() === 'NO' ? 'NO' : 'YES';
       const nativeOpenPosition = nativeMarketStateBefore ? !positionIsClosed(body) : false;
+      const nativeSellPosition = nativeMarketStateBefore ? positionIsSellCashout(body) : false;
       const nativeQuotePrice = nativeOpenPosition
-        ? (String(side).toUpperCase() === 'NO' ? nativeMarketStateBefore.noPriceNumber : nativeMarketStateBefore.yesPriceNumber)
+        ? nativeTradePriceFromState(nativeMarketStateBefore, sideUp, 'buy')
+        : nativeSellPosition
+          ? nativeTradePriceFromState(nativeMarketStateBefore, sideUp, 'sell')
         : price;
       const inferredPrices = nativeOpenPosition
         ? inferBinaryPrices(side, nativeQuotePrice, nativeMarketStateBefore.yesPriceNumber, nativeMarketStateBefore.noPriceNumber)
-        : inferBinaryPrices(side, price, body.yesPrice, body.noPrice);
-      const inferredShares = nativeOpenPosition
+        : nativeSellPosition
+          ? inferBinaryPrices(side, nativeQuotePrice, null, null)
+          : inferBinaryPrices(side, price, body.yesPrice, body.noPrice);
+      let inferredShares = nativeOpenPosition
         ? (inferredPrices.price > 0 ? Number(stake) / inferredPrices.price : cleanNumber(body.shares))
         : cleanNumber(body.shares);
+      if (nativeSellPosition && !(inferredShares > 0)) {
+        inferredShares = cleanNumber(body.potentialReturn, 0) || cleanNumber(body.shares, 0) || 0;
+      }
       const inferredPotentialReturn = nativeOpenPosition
         ? (inferredShares > 0 ? inferredShares : cleanNumber(body.potentialReturn))
         : cleanNumber(body.potentialReturn);
+      const centralSellValue = nativeSellPosition && inferredShares > 0 && inferredPrices.price > 0
+        ? inferredShares * inferredPrices.price
+        : null;
+      const reportedSellValue = cleanNumber(body.sellValue, null) ?? cleanNumber(body.cashoutOst, null);
+      const safeSellValue = centralSellValue != null
+        ? Math.max(0, Math.min(Number.isFinite(reportedSellValue) && reportedSellValue >= 0 ? reportedSellValue : centralSellValue, centralSellValue))
+        : cleanNumber(body.sellValue);
+      const nativeVaultTrade = !!nativeMarketStateBefore;
+      const nativeQuoteAction = nativeSellPosition ? 'sell-bid' : nativeOpenPosition ? 'buy-ask' : '';
+      const nativeSelectedBid = nativeVaultTrade ? nativeTradePriceFromState(nativeMarketStateBefore, sideUp, 'sell') : null;
+      const nativeSelectedAsk = nativeVaultTrade ? nativeTradePriceFromState(nativeMarketStateBefore, sideUp, 'buy') : null;
       const record = {
         id: cleanText(body.id || signature || crypto.randomUUID(), 128),
         wallet: String(wallet).slice(0, 64),
@@ -2185,7 +2370,7 @@ export default {
         title: cleanText(body.title || marketTitle || '', 200),
         topic: cleanText(body.topic || '', 64),
         source: cleanText(body.source || 'polymarket', 32),
-        side: String(side).toUpperCase().slice(0, 32),
+        side: sideUp,
         stake: Number(stake),
         price: inferredPrices.price,
         yesPrice: inferredPrices.yesPrice,
@@ -2202,13 +2387,30 @@ export default {
         status: cleanText(body.status || 'open', 32),
         cashoutKind: cleanText(body.cashoutKind || '', 40),
         cashoutSig: cleanText(body.cashoutSig || '', 128),
-        cashoutOst: cleanNumber(body.cashoutOst),
+        cashoutOst: nativeSellPosition && safeSellValue != null ? safeSellValue : cleanNumber(body.cashoutOst),
         cashoutAt: cleanNumber(body.cashoutAt, 0),
-        sellPrice: cleanNumber(body.sellPrice),
-        sellValue: cleanNumber(body.sellValue),
-        finalYesPrice: cleanNumber(body.finalYesPrice),
-        finalNoPrice: cleanNumber(body.finalNoPrice),
+        sellPrice: nativeSellPosition ? inferredPrices.price : cleanNumber(body.sellPrice),
+        sellValue: nativeSellPosition && safeSellValue != null ? safeSellValue : cleanNumber(body.sellValue),
+        finalYesPrice: nativeSellPosition && inferredPrices.yesPrice != null ? inferredPrices.yesPrice : cleanNumber(body.finalYesPrice),
+        finalNoPrice: nativeSellPosition && inferredPrices.noPrice != null ? inferredPrices.noPrice : cleanNumber(body.finalNoPrice),
         resolvedAt: cleanNumber(body.resolvedAt, 0),
+        nativeMarketMaker: nativeVaultTrade,
+        counterparty: nativeVaultTrade ? 'ost-native-vault' : cleanText(body.counterparty || '', 64),
+        liquidityProvider: nativeVaultTrade ? 'ost-native-market-maker' : cleanText(body.liquidityProvider || '', 64),
+        shareIssuer: nativeOpenPosition ? 'ost-native-vault' : cleanText(body.shareIssuer || '', 64),
+        shareRedeemer: nativeSellPosition ? 'ost-native-vault' : cleanText(body.shareRedeemer || '', 64),
+        quoteAction: nativeQuoteAction || cleanText(body.quoteAction || '', 32),
+        quoteModel: nativeVaultTrade ? 'ost-native-bid-ask-v2' : cleanText(body.quoteModel || '', 48),
+        quotePrice: nativeVaultTrade ? inferredPrices.price : cleanNumber(body.quotePrice),
+        askPrice: nativeSelectedAsk,
+        bidPrice: nativeSelectedBid,
+        vaultSpread: nativeVaultTrade ? cleanNumber(nativeMarketStateBefore.vaultSpread || nativeMarketStateBefore.vaultEdge, 0) : cleanNumber(body.vaultSpread),
+        vaultEdge: nativeVaultTrade ? cleanNumber(nativeMarketStateBefore.vaultEdge || nativeMarketStateBefore.vaultSpread, 0) : cleanNumber(body.vaultEdge),
+        vaultFlow: nativeOpenPosition ? 'share-sale' : nativeSellPosition ? 'share-buyback' : cleanText(body.vaultFlow || '', 48),
+        vaultGrossInOst: nativeOpenPosition ? Number(stake) : 0,
+        vaultGrossOutOst: nativeSellPosition && safeSellValue != null ? safeSellValue : 0,
+        sharesCreated: nativeOpenPosition ? inferredShares : 0,
+        sharesRedeemed: nativeSellPosition ? inferredShares : 0,
         syncedAt: Date.now()
       };
       // Per-wallet bucket (keep last 100, newest first)
@@ -2887,7 +3089,8 @@ export default {
 
       if (sub === '/markets' && method === 'GET') {
         const limit = Math.min(200, Number(url.searchParams.get('limit') || 60));
-        const raw = await polyGamma(env, '/markets', `limit=${limit}&closed=false`);
+        const active = await fetchActiveMarkets(env, limit);
+        const raw = active.raw;
         const markets = (Array.isArray(raw) ? raw : raw?.markets || []).map(normaliseMarket);
         const btcRound = await buildCanonicalBtcRound(env, { refresh: false });
         const nativeState = btcRound && btcRound.openPrice ? await getNativeMarketState(env, btcRound.id, btcRound.yesPriceNumber) : null;
@@ -2904,7 +3107,7 @@ export default {
           closeAtMs: btcRound.closeAt,
           msLeft: btcRound.msLeft
         }] : [];
-        return json({ markets: ostNative.concat(markets), count: ostNative.length + markets.length, ts: new Date().toISOString() }, 200, { 'cache-control': 'no-store' });
+        return json({ markets: ostNative.concat(markets), count: ostNative.length + markets.length, stale: !!active.stale, source: active.source, cachedAt: active.cachedAt || null, ts: new Date().toISOString() }, 200, { 'cache-control': 'no-store' });
       }
 
       const botMktMatch = sub.match(/^\/markets\/([^/]+)$/);
@@ -2915,12 +3118,17 @@ export default {
           const state = await getNativeMarketState(env, id, r && r.yesPriceNumber);
           return json({ market: Object.assign({}, r, state, { marketState: state }), source: 'ost-native' }, 200, { 'cache-control': 'no-store' });
         }
-        const [gmkt, book] = await Promise.all([
-          polyGamma(env, `/markets/${encodeURIComponent(id)}`),
+        if (isOstNativeMarketId(id, 'ost-native')) {
+          const state = await getNativeMarketState(env, id, url.searchParams.get('baseYes'));
+          return json({ market: Object.assign({ id, source: 'ost-native', isOstNative: true, title: id }, state, { marketState: state }), source: 'ost-native' }, 200, { 'cache-control': 'no-store' });
+        }
+        const [detail, book] = await Promise.all([
+          fetchMarketDetail(env, id),
           polyClob(env, '/book', `token_id=${encodeURIComponent(id)}`)
         ]);
+        const gmkt = detail.raw;
         if (!gmkt) return json({ error: 'market_not_found', id }, 404);
-        return json({ market: normaliseMarket(gmkt), book: book || null, source: 'polymarket', ts: new Date().toISOString() }, 200, { 'cache-control': 'no-store' });
+        return json({ market: normaliseMarket(gmkt), book: book || null, source: 'polymarket', stale: !!detail.stale, cachedAt: detail.cachedAt || null, ts: new Date().toISOString() }, 200, { 'cache-control': 'no-store' });
       }
 
       if (sub === '/btc/round' && method === 'GET') {
@@ -2934,11 +3142,29 @@ export default {
         const side = (url.searchParams.get('side') || 'yes').toLowerCase() === 'no' ? 'NO' : 'YES';
         const stake = Math.max(0, Number(url.searchParams.get('stake')) || 0);
         let price = 0.5;
-        if (id.indexOf('ost-btc5m-') === 0) {
+        if (isOstNativeMarketId(id, url.searchParams.get('source'))) {
           const r = await getNativeMarketState(env, id, url.searchParams.get('baseYes'));
-          price = side === 'NO' ? r.noPriceNumber : r.yesPriceNumber;
+          price = nativeTradePriceFromState(r, side, 'buy') || (side === 'NO' ? r.noPriceNumber : r.yesPriceNumber);
+          const bidPrice = nativeTradePriceFromState(r, side, 'sell') || price;
+          const shares = price > 0 ? stake / price : 0;
+          return json({
+            marketId: id,
+            side,
+            action: 'buy',
+            price,
+            askPrice: price,
+            bidPrice,
+            stake,
+            shares,
+            expectedPayout: shares,
+            expectedCashoutValue: shares * bidPrice,
+            expectedReturn: shares - stake,
+            marketState: r,
+            ts: new Date().toISOString()
+          }, 200, { 'cache-control': 'no-store' });
         } else {
-          const gmkt = await polyGamma(env, `/markets/${encodeURIComponent(id)}`);
+          const detail = await fetchMarketDetail(env, id);
+          const gmkt = detail.raw;
           if (!gmkt) return json({ error: 'market_not_found', id }, 404);
           const m = normaliseMarket(gmkt);
           price = side === 'NO' ? m.noPriceNumber : m.yesPriceNumber;
@@ -2980,14 +3206,15 @@ export default {
           ? await getNativeMarketState(env, marketId, body && (body.baseYesPrice != null ? body.baseYesPrice : body.fairYesPrice))
           : null;
         let price = nativeMarketStateBefore
-          ? (side === 'NO' ? nativeMarketStateBefore.noPriceNumber : nativeMarketStateBefore.yesPriceNumber)
+          ? nativeTradePriceFromState(nativeMarketStateBefore, side, 'buy')
           : Number(body && body.price);
         if (!Number.isFinite(price) || price <= 0 || price >= 1) {
           if (marketId.indexOf('ost-btc5m-') === 0) {
             const r = await buildCanonicalBtcRound(env, { refresh: true });
             price = side === 'NO' ? r.noPriceNumber : r.yesPriceNumber;
           } else {
-            const gmkt = await polyGamma(env, `/markets/${encodeURIComponent(marketId)}`);
+            const detail = await fetchMarketDetail(env, marketId);
+            const gmkt = detail.raw;
             if (!gmkt) return json({ error: 'market_not_found', marketId }, 404);
             const m = normaliseMarket(gmkt);
             price = side === 'NO' ? m.noPriceNumber : m.yesPriceNumber;
@@ -2997,6 +3224,9 @@ export default {
           ? inferBinaryPrices(side, price, nativeMarketStateBefore.yesPriceNumber, nativeMarketStateBefore.noPriceNumber)
           : inferBinaryPrices(side, price, body && body.yesPrice, body && body.noPrice);
         price = inferredPrices.price;
+        const nativeVaultTrade = !!nativeMarketStateBefore;
+        const nativeSelectedBid = nativeVaultTrade ? nativeTradePriceFromState(nativeMarketStateBefore, side, 'sell') : null;
+        const nativeSelectedAsk = nativeVaultTrade ? nativeTradePriceFromState(nativeMarketStateBefore, side, 'buy') : null;
         const createdAt = Date.now();
         const id = cleanText(body.id || body.signature || `bot-${createdAt}-${Math.random().toString(36).slice(2, 10)}`, 128);
         const record = {
@@ -3020,6 +3250,22 @@ export default {
           createdAt,
           ts: new Date(createdAt).toISOString(),
           status: 'open',
+          nativeMarketMaker: nativeVaultTrade,
+          counterparty: nativeVaultTrade ? 'ost-native-vault' : cleanText(body.counterparty || '', 64),
+          liquidityProvider: nativeVaultTrade ? 'ost-native-market-maker' : cleanText(body.liquidityProvider || '', 64),
+          shareIssuer: nativeVaultTrade ? 'ost-native-vault' : cleanText(body.shareIssuer || '', 64),
+          quoteAction: nativeVaultTrade ? 'buy-ask' : cleanText(body.quoteAction || '', 32),
+          quoteModel: nativeVaultTrade ? 'ost-native-bid-ask-v2' : cleanText(body.quoteModel || '', 48),
+          quotePrice: nativeVaultTrade ? price : cleanNumber(body.quotePrice),
+          askPrice: nativeSelectedAsk,
+          bidPrice: nativeSelectedBid,
+          vaultSpread: nativeVaultTrade ? cleanNumber(nativeMarketStateBefore.vaultSpread || nativeMarketStateBefore.vaultEdge, 0) : cleanNumber(body.vaultSpread),
+          vaultEdge: nativeVaultTrade ? cleanNumber(nativeMarketStateBefore.vaultEdge || nativeMarketStateBefore.vaultSpread, 0) : cleanNumber(body.vaultEdge),
+          vaultFlow: nativeVaultTrade ? 'share-sale' : cleanText(body.vaultFlow || '', 48),
+          vaultGrossInOst: nativeVaultTrade ? stake : 0,
+          vaultGrossOutOst: 0,
+          sharesCreated: nativeVaultTrade && price > 0 ? stake / price : 0,
+          sharesRedeemed: 0,
           syncedAt: createdAt
         };
         if (env.OST_KV) {
@@ -3045,13 +3291,46 @@ export default {
         const idx = walletBucket.findIndex(p => p && (p.id === orderId || p.signature === orderId));
         if (idx < 0) return json({ error: 'order_not_found', orderId }, 404);
         const order = walletBucket[idx];
+        const side = String(order.side || body.side || 'YES').toUpperCase() === 'NO' ? 'NO' : 'YES';
+        const nativeStateBefore = isOstNativeMarketId(order.marketId, order.source)
+          ? await getNativeMarketState(env, order.marketId, order.baseYesPrice != null ? order.baseYesPrice : order.yesPrice)
+          : null;
+        const entryPrice = cleanProbability(order.price != null ? order.price : (side === 'NO' ? order.noPrice : order.yesPrice));
+        const shares = Math.max(0, cleanNumber(order.shares, entryPrice > 0 ? cleanNumber(order.stake, 0) / entryPrice : 0) || 0);
+        const bidPrice = nativeStateBefore ? nativeTradePriceFromState(nativeStateBefore, side, 'sell') : cleanProbability(body.sellPrice != null ? body.sellPrice : order.sellPrice);
+        const serverPayout = bidPrice != null && shares > 0 ? shares * bidPrice : cleanNumber(order.potentialReturn, 0);
+        const requestedPayout = cleanNumber(body.payoutOst, null);
+        const payoutOst = Math.max(0, Math.min(Number.isFinite(requestedPayout) && requestedPayout >= 0 ? requestedPayout : serverPayout, serverPayout));
         order.status = 'cashed-out';
         order.cashedOut = true;
         order.cashoutKind = cleanText(body.cashoutKind || 'bot-cashout', 40);
         order.cashoutSig = cleanText(body.signature || '', 128);
-        order.cashoutOst = cleanNumber(body.payoutOst, order.potentialReturn);
+        order.cashoutOst = payoutOst;
         order.cashoutAt = Date.now();
         order.resolvedAt = Date.now();
+        if (bidPrice != null) {
+          order.sellPrice = bidPrice;
+          order.sellValue = payoutOst;
+          order.finalYesPrice = side === 'YES' ? bidPrice : 1 - bidPrice;
+          order.finalNoPrice = side === 'NO' ? bidPrice : 1 - bidPrice;
+        }
+        if (nativeStateBefore) {
+          order.nativeMarketMaker = true;
+          order.counterparty = 'ost-native-vault';
+          order.liquidityProvider = 'ost-native-market-maker';
+          order.shareRedeemer = 'ost-native-vault';
+          order.quoteAction = 'sell-bid';
+          order.quoteModel = 'ost-native-bid-ask-v2';
+          order.quotePrice = bidPrice;
+          order.bidPrice = bidPrice;
+          order.vaultSpread = cleanNumber(nativeStateBefore.vaultSpread || nativeStateBefore.vaultEdge, 0);
+          order.vaultEdge = cleanNumber(nativeStateBefore.vaultEdge || nativeStateBefore.vaultSpread, 0);
+          order.vaultFlow = 'share-buyback';
+          order.vaultGrossInOst = 0;
+          order.vaultGrossOutOst = payoutOst;
+          order.sharesCreated = 0;
+          order.sharesRedeemed = shares;
+        }
         walletBucket[idx] = order;
         await kvPut(env, walletKey, walletBucket);
         const marketState = await applyNativePositionToMarketState(env, order, order.yesPrice);
