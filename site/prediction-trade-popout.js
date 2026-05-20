@@ -151,8 +151,18 @@
       writePos({ left: parseInt(desk.style.left, 10) || 0, top: parseInt(desk.style.top, 10) || 0 });
     });
 
-    // Close button.
-    header.querySelector('.ost-tradepop__close').addEventListener('click', function () { close(); });
+    // Close button. Use capture-phase pointer/touch so mobile repaint work in
+    // the ticket cannot swallow the tap before the click event is synthesized.
+    var closeButton = header.querySelector('.ost-tradepop__close');
+    function closeFromButton(ev) {
+      try { ev.preventDefault(); } catch (_) {}
+      try { ev.stopPropagation(); } catch (_) {}
+      try { if (typeof ev.stopImmediatePropagation === 'function') ev.stopImmediatePropagation(); } catch (_) {}
+      close();
+    }
+    closeButton.addEventListener('pointerdown', closeFromButton, true);
+    closeButton.addEventListener('touchend', closeFromButton, true);
+    closeButton.addEventListener('click', closeFromButton);
 
     return desk;
   }
@@ -385,7 +395,7 @@
       var desk = document.getElementById('predictionTradeDesk');
       if (!desk || !desk.classList.contains('is-open')) return;
       try { renderPopChart(desk); } catch (_) {}
-    }, 1000);
+    }, 1200);
   }
 
   // --------------------------------------------------------------------------
@@ -410,7 +420,16 @@
     boot();
   }
   // The prediction board often re-renders. Re-bind when that happens.
-  var mo = new MutationObserver(function () { watchTradeAction(); ensureLauncher(); });
+  var mutationTimer = null;
+  var mo = new MutationObserver(function () {
+    if (mutationTimer) return;
+    mutationTimer = setTimeout(function () {
+      mutationTimer = null;
+      if (document.body.classList.contains('ost-modal-open')) return;
+      watchTradeAction();
+      ensureLauncher();
+    }, 250);
+  });
   mo.observe(document.body, { childList: true, subtree: true });
 
   // Public API.

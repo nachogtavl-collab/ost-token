@@ -409,11 +409,15 @@
       rememberPositionSyncFailure(payload, 'OST API unavailable');
       return Promise.resolve(null);
     }
+    var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var timeoutId = controller ? setTimeout(function () { try { controller.abort(); } catch (_) {} }, 4500) : null;
     return fetch(base + '/positions', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: controller ? controller.signal : undefined
     }).then(function (r) {
+      if (timeoutId) clearTimeout(timeoutId);
       if (r && r.ok) return r.json();
       return (r ? r.text() : Promise.resolve('')).then(function (text) {
         throw new Error('position sync failed (' + (r && r.status || 'network') + ')' + (text ? ': ' + text.slice(0, 120) : ''));
@@ -422,6 +426,7 @@
       if (typeof onOk === 'function') onOk(j);
       return j;
     }).catch(function (error) {
+      if (timeoutId) clearTimeout(timeoutId);
       rememberPositionSyncFailure(payload, error);
       throw error;
     });
@@ -638,15 +643,18 @@
     return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   }
   function clearLiveTimers() {
-liveTimers.forEach(function (t) {
-  try {
-    if (t && typeof t === 'object' && typeof t.removeOnClose === 'function') {
-      t.removeOnClose();
-    } else {
-      clearInterval(t);
-    }
-  } catch (_) {}
-});
+    var timers = liveTimers.slice();
+    liveTimers = [];
+    timers.forEach(function (t) {
+      try {
+        if (t && typeof t === 'object' && typeof t.removeOnClose === 'function') {
+          t.removeOnClose();
+        } else {
+          clearInterval(t);
+          clearTimeout(t);
+        }
+      } catch (_) {}
+    });
   }
 
   // --------------------------------------------------------------------------
@@ -667,9 +675,19 @@ liveTimers.forEach(function (t) {
       '  <div class="ost-modal__toast" data-bind="toast" hidden></div>' +
       '</div>';
     document.body.appendChild(el);
+    function closeFromIntent(ev) {
+      var target = ev && ev.target && ev.target.closest ? ev.target.closest('[data-act]') : null;
+      if (!target || target.getAttribute('data-act') !== 'close') return false;
+      try { ev.preventDefault(); } catch (_) {}
+      try { ev.stopPropagation(); } catch (_) {}
+      try { if (typeof ev.stopImmediatePropagation === 'function') ev.stopImmediatePropagation(); } catch (_) {}
+      closeModal();
+      return true;
+    }
+    el.addEventListener('pointerdown', closeFromIntent, true);
+    el.addEventListener('touchend', closeFromIntent, true);
     el.addEventListener('click', function (ev) {
-      var t = ev.target.closest('[data-act]');
-      if (t && t.getAttribute('data-act') === 'close') closeModal();
+      closeFromIntent(ev);
     });
     document.addEventListener('keydown', function (ev) {
       if (ev.key === 'Escape' && el.classList.contains('is-open')) closeModal();
@@ -2089,9 +2107,31 @@ liveTimers.forEach(function (t) {
     try { window.addEventListener('ost:native-market-state', bodyEl.__nativeStateListener); } catch (_) {}
     if (market.isOstNative) refreshNativeMarketState(market, bodyEl);
 
-    bodyEl.querySelector('[data-act="placebet"]').addEventListener('click', function () {
+    var placeBetButton = bodyEl.querySelector('[data-act="placebet"]');
+    var placeBetPending = false;
+    if (placeBetButton) placeBetButton.addEventListener('click', function () {
+      if (placeBetPending) return;
       var s = getStake();
       if (!s) { toast('Set a stake first.', 'err'); return; }
+      var originalText = placeBetButton.textContent;
+      var slowTimer = null;
+      placeBetPending = true;
+      placeBetButton.disabled = true;
+      placeBetButton.classList.add('is-loading');
+      placeBetButton.setAttribute('aria-busy', 'true');
+      placeBetButton.textContent = 'Submitting...';
+      slowTimer = setTimeout(function () {
+        if (placeBetPending) toast('Still waiting for wallet approval or share-state confirmation...', 'ok');
+      }, 8000);
+      function resetPlaceBetButton() {
+        if (slowTimer) clearTimeout(slowTimer);
+        placeBetPending = false;
+        if (!placeBetButton) return;
+        placeBetButton.disabled = false;
+        placeBetButton.classList.remove('is-loading');
+        placeBetButton.removeAttribute('aria-busy');
+        placeBetButton.textContent = originalText || 'Place bet';
+      }
       toast('Submitting ' + selectedSide + ' ' + s + ' OST…', 'ok');
       placeBet(market, selectedSide, s, selectedOutcomeKey)
         .then(function (rec) {
@@ -2102,6 +2142,9 @@ liveTimers.forEach(function (t) {
         })
         .catch(function (err) {
           toast('⚠️ ' + (err && err.message ? err.message : 'Bet failed'), 'err');
+        })
+        .then(function () {
+          resetPlaceBetButton();
         });
     });
 
@@ -2169,10 +2212,23 @@ liveTimers.forEach(function (t) {
     function refreshSharedFeed() {
       var base = (window.OST_API_BASE || '').replace(/\/$/, '');
       if (!base) { applySharedFeed([]); return; }
-      fetch(base + '/positions/recent?marketId=' + encodeURIComponent(market.id || '') + '&limit=120', { cache: 'no-store' })
+      if (refreshSharedFeed.inFlight) return;
+      refreshSharedFeed.inFlight = true;
+      var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      var timeoutId = controller ? setTimeout(function () { try { controller.abort(); } catch (_) {} }, 3500) : null;
+      fetch(base + '/positions/recent?marketId=' + encodeURIComponent(market.id || '') + '&limit=120', {
+        cache: 'no-store',
+        signal: controller ? controller.signal : undefined
+      })
         .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (j) { applySharedFeed(j && Array.isArray(j.recent) ? j.recent : []); })
-        .catch(function () { applySharedFeed([]); });
+        .catch(function () {
+          if (!window.__ostSharedFeed || !window.__ostSharedFeed[market.id]) applySharedFeed([]);
+        })
+        .then(function () {
+          if (timeoutId) clearTimeout(timeoutId);
+          refreshSharedFeed.inFlight = false;
+        });
     }
     refreshSharedFeed();
     liveTimers.push(setInterval(refreshSharedFeed, 1000));
@@ -2375,7 +2431,7 @@ liveTimers.forEach(function (t) {
         setText(bodyEl, 'btcOpen', market.meta.priceToBeat || market.meta.openPrice ? fmtUsd(market.meta.priceToBeat || market.meta.openPrice) : '—');
       };
       tickBtc();
-      liveTimers.push(setInterval(tickBtc, 200));
+      liveTimers.push(setInterval(tickBtc, 500));
       var fetchSharedBtcTick = function () {
         var api = window.OST_PREDICTION_API;
         var cachedRound = cachedCanonicalBtcRound();
@@ -2410,7 +2466,10 @@ liveTimers.forEach(function (t) {
           return fetchBtcRace().then(function (p) { return { price: p, source: BTC_PRICE_FEEDS[BTC_FEED_INDEX].name, ts: Date.now() }; });
         });
       };
+      var btcLiveInFlight = false;
       var fetchBtcLive = function () {
+        if (btcLiveInFlight) return;
+        btcLiveInFlight = true;
         fetchSharedBtcTick()
           .then(function (tick) {
             var p = tick && Number(tick.price);
@@ -2482,14 +2541,20 @@ liveTimers.forEach(function (t) {
               paintNativeBtcQuote();
             });
           }
-        });
+        })
+          .catch(function () {
+            setText(bodyEl, 'btcLive', 'feed retrying');
+          })
+          .then(function () {
+            btcLiveInFlight = false;
+          });
       };
       hydrateCanonicalBtcTicks(market, bodyEl);
       fetchBtcLive();
       // The WebSocket/shared tick event below paints immediately. This
       // fallback stays sub-second without hammering the canonical Worker on
       // mobile when the event stream is already fresh.
-      liveTimers.push(setInterval(fetchBtcLive, 500));
+      liveTimers.push(setInterval(fetchBtcLive, 650));
       // Re-render immediately on every fresh BTC tick so the live price and
       // share % follow the WebSocket / canonical feed without waiting for
       // the next poll. Throttled to avoid double-painting on bursty ticks.

@@ -2966,39 +2966,51 @@
     return merged;
   }
 
-  function sharePredictionOrderRecord(record) {
+  function applyPredictionOrderSyncPayload(record, payload) {
+    var marketState = payload && payload.marketState;
+    if (!marketState || !record || !record.marketId) return;
+    try {
+      if (window.OST_NATIVE_MARKET_PRESSURE && typeof window.OST_NATIVE_MARKET_PRESSURE.confirm === 'function') {
+        window.OST_NATIVE_MARKET_PRESSURE.confirm(record.marketId, marketState);
+      }
+    } catch {}
+    try {
+      window.__ostNativeMarketState = window.__ostNativeMarketState || {};
+      window.__ostNativeMarketState[record.marketId] = marketState;
+      window.dispatchEvent(new CustomEvent('ost:native-market-state', { detail: { marketId: record.marketId, state: marketState, record: record } }));
+    } catch {}
+  }
+
+  function postPredictionOrderRecord(record) {
     const base = getOstApiBase();
     const wallet = record && (record.wallet || getPredictionWalletAddress());
-    if (!base || !wallet || !record || !record.marketId) return;
+    if (!base || !wallet || !record || !record.marketId) return Promise.resolve(null);
+    return fetch(base + '/positions', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(Object.assign({}, record, {
+        wallet: wallet,
+        marketTitle: record.title || record.marketTitle || '',
+        signature: record.signature || record.sig || '',
+        ts: record.createdAt || record.ts || Date.now()
+      }))
+    }).then(function(response) {
+      if (response && response.ok) return response.json();
+      return (response ? response.text() : Promise.resolve('')).then(function(text) {
+        throw new Error('position sync failed (' + (response && response.status || 'network') + ')' + (text ? ': ' + text.slice(0, 120) : ''));
+      });
+    }).then(function(payload) {
+      applyPredictionOrderSyncPayload(record, payload);
+      return payload;
+    });
+  }
+
+  function sharePredictionOrderRecord(record) {
     try {
-      fetch(base + '/positions', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(Object.assign({}, record, {
-          wallet: wallet,
-          marketTitle: record.title || record.marketTitle || '',
-          signature: record.signature || record.sig || '',
-          ts: record.createdAt || record.ts || Date.now()
-        }))
-      }).then(function(response) {
-        return response && response.ok ? response.json() : null;
-      }).then(function(payload) {
-        var marketState = payload && payload.marketState;
-        if (!marketState) return;
-        try {
-          if (window.OST_NATIVE_MARKET_PRESSURE && typeof window.OST_NATIVE_MARKET_PRESSURE.confirm === 'function') {
-            window.OST_NATIVE_MARKET_PRESSURE.confirm(record.marketId, marketState);
-          }
-        } catch {}
-        try {
-          window.__ostNativeMarketState = window.__ostNativeMarketState || {};
-          window.__ostNativeMarketState[record.marketId] = marketState;
-          window.dispatchEvent(new CustomEvent('ost:native-market-state', { detail: { marketId: record.marketId, state: marketState, record: record } }));
-        } catch {}
-      }).catch(function(error) {
+      postPredictionOrderRecord(record).catch(function(error) {
         console.warn('[prediction order sync] failed', error && error.message || error);
-        const retryCount = Number(record.__remoteRetryCount || 0);
-        if (retryCount < 3) {
+        const retryCount = Number(record && record.__remoteRetryCount || 0);
+        if (record && retryCount < 3) {
           setTimeout(function() {
             sharePredictionOrderRecord(Object.assign({}, record, { __remoteRetryCount: retryCount + 1 }));
           }, 2500 * (retryCount + 1));
@@ -3105,15 +3117,33 @@
 
   window.syncOstPredictionOrdersFromRemote = syncPredictionOrdersFromRemote;
 
-  function storePredictionOrderRecord(record) {
+  function storePredictionOrderRecord(record, options) {
     try {
       mergePredictionOrderRecords([record]);
-      sharePredictionOrderRecord(record);
+      if (!options || options.share !== false) sharePredictionOrderRecord(record);
     } catch {}
   }
 
   function getPredictionDeskAccounts() {
     return getInterchangeDeskAccounts();
+  }
+
+  function withPredictionTimeout(promise, timeoutMs, message) {
+    var timeoutId = null;
+    var timedOut = false;
+    var timer = new Promise(function(_, reject) {
+      timeoutId = setTimeout(function() {
+        timedOut = true;
+        reject(new Error(message || 'Prediction action timed out'));
+      }, timeoutMs || 10000);
+    });
+    return Promise.race([Promise.resolve(promise), timer]).then(function(value) {
+      if (timeoutId && !timedOut) clearTimeout(timeoutId);
+      return value;
+    }, function(error) {
+      if (timeoutId && !timedOut) clearTimeout(timeoutId);
+      throw error;
+    });
   }
 
   async function ensurePredictionDeskVaultAccount() {
@@ -3133,7 +3163,11 @@
 
     const trader = connectedWalletSession.publicKey;
     // Pool covers the SOL fee — user only needs OST. Skip SOL check.
-    const ostBalance = await getOstBalanceForAddress(trader);
+    const ostBalance = await withPredictionTimeout(
+      getOstBalanceForAddress(trader),
+      8000,
+      'Wallet OST balance is still loading. Reopen the wallet and try again.'
+    );
     if (ostBalance + 1e-9 < Number(order.stake)) {
       throw new Error(t('pay.notEnoughOst', 'Not enough OST in this wallet. Claim or buy OST first.'));
     }
@@ -3142,7 +3176,11 @@
     // Ensure user has an OST ATA (pool pays the rent if missing).
     let sourceAta;
     if (window.OST_RESCUE && window.OST_RESCUE.ensureUserAta) {
-      sourceAta = await window.OST_RESCUE.ensureUserAta(trader);
+      sourceAta = await withPredictionTimeout(
+        window.OST_RESCUE.ensureUserAta(trader),
+        15000,
+        'OST token account setup is still confirming. Try again in a few seconds.'
+      );
     } else {
       sourceAta = getAssociatedTokenAddressSync(mintPk, trader, false, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
       const sourceInfo = await conn.getAccountInfo(sourceAta);
@@ -3204,7 +3242,27 @@
       vaultFlow: 'stake-in',
       createdAt: Date.now()
     };
-    storePredictionOrderRecord(record);
+    try {
+      const syncPayload = await withPredictionTimeout(
+        postPredictionOrderRecord(record),
+        4500,
+        'Live share inventory confirmation timed out; retrying in background.'
+      );
+      if (!syncPayload || (syncPayload.ok !== true && syncPayload.stored !== true)) {
+        throw new Error('OST API did not confirm the live share inventory.');
+      }
+      if (syncPayload.marketState) {
+        record.remoteSyncedAt = Date.now();
+        record.remotePending = false;
+      } else {
+        record.remoteSyncedAt = Date.now();
+      }
+    } catch (syncError) {
+      record.remotePending = true;
+      record.remoteError = syncError && syncError.message ? String(syncError.message).slice(0, 180) : 'share sync pending';
+      setTimeout(function() { sharePredictionOrderRecord(record); }, 1000);
+    }
+    storePredictionOrderRecord(record, { share: false });
     try { window.dispatchEvent(new CustomEvent('ost:prediction-order-recorded', { detail: record })); } catch (_) {}
 
     // Fetch updated balance for UI display (best-effort — use stake-adjusted
@@ -13793,6 +13851,24 @@
       });
     }
 
+    function rejectAfterTimeout(promise, timeoutMs, message) {
+      var timeoutId = null;
+      var timedOut = false;
+      var timer = new Promise(function(_, reject) {
+        timeoutId = window.setTimeout(function() {
+          timedOut = true;
+          reject(new Error(message || 'Operation timed out'));
+        }, timeoutMs || 10000);
+      });
+      return Promise.race([Promise.resolve(promise), timer]).then(function(value) {
+        if (timeoutId && !timedOut) window.clearTimeout(timeoutId);
+        return value;
+      }, function(error) {
+        if (timeoutId && !timedOut) window.clearTimeout(timeoutId);
+        throw error;
+      });
+    }
+
     function explorerTxUrl(signature) {
       return 'https://explorer.solana.com/tx/' + encodeURIComponent(signature) + '?cluster=' + encodeURIComponent(OST_CONFIG.network || 'devnet');
     }
@@ -14658,9 +14734,7 @@
             if (hasCashOut) {
               r = await window.OST_TRADE.predictionCashOut(order, payout);
             } else {
-              // No on-chain trading module loaded — local cash-out so the
-              // user still receives credit for the resolved win.
-              r = { sig: 'local-' + Date.now().toString(36), ost: payout };
+              throw new Error('OST settlement vault is still loading. Refresh and try this claim again.');
             }
             order.cashedOut = true;
             order.cashoutSig = r.sig;
@@ -16606,6 +16680,10 @@
     }
 
     function submitPredictionOrderFromSelection() {
+      if (state.placing) {
+        setTradeStatus('An OST order is already waiting for wallet approval or share-state confirmation.', 'warning');
+        return Promise.reject(new Error('Prediction order already in progress'));
+      }
       var market = getSelectedMarket(getFilteredMarkets());
       if (!market) {
         setTradeStatus(t('wallet.portal.prediction.tradeSelectPrompt', 'Select a live contract first.'), 'error');
@@ -16613,7 +16691,17 @@
       }
       state.placing = true;
       renderPredictionTicket(getFilteredMarkets());
-      return refreshSelectedMarketForTrade(market).then(function(freshMarket) {
+      var placingNoticeTimer = window.setTimeout(function() {
+        if (state.placing) {
+          setTradeStatus('Waiting for wallet approval and the centralized share inventory...', 'warning');
+          renderPredictionTicket(getFilteredMarkets());
+        }
+      }, 8000);
+      return rejectAfterTimeout(
+        refreshSelectedMarketForTrade(market),
+        3500,
+        'Live quote refresh took too long. Try again in a moment.'
+      ).then(function(freshMarket) {
         var orderRequest = buildPredictionOrderRequest(freshMarket || market);
         return createPredictionMarketOrder(orderRequest);
       }).then(function(result) {
@@ -16636,6 +16724,7 @@
         setTradeStatus(error && error.message ? error.message : t('wallet.portal.prediction.tradeFailed', 'Could not place the prediction market order right now.'), 'error');
         throw error;
       }).finally(function() {
+        if (placingNoticeTimer) window.clearTimeout(placingNoticeTimer);
         state.placing = false;
         renderPredictionTicket(getFilteredMarkets());
         renderLatestReceipt();

@@ -59,6 +59,25 @@
     } : signature, 'processed');
   }
 
+  function waitForWalletApproval(promise, label) {
+    var timeoutMs = Math.max(15000, numberSetting('OST_WALLET_PROMPT_TIMEOUT_MS', 90000));
+    var timeoutId = null;
+    var timedOut = false;
+    var timer = new Promise(function (_, reject) {
+      timeoutId = setTimeout(function () {
+        timedOut = true;
+        reject(new Error((label || 'Wallet approval') + ' timed out. Reopen the wallet prompt and try again; no OST was recorded locally.'));
+      }, timeoutMs);
+    });
+    return Promise.race([Promise.resolve(promise), timer]).then(function (value) {
+      if (timeoutId && !timedOut) clearTimeout(timeoutId);
+      return value;
+    }, function (error) {
+      if (timeoutId && !timedOut) clearTimeout(timeoutId);
+      throw error;
+    });
+  }
+
   function vaultConfig() {
     return {
       minReserve: numberSetting('OST_VAULT_MIN_RESERVE', 0),
@@ -420,7 +439,7 @@
       built.tx.partialSign(session.keypair);
       serialized = built.tx.serialize();
     } else if (session.provider && typeof session.provider.signTransaction === 'function') {
-      var signed = await session.provider.signTransaction(built.tx);
+      var signed = await waitForWalletApproval(session.provider.signTransaction(built.tx), 'Wallet signature');
       serialized = signed.serialize();
     } else if (session.provider && typeof session.provider.signAndSendTransaction === 'function') {
       // Provider handles send; just return the signature.

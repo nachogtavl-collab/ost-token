@@ -51,10 +51,17 @@
   color: #f4ead4;
   font-size: 22px;
   cursor: pointer;
-  z-index: 5;
+  z-index: 50;
+  touch-action: manipulation;
   transition: background 120ms ease, transform 120ms ease;
 }
 .ost-modal__close:hover { background: rgba(255, 255, 255, 0.14); transform: rotate(90deg); }
+
+.ost-modal__bet-action:disabled,
+.ost-modal__bet-action.is-loading {
+  cursor: wait;
+  opacity: 0.74;
+}
 
 /* Header --------------------------------------------------------------- */
 .ost-modal__header { margin-bottom: 16px; }
@@ -378,16 +385,18 @@
   .ost-modal__panel {
     width: min(100%, 680px);
     max-height: calc(100dvh - max(12px, env(safe-area-inset-top)) - max(12px, env(safe-area-inset-bottom)));
-    padding: 14px 12px 12px;
+    padding: 50px 12px 12px;
     border-radius: 10px;
     font-size: 13px;
   }
   .ost-modal__close {
-    top: 8px;
-    right: 8px;
-    width: 32px;
-    height: 32px;
-    font-size: 18px;
+    position: fixed;
+    top: max(10px, env(safe-area-inset-top));
+    right: max(10px, env(safe-area-inset-right));
+    width: 44px;
+    height: 44px;
+    font-size: 22px;
+    z-index: 2147483647;
   }
   .ost-modal__main { gap: 10px; }
   .ost-modal__two-col { gap: 10px; }
