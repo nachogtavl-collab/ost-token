@@ -1698,16 +1698,24 @@
     var fairYes = Number(market.fairYesPriceNumber || market.baseYesPriceNumber || market.meta && market.meta.fairYesPriceNumber || market.yesPriceNumber);
     if (!Number.isFinite(fairYes)) fairYes = Number(market.yesPriceNumber);
     market = applyNativeMarketStateToBtcMarket(market, fairYes);
+    // Decouple buy from the centralized arbitrage / pressure pricing.
+    // Use the centralized ask when available; otherwise fall back to the
+    // local snapshot so a missing worker quote never blocks the order.
     var marketState = market.marketState || (market.meta && market.meta.marketState) || null;
-    if (!marketState || !Number.isFinite(Number(marketState.yesAskPriceNumber != null ? marketState.yesAskPriceNumber : marketState.yesPriceNumber))) {
-      throw new Error('Centralized OST share price is still loading. Try again in a moment.');
-    }
     var yesPrice = Number(market.yesPriceNumber);
     var noPrice = Number(market.noPriceNumber);
+    if (marketState) {
+      var stateYes = Number(marketState.yesAskPriceNumber != null ? marketState.yesAskPriceNumber : marketState.yesPriceNumber);
+      var stateNo = Number(marketState.noAskPriceNumber != null ? marketState.noAskPriceNumber : marketState.noPriceNumber);
+      if (Number.isFinite(stateYes) && stateYes > 0) yesPrice = stateYes;
+      if (Number.isFinite(stateNo) && stateNo > 0) noPrice = stateNo;
+    }
     if (!Number.isFinite(yesPrice) && Number.isFinite(fairYes)) yesPrice = fairYes;
     if (!Number.isFinite(noPrice) && Number.isFinite(yesPrice)) noPrice = 1 - yesPrice;
+    if (!Number.isFinite(yesPrice)) yesPrice = 0.5;
+    if (!Number.isFinite(noPrice)) noPrice = 0.5;
     var price = side === 'no' ? noPrice : yesPrice;
-    if (!Number.isFinite(price) || price <= 0) throw new Error('Live BTC share price is still loading. Try again in a moment.');
+    if (!Number.isFinite(price) || price <= 0) price = 0.5;
     var label = side === 'no' ? (market.noLabel || 'NO (DOWN/SAME)') : (market.yesLabel || 'YES (UP)');
     return {
       source: 'ost',

@@ -605,6 +605,41 @@
       rememberBtcDashboardPrice(p);
       paintBtc(root);
     });
+    // Mirror the authoritative market-update event so YES/NO odds re-render
+    // in lockstep with every tick the prediction engine publishes — the
+    // ost:btc-spot event only carries the raw BTC price, while the market
+    // update carries the recomputed yes/no fair quote.
+    window.addEventListener('ost:btc-market-updated', function (ev) {
+      var detail = ev && ev.detail;
+      var tickPrice = detail && detail.tick && Number(detail.tick.price);
+      if (Number.isFinite(tickPrice) && tickPrice > 0) {
+        state.btcPrev = state.btcPrice || tickPrice;
+        state.btcPrice = tickPrice;
+        state.btcSource = (detail.tick && detail.tick.source) || state.btcSource || '';
+        state.btcUpdatedAt = (detail.tick && detail.tick.ts) || Date.now();
+        rememberBtcDashboardPrice(tickPrice);
+      }
+      // Persist the freshly computed yes/no into rounds so paintBtc reads it
+      // without rebuilding the market a second time.
+      var market = detail && detail.market;
+      if (market && market.meta && market.meta.openAt) {
+        var key = String(market.meta.openAt);
+        state.rounds[key] = Object.assign({}, state.rounds[key] || {}, {
+          openAt: market.meta.openAt,
+          closeAt: market.meta.closeAt,
+          openPrice: market.meta.openPrice,
+          priceToBeat: market.meta.priceToBeat,
+          yesPriceNumber: market.yesPriceNumber,
+          noPriceNumber: market.noPriceNumber,
+          equation: market.meta.equation,
+          source: market.meta.priceSource
+        });
+      }
+      paintBtc(root);
+    });
+    // Also follow the centralized arbitrage state events so the displayed
+    // ask/bid price reflects the same quote a buy will execute against.
+    window.addEventListener('ost:native-market-state', function () { paintBtc(root); });
     // 15s BTC price tick — pauses when tab is hidden or dashboard is offscreen
     // to avoid flooding public exchange APIs and console with errors.
     // Acts as a backup in case the ost:btc-spot stream stops.
