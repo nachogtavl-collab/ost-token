@@ -763,15 +763,33 @@ function rememberRecentPositionHot(record) {
   if (POSITION_RECENT_MEMORY.length > POSITION_RECENT_MEMORY_LIMIT) POSITION_RECENT_MEMORY.length = POSITION_RECENT_MEMORY_LIMIT;
 }
 
+function publicRecentPositionRecord(record) {
+  if (!record) return record;
+  const copy = clonePlain(record);
+  const cashoutSig = cleanText(copy.cashoutSig || '', 128);
+  const fallbackSignature = cashoutSig || cleanText(copy.relatedPositionId || copy.id || copy.signature || copy.sig || copy.txid || copy.txHash || [copy.wallet, copy.marketId, copy.side, copy.createdAt, copy.ts].join(':'), 128);
+  if (!copy.signature && fallbackSignature) copy.signature = fallbackSignature;
+  if (!copy.sig && fallbackSignature) copy.sig = fallbackSignature;
+  if (positionIsSellCashout(copy)) {
+    const cashoutPending = !cashoutSig && (copy.cashoutPending === true || cleanNumber(copy.cashoutOst, 0) > 0 || cleanNumber(copy.sellValue, 0) > 0);
+    copy.cashoutSig = cashoutSig;
+    copy.cashoutPending = cashoutPending;
+    copy.cashoutVerified = copy.cashoutVerified === true;
+    copy.verificationState = copy.cashoutVerified ? 'verified' : cashoutSig ? 'submitted' : cashoutPending ? 'pending' : (copy.verificationState || 'closed');
+  }
+  return copy;
+}
+
 function mergeRecentPositionRows(kvRows) {
   const seen = new Set();
   const rows = [];
   POSITION_RECENT_MEMORY.concat(Array.isArray(kvRows) ? kvRows : []).forEach(record => {
-    if (!record) return;
-    const key = recentPositionKey(record);
+    const normalized = publicRecentPositionRecord(record);
+    if (!normalized) return;
+    const key = recentPositionKey(normalized);
     if (key && seen.has(key)) return;
     if (key) seen.add(key);
-    rows.push(record);
+    rows.push(normalized);
   });
   rows.sort((left, right) => (cleanNumber(right?.createdAt, 0) || toMs(right?.ts) || cleanNumber(right?.hotAt, 0) || 0) - (cleanNumber(left?.createdAt, 0) || toMs(left?.ts) || cleanNumber(left?.hotAt, 0) || 0));
   return rows;
@@ -1288,14 +1306,15 @@ export class NativeMarketHub {
       state.livePriceSource = live.source || 'binance';
       state.livePriceTs = now;
       this.appendBtcStateTick(state, state.livePrice, state.livePriceSource, state.livePriceTs);
-      if ((!Number(state.openPrice) || Number(state.openPrice) <= 1000) && now - round.openAt < 5000) {
-        const drift = await fetchBtcPrior5mDriftFast(round);
-        state.openPrice = state.livePrice;
-        state.openPriceSource = `${state.livePriceSource}-provisional`;
-        state.openPriceTs = state.livePriceTs;
-        state.priceToBeat = projectPriceToBeat(state.openPrice, drift);
-        state.priceToBeatSource = state.priceToBeat === state.openPrice ? 'open-provisional' : 'projected-5m-drift-provisional';
-      }
+    }
+
+    if ((!Number(state.openPrice) || Number(state.openPrice) <= 1000) && Number(state.livePrice) > 1000) {
+      const drift = await fetchBtcPrior5mDriftFast(round);
+      state.openPrice = Number(state.livePrice);
+      state.openPriceSource = `${state.livePriceSource || 'live'}-provisional-open`;
+      state.openPriceTs = state.livePriceTs || now;
+      state.priceToBeat = projectPriceToBeat(state.openPrice, drift);
+      state.priceToBeatSource = state.priceToBeat === state.openPrice ? 'open-provisional' : 'projected-5m-drift-provisional';
     }
 
     if (Number(state.openPrice) > 1000 && (!Number(state.priceToBeat) || Number(state.priceToBeat) <= 1000)) {
@@ -1507,15 +1526,23 @@ function recentFlowRecordForPosition(record) {
   const selectedPrice = side === 'NO' ? noPrice : yesPrice;
   const sellValue = cleanNumber(record.sellValue, null) ?? cleanNumber(record.cashoutOst, null) ?? cleanNumber(record.potentialReturn, null) ?? cleanNumber(record.stake, 0);
   const cashoutSig = cleanText(record.cashoutSig || '', 128);
+  const relatedPositionId = cleanText(record.id || record.signature || record.sig || positionKey, 128);
+  const flowSignature = cashoutSig || relatedPositionId;
+  const cashoutPending = !cashoutSig && (record.cashoutPending === true || cleanNumber(record.cashoutOst, 0) > 0 || cleanNumber(record.sellValue, 0) > 0);
+  const cashoutVerified = record.cashoutVerified === true;
   return Object.assign({}, record, {
     id: cleanText(`sell:${positionKey}:${closedAt}`, 180),
-    signature: cashoutSig || null,
-    sig: cashoutSig || null,
-    relatedPositionId: cleanText(record.id || record.signature || record.sig || positionKey, 128),
+    signature: flowSignature || null,
+    sig: flowSignature || null,
+    relatedPositionId,
     flowAction: 'sell',
     tradeAction: 'sell',
     action: 'sell',
     status: 'sold',
+    cashoutSig,
+    cashoutPending,
+    cashoutVerified,
+    verificationState: cashoutVerified ? 'verified' : cashoutSig ? 'submitted' : cashoutPending ? 'pending' : 'closed',
     side,
     price: selectedPrice != null ? selectedPrice : record.price,
     yesPrice: yesPrice != null ? yesPrice : record.yesPrice,

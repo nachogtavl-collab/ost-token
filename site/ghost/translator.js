@@ -7,8 +7,7 @@
 const STORAGE_KEY = 'ost_ghost_keys_v1';
 const DEFAULT_API_BASE = 'https://ost-api.nachogtavl.workers.dev';
 const FALLBACK_API_BASES = [
-  DEFAULT_API_BASE,
-  'https://ost-api-pages.pages.dev'
+  DEFAULT_API_BASE
 ];
 const RELAY_TIMEOUT_MS = 18000;
 

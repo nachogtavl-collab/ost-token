@@ -9,6 +9,8 @@
 
   var CONSOLE_ID = 'ost-api-console';
   var API_BASE_KEY = 'ost.api.base.url';
+  var CANONICAL_API_BASE = 'https://ost-api.nachogtavl.workers.dev';
+  var LEGACY_PROBE_HOST = 'ost-api-pages.pages.dev';
 
   var EXAMPLES = [
     {
@@ -60,7 +62,7 @@
           '<div class="ost-console__left">',
             '<div class="ost-console__server-row">',
               '<label class="ost-console__label">API server</label>',
-              '<input type="url" class="ost-console__url-input" id="ostConsoleApiUrl" placeholder="https://ost-api-pages.pages.dev" spellcheck="false">',
+              '<input type="url" class="ost-console__url-input" id="ostConsoleApiUrl" placeholder="https://ost-api.nachogtavl.workers.dev" spellcheck="false">',
               '<button type="button" class="ost-console__btn ost-console__btn--save" id="ostConsoleSaveUrl">Save</button>',
             '</div>',
             '<div class="ost-console__examples">',
@@ -119,6 +121,40 @@
     };
   }
 
+  function normalizeApiBase(base) {
+    return String(base || '').trim().replace(/\/+$/, '');
+  }
+
+  function isLegacyProbeBase(base) {
+    return normalizeApiBase(base).toLowerCase().indexOf(LEGACY_PROBE_HOST) >= 0;
+  }
+
+  function isProductionHost() {
+    var host = String(location && location.hostname || '').toLowerCase();
+    return host === 'nachogtavl-collab.github.io' || /\.github\.io$/.test(host);
+  }
+
+  function readSavedApiBase() {
+    var saved = normalizeApiBase(localStorage.getItem(API_BASE_KEY) || '');
+    if (isLegacyProbeBase(saved)) {
+      try { localStorage.removeItem(API_BASE_KEY); } catch (_) {}
+      return '';
+    }
+    return saved;
+  }
+
+  function setGlobalApiBase(base, persist) {
+    var clean = normalizeApiBase(base);
+    if (!clean || isLegacyProbeBase(clean)) clean = CANONICAL_API_BASE;
+    window.OST_API_BASE = clean;
+    window.OST_POLY_RELAY_URL = clean;
+    window.OST_API = makeApi(clean);
+    if (persist) {
+      try { localStorage.setItem(API_BASE_KEY, clean); } catch (_) {}
+    }
+    return clean;
+  }
+
   // ── Eval helper (async, captured in a real function) ─────────────────────
 
   function evalExpr(code) {
@@ -152,9 +188,11 @@
     el.classList.add('is-open');
     document.body.style.overflow = 'hidden';
     var inp = document.getElementById('ostConsoleApiUrl');
-    var saved = localStorage.getItem(API_BASE_KEY) || window.OST_API_BASE || '';
-    if (inp) inp.value = saved;
-    applyApiBase(saved || '', el);
+    var saved = readSavedApiBase();
+    var current = normalizeApiBase(window.OST_API_BASE) || CANONICAL_API_BASE;
+    var base = (!isProductionHost() && saved) ? saved : current;
+    if (inp) inp.value = base;
+    applyApiBase(base, el);
     pingServer(el);
     populateExamples();
   }
@@ -166,12 +204,9 @@
   }
 
   function applyApiBase(base, el) {
-    base = (base || '').replace(/\/$/, '');
-    window.OST_API_BASE = base || null;
-    window.OST_API = base ? makeApi(base) : null;
+    base = setGlobalApiBase(base, true);
     var urlEl = document.getElementById('ostConsoleUrl');
-    if (urlEl) urlEl.textContent = base ? base : '(no server configured)';
-    if (base) localStorage.setItem(API_BASE_KEY, base);
+    if (urlEl) urlEl.textContent = base;
   }
 
   function pingServer(el) {
@@ -187,6 +222,12 @@
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (j) {
         if (!j) { set('edge', '⚠ server error'); return; }
+        if (j.worker === 'ost-api-pages-probe' || (!j.service && !j.btcPrice && !j.kv)) {
+          set('edge', '⚠ stale probe endpoint');
+          set('btc', 'no live market data');
+          set('kv', 'no verification storage');
+          return;
+        }
         set('edge', '✓ edge: ' + (j.edge || '?'));
         set('btc', 'BTC $' + (j.btcPrice ? Number(j.btcPrice).toLocaleString(undefined, { maximumFractionDigits: 0 }) : '—') + ' · ' + (j.btcSource || '?'));
         set('kv', j.kv ? '✓ KV storage' : '⚠ KV not bound');
@@ -289,15 +330,10 @@
 
   // Boot: read saved API base on page load
   (function () {
-    // Default edge API endpoint (used when localStorage and inline config are absent).
-    var fallbackBase = 'https://ost-api-pages.pages.dev';
-    if (!window.OST_API_BASE) window.OST_API_BASE = fallbackBase;
-    var saved = localStorage.getItem(API_BASE_KEY) || '';
-    if (saved) {
-      window.OST_API_BASE = saved;
-      window.OST_API = makeApi(saved);
-    } else if (window.OST_API_BASE) {
-      window.OST_API = makeApi(String(window.OST_API_BASE).replace(/\/$/, ''));
-    }
+    var configured = normalizeApiBase(window.OST_API_BASE) || CANONICAL_API_BASE;
+    if (isLegacyProbeBase(configured)) configured = CANONICAL_API_BASE;
+    var saved = readSavedApiBase();
+    var bootBase = (!isProductionHost() && saved) ? saved : configured;
+    setGlobalApiBase(bootBase, false);
   })();
 })();
