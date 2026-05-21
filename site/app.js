@@ -3201,13 +3201,69 @@
   }
 
   async function getOstBalanceForAddressStrict(pubkeyInput) {
-    const conn = getSolanaConnection();
-    if (!conn) throw new Error('Solana RPC unavailable');
     const owner = toPublicKey(pubkeyInput);
     const mintPk = new solanaWeb3.PublicKey(OST_CONFIG.mint);
+    var connections = [];
+    var seenUrls = {};
+    function addConnection(conn) {
+      if (!conn) return;
+      var key = '';
+      try { key = String(conn.rpcEndpoint || conn._rpcEndpoint || ''); } catch (_) {}
+      if (key && seenUrls[key]) return;
+      if (key) seenUrls[key] = true;
+      connections.push(conn);
+    }
+    addConnection(getSolanaConnection());
+    try {
+      var rescueRpc = window.OST_RESCUE && window.OST_RESCUE.rpc;
+      var endpoints = rescueRpc && Array.isArray(rescueRpc.endpoints) ? rescueRpc.endpoints : [];
+      endpoints.forEach(function(url) {
+        try { addConnection(new solanaWeb3.Connection(url, 'processed')); } catch (_) {}
+      });
+    } catch (_) {}
+    if (!connections.length) throw new Error('Solana RPC unavailable');
+
+    var lastError = null;
+    var bestZero = null;
+    for (var index = 0; index < connections.length; index += 1) {
+      try {
+        var result = await fetchOstBalanceFromConnection(connections[index], owner, mintPk);
+        if (result.balance > 0) return rememberPredictionBalanceHint(owner, result.balance, 'rpc') || result.balance;
+        if (result.seenAccount || bestZero === null) bestZero = 0;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    if (bestZero !== null) return rememberPredictionBalanceHint(owner, 0, 'rpc') || 0;
+    throw lastError || new Error('OST balance is unavailable');
+  }
+
+  async function fetchOstBalanceFromConnection(conn, owner, mintPk) {
     const ata = getAssociatedTokenAddressSync(mintPk, owner, false, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
-    const ataInfo = await conn.getAccountInfo(ata);
-    return decodeTokenBalance(ataInfo);
+    var ataInfo = await withPredictionTimeout(
+      conn.getAccountInfo(ata),
+      3500,
+      'OST token account lookup timed out.'
+    ).catch(function(error) { throw error; });
+    var ataBalance = decodeTokenBalance(ataInfo);
+    var totalBalance = ataBalance;
+    var seenAccount = !!ataInfo;
+    try {
+      var tokenAccounts = await withPredictionTimeout(
+        conn.getTokenAccountsByOwner(owner, { mint: mintPk }, 'processed'),
+        4500,
+        'OST token account scan timed out.'
+      );
+      var rows = tokenAccounts && Array.isArray(tokenAccounts.value) ? tokenAccounts.value : [];
+      if (rows.length) {
+        seenAccount = true;
+        totalBalance = rows.reduce(function(sum, row) {
+          return sum + decodeTokenBalance(row && row.account);
+        }, 0);
+        if (totalBalance < ataBalance) totalBalance = ataBalance;
+      }
+    } catch (_) {}
+    return { balance: totalBalance, seenAccount: seenAccount };
   }
 
   async function resolvePredictionOrderBalance(trader, order) {
@@ -3520,6 +3576,8 @@
     try {
       return await getOstBalanceForAddressStrict(pubkeyInput);
     } catch {
+      var hint = getPredictionBalanceHint(pubkeyInput);
+      if (hint && hint.balance !== null) return hint.balance;
       return 0;
     }
   }
@@ -15672,7 +15730,7 @@
 
       if (availableBalanceEl) {
         availableBalanceEl.textContent = state.availableBalance == null
-          ? t('wallet.portal.prediction.connectWalletPrompt', 'Connect wallet')
+          ? (connectedWalletSession && connectedWalletSession.publicKey ? 'Syncing OST...' : t('wallet.portal.prediction.connectWalletPrompt', 'Connect wallet'))
           : formatOst(state.availableBalance);
       }
 
