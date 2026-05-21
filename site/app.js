@@ -14693,6 +14693,7 @@
       }
 
       if (order && order.cashedOut) {
+        var cashoutPending = !!order.cashoutPending && order.cashoutVerified !== true;
         return {
           market: market,
           side: side,
@@ -14702,8 +14703,8 @@
           livePrice: livePrice,
           liveValue: liveValue,
           payout: Number(order.cashoutOst || 0),
-          label: 'Paid',
-          detail: 'Paid out ' + formatOst(Number(order.cashoutOst || 0)),
+          label: cashoutPending ? 'Submitted' : 'Paid',
+          detail: (cashoutPending ? 'Payout verifying ' : 'Paid out ') + formatOst(Number(order.cashoutOst || 0)),
           canCash: false,
           kind: order.cashoutKind || 'prediction-cashout'
         };
@@ -14913,6 +14914,9 @@
             order.cashoutSig = r.sig;
             order.cashoutOst = r.ost;
             order.cashoutAt = Date.now();
+            order.cashoutPending = !!(r && r.pending);
+            order.cashoutVerified = !(r && r.verified === false);
+            delete order.cashoutError;
             order.cashoutKind = action.kind;
             var retained = Math.max(0, Number(order.stake || action.stake || 0) - Number(r.ost || payout || 0));
             if (retained > 0 && !order.vaultRetainedAt) {
@@ -16988,6 +16992,24 @@
     // portal portfolio + ledger reflect the cash-out without waiting for the
     // 15 s board poll or the 5 min resolution sweep.
     window.addEventListener('ost:prediction:order-changed', function() {
+      state.orderHistory = reconcilePredictionVaultLossRecords();
+      renderPredictionLedger();
+    });
+    window.addEventListener('ost:rescue-tx-payout-verified', function(event) {
+      var sig = event && event.detail && event.detail.sig ? String(event.detail.sig) : '';
+      if (!sig) return;
+      var orders = readPredictionOrderRecords();
+      var changed = false;
+      orders.forEach(function(order) {
+        if (!order || String(order.cashoutSig || '') !== sig) return;
+        order.cashoutPending = false;
+        order.cashoutVerified = true;
+        delete order.cashoutError;
+        changed = true;
+      });
+      if (!changed) return;
+      writePredictionOrderRecords(orders);
+      orders.forEach(function(order) { if (order && String(order.cashoutSig || '') === sig) sharePredictionOrderRecord(order); });
       state.orderHistory = reconcilePredictionVaultLossRecords();
       renderPredictionLedger();
     });

@@ -324,9 +324,10 @@
     }).catch(function () { return BigInt(0); });
   }
 
-  async function verifyTokenBalanceDelta(ata, beforeRaw, expectedRaw, decimals, label) {
+  async function verifyTokenBalanceDelta(ata, beforeRaw, expectedRaw, decimals, label, attempts) {
     var lastRaw = beforeRaw;
-    for (var attempt = 0; attempt < 10; attempt += 1) {
+    var maxAttempts = Math.max(1, Number(attempts) || 10);
+    for (var attempt = 0; attempt < maxAttempts; attempt += 1) {
       lastRaw = await getTokenRawBalance(ata);
       if (lastRaw - beforeRaw >= expectedRaw) {
         return { beforeRaw: beforeRaw, afterRaw: lastRaw, deltaRaw: lastRaw - beforeRaw };
@@ -423,6 +424,56 @@
     throw new Error((label || 'Transaction') + ' could not be confirmed on-chain (' + summary + '): ' + (primaryErr && primaryErr.message ? primaryErr.message : primaryErr));
   }
 
+  function emitRescueTxEvent(name, detail) {
+    try { window.dispatchEvent(new CustomEvent('ost:rescue-tx-' + name, { detail: detail || {} })); } catch (_) {}
+  }
+
+  function watchTxConfirmation(sig, built, label) {
+    var confirmation = confirmSentTransaction(sig, built, label);
+    confirmation.then(function () {
+      emitRescueTxEvent('confirmed', { sig: sig, label: label || 'Transaction' });
+    }).catch(function (error) {
+      var message = error && error.message ? error.message : String(error || 'confirmation failed');
+      console.warn('[rescue v2] background confirmation failed', sig, message);
+      emitRescueTxEvent('failed', { sig: sig, label: label || 'Transaction', error: message });
+    });
+    return confirmation;
+  }
+
+  async function returnAfterFastConfirmation(sig, built, label, options) {
+    if (options && options.waitForConfirmation === true) {
+      await confirmSentTransaction(sig, built, label);
+      return sig;
+    }
+    var confirmation = watchTxConfirmation(sig, built, label);
+    try {
+      await withRescueTimeout(
+        confirmation,
+        Math.max(750, numberSetting('OST_FAST_CONFIRM_MS', 2400)),
+        'OST transaction submitted; confirmation is still syncing in the background.'
+      );
+    } catch (error) {
+      var message = error && error.message ? String(error.message) : String(error || '');
+      if (!/confirmation is still syncing/i.test(message)) throw error;
+      emitRescueTxEvent('submitted', { sig: sig, label: label || 'Transaction' });
+    }
+    return sig;
+  }
+
+  async function sendPoolOnlyTxSubmitted(instructions, label) {
+    var built = await buildPoolPaidTx(instructions);
+    built.tx.sign(built.pool);
+    var sig;
+    try {
+      sig = await sendRawSafe(built.conn, built.tx.serialize());
+    } catch (e) {
+      throw await unpackSendError(e);
+    }
+    watchTxConfirmation(sig, built, label || 'Pool-paid transaction');
+    emitRescueTxEvent('submitted', { sig: sig, label: label || 'Pool-paid transaction' });
+    return { sig: sig, built: built };
+  }
+
   // Pool-only tx: pool is the only signer.
   async function sendPoolOnlyTx(instructions) {
     var built = await buildPoolPaidTx(instructions);
@@ -482,7 +533,7 @@
 
   // Pool pays SOL fee + partial-signs first; user wallet signs to authorise
   // their OST transfer. Used when user is spending their own OST.
-  async function sendUserSignedPoolPaidTx(instructions) {
+  async function sendUserSignedPoolPaidTx(instructions, options) {
     var w = window.OST_WALLET;
     if (!w || !w.sign) throw new Error('Wallet helpers not loaded');
     var built = await buildPoolPaidTx(instructions);
@@ -503,14 +554,14 @@
       // Provider handles send; just return the signature.
       var res = await waitForWalletApproval(session.provider.signAndSendTransaction(built.tx, fastSendOptions()), 'Wallet signature');
       var providerSig = typeof res === 'string' ? res : (res && res.signature);
-      if (providerSig) await confirmSentTransaction(providerSig, built, 'Wallet-signed transaction');
+      if (providerSig) await returnAfterFastConfirmation(providerSig, built, 'Wallet-signed transaction', options || {});
       return providerSig;
     } else {
       throw new Error('Wallet cannot sign transactions');
     }
     try {
       var sig = await sendRawSafe(built.conn, serialized);
-      await confirmSentTransaction(sig, built, 'Wallet-signed transaction');
+      await returnAfterFastConfirmation(sig, built, 'Wallet-signed transaction', options || {});
       return sig;
     } catch (e) {
       throw await unpackSendError(e);
@@ -556,6 +607,24 @@
       }
       fetch(base + '/wallet/payouts', { method: 'POST', headers: { 'content-type': 'application/json' }, body: body, keepalive: true }).catch(function () {});
     } catch (_) {}
+  }
+
+  function verifyPayoutInBackground(payoutId, walletStr, amt, memoSummary, memoText, sig, userAta, beforeUserRaw, expectedRaw, decimals) {
+    setTimeout(function () {
+      verifyTokenBalanceDelta(userAta, beforeUserRaw, expectedRaw, decimals, 'OST payout', 24).then(function () {
+        clearPendingPayout(payoutId);
+        rememberPayoutReceipt(payoutId, { wallet: walletStr, ost: amt, sig: sig, memo: memoSummary, ref: payoutRefFromMemo(memoText), verified: true });
+        logPayoutAudit({ id: payoutId, stage: 'result', wallet: walletStr, kind: 'payout', ostAmount: amt, memo: memoSummary, sig: sig, ref: payoutRefFromMemo(memoText) });
+        emitRescueTxEvent('payout-verified', { sig: sig, wallet: walletStr, ostAmount: amt, id: payoutId });
+      }).catch(function (err) {
+        var message = err && err.message ? String(err.message).slice(0, 240) : 'verification still pending';
+        rememberPendingPayout(payoutId, { wallet: walletStr, ostAmount: amt, memo: memoSummary, sig: sig, error: message, stage: /On-chain failure/i.test(message) ? 'send-failed' : 'verification-pending' });
+        if (/On-chain failure/i.test(message)) {
+          logPayoutAudit({ id: payoutId, stage: 'failure', wallet: walletStr, kind: 'payout', ostAmount: amt, memo: memoSummary, sig: sig, error: message, ref: payoutRefFromMemo(memoText) });
+        }
+        emitRescueTxEvent('payout-pending', { sig: sig, wallet: walletStr, ostAmount: amt, id: payoutId, error: message });
+      });
+    }, 0);
   }
 
   async function payoutOst(toPubkeyInput, amountOst, memoText, options) {
@@ -616,6 +685,13 @@
 
       var sig;
       try {
+        if (options && options.fastReturn) {
+          var submitted = await sendPoolOnlyTxSubmitted(ixs, 'OST payout');
+          sig = submitted.sig;
+          rememberPendingPayout(payoutId, { wallet: walletStr, ostAmount: amt, memo: memoSummary, sig: sig, stage: 'verifying' });
+          verifyPayoutInBackground(payoutId, walletStr, amt, memoSummary, memoText, sig, userAta, beforeUserRaw, expectedRaw, c.OST_TOKEN_DECIMALS);
+          return { sig: sig, ost: amt, auditId: payoutId, pending: true, verified: false };
+        }
         sig = await sendPoolOnlyTx(ixs);
         await verifyTokenBalanceDelta(userAta, beforeUserRaw, expectedRaw, c.OST_TOKEN_DECIMALS, 'OST payout');
       } catch (err) {
@@ -694,7 +770,7 @@
         payout: Number(payoutAmount),
         t: Date.now()
       }),
-      { idempotencyKey: 'prediction-cashout:' + (orderId || stableHash(JSON.stringify(orderRecord || {}))) + ':' + Number(payoutAmount || 0).toFixed(9) }
+      { idempotencyKey: 'prediction-cashout:' + (orderId || stableHash(JSON.stringify(orderRecord || {}))) + ':' + Number(payoutAmount || 0).toFixed(9), fastReturn: true }
     );
   }
 

@@ -865,6 +865,7 @@
     updateGameTable(state, 'Confirm the OST stake deposit in your wallet.');
     var memo = JSON.stringify({ k: 'mesh-game-stake', id: state.id, game: state.game, ost: amount, role: state.role, t: Date.now() });
     var result = await window.OST_RESCUE.userSendsOstToPool(amount, memo);
+    updateGameTable(state, 'Stake submitted. Final confirmation is syncing in the background.');
     recordFairGame('stake-deposit', { id: state.id, game: state.game, amount: amount, asset: asset, sig: result && result.sig, role: state.role });
     if (typeof window.recordOstSnapshot === 'function') window.recordOstSnapshot({ ts: Date.now(), kind: 'fair-game-stake', amount: amount, sig: result && result.sig, game: state.game });
     return { sig: result && result.sig, amount: amount, asset: asset, wallet: walletAddress(), paidAt: Date.now() };
@@ -878,13 +879,13 @@
     if (button) { button.disabled = true; button.textContent = 'Cashing out...'; }
     var pot = amount * 2;
     var memo = JSON.stringify({ k: 'mesh-game-cashout', id: state.id, game: state.game, pot: pot, t: Date.now() });
-    var result = await window.OST_RESCUE.payoutOst(walletAddress(), pot, memo);
+    var result = await window.OST_RESCUE.payoutOst(walletAddress(), pot, memo, { fastReturn: true, idempotencyKey: 'mesh-game-cashout:' + String(state.id || '') + ':' + Number(pot || 0).toFixed(9) });
     recordFairGame('cashout', { id: state.id, game: state.game, pot: result && result.ost || pot, sig: result && result.sig });
     if (typeof window.recordOstSnapshot === 'function') window.recordOstSnapshot({ ts: Date.now(), kind: 'fair-game-cashout', amount: result && result.ost || pot, sig: result && result.sig, game: state.game });
     if (typeof window.syncOstWalletEventsFromRemote === 'function') window.syncOstWalletEventsFromRemote();
     refreshUnifiedBalances();
-    setArenaStatus('Fair game pot cashed out to your linked wallet.');
-    if (button) button.textContent = 'Cashed out';
+    setArenaStatus(result && result.pending ? 'Cash-out submitted. Wallet balance verification is finishing in the background.' : 'Fair game pot cashed out to your linked wallet.');
+    if (button) button.textContent = result && result.pending ? 'Submitted' : 'Cashed out';
     return result;
   }
 
