@@ -780,6 +780,16 @@ function publicRecentPositionRecord(record) {
   return copy;
 }
 
+function recentPositionMatchesMarket(record, marketIdFilter) {
+  const filter = cleanText(marketIdFilter || '', 128);
+  if (!filter) return true;
+  const recordMarketId = cleanText(record && record.marketId || '', 128);
+  if (recordMarketId === filter) return true;
+  if (filter === 'ost-btc5m' && recordMarketId.indexOf('ost-btc5m-') === 0) return true;
+  if (recordMarketId === 'ost-btc5m' && filter.indexOf('ost-btc5m-') === 0) return true;
+  return false;
+}
+
 function mergeRecentPositionRows(kvRows) {
   const seen = new Set();
   const rows = [];
@@ -2324,6 +2334,15 @@ export default {
     }
 
     // OST Faucet Gate — shared per-wallet faucet state + anti-double-claim reservations.
+    if (path === '/faucet/state' && method === 'GET') {
+      if (!env.FAUCET_GATE) return json({ error: 'faucet_gate_not_configured' }, 503);
+      const wallet = cleanText(url.searchParams.get('wallet') || '', 80);
+      if (!wallet) return json({ error: 'missing_wallet' }, 400);
+      const id = env.FAUCET_GATE.idFromName('global');
+      const aliasUrl = new URL(request.url);
+      aliasUrl.pathname = '/faucet/v1/state/' + encodeURIComponent(wallet);
+      return env.FAUCET_GATE.get(id).fetch(new Request(aliasUrl.toString(), request));
+    }
     if (path.startsWith('/faucet/v1/')) {
       if (!env.FAUCET_GATE) return json({ error: 'faucet_gate_not_configured' }, 503);
       const id = env.FAUCET_GATE.idFromName('global');
@@ -2678,11 +2697,12 @@ export default {
       const limit = Math.min(200, Number(url.searchParams.get('limit') || 60));
       const marketIdFilter = cleanText(url.searchParams.get('marketId') || '', 128);
       if (!env.OST_KV) return json({ recent: [], note: 'KV not configured' });
-      const hubRows = await getNativeRecentPositionsFromHub(env, marketIdFilter, limit);
+      const hubMarketFilter = marketIdFilter === 'ost-btc5m' ? '' : marketIdFilter;
+      const hubRows = await getNativeRecentPositionsFromHub(env, hubMarketFilter, limit);
       const recent = await kvGet(env, 'positions:recent', []);
       const rows = mergeRecentPositionRows((Array.isArray(hubRows) ? hubRows : []).concat(recent));
       const filteredRows = marketIdFilter
-        ? rows.filter(record => cleanText(record?.marketId || '', 128) === marketIdFilter)
+        ? rows.filter(record => recentPositionMatchesMarket(record, marketIdFilter))
         : rows;
       return json({ recent: filteredRows.slice(0, limit), marketId: marketIdFilter || null, ts: new Date().toISOString() }, 200, { 'cache-control': 'no-store' });
     }

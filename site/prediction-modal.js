@@ -965,6 +965,8 @@
     if (!market) return aliases;
     addAlias(aliases, market.id);
     addAlias(aliases, market.marketId);
+    if (String(market.id || '').indexOf('ost-btc5m-') === 0) addAlias(aliases, 'ost-btc5m');
+    if (String(market.id || '') === 'ost-btc5m' && market.meta && market.meta.openAt) addAlias(aliases, 'ost-btc5m-' + market.meta.openAt);
     addAlias(aliases, market.conditionId || market.condition_id);
     addAlias(aliases, market.gammaMarketId);
     normalizeOutcomeTokenIds(market.clobTokenIds).forEach(function (id) { addAlias(aliases, id); });
@@ -1001,11 +1003,20 @@
     return String(record && (record.signature || record.sig || record.id || record.txid || record.txHash) || '') ||
       [record && record.marketId, record && record.conditionId, record && record.wallet, record && record.side, record && record.stake, record && (record.ts || record.createdAt)].join(':');
   }
+  function nativeBtcMarketIdsMatch(recordMarketId, marketId) {
+    var recordText = String(recordMarketId || '').trim();
+    var marketText = String(marketId || '').trim();
+    if (!recordText || !marketText) return false;
+    if (recordText === marketText) return true;
+    if (marketText === 'ost-btc5m' && recordText.indexOf('ost-btc5m-') === 0) return true;
+    if (recordText === 'ost-btc5m' && marketText.indexOf('ost-btc5m-') === 0) return true;
+    return false;
+  }
   function recordMatchesMarket(record, market) {
     if (!record || !market) return false;
     var marketId = String(market.id || '').trim();
     var recordMarketId = String(record.marketId || '').trim();
-    if (marketId && recordMarketId === marketId) return true;
+    if (nativeBtcMarketIdsMatch(recordMarketId, marketId)) return true;
     if (isOstNativeMarket(market)) return false;
     var marketAliases = marketAliasList(market);
     if (!marketAliases.length) return false;
@@ -1768,7 +1779,7 @@
     if (!id) return [];
     var wallet = ownWallet();
     return readOrders().filter(function (o) {
-      if (!o || String(o.marketId || '') !== id) return false;
+      if (!o || !nativeBtcMarketIdsMatch(o.marketId, id)) return false;
       if (o.cashedOut) return false;
       // If a wallet is connected, only show that wallet's tickets — otherwise
       // show all local tickets so users can still settle pre-connect orders.
@@ -1865,6 +1876,8 @@
           if (!r || !r.sig) throw new Error('Payout was not confirmed on-chain.');
           if (Number(r.ost || 0) + 0.000000001 < Number(payout || 0)) throw new Error('Payout was not fully funded.');
           order.cashoutSig = r.sig;
+          order.cashoutPending = !!r.pending;
+          order.cashoutVerified = !(r.verified === false);
           return doLocal().then(function (loc) {
             return Object.assign({}, loc, { ost: (r && Number(r.ost)) || loc.ost, sig: order.cashoutSig || loc.sig });
           });
@@ -2266,7 +2279,8 @@
       refreshSharedFeed.inFlight = true;
       var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
       var timeoutId = controller ? setTimeout(function () { try { controller.abort(); } catch (_) {} }, 3500) : null;
-      fetch(base + '/positions/recent?marketId=' + encodeURIComponent(market.id || '') + '&limit=120', {
+      var primaryMarketId = market && market.isOstNative && String(market.id || '').indexOf('ost-btc5m') === 0 ? 'ost-btc5m' : (market.id || '');
+      fetch(base + '/positions/recent?marketId=' + encodeURIComponent(primaryMarketId) + '&limit=120', {
         cache: 'no-store',
         signal: controller ? controller.signal : undefined
       })

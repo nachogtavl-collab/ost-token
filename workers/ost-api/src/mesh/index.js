@@ -52,6 +52,10 @@ export async function handleMeshRequest(request, env, { path, method }) {
     return ok({ ok: true, mesh: 'v1', ts: new Date().toISOString() });
   }
 
+  if (method === 'GET' && path === '/mesh/v1/directory') {
+    return ok({ ok: true, identities: [], count: 0, note: 'directory requires durable-object hub', ts: new Date().toISOString() });
+  }
+
   if (method === 'POST' && path === '/mesh/v1/identity/announce') {
     const body = await request.json().catch(() => ({}));
     return identityAnnounce(env, body, ok, err);

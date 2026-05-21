@@ -479,7 +479,17 @@
     var roundRecord = currentDashboardRoundRecord();
     var sideKey = String(side || 'YES').toUpperCase() === 'NO' ? 'no' : 'yes';
     var buttons = Array.prototype.slice.call(root.querySelectorAll('[data-bet]'));
+    var unlockTimer = null;
+    function unlockButtons() {
+      if (unlockTimer) clearTimeout(unlockTimer);
+      buttons.forEach(function (button) { button.disabled = false; button.classList.remove('is-loading'); button.removeAttribute('aria-busy'); });
+    }
     buttons.forEach(function (button) { button.disabled = true; button.classList.add('is-loading'); });
+    buttons.forEach(function (button) { button.setAttribute('aria-busy', 'true'); });
+    unlockTimer = setTimeout(function () {
+      unlockButtons();
+      showToast(root, 'Order is still syncing in the background. You can keep using the market.', 'ok');
+    }, 12000);
     showToast(root, 'Submitting ' + (sideKey === 'no' ? 'DOWN' : 'UP') + ' at the live quote...', 'ok');
     var refresh = typeof api.refreshFiveMinRound === 'function' ? api.refreshFiveMinRound() : Promise.resolve();
     Promise.resolve(refresh)
@@ -498,7 +508,7 @@
         showToast(root, error && error.message ? error.message : 'Bet failed. Try again.', 'err');
       })
       .then(function () {
-        buttons.forEach(function (button) { button.disabled = false; button.classList.remove('is-loading'); });
+        unlockButtons();
       });
   }
 

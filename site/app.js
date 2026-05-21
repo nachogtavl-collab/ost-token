@@ -3404,39 +3404,47 @@
       vaultFlow: 'stake-in',
       createdAt: Date.now()
     };
-    try {
-      const syncPayload = await withPredictionTimeout(
-        postPredictionOrderRecord(record),
-        4500,
-        'Live share inventory confirmation timed out; retrying in background.'
-      );
-      if (!syncPayload || (syncPayload.ok !== true && syncPayload.stored !== true)) {
-        throw new Error('OST API did not confirm the live share inventory.');
-      }
-      if (syncPayload.marketState) {
-        record.remoteSyncedAt = Date.now();
-        record.remotePending = false;
-      } else {
-        record.remoteSyncedAt = Date.now();
-      }
-    } catch (syncError) {
-      record.remotePending = true;
-      record.remoteError = syncError && syncError.message ? String(syncError.message).slice(0, 180) : 'share sync pending';
-      setTimeout(function() { sharePredictionOrderRecord(record); }, 1000);
-    }
+    var estimatedRemainingBalance = ostBalance !== null ? Math.max(0, ostBalance - Number(order.stake)) : null;
+    if (estimatedRemainingBalance !== null) rememberPredictionBalanceHint(trader, estimatedRemainingBalance, 'prediction-spend');
+    record.remotePending = true;
     storePredictionOrderRecord(record, { share: false });
     try { window.dispatchEvent(new CustomEvent('ost:prediction-order-recorded', { detail: record })); } catch (_) {}
 
+    function patchStoredPredictionRecord(patch) {
+      try {
+        var key = predictionOrderKey(record);
+        var orders = readPredictionOrderRecords();
+        var changed = false;
+        orders = orders.map(function(existing) {
+          if (!existing || predictionOrderKey(existing) !== key) return existing;
+          changed = true;
+          return Object.assign({}, existing, patch || {});
+        });
+        if (!changed) orders.unshift(Object.assign({}, record, patch || {}));
+        writePredictionOrderRecords(orders);
+        try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed', { detail: { order: Object.assign({}, record, patch || {}), marketId: record.marketId || '' } })); } catch (_) {}
+      } catch (_) {}
+    }
+
+    Promise.resolve(postPredictionOrderRecord(record)).then(function(syncPayload) {
+      if (!syncPayload || (syncPayload.ok !== true && syncPayload.stored !== true)) throw new Error('OST API did not confirm the live share inventory.');
+      applyPredictionOrderSyncPayload(record, syncPayload);
+      patchStoredPredictionRecord({ remotePending: false, remoteSyncedAt: Date.now(), remoteError: '' });
+    }).catch(function(syncError) {
+      var remoteError = syncError && syncError.message ? String(syncError.message).slice(0, 180) : 'share sync pending';
+      patchStoredPredictionRecord({ remotePending: true, remoteError: remoteError });
+      setTimeout(function() { sharePredictionOrderRecord(Object.assign({}, record, { remotePending: true, remoteError: remoteError })); }, 1000);
+    });
+
     // Fetch updated balance for UI display (best-effort — use stake-adjusted
     // fallback if the RPC hasn't propagated the debit yet).
-    var remainingBalance = null;
+    var remainingBalance = estimatedRemainingBalance;
     var preTradeBalance = ostBalance;
-    try {
-      var fetched = await withPredictionTimeout(
+    Promise.resolve(withPredictionTimeout(
         getOstBalanceForAddressStrict(trader),
         6500,
         'Prediction balance refresh timed out.'
-      );
+      )).then(async function(fetched) {
       fetched = normalizeOstBalanceValue(fetched);
       // If RPC returned a stale value (≥ pre-trade balance), use a locally-
       // calculated estimate so the ticket panel shows something sensible.
@@ -3445,30 +3453,32 @@
           ? Math.max(0, preTradeBalance - Number(order.stake))
           : fetched;
       }
-    } catch (_) {
+      if (remainingBalance !== null) rememberPredictionBalanceHint(trader, remainingBalance, 'prediction-spend');
+      try {
+        if (window.OST_WALLET && window.OST_WALLET.session && remainingBalance !== null) {
+          var solBal = (await conn.getBalance(trader)) / solanaWeb3.LAMPORTS_PER_SOL;
+          if (typeof window.recordOstSnapshot === 'function') {
+            window.recordOstSnapshot({
+              ts: Date.now(), ostBalance: remainingBalance, solBalance: solBal,
+              kind: 'prediction-buy', amount: Number(order.stake), sig: signature
+            });
+          }
+        }
+        if (typeof window.notifyOstTxHistory === 'function') window.notifyOstTxHistory();
+        try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {}
+      } catch (_) {}
+    }).catch(function() {
       var fallbackHint = getPredictionBalanceHint(trader, order);
       var fallbackBalance = preTradeBalance !== null ? preTradeBalance : (fallbackHint && fallbackHint.balance !== null ? fallbackHint.balance : null);
       remainingBalance = fallbackBalance !== null ? Math.max(0, fallbackBalance - Number(order.stake)) : null;
-    }
-    if (remainingBalance !== null) rememberPredictionBalanceHint(trader, remainingBalance, 'prediction-spend');
-    // Update the wallet portfolio chart + transaction history list immediately.
-    try {
-      if (window.OST_WALLET && window.OST_WALLET.session && remainingBalance !== null) {
-        var solBal = (await conn.getBalance(trader)) / solanaWeb3.LAMPORTS_PER_SOL;
-        if (typeof window.recordOstSnapshot === 'function') {
-          window.recordOstSnapshot({
-            ts: Date.now(), ostBalance: remainingBalance, solBalance: solBal,
-            kind: 'prediction-buy', amount: Number(order.stake), sig: signature
-          });
-        }
-      }
-      if (typeof window.notifyOstTxHistory === 'function') window.notifyOstTxHistory();
-    } catch (_) {}
+      if (remainingBalance !== null) rememberPredictionBalanceHint(trader, remainingBalance, 'prediction-spend');
+    });
     return {
       signature: signature,
       remainingBalance: remainingBalance,
       vaultTokenAccount: vaultTokenAccount,
-      record: record
+      record: record,
+      remotePending: true
     };
   }
 

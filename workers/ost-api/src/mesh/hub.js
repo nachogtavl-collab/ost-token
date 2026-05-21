@@ -64,6 +64,10 @@ export class MeshHub {
         return json({ ok: true, mesh: 'v1', hub: 'durable-object', ts: new Date().toISOString() });
       }
 
+      if (method === 'GET' && path === '/mesh/v1/directory') {
+        return this.directory();
+      }
+
       if (method === 'POST' && path === '/mesh/v1/identity/announce') {
         const body = await request.json().catch(() => ({}));
         return this.announce(body);
@@ -135,6 +139,28 @@ export class MeshHub {
     }
 
     return json(record);
+  }
+
+  async directory() {
+    const now = Date.now();
+    const records = [];
+    try {
+      const stored = await this.state.storage.list({ prefix: ID_PREFIX, limit: 100 });
+      for (const [key, record] of stored) {
+        if (isExpired(record, now)) {
+          this.state.storage.delete(key).catch(() => {});
+          continue;
+        }
+        records.push({
+          address: record.address,
+          fingerprint: record.fingerprint || null,
+          ts: record.ts || 0,
+          expiresAt: record.expiresAt || 0
+        });
+      }
+    } catch (_) {}
+    records.sort((left, right) => Number(right.ts || 0) - Number(left.ts || 0));
+    return json({ ok: true, identities: records, count: records.length, hub: 'durable-object', ts: new Date().toISOString() });
   }
 
   signal(body) {
