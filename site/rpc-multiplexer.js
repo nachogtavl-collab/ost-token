@@ -39,9 +39,7 @@
   // Mainnet flip: set window.OST_NETWORK = 'mainnet-beta' BEFORE this
   // script loads (or supply window.OST_RPC_ENDPOINTS = [...] explicitly).
   var DEFAULT_DEVNET = [
-    'https://api.devnet.solana.com',
-    'https://rpc.ankr.com/solana_devnet',
-    'https://devnet.genesysgo.net'
+    'https://api.devnet.solana.com'
   ];
   var DEFAULT_MAINNET = [
     'https://api.mainnet-beta.solana.com',
@@ -56,6 +54,13 @@
   } else {
     ENDPOINTS = DEFAULT_DEVNET.slice();
   }
+  ENDPOINTS = ENDPOINTS.filter(function (endpoint) {
+    return typeof endpoint === 'string' && endpoint &&
+      endpoint.indexOf('api-key=public') === -1 &&
+      endpoint.indexOf('rpc.ankr.com/solana') === -1 &&
+      endpoint.indexOf('devnet.genesysgo.net') === -1;
+  });
+  if (!ENDPOINTS.length) ENDPOINTS = DEFAULT_DEVNET.slice();
   if (typeof window !== 'undefined') window.OST_RPC_ACTIVE_ENDPOINTS = ENDPOINTS.slice();
 
   var FAST_COMMITMENT = (window.OST_SOLANA_FAST_COMMITMENT && String(window.OST_SOLANA_FAST_COMMITMENT)) || 'processed';
@@ -168,8 +173,30 @@
     h.lastErr = (err && err.message) || String(err || '');
   }
   function activeEndpoints() {
-    var ok = ENDPOINTS.filter(isUsable);
-    return ok.length ? ok : ENDPOINTS.slice(); // never return empty
+    return ENDPOINTS.filter(isUsable);
+  }
+  function endpointCooldownMs() {
+    var now = Date.now();
+    var nextReady = Infinity;
+    ENDPOINTS.forEach(function (ep) {
+      var until = ensureHealth(ep).failuresUntil;
+      if (until > now && until < nextReady) nextReady = until;
+    });
+    return nextReady === Infinity ? 0 : Math.max(250, Math.min(8000, nextReady - now));
+  }
+  async function waitForRpcCooldown() {
+    if (activeEndpoints().length) return;
+    var delay = endpointCooldownMs();
+    if (delay > 0) await new Promise(function (resolve) { setTimeout(resolve, delay); });
+  }
+  function orderedEndpoints(primaryEp) {
+    var order = [];
+    var active = activeEndpoints();
+    if (primaryEp && isUsable(primaryEp)) order.push(primaryEp);
+    active.forEach(function (ep) { if (ep !== primaryEp && order.indexOf(ep) < 0) order.push(ep); });
+    if (order.length) return order;
+    if (primaryEp) return [primaryEp];
+    return ENDPOINTS.slice();
   }
 
   // Build a sibling Connection per backup endpoint, lazily.
@@ -197,7 +224,8 @@
       var tried = [];
       var lastErr = null;
 
-      var order = [primaryEp].concat(activeEndpoints().filter(function (e) { return e !== primaryEp; }));
+      await waitForRpcCooldown();
+      var order = orderedEndpoints(primaryEp);
       for (var i = 0; i < order.length; i++) {
         var ep = order[i];
         if (tried.indexOf(ep) >= 0) continue;
@@ -246,7 +274,8 @@
     var self = this;
     var sendOptions = fastSendOptions(options || {});
     var primaryEp = self._rpcEndpoint || ENDPOINTS[0];
-    var endpoints = [primaryEp].concat(activeEndpoints().filter(function (e) { return e !== primaryEp; }));
+    await waitForRpcCooldown();
+    var endpoints = orderedEndpoints(primaryEp);
     var dedup = []; var seen = {};
     endpoints.forEach(function (e) { if (!seen[e]) { seen[e] = 1; dedup.push(e); } });
 
@@ -288,7 +317,8 @@
   solanaWeb3.Connection.prototype.requestAirdrop = async function (pubkey, lamports) {
     var self = this;
     var primaryEp = self._rpcEndpoint || ENDPOINTS[0];
-    var endpoints = [primaryEp].concat(activeEndpoints().filter(function (e) { return e !== primaryEp; }));
+    await waitForRpcCooldown();
+    var endpoints = orderedEndpoints(primaryEp);
     var lastErr = null;
     for (var i = 0; i < endpoints.length; i++) {
       var ep = endpoints[i];
@@ -313,7 +343,8 @@
   solanaWeb3.Connection.prototype.confirmTransaction = async function (sigOrStrategy, commitment) {
     var self = this;
     var primaryEp = self._rpcEndpoint || ENDPOINTS[0];
-    var endpoints = [primaryEp].concat(activeEndpoints().filter(function (e) { return e !== primaryEp; }));
+    await waitForRpcCooldown();
+    var endpoints = orderedEndpoints(primaryEp);
     return new Promise(function (resolve, reject) {
       var settled = false;
       var failures = 0;

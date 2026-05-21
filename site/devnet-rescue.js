@@ -17,11 +17,19 @@
   // -----------------------------------------------------------------------
   // 1) MULTI-RPC CONNECTION
   // -----------------------------------------------------------------------
-  var RPC_ENDPOINTS = [
-    'https://api.devnet.solana.com',
-    'https://devnet.helius-rpc.com/?api-key=public',
-    'https://rpc.ankr.com/solana_devnet'
+  var DEFAULT_RPC_ENDPOINTS = [
+    'https://api.devnet.solana.com'
   ];
+  var RPC_ENDPOINTS = (Array.isArray(window.OST_RPC_ENDPOINTS) && window.OST_RPC_ENDPOINTS.length)
+    ? window.OST_RPC_ENDPOINTS.slice()
+    : DEFAULT_RPC_ENDPOINTS.slice();
+  RPC_ENDPOINTS = RPC_ENDPOINTS.filter(function (endpoint) {
+    return typeof endpoint === 'string' && endpoint &&
+      endpoint.indexOf('api-key=public') === -1 &&
+      endpoint.indexOf('rpc.ankr.com/solana_devnet') === -1 &&
+      endpoint.indexOf('devnet.genesysgo.net') === -1;
+  });
+  if (!RPC_ENDPOINTS.length) RPC_ENDPOINTS = DEFAULT_RPC_ENDPOINTS.slice();
   var rpcIndex = 0;
   var rpcConnections = {};
   var PAYOUT_RECEIPTS_KEY = 'ost.payout.receipts.v1';
@@ -475,7 +483,8 @@
   }
 
   // Pool-only tx: pool is the only signer.
-  async function sendPoolOnlyTx(instructions) {
+  async function sendPoolOnlyTx(instructions, label) {
+    var txLabel = label || 'Pool-paid transaction';
     var built = await buildPoolPaidTx(instructions);
     built.tx.sign(built.pool);
     var sig;
@@ -528,7 +537,7 @@
     var summary = lastStatus
       ? 'last status=' + (lastStatus.confirmationStatus || 'unknown')
       : 'no status from any RPC';
-    throw new Error('Payout could not be confirmed on-chain (' + summary + '): ' + (primaryErr && primaryErr.message ? primaryErr.message : primaryErr));
+    throw new Error(txLabel + ' could not be confirmed on-chain (' + summary + '): ' + (primaryErr && primaryErr.message ? primaryErr.message : primaryErr));
   }
 
   // Pool pays SOL fee + partial-signs first; user wallet signs to authorise
@@ -582,7 +591,17 @@
     if (info) return ata;
     var pool = loadPoolKeypair();
     var ix = w.associatedAccountIx(pool.publicKey, ata, owner, mintPk, c.TOKEN_2022_PROGRAM_ID);
-    await sendPoolOnlyTx([ix]);
+    try {
+      await withRescueTimeout(
+        sendPoolOnlyTx([ix], 'OST account preparation'),
+        Math.max(12000, numberSetting('OST_ATA_CONFIRM_TIMEOUT_MS', 18000)),
+        'OST account preparation is still syncing on devnet. Wait a few seconds and try again.'
+      );
+    } catch (error) {
+      var latestInfo = await conn.getAccountInfo(ata).catch(function () { return null; });
+      if (latestInfo) return ata;
+      throw error;
+    }
     return ata;
   }
 
