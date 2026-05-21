@@ -933,7 +933,7 @@
     if (!w || !w.session || !w.session.publicKey) {
       pop('Connect a wallet first');
       try {
-        var btnConnect = document.getElementById('connectWalletBtn');
+        var btnConnect = document.getElementById('walletBtn') || document.getElementById('connectWalletBtn');
         if (btnConnect) btnConnect.click();
       } catch(e) {}
       return;

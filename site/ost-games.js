@@ -419,7 +419,7 @@
         if (bal < 1) return;
         var w = window.OST_WALLET;
         if (!w || !w.session || !w.session.publicKey) {
-          var b = document.getElementById('connectWalletBtn'); if (b) b.click();
+          var b = document.getElementById('walletBtn') || document.getElementById('connectWalletBtn'); if (b) b.click();
           return;
         }
         if (!window.OST_RESCUE || !window.OST_RESCUE.payoutOst) {
@@ -492,12 +492,12 @@
       var connected = !!(w && w.session && w.session.publicKey);
       if (!connected) {
         dot.dataset.state = 'off';
-        text.innerHTML = '<a href="#connectWalletBtn" id="ostgConnectLink" style="color:#bfdbfe;text-decoration:underline;">Connect wallet</a> to deposit real OST';
+        text.innerHTML = '<a href="#walletBtn" id="ostgConnectLink" style="color:#bfdbfe;text-decoration:underline;">Connect wallet</a> to deposit real OST';
         if (depBtn) { depBtn.disabled = true; depBtn.title = 'Connect a wallet first'; }
         var link = document.getElementById('ostgConnectLink');
         if (link) link.addEventListener('click', function (e) {
           e.preventDefault();
-          var b = document.getElementById('connectWalletBtn');
+          var b = document.getElementById('walletBtn') || document.getElementById('connectWalletBtn');
           if (b) b.click();
         });
         return;
@@ -534,7 +534,7 @@
       }
       var w = window.OST_WALLET;
       if (!w || !w.session || !w.session.publicKey) {
-        var b = document.getElementById('connectWalletBtn'); if (b) b.click();
+        var b = document.getElementById('walletBtn') || document.getElementById('connectWalletBtn'); if (b) b.click();
         return;
       }
       if (!window.OST_RESCUE || !window.OST_RESCUE.userSendsOstToPool) {
