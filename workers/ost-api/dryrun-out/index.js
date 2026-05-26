@@ -474,6 +474,9 @@ async function handleMeshRequest(request, env, { path, method }) {
   if (path === "/mesh/v1/health") {
     return ok({ ok: true, mesh: "v1", ts: (/* @__PURE__ */ new Date()).toISOString() });
   }
+  if (method === "GET" && path === "/mesh/v1/directory") {
+    return ok({ ok: true, identities: [], count: 0, note: "directory requires durable-object hub", ts: (/* @__PURE__ */ new Date()).toISOString() });
+  }
   if (method === "POST" && path === "/mesh/v1/identity/announce") {
     const body = await request.json().catch(() => ({}));
     return identityAnnounce(env, body, ok, err);
@@ -498,6 +501,237 @@ async function handleMeshRequest(request, env, { path, method }) {
 }
 __name(handleMeshRequest, "handleMeshRequest");
 
+// src/ost-price.js
+var CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "content-type, accept, x-ost-wallet"
+};
+function json2(data, status = 200, extra = {}) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { "content-type": "application/json; charset=utf-8", ...CORS, ...extra }
+  });
+}
+__name(json2, "json");
+async function kvGet(env, key, fallback = null) {
+  if (!env.OST_KV)
+    return fallback;
+  try {
+    const v = await env.OST_KV.get(key, { type: "json" });
+    return v ?? fallback;
+  } catch (_) {
+    return fallback;
+  }
+}
+__name(kvGet, "kvGet");
+async function kvPut(env, key, value, expirationTtl = null) {
+  if (!env.OST_KV)
+    return false;
+  try {
+    const opts = Number.isFinite(Number(expirationTtl)) && Number(expirationTtl) > 0 ? { expirationTtl: Number(expirationTtl) } : void 0;
+    await env.OST_KV.put(key, JSON.stringify(value), opts);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+__name(kvPut, "kvPut");
+function cleanText(value, max = 200) {
+  return String(value == null ? "" : value).trim().slice(0, max);
+}
+__name(cleanText, "cleanText");
+var OST_ANCHOR = 0.1;
+var OST_VOL_BAND = 0.02;
+var OST_TICK_MS = 5e3;
+var OST_HISTORY_MAX = 1440;
+var OST_HISTORY_MS = 6e4;
+var OST_WINDOW_MS = 24 * 60 * 60 * 1e3;
+var OST_EVENT_MAX = 5e3;
+var ALPHA = 0.05;
+var BETA = 0.05;
+var GAMMA = 0.05;
+var DELTA = 0.1;
+var ALLOWED_EVENT_TYPES = /* @__PURE__ */ new Set(["faucet", "send", "cashout", "game_win", "game_loss", "swap", "topup", "other"]);
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function() {
+    a = a + 1831565813 >>> 0;
+    let t = a;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+__name(mulberry32, "mulberry32");
+function tickNoise(tickIndex) {
+  return (mulberry32(tickIndex)() - 0.5) * 2 * OST_VOL_BAND;
+}
+__name(tickNoise, "tickNoise");
+function volMultiplier(ts) {
+  const t = ts / OST_TICK_MS;
+  const i = Math.floor(t);
+  const f = t - i;
+  const a = tickNoise(i);
+  const b = tickNoise(i + 1);
+  return 1 + a * (1 - f) + b * f;
+}
+__name(volMultiplier, "volMultiplier");
+function emptyCounters() {
+  return { wallets24h: {}, tx24h: [] };
+}
+__name(emptyCounters, "emptyCounters");
+function pruneCounters(counters, now) {
+  const cutoff = now - OST_WINDOW_MS;
+  const wallets = {};
+  for (const [addr, lastTs] of Object.entries(counters.wallets24h || {})) {
+    if (Number(lastTs) >= cutoff)
+      wallets[addr] = Number(lastTs);
+  }
+  let tx = (counters.tx24h || []).filter((e) => Number(e.ts) >= cutoff);
+  if (tx.length > OST_EVENT_MAX)
+    tx = tx.slice(-OST_EVENT_MAX);
+  return { wallets24h: wallets, tx24h: tx };
+}
+__name(pruneCounters, "pruneCounters");
+function networkFactor(counters) {
+  const W = Object.keys(counters.wallets24h || {}).length;
+  const tx = counters.tx24h || [];
+  const T = tx.length;
+  const V = tx.reduce((s, e) => s + Math.max(0, Number(e.volume) || 0), 0);
+  const n = 1 + ALPHA * Math.log(1 + W) + BETA * Math.log(1 + T) + GAMMA * Math.log(1 + V);
+  return Math.max(1, n);
+}
+__name(networkFactor, "networkFactor");
+function btcMood() {
+  return 1;
+}
+__name(btcMood, "btcMood");
+function computePrice(counters, ts) {
+  const n = networkFactor(counters);
+  const v = volMultiplier(ts);
+  const m = btcMood();
+  const raw = OST_ANCHOR * n * v * m;
+  return Math.max(OST_ANCHOR * 0.5, raw);
+}
+__name(computePrice, "computePrice");
+function change24hPct(counters, nowPrice, ts) {
+  const prevTs = ts - OST_WINDOW_MS;
+  const tx24hAtThen = (counters.tx24h || []).filter((e) => Number(e.ts) < prevTs);
+  const walletsAtThen = {};
+  for (const [addr, lastTs] of Object.entries(counters.wallets24h || {})) {
+    if (Number(lastTs) < prevTs)
+      walletsAtThen[addr] = Number(lastTs);
+  }
+  const prevPrice = computePrice({ wallets24h: walletsAtThen, tx24h: tx24hAtThen }, prevTs);
+  if (!Number.isFinite(prevPrice) || prevPrice <= 0)
+    return 0;
+  return (nowPrice - prevPrice) / prevPrice * 100;
+}
+__name(change24hPct, "change24hPct");
+async function maybeSnapshotHistory(env, counters, ts) {
+  const history = await kvGet(env, "ost:history", []) || [];
+  const lastTs = history.length ? Number(history[history.length - 1].ts) : 0;
+  if (ts - lastTs < OST_HISTORY_MS)
+    return history;
+  const price = computePrice(counters, ts);
+  history.push({ ts, price: Number(price.toFixed(8)), n: Number(networkFactor(counters).toFixed(6)) });
+  while (history.length > OST_HISTORY_MAX)
+    history.shift();
+  await kvPut(env, "ost:history", history);
+  return history;
+}
+__name(maybeSnapshotHistory, "maybeSnapshotHistory");
+async function handleOstPriceRequest(request, env, ctx) {
+  const { path, method, url } = ctx;
+  if (path === "/ost/price" && method === "GET") {
+    const now = Date.now();
+    const counters = pruneCounters(await kvGet(env, "ost:counters", emptyCounters()) || emptyCounters(), now);
+    const price = computePrice(counters, now);
+    const change = change24hPct(counters, price, now);
+    return json2({
+      price: Number(price.toFixed(8)),
+      currency: "USD",
+      anchor: OST_ANCHOR,
+      change24h: Number(change.toFixed(4)),
+      source: "ost-devnet-synthetic",
+      model: "P0 * N(t) * V(t) * M(t)",
+      ts: new Date(now).toISOString()
+    }, 200, { "cache-control": "no-store" });
+  }
+  if (path === "/ost/stats" && method === "GET") {
+    const now = Date.now();
+    const counters = pruneCounters(await kvGet(env, "ost:counters", emptyCounters()) || emptyCounters(), now);
+    const W = Object.keys(counters.wallets24h).length;
+    const T = counters.tx24h.length;
+    const V = counters.tx24h.reduce((s, e) => s + Math.max(0, Number(e.volume) || 0), 0);
+    const n = networkFactor(counters);
+    const v = volMultiplier(now);
+    const m = btcMood();
+    const price = OST_ANCHOR * n * v * m;
+    return json2({
+      ts: new Date(now).toISOString(),
+      anchor: OST_ANCHOR,
+      activeWallets24h: W,
+      tx24h: T,
+      volume24h: Number(V.toFixed(8)),
+      networkFactor: Number(n.toFixed(6)),
+      volMultiplier: Number(v.toFixed(6)),
+      btcMood: Number(m.toFixed(6)),
+      price: Number(price.toFixed(8)),
+      weights: { alpha: ALPHA, beta: BETA, gamma: GAMMA, delta: DELTA },
+      volBand: OST_VOL_BAND,
+      tickMs: OST_TICK_MS
+    }, 200, { "cache-control": "no-store" });
+  }
+  if (path === "/ost/history" && method === "GET") {
+    const range = String(url.searchParams.get("range") || "24h").toLowerCase();
+    const now = Date.now();
+    const cutoffMs = range === "1h" ? 60 * 60 * 1e3 : range === "7d" ? 7 * 24 * 60 * 60 * 1e3 : 24 * 60 * 60 * 1e3;
+    const cutoff = now - cutoffMs;
+    const history = (await kvGet(env, "ost:history", []) || []).filter((p) => Number(p.ts) >= cutoff);
+    return json2({
+      range,
+      points: history,
+      count: history.length,
+      ts: new Date(now).toISOString()
+    }, 200, { "cache-control": "no-store" });
+  }
+  if (path === "/ost/event" && method === "POST") {
+    let body = {};
+    try {
+      body = await request.json();
+    } catch (_) {
+    }
+    const wallet = cleanText(body.wallet || "", 80);
+    const type = cleanText(body.type || "other", 24);
+    const volume = Math.max(0, Math.min(1e12, Number(body.volume) || 0));
+    if (!wallet)
+      return json2({ error: "missing_wallet" }, 400);
+    if (!ALLOWED_EVENT_TYPES.has(type))
+      return json2({ error: "invalid_type", type }, 400);
+    const now = Date.now();
+    const counters = pruneCounters(await kvGet(env, "ost:counters", emptyCounters()) || emptyCounters(), now);
+    counters.wallets24h[wallet] = now;
+    counters.tx24h.push({ ts: now, type, volume });
+    if (counters.tx24h.length > OST_EVENT_MAX)
+      counters.tx24h = counters.tx24h.slice(-OST_EVENT_MAX);
+    await kvPut(env, "ost:counters", counters);
+    await maybeSnapshotHistory(env, counters, now);
+    const price = computePrice(counters, now);
+    return json2({
+      ok: true,
+      accepted: { wallet, type, volume },
+      price: Number(price.toFixed(8)),
+      activeWallets24h: Object.keys(counters.wallets24h).length,
+      tx24h: counters.tx24h.length,
+      ts: new Date(now).toISOString()
+    }, 200, { "cache-control": "no-store" });
+  }
+  return null;
+}
+__name(handleOstPriceRequest, "handleOstPriceRequest");
+
 // src/mesh/hub.js
 var ID_PREFIX = "id:";
 var ID_TTL_MS = 60 * 60 * 24 * 7 * 1e3;
@@ -513,15 +747,15 @@ function cors2(extra = {}) {
   return { ...CORS_HEADERS2, ...extra };
 }
 __name(cors2, "cors");
-function json2(data, status = 200) {
+function json3(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
     headers: cors2({ "Content-Type": "application/json" })
   });
 }
-__name(json2, "json");
+__name(json3, "json");
 function fail(error, status = 400) {
-  return json2({ ok: false, error }, status);
+  return json3({ ok: false, error }, status);
 }
 __name(fail, "fail");
 function validAddr2(value) {
@@ -554,7 +788,10 @@ var MeshHub = class {
       const path = url.pathname.replace(/\/$/, "") || "/";
       const method = request.method;
       if (path === "/mesh/v1/health") {
-        return json2({ ok: true, mesh: "v1", hub: "durable-object", ts: (/* @__PURE__ */ new Date()).toISOString() });
+        return json3({ ok: true, mesh: "v1", hub: "durable-object", ts: (/* @__PURE__ */ new Date()).toISOString() });
+      }
+      if (method === "GET" && path === "/mesh/v1/directory") {
+        return this.directory();
       }
       if (method === "POST" && path === "/mesh/v1/identity/announce") {
         const body = await request.json().catch(() => ({}));
@@ -602,7 +839,7 @@ var MeshHub = class {
     } catch {
       stored = false;
     }
-    return json2({ ok: true, address, ts: record.ts, hub: "durable-object", stored });
+    return json3({ ok: true, address, ts: record.ts, hub: "durable-object", stored });
   }
   async lookup(address) {
     if (!validAddr2(address))
@@ -620,7 +857,30 @@ var MeshHub = class {
       });
       return fail("not found", 404);
     }
-    return json2(record);
+    return json3(record);
+  }
+  async directory() {
+    const now = Date.now();
+    const records = [];
+    try {
+      const stored = await this.state.storage.list({ prefix: ID_PREFIX, limit: 100 });
+      for (const [key, record] of stored) {
+        if (isExpired(record, now)) {
+          this.state.storage.delete(key).catch(() => {
+          });
+          continue;
+        }
+        records.push({
+          address: record.address,
+          fingerprint: record.fingerprint || null,
+          ts: record.ts || 0,
+          expiresAt: record.expiresAt || 0
+        });
+      }
+    } catch (_) {
+    }
+    records.sort((left, right) => Number(right.ts || 0) - Number(left.ts || 0));
+    return json3({ ok: true, identities: records, count: records.length, hub: "durable-object", ts: (/* @__PURE__ */ new Date()).toISOString() });
   }
   signal(body) {
     const { from, to, payload } = body || {};
@@ -636,7 +896,7 @@ var MeshHub = class {
     inbox.push(record);
     this.inboxes.set(to, inbox.slice(-MAX_PER_INBOX2));
     this.pruneInbox(to, ts);
-    return json2({ ok: true, id: record.id, ts, hub: "durable-object" });
+    return json3({ ok: true, id: record.id, ts, hub: "durable-object" });
   }
   inbox({ to, from, since }) {
     if (!validAddr2(to))
@@ -662,7 +922,7 @@ var MeshHub = class {
     else
       this.inboxes.delete(to);
     messages.sort((a, b) => (a.ts || 0) - (b.ts || 0));
-    return json2({ messages: messages.slice(-MAX_PER_INBOX2), hub: "durable-object" });
+    return json3({ messages: messages.slice(-MAX_PER_INBOX2), hub: "durable-object" });
   }
   pruneInbox(to, now = Date.now()) {
     const inbox = this.inboxes.get(to) || [];
@@ -683,7 +943,7 @@ var CORS_HEADERS3 = {
   "Access-Control-Max-Age": "86400"
 };
 var FIVE_MIN_MS = 5 * 60 * 1e3;
-function json3(data, status = 200, extra = {}) {
+function json4(data, status = 200, extra = {}) {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
@@ -693,7 +953,7 @@ function json3(data, status = 200, extra = {}) {
     }
   });
 }
-__name(json3, "json");
+__name(json4, "json");
 function currentRound() {
   const now = Date.now();
   const openAt = Math.floor(now / FIVE_MIN_MS) * FIVE_MIN_MS;
@@ -752,25 +1012,114 @@ async function fetchBtcPrice() {
   return null;
 }
 __name(fetchBtcPrice, "fetchBtcPrice");
+async function fetchBtcPriceFast(timeoutMs = 520) {
+  const attempts = BTC_FEEDS.map(async (feed) => {
+    const r = await fetchWithDeadline(feed.url, {
+      headers: {
+        accept: "application/json",
+        "cache-control": "no-cache, no-store, max-age=0",
+        pragma: "no-cache",
+        "user-agent": "OST-API/1.0"
+      },
+      cf: { cacheTtl: 0 }
+    }, timeoutMs);
+    if (!r.ok)
+      throw new Error(feed.name + " " + r.status);
+    const j = await r.json();
+    const price = feed.pick(j);
+    if (!Number.isFinite(price) || price <= 1e3)
+      throw new Error(feed.name + " empty price");
+    return { price, source: feed.name };
+  });
+  const results = await Promise.allSettled(attempts);
+  for (const result of results) {
+    if (result.status === "fulfilled" && result.value)
+      return result.value;
+  }
+  return null;
+}
+__name(fetchBtcPriceFast, "fetchBtcPriceFast");
 var BTC_TICK_RING_MAX = 600;
 var BTC_LIVE_TTL_S = 60 * 30;
 var BTC_LIVE_REFRESH_MS = 650;
+var BTC_DO_SNAPSHOT_CACHE_MS = 250;
+var BTC_DO_TICK_MIN_GAP_MS = 550;
 var BTC_ROUND_OPEN_MEMORY = /* @__PURE__ */ new Map();
-async function storeRoundOpenPrice(env, round, price, source, ts) {
+var BTC_PRIOR_DRIFT_MEMORY = /* @__PURE__ */ new Map();
+var BTC_DRIFT_BLEND = 0.5;
+var BTC_DRIFT_CAP_PCT = 0.3;
+async function storeRoundOpenPrice(env, round, price, source, ts, priceToBeat) {
   if (!env.OST_KV || !Number.isFinite(price) || price <= 0)
     return null;
+  const beat = Number.isFinite(priceToBeat) && priceToBeat > 0 ? priceToBeat : price;
   const record = {
     openAt: round.openAt,
     closeAt: round.closeAt,
     openPrice: price,
+    priceToBeat: beat,
+    priceToBeatSource: beat === price ? "open" : "projected-5m-drift",
     openPriceSource: source || "",
     openPriceTs: Number(ts) || Date.now(),
     lockedBy: "worker"
   };
-  await kvPut(env, `round:${round.openAt}`, record, 60 * 60 * 2);
+  await kvPut2(env, `round:${round.openAt}`, record, 60 * 60 * 2);
   return record;
 }
 __name(storeRoundOpenPrice, "storeRoundOpenPrice");
+async function fetchBtcPrior5mDrift(round) {
+  const cached = BTC_PRIOR_DRIFT_MEMORY.get(round.openAt);
+  if (cached !== void 0)
+    return cached;
+  const priorOpenAt = round.openAt - 5 * 60 * 1e3;
+  const urls = [
+    `https://data-api.binance.vision/api/v3/klines?symbol=BTCUSDT&interval=5m&startTime=${priorOpenAt}&limit=1`,
+    `https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=5m&startTime=${priorOpenAt}&limit=1`
+  ];
+  for (const url of urls) {
+    try {
+      const r = await fetch(url, {
+        headers: {
+          accept: "application/json",
+          "cache-control": "no-cache, no-store, max-age=0",
+          pragma: "no-cache",
+          "user-agent": "OST-API/1.0"
+        },
+        cf: { cacheTtl: 0 }
+      });
+      if (!r.ok)
+        continue;
+      const rows = await r.json();
+      const row = Array.isArray(rows) ? rows[0] : null;
+      const openTime = Number(row && row[0]);
+      const op = Number(row && row[1]);
+      const cp = Number(row && row[4]);
+      if (openTime === priorOpenAt && Number.isFinite(op) && op > 1e3 && Number.isFinite(cp) && cp > 0) {
+        const drift = (cp - op) / op;
+        BTC_PRIOR_DRIFT_MEMORY.set(round.openAt, drift);
+        if (BTC_PRIOR_DRIFT_MEMORY.size > 8) {
+          const oldest = Array.from(BTC_PRIOR_DRIFT_MEMORY.keys()).sort((a, b) => a - b)[0];
+          BTC_PRIOR_DRIFT_MEMORY.delete(oldest);
+        }
+        return drift;
+      }
+    } catch (_) {
+    }
+  }
+  BTC_PRIOR_DRIFT_MEMORY.set(round.openAt, 0);
+  return 0;
+}
+__name(fetchBtcPrior5mDrift, "fetchBtcPrior5mDrift");
+function projectPriceToBeat(openPrice, priorDrift) {
+  if (!Number.isFinite(openPrice) || openPrice <= 0)
+    return openPrice;
+  if (!Number.isFinite(priorDrift) || priorDrift === 0)
+    return openPrice;
+  const blended = priorDrift * BTC_DRIFT_BLEND;
+  const cap = BTC_DRIFT_CAP_PCT / 100;
+  const clamped = Math.max(-cap, Math.min(cap, blended));
+  return openPrice * (1 + clamped);
+}
+__name(projectPriceToBeat, "projectPriceToBeat");
 async function fetchBtcRoundOpenPrice(round) {
   const cached = BTC_ROUND_OPEN_MEMORY.get(round.openAt);
   if (cached && Number.isFinite(Number(cached.price)) && Number(cached.price) > 0)
@@ -812,22 +1161,84 @@ async function fetchBtcRoundOpenPrice(round) {
   return null;
 }
 __name(fetchBtcRoundOpenPrice, "fetchBtcRoundOpenPrice");
+async function fetchBtcPrior5mDriftFast(round, timeoutMs = 180) {
+  return Promise.race([
+    fetchBtcPrior5mDrift(round).catch(() => 0),
+    new Promise((resolve) => setTimeout(() => resolve(0), timeoutMs))
+  ]);
+}
+__name(fetchBtcPrior5mDriftFast, "fetchBtcPrior5mDriftFast");
+async function fetchBtcRoundOpenPriceFast(round, timeoutMs = 520) {
+  const cached = BTC_ROUND_OPEN_MEMORY.get(round.openAt);
+  if (cached && Number.isFinite(Number(cached.price)) && Number(cached.price) > 0)
+    return cached;
+  const urls = [
+    `https://data-api.binance.vision/api/v3/klines?symbol=BTCUSDT&interval=5m&startTime=${round.openAt}&limit=1`,
+    `https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=5m&startTime=${round.openAt}&limit=1`
+  ];
+  const attempts = urls.map(async (url) => {
+    const r = await fetchWithDeadline(url, {
+      headers: {
+        accept: "application/json",
+        "cache-control": "no-cache, no-store, max-age=0",
+        pragma: "no-cache",
+        "user-agent": "OST-API/1.0"
+      },
+      cf: { cacheTtl: 0 }
+    }, timeoutMs);
+    if (!r.ok)
+      throw new Error("kline " + r.status);
+    const rows = await r.json();
+    const row = Array.isArray(rows) ? rows[0] : null;
+    const openTime = Number(row && row[0]);
+    const openPrice = Number(row && row[1]);
+    if (openTime !== round.openAt || !Number.isFinite(openPrice) || openPrice <= 1e3)
+      throw new Error("kline empty");
+    const source = url.includes("binance.vision") ? "binance-kline" : "binance-kline-api";
+    const record = { price: openPrice, source, t: openTime };
+    BTC_ROUND_OPEN_MEMORY.set(round.openAt, record);
+    if (BTC_ROUND_OPEN_MEMORY.size > 6) {
+      const oldest = Array.from(BTC_ROUND_OPEN_MEMORY.keys()).sort((a, b) => a - b)[0];
+      BTC_ROUND_OPEN_MEMORY.delete(oldest);
+    }
+    return record;
+  });
+  try {
+    return Promise.any ? await Promise.any(attempts) : await attempts[0].catch(() => attempts[1]);
+  } catch (_) {
+    return null;
+  }
+}
+__name(fetchBtcRoundOpenPriceFast, "fetchBtcRoundOpenPriceFast");
 async function lockRoundOpenPrice(env, round, price, source) {
   if (!env.OST_KV || !Number.isFinite(price) || price <= 0)
     return null;
   const key = `round:${round.openAt}`;
-  const existing = await kvGet(env, key, null);
+  const existing = await kvGet2(env, key, null);
   if (existing && Number.isFinite(Number(existing.openPrice)) && Number(existing.openPrice) > 0) {
+    if (!(Number.isFinite(Number(existing.priceToBeat)) && Number(existing.priceToBeat) > 0)) {
+      const drift2 = await fetchBtcPrior5mDrift(round);
+      const beat2 = projectPriceToBeat(Number(existing.openPrice), drift2);
+      const patched = {
+        ...existing,
+        priceToBeat: beat2,
+        priceToBeatSource: beat2 === Number(existing.openPrice) ? "open" : "projected-5m-drift"
+      };
+      await kvPut2(env, key, patched, 60 * 60 * 2);
+      return patched;
+    }
     return existing;
   }
-  return storeRoundOpenPrice(env, round, price, source, Date.now());
+  const drift = await fetchBtcPrior5mDrift(round);
+  const beat = projectPriceToBeat(price, drift);
+  return storeRoundOpenPrice(env, round, price, source, Date.now(), beat);
 }
 __name(lockRoundOpenPrice, "lockRoundOpenPrice");
 async function appendBtcTick(env, round, price, source) {
   if (!env.OST_KV || !Number.isFinite(price) || price <= 0)
     return;
   const ringKey = `btc:ticks:${round.openAt}`;
-  const ring = await kvGet(env, ringKey, []);
+  const ring = await kvGet2(env, ringKey, []);
   const last = ring.length ? ring[ring.length - 1] : null;
   const now = Date.now();
   if (last && last.p === price && now - last.t < 800)
@@ -835,24 +1246,25 @@ async function appendBtcTick(env, round, price, source) {
   ring.push({ t: now, p: price, s: source || "" });
   if (ring.length > BTC_TICK_RING_MAX)
     ring.splice(0, ring.length - BTC_TICK_RING_MAX);
-  await kvPut(env, ringKey, ring, 60 * 60 * 1);
-  await kvPut(env, "btc:latest", { t: now, p: price, s: source || "", round: round.openAt }, BTC_LIVE_TTL_S);
+  await kvPut2(env, ringKey, ring, 60 * 60 * 1);
+  await kvPut2(env, "btc:latest", { t: now, p: price, s: source || "", round: round.openAt }, BTC_LIVE_TTL_S);
 }
 __name(appendBtcTick, "appendBtcTick");
-function serverComputeBtcOdds(openPrice, livePrice, msLeft) {
+function serverComputeBtcOdds(openPrice, livePrice, msLeft, priceToBeat) {
   const FIVE = 5 * 60 * 1e3;
   if (!Number.isFinite(openPrice) || !Number.isFinite(livePrice) || openPrice <= 0 || livePrice <= 0) {
     return { yes: 0.5, no: 0.5, deltaPct: 0, delta: 0, scale: 0 };
   }
+  const beat = Number.isFinite(priceToBeat) && priceToBeat > 0 ? priceToBeat : openPrice;
   const left = Math.max(0, Math.min(FIVE, Number(msLeft) || 0));
   const elapsedRatio = 1 - left / FIVE;
   const remainingRatio = left / FIVE;
-  const delta = livePrice - openPrice;
-  const deltaPct = delta / openPrice * 100;
-  const scale = 0.22 * Math.sqrt(Math.max(remainingRatio, 0.05));
+  const delta = livePrice - beat;
+  const deltaPct = delta / beat * 100;
+  const scale = 0.1 * Math.sqrt(Math.max(remainingRatio, 0.04));
   const z = deltaPct / Math.max(scale, 1e-3);
   let yes = 1 / (1 + Math.exp(-z));
-  const confidence = 0.55 + 0.4 * elapsedRatio;
+  const confidence = 0.65 + 0.32 * elapsedRatio;
   yes = 0.5 + (yes - 0.5) * confidence;
   yes = Math.max(0.02, Math.min(0.98, yes));
   return { yes, no: 1 - yes, deltaPct, delta, scale };
@@ -877,7 +1289,7 @@ __name(btcRoundHasHotLivePrice, "btcRoundHasHotLivePrice");
 async function buildCanonicalBtcRound(env, opts) {
   const round = currentRound();
   const wantFresh = opts && opts.refresh !== false;
-  let latest = await kvGet(env, "btc:latest", null);
+  let latest = await kvGet2(env, "btc:latest", null);
   const latestIsCurrentRound = latest && Number(latest.round) === round.openAt;
   const stale = !latest || !latestIsCurrentRound || Date.now() - Number(latest.t || 0) > BTC_LIVE_REFRESH_MS;
   if (wantFresh && stale) {
@@ -889,20 +1301,27 @@ async function buildCanonicalBtcRound(env, opts) {
     }
   }
   const currentLatest = latest && Number(latest.round) === round.openAt ? latest : null;
-  let stored = await kvGet(env, `round:${round.openAt}`, null);
+  let stored = await kvGet2(env, `round:${round.openAt}`, null);
   const roundOpen = await fetchBtcRoundOpenPrice(round);
   if (roundOpen && Number.isFinite(Number(roundOpen.price)) && Number(roundOpen.price) > 0) {
     const storedOpen = Number(stored && stored.openPrice);
     if (!Number.isFinite(storedOpen) || Math.abs(storedOpen - Number(roundOpen.price)) > 1e-6 || stored.openPriceSource !== roundOpen.source) {
-      stored = await storeRoundOpenPrice(env, round, Number(roundOpen.price), roundOpen.source, roundOpen.t) || stored;
+      let beat = Number(stored && stored.priceToBeat);
+      if (!Number.isFinite(beat) || beat <= 0) {
+        const drift = await fetchBtcPrior5mDrift(round);
+        beat = projectPriceToBeat(Number(roundOpen.price), drift);
+      }
+      stored = await storeRoundOpenPrice(env, round, Number(roundOpen.price), roundOpen.source, roundOpen.t, beat) || stored;
     }
   }
   const openPrice = roundOpen && Number(roundOpen.price) || Number(stored && stored.openPrice) || currentLatest && Number(currentLatest.p) || 0;
   if (currentLatest && openPrice && !stored) {
     stored = await lockRoundOpenPrice(env, round, openPrice, currentLatest.s || "") || stored;
   }
+  const storedBeat = Number(stored && stored.priceToBeat);
+  const priceToBeat = Number.isFinite(storedBeat) && storedBeat > 0 ? storedBeat : openPrice;
   const livePrice = currentLatest && Number(currentLatest.p) || openPrice;
-  const odds = serverComputeBtcOdds(openPrice, livePrice, round.msLeft);
+  const odds = serverComputeBtcOdds(openPrice, livePrice, round.msLeft, priceToBeat);
   const openPriceSource = roundOpen && roundOpen.source || stored && stored.openPriceSource || "";
   const openPriceTs = roundOpen && Number(roundOpen.t) || stored && stored.openPriceTs || null;
   return {
@@ -911,7 +1330,8 @@ async function buildCanonicalBtcRound(env, opts) {
     closeAt: round.closeAt,
     msLeft: round.msLeft,
     openPrice: openPrice || null,
-    priceToBeat: openPrice || null,
+    priceToBeat: priceToBeat || openPrice || null,
+    priceToBeatSource: stored && stored.priceToBeatSource || (priceToBeat && priceToBeat !== openPrice ? "projected-5m-drift" : "open"),
     openPriceSource,
     openPriceTs,
     livePrice: livePrice || null,
@@ -929,31 +1349,45 @@ async function buildCanonicalBtcRound(env, opts) {
 __name(buildCanonicalBtcRound, "buildCanonicalBtcRound");
 async function polyGamma(env, path, query = "") {
   const url = `${env.GAMMA_BASE}${path}${query ? "?" + query : ""}`;
-  const r = await fetch(url, {
+  const r = await fetchWithDeadline(url, {
     headers: { accept: "application/json", "user-agent": "OST-API/1.0" },
     cf: { cacheTtl: 5, cacheEverything: true }
-  });
+  }, 4500);
   return r.ok ? r.json() : null;
 }
 __name(polyGamma, "polyGamma");
 async function polyClob(env, path, query = "") {
   const url = `${env.CLOB_BASE}${path}${query ? "?" + query : ""}`;
-  const r = await fetch(url, {
+  const r = await fetchWithDeadline(url, {
     headers: { accept: "application/json", "user-agent": "OST-API/1.0" },
     cf: { cacheTtl: 2, cacheEverything: true }
-  });
+  }, 4e3);
   return r.ok ? r.json() : null;
 }
 __name(polyClob, "polyClob");
 async function polyData(env, path, query = "") {
   const url = `${env.DATA_BASE}${path}${query ? "?" + query : ""}`;
-  const r = await fetch(url, {
+  const r = await fetchWithDeadline(url, {
     headers: { accept: "application/json", "user-agent": "OST-API/1.0" },
     cf: { cacheTtl: 30, cacheEverything: true }
-  });
+  }, 5e3);
   return r.ok ? r.json() : null;
 }
 __name(polyData, "polyData");
+async function fetchWithDeadline(url, init, timeoutMs = 4500) {
+  const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+  const timeoutId = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+  try {
+    return await fetch(url, {
+      ...init || {},
+      signal: controller ? controller.signal : void 0
+    });
+  } finally {
+    if (timeoutId)
+      clearTimeout(timeoutId);
+  }
+}
+__name(fetchWithDeadline, "fetchWithDeadline");
 function normaliseMarket(raw) {
   let outcomePrices = raw.outcomePrices;
   if (typeof outcomePrices === "string") {
@@ -1017,7 +1451,7 @@ function normaliseMarket(raw) {
   };
 }
 __name(normaliseMarket, "normaliseMarket");
-async function kvGet(env, key, fallback = null) {
+async function kvGet2(env, key, fallback = null) {
   if (!env.OST_KV)
     return fallback;
   try {
@@ -1027,8 +1461,8 @@ async function kvGet(env, key, fallback = null) {
     return fallback;
   }
 }
-__name(kvGet, "kvGet");
-async function kvPut(env, key, value, expirationTtl = null) {
+__name(kvGet2, "kvGet");
+async function kvPut2(env, key, value, expirationTtl = null) {
   if (!env.OST_KV)
     return false;
   try {
@@ -1039,7 +1473,66 @@ async function kvPut(env, key, value, expirationTtl = null) {
     return false;
   }
 }
-__name(kvPut, "kvPut");
+__name(kvPut2, "kvPut");
+var ACTIVE_MARKETS_MEMORY = /* @__PURE__ */ new Map();
+var MARKET_DETAIL_MEMORY = /* @__PURE__ */ new Map();
+async function fetchActiveMarkets(env, limit) {
+  const cleanLimit = Math.max(1, Math.min(200, Number(limit) || 60));
+  const cacheKey = `markets:active:${cleanLimit}`;
+  try {
+    const raw = await polyGamma(env, "/markets", `limit=${cleanLimit}&closed=false`);
+    const rows = Array.isArray(raw) ? raw : raw && raw.markets || [];
+    if (Array.isArray(rows) && rows.length) {
+      const payload = { raw, ts: Date.now() };
+      ACTIVE_MARKETS_MEMORY.set(cacheKey, payload);
+      if (ACTIVE_MARKETS_MEMORY.size > 12) {
+        const firstKey = ACTIVE_MARKETS_MEMORY.keys().next().value;
+        if (firstKey)
+          ACTIVE_MARKETS_MEMORY.delete(firstKey);
+      }
+      await kvPut2(env, cacheKey, payload, 60 * 10);
+      return { raw, stale: false, source: "gamma" };
+    }
+  } catch (_) {
+  }
+  const hot = ACTIVE_MARKETS_MEMORY.get(cacheKey);
+  if (hot && hot.raw)
+    return { raw: hot.raw, stale: true, source: "memory", cachedAt: hot.ts || 0 };
+  const cached = await kvGet2(env, cacheKey, null);
+  if (cached && cached.raw)
+    return { raw: cached.raw, stale: true, source: "kv", cachedAt: cached.ts || 0 };
+  return { raw: null, stale: false, source: "none" };
+}
+__name(fetchActiveMarkets, "fetchActiveMarkets");
+async function fetchMarketDetail(env, id) {
+  const cleanId = cleanText2(id, 128);
+  if (!cleanId)
+    return { raw: null, stale: false, source: "none" };
+  const cacheKey = `markets:detail:${cleanId}`;
+  try {
+    const raw = await polyGamma(env, `/markets/${encodeURIComponent(cleanId)}`);
+    if (raw && typeof raw === "object") {
+      const payload = { raw, ts: Date.now() };
+      MARKET_DETAIL_MEMORY.set(cacheKey, payload);
+      if (MARKET_DETAIL_MEMORY.size > 160) {
+        const firstKey = MARKET_DETAIL_MEMORY.keys().next().value;
+        if (firstKey)
+          MARKET_DETAIL_MEMORY.delete(firstKey);
+      }
+      await kvPut2(env, cacheKey, payload, 60 * 30);
+      return { raw, stale: false, source: "gamma" };
+    }
+  } catch (_) {
+  }
+  const hot = MARKET_DETAIL_MEMORY.get(cacheKey);
+  if (hot && hot.raw)
+    return { raw: hot.raw, stale: true, source: "memory", cachedAt: hot.ts || 0 };
+  const cached = await kvGet2(env, cacheKey, null);
+  if (cached && cached.raw)
+    return { raw: cached.raw, stale: true, source: "kv", cachedAt: cached.ts || 0 };
+  return { raw: null, stale: false, source: "none" };
+}
+__name(fetchMarketDetail, "fetchMarketDetail");
 function toMs(value) {
   if (!value)
     return Date.now();
@@ -1050,10 +1543,10 @@ function toMs(value) {
   return Number.isFinite(parsed) ? parsed : Date.now();
 }
 __name(toMs, "toMs");
-function cleanText(value, max = 200) {
+function cleanText2(value, max = 200) {
   return String(value == null ? "" : value).replace(/[\r\n]+/g, " ").slice(0, max);
 }
-__name(cleanText, "cleanText");
+__name(cleanText2, "cleanText");
 function cleanNumber(value, fallback = null) {
   const number = Number(value);
   return Number.isFinite(number) ? number : fallback;
@@ -1090,6 +1583,12 @@ var NATIVE_MARKET_LIQUIDITY_SHARES = 750;
 var NATIVE_MARKET_LIQUIDITY_OST = 500;
 var NATIVE_MARKET_MAX_SHARE_IMPACT = 0.32;
 var NATIVE_MARKET_MAX_STAKE_IMPACT = 0.08;
+var NATIVE_MARKET_BASE_SPREAD = 0.06;
+var NATIVE_MARKET_MAX_SPREAD = 0.16;
+var NATIVE_MARKET_IMBALANCE_SPREAD = 0.07;
+var NATIVE_MARKET_ACTIVITY_SPREAD = 0.03;
+var NATIVE_MARKET_CROWDED_SIDE_PENALTY = 0.05;
+var NATIVE_MARKET_SELL_HAIRCUT = 0.015;
 var NATIVE_MARKET_STATE_MEMORY = /* @__PURE__ */ new Map();
 var POSITION_RECENT_MEMORY = [];
 var POSITION_RECENT_MEMORY_LIMIT = 300;
@@ -1098,10 +1597,24 @@ function clampNativeProbability(value) {
   return probability == null ? null : Math.max(0.02, Math.min(0.98, probability));
 }
 __name(clampNativeProbability, "clampNativeProbability");
+function clampNativeTradeProbability(value) {
+  const probability = cleanProbability(value);
+  return probability == null ? null : Math.max(0.01, Math.min(0.99, probability));
+}
+__name(clampNativeTradeProbability, "clampNativeTradeProbability");
+function clampNativeSpread(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number))
+    return NATIVE_MARKET_BASE_SPREAD;
+  return Math.max(NATIVE_MARKET_BASE_SPREAD, Math.min(NATIVE_MARKET_MAX_SPREAD, number));
+}
+__name(clampNativeSpread, "clampNativeSpread");
 function isOstNativeMarketId(marketId, source) {
   const marketText = String(marketId == null ? "" : marketId);
   const sourceText = String(source == null ? "" : source).toLowerCase();
   if (marketText.indexOf("ost-btc5m-") === 0)
+    return true;
+  if (marketText.indexOf("native-") === 0)
     return true;
   if (sourceText === "ost")
     return true;
@@ -1109,7 +1622,7 @@ function isOstNativeMarketId(marketId, source) {
 }
 __name(isOstNativeMarketId, "isOstNativeMarketId");
 function nativeMarketStateKey(marketId) {
-  return "market:state:" + cleanText(marketId, 128);
+  return "market:state:" + cleanText2(marketId, 128);
 }
 __name(nativeMarketStateKey, "nativeMarketStateKey");
 function clonePlain(value) {
@@ -1125,7 +1638,7 @@ __name(clonePlain, "clonePlain");
 function rememberNativeMarketStateHot(state) {
   if (!state || !state.marketId)
     return null;
-  const marketId = cleanText(state.marketId, 128);
+  const marketId = cleanText2(state.marketId, 128);
   const copy = clonePlain(Object.assign({}, state, { marketId, hotAt: Date.now() }));
   NATIVE_MARKET_STATE_MEMORY.set(marketId, copy);
   if (NATIVE_MARKET_STATE_MEMORY.size > 250) {
@@ -1137,7 +1650,7 @@ function rememberNativeMarketStateHot(state) {
 }
 __name(rememberNativeMarketStateHot, "rememberNativeMarketStateHot");
 function readNativeMarketStateHot(marketId) {
-  const cleanMarketId = cleanText(marketId, 128);
+  const cleanMarketId = cleanText2(marketId, 128);
   const state = NATIVE_MARKET_STATE_MEMORY.get(cleanMarketId);
   if (!state)
     return null;
@@ -1150,7 +1663,7 @@ function readNativeMarketStateHot(marketId) {
 }
 __name(readNativeMarketStateHot, "readNativeMarketStateHot");
 function recentPositionKey(record) {
-  return cleanText(record && (record.signature || record.sig || record.id || [record.wallet, record.marketId, record.side, record.createdAt, record.ts].join(":")), 180);
+  return cleanText2(record && (record.signature || record.sig || record.id || [record.wallet, record.marketId, record.side, record.createdAt, record.ts].join(":")), 180);
 }
 __name(recentPositionKey, "recentPositionKey");
 function rememberRecentPositionHot(record) {
@@ -1166,18 +1679,53 @@ function rememberRecentPositionHot(record) {
     POSITION_RECENT_MEMORY.length = POSITION_RECENT_MEMORY_LIMIT;
 }
 __name(rememberRecentPositionHot, "rememberRecentPositionHot");
+function publicRecentPositionRecord(record) {
+  if (!record)
+    return record;
+  const copy = clonePlain(record);
+  const cashoutSig = cleanText2(copy.cashoutSig || "", 128);
+  const fallbackSignature = cashoutSig || cleanText2(copy.relatedPositionId || copy.id || copy.signature || copy.sig || copy.txid || copy.txHash || [copy.wallet, copy.marketId, copy.side, copy.createdAt, copy.ts].join(":"), 128);
+  if (!copy.signature && fallbackSignature)
+    copy.signature = fallbackSignature;
+  if (!copy.sig && fallbackSignature)
+    copy.sig = fallbackSignature;
+  if (positionIsSellCashout(copy)) {
+    const cashoutPending = !cashoutSig && (copy.cashoutPending === true || cleanNumber(copy.cashoutOst, 0) > 0 || cleanNumber(copy.sellValue, 0) > 0);
+    copy.cashoutSig = cashoutSig;
+    copy.cashoutPending = cashoutPending;
+    copy.cashoutVerified = copy.cashoutVerified === true;
+    copy.verificationState = copy.cashoutVerified ? "verified" : cashoutSig ? "submitted" : cashoutPending ? "pending" : copy.verificationState || "closed";
+  }
+  return copy;
+}
+__name(publicRecentPositionRecord, "publicRecentPositionRecord");
+function recentPositionMatchesMarket(record, marketIdFilter) {
+  const filter = cleanText2(marketIdFilter || "", 128);
+  if (!filter)
+    return true;
+  const recordMarketId = cleanText2(record && record.marketId || "", 128);
+  if (recordMarketId === filter)
+    return true;
+  if (filter === "ost-btc5m" && recordMarketId.indexOf("ost-btc5m-") === 0)
+    return true;
+  if (recordMarketId === "ost-btc5m" && filter.indexOf("ost-btc5m-") === 0)
+    return true;
+  return false;
+}
+__name(recentPositionMatchesMarket, "recentPositionMatchesMarket");
 function mergeRecentPositionRows(kvRows) {
   const seen = /* @__PURE__ */ new Set();
   const rows = [];
   POSITION_RECENT_MEMORY.concat(Array.isArray(kvRows) ? kvRows : []).forEach((record) => {
-    if (!record)
+    const normalized = publicRecentPositionRecord(record);
+    if (!normalized)
       return;
-    const key = recentPositionKey(record);
+    const key = recentPositionKey(normalized);
     if (key && seen.has(key))
       return;
     if (key)
       seen.add(key);
-    rows.push(record);
+    rows.push(normalized);
   });
   rows.sort((left, right) => (cleanNumber(right?.createdAt, 0) || toMs(right?.ts) || cleanNumber(right?.hotAt, 0) || 0) - (cleanNumber(left?.createdAt, 0) || toMs(left?.ts) || cleanNumber(left?.hotAt, 0) || 0));
   return rows;
@@ -1185,7 +1733,7 @@ function mergeRecentPositionRows(kvRows) {
 __name(mergeRecentPositionRows, "mergeRecentPositionRows");
 function defaultNativeMarketState(marketId) {
   return {
-    marketId: cleanText(marketId, 128),
+    marketId: cleanText2(marketId, 128),
     openYesShares: 0,
     openNoShares: 0,
     openYesStake: 0,
@@ -1205,7 +1753,7 @@ function normalizeNativeMarketState(state, marketId) {
       raw = state;
   }
   const normalized = Object.assign(defaultNativeMarketState(marketId), raw);
-  normalized.marketId = cleanText(normalized.marketId ? normalized.marketId : marketId, 128);
+  normalized.marketId = cleanText2(normalized.marketId ? normalized.marketId : marketId, 128);
   normalized.openYesShares = Math.max(0, cleanNumber(normalized.openYesShares, 0));
   normalized.openNoShares = Math.max(0, cleanNumber(normalized.openNoShares, 0));
   normalized.openYesStake = Math.max(0, cleanNumber(normalized.openYesStake, 0));
@@ -1231,7 +1779,7 @@ function nativePositionKey(positionRecord) {
     const keys = ["id", "signature", "sig", "txid", "txHash"];
     for (const key of keys) {
       if (positionRecord[key])
-        return cleanText(positionRecord[key], 180);
+        return cleanText2(positionRecord[key], 180);
     }
   }
   const fallbackParts = [
@@ -1241,7 +1789,7 @@ function nativePositionKey(positionRecord) {
     positionRecord ? positionRecord.createdAt : "",
     positionRecord ? positionRecord.ts : ""
   ];
-  return cleanText(fallbackParts.join(":"), 180);
+  return cleanText2(fallbackParts.join(":"), 180);
 }
 __name(nativePositionKey, "nativePositionKey");
 function positionIsClosed(positionRecord) {
@@ -1283,7 +1831,7 @@ function nativePositionImpact(positionRecord) {
     stake,
     shares,
     price: sidePrice,
-    status: cleanText(positionRecord ? positionRecord.status : isOpen ? "open" : "closed", 32),
+    status: cleanText2(positionRecord ? positionRecord.status : isOpen ? "open" : "closed", 32),
     openYesShares: isOpen ? side === "YES" ? shares : 0 : 0,
     openNoShares: isOpen ? side === "NO" ? shares : 0 : 0,
     openYesStake: isOpen ? side === "YES" ? stake : 0 : 0,
@@ -1314,13 +1862,40 @@ function quoteNativeMarketState(state, baseYesPrice) {
   const shareImpact = Math.tanh(netShares / liquidityShares) * NATIVE_MARKET_MAX_SHARE_IMPACT;
   const stakeImpact = Math.tanh(netStake / liquidityOst) * NATIVE_MARKET_MAX_STAKE_IMPACT;
   const clampedYes = clampNativeProbability(baseYes + shareImpact + stakeImpact);
-  const yesPriceNumber = clampedYes == null ? 0.5 : clampedYes;
+  const midYesPriceNumber = clampedYes == null ? 0.5 : clampedYes;
+  const midNoPriceNumber = 1 - midYesPriceNumber;
+  const shareImbalance = liquidityShares > 0 ? netShares / liquidityShares : 0;
+  const stakeImbalance = liquidityOst > 0 ? netStake / liquidityOst : 0;
+  const imbalanceSignal = Math.tanh((shareImbalance + stakeImbalance) / 2);
+  const imbalancePressure = Math.tanh(Math.max(Math.abs(shareImbalance), Math.abs(stakeImbalance)));
+  const activityPressure = Math.tanh((openYesStake + openNoStake) / Math.max(1, liquidityOst * 2));
+  const vaultSpread = clampNativeSpread(
+    NATIVE_MARKET_BASE_SPREAD + imbalancePressure * NATIVE_MARKET_IMBALANCE_SPREAD + activityPressure * NATIVE_MARKET_ACTIVITY_SPREAD
+  );
+  const halfSpread = vaultSpread / 2;
+  const yesCrowdPenalty = Math.max(0, imbalanceSignal) * NATIVE_MARKET_CROWDED_SIDE_PENALTY;
+  const noCrowdPenalty = Math.max(0, -imbalanceSignal) * NATIVE_MARKET_CROWDED_SIDE_PENALTY;
+  const sellHaircut = NATIVE_MARKET_SELL_HAIRCUT + vaultSpread * 0.25;
+  const yesAskPriceNumber = clampNativeTradeProbability(midYesPriceNumber + halfSpread + yesCrowdPenalty) ?? 0.5;
+  const noAskPriceNumber = clampNativeTradeProbability(midNoPriceNumber + halfSpread + noCrowdPenalty) ?? 0.5;
+  const rawYesBid = clampNativeTradeProbability(midYesPriceNumber - halfSpread - sellHaircut - yesCrowdPenalty) ?? 0.01;
+  const rawNoBid = clampNativeTradeProbability(midNoPriceNumber - halfSpread - sellHaircut - noCrowdPenalty) ?? 0.01;
+  const yesBidPriceNumber = Math.max(0.01, Math.min(rawYesBid, yesAskPriceNumber - 0.01));
+  const noBidPriceNumber = Math.max(0.01, Math.min(rawNoBid, noAskPriceNumber - 0.01));
   const orderSource = state.orders ? state.orders : {};
   return {
     baseYesPrice: baseYes,
     baseNoPrice: 1 - baseYes,
-    yesPriceNumber,
-    noPriceNumber: 1 - yesPriceNumber,
+    fairYesPriceNumber: midYesPriceNumber,
+    fairNoPriceNumber: midNoPriceNumber,
+    yesPriceNumber: yesAskPriceNumber,
+    noPriceNumber: noAskPriceNumber,
+    yesAskPriceNumber,
+    noAskPriceNumber,
+    yesBidPriceNumber,
+    noBidPriceNumber,
+    yesMidPriceNumber: midYesPriceNumber,
+    noMidPriceNumber: midNoPriceNumber,
     openYesShares,
     openNoShares,
     openYesStake,
@@ -1331,12 +1906,48 @@ function quoteNativeMarketState(state, baseYesPrice) {
     liquidityOst,
     shareImpact,
     stakeImpact,
-    totalImpact: yesPriceNumber - baseYes,
+    totalImpact: midYesPriceNumber - baseYes,
+    quoteImpact: yesAskPriceNumber - baseYes,
+    vaultSpread,
+    vaultEdge: vaultSpread,
+    sellHaircut,
+    imbalanceSignal,
+    imbalancePressure,
+    activityPressure,
+    yesCrowdPenalty,
+    noCrowdPenalty,
     orderCount: Object.keys(orderSource).length,
     updatedAt: state.updatedAt ? state.updatedAt : Date.now()
   };
 }
 __name(quoteNativeMarketState, "quoteNativeMarketState");
+function nativeTradePriceFromState(state, side, action) {
+  if (!state)
+    return null;
+  const sideKey = String(side || "").toUpperCase() === "NO" ? "NO" : "YES";
+  const actionKey = String(action || "buy").toLowerCase();
+  let value = null;
+  if (actionKey === "sell" || actionKey === "cashout") {
+    value = sideKey === "NO" ? state.noBidPriceNumber : state.yesBidPriceNumber;
+  } else if (actionKey === "mid" || actionKey === "fair") {
+    value = sideKey === "NO" ? state.noMidPriceNumber : state.yesMidPriceNumber;
+  } else {
+    value = sideKey === "NO" ? state.noAskPriceNumber != null ? state.noAskPriceNumber : state.noPriceNumber : state.yesAskPriceNumber != null ? state.yesAskPriceNumber : state.yesPriceNumber;
+  }
+  const price = cleanProbability(value);
+  return price == null ? null : Math.max(0.01, Math.min(0.99, price));
+}
+__name(nativeTradePriceFromState, "nativeTradePriceFromState");
+function positionIsSellCashout(positionRecord) {
+  if (!positionRecord || !positionIsClosed(positionRecord))
+    return false;
+  const status = String(positionRecord.status || positionRecord.outcome || "").toLowerCase();
+  const kind = String(positionRecord.cashoutKind || positionRecord.flowAction || positionRecord.tradeAction || positionRecord.action || "").toLowerCase();
+  if (status === "won" || status === "lost" || status === "settled" || status === "resolved")
+    return false;
+  return status === "sold" || status === "cashed-out" || kind.indexOf("sell") >= 0 || kind.indexOf("cashout") >= 0;
+}
+__name(positionIsSellCashout, "positionIsSellCashout");
 function pruneNativeMarketOrders(state) {
   const orders = state.orders ? state.orders : {};
   const keys = Object.keys(orders);
@@ -1356,7 +1967,7 @@ async function nativeBaseYesForMarket(env, marketId, fallbackBaseYes) {
     const current = currentRound();
     if (Number.isFinite(openAt)) {
       if (openAt === current.openAt) {
-        const round = await buildCanonicalBtcRound(env, { refresh: true });
+        const round = await getCanonicalBtcRound(env, { refresh: true });
         const roundYes = clampNativeProbability(round ? round.yesPriceNumber : null);
         if (roundYes != null && btcRoundHasHotLivePrice(round))
           baseYes = roundYes;
@@ -1367,13 +1978,13 @@ async function nativeBaseYesForMarket(env, marketId, fallbackBaseYes) {
 }
 __name(nativeBaseYesForMarket, "nativeBaseYesForMarket");
 async function loadNativeMarketState(env, marketId) {
-  const cleanMarketId = cleanText(marketId, 128);
+  const cleanMarketId = cleanText2(marketId, 128);
   const hot = readNativeMarketStateHot(cleanMarketId);
   if (hot)
     return normalizeNativeMarketState(hot, cleanMarketId);
   if (!env.OST_KV)
     return defaultNativeMarketState(cleanMarketId);
-  return normalizeNativeMarketState(await kvGet(env, nativeMarketStateKey(cleanMarketId), null), cleanMarketId);
+  return normalizeNativeMarketState(await kvGet2(env, nativeMarketStateKey(cleanMarketId), null), cleanMarketId);
 }
 __name(loadNativeMarketState, "loadNativeMarketState");
 function publicNativeMarketState(state) {
@@ -1392,7 +2003,7 @@ async function getNativeMarketState(env, marketId, fallbackBaseYes) {
   Object.assign(state, quoted);
   rememberNativeMarketStateHot(state);
   if (env.OST_KV)
-    await kvPut(env, nativeMarketStateKey(state.marketId), state, NATIVE_MARKET_STATE_TTL_S);
+    await kvPut2(env, nativeMarketStateKey(state.marketId), state, NATIVE_MARKET_STATE_TTL_S);
   return publicNativeMarketState(state);
 }
 __name(getNativeMarketState, "getNativeMarketState");
@@ -1420,7 +2031,7 @@ async function applyNativePositionToMarketState(env, positionRecord, fallbackBas
   Object.assign(state, quoted);
   pruneNativeMarketOrders(state);
   rememberNativeMarketStateHot(state);
-  await kvPut(env, nativeMarketStateKey(state.marketId), state, NATIVE_MARKET_STATE_TTL_S);
+  await kvPut2(env, nativeMarketStateKey(state.marketId), state, NATIVE_MARKET_STATE_TTL_S);
   return publicNativeMarketState(state);
 }
 __name(applyNativePositionToMarketState, "applyNativePositionToMarketState");
@@ -1457,8 +2068,62 @@ async function nativeMarketHubJson(env, path, init) {
   }
 }
 __name(nativeMarketHubJson, "nativeMarketHubJson");
+function normalizeHubBtcRound(payload) {
+  if (!payload || typeof payload !== "object")
+    return null;
+  const source = payload.round && Number.isFinite(Number(payload.round.openAt)) ? Object.assign({}, payload, payload.round) : payload;
+  if (!Number.isFinite(Number(source.openAt)))
+    return null;
+  const openAt = Number(source.openAt);
+  const closeAt = Number(source.closeAt) || openAt + FIVE_MIN_MS;
+  const openPrice = cleanNumber(source.openPrice, null);
+  const priceToBeat = cleanNumber(source.priceToBeat, openPrice);
+  const livePrice = cleanNumber(source.livePrice, openPrice);
+  return Object.assign({}, source, {
+    id: cleanText2(source.id || source.marketId || `ost-btc5m-${openAt}`, 128),
+    marketId: cleanText2(source.marketId || source.id || `ost-btc5m-${openAt}`, 128),
+    openAt,
+    closeAt,
+    msLeft: Math.max(0, closeAt - Date.now()),
+    openPrice,
+    priceToBeat,
+    openPriceSource: cleanText2(source.openPriceSource || source.openSource || "", 64),
+    openPriceTs: cleanNumber(source.openPriceTs, null),
+    livePrice,
+    livePriceSource: cleanText2(source.livePriceSource || source.liveSource || source.source || "", 64),
+    livePriceTs: cleanNumber(source.livePriceTs || source.liveTs, null),
+    source: cleanText2(source.source || source.livePriceSource || source.liveSource || source.openPriceSource || source.openSource || "", 64),
+    yesPriceNumber: clampNativeProbability(source.yesPriceNumber) ?? 0.5,
+    noPriceNumber: clampNativeProbability(source.noPriceNumber) ?? 0.5,
+    canonical: true
+  });
+}
+__name(normalizeHubBtcRound, "normalizeHubBtcRound");
+async function getCanonicalBtcRound(env, opts = {}) {
+  const refresh = opts.refresh !== false;
+  const hubPath = "/btc/round" + (refresh ? "" : "?refresh=0");
+  const hubRound = normalizeHubBtcRound(await nativeMarketHubJson(env, hubPath));
+  if (hubRound)
+    return hubRound;
+  return buildCanonicalBtcRound(env, opts);
+}
+__name(getCanonicalBtcRound, "getCanonicalBtcRound");
+async function getCanonicalBtcTicks(env, openAt, since, opts = {}) {
+  const params = new URLSearchParams();
+  if (Number.isFinite(Number(openAt)) && Number(openAt) > 0)
+    params.set("openAt", String(Math.floor(Number(openAt) / FIVE_MIN_MS) * FIVE_MIN_MS));
+  if (Number.isFinite(Number(since)) && Number(since) > 0)
+    params.set("since", String(Number(since)));
+  if (opts.refresh === false)
+    params.set("refresh", "0");
+  const payload = await nativeMarketHubJson(env, "/btc/ticks" + (params.toString() ? "?" + params.toString() : ""));
+  if (!payload || !Array.isArray(payload.ticks))
+    return null;
+  return payload;
+}
+__name(getCanonicalBtcTicks, "getCanonicalBtcTicks");
 async function getNativeMarketStateFromHub(env, marketId, fallbackBaseYes) {
-  const cleanMarketId = cleanText(marketId, 128);
+  const cleanMarketId = cleanText2(marketId, 128);
   if (!cleanMarketId)
     return null;
   const params = new URLSearchParams();
@@ -1503,24 +2168,217 @@ var NativeMarketHub = class {
   constructor(state, env) {
     this.state = state;
     this.env = env;
+    this.btcSnapshotCache = null;
+    this.btcSnapshotCacheAt = 0;
   }
   async fetch(request) {
     return this.state.blockConcurrencyWhile(() => this.handle(request));
   }
   async readMarket(marketId) {
-    const cleanMarketId = cleanText(marketId, 128);
+    const cleanMarketId = cleanText2(marketId, 128);
     const raw = await this.state.storage.get(nativeMarketStateKey(cleanMarketId));
     return normalizeNativeMarketState(raw, cleanMarketId);
   }
   async writeMarket(state) {
-    const cleanMarketId = cleanText(state && state.marketId, 128);
+    const cleanMarketId = cleanText2(state && state.marketId, 128);
     if (!cleanMarketId)
       return;
     await this.state.storage.put(nativeMarketStateKey(cleanMarketId), state);
   }
+  emptyBtcState(round) {
+    return {
+      roundOpenAt: round.openAt,
+      roundCloseAt: round.closeAt,
+      openPrice: 0,
+      priceToBeat: 0,
+      priceToBeatSource: "",
+      openPriceSource: "",
+      openPriceTs: 0,
+      livePrice: 0,
+      livePriceSource: "",
+      livePriceTs: 0,
+      ticks: []
+    };
+  }
+  async readBtcState(round) {
+    const stored = await this.state.storage.get("btc:state");
+    const base = this.emptyBtcState(round);
+    return Object.assign(base, stored || {}, {
+      roundOpenAt: cleanNumber(stored && stored.roundOpenAt, base.roundOpenAt) || base.roundOpenAt,
+      roundCloseAt: cleanNumber(stored && stored.roundCloseAt, base.roundCloseAt) || base.roundCloseAt,
+      ticks: Array.isArray(stored && stored.ticks) ? stored.ticks : []
+    });
+  }
+  async writeBtcState(state) {
+    await this.state.storage.put("btc:state", state);
+  }
+  appendBtcStateTick(state, price, source, ts) {
+    const p = Number(price);
+    if (!Number.isFinite(p) || p <= 1e3)
+      return;
+    const tickTs = Number(ts) || Date.now();
+    const ticks = Array.isArray(state.ticks) ? state.ticks : [];
+    const last = ticks.length ? ticks[ticks.length - 1] : null;
+    if (last && Number(last.p) === p && tickTs - Number(last.t || 0) < BTC_DO_TICK_MIN_GAP_MS)
+      return;
+    ticks.push({ t: tickTs, p, s: source || "" });
+    if (ticks.length > BTC_TICK_RING_MAX)
+      ticks.splice(0, ticks.length - BTC_TICK_RING_MAX);
+    state.ticks = ticks;
+  }
+  async rolloverBtcStateIfNeeded(state, round) {
+    if (state.roundOpenAt === round.openAt)
+      return state;
+    if (state.roundOpenAt && Number(state.openPrice) > 1e3) {
+      const beat = Number(state.priceToBeat) > 1e3 ? Number(state.priceToBeat) : Number(state.openPrice);
+      const closePrice = Number(state.livePrice) > 1e3 ? Number(state.livePrice) : 0;
+      await this.state.storage.put(`btc:round:${state.roundOpenAt}`, {
+        openAt: state.roundOpenAt,
+        closeAt: state.roundCloseAt,
+        openPrice: state.openPrice,
+        priceToBeat: beat,
+        openPriceSource: state.openPriceSource || "",
+        openPriceTs: state.openPriceTs || 0,
+        closePrice: closePrice || null,
+        closeSource: state.livePriceSource || "",
+        settledAt: Date.now(),
+        yesWon: closePrice ? closePrice > beat : null,
+        tied: closePrice ? closePrice === beat : null
+      });
+      await this.state.storage.put(`btc:ticks:${state.roundOpenAt}`, Array.isArray(state.ticks) ? state.ticks.slice(-BTC_TICK_RING_MAX) : []);
+    }
+    return this.emptyBtcState(round);
+  }
+  async refreshBtcState(force) {
+    const round = currentRound();
+    let state = await this.readBtcState(round);
+    state = await this.rolloverBtcStateIfNeeded(state, round);
+    const now = Date.now();
+    const hasKlineOpen = /kline/i.test(String(state.openPriceSource || ""));
+    const liveStale = !Number(state.livePrice) || Number(state.livePrice) <= 1e3 || now - Number(state.livePriceTs || 0) > BTC_LIVE_REFRESH_MS;
+    const needsOpen = !Number(state.openPrice) || Number(state.openPrice) <= 1e3 || !hasKlineOpen;
+    const [roundOpen, live] = await Promise.all([
+      needsOpen ? fetchBtcRoundOpenPriceFast(round) : Promise.resolve(null),
+      force || liveStale ? fetchBtcPriceFast() : Promise.resolve(null)
+    ]);
+    if (roundOpen && Number(roundOpen.price) > 1e3) {
+      const drift = await fetchBtcPrior5mDriftFast(round);
+      state.openPrice = Number(roundOpen.price);
+      state.openPriceSource = roundOpen.source || "binance-kline";
+      state.openPriceTs = Number(roundOpen.t) || round.openAt;
+      state.priceToBeat = projectPriceToBeat(state.openPrice, drift);
+      state.priceToBeatSource = state.priceToBeat === state.openPrice ? "open" : "projected-5m-drift";
+    }
+    if (live && Number(live.price) > 1e3) {
+      state.livePrice = Number(live.price);
+      state.livePriceSource = live.source || "binance";
+      state.livePriceTs = now;
+      this.appendBtcStateTick(state, state.livePrice, state.livePriceSource, state.livePriceTs);
+    }
+    if ((!Number(state.openPrice) || Number(state.openPrice) <= 1e3) && Number(state.livePrice) > 1e3) {
+      const drift = await fetchBtcPrior5mDriftFast(round);
+      state.openPrice = Number(state.livePrice);
+      state.openPriceSource = `${state.livePriceSource || "live"}-provisional-open`;
+      state.openPriceTs = state.livePriceTs || now;
+      state.priceToBeat = projectPriceToBeat(state.openPrice, drift);
+      state.priceToBeatSource = state.priceToBeat === state.openPrice ? "open-provisional" : "projected-5m-drift-provisional";
+    }
+    if (Number(state.openPrice) > 1e3 && (!Number(state.priceToBeat) || Number(state.priceToBeat) <= 1e3)) {
+      const drift = await fetchBtcPrior5mDriftFast(round);
+      state.priceToBeat = projectPriceToBeat(Number(state.openPrice), drift);
+      state.priceToBeatSource = state.priceToBeat === Number(state.openPrice) ? "open" : "projected-5m-drift";
+    }
+    if ((!Number(state.livePrice) || Number(state.livePrice) <= 1e3) && Number(state.openPrice) > 1e3) {
+      state.livePrice = Number(state.openPrice);
+      state.livePriceSource = state.openPriceSource || "open-price";
+      state.livePriceTs = state.openPriceTs || now;
+      this.appendBtcStateTick(state, state.livePrice, state.livePriceSource, state.livePriceTs);
+    }
+    state.roundOpenAt = round.openAt;
+    state.roundCloseAt = round.closeAt;
+    await this.writeBtcState(state);
+    return state;
+  }
+  async btcSnapshot(opts = {}) {
+    const refresh = opts.refresh !== false;
+    const now = Date.now();
+    if (!opts.force && this.btcSnapshotCache && now - this.btcSnapshotCacheAt < BTC_DO_SNAPSHOT_CACHE_MS) {
+      return this.btcSnapshotCache;
+    }
+    const state = await this.refreshBtcState(!!opts.force || refresh);
+    const round = currentRound();
+    const openPrice = Number(state.openPrice) > 1e3 ? Number(state.openPrice) : null;
+    const priceToBeat = Number(state.priceToBeat) > 1e3 ? Number(state.priceToBeat) : openPrice;
+    const livePrice = Number(state.livePrice) > 1e3 ? Number(state.livePrice) : openPrice;
+    const odds = serverComputeBtcOdds(openPrice || 0, livePrice || 0, round.msLeft, priceToBeat || openPrice || 0);
+    const payload = {
+      ok: true,
+      id: round.id,
+      marketId: round.id,
+      openAt: round.openAt,
+      closeAt: round.closeAt,
+      msLeft: round.msLeft,
+      openPrice,
+      priceToBeat,
+      priceToBeatSource: state.priceToBeatSource || (priceToBeat && priceToBeat !== openPrice ? "projected-5m-drift" : "open"),
+      openPriceSource: state.openPriceSource || "",
+      openPriceTs: state.openPriceTs || null,
+      livePrice,
+      livePriceSource: state.livePriceSource || "",
+      livePriceTs: state.livePriceTs || null,
+      source: state.livePriceSource || state.openPriceSource || "",
+      yesPriceNumber: odds.yes,
+      noPriceNumber: odds.no,
+      deltaPct: odds.deltaPct,
+      delta: odds.delta,
+      scale: odds.scale,
+      ticks: Array.isArray(state.ticks) ? state.ticks.slice(-120) : [],
+      canonical: true,
+      hub: "native-market-hub"
+    };
+    this.btcSnapshotCache = payload;
+    this.btcSnapshotCacheAt = Date.now();
+    return payload;
+  }
+  async btcTicks(openAt, since, refresh) {
+    const current = currentRound();
+    const cleanOpenAt = Number.isFinite(Number(openAt)) && Number(openAt) > 0 ? Math.floor(Number(openAt) / FIVE_MIN_MS) * FIVE_MIN_MS : current.openAt;
+    let ticks = [];
+    if (cleanOpenAt === current.openAt) {
+      const snap = await this.btcSnapshot({ refresh: refresh !== false });
+      ticks = Array.isArray(snap.ticks) ? snap.ticks.slice() : [];
+    } else {
+      ticks = await this.state.storage.get(`btc:ticks:${cleanOpenAt}`) || [];
+    }
+    const filtered = Number(since) > 0 ? ticks.filter((t) => Number(t && t.t) > Number(since)) : ticks;
+    return {
+      ok: true,
+      openAt: cleanOpenAt,
+      closeAt: cleanOpenAt + FIVE_MIN_MS,
+      ticks: filtered,
+      count: filtered.length,
+      ts: (/* @__PURE__ */ new Date()).toISOString(),
+      hub: "native-market-hub"
+    };
+  }
+  async nativeBaseYesForMarket(marketId, fallbackBaseYes) {
+    let baseYes = clampNativeProbability(fallbackBaseYes);
+    const marketText = String(marketId == null ? "" : marketId);
+    if (marketText.indexOf("ost-btc5m-") === 0) {
+      const openAt = Number(marketText.replace("ost-btc5m-", ""));
+      const current = currentRound();
+      if (Number.isFinite(openAt) && openAt === current.openAt) {
+        const round = await this.btcSnapshot({ refresh: true });
+        const roundYes = clampNativeProbability(round && round.yesPriceNumber);
+        if (roundYes != null && btcRoundHasHotLivePrice(round))
+          baseYes = roundYes;
+      }
+    }
+    return baseYes == null ? 0.5 : baseYes;
+  }
   async quoteMarket(marketId, fallbackBaseYes) {
     const state = await this.readMarket(marketId);
-    state.baseYesPrice = await nativeBaseYesForMarket(this.env, state.marketId, fallbackBaseYes != null ? fallbackBaseYes : state.baseYesPrice);
+    state.baseYesPrice = await this.nativeBaseYesForMarket(state.marketId, fallbackBaseYes != null ? fallbackBaseYes : state.baseYesPrice);
     state.updatedAt = state.updatedAt ? state.updatedAt : Date.now();
     const quoted = quoteNativeMarketState(state, state.baseYesPrice);
     Object.assign(state, quoted);
@@ -1544,7 +2402,7 @@ var NativeMarketHub = class {
     const nextImpact = nativePositionImpact(record);
     applyNativeStateDelta(state, nextImpact, 1);
     state.orders[positionKey] = nextImpact;
-    state.baseYesPrice = await nativeBaseYesForMarket(this.env, state.marketId, fallbackBaseYes != null ? fallbackBaseYes : state.baseYesPrice);
+    state.baseYesPrice = await this.nativeBaseYesForMarket(state.marketId, fallbackBaseYes != null ? fallbackBaseYes : state.baseYesPrice);
     state.updatedAt = Date.now();
     const quoted = quoteNativeMarketState(state, state.baseYesPrice);
     Object.assign(state, quoted);
@@ -1555,9 +2413,9 @@ var NativeMarketHub = class {
     return { marketState: publicNativeMarketState(state), flowRecord: flowRecord !== record ? flowRecord : null };
   }
   async readRecent(marketId, limit) {
-    const cleanMarketId = cleanText(marketId || "", 128);
+    const cleanMarketId = cleanText2(marketId || "", 128);
     const rows = await this.state.storage.get("positions:recent") || [];
-    const filtered = cleanMarketId ? rows.filter((record) => cleanText(record?.marketId || "", 128) === cleanMarketId) : rows;
+    const filtered = cleanMarketId ? rows.filter((record) => cleanText2(record?.marketId || "", 128) === cleanMarketId) : rows;
     return filtered.slice(0, Math.min(200, cleanNumber(limit, 60) || 60));
   }
   async handle(request) {
@@ -1566,32 +2424,43 @@ var NativeMarketHub = class {
     const method = request.method;
     if (method === "OPTIONS")
       return new Response(null, { status: 204, headers: CORS_HEADERS3 });
+    if ((path === "/btc/round" || path === "/snapshot") && method === "GET") {
+      const refresh = url.searchParams.get("refresh") !== "0";
+      return json4(await this.btcSnapshot({ refresh }), 200, { "cache-control": "no-store" });
+    }
+    if (path === "/btc/ticks" && method === "GET") {
+      const refresh = url.searchParams.get("refresh") !== "0";
+      return json4(await this.btcTicks(url.searchParams.get("openAt"), url.searchParams.get("since"), refresh), 200, { "cache-control": "no-store" });
+    }
+    if (path === "/poke" && method === "POST") {
+      return json4(await this.btcSnapshot({ refresh: true, force: true }), 200, { "cache-control": "no-store" });
+    }
     const stateMatch = path.match(/^\/state\/([^/]+)$/);
     if (stateMatch && method === "GET") {
       const marketId = decodeURIComponent(stateMatch[1]);
       const baseYes = cleanProbability(url.searchParams.get("baseYes"));
       const state = await this.quoteMarket(marketId, baseYes);
-      return json3({ ok: true, marketId, state, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
+      return json4({ ok: true, marketId, state, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
     }
     if (path === "/position" && method === "POST") {
       let body;
       try {
         body = await request.json();
       } catch (_) {
-        return json3({ error: "invalid_json" }, 400);
+        return json4({ error: "invalid_json" }, 400);
       }
       const result = await this.applyPosition(body && body.record, body && body.fallbackBaseYes);
       if (!result)
-        return json3({ ok: false, error: "not_native" }, 400);
-      return json3(Object.assign({ ok: true }, result), 200, { "cache-control": "no-store" });
+        return json4({ ok: false, error: "not_native" }, 400);
+      return json4(Object.assign({ ok: true }, result), 200, { "cache-control": "no-store" });
     }
     if (path === "/recent" && method === "GET") {
-      const marketId = cleanText(url.searchParams.get("marketId") || "", 128);
+      const marketId = cleanText2(url.searchParams.get("marketId") || "", 128);
       const limit = Math.min(200, cleanNumber(url.searchParams.get("limit"), 60) || 60);
       const recent = await this.readRecent(marketId, limit);
-      return json3({ ok: true, recent, marketId: marketId || null, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
+      return json4({ ok: true, recent, marketId: marketId || null, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
     }
-    return json3({ error: "not_found" }, 404);
+    return json4({ error: "not_found" }, 404);
   }
 };
 __name(NativeMarketHub, "NativeMarketHub");
@@ -1617,16 +2486,24 @@ function recentFlowRecordForPosition(record) {
   }
   const selectedPrice = side === "NO" ? noPrice : yesPrice;
   const sellValue = cleanNumber(record.sellValue, null) ?? cleanNumber(record.cashoutOst, null) ?? cleanNumber(record.potentialReturn, null) ?? cleanNumber(record.stake, 0);
-  const cashoutSig = cleanText(record.cashoutSig || "", 128);
+  const cashoutSig = cleanText2(record.cashoutSig || "", 128);
+  const relatedPositionId = cleanText2(record.id || record.signature || record.sig || positionKey, 128);
+  const flowSignature = cashoutSig || relatedPositionId;
+  const cashoutPending = !cashoutSig && (record.cashoutPending === true || cleanNumber(record.cashoutOst, 0) > 0 || cleanNumber(record.sellValue, 0) > 0);
+  const cashoutVerified = record.cashoutVerified === true;
   return Object.assign({}, record, {
-    id: cleanText(`sell:${positionKey}:${closedAt}`, 180),
-    signature: cashoutSig || null,
-    sig: cashoutSig || null,
-    relatedPositionId: cleanText(record.id || record.signature || record.sig || positionKey, 128),
+    id: cleanText2(`sell:${positionKey}:${closedAt}`, 180),
+    signature: flowSignature || null,
+    sig: flowSignature || null,
+    relatedPositionId,
     flowAction: "sell",
     tradeAction: "sell",
     action: "sell",
     status: "sold",
+    cashoutSig,
+    cashoutPending,
+    cashoutVerified,
+    verificationState: cashoutVerified ? "verified" : cashoutSig ? "submitted" : cashoutPending ? "pending" : "closed",
     side,
     price: selectedPrice != null ? selectedPrice : record.price,
     yesPrice: yesPrice != null ? yesPrice : record.yesPrice,
@@ -1662,7 +2539,7 @@ var STOCK_UNIVERSE = [
   { symbol: "DIA", name: "SPDR Dow Jones Industrial Average ETF", exchange: "NYSE Arca", sector: "Index ETF", currency: "USD" }
 ];
 function normalizeStockSymbol(value) {
-  return cleanText(value || "", 16).replace(/[^a-z0-9.-]/gi, "").toUpperCase();
+  return cleanText2(value || "", 16).replace(/[^a-z0-9.-]/gi, "").toUpperCase();
 }
 __name(normalizeStockSymbol, "normalizeStockSymbol");
 function stockMeta(symbol) {
@@ -1785,7 +2662,7 @@ async function recordStockWalletEvent(env, order) {
     wallet: order.wallet,
     kind: "stock-mirror-order",
     amount: cleanNumber(order.ostStake, 0) || 0,
-    sig: cleanText(order.signature || "", 128),
+    sig: cleanText2(order.signature || "", 128),
     source: "stock-mirror",
     label: `${order.side.toUpperCase()} ${order.symbol} stock mirror`,
     token: "OST",
@@ -1798,12 +2675,12 @@ async function recordStockWalletEvent(env, order) {
     syncedAt: Date.now()
   };
   const key = `wallet:events:${record.wallet}`;
-  const bucket = await kvGet(env, key, []);
-  await kvPut(env, key, mergeNewest(bucket, record, 300));
+  const bucket = await kvGet2(env, key, []);
+  await kvPut2(env, key, mergeNewest(bucket, record, 300));
 }
 __name(recordStockWalletEvent, "recordStockWalletEvent");
 function normalizeFaucetWallet(value) {
-  const wallet = cleanText(value || "", 64);
+  const wallet = cleanText2(value || "", 64);
   return isLikelySolanaAddress(wallet) ? wallet : "";
 }
 __name(normalizeFaucetWallet, "normalizeFaucetWallet");
@@ -1814,7 +2691,7 @@ function publicFaucetState(record, now = Date.now()) {
   const nextDailyClaimAt = welcomeClaimedAt ? lastDailyClaimAt + FAUCET_DAILY_MS : 0;
   const pending = state.pendingReservation && state.pendingReservation.expiresAt > now ? state.pendingReservation : null;
   return {
-    wallet: cleanText(state.wallet || "", 64),
+    wallet: cleanText2(state.wallet || "", 64),
     welcomeClaimed: welcomeClaimedAt > 0,
     welcomeClaimedAt,
     welcomeAmount: cleanNumber(state.welcomeAmount, 0) || 0,
@@ -1823,12 +2700,12 @@ function publicFaucetState(record, now = Date.now()) {
     dailyReady: welcomeClaimedAt > 0 && now >= nextDailyClaimAt,
     dailyClaimCount: cleanNumber(state.dailyClaimCount, 0) || 0,
     totalClaimed: cleanNumber(state.totalClaimed, 0) || 0,
-    lastSignature: cleanText(state.lastSignature || "", 128),
-    lastReservationId: cleanText(state.lastReservationId || "", 80),
+    lastSignature: cleanText2(state.lastSignature || "", 128),
+    lastReservationId: cleanText2(state.lastReservationId || "", 80),
     updatedAt: cleanNumber(state.updatedAt, 0) || 0,
     pendingReservation: pending ? {
-      id: cleanText(pending.id || "", 80),
-      kind: cleanText(pending.kind || "", 16),
+      id: cleanText2(pending.id || "", 80),
+      kind: cleanText2(pending.kind || "", 16),
       amount: cleanNumber(pending.amount, 0) || 0,
       expiresAt: cleanNumber(pending.expiresAt, 0) || 0
     } : null
@@ -1843,20 +2720,20 @@ async function recordFaucetWalletEvent(env, event) {
   if (!env.OST_KV || !event || !event.wallet)
     return;
   const record = {
-    id: cleanText(event.id || event.sig || crypto.randomUUID(), 160),
-    wallet: cleanText(event.wallet, 64),
-    kind: cleanText(event.kind || "faucet-claim", 48),
+    id: cleanText2(event.id || event.sig || crypto.randomUUID(), 160),
+    wallet: cleanText2(event.wallet, 64),
+    kind: cleanText2(event.kind || "faucet-claim", 48),
     amount: cleanNumber(event.amount, 0) || 0,
-    sig: cleanText(event.sig || event.signature || "", 128),
+    sig: cleanText2(event.sig || event.signature || "", 128),
     source: "faucet-gate",
-    label: cleanText(event.label || "OST faucet claim", 200),
+    label: cleanText2(event.label || "OST faucet claim", 200),
     token: "OST",
     ts: cleanNumber(event.ts, Date.now()) || Date.now(),
     syncedAt: Date.now()
   };
   const key = `wallet:events:${record.wallet}`;
-  const bucket = await kvGet(env, key, []);
-  await kvPut(env, key, mergeNewest(bucket, record, 300));
+  const bucket = await kvGet2(env, key, []);
+  await kvPut2(env, key, mergeNewest(bucket, record, 300));
 }
 __name(recordFaucetWalletEvent, "recordFaucetWalletEvent");
 var FaucetGate = class {
@@ -1890,31 +2767,31 @@ var FaucetGate = class {
     if (stateMatch && method === "GET") {
       const wallet = normalizeFaucetWallet(decodeURIComponent(stateMatch[1]));
       if (!wallet)
-        return json3({ error: "invalid_wallet" }, 400);
+        return json4({ error: "invalid_wallet" }, 400);
       const record = await this.readWallet(wallet);
-      return json3({ ok: true, state: publicFaucetState(record) }, 200, { "cache-control": "no-store" });
+      return json4({ ok: true, state: publicFaucetState(record) }, 200, { "cache-control": "no-store" });
     }
     if (path === "/faucet/v1/reserve" && method === "POST") {
       let body;
       try {
         body = await request.json();
       } catch (_) {
-        return json3({ error: "invalid_json" }, 400);
+        return json4({ error: "invalid_json" }, 400);
       }
       const wallet = normalizeFaucetWallet(body && body.wallet);
       if (!wallet)
-        return json3({ error: "invalid_wallet" }, 400);
+        return json4({ error: "invalid_wallet" }, 400);
       const now = Date.now();
       const record = await this.readWallet(wallet);
       const current = publicFaucetState(record, now);
       if (current.pendingReservation) {
-        return json3({ ok: false, error: "claim_in_progress", state: current }, 409, { "cache-control": "no-store" });
+        return json4({ ok: false, error: "claim_in_progress", state: current }, 409, { "cache-control": "no-store" });
       }
       let kind = "welcome";
       let amount = FAUCET_WELCOME_AMOUNT;
       if (current.welcomeClaimed) {
         if (!current.dailyReady) {
-          return json3({ ok: false, error: "cooldown", state: current, nextDailyClaimAt: current.nextDailyClaimAt }, 409, { "cache-control": "no-store" });
+          return json4({ ok: false, error: "cooldown", state: current, nextDailyClaimAt: current.nextDailyClaimAt }, 409, { "cache-control": "no-store" });
         }
         kind = "daily";
         amount = FAUCET_DAILY_AMOUNT;
@@ -1931,32 +2808,32 @@ var FaucetGate = class {
       record.updatedAt = now;
       await this.writeWallet(wallet, record);
       await this.state.storage.put(`faucet:v1:reservation:${reservation.id}`, reservation);
-      return json3({ ok: true, reservationId: reservation.id, kind, amount, expiresAt: reservation.expiresAt, state: publicFaucetState(record, now) }, 200, { "cache-control": "no-store" });
+      return json4({ ok: true, reservationId: reservation.id, kind, amount, expiresAt: reservation.expiresAt, state: publicFaucetState(record, now) }, 200, { "cache-control": "no-store" });
     }
     if (path === "/faucet/v1/commit" && method === "POST") {
       let body;
       try {
         body = await request.json();
       } catch (_) {
-        return json3({ error: "invalid_json" }, 400);
+        return json4({ error: "invalid_json" }, 400);
       }
       const wallet = normalizeFaucetWallet(body && body.wallet);
-      const reservationId = cleanText(body && body.reservationId, 80);
-      const signature = cleanText(body && (body.signature || body.sig), 128);
+      const reservationId = cleanText2(body && body.reservationId, 80);
+      const signature = cleanText2(body && (body.signature || body.sig), 128);
       if (!wallet || !reservationId || !signature)
-        return json3({ error: "missing_fields", required: ["wallet", "reservationId", "signature"] }, 400);
+        return json4({ error: "missing_fields", required: ["wallet", "reservationId", "signature"] }, 400);
       const now = Date.now();
       const record = await this.readWallet(wallet);
       if (record.lastReservationId === reservationId) {
-        return json3({ ok: true, state: publicFaucetState(record, now), idempotent: true }, 200, { "cache-control": "no-store" });
+        return json4({ ok: true, state: publicFaucetState(record, now), idempotent: true }, 200, { "cache-control": "no-store" });
       }
       const pending = record.pendingReservation;
       if (!pending || pending.id !== reservationId)
-        return json3({ error: "reservation_not_active", state: publicFaucetState(record, now) }, 409);
+        return json4({ error: "reservation_not_active", state: publicFaucetState(record, now) }, 409);
       if (pending.expiresAt <= now) {
         delete record.pendingReservation;
         await this.writeWallet(wallet, record);
-        return json3({ error: "reservation_expired", state: publicFaucetState(record, now) }, 409);
+        return json4({ error: "reservation_expired", state: publicFaucetState(record, now) }, 409);
       }
       const amount = Math.min(cleanNumber(body && body.amount, pending.amount) || pending.amount, pending.amount);
       record.totalClaimed = (cleanNumber(record.totalClaimed, 0) || 0) + amount;
@@ -1982,28 +2859,28 @@ var FaucetGate = class {
         label: pending.kind === "welcome" ? "100 OST head start" : "Daily 1 OST faucet",
         ts: now
       });
-      return json3({ ok: true, state: publicFaucetState(record, now) }, 200, { "cache-control": "no-store" });
+      return json4({ ok: true, state: publicFaucetState(record, now) }, 200, { "cache-control": "no-store" });
     }
     if (path === "/faucet/v1/cancel" && method === "POST") {
       let body;
       try {
         body = await request.json();
       } catch (_) {
-        return json3({ error: "invalid_json" }, 400);
+        return json4({ error: "invalid_json" }, 400);
       }
       const wallet = normalizeFaucetWallet(body && body.wallet);
-      const reservationId = cleanText(body && body.reservationId, 80);
+      const reservationId = cleanText2(body && body.reservationId, 80);
       if (!wallet || !reservationId)
-        return json3({ error: "missing_fields", required: ["wallet", "reservationId"] }, 400);
+        return json4({ error: "missing_fields", required: ["wallet", "reservationId"] }, 400);
       const record = await this.readWallet(wallet);
       if (record.pendingReservation && record.pendingReservation.id === reservationId) {
         delete record.pendingReservation;
         record.updatedAt = Date.now();
         await this.writeWallet(wallet, record);
       }
-      return json3({ ok: true, state: publicFaucetState(record) }, 200, { "cache-control": "no-store" });
+      return json4({ ok: true, state: publicFaucetState(record) }, 200, { "cache-control": "no-store" });
     }
-    return json3({ error: "unknown_faucet_endpoint", path }, 404);
+    return json4({ error: "unknown_faucet_endpoint", path }, 404);
   }
 };
 __name(FaucetGate, "FaucetGate");
@@ -2109,22 +2986,22 @@ __name(verifyStripeSignature, "verifyStripeSignature");
 async function loadIntent(env, id) {
   if (!id)
     return null;
-  return await kvGet(env, `topup:intent:${id}`);
+  return await kvGet2(env, `topup:intent:${id}`);
 }
 __name(loadIntent, "loadIntent");
 async function saveIntent(env, intent) {
-  await kvPut(env, `topup:intent:${intent.id}`, intent, 60 * 60 * 24 * 30);
+  await kvPut2(env, `topup:intent:${intent.id}`, intent, 60 * 60 * 24 * 30);
 }
 __name(saveIntent, "saveIntent");
 async function pushQueue(env, id) {
-  const q = (await kvGet(env, "topup:queue", [])).filter((x) => x !== id);
+  const q = (await kvGet2(env, "topup:queue", [])).filter((x) => x !== id);
   q.unshift(id);
-  await kvPut(env, "topup:queue", q.slice(0, 500));
+  await kvPut2(env, "topup:queue", q.slice(0, 500));
 }
 __name(pushQueue, "pushQueue");
 async function removeQueue(env, id) {
-  const q = (await kvGet(env, "topup:queue", [])).filter((x) => x !== id);
-  await kvPut(env, "topup:queue", q);
+  const q = (await kvGet2(env, "topup:queue", [])).filter((x) => x !== id);
+  await kvPut2(env, "topup:queue", q);
 }
 __name(removeQueue, "removeQueue");
 var USDC_MAINNET_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
@@ -2323,7 +3200,7 @@ __name(sumUsdcToTreasury, "sumUsdcToTreasury");
 async function verifyCryptoTopupSignature(env, intent, signature) {
   const cluster = topupCluster(env);
   const usdcMint = topupUsdcMint(env, cluster);
-  const cleanSignature = cleanText(signature, 128);
+  const cleanSignature = cleanText2(signature, 128);
   if (!cleanSignature)
     return { ok: false, error: "missing_signature" };
   let tx = null;
@@ -2387,7 +3264,7 @@ async function verifyCryptoTopupSignature(env, intent, signature) {
 __name(verifyCryptoTopupSignature, "verifyCryptoTopupSignature");
 async function markIntentPaidFromCrypto(env, intent, verification, options = {}) {
   const signatureKey = `topup:crypto:sig:${verification.signature}`;
-  const existingIntentId = await kvGet(env, signatureKey, null);
+  const existingIntentId = await kvGet2(env, signatureKey, null);
   if (existingIntentId && existingIntentId !== intent.id)
     return { ok: false, error: "signature_already_used" };
   intent.status = "paid";
@@ -2396,7 +3273,7 @@ async function markIntentPaidFromCrypto(env, intent, verification, options = {})
   intent.paidAt = Date.now();
   intent.updatedAt = Date.now();
   await saveIntent(env, intent);
-  await kvPut(env, signatureKey, intent.id, 60 * 60 * 24 * 90);
+  await kvPut2(env, signatureKey, intent.id, 60 * 60 * 24 * 90);
   if (options.enqueueDispatcher !== false) {
     await pushQueue(env, intent.id);
   }
@@ -2410,10 +3287,10 @@ async function findCryptoTopupPayment(env, intent) {
     return null;
   const signatures = await solanaRpc(env, "getSignaturesForAddress", [receiver, { limit: 120 }], { cluster });
   for (const item of signatures || []) {
-    const signature = cleanText(item?.signature, 128);
+    const signature = cleanText2(item?.signature, 128);
     if (!signature)
       continue;
-    const used = await kvGet(env, `topup:crypto:sig:${signature}`, null);
+    const used = await kvGet2(env, `topup:crypto:sig:${signature}`, null);
     if (used && used !== intent.id)
       continue;
     try {
@@ -2445,21 +3322,37 @@ var src_default = {
       const ghostV2 = await handleGhostV2Request(request, env, { path, method });
       if (ghostV2)
         return ghostV2;
-      return json3({ error: "unknown ghost endpoint", path }, { status: 404 });
+      return json4({ error: "unknown ghost endpoint", path }, { status: 404 });
     }
     if (path.startsWith("/mesh/")) {
       return handleMeshRequest(request, env, { path, method });
     }
+    if (path.startsWith("/ost/")) {
+      const ostResp = await handleOstPriceRequest(request, env, { path, method, url });
+      if (ostResp)
+        return ostResp;
+    }
+    if (path === "/faucet/state" && method === "GET") {
+      if (!env.FAUCET_GATE)
+        return json4({ error: "faucet_gate_not_configured" }, 503);
+      const wallet = cleanText2(url.searchParams.get("wallet") || "", 80);
+      if (!wallet)
+        return json4({ error: "missing_wallet" }, 400);
+      const id = env.FAUCET_GATE.idFromName("global");
+      const aliasUrl = new URL(request.url);
+      aliasUrl.pathname = "/faucet/v1/state/" + encodeURIComponent(wallet);
+      return env.FAUCET_GATE.get(id).fetch(new Request(aliasUrl.toString(), request));
+    }
     if (path.startsWith("/faucet/v1/")) {
       if (!env.FAUCET_GATE)
-        return json3({ error: "faucet_gate_not_configured" }, 503);
+        return json4({ error: "faucet_gate_not_configured" }, 503);
       const id = env.FAUCET_GATE.idFromName("global");
       return env.FAUCET_GATE.get(id).fetch(request);
     }
     if (path === "/health" || path === "/") {
       const btcResult = await fetchBtcPrice();
       const round = currentRound();
-      return json3({
+      return json4({
         ok: true,
         service: "ost-api",
         version: "1.0",
@@ -2475,6 +3368,10 @@ var src_default = {
           "GET  /btc/round",
           "GET  /btc/ticks",
           "GET  /btc/history",
+          "GET  /ost/price",
+          "GET  /ost/stats",
+          "GET  /ost/history",
+          "POST /ost/event",
           "GET  /markets",
           "GET  /markets/:id",
           "GET  /markets/:id/book",
@@ -2533,17 +3430,33 @@ var src_default = {
       });
     }
     if (path === "/btc/price" && method === "GET") {
+      const canonical = await getCanonicalBtcRound(env, { refresh: true });
+      if (canonical && Number(canonical.livePrice) > 1e3) {
+        return json4({
+          price: Number(canonical.livePrice),
+          currency: "USD",
+          source: canonical.livePriceSource || canonical.source || "ost-canonical",
+          round: {
+            id: canonical.id,
+            openAt: canonical.openAt,
+            closeAt: canonical.closeAt,
+            msLeft: canonical.msLeft
+          },
+          canonical: true,
+          ts: new Date(Number(canonical.livePriceTs) || Date.now()).toISOString()
+        }, 200, { "cache-control": "no-store" });
+      }
       const result = await fetchBtcPrice();
       if (!result) {
-        const cached = await kvGet(env, "btc:latest", null);
+        const cached = await kvGet2(env, "btc:latest", null);
         if (cached)
-          return json3({ price: cached.p, currency: "USD", source: cached.s || "cached", stale: true, round: currentRound(), ts: new Date(cached.t).toISOString() }, 200, { "cache-control": "no-store" });
-        return json3({ error: "all_feeds_failed", price: null }, 503);
+          return json4({ price: cached.p, currency: "USD", source: cached.s || "cached", stale: true, round: currentRound(), ts: new Date(cached.t).toISOString() }, 200, { "cache-control": "no-store" });
+        return json4({ error: "all_feeds_failed", price: null }, 503);
       }
       const round = currentRound();
       await lockRoundOpenPrice(env, round, result.price, result.source);
       await appendBtcTick(env, round, result.price, result.source);
-      return json3({
+      return json4({
         price: result.price,
         currency: "USD",
         source: result.source,
@@ -2553,15 +3466,18 @@ var src_default = {
     }
     if (path === "/btc/round" && method === "GET") {
       const refresh = url.searchParams.get("refresh") !== "0";
-      const data = await buildCanonicalBtcRound(env, { refresh });
-      return json3(data, 200, { "cache-control": "no-store" });
+      const data = await getCanonicalBtcRound(env, { refresh });
+      return json4(data, 200, { "cache-control": "no-store" });
     }
     if (path === "/btc/ticks" && method === "GET") {
       const openAtParam = Number(url.searchParams.get("openAt"));
       const round = Number.isFinite(openAtParam) && openAtParam > 0 ? { openAt: Math.floor(openAtParam / FIVE_MIN_MS) * FIVE_MIN_MS, closeAt: Math.floor(openAtParam / FIVE_MIN_MS) * FIVE_MIN_MS + FIVE_MIN_MS } : currentRound();
       const since = Number(url.searchParams.get("since")) || 0;
+      const hubTicks = await getCanonicalBtcTicks(env, round.openAt, since, { refresh: round.openAt === currentRound().openAt });
+      if (hubTicks)
+        return json4(hubTicks, 200, { "cache-control": "no-store" });
       const ringKey = `btc:ticks:${round.openAt}`;
-      let ring = await kvGet(env, ringKey, []);
+      let ring = await kvGet2(env, ringKey, []);
       if (!Array.isArray(ring))
         ring = [];
       const isCurrentRound = round.openAt === currentRound().openAt;
@@ -2572,7 +3488,7 @@ var src_default = {
         if (Number.isFinite(livePrice) && livePrice > 0) {
           const liveSource = snapshot.livePriceSource || "ost-canonical";
           await appendBtcTick(env, round, livePrice, liveSource);
-          const refreshedRing = await kvGet(env, ringKey, []);
+          const refreshedRing = await kvGet2(env, ringKey, []);
           if (Array.isArray(refreshedRing) && refreshedRing.length) {
             ring = refreshedRing;
           } else {
@@ -2580,13 +3496,13 @@ var src_default = {
             ring = ring.concat([syntheticTick]).slice(-BTC_TICK_RING_MAX);
           }
         } else {
-          const refreshedRing = await kvGet(env, ringKey, []);
+          const refreshedRing = await kvGet2(env, ringKey, []);
           ring = Array.isArray(refreshedRing) ? refreshedRing : [];
         }
       }
       if (isCurrentRound && ring.length < 2) {
         const snapshot = await buildCanonicalBtcRound(env, { refresh: true });
-        const openPrice = Number(snapshot && (snapshot.priceToBeat || snapshot.openPrice));
+        const openPrice = Number(snapshot && snapshot.openPrice);
         const livePrice = Number(snapshot && snapshot.livePrice) || openPrice;
         const liveTs = Number(snapshot && snapshot.livePriceTs) || Date.now();
         const synthetic = [];
@@ -2605,11 +3521,11 @@ var src_default = {
             seen.add(key);
             return true;
           }).slice(-BTC_TICK_RING_MAX);
-          await kvPut(env, ringKey, ring, 60 * 60 * 1);
+          await kvPut2(env, ringKey, ring, 60 * 60 * 1);
         }
       }
       const ticks = since > 0 ? ring.filter((t) => Number(t.t) > since) : ring;
-      return json3({
+      return json4({
         openAt: round.openAt,
         closeAt: round.closeAt,
         ticks,
@@ -2626,29 +3542,35 @@ var src_default = {
         if (!r.ok)
           throw new Error("upstream " + r.status);
         const j = await r.json();
-        return json3({ series: (j?.data?.prices || []).map((p) => ({ t: p.time, p: Number(p.price) })), ts: (/* @__PURE__ */ new Date()).toISOString() });
+        return json4({ series: (j?.data?.prices || []).map((p) => ({ t: p.time, p: Number(p.price) })), ts: (/* @__PURE__ */ new Date()).toISOString() });
       } catch (e) {
-        return json3({ error: "fetch_failed", message: String(e?.message || e), series: [] }, 502);
+        return json4({ error: "fetch_failed", message: String(e?.message || e), series: [] }, 502);
       }
     }
     if (path === "/rounds/current" && method === "GET") {
-      const data = await buildCanonicalBtcRound(env, { refresh: true });
-      return json3({ ...data, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
+      const data = await getCanonicalBtcRound(env, { refresh: true });
+      return json4({ ...data, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
     }
     if (path === "/rounds/open-price" && method === "POST") {
       let body;
       try {
         body = await request.json();
       } catch (_) {
-        return json3({ error: "invalid_json" }, 400);
+        return json4({ error: "invalid_json" }, 400);
       }
       const { openAt, openPrice } = body || {};
       if (!openAt || !Number.isFinite(Number(openPrice)))
-        return json3({ error: "missing_fields", required: ["openAt", "openPrice"] }, 400);
-      const key = `round:${openAt}`;
-      const existing = await kvGet(env, key, {});
-      await kvPut(env, key, { ...existing, openAt: Number(openAt), openPrice: Number(openPrice) });
-      return json3({ ok: true, openAt, openPrice });
+        return json4({ error: "missing_fields", required: ["openAt", "openPrice"] }, 400);
+      const cleanOpenAt = Math.floor(Number(openAt) / FIVE_MIN_MS) * FIVE_MIN_MS;
+      const round = { id: `ost-btc5m-${cleanOpenAt}`, openAt: cleanOpenAt, closeAt: cleanOpenAt + FIVE_MIN_MS, msLeft: Math.max(0, cleanOpenAt + FIVE_MIN_MS - Date.now()) };
+      const existing = await kvGet2(env, `round:${round.openAt}`, null);
+      if (existing && Number.isFinite(Number(existing.openPrice)) && Number(existing.openPrice) > 0) {
+        return json4({ ok: true, openAt: round.openAt, openPrice: existing.openPrice, priceToBeat: existing.priceToBeat || existing.openPrice, source: existing.openPriceSource || "locked", locked: true }, 200, { "cache-control": "no-store" });
+      }
+      const roundOpen = await fetchBtcRoundOpenPrice(round);
+      const serverPrice = roundOpen && Number.isFinite(Number(roundOpen.price)) && Number(roundOpen.price) > 0 ? Number(roundOpen.price) : Number(openPrice);
+      const stored = await lockRoundOpenPrice(env, round, serverPrice, roundOpen && roundOpen.source || "client-fallback");
+      return json4({ ok: true, openAt: round.openAt, openPrice: stored && stored.openPrice || serverPrice, priceToBeat: stored && stored.priceToBeat || serverPrice, source: stored && stored.openPriceSource || "client-fallback", locked: true }, 200, { "cache-control": "no-store" });
     }
     const proxyMap = {
       "/gamma/": env.GAMMA_BASE || "https://gamma-api.polymarket.com",
@@ -2674,20 +3596,21 @@ var src_default = {
             }
           });
         } catch (e) {
-          return json3({ error: "upstream_failed", upstream, message: String(e?.message || e) }, 502);
+          return json4({ error: "upstream_failed", upstream, message: String(e?.message || e) }, 502);
         }
       }
     }
     if (path === "/markets" && method === "GET") {
       const limit = Number(url.searchParams.get("limit") || 60);
-      const raw = await polyGamma(env, "/markets", `limit=${limit}&closed=false`);
+      const active = await fetchActiveMarkets(env, limit);
+      const raw = active.raw;
       if (!raw)
-        return json3({ error: "upstream_failed", markets: [] }, 502);
+        return json4({ error: "upstream_failed", markets: [] }, 502, { "cache-control": "no-store" });
       const markets = (Array.isArray(raw) ? raw : raw.markets || []).map(normaliseMarket);
-      return json3(
-        { markets, count: markets.length, ts: (/* @__PURE__ */ new Date()).toISOString() },
+      return json4(
+        { markets, count: markets.length, stale: !!active.stale, source: active.source, cachedAt: active.cachedAt || null, ts: (/* @__PURE__ */ new Date()).toISOString() },
         200,
-        { "cache-control": "public, max-age=5" }
+        { "cache-control": "no-store" }
       );
     }
     const nativeStateMatch = path.match(/^\/markets\/state\/([^/]+)$/);
@@ -2695,92 +3618,109 @@ var src_default = {
       const marketId = decodeURIComponent(nativeStateMatch[1]);
       const baseYes = cleanProbability(url.searchParams.get("baseYes"));
       const state = await getNativeMarketState(env, marketId, baseYes);
-      return json3({ ok: true, marketId, state, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
+      return json4({ ok: true, marketId, state, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
     }
     const mktMatch = path.match(/^\/markets\/([^/]+)$/);
     if (mktMatch && method === "GET") {
       const id = decodeURIComponent(mktMatch[1]);
-      const [gmkt, book, trades, history] = await Promise.all([
-        polyGamma(env, `/markets/${encodeURIComponent(id)}`),
+      const detail = await fetchMarketDetail(env, id);
+      const gmkt = detail.raw;
+      const [book, trades, history] = await Promise.all([
         polyClob(env, "/book", `token_id=${encodeURIComponent(id)}`),
         polyClob(env, "/trades", `market=${encodeURIComponent(id)}&limit=20`),
         polyData(env, "/prices-history", `market=${encodeURIComponent(id)}&interval=1d&fidelity=10`)
       ]);
       if (!gmkt)
-        return json3({ error: "market_not_found", id }, 404);
-      return json3({
+        return json4({ error: "market_not_found", id }, 404);
+      return json4({
         market: normaliseMarket(gmkt),
         book: book || null,
         trades: (Array.isArray(trades) ? trades : trades?.data || []).slice(0, 20),
         history: (history?.history || history?.prices || []).map((p) => ({ t: p.t || p.time, p: Number(p.p || p.price) })),
+        stale: !!detail.stale,
+        source: detail.source,
+        cachedAt: detail.cachedAt || null,
         ts: (/* @__PURE__ */ new Date()).toISOString()
-      });
+      }, 200, { "cache-control": "no-store" });
     }
     const bookMatch = path.match(/^\/markets\/([^/]+)\/book$/);
     if (bookMatch && method === "GET") {
       const tokenId = decodeURIComponent(bookMatch[1]);
       const book = await polyClob(env, "/book", `token_id=${encodeURIComponent(tokenId)}`);
       if (!book)
-        return json3({ error: "book_unavailable", tokenId }, 502);
-      return json3(book, 200, { "cache-control": "no-store" });
+        return json4({ error: "book_unavailable", tokenId }, 502);
+      return json4(book, 200, { "cache-control": "no-store" });
     }
     const tradesMatch = path.match(/^\/markets\/([^/]+)\/trades$/);
     if (tradesMatch && method === "GET") {
       const marketId = decodeURIComponent(tradesMatch[1]);
       const trades = await polyClob(env, "/trades", `market=${encodeURIComponent(marketId)}&limit=20`);
       const list = Array.isArray(trades) ? trades : trades?.data || [];
-      return json3({ trades: list.slice(0, 20), ts: (/* @__PURE__ */ new Date()).toISOString() });
+      return json4({ trades: list.slice(0, 20), ts: (/* @__PURE__ */ new Date()).toISOString() });
     }
     if (path === "/positions/recent" && method === "GET") {
       const limit = Math.min(200, Number(url.searchParams.get("limit") || 60));
-      const marketIdFilter = cleanText(url.searchParams.get("marketId") || "", 128);
+      const marketIdFilter = cleanText2(url.searchParams.get("marketId") || "", 128);
       if (!env.OST_KV)
-        return json3({ recent: [], note: "KV not configured" });
-      const hubRows = await getNativeRecentPositionsFromHub(env, marketIdFilter, limit);
-      const recent = await kvGet(env, "positions:recent", []);
+        return json4({ recent: [], note: "KV not configured" });
+      const hubMarketFilter = marketIdFilter === "ost-btc5m" ? "" : marketIdFilter;
+      const hubRows = await getNativeRecentPositionsFromHub(env, hubMarketFilter, limit);
+      const recent = await kvGet2(env, "positions:recent", []);
       const rows = mergeRecentPositionRows((Array.isArray(hubRows) ? hubRows : []).concat(recent));
-      const filteredRows = marketIdFilter ? rows.filter((record) => cleanText(record?.marketId || "", 128) === marketIdFilter) : rows;
-      return json3({ recent: filteredRows.slice(0, limit), marketId: marketIdFilter || null, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
+      const filteredRows = marketIdFilter ? rows.filter((record) => recentPositionMatchesMarket(record, marketIdFilter)) : rows;
+      return json4({ recent: filteredRows.slice(0, limit), marketId: marketIdFilter || null, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
     }
     const posMatch = path.match(/^\/positions\/([^/]+)$/);
     if (posMatch && method === "GET") {
       const wallet = decodeURIComponent(posMatch[1]);
       if (!env.OST_KV)
-        return json3({ positions: [], note: "KV not configured \u2014 positions are local-only", wallet });
-      const positions = await kvGet(env, `positions:${wallet}`, []);
-      return json3({ positions, wallet, ts: (/* @__PURE__ */ new Date()).toISOString() });
+        return json4({ positions: [], note: "KV not configured \u2014 positions are local-only", wallet });
+      const positions = await kvGet2(env, `positions:${wallet}`, []);
+      return json4({ positions, wallet, ts: (/* @__PURE__ */ new Date()).toISOString() });
     }
     if (path === "/positions" && method === "POST") {
       let body;
       try {
         body = await request.json();
       } catch (_) {
-        return json3({ error: "invalid_json" }, 400);
+        return json4({ error: "invalid_json" }, 400);
       }
       const { wallet, marketId, marketTitle, side, stake, price, ts, signature } = body || {};
       if (!wallet || !marketId || !side || !Number.isFinite(Number(stake))) {
-        return json3({ error: "missing_fields", required: ["wallet", "marketId", "side", "stake"] }, 400);
+        return json4({ error: "missing_fields", required: ["wallet", "marketId", "side", "stake"] }, 400);
       }
       if (!env.OST_KV)
-        return json3({ ok: true, stored: false, note: "KV not configured \u2014 position not persisted server-side" });
+        return json4({ ok: true, stored: false, note: "KV not configured \u2014 position not persisted server-side" });
       const createdAt = toMs(body.createdAt || ts);
       const nativeMarketStateBefore = isOstNativeMarketId(marketId, body.source) ? await getNativeMarketState(env, String(marketId), body.baseYesPrice != null ? body.baseYesPrice : body.fairYesPrice) : null;
+      const sideUp = String(side).toUpperCase() === "NO" ? "NO" : "YES";
       const nativeOpenPosition = nativeMarketStateBefore ? !positionIsClosed(body) : false;
-      const nativeQuotePrice = nativeOpenPosition ? String(side).toUpperCase() === "NO" ? nativeMarketStateBefore.noPriceNumber : nativeMarketStateBefore.yesPriceNumber : price;
-      const inferredPrices = nativeOpenPosition ? inferBinaryPrices(side, nativeQuotePrice, nativeMarketStateBefore.yesPriceNumber, nativeMarketStateBefore.noPriceNumber) : inferBinaryPrices(side, price, body.yesPrice, body.noPrice);
-      const inferredShares = nativeOpenPosition ? inferredPrices.price > 0 ? Number(stake) / inferredPrices.price : cleanNumber(body.shares) : cleanNumber(body.shares);
+      const nativeSellPosition = nativeMarketStateBefore ? positionIsSellCashout(body) : false;
+      const nativeQuotePrice = nativeOpenPosition ? nativeTradePriceFromState(nativeMarketStateBefore, sideUp, "buy") : nativeSellPosition ? nativeTradePriceFromState(nativeMarketStateBefore, sideUp, "sell") : price;
+      const inferredPrices = nativeOpenPosition ? inferBinaryPrices(side, nativeQuotePrice, nativeMarketStateBefore.yesPriceNumber, nativeMarketStateBefore.noPriceNumber) : nativeSellPosition ? inferBinaryPrices(side, nativeQuotePrice, null, null) : inferBinaryPrices(side, price, body.yesPrice, body.noPrice);
+      let inferredShares = nativeOpenPosition ? inferredPrices.price > 0 ? Number(stake) / inferredPrices.price : cleanNumber(body.shares) : cleanNumber(body.shares);
+      if (nativeSellPosition && !(inferredShares > 0)) {
+        inferredShares = cleanNumber(body.potentialReturn, 0) || cleanNumber(body.shares, 0) || 0;
+      }
       const inferredPotentialReturn = nativeOpenPosition ? inferredShares > 0 ? inferredShares : cleanNumber(body.potentialReturn) : cleanNumber(body.potentialReturn);
+      const centralSellValue = nativeSellPosition && inferredShares > 0 && inferredPrices.price > 0 ? inferredShares * inferredPrices.price : null;
+      const reportedSellValue = cleanNumber(body.sellValue, null) ?? cleanNumber(body.cashoutOst, null);
+      const safeSellValue = centralSellValue != null ? Math.max(0, Math.min(Number.isFinite(reportedSellValue) && reportedSellValue >= 0 ? reportedSellValue : centralSellValue, centralSellValue)) : cleanNumber(body.sellValue);
+      const nativeVaultTrade = !!nativeMarketStateBefore;
+      const nativeQuoteAction = nativeSellPosition ? "sell-bid" : nativeOpenPosition ? "buy-ask" : "";
+      const nativeSelectedBid = nativeVaultTrade ? nativeTradePriceFromState(nativeMarketStateBefore, sideUp, "sell") : null;
+      const nativeSelectedAsk = nativeVaultTrade ? nativeTradePriceFromState(nativeMarketStateBefore, sideUp, "buy") : null;
       const record = {
-        id: cleanText(body.id || signature || crypto.randomUUID(), 128),
+        id: cleanText2(body.id || signature || crypto.randomUUID(), 128),
         wallet: String(wallet).slice(0, 64),
         walletShort: String(wallet).slice(0, 4) + "\u2026" + String(wallet).slice(-4),
         marketId: String(marketId).slice(0, 128),
-        conditionId: cleanText(body.conditionId || body.condition_id || "", 128),
-        marketTitle: cleanText(marketTitle || body.title || "", 200),
-        title: cleanText(body.title || marketTitle || "", 200),
-        topic: cleanText(body.topic || "", 64),
-        source: cleanText(body.source || "polymarket", 32),
-        side: String(side).toUpperCase().slice(0, 32),
+        conditionId: cleanText2(body.conditionId || body.condition_id || "", 128),
+        marketTitle: cleanText2(marketTitle || body.title || "", 200),
+        title: cleanText2(body.title || marketTitle || "", 200),
+        topic: cleanText2(body.topic || "", 64),
+        source: cleanText2(body.source || "polymarket", 32),
+        side: sideUp,
         stake: Number(stake),
         price: inferredPrices.price,
         yesPrice: inferredPrices.yesPrice,
@@ -2788,81 +3728,98 @@ var src_default = {
         shares: inferredShares,
         potentialReturn: inferredPotentialReturn,
         closeAtMs: cleanNumber(body.closeAtMs, 0),
-        clobTokenIds: Array.isArray(body.clobTokenIds) ? body.clobTokenIds.map((v) => cleanText(v, 128)).slice(0, 8) : [],
-        sourceUrl: cleanText(body.sourceUrl || "", 500),
+        clobTokenIds: Array.isArray(body.clobTokenIds) ? body.clobTokenIds.map((v) => cleanText2(v, 128)).slice(0, 8) : [],
+        sourceUrl: cleanText2(body.sourceUrl || "", 500),
         signature: signature ? String(signature).slice(0, 128) : null,
         sig: signature ? String(signature).slice(0, 128) : null,
         ts: new Date(createdAt).toISOString(),
         createdAt,
-        status: cleanText(body.status || "open", 32),
-        cashoutKind: cleanText(body.cashoutKind || "", 40),
-        cashoutSig: cleanText(body.cashoutSig || "", 128),
-        cashoutOst: cleanNumber(body.cashoutOst),
+        status: cleanText2(body.status || "open", 32),
+        cashoutKind: cleanText2(body.cashoutKind || "", 40),
+        cashoutSig: cleanText2(body.cashoutSig || "", 128),
+        cashoutOst: nativeSellPosition && safeSellValue != null ? safeSellValue : cleanNumber(body.cashoutOst),
         cashoutAt: cleanNumber(body.cashoutAt, 0),
-        sellPrice: cleanNumber(body.sellPrice),
-        sellValue: cleanNumber(body.sellValue),
-        finalYesPrice: cleanNumber(body.finalYesPrice),
-        finalNoPrice: cleanNumber(body.finalNoPrice),
+        sellPrice: nativeSellPosition ? inferredPrices.price : cleanNumber(body.sellPrice),
+        sellValue: nativeSellPosition && safeSellValue != null ? safeSellValue : cleanNumber(body.sellValue),
+        finalYesPrice: nativeSellPosition && inferredPrices.yesPrice != null ? inferredPrices.yesPrice : cleanNumber(body.finalYesPrice),
+        finalNoPrice: nativeSellPosition && inferredPrices.noPrice != null ? inferredPrices.noPrice : cleanNumber(body.finalNoPrice),
         resolvedAt: cleanNumber(body.resolvedAt, 0),
+        nativeMarketMaker: nativeVaultTrade,
+        counterparty: nativeVaultTrade ? "ost-native-vault" : cleanText2(body.counterparty || "", 64),
+        liquidityProvider: nativeVaultTrade ? "ost-native-market-maker" : cleanText2(body.liquidityProvider || "", 64),
+        shareIssuer: nativeOpenPosition ? "ost-native-vault" : cleanText2(body.shareIssuer || "", 64),
+        shareRedeemer: nativeSellPosition ? "ost-native-vault" : cleanText2(body.shareRedeemer || "", 64),
+        quoteAction: nativeQuoteAction || cleanText2(body.quoteAction || "", 32),
+        quoteModel: nativeVaultTrade ? "ost-native-bid-ask-v2" : cleanText2(body.quoteModel || "", 48),
+        quotePrice: nativeVaultTrade ? inferredPrices.price : cleanNumber(body.quotePrice),
+        askPrice: nativeSelectedAsk,
+        bidPrice: nativeSelectedBid,
+        vaultSpread: nativeVaultTrade ? cleanNumber(nativeMarketStateBefore.vaultSpread || nativeMarketStateBefore.vaultEdge, 0) : cleanNumber(body.vaultSpread),
+        vaultEdge: nativeVaultTrade ? cleanNumber(nativeMarketStateBefore.vaultEdge || nativeMarketStateBefore.vaultSpread, 0) : cleanNumber(body.vaultEdge),
+        vaultFlow: nativeOpenPosition ? "share-sale" : nativeSellPosition ? "share-buyback" : cleanText2(body.vaultFlow || "", 48),
+        vaultGrossInOst: nativeOpenPosition ? Number(stake) : 0,
+        vaultGrossOutOst: nativeSellPosition && safeSellValue != null ? safeSellValue : 0,
+        sharesCreated: nativeOpenPosition ? inferredShares : 0,
+        sharesRedeemed: nativeSellPosition ? inferredShares : 0,
         syncedAt: Date.now()
       };
       const walletKey = `positions:${wallet}`;
-      const walletBucket = await kvGet(env, walletKey, []);
-      await kvPut(env, walletKey, mergeNewest(walletBucket, record, 100));
-      const recent = await kvGet(env, "positions:recent", []);
+      const walletBucket = await kvGet2(env, walletKey, []);
+      await kvPut2(env, walletKey, mergeNewest(walletBucket, record, 100));
+      const recent = await kvGet2(env, "positions:recent", []);
       const flowRecord = recentFlowRecordForPosition(record);
       rememberRecentPositionHot(flowRecord);
-      await kvPut(env, "positions:recent", mergeNewest(recent, flowRecord, 100), 60 * 60 * 24 * 7);
+      await kvPut2(env, "positions:recent", mergeNewest(recent, flowRecord, 100), 60 * 60 * 24 * 7);
       const marketState = await applyNativePositionToMarketState(env, record, nativeMarketStateBefore ? nativeMarketStateBefore.baseYesPrice : null);
-      return json3({ ok: true, stored: true, record, marketState, flowRecord: flowRecord !== record ? flowRecord : null });
+      return json4({ ok: true, stored: true, record, marketState, flowRecord: flowRecord !== record ? flowRecord : null });
     }
     const walletEventsMatch = path.match(/^\/wallet\/events\/([^/]+)$/);
     if (walletEventsMatch && method === "GET") {
       const wallet = decodeURIComponent(walletEventsMatch[1]);
       const limit = Math.min(300, Number(url.searchParams.get("limit") || 200));
       if (!env.OST_KV)
-        return json3({ events: [], note: "KV not configured", wallet });
-      const events = await kvGet(env, `wallet:events:${wallet}`, []);
-      return json3({ events: events.slice(0, limit), wallet, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
+        return json4({ events: [], note: "KV not configured", wallet });
+      const events = await kvGet2(env, `wallet:events:${wallet}`, []);
+      return json4({ events: events.slice(0, limit), wallet, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
     }
     if (path === "/wallet/events" && method === "POST") {
       let body;
       try {
         body = await request.json();
       } catch (_) {
-        return json3({ error: "invalid_json" }, 400);
+        return json4({ error: "invalid_json" }, 400);
       }
-      const wallet = cleanText(body?.wallet || "", 64);
-      const kind = cleanText(body?.kind || "", 48);
+      const wallet = cleanText2(body?.wallet || "", 64);
+      const kind = cleanText2(body?.kind || "", 48);
       if (!wallet || !kind)
-        return json3({ error: "missing_fields", required: ["wallet", "kind"] }, 400);
+        return json4({ error: "missing_fields", required: ["wallet", "kind"] }, 400);
       if (!env.OST_KV)
-        return json3({ ok: true, stored: false, note: "KV not configured" });
+        return json4({ ok: true, stored: false, note: "KV not configured" });
       const eventTs = toMs(body.ts || body.createdAt || body.cashoutAt);
-      const id = cleanText(body.id || body.eventId || body.sig || body.signature || `${kind}:${eventTs}:${body.amount || ""}:${body.token || body.game || body.marketId || ""}`, 160);
+      const id = cleanText2(body.id || body.eventId || body.sig || body.signature || `${kind}:${eventTs}:${body.amount || ""}:${body.token || body.game || body.marketId || ""}`, 160);
       const record = {
         id,
         wallet,
         kind,
         amount: cleanNumber(body.amount, 0),
-        sig: cleanText(body.sig || body.signature || "", 128),
-        source: cleanText(body.source || "", 48),
-        label: cleanText(body.label || "", 200),
-        token: cleanText(body.token || "", 32),
-        game: cleanText(body.game || "", 48),
-        marketId: cleanText(body.marketId || "", 128),
-        title: cleanText(body.title || "", 200),
-        side: cleanText(body.side || "", 16),
+        sig: cleanText2(body.sig || body.signature || "", 128),
+        source: cleanText2(body.source || "", 48),
+        label: cleanText2(body.label || "", 200),
+        token: cleanText2(body.token || "", 32),
+        game: cleanText2(body.game || "", 48),
+        marketId: cleanText2(body.marketId || "", 128),
+        title: cleanText2(body.title || "", 200),
+        side: cleanText2(body.side || "", 16),
         price: cleanNumber(body.price),
         potentialReturn: cleanNumber(body.potentialReturn),
-        cashoutKind: cleanText(body.cashoutKind || "", 48),
-        vaultFlow: cleanText(body.vaultFlow || "", 48),
-        vault: cleanText(body.vault || "", 64),
-        subKind: cleanText(body.subKind || "", 64),
+        cashoutKind: cleanText2(body.cashoutKind || "", 48),
+        vaultFlow: cleanText2(body.vaultFlow || "", 48),
+        vault: cleanText2(body.vault || "", 64),
+        subKind: cleanText2(body.subKind || "", 64),
         stake: cleanNumber(body.stake),
         retainedOst: cleanNumber(body.retainedOst),
         payoutOst: cleanNumber(body.payoutOst),
-        linkedId: cleanText(body.linkedId || "", 160),
+        linkedId: cleanText2(body.linkedId || "", 160),
         ostBalance: cleanNumber(body.ostBalance),
         solBalance: cleanNumber(body.solBalance),
         gameCredits: cleanNumber(body.gameCredits),
@@ -2871,28 +3828,28 @@ var src_default = {
         syncedAt: Date.now()
       };
       const key = `wallet:events:${wallet}`;
-      const bucket = await kvGet(env, key, []);
-      await kvPut(env, key, mergeNewest(bucket, record, 300));
-      return json3({ ok: true, stored: true, record });
+      const bucket = await kvGet2(env, key, []);
+      await kvPut2(env, key, mergeNewest(bucket, record, 300));
+      return json4({ ok: true, stored: true, record });
     }
     if (path === "/launchpad/coins" && method === "GET") {
       if (!env.OST_KV)
-        return json3({ coins: [], note: "KV not configured" });
-      const coins = await kvGet(env, "launchpad:coins", []);
-      return json3({ coins, count: coins.length, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "public, max-age=2" });
+        return json4({ coins: [], note: "KV not configured" });
+      const coins = await kvGet2(env, "launchpad:coins", []);
+      return json4({ coins, count: coins.length, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "public, max-age=2" });
     }
     if (path === "/launchpad/coins" && method === "POST") {
       let body;
       try {
         body = await request.json();
       } catch (_) {
-        return json3({ error: "invalid_json" }, 400);
+        return json4({ error: "invalid_json" }, 400);
       }
       const { name, symbol, desc, image, twitter, telegram, website, creator, mcap, curve, supply } = body || {};
       if (!name || !symbol)
-        return json3({ error: "missing_fields", required: ["name", "symbol"] }, 400);
+        return json4({ error: "missing_fields", required: ["name", "symbol"] }, 400);
       if (!env.OST_KV)
-        return json3({ ok: true, stored: false, note: "KV not configured" });
+        return json4({ ok: true, stored: false, note: "KV not configured" });
       const record = {
         id: crypto.randomUUID(),
         mint: "ost" + crypto.randomUUID().replace(/-/g, "").slice(0, 40),
@@ -2911,27 +3868,27 @@ var src_default = {
         trades: 0,
         holders: [{ addr: creator || "anon", pct: 100 }]
       };
-      const coins = (await kvGet(env, "launchpad:coins", [])).slice(0, 199);
+      const coins = (await kvGet2(env, "launchpad:coins", [])).slice(0, 199);
       coins.unshift(record);
-      await kvPut(env, "launchpad:coins", coins);
-      return json3({ ok: true, stored: true, coin: record });
+      await kvPut2(env, "launchpad:coins", coins);
+      return json4({ ok: true, stored: true, coin: record });
     }
     if (path === "/launchpad/trade" && method === "POST") {
       let body;
       try {
         body = await request.json();
       } catch (_) {
-        return json3({ error: "invalid_json" }, 400);
+        return json4({ error: "invalid_json" }, 400);
       }
       const { mint, side, amount, trader, signature } = body || {};
       if (!mint || !side || !Number.isFinite(Number(amount)))
-        return json3({ error: "missing_fields", required: ["mint", "side", "amount"] }, 400);
+        return json4({ error: "missing_fields", required: ["mint", "side", "amount"] }, 400);
       if (!env.OST_KV)
-        return json3({ ok: true, stored: false, note: "KV not configured" });
-      const coins = await kvGet(env, "launchpad:coins", []);
+        return json4({ ok: true, stored: false, note: "KV not configured" });
+      const coins = await kvGet2(env, "launchpad:coins", []);
       const idx = coins.findIndex((c2) => c2.mint === mint);
       if (idx < 0)
-        return json3({ error: "coin_not_found", mint }, 404);
+        return json4({ error: "coin_not_found", mint }, 404);
       const c = coins[idx];
       const amt = Number(amount);
       const delta = side === "buy" ? amt * 10 : -amt * 10;
@@ -2940,13 +3897,13 @@ var src_default = {
       c.trades = (c.trades || 0) + 1;
       c.lastTradeAt = Date.now();
       coins[idx] = c;
-      await kvPut(env, "launchpad:coins", coins);
+      await kvPut2(env, "launchpad:coins", coins);
       const tickKey = `launchpad:ticks:${mint}`;
-      const ticks = (await kvGet(env, tickKey, [])).slice(0, 199);
-      const traderWallet = cleanText(trader || "", 64);
-      const cleanSignature = cleanText(signature || body.sig || "", 128);
+      const ticks = (await kvGet2(env, tickKey, [])).slice(0, 199);
+      const traderWallet = cleanText2(trader || "", 64);
+      const cleanSignature = cleanText2(signature || body.sig || "", 128);
       ticks.unshift({ side, amount: amt, mcap: c.mcap, trader: traderWallet ? traderWallet.slice(0, 8) + "\u2026" : "anon", wallet: traderWallet, sig: cleanSignature, ts: Date.now() });
-      await kvPut(env, tickKey, ticks, 60 * 60 * 24 * 7);
+      await kvPut2(env, tickKey, ticks, 60 * 60 * 24 * 7);
       if (traderWallet) {
         const event = {
           id: cleanSignature || crypto.randomUUID(),
@@ -2956,98 +3913,98 @@ var src_default = {
           sig: cleanSignature,
           source: "launchpad",
           label: `${side === "sell" ? "Sell" : "Buy"} $${c.symbol}`,
-          token: cleanText(c.symbol || "", 32),
+          token: cleanText2(c.symbol || "", 32),
           marketId: c.mint,
           title: c.name,
-          side: cleanText(side || "", 16),
+          side: cleanText2(side || "", 16),
           price: cleanNumber(c.mcap, 0),
           ts: Date.now()
         };
         const walletKey = `wallet:events:${traderWallet}`;
-        const walletEvents = await kvGet(env, walletKey, []);
-        await kvPut(env, walletKey, mergeNewest(walletEvents, event, 300));
+        const walletEvents = await kvGet2(env, walletKey, []);
+        await kvPut2(env, walletKey, mergeNewest(walletEvents, event, 300));
       }
-      return json3({ ok: true, coin: c });
+      return json4({ ok: true, coin: c });
     }
     const tickMatch = path.match(/^\/launchpad\/ticks\/([^/]+)$/);
     if (tickMatch && method === "GET") {
       const mint = decodeURIComponent(tickMatch[1]);
       if (!env.OST_KV)
-        return json3({ ticks: [] });
-      const ticks = await kvGet(env, `launchpad:ticks:${mint}`, []);
-      return json3({ ticks, ts: (/* @__PURE__ */ new Date()).toISOString() });
+        return json4({ ticks: [] });
+      const ticks = await kvGet2(env, `launchpad:ticks:${mint}`, []);
+      return json4({ ticks, ts: (/* @__PURE__ */ new Date()).toISOString() });
     }
     if (path === "/stocks/universe" && method === "GET") {
-      return json3({ universe: STOCK_UNIVERSE, count: STOCK_UNIVERSE.length, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "public, max-age=300" });
+      return json4({ universe: STOCK_UNIVERSE, count: STOCK_UNIVERSE.length, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "public, max-age=300" });
     }
     if (path === "/stocks/quotes" && method === "GET") {
-      const rawSymbols = cleanText(url.searchParams.get("symbols") || "", 300).split(",").map(normalizeStockSymbol).filter(Boolean);
+      const rawSymbols = cleanText2(url.searchParams.get("symbols") || "", 300).split(",").map(normalizeStockSymbol).filter(Boolean);
       const symbols = (rawSymbols.length ? rawSymbols : STOCK_UNIVERSE.slice(0, 10).map((item) => item.symbol)).slice(0, 24);
       const quotes = (await Promise.all(symbols.map(fetchStockQuote))).filter(Boolean);
-      return json3({ quotes, count: quotes.length, ts: (/* @__PURE__ */ new Date()).toISOString(), source: "stooq-public" }, 200, { "cache-control": "public, max-age=20" });
+      return json4({ quotes, count: quotes.length, ts: (/* @__PURE__ */ new Date()).toISOString(), source: "stooq-public" }, 200, { "cache-control": "public, max-age=20" });
     }
     const stockHistoryMatch = path.match(/^\/stocks\/([^/]+)\/history$/);
     if (stockHistoryMatch && method === "GET") {
       const symbol = normalizeStockSymbol(decodeURIComponent(stockHistoryMatch[1]));
       if (!symbol)
-        return json3({ error: "invalid_symbol" }, 400);
+        return json4({ error: "invalid_symbol" }, 400);
       const result = await fetchStockHistory(symbol);
-      return json3({ symbol, history: result.history, count: result.history.length, ts: (/* @__PURE__ */ new Date()).toISOString(), source: result.source }, 200, { "cache-control": "public, max-age=900" });
+      return json4({ symbol, history: result.history, count: result.history.length, ts: (/* @__PURE__ */ new Date()).toISOString(), source: result.source }, 200, { "cache-control": "public, max-age=900" });
     }
     const stockQuoteMatch = path.match(/^\/stocks\/([^/]+)$/);
     if (stockQuoteMatch && method === "GET") {
       const symbol = normalizeStockSymbol(decodeURIComponent(stockQuoteMatch[1]));
       if (!symbol)
-        return json3({ error: "invalid_symbol" }, 400);
+        return json4({ error: "invalid_symbol" }, 400);
       const quote = await fetchStockQuote(symbol);
       if (!quote)
-        return json3({ error: "quote_unavailable", symbol }, 502);
-      return json3({ quote, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "public, max-age=20" });
+        return json4({ error: "quote_unavailable", symbol }, 502);
+      return json4({ quote, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "public, max-age=20" });
     }
     const stockOrdersMatch = path.match(/^\/stocks\/orders\/([^/]+)$/);
     if (stockOrdersMatch && method === "GET") {
-      const wallet = cleanText(decodeURIComponent(stockOrdersMatch[1]), 64);
+      const wallet = cleanText2(decodeURIComponent(stockOrdersMatch[1]), 64);
       if (!wallet)
-        return json3({ error: "invalid_wallet" }, 400);
+        return json4({ error: "invalid_wallet" }, 400);
       if (!env.OST_KV)
-        return json3({ orders: [], note: "KV not configured", wallet });
+        return json4({ orders: [], note: "KV not configured", wallet });
       const limit = Math.min(200, Number(url.searchParams.get("limit") || 100));
-      const orders = await kvGet(env, `stocks:orders:${wallet}`, []);
-      return json3({ orders: orders.slice(0, limit), wallet, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
+      const orders = await kvGet2(env, `stocks:orders:${wallet}`, []);
+      return json4({ orders: orders.slice(0, limit), wallet, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
     }
     if (path === "/stocks/orders" && method === "POST") {
       let body;
       try {
         body = await request.json();
       } catch (_) {
-        return json3({ error: "invalid_json" }, 400);
+        return json4({ error: "invalid_json" }, 400);
       }
-      const wallet = cleanText(body && body.wallet, 64);
+      const wallet = cleanText2(body && body.wallet, 64);
       const symbol = normalizeStockSymbol(body && body.symbol);
       const side = String(body && body.side || "").toLowerCase() === "sell" ? "sell" : "buy";
       const ostStake = cleanNumber(body && body.ostStake, 0) || 0;
       const quote = await fetchStockQuote(symbol).catch(() => null);
       const price = cleanNumber(body && body.price, quote && quote.price) || quote && quote.price || 0;
       if (!wallet || !symbol || !ostStake || ostStake <= 0 || !price)
-        return json3({ error: "missing_fields", required: ["wallet", "symbol", "ostStake", "price"] }, 400);
+        return json4({ error: "missing_fields", required: ["wallet", "symbol", "ostStake", "price"] }, 400);
       if (!env.OST_KV)
-        return json3({ ok: true, stored: false, note: "KV not configured" });
+        return json4({ ok: true, stored: false, note: "KV not configured" });
       const meta = stockMeta(symbol);
       const order = {
-        id: cleanText(body.id || body.signature || crypto.randomUUID(), 160),
+        id: cleanText2(body.id || body.signature || crypto.randomUUID(), 160),
         wallet,
         symbol,
-        name: cleanText(body.name || meta.name, 120),
-        exchange: cleanText(body.exchange || meta.exchange, 40),
-        sector: cleanText(body.sector || meta.sector, 60),
+        name: cleanText2(body.name || meta.name, 120),
+        exchange: cleanText2(body.exchange || meta.exchange, 40),
+        sector: cleanText2(body.sector || meta.sector, 60),
         side,
         price,
         shares: cleanNumber(body && body.shares, price > 0 ? cleanNumber(body && body.notionalUsd, 0) / price : 0) || 0,
         notionalUsd: cleanNumber(body && body.notionalUsd, 0) || 0,
         ostStake,
-        brokerCurrency: cleanText(body && body.brokerCurrency || "USD", 8),
-        signature: cleanText(body && (body.signature || body.sig), 128),
-        status: cleanText(body && body.status || "ost-mirror-open", 32),
+        brokerCurrency: cleanText2(body && body.brokerCurrency || "USD", 8),
+        signature: cleanText2(body && (body.signature || body.sig), 128),
+        status: cleanText2(body && body.status || "ost-mirror-open", 32),
         settlement: "OST devnet vault mirror; broker execution requires regulated KYC relay",
         quoteSource: quote && quote.source || "client",
         quoteAsOf: quote && quote.asOf || "",
@@ -3055,12 +4012,12 @@ var src_default = {
         syncedAt: Date.now()
       };
       const walletKey = `stocks:orders:${wallet}`;
-      const walletOrders = await kvGet(env, walletKey, []);
-      await kvPut(env, walletKey, mergeNewest(walletOrders, order, 200));
-      const recent = await kvGet(env, "stocks:orders:recent", []);
-      await kvPut(env, "stocks:orders:recent", mergeNewest(recent, order, 200), 60 * 60 * 24 * 14);
+      const walletOrders = await kvGet2(env, walletKey, []);
+      await kvPut2(env, walletKey, mergeNewest(walletOrders, order, 200));
+      const recent = await kvGet2(env, "stocks:orders:recent", []);
+      await kvPut2(env, "stocks:orders:recent", mergeNewest(recent, order, 200), 60 * 60 * 24 * 14);
       await recordStockWalletEvent(env, order);
-      return json3({ ok: true, stored: true, order });
+      return json4({ ok: true, stored: true, order });
     }
     if (path === "/topup/config" && method === "GET") {
       const cluster = topupCluster(env);
@@ -3072,7 +4029,7 @@ var src_default = {
         solUsd = await fetchSolUsd();
       } catch (_) {
       }
-      return json3({
+      return json4({
         mode: "flexible-value",
         pricing: {
           usdPerOst: rate,
@@ -3099,21 +4056,21 @@ var src_default = {
       try {
         body = await request.json();
       } catch {
-        return json3({ error: "invalid_json" }, 400);
+        return json4({ error: "invalid_json" }, 400);
       }
       const tierId = Number(body && body.tier);
       const legacyTier = TOPUP_TIERS[tierId];
       const usd = normalizeTopupUsd(body && body.usd !== void 0 ? body.usd : legacyTier && legacyTier.usd);
       if (usd === null)
-        return json3({ error: "invalid_usd_amount", minUsd: TOPUP_MIN_USD, maxUsd: TOPUP_MAX_USD }, 400);
+        return json4({ error: "invalid_usd_amount", minUsd: TOPUP_MIN_USD, maxUsd: TOPUP_MAX_USD }, 400);
       const rate = topupUsdPerOst(env);
       const ostAmount = calculateTopupOst(usd, rate);
       const wallet = String(body.wallet || "").trim();
       if (!isLikelySolanaAddress(wallet))
-        return json3({ error: "invalid_wallet" }, 400);
+        return json4({ error: "invalid_wallet" }, 400);
       const method2 = body.method === "crypto" ? "crypto" : "stripe";
       if (!env.OST_KV)
-        return json3({ error: "kv_not_configured" }, 503);
+        return json4({ error: "kv_not_configured" }, 503);
       const intent = {
         id: crypto.randomUUID(),
         memo: shortMemo(),
@@ -3130,22 +4087,22 @@ var src_default = {
         updatedAt: Date.now()
       };
       await saveIntent(env, intent);
-      return json3({ id: intent.id, memo: intent.memo, usd: intent.usd, usdPerOst: intent.usdPerOst, ostAmount: intent.ostAmount, status: intent.status });
+      return json4({ id: intent.id, memo: intent.memo, usd: intent.usd, usdPerOst: intent.usdPerOst, ostAmount: intent.ostAmount, status: intent.status });
     }
     if (path === "/topup/checkout" && method === "POST") {
       if (!env.STRIPE_SECRET_KEY)
-        return json3({ error: "stripe_not_configured" }, 503);
+        return json4({ error: "stripe_not_configured" }, 503);
       let body;
       try {
         body = await request.json();
       } catch {
-        return json3({ error: "invalid_json" }, 400);
+        return json4({ error: "invalid_json" }, 400);
       }
       const intent = await loadIntent(env, body && body.intentId);
       if (!intent)
-        return json3({ error: "intent_not_found" }, 404);
+        return json4({ error: "intent_not_found" }, 404);
       if (intent.status !== "pending")
-        return json3({ error: "intent_not_pending", status: intent.status }, 409);
+        return json4({ error: "intent_not_pending", status: intent.status }, 409);
       const site = buildPublicSiteUrl(env, request);
       const successUrl = `${site}${site.includes("?") ? "&" : "?"}topup=success&intent=${intent.id}#new-here`;
       const cancelUrl = `${site}${site.includes("?") ? "&" : "?"}topup=cancel&intent=${intent.id}#new-here`;
@@ -3168,31 +4125,31 @@ var src_default = {
         }]
       });
       if (!r.ok)
-        return json3({ error: "stripe_error", detail: r.body }, 502);
+        return json4({ error: "stripe_error", detail: r.body }, 502);
       const session = r.body;
-      await kvPut(env, `topup:stripe:${session.id}`, intent.id, 60 * 60 * 24 * 30);
+      await kvPut2(env, `topup:stripe:${session.id}`, intent.id, 60 * 60 * 24 * 30);
       intent.stripeSessionId = session.id;
       intent.updatedAt = Date.now();
       await saveIntent(env, intent);
-      return json3({ url: session.url, sessionId: session.id });
+      return json4({ url: session.url, sessionId: session.id });
     }
     if (path === "/topup/stripe/webhook" && method === "POST") {
       if (!env.STRIPE_WEBHOOK_SECRET)
-        return json3({ error: "webhook_not_configured" }, 503);
+        return json4({ error: "webhook_not_configured" }, 503);
       const sig = request.headers.get("stripe-signature") || "";
       const raw = await request.text();
       const ok2 = await verifyStripeSignature(raw, sig, env.STRIPE_WEBHOOK_SECRET);
       if (!ok2)
-        return json3({ error: "bad_signature" }, 400);
+        return json4({ error: "bad_signature" }, 400);
       let evt;
       try {
         evt = JSON.parse(raw);
       } catch {
-        return json3({ error: "bad_json" }, 400);
+        return json4({ error: "bad_json" }, 400);
       }
       if (evt.type === "checkout.session.completed") {
         const session = evt.data && evt.data.object;
-        const intentId = session && session.client_reference_id || session && session.metadata && session.metadata.intent_id || await kvGet(env, `topup:stripe:${session && session.id}`);
+        const intentId = session && session.client_reference_id || session && session.metadata && session.metadata.intent_id || await kvGet2(env, `topup:stripe:${session && session.id}`);
         if (intentId) {
           const intent = await loadIntent(env, intentId);
           if (intent && intent.status === "pending") {
@@ -3205,14 +4162,14 @@ var src_default = {
           }
         }
       }
-      return json3({ received: true });
+      return json4({ received: true });
     }
     const statusMatch = path.match(/^\/topup\/status\/([^/]+)$/);
     if (statusMatch && method === "GET") {
       const intent = await loadIntent(env, decodeURIComponent(statusMatch[1]));
       if (!intent)
-        return json3({ error: "not_found" }, 404);
-      return json3({
+        return json4({ error: "not_found" }, 404);
+      return json4({
         id: intent.id,
         status: intent.status,
         usd: intent.usd,
@@ -3229,35 +4186,35 @@ var src_default = {
     }
     if (path === "/topup/claim" && method === "POST") {
       if (!env.OST_KV)
-        return json3({ error: "kv_not_configured" }, 503);
+        return json4({ error: "kv_not_configured" }, 503);
       let body;
       try {
         body = await request.json();
       } catch {
-        return json3({ error: "invalid_json" }, 400);
+        return json4({ error: "invalid_json" }, 400);
       }
       const intent = await loadIntent(env, body && body.id);
       if (!intent)
-        return json3({ error: "not_found" }, 404);
+        return json4({ error: "not_found" }, 404);
       if (intent.status === "sent")
-        return json3({ ok: true, intent });
+        return json4({ ok: true, intent });
       if (intent.status !== "paid")
-        return json3({ error: "intent_not_paid", status: intent.status }, 409);
-      const deliveryWallet = cleanText(body && body.wallet, 64);
+        return json4({ error: "intent_not_paid", status: intent.status }, 409);
+      const deliveryWallet = cleanText2(body && body.wallet, 64);
       if (deliveryWallet && intent.wallet && deliveryWallet !== intent.wallet) {
-        return json3({ error: "wallet_mismatch" }, 409);
+        return json4({ error: "wallet_mismatch" }, 409);
       }
-      const deliverySignature = cleanText(body && body.signature, 128);
+      const deliverySignature = cleanText2(body && body.signature, 128);
       if (!deliverySignature)
-        return json3({ error: "missing_delivery_signature" }, 400);
+        return json4({ error: "missing_delivery_signature" }, 400);
       intent.status = "sent";
       intent.signature = deliverySignature;
       intent.sentAt = Date.now();
       intent.updatedAt = Date.now();
-      intent.deliveryKind = cleanText(body && body.deliveryKind, 40) || "client-release";
+      intent.deliveryKind = cleanText2(body && body.deliveryKind, 40) || "client-release";
       await saveIntent(env, intent);
       await removeQueue(env, intent.id);
-      const recent = await kvGet(env, "topup:sent", []);
+      const recent = await kvGet2(env, "topup:sent", []);
       recent.unshift({
         id: intent.id,
         ostAmount: intent.ostAmount,
@@ -3266,56 +4223,56 @@ var src_default = {
         sentAt: intent.sentAt,
         deliveryKind: intent.deliveryKind
       });
-      await kvPut(env, "topup:sent", recent.slice(0, 200));
-      return json3({ ok: true, intent });
+      await kvPut2(env, "topup:sent", recent.slice(0, 200));
+      return json4({ ok: true, intent });
     }
     if (path === "/topup/admin/pending" && method === "GET") {
       if (!adminAuthorized(request, env))
-        return json3({ error: "unauthorized" }, 401);
-      const ids = await kvGet(env, "topup:queue", []);
+        return json4({ error: "unauthorized" }, 401);
+      const ids = await kvGet2(env, "topup:queue", []);
       const out = [];
       for (const id of ids.slice(0, 50)) {
         const it = await loadIntent(env, id);
         if (it && it.status === "paid")
           out.push(it);
       }
-      return json3({ pending: out, count: out.length });
+      return json4({ pending: out, count: out.length });
     }
     if (path === "/topup/admin/mark-sent" && method === "POST") {
       if (!adminAuthorized(request, env))
-        return json3({ error: "unauthorized" }, 401);
+        return json4({ error: "unauthorized" }, 401);
       let body;
       try {
         body = await request.json();
       } catch {
-        return json3({ error: "invalid_json" }, 400);
+        return json4({ error: "invalid_json" }, 400);
       }
       const intent = await loadIntent(env, body && body.id);
       if (!intent)
-        return json3({ error: "not_found" }, 404);
+        return json4({ error: "not_found" }, 404);
       intent.status = "sent";
       intent.signature = String(body.signature || "").slice(0, 128) || null;
       intent.sentAt = Date.now();
       intent.updatedAt = Date.now();
       await saveIntent(env, intent);
       await removeQueue(env, intent.id);
-      const recent = await kvGet(env, "topup:sent", []);
+      const recent = await kvGet2(env, "topup:sent", []);
       recent.unshift({ id: intent.id, ostAmount: intent.ostAmount, wallet: intent.wallet, signature: intent.signature, sentAt: intent.sentAt });
-      await kvPut(env, "topup:sent", recent.slice(0, 200));
-      return json3({ ok: true, intent });
+      await kvPut2(env, "topup:sent", recent.slice(0, 200));
+      return json4({ ok: true, intent });
     }
     if (path === "/topup/admin/confirm-crypto" && method === "POST") {
       if (!adminAuthorized(request, env))
-        return json3({ error: "unauthorized" }, 401);
+        return json4({ error: "unauthorized" }, 401);
       let body;
       try {
         body = await request.json();
       } catch {
-        return json3({ error: "invalid_json" }, 400);
+        return json4({ error: "invalid_json" }, 400);
       }
       const intent = await loadIntent(env, body && body.id);
       if (!intent)
-        return json3({ error: "not_found" }, 404);
+        return json4({ error: "not_found" }, 404);
       if (intent.status === "pending") {
         intent.status = "paid";
         intent.paidAt = Date.now();
@@ -3324,94 +4281,94 @@ var src_default = {
         await saveIntent(env, intent);
         await pushQueue(env, intent.id);
       }
-      return json3({ ok: true, intent });
+      return json4({ ok: true, intent });
     }
     if (path === "/topup/crypto/verify" && method === "POST") {
       if (!env.OST_KV)
-        return json3({ error: "kv_not_configured" }, 503);
+        return json4({ error: "kv_not_configured" }, 503);
       let body;
       try {
         body = await request.json();
       } catch {
-        return json3({ error: "invalid_json" }, 400);
+        return json4({ error: "invalid_json" }, 400);
       }
       const intent = await loadIntent(env, body && body.intentId);
       if (!intent)
-        return json3({ error: "intent_not_found" }, 404);
+        return json4({ error: "intent_not_found" }, 404);
       if (intent.status === "sent" || intent.status === "paid") {
-        return json3({ ok: true, status: intent.status, intent });
+        return json4({ ok: true, status: intent.status, intent });
       }
       if (intent.status !== "pending")
-        return json3({ error: "intent_not_pending", status: intent.status }, 409);
+        return json4({ error: "intent_not_pending", status: intent.status }, 409);
       let verification;
       try {
         verification = await verifyCryptoTopupSignature(env, intent, body && body.signature);
       } catch (error) {
-        return json3({ error: "solana_rpc_failed", detail: cleanText(error?.message || error, 180) }, 502);
+        return json4({ error: "solana_rpc_failed", detail: cleanText2(error?.message || error, 180) }, 502);
       }
       if (!verification.ok)
-        return json3({ error: verification.error, detail: verification.detail || null }, 400);
+        return json4({ error: verification.error, detail: verification.detail || null }, 400);
       const paid = await markIntentPaidFromCrypto(env, intent, verification, { enqueueDispatcher: false });
       if (!paid.ok)
-        return json3({ error: paid.error }, 409);
-      return json3({ ok: true, status: "paid", rail: verification.rail, signature: verification.signature, intent: paid.intent });
+        return json4({ error: paid.error }, 409);
+      return json4({ ok: true, status: "paid", rail: verification.rail, signature: verification.signature, intent: paid.intent });
     }
     const cryptoCheckMatch = path.match(/^\/topup\/crypto\/check\/([^/]+)$/);
     if (cryptoCheckMatch && method === "GET") {
       if (!env.OST_KV)
-        return json3({ error: "kv_not_configured" }, 503);
+        return json4({ error: "kv_not_configured" }, 503);
       const intent = await loadIntent(env, decodeURIComponent(cryptoCheckMatch[1]));
       if (!intent)
-        return json3({ error: "intent_not_found" }, 404);
+        return json4({ error: "intent_not_found" }, 404);
       if (intent.status !== "pending")
-        return json3({ ok: true, status: intent.status, intent });
+        return json4({ ok: true, status: intent.status, intent });
       let verification = null;
       try {
         verification = await findCryptoTopupPayment(env, intent);
       } catch (error) {
-        return json3({ ok: true, status: "pending", found: false, scanError: cleanText(error?.message || error, 180) });
+        return json4({ ok: true, status: "pending", found: false, scanError: cleanText2(error?.message || error, 180) });
       }
       if (!verification)
-        return json3({ ok: true, status: "pending", found: false });
+        return json4({ ok: true, status: "pending", found: false });
       const paid = await markIntentPaidFromCrypto(env, intent, verification, { enqueueDispatcher: false });
       if (!paid.ok)
-        return json3({ error: paid.error }, 409);
-      return json3({ ok: true, status: "paid", found: true, rail: verification.rail, signature: verification.signature, intent: paid.intent });
+        return json4({ error: paid.error }, 409);
+      return json4({ ok: true, status: "paid", found: true, rail: verification.rail, signature: verification.signature, intent: paid.intent });
     }
     if (path === "/offline-vault/sync" && method === "POST") {
       if (!env.OST_KV)
-        return json3({ error: "kv_not_configured" }, 503);
+        return json4({ error: "kv_not_configured" }, 503);
       let body;
       try {
         body = await request.json();
       } catch {
-        return json3({ error: "invalid_json" }, 400);
+        return json4({ error: "invalid_json" }, 400);
       }
-      const deviceId = cleanText(body && body.deviceId, 80) || `anon-${crypto.randomUUID()}`;
+      const deviceId = cleanText2(body && body.deviceId, 80) || `anon-${crypto.randomUUID()}`;
       const events = Array.isArray(body && body.events) ? body.events.slice(0, 100) : [];
       if (!events.length)
-        return json3({ ok: true, accepted: 0, acceptedIds: [], status: "empty" });
+        return json4({ ok: true, accepted: 0, acceptedIds: [], status: "empty" });
       const accepted = events.map((event) => ({
-        id: cleanText(event && event.id, 100) || crypto.randomUUID(),
-        kind: cleanText(event && event.kind, 80),
+        id: cleanText2(event && event.id, 100) || crypto.randomUUID(),
+        kind: cleanText2(event && event.kind, 80),
         amount: cleanNumber(event && event.amount, 0),
         ts: cleanNumber(event && event.ts, Date.now()),
-        iso: cleanText(event && event.iso, 40),
+        iso: cleanText2(event && event.iso, 40),
         offline: !!(event && event.offline),
-        source: cleanText(event && event.source, 80),
-        tokenId: cleanText(event && event.tokenId, 120),
+        source: cleanText2(event && event.source, 80),
+        tokenId: cleanText2(event && event.tokenId, 120),
         proof: event && event.proof ? JSON.stringify(event.proof).slice(0, 4e3) : null,
-        game: cleanText(event && event.game, 80),
+        game: cleanText2(event && event.game, 80),
         receivedAt: Date.now()
       }));
       const key = `offline-vault:${deviceId}`;
-      const existing = await kvGet(env, key, []);
+      const existing = await kvGet2(env, key, []);
       const merged = accepted.reduce((bucket, record) => mergeNewest(bucket, record, 500), existing);
-      await kvPut(env, key, merged, 60 * 60 * 24 * 90);
-      const recent = await kvGet(env, "offline-vault:recent", []);
+      await kvPut2(env, key, merged, 60 * 60 * 24 * 90);
+      const recent = await kvGet2(env, "offline-vault:recent", []);
       const recentMerged = accepted.reduce((bucket, record) => mergeNewest(bucket, { ...record, deviceId }, 500), recent);
-      await kvPut(env, "offline-vault:recent", recentMerged, 60 * 60 * 24 * 30);
-      return json3({
+      await kvPut2(env, "offline-vault:recent", recentMerged, 60 * 60 * 24 * 30);
+      return json4({
         ok: true,
         accepted: accepted.length,
         acceptedIds: accepted.map((e) => e.id),
@@ -3422,42 +4379,42 @@ var src_default = {
     const offlineVaultStatusMatch = path.match(/^\/offline-vault\/status\/([^/]+)$/);
     if (offlineVaultStatusMatch && method === "GET") {
       if (!env.OST_KV)
-        return json3({ events: [], count: 0 });
-      const deviceId = cleanText(decodeURIComponent(offlineVaultStatusMatch[1]), 80);
-      const events = await kvGet(env, `offline-vault:${deviceId}`, []);
-      return json3({ deviceId, events: events.slice(0, 50), count: events.length, ts: (/* @__PURE__ */ new Date()).toISOString() });
+        return json4({ events: [], count: 0 });
+      const deviceId = cleanText2(decodeURIComponent(offlineVaultStatusMatch[1]), 80);
+      const events = await kvGet2(env, `offline-vault:${deviceId}`, []);
+      return json4({ deviceId, events: events.slice(0, 50), count: events.length, ts: (/* @__PURE__ */ new Date()).toISOString() });
     }
     if (path === "/wallet/payouts" && method === "POST") {
       let body;
       try {
         body = await request.json();
       } catch (_) {
-        return json3({ error: "invalid_json" }, 400);
+        return json4({ error: "invalid_json" }, 400);
       }
-      const wallet = cleanText(body && body.wallet, 64);
+      const wallet = cleanText2(body && body.wallet, 64);
       if (!wallet)
-        return json3({ error: "missing_wallet" }, 400);
+        return json4({ error: "missing_wallet" }, 400);
       if (!env.OST_KV)
-        return json3({ ok: true, stored: false });
-      const stage = cleanText(body && body.stage || "intent", 16);
-      const id = cleanText(body && body.id || crypto.randomUUID(), 80);
+        return json4({ ok: true, stored: false });
+      const stage = cleanText2(body && body.stage || "intent", 16);
+      const id = cleanText2(body && body.id || crypto.randomUUID(), 80);
       const record = {
         id,
         wallet,
         walletShort: wallet.slice(0, 4) + "\u2026" + wallet.slice(-4),
         stage,
-        kind: cleanText(body.kind || "payout", 32),
+        kind: cleanText2(body.kind || "payout", 32),
         // faucet|prediction|topup|stock|game
         ostAmount: cleanNumber(body.ostAmount, 0),
-        memo: cleanText(body.memo || "", 240),
-        sig: cleanText(body.sig || body.signature || "", 128),
-        error: cleanText(body.error || "", 240),
-        ref: cleanText(body.ref || "", 128),
+        memo: cleanText2(body.memo || "", 240),
+        sig: cleanText2(body.sig || body.signature || "", 128),
+        error: cleanText2(body.error || "", 240),
+        ref: cleanText2(body.ref || "", 128),
         // intent id, market id, etc.
         ts: Date.now()
       };
       const walletKey = `payouts:${wallet}`;
-      const bucket = await kvGet(env, walletKey, []);
+      const bucket = await kvGet2(env, walletKey, []);
       const existingIdx = bucket.findIndex((e) => e && e.id === id);
       if (existingIdx >= 0) {
         bucket[existingIdx] = Object.assign({}, bucket[existingIdx], record, { history: (bucket[existingIdx].history || []).concat([{ stage: bucket[existingIdx].stage, ts: bucket[existingIdx].ts }]).slice(-5) });
@@ -3466,37 +4423,37 @@ var src_default = {
       }
       if (bucket.length > 200)
         bucket.length = 200;
-      await kvPut(env, walletKey, bucket, 60 * 60 * 24 * 30);
-      const tail = await kvGet(env, "payouts:tail", []);
+      await kvPut2(env, walletKey, bucket, 60 * 60 * 24 * 30);
+      const tail = await kvGet2(env, "payouts:tail", []);
       tail.unshift({ wallet, walletShort: record.walletShort, kind: record.kind, stage, ostAmount: record.ostAmount, sig: record.sig, error: record.error, ts: record.ts, id });
       if (tail.length > 500)
         tail.length = 500;
-      await kvPut(env, "payouts:tail", tail, 60 * 60 * 24 * 14);
-      return json3({ ok: true, stored: true, record });
+      await kvPut2(env, "payouts:tail", tail, 60 * 60 * 24 * 14);
+      return json4({ ok: true, stored: true, record });
     }
     if (path === "/wallet/payouts/recent" && method === "GET") {
       if (!env.OST_KV)
-        return json3({ recent: [], note: "KV not configured" });
+        return json4({ recent: [], note: "KV not configured" });
       const limit = Math.min(200, Number(url.searchParams.get("limit") || 50));
-      const tail = await kvGet(env, "payouts:tail", []);
-      return json3({ recent: tail.slice(0, limit), ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
+      const tail = await kvGet2(env, "payouts:tail", []);
+      return json4({ recent: tail.slice(0, limit), ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
     }
     const walletPayoutsMatch = path.match(/^\/wallet\/payouts\/([^/]+)$/);
     if (walletPayoutsMatch && method === "GET") {
       const wallet = decodeURIComponent(walletPayoutsMatch[1]);
       if (!env.OST_KV)
-        return json3({ payouts: [], wallet, note: "KV not configured" });
-      const bucket = await kvGet(env, `payouts:${wallet}`, []);
+        return json4({ payouts: [], wallet, note: "KV not configured" });
+      const bucket = await kvGet2(env, `payouts:${wallet}`, []);
       const onlyOpen = url.searchParams.get("open") === "1";
       const filtered = onlyOpen ? bucket.filter((e) => e && e.stage === "intent") : bucket;
-      return json3({ payouts: filtered, wallet, count: filtered.length, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
+      return json4({ payouts: filtered, wallet, count: filtered.length, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
     }
     if (path.startsWith("/bot/v1/")) {
       const expectedKey = env.BOT_API_KEY || "ost-bot-public-test-key";
       const presentedKey = request.headers.get("x-ost-bot-key") || url.searchParams.get("botKey") || "";
       const sub = path.slice("/bot/v1".length);
       if (sub === "/health" && method === "GET") {
-        return json3({
+        return json4({
           ok: true,
           service: "ost-bot-api",
           version: "1.0",
@@ -3514,13 +4471,14 @@ var src_default = {
         }, 200, { "cache-control": "no-store" });
       }
       if (presentedKey !== expectedKey) {
-        return json3({ error: "unauthorized", message: "Pass x-ost-bot-key header. See /bot/v1/health for docs." }, 401);
+        return json4({ error: "unauthorized", message: "Pass x-ost-bot-key header. See /bot/v1/health for docs." }, 401);
       }
       if (sub === "/markets" && method === "GET") {
         const limit = Math.min(200, Number(url.searchParams.get("limit") || 60));
-        const raw = await polyGamma(env, "/markets", `limit=${limit}&closed=false`);
+        const active = await fetchActiveMarkets(env, limit);
+        const raw = active.raw;
         const markets = (Array.isArray(raw) ? raw : raw?.markets || []).map(normaliseMarket);
-        const btcRound = await buildCanonicalBtcRound(env, { refresh: false });
+        const btcRound = await getCanonicalBtcRound(env, { refresh: false });
         const nativeState = btcRound && btcRound.openPrice ? await getNativeMarketState(env, btcRound.id, btcRound.yesPriceNumber) : null;
         const ostNative = btcRound.openPrice ? [{
           id: btcRound.id,
@@ -3535,27 +4493,32 @@ var src_default = {
           closeAtMs: btcRound.closeAt,
           msLeft: btcRound.msLeft
         }] : [];
-        return json3({ markets: ostNative.concat(markets), count: ostNative.length + markets.length, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
+        return json4({ markets: ostNative.concat(markets), count: ostNative.length + markets.length, stale: !!active.stale, source: active.source, cachedAt: active.cachedAt || null, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
       }
       const botMktMatch = sub.match(/^\/markets\/([^/]+)$/);
       if (botMktMatch && method === "GET") {
         const id = decodeURIComponent(botMktMatch[1]);
         if (id.indexOf("ost-btc5m-") === 0) {
-          const r = await buildCanonicalBtcRound(env, { refresh: true });
+          const r = await getCanonicalBtcRound(env, { refresh: true });
           const state = await getNativeMarketState(env, id, r && r.yesPriceNumber);
-          return json3({ market: Object.assign({}, r, state, { marketState: state }), source: "ost-native" }, 200, { "cache-control": "no-store" });
+          return json4({ market: Object.assign({}, r, state, { marketState: state }), source: "ost-native" }, 200, { "cache-control": "no-store" });
         }
-        const [gmkt, book] = await Promise.all([
-          polyGamma(env, `/markets/${encodeURIComponent(id)}`),
+        if (isOstNativeMarketId(id, "ost-native")) {
+          const state = await getNativeMarketState(env, id, url.searchParams.get("baseYes"));
+          return json4({ market: Object.assign({ id, source: "ost-native", isOstNative: true, title: id }, state, { marketState: state }), source: "ost-native" }, 200, { "cache-control": "no-store" });
+        }
+        const [detail, book] = await Promise.all([
+          fetchMarketDetail(env, id),
           polyClob(env, "/book", `token_id=${encodeURIComponent(id)}`)
         ]);
+        const gmkt = detail.raw;
         if (!gmkt)
-          return json3({ error: "market_not_found", id }, 404);
-        return json3({ market: normaliseMarket(gmkt), book: book || null, source: "polymarket", ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
+          return json4({ error: "market_not_found", id }, 404);
+        return json4({ market: normaliseMarket(gmkt), book: book || null, source: "polymarket", stale: !!detail.stale, cachedAt: detail.cachedAt || null, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
       }
       if (sub === "/btc/round" && method === "GET") {
-        const r = await buildCanonicalBtcRound(env, { refresh: true });
-        return json3(r, 200, { "cache-control": "no-store" });
+        const r = await getCanonicalBtcRound(env, { refresh: true });
+        return json4(r, 200, { "cache-control": "no-store" });
       }
       const quoteMatch = sub.match(/^\/quote\/([^/]+)$/);
       if (quoteMatch && method === "GET") {
@@ -3563,19 +4526,37 @@ var src_default = {
         const side = (url.searchParams.get("side") || "yes").toLowerCase() === "no" ? "NO" : "YES";
         const stake = Math.max(0, Number(url.searchParams.get("stake")) || 0);
         let price = 0.5;
-        if (id.indexOf("ost-btc5m-") === 0) {
+        if (isOstNativeMarketId(id, url.searchParams.get("source"))) {
           const r = await getNativeMarketState(env, id, url.searchParams.get("baseYes"));
-          price = side === "NO" ? r.noPriceNumber : r.yesPriceNumber;
+          price = nativeTradePriceFromState(r, side, "buy") || (side === "NO" ? r.noPriceNumber : r.yesPriceNumber);
+          const bidPrice = nativeTradePriceFromState(r, side, "sell") || price;
+          const shares2 = price > 0 ? stake / price : 0;
+          return json4({
+            marketId: id,
+            side,
+            action: "buy",
+            price,
+            askPrice: price,
+            bidPrice,
+            stake,
+            shares: shares2,
+            expectedPayout: shares2,
+            expectedCashoutValue: shares2 * bidPrice,
+            expectedReturn: shares2 - stake,
+            marketState: r,
+            ts: (/* @__PURE__ */ new Date()).toISOString()
+          }, 200, { "cache-control": "no-store" });
         } else {
-          const gmkt = await polyGamma(env, `/markets/${encodeURIComponent(id)}`);
+          const detail = await fetchMarketDetail(env, id);
+          const gmkt = detail.raw;
           if (!gmkt)
-            return json3({ error: "market_not_found", id }, 404);
+            return json4({ error: "market_not_found", id }, 404);
           const m = normaliseMarket(gmkt);
           price = side === "NO" ? m.noPriceNumber : m.yesPriceNumber;
         }
         const shares = price > 0 ? stake / price : 0;
         const expectedPayout = shares;
-        return json3({
+        return json4({
           marketId: id,
           side,
           price,
@@ -3590,49 +4571,53 @@ var src_default = {
       if (botPosMatch && method === "GET") {
         const wallet = decodeURIComponent(botPosMatch[1]);
         if (!env.OST_KV)
-          return json3({ positions: [], note: "KV not configured", wallet });
-        const positions = await kvGet(env, `positions:${wallet}`, []);
-        return json3({ positions, wallet, count: positions.length, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
+          return json4({ positions: [], note: "KV not configured", wallet });
+        const positions = await kvGet2(env, `positions:${wallet}`, []);
+        return json4({ positions, wallet, count: positions.length, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
       }
       if (sub === "/order" && method === "POST") {
         let body;
         try {
           body = await request.json();
         } catch (_) {
-          return json3({ error: "invalid_json" }, 400);
+          return json4({ error: "invalid_json" }, 400);
         }
-        const wallet = cleanText(body && body.wallet, 64);
-        const marketId = cleanText(body && body.marketId, 128);
+        const wallet = cleanText2(body && body.wallet, 64);
+        const marketId = cleanText2(body && body.marketId, 128);
         const side = String(body && body.side || "yes").toUpperCase().slice(0, 8);
         const stake = Number(body && body.stake);
         if (!wallet || !marketId || !Number.isFinite(stake) || stake <= 0) {
-          return json3({ error: "missing_fields", required: ["wallet", "marketId", "side", "stake"] }, 400);
+          return json4({ error: "missing_fields", required: ["wallet", "marketId", "side", "stake"] }, 400);
         }
         const nativeMarketStateBefore = isOstNativeMarketId(marketId, body && body.source) ? await getNativeMarketState(env, marketId, body && (body.baseYesPrice != null ? body.baseYesPrice : body.fairYesPrice)) : null;
-        let price = nativeMarketStateBefore ? side === "NO" ? nativeMarketStateBefore.noPriceNumber : nativeMarketStateBefore.yesPriceNumber : Number(body && body.price);
+        let price = nativeMarketStateBefore ? nativeTradePriceFromState(nativeMarketStateBefore, side, "buy") : Number(body && body.price);
         if (!Number.isFinite(price) || price <= 0 || price >= 1) {
           if (marketId.indexOf("ost-btc5m-") === 0) {
-            const r = await buildCanonicalBtcRound(env, { refresh: true });
+            const r = await getCanonicalBtcRound(env, { refresh: true });
             price = side === "NO" ? r.noPriceNumber : r.yesPriceNumber;
           } else {
-            const gmkt = await polyGamma(env, `/markets/${encodeURIComponent(marketId)}`);
+            const detail = await fetchMarketDetail(env, marketId);
+            const gmkt = detail.raw;
             if (!gmkt)
-              return json3({ error: "market_not_found", marketId }, 404);
+              return json4({ error: "market_not_found", marketId }, 404);
             const m = normaliseMarket(gmkt);
             price = side === "NO" ? m.noPriceNumber : m.yesPriceNumber;
           }
         }
         const inferredPrices = nativeMarketStateBefore ? inferBinaryPrices(side, price, nativeMarketStateBefore.yesPriceNumber, nativeMarketStateBefore.noPriceNumber) : inferBinaryPrices(side, price, body && body.yesPrice, body && body.noPrice);
         price = inferredPrices.price;
+        const nativeVaultTrade = !!nativeMarketStateBefore;
+        const nativeSelectedBid = nativeVaultTrade ? nativeTradePriceFromState(nativeMarketStateBefore, side, "sell") : null;
+        const nativeSelectedAsk = nativeVaultTrade ? nativeTradePriceFromState(nativeMarketStateBefore, side, "buy") : null;
         const createdAt = Date.now();
-        const id = cleanText(body.id || body.signature || `bot-${createdAt}-${Math.random().toString(36).slice(2, 10)}`, 128);
+        const id = cleanText2(body.id || body.signature || `bot-${createdAt}-${Math.random().toString(36).slice(2, 10)}`, 128);
         const record = {
           id,
           wallet,
           walletShort: wallet.slice(0, 4) + "\u2026" + wallet.slice(-4),
           marketId,
-          marketTitle: cleanText(body.marketTitle || body.title || marketId, 200),
-          title: cleanText(body.title || body.marketTitle || marketId, 200),
+          marketTitle: cleanText2(body.marketTitle || body.title || marketId, 200),
+          title: cleanText2(body.title || body.marketTitle || marketId, 200),
           side,
           stake,
           price,
@@ -3641,61 +4626,108 @@ var src_default = {
           shares: price > 0 ? stake / price : 0,
           potentialReturn: price > 0 ? stake / price : stake,
           source: "bot",
-          channel: cleanText(body.channel || "bot-api", 32),
-          signature: cleanText(body.signature || "", 128),
-          sig: cleanText(body.signature || "", 128),
+          channel: cleanText2(body.channel || "bot-api", 32),
+          signature: cleanText2(body.signature || "", 128),
+          sig: cleanText2(body.signature || "", 128),
           createdAt,
           ts: new Date(createdAt).toISOString(),
           status: "open",
+          nativeMarketMaker: nativeVaultTrade,
+          counterparty: nativeVaultTrade ? "ost-native-vault" : cleanText2(body.counterparty || "", 64),
+          liquidityProvider: nativeVaultTrade ? "ost-native-market-maker" : cleanText2(body.liquidityProvider || "", 64),
+          shareIssuer: nativeVaultTrade ? "ost-native-vault" : cleanText2(body.shareIssuer || "", 64),
+          quoteAction: nativeVaultTrade ? "buy-ask" : cleanText2(body.quoteAction || "", 32),
+          quoteModel: nativeVaultTrade ? "ost-native-bid-ask-v2" : cleanText2(body.quoteModel || "", 48),
+          quotePrice: nativeVaultTrade ? price : cleanNumber(body.quotePrice),
+          askPrice: nativeSelectedAsk,
+          bidPrice: nativeSelectedBid,
+          vaultSpread: nativeVaultTrade ? cleanNumber(nativeMarketStateBefore.vaultSpread || nativeMarketStateBefore.vaultEdge, 0) : cleanNumber(body.vaultSpread),
+          vaultEdge: nativeVaultTrade ? cleanNumber(nativeMarketStateBefore.vaultEdge || nativeMarketStateBefore.vaultSpread, 0) : cleanNumber(body.vaultEdge),
+          vaultFlow: nativeVaultTrade ? "share-sale" : cleanText2(body.vaultFlow || "", 48),
+          vaultGrossInOst: nativeVaultTrade ? stake : 0,
+          vaultGrossOutOst: 0,
+          sharesCreated: nativeVaultTrade && price > 0 ? stake / price : 0,
+          sharesRedeemed: 0,
           syncedAt: createdAt
         };
         if (env.OST_KV) {
           const walletKey = `positions:${wallet}`;
-          const walletBucket = await kvGet(env, walletKey, []);
-          await kvPut(env, walletKey, mergeNewest(walletBucket, record, 200));
-          const recent = await kvGet(env, "positions:recent", []);
-          await kvPut(env, "positions:recent", mergeNewest(recent, record, 100), 60 * 60 * 24 * 7);
+          const walletBucket = await kvGet2(env, walletKey, []);
+          await kvPut2(env, walletKey, mergeNewest(walletBucket, record, 200));
+          const recent = await kvGet2(env, "positions:recent", []);
+          await kvPut2(env, "positions:recent", mergeNewest(recent, record, 100), 60 * 60 * 24 * 7);
         }
         const marketState = await applyNativePositionToMarketState(env, record, nativeMarketStateBefore ? nativeMarketStateBefore.baseYesPrice : null);
-        return json3({ ok: true, order: record, stored: !!env.OST_KV, marketState }, 200, { "cache-control": "no-store" });
+        return json4({ ok: true, order: record, stored: !!env.OST_KV, marketState }, 200, { "cache-control": "no-store" });
       }
       if (sub === "/order/cashout" && method === "POST") {
         let body;
         try {
           body = await request.json();
         } catch (_) {
-          return json3({ error: "invalid_json" }, 400);
+          return json4({ error: "invalid_json" }, 400);
         }
-        const wallet = cleanText(body && body.wallet, 64);
-        const orderId = cleanText(body && body.orderId, 128);
+        const wallet = cleanText2(body && body.wallet, 64);
+        const orderId = cleanText2(body && body.orderId, 128);
         if (!wallet || !orderId)
-          return json3({ error: "missing_fields", required: ["wallet", "orderId"] }, 400);
+          return json4({ error: "missing_fields", required: ["wallet", "orderId"] }, 400);
         if (!env.OST_KV)
-          return json3({ error: "kv_not_configured" }, 503);
+          return json4({ error: "kv_not_configured" }, 503);
         const walletKey = `positions:${wallet}`;
-        const walletBucket = await kvGet(env, walletKey, []);
+        const walletBucket = await kvGet2(env, walletKey, []);
         const idx = walletBucket.findIndex((p) => p && (p.id === orderId || p.signature === orderId));
         if (idx < 0)
-          return json3({ error: "order_not_found", orderId }, 404);
+          return json4({ error: "order_not_found", orderId }, 404);
         const order = walletBucket[idx];
+        const side = String(order.side || body.side || "YES").toUpperCase() === "NO" ? "NO" : "YES";
+        const nativeStateBefore = isOstNativeMarketId(order.marketId, order.source) ? await getNativeMarketState(env, order.marketId, order.baseYesPrice != null ? order.baseYesPrice : order.yesPrice) : null;
+        const entryPrice = cleanProbability(order.price != null ? order.price : side === "NO" ? order.noPrice : order.yesPrice);
+        const shares = Math.max(0, cleanNumber(order.shares, entryPrice > 0 ? cleanNumber(order.stake, 0) / entryPrice : 0) || 0);
+        const bidPrice = nativeStateBefore ? nativeTradePriceFromState(nativeStateBefore, side, "sell") : cleanProbability(body.sellPrice != null ? body.sellPrice : order.sellPrice);
+        const serverPayout = bidPrice != null && shares > 0 ? shares * bidPrice : cleanNumber(order.potentialReturn, 0);
+        const requestedPayout = cleanNumber(body.payoutOst, null);
+        const payoutOst = Math.max(0, Math.min(Number.isFinite(requestedPayout) && requestedPayout >= 0 ? requestedPayout : serverPayout, serverPayout));
         order.status = "cashed-out";
         order.cashedOut = true;
-        order.cashoutKind = cleanText(body.cashoutKind || "bot-cashout", 40);
-        order.cashoutSig = cleanText(body.signature || "", 128);
-        order.cashoutOst = cleanNumber(body.payoutOst, order.potentialReturn);
+        order.cashoutKind = cleanText2(body.cashoutKind || "bot-cashout", 40);
+        order.cashoutSig = cleanText2(body.signature || "", 128);
+        order.cashoutOst = payoutOst;
         order.cashoutAt = Date.now();
         order.resolvedAt = Date.now();
+        if (bidPrice != null) {
+          order.sellPrice = bidPrice;
+          order.sellValue = payoutOst;
+          order.finalYesPrice = side === "YES" ? bidPrice : 1 - bidPrice;
+          order.finalNoPrice = side === "NO" ? bidPrice : 1 - bidPrice;
+        }
+        if (nativeStateBefore) {
+          order.nativeMarketMaker = true;
+          order.counterparty = "ost-native-vault";
+          order.liquidityProvider = "ost-native-market-maker";
+          order.shareRedeemer = "ost-native-vault";
+          order.quoteAction = "sell-bid";
+          order.quoteModel = "ost-native-bid-ask-v2";
+          order.quotePrice = bidPrice;
+          order.bidPrice = bidPrice;
+          order.vaultSpread = cleanNumber(nativeStateBefore.vaultSpread || nativeStateBefore.vaultEdge, 0);
+          order.vaultEdge = cleanNumber(nativeStateBefore.vaultEdge || nativeStateBefore.vaultSpread, 0);
+          order.vaultFlow = "share-buyback";
+          order.vaultGrossInOst = 0;
+          order.vaultGrossOutOst = payoutOst;
+          order.sharesCreated = 0;
+          order.sharesRedeemed = shares;
+        }
         walletBucket[idx] = order;
-        await kvPut(env, walletKey, walletBucket);
+        await kvPut2(env, walletKey, walletBucket);
         const marketState = await applyNativePositionToMarketState(env, order, order.yesPrice);
-        const recent = await kvGet(env, "positions:recent", []);
+        const recent = await kvGet2(env, "positions:recent", []);
         const flowRecord = recentFlowRecordForPosition(order);
-        await kvPut(env, "positions:recent", mergeNewest(recent, flowRecord, 100), 60 * 60 * 24 * 7);
-        return json3({ ok: true, order, marketState, flowRecord: flowRecord !== order ? flowRecord : null }, 200, { "cache-control": "no-store" });
+        await kvPut2(env, "positions:recent", mergeNewest(recent, flowRecord, 100), 60 * 60 * 24 * 7);
+        return json4({ ok: true, order, marketState, flowRecord: flowRecord !== order ? flowRecord : null }, 200, { "cache-control": "no-store" });
       }
-      return json3({ error: "unknown_bot_endpoint", path, hint: "GET /bot/v1/health for docs" }, 404);
+      return json4({ error: "unknown_bot_endpoint", path, hint: "GET /bot/v1/health for docs" }, 404);
     }
-    return json3({ error: "not_found", message: "Unknown endpoint. GET /health for the full endpoint list." }, 404);
+    return json4({ error: "not_found", message: "Unknown endpoint. GET /health for the full endpoint list." }, 404);
   }
 };
 export {

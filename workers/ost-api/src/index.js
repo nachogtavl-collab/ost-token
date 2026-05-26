@@ -1,6 +1,7 @@
 // Ghost AI v2 — sovereign rebuild. Mounts at /ghost/v2/*
 import { handleGhostV2Request } from './ghost/index.js';
 import { handleMeshRequest }    from './mesh/index.js';
+import { handleOstPriceRequest } from './ost-price.js';
 
 export { MeshHub } from './mesh/hub.js';
 
@@ -2333,6 +2334,12 @@ export default {
       return handleMeshRequest(request, env, { path, method });
     }
 
+    // OST Live Price — devnet synthetic price engine. Additive, isolated.
+    if (path.startsWith('/ost/')) {
+      const ostResp = await handleOstPriceRequest(request, env, { path, method, url });
+      if (ostResp) return ostResp;
+    }
+
     // OST Faucet Gate — shared per-wallet faucet state + anti-double-claim reservations.
     if (path === '/faucet/state' && method === 'GET') {
       if (!env.FAUCET_GATE) return json({ error: 'faucet_gate_not_configured' }, 503);
@@ -2369,6 +2376,10 @@ export default {
           'GET  /btc/round',
           'GET  /btc/ticks',
           'GET  /btc/history',
+          'GET  /ost/price',
+          'GET  /ost/stats',
+          'GET  /ost/history',
+          'POST /ost/event',
           'GET  /markets',
           'GET  /markets/:id',
           'GET  /markets/:id/book',
