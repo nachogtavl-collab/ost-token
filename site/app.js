@@ -4340,6 +4340,25 @@
   window.ostPrice = ostPrice;
   const OST_BASE_PRICE = 0.0001;
 
+  // Step 4: when the live-price flag is on, push oracle ticks into the
+  // module-scoped `ostPrice` so every consumer (balances, send, cash-out,
+  // fair-games, native market, store, calc) inherits the live value through
+  // the existing chokepoint. Inert when the flag is off — same static behavior.
+  try {
+    if (window.OST && typeof window.OST.onPrice === 'function') {
+      window.OST.onPrice(function (meta) {
+        if (!window.OST_LIVE_PRICE || !meta) return;
+        var live = Number(meta.price);
+        if (!Number.isFinite(live) || live <= 0) return;
+        ostPrice = live;
+        window.ostPrice = live;
+        try { refreshOstDisplays(); } catch (_) {}
+        try { updateProductOSTPrices(); } catch (_) {}
+        try { updateCalc(); } catch (_) {}
+      });
+    }
+  } catch (_) {}
+
     function getChartBasePrice(coin) {
       if (coin === 'bitcoin') return prices.bitcoin || 105000;
       if (coin === 'ethereum') return prices.ethereum || 3800;
