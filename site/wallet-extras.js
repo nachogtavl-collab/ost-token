@@ -178,6 +178,14 @@
     return 150; // sane fallback for May 2026 — much closer to spot than 86.6
   }
   function getLiveOstUsd() {
+    // Step 3: when the live-price flag is on, the worker oracle wins.
+    // Flag is OFF by default, so existing topup-worker ranking is preserved.
+    try {
+      if (window.OST_LIVE_PRICE && window.OST && typeof window.OST.getPrice === 'function') {
+        var liveOracle = Number(window.OST.getPrice());
+        if (Number.isFinite(liveOracle) && liveOracle > 0) return liveOracle;
+      }
+    } catch (e) {}
     // Same ranking: prefer the topup worker price (which is what the UI
     // quote displays — typically 0.0118). Fall back to `__ostPrices.ost`,
     // and finally to the topup default. NEVER default to 1, which would

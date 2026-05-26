@@ -5939,7 +5939,10 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
     <script>
       window.OST_API_BASE = "https://ost-api.nachogtavl.workers.dev";
       window.OST_POLY_RELAY_URL = window.OST_API_BASE;
+      // Step 3 rollout flag — leave OFF; flip per-wallet in console with OST.enableLive()
+      window.OST_LIVE_PRICE = window.OST_LIVE_PRICE === true;
     </script>
+    <script src="ost-price-client.js?v=201"></script>
     <script src="native-markets.js?v=3"></script>
     <script src="icons.js?v=1"></script>
     <script src="app.js?v=200"></script>
@@ -5954,7 +5957,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="interchange-live.js?v=2"></script>
   <script src="polish.js?v=2"></script>
   <script src="swap-pool.js?v=1"></script>
-  <script src="wallet-extras.js?v=200"></script>
+  <script src="wallet-extras.js?v=201"></script>
   <script src="compartments.js?v=5"></script>
   <script src="prediction-extras.js?v=10"></script>
   <script src="prediction-pro.js?v=200"></script>
