@@ -551,8 +551,20 @@ var OST_EVENT_MAX = 5e3;
 var ALPHA = 0.05;
 var BETA = 0.05;
 var GAMMA = 0.05;
-var DELTA = 0.1;
-var ALLOWED_EVENT_TYPES = /* @__PURE__ */ new Set(["faucet", "send", "cashout", "game_win", "game_loss", "swap", "topup", "other"]);
+var MOOD_PER_PCT = 0.01;
+var MOOD_FLOOR = 0.9;
+var MOOD_CEIL = 1.1;
+var BTC_MOOD_CACHE_TTL_S = 60;
+var ALLOWED_EVENT_TYPES = /* @__PURE__ */ new Set([
+  "faucet",
+  "send",
+  "cashout",
+  "game_win",
+  "game_loss",
+  "swap",
+  "topup",
+  "other"
+]);
 function mulberry32(seed) {
   let a = seed >>> 0;
   return function() {
@@ -603,19 +615,51 @@ function networkFactor(counters) {
   return Math.max(1, n);
 }
 __name(networkFactor, "networkFactor");
-function btcMood() {
-  return 1;
+function btcMood(pct) {
+  if (!Number.isFinite(pct))
+    return 1;
+  return Math.max(MOOD_FLOOR, Math.min(MOOD_CEIL, 1 + pct * MOOD_PER_PCT));
 }
 __name(btcMood, "btcMood");
-function computePrice(counters, ts) {
+var BTC_24H_FEEDS = [
+  {
+    name: "binance",
+    url: "https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT",
+    pick: (j) => Number(j?.priceChangePercent)
+  },
+  {
+    name: "binance-vision",
+    url: "https://data-api.binance.vision/api/v3/ticker/24hr?symbol=BTCUSDT",
+    pick: (j) => Number(j?.priceChangePercent)
+  }
+];
+async function fetchBtc24hChangePct() {
+  for (const feed of BTC_24H_FEEDS) {
+    try {
+      const r = await fetch(feed.url, {
+        headers: { accept: "application/json", "user-agent": "OST-API/1.0" },
+        cf: { cacheTtl: BTC_MOOD_CACHE_TTL_S, cacheEverything: true }
+      });
+      if (!r.ok)
+        continue;
+      const j = await r.json();
+      const v = feed.pick(j);
+      if (Number.isFinite(v) && Math.abs(v) < 100)
+        return { pct: v, source: feed.name };
+    } catch (_) {
+    }
+  }
+  return null;
+}
+__name(fetchBtc24hChangePct, "fetchBtc24hChangePct");
+function computePrice(counters, ts, mood = 1) {
   const n = networkFactor(counters);
   const v = volMultiplier(ts);
-  const m = btcMood();
-  const raw = OST_ANCHOR * n * v * m;
+  const raw = OST_ANCHOR * n * v * mood;
   return Math.max(OST_ANCHOR * 0.5, raw);
 }
 __name(computePrice, "computePrice");
-function change24hPct(counters, nowPrice, ts) {
+function change24hPct(counters, nowPrice, ts, mood) {
   const prevTs = ts - OST_WINDOW_MS;
   const tx24hAtThen = (counters.tx24h || []).filter((e) => Number(e.ts) < prevTs);
   const walletsAtThen = {};
@@ -623,37 +667,82 @@ function change24hPct(counters, nowPrice, ts) {
     if (Number(lastTs) < prevTs)
       walletsAtThen[addr] = Number(lastTs);
   }
-  const prevPrice = computePrice({ wallets24h: walletsAtThen, tx24h: tx24hAtThen }, prevTs);
+  const prevPrice = computePrice({ wallets24h: walletsAtThen, tx24h: tx24hAtThen }, prevTs, mood);
   if (!Number.isFinite(prevPrice) || prevPrice <= 0)
     return 0;
   return (nowPrice - prevPrice) / prevPrice * 100;
 }
 __name(change24hPct, "change24hPct");
-async function maybeSnapshotHistory(env, counters, ts) {
-  const history = await kvGet(env, "ost:history", []) || [];
-  const lastTs = history.length ? Number(history[history.length - 1].ts) : 0;
-  if (ts - lastTs < OST_HISTORY_MS)
-    return history;
-  const price = computePrice(counters, ts);
-  history.push({ ts, price: Number(price.toFixed(8)), n: Number(networkFactor(counters).toFixed(6)) });
+function bucketHighLow(counters, bucketStart, bucketEndExclusive, mood) {
+  const n = networkFactor(counters);
+  let hi = -Infinity, lo = Infinity;
+  for (let t = bucketStart; t < bucketEndExclusive; t += OST_TICK_MS) {
+    const p = OST_ANCHOR * n * volMultiplier(t) * mood;
+    if (p > hi)
+      hi = p;
+    if (p < lo)
+      lo = p;
+  }
+  const floor = OST_ANCHOR * 0.5;
+  return { high: Math.max(hi, floor), low: Math.max(lo, floor) };
+}
+__name(bucketHighLow, "bucketHighLow");
+function normalizeHistoryEntry(p) {
+  if (p && p.open != null)
+    return p;
+  const price = Number(p?.price) || 0;
+  return { ts: Number(p?.ts) || 0, open: price, high: price, low: price, close: price, n: Number(p?.n) || 1 };
+}
+__name(normalizeHistoryEntry, "normalizeHistoryEntry");
+async function loadHistory(env) {
+  const raw = await kvGet(env, "ost:history", []) || [];
+  return raw.map(normalizeHistoryEntry);
+}
+__name(loadHistory, "loadHistory");
+async function updateHistoryOnEvent(env, counters, mood, now) {
+  const history = await loadHistory(env);
+  const bucketStart = Math.floor(now / OST_HISTORY_MS) * OST_HISTORY_MS;
+  const livePrice = computePrice(counters, now, mood);
+  const last = history.length ? history[history.length - 1] : null;
+  if (last && last.ts === bucketStart) {
+    last.close = Number(livePrice.toFixed(8));
+    last.high = Number(Math.max(last.high, livePrice).toFixed(8));
+    last.low = Number(Math.min(last.low, livePrice).toFixed(8));
+    last.n = Number(networkFactor(counters).toFixed(6));
+  } else {
+    const opened = computePrice(counters, bucketStart, mood);
+    const { high, low } = bucketHighLow(counters, bucketStart, now + 1, mood);
+    history.push({
+      ts: bucketStart,
+      open: Number(opened.toFixed(8)),
+      high: Number(Math.max(high, opened, livePrice).toFixed(8)),
+      low: Number(Math.min(low, opened, livePrice).toFixed(8)),
+      close: Number(livePrice.toFixed(8)),
+      n: Number(networkFactor(counters).toFixed(6))
+    });
+  }
   while (history.length > OST_HISTORY_MAX)
     history.shift();
   await kvPut(env, "ost:history", history);
   return history;
 }
-__name(maybeSnapshotHistory, "maybeSnapshotHistory");
+__name(updateHistoryOnEvent, "updateHistoryOnEvent");
 async function handleOstPriceRequest(request, env, ctx) {
   const { path, method, url } = ctx;
   if (path === "/ost/price" && method === "GET") {
     const now = Date.now();
     const counters = pruneCounters(await kvGet(env, "ost:counters", emptyCounters()) || emptyCounters(), now);
-    const price = computePrice(counters, now);
-    const change = change24hPct(counters, price, now);
+    const btc = await fetchBtc24hChangePct();
+    const mood = btcMood(btc?.pct);
+    const price = computePrice(counters, now, mood);
+    const change = change24hPct(counters, price, now, mood);
     return json2({
       price: Number(price.toFixed(8)),
       currency: "USD",
       anchor: OST_ANCHOR,
       change24h: Number(change.toFixed(4)),
+      btcChange24h: btc ? Number(btc.pct.toFixed(4)) : null,
+      btcMood: Number(mood.toFixed(6)),
       source: "ost-devnet-synthetic",
       model: "P0 * N(t) * V(t) * M(t)",
       ts: new Date(now).toISOString()
@@ -662,13 +751,14 @@ async function handleOstPriceRequest(request, env, ctx) {
   if (path === "/ost/stats" && method === "GET") {
     const now = Date.now();
     const counters = pruneCounters(await kvGet(env, "ost:counters", emptyCounters()) || emptyCounters(), now);
+    const btc = await fetchBtc24hChangePct();
+    const mood = btcMood(btc?.pct);
     const W = Object.keys(counters.wallets24h).length;
     const T = counters.tx24h.length;
     const V = counters.tx24h.reduce((s, e) => s + Math.max(0, Number(e.volume) || 0), 0);
     const n = networkFactor(counters);
     const v = volMultiplier(now);
-    const m = btcMood();
-    const price = OST_ANCHOR * n * v * m;
+    const price = computePrice(counters, now, mood);
     return json2({
       ts: new Date(now).toISOString(),
       anchor: OST_ANCHOR,
@@ -677,11 +767,15 @@ async function handleOstPriceRequest(request, env, ctx) {
       volume24h: Number(V.toFixed(8)),
       networkFactor: Number(n.toFixed(6)),
       volMultiplier: Number(v.toFixed(6)),
-      btcMood: Number(m.toFixed(6)),
+      btcChange24h: btc ? Number(btc.pct.toFixed(4)) : null,
+      btcMoodSource: btc?.source || null,
+      btcMood: Number(mood.toFixed(6)),
       price: Number(price.toFixed(8)),
-      weights: { alpha: ALPHA, beta: BETA, gamma: GAMMA, delta: DELTA },
+      weights: { alpha: ALPHA, beta: BETA, gamma: GAMMA, moodPerPct: MOOD_PER_PCT },
       volBand: OST_VOL_BAND,
-      tickMs: OST_TICK_MS
+      moodBand: [MOOD_FLOOR, MOOD_CEIL],
+      tickMs: OST_TICK_MS,
+      bucketMs: OST_HISTORY_MS
     }, 200, { "cache-control": "no-store" });
   }
   if (path === "/ost/history" && method === "GET") {
@@ -689,11 +783,33 @@ async function handleOstPriceRequest(request, env, ctx) {
     const now = Date.now();
     const cutoffMs = range === "1h" ? 60 * 60 * 1e3 : range === "7d" ? 7 * 24 * 60 * 60 * 1e3 : 24 * 60 * 60 * 1e3;
     const cutoff = now - cutoffMs;
-    const history = (await kvGet(env, "ost:history", []) || []).filter((p) => Number(p.ts) >= cutoff);
+    const counters = pruneCounters(await kvGet(env, "ost:counters", emptyCounters()) || emptyCounters(), now);
+    const btc = await fetchBtc24hChangePct();
+    const mood = btcMood(btc?.pct);
+    const history = (await loadHistory(env)).filter((p) => Number(p.ts) >= cutoff);
+    const bucketStart = Math.floor(now / OST_HISTORY_MS) * OST_HISTORY_MS;
+    const opened = computePrice(counters, bucketStart, mood);
+    const livePrice = computePrice(counters, now, mood);
+    const { high, low } = bucketHighLow(counters, bucketStart, now + 1, mood);
+    const live = {
+      ts: bucketStart,
+      open: Number(opened.toFixed(8)),
+      high: Number(Math.max(high, opened, livePrice).toFixed(8)),
+      low: Number(Math.min(low, opened, livePrice).toFixed(8)),
+      close: Number(livePrice.toFixed(8)),
+      n: Number(networkFactor(counters).toFixed(6)),
+      inProgress: true
+    };
+    if (history.length && history[history.length - 1].ts === bucketStart) {
+      history[history.length - 1] = { ...history[history.length - 1], ...live };
+    } else {
+      history.push(live);
+    }
     return json2({
       range,
       points: history,
       count: history.length,
+      shape: "OHLC",
       ts: new Date(now).toISOString()
     }, 200, { "cache-control": "no-store" });
   }
@@ -717,12 +833,15 @@ async function handleOstPriceRequest(request, env, ctx) {
     if (counters.tx24h.length > OST_EVENT_MAX)
       counters.tx24h = counters.tx24h.slice(-OST_EVENT_MAX);
     await kvPut(env, "ost:counters", counters);
-    await maybeSnapshotHistory(env, counters, now);
-    const price = computePrice(counters, now);
+    const btc = await fetchBtc24hChangePct();
+    const mood = btcMood(btc?.pct);
+    await updateHistoryOnEvent(env, counters, mood, now);
+    const price = computePrice(counters, now, mood);
     return json2({
       ok: true,
       accepted: { wallet, type, volume },
       price: Number(price.toFixed(8)),
+      btcMood: Number(mood.toFixed(6)),
       activeWallets24h: Object.keys(counters.wallets24h).length,
       tx24h: counters.tx24h.length,
       ts: new Date(now).toISOString()
