@@ -413,41 +413,6 @@
     return fetch(url, { headers: { accept: 'application/json' }, cache: 'no-store' })
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
   }
-  function rememberNativeMarketState(state) {
-    if (!state) return null;
-    try {
-      window.__ostNativeMarketState = window.__ostNativeMarketState || {};
-      window.__ostNativeMarketState[NATIVE_MARKET_ID] = Object.assign({}, state, { cachedAt: Date.now() });
-      window.dispatchEvent(new CustomEvent('ost:native-market-state', { detail: { marketId: NATIVE_MARKET_ID, state: window.__ostNativeMarketState[NATIVE_MARKET_ID] } }));
-      return window.__ostNativeMarketState[NATIVE_MARKET_ID];
-    } catch (_) {
-      return state;
-    }
-  }
-  function cachedNativeMarketState() {
-    try { return window.__ostNativeMarketState && window.__ostNativeMarketState[NATIVE_MARKET_ID] || null; } catch (_) { return null; }
-  }
-  function refreshNativeMarketState(baseYes) {
-    var base = relayBase();
-    if (!base) return Promise.resolve(cachedNativeMarketState());
-    var price = Number(baseYes);
-    var query = Number.isFinite(price) && price > 0 ? '?baseYes=' + encodeURIComponent(price) : '';
-    return fetchJson(base + '/markets/state/' + encodeURIComponent(NATIVE_MARKET_ID) + query)
-      .then(function (payload) { return rememberNativeMarketState(payload && (payload.state || payload.marketState)); })
-      .catch(function () { return cachedNativeMarketState(); });
-  }
-  function nativeAskPrice(fallback, state) {
-    var quote = state || cachedNativeMarketState();
-    var price = Number(quote && (quote.yesAskPriceNumber != null ? quote.yesAskPriceNumber : quote.yesPriceNumber));
-    if (!Number.isFinite(price) || price <= 0) price = Number(fallback);
-    return Number.isFinite(price) && price > 0 ? price : NaN;
-  }
-  function nativeBidPrice(fallback, state) {
-    var quote = state || cachedNativeMarketState();
-    var price = Number(quote && (quote.yesBidPriceNumber != null ? quote.yesBidPriceNumber : quote.yesPriceNumber));
-    if (!Number.isFinite(price) || price <= 0) price = Number(fallback);
-    return Number.isFinite(price) && price > 0 ? price : NaN;
-  }
   function fetchPolymarketEvent(slug) {
     return fetchJson(gammaUrl('/events?slug=' + encodeURIComponent(slug))).then(function (data) {
       var events = Array.isArray(data) ? data : (data && data.data) || [];
@@ -528,8 +493,6 @@
     if (!liveOutcomes.some(function (outcome) { return outcome.key === key; })) key = 'home';
     selectedOutcomeKey = key;
     renderMarketPanel(liveOutcomes, null, true);
-    var selected = getSelectedOutcome();
-    refreshNativeMarketState(selected && selected.price).then(function () { updateTradeProjection(); renderOpenPositions(); });
     requestHistoryForSelected(false);
     if (shouldFocus) focusInlineTrade();
   }
@@ -661,8 +624,6 @@
           pushLiveHistoryPoints(outcomes);
           renderMarketPanel(outcomes, 'Live · Polymarket' + vol);
           syncNativeMarketState(ev, outcomes);
-          var selected = getSelectedOutcome() || outcomes[0];
-          refreshNativeMarketState(selected && selected.price).then(function () { updateTradeProjection(); renderOpenPositions(); });
         } else {
           renderFallbackMarketPanel();
         }
@@ -852,9 +813,9 @@
     var priceEl = modalEl.querySelector('#ost-live-selected-price');
     var projectionEl = modalEl.querySelector('#ost-live-projection');
     var stake = Math.max(0, Number(stakeEl && stakeEl.value) || 0);
-    var price = outcome ? nativeAskPrice(Number(outcome.price)) : NaN;
+    var price = outcome ? Number(outcome.price) : NaN;
     if (selectedEl && outcome) selectedEl.textContent = outcome.displayLabel || outcome.label;
-    if (priceEl) priceEl.textContent = Number.isFinite(price) ? fmtCents(price) + ' OST Native ask' : '--';
+    if (priceEl) priceEl.textContent = Number.isFinite(price) ? fmtCents(price) + ' per share' : '--';
     if (!projectionEl) return;
     if (!Number.isFinite(price) || price <= 0 || !stake) {
       projectionEl.textContent = 'Enter a stake to preview shares';
@@ -884,13 +845,11 @@
       return;
     }
     var label = outcome.displayLabel || outcome.label;
+    var price = Number(outcome.price);
     var original = button ? button.textContent : '';
     if (button) { button.disabled = true; button.textContent = 'Buying...'; }
     if (statusEl) statusEl.textContent = 'Submitting ' + label + ' shares...';
-    refreshNativeMarketState(Number(outcome.price)).then(function (nativeState) {
-      var price = nativeAskPrice(Number(outcome.price), nativeState);
-      if (!Number.isFinite(price) || price <= 0) throw new Error('Centralized OST share price is still loading. Try again in a moment.');
-      return api.placeOrder({
+    api.placeOrder({
       source: 'polymarket',
       marketId: NATIVE_MARKET_ID,
       conditionId: outcome.conditionId || '',
@@ -906,24 +865,10 @@
       noPrice: 1 - price,
       shares: stake / price,
       potentialReturn: stake / price,
-      baseYesPrice: Number(outcome.price),
-      fairYesPrice: Number(outcome.price),
-      fairNoPrice: 1 - Number(outcome.price),
-      tradableYesPrice: price,
-      tradableNoPrice: 1 - price,
       closeAtMs: Date.parse('2026-05-01T15:00:00Z'),
       clobTokenIds: (outcome.clobTokenIds || []).slice(0, 4),
       sourceUrl: STREAMS[FEATURED_SLUG].polymarket,
-      nativeMarketMaker: true,
-      counterparty: 'ost-native-vault',
-      shareIssuer: 'ost-native-vault',
-      liquidityProvider: 'ost-native-market-maker',
-      quoteAction: 'buy-ask',
-      quoteModel: 'ost-native-bid-ask-v2',
-      vaultSpread: Number(nativeState && (nativeState.vaultSpread || nativeState.vaultEdge)) || 0,
-      vaultFlow: 'share-sale',
       reference: 'live-watch-' + outcome.key + '-' + Date.now().toString(36)
-      });
     }).then(function (result) {
       var sig = result && result.signature ? String(result.signature).slice(0, 10) + '...' : '';
       showToast('Bought ' + label + ' shares' + (sig ? ' · ' + sig : ''));
@@ -974,7 +919,7 @@
     }
     list.innerHTML = positions.map(function (order) {
       var outcome = outcomeForOrder(order) || {};
-      var price = nativeBidPrice(Number(outcome.price));
+      var price = Number(outcome.price);
       var entry = Number(order.price || order.yesPrice || 0);
       var stake = Number(order.stake || 0);
       var shares = Number(order.shares) > 0 ? Number(order.shares) : (entry > 0 ? stake / entry : 0);
@@ -984,7 +929,7 @@
       var key = escapeHtml(orderKey(order));
       return '<div class="live-position-row">' +
         '<div><strong>' + escapeHtml(order.outcomeLabel || outcome.displayLabel || outcome.label || 'Shares') + '</strong><span>' + stake.toFixed(2) + ' OST @ ' + fmtCents(entry) + '</span></div>' +
-        '<div><span>bid ' + fmtCents(price) + '</span><strong>' + liveValue.toFixed(2) + ' OST</strong></div>' +
+        '<div><span>live ' + fmtCents(price) + '</span><strong>' + liveValue.toFixed(2) + ' OST</strong></div>' +
         '<span class="live-position-pnl ' + pnlClass + '">' + (pnl >= 0 ? '+' : '-') + Math.abs(pnl).toFixed(2) + '</span>' +
         '<button type="button" data-live-sell-order="' + key + '">Sell</button>' +
       '</div>';
@@ -1001,7 +946,6 @@
     var stake = Number(order.stake || 0);
     var shares = Number(order.shares) > 0 ? Number(order.shares) : (entry > 0 ? stake / entry : 0);
     var livePx = Number(outcome.price);
-    livePx = nativeBidPrice(livePx);
     if (!Number.isFinite(livePx) || livePx <= 0) livePx = entry;
     var payout = Math.max(0, shares * livePx);
     if (!payout) { showToast('Cannot sell at 0¢.', 'error'); return; }
@@ -1017,14 +961,6 @@
       order.cashoutSig = result && result.sig ? result.sig : ('local-' + Date.now().toString(36));
       order.cashoutAt = Date.now();
       order.cashoutKind = localOnly ? 'live-watch-local-sell' : 'live-watch-sell';
-      order.nativeMarketMaker = true;
-      order.counterparty = 'ost-native-vault';
-      order.shareRedeemer = 'ost-native-vault';
-      order.liquidityProvider = 'ost-native-market-maker';
-      order.quoteAction = 'sell-bid';
-      order.quoteModel = 'ost-native-bid-ask-v2';
-      order.vaultFlow = 'share-buyback';
-      order.sharesRedeemed = shares;
       orders[idx] = order;
       writeOrders(orders);
       postPositionUpdate(order);

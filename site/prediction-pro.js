@@ -67,10 +67,10 @@
   // ---------------------------------------------------------------------------
   var FIVE_MIN_MS = 5 * 60 * 1000;
   var BTC_PRICE_URL = 'https://data-api.binance.vision/api/v3/ticker/price?symbol=BTCUSDT';
-  var BTC_REFRESH_MS = 850;           // canonical worker cadence; stays below 1s for shared quotes
+  var BTC_REFRESH_MS = 1500;          // canonical worker cadence; WebSocket ticks keep the UI live between polls
   var BTC_DEDUPE_MS  = 200;           // dedupe identical prints inside this window (was 300)
-  var BTC_LOCAL_TICK_FRESH_MS = 900;
-  var BTC_FEED_TIMEOUT_MS = 2200;
+  var BTC_LOCAL_TICK_FRESH_MS = 1500;
+  var BTC_FEED_TIMEOUT_MS = 3000;
   var BTC_MAX_SERIES = 900;           // ~7.5 min of sub-second history for the chart
   var BTC_WS_URLS = [
     'wss://stream.binance.com:9443/ws/btcusdt@trade',
@@ -80,13 +80,7 @@
   var btcWsIndex = 0;
   var btcWsReconnectTimer = 0;
   var btcWsLastTickAt = 0;
-  var OST_WORKER_BTC_URL = String((typeof window !== 'undefined' && window.OST_API_BASE) || '').replace(/\/$/, '') + '/btc/price';
   var BTC_PRICE_FEEDS = [
-    {
-      name: 'ost-worker',
-      url: OST_WORKER_BTC_URL,
-      pick: function (j) { return j && Number(j.price); }
-    },
     {
       name: 'binance',
       url: BTC_PRICE_URL,
@@ -146,15 +140,10 @@
   var nativeMarketStateInFlight = {};
   var nativeMarketStateInFlightBase = {};
   var NATIVE_STATE_BASE_TOLERANCE = 0.005;
-  var NATIVE_STATE_REFRESH_MS = 750;
-  var NATIVE_LOCAL_PRESSURE_TTL_MS = 8000;
-  var NATIVE_MARKET_LIQUIDITY_SHARES = 750;
-  var NATIVE_MARKET_LIQUIDITY_OST = 500;
-  var NATIVE_MARKET_MAX_SHARE_IMPACT = 0.32;
-  var NATIVE_MARKET_MAX_STAKE_IMPACT = 0.08;
+  var NATIVE_STATE_REFRESH_MS = 3000;
 
   function canonicalRoundIsFresh() {
-    return canonicalRound && (Date.now() - canonicalRoundFetchedAt < 1500);
+    return canonicalRound && (Date.now() - canonicalRoundFetchedAt < 4500);
   }
 
   function isBinanceSource(source) {
@@ -175,183 +164,6 @@
     return Object.assign({}, btcLastTick);
   }
 
-  function nativePressureStore() {
-    try {
-      window.__ostNativeLocalPressure = window.__ostNativeLocalPressure || {};
-      return window.__ostNativeLocalPressure;
-    } catch (_) {
-      return {};
-    }
-  }
-
-  function cleanNativeNumber(value, fallback) {
-    var number = Number(value);
-    return Number.isFinite(number) ? number : (Number(fallback) || 0);
-  }
-
-  function cleanNativeProbability(value) {
-    var number = Number(value);
-    if (!Number.isFinite(number)) return null;
-    if (number > 1 && number <= 100) number = number / 100;
-    return Math.max(0, Math.min(1, number));
-  }
-
-  function clampNativeQuoteProbability(value) {
-    var probability = cleanNativeProbability(value);
-    return probability == null ? null : Math.max(0.02, Math.min(0.98, probability));
-  }
-
-  function isOstNativeMarketIdentifier(marketId, source) {
-    var marketText = String(marketId == null ? '' : marketId);
-    var sourceText = String(source == null ? '' : source).toLowerCase();
-    return marketText.indexOf('ost-btc5m-') === 0 || marketText === 'ost-btc5m' || sourceText === 'ost' || sourceText === 'ost-native';
-  }
-
-  function nativePressureMarketId(record) {
-    return String(record && (record.marketId || record.id) || '').trim();
-  }
-
-  function nativePressureRecordKey(record) {
-    if (!record) return '';
-    return String(record.signature || record.sig || record.remoteId || record.id || [record.wallet || '', record.marketId || '', record.side || '', record.createdAt || record.ts || ''].join(':'));
-  }
-
-  function nativePressureRecordTime(record) {
-    var raw = record && (record.cashoutAt || record.resolvedAt || record.syncedAt || record.createdAt || record.ts || record.quotedAt);
-    var number = Number(raw);
-    if (Number.isFinite(number) && number > 0) return number < 100000000000 ? number * 1000 : number;
-    var parsed = Date.parse(raw);
-    return Number.isFinite(parsed) ? parsed : Date.now();
-  }
-
-  function nativePressureSide(record) {
-    return String(record && record.side || '').toUpperCase() === 'NO' || String(record && record.side || '').toLowerCase() === 'no' ? 'NO' : 'YES';
-  }
-
-  function nativePositionIsClosed(record) {
-    var status = String(record && (record.status || record.outcome) || '').toLowerCase();
-    return !!(record && (record.cashedOut || record.resolved || Number(record.cashoutAt || 0) > 0 || ['sold', 'cashed-out', 'settled', 'won', 'lost', 'closed', 'resolved'].indexOf(status) >= 0));
-  }
-
-  function nativePositionImpact(record, forceOpen) {
-    var side = nativePressureSide(record);
-    var isOpen = forceOpen || !nativePositionIsClosed(record);
-    var stake = Math.max(0, cleanNativeNumber(record && (record.stake != null ? record.stake : record.amount), 0));
-    var selectedPrice = cleanNativeProbability(record && (record.price != null ? record.price : record.entryPrice));
-    var yesPrice = cleanNativeProbability(record && (record.yesPrice != null ? record.yesPrice : record.tradableYesPrice));
-    var noPrice = cleanNativeProbability(record && (record.noPrice != null ? record.noPrice : record.tradableNoPrice));
-    var sidePrice = selectedPrice == null ? 0 : selectedPrice;
-    if (side === 'NO' && noPrice != null) sidePrice = noPrice;
-    if (side === 'YES' && yesPrice != null) sidePrice = yesPrice;
-    var shares = Math.max(0, cleanNativeNumber(record && record.shares, 0));
-    if (!(shares > 0) && stake > 0 && sidePrice > 0) shares = stake / sidePrice;
-    return {
-      openYesShares: isOpen && side === 'YES' ? shares : 0,
-      openNoShares: isOpen && side === 'NO' ? shares : 0,
-      openYesStake: isOpen && side === 'YES' ? stake : 0,
-      openNoStake: isOpen && side === 'NO' ? stake : 0
-    };
-  }
-
-  function nativeStateCanCoverPending(state, pending) {
-    if (!state || !pending || pending.direction < 0) return true;
-    var impact = pending.impact || {};
-    if (impact.openYesShares > 0) return cleanNativeNumber(state.openYesShares, 0) + 1e-6 >= impact.openYesShares * 0.9;
-    if (impact.openNoShares > 0) return cleanNativeNumber(state.openNoShares, 0) + 1e-6 >= impact.openNoShares * 0.9;
-    if (impact.openYesStake > 0) return cleanNativeNumber(state.openYesStake, 0) + 1e-6 >= impact.openYesStake * 0.9;
-    if (impact.openNoStake > 0) return cleanNativeNumber(state.openNoStake, 0) + 1e-6 >= impact.openNoStake * 0.9;
-    return true;
-  }
-
-  function confirmNativeLocalPressure(marketId, state) {
-    if (!marketId || !state || state.localPressureApplied) return false;
-    var store = nativePressureStore();
-    var bucket = store[marketId];
-    if (!bucket || !bucket.records) return false;
-    var updatedAt = cleanNativeNumber(state.updatedAt || state.cachedAt, 0);
-    if (updatedAt && updatedAt < 100000000000) updatedAt *= 1000;
-    var now = Date.now();
-    var changed = false;
-    Object.keys(bucket.records).forEach(function (key) {
-      var pending = bucket.records[key];
-      if (!pending) return;
-      var expired = now - cleanNativeNumber(pending.ts, now) > NATIVE_LOCAL_PRESSURE_TTL_MS;
-      var confirmed = updatedAt && updatedAt + 1500 >= cleanNativeNumber(pending.recordTs, pending.ts) && nativeStateCanCoverPending(state, pending);
-      if (expired || confirmed) {
-        delete bucket.records[key];
-        changed = true;
-      }
-    });
-    return changed;
-  }
-
-  function rememberNativeLocalPressureRecord(record) {
-    var marketId = nativePressureMarketId(record);
-    if (!marketId || !isOstNativeMarketIdentifier(marketId, record && record.source)) return null;
-    var key = nativePressureRecordKey(record);
-    if (!key) return null;
-    var store = nativePressureStore();
-    var bucket = store[marketId] = store[marketId] || { records: {} };
-    var isClosing = nativePositionIsClosed(record);
-    if (isClosing && bucket.records[key] && bucket.records[key].direction > 0) {
-      delete bucket.records[key];
-      return { marketId: marketId, key: key, changed: true };
-    }
-    var impact = nativePositionImpact(record, isClosing);
-    var hasImpact = impact.openYesShares || impact.openNoShares || impact.openYesStake || impact.openNoStake;
-    if (!hasImpact) return null;
-    bucket.records[key] = {
-      key: key,
-      direction: isClosing ? -1 : 1,
-      impact: impact,
-      ts: Date.now(),
-      recordTs: nativePressureRecordTime(record)
-    };
-    return { marketId: marketId, key: key, changed: true };
-  }
-
-  function baseNativeStateForQuote(marketId, state, baseYes) {
-    var source = state && state.localPressureApplied ? {
-      marketId: state.marketId || marketId,
-      openYesShares: state.serverOpenYesShares,
-      openNoShares: state.serverOpenNoShares,
-      openYesStake: state.serverOpenYesStake,
-      openNoStake: state.serverOpenNoStake,
-      liquidityShares: state.liquidityShares,
-      liquidityOst: state.liquidityOst,
-      orderCount: state.serverOrderCount != null ? state.serverOrderCount : state.orderCount,
-      updatedAt: state.serverUpdatedAt || state.updatedAt,
-      baseYesPrice: state.serverBaseYesPrice != null ? state.serverBaseYesPrice : state.baseYesPrice
-    } : (state || {});
-    var base = clampNativeQuoteProbability(baseYes != null ? baseYes : source.baseYesPrice);
-    if (base == null) base = 0.5;
-    return {
-      marketId: source.marketId || marketId,
-      openYesShares: Math.max(0, cleanNativeNumber(source.openYesShares, 0)),
-      openNoShares: Math.max(0, cleanNativeNumber(source.openNoShares, 0)),
-      openYesStake: Math.max(0, cleanNativeNumber(source.openYesStake, 0)),
-      openNoStake: Math.max(0, cleanNativeNumber(source.openNoStake, 0)),
-      liquidityShares: Math.max(100, cleanNativeNumber(source.liquidityShares, NATIVE_MARKET_LIQUIDITY_SHARES)),
-      liquidityOst: Math.max(100, cleanNativeNumber(source.liquidityOst, NATIVE_MARKET_LIQUIDITY_OST)),
-      orderCount: Math.max(0, cleanNativeNumber(source.orderCount, 0)),
-      updatedAt: cleanNativeNumber(source.updatedAt, 0),
-      baseYesPrice: base
-    };
-  }
-
-  function quoteNativeMarketStateWithLocalPressure(marketId, state, baseYes) {
-    return state || null;
-  }
-
-  window.OST_NATIVE_MARKET_PRESSURE = Object.assign(window.OST_NATIVE_MARKET_PRESSURE || {}, {
-    remember: rememberNativeLocalPressureRecord,
-    confirm: confirmNativeLocalPressure,
-    quote: quoteNativeMarketStateWithLocalPressure
-  });
-  window.__ostRememberNativeMarketPressure = rememberNativeLocalPressureRecord;
-  window.__ostConfirmNativeMarketPressure = confirmNativeLocalPressure;
-  window.__ostQuoteNativeMarketWithLocalPressure = quoteNativeMarketStateWithLocalPressure;
-
   function canonicalRoundHasHotLivePrice(round) {
     var live = Number(round && round.livePrice);
     if (!Number.isFinite(live) || live <= 1000) return false;
@@ -366,7 +178,6 @@
 
   function rememberNativeMarketState(marketId, state) {
     if (!marketId || !state) return null;
-    confirmNativeLocalPressure(marketId, state);
     nativeMarketStateById[marketId] = Object.assign({}, state, { cachedAt: Date.now() });
     try {
       window.__ostNativeMarketState = window.__ostNativeMarketState || {};
@@ -379,22 +190,18 @@
   function cachedNativeMarketState(marketId) {
     var state = nativeMarketStateById[marketId];
     try {
-      var shared = window.__ostNativeMarketState && window.__ostNativeMarketState[marketId];
-      var stateUpdatedAt = Number(state && (state.updatedAt || state.cachedAt)) || 0;
-      var sharedUpdatedAt = Number(shared && (shared.updatedAt || shared.cachedAt)) || 0;
-      if (!state || (shared && sharedUpdatedAt >= stateUpdatedAt)) state = shared;
+      if (!state && window.__ostNativeMarketState) state = window.__ostNativeMarketState[marketId];
     } catch (_) {}
     return state || null;
   }
 
   function applyNativeMarketStateToBtcMarket(market, fairYes) {
+    var state = cachedNativeMarketState(market && market.id);
+    var yes = Number(state && state.yesPriceNumber);
+    var no = Number(state && state.noPriceNumber);
     var baseYes = Number(fairYes);
     if (!Number.isFinite(baseYes)) baseYes = Number(market && market.yesPriceNumber);
     if (!Number.isFinite(baseYes)) baseYes = 0.5;
-    var rawState = cachedNativeMarketState(market && market.id);
-    var state = quoteNativeMarketStateWithLocalPressure(market && market.id, rawState, baseYes);
-    var yes = Number(state && state.yesPriceNumber);
-    var no = Number(state && state.noPriceNumber);
     market.baseYesPriceNumber = baseYes;
     market.baseNoPriceNumber = 1 - baseYes;
     market.fairYesPriceNumber = baseYes;
@@ -413,12 +220,6 @@
     market.meta.baseYesPrice = Number(state.baseYesPrice);
     market.meta.yesPriceNumber = market.yesPriceNumber;
     market.meta.noPriceNumber = market.noPriceNumber;
-    market.meta.yesAskPriceNumber = Number(state.yesAskPriceNumber != null ? state.yesAskPriceNumber : market.yesPriceNumber);
-    market.meta.noAskPriceNumber = Number(state.noAskPriceNumber != null ? state.noAskPriceNumber : market.noPriceNumber);
-    market.meta.yesBidPriceNumber = Number(state.yesBidPriceNumber != null ? state.yesBidPriceNumber : market.yesPriceNumber);
-    market.meta.noBidPriceNumber = Number(state.noBidPriceNumber != null ? state.noBidPriceNumber : market.noPriceNumber);
-    market.meta.vaultSpread = Number(state.vaultSpread || state.vaultEdge || 0) || 0;
-    market.meta.sellHaircut = Number(state.sellHaircut || 0) || 0;
     market.meta.shareImpact = Number(state.shareImpact) || 0;
     market.meta.stakeImpact = Number(state.stakeImpact) || 0;
     market.meta.totalImpact = Number(state.totalImpact) || (market.yesPriceNumber - baseYes);
@@ -426,7 +227,6 @@
     market.meta.openNoStake = Number(state.openNoStake) || 0;
     market.meta.openYesShares = Number(state.openYesShares) || 0;
     market.meta.openNoShares = Number(state.openNoShares) || 0;
-    market.meta.localPendingCount = Number(state.localPendingCount) || 0;
     if (market && market.meta && /btc\s*-?\s*5m|btc5m/i.test(String(market.meta.kind || ''))) {
       market.meta.tradableYesPriceNumber = market.yesPriceNumber;
       market.meta.tradableNoPriceNumber = market.noPriceNumber;
@@ -465,7 +265,7 @@
       .then(function (j) {
         var state = j && (j.state || j.marketState);
         if (!state) return null;
-        state = rememberNativeMarketState(market.id, state) || state;
+        rememberNativeMarketState(market.id, state);
         try {
           window.dispatchEvent(new CustomEvent('ost:btc-market-updated', {
             detail: { reason: 'native-market-state', tick: Object.assign({}, btcLastTick), market: buildFiveMinBtcMarket() }
@@ -483,44 +283,6 @@
       });
     return nativeMarketStateInFlight[market.id];
   }
-
-  function publishNativeLocalPressureUpdate(marketId, reason) {
-    if (!marketId) return;
-    nativeMarketStateLastFetch[marketId] = 0;
-    var market = null;
-    try { market = buildFiveMinBtcMarket(); } catch (_) { market = null; }
-    if (market && market.id === marketId) {
-      try {
-        if (market.marketState) {
-          window.dispatchEvent(new CustomEvent('ost:native-market-state', { detail: { marketId: marketId, state: market.marketState, reason: reason || 'local-pressure' } }));
-        }
-      } catch (_) {}
-      try {
-        window.dispatchEvent(new CustomEvent('ost:btc-market-updated', {
-          detail: { reason: reason || 'local-pressure', tick: Object.assign({}, btcLastTick), market: market }
-        }));
-      } catch (_) {}
-      try { withSoftTimeout(refreshNativeBtcMarketState(market), 1800, null); } catch (_) {}
-    }
-  }
-
-  function latestNativeOrderForPressure() {
-    try {
-      return readOrders().filter(function (order) {
-        return order && isOstNativeMarketIdentifier(order.marketId, order.source) && Date.now() - nativePressureRecordTime(order) < 15000;
-      })[0] || null;
-    } catch (_) { return null; }
-  }
-
-  function onNativePressureOrderEvent(event) {
-    var detail = event && event.detail;
-    var record = detail && (detail.record || detail.order || detail.position) || detail || latestNativeOrderForPressure();
-    var result = rememberNativeLocalPressureRecord(record);
-    if (result && result.changed) publishNativeLocalPressureUpdate(result.marketId, event && event.type || 'prediction-order');
-  }
-
-  try { window.addEventListener('ost:prediction-order-recorded', onNativePressureOrderEvent); } catch (_) {}
-  try { window.addEventListener('ost:prediction:order-changed', onNativePressureOrderEvent); } catch (_) {}
 
   function clampNumber(value, min, max) {
     return Math.min(max, Math.max(min, value));
@@ -706,7 +468,7 @@
     var force = options && options.force;
     var directOnly = options && options.directOnly;
     var wsTick = freshBinanceWsTick(2500);
-    if (directOnly && wsTick) return Promise.resolve(wsTick);
+    if (wsTick) return Promise.resolve(wsTick);
     if (!force && btcLastTick.price && Date.now() - btcLastTick.ts < BTC_LOCAL_TICK_FRESH_MS) {
       return Promise.resolve(Object.assign({}, btcLastTick));
     }
@@ -720,7 +482,6 @@
           if (Number.isFinite(p) && p > 1000 && canonicalRoundHasHotLivePrice(round)) {
             return Object.assign({}, rememberBtcTick(p, round.livePriceSource || 'ost-canonical'));
           }
-          if (wsTick) return wsTick;
           return fetchDirectBtcSpot();
         })
         .catch(fetchDirectBtcSpot);
@@ -972,21 +733,14 @@
     var canonLivePrice = canonLiveTrusted ? Number(canon.livePrice) : NaN;
     var canonLiveTs = Number(canon && (canon.livePriceTs || canon.updatedAt)) || 0;
     var localLiveFresh = Number.isFinite(Number(btcLastTick.price)) && Number(btcLastTick.price) > 1000
-      && !canonLiveTrusted
       && (!canonLiveTs || btcLastTick.ts >= canonLiveTs - 50 || Date.now() - btcLastTick.ts < 1200);
-    var livePrice = canonLiveTrusted
-      ? canonLivePrice
-      : localLiveFresh
+    var livePrice = localLiveFresh
       ? Number(btcLastTick.price)
       : ((Number.isFinite(canonLivePrice) && canonLivePrice > 0 ? canonLivePrice : 0) || btcLastTick.price || refPrice || roundRecord.openPrice || 0);
-    var liveSource = canonLiveTrusted
-      ? (canon && (canon.livePriceSource || canon.source) || 'ost-canonical')
-      : localLiveFresh
+    var liveSource = localLiveFresh
       ? (btcLastTick.source || 'binance-ws')
       : ((canonLiveTrusted && canon && (canon.livePriceSource || canon.source)) || btcLastTick.source || (canon && (canon.livePriceSource || canon.source)) || 'BTC FEED');
-    var liveTs = canonLiveTrusted
-      ? (canon && Number(canon.livePriceTs || canon.updatedAt) || 0)
-      : localLiveFresh
+    var liveTs = localLiveFresh
       ? btcLastTick.ts
       : ((canonLiveTrusted && canon && Number(canon.livePriceTs)) || btcLastTick.ts || (canon && Number(canon.livePriceTs)) || 0);
     var localOpenFallback = Number.isFinite(livePrice) && livePrice > 1000 ? livePrice : 0;
@@ -999,10 +753,6 @@
       || projectLocalPriceToBeat(openPrice)
       || openPrice;
     var odds = computeBtcOdds(openPrice, livePrice, b, priceToBeat);
-    if (canonLiveTrusted && canon && Number.isFinite(Number(canon.yesPriceNumber))) {
-      odds.yes = Math.max(0.02, Math.min(0.98, Number(canon.yesPriceNumber)));
-      odds.no = Number.isFinite(Number(canon.noPriceNumber)) ? Math.max(0.02, Math.min(0.98, Number(canon.noPriceNumber))) : 1 - odds.yes;
-    }
     odds.canonical = !!canon;
     var roundId = 'ost-btc5m-' + b.openAt;
     var yesPct = (odds.yes * 100).toFixed(1) + '%';
@@ -1236,8 +986,6 @@
       if (r.settled) return;
       if (now < r.closeAt + 1000) return;
       var openPrice = Number(r.openPrice);
-      var priceToBeat = Number(r.priceToBeat);
-      if (!Number.isFinite(priceToBeat) || priceToBeat <= 0) priceToBeat = openPrice;
       var closePrice = Number(btcLastTick.price);
       if (!Number.isFinite(openPrice) || openPrice <= 0) {
         r.settlementStatus = 'waiting-open-price';
@@ -1262,8 +1010,8 @@
       r.settled = true;
       r.settledAt = now;
       r.settlementStatus = 'settled';
-      r.yesWon  = r.closePrice > priceToBeat;
-      r.tied = r.closePrice === priceToBeat;
+      r.yesWon  = r.closePrice > openPrice;
+      r.tied = r.closePrice === openPrice;
       changed = true;
     });
     if (changed) writeRounds(rounds);
@@ -1704,24 +1452,12 @@
     var fairYes = Number(market.fairYesPriceNumber || market.baseYesPriceNumber || market.meta && market.meta.fairYesPriceNumber || market.yesPriceNumber);
     if (!Number.isFinite(fairYes)) fairYes = Number(market.yesPriceNumber);
     market = applyNativeMarketStateToBtcMarket(market, fairYes);
-    // Decouple buy from the centralized arbitrage / pressure pricing.
-    // Use the centralized ask when available; otherwise fall back to the
-    // local snapshot so a missing worker quote never blocks the order.
-    var marketState = market.marketState || (market.meta && market.meta.marketState) || null;
     var yesPrice = Number(market.yesPriceNumber);
     var noPrice = Number(market.noPriceNumber);
-    if (marketState) {
-      var stateYes = Number(marketState.yesAskPriceNumber != null ? marketState.yesAskPriceNumber : marketState.yesPriceNumber);
-      var stateNo = Number(marketState.noAskPriceNumber != null ? marketState.noAskPriceNumber : marketState.noPriceNumber);
-      if (Number.isFinite(stateYes) && stateYes > 0) yesPrice = stateYes;
-      if (Number.isFinite(stateNo) && stateNo > 0) noPrice = stateNo;
-    }
     if (!Number.isFinite(yesPrice) && Number.isFinite(fairYes)) yesPrice = fairYes;
     if (!Number.isFinite(noPrice) && Number.isFinite(yesPrice)) noPrice = 1 - yesPrice;
-    if (!Number.isFinite(yesPrice)) yesPrice = 0.5;
-    if (!Number.isFinite(noPrice)) noPrice = 0.5;
     var price = side === 'no' ? noPrice : yesPrice;
-    if (!Number.isFinite(price) || price <= 0) price = 0.5;
+    if (!Number.isFinite(price) || price <= 0) throw new Error('Live BTC share price is still loading. Try again in a moment.');
     var label = side === 'no' ? (market.noLabel || 'NO (DOWN/SAME)') : (market.yesLabel || 'YES (UP)');
     return {
       source: 'ost',
@@ -1775,10 +1511,7 @@
     return refreshFiveMinBtcQuote().then(function () {
       var payload = buildFiveMinBtcOrderPayload(req);
       return window.OST_PREDICTION_API.placeOrder(payload).then(function (result) {
-        var record = result && result.record ? result.record : result;
-        var pressure = rememberNativeLocalPressureRecord(record);
-        if (pressure && pressure.changed) publishNativeLocalPressureUpdate(pressure.marketId, 'place-bet-direct');
-        return record;
+        return result && result.record ? result.record : result;
       });
     });
   }
@@ -1804,26 +1537,12 @@
   //   OST_PREDICTION_API.ledger()                         → user's open orders
   // ---------------------------------------------------------------------------
   var subscribers = [];
-  var broadcastInFlight = false;
-  var broadcastTimer = 0;
   function broadcast() {
-    if (!subscribers.length) return;
-    if (broadcastInFlight) return;
-    broadcastInFlight = true;
     OST_PREDICTION_API.markets().then(function (m) {
       subscribers.forEach(function (cb) { try { cb(m); } catch (e) {} });
-    }).catch(function () {}).then(function () { broadcastInFlight = false; });
+    });
   }
-  function scheduleBroadcast(delay) {
-    if (broadcastTimer) return;
-    broadcastTimer = setTimeout(function () {
-      broadcastTimer = 0;
-      broadcast();
-    }, delay || 120);
-  }
-  setInterval(broadcast, 1200);
-  try { window.addEventListener('ost:btc-market-updated', function () { scheduleBroadcast(80); }); } catch (_) {}
-  try { window.addEventListener('ost:native-market-state', function () { scheduleBroadcast(80); }); } catch (_) {}
+  setInterval(broadcast, 30000);
 
   var OST_PREDICTION_API = {
     version: '1.1',
@@ -1893,7 +1612,6 @@
     subscribe: function (cb) {
       if (typeof cb !== 'function') return function () {};
       subscribers.push(cb);
-      scheduleBroadcast(0);
       return function () { subscribers = subscribers.filter(function (x) { return x !== cb; }); };
     },
     ledger: function () {

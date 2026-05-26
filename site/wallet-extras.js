@@ -15,31 +15,6 @@
   function $(id) { return document.getElementById(id); }
   function on(el, ev, fn) { if (el) el.addEventListener(ev, fn); }
   function toast(icon, msg) { if (typeof window.toast === 'function') window.toast(icon, msg); }
-  function fastLane() { try { return window.OST_SOLANA_FAST || null; } catch (e) { return null; } }
-  function fastSendOptions(extra) {
-    var fast = fastLane();
-    if (fast && typeof fast.sendOptions === 'function') return fast.sendOptions(extra || {});
-    return Object.assign({ skipPreflight: false, preflightCommitment: 'confirmed', maxRetries: 3 }, extra || {});
-  }
-  function applyFastLane(tx) {
-    var fast = fastLane();
-    if (fast && typeof fast.applyPriorityFees === 'function') fast.applyPriorityFees(tx);
-    return tx;
-  }
-  async function fastBlockhash(conn) {
-    var fast = fastLane();
-    if (fast && typeof fast.getLatestBlockhash === 'function') return fast.getLatestBlockhash(conn);
-    return conn.getLatestBlockhash('processed');
-  }
-  async function fastConfirm(conn, signature, latest) {
-    var fast = fastLane();
-    if (fast && typeof fast.confirm === 'function') return fast.confirm(conn, signature, latest);
-    return conn.confirmTransaction(latest && latest.blockhash ? {
-      signature: signature,
-      blockhash: latest.blockhash,
-      lastValidBlockHeight: latest.lastValidBlockHeight
-    } : signature, 'processed');
-  }
 
   function loadSnapshots() {
     try {
@@ -316,8 +291,7 @@
 
     // Pool is the feePayer — users do not need extra devnet SOL for gas.
     tx.feePayer = poolPub;
-    applyFastLane(tx);
-    var bh = await fastBlockhash(conn);
+    var bh = await conn.getLatestBlockhash('confirmed');
     tx.recentBlockhash = bh.blockhash;
     // Pool partial-signs as feePayer + OST-source authority.
     tx.partialSign(pool);
@@ -589,7 +563,7 @@
     if (typeof solanaWeb3 === 'undefined') return null;
     var rpcUrl = resolveTopupRpc(config);
     if (!topupConnections[rpcUrl]) {
-      topupConnections[rpcUrl] = new solanaWeb3.Connection(rpcUrl, 'processed');
+      topupConnections[rpcUrl] = new solanaWeb3.Connection(rpcUrl, 'confirmed');
     }
     return topupConnections[rpcUrl];
   }
@@ -876,11 +850,14 @@
 
   async function sendRawWithRetry(conn, serialized) {
     try {
-      return await conn.sendRawTransaction(serialized, fastSendOptions());
+      return await conn.sendRawTransaction(serialized, {
+        skipPreflight: false,
+        preflightCommitment: 'confirmed'
+      });
     } catch (error) {
       var message = String(error && error.message || error || '');
       if (message.indexOf('simulation failed') !== -1 || message.indexOf('Simulation failed') !== -1) {
-        return conn.sendRawTransaction(serialized, fastSendOptions({ skipPreflight: true }));
+        return conn.sendRawTransaction(serialized, { skipPreflight: true });
       }
       throw error;
     }
@@ -891,8 +868,7 @@
     if (!conn) throw new Error('Solana RPC unavailable');
     if (!session || !session.publicKey) throw new Error('Connect a wallet first');
 
-    applyFastLane(transaction);
-    var latest = await fastBlockhash(conn);
+    var latest = await conn.getLatestBlockhash('confirmed');
     transaction.recentBlockhash = latest.blockhash;
     if (!transaction.feePayer) transaction.feePayer = session.publicKey;
 
@@ -913,7 +889,11 @@
     }
 
     if (!signature) throw new Error('Active wallet cannot sign transactions');
-    var confirmation = await fastConfirm(conn, signature, latest);
+    var confirmation = await conn.confirmTransaction({
+      signature: signature,
+      blockhash: latest.blockhash,
+      lastValidBlockHeight: latest.lastValidBlockHeight
+    }, 'confirmed');
     if (confirmation && confirmation.value && confirmation.value.err) {
       var errText;
       try { errText = JSON.stringify(confirmation.value.err); }

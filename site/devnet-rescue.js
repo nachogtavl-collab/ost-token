@@ -17,19 +17,11 @@
   // -----------------------------------------------------------------------
   // 1) MULTI-RPC CONNECTION
   // -----------------------------------------------------------------------
-  var DEFAULT_RPC_ENDPOINTS = [
-    'https://api.devnet.solana.com'
+  var RPC_ENDPOINTS = [
+    'https://api.devnet.solana.com',
+    'https://devnet.helius-rpc.com/?api-key=public',
+    'https://rpc.ankr.com/solana_devnet'
   ];
-  var RPC_ENDPOINTS = (Array.isArray(window.OST_RPC_ENDPOINTS) && window.OST_RPC_ENDPOINTS.length)
-    ? window.OST_RPC_ENDPOINTS.slice()
-    : DEFAULT_RPC_ENDPOINTS.slice();
-  RPC_ENDPOINTS = RPC_ENDPOINTS.filter(function (endpoint) {
-    return typeof endpoint === 'string' && endpoint &&
-      endpoint.indexOf('api-key=public') === -1 &&
-      endpoint.indexOf('rpc.ankr.com/solana_devnet') === -1 &&
-      endpoint.indexOf('devnet.genesysgo.net') === -1;
-  });
-  if (!RPC_ENDPOINTS.length) RPC_ENDPOINTS = DEFAULT_RPC_ENDPOINTS.slice();
   var rpcIndex = 0;
   var rpcConnections = {};
   var PAYOUT_RECEIPTS_KEY = 'ost.payout.receipts.v1';
@@ -39,109 +31,6 @@
   function numberSetting(name, fallback) {
     var value = Number(window[name]);
     return Number.isFinite(value) && value >= 0 ? value : fallback;
-  }
-
-  function fastLane() { try { return window.OST_SOLANA_FAST || null; } catch (_) { return null; } }
-  function fastSendOptions(extra) {
-    var fast = fastLane();
-    if (fast && typeof fast.sendOptions === 'function') return fast.sendOptions(extra || {});
-    return Object.assign({ skipPreflight: false, preflightCommitment: 'confirmed', maxRetries: 3 }, extra || {});
-  }
-  function applyFastLane(tx) {
-    var fast = fastLane();
-    if (fast && typeof fast.applyPriorityFees === 'function') fast.applyPriorityFees(tx);
-    return tx;
-  }
-  async function fastBlockhash(conn) {
-    var fast = fastLane();
-    if (fast && typeof fast.getLatestBlockhash === 'function') return fast.getLatestBlockhash(conn);
-    return conn.getLatestBlockhash('processed');
-  }
-  async function fastConfirm(conn, signature, latest) {
-    var fast = fastLane();
-    if (fast && typeof fast.confirm === 'function') return fast.confirm(conn, signature, latest);
-    return conn.confirmTransaction(latest && latest.blockhash ? {
-      signature: signature,
-      blockhash: latest.blockhash,
-      lastValidBlockHeight: latest.lastValidBlockHeight
-    } : signature, 'processed');
-  }
-
-  function waitForWalletApproval(promise, label) {
-    var timeoutMs = Math.max(15000, numberSetting('OST_WALLET_PROMPT_TIMEOUT_MS', 90000));
-    var timeoutId = null;
-    var timedOut = false;
-    var timer = new Promise(function (_, reject) {
-      timeoutId = setTimeout(function () {
-        timedOut = true;
-        reject(new Error((label || 'Wallet approval') + ' timed out. Reopen the wallet prompt and try again; no OST was recorded locally.'));
-      }, timeoutMs);
-    });
-    return Promise.race([Promise.resolve(promise), timer]).then(function (value) {
-      if (timeoutId && !timedOut) clearTimeout(timeoutId);
-      return value;
-    }, function (error) {
-      if (timeoutId && !timedOut) clearTimeout(timeoutId);
-      throw error;
-    });
-  }
-
-  function withRescueTimeout(promise, timeoutMs, message) {
-    var timeoutId = null;
-    var timedOut = false;
-    var timer = new Promise(function (_, reject) {
-      timeoutId = setTimeout(function () {
-        timedOut = true;
-        reject(new Error(message || 'OST request timed out'));
-      }, timeoutMs || 10000);
-    });
-    return Promise.race([Promise.resolve(promise), timer]).then(function (value) {
-      if (timeoutId && !timedOut) clearTimeout(timeoutId);
-      return value;
-    }, function (error) {
-      if (timeoutId && !timedOut) clearTimeout(timeoutId);
-      throw error;
-    });
-  }
-
-  function walletAddressString(pubkeyInput) {
-    try {
-      if (pubkeyInput && typeof pubkeyInput.toBase58 === 'function') return pubkeyInput.toBase58();
-      return String(pubkeyInput || '');
-    } catch (_) {
-      return '';
-    }
-  }
-
-  function cachedSpendBalance(pubkeyInput) {
-    var wallet = walletAddressString(pubkeyInput);
-    if (!wallet) return null;
-    try {
-      var cache = window.__ostPredictionBalanceCache && window.__ostPredictionBalanceCache[wallet];
-      var balance = Number(cache && cache.balance);
-      if (cache && Number.isFinite(balance) && balance >= 0 && (!cache.ts || Date.now() - Number(cache.ts) < 10 * 60 * 1000)) {
-        return balance;
-      }
-    } catch (_) {}
-    return null;
-  }
-
-  async function resolveSpendBalance(w, pubkeyInput) {
-    var cached = cachedSpendBalance(pubkeyInput);
-    try {
-      var fetched = await withRescueTimeout(
-        w.getOstBalance(pubkeyInput),
-        numberSetting('OST_SPEND_BALANCE_TIMEOUT_MS', 7000),
-        'OST balance refresh timed out'
-      );
-      var balance = Number(fetched);
-      if (Number.isFinite(balance) && balance > 0) return { balance: balance, source: 'rpc' };
-      if (Number.isFinite(balance) && balance === 0 && cached !== null && cached > 0) return { balance: cached, source: 'cache' };
-      if (Number.isFinite(balance) && balance === 0) return { balance: 0, source: 'untrusted-zero' };
-    } catch (_) {
-      if (cached !== null) return { balance: cached, source: 'cache' };
-    }
-    return { balance: null, source: 'unknown' };
   }
 
   function vaultConfig() {
@@ -249,7 +138,7 @@
 
   function makeConn(url) {
     if (!rpcConnections[url]) {
-      try { rpcConnections[url] = new solanaWeb3.Connection(url, 'processed'); }
+      try { rpcConnections[url] = new solanaWeb3.Connection(url, 'confirmed'); }
       catch (e) { return null; }
     }
     return rpcConnections[url];
@@ -332,10 +221,9 @@
     }).catch(function () { return BigInt(0); });
   }
 
-  async function verifyTokenBalanceDelta(ata, beforeRaw, expectedRaw, decimals, label, attempts) {
+  async function verifyTokenBalanceDelta(ata, beforeRaw, expectedRaw, decimals, label) {
     var lastRaw = beforeRaw;
-    var maxAttempts = Math.max(1, Number(attempts) || 10);
-    for (var attempt = 0; attempt < maxAttempts; attempt += 1) {
+    for (var attempt = 0; attempt < 10; attempt += 1) {
       lastRaw = await getTokenRawBalance(ata);
       if (lastRaw - beforeRaw >= expectedRaw) {
         return { beforeRaw: beforeRaw, afterRaw: lastRaw, deltaRaw: lastRaw - beforeRaw };
@@ -357,8 +245,7 @@
     var tx = new solanaWeb3.Transaction();
     instructions.forEach(function (ix) { if (ix) tx.add(ix); });
     tx.feePayer = pool.publicKey;
-    applyFastLane(tx);
-    var bh = await fastBlockhash(conn);
+    var bh = await conn.getLatestBlockhash('confirmed');
     tx.recentBlockhash = bh.blockhash;
     tx.lastValidBlockHeight = bh.lastValidBlockHeight;
     return { tx: tx, pool: pool, conn: conn, blockhash: bh };
@@ -385,14 +272,17 @@
   // simulation false-positives ("no record of a prior credit").
   async function sendRawSafe(conn, serialized) {
     try {
-      return await conn.sendRawTransaction(serialized, fastSendOptions());
+      return await conn.sendRawTransaction(serialized, {
+        skipPreflight: false,
+        preflightCommitment: 'confirmed'
+      });
     } catch (e) {
       var msg = (e && e.message) || '';
       if (msg.includes('no record of a prior credit') ||
           msg.includes('simulation failed') ||
           msg.includes('Simulation failed')) {
         // Balance was verified before this call — safe to skip stale simulation.
-        return conn.sendRawTransaction(serialized, fastSendOptions({ skipPreflight: true }));
+        return conn.sendRawTransaction(serialized, { skipPreflight: true });
       }
       throw await unpackSendError(e);
     }
@@ -401,7 +291,11 @@
   async function confirmSentTransaction(sig, built, label) {
     var primaryErr = null;
     try {
-      var res = await fastConfirm(built.conn, sig, built.blockhash);
+      var res = await built.conn.confirmTransaction({
+        signature: sig,
+        blockhash: built.blockhash.blockhash,
+        lastValidBlockHeight: built.blockhash.lastValidBlockHeight
+      }, 'confirmed');
       if (res && res.value && res.value.err) {
         throw new Error('On-chain failure: ' + JSON.stringify(res.value.err));
       }
@@ -420,7 +314,7 @@
           if (entry) {
             lastStatus = entry;
             if (entry.err) throw new Error('On-chain failure: ' + JSON.stringify(entry.err));
-            if (entry.confirmationStatus === 'processed' || entry.confirmationStatus === 'confirmed' || entry.confirmationStatus === 'finalized') return sig;
+            if (entry.confirmationStatus === 'confirmed' || entry.confirmationStatus === 'finalized') return sig;
           }
         } catch (statusErr) {
           if (statusErr && /On-chain failure/i.test(statusErr.message || '')) throw statusErr;
@@ -432,59 +326,8 @@
     throw new Error((label || 'Transaction') + ' could not be confirmed on-chain (' + summary + '): ' + (primaryErr && primaryErr.message ? primaryErr.message : primaryErr));
   }
 
-  function emitRescueTxEvent(name, detail) {
-    try { window.dispatchEvent(new CustomEvent('ost:rescue-tx-' + name, { detail: detail || {} })); } catch (_) {}
-  }
-
-  function watchTxConfirmation(sig, built, label) {
-    var confirmation = confirmSentTransaction(sig, built, label);
-    confirmation.then(function () {
-      emitRescueTxEvent('confirmed', { sig: sig, label: label || 'Transaction' });
-    }).catch(function (error) {
-      var message = error && error.message ? error.message : String(error || 'confirmation failed');
-      console.warn('[rescue v2] background confirmation failed', sig, message);
-      emitRescueTxEvent('failed', { sig: sig, label: label || 'Transaction', error: message });
-    });
-    return confirmation;
-  }
-
-  async function returnAfterFastConfirmation(sig, built, label, options) {
-    if (options && options.waitForConfirmation === true) {
-      await confirmSentTransaction(sig, built, label);
-      return sig;
-    }
-    var confirmation = watchTxConfirmation(sig, built, label);
-    try {
-      await withRescueTimeout(
-        confirmation,
-        Math.max(750, numberSetting('OST_FAST_CONFIRM_MS', 2400)),
-        'OST transaction submitted; confirmation is still syncing in the background.'
-      );
-    } catch (error) {
-      var message = error && error.message ? String(error.message) : String(error || '');
-      if (!/confirmation is still syncing/i.test(message)) throw error;
-      emitRescueTxEvent('submitted', { sig: sig, label: label || 'Transaction' });
-    }
-    return sig;
-  }
-
-  async function sendPoolOnlyTxSubmitted(instructions, label) {
-    var built = await buildPoolPaidTx(instructions);
-    built.tx.sign(built.pool);
-    var sig;
-    try {
-      sig = await sendRawSafe(built.conn, built.tx.serialize());
-    } catch (e) {
-      throw await unpackSendError(e);
-    }
-    watchTxConfirmation(sig, built, label || 'Pool-paid transaction');
-    emitRescueTxEvent('submitted', { sig: sig, label: label || 'Pool-paid transaction' });
-    return { sig: sig, built: built };
-  }
-
   // Pool-only tx: pool is the only signer.
-  async function sendPoolOnlyTx(instructions, label) {
-    var txLabel = label || 'Pool-paid transaction';
+  async function sendPoolOnlyTx(instructions) {
     var built = await buildPoolPaidTx(instructions);
     built.tx.sign(built.pool);
     var sig;
@@ -501,7 +344,11 @@
     // and the OST never arrived in their wallet ("lost to unknown").
     var primaryErr = null;
     try {
-      var res = await fastConfirm(built.conn, sig, built.blockhash);
+      var res = await built.conn.confirmTransaction({
+        signature: sig,
+        blockhash: built.blockhash.blockhash,
+        lastValidBlockHeight: built.blockhash.lastValidBlockHeight
+      }, 'confirmed');
       if (res && res.value && res.value.err) {
         throw new Error('On-chain failure: ' + JSON.stringify(res.value.err));
       }
@@ -523,7 +370,7 @@
           if (entry) {
             lastStatus = entry;
             if (entry.err) throw new Error('On-chain failure: ' + JSON.stringify(entry.err));
-            if (entry.confirmationStatus === 'processed' || entry.confirmationStatus === 'confirmed' || entry.confirmationStatus === 'finalized') {
+            if (entry.confirmationStatus === 'confirmed' || entry.confirmationStatus === 'finalized') {
               return sig;
             }
           }
@@ -537,12 +384,12 @@
     var summary = lastStatus
       ? 'last status=' + (lastStatus.confirmationStatus || 'unknown')
       : 'no status from any RPC';
-    throw new Error(txLabel + ' could not be confirmed on-chain (' + summary + '): ' + (primaryErr && primaryErr.message ? primaryErr.message : primaryErr));
+    throw new Error('Payout could not be confirmed on-chain (' + summary + '): ' + (primaryErr && primaryErr.message ? primaryErr.message : primaryErr));
   }
 
   // Pool pays SOL fee + partial-signs first; user wallet signs to authorise
   // their OST transfer. Used when user is spending their own OST.
-  async function sendUserSignedPoolPaidTx(instructions, options) {
+  async function sendUserSignedPoolPaidTx(instructions) {
     var w = window.OST_WALLET;
     if (!w || !w.sign) throw new Error('Wallet helpers not loaded');
     var built = await buildPoolPaidTx(instructions);
@@ -557,20 +404,20 @@
       built.tx.partialSign(session.keypair);
       serialized = built.tx.serialize();
     } else if (session.provider && typeof session.provider.signTransaction === 'function') {
-      var signed = await waitForWalletApproval(session.provider.signTransaction(built.tx), 'Wallet signature');
+      var signed = await session.provider.signTransaction(built.tx);
       serialized = signed.serialize();
     } else if (session.provider && typeof session.provider.signAndSendTransaction === 'function') {
       // Provider handles send; just return the signature.
-      var res = await waitForWalletApproval(session.provider.signAndSendTransaction(built.tx), 'Wallet signature');
+      var res = await session.provider.signAndSendTransaction(built.tx);
       var providerSig = typeof res === 'string' ? res : (res && res.signature);
-      if (providerSig) await returnAfterFastConfirmation(providerSig, built, 'Wallet-signed transaction', options || {});
+      if (providerSig) await confirmSentTransaction(providerSig, built, 'Wallet-signed transaction');
       return providerSig;
     } else {
       throw new Error('Wallet cannot sign transactions');
     }
     try {
       var sig = await sendRawSafe(built.conn, serialized);
-      await returnAfterFastConfirmation(sig, built, 'Wallet-signed transaction', options || {});
+      await confirmSentTransaction(sig, built, 'Wallet-signed transaction');
       return sig;
     } catch (e) {
       throw await unpackSendError(e);
@@ -591,17 +438,7 @@
     if (info) return ata;
     var pool = loadPoolKeypair();
     var ix = w.associatedAccountIx(pool.publicKey, ata, owner, mintPk, c.TOKEN_2022_PROGRAM_ID);
-    try {
-      await withRescueTimeout(
-        sendPoolOnlyTx([ix], 'OST account preparation'),
-        Math.max(12000, numberSetting('OST_ATA_CONFIRM_TIMEOUT_MS', 18000)),
-        'OST account preparation is still syncing on devnet. Wait a few seconds and try again.'
-      );
-    } catch (error) {
-      var latestInfo = await conn.getAccountInfo(ata).catch(function () { return null; });
-      if (latestInfo) return ata;
-      throw error;
-    }
+    await sendPoolOnlyTx([ix]);
     return ata;
   }
 
@@ -626,24 +463,6 @@
       }
       fetch(base + '/wallet/payouts', { method: 'POST', headers: { 'content-type': 'application/json' }, body: body, keepalive: true }).catch(function () {});
     } catch (_) {}
-  }
-
-  function verifyPayoutInBackground(payoutId, walletStr, amt, memoSummary, memoText, sig, userAta, beforeUserRaw, expectedRaw, decimals) {
-    setTimeout(function () {
-      verifyTokenBalanceDelta(userAta, beforeUserRaw, expectedRaw, decimals, 'OST payout', 24).then(function () {
-        clearPendingPayout(payoutId);
-        rememberPayoutReceipt(payoutId, { wallet: walletStr, ost: amt, sig: sig, memo: memoSummary, ref: payoutRefFromMemo(memoText), verified: true });
-        logPayoutAudit({ id: payoutId, stage: 'result', wallet: walletStr, kind: 'payout', ostAmount: amt, memo: memoSummary, sig: sig, ref: payoutRefFromMemo(memoText) });
-        emitRescueTxEvent('payout-verified', { sig: sig, wallet: walletStr, ostAmount: amt, id: payoutId });
-      }).catch(function (err) {
-        var message = err && err.message ? String(err.message).slice(0, 240) : 'verification still pending';
-        rememberPendingPayout(payoutId, { wallet: walletStr, ostAmount: amt, memo: memoSummary, sig: sig, error: message, stage: /On-chain failure/i.test(message) ? 'send-failed' : 'verification-pending' });
-        if (/On-chain failure/i.test(message)) {
-          logPayoutAudit({ id: payoutId, stage: 'failure', wallet: walletStr, kind: 'payout', ostAmount: amt, memo: memoSummary, sig: sig, error: message, ref: payoutRefFromMemo(memoText) });
-        }
-        emitRescueTxEvent('payout-pending', { sig: sig, wallet: walletStr, ostAmount: amt, id: payoutId, error: message });
-      });
-    }, 0);
   }
 
   async function payoutOst(toPubkeyInput, amountOst, memoText, options) {
@@ -704,13 +523,6 @@
 
       var sig;
       try {
-        if (options && options.fastReturn) {
-          var submitted = await sendPoolOnlyTxSubmitted(ixs, 'OST payout');
-          sig = submitted.sig;
-          rememberPendingPayout(payoutId, { wallet: walletStr, ostAmount: amt, memo: memoSummary, sig: sig, stage: 'verifying' });
-          verifyPayoutInBackground(payoutId, walletStr, amt, memoSummary, memoText, sig, userAta, beforeUserRaw, expectedRaw, c.OST_TOKEN_DECIMALS);
-          return { sig: sig, ost: amt, auditId: payoutId, pending: true, verified: false };
-        }
         sig = await sendPoolOnlyTx(ixs);
         await verifyTokenBalanceDelta(userAta, beforeUserRaw, expectedRaw, c.OST_TOKEN_DECIMALS, 'OST payout');
       } catch (err) {
@@ -737,10 +549,8 @@
     var amt = Number(amountOst);
     if (!Number.isFinite(amt) || amt <= 0) throw new Error('Enter a valid OST amount');
 
-    var balanceCheck = await resolveSpendBalance(w, w.session.publicKey);
-    if (balanceCheck && balanceCheck.source === 'rpc' && balanceCheck.balance + 1e-9 < amt) {
-      throw new Error('Not enough OST in wallet');
-    }
+    var userBal = await w.getOstBalance(w.session.publicKey);
+    if (userBal + 1e-9 < amt) throw new Error('Not enough OST in wallet');
 
     var mintPk = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.mint);
     var poolAta = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.ata);
@@ -789,7 +599,7 @@
         payout: Number(payoutAmount),
         t: Date.now()
       }),
-      { idempotencyKey: 'prediction-cashout:' + (orderId || stableHash(JSON.stringify(orderRecord || {}))) + ':' + Number(payoutAmount || 0).toFixed(9), fastReturn: true }
+      { idempotencyKey: 'prediction-cashout:' + (orderId || stableHash(JSON.stringify(orderRecord || {}))) + ':' + Number(payoutAmount || 0).toFixed(9) }
     );
   }
 

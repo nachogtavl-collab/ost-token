@@ -39,7 +39,9 @@
   // Mainnet flip: set window.OST_NETWORK = 'mainnet-beta' BEFORE this
   // script loads (or supply window.OST_RPC_ENDPOINTS = [...] explicitly).
   var DEFAULT_DEVNET = [
-    'https://api.devnet.solana.com'
+    'https://api.devnet.solana.com',
+    'https://rpc.ankr.com/solana_devnet',
+    'https://devnet.genesysgo.net'
   ];
   var DEFAULT_MAINNET = [
     'https://api.mainnet-beta.solana.com',
@@ -54,109 +56,7 @@
   } else {
     ENDPOINTS = DEFAULT_DEVNET.slice();
   }
-  ENDPOINTS = ENDPOINTS.filter(function (endpoint) {
-    return typeof endpoint === 'string' && endpoint &&
-      endpoint.indexOf('api-key=public') === -1 &&
-      endpoint.indexOf('rpc.ankr.com/solana') === -1 &&
-      endpoint.indexOf('devnet.genesysgo.net') === -1;
-  });
-  if (!ENDPOINTS.length) ENDPOINTS = DEFAULT_DEVNET.slice();
   if (typeof window !== 'undefined') window.OST_RPC_ACTIVE_ENDPOINTS = ENDPOINTS.slice();
-
-  var FAST_COMMITMENT = (window.OST_SOLANA_FAST_COMMITMENT && String(window.OST_SOLANA_FAST_COMMITMENT)) || 'confirmed';
-  // Preflight MUST run against a meaningful state. 'processed' lets bad txs through silently.
-  var FAST_PREFLIGHT_COMMITMENT = (window.OST_SOLANA_FAST_PREFLIGHT && String(window.OST_SOLANA_FAST_PREFLIGHT)) || 'confirmed';
-  var FAST_BLOCKHASH_COMMITMENT = (window.OST_SOLANA_BLOCKHASH_COMMITMENT && String(window.OST_SOLANA_BLOCKHASH_COMMITMENT)) || FAST_COMMITMENT;
-  var FAST_MAX_RETRIES = Number.isFinite(Number(window.OST_SOLANA_MAX_RETRIES)) ? Number(window.OST_SOLANA_MAX_RETRIES) : 3;
-  var FAST_BLOCKHASH_TTL_MS = Number.isFinite(Number(window.OST_SOLANA_BLOCKHASH_TTL_MS)) ? Number(window.OST_SOLANA_BLOCKHASH_TTL_MS) : 18000;
-  var FAST_PRIORITY_MICRO_LAMPORTS = Number.isFinite(Number(window.OST_SOLANA_PRIORITY_MICRO_LAMPORTS)) ? Number(window.OST_SOLANA_PRIORITY_MICRO_LAMPORTS) : 25000;
-  var FAST_COMPUTE_UNIT_LIMIT = Number.isFinite(Number(window.OST_SOLANA_COMPUTE_UNIT_LIMIT)) ? Number(window.OST_SOLANA_COMPUTE_UNIT_LIMIT) : 240000;
-  var blockhashCache = {};
-
-  function fastSendOptions(extra) {
-    // skipPreflight defaults to false: surface bad txs loudly instead of silently submitting them.
-    var options = Object.assign({
-      skipPreflight: false,
-      preflightCommitment: FAST_PREFLIGHT_COMMITMENT,
-      maxRetries: FAST_MAX_RETRIES
-    }, extra || {});
-    if (!options.preflightCommitment) options.preflightCommitment = FAST_PREFLIGHT_COMMITMENT;
-    if (!Number.isFinite(Number(options.maxRetries))) options.maxRetries = FAST_MAX_RETRIES;
-    return options;
-  }
-
-  function txHasRealSignature(tx) {
-    return !!(tx && Array.isArray(tx.signatures) && tx.signatures.some(function (sigPair) { return sigPair && sigPair.signature; }));
-  }
-
-  function sameProgramId(left, right) {
-    try {
-      if (!left || !right) return false;
-      if (typeof left.equals === 'function') return left.equals(right);
-      return String(left) === String(right);
-    } catch (_) { return false; }
-  }
-
-  function applyPriorityFees(tx, opts) {
-    if (!tx || !Array.isArray(tx.instructions) || txHasRealSignature(tx)) return tx;
-    var budget = solanaWeb3.ComputeBudgetProgram;
-    if (!budget || !budget.programId) return tx;
-    var hasBudgetIx = tx.instructions.some(function (ix) { return ix && sameProgramId(ix.programId, budget.programId); });
-    if (hasBudgetIx) return tx;
-    var settings = opts || {};
-    var microLamports = Number.isFinite(Number(settings.microLamports)) ? Number(settings.microLamports) : FAST_PRIORITY_MICRO_LAMPORTS;
-    var unitLimit = Number.isFinite(Number(settings.computeUnitLimit)) ? Number(settings.computeUnitLimit) : FAST_COMPUTE_UNIT_LIMIT;
-    var prefix = [];
-    try { if (unitLimit > 0 && budget.setComputeUnitLimit) prefix.push(budget.setComputeUnitLimit({ units: Math.floor(unitLimit) })); } catch (_) {}
-    try { if (microLamports > 0 && budget.setComputeUnitPrice) prefix.push(budget.setComputeUnitPrice({ microLamports: Math.floor(microLamports) })); } catch (_) {}
-    if (prefix.length) tx.instructions = prefix.concat(tx.instructions);
-    return tx;
-  }
-
-  async function fastLatestBlockhash(conn, opts) {
-    if (!conn || typeof conn.getLatestBlockhash !== 'function') throw new Error('Solana RPC unavailable');
-    var endpoint = conn._rpcEndpoint || ENDPOINTS[0] || 'default';
-    var key = endpoint + '|' + FAST_BLOCKHASH_COMMITMENT;
-    var cached = blockhashCache[key];
-    if (cached && cached.blockhash && Date.now() - cached.ts < FAST_BLOCKHASH_TTL_MS) return cached;
-    var latest = await conn.getLatestBlockhash((opts && opts.commitment) || FAST_BLOCKHASH_COMMITMENT);
-    var stored = Object.assign({}, latest, { ts: Date.now(), commitment: (opts && opts.commitment) || FAST_BLOCKHASH_COMMITMENT });
-    blockhashCache[key] = stored;
-    return stored;
-  }
-
-  function backgroundConfirm(conn, signature, latest) {
-    if (!conn || !signature || typeof conn.confirmTransaction !== 'function') return;
-    setTimeout(function () {
-      var strategy = latest && latest.blockhash
-        ? { signature: signature, blockhash: latest.blockhash, lastValidBlockHeight: latest.lastValidBlockHeight }
-        : signature;
-      conn.confirmTransaction(strategy, 'confirmed').catch(function () {});
-    }, 0);
-  }
-
-  async function fastConfirm(conn, signature, latest, opts) {
-    if (!conn || !signature || typeof conn.confirmTransaction !== 'function') throw new Error('Solana RPC unavailable');
-    var commitment = (opts && opts.commitment) || FAST_COMMITMENT;
-    var strategy = latest && latest.blockhash
-      ? { signature: signature, blockhash: latest.blockhash, lastValidBlockHeight: latest.lastValidBlockHeight }
-      : signature;
-    var res = await conn.confirmTransaction(strategy, commitment);
-    if (!(res && res.value && res.value.err)) backgroundConfirm(conn, signature, latest);
-    return res;
-  }
-
-  window.OST_SOLANA_FAST = Object.assign(window.OST_SOLANA_FAST || {}, {
-    commitment: FAST_COMMITMENT,
-    preflightCommitment: FAST_PREFLIGHT_COMMITMENT,
-    blockhashCommitment: FAST_BLOCKHASH_COMMITMENT,
-    sendOptions: fastSendOptions,
-    getLatestBlockhash: fastLatestBlockhash,
-    applyPriorityFees: applyPriorityFees,
-    confirm: fastConfirm,
-    backgroundConfirm: backgroundConfirm,
-    hasRealSignature: txHasRealSignature
-  });
 
   // Per-endpoint health: temporary backoff on 429 / 5xx
   var health = {};
@@ -175,30 +75,8 @@
     h.lastErr = (err && err.message) || String(err || '');
   }
   function activeEndpoints() {
-    return ENDPOINTS.filter(isUsable);
-  }
-  function endpointCooldownMs() {
-    var now = Date.now();
-    var nextReady = Infinity;
-    ENDPOINTS.forEach(function (ep) {
-      var until = ensureHealth(ep).failuresUntil;
-      if (until > now && until < nextReady) nextReady = until;
-    });
-    return nextReady === Infinity ? 0 : Math.max(250, Math.min(8000, nextReady - now));
-  }
-  async function waitForRpcCooldown() {
-    if (activeEndpoints().length) return;
-    var delay = endpointCooldownMs();
-    if (delay > 0) await new Promise(function (resolve) { setTimeout(resolve, delay); });
-  }
-  function orderedEndpoints(primaryEp) {
-    var order = [];
-    var active = activeEndpoints();
-    if (primaryEp && isUsable(primaryEp)) order.push(primaryEp);
-    active.forEach(function (ep) { if (ep !== primaryEp && order.indexOf(ep) < 0) order.push(ep); });
-    if (order.length) return order;
-    if (primaryEp) return [primaryEp];
-    return ENDPOINTS.slice();
+    var ok = ENDPOINTS.filter(isUsable);
+    return ok.length ? ok : ENDPOINTS.slice(); // never return empty
   }
 
   // Build a sibling Connection per backup endpoint, lazily.
@@ -206,7 +84,7 @@
   function siblingFor(ep, primary) {
     if (siblings[ep]) return siblings[ep];
     try {
-      siblings[ep] = new solanaWeb3.Connection(ep, primary._commitment || FAST_COMMITMENT);
+      siblings[ep] = new solanaWeb3.Connection(ep, primary._commitment || 'confirmed');
     } catch (e) {
       siblings[ep] = null;
     }
@@ -226,8 +104,7 @@
       var tried = [];
       var lastErr = null;
 
-      await waitForRpcCooldown();
-      var order = orderedEndpoints(primaryEp);
+      var order = [primaryEp].concat(activeEndpoints().filter(function (e) { return e !== primaryEp; }));
       for (var i = 0; i < order.length; i++) {
         var ep = order[i];
         if (tried.indexOf(ep) >= 0) continue;
@@ -274,10 +151,8 @@
   var origSendRaw = solanaWeb3.Connection.prototype.sendRawTransaction;
   solanaWeb3.Connection.prototype.sendRawTransaction = async function (rawTx, options) {
     var self = this;
-    var sendOptions = fastSendOptions(options || {});
     var primaryEp = self._rpcEndpoint || ENDPOINTS[0];
-    await waitForRpcCooldown();
-    var endpoints = orderedEndpoints(primaryEp);
+    var endpoints = [primaryEp].concat(activeEndpoints().filter(function (e) { return e !== primaryEp; }));
     var dedup = []; var seen = {};
     endpoints.forEach(function (e) { if (!seen[e]) { seen[e] = 1; dedup.push(e); } });
 
@@ -288,7 +163,7 @@
       dedup.forEach(function (ep) {
         var conn = (ep === primaryEp) ? self : siblingFor(ep, self);
         if (!conn) { failures++; return; }
-        origSendRaw.call(conn, rawTx, sendOptions).then(function (sig) {
+        origSendRaw.call(conn, rawTx, options).then(function (sig) {
           if (settled) return;
           settled = true;
           ensureHealth(ep).failuresUntil = 0;
@@ -319,8 +194,7 @@
   solanaWeb3.Connection.prototype.requestAirdrop = async function (pubkey, lamports) {
     var self = this;
     var primaryEp = self._rpcEndpoint || ENDPOINTS[0];
-    await waitForRpcCooldown();
-    var endpoints = orderedEndpoints(primaryEp);
+    var endpoints = [primaryEp].concat(activeEndpoints().filter(function (e) { return e !== primaryEp; }));
     var lastErr = null;
     for (var i = 0; i < endpoints.length; i++) {
       var ep = endpoints[i];
@@ -345,8 +219,7 @@
   solanaWeb3.Connection.prototype.confirmTransaction = async function (sigOrStrategy, commitment) {
     var self = this;
     var primaryEp = self._rpcEndpoint || ENDPOINTS[0];
-    await waitForRpcCooldown();
-    var endpoints = orderedEndpoints(primaryEp);
+    var endpoints = [primaryEp].concat(activeEndpoints().filter(function (e) { return e !== primaryEp; }));
     return new Promise(function (resolve, reject) {
       var settled = false;
       var failures = 0;

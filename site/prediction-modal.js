@@ -59,8 +59,7 @@
   var nativeStateInFlight = {};
   var nativeStateInFlightBase = {};
   var NATIVE_STATE_BASE_TOLERANCE = 0.005;
-  var NATIVE_STATE_REFRESH_MS = 750;
-  var POSITION_SYNC_RETRY_KEY = 'ost.prediction.position.sync.retry.v1';
+  var NATIVE_STATE_REFRESH_MS = 3000;
 
   function ostApiBase() {
     return String(window.OST_API_BASE || '').replace(/\/$/, '');
@@ -191,11 +190,6 @@
       if (Number(storedRound.priceToBeat) > 0 && !market.meta.priceToBeat) market.meta.priceToBeat = Number(storedRound.priceToBeat);
     }
     var p = Number(livePrice);
-    if (canonicalRoundMatchesMarket(market, round) && canonicalBtcRoundIsHot(round)) {
-      p = Number(round.livePrice);
-      source = round.livePriceSource || round.source || source;
-      updatedAt = Number(round.livePriceTs || round.updatedAt) || updatedAt;
-    }
     if (Number.isFinite(p) && p > 1000) market.meta.livePrice = p;
     else p = Number(market.meta.livePrice);
     var beat = Number(market.meta.priceToBeat || market.meta.openPrice || 0);
@@ -264,38 +258,9 @@
     var yes = Number(market && market.yesPriceNumber);
     return Number.isFinite(yes) ? yes : 0.5;
   }
-
-  function nativePressureTools() {
-    try { return window.OST_NATIVE_MARKET_PRESSURE || null; } catch (_) { return null; }
-  }
-
-  function quoteNativeStateWithPressure(market, state, baseYes) {
-    var tools = nativePressureTools();
-    if (!market || !state || !tools || typeof tools.quote !== 'function') return state;
-    try { return tools.quote(market.id, state, baseYes); } catch (_) { return state; }
-  }
-
-  function confirmNativeStatePressure(market, state) {
-    var tools = nativePressureTools();
-    if (!market || !state || state.localPressureApplied || !tools || typeof tools.confirm !== 'function') return;
-    try { tools.confirm(market.id, state); } catch (_) {}
-  }
-
-  function rememberNativePressure(record) {
-    var tools = nativePressureTools();
-    if (!record || !tools || typeof tools.remember !== 'function') return null;
-    try { return tools.remember(record); } catch (_) { return null; }
-  }
-
-  function syncNativeQuoteBody(bodyEl) {
-    try { if (bodyEl && typeof bodyEl.__syncNativeQuoteUi === 'function') bodyEl.__syncNativeQuoteUi(); } catch (_) {}
-  }
-
   function applyNativeMarketState(market, state) {
     if (!market || !state) return null;
     market.meta = market.meta || {};
-    confirmNativeStatePressure(market, state);
-    state = quoteNativeStateWithPressure(market, state, nativeBaseYesInput(market, state.baseYesPrice));
     var yes = Number(state.yesPriceNumber);
     var no = Number(state.noPriceNumber);
     if (!Number.isFinite(yes) || !Number.isFinite(no)) return null;
@@ -315,12 +280,6 @@
     market.meta.noPriceNumber = market.noPriceNumber;
     market.meta.tradableYesPriceNumber = market.yesPriceNumber;
     market.meta.tradableNoPriceNumber = market.noPriceNumber;
-    market.meta.yesAskPriceNumber = Number(state.yesAskPriceNumber != null ? state.yesAskPriceNumber : market.yesPriceNumber);
-    market.meta.noAskPriceNumber = Number(state.noAskPriceNumber != null ? state.noAskPriceNumber : market.noPriceNumber);
-    market.meta.yesBidPriceNumber = Number(state.yesBidPriceNumber != null ? state.yesBidPriceNumber : market.yesPriceNumber);
-    market.meta.noBidPriceNumber = Number(state.noBidPriceNumber != null ? state.noBidPriceNumber : market.noPriceNumber);
-    market.meta.vaultSpread = Number(state.vaultSpread || state.vaultEdge || 0) || 0;
-    market.meta.sellHaircut = Number(state.sellHaircut || 0) || 0;
     window.__ostNativeMarketState = window.__ostNativeMarketState || {};
     window.__ostNativeMarketState[market.id] = market.marketState;
     try { window.dispatchEvent(new CustomEvent('ost:native-market-state', { detail: { marketId: market.id, state: market.marketState } })); } catch (_) {}
@@ -334,7 +293,7 @@
       var pendingBase = Number(nativeStateInFlightBase[market.id]);
       if (!Number.isFinite(pendingBase) || Math.abs(pendingBase - baseYes) < NATIVE_STATE_BASE_TOLERANCE) return nativeStateInFlight[market.id];
     }
-    if (Date.now() - (nativeStateFetchAt[market.id] || 0) < 450) {
+    if (Date.now() - (nativeStateFetchAt[market.id] || 0) < 650) {
       try {
         var cached = window.__ostNativeMarketState && window.__ostNativeMarketState[market.id];
         var cachedBase = Number(cached && cached.baseYesPrice);
@@ -378,83 +337,6 @@
       })
     ]);
   }
-
-  function readPositionSyncQueue() {
-    try {
-      var rows = JSON.parse(localStorage.getItem(POSITION_SYNC_RETRY_KEY) || '[]');
-      return Array.isArray(rows) ? rows : [];
-    } catch (_) { return []; }
-  }
-
-  function writePositionSyncQueue(rows) {
-    try { localStorage.setItem(POSITION_SYNC_RETRY_KEY, JSON.stringify((rows || []).slice(0, 80))); } catch (_) {}
-  }
-
-  function positionSyncKey(payload) {
-    return String(payload && (payload.signature || payload.sig || payload.id || [payload.wallet || '', payload.marketId || '', payload.side || '', payload.createdAt || payload.ts || ''].join(':')) || '');
-  }
-
-  function rememberPositionSyncFailure(payload, error) {
-    if (!payload || !payload.marketId) return;
-    var key = positionSyncKey(payload);
-    var rows = readPositionSyncQueue().filter(function (row) { return positionSyncKey(row && row.payload) !== key; });
-    rows.unshift({ payload: payload, error: String(error && error.message || error || 'sync failed').slice(0, 180), retryAt: Date.now() + 2500, tries: 0, queuedAt: Date.now() });
-    writePositionSyncQueue(rows);
-    try { window.dispatchEvent(new CustomEvent('ost:position-sync-failed', { detail: { payload: payload, error: error } })); } catch (_) {}
-  }
-
-  function postPositionToWorker(payload, onOk) {
-    var base = (window.OST_API_BASE || '').replace(/\/$/, '');
-    if (!base) {
-      rememberPositionSyncFailure(payload, 'OST API unavailable');
-      return Promise.resolve(null);
-    }
-    var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    var timeoutId = controller ? setTimeout(function () { try { controller.abort(); } catch (_) {} }, 4500) : null;
-    return fetch(base + '/positions', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(payload),
-      signal: controller ? controller.signal : undefined
-    }).then(function (r) {
-      if (timeoutId) clearTimeout(timeoutId);
-      if (r && r.ok) return r.json();
-      return (r ? r.text() : Promise.resolve('')).then(function (text) {
-        throw new Error('position sync failed (' + (r && r.status || 'network') + ')' + (text ? ': ' + text.slice(0, 120) : ''));
-      });
-    }).then(function (j) {
-      if (typeof onOk === 'function') onOk(j);
-      return j;
-    }).catch(function (error) {
-      if (timeoutId) clearTimeout(timeoutId);
-      rememberPositionSyncFailure(payload, error);
-      throw error;
-    });
-  }
-
-  var positionSyncFlushInFlight = false;
-  function flushPositionSyncQueue() {
-    if (positionSyncFlushInFlight) return;
-    var rows = readPositionSyncQueue();
-    var due = rows.filter(function (row) { return !row.retryAt || row.retryAt <= Date.now(); });
-    if (!due.length) return;
-    positionSyncFlushInFlight = true;
-    var remaining = rows.filter(function (row) { return row.retryAt && row.retryAt > Date.now(); });
-    var chain = Promise.resolve();
-    due.slice(0, 8).forEach(function (row) {
-      chain = chain.then(function () {
-        return postPositionToWorker(row.payload).catch(function () {
-          row.tries = Number(row.tries || 0) + 1;
-          row.retryAt = Date.now() + Math.min(30000, 2500 * Math.max(1, row.tries));
-          remaining.push(row);
-        });
-      });
-    });
-    chain.then(function () { writePositionSyncQueue(remaining); }).finally(function () { positionSyncFlushInFlight = false; });
-  }
-  setInterval(flushPositionSyncQueue, 5000);
-  try { window.addEventListener('online', flushPositionSyncQueue); } catch (_) {}
-  setTimeout(flushPositionSyncQueue, 1200);
   function isClosedFlowRecord(record) {
     var status = String(record && (record.status || record.outcome) || '').toLowerCase();
     return !!(record && (record.cashedOut || record.resolved || Number(record.cashoutAt || 0) > 0 || ['sold', 'cashed-out', 'closed', 'settled', 'resolved', 'won', 'lost'].indexOf(status) >= 0));
@@ -463,8 +345,9 @@
 
   // Push a freshly-placed bet to the global ost-api positions feed so every
   // other OST user sees it in their "Live OST flow" ticker.
-  function shareBetGlobally(market, side, stake, rec, outcomeKey, bodyEl) {
+  function shareBetGlobally(market, side, stake, rec, outcomeKey) {
     try {
+      var base = (window.OST_API_BASE || '').replace(/\/$/, '');
       var wallet = (rec && rec.wallet) ||
         (window.OST_WALLET && window.OST_WALLET.session && window.OST_WALLET.session.publicKey && window.OST_WALLET.session.publicKey.toBase58 && window.OST_WALLET.session.publicKey.toBase58()) ||
         window.OST_WALLET_PUBKEY ||
@@ -501,16 +384,19 @@
         ts: rec && (rec.ts || rec.createdAt) || new Date().toISOString()
       });
       optimisticallyMergeFlowRecord(market, payload);
-      rememberNativePressure(payload);
-      syncNativeQuoteBody(bodyEl);
-      postPositionToWorker(payload, function (j) {
+      if (!base) return;
+      fetch(base + '/positions', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).then(function (r) { return r && r.ok ? r.json() : null; })
+        .then(function (j) {
           if (j && j.marketState) applyNativeMarketState(market, j.marketState);
           if (j && j.record) optimisticallyMergeFlowRecord(market, j.record);
           if (j && j.flowRecord) optimisticallyMergeFlowRecord(market, j.flowRecord);
-          syncNativeQuoteBody(bodyEl);
-        }).catch(function (error) {
-          try { toast('Bet recorded. Live market sync is retrying: ' + String(error && error.message || 'worker unavailable').slice(0, 90), 'err'); } catch (_) {}
-        });
+          if (bodyEl && typeof bodyEl.__syncNativeQuoteUi === 'function') bodyEl.__syncNativeQuoteUi();
+        })
+        .catch(function () { /* fire-and-forget */ });
     } catch (_) { /* never block UI */ }
   }
 
@@ -643,18 +529,15 @@
     return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   }
   function clearLiveTimers() {
-    var timers = liveTimers.slice();
-    liveTimers = [];
-    timers.forEach(function (t) {
-      try {
-        if (t && typeof t === 'object' && typeof t.removeOnClose === 'function') {
-          t.removeOnClose();
-        } else {
-          clearInterval(t);
-          clearTimeout(t);
-        }
-      } catch (_) {}
-    });
+liveTimers.forEach(function (t) {
+  try {
+    if (t && typeof t === 'object' && typeof t.removeOnClose === 'function') {
+      t.removeOnClose();
+    } else {
+      clearInterval(t);
+    }
+  } catch (_) {}
+});
   }
 
   // --------------------------------------------------------------------------
@@ -675,19 +558,9 @@
       '  <div class="ost-modal__toast" data-bind="toast" hidden></div>' +
       '</div>';
     document.body.appendChild(el);
-    function closeFromIntent(ev) {
-      var target = ev && ev.target && ev.target.closest ? ev.target.closest('[data-act]') : null;
-      if (!target || target.getAttribute('data-act') !== 'close') return false;
-      try { ev.preventDefault(); } catch (_) {}
-      try { ev.stopPropagation(); } catch (_) {}
-      try { if (typeof ev.stopImmediatePropagation === 'function') ev.stopImmediatePropagation(); } catch (_) {}
-      closeModal();
-      return true;
-    }
-    el.addEventListener('pointerdown', closeFromIntent, true);
-    el.addEventListener('touchend', closeFromIntent, true);
     el.addEventListener('click', function (ev) {
-      closeFromIntent(ev);
+      var t = ev.target.closest('[data-act]');
+      if (t && t.getAttribute('data-act') === 'close') closeModal();
     });
     document.addEventListener('keydown', function (ev) {
       if (ev.key === 'Escape' && el.classList.contains('is-open')) closeModal();
@@ -892,17 +765,6 @@
       clobTokenIds: normalizeOutcomeTokenIds(market && market.clobTokenIds)
     };
   }
-  function getNativeSellQuotePrice(market, side, fallback) {
-    var sideKey = String(side || '').toUpperCase() === 'NO' ? 'NO' : 'YES';
-    var price = NaN;
-    if (market && market.isOstNative) {
-      var state = market.marketState || (window.__ostNativeMarketState && window.__ostNativeMarketState[market.id]) || null;
-      if (state) price = sideKey === 'NO' ? Number(state.noBidPriceNumber) : Number(state.yesBidPriceNumber);
-      if (!Number.isFinite(price) && market.meta) price = sideKey === 'NO' ? Number(market.meta.noBidPriceNumber) : Number(market.meta.yesBidPriceNumber);
-    }
-    if (!Number.isFinite(price) || price <= 0) price = Number(fallback);
-    return Number.isFinite(price) && price > 0 ? price : NaN;
-  }
   function clampProbability(value) {
     var n = Number(value);
     return Number.isFinite(n) ? Math.max(0, Math.min(1, n)) : NaN;
@@ -930,17 +792,13 @@
     if (!Number.isFinite(sellValue)) sellValue = Number(order.cashoutOst || order.sellValue || order.potentialReturn || order.stake || 0) || 0;
     return Object.assign({}, order, {
       id: 'sell:' + baseKey + ':' + cashoutAt,
-      signature: order.cashoutSig || order.signature || order.sig || baseKey,
-      sig: order.cashoutSig || order.sig || order.signature || baseKey,
+      signature: order.cashoutSig || '',
+      sig: order.cashoutSig || '',
       relatedPositionId: baseKey,
       flowAction: 'sell',
       tradeAction: 'sell',
       action: 'sell',
       status: 'sold',
-      cashoutSig: order.cashoutSig || '',
-      cashoutPending: !!order.cashoutPending && order.cashoutVerified !== true,
-      cashoutVerified: order.cashoutVerified === true,
-      verificationState: order.cashoutVerified === true ? 'verified' : order.cashoutSig ? 'submitted' : order.cashoutPending ? 'pending' : 'closed',
       side: side,
       price: Number.isFinite(selectedPrice) ? selectedPrice : null,
       yesPrice: Number.isFinite(yesPrice) ? yesPrice : null,
@@ -965,8 +823,6 @@
     if (!market) return aliases;
     addAlias(aliases, market.id);
     addAlias(aliases, market.marketId);
-    if (String(market.id || '').indexOf('ost-btc5m-') === 0) addAlias(aliases, 'ost-btc5m');
-    if (String(market.id || '') === 'ost-btc5m' && market.meta && market.meta.openAt) addAlias(aliases, 'ost-btc5m-' + market.meta.openAt);
     addAlias(aliases, market.conditionId || market.condition_id);
     addAlias(aliases, market.gammaMarketId);
     normalizeOutcomeTokenIds(market.clobTokenIds).forEach(function (id) { addAlias(aliases, id); });
@@ -1003,20 +859,11 @@
     return String(record && (record.signature || record.sig || record.id || record.txid || record.txHash) || '') ||
       [record && record.marketId, record && record.conditionId, record && record.wallet, record && record.side, record && record.stake, record && (record.ts || record.createdAt)].join(':');
   }
-  function nativeBtcMarketIdsMatch(recordMarketId, marketId) {
-    var recordText = String(recordMarketId || '').trim();
-    var marketText = String(marketId || '').trim();
-    if (!recordText || !marketText) return false;
-    if (recordText === marketText) return true;
-    if (marketText === 'ost-btc5m' && recordText.indexOf('ost-btc5m-') === 0) return true;
-    if (recordText === 'ost-btc5m' && marketText.indexOf('ost-btc5m-') === 0) return true;
-    return false;
-  }
   function recordMatchesMarket(record, market) {
     if (!record || !market) return false;
     var marketId = String(market.id || '').trim();
     var recordMarketId = String(record.marketId || '').trim();
-    if (nativeBtcMarketIdsMatch(recordMarketId, marketId)) return true;
+    if (marketId && recordMarketId === marketId) return true;
     if (isOstNativeMarket(market)) return false;
     var marketAliases = marketAliasList(market);
     if (!marketAliases.length) return false;
@@ -1511,29 +1358,17 @@
         if (!actionBtn) return fail(new Error('Trade desk button not found.'));
         var prevLedger = readJson(ORDERS_KEY, []) || [];
         var prevLen = prevLedger.length;
-        function watchLedger() {
-          timeout = setTimeout(function () {
-            fail(new Error('Wallet approval or network confirmation is still pending. Check Open Positions after the wallet closes.'));
-          }, 90000);
-          iv = setInterval(function () {
-            var now = readJson(ORDERS_KEY, []) || [];
-            if (now.length > prevLen) {
-              var latest = now.filter(function (order) { return order && String(order.marketId || '') === String(market.id || ''); })[0] || now[0];
-              finish(latest);
-            }
-          }, 600);
-        }
-        if (actionBtn.disabled) {
-          var statusEl = document.getElementById('predictionTradeStatus');
-          var statusText = statusEl && statusEl.textContent ? statusEl.textContent.trim() : '';
-          if (/waiting|sending|approval|confirmation|pending/i.test(statusText)) {
-            watchLedger();
-            return;
-          }
-          return fail(new Error(statusText || 'Trade desk is not ready yet.'));
-        }
         actionBtn.click();
-        watchLedger();
+        timeout = setTimeout(function () {
+          fail(new Error('Bet submitted - check the open positions list below for confirmation.'));
+        }, 45000);
+        iv = setInterval(function () {
+          var now = readJson(ORDERS_KEY, []) || [];
+          if (now.length > prevLen) {
+            var latest = now.filter(function (order) { return order && String(order.marketId || '') === String(market.id || ''); })[0] || now[0];
+            finish(latest);
+          }
+        }, 600);
       }, 80);
     });
   }
@@ -1547,46 +1382,10 @@
       return Promise.reject(new Error('This 5-minute round just closed. Loading the next round...'));
     }
     var requestedSide = String(side || 'YES').toUpperCase() === 'NO' ? 'NO' : 'YES';
-
-    // Mobile clients often reach this path before the centralized OST share state
-    // has finished loading. Instead of rejecting outright, fetch the live state
-    // here so the buy can proceed using the same authoritative quote that the
-    // arbitrage / pressure pricing depends on.
-    function ensureNativeAskReady() {
-      if (!market || !market.isOstNative) return Promise.resolve();
-      var existing = market.marketState || (market.meta && market.meta.marketState) || null;
-      var ask = requestedSide === 'NO'
-        ? Number(existing && (existing.noAskPriceNumber != null ? existing.noAskPriceNumber : existing.noPriceNumber))
-        : Number(existing && (existing.yesAskPriceNumber != null ? existing.yesAskPriceNumber : existing.yesPriceNumber));
-      if (existing && Number.isFinite(ask) && ask > 0) return Promise.resolve();
-      return withTimeout(
-        refreshNativeMarketState(market, null, nativeBaseYesInput(market)),
-        5000,
-        null
-      );
-    }
-
-    return ensureNativeAskReady().then(function () { return placeBetDirectlyResolved(market, side, stake, outcomeKey, requestedSide); });
-  }
-
-  function placeBetDirectlyResolved(market, side, stake, outcomeKey, requestedSide) {
-    var api = window.OST_PREDICTION_API;
     var contract = getModalTradeContract(market, requestedSide, outcomeKey || '');
-    // The arbitrage / pressure pricing engine is OPTIONAL on the buy path.
-    // If the centralized share inventory hasn't landed yet, fall through to
-    // the local snapshot price so the user is never blocked from buying.
     var contractSide = contract && contract.side ? String(contract.side).toUpperCase() : requestedSide;
     var sideForOrder = contractSide.toLowerCase();
     var price = Number(contract && contract.price);
-    if (market && market.isOstNative) {
-      var state = market.marketState || (market.meta && market.meta.marketState) || null;
-      var stateAsk = requestedSide === 'NO'
-        ? Number(state && (state.noAskPriceNumber != null ? state.noAskPriceNumber : state.noPriceNumber))
-        : Number(state && (state.yesAskPriceNumber != null ? state.yesAskPriceNumber : state.yesPriceNumber));
-      if (state && Number.isFinite(stateAsk) && stateAsk > 0 && (!Number.isFinite(price) || price <= 0)) {
-        price = stateAsk;
-      }
-    }
     if (!Number.isFinite(price) || price <= 0) {
       price = contractSide === 'NO' ? Number(market && market.noPriceNumber) : Number(market && market.yesPriceNumber);
     }
@@ -1597,12 +1396,7 @@
     if (!Number.isFinite(noPrice) && Number.isFinite(yesPrice)) noPrice = 1 - yesPrice;
     if (!Number.isFinite(yesPrice) && Number.isFinite(noPrice)) yesPrice = 1 - noPrice;
     if (!Number.isFinite(price) || price <= 0) {
-      // Last-resort fallback: a 50/50 quote keeps the buy alive if every upstream
-      // price source is missing. Applied loss/gain still settles against the
-      // centralized state when it becomes available.
-      price = 0.5;
-      if (!Number.isFinite(yesPrice)) yesPrice = 0.5;
-      if (!Number.isFinite(noPrice)) noPrice = 0.5;
+      return Promise.reject(new Error('Live share price is still loading. Try again in a moment.'));
     }
     var numericStake = Number(stake) || 0;
     var shares = numericStake / price;
@@ -1647,14 +1441,7 @@
   }
 
   function refreshMarketQuoteBeforeBet(market) {
-    if (!isFastBtcMarket(market)) {
-      if (isOstNativeMarket(market)) {
-        // 4.5 s gives the centralized worker fetch room to land on slow mobile
-        // links — placeBetDirectly retries the fetch internally if it still misses.
-        return withTimeout(refreshNativeMarketState(market, null, nativeBaseYesInput(market)), 4500, null).then(function () { return market; });
-      }
-      return Promise.resolve(market);
-    }
+    if (!isFastBtcMarket(market)) return Promise.resolve(market);
     var api = window.OST_PREDICTION_API || {};
     return withTimeout(fetchCanonicalBtcRound(), 900, null)
       .then(function (round) {
@@ -1779,7 +1566,7 @@
     if (!id) return [];
     var wallet = ownWallet();
     return readOrders().filter(function (o) {
-      if (!o || !nativeBtcMarketIdsMatch(o.marketId, id)) return false;
+      if (!o || String(o.marketId || '') !== id) return false;
       if (o.cashedOut) return false;
       // If a wallet is connected, only show that wallet's tickets — otherwise
       // show all local tickets so users can still settle pre-connect orders.
@@ -1802,29 +1589,34 @@
       '</div>' +
     '</section>';
   }
-  function postPositionUpdate(order, market, bodyEl) {
+  function postPositionUpdate(order, market) {
     try {
-      var payload = Object.assign({}, order, {
-        wallet: order.wallet || ownWallet() || 'anon',
-        marketTitle: order.title || order.marketTitle || '',
-        ts: order.createdAt || order.ts || Date.now(),
-        baseYesPrice: market ? nativeBaseYesInput(market) : null
-      });
-      rememberNativePressure(payload);
-      syncNativeQuoteBody(bodyEl);
-      postPositionToWorker(payload, function (j) {
+      var base = (window.OST_API_BASE || '').replace(/\/$/, '');
+      if (!base) return;
+      fetch(base + '/positions', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(Object.assign({}, order, {
+          wallet: order.wallet || ownWallet() || 'anon',
+          marketTitle: order.title || order.marketTitle || '',
+          ts: order.createdAt || order.ts || Date.now(),
+          baseYesPrice: market ? nativeBaseYesInput(market) : null
+        }))
+      }).then(function (r) { return r && r.ok ? r.json() : null; })
+        .then(function (j) {
           if (market && j && j.marketState) applyNativeMarketState(market, j.marketState);
           if (market && j && j.record) optimisticallyMergeFlowRecord(market, j.record);
           if (market && j && j.flowRecord) optimisticallyMergeFlowRecord(market, j.flowRecord);
-          syncNativeQuoteBody(bodyEl);
-        }).catch(function () {});
+          if (market && bodyEl && typeof bodyEl.__syncNativeQuoteUi === 'function') bodyEl.__syncNativeQuoteUi();
+        })
+        .catch(function () {});
     } catch (_) {}
   }
-  function notifyOrderChanged(order, market) {
-    try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed', { detail: { order: order || null, marketId: order && order.marketId || (market && market.id) || '' } })); } catch (_) {}
+  function notifyOrderChanged() {
+    try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch (_) {}
     try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {}
   }
-  function sellOrder(order, payout, kind, market, sale, bodyEl) {
+  function sellOrder(order, payout, kind, market, sale) {
     // Positive payouts must land on-chain before the ticket is marked sold.
     var doLocal = function () {
       order.cashedOut = true;
@@ -1865,8 +1657,8 @@
       if (idx >= 0) orders[idx] = order; else orders.unshift(order);
       writeOrders(orders);
       if (sellTick) optimisticallyMergeFlowRecord(market, sellTick);
-      postPositionUpdate(order, market, bodyEl);
-      notifyOrderChanged(order, market);
+      postPositionUpdate(order, market);
+      notifyOrderChanged();
       return Promise.resolve({ ost: Number(payout) || 0, sig: order.cashoutSig || '' });
     };
     if (!(Number(payout) > 0)) return doLocal();
@@ -1876,8 +1668,6 @@
           if (!r || !r.sig) throw new Error('Payout was not confirmed on-chain.');
           if (Number(r.ost || 0) + 0.000000001 < Number(payout || 0)) throw new Error('Payout was not fully funded.');
           order.cashoutSig = r.sig;
-          order.cashoutPending = !!r.pending;
-          order.cashoutVerified = !(r.verified === false);
           return doLocal().then(function (loc) {
             return Object.assign({}, loc, { ost: (r && Number(r.ost)) || loc.ost, sig: order.cashoutSig || loc.sig });
           });
@@ -2163,51 +1953,33 @@
       var detail = event && event.detail || {};
       if (String(detail.marketId || '') !== String(market.id || '')) return;
       if (detail.state && detail.state !== market.marketState) {
-        applyNativeMarketState(market, detail.state);
+        var state = detail.state;
+        var yes = Number(state.yesPriceNumber);
+        var no = Number(state.noPriceNumber);
+        if (Number.isFinite(yes) && Number.isFinite(no)) {
+          market.marketState = state;
+          market.yesPriceNumber = yes;
+          market.noPriceNumber = no;
+        }
       }
       bodyEl.__syncNativeQuoteUi();
     };
     try { window.addEventListener('ost:native-market-state', bodyEl.__nativeStateListener); } catch (_) {}
     if (market.isOstNative) refreshNativeMarketState(market, bodyEl);
 
-    var placeBetButton = bodyEl.querySelector('[data-act="placebet"]');
-    var placeBetPending = false;
-    if (placeBetButton) placeBetButton.addEventListener('click', function () {
-      if (placeBetPending) return;
+    bodyEl.querySelector('[data-act="placebet"]').addEventListener('click', function () {
       var s = getStake();
       if (!s) { toast('Set a stake first.', 'err'); return; }
-      var originalText = placeBetButton.textContent;
-      var slowTimer = null;
-      placeBetPending = true;
-      placeBetButton.disabled = true;
-      placeBetButton.classList.add('is-loading');
-      placeBetButton.setAttribute('aria-busy', 'true');
-      placeBetButton.textContent = 'Submitting...';
-      slowTimer = setTimeout(function () {
-        if (placeBetPending) toast('Wallet approval or network confirmation is still open. Keep this screen up.', 'ok');
-      }, 8000);
-      function resetPlaceBetButton() {
-        if (slowTimer) clearTimeout(slowTimer);
-        placeBetPending = false;
-        if (!placeBetButton) return;
-        placeBetButton.disabled = false;
-        placeBetButton.classList.remove('is-loading');
-        placeBetButton.removeAttribute('aria-busy');
-        placeBetButton.textContent = originalText || 'Place bet';
-      }
       toast('Submitting ' + selectedSide + ' ' + s + ' OST…', 'ok');
       placeBet(market, selectedSide, s, selectedOutcomeKey)
         .then(function (rec) {
           toast('✅ Bet recorded' + (rec && rec.sig ? ' (sig ' + String(rec.sig).slice(0, 8) + '…)' : '') + '. Check Open Positions below.', 'ok');
           // Share to global feed so every other OST user sees the tick live.
-          shareBetGlobally(market, selectedSide, s, rec, selectedOutcomeKey, bodyEl);
+          shareBetGlobally(market, selectedSide, s, rec, selectedOutcomeKey);
           bodyEl.__syncNativeQuoteUi && bodyEl.__syncNativeQuoteUi();
         })
         .catch(function (err) {
           toast('⚠️ ' + (err && err.message ? err.message : 'Bet failed'), 'err');
-        })
-        .then(function () {
-          resetPlaceBetButton();
         });
     });
 
@@ -2275,24 +2047,10 @@
     function refreshSharedFeed() {
       var base = (window.OST_API_BASE || '').replace(/\/$/, '');
       if (!base) { applySharedFeed([]); return; }
-      if (refreshSharedFeed.inFlight) return;
-      refreshSharedFeed.inFlight = true;
-      var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-      var timeoutId = controller ? setTimeout(function () { try { controller.abort(); } catch (_) {} }, 3500) : null;
-      var primaryMarketId = market && market.isOstNative && String(market.id || '').indexOf('ost-btc5m') === 0 ? 'ost-btc5m' : (market.id || '');
-      fetch(base + '/positions/recent?marketId=' + encodeURIComponent(primaryMarketId) + '&limit=120', {
-        cache: 'no-store',
-        signal: controller ? controller.signal : undefined
-      })
+      fetch(base + '/positions/recent?marketId=' + encodeURIComponent(market.id || '') + '&limit=120', { cache: 'no-store' })
         .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (j) { applySharedFeed(j && Array.isArray(j.recent) ? j.recent : []); })
-        .catch(function () {
-          if (!window.__ostSharedFeed || !window.__ostSharedFeed[market.id]) applySharedFeed([]);
-        })
-        .then(function () {
-          if (timeoutId) clearTimeout(timeoutId);
-          refreshSharedFeed.inFlight = false;
-        });
+        .catch(function () { applySharedFeed([]); });
     }
     refreshSharedFeed();
     liveTimers.push(setInterval(refreshSharedFeed, 1000));
@@ -2318,7 +2076,6 @@
         var shares = Number(o.shares) > 0 ? Number(o.shares) : (entryPx > 0 ? stake / entryPx : 0);
         var contract = getModalTradeContract(market, side, o.outcomeKey || '');
         var livePx = side === 'NO' ? Number(contract && contract.noPrice) : Number(contract && contract.yesPrice);
-        livePx = getNativeSellQuotePrice(market, side, livePx);
         if (!Number.isFinite(livePx) || livePx <= 0) livePx = entryPx;
         totalStake += stake;
         totalValue += shares > 0 && livePx > 0 ? shares * livePx : stake;
@@ -2341,7 +2098,6 @@
         var shares = Number(o.shares) > 0 ? Number(o.shares) : (entryPx > 0 ? stake / entryPx : 0);
         var contract = getModalTradeContract(market, side, o.outcomeKey || '');
         var livePx = side === 'NO' ? Number(contract && contract.noPrice) : Number(contract && contract.yesPrice);
-        livePx = getNativeSellQuotePrice(market, side, livePx);
         if (!Number.isFinite(livePx) || livePx <= 0) livePx = entryPx;
         var liveValue = shares > 0 && livePx > 0 ? shares * livePx : stake;
         var pnl = liveValue - stake;
@@ -2368,13 +2124,12 @@
           var shares = Number(order.shares) > 0 ? Number(order.shares) : (entryPx > 0 ? Number(order.stake || 0) / entryPx : 0);
           var contract = getModalTradeContract(market, side, order.outcomeKey || '');
           var livePx = side === 'NO' ? Number(contract && contract.noPrice) : Number(contract && contract.yesPrice);
-          livePx = getNativeSellQuotePrice(market, side, livePx);
           if (!Number.isFinite(livePx) || livePx <= 0) livePx = entryPx;
           var payout = Math.max(0, shares * livePx);
           if (!(payout > 0)) { toast('Cannot sell at 0¢', 'err'); return; }
           var orig = btn.textContent;
           btn.disabled = true; btn.textContent = '…';
-          sellOrder(order, payout, 'prediction-sell-modal', market, { sellPrice: livePx, sellValue: payout, shares: shares }, bodyEl)
+          sellOrder(order, payout, 'prediction-sell-modal', market, { sellPrice: livePx, sellValue: payout, shares: shares })
             .then(function (r) {
               toast('✅ Sold ' + (Number(r.ost) || payout).toFixed(2) + ' OST' + (r.sig ? ' (' + String(r.sig).slice(0, 8) + '…)' : ''), 'ok');
               refreshSellList();
@@ -2495,7 +2250,7 @@
         setText(bodyEl, 'btcOpen', market.meta.priceToBeat || market.meta.openPrice ? fmtUsd(market.meta.priceToBeat || market.meta.openPrice) : '—');
       };
       tickBtc();
-      liveTimers.push(setInterval(tickBtc, 500));
+      liveTimers.push(setInterval(tickBtc, 200));
       var fetchSharedBtcTick = function () {
         var api = window.OST_PREDICTION_API;
         var cachedRound = cachedCanonicalBtcRound();
@@ -2530,10 +2285,7 @@
           return fetchBtcRace().then(function (p) { return { price: p, source: BTC_PRICE_FEEDS[BTC_FEED_INDEX].name, ts: Date.now() }; });
         });
       };
-      var btcLiveInFlight = false;
       var fetchBtcLive = function () {
-        if (btcLiveInFlight) return;
-        btcLiveInFlight = true;
         fetchSharedBtcTick()
           .then(function (tick) {
             var p = tick && Number(tick.price);
@@ -2605,20 +2357,14 @@
               paintNativeBtcQuote();
             });
           }
-        })
-          .catch(function () {
-            setText(bodyEl, 'btcLive', 'feed retrying');
-          })
-          .then(function () {
-            btcLiveInFlight = false;
-          });
+        });
       };
       hydrateCanonicalBtcTicks(market, bodyEl);
       fetchBtcLive();
       // The WebSocket/shared tick event below paints immediately. This
       // fallback stays sub-second without hammering the canonical Worker on
       // mobile when the event stream is already fresh.
-      liveTimers.push(setInterval(fetchBtcLive, 650));
+      liveTimers.push(setInterval(fetchBtcLive, 500));
       // Re-render immediately on every fresh BTC tick so the live price and
       // share % follow the WebSocket / canonical feed without waiting for
       // the next poll. Throttled to avoid double-painting on bursty ticks.
