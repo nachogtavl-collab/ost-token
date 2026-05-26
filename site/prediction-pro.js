@@ -80,7 +80,13 @@
   var btcWsIndex = 0;
   var btcWsReconnectTimer = 0;
   var btcWsLastTickAt = 0;
+  var OST_WORKER_BTC_URL = String((typeof window !== 'undefined' && window.OST_API_BASE) || '').replace(/\/$/, '') + '/btc/price';
   var BTC_PRICE_FEEDS = [
+    {
+      name: 'ost-worker',
+      url: OST_WORKER_BTC_URL,
+      pick: function (j) { return j && Number(j.price); }
+    },
     {
       name: 'binance',
       url: BTC_PRICE_URL,

@@ -49,7 +49,7 @@
   function fastSendOptions(extra) {
     var fast = fastLane();
     if (fast && typeof fast.sendOptions === 'function') return fast.sendOptions(extra || {});
-    return Object.assign({ skipPreflight: true, preflightCommitment: 'processed', maxRetries: 3 }, extra || {});
+    return Object.assign({ skipPreflight: false, preflightCommitment: 'confirmed', maxRetries: 3 }, extra || {});
   }
   function applyFastLane(tx) {
     var fast = fastLane();
@@ -233,7 +233,7 @@
     tx.recentBlockhash = bh.blockhash;
 
     if (typeof wallet.signAndSendTransaction === 'function') {
-      var res = await wallet.signAndSendTransaction(tx, fastSendOptions());
+      var res = await wallet.signAndSendTransaction(tx);
       var sig = (res && res.signature) || res;
       await fastConfirm(connection, sig, bh);
       return sig;

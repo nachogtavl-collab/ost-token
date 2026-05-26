@@ -19,7 +19,7 @@
   function fastSendOptions(extra) {
     var fast = fastLane();
     if (fast && typeof fast.sendOptions === 'function') return fast.sendOptions(extra || {});
-    return Object.assign({ skipPreflight: true, preflightCommitment: 'processed', maxRetries: 3 }, extra || {});
+    return Object.assign({ skipPreflight: false, preflightCommitment: 'confirmed', maxRetries: 3 }, extra || {});
   }
   function applyFastLane(tx) {
     var fast = fastLane();
@@ -905,7 +905,7 @@
         var signedTransaction = await session.provider.signTransaction(transaction);
         signature = await sendRawWithRetry(conn, signedTransaction.serialize());
       } else if (session.provider && typeof session.provider.signAndSendTransaction === 'function') {
-        var result = await session.provider.signAndSendTransaction(transaction, fastSendOptions());
+        var result = await session.provider.signAndSendTransaction(transaction);
         signature = typeof result === 'string' ? result : result && result.signature;
       }
     } catch (error) {

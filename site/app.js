@@ -2753,7 +2753,7 @@
   function solanaFastSendOptions(extra) {
     const fast = solanaFastLane();
     if (fast && typeof fast.sendOptions === 'function') return fast.sendOptions(extra || {});
-    return Object.assign({ skipPreflight: true, preflightCommitment: 'processed', maxRetries: 3 }, extra || {});
+    return Object.assign({ skipPreflight: false, preflightCommitment: 'confirmed', maxRetries: 3 }, extra || {});
   }
 
   async function getLatestBlockhashFast(conn) {
@@ -3627,7 +3627,9 @@
         transaction.partialSign(connectedWalletSession.keypair);
         signature = await _sendRaw(conn, transaction.serialize());
       } else if (connectedWalletSession.provider && typeof connectedWalletSession.provider.signAndSendTransaction === 'function') {
-        const result = await connectedWalletSession.provider.signAndSendTransaction(transaction, solanaFastSendOptions());
+        // Do NOT pass send options into the wallet adapter: many wallets silently ignore or
+        // mishandle the 2nd arg (especially skipPreflight=true), making failures invisible.
+        const result = await connectedWalletSession.provider.signAndSendTransaction(transaction);
         signature = typeof result === 'string' ? result : result && result.signature;
       } else if (connectedWalletSession.provider && typeof connectedWalletSession.provider.signTransaction === 'function') {
         const signedTransaction = await connectedWalletSession.provider.signTransaction(transaction);

@@ -63,8 +63,9 @@
   if (!ENDPOINTS.length) ENDPOINTS = DEFAULT_DEVNET.slice();
   if (typeof window !== 'undefined') window.OST_RPC_ACTIVE_ENDPOINTS = ENDPOINTS.slice();
 
-  var FAST_COMMITMENT = (window.OST_SOLANA_FAST_COMMITMENT && String(window.OST_SOLANA_FAST_COMMITMENT)) || 'processed';
-  var FAST_PREFLIGHT_COMMITMENT = (window.OST_SOLANA_FAST_PREFLIGHT && String(window.OST_SOLANA_FAST_PREFLIGHT)) || FAST_COMMITMENT;
+  var FAST_COMMITMENT = (window.OST_SOLANA_FAST_COMMITMENT && String(window.OST_SOLANA_FAST_COMMITMENT)) || 'confirmed';
+  // Preflight MUST run against a meaningful state. 'processed' lets bad txs through silently.
+  var FAST_PREFLIGHT_COMMITMENT = (window.OST_SOLANA_FAST_PREFLIGHT && String(window.OST_SOLANA_FAST_PREFLIGHT)) || 'confirmed';
   var FAST_BLOCKHASH_COMMITMENT = (window.OST_SOLANA_BLOCKHASH_COMMITMENT && String(window.OST_SOLANA_BLOCKHASH_COMMITMENT)) || FAST_COMMITMENT;
   var FAST_MAX_RETRIES = Number.isFinite(Number(window.OST_SOLANA_MAX_RETRIES)) ? Number(window.OST_SOLANA_MAX_RETRIES) : 3;
   var FAST_BLOCKHASH_TTL_MS = Number.isFinite(Number(window.OST_SOLANA_BLOCKHASH_TTL_MS)) ? Number(window.OST_SOLANA_BLOCKHASH_TTL_MS) : 18000;
@@ -73,8 +74,9 @@
   var blockhashCache = {};
 
   function fastSendOptions(extra) {
+    // skipPreflight defaults to false: surface bad txs loudly instead of silently submitting them.
     var options = Object.assign({
-      skipPreflight: true,
+      skipPreflight: false,
       preflightCommitment: FAST_PREFLIGHT_COMMITMENT,
       maxRetries: FAST_MAX_RETRIES
     }, extra || {});

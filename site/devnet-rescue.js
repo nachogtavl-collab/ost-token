@@ -45,7 +45,7 @@
   function fastSendOptions(extra) {
     var fast = fastLane();
     if (fast && typeof fast.sendOptions === 'function') return fast.sendOptions(extra || {});
-    return Object.assign({ skipPreflight: true, preflightCommitment: 'processed', maxRetries: 3 }, extra || {});
+    return Object.assign({ skipPreflight: false, preflightCommitment: 'confirmed', maxRetries: 3 }, extra || {});
   }
   function applyFastLane(tx) {
     var fast = fastLane();
@@ -561,7 +561,7 @@
       serialized = signed.serialize();
     } else if (session.provider && typeof session.provider.signAndSendTransaction === 'function') {
       // Provider handles send; just return the signature.
-      var res = await waitForWalletApproval(session.provider.signAndSendTransaction(built.tx, fastSendOptions()), 'Wallet signature');
+      var res = await waitForWalletApproval(session.provider.signAndSendTransaction(built.tx), 'Wallet signature');
       var providerSig = typeof res === 'string' ? res : (res && res.signature);
       if (providerSig) await returnAfterFastConfirmation(providerSig, built, 'Wallet-signed transaction', options || {});
       return providerSig;
