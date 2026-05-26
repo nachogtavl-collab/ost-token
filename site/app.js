@@ -4648,8 +4648,12 @@
     if (prices.ethereum) fiatRates.ETH = 1 / prices.ethereum;
     if (prices.solana) fiatRates.SOL = 1 / prices.solana;
 
-    ostPrice = OST_BASE_PRICE;
-    window.ostPrice = ostPrice;
+    // Step 4: when the live-price flag is on, the oracle subscription owns
+    // ostPrice. Skip the static reset so we don't clobber the live tick.
+    if (!window.OST_LIVE_PRICE) {
+      ostPrice = OST_BASE_PRICE;
+      window.ostPrice = ostPrice;
+    }
     refreshOstDisplays();
     updateProductOSTPrices();
     updateCalc();
