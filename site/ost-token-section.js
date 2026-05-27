@@ -100,7 +100,7 @@
 
   function loadMetadata() {
     try {
-      fetch('./ost-metadata.json', { cache: 'no-store' })
+      fetch('./assets/ost-metadata.json', { cache: 'no-store' })
         .then(function (r) { return r.ok ? r.json() : null; })
         .then(applyMetadata)
         .catch(function () {});

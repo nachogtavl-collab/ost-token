@@ -1,0 +1,31 @@
+{
+  "name": "OST",
+  "symbol": "OST",
+  "description": "OST is decentralized digital cash and uncensored internet for 8 billion human beings — and eventually, beyond. Private. Instant. Unstoppable. The currency of Earth & Space.\n\nZero fees forever. Native confidential transfers (Token-2022). Human + AI Prediction Markets. Multi-layer resilience (on-chain + offline + satellite). Public Benefit Corporation — patents held for humanity.\n\nFrom private money to free intelligence. From Earth to Mars. From atoms to self-constructing civilizations.",
+  "image": "https://nachogtavl-collab.github.io/ost-token/assets/ost-logo.svg",
+  "external_url": "https://nachogtavl-collab.github.io/ost-token/",
+  "attributes": [
+    { "trait_type": "Decimals", "value": 9 },
+    { "trait_type": "Total Supply", "value": "1,000,000,000" },
+    { "trait_type": "Pre-mine", "value": "0" },
+    { "trait_type": "Network", "value": "Solana (Token-2022)" },
+    { "trait_type": "Confidential Transfers", "value": "Enabled (ElGamal + ZK)" },
+    { "trait_type": "Live Price Oracle", "value": "Active" }
+  ],
+  "properties": {
+    "files": [
+      {
+        "uri": "https://nachogtavl-collab.github.io/ost-token/assets/ost-logo.svg",
+        "type": "image/svg+xml"
+      }
+    ],
+    "category": "fungible",
+    "creators": [
+      {
+        "address": "REPLACE_WITH_YOUR_MINT_AUTHORITY_WALLET",
+        "share": 100
+      }
+    ]
+  },
+  "seller_fee_basis_points": 0
+}
