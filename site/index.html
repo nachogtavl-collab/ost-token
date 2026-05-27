@@ -5939,10 +5939,10 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
     <script>
       window.OST_API_BASE = "https://ost-api.nachogtavl.workers.dev";
       window.OST_POLY_RELAY_URL = window.OST_API_BASE;
-      // Step 3 rollout flag — leave OFF; flip per-wallet in console with OST.enableLive()
-      window.OST_LIVE_PRICE = window.OST_LIVE_PRICE === true;
+      // Live OST price is ON by default; set window.OST_LIVE_PRICE=false before this block to disable.
+      window.OST_LIVE_PRICE = window.OST_LIVE_PRICE !== false;
     </script>
-    <script src="ost-price-client.js?v=201"></script>
+    <script src="ost-price-client.js?v=202"></script>
     <script src="native-markets.js?v=3"></script>
     <script src="icons.js?v=1"></script>
     <script src="app.js?v=202"></script>
