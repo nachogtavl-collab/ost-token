@@ -4655,7 +4655,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
 
             <!-- Flow animation -->
             <div class="lp-flow" id="lpFlow" style="display:none">
-              <div class="lp-fstep" data-s="1"><span class="lp-fdot"></span><span>Connecting wallet&hellip;</span></div>
+              <div class="lp-fstep" data-s="1"><span class="lp-fdot"></span><span>Wallet ready&hellip;</span></div>
               <div class="lp-fstep" data-s="2"><span class="lp-fdot"></span><span>Deploying token&hellip;</span></div>
               <div class="lp-fstep" data-s="3"><span class="lp-fdot"></span><span>Creating bonding curve&hellip;</span></div>
               <div class="lp-fstep" data-s="4"><span class="lp-fdot"></span><span>Adding initial liquidity&hellip;</span></div>
@@ -6042,7 +6042,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
 
       function warmOfflineAssets() {
         if (!('caches' in window)) return;
-        caches.open('ost-pwa-runtime-v210').then(function (cache) {
+        caches.open('ost-pwa-runtime-v211').then(function (cache) {
           collectOfflineAssetUrls().reduce(function (chain, url) {
             return chain.then(function () {
               return fetch(url, { mode: 'no-cors', cache: 'force-cache' })
