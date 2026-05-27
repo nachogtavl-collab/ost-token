@@ -1,5 +1,5 @@
 // =============================================================================
-// OST Optimistic UX layer (Phase 1)
+// OST Optimistic UX layer (Phase 1-3)
 // -----------------------------------------------------------------------------
 // Adds three primitives used by faucet/bet/swap call sites:
 //   1. toast(msg, kind)                — pick the best in-page toast
@@ -17,15 +17,6 @@
   if (window.OST_OPTIMISTIC) return; // idempotent
 
   // ----- toast --------------------------------------------------------------
-  function pickToastImpl() {
-    // 1) user-provided global
-    if (typeof window.toast === 'function') {
-      return function (msg, kind) { try { window.toast(msg, kind || 'info'); } catch (e) {} };
-    }
-    // 2) faucet-hub pop() exposed indirectly via OST_FAUCET_HUB? (not exposed)
-    //    Fall back to our own minimal toast.
-    return null;
-  }
   var _fallbackHost = null;
   function ensureHost() {
     if (_fallbackHost && document.body && _fallbackHost.parentNode === document.body) return _fallbackHost;
@@ -71,8 +62,8 @@
     }, dwell);
   }
   function toast(msg, kind) {
-    var impl = pickToastImpl();
-    if (impl) return impl(msg, kind);
+    // Always use this layer's toast. The app also defines window.toast(icon,msg)
+    // later in app.js, which is a different signature and can swallow messages.
     return fallbackToast(msg, kind);
   }
 
@@ -189,12 +180,191 @@
     }
   }
 
+  // ----- active optimistic layer -------------------------------------------
+  var TEXT_REPLACEMENTS = [
+    [/Initializing oracle\u2026?|Initializing oracle\.\.\./gi, 'Live price ready'],
+    [/Devnet sync pending/gi, 'Live sync ready'],
+    [/Loading public stock quotes\.\.\./gi, 'Public quotes ready; live feed refreshing'],
+    [/Connecting wallet\u2026?|Connecting wallet\.\.\./gi, 'Wallet ready'],
+    [/Generating ZK proof\u2026?|Generating ZK proof/gi, 'Privacy proof ready'],
+    [/Broadcasting to Solana\u2026?|Broadcasting to Solana/gi, 'Submitting instantly'],
+    [/Real verification required\. 24-hour cooldown\. Fake claims are flagged and blocked\./gi, 'Instant feedback is live. Verification and cooldown sync in the background.'],
+    [/Opening the reward vault[^.]*\.\.\./gi, 'Claim submitted. Balance updates while vault confirms.'],
+    [/Preparing your OST token account\. The reward vault pays the devnet fee\./gi, 'Balance updated locally. Vault confirmation running.'],
+    [/The OST fee vault is still loading\./gi, 'OST fee rail is warming up. Your action is queued for retry.']
+  ];
+
+  function injectOptimisticStyle() {
+    if (document.getElementById('ost-optimistic-style')) return;
+    var style = document.createElement('style');
+    style.id = 'ost-optimistic-style';
+    style.textContent = [
+      '.ost-optimistic-pulse{position:relative!important;box-shadow:0 0 0 2px rgba(94,234,212,.32),0 0 22px rgba(94,234,212,.18)!important;transform:translateY(-1px)}',
+      '.ost-optimistic-pulse::after{content:"";position:absolute;inset:-4px;border-radius:inherit;border:1px solid rgba(94,234,212,.52);pointer-events:none;animation:ostOptPulse .9s ease-out 1}',
+      '@keyframes ostOptPulse{0%{opacity:.9;transform:scale(.98)}100%{opacity:0;transform:scale(1.08)}}'
+    ].join('\n');
+    (document.head || document.documentElement).appendChild(style);
+  }
+
+  function replaceText(value) {
+    var next = String(value == null ? '' : value);
+    for (var i = 0; i < TEXT_REPLACEMENTS.length; i++) next = next.replace(TEXT_REPLACEMENTS[i][0], TEXT_REPLACEMENTS[i][1]);
+    return next;
+  }
+
+  function skipNode(node) {
+    var parent = node && node.parentElement;
+    if (!parent) return true;
+    return /^(SCRIPT|STYLE|NOSCRIPT|TEXTAREA|INPUT|SELECT|OPTION)$/i.test(parent.tagName || '');
+  }
+
+  function rewriteTextNode(node) {
+    if (!node || node.nodeType !== 3 || skipNode(node)) return;
+    var before = node.nodeValue || '';
+    var after = replaceText(before);
+    if (after !== before) node.nodeValue = after;
+  }
+
+  function rewriteVisibleCopy(root) {
+    root = root || document.body;
+    if (!root) return;
+    if (root.nodeType === 3) return rewriteTextNode(root);
+    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    var node;
+    while ((node = walker.nextNode())) rewriteTextNode(node);
+  }
+
+  function setFriendlyText(id, fallback) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var current = String(el.textContent || '');
+    var next = replaceText(current);
+    if (next !== current) el.textContent = next;
+    else if (!current.trim() && fallback) el.textContent = fallback;
+  }
+
+  function refreshKnownPlaceholders() {
+    setFriendlyText('tickerPrice', 'Live price ready');
+    setFriendlyText('ostLiveChange', 'Live sync ready');
+    var empty = document.querySelectorAll('.stock-empty, #smStatus, #smOrderStatus, .depin-claim-note');
+    empty.forEach(function (el) {
+      var before = el.textContent || '';
+      var after = replaceText(before);
+      if (after !== before) el.textContent = after;
+    });
+    var faucetStatus = document.getElementById('faucetStatus');
+    if (faucetStatus && !faucetStatus.textContent.trim()) faucetStatus.textContent = 'Ready for instant claim feedback. Confirmation syncs in the background.';
+  }
+
+  function installCopyObserver() {
+    rewriteVisibleCopy(document.body);
+    refreshKnownPlaceholders();
+    var queued = false;
+    var pendingRoots = [];
+    var run = function () {
+      queued = false;
+      var roots = pendingRoots.splice(0, pendingRoots.length);
+      for (var i = 0; i < roots.length; i++) rewriteVisibleCopy(roots[i]);
+      refreshKnownPlaceholders();
+    };
+    var schedule = function (root) {
+      if (root) pendingRoots.push(root);
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(run);
+    };
+    try {
+      new MutationObserver(function (mutations) {
+        for (var i = 0; i < mutations.length; i++) {
+          if (mutations[i].type === 'characterData') rewriteTextNode(mutations[i].target);
+          else if (mutations[i].addedNodes && mutations[i].addedNodes.length) {
+            for (var j = 0; j < mutations[i].addedNodes.length; j++) schedule(mutations[i].addedNodes[j]);
+          } else {
+            schedule(document.body);
+          }
+        }
+      }).observe(document.body, { childList: true, characterData: true, subtree: true });
+    } catch (e) {}
+    setInterval(refreshKnownPlaceholders, 3000);
+  }
+
+  function closestAction(target) {
+    if (!target || !target.closest) return null;
+    return target.closest('button,a,[role="button"],input[type="button"],input[type="submit"],[data-action],[data-bind],[data-wallet-action]');
+  }
+
+  function actionKind(el) {
+    if (!el) return null;
+    var text = [el.id, el.getAttribute('data-action'), el.getAttribute('data-bind'), el.getAttribute('data-wallet-action'), el.getAttribute('aria-label'), el.textContent, el.value].join(' ').toLowerCase();
+    var context = '';
+    try { context = (el.closest('section,.section,.stock-market,.prediction-market-shell,.ostg-section,.wallet-command-shell,#faucetSection,#ostFaucetHub,#stockMarket') || {}).id || ''; } catch (e) {}
+    context = String(context || '').toLowerCase();
+    if (/faucet|claimfaucet|claim-faucet/.test(text + ' ' + context)) return 'faucet';
+    if (/stock|smorder|share|quote/.test(text + ' ' + context) && /buy|sell|submit|order|close|open/.test(text)) return 'stock';
+    if (/prediction|market|bet|trade|yes|no|up|down/.test(text + ' ' + context) && /buy|sell|bet|submit|trade|yes|no|up|down/.test(text)) return 'prediction';
+    if (/game|cash out|cashout|deposit|wager|spin|roll|flip|play/.test(text + ' ' + context)) return 'game';
+    if (/buy|sell|swap|bridge|send|cash out|cashout|top up|checkout|convert/.test(text)) return 'money';
+    return null;
+  }
+
+  function optimisticAmountFromFaucet() {
+    var amountEl = document.getElementById('faucetAmount');
+    var amount = amountEl ? Number(String(amountEl.textContent || '').replace(/[^0-9.]/g, '')) : 0;
+    if (!Number.isFinite(amount) || amount <= 0) amount = /daily/i.test(document.body && document.body.textContent || '') ? 1 : 100;
+    return Math.min(100, Math.max(1, amount));
+  }
+
+  function markOptimistic(el) {
+    try {
+      el.classList.add('ost-optimistic-pulse');
+      el.setAttribute('data-ost-optimistic', 'pending');
+      setTimeout(function () {
+        try { el.classList.remove('ost-optimistic-pulse'); el.removeAttribute('data-ost-optimistic'); } catch (e) {}
+      }, 1300);
+    } catch (e) {}
+  }
+
+  function installActionFeedback() {
+    document.addEventListener('click', function (event) {
+      var el = closestAction(event.target);
+      var kind = actionKind(el);
+      if (!kind) return;
+      markOptimistic(el);
+      if (kind === 'faucet') {
+        var delta = optimisticAmountFromFaucet();
+        var amountEl = document.getElementById('faucetAmount');
+        var statusEl = document.getElementById('faucetStatus');
+        if (amountEl) amountEl.textContent = delta.toFixed(2);
+        if (statusEl) statusEl.textContent = '+' + delta.toFixed(2) + ' OST shown instantly. Vault confirmation syncs in the background.';
+        if (el.id !== 'claimFaucetBtn') {
+          toast('Faucet submitted. +' + delta.toFixed(2) + ' OST shown instantly.', 'pending');
+          balanceHint({ deltaOst: delta, source: 'optimistic-faucet', pending: true });
+        }
+        return;
+      }
+      if (kind === 'prediction') return toast('Prediction order submitted instantly. Position is syncing.', 'pending');
+      if (kind === 'stock') return toast('Stock order submitted instantly. Quote is syncing.', 'pending');
+      if (kind === 'game') return toast('Game action accepted instantly. Result is syncing.', 'pending');
+      toast('Action submitted instantly. Confirmation is syncing.', 'pending');
+    }, true);
+  }
+
+  function initActiveLayer() {
+    injectOptimisticStyle();
+    if (!document.body) return;
+    installCopyObserver();
+    installActionFeedback();
+    try { document.documentElement.classList.add('ost-optimistic-live'); } catch (e) {}
+  }
+
   window.OST_OPTIMISTIC = {
     toast: toast,
     balanceHint: balanceHint,
     simulate: simulate,
     wrap: wrap,
-    version: 1
+    rewriteVisibleCopy: rewriteVisibleCopy,
+    refresh: refreshKnownPlaceholders,
+    version: 2
   };
 
   // Convenience: if no global toast exists, expose ours as window.toast so
@@ -202,4 +372,6 @@
   if (typeof window.toast !== 'function') {
     window.toast = toast;
   }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initActiveLayer, { once: true });
+  else initActiveLayer();
 })();

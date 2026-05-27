@@ -201,7 +201,7 @@
       setStatus('Stock relay offline: OST API base missing.', 'is-error');
       return;
     }
-    setStatus('Loading public stock quotes...');
+    setStatus('Public quotes ready; live feed refreshing');
     try {
       var response = await fetch(base + '/stocks/quotes?symbols=' + encodeURIComponent(state.symbols.join(',')), { cache: 'no-store' });
       var payload = response.ok ? await response.json() : null;

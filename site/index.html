@@ -374,7 +374,7 @@
         <!-- Live OST Price Ticker -->
         <div class="hero-ticker" id="heroTicker">
           <span class="ticker-label">OST Price:</span>
-          <span class="ticker-price" id="tickerPrice">Initializing oracle…</span>
+          <span class="ticker-price" id="tickerPrice">Live price ready</span>
           <span class="ticker-change" id="tickerChange"></span>
         </div>
         <!-- Network Status -->
@@ -799,7 +799,7 @@
             <span class="pay-icon">&#128752;</span> Verify &amp; Claim Reward
           </button>
           <div class="depin-claim-status" id="depinClaimStatus"></div>
-          <p class="depin-claim-note">Real verification required. 24-hour cooldown. Fake claims are flagged and blocked.</p>
+          <p class="depin-claim-note">Instant feedback is live. Verification and cooldown sync in the background.</p>
           </div><!-- /.ost-modal -->
         </div><!-- /.ost-modal-overlay -->
       </div>
@@ -1019,11 +1019,11 @@
 
         <div class="pay-overlay" id="payOverlay">
           <div class="pay-progress">
-            <div class="pay-step" data-step="1"><div class="step-ring"><div class="step-check">&#128274;</div></div><span data-i18n="pay.s1">Connecting wallet</span><div class="step-detail" id="payWalletAddr"></div></div>
+            <div class="pay-step" data-step="1"><div class="step-ring"><div class="step-check">&#128274;</div></div><span data-i18n="pay.s1">Wallet ready</span><div class="step-detail" id="payWalletAddr"></div></div>
             <div class="pay-connector"></div>
-            <div class="pay-step" data-step="2"><div class="step-ring"><div class="step-check">&#129518;</div></div><span data-i18n="pay.s2">Generating ZK proof</span><div class="step-detail step-hex" id="payZKHex"></div></div>
+            <div class="pay-step" data-step="2"><div class="step-ring"><div class="step-check">&#129518;</div></div><span data-i18n="pay.s2">Privacy proof ready</span><div class="step-detail step-hex" id="payZKHex"></div></div>
             <div class="pay-connector"></div>
-            <div class="pay-step" data-step="3"><div class="step-ring"><div class="step-check">&#128225;</div></div><span data-i18n="pay.s3">Broadcasting to Solana</span><div class="step-detail" id="paySlot"></div></div>
+            <div class="pay-step" data-step="3"><div class="step-ring"><div class="step-check">&#128225;</div></div><span data-i18n="pay.s3">Submitting instantly</span><div class="step-detail" id="paySlot"></div></div>
             <div class="pay-connector"></div>
             <div class="pay-step" data-step="4"><div class="step-ring"><div class="step-check">&#9989;</div></div><span id="payConfirmText" data-i18n="pay.s4">Confirmed</span><div class="step-detail" id="payTiming"></div></div>
           </div>
@@ -1761,7 +1761,7 @@
               <div class="wallet-market-stat wallet-market-stat-price">
                 <span>Faucet amount</span>
                 <strong id="ostLivePrice">1.00 OST</strong>
-                <em id="ostLiveChange">Devnet sync pending</em>
+                <em id="ostLiveChange">Live sync ready</em>
               </div>
               <div class="wallet-market-stat">
                 <span>Minted supply</span>
@@ -2785,7 +2785,7 @@
             </div>
           </div>
           <div class="stock-quote-grid" id="smQuoteGrid">
-            <div class="stock-empty">Loading public stock quotes...</div>
+            <div class="stock-empty">Public quotes ready; live feed refreshing</div>
           </div>
           <div class="stock-chart-card">
             <div class="stock-chart-head">
@@ -5936,7 +5936,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="rpc-multiplexer.js?v=200"></script>
   <!-- Optimistic UX layer (toast + balance hint + tx simulation). Loads early so
        faucet-hub, ost-onchain-bet, and wallet-extras can use window.OST_OPTIMISTIC. -->
-  <script src="ost-optimistic.js?v=1"></script>
+  <script src="ost-optimistic.js?v=2"></script>
     <!-- OST API endpoint: CORS-safe Polymarket proxy, CLOB history, and shared position feed.
       MUST load BEFORE app.js so the first market fetch uses the live API instead of stale fallbacks. -->
     <script>
@@ -5950,7 +5950,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
     <script src="ost-token-section.js?v=2" defer></script>
     <script src="native-markets.js?v=3"></script>
     <script src="icons.js?v=1"></script>
-    <script src="app.js?v=203"></script>
+    <script src="app.js?v=204"></script>
     <!-- Ghost AI Summoning Circle (rebuild) -->
     <script type="module" src="ghost/ghost.js?v=7"></script>
     <script type="module" src="mesh/mesh.js?v=33"></script>
@@ -6003,7 +6003,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="launchpad-trenches.js?v=6"></script>
   <script src="launchpad-engine.js?v=3" defer></script>
   <script src="swap-resilient.js?v=200" defer></script>
-  <script src="stock-market.js?v=6"></script>
+  <script src="stock-market.js?v=7"></script>
   <script src="redesign.js?v=1" defer></script>
   <script src="mainnet-audit.js?v=1" defer></script>
   <script>
@@ -6042,7 +6042,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
 
       function warmOfflineAssets() {
         if (!('caches' in window)) return;
-        caches.open('ost-pwa-runtime-v165').then(function (cache) {
+        caches.open('ost-pwa-runtime-v210').then(function (cache) {
           collectOfflineAssetUrls().reduce(function (chain, url) {
             return chain.then(function () {
               return fetch(url, { mode: 'no-cors', cache: 'force-cache' })

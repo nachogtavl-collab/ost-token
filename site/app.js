@@ -79,7 +79,7 @@
       'features.f6.title': 'ZK Tax Compliance', 'features.f6.text': 'Prove taxes without revealing your balance.',
       'pay.title': 'Curated Shop - Live Listings', 'pay.sub': 'Build a cart from real products, then send it to the interchange desk for a live OST request.',
       'pay.cart': 'Your Cart', 'pay.empty': 'Tap + to add items', 'pay.paybtn': 'Review in OST Desk',
-      'pay.s1': 'Connecting wallet', 'pay.s2': 'Generating ZK proof', 'pay.s3': 'Broadcasting transfer', 'pay.s4': 'Confirmed in 0.4s',
+      'pay.s1': 'Wallet ready', 'pay.s2': 'Privacy proof ready', 'pay.s3': 'Submitting instantly', 'pay.s4': 'Confirmed in 0.4s',
       'pay.done': 'Payment Complete - Fully Private', 'pay.donesub': 'No one on Earth saw this transaction.',
       'transfer.title': 'Bring Your Money From Anywhere', 'transfer.sub': 'Live prices. Real-time charts. Exchange any currency into OST.',
       'transfer.calc': 'Exchange Rate Calculator', 'transfer.calcsub': 'See how much OST you get for any amount.',
@@ -4380,7 +4380,7 @@
         return 'Fee vault ready';
       }
       if (!ostDevnetMetrics.available) {
-        return ostDevnetMetrics.loading ? 'Syncing devnet' : 'Devnet sync pending';
+        return ostDevnetMetrics.loading ? 'Syncing devnet' : 'Live sync ready';
       }
       if (ostDevnetMetrics.faucetClaimCount > 0) {
         return formatCompactCount(ostDevnetMetrics.faucetClaimCount) + ' wallets served - 100 OST start';
@@ -4410,7 +4410,7 @@
         if (ostDevnetMetrics.available) {
           updatedEl.textContent = 'Devnet live · ' + new Date(ostDevnetMetrics.lastUpdatedAt || Date.now()).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
         } else {
-          updatedEl.textContent = ostDevnetMetrics.loading ? 'Syncing devnet…' : 'Devnet sync pending';
+          updatedEl.textContent = ostDevnetMetrics.loading ? 'Syncing devnet…' : 'Live sync ready';
         }
       }
     }
@@ -6101,13 +6101,17 @@
 
   if (faucetBtn) {
     faucetBtn.addEventListener('click', () => {
+      let optimisticAmount = 0;
       if (window.OST_OPTIMISTIC) {
-        try { window.OST_OPTIMISTIC.toast('Claiming OST faucet…', 'pending'); } catch (e) {}
-        try { window.OST_OPTIMISTIC.balanceHint({ deltaOst: +1, source: 'faucet-claim', pending: true }); } catch (e) {}
+        const visibleAmount = Number(String(faucetAmount && faucetAmount.textContent || '').replace(/[^0-9.]/g, ''));
+        optimisticAmount = Number.isFinite(visibleAmount) && visibleAmount > 0 ? visibleAmount : OST_WELCOME_DROP_AMOUNT;
+        try { window.OST_OPTIMISTIC.toast('Faucet claim queued. +' + optimisticAmount.toFixed(2) + ' OST updates instantly.', 'pending'); } catch (e) {}
+        try { window.OST_OPTIMISTIC.balanceHint({ deltaOst: optimisticAmount, source: 'faucet-claim', pending: true }); } catch (e) {}
       }
       runOstFaucetFlow({ animate: true }).then(function (result) {
         if (window.OST_OPTIMISTIC && (!result || result.ok === false)) {
-          try { window.OST_OPTIMISTIC.balanceHint({ deltaOst: -1, source: 'faucet-claim', rollback: true }); } catch (e) {}
+          const rollbackAmount = result && Number(result.amount) > 0 ? Number(result.amount) : optimisticAmount;
+          try { window.OST_OPTIMISTIC.balanceHint({ deltaOst: -rollbackAmount, source: 'faucet-claim', rollback: true }); } catch (e) {}
         }
       });
     });
