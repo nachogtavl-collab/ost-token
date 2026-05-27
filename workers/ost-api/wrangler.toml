@@ -23,6 +23,10 @@ class_name = "FaucetGate"
 name = "NATIVE_MARKET_HUB"
 class_name = "NativeMarketHub"
 
+[[durable_objects.bindings]]
+name = "REALTIME_HUB"
+class_name = "RealtimeHub"
+
 [[migrations]]
 tag = "mesh_hub_v1"
 new_sqlite_classes = ["MeshHub"]
@@ -34,6 +38,10 @@ new_sqlite_classes = ["FaucetGate"]
 [[migrations]]
 tag = "native_market_hub_v1"
 new_sqlite_classes = ["NativeMarketHub"]
+
+[[migrations]]
+tag = "realtime_hub_v1"
+new_sqlite_classes = ["RealtimeHub"]
 
 [vars]
 GAMMA_BASE = "https://gamma-api.polymarket.com"

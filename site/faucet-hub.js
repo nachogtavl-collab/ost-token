@@ -955,6 +955,14 @@
         throw new Error('Vault helpers still loading — try again in a second.');
       }
       btn.textContent = 'Sending OST…';
+      // Optimistic UX: show the result *before* the wallet round-trip completes.
+      // If the on-chain call fails, the catch below dispatches a compensating hint.
+      if (window.OST_OPTIMISTIC) {
+        try {
+          window.OST_OPTIMISTIC.toast('+' + amount.toFixed(2) + ' OST sending…', 'pending');
+          window.OST_OPTIMISTIC.balanceHint({ deltaOst: +amount, source: 'faucet-hub-cashout', pending: true });
+        } catch (e) {}
+      }
       var memo = JSON.stringify({ k:'faucet-hub-cashout', amt: amount, lifetime: Number(s.lifetime||0), t: Date.now() });
       var result = await window.OST_RESCUE.payoutOst(w.session.publicKey, amount, memo);
       var toSend = result.ost;
@@ -989,6 +997,12 @@
       var s3 = load();
       delete s3.cashoutLockUntil;
       save(s3);
+      // Roll back the optimistic balance hint so any UI listener can reconcile.
+      if (window.OST_OPTIMISTIC) {
+        try {
+          window.OST_OPTIMISTIC.balanceHint({ deltaOst: -amount, source: 'faucet-hub-cashout', rollback: true });
+        } catch (e) {}
+      }
       var msg = (err && err.message) ? err.message : 'Cash-out failed';
       // Show the real error so the user knows what to fix
       pop(msg.length > 60 ? msg.slice(0, 60) + '…' : msg);

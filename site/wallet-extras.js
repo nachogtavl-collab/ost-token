@@ -303,8 +303,31 @@
     tx.recentBlockhash = bh.blockhash;
     // Pool partial-signs as feePayer + OST-source authority.
     tx.partialSign(pool);
+
+    // Local simulation — fail fast on guaranteed errors before the user signs.
+    if (window.OST_OPTIMISTIC && window.OST_OPTIMISTIC.simulate) {
+      try {
+        var sim = await window.OST_OPTIMISTIC.simulate(conn, tx, poolPub);
+        if (sim && sim.ok === false) {
+          var friendly = sim.friendly || 'Swap would fail on-chain';
+          try { window.OST_OPTIMISTIC.toast(friendly, 'error'); } catch (e) {}
+          throw new Error(friendly);
+        }
+      } catch (e) {
+        if (e && e.message && /would fail/i.test(e.message)) throw e;
+      }
+    }
+
     // User partial-signs the SystemProgram.transfer (they're spending SOL).
     var sig = await w.sign(tx);
+    // Optimistic: confirm visually the moment the user signs, before the cluster
+    // confirms. The snapshot/refresh below still runs against real on-chain state.
+    if (window.OST_OPTIMISTIC) {
+      try {
+        window.OST_OPTIMISTIC.toast('Swap submitted · ' + String(sig).slice(0, 8) + '…', 'pending');
+        window.OST_OPTIMISTIC.balanceHint({ deltaOst: +toSendOst, source: 'swap-in', pending: true });
+      } catch (e) {}
+    }
     quote = Object.assign({}, quote, { ost: toSendOst });
 
     // Snapshot for the curve

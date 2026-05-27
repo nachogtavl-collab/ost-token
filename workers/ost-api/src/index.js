@@ -2,8 +2,10 @@
 import { handleGhostV2Request } from './ghost/index.js';
 import { handleMeshRequest }    from './mesh/index.js';
 import { handleOstPriceRequest } from './ost-price.js';
+import { handleRealtimeRequest, publishRealtimeEvent } from './realtime.js';
 
 export { MeshHub } from './mesh/hub.js';
+export { RealtimeHub } from './realtime.js';
 
 /**
  * OST Prediction API Server — Cloudflare Worker
@@ -649,6 +651,93 @@ function toMs(value) {
 
 function cleanText(value, max = 200) {
   return String(value == null ? '' : value).replace(/[\r\n]+/g, ' ').slice(0, max);
+}
+
+function walletChannelForRealtime(wallet) {
+  const clean = cleanText(wallet || '', 80);
+  return clean ? 'wallet:' + clean : '';
+}
+
+function channelForRealtime(prefix, value) {
+  const clean = cleanText(value || '', 160)
+    .toLowerCase()
+    .replace(/[^a-z0-9:_./-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+  return clean ? prefix + ':' + clean : '';
+}
+
+function publishPositionRealtime(env, record, marketState, flowRecord) {
+  if (!record) return;
+  const walletChannel = walletChannelForRealtime(record.wallet);
+  const marketChannel = channelForRealtime('market', record.marketId);
+  const closed = positionIsClosed(record);
+  const amount = closed
+    ? cleanNumber(record.cashoutOst != null ? record.cashoutOst : record.sellValue, 0) || 0
+    : cleanNumber(record.stake, 0) || 0;
+  const channels = ['all', 'prediction', 'orderbook'];
+  if (marketChannel) channels.push(marketChannel);
+  if (walletChannel) channels.push(walletChannel);
+  publishRealtimeEvent(env, {
+    type: closed ? 'prediction.cashout' : 'prediction.order',
+    public: true,
+    channels,
+    wallet: record.wallet || '',
+    marketId: record.marketId || '',
+    amount,
+    token: 'OST',
+    title: closed ? 'Prediction cash-out' : 'Prediction order live',
+    message: closed
+      ? 'Prediction cash-out settled for ' + amount + ' OST'
+      : String(record.side || 'YES').toUpperCase() + ' order opened for ' + amount + ' OST',
+    payload: { record, marketState: marketState || null, flowRecord: flowRecord || null }
+  }).catch(() => {});
+  if (marketState) {
+    publishRealtimeEvent(env, {
+      type: 'orderbook.update',
+      public: true,
+      channels: ['all', 'orderbook', 'prediction', marketChannel].filter(Boolean),
+      marketId: record.marketId || '',
+      title: 'Market book updated',
+      message: record.marketTitle || record.title || record.marketId || 'OST market update',
+      silent: true,
+      payload: { marketState, record: flowRecord || record }
+    }).catch(() => {});
+  }
+  if (walletChannel) {
+    publishRealtimeEvent(env, {
+      type: 'transaction.alert',
+      private: true,
+      channels: [walletChannel],
+      wallet: record.wallet || '',
+      marketId: record.marketId || '',
+      amount,
+      token: 'OST',
+      title: closed ? 'Cash-out confirmed' : 'Prediction order confirmed',
+      message: closed ? '+' + amount + ' OST cash-out' : '-' + amount + ' OST stake locked',
+      payload: { record, marketState: marketState || null }
+    }).catch(() => {});
+  }
+}
+
+function publishWalletRealtime(env, record, overrides = {}) {
+  if (!record || !record.wallet) return;
+  const walletChannel = walletChannelForRealtime(record.wallet);
+  if (!walletChannel) return;
+  const amount = cleanNumber(record.amount != null ? record.amount : record.ostAmount, 0) || 0;
+  publishRealtimeEvent(env, Object.assign({
+    type: 'wallet.event',
+    private: true,
+    channels: [walletChannel],
+    wallet: record.wallet,
+    marketId: record.marketId || '',
+    gameId: record.game || '',
+    amount,
+    token: record.token || 'OST',
+    title: record.label || record.kind || 'Wallet activity',
+    message: amount ? String(record.kind || 'Activity') + ' ' + amount + ' ' + (record.token || 'OST') : String(record.kind || 'Wallet activity'),
+    payload: { record }
+  }, overrides)).catch(() => {});
 }
 
 function cleanNumber(value, fallback = null) {
@@ -1383,6 +1472,27 @@ export class NativeMarketHub {
       canonical: true,
       hub: 'native-market-hub'
     };
+    if (Number(payload.livePrice) > 1000) {
+      const shouldPublish = !this.lastRealtimeBtcAt
+        || now - this.lastRealtimeBtcAt > 1200
+        || Math.abs(Number(payload.livePrice) - Number(this.lastRealtimeBtcPrice || 0)) >= 0.5;
+      if (shouldPublish) {
+        this.lastRealtimeBtcAt = now;
+        this.lastRealtimeBtcPrice = Number(payload.livePrice);
+        publishRealtimeEvent(this.env, {
+          type: 'price.tick',
+          public: true,
+          channels: ['all', 'price', 'price:btc', 'prediction', 'market:' + payload.marketId],
+          marketId: payload.marketId,
+          amount: payload.livePrice,
+          token: 'BTC',
+          title: 'BTC price update',
+          message: 'BTC ' + Number(payload.livePrice).toFixed(2) + ' USD',
+          silent: true,
+          payload
+        }).catch(() => {});
+      }
+    }
     this.btcSnapshotCache = payload;
     this.btcSnapshotCacheAt = Date.now();
     return payload;
@@ -1898,7 +2008,19 @@ export class FaucetGate {
         label: pending.kind === 'welcome' ? '100 OST head start' : 'Daily 1 OST faucet',
         ts: now
       });
-      return json({ ok: true, state: publicFaucetState(record, now) }, 200, { 'cache-control': 'no-store' });
+      const state = publicFaucetState(record, now);
+      publishRealtimeEvent(this.env, {
+        type: 'faucet.claim',
+        public: true,
+        channels: ['all', 'faucet', walletChannelForRealtime(wallet)],
+        wallet,
+        amount,
+        token: 'OST',
+        title: 'Faucet claim confirmed',
+        message: '+' + amount + ' OST ' + (pending.kind === 'welcome' ? 'head start' : 'daily claim'),
+        payload: { state, reservationId, signature, kind: pending.kind }
+      }).catch(() => {});
+      return json({ ok: true, state }, 200, { 'cache-control': 'no-store' });
     }
 
     if (path === '/faucet/v1/cancel' && method === 'POST') {
@@ -2283,6 +2405,20 @@ async function markIntentPaidFromCrypto(env, intent, verification, options = {})
   if (options.enqueueDispatcher !== false) {
     await pushQueue(env, intent.id);
   }
+  publishWalletRealtime(env, {
+    id: intent.id,
+    wallet: intent.wallet,
+    kind: 'topup-paid',
+    amount: intent.ostAmount,
+    sig: verification.signature,
+    label: 'Payment verified; OST delivery queued',
+    token: 'OST',
+    ts: intent.paidAt
+  }, {
+    type: 'topup.paid',
+    title: 'Payment verified',
+    message: intent.ostAmount + ' OST delivery is queued'
+  });
   return { ok: true, intent };
 }
 
@@ -2340,6 +2476,11 @@ export default {
       if (ostResp) return ostResp;
     }
 
+    // OST Realtime — WebSocket events for prices, orders, wallet alerts, games.
+    if (path.startsWith('/realtime/')) {
+      return handleRealtimeRequest(request, env, { path, method });
+    }
+
     // OST Faucet Gate — shared per-wallet faucet state + anti-double-claim reservations.
     if (path === '/faucet/state' && method === 'GET') {
       if (!env.FAUCET_GATE) return json({ error: 'faucet_gate_not_configured' }, 503);
@@ -2380,6 +2521,10 @@ export default {
           'GET  /ost/stats',
           'GET  /ost/history',
           'POST /ost/event',
+          'GET  /realtime/v1/health',
+          'GET  /realtime/v1/ws',
+          'POST /realtime/v1/publish',
+          'GET  /realtime/v1/events',
           'GET  /markets',
           'GET  /markets/:id',
           'GET  /markets/:id/book',
@@ -2836,6 +2981,7 @@ export default {
       rememberRecentPositionHot(flowRecord);
       await kvPut(env, 'positions:recent', mergeNewest(recent, flowRecord, 100), 60 * 60 * 24 * 7);
       const marketState = await applyNativePositionToMarketState(env, record, nativeMarketStateBefore ? nativeMarketStateBefore.baseYesPrice : null);
+      publishPositionRealtime(env, record, marketState, flowRecord);
       return json({ ok: true, stored: true, record, marketState, flowRecord: flowRecord !== record ? flowRecord : null });
     }
 
@@ -2892,6 +3038,11 @@ export default {
       const key = `wallet:events:${wallet}`;
       const bucket = await kvGet(env, key, []);
       await kvPut(env, key, mergeNewest(bucket, record, 300));
+      publishWalletRealtime(env, record, {
+        type: 'transaction.alert',
+        title: record.label || record.kind || 'Wallet activity',
+        message: record.amount ? String(record.label || record.kind) + ' +' + record.amount + ' ' + (record.token || 'OST') : String(record.label || record.kind)
+      });
       return json({ ok: true, stored: true, record });
     }
 
@@ -2930,6 +3081,17 @@ export default {
       const coins = (await kvGet(env, 'launchpad:coins', [])).slice(0, 199);
       coins.unshift(record);
       await kvPut(env, 'launchpad:coins', coins);
+      publishRealtimeEvent(env, {
+        type: 'launchpad.coin',
+        public: true,
+        channels: ['all', 'launchpad', channelForRealtime('launchpad', record.mint)],
+        mint: record.mint,
+        symbol: record.symbol,
+        wallet: record.creator,
+        title: '$' + record.symbol + ' launched',
+        message: record.name + ' is live on OST Launchpad',
+        payload: { coin: record }
+      }).catch(() => {});
       return json({ ok: true, stored: true, coin: record });
     }
     // POST /launchpad/trade  { mint, side: 'buy'|'sell', amount, trader }
@@ -2977,7 +3139,21 @@ export default {
         const walletKey = `wallet:events:${traderWallet}`;
         const walletEvents = await kvGet(env, walletKey, []);
         await kvPut(env, walletKey, mergeNewest(walletEvents, event, 300));
+        publishWalletRealtime(env, event, { type: 'transaction.alert' });
       }
+      publishRealtimeEvent(env, {
+        type: 'launchpad.trade',
+        public: true,
+        channels: ['all', 'launchpad', channelForRealtime('launchpad', mint), traderWallet ? walletChannelForRealtime(traderWallet) : ''].filter(Boolean),
+        mint,
+        symbol: c.symbol,
+        wallet: traderWallet,
+        amount: amt,
+        token: 'OST',
+        title: '$' + c.symbol + ' trade',
+        message: (side === 'sell' ? 'Sell' : 'Buy') + ' ' + amt + ' OST',
+        payload: { coin: c, tick: ticks[0] }
+      }).catch(() => {});
       return json({ ok: true, coin: c });
     }
     const tickMatch = path.match(/^\/launchpad\/ticks\/([^/]+)$/);
@@ -3064,6 +3240,29 @@ export default {
       const recent = await kvGet(env, 'stocks:orders:recent', []);
       await kvPut(env, 'stocks:orders:recent', mergeNewest(recent, order, 200), 60 * 60 * 24 * 14);
       await recordStockWalletEvent(env, order);
+      publishRealtimeEvent(env, {
+        type: 'stock.order',
+        public: true,
+        channels: ['all', 'stock', channelForRealtime('stock', symbol), walletChannelForRealtime(wallet)].filter(Boolean),
+        wallet,
+        symbol,
+        amount: order.ostStake,
+        token: 'OST',
+        title: symbol + ' mirror order',
+        message: side.toUpperCase() + ' ' + symbol + ' for ' + order.ostStake + ' OST',
+        payload: { order }
+      }).catch(() => {});
+      publishWalletRealtime(env, {
+        id: order.id,
+        wallet,
+        kind: 'stock-mirror-order',
+        amount: order.ostStake,
+        sig: order.signature,
+        label: order.side.toUpperCase() + ' ' + order.symbol + ' stock mirror',
+        token: 'OST',
+        marketId: order.symbol,
+        ts: order.createdAt
+      }, { type: 'transaction.alert' });
       return json({ ok: true, stored: true, order });
     }
 
@@ -3194,6 +3393,20 @@ export default {
             intent.paymentRef = session.payment_intent || session.id;
             await saveIntent(env, intent);
             await pushQueue(env, intent.id);
+            publishWalletRealtime(env, {
+              id: intent.id,
+              wallet: intent.wallet,
+              kind: 'topup-paid',
+              amount: intent.ostAmount,
+              sig: intent.paymentRef,
+              label: 'Payment verified; OST delivery queued',
+              token: 'OST',
+              ts: intent.paidAt
+            }, {
+              type: 'topup.paid',
+              title: 'Payment verified',
+              message: intent.ostAmount + ' OST delivery is queued'
+            });
           }
         }
       }
@@ -3256,6 +3469,20 @@ export default {
         deliveryKind: intent.deliveryKind
       });
       await kvPut(env, 'topup:sent', recent.slice(0, 200));
+      publishWalletRealtime(env, {
+        id: intent.id,
+        wallet: intent.wallet,
+        kind: 'topup-sent',
+        amount: intent.ostAmount,
+        sig: intent.signature,
+        label: 'OST top-up delivered',
+        token: 'OST',
+        ts: intent.sentAt
+      }, {
+        type: 'topup.sent',
+        title: 'Top-up delivered',
+        message: '+' + intent.ostAmount + ' OST delivered'
+      });
       return json({ ok: true, intent });
     }
 
@@ -3286,6 +3513,20 @@ export default {
       const recent = await kvGet(env, 'topup:sent', []);
       recent.unshift({ id: intent.id, ostAmount: intent.ostAmount, wallet: intent.wallet, signature: intent.signature, sentAt: intent.sentAt });
       await kvPut(env, 'topup:sent', recent.slice(0, 200));
+      publishWalletRealtime(env, {
+        id: intent.id,
+        wallet: intent.wallet,
+        kind: 'topup-sent',
+        amount: intent.ostAmount,
+        sig: intent.signature,
+        label: 'OST top-up delivered',
+        token: 'OST',
+        ts: intent.sentAt
+      }, {
+        type: 'topup.sent',
+        title: 'Top-up delivered',
+        message: '+' + intent.ostAmount + ' OST delivered'
+      });
       return json({ ok: true, intent });
     }
 
@@ -3445,6 +3686,13 @@ export default {
       tail.unshift({ wallet, walletShort: record.walletShort, kind: record.kind, stage, ostAmount: record.ostAmount, sig: record.sig, error: record.error, ts: record.ts, id });
       if (tail.length > 500) tail.length = 500;
       await kvPut(env, 'payouts:tail', tail, 60 * 60 * 24 * 14);
+      publishWalletRealtime(env, record, {
+        type: stage === 'failure' ? 'payout.failure' : stage === 'result' ? 'payout.result' : 'payout.intent',
+        title: stage === 'failure' ? 'Payout failed' : stage === 'result' ? 'Payout confirmed' : 'Payout started',
+        message: stage === 'failure'
+          ? (record.error || 'Payout failed')
+          : (stage === 'result' ? '+' : '') + record.ostAmount + ' OST ' + record.kind
+      });
       return json({ ok: true, stored: true, record });
     }
 
@@ -3689,6 +3937,7 @@ export default {
           await kvPut(env, 'positions:recent', mergeNewest(recent, record, 100), 60 * 60 * 24 * 7);
         }
         const marketState = await applyNativePositionToMarketState(env, record, nativeMarketStateBefore ? nativeMarketStateBefore.baseYesPrice : null);
+        publishPositionRealtime(env, record, marketState, record);
         return json({ ok: true, order: record, stored: !!env.OST_KV, marketState }, 200, { 'cache-control': 'no-store' });
       }
 
@@ -3750,6 +3999,7 @@ export default {
         const recent = await kvGet(env, 'positions:recent', []);
         const flowRecord = recentFlowRecordForPosition(order);
         await kvPut(env, 'positions:recent', mergeNewest(recent, flowRecord, 100), 60 * 60 * 24 * 7);
+        publishPositionRealtime(env, order, marketState, flowRecord);
         return json({ ok: true, order, marketState, flowRecord: flowRecord !== order ? flowRecord : null }, 200, { 'cache-control': 'no-store' });
       }
 

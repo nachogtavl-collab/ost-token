@@ -205,9 +205,29 @@
     var bh = await connection.getLatestBlockhash('confirmed');
     tx.recentBlockhash = bh.blockhash;
 
+    // Local simulation — fail fast on guaranteed errors *before* the wallet popup.
+    // Never blocks if simulation can't run (timeout/RPC error returns ok:true).
+    if (window.OST_OPTIMISTIC && window.OST_OPTIMISTIC.simulate) {
+      try {
+        var sim = await window.OST_OPTIMISTIC.simulate(connection, tx, payer);
+        if (sim && sim.ok === false) {
+          var friendly = sim.friendly || 'Transaction would fail on-chain';
+          try { window.OST_OPTIMISTIC.toast(friendly, 'error'); } catch (e) {}
+          throw new Error(friendly);
+        }
+      } catch (e) {
+        // Only re-throw if it's our own thrown simulation rejection.
+        if (e && e.message && /would fail/i.test(e.message)) throw e;
+      }
+    }
+
     if (typeof wallet.signAndSendTransaction === 'function') {
       var res = await wallet.signAndSendTransaction(tx);
       var sig = (res && res.signature) || res;
+      // Optimistic: tell the user the tx was submitted (before confirm finishes).
+      if (window.OST_OPTIMISTIC) {
+        try { window.OST_OPTIMISTIC.toast('Submitted · ' + String(sig).slice(0, 8) + '…', 'pending'); } catch (e) {}
+      }
       await connection.confirmTransaction(
         { signature: sig, blockhash: bh.blockhash, lastValidBlockHeight: bh.lastValidBlockHeight },
         'confirmed'
@@ -217,6 +237,9 @@
     if (typeof wallet.signTransaction === 'function') {
       var signed = await wallet.signTransaction(tx);
       var sig2 = await connection.sendRawTransaction(signed.serialize());
+      if (window.OST_OPTIMISTIC) {
+        try { window.OST_OPTIMISTIC.toast('Submitted · ' + String(sig2).slice(0, 8) + '…', 'pending'); } catch (e) {}
+      }
       await connection.confirmTransaction(
         { signature: sig2, blockhash: bh.blockhash, lastValidBlockHeight: bh.lastValidBlockHeight },
         'confirmed'

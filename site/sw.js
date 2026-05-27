@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v206';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v206';
+const CACHE_NAME = 'ost-pwa-cache-v208';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v208';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -28,6 +28,8 @@ const PRECACHE_PATHS = [
   './mobile-shell.css?v=13',
   './mobile-shrink.css?v=1',
   './rpc-multiplexer.js?v=200',
+  './ost-optimistic.js?v=1',
+  './realtime.js?v=1',
   './ost-notifications.js?v=2',
   './app.js?v=202',
   './icons.js?v=1',
