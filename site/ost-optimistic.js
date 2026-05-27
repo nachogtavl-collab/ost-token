@@ -17,6 +17,9 @@
   if (window.OST_OPTIMISTIC) return; // idempotent
 
   // ----- toast --------------------------------------------------------------
+  // Quiet by default: action feedback should update inline UI, not create popups.
+  var _toastLastShown = Object.create(null);
+  var OPTIMISTIC_TOAST_COOLDOWN_MS = 8000;
   var _fallbackHost = null;
   function ensureHost() {
     if (_fallbackHost && document.body && _fallbackHost.parentNode === document.body) return _fallbackHost;
@@ -62,8 +65,12 @@
     }, dwell);
   }
   function toast(msg, kind) {
-    // Always use this layer's toast. The app also defines window.toast(icon,msg)
-    // later in app.js, which is a different signature and can swallow messages.
+    if (window.OST_ALLOW_OPTIMISTIC_POPUPS !== true) return false;
+    var text = String(msg == null ? '' : msg);
+    var key = String(kind || 'info') + ':' + text.replace(/\s+/g, ' ').trim().slice(0, 160);
+    var now = Date.now();
+    if (now - (_toastLastShown[key] || 0) < OPTIMISTIC_TOAST_COOLDOWN_MS) return false;
+    _toastLastShown[key] = now;
     return fallbackToast(msg, kind);
   }
 
@@ -183,12 +190,24 @@
   // ----- active optimistic layer -------------------------------------------
   var TEXT_REPLACEMENTS = [
     [/Initializing oracle\u2026?|Initializing oracle\.\.\./gi, 'Live price ready'],
+    [/Loading live feeds\u2026?|Loading live feeds\.\.\./gi, 'Live feeds ready; refreshing'],
+    [/Loading live prediction markets\u2026?|Loading live prediction markets\.\.\./gi, 'Prediction markets ready; refreshing'],
+    [/Loading venue tape\u2026?|Loading venue tape\.\.\./gi, 'Venue tape ready; refreshing'],
+    [/Loading market pulse\u2026?|Loading market pulse\.\.\./gi, 'Market pulse ready; refreshing'],
+    [/Starting stock relay\u2026?|Starting stock relay\.\.\./gi, 'Public quotes ready; live feed refreshing'],
+    [/Waiting for public quote relay\u2026?|Waiting for public quote relay\.\.\./gi, 'Public quotes ready; live feed refreshing'],
+    [/Waiting for first refresh/gi, 'Live refresh ready'],
+    [/Loading\.\.\./gi, 'Ready'],
     [/Devnet sync pending/gi, 'Live sync ready'],
+    [/Syncing devnet\u2026?|Syncing devnet\.\.\.|Syncing devnet/gi, 'Live sync ready'],
+    [/Loading mint, treasury, and faucet data\u2026?|Loading mint, treasury, and faucet data\.\.\./gi, 'Live devnet data ready; refreshing'],
     [/Loading public stock quotes\.\.\./gi, 'Public quotes ready; live feed refreshing'],
     [/Connecting wallet\u2026?|Connecting wallet\.\.\./gi, 'Wallet ready'],
     [/Generating ZK proof\u2026?|Generating ZK proof/gi, 'Privacy proof ready'],
-    [/Broadcasting to Solana\u2026?|Broadcasting to Solana/gi, 'Submitting instantly'],
-    [/Real verification required\. 24-hour cooldown\. Fake claims are flagged and blocked\./gi, 'Instant feedback is live. Verification and cooldown sync in the background.'],
+    [/Broadcasting to Solana\u2026?|Broadcasting to Solana/gi, 'Submitting securely'],
+    [/Sending a real OST market ticket to the prediction vault\u2026?|Sending a real OST market ticket to the prediction vault\.\.\./gi, 'Prediction ticket opened locally. Vault confirmation is syncing.'],
+    [/Routing OST to the mirror settlement vault\u2026?|Routing OST to the mirror settlement vault\.\.\./gi, 'Stock mirror ticket opened locally. Settlement is syncing.'],
+    [/Real verification required\. 24-hour cooldown\. Fake claims are flagged and blocked\./gi, 'Verification and cooldown sync in the background.'],
     [/Opening the reward vault[^.]*\.\.\./gi, 'Claim submitted. Balance updates while vault confirms.'],
     [/Preparing your OST token account\. The reward vault pays the devnet fee\./gi, 'Balance updated locally. Vault confirmation running.'],
     [/The OST fee vault is still loading\./gi, 'OST fee rail is warming up. Your action is queued for retry.']
@@ -246,14 +265,19 @@
   function refreshKnownPlaceholders() {
     setFriendlyText('tickerPrice', 'Live price ready');
     setFriendlyText('ostLiveChange', 'Live sync ready');
-    var empty = document.querySelectorAll('.stock-empty, #smStatus, #smOrderStatus, .depin-claim-note');
+    var empty = document.querySelectorAll([
+      '.stock-empty', '#smStatus', '#smOrderStatus', '.depin-claim-note',
+      '#predictionMarketStatus', '#predictionMarketUpdated', '.prediction-market-empty-card',
+      '.prediction-tape-empty', '.prediction-pulse-empty', '#predictionTradeStatus',
+      '#ostPopupTitle', '.clf-time', '[data-ost-loading]'
+    ].join(','));
     empty.forEach(function (el) {
       var before = el.textContent || '';
       var after = replaceText(before);
       if (after !== before) el.textContent = after;
     });
     var faucetStatus = document.getElementById('faucetStatus');
-    if (faucetStatus && !faucetStatus.textContent.trim()) faucetStatus.textContent = 'Ready for instant claim feedback. Confirmation syncs in the background.';
+    if (faucetStatus && !faucetStatus.textContent.trim()) faucetStatus.textContent = 'Ready for claim feedback. Confirmation syncs in the background.';
   }
 
   function installCopyObserver() {
@@ -290,21 +314,53 @@
 
   function closestAction(target) {
     if (!target || !target.closest) return null;
-    return target.closest('button,a,[role="button"],input[type="button"],input[type="submit"],[data-action],[data-bind],[data-wallet-action]');
+    return target.closest('button,a,form,[role="button"],input[type="button"],input[type="submit"],[data-action],[data-bind],[data-wallet-action]');
   }
 
   function actionKind(el) {
     if (!el) return null;
-    var text = [el.id, el.getAttribute('data-action'), el.getAttribute('data-bind'), el.getAttribute('data-wallet-action'), el.getAttribute('aria-label'), el.textContent, el.value].join(' ').toLowerCase();
+    var text = [
+      el.id,
+      el.getAttribute('data-action'),
+      el.getAttribute('data-bind'),
+      el.getAttribute('data-wallet-action'),
+      el.getAttribute('data-buy-ost'),
+      el.getAttribute('data-stock-side'),
+      el.getAttribute('data-stock-close'),
+      el.getAttribute('data-prediction-quick-side'),
+      el.getAttribute('data-prediction-quick-outcome-key'),
+      el.getAttribute('aria-label'),
+      el.textContent,
+      el.value
+    ].join(' ').toLowerCase();
     var context = '';
-    try { context = (el.closest('section,.section,.stock-market,.prediction-market-shell,.ostg-section,.wallet-command-shell,#faucetSection,#ostFaucetHub,#stockMarket') || {}).id || ''; } catch (e) {}
+    try {
+      var contextEl = el.closest('section,.section,.stock-market,.prediction-market-board,.prediction-market-shell,.prediction-trade-desk,.ostg-section,.wallet-command-shell,#faucetSection,#ostFaucetHub,#stockMarket,#wallet-panel-convert,#predictionTradeDesk,#predictionMarketList,#predictionMarketStage,#ostGames,#ostGamesSection');
+      context = [contextEl && contextEl.id, contextEl && contextEl.className].join(' ');
+    } catch (e) {}
     context = String(context || '').toLowerCase();
     if (/faucet|claimfaucet|claim-faucet/.test(text + ' ' + context)) return 'faucet';
-    if (/stock|smorder|share|quote/.test(text + ' ' + context) && /buy|sell|submit|order|close|open/.test(text)) return 'stock';
-    if (/prediction|market|bet|trade|yes|no|up|down/.test(text + ' ' + context) && /buy|sell|bet|submit|trade|yes|no|up|down/.test(text)) return 'prediction';
+    if (/stock|smorder|share|quote/.test(text + ' ' + context) && /buy|sell|submit|order|close|open|ticket|position/.test(text)) return 'stock';
+    if (/prediction|market|bet|trade|yes|no|up|down/.test(text + ' ' + context) && /buy|sell|bet|submit|trade|yes|no|up|down|order|ticket/.test(text)) return 'prediction';
     if (/game|cash out|cashout|deposit|wager|spin|roll|flip|play/.test(text + ' ' + context)) return 'game';
     if (/buy|sell|swap|bridge|send|cash out|cashout|top up|checkout|convert/.test(text)) return 'money';
     return null;
+  }
+
+  var lastFeedbackByKey = Object.create(null);
+  function feedbackKey(kind, el, detail) {
+    if (kind === 'faucet') return 'faucet';
+    var raw = detail && detail.key;
+    if (!raw && el) raw = el.id || el.getAttribute('data-action') || el.getAttribute('data-stock-close') || el.getAttribute('data-prediction-quick-side') || el.textContent || '';
+    return kind + ':' + String(raw || 'generic').replace(/\s+/g, ' ').trim().slice(0, 80);
+  }
+
+  function shouldFeedback(key, ms) {
+    var now = Date.now();
+    var previous = lastFeedbackByKey[key] || 0;
+    if (previous && now - previous < (ms || 900)) return false;
+    lastFeedbackByKey[key] = now;
+    return true;
   }
 
   function optimisticAmountFromFaucet() {
@@ -324,29 +380,64 @@
     } catch (e) {}
   }
 
+  function optimisticFaucetClaim(detail) {
+    detail = detail || {};
+    var delta = Number(detail.amount);
+    if (!Number.isFinite(delta) || delta <= 0) delta = optimisticAmountFromFaucet();
+    var amountEl = document.getElementById('faucetAmount');
+    var statusEl = document.getElementById('faucetStatus');
+    var message = detail.message || ('+' + delta.toFixed(2) + ' OST queued. Vault confirmation syncs in the background.');
+    if (amountEl && detail.updateAmount !== false) amountEl.textContent = delta.toFixed(2);
+    if (statusEl && detail.updateStatus !== false) statusEl.textContent = message;
+    if (detail.notify === false) return delta;
+    if (detail.force || shouldFeedback(feedbackKey('faucet', detail.el, detail), detail.debounceMs || 1200)) {
+      toast(detail.toast || ('Faucet queued. +' + delta.toFixed(2) + ' OST is syncing.'), detail.kind || 'pending');
+      balanceHint({ deltaOst: delta, source: detail.source || 'optimistic-faucet', pending: true });
+    }
+    return delta;
+  }
+
+  function actionFeedback(kind, detail) {
+    detail = detail || {};
+    var el = detail.el || null;
+    if (el) markOptimistic(el);
+    if (kind === 'faucet') return optimisticFaucetClaim(detail);
+    var key = feedbackKey(kind, el, detail);
+    var shouldNotify = detail.force || shouldFeedback(key, detail.debounceMs || 900);
+    if (kind === 'prediction') {
+      var predictionStatus = document.getElementById('predictionTradeStatus');
+      if (predictionStatus && detail.statusText !== false) predictionStatus.textContent = detail.statusText || 'Prediction ticket queued. Vault confirmation is syncing.';
+      if (shouldNotify) toast(detail.toast || 'Prediction ticket queued. Position is syncing.', detail.kind || 'pending');
+      if (shouldNotify && Number(detail.amount) > 0) balanceHint({ deltaOst: -Number(detail.amount), source: detail.source || 'prediction-order', pending: true });
+      return true;
+    }
+    if (kind === 'stock') {
+      var stockStatus = document.getElementById('smOrderStatus');
+      if (stockStatus && detail.statusText !== false) stockStatus.textContent = detail.statusText || 'Stock mirror ticket opened locally. Settlement is syncing.';
+      if (shouldNotify) toast(detail.toast || 'Stock order queued. Quote is syncing.', detail.kind || 'pending');
+      if (shouldNotify && Number(detail.amount) > 0) balanceHint({ deltaOst: -Number(detail.amount), source: detail.source || 'stock-order', pending: true });
+      return true;
+    }
+    if (kind === 'game') {
+      if (shouldNotify) toast(detail.toast || 'Game action queued. Result is syncing.', detail.kind || 'pending');
+      return true;
+    }
+    if (shouldNotify) toast(detail.toast || 'Action queued. Confirmation is syncing.', detail.kind || 'pending');
+    return true;
+  }
+
   function installActionFeedback() {
-    document.addEventListener('click', function (event) {
+    var onAction = function (event) {
       var el = closestAction(event.target);
       var kind = actionKind(el);
       if (!kind) return;
-      markOptimistic(el);
-      if (kind === 'faucet') {
-        var delta = optimisticAmountFromFaucet();
-        var amountEl = document.getElementById('faucetAmount');
-        var statusEl = document.getElementById('faucetStatus');
-        if (amountEl) amountEl.textContent = delta.toFixed(2);
-        if (statusEl) statusEl.textContent = '+' + delta.toFixed(2) + ' OST shown instantly. Vault confirmation syncs in the background.';
-        if (el.id !== 'claimFaucetBtn') {
-          toast('Faucet submitted. +' + delta.toFixed(2) + ' OST shown instantly.', 'pending');
-          balanceHint({ deltaOst: delta, source: 'optimistic-faucet', pending: true });
-        }
-        return;
-      }
-      if (kind === 'prediction') return toast('Prediction order submitted instantly. Position is syncing.', 'pending');
-      if (kind === 'stock') return toast('Stock order submitted instantly. Quote is syncing.', 'pending');
-      if (kind === 'game') return toast('Game action accepted instantly. Result is syncing.', 'pending');
-      toast('Action submitted instantly. Confirmation is syncing.', 'pending');
-    }, true);
+      actionFeedback(kind, { el: el, source: 'delegated-' + event.type });
+    };
+    if ('PointerEvent' in window) document.addEventListener('pointerdown', onAction, true);
+    document.addEventListener('touchstart', onAction, true);
+    document.addEventListener('mousedown', onAction, true);
+    document.addEventListener('click', onAction, true);
+    document.addEventListener('submit', onAction, true);
   }
 
   function initActiveLayer() {
@@ -362,9 +453,12 @@
     balanceHint: balanceHint,
     simulate: simulate,
     wrap: wrap,
+    actionFeedback: actionFeedback,
+    faucetClaim: optimisticFaucetClaim,
     rewriteVisibleCopy: rewriteVisibleCopy,
     refresh: refreshKnownPlaceholders,
-    version: 2
+    quietPopups: true,
+    version: 4
   };
 
   // Convenience: if no global toast exists, expose ours as window.toast so

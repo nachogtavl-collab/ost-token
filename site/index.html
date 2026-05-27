@@ -799,7 +799,7 @@
             <span class="pay-icon">&#128752;</span> Verify &amp; Claim Reward
           </button>
           <div class="depin-claim-status" id="depinClaimStatus"></div>
-          <p class="depin-claim-note">Instant feedback is live. Verification and cooldown sync in the background.</p>
+          <p class="depin-claim-note">Verification and cooldown sync in the background.</p>
           </div><!-- /.ost-modal -->
         </div><!-- /.ost-modal-overlay -->
       </div>
@@ -1023,7 +1023,7 @@
             <div class="pay-connector"></div>
             <div class="pay-step" data-step="2"><div class="step-ring"><div class="step-check">&#129518;</div></div><span data-i18n="pay.s2">Privacy proof ready</span><div class="step-detail step-hex" id="payZKHex"></div></div>
             <div class="pay-connector"></div>
-            <div class="pay-step" data-step="3"><div class="step-ring"><div class="step-check">&#128225;</div></div><span data-i18n="pay.s3">Submitting instantly</span><div class="step-detail" id="paySlot"></div></div>
+            <div class="pay-step" data-step="3"><div class="step-ring"><div class="step-check">&#128225;</div></div><span data-i18n="pay.s3">Submitting securely</span><div class="step-detail" id="paySlot"></div></div>
             <div class="pay-connector"></div>
             <div class="pay-step" data-step="4"><div class="step-ring"><div class="step-check">&#9989;</div></div><span id="payConfirmText" data-i18n="pay.s4">Confirmed</span><div class="step-detail" id="payTiming"></div></div>
           </div>
@@ -5936,7 +5936,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="rpc-multiplexer.js?v=200"></script>
   <!-- Optimistic UX layer (toast + balance hint + tx simulation). Loads early so
        faucet-hub, ost-onchain-bet, and wallet-extras can use window.OST_OPTIMISTIC. -->
-  <script src="ost-optimistic.js?v=2"></script>
+  <script src="ost-optimistic.js?v=4"></script>
     <!-- OST API endpoint: CORS-safe Polymarket proxy, CLOB history, and shared position feed.
       MUST load BEFORE app.js so the first market fetch uses the live API instead of stale fallbacks. -->
     <script>
@@ -5950,7 +5950,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
     <script src="ost-token-section.js?v=2" defer></script>
     <script src="native-markets.js?v=3"></script>
     <script src="icons.js?v=1"></script>
-    <script src="app.js?v=204"></script>
+    <script src="app.js?v=205"></script>
     <!-- Ghost AI Summoning Circle (rebuild) -->
     <script type="module" src="ghost/ghost.js?v=7"></script>
     <script type="module" src="mesh/mesh.js?v=33"></script>
@@ -5987,7 +5987,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="code-academy.js?v=3"></script>
   <script src="i18n-runtime.js?v=4"></script>
   <script src="devnet-rescue.js?v=200"></script>
-  <script src="ost-notifications.js?v=2"></script>
+  <script src="ost-notifications.js?v=3"></script>
   <script src="mesh/mesh-upgrade.js?v=11"></script>
   <script src="mesh/mesh-link.js?v=2" defer></script>
   <!-- Mesh Casual Games (non-staked) -->

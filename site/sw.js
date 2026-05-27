@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v211';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v211';
+const CACHE_NAME = 'ost-pwa-cache-v212';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v212';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -28,10 +28,10 @@ const PRECACHE_PATHS = [
   './mobile-shell.css?v=13',
   './mobile-shrink.css?v=1',
   './rpc-multiplexer.js?v=200',
-  './ost-optimistic.js?v=2',
+  './ost-optimistic.js?v=4',
   './realtime.js?v=1',
-  './ost-notifications.js?v=2',
-  './app.js?v=204',
+  './ost-notifications.js?v=3',
+  './app.js?v=205',
   './icons.js?v=1',
   './nuevo-laredo-gas.js?v=1',
   './shop-quickview.js?v=3',
@@ -220,7 +220,7 @@ function notificationPayload(data = {}) {
       icon: data.icon || './icon-192.png',
       badge: data.badge || './icon-192.png',
       tag: data.tag || 'ost-mesh',
-      renotify: true,
+      renotify: false,
       requireInteraction: !!data.requireInteraction,
       vibrate: data.vibrate || [90, 45, 90],
       data: {
@@ -232,6 +232,23 @@ function notificationPayload(data = {}) {
   };
 }
 
+const NOTIFICATION_COOLDOWN_MS = 30000;
+const URGENT_NOTIFICATION_COOLDOWN_MS = 12000;
+const notificationLastShownAt = new Map();
+
+function shouldShowNotification(data = {}) {
+  if (data.force && data.type === 'system') return true;
+  const tag = data.tag || `ost-mesh-${data.type || 'mesh'}`;
+  const now = Date.now();
+  const type = data.type || 'mesh';
+  const cooldown = type === 'call' || type === 'video-call' || type === 'challenge'
+    ? URGENT_NOTIFICATION_COOLDOWN_MS
+    : NOTIFICATION_COOLDOWN_MS;
+  if (now - (notificationLastShownAt.get(tag) || 0) < cooldown) return false;
+  notificationLastShownAt.set(tag, now);
+  return true;
+}
+
 // In-memory cache of the user's most recent location fix, set by the page
 // before unload so background sync handlers can replay it. Survives only as
 // long as the SW is alive — for true persistence the page also writes to
@@ -241,6 +258,7 @@ let __ostLastLocation = null;
 self.addEventListener('message', (event) => {
   const data = event.data || {};
   if (data.type === 'ost-notify') {
+    if (!shouldShowNotification(data)) return;
     const payload = notificationPayload(data);
     event.waitUntil(self.registration.showNotification(payload.title, payload.options));
     return;
@@ -275,6 +293,7 @@ self.addEventListener('push', (event) => {
     try { data = { title: 'OST Mesh', body: event.data ? event.data.text() : '' }; } catch (__) { data = {}; }
   }
   const payload = notificationPayload(data);
+  if (!shouldShowNotification(data)) return;
   event.waitUntil(self.registration.showNotification(payload.title, payload.options));
 });
 

@@ -7,6 +7,9 @@
   var DEFAULT_ICON = 'icon-192.png';
   var DEFAULT_BADGE = 'icon-192.png';
   var PUSH_SUB_KEY = 'ost.notifications.pushSubscription.v1';
+  var NOTIFICATION_COOLDOWN_MS = 30000;
+  var URGENT_NOTIFICATION_COOLDOWN_MS = 12000;
+  var lastNotificationAtByTag = Object.create(null);
   var audioContext = null;
   var unlocked = false;
 
@@ -133,6 +136,19 @@
     return document.hidden || window.matchMedia('(display-mode: standalone)').matches;
   }
 
+  function rateLimited(type, options) {
+    options = options || {};
+    if (options.force && type === 'system') return false;
+    var tag = options.tag || ('ost-mesh-' + (type || 'mesh'));
+    var now = Date.now();
+    var cooldown = type === 'call' || type === 'video-call' || type === 'challenge'
+      ? URGENT_NOTIFICATION_COOLDOWN_MS
+      : NOTIFICATION_COOLDOWN_MS;
+    if (now - (lastNotificationAtByTag[tag] || 0) < cooldown) return true;
+    lastNotificationAtByTag[tag] = now;
+    return false;
+  }
+
   function showViaServiceWorker(title, body, options) {
     if (!('serviceWorker' in navigator)) return Promise.reject(new Error('service worker unavailable'));
     return navigator.serviceWorker.ready.then(function (registration) {
@@ -142,9 +158,9 @@
         icon: options.icon || DEFAULT_ICON,
         badge: options.badge || DEFAULT_BADGE,
         tag: options.tag || 'ost-mesh',
-        renotify: true,
+        renotify: false,
         requireInteraction: !!options.requireInteraction,
-        silent: false,
+        silent: !!options.silent,
         vibrate: options.vibrate || [90, 45, 90],
         data: { url: options.url || appUrl('mesh'), type: options.type || 'mesh' },
         actions: [{ action: 'open', title: 'Open OST Mesh' }]
@@ -155,11 +171,12 @@
   function mesh(type, title, body, options) {
     options = options || {};
     type = type || 'mesh';
+    if (!shouldNotify(type, options)) return Promise.resolve(false);
+    if (rateLimited(type, options)) return Promise.resolve(false);
     if (readEnabled()) tone(type);
     if (navigator.vibrate && (type === 'call' || type === 'video-call' || type === 'challenge')) {
       try { navigator.vibrate([120, 60, 120]); } catch (_) {}
     }
-    if (!shouldNotify(type, options)) return Promise.resolve(false);
     setBadge(1);
     var payload = Object.assign({ type: type, tag: 'ost-mesh-' + type, url: appUrl('mesh') }, options, { type: type });
     return showViaServiceWorker(title || 'OST Mesh', body || '', payload).catch(function () {
@@ -169,7 +186,7 @@
           icon: payload.icon || DEFAULT_ICON,
           badge: payload.badge || DEFAULT_BADGE,
           tag: payload.tag,
-          renotify: true,
+          renotify: false,
           data: { url: payload.url, type: type }
         });
         return true;

@@ -79,7 +79,7 @@
       'features.f6.title': 'ZK Tax Compliance', 'features.f6.text': 'Prove taxes without revealing your balance.',
       'pay.title': 'Curated Shop - Live Listings', 'pay.sub': 'Build a cart from real products, then send it to the interchange desk for a live OST request.',
       'pay.cart': 'Your Cart', 'pay.empty': 'Tap + to add items', 'pay.paybtn': 'Review in OST Desk',
-      'pay.s1': 'Wallet ready', 'pay.s2': 'Privacy proof ready', 'pay.s3': 'Submitting instantly', 'pay.s4': 'Confirmed in 0.4s',
+      'pay.s1': 'Wallet ready', 'pay.s2': 'Privacy proof ready', 'pay.s3': 'Submitting securely', 'pay.s4': 'Confirmed in 0.4s',
       'pay.done': 'Payment Complete - Fully Private', 'pay.donesub': 'No one on Earth saw this transaction.',
       'transfer.title': 'Bring Your Money From Anywhere', 'transfer.sub': 'Live prices. Real-time charts. Exchange any currency into OST.',
       'transfer.calc': 'Exchange Rate Calculator', 'transfer.calcsub': 'See how much OST you get for any amount.',
@@ -4380,7 +4380,7 @@
         return 'Fee vault ready';
       }
       if (!ostDevnetMetrics.available) {
-        return ostDevnetMetrics.loading ? 'Syncing devnet' : 'Live sync ready';
+        return 'Live sync ready';
       }
       if (ostDevnetMetrics.faucetClaimCount > 0) {
         return formatCompactCount(ostDevnetMetrics.faucetClaimCount) + ' wallets served - 100 OST start';
@@ -4410,7 +4410,7 @@
         if (ostDevnetMetrics.available) {
           updatedEl.textContent = 'Devnet live · ' + new Date(ostDevnetMetrics.lastUpdatedAt || Date.now()).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
         } else {
-          updatedEl.textContent = ostDevnetMetrics.loading ? 'Syncing devnet…' : 'Live sync ready';
+          updatedEl.textContent = 'Live sync ready';
         }
       }
     }
@@ -5951,6 +5951,35 @@
   let faucetTotal = 0;
   let faucetRunning = false;
 
+  function visibleFaucetClaimAmount(fallbackAmount) {
+    const visibleAmount = Number(String(faucetAmount && faucetAmount.textContent || '').replace(/[^0-9.]/g, ''));
+    if (Number.isFinite(visibleAmount) && visibleAmount > 0) return visibleAmount;
+    return Number(fallbackAmount) > 0 ? Number(fallbackAmount) : OST_WELCOME_DROP_AMOUNT;
+  }
+
+  function showOptimisticFaucetClaim(options) {
+    const settings = options || {};
+    const amount = visibleFaucetClaimAmount(settings.amount);
+    const message = settings.message || ('+' + amount.toFixed(2) + ' OST queued. Vault confirmation syncs in the background.');
+    if (window.OST_OPTIMISTIC && typeof window.OST_OPTIMISTIC.faucetClaim === 'function') {
+      try {
+        return window.OST_OPTIMISTIC.faucetClaim({
+          amount,
+          message,
+          source: settings.source || 'app-faucet',
+          notify: settings.notify !== false,
+          debounceMs: settings.debounceMs || 1200
+        });
+      } catch (e) {}
+    }
+    if (faucetAmount) faucetAmount.textContent = amount.toFixed(2);
+    if (faucetStatus) faucetStatus.textContent = message;
+    if (settings.notify !== false && window.OST_OPTIMISTIC) {
+      try { window.OST_OPTIMISTIC.balanceHint({ deltaOst: amount, source: settings.source || 'app-faucet', pending: true }); } catch (e) {}
+    }
+    return amount;
+  }
+
   async function animateFaucetCoins() {
     if (!faucetDropZone) return;
     for (let i = 0; i < 8; i++) {
@@ -5993,14 +6022,14 @@
         }
 
         clearWalletFundingState();
-        const rewardLabel = rewardState.welcomeClaimed ? 'daily 1 OST drop' : '100 OST head start';
-        if (faucetStatus) faucetStatus.textContent = 'Opening the reward vault for your ' + rewardLabel + '...';
+        const optimisticClaimAmount = rewardState.welcomeClaimed ? OST_DAILY_DROP_AMOUNT : OST_WELCOME_DROP_AMOUNT;
+        showOptimisticFaucetClaim({ amount: optimisticClaimAmount, source: 'run-faucet-flow' });
 
         maybeRecordSeedlessOnboard().catch(function (recordError) {
           console.warn('[OST] Seedless profile record skipped', recordError);
         });
 
-        if (faucetStatus) faucetStatus.textContent = 'Preparing your OST token account. The reward vault pays the devnet fee.';
+        if (faucetStatus) faucetStatus.textContent = '+' + optimisticClaimAmount.toFixed(2) + ' OST queued. Vault confirmation syncs in the background.';
         const faucetResult = await claimOstFaucetForActiveWallet();
         const ostBalance = faucetResult.balance || await getOstBalanceForAddress(connectedWalletSession.publicKey);
         faucetTotal = ostBalance;
@@ -6101,13 +6130,7 @@
 
   if (faucetBtn) {
     faucetBtn.addEventListener('click', () => {
-      let optimisticAmount = 0;
-      if (window.OST_OPTIMISTIC) {
-        const visibleAmount = Number(String(faucetAmount && faucetAmount.textContent || '').replace(/[^0-9.]/g, ''));
-        optimisticAmount = Number.isFinite(visibleAmount) && visibleAmount > 0 ? visibleAmount : OST_WELCOME_DROP_AMOUNT;
-        try { window.OST_OPTIMISTIC.toast('Faucet claim queued. +' + optimisticAmount.toFixed(2) + ' OST updates instantly.', 'pending'); } catch (e) {}
-        try { window.OST_OPTIMISTIC.balanceHint({ deltaOst: optimisticAmount, source: 'faucet-claim', pending: true }); } catch (e) {}
-      }
+      const optimisticAmount = showOptimisticFaucetClaim({ source: 'claimFaucetBtn' });
       runOstFaucetFlow({ animate: true }).then(function (result) {
         if (window.OST_OPTIMISTIC && (!result || result.ok === false)) {
           const rollbackAmount = result && Number(result.amount) > 0 ? Number(result.amount) : optimisticAmount;
@@ -6801,12 +6824,27 @@
   }
 
   /* ---------- TOAST ---------- */
+  const appToastLastShown = new Map();
+  const APP_TOAST_COOLDOWN_MS = 6000;
+  const APP_TOAST_MAX_VISIBLE = 2;
+
   function toast(icon, message) {
     const container = $('#toastContainer');
     if (!container) return;
+    const text = String(message == null ? '' : message);
+    const iconText = String(icon == null ? '' : icon);
+    const critical = /⚠|❌|error|failed|blocked|unavailable|denied|invalid|try again/i.test(iconText + ' ' + text);
+    if (!critical && window.OST_ALLOW_POPUP_NOTICES !== true) return;
+    const key = (iconText + '|' + text).replace(/\s+/g, ' ').trim().slice(0, 160);
+    const now = Date.now();
+    if (now - (appToastLastShown.get(key) || 0) < APP_TOAST_COOLDOWN_MS) return;
+    appToastLastShown.set(key, now);
+    while (container.children.length >= APP_TOAST_MAX_VISIBLE) {
+      try { container.removeChild(container.firstElementChild); } catch (e) { break; }
+    }
     const t = document.createElement('div');
     t.className = 'toast';
-    t.innerHTML = `<span class="toast-icon">${icon}</span><span>${esc(message)}</span>`;
+    t.innerHTML = `<span class="toast-icon">${esc(iconText)}</span><span>${esc(text)}</span>`;
     container.appendChild(t);
     setTimeout(() => {
       t.classList.add('removing');
