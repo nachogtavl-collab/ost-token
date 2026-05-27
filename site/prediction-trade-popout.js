@@ -24,8 +24,19 @@
   window.__OST_TRADE_POPOUT_LOADED = true;
 
   var POS_KEY = 'ost.tradeDesk.popout.v1';
+  var lastLauncherActivationAt = 0;
 
   function $(sel, root) { return (root || document).querySelector(sel); }
+
+  function isMarketModalOpen() {
+    return !!document.querySelector('#ost-market-modal.is-open, .live-watch-modal.is-open');
+  }
+
+  function clearStaleModalLock() {
+    if (!document.body || !document.body.classList.contains('ost-modal-open') || isMarketModalOpen()) return;
+    document.body.classList.remove('ost-modal-open');
+    if (document.body.style && document.body.style.overflow === 'hidden') document.body.style.overflow = '';
+  }
 
   function readPos() {
     try { return JSON.parse(localStorage.getItem(POS_KEY) || 'null') || {}; }
@@ -170,7 +181,8 @@
   function open() {
     var desk = ensurePopout();
     if (!desk) return;
-    if (document.body.classList.contains('ost-modal-open')) return; // don't fight the modal
+    clearStaleModalLock();
+    if (isMarketModalOpen()) return; // don't fight the modal
     desk.classList.add('is-open');
     document.body.classList.add('ost-tradepop-open');
     writePos({ open: true });
@@ -189,11 +201,36 @@
     if (desk && desk.classList.contains('is-open')) close(); else open();
   }
 
+  function activateLauncher(ev) {
+    if (ev) {
+      try { ev.preventDefault(); } catch (_) {}
+      try { ev.stopPropagation(); } catch (_) {}
+      try { if (typeof ev.stopImmediatePropagation === 'function') ev.stopImmediatePropagation(); } catch (_) {}
+    }
+    var now = Date.now();
+    if (now - lastLauncherActivationAt < 450) return;
+    lastLauncherActivationAt = now;
+    toggle();
+  }
+
+  function bindLauncher(btn) {
+    if (!btn || btn.__ostTradePopLauncherBound) return;
+    btn.__ostTradePopLauncherBound = true;
+    btn.addEventListener('pointerdown', activateLauncher, true);
+    btn.addEventListener('touchend', activateLauncher, true);
+    btn.addEventListener('click', activateLauncher, true);
+  }
+
   // --------------------------------------------------------------------------
   // Launcher button — fixed in the trade lane, outside page stacking contexts.
   // --------------------------------------------------------------------------
   function ensureLauncher() {
-    if (document.getElementById('ostTradePopLauncher')) return;
+    var existing = document.getElementById('ostTradePopLauncher');
+    if (existing) {
+      bindLauncher(existing);
+      syncLauncher(!!document.querySelector('#predictionTradeDesk.is-open'));
+      return;
+    }
     // Look for a sensible anchor near the prediction board.
     var anchor =
       $('#predictionMarketList') ||
@@ -207,14 +244,17 @@
     btn.className = 'ost-tradepop__launcher';
     btn.innerHTML = '<span class="ost-tradepop__icon" aria-hidden="true">🎯</span><span class="ost-tradepop__text">Trade ticket</span>';
     btn.title = 'Open the OST trade ticket as a floating, draggable panel';
-    btn.addEventListener('click', toggle);
+    bindLauncher(btn);
     document.body.appendChild(btn);
     syncLauncher(false);
   }
   function syncLauncher(open) {
     var btn = document.getElementById('ostTradePopLauncher');
     if (!btn) return;
+    bindLauncher(btn);
+    if (!isMarketModalOpen()) btn.style.display = '';
     btn.classList.toggle('is-active', !!open);
+    btn.setAttribute('aria-pressed', open ? 'true' : 'false');
     btn.innerHTML = open
       ? '<span class="ost-tradepop__icon" aria-hidden="true">▾</span><span class="ost-tradepop__text">Hide ticket</span>'
       : '<span class="ost-tradepop__icon" aria-hidden="true">🎯</span><span class="ost-tradepop__text">Trade ticket</span>';
@@ -425,7 +465,8 @@
     if (mutationTimer) return;
     mutationTimer = setTimeout(function () {
       mutationTimer = null;
-      if (document.body.classList.contains('ost-modal-open')) return;
+      clearStaleModalLock();
+      if (isMarketModalOpen()) return;
       watchTradeAction();
       ensureLauncher();
     }, 250);

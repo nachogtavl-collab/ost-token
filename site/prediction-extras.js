@@ -590,10 +590,10 @@
       '.ost-market-activity-chip.is-no { border-color:rgba(255,124,138,.25);background:rgba(255,124,138,.08);color:#ffe1e5; }',
       '.ost-market-activity-chip b { color:#fff; }',
       '.ost-market-activity-empty { color:#94a3b8;font-size:11px; }',
-      '#ost-trade-ticket-fab { position:fixed;bottom:24px;right:24px;z-index:9998;padding:12px 18px;border-radius:999px;border:none;background:linear-gradient(135deg,#7ce6a8,#22c55e);color:#031;font-weight:800;font-size:14px;cursor:pointer;box-shadow:0 8px 24px rgba(34,197,94,.35);display:none;align-items:center;gap:8px; }',
+      '#ost-trade-ticket-fab { position:fixed;bottom:24px;right:24px;z-index:999430;padding:12px 18px;border-radius:999px;border:none;background:linear-gradient(135deg,#7ce6a8,#22c55e);color:#031;font-weight:800;font-size:14px;cursor:pointer;box-shadow:0 8px 24px rgba(34,197,94,.35);display:none;align-items:center;gap:8px; }',
       '#ost-trade-ticket-fab:hover { transform:translateY(-2px); }',
       '#ost-trade-ticket-fab .ost-tt-count { background:#031;color:#7ce6a8;border-radius:999px;padding:2px 8px;font-size:11px; }',
-      '#ost-trade-ticket-modal { position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center; }',
+      '#ost-trade-ticket-modal { position:fixed;inset:0;z-index:2147483646;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center; }',
       '#ost-trade-ticket-modal.is-open { display:flex; }',
       '#ost-trade-ticket-modal .ost-tt-panel { width:min(560px,92vw);max-height:80vh;overflow:auto;background:#0b1220;border:1px solid rgba(124,230,168,.25);border-radius:14px;padding:18px;color:#e2e8f0; }',
       '#ost-trade-ticket-modal .ost-tt-row { display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid rgba(255,255,255,.06); }',
@@ -861,6 +861,7 @@
     fab.type = 'button';
     fab.innerHTML = '\uD83C\uDFAF Trade ticket <span class="ost-tt-count">0</span>';
     document.body.appendChild(fab);
+    var lastTicketFabActivationAt = 0;
 
     var ttModal = document.createElement('div');
     ttModal.id = 'ost-trade-ticket-modal';
@@ -934,10 +935,24 @@
       });
     }
 
-    fab.addEventListener('click', function () {
+    function openTicketPanel(ev) {
+      if (ev) {
+        try { ev.preventDefault(); } catch (e) {}
+        try { ev.stopPropagation(); } catch (e) {}
+        try { if (typeof ev.stopImmediatePropagation === 'function') ev.stopImmediatePropagation(); } catch (e) {}
+      }
+      var now = Date.now();
+      if (now - lastTicketFabActivationAt < 450) return;
+      lastTicketFabActivationAt = now;
+      if (window.OST_TRADE_POPOUT && typeof window.OST_TRADE_POPOUT.close === 'function') {
+        try { window.OST_TRADE_POPOUT.close(); } catch (e) {}
+      }
       renderTicketPanel();
       ttModal.classList.add('is-open');
-    });
+    }
+    fab.addEventListener('pointerdown', openTicketPanel, true);
+    fab.addEventListener('touchend', openTicketPanel, true);
+    fab.addEventListener('click', openTicketPanel, true);
 
     // ---- boot ------------------------------------------------------------
     function tick() {

@@ -25,6 +25,7 @@
 
 /* When the unified market modal is open, hide the popout entirely. */
 body.ost-modal-open .prediction-trade-desk.ost-tradepop { display: none !important; }
+body.ost-modal-open .ost-tradepop__launcher { display: none !important; }
 
 /* Header bar (drag handle + close) */
 .ost-tradepop__header {
@@ -97,6 +98,9 @@ body.ost-modal-open .prediction-trade-desk.ost-tradepop { display: none !importa
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  pointer-events: auto;
+  touch-action: manipulation;
+  user-select: none;
 }
 .ost-tradepop__launcher:hover { transform: translateY(-1px); filter: brightness(1.05); }
 .ost-tradepop__icon { flex: 0 0 auto; }
