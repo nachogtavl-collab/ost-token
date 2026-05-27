@@ -428,6 +428,10 @@
           return;
         }
         var prev = cashBtn.textContent; cashBtn.disabled = true; cashBtn.textContent = 'Sending…';
+        if (window.OST_OPTIMISTIC) {
+          try { window.OST_OPTIMISTIC.toast('Cashing out ' + bal.toFixed(2) + ' OST…', 'pending'); } catch (e) {}
+          try { window.OST_OPTIMISTIC.balanceHint({ deltaOst: +bal, source: 'games-cashout', pending: true }); } catch (e) {}
+        }
         try {
           var memo = JSON.stringify({ k: 'games-cashout', ost: bal, t: Date.now() });
           var r = await window.OST_RESCUE.payoutOst(w.session.publicKey, bal, memo);
@@ -441,6 +445,10 @@
           try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {}
         } catch (e) {
           console.warn('[ostg] cashout failed', e);
+          if (window.OST_OPTIMISTIC) {
+            try { window.OST_OPTIMISTIC.balanceHint({ deltaOst: -bal, source: 'games-cashout', rollback: true }); } catch (er) {}
+            try { window.OST_OPTIMISTIC.toast('Cash-out failed', 'error'); } catch (er) {}
+          }
           alert('Cash-out failed: ' + (e && e.message ? e.message : e));
           cashBtn.textContent = prev;
         } finally {
@@ -549,6 +557,10 @@
       try { bal = await w.getOstBalance(w.session.publicKey); } catch (_) {}
       if (amt > bal + 1e-9) { alert('Wallet only has ' + fmt(bal) + ' OST.'); return; }
       var prev = depBtn.textContent; depBtn.disabled = true; depBtn.textContent = 'Sending…';
+      if (window.OST_OPTIMISTIC) {
+        try { window.OST_OPTIMISTIC.toast('Depositing ' + amt.toFixed(2) + ' OST…', 'pending'); } catch (e) {}
+        try { window.OST_OPTIMISTIC.balanceHint({ deltaOst: -amt, source: 'games-deposit', pending: true }); } catch (e) {}
+      }
       try {
         var memo = JSON.stringify({ k: 'games-deposit', ost: amt, t: Date.now() });
         var r = await window.OST_RESCUE.userSendsOstToPool(amt, memo);
@@ -559,6 +571,10 @@
         try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {}
       } catch (e) {
         console.warn('[ostg] deposit failed', e);
+        if (window.OST_OPTIMISTIC) {
+          try { window.OST_OPTIMISTIC.balanceHint({ deltaOst: +amt, source: 'games-deposit', rollback: true }); } catch (er) {}
+          try { window.OST_OPTIMISTIC.toast('Deposit failed', 'error'); } catch (er) {}
+        }
         alert('Deposit failed: ' + (e && e.message ? e.message : e));
         depBtn.textContent = prev;
       } finally {
@@ -758,6 +774,9 @@
     if (!Number.isFinite(amount) || amount <= 0) return { ok: false, msg: 'Enter a positive bet.' };
     if (amount > getBalance() + 1e-9) return { ok: false, msg: 'Not enough play balance — deposit OST or earn credits first.' };
     debit(amount);
+    if (window.OST_OPTIMISTIC) {
+      try { window.OST_OPTIMISTIC.balanceHint({ deltaOst: -Number(amount), source: 'ost-games-bet', pending: true }); } catch (e) {}
+    }
     return { ok: true };
   }
 

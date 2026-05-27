@@ -718,6 +718,11 @@
     state.placing = true;
     renderTicket();
     setOrderStatus('Routing OST to the mirror settlement vault...');
+    var optimisticStake = Number(state.ostStake || 0);
+    if (window.OST_OPTIMISTIC) {
+      try { window.OST_OPTIMISTIC.toast(state.side.toUpperCase() + ' ' + optimisticStake + ' OST · ' + quote.symbol + ' submitted…', 'pending'); } catch (e) {}
+      try { window.OST_OPTIMISTIC.balanceHint({ deltaOst: -optimisticStake, source: 'stock-' + state.side, pending: true, symbol: quote.symbol }); } catch (e) {}
+    }
     try {
       var notionalUsd = calcNotionalUsd();
       var shares = calcShares();
@@ -798,6 +803,10 @@
       } catch (error) {}
     } catch (error) {
       setOrderStatus(error && error.message ? error.message : 'Stock mirror order failed.', 'is-error');
+      if (window.OST_OPTIMISTIC) {
+        try { window.OST_OPTIMISTIC.balanceHint({ deltaOst: +optimisticStake, source: 'stock-' + state.side, rollback: true, symbol: quote.symbol }); } catch (e) {}
+        try { window.OST_OPTIMISTIC.toast(error && error.message ? error.message : 'Stock order failed', 'error'); } catch (e) {}
+      }
     } finally {
       state.placing = false;
       renderTicket();

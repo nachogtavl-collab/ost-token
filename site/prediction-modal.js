@@ -1971,15 +1971,26 @@ liveTimers.forEach(function (t) {
       var s = getStake();
       if (!s) { toast('Set a stake first.', 'err'); return; }
       toast('Submitting ' + selectedSide + ' ' + s + ' OST…', 'ok');
+      if (window.OST_OPTIMISTIC) {
+        try { window.OST_OPTIMISTIC.toast(selectedSide.toUpperCase() + ' ' + s + ' OST submitted…', 'pending'); } catch (e) {}
+        try { window.OST_OPTIMISTIC.balanceHint({ deltaOst: -Number(s), source: 'prediction-bet', pending: true, side: selectedSide, marketId: market && market.id }); } catch (e) {}
+      }
       placeBet(market, selectedSide, s, selectedOutcomeKey)
         .then(function (rec) {
           toast('✅ Bet recorded' + (rec && rec.sig ? ' (sig ' + String(rec.sig).slice(0, 8) + '…)' : '') + '. Check Open Positions below.', 'ok');
+          if (window.OST_OPTIMISTIC) {
+            try { window.OST_OPTIMISTIC.toast('✓ ' + selectedSide.toUpperCase() + ' confirmed', 'success'); } catch (e) {}
+          }
           // Share to global feed so every other OST user sees the tick live.
           shareBetGlobally(market, selectedSide, s, rec, selectedOutcomeKey);
           bodyEl.__syncNativeQuoteUi && bodyEl.__syncNativeQuoteUi();
         })
         .catch(function (err) {
           toast('⚠️ ' + (err && err.message ? err.message : 'Bet failed'), 'err');
+          if (window.OST_OPTIMISTIC) {
+            try { window.OST_OPTIMISTIC.balanceHint({ deltaOst: +Number(s), source: 'prediction-bet', rollback: true, side: selectedSide, marketId: market && market.id }); } catch (e) {}
+            try { window.OST_OPTIMISTIC.toast((err && err.message) ? err.message : 'Bet failed', 'error'); } catch (e) {}
+          }
         });
     });
 

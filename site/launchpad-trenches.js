@@ -218,6 +218,10 @@
         pop.querySelector('[data-bind="status"]').textContent = 'OST API base missing.';
         return;
       }
+      if (window.OST_OPTIMISTIC) {
+        try { window.OST_OPTIMISTIC.toast(side.toUpperCase() + ' ' + amt + ' OST · ' + (coin.symbol || 'memecoin') + ' submitted…', 'pending'); } catch (e) {}
+        try { window.OST_OPTIMISTIC.balanceHint({ deltaOst: side === 'buy' ? -amt : +amt, source: 'launchpad-' + side, pending: true, mint: coin.mint || coin.id, symbol: coin.symbol }); } catch (e) {}
+      }
       var walletTrade = side === 'buy'
         ? trade.memecoinBuy(coin.symbol || coin.mint || coin.id, amt)
         : trade.memecoinSell(coin.symbol || coin.mint || coin.id, amt);
@@ -252,6 +256,10 @@
         })
         .catch(function (e) {
           pop.querySelector('[data-bind="status"]').textContent = '⚠️ ' + e.message;
+          if (window.OST_OPTIMISTIC) {
+            try { window.OST_OPTIMISTIC.balanceHint({ deltaOst: side === 'buy' ? +amt : -amt, source: 'launchpad-' + side, rollback: true, mint: coin.mint || coin.id, symbol: coin.symbol }); } catch (er) {}
+            try { window.OST_OPTIMISTIC.toast(e && e.message ? e.message : 'Trade failed', 'error'); } catch (er) {}
+          }
         });
     };
 

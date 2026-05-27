@@ -6101,7 +6101,15 @@
 
   if (faucetBtn) {
     faucetBtn.addEventListener('click', () => {
-      runOstFaucetFlow({ animate: true });
+      if (window.OST_OPTIMISTIC) {
+        try { window.OST_OPTIMISTIC.toast('Claiming OST faucet…', 'pending'); } catch (e) {}
+        try { window.OST_OPTIMISTIC.balanceHint({ deltaOst: +1, source: 'faucet-claim', pending: true }); } catch (e) {}
+      }
+      runOstFaucetFlow({ animate: true }).then(function (result) {
+        if (window.OST_OPTIMISTIC && (!result || result.ok === false)) {
+          try { window.OST_OPTIMISTIC.balanceHint({ deltaOst: -1, source: 'faucet-claim', rollback: true }); } catch (e) {}
+        }
+      });
     });
     refreshFaucetRewardUi();
     setInterval(refreshFaucetRewardUi, 1000);
