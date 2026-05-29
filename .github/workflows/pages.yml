@@ -5,7 +5,6 @@ on:
     branches: [master]
     paths:
       - site/**
-      - scripts/fetch-prediction-market-snapshot.js
       - .github/workflows/pages.yml
   schedule:
     - cron: '*/15 * * * *'
@@ -31,8 +30,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Build prediction market snapshot
-        run: node ./scripts/fetch-prediction-market-snapshot.js
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
