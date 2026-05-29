@@ -1,59 +1,56 @@
-// OST Subtle Optimistic UX Layer (Phase 1 - Active)
-// No spam toasts. Users feel speed, not read messages.
+// OST Subtle Optimistic UX Layer v5 (Safe & Targeted)
+// Only patches safe placeholders. Protects Vault, Veil, and critical flows.
 
 (function () {
   'use strict';
-  if (window.OST_OPTIMISTIC_ACTIVE) return;
-  window.OST_OPTIMISTIC_ACTIVE = true;
+  if (window.OST_OPTIMISTIC_SAFE) return;
+  window.OST_OPTIMISTIC_SAFE = true;
 
-  // Subtle success indicator (green flash + balance update)
-  function subtleSuccess(element, balanceDelta) {
-    if (!element) return;
-    
-    // Green flash animation
-    element.style.transition = 'all 0.2s ease';
-    element.style.backgroundColor = '#10b981';
-    element.style.color = 'white';
-    
-    setTimeout(() => {
-      element.style.backgroundColor = '';
-      element.style.color = '';
-    }, 400);
+  // Only patch these exact safe strings
+  const SAFE_REPLACEMENTS = [
+    { from: /Initializing oracle\u2026?|Initializing oracle\.\.\./gi, to: 'Live' },
+    { from: /Loading live feeds\u2026?|Loading live feeds\.\.\./gi, to: 'Live' },
+    { from: /Devnet sync pending/gi, to: 'Live' },
+    { from: /Syncing devnet\u2026?|Syncing devnet\.\.\./gi, to: 'Live' },
+    { from: /Loading\.\.\./gi, to: 'Ready' }
+  ];
 
-    // If balance element exists, update it
-    if (balanceDelta && window.OST_BALANCE_ELEMENT) {
-      const current = parseFloat(window.OST_BALANCE_ELEMENT.textContent) || 0;
-      window.OST_BALANCE_ELEMENT.textContent = (current + balanceDelta).toFixed(2);
+  function safeReplace(text) {
+    let result = String(text || '');
+    for (const rule of SAFE_REPLACEMENTS) {
+      result = result.replace(rule.from, rule.to);
     }
+    return result;
   }
 
-  // Make balance hint globally available
-  window.OST_BALANCE_HINT = function(delta) {
-    if (window.OST_BALANCE_ELEMENT) {
-      const current = parseFloat(window.OST_BALANCE_ELEMENT.textContent) || 0;
-      window.OST_BALANCE_ELEMENT.textContent = (current + delta).toFixed(2);
-    }
-  };
-
-  // Auto-patch common loading states
-  function autoPatchPlaceholders() {
-    // Patch price loading
-    const priceEls = document.querySelectorAll('[data-price], .price, #ost-price');
-    priceEls.forEach(el => {
-      if (el.textContent.includes('Loading') || el.textContent.includes('Initializing')) {
-        el.textContent = 'Live';
-        el.style.color = '#10b981';
+  function patchSafePlaceholders() {
+    const candidates = document.querySelectorAll('h1, h2, h3, p, span, div');
+    candidates.forEach(el => {
+      const text = el.textContent || '';
+      if (/Initializing oracle|Loading live feeds|Devnet sync pending|Syncing devnet|Loading\.\.\./i.test(text)) {
+        const newText = safeReplace(text);
+        if (newText !== text) {
+          el.textContent = newText;
+          el.style.color = '#10b981';
+        }
       }
     });
   }
 
-  // Run auto-patch on load
-  setTimeout(autoPatchPlaceholders, 800);
+  // Run once on load + every 4 seconds (light)
+  setTimeout(patchSafePlaceholders, 600);
+  setInterval(patchSafePlaceholders, 4000);
 
-  // Public API
+  // Subtle success pulse (green flash)
   window.OST = window.OST || {};
-  window.OST.subtleSuccess = subtleSuccess;
-  window.OST.balanceHint = window.OST_BALANCE_HINT;
+  window.OST.subtlePulse = function(element) {
+    if (!element) return;
+    element.style.transition = 'all 0.2s ease';
+    element.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.4)';
+    setTimeout(() => {
+      element.style.boxShadow = '';
+    }, 450);
+  };
 
-  console.log('%c[OST] Subtle Optimistic Layer Active', 'color:#10b981');
+  console.log('%c[OST] Safe Optimistic Layer Active (v5)', 'color:#10b981');
 })();
