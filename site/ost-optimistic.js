@@ -1,27 +1,22 @@
-// OST Minimal Passive Layer v6
-// Only adds subtle green flash on buttons. Does nothing else.
+// OST Clean Foundation Layer v1
+// Minimal, stable, and safe. No aggressive changes.
 
 (function () {
   'use strict';
-  if (window.OST_MINIMAL) return;
-  window.OST_MINIMAL = true;
+  if (window.OST_CLEAN) return;
+  window.OST_CLEAN = true;
 
-  function addFlash(el) {
-    if (!el) return;
-    el.style.transition = 'box-shadow 0.2s ease';
-    el.style.boxShadow = '0 0 0 4px rgba(16, 185, 129, 0.35)';
-    setTimeout(() => {
-      el.style.boxShadow = '';
-    }, 500);
-  }
-
-  // Listen for clicks on buttons
+  // Simple green flash on button clicks
   document.addEventListener('click', function(e) {
-    const btn = e.target.closest('button, [role="button"], .btn, .claim-btn, .action-btn');
+    const btn = e.target.closest('button, [role="button"], .btn');
     if (btn) {
-      addFlash(btn);
+      btn.style.transition = 'box-shadow 0.2s ease';
+      btn.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.4)';
+      setTimeout(() => {
+        btn.style.boxShadow = '';
+      }, 400);
     }
   }, true);
 
-  console.log('%c[OST] Minimal Passive Layer Active (v6)', 'color:#10b981');
+  console.log('%c[OST] Clean Foundation Layer Active', 'color:#10b981');
 })();
