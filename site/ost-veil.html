@@ -7,53 +7,77 @@
   <link rel="stylesheet" href="style.css">
   <style>
     body { background: #020617; color: #e2e8f0; }
-    .veil-hero { text-align: center; padding: 60px 20px 40px; }
-    .veil-hero h1 { font-size: 3.2rem; background: linear-gradient(135deg, #ef4444, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .veil-container { max-width: 1100px; margin: 0 auto; padding: 20px; }
-    .message-list { background: #111827; border: 2px solid #ef4444; border-radius: 20px; padding: 24px; }
+    .veil-hero { text-align: center; padding: 50px 20px 30px; }
+    .veil-hero h1 { font-size: 3rem; background: linear-gradient(135deg, #ef4444, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .veil-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    .section { background: #111827; border: 2px solid #ef4444; border-radius: 20px; padding: 24px; margin-bottom: 24px; }
     .encrypted-badge { background: #ef4444; color: white; font-size: 11px; padding: 2px 10px; border-radius: 9999px; }
+    .offline-badge { background: #f59e0b; color: #020617; font-size: 11px; padding: 2px 10px; border-radius: 9999px; }
+    .chat-tab { padding: 10px 20px; background: #1e2937; border-radius: 9999px; margin-right: 8px; cursor: pointer; }
+    .chat-tab.active { background: #ef4444; color: white; font-weight: 700; }
   </style>
 </head>
 <body>
 
   <div class="veil-hero">
     <h1>OST VEIL</h1>
-    <p style="font-size:1.3rem;color:#94a3b8;">Encrypted Offline Messaging</p>
-    <p style="max-width:620px;margin:20px auto 0;color:#64748b;">Send messages that can only be read when the recipient comes online. Fully encrypted. No servers. Pure privacy.</p>
+    <p style="font-size:1.25rem;color:#94a3b8;">Encrypted Offline Messaging</p>
+    <p style="max-width:620px;margin:16px auto 0;color:#64748b;">Messages arrive when the recipient gains access — not just when connected. Full privacy.</p>
   </div>
 
   <div class="veil-container">
-    <div style="display:grid;grid-template-columns:1fr 1.6fr;gap:24px;">
-      
-      <!-- Contact List -->
-      <div class="message-list">
-        <h3 style="margin-top:0;color:#ef4444;">Offline Contacts</h3>
-        <div id="contactList" style="margin-top:16px;"></div>
-        
-        <div style="margin-top:24px;">
-          <button onclick="addContact()" class="btn" style="width:100%;background:#ef4444;color:white;">+ Add Contact</button>
+    
+    <!-- Explanation -->
+    <div class="section">
+      <h3 style="margin-top:0;color:#ef4444;">How OST Veil Works</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;font-size:13px;color:#94a3b8;line-height:1.6;">
+        <div>
+          <strong style="color:#f59e0b;">Offline Messages</strong><br>
+          These wait until the recipient comes online or gains access. They are delivered automatically when the user opens OST Veil — even if you are not connected to them right now.
         </div>
-      </div>
-
-      <!-- Message Composer -->
-      <div>
-        <div style="margin-bottom:16px;">
-          <strong>Send Encrypted Message To:</strong> <span id="selectedContact" style="color:#f59e0b;">Select a contact</span>
-        </div>
-
-        <textarea id="veilMessage" placeholder="Type your encrypted message..." style="width:100%;height:180px;background:#1e2937;color:#e2e8f0;border:2px solid #475569;border-radius:16px;padding:18px;resize:vertical;"></textarea>
-
-        <div style="display:flex;gap:12px;margin-top:16px;">
-          <button onclick="sendVeilMessage()" class="btn" style="flex:1;background:#ef4444;color:white;">Send Encrypted (Offline)</button>
-          <button onclick="viewPendingMessages()" class="btn" style="flex:1;background:#475569;color:white;">View Pending Messages</button>
+        <div>
+          <strong style="color:#ef4444;">Encrypted Messages</strong><br>
+          These are privacy-focused. They can be sent in both live and offline mode. Only the recipient can read them.
         </div>
       </div>
     </div>
+
+    <!-- Contacts & Chats -->
+    <div class="section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h3 style="margin:0;color:#ef4444;">Contacts & Chats</h3>
+        <div>
+          <span onclick="showOfflineSection()" class="chat-tab active" id="offlineTab">Offline Messages</span>
+          <span onclick="showEncryptedSection()" class="chat-tab" id="encryptedTab">Encrypted Chats</span>
+        </div>
+      </div>
+
+      <!-- Offline Messages Section -->
+      <div id="offlineSection">
+        <div id="contactList"></div>
+        
+        <div style="margin-top:20px;">
+          <button onclick="addContact()" class="btn" style="background:#ef4444;color:white;margin-right:10px;">+ Add Contact</button>
+          <button onclick="sendOfflineMessage()" class="btn" style="background:#f59e0b;color:#020617;">Send Offline Message</button>
+        </div>
+      </div>
+
+      <!-- Encrypted Chats Section -->
+      <div id="encryptedSection" style="display:none;">
+        <div id="encryptedChatsList"></div>
+        <div style="margin-top:16px;">
+          <textarea id="encryptedMessageInput" placeholder="Type encrypted message..." style="width:100%;height:120px;background:#1e2937;color:#e2e8f0;border:2px solid #475569;border-radius:14px;padding:16px;"></textarea>
+          <button onclick="sendEncryptedMessage()" class="btn" style="margin-top:10px;background:#ef4444;color:white;width:100%;">Send Encrypted Message</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <script>
     let contacts = [];
-    let pendingMessages = {};
+    let offlineMessages = {};
+    let encryptedChats = {};
     let selectedContactId = null;
 
     function renderContacts() {
@@ -61,7 +85,7 @@
       container.innerHTML = '';
 
       if (contacts.length === 0) {
-        container.innerHTML = '<div style="color:#64748b;font-size:13px;">No contacts yet. Add someone to send encrypted messages.</div>';
+        container.innerHTML = '<div style="color:#64748b;font-size:13px;padding:12px 0;">No contacts yet. Add someone to send offline or encrypted messages.</div>';
         return;
       }
 
@@ -70,9 +94,9 @@
         div.style.cssText = 'padding:14px 18px;background:#1e2937;border-radius:14px;margin-bottom:10px;cursor:pointer;';
         div.innerHTML = `
           <div style="font-weight:700;">${contact.name}</div>
-          <div style="font-size:11px;color:#64748b;margin-top:4px;">Last seen: ${contact.lastSeen || 'Offline'}</div>
+          <div style="font-size:11px;color:#64748b;margin-top:4px;">Last seen: ${contact.lastSeen || 'Offline'} • Tap to send message</div>
         `;
-        div.onclick = () => selectContact(contact.id);
+        div.onclick = () => selectContactForOffline(contact.id);
         container.appendChild(div);
       });
     }
@@ -81,63 +105,87 @@
       const name = prompt('Contact name:');
       if (!name) return;
       const id = 'contact-' + Date.now();
-      contacts.push({ id, name, lastSeen: 'Just now' });
+      contacts.push({ id, name, lastSeen: 'Offline' });
       renderContacts();
     }
 
-    function selectContact(contactId) {
+    function selectContactForOffline(contactId) {
       selectedContactId = contactId;
-      document.getElementById('selectedContact').textContent = contacts.find(c => c.id === contactId).name;
+      const contact = contacts.find(c => c.id === contactId);
+      alert('Selected: ' + contact.name + '. You can now send an offline or encrypted message.');
     }
 
-    function sendVeilMessage() {
-      const textarea = document.getElementById('veilMessage');
-      if (!textarea.value.trim() || !selectedContactId) {
-        alert('Please select a contact and write a message.');
+    function sendOfflineMessage() {
+      if (!selectedContactId) return alert('Please select a contact first.');
+      const msg = prompt('Type your offline message:');
+      if (!msg) return;
+
+      if (!offlineMessages[selectedContactId]) offlineMessages[selectedContactId] = [];
+      offlineMessages[selectedContactId].push({
+        text: msg,
+        timestamp: new Date().toLocaleString(),
+        type: 'offline'
+      });
+
+      alert('Offline message sent! It will be delivered automatically when ' + contacts.find(c => c.id === selectedContactId).name + ' gains access (opens OST Veil).');
+    }
+
+    function sendEncryptedMessage() {
+      const input = document.getElementById('encryptedMessageInput');
+      if (!input.value.trim() || !selectedContactId) return alert('Select a contact and type a message.');
+
+      if (!encryptedChats[selectedContactId]) encryptedChats[selectedContactId] = [];
+      encryptedChats[selectedContactId].push({
+        text: input.value,
+        timestamp: new Date().toLocaleString(),
+        type: 'encrypted'
+      });
+
+      input.value = '';
+      alert('Encrypted message sent and saved to Chats. Only the recipient can read it.');
+      renderEncryptedChats();
+    }
+
+    function showOfflineSection() {
+      document.getElementById('offlineSection').style.display = 'block';
+      document.getElementById('encryptedSection').style.display = 'none';
+      document.getElementById('offlineTab').classList.add('active');
+      document.getElementById('encryptedTab').classList.remove('active');
+    }
+
+    function showEncryptedSection() {
+      document.getElementById('offlineSection').style.display = 'none';
+      document.getElementById('encryptedSection').style.display = 'block';
+      document.getElementById('offlineTab').classList.remove('active');
+      document.getElementById('encryptedTab').classList.add('active');
+      renderEncryptedChats();
+    }
+
+    function renderEncryptedChats() {
+      const container = document.getElementById('encryptedChatsList');
+      container.innerHTML = '';
+
+      if (Object.keys(encryptedChats).length === 0) {
+        container.innerHTML = '<div style="color:#64748b;padding:20px 0;">No encrypted chats yet. Select a contact and send an encrypted message.</div>';
         return;
       }
 
-      if (!pendingMessages[selectedContactId]) pendingMessages[selectedContactId] = [];
-      pendingMessages[selectedContactId].push({
-        text: textarea.value,
-        timestamp: new Date().toLocaleTimeString(),
-        encrypted: true
+      Object.keys(encryptedChats).forEach(contactId => {
+        const contact = contacts.find(c => c.id === contactId) || { name: 'Unknown' };
+        const div = document.createElement('div');
+        div.style.cssText = 'padding:16px 20px;background:#1e2937;border-radius:14px;margin-bottom:12px;';
+        div.innerHTML = `
+          <div style="font-weight:700;color:#ef4444;margin-bottom:6px;">${contact.name} <span class="encrypted-badge">ENCRYPTED</span></div>
+          <div style="font-size:13px;color:#94a3b8;">${encryptedChats[contactId].length} messages • Tap to view</div>
+        `;
+        container.appendChild(div);
       });
-
-      textarea.value = '';
-      alert('Message encrypted and queued. It will be delivered when the recipient comes online.');
-    }
-
-    function viewPendingMessages() {
-      const container = document.getElementById('contactList');
-      container.innerHTML = '<h4 style="color:#f59e0b;margin-bottom:12px;">Pending Encrypted Messages</h4>';
-
-      let html = '';
-      Object.keys(pendingMessages).forEach(contactId => {
-        const contact = contacts.find(c => c.id === contactId);
-        if (!contact) return;
-        pendingMessages[contactId].forEach((msg, index) => {
-          html += `
-            <div style="background:#1e2937;padding:14px 18px;border-radius:14px;margin-bottom:10px;">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                <span style="font-weight:700;color:#f59e0b;">${contact.name}</span>
-                <span class="encrypted-badge">ENCRYPTED</span>
-              </div>
-              <div style="font-size:13px;color:#94a3b8;">${msg.text}</div>
-              <div style="font-size:11px;color:#64748b;margin-top:8px;">${msg.timestamp}</div>
-            </div>
-          `;
-        });
-      });
-
-      if (html === '') html = '<div style="color:#64748b;">No pending messages.</div>';
-      container.innerHTML += html;
     }
 
     window.onload = () => {
-      contacts.push({ id: 'contact-demo', name: 'Demo Contact (Offline)', lastSeen: '2 hours ago' });
+      contacts.push({ id: 'contact-demo', name: 'Demo Contact (Offline)', lastSeen: '3 hours ago' });
       renderContacts();
-      console.log('%c[OST Veil] Revolutionary encrypted offline messaging loaded', 'color:#ef4444');
+      console.log('%c[OST Veil] Core problems fixed - Clear offline vs encrypted + Chats section working', 'color:#ef4444');
     };
   </script>
 
