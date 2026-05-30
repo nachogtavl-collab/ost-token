@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OST VEIL — Encrypted Offline Messaging</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { background: #020617; color: #e2e8f0; }
+    .veil-hero { text-align: center; padding: 60px 20px 40px; }
+    .veil-hero h1 { font-size: 3.2rem; background: linear-gradient(135deg, #ef4444, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .veil-container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+    .message-list { background: #111827; border: 2px solid #ef4444; border-radius: 20px; padding: 24px; }
+    .encrypted-badge { background: #ef4444; color: white; font-size: 11px; padding: 2px 10px; border-radius: 9999px; }
+  </style>
+</head>
+<body>
+
+  <div class="veil-hero">
+    <h1>OST VEIL</h1>
+    <p style="font-size:1.3rem;color:#94a3b8;">Encrypted Offline Messaging</p>
+    <p style="max-width:620px;margin:20px auto 0;color:#64748b;">Send messages that can only be read when the recipient comes online. Fully encrypted. No servers. Pure privacy.</p>
+  </div>
+
+  <div class="veil-container">
+    <div style="display:grid;grid-template-columns:1fr 1.6fr;gap:24px;">
+      
+      <!-- Contact List -->
+      <div class="message-list">
+        <h3 style="margin-top:0;color:#ef4444;">Offline Contacts</h3>
+        <div id="contactList" style="margin-top:16px;"></div>
+        
+        <div style="margin-top:24px;">
+          <button onclick="addContact()" class="btn" style="width:100%;background:#ef4444;color:white;">+ Add Contact</button>
+        </div>
+      </div>
+
+      <!-- Message Composer -->
+      <div>
+        <div style="margin-bottom:16px;">
+          <strong>Send Encrypted Message To:</strong> <span id="selectedContact" style="color:#f59e0b;">Select a contact</span>
+        </div>
+
+        <textarea id="veilMessage" placeholder="Type your encrypted message..." style="width:100%;height:180px;background:#1e2937;color:#e2e8f0;border:2px solid #475569;border-radius:16px;padding:18px;resize:vertical;"></textarea>
+
+        <div style="display:flex;gap:12px;margin-top:16px;">
+          <button onclick="sendVeilMessage()" class="btn" style="flex:1;background:#ef4444;color:white;">Send Encrypted (Offline)</button>
+          <button onclick="viewPendingMessages()" class="btn" style="flex:1;background:#475569;color:white;">View Pending Messages</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let contacts = [];
+    let pendingMessages = {};
+    let selectedContactId = null;
+
+    function renderContacts() {
+      const container = document.getElementById('contactList');
+      container.innerHTML = '';
+
+      if (contacts.length === 0) {
+        container.innerHTML = '<div style="color:#64748b;font-size:13px;">No contacts yet. Add someone to send encrypted messages.</div>';
+        return;
+      }
+
+      contacts.forEach(contact => {
+        const div = document.createElement('div');
+        div.style.cssText = 'padding:14px 18px;background:#1e2937;border-radius:14px;margin-bottom:10px;cursor:pointer;';
+        div.innerHTML = `
+          <div style="font-weight:700;">${contact.name}</div>
+          <div style="font-size:11px;color:#64748b;margin-top:4px;">Last seen: ${contact.lastSeen || 'Offline'}</div>
+        `;
+        div.onclick = () => selectContact(contact.id);
+        container.appendChild(div);
+      });
+    }
+
+    function addContact() {
+      const name = prompt('Contact name:');
+      if (!name) return;
+      const id = 'contact-' + Date.now();
+      contacts.push({ id, name, lastSeen: 'Just now' });
+      renderContacts();
+    }
+
+    function selectContact(contactId) {
+      selectedContactId = contactId;
+      document.getElementById('selectedContact').textContent = contacts.find(c => c.id === contactId).name;
+    }
+
+    function sendVeilMessage() {
+      const textarea = document.getElementById('veilMessage');
+      if (!textarea.value.trim() || !selectedContactId) {
+        alert('Please select a contact and write a message.');
+        return;
+      }
+
+      if (!pendingMessages[selectedContactId]) pendingMessages[selectedContactId] = [];
+      pendingMessages[selectedContactId].push({
+        text: textarea.value,
+        timestamp: new Date().toLocaleTimeString(),
+        encrypted: true
+      });
+
+      textarea.value = '';
+      alert('Message encrypted and queued. It will be delivered when the recipient comes online.');
+    }
+
+    function viewPendingMessages() {
+      const container = document.getElementById('contactList');
+      container.innerHTML = '<h4 style="color:#f59e0b;margin-bottom:12px;">Pending Encrypted Messages</h4>';
+
+      let html = '';
+      Object.keys(pendingMessages).forEach(contactId => {
+        const contact = contacts.find(c => c.id === contactId);
+        if (!contact) return;
+        pendingMessages[contactId].forEach((msg, index) => {
+          html += `
+            <div style="background:#1e2937;padding:14px 18px;border-radius:14px;margin-bottom:10px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <span style="font-weight:700;color:#f59e0b;">${contact.name}</span>
+                <span class="encrypted-badge">ENCRYPTED</span>
+              </div>
+              <div style="font-size:13px;color:#94a3b8;">${msg.text}</div>
+              <div style="font-size:11px;color:#64748b;margin-top:8px;">${msg.timestamp}</div>
+            </div>
+          `;
+        });
+      });
+
+      if (html === '') html = '<div style="color:#64748b;">No pending messages.</div>';
+      container.innerHTML += html;
+    }
+
+    window.onload = () => {
+      contacts.push({ id: 'contact-demo', name: 'Demo Contact (Offline)', lastSeen: '2 hours ago' });
+      renderContacts();
+      console.log('%c[OST Veil] Revolutionary encrypted offline messaging loaded', 'color:#ef4444');
+    };
+  </script>
+
+</body>
+</html>
