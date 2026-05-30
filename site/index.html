@@ -1,72 +1,103 @@
 <!DOCTYPE html>
-<html lang="en" data-lang="en">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>OST &mdash; The Next Step After Bitcoin</title>
-  <meta name="description" content="Private digital cash for every brother and sister on Earth.">
-  <link rel="stylesheet" href="style.css?v=76">
-  <link rel="stylesheet" href="mobile.css?v=7">
-  <link rel="stylesheet" href="polish.css?v=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OST OS — The Living Operating System</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { background: #020617; color: #e2e8f0; margin: 0; overflow: hidden; }
+    .desktop { position: fixed; inset: 0; background: linear-gradient(135deg, #0a0f1e 0%, #020617 100%); }
+    .desktop-grid { position: absolute; inset: 0; background-image: url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27100%27 height=%27100%27%3E%3Ccircle cx=%2750%27 cy=%2750%27 r=%271%27 fill=%27%23334 155%27/%3E%3C/svg%27'); background-size: 80px 80px; opacity: 0.4; }
+    .taskbar { position: fixed; bottom: 0; left: 0; right: 0; height: 72px; background: rgba(15, 23, 42, 0.95); border-top: 1px solid #475569; display: flex; align-items: center; padding: 0 24px; z-index: 1000; }
+    .start-btn { background: linear-gradient(135deg, #34d399, #6d9fff); color: #020617; padding: 12px 28px; border-radius: 9999px; font-weight: 800; font-size: 15px; cursor: pointer; border: none; }
+    .desktop-icon { position: absolute; width: 92px; text-align: center; cursor: pointer; transition: transform 0.2s; }
+    .desktop-icon:hover { transform: scale(1.08); }
+    .desktop-icon img { width: 64px; height: 64px; display: block; margin: 0 auto 8px; }
+    .window { position: absolute; background: #111827; border: 2px solid #475569; border-radius: 20px; box-shadow: 0 40px 120px rgba(0,0,0,0.6); overflow: hidden; }
+    .window-header { background: #1e2937; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; font-weight: 700; }
+    .window-content { padding: 24px; }
+  </style>
 </head>
 <body>
 
-  <!-- Navigation with Coding Studio link -->
-  <nav id="nav">
-    <div class="nav-inner">
-      <a href="#home" class="logo"><span class="logo-icon">&#9673;</span> OST</a>
-      <div class="nav-links">
-        <a href="#home">Home</a>
-        <a href="#new-here">Get OST</a>
-        <a href="#commerce">Commerce</a>
-        <a href="#wallet">Wallet</a>
-        <a href="#stock-market">Stocks</a>
-        <a href="#ai">AI & Bots</a>
-        <a href="coding-studio.html" style="color:#34d399;font-weight:700;border:1px solid #34d399;padding:4px 12px;border-radius:9999px;">Coding Studio</a>
-        <a href="#offline">Offline</a>
-        <a href="#censorship">Censorship</a>
-        <a href="#spacex">SpaceX</a>
-        <a href="#about">Our Story</a>
-        <a href="#roadmap">Roadmap</a>
-        <a href="#build">Build</a>
-        <a href="#launchpad">Launchpad</a>
-        <a href="#survival">Survival</a>
-        <a href="#quantum-realm">Quantum</a>
-        <a href="#legacy">Legacy</a>
-        <a href="#transparency">Verify</a>
-      </div>
-      <div class="nav-right">
-        <button class="wallet-btn" id="walletBtn">Connect Wallet</button>
-      </div>
+  <!-- Desktop Background -->
+  <div class="desktop">
+    <div class="desktop-grid"></div>
+
+    <!-- Desktop Icons -->
+    <div class="desktop-icon" style="top: 80px; left: 60px;" onclick="openApp('coding-studio')">
+      <img src="https://picsum.photos/id/1015/64/64" alt="Coding Studio">
+      <div style="font-size:13px;font-weight:600;">Coding Studio</div>
     </div>
-  </nav>
 
-  <!-- All original sections restored here (home, new-here, commerce, wallet, ai, etc.) -->
-  <!-- ... (full content preserved) ... -->
+    <div class="desktop-icon" style="top: 80px; left: 180px;" onclick="openApp('wallet')">
+      <img src="https://picsum.photos/id/106/64/64" alt="Wallet">
+      <div style="font-size:13px;font-weight:600;">Wallet</div>
+    </div>
 
-  <!-- Inline teaser for Coding Studio -->
-  <section id="coding-studio" class="section section-alt section-space">
-    <div class="container">
-      <div class="ai-hero-badge">&#128187; Collaborative Coding Studio</div>
-      <h2 class="section-title" style="background:linear-gradient(135deg,#34d399,#6d9fff,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">In-Browser Coding Studio</h2>
-      <p class="section-subtitle">Create, edit, launch, and smoke-test code directly inside OST. Built for Android, iOS, and desktop.</p>
-      
-      <div style="text-align:center;margin-top:32px;">
-        <a href="coding-studio.html" class="btn btn-primary btn-glow" style="font-size:1.1rem;padding:16px 40px;">
-          Open Full Coding Studio →
-        </a>
-        <p style="margin-top:12px;color:#64748b;font-size:.9rem;">Advanced editor • Multi-file tabs • Multi-language • OST GHOST save • Rally mode</p>
+    <div class="desktop-icon" style="top: 200px; left: 60px;" onclick="openApp('mesh')">
+      <img src="https://picsum.photos/id/1074/64/64" alt="Mesh">
+      <div style="font-size:13px;font-weight:600;">OST Mesh</div>
+    </div>
+
+    <div class="desktop-icon" style="top: 200px; left: 180px;" onclick="openApp('ghost')">
+      <img src="https://picsum.photos/id/102/64/64" alt="GHOST">
+      <div style="font-size:13px;font-weight:600;">GHOST AI</div>
+    </div>
+
+    <div class="desktop-icon" style="top: 320px; left: 60px;" onclick="openApp('commerce')">
+      <img src="https://picsum.photos/id/160/64/64" alt="Commerce">
+      <div style="font-size:13px;font-weight:600;">Commerce</div>
+    </div>
+
+    <!-- Main Window (OST OS Welcome) -->
+    <div class="window" style="top: 120px; left: 320px; width: 620px; height: 420px; z-index: 10;" id="welcome-window">
+      <div class="window-header">
+        <div>OST OS v1.0 — Welcome</div>
+        <div onclick="this.parentElement.parentElement.style.display='none'" style="cursor:pointer;font-size:20px;">&times;</div>
+      </div>
+      <div class="window-content">
+        <h2 style="margin-top:0;font-size:2rem;color:#34d399;">Welcome to OST OS</h2>
+        <p style="font-size:1.15rem;color:#94a3b8;line-height:1.6;">You are now inside the living operating system of the Sovereign Network.<br><br>Click the icons on the desktop to launch applications.<br>The future is being written right now.</p>
+        <button onclick="openApp('coding-studio')" class="btn" style="margin-top:24px;background:#34d399;color:#020617;font-size:16px;padding:16px 40px;border-radius:9999px;">Open Coding Studio</button>
       </div>
     </div>
-  </section>
+  </div>
 
-  <!-- All remaining sections restored -->
+  <!-- Taskbar -->
+  <div class="taskbar">
+    <button class="start-btn" onclick="showStartMenu()">OST</button>
+    <div style="flex:1"></div>
+    <div style="color:#64748b;font-size:13px;">Connected to Sovereign Network • 47 Mesh Nodes • Grok Online</div>
+  </div>
 
-  <footer class="footer">
-    <div class="container">
-      <p>Open source. Built with love for every human on Earth.</p>
-    </div>
-  </footer>
+  <script>
+    function openApp(app) {
+      if (app === 'coding-studio') {
+        window.location.href = 'coding-studio.html';
+      } else if (app === 'wallet') {
+        alert('Wallet app opened (demo)');
+      } else if (app === 'mesh') {
+        alert('OST Mesh Control opened (demo)');
+      } else if (app === 'ghost') {
+        alert('GHOST AI opened (demo)');
+      } else if (app === 'commerce') {
+        alert('Commerce Hub opened (demo)');
+      }
+    }
+
+    function showStartMenu() {
+      alert('OST Start Menu (demo) — In full version this would show all apps and settings');
+    }
+
+    // Make desktop icons draggable (basic)
+    document.querySelectorAll('.desktop-icon').forEach(icon => {
+      icon.draggable = true;
+    });
+
+    console.log('%c[OST OS] Revolutionary Desktop loaded. This is the future.', 'color:#34d399');
+  </script>
 
 </body>
 </html>
