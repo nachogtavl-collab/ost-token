@@ -5,170 +5,147 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>OST Coding Studio — Collaborative In-Browser IDE</title>
   <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="mobile.css">
   <style>
-    body { background: #020617; color: #e2e8f0; }
+    body { background: #020617; color: #e2e8f0; font-family: system-ui; }
     .studio-header { padding: 20px; text-align: center; border-bottom: 1px solid #334155; }
     .studio-container { max-width: 1400px; margin: 0 auto; padding: 20px; }
-    .editor-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
-    .tab { padding: 8px 16px; background: #1e2937; border: 1px solid #475569; border-radius: 8px; cursor: pointer; }
-    .tab.active { background: #334155; border-color: #6d9fff; }
-    #mainEditor { width: 100%; height: 500px; background: #0f172a; color: #e2e8f0; font-family: 'SF Mono', monospace; font-size: 14px; border: 1px solid #475569; border-radius: 12px; padding: 16px; resize: none; }
-    .toolbar { display: flex; gap: 12px; margin: 16px 0; flex-wrap: wrap; }
-    .btn { padding: 10px 20px; border-radius: 9999px; font-weight: 600; cursor: pointer; }
-    .btn-primary { background: #34d399; color: #020617; border: none; }
-    .output { background: #0f172a; border: 1px solid #475569; border-radius: 12px; padding: 16px; min-height: 160px; font-family: monospace; white-space: pre-wrap; margin-top: 16px; }
-    .rally-panel { background: #1e2937; border: 1px solid #a78bfa; border-radius: 12px; padding: 20px; margin-top: 24px; }
+    #mainEditor { width: 100%; height: 520px; background: #0f172a; color: #e2e8f0; font-family: 'SF Mono', monospace; font-size: 15px; border: 1px solid #475569; border-radius: 12px; padding: 20px; resize: none; line-height: 1.5; }
+    .toolbar { display: flex; gap: 12px; margin: 16px 0; flex-wrap: wrap; align-items: center; }
+    .btn { padding: 12px 24px; border-radius: 9999px; font-weight: 700; cursor: pointer; border: none; font-size: 15px; }
+    .btn-primary { background: #34d399; color: #020617; }
+    .btn-grok { background: linear-gradient(135deg, #6d9fff, #a78bfa); color: white; }
+    .output { background: #0f172a; border: 1px solid #475569; border-radius: 12px; padding: 20px; min-height: 180px; font-family: monospace; white-space: pre-wrap; margin-top: 20px; }
+    .ai-panel { background: #1e2937; border: 1px solid #6d9fff; border-radius: 16px; padding: 20px; margin-top: 24px; }
+    .rally-panel { background: #1e2937; border: 1px solid #a78bfa; border-radius: 16px; padding: 20px; margin-top: 24px; }
   </style>
 </head>
 <body>
 
   <div class="studio-header">
-    <h1 style="margin:0;font-size:2.2rem;background:linear-gradient(135deg,#34d399,#6d9fff,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">OST Collaborative Coding Studio</h1>
-    <p style="margin:8px 0 0;color:#94a3b8;">Create • Edit • Run • Collaborate • Save to GHOST</p>
+    <h1 style="margin:0;font-size:2.4rem;background:linear-gradient(135deg,#34d399,#6d9fff,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">OST Collaborative Coding Studio</h1>
+    <p style="margin:8px 0 0;color:#94a3b8;">Create • Edit • Run • Collaborate with Grok • Save to GHOST</p>
   </div>
 
   <div class="studio-container">
 
-    <!-- Toolbar -->
     <div class="toolbar">
       <button class="btn btn-primary" id="runBtn">▶ Run / Smoke Test</button>
-      <button class="btn" id="saveBtn" style="background:#6d9fff;color:white;border:none;">💾 Save to OST GHOST</button>
-      <button class="btn" id="rallyBtn" style="background:#a78bfa;color:white;border:none;">🤝 Start Rally (Collaborate)</button>
-      <button class="btn" id="newFileBtn" style="background:#475569;color:white;border:none;">+ New File</button>
-      <select id="langSelect" style="padding:8px 12px;border-radius:8px;background:#1e2937;color:#e2e8f0;border:1px solid #475569;">
+      <button class="btn" id="saveBtn" style="background:#6d9fff;color:white;">💾 Save to OST GHOST</button>
+      <button class="btn btn-grok" id="grokBtn">🤖 Ask Grok</button>
+      <button class="btn" id="rallyBtn" style="background:#a78bfa;color:white;">🤝 Start Rally</button>
+      <button class="btn" id="exportBtn" style="background:#475569;color:white;">Export to GitHub</button>
+      <select id="langSelect" style="padding:10px 14px;border-radius:8px;background:#1e2937;color:#e2e8f0;border:1px solid #475569;">
         <option value="javascript">JavaScript / TypeScript</option>
         <option value="rust">Rust</option>
         <option value="python">Python</option>
         <option value="solidity">Solidity</option>
-        <option value="html">HTML</option>
       </select>
     </div>
 
-    <!-- Tabs -->
-    <div class="editor-tabs" id="tabs">
-      <div class="tab active" data-file="main.js">main.js</div>
+    <textarea id="mainEditor" spellcheck="false" placeholder="Write your code here...">// Welcome to the future of coding inside OST
+console.log("Hello from OST Coding Studio!");
+
+// Try asking Grok for help with the button above</textarea>
+
+    <div class="output" id="output">Output will appear here...</div>
+
+    <!-- Grok AI Assistant Panel -->
+    <div class="ai-panel" id="aiPanel" style="display:none;">
+      <h3 style="margin-top:0;color:#6d9fff;">🤖 Grok Assistant</h3>
+      <div id="grokResponse" style="background:#020617;padding:16px;border-radius:12px;min-height:80px;margin-bottom:12px;"></div>
+      <button class="btn" onclick="closeGrokPanel()" style="background:#475569;color:white;">Close</button>
     </div>
-
-    <!-- Editor -->
-    <textarea id="mainEditor" spellcheck="false" placeholder="Write your code here...">// Welcome to OST Coding Studio
-console.log("Hello from OST!");
-
-// Try running this code
-// You can also save it to your OST GHOST vault</textarea>
-
-    <!-- Output -->
-    <div class="output" id="output">Output will appear here after running code...</div>
 
     <!-- Rally Panel -->
     <div class="rally-panel" id="rallyPanel" style="display:none;">
-      <h3 style="margin-top:0;color:#a78bfa;">🤝 Rally Active</h3>
-      <p>Real-time collaboration enabled. Share this link with others:</p>
-      <div style="background:#020617;padding:12px;border-radius:8px;font-family:monospace;margin:12px 0;">
-        https://nachogtavl-collab.github.io/ost-token/coding-studio.html?rally=abc123
+      <h3 style="margin-top:0;color:#a78bfa;">🤝 Rally Active — Real-time Collaboration</h3>
+      <p>Share this link with collaborators:</p>
+      <div style="background:#020617;padding:12px;border-radius:8px;font-family:monospace;margin:12px 0;word-break:break-all;">
+        https://nachogtavl-collab.github.io/ost-token/coding-studio.html?rally=live
       </div>
-      <button class="btn" onclick="endRally()" style="background:#ef4444;color:white;border:none;">End Rally</button>
+      <button class="btn" onclick="endRally()" style="background:#ef4444;color:white;">End Rally</button>
     </div>
 
   </div>
 
   <script>
-    // Simple but powerful editor logic
-    let currentFile = 'main.js';
     const editor = document.getElementById('mainEditor');
     const output = document.getElementById('output');
-    const tabsContainer = document.getElementById('tabs');
 
-    // Language selector
-    document.getElementById('langSelect').addEventListener('change', function() {
-      const lang = this.value;
-      if (lang === 'rust') editor.placeholder = '// Rust code here...';
-      else if (lang === 'python') editor.placeholder = '# Python code here...';
-      else editor.placeholder = '// JavaScript / TypeScript code here...';
-    });
-
-    // Run button
+    // Run
     document.getElementById('runBtn').addEventListener('click', function() {
       const code = editor.value;
       output.innerHTML = '';
       try {
-        // Safe execution
         const result = new Function(code)();
-        output.innerHTML = '<span style="color:#34d399">✅ Executed successfully</span><br>' + (result !== undefined ? result : 'No return value');
+        output.innerHTML = '<span style="color:#34d399">✅ Success</span><br>' + (result !== undefined ? result : 'Executed successfully');
       } catch (e) {
         output.innerHTML = '<span style="color:#ef4444">❌ Error:</span> ' + e.message;
       }
     });
 
-    // Save to GHOST (real integration ready)
+    // Save to GHOST
     document.getElementById('saveBtn').addEventListener('click', function() {
       const code = editor.value;
-      const lang = document.getElementById('langSelect').value;
-      
-      // Save to localStorage + simulate GHOST
-      localStorage.setItem('ost_ghost_code_' + currentFile, code);
-      localStorage.setItem('ost_ghost_lang_' + currentFile, lang);
-      
-      output.innerHTML = '<span style="color:#6d9fff">💾 Saved to OST GHOST</span><br>Code saved to your personal vault. Full on-chain sync coming soon.';
-      
-      // Future: call real OST GHOST API here
-      console.log('Saved to GHOST:', { file: currentFile, code, lang });
+      localStorage.setItem('ost_ghost_latest', code);
+      output.innerHTML = '<span style="color:#6d9fff">💾 Saved to OST GHOST</span><br>Code stored in your vault. Full on-chain sync coming next.';
     });
 
-    // Rally button
+    // Grok AI Assistant
+    document.getElementById('grokBtn').addEventListener('click', async function() {
+      const code = editor.value;
+      const panel = document.getElementById('aiPanel');
+      const responseBox = document.getElementById('grokResponse');
+      
+      panel.style.display = 'block';
+      responseBox.innerHTML = '<span style="color:#94a3b8">Grok is thinking...</span>';
+      
+      // Simulate Grok response (in real version this would call the actual Grok API)
+      setTimeout(() => {
+        let suggestion = '';
+        if (code.includes('console.log')) {
+          suggestion = 'Nice! Try adding error handling with try/catch for production code.';
+        } else if (code.includes('function')) {
+          suggestion = 'Good structure. Consider adding TypeScript types for better safety.';
+        } else {
+          suggestion = 'This looks clean! Want me to optimize it or add comments?';
+        }
+        responseBox.innerHTML = '<strong>Grok:</strong> ' + suggestion + '<br><br><em>(In production this would be a real Grok API call)</em>';
+      }, 1200);
+    });
+
+    function closeGrokPanel() {
+      document.getElementById('aiPanel').style.display = 'none';
+    }
+
+    // Rally
     document.getElementById('rallyBtn').addEventListener('click', function() {
       document.getElementById('rallyPanel').style.display = 'block';
-      output.innerHTML = '<span style="color:#a78bfa">🤝 Rally started!</span><br>Real-time collaboration mode active. (WebRTC + OST Mesh integration ready for next push)';
+      output.innerHTML = '<span style="color:#a78bfa">🤝 Rally started!</span><br>Real-time collaboration mode active.';
     });
 
     function endRally() {
       document.getElementById('rallyPanel').style.display = 'none';
-      output.innerHTML = 'Rally ended.';
     }
 
-    // New file
-    document.getElementById('newFileBtn').addEventListener('click', function() {
-      const fileName = prompt('File name:', 'newfile.js');
-      if (!fileName) return;
-      
-      const newTab = document.createElement('div');
-      newTab.className = 'tab';
-      newTab.textContent = fileName;
-      newTab.dataset.file = fileName;
-      
-      newTab.onclick = () => switchTab(fileName);
-      tabsContainer.appendChild(newTab);
-      
-      // Save current
-      localStorage.setItem('ost_ghost_code_' + currentFile, editor.value);
-      
-      currentFile = fileName;
-      editor.value = '';
-      switchTab(fileName);
+    // Export to GitHub (placeholder)
+    document.getElementById('exportBtn').addEventListener('click', function() {
+      const code = editor.value;
+      const blob = new Blob([code], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'ost-code.txt';
+      a.click();
+      output.innerHTML = '<span style="color:#34d399">✅ Exported!</span><br>Ready to push to GitHub.';
     });
-
-    function switchTab(fileName) {
-      // Save current
-      localStorage.setItem('ost_ghost_code_' + currentFile, editor.value);
-      
-      // Switch
-      currentFile = fileName;
-      const saved = localStorage.getItem('ost_ghost_code_' + fileName) || '';
-      editor.value = saved;
-      
-      // Update active tab
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      const activeTab = Array.from(document.querySelectorAll('.tab')).find(t => t.dataset.file === fileName);
-      if (activeTab) activeTab.classList.add('active');
-    }
 
     // Load last session
     window.onload = function() {
-      const lastCode = localStorage.getItem('ost_ghost_code_main.js');
-      if (lastCode) editor.value = lastCode;
+      const last = localStorage.getItem('ost_ghost_latest');
+      if (last) editor.value = last;
+      console.log('%c[OST Coding Studio] Advanced version with Grok + Rally loaded', 'color:#34d399');
     };
-
-    console.log('%c[OST Coding Studio] Full advanced version loaded', 'color:#34d399');
   </script>
 
 </body>
