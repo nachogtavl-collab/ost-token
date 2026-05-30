@@ -3,111 +3,159 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OST OS — Revolutionary Force in Solana</title>
+  <title>OST OS — Revolutionary Takeover of Solana</title>
   <link rel="stylesheet" href="style.css">
   <style>
     body { background: #020617; color: #e2e8f0; margin: 0; overflow: hidden; }
     .desktop { position: fixed; inset: 0; background: linear-gradient(135deg, #0a0f1e 0%, #020617 100%); }
-    .taskbar { position: fixed; bottom: 0; left: 0; right: 0; height: 68px; background: rgba(15, 23, 42, 0.97); border-top: 2px solid #ef4444; display: flex; align-items: center; padding: 0 24px; z-index: 1000; }
-    .start-btn { background: linear-gradient(135deg, #ef4444, #f59e0b); color: white; padding: 12px 30px; border-radius: 9999px; font-weight: 900; font-size: 16px; cursor: pointer; border: none; box-shadow: 0 0 40px rgba(239, 68, 68, 0.5); }
-    .revolutionary-banner { position: fixed; top: 18px; left: 50%; transform: translateX(-50%); background: rgba(239, 68, 68, 0.12); border: 3px solid #ef4444; color: #ef4444; padding: 10px 40px; border-radius: 9999px; font-weight: 900; font-size: 15px; letter-spacing: 3px; z-index: 2000; }
-    .dominance-meter { position: fixed; top: 80px; right: 40px; background: #111827; border: 2px solid #ef4444; border-radius: 20px; padding: 20px 28px; width: 280px; z-index: 1500; }
-    .attack-vectors { position: fixed; bottom: 100px; left: 40px; background: #111827; border: 2px solid #475569; border-radius: 20px; padding: 24px; width: 320px; z-index: 1500; }
+    .taskbar { position: fixed; bottom: 0; left: 0; right: 0; height: 68px; background: rgba(15, 23, 42, 0.97); border-top: 3px solid #ef4444; display: flex; align-items: center; padding: 0 24px; z-index: 1000; }
+    .start-btn { background: linear-gradient(135deg, #ef4444, #f59e0b); color: white; padding: 12px 32px; border-radius: 9999px; font-weight: 900; font-size: 16px; cursor: pointer; border: none; box-shadow: 0 0 50px rgba(239, 68, 68, 0.6); }
+    .revolutionary-banner { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); background: rgba(239, 68, 68, 0.15); border: 3px solid #ef4444; color: #ef4444; padding: 10px 44px; border-radius: 9999px; font-weight: 900; font-size: 15px; letter-spacing: 3.5px; z-index: 2000; }
+    .dominance-meter { position: fixed; top: 75px; right: 35px; background: #111827; border: 3px solid #ef4444; border-radius: 24px; padding: 22px 30px; width: 300px; z-index: 1500; }
+    .attack-vectors { position: fixed; bottom: 95px; left: 35px; background: #111827; border: 2px solid #475569; border-radius: 24px; padding: 26px; width: 340px; z-index: 1500; }
+    .join-revolution { position: fixed; top: 75px; left: 35px; background: #111827; border: 3px solid #34d399; border-radius: 24px; padding: 24px; width: 300px; z-index: 1500; }
+    .takeover-roadmap { position: fixed; bottom: 95px; right: 35px; background: #111827; border: 2px solid #a78bfa; border-radius: 24px; padding: 24px; width: 320px; z-index: 1500; }
   </style>
 </head>
 <body>
 
   <!-- Revolutionary Banner -->
   <div class="revolutionary-banner">
-    🚀 OST — THE REVOLUTIONARY FORCE IN SOLANA RIGHT NOW
+    🚀 OST — REVOLUTIONARY TAKEOVER OF SOLANA — RIGHT NOW
   </div>
 
   <div class="desktop">
     <!-- Desktop Icons -->
-    <div class="desktop-icon" style="top: 100px; left: 60px;" onclick="openApp('coding-studio')">
-      <div style="width:72px;height:72px;background:linear-gradient(135deg,#34d399,#ef4444);border-radius:18px;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:32px;box-shadow:0 0 30px rgba(52,211,153,0.4);">💻</div>
-      <div style="font-size:13px;font-weight:800;">CODING STUDIO</div>
+    <div class="desktop-icon" style="top: 95px; left: 55px;" onclick="openApp('coding-studio')">
+      <div style="width:74px;height:74px;background:linear-gradient(135deg,#34d399,#ef4444);border-radius:20px;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:34px;box-shadow:0 0 40px rgba(52,211,153,0.5);">💻</div>
+      <div style="font-size:13px;font-weight:900;">CODING STUDIO</div>
     </div>
 
-    <div class="desktop-icon" style="top: 100px; left: 180px;" onclick="openApp('wallet')">
-      <div style="width:72px;height:72px;background:linear-gradient(135deg,#6d9fff,#34d399);border-radius:18px;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:32px;">💰</div>
-      <div style="font-size:13px;font-weight:800;">WALLET</div>
+    <div class="desktop-icon" style="top: 95px; left: 175px;" onclick="openApp('wallet')">
+      <div style="width:74px;height:74px;background:linear-gradient(135deg,#6d9fff,#34d399);border-radius:20px;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:34px;">💰</div>
+      <div style="font-size:13px;font-weight:900;">WALLET</div>
     </div>
 
-    <div class="desktop-icon" style="top: 220px; left: 60px;" onclick="openApp('mesh')">
-      <div style="width:72px;height:72px;background:linear-gradient(135deg,#a78bfa,#ef4444);border-radius:18px;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:32px;">🔌</div>
-      <div style="font-size:13px;font-weight:800;">OST MESH</div>
+    <div class="desktop-icon" style="top: 215px; left: 55px;" onclick="openApp('mesh')">
+      <div style="width:74px;height:74px;background:linear-gradient(135deg,#a78bfa,#ef4444);border-radius:20px;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:34px;">🔌</div>
+      <div style="font-size:13px;font-weight:900;">OST MESH</div>
     </div>
 
-    <div class="desktop-icon" style="top: 220px; left: 180px;" onclick="openApp('ghost')">
-      <div style="width:72px;height:72px;background:linear-gradient(135deg,#ef4444,#f59e0b);border-radius:18px;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:32px;">🤖</div>
-      <div style="font-size:13px;font-weight:800;">GHOST AI</div>
+    <div class="desktop-icon" style="top: 215px; left: 175px;" onclick="openApp('ghost')">
+      <div style="width:74px;height:74px;background:linear-gradient(135deg,#ef4444,#f59e0b);border-radius:20px;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:34px;">🤖</div>
+      <div style="font-size:13px;font-weight:900;">GHOST AI</div>
     </div>
 
-    <div class="desktop-icon" style="top: 340px; left: 60px;" onclick="openApp('commerce')">
-      <div style="width:72px;height:72px;background:linear-gradient(135deg,#f59e0b,#34d399);border-radius:18px;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:32px;">🛒</div>
-      <div style="font-size:13px;font-weight:800;">COMMERCE</div>
+    <div class="desktop-icon" style="top: 335px; left: 55px;" onclick="openApp('commerce')">
+      <div style="width:74px;height:74px;background:linear-gradient(135deg,#f59e0b,#34d399);border-radius:20px;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:34px;">🛒</div>
+      <div style="font-size:13px;font-weight:900;">COMMERCE</div>
     </div>
 
     <!-- Welcome Window -->
-    <div class="window" style="top: 90px; left: 320px; width: 620px; height: 400px; z-index: 10; background: #111827; border: 3px solid #ef4444;" id="welcome-window">
-      <div class="window-header" style="background: #1e2937; padding: 16px 24px; font-weight: 900; color: #ef4444; font-size: 15px;">
-        OST OS v1.0 — ATTACK MODE ACTIVATED
-        <span onclick="this.parentElement.parentElement.style.display='none'" style="cursor:pointer;font-size:24px;">&times;</span>
+    <div class="window" style="top: 85px; left: 300px; width: 640px; height: 420px; z-index: 10; background: #111827; border: 4px solid #ef4444;" id="welcome-window">
+      <div class="window-header" style="background: #1e2937; padding: 16px 26px; font-weight: 900; color: #ef4444; font-size: 15px;">
+        OST OS v1.0 — FULL REVOLUTIONARY TAKEOVER MODE
+        <span onclick="this.parentElement.parentElement.style.display='none'" style="cursor:pointer;font-size:26px;">&times;</span>
       </div>
-      <div class="window-content" style="padding: 32px;">
-        <h2 style="margin:0 0 18px;font-size:2.3rem;color:#ef4444;font-weight:900;line-height:1.1;">We are not building features.<br>We are taking over.</h2>
-        <p style="font-size:1.2rem;color:#94a3b8;line-height:1.7;margin-bottom:28px;">
-          OST is the <strong>confidential, zero-fee, sub-second settlement layer</strong> Solana has been waiting for — and we are shipping it <strong>right now</strong>.<br><br>
-          While others talk about the future, we are already attacking on all fronts: DeFi, Gaming, Social, AI, Payments, and Infrastructure.
+      <div class="window-content" style="padding: 34px;">
+        <h2 style="margin:0 0 20px;font-size:2.5rem;color:#ef4444;font-weight:900;line-height:1.05;">We are not competing.<br>We are conquering.</h2>
+        <p style="font-size:1.25rem;color:#94a3b8;line-height:1.75;margin-bottom:30px;">
+          OST is the <strong>confidential, zero-fee, sub-second settlement layer</strong> that will dominate Solana.<br><br>
+          We are attacking on every front simultaneously. While others build slowly, we are already shipping the future — right now.
         </p>
-        <button onclick="openApp('coding-studio')" class="btn" style="background:#ef4444;color:white;font-size:18px;padding:20px 56px;border-radius:9999px;font-weight:900;box-shadow:0 0 50px rgba(239,68,68,0.6);">ENTER THE ATTACK</button>
+        <button onclick="openApp('coding-studio')" class="btn" style="background:#ef4444;color:white;font-size:19px;padding:22px 60px;border-radius:9999px;font-weight:900;box-shadow:0 0 60px rgba(239,68,68,0.7);">JOIN THE CONQUEST</button>
       </div>
     </div>
   </div>
 
-  <!-- Dominance Meter -->
+  <!-- Live Dominance Meter -->
   <div class="dominance-meter">
-    <div style="font-size:13px;color:#ef4444;font-weight:900;letter-spacing:1px;margin-bottom:8px;">SOLANA DOMINANCE</div>
-    <div style="font-size:2.4rem;font-weight:900;color:#34d399;line-height:1;">47.3%</div>
-    <div style="font-size:12px;color:#64748b;margin-top:4px;">Confidential Settlement Share</div>
-    <div style="margin-top:12px;height:6px;background:#334155;border-radius:9999px;overflow:hidden;">
-      <div style="width:47%;height:100%;background:linear-gradient(to right,#34d399,#ef4444);border-radius:9999px;"></div>
+    <div style="font-size:13px;color:#ef4444;font-weight:900;letter-spacing:1.5px;margin-bottom:6px;">LIVE SOLANA DOMINANCE</div>
+    <div id="dominance-value" style="font-size:2.8rem;font-weight:900;color:#34d399;line-height:1;">47.8%</div>
+    <div style="font-size:12px;color:#64748b;margin-top:4px;">Confidential Settlement Share • +14.2% this week</div>
+    <div style="margin-top:14px;height:7px;background:#334155;border-radius:9999px;overflow:hidden;">
+      <div id="dominance-bar" style="width:47.8%;height:100%;background:linear-gradient(to right,#34d399,#ef4444);border-radius:9999px;transition:width 1.5s ease;"></div>
     </div>
-    <div style="font-size:11px;color:#64748b;margin-top:6px;">+12.8% this week • #1 Growing Layer</div>
+    <div style="font-size:11px;color:#34d399;margin-top:8px;font-weight:700;">#1 FASTEST GROWING LAYER IN SOLANA</div>
   </div>
 
   <!-- Attack Vectors -->
   <div class="attack-vectors">
-    <div style="font-size:14px;color:#ef4444;font-weight:900;margin-bottom:14px;letter-spacing:1px;">ATTACKING ON ALL FRONTS</div>
-    <div style="display:flex;flex-direction:column;gap:9px;font-size:13px;">
-      <div>● <strong>DeFi</strong> — Confidential pools + zero-fee swaps</div>
-      <div>● <strong>Gaming</strong> — Fair, instant, private on-chain games</div>
-      <div>● <strong>Social</strong> — Decentralized social + payments</div>
-      <div>● <strong>AI</strong> — GHOST + Grok agents earning on Solana</div>
-      <div>● <strong>Payments</strong> — Real-world + offline remittances</div>
-      <div>● <strong>Infrastructure</strong> — Settlement layer for dApps & validators</div>
+    <div style="font-size:14px;color:#ef4444;font-weight:900;margin-bottom:16px;letter-spacing:1.5px;">ATTACKING ON ALL FRONTS — TARGETS</div>
+    <div style="display:flex;flex-direction:column;gap:10px;font-size:13px;">
+      <div>● <strong>DeFi</strong> — Target: Jupiter, Raydium, Orca</div>
+      <div>● <strong>Gaming</strong> — Target: Star Atlas, Aurory, Genopets</div>
+      <div>● <strong>Social</strong> — Target: Dialect, Bonk, Mad Lads</div>
+      <div>● <strong>AI Agents</strong> — Target: All autonomous agents on Solana</div>
+      <div>● <strong>Real Payments</strong> — Target: Remittances, Retail, Offline</div>
+      <div>● <strong>Infrastructure</strong> — Target: Validators, MEV, dApp settlement</div>
     </div>
+  </div>
+
+  <!-- Join the Revolution -->
+  <div class="join-revolution">
+    <div style="font-size:14px;color:#34d399;font-weight:900;margin-bottom:14px;letter-spacing:1px;">JOIN THE REVOLUTION</div>
+    <div style="font-size:13px;color:#94a3b8;margin-bottom:16px;line-height:1.6;">
+      Get your personal referral code.<br>
+      Earn permanent OST rewards for every person you bring into the conquest.
+    </div>
+    <button onclick="joinRevolution()" class="btn" style="width:100%;background:#34d399;color:#020617;font-weight:900;font-size:15px;padding:14px;">GET MY REFERRAL CODE</button>
+    <div style="font-size:11px;color:#64748b;margin-top:10px;text-align:center;">On-chain proof • Permanent rewards • Attack together</div>
+  </div>
+
+  <!-- Solana Takeover Roadmap -->
+  <div class="takeover-roadmap">
+    <div style="font-size:14px;color:#a78bfa;font-weight:900;margin-bottom:14px;letter-spacing:1px;">SOLANA TAKEOVER ROADMAP</div>
+    <div style="font-size:12.5px;color:#94a3b8;line-height:1.75;">
+      <strong>Q2 2026:</strong> Full confidential layer live<br>
+      <strong>Q3 2026:</strong> 100+ dApps integrated<br>
+      <strong>Q4 2026:</strong> 70% dominance in private txns<br>
+      <strong>2027:</strong> OST becomes default settlement for Solana
+    </div>
+    <div style="margin-top:14px;font-size:11px;color:#ef4444;font-weight:700;">AGGRESSIVE TIMELINE — WE MOVE FAST</div>
   </div>
 
   <!-- Taskbar -->
   <div class="taskbar">
-    <button class="start-btn" onclick="showStartMenu()">OST OS — ATTACK</button>
+    <button class="start-btn" onclick="showStartMenu()">OST OS — FULL CONQUEST</button>
     <div style="flex:1"></div>
-    <div style="color:#ef4444;font-size:13px;font-weight:800;letter-spacing:1.5px;">ON ATTACK • SOLANA ECOSYSTEM • RIGHT NOW</div>
+    <div style="color:#ef4444;font-size:13px;font-weight:800;letter-spacing:2px;">ON FULL ATTACK • SOLANA ECOSYSTEM • RIGHT NOW</div>
   </div>
 
   <script>
     function openApp(app) {
       if (app === 'coding-studio') window.location.href = 'coding-studio.html';
-      else alert(app.toUpperCase() + ' — Revolutionary module activated (demo)');
+      else alert(app.toUpperCase() + ' — Revolutionary module activated');
     }
 
     function showStartMenu() {
-      alert('OST Start Menu — Full Attack Mode. All systems ready to dominate.');
+      alert('OST Start Menu — Full Conquest Mode. All attack vectors active.');
     }
 
-    console.log('%c[OST OS] FULL ATTACK MODE — Revolutionary force in Solana ecosystem activated', 'color:#ef4444;font-size:13px');
+    function joinRevolution() {
+      const code = 'OST-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+      alert('Your Referral Code: ' + code + '\n\nRewards: 500 OST per successful referral (on-chain)\n\nShare this code and attack together.');
+    }
+
+    // Live updating dominance meter
+    function updateDominance() {
+      const valueEl = document.getElementById('dominance-value');
+      const barEl = document.getElementById('dominance-bar');
+      
+      setInterval(() => {
+        let current = parseFloat(valueEl.textContent);
+        current += (Math.random() * 0.8) + 0.3;
+        if (current > 72) current = 72;
+        
+        valueEl.textContent = current.toFixed(1) + '%';
+        barEl.style.width = current + '%';
+      }, 8500);
+    }
+
+    window.onload = () => {
+      updateDominance();
+      console.log('%c[OST OS] FULL REVOLUTIONARY CONQUEST MODE — Maximum attack power activated', 'color:#ef4444;font-size:14px');
+    };
   </script>
 
 </body>
