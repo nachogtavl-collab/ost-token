@@ -11,10 +11,6 @@
     .taskbar { position: fixed; bottom: 0; left: 0; right: 0; height: 68px; background: rgba(15, 23, 42, 0.97); border-top: 3px solid #ef4444; display: flex; align-items: center; padding: 0 24px; z-index: 1000; }
     .start-btn { background: linear-gradient(135deg, #ef4444, #f59e0b); color: white; padding: 12px 32px; border-radius: 9999px; font-weight: 900; font-size: 16px; cursor: pointer; border: none; box-shadow: 0 0 50px rgba(239, 68, 68, 0.6); }
     .revolutionary-banner { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); background: rgba(239, 68, 68, 0.15); border: 3px solid #ef4444; color: #ef4444; padding: 10px 44px; border-radius: 9999px; font-weight: 900; font-size: 15px; letter-spacing: 3.5px; z-index: 2000; }
-    .dominance-meter { position: fixed; top: 75px; right: 35px; background: #111827; border: 3px solid #ef4444; border-radius: 24px; padding: 22px 30px; width: 300px; z-index: 1500; }
-    .attack-vectors { position: fixed; bottom: 95px; left: 35px; background: #111827; border: 2px solid #475569; border-radius: 24px; padding: 26px; width: 340px; z-index: 1500; }
-    .join-revolution { position: fixed; top: 75px; left: 35px; background: #111827; border: 3px solid #34d399; border-radius: 24px; padding: 24px; width: 300px; z-index: 1500; }
-    .takeover-roadmap { position: fixed; bottom: 95px; right: 35px; background: #111827; border: 2px solid #a78bfa; border-radius: 24px; padding: 24px; width: 320px; z-index: 1500; }
     @media (max-width: 768px) {
       .desktop-icon { width: 70px !important; }
       .desktop-icon > div { width: 58px !important; height: 58px !important; font-size: 28px !important; }
@@ -23,73 +19,56 @@
 </head>
 <body>
 
-  <!-- Revolutionary Banner -->
   <div class="revolutionary-banner">
     🚀 OST — REVOLUTIONARY TAKEOVER OF SOLANA — RIGHT NOW
   </div>
 
   <div class="desktop">
     <!-- Desktop Icons -->
-    <div class="desktop-icon" style="top: 80px; left: 40px;" onclick="openApp('coding-studio')">
-      <div style="width:68px;height:68px;background:linear-gradient(135deg,#34d399,#ef4444);border-radius:18px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:30px;box-shadow:0 0 30px rgba(52,211,153,0.5);">💻</div>
-      <div style="font-size:11px;font-weight:800;">CODING STUDIO</div>
+    <div class="desktop-icon" style="top: 70px; left: 35px;" onclick="openApp('coding-studio')">
+      <div style="width:66px;height:66px;background:linear-gradient(135deg,#34d399,#ef4444);border-radius:18px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 0 30px rgba(52,211,153,0.5);">💻</div>
+      <div style="font-size:10px;font-weight:800;">VISUAL STUDIO</div>
     </div>
 
-    <div class="desktop-icon" style="top: 80px; left: 140px;" onclick="openApp('x-app')">
-      <div style="width:68px;height:68px;background:linear-gradient(135deg,#1da1f2,#000000);border-radius:18px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:30px;">🕊️</div>
-      <div style="font-size:11px;font-weight:800;">X APP</div>
+    <div class="desktop-icon" style="top: 70px; left: 125px;" onclick="openApp('grok')">
+      <div style="width:66px;height:66px;background:linear-gradient(135deg,#6d9fff,#a78bfa);border-radius:18px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:28px;">🤖</div>
+      <div style="font-size:10px;font-weight:800;">GROK AI</div>
     </div>
 
-    <div class="desktop-icon" style="top: 180px; left: 40px;" onclick="openApp('grok')">
-      <div style="width:68px;height:68px;background:linear-gradient(135deg,#6d9fff,#a78bfa);border-radius:18px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:30px;">🤖</div>
-      <div style="font-size:11px;font-weight:800;">GROK AI</div>
+    <div class="desktop-icon" style="top: 160px; left: 35px;" onclick="openApp('x-app')">
+      <div style="width:66px;height:66px;background:linear-gradient(135deg,#1da1f2,#000000);border-radius:18px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:28px;">🕊️</div>
+      <div style="font-size:10px;font-weight:800;">X APP</div>
     </div>
 
-    <div class="desktop-icon" style="top: 180px; left: 140px;" onclick="openApp('mesh')">
-      <div style="width:68px;height:68px;background:linear-gradient(135deg,#a78bfa,#ef4444);border-radius:18px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:30px;">🔌</div>
-      <div style="font-size:11px;font-weight:800;">OST MESH</div>
+    <div class="desktop-icon" style="top: 160px; left: 125px;" onclick="openApp('mesh')">
+      <div style="width:66px;height:66px;background:linear-gradient(135deg,#a78bfa,#ef4444);border-radius:18px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:28px;">🔌</div>
+      <div style="font-size:10px;font-weight:800;">OST MESH</div>
     </div>
 
-    <div class="desktop-icon" style="top: 280px; left: 40px;" onclick="openApp('veil')">
-      <div style="width:68px;height:68px;background:linear-gradient(135deg,#ef4444,#f59e0b);border-radius:18px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:30px;">🔒</div>
-      <div style="font-size:11px;font-weight:800;">OST VEIL</div>
+    <div class="desktop-icon" style="top: 250px; left: 35px;" onclick="openApp('veil')">
+      <div style="width:66px;height:66px;background:linear-gradient(135deg,#ef4444,#f59e0b);border-radius:18px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:28px;">🔒</div>
+      <div style="font-size:10px;font-weight:800;">OST VEIL</div>
     </div>
 
-    <div class="desktop-icon" style="top: 280px; left: 140px;" onclick="openApp('commerce')">
-      <div style="width:68px;height:68px;background:linear-gradient(135deg,#f59e0b,#34d399);border-radius:18px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:30px;">🛒</div>
-      <div style="font-size:11px;font-weight:800;">COMMERCE</div>
+    <div class="desktop-icon" style="top: 250px; left: 125px;" onclick="openApp('commerce')">
+      <div style="width:66px;height:66px;background:linear-gradient(135deg,#f59e0b,#34d399);border-radius:18px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:28px;">🛒</div>
+      <div style="font-size:10px;font-weight:800;">COMMERCE</div>
     </div>
 
     <!-- Welcome Window -->
-    <div class="window" style="top: 70px; left: 260px; width: 580px; height: 380px; z-index: 10; background: #111827; border: 4px solid #ef4444;" id="welcome-window">
-      <div class="window-header" style="background: #1e2937; padding: 14px 22px; font-weight: 900; color: #ef4444; font-size: 14px;">
+    <div class="window" style="top: 60px; left: 240px; width: 560px; height: 360px; z-index: 10; background: #111827; border: 4px solid #ef4444;" id="welcome-window">
+      <div class="window-header" style="background: #1e2937; padding: 14px 20px; font-weight: 900; color: #ef4444; font-size: 14px;">
         OST OS v1.0 — FULL REVOLUTIONARY TAKEOVER MODE
         <span onclick="this.parentElement.parentElement.style.display='none'" style="cursor:pointer;font-size:24px;">&times;</span>
       </div>
-      <div class="window-content" style="padding: 28px;">
-        <h2 style="margin:0 0 16px;font-size:2.1rem;color:#ef4444;font-weight:900;line-height:1.1;">We are not competing.<br>We are conquering.</h2>
-        <p style="font-size:1.1rem;color:#94a3b8;line-height:1.65;margin-bottom:24px;">
+      <div class="window-content" style="padding: 26px;">
+        <h2 style="margin:0 0 14px;font-size:2rem;color:#ef4444;font-weight:900;line-height:1.1;">We are not competing.<br>We are conquering.</h2>
+        <p style="font-size:1.05rem;color:#94a3b8;line-height:1.6;margin-bottom:20px;">
           OST is the <strong>confidential, zero-fee, sub-second settlement layer</strong> that will dominate Solana.<br><br>
-          X App + Grok AI + Visual Studio are now fully integrated and mobile-ready.
+          Visual Studio • Grok AI • X App • Mesh • Veil — All active and mobile-ready.
         </p>
-        <button onclick="openApp('coding-studio')" class="btn" style="background:#ef4444;color:white;font-size:17px;padding:18px 48px;border-radius:9999px;font-weight:900;box-shadow:0 0 50px rgba(239,68,68,0.6);">ENTER VISUAL STUDIO</button>
+        <button onclick="openApp('coding-studio')" class="btn" style="background:#ef4444;color:white;font-size:16px;padding:16px 44px;border-radius:9999px;font-weight:900;box-shadow:0 0 50px rgba(239,68,68,0.6);">ENTER VISUAL STUDIO</button>
       </div>
-    </div>
-  </div>
-
-  <!-- Live Dominance Meter -->
-  <div class="dominance-meter">
-    <div style="font-size:12px;color:#ef4444;font-weight:900;letter-spacing:1px;margin-bottom:4px;">LIVE SOLANA DOMINANCE</div>
-    <div id="dominance-value" style="font-size:2.4rem;font-weight:900;color:#34d399;line-height:1;">48.2%</div>
-    <div style="font-size:11px;color:#64748b;margin-top:2px;">Confidential Settlement Share</div>
-  </div>
-
-  <!-- Attack Vectors -->
-  <div class="attack-vectors">
-    <div style="font-size:13px;color:#ef4444;font-weight:900;margin-bottom:12px;letter-spacing:1px;">ATTACKING ON ALL FRONTS</div>
-    <div style="font-size:12px;color:#94a3b8;line-height:1.6;">
-      ● DeFi • Gaming • Social • AI • Payments • Infrastructure<br>
-      ● X App + Grok AI fully integrated
     </div>
   </div>
 
@@ -103,33 +82,19 @@
   <script>
     function openApp(app) {
       if (app === 'coding-studio') window.location.href = 'coding-studio.html';
-      else if (app === 'x-app') window.location.href = 'https://x.com/nachironga';
-      else if (app === 'grok') {
-        alert('Grok AI Integration Active!\n\nYou can now use Grok directly inside OST for code generation, strategy, and real-time intelligence. (Full integration coming in next push)');
-      }
+      else if (app === 'grok') window.location.href = 'grok.html';
+      else if (app === 'x-app') window.location.href = 'x-app.html';
       else if (app === 'mesh') window.location.href = 'ost-mesh.html';
       else if (app === 'veil') window.location.href = 'ost-veil.html';
       else alert(app.toUpperCase() + ' — Revolutionary module activated');
     }
 
     function showStartMenu() {
-      alert('OST Start Menu — X App, Grok, Visual Studio, Mesh, Veil all active and mobile-ready.');
-    }
-
-    // Live updating dominance meter
-    function updateDominance() {
-      const valueEl = document.getElementById('dominance-value');
-      setInterval(() => {
-        let current = parseFloat(valueEl.textContent);
-        current += (Math.random() * 0.6) + 0.2;
-        if (current > 75) current = 75;
-        valueEl.textContent = current.toFixed(1) + '%';
-      }, 9000);
+      alert('OST Start Menu — Visual Studio, Grok, X App, Mesh, Veil all active and mobile-ready.');
     }
 
     window.onload = () => {
-      updateDominance();
-      console.log('%c[OST OS] X App + Grok + Visual Studio verified and mobile-ready', 'color:#34d399');
+      console.log('%c[OST OS] Full Grok + X + Deep Visual Studio verified and active', 'color:#34d399');
     };
   </script>
 
