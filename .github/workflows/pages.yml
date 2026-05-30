@@ -6,8 +6,6 @@ on:
     paths:
       - site/**
       - .github/workflows/pages.yml
-  schedule:
-    - cron: '*/15 * * * *'
   workflow_dispatch:
 
 permissions:
