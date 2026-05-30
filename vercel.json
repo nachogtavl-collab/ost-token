@@ -1,0 +1,7 @@
+{
+  "version": 2,
+  "outputDirectory": ".",
+  "builds": [
+    { "src": "**/*", "use": "@vercel/static" }
+  ]
+}
