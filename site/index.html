@@ -3,100 +3,91 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OST OS — The Living Operating System</title>
+  <title>OST OS — The Revolutionary Force in Solana</title>
   <link rel="stylesheet" href="style.css">
   <style>
     body { background: #020617; color: #e2e8f0; margin: 0; overflow: hidden; }
     .desktop { position: fixed; inset: 0; background: linear-gradient(135deg, #0a0f1e 0%, #020617 100%); }
-    .desktop-grid { position: absolute; inset: 0; background-image: url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27100%27 height=%27100%27%3E%3Ccircle cx=%2750%27 cy=%2750%27 r=%271%27 fill=%27%23334 155%27/%3E%3C/svg%27'); background-size: 80px 80px; opacity: 0.4; }
-    .taskbar { position: fixed; bottom: 0; left: 0; right: 0; height: 72px; background: rgba(15, 23, 42, 0.95); border-top: 1px solid #475569; display: flex; align-items: center; padding: 0 24px; z-index: 1000; }
-    .start-btn { background: linear-gradient(135deg, #34d399, #6d9fff); color: #020617; padding: 12px 28px; border-radius: 9999px; font-weight: 800; font-size: 15px; cursor: pointer; border: none; }
-    .desktop-icon { position: absolute; width: 92px; text-align: center; cursor: pointer; transition: transform 0.2s; }
-    .desktop-icon:hover { transform: scale(1.08); }
-    .desktop-icon img { width: 64px; height: 64px; display: block; margin: 0 auto 8px; }
-    .window { position: absolute; background: #111827; border: 2px solid #475569; border-radius: 20px; box-shadow: 0 40px 120px rgba(0,0,0,0.6); overflow: hidden; }
-    .window-header { background: #1e2937; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; font-weight: 700; }
-    .window-content { padding: 24px; }
+    .desktop-grid { position: absolute; inset: 0; background-image: url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27100%27 height=%27100%27%3E%3Ccircle cx=%2750%27 cy=%2750%27 r=%271%27 fill=%27%23334155%27/%3E%3C/svg%27'); background-size: 70px 70px; opacity: 0.35; }
+    .taskbar { position: fixed; bottom: 0; left: 0; right: 0; height: 68px; background: rgba(15, 23, 42, 0.96); border-top: 1px solid #475569; display: flex; align-items: center; padding: 0 24px; z-index: 1000; }
+    .start-btn { background: linear-gradient(135deg, #34d399, #ef4444); color: white; padding: 11px 26px; border-radius: 9999px; font-weight: 900; font-size: 15px; cursor: pointer; border: none; box-shadow: 0 0 30px rgba(239, 68, 68, 0.4); }
+    .desktop-icon { position: absolute; width: 88px; text-align: center; cursor: pointer; transition: all 0.2s; }
+    .desktop-icon:hover { transform: scale(1.1); }
+    .revolutionary-banner { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(239, 68, 68, 0.15); border: 2px solid #ef4444; color: #ef4444; padding: 8px 32px; border-radius: 9999px; font-weight: 900; font-size: 14px; letter-spacing: 2px; z-index: 2000; }
   </style>
 </head>
 <body>
 
-  <!-- Desktop Background -->
+  <!-- Revolutionary Banner -->
+  <div class="revolutionary-banner">
+    🚀 THE REVOLUTIONARY FORCE IN SOLANA — RIGHT NOW
+  </div>
+
   <div class="desktop">
     <div class="desktop-grid"></div>
 
     <!-- Desktop Icons -->
-    <div class="desktop-icon" style="top: 80px; left: 60px;" onclick="openApp('coding-studio')">
-      <img src="https://picsum.photos/id/1015/64/64" alt="Coding Studio">
-      <div style="font-size:13px;font-weight:600;">Coding Studio</div>
+    <div class="desktop-icon" style="top: 90px; left: 70px;" onclick="openApp('coding-studio')">
+      <div style="width:68px;height:68px;background:linear-gradient(135deg,#34d399,#6d9fff);border-radius:16px;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:28px;">💻</div>
+      <div style="font-size:12px;font-weight:700;">Coding Studio</div>
     </div>
 
-    <div class="desktop-icon" style="top: 80px; left: 180px;" onclick="openApp('wallet')">
-      <img src="https://picsum.photos/id/106/64/64" alt="Wallet">
-      <div style="font-size:13px;font-weight:600;">Wallet</div>
+    <div class="desktop-icon" style="top: 90px; left: 190px;" onclick="openApp('wallet')">
+      <div style="width:68px;height:68px;background:linear-gradient(135deg,#6d9fff,#a78bfa);border-radius:16px;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:28px;">💰</div>
+      <div style="font-size:12px;font-weight:700;">Wallet</div>
     </div>
 
-    <div class="desktop-icon" style="top: 200px; left: 60px;" onclick="openApp('mesh')">
-      <img src="https://picsum.photos/id/1074/64/64" alt="Mesh">
-      <div style="font-size:13px;font-weight:600;">OST Mesh</div>
+    <div class="desktop-icon" style="top: 210px; left: 70px;" onclick="openApp('mesh')">
+      <div style="width:68px;height:68px;background:linear-gradient(135deg,#a78bfa,#ef4444);border-radius:16px;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:28px;">🔌</div>
+      <div style="font-size:12px;font-weight:700;">OST Mesh</div>
     </div>
 
-    <div class="desktop-icon" style="top: 200px; left: 180px;" onclick="openApp('ghost')">
-      <img src="https://picsum.photos/id/102/64/64" alt="GHOST">
-      <div style="font-size:13px;font-weight:600;">GHOST AI</div>
+    <div class="desktop-icon" style="top: 210px; left: 190px;" onclick="openApp('ghost')">
+      <div style="width:68px;height:68px;background:linear-gradient(135deg,#ef4444,#f59e0b);border-radius:16px;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:28px;">🤖</div>
+      <div style="font-size:12px;font-weight:700;">GHOST AI</div>
     </div>
 
-    <div class="desktop-icon" style="top: 320px; left: 60px;" onclick="openApp('commerce')">
-      <img src="https://picsum.photos/id/160/64/64" alt="Commerce">
-      <div style="font-size:13px;font-weight:600;">Commerce</div>
+    <div class="desktop-icon" style="top: 330px; left: 70px;" onclick="openApp('commerce')">
+      <div style="width:68px;height:68px;background:linear-gradient(135deg,#f59e0b,#34d399);border-radius:16px;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:28px;">🛒</div>
+      <div style="font-size:12px;font-weight:700;">Commerce</div>
     </div>
 
-    <!-- Main Window (OST OS Welcome) -->
-    <div class="window" style="top: 120px; left: 320px; width: 620px; height: 420px; z-index: 10;" id="welcome-window">
-      <div class="window-header">
-        <div>OST OS v1.0 — Welcome</div>
-        <div onclick="this.parentElement.parentElement.style.display='none'" style="cursor:pointer;font-size:20px;">&times;</div>
+    <!-- Welcome Window -->
+    <div class="window" style="top: 100px; left: 340px; width: 580px; height: 380px; z-index: 10; background: #111827; border: 3px solid #ef4444;" id="welcome-window">
+      <div class="window-header" style="background: #1e2937; padding: 14px 22px; font-weight: 900; color: #ef4444;">
+        OST OS v1.0 — THE REVOLUTION STARTS NOW
+        <span onclick="this.parentElement.parentElement.style.display='none'" style="cursor:pointer;font-size:22px;">&times;</span>
       </div>
-      <div class="window-content">
-        <h2 style="margin-top:0;font-size:2rem;color:#34d399;">Welcome to OST OS</h2>
-        <p style="font-size:1.15rem;color:#94a3b8;line-height:1.6;">You are now inside the living operating system of the Sovereign Network.<br><br>Click the icons on the desktop to launch applications.<br>The future is being written right now.</p>
-        <button onclick="openApp('coding-studio')" class="btn" style="margin-top:24px;background:#34d399;color:#020617;font-size:16px;padding:16px 40px;border-radius:9999px;">Open Coding Studio</button>
+      <div class="window-content" style="padding: 28px;">
+        <h2 style="margin:0 0 16px;font-size:2.1rem;color:#ef4444;font-weight:900;">We are not participating.<br>We are attacking.</h2>
+        <p style="font-size:1.15rem;color:#94a3b8;line-height:1.65;margin-bottom:24px;">
+          While others build features, we are building the <strong>confidential, zero-fee, instant settlement layer</strong> that Solana has been missing.<br><br>
+          OST is not another token.<br>
+          OST is the <strong>revolutionary operating system</strong> of the Solana ecosystem — right now.
+        </p>
+        <button onclick="openApp('coding-studio')" class="btn" style="background:#ef4444;color:white;font-size:17px;padding:18px 48px;border-radius:9999px;font-weight:900;box-shadow:0 0 40px rgba(239,68,68,0.5);">ENTER THE REVOLUTION</button>
       </div>
     </div>
   </div>
 
   <!-- Taskbar -->
   <div class="taskbar">
-    <button class="start-btn" onclick="showStartMenu()">OST</button>
+    <button class="start-btn" onclick="showStartMenu()">OST OS</button>
     <div style="flex:1"></div>
-    <div style="color:#64748b;font-size:13px;">Connected to Sovereign Network • 47 Mesh Nodes • Grok Online</div>
+    <div style="color:#ef4444;font-size:13px;font-weight:700;letter-spacing:1px;">ATTACKING ON ALL FRONTS • SOLANA ECOSYSTEM</div>
   </div>
 
   <script>
     function openApp(app) {
-      if (app === 'coding-studio') {
-        window.location.href = 'coding-studio.html';
-      } else if (app === 'wallet') {
-        alert('Wallet app opened (demo)');
-      } else if (app === 'mesh') {
-        alert('OST Mesh Control opened (demo)');
-      } else if (app === 'ghost') {
-        alert('GHOST AI opened (demo)');
-      } else if (app === 'commerce') {
-        alert('Commerce Hub opened (demo)');
-      }
+      if (app === 'coding-studio') window.location.href = 'coding-studio.html';
+      else alert(app.toUpperCase() + ' app opened (demo)');
     }
 
     function showStartMenu() {
-      alert('OST Start Menu (demo) — In full version this would show all apps and settings');
+      alert('OST Start Menu — Attack Mode Activated');
     }
 
-    // Make desktop icons draggable (basic)
-    document.querySelectorAll('.desktop-icon').forEach(icon => {
-      icon.draggable = true;
-    });
-
-    console.log('%c[OST OS] Revolutionary Desktop loaded. This is the future.', 'color:#34d399');
+    console.log('%c[OST OS] REVOLUTIONARY MODE ACTIVATED — Attacking Solana ecosystem on all fronts', 'color:#ef4444;font-size:13px');
   </script>
 
 </body>
