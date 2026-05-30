@@ -41,9 +41,9 @@
       <div style="font-size:13px;font-weight:900;">OST MESH</div>
     </div>
 
-    <div class="desktop-icon" style="top: 215px; left: 175px;" onclick="openApp('ghost')">
-      <div style="width:74px;height:74px;background:linear-gradient(135deg,#ef4444,#f59e0b);border-radius:20px;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:34px;">🤖</div>
-      <div style="font-size:13px;font-weight:900;">GHOST AI</div>
+    <div class="desktop-icon" style="top: 215px; left: 175px;" onclick="openApp('veil')">
+      <div style="width:74px;height:74px;background:linear-gradient(135deg,#ef4444,#f59e0b);border-radius:20px;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:34px;">🔒</div>
+      <div style="font-size:13px;font-weight:900;">OST VEIL</div>
     </div>
 
     <div class="desktop-icon" style="top: 335px; left: 55px;" onclick="openApp('commerce')">
@@ -125,6 +125,8 @@
   <script>
     function openApp(app) {
       if (app === 'coding-studio') window.location.href = 'coding-studio.html';
+      else if (app === 'mesh') window.location.href = 'ost-mesh.html';
+      else if (app === 'veil') window.location.href = 'ost-veil.html';
       else alert(app.toUpperCase() + ' — Revolutionary module activated');
     }
 
