@@ -3,7 +3,7 @@ const path = require('node:path');
 
 const POLYMARKET_URL = 'https://gamma-api.polymarket.com/markets?limit=160&closed=false';
 const KALSHI_URL = 'https://api.elections.kalshi.com/trade-api/v2/markets?limit=160';
-const OUTPUT_PATH = path.join(__dirname, '..', 'site', 'data', 'prediction-market-snapshot.json');
+const OUTPUT_PATH = path.join(__dirname, '..', 'docs', 'data', 'prediction-market-snapshot.json');
 
 function extractPolymarketMarkets(data) {
   if (Array.isArray(data)) return data;
