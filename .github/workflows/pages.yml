@@ -3,6 +3,11 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [master]
+  schedule:
+    # Refresh Polymarket/Kalshi snapshot data every 15 minutes so
+    # prediction markets never look stale between code pushes.
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -19,6 +24,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Best-effort: a failed snapshot must NEVER block the deploy
+      # (this step previously failed and was removed entirely; the site
+      # falls back to live client-side fetches when the file is missing).
+      - name: Build prediction market snapshot
+        run: node ./scripts/fetch-prediction-market-snapshot.js
+        continue-on-error: true
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

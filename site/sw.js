@@ -1,10 +1,14 @@
-const CACHE_NAME = 'ost-pwa-cache-v213';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v213';
+const CACHE_NAME = 'ost-pwa-cache-v214';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v214';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
   './',
   './index.html',
+  './markets.html',
+  './fast-markets.js?v=1',
+  './commerce.html',
+  './ost-money.js',
   './manifest.json',
   './favicon.svg',
   './ost-logo.svg',

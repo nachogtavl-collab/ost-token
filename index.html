@@ -55,6 +55,11 @@
       <div style="font-size:10px;font-weight:800;">COMMERCE</div>
     </div>
 
+    <div class="desktop-icon" style="top: 340px; left: 35px;" onclick="openApp('markets')">
+      <div style="width:66px;height:66px;background:linear-gradient(135deg,#34d399,#6d9fff);border-radius:18px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 0 30px rgba(109,159,255,0.5);">📈</div>
+      <div style="font-size:10px;font-weight:800;">LIVE MARKETS</div>
+    </div>
+
     <!-- Welcome Window -->
     <div class="window" style="top: 60px; left: 240px; width: 560px; height: 360px; z-index: 10; background: #111827; border: 4px solid #ef4444;" id="welcome-window">
       <div class="window-header" style="background: #1e2937; padding: 14px 20px; font-weight: 900; color: #ef4444; font-size: 14px;">
@@ -88,6 +93,7 @@
       else if (app === 'mesh') window.location.href = 'ost-mesh.html';
       else if (app === 'veil') window.location.href = 'ost-veil.html';
       else if (app === 'commerce') window.location.href = 'commerce.html';
+      else if (app === 'markets') window.location.href = 'markets.html';
       else alert(app.toUpperCase() + ' — Revolutionary module activated');
     }
 
