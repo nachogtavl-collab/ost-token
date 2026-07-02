@@ -32,13 +32,17 @@
     </div>
   </div>
 
+  <script src="ost-money.js"></script>
   <script>
+    let xRewardsLeft = 5;
+
     function postToX() {
       const content = document.getElementById('postContent').value.trim();
       if (!content) return alert('Please write something to post.');
 
       alert('Posted to X successfully!\n\n' + content + '\n\n(Real X API integration ready in production)');
       document.getElementById('postContent').value = '';
+      if (window.OST_MONEY && xRewardsLeft > 0) { xRewardsLeft -= 1; window.OST_MONEY.add(0.5, 'x-app:post'); }
     }
 
     function postToXWithGrok() {
@@ -47,6 +51,7 @@
 
       alert('Grok enhanced your post and it has been published to X!\n\nOriginal: ' + content + '\n\n(Full Grok + X integration coming next)');
       document.getElementById('postContent').value = '';
+      if (window.OST_MONEY && xRewardsLeft > 0) { xRewardsLeft -= 1; window.OST_MONEY.add(0.75, 'x-app:post-grok'); }
     }
   </script>
 

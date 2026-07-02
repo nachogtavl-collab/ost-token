@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Commerce — Inside OST</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { background: #020617; color: #e2e8f0; }
+    .cm-hero { text-align: center; padding: 40px 20px 20px; }
+    .cm-hero h1 { font-size: 2.8rem; background: linear-gradient(135deg,#f59e0b,#34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .cm-container { max-width: 1000px; margin: 0 auto; padding: 20px 20px 60px; }
+    .cm-balance-card { background: #111827; border: 2px solid #34d399; border-radius: 20px; padding: 24px; text-align: center; margin-bottom: 28px; }
+    .cm-balance-amount { font-size: 2.4rem; font-weight: 900; color: #34d399; }
+    .cm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+    .cm-item { background: #111827; border: 2px solid #475569; border-radius: 16px; padding: 20px; text-align: center; }
+    .cm-item-icon { font-size: 2.2rem; margin-bottom: 8px; }
+    .cm-item-name { font-weight: 800; margin-bottom: 4px; }
+    .cm-item-price { color: #f59e0b; font-weight: 700; margin-bottom: 14px; }
+    .cm-status { text-align: center; margin-top: 20px; color: #94a3b8; font-size: 13px; min-height: 18px; }
+  </style>
+</head>
+<body>
+
+  <div class="cm-hero">
+    <h1>Commerce</h1>
+    <p style="color:#94a3b8;">Every action inside OST earns or spends real OST. This is money for everything.</p>
+  </div>
+
+  <div class="cm-container">
+    <div class="cm-balance-card">
+      <div style="font-size:12px;letter-spacing:2px;color:#94a3b8;text-transform:uppercase;margin-bottom:8px;">Your Balance</div>
+      <div class="cm-balance-amount" id="cmBalance">0.00 OST</div>
+      <button onclick="claimDaily()" class="btn" style="background:#34d399;color:#020617;margin-top:16px;">+ Claim Daily OST</button>
+    </div>
+
+    <div class="cm-grid" id="cmGrid"></div>
+    <div class="cm-status" id="cmStatus"></div>
+
+    <div style="margin-top:36px;text-align:center;">
+      <p style="color:#64748b;font-size:13px;margin-bottom:14px;">Earn more OST by building in Visual Studio, chatting with Grok, or posting to X — every app inside OST pays out.</p>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+        <a href="coding-studio.html" class="btn btn-outline">Visual Studio</a>
+        <a href="grok.html" class="btn btn-outline">Grok AI</a>
+        <a href="x-app.html" class="btn btn-outline">X App</a>
+        <a href="index.html" class="btn btn-outline">Back to Desktop</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="ost-money.js"></script>
+  <script>
+    var ITEMS = [
+      { id: 'sticker', icon: '\u{1F31F}', name: 'OST Sticker Pack', price: 2 },
+      { id: 'hoodie', icon: '\u{1F9E5}', name: 'Revolutionary Hoodie', price: 15 },
+      { id: 'badge', icon: '\u{1F396}️', name: 'Founding Rebel Badge', price: 8 },
+      { id: 'ticket', icon: '\u{1F39F}️', name: 'Launch Event Ticket', price: 20 },
+      { id: 'boost', icon: '⚡', name: 'Mesh Speed Boost (24h)', price: 5 },
+      { id: 'skin', icon: '\u{1F3A8}', name: 'Visual Studio Theme', price: 4 }
+    ];
+
+    function renderGrid() {
+      var grid = document.getElementById('cmGrid');
+      grid.innerHTML = ITEMS.map(function (it) {
+        return '<div class="cm-item">' +
+          '<div class="cm-item-icon">' + it.icon + '</div>' +
+          '<div class="cm-item-name">' + it.name + '</div>' +
+          '<div class="cm-item-price">' + it.price.toFixed(2) + ' OST</div>' +
+          '<button class="btn" style="background:#f59e0b;color:#020617;width:100%;" onclick="buy(\'' + it.id + '\')">Buy</button>' +
+          '</div>';
+      }).join('');
+    }
+
+    function renderBalance() {
+      document.getElementById('cmBalance').textContent = window.OST_MONEY.get().toFixed(2) + ' OST';
+    }
+
+    function buy(id) {
+      var item = ITEMS.filter(function (i) { return i.id === id; })[0];
+      if (!item) return;
+      var status = document.getElementById('cmStatus');
+      var ok = window.OST_MONEY.spend(item.price, 'commerce:' + id);
+      if (ok) {
+        status.style.color = '#34d399';
+        status.textContent = 'Purchased ' + item.name + ' for ' + item.price.toFixed(2) + ' OST.';
+      } else {
+        status.style.color = '#ef4444';
+        status.textContent = 'Not enough OST for ' + item.name + '. Claim daily OST or earn more first.';
+      }
+      renderBalance();
+    }
+
+    function claimDaily() {
+      window.OST_MONEY.add(5, 'commerce:daily-claim');
+      renderBalance();
+      var status = document.getElementById('cmStatus');
+      status.style.color = '#34d399';
+      status.textContent = '+5.00 OST claimed.';
+    }
+
+    window.addEventListener('ost-money-changed', renderBalance);
+    renderGrid();
+    renderBalance();
+  </script>
+
+</body>
+</html>

@@ -44,6 +44,7 @@ console.log("Hello from OST Visual Studio!");</textarea>
     <div class="output" id="output">Output will appear here after running code...</div>
   </div>
 
+  <script src="ost-money.js"></script>
   <script>
     let files = [
       { name: 'main.js', content: '// Welcome to OST Visual Studio\nconsole.log("Hello from OST!");' },
@@ -74,6 +75,7 @@ console.log("Hello from OST Visual Studio!");</textarea>
         // Real execution (safe eval for demo)
         const result = new Function(code)();
         output.innerHTML = '<span style="color:#34d399">✅ Executed successfully</span><br>' + (result !== undefined ? result : 'No return value');
+        if (window.OST_MONEY) window.OST_MONEY.add(1, 'coding-studio:run');
       } catch(e) {
         output.innerHTML = '<span style="color:#ef4444">Error:</span> ' + e.message;
       }
@@ -83,6 +85,7 @@ console.log("Hello from OST Visual Studio!");</textarea>
       const code = document.getElementById('mainEditor').value;
       localStorage.setItem('ghost_vs_' + files[currentFileIndex].name, code);
       document.getElementById('output').innerHTML = '<span style="color:#6d9fff">💾 Saved to OST GHOST</span><br>File versioned and encrypted.';
+      if (window.OST_MONEY) window.OST_MONEY.add(0.5, 'coding-studio:save');
     }
 
     function addNewFile() {
@@ -105,6 +108,7 @@ console.log("Hello from OST Visual Studio!");</textarea>
       document.getElementById('output').innerHTML = '<span style="color:#ef4444">🚀 Deploying to OST Network...</span>';
       setTimeout(() => {
         document.getElementById('output').innerHTML = '<span style="color:#34d399">✅ Deployed successfully!</span><br>Program ID: J2jiS296YWVie1Sopb4SxcM3aJnP9aAwe6aLDhCqvGXY';
+        if (window.OST_MONEY) window.OST_MONEY.add(10, 'coding-studio:deploy');
       }, 1500);
     }
 

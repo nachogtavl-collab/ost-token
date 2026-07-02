@@ -31,8 +31,10 @@
     </div>
   </div>
 
+  <script src="ost-money.js"></script>
   <script>
     const chatBox = document.getElementById('chatBox');
+    let grokRewardsLeft = 5;
 
     function addMessage(text, isUser) {
       const div = document.createElement('div');
@@ -50,6 +52,7 @@
       const question = input.value;
       input.value = '';
 
+      // Simulate Grok response (in production this would call real Grok API)
       setTimeout(() => {
         let response = '';
         if (question.toLowerCase().includes('ost')) {
@@ -60,9 +63,14 @@
           response = 'I understand. How can I help you build the future with OST today?';
         }
         addMessage(response, false);
+        if (window.OST_MONEY && grokRewardsLeft > 0) {
+          grokRewardsLeft -= 1;
+          window.OST_MONEY.add(0.25, 'grok:chat');
+        }
       }, 900);
     }
 
+    // Welcome message
     window.onload = () => {
       addMessage('Hello! I am Grok, integrated inside OST. How can I help you conquer today?', false);
     };

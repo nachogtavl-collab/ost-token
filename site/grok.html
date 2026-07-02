@@ -31,8 +31,10 @@
     </div>
   </div>
 
+  <script src="ost-money.js"></script>
   <script>
     const chatBox = document.getElementById('chatBox');
+    let grokRewardsLeft = 5;
 
     function addMessage(text, isUser) {
       const div = document.createElement('div');
@@ -61,6 +63,10 @@
           response = 'I understand. How can I help you build the future with OST today?';
         }
         addMessage(response, false);
+        if (window.OST_MONEY && grokRewardsLeft > 0) {
+          grokRewardsLeft -= 1;
+          window.OST_MONEY.add(0.25, 'grok:chat');
+        }
       }, 900);
     }
 
