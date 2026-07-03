@@ -1752,9 +1752,48 @@ function parseStockQuoteCsv(text, symbol) {
   };
 }
 
+async function fetchYahooStockQuote(clean) {
+  const response = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol(clean))}?range=1d&interval=5m&includePrePost=false`, {
+    headers: { accept: 'application/json', 'user-agent': 'OST-Stock-Mirror/1.0' },
+    cf: { cacheTtl: 20, cacheEverything: true }
+  });
+  if (!response.ok) return null;
+  let payload = null;
+  try { payload = await response.json(); } catch (_) { return null; }
+  const result = payload && payload.chart && Array.isArray(payload.chart.result) ? payload.chart.result[0] : null;
+  const yahooMeta = result && result.meta ? result.meta : null;
+  const price = cleanNumber(yahooMeta && yahooMeta.regularMarketPrice);
+  if (!Number.isFinite(price) || price <= 0) return null;
+  const previous = cleanNumber(yahooMeta.chartPreviousClose != null ? yahooMeta.chartPreviousClose : yahooMeta.previousClose) || price;
+  const change = price - previous;
+  const meta = stockMeta(clean);
+  return {
+    symbol: clean,
+    name: meta.name,
+    exchange: meta.exchange,
+    sector: meta.sector,
+    currency: (yahooMeta && yahooMeta.currency) || meta.currency || 'USD',
+    price,
+    open: cleanNumber(yahooMeta.regularMarketOpen) || null,
+    high: cleanNumber(yahooMeta.regularMarketDayHigh) || null,
+    low: cleanNumber(yahooMeta.regularMarketDayLow) || null,
+    volume: cleanNumber(yahooMeta.regularMarketVolume, 0) || 0,
+    change,
+    changePct: previous ? change / previous * 100 : 0,
+    asOf: yahooMeta.regularMarketTime ? new Date(Number(yahooMeta.regularMarketTime) * 1000).toISOString() : new Date().toISOString(),
+    source: 'yahoo-chart-public'
+  };
+}
+
 async function fetchStockQuote(symbol) {
   const clean = normalizeStockSymbol(symbol);
   if (!clean) return null;
+  // Yahoo first — Stooq started blocking Cloudflare egress (empty CSV/451),
+  // which left the whole stock mirror without live prices.
+  try {
+    const yahoo = await fetchYahooStockQuote(clean);
+    if (yahoo) return yahoo;
+  } catch (_) {}
   const response = await fetch(`https://stooq.com/q/l/?s=${encodeURIComponent(stooqSymbol(clean))}&f=sd2t2ohlcv&h&e=csv`, {
     headers: { accept: 'text/csv', 'user-agent': 'OST-Stock-Mirror/1.0' },
     cf: { cacheTtl: 20, cacheEverything: true }

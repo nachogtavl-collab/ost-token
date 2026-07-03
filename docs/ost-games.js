@@ -168,6 +168,7 @@
     s.credits = Math.max(0, bal - amount);
     saveBank(s);
     fireBalanceChange();
+    try { window.dispatchEvent(new CustomEvent('ost:game-wager', { detail: { amount: amount, total: s.credits } })); } catch (_) {}
     return true;
   }
   function credit(amount, source) {

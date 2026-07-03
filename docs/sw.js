@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v216';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v216';
+const CACHE_NAME = 'ost-pwa-cache-v217';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v217';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -11,6 +11,8 @@ const PRECACHE_PATHS = [
   './commerce.html',
   './ost-money.js?v=2',
   './ost-quantum.js?v=1',
+  './ost-parlay.js?v=1',
+  './ost-games-meta.js?v=1',
   './ost-total-balance.js?v=1',
   './manifest.json',
   './favicon.svg',
