@@ -13637,11 +13637,11 @@
     var NATIVE_MARKET_RENDER_MIN_MS = 650;
 
     function getPredictionDefaultVisibleCount() {
-      return window.matchMedia && window.matchMedia('(max-width: 720px)').matches ? 5 : 8;
+      return window.matchMedia && window.matchMedia('(max-width: 720px)').matches ? 8 : 14;
     }
 
     function getPredictionSearchVisibleCount() {
-      return window.matchMedia && window.matchMedia('(max-width: 720px)').matches ? 8 : 12;
+      return window.matchMedia && window.matchMedia('(max-width: 720px)').matches ? 12 : 20;
     }
 
     function getPredictionShowMoreStep() {
@@ -14191,6 +14191,7 @@
         topics.add('sports');
       }
       if (/\bnba\b|\bnfl\b|\bmlb\b|\bnhl\b|\bsoccer\b|\bfootball\b|\bgolf\b|\btennis\b|\bgoal\b|\bpoints scored\b|\bplayer points\b|\bwins by over\b|\bworld cup\b|\bfinals\b|\bmls\b|\bformula 1\b|\bf1\b|\bbaseball\b|\bbasketball\b|sportsmultigame/.test(lower)) topics.add('sports');
+      if (/world cup|fifa|golden ball|golden boot|round of 16|quarterfinal|wc26/.test(lower)) topics.add('worldcup');
       if (/\biran\b|\btehran\b|\bhormuz\b|\biranian\b|\bpersian gulf\b/.test(lower)) {
         topics.add('iran');
         topics.add('geopolitics');
@@ -15736,7 +15737,11 @@
 
     function getFilteredMarkets() {
       var query = state.query.trim().toLowerCase();
+      var nowMs = Date.now();
       var filtered = state.markets.filter(function(market) {
+        // Self-cleaning board: markets past close disappear on their own
+        // (30 min grace so just-settled rounds can still show a result).
+        if (market.closeAtMs && market.closeAtMs < nowMs - 1800000) return false;
         if (state.source !== 'all' && market.source !== state.source) return false;
         if (state.topic !== 'all') {
           var marketTopics = market.topics instanceof Set ? market.topics : buildTopicSet([
@@ -15762,7 +15767,7 @@
         return (b.sortValue || 0) - (a.sortValue || 0);
       });
 
-      return interleaveMarkets(filtered, query ? 24 : 18);
+      return interleaveMarkets(filtered, query ? 96 : 72);
     }
 
     function updateStatus(kind, text) {
@@ -16198,7 +16203,8 @@
       }
 
       if (markets.length) {
-        updateStatus(failures.length ? 'is-warning' : 'is-live', failures.length ? 'Live with one source degraded' : '2 live venues connected');
+        var liveVenues = Number(state.sourceHealth.polymarket) + Number(state.sourceHealth.kalshi);
+        updateStatus('is-live', markets.length + ' live markets · ' + (liveVenues >= 2 ? 'Polymarket + Kalshi + OST native' : liveVenues === 1 ? (state.sourceHealth.polymarket ? 'Polymarket + OST native' : 'Kalshi + OST native') : 'OST native rounds'));
       } else {
         if (!state.lastError) state.lastError = 'No active markets returned';
         updateStatus('is-error', 'Feeds unavailable right now');

@@ -1,0 +1,105 @@
+/* ==========================================================================
+   OST · iPhone fit pass — ≤430px (iPad already renders 1:1 correctly)
+   Focus: prediction hub, market cards, filter chips, trade modal, docks.
+   ========================================================================== */
+@media (max-width: 430px) {
+
+  /* --- filter chips: one horizontal scroll row instead of a cramped wrap */
+  .prediction-market-controls,
+  .prediction-chip-row,
+  [data-prediction-topic-row] {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .prediction-chip {
+    flex: 0 0 auto;
+    padding: 7px 12px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  /* --- market cards: full-bleed single column, calmer padding */
+  #predictionMarketList {
+    grid-template-columns: 1fr !important;
+    gap: 10px;
+  }
+  .prediction-market-card {
+    padding: 12px 12px 10px;
+  }
+  .prediction-market-card h5 {
+    font-size: 0.92rem;
+    line-height: 1.35;
+  }
+  .prediction-market-card p {
+    font-size: 0.74rem;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .prediction-market-price-grid {
+    gap: 6px;
+  }
+  .prediction-market-price strong {
+    font-size: 1rem;
+  }
+  .prediction-market-meta-row {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .prediction-market-metric span {
+    font-size: 0.6rem;
+  }
+  .prediction-market-metric strong {
+    font-size: 0.72rem;
+  }
+
+  /* --- hero + stage: stop double columns squeezing to slivers */
+  .prediction-market-shell,
+  .prediction-market-main {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* --- trade modal: full-screen sheet feel */
+  #ost-market-modal .ost-modal__card,
+  .ost-modal__card {
+    max-width: 100vw !important;
+    width: 100vw !important;
+    max-height: 100dvh !important;
+    height: 100dvh !important;
+    border-radius: 0 !important;
+  }
+  .ost-modal__side-btn {
+    padding: 12px 0 !important;
+    font-size: 15px !important;
+  }
+
+  /* --- parlay dock + games meta: clear of each other and of thumbs */
+  #ostParlayDock {
+    right: 6px;
+    bottom: 70px;
+    width: calc(100vw - 12px);
+  }
+  #ostParlayDock .opl-body {
+    max-height: 58vh;
+  }
+  #ostMetaBadge {
+    left: 8px;
+    bottom: 12px;
+    padding: 7px 11px;
+    font-size: 11px;
+  }
+  #ostMetaPop {
+    left: 8px;
+    bottom: 52px;
+    width: calc(100vw - 16px);
+  }
+
+  /* --- parlay chips on cards: bigger tap targets */
+  .oplc-btn {
+    padding: 6px 14px;
+    font-size: 11px;
+  }
+}

@@ -1,15 +1,30 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 
-// Multiple Polymarket pulls so sports (World Cup!), games and the main feed
-// all land in the snapshot. Deduped by id below.
+/*
+ * Prediction market snapshot builder — runs before every site deploy.
+ *
+ * Polymarket: several Gamma pulls (main feed, sports incl. World Cup, games,
+ * hottest by volume, deep page) deduped by id.
+ *
+ * Kalshi: their public API stripped prices from market/event listings, but
+ * the per-market ORDERBOOK endpoint is still public. So: page /events for
+ * clean titles, then harvest orderbooks in small parallel batches and derive
+ * real prices from the book (yes bid = best yes_dollars level, yes ask =
+ * 1 - best no_dollars level). Only markets with a live book ship.
+ */
+
 const POLYMARKET_URLS = [
-  'https://gamma-api.polymarket.com/markets?limit=160&closed=false',
-  'https://gamma-api.polymarket.com/markets?limit=120&closed=false&tag_id=100639', // sports
-  'https://gamma-api.polymarket.com/markets?limit=80&closed=false&tag_id=100640',  // games
-  'https://gamma-api.polymarket.com/markets?limit=80&closed=false&order=volume24hr&ascending=false' // hottest
+  'https://gamma-api.polymarket.com/markets?limit=500&closed=false',
+  'https://gamma-api.polymarket.com/markets?limit=300&closed=false&tag_id=100639', // sports / World Cup
+  'https://gamma-api.polymarket.com/markets?limit=120&closed=false&tag_id=100640', // games
+  'https://gamma-api.polymarket.com/markets?limit=200&closed=false&order=volume24hr&ascending=false',
+  'https://gamma-api.polymarket.com/markets?limit=300&closed=false&offset=500'
 ];
-const KALSHI_URL = 'https://api.elections.kalshi.com/trade-api/v2/markets?limit=200&status=open';
+const KALSHI_BASE = 'https://api.elections.kalshi.com/trade-api/v2';
+const KALSHI_EVENT_PAGES = 4;          // 4 x 200 events scanned
+const KALSHI_TARGET = 120;             // aim for ~this many priced markets
+const KALSHI_BATCH = 5;                // parallel orderbook fetches
 const OUTPUT_PATH = path.join(__dirname, '..', 'docs', 'data', 'prediction-market-snapshot.json');
 
 function extractPolymarketMarkets(data) {
@@ -18,102 +33,252 @@ function extractPolymarketMarkets(data) {
   return [];
 }
 
-function extractKalshiMarkets(data) {
-  if (Array.isArray(data && data.markets)) return data.markets;
-  if (Array.isArray(data)) return data;
-  return [];
-}
-
 async function fetchJson(label, url) {
   const response = await fetch(url, {
-    headers: {
-      accept: 'application/json',
-      'user-agent': 'ost-token-pages-build/1.0'
-    }
+    headers: { accept: 'application/json', 'user-agent': 'ost-token-pages-build/1.1' }
   });
-
-  if (!response.ok) {
-    throw new Error(label + ' returned ' + response.status);
-  }
-
+  if (!response.ok) throw new Error(label + ' returned ' + response.status);
   return response.json();
-}
-
-async function loadSource(label, url, extractor, filterFn) {
-  try {
-    const payload = await fetchJson(label, url);
-    return {
-      ok: true,
-      markets: extractor(payload).filter(filterFn)
-    };
-  } catch (error) {
-    console.error('[prediction-snapshot] ' + label + ' failed: ' + error.message);
-    return {
-      ok: false,
-      markets: []
-    };
-  }
 }
 
 function polymarketFilter(item) {
   return item && item.active !== false && item.closed !== true;
 }
 
-// Kalshi multi-leg/parlay records have machine-generated titles like
-// "yes A's,yes Milwaukee,yes Cape Verde advances" — unreadable on a board.
-function kalshiFilter(item) {
-  if (!item || (item.status && item.status !== 'active' && item.status !== 'open')) return false;
-  const title = String(item.title || '');
-  if (!title || title.length < 8) return false;
-  if (/^yes\s/i.test(title) || /,\s*yes\s/i.test(title) || /,\s*no\s/i.test(title)) return false;
-  return true;
-}
+// ---------------------------------------------------------------- Polymarket
+const POLYMARKET_SEARCHES = ['world cup', 'fifa 2026', 'golden boot', 'champions league'];
 
-async function main() {
-  const polyResults = await Promise.all(
-    POLYMARKET_URLS.map((url, i) =>
-      loadSource('Polymarket[' + i + ']', url, extractPolymarketMarkets, polymarketFilter))
-  );
-  const kalshi = await loadSource('Kalshi', KALSHI_URL, extractKalshiMarkets, kalshiFilter);
-
-  const seen = new Set();
-  const polymarketMarkets = [];
-  let polyOk = false;
-  polyResults.forEach(res => {
-    if (res.ok) polyOk = true;
-    res.markets.forEach(m => {
-      const id = m && (m.id || m.conditionId);
-      if (!id || seen.has(id)) return;
-      seen.add(id);
-      polymarketMarkets.push(m);
+function flattenEventMarkets(events) {
+  const out = [];
+  (events || []).forEach(event => {
+    (event.markets || []).forEach(m => {
+      if (!polymarketFilter(m)) return;
+      // carry the event title so grouped legs read like Polymarket does
+      if (event.title && m.question && m.question.length < 26) {
+        m = Object.assign({}, m, { question: event.title + ': ' + m.question });
+      }
+      out.push(m);
     });
   });
+  return out;
+}
 
-  if (!polyOk && !kalshi.ok) {
-    console.warn('[prediction-snapshot] All sources failed — writing empty snapshot so deploy continues.');
+async function loadPolymarketSearch() {
+  const results = await Promise.all(POLYMARKET_SEARCHES.map(async q => {
+    try {
+      const payload = await fetchJson('search:' + q,
+        'https://gamma-api.polymarket.com/public-search?q=' + encodeURIComponent(q) + '&limit_per_type=25');
+      return flattenEventMarkets(payload && payload.events);
+    } catch (error) {
+      console.error('[prediction-snapshot] search "' + q + '" failed: ' + error.message);
+      return [];
+    }
+  }));
+  return results.flat();
+}
+
+async function loadPolymarketSportsEvents() {
+  try {
+    const payload = await fetchJson('sports-events',
+      'https://gamma-api.polymarket.com/events?limit=200&closed=false&tag_id=100639');
+    return flattenEventMarkets(Array.isArray(payload) ? payload : payload && payload.value);
+  } catch (error) {
+    console.error('[prediction-snapshot] sports events failed: ' + error.message);
+    return [];
   }
+}
+
+async function loadPolymarket() {
+  const [urlResults, searchMarkets, sportsMarkets] = await Promise.all([
+    Promise.all(POLYMARKET_URLS.map(async (url, i) => {
+      try {
+        const payload = await fetchJson('Polymarket[' + i + ']', url);
+        return extractPolymarketMarkets(payload).filter(polymarketFilter);
+      } catch (error) {
+        console.error('[prediction-snapshot] Polymarket[' + i + '] failed: ' + error.message);
+        return [];
+      }
+    })),
+    loadPolymarketSearch(),
+    loadPolymarketSportsEvents()
+  ]);
+  const seen = new Set();
+  const markets = [];
+  urlResults.flat().concat(searchMarkets, sportsMarkets).forEach(m => {
+    const id = m && (m.id || m.conditionId);
+    if (!id || seen.has(id)) return;
+    seen.add(id);
+    markets.push(slimPolymarket(m));
+  });
+  return markets;
+}
+
+// Keep only the fields the client mapper reads — the raw gamma records made
+// the snapshot >5 MB, which is hostile to phones.
+const POLY_KEEP = ['id', 'question', 'slug', 'outcomes', 'outcomePrices', 'conditionId',
+  'clobTokenIds', 'endDate', 'endDateIso', 'startDate', 'createdAt', 'category',
+  'volume24hr', 'volumeNum', 'volume', 'liquidityNum', 'liquidity', 'bestBid', 'bestAsk',
+  'lastTradePrice', 'oneWeekPriceChange', 'oneMonthPriceChange', 'active', 'closed'];
+
+function slimPolymarket(m) {
+  const out = {};
+  POLY_KEEP.forEach(k => { if (m[k] !== undefined && m[k] !== null) out[k] = m[k]; });
+  if (m.description) out.description = String(m.description).slice(0, 220);
+  return out;
+}
+
+// -------------------------------------------------------------------- Kalshi
+function cleanKalshiTitle(event, market) {
+  const evTitle = String(event.title || '').trim();
+  const sub = String(market.yes_sub_title || market.subtitle || '').trim();
+  if (!evTitle) return '';
+  if (!sub || evTitle.toLowerCase().includes(sub.toLowerCase())) return evTitle;
+  return evTitle + ' — ' + sub;
+}
+
+function junkTitle(title) {
+  return !title || title.length < 8 || /^yes\s/i.test(title) || /,\s*(yes|no)\s/i.test(title);
+}
+
+async function kalshiEvents() {
+  const events = [];
+  let cursor = '';
+  for (let page = 0; page < KALSHI_EVENT_PAGES; page++) {
+    const url = KALSHI_BASE + '/events?limit=200&status=open&with_nested_markets=true' +
+      (cursor ? '&cursor=' + encodeURIComponent(cursor) : '');
+    try {
+      const payload = await fetchJson('Kalshi events p' + page, url);
+      (payload.events || []).forEach(e => events.push(e));
+      cursor = payload.cursor || '';
+      if (!cursor) break;
+    } catch (error) {
+      console.error('[prediction-snapshot] ' + error.message);
+      break;
+    }
+  }
+  return events;
+}
+
+function bookBest(levels) {
+  // levels: [["0.6500","284.00"], ...] price->resting dollars; best = highest price
+  let best = 0, depth = 0;
+  (levels || []).forEach(l => {
+    const price = Number(l[0]);
+    const qty = Number(l[1]);
+    if (Number.isFinite(qty)) depth += qty;
+    if (Number.isFinite(price) && price > best) best = price;
+  });
+  return { best, depth };
+}
+
+async function kalshiOrderbook(ticker) {
+  const payload = await fetchJson('orderbook', KALSHI_BASE + '/markets/' + encodeURIComponent(ticker) + '/orderbook');
+  const book = payload.orderbook_fp || payload.orderbook || {};
+  const yes = bookBest(book.yes_dollars || book.yes);
+  const no = bookBest(book.no_dollars || book.no);
+  if (!(yes.best > 0) && !(no.best > 0)) return null;
+  const yesBid = yes.best > 0 ? yes.best : null;
+  const yesAsk = no.best > 0 ? 1 - no.best : null;
+  const mid = yesBid != null && yesAsk != null ? (yesBid + yesAsk) / 2
+            : yesBid != null ? yesBid : yesAsk;
+  if (!(mid > 0) || mid >= 1) return null;
+  return {
+    yesBid: yesBid != null ? Number(yesBid.toFixed(4)) : null,
+    yesAsk: yesAsk != null ? Number(yesAsk.toFixed(4)) : null,
+    mid: Number(mid.toFixed(4)),
+    liquidity: Math.round(yes.depth + no.depth)
+  };
+}
+
+async function loadKalshi() {
+  const events = await kalshiEvents();
+  console.log('[prediction-snapshot] Kalshi events scanned: ' + events.length);
+
+  // Candidate legs: clean title, active, closing within 18 months.
+  // World Cup / sports events get priority, then everything else.
+  const horizon = Date.now() + 548 * 86400000;
+  const candidates = [];
+  events.forEach(event => {
+    (event.markets || []).forEach(market => {
+      if (market.status && market.status !== 'active') return;
+      const title = cleanKalshiTitle(event, market);
+      if (junkTitle(title)) return;
+      const closeMs = Date.parse(market.close_time || '');
+      if (!Number.isFinite(closeMs) || closeMs < Date.now() || closeMs > horizon) return;
+      candidates.push({
+        event, market, title, closeMs,
+        priority: /world cup|fifa|soccer|football/i.test(title + ' ' + (event.category || '')) ? 0
+                : (event.category === 'Politics' || event.category === 'Elections') ? 1
+                : (event.category === 'Economics' || event.category === 'Financials') ? 1
+                : 2
+      });
+    });
+  });
+  candidates.sort((a, b) => a.priority - b.priority || a.closeMs - b.closeMs);
+  // Cap per event so one series doesn't eat the whole quota
+  const perEvent = {};
+  const queue = candidates.filter(c => {
+    const key = c.event.event_ticker || c.event.title;
+    perEvent[key] = (perEvent[key] || 0) + 1;
+    return perEvent[key] <= 4;
+  }).slice(0, 400);
+
+  const out = [];
+  for (let i = 0; i < queue.length && out.length < KALSHI_TARGET; i += KALSHI_BATCH) {
+    const batch = queue.slice(i, i + KALSHI_BATCH);
+    const books = await Promise.all(batch.map(c => kalshiOrderbook(c.market.ticker).catch(() => null)));
+    books.forEach((book, j) => {
+      if (!book) return;
+      const c = batch[j];
+      out.push({
+        ticker: c.market.ticker,
+        event_ticker: c.event.event_ticker,
+        title: c.title,
+        yes_sub_title: c.market.yes_sub_title || '',
+        rules_primary: (c.market.rules_primary || '').slice(0, 240),
+        category: c.event.category || '',
+        close_time: c.market.close_time,
+        open_time: c.market.open_time,
+        status: 'active',
+        yes_bid_dollars: book.yesBid,
+        yes_ask_dollars: book.yesAsk,
+        last_price_dollars: book.mid,
+        liquidity_dollars: book.liquidity,
+        source: 'kalshi-orderbook-public'
+      });
+    });
+    await new Promise(res => setTimeout(res, 180)); // stay polite on rate limits
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------- main
+async function main() {
+  const [polymarket, kalshi] = await Promise.all([
+    loadPolymarket(),
+    loadKalshi().catch(error => {
+      console.error('[prediction-snapshot] Kalshi failed: ' + error.message);
+      return [];
+    })
+  ]);
 
   const snapshot = {
     generatedAt: new Date().toISOString(),
     sourceHealth: {
-      polymarket: polyOk && polymarketMarkets.length > 0,
-      kalshi: kalshi.ok && kalshi.markets.length > 0
+      polymarket: polymarket.length > 0,
+      kalshi: kalshi.length > 0
     },
-    polymarket: polymarketMarkets,
-    kalshi: kalshi.markets
+    polymarket,
+    kalshi
   };
 
   await fs.mkdir(path.dirname(OUTPUT_PATH), { recursive: true });
   await fs.writeFile(OUTPUT_PATH, JSON.stringify(snapshot) + '\n', 'utf8');
-
-  console.log(
-    '[prediction-snapshot] Wrote ' + OUTPUT_PATH +
-    ' (' + snapshot.polymarket.length + ' Polymarket, ' + snapshot.kalshi.length + ' Kalshi)'
-  );
+  console.log('[prediction-snapshot] Wrote ' + OUTPUT_PATH +
+    ' (' + polymarket.length + ' Polymarket, ' + kalshi.length + ' Kalshi)');
 }
 
 main().catch(function(error) {
   console.error('[prediction-snapshot] ' + error.message);
-  // Do NOT set a non-zero exit code — a failed snapshot must never block the
-  // Pages deployment. The site handles an empty/stale snapshot gracefully.
+  // never block the deploy
 });
