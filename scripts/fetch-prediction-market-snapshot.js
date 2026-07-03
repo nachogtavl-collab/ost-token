@@ -19,11 +19,12 @@ const POLYMARKET_URLS = [
   'https://gamma-api.polymarket.com/markets?limit=300&closed=false&tag_id=100639', // sports / World Cup
   'https://gamma-api.polymarket.com/markets?limit=120&closed=false&tag_id=100640', // games
   'https://gamma-api.polymarket.com/markets?limit=200&closed=false&order=volume24hr&ascending=false',
-  'https://gamma-api.polymarket.com/markets?limit=300&closed=false&offset=500'
+  'https://gamma-api.polymarket.com/markets?limit=300&closed=false&offset=500',
+  'https://gamma-api.polymarket.com/markets?limit=300&closed=false&offset=800'
 ];
 const KALSHI_BASE = 'https://api.elections.kalshi.com/trade-api/v2';
-const KALSHI_EVENT_PAGES = 4;          // 4 x 200 events scanned
-const KALSHI_TARGET = 120;             // aim for ~this many priced markets
+const KALSHI_EVENT_PAGES = 10;          // 4 x 200 events scanned
+const KALSHI_TARGET = 200;             // aim for ~this many priced markets
 const KALSHI_BATCH = 5;                // parallel orderbook fetches
 const OUTPUT_PATH = path.join(__dirname, '..', 'docs', 'data', 'prediction-market-snapshot.json');
 
@@ -46,7 +47,7 @@ function polymarketFilter(item) {
 }
 
 // ---------------------------------------------------------------- Polymarket
-const POLYMARKET_SEARCHES = ['world cup', 'fifa 2026', 'golden boot', 'champions league'];
+const POLYMARKET_SEARCHES = ['world cup', 'fifa 2026', 'golden boot', 'champions league', 'nba finals', 'ufc', 'formula 1'];
 
 function flattenEventMarkets(events) {
   const out = [];

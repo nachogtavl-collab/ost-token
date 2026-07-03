@@ -521,13 +521,19 @@
         return;
       }
     } catch (e) {}
+    // Static-deploy fallback: pay the win from the canonical credits pool so
+    // a claim ALWAYS moves real balance (previously this marked the bet
+    // claimed without paying anything - a dead end).
+    if (window.OST_MONEY && typeof window.OST_MONEY.add === 'function') {
+      window.OST_MONEY.add(Number(bet.payoutIfWin) || 0, 'prediction-win');
+    }
     bet.signature = 'local-' + Date.now().toString(36);
     doClaim();
   }
 
   // Mount a "My bets" tab in the prediction board
   function mountMyBetsPanel() {
-    var board = document.querySelector('.prediction-market-board, [data-section="prediction"], #prediction-market-board') || document.querySelector('.prediction-stage');
+    var board = document.getElementById('predictionMarketBoard') || document.querySelector('.prediction-market-board, [data-section="prediction"], #prediction-market-board') || document.querySelector('.prediction-stage');
     if (!board) return;
     if (document.getElementById('ost-pred-mybets')) return;
     var host = document.createElement('section');
