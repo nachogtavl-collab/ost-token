@@ -1,7 +1,7 @@
 {
   "name": "ost-token",
   "version": "0.1.0",
-  "description": "OST (Out-of-Space Token) — SPL Token-2022 Confidential Transfers Client",
+  "description": "OST (Out-of-Space Token) \u2014 SPL Token-2022 Confidential Transfers Client",
   "scripts": {
     "build": "anchor build",
     "build:betting": "anchor build -p ost_betting",
@@ -16,7 +16,8 @@
     "vault:refill": "ts-node scripts/ensure-vault-funded.ts --confirm",
     "metadata:ost": "ts-node scripts/create-ost-metaplex-metadata.ts",
     "metadata:mint": "ts-node scripts/create-mint-metadata.ts",
-    "deploy:site": "npx wrangler pages deploy docs --project-name ost-token --branch master"
+    "deploy:site": "npx wrangler pages deploy docs --project-name ost-token --branch master",
+    "predeploy:site": "node scripts/fetch-prediction-market-snapshot.js"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.0",

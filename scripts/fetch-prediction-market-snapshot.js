@@ -1,8 +1,15 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 
-const POLYMARKET_URL = 'https://gamma-api.polymarket.com/markets?limit=160&closed=false';
-const KALSHI_URL = 'https://api.elections.kalshi.com/trade-api/v2/markets?limit=160';
+// Multiple Polymarket pulls so sports (World Cup!), games and the main feed
+// all land in the snapshot. Deduped by id below.
+const POLYMARKET_URLS = [
+  'https://gamma-api.polymarket.com/markets?limit=160&closed=false',
+  'https://gamma-api.polymarket.com/markets?limit=120&closed=false&tag_id=100639', // sports
+  'https://gamma-api.polymarket.com/markets?limit=80&closed=false&tag_id=100640',  // games
+  'https://gamma-api.polymarket.com/markets?limit=80&closed=false&order=volume24hr&ascending=false' // hottest
+];
+const KALSHI_URL = 'https://api.elections.kalshi.com/trade-api/v2/markets?limit=200&status=open';
 const OUTPUT_PATH = path.join(__dirname, '..', 'docs', 'data', 'prediction-market-snapshot.json');
 
 function extractPolymarketMarkets(data) {
@@ -48,42 +55,56 @@ async function loadSource(label, url, extractor, filterFn) {
   }
 }
 
-async function main() {
-  const [polymarket, kalshi] = await Promise.all([
-    loadSource(
-      'Polymarket',
-      POLYMARKET_URL,
-      extractPolymarketMarkets,
-      function(item) {
-        return item && item.active !== false && item.closed !== true;
-      }
-    ),
-    loadSource(
-      'Kalshi',
-      KALSHI_URL,
-      extractKalshiMarkets,
-      function(item) {
-        return item && item.status === 'active';
-      }
-    )
-  ]);
+function polymarketFilter(item) {
+  return item && item.active !== false && item.closed !== true;
+}
 
-  if (!polymarket.ok && !kalshi.ok) {
-    console.warn('[prediction-snapshot] Both sources failed — writing empty snapshot so deploy continues.');
+// Kalshi multi-leg/parlay records have machine-generated titles like
+// "yes A's,yes Milwaukee,yes Cape Verde advances" — unreadable on a board.
+function kalshiFilter(item) {
+  if (!item || (item.status && item.status !== 'active' && item.status !== 'open')) return false;
+  const title = String(item.title || '');
+  if (!title || title.length < 8) return false;
+  if (/^yes\s/i.test(title) || /,\s*yes\s/i.test(title) || /,\s*no\s/i.test(title)) return false;
+  return true;
+}
+
+async function main() {
+  const polyResults = await Promise.all(
+    POLYMARKET_URLS.map((url, i) =>
+      loadSource('Polymarket[' + i + ']', url, extractPolymarketMarkets, polymarketFilter))
+  );
+  const kalshi = await loadSource('Kalshi', KALSHI_URL, extractKalshiMarkets, kalshiFilter);
+
+  const seen = new Set();
+  const polymarketMarkets = [];
+  let polyOk = false;
+  polyResults.forEach(res => {
+    if (res.ok) polyOk = true;
+    res.markets.forEach(m => {
+      const id = m && (m.id || m.conditionId);
+      if (!id || seen.has(id)) return;
+      seen.add(id);
+      polymarketMarkets.push(m);
+    });
+  });
+
+  if (!polyOk && !kalshi.ok) {
+    console.warn('[prediction-snapshot] All sources failed — writing empty snapshot so deploy continues.');
   }
 
   const snapshot = {
     generatedAt: new Date().toISOString(),
     sourceHealth: {
-      polymarket: polymarket.ok && polymarket.markets.length > 0,
+      polymarket: polyOk && polymarketMarkets.length > 0,
       kalshi: kalshi.ok && kalshi.markets.length > 0
     },
-    polymarket: polymarket.markets,
+    polymarket: polymarketMarkets,
     kalshi: kalshi.markets
   };
 
   await fs.mkdir(path.dirname(OUTPUT_PATH), { recursive: true });
-  await fs.writeFile(OUTPUT_PATH, JSON.stringify(snapshot, null, 2) + '\n', 'utf8');
+  await fs.writeFile(OUTPUT_PATH, JSON.stringify(snapshot) + '\n', 'utf8');
 
   console.log(
     '[prediction-snapshot] Wrote ' + OUTPUT_PATH +

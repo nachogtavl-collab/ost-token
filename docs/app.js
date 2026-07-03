@@ -16054,7 +16054,56 @@
           })
         : Promise.reject(new Error('No OST API base configured'));
 
-      return workerPromise;
+      // Static snapshot (built at deploy time) — the only client-reachable
+      // source of Kalshi records, and the Polymarket fallback when the
+      // worker is down. Served from ./data/ alongside the site.
+      var staticPromise = fetch('data/prediction-market-snapshot.json', {
+        headers: { accept: 'application/json' },
+        cache: 'no-store'
+      }).then(function(r) {
+        if (!r.ok) throw new Error('Snapshot file returned ' + r.status);
+        return r.json();
+      });
+
+      return Promise.allSettled([workerPromise, staticPromise]).then(function(results) {
+        var worker = results[0].status === 'fulfilled' ? results[0].value : null;
+        var file = results[1].status === 'fulfilled' ? results[1].value : null;
+        if (!worker && !file) {
+          throw new Error('No market snapshot available (worker + static both failed)');
+        }
+        var polymarketMarkets = worker ? worker.polymarketMarkets : [];
+        if ((!polymarketMarkets || !polymarketMarkets.length) && file && Array.isArray(file.polymarket)) {
+          polymarketMarkets = file.polymarket.map(mapPolymarketMarket);
+        }
+        var kalshiMarkets = [];
+        if (file && Array.isArray(file.kalshi) && file.kalshi.length) {
+          kalshiMarkets = file.kalshi.map(function(item) {
+            // Public feed prices arrive as integer cents; the mapper wants
+            // the *_dollars fields — synthesize them when missing.
+            if (item && item.yes_ask != null && item.yes_ask_dollars == null) {
+              item = Object.assign({}, item, {
+                yes_ask_dollars: Number(item.yes_ask) / 100,
+                yes_bid_dollars: item.yes_bid != null ? Number(item.yes_bid) / 100 : undefined,
+                no_ask_dollars: item.no_ask != null ? Number(item.no_ask) / 100 : undefined,
+                no_bid_dollars: item.no_bid != null ? Number(item.no_bid) / 100 : undefined,
+                last_price_dollars: item.last_price != null ? Number(item.last_price) / 100 : undefined
+              });
+            }
+            return mapKalshiMarket(item);
+          }).filter(function(m) {
+            return m && Number.isFinite(m.yesPriceNumber);
+          });
+        }
+        return {
+          polymarketMarkets: polymarketMarkets || [],
+          kalshiMarkets: kalshiMarkets,
+          sourceHealth: {
+            polymarket: !!(polymarketMarkets && polymarketMarkets.length),
+            kalshi: kalshiMarkets.length > 0
+          },
+          generatedAt: (worker && worker.generatedAt) || (file && file.generatedAt ? new Date(file.generatedAt) : new Date())
+        };
+      });
     }
 
     function normalizeNativePredictionMarket(market) {
@@ -16366,10 +16415,10 @@
           updateStatus('is-warning', 'Refresh failed — showing last snapshot');
         }
         state.lastError = error && error.message ? error.message : String(error);
-        renderOstNativeRefresh({ light: isPredictionInteractionActive() || isOstBtcMarketId(state.selectedMarketId) });
+        renderOstNativeRefresh({ light: isPredictionInteractionActive() });
       }).finally(function() {
         state.loading = false;
-        renderOstNativeRefresh({ light: isPredictionInteractionActive() || isOstBtcMarketId(state.selectedMarketId) });
+        renderOstNativeRefresh({ light: isPredictionInteractionActive() });
       });
     }
 
