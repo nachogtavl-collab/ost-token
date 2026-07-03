@@ -1,52 +1,116 @@
 /* ==========================================================================
- * OST Money — shared demo balance across every OS app
+ * OST Money — ONE money API for every OST page
  * --------------------------------------------------------------------------
- * The OS Desktop (index.html) links out to standalone pages (Visual Studio,
- * Grok, X App, Mesh, Veil, Commerce). Each one used to be an island with no
- * shared state. This gives every page the same OST balance (localStorage),
- * a floating badge to see/spend it, and helpers so any page can pay the
- * user for using it. Pure additive/self-contained — no page needs to change
- * its existing logic, just include this file and call window.OST_MONEY.
+ * window.OST_MONEY is the single way to read/award/spend the user's OST
+ * bonus credits. It is a facade over the SAME canonical pool the faucet
+ * hub, games, Code Academy and mesh markets use:
+ *
+ *     localStorage['ost.faucet.hub.v2']  ->  { credits, lifetime }
+ *
+ * (The other pool is the real on-chain devnet balance shown in the wallet
+ * dashboard — that one only changes through actual token transfers.)
+ *
+ * v1 of this file mistakenly kept its own store ('ost.demo.balance.v1'),
+ * creating a third disconnected balance. v2 folds any remaining v1 value
+ * into the canonical pool once, then deletes the old key.
+ *
+ * Pages without their own balance UI (OS Desktop, Grok, X App, Veil...)
+ * get a floating badge; pages with the nav total badge (classic app)
+ * get the API only.
  * ========================================================================== */
 (function () {
   'use strict';
 
-  var KEY = 'ost.demo.balance.v1';
-  var STARTING_BALANCE = 25;
+  var HUB_KEY = 'ost.faucet.hub.v2';
+  var LEGACY_KEY = 'ost.demo.balance.v1';
+  var WELCOME_BONUS = 25;
 
-  function read() {
-    try {
-      var raw = localStorage.getItem(KEY);
-      if (raw === null) { localStorage.setItem(KEY, String(STARTING_BALANCE)); return STARTING_BALANCE; }
-      var n = parseFloat(raw);
-      return isNaN(n) ? 0 : n;
-    } catch (_) { return STARTING_BALANCE; }
+  function loadHub() {
+    try { return JSON.parse(localStorage.getItem(HUB_KEY) || '{}') || {}; } catch (_) { return {}; }
+  }
+  function saveHub(s) {
+    try { localStorage.setItem(HUB_KEY, JSON.stringify(s)); } catch (_) {}
   }
 
-  function write(n) {
-    try { localStorage.setItem(KEY, String(n)); } catch (_) {}
+  // One-time: fold legacy demo balance into the canonical pool; grant the
+  // welcome bonus once so first-time visitors still start with spending money.
+  function migrate() {
+    var s = loadHub();
+    var changed = false;
+    try {
+      var legacy = localStorage.getItem(LEGACY_KEY);
+      if (legacy !== null) {
+        var v = parseFloat(legacy);
+        if (!isNaN(v) && v > 0) {
+          s.credits = Number(s.credits || 0) + v;
+          s.lifetime = Number(s.lifetime || 0) + v;
+        }
+        localStorage.removeItem(LEGACY_KEY);
+        s.welcomeBonus = true; // legacy users already had their 25
+        changed = true;
+      }
+    } catch (_) {}
+    if (!s.welcomeBonus) {
+      s.credits = Number(s.credits || 0) + WELCOME_BONUS;
+      s.lifetime = Number(s.lifetime || 0) + WELCOME_BONUS;
+      s.welcomeBonus = true;
+      changed = true;
+    }
+    if (changed) saveHub(s);
+  }
+
+  function read() {
+    return Number(loadHub().credits || 0);
+  }
+
+  function syncSharedUi(total) {
+    // Keep the faucet hub counter and any [data-ostg-balance] element in step
+    // (same contract code-academy.js and ost-games.js follow).
+    var fh = document.getElementById('fhCredits');
+    if (fh) fh.textContent = total.toFixed(2);
+    document.querySelectorAll('[data-ostg-balance]').forEach(function (e) {
+      e.textContent = total.toFixed(2);
+    });
+  }
+
+  function broadcast(delta, total, source) {
+    try { window.dispatchEvent(new CustomEvent('ost-money-changed', { detail: { total: total, delta: delta, source: source || '' } })); } catch (_) {}
+    if (delta > 0) {
+      try { window.dispatchEvent(new CustomEvent('ost-faucet-hub-award', { detail: { credits: delta, source: source || 'ost-money', total: total } })); } catch (_) {}
+    }
   }
 
   function add(amount, source) {
     amount = Number(amount) || 0;
     if (amount <= 0) return read();
-    var total = read() + amount;
-    write(total);
+    var s = loadHub();
+    s.credits = Number(s.credits || 0) + amount;
+    s.lifetime = Number(s.lifetime || 0) + amount;
+    saveHub(s);
     render();
     bump(amount);
-    try { window.dispatchEvent(new CustomEvent('ost-money-changed', { detail: { total: total, delta: amount, source: source || '' } })); } catch (_) {}
-    return total;
+    syncSharedUi(s.credits);
+    broadcast(amount, s.credits, source);
+    return s.credits;
   }
 
   function spend(amount, source) {
     amount = Number(amount) || 0;
-    var current = read();
+    var s = loadHub();
+    var current = Number(s.credits || 0);
     if (amount <= 0 || amount > current) return false;
-    var total = current - amount;
-    write(total);
+    s.credits = current - amount;
+    saveHub(s);
     render();
-    try { window.dispatchEvent(new CustomEvent('ost-money-changed', { detail: { total: total, delta: -amount, source: source || '' } })); } catch (_) {}
+    syncSharedUi(s.credits);
+    broadcast(-amount, s.credits, source);
     return true;
+  }
+
+  // ------------------------------------------------------------------ badge
+  function pageHasOwnBalanceUi() {
+    // The classic app renders its own nav total badge (ost-total-balance.js)
+    return !!document.getElementById('walletBtn');
   }
 
   function injectStyles() {
@@ -69,6 +133,7 @@
   }
 
   function ensureBadge() {
+    if (pageHasOwnBalanceUi()) return null;
     var badge = document.getElementById('ostMoneyBadge');
     if (badge) return badge;
     injectStyles();
@@ -90,6 +155,7 @@
 
   function bump(amount) {
     var badge = ensureBadge();
+    if (!badge) return;
     badge.classList.remove('is-bump');
     void badge.offsetWidth;
     badge.classList.add('is-bump');
@@ -107,16 +173,20 @@
 
   function render() {
     var badge = ensureBadge();
+    if (!badge) return;
     var amountEl = document.getElementById('ostMoneyAmount');
     if (amountEl) amountEl.textContent = read().toFixed(2);
   }
 
   function boot() {
+    migrate();
     render();
-    window.addEventListener('storage', function (e) { if (e.key === KEY) render(); }, false);
+    window.addEventListener('storage', function (e) { if (e.key === HUB_KEY) { render(); } }, false);
+    // Other modules award into the same pool — reflect their changes too.
+    window.addEventListener('ost-faucet-hub-award', function () { render(); }, false);
   }
 
-  window.OST_MONEY = { get: read, add: add, spend: spend, refresh: render };
+  window.OST_MONEY = { get: read, add: add, spend: spend, refresh: render, key: HUB_KEY };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot);

@@ -150,6 +150,8 @@
     'interchange':'interchange',
     'academy':    'academy',
     'code-academy':'academy',
+    'coding-studio':'academy',
+    'codingstudio':'academy',
     'convert':    'convert',
     'bridge':     'bridge'
   };
