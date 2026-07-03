@@ -1330,7 +1330,7 @@
     var topicSet = new Set(topicNames);
     return {
       source: 'ost',
-      sourceLabel: 'OST Native',
+      sourceLabel: 'OST Paper',
       id: 'ost-' + spec.id,
       title: spec.title,
       detail: spec.detail,
@@ -1354,7 +1354,11 @@
       sortValue: vol,
       createdAtMs: spec.createdAtMs || Date.now() - 86400000,
       closeAtMs: spec.closeAtMs,
-      isOstNative: true,
+      // Paper markets with curated (not live) odds. isOstNative:false keeps
+      // them OUT of the pinned rail — they only surface as placeholders when
+      // every real venue feed is down. Real natives (btc5m/eth5m/sol5m/EPL)
+      // keep the pin.
+      isOstNative: false,
       isBreaking: !!spec.isBreaking,
     };
   }

@@ -16071,9 +16071,21 @@
         if (!worker && !file) {
           throw new Error('No market snapshot available (worker + static both failed)');
         }
-        var polymarketMarkets = worker ? worker.polymarketMarkets : [];
-        if ((!polymarketMarkets || !polymarketMarkets.length) && file && Array.isArray(file.polymarket)) {
-          polymarketMarkets = file.polymarket.map(mapPolymarketMarket);
+        // Union of worker (freshest prices) + static snapshot (widest catalog:
+        // sports/World Cup/games tags) — deduped by id, worker records win.
+        var polymarketMarkets = (worker && worker.polymarketMarkets ? worker.polymarketMarkets : []).slice();
+        if (file && Array.isArray(file.polymarket) && file.polymarket.length) {
+          var seenIds = {};
+          polymarketMarkets.forEach(function(m) { if (m && m.id != null) seenIds[String(m.id)] = true; });
+          file.polymarket.forEach(function(raw) {
+            var id = raw && (raw.id != null ? raw.id : raw.conditionId);
+            if (id == null || seenIds[String(id)]) return;
+            seenIds[String(id)] = true;
+            try {
+              var mapped = mapPolymarketMarket(raw);
+              if (mapped && Number.isFinite(Number(mapped.yesPriceNumber))) polymarketMarkets.push(mapped);
+            } catch (_) {}
+          });
         }
         var kalshiMarkets = [];
         if (file && Array.isArray(file.kalshi) && file.kalshi.length) {

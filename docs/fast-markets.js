@@ -50,7 +50,7 @@
   // Per-coin live state
   var live = {};
   COINS.forEach(function (c) {
-    live[c.key] = { openAt: 0, closeAt: 0, openPrice: 0, price: 0, ticks: [], source: '' };
+    live[c.key] = { openAt: 0, closeAt: 0, openPrice: 0, price: 0, ticks: [], source: '', quoteVolume24h: 0 };
   });
 
   function boundaries(now) {
@@ -181,6 +181,24 @@
     });
   }
 
+  function refreshDayVolume(coin) {
+    var st = live[coin.key];
+    var urls = [
+      'https://api.binance.com/api/v3/ticker/24hr?symbol=' + coin.symbol,
+      'https://data-api.binance.vision/api/v3/ticker/24hr?symbol=' + coin.symbol
+    ];
+    var i = 0;
+    function next() {
+      if (i >= urls.length) return Promise.resolve(null);
+      return fetchJson(urls[i++], 4000).then(function (j) {
+        var v = Number(j && j.quoteVolume);
+        if (Number.isFinite(v) && v > 0) { st.quoteVolume24h = v; return v; }
+        return next();
+      }).catch(next);
+    }
+    return next();
+  }
+
   // ---------------------------------------------------- market card builder
   function fmtUsd(n) {
     if (!Number.isFinite(n) || n <= 0) return '—';
@@ -209,7 +227,11 @@
       noValue: Math.round((1 - yes) * 100) + '%',
       yesPriceNumber: yes,
       noPriceNumber: 1 - yes,
-      volumeValue: 'Live',
+      volumeNumber: st.quoteVolume24h || 0,
+      volumeValue: st.quoteVolume24h ? '$' + (st.quoteVolume24h / 1e9).toFixed(2) + 'B · Binance 24h' : 'Live',
+      secondaryMetricLabel: 'Underlying 24h volume',
+      secondaryMetricValue: st.quoteVolume24h ? '$' + (st.quoteVolume24h / 1e9).toFixed(2) + 'B' : '—',
+      secondaryMetricNumber: st.quoteVolume24h || 0,
       closeText: 'Closes ' + closeLabel,
       closeAtMs: b.closeAt,
       primaryUrl: coin.externalUrl,
@@ -312,7 +334,9 @@
     COINS.forEach(function (c, i) {
       setTimeout(function () {
         tickCoin(c);
+        refreshDayVolume(c);
         setInterval(function () { tickCoin(c); }, POLL_MS);
+        setInterval(function () { refreshDayVolume(c); }, 120000);
       }, i * 700);
     });
     setInterval(settleScan, SETTLE_SCAN_MS);
