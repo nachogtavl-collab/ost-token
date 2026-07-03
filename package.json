@@ -16,7 +16,7 @@
     "vault:refill": "ts-node scripts/ensure-vault-funded.ts --confirm",
     "metadata:ost": "ts-node scripts/create-ost-metaplex-metadata.ts",
     "metadata:mint": "ts-node scripts/create-mint-metadata.ts",
-    "deploy:site": "wrangler pages deploy docs --project-name ost-token --branch master"
+    "deploy:site": "npx wrangler pages deploy docs --project-name ost-token --branch master"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.0",
