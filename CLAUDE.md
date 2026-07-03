@@ -54,5 +54,6 @@ Rules:
 
 - The repo sits in OneDrive — file locks cause `Permission denied` on renames; kill stray `python -m http.server` processes first.
 - Windows sed mangles `&` in replacements — use python for html edits.
+- Regex literals written through bash-heredoc→python can silently turn `\b` into 0x08 backspace chars (invisible in terminal, regex never matches). After patching any regex, verify with `python -c "print('\x08' in open(f,encoding='utf-8').read())"`.
 - Uncommitted Rust changes in `programs/` predate current work — don't sweep into site commits.
 - Worker CORS is `*` but rate-limits aggressively (429 on bare curl).
