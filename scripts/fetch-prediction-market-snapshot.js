@@ -49,12 +49,53 @@ function polymarketFilter(item) {
 // ---------------------------------------------------------------- Polymarket
 const POLYMARKET_SEARCHES = ['world cup', 'fifa 2026', 'golden boot', 'champions league', 'nba finals', 'ufc', 'formula 1'];
 
+function legPrice(m) {
+  try {
+    const prices = typeof m.outcomePrices === 'string' ? JSON.parse(m.outcomePrices) : m.outcomePrices;
+    const p = Number(prices && prices[0]);
+    return Number.isFinite(p) ? p : NaN;
+  } catch (_) { return NaN; }
+}
+
+function legLabel(event, m) {
+  const gi = String(m.groupItemTitle || '').trim();
+  if (gi) return gi;
+  let q = String(m.question || '').trim();
+  const ev = String(event.title || '').trim();
+  if (ev && q.toLowerCase().startsWith(ev.toLowerCase())) q = q.slice(ev.length).replace(/^[\s:—-]+/, '');
+  return q || 'Option';
+}
+
 function flattenEventMarkets(events) {
   const out = [];
   (events || []).forEach(event => {
-    (event.markets || []).forEach(m => {
-      if (!polymarketFilter(m)) return;
-      // carry the event title so grouped legs read like Polymarket does
+    const legs = (event.markets || []).filter(polymarketFilter);
+    // Polymarket's signature: grouped events (Who wins? A/B/C/…) become ONE
+    // record carrying the whole outcome ladder instead of N scattered cards.
+    const priced = legs.map(m => ({ m, price: legPrice(m) })).filter(x => Number.isFinite(x.price) && x.price > 0.001 && x.price < 0.999);
+    if (legs.length >= 3 && priced.length >= 3 && event.title) {
+      priced.sort((a, b) => b.price - a.price);
+      out.push({
+        id: 'group:' + (event.id || event.slug || event.title),
+        question: event.title,
+        description: 'Multi-outcome event — ' + priced.length + ' options. Prices are live Polymarket consensus per outcome.',
+        slug: event.slug || '',
+        groupOutcomes: priced.slice(0, 10).map(x => ({
+          label: legLabel(event, x.m).slice(0, 48),
+          price: Number(x.price.toFixed(4)),
+          marketId: x.m.id,
+          conditionId: x.m.conditionId,
+          clobTokenIds: x.m.clobTokenIds
+        })),
+        endDate: legs.reduce((mx, m) => (m.endDate && (!mx || m.endDate > mx)) ? m.endDate : mx, ''),
+        volume24hr: legs.reduce((sv, m) => sv + (Number(m.volume24hr) || 0), 0),
+        liquidityNum: legs.reduce((sv, m) => sv + (Number(m.liquidityNum) || 0), 0),
+        active: true,
+        closed: false
+      });
+      return; // group record replaces the scattered legs
+    }
+    legs.forEach(m => {
       if (event.title && m.question && m.question.length < 26) {
         m = Object.assign({}, m, { question: event.title + ': ' + m.question });
       }
@@ -116,7 +157,7 @@ async function loadPolymarket() {
 
 // Keep only the fields the client mapper reads — the raw gamma records made
 // the snapshot >5 MB, which is hostile to phones.
-const POLY_KEEP = ['id', 'question', 'slug', 'outcomes', 'outcomePrices', 'conditionId',
+const POLY_KEEP = ['id', 'question', 'slug', 'outcomes', 'outcomePrices', 'conditionId', 'groupOutcomes',
   'clobTokenIds', 'endDate', 'endDateIso', 'startDate', 'createdAt', 'category',
   'volume24hr', 'volumeNum', 'volume', 'liquidityNum', 'liquidity', 'bestBid', 'bestAsk',
   'lastTradePrice', 'oneWeekPriceChange', 'oneMonthPriceChange', 'active', 'closed'];

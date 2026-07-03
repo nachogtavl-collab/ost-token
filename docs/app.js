@@ -16087,6 +16087,25 @@
             if (id == null || seenIds[String(id)]) return;
             seenIds[String(id)] = true;
             try {
+              // Grouped multi-outcome events (Polymarket's signature ladder):
+              // the snapshot ships one record with the full outcome list.
+              if (Array.isArray(raw.groupOutcomes) && raw.groupOutcomes.length >= 3) {
+                var top = raw.groupOutcomes[0];
+                var mappedGroup = mapPolymarketMarket(Object.assign({}, raw, {
+                  outcomes: JSON.stringify(['Yes', 'No']),
+                  outcomePrices: JSON.stringify([String(top.price), String(1 - top.price)])
+                }));
+                if (mappedGroup) {
+                  mappedGroup.outcomes = raw.groupOutcomes.map(function(o) {
+                    return { label: o.label, price: Number(o.price), key: String(o.marketId || o.label), marketId: o.marketId, conditionId: o.conditionId, clobTokenIds: o.clobTokenIds };
+                  });
+                  mappedGroup.yesLabel = String(top.label).slice(0, 22);
+                  mappedGroup.contractLabel = raw.groupOutcomes.length + '-outcome ladder';
+                  mappedGroup.isGrouped = true;
+                  polymarketMarkets.push(mappedGroup);
+                }
+                return;
+              }
               var mapped = mapPolymarketMarket(raw);
               if (mapped && Number.isFinite(Number(mapped.yesPriceNumber))) polymarketMarkets.push(mapped);
             } catch (_) {}

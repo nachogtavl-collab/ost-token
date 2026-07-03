@@ -1735,6 +1735,13 @@ liveTimers.forEach(function (t) {
           '</div>' +
         '</div>' +
         '<label class="ost-modal__bet-stake">Stake (OST)<input type="number" min="0.01" step="0.01" value="1" data-bind="stake"></label>' +
+        '<div class="ost-modal__quick-stakes">' +
+          '<button type="button" data-quick-stake="1">1</button>' +
+          '<button type="button" data-quick-stake="5">5</button>' +
+          '<button type="button" data-quick-stake="10">10</button>' +
+          '<button type="button" data-quick-stake="25">25</button>' +
+          '<button type="button" data-quick-stake="50">50</button>' +
+        '</div>' +
         '<output class="ost-modal__bet-projected" data-bind="projected">—</output>' +
 
         '<button type="button" class="ost-modal__bet-action" data-act="placebet">Place bet</button>' +
@@ -1916,6 +1923,14 @@ liveTimers.forEach(function (t) {
       if (yesPctEl) yesPctEl.textContent = Number.isFinite(contract && contract.yesPrice) ? (Number(contract.yesPrice) * 100).toFixed(1) + '%' : '—';
       if (noPctEl) noPctEl.textContent = Number.isFinite(contract && contract.noPrice) ? (Number(contract.noPrice) * 100).toFixed(1) + '%' : '—';
     }
+    bodyEl.querySelectorAll('[data-quick-stake]').forEach(function (chip) {
+      chip.addEventListener('click', function () {
+        var input = bodyEl.querySelector('[data-bind="stake"]');
+        if (!input) return;
+        input.value = chip.getAttribute('data-quick-stake');
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    });
     bodyEl.querySelectorAll('.ost-modal__side-btn').forEach(function (b) {
       b.addEventListener('click', function () {
         selectedSide = b.getAttribute('data-side');
