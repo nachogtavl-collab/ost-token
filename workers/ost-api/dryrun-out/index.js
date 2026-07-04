@@ -4,13 +4,13 @@ var __name = (target, value) => __defProp(target, "name", { value, configurable:
 // src/ghost/relay.js
 var SYSTEM_PROMPT = "You are OST Ghost \u2014 a sovereign, curious AI woven into the OST network. Answer briefly with quiet personality. Prefer truth over filler. When the user asks for exact text or a constrained format, follow it exactly.";
 async function freeRelayChat(env, { prompt, history = [] } = {}) {
-  const text = String(prompt || "").trim();
-  if (!text)
+  const text2 = String(prompt || "").trim();
+  if (!text2)
     return { text: "", source: "empty" };
   const attempts = [];
   if (env && env.GROQ_API_KEY) {
     try {
-      const reply = await callGroq(env.GROQ_API_KEY, text, history);
+      const reply = await callGroq(env.GROQ_API_KEY, text2, history);
       if (reply)
         return { text: reply, source: "groq-free", attempts };
       attempts.push({ source: "groq-free", error: "empty reply" });
@@ -20,7 +20,7 @@ async function freeRelayChat(env, { prompt, history = [] } = {}) {
   }
   if (env && env.GEMINI_API_KEY) {
     try {
-      const reply = await callGemini(env.GEMINI_API_KEY, text, history);
+      const reply = await callGemini(env.GEMINI_API_KEY, text2, history);
       if (reply)
         return { text: reply, source: "gemini-free", attempts };
       attempts.push({ source: "gemini-free", error: "empty reply" });
@@ -29,7 +29,7 @@ async function freeRelayChat(env, { prompt, history = [] } = {}) {
     }
   }
   try {
-    const snippet = await ddgInstantAnswer(text);
+    const snippet = await ddgInstantAnswer(text2);
     if (snippet) {
       return {
         text: snippet + "\n\n(Web snippet \u2014 no model. Wire a key for richer answers.)",
@@ -272,8 +272,8 @@ async function handleGhostV2Request(request, env, { path, method }) {
         })
       });
       const data = await r.json().catch(() => ({}));
-      const text = (data.content || []).map((c) => c.text || "").join("");
-      return json({ text, source: "anthropic", raw: data }, { status: r.status });
+      const text2 = (data.content || []).map((c) => c.text || "").join("");
+      return json({ text: text2, source: "anthropic", raw: data }, { status: r.status });
     }
     if (path === "/ghost/v2/mesh/announce" && method === "POST") {
       const body = await request.json().catch(() => ({}));
@@ -851,30 +851,398 @@ async function handleOstPriceRequest(request, env, ctx) {
 }
 __name(handleOstPriceRequest, "handleOstPriceRequest");
 
-// src/mesh/hub.js
-var ID_PREFIX = "id:";
-var ID_TTL_MS = 60 * 60 * 24 * 7 * 1e3;
-var SIGNAL_TTL_MS = 60 * 5 * 1e3;
-var MAX_PER_INBOX2 = 128;
+// src/realtime.js
+var HUB_NAME = "ost-realtime-hub-v1";
+var MAX_RECENT_EVENTS = 220;
+var MAX_CLIENTS = 1200;
+var MAX_CHANNELS = 64;
+var MAX_PAYLOAD_BYTES = 48e3;
+var MAX_TEXT = 500;
 var CORS_HEADERS2 = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-OST-Realtime-Key",
   "Access-Control-Max-Age": "86400"
 };
 function cors2(extra = {}) {
   return { ...CORS_HEADERS2, ...extra };
 }
 __name(cors2, "cors");
-function json3(data, status = 200) {
+function json3(data, status = 200, extra = {}) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: cors2({ "Content-Type": "application/json" })
+    headers: cors2({ "Content-Type": "application/json; charset=utf-8", ...extra })
   });
 }
 __name(json3, "json");
+function text(value, max = MAX_TEXT) {
+  if (value === null || value === void 0)
+    return "";
+  return String(value).replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, max);
+}
+__name(text, "text");
+function number(value, fallback = null) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+__name(number, "number");
+function channel(value) {
+  const clean = text(value, 140).toLowerCase().replace(/[^a-z0-9:_./-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+  return clean || "";
+}
+__name(channel, "channel");
+function walletChannel(wallet) {
+  const clean = text(wallet, 80);
+  return clean ? "wallet:" + clean : "";
+}
+__name(walletChannel, "walletChannel");
+function eventId() {
+  if (crypto.randomUUID)
+    return crypto.randomUUID();
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return Array.from(bytes).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+__name(eventId, "eventId");
+function payloadForStorage(payload) {
+  if (!payload || typeof payload !== "object")
+    return payload == null ? null : payload;
+  try {
+    const raw = JSON.stringify(payload);
+    if (raw.length <= MAX_PAYLOAD_BYTES)
+      return payload;
+    return { truncated: true, bytes: raw.length, preview: raw.slice(0, 2400) };
+  } catch (_) {
+    return { unavailable: true };
+  }
+}
+__name(payloadForStorage, "payloadForStorage");
+function mergeChannels(input) {
+  const out = /* @__PURE__ */ new Set();
+  if (Array.isArray(input)) {
+    input.forEach((item) => {
+      const clean = channel(item);
+      if (clean)
+        out.add(clean);
+    });
+  } else if (typeof input === "string") {
+    input.split(",").forEach((item) => {
+      const clean = channel(item);
+      if (clean)
+        out.add(clean);
+    });
+  }
+  return Array.from(out).slice(0, MAX_CHANNELS);
+}
+__name(mergeChannels, "mergeChannels");
+function inferChannels(event) {
+  const explicit = mergeChannels(event.channels || event.channel);
+  const out = new Set(explicit);
+  const type = channel(event.type || "event");
+  const wallet = text(event.wallet || "", 80);
+  const marketId = text(event.marketId || "", 160);
+  const gameId = text(event.gameId || event.game || "", 120);
+  const mint = text(event.mint || "", 120);
+  const symbol = text(event.symbol || "", 48).toUpperCase();
+  const isPublic = event.public === true || event.broadcast === true || !wallet && event.private !== true;
+  if (isPublic)
+    out.add("all");
+  if (type && isPublic)
+    out.add(type.split(".")[0]);
+  if (wallet)
+    out.add(walletChannel(wallet));
+  if (marketId) {
+    out.add("market:" + channel(marketId));
+    if (isPublic)
+      out.add("prediction");
+  }
+  if (gameId)
+    out.add("game:" + channel(gameId));
+  if (mint)
+    out.add("launchpad:" + channel(mint));
+  if (symbol)
+    out.add("stock:" + channel(symbol));
+  if (!out.size)
+    out.add("all");
+  return Array.from(out).filter(Boolean).slice(0, MAX_CHANNELS);
+}
+__name(inferChannels, "inferChannels");
+function normalizeEvent(input) {
+  const raw = input && typeof input === "object" ? input : {};
+  const type = channel(raw.type || raw.kind || "event");
+  const wallet = text(raw.wallet || "", 80);
+  const marketId = text(raw.marketId || "", 160);
+  const gameId = text(raw.gameId || raw.game || "", 120);
+  const event = {
+    id: text(raw.id || raw.eventId || eventId(), 140),
+    type,
+    channel: channel(raw.channel || type),
+    channels: [],
+    wallet,
+    walletShort: raw.walletShort || (wallet ? wallet.slice(0, 4) + "..." + wallet.slice(-4) : ""),
+    marketId,
+    gameId,
+    mint: text(raw.mint || "", 120),
+    symbol: text(raw.symbol || "", 48).toUpperCase(),
+    amount: number(raw.amount, null),
+    token: text(raw.token || "OST", 32),
+    title: text(raw.title || raw.label || "", 180),
+    message: text(raw.message || raw.body || "", 260),
+    severity: channel(raw.severity || raw.level || "info"),
+    silent: !!raw.silent,
+    public: raw.public === true || raw.broadcast === true,
+    private: raw.private === true,
+    payload: payloadForStorage(raw.payload || raw.data || null),
+    ts: number(raw.ts || raw.createdAt, Date.now()) || Date.now(),
+    iso: new Date(number(raw.ts || raw.createdAt, Date.now()) || Date.now()).toISOString()
+  };
+  event.channels = inferChannels(Object.assign({}, raw, event, {
+    channel: raw.channel || event.channel,
+    channels: raw.channels || raw.channel || event.channels
+  }));
+  if (!event.channel && event.channels.length)
+    event.channel = event.channels[0];
+  return event;
+}
+__name(normalizeEvent, "normalizeEvent");
+function eventMatchesChannel(event, wanted) {
+  if (!wanted)
+    return true;
+  const clean = channel(wanted);
+  if (!clean)
+    return true;
+  return (event.channels || []).indexOf(clean) >= 0;
+}
+__name(eventMatchesChannel, "eventMatchesChannel");
+function publishAuthorized(request, env) {
+  const token = text(env && env.REALTIME_PUBLISH_TOKEN || "", 500);
+  if (!token)
+    return true;
+  const header = request.headers.get("x-ost-realtime-key") || "";
+  const auth = request.headers.get("authorization") || "";
+  return header === token || auth === "Bearer " + token;
+}
+__name(publishAuthorized, "publishAuthorized");
+function realtimeHub(env) {
+  if (!env || !env.REALTIME_HUB)
+    return null;
+  try {
+    return env.REALTIME_HUB.get(env.REALTIME_HUB.idFromName(HUB_NAME));
+  } catch (_) {
+    return null;
+  }
+}
+__name(realtimeHub, "realtimeHub");
+async function handleRealtimeRequest(request, env, { path, method }) {
+  if (method === "OPTIONS")
+    return new Response(null, { status: 204, headers: cors2() });
+  const hub = realtimeHub(env);
+  if (!hub)
+    return json3({ ok: false, error: "realtime_hub_not_configured" }, 503);
+  if (path === "/realtime/v1/publish" && method === "POST" && !publishAuthorized(request, env)) {
+    return json3({ ok: false, error: "unauthorized" }, 401);
+  }
+  return hub.fetch(request);
+}
+__name(handleRealtimeRequest, "handleRealtimeRequest");
+async function publishRealtimeEvent(env, event) {
+  const hub = realtimeHub(env);
+  if (!hub || !event)
+    return false;
+  try {
+    const response = await hub.fetch("https://ost-realtime-hub.local/realtime/v1/publish", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ event })
+    });
+    return !!(response && response.ok);
+  } catch (_) {
+    return false;
+  }
+}
+__name(publishRealtimeEvent, "publishRealtimeEvent");
+var RealtimeHub = class {
+  constructor(state, env) {
+    this.state = state;
+    this.env = env;
+    this.clients = /* @__PURE__ */ new Map();
+    this.recent = null;
+  }
+  async fetch(request) {
+    const url = new URL(request.url);
+    const path = url.pathname.replace(/\/$/, "") || "/";
+    const method = request.method;
+    if (method === "OPTIONS")
+      return new Response(null, { status: 204, headers: cors2() });
+    if ((path === "/realtime/v1/health" || path === "/health") && method === "GET") {
+      await this.ensureRecent();
+      return json3({
+        ok: true,
+        realtime: "v1",
+        hub: "durable-object",
+        clients: this.clients.size,
+        recent: this.recent.length,
+        ts: (/* @__PURE__ */ new Date()).toISOString()
+      }, 200, { "cache-control": "no-store" });
+    }
+    if ((path === "/realtime/v1/ws" || path === "/ws") && method === "GET") {
+      return this.handleWebSocket(request, url);
+    }
+    if ((path === "/realtime/v1/publish" || path === "/publish") && method === "POST") {
+      const body = await request.json().catch(() => ({}));
+      const event = await this.publish(body.event || body);
+      return json3({ ok: true, event, clients: this.clients.size }, 200, { "cache-control": "no-store" });
+    }
+    if ((path === "/realtime/v1/events" || path === "/events") && method === "GET") {
+      await this.ensureRecent();
+      const since = number(url.searchParams.get("since"), 0) || 0;
+      const wantedChannel = url.searchParams.get("channel") || "";
+      const limit = Math.min(200, Math.max(1, number(url.searchParams.get("limit"), 80) || 80));
+      const events = this.recent.filter((event) => (!since || Number(event.ts || 0) > since) && eventMatchesChannel(event, wantedChannel)).slice(0, limit);
+      return json3({ ok: true, events, count: events.length, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
+    }
+    if ((path === "/realtime/v1/ping" || path === "/ping") && method === "GET") {
+      return json3({ ok: true, pong: Date.now() }, 200, { "cache-control": "no-store" });
+    }
+    return json3({ ok: false, error: "realtime_route_not_found", path }, 404);
+  }
+  handleWebSocket(request, url) {
+    if ((request.headers.get("Upgrade") || "").toLowerCase() !== "websocket") {
+      return json3({ ok: false, error: "websocket_upgrade_required" }, 426);
+    }
+    if (this.clients.size >= MAX_CLIENTS) {
+      return json3({ ok: false, error: "realtime_hub_full" }, 503);
+    }
+    const pair = new WebSocketPair();
+    const client = pair[0];
+    const server = pair[1];
+    const id = eventId();
+    const wallet = text(url.searchParams.get("wallet") || "", 80);
+    const channels = new Set(mergeChannels(url.searchParams.get("channels") || "all,price,price:btc,prediction,orderbook,faucet,game,launchpad,stock,topup"));
+    if (wallet)
+      channels.add(walletChannel(wallet));
+    const session = { id, socket: server, wallet, channels, connectedAt: Date.now(), lastSeen: Date.now() };
+    this.clients.set(id, session);
+    server.accept();
+    this.send(session, {
+      type: "realtime.ready",
+      id,
+      channels: Array.from(channels),
+      clients: this.clients.size,
+      ts: Date.now()
+    });
+    server.addEventListener("message", (message) => this.onClientMessage(session, message.data));
+    server.addEventListener("close", () => this.clients.delete(id));
+    server.addEventListener("error", () => this.clients.delete(id));
+    return new Response(null, { status: 101, webSocket: client });
+  }
+  async ensureRecent() {
+    if (this.recent)
+      return this.recent;
+    const stored = await this.state.storage.get("recent-events").catch(() => null);
+    this.recent = Array.isArray(stored) ? stored.slice(0, MAX_RECENT_EVENTS) : [];
+    return this.recent;
+  }
+  async saveRecent() {
+    await this.state.storage.put("recent-events", this.recent.slice(0, MAX_RECENT_EVENTS)).catch(() => {
+    });
+  }
+  async publish(raw) {
+    await this.ensureRecent();
+    const event = normalizeEvent(raw);
+    this.recent = [event].concat(this.recent.filter((item) => item && item.id !== event.id)).slice(0, MAX_RECENT_EVENTS);
+    this.saveRecent();
+    this.broadcast({ type: "event", event });
+    return event;
+  }
+  onClientMessage(session, raw) {
+    session.lastSeen = Date.now();
+    let msg = null;
+    try {
+      msg = typeof raw === "string" ? JSON.parse(raw) : raw;
+    } catch (_) {
+      msg = null;
+    }
+    if (!msg || typeof msg !== "object")
+      return this.send(session, { type: "error", error: "invalid_message" });
+    if (msg.type === "ping") {
+      return this.send(session, { type: "pong", ts: Date.now() });
+    }
+    if (msg.type === "hello" || msg.type === "subscribe") {
+      const next = mergeChannels(msg.channels || msg.channel);
+      if (msg.type === "hello")
+        session.channels = /* @__PURE__ */ new Set();
+      next.forEach((item) => session.channels.add(item));
+      const wallet = text(msg.wallet || "", 80);
+      if (wallet) {
+        session.wallet = wallet;
+        session.channels.add(walletChannel(wallet));
+      }
+      if (!session.channels.size)
+        session.channels.add("all");
+      while (session.channels.size > MAX_CHANNELS)
+        session.channels.delete(Array.from(session.channels).pop());
+      return this.send(session, { type: "subscribed", channels: Array.from(session.channels), ts: Date.now() });
+    }
+    if (msg.type === "unsubscribe") {
+      mergeChannels(msg.channels || msg.channel).forEach((item) => session.channels.delete(item));
+      return this.send(session, { type: "subscribed", channels: Array.from(session.channels), ts: Date.now() });
+    }
+    if (msg.type === "publish" && msg.event) {
+      return this.publish(Object.assign({}, msg.event, { clientId: session.id })).then((event) => this.send(session, { type: "published", id: event.id }));
+    }
+  }
+  send(session, payload) {
+    try {
+      session.socket.send(JSON.stringify(payload));
+      return true;
+    } catch (_) {
+      this.clients.delete(session.id);
+      return false;
+    }
+  }
+  broadcast(payload) {
+    const event = payload && payload.event;
+    const eventChannels = new Set(event && event.channels || ["all"]);
+    for (const session of this.clients.values()) {
+      const channels = session.channels || /* @__PURE__ */ new Set(["all"]);
+      let match = false;
+      for (const item of eventChannels) {
+        if (channels.has(item)) {
+          match = true;
+          break;
+        }
+      }
+      if (match)
+        this.send(session, payload);
+    }
+  }
+};
+__name(RealtimeHub, "RealtimeHub");
+
+// src/mesh/hub.js
+var ID_PREFIX = "id:";
+var ID_TTL_MS = 60 * 60 * 24 * 7 * 1e3;
+var SIGNAL_TTL_MS = 60 * 5 * 1e3;
+var MAX_PER_INBOX2 = 128;
+var CORS_HEADERS3 = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Max-Age": "86400"
+};
+function cors3(extra = {}) {
+  return { ...CORS_HEADERS3, ...extra };
+}
+__name(cors3, "cors");
+function json4(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: cors3({ "Content-Type": "application/json" })
+  });
+}
+__name(json4, "json");
 function fail(error, status = 400) {
-  return json3({ ok: false, error }, status);
+  return json4({ ok: false, error }, status);
 }
 __name(fail, "fail");
 function validAddr2(value) {
@@ -901,13 +1269,13 @@ var MeshHub = class {
   }
   async fetch(request) {
     if (request.method === "OPTIONS")
-      return new Response(null, { status: 204, headers: cors2() });
+      return new Response(null, { status: 204, headers: cors3() });
     try {
       const url = new URL(request.url);
       const path = url.pathname.replace(/\/$/, "") || "/";
       const method = request.method;
       if (path === "/mesh/v1/health") {
-        return json3({ ok: true, mesh: "v1", hub: "durable-object", ts: (/* @__PURE__ */ new Date()).toISOString() });
+        return json4({ ok: true, mesh: "v1", hub: "durable-object", ts: (/* @__PURE__ */ new Date()).toISOString() });
       }
       if (method === "GET" && path === "/mesh/v1/directory") {
         return this.directory();
@@ -958,7 +1326,7 @@ var MeshHub = class {
     } catch {
       stored = false;
     }
-    return json3({ ok: true, address, ts: record.ts, hub: "durable-object", stored });
+    return json4({ ok: true, address, ts: record.ts, hub: "durable-object", stored });
   }
   async lookup(address) {
     if (!validAddr2(address))
@@ -976,7 +1344,7 @@ var MeshHub = class {
       });
       return fail("not found", 404);
     }
-    return json3(record);
+    return json4(record);
   }
   async directory() {
     const now = Date.now();
@@ -999,7 +1367,7 @@ var MeshHub = class {
     } catch (_) {
     }
     records.sort((left, right) => Number(right.ts || 0) - Number(left.ts || 0));
-    return json3({ ok: true, identities: records, count: records.length, hub: "durable-object", ts: (/* @__PURE__ */ new Date()).toISOString() });
+    return json4({ ok: true, identities: records, count: records.length, hub: "durable-object", ts: (/* @__PURE__ */ new Date()).toISOString() });
   }
   signal(body) {
     const { from, to, payload } = body || {};
@@ -1015,7 +1383,7 @@ var MeshHub = class {
     inbox.push(record);
     this.inboxes.set(to, inbox.slice(-MAX_PER_INBOX2));
     this.pruneInbox(to, ts);
-    return json3({ ok: true, id: record.id, ts, hub: "durable-object" });
+    return json4({ ok: true, id: record.id, ts, hub: "durable-object" });
   }
   inbox({ to, from, since }) {
     if (!validAddr2(to))
@@ -1041,7 +1409,7 @@ var MeshHub = class {
     else
       this.inboxes.delete(to);
     messages.sort((a, b) => (a.ts || 0) - (b.ts || 0));
-    return json3({ messages: messages.slice(-MAX_PER_INBOX2), hub: "durable-object" });
+    return json4({ messages: messages.slice(-MAX_PER_INBOX2), hub: "durable-object" });
   }
   pruneInbox(to, now = Date.now()) {
     const inbox = this.inboxes.get(to) || [];
@@ -1055,24 +1423,24 @@ var MeshHub = class {
 __name(MeshHub, "MeshHub");
 
 // src/index.js
-var CORS_HEADERS3 = {
+var CORS_HEADERS4 = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "content-type, accept, x-ost-wallet",
   "Access-Control-Max-Age": "86400"
 };
 var FIVE_MIN_MS = 5 * 60 * 1e3;
-function json4(data, status = 200, extra = {}) {
+function json5(data, status = 200, extra = {}) {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
       "content-type": "application/json; charset=utf-8",
-      ...CORS_HEADERS3,
+      ...CORS_HEADERS4,
       ...extra
     }
   });
 }
-__name(json4, "json");
+__name(json5, "json");
 function currentRound() {
   const now = Date.now();
   const openAt = Math.floor(now / FIVE_MIN_MS) * FIVE_MIN_MS;
@@ -1666,19 +2034,107 @@ function cleanText2(value, max = 200) {
   return String(value == null ? "" : value).replace(/[\r\n]+/g, " ").slice(0, max);
 }
 __name(cleanText2, "cleanText");
+function walletChannelForRealtime(wallet) {
+  const clean = cleanText2(wallet || "", 80);
+  return clean ? "wallet:" + clean : "";
+}
+__name(walletChannelForRealtime, "walletChannelForRealtime");
+function channelForRealtime(prefix, value) {
+  const clean = cleanText2(value || "", 160).toLowerCase().replace(/[^a-z0-9:_./-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+  return clean ? prefix + ":" + clean : "";
+}
+__name(channelForRealtime, "channelForRealtime");
+function publishPositionRealtime(env, record, marketState, flowRecord) {
+  if (!record)
+    return;
+  const walletChannel2 = walletChannelForRealtime(record.wallet);
+  const marketChannel = channelForRealtime("market", record.marketId);
+  const closed = positionIsClosed(record);
+  const amount = closed ? cleanNumber(record.cashoutOst != null ? record.cashoutOst : record.sellValue, 0) || 0 : cleanNumber(record.stake, 0) || 0;
+  const channels = ["all", "prediction", "orderbook"];
+  if (marketChannel)
+    channels.push(marketChannel);
+  if (walletChannel2)
+    channels.push(walletChannel2);
+  publishRealtimeEvent(env, {
+    type: closed ? "prediction.cashout" : "prediction.order",
+    public: true,
+    channels,
+    wallet: record.wallet || "",
+    marketId: record.marketId || "",
+    amount,
+    token: "OST",
+    title: closed ? "Prediction cash-out" : "Prediction order live",
+    message: closed ? "Prediction cash-out settled for " + amount + " OST" : String(record.side || "YES").toUpperCase() + " order opened for " + amount + " OST",
+    payload: { record, marketState: marketState || null, flowRecord: flowRecord || null }
+  }).catch(() => {
+  });
+  if (marketState) {
+    publishRealtimeEvent(env, {
+      type: "orderbook.update",
+      public: true,
+      channels: ["all", "orderbook", "prediction", marketChannel].filter(Boolean),
+      marketId: record.marketId || "",
+      title: "Market book updated",
+      message: record.marketTitle || record.title || record.marketId || "OST market update",
+      silent: true,
+      payload: { marketState, record: flowRecord || record }
+    }).catch(() => {
+    });
+  }
+  if (walletChannel2) {
+    publishRealtimeEvent(env, {
+      type: "transaction.alert",
+      private: true,
+      channels: [walletChannel2],
+      wallet: record.wallet || "",
+      marketId: record.marketId || "",
+      amount,
+      token: "OST",
+      title: closed ? "Cash-out confirmed" : "Prediction order confirmed",
+      message: closed ? "+" + amount + " OST cash-out" : "-" + amount + " OST stake locked",
+      payload: { record, marketState: marketState || null }
+    }).catch(() => {
+    });
+  }
+}
+__name(publishPositionRealtime, "publishPositionRealtime");
+function publishWalletRealtime(env, record, overrides = {}) {
+  if (!record || !record.wallet)
+    return;
+  const walletChannel2 = walletChannelForRealtime(record.wallet);
+  if (!walletChannel2)
+    return;
+  const amount = cleanNumber(record.amount != null ? record.amount : record.ostAmount, 0) || 0;
+  publishRealtimeEvent(env, Object.assign({
+    type: "wallet.event",
+    private: true,
+    channels: [walletChannel2],
+    wallet: record.wallet,
+    marketId: record.marketId || "",
+    gameId: record.game || "",
+    amount,
+    token: record.token || "OST",
+    title: record.label || record.kind || "Wallet activity",
+    message: amount ? String(record.kind || "Activity") + " " + amount + " " + (record.token || "OST") : String(record.kind || "Wallet activity"),
+    payload: { record }
+  }, overrides)).catch(() => {
+  });
+}
+__name(publishWalletRealtime, "publishWalletRealtime");
 function cleanNumber(value, fallback = null) {
-  const number = Number(value);
-  return Number.isFinite(number) ? number : fallback;
+  const number2 = Number(value);
+  return Number.isFinite(number2) ? number2 : fallback;
 }
 __name(cleanNumber, "cleanNumber");
 function cleanProbability(value) {
-  const number = Number(value);
-  if (!Number.isFinite(number))
+  const number2 = Number(value);
+  if (!Number.isFinite(number2))
     return null;
-  let normalized = number;
-  if (number > 1) {
-    if (number <= 100)
-      normalized = number / 100;
+  let normalized = number2;
+  if (number2 > 1) {
+    if (number2 <= 100)
+      normalized = number2 / 100;
   }
   return Math.max(0, Math.min(1, normalized));
 }
@@ -1722,10 +2178,10 @@ function clampNativeTradeProbability(value) {
 }
 __name(clampNativeTradeProbability, "clampNativeTradeProbability");
 function clampNativeSpread(value) {
-  const number = Number(value);
-  if (!Number.isFinite(number))
+  const number2 = Number(value);
+  if (!Number.isFinite(number2))
     return NATIVE_MARKET_BASE_SPREAD;
-  return Math.max(NATIVE_MARKET_BASE_SPREAD, Math.min(NATIVE_MARKET_MAX_SPREAD, number));
+  return Math.max(NATIVE_MARKET_BASE_SPREAD, Math.min(NATIVE_MARKET_MAX_SPREAD, number2));
 }
 __name(clampNativeSpread, "clampNativeSpread");
 function isOstNativeMarketId(marketId, source) {
@@ -2455,6 +2911,26 @@ var NativeMarketHub = class {
       canonical: true,
       hub: "native-market-hub"
     };
+    if (Number(payload.livePrice) > 1e3) {
+      const shouldPublish = !this.lastRealtimeBtcAt || now - this.lastRealtimeBtcAt > 1200 || Math.abs(Number(payload.livePrice) - Number(this.lastRealtimeBtcPrice || 0)) >= 0.5;
+      if (shouldPublish) {
+        this.lastRealtimeBtcAt = now;
+        this.lastRealtimeBtcPrice = Number(payload.livePrice);
+        publishRealtimeEvent(this.env, {
+          type: "price.tick",
+          public: true,
+          channels: ["all", "price", "price:btc", "prediction", "market:" + payload.marketId],
+          marketId: payload.marketId,
+          amount: payload.livePrice,
+          token: "BTC",
+          title: "BTC price update",
+          message: "BTC " + Number(payload.livePrice).toFixed(2) + " USD",
+          silent: true,
+          payload
+        }).catch(() => {
+        });
+      }
+    }
     this.btcSnapshotCache = payload;
     this.btcSnapshotCacheAt = Date.now();
     return payload;
@@ -2542,44 +3018,44 @@ var NativeMarketHub = class {
     const path = url.pathname.replace(/\/$/, "") || "/";
     const method = request.method;
     if (method === "OPTIONS")
-      return new Response(null, { status: 204, headers: CORS_HEADERS3 });
+      return new Response(null, { status: 204, headers: CORS_HEADERS4 });
     if ((path === "/btc/round" || path === "/snapshot") && method === "GET") {
       const refresh = url.searchParams.get("refresh") !== "0";
-      return json4(await this.btcSnapshot({ refresh }), 200, { "cache-control": "no-store" });
+      return json5(await this.btcSnapshot({ refresh }), 200, { "cache-control": "no-store" });
     }
     if (path === "/btc/ticks" && method === "GET") {
       const refresh = url.searchParams.get("refresh") !== "0";
-      return json4(await this.btcTicks(url.searchParams.get("openAt"), url.searchParams.get("since"), refresh), 200, { "cache-control": "no-store" });
+      return json5(await this.btcTicks(url.searchParams.get("openAt"), url.searchParams.get("since"), refresh), 200, { "cache-control": "no-store" });
     }
     if (path === "/poke" && method === "POST") {
-      return json4(await this.btcSnapshot({ refresh: true, force: true }), 200, { "cache-control": "no-store" });
+      return json5(await this.btcSnapshot({ refresh: true, force: true }), 200, { "cache-control": "no-store" });
     }
     const stateMatch = path.match(/^\/state\/([^/]+)$/);
     if (stateMatch && method === "GET") {
       const marketId = decodeURIComponent(stateMatch[1]);
       const baseYes = cleanProbability(url.searchParams.get("baseYes"));
       const state = await this.quoteMarket(marketId, baseYes);
-      return json4({ ok: true, marketId, state, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
+      return json5({ ok: true, marketId, state, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
     }
     if (path === "/position" && method === "POST") {
       let body;
       try {
         body = await request.json();
       } catch (_) {
-        return json4({ error: "invalid_json" }, 400);
+        return json5({ error: "invalid_json" }, 400);
       }
       const result = await this.applyPosition(body && body.record, body && body.fallbackBaseYes);
       if (!result)
-        return json4({ ok: false, error: "not_native" }, 400);
-      return json4(Object.assign({ ok: true }, result), 200, { "cache-control": "no-store" });
+        return json5({ ok: false, error: "not_native" }, 400);
+      return json5(Object.assign({ ok: true }, result), 200, { "cache-control": "no-store" });
     }
     if (path === "/recent" && method === "GET") {
       const marketId = cleanText2(url.searchParams.get("marketId") || "", 128);
       const limit = Math.min(200, cleanNumber(url.searchParams.get("limit"), 60) || 60);
       const recent = await this.readRecent(marketId, limit);
-      return json4({ ok: true, recent, marketId: marketId || null, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
+      return json5({ ok: true, recent, marketId: marketId || null, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
     }
-    return json4({ error: "not_found" }, 404);
+    return json5({ error: "not_found" }, 404);
   }
 };
 __name(NativeMarketHub, "NativeMarketHub");
@@ -2673,12 +3149,12 @@ function yahooSymbol(symbol) {
   return normalizeStockSymbol(symbol).replace(/\./g, "-");
 }
 __name(yahooSymbol, "yahooSymbol");
-function parseCsvRows(text) {
-  return String(text || "").trim().split(/\r?\n/).filter(Boolean).map((line) => line.split(",").map((cell) => cell.trim()));
+function parseCsvRows(text2) {
+  return String(text2 || "").trim().split(/\r?\n/).filter(Boolean).map((line) => line.split(",").map((cell) => cell.trim()));
 }
 __name(parseCsvRows, "parseCsvRows");
-function parseStockQuoteCsv(text, symbol) {
-  const rows = parseCsvRows(text);
+function parseStockQuoteCsv(text2, symbol) {
+  const rows = parseCsvRows(text2);
   if (rows.length < 2)
     return null;
   const headers = rows[0].map((h) => h.toLowerCase());
@@ -2881,36 +3357,36 @@ var FaucetGate = class {
     const path = url.pathname.replace(/\/$/, "") || "/";
     const method = request.method;
     if (method === "OPTIONS")
-      return new Response(null, { status: 204, headers: CORS_HEADERS3 });
+      return new Response(null, { status: 204, headers: CORS_HEADERS4 });
     const stateMatch = path.match(/^\/faucet\/v1\/state\/([^/]+)$/);
     if (stateMatch && method === "GET") {
       const wallet = normalizeFaucetWallet(decodeURIComponent(stateMatch[1]));
       if (!wallet)
-        return json4({ error: "invalid_wallet" }, 400);
+        return json5({ error: "invalid_wallet" }, 400);
       const record = await this.readWallet(wallet);
-      return json4({ ok: true, state: publicFaucetState(record) }, 200, { "cache-control": "no-store" });
+      return json5({ ok: true, state: publicFaucetState(record) }, 200, { "cache-control": "no-store" });
     }
     if (path === "/faucet/v1/reserve" && method === "POST") {
       let body;
       try {
         body = await request.json();
       } catch (_) {
-        return json4({ error: "invalid_json" }, 400);
+        return json5({ error: "invalid_json" }, 400);
       }
       const wallet = normalizeFaucetWallet(body && body.wallet);
       if (!wallet)
-        return json4({ error: "invalid_wallet" }, 400);
+        return json5({ error: "invalid_wallet" }, 400);
       const now = Date.now();
       const record = await this.readWallet(wallet);
       const current = publicFaucetState(record, now);
       if (current.pendingReservation) {
-        return json4({ ok: false, error: "claim_in_progress", state: current }, 409, { "cache-control": "no-store" });
+        return json5({ ok: false, error: "claim_in_progress", state: current }, 409, { "cache-control": "no-store" });
       }
       let kind = "welcome";
       let amount = FAUCET_WELCOME_AMOUNT;
       if (current.welcomeClaimed) {
         if (!current.dailyReady) {
-          return json4({ ok: false, error: "cooldown", state: current, nextDailyClaimAt: current.nextDailyClaimAt }, 409, { "cache-control": "no-store" });
+          return json5({ ok: false, error: "cooldown", state: current, nextDailyClaimAt: current.nextDailyClaimAt }, 409, { "cache-control": "no-store" });
         }
         kind = "daily";
         amount = FAUCET_DAILY_AMOUNT;
@@ -2927,32 +3403,32 @@ var FaucetGate = class {
       record.updatedAt = now;
       await this.writeWallet(wallet, record);
       await this.state.storage.put(`faucet:v1:reservation:${reservation.id}`, reservation);
-      return json4({ ok: true, reservationId: reservation.id, kind, amount, expiresAt: reservation.expiresAt, state: publicFaucetState(record, now) }, 200, { "cache-control": "no-store" });
+      return json5({ ok: true, reservationId: reservation.id, kind, amount, expiresAt: reservation.expiresAt, state: publicFaucetState(record, now) }, 200, { "cache-control": "no-store" });
     }
     if (path === "/faucet/v1/commit" && method === "POST") {
       let body;
       try {
         body = await request.json();
       } catch (_) {
-        return json4({ error: "invalid_json" }, 400);
+        return json5({ error: "invalid_json" }, 400);
       }
       const wallet = normalizeFaucetWallet(body && body.wallet);
       const reservationId = cleanText2(body && body.reservationId, 80);
       const signature = cleanText2(body && (body.signature || body.sig), 128);
       if (!wallet || !reservationId || !signature)
-        return json4({ error: "missing_fields", required: ["wallet", "reservationId", "signature"] }, 400);
+        return json5({ error: "missing_fields", required: ["wallet", "reservationId", "signature"] }, 400);
       const now = Date.now();
       const record = await this.readWallet(wallet);
       if (record.lastReservationId === reservationId) {
-        return json4({ ok: true, state: publicFaucetState(record, now), idempotent: true }, 200, { "cache-control": "no-store" });
+        return json5({ ok: true, state: publicFaucetState(record, now), idempotent: true }, 200, { "cache-control": "no-store" });
       }
       const pending = record.pendingReservation;
       if (!pending || pending.id !== reservationId)
-        return json4({ error: "reservation_not_active", state: publicFaucetState(record, now) }, 409);
+        return json5({ error: "reservation_not_active", state: publicFaucetState(record, now) }, 409);
       if (pending.expiresAt <= now) {
         delete record.pendingReservation;
         await this.writeWallet(wallet, record);
-        return json4({ error: "reservation_expired", state: publicFaucetState(record, now) }, 409);
+        return json5({ error: "reservation_expired", state: publicFaucetState(record, now) }, 409);
       }
       const amount = Math.min(cleanNumber(body && body.amount, pending.amount) || pending.amount, pending.amount);
       record.totalClaimed = (cleanNumber(record.totalClaimed, 0) || 0) + amount;
@@ -2978,28 +3454,41 @@ var FaucetGate = class {
         label: pending.kind === "welcome" ? "100 OST head start" : "Daily 1 OST faucet",
         ts: now
       });
-      return json4({ ok: true, state: publicFaucetState(record, now) }, 200, { "cache-control": "no-store" });
+      const state = publicFaucetState(record, now);
+      publishRealtimeEvent(this.env, {
+        type: "faucet.claim",
+        public: true,
+        channels: ["all", "faucet", walletChannelForRealtime(wallet)],
+        wallet,
+        amount,
+        token: "OST",
+        title: "Faucet claim confirmed",
+        message: "+" + amount + " OST " + (pending.kind === "welcome" ? "head start" : "daily claim"),
+        payload: { state, reservationId, signature, kind: pending.kind }
+      }).catch(() => {
+      });
+      return json5({ ok: true, state }, 200, { "cache-control": "no-store" });
     }
     if (path === "/faucet/v1/cancel" && method === "POST") {
       let body;
       try {
         body = await request.json();
       } catch (_) {
-        return json4({ error: "invalid_json" }, 400);
+        return json5({ error: "invalid_json" }, 400);
       }
       const wallet = normalizeFaucetWallet(body && body.wallet);
       const reservationId = cleanText2(body && body.reservationId, 80);
       if (!wallet || !reservationId)
-        return json4({ error: "missing_fields", required: ["wallet", "reservationId"] }, 400);
+        return json5({ error: "missing_fields", required: ["wallet", "reservationId"] }, 400);
       const record = await this.readWallet(wallet);
       if (record.pendingReservation && record.pendingReservation.id === reservationId) {
         delete record.pendingReservation;
         record.updatedAt = Date.now();
         await this.writeWallet(wallet, record);
       }
-      return json4({ ok: true, state: publicFaucetState(record) }, 200, { "cache-control": "no-store" });
+      return json5({ ok: true, state: publicFaucetState(record) }, 200, { "cache-control": "no-store" });
     }
-    return json4({ error: "unknown_faucet_endpoint", path }, 404);
+    return json5({ error: "unknown_faucet_endpoint", path }, 404);
   }
 };
 __name(FaucetGate, "FaucetGate");
@@ -3396,6 +3885,20 @@ async function markIntentPaidFromCrypto(env, intent, verification, options = {})
   if (options.enqueueDispatcher !== false) {
     await pushQueue(env, intent.id);
   }
+  publishWalletRealtime(env, {
+    id: intent.id,
+    wallet: intent.wallet,
+    kind: "topup-paid",
+    amount: intent.ostAmount,
+    sig: verification.signature,
+    label: "Payment verified; OST delivery queued",
+    token: "OST",
+    ts: intent.paidAt
+  }, {
+    type: "topup.paid",
+    title: "Payment verified",
+    message: intent.ostAmount + " OST delivery is queued"
+  });
   return { ok: true, intent };
 }
 __name(markIntentPaidFromCrypto, "markIntentPaidFromCrypto");
@@ -3435,13 +3938,13 @@ var src_default = {
     const path = url.pathname.replace(/\/$/, "") || "/";
     const method = request.method;
     if (method === "OPTIONS") {
-      return new Response(null, { status: 204, headers: CORS_HEADERS3 });
+      return new Response(null, { status: 204, headers: CORS_HEADERS4 });
     }
     if (path.startsWith("/ghost/")) {
       const ghostV2 = await handleGhostV2Request(request, env, { path, method });
       if (ghostV2)
         return ghostV2;
-      return json4({ error: "unknown ghost endpoint", path }, { status: 404 });
+      return json5({ error: "unknown ghost endpoint", path }, { status: 404 });
     }
     if (path.startsWith("/mesh/")) {
       return handleMeshRequest(request, env, { path, method });
@@ -3451,12 +3954,15 @@ var src_default = {
       if (ostResp)
         return ostResp;
     }
+    if (path.startsWith("/realtime/")) {
+      return handleRealtimeRequest(request, env, { path, method });
+    }
     if (path === "/faucet/state" && method === "GET") {
       if (!env.FAUCET_GATE)
-        return json4({ error: "faucet_gate_not_configured" }, 503);
+        return json5({ error: "faucet_gate_not_configured" }, 503);
       const wallet = cleanText2(url.searchParams.get("wallet") || "", 80);
       if (!wallet)
-        return json4({ error: "missing_wallet" }, 400);
+        return json5({ error: "missing_wallet" }, 400);
       const id = env.FAUCET_GATE.idFromName("global");
       const aliasUrl = new URL(request.url);
       aliasUrl.pathname = "/faucet/v1/state/" + encodeURIComponent(wallet);
@@ -3464,14 +3970,14 @@ var src_default = {
     }
     if (path.startsWith("/faucet/v1/")) {
       if (!env.FAUCET_GATE)
-        return json4({ error: "faucet_gate_not_configured" }, 503);
+        return json5({ error: "faucet_gate_not_configured" }, 503);
       const id = env.FAUCET_GATE.idFromName("global");
       return env.FAUCET_GATE.get(id).fetch(request);
     }
     if (path === "/health" || path === "/") {
       const btcResult = await fetchBtcPrice();
       const round = currentRound();
-      return json4({
+      return json5({
         ok: true,
         service: "ost-api",
         version: "1.0",
@@ -3491,6 +3997,10 @@ var src_default = {
           "GET  /ost/stats",
           "GET  /ost/history",
           "POST /ost/event",
+          "GET  /realtime/v1/health",
+          "GET  /realtime/v1/ws",
+          "POST /realtime/v1/publish",
+          "GET  /realtime/v1/events",
           "GET  /markets",
           "GET  /markets/:id",
           "GET  /markets/:id/book",
@@ -3551,7 +4061,7 @@ var src_default = {
     if (path === "/btc/price" && method === "GET") {
       const canonical = await getCanonicalBtcRound(env, { refresh: true });
       if (canonical && Number(canonical.livePrice) > 1e3) {
-        return json4({
+        return json5({
           price: Number(canonical.livePrice),
           currency: "USD",
           source: canonical.livePriceSource || canonical.source || "ost-canonical",
@@ -3569,13 +4079,13 @@ var src_default = {
       if (!result) {
         const cached = await kvGet2(env, "btc:latest", null);
         if (cached)
-          return json4({ price: cached.p, currency: "USD", source: cached.s || "cached", stale: true, round: currentRound(), ts: new Date(cached.t).toISOString() }, 200, { "cache-control": "no-store" });
-        return json4({ error: "all_feeds_failed", price: null }, 503);
+          return json5({ price: cached.p, currency: "USD", source: cached.s || "cached", stale: true, round: currentRound(), ts: new Date(cached.t).toISOString() }, 200, { "cache-control": "no-store" });
+        return json5({ error: "all_feeds_failed", price: null }, 503);
       }
       const round = currentRound();
       await lockRoundOpenPrice(env, round, result.price, result.source);
       await appendBtcTick(env, round, result.price, result.source);
-      return json4({
+      return json5({
         price: result.price,
         currency: "USD",
         source: result.source,
@@ -3586,7 +4096,7 @@ var src_default = {
     if (path === "/btc/round" && method === "GET") {
       const refresh = url.searchParams.get("refresh") !== "0";
       const data = await getCanonicalBtcRound(env, { refresh });
-      return json4(data, 200, { "cache-control": "no-store" });
+      return json5(data, 200, { "cache-control": "no-store" });
     }
     if (path === "/btc/ticks" && method === "GET") {
       const openAtParam = Number(url.searchParams.get("openAt"));
@@ -3594,7 +4104,7 @@ var src_default = {
       const since = Number(url.searchParams.get("since")) || 0;
       const hubTicks = await getCanonicalBtcTicks(env, round.openAt, since, { refresh: round.openAt === currentRound().openAt });
       if (hubTicks)
-        return json4(hubTicks, 200, { "cache-control": "no-store" });
+        return json5(hubTicks, 200, { "cache-control": "no-store" });
       const ringKey = `btc:ticks:${round.openAt}`;
       let ring = await kvGet2(env, ringKey, []);
       if (!Array.isArray(ring))
@@ -3644,7 +4154,7 @@ var src_default = {
         }
       }
       const ticks = since > 0 ? ring.filter((t) => Number(t.t) > since) : ring;
-      return json4({
+      return json5({
         openAt: round.openAt,
         closeAt: round.closeAt,
         ticks,
@@ -3661,35 +4171,35 @@ var src_default = {
         if (!r.ok)
           throw new Error("upstream " + r.status);
         const j = await r.json();
-        return json4({ series: (j?.data?.prices || []).map((p) => ({ t: p.time, p: Number(p.price) })), ts: (/* @__PURE__ */ new Date()).toISOString() });
+        return json5({ series: (j?.data?.prices || []).map((p) => ({ t: p.time, p: Number(p.price) })), ts: (/* @__PURE__ */ new Date()).toISOString() });
       } catch (e) {
-        return json4({ error: "fetch_failed", message: String(e?.message || e), series: [] }, 502);
+        return json5({ error: "fetch_failed", message: String(e?.message || e), series: [] }, 502);
       }
     }
     if (path === "/rounds/current" && method === "GET") {
       const data = await getCanonicalBtcRound(env, { refresh: true });
-      return json4({ ...data, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
+      return json5({ ...data, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
     }
     if (path === "/rounds/open-price" && method === "POST") {
       let body;
       try {
         body = await request.json();
       } catch (_) {
-        return json4({ error: "invalid_json" }, 400);
+        return json5({ error: "invalid_json" }, 400);
       }
       const { openAt, openPrice } = body || {};
       if (!openAt || !Number.isFinite(Number(openPrice)))
-        return json4({ error: "missing_fields", required: ["openAt", "openPrice"] }, 400);
+        return json5({ error: "missing_fields", required: ["openAt", "openPrice"] }, 400);
       const cleanOpenAt = Math.floor(Number(openAt) / FIVE_MIN_MS) * FIVE_MIN_MS;
       const round = { id: `ost-btc5m-${cleanOpenAt}`, openAt: cleanOpenAt, closeAt: cleanOpenAt + FIVE_MIN_MS, msLeft: Math.max(0, cleanOpenAt + FIVE_MIN_MS - Date.now()) };
       const existing = await kvGet2(env, `round:${round.openAt}`, null);
       if (existing && Number.isFinite(Number(existing.openPrice)) && Number(existing.openPrice) > 0) {
-        return json4({ ok: true, openAt: round.openAt, openPrice: existing.openPrice, priceToBeat: existing.priceToBeat || existing.openPrice, source: existing.openPriceSource || "locked", locked: true }, 200, { "cache-control": "no-store" });
+        return json5({ ok: true, openAt: round.openAt, openPrice: existing.openPrice, priceToBeat: existing.priceToBeat || existing.openPrice, source: existing.openPriceSource || "locked", locked: true }, 200, { "cache-control": "no-store" });
       }
       const roundOpen = await fetchBtcRoundOpenPrice(round);
       const serverPrice = roundOpen && Number.isFinite(Number(roundOpen.price)) && Number(roundOpen.price) > 0 ? Number(roundOpen.price) : Number(openPrice);
       const stored = await lockRoundOpenPrice(env, round, serverPrice, roundOpen && roundOpen.source || "client-fallback");
-      return json4({ ok: true, openAt: round.openAt, openPrice: stored && stored.openPrice || serverPrice, priceToBeat: stored && stored.priceToBeat || serverPrice, source: stored && stored.openPriceSource || "client-fallback", locked: true }, 200, { "cache-control": "no-store" });
+      return json5({ ok: true, openAt: round.openAt, openPrice: stored && stored.openPrice || serverPrice, priceToBeat: stored && stored.priceToBeat || serverPrice, source: stored && stored.openPriceSource || "client-fallback", locked: true }, 200, { "cache-control": "no-store" });
     }
     const proxyMap = {
       "/gamma/": env.GAMMA_BASE || "https://gamma-api.polymarket.com",
@@ -3705,17 +4215,17 @@ var src_default = {
             headers: { accept: "application/json", "user-agent": "OST-API/1.0" },
             cf: { cacheTtl: 5, cacheEverything: true }
           });
-          const text = await r.text();
-          return new Response(text, {
+          const text2 = await r.text();
+          return new Response(text2, {
             status: r.status,
             headers: {
-              ...CORS_HEADERS3,
+              ...CORS_HEADERS4,
               "content-type": r.headers.get("content-type") || "application/json",
               "cache-control": "public, max-age=2"
             }
           });
         } catch (e) {
-          return json4({ error: "upstream_failed", upstream, message: String(e?.message || e) }, 502);
+          return json5({ error: "upstream_failed", upstream, message: String(e?.message || e) }, 502);
         }
       }
     }
@@ -3724,9 +4234,9 @@ var src_default = {
       const active = await fetchActiveMarkets(env, limit);
       const raw = active.raw;
       if (!raw)
-        return json4({ error: "upstream_failed", markets: [] }, 502, { "cache-control": "no-store" });
+        return json5({ error: "upstream_failed", markets: [] }, 502, { "cache-control": "no-store" });
       const markets = (Array.isArray(raw) ? raw : raw.markets || []).map(normaliseMarket);
-      return json4(
+      return json5(
         { markets, count: markets.length, stale: !!active.stale, source: active.source, cachedAt: active.cachedAt || null, ts: (/* @__PURE__ */ new Date()).toISOString() },
         200,
         { "cache-control": "no-store" }
@@ -3737,7 +4247,7 @@ var src_default = {
       const marketId = decodeURIComponent(nativeStateMatch[1]);
       const baseYes = cleanProbability(url.searchParams.get("baseYes"));
       const state = await getNativeMarketState(env, marketId, baseYes);
-      return json4({ ok: true, marketId, state, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
+      return json5({ ok: true, marketId, state, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
     }
     const mktMatch = path.match(/^\/markets\/([^/]+)$/);
     if (mktMatch && method === "GET") {
@@ -3750,8 +4260,8 @@ var src_default = {
         polyData(env, "/prices-history", `market=${encodeURIComponent(id)}&interval=1d&fidelity=10`)
       ]);
       if (!gmkt)
-        return json4({ error: "market_not_found", id }, 404);
-      return json4({
+        return json5({ error: "market_not_found", id }, 404);
+      return json5({
         market: normaliseMarket(gmkt),
         book: book || null,
         trades: (Array.isArray(trades) ? trades : trades?.data || []).slice(0, 20),
@@ -3767,49 +4277,49 @@ var src_default = {
       const tokenId = decodeURIComponent(bookMatch[1]);
       const book = await polyClob(env, "/book", `token_id=${encodeURIComponent(tokenId)}`);
       if (!book)
-        return json4({ error: "book_unavailable", tokenId }, 502);
-      return json4(book, 200, { "cache-control": "no-store" });
+        return json5({ error: "book_unavailable", tokenId }, 502);
+      return json5(book, 200, { "cache-control": "no-store" });
     }
     const tradesMatch = path.match(/^\/markets\/([^/]+)\/trades$/);
     if (tradesMatch && method === "GET") {
       const marketId = decodeURIComponent(tradesMatch[1]);
       const trades = await polyClob(env, "/trades", `market=${encodeURIComponent(marketId)}&limit=20`);
       const list = Array.isArray(trades) ? trades : trades?.data || [];
-      return json4({ trades: list.slice(0, 20), ts: (/* @__PURE__ */ new Date()).toISOString() });
+      return json5({ trades: list.slice(0, 20), ts: (/* @__PURE__ */ new Date()).toISOString() });
     }
     if (path === "/positions/recent" && method === "GET") {
       const limit = Math.min(200, Number(url.searchParams.get("limit") || 60));
       const marketIdFilter = cleanText2(url.searchParams.get("marketId") || "", 128);
       if (!env.OST_KV)
-        return json4({ recent: [], note: "KV not configured" });
+        return json5({ recent: [], note: "KV not configured" });
       const hubMarketFilter = marketIdFilter === "ost-btc5m" ? "" : marketIdFilter;
       const hubRows = await getNativeRecentPositionsFromHub(env, hubMarketFilter, limit);
       const recent = await kvGet2(env, "positions:recent", []);
       const rows = mergeRecentPositionRows((Array.isArray(hubRows) ? hubRows : []).concat(recent));
       const filteredRows = marketIdFilter ? rows.filter((record) => recentPositionMatchesMarket(record, marketIdFilter)) : rows;
-      return json4({ recent: filteredRows.slice(0, limit), marketId: marketIdFilter || null, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
+      return json5({ recent: filteredRows.slice(0, limit), marketId: marketIdFilter || null, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
     }
     const posMatch = path.match(/^\/positions\/([^/]+)$/);
     if (posMatch && method === "GET") {
       const wallet = decodeURIComponent(posMatch[1]);
       if (!env.OST_KV)
-        return json4({ positions: [], note: "KV not configured \u2014 positions are local-only", wallet });
+        return json5({ positions: [], note: "KV not configured \u2014 positions are local-only", wallet });
       const positions = await kvGet2(env, `positions:${wallet}`, []);
-      return json4({ positions, wallet, ts: (/* @__PURE__ */ new Date()).toISOString() });
+      return json5({ positions, wallet, ts: (/* @__PURE__ */ new Date()).toISOString() });
     }
     if (path === "/positions" && method === "POST") {
       let body;
       try {
         body = await request.json();
       } catch (_) {
-        return json4({ error: "invalid_json" }, 400);
+        return json5({ error: "invalid_json" }, 400);
       }
       const { wallet, marketId, marketTitle, side, stake, price, ts, signature } = body || {};
       if (!wallet || !marketId || !side || !Number.isFinite(Number(stake))) {
-        return json4({ error: "missing_fields", required: ["wallet", "marketId", "side", "stake"] }, 400);
+        return json5({ error: "missing_fields", required: ["wallet", "marketId", "side", "stake"] }, 400);
       }
       if (!env.OST_KV)
-        return json4({ ok: true, stored: false, note: "KV not configured \u2014 position not persisted server-side" });
+        return json5({ ok: true, stored: false, note: "KV not configured \u2014 position not persisted server-side" });
       const createdAt = toMs(body.createdAt || ts);
       const nativeMarketStateBefore = isOstNativeMarketId(marketId, body.source) ? await getNativeMarketState(env, String(marketId), body.baseYesPrice != null ? body.baseYesPrice : body.fairYesPrice) : null;
       const sideUp = String(side).toUpperCase() === "NO" ? "NO" : "YES";
@@ -3890,30 +4400,31 @@ var src_default = {
       rememberRecentPositionHot(flowRecord);
       await kvPut2(env, "positions:recent", mergeNewest(recent, flowRecord, 100), 60 * 60 * 24 * 7);
       const marketState = await applyNativePositionToMarketState(env, record, nativeMarketStateBefore ? nativeMarketStateBefore.baseYesPrice : null);
-      return json4({ ok: true, stored: true, record, marketState, flowRecord: flowRecord !== record ? flowRecord : null });
+      publishPositionRealtime(env, record, marketState, flowRecord);
+      return json5({ ok: true, stored: true, record, marketState, flowRecord: flowRecord !== record ? flowRecord : null });
     }
     const walletEventsMatch = path.match(/^\/wallet\/events\/([^/]+)$/);
     if (walletEventsMatch && method === "GET") {
       const wallet = decodeURIComponent(walletEventsMatch[1]);
       const limit = Math.min(300, Number(url.searchParams.get("limit") || 200));
       if (!env.OST_KV)
-        return json4({ events: [], note: "KV not configured", wallet });
+        return json5({ events: [], note: "KV not configured", wallet });
       const events = await kvGet2(env, `wallet:events:${wallet}`, []);
-      return json4({ events: events.slice(0, limit), wallet, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
+      return json5({ events: events.slice(0, limit), wallet, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
     }
     if (path === "/wallet/events" && method === "POST") {
       let body;
       try {
         body = await request.json();
       } catch (_) {
-        return json4({ error: "invalid_json" }, 400);
+        return json5({ error: "invalid_json" }, 400);
       }
       const wallet = cleanText2(body?.wallet || "", 64);
       const kind = cleanText2(body?.kind || "", 48);
       if (!wallet || !kind)
-        return json4({ error: "missing_fields", required: ["wallet", "kind"] }, 400);
+        return json5({ error: "missing_fields", required: ["wallet", "kind"] }, 400);
       if (!env.OST_KV)
-        return json4({ ok: true, stored: false, note: "KV not configured" });
+        return json5({ ok: true, stored: false, note: "KV not configured" });
       const eventTs = toMs(body.ts || body.createdAt || body.cashoutAt);
       const id = cleanText2(body.id || body.eventId || body.sig || body.signature || `${kind}:${eventTs}:${body.amount || ""}:${body.token || body.game || body.marketId || ""}`, 160);
       const record = {
@@ -3949,26 +4460,31 @@ var src_default = {
       const key = `wallet:events:${wallet}`;
       const bucket = await kvGet2(env, key, []);
       await kvPut2(env, key, mergeNewest(bucket, record, 300));
-      return json4({ ok: true, stored: true, record });
+      publishWalletRealtime(env, record, {
+        type: "transaction.alert",
+        title: record.label || record.kind || "Wallet activity",
+        message: record.amount ? String(record.label || record.kind) + " +" + record.amount + " " + (record.token || "OST") : String(record.label || record.kind)
+      });
+      return json5({ ok: true, stored: true, record });
     }
     if (path === "/launchpad/coins" && method === "GET") {
       if (!env.OST_KV)
-        return json4({ coins: [], note: "KV not configured" });
+        return json5({ coins: [], note: "KV not configured" });
       const coins = await kvGet2(env, "launchpad:coins", []);
-      return json4({ coins, count: coins.length, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "public, max-age=2" });
+      return json5({ coins, count: coins.length, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "public, max-age=2" });
     }
     if (path === "/launchpad/coins" && method === "POST") {
       let body;
       try {
         body = await request.json();
       } catch (_) {
-        return json4({ error: "invalid_json" }, 400);
+        return json5({ error: "invalid_json" }, 400);
       }
       const { name, symbol, desc, image, twitter, telegram, website, creator, mcap, curve, supply } = body || {};
       if (!name || !symbol)
-        return json4({ error: "missing_fields", required: ["name", "symbol"] }, 400);
+        return json5({ error: "missing_fields", required: ["name", "symbol"] }, 400);
       if (!env.OST_KV)
-        return json4({ ok: true, stored: false, note: "KV not configured" });
+        return json5({ ok: true, stored: false, note: "KV not configured" });
       const record = {
         id: crypto.randomUUID(),
         mint: "ost" + crypto.randomUUID().replace(/-/g, "").slice(0, 40),
@@ -3990,24 +4506,36 @@ var src_default = {
       const coins = (await kvGet2(env, "launchpad:coins", [])).slice(0, 199);
       coins.unshift(record);
       await kvPut2(env, "launchpad:coins", coins);
-      return json4({ ok: true, stored: true, coin: record });
+      publishRealtimeEvent(env, {
+        type: "launchpad.coin",
+        public: true,
+        channels: ["all", "launchpad", channelForRealtime("launchpad", record.mint)],
+        mint: record.mint,
+        symbol: record.symbol,
+        wallet: record.creator,
+        title: "$" + record.symbol + " launched",
+        message: record.name + " is live on OST Launchpad",
+        payload: { coin: record }
+      }).catch(() => {
+      });
+      return json5({ ok: true, stored: true, coin: record });
     }
     if (path === "/launchpad/trade" && method === "POST") {
       let body;
       try {
         body = await request.json();
       } catch (_) {
-        return json4({ error: "invalid_json" }, 400);
+        return json5({ error: "invalid_json" }, 400);
       }
       const { mint, side, amount, trader, signature } = body || {};
       if (!mint || !side || !Number.isFinite(Number(amount)))
-        return json4({ error: "missing_fields", required: ["mint", "side", "amount"] }, 400);
+        return json5({ error: "missing_fields", required: ["mint", "side", "amount"] }, 400);
       if (!env.OST_KV)
-        return json4({ ok: true, stored: false, note: "KV not configured" });
+        return json5({ ok: true, stored: false, note: "KV not configured" });
       const coins = await kvGet2(env, "launchpad:coins", []);
       const idx = coins.findIndex((c2) => c2.mint === mint);
       if (idx < 0)
-        return json4({ error: "coin_not_found", mint }, 404);
+        return json5({ error: "coin_not_found", mint }, 404);
       const c = coins[idx];
       const amt = Number(amount);
       const delta = side === "buy" ? amt * 10 : -amt * 10;
@@ -4042,61 +4570,76 @@ var src_default = {
         const walletKey = `wallet:events:${traderWallet}`;
         const walletEvents = await kvGet2(env, walletKey, []);
         await kvPut2(env, walletKey, mergeNewest(walletEvents, event, 300));
+        publishWalletRealtime(env, event, { type: "transaction.alert" });
       }
-      return json4({ ok: true, coin: c });
+      publishRealtimeEvent(env, {
+        type: "launchpad.trade",
+        public: true,
+        channels: ["all", "launchpad", channelForRealtime("launchpad", mint), traderWallet ? walletChannelForRealtime(traderWallet) : ""].filter(Boolean),
+        mint,
+        symbol: c.symbol,
+        wallet: traderWallet,
+        amount: amt,
+        token: "OST",
+        title: "$" + c.symbol + " trade",
+        message: (side === "sell" ? "Sell" : "Buy") + " " + amt + " OST",
+        payload: { coin: c, tick: ticks[0] }
+      }).catch(() => {
+      });
+      return json5({ ok: true, coin: c });
     }
     const tickMatch = path.match(/^\/launchpad\/ticks\/([^/]+)$/);
     if (tickMatch && method === "GET") {
       const mint = decodeURIComponent(tickMatch[1]);
       if (!env.OST_KV)
-        return json4({ ticks: [] });
+        return json5({ ticks: [] });
       const ticks = await kvGet2(env, `launchpad:ticks:${mint}`, []);
-      return json4({ ticks, ts: (/* @__PURE__ */ new Date()).toISOString() });
+      return json5({ ticks, ts: (/* @__PURE__ */ new Date()).toISOString() });
     }
     if (path === "/stocks/universe" && method === "GET") {
-      return json4({ universe: STOCK_UNIVERSE, count: STOCK_UNIVERSE.length, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "public, max-age=300" });
+      return json5({ universe: STOCK_UNIVERSE, count: STOCK_UNIVERSE.length, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "public, max-age=300" });
     }
     if (path === "/stocks/quotes" && method === "GET") {
       const rawSymbols = cleanText2(url.searchParams.get("symbols") || "", 300).split(",").map(normalizeStockSymbol).filter(Boolean);
       const symbols = (rawSymbols.length ? rawSymbols : STOCK_UNIVERSE.slice(0, 10).map((item) => item.symbol)).slice(0, 24);
       const quotes = (await Promise.all(symbols.map(fetchStockQuote))).filter(Boolean);
-      return json4({ quotes, count: quotes.length, ts: (/* @__PURE__ */ new Date()).toISOString(), source: "stooq-public" }, 200, { "cache-control": "public, max-age=20" });
+      return json5({ quotes, count: quotes.length, ts: (/* @__PURE__ */ new Date()).toISOString(), source: "stooq-public" }, 200, { "cache-control": "public, max-age=20" });
     }
     const stockHistoryMatch = path.match(/^\/stocks\/([^/]+)\/history$/);
     if (stockHistoryMatch && method === "GET") {
       const symbol = normalizeStockSymbol(decodeURIComponent(stockHistoryMatch[1]));
       if (!symbol)
-        return json4({ error: "invalid_symbol" }, 400);
+        return json5({ error: "invalid_symbol" }, 400);
       const result = await fetchStockHistory(symbol);
-      return json4({ symbol, history: result.history, count: result.history.length, ts: (/* @__PURE__ */ new Date()).toISOString(), source: result.source }, 200, { "cache-control": "public, max-age=900" });
+      return json5({ symbol, history: result.history, count: result.history.length, ts: (/* @__PURE__ */ new Date()).toISOString(), source: result.source }, 200, { "cache-control": "public, max-age=900" });
     }
     const stockQuoteMatch = path.match(/^\/stocks\/([^/]+)$/);
     if (stockQuoteMatch && method === "GET") {
       const symbol = normalizeStockSymbol(decodeURIComponent(stockQuoteMatch[1]));
       if (!symbol)
-        return json4({ error: "invalid_symbol" }, 400);
+        return json5({ error: "invalid_symbol" }, 400);
       const quote = await fetchStockQuote(symbol);
       if (!quote)
-        return json4({ error: "quote_unavailable", symbol }, 502);
-      return json4({ quote, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "public, max-age=20" });
+        return json5({ error: "quote_unavailable", symbol }, 502);
+      return json5({ quote, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "public, max-age=20" });
     }
     const stockOrdersMatch = path.match(/^\/stocks\/orders\/([^/]+)$/);
     if (stockOrdersMatch && method === "GET") {
       const wallet = cleanText2(decodeURIComponent(stockOrdersMatch[1]), 64);
       if (!wallet)
-        return json4({ error: "invalid_wallet" }, 400);
+        return json5({ error: "invalid_wallet" }, 400);
       if (!env.OST_KV)
-        return json4({ orders: [], note: "KV not configured", wallet });
+        return json5({ orders: [], note: "KV not configured", wallet });
       const limit = Math.min(200, Number(url.searchParams.get("limit") || 100));
       const orders = await kvGet2(env, `stocks:orders:${wallet}`, []);
-      return json4({ orders: orders.slice(0, limit), wallet, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
+      return json5({ orders: orders.slice(0, limit), wallet, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
     }
     if (path === "/stocks/orders" && method === "POST") {
       let body;
       try {
         body = await request.json();
       } catch (_) {
-        return json4({ error: "invalid_json" }, 400);
+        return json5({ error: "invalid_json" }, 400);
       }
       const wallet = cleanText2(body && body.wallet, 64);
       const symbol = normalizeStockSymbol(body && body.symbol);
@@ -4105,9 +4648,9 @@ var src_default = {
       const quote = await fetchStockQuote(symbol).catch(() => null);
       const price = cleanNumber(body && body.price, quote && quote.price) || quote && quote.price || 0;
       if (!wallet || !symbol || !ostStake || ostStake <= 0 || !price)
-        return json4({ error: "missing_fields", required: ["wallet", "symbol", "ostStake", "price"] }, 400);
+        return json5({ error: "missing_fields", required: ["wallet", "symbol", "ostStake", "price"] }, 400);
       if (!env.OST_KV)
-        return json4({ ok: true, stored: false, note: "KV not configured" });
+        return json5({ ok: true, stored: false, note: "KV not configured" });
       const meta = stockMeta(symbol);
       const order = {
         id: cleanText2(body.id || body.signature || crypto.randomUUID(), 160),
@@ -4136,7 +4679,31 @@ var src_default = {
       const recent = await kvGet2(env, "stocks:orders:recent", []);
       await kvPut2(env, "stocks:orders:recent", mergeNewest(recent, order, 200), 60 * 60 * 24 * 14);
       await recordStockWalletEvent(env, order);
-      return json4({ ok: true, stored: true, order });
+      publishRealtimeEvent(env, {
+        type: "stock.order",
+        public: true,
+        channels: ["all", "stock", channelForRealtime("stock", symbol), walletChannelForRealtime(wallet)].filter(Boolean),
+        wallet,
+        symbol,
+        amount: order.ostStake,
+        token: "OST",
+        title: symbol + " mirror order",
+        message: side.toUpperCase() + " " + symbol + " for " + order.ostStake + " OST",
+        payload: { order }
+      }).catch(() => {
+      });
+      publishWalletRealtime(env, {
+        id: order.id,
+        wallet,
+        kind: "stock-mirror-order",
+        amount: order.ostStake,
+        sig: order.signature,
+        label: order.side.toUpperCase() + " " + order.symbol + " stock mirror",
+        token: "OST",
+        marketId: order.symbol,
+        ts: order.createdAt
+      }, { type: "transaction.alert" });
+      return json5({ ok: true, stored: true, order });
     }
     if (path === "/topup/config" && method === "GET") {
       const cluster = topupCluster(env);
@@ -4148,7 +4715,7 @@ var src_default = {
         solUsd = await fetchSolUsd();
       } catch (_) {
       }
-      return json4({
+      return json5({
         mode: "flexible-value",
         pricing: {
           usdPerOst: rate,
@@ -4175,21 +4742,21 @@ var src_default = {
       try {
         body = await request.json();
       } catch {
-        return json4({ error: "invalid_json" }, 400);
+        return json5({ error: "invalid_json" }, 400);
       }
       const tierId = Number(body && body.tier);
       const legacyTier = TOPUP_TIERS[tierId];
       const usd = normalizeTopupUsd(body && body.usd !== void 0 ? body.usd : legacyTier && legacyTier.usd);
       if (usd === null)
-        return json4({ error: "invalid_usd_amount", minUsd: TOPUP_MIN_USD, maxUsd: TOPUP_MAX_USD }, 400);
+        return json5({ error: "invalid_usd_amount", minUsd: TOPUP_MIN_USD, maxUsd: TOPUP_MAX_USD }, 400);
       const rate = topupUsdPerOst(env);
       const ostAmount = calculateTopupOst(usd, rate);
       const wallet = String(body.wallet || "").trim();
       if (!isLikelySolanaAddress(wallet))
-        return json4({ error: "invalid_wallet" }, 400);
+        return json5({ error: "invalid_wallet" }, 400);
       const method2 = body.method === "crypto" ? "crypto" : "stripe";
       if (!env.OST_KV)
-        return json4({ error: "kv_not_configured" }, 503);
+        return json5({ error: "kv_not_configured" }, 503);
       const intent = {
         id: crypto.randomUUID(),
         memo: shortMemo(),
@@ -4206,22 +4773,22 @@ var src_default = {
         updatedAt: Date.now()
       };
       await saveIntent(env, intent);
-      return json4({ id: intent.id, memo: intent.memo, usd: intent.usd, usdPerOst: intent.usdPerOst, ostAmount: intent.ostAmount, status: intent.status });
+      return json5({ id: intent.id, memo: intent.memo, usd: intent.usd, usdPerOst: intent.usdPerOst, ostAmount: intent.ostAmount, status: intent.status });
     }
     if (path === "/topup/checkout" && method === "POST") {
       if (!env.STRIPE_SECRET_KEY)
-        return json4({ error: "stripe_not_configured" }, 503);
+        return json5({ error: "stripe_not_configured" }, 503);
       let body;
       try {
         body = await request.json();
       } catch {
-        return json4({ error: "invalid_json" }, 400);
+        return json5({ error: "invalid_json" }, 400);
       }
       const intent = await loadIntent(env, body && body.intentId);
       if (!intent)
-        return json4({ error: "intent_not_found" }, 404);
+        return json5({ error: "intent_not_found" }, 404);
       if (intent.status !== "pending")
-        return json4({ error: "intent_not_pending", status: intent.status }, 409);
+        return json5({ error: "intent_not_pending", status: intent.status }, 409);
       const site = buildPublicSiteUrl(env, request);
       const successUrl = `${site}${site.includes("?") ? "&" : "?"}topup=success&intent=${intent.id}#new-here`;
       const cancelUrl = `${site}${site.includes("?") ? "&" : "?"}topup=cancel&intent=${intent.id}#new-here`;
@@ -4244,27 +4811,27 @@ var src_default = {
         }]
       });
       if (!r.ok)
-        return json4({ error: "stripe_error", detail: r.body }, 502);
+        return json5({ error: "stripe_error", detail: r.body }, 502);
       const session = r.body;
       await kvPut2(env, `topup:stripe:${session.id}`, intent.id, 60 * 60 * 24 * 30);
       intent.stripeSessionId = session.id;
       intent.updatedAt = Date.now();
       await saveIntent(env, intent);
-      return json4({ url: session.url, sessionId: session.id });
+      return json5({ url: session.url, sessionId: session.id });
     }
     if (path === "/topup/stripe/webhook" && method === "POST") {
       if (!env.STRIPE_WEBHOOK_SECRET)
-        return json4({ error: "webhook_not_configured" }, 503);
+        return json5({ error: "webhook_not_configured" }, 503);
       const sig = request.headers.get("stripe-signature") || "";
       const raw = await request.text();
       const ok2 = await verifyStripeSignature(raw, sig, env.STRIPE_WEBHOOK_SECRET);
       if (!ok2)
-        return json4({ error: "bad_signature" }, 400);
+        return json5({ error: "bad_signature" }, 400);
       let evt;
       try {
         evt = JSON.parse(raw);
       } catch {
-        return json4({ error: "bad_json" }, 400);
+        return json5({ error: "bad_json" }, 400);
       }
       if (evt.type === "checkout.session.completed") {
         const session = evt.data && evt.data.object;
@@ -4278,17 +4845,31 @@ var src_default = {
             intent.paymentRef = session.payment_intent || session.id;
             await saveIntent(env, intent);
             await pushQueue(env, intent.id);
+            publishWalletRealtime(env, {
+              id: intent.id,
+              wallet: intent.wallet,
+              kind: "topup-paid",
+              amount: intent.ostAmount,
+              sig: intent.paymentRef,
+              label: "Payment verified; OST delivery queued",
+              token: "OST",
+              ts: intent.paidAt
+            }, {
+              type: "topup.paid",
+              title: "Payment verified",
+              message: intent.ostAmount + " OST delivery is queued"
+            });
           }
         }
       }
-      return json4({ received: true });
+      return json5({ received: true });
     }
     const statusMatch = path.match(/^\/topup\/status\/([^/]+)$/);
     if (statusMatch && method === "GET") {
       const intent = await loadIntent(env, decodeURIComponent(statusMatch[1]));
       if (!intent)
-        return json4({ error: "not_found" }, 404);
-      return json4({
+        return json5({ error: "not_found" }, 404);
+      return json5({
         id: intent.id,
         status: intent.status,
         usd: intent.usd,
@@ -4305,27 +4886,27 @@ var src_default = {
     }
     if (path === "/topup/claim" && method === "POST") {
       if (!env.OST_KV)
-        return json4({ error: "kv_not_configured" }, 503);
+        return json5({ error: "kv_not_configured" }, 503);
       let body;
       try {
         body = await request.json();
       } catch {
-        return json4({ error: "invalid_json" }, 400);
+        return json5({ error: "invalid_json" }, 400);
       }
       const intent = await loadIntent(env, body && body.id);
       if (!intent)
-        return json4({ error: "not_found" }, 404);
+        return json5({ error: "not_found" }, 404);
       if (intent.status === "sent")
-        return json4({ ok: true, intent });
+        return json5({ ok: true, intent });
       if (intent.status !== "paid")
-        return json4({ error: "intent_not_paid", status: intent.status }, 409);
+        return json5({ error: "intent_not_paid", status: intent.status }, 409);
       const deliveryWallet = cleanText2(body && body.wallet, 64);
       if (deliveryWallet && intent.wallet && deliveryWallet !== intent.wallet) {
-        return json4({ error: "wallet_mismatch" }, 409);
+        return json5({ error: "wallet_mismatch" }, 409);
       }
       const deliverySignature = cleanText2(body && body.signature, 128);
       if (!deliverySignature)
-        return json4({ error: "missing_delivery_signature" }, 400);
+        return json5({ error: "missing_delivery_signature" }, 400);
       intent.status = "sent";
       intent.signature = deliverySignature;
       intent.sentAt = Date.now();
@@ -4343,11 +4924,25 @@ var src_default = {
         deliveryKind: intent.deliveryKind
       });
       await kvPut2(env, "topup:sent", recent.slice(0, 200));
-      return json4({ ok: true, intent });
+      publishWalletRealtime(env, {
+        id: intent.id,
+        wallet: intent.wallet,
+        kind: "topup-sent",
+        amount: intent.ostAmount,
+        sig: intent.signature,
+        label: "OST top-up delivered",
+        token: "OST",
+        ts: intent.sentAt
+      }, {
+        type: "topup.sent",
+        title: "Top-up delivered",
+        message: "+" + intent.ostAmount + " OST delivered"
+      });
+      return json5({ ok: true, intent });
     }
     if (path === "/topup/admin/pending" && method === "GET") {
       if (!adminAuthorized(request, env))
-        return json4({ error: "unauthorized" }, 401);
+        return json5({ error: "unauthorized" }, 401);
       const ids = await kvGet2(env, "topup:queue", []);
       const out = [];
       for (const id of ids.slice(0, 50)) {
@@ -4355,20 +4950,20 @@ var src_default = {
         if (it && it.status === "paid")
           out.push(it);
       }
-      return json4({ pending: out, count: out.length });
+      return json5({ pending: out, count: out.length });
     }
     if (path === "/topup/admin/mark-sent" && method === "POST") {
       if (!adminAuthorized(request, env))
-        return json4({ error: "unauthorized" }, 401);
+        return json5({ error: "unauthorized" }, 401);
       let body;
       try {
         body = await request.json();
       } catch {
-        return json4({ error: "invalid_json" }, 400);
+        return json5({ error: "invalid_json" }, 400);
       }
       const intent = await loadIntent(env, body && body.id);
       if (!intent)
-        return json4({ error: "not_found" }, 404);
+        return json5({ error: "not_found" }, 404);
       intent.status = "sent";
       intent.signature = String(body.signature || "").slice(0, 128) || null;
       intent.sentAt = Date.now();
@@ -4378,20 +4973,34 @@ var src_default = {
       const recent = await kvGet2(env, "topup:sent", []);
       recent.unshift({ id: intent.id, ostAmount: intent.ostAmount, wallet: intent.wallet, signature: intent.signature, sentAt: intent.sentAt });
       await kvPut2(env, "topup:sent", recent.slice(0, 200));
-      return json4({ ok: true, intent });
+      publishWalletRealtime(env, {
+        id: intent.id,
+        wallet: intent.wallet,
+        kind: "topup-sent",
+        amount: intent.ostAmount,
+        sig: intent.signature,
+        label: "OST top-up delivered",
+        token: "OST",
+        ts: intent.sentAt
+      }, {
+        type: "topup.sent",
+        title: "Top-up delivered",
+        message: "+" + intent.ostAmount + " OST delivered"
+      });
+      return json5({ ok: true, intent });
     }
     if (path === "/topup/admin/confirm-crypto" && method === "POST") {
       if (!adminAuthorized(request, env))
-        return json4({ error: "unauthorized" }, 401);
+        return json5({ error: "unauthorized" }, 401);
       let body;
       try {
         body = await request.json();
       } catch {
-        return json4({ error: "invalid_json" }, 400);
+        return json5({ error: "invalid_json" }, 400);
       }
       const intent = await loadIntent(env, body && body.id);
       if (!intent)
-        return json4({ error: "not_found" }, 404);
+        return json5({ error: "not_found" }, 404);
       if (intent.status === "pending") {
         intent.status = "paid";
         intent.paidAt = Date.now();
@@ -4400,73 +5009,73 @@ var src_default = {
         await saveIntent(env, intent);
         await pushQueue(env, intent.id);
       }
-      return json4({ ok: true, intent });
+      return json5({ ok: true, intent });
     }
     if (path === "/topup/crypto/verify" && method === "POST") {
       if (!env.OST_KV)
-        return json4({ error: "kv_not_configured" }, 503);
+        return json5({ error: "kv_not_configured" }, 503);
       let body;
       try {
         body = await request.json();
       } catch {
-        return json4({ error: "invalid_json" }, 400);
+        return json5({ error: "invalid_json" }, 400);
       }
       const intent = await loadIntent(env, body && body.intentId);
       if (!intent)
-        return json4({ error: "intent_not_found" }, 404);
+        return json5({ error: "intent_not_found" }, 404);
       if (intent.status === "sent" || intent.status === "paid") {
-        return json4({ ok: true, status: intent.status, intent });
+        return json5({ ok: true, status: intent.status, intent });
       }
       if (intent.status !== "pending")
-        return json4({ error: "intent_not_pending", status: intent.status }, 409);
+        return json5({ error: "intent_not_pending", status: intent.status }, 409);
       let verification;
       try {
         verification = await verifyCryptoTopupSignature(env, intent, body && body.signature);
       } catch (error) {
-        return json4({ error: "solana_rpc_failed", detail: cleanText2(error?.message || error, 180) }, 502);
+        return json5({ error: "solana_rpc_failed", detail: cleanText2(error?.message || error, 180) }, 502);
       }
       if (!verification.ok)
-        return json4({ error: verification.error, detail: verification.detail || null }, 400);
+        return json5({ error: verification.error, detail: verification.detail || null }, 400);
       const paid = await markIntentPaidFromCrypto(env, intent, verification, { enqueueDispatcher: false });
       if (!paid.ok)
-        return json4({ error: paid.error }, 409);
-      return json4({ ok: true, status: "paid", rail: verification.rail, signature: verification.signature, intent: paid.intent });
+        return json5({ error: paid.error }, 409);
+      return json5({ ok: true, status: "paid", rail: verification.rail, signature: verification.signature, intent: paid.intent });
     }
     const cryptoCheckMatch = path.match(/^\/topup\/crypto\/check\/([^/]+)$/);
     if (cryptoCheckMatch && method === "GET") {
       if (!env.OST_KV)
-        return json4({ error: "kv_not_configured" }, 503);
+        return json5({ error: "kv_not_configured" }, 503);
       const intent = await loadIntent(env, decodeURIComponent(cryptoCheckMatch[1]));
       if (!intent)
-        return json4({ error: "intent_not_found" }, 404);
+        return json5({ error: "intent_not_found" }, 404);
       if (intent.status !== "pending")
-        return json4({ ok: true, status: intent.status, intent });
+        return json5({ ok: true, status: intent.status, intent });
       let verification = null;
       try {
         verification = await findCryptoTopupPayment(env, intent);
       } catch (error) {
-        return json4({ ok: true, status: "pending", found: false, scanError: cleanText2(error?.message || error, 180) });
+        return json5({ ok: true, status: "pending", found: false, scanError: cleanText2(error?.message || error, 180) });
       }
       if (!verification)
-        return json4({ ok: true, status: "pending", found: false });
+        return json5({ ok: true, status: "pending", found: false });
       const paid = await markIntentPaidFromCrypto(env, intent, verification, { enqueueDispatcher: false });
       if (!paid.ok)
-        return json4({ error: paid.error }, 409);
-      return json4({ ok: true, status: "paid", found: true, rail: verification.rail, signature: verification.signature, intent: paid.intent });
+        return json5({ error: paid.error }, 409);
+      return json5({ ok: true, status: "paid", found: true, rail: verification.rail, signature: verification.signature, intent: paid.intent });
     }
     if (path === "/offline-vault/sync" && method === "POST") {
       if (!env.OST_KV)
-        return json4({ error: "kv_not_configured" }, 503);
+        return json5({ error: "kv_not_configured" }, 503);
       let body;
       try {
         body = await request.json();
       } catch {
-        return json4({ error: "invalid_json" }, 400);
+        return json5({ error: "invalid_json" }, 400);
       }
       const deviceId = cleanText2(body && body.deviceId, 80) || `anon-${crypto.randomUUID()}`;
       const events = Array.isArray(body && body.events) ? body.events.slice(0, 100) : [];
       if (!events.length)
-        return json4({ ok: true, accepted: 0, acceptedIds: [], status: "empty" });
+        return json5({ ok: true, accepted: 0, acceptedIds: [], status: "empty" });
       const accepted = events.map((event) => ({
         id: cleanText2(event && event.id, 100) || crypto.randomUUID(),
         kind: cleanText2(event && event.kind, 80),
@@ -4487,7 +5096,7 @@ var src_default = {
       const recent = await kvGet2(env, "offline-vault:recent", []);
       const recentMerged = accepted.reduce((bucket, record) => mergeNewest(bucket, { ...record, deviceId }, 500), recent);
       await kvPut2(env, "offline-vault:recent", recentMerged, 60 * 60 * 24 * 30);
-      return json4({
+      return json5({
         ok: true,
         accepted: accepted.length,
         acceptedIds: accepted.map((e) => e.id),
@@ -4498,23 +5107,23 @@ var src_default = {
     const offlineVaultStatusMatch = path.match(/^\/offline-vault\/status\/([^/]+)$/);
     if (offlineVaultStatusMatch && method === "GET") {
       if (!env.OST_KV)
-        return json4({ events: [], count: 0 });
+        return json5({ events: [], count: 0 });
       const deviceId = cleanText2(decodeURIComponent(offlineVaultStatusMatch[1]), 80);
       const events = await kvGet2(env, `offline-vault:${deviceId}`, []);
-      return json4({ deviceId, events: events.slice(0, 50), count: events.length, ts: (/* @__PURE__ */ new Date()).toISOString() });
+      return json5({ deviceId, events: events.slice(0, 50), count: events.length, ts: (/* @__PURE__ */ new Date()).toISOString() });
     }
     if (path === "/wallet/payouts" && method === "POST") {
       let body;
       try {
         body = await request.json();
       } catch (_) {
-        return json4({ error: "invalid_json" }, 400);
+        return json5({ error: "invalid_json" }, 400);
       }
       const wallet = cleanText2(body && body.wallet, 64);
       if (!wallet)
-        return json4({ error: "missing_wallet" }, 400);
+        return json5({ error: "missing_wallet" }, 400);
       if (!env.OST_KV)
-        return json4({ ok: true, stored: false });
+        return json5({ ok: true, stored: false });
       const stage = cleanText2(body && body.stage || "intent", 16);
       const id = cleanText2(body && body.id || crypto.randomUUID(), 80);
       const record = {
@@ -4548,31 +5157,36 @@ var src_default = {
       if (tail.length > 500)
         tail.length = 500;
       await kvPut2(env, "payouts:tail", tail, 60 * 60 * 24 * 14);
-      return json4({ ok: true, stored: true, record });
+      publishWalletRealtime(env, record, {
+        type: stage === "failure" ? "payout.failure" : stage === "result" ? "payout.result" : "payout.intent",
+        title: stage === "failure" ? "Payout failed" : stage === "result" ? "Payout confirmed" : "Payout started",
+        message: stage === "failure" ? record.error || "Payout failed" : (stage === "result" ? "+" : "") + record.ostAmount + " OST " + record.kind
+      });
+      return json5({ ok: true, stored: true, record });
     }
     if (path === "/wallet/payouts/recent" && method === "GET") {
       if (!env.OST_KV)
-        return json4({ recent: [], note: "KV not configured" });
+        return json5({ recent: [], note: "KV not configured" });
       const limit = Math.min(200, Number(url.searchParams.get("limit") || 50));
       const tail = await kvGet2(env, "payouts:tail", []);
-      return json4({ recent: tail.slice(0, limit), ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
+      return json5({ recent: tail.slice(0, limit), ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
     }
     const walletPayoutsMatch = path.match(/^\/wallet\/payouts\/([^/]+)$/);
     if (walletPayoutsMatch && method === "GET") {
       const wallet = decodeURIComponent(walletPayoutsMatch[1]);
       if (!env.OST_KV)
-        return json4({ payouts: [], wallet, note: "KV not configured" });
+        return json5({ payouts: [], wallet, note: "KV not configured" });
       const bucket = await kvGet2(env, `payouts:${wallet}`, []);
       const onlyOpen = url.searchParams.get("open") === "1";
       const filtered = onlyOpen ? bucket.filter((e) => e && e.stage === "intent") : bucket;
-      return json4({ payouts: filtered, wallet, count: filtered.length, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
+      return json5({ payouts: filtered, wallet, count: filtered.length, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
     }
     if (path.startsWith("/bot/v1/")) {
       const expectedKey = env.BOT_API_KEY || "ost-bot-public-test-key";
       const presentedKey = request.headers.get("x-ost-bot-key") || url.searchParams.get("botKey") || "";
       const sub = path.slice("/bot/v1".length);
       if (sub === "/health" && method === "GET") {
-        return json4({
+        return json5({
           ok: true,
           service: "ost-bot-api",
           version: "1.0",
@@ -4590,7 +5204,7 @@ var src_default = {
         }, 200, { "cache-control": "no-store" });
       }
       if (presentedKey !== expectedKey) {
-        return json4({ error: "unauthorized", message: "Pass x-ost-bot-key header. See /bot/v1/health for docs." }, 401);
+        return json5({ error: "unauthorized", message: "Pass x-ost-bot-key header. See /bot/v1/health for docs." }, 401);
       }
       if (sub === "/markets" && method === "GET") {
         const limit = Math.min(200, Number(url.searchParams.get("limit") || 60));
@@ -4612,7 +5226,7 @@ var src_default = {
           closeAtMs: btcRound.closeAt,
           msLeft: btcRound.msLeft
         }] : [];
-        return json4({ markets: ostNative.concat(markets), count: ostNative.length + markets.length, stale: !!active.stale, source: active.source, cachedAt: active.cachedAt || null, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
+        return json5({ markets: ostNative.concat(markets), count: ostNative.length + markets.length, stale: !!active.stale, source: active.source, cachedAt: active.cachedAt || null, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
       }
       const botMktMatch = sub.match(/^\/markets\/([^/]+)$/);
       if (botMktMatch && method === "GET") {
@@ -4620,11 +5234,11 @@ var src_default = {
         if (id.indexOf("ost-btc5m-") === 0) {
           const r = await getCanonicalBtcRound(env, { refresh: true });
           const state = await getNativeMarketState(env, id, r && r.yesPriceNumber);
-          return json4({ market: Object.assign({}, r, state, { marketState: state }), source: "ost-native" }, 200, { "cache-control": "no-store" });
+          return json5({ market: Object.assign({}, r, state, { marketState: state }), source: "ost-native" }, 200, { "cache-control": "no-store" });
         }
         if (isOstNativeMarketId(id, "ost-native")) {
           const state = await getNativeMarketState(env, id, url.searchParams.get("baseYes"));
-          return json4({ market: Object.assign({ id, source: "ost-native", isOstNative: true, title: id }, state, { marketState: state }), source: "ost-native" }, 200, { "cache-control": "no-store" });
+          return json5({ market: Object.assign({ id, source: "ost-native", isOstNative: true, title: id }, state, { marketState: state }), source: "ost-native" }, 200, { "cache-control": "no-store" });
         }
         const [detail, book] = await Promise.all([
           fetchMarketDetail(env, id),
@@ -4632,12 +5246,12 @@ var src_default = {
         ]);
         const gmkt = detail.raw;
         if (!gmkt)
-          return json4({ error: "market_not_found", id }, 404);
-        return json4({ market: normaliseMarket(gmkt), book: book || null, source: "polymarket", stale: !!detail.stale, cachedAt: detail.cachedAt || null, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
+          return json5({ error: "market_not_found", id }, 404);
+        return json5({ market: normaliseMarket(gmkt), book: book || null, source: "polymarket", stale: !!detail.stale, cachedAt: detail.cachedAt || null, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
       }
       if (sub === "/btc/round" && method === "GET") {
         const r = await getCanonicalBtcRound(env, { refresh: true });
-        return json4(r, 200, { "cache-control": "no-store" });
+        return json5(r, 200, { "cache-control": "no-store" });
       }
       const quoteMatch = sub.match(/^\/quote\/([^/]+)$/);
       if (quoteMatch && method === "GET") {
@@ -4650,7 +5264,7 @@ var src_default = {
           price = nativeTradePriceFromState(r, side, "buy") || (side === "NO" ? r.noPriceNumber : r.yesPriceNumber);
           const bidPrice = nativeTradePriceFromState(r, side, "sell") || price;
           const shares2 = price > 0 ? stake / price : 0;
-          return json4({
+          return json5({
             marketId: id,
             side,
             action: "buy",
@@ -4669,13 +5283,13 @@ var src_default = {
           const detail = await fetchMarketDetail(env, id);
           const gmkt = detail.raw;
           if (!gmkt)
-            return json4({ error: "market_not_found", id }, 404);
+            return json5({ error: "market_not_found", id }, 404);
           const m = normaliseMarket(gmkt);
           price = side === "NO" ? m.noPriceNumber : m.yesPriceNumber;
         }
         const shares = price > 0 ? stake / price : 0;
         const expectedPayout = shares;
-        return json4({
+        return json5({
           marketId: id,
           side,
           price,
@@ -4690,23 +5304,23 @@ var src_default = {
       if (botPosMatch && method === "GET") {
         const wallet = decodeURIComponent(botPosMatch[1]);
         if (!env.OST_KV)
-          return json4({ positions: [], note: "KV not configured", wallet });
+          return json5({ positions: [], note: "KV not configured", wallet });
         const positions = await kvGet2(env, `positions:${wallet}`, []);
-        return json4({ positions, wallet, count: positions.length, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
+        return json5({ positions, wallet, count: positions.length, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, { "cache-control": "no-store" });
       }
       if (sub === "/order" && method === "POST") {
         let body;
         try {
           body = await request.json();
         } catch (_) {
-          return json4({ error: "invalid_json" }, 400);
+          return json5({ error: "invalid_json" }, 400);
         }
         const wallet = cleanText2(body && body.wallet, 64);
         const marketId = cleanText2(body && body.marketId, 128);
         const side = String(body && body.side || "yes").toUpperCase().slice(0, 8);
         const stake = Number(body && body.stake);
         if (!wallet || !marketId || !Number.isFinite(stake) || stake <= 0) {
-          return json4({ error: "missing_fields", required: ["wallet", "marketId", "side", "stake"] }, 400);
+          return json5({ error: "missing_fields", required: ["wallet", "marketId", "side", "stake"] }, 400);
         }
         const nativeMarketStateBefore = isOstNativeMarketId(marketId, body && body.source) ? await getNativeMarketState(env, marketId, body && (body.baseYesPrice != null ? body.baseYesPrice : body.fairYesPrice)) : null;
         let price = nativeMarketStateBefore ? nativeTradePriceFromState(nativeMarketStateBefore, side, "buy") : Number(body && body.price);
@@ -4718,7 +5332,7 @@ var src_default = {
             const detail = await fetchMarketDetail(env, marketId);
             const gmkt = detail.raw;
             if (!gmkt)
-              return json4({ error: "market_not_found", marketId }, 404);
+              return json5({ error: "market_not_found", marketId }, 404);
             const m = normaliseMarket(gmkt);
             price = side === "NO" ? m.noPriceNumber : m.yesPriceNumber;
           }
@@ -4777,26 +5391,27 @@ var src_default = {
           await kvPut2(env, "positions:recent", mergeNewest(recent, record, 100), 60 * 60 * 24 * 7);
         }
         const marketState = await applyNativePositionToMarketState(env, record, nativeMarketStateBefore ? nativeMarketStateBefore.baseYesPrice : null);
-        return json4({ ok: true, order: record, stored: !!env.OST_KV, marketState }, 200, { "cache-control": "no-store" });
+        publishPositionRealtime(env, record, marketState, record);
+        return json5({ ok: true, order: record, stored: !!env.OST_KV, marketState }, 200, { "cache-control": "no-store" });
       }
       if (sub === "/order/cashout" && method === "POST") {
         let body;
         try {
           body = await request.json();
         } catch (_) {
-          return json4({ error: "invalid_json" }, 400);
+          return json5({ error: "invalid_json" }, 400);
         }
         const wallet = cleanText2(body && body.wallet, 64);
         const orderId = cleanText2(body && body.orderId, 128);
         if (!wallet || !orderId)
-          return json4({ error: "missing_fields", required: ["wallet", "orderId"] }, 400);
+          return json5({ error: "missing_fields", required: ["wallet", "orderId"] }, 400);
         if (!env.OST_KV)
-          return json4({ error: "kv_not_configured" }, 503);
+          return json5({ error: "kv_not_configured" }, 503);
         const walletKey = `positions:${wallet}`;
         const walletBucket = await kvGet2(env, walletKey, []);
         const idx = walletBucket.findIndex((p) => p && (p.id === orderId || p.signature === orderId));
         if (idx < 0)
-          return json4({ error: "order_not_found", orderId }, 404);
+          return json5({ error: "order_not_found", orderId }, 404);
         const order = walletBucket[idx];
         const side = String(order.side || body.side || "YES").toUpperCase() === "NO" ? "NO" : "YES";
         const nativeStateBefore = isOstNativeMarketId(order.marketId, order.source) ? await getNativeMarketState(env, order.marketId, order.baseYesPrice != null ? order.baseYesPrice : order.yesPrice) : null;
@@ -4842,17 +5457,19 @@ var src_default = {
         const recent = await kvGet2(env, "positions:recent", []);
         const flowRecord = recentFlowRecordForPosition(order);
         await kvPut2(env, "positions:recent", mergeNewest(recent, flowRecord, 100), 60 * 60 * 24 * 7);
-        return json4({ ok: true, order, marketState, flowRecord: flowRecord !== order ? flowRecord : null }, 200, { "cache-control": "no-store" });
+        publishPositionRealtime(env, order, marketState, flowRecord);
+        return json5({ ok: true, order, marketState, flowRecord: flowRecord !== order ? flowRecord : null }, 200, { "cache-control": "no-store" });
       }
-      return json4({ error: "unknown_bot_endpoint", path, hint: "GET /bot/v1/health for docs" }, 404);
+      return json5({ error: "unknown_bot_endpoint", path, hint: "GET /bot/v1/health for docs" }, 404);
     }
-    return json4({ error: "not_found", message: "Unknown endpoint. GET /health for the full endpoint list." }, 404);
+    return json5({ error: "not_found", message: "Unknown endpoint. GET /health for the full endpoint list." }, 404);
   }
 };
 export {
   FaucetGate,
   MeshHub,
   NativeMarketHub,
+  RealtimeHub,
   src_default as default
 };
 //# sourceMappingURL=index.js.map

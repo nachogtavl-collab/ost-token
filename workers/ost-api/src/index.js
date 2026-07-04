@@ -2498,10 +2498,56 @@ export default {
     }
 
     // Ghost router (Phase 2) will be wired here.
+    // ── POST /ghost/chat ─ OST Ghost companion brain (Workers AI, free tier) ──
+    if (path === '/ghost/chat' && method === 'POST') {
+      if (!env.AI || typeof env.AI.run !== 'function') {
+        return json({ error: 'ai_unavailable', note: 'Workers AI binding not deployed yet' }, 503);
+      }
+      let body = {};
+      try { body = await request.json(); } catch (_) {}
+      const userMessages = Array.isArray(body.messages) ? body.messages.slice(-6) : [];
+      const context = body.context && typeof body.context === 'object' ? body.context : {};
+      const cleanMsgs = userMessages
+        .filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
+        .map(m => ({ role: m.role, content: String(m.content).slice(0, 600) }));
+      if (!cleanMsgs.length) return json({ error: 'no_messages' }, 400);
+      const ctxSummary = JSON.stringify(context).slice(0, 1500);
+      const system = 'You are the OST Ghost, the friendly in-page companion of the OST token devnet app '
+        + '(prediction markets, 5-minute BTC/ETH/SOL rounds, parlays, faucet arcade games, offline vault). '
+        + 'You can see the live session data of this user: ' + ctxSummary + '. '
+        + 'Be warm, concise (2-4 sentences), concrete, and honest. Use their real numbers when relevant. '
+        + 'If they are losing, be kind and suggest a break or lower stakes - never promise wins. '
+        + 'Everything here is devnet test-token play, never financial advice. Answer questions about app features plainly.';
+      // Model fallback chain — Workers AI deprecates models over time, so we
+      // walk the list until one answers instead of hard-coding a single id.
+      const GHOST_MODELS = [
+        '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
+        '@cf/mistralai/mistral-small-3.1-24b-instruct',
+        '@cf/meta/llama-3.2-3b-instruct'
+      ];
+      const errors = [];
+      let lastError = '';
+      for (const model of GHOST_MODELS) {
+        try {
+          const ai = await env.AI.run(model, {
+            messages: [{ role: 'system', content: system }].concat(cleanMsgs),
+            max_tokens: 320
+          });
+          const reply = (ai && (ai.response || ai.result || '')) || '';
+          if (!reply) throw new Error('empty reply');
+          return json({ ok: true, reply: String(reply).slice(0, 2000), model, ts: Date.now() });
+        } catch (error) {
+          lastError = String(error && error.message || error).slice(0, 160);
+          errors.push(model.split('/').pop() + ': ' + lastError);
+        }
+      }
+      return json({ error: 'ai_failed', message: errors.join(' | ').slice(0, 500) }, 502);
+    }
+
     if (path.startsWith('/ghost/')) {
       const ghostV2 = await handleGhostV2Request(request, env, { path, method });
       if (ghostV2) return ghostV2;
-      return json({ error: 'unknown ghost endpoint', path }, { status: 404 });
+      return json({ error: 'unknown ghost endpoint', path }, 404);
     }
 
     // OST Mesh — quantum-ready P2P signaling + identity directory.

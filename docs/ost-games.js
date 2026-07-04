@@ -1055,150 +1055,256 @@
   function renderCrash(stage) {
     stage.innerHTML =
       '<div class="ostg-game ostg-crash">' +
+        '<div class="ostg-crash-history" id="crHistory"></div>' +
         '<div class="ostg-controls">' +
           '<label>Bet (OST)<input type="number" id="crBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
           '<label>Auto cash-out ×<input type="number" id="crAuto" min="1.01" step="0.01" value="3.00" inputmode="decimal"></label>' +
-          '<button class="ostg-btn ostg-btn-primary" id="crStart">Place bet</button>' +
-          '<button class="ostg-btn ostg-btn-cash" id="crCash" disabled>Cash out</button>' +
+          '<label class="ostg-crash-queue"><input type="checkbox" id="crQueue"> Auto-bet next round</label>' +
+          '<button class="ostg-btn ostg-btn-primary" id="crStart">Launch</button>' +
+          '<button class="ostg-btn ostg-btn-cash" id="crCash" disabled>Eject</button>' +
           '<div class="ostg-meta"><span>Peak</span> <strong id="crPeak">1.00x</strong></div>' +
         '</div>' +
         '<div class="ostg-crash-stage">' +
-          '<canvas id="crCanvas" width="640" height="280"></canvas>' +
+          '<canvas id="crCanvas" width="640" height="300"></canvas>' +
           '<div class="ostg-crash-mult" id="crMult">1.00×</div>' +
         '</div>' +
-        '<div class="ostg-status" id="crStatus">Set your bet and your auto cash-out target. Watch the rocket — cash out before it crashes.</div>' +
+        '<div class="ostg-status" id="crStatus">Set your bet and auto-eject target. The rocket climbs until it explodes — bank before it does.</div>' +
       '</div>';
+
+    if (!document.getElementById('ostgCrashDeluxeStyle')) {
+      var cst = document.createElement('style');
+      cst.id = 'ostgCrashDeluxeStyle';
+      cst.textContent =
+        '.ostg-crash-history{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;min-height:22px;}' +
+        '.ostg-crash-bust{border-radius:999px;padding:2px 10px;font-size:11px;font-weight:800;animation:crBustIn .3s ease;}' +
+        '.ostg-crash-bust.lo{background:rgba(255,124,138,0.16);color:#ff9aa5;}' +
+        '.ostg-crash-bust.mid{background:rgba(52,211,153,0.15);color:#7ce6a8;}' +
+        '.ostg-crash-bust.hi{background:rgba(245,196,104,0.22);color:#f5c468;box-shadow:0 0 12px rgba(245,196,104,0.4);}' +
+        '@keyframes crBustIn{from{transform:scale(.5);opacity:0;}to{transform:scale(1);opacity:1;}}' +
+        '.ostg-crash-queue{display:flex;align-items:center;gap:6px;font-size:11px;color:#8ea3c7;font-weight:700;}' +
+        '.ostg-crash-mult{transition:text-shadow .2s;}' +
+        '.ostg-crash-mult.is-hot{text-shadow:0 0 30px rgba(245,196,104,0.9);}';
+      document.head.appendChild(cst);
+    }
 
     var canvas = document.getElementById('crCanvas');
     var ctx = canvas.getContext('2d');
     var betEl = document.getElementById('crBet');
     var autoEl = document.getElementById('crAuto');
+    var queueEl = document.getElementById('crQueue');
     var startBtn = document.getElementById('crStart');
     var cashBtn = document.getElementById('crCash');
     var multEl = document.getElementById('crMult');
     var peakEl = document.getElementById('crPeak');
     var statusEl = document.getElementById('crStatus');
+    var historyEl = document.getElementById('crHistory');
+
+    var HIST_KEY = 'ost.crash.history.v1';
+    function readHist() { try { return JSON.parse(localStorage.getItem(HIST_KEY) || '[]') || []; } catch (_) { return []; } }
+    function pushHist(v) {
+      var h = readHist(); h.push(Number(v.toFixed(2)));
+      try { localStorage.setItem(HIST_KEY, JSON.stringify(h.slice(-12))); } catch (_) {}
+      paintHist();
+    }
+    function paintHist() {
+      historyEl.innerHTML = readHist().slice().reverse().map(function (v) {
+        var cls = v >= 10 ? 'hi' : v >= 2 ? 'mid' : 'lo';
+        return '<span class="ostg-crash-bust ' + cls + '">' + v.toFixed(2) + '×</span>';
+      }).join('') || '<span style="color:#475569;font-size:11px;">Last busts appear here</span>';
+    }
+    paintHist();
+
+    // ---- 3D-feel scene: parallax starfield + thrust particles ------------
+    var W = canvas.width, H = canvas.height;
+    var stars = [];
+    for (var si = 0; si < 90; si++) {
+      stars.push({ x: Math.random() * W, y: Math.random() * H, z: 0.25 + Math.random() * 0.75, r: 0.6 + Math.random() * 1.6 });
+    }
+    var particles = [];   // thrust exhaust
+    var shakeT = 0;       // screen shake after bust
 
     var session = null;
     var raf = 0;
-    activeGameCleanup = function () {
-      cancelAnimationFrame(raf);
-      session = null;
-    };
+    activeGameCleanup = function () { cancelAnimationFrame(raf); session = null; };
 
-    function draw(mult, t, crashed) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      var gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-      gradient.addColorStop(0, '#111827');
-      gradient.addColorStop(1, '#020617');
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      // grid
-      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-      for (var x = 0; x < canvas.width; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
-      for (var y = 0; y < canvas.height; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
-      // curve
-      var maxMult = Math.max(3, mult, session && session.cashMult || 1, session && session.peak || 1);
-      function yFor(value) {
-        var ratio = Math.log(Math.max(1, value)) / Math.log(maxMult);
-        return h - 22 - Math.min(h - 42, ratio * (h - 46));
+    function yFor(value, maxMult) {
+      var ratio = Math.log(Math.max(1, value)) / Math.log(Math.max(1.5, maxMult));
+      return H - 26 - Math.min(H - 52, ratio * (H - 56));
+    }
+
+    function draw(mult, t, crashed, dt) {
+      // camera shake
+      var sx = 0, sy = 0;
+      if (shakeT > 0) {
+        shakeT -= dt;
+        var s = Math.min(1, shakeT / 0.5) * 9;
+        sx = (Math.random() - 0.5) * s; sy = (Math.random() - 0.5) * s;
       }
+      ctx.save();
+      ctx.translate(sx, sy);
+      // deep space bg
+      var g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, crashed ? '#1c0a0f' : '#0b1022');
+      g.addColorStop(1, '#020617');
+      ctx.fillStyle = g;
+      ctx.fillRect(-12, -12, W + 24, H + 24);
+      // parallax stars — speed rises with the multiplier (depth illusion)
+      var speed = 18 + Math.min(360, (mult - 1) * 46);
+      stars.forEach(function (st) {
+        st.x -= speed * st.z * dt;
+        if (st.x < -4) { st.x = W + 4; st.y = Math.random() * H; }
+        ctx.globalAlpha = 0.35 + st.z * 0.55;
+        ctx.fillStyle = '#cbd5e1';
+        // streak into lines as speed builds (warp effect)
+        var len = Math.min(26, speed * st.z * 0.05);
+        ctx.fillRect(st.x, st.y, Math.max(st.r, len), st.r);
+      });
+      ctx.globalAlpha = 1;
+
+      var maxMult = Math.max(3, mult * 1.15, session && session.peak || 1);
+      // curve
       ctx.beginPath();
-      var w = canvas.width, h = canvas.height;
       for (var i = 0; i <= 100; i++) {
         var f = i / 100;
         var m = Math.pow(mult, f);
-        var px = f * Math.min(w - 22, 10 + t * 76);
-        var py = yFor(m);
+        var px = f * Math.min(W - 30, 12 + t * 72);
+        var py = yFor(m, maxMult);
         if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
       }
-      ctx.strokeStyle = crashed ? '#dc2626' : '#34d399';
+      ctx.strokeStyle = crashed ? '#ef4444' : '#34d399';
       ctx.lineWidth = 3;
+      ctx.shadowColor = crashed ? 'rgba(239,68,68,0.8)' : 'rgba(52,211,153,0.6)';
+      ctx.shadowBlur = 12;
       ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // cashout marker
       if (session && session.cashed && session.cashMult) {
-        var cashY = yFor(session.cashMult);
+        var cy = yFor(session.cashMult, maxMult);
         ctx.setLineDash([6, 6]);
-        ctx.beginPath(); ctx.moveTo(0, cashY); ctx.lineTo(w, cashY);
-        ctx.strokeStyle = 'rgba(245,196,104,0.6)'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy);
+        ctx.strokeStyle = 'rgba(245,196,104,0.65)'; ctx.lineWidth = 2; ctx.stroke();
         ctx.setLineDash([]);
         ctx.fillStyle = '#fde68a'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'left';
-        ctx.fillText('cashout ' + session.cashMult.toFixed(2) + 'x', 12, Math.max(18, cashY - 8));
+        ctx.fillText('ejected ' + session.cashMult.toFixed(2) + '×', 12, Math.max(18, cy - 8));
       }
-      // rocket head
-      var fx = Math.min(w - 20, Math.max(18, 10 + t * 76));
-      var fy = yFor(mult);
-      ctx.fillStyle = crashed ? '#dc2626' : '#f5c468';
-      ctx.font = '28px sans-serif';
+
+      // rocket + exhaust
+      var fx = Math.min(W - 26, Math.max(20, 12 + t * 72));
+      var fy = yFor(mult, maxMult);
+      if (!crashed) {
+        // spawn thrust particles
+        for (var pk = 0; pk < 3; pk++) {
+          particles.push({ x: fx - 12, y: fy + 8, vx: -60 - Math.random() * 90, vy: 24 + Math.random() * 40, ttl: 0.5 + Math.random() * 0.3, hot: Math.random() });
+        }
+      }
+      particles.forEach(function (p) {
+        p.ttl -= dt; p.x += p.vx * dt; p.y += p.vy * dt;
+        if (p.ttl <= 0) return;
+        ctx.globalAlpha = Math.max(0, p.ttl * 1.6);
+        ctx.fillStyle = p.hot > 0.6 ? '#fde68a' : p.hot > 0.3 ? '#fb923c' : '#94a3b8';
+        ctx.beginPath(); ctx.arc(p.x, p.y, 2.4 * p.ttl + 0.8, 0, Math.PI * 2); ctx.fill();
+      });
+      particles = particles.filter(function (p) { return p.ttl > 0; });
+      ctx.globalAlpha = 1;
+      ctx.font = '30px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(crashed ? '💥' : '🚀', fx, fy);
+      ctx.save();
+      if (!crashed) { ctx.translate(fx, fy); ctx.rotate(-0.5 - Math.min(0.5, (mult - 1) * 0.06)); ctx.fillText('🚀', 0, 0); }
+      else { ctx.translate(fx, fy); ctx.fillText('💥', 0, 0); }
+      ctx.restore();
+      ctx.restore();
+    }
+
+    function endRound(finalMult) {
+      pushHist(finalMult);
+      startBtn.disabled = false; cashBtn.disabled = true;
+      betEl.disabled = false; autoEl.disabled = false;
+      var again = queueEl.checked;
+      session = null;
+      if (again) {
+        var n = 3;
+        statusEl.textContent = 'Auto-bet: next launch in ' + n + '…';
+        var cd = setInterval(function () {
+          n -= 1;
+          if (!queueEl.checked) { clearInterval(cd); statusEl.textContent = 'Auto-bet cancelled.'; return; }
+          if (n <= 0) { clearInterval(cd); onStart(); return; }
+          statusEl.textContent = 'Auto-bet: next launch in ' + n + '…';
+        }, 1000);
+      }
     }
 
     async function onStart() {
       var amt = parseBet(betEl, statusEl);
       if (amt === null) return;
       var res = placeBet(amt);
-      if (!res.ok) { statusEl.textContent = res.msg; return; }
+      if (!res.ok) { statusEl.textContent = res.msg; queueEl.checked = false; return; }
       var floats = await pfFloats(1);
       var crashAt = crashPoint(floats[0]);
       var auto = clamp(parseFloat(autoEl.value) || 0, 0, 1000000);
       if (auto > 0 && auto < 1.01) auto = 1.01;
-      session = { bet: amt, crashAt: crashAt, auto: auto, t0: performance.now(), cashed: false, cashMult: 0, peak: 1 };
+      session = { bet: amt, crashAt: crashAt, auto: auto, t0: performance.now(), lastT: performance.now(), cashed: false, cashMult: 0, peak: 1 };
       if (peakEl) peakEl.textContent = '1.00x';
       startBtn.disabled = true; cashBtn.disabled = false; betEl.disabled = true; autoEl.disabled = true;
-      statusEl.textContent = 'Flying… cash out before the multiplier explodes.';
-      function tick() {
+      statusEl.textContent = 'Climbing… eject before the explosion.';
+      function tick(now) {
         if (!session) return;
-        var elapsed = (performance.now() - session.t0) / 1000;
-        var mult = Math.pow(Math.E, 0.32 * elapsed); // punchier, more arcade-like exponential
-        session.peak = Math.max(session.peak || 1, mult);
+        var dt = Math.min(0.05, (now - session.lastT) / 1000);
+        session.lastT = now;
+        var elapsed = (now - session.t0) / 1000;
+        var mult = Math.pow(Math.E, 0.32 * elapsed);
+        session.peak = Math.max(session.peak || 1, Math.min(mult, session.crashAt));
         if (peakEl) peakEl.textContent = shortMult(session.peak);
         if (mult >= session.crashAt) {
           mult = session.crashAt;
-          draw(mult, elapsed, true);
+          shakeT = 0.55;
+          draw(mult, elapsed, true, dt);
           multEl.textContent = mult.toFixed(2) + '× CRASH';
           multEl.style.color = '#fca5a5';
+          multEl.classList.remove('is-hot');
           if (!session.cashed) {
-            settleGame('crash', session.bet, 0, 0, statusEl, '💥 Crashed at ' + shortMult(mult) + ' — lost ' + session.bet.toFixed(2) + ' OST.', canvas.parentElement);
+            settleGame('crash', session.bet, 0, 0, statusEl, '💥 Exploded at ' + shortMult(mult) + ' — lost ' + session.bet.toFixed(2) + ' OST.', canvas.parentElement);
           } else {
-            statusEl.textContent = 'Round crashed at ' + shortMult(mult) + '. You banked at ' + shortMult(session.cashMult) + '.';
+            statusEl.textContent = 'Exploded at ' + shortMult(mult) + '. You ejected at ' + shortMult(session.cashMult) + ' — perfect timing.';
           }
-          endRound();
+          // let the shake play out
+          var doneMult = mult;
+          var post = 0;
+          (function shakeLoop(n2) {
+            var d2 = 0.016;
+            draw(doneMult, elapsed, true, d2);
+            post += d2;
+            if (post < 0.6) raf = requestAnimationFrame(function () { shakeLoop(); });
+            else endRound(doneMult);
+          })();
           return;
         }
-        if (session.auto && mult >= session.auto && !session.cashed) {
-          onCash(true);
-        }
+        if (session.auto && mult >= session.auto && !session.cashed) onCash(true);
         multEl.textContent = mult.toFixed(2) + '×';
         multEl.style.color = mult >= 10 ? '#fca5a5' : mult >= 3 ? '#fde68a' : mult >= 2 ? '#86efac' : '#f8fafc';
-        draw(mult, elapsed, false);
+        multEl.classList.toggle('is-hot', mult >= 3);
+        draw(mult, elapsed, false, dt);
         raf = requestAnimationFrame(tick);
       }
-      tick();
+      raf = requestAnimationFrame(tick);
     }
 
     function onCash(isAuto) {
       if (!session || session.cashed) return;
-      session.cashed = true;
       var elapsed = (performance.now() - session.t0) / 1000;
-      var mult = Math.min(session.crashAt, Math.pow(Math.E, 0.32 * elapsed));
+      var mult = Math.min(Math.pow(Math.E, 0.32 * elapsed), session.crashAt);
+      if (mult >= session.crashAt) return; // too late — bust handler owns it
+      session.cashed = true;
       session.cashMult = mult;
+      cashBtn.disabled = true;
       var payout = session.bet * mult;
-      cashBtn.disabled = true;
-      settleGame('crash', session.bet, payout, mult, statusEl, (isAuto ? '🤖 Auto ' : '💰 ') + 'cashed out at ' + shortMult(mult) + ' for ' + payout.toFixed(2) + ' OST. Round keeps flying…', canvas.parentElement);
-    }
-
-    function endRound() {
-      cancelAnimationFrame(raf);
-      session = null;
-      startBtn.disabled = false;
-      cashBtn.disabled = true;
-      betEl.disabled = false;
-      autoEl.disabled = false;
+      settleGame('crash', session.bet, payout, mult, statusEl,
+        (isAuto ? '🎯 Auto-ejected' : '🪂 Ejected') + ' at ' + shortMult(mult) + ' — banked ' + payout.toFixed(2) + ' OST. Rocket still flying…', canvas.parentElement);
     }
 
     startBtn.addEventListener('click', onStart);
     cashBtn.addEventListener('click', function () { onCash(false); });
-    draw(1, 0, false);
+    draw(1, 0, false, 0.016);
   }
 
   // ────────────────────────────────────────────────────────────────────────
@@ -3140,54 +3246,229 @@
   }
 
   function renderDragonTower(stage) {
-    renderQuickCasino(stage, {
-      id: 'dragontower', meta: 'Path risk tower', button: 'Climb tower', optionLabel: 'Mode',
-      options: [
-        { value: 'easy', label: 'Easy · 4 floors' },
-        { value: 'medium', label: 'Medium · 5 floors' },
-        { value: 'hard', label: 'Hard · 5 floors' }
-      ],
-      idle: '<div class="ostg-versus">Dragon Tower</div>', status: 'Climb a tower of eggs. Hit a dragon trap and the run ends.',
-      preview: function(pick, amount) {
-        var modes = { easy: { rows: 4, trap: 0.18 }, medium: { rows: 5, trap: 0.28 }, hard: { rows: 5, trap: 0.42 } };
-        var mode = modes[pick] || modes.easy;
-        var chance = Math.pow(1 - mode.trap, mode.rows);
-        var multiplier = 0.99 / chance;
-        return { chance: (chance * 100).toFixed(2) + '%', multiplier: shortMult(multiplier), payout: fmt(amount * multiplier) + ' OST', risk: pick || 'easy' };
-      },
-      resolve: async function(amount, pick) {
-        var modes = {
-          easy: { rows: 4, cols: 4, trap: 0.18, label: 'Easy' },
-          medium: { rows: 5, cols: 3, trap: 0.28, label: 'Medium' },
-          hard: { rows: 5, cols: 2, trap: 0.42, label: 'Hard' }
-        };
-        var mode = modes[pick] || modes.easy;
-        var floats = await pfFloats(mode.rows * 2);
-        var survivedRows = 0;
-        var bustRow = -1;
-        for (var row = 0; row < mode.rows; row++) {
-          if (floats[row] < mode.trap) { bustRow = row; break; }
-          survivedRows += 1;
-        }
-        var survived = survivedRows === mode.rows;
-        var multiplier = survived ? 0.99 / Math.pow(1 - mode.trap, mode.rows) : 0;
-        var htmlRows = [];
-        for (var r = mode.rows - 1; r >= 0; r--) {
-          htmlRows.push('<div class="ostg-tower-row is-current" style="--tower-cols:' + mode.cols + '">' + Array.from({ length: mode.cols }).map(function(_, c) {
-            var picked = c === Math.floor((floats[mode.rows + r] || 0) * mode.cols);
-            var cleared = r < survivedRows || survived;
-            var cls = picked && cleared ? 'is-safe' : (picked && r === bustRow ? 'is-trap' : '');
-            return '<span class="ostg-tower-cell ' + cls + '">' + (cls === 'is-trap' ? '🐉' : picked ? '🥚' : '·') + '</span>';
-          }).join('') + '</div>');
-        }
-        return {
-          html: '<div class="ostg-tower-board">' + htmlRows.join('') + '</div><div class="ostg-world-note">' + mode.label + ' path · ' + survivedRows + '/' + mode.rows + ' floors</div>',
-          payout: amount * multiplier,
-          multiplier: multiplier,
-          text: survived ? 'Dragon Tower cleared for ' + shortMult(multiplier) + '.' : 'Dragon trap on floor ' + (bustRow + 1) + '.'
-        };
+    // Full interactive climb — replaces the old one-click instant version.
+    // Pick a tile on each floor; eggs climb, a dragon ends the run. Cash out
+    // between floors. Provably-fair dragon placement via pfFloats.
+    var MODES = {
+      easy:   { cols: 4, floors: 8, label: 'Easy',   factor: 0.99 * 4 / 3 },
+      medium: { cols: 3, floors: 8, label: 'Medium', factor: 0.99 * 3 / 2 },
+      hard:   { cols: 2, floors: 8, label: 'Hard',   factor: 0.99 * 2 / 1 }
+    };
+
+    stage.innerHTML =
+      '<div class="ostg-game ostg-dragontower">' +
+        '<div class="ostg-controls">' +
+          '<label>Bet (OST)<input type="number" id="dtBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
+          '<label>Mode<select id="dtMode">' +
+            '<option value="easy">Easy · 4 tiles</option>' +
+            '<option value="medium" selected>Medium · 3 tiles</option>' +
+            '<option value="hard">Hard · 2 tiles</option>' +
+          '</select></label>' +
+          '<button class="ostg-btn ostg-btn-primary" id="dtStart">Enter the tower</button>' +
+          '<button class="ostg-btn ostg-btn-cash" id="dtCash" disabled>Descend with loot</button>' +
+          '<div class="ostg-meta"><span>Floor</span> <strong id="dtFloor">—</strong></div>' +
+          '<div class="ostg-meta"><span>Current</span> <strong id="dtMult">1.00x</strong></div>' +
+        '</div>' +
+        '<div class="dt-ladder" id="dtLadder"></div>' +
+        '<div class="dt-tower-wrap"><div class="dt-tower" id="dtTower"></div></div>' +
+        '<div class="ostg-status" id="dtStatus">Pick a mode and enter. One tile per floor hides a dragon — the rest hold eggs. Climb all 8 floors for the max multiplier.</div>' +
+      '</div>';
+
+    if (!document.getElementById('ostgDragonTowerStyle')) {
+      var dst = document.createElement('style');
+      dst.id = 'ostgDragonTowerStyle';
+      dst.textContent =
+        '.dt-ladder{display:flex;gap:5px;overflow-x:auto;padding:4px 2px 8px;scrollbar-width:thin;}' +
+        '.dt-step{flex:0 0 auto;border-radius:9px;padding:4px 9px;font-size:10.5px;font-weight:800;text-align:center;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);color:#8ea3c7;min-width:56px;}' +
+        '.dt-step small{display:block;font-size:9px;opacity:.7;}' +
+        '.dt-step.is-done{background:rgba(52,211,153,0.16);border-color:rgba(52,211,153,0.45);color:#7ce6a8;}' +
+        '.dt-step.is-next{background:rgba(249,115,22,0.16);border-color:rgba(249,115,22,0.55);color:#fdba74;animation:dtPulse 1.4s infinite;}' +
+        '@keyframes dtPulse{0%,100%{box-shadow:0 0 0 0 rgba(249,115,22,0.35);}50%{box-shadow:0 0 0 6px rgba(249,115,22,0);}}' +
+        '.dt-tower-wrap{max-height:340px;overflow-y:auto;border-radius:14px;background:linear-gradient(180deg,#170f08,#0a0e1c 80%);border:1px solid rgba(249,115,22,0.25);padding:10px;scrollbar-width:thin;}' +
+        '.dt-tower{display:flex;flex-direction:column;gap:7px;}' +
+        '.dt-floor{display:grid;gap:7px;opacity:.45;transition:opacity .3s,transform .3s;}' +
+        '.dt-floor.is-active{opacity:1;transform:scale(1.02);}' +
+        '.dt-floor.is-cleared{opacity:.85;}' +
+        '.dt-floor-label{grid-column:1/-1;font-size:9.5px;font-weight:800;color:#64748b;letter-spacing:.06em;}' +
+        '.dt-tile{position:relative;height:48px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:linear-gradient(165deg,#1c2438,#111827);cursor:pointer;perspective:300px;font-size:20px;display:flex;align-items:center;justify-content:center;color:#475569;transition:border-color .15s,transform .12s;}' +
+        '.dt-floor.is-active .dt-tile:hover{border-color:#fb923c;transform:translateY(-2px);}' +
+        '.dt-tile:disabled{cursor:default;}' +
+        '.dt-tile .dt-flip{transition:transform .3s cubic-bezier(.3,1.4,.5,1);transform-style:preserve-3d;display:flex;align-items:center;justify-content:center;width:100%;height:100%;}' +
+        '.dt-tile.is-open .dt-flip{transform:rotateX(180deg);}' +
+        '.dt-tile .dt-face{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;backface-visibility:hidden;border-radius:inherit;}' +
+        '.dt-tile .dt-back{transform:rotateX(180deg);}' +
+        '.dt-tile.is-egg .dt-back{background:radial-gradient(circle,rgba(52,211,153,0.3),transparent 75%);}' +
+        '.dt-tile.is-dragon .dt-back{background:radial-gradient(circle,rgba(239,68,68,0.4),transparent 75%);}' +
+        '.dt-tower-wrap.is-burning{animation:dtBurn .6s ease;}' +
+        '@keyframes dtBurn{0%,100%{transform:translate(0);}20%{transform:translate(-6px,3px);}40%{transform:translate(6px,-3px);}60%{transform:translate(-4px,-2px);}80%{transform:translate(3px,2px);}}';
+      document.head.appendChild(dst);
+    }
+
+    var betEl = document.getElementById('dtBet');
+    var modeEl = document.getElementById('dtMode');
+    var startBtn = document.getElementById('dtStart');
+    var cashBtn = document.getElementById('dtCash');
+    var floorEl = document.getElementById('dtFloor');
+    var multEl = document.getElementById('dtMult');
+    var statusEl = document.getElementById('dtStatus');
+    var towerEl = document.getElementById('dtTower');
+    var ladderEl = document.getElementById('dtLadder');
+    var wrapEl = stage.querySelector('.dt-tower-wrap');
+
+    var session = null;
+    activeGameCleanup = function () { session = null; };
+
+    function multAt(mode, floorsCleared) {
+      return Math.pow(mode.factor, floorsCleared);
+    }
+
+    function paintLadder() {
+      var mode = MODES[session ? session.mode : modeEl.value] || MODES.medium;
+      var betAmt = session ? session.bet : (parseFloat(betEl.value) || 1);
+      var cleared = session ? session.floor : 0;
+      var html = '';
+      for (var f = 1; f <= mode.floors; f++) {
+        var m = multAt(mode, f);
+        var cls = f <= cleared ? ' is-done' : (f === cleared + 1 && session ? ' is-next' : '');
+        html += '<span class="dt-step' + cls + '">' + shortMult(m) + '<small>' + (betAmt * m).toFixed(1) + ' OST</small></span>';
       }
-    });
+      ladderEl.innerHTML = html;
+    }
+
+    function buildTower(mode) {
+      towerEl.innerHTML = '';
+      // render top floor first so climbing reads upward
+      for (var f = mode.floors - 1; f >= 0; f--) {
+        var row = document.createElement('div');
+        row.className = 'dt-floor';
+        row.dataset.floor = String(f);
+        row.style.gridTemplateColumns = 'repeat(' + mode.cols + ',1fr)';
+        var label = document.createElement('div');
+        label.className = 'dt-floor-label';
+        label.textContent = 'FLOOR ' + (f + 1) + ' · ' + shortMult(multAt(mode, f + 1));
+        row.appendChild(label);
+        for (var c = 0; c < mode.cols; c++) {
+          var tile = document.createElement('button');
+          tile.type = 'button';
+          tile.className = 'dt-tile';
+          tile.dataset.floor = String(f);
+          tile.dataset.col = String(c);
+          tile.disabled = true;
+          tile.innerHTML = '<span class="dt-flip"><span class="dt-face dt-front">🚪</span><span class="dt-face dt-back"></span></span>';
+          tile.addEventListener('click', onTile);
+          row.appendChild(tile);
+        }
+        towerEl.appendChild(row);
+      }
+    }
+
+    function setActiveFloor(f) {
+      towerEl.querySelectorAll('.dt-floor').forEach(function (row) {
+        var rf = parseInt(row.dataset.floor, 10);
+        row.classList.toggle('is-active', rf === f);
+        row.classList.toggle('is-cleared', rf < f);
+        row.querySelectorAll('.dt-tile').forEach(function (t) { t.disabled = rf !== f || t.classList.contains('is-open'); });
+      });
+      var row = towerEl.querySelector('.dt-floor[data-floor="' + f + '"]');
+      if (row && row.scrollIntoView) row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+
+    function openTile(tile, isDragon) {
+      var back = tile.querySelector('.dt-back');
+      if (back) back.textContent = isDragon ? '🐉' : '🥚';
+      tile.classList.add('is-open', isDragon ? 'is-dragon' : 'is-egg');
+      tile.disabled = true;
+    }
+
+    function updateMeta() {
+      if (!session) { floorEl.textContent = '—'; multEl.textContent = '1.00x'; cashBtn.disabled = true; cashBtn.textContent = 'Descend with loot'; paintLadder(); return; }
+      var mode = MODES[session.mode];
+      var m = multAt(mode, session.floor);
+      floorEl.textContent = session.floor + '/' + mode.floors;
+      multEl.textContent = shortMult(m);
+      cashBtn.disabled = session.floor < 1;
+      cashBtn.textContent = session.floor >= 1 ? ('💰 Descend · ' + (session.bet * m).toFixed(2) + ' OST') : 'Descend with loot';
+      paintLadder();
+    }
+
+    async function onStart() {
+      var amt = parseBet(betEl, statusEl);
+      if (amt === null) return;
+      var res = placeBet(amt);
+      if (!res.ok) { statusEl.textContent = res.msg; return; }
+      var mode = MODES[modeEl.value] || MODES.medium;
+      var floats = await pfFloats(mode.floors);
+      var dragons = floats.map(function (f) { return Math.floor(f * mode.cols); });
+      session = { bet: amt, mode: modeEl.value, dragons: dragons, floor: 0 };
+      buildTower(mode);
+      setActiveFloor(0);
+      updateMeta();
+      startBtn.disabled = true; betEl.disabled = true; modeEl.disabled = true;
+      statusEl.textContent = 'Floor 1 — pick a door. One hides the dragon.';
+    }
+
+    function onTile(e) {
+      if (!session) return;
+      var tile = e.currentTarget;
+      var f = parseInt(tile.dataset.floor, 10);
+      var c = parseInt(tile.dataset.col, 10);
+      if (f !== session.floor) return;
+      var mode = MODES[session.mode];
+      var isDragon = session.dragons[f] === c;
+      openTile(tile, isDragon);
+      if (isDragon) {
+        wrapEl.classList.remove('is-burning');
+        void wrapEl.offsetWidth;
+        wrapEl.classList.add('is-burning');
+        // reveal the rest of this floor + all dragons above
+        towerEl.querySelectorAll('.dt-tile').forEach(function (t) {
+          var tf = parseInt(t.dataset.floor, 10), tc = parseInt(t.dataset.col, 10);
+          if (t.classList.contains('is-open')) return;
+          if (tf >= f) setTimeout(function () { openTile(t, session && session.dragons ? session.dragons[tf] === tc : false); }, (tf - f) * 120 + 150);
+        });
+        var lostBet = session.bet;
+        settleGame('dragontower', lostBet, 0, 0, statusEl, '🐉 The dragon got you on floor ' + (f + 1) + '. Lost ' + fmt(lostBet) + ' OST.', towerEl);
+        endRun();
+      } else {
+        session.floor += 1;
+        updateMeta();
+        var m = multAt(mode, session.floor);
+        if (session.floor >= mode.floors) {
+          var payout = session.bet * m;
+          settleGame('dragontower', session.bet, payout, m, statusEl, '👑 TOWER CONQUERED — ' + shortMult(m) + ' pays ' + payout.toFixed(2) + ' OST!', towerEl);
+          endRun();
+        } else {
+          setActiveFloor(session.floor);
+          statusEl.textContent = '🥚 Floor ' + session.floor + ' cleared · ' + shortMult(m) + ' — climb or descend with the loot.';
+        }
+      }
+    }
+
+    function onCash() {
+      if (!session || session.floor < 1) return;
+      var mode = MODES[session.mode];
+      var m = multAt(mode, session.floor);
+      var payout = session.bet * m;
+      settleGame('dragontower', session.bet, payout, m, statusEl, '💰 Descended from floor ' + session.floor + ' with ' + payout.toFixed(2) + ' OST (' + shortMult(m) + ').', towerEl);
+      endRun();
+    }
+
+    function endRun() {
+      var keepDragons = session ? session.dragons : null;
+      session = session ? { dragons: keepDragons } : null; // reveal callbacks may still need positions
+      setTimeout(function () { session = null; }, 1600);
+      startBtn.disabled = false; betEl.disabled = false; modeEl.disabled = false;
+      cashBtn.disabled = true; cashBtn.textContent = 'Descend with loot';
+      towerEl.querySelectorAll('.dt-floor').forEach(function (row) { row.classList.remove('is-active'); });
+      floorEl.textContent = '—';
+    }
+
+    [modeEl, betEl].forEach(function (el) { el.addEventListener('input', function () { if (!session) paintLadder(); }); });
+    startBtn.addEventListener('click', onStart);
+    cashBtn.addEventListener('click', onCash);
+    buildTower(MODES[modeEl.value] || MODES.medium);
+    paintLadder();
+    updateMeta();
   }
 
   function renderDiamonds(stage) {

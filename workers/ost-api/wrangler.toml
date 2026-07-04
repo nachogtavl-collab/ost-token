@@ -5,6 +5,10 @@ compatibility_date = "2025-01-01"
 [placement]
 mode = "smart"
 
+# Workers AI - powers the OST Ghost companion chat (free tier, no API key)
+[ai]
+binding = "AI"
+
 # KV namespace for shared positions, launchpad coins, round prices.
 # Created 2026-04-28; binding name MUST stay "OST_KV" to match src/index.js.
 [[kv_namespaces]]

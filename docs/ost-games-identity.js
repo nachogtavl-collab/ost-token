@@ -33,6 +33,7 @@
     coin:       { a: '#f5c468', b: '#94a3b8', motif: '🪙', verb: '🪙 Flip it' },
     keno:       { a: '#6d9fff', b: '#34d399', motif: '🔢', verb: '🎱 Draw numbers' },
     tower:      { a: '#fb7185', b: '#facc15', motif: '🗼', verb: '🧗 Start the climb', cash: '💰 Descend with loot' },
+    dragontower:{ a: '#f97316', b: '#22c55e', motif: '🐉', verb: '🐉 Enter the tower',  cash: '💰 Descend with loot' },
     roulette:   { a: '#ef4444', b: '#22c55e', motif: '🎰', verb: '🎡 Spin the strip' },
     slots:      { a: '#fde047', b: '#f472b6', motif: '🍒', verb: '🍒 Pull the lever' },
     blackjack:  { a: '#22c55e', b: '#f8fafc', motif: '🂡', verb: '🃏 Deal' },
@@ -49,9 +50,9 @@
     limbo: '#lbRoll', hilo: '#hlStart', wheel: '#whSpin', coin: '#cfDisk',
     keno: '#knDraw', tower: '#twStart', roulette: '#rtSpin', slots: '#slSpin',
     blackjack: '#bjDeal', baccarat: '#baDeal', videopoker: '#vpDeal',
-    penalty: '#pnBall'
+    penalty: '#pnBall', dragontower: '#dtStart'
   };
-  var CASH = { mines: '#mnCash', crash: '#crCash', hilo: '#hlCash', tower: '#twCash' };
+  var CASH = { mines: '#mnCash', crash: '#crCash', hilo: '#hlCash', tower: '#twCash', dragontower: '#dtCash' };
 
   function injectStyles() {
     if (document.getElementById('ostGamesIdentityStyle')) return;
