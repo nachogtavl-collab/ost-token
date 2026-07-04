@@ -5937,6 +5937,8 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <!-- RPC multiplexer: every Connection instance auto-fails-over and broadcast-sends.
        MUST load BEFORE app.js so all connections built by the app inherit the wrapper. -->
+  <!-- Data Guard: recover/back up critical storage BEFORE anything reads it. -->
+  <script src="ost-data-guard.js?v=1"></script>
   <script src="rpc-multiplexer.js?v=200"></script>
   <!-- Optimistic UX layer (toast + balance hint + tx simulation). Loads early so
        faucet-hub, ost-onchain-bet, and wallet-extras can use window.OST_OPTIMISTIC. -->
@@ -5959,6 +5961,8 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
     <script src="ost-games-meta.js?v=1"></script>
     <script src="ost-games-identity.js?v=1"></script>
     <script src="ost-live-prices.js?v=1"></script>
+    <script src="ost-telemetry.js?v=1"></script>
+    <script src="ost-live-stats.js?v=1"></script>
     <script src="ost-pro-fast-tiles.js?v=1"></script>
     <script src="ost-wc-rail.js?v=1"></script>
     <script src="ost-total-balance.js?v=1"></script>
