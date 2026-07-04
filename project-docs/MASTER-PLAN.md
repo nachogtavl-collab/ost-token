@@ -131,3 +131,40 @@ honest source of "volatility" — organic, not fabricated.
 **Mesh + Ghost**: both load without fatal errors (Mesh renders full DOM +
 ~730 controls; Ghost API present). A true "modern social + live P2P data"
 rebuild is a dedicated multi-session effort — staged, not faked.
+
+---
+
+## Session 2026-07-04 (part 2): games + Ghost + Mesh foundation
+
+**Crash & Dragon Tower** — deep 3D-feel rebuilds shipped (Crash: parallax
+warp starfield, thrust particles, camera shake, bust history, auto-bet
+queue; Dragon Tower: real interactive floor-by-floor climb with door flips,
+multiplier ladder, cash-out). ✅ live + playtested.
+
+**OST Ghost is a live companion** ✅ — `ost-ghost-companion.js` reads every
+store (credits, wallet, bets, parlays w/ live value, streaks, pending
+payouts, treasury), mood ring on session P/L, proactive throttled bubbles,
+local brain for instant data answers, and an ONLINE brain: Llama 3.3 70B on
+Cloudflare Workers AI via new `POST /ghost/chat` (free tier, no key). Model
+fallback chain guards against Workers-AI deprecations.
+
+**Mesh P2P — root causes fixed, live test quota-gated:**
+- QR ✅ verified: the old "QR" was an external api.qrserver.com image that
+  silently failed → cameras scanned nothing. Now vendored qrcode-generator
+  (real canvas QR) + vendored jsQR decoder (offline-capable). Round-trip
+  encode→decode proven in-browser.
+- Durable messaging ✅ deployed: MeshHub Durable Object now has
+  `msg/send`, `msg/inbox` (7-day store-and-forward), `presence` — real
+  online/offline single-thread chat transport. Uses DO `state.storage`,
+  not KV.
+- ⚠️ **Cloudflare free-tier daily limits hit** (KV 1000 writes/day + the
+  100k req/day cap → error 1027 account lockout for the day). Caused by
+  last session's telemetry writing KV on every event. FIXED the recurrence
+  (worker coalesces writes to ~1/20s + per-bucket; client batches to 1
+  event/min). But **live cross-device mesh chat can't be green-tested until
+  the UTC-midnight quota reset.**
+- 🔨 NEXT: (a) client chat UI wiring the new durable endpoints into one
+  online/offline thread with presence dots + poll/drain + optimistic send;
+  (b) verify live after quota reset. RECOMMENDATION: the $5/mo Cloudflare
+  Workers Paid plan removes these daily caps entirely and is the real fix
+  for a growing tester base.
