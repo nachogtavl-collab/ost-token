@@ -92,3 +92,42 @@ prerequisite), or 🔭 research. Updated 2026-07-03.
 - 🔨 Next (unblocked — wrangler is logged in): worker upgrade for
   server-authoritative ETH/SOL rounds + realtime broadcast of every bet;
   leaderboards & win streaks; 1-min turbo rounds.
+
+---
+
+## Foundation findings (2026-07-04) — hard constraints, read before "mint trillions"
+
+**Supply ceiling is REAL and physical.** The OST mint uses 9 decimals. SPL
+amounts are u64, so max total supply = 2^64−1 / 10^9 = **18.446 billion OST**,
+period. Current supply is ~11.04B, leaving only ~7.4B headroom. **Trillions
+are impossible on this mint.** Options if a trillion-scale token is truly
+wanted:
+- **Keep 9 decimals** (recommended for now): 18.4B is plenty for devnet; the
+  faucet problem is not a supply problem (see below).
+- **New mint at 6 decimals** → 18.4 *trillion* cap. This is a hard migration
+  (new mint address, re-issue balances, update pool/metadata/site). A
+  deliberate decision, not a quick script.
+
+**The faucet is NOT empty.** On-chain check 2026-07-04: faucet pool holds
+~10 billion OST and ~30 SOL for fees. "Faucet keeps emptying" was a *display*
+symptom, not depletion — the live tiles read hard-coded zero because the
+client never reported activity to the worker. Fixed via ost-telemetry.js +
+ost-live-stats.js. Real anti-whale armor (per-wallet daily caps, global rate
+limit) belongs in the worker FaucetGate — staged, not yet built.
+
+**"Every trade always profitable for everyone" is mathematically impossible.**
+Every trade has two sides; if both always win, a third party always funds the
+difference until it collapses (that is the definition of a Ponzi and would end
+OST's credibility). What IS real: the **protocol/house** profits on every
+transaction — the spread + fees route to the treasury vault, which funds the
+faucet, payouts and buybacks. Build toward the casino-house model (already how
+prediction losses fund the vault), not guaranteed user profit.
+
+**OST price now responds to usage.** The worker computes price from 24h active
+wallets + tx + volume. Telemetry wiring means real activity now moves the
+price (verified: a couple of events moved it $0.101 → $0.125). This is the
+honest source of "volatility" — organic, not fabricated.
+
+**Mesh + Ghost**: both load without fatal errors (Mesh renders full DOM +
+~730 controls; Ghost API present). A true "modern social + live P2P data"
+rebuild is a dedicated multi-session effort — staged, not faked.
