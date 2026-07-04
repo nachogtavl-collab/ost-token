@@ -45,6 +45,7 @@ Rules:
 
 - Vanilla JS IIFEs, no modules/bundler. New features = new self-contained file + `<script>` tag in the html + add to `docs/sw.js` PRECACHE (and bump its cache version).
 - Feature modules integrate by wrapping existing `window.*` hooks and listening to events — do not edit app.js internals unless the feature lives there.
+- **No new floating corner buttons.** Mobile nav is `ost-appbar.js/css` (bottom tab bar + More sheet). A module that adds a fixed launcher MUST add its selector to the hide-list in `ost-appbar.css` and a tile in the appbar TOOLS list; never pin its own corner on phones. Mobile type scale lives in `ost-mobile-scale.css` (16px base — never reintroduce a global shrink).
 - i18n: user-facing strings in app.js flow through `t(key, fallback)`; injected modules ship English (i18n-runtime translates common patterns).
 - `docs/index.html` and `docs/markets.html` must stay content-identical except `<title>`.
 - Honesty rule: never present unlaunched capabilities (VPN, NFC, mainnet, partnerships) as live. Label R&D as R&D.
