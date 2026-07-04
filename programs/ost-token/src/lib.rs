@@ -7,9 +7,9 @@
 
 use anchor_lang::prelude::*;
 
-pub mod state;
 pub mod errors;
 pub mod instructions;
+pub mod state;
 
 use instructions::*;
 
@@ -290,10 +290,7 @@ pub mod ost_token {
     // Reveal the raw secret to unlock OST from the ecash vault.
     // One-time use. Supports optional expiry for time-limited notes.
     // ========================================================================
-    pub fn redeem_bearer_note(
-        ctx: Context<RedeemBearerNote>,
-        secret: [u8; 32],
-    ) -> Result<()> {
+    pub fn redeem_bearer_note(ctx: Context<RedeemBearerNote>, secret: [u8; 32]) -> Result<()> {
         instructions::redeem_bearer_note::handler(ctx, secret)
     }
 
@@ -315,10 +312,7 @@ pub mod ost_token {
     // Actual key derivation happens client-side via Web3Auth MPC or platform
     // passkeys (Face ID, fingerprint, Windows Hello). No seed phrase needed.
     // ========================================================================
-    pub fn seedless_onboard(
-        ctx: Context<SeedlessOnboard>,
-        auth_method: u8,
-    ) -> Result<()> {
+    pub fn seedless_onboard(ctx: Context<SeedlessOnboard>, auth_method: u8) -> Result<()> {
         instructions::seedless_onboard::handler(ctx, auth_method)
     }
 
@@ -346,10 +340,7 @@ pub mod ost_token {
     // at age milestones — babies get their first OST before they can speak.
     // Family Grow Accounts for the next generation of space citizens.
     // ========================================================================
-    pub fn create_grow_vault(
-        ctx: Context<CreateGrowVault>,
-        child_birth_year: u16,
-    ) -> Result<()> {
+    pub fn create_grow_vault(ctx: Context<CreateGrowVault>, child_birth_year: u16) -> Result<()> {
         instructions::grow_vault::handler_create(ctx, child_birth_year)
     }
 
@@ -360,10 +351,7 @@ pub mod ost_token {
     // per vault (ages 0, 1, 5, 10, 13, 16, 18). Each milestone claimed once.
     // At age 18 the vault graduates — child takes full control.
     // ========================================================================
-    pub fn claim_grow_faucet(
-        ctx: Context<ClaimGrowFaucet>,
-        milestone_index: u8,
-    ) -> Result<()> {
+    pub fn claim_grow_faucet(ctx: Context<ClaimGrowFaucet>, milestone_index: u8) -> Result<()> {
         instructions::grow_vault::handler_claim(ctx, milestone_index)
     }
 
@@ -399,7 +387,9 @@ pub mod ost_token {
         amount_usd: u64,
         is_buy: bool,
     ) -> Result<()> {
-        instructions::exchange_gift_card::handler(ctx, nonce, merchant, code_hash, amount_usd, is_buy)
+        instructions::exchange_gift_card::handler(
+            ctx, nonce, merchant, code_hash, amount_usd, is_buy,
+        )
     }
 
     // ========================================================================
@@ -436,10 +426,24 @@ pub mod ost_token {
     // ========================================================================
     // 29. QUANTUM YIELD STAKE (Superposition Staking)
     // ========================================================================
-    pub fn quantum_yield_stake(
-        ctx: Context<QuantumYieldStake>,
-        amount: u64,
-    ) -> Result<()> {
+    pub fn quantum_yield_stake(ctx: Context<QuantumYieldStake>, amount: u64) -> Result<()> {
         instructions::quantum_realm::handler_quantum_stake(ctx, amount)
+    }
+
+    // ========================================================================
+    // 30. CREATE METAPLEX TOKEN METADATA
+    // ========================================================================
+    // Creates the Metaplex metadata PDA for the existing OST Token-2022 mint.
+    // Wallets, explorers, and Jupiter read this PDA for name/symbol/logo.
+    // The mint authority is a PDA, so this instruction signs the Metaplex CPI
+    // with the program's mint-authority seeds.
+    // ========================================================================
+    pub fn create_metaplex_metadata(
+        ctx: Context<CreateMetaplexMetadata>,
+        name: String,
+        symbol: String,
+        uri: String,
+    ) -> Result<()> {
+        instructions::create_metaplex_metadata::handler(ctx, name, symbol, uri)
     }
 }

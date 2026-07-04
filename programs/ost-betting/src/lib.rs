@@ -45,7 +45,10 @@ pub mod ost_betting {
         let clock = Clock::get()?;
         let market = &mut ctx.accounts.market;
         require!(!market.resolved, BettingError::MarketAlreadyResolved);
-        require!(clock.unix_timestamp < market.lock_ts, BettingError::MarketLocked);
+        require!(
+            clock.unix_timestamp < market.lock_ts,
+            BettingError::MarketLocked
+        );
 
         // Transfer SOL stake from bettor to market vault PDA via Anchor CPI helper.
         system_program::transfer(
@@ -96,9 +99,15 @@ pub mod ost_betting {
         let clock = Clock::get()?;
         let market = &mut ctx.accounts.market;
 
-        require!(ctx.accounts.authority.key() == market.authority, BettingError::Unauthorized);
+        require!(
+            ctx.accounts.authority.key() == market.authority,
+            BettingError::Unauthorized
+        );
         require!(!market.resolved, BettingError::MarketAlreadyResolved);
-        require!(clock.unix_timestamp >= market.resolve_ts, BettingError::ResolveTooEarly);
+        require!(
+            clock.unix_timestamp >= market.resolve_ts,
+            BettingError::ResolveTooEarly
+        );
 
         market.resolved = true;
         market.winning_side = winning_side;

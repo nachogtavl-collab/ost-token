@@ -13,8 +13,8 @@ use anchor_lang::solana_program::program::invoke;
 use anchor_spl::token_2022::{self, spl_token_2022};
 use spl_token_2022::instruction as token_instruction;
 
-use crate::state::{DaoTreasury, MerchantAccount};
 use crate::errors::OstError;
+use crate::state::{DaoTreasury, MerchantAccount};
 
 #[derive(Accounts)]
 pub struct MerchantPayment<'info> {
@@ -75,7 +75,10 @@ pub fn handler(
     memo: Option<String>, // optional order reference
 ) -> Result<()> {
     require!(amount > 0, OstError::ZeroAmount);
-    require!(ctx.accounts.merchant_account.active, OstError::MerchantNotActive);
+    require!(
+        ctx.accounts.merchant_account.active,
+        OstError::MerchantNotActive
+    );
 
     let fee_bps = ctx.accounts.dao_treasury.fee_basis_points as u64;
 
@@ -86,9 +89,7 @@ pub fn handler(
         .checked_div(10_000)
         .ok_or(OstError::Overflow)?;
 
-    let net_amount = amount
-        .checked_sub(fee_amount)
-        .ok_or(OstError::Overflow)?;
+    let net_amount = amount.checked_sub(fee_amount).ok_or(OstError::Overflow)?;
 
     // ---- Pay merchant (net after fee) ----
     let ix_pay = token_instruction::transfer_checked(
@@ -152,9 +153,18 @@ pub fn handler(
         .ok_or(OstError::Overflow)?;
 
     if let Some(ref m) = memo {
-        msg!("Merchant payment: {} OST to \"{}\" (memo: {})", net_amount, merchant.label, m);
+        msg!(
+            "Merchant payment: {} OST to \"{}\" (memo: {})",
+            net_amount,
+            merchant.label,
+            m
+        );
     } else {
-        msg!("Merchant payment: {} OST to \"{}\"", net_amount, merchant.label);
+        msg!(
+            "Merchant payment: {} OST to \"{}\"",
+            net_amount,
+            merchant.label
+        );
     }
 
     Ok(())

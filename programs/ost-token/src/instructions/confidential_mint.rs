@@ -13,8 +13,8 @@ use anchor_lang::solana_program::program::invoke_signed;
 use anchor_spl::token_2022::{self, spl_token_2022};
 use spl_token_2022::instruction as token_instruction;
 
-use crate::state::MintConfig;
 use crate::errors::OstError;
+use crate::state::MintConfig;
 
 #[derive(Accounts)]
 pub struct ConfidentialMint<'info> {
@@ -95,7 +95,11 @@ pub fn handler(ctx: Context<ConfidentialMint>, amount: u64, _proof_data: Vec<u8>
         .checked_add(amount)
         .ok_or(OstError::Overflow)?;
 
-    msg!("Minted {} OST (raw) to {}", amount, ctx.accounts.destination.key);
+    msg!(
+        "Minted {} OST (raw) to {}",
+        amount,
+        ctx.accounts.destination.key
+    );
 
     Ok(())
 }

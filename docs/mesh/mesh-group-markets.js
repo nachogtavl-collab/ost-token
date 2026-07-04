@@ -336,6 +336,11 @@
 
   // Pay our own backers locally if any of them is us. Each peer runs the same
   // logic on its own machine when it receives the resolve event.
+  // 2% protocol rake on the loser pot (never on the returned stake, so a
+  // winner can never receive less than they put in). Every peer runs the
+  // same deterministic math, so all devices agree on the payout.
+  var RAKE = 0.02;
+
   function payoutLocal(market) {
     var me = selfAddress();
     var totals = totalsFor(market);
@@ -346,8 +351,13 @@
     if (!winner) return;
     (winner.backers || []).forEach(function (b) {
       if (b.addr !== me) return;
-      var share = b.amount + (b.amount / winnerTot) * loserPot;
+      var fairProfit = (b.amount / winnerTot) * loserPot;
+      var rakeKept = fairProfit * RAKE;
+      var share = b.amount + fairProfit - rakeKept;
       if (share > 0) creditCredits(share, 'market.payout');
+      if (rakeKept > 0.0001) {
+        try { window.dispatchEvent(new CustomEvent('ost:house-fee', { detail: { source: 'mesh', amount: rakeKept, label: 'group market rake' } })); } catch (e) {}
+      }
     });
   }
 

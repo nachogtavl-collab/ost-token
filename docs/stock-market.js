@@ -2,7 +2,19 @@
 (function () {
   'use strict';
 
-  var DEFAULT_SYMBOLS = ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'AMZN', 'META', 'GOOGL', 'AMD', 'JPM', 'V', 'KO', 'SPY', 'QQQ', 'DIA'];
+  // 42 symbols (3x the original 14) across eight sectors so the mirror reads
+  // like a real terminal: tech, semis, finance, consumer, health, energy,
+  // crypto-adjacent equities, and index/commodity ETFs.
+  var DEFAULT_SYMBOLS = [
+    'AAPL', 'MSFT', 'NVDA', 'TSLA', 'AMZN', 'META', 'GOOGL', 'AMD', 'NFLX', 'ORCL', 'CRM', 'PLTR', 'UBER',
+    'TSM', 'ASML', 'AVGO',
+    'JPM', 'V', 'MA', 'BAC', 'GS',
+    'KO', 'PEP', 'MCD', 'NKE', 'WMT', 'DIS',
+    'JNJ', 'PFE', 'UNH', 'LLY',
+    'XOM', 'CVX', 'BA', 'CAT',
+    'COIN', 'MSTR', 'HOOD',
+    'SPY', 'QQQ', 'DIA', 'GLD'
+  ];
   var STORAGE_WATCHLIST = 'ost.stock.watchlist.v1';
   var STORAGE_ORDERS = 'ost.stock.orders.v1';
   // Sensible default OST/USD price so that conversion math is meaningful even
@@ -203,9 +215,21 @@
     }
     setStatus('Public quotes ready; live feed refreshing');
     try {
-      var response = await fetch(base + '/stocks/quotes?symbols=' + encodeURIComponent(state.symbols.join(',')), { cache: 'no-store' });
-      var payload = response.ok ? await response.json() : null;
-      state.quotes = payload && Array.isArray(payload.quotes) ? payload.quotes : [];
+      // The worker serves at most 24 symbols per request (Cloudflare
+      // subrequest budget), so fetch the 42-symbol universe in chunks.
+      var chunks = [];
+      for (var ci = 0; ci < state.symbols.length; ci += 20) chunks.push(state.symbols.slice(ci, ci + 20));
+      var payloads = await Promise.all(chunks.map(function (chunk) {
+        return fetch(base + '/stocks/quotes?symbols=' + encodeURIComponent(chunk.join(',')), { cache: 'no-store' })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .catch(function () { return null; });
+      }));
+      var payload = payloads.find(function (p) { return p && Array.isArray(p.quotes); }) || null;
+      var merged = [];
+      payloads.forEach(function (p) {
+        if (p && Array.isArray(p.quotes)) merged = merged.concat(p.quotes);
+      });
+      state.quotes = merged;
       if (state.quotes.length && !state.quotes.some(function(quote) { return quote.symbol === state.selectedSymbol; })) {
         state.selectedSymbol = state.quotes[0].symbol;
       }

@@ -133,14 +133,36 @@
   }
 
   // ------------------------------------------------------------- slip math
+  // Per-leg vig (house edge). Stamped on the slip at purchase so terms are
+  // locked in: slips placed before the vig existed keep their original odds.
+  function parlayVigBps() {
+    try {
+      var v = parseFloat(localStorage.getItem('OST_FEE_PARLAY_LEG_BPS'));
+      if (Number.isFinite(v) && v >= 0 && v <= 1000) return v;
+    } catch (_) {}
+    return 250; // 2.5% per leg — sportsbook-standard parlay vig
+  }
+
   function slipPayout(slip) {
+    var vig = Number(slip.vigBps) > 0 ? Number(slip.vigBps) / 10000 : 0;
+    var mult = 1;
+    slip.legs.forEach(function (l) {
+      if (l.status === 'void') return;
+      mult *= (1 / clampP(l.entryPrice)) * (1 - vig);
+    });
+    mult = Math.min(mult, MAX_MULT);
+    return slip.stake * mult;
+  }
+
+  // What the payout would be at FAIR odds — the gap vs slipPayout is the
+  // protocol's realised edge on a winning slip.
+  function slipFairPayout(slip) {
     var mult = 1;
     slip.legs.forEach(function (l) {
       if (l.status === 'void') return;
       mult *= 1 / clampP(l.entryPrice);
     });
-    mult = Math.min(mult, MAX_MULT);
-    return slip.stake * mult;
+    return slip.stake * Math.min(mult, MAX_MULT);
   }
 
   function slipLiveValue(slip) {
@@ -550,6 +572,7 @@
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
       legs: draft.map(function (l) { return Object.assign({ status: 'open' }, l); }),
       stake: amount,
+      vigBps: parlayVigBps(),
       status: 'open',
       placedAt: Date.now()
     };
@@ -575,6 +598,11 @@
     slip.settledAt = Date.now();
     writeSlips(slips);
     window.OST_MONEY.add(slip.cashoutOst, 'parlay-cashout');
+    // The cash-out spread (live value − offer) is realised house revenue.
+    var spreadKept = slipLiveValue(slip) - slip.cashoutOst;
+    if (spreadKept > 0.0001) {
+      try { window.dispatchEvent(new CustomEvent('ost:house-fee', { detail: { source: 'parlay', amount: spreadKept, label: 'cash-out spread' } })); } catch (_) {}
+    }
     ledgerUpsert(slip);
     toastMini('Sold combo for ' + slip.cashoutOst.toFixed(2) + ' OST');
     renderDock();
@@ -642,6 +670,11 @@
           if (window.OST_MONEY) window.OST_MONEY.add(payout, slip.status === 'won' ? 'parlay-win' : 'parlay-void-refund');
           ledgerUpsert(slip);
           if (slip.status === 'won') {
+            // Realised house edge: fair payout − vig payout stayed with OST.
+            var edge = slipFairPayout(slip) - payout;
+            if (edge > 0.0001) {
+              try { window.dispatchEvent(new CustomEvent('ost:house-fee', { detail: { source: 'parlay', amount: edge, label: 'parlay vig' } })); } catch (_) {}
+            }
             try { window.dispatchEvent(new CustomEvent('ost:parlay-won', { detail: { payout: payout, legs: slip.legs } })); } catch (_) {}
           }
         }

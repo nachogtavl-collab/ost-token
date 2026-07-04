@@ -338,6 +338,9 @@
       refreshChartIfReady();
     } catch (e) {}
 
+    // The 0.5% pool fee is OST the pool kept — report it to the real ledger.
+    try { window.dispatchEvent(new CustomEvent('ost:house-fee', { detail: { source: 'swap', amount: Number(quote.fee) || 0, label: 'swap pool fee' } })); } catch (e) {}
+
     return { sig: sig, ost: quote.ost, solUsd: quote.solUsd, rate: quote.rate, fee: quote.fee };
   }
 
@@ -458,6 +461,9 @@
       recordSnapshot({ ts: Date.now(), ostBalance: ostBal, solBalance: solBal, kind: 'treasury-in', amount: quote.ost, sig: sig });
       refreshChartIfReady();
     } catch (e) {}
+
+    // The 0.5% conversion fee is OST the pool kept — real ledger entry.
+    try { window.dispatchEvent(new CustomEvent('ost:house-fee', { detail: { source: 'swap', amount: Number(quote.fee) || 0, label: quote.currency + ' conversion fee' } })); } catch (e) {}
 
     return { sig: sig, ost: quote.ost, currency: quote.currency, usd: quote.usd, rate: quote.rate, kind: 'treasury-iou' };
   }

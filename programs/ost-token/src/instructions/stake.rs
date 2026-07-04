@@ -11,8 +11,8 @@ use anchor_lang::solana_program::program::invoke;
 use anchor_spl::token_2022::{self, spl_token_2022};
 use spl_token_2022::instruction as token_instruction;
 
-use crate::state::StakeAccount;
 use crate::errors::OstError;
+use crate::state::StakeAccount;
 
 #[derive(Accounts)]
 pub struct Stake<'info> {

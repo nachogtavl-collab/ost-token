@@ -17,8 +17,8 @@
 
 use anchor_lang::prelude::*;
 
-use crate::state::ZkTaxReport;
 use crate::errors::OstError;
+use crate::state::ZkTaxReport;
 
 #[derive(Accounts)]
 #[instruction(tax_year: u16)]
@@ -48,7 +48,10 @@ pub fn handler(
     jurisdiction_code: [u8; 2],
 ) -> Result<()> {
     // ---- Basic validation ----
-    require!(tax_year >= 2020 && tax_year <= 2100, OstError::InvalidTaxYear);
+    require!(
+        tax_year >= 2020 && tax_year <= 2100,
+        OstError::InvalidTaxYear
+    );
 
     // Ensure proof_hash is not all zeros (client must provide real proof)
     require!(

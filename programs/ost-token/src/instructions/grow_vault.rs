@@ -43,18 +43,18 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_2022::{self, Token2022, TransferChecked};
 
-use crate::state::{DaoTreasury, GrowVault};
 use crate::errors::OstError;
+use crate::state::{DaoTreasury, GrowVault};
 
 /// Milestone ages and their OST rewards (raw amounts with 9 decimals)
 const MILESTONES: [(u16, u64); 7] = [
-    (0,  1_000_000_000),   // Born in space — 1 OST
-    (1,    500_000_000),   // First orbit — 0.5 OST
-    (5,  1_000_000_000),   // Kindergarten explorer — 1 OST
-    (10, 2_000_000_000),   // Junior astronaut — 2 OST
-    (13, 3_000_000_000),   // Teen pioneer — 3 OST
-    (16, 5_000_000_000),   // Cadet — 5 OST
-    (18, 10_000_000_000),  // Full citizen — 10 OST
+    (0, 1_000_000_000),   // Born in space — 1 OST
+    (1, 500_000_000),     // First orbit — 0.5 OST
+    (5, 1_000_000_000),   // Kindergarten explorer — 1 OST
+    (10, 2_000_000_000),  // Junior astronaut — 2 OST
+    (13, 3_000_000_000),  // Teen pioneer — 3 OST
+    (16, 5_000_000_000),  // Cadet — 5 OST
+    (18, 10_000_000_000), // Full citizen — 10 OST
 ];
 
 // ============================================================================
@@ -203,7 +203,9 @@ pub fn handler_claim(ctx: Context<ClaimGrowFaucet>, milestone_index: u8) -> Resu
 
     // ---- Update vault state ----
     vault.milestones_claimed |= milestone_bit;
-    vault.total_received = vault.total_received.checked_add(reward_amount)
+    vault.total_received = vault
+        .total_received
+        .checked_add(reward_amount)
         .ok_or(OstError::Overflow)?;
 
     // If age 18 milestone claimed, mark vault as graduated

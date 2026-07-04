@@ -7,8 +7,8 @@
 
 use anchor_lang::prelude::*;
 
-use crate::state::{Proposal, StakeAccount, VoteRecord};
 use crate::errors::OstError;
+use crate::state::{Proposal, StakeAccount, VoteRecord};
 
 #[derive(Accounts)]
 #[instruction(proposal_id: u64)]

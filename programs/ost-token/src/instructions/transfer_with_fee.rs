@@ -17,8 +17,8 @@ use anchor_lang::solana_program::program::invoke;
 use anchor_spl::token_2022::{self, spl_token_2022};
 use spl_token_2022::instruction as token_instruction;
 
-use crate::state::DaoTreasury;
 use crate::errors::OstError;
+use crate::state::DaoTreasury;
 
 #[derive(Accounts)]
 pub struct TransferWithFee<'info> {
@@ -74,9 +74,7 @@ pub fn handler(ctx: Context<TransferWithFee>, amount: u64) -> Result<()> {
         .checked_div(10_000)
         .ok_or(OstError::Overflow)?;
 
-    let net_amount = amount
-        .checked_sub(fee_amount)
-        .ok_or(OstError::Overflow)?;
+    let net_amount = amount.checked_sub(fee_amount).ok_or(OstError::Overflow)?;
 
     // ---- Transfer net amount to receiver ----
     let ix_transfer = token_instruction::transfer_checked(

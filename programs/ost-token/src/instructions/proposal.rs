@@ -12,8 +12,8 @@
 
 use anchor_lang::prelude::*;
 
-use crate::state::{MintConfig, Proposal};
 use crate::errors::OstError;
+use crate::state::{MintConfig, Proposal};
 
 #[derive(Accounts)]
 #[instruction(proposal_id: u64)]
@@ -66,7 +66,11 @@ pub fn handler(ctx: Context<CreateProposal>, proposal_id: u64, description: Stri
     proposal.executed = false;
     proposal.bump = ctx.bumps.proposal;
 
-    msg!("Proposal {} created. Voting ends at {}", proposal_id, proposal.voting_ends_at);
+    msg!(
+        "Proposal {} created. Voting ends at {}",
+        proposal_id,
+        proposal.voting_ends_at
+    );
 
     Ok(())
 }

@@ -10,8 +10,8 @@ use anchor_lang::solana_program::program::invoke_signed;
 use anchor_spl::token_2022::{self, spl_token_2022};
 use spl_token_2022::instruction as token_instruction;
 
-use crate::state::{MintConfig, StakeAccount};
 use crate::errors::OstError;
+use crate::state::{MintConfig, StakeAccount};
 
 #[derive(Accounts)]
 pub struct Unstake<'info> {
@@ -105,7 +105,11 @@ pub fn handler(ctx: Context<Unstake>) -> Result<()> {
     let stake = &mut ctx.accounts.stake_account;
     stake.amount = 0;
 
-    msg!("Unstaked {} OST (raw) back to {}", amount, ctx.accounts.owner.key());
+    msg!(
+        "Unstaked {} OST (raw) back to {}",
+        amount,
+        ctx.accounts.owner.key()
+    );
 
     Ok(())
 }

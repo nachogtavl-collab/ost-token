@@ -14,8 +14,8 @@ use anchor_lang::prelude::*;
 use anchor_lang::solana_program::hash::hash;
 use anchor_spl::token_2022::{self, Token2022, TransferChecked};
 
-use crate::state::BearerNote;
 use crate::errors::OstError;
+use crate::state::BearerNote;
 
 #[derive(Accounts)]
 pub struct RedeemBearerNote<'info> {

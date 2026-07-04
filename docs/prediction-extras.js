@@ -228,7 +228,7 @@
     var defaultStake = 5;
     openModal([
       '<h2>Bet ' + side.toUpperCase() + ' on “' + escapeHtml(market.title) + '”</h2>',
-      '<p class="ost-pred-sub">Side price: ' + Math.round(price * 100) + '% — payout multiplier ≈ ' + (1 / price).toFixed(2) + 'x. OST is transferred to the on-chain prediction vault.</p>',
+      '<p class="ost-pred-sub">Side price: ' + Math.round(price * 100) + '% — payout ≈ ' + ((1 - 150 / 10000) / price).toFixed(2) + 'x after the 1.5% protocol fee. OST is transferred to the on-chain prediction vault.</p>',
       '<label class="ost-pred-label">Stake (OST) <input type="number" id="ost-pred-stake" min="0.1" step="0.1" value="' + defaultStake + '"></label>',
       '<div class="ost-pred-modal__cta">',
         '<button type="button" class="ost-pred-btn" id="ost-pred-cancel">Cancel</button>',
@@ -256,21 +256,42 @@
 
   // Submit bet — uses OST_WALLET to do a real Token-2022 transfer to the swap pool with a memo
   // Falls back to a simulated record if no wallet/web3 is available.
+  function ticketFeeBps() {
+    try {
+      var v = parseFloat(localStorage.getItem('OST_FEE_PREDICTION_BPS'));
+      if (Number.isFinite(v) && v >= 0 && v <= 1000) return v;
+    } catch (_) {}
+    return 150;
+  }
+
   function submitBet(market, side, stake, price) {
     var memo = JSON.stringify({ k: 'ost-bet', m: market.id, s: side, p: price, a: stake, t: Date.now() });
+    // Same house edge as the main desk: the fee slice buys no shares, so the
+    // pool keeps it win or lose. payoutIfWin is quoted from the NET stake.
+    var feeBps = ticketFeeBps();
+    var feeOst = stake * feeBps / 10000;
+    var netStake = stake - feeOst;
     var record = {
       id: 'bet-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6),
       marketId: market.id,
       title: market.title,
       side: side,
       stake: stake,
+      feeOst: feeOst,
+      netStake: netStake,
+      feeBps: feeBps,
       price: price,
-      payoutIfWin: stake / price,
+      payoutIfWin: netStake / price,
       placedAt: Date.now(),
       status: 'open',
       signature: '',
       isOstNative: !!market.isOst
     };
+    function commit(record) {
+      var bets = readBets(); bets.unshift(record); writeBets(bets);
+      try { window.dispatchEvent(new CustomEvent('ost:house-fee', { detail: { source: 'ticket', amount: feeOst, label: 'ticket fee' } })); } catch (_) {}
+      return record;
+    }
 
     return new Promise(function (resolve, reject) {
       try {
@@ -279,16 +300,21 @@
         if (W && W.transferChecked && pool) {
           W.transferChecked({ to: pool, amount: stake, memo: memo }).then(function (sig) {
             record.signature = String(sig || ('local-' + record.id));
-            var bets = readBets(); bets.unshift(record); writeBets(bets);
-            resolve(record);
+            resolve(commit(record));
           }).catch(reject);
           return;
         }
       } catch (e) { /* fall through */ }
-      // Simulated fallback so the UX never feels broken in dev
-      record.signature = 'sim-' + record.id;
-      var bets = readBets(); bets.unshift(record); writeBets(bets);
-      resolve(record);
+      // No wallet: the stake must still be REAL money — debit the credits
+      // pool. A bet that moves nothing is not a bet (that was the old "sim"
+      // free-ride, which let testers ride positions without funding them).
+      if (window.OST_MONEY && window.OST_MONEY.spend && window.OST_MONEY.spend(stake, 'prediction-ticket')) {
+        record.signature = 'credits-' + record.id;
+        record.fundedBy = 'credits';
+        resolve(commit(record));
+        return;
+      }
+      reject(new Error('Connect your OST wallet or earn credits first — every bet must be funded.'));
     });
   }
 

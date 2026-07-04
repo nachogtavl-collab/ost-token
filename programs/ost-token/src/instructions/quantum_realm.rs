@@ -44,8 +44,8 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_2022::{self, spl_token_2022, Token2022, TransferChecked};
 
-use crate::state::{QuantumBearerToken, EntangledPair, QuantumYieldVault};
 use crate::errors::OstError;
+use crate::state::{EntangledPair, QuantumBearerToken, QuantumYieldVault};
 
 // ============================================================================
 // 1. MINT QUANTUM BEARER TOKEN
@@ -110,7 +110,10 @@ pub fn handler_mint_quantum(
     security_level: u8,
 ) -> Result<()> {
     require!(amount > 0, OstError::ZeroAmount);
-    require!(security_level >= 1 && security_level <= 5, OstError::InvalidQuantumSecurityLevel);
+    require!(
+        security_level >= 1 && security_level <= 5,
+        OstError::InvalidQuantumSecurityLevel
+    );
 
     // ---- Transfer OST from minter → quantum vault ----
     let cpi_accounts = TransferChecked {
@@ -119,10 +122,7 @@ pub fn handler_mint_quantum(
         authority: ctx.accounts.minter.to_account_info(),
         mint: ctx.accounts.mint.to_account_info(),
     };
-    let cpi_ctx = CpiContext::new(
-        ctx.accounts.token_program.to_account_info(),
-        cpi_accounts,
-    );
+    let cpi_ctx = CpiContext::new(ctx.accounts.token_program.to_account_info(), cpi_accounts);
     token_2022::transfer_checked(cpi_ctx, amount, 9)?; // 9 decimals
 
     // ---- Record the quantum bearer token ----
@@ -186,10 +186,7 @@ pub struct EntangleWallets<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn handler_entangle(
-    ctx: Context<EntangleWallets>,
-    kyber_shared_hash: [u8; 32],
-) -> Result<()> {
+pub fn handler_entangle(ctx: Context<EntangleWallets>, kyber_shared_hash: [u8; 32]) -> Result<()> {
     let pair = &mut ctx.accounts.entangled_pair;
     pair.wallet_a = ctx.accounts.wallet_a.key();
     pair.wallet_b = ctx.accounts.wallet_b.key();
@@ -267,10 +264,7 @@ pub struct QuantumYieldStake<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn handler_quantum_stake(
-    ctx: Context<QuantumYieldStake>,
-    amount: u64,
-) -> Result<()> {
+pub fn handler_quantum_stake(ctx: Context<QuantumYieldStake>, amount: u64) -> Result<()> {
     require!(amount > 0, OstError::ZeroAmount);
 
     // ---- Transfer OST from staker → yield vault ----
@@ -280,10 +274,7 @@ pub fn handler_quantum_stake(
         authority: ctx.accounts.staker.to_account_info(),
         mint: ctx.accounts.mint.to_account_info(),
     };
-    let cpi_ctx = CpiContext::new(
-        ctx.accounts.token_program.to_account_info(),
-        cpi_accounts,
-    );
+    let cpi_ctx = CpiContext::new(ctx.accounts.token_program.to_account_info(), cpi_accounts);
     token_2022::transfer_checked(cpi_ctx, amount, 9)?;
 
     // ---- Record the quantum yield vault ----

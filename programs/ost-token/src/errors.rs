@@ -119,4 +119,16 @@ pub enum OstError {
 
     #[msg("Quantum yield vault already collapsed")]
     YieldAlreadyCollapsed,
+
+    #[msg("Metadata name exceeds Metaplex limit of 32 bytes")]
+    MetadataNameTooLong,
+
+    #[msg("Metadata symbol exceeds Metaplex limit of 10 bytes")]
+    MetadataSymbolTooLong,
+
+    #[msg("Metadata URI exceeds Metaplex limit of 200 bytes")]
+    MetadataUriTooLong,
+
+    #[msg("Metadata PDA does not match mint")]
+    InvalidMetadataPda,
 }

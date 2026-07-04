@@ -15,8 +15,8 @@
 
 use anchor_lang::prelude::*;
 
-use crate::state::{MerchantAccount, MintConfig};
 use crate::errors::OstError;
+use crate::state::{MerchantAccount, MintConfig};
 
 #[derive(Accounts)]
 pub struct RegisterMerchant<'info> {
@@ -55,7 +55,11 @@ pub fn handler(ctx: Context<RegisterMerchant>, label: String) -> Result<()> {
     merchant.total_received = 0;
     merchant.bump = ctx.bumps.merchant_account;
 
-    msg!("Merchant registered: \"{}\" ({})", label, ctx.accounts.merchant.key());
+    msg!(
+        "Merchant registered: \"{}\" ({})",
+        label,
+        ctx.accounts.merchant.key()
+    );
 
     Ok(())
 }

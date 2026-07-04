@@ -53,8 +53,8 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_2022::{self, spl_token_2022, Token2022, TransferChecked};
 
-use crate::state::BearerNote;
 use crate::errors::OstError;
+use crate::state::BearerNote;
 
 // ============================================================================
 // MINT BEARER NOTE — Lock OST into a vault PDA, get a redeemable note
@@ -119,10 +119,7 @@ pub fn handler(
         authority: ctx.accounts.minter.to_account_info(),
         mint: ctx.accounts.mint.to_account_info(),
     };
-    let cpi_ctx = CpiContext::new(
-        ctx.accounts.token_program.to_account_info(),
-        cpi_accounts,
-    );
+    let cpi_ctx = CpiContext::new(ctx.accounts.token_program.to_account_info(), cpi_accounts);
     token_2022::transfer_checked(cpi_ctx, amount, 9)?; // 9 decimals
 
     // ---- Record the bearer note ----
@@ -139,7 +136,11 @@ pub fn handler(
         "Bearer note minted: {} OST locked (hash: {:?}, expires: {})",
         amount,
         &secret_hash[..8], // log first 8 bytes only
-        if expires_at == 0 { "never".to_string() } else { expires_at.to_string() }
+        if expires_at == 0 {
+            "never".to_string()
+        } else {
+            expires_at.to_string()
+        }
     );
 
     Ok(())

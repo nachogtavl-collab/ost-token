@@ -7,14 +7,17 @@
  * buybacks. This is exactly how a solvent casino/exchange survives — it is
  * NOT "every user always wins" (that is a Ponzi).
  *
- * This engine makes that edge REAL and VISIBLE by metering the flows that
- * already happen and recording the protocol's take on each:
+ * v2: this ledger records only fees that were ACTUALLY withheld from a
+ * trade. Charge points dispatch `ost:house-fee` at the moment real OST is
+ * kept by the protocol:
  *
- *   · Prediction/parlay stakes  → 1.5% protocol fee (the vault keeps it;
- *     losing stakes already stay in the vault — pure house revenue).
- *   · Faucet-game rounds        → the net of wagers − payouts is the house
- *     edge; metered as it accrues.
- *   · Swaps / conversions       → a configurable spread (default 0.30%).
+ *   · Prediction trades   → 1.5% fee charged in app.js placeOrder (payout
+ *     scaled to net stake; the vault keeps the fee slice of every stake).
+ *   · Parlay slips        → per-leg vig on the payout multiplier + 6%
+ *     cash-out spread, both accrued when realised.
+ *   · Faucet-game rounds  → the net of wagers − payouts is the house edge.
+ *   · Swaps               → the swap rail's real 0.5% pool fee.
+ *   · Mesh group markets  → 2% pot rake at settlement.
  *
  * Every accrual is: stored to ost.treasury.revenue.v1, reported to the
  * live price engine as telemetry (activity moves OST), and surfaced via
@@ -69,12 +72,6 @@
     return { out: (Number(grossOut) || 0) - fee, fee: fee, feeBps: bps };
   }
 
-  // ---- meter prediction/parlay stakes ------------------------------------
-  function onPredictionStake(stake) {
-    var fee = (Number(stake) || 0) * feePredictionBps() / 10000;
-    if (fee > 0) accrue('prediction', fee, 'stake fee');
-  }
-
   // ---- meter faucet-game house edge (wagers in − payouts out) ------------
   var gameFloat = 0; // running net; positive = house ahead since last flush
   function onGameWager(amt) { gameFloat += Number(amt) || 0; }
@@ -107,15 +104,19 @@
   }
 
   function wire() {
-    window.addEventListener('ost:prediction-order-recorded', function (e) {
-      onPredictionStake((e && e.detail && e.detail.stake) || 0);
-    }, false);
-    // parlay/prediction stakes via money spend tagged 'parlay'/'prediction'
-    window.addEventListener('ost-money-changed', function (e) {
+    // v2: the ledger only records fees that were ACTUALLY withheld. Each
+    // charge point (app.js placeOrder, parlay vig/cash-out spread, ticket,
+    // swap rail, mesh rake) dispatches ost:house-fee with the real amount at
+    // the moment the money is withheld. The old listeners that *estimated*
+    // 1.5% of stakes without anyone paying it are gone — that was a meter,
+    // not revenue.
+    window.addEventListener('ost:house-fee', function (e) {
       var d = (e && e.detail) || {};
-      if (Number(d.delta) < 0 && /parlay|prediction/.test(String(d.source || ''))) {
-        onPredictionStake(Math.abs(Number(d.delta)));
-      }
+      var src = String(d.source || 'fee');
+      var amt = Number(d.amount) || 0;
+      if (amt <= 0) return;
+      if (src === 'parlay' || src === 'scalar' || src === 'ticket' || src === 'mesh') src = 'prediction';
+      accrue(src === 'prediction' || src === 'game' || src === 'swap' ? src : 'fee', amt, d.label);
     }, false);
     window.addEventListener('ost:game-wager', function (e) { onGameWager((e && e.detail && e.detail.amount) || 0); }, false);
     window.addEventListener('ost-faucet-hub-award', function (e) {

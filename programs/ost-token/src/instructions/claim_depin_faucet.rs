@@ -32,20 +32,20 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_2022::{self, Token2022, TransferChecked};
 
-use crate::state::{AiRewardStake, DaoTreasury, DepinClaim};
 use crate::errors::OstError;
+use crate::state::{AiRewardStake, DaoTreasury, DepinClaim};
 
 /// Cooldown between claims: 24 hours
 pub const DEPIN_COOLDOWN: i64 = 86_400;
 
 /// Reward amounts per resource type (9 decimals)
 const DEPIN_REWARDS: [u64; 6] = [
-    500_000_000,    // 0: Bandwidth  — 0.5 OST
-    2_000_000_000,  // 1: GPU        — 2.0 OST
-    1_000_000_000,  // 2: CPU        — 1.0 OST
-    500_000_000,    // 3: Storage    — 0.5 OST
-    1_500_000_000,  // 4: LoRa/5G    — 1.5 OST
-    3_000_000_000,  // 5: Satellite  — 3.0 OST
+    500_000_000,   // 0: Bandwidth  — 0.5 OST
+    2_000_000_000, // 1: GPU        — 2.0 OST
+    1_000_000_000, // 2: CPU        — 1.0 OST
+    500_000_000,   // 3: Storage    — 0.5 OST
+    1_500_000_000, // 4: LoRa/5G    — 1.5 OST
+    3_000_000_000, // 5: Satellite  — 3.0 OST
 ];
 
 #[derive(Accounts)]
@@ -106,10 +106,7 @@ pub struct ClaimDepinFaucet<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn handler(
-    ctx: Context<ClaimDepinFaucet>,
-    attestation_hash: [u8; 32],
-) -> Result<()> {
+pub fn handler(ctx: Context<ClaimDepinFaucet>, attestation_hash: [u8; 32]) -> Result<()> {
     let now = Clock::get()?.unix_timestamp;
     let claim = &mut ctx.accounts.depin_claim;
 
@@ -129,7 +126,10 @@ pub fn handler(
 
     // Determine reward based on resource type from the stake record
     let resource_type = ctx.accounts.reward_stake.resource_type as usize;
-    require!(resource_type < DEPIN_REWARDS.len(), OstError::InvalidResourceType);
+    require!(
+        resource_type < DEPIN_REWARDS.len(),
+        OstError::InvalidResourceType
+    );
     let reward_amount = DEPIN_REWARDS[resource_type];
 
     // ---- Transfer reward from treasury → contributor ----
@@ -153,10 +153,11 @@ pub fn handler(
     // ---- Update claim record ----
     claim.contributor = ctx.accounts.contributor.key();
     claim.last_claim_at = now;
-    claim.total_claimed = claim.total_claimed.checked_add(reward_amount)
+    claim.total_claimed = claim
+        .total_claimed
+        .checked_add(reward_amount)
         .ok_or(OstError::Overflow)?;
-    claim.claim_count = claim.claim_count.checked_add(1)
-        .ok_or(OstError::Overflow)?;
+    claim.claim_count = claim.claim_count.checked_add(1).ok_or(OstError::Overflow)?;
     claim.last_attestation_hash = attestation_hash;
     claim.bump = ctx.bumps.depin_claim;
 

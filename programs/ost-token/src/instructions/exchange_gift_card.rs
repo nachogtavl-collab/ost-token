@@ -34,8 +34,8 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_2022::{self, Token2022, TransferChecked};
 
-use crate::state::{DaoTreasury, GiftCardExchange};
 use crate::errors::OstError;
+use crate::state::{DaoTreasury, GiftCardExchange};
 
 /// Maximum USD-equivalent per single exchange (10 000 USD in 9-decimal OST).
 const MAX_EXCHANGE_AMOUNT: u64 = 10_000_000_000_000; // 10 000 OST
@@ -124,19 +124,15 @@ pub fn handler(
             authority: ctx.accounts.user.to_account_info(),
             mint: ctx.accounts.mint.to_account_info(),
         };
-        let cpi_ctx = CpiContext::new(
-            ctx.accounts.token_program.to_account_info(),
-            cpi_accounts,
-        );
+        let cpi_ctx = CpiContext::new(ctx.accounts.token_program.to_account_info(), cpi_accounts);
         token_2022::transfer_checked(cpi_ctx, total_cost, 9)?;
     } else {
         // SELL: Treasury pays OST → user. Net = amount − fee.
         let payout = amount_usd.checked_sub(fee).unwrap();
 
-        let treasury_seeds: &[&[u8]] = &[
-            b"treasury-authority",
-            &[ctx.bumps.treasury_authority],
-        ];
+        let treasury_bump = [ctx.bumps.treasury_authority];
+        let treasury_seeds: &[&[u8]] = &[b"treasury-authority", &treasury_bump];
+        let signer_seeds = [treasury_seeds];
 
         let cpi_accounts = TransferChecked {
             from: ctx.accounts.treasury_token_account.to_account_info(),
@@ -147,7 +143,7 @@ pub fn handler(
         let cpi_ctx = CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
             cpi_accounts,
-            &[treasury_seeds],
+            &signer_seeds,
         );
         token_2022::transfer_checked(cpi_ctx, payout, 9)?;
     }

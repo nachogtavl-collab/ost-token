@@ -10,8 +10,8 @@
 
 use anchor_lang::prelude::*;
 
-use crate::state::{DaoTreasury, MintConfig};
 use crate::errors::OstError;
+use crate::state::{DaoTreasury, MintConfig};
 
 #[derive(Accounts)]
 pub struct InitializeTreasury<'info> {

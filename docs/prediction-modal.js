@@ -734,16 +734,24 @@ liveTimers.forEach(function (t) {
   function getModalTradeContract(market, side, outcomeKey) {
     var selectedOutcome = getSelectedOutcomeContract(market, outcomeKey);
     if (selectedOutcome) {
+      // Honor Yes/No per outcome (matches the board desk). NO fades the
+      // outcome at the mirrored price; NO buys the second token when present.
+      var oSide = side === 'NO' ? 'NO' : 'YES';
+      var yesP = selectedOutcome.price;
+      var noP = Number.isFinite(yesP) ? Math.max(0, Math.min(1, 1 - yesP)) : NaN;
+      var ids = selectedOutcome.clobTokenIds.slice();
+      var sideIds = oSide === 'NO' && ids.length > 1 ? [ids[1], ids[0]] : ids;
       return {
         key: selectedOutcome.key,
-        label: selectedOutcome.label,
-        side: 'YES',
-        price: selectedOutcome.price,
-        yesPrice: selectedOutcome.price,
-        noPrice: Number.isFinite(selectedOutcome.price) ? Math.max(0, Math.min(1, 1 - selectedOutcome.price)) : NaN,
+        label: oSide === 'NO' ? ('No · ' + selectedOutcome.label) : selectedOutcome.label,
+        outcomeLabel: selectedOutcome.label,
+        side: oSide,
+        price: oSide === 'NO' ? noP : yesP,
+        yesPrice: yesP,
+        noPrice: noP,
         gammaMarketId: selectedOutcome.gammaMarketId || market.gammaMarketId || market.id || '',
         conditionId: selectedOutcome.conditionId || market.conditionId || '',
-        clobTokenIds: selectedOutcome.clobTokenIds.slice()
+        clobTokenIds: sideIds
       };
     }
     var normalizedSide = side === 'NO' ? 'NO' : 'YES';
@@ -1728,10 +1736,12 @@ liveTimers.forEach(function (t) {
       '<div class="ost-modal__bet-grid">' +
         '<div class="ost-modal__bet-side">' +
           '<div class="ost-modal__bet-toggle">' +
-            (multiOutcome
-              ? '<button type="button" data-side="YES" class="ost-modal__side-btn ost-modal__side-btn--yes is-active">Selected outcome</button>'
-              : '<button type="button" data-side="YES" class="ost-modal__side-btn ost-modal__side-btn--yes is-active">YES</button>' +
-                '<button type="button" data-side="NO"  class="ost-modal__side-btn ost-modal__side-btn--no">NO</button>') +
+            // Multi-outcome markets get a real Yes/No pair for the SELECTED
+            // outcome (Yes = it happens, No = it doesn't) — previously only a
+            // dead "Selected outcome" YES button, so an outcome could never
+            // be faded. Binary markets keep the plain YES/NO.
+            ('<button type="button" data-side="YES" class="ost-modal__side-btn ost-modal__side-btn--yes is-active">' + (multiOutcome ? 'YES · happens' : 'YES') + '</button>' +
+             '<button type="button" data-side="NO"  class="ost-modal__side-btn ost-modal__side-btn--no">' + (multiOutcome ? 'NO · fades' : 'NO') + '</button>') +
           '</div>' +
         '</div>' +
         '<label class="ost-modal__bet-stake">Stake (OST)<input type="number" min="0.01" step="0.01" value="1" data-bind="stake"></label>' +
@@ -1948,8 +1958,15 @@ liveTimers.forEach(function (t) {
       var contract = getActiveContract();
       var px = contract ? Number(contract.price) : NaN;
       if (!Number.isFinite(px) || px <= 0) px = 0.5;
-      var shares = s / px;
-      setText(bodyEl, 'projected', 'Win ' + shares.toFixed(2) + ' OST · risk ' + s.toFixed(2) + ' OST · @ ' + fmtCents(px));
+      // Quote NET of the 1.5% protocol fee — the same fee placeOrder charges,
+      // so the projection matches what a winner actually receives.
+      var feeBps = 150;
+      try {
+        var o = parseFloat(localStorage.getItem('OST_FEE_PREDICTION_BPS'));
+        if (Number.isFinite(o) && o >= 0 && o <= 1000) feeBps = o;
+      } catch (_) {}
+      var shares = (s / px) * (1 - feeBps / 10000);
+      setText(bodyEl, 'projected', 'Win ' + shares.toFixed(2) + ' OST · risk ' + s.toFixed(2) + ' OST · @ ' + fmtCents(px) + ' · fee ' + (feeBps / 100) + '%');
     }
     var stakeInput = bodyEl.querySelector('[data-bind="stake"]');
     if (stakeInput) stakeInput.addEventListener('input', recalcProjected);
@@ -2151,8 +2168,21 @@ liveTimers.forEach(function (t) {
           var contract = getModalTradeContract(market, side, order.outcomeKey || '');
           var livePx = side === 'NO' ? Number(contract && contract.noPrice) : Number(contract && contract.yesPrice);
           if (!Number.isFinite(livePx) || livePx <= 0) livePx = entryPx;
-          var payout = Math.max(0, shares * livePx);
+          // 2% sell spread — same principle as the parlay cash-out: the
+          // protocol is the counterparty and keeps the spread. Without it,
+          // positions exited at full fair value and OST earned nothing.
+          var sellSpreadBps = 200;
+          try {
+            var sbps = parseFloat(localStorage.getItem('OST_FEE_SELL_BPS'));
+            if (Number.isFinite(sbps) && sbps >= 0 && sbps <= 1000) sellSpreadBps = sbps;
+          } catch (_) {}
+          var fairValue = Math.max(0, shares * livePx);
+          var payout = fairValue * (1 - sellSpreadBps / 10000);
           if (!(payout > 0)) { toast('Cannot sell at 0¢', 'err'); return; }
+          var spreadKept = fairValue - payout;
+          if (spreadKept > 0.0001) {
+            try { window.dispatchEvent(new CustomEvent('ost:house-fee', { detail: { source: 'prediction', amount: spreadKept, label: 'sell spread' } })); } catch (_) {}
+          }
           var orig = btn.textContent;
           btn.disabled = true; btn.textContent = '…';
           sellOrder(order, payout, 'prediction-sell-modal', market, { sellPrice: livePx, sellValue: payout, shares: shares })

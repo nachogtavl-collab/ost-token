@@ -83,8 +83,8 @@
 
 use anchor_lang::prelude::*;
 
-use crate::state::AiRewardStake;
 use crate::errors::OstError;
+use crate::state::AiRewardStake;
 
 #[derive(Accounts)]
 pub struct AiRewardStakeIx<'info> {

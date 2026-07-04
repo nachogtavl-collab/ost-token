@@ -2588,6 +2588,76 @@ nav {
   color: #fecaca;
 }
 
+/* --- Multi-option ladder: one row per outcome, Yes/No chips per row --- */
+.prediction-outcome-toggle.prediction-outcome-ladder {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 340px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 2px;
+}
+.prediction-outcome-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.06);
+  background: rgba(255,255,255,.02);
+  transition: border-color .18s ease, background .18s ease;
+}
+.prediction-outcome-row.is-selected {
+  border-color: rgba(109,159,255,.35);
+  background: rgba(109,159,255,.07);
+}
+.prediction-outcome-name {
+  font-size: .92rem;
+  color: var(--text);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.prediction-outcome-sides {
+  display: flex;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+.prediction-outcome-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 11px;
+  border-radius: 9px;
+  border: 1px solid rgba(255,255,255,.1);
+  background: rgba(255,255,255,.03);
+  color: var(--text-muted);
+  font-size: .78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color .18s ease, background .18s ease, color .18s ease;
+  min-width: 62px;
+  justify-content: center;
+}
+.prediction-outcome-chip strong { color: var(--text); font-variant-numeric: tabular-nums; }
+.prediction-outcome-chip.chip-yes:hover,
+.prediction-outcome-chip.chip-yes.is-active {
+  border-color: rgba(52,211,153,.45);
+  background: rgba(52,211,153,.14);
+  color: #d1fae5;
+}
+.prediction-outcome-chip.chip-no:hover,
+.prediction-outcome-chip.chip-no.is-active {
+  border-color: rgba(248,113,113,.42);
+  background: rgba(248,113,113,.12);
+  color: #fecaca;
+}
+
 .prediction-stake-field {
   display: block;
 }

@@ -3091,6 +3091,21 @@
       if (!sourceInfo) throw new Error('This wallet does not have an OST token account yet. Claim or receive OST first.');
     }
 
+    // Protocol fee — charged HERE, at the single choke point every trade path
+    // (board, modal, popout ticket, pro desk, stock mirror, fast markets,
+    // scalar/date buckets) flows through. The FULL stake is transferred to the
+    // settlement vault below; the fee portion buys no shares, so the vault
+    // keeps it on every trade regardless of outcome. That retained slice is
+    // the protocol's real house edge — not a display-only ledger entry.
+    let predictionFeeBps = 150;
+    try {
+      const bpsOverride = parseFloat(localStorage.getItem('OST_FEE_PREDICTION_BPS'));
+      if (Number.isFinite(bpsOverride) && bpsOverride >= 0 && bpsOverride <= 1000) predictionFeeBps = bpsOverride;
+    } catch (_) {}
+    const feeOst = Number(order.stake) * predictionFeeBps / 10000;
+    const netStake = Number(order.stake) - feeOst;
+    const feeScale = netStake / Number(order.stake);
+
     const memo = buildPredictionOrderMemo(order);
     if (!window.OST_RESCUE || typeof window.OST_RESCUE.userSendsOstToPool !== 'function') {
       throw new Error(t('pay.walletNeedsSol', 'The OST settlement vault is still loading. Please wait a moment and try again.'));
@@ -3121,8 +3136,11 @@
       yesPrice: Number(order.yesPrice),
       noPrice: Number(order.noPrice),
       stake: Number(order.stake),
-      shares: Number(order.shares) || (Number(order.price) > 0 ? Number(order.stake) / Number(order.price) : Number(order.potentialReturn || 0)),
-      potentialReturn: Number(order.potentialReturn),
+      feeOst: feeOst,
+      netStake: netStake,
+      feeBps: predictionFeeBps,
+      shares: (Number(order.shares) || (Number(order.price) > 0 ? Number(order.stake) / Number(order.price) : Number(order.potentialReturn || 0))) * feeScale,
+      potentialReturn: Number(order.potentialReturn) * feeScale,
       closeAtMs: Number(order.closeAtMs || 0),
       clobTokenIds: Array.isArray(order.clobTokenIds) ? order.clobTokenIds.slice(0, 4) : [],
       sourceUrl: order.sourceUrl,
@@ -3148,6 +3166,8 @@
     };
     storePredictionOrderRecord(record);
     try { window.dispatchEvent(new CustomEvent('ost:prediction-order-recorded', { detail: record })); } catch (_) {}
+    // Real, funded protocol revenue: the fee stays in the settlement vault.
+    try { window.dispatchEvent(new CustomEvent('ost:house-fee', { detail: { source: 'prediction', amount: feeOst, label: 'trade fee ' + (predictionFeeBps / 100) + '%' } })); } catch (_) {}
 
     // Fetch updated balance for UI display (best-effort — use stake-adjusted
     // fallback if the RPC hasn't propagated the debit yet).
@@ -13994,16 +14014,29 @@
       if (!market) return null;
       var selectedOutcome = getSelectedOutcomeContract(market, outcomeKey);
       if (selectedOutcome) {
+        // Multi-option markets now support BOTH sides per outcome: YES = this
+        // outcome happens (price), NO = this outcome does NOT happen (1-price).
+        // Previously side was hardcoded 'yes', so a bettor could never fade a
+        // specific outcome — that was the "variable option" gap.
+        var outcomeSide = side === 'no' ? 'no' : 'yes';
+        var yesP = selectedOutcome.price;
+        var noP = Number.isFinite(yesP) ? clamp(1 - yesP, 0, 1) : NaN;
+        var tokenIds = getMarketTokenIds(market, selectedOutcome.key);
+        // Polymarket sub-market token order is [YES, NO]; buying NO uses ids[1].
+        var sideTokens = outcomeSide === 'no' && tokenIds.length > 1
+          ? [tokenIds[1], tokenIds[0]]
+          : tokenIds;
         return {
           key: selectedOutcome.key,
-          label: selectedOutcome.label,
-          side: 'yes',
-          price: selectedOutcome.price,
-          yesPrice: selectedOutcome.price,
-          noPrice: Number.isFinite(selectedOutcome.price) ? clamp(1 - selectedOutcome.price, 0, 1) : NaN,
+          label: outcomeSide === 'no' ? ('No · ' + selectedOutcome.label) : selectedOutcome.label,
+          outcomeLabel: selectedOutcome.label,
+          side: outcomeSide,
+          price: outcomeSide === 'no' ? noP : yesP,
+          yesPrice: yesP,
+          noPrice: noP,
           gammaMarketId: selectedOutcome.gammaMarketId || market.gammaMarketId || '',
           conditionId: selectedOutcome.conditionId || market.conditionId || (market.raw && (market.raw.conditionId || market.raw.condition_id)) || '',
-          clobTokenIds: getMarketTokenIds(market, selectedOutcome.key)
+          clobTokenIds: sideTokens
         };
       }
       side = side === 'no' ? 'no' : 'yes';
@@ -15160,16 +15193,32 @@
       }
       if (marketHasExplicitOutcomeContracts(market)) {
         var selectedOutcome = syncSelectedOutcomeKey(market);
+        var activeSide = state.selectedSide === 'no' ? 'no' : 'yes';
+        // Each outcome row carries its own Yes / No chips (Polymarket's exact
+        // multi-option pattern): back an outcome to happen, or fade it. Both
+        // sides are real tradable positions with mirrored prices.
+        outcomeToggle.classList.add('prediction-outcome-ladder');
         outcomeToggle.innerHTML = getMarketOutcomeContracts(market).map(function(outcome) {
+          var isSel = selectedOutcome && selectedOutcome.key === outcome.key;
+          var yesP = outcome.price;
+          var noP = Number.isFinite(yesP) ? clamp(1 - yesP, 0, 1) : NaN;
           return [
-            '<button class="prediction-side-btn' + (selectedOutcome && selectedOutcome.key === outcome.key ? ' is-active' : '') + '" type="button" data-prediction-outcome-key="' + escapeHtml(outcome.key) + '">',
-              '<span>' + escapeHtml(outcome.label) + '</span>',
-              '<strong>' + escapeHtml(Number.isFinite(outcome.price) ? formatPercent(outcome.price) : '--') + '</strong>',
-            '</button>'
+            '<div class="prediction-outcome-row' + (isSel ? ' is-selected' : '') + '">',
+              '<span class="prediction-outcome-name">' + escapeHtml(outcome.label) + '</span>',
+              '<span class="prediction-outcome-sides">',
+                '<button class="prediction-outcome-chip chip-yes' + (isSel && activeSide === 'yes' ? ' is-active' : '') + '" type="button" data-prediction-outcome-key="' + escapeHtml(outcome.key) + '" data-prediction-outcome-side="yes">',
+                  'Yes <strong>' + escapeHtml(Number.isFinite(yesP) ? formatPercent(yesP) : '--') + '</strong>',
+                '</button>',
+                '<button class="prediction-outcome-chip chip-no' + (isSel && activeSide === 'no' ? ' is-active' : '') + '" type="button" data-prediction-outcome-key="' + escapeHtml(outcome.key) + '" data-prediction-outcome-side="no">',
+                  'No <strong>' + escapeHtml(Number.isFinite(noP) ? formatPercent(noP) : '--') + '</strong>',
+                '</button>',
+              '</span>',
+            '</div>'
           ].join('');
         }).join('');
         return;
       }
+      outcomeToggle.classList.remove('prediction-outcome-ladder');
       outcomeToggle.innerHTML = [
         '<button class="prediction-side-btn' + (state.selectedSide !== 'no' ? ' is-active' : '') + '" type="button" data-prediction-side="yes">',
           '<span>' + escapeHtml(market.yesLabel || 'Buy Yes') + '</span>',
@@ -15471,9 +15520,17 @@
       setChipState(stakeQuickEl, 'data-prediction-stake', String(Math.round(Number(state.stake) || 0)));
 
       var priceFraction = activeContract ? Number(activeContract.price) : getMarketPrice(market, state.selectedSide);
-      var estimatedShares = calculateEstimatedShares(state.stake, priceFraction);
-      var estimatedReturn = calculatePotentialReturn(state.stake, priceFraction);
-      var payoutMultiple = Number.isFinite(priceFraction) && priceFraction > 0 ? (1 / priceFraction) : NaN;
+      // Quote NET of the protocol fee so the ticket shows exactly what a
+      // winner receives — the same math placeOrder charges at execution.
+      var quoteFeeBps = 150;
+      try {
+        var quoteBpsOverride = parseFloat(localStorage.getItem('OST_FEE_PREDICTION_BPS'));
+        if (Number.isFinite(quoteBpsOverride) && quoteBpsOverride >= 0 && quoteBpsOverride <= 1000) quoteFeeBps = quoteBpsOverride;
+      } catch (_) {}
+      var quoteFeeScale = 1 - quoteFeeBps / 10000;
+      var estimatedShares = calculateEstimatedShares(state.stake, priceFraction) * quoteFeeScale;
+      var estimatedReturn = calculatePotentialReturn(state.stake, priceFraction) * quoteFeeScale;
+      var payoutMultiple = Number.isFinite(priceFraction) && priceFraction > 0 ? (quoteFeeScale / priceFraction) : NaN;
       var netIfRight = Number.isFinite(estimatedReturn) ? Math.max(estimatedReturn - state.stake, 0) : NaN;
       var hasSufficientBalance = state.availableBalance == null || state.availableBalance + 1e-9 >= Number(state.stake);
       var canTradeSelection = Number.isFinite(priceFraction) && priceFraction > 0;
@@ -15794,7 +15851,7 @@
         return (b.sortValue || 0) - (a.sortValue || 0);
       });
 
-      return interleaveMarkets(filtered, query ? 200 : 160);
+      return interleaveMarkets(filtered, query ? 400 : 320); // 2x board depth
     }
 
     function updateStatus(kind, text) {
@@ -16623,7 +16680,9 @@
         var outcomeButton = event.target.closest('button[data-prediction-outcome-key]');
         if (outcomeButton) {
           state.selectedOutcomeKey = outcomeButton.getAttribute('data-prediction-outcome-key') || '';
-          state.selectedSide = 'yes';
+          // Honor the per-outcome Yes/No chip instead of forcing 'yes', so a
+          // bettor can fade a specific outcome in a multi-option market.
+          state.selectedSide = outcomeButton.getAttribute('data-prediction-outcome-side') === 'no' ? 'no' : 'yes';
           renderPredictionTicket(getFilteredMarkets());
           renderPredictionStage(getFilteredMarkets());
           return;

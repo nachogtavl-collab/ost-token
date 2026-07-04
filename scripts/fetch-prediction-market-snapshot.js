@@ -20,11 +20,18 @@ const POLYMARKET_URLS = [
   'https://gamma-api.polymarket.com/markets?limit=120&closed=false&tag_id=100640', // games
   'https://gamma-api.polymarket.com/markets?limit=200&closed=false&order=volume24hr&ascending=false',
   'https://gamma-api.polymarket.com/markets?limit=300&closed=false&offset=500',
-  'https://gamma-api.polymarket.com/markets?limit=300&closed=false&offset=800'
+  'https://gamma-api.polymarket.com/markets?limit=300&closed=false&offset=800',
+  // 2x expansion: deeper pages + volume tail for broader coverage
+  'https://gamma-api.polymarket.com/markets?limit=300&closed=false&offset=1100',
+  'https://gamma-api.polymarket.com/markets?limit=300&closed=false&offset=1400',
+  'https://gamma-api.polymarket.com/markets?limit=300&closed=false&offset=1700',
+  'https://gamma-api.polymarket.com/markets?limit=300&closed=false&offset=2000',
+  'https://gamma-api.polymarket.com/markets?limit=200&closed=false&order=volume24hr&ascending=false&offset=200',
+  'https://gamma-api.polymarket.com/markets?limit=200&closed=false&order=endDate&ascending=true' // near-dated scalar/date markets
 ];
 const KALSHI_BASE = 'https://api.elections.kalshi.com/trade-api/v2';
-const KALSHI_EVENT_PAGES = 10;          // 4 x 200 events scanned
-const KALSHI_TARGET = 200;             // aim for ~this many priced markets
+const KALSHI_EVENT_PAGES = 20;          // 2x: 20 x 200 events scanned
+const KALSHI_TARGET = 400;             // 2x: aim for ~this many priced markets
 const KALSHI_BATCH = 5;                // parallel orderbook fetches
 const OUTPUT_PATH = path.join(__dirname, '..', 'docs', 'data', 'prediction-market-snapshot.json');
 
@@ -47,7 +54,13 @@ function polymarketFilter(item) {
 }
 
 // ---------------------------------------------------------------- Polymarket
-const POLYMARKET_SEARCHES = ['world cup', 'fifa 2026', 'golden boot', 'champions league', 'nba finals', 'ufc', 'formula 1'];
+const POLYMARKET_SEARCHES = [
+  'world cup', 'fifa 2026', 'golden boot', 'champions league', 'nba finals', 'ufc', 'formula 1',
+  // 2x expansion — more sports, crypto, macro, politics, entertainment
+  'premier league', 'la liga', 'nfl', 'mlb', 'nhl', 'tennis', 'olympics',
+  'bitcoin', 'ethereum', 'solana', 'fed', 'inflation', 'recession',
+  'election', 'president', 'oscars', 'grammys', 'spacex', 'openai', 'apple'
+];
 
 function legPrice(m) {
   try {
@@ -120,14 +133,24 @@ async function loadPolymarketSearch() {
 }
 
 async function loadPolymarketSportsEvents() {
-  try {
-    const payload = await fetchJson('sports-events',
-      'https://gamma-api.polymarket.com/events?limit=200&closed=false&tag_id=100639');
-    return flattenEventMarkets(Array.isArray(payload) ? payload : payload && payload.value);
-  } catch (error) {
-    console.error('[prediction-snapshot] sports events failed: ' + error.message);
-    return [];
-  }
+  // Sports + top-volume general events. Grouped events become the ladder
+  // records (groupOutcomes) — this is where multi-option, scalar-bucket and
+  // date-bucket markets come from, so pulling both feeds doubles that pool.
+  const urls = [
+    'https://gamma-api.polymarket.com/events?limit=200&closed=false&tag_id=100639',
+    'https://gamma-api.polymarket.com/events?limit=200&closed=false&order=volume24hr&ascending=false',
+    'https://gamma-api.polymarket.com/events?limit=200&closed=false&order=volume24hr&ascending=false&offset=200'
+  ];
+  const results = await Promise.all(urls.map(async (url, i) => {
+    try {
+      const payload = await fetchJson('events p' + i, url);
+      return flattenEventMarkets(Array.isArray(payload) ? payload : payload && payload.value);
+    } catch (error) {
+      console.error('[prediction-snapshot] events pull ' + i + ' failed: ' + error.message);
+      return [];
+    }
+  }));
+  return results.flat();
 }
 
 async function loadPolymarket() {

@@ -13,10 +13,7 @@ use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{program::invoke_signed, system_instruction};
 use anchor_spl::token_2022::{self, spl_token_2022};
 use spl_token_2022::{
-    extension::{
-        confidential_transfer::instruction as ct_instruction,
-        ExtensionType,
-    },
+    extension::{confidential_transfer::instruction as ct_instruction, ExtensionType},
     instruction as token_instruction,
     state::Mint as MintState,
 };
@@ -95,17 +92,14 @@ pub fn handler(ctx: Context<InitializeMint>) -> Result<()> {
     let ix_ct = ct_instruction::initialize_mint(
         &spl_token_2022::id(),
         mint.key,
-        None,                        // no CT authority (fully decentralized)
-        true,                        // auto_approve_new_accounts
-        None,                        // no auditor
+        None, // no CT authority (fully decentralized)
+        true, // auto_approve_new_accounts
+        None, // no auditor
     )?;
 
     invoke_signed(
         &ix_ct,
-        &[
-            mint.to_account_info(),
-            token_program.to_account_info(),
-        ],
+        &[mint.to_account_info(), token_program.to_account_info()],
         &[],
     )?;
 
@@ -114,17 +108,11 @@ pub fn handler(ctx: Context<InitializeMint>) -> Result<()> {
         &spl_token_2022::id(),
         mint.key,
         &ctx.accounts.mint_authority.key(), // mint authority = PDA
-        None,                                // no freeze authority
-        9,                                   // 9 decimals
+        None,                               // no freeze authority
+        9,                                  // 9 decimals
     )?;
 
-    invoke_signed(
-        &ix_init_mint,
-        &[
-            mint.to_account_info(),
-        ],
-        &[],
-    )?;
+    invoke_signed(&ix_init_mint, &[mint.to_account_info()], &[])?;
 
     // ---- Persist config ----
     let config = &mut ctx.accounts.mint_config;
@@ -134,7 +122,10 @@ pub fn handler(ctx: Context<InitializeMint>) -> Result<()> {
     config.total_minted = 0; // Fair launch: zero pre-mine
     config.admin = admin.key();
 
-    msg!("OST Mint initialized: {} (9 decimals, confidential transfers ON, zero pre-mine)", mint.key);
+    msg!(
+        "OST Mint initialized: {} (9 decimals, confidential transfers ON, zero pre-mine)",
+        mint.key
+    );
 
     Ok(())
 }
