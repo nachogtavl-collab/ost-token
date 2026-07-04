@@ -42,7 +42,7 @@
   };
 
   // ------------------------------------------------------------- helpers
-  function clampP(p) { return Math.max(0.03, Math.min(0.97, Number(p) || 0.5)); }
+  function clampP(p) { return Math.max(0.005, Math.min(0.995, Number(p) || 0.5)); }
 
   function boundaries(now) {
     var t = now || Date.now();
@@ -266,7 +266,9 @@
     if (!m) { toastMini('Market not loaded yet'); return false; }
     var yes = clampP(m.yesPriceNumber);
     var p = side === 'yes' ? yes : 1 - yes;
-    if (p <= 0.031 || p >= 0.969) { toastMini('Odds too extreme for a parlay leg'); return false; }
+    // Extreme odds ARE allowed now (longshot 1c legs => big multipliers,
+    // heavy-favorite 99c legs => safe ballast). Only a literal 0/100 with no
+    // market is rejected. MAX_MULT still caps the runaway payout.
     // Fast native cards route to the fast engine instead
     var fm = /^ost-(btc|eth|sol)5m-/.exec(String(marketId));
     if (fm) return addFastLeg(fm[1], side === 'yes' ? 'up' : 'down');

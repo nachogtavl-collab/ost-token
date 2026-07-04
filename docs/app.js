@@ -15767,7 +15767,7 @@
         return (b.sortValue || 0) - (a.sortValue || 0);
       });
 
-      return interleaveMarkets(filtered, query ? 96 : 72);
+      return interleaveMarkets(filtered, query ? 200 : 160);
     }
 
     function updateStatus(kind, text) {

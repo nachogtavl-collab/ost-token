@@ -497,6 +497,22 @@
         logPayoutAudit({ id: payoutId, stage: 'failure', wallet: walletStr, kind: 'payout', ostAmount: amt, memo: memoSummary, error: emptyError, ref: payoutRefFromMemo(memoText) });
         throw new Error(emptyError);
       }
+      // ── Dynamic solvency cap: no single win may take more than a fixed
+      //    FRACTION of the LIVE vault. This is the whale-protection fix — it
+      //    keeps the shared vault solvent so a huge winner can never drain it
+      //    and block everyone else's legitimate claims. The vault degrades
+      //    gracefully instead of hitting zero. Override the fraction with
+      //    localStorage OST_VAULT_MAX_PAYOUT_FRACTION (0..1); default 2%.
+      var solvencyFraction = numberSetting('OST_VAULT_MAX_PAYOUT_FRACTION', 0.02);
+      if (solvencyFraction > 0 && solvencyFraction < 1) {
+        var dynamicCap = poolBal * solvencyFraction;
+        if (amt > dynamicCap) {
+          var dynError = 'This win of ' + formatOstAmount(amt) + ' OST exceeds the live vault solvency cap of ' + formatOstAmount(dynamicCap) + ' OST (' + Math.round(solvencyFraction * 100) + '% of the shared vault). It is queued for staged settlement so smaller winners can always be paid; the remainder pays as the vault refills.';
+          rememberPendingPayout(payoutId, { wallet: walletStr, ostAmount: amt, poolBalance: poolBal, solvencyCap: dynamicCap, memo: memoSummary, error: dynError, stage: 'solvency-staged' });
+          logPayoutAudit({ id: payoutId, stage: 'failure', wallet: walletStr, kind: 'payout', ostAmount: amt, memo: memoSummary, error: dynError, ref: payoutRefFromMemo(memoText) });
+          throw new Error(dynError);
+        }
+      }
       if (cfg.minReserve > 0 && poolBal - amt < cfg.minReserve) {
         var reserveError = 'OST payout vault is protecting its shared reserve. Needs ' + formatOstAmount(amt) + ' OST with ' + formatOstAmount(cfg.minReserve) + ' OST kept online; current vault is ' + formatOstAmount(poolBal) + ' OST. No partial payout was sent.';
         rememberPendingPayout(payoutId, { wallet: walletStr, ostAmount: amt, poolBalance: poolBal, memo: memoSummary, error: reserveError, stage: 'reserve-protected' });
