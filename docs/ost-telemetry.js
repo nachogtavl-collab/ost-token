@@ -22,7 +22,7 @@
   var QUEUE_KEY = 'ost.telemetry.queue.v1';
   var DEVICE_KEY = 'ost.telemetry.device.v1';
   var VALID = { faucet: 1, send: 1, cashout: 1, game_win: 1, game_loss: 1, swap: 1, topup: 1, other: 1 };
-  var MIN_GAP_MS = 1200;   // collapse bursts
+  var MIN_GAP_MS = 60000;  // one KV-write-bearing flush per minute (free-tier safe)
   var lastSentAt = 0;
   var pending = [];
 
@@ -79,26 +79,29 @@
     pending = [];
     if (!batch.length) { saveQueue([]); return; }
     saveQueue(batch);
-    var ev = batch[0];
+    // Coalesce the whole queued batch into ONE event: sum volume, keep the
+    // most meaningful type. This turns N activity events into a single POST
+    // (one server-side write window) instead of N — the fix for exhausting
+    // the free KV write budget.
+    var totalVol = batch.reduce(function (s2, e) { return s2 + (Number(e.volume) || 0); }, 0);
+    var pref = ['game_win', 'cashout', 'faucet', 'swap', 'topup', 'send', 'game_loss', 'other'];
+    var type = 'other';
+    for (var pi = 0; pi < pref.length; pi++) { if (batch.some(function (e) { return e.type === pref[pi]; })) { type = pref[pi]; break; } }
+    var ev = { wallet: batch[batch.length - 1].wallet, type: type, volume: totalVol };
     lastSentAt = Date.now();
     fetch(base + '/ost/event', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ wallet: ev.wallet, type: ev.type, volume: ev.volume }),
+      body: JSON.stringify(ev),
       keepalive: true
     }).then(function (r) {
       if (!r.ok) throw new Error('http ' + r.status);
       return r.json();
     }).then(function (res) {
-      // success: drop this event, keep draining
-      var rest = loadQueue().slice(1);
-      saveQueue(rest);
-      try {
-        window.dispatchEvent(new CustomEvent('ost:telemetry-accepted', { detail: res }));
-      } catch (_) {}
-      if (rest.length || pending.length) flushSoon();
+      saveQueue([]); // whole batch represented by the one accepted event
+      try { window.dispatchEvent(new CustomEvent('ost:telemetry-accepted', { detail: res })); } catch (_) {}
     }).catch(function () {
-      // leave in queue; retry on next event or interval
+      // leave batch queued; retry next interval
     });
   }
 
@@ -141,7 +144,7 @@
 
     // best-effort flush of any queued events on load + periodically
     flush();
-    setInterval(flush, 20000);
+    setInterval(flush, 60000);
     window.addEventListener('online', flush, false);
     // count this session as an active wallet immediately
     enqueue('other', 0);

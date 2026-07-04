@@ -13,6 +13,7 @@
   var SIGNALS_KEY = 'ost.mesh.signals.v1';
   var INVITE_PREFIX = 'ost-mesh-invite:';
   var QR_DECODER_URLS = [
+    'vendor/jsqr.min.js',                                    // local: works offline, in CN, always
     'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js',
     'https://unpkg.com/jsqr@1.4.0/dist/jsQR.js'
   ];
@@ -283,6 +284,30 @@
   }
 
   function qrUrl(value) {
+    // Local, spec-correct QR (vendored qrcode-generator). The old external
+    // api.qrserver.com image silently never loaded offline/behind blocks -
+    // THAT is why other phones "never picked up the QR": there was none.
+    try {
+      if (typeof window.qrcode === 'function') {
+        var qr = window.qrcode(0, 'M');
+        qr.addData(String(value || ''));
+        qr.make();
+        var n = qr.getModuleCount();
+        var cell = Math.max(4, Math.floor(304 / n));
+        var size = n * cell + 32;
+        var cv = document.createElement('canvas');
+        cv.width = size; cv.height = size;
+        var cx = cv.getContext('2d');
+        cx.fillStyle = '#ffffff';
+        cx.fillRect(0, 0, size, size);
+        cx.fillStyle = '#000000';
+        for (var r = 0; r < n; r++) for (var c = 0; c < n; c++) {
+          if (qr.isDark(r, c)) cx.fillRect(16 + c * cell, 16 + r * cell, cell, cell);
+        }
+        return cv.toDataURL('image/png');
+      }
+    } catch (_) {}
+    // last-resort fallback to the external renderer
     return 'https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=16&ecc=M&data=' + encodeURIComponent(value || '');
   }
 

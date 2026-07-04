@@ -342,11 +342,29 @@ export async function handleOstPriceRequest(request, env, ctx) {
     counters.wallets24h[wallet] = now;
     counters.tx24h.push({ ts: now, type, volume });
     if (counters.tx24h.length > OST_EVENT_MAX) counters.tx24h = counters.tx24h.slice(-OST_EVENT_MAX);
-    await kvPut(env, 'ost:counters', counters);
 
+    // ── KV write COALESCING ─────────────────────────────────────────────
+    // Free-tier KV is 1000 writes/day. Writing counters+history on EVERY
+    // event exhausted the daily budget (and broke mesh chat, which shares
+    // the account write quota). We now persist counters at most once per
+    // COUNTER_WRITE_GAP_MS, and history only when its minute bucket rolls.
+    const COUNTER_WRITE_GAP_MS = 20000;
+    const bucketStart = Math.floor(now / OST_HISTORY_MS) * OST_HISTORY_MS;
+    const lastWrite = Number(counters._lastWriteTs || 0);
+    const lastBucket = Number(counters._lastBucket || 0);
     const btc = await fetchBtc24hChangePct();
     const mood = btcMood(btc?.pct);
-    await updateHistoryOnEvent(env, counters, mood, now);
+
+    const bucketRolled = bucketStart !== lastBucket;
+    if (bucketRolled || (now - lastWrite) >= COUNTER_WRITE_GAP_MS) {
+      counters._lastWriteTs = now;
+      counters._lastBucket = bucketStart;
+      await kvPut(env, 'ost:counters', counters);
+      await updateHistoryOnEvent(env, counters, mood, now);
+    }
+    // else: event is still counted in-memory for THIS response; it will be
+    // persisted by the next event that crosses the write gap. Approximate
+    // stats, exact-enough price, and the write budget survives the day.
 
     const price = computePrice(counters, now, mood);
     return json({

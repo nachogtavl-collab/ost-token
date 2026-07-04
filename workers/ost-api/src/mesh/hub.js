@@ -90,6 +90,21 @@ export class MeshHub {
         });
       }
 
+      if (method === 'POST' && path === '/mesh/v1/msg/send') {
+        const body = await request.json().catch(() => ({}));
+        return this.msgSend(body);
+      }
+      if (method === 'GET' && path === '/mesh/v1/msg/inbox') {
+        return this.msgInbox(url.searchParams.get('to'), url.searchParams.get('drain'));
+      }
+      if (method === 'POST' && path === '/mesh/v1/presence') {
+        const body = await request.json().catch(() => ({}));
+        return this.presencePing(body && body.addr);
+      }
+      if (method === 'GET' && path === '/mesh/v1/presence') {
+        return this.presenceQuery(url.searchParams.get('addrs'));
+      }
+
       return fail('mesh route not found: ' + method + ' ' + path, 404);
     } catch (error) {
       return fail('mesh hub error: ' + String(error?.message || error), 500);
@@ -207,5 +222,54 @@ export class MeshHub {
     const keep = inbox.filter((record) => record && now - Number(record.ts || 0) <= SIGNAL_TTL_MS);
     if (keep.length) this.inboxes.set(to, keep.slice(-MAX_PER_INBOX));
     else this.inboxes.delete(to);
+
+  }
+
+  async msgSend(body) {
+    const { from, to, payload } = body || {};
+    if (!validAddr(from) || !validAddr(to)) return fail('bad addresses');
+    if (!payload || typeof payload !== 'object') return fail('bad payload');
+    if (JSON.stringify(payload).length > 16000) return fail('payload too large');
+    const now = Date.now();
+    const id = messageId();
+    const key = MSG_PREFIX + to + ':' + String(now).padStart(14, '0') + ':' + id;
+    await this.state.storage.put(key, { id, from, to, ts: now, payload, expiresAt: now + MSG_TTL_MS });
+    await this.state.storage.put(SEEN_PREFIX + from, now);
+    return json({ ok: true, id, ts: now, hub: 'durable-object' });
+  }
+
+  async msgInbox(to, drain) {
+    if (!validAddr(to)) return fail('bad to');
+    const now = Date.now();
+    const listed = await this.state.storage.list({ prefix: MSG_PREFIX + to + ':', limit: MAX_INBOX });
+    const messages = [];
+    const del = [];
+    for (const [key, rec] of listed) {
+      if (!rec || (rec.expiresAt && rec.expiresAt <= now)) { del.push(key); continue; }
+      messages.push({ id: rec.id, from: rec.from, to: rec.to, ts: rec.ts, payload: rec.payload });
+      if (drain !== '0') del.push(key);
+    }
+    if (del.length) await this.state.storage.delete(del).catch(() => {});
+    await this.state.storage.put(SEEN_PREFIX + to, now);
+    messages.sort((a, b) => a.ts - b.ts);
+    return json({ ok: true, messages, count: messages.length, ts: now });
+  }
+
+  async presencePing(addr) {
+    if (!validAddr(addr)) return fail('bad addr');
+    await this.state.storage.put(SEEN_PREFIX + addr, Date.now());
+    return json({ ok: true, ts: Date.now() });
+  }
+
+  async presenceQuery(addrsCsv) {
+    const addrs = String(addrsCsv || '').split(',').map((a) => a.trim()).filter(validAddr).slice(0, 40);
+    if (!addrs.length) return fail('no valid addrs');
+    const now = Date.now();
+    const presence = {};
+    await Promise.all(addrs.map(async (a) => {
+      const ts = Number(await this.state.storage.get(SEEN_PREFIX + a).catch(() => 0)) || 0;
+      presence[a] = { lastSeen: ts || null, online: ts > 0 && (now - ts) < SEEN_TTL_MS };
+    }));
+    return json({ ok: true, presence, ts: now });
   }
 }

@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v223';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v223';
+const CACHE_NAME = 'ost-pwa-cache-v224';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v224';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -77,7 +77,9 @@ const PRECACHE_PATHS = [
   './mesh/veil.js?v=1',
   './mesh/mesh-play.js?v=13',
   './mesh/mesh-fair-fx.js?v=1',
-  './mesh/mesh-upgrade.js?v=11',
+  './mesh/mesh-upgrade.js?v=12',
+  './vendor/qrcode-generator.js',
+  './vendor/jsqr.min.js',
   './mesh/mesh-link.js?v=2',
   './mesh/mesh-games.js?v=1',
   './mesh/games/tictactoe.js?v=1',
