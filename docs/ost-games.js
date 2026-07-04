@@ -811,9 +811,44 @@
           '<div class="ostg-meta"><span>Current</span> <strong id="mnCurrent">1.00x</strong></div>' +
           '<div class="ostg-meta"><span>Next safe</span> <strong id="mnNext">—</strong></div>' +
         '</div>' +
+        '<div class="mn-ladder" id="mnLadder"></div>' +
         '<div class="ostg-board ostg-board-5x5" id="mnBoard"></div>' +
-        '<div class="ostg-status" id="mnStatus">Choose mines, place a bet, then reveal gems. Cash out before you hit a mine.</div>' +
+        '<div class="ostg-status" id="mnStatus">Choose mines, place a bet, then flip tiles. Every gem climbs the ladder — cash out before a mine ends the run.</div>' +
       '</div>';
+
+    if (!document.getElementById('ostgMinesDeluxeStyle')) {
+      var mst = document.createElement('style');
+      mst.id = 'ostgMinesDeluxeStyle';
+      mst.textContent =
+        '.mn-ladder{display:flex;gap:5px;overflow-x:auto;padding:4px 2px 8px;-webkit-overflow-scrolling:touch;scrollbar-width:thin;}' +
+        '.mn-step{flex:0 0 auto;border-radius:9px;padding:4px 9px;font-size:10.5px;font-weight:800;text-align:center;' +
+        'background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);color:#8ea3c7;min-width:52px;}' +
+        '.mn-step small{display:block;font-size:9px;font-weight:600;opacity:.7;}' +
+        '.mn-step.is-done{background:rgba(52,211,153,0.16);border-color:rgba(52,211,153,0.45);color:#7ce6a8;}' +
+        '.mn-step.is-next{background:rgba(245,196,104,0.14);border-color:rgba(245,196,104,0.5);color:#f5c468;' +
+        'animation:mnNextPulse 1.4s infinite;}' +
+        '@keyframes mnNextPulse{0%,100%{box-shadow:0 0 0 0 rgba(245,196,104,0.35);}50%{box-shadow:0 0 0 6px rgba(245,196,104,0);}}' +
+        '.ostg-tile{perspective:400px;position:relative;overflow:visible!important;}' +
+        '.ostg-tile .mn-inner{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;' +
+        'transition:transform .28s cubic-bezier(.3,1.4,.5,1);transform-style:preserve-3d;font-size:20px;}' +
+        '.ostg-tile.is-flipped .mn-inner{transform:rotateY(180deg);}' +
+        '.ostg-tile .mn-face{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;backface-visibility:hidden;border-radius:inherit;}' +
+        '.ostg-tile .mn-back{transform:rotateY(180deg);}' +
+        '.ostg-tile.safe .mn-back{background:radial-gradient(circle,rgba(52,211,153,0.28),transparent 75%);}' +
+        '.ostg-tile.mine .mn-back,.ostg-tile.mine-reveal .mn-back{background:radial-gradient(circle,rgba(239,68,68,0.32),transparent 75%);}' +
+        '.mn-spark{position:absolute;left:50%;top:50%;width:4px;height:4px;border-radius:50%;background:#7ce6a8;pointer-events:none;' +
+        'animation:mnSpark .55s ease-out forwards;}' +
+        '@keyframes mnSpark{to{transform:translate(var(--sx),var(--sy)) scale(0);opacity:0;}}' +
+        '.mn-float{position:absolute;left:50%;top:0;transform:translateX(-50%);color:#7ce6a8;font-size:12px;font-weight:900;' +
+        'pointer-events:none;animation:mnFloat .9s ease forwards;z-index:5;white-space:nowrap;}' +
+        '@keyframes mnFloat{0%{opacity:0;transform:translate(-50%,4px);}25%{opacity:1;}100%{opacity:0;transform:translate(-50%,-22px);}}' +
+        '.ostg-board.is-quake{animation:mnQuake .5s ease;}' +
+        '@keyframes mnQuake{0%,100%{transform:translate(0,0);}20%{transform:translate(-5px,3px);}40%{transform:translate(5px,-3px);}60%{transform:translate(-4px,-2px);}80%{transform:translate(3px,2px);}}' +
+        '.ostg-game.ostg-mines.is-detonated::after{content:"";position:absolute;inset:0;background:radial-gradient(circle,rgba(239,68,68,0.22),transparent 70%);' +
+        'pointer-events:none;animation:mnVignette .7s ease forwards;}' +
+        '@keyframes mnVignette{from{opacity:1;}to{opacity:0;}}';
+      document.head.appendChild(mst);
+    }
 
     var bet = document.getElementById('mnBet');
     var mines = document.getElementById('mnMines');
@@ -826,6 +861,7 @@
     var nextEl   = document.getElementById('mnNext');
     var statusEl = document.getElementById('mnStatus');
     var board    = document.getElementById('mnBoard');
+    var ladder   = document.getElementById('mnLadder');
 
     var session = null;
 
@@ -837,25 +873,46 @@
         c.dataset.idx = String(i);
         c.type = 'button';
         c.setAttribute('aria-label', 'Mines tile ' + (i + 1) + ' of 25, hidden');
+        c.innerHTML = '<span class="mn-inner"><span class="mn-face mn-front">✦</span><span class="mn-face mn-back"></span></span>';
         c.addEventListener('click', onPick);
         c.disabled = !session;
         board.appendChild(c);
       }
     }
 
+    function paintLadder() {
+      var mineCount = session ? session.mines : parseInt(mines.value, 10);
+      var betAmt = session ? session.bet : (parseFloat(bet.value) || 1);
+      var maxSteps = 25 - mineCount;
+      var done = session ? session.safeRevealed : 0;
+      var html = '';
+      for (var stp = 1; stp <= Math.min(maxSteps, 20); stp++) {
+        var m = minesMultiplier(stp, mineCount);
+        var cls = stp <= done ? ' is-done' : (stp === done + 1 ? ' is-next' : '');
+        html += '<span class="mn-step' + cls + '">' + shortMult(m) + '<small>' + (betAmt * m).toFixed(1) + ' OST</small></span>';
+      }
+      ladder.innerHTML = html;
+      var next = ladder.querySelector('.is-next');
+      if (next && next.scrollIntoView) next.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+    }
+
     function updateMeta() {
       if (!session) {
         currentEl.textContent = '1.00x';
         nextEl.textContent = '—';
+        paintLadder();
         return;
       }
       var current = session.safeRevealed ? minesMultiplier(session.safeRevealed, session.mines) : 1;
       var nextPick = Math.min(session.safeRevealed + 1, 25 - session.mines);
       currentEl.textContent = shortMult(current);
       nextEl.textContent = shortMult(minesMultiplier(nextPick, session.mines));
-      cashBtn.textContent = session.safeRevealed ? ('Cash out · ' + (session.bet * current).toFixed(2) + ' OST') : 'Cash out';
+      cashBtn.textContent = session.safeRevealed ? ('💰 Take ' + (session.bet * current).toFixed(2) + ' OST') : '💰 Take the gold';
       cashBtn.disabled = session.safeRevealed < 1;
+      paintLadder();
     }
+
+    [mines, bet].forEach(function (e) { e.addEventListener('input', function () { if (!session) paintLadder(); }); });
 
     async function onStart() {
       var amt = parseBet(bet, statusEl);
@@ -864,22 +921,40 @@
       if (!res.ok) { statusEl.textContent = res.msg; return; }
       var mineCount = parseInt(mines.value, 10);
       var floats = await pfFloats(25);
-      // Fisher-Yates shuffle indices via floats
       var idxs = []; for (var i = 0; i < 25; i++) idxs.push(i);
-      for (var i = 24; i > 0; i--) {
-        var j = Math.floor(floats[i] * (i + 1));
-        var t = idxs[i]; idxs[i] = idxs[j]; idxs[j] = t;
+      for (var i2 = 24; i2 > 0; i2--) {
+        var j = Math.floor(floats[i2] * (i2 + 1));
+        var t = idxs[i2]; idxs[i2] = idxs[j]; idxs[j] = t;
       }
       var minePositions = new Set(idxs.slice(0, mineCount));
       session = { bet: amt, mines: mineCount, minePositions: minePositions, safeRevealed: 0, revealed: new Set() };
+      stage.querySelector('.ostg-mines').classList.remove('is-detonated');
       buildBoard();
       updateMeta();
-      statusEl.textContent = 'Pick a tile. Each safe tile boosts your multiplier.';
+      statusEl.textContent = 'Flip a tile. Every gem climbs the golden ladder above.';
       startBtn.disabled = true;
       quickBtn.disabled = false;
       mines.disabled = true;
       auto.disabled = true;
       bet.disabled = true;
+    }
+
+    function sparkle(tile) {
+      for (var k = 0; k < 7; k++) {
+        var s = document.createElement('span');
+        s.className = 'mn-spark';
+        var ang = (k / 7) * Math.PI * 2;
+        s.style.setProperty('--sx', Math.round(Math.cos(ang) * 26) + 'px');
+        s.style.setProperty('--sy', Math.round(Math.sin(ang) * 26) + 'px');
+        tile.appendChild(s);
+        setTimeout(function (el) { el.remove(); }.bind(null, s), 600);
+      }
+    }
+
+    function flipTo(tile, symbol, cls) {
+      var back = tile.querySelector('.mn-back');
+      if (back) back.textContent = symbol;
+      tile.classList.add(cls, 'is-flipped');
     }
 
     function onPick(e) {
@@ -890,22 +965,28 @@
       tile.disabled = true;
       session.revealed.add(idx);
       if (session.minePositions.has(idx)) {
-        tile.classList.add('mine');
-        tile.innerHTML = '<span>💣</span>';
+        flipTo(tile, '💣', 'mine');
+        board.classList.remove('is-quake');
+        void board.offsetWidth;
+        board.classList.add('is-quake');
+        stage.querySelector('.ostg-mines').classList.add('is-detonated');
         tile.setAttribute('aria-label', 'Mines tile ' + (idx + 1) + ', mine');
-        pulse(tile, 'ostg-tile-pop');
-        revealAll();
-        settleGame('mines', session.bet, 0, 0, statusEl, '💥 Hit a mine. Lost ' + fmt(session.bet) + ' OST.', board);
+        settleGame('mines', session.bet, 0, 0, statusEl, '💥 BOOM — the mine ends the run. Lost ' + fmt(session.bet) + ' OST.', board);
+        revealAll(idx);
         endRound();
       } else {
         session.safeRevealed += 1;
-        tile.classList.add('safe');
-        tile.innerHTML = '<span>💎</span>';
+        flipTo(tile, '💎', 'safe');
+        sparkle(tile);
         tile.setAttribute('aria-label', 'Mines tile ' + (idx + 1) + ', safe gem');
-        pulse(tile, 'ostg-tile-pop');
         var mult = minesMultiplier(session.safeRevealed, session.mines);
+        var floatChip = document.createElement('span');
+        floatChip.className = 'mn-float';
+        floatChip.textContent = shortMult(mult);
+        tile.appendChild(floatChip);
+        setTimeout(function () { floatChip.remove(); }, 950);
         updateMeta();
-        statusEl.textContent = '✅ Safe ' + session.safeRevealed + '/' + (25 - session.mines) + ' · ' + shortMult(mult);
+        statusEl.textContent = '💎 ' + session.safeRevealed + '/' + (25 - session.mines) + ' gems · ladder at ' + shortMult(mult);
         var autoAt = parseInt(auto.value, 10) || 0;
         if (autoAt && session.safeRevealed >= autoAt) return onCash();
         if (session.safeRevealed === 25 - session.mines) onCash(); // perfect clear
@@ -919,13 +1000,15 @@
       tiles[Math.floor(Math.random() * tiles.length)].click();
     }
 
-    function revealAll() {
+    function revealAll(hitIdx) {
+      var delay = 0;
+      var mineSnapshot = session ? session.minePositions : new Set();
       board.querySelectorAll('.ostg-tile').forEach(function (t) {
         t.disabled = true;
         var i = parseInt(t.dataset.idx, 10);
-        if (session.minePositions.has(i) && !t.classList.contains('mine')) {
-          t.classList.add('mine-reveal');
-          t.innerHTML = '<span>💣</span>';
+        if (mineSnapshot.has(i) && i !== hitIdx && !t.classList.contains('mine')) {
+          delay += 90;
+          setTimeout(function () { flipTo(t, '💣', 'mine-reveal'); }, delay);
           t.setAttribute('aria-label', 'Mines tile ' + (i + 1) + ', revealed mine');
         }
       });
@@ -935,8 +1018,8 @@
       if (!session) return;
       var mult = minesMultiplier(session.safeRevealed, session.mines);
       var payout = session.bet * mult;
-      settleGame('mines', session.bet, payout, mult, statusEl, '💰 Cashed out at ' + shortMult(mult) + ' for ' + payout.toFixed(2) + ' OST', board);
-      revealAll();
+      settleGame('mines', session.bet, payout, mult, statusEl, '💰 Banked at ' + shortMult(mult) + ' — ' + payout.toFixed(2) + ' OST is yours.', board);
+      revealAll(-1);
       endRound();
     }
 
@@ -945,7 +1028,7 @@
       startBtn.disabled = false;
       quickBtn.disabled = true;
       cashBtn.disabled = true;
-      cashBtn.textContent = 'Cash out';
+      cashBtn.textContent = '💰 Take the gold';
       mines.disabled = false;
       auto.disabled = false;
       bet.disabled = false;
@@ -1229,13 +1312,14 @@
           '<label>Risk<select id="plRisk"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select></label>' +
           '<label>Rows<select id="plRows"><option value="8">8</option><option value="12" selected>12</option><option value="16">16</option></select></label>' +
           '<label>Balls<select id="plBalls"><option value="1">1</option><option value="3" selected>3</option><option value="5">5</option><option value="10">10</option></select></label>' +
-          '<button class="ostg-btn ostg-btn-primary" id="plDrop">Drop ball</button>' +
+          '<button class="ostg-btn ostg-btn-primary" id="plDrop">Drop balls</button>' +
         '</div>' +
         '<div class="ostg-plinko-stage">' +
           '<canvas id="plCanvas" width="640" height="380"></canvas>' +
         '</div>' +
         '<div class="ostg-plinko-mults" id="plMults"></div>' +
-        '<div class="ostg-status" id="plStatus">Drop a ball — bounces left or right at every peg.</div>' +
+        '<div class="ostg-plinko-results" id="plResults"></div>' +
+        '<div class="ostg-status" id="plStatus">Drop the balls — every peg deflects them left or right. Edge buckets pay big.</div>' +
       '</div>';
 
     var bet = document.getElementById('plBet');
@@ -1246,121 +1330,230 @@
     var canvas = document.getElementById('plCanvas');
     var ctx = canvas.getContext('2d');
     var multsBar = document.getElementById('plMults');
+    var resultsBar = document.getElementById('plResults');
     var statusEl = document.getElementById('plStatus');
 
-    function paintMults() {
+    if (!document.getElementById('ostgPlinkoDeluxeStyle')) {
+      var pst = document.createElement('style');
+      pst.id = 'ostgPlinkoDeluxeStyle';
+      pst.textContent =
+        '.ostg-plinko-results{display:flex;gap:5px;flex-wrap:wrap;margin:6px 0 2px;min-height:22px;}' +
+        '.ostg-plinko-chip{border-radius:999px;padding:2px 9px;font-size:11px;font-weight:800;animation:plChipIn .3s ease;}' +
+        '.ostg-plinko-chip.small{background:rgba(255,255,255,0.08);color:#94a3b8;}' +
+        '.ostg-plinko-chip.mid{background:rgba(52,211,153,0.16);color:#7ce6a8;}' +
+        '.ostg-plinko-chip.big{background:rgba(245,196,104,0.2);color:#f5c468;box-shadow:0 0 12px rgba(245,196,104,0.35);}' +
+        '@keyframes plChipIn{from{transform:scale(.6);opacity:0;}to{transform:scale(1);opacity:1;}}';
+      document.head.appendChild(pst);
+    }
+
+    var BALL_COLORS = ['#f5c468', '#7dd3fc', '#f472b6', '#7ce6a8', '#a78bfa', '#fb923c', '#fde047', '#5eead4', '#fca5a5', '#c4b5fd'];
+
+    // ---- live scene state (all drawn each frame in ONE loop) --------------
+    var scene = {
+      flights: [],       // balls in flight
+      pegFlash: {},      // "row_col" -> flash ttl
+      bucketPulse: {},   // bucket index -> pulse ttl
+      pops: [],          // rising multiplier texts
+      landedGlow: []     // recent landings for a soft glow
+    };
+    var rafId = 0;
+    var running = false;
+    activeGameCleanup = function () { running = false; cancelAnimationFrame(rafId); };
+
+    function geometry() {
       var n = parseInt(rows.value, 10);
-      var arr = PLINKO_MULTS[n][risk.value];
+      return { n: n, topY: 30, botY: canvas.height - 40, spacingY: (canvas.height - 70) / n, pegDX: 28, buckets: n + 1, bw: canvas.width / (n + 1) };
+    }
+
+    function paintMults() {
+      var g = geometry();
+      var arr = PLINKO_MULTS[g.n][risk.value];
       multsBar.innerHTML = arr.map(function (m) {
         var cls = m >= 5 ? 'big' : m >= 1.2 ? 'mid' : 'small';
         return '<span class="ostg-mult-cell ' + cls + '">' + m + '×</span>';
       }).join('');
     }
-    [risk, rows].forEach(function (e) { e.addEventListener('change', function () { paintMults(); paintBoard(); }); });
+    [risk, rows].forEach(function (e) { e.addEventListener('change', function () { paintMults(); drawScene(); }); });
     paintMults();
 
-    function paintBoard(highlightBucket) {
-      var n = parseInt(rows.value, 10);
+    function drawScene() {
+      var g = geometry();
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      var topY = 30;
-      var botY = canvas.height - 40;
-      var spacingY = (botY - topY) / n;
-      for (var r = 0; r < n; r++) {
+      // pegs (flash when a ball strikes them)
+      for (var r = 0; r < g.n; r++) {
         var pegs = r + 2;
-        var totalW = (pegs - 1) * 28;
-        var startX = canvas.width / 2 - totalW / 2;
+        var startX = canvas.width / 2 - ((pegs - 1) * g.pegDX) / 2;
+        var py = g.topY + r * g.spacingY;
         for (var p = 0; p < pegs; p++) {
+          var flash = scene.pegFlash[r + '_' + p] || 0;
           ctx.beginPath();
-          ctx.arc(startX + p * 28, topY + r * spacingY, 3, 0, Math.PI * 2);
-          ctx.fillStyle = '#bfdbfe';
+          ctx.arc(startX + p * g.pegDX, py, flash > 0 ? 4.5 : 3, 0, Math.PI * 2);
+          if (flash > 0) {
+            ctx.fillStyle = '#fde68a';
+            ctx.shadowColor = 'rgba(245,196,104,0.9)';
+            ctx.shadowBlur = 14;
+          } else {
+            ctx.fillStyle = 'rgba(191,219,254,0.85)';
+            ctx.shadowBlur = 0;
+          }
           ctx.fill();
+          ctx.shadowBlur = 0;
         }
       }
-      // buckets
-      var buckets = n + 1;
-      var bw = canvas.width / buckets;
-      for (var i = 0; i < buckets; i++) {
-        ctx.fillStyle = i === highlightBucket ? 'rgba(245,196,104,0.5)' : 'rgba(255,255,255,0.06)';
-        ctx.fillRect(i * bw + 2, botY + 4, bw - 4, 28);
+      // buckets (pulse on impact, glow by payout tier)
+      var arr = PLINKO_MULTS[g.n][risk.value];
+      for (var i = 0; i < g.buckets; i++) {
+        var m = arr[i];
+        var pulseT = scene.bucketPulse[i] || 0;
+        var lift = pulseT > 0 ? Math.sin(pulseT * Math.PI) * 6 : 0;
+        var baseCol = m >= 5 ? 'rgba(245,196,104,' : m >= 1.2 ? 'rgba(52,211,153,' : 'rgba(255,255,255,';
+        ctx.fillStyle = baseCol + (pulseT > 0 ? 0.5 : (m >= 5 ? 0.18 : m >= 1.2 ? 0.12 : 0.06)) + ')';
+        ctx.fillRect(i * g.bw + 2, g.botY + 4 - lift, g.bw - 4, 28 + lift);
       }
+      // trails + balls
+      scene.flights.forEach(function (f) {
+        if (!f.visible) return;
+        f.trail.forEach(function (t, k) {
+          ctx.beginPath();
+          ctx.arc(t.x, t.y, 7 * (k + 1) / f.trail.length * 0.7, 0, Math.PI * 2);
+          ctx.fillStyle = f.color;
+          ctx.globalAlpha = 0.13 * (k + 1) / f.trail.length;
+          ctx.fill();
+        });
+        ctx.globalAlpha = 1;
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, 8 * f.squash, 0, Math.PI * 2);
+        ctx.fillStyle = f.color;
+        ctx.shadowColor = f.color;
+        ctx.shadowBlur = 16;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      });
+      // rising multiplier pops
+      ctx.textAlign = 'center';
+      scene.pops.forEach(function (pop) {
+        ctx.globalAlpha = Math.max(0, pop.ttl);
+        ctx.fillStyle = pop.big ? '#f5c468' : '#7ce6a8';
+        ctx.font = 'bold ' + (pop.big ? 20 : 15) + 'px sans-serif';
+        ctx.fillText(pop.text, pop.x, pop.y - (1 - pop.ttl) * 34);
+      });
+      ctx.globalAlpha = 1;
     }
-    paintBoard();
+    drawScene();
+
+    function decayScene(dt) {
+      Object.keys(scene.pegFlash).forEach(function (k) {
+        scene.pegFlash[k] -= dt * 4;
+        if (scene.pegFlash[k] <= 0) delete scene.pegFlash[k];
+      });
+      Object.keys(scene.bucketPulse).forEach(function (k) {
+        scene.bucketPulse[k] -= dt * 2.2;
+        if (scene.bucketPulse[k] <= 0) delete scene.bucketPulse[k];
+      });
+      scene.pops.forEach(function (p) { p.ttl -= dt * 0.9; });
+      scene.pops = scene.pops.filter(function (p) { return p.ttl > 0; });
+    }
 
     dropBtn.addEventListener('click', async function () {
       var amt = parseBet(bet, statusEl);
       if (amt === null) return;
       var res = placeBet(amt); if (!res.ok) { statusEl.textContent = res.msg; return; }
-      var n = parseInt(rows.value, 10);
+      var g = geometry();
       var ballCount = parseInt(balls.value, 10) || 1;
-      var allFloats = await pfFloats(n * ballCount);
-      var topY = 30, botY = canvas.height - 40, spacingY = (botY - topY) / n;
-      var pegSpacing = 28;
-      var buckets = n + 1;
-      var bw = canvas.width / buckets;
+      var allFloats = await pfFloats(g.n * ballCount);
+      var arr = PLINKO_MULTS[g.n][risk.value];
       var perBall = amt / ballCount;
       var totalPayout = 0;
-      var landed = [];
+      var landedCount = 0;
+      resultsBar.innerHTML = '';
       setBusy([dropBtn, bet, risk, rows, balls], true);
-      function drawBall(px, py) {
-        ctx.beginPath();
-        ctx.arc(px, py, 8, 0, Math.PI * 2);
-        ctx.fillStyle = '#f5c468';
-        ctx.shadowColor = 'rgba(245,196,104,0.9)';
-        ctx.shadowBlur = 16;
-        ctx.fill();
-        ctx.shadowBlur = 0;
-      }
-      function playBall(ballIndex) {
-        var floats = allFloats.slice(ballIndex * n, ballIndex * n + n);
+      statusEl.textContent = ballCount + ' ball' + (ballCount === 1 ? '' : 's') + ' in the pyramid…';
+
+      // Build one flight per ball; ALL animate concurrently in one loop.
+      scene.flights = [];
+      for (var bIdx = 0; bIdx < ballCount; bIdx++) {
+        var floats = allFloats.slice(bIdx * g.n, bIdx * g.n + g.n);
         var bucket = 0;
-        for (var i = 0; i < n; i++) if (floats[i] >= 0.5) bucket++;
-        var path = [{ x: canvas.width / 2, y: topY }];
-        var x = canvas.width / 2, y = topY;
-        for (var stepIdx = 0; stepIdx < n; stepIdx++) {
-          x += (floats[stepIdx] >= 0.5 ? pegSpacing / 2 : -pegSpacing / 2);
-          y += spacingY;
-          path.push({ x: x, y: y });
+        var path = [{ x: canvas.width / 2, y: g.topY - 14 }];
+        var x = canvas.width / 2;
+        for (var s = 0; s < g.n; s++) {
+          var right = floats[s] >= 0.5;
+          if (right) bucket++;
+          x += right ? g.pegDX / 2 : -g.pegDX / 2;
+          path.push({ x: x, y: g.topY + s * g.spacingY, row: s, right: right });
         }
-        path.push({ x: bucket * bw + bw / 2, y: botY + 18 });
-        var seg = 0;
-        var segStart = performance.now();
-        var segDur = Math.max(62, 720 / path.length);
-        statusEl.textContent = 'Dropping ball ' + (ballIndex + 1) + '/' + ballCount + ' through ' + n + ' rows...';
-        function animate() {
-        var p = Math.min(1, (performance.now() - segStart) / segDur);
-        var ease = 1 - Math.pow(1 - p, 2);
-        var a = path[seg], b = path[seg + 1];
-        var px = a.x + (b.x - a.x) * ease;
-        var py = a.y + (b.y - a.y) * ease + Math.sin(p * Math.PI) * 8;
-        paintBoard(landed[landed.length - 1]);
-        landed.forEach(function(previousBucket) {
-          drawBall(previousBucket * bw + bw / 2, botY + 18);
+        path.push({ x: bucket * g.bw + g.bw / 2, y: g.botY + 16 });
+        scene.flights.push({
+          idx: bIdx, path: path, bucket: bucket,
+          color: BALL_COLORS[bIdx % BALL_COLORS.length],
+          seg: 0, segT: 0, delay: bIdx * 0.24,
+          x: path[0].x, y: path[0].y, squash: 1,
+          trail: [], visible: false, done: false
         });
-        drawBall(px, py);
-        if (p < 1) return requestAnimationFrame(animate);
-        seg++;
-        if (seg < path.length - 1) {
-          segStart = performance.now();
-          return requestAnimationFrame(animate);
-        }
-        paintBoard(bucket);
-        landed.push(bucket);
-        landed.forEach(function(previousBucket) {
-          drawBall(previousBucket * bw + bw / 2, botY + 18);
-        });
-        drawBall(path[path.length - 1].x, path[path.length - 1].y);
-        var mult = PLINKO_MULTS[n][risk.value][bucket];
-        totalPayout += perBall * mult;
-        if (ballIndex + 1 < ballCount) return setTimeout(function() { playBall(ballIndex + 1); }, 120);
-        var totalMultiplier = totalPayout / amt;
-        settleGame('plinko', amt, totalPayout, totalMultiplier, statusEl,
-          'Dropped ' + ballCount + ' ball' + (ballCount === 1 ? '' : 's') + ' · paid ' + totalPayout.toFixed(2) + ' OST at ' + shortMult(totalMultiplier) + ' total.',
-          canvas.parentElement);
-        setBusy([dropBtn, bet, risk, rows, balls], false);
-        }
-        animate();
       }
-      playBall(0);
+
+      running = true;
+      var last = performance.now();
+      function loop(now) {
+        var dt = Math.min(0.05, (now - last) / 1000);
+        last = now;
+        decayScene(dt);
+
+        scene.flights.forEach(function (f) {
+          if (f.done) return;
+          if (f.delay > 0) { f.delay -= dt; return; }
+          f.visible = true;
+          var segDur = f.seg === 0 ? 0.16 : 0.14; // brisk row-to-row fall
+          f.segT += dt / segDur;
+          var a = f.path[f.seg], b = f.path[f.seg + 1];
+          var t = Math.min(1, f.segT);
+          var fall = t * t;                          // gravity: accelerate down
+          f.x = a.x + (b.x - a.x) * t;
+          f.y = a.y + (b.y - a.y) * fall + Math.sin(t * Math.PI) * -5; // arc over the peg
+          f.squash = 1 + Math.sin(t * Math.PI) * 0.12;
+          f.trail.push({ x: f.x, y: f.y });
+          if (f.trail.length > 6) f.trail.shift();
+          if (t >= 1) {
+            if (b.row != null) {
+              // struck the peg row: flash the peg it bounced off
+              var pegs = b.row + 2;
+              var startX = canvas.width / 2 - ((pegs - 1) * g.pegDX) / 2;
+              var col = Math.round((b.x - startX) / g.pegDX);
+              scene.pegFlash[b.row + '_' + Math.max(0, Math.min(pegs - 1, col))] = 1;
+            }
+            f.seg++;
+            f.segT = 0;
+            if (f.seg >= f.path.length - 1) {
+              f.done = true;
+              f.visible = false;
+              landedCount++;
+              var m = arr[f.bucket];
+              var pay = perBall * m;
+              totalPayout += pay;
+              scene.bucketPulse[f.bucket] = 1;
+              scene.pops.push({ x: f.bucket * g.bw + g.bw / 2, y: g.botY - 2, text: m + '×', ttl: 1, big: m >= 5 });
+              var cls = m >= 5 ? 'big' : m >= 1.2 ? 'mid' : 'small';
+              resultsBar.innerHTML += '<span class="ostg-plinko-chip ' + cls + '">' + m + '× · ' + pay.toFixed(2) + '</span>';
+              if (landedCount === ballCount) {
+                var totalMultiplier = totalPayout / amt;
+                settleGame('plinko', amt, totalPayout, totalMultiplier, statusEl,
+                  ballCount + ' ball' + (ballCount === 1 ? '' : 's') + ' landed · paid ' + totalPayout.toFixed(2) + ' OST (' + shortMult(totalMultiplier) + ' total).',
+                  canvas.parentElement);
+                setBusy([dropBtn, bet, risk, rows, balls], false);
+              }
+            }
+          }
+        });
+
+        drawScene();
+        var anyAlive = scene.flights.some(function (f) { return !f.done; });
+        if ((anyAlive || scene.pops.length || Object.keys(scene.pegFlash).length) && running) {
+          rafId = requestAnimationFrame(loop);
+        } else {
+          drawScene();
+        }
+      }
+      rafId = requestAnimationFrame(loop);
     });
   }
 
