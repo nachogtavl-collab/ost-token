@@ -12246,6 +12246,33 @@
     /* Draw a QR-like grid on a canvas inside the target div */
     function drawQR(container, seed) {
       container.innerHTML = '';
+      // REAL, scannable QR that encodes the actual bearer text (seed). The old
+      // version drew a random pattern that no camera could ever read — which is
+      // exactly why testers said the "output format doesn't generate" and could
+      // not transfer the token to another phone. Uses the vendored encoder.
+      if (typeof window.qrcode === 'function' && seed) {
+        try {
+          var qr = window.qrcode(0, 'M');
+          qr.addData(String(seed));
+          qr.make();
+          var n = qr.getModuleCount();
+          var px = Math.max(4, Math.floor(200 / n));
+          var pad = 16;
+          var dim = n * px + pad * 2;
+          var rq = document.createElement('canvas');
+          rq.width = dim; rq.height = dim;
+          rq.style.width = 'min(220px,60vw)'; rq.style.height = 'min(220px,60vw)';
+          rq.style.borderRadius = '12px';
+          var rc = rq.getContext('2d');
+          rc.fillStyle = '#ffffff'; rc.fillRect(0, 0, dim, dim);
+          rc.fillStyle = '#0a0e1c';
+          for (var rr = 0; rr < n; rr++) for (var cc = 0; cc < n; cc++) {
+            if (qr.isDark(rr, cc)) rc.fillRect(pad + cc * px, pad + rr * px, px, px);
+          }
+          container.appendChild(rq);
+          return;
+        } catch (_) { /* fall through to placeholder */ }
+      }
       var canvas = document.createElement('canvas');
       var size = 160;
       canvas.width = size; canvas.height = size;

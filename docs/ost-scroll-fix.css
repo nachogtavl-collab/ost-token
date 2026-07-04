@@ -1,0 +1,66 @@
+/* ==========================================================================
+   OST · Scroll & PWA stability
+   Fixes the mobile "page wiggle" on scroll-momentum reversal and makes the
+   installed PWA behave like a native app.
+   ========================================================================== */
+
+/* Kill the rubber-band/overscroll bounce that makes the page wiggle when you
+   flick up then down (momentum reversal). This is the #1 cause of the jitter. */
+html {
+  overscroll-behavior: none;
+}
+body {
+  overscroll-behavior-y: none;   /* no vertical chaining bounce */
+  overscroll-behavior-x: none;   /* no horizontal rubber-band = no side wiggle */
+}
+
+/* A hidden 1px-wider child anywhere causes iOS to rubber-band sideways on
+   every scroll. Hard-clip the page box so that can never translate the view. */
+html, body {
+  max-width: 100%;
+  overflow-x: clip;              /* clip (not just hidden) — no scroll offset */
+}
+
+@media (max-width: 820px), (pointer: coarse) and (max-width: 1024px) {
+  /* Smooth, GPU-composited momentum without layout thrash. */
+  html, body {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: auto;       /* smooth-scroll + momentum fight = wiggle */
+  }
+
+  /* The URL bar hiding/showing changes 100dvh mid-scroll and reflows fixed
+     backgrounds, which reads as a wiggle. Pin the decorative background to
+     the large viewport so it does not resize while scrolling. */
+  body::before,
+  #particleCanvas,
+  .hero-bg,
+  .cursor-glow {
+    height: 100lvh !important;
+  }
+
+  /* Any horizontal scroller must contain its own overscroll so a sideways
+     flick inside it never rubber-bands the whole page. */
+  [style*="overflow-x"],
+  .prediction-market-controls,
+  .dt-ladder,
+  .mn-ladder,
+  .owc-scroll,
+  .ostg-crash-history {
+    overscroll-behavior-x: contain;
+    touch-action: pan-x;
+  }
+}
+
+/* When launched as an installed PWA (standalone), lock the body so only inner
+   content scrolls — this is what makes it feel like a native app instead of a
+   web page that bounces past its edges. */
+@media all and (display-mode: standalone) {
+  html {
+    height: 100%;
+    overscroll-behavior: none;
+  }
+  body {
+    min-height: 100dvh;
+    overscroll-behavior: none;
+  }
+}

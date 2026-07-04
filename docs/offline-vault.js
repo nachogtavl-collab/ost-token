@@ -335,6 +335,53 @@
     return true;
   }
 
+  // ── Unified coin: mint a survival note = convert spendable OST into offline
+  //    balance, IMMEDIATELY usable in offline games. This is the "survival and
+  //    offline should be one coin" the testers asked for: one action makes an
+  //    offline-spendable, transferable, redeemable note in a single step.
+  async function mintFromOst(amount, format) {
+    await ensureReady();
+    amount = clampAmount(amount);
+    if (!amount) throw new Error('Enter an amount to mint.');
+    // Debit the canonical spendable OST pool so the offline coin has real
+    // backing (no free money). Best-effort: if the pool is empty we still
+    // create the note so devnet testers are never hard-blocked, but we tell them.
+    var backed = false;
+    try {
+      if (window.OST_MONEY && typeof window.OST_MONEY.get === 'function' && window.OST_MONEY.get() >= amount) {
+        backed = window.OST_MONEY.spend(amount, 'offline-mint');
+      }
+    } catch (_) {}
+    var token = await createBearerToken({ amount: amount, format: format || 'digital' });
+    vault.balance = Math.max(0, Number(vault.balance || 0) + amount);
+    vault.active = true; // minted coin is spendable in offline games right away
+    addLedger('offline-mint', amount, { tokenId: token.tokenId, format: token.format, backed: backed });
+    await saveVault();
+    setStatus('Minted ' + fmt(amount) + ' OST into the offline vault — ready for offline games' + (backed ? '' : ' (unbacked devnet note)') + '.', 'ok');
+    try { window.dispatchEvent(new CustomEvent('ost:offline-minted', { detail: { amount: amount, tokenId: token.tokenId, backed: backed, token: token } })); } catch (_) {}
+    return { token: token, bearerText: 'OST-BEARER-V1:' + JSON.stringify(token), balance: vault.balance, backed: backed };
+  }
+
+  // Redeem offline balance back to spendable OST (the reverse trip).
+  async function redeemToOst(amount) {
+    await ensureReady();
+    amount = clampAmount(amount) || Number(vault.balance || 0);
+    amount = clampAmount(amount);
+    if (!amount) throw new Error('Nothing to redeem.');
+    if (amount > vault.balance + 1e-9) throw new Error('Redeem amount exceeds your offline balance of ' + fmt(vault.balance) + ' OST.');
+    vault.balance = Math.max(0, vault.balance - amount);
+    if (vault.balance <= 0) vault.active = false;
+    addLedger('offline-redeem', amount, {});
+    await saveVault();
+    var credited = false;
+    try {
+      if (window.OST_MONEY && typeof window.OST_MONEY.add === 'function') { window.OST_MONEY.add(amount, 'offline-redeem'); credited = true; }
+    } catch (_) {}
+    setStatus('Redeemed ' + fmt(amount) + ' OST from the offline vault back into your spendable OST.', 'ok');
+    try { window.dispatchEvent(new CustomEvent('ost:offline-redeemed', { detail: { amount: amount, credited: credited } })); } catch (_) {}
+    return { amount: amount, credited: credited, balance: vault.balance };
+  }
+
   function recordGameResult(detail) {
     if (!vault.active) return;
     addLedger('offline-game-proof', Number(detail && detail.amount || 0), {
@@ -522,6 +569,10 @@
     });
     var syncBtn = $('offlineVaultSyncBtn');
     if (syncBtn) syncBtn.addEventListener('click', function () { syncNow().catch(function (e) { setStatus(e.message || String(e), 'error'); }); });
+    var redeemBtn = $('offlineVaultRedeemBtn');
+    if (redeemBtn) redeemBtn.addEventListener('click', function () {
+      redeemToOst().catch(function (e) { setStatus(e.message || String(e), 'error'); });
+    });
     var latestBtn = $('offlineVaultLatestBtn');
     if (latestBtn) latestBtn.addEventListener('click', function () { importLatestMinted().catch(function (e) { setStatus(e.message || String(e), 'error'); }); });
 
@@ -530,7 +581,19 @@
       lastMintedPreview = event.detail || null;
       var btn = $('offlineVaultLatestBtn');
       if (btn) btn.disabled = !lastMintedPreview;
-      if (lastMintedPreview) setStatus('Survival token minted. You can import the latest note into this offline vault.', 'ok');
+      // UNIFIED COIN: auto-import the freshly minted note into the offline
+      // vault and activate it, so the minted token is IMMEDIATELY playable in
+      // offline games — no separate "import latest" + "use games" steps that
+      // testers kept missing. Guarded against double-credit by tokenId.
+      if (lastMintedPreview && lastMintedPreview.bearerText) {
+        importBearerText(lastMintedPreview.bearerText, 'survival-mint-auto')
+          .then(function () {
+            vault.active = true;
+            return saveVault();
+          })
+          .then(function () { setStatus('Minted note is now spendable in offline vault games.', 'ok'); })
+          .catch(function () { /* already imported / dupe — fine */ });
+      }
     });
   }
 
@@ -552,6 +615,8 @@
     recordGameResult: recordGameResult,
     importBearerText: importBearerText,
     createBearerToken: createBearerToken,
+    mintFromOst: mintFromOst,
+    redeemToOst: redeemToOst,
     sync: syncNow,
     updateUI: updateUI
   };
