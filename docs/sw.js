@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v225';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v225';
+const CACHE_NAME = 'ost-pwa-cache-v226';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v226';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -19,12 +19,13 @@ const PRECACHE_PATHS = [
   './ost-telemetry.js?v=1',
   './ost-live-stats.js?v=1',
   './ost-treasury-engine.js?v=1',
-  './ost-mobile-dock.js?v=1',
+  './ost-appbar.js?v=1',
   './ost-ghost-companion.js?v=1',
   './ost-data-guard.js?v=1',
   './ost-pro-fast-tiles.js?v=1',
   './ost-wc-rail.js?v=1',
   './ost-mobile-fit.css?v=1',
+  './ost-appbar.css?v=1',
   './ost-total-balance.js?v=1',
   './manifest.json',
   './favicon.svg',
@@ -47,12 +48,12 @@ const PRECACHE_PATHS = [
   './offline-vault.css?v=1',
   './stock-market.css?v=1',
   './mobile-shell.css?v=13',
-  './mobile-shrink.css?v=1',
+  './ost-mobile-scale.css?v=1',
   './rpc-multiplexer.js?v=200',
   './ost-optimistic.js?v=4',
   './realtime.js?v=1',
   './ost-notifications.js?v=3',
-  './app.js?v=205',
+  './app.js?v=206',
   './icons.js?v=1',
   './nuevo-laredo-gas.js?v=1',
   './shop-quickview.js?v=3',

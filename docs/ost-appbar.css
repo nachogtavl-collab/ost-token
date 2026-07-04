@@ -1,0 +1,281 @@
+/* ==========================================================================
+ * OST · App Bar — ONE bottom navigation for mobile
+ * --------------------------------------------------------------------------
+ * Before this file, 9+ modules each pinned their own floating button to the
+ * bottom corners (ghost orb, old ghost trigger, mesh trigger, parlay dock,
+ * streaks badge, money badge, card button, trade launcher, veil pill, ⊕ dock)
+ * and they overlapped on phones. This file is the single authority:
+ *
+ *   1. On mobile, ALL persistent floating launchers are hidden here.
+ *   2. ost-appbar.js renders one native-style bottom tab bar
+ *      (Home · Markets · Games · Wallet · More) — every tool lives in the
+ *      More sheet, nothing overlaps, everything stays reachable.
+ *   3. Panels that tools open (ghost panel, parlay dock, streak pop, toasts)
+ *      are repositioned to sit ABOVE the bar.
+ *
+ * Desktop (>820px, fine pointer) is untouched: bar hidden, widgets as-is.
+ * If a future module adds a floating button, add its selector to the
+ * hide-list below — do not let it pin its own corner on mobile.
+ * ========================================================================== */
+
+:root {
+  --ost-appbar-h: 62px;
+  /* Old shell offset math keys off this var — keep it in sync with the bar. */
+  --ost-mobile-dock-h: 62px;
+}
+
+/* Hidden outside the mobile shell. */
+#ostAppBar, #ostAppSheet, #ostAppSheetBackdrop { display: none; }
+
+@media (max-width: 820px), (pointer: coarse) and (max-width: 1024px) {
+
+  /* Content must never hide behind the bar. Overrides mobile-shell's 174px. */
+  body {
+    padding-bottom: calc(var(--ost-appbar-h) + env(safe-area-inset-bottom) + 28px) !important;
+  }
+
+  /* ======================================================================
+     1 · THE HIDE-LIST — every persistent floating launcher, one place.
+     ====================================================================== */
+  #ostDockFab, #ostDockTray,          /* legacy ⊕ dock (module retired) */
+  #ostGhostOrb,                       /* ghost companion orb  → More sheet */
+  #ghost-summon-trigger,              /* old ghost layer trigger → More sheet */
+  #ost-mesh-trigger,                  /* mesh trigger → More sheet */
+  .ost-tradepop__launcher,            /* trade popout launcher → More sheet */
+  #ost-trade-ticket-fab,              /* trade ticket fab → More sheet */
+  #ostCardFloatingBtn,                /* OST card button → More sheet */
+  #ost-veil-status-pill,              /* veil status pill (info-only) */
+  .ffx-mute,                          /* mesh fx mute (lives inside mesh UI) */
+  #ostMoneyBadge,                     /* money badge → Wallet tab shows it */
+  .ost-xp-tooltip,                    /* xp readout under the bar */
+  .ost-dock {                         /* compartments strip → More sheet */
+    display: none !important;
+  }
+
+  /* Parlay dock + streaks badge only appear when summoned from the sheet. */
+  body:not(.ost-widgets-live) #ostParlayDock,
+  body:not(.ost-widgets-live) #ostMetaBadge,
+  body:not(.ost-widgets-live) #ostMetaPop {
+    display: none !important;
+  }
+
+  /* ======================================================================
+     2 · SUMMONED WIDGETS + TOOL PANELS — parked above the bar, full width.
+     ====================================================================== */
+  body.ost-widgets-live #ostParlayDock {
+    left: 8px !important;
+    right: 8px !important;
+    width: auto !important;
+    bottom: calc(var(--ost-appbar-h) + env(safe-area-inset-bottom) + 12px) !important;
+  }
+  body.ost-widgets-live #ostMetaBadge {
+    left: 12px !important;
+    bottom: calc(var(--ost-appbar-h) + env(safe-area-inset-bottom) + 12px) !important;
+  }
+  #ostMetaPop {
+    left: 8px !important;
+    right: 8px !important;
+    width: auto !important;
+    bottom: calc(var(--ost-appbar-h) + env(safe-area-inset-bottom) + 64px) !important;
+  }
+  #ostGhostPanel {
+    left: 8px !important;
+    right: 8px !important;
+    width: auto !important;
+    bottom: calc(var(--ost-appbar-h) + env(safe-area-inset-bottom) + 10px) !important;
+    height: min(520px, 68vh) !important;
+  }
+  .og-bubble {
+    left: 10px !important;
+    bottom: calc(var(--ost-appbar-h) + env(safe-area-inset-bottom) + 14px) !important;
+  }
+  .omb-toast {
+    bottom: calc(var(--ost-appbar-h) + env(safe-area-inset-bottom) + 18px) !important;
+  }
+  #ostRealtimeToasts {
+    bottom: calc(var(--ost-appbar-h) + env(safe-area-inset-bottom) + 12px) !important;
+  }
+
+  /* ======================================================================
+     3 · THE BAR
+     ====================================================================== */
+  #ostAppBar {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    top: auto !important;              /* the global nav{top:0} rule must lose */
+    z-index: 99500;                    /* over widgets; under fullscreen apps */
+    height: calc(var(--ost-appbar-h) + env(safe-area-inset-bottom));
+    padding: 6px max(6px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(6px, env(safe-area-inset-left));
+    background: rgba(7, 11, 22, 0.94);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border-top: 1px solid rgba(148, 219, 255, 0.14);
+  }
+  .ost-appbar-tab {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-height: 48px;
+    border: none;
+    background: transparent;
+    color: #8fa3bd;
+    font-weight: 700;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    border-radius: 14px;
+    padding: 4px 2px !important;       /* beat the 44px button scale rule */
+    min-width: 0;
+  }
+  .ost-appbar-tab .oab-ico  { font-size: 21px; line-height: 1; }
+  .ost-appbar-tab .oab-lbl  { font-size: 10px !important; letter-spacing: .02em; }
+  .ost-appbar-tab .oab-sub  {
+    font-size: 9px !important;
+    font-variant-numeric: tabular-nums;
+    color: #5eead4;
+    line-height: 1;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ost-appbar-tab.is-active { color: #eaf4ff; }
+  .ost-appbar-tab.is-active .oab-ico { transform: translateY(-1px); }
+  .ost-appbar-tab.is-active::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 26px;
+    height: 3px;
+    border-radius: 0 0 4px 4px;
+    background: linear-gradient(90deg, #5eead4, #67b7ff);
+  }
+  .oab-badge {
+    position: absolute;
+    top: 2px;
+    right: calc(50% - 22px);
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: #f43f5e;
+    color: #fff;
+    font-size: 10px !important;
+    font-weight: 900;
+    line-height: 16px;
+    text-align: center;
+    display: none;
+  }
+  .oab-badge.is-on { display: block; }
+
+  /* ======================================================================
+     4 · THE MORE SHEET (native bottom sheet, slides from under the bar)
+     ====================================================================== */
+  #ostAppSheetBackdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 99490;
+    background: rgba(2, 6, 16, 0.62);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .22s ease;
+  }
+  body.ost-sheet-open #ostAppSheetBackdrop { opacity: 1; pointer-events: auto; }
+
+  #ostAppSheet {
+    display: block;
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 99495;
+    transform: translateY(106%);
+    transition: transform .26s cubic-bezier(.32, .72, .28, 1);
+    background: linear-gradient(180deg, #0e1526, #080d1a);
+    border-radius: 22px 22px 0 0;
+    border-top: 1px solid rgba(148, 219, 255, 0.18);
+    box-shadow: 0 -18px 60px rgba(0, 0, 0, 0.55);
+    padding: 10px 14px calc(var(--ost-appbar-h) + env(safe-area-inset-bottom) + 16px);
+    max-height: 76vh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  body.ost-sheet-open #ostAppSheet { transform: translateY(0); }
+
+  .oas-grab {
+    width: 40px;
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.22);
+    margin: 2px auto 12px;
+  }
+  .oas-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .oas-head strong { color: #eaf4ff; font-size: 15px !important; }
+  .oas-bal {
+    color: #5eead4;
+    font-weight: 900;
+    font-size: 14px !important;
+    font-variant-numeric: tabular-nums;
+  }
+  .oas-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .oas-tool {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 74px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    background: rgba(255, 255, 255, 0.045);
+    color: #dbe7f5;
+    font-weight: 800;
+    cursor: pointer;
+    padding: 10px 6px !important;
+  }
+  .oas-tool:active { background: rgba(94, 234, 212, 0.12); }
+  .oas-tool .oas-ico { font-size: 24px; line-height: 1; }
+  .oas-tool .oas-lbl { font-size: 11px !important; text-align: center; line-height: 1.2; }
+  .oas-tool[hidden] { display: none; }
+
+  .oas-sub {
+    color: #8fa3bd;
+    font-size: 11px !important;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin: 4px 2px 8px;
+  }
+  .oas-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .oas-link {
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    color: #cfe0f2;
+    border-radius: 999px;
+    padding: 9px 14px !important;
+    font-size: 12px !important;
+    font-weight: 700;
+    cursor: pointer;
+    min-height: 38px;
+  }
+}
