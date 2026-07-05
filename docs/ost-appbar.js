@@ -55,6 +55,22 @@
     } catch (_) { return 0; }
   }
 
+  // On-chain OST shown in the wallet dashboard (#wdOstBal). Deposits, faucet
+  // claims and swaps land here, so the wallet tab must include it or a deposit
+  // "wouldn't reflect on the balance".
+  function walletOst() {
+    try {
+      var el = document.getElementById('wdOstBal');
+      if (!el) return 0;
+      var n = parseFloat(String(el.textContent).replace(/[^\d.\-]/g, ''));
+      return isNaN(n) ? 0 : Math.max(0, n);
+    } catch (_) { return 0; }
+  }
+
+  // The single "how much OST do I have" number: credits + on-chain, so BOTH
+  // game/prediction winnings and on-chain deposits always show here.
+  function totalOst() { return credits() + walletOst(); }
+
   function openParlayCount() {
     try {
       if (!window.OST_PARLAY || !window.OST_PARLAY.slips) return 0;
@@ -194,7 +210,7 @@
   }
 
   function refreshBalance() {
-    var txt = fmtOst(credits()) + ' OST';
+    var txt = fmtOst(totalOst()) + ' OST';
     if (walletSub) walletSub.textContent = txt;
     if (sheetBal) sheetBal.textContent = txt;
   }
@@ -333,9 +349,12 @@
     refreshBadge();
     window.addEventListener('ost-money-changed', refreshBalance, false);
     window.addEventListener('ost-faucet-hub-award', refreshBalance, false);
+    window.addEventListener('ost:wallet-changed', refreshBalance, false);   // on-chain deposits/faucet
     window.addEventListener('ost:prediction-order-recorded', refreshBadge, false);
     window.addEventListener('ost:parlay-won', refreshBadge, false);
-    setInterval(function () { refreshBalance(); refreshBadge(); }, 30000);
+    // Poll a bit faster so an on-chain deposit shows within a few seconds even
+    // if its change event was missed (devnet RPC lag).
+    setInterval(function () { refreshBalance(); refreshBadge(); }, 5000);
 
     setActive('home');
   }

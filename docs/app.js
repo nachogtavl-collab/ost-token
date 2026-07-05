@@ -3089,25 +3089,23 @@
       }
     } catch (_) {}
 
-    // Funding: prefer a connected on-chain wallet WITH enough OST; otherwise
-    // fund the bet from the canonical CREDITS pool (where faucet + game wins
-    // land). This is why the balance you actually have can now be bet — the
-    // desk no longer hard-requires an on-chain wallet, so winnings are usable.
+    // Funding — robust against flaky devnet RPC:
+    //   · No wallet          -> credits pool (faucet + game winnings live there).
+    //   · Wallet connected   -> ATTEMPT the real on-chain transfer (it is the
+    //     true gate); if it can't fund for ANY reason (insufficient, RPC error,
+    //     ATA, timeout) and the credits pool can cover the stake, fall back to
+    //     credits so a funded user is NEVER blocked. We do NOT pre-gate on a
+    //     balance read — a stale/failed read used to force the credits path and
+    //     falsely report "not enough OST" for wallets that actually had funds.
     const stakeAmt = Number(order.stake);
-    let onChainOk = false;
-    if (connectedWalletSession && connectedWalletSession.publicKey && getSolanaConnection()) {
-      try {
-        const preBal = await getOstBalanceForAddress(connectedWalletSession.publicKey);
-        onChainOk = (Number(preBal) || 0) + 1e-9 >= stakeAmt;
-      } catch (_) { onChainOk = false; }
+    function creditsAvailable() {
+      try { return (window.OST_MONEY && typeof window.OST_MONEY.get === 'function') ? (Number(window.OST_MONEY.get()) || 0) : 0; } catch (_) { return 0; }
     }
-
-    if (!onChainOk) {
-      // ---- credits-funded ticket ----
+    function fundFromCredits() {
       if (!window.OST_MONEY || typeof window.OST_MONEY.spend !== 'function') {
         throw new Error('Balance system is still loading. Refresh and try again.');
       }
-      if ((Number(window.OST_MONEY.get()) || 0) + 1e-9 < stakeAmt) {
+      if (creditsAvailable() + 1e-9 < stakeAmt) {
         throw new Error('Not enough OST to place this ticket. Claim the faucet or win some first.');
       }
       if (!window.OST_MONEY.spend(stakeAmt, 'prediction-bet')) {
@@ -3137,18 +3135,20 @@
       storePredictionOrderRecord(creditRecord);
       try { window.dispatchEvent(new CustomEvent('ost:prediction-order-recorded', { detail: creditRecord })); } catch (_) {}
       try { if (typeof window.notifyOstTxHistory === 'function') window.notifyOstTxHistory(); } catch (_) {}
-      return { signature: csig, remainingBalance: Number(window.OST_MONEY.get()) || 0, record: creditRecord, fundedBy: 'credits' };
+      return { signature: csig, remainingBalance: creditsAvailable(), record: creditRecord, fundedBy: 'credits' };
     }
 
     const conn = getSolanaConnection();
-    if (!conn) throw new Error('Solana RPC unavailable');
+    const hasWallet = !!(connectedWalletSession && connectedWalletSession.publicKey && conn);
+    if (!hasWallet) return fundFromCredits();
 
+    try {
     const trader = connectedWalletSession.publicKey;
-    // Pool covers the SOL fee — user only needs OST. Skip SOL check.
-    const ostBalance = await getOstBalanceForAddress(trader);
-    if (ostBalance + 1e-9 < Number(order.stake)) {
-      throw new Error(t('pay.notEnoughOst', 'Not enough OST in this wallet. Claim or buy OST first.'));
-    }
+    // Pool covers the SOL fee — user only needs OST. The transfer below is the
+    // real gate; a best-effort read only informs the UI. We never hard-block on
+    // it, so a stale RPC read can't stop a funded wallet from betting.
+    let ostBalance = await getOstBalanceForAddress(trader).catch(function () { return NaN; });
+    if (!Number.isFinite(ostBalance)) ostBalance = stakeAmt; // unknown -> assume ok, let transfer gate
 
     const mintPk = new solanaWeb3.PublicKey(OST_CONFIG.mint);
     // Ensure user has an OST ATA (pool pays the rent if missing).
@@ -3256,6 +3256,13 @@
       vaultTokenAccount: vaultTokenAccount,
       record: record
     };
+    } catch (onChainErr) {
+      // On-chain funding could not complete (insufficient, RPC, ATA, timeout).
+      // If the credits pool can cover the stake, fund from credits so a user
+      // with a real balance is never blocked. Otherwise surface the error.
+      if (creditsAvailable() + 1e-9 >= stakeAmt) return fundFromCredits();
+      throw onChainErr;
+    }
   }
 
   window.OST_PREDICTION_API = Object.assign(window.OST_PREDICTION_API || {}, {
@@ -16972,6 +16979,11 @@
         renderPredictionLedger();
       });
     });
+    // Instantly reflect credits changes (game/prediction wins, deposits,
+    // redeems) in the bet-available balance — previously it only refreshed on
+    // the 30s poll, so a fresh win "didn't flow back to the balance to play".
+    window.addEventListener('ost-money-changed', function () { syncTradeWallet(); });
+    window.addEventListener('ost-faucet-hub-award', function () { syncTradeWallet(); });
     window.addEventListener('ost:prediction-orders-synced', function() {
       state.orderHistory = reconcilePredictionVaultLossRecords();
       renderPredictionLedger();
