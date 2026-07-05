@@ -1418,6 +1418,8 @@
           '<label>Risk<select id="plRisk"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select></label>' +
           '<label>Rows<select id="plRows"><option value="8">8</option><option value="12" selected>12</option><option value="16">16</option></select></label>' +
           '<label>Balls<select id="plBalls"><option value="1">1</option><option value="3" selected>3</option><option value="5">5</option><option value="10">10</option></select></label>' +
+          '<label class="ostg-plinko-auto"><input type="checkbox" id="plAuto"> Auto</label>' +
+          '<label>Rounds<input type="number" id="plAutoN" min="0" step="1" value="10" inputmode="numeric" title="Number of auto rounds (0 = until you stop)"></label>' +
           '<button class="ostg-btn ostg-btn-primary" id="plDrop">Drop balls</button>' +
         '</div>' +
         '<div class="ostg-plinko-stage">' +
@@ -1432,6 +1434,8 @@
     var risk = document.getElementById('plRisk');
     var rows = document.getElementById('plRows');
     var balls = document.getElementById('plBalls');
+    var autoEl = document.getElementById('plAuto');
+    var autoNEl = document.getElementById('plAutoN');
     var dropBtn = document.getElementById('plDrop');
     var canvas = document.getElementById('plCanvas');
     var ctx = canvas.getContext('2d');
@@ -1448,6 +1452,9 @@
         '.ostg-plinko-chip.small{background:rgba(255,255,255,0.08);color:#94a3b8;}' +
         '.ostg-plinko-chip.mid{background:rgba(52,211,153,0.16);color:#7ce6a8;}' +
         '.ostg-plinko-chip.big{background:rgba(245,196,104,0.2);color:#f5c468;box-shadow:0 0 12px rgba(245,196,104,0.35);}' +
+        '.ostg-plinko-auto{display:flex;align-items:center;gap:6px;white-space:nowrap;}' +
+        '.ostg-plinko-auto input{width:auto;margin:0;}' +
+        '.ostg-btn.ostg-btn-danger{background:linear-gradient(135deg,#f87171,#ef4444)!important;color:#2a0808!important;}' +
         '@keyframes plChipIn{from{transform:scale(.6);opacity:0;}to{transform:scale(1);opacity:1;}}';
       document.head.appendChild(pst);
     }
@@ -1464,7 +1471,8 @@
     };
     var rafId = 0;
     var running = false;
-    activeGameCleanup = function () { running = false; cancelAnimationFrame(rafId); };
+    var autoRunning = false;
+    activeGameCleanup = function () { running = false; autoRunning = false; cancelAnimationFrame(rafId); };
 
     function geometry() {
       var n = parseInt(rows.value, 10);
@@ -1560,10 +1568,14 @@
       scene.pops = scene.pops.filter(function (p) { return p.ttl > 0; });
     }
 
-    dropBtn.addEventListener('click', async function () {
+    // One drop round, resolved when the round has fully settled (or false if
+    // it couldn't start — e.g. bad bet / insufficient balance). Auto-bet drives
+    // this in a loop; a manual tap runs it once.
+    function dropOnce() {
+     return new Promise(async function (resolveRound) {
       var amt = parseBet(bet, statusEl);
-      if (amt === null) return;
-      var res = placeBet(amt); if (!res.ok) { statusEl.textContent = res.msg; return; }
+      if (amt === null) { resolveRound(false); return; }
+      var res = placeBet(amt); if (!res.ok) { statusEl.textContent = res.msg; resolveRound(false); return; }
       var g = geometry();
       var ballCount = parseInt(balls.value, 10) || 1;
       var allFloats = await pfFloats(g.n * ballCount);
@@ -1572,7 +1584,9 @@
       var totalPayout = 0;
       var landedCount = 0;
       resultsBar.innerHTML = '';
-      setBusy([dropBtn, bet, risk, rows, balls], true);
+      // Keep the Drop button live during auto so it can act as Stop.
+      setBusy([bet, risk, rows, balls], true);
+      if (!autoRunning) setBusy([dropBtn], true);
       statusEl.textContent = ballCount + ' ball' + (ballCount === 1 ? '' : 's') + ' in the pyramid…';
 
       // Build one flight per ball; ALL animate concurrently in one loop.
@@ -1645,7 +1659,8 @@
                 settleGame('plinko', amt, totalPayout, totalMultiplier, statusEl,
                   ballCount + ' ball' + (ballCount === 1 ? '' : 's') + ' landed · paid ' + totalPayout.toFixed(2) + ' OST (' + shortMult(totalMultiplier) + ' total).',
                   canvas.parentElement);
-                setBusy([dropBtn, bet, risk, rows, balls], false);
+                if (!autoRunning) setBusy([dropBtn, bet, risk, rows, balls], false);
+                resolveRound(true);
               }
             }
           }
@@ -1660,6 +1675,45 @@
         }
       }
       rafId = requestAnimationFrame(loop);
+     });
+    }
+
+    // Auto-bet: drop round after round on its own until the requested count is
+    // reached (0 = until you stop), you run out of OST, or you tap Stop. The
+    // Drop button doubles as Stop while auto is running.
+    async function runAuto() {
+      autoRunning = true;
+      dropBtn.textContent = 'Stop auto';
+      dropBtn.classList.add('ostg-btn-danger');
+      var remaining = Math.max(0, Math.floor(Number(autoNEl && autoNEl.value) || 0));
+      var infinite = remaining === 0;
+      var played = 0;
+      while (autoRunning && (infinite || remaining > 0)) {
+        var ok = await dropOnce();
+        if (!ok) break;                       // bad bet / out of balance — stop
+        played++;
+        if (!infinite) { remaining--; if (autoNEl) autoNEl.value = String(remaining); }
+        if (!autoRunning || (!infinite && remaining <= 0)) break;
+        await delay(750);                     // brief beat between rounds
+      }
+      autoRunning = false;
+      dropBtn.textContent = 'Drop balls';
+      dropBtn.classList.remove('ostg-btn-danger');
+      setBusy([dropBtn, bet, risk, rows, balls], false);
+      if (autoNEl && Number(autoNEl.value) <= 0) autoNEl.value = '10';
+      if (statusEl && played > 0) statusEl.textContent += ' · auto finished (' + played + ' round' + (played === 1 ? '' : 's') + ')';
+    }
+
+    dropBtn.addEventListener('click', function () {
+      if (autoRunning) {                      // acting as Stop
+        autoRunning = false;
+        dropBtn.textContent = 'Drop balls';
+        dropBtn.classList.remove('ostg-btn-danger');
+        if (statusEl) statusEl.textContent = 'Auto-bet stopped.';
+        return;
+      }
+      if (autoEl && autoEl.checked) runAuto();
+      else dropOnce();
     });
   }
 

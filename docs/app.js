@@ -16669,6 +16669,24 @@
       });
     }
 
+    // The market tape chips carry data-prediction-select-market-id but had NO
+    // click listener — tapping a tape chip was a dead end. Wire it exactly like
+    // the pulse tiles so a tape tap focuses that market in the hero + desk.
+    if (tapeEl) {
+      tapeEl.addEventListener('click', function(event) {
+        if (event.target.closest('a')) return;
+        if (handlePredictionCardSelection(event.target)) {
+          focusPredictionExperience('stage');
+        }
+      });
+      tapeEl.addEventListener('keydown', function(event) {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        if (handlePredictionCardSelection(event.target)) {
+          event.preventDefault();
+        }
+      });
+    }
+
     if (outcomeToggle) {
       outcomeToggle.addEventListener('click', function(event) {
         var outcomeButton = event.target.closest('button[data-prediction-outcome-key]');

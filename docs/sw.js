@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v229';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v229';
+const CACHE_NAME = 'ost-pwa-cache-v231';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v231';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -27,6 +27,7 @@ const PRECACHE_PATHS = [
   './ost-wc-rail.js?v=1',
   './ost-mobile-fit.css?v=1',
   './ost-appbar.css?v=2',
+  './predict-mobile.css?v=1',
   './ost-total-balance.js?v=1',
   './manifest.json',
   './favicon.svg',
@@ -54,14 +55,14 @@ const PRECACHE_PATHS = [
   './ost-optimistic.js?v=4',
   './realtime.js?v=1',
   './ost-notifications.js?v=3',
-  './app.js?v=208',
+  './app.js?v=209',
   './icons.js?v=1',
   './nuevo-laredo-gas.js?v=1',
   './shop-quickview.js?v=3',
   './interchange-live.js?v=2',
   './polish.js?v=2',
   './swap-pool.js?v=1',
-  './wallet-extras.js?v=202',
+  './wallet-extras.js?v=203',
   './ost-price-client.js?v=202',
   './ost-token-section.js?v=2',
   './assets/ost-metadata.json',
@@ -113,7 +114,7 @@ const PRECACHE_PATHS = [
   './ost-card.js?v=7',
   './launchpad-engine.js?v=4',
   './swap-resilient.js?v=200',
-  './ost-games.js?v=21',
+  './ost-games.js?v=22',
   './code-academy.js?v=3',
   './i18n-runtime.js?v=4',
   './devnet-rescue.js?v=200',

@@ -1311,7 +1311,8 @@
     return '$' + Math.round(n);
   }
   function relTime(ms) {
-    var d = ms - Date.now();
+    if (!Number.isFinite(Number(ms))) return 'Open';   // no close time -> honest label, not "in NaNmo"
+    var d = Number(ms) - Date.now();
     var hrs = Math.round(d / 3600000);
     if (hrs < 24) return 'in ' + hrs + 'h';
     var days = Math.round(hrs / 24);
@@ -1964,7 +1965,8 @@
 
   // ── Friendly relative time for X-axis labels ──────────────────────────
   function relTime(ts, nowTs) {
-    var diff = Math.max(0, nowTs - ts);
+    if (!Number.isFinite(Number(ts)) || !Number.isFinite(Number(nowTs))) return '';  // no timestamp -> no "NaNd ago"
+    var diff = Math.max(0, Number(nowTs) - Number(ts));
     if (diff < 60000) return 'now';
     if (diff < 3600000) return Math.round(diff / 60000) + 'm ago';
     if (diff < 86400000) return Math.round(diff / 3600000) + 'h ago';
