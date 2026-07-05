@@ -3066,8 +3066,56 @@
     if (!order || !Number.isFinite(Number(order.stake)) || Number(order.stake) <= 0) {
       throw new Error('Select a live market and enter a valid OST stake first.');
     }
-    if (!connectedWalletSession || !connectedWalletSession.publicKey) {
-      throw new Error(t('pay.deskNeedWallet', 'Create or connect your OST wallet first'));
+
+    // Funding: prefer a connected on-chain wallet WITH enough OST; otherwise
+    // fund the bet from the canonical CREDITS pool (where faucet + game wins
+    // land). This is why the balance you actually have can now be bet — the
+    // desk no longer hard-requires an on-chain wallet, so winnings are usable.
+    const stakeAmt = Number(order.stake);
+    let onChainOk = false;
+    if (connectedWalletSession && connectedWalletSession.publicKey && getSolanaConnection()) {
+      try {
+        const preBal = await getOstBalanceForAddress(connectedWalletSession.publicKey);
+        onChainOk = (Number(preBal) || 0) + 1e-9 >= stakeAmt;
+      } catch (_) { onChainOk = false; }
+    }
+
+    if (!onChainOk) {
+      // ---- credits-funded ticket ----
+      if (!window.OST_MONEY || typeof window.OST_MONEY.spend !== 'function') {
+        throw new Error('Balance system is still loading. Refresh and try again.');
+      }
+      if ((Number(window.OST_MONEY.get()) || 0) + 1e-9 < stakeAmt) {
+        throw new Error('Not enough OST to place this ticket. Claim the faucet or win some first.');
+      }
+      if (!window.OST_MONEY.spend(stakeAmt, 'prediction-bet')) {
+        throw new Error('Could not debit your OST balance for this ticket.');
+      }
+      const csig = 'credits-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      const creditRecord = {
+        signature: csig, sig: csig, ts: Date.now(), status: 'open',
+        wallet: 'credits', fundedBy: 'credits',
+        source: order.source, marketId: order.marketId, conditionId: order.conditionId || '',
+        title: order.title, side: order.side, topic: order.topic,
+        price: Number(order.price), yesPrice: Number(order.yesPrice), noPrice: Number(order.noPrice),
+        stake: stakeAmt,
+        shares: Number(order.shares) || (Number(order.price) > 0 ? stakeAmt / Number(order.price) : Number(order.potentialReturn || 0)),
+        potentialReturn: Number(order.potentialReturn),
+        closeAtMs: Number(order.closeAtMs || 0),
+        clobTokenIds: Array.isArray(order.clobTokenIds) ? order.clobTokenIds.slice(0, 4) : [],
+        sourceUrl: order.sourceUrl, outcomeKey: order.outcomeKey || '', outcomeLabel: order.outcomeLabel || '',
+        gammaMarketId: order.gammaMarketId || '',
+        baseYesPrice: Number(order.baseYesPrice), fairYesPrice: Number(order.fairYesPrice), fairNoPrice: Number(order.fairNoPrice),
+        tradableYesPrice: Number(order.tradableYesPrice), tradableNoPrice: Number(order.tradableNoPrice),
+        quotedAt: Number(order.quotedAt || Date.now()), quoteSource: order.quoteSource || '',
+        openAt: Number(order.openAt || 0), closeAt: Number(order.closeAt || 0),
+        openPrice: Number(order.openPrice), priceToBeat: Number(order.priceToBeat), livePrice: Number(order.livePrice),
+        vaultFlow: 'credits-stake', createdAt: Date.now()
+      };
+      storePredictionOrderRecord(creditRecord);
+      try { window.dispatchEvent(new CustomEvent('ost:prediction-order-recorded', { detail: creditRecord })); } catch (_) {}
+      try { if (typeof window.notifyOstTxHistory === 'function') window.notifyOstTxHistory(); } catch (_) {}
+      return { signature: csig, remainingBalance: Number(window.OST_MONEY.get()) || 0, record: creditRecord, fundedBy: 'credits' };
     }
 
     const conn = getSolanaConnection();
@@ -14694,11 +14742,21 @@
             order.sellValue = action.liveValue;
             order.status = action.finalStatus || (action.kind === 'prediction-settlement' ? 'settled' : 'sold');
             var r;
-            if (hasCashOut) {
+            if (order.fundedBy === 'credits') {
+              // Credits-funded ticket: pay the NET win straight back to the
+              // canonical credits pool so the balance updates immediately.
+              if (payout > 0 && window.OST_MONEY && typeof window.OST_MONEY.add === 'function') {
+                window.OST_MONEY.add(payout, action.kind === 'prediction-settlement' ? 'prediction-win' : 'prediction-sell');
+              }
+              r = { sig: 'credits-' + Date.now().toString(36), ost: payout };
+            } else if (hasCashOut) {
               r = await window.OST_TRADE.predictionCashOut(order, payout);
             } else {
               // No on-chain trading module loaded — local cash-out so the
               // user still receives credit for the resolved win.
+              if (payout > 0 && window.OST_MONEY && typeof window.OST_MONEY.add === 'function') {
+                window.OST_MONEY.add(payout, 'prediction-win');
+              }
               r = { sig: 'local-' + Date.now().toString(36), ost: payout };
             }
             order.cashedOut = true;
@@ -14816,11 +14874,17 @@
       if (receiptExplorerEl) receiptExplorerEl.href = explorerTxUrl(state.latestReceipt.signature);
     }
 
+    function creditsBalance() {
+      try { return (window.OST_MONEY && typeof window.OST_MONEY.get === 'function') ? (Number(window.OST_MONEY.get()) || 0) : 0; } catch (_) { return 0; }
+    }
+
     function syncTradeWallet() {
       if (!connectedWalletSession || !connectedWalletSession.publicKey) {
-        state.availableBalance = null;
+        // No on-chain wallet: the desk funds tickets from the credits pool
+        // (where faucet + game wins land), so show that spendable balance.
+        state.availableBalance = creditsBalance();
         renderPredictionTicket(getFilteredMarkets());
-        return Promise.resolve(null);
+        return Promise.resolve(state.availableBalance);
       }
 
       var pubkey = connectedWalletSession.publicKey;
@@ -14838,13 +14902,15 @@
         }
         return balance;
       }).then(function(balance) {
-        state.availableBalance = balance;
+        // Spendable = the larger of on-chain OST and credits, since a ticket
+        // draws from whichever can cover it (placeOrder falls back to credits).
+        state.availableBalance = Math.max(Number(balance) || 0, creditsBalance());
         renderPredictionTicket(getFilteredMarkets());
-        return balance;
+        return state.availableBalance;
       }).catch(function() {
-        state.availableBalance = 0;
+        state.availableBalance = creditsBalance();
         renderPredictionTicket(getFilteredMarkets());
-        return 0;
+        return state.availableBalance;
       });
     }
 
@@ -15569,8 +15635,8 @@
       }
 
       if (availableBalanceEl) {
-        availableBalanceEl.textContent = state.availableBalance == null
-          ? t('wallet.portal.prediction.connectWalletPrompt', 'Connect wallet')
+        availableBalanceEl.textContent = (state.availableBalance == null)
+          ? formatOst(creditsBalance())
           : formatOst(state.availableBalance);
       }
 
@@ -15578,7 +15644,10 @@
       if (tradeCopyEl) tradeCopyEl.textContent = 'Choose the live side, size the order, and route an OST-denominated ticket from the same market board into the devnet settlement vault.';
       if (tradeActionBtn) {
         var loadingBlocksTrade = state.loading && !(market && market.isOstNative);
-        tradeActionBtn.disabled = loadingBlocksTrade || state.placing || !connectedWalletSession || !connectedWalletSession.publicKey || !canTradeSelection || !hasSufficientBalance;
+        // No longer hard-requires an on-chain wallet: a ticket can be funded
+        // from the credits pool, so the button is enabled whenever the user
+        // has enough spendable balance (on-chain OR credits).
+        tradeActionBtn.disabled = loadingBlocksTrade || state.placing || !canTradeSelection || !hasSufficientBalance;
       }
       if (tradeActionLabelEl) {
         tradeActionLabelEl.textContent = state.placing
@@ -15592,12 +15661,10 @@
 
       if (state.placing) {
         setTradeStatus(t('wallet.portal.prediction.tradePending', 'Sending a real OST market ticket to the prediction vault...'), 'warning');
-      } else if (!connectedWalletSession || !connectedWalletSession.publicKey) {
-        setTradeStatus(t('wallet.portal.prediction.tradeWalletNeeded', 'Connect your OST wallet to place a market ticket.'), 'info');
       } else if (!canTradeSelection) {
         setTradeStatus(t('wallet.portal.prediction.tradeUnavailable', 'This side is not tradeable right now.'), 'warning');
       } else if (!hasSufficientBalance) {
-        setTradeStatus(t('wallet.portal.prediction.tradeNotEnough', 'This wallet does not have enough OST for that stake.'), 'error');
+        setTradeStatus(t('wallet.portal.prediction.tradeNotEnough', 'Not enough OST for that stake. Claim the faucet or lower the amount.'), 'error');
       } else {
         setTradeStatus(t('wallet.portal.prediction.tradeReady', 'Ready to route this position into the OST prediction vault.'), 'success');
       }

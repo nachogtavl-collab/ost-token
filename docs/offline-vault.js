@@ -29,6 +29,9 @@
 
   var vault = {
     balance: 0,
+    backed: 0,      // portion of balance actually debited from real OST — only
+                    // this much may ever redeem back to spendable OST. Prevents
+                    // unbacked "devnet" notes from being minted into real money.
     active: false,
     tokens: [],
     ledger: [],
@@ -88,8 +91,13 @@
 
   function normalizeVault(v) {
     v = v && typeof v === 'object' ? v : {};
+    var bal = Math.max(0, Number(v.balance || 0));
     return {
-      balance: Math.max(0, Number(v.balance || 0)),
+      balance: bal,
+      // If an older vault has no `backed` field, assume the whole balance is
+      // backed (grandfathered) so legit balances still redeem; new unbacked
+      // mints are blocked below, so this can't be exploited going forward.
+      backed: Math.max(0, Math.min(bal, Number(v.backed != null ? v.backed : bal))),
       active: !!v.active,
       tokens: Array.isArray(v.tokens) ? v.tokens.slice(0, 500) : [],
       ledger: Array.isArray(v.ledger) ? v.ledger.slice(0, 500) : [],
@@ -343,43 +351,55 @@
     await ensureReady();
     amount = clampAmount(amount);
     if (!amount) throw new Error('Enter an amount to mint.');
-    // Debit the canonical spendable OST pool so the offline coin has real
-    // backing (no free money). Best-effort: if the pool is empty we still
-    // create the note so devnet testers are never hard-blocked, but we tell them.
+    // A mint MUST be fully backed by real spendable OST — the pool is debited
+    // 1:1 before the offline note exists. No unbacked "devnet notes": those
+    // could be redeemed back into real OST, minting money from nothing (the
+    // leak testers were exploiting). If you have no OST, claim the faucet first.
+    var have = 0;
+    try { if (window.OST_MONEY && typeof window.OST_MONEY.get === 'function') have = Number(window.OST_MONEY.get()) || 0; } catch (_) {}
+    if (have + 1e-9 < amount) {
+      throw new Error('Not enough spendable OST to mint ' + fmt(amount) + ' (you have ' + fmt(have) + '). Claim or earn OST first.');
+    }
     var backed = false;
-    try {
-      if (window.OST_MONEY && typeof window.OST_MONEY.get === 'function' && window.OST_MONEY.get() >= amount) {
-        backed = window.OST_MONEY.spend(amount, 'offline-mint');
-      }
-    } catch (_) {}
+    try { backed = window.OST_MONEY.spend(amount, 'offline-mint'); } catch (_) {}
+    if (!backed) throw new Error('Could not debit OST for the mint. Try again.');
     var token = await createBearerToken({ amount: amount, format: format || 'digital' });
     vault.balance = Math.max(0, Number(vault.balance || 0) + amount);
+    vault.backed = Math.max(0, Number(vault.backed || 0) + amount); // fully backed
     vault.active = true; // minted coin is spendable in offline games right away
-    addLedger('offline-mint', amount, { tokenId: token.tokenId, format: token.format, backed: backed });
+    addLedger('offline-mint', amount, { tokenId: token.tokenId, format: token.format, backed: true });
     await saveVault();
-    setStatus('Minted ' + fmt(amount) + ' OST into the offline vault — ready for offline games' + (backed ? '' : ' (unbacked devnet note)') + '.', 'ok');
-    try { window.dispatchEvent(new CustomEvent('ost:offline-minted', { detail: { amount: amount, tokenId: token.tokenId, backed: backed, token: token } })); } catch (_) {}
-    return { token: token, bearerText: 'OST-BEARER-V1:' + JSON.stringify(token), balance: vault.balance, backed: backed };
+    setStatus('Minted ' + fmt(amount) + ' OST into the offline vault — ready for offline games.', 'ok');
+    try { window.dispatchEvent(new CustomEvent('ost:offline-minted', { detail: { amount: amount, tokenId: token.tokenId, backed: true, token: token } })); } catch (_) {}
+    return { token: token, bearerText: 'OST-BEARER-V1:' + JSON.stringify(token), balance: vault.balance, backed: true };
   }
 
-  // Redeem offline balance back to spendable OST (the reverse trip).
+  // Redeem offline balance back to spendable OST (the reverse trip). Only the
+  // BACKED portion can become real OST again — any unbacked balance (imported
+  // notes, offline winnings beyond backing) stays offline-only and never mints
+  // spendable money.
   async function redeemToOst(amount) {
     await ensureReady();
     amount = clampAmount(amount) || Number(vault.balance || 0);
     amount = clampAmount(amount);
     if (!amount) throw new Error('Nothing to redeem.');
     if (amount > vault.balance + 1e-9) throw new Error('Redeem amount exceeds your offline balance of ' + fmt(vault.balance) + ' OST.');
+    var creditable = Math.max(0, Math.min(amount, Number(vault.backed || 0)));
     vault.balance = Math.max(0, vault.balance - amount);
+    vault.backed = Math.max(0, Number(vault.backed || 0) - creditable);
     if (vault.balance <= 0) vault.active = false;
-    addLedger('offline-redeem', amount, {});
+    addLedger('offline-redeem', amount, { creditedToOst: creditable, unbacked: amount - creditable });
     await saveVault();
     var credited = false;
     try {
-      if (window.OST_MONEY && typeof window.OST_MONEY.add === 'function') { window.OST_MONEY.add(amount, 'offline-redeem'); credited = true; }
+      if (creditable > 0 && window.OST_MONEY && typeof window.OST_MONEY.add === 'function') { window.OST_MONEY.add(creditable, 'offline-redeem'); credited = true; }
     } catch (_) {}
-    setStatus('Redeemed ' + fmt(amount) + ' OST from the offline vault back into your spendable OST.', 'ok');
-    try { window.dispatchEvent(new CustomEvent('ost:offline-redeemed', { detail: { amount: amount, credited: credited } })); } catch (_) {}
-    return { amount: amount, credited: credited, balance: vault.balance };
+    var note = creditable < amount - 1e-9
+      ? 'Redeemed ' + fmt(creditable) + ' backed OST to spendable; ' + fmt(amount - creditable) + ' was unbacked offline value.'
+      : 'Redeemed ' + fmt(creditable) + ' OST from the offline vault back into your spendable OST.';
+    setStatus(note, 'ok');
+    try { window.dispatchEvent(new CustomEvent('ost:offline-redeemed', { detail: { amount: amount, credited: creditable, unbacked: amount - creditable } })); } catch (_) {}
+    return { amount: amount, credited: creditable, balance: vault.balance };
   }
 
   function recordGameResult(detail) {
