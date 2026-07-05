@@ -3067,6 +3067,28 @@
       throw new Error('Select a live market and enter a valid OST stake first.');
     }
 
+    // OST arbitrage: the protocol is the market maker. It fills this BUY at its
+    // ASK (mid marked up by the spread), so the user receives FEWER shares and
+    // OST banks the spread — booked here on every ticket, win or lose. This is
+    // authoritative for ALL callers (desk, modal, direct API): the recorded
+    // shares are set to the arb-adjusted amount so the spread is real, never
+    // double-counted.
+    try {
+      if (window.OST_ARB && typeof window.OST_ARB.bookBuy === 'function') {
+        var midForArb = (window.OST_PRICES && order.marketId) ? window.OST_PRICES.mid(order.marketId, order.side) : Number(order.price);
+        if (!Number.isFinite(midForArb) || midForArb <= 0) midForArb = Number(order.price);
+        if (Number.isFinite(midForArb) && midForArb > 0) {
+          var aq = window.OST_ARB.bookBuy(Number(order.stake), midForArb, { marketId: order.marketId, side: order.side });
+          if (aq && aq.shares > 0) {
+            order.shares = aq.shares;
+            order.potentialReturn = aq.shares;   // each winning share pays up to 1 OST
+            order.fillPrice = aq.ask;
+            order.arbCut = aq.arb;
+          }
+        }
+      }
+    } catch (_) {}
+
     // Funding: prefer a connected on-chain wallet WITH enough OST; otherwise
     // fund the bet from the canonical CREDITS pool (where faucet + game wins
     // land). This is why the balance you actually have can now be bet — the
@@ -14724,14 +14746,23 @@
             return;
           }
           var payout = Number(action.payout);
-          // House edge, live: rake the protocol's cut of the PROFIT (payout
-          // above the original stake) on every winning claim / profitable sell,
-          // so the user receives the NET \u2014 never the full amount fee-free.
           var houseFee = 0;
-          if (window.OST_HOUSE && typeof window.OST_HOUSE.rake === 'function' && payout > 0) {
-            var rk = window.OST_HOUSE.rake(payout, Number(order.stake || action.stake || 0), 'prediction', { kind: action.kind });
-            houseFee = rk.fee;
-            payout = rk.net;
+          if (payout > 0) {
+            if (action.kind === 'prediction-settlement') {
+              // Winning claim: the house takes its cut of the PROFIT.
+              if (window.OST_HOUSE && typeof window.OST_HOUSE.rake === 'function') {
+                var rk = window.OST_HOUSE.rake(payout, Number(order.stake || action.stake || 0), 'prediction', { kind: 'claim' });
+                houseFee = rk.fee; payout = rk.net;
+              }
+            } else if (window.OST_ARB && typeof window.OST_ARB.bookSell === 'function') {
+              // Selling out early: OST buys the shares back BELOW market (the
+              // arbitrage spread), so the user is filled at OST's bid.
+              var midSell = (window.OST_PRICES && order.marketId) ? window.OST_PRICES.mid(order.marketId, order.side) : Number(action.livePrice || order.price);
+              if (!Number.isFinite(midSell) || midSell <= 0) midSell = Number(action.livePrice || order.price) || (payout / Math.max(1e-9, Number(order.shares) || 1));
+              var shs = Number(order.shares) > 0 ? Number(order.shares) : (midSell > 0 ? payout / midSell : 0);
+              var arbS = window.OST_ARB.bookSell(shs, midSell, { marketId: order.marketId, side: order.side, kind: 'sell' });
+              houseFee = arbS.arb; payout = arbS.proceeds;
+            }
           }
           var orig = btn.textContent;
           btn.disabled = true; btn.textContent = '\u2026';
@@ -15576,11 +15607,18 @@
       if (selectedDetailEl) selectedDetailEl.textContent = market.detail;
       setChipState(stakeQuickEl, 'data-prediction-stake', String(Math.round(Number(state.stake) || 0)));
 
-      var priceFraction = activeContract ? Number(activeContract.price) : getMarketPrice(market, state.selectedSide);
-      // Quote the true payout NET of the house edge (taken on the PROFIT at
-      // claim), so the ticket shows exactly what a winner will receive.
-      var grossReturn = calculatePotentialReturn(state.stake, priceFraction);
-      var estimatedShares = calculateEstimatedShares(state.stake, priceFraction);
+      // Unified live price (same value the card, popout and history read).
+      var priceFraction = (window.OST_PRICES && market && !market.isGrouped && Number.isFinite(window.OST_PRICES.mid(market.id, state.selectedSide)))
+        ? window.OST_PRICES.mid(market.id, state.selectedSide)
+        : (activeContract ? Number(activeContract.price) : getMarketPrice(market, state.selectedSide));
+      // OST is the market maker: the user is filled at OST's ASK (mid marked
+      // up by the arbitrage spread), so they receive fewer shares and OST banks
+      // the spread on the buy. The winning payout is then net of the house fee.
+      var arbBuy = (window.OST_ARB && typeof window.OST_ARB.buyQuote === 'function')
+        ? window.OST_ARB.buyQuote(Number(state.stake) || 0, priceFraction)
+        : { shares: calculateEstimatedShares(state.stake, priceFraction), ask: priceFraction, arb: 0 };
+      var estimatedShares = arbBuy.shares;                 // shares after the arb spread
+      var grossReturn = estimatedShares;                    // each winning share pays up to 1 OST
       var houseQuote = (window.OST_HOUSE && typeof window.OST_HOUSE.quote === 'function')
         ? window.OST_HOUSE.quote(grossReturn, Number(state.stake) || 0)
         : { net: grossReturn, fee: 0 };
@@ -16811,9 +16849,18 @@
 
     function buildPredictionOrderRequest(market) {
       var activeContract = buildTradeContract(market, state.selectedSide, state.selectedOutcomeKey);
+      // Fill at the UNIFIED live price so the recorded order matches the ticket.
       var priceFraction = activeContract ? Number(activeContract.price) : NaN;
-      var potentialReturn = calculatePotentialReturn(state.stake, priceFraction);
-      if (!Number.isFinite(priceFraction) || priceFraction <= 0 || !Number.isFinite(potentialReturn)) {
+      if (window.OST_PRICES && market && !market.isGrouped && Number.isFinite(window.OST_PRICES.mid(market.id, state.selectedSide))) {
+        priceFraction = window.OST_PRICES.mid(market.id, state.selectedSide);
+      }
+      // Apply the OST arbitrage spread on the buy: the user is filled at OST's
+      // ask, receiving fewer shares; OST banks the spread (booked in placeOrder).
+      var arbBuy = (window.OST_ARB && typeof window.OST_ARB.buyQuote === 'function')
+        ? window.OST_ARB.buyQuote(state.stake, priceFraction)
+        : { shares: calculateEstimatedShares(state.stake, priceFraction), ask: priceFraction, arb: 0 };
+      var potentialReturn = arbBuy.shares;
+      if (!Number.isFinite(priceFraction) || priceFraction <= 0 || !Number.isFinite(potentialReturn) || potentialReturn <= 0) {
         throw new Error(t('wallet.portal.prediction.tradeUnavailable', 'This side is not tradeable right now.'));
       }
       var baseYes = Number(market.baseYesPriceNumber != null ? market.baseYesPriceNumber : market.fairYesPriceNumber);
@@ -16835,7 +16882,9 @@
         price: priceFraction,
         yesPrice: yesPrice,
         noPrice: noPrice,
-        shares: calculateEstimatedShares(state.stake, priceFraction),
+        shares: arbBuy.shares,
+        arbCut: arbBuy.arb,
+        fillPrice: arbBuy.ask,
         potentialReturn: potentialReturn,
         closeAtMs: market.closeAtMs || 0,
         clobTokenIds: activeContract && activeContract.clobTokenIds ? activeContract.clobTokenIds : getMarketTokenIds(market),

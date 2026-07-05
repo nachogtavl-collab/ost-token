@@ -341,13 +341,16 @@
       var pts = raw.slice(-140).map(function (point) {
         return btcProbabilityFromPoint(Number(point && point.price), round, point && (point.ts || point.t));
       }).filter(Number.isFinite);
-      var liveYes = Number(round && (round.yesPriceNumber != null ? round.yesPriceNumber : market.yesPriceNumber));
+      var liveYes = (window.OST_PRICES && market && Number.isFinite(window.OST_PRICES.mid(market.id, 'yes')))
+        ? window.OST_PRICES.mid(market.id, 'yes')
+        : Number(round && (round.yesPriceNumber != null ? round.yesPriceNumber : market.yesPriceNumber));
       if (Number.isFinite(liveYes) && liveYes > 0 && liveYes < 1) pts.push(liveYes);
       if (pts.length === 1) pts.unshift(pts[0]);
       if (side === 'NO') pts = pts.map(function (v) { return 1 - v; });
       return pts;
     }
-    var yes = Number(market.yesPriceNumber);
+    var yes = (window.OST_PRICES && market && Number.isFinite(window.OST_PRICES.mid(market.id, 'yes')))
+      ? window.OST_PRICES.mid(market.id, 'yes') : Number(market.yesPriceNumber);
     var no = Number(market.noPriceNumber);
     if (!Number.isFinite(yes)) yes = 0.5;
     if (!Number.isFinite(no)) no = 1 - yes;

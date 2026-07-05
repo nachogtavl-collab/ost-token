@@ -2162,16 +2162,18 @@ liveTimers.forEach(function (t) {
           var entryPx = Number(order.price || (side === 'NO' ? order.noPrice : order.yesPrice)) || 0;
           var shares = Number(order.shares) > 0 ? Number(order.shares) : (entryPx > 0 ? Number(order.stake || 0) / entryPx : 0);
           var contract = getModalTradeContract(market, side, order.outcomeKey || '');
-          var livePx = side === 'NO' ? Number(contract && contract.noPrice) : Number(contract && contract.yesPrice);
+          // Unified live price for the fill.
+          var livePx = (window.OST_PRICES && market && window.OST_PRICES.mid(market.id, side))
+            ? window.OST_PRICES.mid(market.id, side)
+            : (side === 'NO' ? Number(contract && contract.noPrice) : Number(contract && contract.yesPrice));
           if (!Number.isFinite(livePx) || livePx <= 0) livePx = entryPx;
-          // House edge on the sell: rake the protocol's cut of any PROFIT
-          // (proceeds above the original cost basis). Exiting at or below cost
-          // is never taxed; the user receives the NET.
-          var fairValue = Math.max(0, shares * livePx);
-          var costBasis = Number(order.stake) || 0;
-          var payout = fairValue;
-          if (window.OST_HOUSE && typeof window.OST_HOUSE.rake === 'function') {
-            payout = window.OST_HOUSE.rake(fairValue, costBasis, 'prediction', { kind: 'sell' }).net;
+          // OST is the counterparty: it buys the user's shares BELOW market
+          // (the arbitrage spread / bid), banking the spread on the sell.
+          var payout;
+          if (window.OST_ARB && typeof window.OST_ARB.bookSell === 'function') {
+            payout = window.OST_ARB.bookSell(shares, livePx, { marketId: market.id, side: side, kind: 'sell' }).proceeds;
+          } else {
+            payout = Math.max(0, shares * livePx);
           }
           if (!(payout > 0)) { toast('Cannot sell at 0¢', 'err'); return; }
           var orig = btn.textContent;
