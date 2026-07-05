@@ -215,20 +215,28 @@
     }
     setStatus('Public quotes ready; live feed refreshing');
     try {
-      // The worker serves at most 24 symbols per request (Cloudflare
-      // subrequest budget), so fetch the 42-symbol universe in chunks.
+      // The worker serves at most 24 symbols per request. Split the 42-symbol
+      // universe into the FEWEST chunks (21+21) and fetch them SEQUENTIALLY so
+      // a single client never fans out parallel requests into the worker's
+      // aggressive per-IP rate limiter (that returned empty quote sets).
+      var CHUNK = 21;
       var chunks = [];
-      for (var ci = 0; ci < state.symbols.length; ci += 20) chunks.push(state.symbols.slice(ci, ci + 20));
-      var payloads = await Promise.all(chunks.map(function (chunk) {
-        return fetch(base + '/stocks/quotes?symbols=' + encodeURIComponent(chunk.join(',')), { cache: 'no-store' })
-          .then(function (r) { return r.ok ? r.json() : null; })
-          .catch(function () { return null; });
-      }));
-      var payload = payloads.find(function (p) { return p && Array.isArray(p.quotes); }) || null;
+      for (var ci = 0; ci < state.symbols.length; ci += CHUNK) chunks.push(state.symbols.slice(ci, ci + CHUNK));
       var merged = [];
-      payloads.forEach(function (p) {
-        if (p && Array.isArray(p.quotes)) merged = merged.concat(p.quotes);
-      });
+      var anyOk = false;
+      for (var k = 0; k < chunks.length; k++) {
+        try {
+          var resp = await fetch(base + '/stocks/quotes?symbols=' + encodeURIComponent(chunks[k].join(',')), { cache: 'no-store' });
+          if (resp.ok) {
+            var pj = await resp.json();
+            if (pj && Array.isArray(pj.quotes)) { merged = merged.concat(pj.quotes); anyOk = true; }
+          }
+        } catch (_) {}
+      }
+      // If the relay is rate-limiting, keep whatever we already had rendered
+      // rather than blanking the board.
+      if (!anyOk && state.quotes && state.quotes.length) { renderQuotes(); renderTicket(); return; }
+      var payload = { quotes: merged, source: 'ost edge relay' };
       state.quotes = merged;
       if (state.quotes.length && !state.quotes.some(function(quote) { return quote.symbol === state.selectedSymbol; })) {
         state.selectedSymbol = state.quotes[0].symbol;
