@@ -602,6 +602,17 @@
     var notionalUsd = nowPrice * shares;
     order.exitPrice = nowPrice;
     var pnl = estimatePnl(order);
+    // House edge, live: rake the protocol's cut of the PROFIT (payout above the
+    // OST stake) when closing a stock position; a flat/losing close is never
+    // taxed and the trader receives the NET.
+    var grossPayout = Number(pnl.payoutOst) || 0;
+    var stockBasis = Number(order.ostStake) || 0;
+    var stockHouseFee = 0;
+    if (window.OST_HOUSE && typeof window.OST_HOUSE.rake === 'function' && grossPayout > 0) {
+      var sr = window.OST_HOUSE.rake(grossPayout, stockBasis, 'stock', { symbol: order.symbol });
+      stockHouseFee = sr.fee;
+      pnl.payoutOst = sr.net;
+    }
     var payout;
     try {
       payout = await settleClosePayout(order, pnl.payoutOst);

@@ -222,6 +222,16 @@
     var s1 = coin.tokensSold;
     var s0 = Math.max(0, s1 - tokens);
     var ostOut = curveCost(s0, s1, coin.supply);
+    // House edge, live: rake the protocol's cut of the PROFIT (proceeds above
+    // the cost basis of the tokens being sold). Selling at/under cost is never
+    // taxed; the trader receives the NET.
+    var sellBasis = Math.max(0, Number(pos.costOst || 0) * (pos.tokens > 0 ? tokens / pos.tokens : 0));
+    var sellHouseFee = 0;
+    if (window.OST_HOUSE && typeof window.OST_HOUSE.rake === 'function') {
+      var lr = window.OST_HOUSE.rake(ostOut, sellBasis, 'memecoin', { symbol: coin.symbol });
+      sellHouseFee = lr.fee;
+      ostOut = lr.net;
+    }
     if (!window.OST_RESCUE || typeof window.OST_RESCUE.payoutOst !== 'function') {
       throw new Error('OST launchpad payout vault is still loading. Try again in a moment.');
     }

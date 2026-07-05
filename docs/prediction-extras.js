@@ -256,32 +256,19 @@
 
   // Submit bet — uses OST_WALLET to do a real Token-2022 transfer to the swap pool with a memo
   // Falls back to a simulated record if no wallet/web3 is available.
-  function ticketFeeBps() {
-    try {
-      var v = parseFloat(localStorage.getItem('OST_FEE_PREDICTION_BPS'));
-      if (Number.isFinite(v) && v >= 0 && v <= 1000) return v;
-    } catch (_) {}
-    return 150;
-  }
-
   function submitBet(market, side, stake, price) {
     var memo = JSON.stringify({ k: 'ost-bet', m: market.id, s: side, p: price, a: stake, t: Date.now() });
-    // Same house edge as the main desk: the fee slice buys no shares, so the
-    // pool keeps it win or lose. payoutIfWin is quoted from the NET stake.
-    var feeBps = ticketFeeBps();
-    var feeOst = stake * feeBps / 10000;
-    var netStake = stake - feeOst;
+    // True odds on the ticket; the house edge is taken on the PROFIT when the
+    // winner claims (see the claim handler + OST_HOUSE). Loss = full stake to
+    // the vault. No hidden entry fee.
     var record = {
       id: 'bet-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6),
       marketId: market.id,
       title: market.title,
       side: side,
       stake: stake,
-      feeOst: feeOst,
-      netStake: netStake,
-      feeBps: feeBps,
       price: price,
-      payoutIfWin: netStake / price,
+      payoutIfWin: stake / price,
       placedAt: Date.now(),
       status: 'open',
       signature: '',
@@ -289,7 +276,6 @@
     };
     function commit(record) {
       var bets = readBets(); bets.unshift(record); writeBets(bets);
-      try { window.dispatchEvent(new CustomEvent('ost:house-fee', { detail: { source: 'ticket', amount: feeOst, label: 'ticket fee' } })); } catch (_) {}
       return record;
     }
 
@@ -519,31 +505,41 @@
     var bet = bets.find(function (b) { return b.id === betId; });
     if (!bet || bet.status !== 'won' || bet.claimed) return;
     btn.disabled = true; btn.textContent = 'Claiming…';
+    // House edge, live: rake the protocol's cut of the PROFIT (win above the
+    // stake) so the winner claims the NET — never the full amount fee-free.
+    var grossWin = Number(bet.payoutIfWin) || 0;
+    var payAmt = grossWin;
+    if (window.OST_HOUSE && typeof window.OST_HOUSE.rake === 'function') {
+      var rk = window.OST_HOUSE.rake(grossWin, Number(bet.stake) || 0, 'prediction', { kind: 'claim' });
+      payAmt = rk.net;
+      bet.houseFee = rk.fee;
+    }
+    bet.paidOut = payAmt;
     var doClaim = function () {
       bet.claimed = true; bet.claimedAt = Date.now();
       writeBets(bets);
-      btn.outerHTML = '<span class="ost-bet-claimed">✓ ' + fmt(bet.payoutIfWin) + ' OST claimed</span>';
+      btn.outerHTML = '<span class="ost-bet-claimed">✓ ' + fmt(payAmt) + ' OST claimed' + (bet.houseFee > 0 ? ' (house −' + fmt(bet.houseFee) + ')' : '') + '</span>';
       if (window.OST_WALLET && typeof window.OST_WALLET.refresh === 'function') window.OST_WALLET.refresh();
       try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch (_) {}
       try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {}
     };
     var failClaim = function (error) {
       btn.disabled = false;
-      btn.textContent = 'Claim ' + fmt(bet.payoutIfWin) + ' OST';
+      btn.textContent = 'Claim ' + fmt(payAmt) + ' OST';
       btn.title = (error && error.message) || 'OST payout vault is still loading.';
     };
     // Try the live payout path first; local fallback keeps resolved wins usable
     // on static deployments where the payout module has not loaded yet.
     try {
       if (window.OST_TRADE && typeof window.OST_TRADE.predictionCashOut === 'function') {
-        window.OST_TRADE.predictionCashOut(bet, bet.payoutIfWin).then(function (result) {
+        window.OST_TRADE.predictionCashOut(bet, payAmt).then(function (result) {
           if (result && result.sig) bet.signature = result.sig;
           doClaim();
         }).catch(failClaim);
         return;
       }
       if (window.OST_REAL_SWAP && typeof window.OST_REAL_SWAP.payout === 'function') {
-        window.OST_REAL_SWAP.payout(bet.payoutIfWin).then(doClaim).catch(failClaim);
+        window.OST_REAL_SWAP.payout(payAmt).then(doClaim).catch(failClaim);
         return;
       }
     } catch (e) {}
@@ -551,7 +547,7 @@
     // a claim ALWAYS moves real balance (previously this marked the bet
     // claimed without paying anything - a dead end).
     if (window.OST_MONEY && typeof window.OST_MONEY.add === 'function') {
-      window.OST_MONEY.add(Number(bet.payoutIfWin) || 0, 'prediction-win');
+      window.OST_MONEY.add(Number(payAmt) || 0, 'prediction-win');
     }
     bet.signature = 'local-' + Date.now().toString(36);
     doClaim();

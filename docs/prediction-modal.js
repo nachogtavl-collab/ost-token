@@ -1958,15 +1958,11 @@ liveTimers.forEach(function (t) {
       var contract = getActiveContract();
       var px = contract ? Number(contract.price) : NaN;
       if (!Number.isFinite(px) || px <= 0) px = 0.5;
-      // Quote NET of the 1.5% protocol fee — the same fee placeOrder charges,
-      // so the projection matches what a winner actually receives.
-      var feeBps = 150;
-      try {
-        var o = parseFloat(localStorage.getItem('OST_FEE_PREDICTION_BPS'));
-        if (Number.isFinite(o) && o >= 0 && o <= 1000) feeBps = o;
-      } catch (_) {}
-      var shares = (s / px) * (1 - feeBps / 10000);
-      setText(bodyEl, 'projected', 'Win ' + shares.toFixed(2) + ' OST · risk ' + s.toFixed(2) + ' OST · @ ' + fmtCents(px) + ' · fee ' + (feeBps / 100) + '%');
+      // Show the true payout NET of the house edge (taken on PROFIT at claim),
+      // so the projection matches exactly what a winner receives.
+      var gross = s / px;
+      var q = (window.OST_HOUSE && window.OST_HOUSE.quote) ? window.OST_HOUSE.quote(gross, s) : { net: gross, fee: 0 };
+      setText(bodyEl, 'projected', 'Win ' + q.net.toFixed(2) + ' OST · risk ' + s.toFixed(2) + ' OST · @ ' + fmtCents(px) + (q.fee > 0 ? ' · house −' + q.fee.toFixed(2) : ''));
     }
     var stakeInput = bodyEl.querySelector('[data-bind="stake"]');
     if (stakeInput) stakeInput.addEventListener('input', recalcProjected);
@@ -2168,21 +2164,16 @@ liveTimers.forEach(function (t) {
           var contract = getModalTradeContract(market, side, order.outcomeKey || '');
           var livePx = side === 'NO' ? Number(contract && contract.noPrice) : Number(contract && contract.yesPrice);
           if (!Number.isFinite(livePx) || livePx <= 0) livePx = entryPx;
-          // 2% sell spread — same principle as the parlay cash-out: the
-          // protocol is the counterparty and keeps the spread. Without it,
-          // positions exited at full fair value and OST earned nothing.
-          var sellSpreadBps = 200;
-          try {
-            var sbps = parseFloat(localStorage.getItem('OST_FEE_SELL_BPS'));
-            if (Number.isFinite(sbps) && sbps >= 0 && sbps <= 1000) sellSpreadBps = sbps;
-          } catch (_) {}
+          // House edge on the sell: rake the protocol's cut of any PROFIT
+          // (proceeds above the original cost basis). Exiting at or below cost
+          // is never taxed; the user receives the NET.
           var fairValue = Math.max(0, shares * livePx);
-          var payout = fairValue * (1 - sellSpreadBps / 10000);
-          if (!(payout > 0)) { toast('Cannot sell at 0¢', 'err'); return; }
-          var spreadKept = fairValue - payout;
-          if (spreadKept > 0.0001) {
-            try { window.dispatchEvent(new CustomEvent('ost:house-fee', { detail: { source: 'prediction', amount: spreadKept, label: 'sell spread' } })); } catch (_) {}
+          var costBasis = Number(order.stake) || 0;
+          var payout = fairValue;
+          if (window.OST_HOUSE && typeof window.OST_HOUSE.rake === 'function') {
+            payout = window.OST_HOUSE.rake(fairValue, costBasis, 'prediction', { kind: 'sell' }).net;
           }
+          if (!(payout > 0)) { toast('Cannot sell at 0¢', 'err'); return; }
           var orig = btn.textContent;
           btn.disabled = true; btn.textContent = '…';
           sellOrder(order, payout, 'prediction-sell-modal', market, { sellPrice: livePx, sellValue: payout, shares: shares })

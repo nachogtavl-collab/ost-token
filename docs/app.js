@@ -3091,20 +3091,12 @@
       if (!sourceInfo) throw new Error('This wallet does not have an OST token account yet. Claim or receive OST first.');
     }
 
-    // Protocol fee — charged HERE, at the single choke point every trade path
-    // (board, modal, popout ticket, pro desk, stock mirror, fast markets,
-    // scalar/date buckets) flows through. The FULL stake is transferred to the
-    // settlement vault below; the fee portion buys no shares, so the vault
-    // keeps it on every trade regardless of outcome. That retained slice is
-    // the protocol's real house edge — not a display-only ledger entry.
-    let predictionFeeBps = 150;
-    try {
-      const bpsOverride = parseFloat(localStorage.getItem('OST_FEE_PREDICTION_BPS'));
-      if (Number.isFinite(bpsOverride) && bpsOverride >= 0 && bpsOverride <= 1000) predictionFeeBps = bpsOverride;
-    } catch (_) {}
-    const feeOst = Number(order.stake) * predictionFeeBps / 10000;
-    const netStake = Number(order.stake) - feeOst;
-    const feeScale = netStake / Number(order.stake);
+    // House edge model: the full stake funds the settlement vault. On a LOSS
+    // the whole stake stays with the protocol (natural edge); on a WIN, the
+    // house takes its visible cut of the PROFIT at claim time via OST_HOUSE
+    // (see the claim path). No hidden entry scaling — the ticket quotes true
+    // odds and the fee is charged live when the winner claims.
+    const feeScale = 1;
 
     const memo = buildPredictionOrderMemo(order);
     if (!window.OST_RESCUE || typeof window.OST_RESCUE.userSendsOstToPool !== 'function') {
@@ -3136,9 +3128,6 @@
       yesPrice: Number(order.yesPrice),
       noPrice: Number(order.noPrice),
       stake: Number(order.stake),
-      feeOst: feeOst,
-      netStake: netStake,
-      feeBps: predictionFeeBps,
       shares: (Number(order.shares) || (Number(order.price) > 0 ? Number(order.stake) / Number(order.price) : Number(order.potentialReturn || 0))) * feeScale,
       potentialReturn: Number(order.potentialReturn) * feeScale,
       closeAtMs: Number(order.closeAtMs || 0),
@@ -3166,8 +3155,6 @@
     };
     storePredictionOrderRecord(record);
     try { window.dispatchEvent(new CustomEvent('ost:prediction-order-recorded', { detail: record })); } catch (_) {}
-    // Real, funded protocol revenue: the fee stays in the settlement vault.
-    try { window.dispatchEvent(new CustomEvent('ost:house-fee', { detail: { source: 'prediction', amount: feeOst, label: 'trade fee ' + (predictionFeeBps / 100) + '%' } })); } catch (_) {}
 
     // Fetch updated balance for UI display (best-effort — use stake-adjusted
     // fallback if the RPC hasn't propagated the debit yet).
@@ -14689,9 +14676,19 @@
             return;
           }
           var payout = Number(action.payout);
+          // House edge, live: rake the protocol's cut of the PROFIT (payout
+          // above the original stake) on every winning claim / profitable sell,
+          // so the user receives the NET \u2014 never the full amount fee-free.
+          var houseFee = 0;
+          if (window.OST_HOUSE && typeof window.OST_HOUSE.rake === 'function' && payout > 0) {
+            var rk = window.OST_HOUSE.rake(payout, Number(order.stake || action.stake || 0), 'prediction', { kind: action.kind });
+            houseFee = rk.fee;
+            payout = rk.net;
+          }
           var orig = btn.textContent;
           btn.disabled = true; btn.textContent = '\u2026';
           try {
+            order.houseFee = houseFee;
             order.cashoutKind = action.kind;
             order.sellPrice = action.livePrice;
             order.sellValue = action.liveValue;
@@ -15514,17 +15511,15 @@
       setChipState(stakeQuickEl, 'data-prediction-stake', String(Math.round(Number(state.stake) || 0)));
 
       var priceFraction = activeContract ? Number(activeContract.price) : getMarketPrice(market, state.selectedSide);
-      // Quote NET of the protocol fee so the ticket shows exactly what a
-      // winner receives — the same math placeOrder charges at execution.
-      var quoteFeeBps = 150;
-      try {
-        var quoteBpsOverride = parseFloat(localStorage.getItem('OST_FEE_PREDICTION_BPS'));
-        if (Number.isFinite(quoteBpsOverride) && quoteBpsOverride >= 0 && quoteBpsOverride <= 1000) quoteFeeBps = quoteBpsOverride;
-      } catch (_) {}
-      var quoteFeeScale = 1 - quoteFeeBps / 10000;
-      var estimatedShares = calculateEstimatedShares(state.stake, priceFraction) * quoteFeeScale;
-      var estimatedReturn = calculatePotentialReturn(state.stake, priceFraction) * quoteFeeScale;
-      var payoutMultiple = Number.isFinite(priceFraction) && priceFraction > 0 ? (quoteFeeScale / priceFraction) : NaN;
+      // Quote the true payout NET of the house edge (taken on the PROFIT at
+      // claim), so the ticket shows exactly what a winner will receive.
+      var grossReturn = calculatePotentialReturn(state.stake, priceFraction);
+      var estimatedShares = calculateEstimatedShares(state.stake, priceFraction);
+      var houseQuote = (window.OST_HOUSE && typeof window.OST_HOUSE.quote === 'function')
+        ? window.OST_HOUSE.quote(grossReturn, Number(state.stake) || 0)
+        : { net: grossReturn, fee: 0 };
+      var estimatedReturn = Number.isFinite(grossReturn) ? houseQuote.net : NaN;
+      var payoutMultiple = (Number.isFinite(estimatedReturn) && Number(state.stake) > 0) ? (estimatedReturn / Number(state.stake)) : NaN;
       var netIfRight = Number.isFinite(estimatedReturn) ? Math.max(estimatedReturn - state.stake, 0) : NaN;
       var hasSufficientBalance = state.availableBalance == null || state.availableBalance + 1e-9 >= Number(state.stake);
       var canTradeSelection = Number.isFinite(priceFraction) && priceFraction > 0;

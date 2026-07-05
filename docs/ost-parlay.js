@@ -133,36 +133,18 @@
   }
 
   // ------------------------------------------------------------- slip math
-  // Per-leg vig (house edge). Stamped on the slip at purchase so terms are
-  // locked in: slips placed before the vig existed keep their original odds.
-  function parlayVigBps() {
-    try {
-      var v = parseFloat(localStorage.getItem('OST_FEE_PARLAY_LEG_BPS'));
-      if (Number.isFinite(v) && v >= 0 && v <= 1000) return v;
-    } catch (_) {}
-    return 250; // 2.5% per leg — sportsbook-standard parlay vig
-  }
-
+  // Parlay odds are shown at FAIR value. The house edge is taken as OST_HOUSE's
+  // visible cut of the PROFIT at the moment a slip is won or cashed out (see
+  // settleScan + sellSlip), so the displayed multiplier is honest and the fee
+  // is charged live on realisation — never a hidden vig baked into the odds.
   function slipPayout(slip) {
-    var vig = Number(slip.vigBps) > 0 ? Number(slip.vigBps) / 10000 : 0;
-    var mult = 1;
-    slip.legs.forEach(function (l) {
-      if (l.status === 'void') return;
-      mult *= (1 / clampP(l.entryPrice)) * (1 - vig);
-    });
-    mult = Math.min(mult, MAX_MULT);
-    return slip.stake * mult;
-  }
-
-  // What the payout would be at FAIR odds — the gap vs slipPayout is the
-  // protocol's realised edge on a winning slip.
-  function slipFairPayout(slip) {
     var mult = 1;
     slip.legs.forEach(function (l) {
       if (l.status === 'void') return;
       mult *= 1 / clampP(l.entryPrice);
     });
-    return slip.stake * Math.min(mult, MAX_MULT);
+    mult = Math.min(mult, MAX_MULT);
+    return slip.stake * mult;
   }
 
   function slipLiveValue(slip) {
@@ -177,8 +159,14 @@
     return payout * prob;
   }
 
+  // The cash-out offer shown to the user is already NET of the house edge on
+  // profit, so what they see is exactly what they receive.
   function cashoutOffer(slip) {
-    return slipLiveValue(slip) * (1 - CASHOUT_SPREAD);
+    var live = slipLiveValue(slip);
+    if (window.OST_HOUSE && typeof window.OST_HOUSE.quote === 'function') {
+      return window.OST_HOUSE.quote(live, Number(slip.stake) || 0).net;
+    }
+    return live * (1 - CASHOUT_SPREAD);
   }
 
   // ------------------------------------------------------------- stores
@@ -572,7 +560,6 @@
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
       legs: draft.map(function (l) { return Object.assign({ status: 'open' }, l); }),
       stake: amount,
-      vigBps: parlayVigBps(),
       status: 'open',
       placedAt: Date.now()
     };
@@ -591,18 +578,21 @@
     var slips = readSlips();
     var slip = slips.find(function (s) { return s.id === id; });
     if (!slip || slip.status !== 'open' || !window.OST_MONEY) return;
-    var offer = cashoutOffer(slip);
-    if (!(offer >= 0.01)) return;
+    // Charge the house edge live on the cash-out: rake the profit portion of
+    // the fair live value; the user receives the NET (== the offer shown).
+    var live = slipLiveValue(slip);
+    var net = live;
+    if (window.OST_HOUSE && typeof window.OST_HOUSE.rake === 'function') {
+      net = window.OST_HOUSE.rake(live, Number(slip.stake) || 0, 'parlay', { kind: 'cashout' }).net;
+    } else {
+      net = cashoutOffer(slip);
+    }
+    if (!(net >= 0.01)) return;
     slip.status = 'cashed';
-    slip.cashoutOst = Math.round(offer * 100) / 100;
+    slip.cashoutOst = Math.round(net * 100) / 100;
     slip.settledAt = Date.now();
     writeSlips(slips);
     window.OST_MONEY.add(slip.cashoutOst, 'parlay-cashout');
-    // The cash-out spread (live value − offer) is realised house revenue.
-    var spreadKept = slipLiveValue(slip) - slip.cashoutOst;
-    if (spreadKept > 0.0001) {
-      try { window.dispatchEvent(new CustomEvent('ost:house-fee', { detail: { source: 'parlay', amount: spreadKept, label: 'cash-out spread' } })); } catch (_) {}
-    }
     ledgerUpsert(slip);
     toastMini('Sold combo for ' + slip.cashoutOst.toFixed(2) + ' OST');
     renderDock();
@@ -666,15 +656,16 @@
           slip.status = liveLegs.length ? 'won' : 'cashed'; // all void -> refund
           slip.settledAt = Date.now();
           var payout = slip.status === 'won' ? slipPayout(slip) : slip.stake;
+          // Won: charge the house edge live on the profit; a void refund of the
+          // user's own stake is never taxed.
+          if (slip.status === 'won' && window.OST_HOUSE && typeof window.OST_HOUSE.rake === 'function') {
+            payout = window.OST_HOUSE.rake(payout, Number(slip.stake) || 0, 'parlay', { kind: 'win' }).net;
+          }
           if (slip.status === 'cashed') slip.cashoutOst = slip.stake;
+          slip.paidOut = payout;
           if (window.OST_MONEY) window.OST_MONEY.add(payout, slip.status === 'won' ? 'parlay-win' : 'parlay-void-refund');
           ledgerUpsert(slip);
           if (slip.status === 'won') {
-            // Realised house edge: fair payout − vig payout stayed with OST.
-            var edge = slipFairPayout(slip) - payout;
-            if (edge > 0.0001) {
-              try { window.dispatchEvent(new CustomEvent('ost:house-fee', { detail: { source: 'parlay', amount: edge, label: 'parlay vig' } })); } catch (_) {}
-            }
             try { window.dispatchEvent(new CustomEvent('ost:parlay-won', { detail: { payout: payout, legs: slip.legs } })); } catch (_) {}
           }
         }

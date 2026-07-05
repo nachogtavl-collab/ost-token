@@ -111,12 +111,22 @@
   }
 
   function settleGame(game, bet, payout, mult, statusEl, winText, stageEl) {
-    if (payout > 0) credit(payout, game);
+    // House edge, live: take the protocol's cut of the PROFIT (winnings above
+    // the bet) before the player is paid. A loss or break-even is never taxed.
+    var houseFee = 0;
+    if (payout > 0) {
+      if (window.OST_HOUSE && typeof window.OST_HOUSE.rake === 'function') {
+        var r = window.OST_HOUSE.rake(payout, Number(bet || 0), 'game', { game: game });
+        houseFee = r.fee;
+        payout = r.net;
+      }
+      credit(payout, game);
+    }
     recordRound(game, bet, payout, mult);
     pushHistory(mult);
-    if (statusEl) statusEl.textContent = winText;
+    if (statusEl) statusEl.textContent = winText + (houseFee > 0 ? ' · house −' + fmt(houseFee) + ' OST' : '');
     if (payout > bet) {
-      toast('+' + fmt(payout - bet) + ' OST · ' + shortMult(mult), 'win');
+      toast('+' + fmt(payout - bet) + ' OST · ' + shortMult(mult) + (houseFee > 0 ? ' · house −' + fmt(houseFee) : ''), 'win');
       popBurst(stageEl || statusEl && statusEl.parentElement, 20);
     } else if (payout > 0) {
       toast('Returned ' + fmt(payout) + ' OST · ' + shortMult(mult), 'soft');
