@@ -196,6 +196,7 @@
     updateCoin(coin);
 
     var sig = buySettlement && buySettlement.sig || sigShort();
+    syncTradeToWorker(coin, 'buy', amt, trader, sig); // share to the registry (amount = OST in)
     recordTrade({ ts: Date.now(), trader: trader, mint: coin.mint, symbol: coin.symbol, side: 'buy', ost: amt, tokens: tokens, price: coin.price, mcap: coin.mcap, sig: sig });
     try {
       window.dispatchEvent(new CustomEvent('ost:lp-trade', { detail: { side: 'buy', coin: coin, ost: amt, tokens: tokens, sig: sig } }));
@@ -245,6 +246,7 @@
     updateCoin(coin);
 
     var sig = sellSettlement && sellSettlement.sig || sigShort();
+    syncTradeToWorker(coin, 'sell', tokens, trader, sig); // share to the registry (amount = tokens out)
     recordTrade({ ts: Date.now(), trader: trader, mint: coin.mint, symbol: coin.symbol, side: 'sell', ost: ostOut, tokens: tokens, price: coin.price, mcap: coin.mcap, sig: sig });
     try {
       window.dispatchEvent(new CustomEvent('ost:lp-trade', { detail: { side: 'sell', coin: coin, ost: ostOut, tokens: tokens, sig: sig } }));
@@ -270,6 +272,26 @@
       } catch (_) {}
     }
     return { ok: true, ost: ostOut, tokens: tokens, price: coin.price, mcap: coin.mcap, curve: coin.curve, sig: sig, signature: sig };
+  }
+
+  // Push a completed trade to the shared worker registry so every visitor
+  // sees the coin's real mcap/curve advance. Fire-and-forget: the local trade
+  // already settled the OST and updated holdings; this just shares the state.
+  function apiBase() {
+    return (typeof window !== 'undefined' && window.OST_API_BASE) ? String(window.OST_API_BASE).replace(/\/$/, '') : '';
+  }
+  function syncTradeToWorker(coin, side, amount, trader, sig) {
+    var base = apiBase();
+    if (!base || !coin || !coin.mint) return;
+    // Worker expects: buy -> amount is OST in; sell -> amount is tokens.
+    try {
+      fetch(base + '/launchpad/trade', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', accept: 'application/json' },
+        body: JSON.stringify({ mint: coin.mint, side: side, amount: amount, trader: trader || 'anon', signature: sig || '' }),
+        keepalive: true
+      }).catch(function () {});
+    } catch (_) {}
   }
 
   function currentTrader() {

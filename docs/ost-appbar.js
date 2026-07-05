@@ -69,13 +69,44 @@
     document.body.classList.toggle('ost-widgets-live', !!v);
   }
 
+  // Robust navigation: a section may live inside a compartment (and a sub-tab)
+  // that is display:none, so a raw scrollIntoView silently no-ops — that was
+  // the "dead-end" Markets/Offline buttons. Activate the compartment FIRST (it
+  // un-hides the section), optionally click the sub-tab, THEN scroll to the
+  // precise element. Falls back to a plain scroll if compartments isn't loaded.
+  function navTo(compartmentId, subTab, scrollSel) {
+    var didActivate = false;
+    try {
+      if (window.OST_COMPARTMENTS && typeof window.OST_COMPARTMENTS.activate === 'function') {
+        window.OST_COMPARTMENTS.activate(compartmentId, !subTab && !scrollSel);
+        didActivate = true;
+      }
+    } catch (_) {}
+    var run = function () {
+      if (subTab) {
+        var t = document.querySelector('[data-wallet-panel-target="' + subTab + '"], [data-wallet-tab="' + subTab + '"], [data-store-tab="' + subTab + '"], [data-tab="' + subTab + '"]');
+        if (t) t.click();
+      }
+      if (scrollSel) scrollToFirst([].concat(scrollSel));
+      else if (!didActivate) scrollToFirst(['#' + compartmentId]);
+    };
+    // Wait a frame so the just-un-hidden section has layout before we scroll.
+    if (subTab || scrollSel) setTimeout(run, didActivate ? 300 : 60);
+    else if (!didActivate) scrollToFirst(['#' + compartmentId]);
+  }
+
   /* ---- config ------------------------------------------------------------ */
 
   var TABS = [
-    { key: 'home',    ico: '🏠', lbl: 'Home',    go: function () { window.scrollTo({ top: 0, behavior: 'smooth' }); } },
-    { key: 'markets', ico: '📈', lbl: 'Markets', go: function () { scrollToFirst(['#predictionMarketBoard', '#live-bet']); } },
-    { key: 'games',   ico: '🎮', lbl: 'Games',   go: function () { scrollToFirst(['#ostGames', '#ostGamesSection', '#new-here']); } },
-    { key: 'wallet',  ico: '👛', lbl: 'Wallet',  go: function () { scrollToFirst(['#wallet']); } },
+    { key: 'home',    ico: '🏠', lbl: 'Home',    go: function () {
+        // Home is the top of the page; activate WITHOUT the compartment's
+        // auto-scroll (it would fight our scroll-to-top), then pin to 0.
+        try { if (window.OST_COMPARTMENTS && window.OST_COMPARTMENTS.activate) window.OST_COMPARTMENTS.activate('home', false); } catch (_) {}
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } },
+    { key: 'markets', ico: '📈', lbl: 'Markets', go: function () { navTo('wallet', 'predict', ['#predictionMarketBoard', '#live-bet']); } },
+    { key: 'games',   ico: '🎮', lbl: 'Games',   go: function () { navTo('new-here', null, ['#ostGames', '#ostGamesSection']); } },
+    { key: 'wallet',  ico: '👛', lbl: 'Wallet',  go: function () { navTo('wallet', 'access', ['#wallet']); } },
     { key: 'more',    ico: '⊕',  lbl: 'More',    go: null /* sheet toggle */ }
   ];
 
@@ -98,7 +129,8 @@
         clickFirst(['#ostMetaBadge']);
       } },
     { ico: '💳', lbl: 'OST Card', need: ['#ostCardFloatingBtn'], run: function () {
-        clickFirst(['#ostCardFloatingBtn']);
+        if (window.OST_CARD && typeof window.OST_CARD.openFullCard === 'function') window.OST_CARD.openFullCard();
+        else clickFirst(['#ostCardFloatingBtn']);
       } },
     { ico: '🎯', lbl: 'Trade ticket', need: ['.ost-tradepop__launcher', '#ost-trade-ticket-fab'], run: function () {
         clickFirst(['.ost-tradepop__launcher', '#ost-trade-ticket-fab']);
@@ -107,7 +139,7 @@
         clickFirst(['#ghost-summon-trigger']);
       } },
     { ico: '🔋', lbl: 'Offline vault', need: ['#offline'], run: function () {
-        scrollToFirst(['#offline']);
+        navTo('offline', null, ['#offline']);
       } }
   ];
 

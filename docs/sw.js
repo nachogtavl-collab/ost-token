@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v228';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v228';
+const CACHE_NAME = 'ost-pwa-cache-v229';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v229';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -20,13 +20,13 @@ const PRECACHE_PATHS = [
   './ost-live-stats.js?v=1',
   './ost-treasury-engine.js?v=2',
   './ost-engine-guard.js?v=1',
-  './ost-appbar.js?v=1',
+  './ost-appbar.js?v=2',
   './ost-ghost-companion.js?v=1',
   './ost-data-guard.js?v=1',
   './ost-pro-fast-tiles.js?v=1',
   './ost-wc-rail.js?v=1',
   './ost-mobile-fit.css?v=1',
-  './ost-appbar.css?v=1',
+  './ost-appbar.css?v=2',
   './ost-total-balance.js?v=1',
   './manifest.json',
   './favicon.svg',
@@ -49,12 +49,12 @@ const PRECACHE_PATHS = [
   './offline-vault.css?v=1',
   './stock-market.css?v=1',
   './mobile-shell.css?v=13',
-  './ost-mobile-scale.css?v=1',
+  './ost-mobile-scale.css?v=2',
   './rpc-multiplexer.js?v=200',
   './ost-optimistic.js?v=4',
   './realtime.js?v=1',
   './ost-notifications.js?v=3',
-  './app.js?v=207',
+  './app.js?v=208',
   './icons.js?v=1',
   './nuevo-laredo-gas.js?v=1',
   './shop-quickview.js?v=3',
@@ -111,7 +111,7 @@ const PRECACHE_PATHS = [
   './ost-scroll-fix.css?v=1',
   './apple-tap.js?v=4',
   './ost-card.js?v=7',
-  './launchpad-engine.js?v=3',
+  './launchpad-engine.js?v=4',
   './swap-resilient.js?v=200',
   './ost-games.js?v=21',
   './code-academy.js?v=3',

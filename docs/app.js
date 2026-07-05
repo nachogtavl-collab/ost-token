@@ -11152,25 +11152,12 @@
       'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect fill="%23191b2a" width="200" height="200"/><text x="100" y="115" text-anchor="middle" font-size="80" fill="%23ff4500">🚀</text></svg>')
     ];
 
-    if (launches.length === 0) {
-      var now = Date.now();
-      var demoData = [
-        { name:'SpaceDoge', symbol:'SDOGE', desc:'First dog in decentralized orbit. Much wow, very satellite.', mcap: 42000, curve: 61, img: DEMO_IMAGES[0], twitter:'https://twitter.com/spacedoge', telegram:'', website:'', creator:'7xK...b2F', date: now - 120000, comments:[{user:'anon42',text:'to the moon 🚀'},{user:'degen99',text:'aping in'}], holders:[{addr:'7xK...b2F',pct:18},{addr:'3mP...nQ9',pct:12},{addr:'9aW...kL5',pct:8},{addr:'2bT...pQ5',pct:5}] },
-        { name:'Starlink Inu', symbol:'SINU', desc:'Decentralized satellite meme power. Beaming gains from LEO.', mcap: 31500, curve: 46, img: DEMO_IMAGES[1], twitter:'', telegram:'https://t.me/starlinkinu', website:'', creator:'4pR...mN3', date: now - 300000, comments:[{user:'satfan',text:'this one is different'}], holders:[{addr:'4pR...mN3',pct:22},{addr:'8kL...wR7',pct:9},{addr:'5nG...hT2',pct:6}] },
-        { name:'LunarDAO', symbol:'LUNA2', desc:'Governance for moon settlers. Vote on crater allocation.', mcap: 58200, curve: 84, img: DEMO_IMAGES[2], twitter:'https://twitter.com/lunardao', telegram:'', website:'https://lunardao.space', creator:'6cD...wM8', date: now - 60000, comments:[{user:'moonboy',text:'KOTH incoming!'},{user:'whale1',text:'just bought 50k'},{user:'skeptic',text:'careful guys'}], holders:[{addr:'6cD...wM8',pct:15},{addr:'1xY...aB3',pct:11},{addr:'7wQ...eF9',pct:7},{addr:'3mP...nQ9',pct:4},{addr:'9kL...rT6',pct:3}] },
-        { name:'OrbitalCash', symbol:'ORBT', desc:'Cash for the orbital economy. Zero-G settlement layer.', mcap: 8900, curve: 13, img: DEMO_IMAGES[3], twitter:'', telegram:'', website:'', creator:'2bT...pQ5', date: now - 900000, comments:[], holders:[{addr:'2bT...pQ5',pct:35},{addr:'8kL...wR7',pct:8}] },
-        { name:'ZeroGravity', symbol:'0GRV', desc:'No gravity, no limits. The weightless memecoin.', mcap: 22100, curve: 32, img: DEMO_IMAGES[4], twitter:'', telegram:'https://t.me/zerograv', website:'', creator:'9aW...hJ7', date: now - 600000, comments:[{user:'trader1',text:'nice chart setup'}], holders:[{addr:'9aW...hJ7',pct:20},{addr:'4pR...mN3',pct:6},{addr:'1xY...aB3',pct:5}] },
-        { name:'CatOnSolana', symbol:'MEOW', desc:'Every blockchain needs a cat. This is ours. Purr.', mcap: 15600, curve: 23, img: DEMO_IMAGES[5], twitter:'https://twitter.com/catonsol', telegram:'', website:'', creator:'5nG...hT2', date: now - 450000, comments:[{user:'catfan',text:'finally a cat coin on OST'}], holders:[{addr:'5nG...hT2',pct:25},{addr:'7xK...b2F',pct:7}] },
-        { name:'PepeOST', symbol:'POST', desc:'Pepe but make it interplanetary. Rare. Encrypted. Unstoppable.', mcap: 37800, curve: 55, img: DEMO_IMAGES[6], twitter:'', telegram:'https://t.me/pepeost', website:'https://pepeost.meme', creator:'3mP...nQ9', date: now - 180000, comments:[{user:'pepelord',text:'rarest pepe ever'},{user:'anon42',text:'chart looks bullish'}], holders:[{addr:'3mP...nQ9',pct:16},{addr:'9aW...hJ7',pct:10},{addr:'6cD...wM8',pct:6},{addr:'8kL...wR7',pct:4}] },
-        { name:'RocketFuel', symbol:'FUEL', desc:'Powering the next generation of meme launches. High octane.', mcap: 5200, curve: 8, img: DEMO_IMAGES[7], twitter:'', telegram:'', website:'', creator:'8kL...wR7', date: now - 1200000, comments:[], holders:[{addr:'8kL...wR7',pct:40},{addr:'2bT...pQ5',pct:5}] }
-      ];
-      demoData.forEach(function(d) {
-        d.mint = generateMint();
-        d.supply = 1000000000;
-      });
-      launches = demoData;
-      localStorage.setItem('ost_lp_history2', JSON.stringify(launches));
-    }
+    // No fake seed coins. The launchpad is REAL, shared infrastructure: coins
+    // and their market caps come from the worker registry (GET /launchpad/coins),
+    // where every mcap is derived from an actual bonding-curve trade — never an
+    // invented number. syncLaunchpadFromRemote() (below) populates this list,
+    // and the worker lazily seeds honest zero-trade starter coins if empty.
+    // Offline, the launchpad simply shows whatever real coins were last synced.
 
     /* ── Utility ── */
     function generateMint() {
@@ -11209,8 +11196,11 @@
         name: String(c.name || 'Unnamed').slice(0, 64),
         symbol: String(c.symbol || 'MEME').toUpperCase().slice(0, 12),
         desc: String(c.desc || ''),
-        mcap: Number(c.mcap || 100) || 100,
+        mcap: Math.max(0, Number(c.mcap) || 0),
         curve: Math.max(0, Math.min(100, Number(c.curve || 0) || 0)),
+        tokensSold: Math.max(0, Number(c.tokensSold) || 0),
+        price: Number(c.price) || 0.00003,
+        holderCount: Number(c.holderCount) || 0,
         img: c.img || c.image || '',
         image: c.image || c.img || '',
         twitter: c.twitter || '',
@@ -11261,7 +11251,7 @@
       finally { syncLaunchpadFromRemote.inFlight = false; }
       return false;
     }
-    function publishLaunchToRemote(launch) {
+    function publishLaunchToRemote(launch, initialBuyOst) {
       var base = launchpadApiBase();
       if (!base || !launch) return Promise.resolve(null);
       return fetch(base + '/launchpad/coins', {
@@ -11276,9 +11266,8 @@
           telegram: launch.telegram,
           website: launch.website,
           creator: getLaunchpadTrader() || launch.creator || 'anon',
-          mcap: launch.mcap,
-          curve: launch.curve,
-          supply: launch.supply
+          supply: launch.supply,
+          initialBuyOst: Math.max(0, Number(initialBuyOst) || 0)
         })
       }).then(function(r) { return r.ok ? r.json() : null; }).then(function(payload) {
         if (payload && payload.coin) {
@@ -11473,27 +11462,38 @@
 
       runFlow(function() {
         var mintAddr = generateMint();
-        var startMcap = initialBuy > 0 ? Math.floor(initialBuy * 10) : Math.floor(Math.random() * 2000) + 100;
+        // A new coin starts with ZERO tokens sold — mcap is the honest curve
+        // base (0), not an invented number. tokensSold drives every field so
+        // the engine + worker agree. An optional initial buy is executed as a
+        // REAL bonding-curve trade below (spends OST, credits real tokens).
         var launch = {
           name: name, symbol: symbol, desc: desc,
-          mcap: startMcap, curve: Math.min(Math.floor(startMcap / 690), 100),
+          supply: 1000000000, tokensSold: 0,
+          price: 0.00003, mcap: 0, curve: 0,
           img: uploadedImage || DEMO_IMAGES[Math.floor(Math.random() * DEMO_IMAGES.length)],
           twitter: twitter, telegram: telegram, website: website,
-          mint: mintAddr, supply: 1000000000,
+          mint: mintAddr,
           creator: connectedWallet ? connectedWallet.slice(0, 4) + '...' + connectedWallet.slice(-4) : 'anon',
           date: Date.now(),
           comments: [],
-          holders: [{ addr: connectedWallet ? connectedWallet.slice(0,4)+'...'+connectedWallet.slice(-4) : 'anon', pct: 100 }]
+          holders: []
         };
         launches.unshift(launch);
         localStorage.setItem('ost_lp_history2', JSON.stringify(launches));
-        publishLaunchToRemote(launch).then(function() {
+        publishLaunchToRemote(launch, initialBuy).then(function() {
           renderTicker();
           renderFeed();
           renderBoard();
           updateStats();
           updateTotalCount();
         });
+        // Execute the creator's initial buy as a real trade on the curve.
+        if (initialBuy > 0 && window.OST_LAUNCHPAD && typeof window.OST_LAUNCHPAD.buy === 'function' && getLaunchpadTrader()) {
+          Promise.resolve(window.OST_LAUNCHPAD.buy(mintAddr, initialBuy)).then(function () {
+            var rc = window.OST_LAUNCHPAD.getCoin(mintAddr);
+            if (rc) { Object.assign(launch, rc); localStorage.setItem('ost_lp_history2', JSON.stringify(launches)); renderFeed(); renderBoard(); updateStats(); }
+          }).catch(function (e) { toast('⚠️', 'Coin created — initial buy skipped: ' + ((e && e.message) || 'error')); });
+        }
 
         document.getElementById('lpSuccessName').textContent = name;
         document.getElementById('lpSuccessSymbol').textContent = '$' + symbol;
@@ -11721,12 +11721,9 @@
             var trade = window.OST_TRADE;
             if (!trade || !trade.memecoinBuy) throw new Error('Trading module not loaded. Refresh and connect a wallet.');
             var result = await trade.memecoinBuy(l.symbol, 10);
-            var remote = await postLaunchpadTradeRemote(l, 'buy', 10, result && result.signature || result && result.sig || '');
-            if (remote && remote.coin) Object.assign(l, normalizeRemoteLaunchpadCoin(remote.coin));
-            else {
-              l.mcap += Math.floor(10 * 8);
-              l.curve = Math.min(Math.floor(l.mcap / 690), 100);
-            }
+            // Engine settled + shared the trade; read its real curve state.
+            var rcq = window.OST_LAUNCHPAD && window.OST_LAUNCHPAD.getCoin ? window.OST_LAUNCHPAD.getCoin(l.mint) : null;
+            if (rcq) { l.mcap = rcq.mcap; l.curve = rcq.curve; l.tokensSold = rcq.tokensSold; l.price = rcq.price; }
             localStorage.setItem('ost_lp_history2', JSON.stringify(launches));
             activities.unshift({ user: connectedWallet ? connectedWallet.slice(0,4)+'...' : 'anon', verb: 'bought', token: '$' + l.symbol, amount: '10', type: 'buy', time: Date.now() });
             toast('✅', 'Quick bought 10 OST of $' + l.symbol);
@@ -11925,12 +11922,12 @@
             if (typeof window.recordOstPlatformEvent === 'function') {
               window.recordOstPlatformEvent({ kind: 'launchpad-buy', amount: amt, token: currentToken.symbol, sig: buySig, ts: Date.now() });
             }
-            var remoteBuy = await postLaunchpadTradeRemote(currentToken, 'buy', amt, buySig);
-            if (remoteBuy && remoteBuy.coin) Object.assign(currentToken, normalizeRemoteLaunchpadCoin(remoteBuy.coin));
-            else {
-              currentToken.mcap += Math.floor(amt * 8);
-              currentToken.curve = Math.min(Math.floor(currentToken.mcap / 690), 100);
-            }
+            // The engine (OST_TRADE.memecoinBuy) already settled the OST,
+            // advanced the REAL curve, and shared the trade to the worker
+            // registry. Read its authoritative local state for the UI — never
+            // a second worker POST (that would double-count) or fake math.
+            var rc = window.OST_LAUNCHPAD && window.OST_LAUNCHPAD.getCoin ? window.OST_LAUNCHPAD.getCoin(currentToken.mint) : null;
+            if (rc) { currentToken.mcap = rc.mcap; currentToken.curve = rc.curve; currentToken.tokensSold = rc.tokensSold; currentToken.price = rc.price; }
             activities.unshift({ user: connectedWallet ? connectedWallet.slice(0,4)+'...' : 'You', verb: 'bought', token: '$' + currentToken.symbol, amount: amt.toString(), type: 'buy', time: Date.now() });
             toast('✅', 'Bought ' + amt + ' OST of $' + currentToken.symbol + ' · sig ' + String(buySig).slice(0,8));
           } else {
@@ -11939,12 +11936,9 @@
             if (typeof window.recordOstPlatformEvent === 'function') {
               window.recordOstPlatformEvent({ kind: 'launchpad-sell', amount: result.ost, token: currentToken.symbol, sig: sellSig, ts: Date.now() });
             }
-            var remoteSell = await postLaunchpadTradeRemote(currentToken, 'sell', amt, sellSig);
-            if (remoteSell && remoteSell.coin) Object.assign(currentToken, normalizeRemoteLaunchpadCoin(remoteSell.coin));
-            else {
-              currentToken.mcap = Math.max(100, currentToken.mcap - Math.floor(amt * 5));
-              currentToken.curve = Math.min(Math.floor(currentToken.mcap / 690), 100);
-            }
+            // Engine already settled + shared the sell; read its real state.
+            var rcs = window.OST_LAUNCHPAD && window.OST_LAUNCHPAD.getCoin ? window.OST_LAUNCHPAD.getCoin(currentToken.mint) : null;
+            if (rcs) { currentToken.mcap = rcs.mcap; currentToken.curve = rcs.curve; currentToken.tokensSold = rcs.tokensSold; currentToken.price = rcs.price; }
             activities.unshift({ user: connectedWallet ? connectedWallet.slice(0,4)+'...' : 'You', verb: 'sold', token: '$' + currentToken.symbol, amount: result.ost.toString(), type: 'sell', time: Date.now() });
             toast('✅', 'Sold ' + result.ost.toFixed(2) + ' ' + currentToken.symbol + ' · sig ' + String(sellSig).slice(0,8));
           }

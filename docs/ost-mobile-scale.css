@@ -1,11 +1,16 @@
 /* ==========================================================================
- * OST · Mobile Scale v2 — replaces mobile-shrink.css
+ * OST · Mobile Scale v3 — replaces mobile-shrink.css
  * --------------------------------------------------------------------------
- * mobile-shrink.css forced html{font-size:12px} (11.5px on iPhone SE), a
- * global −25% zoom that testers reported as "everything is too cramped".
- * Native iOS/Android apps use a 16-17px body. This file restores a proper
- * native-app type scale and comfortable spacing on phones while keeping
- * sections compact enough to scan.
+ * History: v1 forced html{font-size:12px} — testers said "too cramped".
+ * v2 went to 16px — testers said "too big, zoom out the whole page".
+ * v3 keeps a readable 16px type floor (so nothing is cramped) AND applies a
+ * true proportional page zoom-out via `zoom`, which font-size alone cannot do
+ * (the hero uses vw/clamp sizing that ignores the root font-size). `zoom`
+ * shrinks EVERYTHING uniformly — text, padding, gaps, images — top to bottom,
+ * which is exactly the "zoom out the whole page" the product owner asked for.
+ *
+ * Tap targets: 0.85 × 44px ≈ 37px effective, still comfortably tappable; the
+ * bottom app-bar tabs are 48px+ so they stay ≥ 40px zoomed.
  *
  * Breakpoints:
  *   ≤ 820px          — phones + small tablets (matches mobile-shell.css)
@@ -14,8 +19,25 @@
  * ========================================================================== */
 
 @media (max-width: 820px) {
-  html { font-size: 16px; }            /* native-app baseline (was 12px) */
+  /* Proportional zoom-out of the entire page. `zoom` is supported on iOS
+     Safari, Chrome, Edge and Firefox 126+; it scales fixed children too, so
+     the bottom app bar stays pinned (verified) and shrinks with the page. */
+  body { zoom: 0.85; }
+
+  html { font-size: 16px; }            /* readable type floor (pre-zoom) */
   body { line-height: 1.55; }
+
+  /* `zoom` renders the fixed decorative backgrounds at 85% height, which
+     could expose a sliver at the bottom of a long scroll. Over-cover them so
+     the starfield/gradient always fills the viewport. Dark-on-dark makes any
+     residual seam invisible, but this keeps it exact. */
+  body::before,
+  #particleCanvas,
+  .hero-bg,
+  .cursor-glow {
+    height: 124lvh !important;
+    min-height: 124vh !important;
+  }
 
   /* ------- Type ramp: readable, not shrunken ---------------------------- */
   h1, .hero-title           { font-size: clamp(1.7rem, 6.5vw, 2.15rem) !important; line-height: 1.14 !important; }
@@ -90,10 +112,12 @@
   }
 }
 
-/* iPhone SE / mini — trim the scale a touch, never below readable. */
+/* iPhone SE / mini — narrowest screens get a touch more zoom-out so dense
+   grids (game arcade, market cards) fit without horizontal squeeze. */
 @media (max-width: 380px) {
-  html { font-size: 15px; }            /* was 11.5px */
-  h1, .hero-title    { font-size: 1.6rem !important; }
-  h2, .section-title { font-size: 1.28rem !important; }
+  body { zoom: 0.82; }
+  html { font-size: 16px; }            /* zoom does the shrinking, keep type readable */
+  h1, .hero-title    { font-size: 1.7rem !important; }
+  h2, .section-title { font-size: 1.32rem !important; }
   .btn, button       { padding: 10px 13px !important; }
 }

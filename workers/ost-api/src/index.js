@@ -745,6 +745,69 @@ function cleanNumber(value, fallback = null) {
   return Number.isFinite(number) ? number : fallback;
 }
 
+// ── LAUNCHPAD bonding curve (REAL) ─────────────────────────────────────────
+// A linear bonding curve priced in OST, identical math to the client engine
+// so server and client agree. price(r) = BASE*(1 + r*STEEP), r = sold/supply.
+// Buying integrates the curve (costs more as supply sells); selling refunds
+// the same integral. This replaces the old fake `mcap += amt*10` random bump.
+const LP_BASE_PRICE = 0.00003;      // OST per token at zero supply
+const LP_CURVE_STEEPNESS = 199;     // price multiplier at full supply
+const LP_DEFAULT_SUPPLY = 1_000_000_000;
+const LP_GRADUATION_MCAP = 69000;   // OST mcap that locks the curve (DEX migration)
+
+function lpPriceAt(soldRatio) {
+  const r = Math.max(0, Math.min(1, soldRatio));
+  return LP_BASE_PRICE * (1 + r * LP_CURVE_STEEPNESS);
+}
+// Integral of price from s0..s1 tokens sold = OST cost to move the curve.
+function lpCurveCost(s0, s1, supply) {
+  const ds = s1 - s0;
+  const ds2 = s1 * s1 - s0 * s0;
+  return LP_BASE_PRICE * ds + (LP_BASE_PRICE * LP_CURVE_STEEPNESS / (2 * supply)) * ds2;
+}
+// Inverse: tokens minted for a given OST input, starting at sold s0.
+function lpTokensForOst(ostIn, s0, supply) {
+  const A = LP_BASE_PRICE * LP_CURVE_STEEPNESS / (2 * supply);
+  const B = LP_BASE_PRICE * (1 + LP_CURVE_STEEPNESS * s0 / supply);
+  if (A <= 0) return ostIn / Math.max(1e-12, B);
+  const disc = B * B + 4 * A * ostIn;
+  return (-B + Math.sqrt(disc)) / (2 * A);
+}
+// Recompute a coin's public fields from its authoritative tokensSold.
+function lpRecompute(coin) {
+  const supply = Number(coin.supply) || LP_DEFAULT_SUPPLY;
+  let sold = Number(coin.tokensSold);
+  if (!Number.isFinite(sold) || sold < 0) sold = 0;
+  sold = Math.min(sold, supply);
+  const price = lpPriceAt(sold / supply);
+  const mcap = sold * price;
+  coin.supply = supply;
+  coin.tokensSold = sold;
+  coin.price = price;
+  coin.mcap = Math.round(mcap);
+  coin.curve = Math.max(0, Math.min(100, Math.floor((mcap / LP_GRADUATION_MCAP) * 100)));
+  return coin;
+}
+// Honest starter coins seeded with ZERO trades — their mcap grows only from
+// real trades, never invented. Gives the launchpad life without fake numbers.
+function lpStarterCoins() {
+  const now = Date.now();
+  const mk = (name, symbol, desc) => lpRecompute({
+    id: 'seed-' + symbol.toLowerCase(),
+    mint: 'ost' + symbol.toLowerCase() + 'seed0000000000000000000000000000',
+    name, symbol, desc,
+    image: null, twitter: null, telegram: null, website: null,
+    creator: 'ost-genesis', createdAt: now, trades: 0,
+    supply: LP_DEFAULT_SUPPLY, tokensSold: 0, holders: {}
+  });
+  return [
+    mk('Ancients', 'ANKH', 'Genesis meme of the OST realm. Zero trades — the curve starts here.'),
+    mk('Scarab', 'SCRB', 'The lucky beetle. Real bonding curve, priced in OST.'),
+    mk('Pyramid', 'PYRA', 'Build it block by block. Every buy moves the curve for real.'),
+    mk('Nile', 'NILE', 'Liquidity flows downstream. Fair launch, no presale.')
+  ];
+}
+
 function cleanProbability(value) {
   const number = Number(value);
   if (!Number.isFinite(number)) return null;
@@ -3164,8 +3227,20 @@ export default {
     // KV-backed so every visitor sees the same coins and their live mcap/curve.
     if (path === '/launchpad/coins' && method === 'GET') {
       if (!env.OST_KV) return json({ coins: [], note: 'KV not configured' });
-      const coins = await kvGet(env, 'launchpad:coins', []);
-      return json({ coins, count: coins.length, ts: new Date().toISOString() }, 200, { 'cache-control': 'public, max-age=2' });
+      let coins = await kvGet(env, 'launchpad:coins', []);
+      // Lazy-seed honest starter coins once, so a fresh registry isn't empty
+      // but every number is still curve-real (zero trades = base mcap).
+      if (!Array.isArray(coins) || coins.length === 0) {
+        coins = lpStarterCoins();
+        await kvPut(env, 'launchpad:coins', coins);
+      }
+      // Never leak internal holder ledgers to the public list; expose a count.
+      const publicCoins = coins.map(c => {
+        const holderCount = c.holders && typeof c.holders === 'object' ? Object.keys(c.holders).length : (Array.isArray(c.holders) ? c.holders.length : 0);
+        const { holders, ...rest } = c;
+        return { ...rest, holderCount };
+      });
+      return json({ coins: publicCoins, count: publicCoins.length, ts: new Date().toISOString() }, 200, { 'cache-control': 'public, max-age=2' });
     }
     if (path === '/launchpad/coins' && method === 'POST') {
       let body;
@@ -3173,7 +3248,13 @@ export default {
       const { name, symbol, desc, image, twitter, telegram, website, creator, mcap, curve, supply } = body || {};
       if (!name || !symbol) return json({ error: 'missing_fields', required: ['name', 'symbol'] }, 400);
       if (!env.OST_KV) return json({ ok: true, stored: false, note: 'KV not configured' });
-      const record = {
+      // A new coin starts at ZERO tokens sold — its mcap is the honest curve
+      // base, not an invented number. An optional creator "initial buy" moves
+      // the curve for real (tokens credited to the creator's holder balance).
+      const supplyN = Number(supply) || LP_DEFAULT_SUPPLY;
+      const initialBuyOst = Math.max(0, Number(body.initialBuyOst) || 0);
+      const creatorAddr = creator ? String(creator).slice(0, 64) : 'anon';
+      const record = lpRecompute({
         id: crypto.randomUUID(),
         mint: 'ost' + crypto.randomUUID().replace(/-/g, '').slice(0, 40),
         name: String(name).slice(0, 64),
@@ -3183,17 +3264,24 @@ export default {
         twitter: twitter ? String(twitter).slice(0, 200) : null,
         telegram: telegram ? String(telegram).slice(0, 200) : null,
         website: website ? String(website).slice(0, 200) : null,
-        creator: creator ? String(creator).slice(0, 64) : 'anon',
-        mcap: Number(mcap) || 100,
-        curve: Math.max(0, Math.min(100, Number(curve) || 1)),
-        supply: Number(supply) || 1_000_000_000,
+        creator: creatorAddr,
+        supply: supplyN,
+        tokensSold: 0,
         createdAt: Date.now(),
         trades: 0,
-        holders: [{ addr: creator || 'anon', pct: 100 }]
-      };
+        holders: {}
+      });
+      if (initialBuyOst > 0) {
+        const tok = Math.min(supplyN, lpTokensForOst(initialBuyOst, 0, supplyN));
+        record.tokensSold = tok;
+        record.holders[creatorAddr] = tok;
+        record.trades = 1;
+        lpRecompute(record);
+      }
       const coins = (await kvGet(env, 'launchpad:coins', [])).slice(0, 199);
       coins.unshift(record);
       await kvPut(env, 'launchpad:coins', coins);
+      const { holders: _hc, ...publicRecord } = record;
       publishRealtimeEvent(env, {
         type: 'launchpad.coin',
         public: true,
@@ -3203,9 +3291,9 @@ export default {
         wallet: record.creator,
         title: '$' + record.symbol + ' launched',
         message: record.name + ' is live on OST Launchpad',
-        payload: { coin: record }
+        payload: { coin: publicRecord }
       }).catch(() => {});
-      return json({ ok: true, stored: true, coin: record });
+      return json({ ok: true, stored: true, coin: publicRecord });
     }
     // POST /launchpad/trade  { mint, side: 'buy'|'sell', amount, trader }
     if (path === '/launchpad/trade' && method === 'POST') {
@@ -3219,19 +3307,46 @@ export default {
       if (idx < 0) return json({ error: 'coin_not_found', mint }, 404);
       const c = coins[idx];
       const amt = Number(amount);
-      // Simple bonding-curve: each OST in moves mcap by ~10x; sells drop it.
-      const delta = side === 'buy' ? amt * 10 : -amt * 10;
-      c.mcap = Math.max(100, (Number(c.mcap) || 100) + delta);
-      c.curve = Math.max(0, Math.min(100, Math.floor((c.mcap / 690))));
+      if (!(amt > 0)) return json({ error: 'bad_amount' }, 400);
+      const supplyC = Number(c.supply) || LP_DEFAULT_SUPPLY;
+      if (typeof c.tokensSold !== 'number') c.tokensSold = 0;
+      if (!c.holders || typeof c.holders !== 'object' || Array.isArray(c.holders)) c.holders = {};
+      const traderKey = cleanText(trader || '', 64) || 'anon';
+      // REAL bonding curve. Buy: `amount` is OST in -> tokens minted on the
+      // curve. Sell: `amount` is tokens -> OST refunded from the curve. The
+      // holder ledger is authoritative: you cannot sell tokens you never held.
+      let tradedTokens = 0, tradedOst = 0;
+      if (side === 'buy') {
+        if ((Number(c.curve) || 0) >= 100) return json({ error: 'graduated' }, 409);
+        const s0 = c.tokensSold;
+        let tokens = lpTokensForOst(amt, s0, supplyC);
+        let ostSpent = amt;
+        if (s0 + tokens > supplyC) { tokens = supplyC - s0; ostSpent = lpCurveCost(s0, supplyC, supplyC); }
+        c.tokensSold = s0 + tokens;
+        c.holders[traderKey] = (Number(c.holders[traderKey]) || 0) + tokens;
+        tradedTokens = tokens; tradedOst = ostSpent;
+      } else {
+        const held = Number(c.holders[traderKey]) || 0;
+        const tokens = Math.min(amt, held, c.tokensSold);
+        if (!(tokens > 0)) return json({ error: 'no_balance', held }, 409);
+        const s1 = c.tokensSold;
+        const s0 = Math.max(0, s1 - tokens);
+        const ostOut = lpCurveCost(s0, s1, supplyC);
+        c.tokensSold = s0;
+        c.holders[traderKey] = Math.max(0, held - tokens);
+        if (c.holders[traderKey] < 1e-9) delete c.holders[traderKey];
+        tradedTokens = tokens; tradedOst = ostOut;
+      }
       c.trades = (c.trades || 0) + 1;
       c.lastTradeAt = Date.now();
+      lpRecompute(c);
       coins[idx] = c;
       await kvPut(env, 'launchpad:coins', coins);
       const tickKey = `launchpad:ticks:${mint}`;
       const ticks = (await kvGet(env, tickKey, [])).slice(0, 199);
       const traderWallet = cleanText(trader || '', 64);
       const cleanSignature = cleanText(signature || body.sig || '', 128);
-      ticks.unshift({ side, amount: amt, mcap: c.mcap, trader: traderWallet ? traderWallet.slice(0, 8) + '…' : 'anon', wallet: traderWallet, sig: cleanSignature, ts: Date.now() });
+      ticks.unshift({ side, amount: amt, ost: Number(tradedOst.toFixed(6)), tokens: Number(tradedTokens.toFixed(4)), price: c.price, mcap: c.mcap, trader: traderWallet ? traderWallet.slice(0, 8) + '…' : 'anon', wallet: traderWallet, sig: cleanSignature, ts: Date.now() });
       await kvPut(env, tickKey, ticks, 60 * 60 * 24 * 7);
       if (traderWallet) {
         const event = {
@@ -3264,10 +3379,31 @@ export default {
         amount: amt,
         token: 'OST',
         title: '$' + c.symbol + ' trade',
-        message: (side === 'sell' ? 'Sell' : 'Buy') + ' ' + amt + ' OST',
-        payload: { coin: c, tick: ticks[0] }
+        message: (side === 'sell' ? 'Sold for ' + tradedOst.toFixed(2) + ' OST' : 'Bought ' + tradedTokens.toFixed(0) + ' for ' + tradedOst.toFixed(2) + ' OST'),
+        payload: { coin: (({ holders, ...rest }) => rest)(c), tick: ticks[0] }
       }).catch(() => {});
-      return json({ ok: true, coin: c });
+      // Public response: coin state without the holder ledger + this trade's
+      // real fill and the trader's new balance.
+      const { holders: _h, ...publicCoin } = c;
+      return json({
+        ok: true,
+        coin: publicCoin,
+        fill: { side, tokens: Number(tradedTokens.toFixed(4)), ost: Number(tradedOst.toFixed(6)), price: c.price },
+        balance: Number((c.holders[traderKey] || 0).toFixed(4))
+      });
+    }
+    // GET /launchpad/holdings/:wallet — a trader's real balances across coins.
+    const lpHoldMatch = path.match(/^\/launchpad\/holdings\/([^/]+)$/);
+    if (lpHoldMatch && method === 'GET') {
+      if (!env.OST_KV) return json({ holdings: [] });
+      const wallet = cleanText(decodeURIComponent(lpHoldMatch[1]), 64);
+      const allCoins = await kvGet(env, 'launchpad:coins', []);
+      const holdings = [];
+      for (const c of allCoins) {
+        const bal = c.holders && typeof c.holders === 'object' ? Number(c.holders[wallet]) : 0;
+        if (bal > 1e-9) holdings.push({ mint: c.mint, symbol: c.symbol, name: c.name, tokens: Number(bal.toFixed(4)), price: c.price, value: Number((bal * c.price).toFixed(4)) });
+      }
+      return json({ wallet, holdings, ts: new Date().toISOString() });
     }
     const tickMatch = path.match(/^\/launchpad\/ticks\/([^/]+)$/);
     if (tickMatch && method === 'GET') {
