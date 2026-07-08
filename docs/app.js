@@ -7521,6 +7521,9 @@
         }
         const ostBal = await getOstBalanceForAddress(pk);
         if (wdOstBal) wdOstBal.textContent = ostBal.toFixed(2);
+        // Feed the balance tree so the last confirmed on-chain amount survives
+        // a hard refresh (fixes "OST disappears on refresh").
+        try { if (window.OST_TREE) window.OST_TREE.reportChain(String(pubkey), ostBal); } catch (_) {}
         if (wdOstUsd) {
           const cur2 = window.__ostCurrency || 'USD';
           const fiatRate2 = (window.OST_TREASURY && window.OST_TREASURY.priceUsd)

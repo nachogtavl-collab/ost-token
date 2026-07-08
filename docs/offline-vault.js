@@ -187,6 +187,9 @@
 
   function dispatchChanged() {
     try { window.dispatchEvent(new CustomEvent('ost:offline-vault-changed', { detail: publicState() })); } catch (_) {}
+    // Report the backed (redeemable) amount to the balance tree so survival
+    // OST is part of the one unified total.
+    try { if (window.OST_TREE) window.OST_TREE.reportVault(Number(vault.backed || 0)); } catch (_) {}
   }
 
   function publicState() {
@@ -485,6 +488,8 @@
     await loadVault();
     ready = true;
     updateUI();
+    // Boot-time report so the unified balance tree includes survival OST.
+    try { if (window.OST_TREE) window.OST_TREE.reportVault(Number(vault.backed || 0)); } catch (_) {}
   }
 
   async function handleFile(file) {

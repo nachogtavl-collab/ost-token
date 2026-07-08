@@ -60,6 +60,12 @@
   // "wouldn't reflect on the balance".
   function walletOst() {
     try {
+      // Prefer the balance tree: it survives hard refreshes via the persisted
+      // last-known on-chain cache (fixes "balance resets after refresh").
+      if (window.OST_TREE && window.OST_TREE.chain) {
+        var c = window.OST_TREE.chain();
+        if (c && Number.isFinite(c.amount)) return Math.max(0, c.amount);
+      }
       var el = document.getElementById('wdOstBal');
       if (!el) return 0;
       var n = parseFloat(String(el.textContent).replace(/[^\d.\-]/g, ''));

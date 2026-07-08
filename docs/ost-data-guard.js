@@ -28,6 +28,7 @@
   // identity, progression. (Add new critical stores here as they appear.)
   var CRITICAL = [
     'ost.faucet.hub.v2',            // canonical OST credits pool
+    'ost.chain.lastKnown.v1',       // last confirmed on-chain balance (balance tree)
     'ost.prediction.orders.v1',     // market tickets / bets ledger
     'ost.parlays.v1',               // parlay slips
     'ost.games.meta.v1',            // streaks, tier, rakeback, daily
