@@ -315,6 +315,10 @@ body.ost-focus-mode .ost-breadcrumb {
     top: max(60px, env(safe-area-inset-top));
     font-size: 0.74rem;
   }
+  /* App-like mobile focus mode: spotlight spans full width (no desktop dock gutter). */
+  body.ost-focus-mode .ost-section-active::before {
+    inset: 56px 0 0 0;
+  }
 }
 
 /* ------------------------------------------------------------------ Respect reduced motion */

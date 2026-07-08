@@ -108,13 +108,17 @@
     -webkit-overflow-scrolling: touch;
   }
 
-  body.ost-mobile-shell .ost-section-hidden,
+  /* App-like mobile: only the ACTIVE section renders (focus mode). Inactive
+     sections are genuinely hidden instead of the old force-show-everything. */
   body.ost-mobile-shell .ost-section-active,
-  body.ost-mobile-shell section[id] {
+  body.ost-mobile-shell section[id]:not(.ost-section-hidden) {
     display: block !important;
     visibility: visible !important;
     opacity: 1 !important;
     transform: none !important;
+  }
+  body.ost-mobile-shell.ost-focus-mode .ost-section-hidden {
+    display: none !important;
   }
 
   body.ost-mobile-shell * {

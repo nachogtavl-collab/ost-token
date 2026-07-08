@@ -42,18 +42,16 @@
       sessionStorage.setItem('ost.welcome.seen.session', '1');
       localStorage.setItem('ost.tour.completed', '1');
       localStorage.setItem('ost.compartments.guideSeen.v1', '1');
-      localStorage.setItem('ost.compartments.v1', JSON.stringify(Object.assign({}, JSON.parse(localStorage.getItem('ost.compartments.v1') || '{}'), { focusMode: false })));
+      // Mobile is app-like now: DO NOT force focus mode off (that produced the
+      // endless 18-section scroll). Compartments keeps one section active.
     } catch (_) {}
   }
 
   function unblockInitialMobileAccess() {
     if (!isMobileShell()) return;
     applyMobileAccessDefaults();
-    if (window.OST_COMPARTMENTS && typeof window.OST_COMPARTMENTS.showAll === 'function') {
-      window.OST_COMPARTMENTS.showAll();
-    } else if (window.OST_COMPARTMENTS && window.OST_COMPARTMENTS.focusMode && typeof window.OST_COMPARTMENTS.toggleFocus === 'function') {
-      window.OST_COMPARTMENTS.toggleFocus();
-    }
+    // Was: force showAll() — that created the endless-scroll. Mobile now stays
+    // app-like (one section at a time), navigated by the bottom app bar.
   }
 
   function activateSection(id, tab) {

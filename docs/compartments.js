@@ -19,6 +19,7 @@
     { id: 'new-here',    label: 'Get OST',       icon: '🎁', desc: 'Faucets, family vaults, first OST in 60 seconds', badge: 'Start' },
     { id: 'commerce',    label: 'Spend OST',     icon: '🛒', desc: 'Shop, gift cards, gas station, interchange', subs: ['shop','interchange','giftcards','fuel'] },
     { id: 'wallet',      label: 'Wallet',        icon: '👛', desc: 'Connect, swap, convert, prediction markets, launchpad', subs: ['access','market','convert','portals'], badge: 'Live' },
+    { id: 'stock-market', label: 'Stocks',       icon: '📊', desc: 'Tokenized stock mirror — trade OST against equities' },
     { id: 'ai',          label: 'AI Agents',     icon: '🤖', desc: 'Bot connectors and machine intelligence' },
     { id: 'offline',     label: 'Offline',       icon: '📡', desc: 'NFC, QR, Bluetooth — pay without internet' },
     { id: 'citizens',    label: 'Citizens',      icon: '🌍', desc: 'Global map · 15 countries · unbanked rails' },
@@ -62,8 +63,11 @@
     focusMode: false,
     settings: loadSettings()
   };
-  if (state.settings.focusMode === true && state.settings.focusModeUserSet === true && !isMobileViewport()) state.focusMode = true;
-  if (isMobileViewport()) state.focusMode = false;
+  // Mobile is an APP: always one section at a time (focus mode on), navigated by
+  // the bottom app bar. Desktop keeps the classic full-scroll unless the user
+  // opted into focus mode via the dock.
+  if (isMobileViewport()) state.focusMode = true;
+  else if (state.settings.focusMode === true && state.settings.focusModeUserSet === true) state.focusMode = true;
 
   // -------------------------------------------------------------- Build dock
   var dock, breadcrumb, breadcrumbIcon, breadcrumbLabel, breadcrumbToggle;
@@ -134,10 +138,9 @@
   }
 
   function applyFocusClasses() {
-    if (isMobileViewport() && state.focusMode) {
-      state.focusMode = false;
-      state.settings.focusMode = false;
-      saveSettings(state.settings);
+    // Mobile always stays app-like (one section at a time).
+    if (isMobileViewport() && !state.focusMode) {
+      state.focusMode = true;
     }
     var present = SECTIONS.map(function (s) { return s.id; });
     SECTIONS.forEach(function (s) {
@@ -207,9 +210,8 @@
 
   function toggleFocusMode() {
     if (isMobileViewport()) {
-      state.focusMode = false;
-      state.settings.focusMode = false;
-      saveSettings(state.settings);
+      // No "show everything" on mobile — the app model is one section at a time.
+      state.focusMode = true;
       applyFocusClasses();
       return;
     }
@@ -364,9 +366,7 @@
   // -------------------------------------------------------------- Boot
   function boot() {
     if (isMobileViewport()) {
-      state.focusMode = false;
-      state.settings.focusMode = false;
-      saveSettings(state.settings);
+      state.focusMode = true; // app-like: only the active section renders
     }
 
     // Keep the full page accessible by default, while still tracking the current section.
