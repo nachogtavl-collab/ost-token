@@ -16995,6 +16995,22 @@
     resolutionTimer = window.setInterval(refreshPredictionOrderResolutions, 30000);
     // Re-sync wallet balance every 30 s so displayed OST funds stay accurate.
     var balancePollTimer = window.setInterval(syncTradeWallet, 30000);
+    // Turbo ticks: while the user is INSIDE a 5-min market, ost-tick-turbo
+    // streams sub-second Binance prices — re-render the ticket (throttled) so
+    // the live price and share quote move at tick speed. Other markets and
+    // idle pages are untouched (the stream only exists while focused).
+    var turboRenderAt = 0;
+    window.addEventListener('ost:turbo-tick', function (e) {
+      try {
+        var key = e && e.detail && e.detail.key;
+        var id = String(state.selectedMarketId || '');
+        if (!key || id.indexOf('ost-' + String(key).slice(0, 3) + '5m-') !== 0) return;
+        var now = Date.now();
+        if (now - turboRenderAt < 240) return;
+        turboRenderAt = now;
+        renderPredictionTicket(getFilteredMarkets());
+      } catch (_) {}
+    }, false);
     // Also refresh when a wallet connects/switches.
     window.addEventListener('ost:wallet-changed', function() {
       syncTradeWallet();

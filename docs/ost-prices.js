@@ -62,9 +62,16 @@
     return NaN;
   }
 
+  // Turbo mode: while the user is INSIDE a market, ost-tick-turbo marks it so
+  // its cache TTL drops to 250ms — the ticket tracks streamed ticks instead of
+  // the 1s render cache. Everything else keeps the calm 1s TTL (no bottleneck).
+  var turboUntil = {};
+  function markTurbo(id) { if (id != null) turboUntil[id] = Date.now() + 5000; }
+
   function get(id) {
     var c = cache[id];
-    if (c && Date.now() - c.ts < CACHE_TTL) return c;
+    var ttl = (turboUntil[id] && Date.now() < turboUntil[id]) ? 250 : CACHE_TTL;
+    if (c && Date.now() - c.ts < ttl) return c;
     var yes = clampP(resolveYes(id));
     if (!Number.isFinite(yes)) return c || null;   // keep last good if resolve fails
     var rec = { yes: yes, no: clampP(1 - yes), mid: yes, ts: Date.now(), source: 'ost-prices' };
@@ -85,5 +92,5 @@
     cache[id] = { yes: y, no: clampP(1 - y), mid: y, ts: Date.now(), source: source || 'producer' };
   }
 
-  window.OST_PRICES = { get: get, mid: mid, set: set, clampP: clampP };
+  window.OST_PRICES = { get: get, mid: mid, set: set, clampP: clampP, markTurbo: markTurbo };
 })();

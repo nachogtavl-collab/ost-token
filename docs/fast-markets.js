@@ -343,11 +343,26 @@
     setTimeout(settleScan, 4000);
   }
 
+  // External tick injection: ost-tick-turbo streams Binance ws prices when the
+  // user is inside a 5-min market. Same handling as a fetchSpot() result.
+  function pushTick(key, price) {
+    var st = live[key];
+    var p = Number(price);
+    if (!st || !Number.isFinite(p) || p <= 0) return false;
+    st.price = p;
+    st.source = 'ws';
+    st.ticks.push({ ts: Date.now(), price: p });
+    if (st.ticks.length > 240) st.ticks = st.ticks.slice(-240);
+    if (!st.openPrice && st.openAt && (Date.now() - st.openAt) < 4000) st.openPrice = p;
+    return true;
+  }
+
   window.OST_FAST_MARKETS = {
     coins: COINS.map(function (c) { return c.key; }),
     state: function (key) { return live[key] ? Object.assign({}, live[key]) : null; },
     buildMarket: buildMarket,
-    settleScan: settleScan
+    settleScan: settleScan,
+    pushTick: pushTick
   };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
