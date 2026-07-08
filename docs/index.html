@@ -192,9 +192,42 @@
   <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://unpkg.com" crossorigin>
+  <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Egyptian+Hieroglyphs&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <!-- Leaflet CSS is lazy-loaded on demand by ost-lazyload when the gas map opens (was render-blocking here). -->
+  <script>
+  /* OSTLoad — one shared on-demand loader for heavy CDN assets, so they stay
+     OFF the critical path and only download when a feature actually needs them. */
+  window.OSTLoad = (function () {
+    var cache = {};
+    function once(key, make) { return cache[key] || (cache[key] = make()); }
+    return {
+      script: function (src) {
+        return once(src, function () {
+          return new Promise(function (res, rej) {
+            var s = document.createElement('script');
+            s.src = src; s.async = true; s.crossOrigin = '';
+            s.onload = function () { res(src); };
+            s.onerror = function () { delete cache[src]; rej(new Error('failed to load ' + src)); };
+            document.head.appendChild(s);
+          });
+        });
+      },
+      css: function (href) {
+        return once(href, function () {
+          return new Promise(function (res) {
+            var l = document.createElement('link');
+            l.rel = 'stylesheet'; l.href = href; l.crossOrigin = '';
+            l.onload = l.onerror = function () { res(href); };
+            document.head.appendChild(l);
+          });
+        });
+      }
+    };
+  })();
+  </script>
   <link rel="stylesheet" href="style.css?v=77">
   <link rel="stylesheet" href="mobile.css?v=7">
   <link rel="stylesheet" href="polish.css?v=1">
@@ -5718,7 +5751,8 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   </div>
 
   <script src="mobile-shell.js?v=11"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- three.js is lazy-loaded on idle by app.js initGlobe (was render-blocking, ~580KB). -->
+
   <!-- ──────────────────────────────────────────────────────────────────
        Buffer + Node-globals polyfill — REQUIRED by @solana/web3.js.
        Without this, every send / swap / faucet / convert fails with
@@ -5938,7 +5972,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
     })();
   </script>
   <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <!-- Leaflet JS is lazy-loaded on demand by nuevo-laredo-gas.js when the gas map opens (~150KB). -->
   <!-- RPC multiplexer: every Connection instance auto-fails-over and broadcast-sends.
        MUST load BEFORE app.js so all connections built by the app inherit the wrapper. -->
   <!-- Data Guard: recover/back up critical storage BEFORE anything reads it. -->
@@ -5978,14 +6012,14 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
     <script src="ost-wc-rail.js?v=1"></script>
     <script src="ost-total-balance.js?v=1"></script>
     <script src="icons.js?v=1"></script>
-    <script src="app.js?v=212"></script>
+    <script src="app.js?v=213"></script>
     <!-- Ghost AI Summoning Circle (rebuild) -->
     <script type="module" src="ghost/ghost.js?v=7"></script>
     <script type="module" src="mesh/mesh.js?v=33"></script>
     <script type="module" src="mesh/veil.js?v=1"></script>
     <script type="module" src="mesh/mesh-play.js?v=13"></script>
   <script src="mesh/mesh-fair-fx.js?v=1" defer></script>
-  <script src="nuevo-laredo-gas.js?v=1"></script>
+  <script src="nuevo-laredo-gas.js?v=2"></script>
   <script src="shop-quickview.js?v=3"></script>
   <script src="interchange-live.js?v=2"></script>
   <script src="polish.js?v=2"></script>

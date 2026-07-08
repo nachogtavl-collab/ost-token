@@ -4339,8 +4339,30 @@
     });
   }
 
-  if (location.hash && location.hash !== '#home') runIdle(initGlobe, 1600);
-  else initGlobe();
+  // three.js (~580KB) is no longer render-blocking: pull it lazily, after first
+  // paint, only when we're actually going to draw the hero globe — and skip it
+  // entirely on Save-Data / very low-memory phones (the globe is decorative).
+  function ostSkipHeavyVisuals() {
+    try {
+      var c = navigator.connection || {};
+      if (c.saveData) return true;
+      if (typeof navigator.deviceMemory === 'number' && navigator.deviceMemory <= 1) return true;
+    } catch (e) {}
+    return false;
+  }
+  function loadGlobe() {
+    if (typeof THREE !== 'undefined') { initGlobe(); return; }
+    if (!window.OSTLoad || !$('#globeCanvas')) return;
+    window.OSTLoad.script('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js')
+      .then(function () { initGlobe(); })
+      .catch(function () { console.warn('Globe: THREE.js failed to load'); });
+  }
+  if (!ostSkipHeavyVisuals()) {
+    // Only after the page has finished loading — keeps three.js off the critical path.
+    var scheduleGlobe = function () { runIdle(loadGlobe, (location.hash && location.hash !== '#home') ? 1800 : 1200); };
+    if (document.readyState === 'complete') scheduleGlobe();
+    else window.addEventListener('load', scheduleGlobe, { once: true });
+  }
 
   /* ---------- BACKGROUND PARTICLES ---------- */
   (function () {

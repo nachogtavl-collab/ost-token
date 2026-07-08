@@ -13,7 +13,16 @@
 (function () {
   'use strict';
 
-  if (!window.L || !document) return;
+  if (!document) return;
+  // Leaflet is lazy-loaded on demand (see ensureLeaflet) so its ~150KB + CSS stay
+  // off the critical path — this module no longer requires L at load time.
+  function ensureLeaflet() {
+    if (window.L) return Promise.resolve(window.L);
+    if (!window.OSTLoad) return Promise.reject(new Error('OSTLoad missing'));
+    return window.OSTLoad.css('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css')
+      .then(function () { return window.OSTLoad.script('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'); })
+      .then(function () { return window.L; });
+  }
 
   // ── Mexican cities we surface (lat, lon, default zoom, search radius m) ────
   var MX_CITIES = {
@@ -132,19 +141,23 @@
     if (state.map) { loadStations(); return; }
     var mapEl = document.getElementById('mxLiveMap');
     if (!mapEl) return;
-    var c = MX_CITIES[state.cityKey];
-    state.map = window.L.map(mapEl, {
-      zoomControl: true,
-      preferCanvas: true
-    }).setView([c.lat, c.lon], c.zoom);
-    window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '© OpenStreetMap contributors'
-    }).addTo(state.map);
-    state.layer = window.L.layerGroup().addTo(state.map);
-    // Defer a tick so the container has its real width before invalidateSize
-    setTimeout(function () { try { state.map.invalidateSize(); } catch (_) {} }, 80);
-    loadStations();
+    setStatus('Loading map…', null);
+    ensureLeaflet().then(function () {
+      if (state.map) { loadStations(); return; }
+      var c = MX_CITIES[state.cityKey];
+      state.map = window.L.map(mapEl, {
+        zoomControl: true,
+        preferCanvas: true
+      }).setView([c.lat, c.lon], c.zoom);
+      window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(state.map);
+      state.layer = window.L.layerGroup().addTo(state.map);
+      // Defer a tick so the container has its real width before invalidateSize
+      setTimeout(function () { try { state.map.invalidateSize(); } catch (_) {} }, 80);
+      loadStations();
+    }).catch(function () { setStatus('Map failed to load', 'error'); });
   }
 
   function setStatus(text, tone) {

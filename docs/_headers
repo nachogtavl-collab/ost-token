@@ -1,0 +1,13 @@
+# Cloudflare Pages security headers — applied to every response.
+# Conservative on purpose: nothing here blocks a CDN, RPC, worker, camera (QR),
+# geolocation (maps) or wallet popup the app already uses. CSP is limited to the
+# three directives that are safe without a build step (no script/connect limits,
+# which would need per-file nonces the static site can't maintain).
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: SAMEORIGIN
+  Referrer-Policy: strict-origin-when-cross-origin
+  Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
+  Permissions-Policy: browsing-topics=(), interest-cohort=()
+  Content-Security-Policy: frame-ancestors 'self'; object-src 'none'; base-uri 'self'
