@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v237';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v237';
+const CACHE_NAME = 'ost-pwa-cache-v238';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v238';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -23,7 +23,7 @@ const PRECACHE_PATHS = [
   './ost-live-stats.js?v=1',
   './ost-treasury-engine.js?v=2',
   './ost-engine-guard.js?v=1',
-  './ost-appbar.js?v=2',
+  './ost-appbar.js?v=3',
   './ost-ghost-companion.js?v=1',
   './ost-data-guard.js?v=1',
   './ost-pro-fast-tiles.js?v=1',
@@ -40,7 +40,7 @@ const PRECACHE_PATHS = [
   './style.css?v=77',
   './mobile.css?v=7',
   './polish.css?v=1',
-  './compartments.css?v=2',
+  './compartments.css?v=3',
   './prediction-extras.css?v=5',
   './prediction-pro.css?v=1',
   './prediction-modal.css?v=6',
@@ -52,15 +52,15 @@ const PRECACHE_PATHS = [
   './topup.css?v=4',
   './offline-vault.css?v=1',
   './stock-market.css?v=1',
-  './mobile-shell.css?v=13',
+  './mobile-shell.css?v=14',
   './ost-mobile-scale.css?v=3',
   './rpc-multiplexer.js?v=200',
   './ost-optimistic.js?v=4',
   './realtime.js?v=1',
   './ost-notifications.js?v=3',
-  './app.js?v=211',
+  './app.js?v=213',
   './icons.js?v=1',
-  './nuevo-laredo-gas.js?v=1',
+  './nuevo-laredo-gas.js?v=2',
   './shop-quickview.js?v=3',
   './interchange-live.js?v=2',
   './polish.js?v=2',
@@ -98,7 +98,7 @@ const PRECACHE_PATHS = [
   './mesh/mesh-crypto.js?v=1',
   './mesh/mesh-rtc.js?v=10',
   './mesh/mesh.css?v=14',
-  './compartments.js?v=5',
+  './compartments.js?v=6',
   './prediction-extras.js?v=13',
   './prediction-pro.js?v=200',
   './prediction-scalar.js?v=3',
@@ -108,7 +108,7 @@ const PRECACHE_PATHS = [
   './ost-console.js?v=3',
   './ost-onchain-bet.js?v=200',
   './ux-extras.js?v=10',
-  './mobile-shell.js?v=11',
+  './mobile-shell.js?v=12',
   './faucet-hub.js?v=16',
   './faucet-hub-ads.js?v=100',
   './offline-vault.js?v=9',
@@ -130,10 +130,10 @@ const PRECACHE_PATHS = [
   './redesign.css?v=1',
   './redesign.js?v=1',
   './mainnet-audit.js?v=1',
-  'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
+  './ost-pq-demo.js?v=1',
+  // three.js + leaflet are lazy-loaded on demand (runtime-cached when used), so
+  // they are intentionally NOT precached — keeps the SW install light on mobile.
   'https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js',
-  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
-  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
   'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap',
   'https://fonts.googleapis.com/css2?family=Noto+Sans+Egyptian+Hieroglyphs&display=swap'
 ];

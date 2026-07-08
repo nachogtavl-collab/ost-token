@@ -5190,9 +5190,9 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
 
       <!-- Hero -->
       <div class="qr-hero">
-        <div class="qr-badge">&#9883; PRE-QUANTUM CURRENCY</div>
-        <h2 class="section-title qr-title">Welcome to the <span class="qr-gradient-text">Quantum Realm</span></h2>
-        <p class="section-subtitle qr-subtitle">OST isn&rsquo;t just quantum-<em>resistant</em>. It&rsquo;s <strong>native to the quantum world</strong> from day one &mdash; the first currency designed for a post-classical universe.</p>
+        <div class="qr-badge">&#9883; POST-QUANTUM RESEARCH</div>
+        <h2 class="section-title qr-title">The <span class="qr-gradient-text">Quantum Realm</span> &mdash; OST&rsquo;s R&amp;D lab</h2>
+        <p class="section-subtitle qr-subtitle">This is where OST is <strong>heading</strong>, not a claim about today. OST currently settles on Solana&rsquo;s ed25519 signatures &mdash; strong now, but breakable by a large quantum computer. Here we prototype the <strong>post-quantum</strong> cryptography that keeps money safe for what comes next. One of these prototypes is <strong>real and runs in your browser below.</strong></p>
       </div>
 
       <!-- Three Pillars -->
@@ -5202,8 +5202,8 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
         <div class="qr-card" id="qrCard1">
           <div class="qr-card-glow"></div>
           <div class="qr-card-icon">&#128272;</div>
-          <h3 class="qr-card-title">Quantum-Proof Signatures</h3>
-          <p class="qr-card-desc">Every OST transaction is shielded by <strong>Winternitz One-Time Signatures</strong> and <strong>lattice-based Dilithium</strong> &mdash; unbreakable by any quantum computer, present or future.</p>
+          <h3 class="qr-card-title">Post-Quantum Signatures <span class="qr-tag qr-tag-live">Live demo</span></h3>
+          <p class="qr-card-desc">The direction: hash-based one-time signatures (<strong>Lamport / Winternitz</strong>) plus lattice-based <strong>Dilithium</strong>, layered over today&rsquo;s classical keys. Not yet securing live OST &mdash; but the hash-based scheme is <strong>real</strong>, and you can sign &amp; verify with it right here.</p>
           <div class="qr-card-detail">
             <div class="qr-sig-visual">
               <div class="qr-sig-layer" id="qrSigWots">
@@ -5217,11 +5217,23 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
               </div>
             </div>
             <ul class="qr-feature-list">
-              <li>&#10003; Hash-based OTS &mdash; zero algebraic assumptions</li>
-              <li>&#10003; NIST PQC Round 3 finalist (CRYSTALS-Dilithium)</li>
-              <li>&#10003; Hybrid mode: classical + post-quantum layered</li>
-              <li>&#10003; Forward-secure: past transactions stay safe forever</li>
+              <li>&#10003; Hash-based OTS &mdash; security rests only on SHA-256</li>
+              <li>&#10003; NIST PQC standard (CRYSTALS-Dilithium / ML-DSA) &mdash; on the roadmap</li>
+              <li>&#10003; Hybrid target: classical + post-quantum layered</li>
+              <li>&#10003; Forward-secure: one-time keys never reused</li>
             </ul>
+            <!-- REAL, working post-quantum signature (Lamport OTS over SHA-256). -->
+            <div class="qr-pqdemo" id="qrPqDemo">
+              <div class="qr-pqdemo-head">&#9889; Real Lamport one-time signature &mdash; in your browser</div>
+              <label class="qr-pqdemo-label" for="qrPqMsg">Message to sign</label>
+              <input class="qr-pqdemo-input" id="qrPqMsg" type="text" maxlength="64" value="OST pays Ana 25 OST" autocomplete="off" spellcheck="false">
+              <div class="qr-pqdemo-actions">
+                <button type="button" class="btn btn-accent" id="qrPqSign">&#128273; Generate key &amp; sign</button>
+                <button type="button" class="btn btn-outline" id="qrPqVerify" disabled>&#10003; Verify</button>
+                <button type="button" class="btn btn-outline" id="qrPqTamper" disabled>&#9888; Tamper</button>
+              </div>
+              <div class="qr-pqdemo-out" id="qrPqOut">Generates a 256-pair Lamport keypair, signs the SHA-256 of your message, and verifies it &mdash; genuine post-quantum crypto, nothing hits a server.</div>
+            </div>
           </div>
         </div>
 
@@ -5229,8 +5241,8 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
         <div class="qr-card" id="qrCard2">
           <div class="qr-card-glow"></div>
           <div class="qr-card-icon">&#9878;</div>
-          <h3 class="qr-card-title">Entangled Transfers</h3>
-          <p class="qr-card-desc">Two wallets, instantly linked &mdash; like quantum entanglement. Send OST that settles <strong>simultaneously on both ends</strong>, with non-local finality and zero round-trips.</p>
+          <h3 class="qr-card-title">Entangled Transfers <span class="qr-tag qr-tag-concept">Concept</span></h3>
+          <p class="qr-card-desc"><em>A metaphor for a real goal:</em> atomic two-party settlement where both sides finalize together or not at all, with post-quantum key exchange (Kyber / ML-KEM). No &ldquo;spooky action&rdquo; &mdash; just atomic swaps, framed playfully. Not live yet.</p>
           <div class="qr-card-detail">
             <div class="qr-entangle-visual" id="qrEntangleVisual">
               <div class="qr-wallet qr-wallet-a">
@@ -5263,8 +5275,8 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
         <div class="qr-card" id="qrCard3">
           <div class="qr-card-glow"></div>
           <div class="qr-card-icon">&#8734;</div>
-          <h3 class="qr-card-title">Non-Linear Money</h3>
-          <p class="qr-card-desc">Your balance exists in <strong>superposition</strong> &mdash; unresolved until observed. Probabilistic yields. Collapsed privacy. Money that behaves like quantum matter.</p>
+          <h3 class="qr-card-title">Non-Linear Money <span class="qr-tag qr-tag-concept">Concept</span></h3>
+          <p class="qr-card-desc"><em>A research metaphor</em> for privacy tech (shielded balances that stay hidden until revealed) and adaptive fees. &ldquo;Superposition&rdquo; is illustrative, not a live financial product &mdash; and no yield is paid today.</p>
           <div class="qr-card-detail">
             <div class="qr-superposition" id="qrSuperposition">
               <div class="qr-state-visual">
@@ -5284,10 +5296,10 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
             </div>
             <button class="btn btn-accent qr-collapse-btn" id="qrCollapseBtn">&#128269; Collapse State</button>
             <ul class="qr-feature-list">
-              <li>&#10003; Superposition privacy &mdash; balances unresolvable until measured</li>
-              <li>&#10003; Probabilistic yield: 3&ndash;12% APY based on quantum entropy</li>
-              <li>&#10003; Non-linear fee curves &mdash; no fixed gas, quantum-adaptive</li>
-              <li>&#10003; Observer effect: mere inspection changes the state</li>
+              <li>&#10003; Shielded balances &mdash; a privacy research direction</li>
+              <li>&#9633; Probabilistic yield &mdash; concept only, nothing paid today</li>
+              <li>&#10003; Adaptive fee curves &mdash; a design we&rsquo;re exploring</li>
+              <li>&#10003; Reveal-on-spend &mdash; illustrative, not live</li>
             </ul>
           </div>
         </div>
@@ -5297,19 +5309,19 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
       <div class="qr-stats">
         <div class="qr-stat">
           <span class="qr-stat-value" id="qrStatSigs">0</span>
-          <span class="qr-stat-label">Quantum Signatures</span>
+          <span class="qr-stat-label">PQ signatures you&rsquo;ve made</span>
         </div>
         <div class="qr-stat">
-          <span class="qr-stat-value" id="qrStatEntangled">0</span>
-          <span class="qr-stat-label">Entangled Pairs</span>
+          <span class="qr-stat-value" id="qrStatEntangled">256</span>
+          <span class="qr-stat-label">Lamport key pairs / sig</span>
         </div>
         <div class="qr-stat">
-          <span class="qr-stat-value" id="qrStatYield">0%</span>
-          <span class="qr-stat-label">Mean Yield (APY)</span>
+          <span class="qr-stat-value" id="qrStatYield">SHA-256</span>
+          <span class="qr-stat-label">Hardness assumption</span>
         </div>
         <div class="qr-stat">
-          <span class="qr-stat-value" id="qrStatCoherence">100%</span>
-          <span class="qr-stat-label">Coherence</span>
+          <span class="qr-stat-value" id="qrStatCoherence">R&amp;D</span>
+          <span class="qr-stat-label">Live-chain status</span>
         </div>
       </div>
 
@@ -5320,7 +5332,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
       </div>
 
       <!-- Footer note -->
-      <div class="qr-note">&#9878; Quantum realm features are forward-looking innovations. Winternitz OTS and lattice-based cryptography are real post-quantum standards (NIST SP 800-208). &ldquo;Entangled transfers&rdquo; and &ldquo;superposition privacy&rdquo; are metaphorical descriptions of novel cryptographic protocols under active R&amp;D.</div>
+      <div class="qr-note">&#9878; <strong>Honest status:</strong> live OST transactions are signed today with Solana&rsquo;s classical <strong>ed25519</strong> &mdash; not yet post-quantum. Hash-based one-time signatures (Lamport/Winternitz, NIST SP 800-208) and lattice signatures (Dilithium/ML-DSA) are <strong>real standards</strong> and the direction OST is building toward; the Lamport demo above is genuine and runs locally. &ldquo;Entangled transfers&rdquo; and &ldquo;superposition&rdquo; are <strong>metaphors</strong> for atomic settlement and privacy research, not live features.</div>
     </div>
   </section>
 
@@ -6070,6 +6082,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="stock-market.js?v=10"></script>
   <script src="redesign.js?v=1" defer></script>
   <script src="mainnet-audit.js?v=1" defer></script>
+  <script src="ost-pq-demo.js?v=1" defer></script>
   <script>
     (function () {
       var deferredPrompt = null;
