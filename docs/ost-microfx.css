@@ -1,0 +1,113 @@
+/* ==========================================================================
+ * OST · Micro-interactions — shared feedback layer for the core sections
+ * (Launchpad, Commerce/Gift cards, Wallet, Prediction Markets). Purely
+ * additive polish: pointer-origin button ripple, card hover-lift, loading
+ * shimmer, success pop / ring, and a balance "bump". Fully disabled under
+ * prefers-reduced-motion; hover-lift only on fine (mouse) pointers.
+ * ========================================================================== */
+
+/* ---- Card hover-lift (fine pointers only, so phones don't get sticky hover) */
+@media (hover: hover) and (pointer: fine) {
+  .prediction-market-card,
+  .qr-card,
+  .wallet-portal-card,
+  .wallet-side-card,
+  .launch-card, .coin-card, .trench-card, .token-card,
+  .giftcard, .gift-card, .store-card, .shop-card,
+  .ost-liftable {
+    transition: transform .22s cubic-bezier(.16,1,.3,1),
+                box-shadow .22s cubic-bezier(.16,1,.3,1),
+                border-color .22s ease;
+    will-change: transform;
+  }
+  .prediction-market-card:hover,
+  .qr-card:hover,
+  .wallet-portal-card:hover,
+  .wallet-side-card:hover,
+  .launch-card:hover, .coin-card:hover, .trench-card:hover, .token-card:hover,
+  .giftcard:hover, .gift-card:hover, .store-card:hover, .shop-card:hover,
+  .ost-liftable:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 18px 40px -18px rgba(16, 185, 129, .45),
+                0 6px 18px -12px rgba(0, 0, 0, .55);
+    border-color: rgba(52, 211, 153, .45);
+  }
+}
+
+/* ---- Loading shimmer (skeletons / pending tiles): add class .ost-shimmer ---- */
+.ost-shimmer {
+  position: relative;
+  overflow: hidden;
+  background: rgba(148, 163, 184, .10);
+  color: transparent !important;
+  border-radius: 8px;
+}
+.ost-shimmer::after {
+  content: '';
+  position: absolute; inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .12), transparent);
+  animation: ostShimmer 1.25s infinite;
+}
+@keyframes ostShimmer { 100% { transform: translateX(100%); } }
+
+/* ---- Button loading state: <button class="is-loading"> shows a spinner ------ */
+.btn.is-loading { color: transparent !important; pointer-events: none; }
+.btn.is-loading::before {
+  content: '';
+  position: absolute; top: 50%; left: 50%;
+  width: 16px; height: 16px; margin: -8px 0 0 -8px;
+  border: 2px solid rgba(255, 255, 255, .35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: ostSpin .7s linear infinite;
+}
+@keyframes ostSpin { 100% { transform: rotate(360deg); } }
+
+/* ---- Success pop + ring (OST_FX.success / burst) ---------------------------- */
+.ost-fx-pop { animation: ostPop .5s cubic-bezier(.22,1,.36,1); }
+@keyframes ostPop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.14); }
+  100% { transform: scale(1); }
+}
+.ost-fx-ring {
+  position: fixed;
+  z-index: 2000000;
+  pointer-events: none;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  border: 2px solid #34d399;
+  transform: translate(-50%, -50%);
+  animation: ostRing .6s ease-out forwards;
+}
+@keyframes ostRing {
+  0% { opacity: .9; width: 12px; height: 12px; }
+  100% { opacity: 0; width: 120px; height: 120px; border-width: 1px; }
+}
+
+/* ---- Balance bump (green flash + scale when OST goes up) --------------------- */
+.ost-fx-bump { animation: ostBump .6s cubic-bezier(.22,1,.36,1); }
+@keyframes ostBump {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.18); color: #34d399; text-shadow: 0 0 14px rgba(52,211,153,.7); }
+  100% { transform: scale(1); }
+}
+
+/* ---- Confetti sparks (win moments) ----------------------------------------- */
+.ost-fx-spark {
+  position: fixed; z-index: 2000000; pointer-events: none;
+  width: 7px; height: 7px; border-radius: 2px;
+  animation: ostSpark .8s ease-out forwards;
+}
+@keyframes ostSpark {
+  0% { opacity: 1; transform: translate(-50%, -50%) rotate(0); }
+  100% { opacity: 0; transform: translate(var(--dx, 0), var(--dy, -60px)) rotate(220deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ost-shimmer::after,
+  .btn.is-loading::before,
+  .ost-fx-pop, .ost-fx-ring, .ost-fx-bump, .ost-fx-spark { animation: none !important; }
+  .ost-fx-ring, .ost-fx-spark { display: none !important; }
+}

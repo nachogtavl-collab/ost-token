@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v238';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v238';
+const CACHE_NAME = 'ost-pwa-cache-v239';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v239';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -131,6 +131,8 @@ const PRECACHE_PATHS = [
   './redesign.js?v=1',
   './mainnet-audit.js?v=1',
   './ost-pq-demo.js?v=1',
+  './ost-microfx.js?v=1',
+  './ost-microfx.css?v=1',
   // three.js + leaflet are lazy-loaded on demand (runtime-cached when used), so
   // they are intentionally NOT precached — keeps the SW install light on mobile.
   'https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js',
