@@ -3067,6 +3067,34 @@
       throw new Error('Select a live market and enter a valid OST stake first.');
     }
 
+    // Scalar / date / multi-outcome: if the user picked a bucket on this event,
+    // route the bet to the REAL underlying leg market (each Polymarket bucket
+    // is its own binary market). The existing resolution engine then settles
+    // it natively — bucket bets are real, not decorative. Runs BEFORE the arb
+    // block so shares are quoted at the leg's actual price.
+    try {
+      var scalApi = window.OST_PREDICTION_SCALAR;
+      var pick = scalApi && scalApi.selection ? scalApi.selection(order.marketId) : null;
+      if (pick && pick.legId) {
+        order.parentEventId = order.marketId;
+        order.marketId = String(pick.legId);
+        order.title = (order.title ? order.title + ' — ' : '') + pick.label;
+        var legP = Number(pick.legPrice);
+        if (Number.isFinite(legP) && legP > 0.001 && legP < 0.999) {
+          order.price = legP;
+          order.yesPrice = legP;
+          order.noPrice = 1 - legP;
+          order.shares = Number(order.stake) / legP;
+          order.potentialReturn = order.shares;
+        }
+        order.side = 'yes';                 // bucket bet = YES on that leg
+        order.marketType = pick.type;
+        order.bucketId = pick.bucketId;
+        order.bucketLabel = pick.label;
+        if (scalApi.clearSelection) scalApi.clearSelection(order.parentEventId);
+      }
+    } catch (_) {}
+
     // OST arbitrage: the protocol is the market maker. It fills this BUY at its
     // ASK (mid marked up by the spread), so the user receives FEWER shares and
     // OST banks the spread — booked here on every ticket, win or lose. This is

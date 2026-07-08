@@ -326,7 +326,9 @@
           if (raw && (!Array.isArray(raw.outcomes) || raw.outcomes.length < 3) && raw.raw && raw.raw.polymarketEvent && Array.isArray(raw.raw.polymarketEvent.markets) && raw.raw.polymarketEvent.markets.length > 2) {
             var legs = raw.raw.polymarketEvent.markets.map(function (leg) {
               return {
-                key: leg.key || leg.id || leg.groupItemTitle,
+                // Prefer the leg's REAL market id — orders route to it so the
+                // existing binary resolution engine settles bucket bets.
+                key: leg.id || leg.conditionId || leg.key || leg.groupItemTitle,
                 label: leg.groupItemTitle || leg.label || leg.title || ('Leg ' + (leg.id || '')),
                 price: Number(leg.price != null ? leg.price : (leg.outcomePrices && JSON.parse(typeof leg.outcomePrices === 'string' ? leg.outcomePrices : JSON.stringify(leg.outcomePrices))[0])) || 0
               };
@@ -342,10 +344,30 @@
     card.dataset.ostScalarReady = '1';
     card.dataset.ostMarketType = norm.marketType;
     var binaryToggle = card.querySelector('[data-role="binary-toggle"], .prediction-side-toggle, .prediction-card__sides');
+    var enhancedRaw = raw; // keep the outcomes list for leg lookup on select
     var picker = renderBucketPicker(norm, {
       onSelect: function (b) {
         card.dataset.ostBucketId = String(b.id);
         card.dataset.ostBucketLabel = b.label || '';
+        // Register the selection so placeOrder can route the bet to the REAL
+        // underlying leg market (each Polymarket bucket is its own binary
+        // market — betting the leg means the existing resolution engine
+        // settles it natively, no bespoke oracle).
+        var leg = null;
+        try {
+          leg = (enhancedRaw.outcomes || []).find(function (o) {
+            return o && (o.label === b.label || o.key === b.key);
+          }) || null;
+        } catch (_) {}
+        selections[String(norm.id)] = {
+          marketId: String(norm.id),
+          type: norm.marketType,
+          bucketId: b.id,
+          label: b.label || '',
+          legId: leg && leg.key != null ? String(leg.key) : null,
+          legPrice: Number(leg && leg.price != null ? leg.price : b.price) || 0,
+          ts: Date.now()
+        };
       }
     });
     if (binaryToggle) binaryToggle.replaceWith(picker);
@@ -381,6 +403,17 @@
   // ---------------------------------------------------------------------------
   // 6) Public API — extends window.OST_PREDICTION_API non-destructively.
   // ---------------------------------------------------------------------------
+  // Live bucket selections, keyed by event market id. placeOrder consults
+  // this to route a multi-outcome bet to its real underlying leg market.
+  var selections = {};
+  function selection(marketId) {
+    var s = selections[String(marketId)];
+    if (!s) return null;
+    if (Date.now() - s.ts > 15 * 60 * 1000) { delete selections[String(marketId)]; return null; }
+    return s;
+  }
+  function clearSelection(marketId) { delete selections[String(marketId)]; }
+
   var api = {
     normalizeMarket: normalizeMarket,
     classifyOutcomes: classifyOutcomes,
@@ -389,7 +422,9 @@
     renderBucketPicker: renderBucketPicker,
     recordScalarOrder: recordScalarOrder,
     resolveBucket: resolveBucket,
-    settleScalarMarket: settleScalarMarket
+    settleScalarMarket: settleScalarMarket,
+    selection: selection,
+    clearSelection: clearSelection
   };
 
   if (typeof window !== 'undefined') {

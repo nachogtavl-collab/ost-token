@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v241';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v241';
+const CACHE_NAME = 'ost-pwa-cache-v242';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v242';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -60,7 +60,7 @@ const PRECACHE_PATHS = [
   './ost-optimistic.js?v=4',
   './realtime.js?v=1',
   './ost-notifications.js?v=3',
-  './app.js?v=215',
+  './app.js?v=216',
   './icons.js?v=1',
   './nuevo-laredo-gas.js?v=2',
   './shop-quickview.js?v=3',
@@ -103,7 +103,7 @@ const PRECACHE_PATHS = [
   './compartments.js?v=6',
   './prediction-extras.js?v=13',
   './prediction-pro.js?v=200',
-  './prediction-scalar.js?v=3',
+  './prediction-scalar.js?v=4',
   './prediction-modal.js?v=204',
   './prediction-trade-popout.js?v=7',
   './prediction-pro-dash.js?v=14',
