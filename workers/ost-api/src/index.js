@@ -43,6 +43,7 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'content-type, accept, x-ost-wallet',
+  'Access-Control-Expose-Headers': 'x-ost-relay',
   'Access-Control-Max-Age': '86400'
 };
 const FIVE_MIN_MS = 5 * 60 * 1000;
@@ -2671,6 +2672,77 @@ export default {
       if (!env.FAUCET_GATE) return json({ error: 'faucet_gate_not_configured' }, 503);
       const id = env.FAUCET_GATE.idFromName('global');
       return env.FAUCET_GATE.get(id).fetch(request);
+    }
+
+    // ── Polymarket relay: /gamma/* /clob/* /data/* ───────────────────────────
+    // The site sets OST_POLY_RELAY_URL to this worker and requests these
+    // prefixes, but the routes never existed — every relayed fetch 404'd and
+    // fell back to direct Polymarket (blocked/geo-limited for some testers).
+    // GET-only, host-allowlisted, edge-cached 15s so heavy use never hammers
+    // the upstream or this worker's limits.
+    const RELAY_HOSTS = {
+      '/gamma': 'https://gamma-api.polymarket.com',
+      '/clob': 'https://clob.polymarket.com',
+      '/data': 'https://data-api.polymarket.com'
+    };
+    for (const prefix of Object.keys(RELAY_HOSTS)) {
+      if (method === 'GET' && (path === prefix || path.startsWith(prefix + '/'))) {
+        const upstream = RELAY_HOSTS[prefix] + path.slice(prefix.length) + url.search;
+        try {
+          const resp = await fetch(upstream, {
+            headers: { accept: 'application/json', 'user-agent': 'ost-relay/1.0 (+https://ost-token.pages.dev)' },
+            cf: { cacheTtl: 15, cacheEverything: true }
+          });
+          const body = await resp.arrayBuffer();
+          return new Response(body, {
+            status: resp.status,
+            headers: {
+              ...CORS_HEADERS,
+              'content-type': resp.headers.get('content-type') || 'application/json',
+              'cache-control': 'public, max-age=15',
+              'x-ost-relay': prefix.slice(1)
+            }
+          });
+        } catch (err) {
+          return json({ error: 'relay_failed', upstream: prefix, message: String(err?.message || err).slice(0, 200) }, 502);
+        }
+      }
+    }
+
+    // ── GET /bot/v1/info — machine-readable API index for AIs/bots/servers ──
+    // CORS is * and all listed GETs are key-free, so agents, localhost scripts
+    // and servers can integrate directly. This endpoint is the contract.
+    if (path === '/bot/v1/info' && method === 'GET') {
+      return json({
+        ok: true,
+        name: 'OST Bot API',
+        version: 1,
+        network: 'solana-devnet',
+        mint: '383pTzoZ8Gp83dzk23ZnvLcfX2Sq32TAGN48CMQu2pAJ',
+        app: 'https://ost-token.pages.dev',
+        note: 'Devnet test tokens only — no real-money value. Read endpoints are public; rate-limit friendly (cache ~15s where marked).',
+        endpoints: [
+          { method: 'GET', path: '/bot/v1/info', desc: 'this API index' },
+          { method: 'GET', path: '/health', desc: 'service health + BTC price + current 5-min round' },
+          { method: 'GET', path: '/markets', desc: 'live OST-native prediction markets (BTC 5-min rounds)' },
+          { method: 'GET', path: '/btc/round', desc: 'current server-authoritative BTC 5-min round' },
+          { method: 'GET', path: '/btc/price', desc: 'live BTC spot used for rounds' },
+          { method: 'GET', path: '/btc/ticks', desc: 'recent BTC tick history' },
+          { method: 'GET', path: '/btc/history', desc: 'settled BTC 5-min round history' },
+          { method: 'GET', path: '/positions/recent', desc: 'global recent bet feed (anonymized wallets)' },
+          { method: 'GET', path: '/stocks/universe', desc: 'stock-mirror instrument list' },
+          { method: 'GET', path: '/stocks/quotes', desc: 'stock-mirror live quotes' },
+          { method: 'GET', path: '/launchpad/coins', desc: 'launchpad memecoin list + curves' },
+          { method: 'GET', path: '/gamma/*', desc: 'Polymarket Gamma API relay (edge-cached 15s)' },
+          { method: 'GET', path: '/clob/*', desc: 'Polymarket CLOB API relay (edge-cached 15s)' },
+          { method: 'GET', path: '/data/*', desc: 'Polymarket data API relay (edge-cached 15s)' }
+        ],
+        realtime: {
+          websocket: '/realtime/ws',
+          desc: 'live prices, orders, wallet alerts, games (Durable Object hub)'
+        },
+        ts: Date.now()
+      });
     }
 
     // ── GET /health ──────────────────────────────────────────────────────────

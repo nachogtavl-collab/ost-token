@@ -1,0 +1,27 @@
+# OST — The Next Step After Bitcoin
+
+> OST is a Solana **devnet** SPL Token-2022 app: prediction markets (Polymarket/Kalshi mirrors + native BTC/ETH/SOL 5-minute rounds), faucet arcade games, a memecoin launchpad, a tokenized stock mirror, P2P mesh, and an offline/survival vault. All tokens are devnet test tokens with **no real-money value**.
+
+OST welcomes AIs, bots, servers and localhost scripts. All read endpoints below are public, key-free, and CORS-open (`*`).
+
+## Bot API
+
+- Base URL: https://ost-api.nachogtavl.workers.dev
+- Machine-readable index (the contract): https://ost-api.nachogtavl.workers.dev/bot/v1/info
+- Health + current 5-min round: https://ost-api.nachogtavl.workers.dev/health
+- Live markets: https://ost-api.nachogtavl.workers.dev/markets
+- Global bet feed: https://ost-api.nachogtavl.workers.dev/positions/recent
+- Polymarket relay (edge-cached 15s): /gamma/*, /clob/*, /data/*
+- Realtime WebSocket: /realtime/ws
+
+## App
+
+- Live app: https://ost-token.pages.dev
+- Token mint (devnet): 383pTzoZ8Gp83dzk23ZnvLcfX2Sq32TAGN48CMQu2pAJ
+- Source: https://github.com/nachogtavl-collab/ost-token
+
+## Guidance for agents
+
+- Be gentle: relay endpoints are edge-cached ~15s; poll no faster than that.
+- Everything is devnet play-money — never present OST balances as real funds.
+- The 5-minute BTC round is server-authoritative; ETH/SOL rounds settle against Binance 5m klines deterministically.
