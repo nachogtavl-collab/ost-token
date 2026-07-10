@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v242';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v242';
+const CACHE_NAME = 'ost-pwa-cache-v243';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v243';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -58,7 +58,7 @@ const PRECACHE_PATHS = [
   './ost-mobile-scale.css?v=3',
   './rpc-multiplexer.js?v=200',
   './ost-optimistic.js?v=4',
-  './realtime.js?v=1',
+  './realtime.js?v=2',
   './ost-notifications.js?v=3',
   './app.js?v=216',
   './icons.js?v=1',
@@ -133,7 +133,7 @@ const PRECACHE_PATHS = [
   './redesign.js?v=1',
   './mainnet-audit.js?v=1',
   './ost-pq-demo.js?v=1',
-  './ost-microfx.js?v=1',
+  './ost-microfx.js?v=2',
   './ost-microfx.css?v=1',
   // three.js + leaflet are lazy-loaded on demand (runtime-cached when used), so
   // they are intentionally NOT precached — keeps the SW install light on mobile.

@@ -186,9 +186,12 @@
     if (!event || event.silent) return;
     if (/^(price|orderbook)\./.test(event.type || '')) return;
     var own = isOwnWallet(event.wallet);
-    var publicFaucet = event.type === 'faucet.claim';
-    var game = event.type === 'game.result';
-    if (!own && !publicFaucet && !game) return;
+    // ONLY the user's own events pop a notification. Other people's public
+    // faucet claims / game results still reach the live-feed UI via their
+    // ost:* events (dispatched above), but must NOT pop a toast for every
+    // user — a room full of testers/bots turned that into a non-stop stream
+    // of "LIVE" cards that made the app unusable.
+    if (!own) return;
     var msg = event.message || event.title || event.type || 'OST update';
     try {
       if (window.OST_OPTIMISTIC && typeof window.OST_OPTIMISTIC.toast === 'function') {
@@ -205,7 +208,17 @@
     fallbackToast(msg, event.severity);
   }
 
+  var fbTimes = [];       // shown timestamps (rolling window)
+  var fbLast = {};        // message -> last shown ts (dedup)
   function fallbackToast(message, severity) {
+    // Anti-spam guard: dedup identical messages within 4s, cap 4 per 4s.
+    var now = Date.now();
+    var key = String(message == null ? '' : message).slice(0, 120);
+    if (fbLast[key] && now - fbLast[key] < 4000) return;
+    fbTimes = fbTimes.filter(function (t) { return now - t < 4000; });
+    if (fbTimes.length >= 4) return;
+    fbTimes.push(now); fbLast[key] = now;
+    if (Object.keys(fbLast).length > 120) fbLast = {};
     var host = document.getElementById('ostRealtimeToasts');
     if (!host) {
       host = document.createElement('div');
@@ -213,6 +226,8 @@
       host.style.cssText = 'position:fixed;z-index:2147483000;right:14px;bottom:14px;display:grid;gap:8px;max-width:min(360px,calc(100vw - 28px));pointer-events:none';
       document.body.appendChild(host);
     }
+    // Never let more than 3 stack on screen.
+    while (host.children.length >= 3) { try { host.removeChild(host.firstElementChild); } catch (_) { break; } }
     var item = document.createElement('div');
     item.textContent = String(message || 'OST update');
     item.style.cssText = 'background:rgba(8,12,20,.94);color:#f8fafc;border:1px solid rgba(109,159,255,.35);box-shadow:0 16px 40px rgba(0,0,0,.35);border-radius:8px;padding:10px 12px;font:600 13px/1.35 Inter,system-ui,sans-serif;transform:translateY(8px);opacity:0;transition:opacity .18s ease,transform .18s ease';

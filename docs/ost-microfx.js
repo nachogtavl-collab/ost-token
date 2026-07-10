@@ -70,7 +70,13 @@
         (function (node) { setTimeout(function () { node.remove(); }, 850); })(s);
       }
     },
+    _lastCelebrate: 0,
     celebrate: function (el) {
+      // Hard cooldown: games award constantly — never let celebrations stack
+      // into a screen-filling spam of sparks.
+      var now = Date.now();
+      if (now - this._lastCelebrate < 4000) { this.bump(el); return; }
+      this._lastCelebrate = now;
       var c = centerOf(el);
       this.ring(c.x, c.y);
       this.sparks(c.x, c.y, 12);
@@ -108,7 +114,9 @@
     if (Number.isFinite(now) && Number.isFinite(last) && now > last + 1e-9) {
       var el = walletBalEl();
       FX.bump(el);
-      if (big) FX.celebrate(el);
+      // Only a meaningful jump celebrates (games award tiny amounts constantly);
+      // celebrate() also enforces its own 4s cooldown.
+      if (big && (now - last) >= 10) FX.celebrate(el);
     }
     last = now;
   }
