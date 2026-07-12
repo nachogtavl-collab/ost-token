@@ -22,6 +22,25 @@
   function readBets() { try { return JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); } catch (e) { return []; } }
   function writeBets(list) { try { localStorage.setItem(STORE_KEY, JSON.stringify(list)); } catch (e) {} }
 
+  // Claims in flight (betId -> true). A payout is async, so until it resolves
+  // the stored bet still says claimed:false — without this, ANY re-render
+  // (30s timer, order-changed event, the DOM observer) would paint a fresh,
+  // enabled "Claim" button over the pending one and the user could claim the
+  // same win twice. Renders read this to show a disabled "Claiming…" instead.
+  var claimingIds = Object.create(null);
+
+  // Always re-read before writing: claimBet used to persist a snapshot captured
+  // before the async payout, silently clobbering any concurrent bet updates.
+  function updateBet(betId, mutate) {
+    var list = readBets();
+    var rec = null;
+    for (var i = 0; i < list.length; i++) { if (list[i] && list[i].id === betId) { rec = list[i]; break; } }
+    if (!rec) return null;
+    mutate(rec);
+    writeBets(list);
+    return rec;
+  }
+
   function ensureModal() {
     var el = document.getElementById(MODAL_ID);
     if (el) return el;
@@ -407,7 +426,8 @@
     function rowHtml(b) {
       var statusCls = b.status === 'won' ? 'is-won' : b.status === 'lost' ? 'is-lost' : 'is-open';
       var sideCls   = b.side === 'yes' ? 'is-yes' : 'is-no';
-      var canClaim  = b.status === 'won' && !b.claimed;
+      var inFlight  = !!claimingIds[b.id];
+      var canClaim  = b.status === 'won' && !b.claimed && !inFlight;
       var stake     = Number(b.stake) || 0;
       var payout    = Number(b.payoutIfWin) || 0;
       var entryPx   = Number(b.price) || 0.5;
@@ -439,7 +459,8 @@
           '<div class="ost-bet-row__actions">',
             '<button type="button" class="ost-pred-btn ost-pred-btn--ghost" data-ost-bet-open="' + escapeHtml(b.marketId) + '">Open market</button>',
             (canClaim ? '<button type="button" class="ost-pred-btn ost-pred-btn--yes" data-ost-bet-claim="' + escapeHtml(b.id) + '">Claim ' + fmt(payout) + ' OST</button>' : ''),
-            (b.claimed ? '<span class="ost-bet-claimed">✓ ' + fmt(payout) + ' OST claimed</span>' : ''),
+            (inFlight ? '<button type="button" class="ost-pred-btn ost-pred-btn--yes" disabled>Claiming…</button>' : ''),
+            (b.claimed ? '<span class="ost-bet-claimed">✓ ' + fmt(Number(b.paidOut) || payout) + ' OST claimed</span>' : ''),
             (b.signature && !/^(local|sim)-/.test(b.signature) ? '<a class="ost-bet-explorer" href="https://explorer.solana.com/tx/' + encodeURIComponent(b.signature) + '?cluster=devnet" target="_blank" rel="noopener">tx ' + escapeHtml(String(b.signature).slice(0, 6)) + '… ↗</a>' : ''),
           '</div>',
         '</article>'
@@ -501,56 +522,74 @@
   }
 
   function claimBet(betId, btn) {
-    var bets = readBets();
-    var bet = bets.find(function (b) { return b.id === betId; });
+    if (claimingIds[betId]) return;                 // re-entrancy: already paying out
+    var bet = readBets().find(function (b) { return b && b.id === betId; });
     if (!bet || bet.status !== 'won' || bet.claimed) return;
-    btn.disabled = true; btn.textContent = 'Claiming…';
+    claimingIds[betId] = true;                      // re-renders now show "Claiming…"
+    if (btn) { btn.disabled = true; btn.textContent = 'Claiming…'; }
+
     // House edge, live: rake the protocol's cut of the PROFIT (win above the
     // stake) so the winner claims the NET — never the full amount fee-free.
     var grossWin = Number(bet.payoutIfWin) || 0;
     var payAmt = grossWin;
+    var houseFee = 0;
     if (window.OST_HOUSE && typeof window.OST_HOUSE.rake === 'function') {
       var rk = window.OST_HOUSE.rake(grossWin, Number(bet.stake) || 0, 'prediction', { kind: 'claim' });
       payAmt = rk.net;
-      bet.houseFee = rk.fee;
+      houseFee = rk.fee;
     }
-    bet.paidOut = payAmt;
-    var doClaim = function () {
-      bet.claimed = true; bet.claimedAt = Date.now();
-      writeBets(bets);
-      btn.outerHTML = '<span class="ost-bet-claimed">✓ ' + fmt(payAmt) + ' OST claimed' + (bet.houseFee > 0 ? ' (house −' + fmt(bet.houseFee) + ')' : '') + '</span>';
+
+    var settled = false;
+    var doClaim = function (sig) {
+      if (settled) return;                          // never double-settle
+      settled = true;
+      // Fresh read-modify-write, and idempotent: if anything already marked it
+      // claimed, don't write a second payout record.
+      updateBet(betId, function (r) {
+        if (r.claimed) return;
+        r.claimed = true;
+        r.claimedAt = Date.now();
+        r.paidOut = payAmt;
+        r.houseFee = houseFee;
+        if (sig) r.signature = sig;
+      });
+      delete claimingIds[betId];
+      if (btn && btn.parentNode) {
+        btn.outerHTML = '<span class="ost-bet-claimed">✓ ' + fmt(payAmt) + ' OST claimed' + (houseFee > 0 ? ' (house −' + fmt(houseFee) + ')' : '') + '</span>';
+      }
       if (window.OST_WALLET && typeof window.OST_WALLET.refresh === 'function') window.OST_WALLET.refresh();
       try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch (_) {}
       try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {}
     };
     var failClaim = function (error) {
-      btn.disabled = false;
-      btn.textContent = 'Claim ' + fmt(payAmt) + ' OST';
-      btn.title = (error && error.message) || 'OST payout vault is still loading.';
+      if (settled) return;
+      delete claimingIds[betId];                    // payout failed — allow a retry
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Claim ' + fmt(payAmt) + ' OST';
+        btn.title = (error && error.message) || 'OST payout vault is still loading.';
+      }
     };
     // Try the live payout path first; local fallback keeps resolved wins usable
     // on static deployments where the payout module has not loaded yet.
     try {
       if (window.OST_TRADE && typeof window.OST_TRADE.predictionCashOut === 'function') {
         window.OST_TRADE.predictionCashOut(bet, payAmt).then(function (result) {
-          if (result && result.sig) bet.signature = result.sig;
-          doClaim();
+          doClaim(result && result.sig);
         }).catch(failClaim);
         return;
       }
       if (window.OST_REAL_SWAP && typeof window.OST_REAL_SWAP.payout === 'function') {
-        window.OST_REAL_SWAP.payout(payAmt).then(doClaim).catch(failClaim);
+        window.OST_REAL_SWAP.payout(payAmt).then(function () { doClaim(); }).catch(failClaim);
         return;
       }
     } catch (e) {}
     // Static-deploy fallback: pay the win from the canonical credits pool so
-    // a claim ALWAYS moves real balance (previously this marked the bet
-    // claimed without paying anything - a dead end).
+    // a claim ALWAYS moves real balance.
     if (window.OST_MONEY && typeof window.OST_MONEY.add === 'function') {
       window.OST_MONEY.add(Number(payAmt) || 0, 'prediction-win');
     }
-    bet.signature = 'local-' + Date.now().toString(36);
-    doClaim();
+    doClaim('local-' + Date.now().toString(36));
   }
 
   // Mount a "My bets" tab in the prediction board
@@ -572,7 +611,16 @@
   function boot() {
     enhanceCards();
     mountMyBetsPanel();
-    var obs = new MutationObserver(function () { enhanceCards(); });
+    // This observer used to run enhanceCards() on EVERY DOM mutation in the
+    // whole body. The live price feed repaints charts several times a second
+    // (and toasts/effects add nodes), so the claim area was re-scanned
+    // constantly — that was the lag. Coalesce into one pass per frame-ish.
+    var pending = false;
+    var obs = new MutationObserver(function () {
+      if (pending) return;
+      pending = true;
+      setTimeout(function () { pending = false; enhanceCards(); }, 250);
+    });
     obs.observe(document.body, { childList: true, subtree: true });
   }
   if (document.readyState === 'loading') {
