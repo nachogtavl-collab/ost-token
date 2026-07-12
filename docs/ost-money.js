@@ -73,14 +73,18 @@
     });
   }
 
-  function broadcast(delta, total, source) {
-    try { window.dispatchEvent(new CustomEvent('ost-money-changed', { detail: { total: total, delta: delta, source: source || '' } })); } catch (_) {}
-    if (delta > 0) {
+  // `silent` suppresses the celebratory award event ONLY (the ghost bubble,
+  // confetti, sound). Balances still broadcast via ost-money-changed so every
+  // UI updates. Batch payouts (auto-claim settling a backlog of wins) use this
+  // and show ONE summary instead of a notification per bet.
+  function broadcast(delta, total, source, silent) {
+    try { window.dispatchEvent(new CustomEvent('ost-money-changed', { detail: { total: total, delta: delta, source: source || '', silent: !!silent } })); } catch (_) {}
+    if (delta > 0 && !silent) {
       try { window.dispatchEvent(new CustomEvent('ost-faucet-hub-award', { detail: { credits: delta, source: source || 'ost-money', total: total } })); } catch (_) {}
     }
   }
 
-  function add(amount, source) {
+  function add(amount, source, opts) {
     amount = Number(amount) || 0;
     if (amount <= 0) return read();
     var s = loadHub();
@@ -88,9 +92,9 @@
     s.lifetime = Number(s.lifetime || 0) + amount;
     saveHub(s);
     render();
-    bump(amount);
+    if (!(opts && opts.silent)) bump(amount);
     syncSharedUi(s.credits);
-    broadcast(amount, s.credits, source);
+    broadcast(amount, s.credits, source, !!(opts && opts.silent));
     return s.credits;
   }
 

@@ -67,12 +67,29 @@
     el.classList.add(cls);
   }
 
+  // Anti-spam: settleGame() toasts on EVERY round, and auto-bet / multi-ball
+  // Plinko settle many rounds a second — this used to stack an unbounded pile
+  // of toasts and made the app unusable. Dedup identical messages, rate-limit,
+  // and never stack more than 3.
+  var _tTimes = [];
+  var _tLast = Object.create(null);
   function toast(message, kind) {
     var host = document.getElementById('ostGames');
     if (!host) return;
+    var msg = String(message == null ? '' : message);
+    var now = Date.now();
+    if (_tLast[msg] && now - _tLast[msg] < 1200) return;      // identical burst
+    _tTimes = _tTimes.filter(function (t) { return now - t < 3000; });
+    if (_tTimes.length >= 5) return;                          // rate limit
+    _tTimes.push(now);
+    _tLast[msg] = now;
+    if (Object.keys(_tLast).length > 80) _tLast = Object.create(null);
+    // Never let more than 3 sit on screen.
+    var live = host.querySelectorAll('.ostg-toast');
+    for (var i = 0; i + 2 < live.length; i++) { try { live[i].remove(); } catch (_) {} }
     var el = document.createElement('div');
     el.className = 'ostg-toast ' + (kind || 'info');
-    el.textContent = message;
+    el.textContent = msg;
     host.appendChild(el);
     requestAnimationFrame(function () { el.classList.add('show'); });
     setTimeout(function () {
@@ -81,8 +98,14 @@
     }, 2400);
   }
 
+  // Also rate-limited: a win burst is 18 nodes, and auto-bet wins fire them
+  // back-to-back — the confetti became a permanent screen-filling storm.
+  var _burstAt = 0;
   function popBurst(parent, count) {
     if (!parent) return;
+    var now = Date.now();
+    if (now - _burstAt < 900) return;
+    _burstAt = now;
     var box = parent.getBoundingClientRect();
     for (var i = 0; i < (count || 18); i++) {
       var s = document.createElement('i');

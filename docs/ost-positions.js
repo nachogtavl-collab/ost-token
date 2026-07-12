@@ -106,30 +106,69 @@
       return b && b.status === 'won' && !b.claimed && !(api() && api().isClaiming && api().isClaiming(b.id));
     });
   }
-  // Serialised so payouts never race each other.
+  // A payout that keeps failing (dead RPC) must not be retried forever — that
+  // was a hidden hammer loop. Back off, and stop after a few tries.
+  var attempts = Object.create(null);
+  var nextTry = Object.create(null);
+  var MAX_TRIES = 4;
+
+  function retryable(b) {
+    var n = attempts[b.id] || 0;
+    if (n >= MAX_TRIES) return false;
+    return !nextTry[b.id] || Date.now() >= nextTry[b.id];
+  }
+
+  // Serialised so payouts never race each other. Pays SILENTLY and reports one
+  // summary — settling a backlog of wins used to fire a celebration per bet,
+  // which is what spammed the screen.
   function claimAll() {
     var a = api();
     if (!a || busy) return Promise.resolve(0);
+    var todo = claimable().filter(retryable);
+    if (!todo.length) return Promise.resolve(0);
     busy = true;
-    var todo = claimable();
+    var before = summary();
     var done = 0;
     return todo.reduce(function (chain, b) {
       return chain.then(function () {
-        try { a.claim(b.id, null); done++; } catch (_) {}
-        return new Promise(function (r) { setTimeout(r, 250); });
+        attempts[b.id] = (attempts[b.id] || 0) + 1;
+        nextTry[b.id] = Date.now() + Math.min(60000, 4000 * attempts[b.id]); // backoff
+        try { a.claim(b.id, null, { silent: true }); done++; } catch (_) {}
+        return new Promise(function (r) { setTimeout(r, 200); });
       });
     }, Promise.resolve()).then(function () {
+      return new Promise(function (r) { setTimeout(r, 400); }); // let payouts settle
+    }).then(function () {
       busy = false;
+      var after = summary();
+      var paid = after.paidTotal - before.paidTotal;
+      var n = before.toClaim - after.toClaim;
+      if (n > 0 && paid > 0) announce(n, paid);   // ONE summary, not one per bet
       render();
       return done;
-    }).catch(function () { busy = false; return done; });
+    }).catch(function () { busy = false; render(); return done; });
+  }
+
+  // A single, quiet confirmation for a batch of claims.
+  var lastAnnounce = 0;
+  function announce(n, paid) {
+    if (Date.now() - lastAnnounce < 5000) return;
+    lastAnnounce = Date.now();
+    var msg = 'Claimed ' + n + ' win' + (n === 1 ? '' : 's') + ' · +' + fmt(paid) + ' OST';
+    var el = document.getElementById(HUD_ID);
+    if (el) {
+      var note = document.createElement('div');
+      note.className = 'ost-pos-hud__done';
+      note.textContent = '✓ ' + msg;
+      el.appendChild(note);
+      setTimeout(function () { note.remove(); }, 5000);
+    }
   }
 
   // Auto-claim sweep: settle wins the moment they resolve.
   function sweep() {
-    if (!autoClaimOn()) return;
-    var todo = claimable();
-    if (!todo.length) return;
+    if (!autoClaimOn() || busy) return;
+    if (!claimable().filter(retryable).length) return;
     claimAll();
   }
 
@@ -202,6 +241,7 @@
       + '.ost-pos-btn{background:linear-gradient(135deg,#34d399,#22d3ee);color:#04211a;border:0;border-radius:10px;padding:9px 16px;font-weight:700;font-size:.85rem;min-height:40px;cursor:pointer;}'
       + '.ost-pos-btn[disabled]{opacity:.6;cursor:default;}'
       + '.ost-pos-hud__warn{margin-top:8px;font-size:.78rem;color:#fcd34d;}'
+      + '.ost-pos-hud__done{margin-top:8px;font-size:.8rem;color:#34d399;font-weight:600;}'
       + '.ost-pos-hud__auto{display:flex;align-items:center;gap:7px;margin-top:9px;font-size:.78rem;color:#94a3b8;cursor:pointer;}';
     var s = document.createElement('style');
     s.id = 'ostPosCss'; s.textContent = css;

@@ -389,9 +389,11 @@
         signature: o.signature || '',
         // Carry the settle fields through — without these a claimed desk win
         // still rendered a live "Claim" button forever (and could re-pay).
-        claimed: !!o.claimed,
-        claimedAt: Number(o.claimedAt) || 0,
-        paidOut: Number(o.paidOut) || 0,
+        // app.js's own ticket marks payouts as cashedOut/cashoutOst, so treat
+        // that as claimed too — otherwise we'd pay a bet the desk already paid.
+        claimed: !!(o.claimed || o.cashedOut),
+        claimedAt: Number(o.claimedAt || o.cashedOutAt) || 0,
+        paidOut: Number(o.paidOut || o.cashoutOst) || 0,
         houseFee: Number(o.houseFee) || 0,
         fundedBy: o.fundedBy || '',     // decides which rail the payout uses
 
@@ -557,12 +559,13 @@
     });
   }
 
-  function claimBet(betId, btn) {
+  function claimBet(betId, btn, opts) {
+    var silent = !!(opts && opts.silent);           // batch/auto claim: one summary, not N popups
     if (claimingIds[betId]) return;                 // re-entrancy: already paying out
     // Look up across BOTH stores — a main trade-desk win lives in the order
     // store, not the extras store (that mismatch made desk claims pay nothing).
     var bet = readAllBets().find(function (b) { return b && b.id === betId; });
-    if (!bet || bet.status !== 'won' || bet.claimed) return;
+    if (!bet || bet.status !== 'won' || bet.claimed || bet.cashedOut) return;
     claimingIds[betId] = true;                      // re-renders now show "Claiming…"
     if (btn) { btn.disabled = true; btn.textContent = 'Claiming…'; }
 
@@ -585,11 +588,17 @@
       // idempotent: if anything already marked it claimed, don't write a
       // second payout record.
       updateAnyBet(betId, function (r) {
-        if (r.claimed) return;
+        if (r.claimed || r.cashedOut) return;
         r.claimed = true;
         r.claimedAt = Date.now();
         r.paidOut = payAmt;
         r.houseFee = houseFee;
+        // The main ticket in app.js keys its Open/Claim/Paid tabs off
+        // cashedOut/cashoutOst. Write BOTH schemas or a claimed bet sits in the
+        // "Claim" tab forever AND the ticket's own cashout could pay it twice.
+        r.cashedOut = true;
+        r.cashedOutAt = r.claimedAt;
+        r.cashoutOst = payAmt;
         if (sig && !r.signature) r.signature = sig;   // never overwrite an on-chain sig
       });
       delete claimingIds[betId];
@@ -634,7 +643,7 @@
     // No usable on-chain payout path (or a credits-funded ticket): pay from the
     // canonical credits pool. A WON BET MUST ALWAYS PAY — never strand it.
     if (window.OST_MONEY && typeof window.OST_MONEY.add === 'function') {
-      window.OST_MONEY.add(Number(payAmt) || 0, 'prediction-win');
+      window.OST_MONEY.add(Number(payAmt) || 0, 'prediction-win', { silent: silent });
       doClaim('credits-' + Date.now().toString(36));
       return;
     }

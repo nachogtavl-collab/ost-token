@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v245';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v245';
+const CACHE_NAME = 'ost-pwa-cache-v246';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v246';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -10,7 +10,7 @@ const PRECACHE_PATHS = [
   './fast-markets.js?v=2',
   './ost-tick-turbo.js?v=1',
   './commerce.html',
-  './ost-money.js?v=2',
+  './ost-money.js?v=3',
   './ost-house.js?v=1',
   './ost-prices.js?v=2',
   './ost-arbitrage.js?v=1',
@@ -101,8 +101,8 @@ const PRECACHE_PATHS = [
   './mesh/mesh-rtc.js?v=10',
   './mesh/mesh.css?v=14',
   './compartments.js?v=6',
-  './prediction-extras.js?v=15',
-  './ost-positions.js?v=1',
+  './prediction-extras.js?v=16',
+  './ost-positions.js?v=2',
   './prediction-pro.js?v=200',
   './prediction-scalar.js?v=4',
   './prediction-modal.js?v=204',
@@ -120,7 +120,7 @@ const PRECACHE_PATHS = [
   './ost-card.js?v=7',
   './launchpad-engine.js?v=5',
   './swap-resilient.js?v=200',
-  './ost-games.js?v=23',
+  './ost-games.js?v=24',
   './code-academy.js?v=3',
   './i18n-runtime.js?v=4',
   './devnet-rescue.js?v=200',
