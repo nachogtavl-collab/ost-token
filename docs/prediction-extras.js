@@ -41,6 +41,34 @@
     return rec;
   }
 
+  // ---- main trade-desk orders (ost.prediction.orders.v1) --------------------
+  // Bets placed on the MAIN desk live in the app.js order store, and the panel
+  // renders them with a synthetic "desk-" id. Claiming one used to look it up
+  // in the extras store (where it never exists) and silently return — so every
+  // trade-desk win showed a Claim button that paid NOTHING. These helpers let a
+  // claim settle against the real order record.
+  var DESK_PREFIX = 'desk-';
+  function deskKeyOf(o) { return DESK_PREFIX + (o.signature || (o.createdAt + '-' + o.marketId)); }
+  function readDeskOrders() {
+    try { var a = JSON.parse(localStorage.getItem(TRADE_DESK_STORE_KEY) || '[]'); return Array.isArray(a) ? a : []; }
+    catch (_) { return []; }
+  }
+  function writeDeskOrders(list) {
+    try { localStorage.setItem(TRADE_DESK_STORE_KEY, JSON.stringify(list)); } catch (_) {}
+  }
+  function updateDeskOrder(betId, mutate) {
+    var list = readDeskOrders();
+    for (var i = 0; i < list.length; i++) {
+      if (list[i] && deskKeyOf(list[i]) === betId) { mutate(list[i]); writeDeskOrders(list); return list[i]; }
+    }
+    return null;
+  }
+  // Route a settle to whichever store actually owns the record.
+  function updateAnyBet(betId, mutate) {
+    if (String(betId).indexOf(DESK_PREFIX) === 0) return updateDeskOrder(betId, mutate);
+    return updateBet(betId, mutate);
+  }
+
   function ensureModal() {
     var el = document.getElementById(MODAL_ID);
     if (el) return el;
@@ -349,7 +377,7 @@
       var stake = Number(o.stake) || 0;
       var price = Number(o.price) || 0.5;
       return {
-        id: 'desk-' + (o.signature || (o.createdAt + '-' + o.marketId)),
+        id: deskKeyOf(o),
         marketId: o.marketId || o.id || '',
         title: o.title || 'Prediction ticket',
         side: (o.side || 'yes').toLowerCase(),
@@ -359,6 +387,14 @@
         placedAt: Number(o.createdAt) || Date.now(),
         status: o.status || 'open',
         signature: o.signature || '',
+        // Carry the settle fields through — without these a claimed desk win
+        // still rendered a live "Claim" button forever (and could re-pay).
+        claimed: !!o.claimed,
+        claimedAt: Number(o.claimedAt) || 0,
+        paidOut: Number(o.paidOut) || 0,
+        houseFee: Number(o.houseFee) || 0,
+        fundedBy: o.fundedBy || '',     // decides which rail the payout uses
+
         isOstNative: /ost/i.test(String(o.source || '')),
         source: o.source || ''
       };
@@ -523,7 +559,9 @@
 
   function claimBet(betId, btn) {
     if (claimingIds[betId]) return;                 // re-entrancy: already paying out
-    var bet = readBets().find(function (b) { return b && b.id === betId; });
+    // Look up across BOTH stores — a main trade-desk win lives in the order
+    // store, not the extras store (that mismatch made desk claims pay nothing).
+    var bet = readAllBets().find(function (b) { return b && b.id === betId; });
     if (!bet || bet.status !== 'won' || bet.claimed) return;
     claimingIds[betId] = true;                      // re-renders now show "Claiming…"
     if (btn) { btn.disabled = true; btn.textContent = 'Claiming…'; }
@@ -543,15 +581,16 @@
     var doClaim = function (sig) {
       if (settled) return;                          // never double-settle
       settled = true;
-      // Fresh read-modify-write, and idempotent: if anything already marked it
-      // claimed, don't write a second payout record.
-      updateBet(betId, function (r) {
+      // Fresh read-modify-write into whichever store owns the record, and
+      // idempotent: if anything already marked it claimed, don't write a
+      // second payout record.
+      updateAnyBet(betId, function (r) {
         if (r.claimed) return;
         r.claimed = true;
         r.claimedAt = Date.now();
         r.paidOut = payAmt;
         r.houseFee = houseFee;
-        if (sig) r.signature = sig;
+        if (sig && !r.signature) r.signature = sig;   // never overwrite an on-chain sig
       });
       delete claimingIds[betId];
       if (btn && btn.parentNode) {
@@ -570,26 +609,36 @@
         btn.title = (error && error.message) || 'OST payout vault is still loading.';
       }
     };
-    // Try the live payout path first; local fallback keeps resolved wins usable
-    // on static deployments where the payout module has not loaded yet.
-    try {
-      if (window.OST_TRADE && typeof window.OST_TRADE.predictionCashOut === 'function') {
-        window.OST_TRADE.predictionCashOut(bet, payAmt).then(function (result) {
-          doClaim(result && result.sig);
-        }).catch(failClaim);
+    // Pay through the SAME rail the ticket was funded on (see submitBet):
+    // a credits-funded ticket pays credits; an on-chain ticket pays on-chain.
+    // Previously the on-chain path was tried whenever OST_TRADE merely EXISTED,
+    // and if it rejected (no wallet connected, RPC down) the win was never paid
+    // — the button just came back. That stranded real winnings.
+    var creditsFunded = bet.fundedBy === 'credits' || /^credits-/.test(String(bet.signature || ''));
+    // OST_WALLET/OST_TRADE EXIST even with no wallet connected — gating on mere
+    // object presence sent every credits user down an on-chain payout that
+    // always rejected, and the win was stranded. Require a real session.
+    var hasWallet = !!(window.OST_WALLET && (window.OST_WALLET.session || window.OST_WALLET.address));
+    var onChainFn = (window.OST_TRADE && typeof window.OST_TRADE.predictionCashOut === 'function')
+      ? function () { return window.OST_TRADE.predictionCashOut(bet, payAmt).then(function (r) { return r && r.sig; }); }
+      : (window.OST_REAL_SWAP && typeof window.OST_REAL_SWAP.payout === 'function')
+        ? function () { return window.OST_REAL_SWAP.payout(payAmt).then(function () { return null; }); }
+        : null;
+
+    if (!creditsFunded && hasWallet && onChainFn) {
+      try {
+        onChainFn().then(function (sig) { doClaim(sig); }).catch(failClaim);
         return;
-      }
-      if (window.OST_REAL_SWAP && typeof window.OST_REAL_SWAP.payout === 'function') {
-        window.OST_REAL_SWAP.payout(payAmt).then(function () { doClaim(); }).catch(failClaim);
-        return;
-      }
-    } catch (e) {}
-    // Static-deploy fallback: pay the win from the canonical credits pool so
-    // a claim ALWAYS moves real balance.
+      } catch (e) { /* fall through to the credits rail */ }
+    }
+    // No usable on-chain payout path (or a credits-funded ticket): pay from the
+    // canonical credits pool. A WON BET MUST ALWAYS PAY — never strand it.
     if (window.OST_MONEY && typeof window.OST_MONEY.add === 'function') {
       window.OST_MONEY.add(Number(payAmt) || 0, 'prediction-win');
+      doClaim('credits-' + Date.now().toString(36));
+      return;
     }
-    doClaim('local-' + Date.now().toString(36));
+    failClaim(new Error('No payout rail available — try again in a moment.'));
   }
 
   // Mount a "My bets" tab in the prediction board
@@ -1046,4 +1095,12 @@
       if (ev && (ev.key === TRADE_DESK_STORE_KEY || ev.key === STORE_KEY)) refreshRecentActivityFeed().then(tick);
     });
   })();
+
+  // The ONE claim path, shared by the panel, the ticket HUD, auto-claim and the
+  // reconciler — so payouts can never diverge between surfaces.
+  window.OST_PRED_CLAIM = {
+    list: readAllBets,             // merged positions from BOTH stores
+    claim: claimBet,               // idempotent, re-entrancy-safe, routes to the right store
+    isClaiming: function (id) { return !!claimingIds[id]; }
+  };
 })();
