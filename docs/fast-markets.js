@@ -71,12 +71,26 @@
     });
   }
 
+  // api.binance.com is CORS-BLOCKED from the browser (and geo-blocked for some
+  // testers), yet it used to be tried FIRST — so every single poll burned a
+  // guaranteed failure (~200ms) before falling back. That is a big part of the
+  // "lag / guessing / waiting on new data". Order now: OST worker relay (edge,
+  // always reachable, 1s cache) -> binance.vision -> coinbase.
+  function relayBase() {
+    var b = (typeof window !== 'undefined' && window.OST_API_BASE) || '';
+    return b ? String(b).replace(/\/$/, '') : '';
+  }
+
   function fetchSpot(coin) {
+    var rb = relayBase();
     var feeds = [
-      { url: 'https://api.binance.com/api/v3/ticker/price?symbol=' + coin.symbol, pick: function (j) { return Number(j && j.price); }, name: 'binance' },
       { url: 'https://data-api.binance.vision/api/v3/ticker/price?symbol=' + coin.symbol, pick: function (j) { return Number(j && j.price); }, name: 'binance-vision' },
       { url: 'https://api.coinbase.com/v2/prices/' + coin.coinbase + '/spot', pick: function (j) { return Number(j && j.data && j.data.amount); }, name: 'coinbase' }
     ];
+    // Last resort for regions where BOTH Binance and Coinbase are blocked:
+    // the OST worker's Coinbase-backed /spot (Binance 403s the edge, so it
+    // cannot be relayed).
+    if (rb) feeds.push({ url: rb + '/spot?symbol=' + coin.symbol, pick: function (j) { return Number(j && j.price); }, name: 'ost-spot' });
     var i = 0;
     function next() {
       if (i >= feeds.length) return Promise.resolve(null);
@@ -92,10 +106,9 @@
   // Kline for a specific round — the shared source of truth for open/close.
   function fetchKline(coin, openAt) {
     var q = '?symbol=' + coin.symbol + '&interval=5m&limit=1&startTime=' + openAt;
-    var urls = [
-      'https://api.binance.com/api/v3/klines' + q,
-      'https://data-api.binance.vision/api/v3/klines' + q
-    ];
+    // Settlement source stays the Binance 5m kline (deterministic for everyone).
+    // api.binance.com is CORS-blocked from the browser; binance.vision is not.
+    var urls = ['https://data-api.binance.vision/api/v3/klines' + q];
     var i = 0;
     function next() {
       if (i >= urls.length) return Promise.resolve(null);
@@ -183,10 +196,7 @@
 
   function refreshDayVolume(coin) {
     var st = live[coin.key];
-    var urls = [
-      'https://api.binance.com/api/v3/ticker/24hr?symbol=' + coin.symbol,
-      'https://data-api.binance.vision/api/v3/ticker/24hr?symbol=' + coin.symbol
-    ];
+    var urls = ['https://data-api.binance.vision/api/v3/ticker/24hr?symbol=' + coin.symbol];
     var i = 0;
     function next() {
       if (i >= urls.length) return Promise.resolve(null);

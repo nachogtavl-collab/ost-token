@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v248';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v248';
+const CACHE_NAME = 'ost-pwa-cache-v250';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v250';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -7,8 +7,8 @@ const PRECACHE_PATHS = [
   './index.html',
   './markets.html',
   './desktop.html',
-  './fast-markets.js?v=2',
-  './ost-tick-turbo.js?v=2',
+  './fast-markets.js?v=3',
+  './ost-tick-turbo.js?v=4',
   './commerce.html',
   './ost-money.js?v=3',
   './ost-house.js?v=1',

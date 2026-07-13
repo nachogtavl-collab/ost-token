@@ -2684,14 +2684,21 @@ export default {
       '/gamma': 'https://gamma-api.polymarket.com',
       '/clob': 'https://clob.polymarket.com',
       '/data': 'https://data-api.polymarket.com'
+      // NOTE: no Binance relay here on purpose — Binance returns 403 to
+      // Cloudflare/datacenter IPs, so proxying it server-side does not work.
+      // Browsers CAN reach data-api.binance.vision directly (api.binance.com is
+      // the one that's CORS-blocked), so the client hits binance.vision first
+      // and falls back to GET /spot below, which is Coinbase-backed and works
+      // from the edge — that's the path for regions where Binance is blocked.
     };
     for (const prefix of Object.keys(RELAY_HOSTS)) {
       if (method === 'GET' && (path === prefix || path.startsWith(prefix + '/'))) {
         const upstream = RELAY_HOSTS[prefix] + path.slice(prefix.length) + url.search;
+        const ttl = 15;
         try {
           const resp = await fetch(upstream, {
             headers: { accept: 'application/json', 'user-agent': 'ost-relay/1.0 (+https://ost-token.pages.dev)' },
-            cf: { cacheTtl: 15, cacheEverything: true }
+            cf: { cacheTtl: ttl, cacheEverything: true }
           });
           const body = await resp.arrayBuffer();
           return new Response(body, {
@@ -2699,13 +2706,40 @@ export default {
             headers: {
               ...CORS_HEADERS,
               'content-type': resp.headers.get('content-type') || 'application/json',
-              'cache-control': 'public, max-age=15',
+              'cache-control': 'public, max-age=' + ttl,
               'x-ost-relay': prefix.slice(1)
             }
           });
         } catch (err) {
           return json({ error: 'relay_failed', upstream: prefix, message: String(err?.message || err).slice(0, 200) }, 502);
         }
+      }
+    }
+
+    // ── GET /spot?symbol=BTCUSDT ─ edge-reachable spot price ─────────────────
+    // The browser's Binance paths can be blocked (api.binance.com is CORS-
+    // blocked everywhere; binance.vision + the ws stream are blocked in some
+    // regions, e.g. CN). Binance also 403s Cloudflare IPs, so we CANNOT relay
+    // it. Coinbase does answer from the edge — so this is the always-reachable
+    // fallback tick source. 1s edge cache: all clients in the same second share
+    // one upstream call.
+    if (path === '/spot' && method === 'GET') {
+      const symbol = String(url.searchParams.get('symbol') || '').toUpperCase();
+      const MAP = { BTCUSDT: 'BTC-USD', ETHUSDT: 'ETH-USD', SOLUSDT: 'SOL-USD' };
+      const pair = MAP[symbol];
+      if (!pair) return json({ error: 'unsupported_symbol', symbol, supported: Object.keys(MAP) }, 400);
+      try {
+        const r = await fetch('https://api.coinbase.com/v2/prices/' + pair + '/spot', {
+          headers: { accept: 'application/json' },
+          cf: { cacheTtl: 1, cacheEverything: true }
+        });
+        const j = await r.json();
+        const price = Number(j && j.data && j.data.amount);
+        if (!Number.isFinite(price) || price <= 0) return json({ error: 'no_price', symbol }, 502);
+        return json({ symbol, price, source: 'coinbase', ts: Date.now() }, 200,
+          { 'cache-control': 'public, max-age=1', 'x-ost-spot': 'coinbase' });
+      } catch (err) {
+        return json({ error: 'spot_failed', message: String(err?.message || err).slice(0, 160) }, 502);
       }
     }
 
