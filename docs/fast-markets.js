@@ -82,6 +82,18 @@
   }
 
   function fetchSpot(coin) {
+    // SOLANA-FIRST: prefer the Pyth Network oracle (Solana's price layer) when
+    // it has a fresh tick — that is the decentralization direction of the app.
+    // Exchange APIs remain as fallbacks so a Pyth outage can't stall rounds.
+    // Settlement is UNCHANGED (deterministic Binance 5m klines) until the
+    // ost-betting Anchor program verifies Pyth updates on-chain.
+    try {
+      var sym = String(coin.symbol || '').replace(/USDT$/, '');
+      var py = window.OST_PYTH && window.OST_PYTH.get ? window.OST_PYTH.get(sym) : null;
+      if (py && py.price > 0 && py.ageS < 12) {
+        return Promise.resolve({ price: py.price, source: 'pyth' });
+      }
+    } catch (_) {}
     var rb = relayBase();
     var feeds = [
       { url: 'https://data-api.binance.vision/api/v3/ticker/price?symbol=' + coin.symbol, pick: function (j) { return Number(j && j.price); }, name: 'binance-vision' },

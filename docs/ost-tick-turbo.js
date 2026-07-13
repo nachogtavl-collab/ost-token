@@ -162,6 +162,14 @@
   }, false);
   window.addEventListener('pagehide', close, false);
 
+  // Pyth (Solana's oracle) ticks arrive via ost-pyth.js — feed them into the
+  // focused market too. Free extra tick density from the Solana ecosystem.
+  window.addEventListener('ost:pyth-tick', function (e) {
+    var d = e && e.detail;
+    if (!d || !wsKey) return;
+    if (SYMBOLS[wsKey] === String(d.symbol || '') + 'USDT') emitPrice(wsKey, Number(d.price));
+  }, false);
+
   window.OST_TURBO = {
     status: function () {
       return {

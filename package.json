@@ -17,7 +17,8 @@
     "metadata:ost": "ts-node scripts/create-ost-metaplex-metadata.ts",
     "metadata:mint": "ts-node scripts/create-mint-metadata.ts",
     "deploy:site": "npx wrangler pages deploy docs --project-name ost-token --branch master",
-    "predeploy:site": "node scripts/fetch-prediction-market-snapshot.js"
+    "predeploy:site": "node scripts/fetch-prediction-market-snapshot.js",
+    "deploy:ipfs": "node scripts/deploy-ipfs.mjs"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.0",
