@@ -26,7 +26,7 @@
   };
   var WS_BASE = 'wss://stream.binance.com:9443/ws/';
 
-  var minGap = 250;
+  var minGap = 150;   // fast devices: up to ~6-7 UI events/sec inside a market
   try {
     var c = navigator.connection || {};
     if (c.saveData || (typeof navigator.deviceMemory === 'number' && navigator.deviceMemory <= 2)) minGap = 600;

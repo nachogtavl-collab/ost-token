@@ -422,12 +422,22 @@
       host.innerHTML = '<div class="ost-pred-empty">No bets yet. Click <strong>Bet YES</strong> or <strong>Bet NO</strong> on any market, <em>or</em> use the main trade desk\'s <strong>Buy YES/NO with OST</strong> button — both flows show up here.</div>';
       return;
     }
+    // The REAL receivable for a win: net of the house fee — what a claim
+    // actually pays, not the pre-fee gross. Claimed bets use the true paidOut.
+    function netWin(b) {
+      if (b.claimed && Number(b.paidOut) > 0) return Number(b.paidOut);
+      var gross = Number(b.payoutIfWin) || 0;
+      try {
+        if (window.OST_HOUSE && window.OST_HOUSE.quote) return Number(window.OST_HOUSE.quote(gross, Number(b.stake) || 0).net) || gross;
+      } catch (_) {}
+      return gross;
+    }
     // Polymarket-style portfolio summary
     var totals = bets.reduce(function (acc, b) {
       var stake = Number(b.stake) || 0;
       acc.staked += stake;
       if (b.status === 'open')  acc.openCount++;
-      if (b.status === 'won') { acc.wonCount++; acc.realised += (Number(b.payoutIfWin) - stake); if (b.claimed) acc.claimed += Number(b.payoutIfWin); }
+      if (b.status === 'won') { acc.wonCount++; acc.realised += (netWin(b) - stake); if (b.claimed) acc.claimed += netWin(b); }
       if (b.status === 'lost')  { acc.lostCount++; acc.realised -= stake; }
       // Mark-to-market for open positions (current YES price from window cache)
       if (b.status === 'open') {
@@ -467,7 +477,9 @@
       var inFlight  = !!claimingIds[b.id];
       var canClaim  = b.status === 'won' && !b.claimed && !inFlight;
       var stake     = Number(b.stake) || 0;
-      var payout    = Number(b.payoutIfWin) || 0;
+      // EVERY row shows the REAL cash-out: net of the house fee — what a win
+      // actually pays into the balance, not the pre-fee gross.
+      var payout    = netWin(b);
       var entryPx   = Number(b.price) || 0.5;
       var live      = null;
       try { live = (window.OST_PREDICTIONS && window.OST_PREDICTIONS.priceFor && window.OST_PREDICTIONS.priceFor(b.marketId)) || null; } catch (_) {}

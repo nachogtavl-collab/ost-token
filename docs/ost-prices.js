@@ -17,7 +17,7 @@
 (function () {
   'use strict';
 
-  var CACHE_TTL = 1000;
+  var CACHE_TTL = 500;   // was 1000 — board/ticket track live data twice as fast
   var cache = {};       // id -> { yes, no, mid, ts, source }
   var overrides = {};   // id -> { yes, ts, source } pushed by producers
 
@@ -70,7 +70,7 @@
 
   function get(id) {
     var c = cache[id];
-    var ttl = (turboUntil[id] && Date.now() < turboUntil[id]) ? 250 : CACHE_TTL;
+    var ttl = (turboUntil[id] && Date.now() < turboUntil[id]) ? 120 : CACHE_TTL;
     if (c && Date.now() - c.ts < ttl) return c;
     var yes = clampP(resolveYes(id));
     if (!Number.isFinite(yes)) return c || null;   // keep last good if resolve fails

@@ -2836,6 +2836,18 @@ export default {
     // numbers; the worker also locks the round open price + appends to the
     // shared tick ring on every call.
     if (path === '/btc/price' && method === 'GET') {
+      // Serve from the shared ~900ms round cache when possible — same DO-load
+      // relief as /btc/round (see below).
+      const cachedRound = globalThis.__ostRoundCache;
+      if (cachedRound && Date.now() - cachedRound.ts < 900 && Number(cachedRound.data && cachedRound.data.livePrice) > 1000) {
+        const c = cachedRound.data;
+        return json({
+          price: Number(c.livePrice), currency: 'USD',
+          source: c.livePriceSource || c.source || 'ost-canonical',
+          round: { id: c.id, openAt: c.openAt, closeAt: c.closeAt, msLeft: Math.max(0, Number(c.closeAt) - Date.now()) },
+          canonical: true, ts: new Date(Number(c.livePriceTs) || Date.now()).toISOString()
+        }, 200, { 'cache-control': 'no-store', 'x-ost-cache': 'isolate' });
+      }
       const canonical = await getCanonicalBtcRound(env, { refresh: true });
       if (canonical && Number(canonical.livePrice) > 1000) {
         return json({
@@ -2876,9 +2888,20 @@ export default {
     // Single source of truth for the 5-min BTC round. Every browser/bot in the
     // SAME round MUST get the SAME openPrice + livePrice + yesPriceNumber here.
     // Resolves the "user A sees 80¢ NO, user B sees 50¢ NO" discrepancy.
+    // PERF: every client polls this at ~1.5s and EVERY request used to
+    // serialize through the single NativeMarketHub DO — under load the DO
+    // queued, responses lagged past the client's 4.5s freshness window, and
+    // the round UI froze/guessed. A ~900ms isolate cache means all users in
+    // the same second share ONE DO round-trip; data is at most 0.9s old,
+    // well inside the ws-tick cadence that keeps prices live between polls.
     if (path === '/btc/round' && method === 'GET') {
+      const now = Date.now();
+      if (globalThis.__ostRoundCache && now - globalThis.__ostRoundCache.ts < 900) {
+        return json(globalThis.__ostRoundCache.data, 200, { 'cache-control': 'no-store', 'x-ost-cache': 'isolate' });
+      }
       const refresh = url.searchParams.get('refresh') !== '0';
       const data = await getCanonicalBtcRound(env, { refresh });
+      if (data && Number(data.closeAt) > now) globalThis.__ostRoundCache = { ts: now, data };
       return json(data, 200, { 'cache-control': 'no-store' });
     }
 

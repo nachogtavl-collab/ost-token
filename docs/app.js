@@ -14666,7 +14666,10 @@
       var portfolio = state.orderHistory.reduce(function(acc, order) {
         var action = getPredictionOrderAction(order);
         var stake = Number(order && order.stake || 0) || 0;
-        var currentValue = order && order.cashedOut ? Number(order.cashoutOst || 0) : Number(action.payout || action.liveValue || 0);
+        // Portfolio numbers use the NET receivable (displayNetPayout is hoisted),
+        // matching what a cash-out will actually pay — not the pre-fee gross.
+        var netNow = displayNetPayout(action, order);
+        var currentValue = order && order.cashedOut ? Number(order.cashoutOst || 0) : (netNow || Number(action.liveValue || 0));
         acc.staked += stake;
         acc.value += Number.isFinite(currentValue) ? currentValue : 0;
         if (order && order.cashedOut) {
@@ -14674,7 +14677,7 @@
           acc.pnl += Number(order.cashoutOst || 0) - stake;
         } else if (action.finalStatus === 'won') {
           acc.claim += 1;
-          acc.pnl += Number(action.payout || 0) - stake;
+          acc.pnl += netNow - stake;
         } else if (action.finalStatus === 'lost') {
           acc.closed += 1;
           acc.pnl -= stake;
@@ -14702,6 +14705,28 @@
         '</div>'
       ].join('');
 
+      // The REAL cash-out number the user will receive — net of the house fee
+      // (winning claim) or the arbitrage spread (early sell). action.payout is
+      // the GROSS input the execution path rakes from; showing it on the button
+      // advertised more than users got. Display-only: execution math unchanged.
+      function displayNetPayout(action, order) {
+        var gross = Number(action.payout) || 0;
+        if (gross <= 0) return 0;
+        try {
+          if (action.kind === 'prediction-settlement') {
+            if (window.OST_HOUSE && window.OST_HOUSE.quote) {
+              return Number(window.OST_HOUSE.quote(gross, Number(order.stake || action.stake || 0)).net) || gross;
+            }
+          } else if (window.OST_ARB && window.OST_ARB.sellQuote) {
+            var mid = (window.OST_PRICES && order.marketId) ? window.OST_PRICES.mid(order.marketId, order.side) : Number(action.livePrice);
+            if (!Number.isFinite(mid) || mid <= 0) mid = Number(action.livePrice) || 0;
+            var shs = Number(order.shares) > 0 ? Number(order.shares) : (mid > 0 ? gross / mid : 0);
+            if (shs > 0 && mid > 0) return Number(window.OST_ARB.sellQuote(shs, mid).proceeds) || gross;
+          }
+        } catch (_) {}
+        return gross;
+      }
+
       var rowsHtml = state.orderHistory.map(function(order, idx) {
         var action = getPredictionOrderAction(order);
         var filterStatus = order.cashedOut ? 'paid' : action.finalStatus === 'won' ? 'claim' : action.finalStatus === 'lost' ? 'closed' : 'open';
@@ -14710,7 +14735,7 @@
           : t('wallet.portal.prediction.buyYes', 'YES position');
         var canCash = action.canCash && Number(order.stake || 0) > 0;
         var cashBtn = canCash
-          ? '<button type="button" class="prediction-cashout-btn" data-cashout-idx="' + idx + '" style="margin-left:auto;padding:4px 10px;border-radius:6px;background:#22c55e;color:#000;border:none;font-weight:700;cursor:pointer;font-size:12px">' + escapeHtml(action.label) + ' · ' + escapeHtml(formatOst(action.payout)) + '</button>'
+          ? '<button type="button" class="prediction-cashout-btn" data-cashout-idx="' + idx + '" style="margin-left:auto;padding:4px 10px;border-radius:6px;background:#22c55e;color:#000;border:none;font-weight:700;cursor:pointer;font-size:12px">' + escapeHtml(action.label) + ' · ' + escapeHtml(formatOst(displayNetPayout(action, order))) + '</button>'
           : '<span style="color:' + (order.cashedOut || action.finalStatus === 'won' ? '#22c55e' : action.finalStatus === 'lost' ? '#f87171' : '#94a3b8') + ';font-weight:700;font-size:12px;margin-left:auto">' + escapeHtml(action.detail || action.label) + '</span>';
         // Per-share info: use stored price directly (side-specific), fallback to deriving from potReturn
         var stake = Number(order.stake || 0);
@@ -17034,7 +17059,7 @@
         var id = String(state.selectedMarketId || '');
         if (!key || id.indexOf('ost-' + String(key).slice(0, 3) + '5m-') !== 0) return;
         var now = Date.now();
-        if (now - turboRenderAt < 240) return;
+        if (now - turboRenderAt < 120) return;   // ~8 ticket updates/sec inside a market
         turboRenderAt = now;
         renderPredictionTicket(getFilteredMarkets());
       } catch (_) {}

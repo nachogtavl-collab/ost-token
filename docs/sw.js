@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v246';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v246';
+const CACHE_NAME = 'ost-pwa-cache-v247';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v247';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -8,11 +8,11 @@ const PRECACHE_PATHS = [
   './markets.html',
   './desktop.html',
   './fast-markets.js?v=2',
-  './ost-tick-turbo.js?v=1',
+  './ost-tick-turbo.js?v=2',
   './commerce.html',
   './ost-money.js?v=3',
   './ost-house.js?v=1',
-  './ost-prices.js?v=2',
+  './ost-prices.js?v=3',
   './ost-arbitrage.js?v=1',
   './ost-quantum.js?v=1',
   './ost-parlay.js?v=3',
@@ -33,7 +33,7 @@ const PRECACHE_PATHS = [
   './ost-mobile-fit.css?v=1',
   './ost-appbar.css?v=2',
   './predict-mobile.css?v=1',
-  './ost-total-balance.js?v=1',
+  './ost-total-balance.js?v=2',
   './manifest.json',
   './favicon.svg',
   './ost-logo.svg',
@@ -60,7 +60,7 @@ const PRECACHE_PATHS = [
   './ost-optimistic.js?v=4',
   './realtime.js?v=2',
   './ost-notifications.js?v=3',
-  './app.js?v=216',
+  './app.js?v=217',
   './icons.js?v=1',
   './nuevo-laredo-gas.js?v=2',
   './shop-quickview.js?v=3',
@@ -101,7 +101,7 @@ const PRECACHE_PATHS = [
   './mesh/mesh-rtc.js?v=10',
   './mesh/mesh.css?v=14',
   './compartments.js?v=6',
-  './prediction-extras.js?v=16',
+  './prediction-extras.js?v=17',
   './ost-positions.js?v=2',
   './prediction-pro.js?v=200',
   './prediction-scalar.js?v=4',

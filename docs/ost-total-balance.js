@@ -23,6 +23,15 @@
   }
 
   function getWalletOst() {
+    // Prefer the balance tree: it includes the persisted last-known on-chain
+    // amount, so this badge survives hard refreshes / slow RPC exactly like
+    // the app bar — one source of truth across the whole app.
+    try {
+      if (window.OST_TREE && window.OST_TREE.chain) {
+        var c = window.OST_TREE.chain();
+        if (c && Number.isFinite(c.amount)) return Math.max(0, c.amount);
+      }
+    } catch (_) {}
     var el = document.getElementById('wdOstBal');
     if (!el) return 0;
     var n = parseFloat(el.textContent);
