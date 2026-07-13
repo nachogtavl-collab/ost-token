@@ -1606,6 +1606,11 @@
     // this in a loop; a manual tap runs it once.
     function dropOnce() {
      return new Promise(async function (resolveRound) {
+      // A previous round's rAF loop must NOT keep running: two concurrent loops
+      // both advance the same flights (double-speed) and could settle a round
+      // that had already visually finished — the "reads 10 balls dropping when
+      // they already dropped" report.
+      if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
       var amt = parseBet(bet, statusEl);
       if (amt === null) { resolveRound(false); return; }
       var res = placeBet(amt); if (!res.ok) { statusEl.textContent = res.msg; resolveRound(false); return; }
@@ -1646,6 +1651,42 @@
       }
 
       running = true;
+
+      // ---- guaranteed settlement ------------------------------------------
+      // The round used to resolve ONLY from inside the rAF loop, when the last
+      // ball landed. Browsers PAUSE requestAnimationFrame in a hidden tab, so
+      // switching away mid-drop froze the loop, the promise never resolved, and
+      // auto-bet hung forever — you had to restart the game by hand. Now every
+      // round settles exactly once, via the animation OR a watchdog.
+      var settled = false;
+      var watchdog = 0;
+      function finishRound() {
+        if (settled) return;
+        settled = true;
+        if (watchdog) { clearTimeout(watchdog); watchdog = 0; }
+        var totalMultiplier = amt > 0 ? totalPayout / amt : 0;
+        settleGame('plinko', amt, totalPayout, totalMultiplier, statusEl,
+          ballCount + ' ball' + (ballCount === 1 ? '' : 's') + ' landed · paid ' + totalPayout.toFixed(2) + ' OST (' + shortMult(totalMultiplier) + ' total).',
+          canvas.parentElement);
+        if (!autoRunning) setBusy([dropBtn, bet, risk, rows, balls], false);
+        resolveRound(true);
+      }
+      // Credit any ball that never got to animate (hidden tab), then settle.
+      function forceLandRemaining() {
+        scene.flights.forEach(function (f) {
+          if (f.done) return;
+          f.done = true; f.visible = false;
+          landedCount++;
+          totalPayout += perBall * arr[f.bucket];
+        });
+        drawScene();
+        finishRound();
+      }
+      // Generous ceiling: normal flight is ~(rows*0.15s + stagger). If we are
+      // past that by a wide margin the loop is not running — settle anyway.
+      var expectedMs = (g.n * 160) + (ballCount * 240) + 1500;
+      watchdog = setTimeout(forceLandRemaining, expectedMs + 4000);
+
       var last = performance.now();
       function loop(now) {
         var dt = Math.min(0.05, (now - last) / 1000);
@@ -1687,14 +1728,7 @@
               scene.pops.push({ x: f.bucket * g.bw + g.bw / 2, y: g.botY - 2, text: m + '×', ttl: 1, big: m >= 5 });
               var cls = m >= 5 ? 'big' : m >= 1.2 ? 'mid' : 'small';
               resultsBar.innerHTML += '<span class="ostg-plinko-chip ' + cls + '">' + m + '× · ' + pay.toFixed(2) + '</span>';
-              if (landedCount === ballCount) {
-                var totalMultiplier = totalPayout / amt;
-                settleGame('plinko', amt, totalPayout, totalMultiplier, statusEl,
-                  ballCount + ' ball' + (ballCount === 1 ? '' : 's') + ' landed · paid ' + totalPayout.toFixed(2) + ' OST (' + shortMult(totalMultiplier) + ' total).',
-                  canvas.parentElement);
-                if (!autoRunning) setBusy([dropBtn, bet, risk, rows, balls], false);
-                resolveRound(true);
-              }
+              if (landedCount >= ballCount) finishRound();   // settles exactly once
             }
           }
         });
@@ -1718,14 +1752,24 @@
       autoRunning = true;
       dropBtn.textContent = 'Stop auto';
       dropBtn.classList.add('ostg-btn-danger');
-      var remaining = Math.max(0, Math.floor(Number(autoNEl && autoNEl.value) || 0));
-      var infinite = remaining === 0;
+      // Read the requested count ONCE and count down internally. It used to
+      // decrement the Rounds INPUT itself, so the box ticked down to 0 and your
+      // chosen number was destroyed — after a run you had to retype it before
+      // you could drop again ("only lasts 10 rounds / manual restart").
+      var total = Math.max(0, Math.floor(Number(autoNEl && autoNEl.value) || 0));
+      var infinite = total === 0;
+      var remaining = total;
       var played = 0;
       while (autoRunning && (infinite || remaining > 0)) {
         var ok = await dropOnce();
         if (!ok) break;                       // bad bet / out of balance — stop
         played++;
-        if (!infinite) { remaining--; if (autoNEl) autoNEl.value = String(remaining); }
+        if (!infinite) remaining--;
+        if (statusEl) {
+          statusEl.textContent += infinite
+            ? ' · auto round ' + played
+            : ' · auto ' + played + '/' + total;
+        }
         if (!autoRunning || (!infinite && remaining <= 0)) break;
         await delay(750);                     // brief beat between rounds
       }
@@ -1733,7 +1777,7 @@
       dropBtn.textContent = 'Drop balls';
       dropBtn.classList.remove('ostg-btn-danger');
       setBusy([dropBtn, bet, risk, rows, balls], false);
-      if (autoNEl && Number(autoNEl.value) <= 0) autoNEl.value = '10';
+      // The user's chosen count is preserved — auto can be re-run immediately.
       if (statusEl && played > 0) statusEl.textContent += ' · auto finished (' + played + ' round' + (played === 1 ? '' : 's') + ')';
     }
 
