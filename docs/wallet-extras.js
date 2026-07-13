@@ -177,29 +177,44 @@
     if (Number.isFinite(p.solana) && p.solana > 0) return p.solana;
     return 150; // sane fallback for May 2026 — much closer to spot than 86.6
   }
+  // THE canonical USD price of OST for CONVERSIONS (both swap directions and
+  // the fiat tiers). This must be ONE number app-wide.
+  //
+  // It was not. The oracle check below used to run FIRST on the belief that
+  // "the flag is OFF by default" — but index.html sets
+  // `OST_LIVE_PRICE = OST_LIVE_PRICE !== false`, i.e. ON. So SOL→OST priced OST
+  // at the oracle (~$0.138) while OST→SOL (swap-resilient) priced it at the
+  // topup config (~$0.0118). Same token, two prices, 11.7x apart: converting
+  // 1 SOL -> OST -> back to SOL destroyed ~92% of the user's value, and the
+  // SOL→OST quote handed out ~11.7x LESS OST than the app's own advertised
+  // rate. Restoring the documented ranking (topup config first) makes both
+  // directions agree, matches the purchase tiers, spends the ABUNDANT asset
+  // (10B OST in the pool) and protects the SCARCE one (~30 SOL).
+  //
+  // NOTE: window.OST.getPrice() (the synthetic market oracle) is a DISPLAY
+  // price for charts — it is deliberately NOT the conversion price.
   function getLiveOstUsd() {
-    // Step 3: when the live-price flag is on, the worker oracle wins.
-    // Flag is OFF by default, so existing topup-worker ranking is preserved.
-    try {
-      if (window.OST_LIVE_PRICE && window.OST && typeof window.OST.getPrice === 'function') {
-        var liveOracle = Number(window.OST.getPrice());
-        if (Number.isFinite(liveOracle) && liveOracle > 0) return liveOracle;
-      }
-    } catch (e) {}
-    // Same ranking: prefer the topup worker price (which is what the UI
-    // quote displays — typically 0.0118). Fall back to `__ostPrices.ost`,
-    // and finally to the topup default. NEVER default to 1, which would
-    // collapse the SOL→OST rate by ~85x and credit "far less OST".
     try {
       if (window.OST_TOPUP && typeof window.OST_TOPUP.usdPerOst === 'function') {
         var liveTop = Number(window.OST_TOPUP.usdPerOst());
         if (Number.isFinite(liveTop) && liveTop > 0) return liveTop;
       }
     } catch (e) {}
+    try {
+      if (window.OST_LIVE_PRICE && window.OST && typeof window.OST.getPrice === 'function') {
+        var liveOracle = Number(window.OST.getPrice());
+        if (Number.isFinite(liveOracle) && liveOracle > 0) return liveOracle;
+      }
+    } catch (e) {}
     var p = window.__ostPrices || {};
     if (Number.isFinite(p.ost) && p.ost > 0 && p.ost < 100) return p.ost;
     return 0.0118; // matches topup.js DEFAULT_USD_PER_OST
   }
+  // One exported source so no future module can invent a third conversion price.
+  window.OST_CONVERT_PRICE = {
+    ostUsd: getLiveOstUsd,
+    solUsd: function () { return getLiveSolUsd(); }
+  };
 
   function quoteSolToOst(solAmount) {
     var solUsd = getLiveSolUsd();

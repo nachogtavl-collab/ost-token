@@ -3633,15 +3633,39 @@
   async function faucetGateRequest(path, body) {
     const base = getOstApiBase();
     if (!base) return { ok: false, error: 'api_not_configured' };
-    const response = await fetch(base + path, {
-      method: body ? 'POST' : 'GET',
-      headers: body ? { 'content-type': 'application/json', accept: 'application/json' } : { accept: 'application/json' },
-      body: body ? JSON.stringify(body) : undefined,
-      cache: 'no-store'
-    });
+    let response;
+    try {
+      response = await fetch(base + path, {
+        method: body ? 'POST' : 'GET',
+        headers: body ? { 'content-type': 'application/json', accept: 'application/json' } : { accept: 'application/json' },
+        body: body ? JSON.stringify(body) : undefined,
+        cache: 'no-store'
+      });
+    } catch (networkError) {
+      // A dead network used to THROW out of here and abort the whole claim.
+      return { ok: false, error: 'gate_unreachable', unreachable: true };
+    }
     const payload = await response.json().catch(function() { return {}; });
     if (!response.ok) return Object.assign({ ok: false, httpStatus: response.status }, payload || {});
     return payload || { ok: true };
+  }
+
+  // Is this gate result an INFRASTRUCTURE failure (gate is down) rather than an
+  // authoritative "no" (cooldown / already claiming)? The FaucetGate is a
+  // Durable Object; when its free-tier quota is exhausted every request 5xx's,
+  // and the faucet used to fail CLOSED — a quota problem became a total faucet
+  // outage for every legitimate user. Those cases now fall back to the local
+  // cooldown record instead of denying the claim.
+  function faucetGateIsDown(gate) {
+    if (!gate) return true;                                   // null/undefined
+    if (gate.ok !== false) return false;                      // gate answered fine
+    const err = String(gate.error || '');
+    if (err === 'cooldown' || err === 'claim_in_progress') return false;  // authoritative
+    if (gate.unreachable) return true;
+    const status = Number(gate.httpStatus || 0);
+    if (status === 429 || status >= 500) return true;         // rate-limited / DO quota / crash
+    if (/not_configured|unavailable|exceeded|quota|durable/i.test(err)) return true;
+    return true;   // unknown gate error -> treat as down, never strand a real user
   }
 
   function syncRewardClaimsFromRemote(walletAddress, options) {
@@ -3793,32 +3817,54 @@
 
     const claimer = connectedWalletSession.publicKey;
     const walletAddress = claimer.toBase58();
-    await syncRewardClaimsFromRemote(walletAddress, { force: true });
+    // Best-effort: a failed remote sync must never abort the claim (it used to
+    // reject and take the whole faucet down with it).
+    await syncRewardClaimsFromRemote(walletAddress, { force: true }).catch(function () { return false; });
     const state = getRewardClaimForWallet(walletAddress);
     let kind = 'welcome';
     let amount = OST_WELCOME_DROP_AMOUNT;
     let reservation = null;
+
+    // Local cooldown check — the fallback authority whenever the remote gate
+    // cannot answer. Enforces welcome-once + daily on this device.
+    const applyLocalCooldown = async () => {
+      if (state.welcomeClaimed) {
+        if (!state.dailyReady) {
+          return { claimed: false, cooldown: true, nextDailyClaimAt: state.nextDailyClaimAt, balance: await getOstBalanceForAddress(claimer) };
+        }
+        kind = 'daily';
+        amount = OST_DAILY_DROP_AMOUNT;
+      }
+      return null;   // clear to claim
+    };
+
+    let gateDown = false;
     if (getOstApiBase()) {
       const gate = await reserveRemoteFaucetClaim(walletAddress);
-      if (!gate || gate.ok === false) {
-        if (gate && gate.error === 'cooldown') {
-          const remoteState = getRewardClaimForWallet(walletAddress);
-          return { claimed: false, cooldown: true, nextDailyClaimAt: remoteState.nextDailyClaimAt, balance: await getOstBalanceForAddress(claimer) };
-        }
-        if (gate && gate.error === 'claim_in_progress') {
-          throw new Error('A faucet claim is already syncing for this wallet. Wait a minute and refresh on any device.');
-        }
-        throw new Error('Faucet gate is temporarily unavailable. Claims are paused to prevent duplicate farming.');
+      if (gate && gate.ok !== false) {
+        reservation = gate;
+        kind = gate.kind || kind;
+        amount = Number(gate.amount || amount);
+      } else if (gate && gate.error === 'cooldown') {
+        const remoteState = getRewardClaimForWallet(walletAddress);
+        return { claimed: false, cooldown: true, nextDailyClaimAt: remoteState.nextDailyClaimAt, balance: await getOstBalanceForAddress(claimer) };
+      } else if (gate && gate.error === 'claim_in_progress') {
+        throw new Error('A faucet claim is already syncing for this wallet. Wait a minute and refresh on any device.');
+      } else if (faucetGateIsDown(gate)) {
+        // Gate is DOWN (DO quota exhausted / 5xx / unreachable). Do not punish
+        // legitimate users: fall back to the local cooldown record. Cross-device
+        // dedup is degraded until the gate recovers — that is the honest,
+        // deliberate trade vs. denying every claim.
+        gateDown = true;
+        console.warn('[OST] Faucet gate unavailable — falling back to local cooldown', gate);
+        const blocked = await applyLocalCooldown();
+        if (blocked) return blocked;
+      } else {
+        throw new Error('Faucet gate refused this claim.');
       }
-      reservation = gate;
-      kind = gate.kind || kind;
-      amount = Number(gate.amount || amount);
-    } else if (state.welcomeClaimed) {
-      if (!state.dailyReady) {
-        return { claimed: false, cooldown: true, nextDailyClaimAt: state.nextDailyClaimAt, balance: await getOstBalanceForAddress(claimer) };
-      }
-      kind = 'daily';
-      amount = OST_DAILY_DROP_AMOUNT;
+    } else {
+      const blocked = await applyLocalCooldown();
+      if (blocked) return blocked;
     }
 
     if (!window.OST_RESCUE || typeof window.OST_RESCUE.payoutOst !== 'function') {

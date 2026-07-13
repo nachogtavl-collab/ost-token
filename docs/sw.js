@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v247';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v247';
+const CACHE_NAME = 'ost-pwa-cache-v248';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v248';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -60,14 +60,14 @@ const PRECACHE_PATHS = [
   './ost-optimistic.js?v=4',
   './realtime.js?v=2',
   './ost-notifications.js?v=3',
-  './app.js?v=217',
+  './app.js?v=218',
   './icons.js?v=1',
   './nuevo-laredo-gas.js?v=2',
   './shop-quickview.js?v=3',
   './interchange-live.js?v=2',
   './polish.js?v=2',
   './swap-pool.js?v=1',
-  './wallet-extras.js?v=203',
+  './wallet-extras.js?v=204',
   './ost-price-client.js?v=202',
   './ost-token-section.js?v=2',
   './assets/ost-metadata.json',
@@ -119,7 +119,7 @@ const PRECACHE_PATHS = [
   './apple-tap.js?v=4',
   './ost-card.js?v=7',
   './launchpad-engine.js?v=5',
-  './swap-resilient.js?v=200',
+  './swap-resilient.js?v=201',
   './ost-games.js?v=24',
   './code-academy.js?v=3',
   './i18n-runtime.js?v=4',

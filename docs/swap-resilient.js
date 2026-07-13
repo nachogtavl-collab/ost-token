@@ -100,8 +100,14 @@
   // ────────────────────────────────────────────────────────────────────────
   // Inverse swap: OST -> SOL atomic, pool feePayer
   // ────────────────────────────────────────────────────────────────────────
+  // Both swap directions MUST price OST identically or the round-trip silently
+  // eats the user's value (it used to destroy ~92%). Use the one canonical
+  // conversion price exported by wallet-extras.
   function getLiveOstUsd() {
-    // wallet-extras.js exposes a private getLiveOstUsd; fall back to topup config.
+    if (window.OST_CONVERT_PRICE && typeof window.OST_CONVERT_PRICE.ostUsd === 'function') {
+      var c = Number(window.OST_CONVERT_PRICE.ostUsd());
+      if (Number.isFinite(c) && c > 0) return c;
+    }
     if (window.OST_TOPUP && window.OST_TOPUP.usdPerOst) {
       var v = Number(window.OST_TOPUP.usdPerOst());
       if (Number.isFinite(v) && v > 0) return v;
@@ -109,6 +115,10 @@
     return 0.0118; // matches topup.js DEFAULT_USD_PER_OST
   }
   function priceUsdSol() {
+    if (window.OST_CONVERT_PRICE && typeof window.OST_CONVERT_PRICE.solUsd === 'function') {
+      var c = Number(window.OST_CONVERT_PRICE.solUsd());
+      if (Number.isFinite(c) && c > 0) return c;
+    }
     if (window.OST_TOPUP && typeof window.OST_TOPUP.solUsd === 'function') {
       var t = Number(window.OST_TOPUP.solUsd());
       if (Number.isFinite(t) && t > 0) return t;
