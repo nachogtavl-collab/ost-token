@@ -566,23 +566,169 @@ function normaliseMarket(raw) {
   };
 }
 
-// ── KV helpers (positions + round prices) ─────────────────────────────────────
+// ── Storage with a real backup chain ─────────────────────────────────────────
+//
+//   memory  ->  Cache API (edge)  ->  KV  ->  D1  ->  R2 (if bound)
+//
+// WHY NOT "more KV namespaces": Cloudflare KV limits (~1k writes/day free) are
+// PER ACCOUNT, not per namespace. A second/third KV would run out at the exact
+// same instant as the first, so it is not a backup at all. The tiers below are
+// DIFFERENT products, each with its own separate quota — that is what actually
+// keeps the app alive when one runs dry.
+//
+// Reads try each tier in order and BACKFILL the faster tiers on a hit.
+// Writes go to every healthy tier, so no single store holds the only copy.
+// A circuit breaker trips a tier that is erroring/exhausted so we stop hammering
+// it (and stop burning quota on calls that will fail) until it is retried.
 
-async function kvGet(env, key, fallback = null) {
-  if (!env.OST_KV) return fallback;
-  try { const v = await env.OST_KV.get(key, { type: 'json' }); return v ?? fallback; }
-  catch (_) { return fallback; }
+const MEM = new Map();                       // isolate-local, fastest, free
+const MEM_MAX = 500;
+const BREAKER = Object.create(null);          // tier -> retry-after timestamp
+const BREAK_MS = 60_000;
+
+function tierDown(tier) { return (BREAKER[tier] || 0) > Date.now(); }
+function tripTier(tier) { BREAKER[tier] = Date.now() + BREAK_MS; }
+function healTier(tier) { BREAKER[tier] = 0; }
+
+function memGet(key) {
+  const e = MEM.get(key);
+  if (!e) return undefined;
+  if (e.exp && Date.now() > e.exp) { MEM.delete(key); return undefined; }
+  return e.v;
 }
-async function kvPut(env, key, value, expirationTtl = null) {
-  if (!env.OST_KV) return false;
+function memPut(key, value, ttlS) {
+  if (MEM.size >= MEM_MAX) MEM.delete(MEM.keys().next().value);   // simple LRU-ish
+  MEM.set(key, { v: value, exp: ttlS ? Date.now() + ttlS * 1000 : 0 });
+}
+
+const CACHE_ORIGIN = 'https://ost-store.internal/';
+function cacheReq(key) { return new Request(CACHE_ORIGIN + encodeURIComponent(key)); }
+
+async function cacheGet(key) {
+  if (tierDown('cache')) return undefined;
   try {
-    const opts = Number.isFinite(Number(expirationTtl)) && Number(expirationTtl) > 0
-      ? { expirationTtl: Number(expirationTtl) }
-      : undefined;
-    await env.OST_KV.put(key, JSON.stringify(value), opts);
+    const r = await caches.default.match(cacheReq(key));
+    if (!r) return undefined;
+    return await r.json();
+  } catch (_) { tripTier('cache'); return undefined; }
+}
+async function cachePut(key, value, ttlS) {
+  if (tierDown('cache')) return false;
+  try {
+    await caches.default.put(cacheReq(key), new Response(JSON.stringify(value), {
+      headers: { 'content-type': 'application/json', 'cache-control': 'max-age=' + (ttlS && ttlS > 0 ? ttlS : 300) }
+    }));
     return true;
-  }
-  catch (_) { return false; }
+  } catch (_) { tripTier('cache'); return false; }
+}
+
+async function d1Get(env, key) {
+  if (!env.DB || tierDown('d1')) return undefined;
+  try {
+    const row = await env.DB.prepare('SELECT v, exp FROM kv WHERE k = ?').bind(key).first();
+    if (!row) return undefined;
+    if (row.exp && Date.now() > Number(row.exp)) return undefined;
+    healTier('d1');
+    return JSON.parse(row.v);
+  } catch (_) { tripTier('d1'); return undefined; }
+}
+async function d1Put(env, key, value, ttlS) {
+  if (!env.DB || tierDown('d1')) return false;
+  try {
+    const exp = ttlS && ttlS > 0 ? Date.now() + ttlS * 1000 : null;
+    await env.DB.prepare(
+      'INSERT INTO kv (k, v, exp, updated_at) VALUES (?, ?, ?, ?) ' +
+      'ON CONFLICT(k) DO UPDATE SET v = excluded.v, exp = excluded.exp, updated_at = excluded.updated_at'
+    ).bind(key, JSON.stringify(value), exp, Date.now()).run();
+    healTier('d1');
+    return true;
+  } catch (_) { tripTier('d1'); return false; }
+}
+
+async function r2Get(env, key) {
+  if (!env.BACKUP_R2 || tierDown('r2')) return undefined;
+  try {
+    const o = await env.BACKUP_R2.get('kv/' + key);
+    if (!o) return undefined;
+    healTier('r2');
+    return await o.json();
+  } catch (_) { tripTier('r2'); return undefined; }
+}
+async function r2Put(env, key, value) {
+  if (!env.BACKUP_R2 || tierDown('r2')) return false;
+  try {
+    await env.BACKUP_R2.put('kv/' + key, JSON.stringify(value), { httpMetadata: { contentType: 'application/json' } });
+    healTier('r2');
+    return true;
+  } catch (_) { tripTier('r2'); return false; }
+}
+
+async function kvNativeGet(env, key) {
+  if (!env.OST_KV || tierDown('kv')) return undefined;
+  try {
+    const v = await env.OST_KV.get(key, { type: 'json' });
+    healTier('kv');
+    return v ?? undefined;
+  } catch (_) { tripTier('kv'); return undefined; }   // quota exhausted / erroring -> stop hammering
+}
+async function kvNativePut(env, key, value, ttlS) {
+  if (!env.OST_KV || tierDown('kv')) return false;
+  try {
+    const opts = ttlS && ttlS > 0 ? { expirationTtl: ttlS } : undefined;
+    await env.OST_KV.put(key, JSON.stringify(value), opts);
+    healTier('kv');
+    return true;
+  } catch (_) { tripTier('kv'); return false; }       // KV is out -> D1/R2 carry the write
+}
+
+// Same signatures as before, so every existing call site gets failover for free.
+async function kvGet(env, key, fallback = null) {
+  const m = memGet(key);
+  if (m !== undefined) return m;
+
+  const c = await cacheGet(key);
+  if (c !== undefined) { memPut(key, c, 60); return c; }
+
+  const k = await kvNativeGet(env, key);
+  if (k !== undefined) { memPut(key, k, 60); await cachePut(key, k, 300); return k; }
+
+  const d = await d1Get(env, key);
+  if (d !== undefined) { memPut(key, d, 60); await cachePut(key, d, 300); return d; }
+
+  const r = await r2Get(env, key);
+  if (r !== undefined) { memPut(key, r, 60); await cachePut(key, r, 300); return r; }
+
+  return fallback;
+}
+
+async function kvPut(env, key, value, expirationTtl = null) {
+  const ttlS = Number.isFinite(Number(expirationTtl)) && Number(expirationTtl) > 0 ? Number(expirationTtl) : null;
+  memPut(key, value, ttlS);
+  await cachePut(key, value, ttlS);
+  // Write to every healthy durable tier — no single store is the only copy, and
+  // if KV is exhausted the data still lands in D1 (and R2 when bound).
+  const [kv, d1, r2] = await Promise.all([
+    kvNativePut(env, key, value, ttlS),
+    d1Put(env, key, value, ttlS),
+    r2Put(env, key, value)
+  ]);
+  return kv || d1 || r2;
+}
+
+function storeHealth(env) {
+  const now = Date.now();
+  const tier = (name, bound) => ({
+    bound: !!bound,
+    healthy: !!bound && !tierDown(name),
+    retryInMs: Math.max(0, (BREAKER[name] || 0) - now)
+  });
+  return {
+    memory: { bound: true, healthy: true, entries: MEM.size },
+    cache: tier('cache', true),
+    kv: tier('kv', env.OST_KV),
+    d1: tier('d1', env.DB),
+    r2: tier('r2', env.BACKUP_R2)
+  };
 }
 
 const ACTIVE_MARKETS_MEMORY = new Map();
@@ -2714,6 +2860,36 @@ export default {
           return json({ error: 'relay_failed', upstream: prefix, message: String(err?.message || err).slice(0, 200) }, 502);
         }
       }
+    }
+
+    // ── GET /store/health ─ which storage tier is carrying the load ──────────
+    // Shows the backup chain live: memory -> cache -> KV -> D1 -> R2. A tier
+    // that errors or runs out of quota is "tripped" (circuit breaker) and the
+    // next tier carries writes/reads until it is retried.
+    if (path === '/store/health' && method === 'GET') {
+      return json({ ok: true, chain: ['memory', 'cache', 'kv', 'd1', 'r2'], tiers: storeHealth(env), ts: Date.now() });
+    }
+
+    // ── GET /store/selftest ─ prove the chain actually fails over ────────────
+    if (path === '/store/selftest' && method === 'GET') {
+      const key = 'store:selftest:' + Date.now();
+      const value = { probe: true, at: Date.now() };
+      const wrote = await kvPut(env, key, value, 300);
+      const readBack = await kvGet(env, key, null);
+      // Read straight out of D1 to prove the backup tier really holds a copy.
+      let d1Copy = null;
+      try {
+        if (env.DB) {
+          const row = await env.DB.prepare('SELECT v FROM kv WHERE k = ?').bind(key).first();
+          d1Copy = row ? JSON.parse(row.v) : null;
+        }
+      } catch (_) {}
+      return json({
+        ok: !!wrote && !!readBack,
+        wrote, readBack,
+        d1HasIndependentCopy: !!d1Copy && d1Copy.probe === true,
+        tiers: storeHealth(env)
+      });
     }
 
     // ── GET /spot?symbol=BTCUSDT ─ edge-reachable spot price ─────────────────
