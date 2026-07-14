@@ -31,7 +31,9 @@ const { AnchorProvider, Program, Wallet, BN } = anchor;
 const RPC = 'https://api.devnet.solana.com';
 const MINT = new PublicKey('383pTzoZ8Gp83dzk23ZnvLcfX2Sq32TAGN48CMQu2pAJ');
 const DECIMALS = 9;
-const ROOT = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
+// decodeURIComponent: the repo path contains a space ("New folder"), which the
+// file: URL encodes as %20 and fs cannot open.
+const ROOT = decodeURIComponent(new URL('..', import.meta.url).pathname).replace(/^\/([A-Za-z]:)/, '$1');
 
 const idl = JSON.parse(readFileSync(ROOT + '/target/idl/ost_betting.json', 'utf8'));
 const PROGRAM_ID = new PublicKey(idl.address);
@@ -141,10 +143,26 @@ async function makeBettor(name, ostAmount) {
   const mkt = await program.account.market.fetch(market);
   console.log(`   on-chain pools: YES=${ui(mkt.yesPool)} NO=${ui(mkt.noPool)}`);
 
-  console.log('\n4) resolve_market (waiting for resolve_ts…)');
-  while (Math.floor(Date.now() / 1000) < resolveTs.toNumber()) { await sleep(2000); process.stdout.write('.'); }
-  sig = await program.methods.resolveMarket(1)   // YES wins
-    .accounts({ authority: authority.publicKey, market }).rpc();
+  console.log('\n4) resolve_market (waiting for the CHAIN clock, not wall-clock…)');
+  // The program checks Solana's Clock sysvar, which drifts behind real time on
+  // devnet — waiting on Date.now() gives ResolveTooEarly. Poll the chain clock.
+  sig = null;
+  for (let i = 0; i < 40; i++) {
+    const slot = await conn.getSlot('confirmed');
+    const chainTs = await conn.getBlockTime(slot);
+    if (chainTs && chainTs >= resolveTs.toNumber()) {
+      try {
+        sig = await program.methods.resolveMarket(1)   // YES wins
+          .accounts({ authority: authority.publicKey, market }).rpc();
+        break;
+      } catch (e) {
+        if (!/ResolveTooEarly/.test(e.message)) throw e;
+      }
+    }
+    process.stdout.write('.');
+    await sleep(3000);
+  }
+  if (!sig) throw new Error('chain clock never reached resolve_ts');
   console.log('\n   resolved YES:', link(sig));
 
   console.log('\n5) claim_payout — winner A pulls the whole pool out of the vault');
