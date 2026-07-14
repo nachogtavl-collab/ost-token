@@ -56,6 +56,10 @@ const wallet = new anchor.Wallet(authority);
 const pythReceiver = new PythSolanaReceiver({ connection: conn, wallet });
 const hermes = new HermesClient('https://hermes.pyth.network', {});
 
+// The house-edge destination. Pinned onto each market at creation, so it can
+// never be redirected at claim time.
+const treasuryAta = getAssociatedTokenAddressSync(MINT, authority.publicKey, true, TOKEN_2022_PROGRAM_ID);
+
 const roundOpenAt = (t = Date.now()) => Math.floor(t / 1000 / FIVE_MIN) * FIVE_MIN;
 
 function pdas(marketId) {
@@ -71,7 +75,7 @@ function pdas(marketId) {
 // feed_id/open_price). They can no longer be resolved — the authority-resolve
 // instruction was deliberately removed — so we skip them instead of crashing.
 // (Only test markets are affected; no user funds were ever in them.)
-const MARKET_LEN = 8 + 32 + 32 + 8 + 1 + 1 + 8 + 8 + 8 + 8 + 8 + 1 + 1 + 32 + 8 + 4 + 8;
+const MARKET_LEN = 8 + 32 + 32 + 8 + 1 + 1 + 8 + 8 + 8 + 8 + 8 + 1 + 1 + 32 + 8 + 4 + 8 + 32 + 8;
 function decodeMarket(data) {
   if (data.length < MARKET_LEN) return { legacy: true };
   let o = 8 + 32 + 32;                       // authority, mint
@@ -112,6 +116,7 @@ async function openMarket(openAt) {
       { pubkey: MINT, isSigner: false, isWritable: false },
       { pubkey: market, isSigner: false, isWritable: true },
       { pubkey: vault, isSigner: false, isWritable: true },
+      { pubkey: treasuryAta, isSigner: false, isWritable: false },
       { pubkey: TOKEN_2022_PROGRAM_ID, isSigner: false, isWritable: false },
       { pubkey: SystemProgram.programId, isSigner: false, isWritable: false }
     ],

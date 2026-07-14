@@ -1,7 +1,8 @@
 [workspace]
 members = [
     "programs/ost-token",
-    "programs/ost-betting"
+    "programs/ost-betting",
+    "programs/ost-games"
 ]
 resolver = "2"
 

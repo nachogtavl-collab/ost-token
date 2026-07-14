@@ -5,11 +5,14 @@
  *   program F82m45QUAFJ4GtMsJrSFnWzDrjWdZjdzyh8HTPgTBHXr
  *
  * place_bet   -> the user's OST is escrowed in a PROGRAM-OWNED vault
- * claim_payout-> winnings come back OUT of that vault, signed by the market PDA
+ * claim_payout-> winnings come back OUT of that vault, signed by the market PDA,
+ *                minus the house edge (2% of PROFIT only), which the PROGRAM
+ *                sweeps into the treasury pinned on the market at creation.
  *
- * This is the real thing: no custodial pool, no server holding the money. The
- * only trusted step left is `resolve_market` (authority-signed by the crank) —
- * making that trustless means verifying a Pyth update inside the program.
+ * This is the real thing: no custodial pool, no server holding the money, and
+ * no authority-resolve instruction — the program reads the close price from a
+ * signed Pyth update and decides the winner itself. Nobody can pick the outcome
+ * or re-point the rake.
  *
  * Markets are opened by scripts/market-crank.mjs (a shared market must be
  * created by ONE authority, or every bettor would land in a different pool).
@@ -89,7 +92,12 @@
   }
 
   // Market account layout after the 8-byte discriminator.
+  // 8 (disc) + Market::SIZE. Markets created before the house-edge upgrade are
+  // shorter; they are treated as unusable rather than misread.
+  var MARKET_LEN = 8 + (32 + 32 + 8 + 1 + 1 + 8 + 8 + 8 + 8 + 8 + 1 + 1) + (32 + 8 + 4 + 8) + (32 + 8);
+
   function parseMarket(data) {
+    if (data.length < MARKET_LEN) return null;
     var dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
     var o = 8 + 32 + 32;                       // skip disc + authority + mint
     var marketId = dv.getBigUint64(o, true); o += 8;
@@ -100,14 +108,27 @@
     var yesPool = dv.getBigUint64(o, true); o += 8;
     var noPool = dv.getBigUint64(o, true); o += 8;
     var resolved = data[o] === 1; o += 1;
-    var winningSide = data[o];
+    var winningSide = data[o]; o += 1;
+    o += 32;                                   // feed_id
+    var openPrice = dv.getBigInt64(o, true); o += 8;
+    var openExpo = dv.getInt32(o, true); o += 4;
+    var closePrice = dv.getBigInt64(o, true); o += 8;
+    // The treasury the program sweeps the house edge into. It is PINNED on the
+    // market at creation, so we must read it from the market — we cannot guess
+    // it, and passing the wrong one makes the claim fail (WrongTreasury).
+    var treasury = new (w3().PublicKey)(data.slice(o, o + 32)); o += 32;
+    var feesCollected = dv.getBigUint64(o, true);
     var ui = function (b) { return Number(b) / Math.pow(10, DECIMALS); };
     return {
       marketId: Number(marketId),
       lockTs: Number(lockTs) * 1000,
       resolveTs: Number(resolveTs) * 1000,
       yes: ui(yesPool), no: ui(noPool),
-      resolved: resolved, winningSide: winningSide
+      resolved: resolved, winningSide: winningSide,
+      openPrice: Number(openPrice) * Math.pow(10, openExpo),
+      closePrice: Number(closePrice) * Math.pow(10, openExpo),
+      treasury: treasury,
+      feesCollected: ui(feesCollected)
     };
   }
 
@@ -155,7 +176,9 @@
     });
   }
 
-  function ixClaim(openAtSec) {
+  // `treasury` comes from the market account itself — the program pins it at
+  // creation and rejects any other account, so it must be read, not derived.
+  function ixClaim(openAtSec, treasury) {
     var W = w3();
     var s = session();
     var d = derive(openAtSec);
@@ -169,6 +192,7 @@
         { pubkey: positionPda(d.market, bettor), isSigner: false, isWritable: true },
         { pubkey: d.vault, isSigner: false, isWritable: true },
         { pubkey: userAta(bettor), isSigner: false, isWritable: true },
+        { pubkey: treasury, isSigner: false, isWritable: true },
         { pubkey: pk(TOKEN_2022), isSigner: false, isWritable: false },
         { pubkey: W.SystemProgram.programId, isSigner: false, isWritable: false }
       ],
@@ -218,10 +242,26 @@
     return marketFor(openAtSec).then(function (m) {
       if (!m || !m.exists) throw new Error('no on-chain market');
       if (!m.resolved) throw new Error('market not resolved yet');
-      return send([ixClaim(openAtSec)]).then(function (sig) {
+      if (!m.treasury) throw new Error('market predates the on-chain house edge');
+      return send([ixClaim(openAtSec, m.treasury)]).then(function (sig) {
         return { signature: String(sig), onChain: true };
       });
     });
+  }
+
+  // What the program will actually pay this wallet, AFTER the on-chain rake.
+  // Mirrors claim_payout exactly: gross = stake * total / winnerPool, the fee is
+  // HOUSE_FEE_BPS of the PROFIT only, and the stake is never taxed.
+  var HOUSE_FEE_BPS = 200;                       // must match the program constant
+  function quoteNet(m, side, stakeOst) {
+    var yes = m.yes || 0, no = m.no || 0;
+    var total = yes + no;
+    var winner = (side === 'yes' || side === 1) ? yes : no;
+    if (!winner || !total) return { gross: 0, fee: 0, net: 0 };
+    var gross = stakeOst * total / winner;
+    var profit = Math.max(0, gross - stakeOst);
+    var fee = profit * HOUSE_FEE_BPS / 10000;
+    return { gross: gross, fee: fee, net: gross - fee };
   }
 
   // Convenience: the round id the app's OST-native BTC markets use.
@@ -234,6 +274,8 @@
     available: available,
     marketFor: marketFor,
     impliedYes: impliedYes,
+    quoteNet: quoteNet,
+    houseFeeBps: HOUSE_FEE_BPS,
     placeBet: placeBet,
     claim: claim,
     roundOpenAt: roundOpenAt,

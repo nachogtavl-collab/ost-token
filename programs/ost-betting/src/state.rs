@@ -24,12 +24,19 @@ pub struct Market {
     pub open_price: i64,     // locked from Pyth at/after lock_ts
     pub open_expo: i32,
     pub close_price: i64,    // read from Pyth at resolve
+
+    // ---- House edge (on-chain) --------------------------------------------
+    // The treasury token account is PINNED at market creation, so a claimer can
+    // never redirect the rake to an account they control.
+    pub treasury_token: Pubkey,
+    pub fees_collected: u64, // running total of rake taken by this market
 }
 
 impl Market {
     pub const SIZE: usize =
         32 + 32 + 8 + 1 + 1 + 8 + 8 + 8 + 8 + 8 + 1 + 1  // original
-        + 32 + 8 + 4 + 8;                                  // feed_id, open_price, open_expo, close_price
+        + 32 + 8 + 4 + 8                                   // feed_id, open_price, open_expo, close_price
+        + 32 + 8;                                          // treasury_token, fees_collected
 }
 
 #[account]

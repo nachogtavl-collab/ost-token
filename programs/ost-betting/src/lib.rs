@@ -31,6 +31,28 @@ declare_id!("F82m45QUAFJ4GtMsJrSFnWzDrjWdZjdzyh8HTPgTBHXr");
 /// stale price.
 pub const MAX_PRICE_AGE_SECS: u64 = 120;
 
+/// House edge, in basis points, taken from the PROFIT only (never the stake).
+/// 200 bps = 2%, matching docs/ost-house.js. It is a compile-time constant on
+/// purpose: nobody can raise the rake on a market that already has money in it.
+pub const HOUSE_FEE_BPS: u16 = 200;
+
+#[event]
+pub struct LegacyRefunded {
+    pub market: Pubkey,
+    pub bettor: Pubkey,
+    pub stake: u64,
+}
+
+#[event]
+pub struct PayoutClaimed {
+    pub market: Pubkey,
+    pub bettor: Pubkey,
+    pub stake: u64,
+    pub gross: u64,
+    pub fee: u64,
+    pub net: u64,
+}
+
 #[program]
 pub mod ost_betting {
     use super::*;
@@ -62,6 +84,10 @@ pub mod ost_betting {
         market.open_price = 0;
         market.open_expo = 0;
         market.close_price = 0;
+        // Pin the treasury now — the rake destination is fixed for the life of
+        // this market and cannot be swapped at claim time.
+        market.treasury_token = ctx.accounts.treasury_token.key();
+        market.fees_collected = 0;
 
         Ok(())
     }
@@ -120,6 +146,107 @@ pub mod ost_betting {
         market.winning_side = if price.price >= market.open_price { 1 } else { 0 };
         market.resolved = true;
 
+        Ok(())
+    }
+
+    /// Refund a stake stranded in a LEGACY market.
+    ///
+    /// Markets created before the Pyth upgrade have a shorter layout and no
+    /// feed_id, so they can no longer be resolved (the authority-resolve
+    /// instruction was deliberately deleted) and no longer deserialize into the
+    /// current `Market`. Two of them still held real OST — 35 OST that no code
+    /// path on earth could have released. Writing that off would have been
+    /// exactly the kind of quiet loss we refuse to ship.
+    ///
+    /// This gives every bettor their ORIGINAL STAKE back. It is not a payout:
+    /// nobody wins, nobody is raked, because those markets never had an outcome.
+    ///
+    /// SAFETY: this only accepts markets whose account is SMALLER than the
+    /// current `Market` — i.e. provably legacy. A live market (8 + Market::SIZE
+    /// bytes) can never be routed through here, so this cannot be used to drain
+    /// an open pool. It is also permissionless: anyone can push the refund, but
+    /// the funds can only ever go to the bettor recorded in the position.
+    pub fn refund_legacy_position(ctx: Context<RefundLegacyPosition>) -> Result<()> {
+        let market_ai = &ctx.accounts.market;
+        let data = market_ai.try_borrow_data()?;
+
+        // Provably legacy: too small to be a current Market.
+        require!(
+            data.len() < 8 + Market::SIZE,
+            BettingError::NotALegacyMarket
+        );
+        // Still one of OUR market accounts (right discriminator), not junk.
+        let expected_disc = Market::DISCRIMINATOR;
+        require!(
+            data.len() >= 8 + 116 && data[0..8] == *expected_disc,
+            BettingError::NotALegacyMarket
+        );
+
+        // Old layout: authority(32) mint(32) market_id(8) bump(1) vault_bump(1) …
+        let authority = Pubkey::try_from(&data[8..40]).map_err(|_| BettingError::NotALegacyMarket)?;
+        let market_id = u64::from_le_bytes(data[72..80].try_into().unwrap());
+        let bump = data[80];
+        let vault_bump = data[81];
+        drop(data);
+
+        // The account really is the market PDA for that (authority, market_id).
+        let expected_market = Pubkey::create_program_address(
+            &[b"market", authority.as_ref(), &market_id.to_le_bytes(), &[bump]],
+            &crate::ID,
+        )
+        .map_err(|_| BettingError::NotALegacyMarket)?;
+        require_keys_eq!(expected_market, market_ai.key(), BettingError::NotALegacyMarket);
+
+        // …and the vault really is that market's vault.
+        let expected_vault = Pubkey::create_program_address(
+            &[b"vault", market_ai.key().as_ref(), &[vault_bump]],
+            &crate::ID,
+        )
+        .map_err(|_| BettingError::NotALegacyMarket)?;
+        require_keys_eq!(
+            expected_vault,
+            ctx.accounts.vault.key(),
+            BettingError::NotALegacyMarket
+        );
+
+        let position = &ctx.accounts.position;
+        require!(!position.claimed, BettingError::AlreadyClaimed);
+        require_keys_eq!(position.market, market_ai.key(), BettingError::NothingToClaim);
+        let stake = position.stake;
+        require!(stake > 0, BettingError::NothingToClaim);
+
+        // Vault is owned by the market PDA — sign with the market's seeds.
+        let market_id_bytes = market_id.to_le_bytes();
+        let market_bump = [bump];
+        let signer_seeds: &[&[&[u8]]] = &[&[
+            b"market",
+            authority.as_ref(),
+            market_id_bytes.as_ref(),
+            &market_bump,
+        ]];
+
+        token_interface::transfer_checked(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                TransferChecked {
+                    from: ctx.accounts.vault.to_account_info(),
+                    mint: ctx.accounts.mint.to_account_info(),
+                    to: ctx.accounts.bettor_token.to_account_info(),
+                    authority: market_ai.to_account_info(),
+                },
+                signer_seeds,
+            ),
+            stake,
+            ctx.accounts.mint.decimals,
+        )?;
+
+        ctx.accounts.position.claimed = true;
+
+        emit!(LegacyRefunded {
+            market: market_ai.key(),
+            bettor: ctx.accounts.position.bettor,
+            stake,
+        });
         Ok(())
     }
 
@@ -211,12 +338,26 @@ pub mod ost_betting {
 
         require!(winner_pool > 0, BettingError::NothingToClaim);
 
-        // Pari-mutuel payout: stake * total_pool / winner_pool
-        let payout = (ctx.accounts.position.stake as u128)
+        // Pari-mutuel gross payout: stake * total_pool / winner_pool
+        let stake = ctx.accounts.position.stake;
+        let gross = (stake as u128)
             .checked_mul(total_pool as u128)
             .ok_or(BettingError::MathOverflow)?
             .checked_div(winner_pool as u128)
             .ok_or(BettingError::MathOverflow)? as u64;
+
+        // ---- HOUSE EDGE, ON-CHAIN --------------------------------------------
+        // Same rule the app has always advertised (docs/ost-house.js): the rake
+        // is taken from the PROFIT ONLY (gross - stake), never from the stake.
+        // A break-even or losing claim is never taxed. Enforced by the program
+        // now, so the edge cannot be bypassed by talking to the chain directly —
+        // which is exactly how testers used to dodge it.
+        let profit = gross.saturating_sub(stake);
+        let fee = ((profit as u128)
+            .checked_mul(HOUSE_FEE_BPS as u128)
+            .ok_or(BettingError::MathOverflow)?
+            / 10_000u128) as u64;
+        let net = gross.checked_sub(fee).ok_or(BettingError::MathOverflow)?;
 
         // Vault is owned by the MARKET PDA — sign with the market's seeds.
         let authority_key = market.authority;
@@ -229,6 +370,7 @@ pub mod ost_betting {
             &market_bump,
         ]];
 
+        // Pay the winner the NET amount.
         token_interface::transfer_checked(
             CpiContext::new_with_signer(
                 ctx.accounts.token_program.to_account_info(),
@@ -240,11 +382,46 @@ pub mod ost_betting {
                 },
                 signer_seeds,
             ),
-            payout,
+            net,
             ctx.accounts.mint.decimals,
         )?;
 
+        // Sweep the rake to the treasury token account, in the SAME transaction.
+        // The treasury is pinned to the market at creation, so a claimer cannot
+        // redirect the fee to an account of their choosing.
+        if fee > 0 {
+            token_interface::transfer_checked(
+                CpiContext::new_with_signer(
+                    ctx.accounts.token_program.to_account_info(),
+                    TransferChecked {
+                        from: ctx.accounts.vault.to_account_info(),
+                        mint: ctx.accounts.mint.to_account_info(),
+                        to: ctx.accounts.treasury_token.to_account_info(),
+                        authority: ctx.accounts.market.to_account_info(),
+                    },
+                    signer_seeds,
+                ),
+                fee,
+                ctx.accounts.mint.decimals,
+            )?;
+        }
+
+        let market_mut = &mut ctx.accounts.market;
+        market_mut.fees_collected = market_mut
+            .fees_collected
+            .checked_add(fee)
+            .ok_or(BettingError::MathOverflow)?;
+
         ctx.accounts.position.claimed = true;
+
+        emit!(PayoutClaimed {
+            market: market_mut.key(),
+            bettor: ctx.accounts.bettor.key(),
+            stake,
+            gross,
+            fee,
+            net,
+        });
 
         Ok(())
     }
@@ -279,6 +456,10 @@ pub struct InitializeMarket<'info> {
         token::token_program = token_program
     )]
     pub vault: InterfaceAccount<'info, TokenAccount>,
+
+    /// Where the house edge is swept. Recorded on the market at creation.
+    #[account(token::mint = mint, token::token_program = token_program)]
+    pub treasury_token: InterfaceAccount<'info, TokenAccount>,
 
     pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
@@ -366,6 +547,53 @@ pub struct ClaimPayout<'info> {
     pub vault: InterfaceAccount<'info, TokenAccount>,
 
     #[account(mut, token::mint = mint, token::token_program = token_program)]
+    pub bettor_token: InterfaceAccount<'info, TokenAccount>,
+
+    /// MUST be the treasury pinned on the market at creation. A claimer cannot
+    /// point the rake at an account they control.
+    #[account(
+        mut,
+        address = market.treasury_token @ BettingError::WrongTreasury,
+        token::mint = mint,
+        token::token_program = token_program
+    )]
+    pub treasury_token: InterfaceAccount<'info, TokenAccount>,
+
+    pub token_program: Interface<'info, TokenInterface>,
+    pub system_program: Program<'info, System>,
+}
+
+/// Refund a stake out of a LEGACY market's vault. The market is an
+/// UncheckedAccount ON PURPOSE: its old layout can no longer be deserialized
+/// into `Market`, which is precisely why the funds were stuck. Every field we
+/// rely on is re-derived and checked against the PDA seeds in the handler.
+#[derive(Accounts)]
+pub struct RefundLegacyPosition<'info> {
+    /// Permissionless. Pays the fee; has no say in where the money goes.
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    /// CHECK: validated in the handler — discriminator, legacy size, and PDA seeds.
+    #[account(mut)]
+    pub market: UncheckedAccount<'info>,
+
+    pub mint: InterfaceAccount<'info, Mint>,
+
+    /// The Position layout never changed, so this still deserializes cleanly.
+    #[account(mut, constraint = position.market == market.key() @ BettingError::NothingToClaim)]
+    pub position: Account<'info, Position>,
+
+    #[account(mut, token::mint = mint, token::token_program = token_program)]
+    pub vault: InterfaceAccount<'info, TokenAccount>,
+
+    /// Must belong to the bettor recorded in the position — a payer cannot
+    /// redirect somebody else's refund into their own account.
+    #[account(
+        mut,
+        constraint = bettor_token.owner == position.bettor @ BettingError::NothingToClaim,
+        token::mint = mint,
+        token::token_program = token_program
+    )]
     pub bettor_token: InterfaceAccount<'info, TokenAccount>,
 
     pub token_program: Interface<'info, TokenInterface>,

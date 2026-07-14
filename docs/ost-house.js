@@ -112,8 +112,24 @@
     return { net: Math.max(0, gross - fee), fee: fee, bps: bps() };
   }
 
+  // Record a fee that was ALREADY charged somewhere else — specifically, by the
+  // on-chain betting program, which takes its own 2%-of-profit edge inside
+  // claim_payout. Calling rake() for those payouts would book the same OST
+  // twice (once on-chain, once here). book() records it exactly once and does
+  // not touch the user's payout, because the chain already deducted it.
+  function book(fee, kind, meta) {
+    fee = Number(fee) || 0;
+    if (!(fee > 0.0000001)) return 0;
+    saveTotal(loadTotal() + fee);
+    renderTotal();
+    try { window.dispatchEvent(new CustomEvent('ost:house-fee', { detail: { source: kind || 'house', amount: fee, label: 'house edge', meta: meta || null } })); } catch (_) {}
+    flashNote(fee, kind);
+    return fee;
+  }
+
   window.OST_HOUSE = {
     rake: rake,
+    book: book,
     net: net,
     quote: quote,
     bps: bps,

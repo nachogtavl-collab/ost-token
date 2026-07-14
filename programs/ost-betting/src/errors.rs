@@ -30,4 +30,8 @@ pub enum BettingError {
     OpenPriceMissing,
     #[msg("Oracle exponent changed; refusing to compare mismatched scales")]
     ExponentMismatch,
+    #[msg("Treasury account does not match the one pinned on this market")]
+    WrongTreasury,
+    #[msg("Not a legacy market — refunds only apply to markets that can no longer be resolved")]
+    NotALegacyMarket,
 }

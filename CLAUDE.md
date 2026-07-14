@@ -75,9 +75,20 @@ export CARGO_TARGET_DIR='C:\ostb'          # repo lives under "OneDrive\Desktop\
 cargo +solana build --release --target sbpf-solana-solana -p ost-betting
 cp /c/ostb/sbpf-solana-solana/release/ost_betting.so target/deploy/
 
-cd target/deploy && solana program deploy ost_betting.so \
-  --program-id ost_betting-keypair.json --url devnet
+# DO NOT use `solana program deploy` / `write-buffer` directly on public devnet.
+# They blast all ~490 chunk-writes at once; devnet rate-limits per IP, so the CLI
+# 429s ITSELF into a stall (observed: 55 min, zero progress, and even `getHealth`
+# from the same IP started 429ing). Its retries make the throttling worse.
+# Upload the buffer PACED instead, then do the (small, single-tx) upgrade:
+cd scripts/deploy && npm i
+node upload-buffer.mjs ../../target/deploy/ost_betting.so --rate 5   # prints BUFFER
+cd ../.. && solana program deploy --buffer <BUFFER> \
+  --program-id target/deploy/ost_betting-keypair.json --url devnet
 ```
+If a deploy dies mid-upload it leaves an orphaned buffer holding ~3 SOL. Recover
+with `solana program close --buffers --url devnet` (this has stranded 10+ SOL).
+Helius's `?api-key=public` endpoint is READ-ONLY — it 401s on sendTransaction, so
+it cannot be used to deploy.
 IDL: `anchor idl build -p ost_betting` (needs the `idl-build` feature in Cargo.toml) → `target/idl/`.
 
 Program-side gotchas learned the hard way:
@@ -96,3 +107,5 @@ Program-side gotchas learned the hard way:
 - Playwright headless throttles `requestAnimationFrame` — canvas game animations (Plinko drops, Crash) run much slower than on-device, so multi-round/auto-bet verifications need generous polling (90–130 × 700ms) or fewest-rows/1-ball settings.
 - Bulk version-bump scripts: NEVER `open(path,'w').write(open(path).read()...)` in one expression — Python opens-for-write (truncating the file to 0 bytes) before the read runs, emptying it. Read fully into a var first, then open for write. (This wiped index.html/markets.html/sw.js once; restored via `git checkout --`.)
 - House edge lives in `docs/ost-house.js` (`window.OST_HOUSE`): rake(gross, basis, kind) charges 2% of PROFIT (gross−basis) at every payout — games (settleGame), parlay win/cash-out, prediction claim/sell, stock/memecoin sell. Losses/refunds are never taxed. Add new payout paths through it, not a bespoke fee.
+- **On-chain tickets are the exception.** A bet escrowed in the betting program (`onChain: true`, routed by `docs/ost-onchain-route.js`) has its edge charged BY THE PROGRAM inside `claim_payout` (`HOUSE_FEE_BPS = 200`, profit-only, swept to the treasury pinned on the market at creation). For those, `claimBet` must NOT call `rake()` — it calls `OST_HOUSE.book(fee)` instead, which records an already-charged fee exactly once. Calling `rake()` there books the same OST twice.
+- The desk's default rail for `ost-btc5m-*` rounds is the on-chain program whenever a wallet is connected and the round's market is open; everything else (and any failure) falls back to the custodial pool. An on-chain ticket must never be paid from credits — its OST is in the program vault, so that would pay twice.

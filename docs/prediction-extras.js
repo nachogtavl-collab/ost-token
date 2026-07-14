@@ -396,6 +396,11 @@
         paidOut: Number(o.paidOut || o.cashoutOst) || 0,
         houseFee: Number(o.houseFee) || 0,
         fundedBy: o.fundedBy || '',     // decides which rail the payout uses
+        // Escrowed in the on-chain program vault? These two decide the payout
+        // rail. Dropping them here would silently send an on-chain ticket down
+        // the custodial path — paying it twice and stranding the escrow.
+        onChain: !!o.onChain,
+        onChainOpenAt: Number(o.onChainOpenAt) || 0,
 
         isOstNative: /ost/i.test(String(o.source || '')),
         source: o.source || ''
@@ -581,12 +586,18 @@
     claimingIds[betId] = true;                      // re-renders now show "Claiming…"
     if (btn) { btn.disabled = true; btn.textContent = 'Claiming…'; }
 
+    // Is this ticket escrowed in the on-chain program vault? If so the PROGRAM
+    // charges the house edge inside claim_payout, so we must NOT rake here as
+    // well — that would book the same fee twice and understate the payout.
+    var onChainTicket = !!(bet.onChain && bet.onChainOpenAt &&
+      window.OST_ONCHAIN && typeof window.OST_ONCHAIN.available === 'function' && window.OST_ONCHAIN.available());
+
     // House edge, live: rake the protocol's cut of the PROFIT (win above the
     // stake) so the winner claims the NET — never the full amount fee-free.
     var grossWin = Number(bet.payoutIfWin) || 0;
     var payAmt = grossWin;
     var houseFee = 0;
-    if (window.OST_HOUSE && typeof window.OST_HOUSE.rake === 'function') {
+    if (!onChainTicket && window.OST_HOUSE && typeof window.OST_HOUSE.rake === 'function') {
       var rk = window.OST_HOUSE.rake(grossWin, Number(bet.stake) || 0, 'prediction', { kind: 'claim' });
       payAmt = rk.net;
       houseFee = rk.fee;
@@ -645,6 +656,48 @@
       : (window.OST_REAL_SWAP && typeof window.OST_REAL_SWAP.payout === 'function')
         ? function () { return window.OST_REAL_SWAP.payout(payAmt).then(function () { return null; }); }
         : null;
+
+    // RAIL 0 — the PROGRAM vault. A ticket escrowed on-chain (ost-onchain-route)
+    // must be paid by claim_payout, out of the vault that holds its OST. Paying
+    // it from the credits pool would pay it twice and strand the escrow forever.
+    // The program also takes the house edge itself, so we do NOT rake again here
+    // — it already returns the NET.
+    if (onChainTicket) {
+      var openAtSec = Number(bet.onChainOpenAt);
+      var myStake = Number(bet.stake) || 0;
+      // The payout is PARI-MUTUEL: it depends on the FINAL pools, not on the
+      // price quoted when the ticket was written. `payoutIfWin` is a bet-time
+      // estimate and would be wrong here, so we recompute from the settled
+      // market — the same formula the program runs.
+      window.OST_ONCHAIN.marketFor(openAtSec).then(function (m) {
+        if (!m || !m.exists) throw new Error('On-chain market not found for this ticket.');
+        if (!m.resolved) throw new Error('This round has not settled on-chain yet — try again shortly.');
+        // The CHAIN decides who won (from Pyth), not our local price feed. If it
+        // disagrees with the off-chain status, the chain is the truth: claiming
+        // would pay nothing, so we must not record a phantom payout.
+        var chainWon = (m.winningSide === 1) === (String(bet.side).toLowerCase() === 'yes');
+        if (!chainWon) throw new Error('The oracle settled this round the other way — this ticket did not win on-chain.');
+
+        var q = window.OST_ONCHAIN.quoteNet(m, bet.side, myStake);
+        payAmt = q.net;
+        houseFee = q.fee;
+        return window.OST_ONCHAIN.claim(openAtSec).then(function (res) {
+          // Book the fee the CHAIN already took, so house revenue is counted
+          // once (the program charged it inside claim_payout).
+          try {
+            if (window.OST_HOUSE && typeof window.OST_HOUSE.book === 'function') {
+              window.OST_HOUSE.book(houseFee, 'prediction', { kind: 'claim', onChain: true });
+            }
+          } catch (_) {}
+          doClaim(String((res && res.signature) || ''));
+        });
+      }).catch(function (err) {
+        // Never silently reroute an on-chain ticket to the credits pool: its OST
+        // is escrowed in the program vault, so paying from credits pays twice.
+        failClaim(err instanceof Error ? err : new Error(String((err && err.message) || err)));
+      });
+      return;
+    }
 
     if (!creditsFunded && hasWallet && onChainFn) {
       try {

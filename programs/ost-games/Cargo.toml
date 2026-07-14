@@ -1,0 +1,26 @@
+[package]
+name = "ost-games"
+version = "0.1.0"
+description = "OST on-chain games — Switchboard VRF randomness, real OST escrow"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "ost_games"
+
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+default = []
+
+[dependencies]
+anchor-lang = { version = "0.31", features = ["init-if-needed"] }
+anchor-spl = { version = "0.31", features = ["token_2022"] }
+# Switchboard On-Demand: the randomness is committed to a FUTURE slot and signed
+# by the oracle network. Neither the player nor the house can see or influence
+# the value at bet time — which is exactly what the browser-side seed could not
+# guarantee (the player held the "server" seed in localStorage).
+switchboard-on-demand = "0.3"

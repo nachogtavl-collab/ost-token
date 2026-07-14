@@ -1,0 +1,9 @@
+{
+  "name": "ost-deploy",
+  "private": true,
+  "type": "module",
+  "description": "Paced program uploader. `solana program deploy` fires every chunk write at once, which 429s public devnet into a stall (it rate-limits per IP, and the CLI's retries make it worse). This uploads at a fixed rate with backoff instead.",
+  "dependencies": {
+    "@solana/web3.js": "^1.95.0"
+  }
+}

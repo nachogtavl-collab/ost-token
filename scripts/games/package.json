@@ -1,0 +1,12 @@
+{
+  "name": "ost-games-crank",
+  "private": true,
+  "type": "module",
+  "description": "Isolated on purpose — the Switchboard On-Demand SDK pins its own @solana/web3.js and Anchor versions. Hoisting these into the repo root breaks docs/ (web3 1.98). Same reason scripts/pyth-crank keeps its own node_modules. Do not hoist.",
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.31.0",
+    "@solana/spl-token": "^0.4.9",
+    "@solana/web3.js": "^1.95.0",
+    "@switchboard-xyz/on-demand": "^2.0.0"
+  }
+}

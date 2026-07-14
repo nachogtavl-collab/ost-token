@@ -3296,6 +3296,10 @@
   window.OST_PREDICTION_API = Object.assign(window.OST_PREDICTION_API || {}, {
     placeOrder: createPredictionMarketOrder,
     readOrders: readPredictionOrderRecords,
+    // Exposed so the on-chain router (ost-onchain-route.js) records a ticket it
+    // funded through the program vault into the SAME store, with the same merge
+    // + remote-share semantics. Re-implementing this would let the schemas drift.
+    recordOrder: storePredictionOrderRecord,
     syncOrders: syncPredictionOrdersFromRemote,
     walletAddress: getPredictionWalletAddress
   });

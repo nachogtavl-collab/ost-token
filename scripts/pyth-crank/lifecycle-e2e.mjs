@@ -11,8 +11,10 @@
  *   4. resolve_with_pyth   — the PROGRAM reads the CLOSE price and decides the
  *                            winner ITSELF (permissionless). There is no
  *                            authority-resolve instruction to call any more.
- *   5. claim_payout        — the winning side pulls the whole pool OUT of the
- *                            vault; the losing side gets nothing.
+ *   5. claim_payout        — the winning side pulls the pool OUT of the vault,
+ *                            minus the HOUSE EDGE (2% of PROFIT only), which the
+ *                            PROGRAM sweeps into the treasury pinned on the
+ *                            market at creation. The losing side gets nothing.
  *
  * Everything is asserted against REAL on-chain token balances and the REAL
  * market account. Exits non-zero on any mismatch. Which side wins is decided by
@@ -42,6 +44,7 @@ const MINT = new PublicKey('383pTzoZ8Gp83dzk23ZnvLcfX2Sq32TAGN48CMQu2pAJ');
 const PROGRAM_ID = new PublicKey('F82m45QUAFJ4GtMsJrSFnWzDrjWdZjdzyh8HTPgTBHXr');
 const BTC_FEED = '0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43';
 const DEC = 9;
+const HOUSE_FEE_BPS = 200;            // must equal HOUSE_FEE_BPS in the program
 
 const disc = (n) => createHash('sha256').update('global:' + n).digest().subarray(0, 8);
 const u64 = (n) => { const b = Buffer.alloc(8); b.writeBigUInt64LE(BigInt(n)); return b; };
@@ -58,10 +61,14 @@ const wallet = new anchor.Wallet(authority);
 const pyth = new PythSolanaReceiver({ connection: conn, wallet });
 const hermes = new HermesClient('https://hermes.pyth.network', {});
 
+// The house-edge destination: pinned onto the market at creation.
+const treasuryAta = getAssociatedTokenAddressSync(MINT, authority.publicKey, true, TOKEN_2022_PROGRAM_ID);
+const bal = async (a) => { try { return ui((await getAccount(conn, a, 'confirmed', TOKEN_2022_PROGRAM_ID)).amount); } catch { return 0; } };
+
 let fails = 0;
 const say = (ok, m) => { console.log((ok ? '  PASS ' : '  FAIL ') + m); if (!ok) fails++; };
 
-const MARKET_LEN = 8 + 32 + 32 + 8 + 1 + 1 + 8 + 8 + 8 + 8 + 8 + 1 + 1 + 32 + 8 + 4 + 8;
+const MARKET_LEN = 8 + 32 + 32 + 8 + 1 + 1 + 8 + 8 + 8 + 8 + 8 + 1 + 1 + 32 + 8 + 4 + 8 + 32 + 8;
 function decode(d) {
   let o = 8 + 32 + 32 + 8 + 2 + 8;
   const lockTs = Number(d.readBigInt64LE(o)); o += 8;
@@ -73,8 +80,10 @@ function decode(d) {
   o += 32;
   const openPrice = Number(d.readBigInt64LE(o)); o += 8;
   const expo = d.readInt32LE(o); o += 4;
-  const closePrice = Number(d.readBigInt64LE(o));
-  return { lockTs, resolveTs, yes, no, resolved, side, openPrice, closePrice, expo };
+  const closePrice = Number(d.readBigInt64LE(o)); o += 8;
+  const treasury = new PublicKey(d.subarray(o, o + 32)); o += 32;
+  const feesCollected = ui(d.readBigUInt64LE(o));
+  return { lockTs, resolveTs, yes, no, resolved, side, openPrice, closePrice, expo, treasury, feesCollected };
 }
 const getMarket = async (pk) => {
   const i = await conn.getAccountInfo(pk);
@@ -138,6 +147,7 @@ async function fund(name, ost) {
       { pubkey: MINT, isSigner: false, isWritable: false },
       { pubkey: market, isSigner: false, isWritable: true },
       { pubkey: vault, isSigner: false, isWritable: true },
+      { pubkey: treasuryAta, isSigner: false, isWritable: false },
       { pubkey: TOKEN_2022_PROGRAM_ID, isSigner: false, isWritable: false },
       { pubkey: SystemProgram.programId, isSigner: false, isWritable: false }
     ],
@@ -206,17 +216,41 @@ async function fund(name, ost) {
       { pubkey: posOf(bettor), isSigner: false, isWritable: true },
       { pubkey: vault, isSigner: false, isWritable: true },
       { pubkey: ata, isSigner: false, isWritable: true },
+      { pubkey: treasuryAta, isSigner: false, isWritable: true },
       { pubkey: TOKEN_2022_PROGRAM_ID, isSigner: false, isWritable: false },
       { pubkey: SystemProgram.programId, isSigner: false, isWritable: false }
     ],
     data: disc('claim_payout')
   });
 
+  // What the PROGRAM should pay: gross = whole pool; the rake is 2% of the
+  // PROFIT only, so the winner's own stake is never taxed.
+  const gross = 30;
+  const profit = gross - winnerStake;
+  const feeExp = profit * HOUSE_FEE_BPS / 10000;
+  const netExp = gross - feeExp;
+  const near = (a, b) => Math.abs(a - b) < 1e-6;
+
+  say(m.treasury.equals(treasuryAta),
+    `treasury is PINNED on the market: ${m.treasury.toBase58().slice(0, 8)}… (a claimer cannot redirect the rake)`);
+
   const wBefore = await ostBal(winner.kp.publicKey);
+  const tBefore = await bal(treasuryAta);
   sig = await sendAndConfirmTransaction(conn, new Transaction().add(claimIx(winner.kp.publicKey, winner.ata)), [winner.kp], { commitment: 'confirmed' });
   const wAfter = await ostBal(winner.kp.publicKey);
+  const tAfter = await bal(treasuryAta);
   console.log('   winner claim tx', link(sig));
-  say(wAfter - wBefore === 30, `winner received the WHOLE 30 OST pool (staked ${winnerStake}): ${wBefore} -> ${wAfter}`);
+  console.log(`   pool ${gross} OST · stake ${winnerStake} · profit ${profit} · edge ${HOUSE_FEE_BPS / 100}% of profit = ${feeExp} OST`);
+  say(near(wAfter - wBefore, netExp),
+    `winner received NET ${netExp} OST (gross ${gross} − ${feeExp} edge): ${wBefore} -> ${wAfter}`);
+  say(near(tAfter - tBefore, feeExp),
+    `house edge landed ON-CHAIN in the treasury: +${(tAfter - tBefore).toFixed(9)} OST (expected ${feeExp})`);
+
+  const mFee = await getMarket(market);
+  say(near(mFee.feesCollected, feeExp),
+    `market.fees_collected recorded the rake: ${mFee.feesCollected} OST`);
+  say(!near(feeExp, gross * HOUSE_FEE_BPS / 10000),
+    `the stake was NOT taxed (a gross-based rake would have been ${(gross * HOUSE_FEE_BPS / 10000)} OST)`);
 
   const lBefore = await ostBal(loser.kp.publicKey);
   await sendAndConfirmTransaction(conn, new Transaction().add(claimIx(loser.kp.publicKey, loser.ata)), [loser.kp], { commitment: 'confirmed' });
@@ -228,7 +262,7 @@ async function fund(name, ost) {
 
   console.log(fails
     ? `\n${fails} FAIL`
-    : '\n✅ FULLY TRUSTLESS: real OST escrowed, the ORACLE decided the winner inside the program, and the winner pulled the pool out. No human touched the outcome.');
+    : '\n✅ FULLY TRUSTLESS: real OST escrowed, the ORACLE decided the winner inside the program, the winner pulled the pool out, and the HOUSE EDGE (2% of profit, never the stake) was taken BY THE PROGRAM into a treasury pinned at market creation. No human touched the outcome, and nobody can re-point or raise the rake.');
   process.exit(fails ? 1 : 0);
 })().catch(e => {
   console.error('\nFAILED:', e.message);
