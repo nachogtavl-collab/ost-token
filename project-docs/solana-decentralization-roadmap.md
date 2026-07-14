@@ -61,17 +61,48 @@ real token balances, exits non-zero on mismatch):
 Economics: pari-mutuel (`stake * total_pool / winner_pool`) — odds emerge from
 the pools, so **settlement needs no oracle price**.
 
-### Stage 2 — what remains
-1. Wire the frontend `placeOrder` for OST-native 5-min rounds to `place_bet`
-   (stake into the program vault instead of the custodial pool), and the claim
-   path to `claim_payout`.
-2. Replace authority-keyed `resolve_market` with **Pyth-verified resolution**
-   on-chain, so the winning side is proven by oracle data rather than trusted.
-3. Market creation crank for each 5-min round.
+### Stage 2 — ✅ COMPLETE, AND TRUSTLESS
 
-Honest gaps today: resolution is still authority-signed (trusted), and the
-house edge/arbitrage spread live off-chain — on-chain economics are pure
-pari-mutuel.
+**The authority can no longer choose an outcome — the instruction that let it do
+so was DELETED.** `resolve_market(winning_side)` is gone from the program. It is
+not deprecated or gated; it does not exist. Two permissionless instructions
+replace it (anyone may call them):
+
+- `lock_open_price` — the program verifies a signed **Pyth** update and stores
+  the round's OPEN price.
+- `resolve_with_pyth` — the program verifies a fresh update, reads the CLOSE
+  price and **decides the winner itself** (`close >= open => YES`).
+
+In-program guards: the update must belong to the market's own `feed_id`, be
+≤120s old (never settle on a stale price), and its exponent must match the
+locked open price (refuse to compare mismatched scales rather than silently
+settle on the wrong number). `feed_id`, `open_price`, `open_expo` and
+`close_price` are stored on the market, so every settlement is auditable
+on-chain forever.
+
+**Proven end-to-end with real OST** (`scripts/pyth-crank/lifecycle-e2e.mjs`):
+
+| Step | Result |
+|---|---|
+| `lock_open_price` | program read open **$62,708.87** from Pyth |
+| `place_bet` ×2 | A: 20 OST YES, B: 10 OST NO → **vault holds 30 OST** |
+| `resolve_with_pyth` | close **$62,691.12** → resolved **NO (down)** — the price fell, so the side the test could not predict won |
+| `claim_payout` | winner staked 10, **received the whole 30 OST pool**; loser got nothing and cannot claim twice; **vault drained to 0** |
+
+**Frontend:** `docs/ost-onchain-market.js` stakes real OST from the browser into
+the program vault (proven: vault 0→5 OST, user 25→20 OST), and reads the odds
+from the on-chain pools.
+
+### Honest gaps that remain
+- The **house edge and arbitrage spread are still off-chain**. On-chain
+  economics are pure pari-mutuel — the program takes no rake.
+- The crank is a **convenience, not an authority**: it signs transactions but
+  cannot pick outcomes. If it vanishes, anyone can call the same instructions.
+- The **desk still routes most bets through the off-chain path**. The on-chain
+  rail is shipped and proven; making it the default is a product decision.
+- Markets created **before** the Pyth upgrade use the old layout and can never
+  be settled (authority-resolve is gone). Only test markets were affected — no
+  user funds were ever in them.
 
 ## Stage 3 — Verifiable games
 
