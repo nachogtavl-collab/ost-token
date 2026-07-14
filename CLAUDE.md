@@ -18,7 +18,7 @@ GitHub Pages (nachogtavl-collab.github.io/ost-token) is a stale backup; Cloudfla
 | `docs/` | **The website.** `index.html` = classic full app (~6k lines, the real product). `desktop.html` = OS Desktop launcher. `markets.html` = alias of index. `commerce.html`, `grok.html`, `x-app.html`, `coding-studio.html` = OS apps. |
 | `docs/app.js` | ~16k-line monolith: wallet, faucet, predictions, commerce, i18n, survival vault. Everything else hooks into it. **Edit surgically; never reformat.** |
 | `docs/mesh/`, `docs/ghost/` | P2P mesh (WebRTC games/markets) and ghost AI layers. |
-| `programs/` | Anchor programs (`ost-token`, `ost-betting`). Build: `anchor build` (needs `cargo build-sbf --force-tools-install` if toolchain corrupts). |
+| `programs/` | Anchor programs (`ost-token`, `ost-betting`). **`ost-betting` is DEPLOYED to devnet: `F82m45QUAFJ4GtMsJrSFnWzDrjWdZjdzyh8HTPgTBHXr`** — escrows real OST (Token-2022) in a program-owned vault; pari-mutuel. Proof: `node scripts/onchain-market-e2e.mjs`. See the build recipe below — `anchor build` does NOT work on this machine. |
 | `workers/ost-api/` | Cloudflare Worker backend: KV + Durable Objects (NativeMarketHub = shared BTC 5-min rounds, RealtimeHub = websocket, FaucetGate, MeshHub). Deploy: `npx wrangler deploy` from that folder. |
 | `scripts/` | ts-node utilities (faucet funding, metadata, market snapshot). |
 | `project-docs/` | Non-served markdown/docs. |
@@ -50,6 +50,39 @@ Rules:
 - `docs/index.html` and `docs/markets.html` must stay content-identical except `<title>`.
 - Honesty rule: never present unlaunched capabilities (VPN, NFC, mainnet, partnerships) as live. Label R&D as R&D.
 - **Never sell/accept real money for devnet OST.** Purchase flows must use test payments until mainnet.
+
+## Building Solana programs on THIS machine (anchor build / cargo build-sbf are BROKEN here)
+
+Do not waste time on `anchor build` or `cargo build-sbf` — both fail permanently on this
+Windows setup for three separate root causes (all diagnosed, none fixable by "reinstall"):
+1. `~/.rustup/toolchains/solana` can be an **MSYS-style symlink** that rustup reports as
+   uninstalled but cannot actually delete → cargo-build-sbf's re-link collides forever.
+2. **solana 2.2.12's cargo-build-sbf canonicalizes** the SDK path (Windows always yields a
+   `\\?\` prefix) then compares it to `rustup toolchain list -v` (plain path). These can
+   NEVER match → permanent *"The Solana toolchain is corrupted"*. Cache repair cannot fix it.
+3. platform-tools' host sysroot sits at a **260-char path = exactly Windows MAX_PATH**, so
+   `link.exe` cannot open `libwindows_targets*.rlib` (LNK1104).
+
+**The recipe that works (no admin, no Developer Mode, no WSL):**
+```bash
+# one-time: copy platform-tools (from the 3.1.12 release) to a SHORT path
+#   C:\sol-pt   <- platform-tools-v1.52
+rustup toolchain link solana 'C:\sol-pt\rust'
+
+export PATH="/c/sol-pt/llvm/bin:$PATH"
+export CARGO_TARGET_DIR='C:\ostb'          # repo lives under "OneDrive\Desktop\New folder" — too long
+cargo +solana build --release --target sbpf-solana-solana -p ost-betting
+cp /c/ostb/sbpf-solana-solana/release/ost_betting.so target/deploy/
+
+cd target/deploy && solana program deploy ost_betting.so \
+  --program-id ost_betting-keypair.json --url devnet
+```
+IDL: `anchor idl build -p ost_betting` (needs the `idl-build` feature in Cargo.toml) → `target/idl/`.
+
+Program-side gotchas learned the hard way:
+- Escrow the **token**, not SOL. Use `anchor_spl::token_interface` (works with Token-2022, which OST is).
+- On-chain checks use the **Clock sysvar**, which lags wall-clock on devnet — poll `getBlockTime`,
+  not `Date.now()`, or you get spurious `ResolveTooEarly`.
 
 ## Known traps
 

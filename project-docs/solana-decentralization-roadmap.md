@@ -38,18 +38,40 @@ transfer instructions.
 - Limits stated plainly: the IPFS build still calls the Cloudflare worker API;
   game RNG and settlement are still off-chain in this stage.
 
-## Stage 2 — On-chain prediction markets (the big one; program EXISTS)
+## Stage 2 — On-chain prediction markets — ✅ PROGRAM LIVE ON DEVNET
 
-1. `anchor build && anchor deploy` `ost-betting` to devnet.
-2. Wire `placeOrder` for OST-native 5-min rounds to `place_bet` (funds move
-   into the program vault PDA, not the custodial pool).
-3. Settlement: a crank (initially the worker, later anyone) calls
-   `resolve_market`; extend the program to verify a **Pyth price update**
-   on-chain so the winning side is proven by oracle data, not trusted.
-4. `claim_payout` replaces the client-side claim path for these markets.
+**Deployed:** `F82m45QUAFJ4GtMsJrSFnWzDrjWdZjdzyh8HTPgTBHXr`
 
-Effort: days, not hours. Risk: program upgrade/authority management, compute
-budget for Pyth verification. Payoff: bets/odds/settlement/claims all on-chain.
+Root fix before deploying: the program escrowed **native SOL**, but OST markets
+stake **OST (Token-2022)** — deploying that would have been decentralization
+theater (an "on-chain market" where the OST never moves on-chain). Rewritten to
+escrow the real token via `token_interface::transfer_checked` into a
+program-owned vault whose authority is the market PDA.
+
+Proven end-to-end on devnet (`node scripts/onchain-market-e2e.mjs`, asserts on
+real token balances, exits non-zero on mismatch):
+
+| Step | Result |
+|---|---|
+| `initialize_market` | market PDA + program-owned OST vault created |
+| `place_bet` ×2 | A: 20 OST YES, B: 10 OST NO → **vault really holds 30 OST**; pools YES=20 NO=10 |
+| `resolve_market` | YES |
+| `claim_payout` | A receives **30 OST back out of the vault**; vault → 0 |
+
+Economics: pari-mutuel (`stake * total_pool / winner_pool`) — odds emerge from
+the pools, so **settlement needs no oracle price**.
+
+### Stage 2 — what remains
+1. Wire the frontend `placeOrder` for OST-native 5-min rounds to `place_bet`
+   (stake into the program vault instead of the custodial pool), and the claim
+   path to `claim_payout`.
+2. Replace authority-keyed `resolve_market` with **Pyth-verified resolution**
+   on-chain, so the winning side is proven by oracle data rather than trusted.
+3. Market creation crank for each 5-min round.
+
+Honest gaps today: resolution is still authority-signed (trusted), and the
+house edge/arbitrage spread live off-chain — on-chain economics are pure
+pari-mutuel.
 
 ## Stage 3 — Verifiable games
 
