@@ -5999,6 +5999,8 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
       MUST load BEFORE app.js so the first market fetch uses the live API instead of stale fallbacks. -->
     <script>
       window.OST_API_BASE = "https://ost-api.nachogtavl.workers.dev";
+      // Authority that opens the shared on-chain markets (scripts/market-crank.mjs).
+      window.OST_ONCHAIN_AUTHORITY = "6LvGarqaiQfaaZ8RsCd3NQE96UAhDYCz8MXvarw6bsfF";
       window.OST_POLY_RELAY_URL = window.OST_API_BASE;
       // Live OST price is ON by default; set window.OST_LIVE_PRICE=false before this block to disable.
       window.OST_LIVE_PRICE = window.OST_LIVE_PRICE !== false;
@@ -6029,6 +6031,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
     <script src="ost-total-balance.js?v=2"></script>
     <script src="icons.js?v=1"></script>
     <script src="app.js?v=218"></script>
+  <script src="ost-onchain-market.js?v=1" defer></script>
     <!-- Ghost AI Summoning Circle (rebuild) -->
     <script type="module" src="ghost/ghost.js?v=7"></script>
     <script type="module" src="mesh/mesh.js?v=33"></script>
