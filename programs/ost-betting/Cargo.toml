@@ -17,3 +17,5 @@ default = []
 
 [dependencies]
 anchor-lang = { version = "0.31", features = ["init-if-needed"] }
+# token_interface: same CPIs work for classic SPL Token AND Token-2022 (OST).
+anchor-spl = { version = "0.31", features = ["token_2022"] }

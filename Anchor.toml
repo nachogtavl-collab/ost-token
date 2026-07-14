@@ -12,11 +12,11 @@ skip-lint = false
 
 [programs.devnet]
 ost_token = "J2jiS296YWVie1Sopb4SxcM3aJnP9aAwe6aLDhCqvGXY"
-ost_betting = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkgMQHGz5A9A"
+ost_betting = "F82m45QUAFJ4GtMsJrSFnWzDrjWdZjdzyh8HTPgTBHXr"
 
 [programs.localnet]
 ost_token = "J2jiS296YWVie1Sopb4SxcM3aJnP9aAwe6aLDhCqvGXY"
-ost_betting = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkgMQHGz5A9A"
+ost_betting = "F82m45QUAFJ4GtMsJrSFnWzDrjWdZjdzyh8HTPgTBHXr"
 
 [registry]
 url = "https://api.apr.dev"

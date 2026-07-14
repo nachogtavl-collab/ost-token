@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 #[account]
 pub struct Market {
     pub authority: Pubkey,
+    pub mint: Pubkey,        // the OST mint this market escrows (Token-2022)
     pub market_id: u64,
     pub bump: u8,
     pub vault_bump: u8,
@@ -16,7 +17,7 @@ pub struct Market {
 }
 
 impl Market {
-    pub const SIZE: usize = 32 + 8 + 1 + 1 + 8 + 8 + 8 + 8 + 8 + 1 + 1;
+    pub const SIZE: usize = 32 + 32 + 8 + 1 + 1 + 8 + 8 + 8 + 8 + 8 + 1 + 1;
 }
 
 #[account]
