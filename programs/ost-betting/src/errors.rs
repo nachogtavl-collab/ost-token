@@ -22,4 +22,12 @@ pub enum BettingError {
     MathOverflow,
     #[msg("Market cannot be resolved before resolve timestamp")]
     ResolveTooEarly,
+    #[msg("Pyth update is stale or belongs to a different feed")]
+    StaleOrWrongFeed,
+    #[msg("Open price has already been locked for this market")]
+    OpenPriceAlreadySet,
+    #[msg("Open price was never locked — cannot resolve")]
+    OpenPriceMissing,
+    #[msg("Oracle exponent changed; refusing to compare mismatched scales")]
+    ExponentMismatch,
 }

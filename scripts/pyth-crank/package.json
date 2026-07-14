@@ -1,0 +1,22 @@
+{
+  "name": "ost-pyth-crank",
+  "private": true,
+  "type": "module",
+  "description": "Isolated dependency graph for the Pyth-verified market crank. The Pyth receiver SDK pulls jito-ts -> an OLD @solana/web3.js that needs rpc-websockets@7, while the main repo uses web3 1.98 which needs rpc-websockets@9. Those cannot coexist in one node_modules (pinning either one breaks the other \u2014 verified). Isolating the crank here lets npm nest both correctly instead of masking the conflict with a global override.",
+  "scripts": {
+    "crank": "node crank.mjs",
+    "watch": "node crank.mjs --watch"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.31.0",
+    "@pythnetwork/hermes-client": "^2.0.0",
+    "@pythnetwork/pyth-solana-receiver": "^0.10.0",
+    "@solana/spl-token": "^0.4.12",
+    "@solana/web3.js": "^1.95.0"
+  },
+  "overrides": {
+    "jito-ts": {
+      "@solana/web3.js": "^1.95.0"
+    }
+  }
+}

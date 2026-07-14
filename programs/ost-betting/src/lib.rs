@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface, TransferChecked};
+use pyth_solana_receiver_sdk::price_update::PriceUpdateV2;
 
 pub mod errors;
 pub mod state;
@@ -26,6 +27,10 @@ declare_id!("F82m45QUAFJ4GtMsJrSFnWzDrjWdZjdzyh8HTPgTBHXr");
 // the next stage and slots into `resolve_market`.
 // ============================================================================
 
+/// A Pyth update older than this is refused — a market must never settle on a
+/// stale price.
+pub const MAX_PRICE_AGE_SECS: u64 = 120;
+
 #[program]
 pub mod ost_betting {
     use super::*;
@@ -35,6 +40,7 @@ pub mod ost_betting {
         market_id: u64,
         lock_ts: i64,
         resolve_ts: i64,
+        feed_id: [u8; 32],
     ) -> Result<()> {
         require!(resolve_ts > lock_ts, BettingError::ResolveTooEarly);
 
@@ -52,6 +58,67 @@ pub mod ost_betting {
         market.no_pool = 0;
         market.resolved = false;
         market.winning_side = 0;
+        market.feed_id = feed_id;
+        market.open_price = 0;
+        market.open_expo = 0;
+        market.close_price = 0;
+
+        Ok(())
+    }
+
+    /// Lock the market's OPEN price from Pyth. PERMISSIONLESS — anyone can call
+    /// it, because the price comes from a signed oracle update the program
+    /// verifies itself, not from the caller. Can only be set once, and only
+    /// from the feed this market was created against.
+    pub fn lock_open_price(ctx: Context<UsePythPrice>) -> Result<()> {
+        let clock = Clock::get()?;
+        let market = &mut ctx.accounts.market;
+        require!(!market.resolved, BettingError::MarketAlreadyResolved);
+        require!(market.open_price == 0, BettingError::OpenPriceAlreadySet);
+
+        let price = ctx
+            .accounts
+            .price_update
+            .get_price_no_older_than(&clock, MAX_PRICE_AGE_SECS, &market.feed_id)
+            .map_err(|_| error!(BettingError::StaleOrWrongFeed))?;
+        require!(price.price > 0, BettingError::StaleOrWrongFeed);
+
+        market.open_price = price.price;
+        market.open_expo = price.exponent;
+        Ok(())
+    }
+
+    /// Resolve the market from the ORACLE. PERMISSIONLESS and trustless: the
+    /// program reads the close price from the same Pyth feed and decides the
+    /// winner itself (close >= open => YES). There is deliberately NO authority
+    /// path — not even the market creator can choose the outcome.
+    pub fn resolve_with_pyth(ctx: Context<UsePythPrice>) -> Result<()> {
+        let clock = Clock::get()?;
+        let market = &mut ctx.accounts.market;
+
+        require!(!market.resolved, BettingError::MarketAlreadyResolved);
+        require!(
+            clock.unix_timestamp >= market.resolve_ts,
+            BettingError::ResolveTooEarly
+        );
+        require!(market.open_price != 0, BettingError::OpenPriceMissing);
+
+        let price = ctx
+            .accounts
+            .price_update
+            .get_price_no_older_than(&clock, MAX_PRICE_AGE_SECS, &market.feed_id)
+            .map_err(|_| error!(BettingError::StaleOrWrongFeed))?;
+
+        // Pyth keeps the exponent stable per feed; refuse to compare mismatched
+        // scales rather than silently settling on the wrong number.
+        require!(
+            price.exponent == market.open_expo,
+            BettingError::ExponentMismatch
+        );
+
+        market.close_price = price.price;
+        market.winning_side = if price.price >= market.open_price { 1 } else { 0 };
+        market.resolved = true;
 
         Ok(())
     }
@@ -114,27 +181,12 @@ pub mod ost_betting {
         Ok(())
     }
 
-    pub fn resolve_market(ctx: Context<ResolveMarket>, winning_side: u8) -> Result<()> {
-        require!(winning_side <= 1, BettingError::InvalidSide);
-
-        let clock = Clock::get()?;
-        let market = &mut ctx.accounts.market;
-
-        require!(
-            ctx.accounts.authority.key() == market.authority,
-            BettingError::Unauthorized
-        );
-        require!(!market.resolved, BettingError::MarketAlreadyResolved);
-        require!(
-            clock.unix_timestamp >= market.resolve_ts,
-            BettingError::ResolveTooEarly
-        );
-
-        market.resolved = true;
-        market.winning_side = winning_side;
-
-        Ok(())
-    }
+    // NOTE: the old authority-signed `resolve_market(winning_side)` is GONE on
+    // purpose. While it existed, the market creator could simply declare the
+    // winner — the escrow was on-chain but the OUTCOME was still trusted, which
+    // is exactly the kind of half-decentralization we refuse to ship. The only
+    // way to resolve a market now is `resolve_with_pyth`, where the program
+    // reads the price itself.
 
     pub fn claim_payout(ctx: Context<ClaimPayout>) -> Result<()> {
         require!(ctx.accounts.market.resolved, BettingError::MarketNotResolved);
@@ -269,12 +321,21 @@ pub struct PlaceBet<'info> {
     pub system_program: Program<'info, System>,
 }
 
+/// Used by BOTH lock_open_price and resolve_with_pyth. There is no `authority`
+/// here on purpose: anyone may push the market forward, because the outcome is
+/// decided by the verified oracle account, not by the signer.
 #[derive(Accounts)]
-pub struct ResolveMarket<'info> {
-    pub authority: Signer<'info>,
+pub struct UsePythPrice<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
 
     #[account(mut)]
     pub market: Account<'info, Market>,
+
+    /// Pyth price update posted on-chain by the Pyth receiver program. The SDK
+    /// verifies it belongs to `market.feed_id` and is fresh; a forged or
+    /// wrong-feed account makes the instruction fail.
+    pub price_update: Account<'info, PriceUpdateV2>,
 }
 
 #[derive(Accounts)]
