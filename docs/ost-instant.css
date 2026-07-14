@@ -1,0 +1,55 @@
+/* ==========================================================================
+ * OST · Instant touch — the button must answer BEFORE the finger lifts
+ * --------------------------------------------------------------------------
+ * The app had 2 `:active` rules in the entire stylesheet and no `touch-action`
+ * at all. So a tap produced NOTHING until the JS click handler ran — and if the
+ * main thread was mid-task, that could be hundreds of milliseconds later. The
+ * app felt slow even when it wasn't, because nothing acknowledged the press.
+ *
+ * Everything here animates ONLY transform / opacity / filter, which the
+ * compositor can paint without touching layout — so the press state shows up
+ * even while the main thread is busy.
+ * ========================================================================== */
+
+/* `manipulation` drops the browser's wait-and-see for a double-tap-to-zoom,
+   which is a free ~300ms off every tap on mobile. We paint our own press state,
+   so kill the grey flash that would fight with it. */
+a, button, [role="button"], input, select, textarea, label,
+.btn, .chip, .tile, .card, .tab, .nav-link, .ost-tap {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* The press state. 90ms is under the ~100ms threshold where a response still
+   reads as "instant" — the user sees it while the finger is still down. */
+.ost-pressed {
+  transform: scale(0.972);
+  filter: brightness(1.08);
+  transition: transform 90ms cubic-bezier(.2, .8, .3, 1),
+              filter 90ms cubic-bezier(.2, .8, .3, 1);
+  will-change: transform;
+}
+
+/* Release: spring back a touch faster than it went down, so it feels snappy
+   rather than mushy. */
+.ost-released {
+  transform: scale(1);
+  filter: brightness(1);
+  transition: transform 130ms cubic-bezier(.2, .9, .25, 1.15),
+              filter 130ms ease-out;
+}
+
+/* Don't shrink big surfaces — scaling a whole card looks broken. They get a
+   lift instead. */
+.ost-pressed.ost-press-soft {
+  transform: translateY(1px) scale(0.995);
+}
+
+/* Honour the user's OS setting: no motion means no scaling, but they still get
+   an instant brightness change so the press is still acknowledged. */
+@media (prefers-reduced-motion: reduce) {
+  .ost-pressed, .ost-released {
+    transform: none;
+    transition: filter 60ms linear;
+  }
+}

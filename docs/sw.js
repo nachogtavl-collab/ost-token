@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ost-pwa-cache-v254';
+const CACHE_NAME = 'ost-pwa-cache-v257';
 const RUNTIME_CACHE = 'ost-pwa-runtime-v253';
 const CACHE_PREFIX = 'ost-pwa-';
 
@@ -64,6 +64,9 @@ const PRECACHE_PATHS = [
   './app.js?v=218',
   './ost-onchain-market.js?v=1',
   './ost-onchain-route.js?v=1',
+  './ost-lazy.js?v=1',
+  './ost-instant.js?v=1',
+  './ost-instant.css?v=1',
   './icons.js?v=1',
   './nuevo-laredo-gas.js?v=2',
   './shop-quickview.js?v=3',
@@ -99,6 +102,7 @@ const PRECACHE_PATHS = [
   './mesh/games/cuppong.js?v=1',
   './mesh/games/minigolf.js?v=1',
   './mesh/mesh-social-x.js?v=3',
+  './mesh/mesh-group-markets.js?v=2',
   './mesh/mesh-location-pro.js?v=7',
   './mesh/mesh-crypto.js?v=1',
   './mesh/mesh-rtc.js?v=10',
@@ -167,10 +171,53 @@ async function putInCache(cacheName, request, response) {
   await cache.put(request, response.clone());
 }
 
+// How many files the SW may pull at once while precaching.
+//
+// This used to be `Promise.allSettled(urls.map(cache.add))` — all 136 files
+// fired AT ONCE, each with `cache: 'reload'` so they bypass the HTTP cache and
+// really hit the network. Every deploy bumps CACHE_NAME, so that storm re-ran
+// after EVERY push, fighting the page's own ~250 requests for bandwidth and
+// sockets. That is why the app "got slow after the last pushes".
+//
+// A small pool keeps the install cheap and leaves the network free for the page
+// the user is actually looking at.
+const PRECACHE_CONCURRENCY = 4;
+
+// The shell the app cannot render without. Fetched first; everything else is
+// topped up afterwards, so a cold install never blocks on a game or a 3D lib.
+const CRITICAL = /(?:^|\/)(?:index\.html|markets\.html|offline\.html|style\.css|app\.js|manifest\.json|sw\.js)$|\/$/i;
+
+async function fetchInto(cache, url) {
+  try {
+    await cache.add(new Request(url, { cache: 'reload' }));
+  } catch (_) {
+    /* one missing asset must never fail the whole install */
+  }
+}
+
+async function pooled(cache, urls, limit) {
+  let i = 0;
+  const workers = new Array(Math.min(limit, urls.length)).fill(0).map(async () => {
+    while (i < urls.length) {
+      const url = urls[i++];
+      await fetchInto(cache, url);
+    }
+  });
+  await Promise.all(workers);
+}
+
 async function precache() {
   const cache = await caches.open(CACHE_NAME);
   const urls = PRECACHE_PATHS.map(toScopedUrl);
-  await Promise.allSettled(urls.map((url) => cache.add(new Request(url, { cache: 'reload' }))));
+  const critical = urls.filter((u) => CRITICAL.test(u));
+  const rest = urls.filter((u) => !CRITICAL.test(u));
+
+  // Only the shell is awaited — install completes fast.
+  await pooled(cache, critical, PRECACHE_CONCURRENCY);
+
+  // The rest fills in behind the user's back. Deliberately NOT awaited: the
+  // install event should not hold the network hostage while they wait to trade.
+  pooled(cache, rest, PRECACHE_CONCURRENCY);
 }
 
 async function navigationResponse(request) {
@@ -214,11 +261,51 @@ async function networkFirstResponse(request) {
   }
 }
 
+// Serve from cache, then refresh in the background. The user gets bytes at disk
+// speed and still ends up on the newest code by the next load.
+async function staleWhileRevalidate(request) {
+  const cached = await caches.match(request);
+  const network = fetch(request)
+    .then((response) => {
+      putInCache(CACHE_NAME, request, response.clone()).catch(() => {});
+      return response;
+    })
+    .catch(() => null);
+
+  if (cached) return cached;                 // instant
+  const fresh = await network;
+  return fresh || (await caches.match(request)) || Response.error();
+}
+
+// WHY THIS CHANGED
+//
+// This used to return true for every .html, .css AND .js — sending all of them
+// down networkFirstResponse(), which fetches with `cache: 'no-store'`. That
+// means on EVERY page load the browser re-downloaded ~1MB across ~99 scripts
+// from the network, deliberately bypassing the HTTP cache, and only touched the
+// SW cache if the network FAILED. A PWA that re-downloads its whole codebase on
+// every visit cannot feel fast, and on a flaky connection a single dropped
+// request hard-failed a feature outright (no cached copy to fall back to).
+//
+// Scripts and styles are already versioned (`?v=N`), so a changed file has a
+// changed URL. They can safely be served from cache and revalidated behind the
+// user's back. Only DOCUMENTS stay network-first, so a new deploy is still
+// picked up immediately rather than being pinned to a stale shell.
 function shouldNetworkFirst(request) {
   try {
     const url = new URL(request.url);
     if (url.origin !== scopeUrl.origin) return false;
-    return /\.(?:html|css|js)$/i.test(url.pathname) || url.pathname === scopeUrl.pathname || url.pathname.endsWith('/');
+    return /\.html$/i.test(url.pathname) || url.pathname === scopeUrl.pathname || url.pathname.endsWith('/');
+  } catch (_) {
+    return false;
+  }
+}
+
+function shouldStaleWhileRevalidate(request) {
+  try {
+    const url = new URL(request.url);
+    if (url.origin !== scopeUrl.origin) return false;
+    return /\.(?:css|js|json|svg|woff2?|png|jpg|jpeg|webp)$/i.test(url.pathname);
   } catch (_) {
     return false;
   }
@@ -247,7 +334,16 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  event.respondWith(shouldNetworkFirst(request) ? networkFirstResponse(request) : cacheFirstResponse(request));
+  if (shouldNetworkFirst(request)) {
+    event.respondWith(networkFirstResponse(request));
+    return;
+  }
+  // Versioned code/assets: cache-first, revalidated in the background.
+  if (shouldStaleWhileRevalidate(request)) {
+    event.respondWith(staleWhileRevalidate(request));
+    return;
+  }
+  event.respondWith(cacheFirstResponse(request));
 });
 
 function notificationPayload(data = {}) {

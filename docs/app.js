@@ -13726,9 +13726,18 @@
       var paused = false;
       var direction = 1;
       var lastTs = 0;
+      // This loop used to run FOREVER at 60fps — reading scrollWidth/clientWidth
+      // (which forces a layout) and writing scrollLeft every single frame, even
+      // when the carousel was scrolled far off-screen or the tab was in the
+      // background. Two rails meant two permanent layout-thrash loops on the main
+      // thread; the profiler caught them costing 269ms. Now they only run while
+      // actually on screen.
+      var onScreen = false;
+      var running = false;
 
       function frame(ts) {
-        if (!rail || !rail.isConnected) return;
+        if (!rail || !rail.isConnected) { running = false; return; }
+        if (!onScreen || document.hidden) { running = false; lastTs = 0; return; }
         if (!lastTs) lastTs = ts;
         var delta = ts - lastTs;
         lastTs = ts;
@@ -13741,12 +13750,30 @@
         window.requestAnimationFrame(frame);
       }
 
+      function start() {
+        if (running || !onScreen || document.hidden) return;
+        running = true;
+        lastTs = 0;
+        window.requestAnimationFrame(frame);
+      }
+
       rail.addEventListener('mouseenter', function() { paused = true; });
       rail.addEventListener('mouseleave', function() { paused = false; });
       rail.addEventListener('pointerdown', function() { paused = true; });
       rail.addEventListener('pointerup', function() { paused = false; });
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) start();
+      });
 
-      window.requestAnimationFrame(frame);
+      if (window.IntersectionObserver) {
+        new IntersectionObserver(function (entries) {
+          onScreen = entries.some(function (e) { return e.isIntersecting; });
+          start();
+        }, { threshold: 0 }).observe(rail);
+      } else {
+        onScreen = true;
+        start();
+      }
     }
 
     window.setTimeout(function() {
@@ -13955,14 +13982,22 @@
       return (rounded > 0 ? '+' : '') + rounded + ' pts';
     }
 
+    // Intl.NumberFormat construction is expensive — profiling showed formatMoney
+    // burning 329ms at boot because it built a NEW formatter on every call, and
+    // it is called once per market per render. There are only two shapes, so
+    // build them once.
+    var MONEY_FMT = {};
+    function moneyFormatter(digits) {
+      return MONEY_FMT[digits] || (MONEY_FMT[digits] = new Intl.NumberFormat(undefined, {
+        style: 'currency',
+        currency: 'USD',
+        maximumFractionDigits: digits
+      }));
+    }
     function formatMoney(value) {
       var number = Number(value);
       if (!Number.isFinite(number)) return 'N/A';
-      return new Intl.NumberFormat(undefined, {
-        style: 'currency',
-        currency: 'USD',
-        maximumFractionDigits: number >= 100 ? 0 : 2
-      }).format(number);
+      return moneyFormatter(number >= 100 ? 0 : 2).format(number);
     }
 
     function formatRelativeTime(value) {
@@ -14326,15 +14361,31 @@
       });
     }
 
+    // Polymarket ships `outcomes` / `clobTokenIds` as JSON *strings*, and the
+    // render path re-parses the SAME unchanged strings on every pass — profiling
+    // showed 496ms of JSON.parse at boot, the single hottest function in the app.
+    // The strings are immutable, so the parse result is cacheable.
+    //
+    // Bounded so a long session with thousands of markets can't grow it forever.
+    var PARSE_CACHE = new Map();
+    var PARSE_CACHE_MAX = 500;
     function parseMaybeJson(value) {
       if (Array.isArray(value)) return value;
       if (typeof value !== 'string') return [];
+      var hit = PARSE_CACHE.get(value);
+      if (hit) return hit;
+      var out;
       try {
         var parsed = JSON.parse(value);
-        return Array.isArray(parsed) ? parsed : [];
+        out = Array.isArray(parsed) ? parsed : [];
       } catch (error) {
-        return [];
+        out = [];
       }
+      if (PARSE_CACHE.size >= PARSE_CACHE_MAX) {
+        PARSE_CACHE.delete(PARSE_CACHE.keys().next().value);   // drop oldest
+      }
+      PARSE_CACHE.set(value, out);
+      return out;
     }
 
     function normalizeWhitespace(value) {

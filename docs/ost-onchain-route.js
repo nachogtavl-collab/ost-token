@@ -39,6 +39,67 @@
   function chain() { return window.OST_ONCHAIN; }
   function log(msg) { try { console.info('[ost-onchain-route] ' + msg); } catch (_) {} }
 
+  // ---- market cache -------------------------------------------------------
+  // Devnet RPC round-trips run 200ms–1.2s. The first version of this module
+  // called marketFor() INSIDE placeOrder, so every bet paid that latency before
+  // anything happened — and if the chain was slow, the user sat there watching a
+  // dead button. That is a self-inflicted "the app feels slow".
+  //
+  // Instead we keep the CURRENT round's market warm in the background and let
+  // placeOrder read it from memory. A bet never waits on a lookup.
+  var cache = {};                      // openAtSec -> { at, market }
+  var CACHE_MS = 20000;                // a round lasts 5 min; 20s is plenty fresh
+  var inflight = {};
+
+  function cachedMarket(openAtSec) {
+    var hit = cache[openAtSec];
+    return (hit && Date.now() - hit.at < CACHE_MS) ? hit.market : null;
+  }
+
+  function fetchMarket(openAtSec) {
+    if (inflight[openAtSec]) return inflight[openAtSec];
+    var C = chain();
+    if (!C || !C.available()) return Promise.resolve(null);
+    inflight[openAtSec] = C.marketFor(openAtSec).then(function (m) {
+      cache[openAtSec] = { at: Date.now(), market: m };
+      delete inflight[openAtSec];
+      return m;
+    }).catch(function () {
+      delete inflight[openAtSec];
+      return null;
+    });
+    return inflight[openAtSec];
+  }
+
+  // Reject rather than hang: a slow chain must fall back to the working rail
+  // fast, not freeze the ticket.
+  function withTimeout(promise, ms, label) {
+    return new Promise(function (resolve, reject) {
+      var done = false;
+      var t = setTimeout(function () {
+        if (!done) { done = true; reject(new Error(label + ' timed out after ' + ms + 'ms')); }
+      }, ms);
+      promise.then(function (v) {
+        if (!done) { done = true; clearTimeout(t); resolve(v); }
+      }, function (e) {
+        if (!done) { done = true; clearTimeout(t); reject(e); }
+      });
+    });
+  }
+
+  // Keep the round the user is actually looking at warm, so the bet path is a
+  // memory read. Cheap: one getAccountInfo per round, not one per bet.
+  function currentRound() {
+    var C = chain();
+    return C ? C.roundOpenAt(Date.now()) : 0;
+  }
+  function warm() {
+    var C = chain();
+    if (!C || !C.available()) return;
+    var now = currentRound();
+    if (!cachedMarket(now)) fetchMarket(now);
+  }
+
   // ---- placing ------------------------------------------------------------
 
   function recordOnChainTicket(order, openAtSec, res, quote) {
@@ -93,13 +154,24 @@
       var stake = Number(order && order.stake);
       if (!Number.isFinite(stake) || stake <= 0) return inner(order);
 
-      return C.marketFor(openAtSec).then(function (m) {
+      // The warm cache means this is normally a memory read — no RPC on the hot
+      // path. If it is cold (first bet of a round), give the lookup a short
+      // budget and fall back rather than make the user wait on devnet.
+      var cached = cachedMarket(openAtSec);
+      var lookup = cached
+        ? Promise.resolve(cached)
+        : withTimeout(fetchMarket(openAtSec), 1200, 'on-chain market lookup')
+            .catch(function () { return null; });
+
+      return lookup.then(function (m) {
         if (!m || !m.exists) { log('no on-chain market for this round yet — off-chain path'); return inner(order); }
         if (m.resolved) { log('market already resolved — off-chain path'); return inner(order); }
         if (Date.now() >= m.lockTs) { log('market locked — off-chain path'); return inner(order); }
 
         var quote = C.quoteNet(m, order.side, stake);
         return C.placeBet(openAtSec, order.side, stake).then(function (res) {
+          // The pools moved — the next bet should not quote a stale price.
+          delete cache[openAtSec];
           var rec = recordOnChainTicket(order, openAtSec, res, quote);
           log('ON-CHAIN bet placed: ' + stake + ' OST ' + String(order.side).toUpperCase() +
               ' -> program vault (' + res.signature.slice(0, 10) + '…)');
@@ -128,10 +200,30 @@
   (function attach() {
     if (wrapPlaceOrder()) {
       log('desk routed: OST-native BTC rounds default to the on-chain program');
+      startWarming();
       return;
     }
     if (tries++ < 60) setTimeout(attach, 250);
   })();
+
+  // Warm the cache only once the browser is idle and the tab is visible. Boot is
+  // already the busiest moment in the app's life; adding an RPC to it would make
+  // the page feel slower to load in exchange for a faster bet, which is a bad
+  // trade. A hidden tab warms nothing — no point burning a user's data.
+  var warmTimer = null;
+  function startWarming() {
+    var idle = window.requestIdleCallback || function (fn) { return setTimeout(fn, 1500); };
+    idle(function () {
+      warm();
+      if (warmTimer) clearInterval(warmTimer);
+      warmTimer = setInterval(function () {
+        if (document.visibilityState === 'visible') warm();
+      }, 15000);
+    }, { timeout: 4000 });
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') warm();
+    });
+  }
 
   window.OST_ONCHAIN_ROUTE = {
     openAtSecOf: openAtSecOf,
