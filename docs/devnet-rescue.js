@@ -245,7 +245,12 @@
     var tx = new solanaWeb3.Transaction();
     instructions.forEach(function (ix) { if (ix) tx.add(ix); });
     tx.feePayer = pool.publicKey;
-    var bh = await conn.getLatestBlockhash('confirmed');
+    // Reuse the blockhash the app keeps warm in the background — saves a full RPC
+    // round-trip (200ms–1.2s on devnet) on the hot path of every pool-paid bet.
+    // Falls back to a live fetch if none is warm yet.
+    var bh = null;
+    try { if (window.OST_WALLET && window.OST_WALLET.warmBlockhashValue) bh = window.OST_WALLET.warmBlockhashValue(); } catch (_) {}
+    if (!bh) bh = await conn.getLatestBlockhash('confirmed');
     tx.recentBlockhash = bh.blockhash;
     tx.lastValidBlockHeight = bh.lastValidBlockHeight;
     return { tx: tx, pool: pool, conn: conn, blockhash: bh };
@@ -288,14 +293,21 @@
     }
   }
 
-  async function confirmSentTransaction(sig, built, label) {
+  async function confirmSentTransaction(sig, built, label, commitment) {
+    // Bets pass 'processed' (~1 slot) so the ticket lands fast; the tx's err
+    // field is already populated at processed, so a real revert is still caught.
+    // Everything else keeps the safe 'confirmed' default.
+    var level = commitment || 'confirmed';
+    var accept = level === 'processed'
+      ? { processed: 1, confirmed: 1, finalized: 1 }
+      : { confirmed: 1, finalized: 1 };
     var primaryErr = null;
     try {
       var res = await built.conn.confirmTransaction({
         signature: sig,
         blockhash: built.blockhash.blockhash,
         lastValidBlockHeight: built.blockhash.lastValidBlockHeight
-      }, 'confirmed');
+      }, level);
       if (res && res.value && res.value.err) {
         throw new Error('On-chain failure: ' + JSON.stringify(res.value.err));
       }
@@ -314,7 +326,7 @@
           if (entry) {
             lastStatus = entry;
             if (entry.err) throw new Error('On-chain failure: ' + JSON.stringify(entry.err));
-            if (entry.confirmationStatus === 'confirmed' || entry.confirmationStatus === 'finalized') return sig;
+            if (entry.confirmationStatus && accept[entry.confirmationStatus]) return sig;
           }
         } catch (statusErr) {
           if (statusErr && /On-chain failure/i.test(statusErr.message || '')) throw statusErr;
@@ -389,7 +401,9 @@
 
   // Pool pays SOL fee + partial-signs first; user wallet signs to authorise
   // their OST transfer. Used when user is spending their own OST.
-  async function sendUserSignedPoolPaidTx(instructions) {
+  async function sendUserSignedPoolPaidTx(instructions, opts) {
+    opts = opts || {};
+    var commitment = opts.fast ? 'processed' : (opts.commitment || 'confirmed');
     var w = window.OST_WALLET;
     if (!w || !w.sign) throw new Error('Wallet helpers not loaded');
     var built = await buildPoolPaidTx(instructions);
@@ -410,14 +424,14 @@
       // Provider handles send; just return the signature.
       var res = await session.provider.signAndSendTransaction(built.tx);
       var providerSig = typeof res === 'string' ? res : (res && res.signature);
-      if (providerSig) await confirmSentTransaction(providerSig, built, 'Wallet-signed transaction');
+      if (providerSig) await confirmSentTransaction(providerSig, built, 'Wallet-signed transaction', commitment);
       return providerSig;
     } else {
       throw new Error('Wallet cannot sign transactions');
     }
     try {
       var sig = await sendRawSafe(built.conn, serialized);
-      await confirmSentTransaction(sig, built, 'Wallet-signed transaction');
+      await confirmSentTransaction(sig, built, 'Wallet-signed transaction', commitment);
       return sig;
     } catch (e) {
       throw await unpackSendError(e);
@@ -559,14 +573,21 @@
   // -----------------------------------------------------------------------
   // 6) USER → POOL  (BUY-side; pool pays the SOL fee)
   // -----------------------------------------------------------------------
-  async function userSendsOstToPool(amountOst, memoText) {
+  async function userSendsOstToPool(amountOst, memoText, opts) {
+    opts = opts || {};
     var w = window.OST_WALLET; if (!w || !w.session || !w.session.publicKey) throw new Error('Connect a wallet first');
     var c = w.constants;
     var amt = Number(amountOst);
     if (!Number.isFinite(amt) || amt <= 0) throw new Error('Enter a valid OST amount');
 
-    var userBal = await w.getOstBalance(w.session.publicKey);
-    if (userBal + 1e-9 < amt) throw new Error('Not enough OST in wallet');
+    // The balance pre-check is a full RPC round-trip. On the fast (betting) path
+    // we skip it: the transfer itself is the real gate and fails fast with a
+    // clear error if the balance is short, so there is no need to block the bet
+    // on a read first. Other callers keep the upfront check.
+    if (!opts.fast) {
+      var userBal = await w.getOstBalance(w.session.publicKey);
+      if (userBal + 1e-9 < amt) throw new Error('Not enough OST in wallet');
+    }
 
     var mintPk = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.mint);
     var poolAta = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.ata);
@@ -578,7 +599,7 @@
     ];
     if (memoText) ixs.push(w.memoIx(String(memoText), w.session.publicKey));
 
-    var sig = await sendUserSignedPoolPaidTx(ixs);
+    var sig = await sendUserSignedPoolPaidTx(ixs, { fast: !!opts.fast });
     return { sig: sig, ost: amt };
   }
 

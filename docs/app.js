@@ -3256,7 +3256,9 @@
     }
     // Fund the same payout pool that pays winners; retained losses therefore
     // stay in the live vault instead of being stranded in a separate desk ATA.
-    const settlement = await window.OST_RESCUE.userSendsOstToPool(Number(order.stake), memo);
+    // fast: prewarmed blockhash, skip the balance pre-read, confirm at 'processed'
+    // — the bet lands in well under a second instead of waiting on 'confirmed'.
+    const settlement = await window.OST_RESCUE.userSendsOstToPool(Number(order.stake), memo, { fast: true });
     const signature = settlement && (settlement.sig || settlement.signature) || '';
     const vaultTokenAccount = window.OST_SWAP_POOL && window.OST_SWAP_POOL.ata ? String(window.OST_SWAP_POOL.ata) : '';
 
@@ -6381,6 +6383,12 @@
     signFast: function (tx) { return signAndSendTransaction(tx, { commitment: 'processed' }); },
     reconcile: reconcileConfirmation,
     warmBlockhash: function () { return refreshBlockhash(false); },
+    // The warm blockhash value (or null), so other modules — e.g. the custodial
+    // pool path in devnet-rescue — can stamp a tx without their own round-trip.
+    warmBlockhashValue: function () {
+      var c = cachedBlockhash();
+      return c ? { blockhash: c.blockhash, lastValidBlockHeight: c.lastValidBlockHeight } : null;
+    },
     transferChecked: createTransferCheckedInstruction,
     associatedAddress: getAssociatedTokenAddressSync,
     associatedAccountIx: createAssociatedTokenAccountInstruction,

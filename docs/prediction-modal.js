@@ -1477,7 +1477,15 @@ liveTimers.forEach(function (t) {
       var sideKey = String(side || 'YES').toUpperCase() === 'NO' ? 'no' : 'yes';
       return Promise.resolve(api.placeBet({ marketId: market.id, side: sideKey, stake: stake }));
     }
-    return refreshMarketQuoteBeforeBet(market).then(function (freshMarket) {
+    // The pre-bet quote refresh used to run THREE sequential network fetches
+    // (fetchCanonicalBtcRound 900ms + btcSpot 700ms + refreshNativeMarketState
+    // 900ms) — up to 2.5s of waiting before the order was even submitted, which
+    // is the main reason betting "felt slow". The price on screen is already kept
+    // live by the tick feed, and for on-chain bets the true price is the pool
+    // ratio, not this display quote. So we cap the refresh at 400ms and place the
+    // bet with the live on-screen market if it is slower. Accuracy is unchanged
+    // in practice; the multi-second stall is gone.
+    return withTimeout(refreshMarketQuoteBeforeBet(market), 400, market).then(function (freshMarket) {
       return placeBetDirectly(freshMarket || market, side, stake, outcomeKey);
     })
       .catch(function (directError) {
