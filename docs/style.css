@@ -2898,6 +2898,31 @@ nav {
   color: #fecaca;
 }
 
+/* One-tap quick bet: the ARMED "⚡ Confirm N" state. Pulses so it clearly reads
+   as "tap again to place". Grows slightly and glows to feel responsive. */
+.prediction-market-quick-btn.is-armed {
+  color: #0b0f14;
+  font-weight: 800;
+  border-color: transparent;
+  transform: scale(1.03);
+  animation: ostQuickArm 1.05s ease-in-out infinite;
+}
+.prediction-market-quick-btn.is-armed.is-yes {
+  background: linear-gradient(180deg, #6ee7b7, #34d399);
+  box-shadow: 0 0 0 1px rgba(52,211,153,.5), 0 8px 22px -6px rgba(52,211,153,.65);
+}
+.prediction-market-quick-btn.is-armed.is-no {
+  background: linear-gradient(180deg, #fca5a5, #f87171);
+  box-shadow: 0 0 0 1px rgba(248,113,113,.5), 0 8px 22px -6px rgba(248,113,113,.65);
+}
+@keyframes ostQuickArm {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(255,255,255,.35), 0 6px 16px -6px rgba(0,0,0,.5); }
+  50%      { box-shadow: 0 0 0 3px rgba(255,255,255,.18), 0 10px 26px -6px rgba(0,0,0,.55); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .prediction-market-quick-btn.is-armed { animation: none; }
+}
+
 .prediction-market-api-link {
   color: var(--text-muted);
 }

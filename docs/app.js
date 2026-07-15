@@ -13974,6 +13974,7 @@
       return window.matchMedia && window.matchMedia('(max-width: 720px)').matches ? 4 : 6;
     }
 
+    var quickArmTimer = null;      // auto-disarms a one-tap quick bet after the window
     var state = {
       markets: [],
       source: 'all',
@@ -13983,6 +13984,10 @@
       selectedMarketId: '',
       selectedOutcomeKey: '',
       selectedSide: 'yes',
+      // One-tap quick bet: first tap on a card's YES/NO ARMS it (shows "Confirm
+      // N OST"); a second tap within the window places it instantly. Beats
+      // Polymarket's click→panel→type→confirm→approve, without accidental bets.
+      armedBet: null,           // { marketId, side, at }
       stake: 25,
       visibleCount: getPredictionDefaultVisibleCount(),
       loading: false,
@@ -16351,14 +16356,24 @@
                 var hasExplicitOutcomes = marketHasExplicitOutcomeContracts(market);
                 var primary = contracts[0] || null;
                 var secondary = contracts[1] || null;
+                // Armed-aware one-tap button: when this card+side is armed, the
+                // button flips to "⚡ Confirm N OST" so a second tap places it.
+                var armed = state.armedBet;
+                var stakeShown = Math.round(Number(state.stake) || 25);
+                function quickBtn(side, sideClass, label) {
+                  var isArmed = armed && String(armed.marketId) === String(market.id) && armed.side === side;
+                  var cls = 'prediction-market-quick-btn ' + sideClass + (isArmed ? ' is-armed' : '');
+                  var text = isArmed ? '⚡ Confirm ' + stakeShown : label;
+                  return '<button type="button" class="' + cls + '" data-prediction-quick-side="' + side + '"'
+                    + (isArmed ? ' data-prediction-armed="1"' : '') + '>' + escapeHtml(text) + '</button>';
+                }
                 return hasExplicitOutcomes
                   ? '<button type="button" class="prediction-market-quick-btn is-yes" data-prediction-quick-outcome-key="' + escapeHtml(primary ? primary.key : '') + '">' + escapeHtml(primary ? truncateText(primary.label, 16) : 'Select') + '</button>' +
                     '<button type="button" class="prediction-market-quick-btn is-no" data-prediction-quick-outcome-key="' + escapeHtml(secondary ? secondary.key : '') + '">' + escapeHtml(secondary ? truncateText(secondary.label, 16) : 'More') + '</button>'
                   : isOstBtcMarket(market)
                     ? '<button type="button" class="prediction-market-quick-btn is-yes" data-prediction-quick-side="yes">Bet UP</button>' +
                       '<button type="button" class="prediction-market-quick-btn is-no" data-prediction-quick-side="no">Bet DOWN</button>'
-                    : '<button type="button" class="prediction-market-quick-btn is-yes" data-prediction-quick-side="yes">Buy YES</button>' +
-                      '<button type="button" class="prediction-market-quick-btn is-no" data-prediction-quick-side="no">Buy NO</button>';
+                    : quickBtn('yes', 'is-yes', 'Buy YES') + quickBtn('no', 'is-no', 'Buy NO');
               })(),
               '<button type="button" class="prediction-market-open-btn" data-prediction-open-modal="1">Details</button>',
               '<a class="prediction-market-api-link" href="' + escapeHtml(market.primaryUrl) + '" target="_blank" rel="noopener">Venue</a>',
@@ -16995,21 +17010,47 @@
         if (quickSideBtn) {
           var quickArticle = quickSideBtn.closest('.prediction-market-card[data-prediction-market-id]');
           if (!quickArticle) return;
-          state.selectedMarketId = quickArticle.getAttribute('data-prediction-market-id') || '';
+          var quickMid = quickArticle.getAttribute('data-prediction-market-id') || '';
+          var quickSide = quickSideBtn.getAttribute('data-prediction-quick-side') === 'no' ? 'no' : 'yes';
+          state.selectedMarketId = quickMid;
           state.selectedOutcomeKey = '';
-          state.selectedSide = quickSideBtn.getAttribute('data-prediction-quick-side') === 'no' ? 'no' : 'yes';
+          state.selectedSide = quickSide;
           if (!Number(state.stake)) {
             state.stake = 25;
             if (stakeInputEl) stakeInputEl.value = '25';
           }
-          renderPredictionBoard();
           var selectedQuickMarket = getSelectedMarket(getFilteredMarkets());
+          // BTC 5-min rounds stay pure one-tap (fast game, low stakes).
           if (isOstBtcMarket(selectedQuickMarket)) {
+            state.armedBet = null;
+            renderPredictionBoard();
             setTradeStatus('Submitting ' + state.selectedSide.toUpperCase() + ' at the live BTC quote...', 'warning');
             submitPredictionOrderFromSelection().catch(function() {});
+            return;
+          }
+          // Everything else: ARM on first tap, PLACE on second (within the
+          // window). One-tap-to-arm + one-tap-to-confirm, both on the card —
+          // faster than Polymarket's panel, with no accidental bets.
+          var armed = state.armedBet;
+          var isConfirm = armed && String(armed.marketId) === String(quickMid) &&
+            armed.side === quickSide && (Date.now() - armed.at) < 3500;
+          if (isConfirm) {
+            state.armedBet = null;
+            if (quickArmTimer) { clearTimeout(quickArmTimer); quickArmTimer = null; }
+            renderPredictionBoard();
+            setTradeStatus('Placing ' + quickSide.toUpperCase() + ' — ' + (Math.round(Number(state.stake) || 25)) + ' OST…', 'warning');
+            submitPredictionOrderFromSelection().catch(function() {});
           } else {
-            setTradeStatus('Selected ' + state.selectedSide.toUpperCase() + '. Review stake and route the OST ticket when ready.', 'info');
-            focusPredictionExperience('trade');
+            state.armedBet = { marketId: quickMid, side: quickSide, at: Date.now() };
+            renderPredictionBoard();
+            setTradeStatus('Tap ' + quickSide.toUpperCase() + ' again to place ' + (Math.round(Number(state.stake) || 25)) + ' OST, or adjust the stake.', 'info');
+            if (quickArmTimer) clearTimeout(quickArmTimer);
+            quickArmTimer = setTimeout(function () {
+              if (state.armedBet && String(state.armedBet.marketId) === String(quickMid)) {
+                state.armedBet = null;
+                renderPredictionBoard();
+              }
+            }, 3500);
           }
           return;
         }
