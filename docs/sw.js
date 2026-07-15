@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ost-pwa-cache-v261';
+const CACHE_NAME = 'ost-pwa-cache-v262';
 const RUNTIME_CACHE = 'ost-pwa-runtime-v253';
 const CACHE_PREFIX = 'ost-pwa-';
 
@@ -33,7 +33,7 @@ const PRECACHE_PATHS = [
   './ost-wc-rail.js?v=1',
   './ost-mobile-fit.css?v=1',
   './ost-appbar.css?v=2',
-  './predict-mobile.css?v=1',
+  './predict-mobile.css?v=2',
   './ost-total-balance.js?v=2',
   './manifest.json',
   './favicon.svg',

@@ -166,5 +166,85 @@
 
   /* ── 8 · SECTION RHYTHM: less air between blocks ───────────────────────── */
   .prediction-market-board > * { margin-block: 10px !important; }
-  .prediction-market-board { padding: 14px !important; }
+  .prediction-market-board { padding: 12px 8px !important; }
+
+  /* ── 9 · LIST FIRST — reach the browsable markets immediately ───────────
+     `.prediction-market-main` renders the big featured "stage" (chart, tape,
+     ladder, inline trade desk ≈ 1300px tall) BEFORE the market grid, so on a
+     phone you scroll through one market's detail before you can browse. On
+     mobile a card tap opens the full modal anyway, so the inline stage is
+     redundant here. Flip the order: cards come first, the featured stage drops
+     below as a "spotlight". */
+  .prediction-market-main {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+  #predictionMarketList { order: -1 !important; }
+  .prediction-market-stage { order: 2 !important; }
+
+  /* ── 10 · RECLAIM CARD WIDTH ────────────────────────────────────────────
+     The predict board is nested five padding layers deep (section > container >
+     wallet-shell > wallet-panel > board), which strips ~120px and leaves cards
+     at ~262px in a 390px screen. Trim the wallet chrome padding ONLY while the
+     predict tab is the active one (so other wallet tabs are untouched), and zero
+     the redundant inner wrappers. Cards then use nearly the full width. */
+  .wallet-tab-panel.is-active:has(.prediction-market-board) { padding-left: 6px !important; padding-right: 6px !important; }
+  .wallet-command-shell:has(.wallet-tab-panel.is-active .prediction-market-board) { padding-left: 6px !important; padding-right: 6px !important; }
+  .prediction-market-shell,
+  .prediction-market-main { padding-left: 0 !important; padding-right: 0 !important; }
+
+  /* ── 11 · COMPACT THE FEATURED STAGE (now below the list) ───────────────── */
+  .prediction-market-stage { padding: 12px !important; gap: 10px !important; }
+  .prediction-stage-stats {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+  .prediction-stage-stat { padding: 8px !important; }
+  .prediction-stage-stat span { font-size: 0.58rem !important; }
+  .prediction-stage-stat strong { font-size: 0.9rem !important; }
+
+  /* ── 12 · CARD VISUAL REFRESH ───────────────────────────────────────────
+     Cleaner, tighter cards: crisper border, comfortable radius, the quick
+     YES/NO buttons full-width and thumb-sized, price row legible. */
+  .prediction-market-card {
+    padding: 13px !important;
+    border-radius: 16px !important;
+    border: 1px solid rgba(148, 176, 220, 0.14) !important;
+    background: linear-gradient(180deg, rgba(20, 28, 42, 0.72), rgba(13, 19, 30, 0.72)) !important;
+  }
+  .prediction-market-card.is-selected {
+    border-color: rgba(110, 168, 254, 0.5) !important;
+    box-shadow: 0 0 0 1px rgba(110, 168, 254, 0.35), 0 12px 30px -14px rgba(56, 130, 246, 0.5) !important;
+  }
+  .prediction-market-actions {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+  /* The Details / Venue links go full-width beneath the two quick buttons. */
+  .prediction-market-open-btn { grid-column: 1 / -1 !important; }
+  .prediction-market-api-link { grid-column: 1 / -1 !important; text-align: center !important; }
+  .prediction-market-quick-btn {
+    min-height: 44px !important;      /* thumb target */
+    font-weight: 700 !important;
+    border-radius: 12px !important;
+  }
+  .prediction-market-price-grid { gap: 8px !important; }
+  .prediction-market-price strong { font-size: 1.02rem !important; }
+
+  /* ── 13 · TRIM CARD REDUNDANCY on mobile ────────────────────────────────
+     Two things bloated the card height without adding information on a phone:
+       · the topic-tag pills, which for most markets just repeat "All markets"
+         three times (the topic is already in the topline), and
+       · the YES/NO price grid, which shows the SAME two percentages already in
+         the probability row right above it.
+     Hide both on mobile so a card is scannable in one glance. */
+  .prediction-market-tags { display: none !important; }
+  .prediction-market-price-grid { display: none !important; }
+
+  /* Give the probability row + sparkline a touch more presence now that it is
+     the single price readout on the card. */
+  .prediction-market-probability-row { font-size: 0.86rem !important; }
 }
