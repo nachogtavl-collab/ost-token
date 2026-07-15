@@ -2923,6 +2923,36 @@ nav {
   .prediction-market-quick-btn.is-armed { animation: none; }
 }
 
+/* Card sparkline — a live YES-price trend drawn from observed prices. Sits
+   between the YES and NO labels in the probability row. */
+.prediction-spark-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* mobile-shell.css forces `min-width:0` + `max-width:100%` on every element,
+     which shrinks fixed-width children to nothing. Pin the size so the spark
+     survives on phones (see CLAUDE.md mobile trap). */
+  flex: 0 0 72px;
+  min-width: 72px;
+  width: 72px;
+  height: 22px;
+  opacity: .95;
+}
+.prediction-spark {
+  display: block;
+  overflow: visible;
+  width: 72px;
+  height: 22px;
+  min-width: 72px;
+  max-width: 72px;
+}
+.prediction-spark polyline { stroke: #94a3b8; }
+.prediction-spark circle { fill: #cbd5e1; }
+.prediction-spark.is-up polyline { stroke: #34d399; }
+.prediction-spark.is-up circle { fill: #6ee7b7; }
+.prediction-spark.is-down polyline { stroke: #f87171; }
+.prediction-spark.is-down circle { fill: #fca5a5; }
+
 .prediction-market-api-link {
   color: var(--text-muted);
 }

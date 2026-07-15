@@ -13975,6 +13975,80 @@
     }
 
     var quickArmTimer = null;      // auto-disarms a one-tap quick bet after the window
+
+    // ---- Card sparklines ----------------------------------------------------
+    // A tiny live price-trend line on every market card. We do NOT fetch history
+    // per card (that would be one network call per card). Instead each card keeps
+    // a small ring buffer of the YES prices we have actually OBSERVED as the board
+    // re-renders, seeded from the market's own previous→current move so it is
+    // never a single flat dot. Fast markets (BTC 5-min) fill it every tick; slower
+    // venues fill it on each refresh. When richer venue history is already cached
+    // (a market that has been opened), we draw that instead — it is real series
+    // data. Everything drawn is a price that genuinely happened.
+    var sparkBuf = {};             // marketId -> [ {t, p} ]  (p is 0..1 YES prob)
+    var SPARK_MAX = 40;
+
+    function recordSparkPoint(market) {
+      if (!market || !market.id) return;
+      var p = Number(market.yesPriceNumber);
+      if (!Number.isFinite(p)) return;
+      p = clamp(p, 0, 1);
+      var id = String(market.id);
+      var buf = sparkBuf[id];
+      if (!buf) {
+        // Seed so the FIRST render already shows a real 2-point trend, not a bare
+        // dot. Prefer a distinct reported previous price; otherwise derive the
+        // start from the venue's own trend metric (getTrendPoints = the recent
+        // change in points). Worst case start == current -> a flat line, which
+        // still draws. Live ticks then extend it.
+        buf = [];
+        var prev = Number(market.previousYesPriceNumber);
+        if (!Number.isFinite(prev) || Math.abs(prev - p) < 1e-6) {
+          var trend = 0;
+          try { trend = Number(getTrendPoints(market, 'yes')) || 0; } catch (_) {}
+          prev = clamp(p - trend / 100, 0, 1);
+        }
+        buf.push({ t: Date.now() - 1, p: clamp(prev, 0, 1) });
+        sparkBuf[id] = buf;
+      }
+      var last = buf[buf.length - 1];
+      // Append when the price moved, ~4s passed, or we only have the seed point
+      // (so every card always has at least a 2-point line to draw). This keeps
+      // the buffer meaningful instead of a flat run of identical points.
+      if (!last || buf.length < 2 || Math.abs(last.p - p) > 1e-6 || (Date.now() - last.t) > 4000) {
+        buf.push({ t: Date.now(), p: p });
+        if (buf.length > SPARK_MAX) buf.shift();
+      }
+    }
+
+    // Build a tiny inline SVG sparkline. Prefers real cached venue history; falls
+    // back to the observed live buffer. Returns '' when there is nothing to draw.
+    function sparklineSvg(market) {
+      if (!market || !market.id) return '';
+      var series = null;
+      var cached = getCachedHistory(market, 'yes');
+      if (cached && cached.length > 3) series = cached.slice(-40).map(function (pt) { return Number(pt.p); });
+      else {
+        var buf = sparkBuf[String(market.id)];
+        if (buf && buf.length > 1) series = buf.map(function (pt) { return pt.p; });
+      }
+      if (!series || series.length < 2) return '';
+      var W = 72, H = 22, n = series.length;
+      var min = Math.min.apply(null, series), max = Math.max.apply(null, series);
+      var range = (max - min) || 1;
+      var pts = series.map(function (v, i) {
+        var x = (i / (n - 1)) * W;
+        var y = H - ((v - min) / range) * (H - 4) - 2;   // 2px padding top/bottom
+        return (Math.round(x * 10) / 10) + ',' + (Math.round(y * 10) / 10);
+      }).join(' ');
+      var up = series[n - 1] >= series[0];
+      var cls = up ? 'is-up' : 'is-down';
+      var lastX = W, lastY = H - ((series[n - 1] - min) / range) * (H - 4) - 2;
+      return '<svg class="prediction-spark ' + cls + '" viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" preserveAspectRatio="none" aria-hidden="true">'
+        + '<polyline points="' + pts + '" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></polyline>'
+        + '<circle cx="' + (Math.round(lastX * 10) / 10) + '" cy="' + (Math.round(lastY * 10) / 10) + '" r="1.8"></circle>'
+        + '</svg>';
+    }
     var state = {
       markets: [],
       source: 'all',
@@ -16286,6 +16360,8 @@
       var hiddenCount = Math.max(0, filteredMarkets.length - visibleMarkets.length);
 
       listEl.innerHTML = visibleMarkets.map(function(market, index) {
+        recordSparkPoint(market);                 // observe this render's price
+        var sparkHtml = sparklineSvg(market);
         var sourceClass = getMarketSourceClass(market);
         var topicLabel = topicLabels[market.topic] || topicLabels.all;
         var isFeatured = false;
@@ -16319,6 +16395,7 @@
             '<div class="prediction-market-tags">' + topicTags + '</div>',
             '<div class="prediction-market-probability-row">',
               '<span>' + escapeHtml(market.yesLabel) + ' ' + escapeHtml(market.yesValue) + '</span>',
+              (sparkHtml ? '<span class="prediction-spark-wrap">' + sparkHtml + '</span>' : ''),
               '<span>' + escapeHtml(market.noLabel) + ' ' + escapeHtml(market.noValue) + '</span>',
             '</div>',
             '<div class="prediction-market-bar"><span class="prediction-market-bar-fill" style="width:' + escapeHtml(String(clamp((market.yesPriceNumber || 0) * 100, 0, 100))) + '%"></span></div>',
