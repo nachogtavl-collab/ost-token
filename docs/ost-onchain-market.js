@@ -200,38 +200,71 @@
     });
   }
 
-  function send(ixs) {
+  function send(ixs, fast) {
     var W = w3();
     var w = window.OST_WALLET;
     var tx = new W.Transaction();
     ixs.forEach(function (i) { tx.add(i); });
-    return w.sign(tx);            // app's signAndSendTransaction (local wallet or adapter)
+    // Betting/claiming use the fast path: confirm at 'processed' (~1 slot) with a
+    // prewarmed blockhash, so the ticket lands in well under half a second. The
+    // caller reconciles 'confirmed' in the background. Falls back to the normal
+    // sign() on any wallet that predates signFast.
+    if (fast && typeof w.signFast === 'function') return w.signFast(tx);
+    return w.sign(tx);
   }
 
   // Stake OST into the program vault. Rejects (never silently no-ops) so the
-  // caller can fall back to the off-chain path with a real reason.
-  function placeBet(openAtSec, side, amountOst) {
+  // Once a wallet has an OST token account it keeps it — so we only need to
+  // check ONCE, not before every bet. Caching this removes a round-trip from the
+  // hot path for the ~99% of bets where the ATA already exists.
+  var ataKnown = {};
+  function ensureAtaIx(owner) {
+    var key = owner.toBase58();
+    var ata = userAta(owner);
+    if (ataKnown[key]) return Promise.resolve(null);
+    return conn().getAccountInfo(ata).then(function (info) {
+      if (info) { ataKnown[key] = true; return null; }
+      return (window.OST_WALLET.associatedAccountIx)
+        ? window.OST_WALLET.associatedAccountIx(owner, ata, owner, pk(MINT))
+        : null;
+    });
+  }
+
+  // `preMarket` lets the caller pass the market it already fetched (the router
+  // keeps it warm), so a bet does not pay a second marketFor() round-trip.
+  function placeBet(openAtSec, side, amountOst, preMarket) {
     if (!available()) return Promise.reject(new Error('on-chain path unavailable (no wallet)'));
-    return marketFor(openAtSec).then(function (m) {
+    var start = (preMarket && preMarket.exists) ? Promise.resolve(preMarket) : marketFor(openAtSec);
+    return start.then(function (m) {
       if (!m || !m.exists) throw new Error('no on-chain market for this round yet');
       if (m.resolved) throw new Error('market already resolved');
       if (Date.now() >= m.lockTs) throw new Error('market locked (too close to close)');
       var s = session();
-      var ixs = [];
-      // Make sure the bettor has an OST token account.
-      var ata = userAta(s.publicKey);
-      return conn().getAccountInfo(ata).then(function (info) {
-        if (!info && window.OST_WALLET.associatedAccountIx) {
-          ixs.push(window.OST_WALLET.associatedAccountIx(s.publicKey, ata, s.publicKey, pk(MINT)));
-        }
+      return ensureAtaIx(s.publicKey).then(function (ataIx) {
+        var ixs = [];
+        if (ataIx) ixs.push(ataIx);
         ixs.push(ixPlaceBet(openAtSec, side, amountOst));
-        return send(ixs);
+        return send(ixs, true);       // fast: processed-level, prewarmed blockhash
       }).then(function (sig) {
+        // The ATA definitely exists now.
+        ataKnown[s.publicKey.toBase58()] = true;
         try {
           window.dispatchEvent(new CustomEvent('ost:onchain-bet', {
             detail: { openAt: openAtSec, side: side, amount: amountOst, signature: String(sig), market: m.market.toBase58() }
           }));
         } catch (_) {}
+        // Reconcile 'confirmed' in the background — we already returned to the UI.
+        if (window.OST_WALLET.reconcile) {
+          window.OST_WALLET.reconcile(String(sig)).then(function (r) {
+            if (r && !r.ok) {
+              try {
+                window.dispatchEvent(new CustomEvent('ost:onchain-bet-reverted', {
+                  detail: { signature: String(sig), openAt: openAtSec, err: r.err }
+                }));
+              } catch (_) {}
+            }
+          });
+        }
         return { signature: String(sig), market: m.market.toBase58(), onChain: true };
       });
     });
@@ -243,7 +276,8 @@
       if (!m || !m.exists) throw new Error('no on-chain market');
       if (!m.resolved) throw new Error('market not resolved yet');
       if (!m.treasury) throw new Error('market predates the on-chain house edge');
-      return send([ixClaim(openAtSec, m.treasury)]).then(function (sig) {
+      return send([ixClaim(openAtSec, m.treasury)], true).then(function (sig) {
+        if (window.OST_WALLET.reconcile) window.OST_WALLET.reconcile(String(sig));
         return { signature: String(sig), onChain: true };
       });
     });

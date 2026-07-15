@@ -2217,6 +2217,60 @@
     return solanaConnection;
   }
 
+  // ---- Blockhash prewarm --------------------------------------------------
+  // Fetching a fresh blockhash is a full RPC round-trip (200ms–1.2s on devnet)
+  // that used to happen INSIDE the signing path, before the user's transaction
+  // could even be sent. A blockhash stays valid for ~150 slots (~60s), so there
+  // is no reason to fetch one at click time: we keep a warm one and refresh it
+  // in the background. This is the single biggest win for "betting feels
+  // instant" — the tx is ready to sign the moment the button is pressed.
+  var _bhCache = null;                 // { blockhash, lastValidBlockHeight, at }
+  var _bhInflight = null;
+  var BLOCKHASH_TTL = 20000;           // refresh well before the ~60s expiry
+
+  function refreshBlockhash(force) {
+    var conn = getSolanaConnection();
+    if (!conn) return Promise.resolve(null);
+    if (_bhInflight) return _bhInflight;
+    if (!force && _bhCache && Date.now() - _bhCache.at < BLOCKHASH_TTL) {
+      return Promise.resolve(_bhCache);
+    }
+    _bhInflight = conn.getLatestBlockhash('confirmed').then(function (bh) {
+      _bhCache = { blockhash: bh.blockhash, lastValidBlockHeight: bh.lastValidBlockHeight, at: Date.now() };
+      _bhInflight = null;
+      return _bhCache;
+    }).catch(function (e) {
+      _bhInflight = null;
+      return null;                     // callers fall back to a live fetch
+    });
+    return _bhInflight;
+  }
+
+  // A warm blockhash if we have one that is still comfortably valid, else null.
+  // Ceiling is 25s: a blockhash lives ~150 slots (~65s), and an external-wallet
+  // user can sit in an approval popup for 20–30s after we stamp it, so a fresher
+  // cap keeps the tx from expiring mid-approval. The 20s background refresh means
+  // the cache is normally younger than this anyway.
+  function cachedBlockhash() {
+    if (_bhCache && Date.now() - _bhCache.at < 25000) return _bhCache;
+    return null;
+  }
+
+  // Keep one warm while the tab is visible. Cheap: one getLatestBlockhash per
+  // 20s, and only when the user can actually act.
+  (function keepBlockhashWarm() {
+    if (typeof window === 'undefined') return;
+    var tick = function () {
+      if (document.visibilityState === 'visible' && getSolanaConnection()) refreshBlockhash(false);
+    };
+    var idle = window.requestIdleCallback || function (fn) { return setTimeout(fn, 800); };
+    idle(tick);
+    setInterval(tick, BLOCKHASH_TTL);
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') tick();
+    });
+  })();
+
   function readU16LE(bytes, offset) {
     return bytes[offset] | (bytes[offset + 1] << 8);
   }
@@ -3411,7 +3465,13 @@
     }
   }
 
-  async function signAndSendTransaction(transaction) {
+  async function signAndSendTransaction(transaction, opts) {
+    opts = opts || {};
+    // `fast` betting/games txs confirm at 'processed' (~1 slot) and let the
+    // caller reconcile 'confirmed' in the background, so the button releases in
+    // ~400ms instead of waiting 1–2s for 'confirmed'. Everything else (payments,
+    // swaps) keeps the safe default and waits for 'confirmed'.
+    var commitment = opts.commitment || 'confirmed';
     const conn = getSolanaConnection();
     if (!conn) throw new Error('Solana RPC unavailable');
     if (!connectedWalletSession || !connectedWalletSession.publicKey) throw new Error('Connect your wallet first');
@@ -3431,8 +3491,11 @@
     // blockhash invalidates the pool's signature and silently breaks every swap.
     let latest = null;
     if (!transaction.recentBlockhash) {
-      latest = await conn.getLatestBlockhash('confirmed');
+      // Use the warm blockhash if we have one — no round-trip on the hot path.
+      latest = cachedBlockhash() || (await refreshBlockhash(true)) || (await conn.getLatestBlockhash('confirmed'));
       transaction.recentBlockhash = latest.blockhash;
+      // Immediately kick off a refresh so the NEXT bet is warm too.
+      refreshBlockhash(false);
     }
     if (!transaction.feePayer) {
       transaction.feePayer = connectedWalletSession.publicKey;
@@ -3459,23 +3522,38 @@
     if (!latest) {
       try { latest = await conn.getLatestBlockhash('confirmed'); } catch (_) {}
     }
-    let confirmRes = null;
-    if (latest) {
-      confirmRes = await conn.confirmTransaction({
-        signature,
-        blockhash: latest.blockhash,
-        lastValidBlockHeight: latest.lastValidBlockHeight
-      }, 'confirmed');
-    } else {
-      confirmRes = await conn.confirmTransaction(signature, 'confirmed');
-    }
-    // Surface on-chain failures: a confirmed tx can still have reverted with err.
+
+    // Confirm at `commitment`. Betting/games pass 'processed' (~1 slot) so the
+    // button releases fast; the caller then reconciles 'confirmed' in the
+    // background via reconcileConfirmation(). A tx confirmed at 'processed' has
+    // been executed by the leader and its err field is already populated — so we
+    // still catch an on-chain revert here, we just don't wait the extra slot for
+    // supermajority confirmation before telling the user it landed.
+    const doConfirm = function (level) {
+      return latest
+        ? conn.confirmTransaction({ signature, blockhash: latest.blockhash, lastValidBlockHeight: latest.lastValidBlockHeight }, level)
+        : conn.confirmTransaction(signature, level);
+    };
+    let confirmRes = await doConfirm(commitment);
     if (confirmRes && confirmRes.value && confirmRes.value.err) {
       var errStr;
       try { errStr = JSON.stringify(confirmRes.value.err); } catch (_) { errStr = String(confirmRes.value.err); }
       throw new Error('Transaction reverted on-chain: ' + errStr + ' (sig ' + signature + ')');
     }
     return signature;
+  }
+
+  // Background reconciliation for a `fast` (processed-level) send: wait for full
+  // 'confirmed' commitment and report if the tx actually failed. Rare — a tx
+  // that made it to 'processed' without an err almost never reverts later — but
+  // if it does, the caller can walk back the optimistic UI. Never throws.
+  function reconcileConfirmation(signature) {
+    var conn = getSolanaConnection();
+    if (!conn || !signature) return Promise.resolve({ ok: true });
+    return conn.confirmTransaction(signature, 'confirmed').then(function (res) {
+      var err = res && res.value && res.value.err;
+      return err ? { ok: false, err: err } : { ok: true };
+    }).catch(function () { return { ok: true }; });   // network hiccup ≠ revert
   }
 
   // ---------------------------------------------------------------------------
@@ -6298,6 +6376,11 @@
     ensureAta: ensureOstAssociatedTokenAccount,
     ensureFee: ensureWalletFeeBalance,
     sign: signAndSendTransaction,
+    // Fast path for betting/games: confirm at 'processed' (~1 slot) and let the
+    // caller reconcile 'confirmed' in the background. ~400ms vs 1–2s.
+    signFast: function (tx) { return signAndSendTransaction(tx, { commitment: 'processed' }); },
+    reconcile: reconcileConfirmation,
+    warmBlockhash: function () { return refreshBlockhash(false); },
     transferChecked: createTransferCheckedInstruction,
     associatedAddress: getAssociatedTokenAddressSync,
     associatedAccountIx: createAssociatedTokenAccountInstruction,

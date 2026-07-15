@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ost-pwa-cache-v257';
+const CACHE_NAME = 'ost-pwa-cache-v258';
 const RUNTIME_CACHE = 'ost-pwa-runtime-v253';
 const CACHE_PREFIX = 'ost-pwa-';
 
@@ -61,9 +61,9 @@ const PRECACHE_PATHS = [
   './ost-optimistic.js?v=4',
   './realtime.js?v=2',
   './ost-notifications.js?v=3',
-  './app.js?v=218',
-  './ost-onchain-market.js?v=1',
-  './ost-onchain-route.js?v=1',
+  './app.js?v=219',
+  './ost-onchain-market.js?v=2',
+  './ost-onchain-route.js?v=2',
   './ost-lazy.js?v=1',
   './ost-instant.js?v=1',
   './ost-instant.css?v=1',

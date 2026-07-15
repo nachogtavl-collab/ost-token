@@ -98,6 +98,10 @@
     if (!C || !C.available()) return;
     var now = currentRound();
     if (!cachedMarket(now)) fetchMarket(now);
+    // Keep a blockhash warm too, so the bet tx is ready to sign instantly.
+    if (window.OST_WALLET && typeof window.OST_WALLET.warmBlockhash === 'function') {
+      window.OST_WALLET.warmBlockhash();
+    }
   }
 
   // ---- placing ------------------------------------------------------------
@@ -141,6 +145,26 @@
     return rec;
   }
 
+  // A bet is acknowledged at 'processed' commitment for speed, then reconciled to
+  // 'confirmed' in the background. On the rare occasion a processed tx is rolled
+  // back by a fork, ost-onchain-market fires this — void the optimistic ticket so
+  // the user is never shown a bet that didn't actually land. Same-signature key
+  // means recordOrder() UPDATES the ticket rather than adding a duplicate.
+  window.addEventListener('ost:onchain-bet-reverted', function (ev) {
+    var d = ev && ev.detail; if (!d || !d.signature) return;
+    try {
+      if (window.OST_PREDICTION_API && typeof window.OST_PREDICTION_API.recordOrder === 'function') {
+        window.OST_PREDICTION_API.recordOrder({
+          signature: d.signature, sig: d.signature,
+          status: 'failed', voided: true, voidReason: 'rolled-back',
+          ts: Date.now(), createdAt: Date.now()
+        });
+      }
+      if (typeof window.notifyOstTxHistory === 'function') window.notifyOstTxHistory();
+      log('bet ' + String(d.signature).slice(0, 10) + '… rolled back — ticket voided');
+    } catch (_) {}
+  });
+
   function wrapPlaceOrder() {
     var api = window.OST_PREDICTION_API;
     if (!api || typeof api.placeOrder !== 'function' || api.__onchainRouted) return false;
@@ -169,7 +193,8 @@
         if (Date.now() >= m.lockTs) { log('market locked — off-chain path'); return inner(order); }
 
         var quote = C.quoteNet(m, order.side, stake);
-        return C.placeBet(openAtSec, order.side, stake).then(function (res) {
+        // Pass the warm market straight through, so placeBet doesn't re-fetch it.
+        return C.placeBet(openAtSec, order.side, stake, m).then(function (res) {
           // The pools moved — the next bet should not quote a stale price.
           delete cache[openAtSec];
           var rec = recordOnChainTicket(order, openAtSec, res, quote);
