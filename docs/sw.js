@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ost-pwa-cache-v279';
+const CACHE_NAME = 'ost-pwa-cache-v280';
 const RUNTIME_CACHE = 'ost-pwa-runtime-v253';
 const CACHE_PREFIX = 'ost-pwa-';
 
@@ -126,6 +126,7 @@ const PRECACHE_PATHS = [
   './faucet-hub-ads.js?v=100',
   './ost-update.js?v=1',
   './ost-offline-mode.js?v=1',
+  './ost-audit.js?v=1',
   './offline-vault.js?v=10',
   './ost-scroll-fix.css?v=1',
   './apple-tap.js?v=4',
@@ -492,15 +493,44 @@ self.addEventListener('periodicsync', (event) => {
   }
 });
 
+// Server pushes carry NO encrypted payload on purpose (see workers/ost-api/src/
+// push.js): that crypto fails silently when it is subtly wrong, which is the
+// worst way for an alert system to break. Instead we wake and ask what happened,
+// so the notification shows what is true NOW rather than when it was queued.
+async function pendingMessage() {
+  try {
+    const sub = await self.registration.pushManager.getSubscription();
+    if (!sub) return null;
+    const base = 'https://ost-api.nachogtavl.workers.dev';
+    const res = await fetch(base + '/push/pending?endpoint=' + encodeURIComponent(sub.endpoint), { cache: 'no-store' });
+    if (!res.ok) return null;
+    const m = await res.json();
+    return (m && m.title) ? m : null;
+  } catch (_) { return null; }
+}
+
 self.addEventListener('push', (event) => {
-  let data = {};
-  try { data = event.data ? event.data.json() : {}; }
-  catch (_) {
-    try { data = { title: 'OST Mesh', body: event.data ? event.data.text() : '' }; } catch (__) { data = {}; }
-  }
-  const payload = notificationPayload(data);
-  if (!shouldShowNotification(data)) return;
-  event.waitUntil(self.registration.showNotification(payload.title, payload.options));
+  event.waitUntil((async () => {
+    let data = {};
+    try { data = event.data ? event.data.json() : {}; }
+    catch (_) {
+      try { data = { title: 'OST', body: event.data ? event.data.text() : '' }; } catch (__) { data = {}; }
+    }
+    // No payload = a bare VAPID push from our worker. Go find out what it means.
+    if (!event.data) data = (await pendingMessage()) || data;
+
+    // userVisibleOnly is a promise to the browser that every push shows a
+    // notification; silently returning here can cost us the push permission
+    // entirely. So if we have nothing to say, still say something true.
+    if (!shouldShowNotification(data)) {
+      if (!data || !data.title) {
+        await self.registration.showNotification('OST', { body: 'Tap to open OST.', icon: './icon-192.png', tag: 'ost-generic' });
+      }
+      return;
+    }
+    const payload = notificationPayload(data);
+    await self.registration.showNotification(payload.title, payload.options);
+  })());
 });
 
 self.addEventListener('notificationclick', (event) => {
