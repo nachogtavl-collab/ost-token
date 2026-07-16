@@ -163,8 +163,17 @@
     { ico: '𓂇', lbl: 'Transmit', need: ['#transmitBtn'], run: function () {
         clickFirst(['#transmitBtn', '#transmitBtnLg']);
       } },
-    { ico: '🧿', lbl: 'Ghost realm', need: ['#ghost-summon-trigger'], run: function () {
-        clickFirst(['#ghost-summon-trigger']);
+    // ONE Ghost. The old "realm" was a generic bring-your-own-key chat that could
+    // only answer things Google answers better. The Ghost that knows YOUR ledger
+    // — balance, edge, claimable wins — and can act on it is the real one, so this
+    // opens that. The realm's summoning circle still exists for its own visuals;
+    // it just isn't the thing we send people to for answers.
+    { ico: '👻', lbl: 'Ghost AI', need: ['#ostGhostOrb', '#ghost-summon-trigger'], run: function () {
+        if (window.OST_GHOST_COMPANION && typeof window.OST_GHOST_COMPANION.open === 'function') {
+          window.OST_GHOST_COMPANION.open();
+          return;
+        }
+        clickFirst(['#ostGhostOrb', '#ghost-summon-trigger']);
       } },
     { ico: '🔋', lbl: 'Offline vault', need: ['#offline'], run: function () {
         navTo('offline', null, ['#offline']);

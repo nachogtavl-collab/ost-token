@@ -228,15 +228,33 @@
     addMsg('user', text);
     var input = panel.querySelector('.og-input input');
     if (input) input.value = '';
+    // ---- GROUNDED FIRST -----------------------------------------------------
+    // Anything about YOUR ledger is answered by the brain, from your own records,
+    // instantly and offline. This used to run the other way round — `if (aiReply)`
+    // won over the local answer — so "what's my balance?" waited on a network
+    // round-trip to a 70B model that has to be TOLD your numbers and can still
+    // hallucinate them. A model must never be allowed to guess a figure we can
+    // compute. The brain also ACTS (claim all, affordability), which no model can.
+    var grounded = null;
+    try {
+      if (window.OST_GHOST_BRAIN && typeof window.OST_GHOST_BRAIN.ask === 'function') {
+        grounded = window.OST_GHOST_BRAIN.ask(text);
+      }
+    } catch (_) {}
+    if (grounded && grounded.text) {
+      addMsg('ghost', grounded.text);
+      return;   // authoritative — no network, no guessing
+    }
+
+    // ---- otherwise: open-ended chat, model + local fallback ------------------
     var typing = addMsg('ghost typing', '…thinking');
     var local = localAnswer(text);
     askAI(text).then(function (aiReply) {
       typing.remove();
       if (aiReply) addMsg('ghost', aiReply);
       else if (local) addMsg('ghost', local);
-      else addMsg('ghost', 'I could not reach my online brain and that one is beyond my local knowledge. Try asking about your balance, bets, streaks or how a feature works.');
+      else addMsg('ghost', 'I could not reach my online brain and that one is beyond my local knowledge. Try asking about your balance, bets, edge, or say "claim all".');
     });
-    // If AI is slow, the local brain fills fast for known intents anyway via race UX simplicity.
   }
 
   function buildPanel() {
