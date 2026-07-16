@@ -3384,6 +3384,12 @@
     // funded through the program vault into the SAME store, with the same merge
     // + remote-share semantics. Re-implementing this would let the schemas drift.
     recordOrder: storePredictionOrderRecord,
+    // Optimistic-ticket plumbing, shared with ost-onchain-route.js and the
+    // cash-out path: write a pending ticket instantly, then patch it with the
+    // real signature (or remove it) once the chain resolves in the background.
+    recordOrderLocal: storePredictionOrderRecordLocal,
+    patchOrderByRef: patchPredictionOrderByRef,
+    removeOrderByRef: removePredictionOrderByRef,
     syncOrders: syncPredictionOrdersFromRemote,
     walletAddress: getPredictionWalletAddress
   });

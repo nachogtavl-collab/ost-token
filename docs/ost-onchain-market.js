@@ -132,13 +132,24 @@
     };
   }
 
+  // A RESOLVED market is immutable — its pools, winner and treasury can never
+  // change again. Cache those forever so a cash-out doesn't pay a fresh RPC
+  // round-trip just to re-read a settled result. (Unresolved markets are never
+  // cached here; the router keeps those warm on a short TTL.)
+  var resolvedCache = {};
+
   function marketFor(openAtSec) {
     if (!available()) return Promise.resolve(null);
+    if (resolvedCache[openAtSec]) return Promise.resolve(resolvedCache[openAtSec]);
     var d = derive(openAtSec);
     return conn().getAccountInfo(d.market).then(function (info) {
       if (!info) return { market: d.market, vault: d.vault, exists: false };
       var m = parseMarket(new Uint8Array(info.data));
-      return Object.assign({ market: d.market, vault: d.vault, exists: true }, m);
+      if (!m) return { market: d.market, vault: d.vault, exists: false };
+      var out = Object.assign({ market: d.market, vault: d.vault, exists: true }, m);
+      // Settled result — safe to remember forever.
+      if (out.resolved) resolvedCache[openAtSec] = out;
+      return out;
     }).catch(function () { return null; });
   }
 

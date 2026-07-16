@@ -681,15 +681,39 @@
         var q = window.OST_ONCHAIN.quoteNet(m, bet.side, myStake);
         payAmt = q.net;
         houseFee = q.fee;
-        return window.OST_ONCHAIN.claim(openAtSec).then(function (res) {
-          // Book the fee the CHAIN already took, so house revenue is counted
-          // once (the program charged it inside claim_payout).
-          try {
-            if (window.OST_HOUSE && typeof window.OST_HOUSE.book === 'function') {
-              window.OST_HOUSE.book(houseFee, 'prediction', { kind: 'claim', onChain: true });
-            }
-          } catch (_) {}
-          doClaim(String((res && res.signature) || ''));
+
+        // Book the fee the CHAIN takes, so house revenue is counted once (the
+        // program charges it inside claim_payout).
+        try {
+          if (window.OST_HOUSE && typeof window.OST_HOUSE.book === 'function') {
+            window.OST_HOUSE.book(houseFee, 'prediction', { kind: 'claim', onChain: true });
+          }
+        } catch (_) {}
+
+        // OPTIMISTIC CASH-OUT — mark it paid NOW and let the payout transaction
+        // settle in the background. We only get here AFTER the chain has confirmed
+        // the round is resolved and this ticket actually won, and the payout is
+        // computed with the program's own formula, so the amount shown is the
+        // amount the program will pay. Waiting on the tx round-trip was the last
+        // multi-second stall in the ticket.
+        doClaim('');
+        window.OST_ONCHAIN.claim(openAtSec).then(function (res) {
+          var sig = String((res && res.signature) || '');
+          if (sig) updateAnyBet(betId, function (r) { if (!r.signature) { r.signature = sig; r.sig = sig; } });
+          try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {}
+          try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch (_) {}
+        }).catch(function (err) {
+          // The payout did NOT land — put the ticket back so it can be claimed
+          // again. The OST is still safe in the program vault; nothing was lost.
+          updateAnyBet(betId, function (r) {
+            r.claimed = false; r.cashedOut = false;
+            r.claimedAt = 0; r.cashedOutAt = 0;
+            r.paidOut = 0; r.cashoutOst = 0;
+          });
+          delete claimingIds[betId];
+          try { window.OST_HOUSE && window.OST_HOUSE.book && window.OST_HOUSE.book(-houseFee, 'prediction', { kind: 'claim-reverted', onChain: true }); } catch (_) {}
+          try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch (_) {}
+          try { if (window.OST_OPTIMISTIC) window.OST_OPTIMISTIC.toast('Cash-out did not land — your win is safe, try again.', 'error'); } catch (_) {}
         });
       }).catch(function (err) {
         // Never silently reroute an on-chain ticket to the credits pool: its OST

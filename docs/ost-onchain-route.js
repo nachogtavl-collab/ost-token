@@ -106,10 +106,15 @@
 
   // ---- placing ------------------------------------------------------------
 
-  function recordOnChainTicket(order, openAtSec, res, quote) {
+  function recordOnChainTicket(order, openAtSec, res, quote, ref) {
     var stake = Number(order.stake);
     var openAtMs = openAtSec * 1000;
     var rec = {
+      reference: ref || undefined,
+      // Empty until the background tx returns a signature. `pending` marks it as
+      // still resolving so the UI can show it immediately without lying.
+      pending: !res.signature,
+      optimistic: !res.signature,
       signature: res.signature, sig: res.signature,
       ts: Date.now(), status: 'open',
       wallet: (window.OST_WALLET && window.OST_WALLET.address) || 'wallet',
@@ -136,10 +141,15 @@
       vaultFlow: 'onchain-escrow', createdAt: Date.now()
     };
     try {
-      if (window.OST_PREDICTION_API && typeof window.OST_PREDICTION_API.recordOrder === 'function') {
-        window.OST_PREDICTION_API.recordOrder(rec);
+      var api = window.OST_PREDICTION_API;
+      if (api) {
+        // A still-pending ticket is stored LOCALLY only — never publish a bet to
+        // the global feed before the chain has actually taken it.
+        if (rec.pending && typeof api.recordOrderLocal === 'function') api.recordOrderLocal(rec);
+        else if (typeof api.recordOrder === 'function') api.recordOrder(rec);
       }
       window.dispatchEvent(new CustomEvent('ost:prediction-order-recorded', { detail: rec }));
+      window.dispatchEvent(new CustomEvent('ost:prediction:order-changed', { detail: rec }));
       if (typeof window.notifyOstTxHistory === 'function') window.notifyOstTxHistory();
     } catch (_) {}
     return rec;
@@ -193,15 +203,38 @@
         if (Date.now() >= m.lockTs) { log('market locked — off-chain path'); return inner(order); }
 
         var quote = C.quoteNet(m, order.side, stake);
-        // Pass the warm market straight through, so placeBet doesn't re-fetch it.
-        return C.placeBet(openAtSec, order.side, stake, m).then(function (res) {
-          // The pools moved — the next bet should not quote a stale price.
-          delete cache[openAtSec];
-          var rec = recordOnChainTicket(order, openAtSec, res, quote);
-          log('ON-CHAIN bet placed: ' + stake + ' OST ' + String(order.side).toUpperCase() +
-              ' -> program vault (' + res.signature.slice(0, 10) + '…)');
-          return { signature: res.signature, record: rec, onChain: true, fundedBy: 'onchain' };
+
+        // OPTIMISTIC ON-CHAIN BET — the ticket appears the instant the user taps.
+        // We used to `await` the Solana tx before recording, so the ticket only
+        // showed after the round-trip (signing + send + 'processed'), which is the
+        // "buying takes a few seconds" the desk still had. The tx is now sent in
+        // the BACKGROUND and the ticket is patched with the real signature when it
+        // lands; if it fails, the ticket is removed and nothing is charged (the
+        // stake only ever leaves the wallet if the tx itself succeeds).
+        var ref = 'oc-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        var rec = recordOnChainTicket(order, openAtSec, { signature: '', market: m.market.toBase58() }, quote, ref);
+        delete cache[openAtSec];   // pools are about to move — don't quote stale
+
+        C.placeBet(openAtSec, order.side, stake, m).then(function (res) {
+          var api = window.OST_PREDICTION_API;
+          if (api && typeof api.patchOrderByRef === 'function') {
+            api.patchOrderByRef(ref, { signature: res.signature, sig: res.signature, pending: false, optimistic: false });
+          }
+          // Now that it is real, publish it to the global feed.
+          try { if (api && typeof api.recordOrder === 'function') api.recordOrder(Object.assign({}, rec, { signature: res.signature, sig: res.signature, pending: false, optimistic: false })); } catch (_) {}
+          try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch (_) {}
+          try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {}
+          log('ON-CHAIN bet confirmed: ' + stake + ' OST ' + String(order.side).toUpperCase() +
+              ' -> program vault (' + String(res.signature).slice(0, 10) + '…)');
+        }).catch(function (err) {
+          var api = window.OST_PREDICTION_API;
+          if (api && typeof api.removeOrderByRef === 'function') api.removeOrderByRef(ref);
+          try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch (_) {}
+          try { if (window.OST_OPTIMISTIC) window.OST_OPTIMISTIC.toast('Bet could not be placed on-chain — cleared, nothing charged.', 'error'); } catch (_) {}
+          log('on-chain bet FAILED — optimistic ticket cleared: ' + (err && err.message));
         });
+
+        return { signature: '', pending: true, optimistic: true, reference: ref, record: rec, onChain: true, fundedBy: 'onchain' };
       }).catch(function (err) {
         // Never block a bet. Fall back to the rail that worked before, and say
         // why in the console rather than silently pretending it was on-chain.
