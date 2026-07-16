@@ -2181,7 +2181,9 @@
   const PREDICTION_ORDERS_STORAGE_KEY = 'ost.prediction.orders.v1';
   const WELCOME_SESSION_KEY = 'ost.welcome.seen.session';
   const WELCOME_PREFS_VERSION_KEY = 'ost.welcome.version';
-  const WELCOME_PREFS_VERSION = 'readable-gate-v1';
+  // Bumped so the re-introduced language + currency picker shows once for
+  // EVERYONE — including users the old mobile fastboot had silently marked done.
+  const WELCOME_PREFS_VERSION = 'currency-picker-v2';
   const CLAIM_FAUCET_DISCRIMINATOR = Uint8Array.from([80, 7, 251, 108, 55, 145, 135, 68]);
   const SEEDLESS_ONBOARD_DISCRIMINATOR = Uint8Array.from([135, 41, 102, 172, 127, 61, 190, 75]);
   const textEncoder = new TextEncoder();
@@ -13354,6 +13356,9 @@
       document.body.classList.add('ost-welcome-open');
       if (modal && typeof modal.focus === 'function') setTimeout(function() { modal.focus(); }, 30);
     }
+    // Let anything (a settings button, the More sheet) reopen the language +
+    // currency picker so users can change their money at any time.
+    window.OST_OPEN_WELCOME = showWelcome;
 
     function hideWelcome(fade) {
       document.body.classList.remove('ost-welcome-open');
@@ -13421,16 +13426,14 @@
     setSelectedButton('.wel-lang-btn', 'data-lang', selectedLang, 'wel-lang-active');
     setSelectedButton('.wel-curr-btn', 'data-curr', selectedCurrency, 'wel-curr-active');
 
-    if (mobileGuidesDisabled()) {
-      applyMobileWelcomeDefaults();
-      syncStoredPrefs(selectedLang || 'en', selectedCurrency || 'USD');
-      rememberWelcomeSeen();
-      suppressPostWelcomeOverlays();
-      hideWelcome(false);
-      return;
-    }
-
-    if (prefs.lang && prefs.currency && hasCurrentWelcomeVersion()) {
+    // The welcome popup is a ONE-TIME language + currency setup — different from
+    // the tours/guides that focus mode suppresses. A first-time user (mobile
+    // INCLUDED) must be able to pick their currency, otherwise every OST amount
+    // stays untranslated and they can't do the math. So: if prefs are already
+    // chosen, skip it (still mark tours seen on mobile); if NOT, show it.
+    var welcomeDone = prefs.lang && prefs.currency && hasCurrentWelcomeVersion();
+    if (welcomeDone) {
+      if (mobileGuidesDisabled()) applyMobileWelcomeDefaults();   // keep tours suppressed
       rememberWelcomeSeen();
       suppressPostWelcomeOverlays();
       hideWelcome(false);

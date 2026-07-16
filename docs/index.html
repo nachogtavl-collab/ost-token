@@ -69,15 +69,15 @@
       function applyAccessDefaults() {
         markGuidesSeen();
         try {
+          // Apply FUNCTIONAL defaults only. We deliberately do NOT write
+          // welcomeVersion / ost.welcome.version here any more: pre-marking the
+          // welcome "complete" is exactly what stopped mobile users from ever
+          // seeing the language + currency picker. Only the user actually
+          // finishing the welcome marks it done — so a genuine first-timer gets
+          // to choose their currency and see every OST amount in their money.
           var prefs = JSON.parse(localStorage.getItem('ost_prefs') || '{}') || {};
-          var next = {
-            lang: prefs.lang || document.documentElement.getAttribute('data-lang') || 'en',
-            currency: prefs.currency || window.__ostCurrency || 'USD',
-            welcomeVersion: prefs.welcomeVersion || 'readable-gate-v1'
-          };
-          localStorage.setItem('ost_prefs', JSON.stringify(next));
-          localStorage.setItem('ost.welcome.version', next.welcomeVersion);
-          sessionStorage.setItem('ost.welcome.seen.session', '1');
+          if (!prefs.lang) prefs.lang = document.documentElement.getAttribute('data-lang') || 'en';
+          localStorage.setItem('ost_prefs', JSON.stringify(prefs));
           var compartments = JSON.parse(localStorage.getItem('ost.compartments.v1') || '{}') || {};
           compartments.focusMode = false;
           localStorage.setItem('ost.compartments.v1', JSON.stringify(compartments));
@@ -118,7 +118,10 @@
       overflow-x: hidden !important;
     }
 
-    html.ost-mobile-fastboot #welcomeOverlay,
+    /* Tours/guides stay suppressed in mobile focus mode — but NOT the welcome
+       overlay: it is the one-time language + currency picker, and a mobile user
+       needs it to see amounts in their own money. It hides itself via the
+       `.hidden` class once preferences are chosen. */
     html.ost-mobile-fastboot .ost-guide-overlay,
     html.ost-mobile-fastboot .ost-tour {
       display: none !important;
@@ -126,6 +129,7 @@
       opacity: 0 !important;
       pointer-events: none !important;
     }
+    #welcomeOverlay.hidden { display: none !important; }
 
     @media (max-width: 820px), (pointer: coarse) and (max-width: 1024px) {
       .ost-guide-overlay,
@@ -6012,6 +6016,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <!-- Optimistic UX layer (toast + balance hint + tx simulation). Loads early so
        faucet-hub, ost-onchain-bet, and wallet-extras can use window.OST_OPTIMISTIC. -->
   <script src="ost-optimistic.js?v=5"></script>
+  <script src="ost-fx.js?v=1" defer></script>
     <!-- OST API endpoint: CORS-safe Polymarket proxy, CLOB history, and shared position feed.
       MUST load BEFORE app.js so the first market fetch uses the live API instead of stale fallbacks. -->
     <script>
@@ -6047,7 +6052,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
     <script src="ost-wc-rail.js?v=1"></script>
     <script src="ost-total-balance.js?v=2"></script>
     <script src="icons.js?v=1"></script>
-    <script src="app.js?v=223"></script>
+    <script src="app.js?v=224"></script>
   <script src="ost-onchain-market.js?v=2" defer></script>
   <script src="ost-onchain-route.js?v=2" defer></script>
     <!-- Ghost AI Summoning Circle (rebuild) -->
