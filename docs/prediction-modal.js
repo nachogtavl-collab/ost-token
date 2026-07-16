@@ -529,15 +529,22 @@
     return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   }
   function clearLiveTimers() {
-liveTimers.forEach(function (t) {
-  try {
-    if (t && typeof t === 'object' && typeof t.removeOnClose === 'function') {
-      t.removeOnClose();
-    } else {
-      clearInterval(t);
-    }
-  } catch (_) {}
-});
+    liveTimers.forEach(function (t) {
+      try {
+        if (t && typeof t === 'object' && typeof t.removeOnClose === 'function') {
+          t.removeOnClose();
+        } else {
+          clearInterval(t);
+        }
+      } catch (_) {}
+    });
+    // EMPTY THE ARRAY. This used to clear the timers but keep every entry
+    // forever, so each modal open pushed ~10 more (including removeOnClose
+    // CLOSURES that retain their listeners and market objects). After a long
+    // betting session that is thousands of retained closures re-walked on every
+    // open/close — the memory growth that made the page freeze until a hard
+    // refresh. Dropping the references is what actually frees them.
+    liveTimers.length = 0;
   }
 
   // --------------------------------------------------------------------------

@@ -38,7 +38,14 @@
     'ost.payout.pending.v1',        // pending payouts (claimable later)
     'ost.telemetry.device.v1',      // stable identity
     'ost.xp.v1', 'ost.level.v1',    // progression (if present)
-    'ost.wallet.session.v1'         // browser wallet session (if present)
+    'ost.wallet.session.v1',        // legacy/browser wallet session (if present)
+    // THE BROWSER WALLET KEYPAIR. This was missing — the guard listed
+    // `ost.wallet.session.v1`, which app.js never writes; the real key is
+    // `ost.localWallet.v1` (LOCAL_WALLET_STORAGE_KEY). So the one piece of data a
+    // user can NEVER regenerate — their wallet — was the only thing not backed
+    // up. If it got truncated or quota-evicted, the wallet was simply gone and
+    // the page came back "disconnected" with a 0 balance.
+    'ost.localWallet.v1'
   ];
 
   function isValidJson(raw) {

@@ -6010,7 +6010,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <!-- RPC multiplexer: every Connection instance auto-fails-over and broadcast-sends.
        MUST load BEFORE app.js so all connections built by the app inherit the wrapper. -->
   <!-- Data Guard: recover/back up critical storage BEFORE anything reads it. -->
-  <script src="ost-data-guard.js?v=2"></script>
+  <script src="ost-data-guard.js?v=3"></script>
   <script src="ost-balance-tree.js?v=1"></script>
   <script src="rpc-multiplexer.js?v=200"></script>
   <!-- Optimistic UX layer (toast + balance hint + tx simulation). Loads early so
@@ -6068,7 +6068,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="prediction-pro.js?v=200"></script>
   <script src="prediction-scalar.js?v=4"></script>
   <link rel="stylesheet" href="prediction-modal.css?v=6">
-  <script src="prediction-modal.js?v=205"></script>
+  <script src="prediction-modal.js?v=206"></script>
   <script src="prediction-trade-popout.js?v=7"></script>
   <script src="prediction-pro-dash.js?v=14"></script>
   <!-- OST API edge worker (Cloudflare). Set before ost-console / pro-dash use it. -->

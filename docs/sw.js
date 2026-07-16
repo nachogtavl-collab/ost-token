@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ost-pwa-cache-v267';
+const CACHE_NAME = 'ost-pwa-cache-v268';
 const RUNTIME_CACHE = 'ost-pwa-runtime-v253';
 const CACHE_PREFIX = 'ost-pwa-';
 
@@ -27,7 +27,7 @@ const PRECACHE_PATHS = [
   './ost-engine-guard.js?v=1',
   './ost-appbar.js?v=5',
   './ost-ghost-companion.js?v=1',
-  './ost-data-guard.js?v=2',
+  './ost-data-guard.js?v=3',
   './ost-balance-tree.js?v=1',
   './ost-pro-fast-tiles.js?v=1',
   './ost-wc-rail.js?v=1',
@@ -113,7 +113,7 @@ const PRECACHE_PATHS = [
   './ost-positions.js?v=2',
   './prediction-pro.js?v=200',
   './prediction-scalar.js?v=4',
-  './prediction-modal.js?v=205',
+  './prediction-modal.js?v=206',
   './prediction-trade-popout.js?v=7',
   './prediction-pro-dash.js?v=14',
   './ost-console.js?v=3',
