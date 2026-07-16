@@ -186,8 +186,45 @@
     return report;
   }
 
+  // Hand the report to the operator. run() only logs, which meant a tester had to
+  // hand-copy JSON out of devtools — the actual thing blocking recovery.
+  //
+  // The claim is deliberately NOT trusted on arrival: it carries the buy
+  // signatures so the operator re-verifies every one against the chain before a
+  // single token moves. A tester's localStorage is a tester's to edit, so this is
+  // a claim, never an authorisation.
+  async function exportReport() {
+    const r = window.OST_FORENSIC.last || await run({ log: false });
+    const claim = {
+      v: 1,
+      wallet: r.wallet || '',
+      generatedAt: r.generatedAt,
+      owedOst: r.owedOst,
+      phantomOst: r.phantomOst,
+      unverifiedOst: r.unverifiedOst,
+      rpcAvailable: r.rpcAvailable,
+      // Only the REAL bucket is a payable claim; the operator re-checks each sig.
+      owed: r.real.map(function (x) {
+        return { id: x.id, marketId: x.marketId, side: x.side, stake: x.stake, owedOst: x.owedOst, buySig: x.buySig, cashoutAt: x.cashoutAt, cashoutError: x.cashoutError };
+      }),
+      // Included for diagnosis, NOT for payment. Anyone paying these mints OST.
+      phantomCount: r.phantom.length,
+      unverifiedCount: r.unverified.length
+    };
+    const text = JSON.stringify(claim, null, 2);
+    let copied = false;
+    try { await navigator.clipboard.writeText(text); copied = true; } catch (_) {}
+    console.log('%c OST CLAIM REPORT ' + (copied ? '(copied to clipboard)' : '(copy the text below)'),
+      'background:#065f46;color:#d1fae5;font-weight:bold');
+    console.log(text);
+    console.log('Send this to the OST operator. owedOst =', r.owedOst,
+      'OST across', claim.owed.length, 'ticket(s). phantomOst =', r.phantomOst, 'OST is NOT owed and will not be paid.');
+    return text;
+  }
+
   window.OST_FORENSIC = {
     run: run,
+    export: exportReport,
     last: null,
     // Deliberately absent: anything that pays, claims, or mutates an order.
     // This module exists to be trusted, and it can only be trusted if it is
