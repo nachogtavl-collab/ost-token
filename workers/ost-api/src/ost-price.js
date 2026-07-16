@@ -36,11 +36,21 @@ function json(data, status = 200, extra = {}) {
   });
 }
 async function kvGet(env, key, fallback = null) {
+  // Prefer the worker's tiered store (memory→cache→KV→D1→R2) so reads survive a
+  // KV-exhausted day. Falls back to raw KV if the store was not injected.
+  if (env && env.__store && typeof env.__store.get === 'function') {
+    try { const v = await env.__store.get(key, fallback); return v == null ? fallback : v; }
+    catch (_) { return fallback; }
+  }
   if (!env.OST_KV) return fallback;
   try { const v = await env.OST_KV.get(key, { type: 'json' }); return v ?? fallback; }
   catch (_) { return fallback; }
 }
 async function kvPut(env, key, value, expirationTtl = null) {
+  if (env && env.__store && typeof env.__store.put === 'function') {
+    try { return await env.__store.put(key, value, expirationTtl); }
+    catch (_) { return false; }
+  }
   if (!env.OST_KV) return false;
   try {
     const opts = Number.isFinite(Number(expirationTtl)) && Number(expirationTtl) > 0

@@ -622,11 +622,32 @@ async function cachePut(key, value, ttlS) {
   } catch (_) { tripTier('cache'); return false; }
 }
 
+// The D1 backup writes into a `kv` table — but nothing ever created it (no
+// migration, no CREATE). So the moment KV hit its daily quota and the store fell
+// through to D1, every query threw "no such table: kv", D1 tripped too, and the
+// app was left with only ephemeral memory/cache. That is exactly why trades and
+// rounds stopped persisting on a heavy day.
+//
+// Create it lazily and idempotently, once per isolate. This makes D1 a genuine
+// backup with NO manual migration step — it self-heals on first use.
+let D1_READY = false;
+async function d1Ensure(env) {
+  if (D1_READY || !env.DB) return D1_READY;
+  try {
+    await env.DB.prepare(
+      'CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT NOT NULL, exp INTEGER, updated_at INTEGER)'
+    ).run();
+    D1_READY = true;
+  } catch (_) { /* leave false; the caller trips the tier and D1/R2 or cache carry on */ }
+  return D1_READY;
+}
+
 async function d1Get(env, key) {
   if (!env.DB || tierDown('d1')) return undefined;
   try {
+    if (!(await d1Ensure(env))) throw new Error('d1 schema unavailable');
     const row = await env.DB.prepare('SELECT v, exp FROM kv WHERE k = ?').bind(key).first();
-    if (!row) return undefined;
+    if (!row) { healTier('d1'); return undefined; }   // a working empty read still proves D1 is up
     if (row.exp && Date.now() > Number(row.exp)) return undefined;
     healTier('d1');
     return JSON.parse(row.v);
@@ -635,6 +656,7 @@ async function d1Get(env, key) {
 async function d1Put(env, key, value, ttlS) {
   if (!env.DB || tierDown('d1')) return false;
   try {
+    if (!(await d1Ensure(env))) throw new Error('d1 schema unavailable');
     const exp = ttlS && ttlS > 0 ? Date.now() + ttlS * 1000 : null;
     await env.DB.prepare(
       'INSERT INTO kv (k, v, exp, updated_at) VALUES (?, ?, ?, ?) ' +
@@ -701,12 +723,45 @@ async function kvGet(env, key, fallback = null) {
   return fallback;
 }
 
+// Per-key KV-write throttle for HOT, EPHEMERAL keys only. Cloudflare KV free tier
+// is ~1,000 writes/DAY, and the live price/tick keys (btc:latest, the per-round
+// tick ring, launchpad tick rings, the OST price counters) are rewritten every
+// few seconds — they alone burn the whole daily budget. We write those to KV at
+// most once per window; D1 still gets EVERY write and memory+cache keep reads
+// fresh, so nothing is lost.
+//
+// Scoped ON PURPOSE to reconstructable price data. Durable/position/round keys
+// are NEVER throttled — kvGet reads KV before D1, so throttling a durable key
+// could let a stale KV copy shadow a fresh D1 write on a cross-colo read. Live
+// prices don't care about 25s of staleness (they recompute); a position does.
+const KV_LAST_WRITE = new Map();
+const KV_MIN_GAP_MS = 25_000;
+const KV_HOT_RE = /^(btc:latest$|btc:ticks:|launchpad:ticks:|ost:counters$|ost:history$)/;
+// True when `key` is a hot, reconstructable price key that has ALREADY been
+// persisted within the throttle window — in which case we skip the durable
+// tiers (memory + cache already hold the fresh value). Non-hot keys are never
+// throttled. Live prices don't care about ≤25s of staleness; a position would,
+// which is why only price/tick keys match KV_HOT_RE.
+function hotThrottled(key) {
+  if (!KV_HOT_RE.test(key)) return false;
+  const last = KV_LAST_WRITE.get(key) || 0;
+  if (Date.now() - last < KV_MIN_GAP_MS) return true;      // within window → skip durable write
+  if (KV_LAST_WRITE.size > 2000) KV_LAST_WRITE.delete(KV_LAST_WRITE.keys().next().value);
+  KV_LAST_WRITE.set(key, Date.now());
+  return false;                                            // persist this one
+}
+
 async function kvPut(env, key, value, expirationTtl = null) {
   const ttlS = Number.isFinite(Number(expirationTtl)) && Number(expirationTtl) > 0 ? Number(expirationTtl) : null;
   memPut(key, value, ttlS);
   await cachePut(key, value, ttlS);
-  // Write to every healthy durable tier — no single store is the only copy, and
-  // if KV is exhausted the data still lands in D1 (and R2 when bound).
+  // A hot price key already persisted this window: memory + cache have the fresh
+  // value, so skip the durable tiers and protect BOTH the KV and D1 daily quotas.
+  // This is the change that keeps the app on its fast path all day instead of
+  // burning the whole KV budget on live ticks before noon.
+  if (hotThrottled(key)) return true;
+  // Otherwise write every healthy durable tier — no single store is the only
+  // copy, and if KV is exhausted the data still lands in D1 (and R2 when bound).
   const [kv, d1, r2] = await Promise.all([
     kvNativePut(env, key, value, ttlS),
     d1Put(env, key, value, ttlS),
@@ -2795,6 +2850,10 @@ export default {
 
     // OST Live Price — devnet synthetic price engine. Additive, isolated.
     if (path.startsWith('/ost/')) {
+      // Hand the price module the SAME tiered store (memory→cache→KV→D1→R2) the
+      // rest of the worker uses, so its history/counters survive a KV-exhausted
+      // day instead of resetting. It falls back to its own KV path if absent.
+      if (!env.__store) env.__store = { get: (k, fb) => kvGet(env, k, fb), put: (k, v, ttl) => kvPut(env, k, v, ttl) };
       const ostResp = await handleOstPriceRequest(request, env, { path, method, url });
       if (ostResp) return ostResp;
     }
