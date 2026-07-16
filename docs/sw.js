@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ost-pwa-cache-v278';
+const CACHE_NAME = 'ost-pwa-cache-v279';
 const RUNTIME_CACHE = 'ost-pwa-runtime-v253';
 const CACHE_PREFIX = 'ost-pwa-';
 
@@ -125,6 +125,7 @@ const PRECACHE_PATHS = [
   './faucet-hub.js?v=16',
   './faucet-hub-ads.js?v=100',
   './ost-update.js?v=1',
+  './ost-offline-mode.js?v=1',
   './offline-vault.js?v=10',
   './ost-scroll-fix.css?v=1',
   './apple-tap.js?v=4',
