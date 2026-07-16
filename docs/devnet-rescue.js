@@ -441,18 +441,27 @@
   // -----------------------------------------------------------------------
   // 4) POOL-PAID USER OST ATA CREATION
   // -----------------------------------------------------------------------
+  // A wallet's OST token account, once created, never goes away. So the
+  // existence check only needs to hit the RPC ONCE per wallet — after that it is
+  // a memory lookup. This removes a full getAccountInfo round-trip (200ms–1.2s
+  // on devnet) from the hot path of EVERY buy, which is a big chunk of why a
+  // trade "felt slow to process".
+  var ATA_EXISTS_POOL = Object.create(null);
   async function ensureUserOstAtaPoolPaid(userPubkey) {
     var w = window.OST_WALLET; if (!w) throw new Error('Wallet helpers not loaded');
     var c = w.constants;
     var owner = (userPubkey && userPubkey.toBase58) ? userPubkey : new solanaWeb3.PublicKey(userPubkey);
     var mintPk = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.mint);
     var ata = w.associatedAddress(mintPk, owner, false, c.TOKEN_2022_PROGRAM_ID);
+    var ownerKey = owner.toBase58();
+    if (ATA_EXISTS_POOL[ownerKey]) return ata;        // already proven to exist → no RPC
     var conn = getRpc();
     var info = await conn.getAccountInfo(ata).catch(function () { return null; });
-    if (info) return ata;
+    if (info) { ATA_EXISTS_POOL[ownerKey] = true; return ata; }
     var pool = loadPoolKeypair();
     var ix = w.associatedAccountIx(pool.publicKey, ata, owner, mintPk, c.TOKEN_2022_PROGRAM_ID);
     await sendPoolOnlyTx([ix]);
+    ATA_EXISTS_POOL[ownerKey] = true;                 // created now, remember it
     return ata;
   }
 

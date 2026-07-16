@@ -3108,6 +3108,47 @@
     } catch {}
   }
 
+  // ---- Optimistic order helpers ------------------------------------------
+  // An optimistic buy writes the ticket LOCALLY the instant the user taps, then
+  // funds + confirms in the background. These helpers store/patch/remove by a
+  // stable client `reference` so the background result updates the SAME row
+  // instead of creating a duplicate (which keying by signature would).
+
+  // Store locally only — do NOT share a still-pending ticket to the global feed.
+  function storePredictionOrderRecordLocal(record) {
+    try {
+      var list = readPredictionOrderRecords();
+      list.unshift(record);
+      writePredictionOrderRecords(list.slice(0, 300));
+      // Fire BOTH events so every positions surface (modal, desk ledger, My Bets,
+      // live-watch) repaints the instant the optimistic ticket lands.
+      window.dispatchEvent(new CustomEvent('ost:prediction-order-recorded', { detail: record }));
+      window.dispatchEvent(new CustomEvent('ost:prediction:order-changed', { detail: record }));
+    } catch (_) {}
+  }
+  function patchPredictionOrderByRef(ref, patch) {
+    if (!ref) return false;
+    try {
+      var list = readPredictionOrderRecords();
+      for (var i = 0; i < list.length; i++) {
+        if (list[i] && list[i].reference === ref) {
+          Object.assign(list[i], patch);
+          writePredictionOrderRecords(list);
+          return true;
+        }
+      }
+    } catch (_) {}
+    return false;
+  }
+  function removePredictionOrderByRef(ref) {
+    if (!ref) return;
+    try {
+      var list = readPredictionOrderRecords();
+      var next = list.filter(function (o) { return !o || o.reference !== ref; });
+      if (next.length !== list.length) writePredictionOrderRecords(next);
+    } catch (_) {}
+  }
+
   function getPredictionDeskAccounts() {
     return getInterchangeDeskAccounts();
   }
@@ -3224,54 +3265,25 @@
     const hasWallet = !!(connectedWalletSession && connectedWalletSession.publicKey && conn);
     if (!hasWallet) return fundFromCredits();
 
-    try {
+    // OPTIMISTIC WALLET BUY — the ticket appears the instant the user taps; the
+    // OST transfer is signed, sent, and confirmed in the BACKGROUND. If funding
+    // fails it clears itself (or silently converts to a credits buy when the
+    // credits pool can cover it). This removes ~3 RPC round-trips + the
+    // confirmation wait from the click path, so the result shows before the tap
+    // even finishes. The stake still really moves on-chain — just not blockingly.
     const trader = connectedWalletSession.publicKey;
-    // Pool covers the SOL fee — user only needs OST. The transfer below is the
-    // real gate; a best-effort read only informs the UI. We never hard-block on
-    // it, so a stale RPC read can't stop a funded wallet from betting.
-    let ostBalance = await getOstBalanceForAddress(trader).catch(function () { return NaN; });
-    if (!Number.isFinite(ostBalance)) ostBalance = stakeAmt; // unknown -> assume ok, let transfer gate
-
-    const mintPk = new solanaWeb3.PublicKey(OST_CONFIG.mint);
-    // Ensure user has an OST ATA (pool pays the rent if missing).
-    let sourceAta;
-    if (window.OST_RESCUE && window.OST_RESCUE.ensureUserAta) {
-      sourceAta = await window.OST_RESCUE.ensureUserAta(trader);
-    } else {
-      sourceAta = getAssociatedTokenAddressSync(mintPk, trader, false, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
-      const sourceInfo = await conn.getAccountInfo(sourceAta);
-      if (!sourceInfo) throw new Error('This wallet does not have an OST token account yet. Claim or receive OST first.');
-    }
-
-    // House edge model: the full stake funds the settlement vault. On a LOSS
-    // the whole stake stays with the protocol (natural edge); on a WIN, the
-    // house takes its visible cut of the PROFIT at claim time via OST_HOUSE
-    // (see the claim path). No hidden entry scaling — the ticket quotes true
-    // odds and the fee is charged live when the winner claims.
     const feeScale = 1;
-
-    const memo = buildPredictionOrderMemo(order);
-    if (!window.OST_RESCUE || typeof window.OST_RESCUE.userSendsOstToPool !== 'function') {
-      throw new Error(t('pay.walletNeedsSol', 'The OST settlement vault is still loading. Please wait a moment and try again.'));
-    }
-    // Fund the same payout pool that pays winners; retained losses therefore
-    // stay in the live vault instead of being stranded in a separate desk ATA.
-    // fast: prewarmed blockhash, skip the balance pre-read, confirm at 'processed'
-    // — the bet lands in well under a second instead of waiting on 'confirmed'.
-    const settlement = await window.OST_RESCUE.userSendsOstToPool(Number(order.stake), memo, { fast: true });
-    const signature = settlement && (settlement.sig || settlement.signature) || '';
     const vaultTokenAccount = window.OST_SWAP_POOL && window.OST_SWAP_POOL.ata ? String(window.OST_SWAP_POOL.ata) : '';
+    const ref = String(order.reference || ('ost-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7)));
 
-    // Record the position immediately — we already have a confirmed signature.
-    // The balance is re-fetched below for UI feedback only; we must NOT gate
-    // position storage on it because RPC propagation can lag by several seconds,
-    // making a freshly-deducted balance appear unchanged (false "reverted" error).
     var record = {
-      signature: signature,
-      sig: signature,
+      reference: ref,
+      signature: '', sig: '',
       ts: Date.now(),
       status: 'open',
+      pending: true, optimistic: true,
       wallet: trader.toBase58(),
+      fundedBy: 'wallet',
       source: order.source,
       marketId: order.marketId,
       conditionId: order.conditionId || '',
@@ -3307,46 +3319,60 @@
       vaultFlow: 'stake-in',
       createdAt: Date.now()
     };
-    storePredictionOrderRecord(record);
-    try { window.dispatchEvent(new CustomEvent('ost:prediction-order-recorded', { detail: record })); } catch (_) {}
+    // Show it NOW. A still-pending ticket is stored LOCALLY only — it is shared to
+    // the global feed once funding confirms, so the feed never shows a phantom.
+    storePredictionOrderRecordLocal(record);
+    try { if (window.OST_OPTIMISTIC) window.OST_OPTIMISTIC.balanceHint({ deltaOst: -stakeAmt, source: 'prediction-bet', pending: true, ref: ref }); } catch (_) {}
+    try { if (typeof window.notifyOstTxHistory === 'function') window.notifyOstTxHistory(); } catch (_) {}
 
-    // Fetch updated balance for UI display (best-effort — use stake-adjusted
-    // fallback if the RPC hasn't propagated the debit yet).
-    var remainingBalance;
-    try {
-      var fetched = await getOstBalanceForAddress(trader);
-      // If RPC returned a stale value (≥ pre-trade balance), use a locally-
-      // calculated estimate so the ticket panel shows something sensible.
-      remainingBalance = (fetched + 1e-6 < ostBalance) ? fetched : Math.max(0, ostBalance - Number(order.stake));
-    } catch (_) {
-      remainingBalance = Math.max(0, ostBalance - Number(order.stake));
-    }
-    // Update the wallet portfolio chart + transaction history list immediately.
-    try {
-      if (window.OST_WALLET && window.OST_WALLET.session) {
-        var solBal = (await conn.getBalance(trader)) / solanaWeb3.LAMPORTS_PER_SOL;
-        if (typeof window.recordOstSnapshot === 'function') {
-          window.recordOstSnapshot({
-            ts: Date.now(), ostBalance: remainingBalance, solBalance: solBal,
-            kind: 'prediction-buy', amount: Number(order.stake), sig: signature
-          });
-        }
-      }
-      if (typeof window.notifyOstTxHistory === 'function') window.notifyOstTxHistory();
-    } catch (_) {}
+    (function settleInBackground() {
+      var memo;
+      try { memo = buildPredictionOrderMemo(order); } catch (_) { memo = ''; }
+      Promise.resolve()
+        .then(function () {
+          if (!window.OST_RESCUE || typeof window.OST_RESCUE.userSendsOstToPool !== 'function') {
+            throw new Error('settlement vault loading');
+          }
+          return window.OST_RESCUE.userSendsOstToPool(stakeAmt, memo, { fast: true });
+        })
+        .then(function (settlement) {
+          var sig = (settlement && (settlement.sig || settlement.signature)) || '';
+          patchPredictionOrderByRef(ref, { signature: sig, sig: sig, pending: false, optimistic: false });
+          try { sharePredictionOrderRecord(Object.assign({}, record, { signature: sig, sig: sig, pending: false, optimistic: false })); } catch (_) {}
+          try { if (window.OST_OPTIMISTIC) window.OST_OPTIMISTIC.balanceHint({ deltaOst: -stakeAmt, source: 'prediction-bet', settle: true, ref: ref }); } catch (_) {}
+          try { window.dispatchEvent(new CustomEvent('ost:prediction-order-confirmed', { detail: { reference: ref, signature: sig } })); } catch (_) {}
+          try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch (_) {}
+          try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {}
+          try { if (typeof window.notifyOstTxHistory === 'function') window.notifyOstTxHistory(); } catch (_) {}
+        })
+        .catch(function (err) {
+          // Funding failed. Prefer a silent credits conversion (keep the ticket);
+          // otherwise CLEAR the optimistic ticket and hand the money back.
+          if (creditsAvailable() + 1e-9 >= stakeAmt && window.OST_MONEY && typeof window.OST_MONEY.spend === 'function' && window.OST_MONEY.spend(stakeAmt, 'prediction-bet')) {
+            var csig = 'credits-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+            patchPredictionOrderByRef(ref, { signature: csig, sig: csig, pending: false, optimistic: false, fundedBy: 'credits', wallet: 'credits', vaultFlow: 'credits-stake' });
+            try { if (window.OST_OPTIMISTIC) window.OST_OPTIMISTIC.balanceHint({ deltaOst: -stakeAmt, source: 'prediction-bet', settle: true, ref: ref }); } catch (_) {}
+            try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch (_) {}
+            try { if (typeof window.notifyOstTxHistory === 'function') window.notifyOstTxHistory(); } catch (_) {}
+          } else {
+            removePredictionOrderByRef(ref);
+            try { if (window.OST_OPTIMISTIC) window.OST_OPTIMISTIC.balanceHint({ deltaOst: stakeAmt, source: 'prediction-bet', rollback: true, ref: ref }); } catch (_) {}
+            try { if (window.OST_OPTIMISTIC) window.OST_OPTIMISTIC.toast('Bet could not be funded — cleared and refunded.', 'error'); } catch (_) {}
+            try { window.dispatchEvent(new CustomEvent('ost:prediction-order-failed', { detail: { reference: ref, error: String(err && err.message || err) } })); } catch (_) {}
+            try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch (_) {}
+          }
+        });
+    })();
+
     return {
-      signature: signature,
-      remainingBalance: remainingBalance,
+      signature: '',
+      pending: true,
+      optimistic: true,
+      reference: ref,
+      remainingBalance: undefined,
       vaultTokenAccount: vaultTokenAccount,
       record: record
     };
-    } catch (onChainErr) {
-      // On-chain funding could not complete (insufficient, RPC, ATA, timeout).
-      // If the credits pool can cover the stake, fund from credits so a user
-      // with a real balance is never blocked. Otherwise surface the error.
-      if (creditsAvailable() + 1e-9 >= stakeAmt) return fundFromCredits();
-      throw onChainErr;
-    }
   }
 
   window.OST_PREDICTION_API = Object.assign(window.OST_PREDICTION_API || {}, {
@@ -6383,6 +6409,9 @@
     signFast: function (tx) { return signAndSendTransaction(tx, { commitment: 'processed' }); },
     reconcile: reconcileConfirmation,
     warmBlockhash: function () { return refreshBlockhash(false); },
+    // Synchronous getter for the currently-warm blockhash (or null). The pool-
+    // paid tx builder uses this to skip a live getLatestBlockhash on every buy.
+    warmBlockhashValue: function () { return cachedBlockhash(); },
     // The warm blockhash value (or null), so other modules — e.g. the custodial
     // pool path in devnet-rescue — can stamp a tx without their own round-trip.
     warmBlockhashValue: function () {

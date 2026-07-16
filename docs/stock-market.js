@@ -808,9 +808,12 @@
       }, wallet);
       upsertLocalOrder(buyOrder);
       renderOrders();
+      // The position is already on screen. The worker sync below is a BACKGROUND
+      // write — never awaited — so the buy completes and the button frees the
+      // instant the local order renders, even if the worker (or KV) is slow.
       var base = apiBase();
       if (base) {
-        await fetch(base + '/stocks/orders', {
+        fetch(base + '/stocks/orders', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({
@@ -840,7 +843,9 @@
         }).catch(function() {});
       }
       setOrderStatus('Stock mirror ticket recorded at ' + fmtMoney(buyOrder.entryPrice) + '. Future sells compare against this entry.', 'is-success');
-      await loadOrders();
+      // Background reconcile — do NOT await, so the buy is done the moment the
+      // local ticket shows.
+      Promise.resolve().then(function () { return loadOrders(); }).catch(function () {});
       try {
         if (typeof window.syncOstWalletEventsFromRemote === 'function') window.syncOstWalletEventsFromRemote();
       } catch (error) {}
