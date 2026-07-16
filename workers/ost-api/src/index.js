@@ -50,6 +50,8 @@ const FIVE_MIN_MS = 5 * 60 * 1000;
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 
+import { handlePush } from './push.js';
+
 function json(data, status = 200, extra = {}) {
   return new Response(JSON.stringify(data), {
     status,
@@ -1407,7 +1409,25 @@ function publicNativeMarketState(state) {
 
 async function getNativeMarketState(env, marketId, fallbackBaseYes) {
   const hubState = await getNativeMarketStateFromHub(env, marketId, fallbackBaseYes);
-  if (hubState) return hubState;
+  // The hub (a Durable Object) is a SINGLE global instance, which is precisely
+  // what makes it the authority: every reader on Earth sees the same numbers.
+  if (hubState) return Object.assign({}, hubState, { authoritative: true, degraded: false });
+
+  // ── DEGRADED PATH — READ THIS BEFORE CHANGING IT ─────────────────────────
+  // We are here because the hub failed. What follows is per-colo cached state:
+  // `caches.default` is scoped to ONE data centre and pinned for 300s, over KV
+  // that takes ~60s to propagate. So this value is whatever this colo happened to
+  // see last — a tester in Mexico and one in China get different numbers for the
+  // same market, which is exactly the "no correlation between same markets"
+  // report, and it has been happening since day one of prediction markets.
+  //
+  // Previously this was returned bare, indistinguishable from hub state. That
+  // silence is the entire bug: the Durable Object was added to fix the desync and
+  // then quietly bypassed on every hiccup, so it looked like the DO "didn't work".
+  //
+  // It is still better to answer with a stale price than to fail the request —
+  // but it must never again PRETEND to be authoritative. Flag it, and let the UI
+  // say "reconnecting" instead of showing a confidently wrong number.
   const state = await loadNativeMarketState(env, marketId);
   state.baseYesPrice = await nativeBaseYesForMarket(env, state.marketId, fallbackBaseYes != null ? fallbackBaseYes : state.baseYesPrice);
   state.updatedAt = state.updatedAt ? state.updatedAt : Date.now();
@@ -1415,7 +1435,12 @@ async function getNativeMarketState(env, marketId, fallbackBaseYes) {
   Object.assign(state, quoted);
   rememberNativeMarketStateHot(state);
   if (env.OST_KV) await kvPut(env, nativeMarketStateKey(state.marketId), state, NATIVE_MARKET_STATE_TTL_S);
-  return publicNativeMarketState(state);
+  return Object.assign({}, publicNativeMarketState(state), {
+    authoritative: false,
+    degraded: true,
+    degradedReason: HUB_HEALTH.lastError || 'market hub unreachable',
+    staleAsOf: state.updatedAt || null
+  });
 }
 
 async function applyNativePositionToMarketState(env, positionRecord, fallbackBaseYes) {
@@ -1461,15 +1486,36 @@ function nativeMarketHubStub(env) {
   }
 }
 
+// Why the hub last failed, and how often. This exists because the silent `null`
+// below hid a year-long bug: the Durable Object IS the authority for market
+// state, but every failure mode returned a bare null, and the caller read null as
+// "quietly serve the per-colo cache instead". Testers in different regions were
+// therefore served different prices for the same market, and NOTHING anywhere
+// said the authority had been bypassed. A fallback you cannot see is a fallback
+// you cannot fix.
+const HUB_HEALTH = { fails: 0, lastError: '', lastFailAt: 0, lastOkAt: 0 };
+
+function hubFailed(reason) {
+  HUB_HEALTH.fails++;
+  HUB_HEALTH.lastError = String(reason || 'unknown').slice(0, 160);
+  HUB_HEALTH.lastFailAt = Date.now();
+  // Loud on purpose. This is the line that would have caught the desync.
+  console.error('[NativeMarketHub] UNREACHABLE — falling back to per-colo cache, prices may diverge:', HUB_HEALTH.lastError);
+  return null;
+}
+
 async function nativeMarketHubJson(env, path, init) {
   const stub = nativeMarketHubStub(env);
-  if (!stub) return null;
+  if (!stub) return hubFailed('no DO binding (NATIVE_MARKET_HUB missing from wrangler.toml)');
   try {
     const response = await stub.fetch('https://ost-native-market-hub.local' + path, init || {});
-    if (!response || !response.ok) return null;
-    return await response.json();
-  } catch (_) {
-    return null;
+    if (!response) return hubFailed('empty response');
+    if (!response.ok) return hubFailed('HTTP ' + response.status + ' from hub' + path);
+    const body = await response.json();
+    HUB_HEALTH.lastOkAt = Date.now();
+    return body;
+  } catch (e) {
+    return hubFailed((e && e.message) || 'threw');
   }
 }
 
@@ -2788,6 +2834,28 @@ export default {
 
     if (method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
+    }
+
+    // GET /health/hub — is the market authority actually being used? A year of
+    // desync hid behind a silent null; this makes the answer one curl away.
+    if (path === '/health/hub' && method === 'GET') {
+      const now = Date.now();
+      return json({
+        fails: HUB_HEALTH.fails,
+        lastError: HUB_HEALTH.lastError,
+        lastFailAgoMs: HUB_HEALTH.lastFailAt ? now - HUB_HEALTH.lastFailAt : null,
+        lastOkAgoMs: HUB_HEALTH.lastOkAt ? now - HUB_HEALTH.lastOkAt : null,
+        bindingPresent: !!(env && env.NATIVE_MARKET_HUB),
+        note: 'fails > 0 means market state was served from a per-colo cache and testers CAN see different prices. Counters are per-isolate, so poll repeatedly.'
+      });
+    }
+
+    // Web Push: /push/key, /push/subscribe, /push/unsubscribe, /push/test.
+    // Returns null for anything that is not a push route, so the rest of the
+    // router is untouched.
+    if (path.startsWith('/push/')) {
+      const pushed = await handlePush(request, env, path, method, json);
+      if (pushed) return pushed;
     }
 
     // Ghost router (Phase 2) will be wired here.
