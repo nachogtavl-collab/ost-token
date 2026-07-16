@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ost-pwa-cache-v276';
+const CACHE_NAME = 'ost-pwa-cache-v278';
 const RUNTIME_CACHE = 'ost-pwa-runtime-v253';
 const CACHE_PREFIX = 'ost-pwa-';
 
@@ -124,6 +124,7 @@ const PRECACHE_PATHS = [
   './mobile-shell.js?v=12',
   './faucet-hub.js?v=16',
   './faucet-hub-ads.js?v=100',
+  './ost-update.js?v=1',
   './offline-vault.js?v=10',
   './ost-scroll-fix.css?v=1',
   './apple-tap.js?v=4',
@@ -188,7 +189,7 @@ const PRECACHE_CONCURRENCY = 4;
 
 // The shell the app cannot render without. Fetched first; everything else is
 // topped up afterwards, so a cold install never blocks on a game or a 3D lib.
-const CRITICAL = /(?:^|\/)(?:index\.html|markets\.html|offline\.html|style\.css|app\.js|manifest\.json|sw\.js)$|\/$/i;
+const CRITICAL = /(?:^|\/)(?:index\.html|markets\.html|style\.css|app\.js|manifest\.json|sw\.js)$|\/$/i;
 
 async function fetchInto(cache, url) {
   try {
@@ -294,6 +295,10 @@ async function staleWhileRevalidate(request) {
 // changed URL. They can safely be served from cache and revalidated behind the
 // user's back. Only DOCUMENTS stay network-first, so a new deploy is still
 // picked up immediately rather than being pinned to a stale shell.
+function isSameOrigin(request) {
+  try { return new URL(request.url).origin === scopeUrl.origin; } catch (_) { return false; }
+}
+
 function shouldNetworkFirst(request) {
   try {
     const url = new URL(request.url);
@@ -315,7 +320,30 @@ function shouldStaleWhileRevalidate(request) {
 }
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(precache().then(() => self.skipWaiting()));
+  event.waitUntil(precache().then(() => {
+    // skipWaiting() is RIGHT on a first install and WRONG on an update.
+    //
+    // First install — nothing is controlling this page yet, so activating at
+    // once costs nobody anything and makes the app work offline from the very
+    // first visit instead of the second.
+    //
+    // Update — `registration.active` exists, meaning a page is open RIGHT NOW
+    // running the OLD JS. Seizing control of it mid-session means that old JS
+    // starts fetching NEW assets: version skew, where app.js from build N talks
+    // to modules from build N+1. That is a whole genre of "it froze / it went
+    // weird after a while" bugs, and it is self-inflicted. So we stay in the
+    // waiting state and let the page decide when to swap — ost-update.js asks
+    // the user, then posts OST_SKIP_WAITING below.
+    if (!self.registration.active) return self.skipWaiting();
+    return undefined;
+  }));
+});
+
+// The page has told us the user accepted the new version and is ready to reload.
+// This is the ONLY path that takes over a live session.
+self.addEventListener('message', (event) => {
+  const data = event && event.data;
+  if (data && data.type === 'OST_SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
@@ -328,12 +356,25 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// Static things that are worth serving from cache when the network is gone.
+// `destination` is the browser telling us what the request is FOR, which is far
+// more reliable than sniffing file extensions off a URL.
+//
+// Deliberately absent: '' / 'empty' — that is fetch() and XHR, i.e. every live
+// API poll (markets/state, spot, coingecko, kraken). See the fetch handler.
+const CACHEABLE_DESTINATIONS = new Set(['style', 'script', 'font', 'image']);
+
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   if (request.method !== 'GET') return;
 
+  // Only OUR navigations. A cross-origin <iframe> navigation (the a-ads banners)
+  // is also routed through this worker, and answering it meant awaiting a fetch
+  // to a third-party ad server — pinning the worker as a pending event for as
+  // long as that server felt like taking, on every ad refresh. We could never
+  // serve that response from our cache anyway, so intercepting it was pure cost.
   if (request.mode === 'navigate') {
-    event.respondWith(navigationResponse(request));
+    if (isSameOrigin(request)) event.respondWith(navigationResponse(request));
     return;
   }
 
@@ -346,7 +387,34 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(staleWhileRevalidate(request));
     return;
   }
-  event.respondWith(cacheFirstResponse(request));
+  // Cross-origin static assets we precache (web3.js from unpkg, Google fonts).
+  if (CACHEABLE_DESTINATIONS.has(request.destination)) {
+    event.respondWith(cacheFirstResponse(request));
+    return;
+  }
+
+  // EVERYTHING ELSE FALLS THROUGH UNTOUCHED — AND THAT IS THE WHOLE POINT.
+  //
+  // This used to end in a catch-all `event.respondWith(cacheFirstResponse(...))`
+  // that swallowed every GET on the page. Both helpers above bail on cross-origin,
+  // so each of OST's live API polls — markets/state several times a SECOND, spot,
+  // coingecko, kraken — landed in that catch-all. Two bad consequences:
+  //
+  //  1. IT MADE THE APP UNUPDATABLE. Calling respondWith() makes the fetch a
+  //     PENDING EVENT on the active worker. The spec's "Try Activate" step only
+  //     activates a waiting worker when the active one has NO pending events AND
+  //     (nobody is using it OR skipWaiting was called). skipWaiting() waives the
+  //     clients half — it does NOT waive pending events. A live trading app never
+  //     has zero in-flight fetches, so that condition was never true and a new
+  //     worker could NEVER take over a running page. Measured: 12 requests still
+  //     open 8s after load. This is why fixes never reached testers and why only
+  //     fully closing the app ever picked up a new build.
+  //  2. It cache-first'd live market data — an extra worker hop on every tick,
+  //     for responses that must never come from a cache.
+  //
+  // A service worker that does not call respondWith() lets the browser do the
+  // request directly: no interception, no pending event, no hop. So between asset
+  // loads the worker is genuinely idle and an update can land.
 });
 
 function notificationPayload(data = {}) {
