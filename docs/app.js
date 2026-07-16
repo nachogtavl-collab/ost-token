@@ -2515,7 +2515,11 @@
         getOstBalanceForAddress(pubkey).catch(function() { return null; })
       ]);
       const sol = (lamports / 1e9).toFixed(4);
-      const ostTxt = ostBal !== null ? ' · ' + ostBal.toFixed(2) + ' OST' : '';
+      // `!= null` (loose) on purpose: it catches BOTH null and undefined. The
+      // read now returns undefined when it could not reach the chain, and a
+      // strict `!== null` would let that through into .toFixed() and throw.
+      // Omitting the figure is right — we do not know it, so we do not claim it.
+      const ostTxt = ostBal != null ? ' · ' + ostBal.toFixed(2) + ' OST' : '';
       toast('💰', `Balance: ${sol} SOL${ostTxt}`);
     } catch (e) {
       // silently ignore balance fetch errors
@@ -3432,6 +3436,14 @@
 
     const requester = connectedWalletSession.publicKey;
     const ostBalance = await getOstBalanceForAddress(requester);
+    // FAIL CLOSED. `undefined` means we could not read the balance, and this is a
+    // spend gate — guessing here is how you approve a payment the wallet cannot
+    // cover. Note NaN's trap: `undefined + 1e-9 < x` evaluates to FALSE, so
+    // without this line an unknown balance would sail straight through the check
+    // below as if it were sufficient. Unknown must block, never pass.
+    if (ostBalance === undefined) {
+      throw new Error(t('pay.balanceUnknown', 'Could not verify your OST balance right now. Please try again in a moment.'));
+    }
     if (ostBalance + 1e-9 < Number(request.ostAmount)) {
       throw new Error(t('pay.notEnoughOst', 'Not enough OST in this wallet. Claim or buy OST first.'));
     }
@@ -3487,17 +3499,38 @@
     return Number(rawAmount) / 1e9;
   }
 
+  // Returns a Number when the chain answered, or `undefined` when we simply could
+  // not find out. THOSE ARE NOT THE SAME THING, and conflating them is the bug
+  // behind "hard refresh resets my balance".
+  //
+  // This used to `return 0` both when the connection was not ready yet (very
+  // common one tick after a refresh) and when any RPC call threw (devnet 429s
+  // constantly). A transient network hiccup was therefore rendered as a
+  // confident, real "you have 0 OST" — and 0 is a LEGITIMATE balance, so nothing
+  // downstream could tell the difference. We then papered over the zeroes with
+  // OST_TREE's last-known cache instead of deleting the lie, which is why the bug
+  // kept coming back wearing a new hat.
+  //
+  // `undefined` means unknown. A caller that needs a number for a DECISION should
+  // write `(bal ?? 0)` — unknown-as-zero is conservative there: it declines an
+  // action rather than granting one on a guess. A caller that DISPLAYS a balance
+  // must never do that: show the last known value, or a skeleton. Never a 0 we
+  // invented.
+  //
+  // A genuine on-chain zero (no ATA / empty account) still returns 0 via
+  // decodeTokenBalance — that one is the truth.
   async function getOstBalanceForAddress(pubkeyInput) {
     try {
       const conn = getSolanaConnection();
-      if (!conn) return 0;
+      if (!conn) return undefined;          // not "zero" — "not known yet"
       const owner = toPublicKey(pubkeyInput);
       const mintPk = new solanaWeb3.PublicKey(OST_CONFIG.mint);
       const ata = getAssociatedTokenAddressSync(mintPk, owner, false, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
       const ataInfo = await conn.getAccountInfo(ata);
       return decodeTokenBalance(ataInfo);
-    } catch {
-      return 0;
+    } catch (err) {
+      console.warn('[balance] OST read failed — reporting UNKNOWN, not zero:', err && err.message);
+      return undefined;
     }
   }
 
@@ -6352,9 +6385,13 @@
 
         if (faucetStatus) faucetStatus.textContent = '+' + optimisticClaimAmount.toFixed(2) + ' OST queued. Vault confirmation syncs in the background.';
         const faucetResult = await claimOstFaucetForActiveWallet();
-        const ostBalance = faucetResult.balance || await getOstBalanceForAddress(connectedWalletSession.publicKey);
+        // `||` also swallows a legitimate 0 balance, so read it explicitly, and
+        // fall back to the on-screen figure when the chain cannot be reached —
+        // never to a fabricated number.
+        var ostBalance = faucetResult.balance;
+        if (ostBalance == null) ostBalance = await getOstBalanceForAddress(connectedWalletSession.publicKey);
         faucetTotal = ostBalance;
-        if (faucetAmount) faucetAmount.textContent = ostBalance.toFixed(2);
+        if (faucetAmount && ostBalance != null) faucetAmount.textContent = ostBalance.toFixed(2);
 
         if (faucetResult.cooldown) {
           const waitText = formatDropCooldown(faucetResult.nextDailyClaimAt - Date.now());
@@ -6365,7 +6402,11 @@
 
         const claimedAmount = Number(faucetResult.amount || 0);
         const humanKind = faucetResult.rewardKind === 'daily' ? 'daily manual drop' : 'head start';
-        if (faucetStatus) faucetStatus.textContent = claimedAmount.toFixed(2) + ' OST ' + humanKind + ' claimed. Wallet balance: ' + ostBalance.toFixed(2) + ' OST.';
+        // The claim itself is confirmed; only the follow-up balance read may be
+        // unknown. Report the claim, and stay silent about a balance we could not
+        // verify rather than printing one we made up.
+        if (faucetStatus) faucetStatus.textContent = claimedAmount.toFixed(2) + ' OST ' + humanKind + ' claimed.'
+          + (ostBalance != null ? ' Wallet balance: ' + ostBalance.toFixed(2) + ' OST.' : '');
         toast('🎉', '+' + claimedAmount.toFixed(2) + ' OST ' + humanKind + ' claimed');
         try {
           if (typeof window.recordOstSnapshot === 'function') {
@@ -7749,16 +7790,32 @@
           wdSolUsd.textContent = curSymbol + solInCur.toFixed(cur === 'BTC' ? 6 : 2);
         }
         const ostBal = await getOstBalanceForAddress(pk);
-        if (wdOstBal) wdOstBal.textContent = ostBal.toFixed(2);
-        // Feed the balance tree so the last confirmed on-chain amount survives
-        // a hard refresh (fixes "OST disappears on refresh").
-        try { if (window.OST_TREE) window.OST_TREE.reportChain(String(pubkey), ostBal); } catch (_) {}
-        if (wdOstUsd) {
-          const cur2 = window.__ostCurrency || 'USD';
-          const fiatRate2 = (window.OST_TREASURY && window.OST_TREASURY.priceUsd)
-            ? (window.OST_TREASURY.priceUsd(cur2) || 1) : 1;
-          const curSymbol2 = {'EUR':'€','GBP':'£','CAD':'C$','AUD':'A$','MXN':'MX$','JPY':'¥','BTC':'₿','ETH':'Ξ'}[cur2] || cur2 + ' ';
-          wdOstUsd.textContent = curSymbol2 + (ostBal * ostPrice / fiatRate2).toFixed(cur2 === 'BTC' ? 6 : 2);
+        // `undefined` = the read failed. Do NOT render it and do NOT feed it
+        // onward — keep whatever is on screen, which is the last value the chain
+        // actually confirmed.
+        //
+        // This is where "OST disappears on refresh" really came from, and why the
+        // previous fix never held: getOstBalanceForAddress used to fabricate a 0
+        // on any RPC hiccup, and this line then fed that 0 into OST_TREE — the
+        // very cache added to make the balance survive a refresh. So the failure
+        // poisoned its own antidote: the fake zero became the "last confirmed
+        // on-chain amount". A cache over a lie just launders the lie.
+        if (ostBal === undefined) {
+          // Leave BOTH the OST figure and its fiat conversion exactly as they are.
+          // The fiat line matters as much as the balance: `undefined * price`
+          // is NaN, so rendering it would just swap a fake zero for a fake
+          // "$NaN" — a different wrong answer, not an honest one.
+          console.warn('[balance] chain read unavailable — keeping last known balance on screen');
+        } else {
+          if (wdOstBal) wdOstBal.textContent = ostBal.toFixed(2);
+          try { if (window.OST_TREE) window.OST_TREE.reportChain(String(pubkey), ostBal); } catch (_) {}
+          if (wdOstUsd) {
+            const cur2 = window.__ostCurrency || 'USD';
+            const fiatRate2 = (window.OST_TREASURY && window.OST_TREASURY.priceUsd)
+              ? (window.OST_TREASURY.priceUsd(cur2) || 1) : 1;
+            const curSymbol2 = {'EUR':'€','GBP':'£','CAD':'C$','AUD':'A$','MXN':'MX$','JPY':'¥','BTC':'₿','ETH':'Ξ'}[cur2] || cur2 + ' ';
+            wdOstUsd.textContent = curSymbol2 + (ostBal * ostPrice / fiatRate2).toFixed(cur2 === 'BTC' ? 6 : 2);
+          }
         }
 
         // ── Incoming transfer detection (receiver UX) ──────────────────────
@@ -15368,13 +15425,24 @@
       var pubkey = connectedWalletSession.publicKey;
       var prevBalance = state.availableBalance;
       return getOstBalanceForAddress(pubkey).then(function(balance) {
-        // If RPC returned 0 but the user previously had OST, the devnet node may
-        // still be propagating the latest block.  Retry once after 2 s to avoid
-        // showing a false "not enough OST" gate while the balance catches up.
+        // `undefined` = the read failed, which is NOT a balance of zero. Keep the
+        // last known figure rather than gating the desk on a number we invented.
+        //
+        // The retry below is a fossil of this same bug: it existed because
+        // getOstBalanceForAddress fabricated a 0 on RPC failure, and someone
+        // noticed users being told "not enough OST" while holding plenty. Rather
+        // than fix the lie, they retried it. It stays because a real 0 can also
+        // be block-propagation lag — but that is now the ONLY case it handles,
+        // since a failed read no longer masquerades as 0.
+        if (balance === undefined) return prevBalance;
         if (balance === 0 && prevBalance !== null && prevBalance > 0) {
           return new Promise(function(resolve) {
             setTimeout(function() {
-              getOstBalanceForAddress(pubkey).then(resolve).catch(function() { resolve(0); });
+              // On a second failure keep the last known value too — never resolve
+              // a spend gate with a fabricated zero.
+              getOstBalanceForAddress(pubkey)
+                .then(function (b) { resolve(b === undefined ? prevBalance : b); })
+                .catch(function () { resolve(prevBalance); });
             }, 2000);
           });
         }
