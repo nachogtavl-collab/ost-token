@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ost-pwa-cache-v266';
+const CACHE_NAME = 'ost-pwa-cache-v267';
 const RUNTIME_CACHE = 'ost-pwa-runtime-v253';
 const CACHE_PREFIX = 'ost-pwa-';
 
@@ -25,7 +25,7 @@ const PRECACHE_PATHS = [
   './ost-live-stats.js?v=2',
   './ost-treasury-engine.js?v=2',
   './ost-engine-guard.js?v=1',
-  './ost-appbar.js?v=4',
+  './ost-appbar.js?v=5',
   './ost-ghost-companion.js?v=1',
   './ost-data-guard.js?v=2',
   './ost-balance-tree.js?v=1',
@@ -74,7 +74,7 @@ const PRECACHE_PATHS = [
   './interchange-live.js?v=2',
   './polish.js?v=2',
   './swap-pool.js?v=1',
-  './wallet-extras.js?v=204',
+  './wallet-extras.js?v=205',
   './ost-price-client.js?v=202',
   './ost-token-section.js?v=2',
   './assets/ost-metadata.json',
@@ -134,7 +134,7 @@ const PRECACHE_PATHS = [
   './devnet-rescue.js?v=201',
   './launchpad-trenches.js?v=6',
   './stock-market.js?v=11',
-  './topup.js?v=11',
+  './topup.js?v=12',
   './live-watch.css?v=5',
   './live-watch.js?v=200',
   './native-markets.js?v=3',

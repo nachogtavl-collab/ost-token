@@ -157,6 +157,12 @@
     { ico: '🎯', lbl: 'Trade ticket', need: ['.ost-tradepop__launcher', '#ost-trade-ticket-fab'], run: function () {
         clickFirst(['.ost-tradepop__launcher', '#ost-trade-ticket-fab']);
       } },
+    // The "Transmit to Space" button lives in the home hero and on phones can end
+    // up UNDER the fixed bottom app bar, so a tap hits the nav instead — which is
+    // why it "did nothing". This gives a guaranteed way to open the console.
+    { ico: '𓂇', lbl: 'Transmit', need: ['#transmitBtn'], run: function () {
+        clickFirst(['#transmitBtn', '#transmitBtnLg']);
+      } },
     { ico: '🧿', lbl: 'Ghost realm', need: ['#ghost-summon-trigger'], run: function () {
         clickFirst(['#ghost-summon-trigger']);
       } },

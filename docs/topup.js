@@ -26,6 +26,7 @@
 
   let configCache = null;
   let pollTimer = null;
+  const deliveringIntents = {};   // intentId -> true while its client payout is in flight
   let activeCryptoIntent = null;
 
   function normalizeClusterName(cluster) {
@@ -671,7 +672,12 @@
   // single source of truth for SOL→OST conversion math; without it the
   // on-chain swap rail may default to stale fallback constants and credit
   // far less OST than the user saw quoted.
-  window.OST_TOPUP = {
+  // MERGE, don't overwrite: wallet-extras.js (loaded first) puts the actual OST
+  // delivery function `deliverIfPaid` on OST_TOPUP. This file used to clobber the
+  // whole object, dropping deliverIfPaid — so after a SOL payment verified, there
+  // was NO way left to release the OST and it never arrived. Object.assign keeps
+  // both halves.
+  window.OST_TOPUP = Object.assign(window.OST_TOPUP || {}, {
     usdPerOst: usdPerOst,
     solUsd: solUsd,
     minUsd: minUsd,
@@ -679,7 +685,7 @@
     config: function () { return configCache; },
     refreshConfig: function () { return loadConfig({ force: true }); },
     quoteFromUsd: quoteFromUsd
-  };
+  });
   // Keep config fresh in the background so quotes never go stale beyond ~30s.
   setInterval(function () {
     if (document.hidden) return;
@@ -966,7 +972,13 @@
         }
         throw new Error(j.error || ('verify_http_' + r.status));
       }
-      setStatus('topupCryptoStatus', 'ok', 'Payment verified! Devnet OST dispatch is queued.');
+      setStatus('topupCryptoStatus', 'ok', 'Payment verified! Releasing your OST now…');
+      // Release the OST immediately (client-side payout), don't wait for the
+      // first poll tick. The poll below still confirms 'sent'.
+      if (!deliveringIntents[intentId] && window.OST_TOPUP && typeof window.OST_TOPUP.deliverIfPaid === 'function') {
+        deliveringIntents[intentId] = true;
+        Promise.resolve(window.OST_TOPUP.deliverIfPaid(intentId)).catch(function () { deliveringIntents[intentId] = false; });
+      }
       pollIntent(intentId, 'topupCryptoStatus', { crypto: true });
     } catch (e) {
       setStatus('topupCryptoStatus', 'error', String(e && e.message || e));
@@ -997,7 +1009,24 @@
             (j.signature ? `<a href="https://solscan.io/tx/${j.signature}?cluster=devnet" target="_blank" rel="noopener">View tx</a>` : ''));
           window.dispatchEvent(new CustomEvent('ost:topup-delivered', { detail: j }));
         } else if (j.status === 'paid') {
-          setStatus(statusElId, 'info', 'Payment received! Sending devnet OST...');
+          // The OST payout is CLIENT-SIDE — the worker only tracks status (it
+          // marks 'paid' after verifying the SOL tx, then waits for the client to
+          // release OST from the pool and claim). Nothing was doing that release,
+          // so verified payments sat at 'paid' forever and the OST never arrived.
+          // Trigger it here, once per intent; deliverIfPaid sends the OST and
+          // claims the intent, which flips status to 'sent'.
+          if (!deliveringIntents[id] && window.OST_TOPUP && typeof window.OST_TOPUP.deliverIfPaid === 'function') {
+            deliveringIntents[id] = true;
+            setStatus(statusElId, 'info', 'Payment received! Releasing your OST now…');
+            Promise.resolve(window.OST_TOPUP.deliverIfPaid(id))
+              .then(function () { /* next poll will read 'sent' */ })
+              .catch(function (e) {
+                deliveringIntents[id] = false;   // let the next poll retry
+                setStatus(statusElId, 'info', 'Releasing OST… retrying (' + (e && e.message ? String(e.message).slice(0, 60) : 'network') + ')');
+              });
+          } else {
+            setStatus(statusElId, 'info', 'Payment received! Releasing devnet OST…');
+          }
         }
       } catch (_) {}
     }, 5000);

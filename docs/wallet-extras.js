@@ -1300,7 +1300,7 @@
     };
   }
 
-  window.OST_TOPUP = {
+  window.OST_TOPUP = Object.assign(window.OST_TOPUP || {}, {
     loadConfig: loadTopupConfig,
     quoteSettlement: quoteTopupSettlement,
     createIntent: createTopupIntent,
@@ -1311,7 +1311,7 @@
     rememberPending: writePendingTopup,
     getPending: readPendingTopup,
     clearPending: clearPendingTopup
-  };
+  });
   try { window.dispatchEvent(new CustomEvent('ost:topup-ready')); } catch (e) {}
 
   // ------------------------------------------------------------------
