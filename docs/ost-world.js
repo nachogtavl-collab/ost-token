@@ -212,7 +212,46 @@
     canvas.__ostWorldWired = true;
     canvas.style.cursor = 'pointer';
     canvas.title = 'Enter OST World — browse the content-addressed web';
-    canvas.addEventListener('click', function () { openWorld(); });
+
+    // TAP DETECTION, not `click`.
+    //
+    // The globe owns pointerdown/pointermove/pointerup to drag-spin itself
+    // (app.js initGlobe). On a phone the canvas has default touch-action, so the
+    // browser treats a finger-down as a possible scroll and fires POINTERCANCEL
+    // — and a synthetic `click` never arrives. That is why the globe visibly
+    // reacted to the spin but the World never opened: `click` was simply never
+    // dispatched. A desktop mouse click DOES fire one, which is exactly why this
+    // slipped through testing.
+    //
+    // So detect the tap ourselves: pointer down and up in nearly the same spot,
+    // quickly. A real spin moves further and is left alone for the globe.
+    // touch-action:manipulation also stops the browser holding the tap back to
+    // wait for a double-tap-zoom.
+    try { canvas.style.touchAction = 'manipulation'; } catch (_) {}
+
+    var down = null;
+    var TAP_SLOP = 12;    // px of movement still counted as a tap, not a spin
+    var TAP_MS = 700;
+
+    canvas.addEventListener('pointerdown', function (e) {
+      down = { x: e.clientX, y: e.clientY, t: Date.now() };
+    }, { passive: true });
+
+    canvas.addEventListener('pointerup', function (e) {
+      if (!down) return;
+      var moved = Math.abs(e.clientX - down.x) + Math.abs(e.clientY - down.y);
+      var quick = (Date.now() - down.t) < TAP_MS;
+      down = null;
+      if (moved <= TAP_SLOP && quick) openWorld();
+    }, { passive: true });
+
+    // The browser took the gesture (scroll/zoom) — not a tap.
+    canvas.addEventListener('pointercancel', function () { down = null; }, { passive: true });
+    canvas.addEventListener('pointerleave', function () { down = null; }, { passive: true });
+
+    // Desktop safety net: if a real click does arrive and we somehow missed the
+    // pointer pair, still open. Guarded so a tap never opens the World twice.
+    canvas.addEventListener('click', function () { if (!open) openWorld(); });
     return true;
   }
 
