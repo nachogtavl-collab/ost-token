@@ -160,7 +160,10 @@
       'border:1px solid rgba(167,139,250,0.4);border-radius:14px 14px 14px 4px;padding:10px 13px;color:#e2e8f0;' +
       'font-size:12.5px;line-height:1.45;box-shadow:0 10px 34px rgba(0,0,0,0.55);animation:ogBubbleIn .3s ease;cursor:pointer;}' +
       '@keyframes ogBubbleIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}' +
-      '#ostGhostPanel{position:fixed;left:12px;bottom:64px;z-index:10040;width:min(340px,calc(100vw - 24px));height:min(480px,70vh);' +
+      // Wider + taller than the old chat box: the Ghost now answers with real
+      // multi-line analysis (tilt, leaks, edge), and 340px squeezed those into an
+      // unreadable column.
+      '#ostGhostPanel{position:fixed;left:12px;bottom:64px;z-index:10040;width:min(392px,calc(100vw - 24px));height:min(560px,76vh);' +
       'background:linear-gradient(170deg,#131a2e,#0a0e1c);border:1px solid rgba(167,139,250,0.4);border-radius:18px;' +
       'box-shadow:0 18px 60px rgba(0,0,0,0.65);display:none;flex-direction:column;overflow:hidden;}' +
       '#ostGhostPanel.is-open{display:flex;}' +
@@ -172,9 +175,15 @@
       '.og-mood.cold{background:rgba(125,211,252,0.16);color:#7dd3fc;}' +
       '.og-mood.chill{background:rgba(167,139,250,0.16);color:#c4b5fd;}' +
       '.og-msgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;}' +
-      '.og-msg{max-width:86%;padding:8px 12px;border-radius:12px;font-size:12.5px;line-height:1.5;white-space:pre-wrap;}' +
+      '.og-msg{max-width:86%;padding:8px 12px;border-radius:12px;font-size:12.5px;line-height:1.5;white-space:pre-wrap;' +
+      'overflow-wrap:anywhere;}' +
       '.og-msg.user{align-self:flex-end;background:rgba(109,159,255,0.18);border:1px solid rgba(109,159,255,0.3);color:#dbeafe;border-radius:12px 12px 4px 12px;}' +
-      '.og-msg.ghost{align-self:flex-start;background:rgba(255,255,255,0.05);border:1px solid rgba(167,139,250,0.25);color:#e2e8f0;border-radius:12px 12px 12px 4px;}' +
+      // The Ghost's own answers carry the analysis, so give them the room and a
+      // slightly taller line — bullets ("• …") read as a list, not a paragraph.
+      '.og-msg.ghost{align-self:flex-start;max-width:96%;background:rgba(255,255,255,0.05);border:1px solid rgba(167,139,250,0.25);' +
+      'color:#e2e8f0;border-radius:12px 12px 12px 4px;line-height:1.62;}' +
+      // Numbers are the point of this Ghost — let them stand out from the prose.
+      '.og-msg.ghost strong,.og-msg.ghost b{color:#e9d5ff;}' +
       '.og-msg.typing{color:#94a3b8;font-style:italic;}' +
       '.og-quick{display:flex;gap:5px;flex-wrap:wrap;padding:0 12px 8px;}' +
       '.og-quick button{border:1px solid rgba(167,139,250,0.35);background:transparent;color:#c4b5fd;border-radius:999px;padding:4px 10px;font-size:10.5px;font-weight:700;cursor:pointer;}' +
@@ -270,10 +279,14 @@
       '</div>' +
       '<div class="og-msgs"></div>' +
       '<div class="og-quick">' +
-        '<button data-og-q="How am I doing today?">How am I doing?</button>' +
-        '<button data-og-q="What are my open bets and parlays?">My open bets</button>' +
+        // Lead with what only THIS Ghost can do — your edge, your leaks, and a
+        // real action. Generic questions still work, they just aren't the pitch.
+        '<button data-og-q="Am I better on YES or NO?">📊 My edge</button>' +
+        '<button data-og-q="What am I doing wrong?">🔍 My leaks</button>' +
+        '<button data-og-q="How do I bet?">🧠 My habits</button>' +
+        '<button data-og-q="Claim all my wins">⚡ Claim all</button>' +
         '<button data-og-q="What is my balance?">Balance</button>' +
-        '<button data-og-q="Explain how parlays work">Parlays?</button>' +
+        '<button data-og-q="What are my open bets?">Open bets</button>' +
       '</div>' +
       '<div class="og-input">' +
         '<input type="text" placeholder="Ask me anything about your OST…" maxlength="300">' +
