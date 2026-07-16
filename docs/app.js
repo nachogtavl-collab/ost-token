@@ -4161,6 +4161,29 @@
   const restoredLocalWalletSession = getLocalWalletSession();
   if (restoredLocalWalletSession) {
     setConnectedWalletSession(restoredLocalWalletSession, { announce: false });
+
+    // LOAD-ORDER RACE (this is why the wallet "disconnects" on every refresh and
+    // then acts "connected but not showing"): this restore runs while app.js is
+    // still executing, and it announces `ost:wallet-changed` on a setTimeout(0).
+    // But wallet-extras.js, ost-card.js and topup.js are loaded AFTER app.js —
+    // they register their `ost:wallet-changed` listeners later and therefore MISS
+    // that first dispatch. The session is live internally while every balance and
+    // chip still renders "disconnected", so pressing Connect finds a session
+    // already set and nothing visibly changes.
+    //
+    // Re-announce once the page has fully loaded, when every module is listening.
+    // Idempotent: it only re-syncs UI from the session that already exists.
+    var reannounceWallet = function () {
+      try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {}
+      try { if (typeof window.syncPredictionMarketTradeWallet === 'function') window.syncPredictionMarketTradeWallet(); } catch (_) {}
+      try { if (typeof window.syncWalletJourneyUi === 'function') window.syncWalletJourneyUi(); } catch (_) {}
+      try { setWalletButtonState(connectedWallet); } catch (_) {}
+    };
+    if (document.readyState === 'complete') setTimeout(reannounceWallet, 0);
+    else window.addEventListener('load', reannounceWallet, { once: true });
+    // Coming BACK to a backgrounded tab/PWA can also restore from bfcache with
+    // stale UI — re-sync on pageshow(persisted) too.
+    window.addEventListener('pageshow', function (e) { if (e && e.persisted) reannounceWallet(); });
   }
 
   /* ---------- 3D EARTH — Realistic Day/Night ---------- */
