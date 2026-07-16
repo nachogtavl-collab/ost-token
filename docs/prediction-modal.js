@@ -60,6 +60,8 @@
   var nativeStateInFlightBase = {};
   var NATIVE_STATE_BASE_TOLERANCE = 0.005;
   var NATIVE_STATE_REFRESH_MS = 3000;
+  var ROUND_REFRESH_MS = 4000;
+  var roundFetchAt = 0, roundInFlight = null, lastRound = null;
 
   function ostApiBase() {
     return String(window.OST_API_BASE || '').replace(/\/$/, '');
@@ -88,14 +90,31 @@
     } catch (_) {}
     var base = ostApiBase();
     if (!base) return Promise.resolve(null);
-    return fetch(base + '/btc/round', { headers: { accept: 'application/json' }, cache: 'no-store' })
+    // /btc/round had NO throttle in either file — it fetched on every call, ~40x
+    // a MINUTE, describing a round that lasts FIVE MINUTES. Same rule as market
+    // state: the window gates the FETCH, so a failing worker gets a pause instead
+    // of a retry storm. 4s still notices a round rollover promptly.
+    if (Date.now() - roundFetchAt < ROUND_REFRESH_MS) return Promise.resolve(lastRound);
+    if (roundInFlight) return roundInFlight;
+    roundFetchAt = Date.now();
+    roundInFlight = fetch(base + '/btc/round', { headers: { accept: 'application/json' }, cache: 'no-store' })
       .then(function (r) { return r && r.ok ? r.json() : null; })
       .then(function (round) {
+        roundInFlight = null;
         if (!round || !Number.isFinite(Number(round.openAt))) return null;
+        lastRound = round;
         try { window.__OST_CANONICAL_BTC_ROUND = round; } catch (_) {}
         return round;
       })
-      .catch(function () { return null; });
+      .catch(function () {
+        // MUST clear the latch here too. If only .then() cleared it, a rejected
+        // fetch (guaranteed while the worker returns 1027) would leave
+        // roundInFlight set forever and every later call would hand back that same
+        // dead promise — the round would freeze permanently. A stuck in-flight
+        // flag is a deadlock wearing a cache's clothes.
+        roundInFlight = null;
+        return null;
+      });
   }
   function canonicalRoundMatchesMarket(market, round) {
     return !!(market && market.meta && round && Number(market.meta.openAt) === Number(round.openAt));
@@ -293,12 +312,37 @@
       var pendingBase = Number(nativeStateInFlightBase[market.id]);
       if (!Number.isFinite(pendingBase) || Math.abs(pendingBase - baseYes) < NATIVE_STATE_BASE_TOLERANCE) return nativeStateInFlight[market.id];
     }
-    if (Date.now() - (nativeStateFetchAt[market.id] || 0) < 650) {
-      try {
-        var cached = window.__ostNativeMarketState && window.__ostNativeMarketState[market.id];
-        var cachedBase = Number(cached && cached.baseYesPrice);
-        if (cached && (!Number.isFinite(cachedBase) || Math.abs(cachedBase - baseYes) < NATIVE_STATE_BASE_TOLERANCE)) return Promise.resolve(cached);
-      } catch (_) {}
+    // THE TIME WINDOW IS AUTHORITATIVE — do not re-add a baseYes condition here.
+    //
+    // This guard used to only honour the cache when `baseYes` had barely moved.
+    // But baseYes IS the live BTC-derived fair price: it drifts past the 0.005
+    // tolerance in well under a second, so the condition failed on essentially
+    // every call and the throttle almost never fired. Measured result: ~95
+    // requests/MINUTE for a single 5-minute market — a throttle that existed,
+    // read correctly, and did nothing.
+    //
+    // What the server returns here is the market's POOLS AND SHARES, which only
+    // change when somebody bets. Re-fetching all of that just because the
+    // underlying price ticked is pure waste: the caller re-quotes against the
+    // live price locally anyway.
+    // THE WINDOW GATES THE FETCH, NOT THE CACHE. Do not put `if (cached)` around
+    // this return — that was the bug, and it is worse than it looks.
+    //
+    // When the worker is failing (Cloudflare 1027 = daily request cap blown),
+    // every response is an error, so nothing is ever cached, so a cache-gated
+    // throttle never fires and the client retries flat out. It hammers hardest at
+    // the exact moment the server is dying: fail -> no cache -> instant retry ->
+    // more load -> stays down. That death spiral is why the outages never healed
+    // on their own. Measured: gating on the cache made this WORSE, 95 -> 164
+    // req/min.
+    //
+    // Returning a stale value (or null) for a few seconds is always better than
+    // a retry storm. Callers already handle null — the fetch below resolves null
+    // on a bad response too.
+    if (Date.now() - (nativeStateFetchAt[market.id] || 0) < NATIVE_STATE_REFRESH_MS) {
+      var cached = null;
+      try { cached = (window.__ostNativeMarketState && window.__ostNativeMarketState[market.id]) || null; } catch (_) {}
+      return Promise.resolve(cached);
     }
     nativeStateFetchAt[market.id] = Date.now();
     nativeStateInFlightBase[market.id] = baseYes;

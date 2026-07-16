@@ -132,6 +132,8 @@
   // Canonical round snapshot from the OST worker. It owns the round/open price;
   // a fresh Binance WebSocket trade tick owns the live price when it is flowing.
   var canonicalRound = null;            // last successful /btc/round payload
+  var ROUND_REFRESH_MS = 4000;
+  var roundFetchAt = 0, roundInFlight = null;
   var canonicalRoundFetchedAt = 0;
   var canonicalTicksSeededFor = 0;      // openAt of the round whose ticks we've seeded
   var canonicalTicksLoadingFor = 0;
@@ -253,10 +255,14 @@
       var pendingBase = Number(nativeMarketStateInFlightBase[market.id]);
       if (!Number.isFinite(pendingBase) || Math.abs(pendingBase - baseYes) < NATIVE_STATE_BASE_TOLERANCE) return nativeMarketStateInFlight[market.id];
     }
+    // Time window is authoritative — see the long note in prediction-modal.js.
+    // The baseYes condition that used to live here made this throttle a no-op,
+    // because baseYes is the live price and drifts past the tolerance instantly.
+    // Gates the FETCH, not the cache — see the note in prediction-modal.js. With
+    // `if (cachedState)` here, a failing worker (which caches nothing) got hit
+    // flat out, hammering hardest exactly when it was already over its limit.
     if (now - (nativeMarketStateLastFetch[market.id] || 0) < NATIVE_STATE_REFRESH_MS) {
-      var cachedState = cachedNativeMarketState(market.id);
-      var cachedBase = Number(cachedState && cachedState.baseYesPrice);
-      if (cachedState && (!Number.isFinite(cachedBase) || Math.abs(cachedBase - baseYes) < NATIVE_STATE_BASE_TOLERANCE)) return Promise.resolve(cachedState);
+      return Promise.resolve(cachedNativeMarketState(market.id) || null);
     }
     nativeMarketStateLastFetch[market.id] = now;
     nativeMarketStateInFlightBase[market.id] = baseYes;
@@ -646,9 +652,15 @@
   function fetchCanonicalRound() {
     var apiBase = ostApiBase();
     if (!apiBase) return Promise.resolve(null);
-    return fetch(apiBase + '/btc/round', { headers: { accept: 'application/json' }, cache: 'no-store' })
+    // Untrottled before: ~40 fetches/min for a 5-minute round. Window gates the
+    // fetch (see prediction-modal.js) so a dead worker is not hammered.
+    if (Date.now() - roundFetchAt < ROUND_REFRESH_MS) return Promise.resolve(canonicalRound);
+    if (roundInFlight) return roundInFlight;
+    roundFetchAt = Date.now();
+    roundInFlight = fetch(apiBase + '/btc/round', { headers: { accept: 'application/json' }, cache: 'no-store' })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (data) {
+        roundInFlight = null;
         if (!data || !Number.isFinite(Number(data.openAt))) return null;
         canonicalRound = data;
         canonicalRoundFetchedAt = Date.now();
@@ -656,7 +668,15 @@
         try { window.dispatchEvent(new CustomEvent('ost:btc-round', { detail: data })); } catch (_) {}
         return data;
       })
-      .catch(function () { return null; });
+      .catch(function () {
+        // MUST clear the latch here too. If only .then() cleared it, a rejected
+        // fetch (guaranteed while the worker returns 1027) would leave
+        // roundInFlight set forever and every later call would hand back that same
+        // dead promise — the round would freeze permanently. A stuck in-flight
+        // flag is a deadlock wearing a cache's clothes.
+        roundInFlight = null;
+        return null;
+      });
   }
 
   // Seed the local BTC tick series with the SHARED ring from the worker the
