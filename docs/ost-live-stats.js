@@ -31,22 +31,52 @@
     return String(Math.round(n));
   }
 
-  function paintStats(stats) {
-    if (!stats) return;
-    // "Faucet claims" tile → live active wallets in the last 24h
-    setText('ostMarketVelocity', fmt(stats.activeWallets24h) + ' active');
-    // "Faucet amount"/price tile → the live computed OST price
-    if (Number.isFinite(Number(stats.price))) {
-      setText('ostLivePrice', '$' + Number(stats.price).toFixed(4));
-      var chg = el('ostLiveChange');
-      if (chg) {
-        var mood = Number(stats.btcMood);
-        chg.textContent = stats.tx24h + ' tx · ' + fmt(stats.volume24h) + ' vol (24h)';
+  var lastStats = null;
+
+  // The ONE OST value the whole app agrees on: the canonical CONVERSION price
+  // (what an OST is actually worth to spend/convert), shown in the user's own
+  // currency. This is deliberately NOT the synthetic chart oracle — the wallet,
+  // the trade tickets and the convert rail all price OST at this rate, so the
+  // pulse must too, or a user sees "1 OST = $0.0118" in their balance and a
+  // different number here. Coherence over a gamified ticker.
+  function canonicalOstValueText() {
+    try {
+      if (window.OST_FIAT && typeof window.OST_FIAT.format === 'function') {
+        return window.OST_FIAT.format(1);                 // "$0.01" / "MX$0.24" etc.
       }
-    }
+    } catch (_) {}
+    var usd = 0.0118;
+    try {
+      if (window.OST_CONVERT_PRICE && typeof window.OST_CONVERT_PRICE.ostUsd === 'function') {
+        var v = Number(window.OST_CONVERT_PRICE.ostUsd());
+        if (Number.isFinite(v) && v > 0) usd = v;
+      }
+    } catch (_) {}
+    return '$' + usd.toFixed(4);
+  }
+
+  function paintPrice() {
+    setText('ostLivePrice', canonicalOstValueText());
+  }
+
+  function paintStats(stats) {
+    if (stats) lastStats = stats;
+    // "Faucet claims" tile → live active wallets in the last 24h
+    if (lastStats) setText('ostMarketVelocity', fmt(lastStats.activeWallets24h) + ' active');
+    // Price tile → the CANONICAL OST value (matches the wallet + convert rail),
+    // in the user's currency. The synthetic market activity goes in the caption.
+    paintPrice();
+    var chg = el('ostLiveChange');
+    if (chg && lastStats) chg.textContent = lastStats.tx24h + ' tx · ' + fmt(lastStats.volume24h) + ' vol (24h)';
     var updated = el('ostMarketUpdated');
     if (updated) updated.textContent = 'Live · ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
+
+  // Keep the pulse's OST value in sync with the wallet the instant the user
+  // changes currency or the price moves.
+  ['ost:currencychange', 'ost:price', 'ost:wallet-changed'].forEach(function (ev) {
+    window.addEventListener(ev, paintPrice, { passive: true });
+  });
 
   function paintReserve() {
     // Treasury reserve + minted supply from the on-chain rescue layer when present
