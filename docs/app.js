@@ -15183,6 +15183,11 @@
           }
           var orig = btn.textContent;
           btn.disabled = true; btn.textContent = '\u2026';
+          // Snapshot what this ticket was before we touch it. The lines below
+          // optimistically flip status to settled/sold, and if the payout then
+          // fails we MUST put it back \u2014 a ticket stuck on 'settled' with no
+          // payout is one nobody can ever claim again.
+          var prevStatus = order.status;
           try {
             order.houseFee = houseFee;
             order.cashoutKind = action.kind;
@@ -15200,12 +15205,21 @@
             } else if (hasCashOut) {
               r = await window.OST_TRADE.predictionCashOut(order, payout);
             } else {
-              // No on-chain trading module loaded — local cash-out so the
-              // user still receives credit for the resolved win.
-              if (payout > 0 && window.OST_MONEY && typeof window.OST_MONEY.add === 'function') {
-                window.OST_MONEY.add(payout, 'prediction-win');
-              }
-              r = { sig: 'local-' + Date.now().toString(36), ost: payout };
+              // This branch used to pay a WALLET/ON-CHAIN ticket out of the
+              // credits pool and stamp it with a fake 'local-…' signature,
+              // whenever OST_TRADE simply had not finished loading.
+              //
+              // That pays twice. This ticket's stake is real OST sitting in the
+              // swap pool; crediting the off-chain pool as well mints OST that
+              // was never backed — exactly what CLAUDE.md's two-pools rule
+              // forbids ("An on-chain ticket must never be paid from credits").
+              // And a module that has not loaded yet is a transient condition,
+              // not a reason to hand someone unbacked money forever.
+              //
+              // Throwing sends this to the catch below, which leaves the ticket
+              // claimable and tells the user to retry — by which time OST_TRADE
+              // is loaded and the real payout runs.
+              throw new Error('Payout module not ready yet — please retry in a moment.');
             }
             order.cashedOut = true;
             order.cashoutSig = r.sig;
@@ -15261,37 +15275,43 @@
               }).catch(function(){});
             }
           } catch (err) {
-            console.warn('[prediction cashout] on-chain path failed, applying local fallback', err);
-            // Fallback: mark cashed-out locally so the user always gets credit
-            // for the resolved win (the alternative was forcing them to re-open
-            // the market modal and click Sell, which is exactly what they were
-            // complaining about). We still log the original error in the
-            // signature field so support can investigate.
+            console.error('[prediction cashout] on-chain payout FAILED — ticket left UNPAID and retryable', err);
+            //
+            // DO NOT "FALL BACK" HERE. READ THIS BEFORE CHANGING ANYTHING.
+            //
+            // This block used to set cashedOut = true with a fabricated
+            // signature ('local-' + Date.now().toString(36)) so the UI would
+            // show the win as paid. It was written to silence a UX complaint —
+            // people did not want to re-open the modal and click Sell again.
+            //
+            // The cost of that convenience: the payout never happened, the OST
+            // never left the pool, and cashedOut = true meant the ticket could
+            // NEVER be retried. Every failure quietly, permanently confiscated a
+            // user's winnings. It then called recordVaultRetainedLoss(), which
+            // booked the missing OST as an ordinary "retained loss" — so the
+            // books balanced and the bug survived patch after patch. Testers
+            // found it by spotting 'local-…' where a Solana signature should be.
+            // It cost real OST from day one of devnet.
+            //
+            // A failed payout must NEVER render as paid. The stake is safe in the
+            // pool; the only correct move is to leave the ticket exactly as
+            // claimable as it was, say so plainly, and let them try again. A user
+            // who sees "payout failed, retry" has lost nothing. A user shown a
+            // fake receipt has lost everything and does not know it yet.
             try {
-              order.cashedOut = true;
-              order.cashoutSig = 'local-' + Date.now().toString(36);
-              order.cashoutOst = payout;
-              order.cashoutAt = Date.now();
-              order.cashoutKind = action.kind;
+              order.cashedOut = false;
+              order.cashoutSig = '';
+              order.cashoutOst = 0;
+              order.status = prevStatus;                 // still claimable
+              order.cashoutFailedAt = Date.now();
               order.cashoutError = (err && err.message) ? String(err.message).slice(0, 200) : 'unknown';
-              var fallbackRetained = Math.max(0, Number(order.stake || action.stake || 0) - Number(payout || 0));
-              if (fallbackRetained > 0 && !order.vaultRetainedAt) {
-                order.vaultRetainedAt = Date.now();
-                order.vaultRetainedOst = fallbackRetained;
-                recordVaultRetainedLoss({
-                  source: 'prediction',
-                  subKind: action.kind === 'prediction-settlement' ? 'prediction-settlement-shortfall' : 'prediction-sell-loss',
-                  amount: fallbackRetained,
-                  retainedOst: fallbackRetained,
-                  stake: Number(order.stake || 0) || 0,
-                  payoutOst: Number(payout || 0) || 0,
-                  marketId: order.marketId || '',
-                  title: order.title || '',
-                  side: order.side || '',
-                  linkedId: order.signature || order.sig || order.id || '',
-                  error: order.cashoutError
-                });
-              }
+              // NO recordVaultRetainedLoss() HERE — this is the laundering step,
+              // and it is the reason the bug survived so long. Booking the unpaid
+              // amount as a "retained loss" told the books that OST we still owe
+              // was money we had legitimately kept. Nothing was retained: the
+              // payout simply never ran, and the stake is sitting in the pool.
+              // A retained loss is only real on the SUCCESS path, where a payout
+              // genuinely came back smaller than the stake.
               orders[idx] = order;
               writePredictionOrderRecords(orders);
               sharePredictionOrderRecord(order);
@@ -15299,10 +15319,20 @@
               renderPredictionLedger();
               try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch(_) {}
               try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch(_) {}
-            } catch (fallbackErr) {
-              console.error('[prediction cashout] local fallback also failed', fallbackErr);
+              // Hand the button back so the retry is one tap away, and tell them
+              // the truth: nothing was lost, the claim just did not go through.
               btn.disabled = false; btn.textContent = orig;
-              try { alert('Claim failed: ' + ((err && err.message) || 'unknown')); } catch(e){}
+              var msg = 'Payout did not go through — your OST is safe and this ticket is still claimable. Tap again to retry.';
+              try {
+                if (typeof window.OST_TOAST === 'function') window.OST_TOAST(msg);
+                else if (typeof showToast === 'function') showToast(msg);
+                else alert(msg);
+              } catch (_) { try { alert(msg); } catch (__) {} }
+            } catch (bookkeepingErr) {
+              // Even the "leave it alone" path broke. Say so; never invent a receipt.
+              console.error('[prediction cashout] could not record the failure', bookkeepingErr);
+              btn.disabled = false; btn.textContent = orig;
+              try { alert('Claim failed: ' + ((err && err.message) || 'unknown') + '\nYour OST is safe — please retry.'); } catch(e){}
             }
           }
         });
