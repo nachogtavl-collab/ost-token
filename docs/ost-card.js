@@ -17,7 +17,7 @@
 
   var STORAGE_PROFILE = 'ost.card.profile.v1';
   var STORAGE_AMOUNT = 'ost.card.amount.v1';
-  var DEFAULT_OST_USD = 1.00;
+  var DEFAULT_OST_USD = 0.0118;   // canonical peg default (matches topup.js), NOT $1
   var PUBLIC_SITE_URL = window.OST_PUBLIC_SITE_URL || defaultPublicSiteUrl();
   var SHORTCUT_GUIDE = 'https://support.apple.com/guide/shortcuts/run-shortcut-from-back-tap-or-action-button-apdc7307b8b5/ios';
 
@@ -129,16 +129,27 @@
   }
 
   async function loadQuote() {
-    var base = apiBase();
-    if (!base) return;
+    // Use the ONE canonical conversion price the whole app agrees on (wallet,
+    // convert rail, pulse, trade tickets) so the card never shows a different
+    // OST value. Fall back to the topup config, then the shared default — never
+    // the old $1.00, which made the card wildly misprice OST when offline.
     try {
-      var response = await fetch(base + '/topup/config', { cache: 'no-store' });
-      var payload = response.ok ? await response.json() : null;
-      if (payload && payload.pricing) {
-        var nextOst = Number(payload.pricing.usdPerOst);
-        if (Number.isFinite(nextOst) && nextOst > 0) state.usdPerOst = nextOst;
+      if (window.OST_CONVERT_PRICE && typeof window.OST_CONVERT_PRICE.ostUsd === 'function') {
+        var canon = Number(window.OST_CONVERT_PRICE.ostUsd());
+        if (Number.isFinite(canon) && canon > 0) { state.usdPerOst = canon; return; }
       }
     } catch (_) {}
+    var base = apiBase();
+    if (base) {
+      try {
+        var response = await fetch(base + '/topup/config', { cache: 'no-store' });
+        var payload = response.ok ? await response.json() : null;
+        if (payload && payload.pricing) {
+          var nextOst = Number(payload.pricing.usdPerOst);
+          if (Number.isFinite(nextOst) && nextOst > 0) state.usdPerOst = nextOst;
+        }
+      } catch (_) {}
+    }
     if (!Number.isFinite(state.usdPerOst) || state.usdPerOst <= 0) state.usdPerOst = DEFAULT_OST_USD;
   }
 
@@ -252,7 +263,14 @@
     var ost = Number(state.ostBalance) || 0;
     var usd = ost * (Number(state.usdPerOst) || DEFAULT_OST_USD);
     if ($('ostCardBalance')) $('ostCardBalance').textContent = ost.toFixed(2) + ' OST';
-    if ($('ostCardBalanceUsd')) $('ostCardBalanceUsd').textContent = '~ $' + usd.toFixed(2) + ' USD';
+    if ($('ostCardBalanceUsd')) {
+      // Show the card's value in the user's chosen currency — same OST value the
+      // wallet, pulse and convert rail use — not a hardcoded USD figure.
+      var fiat;
+      try { fiat = (window.OST_FIAT && window.OST_FIAT.format) ? window.OST_FIAT.format(ost) : ('$' + usd.toFixed(2) + ' USD'); }
+      catch (_) { fiat = '$' + usd.toFixed(2) + ' USD'; }
+      $('ostCardBalanceUsd').textContent = '~ ' + fiat;
+    }
     var qrEl = $('ostCardQr'); if (qrEl) qrEl.src = qrUrl(landing, 220);
   }
 
@@ -793,6 +811,9 @@
     window.addEventListener('ost:wallet-changed', function () { ensureProfile(); reload(); });
     window.addEventListener('ost:topup-ready', reload);
     window.addEventListener('ost:network-changed', reload);
+    // Re-price + re-render the card the instant the user changes their currency,
+    // so the card value tracks the wallet.
+    window.addEventListener('ost:currencychange', function () { loadQuote().then(reload).catch(function () { reload(); }); });
     setInterval(reload, 30000);
   }
 
