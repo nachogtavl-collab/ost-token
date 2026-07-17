@@ -248,70 +248,101 @@
   }
 
   // ────────────────────────────────────────────────────────────────────────
-  // Provably-fair RNG  (HMAC-SHA256 chunked into 32-bit values, then mapped)
-  // Server seed is generated client-side per session and revealed when the
-  // player asks; client seed is editable so the user can prove independence.
+  // Provably-fair RNG (Phase 0 — project-docs/TOKEN-ARCHITECTURE.md)
+  // The server seed used to be generated in THIS browser (crypto.getRandomValues),
+  // which meant a modified client could read pf.serverSeed before betting and
+  // predict every outcome. It now lives entirely in the Cloudflare Worker
+  // (workers/ost-api/src/games-rng.js GameSeedHub) — this file never holds it,
+  // not even transiently. What's published before a bet is only the HASH of
+  // that seed (commit); the plaintext seed is revealed only after rotation, so
+  // a bet placed under one hash can be checked, but never predicted.
+  // HMAC-SHA256(serverSeed, clientSeed:nonce:round) chunked into 32-bit values
+  // is unchanged — only WHO computes it moved. clientSeed stays user-editable
+  // and client-side, which is what makes the reveal independently checkable.
   // ────────────────────────────────────────────────────────────────────────
   var pf = {
-    serverSeed: null,
     serverSeedHash: null,
     clientSeed: null,
-    nonce: 0
+    nonce: 0,       // last SERVER-assigned nonce — display/audit only, never
+    deviceId: null  // sent back to derive a digest; see pfFloats()
   };
 
-  async function sha256Hex(text) {
-    var enc = new TextEncoder().encode(text);
-    var buf = await crypto.subtle.digest('SHA-256', enc);
-    return [].map.call(new Uint8Array(buf), function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+  function gamesApiBase() {
+    try { return (window.OST_API_BASE || '').replace(/\/+$/, ''); } catch (_) { return ''; }
   }
-  async function hmacSha256Hex(key, message) {
-    var k = await crypto.subtle.importKey('raw', new TextEncoder().encode(key),
-      { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-    var sig = await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(message));
-    return [].map.call(new Uint8Array(sig), function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+  async function gamesApiGet(path) {
+    var base = gamesApiBase();
+    if (!base) throw new Error('OST API not configured');
+    var res = await fetch(base + path);
+    var body = await res.json().catch(function () { return {}; });
+    if (!res.ok || !body.ok) throw new Error((body && (body.message || body.error)) || 'Request failed');
+    return body;
+  }
+  async function gamesApiPost(path, payload) {
+    var base = gamesApiBase();
+    if (!base) throw new Error('OST API not configured');
+    var res = await fetch(base + path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) });
+    var body = await res.json().catch(function () { return {}; });
+    if (!res.ok || !body.ok) throw new Error((body && (body.message || body.error)) || 'Request failed');
+    return body;
   }
   function randomHex(bytes) {
     var b = new Uint8Array(bytes);
     crypto.getRandomValues(b);
     return [].map.call(b, function (x) { return x.toString(16).padStart(2, '0'); }).join('');
   }
+  function ensureDeviceId() {
+    if (pf.deviceId) return pf.deviceId;
+    var s = loadGames();
+    var id = s.deviceId || ('dev-' + randomHex(16));
+    pf.deviceId = id;
+    if (s.deviceId !== id) { s.deviceId = id; saveGames(s); }
+    return id;
+  }
+  // Reveals the CURRENT seed (proving the previously-published hash was
+  // honest) and commits a new one server-side. Returns the full worker
+  // response so the fairness modal can show the revealed seed.
   async function rotateServerSeed() {
-    pf.serverSeed = randomHex(32);
-    pf.serverSeedHash = await sha256Hex(pf.serverSeed);
+    var resJson = await gamesApiPost('/games/rotate', { player: ensureDeviceId() });
+    pf.serverSeedHash = resJson.newServerSeedHash;
     pf.nonce = 0;
     var s = loadGames();
     s.serverSeedHash = pf.serverSeedHash;
     saveGames(s);
+    return resJson;
   }
   async function ensureSeeds() {
-    if (!pf.serverSeed) await rotateServerSeed();
+    if (!pf.serverSeedHash) {
+      var resJson = await gamesApiGet('/games/seed?player=' + encodeURIComponent(ensureDeviceId()));
+      pf.serverSeedHash = resJson.serverSeedHash;
+      pf.nonce = resJson.nonce;
+    }
     if (!pf.clientSeed) pf.clientSeed = (loadGames().clientSeed || ('ost-' + randomHex(8)));
     var s = loadGames();
     s.clientSeed = pf.clientSeed;
+    s.serverSeedHash = pf.serverSeedHash;
     saveGames(s);
   }
-  // Returns an async generator of floats in [0,1) for the current bet.
+  // Returns floats in [0,1) for the current bet. The worker computes the
+  // HMAC digest(s) itself (it holds the seed) and hands back the raw hex —
+  // the bit-slicing below is identical to the old client-side version, only
+  // the seed source moved. `rounds` is requested in one batched call so a
+  // bet needing many floats (Plinko, Keno, card decks) still costs exactly
+  // one round-trip. The nonce used comes back from the worker and OVERWRITES
+  // pf.nonce — it is never locally incremented or trusted from a prior call.
   async function pfFloats(count) {
     await ensureSeeds();
-    pf.nonce += 1;
-    var msg = pf.clientSeed + ':' + pf.nonce + ':0';
-    var hex = await hmacSha256Hex(pf.serverSeed, msg);
+    var rounds = Math.max(1, Math.ceil(count / 8));
+    var resJson = await gamesApiPost('/games/digest', { player: ensureDeviceId(), clientSeed: pf.clientSeed, rounds: rounds });
+    pf.nonce = resJson.nonce;
     var floats = [];
-    var idx = 0;
-    while (floats.length < count && idx + 8 <= hex.length) {
-      var slice = hex.substr(idx, 8); idx += 8;
-      floats.push(parseInt(slice, 16) / 4294967296);
-    }
-    // If we need more than 8 floats, hash again with extended message
-    var round = 1;
-    while (floats.length < count) {
-      hex = await hmacSha256Hex(pf.serverSeed, msg + ':' + round); round++;
-      idx = 0;
+    (resJson.hex || []).forEach(function (hex) {
+      var idx = 0;
       while (floats.length < count && idx + 8 <= hex.length) {
         floats.push(parseInt(hex.substr(idx, 8), 16) / 4294967296);
         idx += 8;
       }
-    }
+    });
     return floats;
   }
 
@@ -4070,7 +4101,7 @@
       '<div class="ostg-modal-card">' +
         '<button class="ostg-modal-close" id="ostgFairClose">×</button>' +
         '<h3>🔐 Provably-Fair Verification</h3>' +
-        '<p style="opacity:0.78;font-size:13px;">Every outcome is <code>HMAC-SHA256(serverSeed, clientSeed:nonce:0)</code>. Before each round we publish a hash of the server seed; you can verify the seed after rotation matches the hash.</p>' +
+        '<p style="opacity:0.78;font-size:13px;">We commit to a server seed before you ever bet, and only show you its <em>hash</em> — never the seed itself. Every outcome is <code>HMAC-SHA256(serverSeed, clientSeed:nonce:round)</code>. When you rotate below, we reveal the seed that was behind the hash you saw; hash it yourself (SHA-256) and it must match exactly. Because the seed was committed before your bet and only revealed after, neither we nor a modified client could have picked a favorable outcome in between. Your client seed is yours to edit — that independence is what makes the reveal worth checking.</p>' +
         '<label>Server seed (hashed, revealed on rotate)</label>' +
         '<div class="ostg-mono" id="ostgSrvHash"></div>' +
         '<label>Client seed (you can edit)</label>' +
@@ -4090,14 +4121,23 @@
     document.getElementById('ostgFairClose').addEventListener('click', function () { modal.remove(); });
     modal.addEventListener('click', function (e) { if (e.target === modal) modal.remove(); });
     document.getElementById('ostgRotate').addEventListener('click', async function () {
-      var oldSeed = pf.serverSeed;
-      await rotateServerSeed();
+      var btn = document.getElementById('ostgRotate');
+      var prevHash = pf.serverSeedHash;
+      btn.disabled = true;
       var rev = document.getElementById('ostgRevealed');
-      rev.style.display = '';
-      rev.innerHTML = '<strong>Previous server seed (revealed):</strong><br>' + oldSeed +
-        '<br><br>Verify: SHA-256 of that string should match the hash you saw before this rotation.';
-      document.getElementById('ostgSrvHash').textContent = pf.serverSeedHash;
-      document.getElementById('ostgNonce').textContent = '0';
+      try {
+        var result = await rotateServerSeed();
+        rev.style.display = '';
+        rev.innerHTML = '<strong>Server seed (revealed):</strong><br>' + result.revealedSeed +
+          '<br><br>Verify: SHA-256 of that string should equal the hash shown above before you clicked rotate — <span class="ostg-mono">' + prevHash + '</span>.';
+        document.getElementById('ostgSrvHash').textContent = pf.serverSeedHash;
+        document.getElementById('ostgNonce').textContent = '0';
+      } catch (err) {
+        rev.style.display = '';
+        rev.textContent = 'Could not rotate: ' + ((err && err.message) || err);
+      } finally {
+        btn.disabled = false;
+      }
     });
     document.getElementById('ostgSaveSeed').addEventListener('click', function () {
       var v = document.getElementById('ostgClientSeed').value.trim();

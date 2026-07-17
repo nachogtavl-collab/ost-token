@@ -1,66 +1,33 @@
 /* ==========================================================================
-   OST Devnet Rescue v2 — Pool-paid, OST-native UX
+   OST Devnet Rescue v3 — Server-signed, pool-paid UX
    ----------------------------------------------------------------------------
-   Architecture:
-     • The OST swap pool keypair (devnet only) is pre-funded with 100M OST and
-       5 SOL by scripts/init-swap-pool.ts. That gives us a virtually infinite
-       reserve INSIDE the OST ecosystem — no per-user SOL faucet calls needed.
-     • The pool is the SOL FEE PAYER for every user-facing flow (cash-out,
-       sell, ATA creation, etc.) so the user never needs devnet SOL.
-     • Multi-RPC fallback so a single Solana endpoint outage doesn't kill us.
+   Phase 0 (project-docs/TOKEN-ARCHITECTURE.md): the pool keypair used to be
+   shipped to every browser (docs/swap-pool.js .secretKey) and signed payouts
+   client-side. It never signs anything here anymore — every payout, ATA
+   rental, and atomic swap is built and signed by the Cloudflare Worker
+   (workers/ost-api/src/wallet-payouts.js), which is the only place that ever
+   holds the key now. This file's job is now: call the worker, handle the
+   "user still has to add their own signature" step for swaps, and keep the
+   exact same window.OST_RESCUE API so callers didn't need to change.
    ========================================================================== */
 (function () {
   'use strict';
 
   if (typeof solanaWeb3 === 'undefined') return;
 
-  // -----------------------------------------------------------------------
-  // 1) MULTI-RPC CONNECTION
-  // -----------------------------------------------------------------------
-  var RPC_ENDPOINTS = [
-    'https://api.devnet.solana.com',
-    'https://devnet.helius-rpc.com/?api-key=public',
-    'https://rpc.ankr.com/solana_devnet'
-  ];
-  var rpcIndex = 0;
-  var rpcConnections = {};
   var PAYOUT_RECEIPTS_KEY = 'ost.payout.receipts.v1';
   var PAYOUT_PENDING_KEY = 'ost.payout.pending.v1';
   var payoutLocks = {};
-
-  function numberSetting(name, fallback) {
-    var value = Number(window[name]);
-    return Number.isFinite(value) && value >= 0 ? value : fallback;
-  }
-
-  function vaultConfig() {
-    return {
-      minReserve: numberSetting('OST_VAULT_MIN_RESERVE', 0),
-      lowWater: numberSetting('OST_VAULT_LOW_WATER', 1000000000),
-      targetReserve: numberSetting('OST_VAULT_TARGET_RESERVE', 10000000000),
-      maxSinglePayout: numberSetting('OST_MAX_SINGLE_PAYOUT', 1000000000)
-    };
-  }
-
-  function formatOstAmount(value) {
-    var number = Number(value);
-    if (!Number.isFinite(number)) return '0';
-    return number.toLocaleString(undefined, { maximumFractionDigits: number >= 100 ? 2 : 6 });
-  }
 
   function readStorageJson(key, fallback) {
     try {
       var parsed = JSON.parse(localStorage.getItem(key) || 'null');
       return parsed == null ? fallback : parsed;
-    } catch (_) {
-      return fallback;
-    }
+    } catch (_) { return fallback; }
   }
-
   function writeStorageJson(key, value) {
     try { localStorage.setItem(key, JSON.stringify(value)); } catch (_) {}
   }
-
   function stableHash(value) {
     var text = String(value || '');
     var hash = 2166136261;
@@ -70,12 +37,10 @@
     }
     return ('00000000' + (hash >>> 0).toString(16)).slice(-8);
   }
-
   function cleanPayoutId(value) {
     var text = String(value || '').replace(/[^a-z0-9_.:-]/gi, '-').slice(0, 72);
     return text || ('payout-' + Date.now().toString(36));
   }
-
   function payoutRefFromMemo(memoText) {
     var raw = String(memoText || '');
     try {
@@ -91,13 +56,11 @@
     } catch (_) {}
     return raw.slice(0, 180);
   }
-
   function buildPayoutId(wallet, amount, memoText, options) {
     if (options && options.idempotencyKey) return cleanPayoutId(options.idempotencyKey);
     var ref = payoutRefFromMemo(memoText);
     return cleanPayoutId('pay-' + stableHash([wallet, Number(amount || 0).toFixed(9), ref].join('|')));
   }
-
   function getPayoutReceipt(id, wallet, amount) {
     var receipts = readStorageJson(PAYOUT_RECEIPTS_KEY, {});
     var receipt = receipts && receipts[id];
@@ -107,71 +70,49 @@
     if (Math.abs(Number(receipt.ost || 0) - Number(amount || 0)) > 0.000000001) return null;
     return receipt;
   }
-
   function rememberPayoutReceipt(id, receipt) {
     var receipts = readStorageJson(PAYOUT_RECEIPTS_KEY, {});
     receipts[id] = Object.assign({ at: Date.now() }, receipt || {});
     var keys = Object.keys(receipts).sort(function (a, b) { return Number(receipts[b].at || 0) - Number(receipts[a].at || 0); });
-    if (keys.length > 200) {
-      keys.slice(200).forEach(function (key) { delete receipts[key]; });
-    }
+    if (keys.length > 200) keys.slice(200).forEach(function (key) { delete receipts[key]; });
     writeStorageJson(PAYOUT_RECEIPTS_KEY, receipts);
   }
-
   function rememberPendingPayout(id, payload) {
     var pending = readStorageJson(PAYOUT_PENDING_KEY, {});
     pending[id] = Object.assign({ id: id, at: Date.now() }, payload || {});
     writeStorageJson(PAYOUT_PENDING_KEY, pending);
   }
-
   function clearPendingPayout(id) {
     var pending = readStorageJson(PAYOUT_PENDING_KEY, {});
-    if (pending && pending[id]) {
-      delete pending[id];
-      writeStorageJson(PAYOUT_PENDING_KEY, pending);
-    }
+    if (pending && pending[id]) { delete pending[id]; writeStorageJson(PAYOUT_PENDING_KEY, pending); }
   }
+  function pendingPayouts() { return readStorageJson(PAYOUT_PENDING_KEY, {}); }
 
-  function pendingPayouts() {
-    return readStorageJson(PAYOUT_PENDING_KEY, {});
-  }
-
+  // -----------------------------------------------------------------------
+  // Multi-RPC connection — still needed client-side for read-only balance
+  // checks and ATA existence caching. No signing happens over these.
+  // -----------------------------------------------------------------------
+  var RPC_ENDPOINTS = [
+    'https://api.devnet.solana.com',
+    'https://devnet.helius-rpc.com/?api-key=public',
+    'https://rpc.ankr.com/solana_devnet'
+  ];
+  var rpcIndex = 0;
+  var rpcConnections = {};
   function makeConn(url) {
-    if (!rpcConnections[url]) {
-      try { rpcConnections[url] = new solanaWeb3.Connection(url, 'confirmed'); }
-      catch (e) { return null; }
-    }
+    if (!rpcConnections[url]) { try { rpcConnections[url] = new solanaWeb3.Connection(url, 'confirmed'); } catch (e) { return null; } }
     return rpcConnections[url];
   }
-  function getRpc() {
-    return makeConn(RPC_ENDPOINTS[rpcIndex % RPC_ENDPOINTS.length]);
-  }
-  function rotateRpc() {
-    rpcIndex = (rpcIndex + 1) % RPC_ENDPOINTS.length;
-    return getRpc();
-  }
+  function getRpc() { return makeConn(RPC_ENDPOINTS[rpcIndex % RPC_ENDPOINTS.length]); }
+  function rotateRpc() { rpcIndex = (rpcIndex + 1) % RPC_ENDPOINTS.length; return getRpc(); }
   async function withRpc(label, fn) {
     var lastErr = null;
     for (var attempt = 0; attempt < RPC_ENDPOINTS.length * 2; attempt++) {
       var conn = getRpc();
       try { return await fn(conn); }
-      catch (e) {
-        lastErr = e;
-        console.warn('[rescue] ' + label + ' failed on RPC ' + rpcIndex + ':', e && e.message);
-        rotateRpc();
-        await new Promise(function (r) { setTimeout(r, 250 * (attempt + 1)); });
-      }
+      catch (e) { lastErr = e; rotateRpc(); await new Promise(function (r) { setTimeout(r, 250 * (attempt + 1)); }); }
     }
     throw lastErr || new Error(label + ' failed on every RPC');
-  }
-
-  // -----------------------------------------------------------------------
-  // 2) POOL HELPERS
-  // -----------------------------------------------------------------------
-  function loadPoolKeypair() {
-    if (!window.OST_SWAP_POOL || !window.OST_SWAP_POOL.secretKey) return null;
-    try { return solanaWeb3.Keypair.fromSecretKey(Uint8Array.from(window.OST_SWAP_POOL.secretKey)); }
-    catch (e) { return null; }
   }
 
   async function getPoolOstBalance() {
@@ -182,7 +123,6 @@
       return Number(bal && bal.value && bal.value.uiAmount || 0);
     }).catch(function () { return 0; });
   }
-
   async function getPoolSolBalance() {
     if (!window.OST_SWAP_POOL) return 0;
     return withRpc('pool-sol', async function (conn) {
@@ -192,294 +132,52 @@
     }).catch(function () { return 0; });
   }
 
-  function decimalToRawAmount(value, decimals) {
-    var places = Math.max(0, Number(decimals) || 0);
-    var text = String(value || '0');
-    if (/e/i.test(text)) text = Number(value || 0).toFixed(places);
-    var parts = text.split('.');
-    var whole = String(parts[0] || '0').replace(/[^0-9]/g, '') || '0';
-    var fraction = String(parts[1] || '').replace(/[^0-9]/g, '').slice(0, places);
-    while (fraction.length < places) fraction += '0';
-    var scale = BigInt(10) ** BigInt(places);
-    return BigInt(whole) * scale + BigInt(fraction || '0');
+  // Client-side copies of the vault knobs are DISPLAY HINTS only now — the
+  // worker (workers/ost-api/src/solana-pool.js vaultConfig()) re-checks
+  // every cap/reserve/solvency rule itself from its own deploy-time config
+  // and never trusts anything the client sends or reads from window.*.
+  function numberSetting(name, fallback) {
+    var value = Number(window[name]);
+    return Number.isFinite(value) && value >= 0 ? value : fallback;
+  }
+  function vaultConfig() {
+    return {
+      minReserve: numberSetting('OST_VAULT_MIN_RESERVE', 0),
+      lowWater: numberSetting('OST_VAULT_LOW_WATER', 1000000000),
+      targetReserve: numberSetting('OST_VAULT_TARGET_RESERVE', 10000000000),
+      maxSinglePayout: numberSetting('OST_MAX_SINGLE_PAYOUT', 1000000000)
+    };
   }
 
-  function rawToOstText(raw, decimals) {
-    var places = Math.max(0, Number(decimals) || 0);
-    var scale = BigInt(10) ** BigInt(places);
-    var value = BigInt(raw || 0);
-    var whole = value / scale;
-    var fraction = (value % scale).toString().padStart(places, '0').replace(/0+$/, '');
-    return whole.toString() + (fraction ? ('.' + fraction) : '');
-  }
-
-  async function getTokenRawBalance(ataInput) {
-    var ata = (ataInput && ataInput.toBase58) ? ataInput : new solanaWeb3.PublicKey(ataInput);
-    return withRpc('token-raw-balance', async function (conn) {
-      var bal = await conn.getTokenAccountBalance(ata);
-      return BigInt(bal && bal.value && bal.value.amount || '0');
-    }).catch(function () { return BigInt(0); });
-  }
-
-  async function verifyTokenBalanceDelta(ata, beforeRaw, expectedRaw, decimals, label) {
-    var lastRaw = beforeRaw;
-    for (var attempt = 0; attempt < 10; attempt += 1) {
-      lastRaw = await getTokenRawBalance(ata);
-      if (lastRaw - beforeRaw >= expectedRaw) {
-        return { beforeRaw: beforeRaw, afterRaw: lastRaw, deltaRaw: lastRaw - beforeRaw };
-      }
-      await new Promise(function (resolve) { setTimeout(resolve, 650 + attempt * 300); });
-    }
-    var received = lastRaw > beforeRaw ? lastRaw - beforeRaw : BigInt(0);
-    throw new Error((label || 'Payout') + ' signature confirmed, but recipient balance increased by only ' + rawToOstText(received, decimals) + ' OST of ' + rawToOstText(expectedRaw, decimals) + ' OST owed. Keeping payout pending.');
-  }
-
-  // -----------------------------------------------------------------------
-  // 3) POOL-PAID TRANSACTION BUILDER
-  //    Pool signs as feePayer (always) and optionally as a source authority.
-  // -----------------------------------------------------------------------
-  async function buildPoolPaidTx(instructions) {
-    var pool = loadPoolKeypair();
-    if (!pool) throw new Error('Vault keypair not loaded');
-    var conn = getRpc();
-    var tx = new solanaWeb3.Transaction();
-    instructions.forEach(function (ix) { if (ix) tx.add(ix); });
-    tx.feePayer = pool.publicKey;
-    // Reuse the blockhash the app keeps warm in the background — saves a full RPC
-    // round-trip (200ms–1.2s on devnet) on the hot path of every pool-paid bet.
-    // Falls back to a live fetch if none is warm yet.
-    var bh = null;
-    try { if (window.OST_WALLET && window.OST_WALLET.warmBlockhashValue) bh = window.OST_WALLET.warmBlockhashValue(); } catch (_) {}
-    if (!bh) bh = await conn.getLatestBlockhash('confirmed');
-    tx.recentBlockhash = bh.blockhash;
-    tx.lastValidBlockHeight = bh.lastValidBlockHeight;
-    return { tx: tx, pool: pool, conn: conn, blockhash: bh };
-  }
-
-  // Unpack SendTransactionError: call getLogs() so error messages contain real
-  // program logs instead of the useless "Logs: []" placeholder.
-  async function unpackSendError(err) {
-    if (!err) return new Error('Transaction failed');
-    var logs = [];
-    if (typeof err.getLogs === 'function') {
-      try { logs = await err.getLogs(); } catch (_) {}
-    } else if (Array.isArray(err.logs)) {
-      logs = err.logs;
-    }
-    var base = err.message || 'Send failed';
-    if (logs && logs.length) {
-      return new Error(base + '\n\nProgram logs:\n' + logs.join('\n'));
-    }
-    return err;
-  }
-
-  // Send raw bytes with confirmed preflight; retries without preflight on stale-
-  // simulation false-positives ("no record of a prior credit").
-  async function sendRawSafe(conn, serialized) {
-    try {
-      return await conn.sendRawTransaction(serialized, {
-        skipPreflight: false,
-        preflightCommitment: 'confirmed'
-      });
-    } catch (e) {
-      var msg = (e && e.message) || '';
-      if (msg.includes('no record of a prior credit') ||
-          msg.includes('simulation failed') ||
-          msg.includes('Simulation failed')) {
-        // Balance was verified before this call — safe to skip stale simulation.
-        return conn.sendRawTransaction(serialized, { skipPreflight: true });
-      }
-      throw await unpackSendError(e);
-    }
-  }
-
-  async function confirmSentTransaction(sig, built, label, commitment) {
-    // Bets pass 'processed' (~1 slot) so the ticket lands fast; the tx's err
-    // field is already populated at processed, so a real revert is still caught.
-    // Everything else keeps the safe 'confirmed' default.
-    var level = commitment || 'confirmed';
-    var accept = level === 'processed'
-      ? { processed: 1, confirmed: 1, finalized: 1 }
-      : { confirmed: 1, finalized: 1 };
-    var primaryErr = null;
-    try {
-      var res = await built.conn.confirmTransaction({
-        signature: sig,
-        blockhash: built.blockhash.blockhash,
-        lastValidBlockHeight: built.blockhash.lastValidBlockHeight
-      }, level);
-      if (res && res.value && res.value.err) {
-        throw new Error('On-chain failure: ' + JSON.stringify(res.value.err));
-      }
-      return sig;
-    } catch (e) {
-      primaryErr = e;
-    }
-    var lastStatus = null;
-    for (var attempt = 0; attempt < 8; attempt++) {
-      for (var i = 0; i < RPC_ENDPOINTS.length; i++) {
-        var conn = makeConn(RPC_ENDPOINTS[i]);
-        if (!conn) continue;
-        try {
-          var sres = await conn.getSignatureStatuses([sig], { searchTransactionHistory: true });
-          var entry = sres && sres.value && sres.value[0];
-          if (entry) {
-            lastStatus = entry;
-            if (entry.err) throw new Error('On-chain failure: ' + JSON.stringify(entry.err));
-            if (entry.confirmationStatus && accept[entry.confirmationStatus]) return sig;
-          }
-        } catch (statusErr) {
-          if (statusErr && /On-chain failure/i.test(statusErr.message || '')) throw statusErr;
-        }
-      }
-      await new Promise(function (r) { setTimeout(r, 600 + attempt * 250); });
-    }
-    var summary = lastStatus ? 'last status=' + (lastStatus.confirmationStatus || 'unknown') : 'no status from any RPC';
-    throw new Error((label || 'Transaction') + ' could not be confirmed on-chain (' + summary + '): ' + (primaryErr && primaryErr.message ? primaryErr.message : primaryErr));
-  }
-
-  // Pool-only tx: pool is the only signer.
-  async function sendPoolOnlyTx(instructions) {
-    var built = await buildPoolPaidTx(instructions);
-    built.tx.sign(built.pool);
-    var sig;
-    try {
-      sig = await sendRawSafe(built.conn, built.tx.serialize());
-    } catch (e) {
-      throw await unpackSendError(e);
-    }
-    // CRITICAL — DO NOT silently swallow confirmation errors.
-    // The previous version did `.catch(function () {})` here, which made
-    // every caller (faucet cash-out, prediction sell, top-up claim, stock
-    // sell, fair-game wins) believe the payout succeeded even when the
-    // transaction never landed on-chain. Users had their credits debited
-    // and the OST never arrived in their wallet ("lost to unknown").
-    var primaryErr = null;
-    try {
-      var res = await built.conn.confirmTransaction({
-        signature: sig,
-        blockhash: built.blockhash.blockhash,
-        lastValidBlockHeight: built.blockhash.lastValidBlockHeight
-      }, 'confirmed');
-      if (res && res.value && res.value.err) {
-        throw new Error('On-chain failure: ' + JSON.stringify(res.value.err));
-      }
-      return sig;
-    } catch (e) {
-      primaryErr = e;
-    }
-    // Confirmation failed (timeout, RPC drop, websocket loss). Cross-check
-    // by polling getSignatureStatuses across all RPCs — the tx may actually
-    // have landed even though the websocket subscription died.
-    var lastStatus = null;
-    for (var attempt = 0; attempt < 8; attempt++) {
-      for (var i = 0; i < RPC_ENDPOINTS.length; i++) {
-        var conn = makeConn(RPC_ENDPOINTS[i]);
-        if (!conn) continue;
-        try {
-          var sres = await conn.getSignatureStatuses([sig], { searchTransactionHistory: true });
-          var entry = sres && sres.value && sres.value[0];
-          if (entry) {
-            lastStatus = entry;
-            if (entry.err) throw new Error('On-chain failure: ' + JSON.stringify(entry.err));
-            if (entry.confirmationStatus === 'confirmed' || entry.confirmationStatus === 'finalized') {
-              return sig;
-            }
-          }
-        } catch (statusErr) {
-          if (statusErr && /On-chain failure/i.test(statusErr.message || '')) throw statusErr;
-        }
-      }
-      // small back-off between sweeps so a slow leader doesn't false-negative
-      await new Promise(function (r) { setTimeout(r, 600 + attempt * 250); });
-    }
-    var summary = lastStatus
-      ? 'last status=' + (lastStatus.confirmationStatus || 'unknown')
-      : 'no status from any RPC';
-    throw new Error('Payout could not be confirmed on-chain (' + summary + '): ' + (primaryErr && primaryErr.message ? primaryErr.message : primaryErr));
-  }
-
-  // Pool pays SOL fee + partial-signs first; user wallet signs to authorise
-  // their OST transfer. Used when user is spending their own OST.
-  async function sendUserSignedPoolPaidTx(instructions, opts) {
-    opts = opts || {};
-    var commitment = opts.fast ? 'processed' : (opts.commitment || 'confirmed');
-    var w = window.OST_WALLET;
-    if (!w || !w.sign) throw new Error('Wallet helpers not loaded');
-    var built = await buildPoolPaidTx(instructions);
-    built.tx.partialSign(built.pool);
-
-    // w.sign calls signAndSendTransaction which already uses _sendRaw internally,
-    // but we need to hand it the partly-signed tx directly.
-    var session = w.session;
-    if (!session || !session.publicKey) throw new Error('Connect a wallet first');
-    var serialized;
-    if (session.kind === 'local' && session.keypair) {
-      built.tx.partialSign(session.keypair);
-      serialized = built.tx.serialize();
-    } else if (session.provider && typeof session.provider.signTransaction === 'function') {
-      var signed = await session.provider.signTransaction(built.tx);
-      serialized = signed.serialize();
-    } else if (session.provider && typeof session.provider.signAndSendTransaction === 'function') {
-      // Provider handles send; just return the signature.
-      var res = await session.provider.signAndSendTransaction(built.tx);
-      var providerSig = typeof res === 'string' ? res : (res && res.signature);
-      if (providerSig) await confirmSentTransaction(providerSig, built, 'Wallet-signed transaction', commitment);
-      return providerSig;
-    } else {
-      throw new Error('Wallet cannot sign transactions');
-    }
-    try {
-      var sig = await sendRawSafe(built.conn, serialized);
-      await confirmSentTransaction(sig, built, 'Wallet-signed transaction', commitment);
-      return sig;
-    } catch (e) {
-      throw await unpackSendError(e);
-    }
-  }
-
-  // -----------------------------------------------------------------------
-  // 4) POOL-PAID USER OST ATA CREATION
-  // -----------------------------------------------------------------------
-  // A wallet's OST token account, once created, never goes away. So the
-  // existence check only needs to hit the RPC ONCE per wallet — after that it is
-  // a memory lookup. This removes a full getAccountInfo round-trip (200ms–1.2s
-  // on devnet) from the hot path of EVERY buy, which is a big chunk of why a
-  // trade "felt slow to process".
-  var ATA_EXISTS_POOL = Object.create(null);
-  async function ensureUserOstAtaPoolPaid(userPubkey) {
-    var w = window.OST_WALLET; if (!w) throw new Error('Wallet helpers not loaded');
-    var c = w.constants;
-    var owner = (userPubkey && userPubkey.toBase58) ? userPubkey : new solanaWeb3.PublicKey(userPubkey);
-    var mintPk = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.mint);
-    var ata = w.associatedAddress(mintPk, owner, false, c.TOKEN_2022_PROGRAM_ID);
-    var ownerKey = owner.toBase58();
-    if (ATA_EXISTS_POOL[ownerKey]) return ata;        // already proven to exist → no RPC
-    var conn = getRpc();
-    var info = await conn.getAccountInfo(ata).catch(function () { return null; });
-    if (info) { ATA_EXISTS_POOL[ownerKey] = true; return ata; }
-    var pool = loadPoolKeypair();
-    var ix = w.associatedAccountIx(pool.publicKey, ata, owner, mintPk, c.TOKEN_2022_PROGRAM_ID);
-    await sendPoolOnlyTx([ix]);
-    ATA_EXISTS_POOL[ownerKey] = true;                 // created now, remember it
-    return ata;
-  }
-
-  // -----------------------------------------------------------------------
-  // 5) PAYOUT OST  (pool → user, zero-SOL UX)
-  // -----------------------------------------------------------------------
-  // Best-effort audit log → Cloudflare worker. Posts an "intent" before the
-  // on-chain transfer and a "result"/"failure" after, so support / scripts
-  // can reconcile any OST that disappears mid-flight.
   function ostApiBaseSafe() {
     try { return (window.OST_API_BASE || '').replace(/\/+$/, ''); } catch (_) { return ''; }
   }
+
+  async function apiPost(path, body) {
+    var base = ostApiBaseSafe();
+    if (!base) throw new Error('OST API not configured');
+    var res, resJson;
+    try {
+      res = await fetch(base + path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+      resJson = await res.json();
+    } catch (_) {
+      var err = new Error('Could not reach the OST payout service. Try again shortly.');
+      err.code = 'network_error';
+      throw err;
+    }
+    if (!res.ok || !resJson.ok) {
+      var apiErr = new Error(resJson && (resJson.message || resJson.error) || ('Request failed (' + res.status + ')'));
+      apiErr.code = resJson && resJson.error;
+      apiErr.body = resJson;
+      throw apiErr;
+    }
+    return resJson;
+  }
+
   function logPayoutAudit(payload) {
     try {
       var base = ostApiBaseSafe();
       if (!base) return;
-      // navigator.sendBeacon survives page unload — use it when available so
-      // intents written right before navigation still arrive.
       var body = JSON.stringify(payload);
       if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
         try { navigator.sendBeacon(base + '/wallet/payouts', new Blob([body], { type: 'application/json' })); return; } catch (_) {}
@@ -488,91 +186,35 @@
     } catch (_) {}
   }
 
+  // -----------------------------------------------------------------------
+  // PAYOUT OST (pool → user) — was a local sign+send, now one worker call.
+  // -----------------------------------------------------------------------
   async function payoutOst(toPubkeyInput, amountOst, memoText, options) {
-    var w = window.OST_WALLET; if (!w) throw new Error('Wallet helpers not loaded');
-    var c = w.constants;
+    var to = (toPubkeyInput && toPubkeyInput.toBase58) ? toPubkeyInput : new solanaWeb3.PublicKey(toPubkeyInput);
+    var walletStr = to.toBase58();
     var amt = Number(amountOst);
     if (!Number.isFinite(amt) || amt <= 0) throw new Error('Invalid payout amount');
-
-    var to = (toPubkeyInput && toPubkeyInput.toBase58) ? toPubkeyInput : new solanaWeb3.PublicKey(toPubkeyInput);
-    var walletStr = '';
-    try { walletStr = to.toBase58(); } catch (_) {}
-    var memoSummary = '';
-    try { memoSummary = String(memoText || '').slice(0, 200); } catch (_) {}
+    var memoSummary = String(memoText || '').slice(0, 200);
     var payoutId = buildPayoutId(walletStr, amt, memoText, options || {});
+
     var prior = getPayoutReceipt(payoutId, walletStr, amt);
     if (prior) return { sig: prior.sig, ost: Number(prior.ost || amt), auditId: payoutId, idempotent: true };
     if (payoutLocks[payoutId]) return payoutLocks[payoutId];
 
     payoutLocks[payoutId] = (async function () {
-      var cfg = vaultConfig();
-      if (cfg.maxSinglePayout > 0 && amt > cfg.maxSinglePayout) {
-        var capError = 'Payout ' + formatOstAmount(amt) + ' OST exceeds the automatic vault limit of ' + formatOstAmount(cfg.maxSinglePayout) + ' OST. No balance was changed; support must approve or split this settlement.';
-        rememberPendingPayout(payoutId, { wallet: walletStr, ostAmount: amt, memo: memoSummary, error: capError, stage: 'manual-review' });
-        logPayoutAudit({ id: payoutId, stage: 'failure', wallet: walletStr, kind: 'payout', ostAmount: amt, memo: memoSummary, error: capError, ref: payoutRefFromMemo(memoText) });
-        throw new Error(capError);
-      }
-
-      var poolBal = await getPoolOstBalance();
-      if (poolBal + 0.000000001 < amt) {
-        var emptyError = 'OST payout vault needs refill before paying ' + formatOstAmount(amt) + ' OST. No partial payout was sent or recorded; try again shortly.';
-        rememberPendingPayout(payoutId, { wallet: walletStr, ostAmount: amt, poolBalance: poolBal, memo: memoSummary, error: emptyError, stage: 'awaiting-refill' });
-        logPayoutAudit({ id: payoutId, stage: 'failure', wallet: walletStr, kind: 'payout', ostAmount: amt, memo: memoSummary, error: emptyError, ref: payoutRefFromMemo(memoText) });
-        throw new Error(emptyError);
-      }
-      // ── Dynamic solvency cap: no single win may take more than a fixed
-      //    FRACTION of the LIVE vault. This is the whale-protection fix — it
-      //    keeps the shared vault solvent so a huge winner can never drain it
-      //    and block everyone else's legitimate claims. The vault degrades
-      //    gracefully instead of hitting zero. Override the fraction with
-      //    localStorage OST_VAULT_MAX_PAYOUT_FRACTION (0..1); default 2%.
-      var solvencyFraction = numberSetting('OST_VAULT_MAX_PAYOUT_FRACTION', 0.02);
-      if (solvencyFraction > 0 && solvencyFraction < 1) {
-        var dynamicCap = poolBal * solvencyFraction;
-        if (amt > dynamicCap) {
-          var dynError = 'This win of ' + formatOstAmount(amt) + ' OST exceeds the live vault solvency cap of ' + formatOstAmount(dynamicCap) + ' OST (' + Math.round(solvencyFraction * 100) + '% of the shared vault). It is queued for staged settlement so smaller winners can always be paid; the remainder pays as the vault refills.';
-          rememberPendingPayout(payoutId, { wallet: walletStr, ostAmount: amt, poolBalance: poolBal, solvencyCap: dynamicCap, memo: memoSummary, error: dynError, stage: 'solvency-staged' });
-          logPayoutAudit({ id: payoutId, stage: 'failure', wallet: walletStr, kind: 'payout', ostAmount: amt, memo: memoSummary, error: dynError, ref: payoutRefFromMemo(memoText) });
-          throw new Error(dynError);
-        }
-      }
-      if (cfg.minReserve > 0 && poolBal - amt < cfg.minReserve) {
-        var reserveError = 'OST payout vault is protecting its shared reserve. Needs ' + formatOstAmount(amt) + ' OST with ' + formatOstAmount(cfg.minReserve) + ' OST kept online; current vault is ' + formatOstAmount(poolBal) + ' OST. No partial payout was sent.';
-        rememberPendingPayout(payoutId, { wallet: walletStr, ostAmount: amt, poolBalance: poolBal, memo: memoSummary, error: reserveError, stage: 'reserve-protected' });
-        logPayoutAudit({ id: payoutId, stage: 'failure', wallet: walletStr, kind: 'payout', ostAmount: amt, memo: memoSummary, error: reserveError, ref: payoutRefFromMemo(memoText) });
-        throw new Error(reserveError);
-      }
-
-      var pool = loadPoolKeypair();
-      var mintPk = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.mint);
-      var poolAta = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.ata);
-
-      // Pool pays for the user's ATA rent if missing.
-      var userAta = await ensureUserOstAtaPoolPaid(to);
-      var expectedRaw = decimalToRawAmount(amt, c.OST_TOKEN_DECIMALS);
-      var beforeUserRaw = await getTokenRawBalance(userAta);
-
-      var ixs = [
-        w.transferChecked(poolAta, mintPk, userAta, pool.publicKey,
-          expectedRaw, c.OST_TOKEN_DECIMALS, c.TOKEN_2022_PROGRAM_ID)
-      ];
-      if (memoText) ixs.push(w.memoIx(String(memoText), pool.publicKey));
-
       logPayoutAudit({ id: payoutId, stage: 'intent', wallet: walletStr, kind: 'payout', ostAmount: amt, memo: memoSummary, ref: payoutRefFromMemo(memoText) });
-
-      var sig;
       try {
-        sig = await sendPoolOnlyTx(ixs);
-        await verifyTokenBalanceDelta(userAta, beforeUserRaw, expectedRaw, c.OST_TOKEN_DECIMALS, 'OST payout');
+        var resJson = await apiPost('/wallet/payout', { wallet: walletStr, amountOst: amt, memo: memoText ? String(memoText) : '', payoutId: payoutId });
+        clearPendingPayout(payoutId);
+        rememberPayoutReceipt(payoutId, { wallet: walletStr, ost: resJson.ost || amt, sig: resJson.sig, memo: memoSummary, ref: payoutRefFromMemo(memoText), verified: true });
+        logPayoutAudit({ id: payoutId, stage: 'result', wallet: walletStr, kind: 'payout', ostAmount: amt, memo: memoSummary, sig: resJson.sig, ref: payoutRefFromMemo(memoText) });
+        return { sig: resJson.sig, ost: resJson.ost || amt, auditId: payoutId };
       } catch (err) {
-        rememberPendingPayout(payoutId, { wallet: walletStr, ostAmount: amt, memo: memoSummary, error: (err && err.message) ? String(err.message).slice(0, 240) : 'unknown', stage: 'send-failed' });
-        logPayoutAudit({ id: payoutId, stage: 'failure', wallet: walletStr, kind: 'payout', ostAmount: amt, memo: memoSummary, error: (err && err.message) ? String(err.message).slice(0, 240) : 'unknown', ref: payoutRefFromMemo(memoText) });
+        var message = (err && err.message) || 'Payout failed';
+        rememberPendingPayout(payoutId, { wallet: walletStr, ostAmount: amt, memo: memoSummary, error: message.slice(0, 240), stage: (err && err.code) || 'send-failed' });
+        logPayoutAudit({ id: payoutId, stage: 'failure', wallet: walletStr, kind: 'payout', ostAmount: amt, memo: memoSummary, error: message.slice(0, 240), ref: payoutRefFromMemo(memoText) });
         throw err;
       }
-      clearPendingPayout(payoutId);
-      rememberPayoutReceipt(payoutId, { wallet: walletStr, ost: amt, sig: sig, memo: memoSummary, ref: payoutRefFromMemo(memoText), verified: true });
-      logPayoutAudit({ id: payoutId, stage: 'result', wallet: walletStr, kind: 'payout', ostAmount: amt, memo: memoSummary, sig: sig, ref: payoutRefFromMemo(memoText) });
-      return { sig: sig, ost: amt, auditId: payoutId };
     })();
 
     try { return await payoutLocks[payoutId]; }
@@ -580,40 +222,118 @@
   }
 
   // -----------------------------------------------------------------------
-  // 6) USER → POOL  (BUY-side; pool pays the SOL fee)
+  // POOL-PAID USER OST ATA CREATION — same one-RPC-ever memoization, now the
+  // creation itself (when needed) is a single worker call instead of a local
+  // sign+send.
   // -----------------------------------------------------------------------
-  async function userSendsOstToPool(amountOst, memoText, opts) {
-    opts = opts || {};
-    var w = window.OST_WALLET; if (!w || !w.session || !w.session.publicKey) throw new Error('Connect a wallet first');
+  var ATA_EXISTS_POOL = Object.create(null);
+  function localUserAta(userPubkey) {
+    var w = window.OST_WALLET; if (!w) return null;
     var c = w.constants;
-    var amt = Number(amountOst);
-    if (!Number.isFinite(amt) || amt <= 0) throw new Error('Enter a valid OST amount');
-
-    // The balance pre-check is a full RPC round-trip. On the fast (betting) path
-    // we skip it: the transfer itself is the real gate and fails fast with a
-    // clear error if the balance is short, so there is no need to block the bet
-    // on a read first. Other callers keep the upfront check.
-    if (!opts.fast) {
-      var userBal = await w.getOstBalance(w.session.publicKey);
-      if (userBal + 1e-9 < amt) throw new Error('Not enough OST in wallet');
-    }
-
+    var owner = (userPubkey && userPubkey.toBase58) ? userPubkey : new solanaWeb3.PublicKey(userPubkey);
     var mintPk = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.mint);
-    var poolAta = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.ata);
-    var userAta = await ensureUserOstAtaPoolPaid(w.session.publicKey);
-
-    var ixs = [
-      w.transferChecked(userAta, mintPk, poolAta, w.session.publicKey,
-        w.toBaseUnits(amt, c.OST_TOKEN_DECIMALS), c.OST_TOKEN_DECIMALS, c.TOKEN_2022_PROGRAM_ID)
-    ];
-    if (memoText) ixs.push(w.memoIx(String(memoText), w.session.publicKey));
-
-    var sig = await sendUserSignedPoolPaidTx(ixs, { fast: !!opts.fast });
-    return { sig: sig, ost: amt };
+    return w.associatedAddress(mintPk, owner, false, c.TOKEN_2022_PROGRAM_ID);
+  }
+  async function ensureUserOstAtaPoolPaid(userPubkey) {
+    var owner = (userPubkey && userPubkey.toBase58) ? userPubkey : new solanaWeb3.PublicKey(userPubkey);
+    var ownerKey = owner.toBase58();
+    if (ATA_EXISTS_POOL[ownerKey]) return localUserAta(owner);
+    var resJson = await apiPost('/wallet/ata-rent', { owner: ownerKey });
+    ATA_EXISTS_POOL[ownerKey] = true;
+    return new solanaWeb3.PublicKey(resJson.ata);
   }
 
   // -----------------------------------------------------------------------
-  // 7) MEMECOIN BUY / SELL
+  // COSIGN SWAP — the two-step atomic-swap flow. Worker builds + partial-
+  // signs the whole transaction from validated scalars (see
+  // workers/ost-api/src/wallet-payouts.js); this only adds the user's own
+  // signature and hands the fully-signed tx back for the worker to submit.
+  // Used for SOL<->OST swaps and any peer-to-peer OST send.
+  // -----------------------------------------------------------------------
+  function base64ToUint8(base64) {
+    var binary = atob(base64);
+    var bytes = new Uint8Array(binary.length);
+    for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+  }
+  function uint8ToBase64(bytes) {
+    var binary = '';
+    for (var i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary);
+  }
+
+  async function cosignSwap(kind, params) {
+    var w = window.OST_WALLET;
+    if (!w || !w.session || !w.session.publicKey) throw new Error('Connect a wallet first');
+    var body = Object.assign({ kind: kind, wallet: w.session.publicKey.toBase58() }, params);
+    var built = await apiPost('/wallet/cosign', body);
+
+    var tx = solanaWeb3.Transaction.from(base64ToUint8(built.txBase64));
+    var session = w.session;
+    if (session.kind === 'local' && session.keypair) {
+      tx.partialSign(session.keypair);
+    } else if (session.provider && typeof session.provider.signTransaction === 'function') {
+      tx = await session.provider.signTransaction(tx);
+    } else if (session.provider && typeof session.provider.signAndSendTransaction === 'function') {
+      // This provider signs AND submits in one call — it never hands the
+      // signed bytes back, so there's nothing to post to /cosign/submit.
+      // The transaction already carries the pool's earlier signature (still
+      // present since the message wasn't modified), so it still lands as a
+      // proper cosigned swap; we just skip our own submit/confirm step.
+      var res = await session.provider.signAndSendTransaction(tx);
+      var providerSig = typeof res === 'string' ? res : (res && res.signature);
+      if (!providerSig) throw new Error('Wallet did not return a signature');
+      return { sig: providerSig, quote: built.quote };
+    } else {
+      throw new Error('Wallet cannot sign transactions');
+    }
+    var signedTxBase64 = uint8ToBase64(tx.serialize({ requireAllSignatures: false, verifySignatures: false }));
+
+    try {
+      var submitted = await apiPost('/wallet/cosign/submit', { cosignId: built.cosignId, signedTxBase64: signedTxBase64 });
+      return { sig: submitted.sig, quote: built.quote };
+    } catch (err) {
+      if (err && err.code === 'blockhash_expired') err.message = 'This quote expired before it could be submitted — please try again.';
+      throw err;
+    }
+  }
+
+  async function userSendsOstToPool(amountOst, memoText) {
+    var amt = Number(amountOst);
+    if (!Number.isFinite(amt) || amt <= 0) throw new Error('Enter a valid OST amount');
+    var result = await cosignSwap('peer-transfer', { to: window.OST_SWAP_POOL.publicKey, amount: amt, memo: memoText ? String(memoText) : '' });
+    return { sig: result.sig, ost: amt };
+  }
+
+  async function sendPeerOst(toAddress, amountOst, memoText) {
+    var amt = Number(amountOst);
+    if (!Number.isFinite(amt) || amt <= 0) throw new Error('Enter a valid OST amount.');
+    var result = await cosignSwap('peer-transfer', { to: String(toAddress), amount: amt, memo: memoText ? String(memoText) : '' });
+    return result.sig;
+  }
+
+  // Pool pays the fee only — used for arbitrary program instructions the
+  // worker has no business understanding (e.g. the ost-betting program's
+  // stake/claim_payout calls in docs/ost-onchain-market.js). The worker's
+  // ONLY safety check for this kind is that the pool is referenced nowhere
+  // inside the instructions (see solana-pool.js assertPoolAbsent) — it never
+  // moves pool funds or acts as any instruction's authority, only pays the
+  // transaction fee, so what the instructions actually do is not this
+  // module's concern.
+  async function sendPoolFeeOnly(instructions) {
+    var list = (instructions || []).filter(Boolean).map(function (ix) {
+      return {
+        programId: ix.programId.toBase58(),
+        keys: ix.keys.map(function (k) { return { pubkey: k.pubkey.toBase58(), isSigner: !!k.isSigner, isWritable: !!k.isWritable }; }),
+        data: uint8ToBase64(ix.data instanceof Uint8Array ? ix.data : new Uint8Array(ix.data || []))
+      };
+    });
+    var result = await cosignSwap('fee-only', { instructions: list });
+    return result.sig;
+  }
+
+  // -----------------------------------------------------------------------
+  // MEMECOIN BUY / SELL
   // -----------------------------------------------------------------------
   async function memecoinBuy(token, ostAmount) {
     return userSendsOstToPool(ostAmount,
@@ -629,7 +349,7 @@
   }
 
   // -----------------------------------------------------------------------
-  // 8) PREDICTION CASH-OUT
+  // PREDICTION CASH-OUT
   // -----------------------------------------------------------------------
   async function predictionCashOut(orderRecord, payoutAmount) {
     var w = window.OST_WALLET;
@@ -650,7 +370,7 @@
   }
 
   // -----------------------------------------------------------------------
-  // 9) PATCH OST_WALLET.ensureFee  →  no-op (pool pays)
+  // PATCH OST_WALLET.ensureFee → no-op (pool pays)
   // -----------------------------------------------------------------------
   function patchEnsureFee() {
     var w = window.OST_WALLET;
@@ -671,7 +391,7 @@
   }
 
   // -----------------------------------------------------------------------
-  // 10) PUBLIC API
+  // PUBLIC API — same shape callers already use, bodies now worker-backed.
   // -----------------------------------------------------------------------
   window.OST_RESCUE = {
     rpc: { get: getRpc, rotate: rotateRpc, endpoints: RPC_ENDPOINTS, withRpc: withRpc },
@@ -680,11 +400,11 @@
     pendingPayouts: pendingPayouts,
     vaultConfig: vaultConfig,
     ensureUserAta: ensureUserOstAtaPoolPaid,
-    buildPoolPaidTx: buildPoolPaidTx,
-    sendPoolOnlyTx: sendPoolOnlyTx,
-    sendUserSignedPoolPaidTx: sendUserSignedPoolPaidTx,
     payoutOst: payoutOst,
-    userSendsOstToPool: userSendsOstToPool
+    userSendsOstToPool: userSendsOstToPool,
+    sendPeerOst: sendPeerOst,
+    sendPoolFeeOnly: sendPoolFeeOnly,
+    cosignSwap: cosignSwap
   };
   window.OST_TRADE = window.OST_TRADE || {};
   window.OST_TRADE.memecoinBuy = memecoinBuy;
@@ -695,13 +415,11 @@
   function bootstrap() {
     if (!window.OST_WALLET) { return setTimeout(bootstrap, 250); }
     patchEnsureFee();
-    console.log('[rescue v2] pool-paid OST flows active. Endpoints:', RPC_ENDPOINTS.length);
+    console.log('[rescue v3] server-signed pool-paid OST flows active.');
     Promise.all([getPoolOstBalance(), getPoolSolBalance()]).then(function (r) {
       var cfg = vaultConfig();
-      console.log('[rescue v2] pool: ' + r[0].toLocaleString() + ' OST · ' + r[1].toFixed(3) + ' SOL');
-      if (r[0] < cfg.lowWater) {
-        console.warn('[rescue v2] POOL LOW — admin must run: npm run vault:refill');
-      }
+      console.log('[rescue v3] pool: ' + r[0].toLocaleString() + ' OST · ' + r[1].toFixed(3) + ' SOL');
+      if (r[0] < cfg.lowWater) console.warn('[rescue v3] POOL LOW — admin must run: npm run vault:refill');
     }).catch(function () {});
   }
   if (document.readyState === 'loading') {

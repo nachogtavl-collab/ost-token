@@ -3,9 +3,13 @@ import { handleGhostV2Request } from './ghost/index.js';
 import { handleMeshRequest }    from './mesh/index.js';
 import { handleOstPriceRequest } from './ost-price.js';
 import { handleRealtimeRequest, publishRealtimeEvent } from './realtime.js';
+import { handleWalletPayoutsRequest } from './wallet-payouts.js';
+import { handleGamesRngRequest } from './games-rng.js';
 
 export { MeshHub } from './mesh/hub.js';
 export { RealtimeHub } from './realtime.js';
+export { PayoutGate } from './wallet-payouts.js';
+export { GameSeedHub } from './games-rng.js';
 
 /**
  * OST Prediction API Server — Cloudflare Worker
@@ -2836,6 +2840,7 @@ export default {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
 
+
     // GET /health/hub — is the market authority actually being used? A year of
     // desync hid behind a silent null; this makes the answer one curl away.
     if (path === '/health/hub' && method === 'GET') {
@@ -2914,6 +2919,16 @@ export default {
     // OST Mesh — quantum-ready P2P signaling + identity directory.
     if (path.startsWith('/mesh/')) {
       return handleMeshRequest(request, env, { path, method });
+    }
+
+    // Server-side pool payouts (Phase 0 — replaces browser-held pool secret key).
+    if (path === '/wallet/payout' || path === '/wallet/ata-rent' || path.startsWith('/wallet/cosign')) {
+      return handleWalletPayoutsRequest(request, env);
+    }
+
+    // Server-side provably-fair seed (Phase 0 — replaces browser-generated serverSeed).
+    if (path.startsWith('/games/')) {
+      return handleGamesRngRequest(request, env);
     }
 
     // OST Live Price — devnet synthetic price engine. Additive, isolated.

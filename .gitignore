@@ -29,6 +29,12 @@ desktop.ini
 # Environment
 .env
 .env.local
+.dev.vars
+workers/*/.dev.vars
+
+# Wrangler local dev state (Miniflare Durable Object storage, cache)
+.wrangler/
+workers/*/.wrangler/
 
 # Playwright test outputs
 test-results/

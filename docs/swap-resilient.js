@@ -148,57 +148,34 @@
     opts = opts || {};
     var w = window.OST_WALLET;
     if (!w || !w.session || !w.session.publicKey) throw new Error('Connect a wallet first');
-    if (!window.OST_SWAP_POOL) throw new Error('Swap pool not loaded - refresh the page');
-    if (!window.solanaWeb3) throw new Error('Solana web3 not loaded');
+    if (!window.OST_RESCUE || typeof window.OST_RESCUE.cosignSwap !== 'function') throw new Error('Swap pool not loaded - refresh the page');
 
-    var c = w.constants;
-    var conn = w.getConnection();
-    var pool;
-    try { pool = window.solanaWeb3.Keypair.fromSecretKey(Uint8Array.from(window.OST_SWAP_POOL.secretKey)); }
-    catch (e) { throw new Error('Pool keypair unavailable'); }
-
+    // Client-side quote/balance pre-checks are instant UX feedback only — the
+    // worker recomputes its own quote and SOL-reserve floor authoritatively
+    // before it will ever sign (workers/ost-api/src/wallet-payouts.js).
     var quote = quoteOstToSol(ostAmount);
     if (quote.lamports <= 0) throw new Error('Quote too small');
-
-    // Verify balances
     var userOst = await w.getOstBalance(w.session.publicKey).catch(function () { return 0; });
     if (userOst + 1e-9 < quote.ost) {
       throw new Error('Need ' + quote.ost.toFixed(2) + ' OST (have ' + userOst.toFixed(2) + ')');
     }
-    var poolLamports = await conn.getBalance(pool.publicKey).catch(function () { return 0; });
-    if (poolLamports < quote.lamports + 5000) {
-      throw new Error('Pool SOL too low to fulfil cash-out (need ' + ((quote.lamports + 5000) / 1e9).toFixed(4) + ' SOL)');
-    }
 
-    var poolAta = new window.solanaWeb3.PublicKey(window.OST_SWAP_POOL.ata);
-    var mintPk  = new window.solanaWeb3.PublicKey(window.OST_SWAP_POOL.mint);
-    var userAta = (window.OST_RESCUE && window.OST_RESCUE.ensureUserAta)
-      ? await window.OST_RESCUE.ensureUserAta(w.session.publicKey)
-      : await w.ensureAta(w.session.publicKey);
+    var memo = JSON.stringify({
+      k: 'ost-to-sol', ost: quote.ost, sol: Number(quote.sol.toFixed(6)),
+      rate: Number((quote.solUsd / quote.ostUsd).toFixed(4)), t: Date.now()
+    });
 
-    var tx = new window.solanaWeb3.Transaction();
-    tx.add(w.transferChecked(
-      userAta, mintPk, poolAta, w.session.publicKey,
-      w.toBaseUnits(quote.ost, c.OST_TOKEN_DECIMALS),
-      c.OST_TOKEN_DECIMALS, c.TOKEN_2022_PROGRAM_ID
-    ));
-    tx.add(window.solanaWeb3.SystemProgram.transfer({
-      fromPubkey: pool.publicKey,
-      toPubkey:   w.session.publicKey,
-      lamports:   quote.lamports
-    }));
-    if (opts.memo || true) {
-      tx.add(w.memoIx(JSON.stringify({
-        k: 'ost-to-sol', ost: quote.ost, sol: Number(quote.sol.toFixed(6)),
-        rate: Number((quote.solUsd / quote.ostUsd).toFixed(4)), t: Date.now()
-      }), w.session.publicKey));
+    var result;
+    try {
+      result = await window.OST_RESCUE.cosignSwap('ost-to-sol', { amount: quote.ost, memo: memo });
+    } catch (err) {
+      var map = {
+        insufficient_pool_sol: 'Pool SOL too low to fulfil this cash-out. Try again shortly.',
+        quote_too_small: 'Quote too small.'
+      };
+      throw new Error((err && err.code && map[err.code]) || (err && err.message) || 'Swap failed');
     }
-    tx.feePayer = pool.publicKey;
-    var bh = await conn.getLatestBlockhash('confirmed');
-    tx.recentBlockhash = bh.blockhash;
-    tx.partialSign(pool);          // pool signs as feePayer + system source
-    var sig = await w.sign(tx);    // user signs as token authority
-    return { sig: sig, ost: quote.ost, sol: quote.sol, rate: quote.solUsd / quote.ostUsd, fee: quote.fee };
+    return { sig: result.sig, ost: result.quote.ostAmount, sol: result.quote.solAmount, rate: result.quote.rate, fee: result.quote.fee };
   }
 
   // ────────────────────────────────────────────────────────────────────────

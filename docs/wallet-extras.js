@@ -231,34 +231,19 @@
     };
   }
 
-  function getSwapPool() {
-    if (!window.OST_SWAP_POOL || !window.OST_SWAP_POOL.secretKey) return null;
-    try {
-      var sk = Uint8Array.from(window.OST_SWAP_POOL.secretKey);
-      return solanaWeb3.Keypair.fromSecretKey(sk);
-    } catch (e) { console.warn('[swap-pool] bad secret key', e); return null; }
-  }
-
   async function performRealSwap(solAmount, opts) {
     opts = opts || {};
     var w = window.OST_WALLET;
     if (!w || !w.session || !w.session.publicKey) throw new Error('Connect a wallet first');
     if (!Number.isFinite(solAmount) || solAmount <= 0) throw new Error('Invalid SOL amount');
+    if (!window.OST_RESCUE || typeof window.OST_RESCUE.cosignSwap !== 'function') throw new Error('Swap pool not loaded — refresh the page');
 
-    var pool = getSwapPool();
-    if (!pool) throw new Error('Swap pool not loaded — refresh the page');
-
-    var poolPub = pool.publicKey;
-    var poolAta = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.ata);
-    var mintPk = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.mint);
-    var c = w.constants;
-    var conn = w.getConnection();
-
+    // Client-side quote/balance pre-checks are instant UX feedback only — the
+    // worker recomputes its own quote and caps authoritatively before it will
+    // ever sign (workers/ost-api/src/wallet-payouts.js handleCosignBuild).
     var quote = quoteSolToOst(solAmount);
     if (quote.ost <= 0) throw new Error('Quote too small');
-
-    // Make sure the user has enough SOL for the exact swap. The pool pays the
-    // transaction fee and any OST ATA rent, so no extra SOL buffer is required.
+    var conn = w.getConnection();
     var userLamports = await conn.getBalance(w.session.publicKey);
     var needed = Math.round(solAmount * solanaWeb3.LAMPORTS_PER_SOL);
     if (userLamports < needed) {
@@ -269,81 +254,27 @@
       }
     }
 
-    // Check pool OST. The user must receive the full quoted OST amount or the
-    // swap must fail before any local success state is written.
-    var poolOst = 0;
+    var result;
     try {
-      var poolAcct = await conn.getTokenAccountBalance(poolAta);
-      poolOst = Number(poolAcct.value.uiAmount || 0);
-    } catch (e) {
-      throw new Error('Swap pool not initialised on devnet. Admin must run init-swap-pool.ts first.');
+      result = await window.OST_RESCUE.cosignSwap('sol-to-ost', { amount: solAmount, memo: opts.memo ? String(opts.memo) : '' });
+    } catch (err) {
+      var map = {
+        solvency_cap: 'This swap exceeds the live vault solvency cap. Try a smaller amount.',
+        insufficient_pool: 'OST vault needs refill before this swap can deliver the full quote. No partial swap was sent.',
+        quote_too_small: 'Quote too small.'
+      };
+      throw new Error((err && err.code && map[err.code]) || (err && err.message) || 'Swap failed');
     }
-    if (poolOst <= 0) throw new Error('OST vault is empty — admin must run init-swap-pool.ts to top it up.');
-    var rescueConfig = window.OST_RESCUE && typeof window.OST_RESCUE.vaultConfig === 'function'
-      ? window.OST_RESCUE.vaultConfig()
-      : {};
-    var minReserve = Number(rescueConfig && rescueConfig.minReserve);
-    if (!Number.isFinite(minReserve) || minReserve < 0) minReserve = 100000;
-    if (poolOst + 0.000000001 < quote.ost) {
-      throw new Error('OST vault needs refill before this swap can deliver the full ' + quote.ost.toFixed(4) + ' OST quote. No partial swap was sent.');
-    }
-    if (minReserve > 0 && poolOst - quote.ost < minReserve) {
-      throw new Error('OST vault is protecting its shared payout reserve. Try a smaller swap or wait for refill.');
-    }
-    var toSendOst = quote.ost;
+    var sig = result.sig;
+    var toSendOst = result.quote.ostAmount;
+    quote = Object.assign({}, quote, result.quote, { ost: toSendOst });
 
-    // Pool pays the SOL tx fee; user only signs the SOL-transfer instruction.
-    // ATA creation (if missing) is handled by OST_RESCUE with pool paying rent.
-    var userAta = (window.OST_RESCUE && window.OST_RESCUE.ensureUserAta)
-      ? await window.OST_RESCUE.ensureUserAta(w.session.publicKey)
-      : await w.ensureAta(w.session.publicKey);
-
-    // Build: user sends SOL → pool + pool sends OST → user, pool is feePayer.
-    var tx = new solanaWeb3.Transaction();
-    tx.add(solanaWeb3.SystemProgram.transfer({
-      fromPubkey: w.session.publicKey,
-      toPubkey: poolPub,
-      lamports: Math.round(solAmount * solanaWeb3.LAMPORTS_PER_SOL)
-    }));
-    tx.add(w.transferChecked(
-      poolAta, mintPk, userAta, poolPub,
-      w.toBaseUnits(toSendOst, c.OST_TOKEN_DECIMALS),
-      c.OST_TOKEN_DECIMALS, c.TOKEN_2022_PROGRAM_ID
-    ));
-    if (opts.memo) tx.add(w.memoIx(opts.memo, w.session.publicKey));
-
-    // Pool is the feePayer — users do not need extra devnet SOL for gas.
-    tx.feePayer = poolPub;
-    var bh = await conn.getLatestBlockhash('confirmed');
-    tx.recentBlockhash = bh.blockhash;
-    // Pool partial-signs as feePayer + OST-source authority.
-    tx.partialSign(pool);
-
-    // Local simulation — fail fast on guaranteed errors before the user signs.
-    if (window.OST_OPTIMISTIC && window.OST_OPTIMISTIC.simulate) {
-      try {
-        var sim = await window.OST_OPTIMISTIC.simulate(conn, tx, poolPub);
-        if (sim && sim.ok === false) {
-          var friendly = sim.friendly || 'Swap would fail on-chain';
-          try { window.OST_OPTIMISTIC.toast(friendly, 'error'); } catch (e) {}
-          throw new Error(friendly);
-        }
-      } catch (e) {
-        if (e && e.message && /would fail/i.test(e.message)) throw e;
-      }
-    }
-
-    // User partial-signs the SystemProgram.transfer (they're spending SOL).
-    var sig = await w.sign(tx);
-    // Optimistic: confirm visually the moment the user signs, before the cluster
-    // confirms. The snapshot/refresh below still runs against real on-chain state.
     if (window.OST_OPTIMISTIC) {
       try {
         window.OST_OPTIMISTIC.toast('Swap submitted · ' + String(sig).slice(0, 8) + '…', 'pending');
         window.OST_OPTIMISTIC.balanceHint({ deltaOst: +toSendOst, source: 'swap-in', pending: true });
       } catch (e) {}
     }
-    quote = Object.assign({}, quote, { ost: toSendOst });
 
     // Snapshot for the curve
     try {

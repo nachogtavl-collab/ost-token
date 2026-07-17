@@ -2861,19 +2861,13 @@
     const accounts = getInterchangeDeskAccounts();
     const existingAccount = await conn.getAccountInfo(accounts.vaultTokenAccount);
     if (!existingAccount) {
-      if (!window.OST_RESCUE || typeof window.OST_RESCUE.sendPoolOnlyTx !== 'function' || !window.OST_SWAP_POOL) {
+      if (!window.OST_RESCUE || typeof window.OST_RESCUE.ensureUserAta !== 'function') {
         throw new Error('OST fee vault is still loading. Please wait a moment and try again.');
       }
-      const poolPayer = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.publicKey);
-      const createVaultIx = createAssociatedTokenAccountInstruction(
-        poolPayer,
-        accounts.vaultTokenAccount,
-        accounts.treasuryAuthority,
-        accounts.mintPk,
-        TOKEN_2022_PROGRAM_ID,
-        ASSOCIATED_TOKEN_PROGRAM_ID
-      );
-      await window.OST_RESCUE.sendPoolOnlyTx([createVaultIx]);
+      // ensureUserAta isn't user-specific despite the name — it pool-pays rent
+      // for the ATA of whatever owner pubkey it's given, which is exactly what
+      // the desk's PDA-owned treasury vault account needs too.
+      await window.OST_RESCUE.ensureUserAta(accounts.treasuryAuthority);
     }
     return accounts;
   }
@@ -3448,32 +3442,16 @@
       throw new Error(t('pay.notEnoughOst', 'Not enough OST in this wallet. Claim or buy OST first.'));
     }
 
-    const mintPk = new solanaWeb3.PublicKey(OST_CONFIG.mint);
-    let sourceAta;
-    if (window.OST_RESCUE && typeof window.OST_RESCUE.ensureUserAta === 'function') {
-      sourceAta = await window.OST_RESCUE.ensureUserAta(requester);
-    } else {
-      throw new Error(t('pay.walletNeedsSol', 'The OST fee vault is still loading. Please wait a moment and try again.'));
-    }
-
     const deskAccounts = await ensureInterchangeDeskVaultAccount();
     const memo = buildInterchangeMemo(request);
-    const amountBaseUnits = decimalAmountToBaseUnits(Number(request.ostAmount), OST_TOKEN_DECIMALS);
-    const memoIx = createMemoInstruction(memo, requester);
-    const transferIx = createTransferCheckedInstruction(
-      sourceAta,
-      mintPk,
-      deskAccounts.vaultTokenAccount,
-      requester,
-      amountBaseUnits,
-      OST_TOKEN_DECIMALS,
-      TOKEN_2022_PROGRAM_ID
-    );
 
-    if (!window.OST_RESCUE || typeof window.OST_RESCUE.sendUserSignedPoolPaidTx !== 'function') {
+    if (!window.OST_RESCUE || typeof window.OST_RESCUE.sendPeerOst !== 'function') {
       throw new Error(t('pay.walletNeedsSol', 'The OST fee vault is still loading. Please wait a moment and try again.'));
     }
-    const signature = await window.OST_RESCUE.sendUserSignedPoolPaidTx([memoIx, transferIx]);
+    // sendPeerOst takes the destination OWNER (the desk's treasury PDA), not
+    // its token account — it derives the ATA itself the same way the worker
+    // will, so this stays correct even if the vault account didn't exist yet.
+    const signature = await window.OST_RESCUE.sendPeerOst(deskAccounts.treasuryAuthority.toBase58(), Number(request.ostAmount), memo);
     const remainingBalance = await getOstBalanceForAddress(requester);
     storeInterchangeRequestRecord({
       signature,
@@ -3547,8 +3525,13 @@
 
     if (!transaction.feePayer) {
       const instructions = Array.isArray(transaction.instructions) ? transaction.instructions.filter(Boolean) : [];
-      if (instructions.length && window.OST_RESCUE && typeof window.OST_RESCUE.sendUserSignedPoolPaidTx === 'function') {
-        return window.OST_RESCUE.sendUserSignedPoolPaidTx(instructions);
+      // No feePayer set means "let the pool pay" (e.g. ost-onchain-market.js
+      // betting instructions, seedless onboarding). The worker never builds
+      // these — it only checks the pool is referenced nowhere inside them
+      // before paying the fee. See docs/devnet-rescue.js sendPoolFeeOnly and
+      // workers/ost-api/src/solana-pool.js assertPoolAbsent.
+      if (instructions.length && window.OST_RESCUE && typeof window.OST_RESCUE.sendPoolFeeOnly === 'function') {
+        return window.OST_RESCUE.sendPoolFeeOnly(instructions);
       }
       if (instructions.length && OST_CONFIG.network === 'devnet') {
         throw new Error('OST fee vault is still loading. Please wait a moment and try again.');

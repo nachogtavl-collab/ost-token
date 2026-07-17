@@ -1,6 +1,11 @@
 name = "ost-api"
 main = "src/index.js"
 compatibility_date = "2025-01-01"
+# Required by @solana/web3.js (Buffer / Node crypto shims). Added for the
+# server-side pool signer (wallet-payouts.js) — verify with `wrangler dev
+# --local` that this doesn't regress the existing Durable Object / D1 bindings
+# before relying on it.
+compatibility_flags = ["nodejs_compat"]
 
 [placement]
 mode = "smart"
@@ -47,6 +52,14 @@ class_name = "NativeMarketHub"
 name = "REALTIME_HUB"
 class_name = "RealtimeHub"
 
+[[durable_objects.bindings]]
+name = "PAYOUT_GATE"
+class_name = "PayoutGate"
+
+[[durable_objects.bindings]]
+name = "GAME_SEED_HUB"
+class_name = "GameSeedHub"
+
 [[migrations]]
 tag = "mesh_hub_v1"
 new_sqlite_classes = ["MeshHub"]
@@ -63,6 +76,14 @@ new_sqlite_classes = ["NativeMarketHub"]
 tag = "realtime_hub_v1"
 new_sqlite_classes = ["RealtimeHub"]
 
+[[migrations]]
+tag = "payout_gate_v1"
+new_sqlite_classes = ["PayoutGate"]
+
+[[migrations]]
+tag = "game_seed_hub_v1"
+new_sqlite_classes = ["GameSeedHub"]
+
 [vars]
 GAMMA_BASE = "https://gamma-api.polymarket.com"
 CLOB_BASE  = "https://clob.polymarket.com"
@@ -77,6 +98,17 @@ TREASURY_SOL_MAINNET  = "Fm7ErbkWzPMpqJ2MdT2LR1oyAHNMvAQxmCXVM7KxGRrM"
 # Devnet OST mint (Token-2022). Source of truth: mint-info.json.
 OST_MINT = "383pTzoZ8Gp83dzk23ZnvLcfX2Sq32TAGN48CMQu2pAJ"
 
+# ---- Server-side pool signer (Phase 0 — see project-docs/TOKEN-ARCHITECTURE.md) ----
+# Deploy-time config for /wallet/payout, /wallet/ata-rent, /wallet/cosign.
+# These are the AUTHORITATIVE checks — client-side copies are display hints only.
+OST_MAX_SINGLE_PAYOUT = "1000000000"
+OST_VAULT_MIN_RESERVE = "0"
+OST_VAULT_MAX_PAYOUT_FRACTION = "0.02"
+OST_VAULT_LOW_WATER = "1000000000"
+
 # Secrets — set via:  npx wrangler secret put STRIPE_SECRET_KEY
 #                     npx wrangler secret put STRIPE_WEBHOOK_SECRET
 #                     npx wrangler secret put TOPUP_ADMIN_TOKEN
+#                     npx wrangler secret put OST_POOL_SECRET_KEY
+#                       (paste the JSON array printed by scripts/init-swap-pool.ts —
+#                       NEVER commit this value or write it into docs/swap-pool.js)

@@ -938,7 +938,7 @@
       } catch(e) {}
       return;
     }
-    if (!window.OST_SWAP_POOL || !window.OST_SWAP_POOL.secretKey) {
+    if (!window.OST_SWAP_POOL) {
       pop('Rewards vault not loaded — refresh the page');
       return;
     }

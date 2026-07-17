@@ -1382,19 +1382,11 @@
     amount = Number(amount || 0);
     if (!Number.isFinite(amount) || amount <= 0) throw new Error('Enter a valid OST amount.');
     requireWalletAddress();
-    if (typeof solanaWeb3 === 'undefined') throw new Error('Solana web3 is still loading.');
     var w = window.OST_WALLET;
     if (!w || !w.session || !w.session.publicKey) throw new Error('Connect a wallet first.');
-    if (!window.OST_RESCUE || typeof window.OST_RESCUE.ensureUserAta !== 'function' || typeof window.OST_RESCUE.sendUserSignedPoolPaidTx !== 'function') throw new Error('OST fee vault is still loading.');
-    var c = w.constants;
-    var toPubkey = new solanaWeb3.PublicKey(toAddress);
-    var mintPk = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.mint);
-    var fromAta = await window.OST_RESCUE.ensureUserAta(w.session.publicKey);
-    var toAta = await window.OST_RESCUE.ensureUserAta(toPubkey);
-    var ixs = [w.transferChecked(fromAta, mintPk, toAta, w.session.publicKey, w.toBaseUnits(amount, c.OST_TOKEN_DECIMALS), c.OST_TOKEN_DECIMALS, c.TOKEN_2022_PROGRAM_ID)];
-    if (note) ixs.push(w.memoIx(String(note), w.session.publicKey));
+    if (!window.OST_RESCUE || typeof window.OST_RESCUE.sendPeerOst !== 'function') throw new Error('OST fee vault is still loading.');
     setArenaStatus('Sending OST directly inside Mesh...');
-    var sig = await window.OST_RESCUE.sendUserSignedPoolPaidTx(ixs);
+    var sig = await window.OST_RESCUE.sendPeerOst(String(toAddress), amount, note ? String(note) : '');
     if (typeof window.recordOstSnapshot === 'function') window.recordOstSnapshot({ ts: Date.now(), kind: 'send', amount: amount, sig: sig, to: toAddress });
     try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {}
     await sendPayload('wallet.paid', { mode: 'paid', amount: amount, asset: 'OST', note: note, address: walletAddress(), sig: sig }).catch(function () {});
