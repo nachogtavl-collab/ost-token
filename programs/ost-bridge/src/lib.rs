@@ -3,9 +3,8 @@ use anchor_spl::token_interface::{
     self, Burn, Mint, MintTo, TokenAccount, TokenInterface, TransferChecked,
 };
 
-// Replaced with the real program id after the first build (anchor keys / the
-// keypair in target/deploy). Left as the Anchor placeholder until then.
-declare_id!("Bridge1111111111111111111111111111111111111");
+// Real program id — matches target/deploy/ost_bridge-keypair.json.
+declare_id!("J7jqcwT44CY4oXjwu6fwfiFvQDWBQRsueqL7dsZjnrJd");
 
 // ===========================================================================
 // OST BRIDGE — the ONE door between the two economies
