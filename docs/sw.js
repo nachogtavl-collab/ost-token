@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ost-pwa-cache-v289';
+const CACHE_NAME = 'ost-pwa-cache-v290';
 const RUNTIME_CACHE = 'ost-pwa-runtime-v253';
 const CACHE_PREFIX = 'ost-pwa-';
 
@@ -127,7 +127,7 @@ const PRECACHE_PATHS = [
   './ost-idle-guard.js?v=2',
   './ost-update.js?v=1',
   './ost-offline-mode.js?v=1',
-  './ost-bridge-ui.js?v=1',
+  './ost-bridge-ui.js?v=2',
   './ost-audit.js?v=2',
   './offline-vault.js?v=10',
   './ost-scroll-fix.css?v=1',
@@ -138,7 +138,7 @@ const PRECACHE_PATHS = [
   './ost-games.js?v=26',
   './code-academy.js?v=3',
   './i18n-runtime.js?v=4',
-  './devnet-rescue.js?v=202',
+  './devnet-rescue.js?v=203',
   './launchpad-trenches.js?v=6',
   './stock-market.js?v=11',
   './topup.js?v=12',

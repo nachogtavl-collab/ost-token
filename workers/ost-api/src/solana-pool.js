@@ -109,6 +109,26 @@ export function getMint(env) {
   return new PublicKey(raw);
 }
 
+// OSTG — the game token (the bridge program's minted side). The pool sponsors gas
+// for BOTH tokens, so the ATA-rent and fee-only paths must accept this mint too.
+export const OSTG_MINT = 'DfgxMbdN49AX2Za9LuvsyixF1jgVh45RbgWYSGonxQos';
+
+// Resolve a caller-supplied mint to a PublicKey, ALLOWLISTED to the two tokens
+// we sponsor. Anything else is rejected — we will not pool-pay rent for an
+// arbitrary mint a client names (that would let anyone spend our SOL creating
+// junk accounts). Empty/absent defaults to OST for backward compatibility.
+export function resolveSponsoredMint(env, mintStr) {
+  const ost = getMint(env);
+  if (!mintStr || mintStr === ost.toBase58()) return ost;
+  if (mintStr === OSTG_MINT) return new PublicKey(OSTG_MINT);
+  throw new Error('mint_not_sponsored');
+}
+
+export function ataForMint(owner, mintPk) {
+  const ownerPk = owner instanceof PublicKey ? owner : new PublicKey(owner);
+  return getAssociatedTokenAddressSync(mintPk, ownerPk, true, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
+}
+
 export function poolAta(env) {
   const pool = getPoolKeypair(env);
   return getAssociatedTokenAddressSync(getMint(env), pool.publicKey, false, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);

@@ -243,6 +243,21 @@
     return new solanaWeb3.PublicKey(resJson.ata);
   }
 
+  // Pool-paid ATA creation for ANY sponsored mint (OST or OSTG). The bridge uses
+  // this so a seedless user with zero SOL can hold the game token — the pool pays
+  // the rent, exactly as it does for OST. The worker allowlists the mint.
+  var ATA_EXISTS_MINT = {};
+  async function ensureUserAtaForMint(userPubkey, mint) {
+    var owner = (userPubkey && userPubkey.toBase58) ? userPubkey : new solanaWeb3.PublicKey(userPubkey);
+    var ownerKey = owner.toBase58();
+    var mintKey = (mint && mint.toBase58) ? mint.toBase58() : String(mint);
+    var cacheKey = ownerKey + ':' + mintKey;
+    if (ATA_EXISTS_MINT[cacheKey]) return;
+    var resJson = await apiPost('/wallet/ata-rent', { owner: ownerKey, mint: mintKey });
+    ATA_EXISTS_MINT[cacheKey] = true;
+    return resJson && resJson.ata ? new solanaWeb3.PublicKey(resJson.ata) : null;
+  }
+
   // -----------------------------------------------------------------------
   // COSIGN SWAP — the two-step atomic-swap flow. Worker builds + partial-
   // signs the whole transaction from validated scalars (see
@@ -400,6 +415,7 @@
     pendingPayouts: pendingPayouts,
     vaultConfig: vaultConfig,
     ensureUserAta: ensureUserOstAtaPoolPaid,
+    ensureUserAtaForMint: ensureUserAtaForMint,
     payoutOst: payoutOst,
     userSendsOstToPool: userSendsOstToPool,
     sendPeerOst: sendPeerOst,

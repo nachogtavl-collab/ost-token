@@ -240,9 +240,14 @@ export class PayoutGate {
     const ownerStr = cleanText(body && body.owner, 64);
     if (!isValidPubkey(ownerStr)) return json({ error: 'invalid_owner' }, 400);
     const owner = new PublicKey(ownerStr);
+    // Which token's account to create. Defaults to OST; OSTG is now allowed so a
+    // seedless user (no SOL) can hold the game token without paying rent. Any
+    // other mint is rejected by resolveSponsoredMint.
+    let mint;
+    try { mint = Pool.resolveSponsoredMint(this.env, cleanText(body && body.mint, 64)); }
+    catch (_) { return json({ error: 'mint_not_sponsored' }, 400); }
     const conn = Pool.getConnection();
-    const mint = Pool.getMint(this.env);
-    const ata = Pool.userAta(this.env, owner);
+    const ata = Pool.ataForMint(owner, mint);
     if (await Pool.ataExists(conn, ata)) return json({ ok: true, created: false, ata: ata.toBase58() });
     const pool = Pool.getPoolKeypair(this.env);
     const sig = await Pool.buildSignSendConfirm(this.env, [Pool.ixCreateAta(pool.publicKey, ata, owner, mint)], [], 'ATA rent');

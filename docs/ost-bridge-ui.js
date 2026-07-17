@@ -20,9 +20,11 @@
  * bridge into a token the games cannot spend yet. (CLAUDE.md: never present an
  * unlaunched capability as live.)
  *
- * v1 scope: the balances + the division explainer work for everyone with no SOL.
- * The convert ACTION is user-paid (needs a little devnet SOL for the network
- * fee); seedless pool-paid bridging via /wallet/cosign is a documented follow-up.
+ * GAS IS SPONSORED. Like OST, the fee account (pool) pays the network fee AND the
+ * token-account rent for OSTG, so converting costs the user ZERO SOL — it works
+ * on a brand-new seedless wallet. (Falls back to user-paid only if the rescue
+ * layer is unavailable.) One wallet holds both tokens: a Solana keypair owns an
+ * account per mint under the same owner, so the same wallet is already both.
  * ========================================================================== */
 (function () {
   'use strict';
@@ -129,22 +131,54 @@
     if (!(amt > 0)) throw new Error('Enter an amount greater than zero.');
     var rawAmount = BigInt(Math.round(amt * 10 ** DEC));
 
-    var ixs = [];
-    // The destination ATA must exist. deposit mints OSTG -> ensure OSTG ATA;
-    // withdraw releases OST -> ensure OST ATA. Idempotent, so a no-op if present.
-    var destMint = direction === 'deposit' ? OSTG_MINT : OSTC_MINT;
-    var destAta = ataOf(destMint, o);
-    var destInfo = await c.getAccountInfo(destAta);
-    if (!destInfo) ixs.push(createAtaIdempotentIx(o, destAta, o, destMint));
-    ixs.push(bridgeIx(direction, o, rawAmount));
+    var rescue = window.OST_RESCUE;
+    var poolPaid = !!(rescue && rescue.sendPoolFeeOnly && rescue.ensureUserAtaForMint);
 
+    // GAS IS SPONSORED BY THE FEE ACCOUNT — no SOL required from the user, exactly
+    // like OST. The pool pays the network fee AND the token-account rent, so this
+    // works for a brand-new seedless wallet that has never held SOL.
+    //
+    // Two steps, on purpose:
+    //  1. Create the destination token account POOL-PAID via /wallet/ata-rent. It
+    //     cannot go in the fee-only tx below, because that tx forbids the pool
+    //     appearing in any instruction (assertPoolAbsent) — and an ATA-create
+    //     would list the pool as the rent payer.
+    //  2. Send the bridge instruction fee-only: the pool signs ONLY as fee payer
+    //     (it is referenced in no instruction), the user signs their own leg.
+    if (poolPaid) {
+      // Ensure BOTH sides exist: the source must exist to spend from, the dest to
+      // receive into. Cheap + idempotent (worker no-ops if present).
+      try { await rescue.ensureUserAtaForMint(o, OSTC_MINT); } catch (_) {}
+      try { await rescue.ensureUserAtaForMint(o, OSTG_MINT); } catch (_) {}
+
+      // WAIT until both accounts are actually VISIBLE before the deposit
+      // references them. The pool creates them in a separate transaction, and
+      // referencing a just-created account before it has propagated makes the
+      // bridge program throw AccountNotInitialized (Anchor 3012). Proven in
+      // scripts/pyth-crank/bridge-seedless-e2e.mjs: with this wait the deposit
+      // lands first try; without it, it races. Only matters on a first-ever
+      // bridge (accounts already exist afterwards).
+      for (var i = 0; i < 12; i++) {
+        var haveC = await c.getAccountInfo(ataOf(OSTC_MINT, o)).catch(function () { return null; });
+        var haveG = await c.getAccountInfo(ataOf(OSTG_MINT, o)).catch(function () { return null; });
+        if (haveC && haveG) break;
+        await new Promise(function (r) { setTimeout(r, 1200); });
+      }
+
+      var sigPool = await rescue.sendPoolFeeOnly([bridgeIx(direction, o, rawAmount)]);
+      return sigPool || '';
+    }
+
+    // Fallback (rescue layer not loaded): user-paid. Needs a little SOL.
+    var ixs = [];
+    var dMint = direction === 'deposit' ? OSTG_MINT : OSTC_MINT;
+    var destAta = ataOf(dMint, o);
+    var destInfo = await c.getAccountInfo(destAta);
+    if (!destInfo) ixs.push(createAtaIdempotentIx(o, destAta, o, dMint));
+    ixs.push(bridgeIx(direction, o, rawAmount));
     var tx = new solanaWeb3.Transaction();
     ixs.forEach(function (ix) { tx.add(ix); });
-    // feePayer = the user. Unset would route to the pool-fee path, but that path
-    // forbids referencing the pool and cannot pay ATA rent — so the honest v1 is
-    // user-paid. If the user has no SOL, say so plainly (below), don't fail dark.
     tx.feePayer = o;
-
     try {
       var sig = await window.OST_WALLET.sign(tx);
       return typeof sig === 'string' ? sig : (sig && sig.signature) || '';
@@ -209,7 +243,7 @@
     root.innerHTML =
       '<div class="ostb-head">' +
         '<div class="ostb-title">🌉 OST Bridge <span style="font-size:10px;font-weight:800;color:#6ee7b7;background:rgba(52,211,153,.14);border-radius:999px;padding:2px 8px;">1:1 · on-chain</span></div>' +
-        '<div class="ostb-sub">Two OSTs, one door. Convert between the everyday currency and the in-app game token — backed 1:1 by the on-chain bridge.</div>' +
+        '<div class="ostb-sub">Two OSTs, one wallet. Convert between the everyday currency and the in-app game token — 1:1, backed on-chain, and gas-free (we sponsor the fee).</div>' +
       '</div>' +
       '<div class="ostb-div">' +
         '<div class="ostb-card cur">' +
@@ -233,7 +267,7 @@
           '<input type="number" min="0" step="any" placeholder="Amount" data-ostb-amt>' +
           '<button class="ostb-go" data-ostb-go>Convert</button>' +
         '</div>' +
-        '<div class="ostb-flow" data-ostb-flow>Get OSTG to play; cash back to OST to spend. Always 1:1.</div>' +
+        '<div class="ostb-flow" data-ostb-flow>Get OSTG to play; cash back to OST to spend. Always 1:1 · no gas fees.</div>' +
       '</div>' +
       '<div class="ostb-peg" data-ostb-peg>Checking peg…</div>';
 
