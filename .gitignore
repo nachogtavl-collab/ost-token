@@ -42,3 +42,6 @@ playwright-report/
 *.tmp.spec.js
 .last-run.json
 reports/
+
+# OSTG mint keypair — mint authority is the bridge PDA, but never commit secret keys
+keys/

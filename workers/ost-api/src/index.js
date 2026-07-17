@@ -2865,6 +2865,51 @@ export default {
       });
     }
 
+    // GET /health/peg — the public 1:1 checker for the OSTG<->OSTC bridge.
+    //
+    // The bridge's whole promise is the identity  supply(OSTG) == vault(OSTC).
+    // This does not TRUST it — it READS both numbers straight off the chain and
+    // reports whether they match. Anyone can verify the peg without our say-so,
+    // which is the only kind of promise worth making about money. If drift is
+    // ever non-zero, the program minted or released something it should not have,
+    // and this endpoint says so out loud instead of hiding it.
+    if (path === '/health/peg' && method === 'GET') {
+      const OSTG_MINT = 'DfgxMbdN49AX2Za9LuvsyixF1jgVh45RbgWYSGonxQos';
+      const VAULT = '8X6pL7QtYqGd8pzkVA3nkWu36rRw9YQsUGh79V6XRYak';
+      try {
+        // Real network reads, in parallel. No cache — a stale peg is a lie.
+        const [supplyRes, vaultRes] = await Promise.all([
+          solanaRpc(env, 'getTokenSupply', [OSTG_MINT], { cluster: 'devnet' }),
+          solanaRpc(env, 'getTokenAccountBalance', [VAULT], { cluster: 'devnet' }),
+        ]);
+        const ostgSupply = supplyRes?.value?.uiAmount;
+        const vaultOstc = vaultRes?.value?.uiAmount;
+        // undefined means the read FAILED — do not report a fake 0/0 "it's fine".
+        // (This is the masking anti-pattern; a peg checker that lies is worse than
+        // none.) Say the read failed instead.
+        if (ostgSupply == null || vaultOstc == null) {
+          return json({ ok: false, error: 'rpc_read_failed', ostgSupply, vaultOstc,
+            note: 'Could not read supply and/or vault — this is NOT a peg verdict.' }, 502);
+        }
+        const drift = Number((ostgSupply - vaultOstc).toFixed(9));
+        const pegHolds = Math.abs(drift) < 1e-9;
+        return json({
+          ok: pegHolds,
+          pegHolds,
+          ostgSupply,
+          vaultOstc,
+          drift,
+          ostgMint: OSTG_MINT,
+          vault: VAULT,
+          note: pegHolds
+            ? 'supply(OSTG) == vault(OSTC): every OSTG is backed 1:1 by escrowed OSTC.'
+            : 'PEG BROKEN — OSTG supply and vault OSTC disagree. The bridge minted or released money it should not have.'
+        }, pegHolds ? 200 : 500);
+      } catch (e) {
+        return json({ ok: false, error: 'peg_check_threw', detail: String(e && e.message).slice(0, 160) }, 502);
+      }
+    }
+
     // Web Push: /push/key, /push/subscribe, /push/unsubscribe, /push/test.
     // Returns null for anything that is not a push route, so the rest of the
     // router is untouched.

@@ -79,7 +79,12 @@ pub mod ost_bridge {
         )?;
 
         // 2) Mint the same amount of OSTG to the user. Authority = bridge PDA.
-        let signer_seeds: &[&[&[u8]]] = &[&[b"bridge", &[ctx.accounts.bridge.bump]]];
+        // Signer seeds MUST match the PDA derivation exactly — which now includes
+        // ostc_mint (see the Initialize account). Bind to locals so the seed slice
+        // can borrow them.
+        let ostc_key = ctx.accounts.ostc_mint.key();
+        let bump = [ctx.accounts.bridge.bump];
+        let signer_seeds: &[&[&[u8]]] = &[&[b"bridge", ostc_key.as_ref(), &bump]];
         token_interface::mint_to(
             CpiContext::new_with_signer(
                 ctx.accounts.token_program.to_account_info(),
@@ -121,7 +126,10 @@ pub mod ost_bridge {
         )?;
 
         // 2) Release the same amount of OSTC from the vault. Authority = PDA.
-        let signer_seeds: &[&[&[u8]]] = &[&[b"bridge", &[ctx.accounts.bridge.bump]]];
+        // Seeds must match the ostc_mint-keyed derivation (see Initialize).
+        let ostc_key = ctx.accounts.ostc_mint.key();
+        let bump = [ctx.accounts.bridge.bump];
+        let signer_seeds: &[&[&[u8]]] = &[&[b"bridge", ostc_key.as_ref(), &bump]];
         token_interface::transfer_checked(
             CpiContext::new_with_signer(
                 ctx.accounts.token_program.to_account_info(),
@@ -150,11 +158,18 @@ pub mod ost_bridge {
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {
+    // Keyed BY the OSTC mint on purpose. A single [b"bridge"] PDA is a global
+    // singleton, which means a test bridge and the production bridge would
+    // collide on the same account — and whichever ran initialize() first pins it
+    // forever. Including ostc_mint in the seed gives each currency its own
+    // deterministic, un-collidable bridge: the real-OST bridge and any throwaway
+    // test bridge are simply different PDAs. It also makes the bridge address for
+    // a currency derivable by anyone from the mint alone.
     #[account(
         init,
         payer = payer,
         space = 8 + Bridge::SIZE,
-        seeds = [b"bridge"],
+        seeds = [b"bridge", ostc_mint.key().as_ref()],
         bump
     )]
     pub bridge: Account<'info, Bridge>,
@@ -192,7 +207,7 @@ pub struct Initialize<'info> {
 #[derive(Accounts)]
 pub struct Deposit<'info> {
     #[account(
-        seeds = [b"bridge"],
+        seeds = [b"bridge", ostc_mint.key().as_ref()],
         bump = bridge.bump,
         has_one = ostc_mint,
         has_one = ostg_mint,
@@ -232,7 +247,7 @@ pub struct Deposit<'info> {
 #[derive(Accounts)]
 pub struct Withdraw<'info> {
     #[account(
-        seeds = [b"bridge"],
+        seeds = [b"bridge", ostc_mint.key().as_ref()],
         bump = bridge.bump,
         has_one = ostc_mint,
         has_one = ostg_mint,

@@ -40,22 +40,24 @@ const say = (ok, m) => { console.log((ok ? '  PASS ' : '  FAIL ') + m); if (!ok)
 const tokBal = async (a) => { try { return ui((await getAccount(conn, a, 'confirmed', TP)).amount); } catch { return 0; } };
 const supply = async (m) => ui((await getMint(conn, m, 'confirmed', TP)).supply);
 
-// PDAs
-const [bridge] = PublicKey.findProgramAddressSync([Buffer.from('bridge')], PROGRAM_ID);
-const [vault] = PublicKey.findProgramAddressSync([Buffer.from('vault'), bridge.toBuffer()], PROGRAM_ID);
+// PDAs are derived AFTER the OSTC mint exists — the bridge is now keyed by it.
+let bridge, vault;
 
 async function send(ix, signers = [authority]) {
   return sendAndConfirmTransaction(conn, new Transaction().add(ix), signers, { commitment: 'confirmed' });
 }
 
 (async () => {
-  console.log('bridge PDA :', bridge.toBase58());
-  console.log('vault  PDA :', vault.toBase58());
-
   // 1) Throwaway OSTC test mint (we hold mint authority so we can fund freely).
   console.log('\n1) create test OSTC mint + OSTG mint (authority = bridge PDA)');
   const ostcMint = await createMint(conn, authority, authority.publicKey, null, DEC, undefined, undefined, TP);
   say(true, 'OSTC test mint ' + ostcMint.toBase58());
+  // Bridge is keyed by the OSTC mint, so a throwaway test mint => a throwaway
+  // bridge PDA that can never collide with production.
+  [bridge] = PublicKey.findProgramAddressSync([Buffer.from('bridge'), ostcMint.toBuffer()], PROGRAM_ID);
+  [vault] = PublicKey.findProgramAddressSync([Buffer.from('vault'), bridge.toBuffer()], PROGRAM_ID);
+  console.log('   bridge PDA', bridge.toBase58());
+  console.log('   vault  PDA', vault.toBase58());
 
   // 2) OSTG mint — authority = the bridge PDA, freeze authority = None. This is
   //    the exact requirement flagged in the program: mint authority must be the
