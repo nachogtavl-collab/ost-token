@@ -677,6 +677,11 @@
         roundInFlight = null;
         return null;
       });
+    // RETURN the promise. The refactor that added roundInFlight turned the
+    // original `return fetch(...)` into a bare assignment, so this path returned
+    // undefined and callers doing `fetchCanonicalRound().then(...)` threw
+    // "Cannot read properties of undefined (reading 'then')" every poll cycle.
+    return roundInFlight;
   }
 
   // Seed the local BTC tick series with the SHARED ring from the worker the

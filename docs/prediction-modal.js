@@ -115,6 +115,9 @@
         roundInFlight = null;
         return null;
       });
+    // Same missing-return regression as prediction-pro.js: the roundInFlight
+    // refactor dropped the `return`, so this path handed back undefined.
+    return roundInFlight;
   }
   function canonicalRoundMatchesMarket(market, round) {
     return !!(market && market.meta && round && Number(market.meta.openAt) === Number(round.openAt));

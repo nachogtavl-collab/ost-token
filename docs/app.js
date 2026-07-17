@@ -7814,7 +7814,11 @@
             var dOst = ostBal - prev.ost;
             if (dSol > 0.0001) {
               toast('💰', 'Received ' + dSol.toFixed(4) + ' SOL');
-              if (typeof window.recordOstSnapshot === 'function') {
+              // Never feed an UNKNOWN OST balance into the portfolio chart. When
+              // the OST read failed (ostBal === undefined), recording it would
+              // plot an undefined point and corrupt the curve — the same
+              // unknown-is-not-zero discipline as the balance display.
+              if (typeof window.recordOstSnapshot === 'function' && ostBal !== undefined) {
                 try { window.recordOstSnapshot({ ts: Date.now(), ostBalance: ostBal, solBalance: solBal, kind: 'recv-sol', amount: dSol }); } catch (_) {}
               }
               if (walletFundingState.needsManualFunding && walletFundingState.walletAddress === key && solBal >= 0.02) {
@@ -7823,12 +7827,15 @@
             }
             if (dOst > 0.0001) {
               toast('🟡', 'Received ' + dOst.toFixed(4) + ' OST');
-              if (typeof window.recordOstSnapshot === 'function') {
+              if (typeof window.recordOstSnapshot === 'function' && ostBal !== undefined) {
                 try { window.recordOstSnapshot({ ts: Date.now(), ostBalance: ostBal, solBalance: solBal, kind: 'recv-ost', amount: dOst }); } catch (_) {}
               }
             }
           }
-          __ostLastBalances[key] = { sol: solBal, ost: ostBal, ts: Date.now() };
+          // Preserve the last KNOWN OST balance when the read failed — writing
+          // undefined here would make the next diff NaN and silently disable
+          // receive-detection until a good read lands.
+          __ostLastBalances[key] = { sol: solBal, ost: (ostBal === undefined && prev ? prev.ost : ostBal), ts: Date.now() };
         } catch (_) {}
 
         return {
