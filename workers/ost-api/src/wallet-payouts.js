@@ -112,11 +112,69 @@ export class PayoutGate {
     if (!(amt > 0)) return json({ error: 'invalid_amount' }, 400);
     const payoutId = cleanId(body && body.payoutId, 'pay') || cleanId('pay-' + stableHash([walletStr, amt.toFixed(9), memo].join('|')), 'pay');
 
-    // Locked section: idempotency check, solvency decision, build + BROADCAST
-    // (a single fast RPC call), and durably persisting the resulting
-    // signature. Kept short on purpose — see the note on fetch() above.
-    // Confirmation (slow, can take 10s+ of multi-endpoint polling) happens
-    // AFTER this returns, unlocked, so it never blocks other requests.
+    // Idempotency pre-check, unlocked — cheap (storage only), and lets a
+    // known-confirmed retry short-circuit without touching the network at all.
+    const already = await this.state.storage.get('payout:' + payoutId);
+    if (already && already.status === 'confirmed' && already.wallet === walletStr && Math.abs(already.ost - amt) < 1e-9) {
+      return json({ ok: true, sig: already.sig, ost: already.ost, idempotent: true });
+    }
+
+    // Solvency checks and the RPC reads/instruction-building they need are
+    // done UNLOCKED. They used to run inside blockConcurrencyWhile, which
+    // works locally but hit Cloudflare's production blockConcurrencyWhile
+    // ceiling for real when devnet's public RPC was slow (withRpc's retry
+    // backoff across 3 endpoints can take several seconds) — the platform
+    // aborted the call outright (its own opaque error, not one of ours).
+    // These reads don't need serialization for correctness: Solana itself
+    // rejects an instruction that would overdraw the pool, so a stale
+    // balance snapshot here is a soft business-rule risk, not a fund-safety
+    // one. Only the payoutId-dedup decide+write below needs the lock.
+    const cfg = Pool.vaultConfig(this.env);
+    if (cfg.maxSinglePayout > 0 && amt > cfg.maxSinglePayout) {
+      return json({ error: 'cap_exceeded', message: 'Payout ' + Pool.formatOstAmount(amt) + ' OST exceeds the vault limit of ' + Pool.formatOstAmount(cfg.maxSinglePayout) + ' OST.' }, 409);
+    }
+    let poolBal;
+    try {
+      poolBal = await Pool.getPoolOstBalance(this.env);
+    } catch (e) {
+      return json({ error: 'balance_unknown', message: 'Could not verify the vault balance right now — try again shortly.' }, 503);
+    }
+    if (poolBal + 1e-9 < amt) {
+      return json({ error: 'insufficient_pool', message: 'OST payout vault needs refill before paying ' + Pool.formatOstAmount(amt) + ' OST.' }, 409);
+    }
+    if (cfg.maxPayoutFraction > 0 && cfg.maxPayoutFraction < 1) {
+      const dynamicCap = poolBal * cfg.maxPayoutFraction;
+      if (amt > dynamicCap) {
+        return json({ error: 'solvency_cap', message: 'This payout of ' + Pool.formatOstAmount(amt) + ' OST exceeds the live vault solvency cap of ' + Pool.formatOstAmount(dynamicCap) + ' OST.' }, 409);
+      }
+    }
+    if (cfg.minReserve > 0 && poolBal - amt < cfg.minReserve) {
+      return json({ error: 'reserve_protected', message: 'OST payout vault is protecting its shared reserve.' }, 409);
+    }
+
+    const conn = Pool.getConnection();
+    const owner = new PublicKey(walletStr);
+    const mint = Pool.getMint(this.env);
+    const pool = Pool.getPoolKeypair(this.env);
+    const fromAta = Pool.poolAta(this.env);
+    const toAta = Pool.userAta(this.env, owner);
+
+    const instructions = [];
+    if (!(await Pool.ataExists(conn, toAta))) {
+      instructions.push(Pool.ixCreateAta(pool.publicKey, toAta, owner, mint));
+    }
+    const rawAmount = Pool.decimalToRawAmount(amt, Pool.OST_TOKEN_DECIMALS);
+    instructions.push(Pool.ixTransferChecked(fromAta, mint, toAta, pool.publicKey, rawAmount, Pool.OST_TOKEN_DECIMALS));
+    // payoutId always goes on-chain in the memo (prefixed, ahead of any
+    // caller-supplied memo text) so a stuck 'building' record below can
+    // actually be reconciled by searching the pool's recent signatures for
+    // this id, instead of reconciliation being purely aspirational.
+    instructions.push(Pool.ixMemo('payoutId:' + payoutId + (memo ? ' ' + memo : ''), pool.publicKey));
+
+    // Locked section: idempotency decide + write + BROADCAST (one RPC call,
+    // not a multi-endpoint retry loop) + durably persist the signature.
+    // Confirmation (slow, can take 10s+ of polling) happens AFTER this
+    // returns, unlocked, so it never blocks other requests.
     const outcome = await this.state.blockConcurrencyWhile(async () => {
       const existing = await this.state.storage.get('payout:' + payoutId);
       if (existing && existing.status === 'confirmed' && existing.wallet === walletStr && Math.abs(existing.ost - amt) < 1e-9) {
@@ -131,52 +189,14 @@ export class PayoutGate {
         // We were mid-send when this record was last written and never got
         // to persist a signature. We cannot tell whether buildSignSend's
         // broadcast actually landed on-chain before whatever interrupted us
-        // (observed directly during Phase 0 testing: a Miniflare
-        // blockConcurrencyWhile timeout killed the request AFTER a real
-        // devnet broadcast succeeded but BEFORE the 'sent' write — a retry
-        // that just rebuilt and resent paid out twice). Blindly retrying
-        // here is unsafe in exactly the same way; this needs a human to
-        // check the pool's recent transaction history for a payoutId-tagged
-        // memo before deciding whether to resend.
+        // (observed directly during Phase 0 testing: a blockConcurrencyWhile
+        // timeout killed a request AFTER a real devnet broadcast succeeded
+        // but BEFORE the 'sent' write — a retry that just rebuilt and resent
+        // paid out twice). Blindly retrying here is unsafe the same way;
+        // this needs a human to check the pool's recent transaction history
+        // for a payoutId-tagged memo before deciding whether to resend.
         return { done: true, response: json({ error: 'payout_unknown_state', message: 'A previous attempt for this payout did not finish cleanly and may or may not have landed on-chain. Support must reconcile before retrying — do not resend automatically.', payoutId }, 409) };
       }
-
-      const cfg = Pool.vaultConfig(this.env);
-      if (cfg.maxSinglePayout > 0 && amt > cfg.maxSinglePayout) {
-        return { done: true, response: json({ error: 'cap_exceeded', message: 'Payout ' + Pool.formatOstAmount(amt) + ' OST exceeds the vault limit of ' + Pool.formatOstAmount(cfg.maxSinglePayout) + ' OST.' }, 409) };
-      }
-      const poolBal = await Pool.getPoolOstBalance(this.env);
-      if (poolBal + 1e-9 < amt) {
-        return { done: true, response: json({ error: 'insufficient_pool', message: 'OST payout vault needs refill before paying ' + Pool.formatOstAmount(amt) + ' OST.' }, 409) };
-      }
-      if (cfg.maxPayoutFraction > 0 && cfg.maxPayoutFraction < 1) {
-        const dynamicCap = poolBal * cfg.maxPayoutFraction;
-        if (amt > dynamicCap) {
-          return { done: true, response: json({ error: 'solvency_cap', message: 'This payout of ' + Pool.formatOstAmount(amt) + ' OST exceeds the live vault solvency cap of ' + Pool.formatOstAmount(dynamicCap) + ' OST.' }, 409) };
-        }
-      }
-      if (cfg.minReserve > 0 && poolBal - amt < cfg.minReserve) {
-        return { done: true, response: json({ error: 'reserve_protected', message: 'OST payout vault is protecting its shared reserve.' }, 409) };
-      }
-
-      const conn = Pool.getConnection();
-      const owner = new PublicKey(walletStr);
-      const mint = Pool.getMint(this.env);
-      const pool = Pool.getPoolKeypair(this.env);
-      const fromAta = Pool.poolAta(this.env);
-      const toAta = Pool.userAta(this.env, owner);
-
-      const instructions = [];
-      if (!(await Pool.ataExists(conn, toAta))) {
-        instructions.push(Pool.ixCreateAta(pool.publicKey, toAta, owner, mint));
-      }
-      const rawAmount = Pool.decimalToRawAmount(amt, Pool.OST_TOKEN_DECIMALS);
-      instructions.push(Pool.ixTransferChecked(fromAta, mint, toAta, pool.publicKey, rawAmount, Pool.OST_TOKEN_DECIMALS));
-      // payoutId always goes on-chain in the memo (prefixed, ahead of any
-      // caller-supplied memo text) so a stuck 'building' record above can
-      // actually be reconciled by searching the pool's recent signatures for
-      // this id, instead of reconciliation being purely aspirational.
-      instructions.push(Pool.ixMemo('payoutId:' + payoutId + (memo ? ' ' + memo : ''), pool.publicKey));
 
       // In-flight record BEFORE broadcasting — a crash/eviction after send
       // but before this write is what turns a retry into a double-pay.

@@ -32,11 +32,33 @@ import {
 export const OST_TOKEN_DECIMALS = 9;
 const MEMO_PROGRAM_ID = new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');
 
+// Fallbacks only — every one of these turned out unusable for real RPC calls
+// from Cloudflare's egress when tested directly against the deployed worker:
+// api.devnet.solana.com 403s Cloudflare's shared IPs outright ("Your IP or
+// provider is blocked from this endpoint"); Helius' "?api-key=public" only
+// permits trivial health-checks (401s on real methods); Alchemy's demo key
+// is rate-limited into uselessness (429). None of this showed up in local
+// `wrangler dev` testing because that runs from a normal residential IP.
+// env.SOLANA_DEVNET_RPC (a real Helius/QuickNode/etc. key, set via
+// `wrangler secret put`) is prepended at request time by ensureRpcConfigured
+// and is the only endpoint actually expected to work in production — these
+// three are last-resort fallbacks if that secret is ever missing.
 const RPC_ENDPOINTS = [
-  'https://api.devnet.solana.com',
   'https://devnet.helius-rpc.com/?api-key=public',
-  'https://rpc.ankr.com/solana_devnet'
+  'https://solana-devnet.g.alchemy.com/v2/demo',
+  'https://api.devnet.solana.com'
 ];
+
+let rpcConfigured = false;
+// Cheap and idempotent — safe to call at the top of every exported function
+// that receives env. env bindings don't vary per-request, so this only does
+// real work once per warm isolate.
+export function ensureRpcConfigured(env) {
+  if (rpcConfigured) return;
+  rpcConfigured = true;
+  const override = env && env.SOLANA_DEVNET_RPC;
+  if (override && !RPC_ENDPOINTS.includes(override)) RPC_ENDPOINTS.unshift(override);
+}
 
 let rpcIndex = 0;
 const rpcConnections = {};
@@ -70,6 +92,7 @@ export async function withRpc(label, fn) {
 
 let cachedPool = null;
 export function getPoolKeypair(env) {
+  ensureRpcConfigured(env);
   if (cachedPool) return cachedPool;
   const raw = env && env.OST_POOL_SECRET_KEY;
   if (!raw) throw new Error('OST_POOL_SECRET_KEY not configured');
@@ -188,11 +211,19 @@ export function assertPoolAbsent(instructions, poolPubkey) {
 // -----------------------------------------------------------------------
 // Balances
 // -----------------------------------------------------------------------
+// Deliberately does NOT catch-and-return-0 on failure. This reads the
+// POOL'S OWN ATA, which is an invariant of a healthy deployment (created at
+// init time, never expected to disappear) — any error here means the read
+// failed, not that the balance is zero. Swallowing it into 0n used to make
+// a transient RPC hiccup indistinguishable from "the vault is empty," which
+// (a) produced a false insufficient_pool rejection on a real, well-funded
+// pool, and (b) silently defeated withRpc's multi-endpoint retry, since the
+// error never propagated far enough to trigger it. Let it throw; withRpc
+// retries across endpoints, and a genuine failure surfaces honestly instead
+// of masquerading as a business rejection.
 export async function getTokenRawBalance(conn, ata) {
-  try {
-    const bal = await conn.getTokenAccountBalance(ata);
-    return BigInt((bal && bal.value && bal.value.amount) || '0');
-  } catch (_) { return 0n; }
+  const bal = await conn.getTokenAccountBalance(ata);
+  return BigInt((bal && bal.value && bal.value.amount) || '0');
 }
 
 export async function getPoolOstBalance(env) {
@@ -204,7 +235,7 @@ export async function getPoolSolBalance(env) {
   return withRpc('pool-sol', async conn => {
     const lam = await conn.getBalance(pool.publicKey);
     return lam / LAMPORTS_PER_SOL;
-  }).catch(() => 0);
+  });
 }
 
 export async function ataExists(conn, ata) {
@@ -244,17 +275,13 @@ export class BlockhashExpiredError extends Error {
 }
 
 export async function confirmSignature(sig, blockhashInfo, label) {
-  const primaryConn = getConnection();
-  try {
-    const res = await primaryConn.confirmTransaction({
-      signature: sig,
-      blockhash: blockhashInfo.blockhash,
-      lastValidBlockHeight: blockhashInfo.lastValidBlockHeight
-    }, 'confirmed');
-    if (res && res.value && res.value.err) throw new Error('On-chain failure: ' + JSON.stringify(res.value.err));
-    return sig;
-  } catch (_) { /* fall through to polling */ }
-
+  // Deliberately skips @solana/web3.js's Connection.confirmTransaction() —
+  // without a WebSocket subscription (which this runtime doesn't give it),
+  // it falls back to slow internal long-polling that was observed to hang
+  // for 45-60s+ against a live deployment even though the RPC endpoint
+  // itself responds in well under a second. Goes straight to the manual
+  // getSignatureStatuses polling loop below, which was built for exactly
+  // this reason and is what actually gets used regardless.
   let lastStatus = null;
   for (let attempt = 0; attempt < 8; attempt++) {
     for (let i = 0; i < RPC_ENDPOINTS.length; i++) {

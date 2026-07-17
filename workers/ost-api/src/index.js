@@ -2573,10 +2573,17 @@ function topupRpcUrls(env, cluster) {
       'https://api.mainnet-beta.solana.com'
     ].filter(Boolean);
   }
+  // api.devnet.solana.com 403s Cloudflare Workers' shared egress IPs
+  // ("Your IP or provider is blocked from this endpoint" — confirmed
+  // directly against this deployed worker) and rpc.ankr.com/solana_devnet
+  // now requires an API key too, so both were silently failing every devnet
+  // topup verification. Helius' public devnet endpoint and Alchemy's demo
+  // endpoint verified working from this worker's actual egress.
   return [
     env.SOLANA_DEVNET_RPC,
-    'https://api.devnet.solana.com',
-    'https://rpc.ankr.com/solana_devnet'
+    'https://devnet.helius-rpc.com/?api-key=public',
+    'https://solana-devnet.g.alchemy.com/v2/demo',
+    'https://api.devnet.solana.com'
   ].filter(Boolean);
 }
 
@@ -2839,6 +2846,9 @@ export default {
     if (method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
+
+
+
 
 
     // GET /health/hub — is the market authority actually being used? A year of
