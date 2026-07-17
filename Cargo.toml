@@ -2,7 +2,8 @@
 members = [
     "programs/ost-token",
     "programs/ost-betting",
-    "programs/ost-games"
+    "programs/ost-games",
+    "programs/ost-bridge"
 ]
 resolver = "2"
 

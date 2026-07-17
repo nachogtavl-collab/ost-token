@@ -1,0 +1,22 @@
+[package]
+name = "ost-bridge"
+version = "0.1.0"
+description = "OST 1:1 bridge — escrow OSTC, mint OSTG; burn OSTG, release OSTC"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "ost_bridge"
+
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+default = []
+
+[dependencies]
+anchor-lang = { version = "0.31", features = ["init-if-needed"] }
+# token_interface: same CPIs work for classic SPL Token AND Token-2022 (OST is 2022).
+anchor-spl = { version = "0.31", features = ["token_2022"] }
