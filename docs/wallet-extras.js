@@ -1787,21 +1787,33 @@
   // Expose so external modules (e.g. prediction buys in app.js) can log events.
   window.recordOstSnapshot = recordSnapshot;
 
+  var _lastBalFetchAt = 0;
+  var BAL_FETCH_THROTTLE_MS = 15000;
   window.recordOstPlatformEvent = async function recordOstPlatformEvent(event) {
     var lastSnapshot = loadSnapshots().slice(-1)[0] || {};
     var ostBalance = Number(lastSnapshot.ostBalance || 0) || 0;
     var solBalance = Number(lastSnapshot.solBalance || 0) || 0;
-    try {
-      var wallet = window.OST_WALLET;
-      if (wallet && wallet.session && wallet.session.publicKey) {
-        var connection = wallet.getConnection && wallet.getConnection();
-        ostBalance = await wallet.getOstBalance(wallet.session.publicKey);
-        if (connection) {
-          solBalance = (await connection.getBalance(wallet.session.publicKey)) / solanaWeb3.LAMPORTS_PER_SOL;
+    var now = Date.now();
+    // Throttle the on-chain balance fetch. This function is called on rapid events
+    // (game losses, retained-loss entries) and each call otherwise fired TWO
+    // awaited Solana RPC requests — a storm under auto-bet. Reuse the most recent
+    // snapshot's balances if we fetched within the throttle window; only real,
+    // spaced-out events (launchpad buys/sells, sends) pay for a fresh fetch. The
+    // 30s snapshot poller still keeps the portfolio curve current on its own.
+    if (now - _lastBalFetchAt >= BAL_FETCH_THROTTLE_MS) {
+      try {
+        var wallet = window.OST_WALLET;
+        if (wallet && wallet.session && wallet.session.publicKey) {
+          var connection = wallet.getConnection && wallet.getConnection();
+          ostBalance = await wallet.getOstBalance(wallet.session.publicKey);
+          if (connection) {
+            solBalance = (await connection.getBalance(wallet.session.publicKey)) / solanaWeb3.LAMPORTS_PER_SOL;
+          }
+          _lastBalFetchAt = now;
         }
-      }
-    } catch (e) {}
-    recordSnapshot(Object.assign({ ts: Date.now(), ostBalance: ostBalance, solBalance: solBalance }, event || {}));
+      } catch (e) {}
+    }
+    recordSnapshot(Object.assign({ ts: now, ostBalance: ostBalance, solBalance: solBalance }, event || {}));
     refreshChartIfReady();
     notifyTxHistory();
   };

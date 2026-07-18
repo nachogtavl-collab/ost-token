@@ -148,13 +148,13 @@
     recordRound(game, bet, payout, mult);
     pushHistory(mult);
     if (statusEl) statusEl.textContent = winText + (houseFee > 0 ? ' · house −' + fmt(houseFee) + ' OST' : '');
+    // Only a real win (payout above the bet) gets a toast + burst. A toast on
+    // EVERY round — including losses and break-even returns — was the spam,
+    // especially under auto-bet; the per-game status line + balance already show
+    // those outcomes, so the extra toasts were pure noise.
     if (payout > bet) {
       toast('+' + fmt(payout - bet) + ' OST · ' + shortMult(mult) + (houseFee > 0 ? ' · house −' + fmt(houseFee) : ''), 'win');
       popBurst(stageEl || statusEl && statusEl.parentElement, 20);
-    } else if (payout > 0) {
-      toast('Returned ' + fmt(payout) + ' OST · ' + shortMult(mult), 'soft');
-    } else {
-      toast('-' + fmt(bet) + ' OST', 'loss');
     }
     var net = Number(payout || 0) - Number(bet || 0);
     recordGameLedgerEvent(net > 0 ? 'game-win' : net < 0 ? 'game-loss' : 'game-push', Math.abs(net) || Number(bet || 0), {
@@ -236,15 +236,15 @@
         try { vault.recordGameResult({ kind: kind, amount: Number(amount || 0), game: extra && extra.game, extra: extra || {} }); } catch (_) {}
       }
     }
-    if (!window.recordOstPlatformEvent) return;
-    try {
-      window.recordOstPlatformEvent(Object.assign({
-        kind: kind,
-        amount: Number(amount || 0),
-        ts: Date.now(),
-        source: 'games'
-      }, extra || {}));
-    } catch (_) {}
+    // Deliberately DO NOT call window.recordOstPlatformEvent here. Games move the
+    // OFF-CHAIN credits / OSTG play balance — the user's on-chain OST/SOL balance
+    // does not change per round, yet recordOstPlatformEvent fires TWO awaited
+    // Solana RPC balance fetches every call. Doing that per round (a storm under
+    // auto-bet) only re-snapshotted an UNCHANGED balance. Game activity is already
+    // captured locally (recordRound + the offline-vault ledger) and reported to
+    // the network by ost-telemetry (coalesced to one write/min via the
+    // ost-faucet-hub-award / ost:game-wager events) and the 30s wallet snapshot
+    // poller. So per-round platform snapshots were pure waste — removed.
   }
 
   // ────────────────────────────────────────────────────────────────────────
