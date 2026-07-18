@@ -166,36 +166,30 @@
     if (!trader) throw new Error('Connect a wallet first.');
     ensureCurveState(coin);
     if ((coin.curve || 0) >= 100) throw new Error('Coin has graduated — trading locked until DEX migration.');
-    var bal = await ostBalance(trader);
-    if (bal + 1e-9 < amt) throw new Error('Not enough OST in wallet (need ' + amt.toFixed(2) + ', have ' + bal.toFixed(2) + ').');
-
-    var s0 = coin.tokensSold;
-    var supply = coin.supply;
-    var tokens = tokensForOst(amt, s0, supply);
-    if (s0 + tokens > supply) {
-      tokens = supply - s0;
-      amt = curveCost(s0, supply, supply);
+    if (!window.OST_PLAY || typeof window.OST_PLAY.memeBuy !== 'function') {
+      throw new Error('Play service is still loading. Try again in a moment.');
     }
-    if (!window.OST_RESCUE || typeof window.OST_RESCUE.userSendsOstToPool !== 'function') {
-      throw new Error('OST launchpad vault is still loading. Try again in a moment.');
-    }
-    var buyMemo = JSON.stringify({ k: 'launchpad-buy', mint: coin.mint, symbol: coin.symbol, ost: amt, trader: trader });
-    var buySettlement = await window.OST_RESCUE.userSendsOstToPool(amt, buyMemo);
-    coin.tokensSold = s0 + tokens;
-    coin.trades = (Number(coin.trades) || 0) + 1;
-    recomputeRegistryFields(coin);
-
-    // Update holdings
+    // Server-authoritative: it debits the OSTG play balance, mints tokens on the
+    // curve it owns, and returns the settled coin + position. No local math, no
+    // real-OST transfer.
+    var r = await window.OST_PLAY.memeBuy(coin.mint, coin.symbol, amt);
+    if (!r || !r.ok) throw new Error((r && (r.message || r.error)) || 'Buy was not accepted.');
+    var tokens = Number(r.tokens) || 0;
+    amt = Number(r.ostIn) || amt;
+    // Mirror server truth into the local registry/holdings for display.
+    coin.tokensSold = Number(r.coin.sold);
+    coin.supply = Number(r.coin.supply) || coin.supply;
+    coin.price = Number(r.coin.price);
+    coin.mcap = Number(r.coin.mcap);
+    coin.curve = Number(r.coin.curve);
+    coin.trades = Number(r.coin.trades) || (Number(coin.trades) || 0) + 1;
     var all = loadHoldings();
-    var pos = (all[trader] && all[trader][coin.mint]) || { tokens: 0, costOst: 0 };
-    pos.tokens = (Number(pos.tokens) || 0) + tokens;
-    pos.costOst = (Number(pos.costOst) || 0) + amt;
     all[trader] = all[trader] || {};
-    all[trader][coin.mint] = pos;
+    all[trader][coin.mint] = { tokens: Number(r.position.tokens) || 0, costOst: Number(r.position.costOst) || 0 };
     saveHoldings(all);
     updateCoin(coin);
 
-    var sig = buySettlement && buySettlement.sig || sigShort();
+    var sig = sigShort();
     syncTradeToWorker(coin, 'buy', amt, trader, sig); // share to the registry (amount = OST in)
     recordTrade({ ts: Date.now(), trader: trader, mint: coin.mint, symbol: coin.symbol, side: 'buy', ost: amt, tokens: tokens, price: coin.price, mcap: coin.mcap, sig: sig });
     try {
@@ -219,43 +213,34 @@
     if (tokens > pos.tokens + 1e-9) {
       throw new Error('You only hold ' + pos.tokens.toFixed(2) + ' ' + (coin.symbol || 'tokens') + '. Buy more before selling.');
     }
+    if (!window.OST_PLAY || typeof window.OST_PLAY.memeSell !== 'function') {
+      throw new Error('Play service is still loading. Try again in a moment.');
+    }
     var s1 = coin.tokensSold;
-    var s0 = Math.max(0, s1 - tokens);
-    var ostOut = curveCost(s0, s1, coin.supply);
-    // House edge, live: rake the protocol's cut of the PROFIT (proceeds above
-    // the cost basis of the tokens being sold). Selling at/under cost is never
-    // taxed; the trader receives the NET.
-    var sellBasis = Math.max(0, Number(pos.costOst || 0) * (pos.tokens > 0 ? tokens / pos.tokens : 0));
-    var sellHouseFee = 0;
-    if (window.OST_HOUSE && typeof window.OST_HOUSE.rake === 'function') {
-      var lr = window.OST_HOUSE.rake(ostOut, sellBasis, 'memecoin', { symbol: coin.symbol });
-      sellHouseFee = lr.fee;
-      ostOut = lr.net;
-    }
-    if (!window.OST_RESCUE || typeof window.OST_RESCUE.payoutOst !== 'function') {
-      throw new Error('OST launchpad payout vault is still loading. Try again in a moment.');
-    }
-    var sellMemo = JSON.stringify({ k: 'launchpad-sell', mint: coin.mint, symbol: coin.symbol, ost: ostOut, tokens: tokens, trader: trader });
-    var sellSettlement = await window.OST_RESCUE.payoutOst(trader, ostOut, sellMemo, {
-      idempotencyKey: 'launchpad-sell:' + trader + ':' + coin.mint + ':' + tokens.toFixed(6) + ':' + s1.toFixed(6)
-    });
-    coin.tokensSold = s0;
-    coin.trades = (Number(coin.trades) || 0) + 1;
-    recomputeRegistryFields(coin);
-
-    var all = loadHoldings();
     var ratio = pos.tokens > 0 ? tokens / pos.tokens : 0;
     var costBasisSold = Math.max(0, Number(pos.costOst || 0) * ratio);
+    // Server-authoritative: it computes curve proceeds, takes the 2%-of-profit
+    // house fee, and CREDITS the OSTG play balance (solvency-gated). No real-OST
+    // payout, no client-chosen amount.
+    var r = await window.OST_PLAY.memeSell(coin.mint, tokens);
+    if (!r || !r.ok) throw new Error((r && (r.message || r.error)) || 'Sell was not accepted.');
+    var ostOut = Number(r.ostOut) || 0;
+    var sellHouseFee = Number(r.fee) || 0;
     var retained = Math.max(0, costBasisSold - ostOut);
-    pos.costOst = Math.max(0, pos.costOst - pos.costOst * ratio);
-    pos.tokens = Math.max(0, pos.tokens - tokens);
+    coin.tokensSold = Number(r.coin.sold);
+    coin.price = Number(r.coin.price);
+    coin.mcap = Number(r.coin.mcap);
+    coin.curve = Number(r.coin.curve);
+    coin.trades = Number(r.coin.trades) || (Number(coin.trades) || 0) + 1;
+
+    var all = loadHoldings();
     all[trader] = all[trader] || {};
-    if (pos.tokens < 1e-9) delete all[trader][coin.mint];
-    else all[trader][coin.mint] = pos;
+    if (!r.position || Number(r.position.tokens) < 1e-9) delete all[trader][coin.mint];
+    else all[trader][coin.mint] = { tokens: Number(r.position.tokens) || 0, costOst: Number(r.position.costOst) || 0 };
     saveHoldings(all);
     updateCoin(coin);
 
-    var sig = sellSettlement && sellSettlement.sig || sigShort();
+    var sig = sigShort();
     syncTradeToWorker(coin, 'sell', tokens, trader, sig); // share to the registry (amount = tokens out)
     recordTrade({ ts: Date.now(), trader: trader, mint: coin.mint, symbol: coin.symbol, side: 'sell', ost: ostOut, tokens: tokens, price: coin.price, mcap: coin.mcap, sig: sig });
     try {

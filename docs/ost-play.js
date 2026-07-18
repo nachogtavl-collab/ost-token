@@ -108,6 +108,31 @@
     return r;
   }
 
+  // ---- memecoins (server-authoritative bonding curve, play-balance funded) --
+  async function memeBuy(mint, symbol, ostIn) {
+    var a = addr();
+    if (!a) throw new Error('Connect your wallet first.');
+    var r = await api('POST', '/play/meme/buy', { wallet: a, mint: mint, symbol: symbol || '', ostIn: Number(ostIn) });
+    if (typeof r.balance === 'number') { mirror = r.balance; emit(); }
+    return r;
+  }
+  async function memeSell(mint, tokensIn) {
+    var a = addr();
+    if (!a) throw new Error('Connect your wallet first.');
+    var r = await api('POST', '/play/meme/sell', { wallet: a, mint: mint, tokensIn: Number(tokensIn) });
+    if (typeof r.balance === 'number') { mirror = r.balance; emit(); }
+    return r;
+  }
+  async function memeCoin(mint, symbol) {
+    var q = '/play/meme/coin?mint=' + encodeURIComponent(mint) + (symbol ? '&symbol=' + encodeURIComponent(symbol) : '');
+    return (await api('GET', q)).coin;
+  }
+  async function memeHoldings() {
+    var a = addr();
+    if (!a) return {};
+    return (await api('GET', '/play/meme/holdings?wallet=' + encodeURIComponent(a))).holdings || {};
+  }
+
   // ---- deposit: OSTG wallet -> play balance (gas-free) --------------------
   // Requires OSTG in the wallet (get it 1:1 from OST via the bridge). Moves it to
   // the pool with the fee-only cosign path (pool pays gas), then credits the
@@ -187,6 +212,10 @@
     sessionStart: sessionStart,
     sessionStep: sessionStep,
     sessionCashout: sessionCashout,
+    memeBuy: memeBuy,
+    memeSell: memeSell,
+    memeCoin: memeCoin,
+    memeHoldings: memeHoldings,
     deposit: deposit,
     cashout: cashout,
     addresses: { api: API, ostgMint: OSTG_MINT, poolOstgAta: POOL_OSTG_ATA },

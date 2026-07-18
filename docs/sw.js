@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ost-pwa-cache-v293';
+const CACHE_NAME = 'ost-pwa-cache-v294';
 const RUNTIME_CACHE = 'ost-pwa-runtime-v253';
 const CACHE_PREFIX = 'ost-pwa-';
 
@@ -128,13 +128,13 @@ const PRECACHE_PATHS = [
   './ost-update.js?v=1',
   './ost-offline-mode.js?v=1',
   './ost-bridge-ui.js?v=2',
-  './ost-play.js?v=2',
+  './ost-play.js?v=3',
   './ost-audit.js?v=2',
   './offline-vault.js?v=10',
   './ost-scroll-fix.css?v=1',
   './apple-tap.js?v=4',
   './ost-card.js?v=8',
-  './launchpad-engine.js?v=5',
+  './launchpad-engine.js?v=6',
   './swap-resilient.js?v=202',
   './ost-games.js?v=27',
   './code-academy.js?v=3',
