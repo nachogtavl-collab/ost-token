@@ -128,3 +128,51 @@ OST via the bridge). No unbacked play balance is ever minted. Delete
 
 Do them in order. Each is a real, testable unit; none "big-bangs" the money
 surfaces that already caused the fake-signature loss.
+
+---
+
+## Increment 4 detail — the games are NOT uniform (found while porting)
+
+Rewiring "the games" is not 17 copies of limbo. The 18 games split into two shapes,
+and the split dictates the work:
+
+**SINGLE-SHOT** — one bet → one outcome, fits `/play/bet` directly (limbo pattern):
+`limbo` (done), `dice`, `coinflip`, `wheel`, `keno`, `double`, `slide`, `diamonds`,
+`scarab`, `plinko`, `cases`. Each is: derive float(s) from the seed, map to a
+payout multiplier, done. Porting = replicate the client's float→mult math in
+`src/play-games.js`, verify by recompute.
+ - `dice`: `roll = f0*100`; win = under ? roll<target : roll>target;
+   `mult = 99 / (under ? target : 100-target)`; payout = win ? wager*mult : 0.
+ - (others: read each client render fn's float→mult and mirror it.)
+
+**MULTI-STEP / SESSION** — the player makes decisions DURING the game, so a single
+call cannot model them: `mines` (reveal tiles, bank anytime), `crash` (live
+cash-out before bust), `hilo` (card streak), `tower` / `dragontower` (climb rows),
+`pump` (pressure ladder), `tome` (rune pages). These need a SESSION model:
+  · `/play/session/start {game, params, wager}` — debit wager, open a session
+    bound to nonce(s) from the secret seed, return the committed layout hash.
+  · `/play/session/step {sessionId, action}` — server reveals the next outcome
+    from the seed (already committed), returns it; a losing step ends the session.
+  · `/play/session/cashout {sessionId}` — credit the current multiplier's payout.
+  Same anti-cheat property: outcomes are pinned by a seed the client never saw, so
+  it cannot "reveal a safe tile" it wasn't dealt. Solvency gate applies at payout.
+
+**Recommended order for increment 4:**
+ 4a. Port all SINGLE-SHOT outcome fns to play-games.js (mechanical, recompute-
+     verified, zero client/live-app risk). ~11 games.
+ 4b. Client: switch the shared balance source (getBalance/debit/credit in
+     ost-games.js) to the play balance ATOMICALLY, and route every single-shot
+     game through `/play/bet`. Doing balance+outcomes together avoids a mixed
+     state where some games are server-authoritative and some aren't. Remove the
+     client-side `OST_HOUSE.rake` for these — the edge is now in the server payout
+     (double-raking would overcharge).
+ 4c. Build the session model (above) and port the multi-step games onto it.
+
+Each of 4a/4b/4c is its own shippable, verifiable step. 4a is safe to do anytime
+(server-only). 4b is the first user-visible switch. 4c is the largest.
+
+CAUTION for 4b: the client currently does `placeBet(amt)` (local debit) then
+computes the outcome then `settleGame` (local credit + rake). Server-authoritative
+means: call `/play/bet` FIRST, then animate to the RETURNED outcome, and let the
+balance reflect the server response — never a local debit/credit, never a local
+payout the client chose, never a second rake.
