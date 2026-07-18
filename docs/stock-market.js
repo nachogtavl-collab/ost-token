@@ -595,33 +595,65 @@
     state.closingId = orderId;
     renderOrders();
     setOrderStatus('Closing ' + order.symbol + ' mirror position...');
-    var live = await fetchLatestQuote(order.symbol);
-    var entryPrice = Number(order.entryPrice || order.price) || 0;
-    var nowPrice = live ? Number(live.price) : entryPrice;
-    var shares = Number(order.shares) || 0;
-    var notionalUsd = nowPrice * shares;
-    order.exitPrice = nowPrice;
-    var pnl = estimatePnl(order);
-    // House edge, live: rake the protocol's cut of the PROFIT (payout above the
-    // OST stake) when closing a stock position; a flat/losing close is never
-    // taxed and the trader receives the NET.
-    var grossPayout = Number(pnl.payoutOst) || 0;
-    var stockBasis = Number(order.ostStake) || 0;
-    var stockHouseFee = 0;
-    if (window.OST_HOUSE && typeof window.OST_HOUSE.rake === 'function' && grossPayout > 0) {
-      var sr = window.OST_HOUSE.rake(grossPayout, stockBasis, 'stock', { symbol: order.symbol });
-      stockHouseFee = sr.fee;
-      pnl.payoutOst = sr.net;
-    }
-    var payout;
-    try {
-      payout = await settleClosePayout(order, pnl.payoutOst);
-    } catch (error) {
-      state.closingId = '';
-      setOrderStatus(error && error.message ? error.message : 'Stock payout failed. Position remains open.', 'is-error');
-      renderOrders();
-      renderTicket();
-      return;
+    var entryPrice, nowPrice, shares, notionalUsd, pnl, payout, stockHouseFee = 0;
+    var live = null;
+    if (order.serverPos) {
+      // Server-authoritative close: the SERVER fetches the exit price, computes
+      // P&L 1x on the stake minus a 2%-of-profit fee, and credits the play balance.
+      var cres;
+      try { cres = await window.OST_PLAY.stockClose(order.id); }
+      catch (error) {
+        state.closingId = '';
+        setOrderStatus(error && error.message ? error.message : 'Stock payout failed. Position remains open.', 'is-error');
+        renderOrders(); renderTicket();
+        return;
+      }
+      if (!cres || !cres.ok) {
+        state.closingId = '';
+        setOrderStatus((cres && (cres.message || cres.error)) || 'Close failed. Position remains open.', 'is-error');
+        renderOrders(); renderTicket();
+        return;
+      }
+      entryPrice = Number(cres.entryPrice) || Number(order.entryPrice) || 0;
+      nowPrice = Number(cres.exitPrice) || entryPrice;
+      shares = Number(order.shares) || 0;
+      notionalUsd = nowPrice * shares;
+      order.exitPrice = nowPrice;
+      stockHouseFee = Number(cres.fee) || 0;
+      var payoutOst = Number(cres.payout) || 0;
+      pnl = {
+        ostDelta: payoutOst - (Number(order.ostStake) || 0),
+        usdDelta: shares * (nowPrice - entryPrice),
+        pctText: (entryPrice > 0 ? (((nowPrice - entryPrice) / entryPrice) * 100) : 0).toFixed(2) + '%',
+        payoutOst: payoutOst,
+        exitPrice: nowPrice
+      };
+      payout = { ost: payoutOst, sig: order.id };
+    } else {
+      // Legacy (pre-inc-5) custodial order — settle the old way.
+      live = await fetchLatestQuote(order.symbol);
+      entryPrice = Number(order.entryPrice || order.price) || 0;
+      nowPrice = live ? Number(live.price) : entryPrice;
+      shares = Number(order.shares) || 0;
+      notionalUsd = nowPrice * shares;
+      order.exitPrice = nowPrice;
+      pnl = estimatePnl(order);
+      var grossPayout = Number(pnl.payoutOst) || 0;
+      var stockBasis = Number(order.ostStake) || 0;
+      if (window.OST_HOUSE && typeof window.OST_HOUSE.rake === 'function' && grossPayout > 0) {
+        var sr = window.OST_HOUSE.rake(grossPayout, stockBasis, 'stock', { symbol: order.symbol });
+        stockHouseFee = sr.fee;
+        pnl.payoutOst = sr.net;
+      }
+      try {
+        payout = await settleClosePayout(order, pnl.payoutOst);
+      } catch (error) {
+        state.closingId = '';
+        setOrderStatus(error && error.message ? error.message : 'Stock payout failed. Position remains open.', 'is-error');
+        renderOrders();
+        renderTicket();
+        return;
+      }
     }
     var closeId = 'stock-close-' + orderId + '-' + Date.now().toString(36);
     var closeRecord = normalizeOrder({
@@ -754,101 +786,53 @@
       }
       return;
     }
-    if (!window.OST_PREDICTION_API || typeof window.OST_PREDICTION_API.placeOrder !== 'function') {
-      setOrderStatus('OST settlement vault is still loading. Refresh and try again.', 'is-error');
+    if (!window.OST_PLAY || typeof window.OST_PLAY.stockOpen !== 'function') {
+      setOrderStatus('Play service is still loading. Refresh and try again.', 'is-error');
       return;
     }
     state.placing = true;
     renderTicket();
-    setOrderStatus('Routing OST to the mirror settlement vault...');
+    setOrderStatus('Opening ' + quote.symbol + ' mirror on the OSTG play balance...');
     var optimisticStake = Number(state.ostStake || 0);
     if (window.OST_OPTIMISTIC) {
-      try { window.OST_OPTIMISTIC.toast(state.side.toUpperCase() + ' ' + optimisticStake + ' OST · ' + quote.symbol + ' submitted…', 'pending'); } catch (e) {}
-      try { window.OST_OPTIMISTIC.balanceHint({ deltaOst: -optimisticStake, source: 'stock-' + state.side, pending: true, symbol: quote.symbol }); } catch (e) {}
+      try { window.OST_OPTIMISTIC.toast('BUY ' + optimisticStake + ' OSTG · ' + quote.symbol + ' submitted…', 'pending'); } catch (e) {}
     }
     try {
-      var notionalUsd = calcNotionalUsd();
-      var shares = calcShares();
-      var ticket = await window.OST_PREDICTION_API.placeOrder({
-        source: 'stock-mirror',
-        marketId: quote.symbol,
-        title: quote.name + ' stock mirror',
-        side: 'yes',
-        topic: 'stocks',
-        price: Math.max(0.000001, Number(quote.price || 1)),
-        yesPrice: Math.max(0.000001, Number(quote.price || 1)),
-        noPrice: 0,
-        stake: Number(state.ostStake || 0),
-        shares: shares,
-        potentialReturn: notionalUsd,
-        sourceUrl: 'https://www.nasdaq.com/market-activity/stocks/' + encodeURIComponent(quote.symbol.toLowerCase()),
-        reference: 'stock:' + quote.symbol + ':' + Date.now()
-      });
-      var signature = ticket && (ticket.signature || ticket.sig) || '';
+      // Server-authoritative: the SERVER fetches the entry price and debits the
+      // OSTG play balance. The client never chooses the price. (Mirror stocks are
+      // custodial on the play balance; only PREDICTIONS run on-chain.)
+      var stakeAmt = Number(state.ostStake || 0);
+      var res = await window.OST_PLAY.stockOpen(quote.symbol, 'long', stakeAmt);
+      if (!res || !res.ok || !res.position) throw new Error((res && (res.message || res.error)) || 'Stock order was not accepted.');
+      var srvPos = res.position;
+      var entryPrice = Number(srvPos.entryPrice) || quote.price;
+      var shares = Number(srvPos.shares) || calcShares();
+      var notionalUsd = entryPrice * shares;
       var createdAt = Date.now();
       var buyOrder = normalizeOrder({
-        id: signature || ('stock-buy-' + quote.symbol + '-' + createdAt.toString(36)),
+        id: srvPos.id,
+        serverPos: true,                 // closes via OST_PLAY.stockClose(id)
         wallet: wallet,
         symbol: quote.symbol,
         name: quote.name,
         exchange: quote.exchange,
         sector: quote.sector,
         side: 'buy',
-        price: quote.price,
-        entryPrice: quote.price,
+        price: entryPrice,
+        entryPrice: entryPrice,
         shares: shares,
         notionalUsd: notionalUsd,
-        ostStake: Number(state.ostStake || 0),
+        ostStake: stakeAmt,
         brokerCurrency: state.brokerCurrency,
-        signature: signature,
+        signature: srvPos.id,
         status: 'ost-mirror-open',
-        quoteSource: quote.source || 'public',
+        quoteSource: quote.source || 'server',
         quoteAsOf: quote.asOf || '',
         createdAt: createdAt
       }, wallet);
       upsertLocalOrder(buyOrder);
       renderOrders();
-      // The position is already on screen. The worker sync below is a BACKGROUND
-      // write — never awaited — so the buy completes and the button frees the
-      // instant the local order renders, even if the worker (or KV) is slow.
-      var base = apiBase();
-      if (base) {
-        fetch(base + '/stocks/orders', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            id: buyOrder.id,
-            wallet: wallet,
-            symbol: quote.symbol,
-            name: quote.name,
-            exchange: quote.exchange,
-            sector: quote.sector,
-            side: state.side,
-            price: quote.price,
-            entryPrice: quote.price,
-            shares: shares,
-            notionalUsd: notionalUsd,
-            ostStake: Number(state.ostStake || 0),
-            brokerCurrency: state.brokerCurrency,
-            signature: signature,
-            status: 'ost-mirror-open',
-            quoteSource: quote.source || 'public',
-            quoteAsOf: quote.asOf || '',
-            createdAt: createdAt
-          })
-        }).then(function (response) {
-          return response && response.ok ? response.json().catch(function () { return null; }) : null;
-        }).then(function (payload) {
-          if (payload && payload.order) upsertLocalOrder(Object.assign({}, buyOrder, payload.order, { entryPrice: buyOrder.entryPrice }));
-        }).catch(function() {});
-      }
-      setOrderStatus('Stock mirror ticket recorded at ' + fmtMoney(buyOrder.entryPrice) + '. Future sells compare against this entry.', 'is-success');
-      // Background reconcile — do NOT await, so the buy is done the moment the
-      // local ticket shows.
-      Promise.resolve().then(function () { return loadOrders(); }).catch(function () {});
-      try {
-        if (typeof window.syncOstWalletEventsFromRemote === 'function') window.syncOstWalletEventsFromRemote();
-      } catch (error) {}
+      setOrderStatus('Stock mirror opened at ' + fmtMoney(entryPrice) + ' (server price). Sells settle against this entry.', 'is-success');
     } catch (error) {
       setOrderStatus(error && error.message ? error.message : 'Stock mirror order failed.', 'is-error');
       if (window.OST_OPTIMISTIC) {

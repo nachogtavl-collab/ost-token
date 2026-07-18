@@ -133,6 +133,27 @@
     return (await api('GET', '/play/meme/holdings?wallet=' + encodeURIComponent(a))).holdings || {};
   }
 
+  // ---- mirror stocks (server-priced, play-balance funded) -----------------
+  async function stockOpen(symbol, side, stake) {
+    var a = addr();
+    if (!a) throw new Error('Connect your wallet first.');
+    var r = await api('POST', '/play/stock/open', { wallet: a, symbol: symbol, side: side, stake: Number(stake) });
+    if (typeof r.balance === 'number') { mirror = r.balance; emit(); }
+    return r;
+  }
+  async function stockClose(positionId) {
+    var a = addr();
+    if (!a) throw new Error('Connect your wallet first.');
+    var r = await api('POST', '/play/stock/close', { wallet: a, positionId: positionId });
+    if (typeof r.balance === 'number') { mirror = r.balance; emit(); }
+    return r;
+  }
+  async function stockPositions() {
+    var a = addr();
+    if (!a) return [];
+    return (await api('GET', '/play/stock/positions?wallet=' + encodeURIComponent(a))).positions || [];
+  }
+
   // ---- deposit: OSTG wallet -> play balance (gas-free) --------------------
   // Requires OSTG in the wallet (get it 1:1 from OST via the bridge). Moves it to
   // the pool with the fee-only cosign path (pool pays gas), then credits the
@@ -216,6 +237,9 @@
     memeSell: memeSell,
     memeCoin: memeCoin,
     memeHoldings: memeHoldings,
+    stockOpen: stockOpen,
+    stockClose: stockClose,
+    stockPositions: stockPositions,
     deposit: deposit,
     cashout: cashout,
     addresses: { api: API, ostgMint: OSTG_MINT, poolOstgAta: POOL_OSTG_ATA },
