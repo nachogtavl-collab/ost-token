@@ -171,6 +171,30 @@ cash-out before bust), `hilo` (card streak), `tower` / `dragontower` (climb rows
 Each of 4a/4b/4c is its own shippable, verifiable step. 4a is safe to do anytime
 (server-only). 4b is the first user-visible switch. 4c is the largest.
 
+### CORRECTION (2026-07-18): the client balance switch must be ATOMIC — so 4c comes BEFORE it
+
+Building 4b surfaced that it cannot be partial. The games share getBalance() /
+debit() / credit() in docs/ost-games.js. Consequences:
+ - Switch that shared layer to the play balance and the MULTI-STEP games (mines,
+   crash, hilo, tower, dragontower, pump) — not yet server-authoritative — would
+   debit real OSTG while still computing outcomes LOCALLY = the cheatable model
+   against real value.
+ - Switch only the single-shot games and the balance display is inconsistent
+   (some games on the play balance, some on credits).
+So the switch has to happen for ALL games at once, which means every game must be
+server-authoritative first. Revised order:
+   4a (single-shot outcome fns) — DONE.
+   client module `docs/ost-play.js` (OST_PLAY: balance/bet/deposit/cashout) — DONE,
+     loads clean, deposit instruction byte-verified vs the spl-token helper. Wired
+     into the page but NOT yet into any game (no mixed state introduced).
+   4c (multi-step session model) — do NEXT so all games are server-authoritative.
+   THEN the atomic client switch: point getBalance/debit/credit at OST_PLAY, route
+     single-shot games through OST_PLAY.bet and multi-step through the session API,
+     drop the client OST_HOUSE.rake, add a deposit/cashout panel.
+Alternative if a partial launch is wanted sooner: switch single-shot games to the
+play balance now and DISABLE the multi-step games with a "being upgraded to OSTG"
+state until 4c. Product call — not taken unilaterally.
+
 CAUTION for 4b: the client currently does `placeBet(amt)` (local debit) then
 computes the outcome then `settleGame` (local credit + rake). Server-authoritative
 means: call `/play/bet` FIRST, then animate to the RETURNED outcome, and let the
