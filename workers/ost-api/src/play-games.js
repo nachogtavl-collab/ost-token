@@ -79,6 +79,44 @@ export const GAMES = {
       return { rolled: round9(rolled), win, payoutMult: win ? target : 0 };
     },
   },
+
+  // Matches docs/ost-games.js renderDice: roll = f*100; win under/over target;
+  // multiplier = 99 / winChance (the 99 vs 100 is the 1% edge).
+  dice: {
+    floatsNeeded: 1,
+    validateParams(params) {
+      const target = Number(params && params.target);
+      const dir = params && params.dir;
+      if (!(target >= 2 && target <= 98)) return 'target must be between 2 and 98';
+      if (dir !== 'under' && dir !== 'over') return "dir must be 'under' or 'over'";
+      return null;
+    },
+    outcome(params, floats) {
+      const target = Number(params.target);
+      const dir = params.dir;
+      const roll = floats[0] * 100;
+      const win = dir === 'under' ? roll < target : roll > target;
+      const chance = dir === 'under' ? target : (100 - target);
+      const mult = chance > 0 ? 99 / chance : 0;
+      return { roll: round9(roll), win, payoutMult: win ? mult : 0 };
+    },
+  },
+
+  // Matches docs/ost-games.js coinflip: result = f<0.5 ? 'h':'t'; 1.98x on a hit
+  // (the 1.98 vs 2.0 is the 1% edge).
+  coinflip: {
+    floatsNeeded: 1,
+    validateParams(params) {
+      const side = params && params.side;
+      if (side !== 'h' && side !== 't') return "side must be 'h' or 't'";
+      return null;
+    },
+    outcome(params, floats) {
+      const result = floats[0] < 0.5 ? 'h' : 't';
+      const win = result === params.side;
+      return { result, win, payoutMult: win ? 1.98 : 0 };
+    },
+  },
 };
 
 // Compute one bet's outcome from the secret seed. Pure + deterministic given
