@@ -37,7 +37,9 @@ const { sendTransactions } = require('@pythnetwork/solana-utils');
 import { HermesClient } from '@pythnetwork/hermes-client';
 
 const RPC = process.env.OST_RPC || 'https://api.devnet.solana.com';
-const MINT = new PublicKey('383pTzoZ8Gp83dzk23ZnvLcfX2Sq32TAGN48CMQu2pAJ');
+// OSTG (the game token) — predictions escrow OSTG on-chain now. Must match
+// docs/ost-onchain-market.js MINT. The program is mint-agnostic (no redeploy).
+const MINT = new PublicKey('DfgxMbdN49AX2Za9LuvsyixF1jgVh45RbgWYSGonxQos');
 const PROGRAM_ID = new PublicKey('F82m45QUAFJ4GtMsJrSFnWzDrjWdZjdzyh8HTPgTBHXr');
 // Pyth BTC/USD feed — the same feed the program stores and verifies against.
 const BTC_FEED = '0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43';

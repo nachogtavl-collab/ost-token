@@ -28,7 +28,12 @@
   'use strict';
 
   var PROGRAM_ID = 'F82m45QUAFJ4GtMsJrSFnWzDrjWdZjdzyh8HTPgTBHXr';
-  var MINT = '383pTzoZ8Gp83dzk23ZnvLcfX2Sq32TAGN48CMQu2pAJ';
+  // Predictions run ON-CHAIN escrowing OSTG (the game token), settled trustlessly
+  // by Pyth in the program. The betting program is mint-agnostic (market.mint is a
+  // per-market account), so pointing at OSTG needs NO redeploy — but the crank
+  // (scripts/pyth-crank/crank.mjs) MUST create markets with this same OSTG mint,
+  // or bets hit a mint mismatch. Cutover: switch both, then re-run the crank.
+  var MINT = 'DfgxMbdN49AX2Za9LuvsyixF1jgVh45RbgWYSGonxQos';   // OSTG (was OSTC 383pTz…)
   var TOKEN_2022 = 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb';
   var ATA_PROGRAM = 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL';
   var DECIMALS = 9;
