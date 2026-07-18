@@ -60,6 +60,10 @@ class_name = "PayoutGate"
 name = "GAME_SEED_HUB"
 class_name = "GameSeedHub"
 
+[[durable_objects.bindings]]
+name = "PLAY_LEDGER"
+class_name = "PlayLedger"
+
 [[migrations]]
 tag = "mesh_hub_v1"
 new_sqlite_classes = ["MeshHub"]
@@ -83,6 +87,10 @@ new_sqlite_classes = ["PayoutGate"]
 [[migrations]]
 tag = "game_seed_hub_v1"
 new_sqlite_classes = ["GameSeedHub"]
+
+[[migrations]]
+tag = "play_ledger_v1"
+new_sqlite_classes = ["PlayLedger"]
 
 [vars]
 GAMMA_BASE = "https://gamma-api.polymarket.com"

@@ -10,6 +10,7 @@ export { MeshHub } from './mesh/hub.js';
 export { RealtimeHub } from './realtime.js';
 export { PayoutGate } from './wallet-payouts.js';
 export { GameSeedHub } from './games-rng.js';
+export { PlayLedger } from './play-ledger.js';
 
 /**
  * OST Prediction API Server — Cloudflare Worker
@@ -2984,6 +2985,13 @@ export default {
     // Server-side provably-fair seed (Phase 0 — replaces browser-generated serverSeed).
     if (path.startsWith('/games/')) {
       return handleGamesRngRequest(request, env);
+    }
+
+    // OSTG-backed play balance (Phase 2 — project-docs/PLAY-BALANCE.md). Single
+    // global PlayLedger Durable Object owns every player's balance + the peg.
+    if (path.startsWith('/play/') || path === '/health/play') {
+      const id = env.PLAY_LEDGER.idFromName('global');
+      return env.PLAY_LEDGER.get(id).fetch(request);
     }
 
     // OST Live Price — devnet synthetic price engine. Additive, isolated.
