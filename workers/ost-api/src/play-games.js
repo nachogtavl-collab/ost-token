@@ -346,6 +346,61 @@ export const GAMES = {
   },
 };
 
+/* ---- MULTI-STEP games (session model) ----------------------------------- *
+ * These are interactive: the player acts DURING the game (reveal a tile, climb a
+ * row, cash out live). The whole hidden LAYOUT is fixed by the seed at session
+ * start — before the player sees anything — so a modified client cannot "reveal a
+ * safe tile it wasn't dealt". The server reveals each step from that committed
+ * layout; provable-fair holds because the layout is re-derivable once the seed is
+ * revealed. Port one at a time; mines first.
+ */
+export const MULTI = {
+  mines: {
+    layoutFloats: 25,
+    validateParams(p) {
+      const m = Number(p && p.mines);
+      if (!Number.isInteger(m) || m < 1 || m > 24) return 'mines must be an integer 1..24';
+      return null;
+    },
+    // Matches docs/ost-games.js: Fisher-Yates shuffle of 0..24 with 25 floats
+    // (i from 24 down to 1, j = floor(floats[i]*(i+1))), first `mines` are bombs.
+    buildLayout(params, floats) {
+      const idxs = [];
+      for (let i = 0; i < 25; i++) idxs.push(i);
+      for (let i = 24; i > 0; i--) {
+        const j = Math.floor((floats[i] || 0) * (i + 1));
+        const t = idxs[i]; idxs[i] = idxs[j]; idxs[j] = t;
+      }
+      return { minePositions: idxs.slice(0, Number(params.mines)) };
+    },
+    // minesMultiplier(safe, mines) = 0.99 / (C(25-mines, safe)/C(25, safe)).
+    multiplier(params, safe) {
+      if (safe < 1) return 0;
+      const mines = Number(params.mines);
+      let num = 1, den = 1;
+      for (let i = 0; i < safe; i++) { num *= (25 - mines - i); den *= (25 - i); }
+      return round9(0.99 / (num / den));
+    },
+    config(params) { return { grid: 25, mines: Number(params.mines) }; },
+    // Apply one reveal. Returns { error } | { ended, won, boom?/safe?, ... }.
+    step(params, layout, state, action) {
+      const tile = Number(action && action.tile);
+      if (!Number.isInteger(tile) || tile < 0 || tile > 24) return { error: 'tile must be 0..24' };
+      if ((state.revealed || []).includes(tile)) return { error: 'tile already revealed' };
+      if (layout.minePositions.includes(tile)) {
+        return { ended: true, won: false, boom: true, tile, minePositions: layout.minePositions };
+      }
+      state.revealed = (state.revealed || []).concat(tile);
+      state.safeRevealed = (state.safeRevealed || 0) + 1;
+      const maxSafe = 25 - Number(params.mines);
+      const done = state.safeRevealed >= maxSafe;   // revealed every safe tile
+      return { ended: done, won: done, safe: true, tile, safeRevealed: state.safeRevealed, multiplier: this.multiplier(params, state.safeRevealed) };
+    },
+    // Multiplier bankable right now (0 before the first safe reveal).
+    currentMultiplier(params, state) { return this.multiplier(params, state.safeRevealed || 0); },
+  },
+};
+
 // Compute one bet's outcome from the secret seed. Pure + deterministic given
 // (serverSeed, clientSeed, nonce, params). Returns the outcome detail + payout.
 export async function computeBet(game, serverSeed, clientSeed, nonce, params, wager) {
@@ -361,4 +416,16 @@ export async function computeBet(game, serverSeed, clientSeed, nonce, params, wa
   const o = g.outcome(params, floats);
   const payout = round9(wager * o.payoutMult);
   return Object.assign({ nonce, payout }, o);
+}
+
+// Build a MULTI-step game's hidden layout from the secret seed at a nonce. Pure +
+// deterministic, so it is re-derivable for verification once the seed is revealed.
+export async function layoutFor(game, serverSeed, clientSeed, nonce, params) {
+  const g = MULTI[game];
+  if (!g) throw new Error('unknown_multi_game');
+  const need = g.layoutFloats;
+  const rounds = Math.max(1, Math.ceil(need / 8));
+  const hexes = [];
+  for (let r = 0; r < rounds; r++) hexes.push(await hmacSha256Hex(serverSeed, clientSeed + ':' + nonce + ':' + r));
+  return g.buildLayout(params, floatsFromHexes(hexes, need));
 }

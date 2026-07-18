@@ -26,7 +26,7 @@
  * ========================================================================== */
 import { PublicKey } from '@solana/web3.js';
 import * as Pool from './solana-pool.js';
-import { GAMES, computeBet, randomSeedHex, sha256Hex } from './play-games.js';
+import { GAMES, MULTI, computeBet, layoutFor, randomSeedHex, sha256Hex } from './play-games.js';
 
 const MAX_BATCH = 50;          // auto-bet: at most N nonces per /play/bet call
 const POOL_CACHE_MS = 20000;   // re-read pool OSTG for solvency at most this often
@@ -41,6 +41,7 @@ function json(data, status = 200) {
 }
 function cleanText(v, max) { return typeof v === 'string' ? v.slice(0, max) : ''; }
 function isPubkey(s) { return typeof s === 'string' && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(s); }
+function round9(n) { return Math.round(Number(n) * 1e9) / 1e9; }
 
 function tokenAmountFromInfo(info) {
   const t = info && (info.tokenAmount || info.uiTokenAmount);
@@ -121,6 +122,10 @@ export class PlayLedger {
       if (path === '/play/seed' && method === 'GET') return await this.handleSeed(url);
       if (path === '/play/bet' && method === 'POST') return await this.handleBet(request);
       if (path === '/play/rotate' && method === 'POST') return await this.handleRotate(request);
+
+      if (path === '/play/session/start' && method === 'POST') return await this.handleSessionStart(request);
+      if (path === '/play/session/step' && method === 'POST') return await this.handleSessionStep(request);
+      if (path === '/play/session/cashout' && method === 'POST') return await this.handleSessionCashout(request);
 
       if (path === '/health/play' && method === 'GET') return await this.handleHealth();
     } catch (err) {
@@ -373,6 +378,100 @@ export class PlayLedger {
       const next = { serverSeed: seed, serverSeedHash: await sha256Hex(seed), nonce: 0, clientSeed: rec.clientSeed, epoch: (rec.epoch || 1) + 1 };
       await this.state.storage.put('seed:' + wallet, next);
       return json({ ok: true, revealedSeed, revealedHash, revealedThroughNonce, clientSeed: rec.clientSeed, newServerSeedHash: next.serverSeedHash, epoch: next.epoch });
+    });
+  }
+
+  // ---- MULTI-STEP game sessions (mines etc.) ------------------------------
+  // start: debit the wager and pin the hidden layout from the secret seed. step:
+  // reveal one action against that layout. cashout: credit the current multiplier.
+  // The layout is fixed at start (before the player acts) and re-derivable once
+  // the seed is revealed — provable-fair. No on-chain movement here (pure ledger),
+  // so no crash-safe broadcast; just the DO lock on each mutation.
+  async handleSessionStart(request) {
+    let body; try { body = await request.json(); } catch (_) { return json({ error: 'invalid_json' }, 400); }
+    const wallet = cleanText(body && body.wallet, 64);
+    const game = cleanText(body && body.game, 32);
+    const wager = Number(body && body.wager);
+    const params = (body && body.params && typeof body.params === 'object') ? body.params : {};
+    const clientSeed = cleanText(body && body.clientSeed, 128) || null;
+    if (!isPubkey(wallet)) return json({ error: 'invalid_wallet' }, 400);
+    const g = MULTI[game];
+    if (!g) return json({ error: 'unknown_game', supported: Object.keys(MULTI) }, 400);
+    if (!(wager > 0)) return json({ error: 'invalid_wager' }, 400);
+    const perr = g.validateParams ? g.validateParams(params) : null;
+    if (perr) return json({ error: 'invalid_params', message: perr }, 400);
+
+    return await this.state.blockConcurrencyWhile(async () => {
+      const seedRec = await this.ensureSeed(wallet, clientSeed);
+      const balance = Number((await this.state.storage.get('bal:' + wallet)) || 0);
+      if (balance + 1e-9 < wager) return json({ error: 'insufficient_balance', balance }, 400);
+      const total = Number((await this.state.storage.get('total')) || 0);
+      const nonce = seedRec.nonce + 1;
+      const layout = await layoutFor(game, seedRec.serverSeed, seedRec.clientSeed, nonce, params);
+      const sessionId = crypto.randomUUID();
+      const session = { wallet, game, params, wager, nonce, layout, state: { safeRevealed: 0, revealed: [], ended: false, won: false }, createdAt: Date.now() };
+      await this.state.storage.put('bal:' + wallet, round9(balance - wager));
+      await this.state.storage.put('total', round9(total - wager));
+      await this.state.storage.put('seed:' + wallet, Object.assign({}, seedRec, { nonce }));
+      await this.state.storage.put('sess:' + sessionId, session);
+      return json({ ok: true, sessionId, game, config: g.config ? g.config(params) : {}, wager, serverSeedHash: seedRec.serverSeedHash, nonce, balance: round9(balance - wager) });
+    });
+  }
+
+  async handleSessionStep(request) {
+    let body; try { body = await request.json(); } catch (_) { return json({ error: 'invalid_json' }, 400); }
+    const wallet = cleanText(body && body.wallet, 64);
+    const sessionId = cleanText(body && body.sessionId, 64);
+    const action = (body && body.action && typeof body.action === 'object') ? body.action : {};
+    if (!isPubkey(wallet)) return json({ error: 'invalid_wallet' }, 400);
+    if (!sessionId) return json({ error: 'missing_session' }, 400);
+
+    return await this.state.blockConcurrencyWhile(async () => {
+      const session = await this.state.storage.get('sess:' + sessionId);
+      if (!session || session.wallet !== wallet) return json({ error: 'unknown_session' }, 404);
+      if (session.state.ended) return json({ error: 'session_ended' }, 409);
+      const g = MULTI[session.game];
+      const res = g.step(session.params, session.layout, session.state, action);
+      if (res.error) return json({ error: res.error }, 400);
+      if (res.ended) { session.state.ended = true; session.state.won = !!res.won; }
+      await this.state.storage.put('sess:' + sessionId, session);
+      const canCashout = !session.state.ended && (session.state.safeRevealed || 0) > 0;
+      return json(Object.assign({ ok: true, sessionId }, res, {
+        currentMultiplier: g.currentMultiplier ? g.currentMultiplier(session.params, session.state) : 0,
+        canCashout,
+      }));
+    });
+  }
+
+  async handleSessionCashout(request) {
+    let body; try { body = await request.json(); } catch (_) { return json({ error: 'invalid_json' }, 400); }
+    const wallet = cleanText(body && body.wallet, 64);
+    const sessionId = cleanText(body && body.sessionId, 64);
+    if (!isPubkey(wallet)) return json({ error: 'invalid_wallet' }, 400);
+    if (!sessionId) return json({ error: 'missing_session' }, 400);
+
+    const bankroll = await this.poolBankroll();   // UNLOCKED
+
+    return await this.state.blockConcurrencyWhile(async () => {
+      const session = await this.state.storage.get('sess:' + sessionId);
+      if (!session || session.wallet !== wallet) return json({ error: 'unknown_session' }, 404);
+      if (session.state.ended) return json({ error: 'session_ended', message: 'This session already ended (busted or cashed out).' }, 409);
+      const g = MULTI[session.game];
+      const mult = g.currentMultiplier(session.params, session.state);
+      if (!(mult >= 1) || (session.state.safeRevealed || 0) < 1) return json({ error: 'nothing_to_cashout' }, 400);
+      const payout = round9(session.wager * mult);
+
+      const balance = Number((await this.state.storage.get('bal:' + wallet)) || 0);
+      const total = Number((await this.state.storage.get('total')) || 0);
+      // Solvency: a win raises Σ balances with no new pool OSTG.
+      if (bankroll != null && (total + payout) > bankroll + 1e-9) {
+        return json({ error: 'bankroll_cap', message: 'Cash-out exceeds what the pool can currently back.' }, 409);
+      }
+      session.state.ended = true; session.state.won = true; session.cashedOut = true;
+      await this.state.storage.put('bal:' + wallet, round9(balance + payout));
+      await this.state.storage.put('total', round9(total + payout));
+      await this.state.storage.put('sess:' + sessionId, session);
+      return json({ ok: true, sessionId, payout, multiplier: mult, balance: round9(balance + payout) });
     });
   }
 
