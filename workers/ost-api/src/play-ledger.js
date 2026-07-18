@@ -410,11 +410,15 @@ export class PlayLedger {
       const layout = await layoutFor(game, seedRec.serverSeed, seedRec.clientSeed, nonce, params);
       const sessionId = crypto.randomUUID();
       const session = { wallet, game, params, wager, nonce, layout, state: { safeRevealed: 0, revealed: [], ended: false, won: false }, createdAt: Date.now() };
+      // Some games reveal a public starting state and seed their own state fields
+      // (e.g. hilo's first card + mult) — do this BEFORE persisting so the mutated
+      // state is what gets stored.
+      const reveal = g.startReveal ? g.startReveal(params, layout, session.state) : null;
       await this.state.storage.put('bal:' + wallet, round9(balance - wager));
       await this.state.storage.put('total', round9(total - wager));
       await this.state.storage.put('seed:' + wallet, Object.assign({}, seedRec, { nonce }));
       await this.state.storage.put('sess:' + sessionId, session);
-      return json({ ok: true, sessionId, game, config: g.config ? g.config(params) : {}, wager, serverSeedHash: seedRec.serverSeedHash, nonce, balance: round9(balance - wager) });
+      return json({ ok: true, sessionId, game, config: g.config ? g.config(params) : {}, reveal, wager, serverSeedHash: seedRec.serverSeedHash, nonce, balance: round9(balance - wager) });
     });
   }
 
@@ -435,7 +439,7 @@ export class PlayLedger {
       if (res.error) return json({ error: res.error }, 400);
       if (res.ended) { session.state.ended = true; session.state.won = !!res.won; }
       await this.state.storage.put('sess:' + sessionId, session);
-      const canCashout = !session.state.ended && (session.state.safeRevealed || 0) > 0;
+      const canCashout = !session.state.ended && (g.canCashout ? g.canCashout(session.state) : (session.state.safeRevealed || 0) > 0);
       return json(Object.assign({ ok: true, sessionId }, res, {
         currentMultiplier: g.currentMultiplier ? g.currentMultiplier(session.params, session.state) : 0,
         canCashout,
@@ -457,8 +461,13 @@ export class PlayLedger {
       if (!session || session.wallet !== wallet) return json({ error: 'unknown_session' }, 404);
       if (session.state.ended) return json({ error: 'session_ended', message: 'This session already ended (busted or cashed out).' }, 409);
       const g = MULTI[session.game];
+      // Game-agnostic cashout guard. Most games gate on "made progress"
+      // (currentMultiplier >= 1). Games whose multiplier can dip below 1 on a
+      // near-certain step (hilo) define canCashout(state) to gate on progress
+      // directly, then pay wager × the real multiplier (which may be < 1).
       const mult = g.currentMultiplier(session.params, session.state);
-      if (!(mult >= 1) || (session.state.safeRevealed || 0) < 1) return json({ error: 'nothing_to_cashout' }, 400);
+      const eligible = g.canCashout ? g.canCashout(session.state) : (mult >= 1);
+      if (!eligible) return json({ error: 'nothing_to_cashout' }, 400);
       const payout = round9(session.wager * mult);
 
       const balance = Number((await this.state.storage.get('bal:' + wallet)) || 0);

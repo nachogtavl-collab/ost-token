@@ -416,6 +416,7 @@ export const MULTI = {
     },
     // Multiplier bankable right now (0 before the first safe reveal).
     currentMultiplier(params, state) { return this.multiplier(params, state.safeRevealed || 0); },
+    canCashout(state) { return (state.safeRevealed || 0) > 0; },
   },
 
   // Matches docs/ost-games.js tower: per row, shuffle columns and mark the first
@@ -462,6 +463,7 @@ export const MULTI = {
       return { ended: done, won: done, safe: true, column: col, level: state.level, multiplier: this.multiplier(params, state.level) };
     },
     currentMultiplier(params, state) { return this.multiplier(params, state.level || 0); },
+    canCashout(state) { return (state.level || 0) > 0; },
   },
 
   // Matches docs/ost-games.js renderDragonTower: 8 floors, one dragon per floor at
@@ -502,6 +504,49 @@ export const MULTI = {
       return { ended: done, won: done, safe: true, column: col, floor: state.floor, multiplier: this.multiplier(params, state.floor) };
     },
     currentMultiplier(params, state) { return this.multiplier(params, state.floor || 0); },
+    canCashout(state) { return (state.floor || 0) > 0; },
+  },
+
+  // Matches docs/ost-games.js renderHiLo: a 13-rank deck (A=1..K=13). The seed
+  // pins a fixed card SEQUENCE; the first card is revealed at start, then each
+  // step guesses higher/lower vs the current card and draws the next in sequence.
+  // p(higher) = (13-c)/12, p(lower) = (c-1)/12; a correct guess compounds the
+  // multiplier by 0.99/p (which is < 1 on a near-certain guess — the house edge);
+  // an equal card is a PUSH (no change); a wrong guess ends the session.
+  hilo: {
+    layoutFloats: 52,   // max draws in one session (start card + up to 51 guesses)
+    validateParams() { return null; },   // no params
+    buildLayout(params, floats) {
+      const cards = [];
+      for (let i = 0; i < 52; i++) cards.push(Math.floor(floats[i] * 13) + 1);   // 1..13
+      return { cards };
+    },
+    config() { return { deckSize: 13, maxDraws: 52 }; },
+    // Reveal the starting card and seed hilo's own state fields.
+    startReveal(params, layout, state) { state.pos = 0; state.mult = 1; return { card: layout.cards[0] }; },
+    step(params, layout, state, action) {
+      const dir = action && action.dir;
+      if (dir !== 'hi' && dir !== 'lo') return { error: "dir must be 'hi' or 'lo'" };
+      const pos = state.pos || 0;
+      const current = layout.cards[pos];
+      const p = dir === 'hi' ? (13 - current) / 12 : (current - 1) / 12;
+      if (p <= 0) return { error: 'impossible direction — pick the other side' };
+      const nextPos = pos + 1;
+      if (nextPos >= layout.cards.length) return { ended: true, won: false, exhausted: true, current };
+      const next = layout.cards[nextPos];
+      state.pos = nextPos;
+      if (next === current) {   // push — no multiplier change, session continues
+        return { ended: false, push: true, card: next, prev: current, multiplier: round9(state.mult || 1) };
+      }
+      const win = dir === 'hi' ? next > current : next < current;
+      if (!win) return { ended: true, won: false, card: next, prev: current };
+      state.mult = round9((state.mult || 1) * (0.99 / p));
+      return { ended: false, safe: true, card: next, prev: current, multiplier: state.mult };
+    },
+    currentMultiplier(params, state) { return round9(state.mult || 1); },
+    // Bankable after at least one draw (win or push). Multiplier can be < 1 after a
+    // near-certain guess, so gate on progress, not on mult >= 1.
+    canCashout(state) { return (state.pos || 0) > 0; },
   },
 };
 
