@@ -134,6 +134,14 @@ export function poolAta(env) {
   return getAssociatedTokenAddressSync(getMint(env), pool.publicKey, false, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
 }
 
+// Pool's ATA for a specific (sponsored) mint. Used by the play-balance rails so
+// the pool can hold and move OSTG as well as OST. allowOwnerOffCurve=false: the
+// pool is a plain keypair, on-curve.
+export function poolAtaForMint(env, mintPk) {
+  const pool = getPoolKeypair(env);
+  return getAssociatedTokenAddressSync(mintPk, pool.publicKey, false, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
+}
+
 // allowOwnerOffCurve=true: some destinations are PDA-owned vault accounts
 // (e.g. the interchange desk's treasury ATA), not plain wallets. The ATA
 // derivation is deterministic either way; whether a PDA can actually move
