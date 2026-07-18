@@ -53,6 +53,22 @@ function memeTokensForOst(ostIn, s0, supply) {
   return (-B + Math.sqrt(B * B + 4 * A * ostIn)) / (2 * A);
 }
 
+// ── Mirror stocks (server-authoritative, funded by the play balance) ──────────
+// The SERVER fetches the entry/exit price (public Yahoo feed, same source as the
+// worker's /stocks relay), so a client can never open/close at a price it chose.
+// P&L is 1x on the stake: payoutMove = ±(exit-entry)/entry. 2%-of-profit edge.
+const STOCK_EDGE = 0.02;
+async function fetchStockPrice(symbol) {
+  const url = 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(symbol) + '?range=1d&interval=5m&includePrePost=false';
+  const res = await fetch(url, { headers: { 'user-agent': 'Mozilla/5.0', accept: 'application/json' }, cf: { cacheTtl: 5 } });
+  if (!res.ok) throw new Error('quote_fetch_failed');
+  const j = await res.json();
+  const r0 = j && j.chart && j.chart.result && j.chart.result[0];
+  const price = r0 && r0.meta && Number(r0.meta.regularMarketPrice);
+  if (!(price > 0)) throw new Error('no_price');
+  return price;
+}
+
 const CORS_HEADERS = {
   'access-control-allow-origin': '*',
   'access-control-allow-methods': 'GET, POST, OPTIONS',
@@ -153,6 +169,10 @@ export class PlayLedger {
       if (path === '/play/meme/holdings' && method === 'GET') return await this.handleMemeHoldings(url);
       if (path === '/play/meme/buy' && method === 'POST') return await this.handleMemeBuy(request);
       if (path === '/play/meme/sell' && method === 'POST') return await this.handleMemeSell(request);
+
+      if (path === '/play/stock/positions' && method === 'GET') return await this.handleStockPositions(url);
+      if (path === '/play/stock/open' && method === 'POST') return await this.handleStockOpen(request);
+      if (path === '/play/stock/close' && method === 'POST') return await this.handleStockClose(request);
 
       if (path === '/health/play' && method === 'GET') return await this.handleHealth();
     } catch (err) {
@@ -663,6 +683,81 @@ export class PlayLedger {
       await this.state.storage.put('bal:' + wallet, round9(balance + ostOut));
       await this.state.storage.put('total', round9(total + ostOut));
       return json({ ok: true, tokens: round9(tokens), ostOut, fee, position: holds[mint] || { tokens: 0, costOst: 0 }, coin: this.memeCoinView(coin), balance: round9(balance + ostOut) });
+    });
+  }
+
+  // ── Mirror stocks (server-fetched price, play-balance funded) ──
+  async handleStockPositions(url) {
+    const wallet = cleanText(url.searchParams.get('wallet'), 64);
+    if (!isPubkey(wallet)) return json({ error: 'invalid_wallet' }, 400);
+    const list = await this.state.storage.list({ prefix: 'stockpos:' + wallet + ':' });
+    const positions = [];
+    list.forEach((v) => { if (v && v.open) positions.push(v); });
+    return json({ ok: true, wallet, positions });
+  }
+
+  async handleStockOpen(request) {
+    let body; try { body = await request.json(); } catch (_) { return json({ error: 'invalid_json' }, 400); }
+    const wallet = cleanText(body && body.wallet, 64);
+    const symbol = cleanText(body && body.symbol, 12).toUpperCase();
+    const side = (body && body.side) === 'short' ? 'short' : 'long';
+    const stake = Number(body && body.stake);
+    if (!isPubkey(wallet)) return json({ error: 'invalid_wallet' }, 400);
+    if (!/^[A-Z.\-]{1,12}$/.test(symbol)) return json({ error: 'invalid_symbol' }, 400);
+    if (!(stake > 0)) return json({ error: 'invalid_stake' }, 400);
+
+    // Fetch the entry price UNLOCKED (network I/O never inside the lock). Never
+    // fabricate a price — a fetch failure rejects the open.
+    let entryPrice;
+    try { entryPrice = await fetchStockPrice(symbol); }
+    catch (_) { return json({ error: 'quote_unavailable', message: 'Could not fetch a live price for ' + symbol + '.' }, 502); }
+
+    return await this.state.blockConcurrencyWhile(async () => {
+      const balance = Number((await this.state.storage.get('bal:' + wallet)) || 0);
+      if (balance + 1e-9 < stake) return json({ error: 'insufficient_balance', balance }, 400);
+      const total = Number((await this.state.storage.get('total')) || 0);
+      const id = crypto.randomUUID();
+      const pos = { id, wallet, symbol, side, stake: round9(stake), entryPrice, shares: round9(stake / entryPrice), openedAt: Date.now(), open: true };
+      await this.state.storage.put('bal:' + wallet, round9(balance - stake));   // debit stake — safe
+      await this.state.storage.put('total', round9(total - stake));
+      await this.state.storage.put('stockpos:' + wallet + ':' + id, pos);
+      return json({ ok: true, position: pos, balance: round9(balance - stake) });
+    });
+  }
+
+  async handleStockClose(request) {
+    let body; try { body = await request.json(); } catch (_) { return json({ error: 'invalid_json' }, 400); }
+    const wallet = cleanText(body && body.wallet, 64);
+    const positionId = cleanText(body && body.positionId, 64);
+    if (!isPubkey(wallet)) return json({ error: 'invalid_wallet' }, 400);
+    if (!positionId) return json({ error: 'missing_position' }, 400);
+
+    const key = 'stockpos:' + wallet + ':' + positionId;
+    const pos = await this.state.storage.get(key);
+    if (!pos || !pos.open) return json({ error: 'unknown_position' }, 404);
+
+    // Exit price + bankroll fetched UNLOCKED.
+    let exitPrice;
+    try { exitPrice = await fetchStockPrice(pos.symbol); }
+    catch (_) { return json({ error: 'quote_unavailable', message: 'Could not fetch a live price to close.' }, 502); }
+    const bankroll = await this.poolBankroll();
+
+    return await this.state.blockConcurrencyWhile(async () => {
+      const fresh = await this.state.storage.get(key);
+      if (!fresh || !fresh.open) return json({ error: 'already_closed' }, 409);
+      const move = (exitPrice - fresh.entryPrice) / fresh.entryPrice;
+      const signed = fresh.side === 'short' ? -move : move;              // 1x on the stake
+      let payout = Math.max(0, round9(fresh.stake * (1 + signed)));
+      const fee = round9(Math.max(0, payout - fresh.stake) * STOCK_EDGE);  // 2% of profit only
+      payout = round9(payout - fee);
+      const balance = Number((await this.state.storage.get('bal:' + wallet)) || 0);
+      const total = Number((await this.state.storage.get('total')) || 0);
+      if (bankroll != null && (total + payout) > bankroll + 1e-9) return json({ error: 'bankroll_cap', message: 'Pool can’t back that close right now.' }, 409);
+      fresh.open = false; fresh.exitPrice = exitPrice; fresh.closedAt = Date.now(); fresh.payout = payout; fresh.fee = fee;
+      await this.state.storage.put(key, fresh);
+      await this.state.storage.put('bal:' + wallet, round9(balance + payout));
+      await this.state.storage.put('total', round9(total + payout));
+      return json({ ok: true, position: fresh, payout, fee, entryPrice: fresh.entryPrice, exitPrice, move: round9(signed), balance: round9(balance + payout) });
     });
   }
 
