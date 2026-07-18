@@ -117,6 +117,42 @@ export const GAMES = {
       return { result, win, payoutMult: win ? 1.98 : 0 };
     },
   },
+
+  // Matches docs/ost-games.js "double": color from f thresholds (red<0.475,
+  // black<0.95, else green). green=14x, red/black=2x. The client's lanes[] strip
+  // is COSMETIC (which cell to highlight) — payout is purely `color`.
+  double: {
+    floatsNeeded: 1,
+    validateParams(params) {
+      const pick = params && params.pick;
+      if (pick !== 'red' && pick !== 'black' && pick !== 'green') return "pick must be 'red', 'black' or 'green'";
+      return null;
+    },
+    outcome(params, floats) {
+      const f = floats[0];
+      const color = f < 0.475 ? 'red' : f < 0.95 ? 'black' : 'green';
+      const win = params.pick === color;
+      return { color, win, payoutMult: win ? (color === 'green' ? 14 : 2) : 0 };
+    },
+  },
+
+  // Matches docs/ost-games.js "slide": result = min(100, floor((0.99/f)*100)/100);
+  // win if result >= target; payout target×.
+  slide: {
+    floatsNeeded: 1,
+    validateParams(params) {
+      const target = Number(params && params.target);
+      if (!(target >= 1.01 && target <= 100)) return 'target must be between 1.01 and 100';
+      return null;
+    },
+    outcome(params, floats) {
+      const target = Number(params.target);
+      const value = Math.max(0.000001, floats[0]);
+      const result = Math.min(100, Math.floor((0.99 / value) * 100) / 100);
+      const win = result >= target;
+      return { result: round9(result), win, payoutMult: win ? target : 0 };
+    },
+  },
 };
 
 // Compute one bet's outcome from the secret seed. Pure + deterministic given

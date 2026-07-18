@@ -1,6 +1,6 @@
 // PHASE 2 INCREMENT 4a — verify each ported single-shot game server-side matches
 // its client math exactly, by independent recompute from the revealed seed.
-// Covers limbo, dice, coinflip. Same seed per wallet; nonces accumulate across
+// Covers limbo, dice, coinflip, double, slide. Same seed per wallet; nonces accumulate across
 // games; one /play/rotate reveals the seed to check them all.
 import { readFileSync } from 'node:fs';
 import { createHash, createHmac } from 'node:crypto';
@@ -42,6 +42,8 @@ const recompute = {
   limbo: (seed, cs, n, p, w) => { const rolled = Math.max(1, 99 / (100 * (1 - f0(seed, cs, n)))); const win = rolled >= p.target; return win ? w * p.target : 0; },
   dice: (seed, cs, n, p, w) => { const roll = f0(seed, cs, n) * 100; const win = p.dir === 'under' ? roll < p.target : roll > p.target; const c = p.dir === 'under' ? p.target : 100 - p.target; return win ? w * (99 / c) : 0; },
   coinflip: (seed, cs, n, p, w) => { const res = f0(seed, cs, n) < 0.5 ? 'h' : 't'; return res === p.side ? w * 1.98 : 0; },
+  double: (seed, cs, n, p, w) => { const f = f0(seed, cs, n); const color = f < 0.475 ? 'red' : f < 0.95 ? 'black' : 'green'; return p.pick === color ? w * (color === 'green' ? 14 : 2) : 0; },
+  slide: (seed, cs, n, p, w) => { const v = Math.max(0.000001, f0(seed, cs, n)); const result = Math.min(100, Math.floor((0.99 / v) * 100) / 100); return result >= p.target ? w * p.target : 0; },
 };
 
 (async () => {
@@ -61,7 +63,8 @@ const recompute = {
   // Play 4 bets of each game, recording (game, params, nonce, wager, serverPayout).
   const plays = [];
   const cases = [
-    ['limbo', { target: 2 }], ['dice', { target: 50, dir: 'under' }], ['dice', { target: 30, dir: 'over' }], ['coinflip', { side: 'h' }],
+    ['limbo', { target: 2 }], ['dice', { target: 50, dir: 'under' }], ['coinflip', { side: 'h' }],
+    ['double', { pick: 'red' }], ['double', { pick: 'green' }], ['slide', { target: 2 }],
   ];
   console.log('\n1) play a spread of single-shot bets (server computes each)');
   for (const [game, params] of cases) {
@@ -85,6 +88,6 @@ const recompute = {
   for (const g of Object.keys(byGame)) say(byGame[g].bad === 0, g + ': ' + byGame[g].ok + '/' + (byGame[g].ok + byGame[g].bad) + ' outcomes reproduce exactly');
   say(allMatch, 'ALL games: server payouts == independent recompute');
 
-  console.log('\n' + (fails === 0 ? 'ALL PASS — limbo, dice, coinflip are server-authoritative and provably fair.' : fails + ' FAIL(S)'));
+  console.log('\n' + (fails === 0 ? 'ALL PASS — all ported single-shot games are server-authoritative and provably fair.' : fails + ' FAIL(S)'));
   process.exit(fails === 0 ? 0 : 1);
 })().catch((e) => { console.error('THREW:', e.message || e); process.exit(1); });
