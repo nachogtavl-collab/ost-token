@@ -26,6 +26,10 @@
  * ========================================================================== */
 import { PublicKey } from '@solana/web3.js';
 import * as Pool from './solana-pool.js';
+import { GAMES, computeBet, randomSeedHex, sha256Hex } from './play-games.js';
+
+const MAX_BATCH = 50;          // auto-bet: at most N nonces per /play/bet call
+const POOL_CACHE_MS = 20000;   // re-read pool OSTG for solvency at most this often
 
 const CORS_HEADERS = {
   'access-control-allow-origin': '*',
@@ -113,6 +117,10 @@ export class PlayLedger {
       if (path === '/play/deposit' && method === 'POST') return await this.handleDeposit(request);
 
       if (path === '/play/cashout' && method === 'POST') return await this.handleCashout(request);
+
+      if (path === '/play/seed' && method === 'GET') return await this.handleSeed(url);
+      if (path === '/play/bet' && method === 'POST') return await this.handleBet(request);
+      if (path === '/play/rotate' && method === 'POST') return await this.handleRotate(request);
 
       if (path === '/health/play' && method === 'GET') return await this.handleHealth();
     } catch (err) {
@@ -253,6 +261,119 @@ export class PlayLedger {
       await this.state.storage.put('cashout:' + id, Object.assign({}, rec, { status: 'confirmed' }));
     });
     return json({ ok: true, sig: rec.sig, amount: rec.amount, balance: await this.balOf(wallet) });
+  }
+
+  // ---- provably-fair seed (per wallet, lives HERE so bets are authoritative
+  //      and self-contained — no cross-DO hop to fetch the seed) --------------
+  async ensureSeed(wallet, clientSeed) {
+    let rec = await this.state.storage.get('seed:' + wallet);
+    if (!rec) {
+      const seed = randomSeedHex();
+      rec = { serverSeed: seed, serverSeedHash: await sha256Hex(seed), nonce: 0, clientSeed: clientSeed || ('ost-' + randomSeedHex().slice(0, 16)), epoch: 1 };
+      await this.state.storage.put('seed:' + wallet, rec);
+    } else if (clientSeed && clientSeed !== rec.clientSeed) {
+      rec.clientSeed = clientSeed;
+      await this.state.storage.put('seed:' + wallet, rec);
+    }
+    return rec;
+  }
+
+  async handleSeed(url) {
+    const wallet = cleanText(url.searchParams.get('wallet'), 64);
+    if (!isPubkey(wallet)) return json({ error: 'invalid_wallet' }, 400);
+    const rec = await this.ensureSeed(wallet);
+    // Publishes only the HASH + clientSeed + nonce. Never the secret serverSeed
+    // (that is only revealed on rotate, so past bets become verifiable).
+    return json({ ok: true, serverSeedHash: rec.serverSeedHash, clientSeed: rec.clientSeed, nonce: rec.nonce, epoch: rec.epoch });
+  }
+
+  // Refresh the cached pool OSTG balance (the bankroll) for the solvency guard.
+  // Read UNLOCKED and cached — a WIN raises Σ balances with no new pool OSTG, so
+  // we must never credit a win the pool cannot ultimately pay out.
+  async poolBankroll() {
+    const cached = await this.state.storage.get('poolOstgCache');
+    if (cached && (Date.now() - cached.at) < POOL_CACHE_MS && Number.isFinite(cached.v)) return cached.v;
+    try {
+      const v = await Pool.withRpc('play-bankroll', async (conn) => {
+        const res = await conn.getTokenAccountBalance(Pool.poolAtaForMint(this.env, new PublicKey(Pool.OSTG_MINT)));
+        return Number(res && res.value ? res.value.uiAmount : NaN);
+      });
+      if (Number.isFinite(v)) { await this.state.storage.put('poolOstgCache', { v, at: Date.now() }); return v; }
+    } catch (_) {}
+    return cached && Number.isFinite(cached.v) ? cached.v : null;
+  }
+
+  async handleBet(request) {
+    let body; try { body = await request.json(); } catch (_) { return json({ error: 'invalid_json' }, 400); }
+    const wallet = cleanText(body && body.wallet, 64);
+    const game = cleanText(body && body.game, 32);
+    const wager = Number(body && body.wager);
+    const count = Math.max(1, Math.min(MAX_BATCH, Math.floor(Number(body && body.count) || 1)));
+    const params = (body && body.params && typeof body.params === 'object') ? body.params : {};
+    const clientSeed = cleanText(body && body.clientSeed, 128) || null;
+    if (!isPubkey(wallet)) return json({ error: 'invalid_wallet' }, 400);
+    const g = GAMES[game];
+    if (!g) return json({ error: 'unknown_game', supported: Object.keys(GAMES) }, 400);
+    if (!(wager > 0)) return json({ error: 'invalid_wager' }, 400);
+    const perr = g.validateParams ? g.validateParams(params) : null;
+    if (perr) return json({ error: 'invalid_params', message: perr }, 400);
+
+    // Bankroll for the solvency guard, refreshed UNLOCKED (never RPC in the lock).
+    const bankroll = await this.poolBankroll();
+
+    // LOCKED: the whole play + ledger update. HMAC is microseconds (fine in the
+    // lock); there is NO network I/O here.
+    const out = await this.state.blockConcurrencyWhile(async () => {
+      const seedRec = await this.ensureSeed(wallet, clientSeed);
+      let balance = Number((await this.state.storage.get('bal:' + wallet)) || 0);
+      let total = Number((await this.state.storage.get('total')) || 0);
+      let nonce = seedRec.nonce;
+      const results = [];
+      let stopped = null;
+
+      for (let i = 0; i < count; i++) {
+        if (balance + 1e-9 < wager) { stopped = 'insufficient_balance'; break; }
+        // Bind params to the NEXT nonce, THEN compute the outcome from the secret
+        // seed — the client cannot have known this roll when it chose params.
+        nonce += 1;
+        const r = await computeBet(game, seedRec.serverSeed, seedRec.clientSeed, nonce, params, wager);
+        const net = Math.round((r.payout - wager) * 1e9) / 1e9;
+        // SOLVENCY: never let a win push Σ balances above what the pool can pay.
+        if (net > 0 && bankroll != null && (total + net) > bankroll + 1e-9) { nonce -= 1; stopped = 'bankroll_cap'; break; }
+        balance = Math.round((balance + net) * 1e9) / 1e9;
+        total = Math.round((total + net) * 1e9) / 1e9;
+        results.push({ nonce: r.nonce, rolled: r.rolled, win: r.win, payout: r.payout, net, balance });
+      }
+
+      if (results.length) {
+        await this.state.storage.put('bal:' + wallet, balance);
+        await this.state.storage.put('total', total);
+        await this.state.storage.put('seed:' + wallet, Object.assign({}, seedRec, { nonce }));
+      }
+      return { results, balance, stopped, serverSeedHash: seedRec.serverSeedHash, clientSeed: seedRec.clientSeed };
+    });
+
+    return json(Object.assign({ ok: out.results.length > 0, wallet, game, played: out.results.length }, out));
+  }
+
+  // Reveal the current secret seed and commit a fresh one. Lets a player verify
+  // every past bet: HMAC(revealedSeed, clientSeed:nonce:round) must reproduce the
+  // outcomes the server credited. sha256(revealedSeed) must equal the hash we
+  // published before those bets.
+  async handleRotate(request) {
+    let body; try { body = await request.json(); } catch (_) { return json({ error: 'invalid_json' }, 400); }
+    const wallet = cleanText(body && body.wallet, 64);
+    if (!isPubkey(wallet)) return json({ error: 'invalid_wallet' }, 400);
+    return await this.state.blockConcurrencyWhile(async () => {
+      const rec = await this.ensureSeed(wallet);
+      const revealedSeed = rec.serverSeed;
+      const revealedHash = rec.serverSeedHash;
+      const revealedThroughNonce = rec.nonce;
+      const seed = randomSeedHex();
+      const next = { serverSeed: seed, serverSeedHash: await sha256Hex(seed), nonce: 0, clientSeed: rec.clientSeed, epoch: (rec.epoch || 1) + 1 };
+      await this.state.storage.put('seed:' + wallet, next);
+      return json({ ok: true, revealedSeed, revealedHash, revealedThroughNonce, clientSeed: rec.clientSeed, newServerSeedHash: next.serverSeedHash, epoch: next.epoch });
+    });
   }
 
   async handleHealth() {
