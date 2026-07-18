@@ -568,6 +568,58 @@ export const MULTI = {
     // near-certain guess, so gate on progress, not on mult >= 1.
     canCashout(state) { return (state.pos || 0) > 0; },
   },
+
+  // Matches docs/ost-games.js renderCrash. THE reactive game: the seed fixes a
+  // hidden bust point crashAt = max(1, floor(99/(1-r))/100) (1% edge = instant
+  // bust at 1.00x); the multiplier climbs in real time as mult = e^(K*elapsed).
+  // The eject is authoritative on the SERVER clock (handleSessionCashout calls
+  // this.cashout), never a raw client claim — see the anti-cheat note there.
+  crash: {
+    K: 0.32,          // growth rate: mult = e^(K * elapsedSeconds)
+    GRACE: 1.05,      // tolerate ~5% of RTT/clock skew in a manual eject claim
+    layoutFloats: 1,
+    validateParams(p) {
+      if (p && p.autoCashout != null) {
+        const a = Number(p.autoCashout);
+        if (!(a >= 1.01 && a <= 1e6)) return 'autoCashout must be between 1.01 and 1000000';
+      }
+      return null;
+    },
+    buildLayout(params, floats) {
+      // crashPoint(r) = max(1, floor(99/(1-r))/100). Kept byte-identical to the
+      // client so the revealed seed reproduces the exact bust point.
+      const r = floats[0];
+      const crashAt = Math.max(1, Math.floor(99 / (1 - r)) / 100);
+      return { crashAt };
+    },
+    config(params) { return { growthK: this.K, autoCashout: (params && params.autoCashout != null) ? Number(params.autoCashout) : null }; },
+    // Record the server start time and DO NOT reveal crashAt (a modified client
+    // that knew it would eject at crashAt-ε every round).
+    startReveal(params, layout, state) { state.startTime = Date.now(); return { growthK: this.K }; },
+    step() { return { error: 'crash has no steps — cash out to eject' }; },
+    // Server-clock eject. `auto` settles deterministically at its pre-committed
+    // target (fixed before crashAt was known). A manual eject uses the client's
+    // displayed mult, but bounded by the server's elapsed clock so it cannot claim
+    // a multiplier that hasn't been reached; either way a target >= the hidden bust
+    // point loses. Returns { busted } | { busted:false, mult, crashAt }.
+    cashout(params, layout, state, claimedMult, nowMs) {
+      const auto = (params && params.autoCashout != null) ? Number(params.autoCashout) : null;
+      let target;
+      if (auto != null) {
+        target = auto;                                  // deterministic auto path
+      } else {
+        const elapsed = Math.max(0, (nowMs - (state.startTime || nowMs)) / 1000);
+        const serverMult = Math.pow(Math.E, this.K * elapsed);
+        const cap = serverMult * this.GRACE;
+        target = Number(claimedMult);
+        if (!(target >= 1)) target = 1;
+        if (target > cap) target = cap;                 // can't eject faster than server time
+      }
+      if (target >= layout.crashAt) return { busted: true, crashAt: layout.crashAt };
+      return { busted: false, mult: round9(target), crashAt: layout.crashAt };
+    },
+    currentMultiplier() { return 0; },
+  },
 };
 
 // Compute one bet's outcome from the secret seed. Pure + deterministic given

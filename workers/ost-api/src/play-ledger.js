@@ -461,13 +461,31 @@ export class PlayLedger {
       if (!session || session.wallet !== wallet) return json({ error: 'unknown_session' }, 404);
       if (session.state.ended) return json({ error: 'session_ended', message: 'This session already ended (busted or cashed out).' }, 409);
       const g = MULTI[session.game];
-      // Game-agnostic cashout guard. Most games gate on "made progress"
-      // (currentMultiplier >= 1). Games whose multiplier can dip below 1 on a
-      // near-certain step (hilo) define canCashout(state) to gate on progress
-      // directly, then pay wager × the real multiplier (which may be < 1).
-      const mult = g.currentMultiplier(session.params, session.state);
-      const eligible = g.canCashout ? g.canCashout(session.state) : (mult >= 1);
-      if (!eligible) return json({ error: 'nothing_to_cashout' }, 400);
+      let mult;
+      if (g.cashout) {
+        // Reactive game (crash): the eject multiplier is authoritative on the
+        // SERVER clock. The client's displayed mult is only an upper-bounded hint
+        // (can't claim faster than server-elapsed time), and the hidden bust point
+        // is checked server-side — so a modified client can neither time-travel
+        // nor eject past the crash. A too-late eject busts (no payout).
+        const claimedMult = Number(body && body.claimedMult);
+        const res = g.cashout(session.params, session.layout, session.state, claimedMult, Date.now());
+        if (res.busted) {
+          session.state.ended = true; session.state.won = false; session.state.busted = true;
+          await this.state.storage.put('sess:' + sessionId, session);
+          return json({ ok: true, sessionId, busted: true, crashAt: res.crashAt, payout: 0, multiplier: 0 });
+        }
+        mult = res.mult;
+      } else {
+        // Game-agnostic cashout guard. Most games gate on "made progress"
+        // (currentMultiplier >= 1). Games whose multiplier can dip below 1 on a
+        // near-certain step (hilo) define canCashout(state) to gate on progress
+        // directly, then pay wager × the real multiplier (which may be < 1).
+        const cm = g.currentMultiplier(session.params, session.state);
+        const eligible = g.canCashout ? g.canCashout(session.state) : (cm >= 1);
+        if (!eligible) return json({ error: 'nothing_to_cashout' }, 400);
+        mult = cm;
+      }
       const payout = round9(session.wager * mult);
 
       const balance = Number((await this.state.storage.get('bal:' + wallet)) || 0);
