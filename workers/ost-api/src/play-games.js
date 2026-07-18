@@ -55,6 +55,24 @@ function floatsFromHexes(hexes, count) {
 }
 function round9(n) { return Math.round(Number(n) * 1e9) / 1e9; }
 
+// Exactly docs/ost-games.js shuffleWithFloats (Fisher-Yates; floatIndex counts up
+// from 0 as index counts down). Used by keno and the tower games.
+function shuffleWithFloats(items, floats) {
+  const result = items.slice();
+  for (let index = result.length - 1; index > 0; index--) {
+    const floatIndex = result.length - 1 - index;
+    const swapIndex = Math.floor((floats[floatIndex] || 0) * (index + 1));
+    const t = result[index]; result[index] = result[swapIndex]; result[swapIndex] = t;
+  }
+  return result;
+}
+
+const TOWER_MODES = {
+  easy: { columns: 3, safe: 2 },
+  medium: { columns: 4, safe: 2 },
+  hard: { columns: 4, safe: 1 },
+};
+
 // Exactly docs/ost-games.js KENO_TABLES (payout mult by picks -> hits).
 const KENO_TABLES = {
   1: { 1: 3.8 },
@@ -399,6 +417,92 @@ export const MULTI = {
     // Multiplier bankable right now (0 before the first safe reveal).
     currentMultiplier(params, state) { return this.multiplier(params, state.safeRevealed || 0); },
   },
+
+  // Matches docs/ost-games.js tower: per row, shuffle columns and mark the first
+  // `safe` as safe; pick a column each row to climb; multiplier compounds.
+  tower: {
+    layoutFloats: (p) => TOWER_MODES[p.mode].columns * Number(p.rows),
+    validateParams(p) {
+      if (!TOWER_MODES[p && p.mode]) return "mode must be 'easy', 'medium' or 'hard'";
+      const rows = Number(p.rows);
+      if (rows !== 6 && rows !== 8 && rows !== 10) return 'rows must be 6, 8 or 10';
+      return null;
+    },
+    buildLayout(params, floats) {
+      const cfg = TOWER_MODES[params.mode];
+      const rows = Number(params.rows);
+      const safeRows = [];
+      for (let r = 0; r < rows; r++) {
+        const cols = [];
+        for (let c = 0; c < cfg.columns; c++) cols.push(c);
+        const rowFloats = floats.slice(r * cfg.columns, r * cfg.columns + cfg.columns);
+        safeRows.push(shuffleWithFloats(cols, rowFloats).slice(0, cfg.safe));
+      }
+      return { safeRows };
+    },
+    // towerMultiplier(level) = (0.99 / (safe/columns))^level.
+    multiplier(params, level) {
+      if (!level) return 0;   // 0 = no progress (guards no-gain cashout)
+      const cfg = TOWER_MODES[params.mode];
+      return round9(Math.pow(0.99 / (cfg.safe / cfg.columns), level));
+    },
+    config(params) { const cfg = TOWER_MODES[params.mode]; return { columns: cfg.columns, safe: cfg.safe, rows: Number(params.rows) }; },
+    step(params, layout, state, action) {
+      const cfg = TOWER_MODES[params.mode];
+      const rows = Number(params.rows);
+      const level = state.level || 0;
+      const col = Number(action && action.column);
+      if (!Number.isInteger(col) || col < 0 || col >= cfg.columns) return { error: 'column out of range' };
+      if (level >= rows) return { error: 'tower already complete' };
+      if (!layout.safeRows[level].includes(col)) {
+        return { ended: true, won: false, trap: true, column: col, level, safeRow: layout.safeRows[level] };
+      }
+      state.level = level + 1;
+      const done = state.level >= rows;
+      return { ended: done, won: done, safe: true, column: col, level: state.level, multiplier: this.multiplier(params, state.level) };
+    },
+    currentMultiplier(params, state) { return this.multiplier(params, state.level || 0); },
+  },
+
+  // Matches docs/ost-games.js renderDragonTower: 8 floors, one dragon per floor at
+  // column floor(f*cols); pick a safe column each floor; multiplier = factor^floor.
+  dragontower: {
+    MODES: {
+      easy: { cols: 4, floors: 8, factor: 0.99 * 4 / 3 },
+      medium: { cols: 3, floors: 8, factor: 0.99 * 3 / 2 },
+      hard: { cols: 2, floors: 8, factor: 0.99 * 2 / 1 },
+    },
+    layoutFloats(p) { return this.MODES[p.mode].floors; },
+    validateParams(p) {
+      if (!this.MODES[p && p.mode]) return "mode must be 'easy', 'medium' or 'hard'";
+      return null;
+    },
+    buildLayout(params, floats) {
+      const m = this.MODES[params.mode];
+      const dragons = [];
+      for (let f = 0; f < m.floors; f++) dragons.push(Math.floor(floats[f] * m.cols));
+      return { dragons };
+    },
+    multiplier(params, floorsCleared) {
+      if (!floorsCleared) return 0;
+      return round9(Math.pow(this.MODES[params.mode].factor, floorsCleared));
+    },
+    config(params) { const m = this.MODES[params.mode]; return { columns: m.cols, floors: m.floors }; },
+    step(params, layout, state, action) {
+      const m = this.MODES[params.mode];
+      const floor = state.floor || 0;
+      const col = Number(action && action.column);
+      if (!Number.isInteger(col) || col < 0 || col >= m.cols) return { error: 'column out of range' };
+      if (floor >= m.floors) return { error: 'tower already complete' };
+      if (layout.dragons[floor] === col) {
+        return { ended: true, won: false, dragon: true, column: col, floor, dragonColumn: layout.dragons[floor] };
+      }
+      state.floor = floor + 1;
+      const done = state.floor >= m.floors;
+      return { ended: done, won: done, safe: true, column: col, floor: state.floor, multiplier: this.multiplier(params, state.floor) };
+    },
+    currentMultiplier(params, state) { return this.multiplier(params, state.floor || 0); },
+  },
 };
 
 // Compute one bet's outcome from the secret seed. Pure + deterministic given
@@ -423,7 +527,7 @@ export async function computeBet(game, serverSeed, clientSeed, nonce, params, wa
 export async function layoutFor(game, serverSeed, clientSeed, nonce, params) {
   const g = MULTI[game];
   if (!g) throw new Error('unknown_multi_game');
-  const need = g.layoutFloats;
+  const need = typeof g.layoutFloats === 'function' ? g.layoutFloats(params) : g.layoutFloats;
   const rounds = Math.max(1, Math.ceil(need / 8));
   const hexes = [];
   for (let r = 0; r < rounds; r++) hexes.push(await hmacSha256Hex(serverSeed, clientSeed + ':' + nonce + ':' + r));
