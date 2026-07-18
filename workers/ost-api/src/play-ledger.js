@@ -31,6 +31,28 @@ import { GAMES, MULTI, computeBet, layoutFor, randomSeedHex, sha256Hex } from '.
 const MAX_BATCH = 50;          // auto-bet: at most N nonces per /play/bet call
 const POOL_CACHE_MS = 20000;   // re-read pool OSTG for solvency at most this often
 
+// ── Memecoin bonding curve (server-authoritative, funded by the play balance) ──
+// Byte-identical to docs/launchpad-engine.js so quotes match. The server owns
+// `tokensSold` per coin + per-wallet holdings, so a modified client cannot mint
+// tokens or fabricate proceeds. price(r) = BASE*(1 + r*STEEP).
+const MEME_BASE_PRICE = 0.00003;
+const MEME_STEEP = 199;
+const MEME_SUPPLY = 1000000000;      // 1e9 default supply
+const MEME_GRAD_MCAP = 69000;        // OSTG market cap that locks the curve
+const MEME_EDGE = 0.02;              // 2% of PROFIT on a sell (matches OST_HOUSE)
+function memePriceAt(r) { const x = Math.max(0, Math.min(1, r)); return MEME_BASE_PRICE * (1 + x * MEME_STEEP); }
+// ∫ price ds from s0..s1 — the OSTG cost to move sold from s0 to s1.
+function memeCurveCost(s0, s1, supply) {
+  return MEME_BASE_PRICE * (s1 - s0) + (MEME_BASE_PRICE * MEME_STEEP / (2 * supply)) * (s1 * s1 - s0 * s0);
+}
+// Inverse: tokens minted for `ostIn` OSTG starting at sold s0.
+function memeTokensForOst(ostIn, s0, supply) {
+  const A = MEME_BASE_PRICE * MEME_STEEP / (2 * supply);
+  const B = MEME_BASE_PRICE * (1 + MEME_STEEP * s0 / supply);
+  if (A <= 0) return ostIn / Math.max(1e-12, B);
+  return (-B + Math.sqrt(B * B + 4 * A * ostIn)) / (2 * A);
+}
+
 const CORS_HEADERS = {
   'access-control-allow-origin': '*',
   'access-control-allow-methods': 'GET, POST, OPTIONS',
@@ -126,6 +148,11 @@ export class PlayLedger {
       if (path === '/play/session/start' && method === 'POST') return await this.handleSessionStart(request);
       if (path === '/play/session/step' && method === 'POST') return await this.handleSessionStep(request);
       if (path === '/play/session/cashout' && method === 'POST') return await this.handleSessionCashout(request);
+
+      if (path === '/play/meme/coin' && method === 'GET') return await this.handleMemeCoin(url);
+      if (path === '/play/meme/holdings' && method === 'GET') return await this.handleMemeHoldings(url);
+      if (path === '/play/meme/buy' && method === 'POST') return await this.handleMemeBuy(request);
+      if (path === '/play/meme/sell' && method === 'POST') return await this.handleMemeSell(request);
 
       if (path === '/health/play' && method === 'GET') return await this.handleHealth();
     } catch (err) {
@@ -530,6 +557,112 @@ export class PlayLedger {
       await this.state.storage.put('total', round9(total + payout));
       await this.state.storage.put('sess:' + sessionId, session);
       return json({ ok: true, sessionId, payout, multiplier: mult, balance: round9(balance + payout) });
+    });
+  }
+
+  // ── Memecoins (server-authoritative bonding curve, play-balance funded) ──
+  memeCoinView(c) {
+    const supply = Number(c.supply) || MEME_SUPPLY;
+    const sold = Number(c.sold) || 0;
+    const price = memePriceAt(sold / supply);
+    const mcap = sold * price;
+    const curve = Math.max(0, Math.min(100, Math.floor((mcap / MEME_GRAD_MCAP) * 100)));
+    return { mint: c.mint, symbol: c.symbol || '', supply, sold: round9(sold), price: round9(price), mcap: Math.round(mcap), curve, trades: Number(c.trades) || 0, graduated: curve >= 100 };
+  }
+
+  async handleMemeCoin(url) {
+    const mint = cleanText(url.searchParams.get('mint'), 64);
+    if (!mint) return json({ error: 'missing_mint' }, 400);
+    const c = (await this.state.storage.get('meme:' + mint)) || { mint, symbol: cleanText(url.searchParams.get('symbol'), 32) || '', supply: MEME_SUPPLY, sold: 0, trades: 0 };
+    return json({ ok: true, coin: this.memeCoinView(c) });
+  }
+
+  async handleMemeHoldings(url) {
+    const wallet = cleanText(url.searchParams.get('wallet'), 64);
+    if (!isPubkey(wallet)) return json({ error: 'invalid_wallet' }, 400);
+    const holds = (await this.state.storage.get('meme:hold:' + wallet)) || {};
+    return json({ ok: true, wallet, holdings: holds });
+  }
+
+  async handleMemeBuy(request) {
+    let body; try { body = await request.json(); } catch (_) { return json({ error: 'invalid_json' }, 400); }
+    const wallet = cleanText(body && body.wallet, 64);
+    const mint = cleanText(body && body.mint, 64);
+    const symbol = cleanText(body && body.symbol, 32) || '';
+    const ostIn = Number(body && body.ostIn);
+    if (!isPubkey(wallet)) return json({ error: 'invalid_wallet' }, 400);
+    if (!mint) return json({ error: 'missing_mint' }, 400);
+    if (!(ostIn > 0)) return json({ error: 'invalid_amount' }, 400);
+
+    return await this.state.blockConcurrencyWhile(async () => {
+      const coin = (await this.state.storage.get('meme:' + mint)) || { mint, symbol, supply: MEME_SUPPLY, sold: 0, trades: 0 };
+      if (symbol && !coin.symbol) coin.symbol = symbol;
+      const supply = Number(coin.supply) || MEME_SUPPLY;
+      if (this.memeCoinView(coin).graduated) return json({ error: 'graduated', message: 'Coin has graduated — trading locked.' }, 409);
+      const balance = Number((await this.state.storage.get('bal:' + wallet)) || 0);
+      let amt = ostIn;
+      if (balance + 1e-9 < amt) return json({ error: 'insufficient_balance', balance }, 400);
+      const s0 = Number(coin.sold) || 0;
+      let tokens = memeTokensForOst(amt, s0, supply);
+      if (s0 + tokens > supply) { tokens = supply - s0; amt = memeCurveCost(s0, supply, supply); }   // last buy fills the curve
+      if (!(tokens > 0)) return json({ error: 'nothing_to_buy' }, 400);
+      const total = Number((await this.state.storage.get('total')) || 0);
+      // Buying spends the play balance INTO the curve — a debit, always safe.
+      await this.state.storage.put('bal:' + wallet, round9(balance - amt));
+      await this.state.storage.put('total', round9(total - amt));
+      coin.sold = s0 + tokens; coin.trades = (Number(coin.trades) || 0) + 1;
+      await this.state.storage.put('meme:' + mint, coin);
+      const holdsKey = 'meme:hold:' + wallet;
+      const holds = (await this.state.storage.get(holdsKey)) || {};
+      const pos = holds[mint] || { tokens: 0, costOst: 0 };
+      pos.tokens = round9(pos.tokens + tokens); pos.costOst = round9(pos.costOst + amt);
+      holds[mint] = pos;
+      await this.state.storage.put(holdsKey, holds);
+      return json({ ok: true, ostIn: round9(amt), tokens: round9(tokens), position: pos, coin: this.memeCoinView(coin), balance: round9(balance - amt) });
+    });
+  }
+
+  async handleMemeSell(request) {
+    let body; try { body = await request.json(); } catch (_) { return json({ error: 'invalid_json' }, 400); }
+    const wallet = cleanText(body && body.wallet, 64);
+    const mint = cleanText(body && body.mint, 64);
+    const tokensIn = Number(body && body.tokensIn);
+    if (!isPubkey(wallet)) return json({ error: 'invalid_wallet' }, 400);
+    if (!mint) return json({ error: 'missing_mint' }, 400);
+    if (!(tokensIn > 0)) return json({ error: 'invalid_amount' }, 400);
+
+    const bankroll = await this.poolBankroll();   // UNLOCKED
+
+    return await this.state.blockConcurrencyWhile(async () => {
+      const coin = await this.state.storage.get('meme:' + mint);
+      if (!coin) return json({ error: 'unknown_coin' }, 404);
+      const supply = Number(coin.supply) || MEME_SUPPLY;
+      const holdsKey = 'meme:hold:' + wallet;
+      const holds = (await this.state.storage.get(holdsKey)) || {};
+      const pos = holds[mint] || { tokens: 0, costOst: 0 };
+      let tokens = tokensIn;
+      if (tokens > pos.tokens + 1e-9) return json({ error: 'insufficient_tokens', held: pos.tokens }, 400);
+      if (tokens > pos.tokens) tokens = pos.tokens;
+      const s1 = Number(coin.sold) || 0;
+      const s0 = Math.max(0, s1 - tokens);
+      let ostOut = memeCurveCost(s0, s1, supply);
+      // House edge: 2% of PROFIT above the sold tokens' cost basis (never taxes a loss).
+      const basis = pos.tokens > 0 ? pos.costOst * (tokens / pos.tokens) : 0;
+      const fee = round9(Math.max(0, ostOut - basis) * MEME_EDGE);
+      ostOut = round9(ostOut - fee);
+      const balance = Number((await this.state.storage.get('bal:' + wallet)) || 0);
+      const total = Number((await this.state.storage.get('total')) || 0);
+      // Selling CREDITS the play balance — solvency-gate it like a game win.
+      if (bankroll != null && (total + ostOut) > bankroll + 1e-9) return json({ error: 'bankroll_cap', message: 'Pool can’t back that sell right now.' }, 409);
+      coin.sold = s0; coin.trades = (Number(coin.trades) || 0) + 1;
+      await this.state.storage.put('meme:' + mint, coin);
+      const remainTokens = round9(pos.tokens - tokens);
+      if (remainTokens > 1e-9) holds[mint] = { tokens: remainTokens, costOst: round9(pos.costOst * (remainTokens / pos.tokens)) };
+      else delete holds[mint];
+      await this.state.storage.put(holdsKey, holds);
+      await this.state.storage.put('bal:' + wallet, round9(balance + ostOut));
+      await this.state.storage.put('total', round9(total + ostOut));
+      return json({ ok: true, tokens: round9(tokens), ostOut, fee, position: holds[mint] || { tokens: 0, costOst: 0 }, coin: this.memeCoinView(coin), balance: round9(balance + ostOut) });
     });
   }
 
