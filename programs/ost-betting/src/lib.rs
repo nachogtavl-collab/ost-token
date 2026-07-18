@@ -1,6 +1,8 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface, TransferChecked};
 use pyth_solana_receiver_sdk::price_update::PriceUpdateV2;
+use switchboard_on_demand::on_demand::accounts::pull_feed::PullFeedAccountData;
+use switchboard_on_demand::prelude::rust_decimal::Decimal;
 
 pub mod errors;
 pub mod state;
@@ -30,6 +32,10 @@ declare_id!("F82m45QUAFJ4GtMsJrSFnWzDrjWdZjdzyh8HTPgTBHXr");
 /// A Pyth update older than this is refused — a market must never settle on a
 /// stale price.
 pub const MAX_PRICE_AGE_SECS: u64 = 120;
+
+/// A Switchboard pull-feed result older than this many slots is refused — an
+/// event market must never settle on a stale feed. ~250 slots ≈ 100s.
+pub const MAX_FEED_STALENESS_SLOTS: u64 = 250;
 
 /// House edge, in basis points, taken from the PROFIT only (never the stake).
 /// 200 bps = 2%, matching docs/ost-house.js. It is a compile-time constant on
@@ -88,6 +94,47 @@ pub mod ost_betting {
         // this market and cannot be swapped at claim time.
         market.treasury_token = ctx.accounts.treasury_token.key();
         market.fees_collected = 0;
+        market.market_kind = 0; // PRICE market (Pyth-resolved)
+
+        Ok(())
+    }
+
+    /// Open an EVENT market (arbitrary outcome — elections, sports, "will X
+    /// happen") that resolves from a SWITCHBOARD pull feed instead of Pyth.
+    /// `sb_feed` is the feed account's pubkey, pinned into `feed_id` so
+    /// resolution can only ever read THAT feed. Same pari-mutuel escrow, pools
+    /// (= on-chain probability) and on-chain house edge as a price market — only
+    /// the resolution oracle differs. There is NO open-price step for events.
+    pub fn initialize_event_market(
+        ctx: Context<InitializeMarket>,
+        market_id: u64,
+        lock_ts: i64,
+        resolve_ts: i64,
+        sb_feed: Pubkey,
+    ) -> Result<()> {
+        require!(resolve_ts > lock_ts, BettingError::ResolveTooEarly);
+
+        let clock = Clock::get()?;
+        let market = &mut ctx.accounts.market;
+        market.authority = ctx.accounts.authority.key();
+        market.mint = ctx.accounts.mint.key();
+        market.market_id = market_id;
+        market.bump = ctx.bumps.market;
+        market.vault_bump = ctx.bumps.vault;
+        market.created_at = clock.unix_timestamp;
+        market.lock_ts = lock_ts;
+        market.resolve_ts = resolve_ts;
+        market.yes_pool = 0;
+        market.no_pool = 0;
+        market.resolved = false;
+        market.winning_side = 0;
+        market.feed_id = sb_feed.to_bytes();  // Switchboard feed pubkey bytes
+        market.open_price = 0;                // unused for events
+        market.open_expo = 0;
+        market.close_price = 0;
+        market.treasury_token = ctx.accounts.treasury_token.key();
+        market.fees_collected = 0;
+        market.market_kind = 1;               // EVENT market (Switchboard-resolved)
 
         Ok(())
     }
@@ -144,6 +191,44 @@ pub mod ost_betting {
 
         market.close_price = price.price;
         market.winning_side = if price.price >= market.open_price { 1 } else { 0 };
+        market.resolved = true;
+
+        Ok(())
+    }
+
+    /// Resolve an EVENT market from its SWITCHBOARD pull feed. PERMISSIONLESS and
+    /// trustless, mirroring `resolve_with_pyth`: the program reads the feed the
+    /// market was pinned to at creation and decides the winner itself (feed value
+    /// >= 0.5 => YES occurred). There is deliberately NO authority path — not even
+    /// the market creator can choose the outcome.
+    pub fn resolve_with_switchboard(ctx: Context<UseSwitchboard>) -> Result<()> {
+        let clock = Clock::get()?;
+        let market = &mut ctx.accounts.market;
+
+        require!(!market.resolved, BettingError::MarketAlreadyResolved);
+        require!(market.market_kind == 1, BettingError::WrongMarketKind);
+        require!(
+            clock.unix_timestamp >= market.resolve_ts,
+            BettingError::ResolveTooEarly
+        );
+        // The feed MUST be the exact account pinned at creation — a caller cannot
+        // substitute a feed that says what they want.
+        require!(
+            ctx.accounts.feed.key().to_bytes() == market.feed_id,
+            BettingError::SwitchboardUnavailable
+        );
+
+        let feed_data = ctx.accounts.feed.try_borrow_data()?;
+        let feed = PullFeedAccountData::parse(feed_data)
+            .map_err(|_| error!(BettingError::SwitchboardUnavailable))?;
+        // Fresh value within the staleness window, ≥1 sample. Convention: the feed
+        // resolves the event to 1.0 (YES occurred) or 0.0 (NO). A 0.5 threshold
+        // tolerates tiny oracle rounding around those integer outcomes.
+        let value = feed
+            .get_value(clock.slot, MAX_FEED_STALENESS_SLOTS, 1, false)
+            .map_err(|_| error!(BettingError::SwitchboardUnavailable))?;
+
+        market.winning_side = if value >= Decimal::new(5, 1) { 1 } else { 0 };
         market.resolved = true;
 
         Ok(())
@@ -517,6 +602,20 @@ pub struct UsePythPrice<'info> {
     /// verifies it belongs to `market.feed_id` and is fresh; a forged or
     /// wrong-feed account makes the instruction fail.
     pub price_update: Account<'info, PriceUpdateV2>,
+}
+
+/// Resolve an EVENT market from a Switchboard pull feed. Permissionless: the
+/// outcome is read from `feed` (checked against `market.feed_id` in the ix), not
+/// from any signer.
+#[derive(Accounts)]
+pub struct UseSwitchboard<'info> {
+    #[account(mut)]
+    pub market: Account<'info, Market>,
+
+    /// CHECK: the Switchboard pull-feed account. It is validated in the handler
+    /// against `market.feed_id` (the pubkey pinned at creation) and parsed by the
+    /// Switchboard SDK; a forged or wrong account makes the instruction fail.
+    pub feed: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]

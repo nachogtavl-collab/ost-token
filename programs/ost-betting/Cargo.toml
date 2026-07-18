@@ -23,3 +23,4 @@ anchor-spl = { version = "0.31", features = ["token_2022"] }
 # Pyth PULL oracle: lets the PROGRAM verify a signed price update on-chain,
 # so the winning side is proven by oracle data instead of trusted to an authority.
 pyth-solana-receiver-sdk = "0.6.1"
+switchboard-on-demand = "0.13"

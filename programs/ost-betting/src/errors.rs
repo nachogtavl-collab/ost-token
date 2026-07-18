@@ -34,4 +34,8 @@ pub enum BettingError {
     WrongTreasury,
     #[msg("Not a legacy market — refunds only apply to markets that can no longer be resolved")]
     NotALegacyMarket,
+    #[msg("Wrong market kind for this instruction (price vs event)")]
+    WrongMarketKind,
+    #[msg("Switchboard feed is stale, wrong, or has no valid value")]
+    SwitchboardUnavailable,
 }
