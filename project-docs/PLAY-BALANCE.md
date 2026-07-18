@@ -39,25 +39,55 @@ caps at ~100k requests/day (see REMODEL.md; we just fought that fire).
   Cash out = pool→user OSTG payout (payout shape, gas-free). Both need the
   OST-only transfer paths generalised to OSTG (like ata-rent already was).
 
-## Fairness + anti-cheat WITHOUT a server call per spin
+## Fairness + anti-cheat
 
-This is the crux, and it reuses Phase 0's commit-reveal directly:
+### CORRECTION (2026-07-17): the "batched validate" model was CHEATABLE. Discarded.
 
-1. The DO publishes `serverSeedHash` and holds `serverSeed` secret (already does).
-2. Each outcome is deterministic: `HMAC(serverSeed, clientSeed:nonce)` → the
-   floats `pfFloats()` already consumes. The client fetches digests in BATCHES
-   (e.g. 50 nonces at once), so it plays 50 spins instantly against the local
-   mirror with ONE server round-trip, not 50.
-3. At settlement/cash-out the client submits the session: `{clientSeed, bets:
-   [{nonce, game, wager}], claimedBalance}`. The DO recomputes EVERY outcome from
-   its secret seed and the submitted bets, applies the house edge, and checks the
-   result equals `claimedBalance`. Mismatch → reject, balance unchanged. A player
-   cannot invent a win because outcomes are pinned by a seed they never saw.
-4. Then rotate the seed (reveal old, commit new) so the session is auditable.
+The original plan (client plays a batch locally, submits `{bets, claimedBalance}`
+at settlement, server recomputes) has a hole that only surfaced while building it:
 
-The local mirror is optimistic UX only; the DO is the truth. This is the same
-"optimistic client, authoritative server, never fabricate" discipline as the rest
-of the codebase — applied so it survives the request cap.
+> `/games/digest` returns the HEX for a nonce, and the client computes that bet's
+> outcome from the hex LOCALLY. So the client KNOWS the roll before it has to tell
+> the server what it bet. If bet params (target, wager, cash-out point) are only
+> submitted at settlement, a modified client picks, for each nonce, the params
+> that maximise payout for an outcome it already knows. Commit-reveal stops the
+> HOUSE cheating; it does nothing against the CLIENT choosing params after the
+> roll. For a real-money balance that is a drain.
+
+Batched + reactive play + anti-cheat cannot all three hold: reactive play needs
+each digest before choosing the next bet, and anti-cheat needs each bet's params
+fixed before its digest is released. Those are the same round-trip.
+
+### The correct model: SERVER-AUTHORITATIVE per bet
+
+`POST /play/bet { wallet, game, params, wager, clientSeed, count? }`:
+1. Debit `wager` from the play balance (reject if insufficient).
+2. Server assigns the next nonce, computes the outcome from its SECRET seed at
+   that nonce (params are now bound to the nonce BEFORE the outcome is known to
+   anyone), applies the per-game payout math + house edge SERVER-SIDE.
+3. Credit the payout, return `{nonce, outcome, payout, balance}`.
+The client never chooses params after seeing a roll, and can't skip the edge.
+
+Request-cap fit: bets are human-initiated (the idle guard killed all passive
+polling), so manual play is a call per deliberate bet — fine. AUTO-BET uses fixed
+params, so `count > 1` runs N nonces server-side in ONE call (safe precisely
+because the params are fixed up front, not reactive). Reactive games (Crash
+cash-out) submit the cash-out point as a param of the single bet.
+
+Per-game outcome functions live server-side (this is unavoidable for any
+authoritative model). Port them one at a time; `limbo` first (single float:
+`rolled = max(1, 99/(100*(1-f)))`, win if `rolled >= target`, payout `wager*target`).
+
+## House bankroll / solvency (also missed originally)
+
+A game WIN raises a play balance with no new OSTG entering the pool. So
+`pool OSTG >= Σ play balances` requires the pool to hold a **bankroll** beyond
+deposits — the house's risk capital that covers players being collectively up.
+The house edge makes it drift to the house over time, but variance means it can
+dip. So: fund the pool's OSTG bankroll (bridge OST→OSTG into the pool), and
+`/play/bet` must REFUSE a payout that would push `Σ balances` above pool OSTG
+(cap max win / refuse when the bankroll can't cover it) — never pay what isn't
+backed. `/health/play` already reports this; it must stay solvent by construction.
 
 ## Honesty / invariants (do NOT regress these)
 
