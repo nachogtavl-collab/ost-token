@@ -362,6 +362,26 @@ export const GAMES = {
       return { pages, cursed, survived, mult, win: survived, payoutMult: mult };
     },
   },
+
+  // Matches docs/ost-games.js renderPump (a renderQuickCasino game — SINGLE-SHOT,
+  // despite the design doc's "multi-step" guess): the player picks how many pumps
+  // to take (1..8) up front; one float sets bustAt = 1 + floor(f*9) (1..9); you
+  // survive if pumps < bustAt. mult = 0.99 / ((9-pumps)/9) = 0.99*9/(9-pumps).
+  pump: {
+    floatsNeeded: 1,
+    validateParams(params) {
+      const pumps = Number(params && params.pumps);
+      if (!Number.isInteger(pumps) || pumps < 1 || pumps > 8) return 'pumps must be an integer 1..8';
+      return null;
+    },
+    outcome(params, floats) {
+      const pumps = Number(params.pumps);
+      const bustAt = 1 + Math.floor(floats[0] * 9);   // 1..9
+      const survived = pumps < bustAt;
+      const mult = round9(0.99 / ((9 - pumps) / 9));
+      return { pumps, bustAt, survived, win: survived, payoutMult: survived ? mult : 0 };
+    },
+  },
 };
 
 /* ---- MULTI-STEP games (session model) ----------------------------------- *
