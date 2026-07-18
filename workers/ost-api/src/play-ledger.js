@@ -112,6 +112,8 @@ export class PlayLedger {
 
       if (path === '/play/deposit' && method === 'POST') return await this.handleDeposit(request);
 
+      if (path === '/play/cashout' && method === 'POST') return await this.handleCashout(request);
+
       if (path === '/health/play' && method === 'GET') return await this.handleHealth();
     } catch (err) {
       return json({ error: 'internal_error', message: String((err && err.message) || err).slice(0, 200) }, 500);
@@ -149,6 +151,108 @@ export class PlayLedger {
       return { credited: v.amount, balance: bal, idempotent: false };
     });
     return json(Object.assign({ ok: true, wallet }, out));
+  }
+
+  // CASH OUT — the drain-sensitive pool -> user OSTG send. Every safety property
+  // here is load-bearing; this is the fake-signature bug's favourite costume.
+  //
+  //  · LEDGER-GATED: debit the play balance under the lock BEFORE sending. A
+  //    cash-out for more than the balance is rejected with no debit and no send.
+  //  · IDEMPOTENT per client idempotencyKey: a retry re-confirms the SAME
+  //    signature, never sends again (crash-after-broadcast = double-pay otherwise;
+  //    this is the exact Phase 0 lesson from PayoutGate).
+  //  · REFUND on a broadcast that never left: if buildSignSend throws, the tx did
+  //    not land, so the debit is restored. A 'building' crash (broadcast may have
+  //    landed) is NOT auto-refunded and NOT auto-resent — it needs human
+  //    reconciliation, because guessing either way risks a double-pay or a drain.
+  //  · Never fabricates a signature. A failed/unconfirmed cash-out says so.
+  async handleCashout(request) {
+    let body; try { body = await request.json(); } catch (_) { return json({ error: 'invalid_json' }, 400); }
+    const wallet = cleanText(body && body.wallet, 64);
+    const amount = Number(body && body.amount);
+    const id = cleanText(body && body.idempotencyKey, 96);
+    if (!isPubkey(wallet)) return json({ error: 'invalid_wallet' }, 400);
+    if (!(amount > 0)) return json({ error: 'invalid_amount' }, 400);
+    if (!id) return json({ error: 'missing_idempotency_key', message: 'Supply a unique idempotencyKey per cash-out so a retry cannot double-pay.' }, 400);
+
+    // Fast idempotent reject (re-checked under the lock).
+    const pre = await this.state.storage.get('cashout:' + id);
+    if (pre && pre.status === 'confirmed') return json({ ok: true, sig: pre.sig, amount: pre.amount, idempotent: true, balance: await this.balOf(wallet) });
+
+    const ostgMint = new PublicKey(Pool.OSTG_MINT);
+    const pool = Pool.getPoolKeypair(this.env);
+    const userOstg = Pool.ataForMint(wallet, ostgMint);
+    const poolOstg = Pool.poolAtaForMint(this.env, ostgMint);
+
+    // Build instructions UNLOCKED (may hit RPC for ataExists). The pool builds
+    // and signs this tx entirely — no client instructions — so there is no
+    // assertPoolAbsent concern; the pool legitimately pays ATA rent + moves OSTG.
+    const conn = Pool.getConnection();
+    const rawAmount = Pool.decimalToRawAmount(amount, Pool.OST_TOKEN_DECIMALS);
+    const instructions = [];
+    try {
+      if (!(await Pool.ataExists(conn, userOstg))) {
+        instructions.push(Pool.ixCreateAta(pool.publicKey, userOstg, new PublicKey(wallet), ostgMint));
+      }
+    } catch (_) { /* if the check fails, the create is idempotent on-chain anyway */ }
+    instructions.push(Pool.ixTransferChecked(poolOstg, ostgMint, userOstg, pool.publicKey, rawAmount, Pool.OST_TOKEN_DECIMALS));
+
+    // LOCKED: idempotency decide + balance check + DEBIT + building + BROADCAST.
+    // Confirmation is unlocked, after this returns.
+    const outcome = await this.state.blockConcurrencyWhile(async () => {
+      const existing = await this.state.storage.get('cashout:' + id);
+      if (existing && existing.status === 'confirmed') {
+        return { done: true, response: json({ ok: true, sig: existing.sig, amount: existing.amount, idempotent: true, balance: Number((await this.state.storage.get('bal:' + wallet)) || 0) }) };
+      }
+      if (existing && existing.status === 'sent' && existing.sig) {
+        return { done: false, resume: existing };   // recover: confirm the sig we already have
+      }
+      if (existing && existing.status === 'building') {
+        return { done: true, response: json({ error: 'cashout_unknown_state', message: 'A previous cash-out for this key did not finish cleanly and may or may not have landed. Support must reconcile before retrying — do not resend.', idempotencyKey: id }, 409) };
+      }
+
+      const bal = Number((await this.state.storage.get('bal:' + wallet)) || 0);
+      if (bal + 1e-9 < amount) {
+        return { done: true, response: json({ error: 'insufficient_balance', balance: bal, requested: amount }, 400) };  // NO debit, NO send
+      }
+      const total = Number((await this.state.storage.get('total')) || 0);
+
+      // Debit + mark building BEFORE broadcasting. A crash after broadcast but
+      // before the 'sent' write leaves this 'building' record → 409 above on
+      // retry (human reconciles), never an auto double-pay.
+      await this.state.storage.put('bal:' + wallet, bal - amount);
+      await this.state.storage.put('total', total - amount);
+      await this.state.storage.put('cashout:' + id, { status: 'building', wallet, amount, createdAt: Date.now() });
+
+      let sent;
+      try {
+        sent = await Pool.buildSignSend(this.env, instructions, [], 'OSTG cashout');
+      } catch (e) {
+        // Broadcast never left → the OSTG did not move → restore the debit.
+        await this.state.storage.put('bal:' + wallet, bal);
+        await this.state.storage.put('total', total);
+        await this.state.storage.put('cashout:' + id, { status: 'failed', wallet, amount, refunded: true, error: String((e && e.message) || e).slice(0, 200), createdAt: Date.now() });
+        return { done: true, response: json({ error: 'cashout_send_failed', message: String((e && e.message) || e).slice(0, 200) }, 502) };
+      }
+      const record = { status: 'sent', wallet, amount, sig: sent.sig, blockhashInfo: sent.blockhashInfo, createdAt: Date.now() };
+      await this.state.storage.put('cashout:' + id, record);
+      return { done: false, resume: record };
+    });
+
+    if (outcome.done) return outcome.response;
+
+    // Unlocked confirmation. On failure the sig EXISTS — a retry re-confirms it;
+    // we do NOT refund here, because the OSTG may well have landed.
+    const rec = outcome.resume;
+    try {
+      await Pool.confirmSignature(rec.sig, rec.blockhashInfo, 'OSTG cashout');
+    } catch (e) {
+      return json({ error: 'cashout_unconfirmed', message: String((e && e.message) || e).slice(0, 200), sig: rec.sig }, 409);
+    }
+    await this.state.blockConcurrencyWhile(async () => {
+      await this.state.storage.put('cashout:' + id, Object.assign({}, rec, { status: 'confirmed' }));
+    });
+    return json({ ok: true, sig: rec.sig, amount: rec.amount, balance: await this.balOf(wallet) });
   }
 
   async handleHealth() {
