@@ -55,6 +55,39 @@ function floatsFromHexes(hexes, count) {
 }
 function round9(n) { return Math.round(Number(n) * 1e9) / 1e9; }
 
+// Exactly docs/ost-games.js KENO_TABLES (payout mult by picks -> hits).
+const KENO_TABLES = {
+  1: { 1: 3.8 },
+  2: { 1: 1.2, 2: 10 },
+  3: { 2: 2.2, 3: 45 },
+  4: { 2: 1.5, 3: 6, 4: 110 },
+  5: { 3: 3, 4: 18, 5: 450 },
+  6: { 3: 1.6, 4: 8, 5: 90, 6: 1200 },
+  7: { 3: 1.2, 4: 4, 5: 30, 6: 400, 7: 3000 },
+  8: { 4: 3, 5: 12, 6: 150, 7: 1500, 8: 8000 },
+  9: { 4: 2, 5: 8, 6: 70, 7: 600, 8: 4000, 9: 12000 },
+  10: { 4: 1.4, 5: 5, 6: 40, 7: 400, 8: 2500, 9: 10000, 10: 25000 },
+};
+
+// Exactly docs/ost-games.js PLINKO_MULTS (bucket multipliers by rows -> risk).
+const PLINKO_MULTS = {
+  8: {
+    low: [5.6, 2.1, 1.1, 1, 0.5, 1, 1.1, 2.1, 5.6],
+    medium: [13, 3, 1.3, 0.7, 0.4, 0.7, 1.3, 3, 13],
+    high: [29, 4, 1.5, 0.3, 0.2, 0.3, 1.5, 4, 29],
+  },
+  12: {
+    low: [10, 3, 1.6, 1.4, 1.1, 1, 0.5, 1, 1.1, 1.4, 1.6, 3, 10],
+    medium: [33, 11, 4, 2, 1.1, 0.6, 0.3, 0.6, 1.1, 2, 4, 11, 33],
+    high: [170, 24, 8.1, 2, 0.7, 0.2, 0.2, 0.2, 0.7, 2, 8.1, 24, 170],
+  },
+  16: {
+    low: [16, 9, 2, 1.4, 1.4, 1.2, 1.1, 1, 0.5, 1, 1.1, 1.2, 1.4, 1.4, 2, 9, 16],
+    medium: [110, 41, 10, 5, 3, 1.5, 1, 0.5, 0.3, 0.5, 1, 1.5, 3, 5, 10, 41, 110],
+    high: [1000, 130, 26, 9, 4, 2, 0.2, 0.2, 0.2, 0.2, 0.2, 2, 4, 9, 26, 130, 1000],
+  },
+};
+
 /* ---- the game registry -------------------------------------------------- *
  * Each game: floatsNeeded, validateParams(params)->err|null, and
  * outcome(params, floats) -> { detail..., payoutMult } where the payout is
@@ -234,6 +267,62 @@ export const GAMES = {
       const dealerTotal = draw(floats[3]) + draw(floats[4]) + draw(floats[5]);
       const mult = playerTotal > dealerTotal ? 1.98 : (playerTotal === dealerTotal ? 1 : 0);
       return { playerTotal: round9(playerTotal), dealerTotal: round9(dealerTotal), mult, win: mult > 0, payoutMult: mult };
+    },
+  },
+
+  // Matches docs/ost-games.js keno: Fisher-Yates shuffle 1..40 with 40 floats,
+  // draw 10, count hits against the player's picks, KENO_TABLES[picks][hits].
+  keno: {
+    floatsNeeded: 40,
+    validateParams(params) {
+      const nums = params && params.numbers;
+      if (!Array.isArray(nums) || nums.length < 1 || nums.length > 10) return 'numbers must be 1..10 picks';
+      const seen = new Set();
+      for (const n of nums) {
+        if (!Number.isInteger(n) || n < 1 || n > 40) return 'each number must be an integer 1..40';
+        if (seen.has(n)) return 'numbers must be distinct';
+        seen.add(n);
+      }
+      if (!KENO_TABLES[nums.length]) return 'no payout table for that pick count';
+      return null;
+    },
+    outcome(params, floats) {
+      const selected = new Set(params.numbers);
+      const arr = [];
+      for (let i = 1; i <= 40; i++) arr.push(i);
+      // Fisher-Yates exactly as shuffleWithFloats: floatIndex counts UP from 0 as
+      // index counts DOWN; swap = floor(float * (index+1)).
+      for (let index = arr.length - 1; index > 0; index--) {
+        const floatIndex = arr.length - 1 - index;
+        const swapIndex = Math.floor((floats[floatIndex] || 0) * (index + 1));
+        const t = arr[index]; arr[index] = arr[swapIndex]; arr[swapIndex] = t;
+      }
+      const drawn = arr.slice(0, 10);
+      let hits = 0;
+      for (const d of drawn) if (selected.has(d)) hits++;
+      const mult = KENO_TABLES[params.numbers.length][hits] || 0;
+      return { hits, picks: params.numbers.length, mult, win: mult > 0, payoutMult: mult };
+    },
+  },
+
+  // Matches docs/ost-games.js plinko: `rows` deflections, each float >= 0.5 goes
+  // right; bucket = count of rights (0..rows); PLINKO_MULTS[rows][risk][bucket].
+  // One ball = one bet/nonce; multi-ball is count>1.
+  plinko: {
+    floatsNeeded: (params) => Math.floor(Number(params && params.rows) || 0),
+    validateParams(params) {
+      const rows = Number(params && params.rows);
+      const risk = params && params.risk;
+      if (rows !== 8 && rows !== 12 && rows !== 16) return 'rows must be 8, 12 or 16';
+      if (risk !== 'low' && risk !== 'medium' && risk !== 'high') return "risk must be 'low', 'medium' or 'high'";
+      return null;
+    },
+    outcome(params, floats) {
+      const rows = Number(params.rows);
+      let bucket = 0;
+      for (let s = 0; s < rows; s++) if (floats[s] >= 0.5) bucket++;
+      const mult = PLINKO_MULTS[rows][params.risk][bucket];
+      return { bucket, mult, win: mult >= 1, payoutMult: mult };
     },
   },
 

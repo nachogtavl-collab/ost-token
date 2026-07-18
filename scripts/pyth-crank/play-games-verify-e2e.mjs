@@ -50,6 +50,8 @@ const recompute = {
   diamonds: (seed, cs, n, p, w) => { const fl = floatsN(seed, cs, n, 5); const c = {}; for (let i = 0; i < 5; i++) { const g = Math.floor(fl[i] * 7); c[g] = (c[g] || 0) + 1; } const gr = Object.values(c).sort((a, b) => b - a); const g0 = gr[0], g1 = gr[1] || 0; const m = g0 === 5 ? 50 : g0 === 4 ? 10 : (g0 === 3 && g1 === 2 ? 5 : g0 === 3 ? 2 : (g0 === 2 && g1 === 2 ? 1.2 : 0)); return w * m; },
   cases: (seed, cs, n, p, w) => { const T = { low: [1,2,5,12], standard: [0.5,3,8,25], high: [0.2,4,15,60] }[p.pick]; const fl = floatsN(seed, cs, n, 6); const draw = (v) => T[v < 0.56 ? 0 : v < 0.84 ? 1 : v < 0.97 ? 2 : 3]; const pt = draw(fl[0]) + draw(fl[1]) + draw(fl[2]); const dt = draw(fl[3]) + draw(fl[4]) + draw(fl[5]); const m = pt > dt ? 1.98 : (pt === dt ? 1 : 0); return w * m; },
   tome: (seed, cs, n, p, w) => { const pages = Math.max(2, Math.min(8, Math.floor(p.pages))); const fl = floatsN(seed, cs, n, pages); let cursed = -1; for (let i = 0; i < pages; i++) if (fl[i] < 0.14) { cursed = i; break; } const survived = cursed < 0; const m = survived ? Math.round((0.99 / Math.pow(0.86, pages)) * 1e9) / 1e9 : 0; return w * m; },
+  keno: (seed, cs, n, p, w) => { const KT = { 1:{1:3.8},2:{1:1.2,2:10},3:{2:2.2,3:45},4:{2:1.5,3:6,4:110},5:{3:3,4:18,5:450},6:{3:1.6,4:8,5:90,6:1200},7:{3:1.2,4:4,5:30,6:400,7:3000},8:{4:3,5:12,6:150,7:1500,8:8000},9:{4:2,5:8,6:70,7:600,8:4000,9:12000},10:{4:1.4,5:5,6:40,7:400,8:2500,9:10000,10:25000} }; const fl = floatsN(seed, cs, n, 40); const arr = []; for (let i = 1; i <= 40; i++) arr.push(i); for (let index = arr.length - 1; index > 0; index--) { const fi = arr.length - 1 - index; const sw = Math.floor((fl[fi] || 0) * (index + 1)); const t = arr[index]; arr[index] = arr[sw]; arr[sw] = t; } const sel = new Set(p.numbers); let hits = 0; for (const d of arr.slice(0, 10)) if (sel.has(d)) hits++; return w * ((KT[p.numbers.length][hits]) || 0); },
+  plinko: (seed, cs, n, p, w) => { const PM = { 8:{low:[5.6,2.1,1.1,1,0.5,1,1.1,2.1,5.6],medium:[13,3,1.3,0.7,0.4,0.7,1.3,3,13],high:[29,4,1.5,0.3,0.2,0.3,1.5,4,29]}, 12:{low:[10,3,1.6,1.4,1.1,1,0.5,1,1.1,1.4,1.6,3,10],medium:[33,11,4,2,1.1,0.6,0.3,0.6,1.1,2,4,11,33],high:[170,24,8.1,2,0.7,0.2,0.2,0.2,0.7,2,8.1,24,170]}, 16:{low:[16,9,2,1.4,1.4,1.2,1.1,1,0.5,1,1.1,1.2,1.4,1.4,2,9,16],medium:[110,41,10,5,3,1.5,1,0.5,0.3,0.5,1,1.5,3,5,10,41,110],high:[1000,130,26,9,4,2,0.2,0.2,0.2,0.2,0.2,2,4,9,26,130,1000]} }; const fl = floatsN(seed, cs, n, p.rows); let b = 0; for (let s = 0; s < p.rows; s++) if (fl[s] >= 0.5) b++; return w * PM[p.rows][p.risk][b]; },
 };
 
 (async () => {
@@ -72,7 +74,8 @@ const recompute = {
     ['limbo', { target: 2 }], ['dice', { target: 50, dir: 'under' }], ['coinflip', { side: 'h' }],
     ['double', { pick: 'red' }], ['slide', { target: 2 }],
     ['wheel', { risk: 'low' }], ['scarab', { pick: 'wild' }],
-    ['diamonds', {}], ['cases', { pick: 'standard' }], ['tome', { pages: 3 }], ['tome', { pages: 6 }],
+    ['diamonds', {}], ['cases', { pick: 'standard' }], ['tome', { pages: 3 }],
+    ['keno', { numbers: [1, 5, 9, 14, 22] }], ['plinko', { rows: 8, risk: 'medium' }], ['plinko', { rows: 16, risk: 'high' }],
   ];
   console.log('\n1) play a spread of single-shot bets (server computes each)');
   for (const [game, params] of cases) {
