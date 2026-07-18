@@ -347,7 +347,10 @@ export class PlayLedger {
         if (net > 0 && bankroll != null && (total + net) > bankroll + 1e-9) { nonce -= 1; stopped = 'bankroll_cap'; break; }
         balance = Math.round((balance + net) * 1e9) / 1e9;
         total = Math.round((total + net) * 1e9) / 1e9;
-        results.push({ nonce: r.nonce, rolled: r.rolled, win: r.win, payout: r.payout, net, balance });
+        // Pass the FULL outcome detail (game-specific fields + the floats used) so
+        // the client can animate the exact settled outcome. net/balance overwrite
+        // any same-named outcome field last.
+        results.push(Object.assign({}, r, { net, balance }));
       }
 
       if (results.length) {
@@ -430,6 +433,10 @@ export class PlayLedger {
     if (!isPubkey(wallet)) return json({ error: 'invalid_wallet' }, 400);
     if (!sessionId) return json({ error: 'missing_session' }, 400);
 
+    // Bankroll for the solvency guard on a WON-ended step (perfect clear), fetched
+    // UNLOCKED like the cashout path.
+    const bankroll = await this.poolBankroll();
+
     return await this.state.blockConcurrencyWhile(async () => {
       const session = await this.state.storage.get('sess:' + sessionId);
       if (!session || session.wallet !== wallet) return json({ error: 'unknown_session' }, 404);
@@ -437,10 +444,34 @@ export class PlayLedger {
       const g = MULTI[session.game];
       const res = g.step(session.params, session.layout, session.state, action);
       if (res.error) return json({ error: res.error }, 400);
-      if (res.ended) { session.state.ended = true; session.state.won = !!res.won; }
+      let paid = null;
+      if (res.ended) {
+        session.state.ended = true; session.state.won = !!res.won;
+        // A step that ENDS the session as a WIN (perfect clear: all safe tiles /
+        // top of the tower / all floors) must PAY here — there is no cashout to
+        // follow (cashout would reject an ended session). Credit like cashout,
+        // solvency-gated. A losing end pays nothing.
+        if (res.won && !session.cashedOut) {
+          const mult = g.currentMultiplier(session.params, session.state);
+          const payout = round9(session.wager * mult);
+          const balance = Number((await this.state.storage.get('bal:' + wallet)) || 0);
+          const total = Number((await this.state.storage.get('total')) || 0);
+          if (bankroll != null && (total + payout) > bankroll + 1e-9) {
+            // Can't back the win right now: keep the session OPEN so the player can
+            // cash out once the bankroll recovers, rather than voiding the win.
+            session.state.ended = false; session.state.won = false;
+            await this.state.storage.put('sess:' + sessionId, session);
+            return json({ error: 'bankroll_cap', message: 'House bankroll can’t cover that win yet — cash out shortly.' }, 409);
+          }
+          session.cashedOut = true;
+          await this.state.storage.put('bal:' + wallet, round9(balance + payout));
+          await this.state.storage.put('total', round9(total + payout));
+          paid = { payout, multiplier: mult, balance: round9(balance + payout) };
+        }
+      }
       await this.state.storage.put('sess:' + sessionId, session);
       const canCashout = !session.state.ended && (g.canCashout ? g.canCashout(session.state) : (session.state.safeRevealed || 0) > 0);
-      return json(Object.assign({ ok: true, sessionId }, res, {
+      return json(Object.assign({ ok: true, sessionId }, res, paid || {}, {
         currentMultiplier: g.currentMultiplier ? g.currentMultiplier(session.params, session.state) : 0,
         canCashout,
       }));

@@ -81,6 +81,33 @@
     return r;
   }
 
+  // ---- multi-step sessions (mines, crash, tower, dragontower, hilo) -------
+  // The server pins the hidden layout from its secret seed at start; each step is
+  // revealed server-side; cash-out is solvency-gated. The client only renders what
+  // comes back — it never knows the layout/bust ahead of time.
+  async function sessionStart(game, params, wager) {
+    var a = addr();
+    if (!a) throw new Error('Connect your wallet first.');
+    if (!(Number(wager) > 0)) throw new Error('Enter a wager greater than zero.');
+    var r = await api('POST', '/play/session/start', { wallet: a, game: game, params: params || {}, wager: Number(wager) });
+    if (typeof r.balance === 'number') { mirror = r.balance; emit(); }
+    return r;
+  }
+  async function sessionStep(sessionId, action) {
+    var a = addr();
+    if (!a) throw new Error('Connect your wallet first.');
+    return await api('POST', '/play/session/step', { wallet: a, sessionId: sessionId, action: action || {} });
+  }
+  async function sessionCashout(sessionId, claimedMult) {
+    var a = addr();
+    if (!a) throw new Error('Connect your wallet first.');
+    var body = { wallet: a, sessionId: sessionId };
+    if (claimedMult != null) body.claimedMult = Number(claimedMult);
+    var r = await api('POST', '/play/session/cashout', body);
+    if (typeof r.balance === 'number') { mirror = r.balance; emit(); }
+    return r;
+  }
+
   // ---- deposit: OSTG wallet -> play balance (gas-free) --------------------
   // Requires OSTG in the wallet (get it 1:1 from OST via the bridge). Moves it to
   // the pool with the fee-only cosign path (pool pays gas), then credits the
@@ -157,6 +184,9 @@
     balance: balance,
     refresh: refresh,
     bet: bet,
+    sessionStart: sessionStart,
+    sessionStep: sessionStep,
+    sessionCashout: sessionCashout,
     deposit: deposit,
     cashout: cashout,
     addresses: { api: API, ostgMint: OSTG_MINT, poolOstgAta: POOL_OSTG_ATA },

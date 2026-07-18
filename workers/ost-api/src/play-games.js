@@ -636,7 +636,10 @@ export async function computeBet(game, serverSeed, clientSeed, nonce, params, wa
   const floats = floatsFromHexes(hexes, need);
   const o = g.outcome(params, floats);
   const payout = round9(wager * o.payoutMult);
-  return Object.assign({ nonce, payout }, o);
+  // Return the floats too: the client re-runs its existing per-game render code
+  // against these exact floats to animate the SAME outcome the server settled,
+  // without ever computing the payout/balance itself (server-authoritative).
+  return Object.assign({ nonce, payout, floats }, o);
 }
 
 // Build a MULTI-step game's hidden layout from the secret seed at a nonce. Pure +

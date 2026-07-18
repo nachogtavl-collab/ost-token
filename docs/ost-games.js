@@ -186,6 +186,11 @@
       try { return Number(vault && vault.getBalance ? vault.getBalance() : 0); }
       catch (_) { return 0; }
     }
+    // Phase 2 inc 4b: the play balance is now the server-authoritative OSTG-backed
+    // balance (window.OST_PLAY), NOT the forgeable localStorage credits. The mirror
+    // is undefined until the first refresh / before a wallet connects — treat that
+    // as 0 for display, but note it is "unknown", not "empty".
+    if (window.OST_PLAY) { var b = window.OST_PLAY.balance(); return Number(b) || 0; }
     return Number(loadBank().credits || 0);
   }
   function debit(amount) {
@@ -194,6 +199,15 @@
       var ok = !!(vault && vault.debit && vault.debit(amount, { source: 'ost-games', reason: 'bet' }));
       fireBalanceChange();
       return ok;
+    }
+    // Phase 2 inc 4b: online, the SERVER debits the play balance atomically as part
+    // of each bet/session-start. The client must never mutate the balance locally
+    // (that was the forgeable-credits model). This becomes a client-side guard only.
+    if (window.OST_PLAY) {
+      var pb = window.OST_PLAY.balance();
+      if (typeof pb === 'number' && amount > pb + 1e-9) return false;
+      try { window.dispatchEvent(new CustomEvent('ost:game-wager', { detail: { amount: amount } })); } catch (_) {}
+      return true;
     }
     var s = loadBank();
     var bal = Number(s.credits || 0);
@@ -211,6 +225,10 @@
       fireBalanceChange();
       return;
     }
+    // Phase 2 inc 4b: online, the SERVER credits payouts/refunds. The client only
+    // reflects the balance the server returned. A no-op here is deliberate — never
+    // grant local play balance (see PLAY-BALANCE.md honesty invariants).
+    if (window.OST_PLAY) { fireBalanceChange(); return; }
     var s = loadBank();
     s.credits = Number(s.credits || 0) + Number(amount || 0);
     s.lifetime = Number(s.lifetime || 0) + Number(amount || 0);
@@ -330,7 +348,19 @@
   // bet needing many floats (Plinko, Keno, card decks) still costs exactly
   // one round-trip. The nonce used comes back from the worker and OVERWRITES
   // pf.nonce — it is never locally incremented or trusted from a prior call.
+  // Phase 2 inc 4b: when a bet has already been settled server-side via
+  // /play/bet, the server returns the exact floats it used. We stash them here so
+  // the game's EXISTING render code (which calls pfFloats) reproduces the settled
+  // outcome for animation — without a second digest round-trip and without the
+  // client ever choosing the outcome. Consumed once, then cleared.
+  var _injectedFloats = null;
+  function injectFloats(floats) { _injectedFloats = Array.isArray(floats) ? floats.slice() : null; }
   async function pfFloats(count) {
+    if (_injectedFloats) {
+      var inj = _injectedFloats.slice(0, count);
+      _injectedFloats = null;
+      return inj;
+    }
     await ensureSeeds();
     var rounds = Math.max(1, Math.ceil(count / 8));
     var resJson = await gamesApiPost('/games/digest', { player: ensureDeviceId(), clientSeed: pf.clientSeed, rounds: rounds });
@@ -344,6 +374,68 @@
       }
     });
     return floats;
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // Phase 2 inc 4b — server-authoritative single-shot bet.
+  // playSingle() sends the bet to /play/bet (OST_PLAY.bet); the SERVER debits the
+  // wager, computes the outcome from its secret seed, applies the house edge, and
+  // credits the payout — all atomic + solvency-gated. It returns the settled
+  // result plus the floats used. We inject those floats so the caller's existing
+  // resolve()/render code animates the SAME outcome. The caller NEVER computes the
+  // payout or touches the balance locally (no local debit/credit/rake).
+  //   returns { ok:true, result:{payout,net,balance,...outcome}, err:null }
+  //         | { ok:false, err:'<message>' }
+  // ────────────────────────────────────────────────────────────────────────
+  async function playSingle(gameId, params, amount) {
+    if (!window.OST_PLAY) return { ok: false, err: 'Play service unavailable — reload and try again.' };
+    try {
+      var r = await window.OST_PLAY.bet(gameId, params || {}, amount, 1);
+      if (!r || !r.results || !r.results.length) {
+        var why = r && r.stopped === 'insufficient_balance' ? 'Not enough play balance — deposit OSTG first.'
+          : r && r.stopped === 'bankroll_cap' ? 'House bankroll can’t cover that win right now — lower the bet.'
+          : 'Bet was not accepted.';
+        return { ok: false, err: why };
+      }
+      var res = r.results[0];
+      if (Array.isArray(res.floats)) injectFloats(res.floats);
+      return { ok: true, result: res, err: null };
+    } catch (e) {
+      var msg = (e && (e.message || (e.detail && e.detail.message))) || 'Bet failed.';
+      if (/insufficient/i.test(msg)) msg = 'Not enough play balance — deposit OSTG first.';
+      else if (/wallet/i.test(msg)) msg = 'Connect your wallet first.';
+      return { ok: false, err: msg };
+    }
+  }
+
+  // Display-only settlement for the server-authoritative path: the balance was
+  // already moved by the server, so this only records the round locally, updates
+  // the history strip, and shows the win toast/burst. NO debit/credit/rake here.
+  function displaySettle(game, bet, result, statusEl, winText, stageEl) {
+    var payout = Number(result.payout || 0);
+    var mult = bet > 0 ? payout / bet : 0;
+    recordRound(game, bet, payout, mult);
+    pushHistory(mult);
+    if (statusEl) statusEl.textContent = winText;
+    if (payout > bet) {
+      toast('+' + fmt(payout - bet) + ' OST · ' + shortMult(mult), 'win');
+      popBurst(stageEl || (statusEl && statusEl.parentElement), 20);
+    }
+    var net = payout - Number(bet || 0);
+    recordGameLedgerEvent(net > 0 ? 'game-win' : net < 0 ? 'game-loss' : 'game-push', Math.abs(net) || Number(bet || 0), {
+      game: game, bet: Number(bet || 0), payout: payout, net: net, mult: mult
+    });
+    fireBalanceChange();
+  }
+
+  // Map a play/session API error to a friendly, honest message.
+  function playErrMsg(e) {
+    var msg = (e && (e.message || (e.detail && e.detail.message))) || 'Something went wrong.';
+    if (/insufficient/i.test(msg)) return 'Not enough play balance — deposit OSTG first.';
+    if (/wallet/i.test(msg)) return 'Connect your wallet first.';
+    if (/bankroll/i.test(msg)) return 'House bankroll can’t cover that win yet — lower the bet or cash out shortly.';
+    if (/session_ended|unknown_session/i.test(msg)) return 'This round already ended.';
+    return msg;
   }
 
   // ────────────────────────────────────────────────────────────────────────
@@ -428,8 +520,8 @@
             '<span class="ostg-hero-card card-b">×</span>' +
           '</div>' +
           '<div class="ostg-balance-card">' +
-            '<span class="ostg-balance-label">Chips · play balance</span>' +
-            '<span class="ostg-balance-amt"><strong data-ostg-balance>0.00</strong> OST</span>' +
+            '<span class="ostg-balance-label">Play balance · OSTG</span>' +
+            '<span class="ostg-balance-amt"><strong data-ostg-balance>0.00</strong> OSTG</span>' +
             '<div class="ostg-wallet-line" id="ostgWalletLine">' +
               '<span class="ostg-wallet-dot" data-state="off"></span>' +
               '<span id="ostgWalletText">Wallet: not connected</span>' +
@@ -469,6 +561,8 @@
     buildLobbyStrip();
     showGame('mines');
     window.addEventListener('ost:offline-vault-changed', fireBalanceChange);
+    window.addEventListener('ost:play:balance', fireBalanceChange);   // server play balance moved
+    if (window.OST_PLAY && window.OST_PLAY.refresh) { try { window.OST_PLAY.refresh(); } catch (_) {} }
     document.getElementById('ostgFairBtn').addEventListener('click', openFairness);
     var cashBtn = document.getElementById('ostgCashBtn');
     if (cashBtn) {
@@ -487,34 +581,30 @@
           var b = document.getElementById('walletBtn') || document.getElementById('connectWalletBtn'); if (b) b.click();
           return;
         }
-        if (!window.OST_RESCUE || !window.OST_RESCUE.payoutOst) {
-          // Fall back to hub button if rescue helpers haven't loaded yet.
-          var hubBtn = document.getElementById('fhCashout'); if (hubBtn) hubBtn.click();
+        if (!window.OST_PLAY || !window.OST_PLAY.cashout) {
+          alert('Play service still loading — try again in a second.');
           return;
         }
+        // Withdraw the OSTG-backed play balance to the wallet as OSTG (gas-free,
+        // server-authoritative + solvency-gated). Amounts and the debit are the
+        // SERVER's; the client only reflects the returned balance.
+        var amt = bal;
+        var raw = prompt('How much of your ' + fmt(bal) + ' OSTG play balance to cash out to your wallet?', bal.toFixed(2));
+        if (raw === null) return;
+        amt = parseFloat(raw);
+        if (!Number.isFinite(amt) || amt <= 0) { alert('Enter a positive amount.'); return; }
+        if (amt > bal + 1e-9) { alert('You only have ' + fmt(bal) + ' OSTG in the play balance.'); return; }
         var prev = cashBtn.textContent; cashBtn.disabled = true; cashBtn.textContent = 'Sending…';
-        if (window.OST_OPTIMISTIC) {
-          try { window.OST_OPTIMISTIC.toast('Cashing out ' + bal.toFixed(2) + ' OST…', 'pending'); } catch (e) {}
-          try { window.OST_OPTIMISTIC.balanceHint({ deltaOst: +bal, source: 'games-cashout', pending: true }); } catch (e) {}
-        }
+        if (window.OST_OPTIMISTIC) { try { window.OST_OPTIMISTIC.toast('Cashing out ' + amt.toFixed(2) + ' OSTG…', 'pending'); } catch (e) {} }
         try {
-          var memo = JSON.stringify({ k: 'games-cashout', ost: bal, t: Date.now() });
-          var r = await window.OST_RESCUE.payoutOst(w.session.publicKey, bal, memo);
-          // Debit ONLY after on-chain confirm.
-          var s = loadBank();
-          var remaining = Math.max(0, Number(s.credits || 0) - Number(r.ost || 0));
-          s.credits = Number(r.ost || 0) + 0.000001 >= bal ? 0 : remaining;
-          saveBank(s); fireBalanceChange();
-          recordGameLedgerEvent('games-cashout', r.ost, { sig: r.sig, net: Number(r.ost || 0) });
-          cashBtn.textContent = '✓ Sent ' + r.ost.toFixed(2) + ' OST';
+          var r = await window.OST_PLAY.cashout(amt);
+          cashBtn.textContent = '✓ Sent ' + Number(r.sent || amt).toFixed(2) + ' OSTG';
+          fireBalanceChange();
           try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {}
         } catch (e) {
           console.warn('[ostg] cashout failed', e);
-          if (window.OST_OPTIMISTIC) {
-            try { window.OST_OPTIMISTIC.balanceHint({ deltaOst: -bal, source: 'games-cashout', rollback: true }); } catch (er) {}
-            try { window.OST_OPTIMISTIC.toast('Cash-out failed', 'error'); } catch (er) {}
-          }
-          alert('Cash-out failed: ' + (e && e.message ? e.message : e));
+          if (window.OST_OPTIMISTIC) { try { window.OST_OPTIMISTIC.toast('Cash-out failed', 'error'); } catch (er) {} }
+          alert('Cash-out failed: ' + playErrMsg(e));
           cashBtn.textContent = prev;
         } finally {
           setTimeout(function () { cashBtn.textContent = prev; sync(); }, 3500);
@@ -610,37 +700,39 @@
         var b = document.getElementById('walletBtn') || document.getElementById('connectWalletBtn'); if (b) b.click();
         return;
       }
-      if (!window.OST_RESCUE || !window.OST_RESCUE.userSendsOstToPool) {
-        alert('Wallet helpers still loading — try again in a second.');
+      if (!window.OST_PLAY || !window.OST_PLAY.deposit) {
+        alert('Play service still loading — try again in a second.');
         return;
       }
-      var raw = prompt('How much OST to deposit into the play balance?\n(Will be transferred from your wallet to the rewards vault. Cash out anytime.)', '5');
+      var raw = prompt('How much to deposit into your play balance?\n(OST is auto-converted to OSTG 1:1, gas-free. Cash out anytime.)', '5');
       if (raw === null) return;
       var amt = parseFloat(raw);
       if (!Number.isFinite(amt) || amt <= 0) { alert('Enter a positive amount'); return; }
-      var bal = 0;
-      try { bal = await w.getOstBalance(w.session.publicKey); } catch (_) {}
-      if (amt > bal + 1e-9) { alert('Wallet only has ' + fmt(bal) + ' OST.'); return; }
       var prev = depBtn.textContent; depBtn.disabled = true; depBtn.textContent = 'Sending…';
-      if (window.OST_OPTIMISTIC) {
-        try { window.OST_OPTIMISTIC.toast('Depositing ' + amt.toFixed(2) + ' OST…', 'pending'); } catch (e) {}
-        try { window.OST_OPTIMISTIC.balanceHint({ deltaOst: -amt, source: 'games-deposit', pending: true }); } catch (e) {}
-      }
+      if (window.OST_OPTIMISTIC) { try { window.OST_OPTIMISTIC.toast('Depositing ' + amt.toFixed(2) + ' OSTG…', 'pending'); } catch (e) {} }
       try {
-        var memo = JSON.stringify({ k: 'games-deposit', ost: amt, t: Date.now() });
-        var r = await window.OST_RESCUE.userSendsOstToPool(amt, memo);
-        // Local credit ONLY after on-chain confirm so failures don't grant chips.
-        credit(r.ost, 'wallet-deposit');
-        recordGameLedgerEvent('games-deposit', r.ost, { sig: r.sig, net: -Number(r.ost || 0) });
-        depBtn.textContent = '✓ +' + r.ost.toFixed(2) + ' OST';
+        // The play balance is backed by OSTG. Ensure the wallet has enough OSTG,
+        // bridging OST -> OSTG (1:1, gas-free) for any shortfall first.
+        var ostc = 0, ostg = 0;
+        if (window.OST_BRIDGE_UI && window.OST_BRIDGE_UI.balances) {
+          try { var bals = await window.OST_BRIDGE_UI.balances(); ostc = Number(bals[0] || 0); ostg = Number(bals[1] || 0); } catch (_) {}
+        }
+        if (ostg + 1e-9 < amt) {
+          var need = amt - ostg;
+          if (!window.OST_BRIDGE_UI || !window.OST_BRIDGE_UI.convert) throw new Error('Bridge not loaded — get OSTG first, then deposit.');
+          if (ostc + 1e-9 < need) throw new Error('Need ' + fmt(need) + ' more OSTG (or OST to convert). Claim from the faucet or bridge first.');
+          depBtn.textContent = 'Converting…';
+          await window.OST_BRIDGE_UI.convert('deposit', need);   // OST -> OSTG, gas-free
+        }
+        depBtn.textContent = 'Depositing…';
+        var r = await window.OST_PLAY.deposit(amt);               // OSTG -> pool -> play balance
+        depBtn.textContent = '✓ +' + Number((r && r.credited != null) ? r.credited : amt).toFixed(2) + ' OSTG';
+        fireBalanceChange();
         try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {}
       } catch (e) {
         console.warn('[ostg] deposit failed', e);
-        if (window.OST_OPTIMISTIC) {
-          try { window.OST_OPTIMISTIC.balanceHint({ deltaOst: +amt, source: 'games-deposit', rollback: true }); } catch (er) {}
-          try { window.OST_OPTIMISTIC.toast('Deposit failed', 'error'); } catch (er) {}
-        }
-        alert('Deposit failed: ' + (e && e.message ? e.message : e));
+        if (window.OST_OPTIMISTIC) { try { window.OST_OPTIMISTIC.toast('Deposit failed', 'error'); } catch (er) {} }
+        alert('Deposit failed: ' + playErrMsg(e));
         depBtn.textContent = prev;
       } finally {
         setTimeout(function () { depBtn.disabled = false; depBtn.textContent = prev; }, 3500);
@@ -981,22 +1073,19 @@
     async function onStart() {
       var amt = parseBet(bet, statusEl);
       if (amt === null) return;
-      var res = placeBet(amt);
-      if (!res.ok) { statusEl.textContent = res.msg; return; }
       var mineCount = parseInt(mines.value, 10);
-      var floats = await pfFloats(25);
-      var idxs = []; for (var i = 0; i < 25; i++) idxs.push(i);
-      for (var i2 = 24; i2 > 0; i2--) {
-        var j = Math.floor(floats[i2] * (i2 + 1));
-        var t = idxs[i2]; idxs[i2] = idxs[j]; idxs[j] = t;
-      }
-      var minePositions = new Set(idxs.slice(0, mineCount));
-      session = { bet: amt, mines: mineCount, minePositions: minePositions, safeRevealed: 0, revealed: new Set() };
+      startBtn.disabled = true;
+      statusEl.textContent = 'Placing bet…';
+      // Server-authoritative: it pins the hidden mine layout from its secret seed.
+      var r;
+      try { r = await window.OST_PLAY.sessionStart('mines', { mines: mineCount }, amt); }
+      catch (e) { statusEl.textContent = playErrMsg(e); startBtn.disabled = false; return; }
+      if (!r || !r.sessionId) { statusEl.textContent = playErrMsg({ message: r && r.error }); startBtn.disabled = false; return; }
+      session = { sessionId: r.sessionId, bet: amt, mines: mineCount, safeRevealed: 0, revealed: new Set(), busy: false };
       stage.querySelector('.ostg-mines').classList.remove('is-detonated');
       buildBoard();
       updateMeta();
       statusEl.textContent = 'Flip a tile. Every gem climbs the golden ladder above.';
-      startBtn.disabled = true;
       quickBtn.disabled = false;
       mines.disabled = true;
       auto.disabled = true;
@@ -1021,29 +1110,36 @@
       tile.classList.add(cls, 'is-flipped');
     }
 
-    function onPick(e) {
-      if (!session) return;
+    async function onPick(e) {
+      if (!session || session.busy || session.ending) return;
       var idx = parseInt(e.currentTarget.dataset.idx, 10);
       var tile = e.currentTarget;
       if (tile.disabled) return;
+      session.busy = true;
       tile.disabled = true;
+      // Server reveals the tile from the committed layout (boom or safe).
+      var r;
+      try { r = await window.OST_PLAY.sessionStep(session.sessionId, { tile: idx }); }
+      catch (err) { session.busy = false; tile.disabled = false; statusEl.textContent = playErrMsg(err); return; }
+      session.busy = false;
+      if (!r || r.error) { tile.disabled = false; statusEl.textContent = playErrMsg({ message: r && r.error }); return; }
       session.revealed.add(idx);
-      if (session.minePositions.has(idx)) {
+      if (r.boom) {
         flipTo(tile, '💣', 'mine');
         board.classList.remove('is-quake');
         void board.offsetWidth;
         board.classList.add('is-quake');
         stage.querySelector('.ostg-mines').classList.add('is-detonated');
         tile.setAttribute('aria-label', 'Mines tile ' + (idx + 1) + ', mine');
-        settleGame('mines', session.bet, 0, 0, statusEl, '💥 BOOM — the mine ends the run. Lost ' + fmt(session.bet) + ' OST.', board);
-        revealAll(idx);
+        displaySettle('mines', session.bet, { payout: 0 }, statusEl, '💥 BOOM — the mine ends the run. Lost ' + fmt(session.bet) + ' OST.', board);
+        revealAll(idx, r.minePositions || []);
         endRound();
       } else {
-        session.safeRevealed += 1;
+        session.safeRevealed = (typeof r.safeRevealed === 'number') ? r.safeRevealed : (session.safeRevealed + 1);
         flipTo(tile, '💎', 'safe');
         sparkle(tile);
         tile.setAttribute('aria-label', 'Mines tile ' + (idx + 1) + ', safe gem');
-        var mult = minesMultiplier(session.safeRevealed, session.mines);
+        var mult = (typeof r.multiplier === 'number') ? r.multiplier : minesMultiplier(session.safeRevealed, session.mines);
         var floatChip = document.createElement('span');
         floatChip.className = 'mn-float';
         floatChip.textContent = shortMult(mult);
@@ -1051,22 +1147,28 @@
         setTimeout(function () { floatChip.remove(); }, 950);
         updateMeta();
         statusEl.textContent = '💎 ' + session.safeRevealed + '/' + (25 - session.mines) + ' gems · ladder at ' + shortMult(mult);
+        if (r.ended && r.won) {
+          // Perfect clear — the server already PAID this step (r.payout/r.balance).
+          displaySettle('mines', session.bet, { payout: Number(r.payout || session.bet * mult) }, statusEl,
+            '👑 Perfect clear at ' + shortMult(mult) + ' — ' + Number(r.payout || 0).toFixed(2) + ' OST!', board);
+          endRound();
+          return;
+        }
         var autoAt = parseInt(auto.value, 10) || 0;
         if (autoAt && session.safeRevealed >= autoAt) return onCash();
-        if (session.safeRevealed === 25 - session.mines) onCash(); // perfect clear
       }
     }
 
     function onQuickPick() {
-      if (!session) return;
+      if (!session || session.busy) return;
       var tiles = Array.prototype.slice.call(board.querySelectorAll('.ostg-tile:not(:disabled)'));
       if (!tiles.length) return;
       tiles[Math.floor(Math.random() * tiles.length)].click();
     }
 
-    function revealAll(hitIdx) {
+    function revealAll(hitIdx, minePositions) {
       var delay = 0;
-      var mineSnapshot = session ? session.minePositions : new Set();
+      var mineSnapshot = new Set((minePositions || []).map(Number));
       board.querySelectorAll('.ostg-tile').forEach(function (t) {
         t.disabled = true;
         var i = parseInt(t.dataset.idx, 10);
@@ -1078,12 +1180,16 @@
       });
     }
 
-    function onCash() {
-      if (!session) return;
-      var mult = minesMultiplier(session.safeRevealed, session.mines);
-      var payout = session.bet * mult;
-      settleGame('mines', session.bet, payout, mult, statusEl, '💰 Banked at ' + shortMult(mult) + ' — ' + payout.toFixed(2) + ' OST is yours.', board);
-      revealAll(-1);
+    async function onCash() {
+      if (!session || session.ending || session.safeRevealed < 1) return;
+      session.ending = true;
+      var sid = session.sessionId, betAmt = session.bet;
+      var r;
+      try { r = await window.OST_PLAY.sessionCashout(sid); }
+      catch (err) { session.ending = false; statusEl.textContent = playErrMsg(err); return; }
+      if (!r || r.error || typeof r.payout !== 'number') { session.ending = false; statusEl.textContent = playErrMsg({ message: r && r.error }); return; }
+      displaySettle('mines', betAmt, { payout: r.payout }, statusEl, '💰 Banked at ' + shortMult(r.multiplier) + ' — ' + r.payout.toFixed(2) + ' OST is yours.', board);
+      board.querySelectorAll('.ostg-tile').forEach(function (t) { t.disabled = true; });
       endRound();
     }
 
@@ -1301,49 +1407,30 @@
     async function onStart() {
       var amt = parseBet(betEl, statusEl);
       if (amt === null) return;
-      var res = placeBet(amt);
-      if (!res.ok) { statusEl.textContent = res.msg; queueEl.checked = false; return; }
-      var floats = await pfFloats(1);
-      var crashAt = crashPoint(floats[0]);
+      startBtn.disabled = true; statusEl.textContent = 'Launching…';
+      // Server pins the HIDDEN bust point from its secret seed; the client only
+      // knows the growth rate and animates the climb. The eject is settled by the
+      // server clock (see ost-play.js / play-games crash).
+      var r;
+      try { r = await window.OST_PLAY.sessionStart('crash', {}, amt); }
+      catch (e) { statusEl.textContent = playErrMsg(e); startBtn.disabled = false; queueEl.checked = false; return; }
+      if (!r || !r.sessionId) { statusEl.textContent = playErrMsg({ message: r && r.error }); startBtn.disabled = false; queueEl.checked = false; return; }
+      var K = (r.config && r.config.growthK) || (r.reveal && r.reveal.growthK) || 0.32;
       var auto = clamp(parseFloat(autoEl.value) || 0, 0, 1000000);
       if (auto > 0 && auto < 1.01) auto = 1.01;
-      session = { bet: amt, crashAt: crashAt, auto: auto, t0: performance.now(), lastT: performance.now(), cashed: false, cashMult: 0, peak: 1 };
+      session = { sessionId: r.sessionId, bet: amt, K: K, auto: auto, t0: performance.now(), lastT: performance.now(), cashed: false, cashMult: 0, peak: 1, crashAt: Infinity, ending: false };
       if (peakEl) peakEl.textContent = '1.00x';
-      startBtn.disabled = true; cashBtn.disabled = false; betEl.disabled = true; autoEl.disabled = true;
-      statusEl.textContent = 'Climbing… eject before the explosion.';
+      cashBtn.disabled = false; betEl.disabled = true; autoEl.disabled = true;
+      statusEl.textContent = auto ? ('Climbing… auto-eject at ' + shortMult(auto) + ' or eject early.') : 'Climbing… eject before the explosion.';
       function tick(now) {
-        if (!session) return;
+        if (!session || session.ending) return;
         var dt = Math.min(0.05, (now - session.lastT) / 1000);
         session.lastT = now;
         var elapsed = (now - session.t0) / 1000;
-        var mult = Math.pow(Math.E, 0.32 * elapsed);
-        session.peak = Math.max(session.peak || 1, Math.min(mult, session.crashAt));
+        var mult = Math.pow(Math.E, session.K * elapsed);
+        session.peak = Math.max(session.peak || 1, mult);
         if (peakEl) peakEl.textContent = shortMult(session.peak);
-        if (mult >= session.crashAt) {
-          mult = session.crashAt;
-          shakeT = 0.55;
-          draw(mult, elapsed, true, dt);
-          multEl.textContent = mult.toFixed(2) + '× CRASH';
-          multEl.style.color = '#fca5a5';
-          multEl.classList.remove('is-hot');
-          if (!session.cashed) {
-            settleGame('crash', session.bet, 0, 0, statusEl, '💥 Exploded at ' + shortMult(mult) + ' — lost ' + session.bet.toFixed(2) + ' OST.', canvas.parentElement);
-          } else {
-            statusEl.textContent = 'Exploded at ' + shortMult(mult) + '. You ejected at ' + shortMult(session.cashMult) + ' — perfect timing.';
-          }
-          // let the shake play out
-          var doneMult = mult;
-          var post = 0;
-          (function shakeLoop(n2) {
-            var d2 = 0.016;
-            draw(doneMult, elapsed, true, d2);
-            post += d2;
-            if (post < 0.6) raf = requestAnimationFrame(function () { shakeLoop(); });
-            else endRound(doneMult);
-          })();
-          return;
-        }
-        if (session.auto && mult >= session.auto && !session.cashed) onCash(true);
+        if (session.auto && mult >= session.auto) { onEject(true); return; }
         multEl.textContent = mult.toFixed(2) + '×';
         multEl.style.color = mult >= 10 ? '#fca5a5' : mult >= 3 ? '#fde68a' : mult >= 2 ? '#86efac' : '#f8fafc';
         multEl.classList.toggle('is-hot', mult >= 3);
@@ -1353,21 +1440,47 @@
       raf = requestAnimationFrame(tick);
     }
 
-    function onCash(isAuto) {
-      if (!session || session.cashed) return;
+    // Eject: the server settles against its clock + the hidden bust. We send the
+    // multiplier the player SEES (bounded server-side so it can't be inflated); a
+    // too-late eject busts and the server returns the true crashAt to animate.
+    async function onEject(isAuto) {
+      if (!session || session.ending) return;
+      session.ending = true;
+      if (raf) { cancelAnimationFrame(raf); raf = 0; }
       var elapsed = (performance.now() - session.t0) / 1000;
-      var mult = Math.min(Math.pow(Math.E, 0.32 * elapsed), session.crashAt);
-      if (mult >= session.crashAt) return; // too late — bust handler owns it
-      session.cashed = true;
-      session.cashMult = mult;
+      var localMult = Math.pow(Math.E, session.K * elapsed);
+      var claimed = isAuto ? session.auto : localMult;
+      var betAmt = session.bet, sid = session.sessionId;
       cashBtn.disabled = true;
-      var payout = session.bet * mult;
-      settleGame('crash', session.bet, payout, mult, statusEl,
-        (isAuto ? '🎯 Auto-ejected' : '🪂 Ejected') + ' at ' + shortMult(mult) + ' — banked ' + payout.toFixed(2) + ' OST. Rocket still flying…', canvas.parentElement);
+      var r;
+      try { r = await window.OST_PLAY.sessionCashout(sid, claimed); }
+      catch (e) { statusEl.textContent = playErrMsg(e); endRound(localMult); return; }
+      if (r && r.busted) {
+        var ca = Number(r.crashAt) || localMult;
+        shakeT = 0.55;
+        multEl.textContent = ca.toFixed(2) + '× CRASH';
+        multEl.style.color = '#fca5a5'; multEl.classList.remove('is-hot');
+        displaySettle('crash', betAmt, { payout: 0 }, statusEl, '💥 Exploded at ' + shortMult(ca) + ' — lost ' + betAmt.toFixed(2) + ' OST.', canvas.parentElement);
+        var post = 0;
+        (function shakeLoop() { draw(ca, elapsed, true, 0.016); post += 0.016; if (post < 0.6) raf = requestAnimationFrame(shakeLoop); else endRound(ca); })();
+        return;
+      }
+      if (r && typeof r.payout === 'number') {
+        var m = r.multiplier;
+        session.cashed = true; session.cashMult = m;
+        multEl.textContent = m.toFixed(2) + '×';
+        multEl.style.color = '#86efac';
+        displaySettle('crash', betAmt, { payout: r.payout }, statusEl,
+          (isAuto ? '🎯 Auto-ejected' : '🪂 Ejected') + ' at ' + shortMult(m) + ' — banked ' + r.payout.toFixed(2) + ' OST.', canvas.parentElement);
+        endRound(m);
+        return;
+      }
+      statusEl.textContent = playErrMsg({ message: r && r.error });
+      endRound(localMult);
     }
 
     startBtn.addEventListener('click', onStart);
-    cashBtn.addEventListener('click', function () { onCash(false); });
+    cashBtn.addEventListener('click', function () { onEject(false); });
     draw(1, 0, false, 0.016);
   }
 
@@ -1423,17 +1536,19 @@
     rollBtn.addEventListener('click', async function () {
       var amt = parseBet(bet, statusEl);
       if (amt === null) return;
-      var res = placeBet(amt); if (!res.ok) { statusEl.textContent = res.msg; return; }
       var t = Math.min(98, Math.max(2, parseFloat(target.value) || 50));
-      var floats = await pfFloats(1);
-      var roll = floats[0] * 100; // 0..100
-      var win = dir.value === 'under' ? (roll < t) : (roll > t);
-      var chance = dir.value === 'under' ? t : (100 - t);
-      var winMult = 99 / chance;
-      var t0 = performance.now();
-      var start = parseFloat(marker.style.left) || 0;
       setBusy([rollBtn, bet, dir, target], true);
       statusEl.textContent = 'Rolling…';
+      // Server settles the bet (debit + roll + edge + credit); we animate to it.
+      var played = await playSingle('dice', { target: t, dir: dir.value }, amt);
+      if (!played.ok) { statusEl.textContent = played.err; setBusy([rollBtn, bet, dir, target], false); return; }
+      var floats = await pfFloats(1);         // the SERVER floats (injected)
+      var roll = floats[0] * 100;             // reproduces the settled roll
+      var win = dir.value === 'under' ? (roll < t) : (roll > t);
+      var winMult = 99 / (dir.value === 'under' ? t : (100 - t));
+      var payout = Number(played.result.payout || 0);   // authoritative
+      var t0 = performance.now();
+      var start = parseFloat(marker.style.left) || 0;
       function tick() {
         var p = Math.min(1, (performance.now() - t0) / 850);
         var ease = 1 - Math.pow(1 - p, 3);
@@ -1446,8 +1561,7 @@
           rollEl.textContent = roll.toFixed(2);
           rollEl.style.color = win ? '#86efac' : '#fca5a5';
           pulse(rollEl, win ? 'ostg-pop-win' : 'ostg-pop-loss');
-          var payout = win ? amt * winMult : 0;
-          settleGame('dice', amt, payout, win ? winMult : 0, statusEl,
+          displaySettle('dice', amt, played.result, statusEl,
             win ? '✅ Rolled ' + roll.toFixed(2) + ' — won ' + payout.toFixed(2) + ' OST (' + shortMult(winMult) + ')'
                 : '❌ Rolled ' + roll.toFixed(2) + ' — lost ' + amt.toFixed(2) + ' OST',
             rollEl.parentElement);
@@ -1644,12 +1758,33 @@
       if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
       var amt = parseBet(bet, statusEl);
       if (amt === null) { resolveRound(false); return; }
-      var res = placeBet(amt); if (!res.ok) { statusEl.textContent = res.msg; resolveRound(false); return; }
       var g = geometry();
       var ballCount = parseInt(balls.value, 10) || 1;
-      var allFloats = await pfFloats(g.n * ballCount);
-      var arr = PLINKO_MULTS[g.n][risk.value];
       var perBall = amt / ballCount;
+      // Server-authoritative: each ball is one /play/bet of perBall; the batch
+      // (count = ballCount) debits + settles all balls atomically. Each result
+      // carries the floats used, so the drop animation reproduces the SAME bucket.
+      if (!window.OST_PLAY) { statusEl.textContent = 'Play service unavailable — reload.'; resolveRound(false); return; }
+      var betRes;
+      try { betRes = await window.OST_PLAY.bet('plinko', { rows: g.n, risk: risk.value }, perBall, ballCount); }
+      catch (e) {
+        var m0 = (e && (e.message || (e.detail && e.detail.message))) || 'Bet failed.';
+        if (/insufficient/i.test(m0)) m0 = 'Not enough play balance — deposit OSTG first.';
+        else if (/wallet/i.test(m0)) m0 = 'Connect your wallet first.';
+        statusEl.textContent = m0; resolveRound(false); return;
+      }
+      if (!betRes || !betRes.results || !betRes.results.length) {
+        statusEl.textContent = betRes && betRes.stopped === 'insufficient_balance' ? 'Not enough play balance — deposit OSTG first.'
+          : betRes && betRes.stopped === 'bankroll_cap' ? 'House bankroll can’t cover that right now — lower the bet.'
+          : 'Bet was not accepted.';
+        resolveRound(false); return;
+      }
+      var plResults = betRes.results;
+      ballCount = plResults.length;                    // actual balls placed
+      var arr = PLINKO_MULTS[g.n][risk.value];
+      var serverTotalPayout = plResults.reduce(function (s2, r) { return s2 + Number(r.payout || 0); }, 0);
+      var allFloats = [];
+      plResults.forEach(function (r) { allFloats = allFloats.concat(r.floats || []); });
       var totalPayout = 0;
       var landedCount = 0;
       resultsBar.innerHTML = '';
@@ -1695,9 +1830,10 @@
         if (settled) return;
         settled = true;
         if (watchdog) { clearTimeout(watchdog); watchdog = 0; }
-        var totalMultiplier = amt > 0 ? totalPayout / amt : 0;
-        settleGame('plinko', amt, totalPayout, totalMultiplier, statusEl,
-          ballCount + ' ball' + (ballCount === 1 ? '' : 's') + ' landed · paid ' + totalPayout.toFixed(2) + ' OST (' + shortMult(totalMultiplier) + ' total).',
+        // Use the SERVER total (authoritative), not the locally accumulated sum.
+        var totalMultiplier = amt > 0 ? serverTotalPayout / amt : 0;
+        displaySettle('plinko', amt, { payout: serverTotalPayout }, statusEl,
+          ballCount + ' ball' + (ballCount === 1 ? '' : 's') + ' landed · paid ' + serverTotalPayout.toFixed(2) + ' OST (' + shortMult(totalMultiplier) + ' total).',
           canvas.parentElement);
         if (!autoRunning) setBusy([dropBtn, bet, risk, rows, balls], false);
         resolveRound(true);
@@ -1861,17 +1997,16 @@
     roll.addEventListener('click', async function () {
       var amt = parseBet(bet, statusEl);
       if (amt === null) return;
-      var r = placeBet(amt); if (!r.ok) { statusEl.textContent = r.msg; return; }
       var t = clamp(parseFloat(tgt.value) || 2, 1.01, 1000000);
       tgt.value = t.toFixed(t >= 100 ? 0 : 2);
-      var floats = await pfFloats(1);
-      // Limbo result: m = 99 / (100*(1-r)), with very low r → very high m.
-      var rolled = Math.max(1.0, 99 / (100 * (1 - floats[0])));
-      // Animate count-up
-      var t0 = performance.now();
       setBusy([roll, bet, tgt], true);
       statusEl.textContent = 'Rolling against ' + shortMult(t) + '…';
       multEl.classList.remove('is-win', 'is-loss');
+      var played = await playSingle('limbo', { target: t }, amt);
+      if (!played.ok) { statusEl.textContent = played.err; setBusy([roll, bet, tgt], false); return; }
+      var floats = await pfFloats(1);   // SERVER float (injected)
+      var rolled = Math.max(1.0, 99 / (100 * (1 - floats[0])));   // reproduces settled roll
+      var t0 = performance.now();
       function tick() {
         var p = Math.min(1, (performance.now() - t0) / 900);
         var m = 1 + (rolled - 1) * (1 - Math.pow(1 - p, 3));
@@ -1880,12 +2015,11 @@
         else {
           var win = rolled >= t;
           multEl.classList.add(win ? 'is-win' : 'is-loss');
-          if (win) {
-            var pay = amt * t;
-            settleGame('limbo', amt, pay, t, statusEl, '✅ Rolled ' + shortMult(rolled) + ' ≥ ' + shortMult(t) + ' — won ' + pay.toFixed(2) + ' OST', multEl.parentElement);
-          } else {
-            settleGame('limbo', amt, 0, 0, statusEl, '❌ Rolled ' + shortMult(rolled) + ' < ' + shortMult(t) + ' — lost ' + amt.toFixed(2) + ' OST', multEl.parentElement);
-          }
+          var pay = Number(played.result.payout || 0);   // authoritative
+          displaySettle('limbo', amt, played.result, statusEl,
+            win ? '✅ Rolled ' + shortMult(rolled) + ' ≥ ' + shortMult(t) + ' — won ' + pay.toFixed(2) + ' OST'
+                : '❌ Rolled ' + shortMult(rolled) + ' < ' + shortMult(t) + ' — lost ' + amt.toFixed(2) + ' OST',
+            multEl.parentElement);
           setBusy([roll, bet, tgt], false);
         }
       }
@@ -1947,53 +2081,71 @@
     start.addEventListener('click', async function () {
       var amt = parseBet(bet, statusEl);
       if (amt === null) return;
-      var r = placeBet(amt); if (!r.ok) { statusEl.textContent = r.msg; return; }
-      var c = await newCard();
-      session = { bet: amt, current: c, mult: 1 };
-      card.textContent = cardLabel(c);
+      start.disabled = true; statusEl.textContent = 'Dealing…';
+      var r;
+      try { r = await window.OST_PLAY.sessionStart('hilo', {}, amt); }
+      catch (e) { statusEl.textContent = playErrMsg(e); start.disabled = false; return; }
+      if (!r || !r.sessionId || !r.reveal) { statusEl.textContent = playErrMsg({ message: r && r.error }); start.disabled = false; return; }
+      session = { sessionId: r.sessionId, bet: amt, current: r.reveal.card, mult: 1, busy: false };
+      card.textContent = cardLabel(session.current);
       pulse(card, 'ostg-card-flip');
       multEl.textContent = '1.00×';
-      start.disabled = true; bet.disabled = true; cash.disabled = true;
+      bet.disabled = true; cash.disabled = true;
       updateChoiceButtons();
-      statusEl.textContent = 'Higher or lower than ' + cardLabel(c) + '?';
+      statusEl.textContent = 'Higher or lower than ' + cardLabel(session.current) + '?';
     });
 
     async function pick(dir) {
-      if (!session) return;
+      if (!session || session.busy || session.ending) return;
       var p = dir === 'hi' ? probHi(session.current) : probLo(session.current);
       if (p <= 0) { statusEl.textContent = 'Impossible direction — choose the other side.'; return; }
-      var step = multFor(p);
+      session.busy = true;
       setBusy([hi, lo], true);
-      var next = await newCard();
-      var prev = session.current;
-      var tie = next === prev;
-      var win = dir === 'hi' ? (next > prev) : (next < prev);
-      card.textContent = cardLabel(next);
+      var r;
+      try { r = await window.OST_PLAY.sessionStep(session.sessionId, { dir: dir }); }
+      catch (e) { session.busy = false; setBusy([hi, lo], false); statusEl.textContent = playErrMsg(e); return; }
+      session.busy = false;
+      if (!r || r.error) { setBusy([hi, lo], false); statusEl.textContent = playErrMsg({ message: r && r.error }); return; }
+      session.current = r.card;
+      card.textContent = cardLabel(r.card);
       pulse(card, 'ostg-card-flip');
-      session.current = next;
-      if (tie) {
-        statusEl.textContent = '↔ Push on ' + cardLabel(next) + '. No multiplier change — pick again.';
+      if (r.push) {
+        statusEl.textContent = '↔ Push on ' + cardLabel(r.card) + '. No multiplier change — pick again.';
+        setBusy([hi, lo], false);
         updateChoiceButtons();
         return;
-      } else if (win) {
-        session.mult *= step;
-        multEl.textContent = session.mult.toFixed(2) + '×';
-        pulse(multEl, 'ostg-pop-win');
-        cash.disabled = false;
-        cash.textContent = 'Cash out · ' + (session.bet * session.mult).toFixed(2) + ' OST';
-        statusEl.textContent = '✅ Correct! Multiplier compounded — keep going or cash out.';
-        updateChoiceButtons();
-      } else {
-        settleGame('hilo', session.bet, 0, 0, statusEl, '❌ Wrong — lost ' + session.bet.toFixed(2) + ' OST', card.parentElement);
+      }
+      if (r.ended && !r.won) {
+        displaySettle('hilo', session.bet, { payout: 0 }, statusEl, '❌ Wrong — lost ' + session.bet.toFixed(2) + ' OST', card.parentElement);
+        end();
+        return;
+      }
+      // A correct guess: the server compounded the multiplier.
+      session.mult = (typeof r.multiplier === 'number') ? r.multiplier : session.mult;
+      multEl.textContent = session.mult.toFixed(2) + '×';
+      pulse(multEl, 'ostg-pop-win');
+      cash.disabled = false;
+      cash.textContent = 'Cash out · ' + (session.bet * session.mult).toFixed(2) + ' OST';
+      statusEl.textContent = '✅ Correct! Multiplier compounded — keep going or cash out.';
+      setBusy([hi, lo], false);
+      updateChoiceButtons();
+      if (r.ended && r.won) {   // deck exhausted — server already paid this step
+        displaySettle('hilo', session.bet, { payout: Number(r.payout || session.bet * session.mult) }, statusEl,
+          '💰 Max streak — ' + Number(r.payout || 0).toFixed(2) + ' OST!', card.parentElement);
         end();
       }
     }
     hi.addEventListener('click', function () { pick('hi'); });
     lo.addEventListener('click', function () { pick('lo'); });
-    cash.addEventListener('click', function () {
-      if (!session) return;
-      var pay = session.bet * session.mult;
-      settleGame('hilo', session.bet, pay, session.mult, statusEl, '💰 Cashed out at ' + shortMult(session.mult) + ' for ' + pay.toFixed(2) + ' OST', card.parentElement);
+    cash.addEventListener('click', async function () {
+      if (!session || session.ending) return;
+      session.ending = true;
+      var betAmt = session.bet, sid = session.sessionId;
+      var r;
+      try { r = await window.OST_PLAY.sessionCashout(sid); }
+      catch (e) { session.ending = false; statusEl.textContent = playErrMsg(e); return; }
+      if (!r || typeof r.payout !== 'number') { session.ending = false; statusEl.textContent = playErrMsg({ message: r && r.error }); return; }
+      displaySettle('hilo', betAmt, { payout: r.payout }, statusEl, '💰 Cashed out at ' + shortMult(r.multiplier) + ' for ' + r.payout.toFixed(2) + ' OST', card.parentElement);
       end();
     });
     function end() {
@@ -2072,8 +2224,11 @@
     spin.addEventListener('click', async function () {
       var amt = parseBet(bet, statusEl);
       if (amt === null) return;
-      var r = placeBet(amt); if (!r.ok) { statusEl.textContent = r.msg; return; }
-      var f = await pfFloats(1);
+      spin.disabled = true; bet.disabled = true; risk.disabled = true;
+      statusEl.textContent = 'Spinning…';
+      var played = await playSingle('wheel', { risk: risk.value }, amt);
+      if (!played.ok) { statusEl.textContent = played.err; spin.disabled = false; bet.disabled = false; risk.disabled = false; return; }
+      var f = await pfFloats(1);   // SERVER float (injected)
       var segs = WHEEL_SEGMENTS[risk.value];
       var landIdx = Math.floor(f[0] * segs.length);
       // The pin sits at the top (angle = -PI/2). We want segment `landIdx`
@@ -2081,8 +2236,6 @@
       var centre = ((landIdx + 0.5) / segs.length) * Math.PI * 2;
       var endRot = -Math.PI / 2 - centre + Math.PI * 2 * 6; // 6 full spins
       var startRot = rotation, t0 = performance.now(), dur = 3900;
-      spin.disabled = true; bet.disabled = true; risk.disabled = true;
-      statusEl.textContent = 'Spinning ' + risk.value + ' risk wheel…';
       pulse(pin, 'ostg-pin-bounce');
       function tick() {
         var p = Math.min(1, (performance.now() - t0) / dur);
@@ -2093,8 +2246,8 @@
         else {
           rotation = endRot % (Math.PI * 2);
           var mult = segs[landIdx];
-          var pay = amt * mult;
-          settleGame('wheel', amt, pay, mult, statusEl,
+          var pay = Number(played.result.payout || 0);   // authoritative
+          displaySettle('wheel', amt, played.result, statusEl,
             mult > 0 ? '🎯 Landed on ' + shortMult(mult) + ' — won ' + pay.toFixed(2) + ' OST'
                      : '😬 Landed on 0x — lost ' + amt.toFixed(2) + ' OST',
             canvas.parentElement);
@@ -2129,24 +2282,23 @@
     async function flip(side) {
       var amt = parseBet(bet, statusEl);
       if (amt === null) return;
-      var r = placeBet(amt); if (!r.ok) { statusEl.textContent = r.msg; return; }
       setBusy([heads, tails, bet], true);
       statusEl.textContent = 'Flipping for ' + (side === 'h' ? 'heads' : 'tails') + '…';
       disk.classList.remove('flip-h', 'flip-t');
       disk.textContent = side === 'h' ? '🔆' : '🌙';
-      // tiny delay so the animation plays even on rapid clicks
       void disk.offsetWidth;
-      var f = await pfFloats(1);
+      var played = await playSingle('coinflip', { side: side }, amt);
+      if (!played.ok) { statusEl.textContent = played.err; setBusy([heads, tails, bet], false); return; }
+      var f = await pfFloats(1);   // SERVER float (injected)
       var result = f[0] < 0.5 ? 'h' : 't';
       disk.classList.add('flip-' + result);
       setTimeout(function () {
         disk.textContent = result === 'h' ? '🔆' : '🌙';
-        if (result === side) {
-          var pay = amt * 1.98;
-          settleGame('coinflip', amt, pay, 1.98, statusEl, '✅ ' + (result === 'h' ? 'Heads' : 'Tails') + '! Won ' + pay.toFixed(2) + ' OST', disk.parentElement);
-        } else {
-          settleGame('coinflip', amt, 0, 0, statusEl, '❌ ' + (result === 'h' ? 'Heads' : 'Tails') + ' — lost ' + amt.toFixed(2) + ' OST', disk.parentElement);
-        }
+        var pay = Number(played.result.payout || 0);   // authoritative
+        displaySettle('coinflip', amt, played.result, statusEl,
+          result === side ? '✅ ' + (result === 'h' ? 'Heads' : 'Tails') + '! Won ' + pay.toFixed(2) + ' OST'
+                          : '❌ ' + (result === 'h' ? 'Heads' : 'Tails') + ' — lost ' + amt.toFixed(2) + ' OST',
+          disk.parentElement);
         setBusy([heads, tails, bet], false);
       }, 700);
     }
@@ -2264,10 +2416,11 @@
       var amount = parseBet(bet, statusEl);
       if (amount === null) return;
       if (!selectedNumbers.size) { statusEl.textContent = 'Pick at least one number first.'; return; }
-      var result = placeBet(amount);
-      if (!result.ok) { statusEl.textContent = result.msg; return; }
       setBusy([bet, count, quick, clear, draw], true);
       refreshGrid();
+      var picked = Array.from(selectedNumbers);
+      var played = await playSingle('keno', { numbers: picked }, amount);
+      if (!played.ok) { statusEl.textContent = played.err; setBusy([bet, count, quick, clear, draw], false); return; }
       var drawnNumbers = shuffleWithFloats(allNumbers(), await pfFloats(40)).slice(0, 10).sort(function (left, right) { return left - right; });
       var hitCount = drawnNumbers.filter(function (number) { return selectedNumbers.has(number); }).length;
       statusEl.textContent = 'Drawing 10 numbers...';
@@ -2280,10 +2433,9 @@
         }, index * 90);
       });
       setTimeout(function () {
-        var table = KENO_TABLES[selectedNumbers.size] || {};
-        var multiplier = table[hitCount] || 0;
-        var payout = amount * multiplier;
-        settleGame('keno', amount, payout, multiplier, statusEl,
+        var multiplier = (KENO_TABLES[selectedNumbers.size] || {})[hitCount] || 0;
+        var payout = Number(played.result.payout || 0);   // authoritative
+        displaySettle('keno', amount, played.result, statusEl,
           multiplier > 0 ? 'Matched ' + hitCount + '/' + selectedNumbers.size + ' for ' + shortMult(multiplier) + ' · ' + payout.toFixed(2) + ' OST'
                          : 'Matched ' + hitCount + '/' + selectedNumbers.size + ' — no payout this draw.',
           grid);
@@ -2387,70 +2539,81 @@
       updateTowerControls();
     }
 
-    function revealTower() {
-      if (!session) return;
-      board.querySelectorAll('.ostg-tower-cell').forEach(function (cell) {
-        var row = parseInt(cell.dataset.row, 10);
+    function revealTrapRow(trapRow, safeCols) {
+      var safeSet = new Set((safeCols || []).map(Number));
+      board.querySelectorAll('.ostg-tower-cell[data-row="' + trapRow + '"]').forEach(function (cell) {
         var column = parseInt(cell.dataset.column, 10);
-        var isSafe = session.safeRows[row].has(column);
-        cell.disabled = true;
-        cell.classList.add(isSafe ? 'is-safe' : 'is-trap');
-        cell.textContent = isSafe ? '◇' : '×';
+        if (safeSet.has(column)) { cell.classList.add('is-safe'); cell.textContent = '◇'; }
+        else if (!cell.classList.contains('is-trap')) { cell.textContent = '×'; }
       });
+      board.querySelectorAll('.ostg-tower-cell').forEach(function (cell) { cell.disabled = true; });
     }
 
     async function startTower() {
       var amount = parseBet(bet, statusEl);
       if (amount === null) return;
-      var result = placeBet(amount);
-      if (!result.ok) { statusEl.textContent = result.msg; return; }
       var config = TOWER_MODES[mode.value];
       var rowTotal = parseInt(rows.value, 10);
-      var floats = await pfFloats(rowTotal * config.columns);
-      var safeRows = [];
-      for (var rowIndex = 0; rowIndex < rowTotal; rowIndex++) {
-        var columns = [];
-        for (var columnIndex = 0; columnIndex < config.columns; columnIndex++) columns.push(columnIndex);
-        var rowFloats = floats.slice(rowIndex * config.columns, rowIndex * config.columns + config.columns);
-        safeRows[rowIndex] = new Set(shuffleWithFloats(columns, rowFloats).slice(0, config.safe));
-      }
-      session = { bet: amount, config: config, rows: rowTotal, safeRows: safeRows, level: 0, picks: {} };
       setBusy([bet, mode, rows, start], true);
+      statusEl.textContent = 'Placing bet…';
+      // Server pins the hidden safe tiles per row from its secret seed.
+      var r;
+      try { r = await window.OST_PLAY.sessionStart('tower', { mode: mode.value, rows: rowTotal }, amount); }
+      catch (e) { statusEl.textContent = playErrMsg(e); setBusy([bet, mode, rows, start], false); return; }
+      if (!r || !r.sessionId) { statusEl.textContent = playErrMsg({ message: r && r.error }); setBusy([bet, mode, rows, start], false); return; }
+      session = { sessionId: r.sessionId, bet: amount, config: config, rows: rowTotal, level: 0, picks: {}, busy: false };
       statusEl.textContent = 'Pick a tile on the glowing row. Climb or cash out.';
       buildTower();
     }
 
-    function chooseTowerCell(event) {
-      if (!session) return;
+    async function chooseTowerCell(event) {
+      if (!session || session.busy || session.ending) return;
       var row = parseInt(event.currentTarget.dataset.row, 10);
       var column = parseInt(event.currentTarget.dataset.column, 10);
       if (row !== session.level) { statusEl.textContent = 'Choose from the active row first.'; return; }
-      event.currentTarget.disabled = true;
-      if (session.safeRows[row].has(column)) {
+      var cell = event.currentTarget;
+      session.busy = true;
+      cell.disabled = true;
+      var r;
+      try { r = await window.OST_PLAY.sessionStep(session.sessionId, { column: column }); }
+      catch (e) { session.busy = false; cell.disabled = false; statusEl.textContent = playErrMsg(e); return; }
+      session.busy = false;
+      if (!r || r.error) { cell.disabled = false; statusEl.textContent = playErrMsg({ message: r && r.error }); return; }
+      if (r.safe) {
         session.picks[row] = column;
-        event.currentTarget.classList.add('is-safe');
-        event.currentTarget.textContent = '◇';
-        session.level += 1;
-        var multiplier = towerMultiplier(session.level, session.config);
+        cell.classList.add('is-safe');
+        cell.textContent = '◇';
+        session.level = (typeof r.level === 'number') ? r.level : (session.level + 1);
+        var multiplier = (typeof r.multiplier === 'number') ? r.multiplier : towerMultiplier(session.level, session.config);
         statusEl.textContent = 'Safe row ' + session.level + '/' + session.rows + ' · ' + shortMult(multiplier);
-        pulse(event.currentTarget, 'ostg-pop-win');
-        if (session.level >= session.rows) return cashTower();
+        pulse(cell, 'ostg-pop-win');
+        if (r.ended && r.won) {   // reached the top — server already paid this step
+          displaySettle('tower', session.bet, { payout: Number(r.payout || session.bet * multiplier) }, statusEl,
+            '👑 Tower conquered at ' + shortMult(multiplier) + ' — ' + Number(r.payout || 0).toFixed(2) + ' OST!', board);
+          board.querySelectorAll('.ostg-tower-cell').forEach(function (c) { c.disabled = true; });
+          endTower();
+          return;
+        }
         updateTowerControls();
       } else {
-        event.currentTarget.classList.add('is-trap');
-        event.currentTarget.textContent = '×';
-        revealTower();
-        settleGame('tower', session.bet, 0, 0, statusEl, 'Tower broke on row ' + (row + 1) + ' — lost ' + fmt(session.bet) + ' OST.', board);
+        cell.classList.add('is-trap');
+        cell.textContent = '×';
+        revealTrapRow(row, r.safeRow);
+        displaySettle('tower', session.bet, { payout: 0 }, statusEl, 'Tower broke on row ' + (row + 1) + ' — lost ' + fmt(session.bet) + ' OST.', board);
         endTower();
       }
     }
 
-    function cashTower() {
-      if (!session || session.level < 1) return;
-      var multiplier = towerMultiplier(session.level, session.config);
-      var payout = session.bet * multiplier;
-      revealTower();
-      settleGame('tower', session.bet, payout, multiplier, statusEl, 'Cashed the tower at ' + shortMult(multiplier) + ' for ' + payout.toFixed(2) + ' OST.', board);
+    async function cashTower() {
+      if (!session || session.ending || session.level < 1) return;
+      session.ending = true;
+      var betAmt = session.bet, sid = session.sessionId;
+      var r;
+      try { r = await window.OST_PLAY.sessionCashout(sid); }
+      catch (e) { session.ending = false; statusEl.textContent = playErrMsg(e); return; }
+      if (!r || typeof r.payout !== 'number') { session.ending = false; statusEl.textContent = playErrMsg({ message: r && r.error }); return; }
+      board.querySelectorAll('.ostg-tower-cell').forEach(function (c) { c.disabled = true; });
+      displaySettle('tower', betAmt, { payout: r.payout }, statusEl, 'Cashed the tower at ' + shortMult(r.multiplier) + ' for ' + r.payout.toFixed(2) + ' OST.', board);
       endTower();
     }
 
@@ -3266,26 +3429,41 @@
     play.addEventListener('click', async function() {
       var amount = parseBet(bet, statusEl);
       if (amount === null) return;
-      var placed = placeBet(amount);
-      if (!placed.ok) { statusEl.textContent = placed.msg; return; }
+      var pickVal = pick ? pick.value : '';
+      // Server-authoritative: derive this game's server params from the current
+      // pick/amount, place the bet, and let the SERVER settle it. No local debit.
+      var params = config.params ? config.params(pickVal, amount) : {};
       setBusy([bet, pick, play], true);
       statusEl.textContent = config.loading || 'Dealing...';
       resultEl.classList.remove('is-win', 'is-soft', 'is-loss');
       resultEl.classList.add('is-resolving');
       resultEl.innerHTML = renderQuickResolving(config.id);
+      var played = await playSingle(config.id, params, amount);
+      if (!played.ok) {
+        resultEl.classList.remove('is-resolving');
+        resultEl.innerHTML = renderQuickIdle(config);
+        statusEl.textContent = played.err;
+        setBusy([bet, pick, play], false);
+        return;
+      }
       try {
         await delay(540);
-        var outcome = await config.resolve(amount, pick ? pick.value : '');
+        // resolve() re-runs the game's render math against the SERVER floats
+        // (injected by playSingle), reproducing the exact settled outcome.
+        var outcome = await config.resolve(amount, pickVal);
         await delay(180);
+        var payout = Number(played.result.payout || 0);   // SERVER payout, authoritative
         resultEl.classList.remove('is-resolving');
-        resultEl.classList.add(outcome.payout > amount ? 'is-win' : outcome.payout > 0 ? 'is-soft' : 'is-loss');
+        resultEl.classList.add(payout > amount ? 'is-win' : payout > 0 ? 'is-soft' : 'is-loss');
         resultEl.innerHTML = outcome.html;
-        settleGame(config.id, amount, outcome.payout, outcome.multiplier, statusEl, outcome.text, resultEl);
+        displaySettle(config.id, amount, played.result, statusEl, outcome.text, resultEl);
       } catch (error) {
         resultEl.classList.remove('is-resolving');
-        credit(amount, config.id + '-refund');
-        statusEl.textContent = 'Round failed safely. Bet returned.';
-        console.warn('[ostg] quick casino failed', config.id, error);
+        resultEl.innerHTML = renderQuickIdle(config);
+        // The bet WAS settled server-side; just refresh the balance and inform.
+        if (window.OST_PLAY && window.OST_PLAY.refresh) { try { window.OST_PLAY.refresh(); } catch (_) {} }
+        statusEl.textContent = 'Round settled — see your balance.';
+        console.warn('[ostg] quick casino render failed', config.id, error);
       } finally {
         setBusy([bet, pick, play], false);
       }
@@ -3316,6 +3494,7 @@
   function renderDouble(stage) {
     renderQuickCasino(stage, {
       id: 'double', meta: 'Red/black 2x · green 14x', button: 'Roll double', optionLabel: 'Pick',
+      params: function (pick) { return { pick: pick }; },
       options: [
         { value: 'red', label: 'Red · 2x' },
         { value: 'black', label: 'Black · 2x' },
@@ -3352,6 +3531,7 @@
   function renderSlide(stage) {
     renderQuickCasino(stage, {
       id: 'slide', meta: 'Target multiplier', button: 'Launch slide', optionLabel: 'Cashout target',
+      params: function (pick) { return { target: Number(pick) }; },
       options: [
         { value: '1.25', label: '1.25x' }, { value: '1.5', label: '1.50x' }, { value: '2', label: '2.00x' },
         { value: '5', label: '5.00x' }, { value: '10', label: '10.00x' }, { value: '25', label: '25.00x' }, { value: '50', label: '50.00x' }
@@ -3381,6 +3561,7 @@
   function renderPump(stage) {
     renderQuickCasino(stage, {
       id: 'pump', meta: 'Balloon ladder', button: 'Pump', optionLabel: 'Pumps',
+      params: function (pick) { return { pumps: Number(pick) }; },
       options: [1,2,3,4,5,6,7,8].map(function(count) {
         var prob = (9 - count) / 9;
         return { value: String(count), label: count + ' pumps · ' + shortMult(0.99 / prob) };
@@ -3556,48 +3737,52 @@
     async function onStart() {
       var amt = parseBet(betEl, statusEl);
       if (amt === null) return;
-      var res = placeBet(amt);
-      if (!res.ok) { statusEl.textContent = res.msg; return; }
       var mode = MODES[modeEl.value] || MODES.medium;
-      var floats = await pfFloats(mode.floors);
-      var dragons = floats.map(function (f) { return Math.floor(f * mode.cols); });
-      session = { bet: amt, mode: modeEl.value, dragons: dragons, floor: 0 };
+      startBtn.disabled = true; statusEl.textContent = 'Placing bet…';
+      var r;
+      try { r = await window.OST_PLAY.sessionStart('dragontower', { mode: modeEl.value }, amt); }
+      catch (e) { statusEl.textContent = playErrMsg(e); startBtn.disabled = false; return; }
+      if (!r || !r.sessionId) { statusEl.textContent = playErrMsg({ message: r && r.error }); startBtn.disabled = false; return; }
+      session = { sessionId: r.sessionId, bet: amt, mode: modeEl.value, floor: 0, busy: false };
       buildTower(mode);
       setActiveFloor(0);
       updateMeta();
-      startBtn.disabled = true; betEl.disabled = true; modeEl.disabled = true;
+      betEl.disabled = true; modeEl.disabled = true;
       statusEl.textContent = 'Floor 1 — pick a door. One hides the dragon.';
     }
 
-    function onTile(e) {
-      if (!session) return;
+    async function onTile(e) {
+      if (!session || session.busy || session.ending) return;
       var tile = e.currentTarget;
       var f = parseInt(tile.dataset.floor, 10);
       var c = parseInt(tile.dataset.col, 10);
       if (f !== session.floor) return;
       var mode = MODES[session.mode];
-      var isDragon = session.dragons[f] === c;
-      openTile(tile, isDragon);
-      if (isDragon) {
+      session.busy = true;
+      var r;
+      try { r = await window.OST_PLAY.sessionStep(session.sessionId, { column: c }); }
+      catch (err) { session.busy = false; statusEl.textContent = playErrMsg(err); return; }
+      session.busy = false;
+      if (!r || r.error) { statusEl.textContent = playErrMsg({ message: r && r.error }); return; }
+      if (r.dragon) {
+        openTile(tile, true);
         wrapEl.classList.remove('is-burning');
         void wrapEl.offsetWidth;
         wrapEl.classList.add('is-burning');
-        // reveal the rest of this floor + all dragons above
-        towerEl.querySelectorAll('.dt-tile').forEach(function (t) {
-          var tf = parseInt(t.dataset.floor, 10), tc = parseInt(t.dataset.col, 10);
-          if (t.classList.contains('is-open')) return;
-          if (tf >= f) setTimeout(function () { openTile(t, session && session.dragons ? session.dragons[tf] === tc : false); }, (tf - f) * 120 + 150);
-        });
-        var lostBet = session.bet;
-        settleGame('dragontower', lostBet, 0, 0, statusEl, '🐉 The dragon got you on floor ' + (f + 1) + '. Lost ' + fmt(lostBet) + ' OST.', towerEl);
+        // Reveal the dragon door on THIS floor (the only layout the server exposes).
+        var dcol = (typeof r.dragonColumn === 'number') ? r.dragonColumn : c;
+        var dtile = towerEl.querySelector('.dt-tile[data-floor="' + f + '"][data-col="' + dcol + '"]');
+        if (dtile && !dtile.classList.contains('is-open')) openTile(dtile, true);
+        displaySettle('dragontower', session.bet, { payout: 0 }, statusEl, '🐉 The dragon got you on floor ' + (f + 1) + '. Lost ' + fmt(session.bet) + ' OST.', towerEl);
         endRun();
       } else {
-        session.floor += 1;
+        openTile(tile, false);
+        session.floor = (typeof r.floor === 'number') ? r.floor : (session.floor + 1);
         updateMeta();
-        var m = multAt(mode, session.floor);
-        if (session.floor >= mode.floors) {
-          var payout = session.bet * m;
-          settleGame('dragontower', session.bet, payout, m, statusEl, '👑 TOWER CONQUERED — ' + shortMult(m) + ' pays ' + payout.toFixed(2) + ' OST!', towerEl);
+        var m = (typeof r.multiplier === 'number') ? r.multiplier : multAt(mode, session.floor);
+        if (r.ended && r.won) {   // conquered — server already paid this step
+          displaySettle('dragontower', session.bet, { payout: Number(r.payout || session.bet * m) }, statusEl,
+            '👑 TOWER CONQUERED — ' + shortMult(m) + ' pays ' + Number(r.payout || 0).toFixed(2) + ' OST!', towerEl);
           endRun();
         } else {
           setActiveFloor(session.floor);
@@ -3606,18 +3791,20 @@
       }
     }
 
-    function onCash() {
-      if (!session || session.floor < 1) return;
-      var mode = MODES[session.mode];
-      var m = multAt(mode, session.floor);
-      var payout = session.bet * m;
-      settleGame('dragontower', session.bet, payout, m, statusEl, '💰 Descended from floor ' + session.floor + ' with ' + payout.toFixed(2) + ' OST (' + shortMult(m) + ').', towerEl);
+    async function onCash() {
+      if (!session || session.ending || session.floor < 1) return;
+      session.ending = true;
+      var betAmt = session.bet, sid = session.sessionId, floorNow = session.floor;
+      var r;
+      try { r = await window.OST_PLAY.sessionCashout(sid); }
+      catch (e) { session.ending = false; statusEl.textContent = playErrMsg(e); return; }
+      if (!r || typeof r.payout !== 'number') { session.ending = false; statusEl.textContent = playErrMsg({ message: r && r.error }); return; }
+      displaySettle('dragontower', betAmt, { payout: r.payout }, statusEl, '💰 Descended from floor ' + floorNow + ' with ' + r.payout.toFixed(2) + ' OST (' + shortMult(r.multiplier) + ').', towerEl);
       endRun();
     }
 
     function endRun() {
-      var keepDragons = session ? session.dragons : null;
-      session = session ? { dragons: keepDragons } : null; // reveal callbacks may still need positions
+      session = null;
       setTimeout(function () { session = null; }, 1600);
       startBtn.disabled = false; betEl.disabled = false; modeEl.disabled = false;
       cashBtn.disabled = true; cashBtn.textContent = 'Descend with loot';
@@ -3636,6 +3823,7 @@
   function renderDiamonds(stage) {
     renderQuickCasino(stage, {
       id: 'diamonds', meta: '5-gem reveal', button: 'Reveal gems', optionLabel: 'Bet',
+      params: function () { return {}; },
       options: [{ value: 'spin', label: 'Five diamonds' }],
       idle: '<div class="ostg-versus">Diamonds</div>', status: 'Reveal five gems. Matching colors pay like the classic instant original.',
       resolve: async function(amount) {
@@ -3659,6 +3847,7 @@
   function renderCaseBattle(stage) {
     renderQuickCasino(stage, {
       id: 'cases', meta: 'You vs dealer', button: 'Open cases', optionLabel: 'Case',
+      params: function (pick) { return { pick: pick }; },
       options: [
         { value: 'low', label: 'Starter case' },
         { value: 'standard', label: 'Rain case' },
@@ -3696,6 +3885,7 @@
   function renderTome(stage) {
     renderQuickCasino(stage, {
       id: 'tome', meta: 'Rune ladder', button: 'Open tome', optionLabel: 'Pages',
+      params: function (pick) { return { pages: Number(pick) }; },
       options: [2,3,4,5,6,7,8].map(function(pages) { return { value: String(pages), label: pages + ' pages · ' + shortMult(0.99 / Math.pow(0.86, pages)) }; }),
       idle: '<div class="ostg-versus">Tome</div>', status: 'Open more rune pages for a bigger multiplier. A curse page burns the run.',
       preview: function(pick, amount) {
@@ -3724,6 +3914,7 @@
   function renderScarabSpin(stage) {
     renderQuickCasino(stage, {
       id: 'scarab', meta: '3x3 symbol grid', button: 'Spin scarabs', optionLabel: 'Mode',
+      params: function (pick) { return { pick: pick }; },
       options: [{ value: 'normal', label: 'Normal volatility' }, { value: 'wild', label: 'Wild chase' }],
       idle: '<div class="ostg-versus">Scarab Spin</div>', status: 'Spin a 3x3 instant grid. Scarabs and wilds build the payout.',
       resolve: async function(amount, pick) {
