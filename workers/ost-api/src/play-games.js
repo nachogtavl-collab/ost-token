@@ -197,6 +197,64 @@ export const GAMES = {
       return { scarabs, diamonds, mult, win: mult > 0, payoutMult: mult };
     },
   },
+
+  // Matches docs/ost-games.js "diamonds": 5 gems from a 7-symbol set; group sizes
+  // (desc) map to a multiplier. No pick.
+  diamonds: {
+    floatsNeeded: 5,
+    validateParams() { return null; },
+    outcome(_params, floats) {
+      const counts = {};
+      for (let i = 0; i < 5; i++) { const g = Math.floor(floats[i] * 7); counts[g] = (counts[g] || 0) + 1; }
+      const groups = Object.values(counts).sort((a, b) => b - a);
+      const g0 = groups[0], g1 = groups[1] || 0;
+      const mult = g0 === 5 ? 50 : g0 === 4 ? 10 : (g0 === 3 && g1 === 2 ? 5 : g0 === 3 ? 2 : (g0 === 2 && g1 === 2 ? 1.2 : 0));
+      return { groups, mult, win: mult > 0, payoutMult: mult };
+    },
+  },
+
+  // Matches docs/ost-games.js "cases": 6 draws (3 player, 3 dealer) from a value
+  // table by rarity thresholds; higher total wins 1.98x, tie 1x, else 0.
+  cases: {
+    floatsNeeded: 6,
+    TABLES: {
+      low: [1, 2, 5, 12],
+      standard: [0.5, 3, 8, 25],
+      high: [0.2, 4, 15, 60],
+    },
+    validateParams(params) {
+      const pick = params && params.pick;
+      if (pick !== 'low' && pick !== 'standard' && pick !== 'high') return "pick must be 'low', 'standard' or 'high'";
+      return null;
+    },
+    outcome(params, floats) {
+      const table = this.TABLES[params.pick];
+      const draw = (v) => table[v < 0.56 ? 0 : v < 0.84 ? 1 : v < 0.97 ? 2 : 3];
+      const playerTotal = draw(floats[0]) + draw(floats[1]) + draw(floats[2]);
+      const dealerTotal = draw(floats[3]) + draw(floats[4]) + draw(floats[5]);
+      const mult = playerTotal > dealerTotal ? 1.98 : (playerTotal === dealerTotal ? 1 : 0);
+      return { playerTotal: round9(playerTotal), dealerTotal: round9(dealerTotal), mult, win: mult > 0, payoutMult: mult };
+    },
+  },
+
+  // Matches docs/ost-games.js "tome": open `pages` rune pages; any page < 0.14 is
+  // a curse that busts the run; survive all -> 0.99/0.86^pages, else 0.
+  tome: {
+    floatsNeeded: (params) => Math.max(2, Math.min(8, Math.floor(Number(params && params.pages) || 2))),
+    validateParams(params) {
+      const pages = Number(params && params.pages);
+      if (!(pages >= 2 && pages <= 8 && Number.isInteger(pages))) return 'pages must be an integer 2..8';
+      return null;
+    },
+    outcome(params, floats) {
+      const pages = Math.max(2, Math.min(8, Math.floor(Number(params.pages))));
+      let cursed = -1;
+      for (let i = 0; i < pages; i++) if (floats[i] < 0.14) { cursed = i; break; }
+      const survived = cursed < 0;
+      const mult = survived ? round9(0.99 / Math.pow(0.86, pages)) : 0;
+      return { pages, cursed, survived, mult, win: survived, payoutMult: mult };
+    },
+  },
 };
 
 // Compute one bet's outcome from the secret seed. Pure + deterministic given
@@ -204,10 +262,13 @@ export const GAMES = {
 export async function computeBet(game, serverSeed, clientSeed, nonce, params, wager) {
   const g = GAMES[game];
   if (!g) throw new Error('unknown_game');
-  const rounds = Math.max(1, Math.ceil(g.floatsNeeded / 8));
+  // floatsNeeded may be a fixed number or a function of params (e.g. tome needs
+  // `pages` floats). validateParams must bound it so it can't be unbounded.
+  const need = typeof g.floatsNeeded === 'function' ? g.floatsNeeded(params) : g.floatsNeeded;
+  const rounds = Math.max(1, Math.ceil(need / 8));
   const hexes = [];
   for (let r = 0; r < rounds; r++) hexes.push(await hmacSha256Hex(serverSeed, clientSeed + ':' + nonce + ':' + r));
-  const floats = floatsFromHexes(hexes, g.floatsNeeded);
+  const floats = floatsFromHexes(hexes, need);
   const o = g.outcome(params, floats);
   const payout = round9(wager * o.payoutMult);
   return Object.assign({ nonce, payout }, o);

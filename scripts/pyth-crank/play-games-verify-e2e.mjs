@@ -47,6 +47,9 @@ const recompute = {
   slide: (seed, cs, n, p, w) => { const v = Math.max(0.000001, f0(seed, cs, n)); const result = Math.min(100, Math.floor((0.99 / v) * 100) / 100); return result >= p.target ? w * p.target : 0; },
   wheel: (seed, cs, n, p, w) => { const T = { low: [0,1.2,1.2,1.5,1.2,0,1.2,2,1.2,0,1.5,1.2,1.2,0,1.2,1.5,0,1.2,2,1.2,0,1.2,1.5,1.2,0,1.2,1.2,1.5,0,1.2], medium: [0,1.5,0,2,0,1.5,0,3,0,1.5,0,2,0,5,0,1.5,0,2,0,3,0,1.5,0,2,0,1.5,0,3,0,1.5], high: [0,0,0,0,4,0,0,0,0,9,0,0,0,0,4,0,0,0,0,12,0,0,0,0,4,0,0,0,0,9] }[p.risk]; const idx = Math.min(Math.floor(f0(seed, cs, n) * T.length), T.length - 1); return w * T[idx]; },
   scarab: (seed, cs, n, p, w) => { const fl = floatsN(seed, cs, n, 9); let sc = 0, di = 0; for (let i = 0; i < 9; i++) { const s = Math.floor(fl[i] * 6); if (s === 0) sc++; else if (s === 3) di++; } let m = sc >= 6 ? 30 : sc >= 5 ? 12 : sc >= 4 ? 5 : sc >= 3 ? 2 : di >= 4 ? 1.5 : 0; if (p.pick === 'wild' && m > 0) m = Math.round(m * 1.35 * 1e9) / 1e9; return w * m; },
+  diamonds: (seed, cs, n, p, w) => { const fl = floatsN(seed, cs, n, 5); const c = {}; for (let i = 0; i < 5; i++) { const g = Math.floor(fl[i] * 7); c[g] = (c[g] || 0) + 1; } const gr = Object.values(c).sort((a, b) => b - a); const g0 = gr[0], g1 = gr[1] || 0; const m = g0 === 5 ? 50 : g0 === 4 ? 10 : (g0 === 3 && g1 === 2 ? 5 : g0 === 3 ? 2 : (g0 === 2 && g1 === 2 ? 1.2 : 0)); return w * m; },
+  cases: (seed, cs, n, p, w) => { const T = { low: [1,2,5,12], standard: [0.5,3,8,25], high: [0.2,4,15,60] }[p.pick]; const fl = floatsN(seed, cs, n, 6); const draw = (v) => T[v < 0.56 ? 0 : v < 0.84 ? 1 : v < 0.97 ? 2 : 3]; const pt = draw(fl[0]) + draw(fl[1]) + draw(fl[2]); const dt = draw(fl[3]) + draw(fl[4]) + draw(fl[5]); const m = pt > dt ? 1.98 : (pt === dt ? 1 : 0); return w * m; },
+  tome: (seed, cs, n, p, w) => { const pages = Math.max(2, Math.min(8, Math.floor(p.pages))); const fl = floatsN(seed, cs, n, pages); let cursed = -1; for (let i = 0; i < pages; i++) if (fl[i] < 0.14) { cursed = i; break; } const survived = cursed < 0; const m = survived ? Math.round((0.99 / Math.pow(0.86, pages)) * 1e9) / 1e9 : 0; return w * m; },
 };
 
 (async () => {
@@ -68,7 +71,8 @@ const recompute = {
   const cases = [
     ['limbo', { target: 2 }], ['dice', { target: 50, dir: 'under' }], ['coinflip', { side: 'h' }],
     ['double', { pick: 'red' }], ['slide', { target: 2 }],
-    ['wheel', { risk: 'low' }], ['wheel', { risk: 'high' }], ['scarab', { pick: 'normal' }], ['scarab', { pick: 'wild' }],
+    ['wheel', { risk: 'low' }], ['scarab', { pick: 'wild' }],
+    ['diamonds', {}], ['cases', { pick: 'standard' }], ['tome', { pages: 3 }], ['tome', { pages: 6 }],
   ];
   console.log('\n1) play a spread of single-shot bets (server computes each)');
   for (const [game, params] of cases) {
