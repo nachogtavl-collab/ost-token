@@ -153,6 +153,50 @@ export const GAMES = {
       return { result: round9(result), win, payoutMult: win ? target : 0 };
     },
   },
+
+  // Matches docs/ost-games.js WHEEL_SEGMENTS: landIdx = floor(f*30); mult = table.
+  wheel: {
+    floatsNeeded: 1,
+    SEGMENTS: {
+      low: [0, 1.2, 1.2, 1.5, 1.2, 0, 1.2, 2, 1.2, 0, 1.5, 1.2, 1.2, 0, 1.2, 1.5, 0, 1.2, 2, 1.2, 0, 1.2, 1.5, 1.2, 0, 1.2, 1.2, 1.5, 0, 1.2],
+      medium: [0, 1.5, 0, 2, 0, 1.5, 0, 3, 0, 1.5, 0, 2, 0, 5, 0, 1.5, 0, 2, 0, 3, 0, 1.5, 0, 2, 0, 1.5, 0, 3, 0, 1.5],
+      high: [0, 0, 0, 0, 4, 0, 0, 0, 0, 9, 0, 0, 0, 0, 4, 0, 0, 0, 0, 12, 0, 0, 0, 0, 4, 0, 0, 0, 0, 9],
+    },
+    validateParams(params) {
+      const risk = params && params.risk;
+      if (risk !== 'low' && risk !== 'medium' && risk !== 'high') return "risk must be 'low', 'medium' or 'high'";
+      return null;
+    },
+    outcome(params, floats) {
+      const segs = this.SEGMENTS[params.risk];
+      const idx = Math.floor(floats[0] * segs.length);
+      const mult = segs[Math.min(idx, segs.length - 1)];
+      return { landIdx: idx, mult, win: mult > 0, payoutMult: mult };
+    },
+  },
+
+  // Matches docs/ost-games.js "scarab": 9 floats -> 3x3 grid of 6 symbols; count
+  // scarabs(idx0) + diamonds(idx3); multiplier by cluster; 'wild' pick ×1.35.
+  scarab: {
+    floatsNeeded: 9,
+    validateParams(params) {
+      const pick = params && params.pick;
+      if (pick !== 'normal' && pick !== 'wild') return "pick must be 'normal' or 'wild'";
+      return null;
+    },
+    outcome(params, floats) {
+      // symbols = ['🪲','☀','🔺','💎','🌙','⚱'] → indices 0 = scarab, 3 = diamond.
+      let scarabs = 0, diamonds = 0;
+      for (let i = 0; i < 9; i++) {
+        const s = Math.floor(floats[i] * 6);
+        if (s === 0) scarabs++;
+        else if (s === 3) diamonds++;
+      }
+      let mult = scarabs >= 6 ? 30 : scarabs >= 5 ? 12 : scarabs >= 4 ? 5 : scarabs >= 3 ? 2 : diamonds >= 4 ? 1.5 : 0;
+      if (params.pick === 'wild' && mult > 0) mult = round9(mult * 1.35);
+      return { scarabs, diamonds, mult, win: mult > 0, payoutMult: mult };
+    },
+  },
 };
 
 // Compute one bet's outcome from the secret seed. Pure + deterministic given

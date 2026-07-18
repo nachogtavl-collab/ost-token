@@ -38,33 +38,37 @@ const wait = async (a) => { for (let i = 0; i < 12; i++) { try { for (const x of
 
 // Independent recompute — the client's exact math for each game.
 const f0 = (seed, cs, nonce) => parseInt(createHmac('sha256', Buffer.from(seed, 'hex')).update(cs + ':' + nonce + ':0').digest('hex').substr(0, 8), 16) / 4294967296;
+const floatsN = (seed, cs, nonce, count) => { const rounds = Math.max(1, Math.ceil(count / 8)); const out = []; for (let r = 0; r < rounds; r++) { const hex = createHmac('sha256', Buffer.from(seed, 'hex')).update(cs + ':' + nonce + ':' + r).digest('hex'); let i = 0; while (out.length < count && i + 8 <= hex.length) { out.push(parseInt(hex.substr(i, 8), 16) / 4294967296); i += 8; } } return out; };
 const recompute = {
   limbo: (seed, cs, n, p, w) => { const rolled = Math.max(1, 99 / (100 * (1 - f0(seed, cs, n)))); const win = rolled >= p.target; return win ? w * p.target : 0; },
   dice: (seed, cs, n, p, w) => { const roll = f0(seed, cs, n) * 100; const win = p.dir === 'under' ? roll < p.target : roll > p.target; const c = p.dir === 'under' ? p.target : 100 - p.target; return win ? w * (99 / c) : 0; },
   coinflip: (seed, cs, n, p, w) => { const res = f0(seed, cs, n) < 0.5 ? 'h' : 't'; return res === p.side ? w * 1.98 : 0; },
   double: (seed, cs, n, p, w) => { const f = f0(seed, cs, n); const color = f < 0.475 ? 'red' : f < 0.95 ? 'black' : 'green'; return p.pick === color ? w * (color === 'green' ? 14 : 2) : 0; },
   slide: (seed, cs, n, p, w) => { const v = Math.max(0.000001, f0(seed, cs, n)); const result = Math.min(100, Math.floor((0.99 / v) * 100) / 100); return result >= p.target ? w * p.target : 0; },
+  wheel: (seed, cs, n, p, w) => { const T = { low: [0,1.2,1.2,1.5,1.2,0,1.2,2,1.2,0,1.5,1.2,1.2,0,1.2,1.5,0,1.2,2,1.2,0,1.2,1.5,1.2,0,1.2,1.2,1.5,0,1.2], medium: [0,1.5,0,2,0,1.5,0,3,0,1.5,0,2,0,5,0,1.5,0,2,0,3,0,1.5,0,2,0,1.5,0,3,0,1.5], high: [0,0,0,0,4,0,0,0,0,9,0,0,0,0,4,0,0,0,0,12,0,0,0,0,4,0,0,0,0,9] }[p.risk]; const idx = Math.min(Math.floor(f0(seed, cs, n) * T.length), T.length - 1); return w * T[idx]; },
+  scarab: (seed, cs, n, p, w) => { const fl = floatsN(seed, cs, n, 9); let sc = 0, di = 0; for (let i = 0; i < 9; i++) { const s = Math.floor(fl[i] * 6); if (s === 0) sc++; else if (s === 3) di++; } let m = sc >= 6 ? 30 : sc >= 5 ? 12 : sc >= 4 ? 5 : sc >= 3 ? 2 : di >= 4 ? 1.5 : 0; if (p.pick === 'wild' && m > 0) m = Math.round(m * 1.35 * 1e9) / 1e9; return w * m; },
 };
 
 (async () => {
   const user = Keypair.generate();
   console.log('player:', user.publicKey.toBase58());
   await post('/wallet/ata-rent', { owner: user.publicKey.toBase58(), mint: OSTC.toBase58() });
-  await sendAndConfirmTransaction(conn, new Transaction().add(createTransferCheckedInstruction(ata(OSTC, authority.publicKey), OSTC, ata(OSTC, user.publicKey), authority.publicKey, raw(12), DEC, [], TP)), [authority], { commitment: 'confirmed' });
+  await sendAndConfirmTransaction(conn, new Transaction().add(createTransferCheckedInstruction(ata(OSTC, authority.publicKey), OSTC, ata(OSTC, user.publicKey), authority.publicKey, raw(30), DEC, [], TP)), [authority], { commitment: 'confirmed' });
   await post('/wallet/ata-rent', { owner: user.publicKey.toBase58(), mint: OSTG.toBase58() });
   await wait([ata(OSTC, user.publicKey), ata(OSTG, user.publicKey)]);
-  await feeOnly(user, [bridgeDep(user.publicKey, 10)]);
-  const depSig = await feeOnly(user, [createTransferCheckedInstruction(ata(OSTG, user.publicKey), OSTG, poolAta(OSTG), user.publicKey, raw(8), DEC, [], TP)]);
+  await feeOnly(user, [bridgeDep(user.publicKey, 28)]);
+  const depSig = await feeOnly(user, [createTransferCheckedInstruction(ata(OSTG, user.publicKey), OSTG, poolAta(OSTG), user.publicKey, raw(25), DEC, [], TP)]);
   await new Promise(r => setTimeout(r, 3000));
   await post('/play/deposit', { wallet: user.publicKey.toBase58(), signature: depSig });
   const clientSeed = (await get('/play/seed?wallet=' + user.publicKey.toBase58())).json.clientSeed;
-  say((await get('/play/balance?wallet=' + user.publicKey.toBase58())).json.balance === 8, 'play balance = 8');
+  say((await get('/play/balance?wallet=' + user.publicKey.toBase58())).json.balance === 25, 'play balance = 25');
 
   // Play 4 bets of each game, recording (game, params, nonce, wager, serverPayout).
   const plays = [];
   const cases = [
     ['limbo', { target: 2 }], ['dice', { target: 50, dir: 'under' }], ['coinflip', { side: 'h' }],
-    ['double', { pick: 'red' }], ['double', { pick: 'green' }], ['slide', { target: 2 }],
+    ['double', { pick: 'red' }], ['slide', { target: 2 }],
+    ['wheel', { risk: 'low' }], ['wheel', { risk: 'high' }], ['scarab', { pick: 'normal' }], ['scarab', { pick: 'wild' }],
   ];
   console.log('\n1) play a spread of single-shot bets (server computes each)');
   for (const [game, params] of cases) {
