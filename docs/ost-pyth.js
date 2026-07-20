@@ -25,6 +25,7 @@
   'use strict';
 
   var HERMES = 'https://hermes.pyth.network/v2/updates/price/latest';
+  var HERMES_STREAM = 'https://hermes.pyth.network/v2/updates/price/stream';
   var IDS = {
     BTC: 'e62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43',
     ETH: 'ff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace',
@@ -34,35 +35,66 @@
   Object.keys(IDS).forEach(function (k) { BY_ID[IDS[k]] = k; });
 
   var latest = {};          // sym -> { price, conf, publishTime, ageS, at }
-  var POLL_MS = 4000;       // all three symbols come back in ONE request
+  var POLL_MS = 4000;       // fallback polling; all three come back in ONE request
   var failStreak = 0;
+
+  // Apply one parsed Hermes price update (shared by the stream + the poll path).
+  function applyParsed(arr) {
+    (arr || []).forEach(function (p) {
+      var sym = BY_ID[p.id];
+      if (!sym || !p.price) return;
+      var price = Number(p.price.price) * Math.pow(10, Number(p.price.expo));
+      if (!Number.isFinite(price) || price <= 0) return;
+      latest[sym] = {
+        price: price,
+        conf: Number(p.price.conf) * Math.pow(10, Number(p.price.expo)),
+        publishTime: Number(p.price.publish_time) * 1000,
+        at: Date.now()
+      };
+      try { window.dispatchEvent(new CustomEvent('ost:pyth-tick', { detail: { symbol: sym, price: price } })); } catch (_) {}
+    });
+  }
 
   function refresh() {
     var q = Object.keys(IDS).map(function (k) { return 'ids[]=' + IDS[k]; }).join('&');
     return fetch(HERMES + '?' + q, { cache: 'no-store' })
       .then(function (r) { if (!r.ok) throw new Error('hermes ' + r.status); return r.json(); })
-      .then(function (j) {
-        failStreak = 0;
-        (j && j.parsed || []).forEach(function (p) {
-          var sym = BY_ID[p.id];
-          if (!sym || !p.price) return;
-          var price = Number(p.price.price) * Math.pow(10, Number(p.price.expo));
-          if (!Number.isFinite(price) || price <= 0) return;
-          latest[sym] = {
-            price: price,
-            conf: Number(p.price.conf) * Math.pow(10, Number(p.price.expo)),
-            publishTime: Number(p.price.publish_time) * 1000,
-            at: Date.now()
-          };
-          try { window.dispatchEvent(new CustomEvent('ost:pyth-tick', { detail: { symbol: sym, price: price } })); } catch (_) {}
-        });
-      })
+      .then(function (j) { failStreak = 0; applyParsed(j && j.parsed); })
       .catch(function () {
         failStreak++;
         // Back off if Hermes is unreachable (regional block / outage) — the
         // exchange feeds keep the app alive; Pyth resumes when reachable.
       });
   }
+
+  // ── Real-time STREAM (Solana speed) ────────────────────────────────────
+  // Pyth Hermes serves a Server-Sent-Events stream: one persistent connection
+  // that PUSHES a fresh signed aggregate the instant publishers move the price
+  // (sub-second), instead of us polling every few seconds. This is the price
+  // flowing straight from Solana's oracle to the user — no OST worker, no KV,
+  // no middleman. Polling stays as the automatic fallback if SSE is blocked.
+  var es = null;
+  function streamSupported() { return typeof window.EventSource === 'function'; }
+  function startStream() {
+    if (es || !streamSupported()) return false;
+    var q = Object.keys(IDS).map(function (k) { return 'ids[]=' + IDS[k]; }).join('&');
+    try { es = new EventSource(HERMES_STREAM + '?' + q + '&parsed=true&allow_unordered=true'); }
+    catch (_) { es = null; return false; }
+    es.onmessage = function (ev) {
+      failStreak = 0;
+      try { var j = JSON.parse(ev.data); applyParsed(j && j.parsed); } catch (_) {}
+    };
+    es.onerror = function () {
+      // Connection dropped/blocked — tear down and fall back to polling; the
+      // visibility handler will retry the stream next time the tab is shown.
+      try { es.close(); } catch (_) {}
+      es = null;
+      failStreak++;
+      startPoll();
+    };
+    return true;
+  }
+  function stopStream() { if (es) { try { es.close(); } catch (_) {} es = null; } }
 
   function get(sym) {
     var e = latest[String(sym || '').toUpperCase()];
@@ -72,17 +104,25 @@
     return { price: e.price, conf: e.conf, publishTime: e.publishTime, ageS: ageS };
   }
 
-  // Only poll while the page is visible; pause in background tabs.
+  // Polling fallback — only runs when the SSE stream is not active.
   var timer = 0;
-  function start() {
-    if (timer) return;
+  function startPoll() {
+    if (timer || es) return;
     refresh();
     timer = setInterval(function () {
-      if (failStreak >= 3 && failStreak % 3 !== 0) { failStreak++; return; }   // soft backoff
+      if (es) { clearInterval(timer); timer = 0; return; }   // stream took over
+      if (failStreak >= 3 && failStreak % 3 !== 0) { failStreak++; return; }
       refresh();
     }, POLL_MS);
   }
-  function stop() { if (timer) { clearInterval(timer); timer = 0; } }
+  function stopPoll() { if (timer) { clearInterval(timer); timer = 0; } }
+
+  // Prefer the real-time stream; poll only if SSE is unavailable/blocked.
+  function start() {
+    refresh();                 // one immediate snapshot so prices show instantly
+    if (!startStream()) startPoll();
+  }
+  function stop() { stopStream(); stopPoll(); }
   document.addEventListener('visibilitychange', function () {
     if (document.visibilityState === 'visible') start(); else stop();
   }, false);
@@ -93,6 +133,7 @@
     get: get,
     feeds: IDS,
     source: 'pyth-hermes',
-    refresh: refresh
+    refresh: refresh,
+    streaming: function () { return !!es; }
   };
 })();

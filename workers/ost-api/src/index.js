@@ -352,18 +352,30 @@ async function lockRoundOpenPrice(env, round, price, source) {
 }
 
 async function appendBtcTick(env, round, price, source) {
-  if (!env.OST_KV || !Number.isFinite(price) || price <= 0) return;
+  if (!Number.isFinite(price) || price <= 0) return;
+  const now = Date.now();
+  const latest = { t: now, p: price, s: source || '', round: round.openAt };
+  // ALWAYS keep the freshest tick in isolate memory — free, instant, and totally
+  // independent of KV. Reads prefer this, so the live price the prediction market
+  // streams NEVER waits on (or is bottlenecked by) KV. This is the "work with the
+  // bottleneck" path: the price keeps flowing even when KV is exhausted.
+  memPut('btc:latest', latest, BTC_LIVE_TTL_S);
+  // Under KV pressure (breaker tripped) OR no KV, do NOT touch the KV tick ring at
+  // all — the ephemeral per-round display ring is the first thing to shed. The
+  // client renders live ticks from Pyth (Solana's oracle) directly regardless, so
+  // dropping the KV ring costs nothing user-visible and stops it burning the
+  // ~1k/day KV write budget.
+  if (!env.OST_KV || tierDown('kv')) return;
   const ringKey = `btc:ticks:${round.openAt}`;
   const ring = await kvGet(env, ringKey, []);
   const last = ring.length ? ring[ring.length - 1] : null;
   // Dedupe identical prints inside 800ms — same guard the client used to apply.
-  const now = Date.now();
   if (last && last.p === price && now - last.t < 800) return;
   ring.push({ t: now, p: price, s: source || '' });
   if (ring.length > BTC_TICK_RING_MAX) ring.splice(0, ring.length - BTC_TICK_RING_MAX);
   await kvPut(env, ringKey, ring, 60 * 60 * 1);
-  // Also keep a "latest tick" pointer so cached requests resolve in 1 KV read.
-  await kvPut(env, 'btc:latest', { t: now, p: price, s: source || '', round: round.openAt }, BTC_LIVE_TTL_S);
+  // "latest tick" pointer (KV_HOT_RE-throttled) so cross-isolate reads still work.
+  await kvPut(env, 'btc:latest', latest, BTC_LIVE_TTL_S);
 }
 
 // Deterministic 5-min BTC YES/NO equation. SAME inputs => SAME outputs across
@@ -413,7 +425,9 @@ function btcRoundHasHotLivePrice(round) {
 async function buildCanonicalBtcRound(env, opts) {
   const round = currentRound();
   const wantFresh = opts && opts.refresh !== false;
-  let latest = await kvGet(env, 'btc:latest', null);
+  // Prefer the isolate-memory tick (free, instant) over a KV read — the price
+  // stream never blocks on KV. KV is only consulted when memory is cold.
+  let latest = memGet('btc:latest') || await kvGet(env, 'btc:latest', null);
   const latestIsCurrentRound = latest && Number(latest.round) === round.openAt;
   const stale = !latest || !latestIsCurrentRound || (Date.now() - Number(latest.t || 0) > BTC_LIVE_REFRESH_MS);
   if (wantFresh && stale) {
@@ -3282,8 +3296,8 @@ export default {
       const result = await fetchBtcPrice();
       if (!result) {
         // Surface the cached latest so the chart doesn't go blank when a
-        // single upstream blip happens.
-        const cached = await kvGet(env, 'btc:latest', null);
+        // single upstream blip happens — memory first, KV only if cold.
+        const cached = memGet('btc:latest') || await kvGet(env, 'btc:latest', null);
         if (cached) return json({ price: cached.p, currency: 'USD', source: cached.s || 'cached', stale: true, round: currentRound(), ts: new Date(cached.t).toISOString() }, 200, { 'cache-control': 'no-store' });
         return json({ error: 'all_feeds_failed', price: null }, 503);
       }
