@@ -748,11 +748,19 @@
       .then(function () { if (canonicalTicksLoadingFor === openAt) canonicalTicksLoadingFor = 0; });
   }
 
-  // Periodic poll so cards, charts, and close-outs all share fresh BTC data.
-  setInterval(pollBtcMarket, BTC_REFRESH_MS);
-  setInterval(keepBtcWebSocketFresh, 2500);
+  // BTC price now STREAMS from the Pyth SSE feed (ost-pyth.js → ost:pyth-tick →
+  // rememberBtcTick), the single Solana-oracle source that renders into the chart.
+  // The Binance WebSocket + exchange polling for the LIVE tick are retired — no
+  // more 4 mixed feeds. The market poll stays ONLY for round state (open price /
+  // rollover / settlement) and is PAUSED while the tab is hidden, so an idle or
+  // background tab makes zero worker requests and burns zero KV. (Exchange feeds
+  // survive only as a cold-start fallback inside fetchDirectBtcSpot if Pyth is
+  // unreachable — never as a competing live source.)
+  setInterval(function () {
+    if (typeof document !== 'undefined' && document.hidden) return;   // idle: no polling
+    pollBtcMarket();
+  }, BTC_REFRESH_MS);
   pollBtcMarket();
-  startBtcWebSocket();
 
   function currentRoundBoundaries() {
     if (canonicalRoundIsFresh() && canonicalRound && Number(canonicalRound.openAt) && Number(canonicalRound.closeAt) && Number(canonicalRound.closeAt) > Date.now()) {

@@ -327,7 +327,11 @@ export async function confirmSignature(sig, blockhashInfo, label) {
         if (statusErr && /On-chain failure/i.test(statusErr.message || '')) throw statusErr;
       }
     }
-    await new Promise(r => setTimeout(r, 600 + attempt * 250));
+    // A pool tx usually reaches 'confirmed' in well under a second — poll TIGHT
+    // for the first few attempts so payouts/sells/sends return the instant the
+    // chain confirms, then back off. (Still requires a real confirmation; this
+    // only shortens detection latency, it never returns before the tx lands.)
+    await new Promise(r => setTimeout(r, attempt < 3 ? 250 : 600 + attempt * 200));
   }
   const summary = lastStatus ? 'last status=' + (lastStatus.confirmationStatus || 'unknown') : 'no status from any RPC';
   throw new Error((label || 'Transaction') + ' could not be confirmed on-chain (' + summary + ')');
