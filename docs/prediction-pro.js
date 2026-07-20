@@ -374,6 +374,16 @@
   }
 
   function fetchDirectBtcSpot() {
+    // SOLANA-FIRST: prefer the Pyth Network oracle (streamed via Hermes SSE) when
+    // it has a fresh BTC tick — the price flows straight from Solana's price layer
+    // with no OST worker and no exchange middleman. Exchange feeds stay as
+    // fallbacks so a Pyth outage can never stall the round.
+    try {
+      var py = window.OST_PYTH && window.OST_PYTH.get ? window.OST_PYTH.get('BTC') : null;
+      if (py && py.price > 1000 && py.ageS < 12) {
+        return Promise.resolve(Object.assign({}, rememberBtcTick(py.price, 'pyth')));
+      }
+    } catch (_) {}
     return tryBtcFeeds(orderedBtcFeeds(), 0)
       .then(function (result) {
         btcPreferredSource = result.source && result.source.replace(/\*$/, '') || btcPreferredSource;
@@ -412,6 +422,18 @@
     try { window.dispatchEvent(new CustomEvent('ost:btc-spot', { detail: Object.assign({}, btcLastTick) })); } catch (e) {}
     return btcLastTick;
   }
+
+  // SOLANA STREAM: the instant Pyth pushes a BTC tick (sub-second, via the Hermes
+  // SSE stream in ost-pyth.js), feed it straight into the engine so the 5-min BTC
+  // market's price + odds react at Solana speed instead of poll cadence. This is
+  // the "stream via Solana to the user, stop being the middleman" path — no worker,
+  // no exchange poll in the hot loop. rememberBtcTick dedupes, so it won't spam.
+  try {
+    window.addEventListener('ost:pyth-tick', function (ev) {
+      var d = ev && ev.detail;
+      if (d && d.symbol === 'BTC' && Number(d.price) > 1000) rememberBtcTick(Number(d.price), 'pyth-stream');
+    }, false);
+  } catch (_) {}
 
   function parseBtcWsPrice(event) {
     try {
