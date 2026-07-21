@@ -17541,6 +17541,13 @@
         state.orderHistory = reconcilePredictionVaultLossRecords();
         renderPredictionLedger();
       });
+      // REACTIVE on-chain balance: refetch #wdOstBal shortly after any
+      // balance-moving action (debounced) so a win / deposit / send shows
+      // immediately instead of waiting on a background poll.
+      clearTimeout(window.__ostBalReactiveT);
+      window.__ostBalReactiveT = setTimeout(function () {
+        try { if (connectedWallet) updateWalletBalance(connectedWallet); } catch (_) {}
+      }, 1200);
     });
     // Instantly reflect credits changes (game/prediction wins, deposits,
     // redeems) in the bet-available balance — previously it only refreshed on

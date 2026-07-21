@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ost-pwa-cache-v300';
+const CACHE_NAME = 'ost-pwa-cache-v301';
 const RUNTIME_CACHE = 'ost-pwa-runtime-v253';
 const CACHE_PREFIX = 'ost-pwa-';
 
@@ -37,6 +37,7 @@ const PRECACHE_PATHS = [
   './ost-appbar.css?v=2',
   './predict-mobile.css?v=2',
   './ost-total-balance.js?v=2',
+  './ost-ostg-wallet.js?v=1',
   './manifest.json',
   './favicon.svg',
   './ost-logo.svg',
@@ -65,7 +66,7 @@ const PRECACHE_PATHS = [
   './ost-fx.js?v=1',
   './realtime.js?v=2',
   './ost-notifications.js?v=3',
-  './app.js?v=231',
+  './app.js?v=232',
   './ost-onchain-market.js?v=4',
   './ost-onchain-route.js?v=3',
   './ost-lazy.js?v=1',
@@ -77,7 +78,7 @@ const PRECACHE_PATHS = [
   './interchange-live.js?v=2',
   './polish.js?v=2',
   './swap-pool.js?v=2',
-  './wallet-extras.js?v=206',
+  './wallet-extras.js?v=207',
   './ost-price-client.js?v=202',
   './ost-token-section.js?v=2',
   './assets/ost-metadata.json',

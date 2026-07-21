@@ -1838,10 +1838,19 @@
   // Periodic background snapshot so the curve fills in even without txs
   function startSnapshotPoller() {
     var w = window.OST_WALLET;
-    var lastAddr = null;
-    setInterval(async function () {
+    var lastPollAt = 0;
+    var POLL_MIN_GAP_MS = 8000;   // debounce event bursts — never refetch faster than this
+    // REACTIVE, not blind-polling. The old version fired 2 Solana RPC calls every
+    // 30s forever — even in a hidden/idle tab with a static balance, draining RPC
+    // (and battery) for nothing. Now it fetches (a) the instant a balance-moving
+    // event flows, debounced, and (b) on a slow VISIBLE-only heartbeat as a safety
+    // net. A hidden/idle tab does zero work.
+    async function pollOnce() {
       try {
+        if (typeof document !== 'undefined' && document.hidden) return;   // idle → skip
         if (!w || !w.session || !w.address) return;
+        if (Date.now() - lastPollAt < POLL_MIN_GAP_MS) return;            // debounce
+        lastPollAt = Date.now();
         var conn = w.getConnection();
         if (!conn) return;
         var addr = w.address;
@@ -1850,18 +1859,25 @@
         var sol = lamports / solanaWeb3.LAMPORTS_PER_SOL;
         var list = loadSnapshots();
         var last = list[list.length - 1];
-        // Only snapshot if address changed or balance moved or 60s elapsed
         var delta = !last || last.address !== addr ||
           Math.abs((last.ostBalance || 0) - ost) > 1e-6 ||
           Math.abs((last.solBalance || 0) - sol) > 1e-6 ||
-          (Date.now() - (last.ts || 0)) > 60000;
+          (Date.now() - (last.ts || 0)) > 120000;
         if (delta) {
           recordSnapshot({ ts: Date.now(), ostBalance: ost, solBalance: sol, kind: 'tick', address: addr });
           refreshChartIfReady();
         }
-        lastAddr = addr;
       } catch (e) {}
-    }, 30000);
+    }
+    // Reactive: refetch right after any balance-moving action or play-balance move.
+    window.addEventListener('ost:wallet-changed', pollOnce, false);
+    window.addEventListener('ost:play:balance', pollOnce, false);
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') pollOnce();
+    }, false);
+    // Slow visible-only heartbeat as a safety net (was a blind 30s poll).
+    setInterval(pollOnce, 90000);
+    pollOnce();
   }
 
   // Replace the synthetic wallet portfolio chart drawing
