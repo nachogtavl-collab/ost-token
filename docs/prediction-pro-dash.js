@@ -89,7 +89,9 @@
     var last = state.btcSeries[state.btcSeries.length - 1];
     if (last === p) return;
     state.btcSeries.push(p);
-    if (state.btcSeries.length > 150) state.btcSeries.shift();
+    // Deeper sparkline history so a high-tick-rate stream renders a dense curve
+    // on capable devices (was 150).
+    if (state.btcSeries.length > 600) state.btcSeries.shift();
   }
 
   // ---------------------------------------------------------------------------
@@ -596,6 +598,18 @@
     refreshRelay().then(function () { paintRelay(root); });
     discoverScalarMarkets().then(function () { paintScalar(root); });
 
+    // rAF-COALESCED paint: at high tick rates (Pyth SSE pushes several/sec) we
+    // must NOT repaint synchronously per tick — that thrashes layout and stalls
+    // fast devices. Instead we schedule one paint on the next animation frame, so
+    // the chart renders at the DEVICE's refresh rate (120Hz ProMotion, 144Hz+
+    // gaming) and coalesces bursts. Each device sets its own ceiling.
+    var _btcRaf = 0;
+    var _raf = window.requestAnimationFrame || function (cb) { return setTimeout(cb, 16); };
+    function schedulePaintBtc() {
+      if (_btcRaf) return;
+      _btcRaf = _raf(function () { _btcRaf = 0; try { paintBtc(root); } catch (_) {} });
+    }
+
     // 1Hz UI tick (countdown, stats, projections)
     setInterval(function () {
       refreshLocalState();
@@ -613,7 +627,7 @@
       state.btcSource = detail.source || state.btcSource || '';
       state.btcUpdatedAt = detail.ts || Date.now();
       rememberBtcDashboardPrice(p);
-      paintBtc(root);
+      schedulePaintBtc();
     });
     // Mirror the authoritative market-update event so YES/NO odds re-render
     // in lockstep with every tick the prediction engine publishes — the
@@ -645,11 +659,11 @@
           source: market.meta.priceSource
         });
       }
-      paintBtc(root);
+      schedulePaintBtc();
     });
     // Also follow the centralized arbitrage state events so the displayed
     // ask/bid price reflects the same quote a buy will execute against.
-    window.addEventListener('ost:native-market-state', function () { paintBtc(root); });
+    window.addEventListener('ost:native-market-state', function () { schedulePaintBtc(); });
     // 15s BTC price tick — pauses when tab is hidden or dashboard is offscreen
     // to avoid flooding public exchange APIs and console with errors.
     // Acts as a backup in case the ost:btc-spot stream stops.

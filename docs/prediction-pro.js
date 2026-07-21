@@ -68,10 +68,15 @@
   var FIVE_MIN_MS = 5 * 60 * 1000;
   var BTC_PRICE_URL = 'https://data-api.binance.vision/api/v3/ticker/price?symbol=BTCUSDT';
   var BTC_REFRESH_MS = 1500;          // canonical worker cadence; WebSocket ticks keep the UI live between polls
-  var BTC_DEDUPE_MS  = 200;           // dedupe identical prints inside this window (was 300)
+  // THROUGHPUT: the Pyth SSE stream pushes every publish (multiple/sec). We record
+  // EVERY tick — no dedupe window — so the chart is as dense as the oracle and the
+  // device's network allow. Rendering is rAF-coalesced downstream, so a fast device
+  // (120Hz ProMotion iPhone, 144Hz+ gaming PC on WiFi 6/7 / 5G) draws every tick it
+  // can while a slow one naturally coalesces — the device sets its own ceiling.
+  var BTC_DEDUPE_MS  = 0;             // 0 = record every tick (was 200)
   var BTC_LOCAL_TICK_FRESH_MS = 1500;
   var BTC_FEED_TIMEOUT_MS = 3000;
-  var BTC_MAX_SERIES = 900;           // ~7.5 min of sub-second history for the chart
+  var BTC_MAX_SERIES = 3600;          // deep, dense sub-second history for the chart
   var BTC_WS_URLS = [
     'wss://stream.binance.com:9443/ws/btcusdt@trade',
     'wss://data-stream.binance.vision/ws/btcusdt@trade'
@@ -431,7 +436,13 @@
   try {
     window.addEventListener('ost:pyth-tick', function (ev) {
       var d = ev && ev.detail;
-      if (d && d.symbol === 'BTC' && Number(d.price) > 1000) rememberBtcTick(Number(d.price), 'pyth-stream');
+      if (d && d.symbol === 'BTC' && Number(d.price) > 1000) {
+        rememberBtcTick(Number(d.price), 'pyth-stream');
+        // Recompute + broadcast the YES/NO fair quote on EVERY stream tick so the
+        // odds move with the price at Pyth speed (cheap math; paints are rAF-
+        // coalesced downstream so this can't thrash the device).
+        try { publishBtcMarketUpdate('pyth-stream'); } catch (_) {}
+      }
     }, false);
   } catch (_) {}
 
