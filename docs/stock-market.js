@@ -655,6 +655,14 @@
         return;
       }
     }
+    // Celebrate a big close (>=2x the stake) — OST_CELEBRATE gates the 2x itself.
+    try {
+      window.dispatchEvent(new CustomEvent('ost:trade-win', { detail: {
+        payout: Number((payout && payout.ost) || (pnl && pnl.payoutOst) || 0),
+        stake: Number(order.ostStake || 0),
+        kind: 'Stock', label: order.symbol + ' closed'
+      } }));
+    } catch (_) {}
     var closeId = 'stock-close-' + orderId + '-' + Date.now().toString(36);
     var closeRecord = normalizeOrder({
       id: closeId,

@@ -131,6 +131,24 @@
     if (!(amt > 0)) throw new Error('Enter an amount greater than zero.');
     var rawAmount = BigInt(Math.round(amt * 10 ** DEC));
 
+    // Pre-check the SOURCE balance in the WALLET so the failure is a clear,
+    // actionable message instead of a cryptic token-program error. The #1 cause
+    // of "OSTG won't convert back to OST" is that the OSTG is sitting in the PLAY
+    // balance (from games), not the wallet — the bridge only burns WALLET OSTG.
+    try {
+      var srcMint = direction === 'deposit' ? OSTC_MINT : OSTG_MINT;
+      var srcBal = await readBal(srcMint);
+      if (typeof srcBal === 'number' && srcBal + 1e-9 < amt) {
+        if (direction === 'withdraw') {
+          throw new Error('Your wallet holds ' + fmt(srcBal) + ' OSTG. If your OSTG is in the play balance, cash it out to your wallet first (Arcade → Cash out), then convert OSTG → OST here.');
+        }
+        throw new Error('Your wallet holds ' + fmt(srcBal) + ' OST — not enough to convert ' + fmt(amt) + '.');
+      }
+    } catch (e) {
+      if (e && /wallet holds|play balance/.test(String(e.message || ''))) throw e;
+      /* balance read failed — let the on-chain tx be the source of truth */
+    }
+
     var rescue = window.OST_RESCUE;
     var poolPaid = !!(rescue && rescue.sendPoolFeeOnly && rescue.ensureUserAtaForMint);
 

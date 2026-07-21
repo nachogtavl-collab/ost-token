@@ -15273,6 +15273,16 @@
             order.cashoutOst = r.ost;
             order.cashoutAt = Date.now();
             order.cashoutKind = action.kind;
+            // Celebrate a big win (>=2x the stake) like the faucet games do —
+            // OST_CELEBRATE gates the 2x itself, so this fires for winners only.
+            try {
+              window.dispatchEvent(new CustomEvent('ost:trade-win', { detail: {
+                payout: Number(r.ost || payout || 0),
+                stake: Number(order.stake || action.stake || 0),
+                kind: 'Prediction',
+                label: action.kind === 'prediction-settlement' ? 'Prediction won' : 'Cashed out'
+              } }));
+            } catch (_) {}
             var retained = Math.max(0, Number(order.stake || action.stake || 0) - Number(r.ost || payout || 0));
             if (retained > 0 && !order.vaultRetainedAt) {
               order.vaultRetainedAt = Date.now();
