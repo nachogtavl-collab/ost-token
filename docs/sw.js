@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ost-pwa-cache-v303';
+const CACHE_NAME = 'ost-pwa-cache-v304';
 const RUNTIME_CACHE = 'ost-pwa-runtime-v253';
 const CACHE_PREFIX = 'ost-pwa-';
 
@@ -84,6 +84,7 @@ const PRECACHE_PATHS = [
   './assets/ost-metadata.json',
   './assets/ost-logo.svg',
   './ghost/ghost.js?v=7',
+  './ghost/ghost-terminal.js?v=1',
   './ghost/orb.js?v=1',
   './ghost/translator.js?v=4',
   './ghost/core.js?v=1',
