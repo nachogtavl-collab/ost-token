@@ -307,8 +307,10 @@
         return cv.toDataURL('image/png');
       }
     } catch (_) {}
-    // last-resort fallback to the external renderer
-    return 'https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=16&ecc=M&data=' + encodeURIComponent(value || '');
+    // No external fallback: api.qrserver.com never loads offline/behind blocks,
+    // so returning it here only produced a broken <img> that LOOKED like a QR
+    // problem. Return '' and let the caller say plainly that it could not render.
+    return '';
   }
 
   function loadQrDecoder() {
@@ -398,7 +400,7 @@
       '.omu-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.omu-row input,.omu-row textarea{flex:1 1 150px;min-width:0;border:1px solid rgba(255,255,255,.14);border-radius:11px;background:#06141f;color:#d8eaff;padding:10px;font:inherit;font-size:13px}.omu-row textarea{min-height:48px;resize:vertical}.omu-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(108px,1fr));gap:7px}.omu-actions button,.omu-contact button,.omu-snippet button,.omu-scan-actions button{border:1px solid rgba(255,255,255,.12);border-radius:11px;background:rgba(255,255,255,.07);color:#e8fbff;padding:9px;font-weight:750;font-size:12px;cursor:pointer;min-height:42px;white-space:normal;line-height:1.15}.omu-actions button.primary,.omu-contact button.primary,.omu-scan-actions button.primary{background:linear-gradient(135deg,#00d4ff,#00ff9f);border-color:transparent;color:#03131c}',
       '.omu-list{display:grid;gap:8px;max-height:230px;overflow:auto}.omu-contact{display:grid;grid-template-columns:auto minmax(0,1fr);gap:9px;align-items:center;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:9px;background:rgba(0,0,0,.17)}.omu-contact-main{display:grid;gap:2px;min-width:0}.omu-contact strong{display:block;color:#fff;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.omu-contact span{display:block;color:#8ebbd5;font-family:ui-monospace,Menlo,monospace;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.omu-contact-actions{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(74px,1fr));gap:6px}.omu-empty{border:1px dashed rgba(127,216,255,.22);border-radius:14px;padding:12px;color:#8ebbd5;font-size:12px;text-align:center}',
       '.omu-snippets{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}.omu-snippet{position:relative;border:1px solid rgba(127,216,255,.2);border-radius:16px;background:linear-gradient(150deg,rgba(0,212,255,.17),rgba(167,139,250,.11));padding:10px;min-height:96px;overflow:hidden;display:grid;gap:6px}.omu-snippet.is-pinned{border-color:rgba(255,221,87,.55);background:linear-gradient(150deg,rgba(255,221,87,.18),rgba(0,212,255,.12))}.omu-snippet:before{content:"";position:absolute;inset:-40%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);transform:rotate(18deg);animation:omu-snap-sheen 4s linear infinite}.omu-snippet-text{position:relative;color:#fff;font-weight:800;font-size:13px;line-height:1.3}.omu-snippet-meta{position:relative;font-size:10px;color:#9bcbe6;letter-spacing:.04em;text-transform:uppercase}.omu-snippet.is-pinned .omu-snippet-meta{color:#ffe08a}.omu-snippet-actions{position:relative;display:grid;grid-template-columns:repeat(auto-fit,minmax(54px,1fr));gap:6px}.omu-snippet-actions button{min-height:34px;padding:6px;font-size:11px}',
-      '.omu-signals{display:grid;gap:6px;max-height:128px;overflow:auto}.omu-signal{display:flex;gap:8px;align-items:flex-start;color:#9fbfd8;font-size:12px}.omu-signal:before{content:"";width:7px;height:7px;margin-top:5px;border-radius:50%;background:#5eead4;box-shadow:0 0 12px rgba(94,234,212,.72);animation:omu-pulse 1.8s ease-in-out infinite}.omu-qr-modal{position:fixed;inset:0;z-index:1000300;background:rgba(2,6,14,.86);display:none;align-items:center;justify-content:center;padding:14px}.omu-qr-modal.is-open{display:flex}.omu-qr-panel{width:min(420px,100%);border:1px solid rgba(127,216,255,.22);border-radius:18px;background:#06111d;padding:14px;display:grid;gap:10px;color:#dff8ff;box-shadow:0 24px 80px rgba(0,0,0,.55)}.omu-qr-panel video{width:100%;max-height:54vh;border-radius:14px;background:#000}.omu-qr-box{display:grid;place-items:center;gap:9px}.omu-qr-box img{width:min(320px,86vw);height:auto;aspect-ratio:1;border-radius:14px;background:#fff;padding:8px}.omu-qr-panel textarea{width:100%;min-height:80px;border:1px solid rgba(255,255,255,.14);border-radius:12px;background:#020a12;color:#dff8ff;padding:10px;font:12px ui-monospace,Menlo,monospace}.omu-scan-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}',
+      '.omu-signals{display:grid;gap:6px;max-height:128px;overflow:auto}.omu-signal{display:flex;gap:8px;align-items:flex-start;color:#9fbfd8;font-size:12px}.omu-signal:before{content:"";width:7px;height:7px;margin-top:5px;border-radius:50%;background:#5eead4;box-shadow:0 0 12px rgba(94,234,212,.72);animation:omu-pulse 1.8s ease-in-out infinite}.omu-qr-modal{position:fixed;inset:0;z-index:1000300;background:rgba(2,6,14,.86);display:none;align-items:center;justify-content:center;padding:14px}.omu-qr-modal.is-open{display:flex}.omu-qr-panel{width:min(420px,100%);border:1px solid rgba(127,216,255,.22);border-radius:18px;background:#06111d;padding:14px;display:grid;gap:10px;color:#dff8ff;box-shadow:0 24px 80px rgba(0,0,0,.55)}.omu-qr-panel video{width:100%;max-height:54vh;border-radius:14px;background:#000}.omu-qr-box{display:grid;place-items:center;gap:9px}.omu-qr-box img{width:min(320px,86vw);height:auto;aspect-ratio:1;border-radius:14px;background:#fff;padding:8px;image-rendering:pixelated}.omu-qr-fail{margin:0;padding:14px;border-radius:12px;border:1px solid rgba(255,138,138,.34);background:rgba(120,20,20,.18);color:#ffd9d9;font-size:13px;text-align:center}.omu-qr-panel textarea{width:100%;min-height:80px;border:1px solid rgba(255,255,255,.14);border-radius:12px;background:#020a12;color:#dff8ff;padding:10px;font:12px ui-monospace,Menlo,monospace}.omu-scan-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}',
       '.omu-profile-modal{position:fixed;inset:0;z-index:1000310;background:rgba(2,6,14,.86);display:none;align-items:center;justify-content:center;padding:14px}.omu-profile-modal.is-open{display:flex}.omu-profile-panel{width:min(460px,100%);border:1px solid rgba(127,216,255,.22);border-radius:18px;background:#06111d;padding:14px;display:grid;gap:12px;color:#dff8ff;box-shadow:0 24px 80px rgba(0,0,0,.55)}.omu-profile-view{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center}.omu-profile-view .omu-avatar{width:86px;height:86px;border-radius:26px}.omu-profile-view h3{margin:0;color:#fff;font-size:18px}.omu-profile-view span{display:block;color:#8ebbd5;font-size:12px}.omu-profile-panel p{margin:0;color:#b8d7ea;font-size:13px;line-height:1.45}.omu-profile-panel code{color:#9fffd0;word-break:break-all;font-size:11px}',
       '.ost-mesh-callbar.is-ringing{animation:omu-ring 1s ease-in-out infinite;border-color:rgba(251,191,36,.55);box-shadow:0 0 24px rgba(251,191,36,.12)}.ost-mesh-callbar.is-live{border-color:rgba(52,211,153,.45);box-shadow:0 0 28px rgba(52,211,153,.12)}#ost-mesh-pavilion.ost-mesh-ringing .ost-mesh-shell{box-shadow:inset 0 0 0 1px rgba(251,191,36,.24)}#ost-mesh-pavilion.ost-mesh-in-call .ost-mesh-video-grid.is-on video{box-shadow:0 0 0 1px rgba(94,234,212,.28),0 18px 48px rgba(0,0,0,.38)}.omu-profile-card{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:center}.omu-profile-card strong{color:#fff}.omu-profile-card code{color:#9fffd0;word-break:break-all;font-size:11px}.omu-profile-card p{grid-column:1/-1;margin:0;color:#b8d7ea}',
       '@media(max-width:760px){.ost-mesh-upgrade{padding:10px;border-radius:14px}.omu-body{gap:10px}.omu-grid{grid-template-columns:1fr}.omu-card{padding:9px;border-radius:12px}.omu-contact-actions{grid-template-columns:repeat(2,minmax(0,1fr))}.omu-actions,.omu-snippets{grid-template-columns:repeat(2,minmax(0,1fr))}.omu-profile-social{grid-template-columns:1fr;text-align:center}.omu-avatar{width:60px;height:60px;border-radius:18px;margin:auto}.omu-list{max-height:174px}.omu-signals{max-height:96px}.omu-scan-actions{grid-template-columns:1fr}}@media(max-width:380px){.omu-actions,.omu-snippets,.omu-contact-actions{grid-template-columns:1fr}}',
@@ -475,7 +477,7 @@
     panel.querySelector('#omuShowQr').addEventListener('click', function () { showOwnQr(p); });
     panel.querySelector('#omuEnableAlerts').addEventListener('click', function () { requestAlerts(p, panel); });
     panel.querySelector('#omuScanQr').addEventListener('click', function () { startQrScan(p); });
-    panel.querySelector('#omuSavePeerInput').addEventListener('click', function () { importInviteText(p, valueOf('omuInviteText')); });
+    panel.querySelector('#omuSavePeerInput').addEventListener('click', function () { importInviteText(p, valueOf('omuInviteText'), { connect: false }); });
     panel.querySelector('#omuAddContact').addEventListener('click', function () { saveCurrentPeer(p); });
     panel.querySelector('#omuCopyInvite').addEventListener('click', function () { copyInvite(p); });
     panel.querySelector('#omuSaveText').addEventListener('click', function () { saveTypedText(p); });
@@ -724,15 +726,29 @@
     if (contact) setStatus(p, 'Contact saved.', 'ok');
   }
 
-  function importInviteText(p, raw) {
+  function importInviteText(p, raw, options) {
+    options = options || {};
     var parsed;
     try { parsed = parseMeshInvite(raw); }
     catch (err) { return setStatus(p, 'Could not read that QR/invite: ' + err.message, 'err'); }
     if (!parsed.address) return setStatus(p, 'No OST Mesh address found in that QR/invite.', 'warn');
     saveContact(parsed);
     if (p && p.peerInput) p.peerInput.value = parsed.invite || parsed.address;
-    setStatus(p, 'QR loaded into OST Mesh. Contact saved and ready to connect.', 'ok');
     if (p && p.open) p.open();
+    // Scanning someone's code IS the intent to talk to them. Stopping at
+    // "contact saved" left the user hunting for a Connect button - that was the
+    // hectic part. Go straight into the session; the bundle comes from the
+    // directory when the QR only carried an address.
+    if (options.connect !== false && p && typeof p._connectToPeer === 'function') {
+      setStatus(p, 'Connecting to ' + (parsed.nick || short(parsed.address)) + '…', 'ok');
+      Promise.resolve(p._connectToPeer()).catch(function (err) {
+        setStatus(p, 'Contact saved, but connecting failed: ' +
+          (err && err.message ? err.message : 'unknown error') +
+          '. Press Connect to retry.', 'err');
+      });
+      return;
+    }
+    setStatus(p, 'QR loaded into OST Mesh. Contact saved and ready to connect.', 'ok');
   }
 
   function renderContacts(p) {
@@ -880,7 +896,21 @@
     ensureAvatarThumb(p).then(function (profile) {
       var invite = inviteFor(p, profile);
       if (!invite) return setStatus(p, 'Mesh keys are still loading. Try again in a second.', 'warn');
-      showQrModal(p, invite, 'My OST Mesh QR');
+      // The scannable QR is just the address, so the scanner MUST be able to
+      // pull our key bundle from the directory. Publish it before showing the
+      // code, and if that fails say so - the invite text still carries the
+      // bundle, so pasting it works even with the directory down.
+      showQrModal(p, invite, 'My OST Mesh QR', 'Publishing to the directory…');
+      var announce = (p && typeof p._announceNow === 'function')
+        ? p._announceNow({ silent: true })
+        : Promise.reject(new Error('directory unavailable'));
+      announce.then(function () {
+        showQrModal(p, invite, 'My OST Mesh QR');
+      }).catch(function (err) {
+        showQrModal(p, invite, 'My OST Mesh QR',
+          'Directory did not accept this code (' + (err && err.message ? err.message : 'offline') +
+          '), so scanning it may not find your keys. Copy the invite text below and send it instead.');
+      });
     });
   }
 
@@ -903,14 +933,33 @@
     return modal;
   }
 
-  function showQrModal(p, value, title) {
+  // What goes INSIDE the QR image. Never the full invite: a full invite is
+  // ~1800 base64url chars => a 157x157-module QR. The modal renders it at
+  // min(320px,86vw), i.e. ~1.9 screen px per module, which no phone camera can
+  // resolve off another phone's screen. THAT is why "the QR never works".
+  // The address alone ("ost-mesh:xxxx-xxxx-xxxx-xxxx", 25 chars) is a ~29-module
+  // QR at ~9px per module - scannable across a room. The scanner resolves the
+  // key bundle from the MeshHub directory (Durable Object, no KV involved).
+  function qrPayloadFor(value) {
+    var addr = normalizeAddress(value);
+    return addr || String(value || '');
+  }
+
+  function showQrModal(p, value, title, hint) {
     var modal = ensureQrModal(p);
+    var payload = qrPayloadFor(value);
+    var img = qrUrl(payload);
     modal.classList.add('is-open');
     modal.querySelector('#omuQrTitle').textContent = title || 'OST Mesh QR';
     modal.querySelector('#omuQrVideo').hidden = true;
-    modal.querySelector('#omuQrBox').innerHTML = '<img src="' + qrUrl(value) + '" alt="OST Mesh QR"><textarea readonly>' + escapeHtml(value) + '</textarea>';
+    modal.querySelector('#omuQrBox').innerHTML =
+      (img
+        ? '<img src="' + img + '" alt="OST Mesh QR">'
+        : '<p class="omu-qr-fail">QR could not be rendered on this device. Use the invite text below instead.</p>') +
+      '<textarea readonly>' + escapeHtml(value) + '</textarea>';
     modal.querySelector('#omuQrPaste').value = '';
-    modal.querySelector('#omuQrHint').textContent = 'Share this QR. Scanning it saves your profile and loads your Mesh invite.';
+    modal.querySelector('#omuQrHint').textContent = hint ||
+      'Point the other phone at this code. If the camera is blocked, copy the text below and paste it into their Mesh.';
   }
 
   async function startQrScan(p) {
