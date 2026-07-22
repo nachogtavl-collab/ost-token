@@ -16,7 +16,8 @@
   // Section definitions — id, label, icon, optional sub-tabs, default badge
   var SECTIONS = [
     { id: 'home',        label: 'Home',          icon: '🏠', desc: 'Vision · OST origin · the next step after Bitcoin' },
-    { id: 'new-here',    label: 'Get OST',       icon: '🎁', desc: 'Faucets, family vaults, first OST in 60 seconds', badge: 'Start' },
+    { id: 'new-here',    label: 'Get OST',       icon: '🎁', desc: 'Faucets, family vaults, buy OSTG — first OST in 60 seconds', badge: 'Start' },
+    { id: 'games',       label: 'Games',         icon: '🎮', desc: 'Faucet fair, offline, multiplayer, mesh, and device shortcuts', subs: ['fair','offline','multiplayer','mesh','shortcuts'] },
     { id: 'commerce',    label: 'Spend OST',     icon: '🛒', desc: 'Shop, gift cards, gas station, interchange', subs: ['shop','interchange','giftcards','fuel'] },
     { id: 'wallet',      label: 'Wallet',        icon: '👛', desc: 'Connect, swap, convert, prediction markets, launchpad', subs: ['access','market','convert','portals'], badge: 'Live' },
     { id: 'stock-market', label: 'Stocks',       icon: '📊', desc: 'Tokenized stock mirror — trade OST against equities' },

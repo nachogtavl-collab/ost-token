@@ -547,7 +547,11 @@
 
   function mount() {
     if (document.getElementById('ostGames')) return;
-    var anchor = document.getElementById('ostFaucetHubSection') || document.getElementById('faucetSection');
+    // Games moved out of 'Get OST' into their own section. Prefer that host;
+    // the faucet anchors stay as fallbacks so an older cached index.html
+    // still renders a board instead of nothing.
+    var host = document.getElementById('ostGamesHost');
+    var anchor = host || document.getElementById('ostFaucetHubSection') || document.getElementById('faucetSection');
     if (!anchor) { setTimeout(mount, 400); return; }
     injectStyles();
     var wrap = document.createElement('section');
@@ -555,7 +559,10 @@
     wrap.className = 'section';
     wrap.style.padding = '20px 0 40px';
     wrap.innerHTML = TEMPLATE;
-    anchor.parentElement.insertBefore(wrap, anchor.nextSibling);
+    // Inside the lane panel when we have one, so the lane switcher can show
+    // and hide it; beside the anchor only in the legacy fallback case.
+    if (host) host.appendChild(wrap);
+    else anchor.parentElement.insertBefore(wrap, anchor.nextSibling);
     fireBalanceChange();
     bindTabs();
     buildLobbyStrip();

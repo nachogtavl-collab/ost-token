@@ -127,7 +127,7 @@
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } },
     { key: 'markets', ico: '📈', lbl: 'Markets', go: function () { navTo('wallet', 'predict', ['#predictionMarketBoard', '#live-bet']); } },
-    { key: 'games',   ico: '🎮', lbl: 'Games',   go: function () { navTo('new-here', null, ['#ostGames', '#ostGamesSection']); } },
+    { key: 'games',   ico: '🎮', lbl: 'Games',   go: function () { navTo('games', null, ['#games']); } },
     { key: 'wallet',  ico: '👛', lbl: 'Wallet',  go: function () { navTo('wallet', 'access', ['#wallet']); } },
     { key: 'more',    ico: '⊕',  lbl: 'More',    go: null /* sheet toggle */ }
   ];

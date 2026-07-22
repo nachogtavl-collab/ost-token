@@ -868,6 +868,54 @@
   </section>
 
 
+
+  <!-- ================================================================== -->
+  <!-- 2b. GAMES — split out of "Get OST" so acquiring OST and playing    -->
+  <!--     with it are separate places. Five lanes, grouped by how a game -->
+  <!--     settles and who you play against.                              -->
+  <!-- ================================================================== -->
+  <section id="games" class="section section-space">
+    <div class="container">
+      <h2 class="section-title">&#127918; Games</h2>
+      <p class="section-sub">Every OST game in one place. Each lane says plainly how it settles and who you are playing against.</p>
+
+      <div class="games-lanes" id="gamesLanes">
+        <button type="button" class="games-lane is-active" data-games-lane="fair">
+          <span class="gl-ico">&#127920;</span>
+          <span class="gl-lbl">Faucet &middot; provably fair</span>
+          <span class="gl-sub">Server-settled, commit&ndash;reveal verifiable</span>
+        </button>
+        <button type="button" class="games-lane" data-games-lane="offline">
+          <span class="gl-ico">&#128246;</span>
+          <span class="gl-lbl">Faucet &middot; offline</span>
+          <span class="gl-sub">Playable with no connection</span>
+        </button>
+        <button type="button" class="games-lane" data-games-lane="multiplayer">
+          <span class="gl-ico">&#128101;</span>
+          <span class="gl-lbl">Multiplayer &middot; fair</span>
+          <span class="gl-sub">Player vs player, server-settled</span>
+        </button>
+        <button type="button" class="games-lane" data-games-lane="mesh">
+          <span class="gl-ico">&#128376;</span>
+          <span class="gl-lbl">Mesh multiplayer</span>
+          <span class="gl-sub">Peer-to-peer over OST Mesh</span>
+        </button>
+        <button type="button" class="games-lane" data-games-lane="shortcuts">
+          <span class="gl-ico">&#128241;</span>
+          <span class="gl-lbl">Game shortcuts</span>
+          <span class="gl-sub">Open games already on your device</span>
+        </button>
+      </div>
+
+      <!-- ost-games.js mounts its board here instead of beside the faucet. -->
+      <div class="games-lane-panel" data-games-panel="fair" id="ostGamesHost"></div>
+      <div class="games-lane-panel" data-games-panel="offline" hidden></div>
+      <div class="games-lane-panel" data-games-panel="multiplayer" hidden></div>
+      <div class="games-lane-panel" data-games-panel="mesh" hidden></div>
+      <div class="games-lane-panel" data-games-panel="shortcuts" hidden id="ostGamesShortcuts"></div>
+    </div>
+  </section>
+
   <!-- ================================================================== -->
   <!-- 3. STORES — Shop, Interchange, Gift Cards, Gas -->
   <!-- ================================================================== -->
@@ -6048,11 +6096,12 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
     <script src="ost-live-stats.js?v=2"></script>
     <script src="ost-treasury-engine.js?v=2"></script>
     <script src="ost-engine-guard.js?v=1"></script>
-    <script src="ost-appbar.js?v=8"></script>
+    <script src="ost-appbar.js?v=9"></script>
     <script src="ost-ghost-brain.js?v=2" defer></script>
   <script src="ost-world.js?v=4" defer></script>
   <script src="ost-world-bubble.js?v=4" defer></script>
   <script src="ost-shortcuts.js?v=1" defer></script>
+  <script src="ost-games-lanes.js?v=1" defer></script>
   <script src="ost-ghost-companion.js?v=4"></script>
     <script src="ost-pro-fast-tiles.js?v=1"></script>
     <script src="ost-wc-rail.js?v=1"></script>
@@ -6069,7 +6118,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="polish.js?v=2"></script>
   <script src="swap-pool.js?v=2"></script>
   <script src="wallet-extras.js?v=208"></script>
-  <script src="compartments.js?v=6"></script>
+  <script src="compartments.js?v=7"></script>
   <script src="prediction-extras.js?v=18"></script>
   <script src="ost-positions.js?v=2" defer></script>
   <script src="prediction-pro.js?v=206"></script>
@@ -6091,7 +6140,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="faucet-hub-ads.js?v=101"></script>
   <script src="offline-vault.js?v=10"></script>
   <script src="ost-quantum.js?v=1"></script>
-  <script src="ost-games.js?v=27"></script>
+  <script src="ost-games.js?v=28"></script>
   <script src="i18n-runtime.js?v=4"></script>
   <script src="devnet-rescue.js?v=203"></script>
   <script src="ost-notifications.js?v=3"></script>
