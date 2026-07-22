@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ost-pwa-cache-v306';
+const CACHE_NAME = 'ost-pwa-cache-v307';
 const RUNTIME_CACHE = 'ost-pwa-runtime-v253';
 const CACHE_PREFIX = 'ost-pwa-';
 
@@ -125,8 +125,8 @@ const PRECACHE_PATHS = [
   './ost-onchain-bet.js?v=200',
   './ux-extras.js?v=10',
   './mobile-shell.js?v=12',
-  './faucet-hub.js?v=17',
-  './faucet-hub-ads.js?v=100',
+  './faucet-hub.js?v=18',
+  './faucet-hub-ads.js?v=101',
   './ost-idle-guard.js?v=2',
   './ost-update.js?v=1',
   './ost-offline-mode.js?v=1',

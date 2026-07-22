@@ -68,6 +68,10 @@ class_name = "PlayLedger"
 name = "PURCHASE_LEDGER"
 class_name = "PurchaseLedger"
 
+[[durable_objects.bindings]]
+name = "AD_TREASURY"
+class_name = "AdTreasury"
+
 [[migrations]]
 tag = "mesh_hub_v1"
 new_sqlite_classes = ["MeshHub"]
@@ -99,6 +103,10 @@ new_sqlite_classes = ["PlayLedger"]
 [[migrations]]
 tag = "purchase_ledger_v1"
 new_sqlite_classes = ["PurchaseLedger"]
+
+[[migrations]]
+tag = "ad_treasury_v1"
+new_sqlite_classes = ["AdTreasury"]
 
 [vars]
 GAMMA_BASE = "https://gamma-api.polymarket.com"

@@ -5,12 +5,15 @@ import { handleOstPriceRequest } from './ost-price.js';
 import { handleRealtimeRequest, publishRealtimeEvent } from './realtime.js';
 import { handleWalletPayoutsRequest } from './wallet-payouts.js';
 import { handleGamesRngRequest } from './games-rng.js';
+import { handleSettlementRequest } from './settlement.js';
+import { handleAdRequest } from './ad-treasury.js';
 
 export { MeshHub } from './mesh/hub.js';
 export { RealtimeHub } from './realtime.js';
 export { PayoutGate } from './wallet-payouts.js';
 export { GameSeedHub } from './games-rng.js';
 export { PurchaseLedger } from './purchase-ledger.js';
+export { AdTreasury } from './ad-treasury.js';
 export { PlayLedger } from './play-ledger.js';
 
 /**
@@ -3055,6 +3058,29 @@ export default {
 
     // OSTG-backed play balance (Phase 2 — project-docs/PLAY-BALANCE.md). Single
     // global PlayLedger Durable Object owns every player's balance + the peg.
+    // Real-money settlement (payment processor webhooks). We hold no keys;
+    // the processor handles custody, confirmations and reorgs.
+    if (path.startsWith('/settlement/')) {
+      const settled = await handleSettlementRequest(request, env, {
+        path,
+        method,
+        deps: {
+          loadIntent,
+          mapRef: (e, ref, intentId) => ledgerOp(e, { op: 'ref.map', ref, intentId }),
+          creditIntent: (e, args) => ledgerOp(e, { op: 'credit', ...args })
+        }
+      });
+      if (settled) return settled;
+      return json({ error: 'unknown settlement endpoint', path }, 404);
+    }
+
+    // Ad revenue treasury — server-side view cap + honest accrued/received split.
+    if (path.startsWith('/ads/')) {
+      const handled = await handleAdRequest(request, env, { path, method, adminAuthorized });
+      if (handled) return handled;
+      return json({ error: 'unknown ads endpoint', path }, 404);
+    }
+
     // Purchase ledger health — proves the real-money path is on the Durable
     // Object and not back on the KV write budget.
     if (path === '/health/purchase') {

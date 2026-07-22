@@ -694,7 +694,27 @@
       modal.remove();
       if (earnedSoFar > 0) {
         var st = load(); st.lastAd = Date.now(); save(st);
-        award(earnedSoFar, 'ad');
+        // Register the view with the ad treasury BEFORE paying. The cap used to
+        // be a localStorage counter, i.e. no cap at all - anyone could clear it
+        // and farm this in a loop. The treasury Durable Object enforces the
+        // daily cap server-side, where the client cannot reach it.
+        var api = (window.OST_API_BASE || 'https://ost-api.nachogtavl.workers.dev');
+        var uid = (window.OST_WALLET && window.OST_WALLET.address) || 'anon';
+        var paid = earnedSoFar;
+        fetch(api + '/ads/view', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: uid })
+        }).then(function (r) { return r.json(); }).then(function (data) {
+          if (data && data.ok) { award(paid, 'ad'); return; }
+          pop((data && data.error === 'daily_cap_reached')
+            ? 'Daily ad limit reached — come back tomorrow'
+            : 'Ad reward unavailable right now');
+        }).catch(function () {
+          // Offline: do NOT pay anyway. An unverifiable reward is a free
+          // money printer, and these credits cash out to real OST.
+          pop('Ad reward needs a connection — not credited');
+        });
       }
       btn.disabled = false;
       btn.textContent = skipped

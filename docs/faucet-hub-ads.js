@@ -133,22 +133,42 @@
   window.OST_AD_PROVIDER = {
     name: ADSTERRA_ZONE ? 'adsterra' : (A_ADS_UNIT ? 'a-ads-banner-only' : 'unconfigured'),
     treasury: AD_TREASURY,
+    // True only when a rewarded zone actually exists. The hub uses this to
+    // avoid offering a reward that cannot be paid.
+    rewardedAvailable: function () { return !!ADSTERRA_ZONE; },
+
     show: function (cb) {
-      // Track view server-side to prevent self-click farming. When you
-      // deploy a backend, replace the localStorage counter below with a
-      // signed S2S callback (Adsterra → /api/ad-callback?uid=…&amount=…).
+      // The cap used to live in localStorage, which any user can reset from
+      // devtools - so the "anti self-click farming" comment described something
+      // that did not exist. It is now enforced by the ad treasury Durable
+      // Object, which the client cannot edit.
       var uid = (window.OST_WALLET && window.OST_WALLET.address) || 'anon';
-      var key = 'ost.ads.views.' + uid + '.' + new Date().toISOString().slice(0, 10);
-      try {
-        var cur = parseInt(localStorage.getItem(key) || '0', 10);
-        if (cur >= 20) { cb(false); console.warn('[ads] daily view cap reached for', uid); return; }
-        localStorage.setItem(key, String(cur + 1));
-      } catch (e) {}
-      if (ADSTERRA_ZONE) showAdsterra(cb);
-      else {
+
+      if (!ADSTERRA_ZONE) {
+        // No rewarded inventory configured: say so instead of silently
+        // failing after the user waited through a countdown.
         console.warn('[ads] Rewarded video zone is not configured; no rewarded ad credit issued.');
-        cb(false);
+        cb(false, { reason: 'no_rewarded_zone' });
+        return;
       }
+
+      var api = (window.OST_API_BASE || 'https://ost-api.nachogtavl.workers.dev');
+      fetch(api + '/ads/view', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid: uid })
+      }).then(function (r) { return r.json(); }).then(function (data) {
+        if (!data || !data.ok) {
+          cb(false, { reason: (data && data.error) || 'view_not_recorded' });
+          return;
+        }
+        showAdsterra(cb);
+      }).catch(function (err) {
+        // Server unreachable: do NOT fall back to crediting locally. An
+        // uncapped reward is a free money printer.
+        console.warn('[ads] view cap check failed; no credit issued', err);
+        cb(false, { reason: 'cap_check_unreachable' });
+      });
     }
   };
 
