@@ -158,6 +158,10 @@ async function fetchBtcPriceFast(timeoutMs = 520) {
 // different YES/NO numbers (~80¢ vs ~50¢ on the exact same round).
 const BTC_TICK_RING_MAX = 600;          // ~10 min of 1Hz ticks per round bucket
 const BTC_LIVE_TTL_S = 60 * 30;         // shared "latest tick" cache TTL
+// Share-price bounds: a side can bottom at 0.1c and top at 99.9c (~100c).
+// Was 2c/98c, which clipped deep in/out-of-the-money quotes on both ends.
+const BTC_PROB_MIN = 0.001;
+const BTC_PROB_MAX = 0.999;
 const BTC_LIVE_REFRESH_MS = 650;        // keep Binance stream hot without stale 50/50 rounds
 const BTC_DO_SNAPSHOT_CACHE_MS = 250;   // sub-second shared cache inside the Durable Object
 const BTC_DO_TICK_MIN_GAP_MS = 550;
@@ -399,14 +403,15 @@ function serverComputeBtcOdds(openPrice, livePrice, msLeft, priceToBeat) {
   // hugging 50/50). Sqrt-time scaling still shrinks the band as the round
   // progresses so late ticks decide harder than early ones.
   const scale = 0.10 * Math.sqrt(Math.max(remainingRatio, 0.04));
-  const z = deltaPct / Math.max(scale, 0.001);
+  const z = Math.max(-8, Math.min(8, deltaPct / Math.max(scale, 0.001)));
   let yes = 1 / (1 + Math.exp(-z));
-  // Confidence ramp: start at 0.65 (was 0.55) so users see the price react
-  // immediately, climb to 0.97 by close so a clearly winning side can lock
-  // near the cap rather than getting capped at 0.95.
-  const confidence = 0.65 + 0.32 * elapsedRatio;
-  yes = 0.5 + (yes - 0.5) * confidence;
-  yes = Math.max(0.02, Math.min(0.98, yes));
+  // NO confidence damping. The ramp (0.65 -> 0.97) pulled every quote toward
+  // 50/50 — worst at the START of a round — which is why prices read slow and
+  // disagreed with the equation. sqrt-time in `scale` already encodes time decay,
+  // so the quote is now exactly the model probability. Client (fast-markets,
+  // prediction-pro, prediction-modal) uses the identical form, so canonical and
+  // client odds agree tick-for-tick.
+  yes = Math.max(BTC_PROB_MIN, Math.min(BTC_PROB_MAX, yes));
   return { yes, no: 1 - yes, deltaPct, delta, scale };
 }
 
@@ -1069,12 +1074,12 @@ const POSITION_RECENT_MEMORY_LIMIT = 300;
 
 function clampNativeProbability(value) {
   const probability = cleanProbability(value);
-  return probability == null ? null : Math.max(0.02, Math.min(0.98, probability));
+  return probability == null ? null : Math.max(BTC_PROB_MIN, Math.min(BTC_PROB_MAX, probability));
 }
 
 function clampNativeTradeProbability(value) {
   const probability = cleanProbability(value);
-  return probability == null ? null : Math.max(0.01, Math.min(0.99, probability));
+  return probability == null ? null : Math.max(BTC_PROB_MIN, Math.min(BTC_PROB_MAX, probability));
 }
 
 function clampNativeSpread(value) {

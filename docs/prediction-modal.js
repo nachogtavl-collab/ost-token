@@ -24,6 +24,9 @@
 
   var MODAL_ID = 'ost-market-modal';
   var FIVE_MIN_MS = 5 * 60 * 1000;
+  // Share-price bounds: a side can bottom at 0.1c and top at 99.9c (~100c).
+  var PROB_MIN = 0.001;
+  var PROB_MAX = 0.999;
   var ROUND_KEY = 'ost.prediction.btc5m.rounds.v1';
   var ORDERS_KEY = 'ost.prediction.orders.v1';
   // BTC price feeds — try in order, all browser-CORS-safe.
@@ -189,18 +192,17 @@
       && Number.isFinite(roundLive)
       && Math.abs(roundLive - p) < 0.01
       && (!roundTs || !liveTs || Math.abs(liveTs - roundTs) < 250);
-    if (canUseRoundOdds) return Math.max(0.02, Math.min(0.98, roundYes));
+    if (canUseRoundOdds) return Math.max(PROB_MIN, Math.min(PROB_MAX, roundYes));
     var closeAt = Number(market && market.meta && market.meta.closeAt) || (Date.now() + FIVE_MIN_MS);
     var pct = ((p - beat) / beat) * 100;
     var msLeft = Math.max(0, Math.min(FIVE_MIN_MS, closeAt - Date.now()));
     var remRatio = msLeft / FIVE_MIN_MS;
-    var elapsedRatio = 1 - remRatio;
     var scale = 0.10 * Math.sqrt(Math.max(remRatio, 0.04));
     var z = Math.max(-8, Math.min(8, pct / Math.max(scale, 0.001)));
     var yes = 1 / (1 + Math.exp(-z));
-    var confidence = 0.65 + 0.32 * elapsedRatio;
-    yes = 0.5 + (yes - 0.5) * confidence;
-    return Math.max(0.02, Math.min(0.98, yes));
+    // NO confidence damping — see prediction-pro.js. The quote is the model's
+    // probability so the ticket, the chart and the pro engine all agree.
+    return Math.max(PROB_MIN, Math.min(PROB_MAX, yes));
   }
   function syncFastBtcMarketQuote(market, livePrice, source, round, updatedAt) {
     if (!isFastBtcMarket(market)) return NaN;
@@ -291,7 +293,7 @@
     market.baseNoPriceNumber = Number.isFinite(Number(state.baseNoPrice)) ? Number(state.baseNoPrice) : 1 - market.baseYesPriceNumber;
     market.fairYesPriceNumber = market.baseYesPriceNumber;
     market.fairNoPriceNumber = market.baseNoPriceNumber;
-    market.yesPriceNumber = Math.max(0.01, Math.min(0.99, yes));
+    market.yesPriceNumber = Math.max(PROB_MIN, Math.min(PROB_MAX, yes));
     market.noPriceNumber = Math.max(0.01, Math.min(0.99, no));
     market.meta.marketState = market.marketState;
     market.meta.baseYesPrice = market.baseYesPriceNumber;
@@ -3093,14 +3095,14 @@
               var scale = 0.10 * Math.sqrt(rem);
               var z = Math.max(-8, Math.min(8, dPct / Math.max(scale, 0.001)));
               var yes = 1 / (1 + Math.exp(-z));
-              var elapsed = 1 - rem;
-              yes = 0.5 + (yes - 0.5) * (0.65 + 0.32 * elapsed);
-              btcPts.push(Math.max(0.02, Math.min(0.98, yes)));
+              // NO confidence damping — matches the worker / pro / ticket quote
+              // so the historical line agrees with the live YES/NO percentage.
+              btcPts.push(Math.max(PROB_MIN, Math.min(PROB_MAX, yes)));
             });
             var liveYes = Number(sharedRound && sharedRound.yesPriceNumber);
-            if (Number.isFinite(liveYes) && liveYes > 0 && liveYes < 1) btcPts.push(Math.max(0.02, Math.min(0.98, liveYes)));
+            if (Number.isFinite(liveYes) && liveYes > 0 && liveYes < 1) btcPts.push(Math.max(PROB_MIN, Math.min(PROB_MAX, liveYes)));
             var stateYes = Number(market && market.marketState && market.marketState.yesPriceNumber);
-            if (Number.isFinite(stateYes) && stateYes > 0 && stateYes < 1) btcPts.push(Math.max(0.02, Math.min(0.98, stateYes)));
+            if (Number.isFinite(stateYes) && stateYes > 0 && stateYes < 1) btcPts.push(Math.max(PROB_MIN, Math.min(PROB_MAX, stateYes)));
           } catch (_) {}
           if (btcPts.length >= 2) pts = btcPts;
         }

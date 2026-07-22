@@ -23,6 +23,10 @@
 
   var FIVE_MIN = 5 * 60 * 1000;
   var ORDERS_KEY = 'ost.prediction.orders.v1';
+  // Share-price bounds: a side can bottom at 0.1c and top at 99.9c (~100c).
+  // Was 3c/97c, which made deep-in/out-of-the-money quotes impossible.
+  var PROB_MIN = 0.001;
+  var PROB_MAX = 0.999;
   var POLL_MS = 5000;
   var SETTLE_SCAN_MS = 15000;
 
@@ -172,12 +176,16 @@
       var vol = estimateVolatilityPct(st.ticks);
       var mom = estimateMomentumPct(st.ticks);
       var scale = Math.max(0.012, vol * Math.sqrt(Math.max(timeLeftRatio, 0.08)) * 2.4);
-      var score = Math.max(-4.5, Math.min(4.5, (deltaPct + mom * 0.22) / scale));
+      // Score clamp widened ±4.5 -> ±7: logistic(±4.5) can only reach 1.1c/98.9c,
+      // so the old bound made the new 0.1c/99.9c range mathematically unreachable.
+      var score = Math.max(-7, Math.min(7, (deltaPct + mom * 0.22) / scale));
       yes = 1 / (1 + Math.exp(-score));
-      var confidence = 0.70 + (1 - timeLeftRatio) * 0.25;
-      yes = 0.5 + (yes - 0.5) * confidence;
+      // NO confidence damping. The old `yes = 0.5 + (yes-0.5)*0.70..0.95` pulled
+      // every quote toward 50/50, which is exactly why prices felt slow and
+      // disagreed with the equation/time/probability. The price IS the model's
+      // probability now; sqrt-time in `scale` already handles time decay.
       if (Math.abs(st.price - st.openPrice) < st.openPrice * 0.00002) yes = 0.5 + (yes - 0.5) * 0.35;
-      yes = Math.max(0.03, Math.min(0.97, yes));
+      yes = Math.max(PROB_MIN, Math.min(PROB_MAX, yes));
     }
     return yes;
   }

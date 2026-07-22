@@ -1992,6 +1992,17 @@
       return { ts: s.ts, v: v, kind: s.kind, ost: ost, sol: sol, gameCredits: Number(s.gameCredits) || 0, launchpadExposure: Number(s.launchpadExposure) || 0 };
     });
 
+    // OSTG series lives in the OSTG wallet module (wallet pool + play pool), which
+    // already tracks it reactively — reuse it so this chart mode costs ZERO extra
+    // RPC and always agrees with the OSTG card.
+    if (mode === 'ostg') {
+      var ostgSeries = [];
+      try { ostgSeries = JSON.parse(localStorage.getItem('ost.ostg.wallet.series.v1') || '[]') || []; } catch (_) {}
+      pts = ostgSeries.slice(-80).map(function (p) {
+        return { ts: Number(p.t) || 0, v: Number(p.v) || 0, kind: 'ostg', ost: 0, sol: 0, gameCredits: 0, launchpadExposure: 0 };
+      });
+    }
+
     // ── Canvas setup ──────────────────────────────────────────────────
     var rect = canvas.getBoundingClientRect();
     var width = Math.max(320, Math.round(rect.width || canvas.offsetWidth || 820));

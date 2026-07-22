@@ -73,6 +73,10 @@
   // device's network allow. Rendering is rAF-coalesced downstream, so a fast device
   // (120Hz ProMotion iPhone, 144Hz+ gaming PC on WiFi 6/7 / 5G) draws every tick it
   // can while a slow one naturally coalesces — the device sets its own ceiling.
+  // Share-price bounds: a side can bottom at 0.1c and top at 99.9c (~100c).
+  // Was 2c/98c, which clipped every deep-in/out-of-the-money quote.
+  var PROB_MIN = 0.001;
+  var PROB_MAX = 0.999;
   var BTC_DEDUPE_MS  = 0;             // 0 = record every tick (was 200)
   var BTC_LOCAL_TICK_FRESH_MS = 1500;
   var BTC_FEED_TIMEOUT_MS = 3000;
@@ -218,8 +222,8 @@
     market.meta.fairNoPriceNumber = 1 - baseYes;
     if (!state || !Number.isFinite(yes) || !Number.isFinite(no)) return market;
     market.marketState = state;
-    market.yesPriceNumber = Math.max(0.02, Math.min(0.98, yes));
-    market.noPriceNumber = Math.max(0.02, Math.min(0.98, no));
+    market.yesPriceNumber = Math.max(PROB_MIN, Math.min(PROB_MAX, yes));
+    market.noPriceNumber = Math.max(PROB_MIN, Math.min(PROB_MAX, no));
     market.yesValue = (market.yesPriceNumber * 100).toFixed(1) + '%';
     market.noValue = (market.noPriceNumber * 100).toFixed(1) + '%';
     market.lastPriceNumber = market.yesPriceNumber;
@@ -604,9 +608,12 @@
       var scale = 0.10 * Math.sqrt(Math.max(timeLeftRatio, 0.04));
       var z = clampNumber(deltaPct / Math.max(scale, 0.001), -8, 8);
       yes = 1 / (1 + Math.exp(-z));
-      var confidence = 0.65 + 0.32 * elapsedRatio;
-      yes = 0.5 + (yes - 0.5) * confidence;
-      yes = clampNumber(yes, 0.02, 0.98);
+      // NO confidence damping. `confidence = 0.65 + 0.32*elapsed` used to drag the
+      // quote back toward 50/50 — worst at the START of a round (0.65), which is
+      // precisely when the price looked slow and "wrong" versus the equation. The
+      // sqrt-time term in `scale` already encodes time decay; the price is now
+      // exactly the model's probability.
+      yes = clampNumber(yes, PROB_MIN, PROB_MAX);
     }
     btcLastOdds = { roundId: roundId, yes: yes, previousYes: previousYes };
     return {
