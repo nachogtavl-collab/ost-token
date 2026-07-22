@@ -142,15 +142,17 @@
     { ico: '👻', lbl: 'Ghost AI', need: ['#ostGhostOrb'], run: function () {
         if (window.OST_GHOST_COMPANION && window.OST_GHOST_COMPANION.open) window.OST_GHOST_COMPANION.open();
       } },
-    // Player tile. `need: ['body']` because the bubble is created on demand -
-    // there is no pre-existing element to gate on, and without a launcher here
-    // the player was unreachable on phones (no corner button is allowed).
-    { ico: '🎬', lbl: 'Player', need: ['body'], run: function () {
-        if (!window.OST_WORLD_BUBBLE) return;
-        var st = window.OST_WORLD_BUBBLE.state();
-        if (st.queued) { window.OST_WORLD_BUBBLE.show(); return; }
-        var v = window.prompt('Paste a YouTube link to play while you use OST');
-        if (v) window.OST_WORLD_BUBBLE.play(v);
+    // need:['body'] because the bubble is created on demand - there is no
+    // pre-existing element to gate on, and without a tile here it is
+    // unreachable on phones (no corner button is allowed).
+    // One system: the bubble IS OST World in its collapsed form. The tile opens
+    // whichever face makes sense - the running player if something is queued,
+    // otherwise the world itself.
+    { ico: '🌐', lbl: 'World', need: ['body'], run: function () {
+        var b = window.OST_WORLD_BUBBLE;
+        if (b && b.state().queued) { b.show(); return; }
+        if (window.OST_WORLD && window.OST_WORLD.open) { window.OST_WORLD.open(); return; }
+        if (b) b.show();
       } },
     { ico: '🕸️', lbl: 'Mesh', need: ['#ost-mesh-trigger'], run: function () {
         if (window.OST_MESH && typeof window.OST_MESH.open === 'function') window.OST_MESH.open();

@@ -50,7 +50,7 @@
     expanded: false,
     playing: false,
     title: '',
-    size: 1
+    width: 330
   };
   var el = {};
 
@@ -129,8 +129,25 @@
       '.owb-stage.is-audio{height:0;aspect-ratio:auto;overflow:hidden;}' +
       '.owb-stage.is-audio iframe{height:200px!important;}' +
       '.owb-meta{padding:8px 10px;font-size:12px;color:#9fbfd8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
-      '.owb-controls{display:flex;gap:4px;padding:0 8px 9px;align-items:center;}' +
-      '.owb-controls button{flex:0 0 auto;min-width:34px;height:32px;border-radius:9px;border:1px solid rgba(255,255,255,.12);' +
+      '.owb-controls{display:flex;gap:4px;padding:0 8px 9px;align-items:center;flex-wrap:nowrap;'+
+        'overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:thin;}' +
+      '.owb-controls::-webkit-scrollbar{height:5px}.owb-controls::-webkit-scrollbar-thumb{background:rgba(127,216,255,.35);border-radius:3px}' +
+      // min-width is re-asserted because mobile-shell.css sets a blanket
+      // `body.ost-mobile-shell * { min-width:0 }` that collapses every button
+      // in a horizontal rail down to nothing.
+      '.owb-browse{border-top:1px solid rgba(255,255,255,.08);padding:8px;display:grid;gap:7px;}' +
+      '.owb-add{display:flex;gap:6px;}' +
+      '.owb-add input{flex:1 1 auto;min-width:0;height:32px;border-radius:9px;border:1px solid rgba(255,255,255,.14);background:#020a12;color:#dff8ff;padding:0 9px;font-size:12px;}' +
+      '.owb-add button{flex:0 0 auto;height:32px;padding:0 12px;border-radius:9px;border:1px solid rgba(127,216,255,.35);background:#0b1b29;color:#dff8ff;cursor:pointer;}' +
+      '.owb-queue{display:grid;gap:4px;max-height:170px;overflow-y:auto;}' +
+      '.owb-q{display:flex;gap:7px;align-items:center;padding:5px 7px;border-radius:8px;background:#08161f;cursor:pointer;font-size:12px;color:#9fbfd8;}' +
+      '.owb-q.is-cur{background:#0e2b3d;color:#dff8ff;}' +
+      '.owb-q img{width:46px;height:26px;object-fit:cover;border-radius:4px;flex:0 0 auto;}' +
+      '.owb-q span{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}' +
+      '.owb-q b{flex:0 0 auto;color:#ff9a9a;font-weight:400;padding:0 3px;}' +
+      '.owb-resize{height:16px;cursor:nwse-resize;touch-action:none;display:flex;align-items:center;justify-content:center;}' +
+      '.owb-resize:before{content:"";width:34px;height:4px;border-radius:3px;background:rgba(127,216,255,.42);}' +
+      '.owb-controls button{flex:0 0 auto;min-width:34px!important;height:32px;border-radius:9px;border:1px solid rgba(255,255,255,.12);' +
         'background:#0b1b29;color:#dff8ff;cursor:pointer;font-size:13px;}' +
       '.owb-controls button:hover{border-color:rgba(127,216,255,.5);}' +
       '.owb-controls .owb-grow{flex:1 1 auto;min-width:0;}' +
@@ -148,7 +165,7 @@
     el.root = document.createElement('div');
     el.root.className = 'owb-root';
     el.root.innerHTML =
-      '<div class="owb-bubble is-paused" id="owbBubble" title="OST World player — drag to move, tap to open">' +
+      '<div class="owb-bubble is-paused" id="owbBubble" title="OST World — drag to move, tap to open">' +
         '<div class="owb-eq"><i></i><i></i><i></i></div>' +
       '</div>' +
       '<div class="owb-panel" id="owbPanel" hidden>' +
@@ -159,18 +176,29 @@
         // that was the "videos aren't collapsing" bug.)
         '<div class="owb-stage" id="owbStage"><div id="owbFrame"></div></div>' +
         '<div class="owb-meta" id="owbMeta">Nothing queued</div>' +
-        '<div class="owb-controls">' +
+        // Control rail scrolls sideways. At small widths the buttons used to
+        // overflow the panel with no way to reach them - flex just clipped
+        // them. nowrap + overflow-x:auto keeps every control reachable at any
+        // size the user drags to.
+        '<div class="owb-controls" id="owbControls">' +
           '<button type="button" id="owbPrev" title="Previous">⏮</button>' +
           '<button type="button" id="owbPlay" title="Play/pause">▶</button>' +
           '<button type="button" id="owbNext" title="Next video">⏭</button>' +
           '<button type="button" id="owbBack10" title="Back 10s">-10</button>' +
           '<button type="button" id="owbFwd10" title="Forward 10s">+10</button>' +
-          '<span class="owb-grow"></span>' +
-          '<button type="button" id="owbSize" title="Resize player">M</button>' +
+          '<button type="button" id="owbList" title="Browse queue">☰</button>' +
           '<button type="button" id="owbAudio" title="Collapse video, keep audio">🎧</button>' +
           '<button type="button" id="owbClose" title="Close">✕</button>' +
         '</div>' +
+        '<div class="owb-browse" id="owbBrowse" hidden>' +
+          '<div class="owb-add">' +
+            '<input type="text" id="owbInput" placeholder="Paste a YouTube link…" />' +
+            '<button type="button" id="owbAdd">Add</button>' +
+          '</div>' +
+          '<div class="owb-queue" id="owbQueue"></div>' +
+        '</div>' +
         '<p class="owb-note" id="owbNote"></p>' +
+        '<div class="owb-resize" id="owbResize" title="Drag to resize"></div>' +
       '</div>';
     document.body.appendChild(el.root);
 
@@ -185,13 +213,15 @@
     el.root.querySelector('#owbPrev').addEventListener('click', function () { skip(-1); });
     el.root.querySelector('#owbBack10').addEventListener('click', function () { seekBy(-10); });
     el.root.querySelector('#owbFwd10').addEventListener('click', function () { seekBy(10); });
-    el.root.querySelector('#owbSize').addEventListener('click', cycleSize);
+    el.root.querySelector('#owbList').addEventListener('click', toggleBrowse);
     el.root.querySelector('#owbAudio').addEventListener('click', toggleAudioOnly);
     el.root.querySelector('#owbClose').addEventListener('click', close);
 
     wireDrag();
-    state.size = Number(loadJson(SIZE_KEY, 1)) || 1;
+    state.width = Number(loadJson(SIZE_KEY, 330)) || 330;
     applySize();
+    wireResize();
+    wireBrowse();
     if (loadJson(AUDIO_KEY, false)) {
       var st0 = el.root.querySelector('#owbStage');
       if (st0) st0.classList.add('is-audio');
@@ -342,6 +372,7 @@
       p.playVideo();
       state.playing = true;
       updateBubble();
+      renderQueue();
       setNote('Collapse the video with 🎧 to keep listening. Leaving the browser or locking the phone pauses playback — that is enforced by the OS.');
     }).catch(function (err) {
       setNote(err.message || 'Player unavailable.');
@@ -367,21 +398,114 @@
     place(el.root.offsetLeft, el.root.offsetTop, true);
   }
 
-  // Scale: the user picks how big the video sits on screen.
-  var SIZES = [
-    { id: 'sm', label: 'S', w: 210 },
-    { id: 'md', label: 'M', w: 330 },
-    { id: 'lg', label: 'L', w: 460 }
-  ];
+  // Scale: dragged with a finger, not picked from presets. The handle sets an
+  // exact width the user chooses and it is remembered.
+  var MIN_W = 190, MAX_W = 720;
   function applySize() {
-    var s = SIZES[state.size % SIZES.length];
-    if (el.panel) el.panel.style.width = 'min(' + s.w + 'px, 92vw)';
-    var btn = el.root && el.root.querySelector('#owbSize');
-    if (btn) btn.textContent = s.label;
-    saveJson(SIZE_KEY, state.size);
+    var w = Math.max(MIN_W, Math.min(MAX_W, Math.min(state.width, window.innerWidth - 24)));
+    state.width = w;
+    if (el.panel) el.panel.style.width = w + 'px';
+    saveJson(SIZE_KEY, w);
     place(el.root.offsetLeft, el.root.offsetTop, true);
   }
-  function cycleSize() { state.size = (state.size + 1) % SIZES.length; applySize(); }
+
+  function wireResize() {
+    var handle = el.root.querySelector('#owbResize');
+    if (!handle) return;
+    var startX = 0, startW = 0, active = false;
+    // Which way widening goes depends on the edge we are snapped to, so the
+    // panel grows INTO the screen instead of off it.
+    var leftSide = true;
+    handle.addEventListener('pointerdown', function (e) {
+      active = true;
+      startX = e.clientX;
+      startW = state.width;
+      leftSide = (el.root.offsetLeft + el.root.offsetWidth / 2) < window.innerWidth / 2;
+      handle.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+    handle.addEventListener('pointermove', function (e) {
+      if (!active) return;
+      var dx = e.clientX - startX;
+      state.width = startW + (leftSide ? dx : -dx);
+      applySize();
+    });
+    function end(e) {
+      if (!active) return;
+      active = false;
+      try { handle.releasePointerCapture(e.pointerId); } catch (_) {}
+      applySize();
+    }
+    handle.addEventListener('pointerup', end);
+    handle.addEventListener('pointercancel', end);
+  }
+
+  /* ---- browse / queue ----------------------------------------------------- */
+
+  function toggleBrowse() {
+    var box = el.root.querySelector('#owbBrowse');
+    if (!box) return;
+    box.hidden = !box.hidden;
+    if (!box.hidden) renderQueue();
+    place(el.root.offsetLeft, el.root.offsetTop, true);
+  }
+
+  function renderQueue() {
+    var box = el.root.querySelector('#owbQueue');
+    if (!box) return;
+    if (!state.queue.length) {
+      box.innerHTML = '<div style="color:#6f8ea3;font-size:12px;padding:4px 2px;">Queue is empty. Paste a link above.</div>';
+      return;
+    }
+    box.innerHTML = state.queue.map(function (id, i) {
+      return '<div class="owb-q' + (i === state.index ? ' is-cur' : '') + '" data-i="' + i + '">' +
+        '<img src="https://i.ytimg.com/vi/' + id + '/default.jpg" alt="" loading="lazy">' +
+        '<span>' + (i === state.index && state.title ? esc(state.title) : id) + '</span>' +
+        '<b data-del="' + i + '" title="Remove">✕</b>' +
+      '</div>';
+    }).join('');
+  }
+
+  function esc(t) {
+    return String(t).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+
+  function wireBrowse() {
+    var box = el.root.querySelector('#owbQueue');
+    var input = el.root.querySelector('#owbInput');
+    var add = el.root.querySelector('#owbAdd');
+
+    function addFromInput() {
+      var v = (input.value || '').trim();
+      if (!v) return;
+      var id = parseVideoId(v);
+      if (!id) { setNote('That did not look like a YouTube link or id.'); return; }
+      state.queue.push(id);
+      saveJson(QUEUE_KEY, state.queue);
+      input.value = '';
+      renderQueue();
+      if (state.queue.length === 1) playIndex(0);
+      else setNote('Added to the queue.');
+    }
+    add.addEventListener('click', addFromInput);
+    input.addEventListener('keydown', function (e) { if (e.key === 'Enter') addFromInput(); });
+
+    box.addEventListener('click', function (e) {
+      var del = e.target.closest('[data-del]');
+      if (del) {
+        var d = Number(del.getAttribute('data-del'));
+        state.queue.splice(d, 1);
+        if (state.index >= state.queue.length) state.index = Math.max(0, state.queue.length - 1);
+        saveJson(QUEUE_KEY, state.queue);
+        renderQueue();
+        return;
+      }
+      var row = e.target.closest('[data-i]');
+      if (row) playIndex(Number(row.getAttribute('data-i')));
+    });
+  }
   function close() {
     try { if (state.player) state.player.stopVideo(); } catch (_) {}
     state.playing = false;
