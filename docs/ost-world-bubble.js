@@ -97,6 +97,14 @@
     return m ? m[1] : '';
   }
 
+  // A queue item is either a YouTube id or "tw:<channel>".
+  function parseSource(raw) {
+    var s0 = String(raw || '').trim();
+    var tw = s0.match(/twitch\.tv\/([A-Za-z0-9_]{3,25})/i);
+    if (tw) return 'tw:' + tw[1];
+    return parseVideoId(s0);
+  }
+
   /* ---- UI ----------------------------------------------------------------- */
 
   function injectStyle() {
@@ -145,8 +153,9 @@
       '.owb-q img{width:46px;height:26px;object-fit:cover;border-radius:4px;flex:0 0 auto;}' +
       '.owb-q span{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}' +
       '.owb-q b{flex:0 0 auto;color:#ff9a9a;font-weight:400;padding:0 3px;}' +
-      '.owb-resize{height:16px;cursor:nwse-resize;touch-action:none;display:flex;align-items:center;justify-content:center;}' +
-      '.owb-resize:before{content:"";width:34px;height:4px;border-radius:3px;background:rgba(127,216,255,.42);}' +
+      '.owb-resize{height:30px;cursor:ew-resize;touch-action:none;display:flex;align-items:center;justify-content:center;}' +
+      '.owb-resize:active:before{background:rgba(127,216,255,.85);}' +
+      '.owb-resize:before{content:"";width:64px;height:5px;border-radius:3px;background:rgba(127,216,255,.42);}' +
       '.owb-controls button{flex:0 0 auto;min-width:34px!important;height:32px;border-radius:9px;border:1px solid rgba(255,255,255,.12);' +
         'background:#0b1b29;color:#dff8ff;cursor:pointer;font-size:13px;}' +
       '.owb-controls button:hover{border-color:rgba(127,216,255,.5);}' +
@@ -360,6 +369,38 @@
     });
   }
 
+  function isTwitch(item) { return /^tw:/.test(String(item || '')); }
+
+  // Twitch has no YT-style JS API on a bare iframe embed, so its own player
+  // controls are the transport. What OST provides is the SAME shell: the
+  // stream lives in the stage, so collapse, resize, drag and the queue behave
+  // identically. We disable the transport buttons that would silently do
+  // nothing rather than leave dead controls on screen.
+  function mountTwitch(channel) {
+    var stage = el.root.querySelector('#owbStage');
+    if (!stage) return;
+    if (state.player && state.player.destroy) { try { state.player.destroy(); } catch (_) {} }
+    state.player = null;
+    stage.innerHTML = '<iframe id="owbFrame" allowfullscreen scrolling="no" ' +
+      'src="https://player.twitch.tv/?channel=' + encodeURIComponent(channel) +
+      '&parent=' + location.hostname + '&muted=false"></iframe>';
+    state.title = channel + ' · Twitch';
+    state.playing = true;
+    updateBubble();
+    setTransportEnabled(false);
+    setNote('Twitch live. Volume and quality come from the stream player itself; collapse and resize work as normal.');
+  }
+
+  function setTransportEnabled(on) {
+    ['#owbPlay', '#owbBack10', '#owbFwd10'].forEach(function (sel) {
+      var b = el.root && el.root.querySelector(sel);
+      if (!b) return;
+      b.disabled = !on;
+      b.style.opacity = on ? '' : '.35';
+      b.title = on ? b.title : 'Not available for live Twitch streams';
+    });
+  }
+
   function current() { return state.queue[state.index] || null; }
 
   function playIndex(i) {
@@ -368,6 +409,12 @@
     var id = current();
     build();
     setExpanded(true);
+    if (isTwitch(id)) {
+      mountTwitch(String(id).slice(3));
+      renderQueue();
+      return Promise.resolve();
+    }
+    setTransportEnabled(true);
     return ensurePlayer(id).then(function (p) {
       p.playVideo();
       state.playing = true;
@@ -401,10 +448,15 @@
   // Scale: dragged with a finger, not picked from presets. The handle sets an
   // exact width the user chooses and it is remembered.
   var MIN_W = 190, MAX_W = 720;
-  function applySize() {
+  // `live` = mid-gesture. Re-snapping to the edge on every pointermove moved
+  // the panel out from under the finger, so the handle escaped the touch and
+  // the drag died instantly - that was the "touch scaler doesn't work on
+  // mobile" bug. During a gesture we only resize; we reposition once at the end.
+  function applySize(live) {
     var w = Math.max(MIN_W, Math.min(MAX_W, Math.min(state.width, window.innerWidth - 24)));
     state.width = w;
     if (el.panel) el.panel.style.width = w + 'px';
+    if (live) return;
     saveJson(SIZE_KEY, w);
     place(el.root.offsetLeft, el.root.offsetTop, true);
   }
@@ -414,30 +466,65 @@
     if (!handle) return;
     var startX = 0, startW = 0, active = false;
     // Which way widening goes depends on the edge we are snapped to, so the
-    // panel grows INTO the screen instead of off it.
+    // panel grows INTO the screen instead of off it. Captured once at gesture
+    // start - recomputing it mid-drag makes the direction flip under the finger.
     var leftSide = true;
+
     handle.addEventListener('pointerdown', function (e) {
       active = true;
       startX = e.clientX;
       startW = state.width;
       leftSide = (el.root.offsetLeft + el.root.offsetWidth / 2) < window.innerWidth / 2;
-      handle.setPointerCapture(e.pointerId);
+      try { handle.setPointerCapture(e.pointerId); } catch (_) {}
       e.preventDefault();
     });
     handle.addEventListener('pointermove', function (e) {
       if (!active) return;
+      e.preventDefault();
       var dx = e.clientX - startX;
       state.width = startW + (leftSide ? dx : -dx);
-      applySize();
+      applySize(true);
     });
     function end(e) {
       if (!active) return;
       active = false;
       try { handle.releasePointerCapture(e.pointerId); } catch (_) {}
-      applySize();
+      applySize(false);
     }
     handle.addEventListener('pointerup', end);
     handle.addEventListener('pointercancel', end);
+    handle.addEventListener('lostpointercapture', end);
+
+    // Pinch anywhere on the panel. On a phone this is the gesture people
+    // actually reach for to resize something, and it does not depend on
+    // hitting a thin grab bar.
+    var pts = {}, pinchStart = 0, pinchW = 0;
+    function span() {
+      var k = Object.keys(pts);
+      if (k.length < 2) return 0;
+      var a = pts[k[0]], b = pts[k[1]];
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    }
+    el.panel.addEventListener('pointerdown', function (e) {
+      if (e.pointerType !== 'touch') return;
+      pts[e.pointerId] = { x: e.clientX, y: e.clientY };
+      if (Object.keys(pts).length === 2) { pinchStart = span(); pinchW = state.width; }
+    });
+    el.panel.addEventListener('pointermove', function (e) {
+      if (!(e.pointerId in pts)) return;
+      pts[e.pointerId] = { x: e.clientX, y: e.clientY };
+      if (Object.keys(pts).length < 2 || !pinchStart) return;
+      e.preventDefault();
+      state.width = pinchW * (span() / pinchStart);
+      applySize(true);
+    });
+    function drop(e) {
+      if (!(e.pointerId in pts)) return;
+      delete pts[e.pointerId];
+      if (Object.keys(pts).length < 2 && pinchStart) { pinchStart = 0; applySize(false); }
+    }
+    el.panel.addEventListener('pointerup', drop);
+    el.panel.addEventListener('pointercancel', drop);
   }
 
   /* ---- browse / queue ----------------------------------------------------- */
@@ -459,8 +546,10 @@
     }
     box.innerHTML = state.queue.map(function (id, i) {
       return '<div class="owb-q' + (i === state.index ? ' is-cur' : '') + '" data-i="' + i + '">' +
-        '<img src="https://i.ytimg.com/vi/' + id + '/default.jpg" alt="" loading="lazy">' +
-        '<span>' + (i === state.index && state.title ? esc(state.title) : id) + '</span>' +
+        (isTwitch(id)
+          ? '<img src="https://static-cdn.jtvnw.net/ttv-boxart/Just%20Chatting-46x64.jpg" alt="" loading="lazy">'
+          : '<img src="https://i.ytimg.com/vi/' + id + '/default.jpg" alt="" loading="lazy">') +
+        '<span>' + (i === state.index && state.title ? esc(state.title) : (isTwitch(id) ? String(id).slice(3) + ' · Twitch' : id)) + '</span>' +
         '<b data-del="' + i + '" title="Remove">✕</b>' +
       '</div>';
     }).join('');
@@ -480,8 +569,8 @@
     function addFromInput() {
       var v = (input.value || '').trim();
       if (!v) return;
-      var id = parseVideoId(v);
-      if (!id) { setNote('That did not look like a YouTube link or id.'); return; }
+      var id = parseSource(v);
+      if (!id) { setNote('Paste a YouTube link/id, or a Twitch channel URL.'); return; }
       state.queue.push(id);
       saveJson(QUEUE_KEY, state.queue);
       input.value = '';
@@ -519,7 +608,7 @@
     /** Queue one or more YouTube URLs/ids and start playing. */
     play: function (input) {
       var list = (Array.isArray(input) ? input : [input])
-        .map(parseVideoId)
+        .map(parseSource)
         .filter(Boolean);
       if (!list.length) {
         build(); setExpanded(true);
