@@ -39,6 +39,8 @@
   var BOTTOM_SAFE = 92;   // clear the mobile app bar (ost-appbar) - never sit on it
   var POS_KEY = 'ost.world.bubble.pos.v1';
   var QUEUE_KEY = 'ost.world.bubble.queue.v1';
+  var SIZE_KEY = 'ost.world.bubble.size.v1';
+  var AUDIO_KEY = 'ost.world.bubble.audio.v1';
 
   var state = {
     player: null,
@@ -47,7 +49,8 @@
     index: 0,
     expanded: false,
     playing: false,
-    title: ''
+    title: '',
+    size: 1
   };
   var el = {};
 
@@ -99,8 +102,12 @@
   function injectStyle() {
     if (document.getElementById('ost-world-bubble-style')) return;
     var css =
-      '.owb-root{position:fixed;z-index:1000400;touch-action:none;font-family:inherit;}' +
-      '.owb-bubble{width:56px;height:56px;border-radius:50%;background:linear-gradient(145deg,#0d2438,#071726);' +
+      '.owb-root{position:fixed;z-index:1000400;font-family:inherit;display:flex;flex-direction:column;align-items:flex-end;gap:8px;}' +
+      // touch-action:none belongs ONLY on the drag handle. On the whole root
+      // it also swallowed touches inside the video, so the player's own
+      // controls were dead on phones.
+
+      '.owb-bubble{touch-action:none;width:56px;height:56px;border-radius:50%;background:linear-gradient(145deg,#0d2438,#071726);' +
         'border:1px solid rgba(127,216,255,.38);box-shadow:0 10px 30px rgba(0,0,0,.5);display:grid;place-items:center;' +
         'cursor:grab;color:#7fd8ff;position:relative;overflow:hidden;}' +
       '.owb-bubble.is-dragging{cursor:grabbing;}' +
@@ -111,8 +118,16 @@
       '@keyframes owb-eq{0%,100%{height:5px}50%{height:16px}}' +
       '.owb-panel{width:min(330px,88vw);border-radius:16px;background:#06111d;border:1px solid rgba(127,216,255,.24);' +
         'box-shadow:0 24px 70px rgba(0,0,0,.6);overflow:hidden;color:#dff8ff;}' +
-      '.owb-frame{width:100%;aspect-ratio:16/9;background:#000;display:block;}' +
-      '.owb-frame.is-audio{height:0;aspect-ratio:auto;overflow:hidden;}' +
+      // Stage wraps the API-owned iframe. `!important` because mobile-shell.css
+      // applies a blanket `body.ost-mobile-shell * { max-width:100% }` that
+      // otherwise fights the sizing.
+      '.owb-stage{width:100%;aspect-ratio:16/9;background:#000;display:block;position:relative;}' +
+      '.owb-stage iframe{position:absolute;inset:0;width:100%!important;height:100%!important;border:0;display:block;}' +
+      // Collapsed: the iframe MUST stay in the layout and keep its size, or the
+      // browser tears down the media element and audio stops. Clip it instead
+      // of removing it.
+      '.owb-stage.is-audio{height:0;aspect-ratio:auto;overflow:hidden;}' +
+      '.owb-stage.is-audio iframe{height:200px!important;}' +
       '.owb-meta{padding:8px 10px;font-size:12px;color:#9fbfd8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
       '.owb-controls{display:flex;gap:4px;padding:0 8px 9px;align-items:center;}' +
       '.owb-controls button{flex:0 0 auto;min-width:34px;height:32px;border-radius:9px;border:1px solid rgba(255,255,255,.12);' +
@@ -137,7 +152,12 @@
         '<div class="owb-eq"><i></i><i></i><i></i></div>' +
       '</div>' +
       '<div class="owb-panel" id="owbPanel" hidden>' +
-        '<div id="owbFrame" class="owb-frame"></div>' +
+        // The YouTube API REPLACES #owbFrame with its own <iframe>, and the
+        // replacement does not inherit our class. So every style and the
+        // collapse toggle must live on this wrapper, which the API never
+        // touches. (Toggling the class on #owbFrame silently did nothing -
+        // that was the "videos aren't collapsing" bug.)
+        '<div class="owb-stage" id="owbStage"><div id="owbFrame"></div></div>' +
         '<div class="owb-meta" id="owbMeta">Nothing queued</div>' +
         '<div class="owb-controls">' +
           '<button type="button" id="owbPrev" title="Previous">⏮</button>' +
@@ -146,6 +166,7 @@
           '<button type="button" id="owbBack10" title="Back 10s">-10</button>' +
           '<button type="button" id="owbFwd10" title="Forward 10s">+10</button>' +
           '<span class="owb-grow"></span>' +
+          '<button type="button" id="owbSize" title="Resize player">M</button>' +
           '<button type="button" id="owbAudio" title="Collapse video, keep audio">🎧</button>' +
           '<button type="button" id="owbClose" title="Close">✕</button>' +
         '</div>' +
@@ -164,10 +185,17 @@
     el.root.querySelector('#owbPrev').addEventListener('click', function () { skip(-1); });
     el.root.querySelector('#owbBack10').addEventListener('click', function () { seekBy(-10); });
     el.root.querySelector('#owbFwd10').addEventListener('click', function () { seekBy(10); });
+    el.root.querySelector('#owbSize').addEventListener('click', cycleSize);
     el.root.querySelector('#owbAudio').addEventListener('click', toggleAudioOnly);
     el.root.querySelector('#owbClose').addEventListener('click', close);
 
     wireDrag();
+    state.size = Number(loadJson(SIZE_KEY, 1)) || 1;
+    applySize();
+    if (loadJson(AUDIO_KEY, false)) {
+      var st0 = el.root.querySelector('#owbStage');
+      if (st0) st0.classList.add('is-audio');
+    }
     restorePosition();
   }
 
@@ -245,7 +273,6 @@
   function setExpanded(next) {
     state.expanded = !!next;
     el.panel.hidden = !state.expanded;
-    el.bubble.hidden = state.expanded && window.innerWidth < 520 ? false : false;
     place(el.root.offsetLeft, el.root.offsetTop, true);
   }
 
@@ -330,13 +357,31 @@
     try { state.player.seekTo(Math.max(0, state.player.getCurrentTime() + sec), true); } catch (_) {}
   }
   function toggleAudioOnly() {
-    var frame = el.root.querySelector('#owbFrame');
-    if (!frame) return;
-    var audio = frame.classList.toggle('is-audio');
+    var stage = el.root.querySelector('#owbStage');
+    if (!stage) return;
+    var audio = stage.classList.toggle('is-audio');
+    saveJson(AUDIO_KEY, audio);
     setNote(audio
-      ? 'Audio only. The player is still running in this page — switching apps still pauses it.'
+      ? 'Audio only — still playing. Skip and change video from here any time.'
       : 'Video visible.');
+    place(el.root.offsetLeft, el.root.offsetTop, true);
   }
+
+  // Scale: the user picks how big the video sits on screen.
+  var SIZES = [
+    { id: 'sm', label: 'S', w: 210 },
+    { id: 'md', label: 'M', w: 330 },
+    { id: 'lg', label: 'L', w: 460 }
+  ];
+  function applySize() {
+    var s = SIZES[state.size % SIZES.length];
+    if (el.panel) el.panel.style.width = 'min(' + s.w + 'px, 92vw)';
+    var btn = el.root && el.root.querySelector('#owbSize');
+    if (btn) btn.textContent = s.label;
+    saveJson(SIZE_KEY, state.size);
+    place(el.root.offsetLeft, el.root.offsetTop, true);
+  }
+  function cycleSize() { state.size = (state.size + 1) % SIZES.length; applySize(); }
   function close() {
     try { if (state.player) state.player.stopVideo(); } catch (_) {}
     state.playing = false;

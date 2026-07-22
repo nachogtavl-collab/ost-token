@@ -101,14 +101,21 @@
     if (v == null) return;
     v = String(v).trim();
     if (!v) return;
+    // YouTube goes to the floating bubble, not the world's static frame: the
+    // bubble is what survives closing the world and keeps playing while the
+    // user is anywhere else in the app. Routing it to showEmbed() instead was
+    // why picking a video never produced a bubble.
+    if (svc.id === 'youtube' && window.OST_WORLD_BUBBLE) {
+      if (window.OST_WORLD_BUBBLE.play(v)) {
+        setStatus('Playing in the bubble — it keeps running while you use the rest of OST.', 'ok');
+        return;
+      }
+      setStatus('That did not look like a YouTube link or id.', 'warn');
+      return;
+    }
     var url = svc.build(v);
     if (!url) { setStatus('That did not look like a valid ' + svc.label + ' target.', 'warn'); return; }
     showEmbed(url, svc.label);
-    // A YouTube pick can also go to the floating bubble, so it keeps playing
-    // while the user does something else in the app.
-    if (svc.id === 'youtube' && window.OST_WORLD_BUBBLE) {
-      setStatus('Playing in OST World. Tip: the ● bubble keeps it running while you use the rest of the app.', 'ok');
-    }
   }
 
   /* ---- resolve whatever the user typed into a CID/path -------------------- */

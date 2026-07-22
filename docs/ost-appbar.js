@@ -142,6 +142,16 @@
     { ico: '👻', lbl: 'Ghost AI', need: ['#ostGhostOrb'], run: function () {
         if (window.OST_GHOST_COMPANION && window.OST_GHOST_COMPANION.open) window.OST_GHOST_COMPANION.open();
       } },
+    // Player tile. `need: ['body']` because the bubble is created on demand -
+    // there is no pre-existing element to gate on, and without a launcher here
+    // the player was unreachable on phones (no corner button is allowed).
+    { ico: '🎬', lbl: 'Player', need: ['body'], run: function () {
+        if (!window.OST_WORLD_BUBBLE) return;
+        var st = window.OST_WORLD_BUBBLE.state();
+        if (st.queued) { window.OST_WORLD_BUBBLE.show(); return; }
+        var v = window.prompt('Paste a YouTube link to play while you use OST');
+        if (v) window.OST_WORLD_BUBBLE.play(v);
+      } },
     { ico: '🕸️', lbl: 'Mesh', need: ['#ost-mesh-trigger'], run: function () {
         if (window.OST_MESH && typeof window.OST_MESH.open === 'function') window.OST_MESH.open();
         else clickFirst(['#ost-mesh-trigger']);
