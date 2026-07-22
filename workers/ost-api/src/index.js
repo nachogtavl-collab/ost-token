@@ -10,6 +10,7 @@ export { MeshHub } from './mesh/hub.js';
 export { RealtimeHub } from './realtime.js';
 export { PayoutGate } from './wallet-payouts.js';
 export { GameSeedHub } from './games-rng.js';
+export { PurchaseLedger } from './purchase-ledger.js';
 export { PlayLedger } from './play-ledger.js';
 
 /**
@@ -2533,22 +2534,47 @@ async function verifyStripeSignature(rawBody, sigHeader, secret) {
   return diff === 0;
 }
 
+/* ── Purchase ledger (real money) ──────────────────────────────────────────
+ * Intents used to live in OST_KV. That put every paid customer behind the same
+ * ~1k/day write budget the games burn through, and behind tierDown('kv'), which
+ * DELIBERATELY sheds writes under load. A shed write on the money path means a
+ * customer paid and the record of it vanished. Intents now live in a Durable
+ * Object (no daily write cap) with a D1 audit journal. See purchase-ledger.js.
+ */
+function purchaseLedger(env) {
+  if (!env.PURCHASE_LEDGER) return null;
+  return env.PURCHASE_LEDGER.get(env.PURCHASE_LEDGER.idFromName('purchases-v1'));
+}
+
+async function ledgerOp(env, payload) {
+  const stub = purchaseLedger(env);
+  if (!stub) throw new Error('purchase ledger unavailable');
+  const r = await stub.fetch('https://purchase-ledger/op', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await r.json().catch(() => ({ ok: false, error: 'ledger returned non-json' }));
+  return data;
+}
+
 async function loadIntent(env, id) {
   if (!id) return null;
-  return await kvGet(env, `topup:intent:${id}`);
+  const res = await ledgerOp(env, { op: 'get', id });
+  return (res && res.ok) ? (res.intent || null) : null;
 }
 async function saveIntent(env, intent) {
-  // 30-day TTL
-  await kvPut(env, `topup:intent:${intent.id}`, intent, 60 * 60 * 24 * 30);
+  const res = await ledgerOp(env, { op: 'put', intent });
+  // A failed save must NOT look like success: the caller is about to tell a
+  // customer their purchase is recorded.
+  if (!res || !res.ok) throw new Error('intent_not_saved: ' + ((res && res.error) || 'unknown'));
+  return res.intent;
 }
 async function pushQueue(env, id) {
-  const q = (await kvGet(env, 'topup:queue', [])).filter(x => x !== id);
-  q.unshift(id);
-  await kvPut(env, 'topup:queue', q.slice(0, 500));
+  await ledgerOp(env, { op: 'queue.push', id });
 }
 async function removeQueue(env, id) {
-  const q = (await kvGet(env, 'topup:queue', [])).filter(x => x !== id);
-  await kvPut(env, 'topup:queue', q);
+  await ledgerOp(env, { op: 'queue.remove', id });
 }
 
 const USDC_MAINNET_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
@@ -2801,18 +2827,28 @@ async function verifyCryptoTopupSignature(env, intent, signature) {
 }
 
 async function markIntentPaidFromCrypto(env, intent, verification, options = {}) {
-  const signatureKey = `topup:crypto:sig:${verification.signature}`;
-  const existingIntentId = await kvGet(env, signatureKey, null);
-  if (existingIntentId && existingIntentId !== intent.id) return { ok: false, error: 'signature_already_used' };
-  intent.status = 'paid';
-  intent.cryptoRail = verification.rail;
-  intent.paymentRef = verification.signature;
-  intent.paidAt = Date.now();
-  intent.updatedAt = Date.now();
-  await saveIntent(env, intent);
-  await kvPut(env, signatureKey, intent.id, 60 * 60 * 24 * 90);
-  if (options.enqueueDispatcher !== false) {
-    await pushQueue(env, intent.id);
+  // The old body did: kvGet(sig) -> check -> ... -> kvPut(sig). That is
+  // check-then-write across an eventually consistent store, and it has two real
+  // racers: /topup/crypto/verify (user pressed Verify) and the auto-detect
+  // poller /topup/crypto/check/:intent. Both could read null in different colos
+  // and both credit - ONE payment delivered TWICE. The DO now does the check,
+  // the status transition, the save and the queue push inside a single
+  // serialized section, keyed on the payment reference.
+  const res = await ledgerOp(env, {
+    op: 'credit',
+    intentId: intent.id,
+    ref: verification.signature,
+    rail: verification.rail,
+    enqueue: options.enqueueDispatcher !== false
+  });
+  if (!res || !res.ok) {
+    return { ok: false, error: (res && res.error) || 'credit_failed' };
+  }
+  intent = res.intent;
+  if (res.replay) {
+    // Already delivered on an earlier call. Returning ok (not an error) keeps
+    // the poller and the button idempotent, but we do NOT re-notify.
+    return { ok: true, intent, replay: true };
   }
   publishWalletRealtime(env, {
     id: intent.id,
@@ -2836,10 +2872,21 @@ async function findCryptoTopupPayment(env, intent) {
   const receiver = topupSolReceiver(env, cluster) || '';
   if (!receiver) return null;
   const signatures = await solanaRpc(env, 'getSignaturesForAddress', [receiver, { limit: 120 }], { cluster });
-  for (const item of signatures || []) {
-    const signature = cleanText(item?.signature, 128);
-    if (!signature) continue;
-    const used = await kvGet(env, `topup:crypto:sig:${signature}`, null);
+  const candidates = (signatures || [])
+    .map((item) => cleanText(item?.signature, 128))
+    .filter(Boolean);
+  // One batched ledger call instead of a per-signature lookup inside the loop.
+  let spent = {};
+  try {
+    const res = await ledgerOp(env, { op: 'sig.owners', refs: candidates });
+    if (res && res.ok) spent = res.owners || {};
+  } catch (_) {
+    // Ledger unreachable: do NOT silently treat every signature as unspent -
+    // that is how one payment gets scanned into two intents. The atomic credit
+    // still refuses a reused ref, so fall through and let it be the gate.
+  }
+  for (const signature of candidates) {
+    const used = spent[signature];
     if (used && used !== intent.id) continue;
     try {
       const verification = await verifyCryptoTopupSignature(env, intent, signature);
@@ -3008,6 +3055,17 @@ export default {
 
     // OSTG-backed play balance (Phase 2 — project-docs/PLAY-BALANCE.md). Single
     // global PlayLedger Durable Object owns every player's balance + the peg.
+    // Purchase ledger health — proves the real-money path is on the Durable
+    // Object and not back on the KV write budget.
+    if (path === '/health/purchase') {
+      if (!env.PURCHASE_LEDGER) return json({ ok: false, error: 'purchase_ledger_not_configured' }, 503);
+      try {
+        return json(await ledgerOp(env, { op: 'health' }));
+      } catch (error) {
+        return json({ ok: false, error: String(error?.message || error) }, 503);
+      }
+    }
+
     if (path.startsWith('/play/') || path === '/health/play') {
       const id = env.PLAY_LEDGER.idFromName('global');
       return env.PLAY_LEDGER.get(id).fetch(request);
@@ -4089,7 +4147,7 @@ export default {
       const wallet = String(body.wallet || '').trim();
       if (!isLikelySolanaAddress(wallet)) return json({ error: 'invalid_wallet' }, 400);
       const method2 = body.method === 'crypto' ? 'crypto' : 'stripe';
-      if (!env.OST_KV) return json({ error: 'kv_not_configured' }, 503);
+      if (!env.PURCHASE_LEDGER) return json({ error: 'purchase_ledger_not_configured' }, 503);
 
       const intent = {
         id: crypto.randomUUID(),
@@ -4142,7 +4200,7 @@ export default {
       if (!r.ok) return json({ error: 'stripe_error', detail: r.body }, 502);
       const session = r.body;
       // Map session → intent so the webhook can resolve it.
-      await kvPut(env, `topup:stripe:${session.id}`, intent.id, 60 * 60 * 24 * 30);
+      await ledgerOp(env, { op: 'ref.map', ref: session.id, intentId: intent.id });
       intent.stripeSessionId = session.id;
       intent.updatedAt = Date.now();
       await saveIntent(env, intent);
@@ -4161,7 +4219,7 @@ export default {
         const session = evt.data && evt.data.object;
         const intentId = (session && session.client_reference_id) ||
                          (session && session.metadata && session.metadata.intent_id) ||
-                         await kvGet(env, `topup:stripe:${session && session.id}`);
+                         (await ledgerOp(env, { op: 'ref.get', ref: session && session.id })).intentId;
         if (intentId) {
           const intent = await loadIntent(env, intentId);
           if (intent && intent.status === 'pending') {
@@ -4214,7 +4272,7 @@ export default {
 
     // Public: finalize a paid intent after the client-side devnet release.
     if (path === '/topup/claim' && method === 'POST') {
-      if (!env.OST_KV) return json({ error: 'kv_not_configured' }, 503);
+      if (!env.PURCHASE_LEDGER) return json({ error: 'purchase_ledger_not_configured' }, 503);
       let body; try { body = await request.json(); } catch { return json({ error: 'invalid_json' }, 400); }
       const intent = await loadIntent(env, body && body.id);
       if (!intent) return json({ error: 'not_found' }, 404);
@@ -4237,16 +4295,14 @@ export default {
       await saveIntent(env, intent);
       await removeQueue(env, intent.id);
 
-      const recent = await kvGet(env, 'topup:sent', []);
-      recent.unshift({
+      await ledgerOp(env, { op: 'sent.push', row: {
         id: intent.id,
         ostAmount: intent.ostAmount,
         wallet: intent.wallet,
         signature: intent.signature,
         sentAt: intent.sentAt,
         deliveryKind: intent.deliveryKind
-      });
-      await kvPut(env, 'topup:sent', recent.slice(0, 200));
+      } });
       publishWalletRealtime(env, {
         id: intent.id,
         wallet: intent.wallet,
@@ -4267,7 +4323,7 @@ export default {
     // Admin: list paid-but-not-sent intents (for the dispatcher).
     if (path === '/topup/admin/pending' && method === 'GET') {
       if (!adminAuthorized(request, env)) return json({ error: 'unauthorized' }, 401);
-      const ids = await kvGet(env, 'topup:queue', []);
+      const ids = (await ledgerOp(env, { op: 'queue.list' })).ids || [];
       const out = [];
       for (const id of ids.slice(0, 50)) {
         const it = await loadIntent(env, id);
@@ -4288,9 +4344,7 @@ export default {
       intent.updatedAt = Date.now();
       await saveIntent(env, intent);
       await removeQueue(env, intent.id);
-      const recent = await kvGet(env, 'topup:sent', []);
-      recent.unshift({ id: intent.id, ostAmount: intent.ostAmount, wallet: intent.wallet, signature: intent.signature, sentAt: intent.sentAt });
-      await kvPut(env, 'topup:sent', recent.slice(0, 200));
+      await ledgerOp(env, { op: 'sent.push', row: { id: intent.id, ostAmount: intent.ostAmount, wallet: intent.wallet, signature: intent.signature, sentAt: intent.sentAt } });
       publishWalletRealtime(env, {
         id: intent.id,
         wallet: intent.wallet,
@@ -4330,7 +4384,7 @@ export default {
     // memo, and covers the tier amount, the client can release devnet OST
     // immediately and then finalize the intent via /topup/claim.
     if (path === '/topup/crypto/verify' && method === 'POST') {
-      if (!env.OST_KV) return json({ error: 'kv_not_configured' }, 503);
+      if (!env.PURCHASE_LEDGER) return json({ error: 'purchase_ledger_not_configured' }, 503);
       let body; try { body = await request.json(); } catch { return json({ error: 'invalid_json' }, 400); }
       const intent = await loadIntent(env, body && body.intentId);
       if (!intent) return json({ error: 'intent_not_found' }, 404);
@@ -4354,7 +4408,7 @@ export default {
     // wallet. Manual signature verification above also handles USDC transfers.
     const cryptoCheckMatch = path.match(/^\/topup\/crypto\/check\/([^/]+)$/);
     if (cryptoCheckMatch && method === 'GET') {
-      if (!env.OST_KV) return json({ error: 'kv_not_configured' }, 503);
+      if (!env.PURCHASE_LEDGER) return json({ error: 'purchase_ledger_not_configured' }, 503);
       const intent = await loadIntent(env, decodeURIComponent(cryptoCheckMatch[1]));
       if (!intent) return json({ error: 'intent_not_found' }, 404);
       if (intent.status !== 'pending') return json({ ok: true, status: intent.status, intent });
