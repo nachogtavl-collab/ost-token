@@ -2476,20 +2476,25 @@
       // fallback stays sub-second without hammering the canonical Worker on
       // mobile when the event stream is already fresh.
       liveTimers.push(setInterval(fetchBtcLive, 500));
-      // Re-render immediately on every fresh BTC tick so the live price and
-      // share % follow the WebSocket / canonical feed without waiting for
-      // the next poll. Throttled to avoid double-painting on bursty ticks.
-      var lastSpotPaintAt = 0;
-      var spotListener = function () {
-        var now = Date.now();
-        if (now - lastSpotPaintAt < 60) return;
-        lastSpotPaintAt = now;
-        try { fetchBtcLive(); } catch (_) {}
+      // Re-render on every fresh BTC tick so the live price, share % and the
+      // ticket graph follow the Pyth stream. rAF-COALESCED rather than time-
+      // throttled: the old 60ms gate capped this ticket at ~16fps and the
+      // market-update listener had NO gate at all (it now fires on every Pyth
+      // tick since the odds recompute per tick). Scheduling one repaint per
+      // animation frame renders at the DEVICE's refresh rate (120Hz ProMotion,
+      // 144Hz+ gaming) and collapses bursts into a single paint.
+      // Safe to run this hot: fetchSharedBtcTick() resolves from the cached
+      // btcSpot() tick (the SSE stream keeps it <1.5s fresh), so a repaint costs
+      // NO network call — it only falls back to the worker if the stream dies.
+      var paintRaf = 0;
+      var rafFn = window.requestAnimationFrame || function (cb) { return setTimeout(cb, 16); };
+      var schedulePaint = function () {
+        if (paintRaf) return;
+        paintRaf = rafFn(function () { paintRaf = 0; try { fetchBtcLive(); } catch (_) {} });
       };
+      var spotListener = schedulePaint;
       try { window.addEventListener('ost:btc-spot', spotListener); } catch (_) {}
-      var marketUpdateListener = function () {
-        try { fetchBtcLive(); } catch (_) {}
-      };
+      var marketUpdateListener = schedulePaint;
       try { window.addEventListener('ost:btc-market-updated', marketUpdateListener); } catch (_) {}
       liveTimers.push({ removeOnClose: function () {
         try { window.removeEventListener('ost:btc-spot', spotListener); } catch (_) {}
@@ -3071,8 +3076,13 @@
               ? window.OST_PREDICTION_API.btcSeries()
               : [];
             var sharedTicks = cachedBtcTicksForRound(market.meta.openAt);
-            if (sharedTicks.length >= 2) rawSeries = sharedTicks;
-            rawSeries.slice(-160).forEach(function (point) {
+            // PYTH-FIRST: the client stream series comes straight from Solana's
+            // oracle (no OST worker, no KV) and is far denser than the worker's
+            // shared ring. Only fall back to the worker ticks when the stream has
+            // not built history yet (modal opened cold, mid-round).
+            if (rawSeries.length < 2 && sharedTicks.length >= 2) rawSeries = sharedTicks;
+            // Render a deep slice so the high-rate stream actually SHOWS (was 160).
+            rawSeries.slice(-600).forEach(function (point) {
               var pp = Number(point && (point.price != null ? point.price : point.p));
               if (!Number.isFinite(pp) || pp <= 1000 || openPx <= 0) return;
               var dPct = ((pp - openPx) / openPx) * 100;
