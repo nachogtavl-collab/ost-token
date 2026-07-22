@@ -1036,7 +1036,11 @@ class MeshPavilion {
       const s = e.detail.state;
       if (s === 'connected')      this._setStatus('P2P connected.', 'ok');
       else if (s === 'failed') {
-        this._setStatus('P2P failed (no relay yet).', 'err');
+        // Only ICE/TURN-less direct connection failed. Text DMs still work:
+        // _sendText falls back to the store-and-forward relay automatically.
+        // Saying "no relay yet" made users think Mesh was dead when messaging
+        // was in fact still live - only files/calls/games need a direct link.
+        this._setStatus('No direct P2P link (usually mobile carrier NAT). Messages still send through the relay; files and calls need a direct link.', 'warn');
         if (this.callState !== 'idle') {
           this._setCallStatus('Call connection lost.', 'warn');
           this._resetCallState();
