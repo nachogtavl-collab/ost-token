@@ -154,6 +154,29 @@
         if (window.OST_WORLD && window.OST_WORLD.open) { window.OST_WORLD.open(); return; }
         if (b) b.show();
       } },
+    { ico: '📱', lbl: 'Apps', need: ['body'], run: function () {
+        if (!window.OST_SHORTCUTS) return;
+        var box = document.getElementById('ostShortcutsPanel');
+        if (!box) {
+          box = document.createElement('div');
+          box.id = 'ostShortcutsPanel';
+          box.style.cssText = 'position:fixed;inset:auto 8px 88px 8px;z-index:1000440;max-height:62vh;overflow:auto;' +
+            'padding:12px;border-radius:16px;background:#06111d;border:1px solid rgba(127,216,255,.26);' +
+            'box-shadow:0 22px 66px rgba(0,0,0,.6);color:#dff8ff;';
+          var close = document.createElement('button');
+          close.type = 'button';
+          close.textContent = 'Close';
+          close.style.cssText = 'float:right;border:0;border-radius:9px;padding:5px 11px;background:#12405c;color:#dff8ff;cursor:pointer;';
+          close.addEventListener('click', function () { box.remove(); });
+          box.appendChild(close);
+          var h = document.createElement('div');
+          h.textContent = 'Your apps';
+          h.style.cssText = 'font-weight:600;margin-bottom:9px;';
+          box.appendChild(h);
+          window.OST_SHORTCUTS.render(box);
+          document.body.appendChild(box);
+        } else box.remove();
+      } },
     { ico: '🕸️', lbl: 'Mesh', need: ['#ost-mesh-trigger'], run: function () {
         if (window.OST_MESH && typeof window.OST_MESH.open === 'function') window.OST_MESH.open();
         else clickFirst(['#ost-mesh-trigger']);
