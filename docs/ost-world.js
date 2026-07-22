@@ -50,8 +50,66 @@
     { label: '🧪 Paste any link', cid: '' }
   ];
 
+  // Services that publish an official embed endpoint and are verified
+  // frameable. `build(input)` turns a channel/query into that endpoint.
+  var EMBEDS = [
+    {
+      id: 'twitch', label: '🟣 Twitch',
+      prompt: 'Twitch channel name',
+      build: function (v) {
+        return 'https://player.twitch.tv/?channel=' + encodeURIComponent(v) +
+               '&parent=' + location.hostname + '&muted=false';
+      }
+    },
+    {
+      id: 'youtube', label: '▶️ YouTube',
+      prompt: 'YouTube link or video id',
+      build: function (v) {
+        var m = String(v).match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/);
+        var id = m ? m[1] : (/^[\w-]{11}$/.test(String(v).trim()) ? String(v).trim() : '');
+        return id ? 'https://www.youtube-nocookie.com/embed/' + id + '?playsinline=1&rel=0' : '';
+      }
+    },
+    {
+      id: 'maps', label: '🗺️ Maps',
+      prompt: 'Place or address',
+      build: function (v) {
+        return 'https://maps.google.com/maps?q=' + encodeURIComponent(v) + '&output=embed';
+      }
+    }
+  ];
+
+  // Verified frame-blocked. We link out rather than pretend.
+  var LAUNCH = [
+    { label: '📘 Facebook',  url: 'https://www.facebook.com/',  header: 'X-Frame-Options: DENY',
+      why: 'Facebook sends X-Frame-Options: DENY — no site may frame it.' },
+    { label: '📸 Instagram', url: 'https://www.instagram.com/', header: 'X-Frame-Options: DENY',
+      why: 'Instagram sends X-Frame-Options: DENY — no site may frame it.' },
+    { label: '🔍 Google',    url: 'https://www.google.com/',    header: 'X-Frame-Options: SAMEORIGIN',
+      why: 'Google Search only allows itself to frame it.' },
+    { label: '🟪 Yahoo',     url: 'https://www.yahoo.com/',     header: 'CSP frame-ancestors',
+      why: 'Yahoo allows only an explicit list of hosts to frame it.' }
+  ];
+
   var el = {};
   var open = false;
+
+  // Open an official embed in the media frame. Media stays in its own frame,
+  // separate from the IPFS one, exactly as the existing split intends.
+  function openEmbed(svc) {
+    var v = window.prompt(svc.prompt);
+    if (v == null) return;
+    v = String(v).trim();
+    if (!v) return;
+    var url = svc.build(v);
+    if (!url) { setStatus('That did not look like a valid ' + svc.label + ' target.', 'warn'); return; }
+    showEmbed(url, svc.label);
+    // A YouTube pick can also go to the floating bubble, so it keeps playing
+    // while the user does something else in the app.
+    if (svc.id === 'youtube' && window.OST_WORLD_BUBBLE) {
+      setStatus('Playing in OST World. Tip: the ● bubble keeps it running while you use the rest of the app.', 'ok');
+    }
+  }
 
   /* ---- resolve whatever the user typed into a CID/path -------------------- */
   function parseTarget(raw) {
@@ -386,6 +444,39 @@
       b.addEventListener('click', function () {
         if (!p.cid) { el.input.focus(); setStatus('Paste a CID above and hit Open.', ''); return; }
         go(p.cid);
+      });
+      places.appendChild(b);
+    });
+
+    // ---- The rest of the web, split by what a browser will ACTUALLY allow ---
+    // Verified with the live response headers, not guessed:
+    //   facebook.com   X-Frame-Options: DENY
+    //   instagram.com  X-Frame-Options: DENY
+    //   google.com     X-Frame-Options: SAMEORIGIN
+    //   yahoo.com      CSP frame-ancestors <allow-list we are not on>
+    // No client-side code can override those - it is the browser enforcing the
+    // site's wishes. The only way to "load" them in-frame is a rewriting proxy
+    // that terminates the user's session on OUR server, which would make OST a
+    // man-in-the-middle for people's logins. We do not do that.
+    //
+    // These, by contrast, publish OFFICIAL embed endpoints and are verified
+    // frameable, so they open properly INSIDE the world.
+    EMBEDS.forEach(function (svc) {
+      var b = document.createElement('button');
+      b.textContent = svc.label;
+      b.title = 'Opens inside OST World (official embed)';
+      b.addEventListener('click', function () { openEmbed(svc); });
+      places.appendChild(b);
+    });
+
+    LAUNCH.forEach(function (svc) {
+      var b = document.createElement('button');
+      b.textContent = svc.label + ' ↗';
+      b.title = svc.why;
+      b.addEventListener('click', function () {
+        setStatus(svc.label + ' blocks embedding (' + svc.header + '), so it opens in a real tab. ' +
+                  'Faking it in-frame would mean proxying your login through our server.', '');
+        window.open(svc.url, '_blank', 'noopener,noreferrer');
       });
       places.appendChild(b);
     });
