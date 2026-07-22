@@ -14,6 +14,7 @@ export { PayoutGate } from './wallet-payouts.js';
 export { GameSeedHub } from './games-rng.js';
 export { PurchaseLedger } from './purchase-ledger.js';
 export { AdTreasury } from './ad-treasury.js';
+export { LoanLedger } from './loan-ledger.js';
 export { PlayLedger } from './play-ledger.js';
 
 /**
@@ -3079,6 +3080,31 @@ export default {
       const handled = await handleAdRequest(request, env, { path, method, adminAuthorized });
       if (handled) return handled;
       return json({ error: 'unknown ads endpoint', path }, 404);
+    }
+
+    // OSTG credit lines. Gated twice: LOANS_LIVE must be "true" AND the
+    // cluster must be mainnet - lending devnet tokens against real money
+    // would be lending against nothing.
+    if (path.startsWith('/loans/')) {
+      if (!env.LOAN_LEDGER) return json({ ok: false, error: 'loan_ledger_not_configured' }, 503);
+      const op = path.slice('/loans/'.length);
+      const live = env.LOANS_LIVE === 'true' && topupCluster(env) === 'mainnet-beta';
+      if (!live && op !== 'health' && op !== 'summary') {
+        return json({
+          ok: false,
+          error: 'loans_not_live',
+          note: 'credit lines stay disabled until LOANS_LIVE=true on mainnet',
+          cluster: topupCluster(env)
+        }, 503);
+      }
+      try {
+        const stub = env.LOAN_LEDGER.get(env.LOAN_LEDGER.idFromName('loans-v1'));
+        const init = { method: request.method, headers: { 'Content-Type': 'application/json' } };
+        if (request.method === 'POST') init.body = await request.text();
+        return await stub.fetch('https://loan-ledger/' + op, init);
+      } catch (error) {
+        return json({ ok: false, error: 'loan_ledger_unreachable', detail: String(error?.message || error) }, 502);
+      }
     }
 
     // Purchase ledger health — proves the real-money path is on the Durable
