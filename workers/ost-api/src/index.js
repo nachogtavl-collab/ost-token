@@ -3194,17 +3194,23 @@ export default {
           try {
             const plS = env.PLAY_LEDGER.get(env.PLAY_LEDGER.idFromName('global'));
             const h = await (await plS.fetch('https://play-ledger/health/play')).json();
-            const buffer = Math.max(0, Number(h.buffer) || 0);
+            // Must mirror play-ledger's RESERVE_FRACTION exactly. If this shows
+            // the whole buffer while the server lends only a fraction, the UI
+            // promises money the draw will refuse.
+            const reserveFraction = Number(env.LENDING_RESERVE_FRACTION || 0.5);
+            const buffer = Math.max(0, Number(h.buffer) || 0) * reserveFraction;
             const rate = Number(url.searchParams.get('usdPerOstg')) || 0.0118;
             data.capacity = {
-              poolBufferOstg: buffer,
-              poolBufferUsd: Math.round(buffer * rate * 100) / 100,
+              lendableOstg: buffer,
+              poolBufferOstg: Math.max(0, Number(h.buffer) || 0),
+              reserveFraction,
+              lendableUsd: Math.round(buffer * rate * 100) / 100,
               usdPerOstg: rate,
               // What the user can actually draw right now: the smaller of their
               // remaining credit line and what the pool can back.
               maxDrawUsd: Math.min(Number(data.availableUsd) || 0, Math.round(buffer * rate * 100) / 100),
               maxDrawOstg: Math.min(Math.round(((Number(data.availableUsd) || 0) / rate) * 1e6) / 1e6, buffer),
-              limitedBy: (Number(data.availableUsd) || 0) > (buffer * rate) ? 'pool_buffer' : 'credit_line'
+              limitedBy: (Number(data.availableUsd) || 0) > (buffer * rate) ? 'lending_reserve' : 'credit_line'
             };
           } catch (_) { /* capacity is additive; summary still returns without it */ }
           return json(data);

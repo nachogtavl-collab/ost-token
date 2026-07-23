@@ -193,13 +193,27 @@ export class PlayLedger {
     }
     const total = await this.total();
     const buffer = Math.round((bankroll - total) * 1e6) / 1e6;
-    if (wantOstg > buffer) {
+
+    // LENDING RESERVE. The buffer is the pool's whole backed surplus, and it is
+    // ALSO what pays winners. Lending 100% of it would mean one large draw
+    // leaves nothing to settle a jackpot, so only a fraction is lendable.
+    //
+    // It grows with no intervention because that is what a house edge does:
+    // every losing round lowers Σ play balances while pool OSTG stays put, so
+    // the buffer rises on its own. Loan interest lands the same way - repayment
+    // returns MORE than was drawn. The reserve is therefore self-funding; the
+    // only thing that shrinks it is winners and open loans, which is correct.
+    const RESERVE_FRACTION = Number(this.env.LENDING_RESERVE_FRACTION || 0.5);
+    const lendable = Math.round(Math.max(0, buffer) * RESERVE_FRACTION * 1e6) / 1e6;
+    if (wantOstg > lendable) {
       return json({
         ok: false,
         error: 'insufficient_lending_buffer',
         requestedOstg: wantOstg,
-        availableOstg: Math.max(0, buffer),
-        note: 'the pool lends from its own backed surplus; it cannot mint unbacked OSTG'
+        availableOstg: lendable,
+        poolBufferOstg: Math.max(0, buffer),
+        reserveFraction: RESERVE_FRACTION,
+        note: 'lending draws on a fraction of the pool surplus; the rest must stay free to pay winners'
       }, 409);
     }
 
