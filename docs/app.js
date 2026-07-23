@@ -15298,7 +15298,20 @@
             order.sellValue = action.liveValue;
             order.status = action.finalStatus || (action.kind === 'prediction-settlement' ? 'settled' : 'sold');
             var r;
-            if (order.fundedBy === 'credits') {
+            if (order.fundedBy === 'ostg') {
+              // OSTG-funded ticket: the payout returns to the SAME bucket that
+              // funded the stake. That is what keeps loan-funded profit locked
+              // to its loan - settling a borrowed ticket into personal OSTG
+              // would let a user cash out money the loan produced. houseFee /
+              // arb were already taken off `payout` above, so the ledger
+              // receives the NET and the fee is booked exactly once.
+              var bkt = order.ostgBucket || 'clean';
+              if (payout > 0) {
+                var sr = await window.OST_PLAY.settle(payout, { bucket: bkt });
+                if (!sr || sr.ok === false) throw new Error('Payout failed: ' + ((sr && sr.error) || 'ledger unavailable'));
+              }
+              r = { sig: 'ostg-' + Date.now().toString(36), ost: payout };
+            } else if (order.fundedBy === 'credits') {
               // Credits-funded ticket: pay the NET win straight back to the
               // canonical credits pool so the balance updates immediately.
               if (payout > 0 && window.OST_MONEY && typeof window.OST_MONEY.add === 'function') {

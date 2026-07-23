@@ -107,6 +107,16 @@
   }
   function balance() { return mirror; }
 
+  // The one place a spend decides WHICH OSTG it uses. Defaults to personal:
+  // if the selector has not loaded, we must never fall back to borrowed money.
+  function activeBucket(explicit) {
+    if (explicit) return explicit;
+    try {
+      if (window.OST_OSTG_SOURCE && window.OST_OSTG_SOURCE.current) return window.OST_OSTG_SOURCE.current();
+    } catch (_) {}
+    return 'clean';
+  }
+
   // ---- bet (server-authoritative) ----------------------------------------
   // Returns the server response: { results:[{nonce,win,payout,net,balance,...}],
   // played, balance, stopped }. The caller animates to results[i]'s fields.
@@ -117,8 +127,9 @@
     var r = await api('POST', '/play/bet', {
       wallet: a, game: game, params: params || {}, wager: Number(wager),
       count: Math.max(1, Math.min(50, Math.floor(Number(count) || 1))),
+      bucket: activeBucket(),
     });
-    if (typeof r.balance === 'number') { mirror = r.balance; emit(); }
+    if (typeof r.balance === 'number') { mirror = r.balance; writeCache(a, mirror); emit(); }
     return r;
   }
 
@@ -274,7 +285,7 @@
   async function stake(amount, opts) {
     var a = addr();
     if (!a) return { ok: false, error: 'no_wallet' };
-    var bucket = (opts && opts.bucket) || 'clean';
+    var bucket = activeBucket(opts && opts.bucket);
     try {
       var r = await api('POST', '/play/stake', { wallet: a, amount: Number(amount), bucket: bucket });
       if (r && r.ok && Number.isFinite(Number(r.balance))) { mirror = Number(r.balance); writeCache(a, mirror); emit(); }
@@ -284,7 +295,7 @@
   async function settle(payout, opts) {
     var a = addr();
     if (!a) return { ok: false, error: 'no_wallet' };
-    var bucket = (opts && opts.bucket) || 'clean';
+    var bucket = activeBucket(opts && opts.bucket);
     try {
       var r = await api('POST', '/play/settle', { wallet: a, payout: Number(payout), bucket: bucket });
       if (r && r.ok && Number.isFinite(Number(r.balance))) { mirror = Number(r.balance); writeCache(a, mirror); emit(); }

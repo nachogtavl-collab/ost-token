@@ -438,6 +438,7 @@ export class PlayLedger {
     const count = Math.max(1, Math.min(MAX_BATCH, Math.floor(Number(body && body.count) || 1)));
     const params = (body && body.params && typeof body.params === 'object') ? body.params : {};
     const clientSeed = cleanText(body && body.clientSeed, 128) || null;
+    const bucket = cleanText(body && body.bucket, 64) || 'clean';
     if (!isPubkey(wallet)) return json({ error: 'invalid_wallet' }, 400);
     const g = GAMES[game];
     if (!g) return json({ error: 'unknown_game', supported: Object.keys(GAMES) }, 400);
@@ -453,6 +454,7 @@ export class PlayLedger {
     const out = await this.state.blockConcurrencyWhile(async () => {
       const seedRec = await this.ensureSeed(wallet, clientSeed);
       let balance = Number((await this.state.storage.get('bal:' + wallet)) || 0);
+      const openingBalance = balance;
       let total = Number((await this.state.storage.get('total')) || 0);
       let nonce = seedRec.nonce;
       const results = [];
@@ -480,10 +482,22 @@ export class PlayLedger {
         await this.state.storage.put('total', total);
         await this.state.storage.put('seed:' + wallet, Object.assign({}, seedRec, { nonce }));
       }
-      return { results, balance, stopped, serverSeedHash: seedRec.serverSeedHash, clientSeed: seedRec.clientSeed };
+      return { results, balance, stopped, netChange: Math.round((balance - openingBalance) * 1e9) / 1e9, serverSeedHash: seedRec.serverSeedHash, clientSeed: seedRec.clientSeed };
     });
 
-    return json(Object.assign({ ok: out.results.length > 0, wallet, game, played: out.results.length }, out));
+    // Loan provenance, reconciled ONCE for the whole batch and OUTSIDE the lock.
+    // Games are the hot path - a cross-DO call per round would make every spin
+    // wait on a second Durable Object. The batch net carries the same meaning:
+    // money that left the loan bucket, or winnings returning to it, which is
+    // what keeps loan-funded profit locked to its loan.
+    if (bucket !== 'clean' && out.results.length && out.netChange !== 0) {
+      const n = out.netChange;
+      await this.loanOp(n < 0 ? 'stake' : 'settle',
+        n < 0 ? { address: wallet, amount: -n, bucket }
+              : { address: wallet, payout: n, bucket });
+    }
+
+    return json(Object.assign({ ok: out.results.length > 0, wallet, game, bucket, played: out.results.length }, out));
   }
 
   // Reveal the current secret seed and commit a fresh one. Lets a player verify

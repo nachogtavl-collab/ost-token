@@ -343,9 +343,34 @@
     lockedTotal: lockedTotal
   };
 
+  // Auto-mount beside the stake inputs that spend OSTG. Products render at
+  // different times (and some re-render), so we re-check on the events that
+  // follow a render rather than assuming everything exists at boot.
+  var HOSTS = [
+    '#predictionStakeInput',   // prediction ticket
+    '#smOstStake',             // stock mirror
+    '[data-ostg-source-slot]'  // faucet games board (explicit slot)
+  ];
+  function autoMount() {
+    HOSTS.forEach(function (sel) {
+      var el = document.querySelector(sel);
+      if (!el) return;
+      var host = el.hasAttribute('data-ostg-source-slot') ? el : el.parentElement;
+      if (!host || host.querySelector('[data-oos-chip]')) return;
+      mountChip(host);
+    });
+  }
+
   function boot() {
     try { state.source = localStorage.getItem(SEL_KEY) || 'clean'; } catch (_) {}
     refresh();
+    autoMount();
+    ['ost:prediction-modal-open', 'ost:games-lane', 'ost:wallet-changed'].forEach(function (ev) {
+      window.addEventListener(ev, function () { setTimeout(autoMount, 60); });
+    });
+    // Cheap safety net for panels that appear without firing an event.
+    setTimeout(autoMount, 1500);
+    setTimeout(autoMount, 4000);
     window.addEventListener('ost:wallet-changed', refresh);
     window.addEventListener('ost:play:balance', paint);
   }

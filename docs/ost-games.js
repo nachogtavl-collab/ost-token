@@ -522,6 +522,9 @@
           '<div class="ostg-balance-card">' +
             '<span class="ostg-balance-label">Play balance · OSTG</span>' +
             '<span class="ostg-balance-amt"><strong data-ostg-balance>0.00</strong> OSTG</span>' +
+            // Which OSTG is being wagered - personal or borrowed - shown where
+            // the bet is placed, not buried in a menu.
+            '<span class="ostg-source-slot" data-ostg-source-slot></span>' +
             '<div class="ostg-wallet-line" id="ostgWalletLine">' +
               '<span class="ostg-wallet-dot" data-state="off"></span>' +
               '<span id="ostgWalletText">Wallet: not connected</span>' +
@@ -570,6 +573,10 @@
     window.addEventListener('ost:offline-vault-changed', fireBalanceChange);
     window.addEventListener('ost:play:balance', fireBalanceChange);   // server play balance moved
     if (window.OST_PLAY && window.OST_PLAY.refresh) { try { window.OST_PLAY.refresh(); } catch (_) {} }
+    try {
+      var slot = document.querySelector('[data-ostg-source-slot]');
+      if (slot && window.OST_OSTG_SOURCE && window.OST_OSTG_SOURCE.mountChip) window.OST_OSTG_SOURCE.mountChip(slot);
+    } catch (_) {}
     document.getElementById('ostgFairBtn').addEventListener('click', openFairness);
     var cashBtn = document.getElementById('ostgCashBtn');
     if (cashBtn) {
