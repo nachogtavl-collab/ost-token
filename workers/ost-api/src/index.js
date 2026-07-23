@@ -7,6 +7,7 @@ import { handleWalletPayoutsRequest } from './wallet-payouts.js';
 import { handleGamesRngRequest } from './games-rng.js';
 import { handleSettlementRequest } from './settlement.js';
 import { handleAdRequest } from './ad-treasury.js';
+import { handleAnchorRequest } from './ost-anchor.js';
 
 export { MeshHub } from './mesh/hub.js';
 export { RealtimeHub } from './realtime.js';
@@ -3224,6 +3225,14 @@ export default {
       } catch (error) {
         return json({ ok: false, error: 'loan_ledger_unreachable', detail: String(error?.message || error) }, 502);
       }
+    }
+
+    // OST anchor — the index-linked reference rate, from real Pyth FX feeds.
+    if (path.startsWith('/anchor/')) {
+      if (!env.__store) env.__store = { get: (k, fb) => kvGet(env, k, fb), put: (k, v, ttl) => kvPut(env, k, v, ttl) };
+      const a = await handleAnchorRequest(request, env, { path, store: env.__store });
+      if (a) return a;
+      return json({ error: 'unknown anchor endpoint', path }, 404);
     }
 
     // Purchase ledger health — proves the real-money path is on the Durable
