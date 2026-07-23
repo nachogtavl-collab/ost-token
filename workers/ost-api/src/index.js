@@ -3141,20 +3141,80 @@ export default {
       const geo = jurisdictionBlocked(request, env);
       if (geo) return geo;
       const op = path.slice('/loans/'.length);
-      const live = env.LOANS_LIVE === 'true' && topupCluster(env) === 'mainnet-beta';
-      if (!live && op !== 'health' && op !== 'summary') {
+      // THREE STATES, not a single mainnet switch.
+      //   off  - refuses everything but health/summary (default).
+      //   test - devnet. The mechanism is FULLY REAL: real credit line, real
+      //          provenance, real interest, real repayment, and the drawn OSTG
+      //          is genuinely backed by devnet SPL tokens in the pool. What is
+      //          "test" is the MONEY, not the machinery - which is exactly what
+      //          you need to hand paid testers before mainnet.
+      //   live - mainnet.
+      // A blunt mainnet-only gate made the system impossible to prove before
+      // the day it had to work, which is the wrong order to find bugs in.
+      const mode = String(env.LOANS_MODE || 'off').toLowerCase();
+      const cluster = topupCluster(env);
+      const enabled = (mode === 'live' && cluster === 'mainnet-beta') || (mode === 'test' && cluster !== 'mainnet-beta');
+      if (!enabled && op !== 'health' && op !== 'summary') {
         return json({
           ok: false,
-          error: 'loans_not_live',
-          note: 'credit lines stay disabled until LOANS_LIVE=true on mainnet',
-          cluster: topupCluster(env)
+          error: 'loans_not_enabled',
+          mode,
+          cluster,
+          note: mode === 'live'
+            ? 'LOANS_MODE=live requires mainnet'
+            : 'set LOANS_MODE=test on devnet, or live on mainnet'
         }, 503);
+      }
+
+      // The draw goes through PlayLedger: it owns the balance AND the pool
+      // view, so solvency is enforced at the same point the money is created.
+      if (op === 'draw' && request.method === 'POST') {
+        if (!env.PLAY_LEDGER) return json({ ok: false, error: 'play_ledger_not_configured' }, 503);
+        const pl = env.PLAY_LEDGER.get(env.PLAY_LEDGER.idFromName('global'));
+        return await pl.fetch('https://play-ledger/play/loan-draw', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: await request.text()
+        });
       }
       try {
         const stub = env.LOAN_LEDGER.get(env.LOAN_LEDGER.idFromName('loans-v1'));
         const init = { method: request.method, headers: { 'Content-Type': 'application/json' } };
         if (request.method === 'POST') init.body = await request.text();
-        return await stub.fetch('https://loan-ledger/' + op, init);
+        // Summary is enriched with the REAL lending capacity. The credit line is
+        // denominated in USD, but the pool can only lend its backed surplus, so
+        // the line alone can promise OSTG that cannot actually be drawn. The UI
+        // must show the binding limit, in BOTH units, or a user hits a refusal
+        // for money the screen said they had.
+        if (op === 'summary') {
+          const stubS = env.LOAN_LEDGER.get(env.LOAN_LEDGER.idFromName('loans-v1'));
+          const res = await stubS.fetch('https://loan-ledger/summary' + url.search);
+          const data = await res.json().catch(() => null);
+          if (!data || !data.ok) return json(data || { ok: false, error: 'summary_failed' }, res.status);
+          try {
+            const plS = env.PLAY_LEDGER.get(env.PLAY_LEDGER.idFromName('global'));
+            const h = await (await plS.fetch('https://play-ledger/health/play')).json();
+            const buffer = Math.max(0, Number(h.buffer) || 0);
+            const rate = Number(url.searchParams.get('usdPerOstg')) || 0.0118;
+            data.capacity = {
+              poolBufferOstg: buffer,
+              poolBufferUsd: Math.round(buffer * rate * 100) / 100,
+              usdPerOstg: rate,
+              // What the user can actually draw right now: the smaller of their
+              // remaining credit line and what the pool can back.
+              maxDrawUsd: Math.min(Number(data.availableUsd) || 0, Math.round(buffer * rate * 100) / 100),
+              maxDrawOstg: Math.min(Math.round(((Number(data.availableUsd) || 0) / rate) * 1e6) / 1e6, buffer),
+              limitedBy: (Number(data.availableUsd) || 0) > (buffer * rate) ? 'pool_buffer' : 'credit_line'
+            };
+          } catch (_) { /* capacity is additive; summary still returns without it */ }
+          return json(data);
+        }
+
+        // Carry the query string through. Rebuilding the URL without it made
+        // GET /loans/summary?address=... arrive with no address, so the DO
+        // looked up the empty wallet and reported "no loans" for a wallet that
+        // had one.
+        return await stub.fetch('https://loan-ledger/' + op + url.search, init);
       } catch (error) {
         return json({ ok: false, error: 'loan_ledger_unreachable', detail: String(error?.message || error) }, 502);
       }

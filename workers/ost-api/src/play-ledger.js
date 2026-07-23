@@ -159,6 +159,76 @@ export class PlayLedger {
     return await r.json().catch(() => ({ ok: false, error: 'loan_ledger_bad_response' }));
   }
 
+  /* ---- loan draw: a REAL, POOL-BACKED credit ------------------------------
+   * A loan only means something if the OSTG it creates is actually spendable
+   * and actually backed. The peg this whole system rests on is
+   *
+   *     pool OSTG  >=  Σ all play balances
+   *
+   * so crediting a draw into a play balance WITHOUT pool backing would mint
+   * unbacked OSTG and silently break solvency for every other user. A draw
+   * therefore comes out of the pool's BUFFER (pool − Σ balances): the house is
+   * lending its own real OSTG, which is exactly what lending means.
+   *
+   * Order matters. LoanLedger records the debt FIRST (it can refuse on slots,
+   * line size, descending rule). Only then do we credit. If the credit fails,
+   * the loan is VOIDED - a debt with no money delivered is the worst possible
+   * outcome and must never survive.
+   */
+  async handleLoanDraw(request) {
+    const b = await request.json().catch(() => ({}));
+    const wallet = cleanText(b.wallet, 64);
+    const usd = Number(b.usd);
+    const usdPerOstg = Number(b.usdPerOstg);
+    if (!isPubkey(wallet)) return json({ error: 'invalid_wallet' }, 400);
+    if (!(usd > 0)) return json({ error: 'invalid_amount' }, 400);
+    if (!(usdPerOstg > 0)) return json({ error: 'rate_required' }, 400);
+
+    const wantOstg = Math.round((usd / usdPerOstg) * 1e6) / 1e6;
+
+    // Solvency headroom, read UNLOCKED (it does RPC).
+    const bankroll = await this.poolBankroll();
+    if (bankroll == null) {
+      return json({ ok: false, error: 'bankroll_unreadable', note: 'refusing to lend against an unknown pool' }, 503);
+    }
+    const total = await this.total();
+    const buffer = Math.round((bankroll - total) * 1e6) / 1e6;
+    if (wantOstg > buffer) {
+      return json({
+        ok: false,
+        error: 'insufficient_lending_buffer',
+        requestedOstg: wantOstg,
+        availableOstg: Math.max(0, buffer),
+        note: 'the pool lends from its own backed surplus; it cannot mint unbacked OSTG'
+      }, 409);
+    }
+
+    const lr = await this.loanOp('borrow', { address: wallet, usd, usdPerOstg });
+    if (!lr || !lr.ok) return json(lr || { ok: false, error: 'loan_refused' }, 409);
+    const loanId = lr.loan && lr.loan.id;
+
+    try {
+      const credited = await this.state.blockConcurrencyWhile(async () => {
+        const bal = Number((await this.state.storage.get('bal:' + wallet)) || 0);
+        const t = Number((await this.state.storage.get('total')) || 0);
+        // Re-check under the lock: a concurrent draw could have taken the buffer.
+        if (Math.round((t + wantOstg) * 1e6) / 1e6 > bankroll + 1e-9) return null;
+        const nextBal = Math.round((bal + lr.loan.principalOstg) * 1e6) / 1e6;
+        await this.state.storage.put('bal:' + wallet, nextBal);
+        await this.state.storage.put('total', Math.round((t + lr.loan.principalOstg) * 1e6) / 1e6);
+        return nextBal;
+      });
+      if (credited == null) {
+        await this.loanOp('void', { loanId });
+        return json({ ok: false, error: 'insufficient_lending_buffer_at_commit' }, 409);
+      }
+      return json({ ok: true, loan: lr.loan, balance: credited, bucket: loanId, poolBuffer: Math.round((buffer - wantOstg) * 1e6) / 1e6 });
+    } catch (error) {
+      await this.loanOp('void', { loanId });
+      return json({ ok: false, error: 'credit_failed', detail: String(error?.message || error) }, 500);
+    }
+  }
+
   async handleStake(request) {
     const b = await request.json().catch(() => ({}));
     const wallet = cleanText(b.wallet, 64);
@@ -233,6 +303,7 @@ export class PlayLedger {
       if (path === '/play/bet' && method === 'POST') return await this.handleBet(request);
       if (path === '/play/rotate' && method === 'POST') return await this.handleRotate(request);
 
+      if (path === '/play/loan-draw' && method === 'POST') return await this.handleLoanDraw(request);
       if (path === '/play/stake' && method === 'POST') return await this.handleStake(request);
       if (path === '/play/settle' && method === 'POST') return await this.handleSettle(request);
 
@@ -313,6 +384,30 @@ export class PlayLedger {
     // Fast idempotent reject (re-checked under the lock).
     const pre = await this.state.storage.get('cashout:' + id);
     if (pre && pre.status === 'confirmed') return json({ ok: true, sig: pre.sig, amount: pre.amount, idempotent: true, balance: await this.balOf(wallet) });
+
+    // LOAN LOCK. Without this the whole credit design is defeated: a user could
+    // draw a loan, have it credited to their play balance, and cash it straight
+    // out to real OSTC - extracting borrowed money and leaving only a debt.
+    // Withdrawable = balance MINUS everything locked behind unsettled loans.
+    // Fails CLOSED: if the loan ledger cannot be read we refuse rather than
+    // guess, because guessing wrong here hands out money that isn't theirs.
+    const ls = await this.loanOp('summary', { address: wallet });
+    if (!ls || ls.ok !== true) {
+      return json({ error: 'loan_check_unavailable', message: 'Cannot verify withdrawable balance right now. Try again shortly.' }, 503);
+    }
+    const locked = Number(ls.wallet && ls.wallet.lockedTotal) || 0;
+    if (locked > 0) {
+      const bal = await this.balOf(wallet);
+      const withdrawable = Math.max(0, Math.round((bal - locked) * 1e6) / 1e6);
+      if (amount > withdrawable + 1e-9) {
+        return json({
+          error: 'amount_locked_by_loan',
+          message: 'Only personal OSTG can be cashed out. ' + withdrawable + ' available; ' +
+                   locked + ' is locked until your loan is repaid.',
+          withdrawable, locked, balance: bal
+        }, 409);
+      }
+    }
 
     const ostgMint = new PublicKey(Pool.OSTG_MINT);
     const pool = Pool.getPoolKeypair(this.env);

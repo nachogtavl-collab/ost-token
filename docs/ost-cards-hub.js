@@ -19,9 +19,15 @@
  * of its own - a client-side figure that disagrees with the ledger is worse
  * than no figure at all.
  *
- * Credit is gated server-side behind LOANS_LIVE + mainnet, so on devnet this
- * page shows the terms and refuses to draw. It says that plainly rather than
- * presenting a button that will fail.
+ * Credit is gated server-side by LOANS_MODE (off | test | live). On devnet in
+ * `test` the mechanism is fully real - real line, real provenance, real
+ * interest, real repayment, and the drawn OSTG is genuinely backed by pool
+ * tokens - so testers exercise the true system, not a mock.
+ *
+ * The draw amount is entered in USD and converted to OSTG live, and the screen
+ * shows the BINDING limit: the smaller of the remaining credit line and what
+ * the pool can actually back. Showing the line alone would promise OSTG that
+ * cannot be drawn.
  * ========================================================================== */
 (function () {
   'use strict';
@@ -80,7 +86,9 @@
       '.och-warn{font-size:11.5px;line-height:1.5;margin:11px 0 0;padding:11px;border-radius:11px;' +
         'background:rgba(120,70,10,.2);border:1px solid rgba(255,196,120,.3);color:#ffd9a8;}' +
       '.och-msg{font-size:12px;margin-top:9px;min-height:16px;}' +
-      '.och-msg.ok{color:#7fe3b0;}.och-msg.err{color:#ff9a9a;}';
+      '.och-msg.ok{color:#7fe3b0;}.och-msg.err{color:#ff9a9a;}' +
+      '.och-conv{font-size:12.5px;color:#dff8ff;margin:9px 0 0;}' +
+      '.och-cap{font-size:11.5px;color:#8fb0c4;margin:5px 0 0;line-height:1.45;}';
     var tag = document.createElement('style');
     tag.id = 'ost-cards-hub-style';
     tag.textContent = css;
@@ -158,9 +166,13 @@
           '<h4>Request a draw</h4>' +
           (w
             ? '<div class="och-row">' +
-                '<input type="number" id="ochAmt" min="1" step="1" placeholder="Amount in USD (e.g. 100)">' +
+                '<input type="number" id="ochAmt" min="0.01" step="0.01" placeholder="Amount in USD">' +
                 '<button type="button" class="och-btn warn" id="ochBorrow">Request</button>' +
-              '</div>'
+              '</div>' +
+              // Live USD -> OSTG so the user sees the actual tokens they will
+              // receive before committing, not just a dollar figure.
+              '<p class="och-conv" id="ochConv">Enter an amount to see the OSTG you receive.</p>' +
+              capacityLine(s)
             : '<p class="och-note">Connect a wallet to request a draw.</p>') +
           '<div class="och-msg" id="ochMsg"></div>' +
           '<div class="och-warn">' +
@@ -184,11 +196,46 @@
     var bal = document.getElementById('ochDebitBal');
     if (bal) bal.textContent = debitBalance();
 
+    wireConv(s);
     var btn = document.getElementById('ochBorrow');
     if (btn) btn.addEventListener('click', requestDraw);
     host.querySelectorAll('[data-repay]').forEach(function (b) {
       b.addEventListener('click', function () { repay(b.getAttribute('data-repay')); });
     });
+  }
+
+
+  // The BINDING limit, shown in both units. The credit line is denominated in
+  // USD but the pool can only lend its backed surplus, so showing the line
+  // alone would promise OSTG that cannot be drawn.
+  function capacityLine(s) {
+    var c = s && s.capacity;
+    if (!c) return '';
+    var limited = c.limitedBy === 'pool_buffer';
+    return '<p class="och-cap">Available to draw now: <b>' + usd(c.maxDrawUsd) + '</b> ' +
+      '(<b>' + ostg(c.maxDrawOstg) + '</b>)' +
+      (limited
+        ? ' — capped by the lending pool right now, not by your ' + usd(s.wallet.lineUsd) + ' line.'
+        : ' — your full remaining credit line.') +
+      '</p>';
+  }
+
+  function wireConv(s) {
+    var input = document.getElementById('ochAmt');
+    var out = document.getElementById('ochConv');
+    if (!input || !out) return;
+    var c = (s && s.capacity) || { usdPerOstg: 0.0118, maxDrawUsd: 0, maxDrawOstg: 0 };
+    function upd() {
+      var v = parseFloat(input.value);
+      if (!(v > 0)) { out.textContent = 'Enter an amount to see the OSTG you receive.'; out.className = 'och-conv'; return; }
+      var tokens = v / (c.usdPerOstg || 0.0118);
+      var over = v > (c.maxDrawUsd || 0) + 1e-9;
+      out.innerHTML = usd(v) + ' → <b>' + ostg(tokens) + ' OSTG</b>' +
+        (over ? ' · <span style="color:#ff9a9a;">above what can be drawn right now (' + usd(c.maxDrawUsd) + ')</span>' : '');
+      out.className = 'och-conv' + (over ? ' is-over' : '');
+    }
+    input.addEventListener('input', upd);
+    upd();
   }
 
   function renderLoans(s) {
@@ -245,10 +292,10 @@
 
     state.busy = true;
     msg('Requesting…');
-    api('/loans/borrow', { address: w, usd: amt, usdPerOstg: rate() }).then(function (d) {
+    api('/loans/draw', { wallet: w, usd: amt, usdPerOstg: rate() }).then(function (d) {
       state.busy = false;
       if (!d || !d.ok) return msg(explain(d), 'err');
-      msg('Drawn. ' + ostg(d.loan.principalOstg) + ' is available to play or invest.', 'ok');
+      msg('Drawn — ' + ostg(d.loan.principalOstg) + ' OSTG is now in your play balance.', 'ok');
       refresh();
     }).catch(function () { state.busy = false; msg('Network error — nothing was drawn.', 'err'); });
   }
@@ -287,6 +334,10 @@
     if (e === 'must_be_smaller_than_open_loan') return 'While a draw is unpaid, the next must be smaller — max ' + usd(d.maxAllowedUsd) + '.';
     if (e === 'exceeds_credit_line') return 'That is above your available line (' + usd(d.availableUsd) + ').';
     if (e === 'cannot_repay_loan_with_its_own_funds') return 'You cannot repay a loan with money won using it. Repay from your own OSTG.';
+    if (e === 'insufficient_lending_buffer' || e === 'insufficient_lending_buffer_at_commit')
+      return 'The lending pool cannot cover that right now — max ' + ostg(d.availableOstg || 0) + ' OSTG.';
+    if (e === 'bankroll_unreadable') return 'Cannot read the lending pool right now. Try again shortly.';
+    if (e === 'amount_locked_by_loan') return d.message || 'That amount is locked behind an unpaid loan.';
     if (e === 'insufficient_bucket') return 'Not enough OSTG in that balance (' + ostg(d.have) + ').';
     return e ? ('Could not complete: ' + e) : 'Could not complete that request.';
   }

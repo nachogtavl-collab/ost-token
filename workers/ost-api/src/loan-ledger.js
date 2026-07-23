@@ -342,6 +342,21 @@ export class LoanLedger {
         case 'stake':   return await this.stake(body);
         case 'settle':  return await this.settle(body);
         case 'repay':   return await this.repay(body);
+        // Compensation for a draw whose balance credit failed. Without this a
+        // failed credit would leave a debt the user never received money for.
+        case 'void': {
+          const id = body.loanId;
+          const loan = await this.state.storage.get(LOAN_PREFIX + id);
+          if (!loan) return json({ ok: false, error: 'loan_not_found' }, 404);
+          if (loan.repaidOstg > 0) return json({ ok: false, error: 'partially_repaid_cannot_void' }, 409);
+          const w = await this.wallet(loan.address);
+          w.openLoans = w.openLoans.filter((x) => x !== id);
+          delete w.tainted[id];
+          loan.status = 'void';
+          await this.state.storage.put(LOAN_PREFIX + id, loan);
+          await this.putWallet(w);
+          return json({ ok: true, voided: id });
+        }
         case 'health':  return json({ ok: true, hub: 'durable-object', policy: { BASE_LINE_USD, MAX_LINE_USD, LINE_MULTIPLIER, MAX_OPEN_LOANS, APR_BPS }, ts: Date.now() });
         default: return json({ ok: false, error: 'unknown op: ' + op }, 400);
       }

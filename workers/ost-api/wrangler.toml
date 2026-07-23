@@ -135,6 +135,13 @@ OST_MINT = "383pTzoZ8Gp83dzk23ZnvLcfX2Sq32TAGN48CMQu2pAJ"
 # left "false" by accident at launch. See jurisdictionBlocked() in src/index.js.
 GEOBLOCK_ENABLED = "false"
 
+# Credit lines: off | test | live.
+#   test = devnet. The MECHANISM is fully real (real line, real provenance,
+#          real interest, real repayment, drawn OSTG backed by real pool
+#          tokens); the MONEY is test money. This is what paid testers run on.
+#   live = mainnet only - the code refuses "live" on any other cluster.
+LOANS_MODE = "test"
+
 # ---- Server-side pool signer (Phase 0 — see project-docs/TOKEN-ARCHITECTURE.md) ----
 # Deploy-time config for /wallet/payout, /wallet/ata-rent, /wallet/cosign.
 # These are the AUTHORITATIVE checks — client-side copies are display hints only.
