@@ -148,6 +148,9 @@
 
     host.innerHTML =
       '<div class="och-wrap">' +
+        // On-chain OSTG + reconciliation, so "wallet vs play" and "is the
+        // mirror backed" are answered in the same place cards live.
+        '<div id="ostOnchainSync"></div>' +
         '<div class="och-cards">' +
 
           // ---- OSTC debit ----
@@ -213,6 +216,7 @@
         '</div>' +
       '</div>';
 
+    try { if (window.OST_ONCHAIN_SYNC && window.OST_ONCHAIN_SYNC.refresh) window.OST_ONCHAIN_SYNC.refresh(); } catch (_) {}
     var bal = document.getElementById('ochDebitBal');
     if (bal) bal.textContent = debitBalance();
 

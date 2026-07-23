@@ -344,6 +344,8 @@ export class PlayLedger {
       if (path === '/play/stock/close' && method === 'POST') return await this.handleStockClose(request);
 
       if (path === '/health/play' && method === 'GET') return await this.handleHealth();
+      if (path === '/play/onchain' && method === 'GET') return await this.handleOnchain(url);
+      if (path === '/play/reconcile' && method === 'GET') return await this.handleReconcile(url);
     } catch (err) {
       return json({ error: 'internal_error', message: String((err && err.message) || err).slice(0, 200) }, 500);
     }
@@ -966,6 +968,75 @@ export class PlayLedger {
       await this.state.storage.put('total', round9(total + payout));
       return json({ ok: true, position: fresh, payout, fee, entryPrice: fresh.entryPrice, exitPrice, move: round9(signed), balance: round9(balance + payout) });
     });
+  }
+
+  /* ---- on-chain truth for one wallet --------------------------------------
+   * Reads the user's REAL OSTG token account on Solana - the tokens they hold
+   * in their own wallet, which are NOT the same as their play balance (that is
+   * the mirror in this DO, backed by the pool). Surfacing both is what stops
+   * "positive in my wallet but the app says not enough": they are two distinct
+   * places, and the app should show which is which rather than blend them.
+   */
+  async handleOnchain(url) {
+    const wallet = cleanText(url.searchParams.get('wallet'), 64);
+    if (!isPubkey(wallet)) return json({ error: 'invalid_wallet' }, 400);
+    let onchain = null;
+    try {
+      onchain = await Pool.withRpc('play-onchain', async (conn) => {
+        const ata = Pool.ataForMint(wallet, new PublicKey(Pool.OSTG_MINT));
+        const res = await conn.getTokenAccountBalance(ata).catch(() => null);
+        return res && res.value ? Number(res.value.uiAmount) : 0;
+      });
+    } catch (_) { onchain = null; }
+    if (onchain == null || !Number.isFinite(onchain)) {
+      // Unknown is not zero - never report a fabricated 0 for a failed read.
+      return json({ ok: false, error: 'onchain_read_failed', note: 'could not read on-chain OSTG; NOT zero' }, 502);
+    }
+    return json({
+      ok: true,
+      wallet,
+      onchainOstg: Number(onchain.toFixed(9)),       // in the user's own wallet
+      playBalance: await this.balOf(wallet),          // the mirror (deposited)
+      note: 'onchainOstg is in your wallet; playBalance is deposited into the play pool. Deposit moves the first into the second.'
+    });
+  }
+
+  /* ---- reconciliation: prove the mirror against the chain ------------------
+   * The mirror (Σ play balances) must never exceed pool OSTG on-chain. This
+   * reports the drift EXPLICITLY - a positive buffer is healthy, a negative one
+   * is under-collateralization that must be surfaced, never hidden. This is the
+   * check that answers "is the fast layer still telling the truth about the
+   * slow layer".
+   */
+  async handleReconcile() {
+    const total = await this.total();
+    let poolOstg = null;
+    try {
+      poolOstg = await Pool.withRpc('play-reconcile', async (conn) => {
+        const res = await conn.getTokenAccountBalance(Pool.poolAtaForMint(this.env, new PublicKey(Pool.OSTG_MINT)));
+        return Number(res && res.value ? res.value.uiAmount : NaN);
+      });
+    } catch (_) { poolOstg = null; }
+    if (poolOstg == null || !Number.isFinite(poolOstg)) {
+      return json({ ok: false, error: 'pool_read_failed', note: 'could not read the chain; no verdict' }, 502);
+    }
+    const drift = Number((poolOstg - total).toFixed(9));
+    const reconciled = drift + 1e-9 >= 0;
+    const out = {
+      ok: reconciled,
+      reconciled,
+      onchainPoolOstg: poolOstg,          // slow layer: the truth
+      mirrorTotal: Number(total.toFixed(9)), // fast layer: the cache
+      drift,                               // >= 0 healthy; < 0 is a real problem
+      status: reconciled
+        ? 'mirror is fully backed by on-chain OSTG'
+        : 'UNDER-COLLATERALIZED: mirror exceeds on-chain pool',
+      checkedAt: Date.now()
+    };
+    // Persist the last reconciliation so a UI can show "verified N ago" and a
+    // sudden drift is visible historically, not just in the instant.
+    try { await this.state.storage.put('lastReconcile', out); } catch (_) {}
+    return json(out, reconciled ? 200 : 500);
   }
 
   async handleHealth() {
