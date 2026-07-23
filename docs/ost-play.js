@@ -297,7 +297,12 @@
     if (!a) return { ok: false, error: 'no_wallet' };
     var bucket = activeBucket(opts && opts.bucket);
     try {
-      var r = await api('POST', '/play/settle', { wallet: a, payout: Number(payout), bucket: bucket });
+      var r = await api('POST', '/play/settle', {
+        wallet: a, payout: Number(payout), bucket: bucket,
+        // Fee already withheld from `payout` by OST_HOUSE/OST_ARB. Reported so
+        // the server can record how much house edge grew the lending headroom.
+        fee: Number((opts && opts.fee) || 0)
+      });
       if (r && r.ok && Number.isFinite(Number(r.balance))) { mirror = Number(r.balance); writeCache(a, mirror); emit(); }
       return r;
     } catch (e) { return { ok: false, error: (e && e.message) || 'settle_failed' }; }

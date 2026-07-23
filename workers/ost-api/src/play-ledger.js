@@ -276,6 +276,11 @@ export class PlayLedger {
     const wallet = cleanText(b.wallet, 64);
     const payout = Number(b.payout);
     const bucket = cleanText(b.bucket, 64) || 'clean';
+    // House edge withheld from this payout. It is ALREADY in the headroom by
+    // construction - a smaller payout means Σ play balances rises less while
+    // pool OSTG stays put, so the lending buffer grows by exactly this much.
+    // Recording it makes that flow auditable instead of merely true.
+    const fee = Math.max(0, Number(b.fee) || 0);
     if (!isPubkey(wallet)) return json({ error: 'invalid_wallet' }, 400);
     if (!(payout >= 0)) return json({ error: 'invalid_amount' }, 400);
 
@@ -291,7 +296,11 @@ export class PlayLedger {
       await this.state.storage.put('bal:' + wallet, next);
       const total = Number((await this.state.storage.get('total')) || 0) + payout;
       await this.state.storage.put('total', Math.round(total * 1e6) / 1e6);
-      return json({ ok: true, bucket, credited: payout, balance: next });
+      if (fee > 0) {
+        const acc = Number((await this.state.storage.get('houseAccrued')) || 0) + fee;
+        await this.state.storage.put('houseAccrued', Math.round(acc * 1e6) / 1e6);
+      }
+      return json({ ok: true, bucket, credited: payout, feeRetained: fee, balance: next });
     });
   }
   async total() { return Number((await this.state.storage.get('total')) || 0); }
@@ -980,6 +989,16 @@ export class PlayLedger {
       poolOstg,
       playTotal: Number(total.toFixed(9)),
       buffer: Number((poolOstg - total).toFixed(9)),
+      // The lending reserve is a FRACTION of the buffer: the rest must stay
+      // free to pay winners, so one large draw can never leave a jackpot
+      // unsettleable.
+      lendable: Number(((poolOstg - total) * Number(this.env.LENDING_RESERVE_FRACTION || 0.5)).toFixed(9)),
+      // Cumulative house edge withheld from payouts. This is not a separate
+      // pot - it is already inside `buffer`. A withheld fee means Σ play
+      // balances rose less while pool OSTG stayed put, so the headroom grew by
+      // exactly this amount. Reported so the flow is auditable, not implied.
+      houseAccrued: Number((await this.state.storage.get('houseAccrued')) || 0),
+      houseNote: 'house edge is retained IN the pool; it grows buffer/lendable directly',
       note: solvent
         ? 'pool OSTG >= Σ play balances: every play balance is backed by real OSTG.'
         : 'UNDER-COLLATERALIZED — pool OSTG is less than outstanding play balances.'

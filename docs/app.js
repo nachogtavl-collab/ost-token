@@ -15307,7 +15307,7 @@
               // receives the NET and the fee is booked exactly once.
               var bkt = order.ostgBucket || 'clean';
               if (payout > 0) {
-                var sr = await window.OST_PLAY.settle(payout, { bucket: bkt });
+                var sr = await window.OST_PLAY.settle(payout, { bucket: bkt, fee: houseFee });
                 if (!sr || sr.ok === false) throw new Error('Payout failed: ' + ((sr && sr.error) || 'ledger unavailable'));
               }
               r = { sig: 'ostg-' + Date.now().toString(36), ost: payout };
