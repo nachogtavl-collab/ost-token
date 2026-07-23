@@ -154,6 +154,9 @@
         if (window.OST_WORLD && window.OST_WORLD.open) { window.OST_WORLD.open(); return; }
         if (b) b.show();
       } },
+    { ico: '💳', lbl: 'Cards', need: ['body'], run: function () {
+        if (window.OST_CARDS_HUB && window.OST_CARDS_HUB.open) window.OST_CARDS_HUB.open();
+      } },
     { ico: '📱', lbl: 'Apps', need: ['body'], run: function () {
         if (!window.OST_SHORTCUTS) return;
         var box = document.getElementById('ostShortcutsPanel');

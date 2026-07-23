@@ -2538,6 +2538,55 @@ async function verifyStripeSignature(rawBody, sigHeader, secret) {
   return diff === 0;
 }
 
+
+/* ── Jurisdiction gate ──────────────────────────────────────────────────────
+ * OST's stated posture is that it does not serve US or EU customers. Intent is
+ * not a defence - "they found us on their own" has failed for offshore
+ * operators repeatedly, because jurisdiction follows the CUSTOMER, not where
+ * the company sits. What makes the posture real is refusing the request.
+ *
+ * Cloudflare gives us the resolved country free on every request via
+ * CF-IPCountry, so this costs nothing and cannot be forgotten at the client.
+ *
+ * This is a coarse control: a VPN defeats it. It is not meant to stop a
+ * determined individual - it is meant to ensure OST does not KNOWINGLY serve
+ * a restricted market, which is the part a regulator or processor asks about.
+ * Applied to money paths only (loans, settlement, top-up); browsing, games and
+ * mesh stay open.
+ */
+const EU_EEA = new Set([
+  'AT','BE','BG','HR','CY','CZ','DK','EE','FI','FR','DE','GR','HU','IE','IT',
+  'LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE','IS','LI','NO'
+]);
+const RESTRICTED_EXTRA = new Set(['US', 'GB']);
+
+function requestCountry(request) {
+  return String(request.headers.get('CF-IPCountry') || '').toUpperCase();
+}
+
+function jurisdictionBlocked(request, env) {
+  // OFF on devnet by choice (nothing here moves real money yet), but MAINNET
+  // FORCES IT ON. Tying it to the cluster instead of to a flag means it cannot
+  // be forgotten in the rush of a launch - the exact moment it starts to
+  // matter is the moment it switches itself on. GEOBLOCK_ENABLED='false' can
+  // silence it pre-mainnet; on mainnet the flag is ignored.
+  const mainnet = topupCluster(env) === 'mainnet-beta';
+  if (!mainnet && env.GEOBLOCK_ENABLED === 'false') return null;
+  const cc = requestCountry(request);
+  // T1 = Tor, XX = unknown. Treat unknown as allowed rather than blocking real
+  // users on a header we did not get; the block is about not KNOWINGLY serving.
+  if (!cc || cc === 'XX') return null;
+  if (EU_EEA.has(cc) || RESTRICTED_EXTRA.has(cc)) {
+    return json({
+      ok: false,
+      error: 'jurisdiction_not_served',
+      country: cc,
+      note: 'OST does not offer funded accounts or credit in this jurisdiction.'
+    }, 451);
+  }
+  return null;
+}
+
 /* ── Purchase ledger (real money) ──────────────────────────────────────────
  * Intents used to live in OST_KV. That put every paid customer behind the same
  * ~1k/day write budget the games burn through, and behind tierDown('kv'), which
@@ -3062,6 +3111,8 @@ export default {
     // Real-money settlement (payment processor webhooks). We hold no keys;
     // the processor handles custody, confirmations and reorgs.
     if (path.startsWith('/settlement/')) {
+      const geoS = jurisdictionBlocked(request, env);
+      if (geoS && path !== '/settlement/health') return geoS;
       const settled = await handleSettlementRequest(request, env, {
         path,
         method,
@@ -3087,6 +3138,8 @@ export default {
     // would be lending against nothing.
     if (path.startsWith('/loans/')) {
       if (!env.LOAN_LEDGER) return json({ ok: false, error: 'loan_ledger_not_configured' }, 503);
+      const geo = jurisdictionBlocked(request, env);
+      if (geo) return geo;
       const op = path.slice('/loans/'.length);
       const live = env.LOANS_LIVE === 'true' && topupCluster(env) === 'mainnet-beta';
       if (!live && op !== 'health' && op !== 'summary') {

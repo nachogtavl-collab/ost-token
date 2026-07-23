@@ -130,6 +130,11 @@ TREASURY_SOL_MAINNET  = "Fm7ErbkWzPMpqJ2MdT2LR1oyAHNMvAQxmCXVM7KxGRrM"
 # Devnet OST mint (Token-2022). Source of truth: mint-info.json.
 OST_MINT = "383pTzoZ8Gp83dzk23ZnvLcfX2Sq32TAGN48CMQu2pAJ"
 
+# Jurisdiction gate. OFF while we are on devnet and nothing moves real money.
+# IGNORED on mainnet - the code forces the block on there, so this cannot be
+# left "false" by accident at launch. See jurisdictionBlocked() in src/index.js.
+GEOBLOCK_ENABLED = "false"
+
 # ---- Server-side pool signer (Phase 0 — see project-docs/TOKEN-ARCHITECTURE.md) ----
 # Deploy-time config for /wallet/payout, /wallet/ata-rent, /wallet/cosign.
 # These are the AUTHORITATIVE checks — client-side copies are display hints only.
