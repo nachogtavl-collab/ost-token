@@ -15482,10 +15482,37 @@
       try { return (window.OST_MONEY && typeof window.OST_MONEY.get === 'function') ? (Number(window.OST_MONEY.get()) || 0) : 0; } catch (_) { return 0; }
     }
 
+    // OSTG is the rail predictions actually spend (fundFromOstg). The desk used
+    // to display and gate on OSTC/credits, so a user saw an OSTC number, was
+    // told "not enough OST" against OSTC, and only THEN funded from OSTG - the
+    // classic "predictions still show OSTC" bug. The available balance is now
+    // the OSTG the SELECTED source can spend.
+    function ostgSpendable() {
+      try {
+        if (window.OST_OSTG_SOURCE && window.OST_OSTG_SOURCE.spendable) {
+          var v = window.OST_OSTG_SOURCE.spendable();
+          if (Number.isFinite(v)) return v;
+        }
+        if (window.OST_PLAY && window.OST_PLAY.balance) {
+          var b = window.OST_PLAY.balance();
+          if (Number.isFinite(b)) return b;
+        }
+      } catch (_) {}
+      return undefined;
+    }
+
     function syncTradeWallet() {
+      // Prefer OSTG whenever the play rail is present. Falls through to the old
+      // credits/on-chain path only if OSTG is genuinely unavailable, so nothing
+      // regresses for a user without a play balance yet.
+      var og = ostgSpendable();
+      if (og !== undefined) {
+        state.availableBalance = og;
+        renderPredictionTicket(getFilteredMarkets());
+        return Promise.resolve(og);
+      }
+
       if (!connectedWalletSession || !connectedWalletSession.publicKey) {
-        // No on-chain wallet: the desk funds tickets from the credits pool
-        // (where faucet + game wins land), so show that spendable balance.
         state.availableBalance = creditsBalance();
         renderPredictionTicket(getFilteredMarkets());
         return Promise.resolve(state.availableBalance);
@@ -16260,6 +16287,13 @@
         availableBalanceEl.textContent = (state.availableBalance == null)
           ? formatOst(creditsBalance())
           : formatOst(state.availableBalance);
+        // Name the money: "Available OSTG" or "Loan xxxx" so the user knows
+        // exactly which balance this ticket spends.
+        var lbl = document.getElementById('predictionAvailableLabel');
+        if (lbl) {
+          var src = (window.OST_OSTG_SOURCE && window.OST_OSTG_SOURCE.current) ? window.OST_OSTG_SOURCE.current() : 'clean';
+          lbl.textContent = (src === 'clean') ? 'Available OSTG' : ('Loan ' + String(src).slice(0, 8));
+        }
       }
 
       if (tradeHeadingEl) tradeHeadingEl.textContent = 'Build an OST ticket';
@@ -17623,6 +17657,11 @@
     // the 30s poll, so a fresh win "didn't flow back to the balance to play".
     window.addEventListener('ost-money-changed', function () { syncTradeWallet(); });
     window.addEventListener('ost-faucet-hub-award', function () { syncTradeWallet(); });
+    // OSTG is the desk's rail now, so re-sync when the play balance moves or the
+    // user switches spend source. Without these the shown balance would lag a
+    // draw or a bucket switch, which reads as "OSTG disappeared".
+    window.addEventListener('ost:play:balance', function () { syncTradeWallet(); });
+    window.addEventListener('ost:ostg-source', function () { syncTradeWallet(); });
     window.addEventListener('ost:prediction-orders-synced', function() {
       state.orderHistory = reconcilePredictionVaultLossRecords();
       renderPredictionLedger();

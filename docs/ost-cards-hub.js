@@ -36,10 +36,17 @@
   var API = window.OST_API_BASE || 'https://ost-api.nachogtavl.workers.dev';
 
   function wallet() {
+    // MUST match how ost-play.js resolves the address, or this module queries a
+    // different (or empty) wallet than the one holding the OSTG - which showed
+    // up as "wallet balance won't detect funds". The authoritative source is
+    // OST_WALLET.session.publicKey; .address was often null.
     try {
-      return (window.OST_WALLET && window.OST_WALLET.address) ||
-             (window.solana && window.solana.publicKey && window.solana.publicKey.toString()) || '';
-    } catch (_) { return ''; }
+      var s = window.OST_WALLET && window.OST_WALLET.session;
+      if (s && s.publicKey && s.publicKey.toBase58) return s.publicKey.toBase58();
+      if (window.OST_WALLET && window.OST_WALLET.address) return window.OST_WALLET.address;
+      if (window.solana && window.solana.publicKey) return window.solana.publicKey.toString();
+    } catch (_) {}
+    return '';
   }
 
   function esc(t) {
@@ -88,7 +95,20 @@
       '.och-msg{font-size:12px;margin-top:9px;min-height:16px;}' +
       '.och-msg.ok{color:#7fe3b0;}.och-msg.err{color:#ff9a9a;}' +
       '.och-conv{font-size:12.5px;color:#dff8ff;margin:9px 0 0;}' +
-      '.och-cap{font-size:11.5px;color:#8fb0c4;margin:5px 0 0;line-height:1.45;}';
+      '.och-cap{font-size:11.5px;color:#8fb0c4;margin:5px 0 0;line-height:1.45;}' +
+      '.och-draw-modal{position:fixed;inset:0;z-index:1000600;display:flex;align-items:center;justify-content:center;' +
+        'padding:16px;background:rgba(2,6,12,.72);opacity:0;transition:opacity .2s;}' +
+      '.och-draw-modal.is-open{opacity:1;}' +
+      '.och-draw-panel{width:min(360px,94vw);border-radius:20px;padding:22px;text-align:center;' +
+        'background:linear-gradient(150deg,#3a2a12,#140a02);border:1px solid rgba(255,196,120,.4);' +
+        'box-shadow:0 30px 90px rgba(0,0,0,.7);transform:scale(.94);transition:transform .2s;}' +
+      '.och-draw-modal.is-open .och-draw-panel{transform:scale(1);}' +
+      '.och-draw-usd{font-size:40px;font-weight:750;color:#7fe3b0;letter-spacing:.01em;font-variant-numeric:tabular-nums;}' +
+      '.och-draw-arrow{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#c9a56a;margin:7px 0;}' +
+      '.och-draw-ostg{font-size:27px;font-weight:700;color:#ffd9a8;font-variant-numeric:tabular-nums;}' +
+      '.och-draw-terms{font-size:11.5px;color:#e8c99a;line-height:1.5;margin:14px 0 16px;}' +
+      '.och-draw-actions{display:flex;gap:9px;}' +
+      '.och-draw-actions .och-btn{flex:1 1 0;justify-content:center;}';
     var tag = document.createElement('style');
     tag.id = 'ost-cards-hub-style';
     tag.textContent = css;
@@ -284,45 +304,124 @@
     var amt = parseFloat((document.getElementById('ochAmt') || {}).value);
     if (!w) return msg('Connect a wallet first.', 'err');
     if (!(amt > 0)) return msg('Enter how much you want to draw, in USD.', 'err');
+    openDrawModal(w, amt);
+  }
 
-    // Deliberate friction. A draw is debt; it should take one more beat than a
-    // tap. This is the opposite of prompting someone when their balance is low.
-    if (!window.confirm('Draw ' + usd(amt) + ' as OSTG?\n\nThis is a loan at interest. You cannot withdraw it, ' +
-                        'and winnings from it cannot repay it — they stay locked until you settle from your own OSTG.')) return;
+  // The draw is where a loan has to FEEL real: you see the dollars first, then
+  // watch them convert into the OSTG you receive, then confirm. window.confirm
+  // gave none of that.
+  function openDrawModal(w, amt) {
+    var tokens = amt / rate();
+    var apr = (state.summary && state.summary.policy ? state.summary.policy.aprBps / 100 : 12);
+    var modal = document.createElement('div');
+    modal.className = 'och-draw-modal';
+    modal.innerHTML =
+      '<div class="och-draw-panel">' +
+        '<div class="och-draw-usd" id="ochDrawUsd">$0.00</div>' +
+        '<div class="och-draw-arrow">converts to</div>' +
+        '<div class="och-draw-ostg" id="ochDrawOstg">0.00 OSTG</div>' +
+        '<p class="och-draw-terms">This is a <b>loan at ' + apr + '% APR</b>. You can play and ' +
+          'invest it, but you cannot withdraw it, and winnings from it stay locked until you repay from your own OSTG.</p>' +
+        '<div class="och-draw-actions">' +
+          '<button type="button" class="och-btn" id="ochDrawCancel">Cancel</button>' +
+          '<button type="button" class="och-btn warn" id="ochDrawGo">Confirm draw</button>' +
+        '</div>' +
+        '<div class="och-msg" id="ochDrawMsg"></div>' +
+      '</div>';
+    document.body.appendChild(modal);
+    requestAnimationFrame(function () { modal.classList.add('is-open'); });
 
-    state.busy = true;
-    msg('Requesting…');
-    api('/loans/draw', { wallet: w, usd: amt, usdPerOstg: rate() }).then(function (d) {
-      state.busy = false;
-      if (!d || !d.ok) return msg(explain(d), 'err');
-      msg('Drawn — ' + ostg(d.loan.principalOstg) + ' OSTG is now in your play balance.', 'ok');
-      refresh();
-    }).catch(function () { state.busy = false; msg('Network error — nothing was drawn.', 'err'); });
+    var t0 = performance.now(), DUR = 650;
+    var usdEl = modal.querySelector('#ochDrawUsd'), ostgEl = modal.querySelector('#ochDrawOstg');
+    (function tick(now) {
+      var k = Math.min(1, (now - t0) / DUR);
+      var e = 1 - Math.pow(1 - k, 3);
+      usdEl.textContent = '$' + (amt * e).toFixed(2);
+      ostgEl.textContent = (tokens * e).toFixed(2) + ' OSTG';
+      if (k < 1) requestAnimationFrame(tick);
+    })(t0);
+
+    function close() { modal.classList.remove('is-open'); setTimeout(function () { modal.remove(); }, 200); }
+    modal.querySelector('#ochDrawCancel').addEventListener('click', close);
+    modal.addEventListener('click', function (e) { if (e.target === modal) close(); });
+    modal.querySelector('#ochDrawGo').addEventListener('click', function () {
+      var go = modal.querySelector('#ochDrawGo');
+      var dmsg = modal.querySelector('#ochDrawMsg');
+      go.disabled = true;
+      dmsg.textContent = 'Drawing…'; dmsg.className = 'och-msg';
+      state.busy = true;
+      api('/loans/draw', { wallet: w, usd: amt, usdPerOstg: rate() }).then(function (d) {
+        state.busy = false;
+        if (!d || !d.ok) { go.disabled = false; dmsg.textContent = explain(d); dmsg.className = 'och-msg err'; return; }
+        dmsg.textContent = 'Done — ' + ostg(d.loan.principalOstg) + ' landed in your play balance.';
+        dmsg.className = 'och-msg ok';
+        // Announce immediately so no balance looks like it "disappeared" while
+        // a poll catches up.
+        try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {}
+        if (window.OST_PLAY && window.OST_PLAY.refresh) window.OST_PLAY.refresh();
+        if (window.OST_OSTG_SOURCE && window.OST_OSTG_SOURCE.refresh) window.OST_OSTG_SOURCE.refresh();
+        setTimeout(function () { close(); refresh(); msg('Drawn — ' + ostg(d.loan.principalOstg) + ' OSTG is now yours to play.', 'ok'); }, 1100);
+      }).catch(function () { state.busy = false; go.disabled = false; dmsg.textContent = 'Network error — nothing was drawn.'; dmsg.className = 'och-msg err'; });
+    });
   }
 
   function repay(loanId) {
     if (state.busy) return;
     var w = wallet();
     if (!w) return msg('Connect a wallet first.', 'err');
-    var raw = window.prompt('How much OSTG do you want to repay toward ' + loanId + '?');
-    if (raw == null) return;
-    var amt = parseFloat(raw);
-    if (!(amt > 0)) return msg('Enter a repayment amount.', 'err');
+    var loan = (state.summary && state.summary.loans || []).filter(function (l) { return l.id === loanId; })[0];
+    var owed = loan ? Number(loan.outstandingOstg) : 0;
+    var own = (window.OST_OSTG_SOURCE && window.OST_OSTG_SOURCE.ownSpendable) ? window.OST_OSTG_SOURCE.ownSpendable() : 0;
+    openRepayModal(w, loanId, owed, own);
+  }
 
-    state.busy = true;
-    msg('Repaying…');
-    // from:'clean' — repayment always comes from the user's own OSTG. The
-    // server refuses a loan's own funds anyway; sending 'clean' makes the
-    // intent explicit rather than relying on a default.
-    api('/loans/repay', { address: w, loanId: loanId, amount: amt, from: 'clean' }).then(function (d) {
-      state.busy = false;
-      if (!d || !d.ok) return msg(explain(d), 'err');
-      var extra = d.releasedToClean > 0
-        ? ' Loan settled — ' + ostg(d.releasedToClean) + ' unlocked and is now yours.'
-        : '';
-      msg('Repaid ' + ostg(d.applied) + '.' + extra, 'ok');
-      refresh();
-    }).catch(function () { state.busy = false; msg('Network error — nothing was repaid.', 'err'); });
+  // Repay shows what is owed, what you can pay from your OWN OSTG, and a slider
+  // so partial repayment is one gesture. Repayment always comes from personal
+  // OSTG; the server refuses a loan's own funds and the UI never offers them.
+  function openRepayModal(w, loanId, owed, own) {
+    var maxPay = Math.max(0, Math.min(owed, own));
+    var modal = document.createElement('div');
+    modal.className = 'och-draw-modal';
+    modal.innerHTML =
+      '<div class="och-draw-panel" style="background:linear-gradient(150deg,#0b3a52,#061a26);border-color:rgba(127,216,255,.4);">' +
+        '<div class="och-draw-arrow">Repay loan ' + esc(loanId.slice(0, 8)) + '</div>' +
+        '<div class="och-draw-usd" id="ochRepAmt" style="color:#7fd8ff;">' + ostg(maxPay) + '</div>' +
+        '<input type="range" id="ochRepRange" min="0" max="' + maxPay.toFixed(2) + '" step="0.01" value="' + maxPay.toFixed(2) + '" style="width:100%;margin:14px 0;">' +
+        '<p class="och-draw-terms" style="color:#bfe4f5;">Owed: <b>' + ostg(owed) + '</b> · your OSTG: <b>' + ostg(own) + '</b>. ' +
+          'Repaying the full amount unlocks any winnings tied to this loan.</p>' +
+        '<div class="och-draw-actions">' +
+          '<button type="button" class="och-btn" id="ochRepCancel">Cancel</button>' +
+          '<button type="button" class="och-btn" id="ochRepGo" style="background:#12405c;border-color:rgba(127,216,255,.5);">Repay</button>' +
+        '</div>' +
+        '<div class="och-msg" id="ochRepMsg"></div>' +
+      '</div>';
+    document.body.appendChild(modal);
+    requestAnimationFrame(function () { modal.classList.add('is-open'); });
+
+    var range = modal.querySelector('#ochRepRange');
+    var amtEl = modal.querySelector('#ochRepAmt');
+    range.addEventListener('input', function () { amtEl.textContent = ostg(parseFloat(range.value)); });
+
+    function close() { modal.classList.remove('is-open'); setTimeout(function () { modal.remove(); }, 200); }
+    modal.querySelector('#ochRepCancel').addEventListener('click', close);
+    modal.addEventListener('click', function (e) { if (e.target === modal) close(); });
+    modal.querySelector('#ochRepGo').addEventListener('click', function () {
+      var amt = parseFloat(range.value);
+      var go = modal.querySelector('#ochRepGo'), rmsg = modal.querySelector('#ochRepMsg');
+      if (!(amt > 0)) { rmsg.textContent = 'Move the slider to choose an amount.'; rmsg.className = 'och-msg err'; return; }
+      go.disabled = true; rmsg.textContent = 'Repaying…'; rmsg.className = 'och-msg';
+      state.busy = true;
+      api('/loans/repay', { address: w, loanId: loanId, amount: amt, from: 'clean' }).then(function (d) {
+        state.busy = false;
+        if (!d || !d.ok) { go.disabled = false; rmsg.textContent = explain(d); rmsg.className = 'och-msg err'; return; }
+        var extra = d.releasedToClean > 0 ? ' Loan settled — ' + ostg(d.releasedToClean) + ' unlocked and is now yours.' : '';
+        rmsg.textContent = 'Repaid ' + ostg(d.applied) + '.' + extra; rmsg.className = 'och-msg ok';
+        try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {}
+        if (window.OST_PLAY && window.OST_PLAY.refresh) window.OST_PLAY.refresh();
+        if (window.OST_OSTG_SOURCE && window.OST_OSTG_SOURCE.refresh) window.OST_OSTG_SOURCE.refresh();
+        setTimeout(function () { close(); refresh(); msg('Repaid ' + ostg(d.applied) + '.' + extra, 'ok'); }, 1100);
+      }).catch(function () { state.busy = false; go.disabled = false; rmsg.textContent = 'Network error — nothing was repaid.'; rmsg.className = 'och-msg err'; });
+    });
   }
 
   // Turn server error codes into something a person can act on.

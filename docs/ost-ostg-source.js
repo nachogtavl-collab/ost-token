@@ -35,10 +35,17 @@
   var state = { source: 'clean', summary: null, open: false };
 
   function wallet() {
+    // MUST match how ost-play.js resolves the address, or this module queries a
+    // different (or empty) wallet than the one holding the OSTG - which showed
+    // up as "wallet balance won't detect funds". The authoritative source is
+    // OST_WALLET.session.publicKey; .address was often null.
     try {
-      return (window.OST_WALLET && window.OST_WALLET.address) ||
-             (window.solana && window.solana.publicKey && window.solana.publicKey.toString()) || '';
-    } catch (_) { return ''; }
+      var s = window.OST_WALLET && window.OST_WALLET.session;
+      if (s && s.publicKey && s.publicKey.toBase58) return s.publicKey.toBase58();
+      if (window.OST_WALLET && window.OST_WALLET.address) return window.OST_WALLET.address;
+      if (window.solana && window.solana.publicKey) return window.solana.publicKey.toString();
+    } catch (_) {}
+    return '';
   }
   function ostg(n) { return (Number(n) || 0).toFixed(2); }
   function esc(t) {
@@ -332,8 +339,19 @@
     return loadSummary().then(function () { paint(); });
   }
 
+  // How much OSTG the CURRENTLY SELECTED source can actually spend. Personal
+  // returns own spendable; a loan returns that loan's locked balance. This is
+  // the number a stake gate should read - not OSTC, not credits.
+  function spendable() {
+    var src = current();
+    if (src === 'clean') return ownSpendable();
+    var s = state.summary;
+    return (s && s.wallet && s.wallet.locked && Number(s.wallet.locked[src])) || 0;
+  }
+
   window.OST_OSTG_SOURCE = {
     current: current,
+    spendable: spendable,
     set: setSource,
     open: openSheet,
     close: closeSheet,
