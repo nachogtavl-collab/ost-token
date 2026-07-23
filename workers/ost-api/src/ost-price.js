@@ -1,7 +1,8 @@
+import { fetchAnchor } from './ost-anchor.js';
 // ── OST Live Price (devnet) ──────────────────────────────────────────────────
-// Network-weighted synthetic price for OST on devnet.
+// Network-weighted price for OST, anchored to a REAL FX index (ost-anchor.js).
 //
-//   P(t) = P0 * N(t) * V(t) * M(t)
+//   P(t) = P0 * A(t) * N(t) * M(t)   -- A(t) is the LIVE Pyth FX index
 //
 //   P0   = anchor                       ($0.10)
 //   N(t) = 1 + α·ln(1+W) + β·ln(1+T) + γ·ln(1+Vol24h)   (network demand, log-bounded)
@@ -172,10 +173,39 @@ async function fetchBtc24hChangePct() {
 }
 
 // ── price computation (pure) ────────────────────────────────────────────────
+
+/* ── REAL anchor index ──────────────────────────────────────────────────────
+ * The price used to be OST_ANCHOR * volMultiplier(ts), where volMultiplier is
+ * a mulberry32 PRNG - the chart moved because of a random number generator,
+ * nothing else. That invented movement is replaced by the live Pyth FX index.
+ *
+ * What remains in the price is now REAL on both legs:
+ *   · anchorIndex   live EUR/CNH FX (ost-anchor.js, verifiable)
+ *   · networkFactor actual wallet/tx activity on OST
+ *
+ * If the index cannot be read we hold the LAST GOOD value rather than falling
+ * back to noise. A held price is honest ("nothing new"); a random one is not.
+ */
+let LIVE_INDEX = 1.0;
+let LIVE_INDEX_AT = 0;
+let LIVE_INDEX_STALE = true;
+
+async function refreshIndex(env, store) {
+  if (Date.now() - LIVE_INDEX_AT < 20000) return LIVE_INDEX;
+  try {
+    const a = await fetchAnchor(env, store);
+    if (a && a.ok !== false && Number.isFinite(Number(a.index)) && Number(a.index) > 0) {
+      LIVE_INDEX = Number(a.index);
+      LIVE_INDEX_AT = Date.now();
+      LIVE_INDEX_STALE = !!a.stale;
+    }
+  } catch (_) { /* keep last good - never fall back to invented movement */ }
+  return LIVE_INDEX;
+}
+
 function computePrice(counters, ts, mood = 1.0) {
   const n = networkFactor(counters);
-  const v = volMultiplier(ts);
-  const raw = OST_ANCHOR * n * v * mood;
+  const raw = OST_ANCHOR * LIVE_INDEX * n * mood;
   return Math.max(OST_ANCHOR * 0.5, raw);
 }
 
@@ -192,16 +222,19 @@ function change24hPct(counters, nowPrice, ts, mood) {
 }
 
 // ── OHLC candle helpers ─────────────────────────────────────────────────────
+// Intra-bucket high/low. This used to walk the PRNG across the bucket and
+// return the extremes of INVENTED ticks - i.e. it fabricated wicks for candles
+// that never traded. We do not know a past bucket's true range unless it was
+// recorded, so we report the honest thing: the level implied by the current
+// index and real network activity, with no manufactured spread. Candles will
+// look flat until real ticks accumulate, and a flat candle truthfully says
+// "no recorded range" instead of drawing a wick out of a random number.
 function bucketHighLow(counters, bucketStart, bucketEndExclusive, mood) {
   const n = networkFactor(counters);
-  let hi = -Infinity, lo = Infinity;
-  for (let t = bucketStart; t < bucketEndExclusive; t += OST_TICK_MS) {
-    const p = OST_ANCHOR * n * volMultiplier(t) * mood;
-    if (p > hi) hi = p;
-    if (p < lo) lo = p;
-  }
+  const p = OST_ANCHOR * LIVE_INDEX * n * mood;
   const floor = OST_ANCHOR * 0.5;
-  return { high: Math.max(hi, floor), low: Math.max(lo, floor) };
+  const v = Math.max(p, floor);
+  return { high: v, low: v, synthetic: false, note: 'no recorded intra-bucket range' };
 }
 
 function normalizeHistoryEntry(p) {
@@ -247,6 +280,11 @@ async function updateHistoryOnEvent(env, counters, mood, now) {
 export async function handleOstPriceRequest(request, env, ctx) {
   const { path, method, url } = ctx;
 
+  // Pull the live FX index before ANY price is computed. Without this call
+  // LIVE_INDEX would sit at its 1.0 initialiser forever and the "real" anchor
+  // would quietly have no effect - the price would look anchored and not be.
+  await refreshIndex(env, env.__store);
+
   if (path === '/ost/price' && method === 'GET') {
     const now = Date.now();
     const counters = pruneCounters((await kvGet(env, 'ost:counters', emptyCounters())) || emptyCounters(), now);
@@ -261,8 +299,11 @@ export async function handleOstPriceRequest(request, env, ctx) {
       change24h: Number(change.toFixed(4)),
       btcChange24h: btc ? Number(btc.pct.toFixed(4)) : null,
       btcMood: Number(mood.toFixed(6)),
-      source: 'ost-devnet-synthetic',
-      model: 'P0 * N(t) * V(t) * M(t)',
+      source: 'ost-fx-anchored',
+      anchorIndex: LIVE_INDEX,
+      anchorStale: LIVE_INDEX_STALE,
+      model: 'P0 * A(t) * N(t) * M(t)',
+      modelNote: 'A(t) = live Pyth FX index (see /anchor/about); the old V(t) PRNG term is gone',
       ts: new Date(now).toISOString()
     }, 200, { 'cache-control': 'no-store' });
   }
@@ -276,7 +317,7 @@ export async function handleOstPriceRequest(request, env, ctx) {
     const T = counters.tx24h.length;
     const V = counters.tx24h.reduce((s, e) => s + Math.max(0, Number(e.volume) || 0), 0);
     const n = networkFactor(counters);
-    const v = volMultiplier(now);
+    const v = LIVE_INDEX;
     const price = computePrice(counters, now, mood);
     return json({
       ts: new Date(now).toISOString(),
