@@ -822,11 +822,41 @@ class MeshPavilion {
         }
       } catch (_) {}
     };
-    this._relayPoller = setInterval(tick, 7000);
-    setTimeout(tick, 250);
+    // ADAPTIVE BACKOFF. A flat 7s interval meant ~12,000 requests/day from a
+    // single idle tab, which is what exhausted the Durable Object quota and
+    // took the whole backend down. Now: fast only while a conversation is
+    // actually live, backing off to 60s when nothing arrives, and paused
+    // entirely while the tab is hidden (a hidden tab has no one reading it).
+    const FAST_MS = 7000, SLOW_MS = 60000;
+    this._relayDelay = FAST_MS;
+    const schedule = () => {
+      clearTimeout(this._relayPoller);
+      this._relayPoller = setTimeout(run, this._relayDelay);
+    };
+    const run = async () => {
+      if (document.hidden) { this._relayDelay = SLOW_MS; return schedule(); }
+      const before = this._relayCursor || 0;
+      await tick();
+      // Traffic -> stay responsive. Silence -> ease off, doubling to SLOW_MS.
+      this._relayDelay = (this._relayCursor || 0) > before
+        ? FAST_MS
+        : Math.min(SLOW_MS, this._relayDelay * 2);
+      schedule();
+    };
+    // Coming back to the tab, or opening a chat, should feel instant - so
+    // reset to fast and poll immediately rather than waiting out a long delay.
+    this._relayWake = () => {
+      if (document.hidden) return;
+      this._relayDelay = FAST_MS;
+      clearTimeout(this._relayPoller);
+      this._relayPoller = setTimeout(run, 200);
+    };
+    document.addEventListener('visibilitychange', this._relayWake);
+    setTimeout(run, 250);
   }
   _stopRelayPoller() {
-    if (this._relayPoller) { clearInterval(this._relayPoller); this._relayPoller = null; }
+    if (this._relayPoller) { clearTimeout(this._relayPoller); this._relayPoller = null; }
+    if (this._relayWake) { document.removeEventListener('visibilitychange', this._relayWake); this._relayWake = null; }
   }
   async _handleRelayedDM(fromAddr, wireString) {
     if (!fromAddr || !wireString) return;

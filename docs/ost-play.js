@@ -36,6 +36,7 @@
     catch (_) { return null; }
   }
   function addr() { var w = wallet(); return w ? w.toBase58() : ''; }
+  var lastAddr = '';
 
   function emit() {
     try { window.dispatchEvent(new CustomEvent('ost:play:balance', { detail: { balance: mirror } })); } catch (_) {}
@@ -54,12 +55,52 @@
   }
 
   // ---- balance ------------------------------------------------------------
+  // LAST-KNOWN CACHE, per wallet. Display-only and never spendable - every
+  // debit still goes through the server, which is the sole authority. This
+  // exists because of a real bug: on load the wallet adapter has not attached
+  // yet, so addr() is '' for a moment. The old code treated that as "no
+  // wallet" and wiped the mirror to undefined, which is why OSTG vanished on
+  // every refresh and looked inconsistent. Same fix the on-chain balance tree
+  // already uses.
+  var CACHE_KEY = 'ost.play.balance.lastknown.v1';
+
+  function readCache(a) {
+    try {
+      var all = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+      var v = all && all[a];
+      return Number.isFinite(Number(v)) ? Number(v) : undefined;
+    } catch (_) { return undefined; }
+  }
+  function writeCache(a, v) {
+    if (!a || !Number.isFinite(Number(v))) return;
+    try {
+      var all = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+      all[a] = Number(v);
+      localStorage.setItem(CACHE_KEY, JSON.stringify(all));
+    } catch (_) {}
+  }
+
   async function refresh() {
     var a = addr();
-    if (!a) { mirror = undefined; emit(); return undefined; }
+    if (!a) {
+      // Wallet not attached YET is not the same as no wallet. Keep whatever we
+      // last knew so the number does not blink out during boot; a genuine
+      // disconnect fires ost:wallet-changed and is handled there.
+      if (mirror === undefined) {
+        var seed = readCache(lastAddr);
+        if (seed !== undefined) { mirror = seed; emit(); }
+      }
+      return mirror;
+    }
+    lastAddr = a;
+    if (mirror === undefined) {
+      var cached = readCache(a);
+      if (cached !== undefined) { mirror = cached; emit(); }   // paint instantly
+    }
     try {
       var r = await api('GET', '/play/balance?wallet=' + encodeURIComponent(a));
       mirror = Number(r.balance) || 0;
+      writeCache(a, mirror);
     } catch (_) { /* keep last known; unknown is not zero */ }
     emit();
     return mirror;
@@ -226,9 +267,36 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', refresh);
   else refresh();
 
+  // Generic stake/settle for non-game products (predictions, stocks). `bucket`
+  // says WHERE the money comes from - 'clean' (own OSTG) or a loan id - and the
+  // server enforces the provenance rules. Winnings must be settled back to the
+  // SAME bucket, which is what keeps loan-funded profit locked to its loan.
+  async function stake(amount, opts) {
+    var a = addr();
+    if (!a) return { ok: false, error: 'no_wallet' };
+    var bucket = (opts && opts.bucket) || 'clean';
+    try {
+      var r = await api('POST', '/play/stake', { wallet: a, amount: Number(amount), bucket: bucket });
+      if (r && r.ok && Number.isFinite(Number(r.balance))) { mirror = Number(r.balance); writeCache(a, mirror); emit(); }
+      return r;
+    } catch (e) { return { ok: false, error: (e && e.message) || 'stake_failed' }; }
+  }
+  async function settle(payout, opts) {
+    var a = addr();
+    if (!a) return { ok: false, error: 'no_wallet' };
+    var bucket = (opts && opts.bucket) || 'clean';
+    try {
+      var r = await api('POST', '/play/settle', { wallet: a, payout: Number(payout), bucket: bucket });
+      if (r && r.ok && Number.isFinite(Number(r.balance))) { mirror = Number(r.balance); writeCache(a, mirror); emit(); }
+      return r;
+    } catch (e) { return { ok: false, error: (e && e.message) || 'settle_failed' }; }
+  }
+
   window.OST_PLAY = {
     balance: balance,
     refresh: refresh,
+    stake: stake,
+    settle: settle,
     bet: bet,
     sessionStart: sessionStart,
     sessionStep: sessionStep,

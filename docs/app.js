@@ -3261,6 +3261,62 @@
       return { signature: csig, remainingBalance: creditsAvailable(), record: creditRecord, fundedBy: 'credits' };
     }
 
+    // ---- OSTG IS THE RAIL --------------------------------------------------
+    // Games moved to the server-authoritative OSTG play balance in Phase 2;
+    // predictions were left funding from the localStorage credits pool or a
+    // direct OSTC transfer, which is why tickets kept spending OSTC. Route them
+    // through OST_PLAY first so every product spends the same money.
+    //
+    // OST_PLAY.stake() debits server-side and returns the bucket the money came
+    // from ('clean' = the user's own OSTG, or a loan id). We record that bucket
+    // on the ticket so a settlement can return winnings to the SAME bucket -
+    // that is what keeps loan-funded winnings locked to their loan.
+    async function fundFromOstg() {
+      const src = (window.OST_OSTG_SOURCE && window.OST_OSTG_SOURCE.current)
+        ? window.OST_OSTG_SOURCE.current() : 'clean';
+      const res = await window.OST_PLAY.stake(stakeAmt, { bucket: src, reason: 'prediction-bet' });
+      if (!res || res.ok === false) {
+        const e = new Error(res && res.error === 'insufficient_bucket'
+          ? 'Not enough OSTG in that balance for this ticket.'
+          : ('Could not debit OSTG: ' + ((res && res.error) || 'unknown')));
+        e.code = res && res.error;
+        throw e;
+      }
+      const psig = 'ostg-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      const rec = Object.assign({}, {
+        signature: psig, sig: psig, ts: Date.now(), status: 'open',
+        wallet: 'ostg', fundedBy: 'ostg', ostgBucket: res.bucket || src,
+        source: order.source, marketId: order.marketId, conditionId: order.conditionId || '',
+        title: order.title, side: order.side, topic: order.topic,
+        price: Number(order.price), yesPrice: Number(order.yesPrice), noPrice: Number(order.noPrice),
+        stake: stakeAmt,
+        shares: Number(order.shares) || (Number(order.price) > 0 ? stakeAmt / Number(order.price) : Number(order.potentialReturn || 0)),
+        potentialReturn: Number(order.potentialReturn),
+        closeAtMs: Number(order.closeAtMs || 0),
+        clobTokenIds: Array.isArray(order.clobTokenIds) ? order.clobTokenIds.slice(0, 4) : [],
+        sourceUrl: order.sourceUrl, outcomeKey: order.outcomeKey || '', outcomeLabel: order.outcomeLabel || '',
+        gammaMarketId: order.gammaMarketId || '',
+        quotedAt: Number(order.quotedAt || Date.now()), quoteSource: order.quoteSource || '',
+        openAt: Number(order.openAt || 0), closeAt: Number(order.closeAt || 0),
+        openPrice: Number(order.openPrice), priceToBeat: Number(order.priceToBeat), livePrice: Number(order.livePrice),
+        vaultFlow: 'ostg-stake', createdAt: Date.now()
+      });
+      storePredictionOrderRecord(rec);
+      try { window.dispatchEvent(new CustomEvent('ost:prediction-order-recorded', { detail: rec })); } catch (_) {}
+      try { if (typeof window.notifyOstTxHistory === 'function') window.notifyOstTxHistory(); } catch (_) {}
+      return { signature: psig, record: rec, fundedBy: 'ostg', bucket: rec.ostgBucket };
+    }
+
+    if (window.OST_PLAY && typeof window.OST_PLAY.stake === 'function') {
+      try {
+        return await fundFromOstg();
+      } catch (err) {
+        // A genuine "not enough OSTG" must surface, not silently fall through to
+        // spending the user's OSTC instead - that is the bug being fixed.
+        if (err && err.code === 'insufficient_bucket') throw err;
+      }
+    }
+
     const conn = getSolanaConnection();
     const hasWallet = !!(connectedWalletSession && connectedWalletSession.publicKey && conn);
     if (!hasWallet) return fundFromCredits();

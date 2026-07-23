@@ -138,6 +138,78 @@ export class PlayLedger {
   async fetch(request) { return this.handle(request); }
 
   async balOf(wallet) { return Number((await this.state.storage.get('bal:' + wallet)) || 0); }
+
+  /* ---- generic stake / settle with fund provenance -------------------------
+   * Used by predictions, stocks and any product that is not a faucet game, so
+   * every OSTG product spends the SAME money instead of each inventing a rail.
+   *
+   * `bucket` names where the money comes from: 'clean' (the user's own OSTG) or
+   * a loan id. When it is a loan, LoanLedger is asked FIRST - it owns the
+   * provenance rules and can refuse. Only if it accepts do we move real balance,
+   * so a refusal can never leave the two ledgers disagreeing.
+   */
+  async loanOp(op, body) {
+    if (!this.env.LOAN_LEDGER) return { ok: false, error: 'loan_ledger_unavailable' };
+    const stub = this.env.LOAN_LEDGER.get(this.env.LOAN_LEDGER.idFromName('loans-v1'));
+    const r = await stub.fetch('https://loan-ledger/' + op, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    return await r.json().catch(() => ({ ok: false, error: 'loan_ledger_bad_response' }));
+  }
+
+  async handleStake(request) {
+    const b = await request.json().catch(() => ({}));
+    const wallet = cleanText(b.wallet, 64);
+    const amount = Number(b.amount);
+    const bucket = cleanText(b.bucket, 64) || 'clean';
+    if (!isPubkey(wallet)) return json({ error: 'invalid_wallet' }, 400);
+    if (!(amount > 0)) return json({ error: 'invalid_amount' }, 400);
+
+    if (bucket !== 'clean') {
+      const lr = await this.loanOp('stake', { address: wallet, amount, bucket });
+      if (!lr || !lr.ok) return json({ ok: false, error: lr && lr.error || 'loan_stake_refused' }, 409);
+    }
+
+    return await this.state.blockConcurrencyWhile(async () => {
+      const bal = await this.balOf(wallet);
+      if (bal + 1e-9 < amount) {
+        // Give back what the loan ledger already moved, or the two drift.
+        if (bucket !== 'clean') await this.loanOp('settle', { address: wallet, payout: amount, bucket });
+        return json({ ok: false, error: 'insufficient_bucket', balance: bal }, 409);
+      }
+      const next = Math.round((bal - amount) * 1e6) / 1e6;
+      await this.state.storage.put('bal:' + wallet, next);
+      const total = Number((await this.state.storage.get('total')) || 0) - amount;
+      await this.state.storage.put('total', Math.max(0, Math.round(total * 1e6) / 1e6));
+      return json({ ok: true, bucket, staked: amount, balance: next });
+    });
+  }
+
+  async handleSettle(request) {
+    const b = await request.json().catch(() => ({}));
+    const wallet = cleanText(b.wallet, 64);
+    const payout = Number(b.payout);
+    const bucket = cleanText(b.bucket, 64) || 'clean';
+    if (!isPubkey(wallet)) return json({ error: 'invalid_wallet' }, 400);
+    if (!(payout >= 0)) return json({ error: 'invalid_amount' }, 400);
+
+    // Winnings return to the bucket that funded the stake - that is what keeps
+    // loan-funded profit locked to its loan.
+    if (bucket !== 'clean' && payout > 0) {
+      await this.loanOp('settle', { address: wallet, payout, bucket });
+    }
+
+    return await this.state.blockConcurrencyWhile(async () => {
+      const bal = await this.balOf(wallet);
+      const next = Math.round((bal + payout) * 1e6) / 1e6;
+      await this.state.storage.put('bal:' + wallet, next);
+      const total = Number((await this.state.storage.get('total')) || 0) + payout;
+      await this.state.storage.put('total', Math.round(total * 1e6) / 1e6);
+      return json({ ok: true, bucket, credited: payout, balance: next });
+    });
+  }
   async total() { return Number((await this.state.storage.get('total')) || 0); }
 
   async handle(request) {
@@ -160,6 +232,9 @@ export class PlayLedger {
       if (path === '/play/seed' && method === 'GET') return await this.handleSeed(url);
       if (path === '/play/bet' && method === 'POST') return await this.handleBet(request);
       if (path === '/play/rotate' && method === 'POST') return await this.handleRotate(request);
+
+      if (path === '/play/stake' && method === 'POST') return await this.handleStake(request);
+      if (path === '/play/settle' && method === 'POST') return await this.handleSettle(request);
 
       if (path === '/play/session/start' && method === 'POST') return await this.handleSessionStart(request);
       if (path === '/play/session/step' && method === 'POST') return await this.handleSessionStep(request);
