@@ -75,12 +75,16 @@
     } catch (_) {}
   }
 
+  // undefined = NOT LOADED YET, which is NOT zero. Returning 0 here fabricated
+  // a "not enough" the moment the play balance had not arrived, while a cached
+  // positive value still showed elsewhere - the exact "shows positive but says
+  // not enough" bug. Callers must treat undefined as unknown, not empty.
   function personalBalance() {
     try {
       var b = window.OST_PLAY && window.OST_PLAY.balance();
       if (Number.isFinite(Number(b))) return Number(b);
     } catch (_) {}
-    return 0;
+    return undefined;
   }
 
   function lockedTotal() {
@@ -89,9 +93,13 @@
   }
 
   // Own OSTG = what the play ledger holds MINUS whatever is locked behind
-  // loans. Never show the blended figure as if it were all theirs.
+  // loans. Never show the blended figure as if it were all theirs. Returns
+  // undefined when the balance is unknown so a gate can allow rather than
+  // block on a number we do not have yet.
   function ownSpendable() {
-    return Math.max(0, personalBalance() - lockedTotal());
+    var pb = personalBalance();
+    if (pb === undefined) return undefined;
+    return Math.max(0, pb - lockedTotal());
   }
 
   function loadSummary() {
@@ -346,7 +354,9 @@
     var src = current();
     if (src === 'clean') return ownSpendable();
     var s = state.summary;
-    return (s && s.wallet && s.wallet.locked && Number(s.wallet.locked[src])) || 0;
+    // A loan bucket with no summary yet is unknown, not zero.
+    if (!s || !s.wallet || !s.wallet.locked) return undefined;
+    return Number(s.wallet.locked[src]) || 0;
   }
 
   window.OST_OSTG_SOURCE = {

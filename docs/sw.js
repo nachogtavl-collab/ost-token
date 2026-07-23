@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ost-pwa-cache-v319';
+const CACHE_NAME = 'ost-pwa-cache-v320';
 const RUNTIME_CACHE = 'ost-pwa-runtime-v253';
 const CACHE_PREFIX = 'ost-pwa-';
 
@@ -32,7 +32,7 @@ const PRECACHE_PATHS = [
   './ost-shortcuts.js?v=1',
   './ost-games-lanes.js?v=1',
   './ost-cards-hub.js?v=3',
-  './ost-ostg-source.js?v=3',
+  './ost-ostg-source.js?v=4',
   './ost-ghost-companion.js?v=4',
   './ost-data-guard.js?v=3',
   './ost-balance-tree.js?v=1',
@@ -71,7 +71,7 @@ const PRECACHE_PATHS = [
   './ost-fx.js?v=1',
   './realtime.js?v=2',
   './ost-notifications.js?v=3',
-  './app.js?v=236',
+  './app.js?v=237',
   './ost-onchain-market.js?v=4',
   './ost-onchain-route.js?v=3',
   './ost-lazy.js?v=1',
