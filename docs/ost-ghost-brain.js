@@ -71,12 +71,16 @@
   function credits() {
     try { return Number(window.OST_MONEY && window.OST_MONEY.get ? window.OST_MONEY.get() : 0) || 0; } catch (_) { return 0; }
   }
+  // ONE authority, not the rendered DOM. Ghost quoting a screen-scraped number
+  // meant it could confidently tell a user they had 0 while they were funded.
   function walletOst() {
     try {
-      var el = document.getElementById('wdOstBal');
-      if (el) { var n = parseFloat(String(el.textContent).replace(/[^\d.-]/g, '')); if (Number.isFinite(n)) return n; }
+      if (window.OST_BALANCE) {
+        var v = window.OST_BALANCE.onchainOstc();
+        if (Number.isFinite(v)) return v;
+      }
     } catch (_) {}
-    return 0;
+    return undefined;              // unknown, never 0
   }
   function meta() {
     try { return JSON.parse(localStorage.getItem('ost.games.meta.v1') || '{}') || {}; } catch (_) { return {}; }

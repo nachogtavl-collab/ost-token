@@ -58,24 +58,34 @@
   // On-chain OST shown in the wallet dashboard (#wdOstBal). Deposits, faucet
   // claims and swaps land here, so the wallet tab must include it or a deposit
   // "wouldn't reflect on the balance".
+  // Reads the ONE authority (OST_BALANCE -> /balance/truth). This used to fall
+  // back to parsing #wdOstBal.textContent - the number off the SCREEN - so a
+  // pending or missing element made a funded wallet read as 0. Rendered text is
+  // a picture of a balance, not a balance.
   function walletOst() {
     try {
-      // Prefer the balance tree: it survives hard refreshes via the persisted
-      // last-known on-chain cache (fixes "balance resets after refresh").
+      if (window.OST_BALANCE) {
+        var v = window.OST_BALANCE.onchainOstc();
+        if (Number.isFinite(v)) return Math.max(0, v);
+      }
       if (window.OST_TREE && window.OST_TREE.chain) {
         var c = window.OST_TREE.chain();
         if (c && Number.isFinite(c.amount)) return Math.max(0, c.amount);
       }
-      var el = document.getElementById('wdOstBal');
-      if (!el) return 0;
-      var n = parseFloat(String(el.textContent).replace(/[^\d.\-]/g, ''));
-      return isNaN(n) ? 0 : Math.max(0, n);
-    } catch (_) { return 0; }
+    } catch (_) {}
+    return undefined;              // unknown, NEVER a fabricated 0
   }
 
   // The single "how much OST do I have" number: credits + on-chain, so BOTH
   // game/prediction winnings and on-chain deposits always show here.
-  function totalOst() { return credits() + walletOst(); }
+  // credits are local and always known; the on-chain half may not be. If it is
+  // unknown we return undefined so the UI shows a dash rather than understating
+  // the user's money.
+  function totalOst() {
+    var w = walletOst();
+    if (w === undefined) return undefined;
+    return credits() + w;
+  }
 
   function openParlayCount() {
     try {
@@ -269,7 +279,11 @@
   }
 
   function refreshBalance() {
-    var txt = fmtOst(totalOst()) + ' OST';
+    // undefined = the on-chain half has not been read yet. Show a dash, never
+    // a 0 - understating a user's money is the bug this whole migration exists
+    // to end.
+    var tot = totalOst();
+    var txt = (tot === undefined) ? '— OST' : (fmtOst(tot) + ' OST');
     if (walletSub) walletSub.textContent = txt;
     if (sheetBal) sheetBal.textContent = txt;
   }
