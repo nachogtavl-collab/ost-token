@@ -3120,7 +3120,25 @@ export default {
         deps: {
           loadIntent,
           mapRef: (e, ref, intentId) => ledgerOp(e, { op: 'ref.map', ref, intentId }),
-          creditIntent: (e, args) => ledgerOp(e, { op: 'credit', ...args })
+          creditIntent: (e, args) => ledgerOp(e, { op: 'credit', ...args }),
+          // Cash repayment: dollars paid by card/crypto retire debt directly in
+          // the loan ledger. No OSTG is debited because none was spent - the
+          // user paid with outside money, which is exactly the "repay from a
+          // source unrelated to the loan" rule.
+          repayLoanFromCash: async (e, { wallet, loanId, usd, usdPerOstg, ref }) => {
+            if (!e.LOAN_LEDGER) return { ok: false, error: 'loan_ledger_unavailable' };
+            const amountOstg = Math.round((Number(usd) / Number(usdPerOstg || 0.0118)) * 1e6) / 1e6;
+            const stub = e.LOAN_LEDGER.get(e.LOAN_LEDGER.idFromName('loans-v1'));
+            const r = await stub.fetch('https://loan-ledger/repay', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                address: wallet, loanId, amount: amountOstg,
+                from: 'cash', viaPlay: true, cashRef: ref
+              })
+            });
+            return await r.json().catch(() => ({ ok: false, error: 'loan_ledger_bad_response' }));
+          }
         }
       });
       if (settled) return settled;
@@ -4329,6 +4347,15 @@ export default {
       const method2 = body.method === 'crypto' ? 'crypto' : 'stripe';
       if (!env.PURCHASE_LEDGER) return json({ error: 'purchase_ledger_not_configured' }, 503);
 
+      // A payment can BUY OSTG (default) or REPAY A LOAN. Repayment is the same
+      // money rail, but the settled funds retire debt instead of crediting a
+      // spendable balance - so the purpose is recorded on the intent and the
+      // credit path branches on it. Without this, paying a loan by card would
+      // hand the user MORE OSTG instead of clearing what they owe.
+      const purpose = (body.purpose === 'loan-repay') ? 'loan-repay' : 'buy-ostg';
+      const loanId = purpose === 'loan-repay' ? cleanText(body.loanId, 96) : null;
+      if (purpose === 'loan-repay' && !loanId) return json({ error: 'loan_required' }, 400);
+
       const intent = {
         id: crypto.randomUUID(),
         memo: shortMemo(),
@@ -4338,6 +4365,8 @@ export default {
         ostAmount,
         wallet,
         method: method2,
+        purpose,
+        loanId,
         status: 'pending',          // pending → paid → sent (or cancelled)
         signature: null,
         createdAt: Date.now(),

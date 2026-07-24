@@ -139,7 +139,9 @@ const ADAPTERS = {
           price_amount: intent.usd,
           price_currency: 'usd',
           order_id: intent.id,
-          order_description: `OSTG game tokens (${intent.ostAmount} OSTG)`,
+          order_description: intent.purpose === 'loan-repay'
+            ? `OST loan repayment ($${intent.usd})`
+            : `OSTG game tokens (${intent.ostAmount} OSTG)`,
           ipn_callback_url: `${env.PUBLIC_API_URL || 'https://ost-api.nachogtavl.workers.dev'}/settlement/nowpayments/webhook`,
           success_url: successUrl || undefined,
           cancel_url: cancelUrl || undefined
@@ -234,6 +236,30 @@ export async function handleSettlementRequest(request, env, ctx) {
     });
     if (!credited || !credited.ok) {
       return json({ ok: false, error: (credited && credited.error) || 'credit_failed' }, 409);
+    }
+
+    // LOAN REPAYMENT BY CARD / CRYPTO. Same money rail, opposite effect: the
+    // settled dollars RETIRE DEBT instead of crediting a spendable balance.
+    // Without this branch, paying a loan by card would hand the user MORE OSTG
+    // while their debt stood - the exact opposite of what they asked for.
+    // Runs only on a first credit (never a replay), so a processor retry cannot
+    // repay twice.
+    if (intent.purpose === 'loan-repay' && intent.loanId && !credited.replay) {
+      const applied = await deps.repayLoanFromCash(env, {
+        wallet: intent.wallet,
+        loanId: intent.loanId,
+        usd: Number(intent.usd) || 0,
+        usdPerOstg: Number(intent.usdPerOst) || 0.0118,
+        ref: event.ref
+      });
+      return json({
+        ok: true,
+        purpose: 'loan-repay',
+        loanId: intent.loanId,
+        repaid: !!(applied && applied.ok),
+        detail: applied && (applied.error || applied.status || null),
+        rail: `${adapter.id}:${event.payCurrency}`
+      }, (applied && applied.ok) ? 200 : 409);
     }
 
     return json({
