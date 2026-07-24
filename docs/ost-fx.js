@@ -9,11 +9,11 @@
  *
  * This module unifies them into ONE helper and auto-decorates the UI:
  *
- *   OST_FX.usdPerOst()      -> live OST→USD price
- *   OST_FX.toFiat(ost)      -> number in the preferred currency
- *   OST_FX.format(ost)      -> "€0.44" (localized, with symbol)
- *   OST_FX.hint(ost)        -> "≈ €0.44"  (for appending next to an OST amount)
- *   OST_FX.currency()/symbol()
+ *   OST_FIAT.usdPerOst()      -> live OST→USD price
+ *   OST_FIAT.toFiatUsd(ost)      -> number in the preferred currency
+ *   OST_FIAT.format(ost)      -> "€0.44" (localized, with symbol)
+ *   OST_FIAT.hint(ost)        -> "≈ €0.44"  (for appending next to an OST amount)
+ *   OST_FIAT.currency()/symbol()
  *
  * Auto-decoration: any element carrying `data-ost-fx="<ostAmount>"` gets its
  * fiat hint rendered and kept live as the currency OR the OST price changes.

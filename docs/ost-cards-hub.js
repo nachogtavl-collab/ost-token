@@ -96,6 +96,7 @@
       '.och-msg.ok{color:#7fe3b0;}.och-msg.err{color:#ff9a9a;}' +
       '.och-conv{font-size:12.5px;color:#dff8ff;margin:9px 0 0;}' +
       '.och-cap{font-size:11.5px;color:#8fb0c4;margin:5px 0 0;line-height:1.45;}' +
+      '.och-fiat{font-size:13px;opacity:.8;margin-top:2px;font-variant-numeric:tabular-nums;}' +
       '.och-draw-modal{position:fixed;inset:0;z-index:1000600;display:flex;align-items:center;justify-content:center;' +
         'padding:16px;background:rgba(2,6,12,.72);opacity:0;transition:opacity .2s;}' +
       '.och-draw-modal.is-open{opacity:1;}' +
@@ -160,6 +161,7 @@
             '<div class="och-name">OST Debit Card</div></div>' +
             '<div>' +
               '<div class="och-big" id="ochDebitBal">—</div>' +
+              '<div class="och-fiat" id="ochDebitFiat"></div>' +
               '<p class="och-sub">Spends OSTC you already hold. No debt, nothing to repay. ' +
               'Bridges 1:1 with OSTG once mainnet is live.</p>' +
             '</div>' +
@@ -219,6 +221,8 @@
     try { if (window.OST_ONCHAIN_SYNC && window.OST_ONCHAIN_SYNC.refresh) window.OST_ONCHAIN_SYNC.refresh(); } catch (_) {}
     var bal = document.getElementById('ochDebitBal');
     if (bal) bal.textContent = debitBalance();
+    var fiat = document.getElementById('ochDebitFiat');
+    if (fiat) fiat.textContent = debitFiat();
 
     wireConv(s);
     var btn = document.getElementById('ochBorrow');
@@ -278,19 +282,47 @@
 
   // Debit balance comes from the existing balance tree - we do not invent a
   // third money store (see CLAUDE.md: never invent a third balance store).
-  function debitBalance() {
+  // The card's UNIT is OSTC - that is what it spends. But a card should read in
+  // the money the holder thinks in, so the balance is shown in the user's
+  // selected currency underneath. OST_FX already resolves that preference
+  // (ost_prefs.currency) and formats with the right symbol, so we reuse it
+  // rather than inventing a second currency system.
+  function debitAmount() {
     try {
       if (window.OST_TREE && window.OST_TREE.chain) {
         var c = window.OST_TREE.chain();
-        if (c && Number.isFinite(c.amount)) return c.amount.toFixed(2) + ' OSTC';
+        if (c && Number.isFinite(c.amount)) return c.amount;
       }
       var el = document.getElementById('wdOstBal');
       if (el) {
         var n = parseFloat(String(el.textContent).replace(/[^\d.\-]/g, ''));
-        if (!isNaN(n)) return n.toFixed(2) + ' OSTC';
+        if (!isNaN(n)) return n;
       }
     } catch (_) {}
-    return '—';
+    return undefined;                 // unknown, never a fabricated 0
+  }
+
+  function debitBalance() {
+    var amt = debitAmount();
+    return (amt === undefined) ? '—' : amt.toFixed(2) + ' OSTC';
+  }
+
+  // "≈ €12.34" in the holder's currency, or '' if FX has not loaded. Never a
+  // guessed rate.
+  function debitFiat() {
+    var amt = debitAmount();
+    if (amt === undefined) return '';
+    try {
+      // The module is window.OST_FIAT. Its own header comment says OST_FX,
+      // which is stale - referencing that name silently returned '' and the
+      // fiat line would have rendered nothing while looking "shipped".
+      var fx = window.OST_FIAT;
+      if (fx && typeof fx.format === 'function') {
+        var f = fx.format(amt);
+        return f ? ('≈ ' + f) : '';
+      }
+    } catch (_) {}
+    return '';
   }
 
   function msg(text, kind) {
@@ -511,6 +543,8 @@
     var host = document.getElementById('ostCardsHub');
     if (host) loadSummary().then(function () { render(host); });
     window.addEventListener('ost:wallet-changed', function () { refresh(); });
+    // Changing display currency must repaint the card immediately.
+    window.addEventListener('ost:currencychange', function () { refresh(); });
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
