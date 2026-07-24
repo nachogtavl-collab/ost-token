@@ -288,15 +288,18 @@
   // (ost_prefs.currency) and formats with the right symbol, so we reuse it
   // rather than inventing a second currency system.
   function debitAmount() {
+    // The card spends on-chain OSTC, so it asks the ONE authority for exactly
+    // that. Previously it fell back to parsing #wdOstBal.textContent - reading
+    // the number off the screen - which reported 0 whenever that element had
+    // not rendered.
     try {
+      if (window.OST_BALANCE) {
+        var v = window.OST_BALANCE.onchainOstc();
+        if (Number.isFinite(v)) return v;
+      }
       if (window.OST_TREE && window.OST_TREE.chain) {
         var c = window.OST_TREE.chain();
         if (c && Number.isFinite(c.amount)) return c.amount;
-      }
-      var el = document.getElementById('wdOstBal');
-      if (el) {
-        var n = parseFloat(String(el.textContent).replace(/[^\d.\-]/g, ''));
-        if (!isNaN(n)) return n;
       }
     } catch (_) {}
     return undefined;                 // unknown, never a fabricated 0

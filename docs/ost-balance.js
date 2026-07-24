@@ -58,7 +58,7 @@
       .then(function (d) {
         // Only replace a good answer with another good answer. A failed read
         // must not wipe what we already knew.
-        if (d && d.ok) { state.truth = d; state.at = Date.now(); emit(); }
+        if (d && d.ok) { state.truth = d; state.at = Date.now(); emit(); checkDrift(); }
         state.inflight = null;
         return state.truth;
       })
@@ -100,7 +100,48 @@
     return Number(v).toFixed(2) + (unit ? ' ' + unit : '');
   }
 
+  /* ---- drift detection ----------------------------------------------------
+   * OST_PLAY keeps a FAST local mirror of the play balance so a bet settles
+   * instantly; this module holds the server's authoritative figure. Both read
+   * the same Durable Object, so they should agree.
+   *
+   * They are deliberately NOT merged: forcing games onto the cached authority
+   * would add latency to every spin for no correctness gain. Instead we watch
+   * for disagreement and SAY SO. Silent drift between two views of the same
+   * money is precisely how "my balance changed by itself" starts.
+   */
+  var DRIFT_TOLERANCE = 0.01;
+  function drift() {
+    var authoritative = place('play');
+    if (authoritative === undefined) return undefined;      // nothing to compare
+    var fast;
+    try { fast = window.OST_PLAY && window.OST_PLAY.balance(); } catch (_) { fast = undefined; }
+    if (!Number.isFinite(Number(fast))) return undefined;
+    var delta = Number(fast) - authoritative;
+    return {
+      authoritative: authoritative,
+      fast: Number(fast),
+      delta: Math.round(delta * 1e6) / 1e6,
+      agrees: Math.abs(delta) <= DRIFT_TOLERANCE
+    };
+  }
+
+  function checkDrift() {
+    var d = drift();
+    if (!d || d.agrees) return d;
+    // Loud, not swallowed. A mismatch here means one of the two views is stale
+    // or wrong, and the user is looking at one of them.
+    try {
+      console.warn('[OST_BALANCE] play-balance drift: authoritative=' + d.authoritative +
+                   ' fast=' + d.fast + ' delta=' + d.delta);
+      window.dispatchEvent(new CustomEvent('ost:balance-drift', { detail: d }));
+    } catch (_) {}
+    return d;
+  }
+
   window.OST_BALANCE = {
+    drift: drift,
+    checkDrift: checkDrift,
     refresh: refresh,
     snapshot: snapshot,
     // Individual getters. EVERY one returns undefined when unknown.

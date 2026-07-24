@@ -149,12 +149,30 @@
   }
 
   function ostBalance(trader) {
+    // Reads the ONE authority first. Returns undefined when the balance is
+    // genuinely unknown - the CALLER must decide, and it now refuses rather
+    // than assuming.
+    //
+    // This used to return Infinity "permissive when balance lookup
+    // unavailable": a spend gate that FAILS OPEN. A failed lookup granted
+    // unlimited purchasing power, so an RPC blip let a user buy coins they
+    // could not pay for. A gate that cannot read a balance must decline, not
+    // wave everyone through.
     try {
-      if (window.OST_WALLET && typeof window.OST_WALLET.getOstBalance === 'function') {
-        return window.OST_WALLET.getOstBalance(trader).then(function (n) { return Math.max(0, Number(n) || 0); });
+      if (window.OST_BALANCE) {
+        var v = window.OST_BALANCE.onchainOstc();
+        if (Number.isFinite(v)) return Promise.resolve(Math.max(0, v));
       }
     } catch (_) {}
-    return Promise.resolve(Infinity); // permissive when balance lookup unavailable
+    try {
+      if (window.OST_WALLET && typeof window.OST_WALLET.getOstBalance === 'function') {
+        return window.OST_WALLET.getOstBalance(trader).then(function (n) {
+          var num = Number(n);
+          return Number.isFinite(num) ? Math.max(0, num) : undefined;
+        }).catch(function () { return undefined; });
+      }
+    } catch (_) {}
+    return Promise.resolve(undefined);   // unknown — NOT unlimited
   }
 
   async function buy(mintOrSymbol, ostIn, traderOverride) {
