@@ -60,7 +60,11 @@ export class GhostAwareness {
       contacts: { total: 0, withProfile: 0, recentlyActive: 0, sample: [] },
       signals:  { total: 0, recent: [] },
       games:    { open: 0, recent: [] },
-      profile:  { handle: '', hasAvatar: false }
+      profile:  { handle: '', hasAvatar: false },
+      // Loans: Ghost cannot help with a credit line it cannot see. These come
+      // straight from the loan ledger, so Ghost quotes the SERVER's numbers
+      // and never a figure it inferred.
+      loans:    { open: 0, owedUsd: null, lockedOstg: null, lockedUsd: null, availableUsd: null, list: [] }
     };
   }
 
@@ -96,6 +100,33 @@ export class GhostAwareness {
   refresh() {
     const next = this._emptySnapshot();
     next.online = typeof navigator === 'undefined' ? true : navigator.onLine;
+
+    // Loan state, read from whatever the loan modules already fetched. We do
+    // NOT issue our own request here - refresh() is synchronous and called
+    // often; duplicating the fetch would add load for a number another module
+    // already holds.
+    try {
+      if (window.OST_LOAN_USD) {
+        const lo = window.OST_LOAN_USD.lockedOstg();
+        const lu = window.OST_LOAN_USD.lockedUsd();
+        const ow = window.OST_LOAN_USD.owedUsd();
+        next.loans.lockedOstg = (lo === undefined) ? null : lo;
+        next.loans.lockedUsd  = (lu === undefined) ? null : lu;
+        next.loans.owedUsd    = (ow === undefined) ? null : ow;
+      }
+      if (window.OST_CARDS_HUB && typeof window.OST_CARDS_HUB.summary === 'function') {
+        const sum = window.OST_CARDS_HUB.summary();
+        if (sum && sum.loans) {
+          next.loans.open = sum.loans.length;
+          next.loans.availableUsd = Number(sum.availableUsd);
+          next.loans.list = sum.loans.slice(0, 3).map((l) => ({
+            id: String(l.id || '').slice(0, 10),
+            owedUsd: Number(l.outstandingUsd),
+            aprBps: Number(l.aprBps)
+          }));
+        }
+      }
+    } catch {}
 
     try {
       if (window.OST_VEIL && typeof window.OST_VEIL.status === 'function') {
@@ -236,7 +267,33 @@ export class GhostAwareness {
       const list = s.games.recent.map((g) => `${g.status}/${g.stake || '?'}OST/${shortAddr(g.peer)}`).join(', ');
       parts.push(`- Open fair games: ${list}.`);
     }
-    parts.push('Capabilities you can suggest when relevant: open Mesh Pavilion, summon a peer, broadcast a Ghost whisper to the live peer, accept/retry a fair game, refresh OST Veil.');
+    // ---- Loans -------------------------------------------------------------
+    const L = s.loans || {};
+    if (L.open > 0 || (L.owedUsd != null && L.owedUsd > 0)) {
+      parts.push(`- OSTG CREDIT LINE: ${L.open} open loan(s), owes $${(L.owedUsd || 0).toFixed(2)}` +
+        (L.lockedOstg != null ? `, ${L.lockedOstg.toFixed(2)} OSTG borrowed and in play` : '') +
+        (L.availableUsd != null ? `, $${L.availableUsd.toFixed(2)} still drawable` : '') + '.');
+      if (L.list && L.list.length) {
+        parts.push('- Loans: ' + L.list.map((l) => `${l.id} owes $${(l.owedUsd || 0).toFixed(2)} @ ${(l.aprBps || 0) / 100}% APR`).join('; ') + '.');
+      }
+    } else if (L.availableUsd != null) {
+      parts.push(`- OSTG credit line: no open loans, $${L.availableUsd.toFixed(2)} available to draw.`);
+    }
+    // Loan rules Ghost must state ACCURATELY. Built as an array joined with
+    // newlines - embedding escapes in a long concatenated literal is how this
+    // block got silently corrupted once already.
+    parts.push([
+      "LOAN RULES you must state accurately when asked (never guess):",
+      "  * Debt is denominated in USD at the rate the loan was struck, so what is owed does not move with the token price.",
+      "  * Interest is SIMPLE, never compounding.",
+      "  * Borrowed OSTG can be played FREELY in the fair games - winnings there are NOT locked.",
+      "  * In PREDICTION MARKETS only, winnings made with borrowed funds stay locked until the loan is repaid, and a loan can never be repaid with money won from that same loan.",
+      "  * Borrowed OSTG cannot be withdrawn or converted to OSTC until the loan is settled.",
+      "  * Repayment can come from the user's own OSTG, or by card/crypto in real dollars.",
+      "  * Repaying in full unlocks anything tied to that loan and raises the credit line 1.5x.",
+      "If a user is struggling with debt, say plainly that borrowing more to repay is not possible here (each new draw must be smaller than an unpaid one) and suggest repaying from outside funds. Never encourage borrowing to chase a loss."
+    ].join(String.fromCharCode(10)));
+    parts.push('Capabilities you can suggest when relevant: open Mesh Pavilion, summon a peer, broadcast a Ghost whisper to the live peer, accept/retry a fair game, refresh OST Veil, open the Cards screen to draw or repay a loan.');
     return parts.join('\n');
   }
 

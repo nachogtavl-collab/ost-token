@@ -498,7 +498,14 @@
     loadSummary().then(function () { render(inner); });
   }
 
-  window.OST_CARDS_HUB = { open: open, refresh: refresh, render: render };
+  window.OST_CARDS_HUB = {
+    open: open,
+    refresh: refresh,
+    render: render,
+    // Read-only view of the last loan summary. Ghost AI reads this so it can
+    // answer loan questions from the SERVER's numbers rather than guessing.
+    summary: function () { return state.summary; }
+  };
 
   function boot() {
     var host = document.getElementById('ostCardsHub');
