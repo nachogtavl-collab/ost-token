@@ -311,22 +311,41 @@ export class LoanLedger {
     for (const id of w.openLoans) {
       const l = await this.state.storage.get(LOAN_PREFIX + id);
       if (!l) continue;
+      // USD IS THE UNIT OF ACCOUNT FOR DEBT. We lend real value, so what a
+      // user owes is a dollar amount, not a token count. The OSTG figures stay
+      // for the rails that move tokens, but every debt shown to a human is
+      // USD at the rate the loan was struck at - so the amount owed cannot
+      // drift just because the token price moved.
+      const rate = l.usdPerOstg || 0.0118;
+      const outOstg = this.outstanding(l, now);
       loans.push({
         id: l.id,
         principalUsd: l.principalUsd,
         principalOstg: l.principalOstg,
         repaidOstg: l.repaidOstg,
+        repaidUsd: round2(l.repaidOstg * rate),
         interestOstg: this.interestOwed(l, now),
-        outstandingOstg: this.outstanding(l, now),
+        interestUsd: round2(this.interestOwed(l, now) * rate),
+        outstandingOstg: outOstg,
+        outstandingUsd: round2(outOstg * rate),
+        usdPerOstg: rate,
         aprBps: l.aprBps,
         grantedAt: l.grantedAt
       });
     }
     const committed = loans.reduce((s, l) => s + l.principalUsd, 0);
+    const owedUsd = round2(loans.reduce((s, l) => s + l.outstandingUsd, 0));
+    const pub = this.publicWallet(w);
+    // The borrowed balance sitting in play, expressed in dollars. This is the
+    // number the user should recognise: "I owe $X", not "I owe N tokens".
+    const loanRate = loans.length ? (loans[0].usdPerOstg || 0.0118) : 0.0118;
+    pub.lockedUsd = round2(pub.lockedTotal * loanRate);
+    pub.usdPerOstg = loanRate;
     return {
       ok: true,
-      wallet: this.publicWallet(w),
+      wallet: pub,
       loans,
+      owedUsd,
       availableUsd: round2(Math.max(0, w.lineUsd - committed)),
       policy: {
         baseLineUsd: BASE_LINE_USD,
