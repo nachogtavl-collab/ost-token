@@ -54,41 +54,78 @@ const json = (data, status = 200) =>
 
 const r9 = (n) => Number(Number(n).toFixed(9));
 
+// Last-good on-chain values, per wallet+mint. The public devnet RPCs are
+// rate-limited and fail INTERMITTENTLY, so a throttled instant would otherwise
+// blank a real balance. Serving the last good figure WITH ITS AGE is honest -
+// "998,348,784 as of 40s ago" is true and useful. Serving it as if it were
+// fresh, or replacing it with 0, would not be.
+const lastGood = new Map();
+const LAST_GOOD_TTL_MS = 10 * 60 * 1000;
+
+function rememberGood(key, value, ata) {
+  lastGood.set(key, { value, ata, at: Date.now() });
+}
+function recallGood(key) {
+  const e = lastGood.get(key);
+  if (!e) return null;
+  if (Date.now() - e.at > LAST_GOOD_TTL_MS) { lastGood.delete(key); return null; }
+  return e;
+}
+
 async function readMint(wallet, mintStr, label) {
   try {
     return await Pool.withRpc('balance-truth-' + label, async (conn) => {
       const mintPk = new PublicKey(mintStr);
       const ata = Pool.ataForMint(wallet, mintPk);
-      const res = await conn.getTokenAccountBalance(ata).catch(() => null);
-      if (res && res.value) {
-        return { value: r9(Number(res.value.uiAmount) || 0), source: 'solana-rpc', ata: ata.toBase58(), ok: true };
-      }
 
-      // NO TOKEN ACCOUNT. This is where a false zero is born. It means either
-      //   (a) the wallet genuinely holds none of this mint  -> a REAL zero, or
-      //   (b) this RPC cannot see it (wrong cluster/endpoint) -> UNKNOWN.
-      // Reporting (b) as 0 is exactly how a wallet holding 998M tokens gets
-      // told "not enough". We tell the two apart by asking whether the MINT
-      // itself exists here: if the mint is missing, we are on the wrong chain
-      // and know nothing about this wallet.
-      const mintInfo = await conn.getAccountInfo(mintPk).catch(() => null);
-      if (!mintInfo) {
-        return {
-          value: null, ok: false, error: 'mint_not_visible_on_this_rpc',
-          ata: ata.toBase58(),
-          detail: 'the mint itself is not on this endpoint - cluster mismatch, NOT a zero balance'
-        };
+      // DO NOT swallow errors here. withRpc rotates endpoints ONLY when the
+      // callback throws; a .catch() inside it defeats that rotation entirely,
+      // so a single degraded endpoint (the Helius public URL is rate-limited)
+      // silently produced "no account" -> a false zero, instead of failing over
+      // to a working RPC. That was the actual cause of the on-chain blindness.
+      try {
+        const res = await conn.getTokenAccountBalance(ata);
+        if (res && res.value) {
+          const v = r9(Number(res.value.uiAmount) || 0);
+          rememberGood(wallet + ':' + mintStr, v, ata.toBase58());
+          return { value: v, source: 'solana-rpc', ata: ata.toBase58(), ok: true };
+        }
+        return { value: 0, source: 'solana-rpc', ata: ata.toBase58(), ok: true, note: 'empty token account' };
+      } catch (e) {
+        const msg = String(e && e.message || e);
+        // "could not find account" is the RPC telling us the ATA does not
+        // exist - that IS a genuine zero. Anything else (429, 401, timeout,
+        // network) is an endpoint problem: rethrow so withRpc rotates.
+        if (/could not find account|Invalid param: could not find account/i.test(msg)) {
+          return { value: 0, source: 'solana-rpc', ata: ata.toBase58(), ok: true, note: 'no token account: genuine zero' };
+        }
+        throw e;
       }
-      return { value: 0, source: 'solana-rpc', ata: ata.toBase58(), ok: true, note: 'no token account: genuine zero (mint verified present)' };
     });
   } catch (err) {
-    // Unknown, NOT zero.
-    return { value: null, ok: false, error: 'rpc_failed', detail: String(err?.message || err).slice(0, 120) };
+    // Every endpoint failed. Serve the last good value if we have one, plainly
+    // marked stale with its age. Otherwise unknown - NEVER zero.
+    const cached = recallGood(wallet + ':' + mintStr);
+    if (cached) {
+      return {
+        value: cached.value, ok: true, stale: true,
+        source: 'last-good-cache', ata: cached.ata,
+        ageMs: Date.now() - cached.at,
+        note: 'RPC unavailable right now; this is the last confirmed on-chain value'
+      };
+    }
+    return { value: null, ok: false, error: 'all_rpc_endpoints_failed', detail: String(err?.message || err).slice(0, 160) };
   }
 }
 
 export async function handleBalanceTruth(request, env, { path, url }) {
   if (path !== '/balance/truth') return null;
+
+  // CONFIGURE THE RPC FROM env FIRST. withRpc()/ataForMint() never call
+  // ensureRpcConfigured(env), so a SOLANA_DEVNET_RPC override was silently
+  // ignored on this path - meaning even a paid, non-rate-limited endpoint
+  // would never have been used here. Every on-chain read must go through this.
+  try { Pool.ensureRpcConfigured(env); } catch (_) {}
 
   const wallet = String(url.searchParams.get('wallet') || '').trim();
   if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(wallet)) {
@@ -97,9 +134,13 @@ export async function handleBalanceTruth(request, env, { path, url }) {
 
   // Every source read in ONE pass, so the answer is internally consistent
   // rather than assembled from reads taken seconds apart.
-  const [ostc, ostg, play, loans] = await Promise.all([
-    readMint(wallet, Pool.OSTC_MINT, 'ostc'),
-    readMint(wallet, Pool.OSTG_MINT, 'ostg'),
+  // The two on-chain reads run SEQUENTIALLY. Firing them in parallel doubled
+  // the request rate against the same public devnet endpoints and pushed the
+  // second one into rate-limiting, so OSTG failed while OSTC succeeded. The DO
+  // reads stay parallel - they are our own infrastructure, not a shared RPC.
+  const ostc = await readMint(wallet, Pool.OSTC_MINT, 'ostc');
+  const ostg = await readMint(wallet, Pool.OSTG_MINT, 'ostg');
+  const [play, loans] = await Promise.all([
     (async () => {
       try {
         if (!env.PLAY_LEDGER) return { value: null, ok: false, error: 'play_ledger_unavailable' };
