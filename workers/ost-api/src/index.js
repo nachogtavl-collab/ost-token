@@ -8,6 +8,7 @@ import { handleGamesRngRequest } from './games-rng.js';
 import { handleSettlementRequest } from './settlement.js';
 import { handleAdRequest } from './ad-treasury.js';
 import { handleAnchorRequest } from './ost-anchor.js';
+import { handleBalanceTruth } from './balance-truth.js';
 
 export { MeshHub } from './mesh/hub.js';
 export { RealtimeHub } from './realtime.js';
@@ -3251,6 +3252,12 @@ export default {
       const a = await handleAnchorRequest(request, env, { path, store: env.__store });
       if (a) return a;
       return json({ error: 'unknown anchor endpoint', path }, 404);
+    }
+
+    // ONE answer to "how much does this wallet have". See balance-truth.js.
+    if (path === '/balance/truth') {
+      const bt = await handleBalanceTruth(request, env, { path, url });
+      if (bt) return bt;
     }
 
     // Purchase ledger health — proves the real-money path is on the Durable

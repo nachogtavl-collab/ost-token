@@ -112,6 +112,10 @@ export function getMint(env) {
 // OSTG — the game token (the bridge program's minted side). The pool sponsors gas
 // for BOTH tokens, so the ATA-rent and fee-only paths must accept this mint too.
 export const OSTG_MINT = 'DfgxMbdN49AX2Za9LuvsyixF1jgVh45RbgWYSGonxQos';
+// OSTC (the on-chain token users hold and spend on the card). Exported so
+// balance-truth reads it from ONE place instead of hard-coding the mint in a
+// second file - two copies of an address is how they eventually disagree.
+export const OSTC_MINT = '383pTzoZ8Gp83dzk23ZnvLcfX2Sq32TAGN48CMQu2pAJ';
 
 // Resolve a caller-supplied mint to a PublicKey, ALLOWLISTED to the two tokens
 // we sponsor. Anything else is rejected — we will not pool-pay rent for an
