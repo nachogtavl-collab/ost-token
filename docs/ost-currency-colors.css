@@ -1,0 +1,57 @@
+/* ==========================================================================
+ * OST · Currency colour system — one meaning per colour, everywhere
+ * --------------------------------------------------------------------------
+ * A user must be able to tell WHICH money they are looking at without reading
+ * a label. Four kinds, four colours, used consistently across every surface:
+ *
+ *   OSTC          blue    on-chain token you hold. Yours. Spendable on the card.
+ *   OSTG          purple  your own play balance. Yours. Withdrawable.
+ *   LOAN          gold    the credit line / the debt instrument itself.
+ *   LOANED OSTG   red     borrowed funds in play. NOT yours until repaid.
+ *
+ * Red is deliberately reserved for borrowed money in play. It is the one
+ * balance that is not the user's, and it should never be mistaken for the
+ * others at a glance.
+ * ========================================================================== */
+:root {
+  --ost-ostc:        #4da3ff;   /* blue   */
+  --ost-ostc-dim:    rgba(77,163,255,.16);
+  --ost-ostg:        #a97bff;   /* purple */
+  --ost-ostg-dim:    rgba(169,123,255,.16);
+  --ost-loan:        #ffc04a;   /* gold   */
+  --ost-loan-dim:    rgba(255,192,74,.16);
+  --ost-loaned:      #ff6b6b;   /* red    */
+  --ost-loaned-dim:  rgba(255,107,107,.16);
+}
+
+/* Text/number tokens */
+.ost-c-ostc   { color: var(--ost-ostc)   !important; }
+.ost-c-ostg   { color: var(--ost-ostg)   !important; }
+.ost-c-loan   { color: var(--ost-loan)   !important; }
+.ost-c-loaned { color: var(--ost-loaned) !important; }
+
+/* Chips / pills */
+.ost-pill-ostc   { background: var(--ost-ostc-dim);   border: 1px solid var(--ost-ostc);   color: var(--ost-ostc); }
+.ost-pill-ostg   { background: var(--ost-ostg-dim);   border: 1px solid var(--ost-ostg);   color: var(--ost-ostg); }
+.ost-pill-loan   { background: var(--ost-loan-dim);   border: 1px solid var(--ost-loan);   color: var(--ost-loan); }
+.ost-pill-loaned { background: var(--ost-loaned-dim); border: 1px solid var(--ost-loaned); color: var(--ost-loaned); }
+
+/* The existing source chip: borrowed funds read RED, not gold — gold is the
+   loan instrument, red is borrowed money sitting in a spendable balance. */
+.oos-chip.is-loan { border-color: var(--ost-loaned) !important; background: var(--ost-loaned-dim) !important; color: var(--ost-loaned) !important; }
+.oos-chip.is-loan .oos-dot { background: var(--ost-loaned) !important; }
+.oos-opt.loan .t b { color: var(--ost-loaned); }
+.oos-opt.loan.is-on { border-color: var(--ost-loaned) !important; }
+
+/* Cards hub: the credit-line CARD is the instrument (gold); the locked
+   BALANCE on it is borrowed money (red). */
+.och-card.credit { border-color: var(--ost-loan) !important; }
+.och-card.credit .och-kind, .och-card.credit .och-name { color: var(--ost-loan); }
+.och-locked b { color: var(--ost-loaned) !important; }
+.och-card.debit { border-color: var(--ost-ostc) !important; }
+.och-card.debit .och-kind, .och-card.debit .och-name { color: var(--ost-ostc); }
+
+/* On-chain sync card: wallet OSTG is the user's own (purple), play balance
+   is also theirs (purple); only borrowed shows red. */
+.oxs-slot.chain .v { color: var(--ost-ostg) !important; }
+.oxs-slot.play  .v { color: var(--ost-ostg) !important; }

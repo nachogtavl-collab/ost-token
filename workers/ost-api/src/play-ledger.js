@@ -243,6 +243,60 @@ export class PlayLedger {
     }
   }
 
+  /* ---- loan repayment from the REAL play balance ---------------------------
+   * Repayment used to be checked against the loan ledger's own `clean` counter,
+   * a SECOND accounting that never saw deposits or game winnings. It drifted
+   * from the actual balance and made repaying impossible - the reported
+   * "repay shows 0 / isn't bridged to my OSTG". The money lives HERE, so this
+   * ledger verifies and debits it, then tells the loan ledger to apply it.
+   *
+   * Order matters: debit real OSTG FIRST, then record the repayment. If the
+   * record fails we refund, so a user can never lose OSTG without their debt
+   * shrinking.
+   */
+  async handleLoanRepay(request) {
+    const b = await request.json().catch(() => ({}));
+    const wallet = cleanText(b.wallet, 64);
+    const loanId = cleanText(b.loanId, 96);
+    const amount = Number(b.amount);
+    if (!isPubkey(wallet)) return json({ error: 'invalid_wallet' }, 400);
+    if (!loanId) return json({ error: 'loan_required' }, 400);
+    if (!(amount > 0)) return json({ error: 'invalid_amount' }, 400);
+
+    // Deliberately NOT wrapped in blockConcurrencyWhile. A throw inside that
+    // lock ABORTS the Durable Object and returns an empty 500 with no
+    // diagnosable body - this file's own header warns about exactly that, and
+    // it is what broke this endpoint on first deploy. Storage ops are awaited
+    // in sequence instead, and every failure returns a real message.
+    let debited;
+    try {
+      const bal = Number((await this.state.storage.get('bal:' + wallet)) || 0);
+      if (bal + 1e-9 < amount) {
+        return json({ ok: false, error: 'insufficient_play_balance', have: Number(bal.toFixed(6)), needed: amount }, 409);
+      }
+      const next = Math.round((bal - amount) * 1e6) / 1e6;
+      await this.state.storage.put('bal:' + wallet, next);
+      const total = Number((await this.state.storage.get('total')) || 0) - amount;
+      await this.state.storage.put('total', Math.max(0, Math.round(total * 1e6) / 1e6));
+      debited = { ok: true, balance: next };
+    } catch (err) {
+      return json({ ok: false, error: 'debit_failed', message: String((err && err.message) || err).slice(0, 180) }, 500);
+    }
+
+    const lr = await this.loanOp('repay', { address: wallet, loanId, amount, from: 'clean', viaPlay: true });
+    if (!lr || !lr.ok) {
+      // Give the OSTG back - never take money without reducing the debt.
+      try {
+        const bal = Number((await this.state.storage.get('bal:' + wallet)) || 0) + amount;
+        await this.state.storage.put('bal:' + wallet, Math.round(bal * 1e6) / 1e6);
+        const total = Number((await this.state.storage.get('total')) || 0) + amount;
+        await this.state.storage.put('total', Math.round(total * 1e6) / 1e6);
+      } catch (_) { /* surfaced below as refunded:false so it is never silent */ }
+      return json({ ok: false, error: (lr && lr.error) || 'repay_failed', refunded: true }, 409);
+    }
+    return json(Object.assign({ ok: true, balance: debited.balance }, lr));
+  }
+
   async handleStake(request) {
     const b = await request.json().catch(() => ({}));
     const wallet = cleanText(b.wallet, 64);
@@ -327,6 +381,7 @@ export class PlayLedger {
       if (path === '/play/rotate' && method === 'POST') return await this.handleRotate(request);
 
       if (path === '/play/loan-draw' && method === 'POST') return await this.handleLoanDraw(request);
+      if (path === '/play/loan-repay' && method === 'POST') return await this.handleLoanRepay(request);
       if (path === '/play/stake' && method === 'POST') return await this.handleStake(request);
       if (path === '/play/settle' && method === 'POST') return await this.handleSettle(request);
 
@@ -610,12 +665,12 @@ export class PlayLedger {
     // wait on a second Durable Object. The batch net carries the same meaning:
     // money that left the loan bucket, or winnings returning to it, which is
     // what keeps loan-funded profit locked to its loan.
-    if (bucket !== 'clean' && out.results.length && out.netChange !== 0) {
-      const n = out.netChange;
-      await this.loanOp(n < 0 ? 'stake' : 'settle',
-        n < 0 ? { address: wallet, amount: -n, bucket }
-              : { address: wallet, payout: n, bucket });
-    }
+    // NO TAINT IN FAIR GAMES. Freezing game winnings destroyed the mechanism:
+    // a player with borrowed OSTG could not actually play with it, because
+    // every win was locked away. Tested and rejected. Loaned OSTG spends and
+    // wins FREELY in games - the loan stays a debt to repay, not a cage.
+    // The lock exists only where it protects the house from a risk-free
+    // extraction: PREDICTION MARKETS (see the settle path).
 
     return json(Object.assign({ ok: out.results.length > 0, wallet, game, bucket, played: out.results.length }, out));
   }

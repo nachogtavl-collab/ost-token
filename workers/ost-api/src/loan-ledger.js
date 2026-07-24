@@ -234,15 +234,25 @@ export class LoanLedger {
       if (!loan) return json({ ok: false, error: 'loan_not_found' }, 404);
       if (loan.status !== 'open') return json({ ok: false, error: 'loan_not_open', status: loan.status }, 409);
 
-      const have = src === 'clean' ? w.clean : (w.tainted[src] || 0);
-      if (have < amt) return json({ ok: false, error: 'insufficient_bucket', bucket: src, have: round6(have) }, 409);
+      // viaPlay: the PLAY LEDGER already verified and debited real OSTG, so it
+      // is the authority on funds here. This ledger's own `clean` counter was a
+      // SECOND, separate accounting that never saw deposits or game winnings -
+      // it drifted from the real balance (97.99 vs an actual 2735.37) and made
+      // repayment impossible. Money lives in the play ledger; this ledger
+      // tracks DEBT and provenance.
+      if (!body.viaPlay) {
+        const have = src === 'clean' ? w.clean : (w.tainted[src] || 0);
+        if (have < amt) return json({ ok: false, error: 'insufficient_bucket', bucket: src, have: round6(have) }, 409);
+      }
 
       const now = Date.now();
       const owed = this.outstanding(loan, now);
       const applied = Math.min(amt, owed);
 
-      if (src === 'clean') w.clean = round6(w.clean - applied);
-      else w.tainted[src] = round6(w.tainted[src] - applied);
+      if (!body.viaPlay) {
+        if (src === 'clean') w.clean = round6(w.clean - applied);
+        else w.tainted[src] = round6(w.tainted[src] - applied);
+      }
 
       loan.repaidOstg = round6(loan.repaidOstg + applied);
       const remaining = this.outstanding(loan, now);

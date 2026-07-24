@@ -375,7 +375,11 @@
     if (!w) return msg('Connect a wallet first.', 'err');
     var loan = (state.summary && state.summary.loans || []).filter(function (l) { return l.id === loanId; })[0];
     var owed = loan ? Number(loan.outstandingOstg) : 0;
-    var own = (window.OST_OSTG_SOURCE && window.OST_OSTG_SOURCE.ownSpendable) ? window.OST_OSTG_SOURCE.ownSpendable() : 0;
+    // Repayment spends the REAL play balance. Using the loan ledger's `clean`
+    // counter (or ownSpendable, which subtracts locked) showed 0 and made
+    // repayment look impossible - that was the reported bug.
+    var own;
+    try { own = window.OST_PLAY && window.OST_PLAY.balance(); } catch (_) { own = undefined; }
     openRepayModal(w, loanId, owed, own);
   }
 
@@ -383,7 +387,10 @@
   // so partial repayment is one gesture. Repayment always comes from personal
   // OSTG; the server refuses a loan's own funds and the UI never offers them.
   function openRepayModal(w, loanId, owed, own) {
-    var maxPay = Math.max(0, Math.min(owed, own));
+    // undefined = balance not loaded. Rendering it as 0.00 is the masking bug:
+    // the user sees "0" and concludes repayment is broken. Say it plainly.
+    var known = Number.isFinite(Number(own));
+    var maxPay = known ? Math.max(0, Math.min(owed, Number(own))) : 0;
     var modal = document.createElement('div');
     modal.className = 'och-draw-modal';
     modal.innerHTML =
@@ -391,7 +398,7 @@
         '<div class="och-draw-arrow">Repay loan ' + esc(loanId.slice(0, 8)) + '</div>' +
         '<div class="och-draw-usd" id="ochRepAmt" style="color:#7fd8ff;">' + ostg(maxPay) + '</div>' +
         '<input type="range" id="ochRepRange" min="0" max="' + maxPay.toFixed(2) + '" step="0.01" value="' + maxPay.toFixed(2) + '" style="width:100%;margin:14px 0;">' +
-        '<p class="och-draw-terms" style="color:#bfe4f5;">Owed: <b>' + ostg(owed) + '</b> · your OSTG: <b>' + ostg(own) + '</b>. ' +
+        '<p class="och-draw-terms" style="color:#bfe4f5;">Owed: <b>' + ostg(owed) + '</b> · your OSTG: <b>' + (known ? ostg(own) : 'loading…') + '</b>. ' +
           'Repaying the full amount unlocks any winnings tied to this loan.</p>' +
         '<div class="och-draw-actions">' +
           '<button type="button" class="och-btn" id="ochRepCancel">Cancel</button>' +
@@ -415,7 +422,7 @@
       if (!(amt > 0)) { rmsg.textContent = 'Move the slider to choose an amount.'; rmsg.className = 'och-msg err'; return; }
       go.disabled = true; rmsg.textContent = 'Repaying…'; rmsg.className = 'och-msg';
       state.busy = true;
-      api('/loans/repay', { address: w, loanId: loanId, amount: amt, from: 'clean' }).then(function (d) {
+      api('/play/loan-repay', { wallet: w, loanId: loanId, amount: amt }).then(function (d) {
         state.busy = false;
         if (!d || !d.ok) { go.disabled = false; rmsg.textContent = explain(d); rmsg.className = 'och-msg err'; return; }
         var extra = d.releasedToClean > 0 ? ' Loan settled — ' + ostg(d.releasedToClean) + ' unlocked and is now yours.' : '';
