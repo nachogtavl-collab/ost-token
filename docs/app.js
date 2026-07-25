@@ -16570,7 +16570,19 @@
         return (b.sortValue || 0) - (a.sortValue || 0);
       });
 
-      return interleaveMarkets(filtered, query ? 400 : 320); // 2x board depth
+      var __ranked = interleaveMarkets(filtered, query ? 400 : 320); // 2x board depth
+      // Publish the live market list for the redesigned grid (ost-predict-grid.js).
+      // Throttled + additive: does not change board behaviour, just exposes the
+      // already-computed real markets so the new UI reads the SAME data.
+      try {
+        window.__ostPredictionMarkets = __ranked;
+        var __n = Date.now();
+        if (!window.__ostMktPubAt || __n - window.__ostMktPubAt > 800) {
+          window.__ostMktPubAt = __n;
+          window.dispatchEvent(new CustomEvent('ost:prediction-markets', { detail: { count: __ranked.length } }));
+        }
+      } catch (_) {}
+      return __ranked;
     }
 
     function updateStatus(kind, text) {
