@@ -168,12 +168,32 @@ function realtimeHub(env) {
   }
 }
 
+// Event types the PUBLIC (unauthenticated) publish endpoint may emit. These are
+// social/cosmetic and drive no money action on the receiver. Everything else -
+// wallet.*, transaction.*, topup.*, payout.*, faucet.* - is PRIVILEGED: the
+// receiver dispatches those to ost:wallet-changed / transaction alerts, so a
+// spoofed one fakes a payment. Privileged events may ONLY originate server-side
+// (publishRealtimeEvent calls the hub directly and never passes through here).
+const PUBLIC_PUBLISH_TYPES = new Set(['game.result', 'presence', 'presence.update', 'mesh.presence']);
+
 export async function handleRealtimeRequest(request, env, { path, method }) {
   if (method === 'OPTIONS') return new Response(null, { status: 204, headers: cors() });
   const hub = realtimeHub(env);
   if (!hub) return json({ ok: false, error: 'realtime_hub_not_configured' }, 503);
-  if (path === '/realtime/v1/publish' && method === 'POST' && !publishAuthorized(request, env)) {
-    return json({ ok: false, error: 'unauthorized' }, 401);
+
+  if (path === '/realtime/v1/publish' && method === 'POST') {
+    const authed = publishAuthorized(request, env);
+    if (!authed) {
+      // Read the body to classify the event; forward the SAME bytes onward.
+      const raw = await request.text();
+      let type = '';
+      try { const b = JSON.parse(raw); type = String((b.event && b.event.type) || b.type || ''); } catch (_) {}
+      if (!PUBLIC_PUBLISH_TYPES.has(type)) {
+        return json({ ok: false, error: 'unauthorized',
+          note: 'This event type is server-authoritative; the public endpoint only accepts social events.' }, 401);
+      }
+      return hub.fetch(new Request(request.url, { method: 'POST', headers: request.headers, body: raw }));
+    }
   }
   return hub.fetch(request);
 }
