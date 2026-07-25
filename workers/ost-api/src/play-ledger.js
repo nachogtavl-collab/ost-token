@@ -359,6 +359,24 @@ export class PlayLedger {
   }
   async total() { return Number((await this.state.storage.get('total')) || 0); }
 
+  async handleRateLimit(request) {
+    const b = await request.json().catch(() => ({}));
+    const key = cleanText(b.key, 80) || 'anon';
+    const limit = Math.max(1, Math.min(1000, Math.floor(Number(b.limit) || 30)));
+    const windowSec = Math.max(5, Math.min(3600, Math.floor(Number(b.windowSec) || 60)));
+    const bucket = Math.floor(Date.now() / (windowSec * 1000));
+    const k = 'rl:' + key + ':' + bucket;
+    // Atomic increment under the DO lock — no burst can slip past a stale read
+    // the way KV's eventual consistency allowed.
+    const allowed = await this.state.blockConcurrencyWhile(async () => {
+      const n = Number(await this.state.storage.get(k)) || 0;
+      if (n >= limit) return false;
+      await this.state.storage.put(k, n + 1, { expiration: Math.floor(Date.now() / 1000) + windowSec + 5 });
+      return true;
+    });
+    return json({ ok: true, allowed, limit, windowSec });
+  }
+
   async handle(request) {
     const url = new URL(request.url);
     const path = url.pathname.replace(/\/$/, '') || '/';
@@ -366,6 +384,11 @@ export class PlayLedger {
     if (method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS_HEADERS });
 
     try {
+      // Strongly-consistent rate limiter (the native CF ratelimit binding
+      // silently no-ops on this wrangler version). Atomic per-key/minute
+      // counter; used to guard the billable /ghost/chat AI call.
+      if (path === '/play/rl' && method === 'POST') return await this.handleRateLimit(request);
+
       if (path === '/play/balance' && method === 'GET') {
         const wallet = cleanText(url.searchParams.get('wallet'), 64);
         if (!isPubkey(wallet)) return json({ error: 'invalid_wallet' }, 400);

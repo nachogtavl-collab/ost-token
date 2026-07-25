@@ -3046,6 +3046,28 @@ export default {
       if (!env.AI || typeof env.AI.run !== 'function') {
         return json({ error: 'ai_unavailable', note: 'Workers AI binding not deployed yet' }, 503);
       }
+      // RATE LIMIT (red-team MED). /ghost/chat was unauthenticated and ran
+      // billable Workers AI unbounded — free unlimited inference for anyone,
+      // and a way to exhaust the daily AI quota so real users lose Ghost.
+      // Native rate limiter (strongly consistent per-colo): KV was tried first
+      // but is eventually consistent, so a burst read 0 every time and the cap
+      // never fired. Fail-open only if the binding is absent — a cost limiter
+      // must not take Ghost offline on its own.
+      try {
+        if (env.PLAY_LEDGER) {
+          const ip = request.headers.get('CF-Connecting-IP') || 'anon';
+          const pl = env.PLAY_LEDGER.get(env.PLAY_LEDGER.idFromName('global'));
+          const rlRes = await pl.fetch('https://play-ledger/play/rl', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key: 'ghost:' + ip, limit: 12, windowSec: 60 })
+          });
+          const rl = await rlRes.json().catch(() => ({ allowed: true }));
+          if (rl && rl.allowed === false) {
+            return json({ error: 'rate_limited', note: 'Too many Ghost requests. Wait a minute and try again.' }, 429);
+          }
+        }
+      } catch (_) { /* limiter unavailable: allow rather than take Ghost offline */ }
       let body = {};
       try { body = await request.json(); } catch (_) {}
       const userMessages = Array.isArray(body.messages) ? body.messages.slice(-6) : [];
