@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ost-pwa-cache-v335';
+const CACHE_NAME = 'ost-pwa-cache-v336';
 const RUNTIME_CACHE = 'ost-pwa-runtime-v253';
 const CACHE_PREFIX = 'ost-pwa-';
 
@@ -129,6 +129,7 @@ const PRECACHE_PATHS = [
   './prediction-pro.js?v=206',
   './ost-predict-hud.js?v=1',
   './ost-predict-grid.js?v=1',
+  './ost-predict-activity.js?v=1',
   './prediction-scalar.js?v=4',
   './prediction-modal.js?v=210',
   './prediction-trade-popout.js?v=7',
