@@ -18,6 +18,15 @@
 (function () {
   'use strict';
 
+  // Escape ALL peer-supplied strings before they touch innerHTML. This file
+  // had zero escaping; a peer's invite `label` went straight into the DOM
+  // (red-team HIGH: XSS that can read the wallet keypair from localStorage).
+  function esc(t) {
+    return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
   var APP_KEY = 'ost-mesh-games';
   var OVERLAY_ID = 'ost-mesh-games-overlay';
   var LAUNCHER_ID = 'ost-mesh-games-launcher';
@@ -230,7 +239,7 @@
     if (!stage) return;
     var box = document.createElement('div');
     box.className = 'omg-invite';
-    box.innerHTML = '<h3>Hold tight</h3><p>' + String(text || '') + '</p>'
+    box.innerHTML = '<h3>Hold tight</h3><p>' + esc(text || '') + '</p>'
       + '<div class="omg-row"><button type="button" class="primary" id="omgCancelInvite">Cancel</button></div>';
     stage.appendChild(box);
     box.querySelector('#omgCancelInvite').onclick = function () {
@@ -247,7 +256,7 @@
     if (!stage) return;
     var box = document.createElement('div');
     box.className = 'omg-invite';
-    box.innerHTML = '<h3>' + (payload.label || 'Casual Game') + ' invite</h3>'
+    box.innerHTML = '<h3>' + esc(payload.label || 'Casual Game') + ' invite</h3>'
       + '<p>Your peer wants to play. No stakes, just for fun.</p>'
       + '<div class="omg-row">'
       +   '<button type="button" class="primary" id="omgAccept">Accept</button>'
@@ -306,7 +315,7 @@
       session.handlers = inst || null;
     } catch (err) {
       console.error('[OST_MESH_GAMES] factory error', err);
-      stage.innerHTML = '<div class="omg-invite"><h3>Failed to start</h3><p>' + (err && err.message ? err.message : 'Unknown error') + '</p></div>';
+      stage.innerHTML = '<div class="omg-invite"><h3>Failed to start</h3><p>' + esc(err && err.message ? err.message : 'Unknown error') + '</p></div>';
     }
   }
 

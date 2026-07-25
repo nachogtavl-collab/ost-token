@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ost-pwa-cache-v328';
+const CACHE_NAME = 'ost-pwa-cache-v329';
 const RUNTIME_CACHE = 'ost-pwa-runtime-v253';
 const CACHE_PREFIX = 'ost-pwa-';
 
@@ -75,7 +75,7 @@ const PRECACHE_PATHS = [
   './ost-fx.js?v=2',
   './realtime.js?v=2',
   './ost-notifications.js?v=3',
-  './app.js?v=237',
+  './app.js?v=238',
   './ost-onchain-market.js?v=4',
   './ost-onchain-route.js?v=3',
   './ost-lazy.js?v=1',
@@ -102,7 +102,7 @@ const PRECACHE_PATHS = [
   './ghost/signal.js?v=1',
   './ghost/awareness.js?v=1',
   './ghost/ghost.css?v=3',
-  './mesh/mesh.js?v=35',
+  './mesh/mesh.js?v=36',
   './mesh/veil.js?v=1',
   './mesh/mesh-play.js?v=14',
   './mesh/mesh-fair-fx.js?v=1',
@@ -110,7 +110,7 @@ const PRECACHE_PATHS = [
   './vendor/qrcode-generator.js',
   './vendor/jsqr.min.js',
   './mesh/mesh-link.js?v=2',
-  './mesh/mesh-games.js?v=1',
+  './mesh/mesh-games.js?v=2',
   './mesh/games/tictactoe.js?v=1',
   './mesh/games/chess.js?v=1',
   './mesh/games/pool8.js?v=1',

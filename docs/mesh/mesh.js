@@ -680,7 +680,10 @@ class MeshPavilion {
           const card = this._makeLocationCard(e.payload, e.role);
           this._bubble(e.role, card);
         } else if (e.kind === 'system') {
-          this._bubble('system', String(e.payload && e.payload.html || ''));
+          // Defense-in-depth: restored history is never trusted as raw HTML. No
+          // code path persists a 'system' entry, so this only ever fires for a
+          // tampered localStorage record — render it escaped, never as markup.
+          this._bubble('system', escapeHtml(String((e.payload && (e.payload.text || e.payload.html)) || '')));
         }
       } catch (_) {}
     }

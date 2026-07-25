@@ -118,6 +118,30 @@ export class MeshHub {
     if (!bundle.kex || !bundle.sig) return fail('missing keys');
 
     const now = Date.now();
+
+    // TRUST ON FIRST USE (red-team HIGH: directory poisoning). The ost-mesh
+    // address is a random label, NOT derived from the keys, so a looker-up
+    // cannot cryptographically verify a bundle belongs to an address. Without
+    // this, announce was last-write-wins: anyone could overwrite a victim's
+    // directory entry with their OWN keys and MITM the "E2E" channel and the
+    // Send-OST-to-contact flow.
+    //
+    // Fix: once an address holds a bundle, a DIFFERENT bundle is refused. The
+    // real owner re-announcing with the SAME keys just refreshes the TTL; an
+    // attacker with different keys is rejected. (Genuine key rotation will need
+    // a signed-by-old-key path — noted for later; blocked here for now, which
+    // is the safe direction.)
+    let existing = this.ids.get(address);
+    if (!existing) {
+      existing = await this.state.storage.get(ID_PREFIX + address).catch(() => null);
+    }
+    if (existing && !isExpired(existing, now) && existing.bundle) {
+      const same = existing.bundle.kex === bundle.kex && existing.bundle.sig === bundle.sig;
+      if (!same) {
+        return fail('identity_locked: this address already has a different key bundle; it cannot be overwritten', 409);
+      }
+    }
+
     const record = {
       address,
       bundle,
