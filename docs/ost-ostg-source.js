@@ -185,10 +185,15 @@
     var amount = isLoan
       ? ((state.summary && state.summary.wallet && state.summary.wallet.locked[src]) || 0)
       : ownSpendable();
+    // Colour + compact number via the shared formatter: red for borrowed
+    // OSTG, purple for personal. Compact so the pill never overflows on a
+    // phone; fiat off (the pill is tight — the sheet shows the full value).
+    var amtHtml = (window.OST_CCY && window.OST_CCY.html)
+      ? window.OST_CCY.html(amount, isLoan ? 'loaned' : 'ostg', { fiat: false })
+      : '<b>' + ostg(amount) + '</b>';
     document.querySelectorAll('[data-oos-chip]').forEach(function (c) {
       c.className = 'oos-chip' + (isLoan ? ' is-loan' : '');
-      c.innerHTML = '<span class="oos-dot"></span><span>' + esc(label(src)) + '</span>' +
-                    '<b>' + ostg(amount) + '</b>';
+      c.innerHTML = '<span class="oos-dot"></span><span>' + esc(label(src)) + '</span>' + amtHtml;
       c.title = isLoan
         ? 'Spending BORROWED OSTG. Winnings stay locked until this loan is repaid.'
         : 'Spending your own OSTG. Withdrawable.';
