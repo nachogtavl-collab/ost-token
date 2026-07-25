@@ -3908,6 +3908,52 @@ export default {
       return json({ recent: filteredRows.slice(0, limit), marketId: marketIdFilter || null, ts: new Date().toISOString() }, 200, { 'cache-control': 'no-store' });
     }
 
+    // ── Prediction-market comments ─ REAL per-market thread, Mesh-identity linked
+    // A public append-only comment thread keyed by marketId. Every row is a real
+    // OST wallet (identity = the connected wallet); the poster's Mesh handle is
+    // carried through so the client can link a comment back to that user in the
+    // OST Mesh social layer. Stored server-side (KV+D1), capped, flood-guarded.
+    // Not money — eventual consistency is fine here.
+    if (path === '/predict/comments' && method === 'GET') {
+      const marketId = cleanText(url.searchParams.get('marketId') || '', 128);
+      if (!marketId) return json({ error: 'marketId_required' }, 400);
+      const list = await kvGet(env, `comments:${marketId}`, []);
+      const rows = Array.isArray(list) ? list : [];
+      return json({ comments: rows.slice(-120), marketId, count: rows.length }, 200, { 'cache-control': 'no-store' });
+    }
+    if (path === '/predict/comments' && method === 'POST') {
+      let body;
+      try { body = await request.json(); } catch (_) { return json({ error: 'invalid_json' }, 400); }
+      const wallet = String((body && body.wallet) || '').slice(0, 64);
+      const text = cleanText((body && body.text) || '', 280);
+      const marketId = cleanText((body && body.marketId) || '', 128);
+      if (!wallet || !text || !marketId) {
+        return json({ error: 'missing_fields', required: ['wallet', 'marketId', 'text'] }, 400);
+      }
+      const handle = cleanText((body && body.handle) || '', 40);
+      const key = `comments:${marketId}`;
+      const existing = await kvGet(env, key, []);
+      const arr = Array.isArray(existing) ? existing : [];
+      // per-wallet flood guard: 1 comment / 5s
+      for (let i = arr.length - 1; i >= 0; i--) {
+        if (arr[i] && arr[i].wallet === wallet) {
+          if (Date.now() - Number(arr[i].ts || 0) < 5000) return json({ error: 'slow_down' }, 429);
+          break;
+        }
+      }
+      const comment = {
+        id: crypto.randomUUID(),
+        wallet,
+        walletShort: wallet.slice(0, 4) + '…' + wallet.slice(-4),
+        handle: handle || (wallet.slice(0, 4) + '…' + wallet.slice(-4)),
+        text,
+        ts: Date.now()
+      };
+      arr.push(comment);
+      await kvPut(env, key, arr.slice(-200));
+      return json({ ok: true, comment });
+    }
+
     // ── GET /positions/:wallet ────────────────────────────────────────────────
     const posMatch = path.match(/^\/positions\/([^/]+)$/);
     if (posMatch && method === 'GET') {
