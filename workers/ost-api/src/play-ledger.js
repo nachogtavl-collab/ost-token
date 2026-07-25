@@ -382,8 +382,21 @@ export class PlayLedger {
 
       if (path === '/play/loan-draw' && method === 'POST') return await this.handleLoanDraw(request);
       if (path === '/play/loan-repay' && method === 'POST') return await this.handleLoanRepay(request);
-      if (path === '/play/stake' && method === 'POST') return await this.handleStake(request);
-      if (path === '/play/settle' && method === 'POST') return await this.handleSettle(request);
+      // SECURITY (red-team CRITICAL): /play/settle was an unauthenticated money
+      // printer — an anonymous POST credited arbitrary OSTG, extractable via
+      // cashout. These raw balance mutators have NO legitimate public caller;
+      // only server-authoritative code may ever credit a balance. Gate on an
+      // internal key and FAIL CLOSED (unset key => rejected).
+      if ((path === '/play/stake' || path === '/play/settle') && method === 'POST') {
+        const provided = request.headers.get('x-ost-internal') || '';
+        const secret = this.env && this.env.INTERNAL_MUTATION_KEY;
+        if (!secret || provided !== secret) {
+          return json({ ok: false, error: 'mutation_requires_server_auth',
+            note: 'Balance credits are server-authoritative. This endpoint is not client-callable.' }, 403);
+        }
+        if (path === '/play/stake') return await this.handleStake(request);
+        return await this.handleSettle(request);
+      }
 
       if (path === '/play/session/start' && method === 'POST') return await this.handleSessionStart(request);
       if (path === '/play/session/step' && method === 'POST') return await this.handleSessionStep(request);

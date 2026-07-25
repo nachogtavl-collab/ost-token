@@ -3307,12 +3307,19 @@
       return { signature: psig, record: rec, fundedBy: 'ostg', bucket: rec.ostgBucket };
     }
 
-    if (window.OST_PLAY && typeof window.OST_PLAY.stake === 'function') {
+    // OSTG-NATIVE PREDICTION STAKING IS DISABLED (red-team CRITICAL). It relied
+    // on the client calling /play/settle to credit its own winnings — an
+    // unauthenticated money printer. Balance credits must be server-
+    // authoritative; a prediction cannot be settled by the client asserting it
+    // won. Until a server-side resolver exists (settles against the real market
+    // outcome), predictions use the safe pre-existing credits/wallet rail below.
+    // The server also rejects /play/stake and /play/settle without an internal
+    // key, so this is defence in depth, not the only guard.
+    var OSTG_PREDICTIONS_ENABLED = false;
+    if (OSTG_PREDICTIONS_ENABLED && window.OST_PLAY && typeof window.OST_PLAY.stake === 'function') {
       try {
         return await fundFromOstg();
       } catch (err) {
-        // A genuine "not enough OSTG" must surface, not silently fall through to
-        // spending the user's OSTC instead - that is the bug being fixed.
         if (err && err.code === 'insufficient_bucket') throw err;
       }
     }
