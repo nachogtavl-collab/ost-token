@@ -238,7 +238,13 @@
   }
   function fireBalanceChange() {
     document.querySelectorAll('[data-ostg-balance]').forEach(function (el) {
-      el.textContent = fmt(getBalance());
+      var bal = getBalance();
+      if (window.OST_CCY && typeof window.OST_CCY.html === 'function') {
+        // Purple OSTG, phone-safe compact number, value in the user's currency.
+        el.innerHTML = window.OST_CCY.html(bal, 'ostg', { fiat: true });
+      } else {
+        el.textContent = fmt(bal) + ' OSTG';
+      }
     });
     var hub = document.getElementById('fhCredits');
     if (hub) hub.textContent = fmt(getBalance());
@@ -521,7 +527,7 @@
           '</div>' +
           '<div class="ostg-balance-card">' +
             '<span class="ostg-balance-label">Play balance · OSTG</span>' +
-            '<span class="ostg-balance-amt"><strong data-ostg-balance>0.00</strong> OSTG</span>' +
+            '<span class="ostg-balance-amt" data-ostg-balance></span>' +
             // Which OSTG is being wagered - personal or borrowed - shown where
             // the bet is placed, not buried in a menu.
             '<span class="ostg-source-slot" data-ostg-source-slot></span>' +
