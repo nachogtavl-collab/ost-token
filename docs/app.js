@@ -3307,19 +3307,66 @@
       return { signature: psig, record: rec, fundedBy: 'ostg', bucket: rec.ostgBucket };
     }
 
-    // OSTG-NATIVE PREDICTION STAKING IS DISABLED (red-team CRITICAL). It relied
-    // on the client calling /play/settle to credit its own winnings — an
-    // unauthenticated money printer. Balance credits must be server-
-    // authoritative; a prediction cannot be settled by the client asserting it
-    // won. Until a server-side resolver exists (settles against the real market
-    // outcome), predictions use the safe pre-existing credits/wallet rail below.
-    // The server also rejects /play/stake and /play/settle without an internal
-    // key, so this is defence in depth, not the only guard.
-    var OSTG_PREDICTIONS_ENABLED = false;
-    if (OSTG_PREDICTIONS_ENABLED && window.OST_PLAY && typeof window.OST_PLAY.stake === 'function') {
+    // OSTG-NATIVE PREDICTIONS — SERVER-AUTHORITATIVE (replaces the old client
+    // money-printer path). The client no longer stakes or settles directly
+    // (those endpoints are internal-key gated). Instead it asks the server to
+    // OPEN a position: the server debits the stake with its internal key, prices
+    // entry from ITS odds, and later settles from the REAL round close price
+    // (see prediction-ledger.js + /play/predict/*).
+    //
+    // Only BTC 5-min rounds (ost-btc5m-<openAt>) are server-resolvable today, so
+    // only those route through OSTG. Everything else — and ANY failure — falls
+    // through to the safe credits/wallet rail below. insufficient_bucket is the
+    // one error we surface instead of silently switching rails, so a user who
+    // meant to spend OSTG isn't quietly charged a different balance.
+    async function fundFromOstgNative(walletAddr) {
+      const src = (window.OST_OSTG_SOURCE && window.OST_OSTG_SOURCE.current)
+        ? window.OST_OSTG_SOURCE.current() : 'clean';
+      const base = getOstApiBase() || (window.OST_API_BASE || 'https://ost-api.nachogtavl.workers.dev');
+      const resp = await fetch(base + '/play/predict/open', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wallet: walletAddr, marketId: order.marketId, side: order.side, stake: stakeAmt, bucket: src })
+      });
+      const r = await resp.json().catch(() => ({ ok: false, error: 'bad_response' }));
+      if (!r || r.ok === false) {
+        const e = new Error(r && r.error === 'insufficient_bucket'
+          ? 'Not enough OSTG in that balance for this ticket.'
+          : ('Could not open OSTG position: ' + ((r && r.error) || 'unknown')));
+        e.code = r && r.error; throw e;
+      }
+      const pos = r.position || {};
+      const psig = String(pos.id || '');
+      const rec = {
+        signature: psig, sig: psig, serverPositionId: psig, ts: Date.now(), status: 'open',
+        wallet: 'ostg', fundedBy: 'ostg-native', ostgBucket: pos.bucket || src,
+        source: order.source, marketId: order.marketId, conditionId: order.conditionId || '',
+        title: order.title, side: order.side, topic: order.topic,
+        // entry price + shares are the SERVER's numbers, not the client quote.
+        price: Number(pos.entry), yesPrice: Number(order.yesPrice), noPrice: Number(order.noPrice),
+        stake: stakeAmt, shares: Number(pos.shares), potentialReturn: Number(pos.shares), entry: Number(pos.entry),
+        closeAtMs: Number(pos.closeAt || order.closeAtMs || 0),
+        openAt: Number(pos.openAt || order.openAt || 0), closeAt: Number(pos.closeAt || order.closeAt || 0),
+        openPrice: Number(pos.openPrice || order.openPrice),
+        priceToBeat: Number(pos.priceToBeat || order.priceToBeat), livePrice: Number(order.livePrice),
+        vaultFlow: 'ostg-native-open', createdAt: Date.now()
+      };
+      storePredictionOrderRecord(rec);
+      try { window.dispatchEvent(new CustomEvent('ost:prediction-order-recorded', { detail: rec })); } catch (_) {}
+      try { if (window.OST_PLAY && OST_PLAY.refresh) OST_PLAY.refresh(); } catch (_) {}
+      try { window.dispatchEvent(new CustomEvent('ost:money:change')); } catch (_) {}
+      try { if (typeof window.notifyOstTxHistory === 'function') window.notifyOstTxHistory(); } catch (_) {}
+      return { signature: psig, record: rec, fundedBy: 'ostg-native', bucket: rec.ostgBucket };
+    }
+
+    var isBtc5mRound = /^ost-btc5m-\d+$/.test(String(order.marketId || ''));
+    var ostgWalletAddr = getPredictionWalletAddress();
+    if (isBtc5mRound && ostgWalletAddr && window.OST_PLAY) {
       try {
-        return await fundFromOstg();
+        return await fundFromOstgNative(ostgWalletAddr);
       } catch (err) {
+        // A real "not enough OSTG" is the user's decision to make — surface it.
+        // Any other failure quietly falls back to the credits/wallet rail so a
+        // transient server hiccup never blocks a bet.
         if (err && err.code === 'insufficient_bucket') throw err;
       }
     }
@@ -15018,6 +15065,58 @@
       });
     }
 
+    // Auto-settle OSTG-NATIVE tickets whose round has closed, so a 5-min market
+    // resolves on its own instead of waiting for the user to tap "Settle". The
+    // server owns the outcome; this only asks it to resolve (idempotent). A
+    // transient not_yet / settle_price_unavailable (round not rolled over yet)
+    // leaves the ticket open to retry — it never fabricates a result.
+    function refreshOstgNativeResolutions() {
+      if (refreshOstgNativeResolutions.inFlight) return Promise.resolve(false);
+      var orders = readPredictionOrderRecords();
+      var due = [];
+      orders.forEach(function(order, index) {
+        if (!order || order.fundedBy !== 'ostg-native' || order.cashedOut) return;
+        var st = String(order.status || '').toLowerCase();
+        if (st === 'won' || st === 'lost' || st === 'refunded') return;
+        var closeAt = Number(order.closeAt || order.closeAtMs || 0);
+        if (!(closeAt > 0 && closeAt <= Date.now())) return;
+        due.push({ order: order, index: index });
+      });
+      if (!due.length) return Promise.resolve(false);
+      refreshOstgNativeResolutions.inFlight = true;
+      var base = getOstApiBase() || (window.OST_API_BASE || 'https://ost-api.nachogtavl.workers.dev');
+      return Promise.all(due.map(function(d) {
+        var pid = d.order.serverPositionId || d.order.signature || d.order.sig || d.order.id;
+        return fetch(base + '/play/predict/resolve', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: pid, marketId: d.order.marketId })
+        }).then(function(x){ return x.json(); }).then(function(rr){ return { d: d, rr: rr }; })
+          .catch(function(){ return { d: d, rr: { ok: false, error: 'network' } }; });
+      })).then(function(results) {
+        var fresh = readPredictionOrderRecords();
+        var changed = false, credited = false;
+        results.forEach(function(res) {
+          var rr = res.rr;
+          if (!rr || rr.ok === false) return;   // transient — leave ticket open
+          var oN = fresh[res.d.index]; if (!oN) return;
+          oN.status = rr.status; oN.settlePrice = rr.settlePrice; oN.line = rr.line; oN.winningSide = rr.winningSide;
+          oN.payout = Number(rr.payout) || 0; oN.houseFee = Number(rr.fee) || 0;
+          oN.cashedOut = (Number(rr.payout) || 0) > 0; oN.cashoutOst = Number(rr.payout) || 0;
+          oN.cashoutKind = 'ostg-native-resolve'; oN.resolvedAt = Date.now();
+          fresh[res.d.index] = oN; sharePredictionOrderRecord(oN);
+          changed = true; if (oN.payout > 0) credited = true;
+        });
+        if (!changed) return false;
+        writePredictionOrderRecords(fresh); state.orderHistory = fresh;
+        if (credited) {
+          try { if (window.OST_PLAY && OST_PLAY.refresh) OST_PLAY.refresh(); } catch (_) {}
+          try { window.dispatchEvent(new CustomEvent('ost:money:change')); } catch (_) {}
+        }
+        renderPredictionLedger();
+        return true;
+      }).finally(function() { refreshOstgNativeResolutions.inFlight = false; });
+    }
+
     function getPredictionOrderAction(order) {
       var market = findMarketForOrder(order);
       var side = order && order.side === 'no' ? 'no' : 'yes';
@@ -15059,6 +15158,39 @@
           detail: 'Paid out ' + formatOst(Number(order.cashoutOst || 0)),
           canCash: false,
           kind: order.cashoutKind || 'prediction-cashout'
+        };
+      }
+
+      // OSTG-NATIVE (server-authoritative) tickets never settle on the client.
+      // Before close they are LOCKED (the server refuses to resolve early — no
+      // peer to sell to on a pari-mutuel 5-min round). After close, "Settle"
+      // asks the server to resolve from the real close price. The payout number
+      // is not known until the server computes it, so we show the max potential
+      // (shares) as an estimate on the button; the credit is whatever the server
+      // returns.
+      if (order && order.fundedBy === 'ostg-native') {
+        var oNativeStatus = String(order.status || '').toLowerCase();
+        if (oNativeStatus === 'won' || oNativeStatus === 'lost' || oNativeStatus === 'refunded') {
+          return {
+            market: market, side: side, stake: stake, entryPrice: entryPrice, shares: shares,
+            livePrice: livePrice, liveValue: liveValue, payout: Number(order.payout || 0),
+            label: oNativeStatus === 'won' ? 'Won' : (oNativeStatus === 'refunded' ? 'Refunded' : 'Closed lost'),
+            detail: oNativeStatus === 'won' ? ('Paid ' + formatOst(Number(order.payout || 0)))
+              : (oNativeStatus === 'refunded' ? 'Tie — stake refunded' : 'Resolved losing side'),
+            canCash: false, kind: 'ostg-native-resolved',
+            finalStatus: oNativeStatus === 'refunded' ? 'won' : oNativeStatus
+          };
+        }
+        var nativeClose = Number(order.closeAt || order.closeAtMs || 0);
+        var nativeClosed = nativeClose > 0 && nativeClose <= Date.now();
+        return {
+          market: market, side: side, stake: stake, entryPrice: entryPrice, shares: shares,
+          livePrice: livePrice, liveValue: liveValue,
+          payout: nativeClosed ? (Number(shares) || 0) : 0,
+          label: nativeClosed ? 'Settle' : 'Locked until close',
+          detail: nativeClosed ? 'Server settles from the round close price'
+            : 'OSTG position settles automatically at round close',
+          canCash: nativeClosed, kind: 'ostg-native-resolve', finalStatus: null
         };
       }
 
@@ -15242,6 +15374,49 @@
           var orders = readPredictionOrderRecords();
           var order = orders[idx];
           if (!order) return;
+
+          // OSTG-NATIVE: the SERVER resolves and pays. The client never asserts
+          // an outcome or a payout — it asks /play/predict/resolve, which settles
+          // once, deterministically, from the real round close price, and credits
+          // the server-computed amount. This bypasses ALL the client payout math
+          // below (rake/arb), which only applies to credits/wallet tickets.
+          if (order.fundedBy === 'ostg-native') {
+            var pid = order.serverPositionId || order.signature || order.sig || order.id;
+            var oClose = Number(order.closeAt || order.closeAtMs || 0);
+            if (oClose > 0 && oClose > Date.now()) {
+              toast('⏳', 'This OSTG position settles automatically at round close.');
+              return;
+            }
+            var origN = btn.textContent; btn.disabled = true; btn.textContent = '…';
+            var baseN = getOstApiBase() || (window.OST_API_BASE || 'https://ost-api.nachogtavl.workers.dev');
+            var rr = await fetch(baseN + '/play/predict/resolve', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: pid, marketId: order.marketId })
+            }).then(function (x) { return x.json(); }).catch(function () { return { ok: false, error: 'network' }; });
+            if (!rr || rr.ok === false) {
+              var msg = rr && rr.error === 'not_yet' ? 'Round has not closed yet — try again shortly.'
+                : rr && rr.error === 'settle_price_unavailable' ? 'Waiting for the round close price — try again in a moment.'
+                : ('Could not settle yet: ' + ((rr && rr.error) || 'unknown'));
+              toast('⚠️', msg);
+              btn.disabled = false; btn.textContent = origN;
+              return;
+            }
+            var freshN = readPredictionOrderRecords();
+            var oN = freshN[idx] || order;
+            oN.status = rr.status; oN.settlePrice = rr.settlePrice; oN.line = rr.line; oN.winningSide = rr.winningSide;
+            oN.payout = Number(rr.payout) || 0; oN.houseFee = Number(rr.fee) || 0;
+            oN.cashedOut = (Number(rr.payout) || 0) > 0; oN.cashoutOst = Number(rr.payout) || 0;
+            oN.cashoutKind = 'ostg-native-resolve'; oN.resolvedAt = Date.now();
+            freshN[idx] = oN; writePredictionOrderRecords(freshN); sharePredictionOrderRecord(oN); state.orderHistory = freshN;
+            try { if (window.OST_PLAY && OST_PLAY.refresh) OST_PLAY.refresh(); } catch (_) {}
+            try { window.dispatchEvent(new CustomEvent('ost:money:change')); } catch (_) {}
+            renderPredictionLedger();
+            if (rr.status === 'won') toast('🎉', 'Won! Paid ' + formatOst(oN.payout) + ' OSTG');
+            else if (rr.status === 'refunded') toast('↩️', 'Tie — stake refunded.');
+            else toast('📉', 'Round settled — better luck next round.');
+            return;
+          }
+
           var hasCashOut = !!(window.OST_TRADE && window.OST_TRADE.predictionCashOut);
           var action = getPredictionOrderAction(order);
           if (!action.canCash || !Number.isFinite(Number(action.payout)) || Number(action.payout) <= 0) {
@@ -17636,7 +17811,9 @@
     loadPredictionMarkets();
     loadTimer = window.setInterval(loadPredictionMarkets, 10000);
     refreshPredictionOrderResolutions();
+    refreshOstgNativeResolutions();
     resolutionTimer = window.setInterval(refreshPredictionOrderResolutions, 30000);
+    window.setInterval(refreshOstgNativeResolutions, 20000);
     // Re-sync wallet balance every 30 s so displayed OST funds stay accurate.
     var balancePollTimer = window.setInterval(syncTradeWallet, 30000);
     // Turbo ticks: while the user is INSIDE a 5-min market, ost-tick-turbo

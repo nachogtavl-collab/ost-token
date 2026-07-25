@@ -1600,6 +1600,16 @@ async function getCanonicalBtcTicks(env, openAt, since, opts = {}) {
   return payload;
 }
 
+// The authoritative close snapshot for a settled round, from the DO. Returns
+// null unless the round has actually rolled over (i.e. a real close price
+// exists). Callers must treat null as "not settled yet", never guess.
+async function getBtcRoundResult(env, openAt) {
+  const norm = Math.floor(Number(openAt) / FIVE_MIN_MS) * FIVE_MIN_MS;
+  if (!(norm > 0)) return null;
+  const payload = await nativeMarketHubJson(env, '/btc/round-result?openAt=' + norm);
+  return (payload && payload.found === true) ? payload : null;
+}
+
 async function getNativeMarketStateFromHub(env, marketId, fallbackBaseYes) {
   const cleanMarketId = cleanText(marketId, 128);
   if (!cleanMarketId) return null;
@@ -1937,6 +1947,18 @@ export class NativeMarketHub {
     if (path === '/btc/ticks' && method === 'GET') {
       const refresh = url.searchParams.get('refresh') !== '0';
       return json(await this.btcTicks(url.searchParams.get('openAt'), url.searchParams.get('since'), refresh), 200, { 'cache-control': 'no-store' });
+    }
+
+    // The authoritative settled snapshot for one closed round — the REAL close
+    // price captured at rollover (see rolloverBtcStateIfNeeded). This is what
+    // OSTG prediction settlement reads, so a position settles against the price
+    // the market actually closed at, not whatever the price is when resolve runs.
+    if (path === '/btc/round-result' && method === 'GET') {
+      const openAt = Math.floor(Number(url.searchParams.get('openAt') || 0) / FIVE_MIN_MS) * FIVE_MIN_MS;
+      if (!(openAt > 0)) return json({ found: false, error: 'openAt_required' }, 400);
+      const rec = await this.state.storage.get(`btc:round:${openAt}`);
+      if (!rec) return json({ found: false, openAt }, 200, { 'cache-control': 'no-store' });
+      return json(Object.assign({ found: true }, rec), 200, { 'cache-control': 'no-store' });
     }
 
     if (path === '/poke' && method === 'POST') {
@@ -3293,34 +3315,57 @@ export default {
         let b; try { b = await request.json(); } catch { return json({ ok: false, error: 'invalid_json' }, 400); }
         // Compute the server's YES odds for the round; the DO uses this, not any
         // client-supplied price, so entry shares can't be gamed.
-        let oddsYes = 0.5;
+        // Entry odds AND the price-to-beat both come from the CANONICAL round
+        // (the same server data the hero/desk show the user), so a position is
+        // opened, priced, and later settled against ONE consistent line.
+        let oddsYes = 0.5, priceToBeat = null;
         try {
           const m = String(b.marketId || '').match(/^ost-btc5m-(\d+)$/);
           if (m) {
             const openAt = Number(m[1]);
             if (!env.__store) env.__store = { get: (k, fb) => kvGet(env, k, fb), put: (k, v, ttl) => kvPut(env, k, v, ttl) };
-            const rec = await kvGet(env, 'round:' + openAt, null);
+            const canon = await getCanonicalBtcRound(env, { refresh: false });
             const live = (memGet('btc:latest') || await kvGet(env, 'btc:latest', null));
             const livePrice = Number(live && (live.price || live.p || live.value));
-            if (rec && Number.isFinite(Number(rec.openPrice)) && Number.isFinite(livePrice)) {
-              const msLeft = Math.max(0, (openAt + 5 * 60 * 1000) - Date.now());
-              const o = serverComputeBtcOdds(Number(rec.openPrice), livePrice, msLeft, Number(rec.priceToBeat));
-              if (o && Number.isFinite(o.yes)) oddsYes = o.yes;
+            // Only trust canon if it is THIS round; otherwise fall back to KV.
+            const canonOpen = canon && Number(canon.openAt) === openAt ? Number(canon.openPrice) : NaN;
+            const canonBeat = canon && Number(canon.openAt) === openAt ? Number(canon.priceToBeat) : NaN;
+            const rec = await kvGet(env, 'round:' + openAt, null);
+            const openPrice = Number.isFinite(canonOpen) && canonOpen > 0 ? canonOpen : Number(rec && rec.openPrice);
+            const beat = Number.isFinite(canonBeat) && canonBeat > 0 ? canonBeat
+              : (Number(rec && rec.priceToBeat) > 0 ? Number(rec.priceToBeat) : openPrice);
+            if (Number.isFinite(openPrice) && openPrice > 0) {
+              priceToBeat = Number.isFinite(beat) && beat > 0 ? beat : openPrice;
+              if (Number.isFinite(livePrice)) {
+                const msLeft = Math.max(0, (openAt + 5 * 60 * 1000) - Date.now());
+                const o = serverComputeBtcOdds(openPrice, livePrice, msLeft, priceToBeat);
+                if (o && Number.isFinite(o.yes)) oddsYes = o.yes;
+              }
             }
           }
         } catch (_) {}
         return await stub.fetch('https://prediction-ledger/open', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(Object.assign({}, b, { oddsYes }))
+          body: JSON.stringify(Object.assign({}, b, { oddsYes, priceToBeat }))
         });
       }
       if (pop === 'resolve' && method === 'POST') {
         let b; try { b = await request.json(); } catch { return json({ ok: false, error: 'invalid_json' }, 400); }
-        // Server settle price. Best-effort current BTC price; a round resolved
-        // shortly after close is accurate. (Historical price-at-closeAt is the
-        // refinement to confirm before PREDICT_LIVE=true.)
+        // Authoritative settle price = the round's REAL close price captured by
+        // the NativeMarketHub at rollover — NOT the current price. If the round
+        // has not rolled over yet there is no close price, so settlePrice stays
+        // NaN and the ledger refuses to resolve (it NEVER guesses an outcome).
+        // openAt is embedded in the position id (p_<openAt>_…); marketId is a
+        // fallback for callers that pass it.
+        let openAt = 0;
+        const im = String(b.id || '').match(/^p_(\d+)_/);
+        if (im) openAt = Number(im[1]);
+        if (!openAt) { const mm = String(b.marketId || '').match(/^ost-btc5m-(\d+)$/); if (mm) openAt = Number(mm[1]); }
         let settlePrice = NaN;
-        try { const live = (memGet('btc:latest') || await kvGet(env, 'btc:latest', null)); settlePrice = Number(live && (live.price || live.p || live.value)); } catch (_) {}
+        if (openAt > 0) {
+          const rr = await getBtcRoundResult(env, openAt);
+          if (rr && Number.isFinite(Number(rr.closePrice)) && Number(rr.closePrice) > 0) settlePrice = Number(rr.closePrice);
+        }
         return await stub.fetch('https://prediction-ledger/resolve', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(Object.assign({}, b, { settlePrice }))
@@ -3677,6 +3722,17 @@ export default {
       const data = await getCanonicalBtcRound(env, { refresh });
       if (data && Number(data.closeAt) > now) globalThis.__ostRoundCache = { ts: now, data };
       return json(data, 200, { 'cache-control': 'no-store' });
+    }
+
+    // ── GET /btc/round-result ─ the authoritative settled snapshot for a round.
+    // Public read of the DO's rollover snapshot (real close price + outcome).
+    // Used by OSTG settlement internally and by the client to show settled
+    // results. Returns { found:false } until the round has actually closed.
+    if (path === '/btc/round-result' && method === 'GET') {
+      const openAt = Math.floor(Number(url.searchParams.get('openAt') || 0) / FIVE_MIN_MS) * FIVE_MIN_MS;
+      if (!(openAt > 0)) return json({ found: false, error: 'openAt_required' }, 400);
+      const rr = await getBtcRoundResult(env, openAt);
+      return json(rr || { found: false, openAt }, 200, { 'cache-control': 'no-store' });
     }
 
     // ── GET /btc/ticks ───────────────────────────────────────────────────────

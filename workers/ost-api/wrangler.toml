@@ -150,6 +150,11 @@ GEOBLOCK_ENABLED = "false"
 #   live = mainnet only - the code refuses "live" on any other cluster.
 LOANS_MODE = "test"
 
+# OSTG-native predictions. The server owns the position and settles from the
+# authoritative round close price (see prediction-ledger.js + /btc/round-result).
+# Enabled only after the settlement source was confirmed real end-to-end.
+PREDICT_LIVE = "true"
+
 # ---- Server-side pool signer (Phase 0 — see project-docs/TOKEN-ARCHITECTURE.md) ----
 # Deploy-time config for /wallet/payout, /wallet/ata-rent, /wallet/cosign.
 # These are the AUTHORITATIVE checks — client-side copies are display hints only.

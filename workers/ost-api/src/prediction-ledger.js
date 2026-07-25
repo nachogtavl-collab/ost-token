@@ -130,10 +130,18 @@ export class PredictionLedger {
       return json({ ok: false, error: (deb && deb.error) || 'stake_failed' }, 409);
     }
 
+    // The line the outcome is judged against is the price-to-beat the desk
+    // showed the user (server-provided, canonical). Lock it onto the position so
+    // settlement can NEVER drift from what the user bet against. Fall back to the
+    // open price only if no price-to-beat was supplied.
+    const priceToBeat = Number.isFinite(Number(body.priceToBeat)) && Number(body.priceToBeat) > 0
+      ? Number(body.priceToBeat)
+      : Number(rec.openPrice);
+
     const id = 'p_' + round.openAt + '_' + wallet.slice(0, 6) + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
     const pos = {
       id, wallet, marketId, side, stake, entry, shares, bucket,
-      openPrice: Number(rec.openPrice), openAt: round.openAt, closeAt: round.closeAt,
+      openPrice: Number(rec.openPrice), priceToBeat, openAt: round.openAt, closeAt: round.closeAt,
       status: 'open', createdAt: Date.now()
     };
     await this.state.storage.put(POS_PREFIX + id, pos);
@@ -157,23 +165,36 @@ export class PredictionLedger {
         return json({ ok: false, error: 'not_yet', closeAt: pos.closeAt }, 409);
       }
 
-      // Authoritative outcome: settle price vs recorded open price.
+      // Authoritative outcome: the round's REAL close price vs the price-to-beat
+      // LOCKED onto this position at open time (what the user actually bet
+      // against). Settling against openPrice here would betray the line the desk
+      // showed, so we use pos.priceToBeat (openPrice only as a legacy fallback).
       const settlePrice = Number(body.settlePrice);
       if (!Number.isFinite(settlePrice)) {
-        // The caller (index.js) supplies the settle price from server market
-        // data. No price => cannot resolve; NEVER guess an outcome.
+        // The caller (index.js) supplies the settle price from the settled round
+        // snapshot. No price => the round has not closed yet; NEVER guess.
         return json({ ok: false, error: 'settle_price_unavailable' }, 503);
       }
-      const winningSide = settlePrice > pos.openPrice ? 'yes' : 'no';
-      const won = pos.side === winningSide;
+      const line = Number.isFinite(Number(pos.priceToBeat)) && Number(pos.priceToBeat) > 0
+        ? Number(pos.priceToBeat)
+        : Number(pos.openPrice);
 
-      let payout = 0, fee = 0;
-      if (won) {
-        // Each winning share pays 1 OSTG; house edge on PROFIT only.
-        const gross = r6(pos.shares);
-        const profit = Math.max(0, gross - pos.stake);
-        fee = r6(profit * 0.02);          // 2% of profit, matching OST_HOUSE
-        payout = r6(gross - fee);
+      let payout = 0, fee = 0, winningSide = null, status;
+      if (settlePrice === line) {
+        // Exact tie — neither side won. Refund the stake in full, no house fee.
+        status = 'refunded';
+        payout = r6(pos.stake);
+      } else {
+        winningSide = settlePrice > line ? 'yes' : 'no';
+        const won = pos.side === winningSide;
+        status = won ? 'won' : 'lost';
+        if (won) {
+          // Each winning share pays 1 OSTG; house edge on PROFIT only.
+          const gross = r6(pos.shares);
+          const profit = Math.max(0, gross - pos.stake);
+          fee = r6(profit * 0.02);          // 2% of profit, matching OST_HOUSE
+          payout = r6(gross - fee);
+        }
       }
 
       // Credit the SERVER-computed payout back to the SAME bucket (keeps
@@ -185,14 +206,15 @@ export class PredictionLedger {
         }
       }
 
-      pos.status = won ? 'won' : 'lost';
+      pos.status = status;
       pos.winningSide = winningSide;
       pos.settlePrice = settlePrice;
+      pos.line = line;
       pos.payout = payout;
       pos.fee = fee;
       pos.resolvedAt = Date.now();
       await this.state.storage.put(POS_PREFIX + id, pos);
-      return json({ ok: true, status: pos.status, won, payout, fee, winningSide, settlePrice });
+      return json({ ok: true, status, won: status === 'won', refunded: status === 'refunded', payout, fee, winningSide, settlePrice, line });
     });
   }
 
