@@ -17,6 +17,7 @@ export { GameSeedHub } from './games-rng.js';
 export { PurchaseLedger } from './purchase-ledger.js';
 export { AdTreasury } from './ad-treasury.js';
 export { LoanLedger } from './loan-ledger.js';
+export { PredictionLedger } from './prediction-ledger.js';
 export { PlayLedger } from './play-ledger.js';
 
 /**
@@ -3278,6 +3279,56 @@ export default {
       const a = await handleAnchorRequest(request, env, { path, store: env.__store });
       if (a) return a;
       return json({ error: 'unknown anchor endpoint', path }, 404);
+    }
+
+    // SERVER-AUTHORITATIVE OSTG predictions. open computes entry odds from the
+    // server's own market data (never the client's); resolve settles from the
+    // server's price. Gated by PREDICT_LIVE (off until confirmed). See
+    // prediction-ledger.js.
+    if (path.startsWith('/play/predict/')) {
+      if (!env.PREDICTION_LEDGER) return json({ ok: false, error: 'prediction_ledger_not_configured' }, 503);
+      const pop = path.slice('/play/predict/'.length);
+      const stub = env.PREDICTION_LEDGER.get(env.PREDICTION_LEDGER.idFromName('predictions-v1'));
+      if (pop === 'open' && method === 'POST') {
+        let b; try { b = await request.json(); } catch { return json({ ok: false, error: 'invalid_json' }, 400); }
+        // Compute the server's YES odds for the round; the DO uses this, not any
+        // client-supplied price, so entry shares can't be gamed.
+        let oddsYes = 0.5;
+        try {
+          const m = String(b.marketId || '').match(/^ost-btc5m-(\d+)$/);
+          if (m) {
+            const openAt = Number(m[1]);
+            if (!env.__store) env.__store = { get: (k, fb) => kvGet(env, k, fb), put: (k, v, ttl) => kvPut(env, k, v, ttl) };
+            const rec = await kvGet(env, 'round:' + openAt, null);
+            const live = (memGet('btc:latest') || await kvGet(env, 'btc:latest', null));
+            const livePrice = Number(live && (live.price || live.p || live.value));
+            if (rec && Number.isFinite(Number(rec.openPrice)) && Number.isFinite(livePrice)) {
+              const msLeft = Math.max(0, (openAt + 5 * 60 * 1000) - Date.now());
+              const o = serverComputeBtcOdds(Number(rec.openPrice), livePrice, msLeft, Number(rec.priceToBeat));
+              if (o && Number.isFinite(o.yes)) oddsYes = o.yes;
+            }
+          }
+        } catch (_) {}
+        return await stub.fetch('https://prediction-ledger/open', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(Object.assign({}, b, { oddsYes }))
+        });
+      }
+      if (pop === 'resolve' && method === 'POST') {
+        let b; try { b = await request.json(); } catch { return json({ ok: false, error: 'invalid_json' }, 400); }
+        // Server settle price. Best-effort current BTC price; a round resolved
+        // shortly after close is accurate. (Historical price-at-closeAt is the
+        // refinement to confirm before PREDICT_LIVE=true.)
+        let settlePrice = NaN;
+        try { const live = (memGet('btc:latest') || await kvGet(env, 'btc:latest', null)); settlePrice = Number(live && (live.price || live.p || live.value)); } catch (_) {}
+        return await stub.fetch('https://prediction-ledger/resolve', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(Object.assign({}, b, { settlePrice }))
+        });
+      }
+      if (pop === 'get' && method === 'GET') return await stub.fetch('https://prediction-ledger/get?id=' + encodeURIComponent(url.searchParams.get('id') || ''));
+      if (pop === 'health') return await stub.fetch('https://prediction-ledger/health');
+      return json({ ok: false, error: 'unknown prediction op' }, 404);
     }
 
     // ONE answer to "how much does this wallet have". See balance-truth.js.

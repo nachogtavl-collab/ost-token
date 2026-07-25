@@ -76,6 +76,10 @@ class_name = "AdTreasury"
 name = "LOAN_LEDGER"
 class_name = "LoanLedger"
 
+[[durable_objects.bindings]]
+name = "PREDICTION_LEDGER"
+class_name = "PredictionLedger"
+
 [[migrations]]
 tag = "mesh_hub_v1"
 new_sqlite_classes = ["MeshHub"]
@@ -115,6 +119,10 @@ new_sqlite_classes = ["AdTreasury"]
 [[migrations]]
 tag = "loan_ledger_v1"
 new_sqlite_classes = ["LoanLedger"]
+
+[[migrations]]
+tag = "prediction_ledger_v1"
+new_sqlite_classes = ["PredictionLedger"]
 
 [vars]
 GAMMA_BASE = "https://gamma-api.polymarket.com"
