@@ -3186,14 +3186,18 @@ export default {
         }, 503);
       }
 
-      // The draw goes through PlayLedger: it owns the balance AND the pool
-      // view, so solvency is enforced at the same point the money is created.
-      if (op === 'draw' && request.method === 'POST') {
+      // Draw and repay go through PlayLedger, which owns the balance AND the
+      // pool view. Both are gated in the DO behind the internal key, so this
+      // proxy attaches it — this is the ONLY path that legitimately reaches
+      // those mutators, so the LOANS_MODE + geoblock checks above cannot be
+      // bypassed by hitting /play/loan-* directly.
+      if ((op === 'draw' || op === 'repay') && request.method === 'POST') {
         if (!env.PLAY_LEDGER) return json({ ok: false, error: 'play_ledger_not_configured' }, 503);
+        if (!env.INTERNAL_MUTATION_KEY) return json({ ok: false, error: 'internal_key_not_configured' }, 503);
         const pl = env.PLAY_LEDGER.get(env.PLAY_LEDGER.idFromName('global'));
-        return await pl.fetch('https://play-ledger/play/loan-draw', {
+        return await pl.fetch('https://play-ledger/play/loan-' + (op === 'draw' ? 'draw' : 'repay'), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'x-ost-internal': env.INTERNAL_MUTATION_KEY },
           body: await request.text()
         });
       }

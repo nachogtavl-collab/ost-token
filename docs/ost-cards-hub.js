@@ -457,7 +457,9 @@
       if (!(amt > 0)) { rmsg.textContent = 'Move the slider to choose an amount.'; rmsg.className = 'och-msg err'; return; }
       go.disabled = true; rmsg.textContent = 'Repaying…'; rmsg.className = 'och-msg';
       state.busy = true;
-      api('/play/loan-repay', { wallet: w, loanId: loanId, amount: amt }).then(function (d) {
+      // Repay via the gated /loans/ proxy (LOANS_MODE + geoblock + internal
+      // key). The raw /play/loan-repay is no longer client-callable.
+      api('/loans/repay', { wallet: w, loanId: loanId, amount: amt }).then(function (d) {
         state.busy = false;
         if (!d || !d.ok) { go.disabled = false; rmsg.textContent = explain(d); rmsg.className = 'och-msg err'; return; }
         var extra = d.releasedToClean > 0 ? ' Loan settled — ' + ostg(d.releasedToClean) + ' unlocked and is now yours.' : '';
