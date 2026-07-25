@@ -176,6 +176,17 @@
         } catch (_) {}
       });
     });
+    // RETIRE THE OLD HERO. Now that the new odometer hero is on the page, the
+    // legacy per-market hero card + its preamble are redundant and made the page
+    // "feel endless". Hide them — but ONLY after the new hero actually mounted,
+    // so a failure here can never leave the page with no hero at all (same
+    // fail-safe rule the grid uses for the old market list). The search/filter
+    // toggles, hidden market list (selection routing), detail panel and trade
+    // desk all stay — they are the working machinery the redesign builds on.
+    if (document.getElementById('ophCard')) {
+      ['predictionMarketHero', 'predictionMarketIntro', 'predictionMarketKicker', 'predictionMarketHeading']
+        .forEach(function (id) { var el = document.getElementById(id); if (el) el.style.display = 'none'; });
+    }
     loadRound();
     render();
   }
