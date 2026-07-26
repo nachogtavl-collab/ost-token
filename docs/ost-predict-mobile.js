@@ -549,6 +549,7 @@
       '<div class="opm-amt"><input id="opmAmtIn" inputmode="decimal" value="' + amt + '"><span class="cur">OSTG</span></div>' +
       '<div class="opm-quick">' + [10, 25, 100, 'Max'].map(function (q) { return '<button data-q="' + String(q).toLowerCase() + '">' + q + '</button>'; }).join('') + '</div>' +
       '<div class="opm-src"><span class="l"><span class="d"></span> ' + (onchainActive ? 'Wallet OST · on-chain' : 'Personal OSTG') + '</span></div>' +
+      '<div class="opm-sess" id="opmSess"></div>' +
       '<div class="opm-bd" id="opmBuyBd">' + buyBdHtml(e) + '</div>' +
       '<button class="opm-confirm' + (side === 'no' ? ' no' : '') + '" id="opmCf">Buy ' + (side === 'yes' ? 'Yes' : 'No') + ' · ' + amt + ' OSTG</button>' +
       '<div class="opm-fine">' + icon('lock') + ' ' + (isBtcLive(currentMarket) ? 'Settles from the on-chain price at close' : 'Settles when the market resolves') + '</div>';
@@ -573,10 +574,24 @@
       '<button class="opm-confirm sellc" id="opmCfSell">' + (isSettle ? 'Settle for ' : 'Sell for ') + esc(realNet) + ' OSTG</button>' +
       '<div class="opm-fine">' + icon('lock') + ' Proceeds return to your Play OSTG instantly.</div>';
   }
+  // One-tap betting (session key). Only meaningful on the on-chain 5-min rail.
+  function sessionActive() { try { return !!(window.OST_SESSION && OST_SESSION.exists() && OST_SESSION.balance() > 0); } catch (_) { return false; } }
+  function renderSessionRow() {
+    var host = el('opmSess'); if (!host) return;
+    if (!isBtcLive(currentMarket)) { host.innerHTML = ''; return; }
+    if (sessionActive()) {
+      host.innerHTML = '<div class="opm-sesson"><span>⚡ 1-tap ON · ' + (Number(OST_SESSION.balance()) || 0).toFixed(0) + ' OSTG left</span><button id="opmSessEnd">End</button></div>';
+      var e = el('opmSessEnd'); if (e) e.onclick = function () { e.disabled = true; e.textContent = '…'; OST_SESSION.end().then(function () { toast('Session ended — funds returned to your wallet.'); renderSessionRow(); }).catch(function (err) { toast((err && err.message) || 'Could not end session'); e.disabled = false; e.textContent = 'End'; }); };
+    } else {
+      host.innerHTML = '<button class="opm-sessbtn" id="opmSessOn">⚡ Enable 1-tap betting</button>';
+      var b = el('opmSessOn'); if (b) b.onclick = function () { b.disabled = true; b.textContent = 'Funding… (one signature)'; OST_SESSION.fund(25).then(function () { toast('1-tap on — bets are instant now, capped at what you loaded.'); renderSessionRow(); }).catch(function (err) { toast((err && err.message) || 'Could not enable 1-tap'); b.disabled = false; b.textContent = '⚡ Enable 1-tap betting'; }); };
+    }
+  }
   function paintTicket() {
     var t = el('opmTicket'); if (!t) return;
     if (mode === 'sell') { t.innerHTML = sellConfirmTicket(); var cfs = el('opmCfSell'); if (cfs) cfs.onclick = confirmSell; return; }
     t.innerHTML = buyTicket();
+    renderSessionRow();
     document.querySelectorAll('#opmTicket .opm-tkout button').forEach(function (b) { b.onclick = function () { side = b.getAttribute('data-t'); syncYnSel(); paintTicket(); }; });
     document.querySelectorAll('#opmTicket .opm-quick button').forEach(function (b) { b.onclick = function () { var q = b.getAttribute('data-q'); amt = q === 'max' ? maxBal() : (parseFloat(q) || amt); paintTicket(); }; });
     var inp = el('opmAmtIn'); if (inp) inp.oninput = function () { amt = parseFloat(this.value) || 0; refreshOpenSheet(); };
@@ -736,6 +751,7 @@
   window.addEventListener('ost:prediction-resolutions-refreshed', function () { if (view === 'positions') renderPositions(); });
   window.addEventListener('ost:money:change', function () { refreshBalance(); if (view === 'positions') renderPositions(); });
   window.addEventListener('ost:play:balance', refreshBalance);
+  window.addEventListener('ost:session:change', function () { if (sheetOpen() && mode === 'buy') renderSessionRow(); });
 
   // Entry point for the "Trade ticket" launchers: show the predict panel and
   // drop straight into the flagship live market (new upgraded UI + OSTG buy sheet).

@@ -75,8 +75,13 @@
     return w && w.getConnection ? w.getConnection() : null;
   }
 
+  // Session key (one-tap betting). When funded, it is the bettor + the silent
+  // signer, so a bet needs no wallet popup. See ost-session-key.js.
+  function activeSession() { try { if (window.OST_SESSION && OST_SESSION.exists() && OST_SESSION.keypair()) return OST_SESSION.keypair(); } catch (_) {} return null; }
+  function bettorPk() { var s = activeSession(); if (s) return s.publicKey; var w = session(); return w && w.publicKey; }
+
   function available() {
-    return !!(w3() && session() && conn() && authority());
+    return !!(w3() && (activeSession() || session()) && conn() && authority());
   }
 
   function derive(openAtSec) {
@@ -167,9 +172,8 @@
 
   function ixPlaceBet(openAtSec, side, amountOst) {
     var W = w3();
-    var s = session();
     var d = derive(openAtSec);
-    var bettor = s.publicKey;
+    var bettor = bettorPk();
     var amount = BigInt(Math.round(amountOst * Math.pow(10, DECIMALS)));
     var data = concat([
       new Uint8Array(DISC.place_bet),
@@ -209,7 +213,7 @@
   }
   // SPL Token-2022 TransferChecked (opcode 12): user ATA -> treasury token account.
   function ixSpread(spreadOst, treasury) {
-    var W = w3(); var bettor = session().publicKey;
+    var W = w3(); var bettor = bettorPk();
     var amount = BigInt(Math.round(spreadOst * Math.pow(10, DECIMALS)));
     var data = concat([new Uint8Array([12]), u64le(amount), new Uint8Array([DECIMALS])]);
     return new W.TransactionInstruction({
@@ -228,9 +232,8 @@
   // creation and rejects any other account, so it must be read, not derived.
   function ixClaim(openAtSec, treasury) {
     var W = w3();
-    var s = session();
     var d = derive(openAtSec);
-    var bettor = s.publicKey;
+    var bettor = bettorPk();
     return new W.TransactionInstruction({
       programId: pk(PROGRAM_ID),
       keys: [
@@ -250,6 +253,18 @@
 
   function send(ixs, fast) {
     var W = w3();
+    var sess = activeSession();
+    if (sess) {
+      // Silent session signing — no wallet popup. Sign with the session key and
+      // push the raw tx ourselves.
+      var stx = new W.Transaction();
+      ixs.forEach(function (i) { stx.add(i); });
+      var c = conn();
+      return c.getLatestBlockhash('confirmed').then(function (bh) {
+        stx.feePayer = sess.publicKey; stx.recentBlockhash = bh.blockhash; stx.sign(sess);
+        return c.sendRawTransaction(stx.serialize());
+      });
+    }
     var w = window.OST_WALLET;
     var tx = new W.Transaction();
     ixs.forEach(function (i) { tx.add(i); });
@@ -287,12 +302,12 @@
       if (!m || !m.exists) throw new Error('no on-chain market for this round yet');
       if (m.resolved) throw new Error('market already resolved');
       if (Date.now() >= m.lockTs) throw new Error('market locked (too close to close)');
-      var s = session();
+      var bettor = bettorPk();
       // Split the stake: spread -> treasury (market-maker), net -> pari-mutuel pool.
       var frac = spreadFrac();
       var spread = (arbOnchainOn() && m.treasury && frac > 0) ? Math.max(0, amountOst * frac) : 0;
       var net = amountOst - spread;
-      return ensureAtaIx(s.publicKey).then(function (ataIx) {
+      return ensureAtaIx(bettor).then(function (ataIx) {
         var ixs = [];
         if (ataIx) ixs.push(ataIx);
         if (spread > 0) ixs.push(ixSpread(spread, m.treasury));   // arb spread, on-chain
@@ -300,7 +315,7 @@
         return send(ixs, true);       // fast: processed-level, prewarmed blockhash
       }).then(function (sig) {
         // The ATA definitely exists now.
-        ataKnown[s.publicKey.toBase58()] = true;
+        ataKnown[bettor.toBase58()] = true;
         if (spread > 0) { try { window.dispatchEvent(new CustomEvent('ost:house-fee', { detail: { source: 'arbitrage', amount: spread, label: 'market-maker spread (on-chain)' } })); } catch (_) {} }
         try {
           window.dispatchEvent(new CustomEvent('ost:onchain-bet', {

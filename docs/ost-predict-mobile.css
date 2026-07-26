@@ -296,4 +296,10 @@
 #ostPredictMobile .opm-tickets-btn{display:flex;align-items:center;gap:6px;background:var(--opm-card);border:1px solid var(--opm-line2);border-radius:11px;padding:8px 11px;color:var(--opm-ink2);font-size:12px;font-weight:700;cursor:pointer;margin-right:8px}
 #ostPredictMobile .opm-tickets-btn .opm-ic{width:15px;height:15px;color:var(--opm-cyan)}
 
+/* one-tap betting (session key) */
+#ostPredictMobile .opm-sessbtn{width:100%;border:1px dashed rgba(169,123,255,.5);background:rgba(169,123,255,.08);color:var(--opm-ostg);border-radius:12px;padding:11px;font-size:13px;font-weight:800;cursor:pointer}
+#ostPredictMobile .opm-sessbtn:disabled{opacity:.6}
+#ostPredictMobile .opm-sesson{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 13px;border-radius:12px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.32);font-size:12px;font-weight:700;color:var(--opm-yes)}
+#ostPredictMobile .opm-sesson button{border:0;border-radius:8px;padding:6px 12px;font-size:11.5px;font-weight:800;cursor:pointer;background:var(--opm-card3);color:var(--opm-ink2)}
+
 /* the whole thing only takes over on phones; wider screens still center it */
