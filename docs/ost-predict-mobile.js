@@ -126,16 +126,25 @@
   function walletAddr() { try { return (window.OST_PREDICTION_API && OST_PREDICTION_API.walletAddress && OST_PREDICTION_API.walletAddress()) || ''; } catch (_) { return ''; } }
   function meshHandle() { try { if (window.OST_MESH_IDENTITY && OST_MESH_IDENTITY.handle) return OST_MESH_IDENTITY.handle; } catch (_) {} return ''; }
   function ledgerOrders() { try { return (window.OST_PREDICTION_API && OST_PREDICTION_API.ledger && OST_PREDICTION_API.ledger()) || []; } catch (_) { return []; } }
-  function playBal() { try { return window.OST_PLAY && OST_PLAY.balance && OST_PLAY.balance(); } catch (_) { return undefined; } }
+  // The spendable balance is the ON-CHAIN WALLET OSTG (unified, per the balance
+  // decision): wallet OSTG + whatever is parked in the session key. On-chain
+  // wins land here directly. Falls back to the custodial play balance only if
+  // the session module isn't present.
+  function playBal() {
+    try { if (window.OST_SESSION && OST_SESSION.spendable) { var s = OST_SESSION.spendable(); if (s !== undefined) return s; } } catch (_) {}
+    try { return window.OST_PLAY && OST_PLAY.balance && OST_PLAY.balance(); } catch (_) {}
+    return undefined;
+  }
   function setBalDisplay(v) { document.querySelectorAll('#ostPredictMobile .opm-balv').forEach(function (e) { e.textContent = (v == null ? '—' : Number(Math.max(0, v)).toLocaleString(undefined, { maximumFractionDigits: 2 })); }); }
   function refreshBalance() {
+    try { if (window.OST_SESSION && OST_SESSION.refresh) OST_SESSION.refresh(); } catch (_) {}
     try { if (window.OST_PLAY && OST_PLAY.refresh) OST_PLAY.refresh(); } catch (_) {}
     var b = playBal();
     setBalDisplay(b);
     var f = ''; try { if (window.OST_CCY && OST_CCY.fiat && b != null) f = OST_CCY.fiat(b) || ''; } catch (_) {}
     document.querySelectorAll('#ostPredictMobile .opm-balf').forEach(function (e) { e.textContent = f; });
   }
-  function balChip() { return '<div class="opm-bal"><span class="k">Play OSTG</span><span class="v opm-balv">—</span><span class="f opm-balf"></span></div>'; }
+  function balChip() { return '<div class="opm-bal"><span class="k">OSTG</span><span class="v opm-balv">—</span><span class="f opm-balf"></span></div>'; }
 
   /* ===================================================================== */
   /* BROWSE                                                                 */
@@ -517,6 +526,47 @@
     var sb = el('opmSellBtn'); if (sb && !sb.disabled) sb.onclick = doSell;
   }
 
+  /* ---- AUTONOMOUS ON-CHAIN AUTO-CLAIM ----
+   * Wins are money the user already earned. For every closed on-chain 5-min
+   * ticket, once the program has resolved it, claim it automatically (session-
+   * signed, no popup) so it lands in the wallet OSTG (= the balance). Losers are
+   * marked, never claim-spammed. Idempotent + attempt-capped. */
+  var _claimTries = {};
+  function patchOrder(o, patch) {
+    try {
+      var ref = o.reference || o.signature || o.sig || o.id;
+      if (window.OST_PREDICTION_API && OST_PREDICTION_API.patchOrderByRef && ref) { OST_PREDICTION_API.patchOrderByRef(ref, patch); return; }
+      if (window.OST_PREDICTION_API && OST_PREDICTION_API.recordOrder) OST_PREDICTION_API.recordOrder(Object.assign({}, o, patch));
+    } catch (_) {}
+  }
+  async function autoClaimOnchain() {
+    if (autoClaimOnchain._busy) return; autoClaimOnchain._busy = true;
+    try {
+      if (!(window.OST_ONCHAIN && OST_ONCHAIN.available && OST_ONCHAIN.available() && OST_ONCHAIN.claim && OST_ONCHAIN.marketFor)) return;
+      var orders = ledgerOrders(); var credited = false;
+      for (var i = 0; i < orders.length && i < 16; i++) {
+        var o = orders[i]; if (!o || o.cashedOut) continue;
+        var st = String(o.status || o.outcome || '').toLowerCase();
+        if (st === 'lost' || st === 'sold' || st === 'paid') continue;
+        var mm = String(o.marketId || '').match(/^ost-btc5m-(\d+)$/); if (!mm) continue;   // on-chain rail = btc5m
+        var openAt = o.onChainOpenAt ? Number(o.onChainOpenAt) : Math.floor(Number(mm[1]) / 1000);
+        if (!(openAt > 0) || Date.now() < (openAt + 300) * 1000 + 6000) continue;          // round not closed yet
+        var key = o.signature || o.sig || o.id || String(openAt);
+        if ((_claimTries[key] || 0) > 4) continue; _claimTries[key] = (_claimTries[key] || 0) + 1;
+        var m = await OST_ONCHAIN.marketFor(openAt); if (!m || !m.exists || !m.resolved) continue;
+        var mySide = (o.side === 'no' || o.side === 0) ? 0 : 1;
+        if (m.winningSide !== mySide) { patchOrder(o, { status: 'lost' }); continue; }     // lost — mark, don't claim
+        try {
+          var r = await OST_ONCHAIN.claim(openAt);                                          // session-signed, no popup
+          var net = window.OST_ONCHAIN.quoteNet ? Number(OST_ONCHAIN.quoteNet(m, mySide, Number(o.stake) || 0).net) : 0;
+          patchOrder(o, { status: 'won', cashedOut: true, cashoutOst: net, claimSig: r && r.signature });
+          credited = true;
+        } catch (e) { /* already claimed / not payable yet — leave for next sweep */ }
+      }
+      if (credited) { refreshBalance(); if (view === 'positions') renderPositions(); toast('Auto-claimed your winnings to OSTG.'); }
+    } catch (_) {} finally { autoClaimOnchain._busy = false; }
+  }
+
   /* ---- buy / sell sheet ---- */
   var amt = 25, mode = 'buy';
   function openSheet(m, s) { mode = m; if (s) side = s; syncYnSel(); paintTicket(); el('opmSheet').classList.add('open'); el('opmScrim').classList.add('open'); }
@@ -772,6 +822,9 @@
     setInterval(function () { if (view === 'detail' && isBtcLive(currentMarket)) loadRound(); }, 5000);
     setInterval(function () { if (view === 'detail' && !document.hidden) { loadTrades(); refreshPosition(); if (!isBtcLive(currentMarket)) paintStandard(); } }, 11000);
     setInterval(refreshBalance, 30000);
+    // autonomous autopay: claim resolved on-chain wins to the wallet OSTG
+    setTimeout(autoClaimOnchain, 6000);
+    setInterval(function () { if (!document.hidden) autoClaimOnchain(); }, 25000);
     // markets can arrive after boot
     var t = 0; var iv2 = setInterval(function () { if (allMarkets().length) { if (view === 'browse') renderBrowse(); clearInterval(iv2); } else if (++t > 40) clearInterval(iv2); }, 700);
   }

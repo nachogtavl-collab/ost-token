@@ -61,12 +61,26 @@
     });
   }
 
+  var cachedWallet;   // last-known WALLET OSTG (the unified spendable base)
+  async function readOstg(owner) {
+    if (!owner || !conn()) return null;
+    for (var i = 0; i < 3; i++) {
+      try { var r = await conn().getTokenAccountBalance(ataOf(owner)); var v = Number(r.value.uiAmount); if (isFinite(v)) return v; } catch (_) {}
+      await new Promise(function (r) { setTimeout(r, 600); });
+    }
+    return null;                       // unknown — NEVER a false zero on a 429
+  }
+  // Refresh both balances. LAST-KNOWN semantics: a failed read keeps the old
+  // value instead of showing 0/disconnected (the #2 "disconnections" fix).
   async function refresh() {
-    var k = load(); if (!k || !conn()) { cachedBal = undefined; return cachedBal; }
-    try { var r = await conn().getTokenAccountBalance(ataOf(k.publicKey)); cachedBal = Number(r.value.uiAmount) || 0; }
-    catch (_) { cachedBal = 0; }
+    var k = load();
+    var s = k ? await readOstg(k.publicKey) : 0; if (s != null) cachedBal = s; else if (cachedBal == null) cachedBal = undefined;
+    var u = userPk(); if (u) { var w = await readOstg(u); if (w != null) cachedWallet = w; }
     emit(); return cachedBal;
   }
+  // The unified spendable = wallet OSTG + whatever is parked in the session key.
+  function spendable() { if (cachedWallet == null && cachedBal == null) return undefined; return (cachedWallet || 0) + (cachedBal || 0); }
+  function walletBalance() { return cachedWallet; }
 
   // ONE user signature: SOL float + OSTG (the spend cap) -> the session key.
   async function fund(amountUi) {
@@ -141,7 +155,7 @@
     try { await fund(cap); } catch (_) { autoArmedOnce = false; }
   }
 
-  window.OST_SESSION = { exists: exists, keypair: keypair, pubkey: pubkey, balance: balance, cap: cap, fund: fund, end: end, refresh: refresh, autoArm: autoArm };
+  window.OST_SESSION = { exists: exists, keypair: keypair, pubkey: pubkey, balance: balance, spendable: spendable, walletBalance: walletBalance, cap: cap, fund: fund, end: end, refresh: refresh, autoArm: autoArm };
   // Sweeping = an explicit "off" for this page load, so we don't re-arm behind
   // the user's back after they end a session.
   var _end = end; end = function () { userEnded = true; return _end.apply(null, arguments); };
