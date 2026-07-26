@@ -50,8 +50,14 @@
 
   // The authority that opens the markets (the crank). Market PDAs are seeded by
   // it, so the client must know it to derive the same market everyone bets into.
+  // The crank authority that opens every shared market — the client MUST derive
+  // the SAME market PDAs the crank creates, so it needs this key. It was read
+  // from window but never set, which left the whole on-chain rail dormant
+  // (available() always false). Default to the real crank authority; still
+  // overridable via window.OST_ONCHAIN_AUTHORITY.
+  var CRANK_AUTHORITY = '6LvGarqaiQfaaZ8RsCd3NQE96UAhDYCz8MXvarw6bsfF';
   function authority() {
-    return window.OST_ONCHAIN_AUTHORITY ? pk(window.OST_ONCHAIN_AUTHORITY) : null;
+    return pk(window.OST_ONCHAIN_AUTHORITY || CRANK_AUTHORITY);
   }
 
   function u64le(n) {

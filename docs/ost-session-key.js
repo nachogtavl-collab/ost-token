@@ -111,7 +111,53 @@
     return { ok: true };
   }
 
-  window.OST_SESSION = { exists: exists, keypair: keypair, pubkey: pubkey, balance: balance, cap: cap, fund: fund, end: end, refresh: refresh };
-  // Warm the cached balance if a session already exists.
+  // ---- AUTO-ARM: the moment a wallet is sensed, arm a session automatically ----
+  // No manual "Enable" tap. On a local browser wallet this is fully silent (it
+  // signs with the stored key); on an external wallet it is the single fund
+  // signature. Modest auto-cap, only if the wallet can cover gas. Once per load
+  // and never if the user explicitly ended a session this session.
+  var AUTO_CAP = 25, MIN_CAP = 5, MIN_SOL = 0.05;
+  var autoArmedOnce = false, userEnded = false;
+  // Balance reads gate auto-arm, so a single RPC 429 must not falsely report 0.
+  // Retry a few times, and prefer the wallet's own OSTG helper when present.
+  async function retry(fn, n) { for (var i = 0; i < n; i++) { try { var v = await fn(); if (v != null && !Number.isNaN(v)) return v; } catch (_) {} await new Promise(function (r) { setTimeout(r, 700); }); } return null; }
+  async function walletOstg() {
+    var u = userPk(); if (!u || !conn()) return 0;
+    var v = await retry(async function () {
+      if (window.OST_WALLET && OST_WALLET.getOstBalance) { var b = await OST_WALLET.getOstBalance(u.toBase58()); if (b != null) return Number(b); }
+      var r = await conn().getTokenAccountBalance(ataOf(u)); return Number(r.value.uiAmount);
+    }, 4);
+    return v || 0;
+  }
+  async function walletSol() { var u = userPk(); if (!u || !conn()) return 0; var v = await retry(async function () { return (await conn().getBalance(u)) / 1e9; }, 4); return v || 0; }
+  function onchainReady() { try { return !!(w3() && window.OST_ONCHAIN && OST_ONCHAIN.available && OST_ONCHAIN.available()); } catch (_) { return false; } }
+  async function autoArm() {
+    if (autoArmedOnce || userEnded || !userPk() || !onchainReady()) return;
+    if (exists()) { await refresh(); if (cachedBal > 0) { autoArmedOnce = true; return; } }   // already armed
+    if ((await walletSol()) < MIN_SOL) return;                 // can't cover gas — leave it
+    var cap = Math.min(AUTO_CAP, Math.floor(await walletOstg()));
+    if (!(cap >= MIN_CAP)) return;                             // too little OSTG to bother
+    autoArmedOnce = true;
+    try { await fund(cap); } catch (_) { autoArmedOnce = false; }
+  }
+
+  window.OST_SESSION = { exists: exists, keypair: keypair, pubkey: pubkey, balance: balance, cap: cap, fund: fund, end: end, refresh: refresh, autoArm: autoArm };
+  // Sweeping = an explicit "off" for this page load, so we don't re-arm behind
+  // the user's back after they end a session.
+  var _end = end; end = function () { userEnded = true; return _end.apply(null, arguments); };
+  window.OST_SESSION.end = end;
+
   if (exists()) setTimeout(function () { try { refresh(); } catch (_) {} }, 1500);
+  // Arm on connect, and keep trying on a short poll after load so a transient
+  // RPC hiccup (a single 429 on the balance read) doesn't leave it unarmed —
+  // it retries until armed, the user ends a session, or a few attempts pass.
+  window.addEventListener('ost:wallet-changed', function () { setTimeout(autoArm, 1800); });
+  window.addEventListener('ost:wallet-connected', function () { setTimeout(autoArm, 1800); });
+  var _armTries = 0;
+  var _armIv = setInterval(function () {
+    if (userEnded || _armTries++ > 8) { clearInterval(_armIv); return; }
+    if (exists() && cachedBal > 0) { clearInterval(_armIv); return; }
+    if (userPk()) autoArm();
+  }, 8000);
+  setTimeout(function () { if (userPk()) autoArm(); }, 3200);
 })();
