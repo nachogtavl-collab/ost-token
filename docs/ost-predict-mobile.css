@@ -1,0 +1,213 @@
+/* ==========================================================================
+ * OST · Predict Mobile — the v4 design, for real.
+ * --------------------------------------------------------------------------
+ * A single-market, mobile-portrait prediction page (the BTC 5-min flagship)
+ * matching the approved v4 mockup exactly. Everything is scoped under
+ * #ostPredictMobile and every class is opm- prefixed so it can NEVER collide
+ * with the app's existing .yn/.pool/.trade/.sheet/etc. styles.
+ * ========================================================================== */
+/* The clean surface OWNS the predict panel. Every other module's widget in
+ * here (old board, positions HUD, etc.) is hidden authoritatively — !important
+ * beats any inline display those modules keep re-setting on a timer. They stay
+ * in the DOM (display:none), so the ledger + money paths they power keep working
+ * underneath; this surface just drives them. */
+#wallet-panel-predict > :not(#ostPredictMobile){display:none!important}
+
+#ostPredictMobile{
+  --opm-bg:#050b13;--opm-bg2:#0a1420;--opm-card:#0e1c2b;--opm-card2:#132639;--opm-card3:#17304a;
+  --opm-line:rgba(127,216,255,.12);--opm-line2:rgba(127,216,255,.24);--opm-line3:rgba(127,216,255,.42);
+  --opm-ink:#eef6fc;--opm-ink2:#a2b8cb;--opm-ink3:#647d92;
+  --opm-cyan:#7fd8ff;--opm-purple:#a97bff;--opm-gold:#ffc04a;
+  --opm-yes:#34d399;--opm-yes2:#10b981;--opm-yes-dim:rgba(52,211,153,.14);
+  --opm-no:#fb7185;--opm-no2:#e11d48;--opm-no-dim:rgba(251,113,133,.14);
+  --opm-ostg:#a97bff;--opm-ostc:#4da3ff;
+  --opm-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  position:relative;width:100%;max-width:460px;margin:0 auto;
+  color:var(--opm-ink);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.5;
+  background:
+    radial-gradient(700px 380px at 80% -8%,rgba(169,123,255,.13),transparent 60%),
+    radial-gradient(600px 360px at 0% 0%,rgba(127,216,255,.09),transparent 55%),var(--opm-bg);
+  border-radius:18px;overflow:hidden;padding-bottom:88px;
+  -webkit-font-smoothing:antialiased;
+}
+#ostPredictMobile *{box-sizing:border-box}
+@media(prefers-reduced-motion:reduce){#ostPredictMobile *{animation:none!important;transition:none!important}}
+#ostPredictMobile .opm-ic{width:1em;height:1em;stroke:currentColor;stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+#ostPredictMobile .opm-mono{font-family:var(--opm-mono);font-variant-numeric:tabular-nums}
+#ostPredictMobile .opm-scroll{padding:12px 14px 0}
+
+/* top bar */
+#ostPredictMobile .opm-tb{display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:20;
+  padding:12px 14px;background:rgba(5,11,19,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--opm-line)}
+#ostPredictMobile .opm-cat{font-size:11px;color:var(--opm-ink3);letter-spacing:.04em}
+#ostPredictMobile .opm-cat b{color:var(--opm-ink);font-weight:700;display:block;font-size:13px;letter-spacing:-.01em}
+#ostPredictMobile .opm-sp{flex:1}
+#ostPredictMobile .opm-bal{display:flex;flex-direction:column;align-items:flex-end;padding:6px 11px;border-radius:11px;background:var(--opm-card);border:1px solid rgba(169,123,255,.3)}
+#ostPredictMobile .opm-bal .k{font-size:8.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--opm-ink3)}
+#ostPredictMobile .opm-bal .v{font-family:var(--opm-mono);font-weight:700;font-size:14px;color:var(--opm-ostg)}
+#ostPredictMobile .opm-bal .f{font-size:9px;color:var(--opm-ink3);font-family:var(--opm-mono)}
+
+/* market title */
+#ostPredictMobile .opm-qhead{display:flex;gap:12px;align-items:center;margin:16px 2px 14px}
+#ostPredictMobile .opm-qhead .ico{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:var(--opm-card3);border:1px solid var(--opm-line2);color:var(--opm-gold);flex:0 0 auto}
+#ostPredictMobile .opm-qhead .ico .opm-ic{width:26px;height:26px}
+#ostPredictMobile .opm-qhead h1{margin:0;font-size:20px;font-weight:800;letter-spacing:-.02em;line-height:1.18;color:var(--opm-ink)}
+#ostPredictMobile .opm-live{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--opm-yes);margin-top:5px}
+#ostPredictMobile .opm-live .d{width:6px;height:6px;border-radius:50%;background:var(--opm-yes);box-shadow:0 0 8px var(--opm-yes);animation:opm-pulse 1.5s infinite}
+@keyframes opm-pulse{50%{opacity:.3}}
+
+/* price block */
+#ostPredictMobile .opm-px{border-radius:20px;padding:16px;position:relative;overflow:hidden;margin-bottom:14px;transition:border-color .4s,box-shadow .4s;border:1px solid var(--opm-line2);background:var(--opm-card)}
+#ostPredictMobile .opm-px.up{border-color:rgba(52,211,153,.5);box-shadow:inset 0 0 60px rgba(52,211,153,.09)}
+#ostPredictMobile .opm-px.down{border-color:rgba(251,113,133,.5);box-shadow:inset 0 0 60px rgba(251,113,133,.09)}
+#ostPredictMobile .opm-pxrow{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:4px}
+#ostPredictMobile .opm-pxnow{font-family:var(--opm-mono);font-size:34px;font-weight:800;letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums}
+#ostPredictMobile .opm-px.up .opm-pxnow{color:var(--opm-yes)}
+#ostPredictMobile .opm-px.down .opm-pxnow{color:var(--opm-no)}
+#ostPredictMobile .opm-pxdelta{font-family:var(--opm-mono);font-weight:700;font-size:14px;padding:4px 9px;border-radius:8px}
+#ostPredictMobile .opm-px.up .opm-pxdelta{color:var(--opm-yes);background:var(--opm-yes-dim)}
+#ostPredictMobile .opm-px.down .opm-pxdelta{color:var(--opm-no);background:var(--opm-no-dim)}
+#ostPredictMobile .opm-beat{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--opm-ink2);margin-top:2px}
+#ostPredictMobile .opm-beat .sw{width:16px;height:0;border-top:2px dashed var(--opm-ink3)}
+#ostPredictMobile .opm-beat b{font-family:var(--opm-mono);color:var(--opm-ink);font-weight:700}
+#ostPredictMobile canvas.opm-g{width:100%;height:150px;display:block;margin:12px 0 0}
+#ostPredictMobile .opm-tf{display:flex;gap:5px;margin-top:8px;justify-content:center}
+#ostPredictMobile .opm-tf button{border:1px solid var(--opm-line);background:var(--opm-bg2);color:var(--opm-ink3);font-family:var(--opm-mono);font-size:11px;font-weight:700;padding:5px 12px;border-radius:8px;cursor:pointer}
+#ostPredictMobile .opm-tf button.on{background:var(--opm-card3);color:var(--opm-ink);border-color:var(--opm-line2)}
+
+/* YES/NO */
+#ostPredictMobile .opm-yn{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+#ostPredictMobile .opm-yn button{border:1px solid var(--opm-line2);border-radius:16px;padding:15px;cursor:pointer;display:flex;flex-direction:column;gap:3px;align-items:center;transition:.15s;background:var(--opm-card)}
+#ostPredictMobile .opm-yn .lab{font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
+#ostPredictMobile .opm-yn .px{font-family:var(--opm-mono);font-size:26px;font-weight:800;font-variant-numeric:tabular-nums}
+#ostPredictMobile .opm-yn .sh{font-size:10.5px;color:var(--opm-ink3)}
+#ostPredictMobile .opm-yn .y{color:var(--opm-yes)}
+#ostPredictMobile .opm-yn .y.sel,#ostPredictMobile .opm-yn .y:active{background:var(--opm-yes-dim);border-color:var(--opm-yes)}
+#ostPredictMobile .opm-yn .n{color:var(--opm-no)}
+#ostPredictMobile .opm-yn .n.sel,#ostPredictMobile .opm-yn .n:active{background:var(--opm-no-dim);border-color:var(--opm-no)}
+
+/* pool */
+#ostPredictMobile .opm-pool{border-radius:16px;background:var(--opm-card);border:1px solid var(--opm-line);padding:14px;margin-bottom:14px}
+#ostPredictMobile .opm-pool .h{display:flex;justify-content:space-between;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--opm-ink3);margin-bottom:9px}
+#ostPredictMobile .opm-pool .h .rt{display:flex;align-items:center;gap:5px}
+#ostPredictMobile .opm-pool .h .opm-ic{width:12px;height:12px}
+#ostPredictMobile .opm-splbar{height:34px;border-radius:10px;overflow:hidden;display:flex;font-family:var(--opm-mono);font-weight:800;font-size:13px}
+#ostPredictMobile .opm-splbar .yy{background:linear-gradient(90deg,var(--opm-yes2),var(--opm-yes));color:#04120c;display:flex;align-items:center;padding:0 12px;transition:width .8s cubic-bezier(.2,.8,.2,1);white-space:nowrap;overflow:hidden}
+#ostPredictMobile .opm-splbar .nn{background:linear-gradient(90deg,var(--opm-no),var(--opm-no2));color:#fff;display:flex;align-items:center;justify-content:flex-end;padding:0 12px;flex:1;transition:width .8s cubic-bezier(.2,.8,.2,1);white-space:nowrap;overflow:hidden}
+#ostPredictMobile .opm-pool .sub{display:flex;justify-content:space-between;font-size:11px;color:var(--opm-ink3);margin-top:8px;font-family:var(--opm-mono)}
+
+/* your position */
+#ostPredictMobile .opm-poscard{border-radius:16px;background:linear-gradient(150deg,var(--opm-card2),var(--opm-card));border:1px solid rgba(52,211,153,.32);padding:14px;margin-bottom:14px}
+#ostPredictMobile .opm-poscard .pch{display:flex;align-items:center;gap:8px;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--opm-ink3);margin-bottom:10px}
+#ostPredictMobile .opm-poscard .pch .side{font-size:9.5px;font-weight:800;padding:2px 8px;border-radius:5px}
+#ostPredictMobile .opm-poscard .pch .side.y{color:var(--opm-yes);background:var(--opm-yes-dim)}
+#ostPredictMobile .opm-poscard .pch .side.n{color:var(--opm-no);background:var(--opm-no-dim)}
+#ostPredictMobile .opm-poscard .pch .sp{flex:1}
+#ostPredictMobile .opm-poscard .pnl{font-family:var(--opm-mono);font-weight:800;font-size:13px}
+#ostPredictMobile .opm-poscard .pnl.up{color:var(--opm-yes)}
+#ostPredictMobile .opm-poscard .pnl.down{color:var(--opm-no)}
+#ostPredictMobile .opm-pcgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px}
+#ostPredictMobile .opm-pcg .k{font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--opm-ink3)}
+#ostPredictMobile .opm-pcg .v{font-family:var(--opm-mono);font-weight:700;font-size:15px;margin-top:2px;font-variant-numeric:tabular-nums}
+#ostPredictMobile .opm-pcbtns{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+#ostPredictMobile .opm-pcbtns button{border-radius:12px;padding:12px;font-size:13px;font-weight:800;cursor:pointer;border:1px solid var(--opm-line2);background:var(--opm-card);color:var(--opm-ink);transition:.15s}
+#ostPredictMobile .opm-pcbtns .sell{background:linear-gradient(180deg,#f4a52a,#e0870f);color:#170c02;border:0}
+#ostPredictMobile .opm-pcbtns .addmore{color:var(--opm-yes)}
+#ostPredictMobile .opm-pcbtns button:active{transform:scale(.97)}
+
+/* segmented tabs */
+#ostPredictMobile .opm-seg{display:flex;gap:4px;background:var(--opm-bg);border:1px solid var(--opm-line);border-radius:12px;padding:4px;margin-bottom:12px}
+#ostPredictMobile .opm-seg button{flex:1;border:0;background:none;color:var(--opm-ink3);font-size:12px;font-weight:700;padding:9px 4px;border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px}
+#ostPredictMobile .opm-seg button .opm-ic{width:14px;height:14px}
+#ostPredictMobile .opm-seg button.on{background:var(--opm-card3);color:var(--opm-ink)}
+#ostPredictMobile .opm-pane{display:none}
+#ostPredictMobile .opm-pane.on{display:block}
+#ostPredictMobile .opm-empty{padding:22px;text-align:center;color:var(--opm-ink3);font-size:12.5px}
+
+#ostPredictMobile .opm-trade{display:flex;align-items:center;gap:9px;padding:9px 4px;border-bottom:1px solid var(--opm-line);font-size:12.5px}
+#ostPredictMobile .opm-trade.in{animation:opm-si .4s}
+@keyframes opm-si{from{opacity:0;transform:translateY(-6px)}}
+#ostPredictMobile .opm-trade .s{font-size:9px;font-weight:700;text-transform:uppercase;padding:2px 7px;border-radius:5px}
+#ostPredictMobile .opm-trade .s.y{color:var(--opm-yes);background:var(--opm-yes-dim)}
+#ostPredictMobile .opm-trade .s.n{color:var(--opm-no);background:var(--opm-no-dim)}
+#ostPredictMobile .opm-trade .who{flex:1;color:var(--opm-ink2);font-family:var(--opm-mono);font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#ostPredictMobile .opm-trade .amt{font-family:var(--opm-mono);font-weight:700}
+#ostPredictMobile .opm-trade .t{color:var(--opm-ink3);font-family:var(--opm-mono);font-size:10.5px;min-width:36px;text-align:right}
+
+#ostPredictMobile .opm-holder{display:flex;align-items:center;gap:9px;padding:9px 2px;font-size:12.5px}
+#ostPredictMobile .opm-holder .rank{color:var(--opm-ink3);font-family:var(--opm-mono);width:16px}
+#ostPredictMobile .opm-holder .addr{font-family:var(--opm-mono);color:var(--opm-ink2);font-size:11.5px}
+#ostPredictMobile .opm-holder .bar{flex:1;height:6px;border-radius:3px;background:var(--opm-bg2);overflow:hidden}
+#ostPredictMobile .opm-holder .bar i{display:block;height:100%}
+#ostPredictMobile .opm-holder .sh{font-family:var(--opm-mono);font-weight:700;min-width:56px;text-align:right}
+
+#ostPredictMobile .opm-meshcta{display:flex;align-items:center;gap:10px;padding:12px;border-radius:13px;background:linear-gradient(135deg,rgba(169,123,255,.14),rgba(127,216,255,.06));border:1px solid rgba(169,123,255,.3);margin-bottom:12px;cursor:pointer}
+#ostPredictMobile .opm-meshcta .opm-ic{width:20px;height:20px;color:var(--opm-purple)}
+#ostPredictMobile .opm-meshcta .t{flex:1;font-size:12.5px}
+#ostPredictMobile .opm-meshcta .t b{display:block;font-weight:700}
+#ostPredictMobile .opm-meshcta .t span{color:var(--opm-ink3);font-size:11px}
+#ostPredictMobile .opm-meshcta .go{color:var(--opm-purple)}
+#ostPredictMobile .opm-cmt{display:flex;gap:9px;padding:10px 0;border-bottom:1px solid var(--opm-line)}
+#ostPredictMobile .opm-cmt .av{width:28px;height:28px;border-radius:8px;flex:0 0 auto;display:grid;place-items:center;font-family:var(--opm-mono);font-weight:700;font-size:11px;background:var(--opm-card3);color:var(--opm-purple)}
+#ostPredictMobile .opm-cmt .b .n{font-size:11.5px;font-weight:700}
+#ostPredictMobile .opm-cmt .b .n span{color:var(--opm-ink3);font-weight:500;font-size:10.5px;margin-left:5px;font-family:var(--opm-mono)}
+#ostPredictMobile .opm-cmt .b p{margin:2px 0 0;font-size:12.5px;color:var(--opm-ink2);overflow-wrap:anywhere}
+#ostPredictMobile .opm-cmtbox{display:flex;gap:8px;margin:12px 0 4px}
+#ostPredictMobile .opm-cmtbox input{flex:1;background:var(--opm-bg);border:1px solid var(--opm-line2);border-radius:11px;padding:11px 13px;color:var(--opm-ink);font-size:13px;outline:none}
+#ostPredictMobile .opm-cmtbox button{border:0;border-radius:11px;padding:0 15px;font-weight:800;font-size:13px;background:linear-gradient(180deg,var(--opm-purple),#8a5cf0);color:#fff;cursor:pointer}
+
+/* sticky buy bar */
+#ostPredictMobile .opm-buybar{position:absolute;left:0;right:0;bottom:0;z-index:30;
+  display:flex;gap:10px;padding:12px 14px calc(14px + env(safe-area-inset-bottom));
+  background:rgba(8,16,26,.94);backdrop-filter:blur(14px);border-top:1px solid var(--opm-line2)}
+#ostPredictMobile .opm-buybar button{flex:1;border:0;border-radius:14px;padding:15px;font-size:15px;font-weight:800;cursor:pointer;transition:.15s;color:#fff}
+#ostPredictMobile .opm-buybar .by{background:linear-gradient(180deg,var(--opm-yes),var(--opm-yes2));color:#04120c}
+#ostPredictMobile .opm-buybar .bn{background:linear-gradient(180deg,var(--opm-no),var(--opm-no2));color:#fff}
+#ostPredictMobile .opm-buybar button:active{transform:scale(.97)}
+
+/* sheet (anchored inside the phone container) */
+#ostPredictMobile .opm-scrim{position:absolute;inset:0;z-index:40;background:rgba(2,6,12,.68);opacity:0;pointer-events:none;transition:.25s}
+#ostPredictMobile .opm-scrim.open{opacity:1;pointer-events:auto}
+#ostPredictMobile .opm-sheet{position:absolute;left:0;right:0;bottom:0;z-index:50;
+  background:linear-gradient(180deg,var(--opm-card2),var(--opm-card));border-radius:24px 24px 0 0;border-top:1px solid var(--opm-line3);
+  padding:8px 16px calc(18px + env(safe-area-inset-bottom));transform:translateY(102%);transition:transform .3s cubic-bezier(.2,.8,.2,1);
+  box-shadow:0 -20px 60px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:12px;max-height:90%;overflow-y:auto}
+#ostPredictMobile .opm-sheet.open{transform:translateY(0)}
+#ostPredictMobile .opm-grab{width:40px;height:4px;border-radius:3px;background:var(--opm-line3);margin:6px auto 2px}
+#ostPredictMobile .opm-sheet h3{margin:0;font-size:14px;font-weight:750;display:flex;align-items:center;gap:8px;color:var(--opm-ink)}
+#ostPredictMobile .opm-sheet h3 .opm-ic{width:15px;height:15px;color:var(--opm-cyan)}
+#ostPredictMobile .opm-tkout{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#ostPredictMobile .opm-tkout button{border-radius:13px;padding:13px;border:1px solid var(--opm-line2);cursor:pointer;background:var(--opm-card);display:flex;flex-direction:column;gap:2px;align-items:center}
+#ostPredictMobile .opm-tkout .lab{font-size:11px;font-weight:700;text-transform:uppercase}
+#ostPredictMobile .opm-tkout .px{font-family:var(--opm-mono);font-weight:800;font-size:20px}
+#ostPredictMobile .opm-tkout .y{color:var(--opm-yes)}
+#ostPredictMobile .opm-tkout .y.sel{background:var(--opm-yes-dim);border-color:var(--opm-yes)}
+#ostPredictMobile .opm-tkout .n{color:var(--opm-no)}
+#ostPredictMobile .opm-tkout .n.sel{background:var(--opm-no-dim);border-color:var(--opm-no)}
+#ostPredictMobile .opm-amt{display:flex;align-items:center;gap:8px;background:var(--opm-bg);border:1px solid var(--opm-line2);border-radius:13px;padding:2px 14px}
+#ostPredictMobile .opm-amt input{flex:1;background:none;border:0;color:var(--opm-ink);font-family:var(--opm-mono);font-size:26px;font-weight:700;padding:12px 0;outline:none;width:100%;font-variant-numeric:tabular-nums}
+#ostPredictMobile .opm-amt .cur{font-size:12px;font-weight:700;color:var(--opm-ostg)}
+#ostPredictMobile .opm-quick{display:flex;gap:7px}
+#ostPredictMobile .opm-quick button{flex:1;padding:10px;border-radius:10px;background:var(--opm-card);border:1px solid var(--opm-line);color:var(--opm-ink2);font-family:var(--opm-mono);font-size:13px;cursor:pointer}
+#ostPredictMobile .opm-src{display:flex;align-items:center;justify-content:space-between;padding:10px 13px;border-radius:12px;background:rgba(169,123,255,.08);border:1px solid rgba(169,123,255,.26)}
+#ostPredictMobile .opm-src .l{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--opm-ostg)}
+#ostPredictMobile .opm-src .l .d{width:7px;height:7px;border-radius:50%;background:var(--opm-ostg)}
+#ostPredictMobile .opm-src .chg{font-size:11px;color:var(--opm-ink3);text-decoration:underline;cursor:pointer}
+#ostPredictMobile .opm-bd{display:flex;flex-direction:column;gap:8px;padding:13px;border-radius:13px;background:var(--opm-bg);border:1px solid var(--opm-line)}
+#ostPredictMobile .opm-tl{display:flex;justify-content:space-between;font-size:12.5px}
+#ostPredictMobile .opm-tl .k{color:var(--opm-ink3)}
+#ostPredictMobile .opm-tl .v{font-family:var(--opm-mono);font-weight:700;color:var(--opm-ink)}
+#ostPredictMobile .opm-tl.big{padding-top:8px;border-top:1px dashed var(--opm-line2)}
+#ostPredictMobile .opm-tl.big .k{color:var(--opm-ink)}
+#ostPredictMobile .opm-tl.big .v{color:var(--opm-yes);font-size:18px}
+#ostPredictMobile .opm-roi{font-size:10px;color:var(--opm-yes);background:var(--opm-yes-dim);padding:2px 6px;border-radius:5px;margin-left:6px}
+#ostPredictMobile .opm-confirm{border:0;border-radius:14px;padding:15px;font-size:15px;font-weight:800;cursor:pointer;background:linear-gradient(180deg,var(--opm-yes),var(--opm-yes2));color:#04120c}
+#ostPredictMobile .opm-confirm.no{background:linear-gradient(180deg,var(--opm-no),var(--opm-no2));color:#fff}
+#ostPredictMobile .opm-confirm.sellc{background:linear-gradient(180deg,#f4a52a,#e0870f);color:#170c02}
+#ostPredictMobile .opm-confirm:disabled{opacity:.6;cursor:default}
+#ostPredictMobile .opm-fine{font-size:10px;color:var(--opm-ink3);text-align:center;line-height:1.6}
+#ostPredictMobile .opm-fine .opm-ic{width:11px;height:11px;vertical-align:-2px}
+#ostPredictMobile .opm-locked{margin-top:2px;padding:11px 13px;border-radius:12px;border:1px dashed var(--opm-line2);background:rgba(127,216,255,.05);color:var(--opm-ink2);font-size:12px;text-align:center}
+
+/* the whole thing only takes over on phones; wider screens still center it */
