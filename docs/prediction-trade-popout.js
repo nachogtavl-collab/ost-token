@@ -182,10 +182,12 @@
   }
 
   function open() {
-    // The trade ticket now opens the NEW prediction Positions view (your tickets:
-    // open, won/claim, lost, cashed out, P&L, history) instead of the legacy
-    // floating desk. The old desk stays in the DOM as the money engine that the
-    // new UI's claim/sell actions drive.
+    // The trade ticket opens as a body-level overlay that works from ANY panel
+    // (no navigating to the predictions page). Falls back to the in-panel
+    // positions view, then the legacy floating desk.
+    if (window.OST_TICKET && typeof window.OST_TICKET.open === 'function') {
+      try { window.OST_TICKET.open(); return; } catch (_) {}
+    }
     if (window.OST_PREDICT_MOBILE && typeof window.OST_PREDICT_MOBILE.openPositions === 'function') {
       try { window.OST_PREDICT_MOBILE.openPositions(); return; } catch (_) {}
     }
