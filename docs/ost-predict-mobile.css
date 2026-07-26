@@ -210,4 +210,69 @@
 #ostPredictMobile .opm-fine .opm-ic{width:11px;height:11px;vertical-align:-2px}
 #ostPredictMobile .opm-locked{margin-top:2px;padding:11px 13px;border-radius:12px;border:1px dashed var(--opm-line2);background:rgba(127,216,255,.05);color:var(--opm-ink2);font-size:12px;text-align:center}
 
+/* ===================== BROWSE (markets list) ===================== */
+#ostPredictMobile .opm-view{display:none}
+#ostPredictMobile .opm-view.on{display:block}
+#ostPredictMobile .opm-htitle{font-size:20px;font-weight:800;letter-spacing:-.02em;color:var(--opm-ink);margin:0}
+#ostPredictMobile .opm-hsub{font-size:11px;color:var(--opm-ink3);margin-top:2px}
+#ostPredictMobile .opm-search{display:flex;align-items:center;gap:9px;background:var(--opm-card);border:1px solid var(--opm-line2);border-radius:13px;padding:11px 14px;margin:14px 0 10px}
+#ostPredictMobile .opm-search .opm-ic{width:17px;height:17px;color:var(--opm-ink3)}
+#ostPredictMobile .opm-search input{flex:1;background:none;border:0;outline:none;color:var(--opm-ink);font-size:14px}
+#ostPredictMobile .opm-search input::placeholder{color:var(--opm-ink3)}
+#ostPredictMobile .opm-chips{display:flex;gap:7px;overflow-x:auto;padding:2px 0 10px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+#ostPredictMobile .opm-chips::-webkit-scrollbar{display:none}
+#ostPredictMobile .opm-chip{flex:0 0 auto;border:1px solid var(--opm-line);background:var(--opm-bg2);color:var(--opm-ink2);font-size:12.5px;font-weight:700;padding:8px 14px;border-radius:20px;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px}
+#ostPredictMobile .opm-chip .opm-ic{width:13px;height:13px}
+#ostPredictMobile .opm-chip.on{background:var(--opm-card3);color:var(--opm-ink);border-color:var(--opm-line2)}
+#ostPredictMobile .opm-sec{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--opm-ink3);margin:16px 2px 9px;display:flex;align-items:center;gap:6px}
+#ostPredictMobile .opm-sec .opm-ic{width:13px;height:13px;color:var(--opm-cyan)}
+
+/* featured live 5-min crypto cards (horizontal) */
+#ostPredictMobile .opm-feat{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+#ostPredictMobile .opm-feat::-webkit-scrollbar{display:none}
+#ostPredictMobile .opm-fcard{flex:0 0 76%;max-width:300px;border-radius:16px;border:1px solid var(--opm-line2);background:linear-gradient(155deg,var(--opm-card2),var(--opm-card));padding:14px;cursor:pointer;position:relative;overflow:hidden}
+#ostPredictMobile .opm-fcard .ft{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+#ostPredictMobile .opm-fcard .ft .fi{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:var(--opm-card3);border:1px solid var(--opm-line2);color:var(--opm-gold)}
+#ostPredictMobile .opm-fcard .ft .fi .opm-ic{width:17px;height:17px}
+#ostPredictMobile .opm-fcard .ft b{font-size:13px;font-weight:750}
+#ostPredictMobile .opm-fcard .ft .fl{margin-left:auto;font-size:9.5px;font-weight:700;color:var(--opm-yes);display:flex;align-items:center;gap:4px}
+#ostPredictMobile .opm-fcard .ft .fl .d{width:5px;height:5px;border-radius:50%;background:var(--opm-yes);box-shadow:0 0 6px var(--opm-yes);animation:opm-pulse 1.5s infinite}
+#ostPredictMobile .opm-fcard .fq{font-size:13.5px;font-weight:650;line-height:1.3;color:var(--opm-ink);min-height:35px}
+#ostPredictMobile .opm-fcard .fyn{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:11px}
+#ostPredictMobile .opm-fcard .fyn span{border-radius:9px;padding:7px;text-align:center;font-family:var(--opm-mono);font-weight:800;font-size:14px}
+#ostPredictMobile .opm-fcard .fyn .fy{background:var(--opm-yes-dim);color:var(--opm-yes)}
+#ostPredictMobile .opm-fcard .fyn .fn{background:var(--opm-no-dim);color:var(--opm-no)}
+
+/* market cards grid */
+#ostPredictMobile .opm-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:2px}
+#ostPredictMobile .opm-mcard{border-radius:14px;background:var(--opm-card);border:1px solid var(--opm-line);padding:12px;cursor:pointer;display:flex;flex-direction:column;gap:9px;min-height:132px;transition:.14s}
+#ostPredictMobile .opm-mcard:active{transform:scale(.98);border-color:var(--opm-line2)}
+#ostPredictMobile .opm-mcard .mt{display:flex;gap:8px;align-items:flex-start}
+#ostPredictMobile .opm-mcard .mi{width:28px;height:28px;border-radius:8px;flex:0 0 auto;display:grid;place-items:center;background:var(--opm-card3);border:1px solid var(--opm-line);color:var(--opm-cyan)}
+#ostPredictMobile .opm-mcard .mi .opm-ic{width:15px;height:15px}
+#ostPredictMobile .opm-mcard .mq{font-size:12px;font-weight:650;line-height:1.28;color:var(--opm-ink);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+#ostPredictMobile .opm-mcard .mbar{height:5px;border-radius:3px;background:var(--opm-no-dim);overflow:hidden;margin-top:auto}
+#ostPredictMobile .opm-mcard .mbar i{display:block;height:100%;background:linear-gradient(90deg,var(--opm-yes2),var(--opm-yes))}
+#ostPredictMobile .opm-mcard .myn{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+#ostPredictMobile .opm-mcard .myn span{border-radius:8px;padding:6px 4px;text-align:center;font-family:var(--opm-mono);font-weight:700;font-size:12px}
+#ostPredictMobile .opm-mcard .myn .cy{background:var(--opm-yes-dim);color:var(--opm-yes)}
+#ostPredictMobile .opm-mcard .myn .cn{background:var(--opm-no-dim);color:var(--opm-no)}
+#ostPredictMobile .opm-mcard .mf{display:flex;justify-content:space-between;font-size:9.5px;color:var(--opm-ink3);font-family:var(--opm-mono)}
+#ostPredictMobile .opm-mcard .msrc{font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+
+/* back button on detail */
+#ostPredictMobile .opm-back{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--opm-card);border:1px solid var(--opm-line);color:var(--opm-ink2);cursor:pointer;flex:0 0 auto}
+#ostPredictMobile .opm-back .opm-ic{width:18px;height:18px}
+
+/* standard (non-crypto) detail probability block */
+#ostPredictMobile .opm-prob{border-radius:20px;padding:18px 16px;margin-bottom:14px;border:1px solid var(--opm-line2);background:var(--opm-card);text-align:center}
+#ostPredictMobile .opm-prob .pv{font-family:var(--opm-mono);font-size:44px;font-weight:800;line-height:1;color:var(--opm-yes);font-variant-numeric:tabular-nums}
+#ostPredictMobile .opm-prob .pl{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--opm-ink3);margin-top:6px}
+#ostPredictMobile .opm-prob .pbar{height:8px;border-radius:5px;background:var(--opm-no-dim);overflow:hidden;margin-top:12px}
+#ostPredictMobile .opm-prob .pbar i{display:block;height:100%;background:linear-gradient(90deg,var(--opm-yes2),var(--opm-yes));transition:width .8s cubic-bezier(.2,.8,.2,1)}
+#ostPredictMobile .opm-statrow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-bottom:14px}
+#ostPredictMobile .opm-statrow .st{background:var(--opm-card);border:1px solid var(--opm-line);border-radius:12px;padding:10px}
+#ostPredictMobile .opm-statrow .st .k{font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--opm-ink3)}
+#ostPredictMobile .opm-statrow .st .v{font-family:var(--opm-mono);font-weight:700;font-size:14px;margin-top:2px;color:var(--opm-ink)}
+
 /* the whole thing only takes over on phones; wider screens still center it */
