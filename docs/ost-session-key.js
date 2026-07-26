@@ -62,13 +62,12 @@
   }
 
   var cachedWallet;   // last-known WALLET OSTG (the unified spendable base)
+  // SINGLE attempt — retry loops here amplify the request storm under a 429.
+  // The last-known cache (below) already prevents a false zero on a miss.
   async function readOstg(owner) {
     if (!owner || !conn()) return null;
-    for (var i = 0; i < 3; i++) {
-      try { var r = await conn().getTokenAccountBalance(ataOf(owner)); var v = Number(r.value.uiAmount); if (isFinite(v)) return v; } catch (_) {}
-      await new Promise(function (r) { setTimeout(r, 600); });
-    }
-    return null;                       // unknown — NEVER a false zero on a 429
+    try { var r = await conn().getTokenAccountBalance(ataOf(owner)); var v = Number(r.value.uiAmount); if (isFinite(v)) return v; } catch (_) {}
+    return null;                       // unknown — keep last-known, never a false zero
   }
   // Refresh both balances. LAST-KNOWN semantics: a failed read keeps the old
   // value instead of showing 0/disconnected (the #2 "disconnections" fix).
@@ -140,7 +139,7 @@
     var v = await retry(async function () {
       if (window.OST_WALLET && OST_WALLET.getOstBalance) { var b = await OST_WALLET.getOstBalance(u.toBase58()); if (b != null) return Number(b); }
       var r = await conn().getTokenAccountBalance(ataOf(u)); return Number(r.value.uiAmount);
-    }, 4);
+    }, 1);
     return v || 0;
   }
   async function walletSol() { var u = userPk(); if (!u || !conn()) return 0; var v = await retry(async function () { return (await conn().getBalance(u)) / 1e9; }, 4); return v || 0; }
@@ -169,9 +168,9 @@
   window.addEventListener('ost:wallet-connected', function () { setTimeout(autoArm, 1800); });
   var _armTries = 0;
   var _armIv = setInterval(function () {
-    if (userEnded || _armTries++ > 8) { clearInterval(_armIv); return; }
+    if (userEnded || _armTries++ > 3 || document.hidden) { if (_armTries > 3) clearInterval(_armIv); return; }
     if (exists() && cachedBal > 0) { clearInterval(_armIv); return; }
     if (userPk()) autoArm();
-  }, 8000);
-  setTimeout(function () { if (userPk()) autoArm(); }, 3200);
+  }, 30000);
+  setTimeout(function () { if (userPk() && !document.hidden) autoArm(); }, 4000);
 })();

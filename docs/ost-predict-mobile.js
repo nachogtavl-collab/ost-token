@@ -819,12 +819,16 @@
     if (!mount()) { var n = 0; var iv = setInterval(function () { if (mount() || ++n > 40) clearInterval(iv); }, 500); }
     // detail tickers
     setInterval(function () { if (view !== 'detail') return; if (isBtcLive(currentMarket)) { var cd = el('opmCd'); if (cd && round) { var left = Math.max(0, Math.floor((Number(round.closeAt) - Date.now()) / 1000)); cd.textContent = Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0'); if (left <= 0) loadRound(); } } }, 1000);
-    setInterval(function () { if (view === 'detail' && isBtcLive(currentMarket)) loadRound(); }, 5000);
-    setInterval(function () { if (view === 'detail' && !document.hidden) { loadTrades(); refreshPosition(); if (!isBtcLive(currentMarket)) paintStandard(); } }, 11000);
-    setInterval(refreshBalance, 30000);
-    // autonomous autopay: claim resolved on-chain wins to the wallet OSTG
-    setTimeout(autoClaimOnchain, 6000);
-    setInterval(function () { if (!document.hidden) autoClaimOnchain(); }, 25000);
+    // All polling pauses when the tab is hidden (was hammering the network even
+    // in the background — a big part of the request storm).
+    setInterval(function () { if (view === 'detail' && isBtcLive(currentMarket) && !document.hidden) loadRound(); }, 6000);
+    setInterval(function () { if (view === 'detail' && !document.hidden) { loadTrades(); refreshPosition(); if (!isBtcLive(currentMarket)) paintStandard(); } }, 13000);
+    setInterval(function () { if (!document.hidden) refreshBalance(); }, 40000);
+    // autonomous autopay: claim resolved on-chain wins to the wallet OSTG.
+    // Runs only while visible; it no-ops immediately when there are no open
+    // on-chain tickets, so it isn't network churn most of the time.
+    setTimeout(function () { if (!document.hidden) autoClaimOnchain(); }, 8000);
+    setInterval(function () { if (!document.hidden) autoClaimOnchain(); }, 60000);
     // markets can arrive after boot
     var t = 0; var iv2 = setInterval(function () { if (allMarkets().length) { if (view === 'browse') renderBrowse(); clearInterval(iv2); } else if (++t > 40) clearInterval(iv2); }, 700);
   }
