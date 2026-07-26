@@ -192,6 +192,38 @@
     });
   }
 
+  // ---- ARB SPREAD SKIM (client-side market maker, ON-CHAIN, no server) -------
+  // Feature-flagged. When on, a 5-min buy splits: `spread` OST is transferred to
+  // the market's treasury (the market-maker spread) and the REST is bet
+  // pari-mutuel — both in ONE user-signed transaction. This is the honest,
+  // no-middleman way to capture the arb spread on Solana: the spread really moves
+  // on-chain to the treasury; nothing is faked in the UI.
+  // ON by default (proven on devnet: scripts/pyth-crank/predict-arb-skim-e2e.mjs).
+  // Kill switch: window.OST_ARB_ONCHAIN=false or localStorage OST_ARB_ONCHAIN='0'.
+  function arbOnchainOn() {
+    try { if (window.OST_ARB_ONCHAIN === false) return false; if (window.OST_ARB_ONCHAIN === true) return true; return localStorage.getItem('OST_ARB_ONCHAIN') !== '0'; } catch (_) { return true; }
+  }
+  function spreadFrac() {
+    try { if (window.OST_ARB && OST_ARB.bps) { var b = Number(OST_ARB.bps()); if (b >= 0 && b <= 1500) return b / 10000; } } catch (_) {}
+    return 0.015;
+  }
+  // SPL Token-2022 TransferChecked (opcode 12): user ATA -> treasury token account.
+  function ixSpread(spreadOst, treasury) {
+    var W = w3(); var bettor = session().publicKey;
+    var amount = BigInt(Math.round(spreadOst * Math.pow(10, DECIMALS)));
+    var data = concat([new Uint8Array([12]), u64le(amount), new Uint8Array([DECIMALS])]);
+    return new W.TransactionInstruction({
+      programId: pk(TOKEN_2022),
+      keys: [
+        { pubkey: userAta(bettor), isSigner: false, isWritable: true },
+        { pubkey: pk(MINT), isSigner: false, isWritable: false },
+        { pubkey: treasury, isSigner: false, isWritable: true },
+        { pubkey: bettor, isSigner: true, isWritable: false }
+      ],
+      data: data
+    });
+  }
+
   // `treasury` comes from the market account itself — the program pins it at
   // creation and rejects any other account, so it must be read, not derived.
   function ixClaim(openAtSec, treasury) {
@@ -256,17 +288,23 @@
       if (m.resolved) throw new Error('market already resolved');
       if (Date.now() >= m.lockTs) throw new Error('market locked (too close to close)');
       var s = session();
+      // Split the stake: spread -> treasury (market-maker), net -> pari-mutuel pool.
+      var frac = spreadFrac();
+      var spread = (arbOnchainOn() && m.treasury && frac > 0) ? Math.max(0, amountOst * frac) : 0;
+      var net = amountOst - spread;
       return ensureAtaIx(s.publicKey).then(function (ataIx) {
         var ixs = [];
         if (ataIx) ixs.push(ataIx);
-        ixs.push(ixPlaceBet(openAtSec, side, amountOst));
+        if (spread > 0) ixs.push(ixSpread(spread, m.treasury));   // arb spread, on-chain
+        ixs.push(ixPlaceBet(openAtSec, side, net));
         return send(ixs, true);       // fast: processed-level, prewarmed blockhash
       }).then(function (sig) {
         // The ATA definitely exists now.
         ataKnown[s.publicKey.toBase58()] = true;
+        if (spread > 0) { try { window.dispatchEvent(new CustomEvent('ost:house-fee', { detail: { source: 'arbitrage', amount: spread, label: 'market-maker spread (on-chain)' } })); } catch (_) {} }
         try {
           window.dispatchEvent(new CustomEvent('ost:onchain-bet', {
-            detail: { openAt: openAtSec, side: side, amount: amountOst, signature: String(sig), market: m.market.toBase58() }
+            detail: { openAt: openAtSec, side: side, amount: amountOst, net: net, spread: spread, signature: String(sig), market: m.market.toBase58() }
           }));
         } catch (_) {}
         // Reconcile 'confirmed' in the background — we already returned to the UI.
@@ -281,7 +319,7 @@
             }
           });
         }
-        return { signature: String(sig), market: m.market.toBase58(), onChain: true };
+        return { signature: String(sig), market: m.market.toBase58(), onChain: true, spread: spread, net: net };
       });
     });
   }

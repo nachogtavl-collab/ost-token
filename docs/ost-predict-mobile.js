@@ -356,16 +356,10 @@
     if (!sheetOpen()) return;
     var t = el('opmTicket'); if (!t) return;
     if (mode === 'sell') { t.innerHTML = sellConfirmTicket(); var cfs = el('opmCfSell'); if (cfs) cfs.onclick = confirmSell; return; }
-    var c = side === 'yes' ? midYes : (100 - midYes);
     var inp = el('opmAmtIn'); var a = inp ? (parseFloat(inp.value) || 0) : amt;
-    var sh = c > 0 ? a / (c / 100) : 0, fee = feeOf(sh, a), net = sh - fee, roi = a > 0 ? ((net - a) / a * 100) : 0;
     var ty = t.querySelector('.opm-tkout .y .px'); if (ty) ty.textContent = midYes + '¢';
     var tn = t.querySelector('.opm-tkout .n .px'); if (tn) tn.textContent = (100 - midYes) + '¢';
-    var tls = t.querySelectorAll('.opm-bd .opm-tl');
-    if (tls[0]) { var v0 = tls[0].querySelector('.v'); if (v0) v0.textContent = c + '¢'; }
-    var sV = el('opmShV'); if (sV) sV.textContent = sh.toFixed(2);
-    if (tls[2]) { var v2 = tls[2].querySelector('.v'); if (v2) v2.textContent = fee.toFixed(2); }
-    var big = t.querySelector('.opm-tl.big .v'); if (big) big.innerHTML = net.toFixed(2) + ' OSTG<span class="opm-roi">+' + roi.toFixed(0) + '%</span>';
+    var bd = el('opmBuyBd'); if (bd) bd.innerHTML = buyBdHtml(buyEstimate(a));   // rebuild keeps the spread line in sync
     var cf = el('opmCf'); if (cf && !/Bought|Placing/.test(cf.textContent)) cf.textContent = 'Buy ' + (side === 'yes' ? 'Yes' : 'No') + ' · ' + a + ' OSTG';
   }
 
@@ -529,16 +523,33 @@
   function closeSheet() { var sh = el('opmSheet'), sc = el('opmScrim'); if (sh) sh.classList.remove('open'); if (sc) sc.classList.remove('open'); }
   function maxBal() { var b = playBal(); return b > 0 ? Math.floor(b) : 25; }
   function syncYnSel() { document.querySelectorAll('#opmYn button').forEach(function (b) { b.classList.toggle('sel', b.getAttribute('data-s') === side); }); }
+  // One estimate used by the sheet + its live refresher. When the on-chain arb
+  // is active, part of the stake is the market-maker spread (skimmed to treasury
+  // in the same Solana tx), so the rest is what buys shares — shown, never hidden.
+  function arbBps() { try { if (onchainActive && window.OST_ARB && OST_ARB.bps) return Number(OST_ARB.bps()) || 0; } catch (_) {} return 0; }
+  function buyEstimate(stake) {
+    var c = side === 'yes' ? midYes : (100 - midYes);
+    var sBps = arbBps(), spreadAmt = Math.max(0, stake * sBps / 10000), effStake = stake - spreadAmt;
+    var shares = c > 0 ? effStake / (c / 100) : 0, fee = feeOf(shares, effStake), net = shares - fee;
+    return { c: c, spreadAmt: spreadAmt, sBps: sBps, shares: shares, fee: fee, net: net, roi: stake > 0 ? ((net - stake) / stake * 100) : 0 };
+  }
+  function buyBdHtml(e) {
+    var rows = '<div class="opm-tl"><span class="k">Fill price</span><span class="v">' + e.c + '¢</span></div>' +
+      '<div class="opm-tl"><span class="k">Shares</span><span class="v" id="opmShV">' + e.shares.toFixed(2) + '</span></div>';
+    if (e.spreadAmt > 0) rows += '<div class="opm-tl"><span class="k">Market spread (' + (e.sBps / 100) + '%)</span><span class="v">' + e.spreadAmt.toFixed(2) + '</span></div>';
+    rows += '<div class="opm-tl"><span class="k">Fee (2% profit)</span><span class="v">' + e.fee.toFixed(2) + '</span></div>' +
+      '<div class="opm-tl big"><span class="k">To win</span><span class="v">' + e.net.toFixed(2) + ' OSTG<span class="opm-roi">+' + e.roi.toFixed(0) + '%</span></span></div>';
+    return rows;
+  }
   function buyTicket() {
-    var c = side === 'yes' ? midYes : (100 - midYes); var shares = c > 0 ? amt / (c / 100) : 0;
-    var win = shares, fee = feeOf(win, amt), net = win - fee, roi = amt > 0 ? ((net - amt) / amt * 100) : 0;
+    var e = buyEstimate(amt);
     return '<h3>' + icon('ticket') + ' Buy</h3>' +
       '<div class="opm-tkout"><button class="y' + (side === 'yes' ? ' sel' : '') + '" data-t="yes"><span class="lab">Yes</span><span class="px">' + midYes + '¢</span></button>' +
       '<button class="n' + (side === 'no' ? ' sel' : '') + '" data-t="no"><span class="lab">No</span><span class="px">' + (100 - midYes) + '¢</span></button></div>' +
       '<div class="opm-amt"><input id="opmAmtIn" inputmode="decimal" value="' + amt + '"><span class="cur">OSTG</span></div>' +
       '<div class="opm-quick">' + [10, 25, 100, 'Max'].map(function (q) { return '<button data-q="' + String(q).toLowerCase() + '">' + q + '</button>'; }).join('') + '</div>' +
-      '<div class="opm-src"><span class="l"><span class="d"></span> Personal OSTG</span></div>' +
-      '<div class="opm-bd"><div class="opm-tl"><span class="k">Fill price</span><span class="v">' + c + '¢</span></div><div class="opm-tl"><span class="k">Shares</span><span class="v" id="opmShV">' + shares.toFixed(2) + '</span></div><div class="opm-tl"><span class="k">Fee (2% profit)</span><span class="v">' + fee.toFixed(2) + '</span></div><div class="opm-tl big"><span class="k">To win</span><span class="v">' + net.toFixed(2) + ' OSTG<span class="opm-roi">+' + roi.toFixed(0) + '%</span></span></div></div>' +
+      '<div class="opm-src"><span class="l"><span class="d"></span> ' + (onchainActive ? 'Wallet OST · on-chain' : 'Personal OSTG') + '</span></div>' +
+      '<div class="opm-bd" id="opmBuyBd">' + buyBdHtml(e) + '</div>' +
       '<button class="opm-confirm' + (side === 'no' ? ' no' : '') + '" id="opmCf">Buy ' + (side === 'yes' ? 'Yes' : 'No') + ' · ' + amt + ' OSTG</button>' +
       '<div class="opm-fine">' + icon('lock') + ' ' + (isBtcLive(currentMarket) ? 'Settles from the on-chain price at close' : 'Settles when the market resolves') + '</div>';
   }
