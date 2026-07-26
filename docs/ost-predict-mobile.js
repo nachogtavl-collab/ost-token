@@ -142,7 +142,7 @@
   /* ===================================================================== */
   function browseTemplate() {
     return '' +
-    '<div class="opm-tb"><div><h2 class="opm-htitle">Predictions</h2><div class="opm-hsub">Trade real markets with OSTG</div></div><div class="opm-sp"></div>' + balChip() + '</div>' +
+    '<div class="opm-tb"><div><h2 class="opm-htitle">Predictions</h2><div class="opm-hsub">Trade real markets with OSTG</div></div><div class="opm-sp"></div><button class="opm-tickets-btn" id="opmTicketsBtn">' + icon('ticket') + 'Tickets</button>' + balChip() + '</div>' +
     '<div class="opm-scroll">' +
       '<div class="opm-search">' + icon('search') + '<input id="opmQ" type="search" placeholder="Search Bitcoin, Trump, NBA, inflation…" autocomplete="off"></div>' +
       '<div class="opm-chips" id="opmChips">' + CATS.map(function (c) { return '<button class="opm-chip' + (c.k === 'all' ? ' on' : '') + '" data-c="' + c.k + '">' + icon(c.ic) + c.label + '</button>'; }).join('') + '</div>' +
@@ -630,19 +630,101 @@
 
   function toast(msg) { try { if (typeof window.toast === 'function') { window.toast('info', msg); return; } } catch (_) {} console.log('[predict]', msg); }
 
+  /* ================= POSITIONS (trade tickets) ================= */
+  var posFilter = 'all';
+  function orderState(o) {
+    if (!o) return 'open';
+    if (o.cashedOut) return 'paid';
+    var st = String(o.status || o.outcome || '').toLowerCase();
+    if (st === 'won') return 'claim';
+    if (st === 'lost') return 'lost';
+    if (st === 'sold' || st === 'settled' || st === 'refunded') return 'paid';
+    return 'open';
+  }
+  function computePortfolio(orders) {
+    var p = { staked: 0, value: 0, pnl: 0, open: 0, claim: 0, lost: 0, paid: 0 };
+    orders.forEach(function (o) {
+      var stake = Number(o.stake) || 0; p.staked += stake; var st = orderState(o);
+      if (st === 'paid') { p.paid++; var got = Number(o.cashoutOst) || 0; p.value += got; p.pnl += got - stake; }
+      else if (st === 'claim') { p.claim++; var v = Number(o.potentialReturn) || Number(o.shares) || stake; p.value += v; p.pnl += v - stake; }
+      else if (st === 'lost') { p.lost++; p.pnl -= stake; }
+      else { p.open++; var val = Number(o.shares) > 0 ? Number(o.shares) * (Number(o.entry || o.price) || 0) : stake; if (!(val > 0)) val = stake; p.value += val; p.pnl += val - stake; }
+    });
+    return p;
+  }
+  function cashBtnFor(sig) { if (!sig) return null; try { return document.querySelector('.prediction-cashout-btn[data-order-sig="' + (window.CSS && CSS.escape ? CSS.escape(sig) : sig) + '"]'); } catch (_) { return null; } }
+  function ticketRow(o) {
+    var st = orderState(o), side = o.side === 'no' ? 'no' : 'yes';
+    var stake = Number(o.stake) || 0, shares = Number(o.shares) || 0, sig = o.signature || o.sig || o.id || '';
+    var btn = cashBtnFor(sig), actionHtml;
+    if ((st === 'open' || st === 'claim') && btn) {
+      var net = (btn.textContent.match(/([\d,]+\.?\d*)\s*$/) || [])[1] || '';
+      var claim = /claim|settle/i.test(btn.textContent);
+      actionHtml = '<button class="opm-tbtn' + (claim ? ' claimw' : '') + '" data-sig="' + esc(sig) + '">' + (claim ? 'Claim' : 'Sell') + (net ? ' · ' + esc(net) : '') + '</button>';
+    } else if (st === 'claim') { actionHtml = '<span class="opm-tbadge" style="color:var(--opm-gold)">Won</span>'; }
+    else if (st === 'paid') { actionHtml = '<span class="opm-tres" style="color:var(--opm-yes)">+' + (Number(o.cashoutOst) || 0).toFixed(2) + '</span>'; }
+    else if (st === 'lost') { actionHtml = '<span class="opm-tres" style="color:var(--opm-no)">−' + stake.toFixed(2) + '</span>'; }
+    else { actionHtml = '<span class="opm-tbadge">Open</span>'; }
+    return '<div class="opm-trow" data-mid="' + esc(o.marketId || '') + '"><div class="opm-tmain"><div class="opm-ttitle">' + esc(o.title || o.marketId || 'Ticket') + '</div>' +
+      '<div class="opm-tmeta"><span class="opm-tside ' + (side === 'yes' ? 'y' : 'n') + '">' + (side === 'yes' ? 'Yes' : 'No') + '</span> ' + stake.toFixed(0) + ' OSTG · ' + (shares > 0 ? shares.toFixed(1) + ' sh · ' : '') + ago(o.ts) + '</div></div>' +
+      '<div class="opm-tact">' + actionHtml + '</div></div>';
+  }
+  function positionsTemplate() {
+    return '<div class="opm-tb"><div class="opm-back" id="opmPosBack">' + icon('back') + '</div><div class="opm-cat">Your<b>Trade tickets</b></div><div class="opm-sp"></div>' + balChip() + '</div>' +
+      '<div class="opm-scroll">' +
+        '<div class="opm-psum">' +
+          '<div class="opm-ps"><div class="k">Staked</div><div class="v" id="opmPfStaked">—</div></div>' +
+          '<div class="opm-ps"><div class="k">Value</div><div class="v" id="opmPfValue">—</div></div>' +
+          '<div class="opm-ps"><div class="k">P&amp;L</div><div class="v" id="opmPfPnl">—</div></div>' +
+          '<div class="opm-ps"><div class="k">Open / Won</div><div class="v" id="opmPfCounts">—</div></div>' +
+        '</div>' +
+        '<div class="opm-chips" id="opmPosChips">' + [['all', 'All'], ['open', 'Open'], ['claim', 'Claim wins'], ['paid', 'Cashed out'], ['lost', 'Lost']].map(function (c) { return '<button class="opm-chip' + (c[0] === 'all' ? ' on' : '') + '" data-f="' + c[0] + '">' + c[1] + '</button>'; }).join('') + '</div>' +
+        '<div id="opmPosList"><div class="opm-empty">Loading…</div></div>' +
+      '</div>';
+  }
+  function renderPositions() {
+    if (!el('opmPositions')) return;
+    var orders = ledgerOrders().slice().sort(function (a, b) { return Number(b.ts || 0) - Number(a.ts || 0); });
+    var pf = computePortfolio(orders);
+    var set = function (id, txt, cls) { var e = el(id); if (e) { e.textContent = txt; if (cls != null) e.className = 'v ' + cls; } };
+    set('opmPfStaked', num0(pf.staked)); set('opmPfValue', num0(pf.value));
+    set('opmPfPnl', (pf.pnl >= 0 ? '+' : '−') + num0(Math.abs(pf.pnl)), pf.pnl >= 0 ? 'up' : 'down');
+    set('opmPfCounts', pf.open + ' / ' + pf.claim);
+    var list = el('opmPosList'); if (!list) return;
+    var rows = orders.filter(function (o) { return posFilter === 'all' || orderState(o) === posFilter; });
+    list.innerHTML = rows.length ? rows.map(ticketRow).join('') : '<div class="opm-empty">' + (orders.length ? 'No tickets in this filter.' : 'No tickets yet — place a bet to get started.') + '</div>';
+    list.querySelectorAll('.opm-tbtn').forEach(function (b) {
+      b.onclick = function (e) { e.stopPropagation(); var real = cashBtnFor(b.getAttribute('data-sig')); if (!real) { toast('Settling — try again shortly.'); return; } b.disabled = true; b.textContent = '…'; try { real.click(); } catch (_) {} setTimeout(function () { refreshBalance(); renderPositions(); }, 1500); };
+    });
+    list.querySelectorAll('.opm-trow').forEach(function (r) {
+      r.onclick = function () { var mid = r.getAttribute('data-mid'); var m = allMarkets().filter(function (x) { return String(x.id) === mid; })[0]; if (m) openMarket(m); };
+    });
+  }
+  function wirePositions() {
+    var back = el('opmPosBack'); if (back) back.onclick = showBrowse;
+    var chips = el('opmPosChips'); if (chips) chips.onclick = function (e) { var b = e.target.closest('.opm-chip'); if (!b) return; posFilter = b.getAttribute('data-f'); chips.querySelectorAll('.opm-chip').forEach(function (x) { x.classList.toggle('on', x === b); }); renderPositions(); };
+  }
+  function openPositions() {
+    try { if (window.setWalletPanel) window.setWalletPanel('predict', { scroll: true }); } catch (_) {}
+    stopFlow(); mount(); showView('positions'); wirePositions(); renderPositions();
+    try { var host = el('ostPredictMobile'); if (host) host.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {}
+  }
+
   /* ===================================================================== */
   /* VIEW SWITCHING + MOUNT                                                 */
   /* ===================================================================== */
-  function showView(v) { view = v; var b = el('opmBrowse'), d = el('opmDetail'); if (b) b.classList.toggle('on', v === 'browse'); if (d) d.classList.toggle('on', v === 'detail'); }
+  function showView(v) { view = v; var b = el('opmBrowse'), d = el('opmDetail'), p = el('opmPositions'); if (b) b.classList.toggle('on', v === 'browse'); if (d) d.classList.toggle('on', v === 'detail'); if (p) p.classList.toggle('on', v === 'positions'); }
   function showBrowse() { stopFlow(); showView('browse'); currentMarket = null; renderBrowse(); refreshBalance(); }
 
   function mount() {
     var panel = el('wallet-panel-predict'); if (!panel || el('ostPredictMobile')) return true;
     var host = document.createElement('div'); host.id = 'ostPredictMobile';
-    host.innerHTML = '<div class="opm-view on" id="opmBrowse">' + browseTemplate() + '</div><div class="opm-view" id="opmDetail"></div>';
+    host.innerHTML = '<div class="opm-view on" id="opmBrowse">' + browseTemplate() + '</div><div class="opm-view" id="opmDetail"></div><div class="opm-view" id="opmPositions">' + positionsTemplate() + '</div>';
     panel.insertBefore(host, panel.firstChild);
     Array.prototype.forEach.call(panel.children, function (c) { if (c !== host) c.style.display = 'none'; });
-    wireBrowse(); renderBrowse(); refreshBalance();
+    wireBrowse(); wirePositions();
+    var tb = el('opmTicketsBtn'); if (tb) tb.onclick = openPositions;
+    renderBrowse(); refreshBalance();
     return true;
   }
 
@@ -650,8 +732,9 @@
   window.addEventListener('ost:btc-spot', function (e) { if (view !== 'detail' || !isBtcLive(currentMarket)) return; var p = e && e.detail && Number(e.detail.price); if (p > 0) pushTick(p); });
   window.addEventListener('ost:btc-market-updated', function (e) { if (view !== 'detail' || !isBtcLive(currentMarket)) return; try { var m = e.detail && e.detail.tick; if (m && Number(m.price) > 0) pushTick(Number(m.price)); } catch (_) {} });
   window.addEventListener('ost:prediction-markets', function () { if (view === 'browse') renderBrowse(); });
-  window.addEventListener('ost:prediction-order-recorded', function () { if (view === 'detail') setTimeout(refreshPosition, 400); });
-  window.addEventListener('ost:money:change', refreshBalance);
+  window.addEventListener('ost:prediction-order-recorded', function () { if (view === 'detail') setTimeout(refreshPosition, 400); if (view === 'positions') setTimeout(renderPositions, 400); });
+  window.addEventListener('ost:prediction-resolutions-refreshed', function () { if (view === 'positions') renderPositions(); });
+  window.addEventListener('ost:money:change', function () { refreshBalance(); if (view === 'positions') renderPositions(); });
   window.addEventListener('ost:play:balance', refreshBalance);
 
   // Entry point for the "Trade ticket" launchers: show the predict panel and
@@ -664,7 +747,7 @@
     if (flag) openMarket(flag); else showBrowse();
     try { var host = el('ostPredictMobile'); if (host) host.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {}
   }
-  window.OST_PREDICT_MOBILE = { mount: mount, showBrowse: showBrowse, openMarket: openMarket, openFlagship: openFlagship };
+  window.OST_PREDICT_MOBILE = { mount: mount, showBrowse: showBrowse, openMarket: openMarket, openFlagship: openFlagship, openPositions: openPositions };
 
   function boot() {
     if (!mount()) { var n = 0; var iv = setInterval(function () { if (mount() || ++n > 40) clearInterval(iv); }, 500); }

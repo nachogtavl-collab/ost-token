@@ -182,11 +182,12 @@
   }
 
   function open() {
-    // The trade ticket now opens the NEW prediction UI (upgraded live data +
-    // OSTG buy/sell sheet) instead of the legacy floating desk. The old desk
-    // stays in the DOM as the money engine the new UI drives.
-    if (window.OST_PREDICT_MOBILE && typeof window.OST_PREDICT_MOBILE.openFlagship === 'function') {
-      try { window.OST_PREDICT_MOBILE.openFlagship(); return; } catch (_) {}
+    // The trade ticket now opens the NEW prediction Positions view (your tickets:
+    // open, won/claim, lost, cashed out, P&L, history) instead of the legacy
+    // floating desk. The old desk stays in the DOM as the money engine that the
+    // new UI's claim/sell actions drive.
+    if (window.OST_PREDICT_MOBILE && typeof window.OST_PREDICT_MOBILE.openPositions === 'function') {
+      try { window.OST_PREDICT_MOBILE.openPositions(); return; } catch (_) {}
     }
     var desk = ensurePopout();
     if (!desk) return;

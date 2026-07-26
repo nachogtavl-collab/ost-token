@@ -275,4 +275,25 @@
 #ostPredictMobile .opm-statrow .st .k{font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--opm-ink3)}
 #ostPredictMobile .opm-statrow .st .v{font-family:var(--opm-mono);font-weight:700;font-size:14px;margin-top:2px;color:var(--opm-ink)}
 
+/* ===================== POSITIONS (trade tickets) ===================== */
+#ostPredictMobile .opm-psum{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin:14px 0 10px}
+#ostPredictMobile .opm-ps{background:var(--opm-card);border:1px solid var(--opm-line);border-radius:11px;padding:9px 8px}
+#ostPredictMobile .opm-ps .k{font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:var(--opm-ink3)}
+#ostPredictMobile .opm-ps .v{font-family:var(--opm-mono);font-weight:700;font-size:13.5px;margin-top:3px;color:var(--opm-ink);font-variant-numeric:tabular-nums}
+#ostPredictMobile .opm-ps .v.up{color:var(--opm-yes)}#ostPredictMobile .opm-ps .v.down{color:var(--opm-no)}
+#ostPredictMobile .opm-trow{display:flex;align-items:center;gap:10px;padding:12px 2px;border-bottom:1px solid var(--opm-line);cursor:pointer}
+#ostPredictMobile .opm-tmain{flex:1;min-width:0}
+#ostPredictMobile .opm-ttitle{font-size:12.5px;font-weight:650;color:var(--opm-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#ostPredictMobile .opm-tmeta{font-size:10.5px;color:var(--opm-ink3);font-family:var(--opm-mono);margin-top:3px;display:flex;align-items:center;gap:6px}
+#ostPredictMobile .opm-tside{font-size:9px;font-weight:800;text-transform:uppercase;padding:1px 6px;border-radius:4px;font-family:var(--opm-sans,system-ui)}
+#ostPredictMobile .opm-tside.y{color:var(--opm-yes);background:var(--opm-yes-dim)}#ostPredictMobile .opm-tside.n{color:var(--opm-no);background:var(--opm-no-dim)}
+#ostPredictMobile .opm-tact{flex:0 0 auto}
+#ostPredictMobile .opm-tbtn{border:0;border-radius:9px;padding:8px 12px;font-size:12px;font-weight:800;cursor:pointer;background:linear-gradient(180deg,var(--opm-yes),var(--opm-yes2));color:#04120c}
+#ostPredictMobile .opm-tbtn.claimw{background:linear-gradient(180deg,var(--opm-gold),#e0870f);color:#170c02}
+#ostPredictMobile .opm-tbtn:disabled{opacity:.6}
+#ostPredictMobile .opm-tres{font-family:var(--opm-mono);font-weight:700;font-size:12px}
+#ostPredictMobile .opm-tbadge{font-size:9px;font-weight:800;text-transform:uppercase;padding:2px 7px;border-radius:5px;color:var(--opm-ink3);background:var(--opm-bg2)}
+#ostPredictMobile .opm-tickets-btn{display:flex;align-items:center;gap:6px;background:var(--opm-card);border:1px solid var(--opm-line2);border-radius:11px;padding:8px 11px;color:var(--opm-ink2);font-size:12px;font-weight:700;cursor:pointer;margin-right:8px}
+#ostPredictMobile .opm-tickets-btn .opm-ic{width:15px;height:15px;color:var(--opm-cyan)}
+
 /* the whole thing only takes over on phones; wider screens still center it */
