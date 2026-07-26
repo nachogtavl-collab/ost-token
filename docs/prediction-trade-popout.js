@@ -130,7 +130,10 @@
       desk.style.right = 'auto';
       desk.style.bottom = 'auto';
     }
-    if (pos.open) desk.classList.add('is-open');
+    // Do NOT restore the legacy floating desk's open state — the trade ticket
+    // now routes to the new prediction UI, and the old desk stays hidden (it is
+    // only the money engine the new UI drives).
+    if (pos.open && !window.OST_PREDICT_MOBILE) desk.classList.add('is-open');
 
     // Drag with pointer support, including touch screens.
     var dragging = false, sx = 0, sy = 0, ox = 0, oy = 0;
@@ -179,6 +182,12 @@
   }
 
   function open() {
+    // The trade ticket now opens the NEW prediction UI (upgraded live data +
+    // OSTG buy/sell sheet) instead of the legacy floating desk. The old desk
+    // stays in the DOM as the money engine the new UI drives.
+    if (window.OST_PREDICT_MOBILE && typeof window.OST_PREDICT_MOBILE.openFlagship === 'function') {
+      try { window.OST_PREDICT_MOBILE.openFlagship(); return; } catch (_) {}
+    }
     var desk = ensurePopout();
     if (!desk) return;
     clearStaleModalLock();

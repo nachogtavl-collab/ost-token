@@ -654,7 +654,17 @@
   window.addEventListener('ost:money:change', refreshBalance);
   window.addEventListener('ost:play:balance', refreshBalance);
 
-  window.OST_PREDICT_MOBILE = { mount: mount, showBrowse: showBrowse, openMarket: openMarket };
+  // Entry point for the "Trade ticket" launchers: show the predict panel and
+  // drop straight into the flagship live market (new upgraded UI + OSTG buy sheet).
+  function openFlagship() {
+    try { if (window.setWalletPanel) window.setWalletPanel('predict', { scroll: true }); } catch (_) {}
+    mount();
+    var ms = allMarkets();
+    var flag = ms.filter(isBtcLive)[0] || ms.filter(isNative5m)[0] || ms[0];
+    if (flag) openMarket(flag); else showBrowse();
+    try { var host = el('ostPredictMobile'); if (host) host.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {}
+  }
+  window.OST_PREDICT_MOBILE = { mount: mount, showBrowse: showBrowse, openMarket: openMarket, openFlagship: openFlagship };
 
   function boot() {
     if (!mount()) { var n = 0; var iv = setInterval(function () { if (mount() || ++n > 40) clearInterval(iv); }, 500); }
