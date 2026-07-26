@@ -51,8 +51,20 @@ const u64 = (n) => { const b = Buffer.alloc(8); b.writeBigUInt64LE(BigInt(n)); r
 const i64 = (n) => { const b = Buffer.alloc(8); b.writeBigInt64LE(BigInt(n)); return b; };
 const feedBytes = Buffer.from(BTC_FEED.replace(/^0x/, ''), 'hex');   // [u8;32]
 
-const authority = Keypair.fromSecretKey(Uint8Array.from(
-  JSON.parse(readFileSync(process.env.USERPROFILE + '/.config/solana/id.json', 'utf8'))));
+// Key source, in priority order, so this runs anywhere (local machine OR a
+// cloud host with no filesystem): OST_CRANK_KEY env (JSON array or base64 of the
+// 64-byte secret) -> the local Solana CLI keypair.
+function loadAuthority() {
+  const env = process.env.OST_CRANK_KEY;
+  if (env) {
+    const t = env.trim();
+    const bytes = t[0] === '[' ? JSON.parse(t) : Array.from(Buffer.from(t, 'base64'));
+    return Keypair.fromSecretKey(Uint8Array.from(bytes));
+  }
+  const home = process.env.USERPROFILE || process.env.HOME || '';
+  return Keypair.fromSecretKey(Uint8Array.from(JSON.parse(readFileSync(home + '/.config/solana/id.json', 'utf8'))));
+}
+const authority = loadAuthority();
 const conn = new Connection(RPC, 'confirmed');
 const wallet = new anchor.Wallet(authority);
 const pythReceiver = new PythSolanaReceiver({ connection: conn, wallet });
@@ -211,6 +223,15 @@ console.log('OST market crank — Pyth-verified, trustless settlement');
 console.log('  program  ', PROGRAM_ID.toBase58());
 console.log('  feed     ', BTC_FEED.slice(0, 18) + '… (BTC/USD)');
 console.log('  crank key', authority.publicKey.toBase58(), '(cannot choose outcomes)');
-await pass();
-if (WATCH) setInterval(() => pass().catch(e => console.error('pass failed:', e.message)), 60_000);
-else process.exit(0);
+
+// A crank must NEVER die on a transient RPC 429 / Pyth hiccup. In --watch mode
+// swallow every stray rejection so the loop survives; in one-shot mode a failed
+// pass still exits non-zero so a scheduler can log it, but never throws uncaught.
+if (WATCH) {
+  process.on('unhandledRejection', (e) => console.error('unhandledRejection:', (e && e.message) || e));
+  process.on('uncaughtException', (e) => console.error('uncaughtException:', (e && e.message) || e));
+}
+
+await pass().catch((e) => { console.error('pass failed:', (e && e.message) || e); if (!WATCH) process.exitCode = 1; });
+if (WATCH) setInterval(() => pass().catch((e) => console.error('pass failed:', (e && e.message) || e)), 60_000);
+else process.exit(process.exitCode || 0);
