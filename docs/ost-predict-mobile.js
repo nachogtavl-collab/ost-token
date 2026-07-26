@@ -343,6 +343,30 @@
     var nx = el('opmYnNx'); if (nx) nx.textContent = nMul ? nMul.toFixed(2) + '× payout' : '';
     var by = el('opmBuyY'), bn = el('opmBuyN'); if (by) by.textContent = 'Buy Yes · ' + midYes + '¢'; if (bn) bn.textContent = 'Buy No · ' + (100 - midYes) + '¢';
     if (myPos) renderPosition();   // live P&L follows the live price
+    refreshOpenSheet();            // the buy/sell HUD tracks the live price too
+  }
+
+  // accurate fee via the real house engine (2% of profit), fallback to 2%
+  function feeOf(gross, stake) { try { if (window.OST_HOUSE && OST_HOUSE.quote) return Number(OST_HOUSE.quote(gross, stake).fee) || 0; } catch (_) {} return Math.max(0, (gross - stake) * 0.02); }
+  function sheetOpen() { var s = el('opmSheet'); return !!(s && s.classList.contains('open')); }
+  // Keep the OPEN buy/sell sheet in sync with the flowing price so it never
+  // freezes on the price it was opened at. Buy: patch the derived fields but
+  // never the amount input (preserve typing). Sell: rebuild (no input to keep).
+  function refreshOpenSheet() {
+    if (!sheetOpen()) return;
+    var t = el('opmTicket'); if (!t) return;
+    if (mode === 'sell') { t.innerHTML = sellConfirmTicket(); var cfs = el('opmCfSell'); if (cfs) cfs.onclick = confirmSell; return; }
+    var c = side === 'yes' ? midYes : (100 - midYes);
+    var inp = el('opmAmtIn'); var a = inp ? (parseFloat(inp.value) || 0) : amt;
+    var sh = c > 0 ? a / (c / 100) : 0, fee = feeOf(sh, a), net = sh - fee, roi = a > 0 ? ((net - a) / a * 100) : 0;
+    var ty = t.querySelector('.opm-tkout .y .px'); if (ty) ty.textContent = midYes + '¢';
+    var tn = t.querySelector('.opm-tkout .n .px'); if (tn) tn.textContent = (100 - midYes) + '¢';
+    var tls = t.querySelectorAll('.opm-bd .opm-tl');
+    if (tls[0]) { var v0 = tls[0].querySelector('.v'); if (v0) v0.textContent = c + '¢'; }
+    var sV = el('opmShV'); if (sV) sV.textContent = sh.toFixed(2);
+    if (tls[2]) { var v2 = tls[2].querySelector('.v'); if (v2) v2.textContent = fee.toFixed(2); }
+    var big = t.querySelector('.opm-tl.big .v'); if (big) big.innerHTML = net.toFixed(2) + ' OSTG<span class="opm-roi">+' + roi.toFixed(0) + '%</span>';
+    var cf = el('opmCf'); if (cf && !/Bought|Placing/.test(cf.textContent)) cf.textContent = 'Buy ' + (side === 'yes' ? 'Yes' : 'No') + ' · ' + a + ' OSTG';
   }
 
   function paintOdds() {
@@ -507,7 +531,7 @@
   function syncYnSel() { document.querySelectorAll('#opmYn button').forEach(function (b) { b.classList.toggle('sel', b.getAttribute('data-s') === side); }); }
   function buyTicket() {
     var c = side === 'yes' ? midYes : (100 - midYes); var shares = c > 0 ? amt / (c / 100) : 0;
-    var win = shares, fee = Math.max(0, (win - amt) * 0.02), net = win - fee, roi = amt > 0 ? ((net - amt) / amt * 100) : 0;
+    var win = shares, fee = feeOf(win, amt), net = win - fee, roi = amt > 0 ? ((net - amt) / amt * 100) : 0;
     return '<h3>' + icon('ticket') + ' Buy</h3>' +
       '<div class="opm-tkout"><button class="y' + (side === 'yes' ? ' sel' : '') + '" data-t="yes"><span class="lab">Yes</span><span class="px">' + midYes + '¢</span></button>' +
       '<button class="n' + (side === 'no' ? ' sel' : '') + '" data-t="no"><span class="lab">No</span><span class="px">' + (100 - midYes) + '¢</span></button></div>' +
@@ -544,7 +568,7 @@
     t.innerHTML = buyTicket();
     document.querySelectorAll('#opmTicket .opm-tkout button').forEach(function (b) { b.onclick = function () { side = b.getAttribute('data-t'); syncYnSel(); paintTicket(); }; });
     document.querySelectorAll('#opmTicket .opm-quick button').forEach(function (b) { b.onclick = function () { var q = b.getAttribute('data-q'); amt = q === 'max' ? maxBal() : (parseFloat(q) || amt); paintTicket(); }; });
-    var inp = el('opmAmtIn'); if (inp) inp.oninput = function () { amt = parseFloat(this.value) || 0; var c = side === 'yes' ? midYes : (100 - midYes), sh = c > 0 ? amt / (c / 100) : 0, net = sh - Math.max(0, (sh - amt) * .02); var v = document.querySelector('#opmTicket .opm-tl.big .v'); if (v) v.innerHTML = net.toFixed(2) + ' OSTG<span class="opm-roi">+' + (amt > 0 ? ((net - amt) / amt * 100) : 0).toFixed(0) + '%</span>'; var s = el('opmShV'); if (s) s.textContent = sh.toFixed(2); };
+    var inp = el('opmAmtIn'); if (inp) inp.oninput = function () { amt = parseFloat(this.value) || 0; refreshOpenSheet(); };
     var cf = el('opmCf'); if (cf) cf.onclick = confirmBuy;
   }
   function confirmBuy() {
