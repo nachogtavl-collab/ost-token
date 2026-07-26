@@ -64,6 +64,7 @@
    * price vs the price-to-beat + time left, so they move live with the graph
    * instead of only refreshing on the 5s round poll. */
   var buf = [], LAG = 5, dispPrice = 0, headPrice = 0, flowOn = false, lastDraw = 0, baseMidSet = false;
+  var onchainActive = false;   // true when this round's bets live in the Solana program vault
 
   /* ---- odometer ---- */
   function tween(elm, to, fmt, dur) {
@@ -208,7 +209,7 @@
   function openMarket(m) {
     currentMarket = m; view = 'detail';
     side = 'yes'; myPos = null; seenTrades = {}; firstTrades = true; hist = []; hrs = 1;
-    buf = []; dispPrice = 0; baseMidSet = false;
+    buf = []; dispPrice = 0; baseMidSet = false; onchainActive = false;
     round = null; price = 0; beat = 0; midYes = yesCents(m);
     el('opmDetail').innerHTML = detailTemplate(m);
     showView('detail');
@@ -376,14 +377,37 @@
       if (!baseMidSet && isFinite(Number(d.yesPriceNumber))) { midYes = Math.max(1, Math.min(99, Math.round(Number(d.yesPriceNumber) * 100))); baseMidSet = true; renderOddsLive(); }
       if (prevId && prevId !== d.marketId) {
         // NEW round = NEW market. Reset this round's trades/holders/history.
-        buf = []; hist = []; dispPrice = 0; baseMidSet = false; seenTrades = {}; firstTrades = true;
+        buf = []; hist = []; dispPrice = 0; baseMidSet = false; seenTrades = {}; firstTrades = true; onchainActive = false;
         myPos = null; renderPosition(); refreshPosition(); loadTrades();
       }
       if (Array.isArray(d.ticks) && d.ticks.length && hist.length < 8) {
         d.ticks.map(function (t) { return Number(t.p != null ? t.p : t.price); }).filter(function (x) { return x > 0; }).forEach(pushHist);
       }
       tween(el('opmBeat'), beat, usd); applyDir(); draw();
+      loadOnchain();
     }).catch(function () {});
+  }
+
+  // REAL on-chain pool for this round, straight from the Solana program vault.
+  // Requires a connected wallet (available()) AND that the crank has opened this
+  // round's market on-chain; otherwise we quietly keep the feed/implied pool.
+  // The bet itself already routes on-chain (ost-onchain-route wraps placeOrder),
+  // so this makes the POOL people see match the vault they're actually betting into.
+  function loadOnchain() {
+    if (!(view === 'detail' && isBtcLive(currentMarket))) return;
+    try {
+      if (!(window.OST_ONCHAIN && OST_ONCHAIN.available && OST_ONCHAIN.available() && OST_ONCHAIN.marketFor)) { onchainActive = false; return; }
+      var openAtSec = Math.floor(Number(String((round && round.marketId) || '').replace('ost-btc5m-', '')) / 1000);
+      if (!(openAtSec > 0)) return;
+      Promise.resolve(OST_ONCHAIN.marketFor(openAtSec)).then(function (m) {
+        if (!m || !m.exists || view !== 'detail' || !isBtcLive(currentMarket)) { onchainActive = false; return; }
+        onchainActive = true;
+        poolY = Math.round(Number(m.yes) || 0); poolN = Math.round(Number(m.no) || 0);
+        var rt = document.querySelector('#opmDetail .opm-pool .h .rt');
+        if (rt) rt.innerHTML = icon('scale') + ' on-chain vault';
+        paintOdds();
+      }).catch(function () {});
+    } catch (_) {}
   }
 
   /* ---- feed ids ----
@@ -413,6 +437,7 @@
     }).join(''); firstTrades = false;
   }
   function aggregatePool(arr) {
+    if (onchainActive) return;   // the on-chain vault is authoritative; don't overwrite it
     var y = 0, n = 0; arr.forEach(function (r) { var isSell = String(r.id || '').indexOf('sell:') === 0; var stake = Number(r.stake) || 0; if (isSell || !(stake > 0)) return; if (String(r.side || '').toUpperCase() === 'YES') y += stake; else n += stake; });
     poolY = Math.round(y); poolN = Math.round(n);
   }
@@ -530,7 +555,9 @@
     // OPTIMISTIC: reflect the bet the instant they tap — balance down, position in.
     // The real placeBet reconciles in the background; on failure we revert to truth.
     var bBefore = playBal();
-    if (bBefore != null) setBalDisplay(bBefore - stake);
+    // On-chain 5-min bets spend wallet OST, not the custodial Play OSTG — so only
+    // optimistically move the Play balance when we're NOT on the on-chain rail.
+    if (!onchainActive && bBefore != null) setBalDisplay(bBefore - stake);
     if (myPos && myPos.side === bSide) { var tot = myPos.shares + sh; myPos.entry = (myPos.shares * (myPos.entry || 0) + sh * entry) / (tot || 1); myPos.shares = tot; myPos.pending = true; }
     else { myPos = { order: {}, sig: '', side: bSide, shares: sh, entry: entry, locked: false, sellBtn: null, cashText: '', pending: true }; }
     renderPosition(); closeSheet();
@@ -545,7 +572,7 @@
     if (cfs) { cfs.disabled = true; cfs.textContent = 'Processing…'; }
     // OPTIMISTIC: balance up by the net, clear the card instantly, then reconcile.
     var net = parseFloat(String((myPos.cashText.match(/([\d,]+\.?\d*)\s*$/) || [])[1] || '').replace(/,/g, '')) || posValueNow();
-    var b = playBal(); if (b != null) setBalDisplay(b + net);
+    var b = playBal(); if (!onchainActive && b != null) setBalDisplay(b + net);
     myPos = null; renderPosition();
     try { btn.click(); } catch (_) {}
     closeSheet();
