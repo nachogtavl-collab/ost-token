@@ -55,6 +55,16 @@
   var side = 'yes', poolY = 0, poolN = 0, myPos = null;
   var seenTrades = {}, firstTrades = true;
 
+  /* ---- TICK ENGINE ----------------------------------------------------------
+   * The number people watch must ALWAYS be gliding — never freeze, never jump.
+   * Real BTC ticks land in `buf`; the display plays them back staying LAG ticks
+   * behind the head, easing toward the target every animation frame. That gives
+   * a constant, linear flow through every in-between value even when ticks arrive
+   * in bursts. Share prices (YES/NO cents) are derived from this SAME flowing
+   * price vs the price-to-beat + time left, so they move live with the graph
+   * instead of only refreshing on the 5s round poll. */
+  var buf = [], LAG = 5, dispPrice = 0, headPrice = 0, flowOn = false, lastDraw = 0, baseMidSet = false;
+
   /* ---- odometer ---- */
   function tween(elm, to, fmt, dur) {
     if (!elm) return; var from = (elm._v == null ? to : elm._v); elm._v = to;
@@ -116,10 +126,11 @@
   function meshHandle() { try { if (window.OST_MESH_IDENTITY && OST_MESH_IDENTITY.handle) return OST_MESH_IDENTITY.handle; } catch (_) {} return ''; }
   function ledgerOrders() { try { return (window.OST_PREDICTION_API && OST_PREDICTION_API.ledger && OST_PREDICTION_API.ledger()) || []; } catch (_) { return []; } }
   function playBal() { try { return window.OST_PLAY && OST_PLAY.balance && OST_PLAY.balance(); } catch (_) { return undefined; } }
+  function setBalDisplay(v) { document.querySelectorAll('#ostPredictMobile .opm-balv').forEach(function (e) { e.textContent = (v == null ? '—' : Number(Math.max(0, v)).toLocaleString(undefined, { maximumFractionDigits: 2 })); }); }
   function refreshBalance() {
     try { if (window.OST_PLAY && OST_PLAY.refresh) OST_PLAY.refresh(); } catch (_) {}
     var b = playBal();
-    document.querySelectorAll('#ostPredictMobile .opm-balv').forEach(function (e) { e.textContent = (b == null ? '—' : Number(b).toLocaleString(undefined, { maximumFractionDigits: 2 })); });
+    setBalDisplay(b);
     var f = ''; try { if (window.OST_CCY && OST_CCY.fiat && b != null) f = OST_CCY.fiat(b) || ''; } catch (_) {}
     document.querySelectorAll('#ostPredictMobile .opm-balf').forEach(function (e) { e.textContent = f; });
   }
@@ -197,13 +208,14 @@
   function openMarket(m) {
     currentMarket = m; view = 'detail';
     side = 'yes'; myPos = null; seenTrades = {}; firstTrades = true; hist = []; hrs = 1;
+    buf = []; dispPrice = 0; baseMidSet = false;
     round = null; price = 0; beat = 0; midYes = yesCents(m);
     el('opmDetail').innerHTML = detailTemplate(m);
     showView('detail');
     wireDetail();
     refreshBalance();
-    if (isBtcLive(m)) { loadRound(); }
-    else { paintStandard(); }
+    if (isBtcLive(m)) { loadRound(); startFlow(); }
+    else { stopFlow(); paintStandard(); }
     loadTrades(); loadComments(); refreshPosition();
     try { el('ostPredictMobile').scrollTop = 0; window.scrollTo(0, 0); } catch (_) {}
   }
@@ -290,6 +302,48 @@
   function applyDir() { var pb = el('opmPx'); if (!pb || !beat) return; var up = price >= beat; pb.classList.toggle('up', up); pb.classList.toggle('down', !up); var d = ((price - beat) / beat * 100); var de = el('opmDelta'); if (de) de.textContent = (up ? '▲ ' : '▼ ') + Math.abs(d).toFixed(2) + '%'; }
   function pushHist(p) { if (!(p > 0)) return; hist.push(p); if (hist.length > HIST_MAX) hist.shift(); }
 
+  // real tick in -> buffer (odometer lag playback) + graph history
+  function pushTick(p) { if (!(p > 0)) return; headPrice = p; buf.push(p); if (buf.length > 800) buf.shift(); pushHist(p); }
+
+  function startFlow() { if (flowOn) return; flowOn = true; dispPrice = 0; requestAnimationFrame(flow); }
+  function stopFlow() { flowOn = false; }
+  function flow(ts) {
+    if (!flowOn) return;
+    if (view === 'detail' && isBtcLive(currentMarket) && buf.length) {
+      var target = buf.length > LAG ? buf[buf.length - 1 - LAG] : buf[buf.length - 1];
+      if (!dispPrice) dispPrice = target;
+      dispPrice += (target - dispPrice) * 0.16;              // always easing -> never a hard jump
+      if (Math.abs(target - dispPrice) < 0.4) dispPrice = target;
+      price = dispPrice;
+      var nowEl = el('opmNow'); if (nowEl) nowEl.textContent = usd(price);
+      applyDir();
+      updateLiveOdds();
+      if (!lastDraw || ts - lastDraw > 60) { draw(); lastDraw = ts; }   // graph ~15fps, number 60fps
+    }
+    requestAnimationFrame(flow);
+  }
+
+  // live share prices: implied Yes from the flowing price vs the beat, sharper as
+  // the round nears close. Display-only; the real fill price comes from the
+  // server/chain at buy time.
+  function updateLiveOdds() {
+    if (!(beat > 0)) return;
+    var tLeftFrac = round ? Math.max(0, Math.min(1, (Number(round.closeAt) - Date.now()) / 300000)) : 1;
+    var sens = 9000 * (1 + (1 - tLeftFrac) * 1.4);
+    var implied = Math.max(1, Math.min(99, Math.round(50 + (price - beat) / beat * sens)));
+    if (implied === midYes) return;
+    midYes = implied;
+    renderOddsLive();
+  }
+  function renderOddsLive() {
+    var y = el('opmYnY'), n = el('opmYnN'); if (y) y.textContent = midYes + '¢'; if (n) n.textContent = (100 - midYes) + '¢';
+    var yMul = midYes > 0 ? (100 / midYes) : 0, nMul = (100 - midYes) > 0 ? (100 / (100 - midYes)) : 0;
+    var yx = el('opmYnYx'); if (yx) yx.textContent = yMul ? yMul.toFixed(2) + '× payout' : '';
+    var nx = el('opmYnNx'); if (nx) nx.textContent = nMul ? nMul.toFixed(2) + '× payout' : '';
+    var by = el('opmBuyY'), bn = el('opmBuyN'); if (by) by.textContent = 'Buy Yes · ' + midYes + '¢'; if (bn) bn.textContent = 'Buy No · ' + (100 - midYes) + '¢';
+    if (myPos) renderPosition();   // live P&L follows the live price
+  }
+
   function paintOdds() {
     tween(el('opmYnY'), midYes, cents); tween(el('opmYnN'), 100 - midYes, cents);
     var yMul = midYes > 0 ? (100 / midYes) : 0, nMul = (100 - midYes) > 0 ? (100 / (100 - midYes)) : 0;
@@ -316,22 +370,33 @@
       if (!d || d.ok === false || view !== 'detail') return;
       var prevId = round && round.marketId; round = d;
       beat = Number(d.priceToBeat) || beat;
-      if (Number(d.livePrice) > 0) { price = Number(d.livePrice); pushHist(price); }
-      if (isFinite(Number(d.yesPriceNumber))) midYes = Math.max(1, Math.min(99, Math.round(Number(d.yesPriceNumber) * 100)));
-      if (prevId !== d.marketId && Array.isArray(d.ticks) && d.ticks.length) {
-        d.ticks.map(function (t) { return Number(t.p != null ? t.p : t.price); }).filter(function (x) { return x > 0; }).forEach(pushHist);
+      if (Number(d.livePrice) > 0) pushTick(Number(d.livePrice));
+      // seed the base odds ONCE from the server; after that the live tick engine
+      // (updateLiveOdds) owns the share-price movement so it never looks static.
+      if (!baseMidSet && isFinite(Number(d.yesPriceNumber))) { midYes = Math.max(1, Math.min(99, Math.round(Number(d.yesPriceNumber) * 100))); baseMidSet = true; renderOddsLive(); }
+      if (prevId && prevId !== d.marketId) {
+        // NEW round = NEW market. Reset this round's trades/holders/history.
+        buf = []; hist = []; dispPrice = 0; baseMidSet = false; seenTrades = {}; firstTrades = true;
         myPos = null; renderPosition(); refreshPosition(); loadTrades();
       }
-      tween(el('opmNow'), price, usd, 700); tween(el('opmBeat'), beat, usd); applyDir(); draw(); paintOdds();
+      if (Array.isArray(d.ticks) && d.ticks.length && hist.length < 8) {
+        d.ticks.map(function (t) { return Number(t.p != null ? t.p : t.price); }).filter(function (x) { return x > 0; }).forEach(pushHist);
+      }
+      tween(el('opmBeat'), beat, usd); applyDir(); draw();
     }).catch(function () {});
   }
 
-  /* ---- feed id for the current market ---- */
-  function feedId() { return isBtcLive(currentMarket) ? 'ost-btc5m' : String(currentMarket && currentMarket.id || ''); }
+  /* ---- feed ids ----
+   * Trades + holders are scoped to the EXACT round (each 5-min timestamp is its
+   * own market), so the HUD shows only this round's activity — not all history.
+   * Comments stay at the market-family level, or a 5-min thread would reset and
+   * look empty every round. */
+  function feedTradeId() { return isBtcLive(currentMarket) ? ((round && round.marketId) || 'ost-btc5m') : String(currentMarket && currentMarket.id || ''); }
+  function feedCommentId() { return isBtcLive(currentMarket) ? 'ost-btc5m' : String(currentMarket && currentMarket.id || ''); }
   function activeMarketId() { return isBtcLive(currentMarket) ? (round && round.marketId) : String(currentMarket && currentMarket.id || ''); }
 
   function loadTrades() {
-    var fid = feedId(); if (!fid) return;
+    var fid = feedTradeId(); if (!fid) return;
     return fetch(API + '/positions/recent?marketId=' + encodeURIComponent(fid) + '&limit=60', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
       var arr = (d && d.recent) || []; renderTrades(arr); aggregateHolders(arr); aggregatePool(arr); paintOdds();
     }).catch(function () {});
@@ -360,7 +425,7 @@
     host.innerHTML = list.map(function (h, i) { var pct = Math.max(6, Math.round(h.net / max * 100)); var col = h.side === 'n' ? 'linear-gradient(90deg,#e11d48,#fb7185)' : 'linear-gradient(90deg,#10b981,#34d399)'; var c = h.side === 'n' ? 'var(--opm-no)' : 'var(--opm-yes)'; return '<div class="opm-holder"><span class="rank">' + (i + 1) + '</span><span class="addr">' + esc(h.short) + '</span><span class="bar"><i style="width:' + pct + '%;background:' + col + '"></i></span><span class="sh" style="color:' + c + '">' + num0(h.net) + '</span></div>'; }).join('');
   }
   function loadComments() {
-    var fid = feedId(); if (!fid) return;
+    var fid = feedCommentId(); if (!fid) return;
     return fetch(API + '/predict/comments?marketId=' + encodeURIComponent(fid), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
       var arr = (d && d.comments) || []; var host = el('opmComments'); if (!host) return;
       if (!arr.length) { host.innerHTML = '<div class="opm-empty">Be the first to comment.</div>'; return; }
@@ -371,7 +436,7 @@
     var inp = el('opmCmtIn'); if (!inp) return; var text = String(inp.value || '').trim(); if (!text) return;
     var wallet = walletAddr(); if (!wallet) { toast('Connect a wallet to comment.'); return; }
     inp.value = ''; inp.disabled = true;
-    fetch(API + '/predict/comments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ wallet: wallet, text: text, marketId: feedId(), handle: meshHandle() }) })
+    fetch(API + '/predict/comments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ wallet: wallet, text: text, marketId: feedCommentId(), handle: meshHandle() }) })
       .then(function (r) { return r.json(); }).then(function (d) { inp.disabled = false; if (d && d.error === 'slow_down') { toast('Slow down a moment.'); return; } loadComments(); })
       .catch(function () { inp.disabled = false; });
   }
@@ -429,12 +494,24 @@
       '<div class="opm-fine">' + icon('lock') + ' ' + (isBtcLive(currentMarket) ? 'Settles from the on-chain price at close' : 'Settles when the market resolves') + '</div>';
   }
   function sellConfirmTicket() {
-    var val = posValueNow(); var net = (myPos && myPos.cashText.match(/([\d,]+\.?\d*)\s*$/) || [])[1] || val.toFixed(2); var isSettle = myPos && /settle|claim/i.test(myPos.cashText);
+    var c = myPos ? (myPos.side === 'yes' ? midYes : (100 - midYes)) : 0;
+    var shares = myPos ? myPos.shares : 0, gross = shares * (c / 100), cost = posCost();
+    var profit = Math.max(0, gross - cost), fee = profit * 0.02;
+    var realNet = (myPos && (myPos.cashText.match(/([\d,]+\.?\d*)\s*$/) || [])[1]) || (gross - fee).toFixed(2);
+    var netNum = parseFloat(String(realNet).replace(/,/g, '')) || (gross - fee);
+    var pnl = netNum - cost, up = pnl >= 0;
+    var isSettle = myPos && /settle|claim/i.test(myPos.cashText);
     return '<h3>' + icon('coin') + ' ' + (isSettle ? 'Settle position' : 'Sell your ' + (myPos && myPos.side === 'yes' ? 'Yes' : 'No') + ' position') + '</h3>' +
-      '<div class="opm-fine" style="text-align:left;color:var(--opm-ink2)">' + (isSettle ? 'Claim your settled position. The amount is computed and paid by the server.' : 'Exit early — OST buys your shares back at the current price.') + '</div>' +
-      '<div class="opm-bd"><div class="opm-tl"><span class="k">Shares</span><span class="v">' + (myPos ? myPos.shares.toFixed(2) : '0') + '</span></div><div class="opm-tl big"><span class="k">You receive</span><span class="v" style="color:var(--opm-gold)">' + esc(net) + ' OSTG</span></div></div>' +
-      '<button class="opm-confirm sellc" id="opmCfSell">' + (isSettle ? 'Settle for ' : 'Sell for ') + esc(net) + ' OSTG</button>' +
-      '<div class="opm-fine">' + icon('lock') + ' Proceeds return to your Play OSTG.</div>';
+      '<div class="opm-fine" style="text-align:left;color:var(--opm-ink2)">' + (isSettle ? 'Claim your settled position — the amount is computed and paid by the server.' : 'Exit now — OST buys your shares back at the live price. You keep the move so far instead of waiting for close.') + '</div>' +
+      '<div class="opm-bd">' +
+        '<div class="opm-tl"><span class="k">Selling</span><span class="v">' + shares.toFixed(2) + ' shares</span></div>' +
+        '<div class="opm-tl"><span class="k">Sell price</span><span class="v">' + c + '¢</span></div>' +
+        '<div class="opm-tl"><span class="k">Fee (2% profit)</span><span class="v">' + fee.toFixed(2) + '</span></div>' +
+        '<div class="opm-tl"><span class="k">Realized P&amp;L</span><span class="v" style="color:var(--opm-' + (up ? 'yes' : 'no') + ')">' + (up ? '+' : '−') + Math.abs(pnl).toFixed(2) + ' OSTG</span></div>' +
+        '<div class="opm-tl big"><span class="k">You receive</span><span class="v" style="color:var(--opm-gold)">' + esc(realNet) + ' OSTG</span></div>' +
+      '</div>' +
+      '<button class="opm-confirm sellc" id="opmCfSell">' + (isSettle ? 'Settle for ' : 'Sell for ') + esc(realNet) + ' OSTG</button>' +
+      '<div class="opm-fine">' + icon('lock') + ' Proceeds return to your Play OSTG instantly.</div>';
   }
   function paintTicket() {
     var t = el('opmTicket'); if (!t) return;
@@ -449,18 +526,30 @@
     var cf = el('opmCf'); if (!cf || cf.disabled) return; var stake = amt;
     if (!(stake > 0)) { toast('Enter an amount.'); return; }
     var mid = activeMarketId(); if (!mid) { toast('Market not ready — try again.'); return; }
-    cf.disabled = true; cf.textContent = 'Placing…';
-    Promise.resolve(window.OST_PREDICTION_API.placeBet({ marketId: mid, side: side, stake: stake }))
-      .then(function () { cf.textContent = '✓ Bought'; setTimeout(function () { closeSheet(); refreshBalance(); refreshPosition(); loadTrades(); }, 700); })
-      .catch(function (e) { cf.disabled = false; cf.textContent = 'Buy ' + (side === 'yes' ? 'Yes' : 'No') + ' · ' + amt + ' OSTG'; toast((e && e.message) ? e.message : 'Could not place the bet.'); });
+    var bSide = side, c = bSide === 'yes' ? midYes : (100 - midYes), sh = c > 0 ? stake / (c / 100) : 0, entry = c / 100;
+    // OPTIMISTIC: reflect the bet the instant they tap — balance down, position in.
+    // The real placeBet reconciles in the background; on failure we revert to truth.
+    var bBefore = playBal();
+    if (bBefore != null) setBalDisplay(bBefore - stake);
+    if (myPos && myPos.side === bSide) { var tot = myPos.shares + sh; myPos.entry = (myPos.shares * (myPos.entry || 0) + sh * entry) / (tot || 1); myPos.shares = tot; myPos.pending = true; }
+    else { myPos = { order: {}, sig: '', side: bSide, shares: sh, entry: entry, locked: false, sellBtn: null, cashText: '', pending: true }; }
+    renderPosition(); closeSheet();
+    Promise.resolve(window.OST_PREDICTION_API.placeBet({ marketId: mid, side: bSide, stake: stake }))
+      .then(function () { setTimeout(function () { refreshBalance(); refreshPosition(); loadTrades(); }, 500); })
+      .catch(function (e) { toast((e && e.message) ? e.message : 'Could not place the bet — reverted.'); refreshBalance(); refreshPosition(); });
   }
   function confirmSell() {
     if (!myPos) { closeSheet(); return; } var cfs = el('opmCfSell');
     var btn = (myPos.sellBtn && document.body.contains(myPos.sellBtn)) ? myPos.sellBtn : document.querySelector('.prediction-cashout-btn[data-order-sig="' + (window.CSS && CSS.escape ? CSS.escape(myPos.sig) : myPos.sig) + '"]');
     if (!btn) { toast('Position is settling — try again in a moment.'); return; }
     if (cfs) { cfs.disabled = true; cfs.textContent = 'Processing…'; }
+    // OPTIMISTIC: balance up by the net, clear the card instantly, then reconcile.
+    var net = parseFloat(String((myPos.cashText.match(/([\d,]+\.?\d*)\s*$/) || [])[1] || '').replace(/,/g, '')) || posValueNow();
+    var b = playBal(); if (b != null) setBalDisplay(b + net);
+    myPos = null; renderPosition();
     try { btn.click(); } catch (_) {}
-    setTimeout(function () { closeSheet(); refreshBalance(); refreshPosition(); loadTrades(); }, 1400);
+    closeSheet();
+    setTimeout(function () { refreshBalance(); refreshPosition(); loadTrades(); }, 1400);
   }
   function doSell() { openSheet('sell'); }
 
@@ -483,7 +572,7 @@
   /* VIEW SWITCHING + MOUNT                                                 */
   /* ===================================================================== */
   function showView(v) { view = v; var b = el('opmBrowse'), d = el('opmDetail'); if (b) b.classList.toggle('on', v === 'browse'); if (d) d.classList.toggle('on', v === 'detail'); }
-  function showBrowse() { showView('browse'); currentMarket = null; renderBrowse(); refreshBalance(); }
+  function showBrowse() { stopFlow(); showView('browse'); currentMarket = null; renderBrowse(); refreshBalance(); }
 
   function mount() {
     var panel = el('wallet-panel-predict'); if (!panel || el('ostPredictMobile')) return true;
@@ -496,8 +585,8 @@
   }
 
   /* live BTC stream (only affects the BTC detail while open) */
-  window.addEventListener('ost:btc-spot', function (e) { if (view !== 'detail' || !isBtcLive(currentMarket)) return; var p = e && e.detail && Number(e.detail.price); if (p > 0) { price = p; pushHist(p); tween(el('opmNow'), price, usd, 700); applyDir(); draw(); } });
-  window.addEventListener('ost:btc-market-updated', function (e) { if (view !== 'detail' || !isBtcLive(currentMarket)) return; try { var m = e.detail && e.detail.tick; if (m && Number(m.price) > 0) { price = Number(m.price); pushHist(price); tween(el('opmNow'), price, usd, 700); applyDir(); draw(); } } catch (_) {} });
+  window.addEventListener('ost:btc-spot', function (e) { if (view !== 'detail' || !isBtcLive(currentMarket)) return; var p = e && e.detail && Number(e.detail.price); if (p > 0) pushTick(p); });
+  window.addEventListener('ost:btc-market-updated', function (e) { if (view !== 'detail' || !isBtcLive(currentMarket)) return; try { var m = e.detail && e.detail.tick; if (m && Number(m.price) > 0) pushTick(Number(m.price)); } catch (_) {} });
   window.addEventListener('ost:prediction-markets', function () { if (view === 'browse') renderBrowse(); });
   window.addEventListener('ost:prediction-order-recorded', function () { if (view === 'detail') setTimeout(refreshPosition, 400); });
   window.addEventListener('ost:money:change', refreshBalance);
