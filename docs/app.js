@@ -8137,6 +8137,23 @@
       if (connectedWallet) syncJourneyUi();
     }, 8000);
 
+    // Wallet-section OSTG card (purple). OSTC is the main OST card (blue,
+    // wdOstBal). OSTG = wallet OSTG + custodial play — same total the
+    // predictions desk spends, kept reactive so it never reads stale.
+    function updateOstgWalletCard() {
+      const elg = document.getElementById('wdOstgBal');
+      if (!elg) return;
+      let w, p, known = false;
+      try { if (window.OST_SESSION && OST_SESSION.walletBalance) { w = OST_SESSION.walletBalance(); if (w != null) known = true; } } catch (_) {}
+      try { if (window.OST_PLAY && OST_PLAY.balance) { p = OST_PLAY.balance(); if (p != null) known = true; } } catch (_) {}
+      if (known) elg.textContent = (Number(w || 0) + Number(p || 0)).toLocaleString(undefined, { maximumFractionDigits: 2 });
+    }
+    window.updateOstgWalletCard = updateOstgWalletCard;
+    ['ost:session:change', 'ost:play:balance', 'ost:money:change', 'ost:wallet-changed', 'ost:walletchanged'].forEach((ev) =>
+      window.addEventListener(ev, updateOstgWalletCard));
+    setInterval(() => { if (!document.hidden) updateOstgWalletCard(); }, 8000);
+    updateOstgWalletCard();
+
     // If already connected on load
     if (connectedWallet) showDashboard(connectedWallet);
     else updateWalletIntelligence('', null);

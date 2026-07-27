@@ -176,16 +176,18 @@
         } catch (_) {}
       });
     });
-    // RETIRE THE OLD HERO. Now that the new odometer hero is on the page, the
-    // legacy per-market hero card + its preamble are redundant and made the page
-    // "feel endless". Hide them — but ONLY after the new hero actually mounted,
-    // so a failure here can never leave the page with no hero at all (same
-    // fail-safe rule the grid uses for the old market list). The search/filter
-    // toggles, hidden market list (selection routing), detail panel and trade
-    // desk all stay — they are the working machinery the redesign builds on.
+    // RETIRE THE OLD HERO. The legacy preamble lives in ONE container,
+    // .prediction-market-head, which is a 3-column layout (copy | hero | side).
+    // Hiding its columns individually breaks the grid (empty column + misaligned
+    // leftovers) — so hide the WHOLE header block in a single clean cut. Only
+    // after the new hero mounted, so a failure can never leave the page hero-less
+    // (same fail-safe rule the grid uses for the old list). The search/filter
+    // toggles, summary, hidden market list (selection routing), detail panel and
+    // trade desk all live OUTSIDE this header and stay — they are the working
+    // machinery the redesign builds on.
     if (document.getElementById('ophCard')) {
-      ['predictionMarketHero', 'predictionMarketIntro', 'predictionMarketKicker', 'predictionMarketHeading']
-        .forEach(function (id) { var el = document.getElementById(id); if (el) el.style.display = 'none'; });
+      var oldHead = board.querySelector('.prediction-market-head');
+      if (oldHead) oldHead.style.display = 'none';
     }
     loadRound();
     render();
