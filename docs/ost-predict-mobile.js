@@ -300,7 +300,8 @@
       var yc = yesCents(m);
       body = '<div class="opm-qhead"><div class="ico">' + icon(marketIcon(m)) + '</div><div><h1>' + esc(m.title || m.contractLabel || 'Market') + '</h1>' +
         '<span class="opm-live"><span class="d"></span> ' + esc(m.closeText || m.closeLabel || 'Live market') + '</span></div></div>' +
-        '<div class="opm-prob"><div class="pv" id="opmProb">' + yc + '%</div><div class="pl">implied Yes</div><div class="pbar"><i id="opmProbBar" style="width:' + yc + '%"></i></div></div>' +
+        '<div class="opm-prob"><div class="pv" id="opmProb">' + yc + '%</div><div class="pl">implied Yes</div><div class="pbar"><i id="opmProbBar" style="width:' + yc + '%"></i></div>' +
+          '<canvas class="opm-g" id="opmStdG" width="402" height="120" style="height:120px;margin:12px 0 0"></canvas></div>' +
         '<div class="opm-statrow"><div class="st"><div class="k">24h volume</div><div class="v">' + esc(Number(m.volumeNumber) > 0 ? compact(m.volumeNumber) : (/\d/.test(String(m.volumeLabel || '')) ? m.volumeLabel : '—')) + '</div></div>' +
         '<div class="st"><div class="k">Closes</div><div class="v">' + esc(m.closeText || m.closeLabel || '—') + '</div></div>' +
         '<div class="st"><div class="k">Source</div><div class="v" style="text-transform:capitalize">' + esc(m.source || 'OST') + '</div></div></div>';
@@ -409,6 +410,41 @@
     if (fresh) currentMarket = fresh;
     midYes = yesCents(currentMarket);
     paintOdds();
+    drawStd();
+  }
+
+  /* ---- probability history graph for EVERY (non-crypto) market ----
+   * A readable, client-side record: the market's implied-Yes % accumulated over
+   * time (persisted per market), rendered as a green/red trend line. No server
+   * needed — it builds a real history as the odds move. */
+  function stdKey(id) { return 'ost.predict.stdhist.' + id; }
+  function stdLoad(id) { try { var a = JSON.parse(localStorage.getItem(stdKey(id)) || '[]'); return Array.isArray(a) ? a : []; } catch (_) { return []; } }
+  function stdAppend(id, yc) {
+    if (!id || !(yc > 0)) return stdLoad(id);
+    var arr = stdLoad(id), now = Date.now(), last = arr[arr.length - 1];
+    if (!last || now - last.t > 20000 || Math.abs(last.y - yc) >= 1) { arr.push({ t: now, y: yc }); arr = arr.slice(-120); try { localStorage.setItem(stdKey(id), JSON.stringify(arr)); } catch (_) {} }
+    return arr;
+  }
+  function drawStd() {
+    var cv = el('opmStdG'); if (!cv || !currentMarket) return; var ctx = cv.getContext('2d');
+    var w = cv.width, h = cv.height, pad = 4;
+    var arr = stdAppend(currentMarket.id, midYes);
+    ctx.clearRect(0, 0, w, h);
+    if (arr.length < 2) {
+      var yy = pad + (1 - midYes / 100) * (h - 2 * pad);
+      ctx.setLineDash([4, 4]); ctx.strokeStyle = 'rgba(127,216,255,.5)'; ctx.beginPath(); ctx.moveTo(pad, yy); ctx.lineTo(w - pad, yy); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(160,184,203,.75)'; ctx.font = '10px ui-monospace,monospace'; ctx.textAlign = 'left'; ctx.fillText('building probability history…', pad + 4, 14);
+      ctx.textAlign = 'right'; ctx.fillText(midYes + '% Yes', w - pad - 2, 14); return;
+    }
+    var ys = arr.map(function (p) { return p.y; });
+    var lo = Math.min.apply(0, ys), hi = Math.max.apply(0, ys); var rng = (hi - lo) || 1; lo -= rng * .15; hi += rng * .15; rng = hi - lo;
+    var n = arr.length, gx = function (i) { return pad + i / (n - 1) * (w - 2 * pad); }, gy = function (v) { return pad + (1 - (v - lo) / rng) * (h - 2 * pad); };
+    var up = ys[n - 1] >= ys[0], col = up ? '52,211,153' : '251,113,133';
+    var g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, 'rgba(' + col + ',.28)'); g.addColorStop(1, 'rgba(' + col + ',0)');
+    ctx.beginPath(); ctx.moveTo(gx(0), h - pad); ys.forEach(function (v, i) { ctx.lineTo(gx(i), gy(v)); }); ctx.lineTo(gx(n - 1), h - pad); ctx.closePath(); ctx.fillStyle = g; ctx.fill();
+    ctx.beginPath(); ys.forEach(function (v, i) { i ? ctx.lineTo(gx(i), gy(v)) : ctx.moveTo(gx(i), gy(v)); }); ctx.strokeStyle = 'rgb(' + col + ')'; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
+    ctx.beginPath(); ctx.arc(gx(n - 1), gy(ys[n - 1]), 3.5, 0, 7); ctx.fillStyle = 'rgb(' + col + ')'; ctx.fill();
+    ctx.fillStyle = 'rgba(160,184,203,.85)'; ctx.font = '10px ui-monospace,monospace'; ctx.textAlign = 'right'; ctx.fillText(midYes + '% Yes', w - pad - 2, 13);
   }
 
   function saveRoundCache(d) { try { localStorage.setItem('ost.btc5m.round.lk', JSON.stringify({ marketId: d.marketId, openAt: d.openAt, closeAt: d.closeAt, priceToBeat: d.priceToBeat, openPrice: d.openPrice })); } catch (_) {} }
@@ -560,7 +596,7 @@
     var action;
     if (myPos.locked) { action = '<div class="opm-locked">' + icon('lock') + ' Locked · settles automatically at round close</div>'; }
     else if (myPos.sellBtn) { var net = (myPos.cashText.match(/([\d,]+\.?\d*)\s*$/) || [])[1] || val.toFixed(2); var isSettle = /settle|claim/i.test(myPos.cashText); action = '<div class="opm-pcbtns"><button class="addmore" id="opmAddMore">Add more</button><button class="sell" id="opmSellBtn">' + (isSettle ? 'Settle' : 'Sell') + ' · ' + esc(net) + ' OSTG</button></div>'; }
-    else { action = '<div class="opm-pcbtns"><button class="addmore" id="opmAddMore">Add more</button><button class="sell" id="opmSellBtn" disabled style="opacity:.6">Sell (loading…)</button></div>'; }
+    else { action = '<div class="opm-pcbtns"><button class="addmore" id="opmAddMore">Add more</button><button class="sell" id="opmSellBtn">Sell · ' + val.toFixed(2) + ' OSTG</button></div>'; }
     wrap.innerHTML = '<div class="opm-poscard"><div class="pch">Your position <span class="side ' + sideCls + '">' + sideLab + '</span><span class="sp"></span><span class="pnl ' + (up ? 'up' : 'down') + '">' + esc(pnlTxt) + '</span></div>' +
       '<div class="opm-pcgrid"><div class="opm-pcg"><div class="k">Shares</div><div class="v">' + myPos.shares.toFixed(2) + '</div></div><div class="opm-pcg"><div class="k">Avg entry</div><div class="v">' + Math.round((myPos.entry || 0) * 100) + '¢</div></div><div class="opm-pcg"><div class="k">Value now</div><div class="v">' + val.toFixed(2) + '</div></div></div>' + action + '</div>';
     var am = el('opmAddMore'); if (am) am.onclick = function () { openSheet('buy', myPos.side); };
@@ -701,35 +737,55 @@
     if (bBefore != null) { var opt = Math.max(0, bBefore - stake); _balHold = { v: opt, dir: 'down', until: Date.now() + 9000 }; setBalDisplay(opt); }
     if (myPos && myPos.side === bSide) { var tot = myPos.shares + sh; myPos.entry = (myPos.shares * (myPos.entry || 0) + sh * entry) / (tot || 1); myPos.shares = tot; myPos.pending = true; }
     else { myPos = { order: {}, sig: '', side: bSide, shares: sh, entry: entry, locked: false, sellBtn: null, cashText: '', pending: true }; }
-    renderPosition(); closeSheet();
-    Promise.resolve(window.OST_PREDICTION_API.placeBet({ marketId: mid, side: bSide, stake: stake }))
-      .then(function () { setTimeout(function () { refreshBalance(); refreshPosition(); loadTrades(); }, 700); })
+    renderPosition(); closeSheet(); if (_balHold) _balHold.until = Date.now() + 16000;
+    ensurePlayFunds(stake)
+      .then(function () { return window.OST_PREDICTION_API.placeBet({ marketId: mid, side: bSide, stake: stake }); })
+      .then(function () { setTimeout(function () { refreshBalance(); refreshPosition(); loadTrades(); }, 800); })
       .catch(function (e) { _balHold = null; toast((e && e.message) ? e.message : 'Could not place the bet — reverted.'); refreshBalance(); refreshPosition(); });
   }
+  // DEPOSIT BRIDGE — makes WALLET OSTG directly spendable. If the custodial play
+  // balance can't cover the stake, top it up from the wallet (gas-free pool rail,
+  // OST_PLAY.deposit) before betting. On-chain rail spends the wallet directly,
+  // so no top-up there.
+  function ensurePlayFunds(stake) {
+    try {
+      if (onchainActive) return Promise.resolve();
+      if (!(window.OST_PLAY && OST_PLAY.deposit && OST_PLAY.balance)) return Promise.resolve();
+      var play = Number(OST_PLAY.balance()) || 0;
+      if (play >= stake) return Promise.resolve();
+      var shortfall = Math.ceil((stake - play) * 100) / 100;
+      var w = 0; try { if (window.OST_SESSION && OST_SESSION.walletBalance) w = Number(OST_SESSION.walletBalance()) || 0; } catch (_) {}
+      if (w > 0 && w < shortfall) return Promise.reject(new Error('Not enough OSTG in your wallet for this bet.'));
+      return Promise.resolve(OST_PLAY.deposit(shortfall)).then(function () { refreshBalance(); });
+    } catch (e) { return Promise.reject(e); }
+  }
   function confirmSell() {
-    if (!myPos) { closeSheet(); return; } var cfs = el('opmCfSell');
-    var btn = (myPos.sellBtn && document.body.contains(myPos.sellBtn)) ? myPos.sellBtn : document.querySelector('.prediction-cashout-btn[data-order-sig="' + (window.CSS && CSS.escape ? CSS.escape(myPos.sig) : myPos.sig) + '"]');
-    if (!btn) { toast("This position isn't sellable yet — it settles at close."); if (cfs) { cfs.disabled = false; } return; }
-    if (cfs) { cfs.disabled = true; cfs.textContent = 'Processing…'; }
-    // ROBUST (no crash): DO NOT optimistically clear the position or bump the
-    // balance — a failed sale must leave the position intact, not make it vanish.
-    // Trigger the real, proven cash-out and reconcile from the ledger; whatever
-    // the ledger says after is the truth.
-    var sig = myPos.sig;
-    try { btn.click(); }
-    catch (e) { if (cfs) { cfs.disabled = false; cfs.textContent = 'Sell'; } toast('Could not start the sale — try again.'); return; }
-    // give the balance an optimistic nudge up but HELD (won't overshoot); it
-    // reconciles to the real credited amount, or reverts if the sale didn't take.
-    var net = parseFloat(String((myPos.cashText.match(/([\d,]+\.?\d*)\s*$/) || [])[1] || '').replace(/,/g, '')) || posValueNow();
-    var b = playBal(); if (b != null && net > 0) { _balHold = { v: b + net, dir: 'up', until: Date.now() + 9000 }; setBalDisplay(b + net); }
-    setTimeout(function () {
-      closeSheet();
-      // if the sale went through, the ledger order is now cashed out and
-      // refreshPosition clears myPos; if it failed, the position stays.
-      var still = ledgerOrders().some(function (o) { return (o.signature || o.sig || o.id) === sig && !o.cashedOut && !/won|lost|sold|settled/i.test(String(o.status || '')); });
-      if (still) { _balHold = null; }   // sale didn't take -> release the optimistic bump
-      refreshBalance(); refreshPosition(); loadTrades();
-    }, 1700);
+    if (!myPos) { closeSheet(); return; }
+    var cfs = el('opmCfSell'); if (cfs) { cfs.disabled = true; cfs.textContent = 'Processing…'; }
+    var sig = myPos.sig, tries = 0;
+    // ROBUST + optimistic-on-the-go: retry finding the proven cash-out button
+    // (it may not have rendered the instant they tap), then trigger it and
+    // reconcile from the ledger. NEVER optimistically clear the position — a
+    // failed sale must leave it intact, not vanish (that was the "crash").
+    (function attempt() {
+      var btn = document.querySelector('.prediction-cashout-btn[data-order-sig="' + (window.CSS && CSS.escape ? CSS.escape(sig) : sig) + '"]');
+      if (!btn) {
+        if (tries++ < 4) { setTimeout(attempt, 500); return; }
+        if (cfs) { cfs.disabled = false; cfs.textContent = 'Sell'; }
+        toast("This position isn't sellable yet — it settles at close.");
+        return;
+      }
+      try { btn.click(); }
+      catch (e) { if (cfs) { cfs.disabled = false; cfs.textContent = 'Sell'; } toast('Could not start the sale — try again.'); return; }
+      var net = parseFloat(String((btn.textContent.match(/([\d,]+\.?\d*)\s*$/) || [])[1] || '').replace(/,/g, '')) || posValueNow();
+      var b = playBal(); if (b != null && net > 0) { _balHold = { v: b + net, dir: 'up', until: Date.now() + 12000 }; setBalDisplay(b + net); }
+      setTimeout(function () {
+        closeSheet();
+        var still = ledgerOrders().some(function (o) { return (o.signature || o.sig || o.id) === sig && !o.cashedOut && !/won|lost|sold|settled/i.test(String(o.status || '')); });
+        if (still) { _balHold = null; }   // sale didn't take -> release the optimistic bump
+        refreshBalance(); refreshPosition(); loadTrades();
+      }, 1700);
+    })();
   }
   function doSell() { openSheet('sell'); }
 
