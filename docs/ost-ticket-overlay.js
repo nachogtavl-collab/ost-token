@@ -57,7 +57,8 @@
       '#ostTicketSheet .tk-chips::-webkit-scrollbar{display:none}' +
       '#ostTicketSheet .tk-chip{flex:0 0 auto;border:1px solid rgba(127,216,255,.12);background:#0a1420;color:#a2b8cb;font-size:12px;font-weight:700;padding:7px 13px;border-radius:20px;cursor:pointer;white-space:nowrap}' +
       '#ostTicketSheet .tk-chip.on{background:#17304a;color:#eef6fc}' +
-      '#ostTicketSheet .tk-list{overflow-y:auto;padding:0 16px 18px}' +
+      '#ostTicketSheet .tk-grab,#ostTicketSheet .tk-h,#ostTicketSheet .tk-sum,#ostTicketSheet .tk-chips{flex:0 0 auto}' +
+      '#ostTicketSheet .tk-list{flex:1 1 auto;min-height:0;overflow-y:auto;padding:0 16px 18px}' +
       '#ostTicketSheet .tk-row{display:flex;align-items:center;gap:10px;padding:12px 2px;border-bottom:1px solid rgba(127,216,255,.1)}' +
       '#ostTicketSheet .tk-main{flex:1;min-width:0}' +
       '#ostTicketSheet .tk-title{font-size:12.5px;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +

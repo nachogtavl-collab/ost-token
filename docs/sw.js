@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ost-pwa-cache-v361';
+const CACHE_NAME = 'ost-pwa-cache-v362';
 const RUNTIME_CACHE = 'ost-pwa-runtime-v253';
 const CACHE_PREFIX = 'ost-pwa-';
 
@@ -77,7 +77,7 @@ const PRECACHE_PATHS = [
   './realtime.js?v=2',
   './ost-notifications.js?v=3',
   './app.js?v=240',
-  './ost-predict-mobile.js?v=16',
+  './ost-predict-mobile.js?v=17',
   './ost-predict-mobile.css?v=6',
   './ost-session-key.js?v=6',
   './ost-onchain-market.js?v=7',
@@ -132,7 +132,7 @@ const PRECACHE_PATHS = [
   './prediction-pro.js?v=206',
   './prediction-scalar.js?v=4',
   './prediction-modal.js?v=210',
-  './ost-ticket-overlay.js?v=1',
+  './ost-ticket-overlay.js?v=2',
   './prediction-trade-popout.js?v=10',
   './prediction-pro-dash.js?v=15',
   './ost-console.js?v=3',

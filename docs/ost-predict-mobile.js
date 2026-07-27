@@ -126,19 +126,32 @@
   function walletAddr() { try { return (window.OST_PREDICTION_API && OST_PREDICTION_API.walletAddress && OST_PREDICTION_API.walletAddress()) || ''; } catch (_) { return ''; } }
   function meshHandle() { try { if (window.OST_MESH_IDENTITY && OST_MESH_IDENTITY.handle) return OST_MESH_IDENTITY.handle; } catch (_) {} return ''; }
   function ledgerOrders() { try { return (window.OST_PREDICTION_API && OST_PREDICTION_API.ledger && OST_PREDICTION_API.ledger()) || []; } catch (_) { return []; } }
-  // ONE balance, from the rail the bets ACTUALLY use — so it can never be
-  // stale/conflicting:
-  //   · on-chain market live (onchainActive)  -> wallet+session OSTG
-  //   · otherwise (custodial / OSTG-native)    -> the play OSTG balance
-  // This is the single source of truth for the header; whichever rail a bet
-  // debits is the one shown, and it moves when that rail moves.
+  // The user's REAL total OSTG: their on-chain wallet OSTG token (DfgxMbdN, the
+  // actual wallet funds) + the custodial play OSTG (OST_PLAY). Both are real
+  // OSTG; showing the sum means the header reflects actual wallet funds AND
+  // moves when a bet debits play. Never the credits pool. Unknown stays unknown
+  // (last-known cache in OST_SESSION keeps it from flashing to 0 on a 429).
   function playBal() {
-    if (onchainActive) { try { if (window.OST_SESSION && OST_SESSION.spendable) { var s = OST_SESSION.spendable(); if (s !== undefined) return s; } } catch (_) {} }
-    try { var p = window.OST_PLAY && OST_PLAY.balance && OST_PLAY.balance(); if (p != null) return p; } catch (_) {}
-    try { if (window.OST_SESSION && OST_SESSION.spendable) { var s2 = OST_SESSION.spendable(); if (s2 !== undefined) return s2; } } catch (_) {}
+    var w, p, known = false;
+    try { if (window.OST_SESSION && OST_SESSION.walletBalance) { w = OST_SESSION.walletBalance(); if (w != null) known = true; } } catch (_) {}
+    try { if (window.OST_PLAY && OST_PLAY.balance) { p = OST_PLAY.balance(); if (p != null) known = true; } } catch (_) {}
+    if (known) return (Number(w) || 0) + (Number(p) || 0);
+    try { if (window.OST_SESSION && OST_SESSION.spendable) { var s = OST_SESSION.spendable(); if (s !== undefined) return s; } } catch (_) {}
     return undefined;
   }
-  function setBalDisplay(v) { document.querySelectorAll('#ostPredictMobile .opm-balv').forEach(function (e) { e.textContent = (v == null ? '—' : Number(Math.max(0, v)).toLocaleString(undefined, { maximumFractionDigits: 2 })); }); }
+  // Optimistic hold: after a bet/sell we show the expected balance and refuse to
+  // let a slow reconcile-read bounce it the WRONG way before the server confirms
+  // — that bounce is what made buying feel non-optimistic.
+  var _balHold = null;   // { v, dir:'down'|'up', until }
+  function setBalDisplay(v) {
+    if (v != null && _balHold && Date.now() < _balHold.until) {
+      var nv = Number(v);
+      if (_balHold.dir === 'down' && nv > _balHold.v + 0.001) v = _balHold.v;
+      else if (_balHold.dir === 'up' && nv < _balHold.v - 0.001) v = _balHold.v;
+      else _balHold = null;   // the real balance crossed the optimistic point -> release
+    }
+    document.querySelectorAll('#ostPredictMobile .opm-balv').forEach(function (e) { e.textContent = (v == null ? '—' : Number(Math.max(0, v)).toLocaleString(undefined, { maximumFractionDigits: 2 })); });
+  }
   function refreshBalance() {
     try { if (window.OST_SESSION && OST_SESSION.refresh) OST_SESSION.refresh(); } catch (_) {}
     try { if (window.OST_PLAY && OST_PLAY.refresh) OST_PLAY.refresh(); } catch (_) {}
@@ -227,10 +240,12 @@
     showView('detail');
     wireDetail();
     refreshBalance();
-    if (isBtcLive(m)) { loadRound(); startFlow(); }
-    else { stopFlow(); paintStandard(); }
-    loadTrades(); loadComments(); refreshPosition();
-    try { el('ostPredictMobile').scrollTop = 0; window.scrollTo(0, 0); } catch (_) {}
+    if (isBtcLive(m)) { loadRound(); startFlow(); }   // trades load once the round id is known (avoids family-history flash)
+    else { stopFlow(); paintStandard(); loadTrades(); }
+    loadComments(); refreshPosition();
+    // Scroll to the TOP OF THE PREDICT SURFACE, not the whole page — window.scrollTo(0,0)
+    // yanked the user up to the wallet/convert rails above the panel.
+    try { var h = el('ostPredictMobile'); if (h && h.scrollIntoView) h.scrollIntoView({ block: 'start' }); } catch (_) {}
   }
 
   function detailHead(m) {
@@ -417,10 +432,12 @@
     beat = Number(d.priceToBeat) || beat;
     if (Number(d.livePrice) > 0) pushTick(Number(d.livePrice));
     if (!baseMidSet && isFinite(Number(d.yesPriceNumber))) { midYes = Math.max(1, Math.min(99, Math.round(Number(d.yesPriceNumber) * 100))); baseMidSet = true; renderOddsLive(); }
-    if (prevId && prevId !== d.marketId) {
+    var newRound = prevId && prevId !== d.marketId;
+    if (newRound) {   // rollover = a NEW market: reset this round's live state
       buf = []; hist = []; dispPrice = 0; baseMidSet = false; seenTrades = {}; firstTrades = true; onchainActive = false;
-      myPos = null; renderPosition(); refreshPosition(); loadTrades();
+      myPos = null; renderPosition(); refreshPosition();
     }
+    if (!prevId || newRound) loadTrades();   // (re)load round-scoped trades once the round id is known
     if (Array.isArray(d.ticks) && d.ticks.length && hist.length < 8) {
       d.ticks.map(function (t) { return Number(t.p != null ? t.p : t.price); }).filter(function (x) { return x > 0; }).forEach(pushHist);
     }
@@ -679,28 +696,40 @@
     // OPTIMISTIC: reflect the bet the instant they tap — balance down, position in.
     // The real placeBet reconciles in the background; on failure we revert to truth.
     var bBefore = playBal();
-    // On-chain 5-min bets spend wallet OST, not the custodial Play OSTG — so only
-    // optimistically move the Play balance when we're NOT on the on-chain rail.
-    if (!onchainActive && bBefore != null) setBalDisplay(bBefore - stake);
+    // OPTIMISTIC: the balance drops the instant they tap and HOLDS there (won't
+    // bounce back up on a stale reconcile-read) until the server confirms.
+    if (bBefore != null) { var opt = Math.max(0, bBefore - stake); _balHold = { v: opt, dir: 'down', until: Date.now() + 9000 }; setBalDisplay(opt); }
     if (myPos && myPos.side === bSide) { var tot = myPos.shares + sh; myPos.entry = (myPos.shares * (myPos.entry || 0) + sh * entry) / (tot || 1); myPos.shares = tot; myPos.pending = true; }
     else { myPos = { order: {}, sig: '', side: bSide, shares: sh, entry: entry, locked: false, sellBtn: null, cashText: '', pending: true }; }
     renderPosition(); closeSheet();
     Promise.resolve(window.OST_PREDICTION_API.placeBet({ marketId: mid, side: bSide, stake: stake }))
-      .then(function () { setTimeout(function () { refreshBalance(); refreshPosition(); loadTrades(); }, 500); })
-      .catch(function (e) { toast((e && e.message) ? e.message : 'Could not place the bet — reverted.'); refreshBalance(); refreshPosition(); });
+      .then(function () { setTimeout(function () { refreshBalance(); refreshPosition(); loadTrades(); }, 700); })
+      .catch(function (e) { _balHold = null; toast((e && e.message) ? e.message : 'Could not place the bet — reverted.'); refreshBalance(); refreshPosition(); });
   }
   function confirmSell() {
     if (!myPos) { closeSheet(); return; } var cfs = el('opmCfSell');
     var btn = (myPos.sellBtn && document.body.contains(myPos.sellBtn)) ? myPos.sellBtn : document.querySelector('.prediction-cashout-btn[data-order-sig="' + (window.CSS && CSS.escape ? CSS.escape(myPos.sig) : myPos.sig) + '"]');
-    if (!btn) { toast('Position is settling — try again in a moment.'); return; }
+    if (!btn) { toast("This position isn't sellable yet — it settles at close."); if (cfs) { cfs.disabled = false; } return; }
     if (cfs) { cfs.disabled = true; cfs.textContent = 'Processing…'; }
-    // OPTIMISTIC: balance up by the net, clear the card instantly, then reconcile.
+    // ROBUST (no crash): DO NOT optimistically clear the position or bump the
+    // balance — a failed sale must leave the position intact, not make it vanish.
+    // Trigger the real, proven cash-out and reconcile from the ledger; whatever
+    // the ledger says after is the truth.
+    var sig = myPos.sig;
+    try { btn.click(); }
+    catch (e) { if (cfs) { cfs.disabled = false; cfs.textContent = 'Sell'; } toast('Could not start the sale — try again.'); return; }
+    // give the balance an optimistic nudge up but HELD (won't overshoot); it
+    // reconciles to the real credited amount, or reverts if the sale didn't take.
     var net = parseFloat(String((myPos.cashText.match(/([\d,]+\.?\d*)\s*$/) || [])[1] || '').replace(/,/g, '')) || posValueNow();
-    var b = playBal(); if (!onchainActive && b != null) setBalDisplay(b + net);
-    myPos = null; renderPosition();
-    try { btn.click(); } catch (_) {}
-    closeSheet();
-    setTimeout(function () { refreshBalance(); refreshPosition(); loadTrades(); }, 1400);
+    var b = playBal(); if (b != null && net > 0) { _balHold = { v: b + net, dir: 'up', until: Date.now() + 9000 }; setBalDisplay(b + net); }
+    setTimeout(function () {
+      closeSheet();
+      // if the sale went through, the ledger order is now cashed out and
+      // refreshPosition clears myPos; if it failed, the position stays.
+      var still = ledgerOrders().some(function (o) { return (o.signature || o.sig || o.id) === sig && !o.cashedOut && !/won|lost|sold|settled/i.test(String(o.status || '')); });
+      if (still) { _balHold = null; }   // sale didn't take -> release the optimistic bump
+      refreshBalance(); refreshPosition(); loadTrades();
+    }, 1700);
   }
   function doSell() { openSheet('sell'); }
 
