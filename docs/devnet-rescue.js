@@ -157,14 +157,19 @@
     var base = ostApiBaseSafe();
     if (!base) throw new Error('OST API not configured');
     var res, resJson;
+    // HARD TIMEOUT: a cosign/submit that confirms on-chain must NEVER hang the UI
+    // if the RPC stalls (the "signature never arrives, data stale" bug). It fails
+    // fast; the deposit is idempotent by sig, so the retry/sweep recovers it.
+    var ctrl = new AbortController();
+    var to = setTimeout(function () { try { ctrl.abort(); } catch (_) {} }, 20000);
     try {
-      res = await fetch(base + path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+      res = await fetch(base + path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal: ctrl.signal });
       resJson = await res.json();
-    } catch (_) {
-      var err = new Error('Could not reach the OST payout service. Try again shortly.');
-      err.code = 'network_error';
+    } catch (e) {
+      var err = new Error((e && e.name === 'AbortError') ? 'The payout service took too long — it will finish in the background; try again in a moment.' : 'Could not reach the OST payout service. Try again shortly.');
+      err.code = (e && e.name === 'AbortError') ? 'timeout' : 'network_error';
       throw err;
-    }
+    } finally { clearTimeout(to); }
     if (!res.ok || !resJson.ok) {
       var apiErr = new Error(resJson && (resJson.message || resJson.error) || ('Request failed (' + res.status + ')'));
       apiErr.code = resJson && resJson.error;

@@ -43,14 +43,23 @@
   }
 
   async function api(method, path, body) {
-    var res = await fetch(API + path, {
-      method: method,
-      headers: body ? { 'content-type': 'application/json' } : undefined,
-      body: body ? JSON.stringify(body) : undefined,
-      cache: 'no-store',
-    });
+    // Timeout so a stalled worker/RPC can't hang a bet/deposit forever.
+    var ctrl = new AbortController();
+    var to = setTimeout(function () { try { ctrl.abort(); } catch (_) {} }, 15000);
+    var res;
+    try {
+      res = await fetch(API + path, {
+        method: method,
+        headers: body ? { 'content-type': 'application/json' } : undefined,
+        body: body ? JSON.stringify(body) : undefined,
+        cache: 'no-store',
+        signal: ctrl.signal,
+      });
+    } catch (e) {
+      var ne = new Error(e && e.name === 'AbortError' ? 'timeout' : 'network_error'); ne.code = ne.message; throw ne;
+    } finally { clearTimeout(to); }
     var json = await res.json().catch(function () { return {}; });
-    if (!res.ok) { var e = new Error(json.error || ('http_' + res.status)); e.detail = json; throw e; }
+    if (!res.ok) { var er = new Error(json.error || ('http_' + res.status)); er.detail = json; throw er; }
     return json;
   }
 

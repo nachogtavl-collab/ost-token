@@ -3323,10 +3323,23 @@
       const src = (window.OST_OSTG_SOURCE && window.OST_OSTG_SOURCE.current)
         ? window.OST_OSTG_SOURCE.current() : 'clean';
       const base = getOstApiBase() || (window.OST_API_BASE || 'https://ost-api.nachogtavl.workers.dev');
-      const resp = await fetch(base + '/play/predict/open', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ wallet: walletAddr, marketId: order.marketId, side: order.side, stake: stakeAmt, bucket: src })
-      });
+      // Hard timeout so a stalled worker never hangs the bet ("signature never
+      // arrives, data stale"). Fails fast -> the caller falls back or reverts.
+      const _ctrl = new AbortController();
+      const _to = setTimeout(() => { try { _ctrl.abort(); } catch (_) {} }, 12000);
+      let resp;
+      try {
+        resp = await fetch(base + '/play/predict/open', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ wallet: walletAddr, marketId: order.marketId, side: order.side, stake: stakeAmt, bucket: src }),
+          signal: _ctrl.signal
+        });
+      } catch (e) {
+        clearTimeout(_to);
+        const te = new Error(e && e.name === 'AbortError' ? 'The bet is taking too long — try again in a moment.' : 'Could not reach the bet service.');
+        te.code = 'timeout'; throw te;
+      }
+      clearTimeout(_to);
       const r = await resp.json().catch(() => ({ ok: false, error: 'bad_response' }));
       if (!r || r.ok === false) {
         const e = new Error(r && r.error === 'insufficient_bucket'
