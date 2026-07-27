@@ -126,13 +126,16 @@
   function walletAddr() { try { return (window.OST_PREDICTION_API && OST_PREDICTION_API.walletAddress && OST_PREDICTION_API.walletAddress()) || ''; } catch (_) { return ''; } }
   function meshHandle() { try { if (window.OST_MESH_IDENTITY && OST_MESH_IDENTITY.handle) return OST_MESH_IDENTITY.handle; } catch (_) {} return ''; }
   function ledgerOrders() { try { return (window.OST_PREDICTION_API && OST_PREDICTION_API.ledger && OST_PREDICTION_API.ledger()) || []; } catch (_) { return []; } }
-  // The spendable balance is the ON-CHAIN WALLET OSTG (unified, per the balance
-  // decision): wallet OSTG + whatever is parked in the session key. On-chain
-  // wins land here directly. Falls back to the custodial play balance only if
-  // the session module isn't present.
+  // ONE balance, from the rail the bets ACTUALLY use — so it can never be
+  // stale/conflicting:
+  //   · on-chain market live (onchainActive)  -> wallet+session OSTG
+  //   · otherwise (custodial / OSTG-native)    -> the play OSTG balance
+  // This is the single source of truth for the header; whichever rail a bet
+  // debits is the one shown, and it moves when that rail moves.
   function playBal() {
-    try { if (window.OST_SESSION && OST_SESSION.spendable) { var s = OST_SESSION.spendable(); if (s !== undefined) return s; } } catch (_) {}
-    try { return window.OST_PLAY && OST_PLAY.balance && OST_PLAY.balance(); } catch (_) {}
+    if (onchainActive) { try { if (window.OST_SESSION && OST_SESSION.spendable) { var s = OST_SESSION.spendable(); if (s !== undefined) return s; } } catch (_) {} }
+    try { var p = window.OST_PLAY && OST_PLAY.balance && OST_PLAY.balance(); if (p != null) return p; } catch (_) {}
+    try { if (window.OST_SESSION && OST_SESSION.spendable) { var s2 = OST_SESSION.spendable(); if (s2 !== undefined) return s2; } } catch (_) {}
     return undefined;
   }
   function setBalDisplay(v) { document.querySelectorAll('#ostPredictMobile .opm-balv').forEach(function (e) { e.textContent = (v == null ? '—' : Number(Math.max(0, v)).toLocaleString(undefined, { maximumFractionDigits: 2 })); }); }
