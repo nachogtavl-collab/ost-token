@@ -37,7 +37,9 @@
     var s = document.createElement('style');
     s.id = 'ostgWalletStyle';
     s.textContent =
-      '.wd-balance-ostg .wd-bal-icon{color:#a78bfa;}' +
+      '.wd-balance-ostg .wd-bal-icon{color:#a97bff;}' +
+      '.wd-balance-ostg .wd-bal-amount{color:#a97bff;}' +
+      '.wd-balance-ostg .wd-bal-label{color:#a97bff;}' +
       '.ostg-wallet-split{display:flex;gap:10px;font-size:11px;color:#94a3b8;font-weight:700;margin-top:2px;}' +
       '.ostg-wallet-split b{color:#c4b5fd;}' +
       '.ostg-wallet-spark{display:block;width:100%;height:34px;margin-top:6px;}';
@@ -63,7 +65,10 @@
         '<canvas class="ostg-wallet-spark" data-ostg-spark width="240" height="34" aria-label="OSTG balance history"></canvas>' +
       '</div>' +
       '<div class="wd-bal-usd" data-ostg-usd></div>';
-    host.appendChild(card);
+    // OSTG shows FIRST, before the OSTC (main OST) card — the token order the
+    // wallet is meant to lead with. Fall back to append if that card isn't found.
+    var ostcCard = host.querySelector('.wd-balance-ost');
+    if (ostcCard) host.insertBefore(card, ostcCard); else host.appendChild(card);
     el = {
       total: card.querySelector('[data-ostg-total]'),
       wallet: card.querySelector('[data-ostg-wallet]'),
