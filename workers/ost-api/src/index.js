@@ -3567,6 +3567,13 @@ export default {
     }
 
     // ── GET /health ──────────────────────────────────────────────────────────
+    // Dedicated RPC handoff for the client — served from the worker SECRET so
+    // the Helius key is never committed to the repo. The client fetches this on
+    // boot and points its Solana connection at it (fixes the public-devnet 429s).
+    if (path === '/rpc-config' && method === 'GET') {
+      return json({ rpc: env.SOLANA_DEVNET_RPC || null }, 200, { 'cache-control': 'public, max-age=300' });
+    }
+
     if (path === '/health' || path === '/') {
       const btcResult = await fetchBtcPrice();
       const round = currentRound();

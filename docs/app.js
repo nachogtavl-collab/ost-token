@@ -2213,11 +2213,32 @@
 
   // Initialize Solana connection
   function getSolanaConnection() {
-    if (!solanaConnection && typeof solanaWeb3 !== 'undefined') {
-      solanaConnection = new solanaWeb3.Connection(OST_CONFIG.rpcUrl, 'confirmed');
+    // Prefer the dedicated RPC (Helius) delivered at runtime by /rpc-config;
+    // rebuild the connection if the URL changed after the config arrived.
+    var url = (typeof window !== 'undefined' && window.OST_SOLANA_RPC) || OST_CONFIG.rpcUrl;
+    if (typeof solanaWeb3 !== 'undefined' && (!solanaConnection || solanaConnection.__ostUrl !== url)) {
+      solanaConnection = new solanaWeb3.Connection(url, 'confirmed');
+      solanaConnection.__ostUrl = url;
     }
     return solanaConnection;
   }
+  // Fetch the dedicated devnet RPC from the worker SECRET (not committed) and
+  // repoint every Solana read/tx at it — kills the public-devnet 429s.
+  (function loadDedicatedRpc() {
+    try {
+      var base = ((typeof window !== 'undefined' && window.OST_API_BASE) || 'https://ost-api.nachogtavl.workers.dev').replace(/\/$/, '');
+      fetch(base + '/rpc-config', { cache: 'no-store' })
+        .then(function (r) { return r.json(); })
+        .then(function (c) {
+          if (c && typeof c.rpc === 'string' && /^https:\/\//.test(c.rpc)) {
+            window.OST_SOLANA_RPC = c.rpc;
+            OST_CONFIG.rpcUrl = c.rpc;
+            solanaConnection = null;   // force rebuild on Helius for every subsequent op
+            try { window.dispatchEvent(new CustomEvent('ost:rpc-ready', { detail: { rpc: c.rpc } })); } catch (_) {}
+          }
+        }).catch(function () {});
+    } catch (_) {}
+  })();
 
   // ---- Blockhash prewarm --------------------------------------------------
   // Fetching a fresh blockhash is a full RPC round-trip (200ms–1.2s on devnet)
