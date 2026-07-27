@@ -252,11 +252,44 @@
     var sig = await rescue.sendPoolFeeOnly([
       transferCheckedIx(ataOf(OSTG_MINT, w), PK(POOL_OSTG_ATA), w, rawAmount),
     ]);
-    // Credit the ledger from the verified on-chain deposit (idempotent by sig).
-    var r = await api('POST', '/play/deposit', { wallet: addr(), signature: sig });
-    if (typeof r.balance === 'number') { mirror = r.balance; emit(); }
-    return r;
+    // The OSTG has now MOVED on-chain. Crediting it is idempotent by signature,
+    // so we must RETRY the credit — a single verify that 429s would otherwise
+    // strand the deposit (funds in the pool, no play credit). Remember the sig so
+    // a failure is recovered automatically later.
+    addPendingDeposit(sig);
+    return await creditDeposit(sig);
   }
+
+  function sleepMs(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  var PENDING_KEY = 'ost.play.pendingDeposits.v1';
+  function readPending() { try { var a = JSON.parse(localStorage.getItem(PENDING_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (_) { return []; } }
+  function addPendingDeposit(sig) { try { var a = readPending(); if (a.indexOf(sig) < 0) a.push(sig); localStorage.setItem(PENDING_KEY, JSON.stringify(a.slice(-30))); } catch (_) {} }
+  function removePendingDeposit(sig) { try { localStorage.setItem(PENDING_KEY, JSON.stringify(readPending().filter(function (x) { return x !== sig; }))); } catch (_) {} }
+
+  // Retry the credit until the chain confirms + the RPC cooperates. Transient
+  // errors (tx_not_found, verify_failed, 429) retry; a permanent verdict stops.
+  async function creditDeposit(sig) {
+    var lastErr = '';
+    for (var i = 0; i < 8; i++) {
+      try {
+        var r = await api('POST', '/play/deposit', { wallet: addr(), signature: sig });
+        if (r && r.ok !== false && (r.credited != null || typeof r.balance === 'number' || r.idempotent)) {
+          removePendingDeposit(sig);
+          if (typeof r.balance === 'number') { mirror = r.balance; emit(); }
+          return r;
+        }
+        lastErr = (r && (r.error || r.message)) || 'unverified';
+        if (lastErr === 'no_ostg_to_pool' || lastErr === 'tx_failed' || lastErr === 'invalid_wallet') { removePendingDeposit(sig); throw new Error('Deposit could not be verified: ' + lastErr); }
+      } catch (e) { lastErr = (e && e.message) || String(e); if (/could not be verified/.test(lastErr)) throw e; }
+      await sleepMs(i < 2 ? 1500 : 3000);
+    }
+    // Left pending on purpose — the background sweep will finish it; funds are safe in the pool.
+    throw new Error('Your OSTG moved to the pool but the credit is still confirming — it will finish automatically in a moment.');
+  }
+  // On load + periodically, finish any deposit whose credit didn't land (e.g. a
+  // 429 during verify). Idempotent by signature, so this can only ever help.
+  function sweepPendingDeposits() { readPending().forEach(function (sig) { creditDeposit(sig).catch(function () {}); }); }
+  window.OST_PLAY_SWEEP_DEPOSITS = sweepPendingDeposits;
 
   // ---- cashout: play balance -> wallet OSTG ------------------------------
   async function cashout(uiAmount) {
@@ -273,10 +306,13 @@
   }
 
   // Refresh on wallet change / resume so the mirror tracks the server.
-  window.addEventListener('ost:wallet-changed', function () { refresh(); });
-  window.addEventListener('ost:resume', function () { refresh(); });
+  window.addEventListener('ost:wallet-changed', function () { refresh(); setTimeout(sweepPendingDeposits, 2500); });
+  window.addEventListener('ost:resume', function () { refresh(); sweepPendingDeposits(); });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', refresh);
   else refresh();
+  // Finish any deposit whose credit didn't land, and keep checking (idempotent).
+  setTimeout(sweepPendingDeposits, 4000);
+  setInterval(sweepPendingDeposits, 60000);
 
   // Generic stake/settle for non-game products (predictions, stocks). `bucket`
   // says WHERE the money comes from - 'clean' (own OSTG) or a loan id - and the
