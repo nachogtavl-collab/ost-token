@@ -258,9 +258,20 @@
     // pool gas-free. The transfer references the pool's ATA (not the pool pubkey),
     // so it passes assertPoolAbsent — the pool signs only as fee payer.
     await rescue.ensureUserAtaForMint(w, OSTG_MINT);
-    var sig = await rescue.sendPoolFeeOnly([
-      transferCheckedIx(ataOf(OSTG_MINT, w), PK(POOL_OSTG_ATA), w, rawAmount),
-    ]);
+    // Retry the TRANSFER on transient failures. The pool-cosign build reads
+    // account/blockhash state from a throttled RPC, so it intermittently returns
+    // IllegalOwner / blockhash_expired / 429 even though the accounts are valid
+    // (it succeeds on a retry). Only transient errors retry; a real rejection throws.
+    var sig, lastErr;
+    for (var _t = 0; _t < 3; _t++) {
+      try { sig = await rescue.sendPoolFeeOnly([transferCheckedIx(ataOf(OSTG_MINT, w), PK(POOL_OSTG_ATA), w, rawAmount)]); break; }
+      catch (e) {
+        lastErr = e; var msg = String((e && e.message) || e);
+        if (_t < 2 && /IllegalOwner|blockhash|expired|429|Too Many|timeout|network|took too long|fetch/i.test(msg)) { await sleepMs(2200); continue; }
+        throw e;
+      }
+    }
+    if (!sig) throw (lastErr || new Error('deposit transfer failed'));
     // The OSTG has now MOVED on-chain. Crediting it is idempotent by signature,
     // so we must RETRY the credit — a single verify that 429s would otherwise
     // strand the deposit (funds in the pool, no play credit). Remember the sig so

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ost-pwa-cache-v366';
+const CACHE_NAME = 'ost-pwa-cache-v367';
 const RUNTIME_CACHE = 'ost-pwa-runtime-v253';
 const CACHE_PREFIX = 'ost-pwa-';
 
@@ -145,7 +145,7 @@ const PRECACHE_PATHS = [
   './ost-update.js?v=1',
   './ost-offline-mode.js?v=1',
   './ost-bridge-ui.js?v=3',
-  './ost-play.js?v=10',
+  './ost-play.js?v=11',
   './ost-audit.js?v=2',
   './offline-vault.js?v=10',
   './ost-scroll-fix.css?v=1',
