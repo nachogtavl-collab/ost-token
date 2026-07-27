@@ -115,8 +115,14 @@ export class PredictionLedger {
     if (Date.now() >= round.closeAt) return json({ ok: false, error: 'round_closed' }, 409);
 
     const rec = await this.roundRecord(round.openAt);
-    if (!rec || !Number.isFinite(Number(rec.openPrice))) {
-      return json({ ok: false, error: 'round_open_price_unknown', note: 'refusing to open a position with no authoritative open price' }, 409);
+    // Open reference price. Prefer the crank-locked open price; if the crank
+    // isn't running, fall back to the CANONICAL price-to-beat the route computed
+    // from NativeMarketHub (captured at the round boundary, deterministic). This
+    // lets OSTG predictions open on the play rail WITHOUT a crank.
+    let openPrice = rec && Number.isFinite(Number(rec.openPrice)) && Number(rec.openPrice) > 0 ? Number(rec.openPrice) : NaN;
+    if (!(openPrice > 0) && Number.isFinite(Number(body.priceToBeat)) && Number(body.priceToBeat) > 0) openPrice = Number(body.priceToBeat);
+    if (!(openPrice > 0)) {
+      return json({ ok: false, error: 'round_open_price_unknown', note: 'no open price available for this round yet' }, 409);
     }
 
     // Entry odds are the SERVER's, clamped. Shares = stake / entry.
@@ -136,12 +142,12 @@ export class PredictionLedger {
     // open price only if no price-to-beat was supplied.
     const priceToBeat = Number.isFinite(Number(body.priceToBeat)) && Number(body.priceToBeat) > 0
       ? Number(body.priceToBeat)
-      : Number(rec.openPrice);
+      : openPrice;
 
     const id = 'p_' + round.openAt + '_' + wallet.slice(0, 6) + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
     const pos = {
       id, wallet, marketId, side, stake, entry, shares, bucket,
-      openPrice: Number(rec.openPrice), priceToBeat, openAt: round.openAt, closeAt: round.closeAt,
+      openPrice: openPrice, priceToBeat, openAt: round.openAt, closeAt: round.closeAt,
       status: 'open', createdAt: Date.now()
     };
     await this.state.storage.put(POS_PREFIX + id, pos);
