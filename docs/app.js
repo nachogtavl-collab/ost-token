@@ -4340,16 +4340,24 @@
     // Re-announce once the page has fully loaded, when every module is listening.
     // Idempotent: it only re-syncs UI from the session that already exists.
     var reannounceWallet = function () {
+      if (!connectedWallet) return;   // only ever re-syncs an EXISTING session
       try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {}
+      try { if (typeof window.syncConnectedWalletUi === 'function') window.syncConnectedWalletUi(); } catch (_) {}
       try { if (typeof window.syncPredictionMarketTradeWallet === 'function') window.syncPredictionMarketTradeWallet(); } catch (_) {}
       try { if (typeof window.syncWalletJourneyUi === 'function') window.syncWalletJourneyUi(); } catch (_) {}
       try { setWalletButtonState(connectedWallet); } catch (_) {}
     };
     if (document.readyState === 'complete') setTimeout(reannounceWallet, 0);
     else window.addEventListener('load', reannounceWallet, { once: true });
-    // Coming BACK to a backgrounded tab/PWA can also restore from bfcache with
-    // stale UI — re-sync on pageshow(persisted) too.
-    window.addEventListener('pageshow', function (e) { if (e && e.persisted) reannounceWallet(); });
+    // Late-loaded modules (wallet-extras, ost-card, topup, appbar…) register their
+    // listeners AFTER app.js and miss the first announce — fire several more times
+    // so NONE render "disconnected" over a live session. Idempotent.
+    [300, 900, 1800, 3500, 6000].forEach(function (d) { setTimeout(reannounceWallet, d); });
+    // The exact moment users hit the bug: coming BACK (PWA foreground, tab switch,
+    // bfcache restore, refresh). Re-sync on every re-show/visible.
+    window.addEventListener('pageshow', function () { reannounceWallet(); });
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) reannounceWallet(); });
+    window.addEventListener('focus', function () { reannounceWallet(); });
   }
 
   /* ---------- 3D EARTH — Realistic Day/Night ---------- */
