@@ -1,0 +1,23 @@
+# OST market crank on Fly.io — a tiny always-on background worker (no ports).
+# Runs `crank.mjs --watch` (self-healing). Cheapest always-on option.
+#
+#   fly launch --no-deploy --copy-config --name ost-crank   (from this folder)
+#   fly secrets set OST_CRANK_KEY="<base64>" OST_RPC="<dedicated-devnet-rpc>"
+#   fly deploy
+#
+app = "ost-crank"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+# No [http_service] — this is a worker, it exposes no ports.
+
+[[vm]]
+  size   = "shared-cpu-1x"
+  memory = "256mb"
+  cpus   = 1
+
+[deploy]
+  # keep exactly one instance alive; never scale to zero
+  min_machines_running = 1

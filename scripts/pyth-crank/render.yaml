@@ -1,0 +1,17 @@
+# OST market crank on Render — a background worker (Blueprint deploy).
+# Render → New → Blueprint → point at this repo. Worker runs crank.mjs --watch.
+# Note: Render background workers require a paid instance (~$7/mo); for a
+# near-free always-on use Fly.io (fly.toml) instead.
+services:
+  - type: worker
+    name: ost-crank
+    runtime: docker
+    rootDir: scripts/pyth-crank
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    autoDeploy: false
+    envVars:
+      - key: OST_RPC
+        sync: false          # set to your dedicated devnet RPC in the dashboard
+      - key: OST_CRANK_KEY
+        sync: false          # set to the base64 crank secret in the dashboard
