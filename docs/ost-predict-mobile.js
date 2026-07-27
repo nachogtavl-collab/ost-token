@@ -396,26 +396,47 @@
     paintOdds();
   }
 
+  function saveRoundCache(d) { try { localStorage.setItem('ost.btc5m.round.lk', JSON.stringify({ marketId: d.marketId, openAt: d.openAt, closeAt: d.closeAt, priceToBeat: d.priceToBeat, openPrice: d.openPrice })); } catch (_) {} }
+  function lastRoundCache() { try { return JSON.parse(localStorage.getItem('ost.btc5m.round.lk') || 'null'); } catch (_) { return null; } }
+  // A round computed with NO backend at all — clock 5-min boundaries + the client
+  // BTC price. This is the always-works fallback when /btc/round is down, KV is
+  // exhausted, or the RPC is 429ing. Deterministic id scheme matches the server.
+  function clientRound() {
+    var FIVE = 300000, openAt = Math.floor(Date.now() / FIVE) * FIVE, closeAt = openAt + FIVE;
+    var d = { ok: true, marketId: 'ost-btc5m-' + openAt, openAt: openAt, closeAt: closeAt, msLeft: closeAt - Date.now(), fallback: true, ticks: [] };
+    try { if (window.OST_PREDICTION_API && OST_PREDICTION_API.fiveMinRound) { var r = OST_PREDICTION_API.fiveMinRound(); if (r) { d.openPrice = Number(r.openPrice) || 0; d.priceToBeat = Number(r.priceToBeat || r.openPrice) || 0; d.livePrice = Number(r.livePrice) || price || 0; if (isFinite(Number(r.price)) && Number(r.price) > 0 && Number(r.price) < 1) d.yesPriceNumber = Number(r.price); } } } catch (_) {}
+    var lk = lastRoundCache();
+    if (!(d.priceToBeat > 0) && lk && lk.openAt === openAt && lk.priceToBeat > 0) d.priceToBeat = lk.priceToBeat;   // same bucket -> keep the beat
+    if (!(d.priceToBeat > 0)) d.priceToBeat = beat || price || d.livePrice || 0;
+    if (!(d.livePrice > 0)) d.livePrice = price || d.priceToBeat;
+    return d;
+  }
+  function applyRound(d) {
+    if (!d || view !== 'detail') return;
+    var prevId = round && round.marketId; round = d;
+    beat = Number(d.priceToBeat) || beat;
+    if (Number(d.livePrice) > 0) pushTick(Number(d.livePrice));
+    if (!baseMidSet && isFinite(Number(d.yesPriceNumber))) { midYes = Math.max(1, Math.min(99, Math.round(Number(d.yesPriceNumber) * 100))); baseMidSet = true; renderOddsLive(); }
+    if (prevId && prevId !== d.marketId) {
+      buf = []; hist = []; dispPrice = 0; baseMidSet = false; seenTrades = {}; firstTrades = true; onchainActive = false;
+      myPos = null; renderPosition(); refreshPosition(); loadTrades();
+    }
+    if (Array.isArray(d.ticks) && d.ticks.length && hist.length < 8) {
+      d.ticks.map(function (t) { return Number(t.p != null ? t.p : t.price); }).filter(function (x) { return x > 0; }).forEach(pushHist);
+    }
+    tween(el('opmBeat'), beat, usd); applyDir(); draw();
+    loadOnchain();
+  }
   function loadRound() {
     return fetch(API + '/btc/round', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
-      if (!d || d.ok === false || view !== 'detail') return;
-      var prevId = round && round.marketId; round = d;
-      beat = Number(d.priceToBeat) || beat;
-      if (Number(d.livePrice) > 0) pushTick(Number(d.livePrice));
-      // seed the base odds ONCE from the server; after that the live tick engine
-      // (updateLiveOdds) owns the share-price movement so it never looks static.
-      if (!baseMidSet && isFinite(Number(d.yesPriceNumber))) { midYes = Math.max(1, Math.min(99, Math.round(Number(d.yesPriceNumber) * 100))); baseMidSet = true; renderOddsLive(); }
-      if (prevId && prevId !== d.marketId) {
-        // NEW round = NEW market. Reset this round's trades/holders/history.
-        buf = []; hist = []; dispPrice = 0; baseMidSet = false; seenTrades = {}; firstTrades = true; onchainActive = false;
-        myPos = null; renderPosition(); refreshPosition(); loadTrades();
-      }
-      if (Array.isArray(d.ticks) && d.ticks.length && hist.length < 8) {
-        d.ticks.map(function (t) { return Number(t.p != null ? t.p : t.price); }).filter(function (x) { return x > 0; }).forEach(pushHist);
-      }
-      tween(el('opmBeat'), beat, usd); applyDir(); draw();
-      loadOnchain();
-    }).catch(function () {});
+      if (!d || d.ok === false) throw new Error('bad round');
+      saveRoundCache(d); applyRound(d);
+    }).catch(function () {
+      // ALWAYS-WORKS FALLBACK: no worker / KV exhausted / RPC 429 -> compute the
+      // round on the client from the clock + BTC price. The market stays live and
+      // tradeable (bets fall through to the credits rail, which is pure client).
+      applyRound(clientRound());
+    });
   }
 
   // REAL on-chain pool for this round, straight from the Solana program vault.

@@ -1466,7 +1466,9 @@ async function getNativeMarketState(env, marketId, fallbackBaseYes) {
   const quoted = quoteNativeMarketState(state, state.baseYesPrice);
   Object.assign(state, quoted);
   rememberNativeMarketStateHot(state);
-  if (env.OST_KV) await kvPut(env, nativeMarketStateKey(state.marketId), state, NATIVE_MARKET_STATE_TTL_S);
+  // DO NOT write KV here — this is the DEGRADED READ path (hub unreachable). It
+  // runs on every poll while degraded; writing KV on a read wastes the quota and
+  // accelerates exhaustion. The in-memory hot cache above already serves it.
   return Object.assign({}, publicNativeMarketState(state), {
     authoritative: false,
     degraded: true,
