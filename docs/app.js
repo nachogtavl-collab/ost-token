@@ -7201,7 +7201,12 @@
     vscode:     { label: 'VSCode',     protocols: ['Editor'] },
     github:     { label: 'GitHub',     protocols: ['REST'] },
     polymarket: { label: 'Polymarket', protocols: ['Markets'] },
-    kalshi:     { label: 'Kalshi',     protocols: ['Markets'] }
+    kalshi:     { label: 'Kalshi',     protocols: ['Markets'] },
+    localhost:  { label: 'Localhost',  protocols: ['HTTP'] },
+    vps:        { label: 'VPS',        protocols: ['HTTP'] },
+    gpu:        { label: 'GPU',        protocols: ['HTTP'] },
+    agent:      { label: 'Agent',      protocols: ['HTTP'] },
+    trading:    { label: 'Trading',    protocols: ['HTTP'] }
   };
   const ghostConnectorRegistry = Object.keys(ghostConnectorMeta).reduce((acc, k) => {
     acc[k] = { connected: false, lastCheckedAt: 0 };
@@ -7229,141 +7234,64 @@
   // Expose a tiny placeholder so other scripts can detect rebuild mode.
   window.OST_GHOST = { rebuilding: true, phase: 1 };
   // --------------------------------------------------------------------
+  // Read a connector card's inputs into the config the real engine expects.
+  function ghostCfgFor(type) {
+    const v = id => { const e = document.getElementById(id); return e ? String(e.value || '').trim() : ''; };
+    switch (type) {
+      case 'openai':     return { key: v('apiKeyOpenAI'),     model: v('modelOpenAI') };
+      case 'anthropic':  return { key: v('apiKeyAnthropic'),  model: v('modelAnthropic') };
+      case 'claude':     return { key: v('apiKeyClaude'),     model: v('modelClaude') };
+      case 'gemini':     return { key: v('apiKeyGemini'),     model: v('modelGemini') };
+      case 'grok':       return { key: v('apiKeyGrok'),       model: v('modelGrok') };
+      case 'telegram':   return { key: v('apiKeyTelegram'),   webhook: v('webhookTelegram') };
+      case 'discord':    return { key: v('apiKeyDiscord') };
+      case 'github':     return { key: v('apiKeyGitHub'),     repo: v('repoGitHub') };
+      case 'vscode':     return { key: v('apiKeyVSCode') };
+      case 'webhook':    return { url: v('apiKeyWebhook'),    auth: v('authWebhook') };
+      case 'mcp':        return { url: v('apiKeyMCP') };
+      case 'localhost':  return { url: v('apiKeyLocalhost'),  auth: v('authLocalhost') };
+      case 'vps':        return { url: v('apiKeyVPS'),        auth: v('authVPS') };
+      case 'gpu':        return { url: v('apiKeyGPU'),        auth: v('authGPU') };
+      case 'agent':      return { url: v('apiKeyAgent'),      auth: v('authAgent') };
+      case 'trading':    return { url: v('apiKeyTrading'),    auth: v('authTrading') };
+      case 'polymarket': return { key: v('apiKeyPolymarket') };
+      case 'kalshi':     return { key: v('apiKeyKalshi') };
+      default:           return {};
+    }
+  }
+  // Every connector button now runs a REAL connection through OST_GHOST_CONNECT
+  // (ost-ghost-connect.js). Success registers the model/endpoint into the Ghost;
+  // failure reports the true reason (bad key, CORS, needs a backend) — no fakes.
   $$('.btn-connect').forEach(btn => {
     btn.addEventListener('click', async () => {
       const type = btn.getAttribute('data-connector');
+      const label = getGhostConnectorLabel(type);
       btn.disabled = true;
-      btn.textContent = 'Connecting...';
-      addLog(`Attempting ${type} connection...`, 'info');
-
+      const original = btn.textContent;
+      btn.textContent = 'Connecting…';
+      addLog(`Connecting ${label}…`, 'info');
       try {
-        if (type === 'openai') {
-          const key = $('#apiKeyOpenAI')?.value?.trim();
-          if (!key || !key.startsWith('sk-')) throw new Error('Invalid OpenAI API key format (must start with sk-)');
-          const model = $('#modelOpenAI')?.value || 'gpt-4o';
-          addLog(`Testing OpenAI ${model}...`, 'info');
-          const r = await fetch('https://api.openai.com/v1/models', { headers: { 'Authorization': `Bearer ${key}` } });
-          if (!r.ok) throw new Error(`OpenAI API returned ${r.status}`);
-          const data = await r.json();
-          const models = data.data?.map(m => m.id) || [];
-          addLog(`OpenAI connected! ${models.length} models available. Using ${model}.`, 'success');
-          updateConnectorStatus('OpenAI', true);
-        }
-        else if (type === 'anthropic') {
-          const model = $('#modelAnthropic')?.value || 'claude-sonnet-4-20250514';
-          addLog(`Testing Anthropic relay (${model}) through the OST worker mesh...`, 'info');
-          const result = await testGhostRelayConnection('anthropic');
-          addLog(result.detail || `Anthropic relay ready. Model: ${model}.`, 'success');
-          updateConnectorStatus('Anthropic', true);
-          await syncGhostNetworkState();
-        }
-        else if (type === 'gemini') {
-          const model = $('#modelGemini')?.value || 'gemini-2.0-flash';
-          addLog(`Testing Gemini relay (${model}) through the OST worker mesh...`, 'info');
-          const result = await testGhostRelayConnection('gemini');
-          addLog(result.detail || `Gemini relay ready. Model: ${model}.`, 'success');
-          updateConnectorStatus('Gemini', true);
-          await syncGhostNetworkState();
-        }
-        else if (type === 'telegram') {
-          const token = $('#apiKeyTelegram')?.value?.trim();
-          if (!token || !token.includes(':')) throw new Error('Invalid Telegram bot token format');
-          addLog('Testing Telegram Bot API...', 'info');
-          const r = await fetch(`https://api.telegram.org/bot${token}/getMe`);
-          const data = await r.json();
-          if (!data.ok) throw new Error(data.description || 'Telegram API error');
-          addLog(`Telegram bot connected: @${data.result.username} (${data.result.first_name})`, 'success');
-          updateConnectorStatus('Telegram', true);
-        }
-        else if (type === 'discord') {
-          const token = $('#apiKeyDiscord')?.value?.trim();
-          if (!token) throw new Error('Please enter your Discord bot token');
-          addLog('Discord bot token format accepted. Use Discord.js or discord.py in your backend to connect.', 'success');
-          updateConnectorStatus('Discord', true);
-        }
-        else if (type === 'webhook') {
-          const url = $('#apiKeyWebhook')?.value?.trim();
-          if (!url) throw new Error('Please enter a webhook URL');
-          try { new URL(url); } catch { throw new Error('Invalid URL format'); }
-          addLog(`Testing webhook endpoint: ${url}...`, 'info');
-          try {
-            const r = await fetch(url, { method: 'HEAD', mode: 'no-cors' });
-            addLog('Webhook endpoint accepted (no-cors mode). Configure your server to accept POST from OST.', 'success');
-            updateConnectorStatus('Webhook', true);
-          } catch {
-            addLog('Webhook endpoint unreachable. Check the URL and CORS settings.', 'error');
-            updateConnectorStatus('Webhook', false);
-          }
-        }
-        else if (type === 'mcp') {
-          const transport = $('#transportMCP')?.value || 'sse';
-          addLog(`Testing MCP relay (${transport}) through the OST worker mesh...`, 'info');
-          const result = await testGhostRelayConnection('mcp');
-          addLog(result.detail || `MCP relay ready over ${transport}.`, 'success');
-          updateConnectorStatus('MCP', true);
-          await syncGhostNetworkState();
-        }
-        else if (type === 'claude') {
-          const model = $('#modelClaude')?.value || 'claude-sonnet-4-20250514';
-          addLog(`Testing Claude relay (${model}) through the OST worker mesh...`, 'info');
-          const result = await testGhostRelayConnection('claude');
-          addLog(result.detail || `Claude relay ready. Model: ${model}.`, 'success');
-          updateConnectorStatus('Claude', true);
-          await syncGhostNetworkState();
-        }
-        else if (type === 'grok') {
-          const model = $('#modelGrok')?.value || 'grok-beta';
-          addLog(`Testing Grok relay (${model}) through the OST worker mesh...`, 'info');
-          const result = await testGhostRelayConnection('grok');
-          addLog(result.detail || `Grok relay ready. Model: ${model}.`, 'success');
-          updateConnectorStatus('Grok', true);
-          await syncGhostNetworkState();
-        }
-        else if (type === 'vscode') {
-          const token = $('#apiKeyVSCode')?.value?.trim();
-          const ext = $('#extVSCode')?.value || 'copilot';
-          if (!token) throw new Error('Please enter your GitHub token for VS Code integration');
-          addLog(`Validating GitHub token for ${ext}...`, 'info');
-          if (token.startsWith('ghp_') || token.startsWith('gho_') || token.startsWith('github_pat_')) {
-            addLog(`VS Code ${ext} token accepted. Extension will auto-connect to OST API.`, 'success');
-            updateConnectorStatus('VSCode', true);
-          } else {
-            throw new Error('Invalid token format (expected ghp_ or github_pat_ prefix)');
-          }
-        }
-        else if (type === 'github') {
-          const repo = $('#repoGitHub')?.value?.trim();
-          addLog('Testing GitHub relay through the OST worker mesh...', 'info');
-          const result = await testGhostRelayConnection('github');
-          addLog(result.detail || `GitHub relay ready. ${repo ? `Repo: ${repo}.` : 'No repo specified yet.'}`, 'success');
-          updateConnectorStatus('GitHub', true);
-          await syncGhostNetworkState();
-        }
-        else if (type === 'polymarket') {
-          const key = $('#apiKeyPolymarket')?.value?.trim();
-          const strategy = $('#strategyPolymarket')?.value || 'monitor';
-          if (!key) throw new Error('Please enter your Polymarket API key');
-          addLog(`Registering Polymarket bot (${strategy} mode)...`, 'info');
-          addLog(`Polymarket bot configured. Strategy: ${strategy}. Will execute via OST on-chain settlements.`, 'success');
-          updateConnectorStatus('Polymarket', true);
-        }
-        else if (type === 'kalshi') {
-          const key = $('#apiKeyKalshi')?.value?.trim();
-          const mode = $('#modeKalshi')?.value || 'paper';
-          if (!key) throw new Error('Please enter your Kalshi API key');
-          addLog(`Registering Kalshi bot (${mode} mode)...`, 'info');
-          addLog(`Kalshi event contracts bot configured. Mode: ${mode}. OST payments integrated.`, 'success');
-          updateConnectorStatus('Kalshi', true);
+        if (!window.OST_GHOST_CONNECT) throw new Error('Connector engine still loading — reload and retry.');
+        const res = await window.OST_GHOST_CONNECT.test(type, ghostCfgFor(type));
+        if (res && res.ok) {
+          addLog(res.detail || `${label} connected.`, 'success');
+          updateConnectorStatus(type, true);
+        } else {
+          addLog((res && res.detail) || `${label} did not connect.`, 'error');
+          updateConnectorStatus(type, false);
         }
       } catch (e) {
-        addLog(`Error: ${e.message}`, 'error');
+        addLog(`Error: ${e && e.message ? e.message : e}`, 'error');
         updateConnectorStatus(type, false);
       }
-
       btn.disabled = false;
-      btn.textContent = 'Test Connection';
+      btn.textContent = original || 'Test Connection';
     });
   });
+  // Reflect connectors already connected on this device (persisted).
+  try {
+    if (window.OST_GHOST_CONNECT) window.OST_GHOST_CONNECT.list().forEach(c => updateConnectorStatus(c.type, true));
+  } catch (_) {}
 
   function updateConnectorStatus(name, connected) {
     const key = getGhostConnectorKey(name);

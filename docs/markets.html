@@ -3242,6 +3242,71 @@
               <button class="btn btn-primary btn-sm btn-connect" data-connector="kalshi">Test Connection</button>
             </div>
           </div>
+
+          <div class="connector-card" id="connectorLocalhost">
+            <div class="connector-header">
+              <span class="connector-logo">&#128187;</span>
+              <div><h4>Localhost</h4><p class="connector-type">Your machine (http://localhost)</p></div>
+              <span class="connector-status" id="statusLocalhost">&#9679; Disconnected</span>
+            </div>
+            <div class="connector-fields">
+              <label>Endpoint URL<input type="url" class="connector-input" id="apiKeyLocalhost" placeholder="http://localhost:8080/ost" aria-label="http://localhost:8080/ost"></label>
+              <label>Auth Header<input type="text" class="connector-input" id="authLocalhost" placeholder="Bearer token (optional)" aria-label="Auth header"></label>
+              <button class="btn btn-primary btn-sm btn-connect" data-connector="localhost">Connect</button>
+            </div>
+          </div>
+
+          <div class="connector-card" id="connectorVPS">
+            <div class="connector-header">
+              <span class="connector-logo">&#128421;&#65039;</span>
+              <div><h4>VPS / Cloud</h4><p class="connector-type">Any HTTPS server</p></div>
+              <span class="connector-status" id="statusVPS">&#9679; Disconnected</span>
+            </div>
+            <div class="connector-fields">
+              <label>Endpoint URL<input type="url" class="connector-input" id="apiKeyVPS" placeholder="https://your-server.com/ost" aria-label="VPS endpoint"></label>
+              <label>Auth Header<input type="text" class="connector-input" id="authVPS" placeholder="Bearer token (optional)" aria-label="Auth header"></label>
+              <button class="btn btn-primary btn-sm btn-connect" data-connector="vps">Connect</button>
+            </div>
+          </div>
+
+          <div class="connector-card" id="connectorAgent">
+            <div class="connector-header">
+              <span class="connector-logo">&#129302;</span>
+              <div><h4>AI Agent</h4><p class="connector-type">Autonomous agent HTTP endpoint</p></div>
+              <span class="connector-status" id="statusAgent">&#9679; Disconnected</span>
+            </div>
+            <div class="connector-fields">
+              <label>Agent URL<input type="url" class="connector-input" id="apiKeyAgent" placeholder="https://your-agent.com/ask" aria-label="Agent endpoint"></label>
+              <label>Auth Header<input type="text" class="connector-input" id="authAgent" placeholder="Bearer token (optional)" aria-label="Auth header"></label>
+              <button class="btn btn-primary btn-sm btn-connect" data-connector="agent">Connect</button>
+            </div>
+          </div>
+
+          <div class="connector-card" id="connectorTrading">
+            <div class="connector-header">
+              <span class="connector-logo">&#128200;</span>
+              <div><h4>Trading Bot</h4><p class="connector-type">Your bot's signal/execution endpoint</p></div>
+              <span class="connector-status" id="statusTrading">&#9679; Disconnected</span>
+            </div>
+            <div class="connector-fields">
+              <label>Bot URL<input type="url" class="connector-input" id="apiKeyTrading" placeholder="https://your-bot.com/ost" aria-label="Trading bot endpoint"></label>
+              <label>Auth Header<input type="text" class="connector-input" id="authTrading" placeholder="Bearer token (optional)" aria-label="Auth header"></label>
+              <button class="btn btn-primary btn-sm btn-connect" data-connector="trading">Connect</button>
+            </div>
+          </div>
+
+          <div class="connector-card" id="connectorGPU">
+            <div class="connector-header">
+              <span class="connector-logo">&#127918;</span>
+              <div><h4>GPU Compute</h4><p class="connector-type">Inference / compute HTTP endpoint</p></div>
+              <span class="connector-status" id="statusGPU">&#9679; Disconnected</span>
+            </div>
+            <div class="connector-fields">
+              <label>Compute URL<input type="url" class="connector-input" id="apiKeyGPU" placeholder="https://your-gpu-host.com/infer" aria-label="GPU compute endpoint"></label>
+              <label>Auth Header<input type="text" class="connector-input" id="authGPU" placeholder="Bearer token (optional)" aria-label="Auth header"></label>
+              <button class="btn btn-primary btn-sm btn-connect" data-connector="gpu">Connect</button>
+            </div>
+          </div>
         </div>
 
         <div class="connector-log" id="connectorLog">
@@ -6101,6 +6166,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
     <script src="ost-engine-guard.js?v=1"></script>
     <script src="ost-appbar.js?v=11"></script>
     <script src="ost-ghost-brain.js?v=3" defer></script>
+    <script src="ost-ghost-connect.js?v=1" defer></script>
   <script src="ost-world.js?v=6" defer></script>
   <script src="ost-world-bubble.js?v=4" defer></script>
   <script src="ost-shortcuts.js?v=1" defer></script>
@@ -6110,13 +6176,13 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="ost-onchain-sync.js?v=1" defer></script>
   <script src="ost-loan-usd.js?v=1" defer></script>
   <script src="ost-cards-hub.js?v=9" defer></script>
-  <script src="ost-ghost-companion.js?v=4"></script>
+  <script src="ost-ghost-companion.js?v=5"></script>
     <script src="ost-pro-fast-tiles.js?v=1"></script>
     <script src="ost-wc-rail.js?v=1"></script>
     <script src="ost-total-balance.js?v=2"></script>
     <script src="ost-ostg-wallet.js?v=2" defer></script>
     <script src="icons.js?v=1"></script>
-    <script src="app.js?v=245"></script>
+    <script src="app.js?v=246"></script>
   <script src="ost-session-key.js?v=10" defer></script>
   <script src="ost-onchain-market.js?v=7" defer></script>
   <script src="ost-onchain-route.js?v=3" defer></script>

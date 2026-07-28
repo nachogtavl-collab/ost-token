@@ -123,10 +123,7 @@
   }
 
   // ------------------------------------------------------------- online brain
-  function askAI(text) {
-    var base = apiBase();
-    chatLog.push({ role: 'user', content: text });
-    if (chatLog.length > 10) chatLog = chatLog.slice(-10);
+  function relayChat(base) {
     if (!base) return Promise.resolve(null);
     return fetch(base + '/ghost/chat', {
       method: 'POST',
@@ -134,12 +131,26 @@
       body: JSON.stringify({ messages: chatLog.slice(-6), context: snapshotContext() })
     }).then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
-        if (d && d.ok && d.reply) {
-          chatLog.push({ role: 'assistant', content: d.reply });
-          return d.reply;
-        }
+        if (d && d.ok && d.reply) { chatLog.push({ role: 'assistant', content: d.reply }); return d.reply; }
         return null;
       }).catch(function () { return null; });
+  }
+  function askAI(text) {
+    var base = apiBase();
+    chatLog.push({ role: 'user', content: text });
+    if (chatLog.length > 10) chatLog = chatLog.slice(-10);
+    // If the user connected their own model on the AI page, the Ghost THINKS with
+    // it — grounded in the live OST site map + their stats (OST_GHOST_CONNECT.chat
+    // injects that context). Falls back to the worker relay if it errors.
+    try {
+      if (window.OST_GHOST_CONNECT && OST_GHOST_CONNECT.haveLLM && OST_GHOST_CONNECT.haveLLM()) {
+        return OST_GHOST_CONNECT.chat(chatLog.slice(-6)).then(function (r) {
+          if (r && r.text) { chatLog.push({ role: 'assistant', content: r.text }); return r.text; }
+          return relayChat(base);
+        }).catch(function () { return relayChat(base); });
+      }
+    } catch (_) {}
+    return relayChat(base);
   }
 
   // ------------------------------------------------------------- UI
