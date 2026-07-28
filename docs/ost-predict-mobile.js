@@ -439,30 +439,54 @@
     midYes = implied;
     renderOddsLive();
   }
+  var _posDomAt = 0;
   function renderOddsLive() {
+    // CHEAP text updates run every tick (no buttons here to destroy):
     var y = el('opmYnY'), n = el('opmYnN'); if (y) y.textContent = fmtc(midYes) + '¢'; if (n) n.textContent = fmtc(100 - midYes) + '¢';
     var yMul = midYes > 0 ? (100 / midYes) : 0, nMul = (100 - midYes) > 0 ? (100 / (100 - midYes)) : 0;
     var yx = el('opmYnYx'); if (yx) yx.textContent = yMul ? yMul.toFixed(2) + '× payout' : '';
     var nx = el('opmYnNx'); if (nx) nx.textContent = nMul ? nMul.toFixed(2) + '× payout' : '';
     var by = el('opmBuyY'), bn = el('opmBuyN'); if (by) by.textContent = 'Buy Yes · ' + fmtc(midYes) + '¢'; if (bn) bn.textContent = 'Buy No · ' + fmtc(100 - midYes) + '¢';
-    if (myPos) renderPosition();   // live P&L follows the live price
-    refreshOpenSheet();            // the buy/sell HUD tracks the live price too
+    // EXPENSIVE DOM rebuilds (position card + open sheet) carry BUTTONS, so they
+    // are throttled — rebuilding them at frame rate destroyed the Sell/Buy buttons
+    // mid-tap (the "can't click while data flows" bug).
+    var now = Date.now();
+    if (myPos && now - _posDomAt >= 450) { _posDomAt = now; renderPosition(); }
+    refreshOpenSheet();            // self-throttled (450ms) + patches, never rebuilds the button
   }
 
   // accurate fee via the real house engine (2% of profit), fallback to 2%
   function feeOf(gross, stake) { try { if (window.OST_HOUSE && OST_HOUSE.quote) return Number(OST_HOUSE.quote(gross, stake).fee) || 0; } catch (_) {} return Math.max(0, (gross - stake) * 0.02); }
   function sheetOpen() { var s = el('opmSheet'); return !!(s && s.classList.contains('open')); }
-  // Keep the OPEN buy/sell sheet in sync with the flowing price so it never
-  // freezes on the price it was opened at. Buy: patch the derived fields but
-  // never the amount input (preserve typing). Sell: rebuild (no input to keep).
-  function refreshOpenSheet() {
+  // Keep the OPEN buy/sell sheet in sync with the flowing price — WITHOUT ever
+  // rebuilding its buttons at tick rate. The old code did `t.innerHTML =
+  // sellConfirmTicket()` on every odds change (~60x/s once odds went to 0.1c
+  // precision), which destroyed the Sell button mid-tap — that is exactly why
+  // buy/sell "can't be clicked when data is flowing". Now: throttled, and it
+  // PATCHES text into the existing elements so the buttons are never replaced.
+  // `force` (user typing) bypasses the throttle for instant feedback.
+  var _sheetRefreshAt = 0;
+  function refreshOpenSheet(force) {
     if (!sheetOpen()) return;
+    var now = Date.now();
+    if (!force && now - _sheetRefreshAt < 450) return;   // taps must land — never thrash the DOM at frame rate
+    _sheetRefreshAt = now;
     var t = el('opmTicket'); if (!t) return;
-    if (mode === 'sell') { t.innerHTML = sellConfirmTicket(); var cfs = el('opmCfSell'); if (cfs) cfs.onclick = confirmSell; return; }
+    if (mode === 'sell') {
+      var cfs = el('opmCfSell');
+      if (!cfs) { t.innerHTML = sellConfirmTicket(); cfs = el('opmCfSell'); if (cfs) cfs.onclick = confirmSell; return; }
+      var q = sellQuote();
+      var px = el('opmSellPx'); if (px) px.textContent = fmtc(q.c) + '¢';
+      var fe = el('opmSellFee'); if (fe) fe.textContent = q.fee.toFixed(2);
+      var pl = el('opmSellPnl'); if (pl) { pl.textContent = (q.up ? '+' : '−') + Math.abs(q.pnl).toFixed(2) + ' OSTG'; pl.style.color = 'var(--opm-' + (q.up ? 'yes' : 'no') + ')'; }
+      var nt = el('opmSellNet'); if (nt) nt.textContent = q.realNet + ' OSTG';
+      if (!/Processing|Selling/.test(cfs.textContent)) cfs.textContent = (q.isSettle ? 'Settle for ' : 'Sell for ') + q.realNet + ' OSTG';
+      return;
+    }
     var inp = el('opmAmtIn'); var a = inp ? (parseFloat(inp.value) || 0) : amt;
     var ty = t.querySelector('.opm-tkout .y .px'); if (ty) ty.textContent = fmtc(midYes) + '¢';
     var tn = t.querySelector('.opm-tkout .n .px'); if (tn) tn.textContent = fmtc(100 - midYes) + '¢';
-    var bd = el('opmBuyBd'); if (bd) bd.innerHTML = buyBdHtml(buyEstimate(a));   // rebuild keeps the spread line in sync
+    var bd = el('opmBuyBd'); if (bd) bd.innerHTML = buyBdHtml(buyEstimate(a));   // patch the breakdown; the confirm button below is untouched
     var cf = el('opmCf'); if (cf && !/Bought|Placing/.test(cf.textContent)) cf.textContent = 'Buy ' + (side === 'yes' ? 'Yes' : 'No') + ' · ' + a + ' OSTG';
   }
 
@@ -760,24 +784,28 @@
       '<button class="opm-confirm' + (side === 'no' ? ' no' : '') + '" id="opmCf">Buy ' + (side === 'yes' ? 'Yes' : 'No') + ' · ' + amt + ' OSTG</button>' +
       '<div class="opm-fine">' + icon('lock') + ' ' + (isBtcLive(currentMarket) ? 'Settles from the on-chain price at close' : 'Settles when the market resolves') + '</div>';
   }
-  function sellConfirmTicket() {
+  function sellQuote() {
     var c = myPos ? (myPos.side === 'yes' ? midYes : (100 - midYes)) : 0;
     var shares = myPos ? myPos.shares : 0, gross = shares * (c / 100), cost = posCost();
     var profit = Math.max(0, gross - cost), fee = profit * 0.02;
-    var realNet = (myPos && (myPos.cashText.match(/([\d,]+\.?\d*)\s*$/) || [])[1]) || (gross - fee).toFixed(2);
+    var realNet = (myPos && myPos.cashText && (myPos.cashText.match(/([\d,]+\.?\d*)\s*$/) || [])[1]) || (gross - fee).toFixed(2);
     var netNum = parseFloat(String(realNet).replace(/,/g, '')) || (gross - fee);
     var pnl = netNum - cost, up = pnl >= 0;
-    var isSettle = myPos && /settle|claim/i.test(myPos.cashText);
-    return '<h3>' + icon('coin') + ' ' + (isSettle ? 'Settle position' : 'Sell your ' + (myPos && myPos.side === 'yes' ? 'Yes' : 'No') + ' position') + '</h3>' +
-      '<div class="opm-fine" style="text-align:left;color:var(--opm-ink2)">' + (isSettle ? 'Claim your settled position — the amount is computed and paid by the server.' : 'Exit now — OST buys your shares back at the live price. You keep the move so far instead of waiting for close.') + '</div>' +
+    var isSettle = myPos && /settle|claim/i.test(myPos.cashText || '');
+    return { c: c, shares: shares, fee: fee, realNet: String(realNet), pnl: pnl, up: up, isSettle: isSettle };
+  }
+  function sellConfirmTicket() {
+    var q = sellQuote();
+    return '<h3>' + icon('coin') + ' ' + (q.isSettle ? 'Settle position' : 'Sell your ' + (myPos && myPos.side === 'yes' ? 'Yes' : 'No') + ' position') + '</h3>' +
+      '<div class="opm-fine" style="text-align:left;color:var(--opm-ink2)">' + (q.isSettle ? 'Claim your settled position — the amount is computed and paid by the server.' : 'Exit now — OST buys your shares back at the live price. You keep the move so far instead of waiting for close.') + '</div>' +
       '<div class="opm-bd">' +
-        '<div class="opm-tl"><span class="k">Selling</span><span class="v">' + shares.toFixed(2) + ' shares</span></div>' +
-        '<div class="opm-tl"><span class="k">Sell price</span><span class="v">' + fmtc(c) + '¢</span></div>' +
-        '<div class="opm-tl"><span class="k">Fee (2% profit)</span><span class="v">' + fee.toFixed(2) + '</span></div>' +
-        '<div class="opm-tl"><span class="k">Realized P&amp;L</span><span class="v" style="color:var(--opm-' + (up ? 'yes' : 'no') + ')">' + (up ? '+' : '−') + Math.abs(pnl).toFixed(2) + ' OSTG</span></div>' +
-        '<div class="opm-tl big"><span class="k">You receive</span><span class="v" style="color:var(--opm-gold)">' + esc(realNet) + ' OSTG</span></div>' +
+        '<div class="opm-tl"><span class="k">Selling</span><span class="v">' + q.shares.toFixed(2) + ' shares</span></div>' +
+        '<div class="opm-tl"><span class="k">Sell price</span><span class="v" id="opmSellPx">' + fmtc(q.c) + '¢</span></div>' +
+        '<div class="opm-tl"><span class="k">Fee (2% profit)</span><span class="v" id="opmSellFee">' + q.fee.toFixed(2) + '</span></div>' +
+        '<div class="opm-tl"><span class="k">Realized P&amp;L</span><span class="v" id="opmSellPnl" style="color:var(--opm-' + (q.up ? 'yes' : 'no') + ')">' + (q.up ? '+' : '−') + Math.abs(q.pnl).toFixed(2) + ' OSTG</span></div>' +
+        '<div class="opm-tl big"><span class="k">You receive</span><span class="v" id="opmSellNet" style="color:var(--opm-gold)">' + q.realNet + ' OSTG</span></div>' +
       '</div>' +
-      '<button class="opm-confirm sellc" id="opmCfSell">' + (isSettle ? 'Settle for ' : 'Sell for ') + esc(realNet) + ' OSTG</button>' +
+      '<button class="opm-confirm sellc" id="opmCfSell">' + (q.isSettle ? 'Settle for ' : 'Sell for ') + q.realNet + ' OSTG</button>' +
       '<div class="opm-fine">' + icon('lock') + ' Proceeds return to your Play OSTG instantly.</div>';
   }
   // One-tap betting (session key). Only meaningful on the on-chain 5-min rail.
@@ -809,7 +837,7 @@
     renderSessionRow();
     document.querySelectorAll('#opmTicket .opm-tkout button').forEach(function (b) { b.onclick = function () { side = b.getAttribute('data-t'); syncYnSel(); paintTicket(); }; });
     document.querySelectorAll('#opmTicket .opm-quick button').forEach(function (b) { b.onclick = function () { var q = b.getAttribute('data-q'); amt = q === 'max' ? maxBal() : (parseFloat(q) || amt); paintTicket(); }; });
-    var inp = el('opmAmtIn'); if (inp) inp.oninput = function () { amt = parseFloat(this.value) || 0; refreshOpenSheet(); };
+    var inp = el('opmAmtIn'); if (inp) inp.oninput = function () { amt = parseFloat(this.value) || 0; refreshOpenSheet(true); };
     var cf = el('opmCf'); if (cf) cf.onclick = confirmBuy;
   }
   function confirmBuy() {
@@ -822,10 +850,14 @@
     var bBefore = playBal();
     // OPTIMISTIC: the balance drops the instant they tap and HOLDS there (won't
     // bounce back up on a stale reconcile-read) until the server confirms.
-    if (bBefore != null) { var opt = Math.max(0, bBefore - stake); _balHold = { v: opt, dir: 'down', until: Date.now() + 9000 }; setBalDisplay(opt); }
+    // Hold the reduced value long enough to outlast the on-chain wallet read lag
+    // after the top-up deposit — otherwise a stale-high re-read bounces the balance
+    // back up and it "doesn't react". The hold auto-releases the instant a real
+    // read confirms a total <= the optimistic value (see setBalDisplay).
+    if (bBefore != null) { var opt = Math.max(0, bBefore - stake); _balHold = { v: opt, dir: 'down', until: Date.now() + 40000 }; setBalDisplay(opt); }
     if (myPos && myPos.side === bSide) { var tot = myPos.shares + sh; myPos.entry = (myPos.shares * (myPos.entry || 0) + sh * entry) / (tot || 1); myPos.shares = tot; myPos.pending = true; }
     else { myPos = { order: {}, sig: '', side: bSide, shares: sh, entry: entry, locked: false, sellBtn: null, cashText: '', pending: true }; }
-    renderPosition(); closeSheet(); if (_balHold) _balHold.until = Date.now() + 16000;
+    renderPosition(); closeSheet();
     ensurePlayFunds(stake)
       .then(function () { return window.OST_PREDICTION_API.placeBet({ marketId: mid, side: bSide, stake: stake }); })
       .then(function () { setTimeout(function () { refreshBalance(); refreshPosition(); loadTrades(); }, 800); })
@@ -869,7 +901,7 @@
       try { btn.click(); }
       catch (e) { if (cfs) { cfs.disabled = false; cfs.textContent = 'Sell'; } toast('Could not start the sale — try again.'); return; }
       var net = parseFloat(String((btn.textContent.match(/([\d,]+\.?\d*)\s*$/) || [])[1] || '').replace(/,/g, '')) || posValueNow();
-      var b = playBal(); if (b != null && net > 0) { _balHold = { v: b + net, dir: 'up', until: Date.now() + 12000 }; setBalDisplay(b + net); }
+      var b = playBal(); if (b != null && net > 0) { _balHold = { v: b + net, dir: 'up', until: Date.now() + 40000 }; setBalDisplay(b + net); }
       setTimeout(function () {
         closeSheet();
         var still = ledgerOrders().some(function (o) { return (o.signature || o.sig || o.id) === sig && !o.cashedOut && !/won|lost|sold|settled/i.test(String(o.status || '')); });
@@ -891,7 +923,7 @@
       return;
     }
     var estGross = posValueNow();
-    var b = playBal(); if (b != null && estGross > 0) { _balHold = { v: b + estGross, dir: 'up', until: Date.now() + 12000 }; setBalDisplay(b + estGross); }
+    var b = playBal(); if (b != null && estGross > 0) { _balHold = { v: b + estGross, dir: 'up', until: Date.now() + 40000 }; setBalDisplay(b + estGross); }
     var ctrl = new AbortController(); var to = setTimeout(function () { try { ctrl.abort(); } catch (_) {} }, 12000);
     fetch(API + '/play/predict/cashout', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
