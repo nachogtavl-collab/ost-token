@@ -55,15 +55,22 @@
   var side = 'yes', poolY = 0, poolN = 0, myPos = null;
   var seenTrades = {}, firstTrades = true;
 
-  /* ---- TICK ENGINE ----------------------------------------------------------
-   * The number people watch must ALWAYS be gliding — never freeze, never jump.
-   * Real BTC ticks land in `buf`; the display plays them back staying LAG ticks
-   * behind the head, easing toward the target every animation frame. That gives
-   * a constant, linear flow through every in-between value even when ticks arrive
-   * in bursts. Share prices (YES/NO cents) are derived from this SAME flowing
-   * price vs the price-to-beat + time left, so they move live with the graph
-   * instead of only refreshing on the 5s round poll. */
-  var buf = [], LAG = 5, dispPrice = 0, headPrice = 0, flowOn = false, lastDraw = 0, baseMidSet = false;
+  /* ---- TICK ENGINE (interpolated playback) ----------------------------------
+   * The number people watch must ALWAYS glide at a CONSTANT, LINEAR rate — never
+   * freeze, never snap. Real BTC ticks arrive irregularly (bursts, then gaps), so
+   * driving the display straight off them looks jumpy. Instead every tick is
+   * stored TIMESTAMPED in `buf`, and the display renders the price as it was
+   * `DELAY` ms in the PAST, LINEARLY interpolating between the two real ticks that
+   * bracket that render-time. Playing back on a small delay means there is almost
+   * always a "next" real sample to glide toward, so motion is piecewise-linear
+   * (constant velocity between ticks) with no exponential easing and no burst
+   * jump. DELAY auto-tracks the feed's own cadence so it works whether ticks come
+   * 2/sec or 1/5sec. If ticks stall, we drift along the last segment at half speed
+   * (capped) so the number keeps breathing without fabricating a big move. Share
+   * prices (YES/NO cents), P&L and the graph all read this SAME interpolated
+   * price — every number on screen flows from one honest source. */
+  var buf = [], DELAY = 1600, dispPrice = 0, headPrice = 0, flowOn = false, lastDraw = 0, baseMidSet = false;
+  var _lastTickAt = 0, _gapEMA = 1200;   // exponential moving avg of inter-tick gap -> adaptive DELAY
   var onchainActive = false;   // true when this round's bets live in the Solana program vault
 
   /* ---- odometer ---- */
@@ -234,7 +241,7 @@
   function openMarket(m) {
     currentMarket = m; view = 'detail';
     side = 'yes'; myPos = null; seenTrades = {}; firstTrades = true; hist = []; hrs = 1;
-    buf = []; dispPrice = 0; baseMidSet = false; onchainActive = false;
+    buf = []; dispPrice = 0; _lastTickAt = 0; baseMidSet = false; onchainActive = false;
     round = null; price = 0; beat = 0; midYes = yesCents(m);
     el('opmDetail').innerHTML = detailTemplate(m);
     showView('detail');
@@ -314,6 +321,9 @@
     var cv = el('opmG'); if (!cv) return; var ctx = cv.getContext('2d');
     var w = cv.width, ht = cv.height, pad = 4;
     var data = hist.slice(-Math.min(hist.length, hrs * 33 || 33)); if (data.length < 2) data = hist.slice();
+    // Live edge = the SAME interpolated number shown above the chart, so the dot
+    // and the price readout are never out of step (one honest source for all #s).
+    if (price > 0 && data.length) { data = data.slice(); data[data.length - 1] = price; }
     var n = data.length; if (!n || !beat) { ctx.clearRect(0, 0, w, ht); return; }
     var lo = Math.min(beat, Math.min.apply(0, data)), hi = Math.max(beat, Math.max.apply(0, data));
     var rng = (hi - lo) || 1; lo -= rng * .12; hi += rng * .12; rng = hi - lo;
@@ -332,22 +342,50 @@
   function pushHist(p) { if (!(p > 0)) return; hist.push(p); if (hist.length > HIST_MAX) hist.shift(); }
 
   // real tick in -> buffer (odometer lag playback) + graph history
-  function pushTick(p) { if (!(p > 0)) return; headPrice = p; buf.push(p); if (buf.length > 800) buf.shift(); pushHist(p); }
+  function pushTick(p) {
+    if (!(p > 0)) return;
+    headPrice = p; var now = Date.now();
+    // Learn the feed's cadence so DELAY sits ~1.6x the typical gap — enough that a
+    // "next" real sample is almost always available to interpolate toward.
+    if (_lastTickAt) { var g = now - _lastTickAt; if (g > 40 && g < 20000) { _gapEMA += (g - _gapEMA) * 0.2; DELAY = Math.max(1000, Math.min(4000, _gapEMA * 1.6)); } }
+    _lastTickAt = now;
+    buf.push({ t: now, p: p }); if (buf.length > 800) buf.shift(); pushHist(p);
+  }
 
   function startFlow() { if (flowOn) return; flowOn = true; dispPrice = 0; requestAnimationFrame(flow); }
   function stopFlow() { flowOn = false; }
+  // The price as it was `DELAY` ms ago, LINEARLY interpolated between the two real
+  // ticks bracketing that instant. Before the first tick -> first price. Past the
+  // newest tick -> drift along the last segment at half speed, capped to DELAY, so
+  // it never hard-freezes but never fakes a big move either.
+  function sampleAt(rt) {
+    var n = buf.length; if (!n) return 0;
+    if (rt <= buf[0].t) return buf[0].p;
+    var last = buf[n - 1];
+    if (rt >= last.t) {
+      if (n >= 2) { var prev = buf[n - 2], span = last.t - prev.t; if (span > 0) { var v = (last.p - prev.p) / span; return last.p + v * Math.min(rt - last.t, DELAY) * 0.5; } }
+      return last.p;
+    }
+    for (var i = n - 1; i > 0; i--) {
+      var a = buf[i - 1], b = buf[i];
+      if (a.t <= rt && rt <= b.t) { var s = b.t - a.t; return s > 0 ? a.p + (b.p - a.p) * ((rt - a.t) / s) : b.p; }
+    }
+    return last.p;
+  }
   function flow(ts) {
     if (!flowOn) return;
     if (view === 'detail' && isBtcLive(currentMarket) && buf.length) {
-      var target = buf.length > LAG ? buf[buf.length - 1 - LAG] : buf[buf.length - 1];
-      if (!dispPrice) dispPrice = target;
-      dispPrice += (target - dispPrice) * 0.16;              // always easing -> never a hard jump
-      if (Math.abs(target - dispPrice) < 0.4) dispPrice = target;
-      price = dispPrice;
-      var nowEl = el('opmNow'); if (nowEl) nowEl.textContent = usd(price);
-      applyDir();
-      updateLiveOdds();
-      if (!lastDraw || ts - lastDraw > 60) { draw(); lastDraw = ts; }   // graph ~15fps, number 60fps
+      // The interpolation is already smooth + linear in time, so track it directly
+      // — no second easing layer (that was the exponential decel that "snapped").
+      var val = sampleAt(Date.now() - DELAY);
+      if (val > 0) {
+        dispPrice = val;
+        price = dispPrice;
+        var nowEl = el('opmNow'); if (nowEl) nowEl.textContent = usd(price);
+        applyDir();
+        updateLiveOdds();
+        if (!lastDraw || ts - lastDraw > 60) { draw(); lastDraw = ts; }   // graph ~15fps, number 60fps
+      }
     }
     requestAnimationFrame(flow);
   }
@@ -470,7 +508,7 @@
     if (!baseMidSet && isFinite(Number(d.yesPriceNumber))) { midYes = Math.max(1, Math.min(99, Math.round(Number(d.yesPriceNumber) * 100))); baseMidSet = true; renderOddsLive(); }
     var newRound = prevId && prevId !== d.marketId;
     if (newRound) {   // rollover = a NEW market: reset this round's live state
-      buf = []; hist = []; dispPrice = 0; baseMidSet = false; seenTrades = {}; firstTrades = true; onchainActive = false;
+      buf = []; hist = []; dispPrice = 0; _lastTickAt = 0; baseMidSet = false; seenTrades = {}; firstTrades = true; onchainActive = false;
       myPos = null; renderPosition(); refreshPosition();
     }
     if (!prevId || newRound) loadTrades();   // (re)load round-scoped trades once the round id is known
