@@ -345,9 +345,12 @@
   function pushTick(p) {
     if (!(p > 0)) return;
     headPrice = p; var now = Date.now();
-    // Learn the feed's cadence so DELAY sits ~1.6x the typical gap — enough that a
-    // "next" real sample is almost always available to interpolate toward.
-    if (_lastTickAt) { var g = now - _lastTickAt; if (g > 40 && g < 20000) { _gapEMA += (g - _gapEMA) * 0.2; DELAY = Math.max(1000, Math.min(4000, _gapEMA * 1.6)); } }
+    // Learn the feed's UPDATE cadence so DELAY sits ~1.6x the typical gap — enough
+    // that a "next" real sample is almost always available to interpolate toward.
+    // Ignore intra-burst gaps (<120ms): several ticks landing in one cluster are a
+    // single update, not the real spacing — counting them would collapse DELAY to
+    // its floor and leave between-burst silences unbridged (a visible freeze).
+    if (_lastTickAt) { var g = now - _lastTickAt; if (g >= 120 && g < 20000) { _gapEMA += (g - _gapEMA) * 0.25; DELAY = Math.max(1200, Math.min(4000, _gapEMA * 1.6)); } }
     _lastTickAt = now;
     buf.push({ t: now, p: p }); if (buf.length > 800) buf.shift(); pushHist(p);
   }
