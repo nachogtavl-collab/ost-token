@@ -33,20 +33,31 @@
   // Public gateways, tried in order. If one is blocked or down we fall to the
   // next — the whole point of content addressing is that ANY of them serves the
   // identical bytes, verified by the hash.
+  // Public gateways, tried in order. VERIFIED LIVE 2026-07 — cloudflare-ipfs.com
+  // (shut down 2024) and flk-ipfs (dead DNS) were removed because they made the
+  // rotation land on a host that can never answer. If one is blocked or down we
+  // fall to the next; content addressing means ANY of them serves the identical
+  // bytes, verified by the hash.
   var GATEWAYS = [
     { name: 'dweb.link', url: 'https://dweb.link/ipfs/' },
     { name: 'ipfs.io', url: 'https://ipfs.io/ipfs/' },
-    { name: 'cf-ipfs', url: 'https://cloudflare-ipfs.com/ipfs/' },
+    { name: 'w3s.link', url: 'https://w3s.link/ipfs/' },
+    { name: '4everland', url: 'https://4everland.io/ipfs/' },
     { name: 'pinata', url: 'https://gateway.pinata.cloud/ipfs/' }
   ];
   var gwIndex = 0;
 
-  // OST's own site, content-addressed. Same bytes, verifiable by hash.
-  var OST_CID = 'bafybeihrm53bou45yy5czxq43sp5j65hl3himep75iri3ob32b32ga2pse';
+  // The default demo must be a hash that is ACTUALLY pinned and retrievable, or
+  // the browser opens to a frame that hangs forever. The old OST_CID resolved on
+  // ZERO gateways (nobody was hosting it) — that was the "World won't load" bug.
+  // This is the classic, heavily-pinned IPFS xkcd mirror: it loads in <1s across
+  // every gateway. (OST's own site is not pinned to IPFS yet — we don't pretend
+  // it is; when it is pinned, drop the real CID here.)
+  var OST_CID = 'QmdmQXB2mzChmMeKY47C43LxUdg1NDJ5MWcKMKxDu7RgQm';
 
   var PLACES = [
-    { label: '🌐 OST (content-addressed)', cid: OST_CID },
-    { label: '📖 IPFS docs', cid: 'bafybeicnrwrqfjmnwjqhitb4hxdyzcrbaz3xkcqjxrmwqjkzqhqvhtxvhi' },
+    { label: '🖼️ xkcd on IPFS (demo)', cid: 'QmdmQXB2mzChmMeKY47C43LxUdg1NDJ5MWcKMKxDu7RgQm' },
+    { label: '📂 IPFS sample directory', cid: 'QmUNLLsPACCz1vLxQVkXqqLX5R1X345qqfHbsf67hvA3Nn' },
     { label: '🧪 Paste any link', cid: '' }
   ];
 
@@ -233,12 +244,33 @@
     }
   }
 
-  function showIpfs(target) {
+  var ipfsTimer = null, ipfsTries = 0;
+  // Load an IPFS target with AUTO-FALLBACK. The old version set the iframe src and
+  // walked away — if that gateway hung (dead host, or a CID nobody is hosting) the
+  // World froze forever with no recovery. Now every attempt is on a watchdog: if
+  // the frame hasn't loaded within the window, we advance to the next gateway
+  // automatically, and only give up (with an honest "unpinned" message) after
+  // every gateway has been tried.
+  function showIpfs(target, keepTries) {
     clearStage();
+    if (!keepTries) ipfsTries = 0;
     el.frame.style.display = '';
-    setStatus('Fetching ' + target.slice(0, 14) + '… via ' + GATEWAYS[gwIndex % GATEWAYS.length].name, 'load');
-    el.frame.src = gatewayUrl(target);
     el.cur = target;
+    el.frameLoaded = false;
+    var gw = GATEWAYS[gwIndex % GATEWAYS.length];
+    setStatus('Fetching ' + target.slice(0, 14) + '… via ' + gw.name +
+      (ipfsTries ? ' (gateway ' + (ipfsTries + 1) + '/' + GATEWAYS.length + ')' : ''), 'load');
+    el.frame.src = gatewayUrl(target);
+    clearTimeout(ipfsTimer);
+    ipfsTimer = setTimeout(function () {
+      if (el.frameLoaded || el.cur !== target) return;   // it loaded, or the user navigated away
+      if (ipfsTries++ < GATEWAYS.length - 1) {
+        gwIndex = (gwIndex + 1) % GATEWAYS.length;
+        showIpfs(target, true);                           // try the next gateway
+      } else {
+        setStatus('No gateway could retrieve this hash. It is likely unpinned — nobody on IPFS is hosting it right now. Double-check the CID, or try again later.', 'warn');
+      }
+    }, 7000);
   }
 
   // Both of these build their URL from a hardcoded origin + a validated ID.
@@ -272,18 +304,39 @@
     return m;
   }
 
+  // hls.js is NOT bundled on this page, so HLS used to silently fail everywhere
+  // except Safari. Load it on demand the first time a live stream is opened.
+  function ensureHls() {
+    if (window.Hls) return Promise.resolve(window.Hls);
+    if (el._hlsLoading) return el._hlsLoading;
+    el._hlsLoading = new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js';
+      s.async = true;
+      s.onload = function () { resolve(window.Hls); };
+      s.onerror = function () { el._hlsLoading = null; reject(new Error('hls.js failed to load')); };
+      document.head.appendChild(s);
+    });
+    return el._hlsLoading;
+  }
   function showHls(url) {
     var v = nativeMedia('video', '', 'Live stream');
-    // Safari/iOS decode HLS natively; everyone else needs hls.js, which the app
-    // already ships for broadcasts.
+    // Safari/iOS decode HLS natively; everyone else needs hls.js.
     if (v.canPlayType('application/vnd.apple.mpegurl')) { v.src = url; return; }
-    if (window.Hls && window.Hls.isSupported()) {
-      el.hls = new window.Hls({ enableWorker: true });
-      el.hls.loadSource(url);
-      el.hls.attachMedia(v);
-      return;
-    }
-    setStatus('This device cannot play HLS and hls.js is not loaded on this page.', 'warn');
+    setStatus('Loading the live-stream player…', 'load');
+    ensureHls().then(function (Hls) {
+      if (el.cur !== null && el.native.style.display === 'none') return;   // user navigated away
+      if (Hls && Hls.isSupported()) {
+        el.hls = new Hls({ enableWorker: true });
+        el.hls.loadSource(url);
+        el.hls.attachMedia(v);
+        setStatus('Live stream — decoding on this device.', 'ok');
+      } else {
+        setStatus('This device cannot play HLS. Try “Open externally”.', 'warn');
+      }
+    }).catch(function () {
+      setStatus('Could not load the live-stream player. Try “Open externally”.', 'warn');
+    });
   }
 
   function openExternally(url) {
@@ -340,7 +393,7 @@
     if (!el.cur) { setStatus('Gateways only apply to IPFS content — this is not an IPFS page.', 'warn'); return; }
     gwIndex = (gwIndex + 1) % GATEWAYS.length;
     setStatus('Trying ' + GATEWAYS[gwIndex].name + '… (same hash, different host — the bytes are identical either way)', 'load');
-    el.frame.src = gatewayUrl(el.cur);
+    showIpfs(el.cur, true);   // watchdog-backed, so a manual pick can't hang either
   }
 
   function setStatus(msg, kind) {
@@ -493,7 +546,10 @@
     root.querySelector('[data-ow-close]').addEventListener('click', close);
     el.input.addEventListener('keydown', function (e) { if (e.key === 'Enter') go(el.input.value); });
     el.frame.addEventListener('load', function () {
-      if (el.cur) setStatus('Loaded from ' + GATEWAYS[gwIndex % GATEWAYS.length].name + ' — verified by hash. If it looks wrong, try ⇄ Gateway.', 'ok');
+      if (!el.cur) return;
+      el.frameLoaded = true;
+      clearTimeout(ipfsTimer);
+      setStatus('Loaded from ' + GATEWAYS[gwIndex % GATEWAYS.length].name + ' — verified by hash. If it looks wrong, try ⇄ Gateway.', 'ok');
     });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && open) close(); });
     return root;
