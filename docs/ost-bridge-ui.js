@@ -361,11 +361,16 @@
   // under the wallet dashboard so it never gets orphaned if the DOM shifts.
   function mount() {
     if (el.root) return;
-    var host = document.querySelector('#wallet-panel-portals') ||
+    // Put the OSTG<->OST converter in the CONVERT tab, where people go to convert
+    // (it used to mount only in the Portals tab, so users reported "no way to
+    // convert"). Fall back through portals -> dashboard so it is never orphaned.
+    var host = document.querySelector('#wallet-panel-convert .wallet-convert-grid') ||
+               document.querySelector('#wallet-panel-convert') ||
+               document.querySelector('#wallet-panel-portals') ||
                document.querySelector('#walletDashboard');
     if (!host) return;
     var panel = build();
-    host.appendChild(panel);
+    if (host.firstChild) host.insertBefore(panel, host.firstChild); else host.appendChild(panel);
     refresh(); refreshPeg();
   }
 
