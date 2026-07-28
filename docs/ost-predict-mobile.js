@@ -82,7 +82,10 @@
     requestAnimationFrame(fr);
   }
   var usd = function (v) { return '$' + Math.round(v).toLocaleString(); };
-  var cents = function (v) { return Math.round(v) + '¢'; };
+  // Cents display shows the FULL range: one decimal at the extremes (0.1¢ / 99.9¢)
+  // where a whole-cent round would hide them, plain integer in the middle.
+  var fmtc = function (v) { v = Number(v) || 0; return (v > 0 && v < 1) || v > 99 ? v.toFixed(1) : String(Math.round(v)); };
+  var cents = function (v) { return fmtc(v) + '¢'; };
 
   /* ---- market helpers ---- */
   function allMarkets() { try { return Array.isArray(window.__ostPredictionMarkets) ? window.__ostPredictionMarkets : []; } catch (_) { return []; } }
@@ -341,9 +344,22 @@
     ctx.beginPath(); data.forEach(function (p, i) { i ? ctx.lineTo(gx(i), gy(p)) : ctx.moveTo(gx(i), gy(p)); }); ctx.strokeStyle = 'rgb(' + col + ')'; ctx.lineWidth = 2.2; ctx.lineJoin = 'round'; ctx.stroke();
     var lp = data[n - 1]; ctx.beginPath(); ctx.arc(gx(n - 1), gy(lp), 4, 0, 7); ctx.fillStyle = 'rgb(' + col + ')'; ctx.fill();
     ctx.beginPath(); ctx.arc(gx(n - 1), gy(lp), 8, 0, 7); ctx.strokeStyle = 'rgba(' + col + ',.4)'; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = 'rgba(160,184,203,.9)'; ctx.font = '10px ui-monospace,monospace'; ctx.textAlign = 'right'; ctx.fillText('to beat', w - pad - 2, by - 5);
+    // USD numerical labels (not %): the beat line and the live price, so the graph
+    // reads in dollars — the units the bet is actually decided in.
+    ctx.fillStyle = 'rgba(160,184,203,.9)'; ctx.font = '10px ui-monospace,monospace'; ctx.textAlign = 'right';
+    ctx.fillText('to beat $' + Math.round(beat).toLocaleString(), w - pad - 2, by - 5);
+    ctx.fillStyle = 'rgb(' + col + ')'; ctx.font = 'bold 10px ui-monospace,monospace'; ctx.textAlign = 'left';
+    ctx.fillText('$' + Math.round(lp).toLocaleString(), pad + 2, 12);
   }
-  function applyDir() { var pb = el('opmPx'); if (!pb || !beat) return; var up = price >= beat; pb.classList.toggle('up', up); pb.classList.toggle('down', !up); var d = ((price - beat) / beat * 100); var de = el('opmDelta'); if (de) de.textContent = (up ? '▲ ' : '▼ ') + Math.abs(d).toFixed(2) + '%'; }
+  function applyDir() {
+    var pb = el('opmPx'); if (!pb || !beat) return;
+    var up = price >= beat; pb.classList.toggle('up', up); pb.classList.toggle('down', !up);
+    // Show the USD gap between live and price-to-beat, not a percentage — a BTC
+    // 5-min bet is decided by the numerical difference, so that is what to surface.
+    var diff = price - beat;
+    var de = el('opmDelta');
+    if (de) de.textContent = (up ? '▲ ' : '▼ ') + '$' + Math.abs(diff).toLocaleString(undefined, { maximumFractionDigits: 2 });
+  }
   function pushHist(p) { if (!(p > 0)) return; hist.push(p); if (hist.length > HIST_MAX) hist.shift(); }
 
   // real tick in -> buffer (odometer lag playback) + graph history
@@ -412,21 +428,23 @@
     var msLeft = round ? Math.max(0, Math.min(FIVE, Number(round.closeAt) - Date.now())) : FIVE;
     var timeLeftRatio = msLeft / FIVE;
     var deltaPct = (price - beat) / beat * 100;
-    var scale = 0.10 * Math.sqrt(Math.max(timeLeftRatio, 0.04));
+    var scale = 0.15 * Math.sqrt(Math.max(timeLeftRatio, 0.04));
     var z = Math.max(-8, Math.min(8, deltaPct / Math.max(scale, 0.001)));
     var yes = 1 / (1 + Math.exp(-z));
-    yes = Math.max(0.001, Math.min(0.999, yes));            // BTC_PROB_MIN / BTC_PROB_MAX
-    var implied = Math.max(1, Math.min(99, Math.round(yes * 100)));
+    yes = Math.max(0.001, Math.min(0.999, yes));            // BTC_PROB_MIN / MAX -> full 0.1c..99.9c range
+    // EXACT cents at 0.1 precision (was rounded+clamped to [1,99], which hid the
+    // extremes). So a near-certain outcome shows 99.9c / 0.1c, not a flat 99 / 1.
+    var implied = Math.round(yes * 1000) / 10;
     if (implied === midYes) return;
     midYes = implied;
     renderOddsLive();
   }
   function renderOddsLive() {
-    var y = el('opmYnY'), n = el('opmYnN'); if (y) y.textContent = midYes + '¢'; if (n) n.textContent = (100 - midYes) + '¢';
+    var y = el('opmYnY'), n = el('opmYnN'); if (y) y.textContent = fmtc(midYes) + '¢'; if (n) n.textContent = fmtc(100 - midYes) + '¢';
     var yMul = midYes > 0 ? (100 / midYes) : 0, nMul = (100 - midYes) > 0 ? (100 / (100 - midYes)) : 0;
     var yx = el('opmYnYx'); if (yx) yx.textContent = yMul ? yMul.toFixed(2) + '× payout' : '';
     var nx = el('opmYnNx'); if (nx) nx.textContent = nMul ? nMul.toFixed(2) + '× payout' : '';
-    var by = el('opmBuyY'), bn = el('opmBuyN'); if (by) by.textContent = 'Buy Yes · ' + midYes + '¢'; if (bn) bn.textContent = 'Buy No · ' + (100 - midYes) + '¢';
+    var by = el('opmBuyY'), bn = el('opmBuyN'); if (by) by.textContent = 'Buy Yes · ' + fmtc(midYes) + '¢'; if (bn) bn.textContent = 'Buy No · ' + fmtc(100 - midYes) + '¢';
     if (myPos) renderPosition();   // live P&L follows the live price
     refreshOpenSheet();            // the buy/sell HUD tracks the live price too
   }
@@ -442,8 +460,8 @@
     var t = el('opmTicket'); if (!t) return;
     if (mode === 'sell') { t.innerHTML = sellConfirmTicket(); var cfs = el('opmCfSell'); if (cfs) cfs.onclick = confirmSell; return; }
     var inp = el('opmAmtIn'); var a = inp ? (parseFloat(inp.value) || 0) : amt;
-    var ty = t.querySelector('.opm-tkout .y .px'); if (ty) ty.textContent = midYes + '¢';
-    var tn = t.querySelector('.opm-tkout .n .px'); if (tn) tn.textContent = (100 - midYes) + '¢';
+    var ty = t.querySelector('.opm-tkout .y .px'); if (ty) ty.textContent = fmtc(midYes) + '¢';
+    var tn = t.querySelector('.opm-tkout .n .px'); if (tn) tn.textContent = fmtc(100 - midYes) + '¢';
     var bd = el('opmBuyBd'); if (bd) bd.innerHTML = buyBdHtml(buyEstimate(a));   // rebuild keeps the spread line in sync
     var cf = el('opmCf'); if (cf && !/Bought|Placing/.test(cf.textContent)) cf.textContent = 'Buy ' + (side === 'yes' ? 'Yes' : 'No') + ' · ' + a + ' OSTG';
   }
@@ -458,8 +476,8 @@
     var ya = el('opmPoolYA'), na = el('opmPoolNA'), tot = el('opmPoolTot');
     if (poolY + poolN > 0) { if (ya) ya.textContent = 'Yes ' + num0(poolY) + ' OSTG'; if (na) na.textContent = 'No ' + num0(poolN) + ' OSTG'; if (tot) tot.textContent = num0(poolY + poolN) + ' OSTG total'; }
     else { if (ya) ya.textContent = 'Yes ' + yp + '%'; if (na) na.textContent = 'No ' + (100 - yp) + '%'; if (tot) tot.textContent = 'implied odds'; }
-    var by = el('opmBuyY'), bn = el('opmBuyN'); if (by) by.textContent = 'Buy Yes · ' + midYes + '¢'; if (bn) bn.textContent = 'Buy No · ' + (100 - midYes) + '¢';
-    var pr = el('opmProb'); if (pr) pr.textContent = midYes + '%'; var prb = el('opmProbBar'); if (prb) prb.style.width = midYes + '%';
+    var by = el('opmBuyY'), bn = el('opmBuyN'); if (by) by.textContent = 'Buy Yes · ' + fmtc(midYes) + '¢'; if (bn) bn.textContent = 'Buy No · ' + fmtc(100 - midYes) + '¢';
+    var pr = el('opmProb'); if (pr) pr.textContent = fmtc(midYes) + '%'; var prb = el('opmProbBar'); if (prb) prb.style.width = midYes + '%';
   }
   function paintStandard() {
     // refresh currentMarket odds from the freshest __ostPredictionMarkets
@@ -491,7 +509,7 @@
       var yy = pad + (1 - midYes / 100) * (h - 2 * pad);
       ctx.setLineDash([4, 4]); ctx.strokeStyle = 'rgba(127,216,255,.5)'; ctx.beginPath(); ctx.moveTo(pad, yy); ctx.lineTo(w - pad, yy); ctx.stroke(); ctx.setLineDash([]);
       ctx.fillStyle = 'rgba(160,184,203,.75)'; ctx.font = '10px ui-monospace,monospace'; ctx.textAlign = 'left'; ctx.fillText('building probability history…', pad + 4, 14);
-      ctx.textAlign = 'right'; ctx.fillText(midYes + '% Yes', w - pad - 2, 14); return;
+      ctx.textAlign = 'right'; ctx.fillText(Math.round(midYes) + '% Yes', w - pad - 2, 14); return;
     }
     var ys = arr.map(function (p) { return p.y; });
     var lo = Math.min.apply(0, ys), hi = Math.max.apply(0, ys); var rng = (hi - lo) || 1; lo -= rng * .15; hi += rng * .15; rng = hi - lo;
@@ -501,7 +519,7 @@
     ctx.beginPath(); ctx.moveTo(gx(0), h - pad); ys.forEach(function (v, i) { ctx.lineTo(gx(i), gy(v)); }); ctx.lineTo(gx(n - 1), h - pad); ctx.closePath(); ctx.fillStyle = g; ctx.fill();
     ctx.beginPath(); ys.forEach(function (v, i) { i ? ctx.lineTo(gx(i), gy(v)) : ctx.moveTo(gx(i), gy(v)); }); ctx.strokeStyle = 'rgb(' + col + ')'; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
     ctx.beginPath(); ctx.arc(gx(n - 1), gy(ys[n - 1]), 3.5, 0, 7); ctx.fillStyle = 'rgb(' + col + ')'; ctx.fill();
-    ctx.fillStyle = 'rgba(160,184,203,.85)'; ctx.font = '10px ui-monospace,monospace'; ctx.textAlign = 'right'; ctx.fillText(midYes + '% Yes', w - pad - 2, 13);
+    ctx.fillStyle = 'rgba(160,184,203,.85)'; ctx.font = '10px ui-monospace,monospace'; ctx.textAlign = 'right'; ctx.fillText(Math.round(midYes) + '% Yes', w - pad - 2, 13);
   }
 
   function saveRoundCache(d) { try { localStorage.setItem('ost.btc5m.round.lk', JSON.stringify({ marketId: d.marketId, openAt: d.openAt, closeAt: d.closeAt, priceToBeat: d.priceToBeat, openPrice: d.openPrice })); } catch (_) {} }
@@ -524,7 +542,7 @@
     var prevId = round && round.marketId; round = d;
     beat = Number(d.priceToBeat) || beat;
     if (Number(d.livePrice) > 0) pushTick(Number(d.livePrice));
-    if (!baseMidSet && isFinite(Number(d.yesPriceNumber))) { midYes = Math.max(1, Math.min(99, Math.round(Number(d.yesPriceNumber) * 100))); baseMidSet = true; renderOddsLive(); }
+    if (!baseMidSet && isFinite(Number(d.yesPriceNumber))) { midYes = Math.max(0.1, Math.min(99.9, Math.round(Number(d.yesPriceNumber) * 1000) / 10)); baseMidSet = true; renderOddsLive(); }
     var newRound = prevId && prevId !== d.marketId;
     if (newRound) {   // rollover = a NEW market: reset this round's live state
       buf = []; hist = []; dispPrice = 0; _lastTickAt = 0; baseMidSet = false; seenTrades = {}; firstTrades = true; onchainActive = false;
@@ -722,7 +740,7 @@
     return { c: c, spreadAmt: spreadAmt, sBps: sBps, shares: shares, fee: fee, net: net, roi: stake > 0 ? ((net - stake) / stake * 100) : 0 };
   }
   function buyBdHtml(e) {
-    var rows = '<div class="opm-tl"><span class="k">Fill price</span><span class="v">' + e.c + '¢</span></div>' +
+    var rows = '<div class="opm-tl"><span class="k">Fill price</span><span class="v">' + fmtc(e.c) + '¢</span></div>' +
       '<div class="opm-tl"><span class="k">Shares</span><span class="v" id="opmShV">' + e.shares.toFixed(2) + '</span></div>';
     if (e.spreadAmt > 0) rows += '<div class="opm-tl"><span class="k">Market spread (' + (e.sBps / 100) + '%)</span><span class="v">' + e.spreadAmt.toFixed(2) + '</span></div>';
     rows += '<div class="opm-tl"><span class="k">Fee (2% profit)</span><span class="v">' + e.fee.toFixed(2) + '</span></div>' +
@@ -732,8 +750,8 @@
   function buyTicket() {
     var e = buyEstimate(amt);
     return '<h3>' + icon('ticket') + ' Buy</h3>' +
-      '<div class="opm-tkout"><button class="y' + (side === 'yes' ? ' sel' : '') + '" data-t="yes"><span class="lab">Yes</span><span class="px">' + midYes + '¢</span></button>' +
-      '<button class="n' + (side === 'no' ? ' sel' : '') + '" data-t="no"><span class="lab">No</span><span class="px">' + (100 - midYes) + '¢</span></button></div>' +
+      '<div class="opm-tkout"><button class="y' + (side === 'yes' ? ' sel' : '') + '" data-t="yes"><span class="lab">Yes</span><span class="px">' + fmtc(midYes) + '¢</span></button>' +
+      '<button class="n' + (side === 'no' ? ' sel' : '') + '" data-t="no"><span class="lab">No</span><span class="px">' + fmtc(100 - midYes) + '¢</span></button></div>' +
       '<div class="opm-amt"><input id="opmAmtIn" inputmode="decimal" value="' + amt + '"><span class="cur">OSTG</span></div>' +
       '<div class="opm-quick">' + [10, 25, 100, 'Max'].map(function (q) { return '<button data-q="' + String(q).toLowerCase() + '">' + q + '</button>'; }).join('') + '</div>' +
       '<div class="opm-src"><span class="l"><span class="d"></span> ' + (onchainActive ? 'Wallet OST · on-chain' : 'Personal OSTG') + '</span></div>' +
@@ -754,7 +772,7 @@
       '<div class="opm-fine" style="text-align:left;color:var(--opm-ink2)">' + (isSettle ? 'Claim your settled position — the amount is computed and paid by the server.' : 'Exit now — OST buys your shares back at the live price. You keep the move so far instead of waiting for close.') + '</div>' +
       '<div class="opm-bd">' +
         '<div class="opm-tl"><span class="k">Selling</span><span class="v">' + shares.toFixed(2) + ' shares</span></div>' +
-        '<div class="opm-tl"><span class="k">Sell price</span><span class="v">' + c + '¢</span></div>' +
+        '<div class="opm-tl"><span class="k">Sell price</span><span class="v">' + fmtc(c) + '¢</span></div>' +
         '<div class="opm-tl"><span class="k">Fee (2% profit)</span><span class="v">' + fee.toFixed(2) + '</span></div>' +
         '<div class="opm-tl"><span class="k">Realized P&amp;L</span><span class="v" style="color:var(--opm-' + (up ? 'yes' : 'no') + ')">' + (up ? '+' : '−') + Math.abs(pnl).toFixed(2) + ' OSTG</span></div>' +
         '<div class="opm-tl big"><span class="k">You receive</span><span class="v" style="color:var(--opm-gold)">' + esc(realNet) + ' OSTG</span></div>' +

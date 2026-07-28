@@ -613,7 +613,7 @@
       // 0.10% reference vol with sqrt-time scaling is much more reactive than
       // the previous 0.22% volatility + momentum blend, which left the
       // probability nearly pinned at 50/50 for typical 5-min BTC moves.
-      var scale = 0.10 * Math.sqrt(Math.max(timeLeftRatio, 0.04));
+      var scale = 0.15 * Math.sqrt(Math.max(timeLeftRatio, 0.04));
       var z = clampNumber(deltaPct / Math.max(scale, 0.001), -8, 8);
       yes = 1 / (1 + Math.exp(-z));
       // NO confidence damping. `confidence = 0.65 + 0.32*elapsed` used to drag the

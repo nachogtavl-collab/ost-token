@@ -410,7 +410,7 @@ function serverComputeBtcOdds(openPrice, livePrice, msLeft, priceToBeat) {
   // probability actually reacts to small intra-round moves instead of
   // hugging 50/50). Sqrt-time scaling still shrinks the band as the round
   // progresses so late ticks decide harder than early ones.
-  const scale = 0.10 * Math.sqrt(Math.max(remainingRatio, 0.04));
+  const scale = 0.15 * Math.sqrt(Math.max(remainingRatio, 0.04));
   const z = Math.max(-8, Math.min(8, deltaPct / Math.max(scale, 0.001)));
   let yes = 1 / (1 + Math.exp(-z));
   // NO confidence damping. The ramp (0.65 -> 0.97) pulled every quote toward

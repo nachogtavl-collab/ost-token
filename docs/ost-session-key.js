@@ -158,16 +158,31 @@
     return await retry(async function () { var b = await conn().getBalance(u); return (typeof b === 'number' ? b : Number(b && b.value)) / 1e9; }, 4);
   }
   function onchainReady() { try { return !!(w3() && window.OST_ONCHAIN && OST_ONCHAIN.available && OST_ONCHAIN.available()); } catch (_) { return false; } }
-  // Auto-arm now ONLY refreshes an already-funded session — it NEVER silently
-  // drains the wallet to create one. The old silent auto-fund moved the wallet's
-  // OSTG into the session key on every wallet-sense, even when no on-chain market
-  // existed to use it — which starved the custodial (ostg-native) bet rail that
-  // tops up Play FROM the wallet, so buying broke ("not enough OSTG"). 1-tap is
-  // now an explicit opt-in via the "Enable 1-tap" button, which loads the full
-  // wallet balance on purpose. This keeps wallet OSTG available for normal buys.
+  // Does an on-chain market exist for the CURRENT 5-min round? Auto-arm may only
+  // drain the wallet into the session key when there is genuinely an on-chain rail
+  // to spend it on. If none exists, betting uses the custodial (ostg-native) rail
+  // which tops up Play FROM the wallet — draining it there would starve buys.
+  async function onchainMarketExists() {
+    try {
+      if (!(w3() && window.OST_ONCHAIN && OST_ONCHAIN.available && OST_ONCHAIN.available() && OST_ONCHAIN.marketFor)) return false;
+      var FIVE = 300000;
+      var openAtSec = Math.floor((Math.floor(Date.now() / FIVE) * FIVE) / 1000);
+      var m = await OST_ONCHAIN.marketFor(openAtSec);
+      return !!(m && m.exists);
+    } catch (_) { return false; }
+  }
   async function autoArm() {
-    if (userEnded || !userPk()) return;
-    if (exists()) { try { await refresh(); } catch (_) {} }
+    if (autoArmedOnce || userEnded || !userPk() || !onchainReady()) return;
+    if (exists()) { await refresh(); if (cachedBal > 0) { autoArmedOnce = true; return; } }   // already armed
+    // GATE: only auto-fund when the on-chain rail actually has a market this round.
+    // Without this, silent arming drained the wallet and starved custodial buys.
+    if (!(await onchainMarketExists())) return;
+    var sol = await walletSol();
+    if (sol != null && sol < MIN_SOL) return;                  // only bail when we KNOW gas is short
+    var cap = Math.floor(await walletOstg());                  // load the FULL wallet balance for 1-tap
+    if (!(cap >= MIN_CAP)) return;
+    autoArmedOnce = true;
+    try { await fund(cap); } catch (_) { autoArmedOnce = false; }
   }
 
   window.OST_SESSION = { exists: exists, keypair: keypair, pubkey: pubkey, balance: balance, spendable: spendable, walletBalance: walletBalance, cap: cap, fund: fund, end: end, refresh: refresh, autoArm: autoArm };
