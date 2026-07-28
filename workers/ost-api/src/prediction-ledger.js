@@ -224,6 +224,54 @@ export class PredictionLedger {
     });
   }
 
+  /* ---- sell / early cash-out -------------------------------------------- */
+
+  // Exit an OPEN position BEFORE close at the current implied price. This is what
+  // lets a user "go out" instead of being locked until the round resolves. Safe:
+  //  · the sell price is the SERVER's current odds (clamped), never the client's;
+  //  · value = shares × currentPrice, which is ALWAYS ≤ the max resolve payout
+  //    (shares × 1, since price < 1), so this can never pay more than settlement
+  //    would — no printer;
+  //  · idempotent under blockConcurrencyWhile: only open→sold transitions once.
+  async sell(body) {
+    const id = String(body.id || body.positionId || '');
+    if (!id) return json({ ok: false, error: 'position_required' }, 400);
+    const oddsYes = Number(body.oddsYes);
+    if (!Number.isFinite(oddsYes)) return json({ ok: false, error: 'no_server_odds' }, 400);
+
+    return await this.state.blockConcurrencyWhile(async () => {
+      const pos = await this.state.storage.get(POS_PREFIX + id);
+      if (!pos) return json({ ok: false, error: 'position_not_found' }, 404);
+      if (pos.status !== 'open') {
+        return json({ ok: true, replay: true, status: pos.status, payout: pos.payout || 0 });
+      }
+      // Once the round has closed there is nothing to sell — it settles for real.
+      if (Date.now() >= pos.closeAt) return json({ ok: false, error: 'round_closed', note: 'settles automatically at close' }, 409);
+
+      // Current cash-out price for the held side, clamped exactly like entry so it
+      // can never be gamed. gross is bounded to shares (a share is worth ≤ 1).
+      const cur = this.entryOdds(pos.side, oddsYes);
+      let gross = r6(pos.shares * cur);
+      if (gross > pos.shares) gross = r6(pos.shares);
+      const profit = Math.max(0, gross - pos.stake);
+      const fee = r6(profit * 0.02);          // house edge on profit only, matching resolve()
+      const payout = r6(gross - fee);
+
+      if (payout > 0) {
+        const cr = await this.play('settle', { wallet: pos.wallet, payout, bucket: pos.bucket, fee });
+        if (!cr || cr.ok === false) return json({ ok: false, error: 'cashout_failed', detail: cr && cr.error }, 502);
+      }
+
+      pos.status = 'sold';
+      pos.payout = payout;
+      pos.fee = fee;
+      pos.sellPrice = cur;
+      pos.soldAt = Date.now();
+      await this.state.storage.put(POS_PREFIX + id, pos);
+      return json({ ok: true, status: 'sold', payout, fee, sellPrice: cur, shares: pos.shares });
+    });
+  }
+
   async get(id) {
     const pos = await this.state.storage.get(POS_PREFIX + id);
     return json({ ok: !!pos, position: pos || null });
@@ -236,6 +284,7 @@ export class PredictionLedger {
     if (request.method === 'POST') { try { body = await request.json(); } catch { body = {}; } }
     try {
       if (op === 'open')    return await this.open(body);
+      if (op === 'sell')    return await this.sell(body);
       if (op === 'resolve') return await this.resolve(body);
       if (op === 'get')     return await this.get(url.searchParams.get('id') || body.id);
       if (op === 'health')  return json({ ok: true, hub: 'durable-object', live: String(this.env.PREDICT_LIVE) === 'true' });

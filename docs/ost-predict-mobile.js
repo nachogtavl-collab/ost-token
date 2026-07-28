@@ -624,7 +624,11 @@
     var o = open.sort(function (a, b) { return Number(b.ts || 0) - Number(a.ts || 0); })[0];
     var sig = o.signature || o.sig || o.id || '';
     var btn = sig ? document.querySelector('.prediction-cashout-btn[data-order-sig="' + (window.CSS && CSS.escape ? CSS.escape(sig) : sig) + '"]') : null;
-    myPos = { order: o, sig: sig, side: (o.side === 'no' ? 'no' : 'yes'), shares: Number(o.shares) || 0, entry: Number(o.entry) || Number(o.price) || 0, locked: (o.fundedBy === 'ostg-native') && round && Number(round.closeAt) > Date.now(), sellBtn: btn, cashText: btn ? btn.textContent : '' };
+    // ostg-native positions used to be LOCKED until close (the server had no early
+    // exit). They now sell via /play/predict/cashout, so they are no longer locked
+    // — carry the server position id so confirmSell can cash them out on demand.
+    var isNative = (o.fundedBy === 'ostg-native');
+    myPos = { order: o, sig: sig, native: isNative, posId: o.serverPositionId || o.id || sig, side: (o.side === 'no' ? 'no' : 'yes'), shares: Number(o.shares) || 0, entry: Number(o.entry) || Number(o.price) || 0, locked: false, sellBtn: btn, cashText: btn ? btn.textContent : '' };
     renderPosition();
   }
   function posValueNow() { if (!myPos) return 0; var c = myPos.side === 'yes' ? midYes : (100 - midYes); return myPos.shares * (c / 100); }
@@ -803,6 +807,9 @@
   function confirmSell() {
     if (!myPos) { closeSheet(); return; }
     var cfs = el('opmCfSell'); if (cfs) { cfs.disabled = true; cfs.textContent = 'Processing…'; }
+    // ostg-native positions exit through the server cash-out endpoint (there is no
+    // DOM cash-out button for them). This is what unlocks "go out before close".
+    if (myPos.native) { return confirmSellNative(cfs); }
     var sig = myPos.sig, tries = 0;
     // ROBUST + optimistic-on-the-go: retry finding the proven cash-out button
     // (it may not have rendered the instant they tap), then trigger it and
@@ -827,6 +834,43 @@
         refreshBalance(); refreshPosition(); loadTrades();
       }, 1700);
     })();
+  }
+  // Early cash-out for an ostg-native position via the server. Optimistic: the
+  // balance jumps by the estimated proceeds the instant they tap, and reverts if
+  // the server rejects. The server prices the sell at ITS current odds and pays
+  // shares × price − fee, so the number may settle slightly off the estimate.
+  function confirmSellNative(cfs) {
+    var posId = myPos.posId, order = myPos.order;
+    if (!posId) { if (cfs) { cfs.disabled = false; cfs.textContent = 'Sell'; } toast('This position has no server id yet — try again in a moment.'); return; }
+    if (round && Number(round.closeAt) - Date.now() < 3000) {   // server would reject as round_closed
+      if (cfs) { cfs.disabled = false; cfs.textContent = 'Sell'; }
+      toast('Too close to round end — it settles automatically now.');
+      return;
+    }
+    var estGross = posValueNow();
+    var b = playBal(); if (b != null && estGross > 0) { _balHold = { v: b + estGross, dir: 'up', until: Date.now() + 12000 }; setBalDisplay(b + estGross); }
+    var ctrl = new AbortController(); var to = setTimeout(function () { try { ctrl.abort(); } catch (_) {} }, 12000);
+    fetch(API + '/play/predict/cashout', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: posId, marketId: activeMarketId(), wallet: walletAddr() }),
+      signal: ctrl.signal
+    }).then(function (r) { clearTimeout(to); return r.json(); })
+      .then(function (r) {
+        if (!r || r.ok === false) throw new Error((r && (r.note || r.error)) || 'cashout_failed');
+        patchOrder(order, { status: 'sold', cashedOut: true, cashoutOst: Number(r.payout) || 0, cashoutAt: Date.now(), cashoutKind: 'ostg-native-sell' });
+        if (_balHold) _balHold.until = Date.now() + 4000;
+        toast('Sold — ' + (Number(r.payout) || 0).toFixed(2) + ' OSTG back to your balance.');
+        closeSheet();
+        setTimeout(function () { refreshBalance(); refreshPosition(); loadTrades(); }, 600);
+      })
+      .catch(function (e) {
+        clearTimeout(to); _balHold = null;   // release the optimistic bump — the sale didn't take
+        if (cfs) { cfs.disabled = false; cfs.textContent = 'Sell'; }
+        var msg = String((e && e.message) || '');
+        if (/round_closed/.test(msg)) toast('Round just closed — it settles automatically.');
+        else toast('Could not sell — ' + (msg || 'try again') + '.');
+        refreshBalance(); refreshPosition();
+      });
   }
   function doSell() { openSheet('sell'); }
 

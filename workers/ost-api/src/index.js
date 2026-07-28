@@ -3351,6 +3351,40 @@ export default {
           body: JSON.stringify(Object.assign({}, b, { oddsYes, priceToBeat }))
         });
       }
+      if (pop === 'cashout' && method === 'POST') {
+        let b; try { b = await request.json(); } catch { return json({ ok: false, error: 'invalid_json' }, 400); }
+        // Early exit at the CURRENT server odds (never the client's), computed from
+        // the same canonical round the open used, so a sell is priced on the exact
+        // line the desk shows. openAt comes from the position id (p_<openAt>_…).
+        let oddsYes = 0.5;
+        try {
+          let openAt = 0;
+          const im = String(b.id || '').match(/^p_(\d+)_/);
+          if (im) openAt = Number(im[1]);
+          if (!openAt) { const mm = String(b.marketId || '').match(/^ost-btc5m-(\d+)$/); if (mm) openAt = Number(mm[1]); }
+          if (openAt > 0) {
+            if (!env.__store) env.__store = { get: (k, fb) => kvGet(env, k, fb), put: (k, v, ttl) => kvPut(env, k, v, ttl) };
+            const canon = await getCanonicalBtcRound(env, { refresh: false });
+            const live = (memGet('btc:latest') || await kvGet(env, 'btc:latest', null));
+            const livePrice = Number(live && (live.price || live.p || live.value));
+            const canonOpen = canon && Number(canon.openAt) === openAt ? Number(canon.openPrice) : NaN;
+            const canonBeat = canon && Number(canon.openAt) === openAt ? Number(canon.priceToBeat) : NaN;
+            const rec = await kvGet(env, 'round:' + openAt, null);
+            const openPrice = Number.isFinite(canonOpen) && canonOpen > 0 ? canonOpen : Number(rec && rec.openPrice);
+            const beat = Number.isFinite(canonBeat) && canonBeat > 0 ? canonBeat
+              : (Number(rec && rec.priceToBeat) > 0 ? Number(rec.priceToBeat) : openPrice);
+            if (Number.isFinite(openPrice) && openPrice > 0 && Number.isFinite(livePrice)) {
+              const msLeft = Math.max(0, (openAt + 5 * 60 * 1000) - Date.now());
+              const o = serverComputeBtcOdds(openPrice, livePrice, msLeft, Number.isFinite(beat) && beat > 0 ? beat : openPrice);
+              if (o && Number.isFinite(o.yes)) oddsYes = o.yes;
+            }
+          }
+        } catch (_) {}
+        return await stub.fetch('https://prediction-ledger/sell', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(Object.assign({}, b, { oddsYes }))
+        });
+      }
       if (pop === 'resolve' && method === 'POST') {
         let b; try { b = await request.json(); } catch { return json({ ok: false, error: 'invalid_json' }, 400); }
         // Authoritative settle price = the round's REAL close price captured by

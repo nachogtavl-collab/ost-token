@@ -96,7 +96,11 @@
     var tx = new W.Transaction();
     tx.add(W.SystemProgram.transfer({ fromPubkey: u, toPubkey: k.publicKey, lamports: Math.round(FUND_SOL * 1e9) }));
     var need = false; try { need = !(await conn().getAccountInfo(sAta)); } catch (_) { need = true; }
-    if (need && window.OST_WALLET.associatedAccountIx) { var ix = window.OST_WALLET.associatedAccountIx(k.publicKey, sAta, u, pk(MINT)); if (ix) tx.add(ix); }
+    // Create the SESSION's OSTG ATA: payer = the USER (they sign + pay), owner =
+    // the SESSION key. The old arg order (payer=session, owner=user) made the tx
+    // demand a signature from the unfunded session key AND derived the wrong ATA
+    // address — so the one funding signature ALWAYS failed and 1-tap never armed.
+    if (need && window.OST_WALLET.associatedAccountIx) { var ix = window.OST_WALLET.associatedAccountIx(u, sAta, k.publicKey, pk(MINT)); if (ix) tx.add(ix); }
     tx.add(transferCheckedIx(uAta, sAta, u, amountUi));
     await window.OST_WALLET.sign(tx);                 // the single user signature
     meta.cap = (meta.cap || 0) + amountUi; meta.at = Date.now(); save();
@@ -147,12 +151,18 @@
     }, 1);
     return v || 0;
   }
-  async function walletSol() { var u = userPk(); if (!u || !conn()) return 0; var v = await retry(async function () { return (await conn().getBalance(u)) / 1e9; }, 4); return v || 0; }
+  // Returns SOL in lamports/1e9, or NULL when the read is inconclusive (a bad RPC
+  // response must NOT read as "0 SOL" and silently block arming).
+  async function walletSol() {
+    var u = userPk(); if (!u || !conn()) return null;
+    return await retry(async function () { var b = await conn().getBalance(u); return (typeof b === 'number' ? b : Number(b && b.value)) / 1e9; }, 4);
+  }
   function onchainReady() { try { return !!(w3() && window.OST_ONCHAIN && OST_ONCHAIN.available && OST_ONCHAIN.available()); } catch (_) { return false; } }
   async function autoArm() {
     if (autoArmedOnce || userEnded || !userPk() || !onchainReady()) return;
     if (exists()) { await refresh(); if (cachedBal > 0) { autoArmedOnce = true; return; } }   // already armed
-    if ((await walletSol()) < MIN_SOL) return;                 // can't cover gas — leave it
+    var sol = await walletSol();
+    if (sol != null && sol < MIN_SOL) return;                  // only bail when we KNOW gas is short (null = unknown, try anyway)
     var cap = Math.min(AUTO_CAP, Math.floor(await walletOstg()));
     if (!(cap >= MIN_CAP)) return;                             // too little OSTG to bother
     autoArmedOnce = true;
