@@ -248,9 +248,12 @@
   // Load an IPFS target with AUTO-FALLBACK. The old version set the iframe src and
   // walked away — if that gateway hung (dead host, or a CID nobody is hosting) the
   // World froze forever with no recovery. Now every attempt is on a watchdog: if
-  // the frame hasn't loaded within the window, we advance to the next gateway
-  // automatically, and only give up (with an honest "unpinned" message) after
-  // every gateway has been tried.
+  // the frame hasn't confirmed a load within the window, we advance to the next
+  // gateway automatically, and only give up (with an honest "unpinned" message)
+  // after every gateway has been tried. A CORS probe runs alongside as an EXTRA
+  // signal (never a hard gate — some gateways CORS-block yet render fine in a
+  // frame): a readable 200 upgrades the status to "verified", a readable error
+  // advances us immediately, and an inconclusive result just leaves the watchdog.
   function showIpfs(target, keepTries) {
     clearStage();
     if (!keepTries) ipfsTries = 0;
@@ -262,15 +265,41 @@
       (ipfsTries ? ' (gateway ' + (ipfsTries + 1) + '/' + GATEWAYS.length + ')' : ''), 'load');
     el.frame.src = gatewayUrl(target);
     clearTimeout(ipfsTimer);
-    ipfsTimer = setTimeout(function () {
-      if (el.frameLoaded || el.cur !== target) return;   // it loaded, or the user navigated away
-      if (ipfsTries++ < GATEWAYS.length - 1) {
-        gwIndex = (gwIndex + 1) % GATEWAYS.length;
-        showIpfs(target, true);                           // try the next gateway
-      } else {
-        setStatus('No gateway could retrieve this hash. It is likely unpinned — nobody on IPFS is hosting it right now. Double-check the CID, or try again later.', 'warn');
-      }
-    }, 7000);
+    ipfsTimer = setTimeout(function () { advanceGateway(target); }, 7000);
+    probeGateway(gw.url + target, target, gwIndex);
+  }
+
+  function advanceGateway(target) {
+    if (el.frameLoaded || el.cur !== target) return;   // it loaded, or the user navigated away
+    clearTimeout(ipfsTimer);
+    if (ipfsTries++ < GATEWAYS.length - 1) {
+      gwIndex = (gwIndex + 1) % GATEWAYS.length;
+      showIpfs(target, true);                           // try the next gateway
+    } else {
+      el.frameLoaded = true;                            // stop the churn
+      setStatus('No gateway could retrieve this hash. It is likely unpinned — nobody on IPFS is hosting it right now. Double-check the CID, or try again later.', 'warn');
+    }
+  }
+
+  // Extra signal only — NEVER a hard gate (w3s.link etc. CORS-block but render
+  // fine framed). A readable 200 => verified; a readable 4xx/5xx => advance now;
+  // a CORS/timeout/network reject => inconclusive, leave the iframe + watchdog.
+  function probeGateway(url, target, atIndex) {
+    if (typeof fetch !== 'function') return;
+    var ctrl; try { ctrl = new AbortController(); } catch (_) { ctrl = null; }
+    var to = setTimeout(function () { if (ctrl) { try { ctrl.abort(); } catch (_) {} } }, 6500);
+    fetch(url, { method: 'GET', signal: ctrl ? ctrl.signal : undefined })
+      .then(function (r) {
+        clearTimeout(to);
+        if (el.cur !== target || gwIndex !== atIndex || el.frameLoaded) return;   // stale / already resolved
+        if (r.ok) {
+          el.frameLoaded = true; clearTimeout(ipfsTimer);
+          setStatus('Loaded from ' + GATEWAYS[atIndex % GATEWAYS.length].name + ' — content verified (HTTP ' + r.status + ').', 'ok');
+        } else {
+          advanceGateway(target);   // this gateway definitively can't serve it — move on immediately
+        }
+      })
+      .catch(function () { clearTimeout(to); /* inconclusive: the watchdog + iframe load decide */ });
   }
 
   // Both of these build their URL from a hardcoded origin + a validated ID.
@@ -546,10 +575,12 @@
     root.querySelector('[data-ow-close]').addEventListener('click', close);
     el.input.addEventListener('keydown', function (e) { if (e.key === 'Enter') go(el.input.value); });
     el.frame.addEventListener('load', function () {
-      if (!el.cur) return;
+      if (!el.cur || el.frameLoaded) return;   // probe may have already confirmed/verified it
       el.frameLoaded = true;
       clearTimeout(ipfsTimer);
-      setStatus('Loaded from ' + GATEWAYS[gwIndex % GATEWAYS.length].name + ' — verified by hash. If it looks wrong, try ⇄ Gateway.', 'ok');
+      // Can't read cross-origin content, so don't overclaim "verified" here — that
+      // is only honest when the CORS probe saw a real 200 (message above).
+      setStatus('Loaded from ' + GATEWAYS[gwIndex % GATEWAYS.length].name + '. If you see a gateway error page, the hash may be unpinned — try ⇄ Gateway.', 'ok');
     });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && open) close(); });
     return root;
