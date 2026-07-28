@@ -415,20 +415,28 @@
       });
   }
 
+  // The ONE place ost:btc-spot leaves this module. Tracks lastSpotEmitAt so the
+  // steady heartbeat (below) can stay silent whenever real ticks are flowing.
+  var lastSpotEmitAt = 0;
+  function emitBtcSpot(detail) {
+    lastSpotEmitAt = Date.now();
+    try { window.dispatchEvent(new CustomEvent('ost:btc-spot', { detail: detail || Object.assign({}, btcLastTick) })); } catch (e) {}
+  }
+
   function rememberBtcTick(price, source) {
     var p = Number(price);
     if (!Number.isFinite(p) || p <= 1000) return btcLastTick;
     var now = Date.now();
     if (btcLastTick.price === p && now - btcLastTick.ts < BTC_DEDUPE_MS) {
       btcLastTick = { ts: now, price: p, source: source || btcLastTick.source || 'btc' };
-      try { window.dispatchEvent(new CustomEvent('ost:btc-spot', { detail: Object.assign({}, btcLastTick) })); } catch (e) {}
+      emitBtcSpot();
       return btcLastTick;
     }
     if (btcLastTick.price) btcPrevTick = btcLastTick;
     btcLastTick = { ts: now, price: p, source: source || 'btc' };
     btcSeries.push({ ts: btcLastTick.ts, price: p, source: btcLastTick.source });
     if (btcSeries.length > BTC_MAX_SERIES) btcSeries = btcSeries.slice(-BTC_MAX_SERIES);
-    try { window.dispatchEvent(new CustomEvent('ost:btc-spot', { detail: Object.assign({}, btcLastTick) })); } catch (e) {}
+    emitBtcSpot();
     return btcLastTick;
   }
 
@@ -760,7 +768,7 @@
           btcLastTick = { ts: last.ts, price: last.price, source: last.source };
         }
         canonicalTicksSeededFor = openAt;
-        try { window.dispatchEvent(new CustomEvent('ost:btc-spot', { detail: Object.assign({}, btcLastTick) })); } catch (_) {}
+        emitBtcSpot();
       })
       .catch(function () { /* keep local series */ })
       .then(function () { if (canonicalTicksLoadingFor === openAt) canonicalTicksLoadingFor = 0; });
@@ -779,6 +787,28 @@
     pollBtcMarket();
   }, BTC_REFRESH_MS);
   pollBtcMarket();
+
+  /* ---- STEADY SPOT HEARTBEAT ------------------------------------------------
+   * Live ticks (Pyth SSE / Binance WS) are event-driven, so they arrive in
+   * bursts then go quiet — which forced the client to fabricate motion across the
+   * gaps. This makes the FEED ITSELF tick on a regular cadence, honestly: it does
+   * NOT invent prices. It re-emits the LAST KNOWN price on a fixed interval, and
+   * ONLY when a real tick hasn't already fired within that window (lastSpotEmitAt
+   * gate) — so while Pyth is streaming faster than the cadence this stays silent
+   * and adds nothing. During a quiet stretch it keeps a steady sample flowing at
+   * the last price (a flat, truthful hold) so the client interpolator always has
+   * a fresh bracketing sample and never has to extrapolate. Zero network: it is a
+   * local CustomEvent only, and it pauses entirely when the tab is hidden. */
+  var SPOT_HEARTBEAT_MS = 300;
+  setInterval(function () {
+    if (typeof document !== 'undefined' && document.hidden) return;
+    if (!(btcLastTick && btcLastTick.price > 0)) return;
+    if (Date.now() - btcLastTick.ts > 60000) return;              // real feed dead >60s -> hold, don't emit stale flat forever
+    if (Date.now() - lastSpotEmitAt < SPOT_HEARTBEAT_MS) return;   // real ticks are flowing — stay quiet
+    // Re-emit last known price WITHOUT mutating btcLastTick (so freshness/poll
+    // logic that keys off its real ts+source is untouched). Flat = honest hold.
+    emitBtcSpot({ ts: Date.now(), price: btcLastTick.price, source: 'heartbeat' });
+  }, SPOT_HEARTBEAT_MS);
 
   function currentRoundBoundaries() {
     if (canonicalRoundIsFresh() && canonicalRound && Number(canonicalRound.openAt) && Number(canonicalRound.closeAt) && Number(canonicalRound.closeAt) > Date.now()) {
