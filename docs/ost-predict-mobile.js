@@ -138,12 +138,17 @@
   // OSTG; showing the sum means the header reflects actual wallet funds AND
   // moves when a bet debits play. Never the credits pool. Unknown stays unknown
   // (last-known cache in OST_SESSION keeps it from flashing to 0 on a 429).
+  // FULL spendable = wallet OSTG + SESSION OSTG (1-tap cap) + custodial play. The
+  // session term was missing, so arming 1-tap (which moves wallet OSTG into the
+  // session key) made the displayed balance DROP by the funded amount — the
+  // "1-tap doesn't read the full balance" bug. All three are distinct accounts,
+  // so summing them is correct (no double-count).
   function playBal() {
-    var w, p, known = false;
+    var w, s, p, known = false;
     try { if (window.OST_SESSION && OST_SESSION.walletBalance) { w = OST_SESSION.walletBalance(); if (w != null) known = true; } } catch (_) {}
+    try { if (window.OST_SESSION && OST_SESSION.balance) { s = OST_SESSION.balance(); if (s != null) known = true; } } catch (_) {}
     try { if (window.OST_PLAY && OST_PLAY.balance) { p = OST_PLAY.balance(); if (p != null) known = true; } } catch (_) {}
-    if (known) return (Number(w) || 0) + (Number(p) || 0);
-    try { if (window.OST_SESSION && OST_SESSION.spendable) { var s = OST_SESSION.spendable(); if (s !== undefined) return s; } } catch (_) {}
+    if (known) return (Number(w) || 0) + (Number(s) || 0) + (Number(p) || 0);
     return undefined;
   }
   // Optimistic hold: after a bet/sell we show the expected balance and refuse to
@@ -393,14 +398,25 @@
     requestAnimationFrame(flow);
   }
 
-  // live share prices: implied Yes from the flowing price vs the beat, sharper as
-  // the round nears close. Display-only; the real fill price comes from the
-  // server/chain at buy time.
+  // live share prices: implied Yes from the flowing price vs the beat. This MUST
+  // use the SAME logistic model as the server (serverComputeBtcOdds) and the other
+  // clients (prediction-pro/fast-markets) or the desk disagrees with the canonical
+  // quote. The OLD form here — 50 + (price-beat)/beat*sens — centered every quote
+  // at 50 and ignored the real probability, so shares looked "static at 50¢" no
+  // matter what BTC did. Now: logistic on deltaPct/scale, sqrt-time band, clamped
+  // to [0.1%,99.9%] exactly like the worker (BTC_PROB_MIN/MAX). Display-only; the
+  // real fill price still comes from the server/chain at buy time.
   function updateLiveOdds() {
-    if (!(beat > 0)) return;
-    var tLeftFrac = round ? Math.max(0, Math.min(1, (Number(round.closeAt) - Date.now()) / 300000)) : 1;
-    var sens = 9000 * (1 + (1 - tLeftFrac) * 1.4);
-    var implied = Math.max(1, Math.min(99, Math.round(50 + (price - beat) / beat * sens)));
+    if (!(beat > 0) || !(price > 0)) return;
+    var FIVE = 300000;
+    var msLeft = round ? Math.max(0, Math.min(FIVE, Number(round.closeAt) - Date.now())) : FIVE;
+    var timeLeftRatio = msLeft / FIVE;
+    var deltaPct = (price - beat) / beat * 100;
+    var scale = 0.10 * Math.sqrt(Math.max(timeLeftRatio, 0.04));
+    var z = Math.max(-8, Math.min(8, deltaPct / Math.max(scale, 0.001)));
+    var yes = 1 / (1 + Math.exp(-z));
+    yes = Math.max(0.001, Math.min(0.999, yes));            // BTC_PROB_MIN / BTC_PROB_MAX
+    var implied = Math.max(1, Math.min(99, Math.round(yes * 100)));
     if (implied === midYes) return;
     midYes = implied;
     renderOddsLive();
@@ -756,7 +772,16 @@
       var e = el('opmSessEnd'); if (e) e.onclick = function () { e.disabled = true; e.textContent = '…'; OST_SESSION.end().then(function () { toast('Session ended — funds returned to your wallet.'); renderSessionRow(); }).catch(function (err) { toast((err && err.message) || 'Could not end session'); e.disabled = false; e.textContent = 'End'; }); };
     } else {
       host.innerHTML = '<button class="opm-sessbtn" id="opmSessOn">⚡ Enable 1-tap betting</button>';
-      var b = el('opmSessOn'); if (b) b.onclick = function () { b.disabled = true; b.textContent = 'Funding… (one signature)'; OST_SESSION.fund(25).then(function () { toast('1-tap on — bets are instant now, capped at what you loaded.'); renderSessionRow(); }).catch(function (err) { toast((err && err.message) || 'Could not enable 1-tap'); b.disabled = false; b.textContent = '⚡ Enable 1-tap betting'; }); };
+      var b = el('opmSessOn'); if (b) b.onclick = function () {
+        // Load the FULL available wallet OSTG (not a fixed 25) so 1-tap covers the
+        // user's whole balance — the "doesn't read the full balance" fix. Bounded
+        // by what the wallet actually holds so it can't over-request and fail.
+        var avail = 0;
+        try { avail = Math.floor(Number(OST_SESSION.walletBalance()) || 0); } catch (_) {}
+        if (!(avail > 0)) { toast('No OSTG in your wallet to load into 1-tap yet.'); return; }
+        b.disabled = true; b.textContent = 'Funding ' + avail + ' OSTG… (one signature)';
+        OST_SESSION.fund(avail).then(function () { toast('1-tap on — your full ' + avail + ' OSTG is loaded for instant bets.'); renderSessionRow(); refreshBalance(); }).catch(function (err) { toast((err && err.message) || 'Could not enable 1-tap'); b.disabled = false; b.textContent = '⚡ Enable 1-tap betting'; });
+      };
     }
   }
   function paintTicket() {

@@ -158,15 +158,16 @@
     return await retry(async function () { var b = await conn().getBalance(u); return (typeof b === 'number' ? b : Number(b && b.value)) / 1e9; }, 4);
   }
   function onchainReady() { try { return !!(w3() && window.OST_ONCHAIN && OST_ONCHAIN.available && OST_ONCHAIN.available()); } catch (_) { return false; } }
+  // Auto-arm now ONLY refreshes an already-funded session — it NEVER silently
+  // drains the wallet to create one. The old silent auto-fund moved the wallet's
+  // OSTG into the session key on every wallet-sense, even when no on-chain market
+  // existed to use it — which starved the custodial (ostg-native) bet rail that
+  // tops up Play FROM the wallet, so buying broke ("not enough OSTG"). 1-tap is
+  // now an explicit opt-in via the "Enable 1-tap" button, which loads the full
+  // wallet balance on purpose. This keeps wallet OSTG available for normal buys.
   async function autoArm() {
-    if (autoArmedOnce || userEnded || !userPk() || !onchainReady()) return;
-    if (exists()) { await refresh(); if (cachedBal > 0) { autoArmedOnce = true; return; } }   // already armed
-    var sol = await walletSol();
-    if (sol != null && sol < MIN_SOL) return;                  // only bail when we KNOW gas is short (null = unknown, try anyway)
-    var cap = Math.min(AUTO_CAP, Math.floor(await walletOstg()));
-    if (!(cap >= MIN_CAP)) return;                             // too little OSTG to bother
-    autoArmedOnce = true;
-    try { await fund(cap); } catch (_) { autoArmedOnce = false; }
+    if (userEnded || !userPk()) return;
+    if (exists()) { try { await refresh(); } catch (_) {} }
   }
 
   window.OST_SESSION = { exists: exists, keypair: keypair, pubkey: pubkey, balance: balance, spendable: spendable, walletBalance: walletBalance, cap: cap, fund: fund, end: end, refresh: refresh, autoArm: autoArm };
