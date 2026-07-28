@@ -2580,6 +2580,78 @@
     }
   };
 
+  /* ======================================================================
+   * WALLET STATE CORE (V2) — one canonical identity, race-proof detection
+   * ----------------------------------------------------------------------
+   * THE DISEASE this cures: detection used to be broadcast-only. app.js
+   * announced `ost:wallet-changed` once; any module that finished loading
+   * AFTER that (predict, session-key, card, topup, appbar…) registered its
+   * listener too late and missed it — so a fully live session rendered as
+   * "disconnected" until some later re-announce happened to fire. Testers
+   * saw "wallet not detected" while balances and txs still worked.
+   *
+   * THE CURE: a single source of truth that is (a) readable SYNCHRONOUSLY
+   * at any instant — window.OST_WALLET_PUBKEY / OST_WALLET.pubkey() — and
+   * (b) subscribable with REPLAY: OST_WALLET.onReady(cb) fires immediately
+   * if a wallet is already connected, so a late subscriber can NEVER miss
+   * the state. Every connect/disconnect/account-switch flows through
+   * publishWalletState(), the ONE place that updates the mirror, the nav
+   * button, all subscribers, and the legacy events. No other code path
+   * mutates wallet identity, so the app can't hold two disagreeing views.
+   * ==================================================================== */
+  var _walletSubs = [];
+  function walletStateSnapshot() {
+    return {
+      connected: !!connectedWallet,
+      pubkey: connectedWallet || null,
+      kind: (connectedWalletSession && connectedWalletSession.kind) || null,
+      label: (connectedWalletSession && connectedWalletSession.label) || null
+    };
+  }
+  // The ONE mutator of externally-visible wallet identity. Idempotent and cheap:
+  // safe to call on every re-sync. Sets the synchronous mirror, repaints the nav,
+  // replays to all subscribers, and fires the legacy + V2 events.
+  function publishWalletState() {
+    window.OST_WALLET_PUBKEY = connectedWallet || null;
+    try { setWalletButtonState(connectedWallet); } catch (_) {}
+    var snap = walletStateSnapshot();
+    _walletSubs.slice().forEach(function (cb) { try { cb(snap); } catch (_) {} });
+    try { window.dispatchEvent(new CustomEvent('ost:wallet-changed', { detail: snap })); } catch (_) {}
+    try { window.dispatchEvent(new CustomEvent(snap.connected ? 'ost:wallet-ready' : 'ost:wallet-disconnected', { detail: snap })); } catch (_) {}
+  }
+  // Register a wallet-ready listener that REPLAYS current state on subscribe, so
+  // load order can never make a module miss a live wallet. Returns an unsubscribe.
+  function onWalletReady(cb) {
+    if (typeof cb !== 'function') return function () {};
+    _walletSubs.push(cb);
+    if (connectedWallet) { try { cb(walletStateSnapshot()); } catch (_) {} }
+    return function () { var i = _walletSubs.indexOf(cb); if (i >= 0) _walletSubs.splice(i, 1); };
+  }
+
+  // Wire an EXTENSION provider's live events so the app never keeps a stale
+  // identity. accountChanged with a new key => adopt it (signing/reads as the old
+  // account is a money glitch); accountChanged with null, or disconnect => tear
+  // down. Idempotent per provider.
+  function attachProviderEvents(provider) {
+    if (!provider || provider.__ostEventsWired || typeof provider.on !== 'function') return;
+    provider.__ostEventsWired = true;
+    try {
+      provider.on('accountChanged', function (newKey) {
+        if (newKey) {
+          try {
+            var pkObj = newKey.toBase58 ? newKey : toPublicKey(String(newKey));
+            connectedWalletSession = Object.assign({}, connectedWalletSession, { publicKey: pkObj, provider: provider });
+            connectedWallet = pkObj.toBase58();
+            publishWalletState();
+          } catch (_) { disconnectConnectedWallet(); }
+        } else {
+          disconnectConnectedWallet();
+        }
+      });
+      provider.on('disconnect', function () { disconnectConnectedWallet(); });
+    } catch (_) {}
+  }
+
   function toPublicKey(value) {
     return value instanceof solanaWeb3.PublicKey ? value : new solanaWeb3.PublicKey(value);
   }
@@ -2676,7 +2748,8 @@
     }
     connectedWalletSession = session;
     connectedWallet = session.publicKey.toBase58();
-    setWalletButtonState(connectedWallet);
+    if (session.kind === 'extension' && session.provider) attachProviderEvents(session.provider);
+    publishWalletState();   // canonical: mirror + nav + subscribers + events, all at once
 
     if (settings.backup && session.kind === 'local' && session.keypair) {
       exportLocalWalletBackup(session.keypair);
@@ -2704,7 +2777,7 @@
       if (typeof updateConvertProviders === 'function') {
         updateConvertProviders();
       }
-      try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch {}
+      // (ost:wallet-changed already fired synchronously via publishWalletState)
       // Refresh prediction desk balance so the buy button is enabled with real OST funds.
       if (typeof window.syncPredictionMarketTradeWallet === 'function') {
         window.syncPredictionMarketTradeWallet();
@@ -2734,7 +2807,7 @@
     connectedWalletSession = null;
     connectedWallet = null;
     clearWalletFundingState();
-    setWalletButtonState(null);
+    publishWalletState();   // was silent before — modules never learned about disconnects
     if (typeof window.syncInterchangeDeskWallet === 'function') {
       window.syncInterchangeDeskWallet();
     }
@@ -3700,6 +3773,12 @@
     let signature = null;
     try {
       if (connectedWalletSession.kind === 'local' && connectedWalletSession.keypair) {
+        // MONEY-GLITCH GUARD: never sign with a key that isn't the connected
+        // identity (e.g. a stale keypair left over after a wallet switch). The
+        // signer, the fee payer, and the address the UI shows must be one wallet.
+        if (connectedWalletSession.keypair.publicKey.toBase58() !== connectedWallet) {
+          throw new Error('Wallet identity mismatch — refusing to sign with a stale key. Reconnect your wallet.');
+        }
         // partialSign preserves any pre-existing co-signer signatures (vs .sign which clears them).
         transaction.partialSign(connectedWalletSession.keypair);
         signature = await _sendRaw(conn, transaction.serialize());
@@ -4358,6 +4437,35 @@
     window.addEventListener('pageshow', function () { reannounceWallet(); });
     document.addEventListener('visibilitychange', function () { if (!document.hidden) reannounceWallet(); });
     window.addEventListener('focus', function () { reannounceWallet(); });
+  } else {
+    // EAGER EXTENSION RECONNECT — the other half of "wallet not detected on
+    // refresh". A tester who already linked Phantom/Solflare/Backpack should not
+    // have to reconnect every reload. connect({onlyIfTrusted:true}) re-adopts an
+    // ALREADY-authorized extension with NO popup (it rejects silently if the site
+    // isn't pre-approved). Providers can inject after our script, so retry briefly.
+    (function eagerReconnectExtension() {
+      var tryOne = function (provider, type, label) {
+        if (!provider || connectedWallet || typeof provider.connect !== 'function') return Promise.resolve(false);
+        return Promise.resolve().then(function () { return provider.connect({ onlyIfTrusted: true }); })
+          .then(function (resp) {
+            var pkObj = (resp && resp.publicKey) || provider.publicKey;
+            if (!pkObj || connectedWallet) return false;
+            setConnectedWalletSession({ kind: 'extension', type: type, label: label, provider: provider, publicKey: pkObj }, { announce: false });
+            return true;
+          })
+          .catch(function () { return false; });   // not pre-approved / user never linked -> stay disconnected, no popup
+      };
+      var attempt = function () {
+        if (connectedWallet) return;
+        tryOne(window.solana && window.solana.isPhantom ? window.solana : null, 'phantom', 'Phantom')
+          .then(function (ok) { return ok || tryOne(window.solflare && window.solflare.isSolflare ? window.solflare : null, 'solflare', 'Solflare'); })
+          .then(function (ok) { return ok || tryOne(window.backpack || null, 'backpack', 'Backpack'); });
+      };
+      attempt();
+      var tries = 0;
+      var iv = setInterval(function () { if (connectedWallet || ++tries > 6) { clearInterval(iv); return; } attempt(); }, 500);
+      window.addEventListener('load', attempt, { once: true });
+    })();
   }
 
   /* ---------- 3D EARTH — Realistic Day/Night ---------- */
@@ -6606,6 +6714,11 @@
   window.OST_WALLET = {
     get session() { return connectedWalletSession; },
     get address() { return connectedWallet; },
+    // V2 race-proof detection: synchronous identity + replay-on-subscribe.
+    pubkey: function () { return connectedWallet || null; },
+    ready: function () { return !!connectedWallet; },
+    onReady: onWalletReady,     // fires immediately if already connected — late modules never miss it
+    subscribe: onWalletReady,
     getConnection: getSolanaConnection,
     getOstBalance: getOstBalanceForAddress,
     ensureAta: ensureOstAssociatedTokenAccount,

@@ -26,7 +26,12 @@
   function w3() { return window.solanaWeb3; }
   function pk(s) { return new (w3().PublicKey)(s); }
   function conn() { var w = window.OST_WALLET; return w && w.getConnection ? w.getConnection() : null; }
-  function userPk() { var w = window.OST_WALLET; return (w && w.session && w.session.publicKey) ? w.session.publicKey : null; }
+  function userPk() {
+    var w = window.OST_WALLET;
+    if (w && w.session && w.session.publicKey) return w.session.publicKey;
+    try { if (w && w.pubkey && w.pubkey()) return pk(w.pubkey()); } catch (_) {}   // fall back to the canonical mirror
+    return null;
+  }
   function ataOf(owner) { return w3().PublicKey.findProgramAddressSync([owner.toBuffer(), pk(TOKEN_2022).toBuffer(), pk(MINT).toBuffer()], pk(ATA_PROGRAM))[0]; }
   function emit() { try { window.dispatchEvent(new CustomEvent('ost:session:change', { detail: { pubkey: pubkey() && pubkey().toBase58(), balance: cachedBal, cap: meta && meta.cap } })); } catch (_) {} }
 
@@ -161,16 +166,24 @@
   window.OST_SESSION.end = end;
 
   if (exists()) setTimeout(function () { try { refresh(); } catch (_) {} }, 1500);
-  // Arm on connect, and keep trying on a short poll after load so a transient
-  // RPC hiccup (a single 429 on the balance read) doesn't leave it unarmed —
-  // it retries until armed, the user ends a session, or a few attempts pass.
-  window.addEventListener('ost:wallet-changed', function () { setTimeout(autoArm, 1800); });
-  window.addEventListener('ost:wallet-connected', function () { setTimeout(autoArm, 1800); });
+  // DETERMINISTIC 1-TAP DETECTION. OST_WALLET.onReady REPLAYS immediately if a
+  // wallet is already connected, so 1-tap arms the exact instant the wallet core
+  // is ready — killing the old blind-timeout race where autoArm ran before
+  // OST_WALLET.session existed and quietly gave up ("1-tap won't detect wallet").
+  function armSoon() { if (!userEnded && !document.hidden) setTimeout(autoArm, 800); }
+  (function hookReady(n) {
+    if (window.OST_WALLET && typeof window.OST_WALLET.onReady === 'function') { window.OST_WALLET.onReady(armSoon); return; }
+    if (n > 40) return; setTimeout(function () { hookReady(n + 1); }, 150);   // OST_WALLET may define after us
+  })(0);
+  // Legacy + V2 events and provider account-switches also (re)arm; idempotent.
+  window.addEventListener('ost:wallet-changed', armSoon);
+  window.addEventListener('ost:wallet-ready', armSoon);
+  window.addEventListener('ost:wallet-connected', armSoon);
+  // Backstop poll so a transient 429 on the balance read doesn't leave it unarmed.
   var _armTries = 0;
   var _armIv = setInterval(function () {
     if (userEnded || _armTries++ > 3 || document.hidden) { if (_armTries > 3) clearInterval(_armIv); return; }
     if (exists() && cachedBal > 0) { clearInterval(_armIv); return; }
     if (userPk()) autoArm();
   }, 30000);
-  setTimeout(function () { if (userPk() && !document.hidden) autoArm(); }, 4000);
 })();
