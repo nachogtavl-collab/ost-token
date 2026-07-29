@@ -580,3 +580,25 @@ body.ost-mesh-scroll-lock .ost-mobile-home {
 .ost-mesh-chat-head strong{color:#fff;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%}
 .ost-mesh-chat-prev{font-size:13px;color:#cdd9f5;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ost-mesh-chat-count{font-size:11px;color:#7e8fbd;margin-top:2px}
+
+/* ── Wallet-linked social hero (redesign) ───────────────────────────────── */
+.ost-mesh-hero{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px 16px;align-items:center;
+  padding:16px;margin:0 0 14px;border-radius:18px;
+  background:radial-gradient(600px 240px at 12% -30%,rgba(94,234,212,.16),transparent),linear-gradient(150deg,rgba(20,28,46,.92),rgba(10,14,26,.92));
+  border:1px solid rgba(94,234,212,.22);box-shadow:0 14px 40px rgba(0,0,0,.35);}
+.omh-avatar{width:64px;height:64px;border-radius:16px;grid-row:1/2;box-shadow:0 0 0 2px rgba(94,234,212,.35),0 8px 22px rgba(0,0,0,.4);}
+.omh-info{min-width:0;grid-row:1/2;}
+.omh-name{font-size:19px;font-weight:900;color:#fff;letter-spacing:.2px;line-height:1.1;}
+.omh-wallet{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:#9fffd0;margin-top:3px;word-break:break-all;}
+.omh-bal{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.omh-chip{font-size:11px;font-weight:800;padding:4px 10px;border-radius:999px;background:rgba(2,6,23,.5);border:1px solid rgba(148,163,184,.25);color:#cbd5e1;}
+.omh-chip b{font-family:ui-monospace,monospace;}
+.omh-chip.omh-ostg b{color:#a97bff;}.omh-chip.omh-ostc b{color:#4da3ff;}.omh-chip.omh-sol b{color:#f0c674;}
+.omh-actions{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;}
+.omh-act{flex:1;min-width:74px;display:flex;flex-direction:column;align-items:center;gap:5px;padding:11px 6px;border-radius:13px;cursor:pointer;
+  background:linear-gradient(180deg,rgba(30,41,59,.7),rgba(15,23,42,.7));border:1px solid rgba(148,163,184,.22);
+  color:#e2e8f0;font-size:11px;font-weight:800;transition:.15s;}
+.omh-act span{font-size:19px;line-height:1;}
+.omh-act:hover{border-color:rgba(94,234,212,.55);transform:translateY(-1px);box-shadow:0 8px 20px rgba(0,0,0,.3);}
+.omh-act:active{transform:translateY(0);}
+@media(max-width:560px){.ost-mesh-hero{grid-template-columns:auto minmax(0,1fr);}.omh-avatar{width:54px;height:54px;}.omh-name{font-size:17px;}.omh-act{min-width:60px;font-size:10px;}}

@@ -11,7 +11,7 @@ import {
 } from './mesh-crypto.js?v=1';
 import { MeshRTC } from './mesh-rtc.js?v=10';
 
-const STYLE_HREF = './mesh/mesh.css?v=14';
+const STYLE_HREF = './mesh/mesh.css?v=15';
 const STORAGE_ID = 'ost_mesh_identity_v1';
 const STORAGE_ADDR = 'ost_mesh_addr_v1';
 const MAX_FILE_BYTES = 32 * 1024 * 1024;
@@ -65,9 +65,30 @@ function buildDOM() {
       <div class="ost-mesh-head">
         <div>
           <h2>OST Mesh</h2>
-          <div class="sub">Quantum-ready · End-to-end · Peer-to-peer</div>
+          <div class="sub">Your social layer · wallet-linked · end-to-end</div>
         </div>
         <button class="ost-mesh-close" aria-label="Close">×</button>
+      </div>
+
+      <!-- WALLET-LINKED SOCIAL HERO -->
+      <div class="ost-mesh-hero" id="mesh-hero">
+        <canvas class="omh-avatar" id="mesh-hero-avatar" width="120" height="120" aria-hidden="true"></canvas>
+        <div class="omh-info">
+          <div class="omh-name" id="mesh-hero-name">Guest</div>
+          <div class="omh-wallet" id="mesh-hero-wallet">Connect your wallet to go social</div>
+          <div class="omh-bal">
+            <span class="omh-chip omh-ostg"><b id="mesh-hero-ostg">—</b> OSTG</span>
+            <span class="omh-chip omh-ostc"><b id="mesh-hero-ostc">—</b> OSTC</span>
+            <span class="omh-chip omh-sol"><b id="mesh-hero-sol">—</b> SOL</span>
+          </div>
+        </div>
+        <div class="omh-actions">
+          <button class="omh-act" data-hero="invite"><span>&#128279;</span>Invite</button>
+          <button class="omh-act" data-hero="chats"><span>&#128172;</span>Messages</button>
+          <button class="omh-act" data-hero="pay"><span>&#128176;</span>Pay</button>
+          <button class="omh-act" data-hero="games"><span>&#127918;</span>Games</button>
+          <button class="omh-act" data-hero="stories"><span>&#10024;</span>Stories</button>
+        </div>
       </div>
 
       <div class="ost-mesh-id">
@@ -389,6 +410,20 @@ class MeshPavilion {
   _wire() {
     this.trigger.addEventListener('click', () => this.open());
     this.closeBtn.addEventListener('click', () => this.close());
+    // Wallet-linked social hero: quick-actions route to the real features.
+    const hero = document.getElementById('mesh-hero');
+    if (hero) hero.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-hero]'); if (!b) return;
+      const a = b.getAttribute('data-hero');
+      if (a === 'invite') this._showInviteQR();
+      else if (a === 'chats') { try { this._openChatsList(); } catch (_) {} }
+      else if (a === 'pay') { const inp = document.getElementById('mesh-peer-addr'); if (inp) inp.focus(); this._setStatus('Connect to a peer, then use Pay in the session tools to send OSTC / SOL.', 'info'); }
+      else if (a === 'games') { try { window.dispatchEvent(new CustomEvent('mesh:open-games')); } catch (_) {} this._setStatus('Opening mesh games…', 'info'); }
+      else if (a === 'stories') { try { window.dispatchEvent(new CustomEvent('mesh:open-stories')); } catch (_) {} this._setStatus('Opening stories…', 'info'); }
+    });
+    // Keep the hero in sync with the connected wallet.
+    window.addEventListener('ost:wallet-changed', () => { try { this._renderWalletHero(); } catch (_) {} });
+    if (window.OST_WALLET && window.OST_WALLET.onReady) { try { window.OST_WALLET.onReady(() => this._renderWalletHero()); } catch (_) {} }
     document.getElementById('mesh-copy-addr').addEventListener('click', () => this._copyAddress());
     document.getElementById('mesh-copy-invite').addEventListener('click', () => this._copyInvite());
     const showQrBtn = document.getElementById('mesh-show-qr');
@@ -436,10 +471,49 @@ class MeshPavilion {
     this.endCallBtn.addEventListener('click', () => this._hangup({ restoreData: true }));
   }
 
+  // Draw a deterministic identicon (5x5 mirrored) from a seed string.
+  _drawIdenticon(seed) {
+    const cv = document.getElementById('mesh-hero-avatar'); if (!cv) return;
+    const ctx = cv.getContext('2d'); const W = cv.width, cells = 5, cell = W / cells;
+    let h = 5381; for (let i = 0; i < seed.length; i++) { h = ((h << 5) - h + seed.charCodeAt(i)) | 0; }
+    const hue = Math.abs(h) % 360;
+    ctx.clearRect(0, 0, W, W);
+    ctx.fillStyle = 'hsl(' + hue + ',18%,12%)'; ctx.fillRect(0, 0, W, W);
+    ctx.fillStyle = 'hsl(' + hue + ',75%,62%)';
+    let r = Math.abs(h);
+    for (let x = 0; x < 3; x++) for (let y = 0; y < cells; y++) {
+      r = (r * 1103515245 + 12345) & 0x7fffffff;
+      if (r % 2 === 0) { ctx.fillRect(x * cell, y * cell, cell + 0.5, cell + 0.5); ctx.fillRect((cells - 1 - x) * cell, y * cell, cell + 0.5, cell + 0.5); }
+    }
+  }
+  // Populate the wallet-linked social hero. The mesh identity is presented AS the
+  // user's wallet — the "linked to the users wallet" the redesign is about.
+  _renderWalletHero() {
+    let wallet = '';
+    try { wallet = (window.OST_WALLET_PUBKEY) || (window.OST_WALLET && window.OST_WALLET.pubkey && window.OST_WALLET.pubkey()) || ''; } catch (_) {}
+    const nameEl = document.getElementById('mesh-hero-name');
+    const wEl = document.getElementById('mesh-hero-wallet');
+    const seed = wallet || this.address || 'guest';
+    this._drawIdenticon(seed);
+    if (nameEl) nameEl.textContent = wallet ? (wallet.slice(0, 4) + '·' + wallet.slice(-4)) : 'Guest';
+    if (wEl) wEl.textContent = wallet ? (wallet.slice(0, 8) + '…' + wallet.slice(-6)) : (this.address || 'Connect your wallet to go social');
+    const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = (v == null || isNaN(v)) ? '—' : Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 }); };
+    try { set('mesh-hero-ostg', window.OST_SESSION && OST_SESSION.walletBalance ? OST_SESSION.walletBalance() : null); } catch (_) {}
+    try { set('mesh-hero-ostc', window.OST_WALLET && OST_WALLET.getOstBalance && wallet ? undefined : null); } catch (_) {}
+    // OSTC (main OST) + SOL are async reads; fill them best-effort without blocking.
+    if (wallet && window.OST_WALLET) {
+      try { if (OST_WALLET.getOstBalance) Promise.resolve(OST_WALLET.getOstBalance(wallet)).then(b => set('mesh-hero-ostc', b)).catch(() => {}); } catch (_) {}
+      try {
+        const conn = OST_WALLET.getConnection && OST_WALLET.getConnection();
+        if (conn && window.solanaWeb3) Promise.resolve(conn.getBalance(new solanaWeb3.PublicKey(wallet))).then(l => set('mesh-hero-sol', (Number(l) || 0) / 1e9)).catch(() => {});
+      } catch (_) {}
+    }
+  }
   open()  {
     this._lockPageScroll();
     this.root.classList.add('is-open');
     this.root.setAttribute('aria-hidden', 'false');
+    try { this._renderWalletHero(); } catch (_) {}
     if (this.shell) this.shell.scrollTop = 0;
     if (typeof this.root.focus === 'function') {
       try { this.root.focus({ preventScroll: true }); }
@@ -914,11 +988,21 @@ class MeshPavilion {
     const title = document.getElementById('mesh-qr-title');
     if (!modal || !body) return;
     title.textContent = 'Your invite QR';
+    // Generate the QR LOCALLY (vendor/qrcode-generator) so it works on every
+    // device and offline — the external image service was the reason "QR doesn't
+    // work". Fall back to the service only if the local encoder is unavailable.
+    let local = null;
+    try { if (typeof window.qrcode === 'function') { const q = window.qrcode(0, 'L'); q.addData(invite); q.make(); local = q.createDataURL(5, 4); } } catch (_) {}
     body.innerHTML = `
-      <img src="${QR_API}${encodeURIComponent(invite)}" alt="OST Mesh invite QR" loading="lazy" />
-      <p class="ost-mesh-qr-hint">Have your peer scan this with their phone camera (or use Scan QR here).</p>
+      <img id="mesh-qr-img" alt="OST Mesh invite QR" />
+      <p class="ost-mesh-qr-hint">Have your peer scan this with their phone camera (or use Scan QR). Works offline.</p>
       <textarea readonly class="ost-mesh-qr-text">${escapeHtml(invite)}</textarea>
     `;
+    const img = document.getElementById('mesh-qr-img');
+    if (img) {
+      img.src = local || (QR_API + encodeURIComponent(invite));
+      img.onerror = () => { img.onerror = null; img.src = QR_API + encodeURIComponent(invite); };
+    }
     modal.classList.add('is-open');
     modal.setAttribute('aria-hidden', 'false');
   }
