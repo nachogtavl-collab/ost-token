@@ -28,6 +28,41 @@
   function loadFeed() { try { var a = JSON.parse(localStorage.getItem(FEED_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (_) { return []; } }
   function saveFeed(a) { try { localStorage.setItem(FEED_KEY, JSON.stringify(a.slice(0, 200))); } catch (_) {} }
 
+  /* ---- notifications: toast + tab/trigger badges ---- */
+  var badges = { feed: 0, chats: 0 };
+  function toast(msg) {
+    var t = document.createElement('div'); t.className = 'omm-toast'; t.textContent = msg; document.body.appendChild(t);
+    requestAnimationFrame(function () { t.classList.add('show'); });
+    setTimeout(function () { t.classList.remove('show'); setTimeout(function () { t.remove(); }, 300); }, 3200);
+  }
+  function paintBadges() {
+    ['feed', 'chats'].forEach(function (v) {
+      var tab = document.querySelector('.omm-tab[data-view="' + v + '"]'); if (!tab) return;
+      var b = tab.querySelector('.omm-badge'); var n = badges[v] || 0;
+      if (n > 0) { if (!b) { b = document.createElement('span'); b.className = 'omm-badge'; tab.appendChild(b); } b.textContent = n > 9 ? '9+' : String(n); }
+      else if (b) b.remove();
+    });
+    var trig = document.getElementById('ost-mesh-trigger');
+    if (trig) { var tot = (badges.feed || 0) + (badges.chats || 0); trig.setAttribute('data-badge', tot > 0 ? (tot > 9 ? '9+' : String(tot)) : ''); trig.classList.toggle('has-badge', tot > 0); }
+  }
+  function bumpBadge(v, n) { badges[v] = (badges[v] || 0) + (n || 1); paintBadges(); }
+  function clearBadge(v) { badges[v] = 0; paintBadges(); }
+  function notifyFeedEngagement(shared) {
+    var me = wallet(); if (!me) return;
+    var seen = {}; try { seen = JSON.parse(localStorage.getItem('ost.mesh.feedseen.v1') || '{}') || {}; } catch (_) {}
+    var gained = 0;
+    shared.forEach(function (p) {
+      if (p.who !== me || !p.id) return;
+      var cur = (p.likeCount || 0) + ((p.replies || []).length);
+      var prev = seen[p.id];
+      if (prev != null && cur > prev) gained += (cur - prev);
+      seen[p.id] = cur;
+    });
+    try { localStorage.setItem('ost.mesh.feedseen.v1', JSON.stringify(seen)); } catch (_) {}
+    if (gained > 0) { toast('♥ ' + gained + ' new reaction' + (gained > 1 ? 's' : '') + ' on your posts'); if (currentView() !== 'feed') bumpBadge('feed', gained); }
+  }
+  function currentView() { var s = document.querySelector('#ost-mesh-pavilion .ost-mesh-shell'); return s && s.getAttribute('data-view'); }
+
   var TABS = [
     { id: 'feed', label: 'Feed', icon: '&#8962;' },
     { id: 'chats', label: 'Chats', icon: '&#128172;' },
@@ -61,6 +96,31 @@
       '.omm-reply-compose{display:flex;gap:6px;margin-top:4px}',
       '.omm-reply-compose input{flex:1;background:rgba(2,6,23,.6);border:1px solid rgba(148,163,184,.28);border-radius:10px;color:#eaf6ff;padding:8px 10px;font:inherit;font-size:12.5px}',
       '.omm-reply-compose button{border:none;border-radius:10px;padding:8px 14px;font-weight:800;background:rgba(94,234,212,.16);color:#7ff0d8;cursor:pointer}',
+      // media
+      '.omm-compose-side{display:flex;flex-direction:column;gap:6px}',
+      '.omm-attach{display:grid;place-items:center;width:44px;height:38px;border-radius:11px;background:rgba(2,6,23,.6);border:1px solid rgba(148,163,184,.3);color:#9bcbe6;font-size:18px;cursor:pointer}',
+      '.omm-post-preview{position:relative;margin-top:8px;max-width:180px}',
+      '.omm-post-preview img{width:100%;border-radius:12px;display:block}',
+      '.omm-prev-x{position:absolute;top:-8px;right:-8px;width:24px;height:24px;border-radius:50%;border:none;background:#0b1a2c;color:#fff;font-size:16px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.4)}',
+      '.omm-post-img{margin-top:8px;width:100%;border-radius:12px;display:block;max-height:360px;object-fit:cover}',
+      // notifications
+      '.omm-toast{position:fixed;left:50%;bottom:84px;transform:translate(-50%,20px);z-index:1000600;background:rgba(6,10,20,.97);border:1px solid rgba(94,234,212,.4);color:#eaf6ff;padding:11px 16px;border-radius:14px;font-size:13px;font-weight:700;box-shadow:0 12px 34px rgba(0,0,0,.5);opacity:0;transition:.28s;max-width:88vw;text-align:center}',
+      '.omm-toast.show{opacity:1;transform:translate(-50%,0)}',
+      '.omm-badge{position:absolute;top:2px;left:56%;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:#ff3b6b;color:#fff;font-size:10px;font-weight:900;display:grid;place-items:center;box-shadow:0 0 0 2px rgba(6,10,20,.96)}',
+      '.omm-tab{position:relative}',
+      '#ost-mesh-trigger.has-badge::after{content:attr(data-badge);position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#ff3b6b;color:#fff;font-size:11px;font-weight:900;display:grid;place-items:center}',
+      // conversations
+      '.omm-chatsbox{border:1px solid rgba(94,234,212,.2);border-radius:16px;background:rgba(9,14,26,.6);padding:12px}',
+      '.omm-convos{display:flex;flex-direction:column;gap:4px}',
+      '.omm-convo{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:none;border-radius:12px;padding:9px;cursor:pointer;color:#dbe9f5}',
+      '.omm-convo:hover{background:rgba(2,6,23,.5)}',
+      '.omm-convo-av{width:40px;height:40px;border-radius:12px;flex:0 0 auto}',
+      '.omm-convo-mid{flex:1;min-width:0}',
+      '.omm-convo-top{display:flex;justify-content:space-between;gap:8px}',
+      '.omm-convo-name{font-weight:800;color:#eaf6ff;font-size:13.5px}',
+      '.omm-convo-time{color:#64809a;font-size:11px;flex:0 0 auto}',
+      '.omm-convo-prev{color:#8fb3cc;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.omm-convo-unread{flex:0 0 auto;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#00ffb0;color:#04121a;font-size:11px;font-weight:900;display:grid;place-items:center}',
       '.omm-empty{color:#7fa8c4;font-size:12.5px;text-align:center;padding:20px 8px}',
       '.omm-field{display:flex;flex-direction:column;gap:5px;margin-bottom:11px}',
       '.omm-field label{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#7fd8ff}',
@@ -102,7 +162,9 @@
       '<div class="omm-feedbox">' +
         '<div class="omm-h">&#8962; Mesh Feed</div>' +
         '<div id="omm-stories"></div>' +
-        '<div class="omm-compose"><textarea id="omm-post-text" placeholder="Share something with the mesh…" maxlength="500"></textarea><button class="omm-post-btn" id="omm-post-btn">Post</button></div>' +
+        '<div class="omm-compose"><textarea id="omm-post-text" placeholder="Share something with the mesh…" maxlength="500"></textarea>' +
+          '<div class="omm-compose-side"><label class="omm-attach" title="Add image">&#128247;<input type="file" id="omm-post-img" accept="image/*" hidden></label><button class="omm-post-btn" id="omm-post-btn">Post</button></div></div>' +
+        '<div id="omm-post-preview" class="omm-post-preview" hidden></div>' +
         '<div class="omm-feed-list" id="omm-feed-list"></div>' +
       '</div>';
     shell.appendChild(sec);
@@ -110,17 +172,21 @@
     var listEl = sec.querySelector('#omm-feed-list');
     listEl.addEventListener('click', onFeedClick);
     listEl.addEventListener('keydown', function (e) { if (e.key === 'Enter') { var ri = e.target.closest('[data-ri]'); if (ri) { e.preventDefault(); sendReply(ri.getAttribute('data-ri')); } } });
+    var pendingImg = '';
+    var fileIn = document.getElementById('omm-post-img'), prev = document.getElementById('omm-post-preview');
+    fileIn.addEventListener('change', function () {
+      var f = fileIn.files && fileIn.files[0]; if (!f) return;
+      resizeImage(f, 560, 0.62).then(function (d) { pendingImg = d; prev.hidden = false; prev.innerHTML = '<img src="' + d + '"><button class="omm-prev-x" id="omm-prev-x">&times;</button>'; document.getElementById('omm-prev-x').onclick = function () { pendingImg = ''; prev.hidden = true; prev.innerHTML = ''; fileIn.value = ''; }; }).catch(function () {});
+    });
     sec.querySelector('#omm-post-btn').addEventListener('click', function () {
-      var ta = document.getElementById('omm-post-text'); var t = (ta.value || '').trim(); if (!t) return;
-      var w = wallet();
+      var ta = document.getElementById('omm-post-text'); var t = (ta.value || '').trim(); if (!t && !pendingImg) return;
+      var w = wallet(), img = pendingImg;
       var btn = document.getElementById('omm-post-btn'); btn.disabled = true;
-      // Post to the SHARED mesh timeline so every user sees it. Keep a local copy
-      // only if the network post fails (offline resilience).
-      fetch(API + '/mesh/v1/feed/post', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ wallet: w, name: shortW(w), text: t }) })
+      fetch(API + '/mesh/v1/feed/post', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ wallet: w, name: shortW(w), text: t, img: img }) })
         .then(function (r) { return r.json(); })
         .then(function (res) { if (!(res && res.ok)) throw new Error('post failed'); ta.value = ''; })
-        .catch(function () { var feed = loadFeed(); feed.unshift({ id: 'p' + Date.now(), who: w || 'guest', text: t, ts: Date.now(), pending: true }); saveFeed(feed); ta.value = ''; })
-        .then(function () { btn.disabled = false; renderFeed(); });
+        .catch(function () { var feed = loadFeed(); feed.unshift({ id: 'p' + Date.now(), who: w || 'guest', text: t, img: img, ts: Date.now(), pending: true }); saveFeed(feed); ta.value = ''; })
+        .then(function () { btn.disabled = false; pendingImg = ''; prev.hidden = true; prev.innerHTML = ''; fileIn.value = ''; renderFeed(); });
       try { window.dispatchEvent(new CustomEvent('mesh:feed-post', { detail: { text: t } })); } catch (_) {}
     });
     renderFeed();
@@ -144,6 +210,25 @@
     var r = Math.abs(h); for (var x = 0; x < 3; x++) for (var y = 0; y < 5; y++) { r = (r * 1103515245 + 12345) & 0x7fffffff; if (r % 2 === 0) { ctx.fillRect(x * 10.4, y * 10.4, 11, 11); ctx.fillRect((4 - x) * 10.4, y * 10.4, 11, 11); } }
     return cv.toDataURL();
   }
+  // Client-side resize so feed images are small enough to relay (data URL).
+  function resizeImage(file, maxDim, quality) {
+    return new Promise(function (res, rej) {
+      var fr = new FileReader();
+      fr.onload = function () {
+        var im = new Image();
+        im.onload = function () {
+          var s = Math.min(1, maxDim / Math.max(im.width, im.height));
+          var w = Math.max(1, Math.round(im.width * s)), h = Math.max(1, Math.round(im.height * s));
+          var cv = document.createElement('canvas'); cv.width = w; cv.height = h; cv.getContext('2d').drawImage(im, 0, 0, w, h);
+          var out = cv.toDataURL('image/jpeg', quality || 0.6);
+          if (out.length > 155000) out = cv.toDataURL('image/jpeg', 0.45);   // stay under the worker cap
+          res(out);
+        };
+        im.onerror = rej; im.src = fr.result;
+      };
+      fr.onerror = rej; fr.readAsDataURL(file);
+    });
+  }
   var openReplies = {};
   function paintFeed(items) {
     var list = document.getElementById('omm-feed-list'); if (!list) return;
@@ -154,7 +239,7 @@
       var liked = (p.likedBy || []).indexOf(me) >= 0;
       var lc = p.likeCount || 0, reps = p.replies || [];
       var head = '<div class="omm-post-head"><img class="omm-post-av" src="' + avatarDataUrl(who) + '" alt=""><span class="omm-post-who">' + esc(shortW(who)) + '</span>' + (p.pending ? '<span style="color:#f0c674;font-size:10px">· sending</span>' : '') + '<span class="omm-post-time">' + ago(p.ts) + '</span></div>';
-      var body = '<div class="omm-post-body">' + esc(p.text) + '</div>';
+      var body = (p.text ? '<div class="omm-post-body">' + esc(p.text) + '</div>' : '') + (p.img ? '<img class="omm-post-img" src="' + esc(p.img) + '" alt="">' : '');
       if (!p.id) return '<div class="omm-post">' + head + body + '</div>';
       var actions = '<div class="omm-post-actions"><button class="omm-pa' + (liked ? ' on' : '') + '" data-like="' + esc(p.id) + '">&#9829; <span>' + lc + '</span></button><button class="omm-pa" data-rt="' + esc(p.id) + '">&#128172; <span>' + reps.length + '</span></button></div>';
       var repliesHtml = reps.map(function (r) { return '<div class="omm-reply"><b>' + esc(shortW(r.wallet || r.name)) + '</b> ' + esc(r.text) + '</div>'; }).join('');
@@ -185,11 +270,12 @@
     fetch(API + '/mesh/v1/feed/recent?limit=60', { cache: 'no-store' })
       .then(function (r) { return r.json(); })
       .then(function (j) {
-        var shared = (j && j.posts) ? j.posts.map(function (p) { return { id: p.id, who: p.wallet || p.name, text: p.text, ts: p.ts, likeCount: p.likeCount || 0, likedBy: p.likedBy || [], replies: p.replies || [] }; }) : [];
+        var shared = (j && j.posts) ? j.posts.map(function (p) { return { id: p.id, who: p.wallet || p.name, text: p.text, img: p.img || '', ts: p.ts, likeCount: p.likeCount || 0, likedBy: p.likedBy || [], replies: p.replies || [] }; }) : [];
         var seen = {}, merged = [];
         local.concat(shared).forEach(function (p) { var k = p.id || (p.who + ':' + p.ts); if (!seen[k]) { seen[k] = 1; merged.push(p); } });
         merged.sort(function (a, b) { return (b.ts || 0) - (a.ts || 0); });
         paintFeed(merged);
+        notifyFeedEngagement(shared);
       })
       .catch(function () { paintFeed(loadFeed()); });   // offline: show whatever we have locally
   }
@@ -237,6 +323,31 @@
     } catch (e) { fail(e); }
   }
 
+  function buildChats(shell) {
+    var sec = document.createElement('div'); sec.className = 'omm-section'; sec.setAttribute('data-mesh-view', 'chats');
+    sec.innerHTML = '<div class="omm-chatsbox"><div class="omm-h">&#128172; Conversations</div><div id="omm-convos" class="omm-convos"></div></div>';
+    var row = document.querySelector('#ost-mesh-pavilion .ost-mesh-row');
+    if (row && row.parentNode) row.parentNode.insertBefore(sec, row); else shell.appendChild(sec);
+    renderChats();
+  }
+  function renderChats() {
+    var host = document.getElementById('omm-convos'); if (!host) return;
+    var list = []; try { if (window.OST_MESH && OST_MESH.pavilion && OST_MESH.pavilion._enumerateChats) list = OST_MESH.pavilion._enumerateChats() || []; } catch (_) {}
+    var unread = {}; try { unread = JSON.parse(localStorage.getItem('ost.mesh.unread.v1') || '{}') || {}; } catch (_) {}
+    if (!list.length) { host.innerHTML = '<div class="omm-empty">No conversations yet. Paste a peer address or invite below, or share your QR from Profile.</div>'; return; }
+    host.innerHTML = list.map(function (c) {
+      var u = unread[c.addr] || 0;
+      return '<button class="omm-convo" data-addr="' + esc(c.addr) + '"><img class="omm-convo-av" src="' + avatarDataUrl(c.addr) + '"><div class="omm-convo-mid"><div class="omm-convo-top"><span class="omm-convo-name">' + esc(shortW(c.addr)) + '</span><span class="omm-convo-time">' + ago(c.lastTs) + '</span></div><div class="omm-convo-prev">' + (c.lastRole === 'me' ? 'You: ' : '') + esc((c.preview || '').slice(0, 60)) + '</div></div>' + (u > 0 ? '<span class="omm-convo-unread">' + (u > 9 ? '9+' : u) + '</span>' : '') + '</button>';
+    }).join('');
+    host.querySelectorAll('[data-addr]').forEach(function (b) { b.addEventListener('click', function () { openConvo(b.getAttribute('data-addr')); }); });
+  }
+  function openConvo(addr) {
+    try { var u = JSON.parse(localStorage.getItem('ost.mesh.unread.v1') || '{}') || {}; delete u[addr]; localStorage.setItem('ost.mesh.unread.v1', JSON.stringify(u)); } catch (_) {}
+    var inp = document.getElementById('mesh-peer-addr'); if (inp) inp.value = addr;
+    try { if (window.OST_MESH && OST_MESH.pavilion && OST_MESH.pavilion._replayChatHistory) OST_MESH.pavilion._replayChatHistory(addr); } catch (_) {}
+    var sess = document.querySelector('#ost-mesh-pavilion .ost-mesh-session'); if (sess) sess.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    renderChats();
+  }
   function buildPlay(shell) {
     var sec = document.createElement('div'); sec.className = 'omm-section'; sec.setAttribute('data-mesh-view', 'play');
     sec.innerHTML = '<div class="omm-paybox"><div class="omm-h">&#127918; Play together</div><div class="omm-empty">Connect to a peer in Chats, then launch a fair multiplayer game (tic-tac-toe, chess, pool, and more) — moves are exchanged peer-to-peer and verified.</div><button class="omm-send" id="omm-play-go" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff">Open games</button></div>';
@@ -252,6 +363,8 @@
       shell.setAttribute('data-view', v);
       bar.querySelectorAll('.omm-tab').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-view') === v); });
       shell.scrollTop = 0;
+      clearBadge(v);
+      if (v === 'chats') renderChats();
       if (v === 'feed') { renderStories(); renderFeed(); }
       if (v === 'pay') { try { var to = document.getElementById('omm-pay-to'); if (to && !to.value && shell.__payTarget) to.value = shell.__payTarget; } catch (_) {} }
     }
@@ -274,8 +387,17 @@
     tag(root.querySelector('.ost-mesh-status'), 'chats');
     tag(root.querySelector('.ost-mesh-session'), 'chats');
     // new views
-    buildFeed(shell); buildPay(shell); buildPlay(shell);
+    buildChats(shell); buildFeed(shell); buildPay(shell); buildPlay(shell);
     buildTabbar(root, shell);
+    // Notifications: inbound messages badge the Chats tab + toast, and update the
+    // per-contact unread counts used by the conversation list.
+    window.addEventListener('mesh:incoming-message', function (e) {
+      var addr = e && e.detail && e.detail.addr;
+      try { var u = JSON.parse(localStorage.getItem('ost.mesh.unread.v1') || '{}') || {}; if (addr) u[addr] = (u[addr] || 0) + 1; localStorage.setItem('ost.mesh.unread.v1', JSON.stringify(u)); } catch (_) {}
+      if (currentView() !== 'chats') bumpBadge('chats', 1);
+      toast('New message' + (addr ? ' from ' + shortW(addr) : ''));
+      try { renderChats(); } catch (_) {}
+    });
     // hero quick-actions switch tabs on mobile
     var hero = root.querySelector('.ost-mesh-hero');
     if (hero) hero.addEventListener('click', function (e) {

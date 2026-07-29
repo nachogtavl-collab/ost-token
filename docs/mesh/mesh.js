@@ -745,6 +745,8 @@ class MeshPavilion {
     if (id && list.some((entry) => entry && entry.kind === kind && entry.payload && entry.payload.id === id)) return false;
     list.push({ role, kind, payload, ts: (payload && payload.ts) || Date.now() });
     this._saveChat(addr, list);
+    // Notify the social layer of an inbound message so it can badge/toast.
+    if (role === 'them') { try { window.dispatchEvent(new CustomEvent('mesh:incoming-message', { detail: { addr, kind, ts: Date.now(), preview: (payload && payload.text) || '' } })); } catch (_) {} }
     return true;
   }
   _replayChatHistory(addr) {

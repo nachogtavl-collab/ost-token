@@ -136,17 +136,21 @@ export class MeshHub {
     const wallet = String((body && body.wallet) || '').slice(0, 64);
     const text = String((body && body.text) || '').slice(0, 500).trim();
     const name = String((body && body.name) || '').slice(0, 40);
-    if (!text) return fail('empty_post');
+    // Optional inline image: a small client-resized data URL (cap ~160KB so the
+    // DO stays lean). Only accept image data URLs.
+    let img = String((body && body.img) || '');
+    if (!(/^data:image\/(png|jpeg|webp|gif);base64,/.test(img) && img.length <= 160000)) img = '';
+    if (!text && !img) return fail('empty_post');
     const now = Date.now();
     const id = 'f' + now + '-' + messageId().slice(0, 6);
-    const rec = { id, wallet, name, text, ts: now, expiresAt: now + FEED_TTL_MS };
+    const rec = { id, wallet, name, text, img, ts: now, expiresAt: now + FEED_TTL_MS };
     // reverse-time, zero-padded key so storage.list() returns newest-first.
     await this.state.storage.put(FEED_PREFIX + String(1e15 - now).padStart(16, '0') + ':' + id, rec);
     try {
       const all = await this.state.storage.list({ prefix: FEED_PREFIX });
       if (all.size > FEED_MAX) { const keys = [...all.keys()]; const del = keys.slice(FEED_MAX); if (del.length) await this.state.storage.delete(del).catch(() => {}); }
     } catch (_) {}
-    return json({ ok: true, post: { id, wallet, name, text, ts: now } });
+    return json({ ok: true, post: { id, wallet, name, text, img, ts: now } });
   }
   async feedRecent(limit) {
     const n = Math.max(1, Math.min(100, Number(limit) || 50));
@@ -155,7 +159,7 @@ export class MeshHub {
     const posts = [];
     for (const [, v] of listed) {
       if (v && Number(v.expiresAt || 0) > now) posts.push({
-        id: v.id, wallet: v.wallet, name: v.name, text: v.text, ts: v.ts,
+        id: v.id, wallet: v.wallet, name: v.name, text: v.text, img: v.img || '', ts: v.ts,
         likeCount: v.likes ? Object.keys(v.likes).length : 0,
         likedBy: v.likes ? Object.keys(v.likes) : [],
         replies: Array.isArray(v.replies) ? v.replies.slice(-20) : []
