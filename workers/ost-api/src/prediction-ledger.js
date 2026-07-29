@@ -176,9 +176,13 @@ export class PredictionLedger {
       // against). Settling against openPrice here would betray the line the desk
       // showed, so we use pos.priceToBeat (openPrice only as a legacy fallback).
       const settlePrice = Number(body.settlePrice);
-      if (!Number.isFinite(settlePrice)) {
-        // The caller (index.js) supplies the settle price from the settled round
-        // snapshot. No price => the round has not closed yet; NEVER guess.
+      // MUST be a real positive price. CRITICAL: the caller sends settlePrice=NaN
+      // when the close price isn't ready, and JSON.stringify(NaN) => null, and
+      // Number(null) === 0 which IS finite — so a plain isFinite check let a price
+      // of 0 through, settling EVERY position against 0 (0 < line => "no" always
+      // wins => all YES bets wrongly lost). Reject <= 0 so an unavailable price
+      // leaves the position OPEN to retry instead of mis-settling it.
+      if (!Number.isFinite(settlePrice) || settlePrice <= 0) {
         return json({ ok: false, error: 'settle_price_unavailable' }, 503);
       }
       const line = Number.isFinite(Number(pos.priceToBeat)) && Number(pos.priceToBeat) > 0
