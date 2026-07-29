@@ -136,7 +136,13 @@ export class MeshHub {
       existing = await this.state.storage.get(ID_PREFIX + address).catch(() => null);
     }
     if (existing && !isExpired(existing, now) && existing.bundle) {
-      const same = existing.bundle.kex === bundle.kex && existing.bundle.sig === bundle.sig;
+      // Compare by VALUE, not reference. kex/sig are JWK objects — `===` on two
+      // deserialized objects is always false, so the same identity re-announcing
+      // was wrongly rejected as identity_locked (409), which knocked the whole
+      // directory "offline" after the very first announce. Compare the canonical
+      // JSON so a genuine re-announce of the SAME keys succeeds.
+      const j = (o) => { try { return JSON.stringify(o); } catch (_) { return ''; } };
+      const same = j(existing.bundle.kex) === j(bundle.kex) && j(existing.bundle.sig) === j(bundle.sig);
       if (!same) {
         return fail('identity_locked: this address already has a different key bundle; it cannot be overwritten', 409);
       }

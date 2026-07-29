@@ -615,16 +615,23 @@ class MeshPavilion {
   }
 
   async _announceNow({ silent } = {}) {
-    try {
-      const data = await this._announce();
-      if (this.dirEl) this.dirEl.textContent = 'live';
-      if (!silent) this._setStatus('Directory registration live. Address and invite are ready.', 'ok');
-      return data;
-    } catch (err) {
-      if (this.dirEl) this.dirEl.textContent = 'offline';
-      if (!silent) this._setStatus('Directory registration failed. Use Copy invite instead. ' + err.message, 'warn');
-      throw err;
+    // Retry a few times before declaring offline — a single transient failure
+    // (rate-limit / cold worker) should not knock the directory offline.
+    let lastErr = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const data = await this._announce();
+        if (this.dirEl) this.dirEl.textContent = 'live';
+        if (!silent) this._setStatus('Directory registration live. Address and invite are ready.', 'ok');
+        return data;
+      } catch (err) {
+        lastErr = err;
+        if (attempt < 2) await new Promise((r) => setTimeout(r, 700 * (attempt + 1)));
+      }
     }
+    if (this.dirEl) this.dirEl.textContent = 'offline';
+    if (!silent) this._setStatus('Directory registration failed. Use Copy invite instead. ' + (lastErr && lastErr.message || ''), 'warn');
+    throw lastErr || new Error('announce failed');
   }
 
   async _copyAddress() {
