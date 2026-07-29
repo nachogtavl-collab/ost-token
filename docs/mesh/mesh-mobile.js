@@ -185,7 +185,7 @@
     fetch(API + '/mesh/v1/feed/recent?limit=60', { cache: 'no-store' })
       .then(function (r) { return r.json(); })
       .then(function (j) {
-        var shared = (j && j.posts) ? j.posts.map(function (p) { return { id: p.id, who: p.wallet || p.name, text: p.text, ts: p.ts }; }) : [];
+        var shared = (j && j.posts) ? j.posts.map(function (p) { return { id: p.id, who: p.wallet || p.name, text: p.text, ts: p.ts, likeCount: p.likeCount || 0, likedBy: p.likedBy || [], replies: p.replies || [] }; }) : [];
         var seen = {}, merged = [];
         local.concat(shared).forEach(function (p) { var k = p.id || (p.who + ':' + p.ts); if (!seen[k]) { seen[k] = 1; merged.push(p); } });
         merged.sort(function (a, b) { return (b.ts || 0) - (a.ts || 0); });
