@@ -121,6 +121,17 @@
       '.omm-convo-time{color:#64809a;font-size:11px;flex:0 0 auto}',
       '.omm-convo-prev{color:#8fb3cc;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
       '.omm-convo-unread{flex:0 0 auto;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#00ffb0;color:#04121a;font-size:11px;font-weight:900;display:grid;place-items:center}',
+      // profile
+      '.omm-profilebox{border:1px solid rgba(94,234,212,.2);border-radius:16px;background:rgba(9,14,26,.6);padding:14px}',
+      '.omm-stats{display:flex;gap:8px}',
+      '.omm-stat{flex:1;text-align:center;background:rgba(2,6,23,.5);border:1px solid rgba(148,163,184,.18);border-radius:13px;padding:12px 6px}',
+      '.omm-stat b{display:block;font-size:20px;color:#eaf6ff;font-weight:900}',
+      '.omm-stat span{font-size:11px;color:#8fb3cc;letter-spacing:.4px}',
+      // games
+      '.omm-games{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}',
+      '.omm-game{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 8px;border-radius:14px;border:1px solid rgba(148,163,184,.2);background:linear-gradient(180deg,rgba(30,41,59,.6),rgba(15,23,42,.6));color:#eaf6ff;font-weight:800;font-size:13px;cursor:pointer}',
+      '.omm-game .gi{font-size:26px;line-height:1}',
+      '.omm-game:hover{border-color:rgba(94,234,212,.5)}',
       '.omm-empty{color:#7fa8c4;font-size:12.5px;text-align:center;padding:20px 8px}',
       '.omm-field{display:flex;flex-direction:column;gap:5px;margin-bottom:11px}',
       '.omm-field label{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#7fd8ff}',
@@ -130,6 +141,19 @@
       '.omm-toggle button.on{background:linear-gradient(135deg,#00d4ff,#00ff9f);color:#04121a;border-color:transparent}',
       '.omm-send{width:100%;border:none;border-radius:13px;padding:13px;font-weight:900;font-size:14px;cursor:pointer;background:linear-gradient(135deg,#f0c674,#e0a03a);color:#1a1206;margin-top:4px}',
       '.omm-pay-status{font-size:12px;color:#9bcbe6;margin-top:10px;min-height:16px}',
+      '.omm-pay-tabs{display:flex;gap:6px;margin-bottom:12px;background:rgba(2,6,23,.5);border-radius:12px;padding:4px}',
+      '.omm-pay-tabs button{flex:1;padding:9px;border:none;border-radius:9px;background:none;color:#9bcbe6;font-weight:800;cursor:pointer}',
+      '.omm-pay-tabs button.on{background:linear-gradient(135deg,#00d4ff,#00ff9f);color:#04121a}',
+      '.omm-scanrow{display:flex;gap:8px}.omm-scanrow input{flex:1}',
+      '.omm-scanbtn{border:1px solid rgba(94,234,212,.4);background:rgba(94,234,212,.1);color:#7ff0d8;border-radius:12px;padding:0 14px;font-weight:800;cursor:pointer;white-space:nowrap}',
+      '.omm-recv{text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px}',
+      '.omm-recv-qr img{width:220px;height:220px;border-radius:16px;background:#fff;padding:10px}',
+      '.omm-recv-addr{font-family:ui-monospace,monospace;color:#9fffd0;font-size:13px}',
+      '.omm-scan-overlay{position:fixed;inset:0;z-index:1000700;background:#000;display:flex;align-items:center;justify-content:center}',
+      '.omm-scan-overlay[hidden]{display:none}',
+      '.omm-scan-overlay video{width:100%;height:100%;object-fit:cover}',
+      '.omm-scan-frame{position:absolute;width:64vw;height:64vw;max-width:300px;max-height:300px;border:3px solid #00ffb0;border-radius:24px;box-shadow:0 0 0 100vmax rgba(0,0,0,.5)}',
+      '.omm-scan-close{position:fixed;bottom:calc(28px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:2;border:none;border-radius:999px;padding:12px 28px;font-weight:800;background:#fff;color:#04121a;cursor:pointer}',
       '.omm-h{font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#7fd8ff;font-weight:800;margin:0 0 10px}',
       '.omm-stories-row{display:flex;gap:10px;overflow-x:auto;padding:2px 0 12px;-webkit-overflow-scrolling:touch}',
       '.omm-story{flex:0 0 auto;display:grid;gap:4px;justify-items:center;background:none;border:none;cursor:pointer;width:64px}',
@@ -149,6 +173,19 @@
       '  .omm-tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;color:#7fa8c4;font-size:10px;font-weight:800;padding:6px 2px;cursor:pointer}',
       '  .omm-tab .i{font-size:20px;line-height:1}',
       '  .omm-tab.on{color:#00ffb0}',
+      // Close button: pin it TOP-RIGHT of the full-screen sheet, always tappable.
+      '  #ost-mesh-pavilion.is-open .ost-mesh-close{position:fixed;top:calc(8px + env(safe-area-inset-top));right:12px;z-index:40;width:38px;height:38px;background:rgba(6,10,20,.85);backdrop-filter:blur(6px)}',
+      // Slim the original head so it does not fight the wallet hero.
+      '  #ost-mesh-pavilion.is-open .ost-mesh-head{order:0;padding-right:52px}',
+      '  #ost-mesh-pavilion.is-open .ost-mesh-head h2{font-size:15px}',
+      '  #ost-mesh-pavilion.is-open .ost-mesh-head .sub{display:none}',
+      // The raw identity pills (address/fingerprint/directory) are dev detail —
+      // hide them on mobile so the Profile reads like a social profile; keep the
+      // action buttons (copy/QR/scan/rotate) in a tidy row.
+      '  #ost-mesh-pavilion.is-open .ost-mesh-id{background:none;border:none;padding:0;gap:0}',
+      '  #ost-mesh-pavilion.is-open .ost-mesh-id > div:not(.ost-mesh-id-actions){display:none}',
+      '  #ost-mesh-pavilion.is-open .ost-mesh-id-actions{flex-wrap:wrap;gap:7px}',
+      '  #ost-mesh-pavilion.is-open .ost-mesh-id-actions button{flex:1;min-width:88px}',
       '}'
     ].join('');
     document.head.appendChild(s);
@@ -264,34 +301,59 @@
     var rs = e.target.closest('[data-rs]'); if (rs) { sendReply(rs.getAttribute('data-rs')); return; }
   }
   // Render the SHARED timeline (worker) merged with any unsynced local posts.
+  // NO pre-paint of an empty state (that caused the "jumping" between "no posts"
+  // and the async load). Show a one-time loading line, then paint once per fetch;
+  // on a transient failure keep the current render instead of flashing empty.
+  var feedEverLoaded = false, feedFetching = false;
   function renderFeed() {
-    var local = loadFeed().filter(function (p) { return p.pending; });
-    paintFeed(local.concat([]));   // instant paint of pending; shared arrives async
+    var listEl = document.getElementById('omm-feed-list'); if (!listEl) return;
+    if (!feedEverLoaded && !listEl.children.length) listEl.innerHTML = '<div class="omm-empty">Loading feed…</div>';
+    if (feedFetching) return; feedFetching = true;
     fetch(API + '/mesh/v1/feed/recent?limit=60', { cache: 'no-store' })
       .then(function (r) { return r.json(); })
       .then(function (j) {
         var shared = (j && j.posts) ? j.posts.map(function (p) { return { id: p.id, who: p.wallet || p.name, text: p.text, img: p.img || '', ts: p.ts, likeCount: p.likeCount || 0, likedBy: p.likedBy || [], replies: p.replies || [] }; }) : [];
+        var local = loadFeed().filter(function (p) { return p.pending; });
         var seen = {}, merged = [];
         local.concat(shared).forEach(function (p) { var k = p.id || (p.who + ':' + p.ts); if (!seen[k]) { seen[k] = 1; merged.push(p); } });
         merged.sort(function (a, b) { return (b.ts || 0) - (a.ts || 0); });
+        feedEverLoaded = true;
         paintFeed(merged);
         notifyFeedEngagement(shared);
       })
-      .catch(function () { paintFeed(loadFeed()); });   // offline: show whatever we have locally
+      .catch(function () { if (!feedEverLoaded) { var l = loadFeed().filter(function (p) { return p.pending; }); if (l.length) paintFeed(l); } })
+      .then(function () { feedFetching = false; });
   }
 
   function buildPay(shell) {
     var sec = document.createElement('div'); sec.className = 'omm-section'; sec.setAttribute('data-mesh-view', 'pay');
     sec.innerHTML =
       '<div class="omm-paybox">' +
-        '<div class="omm-h">&#128176; Send money</div>' +
-        '<div class="omm-toggle" id="omm-tok"><button data-tok="ostc" class="on">OSTC</button><button data-tok="sol">SOL</button></div>' +
-        '<div class="omm-field" style="margin-top:11px"><label>Recipient wallet</label><input id="omm-pay-to" placeholder="Solana wallet address" autocomplete="off"></div>' +
-        '<div class="omm-field"><label>Amount</label><input id="omm-pay-amt" type="number" min="0" step="any" placeholder="0.00"></div>' +
-        '<button class="omm-send" id="omm-pay-send">Send OSTC</button>' +
-        '<div class="omm-pay-status" id="omm-pay-status">Sends real devnet value from your connected wallet.</div>' +
+        '<div class="omm-pay-tabs" id="omm-pay-tabs"><button data-pt="send" class="on">Send</button><button data-pt="receive">Receive</button></div>' +
+        '<div id="omm-pay-send-pane">' +
+          '<div class="omm-toggle" id="omm-tok"><button data-tok="ostc" class="on">OSTC</button><button data-tok="sol">SOL</button></div>' +
+          '<div class="omm-field" style="margin-top:11px"><label>Recipient wallet</label><div class="omm-scanrow"><input id="omm-pay-to" placeholder="Wallet address" autocomplete="off"><button class="omm-scanbtn" id="omm-pay-scan">&#128247; Scan</button></div></div>' +
+          '<div class="omm-field"><label>Amount</label><input id="omm-pay-amt" type="number" min="0" step="any" inputmode="decimal" placeholder="0.00"></div>' +
+          '<button class="omm-send" id="omm-pay-send">Send OSTC</button>' +
+          '<div class="omm-pay-status" id="omm-pay-status">Sends real devnet value from your connected wallet.</div>' +
+        '</div>' +
+        '<div id="omm-pay-recv-pane" hidden><div class="omm-recv"><div class="omm-recv-qr" id="omm-recv-qr"></div><div class="omm-recv-addr" id="omm-recv-addr"></div><button class="omm-send" id="omm-recv-copy" style="background:rgba(94,234,212,.16);color:#7ff0d8">Copy my address</button><div class="omm-pay-status">Have someone scan this to pay you.</div></div></div>' +
+        '<div class="omm-scan-overlay" id="omm-scan-overlay" hidden><video id="omm-scan-video" playsinline></video><div class="omm-scan-frame"></div><button class="omm-scan-close" id="omm-scan-close">Cancel</button></div>' +
       '</div>';
     shell.appendChild(sec);
+    // Send/Receive tab switch
+    sec.querySelectorAll('#omm-pay-tabs button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        sec.querySelectorAll('#omm-pay-tabs button').forEach(function (x) { x.classList.remove('on'); }); b.classList.add('on');
+        var recv = b.getAttribute('data-pt') === 'receive';
+        document.getElementById('omm-pay-send-pane').hidden = recv;
+        document.getElementById('omm-pay-recv-pane').hidden = !recv;
+        if (recv) renderReceive();
+      });
+    });
+    sec.querySelector('#omm-pay-scan').addEventListener('click', startScan);
+    sec.querySelector('#omm-scan-close').addEventListener('click', stopScan);
+    sec.querySelector('#omm-recv-copy').addEventListener('click', function () { var w = wallet(); if (w && navigator.clipboard) navigator.clipboard.writeText(w).then(function () { toast('Address copied'); }); });
     var tok = 'ostc';
     sec.querySelectorAll('#omm-tok button').forEach(function (b) {
       b.addEventListener('click', function () { tok = b.getAttribute('data-tok'); sec.querySelectorAll('#omm-tok button').forEach(function (x) { x.classList.remove('on'); }); b.classList.add('on'); sec.querySelector('#omm-pay-send').textContent = 'Send ' + tok.toUpperCase(); });
@@ -323,6 +385,33 @@
     } catch (e) { fail(e); }
   }
 
+  function statTile(n, l) { return '<div class="omm-stat"><b>' + n + '</b><span>' + l + '</span></div>'; }
+  function buildProfile(shell) {
+    var sec = document.createElement('div'); sec.className = 'omm-section'; sec.setAttribute('data-mesh-view', 'profile');
+    sec.innerHTML = '<div class="omm-profilebox"><div class="omm-stats" id="omm-stats">' + statTile('—', 'Posts') + statTile('—', 'Likes') + statTile('—', 'Contacts') + '</div>' +
+      '<div class="omm-h" style="margin-top:14px">Your posts</div><div class="omm-feed-list" id="omm-my-posts"><div class="omm-empty">Loading…</div></div></div>';
+    var hero = document.querySelector('#ost-mesh-pavilion .ost-mesh-hero');
+    if (hero && hero.parentNode) hero.parentNode.insertBefore(sec, hero.nextSibling); else shell.appendChild(sec);
+    renderProfile();
+  }
+  function renderProfile() {
+    var me = wallet(); var statsEl = document.getElementById('omm-stats'), myEl = document.getElementById('omm-my-posts');
+    if (!statsEl) return;
+    var contacts = 0; try { contacts = (window.OST_MESH && OST_MESH.pavilion && OST_MESH.pavilion._enumerateChats() || []).length; } catch (_) {}
+    fetch(API + '/mesh/v1/feed/recent?limit=60', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
+      var posts = (j && j.posts) || [];
+      var mine = me ? posts.filter(function (p) { return p.wallet === me; }) : [];
+      var likes = mine.reduce(function (s, p) { return s + (p.likeCount || 0); }, 0);
+      statsEl.innerHTML = statTile(mine.length, 'Posts') + statTile(likes, 'Likes') + statTile(contacts, 'Contacts');
+      if (myEl) {
+        if (!mine.length) myEl.innerHTML = '<div class="omm-empty">' + (me ? 'You haven’t posted yet — share something in the Feed tab.' : 'Connect your wallet to build your profile.') + '</div>';
+        else myEl.innerHTML = mine.map(function (p) {
+          return '<div class="omm-post">' + (p.text ? '<div class="omm-post-body">' + esc(p.text) + '</div>' : '') + (p.img ? '<img class="omm-post-img" src="' + esc(p.img) + '">' : '') +
+            '<div class="omm-post-actions"><span class="omm-pa">&#9829; ' + (p.likeCount || 0) + '</span><span class="omm-pa">&#128172; ' + ((p.replies || []).length) + '</span><span class="omm-post-time" style="margin-left:auto">' + ago(p.ts) + '</span></div></div>';
+        }).join('');
+      }
+    }).catch(function () { statsEl.innerHTML = statTile('—', 'Posts') + statTile('—', 'Likes') + statTile(contacts, 'Contacts'); });
+  }
   function buildChats(shell) {
     var sec = document.createElement('div'); sec.className = 'omm-section'; sec.setAttribute('data-mesh-view', 'chats');
     sec.innerHTML = '<div class="omm-chatsbox"><div class="omm-h">&#128172; Conversations</div><div id="omm-convos" class="omm-convos"></div></div>';
@@ -348,11 +437,56 @@
     var sess = document.querySelector('#ost-mesh-pavilion .ost-mesh-session'); if (sess) sess.scrollIntoView({ behavior: 'smooth', block: 'start' });
     renderChats();
   }
+  function ensureQRLib() {
+    if (typeof window.qrcode === 'function') return Promise.resolve(true);
+    if (ensureQRLib._p) return ensureQRLib._p;
+    ensureQRLib._p = new Promise(function (res) { var s = document.createElement('script'); s.src = 'vendor/qrcode-generator.js'; s.onload = function () { res(typeof window.qrcode === 'function'); }; s.onerror = function () { res(false); }; document.head.appendChild(s); });
+    return ensureQRLib._p;
+  }
+  function renderReceive() {
+    var w = wallet(); var qrEl = document.getElementById('omm-recv-qr'), addrEl = document.getElementById('omm-recv-addr');
+    if (addrEl) addrEl.textContent = w ? (w.slice(0, 8) + '…' + w.slice(-6)) : 'Connect a wallet';
+    if (!qrEl) return;
+    if (!w) { qrEl.innerHTML = '<div class="omm-empty">Connect your wallet to show your pay code.</div>'; return; }
+    ensureQRLib().then(function () { try { var q = window.qrcode(0, 'M'); q.addData(w); q.make(); qrEl.innerHTML = '<img src="' + q.createDataURL(6, 3) + '" alt="pay code">'; } catch (_) { qrEl.innerHTML = '<div class="omm-empty">' + esc(w) + '</div>'; } });
+  }
+  var scanStream = null, scanRAF = 0;
+  function startScan() {
+    var ov = document.getElementById('omm-scan-overlay'), vid = document.getElementById('omm-scan-video');
+    if (!('BarcodeDetector' in window)) { toast('Scan-to-pay needs a camera browser (Android Chrome). Paste the address for now.'); return; }
+    if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) { toast('Camera unavailable here.'); return; }
+    ov.hidden = false;
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }).then(function (stream) {
+      scanStream = stream; vid.srcObject = stream; vid.play();
+      var det = new window.BarcodeDetector({ formats: ['qr_code'] });
+      var tick = function () { if (!scanStream) return; det.detect(vid).then(function (codes) { if (codes && codes[0]) { onScan(codes[0].rawValue); return; } scanRAF = requestAnimationFrame(tick); }).catch(function () { scanRAF = requestAnimationFrame(tick); }); };
+      scanRAF = requestAnimationFrame(tick);
+    }).catch(function () { ov.hidden = true; toast('Camera permission denied.'); });
+  }
+  function stopScan() { var ov = document.getElementById('omm-scan-overlay'); if (ov) ov.hidden = true; if (scanRAF) cancelAnimationFrame(scanRAF); scanRAF = 0; if (scanStream) { scanStream.getTracks().forEach(function (t) { t.stop(); }); scanStream = null; } }
+  function onScan(raw) {
+    stopScan();
+    var m = String(raw || '').trim().match(/[1-9A-HJ-NP-Za-km-z]{32,44}/);   // base58 pubkey, also inside solana: URIs / mesh invites
+    if (m) { var to = document.getElementById('omm-pay-to'); if (to) { to.value = m[0]; toast('Scanned ' + shortW(m[0])); } } else toast('No wallet address found in that code.');
+  }
+  var GAME_META = { tictactoe: { icon: '⭕', label: 'Tic-Tac-Toe' }, chess: { icon: '♟️', label: 'Chess' }, pool8: { icon: '🎱', label: '8-Ball Pool' }, cuppong: { icon: '🥤', label: 'Cup Pong' }, minigolf: { icon: '⛳', label: 'Mini Golf' } };
   function buildPlay(shell) {
     var sec = document.createElement('div'); sec.className = 'omm-section'; sec.setAttribute('data-mesh-view', 'play');
-    sec.innerHTML = '<div class="omm-paybox"><div class="omm-h">&#127918; Play together</div><div class="omm-empty">Connect to a peer in Chats, then launch a fair multiplayer game (tic-tac-toe, chess, pool, and more) — moves are exchanged peer-to-peer and verified.</div><button class="omm-send" id="omm-play-go" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff">Open games</button></div>';
+    sec.innerHTML = '<div class="omm-paybox">' +
+      '<div class="omm-h">⚔ Fair games — provably fair, for OSTC</div>' +
+      '<button class="omm-send" id="omm-fair" style="background:linear-gradient(135deg,#00d4ff,#00ff9f);color:#04121a">Open Fair Games arena</button>' +
+      '<div class="omm-h" style="margin-top:16px">🎮 Peer games</div><div class="omm-games" id="omm-games"><div class="omm-empty">Loading games…</div></div>' +
+      '<div class="omm-pay-status">Peer games run directly with a connected contact — moves are exchanged P2P and verified. Fair games settle in OSTC with a provably-fair seed.</div></div>';
     shell.appendChild(sec);
-    sec.querySelector('#omm-play-go').addEventListener('click', function () { try { window.dispatchEvent(new CustomEvent('mesh:open-games')); } catch (_) {} });
+    sec.querySelector('#omm-fair').addEventListener('click', function () { try { if (window.OST_MESH_ARENA && OST_MESH_ARENA.open) OST_MESH_ARENA.open(); else window.dispatchEvent(new CustomEvent('mesh:open-games')); } catch (_) {} });
+    renderGames();
+  }
+  function renderGames() {
+    var host = document.getElementById('omm-games'); if (!host) return;
+    var names = []; try { if (window.OST_MESH_GAMES && OST_MESH_GAMES.available) names = OST_MESH_GAMES.available() || []; } catch (_) {}
+    if (!names.length) { host.innerHTML = '<div class="omm-empty">Games load when you connect to a peer — open a chat first, or tap Fair Games above.</div>'; return; }
+    host.innerHTML = names.map(function (n) { var m = GAME_META[n] || { icon: '🎮', label: n }; return '<button class="omm-game" data-game="' + esc(n) + '"><span class="gi">' + m.icon + '</span>' + esc(m.label) + '</button>'; }).join('');
+    host.querySelectorAll('[data-game]').forEach(function (b) { b.addEventListener('click', function () { try { if (window.OST_MESH_GAMES && OST_MESH_GAMES.open) OST_MESH_GAMES.open(b.getAttribute('data-game')); } catch (_) {} }); });
   }
 
   function buildTabbar(root, shell) {
@@ -364,7 +498,9 @@
       bar.querySelectorAll('.omm-tab').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-view') === v); });
       shell.scrollTop = 0;
       clearBadge(v);
+      if (v === 'profile') renderProfile();
       if (v === 'chats') renderChats();
+      if (v === 'play') renderGames();
       if (v === 'feed') { renderStories(); renderFeed(); }
       if (v === 'pay') { try { var to = document.getElementById('omm-pay-to'); if (to && !to.value && shell.__payTarget) to.value = shell.__payTarget; } catch (_) {} }
     }
@@ -387,7 +523,7 @@
     tag(root.querySelector('.ost-mesh-status'), 'chats');
     tag(root.querySelector('.ost-mesh-session'), 'chats');
     // new views
-    buildChats(shell); buildFeed(shell); buildPay(shell); buildPlay(shell);
+    buildProfile(shell); buildChats(shell); buildFeed(shell); buildPay(shell); buildPlay(shell);
     buildTabbar(root, shell);
     // Notifications: inbound messages badge the Chats tab + toast, and update the
     // per-contact unread counts used by the conversation list.

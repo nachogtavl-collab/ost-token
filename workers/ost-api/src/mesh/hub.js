@@ -124,6 +124,13 @@ export class MeshHub {
         const body = await request.json().catch(() => ({}));
         return this.feedReply(body);
       }
+      // Admin moderation: clear the whole feed, or delete one post. Gated by a
+      // secret so only the operator can wipe test/spam data — keeps the feed real.
+      if (method === 'POST' && path === '/mesh/v1/feed/clear') {
+        const body = await request.json().catch(() => ({}));
+        if (!this.env || !this.env.MESH_ADMIN_KEY || body.key !== this.env.MESH_ADMIN_KEY) return fail('unauthorized', 403);
+        return this.feedClear(body.postId);
+      }
 
       return fail('mesh route not found: ' + method + ' ' + path, 404);
     } catch (error) {
@@ -196,6 +203,14 @@ export class MeshHub {
     if (v.replies.length > 50) v.replies = v.replies.slice(-50);
     await this.state.storage.put(found.key, v);
     return json({ ok: true, replyCount: v.replies.length, replies: v.replies.slice(-20) });
+  }
+
+  async feedClear(postId) {
+    const listed = await this.state.storage.list({ prefix: FEED_PREFIX });
+    const del = [];
+    for (const [k, v] of listed) { if (!postId || (v && v.id === postId)) del.push(k); }
+    if (del.length) await this.state.storage.delete(del).catch(() => {});
+    return json({ ok: true, cleared: del.length });
   }
 
   async announce(body) {
