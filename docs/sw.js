@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ost-pwa-cache-v393';
+const CACHE_NAME = 'ost-pwa-cache-v394';
 const RUNTIME_CACHE = 'ost-pwa-runtime-v253';
 const CACHE_PREFIX = 'ost-pwa-';
 
@@ -33,7 +33,7 @@ const PRECACHE_PATHS = [
   './ost-world-bubble.js?v=4',
   './ost-shortcuts.js?v=1',
   './ost-games-lanes.js?v=1',
-  './ost-balance.js?v=2',
+  './ost-balance.js?v=3',
   './ost-onchain-sync.js?v=1',
   './ost-loan-usd.js?v=1',
   './ost-currency-colors.css?v=1',

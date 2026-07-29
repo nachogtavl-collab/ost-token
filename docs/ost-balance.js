@@ -58,12 +58,40 @@
       .then(function (d) {
         // Only replace a good answer with another good answer. A failed read
         // must not wipe what we already knew.
-        if (d && d.ok) { state.truth = d; state.at = Date.now(); emit(); checkDrift(); }
+        if (d && d.ok) { state.truth = d; state.at = Date.now(); }
         state.inflight = null;
-        return state.truth;
+        return backfillOnchain(w).then(function () { emit(); checkDrift(); return state.truth; });
       })
-      .catch(function () { state.inflight = null; return state.truth; });
+      .catch(function () { state.inflight = null; return backfillOnchain(w).then(function () { emit(); return state.truth; }); });
     return state.inflight;
+  }
+
+  // The Cloudflare worker's RPC can be 403'd/rate-limited (its /balance/truth
+  // degrades), but the BROWSER can reach public devnet directly with failover.
+  // When a place is missing/degraded/stale, read it client-side so on-chain funds
+  // are never shown as unknown/zero just because the server RPC is having a moment.
+  var OSTG_MINT = 'DfgxMbdN49AX2Za9LuvsyixF1jgVh45RbgWYSGonxQos';
+  function readClientMint(w, mintStr) {
+    try {
+      var W = window.OST_WALLET, w3 = window.solanaWeb3;
+      if (!(W && W.rpcCall && W.associatedAddress && W.constants && w3)) return Promise.resolve(null);
+      var ata = W.associatedAddress(new w3.PublicKey(mintStr), new w3.PublicKey(w), false, W.constants.TOKEN_2022_PROGRAM_ID, W.constants.ASSOCIATED_TOKEN_PROGRAM_ID);
+      return W.rpcCall(function (c) { return c.getTokenAccountBalance(ata); })
+        .then(function (r) { return r && r.value ? (Number(r.value.uiAmount) || 0) : 0; })
+        .catch(function (e) { return /could not find account/i.test(String(e && e.message || e)) ? 0 : null; });
+    } catch (_) { return Promise.resolve(null); }
+  }
+  function backfillOnchain(w) {
+    if (!w) return Promise.resolve();
+    var t = state.truth || (state.truth = { ok: true, places: {}, derived: {}, wallet: w, readAt: Date.now(), degraded: true });
+    if (!t.places) t.places = {};
+    var ostcMint = (window.OST_CONFIG && OST_CONFIG.mint) || null;
+    function needs(name) { var p = t.places[name]; return !p || !p.ok || p.value == null || p.stale; }
+    var jobs = [];
+    if (ostcMint && needs('onchainOstc')) jobs.push(readClientMint(w, ostcMint).then(function (v) { if (v != null) t.places.onchainOstc = { value: v, ok: true, source: 'client-rpc' }; }));
+    if (needs('onchainOstg')) jobs.push(readClientMint(w, OSTG_MINT).then(function (v) { if (v != null) t.places.onchainOstg = { value: v, ok: true, source: 'client-rpc' }; }));
+    if (!jobs.length) return Promise.resolve();
+    return Promise.all(jobs).then(function () { state.at = Date.now(); }).catch(function () {});
   }
 
   function emit() {

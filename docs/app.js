@@ -2211,19 +2211,51 @@
   let predictionOrderShareAllLastAt = 0;
   window.OST_CONFIG = OST_CONFIG;
 
-  // Initialize Solana connection
+  // ---- Solana RPC with FAILOVER -------------------------------------------
+  // The app used to depend on ONE RPC (Helius). When that key rate-limits or 401s
+  // (free-tier quota returns "invalid api key"), blockhash + balance reads fail,
+  // transactions die ("failed to get recent blockhash"), and the wallet looks
+  // "disconnected" with wrong funds. Now we keep an ordered RPC list and rotate to
+  // the next healthy endpoint on any endpoint error, so one flaky provider can
+  // never break the money path.
+  var RPC_LIST = (function () {
+    var seen = {}, out = [];
+    [OST_CONFIG.rpcUrl, 'https://api.devnet.solana.com'].forEach(function (u) { if (u && /^https:\/\//.test(u) && !seen[u]) { seen[u] = 1; out.push(u); } });
+    return out.length ? out : ['https://api.devnet.solana.com'];
+  })();
+  var RPC_INDEX = 0;
+  function currentRpcUrl() { return RPC_LIST[RPC_INDEX % RPC_LIST.length]; }
   function getSolanaConnection() {
-    // Prefer the dedicated RPC (Helius) delivered at runtime by /rpc-config;
-    // rebuild the connection if the URL changed after the config arrived.
-    var url = (typeof window !== 'undefined' && window.OST_SOLANA_RPC) || OST_CONFIG.rpcUrl;
+    var url = currentRpcUrl();
     if (typeof solanaWeb3 !== 'undefined' && (!solanaConnection || solanaConnection.__ostUrl !== url)) {
       solanaConnection = new solanaWeb3.Connection(url, 'confirmed');
       solanaConnection.__ostUrl = url;
     }
     return solanaConnection;
   }
-  // Fetch the dedicated devnet RPC from the worker SECRET (not committed) and
-  // repoint every Solana read/tx at it — kills the public-devnet 429s.
+  function isRpcEndpointError(e) {
+    var m = String((e && (e.message || e)) || '');
+    return /\b401\b|\b403\b|\b429\b|invalid api key|unauthorized|too many requests|forbidden|failed to fetch|networkerror|load failed|structerror|getlatestblockhash|recent blockhash|rate.?limit/i.test(m);
+  }
+  function rotateRpc() {
+    if (RPC_LIST.length < 2) return false;
+    RPC_INDEX = (RPC_INDEX + 1) % RPC_LIST.length;
+    solanaConnection = null;
+    try { window.OST_SOLANA_RPC = currentRpcUrl(); } catch (_) {}
+    return true;
+  }
+  // Run an RPC op against the current endpoint; on an endpoint failure, rotate and
+  // retry across the whole list. Exposed on OST_WALLET so any module can use it.
+  async function rpcCall(fn) {
+    var lastErr = null;
+    for (var i = 0; i < RPC_LIST.length; i++) {
+      try { return await fn(getSolanaConnection()); }
+      catch (e) { lastErr = e; if (isRpcEndpointError(e) && rotateRpc()) continue; throw e; }
+    }
+    throw lastErr || new Error('all RPC endpoints failed');
+  }
+  // Fetch the dedicated devnet RPC from the worker SECRET (not committed). It
+  // becomes the PRIMARY, with public devnet kept as an automatic fallback.
   (function loadDedicatedRpc() {
     try {
       var base = ((typeof window !== 'undefined' && window.OST_API_BASE) || 'https://ost-api.nachogtavl.workers.dev').replace(/\/$/, '');
@@ -2231,9 +2263,11 @@
         .then(function (r) { return r.json(); })
         .then(function (c) {
           if (c && typeof c.rpc === 'string' && /^https:\/\//.test(c.rpc)) {
+            RPC_LIST = [c.rpc, 'https://api.devnet.solana.com'].filter(function (u, i, a) { return u && a.indexOf(u) === i; });
+            RPC_INDEX = 0;
             window.OST_SOLANA_RPC = c.rpc;
             OST_CONFIG.rpcUrl = c.rpc;
-            solanaConnection = null;   // force rebuild on Helius for every subsequent op
+            solanaConnection = null;   // rebuild on the dedicated RPC
             try { window.dispatchEvent(new CustomEvent('ost:rpc-ready', { detail: { rpc: c.rpc } })); } catch (_) {}
           }
         }).catch(function () {});
@@ -2252,13 +2286,14 @@
   var BLOCKHASH_TTL = 20000;           // refresh well before the ~60s expiry
 
   function refreshBlockhash(force) {
-    var conn = getSolanaConnection();
-    if (!conn) return Promise.resolve(null);
+    if (!getSolanaConnection()) return Promise.resolve(null);
     if (_bhInflight) return _bhInflight;
     if (!force && _bhCache && Date.now() - _bhCache.at < BLOCKHASH_TTL) {
       return Promise.resolve(_bhCache);
     }
-    _bhInflight = conn.getLatestBlockhash('confirmed').then(function (bh) {
+    // Failover: if the primary RPC 401s/429s on getLatestBlockhash, rotate to the
+    // public fallback and retry — this is the "failed to get recent blockhash" fix.
+    _bhInflight = rpcCall(function (c) { return c.getLatestBlockhash('confirmed'); }).then(function (bh) {
       _bhCache = { blockhash: bh.blockhash, lastValidBlockHeight: bh.lastValidBlockHeight, at: Date.now() };
       _bhInflight = null;
       return _bhCache;
@@ -3716,12 +3751,13 @@
   // decodeTokenBalance — that one is the truth.
   async function getOstBalanceForAddress(pubkeyInput) {
     try {
-      const conn = getSolanaConnection();
-      if (!conn) return undefined;          // not "zero" — "not known yet"
+      if (!getSolanaConnection()) return undefined;   // not "zero" — "not known yet"
       const owner = toPublicKey(pubkeyInput);
       const mintPk = new solanaWeb3.PublicKey(OST_CONFIG.mint);
       const ata = getAssociatedTokenAddressSync(mintPk, owner, false, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
-      const ataInfo = await conn.getAccountInfo(ata);
+      // Failover across RPCs so a flaky provider returns UNKNOWN (kept last-known
+      // by callers) at worst — never a false zero, never a fake "disconnected".
+      const ataInfo = await rpcCall(function (c) { return c.getAccountInfo(ata); });
       return decodeTokenBalance(ataInfo);
     } catch (err) {
       console.warn('[balance] OST read failed — reporting UNKNOWN, not zero:', err && err.message);
@@ -6720,6 +6756,8 @@
     onReady: onWalletReady,     // fires immediately if already connected — late modules never miss it
     subscribe: onWalletReady,
     getConnection: getSolanaConnection,
+    rpcCall: rpcCall,           // failover-wrapped RPC op: fn(conn) -> result, rotates on endpoint error
+    rotateRpc: rotateRpc,
     getOstBalance: getOstBalanceForAddress,
     ensureAta: ensureOstAssociatedTokenAccount,
     ensureFee: ensureWalletFeeBalance,
