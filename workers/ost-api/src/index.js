@@ -336,6 +336,39 @@ async function fetchBtcRoundOpenPriceFast(round, timeoutMs = 520) {
   }
 }
 
+// The DETERMINISTIC close price of a 5-min round = the CLOSE of the Binance 5m
+// candle whose openTime === round openAt (its window is [openAt, openAt+5min), so
+// its close is the price at the round's closeAt). Same value for everyone, always
+// available once the candle finalizes — the settlement source of truth when the
+// DO rollover snapshot is missing (which it usually is on sparse devnet traffic).
+const BTC_ROUND_CLOSE_MEMORY = new Map();
+async function fetchBtcCloseFromKline(openAt, timeoutMs = 2500) {
+  const norm = Math.floor(Number(openAt) / FIVE_MIN_MS) * FIVE_MIN_MS;
+  const cached = BTC_ROUND_CLOSE_MEMORY.get(norm);
+  if (cached && Number(cached.close) > 0) return cached;
+  // Coinbase, NOT Binance: Binance blocks Cloudflare datacenter IPs, so its klines
+  // never resolve from the Worker (that is why every payout hung). Coinbase's
+  // Exchange candles ARE reachable from CF and give the same deterministic 5m
+  // close. Rows are [time(sec), low, high, open, close, vol], newest first.
+  // Widen the window (-1 to +2 buckets) so the exact target bucket is always in
+  // the returned set — a tight [norm, norm+5m] window sometimes excluded it.
+  const startISO = new Date(norm - FIVE_MIN_MS).toISOString();
+  const endISO = new Date(norm + 2 * FIVE_MIN_MS).toISOString();
+  const url = `https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=300&start=${startISO}&end=${endISO}`;
+  try {
+    const r = await fetchWithDeadline(url, { headers: { accept: 'application/json', 'user-agent': 'OST-API/1.0' }, cf: { cacheTtl: 0 } }, timeoutMs);
+    if (!r.ok) throw new Error('cb ' + r.status);
+    const rows = await r.json();
+    const row = Array.isArray(rows) ? rows.find(x => Number(x[0]) === norm / 1000) : null;
+    const close = Number(row && row[4]);
+    if (!Number.isFinite(close) || close <= 1000) throw new Error('cb candle empty');
+    const record = { close, source: 'coinbase-5m-candle', closeAt: norm + FIVE_MIN_MS };
+    BTC_ROUND_CLOSE_MEMORY.set(norm, record);
+    if (BTC_ROUND_CLOSE_MEMORY.size > 12) { const oldest = Array.from(BTC_ROUND_CLOSE_MEMORY.keys()).sort((a, b) => a - b)[0]; BTC_ROUND_CLOSE_MEMORY.delete(oldest); }
+    return record;
+  } catch (_) { return null; }
+}
+
 async function lockRoundOpenPrice(env, round, price, source) {
   if (!env.OST_KV || !Number.isFinite(price) || price <= 0) return null;
   const key = `round:${round.openAt}`;
@@ -1608,7 +1641,20 @@ async function getCanonicalBtcTicks(env, openAt, since, opts = {}) {
 async function getBtcRoundResult(env, openAt) {
   const norm = Math.floor(Number(openAt) / FIVE_MIN_MS) * FIVE_MIN_MS;
   if (!(norm > 0)) return null;
+  // 1) The authoritative DO snapshot captured at rollover — if it exists AND has a
+  //    real close price, trust it.
   const payload = await nativeMarketHubJson(env, '/btc/round-result?openAt=' + norm);
+  if (payload && payload.found === true && Number(payload.closePrice) > 0) return payload;
+  // 2) FALLBACK — the deterministic Binance 5m kline close. Rollover only fires on
+  //    live traffic, so on quiet devnet most rounds had NO recorded close, which
+  //    made every OSTG payout hang on settle_price_unavailable. The kline close is
+  //    identical for all users and always available once the candle finalizes.
+  const closeAt = norm + FIVE_MIN_MS;
+  if (Date.now() < closeAt + 8000) return (payload && payload.found === true) ? payload : null;   // candle not final yet
+  const k = await fetchBtcCloseFromKline(norm);
+  if (k && Number(k.close) > 0) {
+    return { found: true, openAt: norm, closeAt, closePrice: Number(k.close), closeSource: k.source, settledAt: Date.now(), fallback: true };
+  }
   return (payload && payload.found === true) ? payload : null;
 }
 
@@ -1959,8 +2005,20 @@ export class NativeMarketHub {
       const openAt = Math.floor(Number(url.searchParams.get('openAt') || 0) / FIVE_MIN_MS) * FIVE_MIN_MS;
       if (!(openAt > 0)) return json({ found: false, error: 'openAt_required' }, 400);
       const rec = await this.state.storage.get(`btc:round:${openAt}`);
-      if (!rec) return json({ found: false, openAt }, 200, { 'cache-control': 'no-store' });
-      return json(Object.assign({ found: true }, rec), 200, { 'cache-control': 'no-store' });
+      if (rec && Number(rec.closePrice) > 0) return json(Object.assign({ found: true }, rec), 200, { 'cache-control': 'no-store' });
+      // FALLBACK (runs in the DO, where Binance fetches are proven to work): if the
+      // rollover snapshot is missing/priceless, settle from the deterministic 5m
+      // kline close and MEMOIZE it so every later read (and payout) is instant.
+      const closeAt = openAt + FIVE_MIN_MS;
+      if (Date.now() >= closeAt + 8000) {
+        const k = await fetchBtcCloseFromKline(openAt);
+        if (k && Number(k.close) > 0) {
+          const snap = { openAt, closeAt, closePrice: Number(k.close), closeSource: k.source, settledAt: Date.now(), fallback: true };
+          try { await this.state.storage.put(`btc:round:${openAt}`, snap); } catch (_) {}
+          return json(Object.assign({ found: true }, snap), 200, { 'cache-control': 'no-store' });
+        }
+      }
+      return json({ found: false, openAt }, 200, { 'cache-control': 'no-store' });
     }
 
     if (path === '/poke' && method === 'POST') {
