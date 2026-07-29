@@ -4,6 +4,9 @@
 */
 
 const ID_PREFIX = 'id:';
+const FEED_PREFIX = 'feed:';
+const FEED_TTL_MS = 60 * 60 * 24 * 3 * 1000;   // shared feed posts live 3 days
+const FEED_MAX = 200;
 const ID_TTL_MS = 60 * 60 * 24 * 7 * 1000;
 const SIGNAL_TTL_MS = 60 * 5 * 1000;
 const MAX_PER_INBOX = 128;
@@ -104,11 +107,46 @@ export class MeshHub {
       if (method === 'GET' && path === '/mesh/v1/presence') {
         return this.presenceQuery(url.searchParams.get('addrs'));
       }
+      // Shared social feed — a lightweight relayed timeline so all mesh users see
+      // one social stream (P2P has no global timeline on its own). Off KV, on the DO.
+      if (method === 'POST' && path === '/mesh/v1/feed/post') {
+        const body = await request.json().catch(() => ({}));
+        return this.feedPost(body);
+      }
+      if (method === 'GET' && path === '/mesh/v1/feed/recent') {
+        return this.feedRecent(url.searchParams.get('limit'));
+      }
 
       return fail('mesh route not found: ' + method + ' ' + path, 404);
     } catch (error) {
       return fail('mesh hub error: ' + String(error?.message || error), 500);
     }
+  }
+
+  /* ---- shared social feed ---- */
+  async feedPost(body) {
+    const wallet = String((body && body.wallet) || '').slice(0, 64);
+    const text = String((body && body.text) || '').slice(0, 500).trim();
+    const name = String((body && body.name) || '').slice(0, 40);
+    if (!text) return fail('empty_post');
+    const now = Date.now();
+    const id = 'f' + now + '-' + messageId().slice(0, 6);
+    const rec = { id, wallet, name, text, ts: now, expiresAt: now + FEED_TTL_MS };
+    // reverse-time, zero-padded key so storage.list() returns newest-first.
+    await this.state.storage.put(FEED_PREFIX + String(1e15 - now).padStart(16, '0') + ':' + id, rec);
+    try {
+      const all = await this.state.storage.list({ prefix: FEED_PREFIX });
+      if (all.size > FEED_MAX) { const keys = [...all.keys()]; const del = keys.slice(FEED_MAX); if (del.length) await this.state.storage.delete(del).catch(() => {}); }
+    } catch (_) {}
+    return json({ ok: true, post: { id, wallet, name, text, ts: now } });
+  }
+  async feedRecent(limit) {
+    const n = Math.max(1, Math.min(100, Number(limit) || 50));
+    const now = Date.now();
+    const listed = await this.state.storage.list({ prefix: FEED_PREFIX, limit: n });
+    const posts = [];
+    for (const [, v] of listed) { if (v && Number(v.expiresAt || 0) > now) posts.push({ id: v.id, wallet: v.wallet, name: v.name, text: v.text, ts: v.ts }); }
+    return json({ ok: true, posts });
   }
 
   async announce(body) {

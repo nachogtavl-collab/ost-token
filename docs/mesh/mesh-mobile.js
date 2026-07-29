@@ -20,6 +20,7 @@
   if (window.__OST_MESH_MOBILE) return; window.__OST_MESH_MOBILE = true;
 
   var FEED_KEY = 'ost.mesh.feed.v1';
+  var API = ((window.OST_API_BASE) || 'https://ost-api.nachogtavl.workers.dev').replace(/\/+$/, '');
   function wallet() { try { return window.OST_WALLET_PUBKEY || (window.OST_WALLET && OST_WALLET.pubkey && OST_WALLET.pubkey()) || ''; } catch (_) { return ''; } }
   function shortW(w) { return w ? w.slice(0, 4) + '·' + w.slice(-4) : 'Guest'; }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
@@ -100,8 +101,15 @@
     renderStories();
     sec.querySelector('#omm-post-btn').addEventListener('click', function () {
       var ta = document.getElementById('omm-post-text'); var t = (ta.value || '').trim(); if (!t) return;
-      var feed = loadFeed(); feed.unshift({ id: 'p' + Date.now(), who: wallet() || 'guest', text: t, ts: Date.now() }); saveFeed(feed);
-      ta.value = ''; renderFeed();
+      var w = wallet();
+      var btn = document.getElementById('omm-post-btn'); btn.disabled = true;
+      // Post to the SHARED mesh timeline so every user sees it. Keep a local copy
+      // only if the network post fails (offline resilience).
+      fetch(API + '/mesh/v1/feed/post', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ wallet: w, name: shortW(w), text: t }) })
+        .then(function (r) { return r.json(); })
+        .then(function (res) { if (!(res && res.ok)) throw new Error('post failed'); ta.value = ''; })
+        .catch(function () { var feed = loadFeed(); feed.unshift({ id: 'p' + Date.now(), who: w || 'guest', text: t, ts: Date.now(), pending: true }); saveFeed(feed); ta.value = ''; })
+        .then(function () { btn.disabled = false; renderFeed(); });
       try { window.dispatchEvent(new CustomEvent('mesh:feed-post', { detail: { text: t } })); } catch (_) {}
     });
     renderFeed();
@@ -125,13 +133,28 @@
     var r = Math.abs(h); for (var x = 0; x < 3; x++) for (var y = 0; y < 5; y++) { r = (r * 1103515245 + 12345) & 0x7fffffff; if (r % 2 === 0) { ctx.fillRect(x * 10.4, y * 10.4, 11, 11); ctx.fillRect((4 - x) * 10.4, y * 10.4, 11, 11); } }
     return cv.toDataURL();
   }
-  function renderFeed() {
+  function paintFeed(items) {
     var list = document.getElementById('omm-feed-list'); if (!list) return;
-    var feed = loadFeed();
-    if (!feed.length) { list.innerHTML = '<div class="omm-empty">No posts yet. Be the first to post to the mesh.</div>'; return; }
-    list.innerHTML = feed.slice(0, 60).map(function (p) {
-      return '<div class="omm-post"><div class="omm-post-head"><img class="omm-post-av" src="' + avatarDataUrl(p.who || 'guest') + '" alt=""><span class="omm-post-who">' + esc(shortW(p.who)) + '</span><span class="omm-post-time">' + ago(p.ts) + '</span></div><div class="omm-post-body">' + esc(p.text) + '</div></div>';
+    if (!items.length) { list.innerHTML = '<div class="omm-empty">No posts yet. Be the first to post to the mesh.</div>'; return; }
+    list.innerHTML = items.slice(0, 60).map(function (p) {
+      var who = p.who || p.wallet || 'guest';
+      return '<div class="omm-post"><div class="omm-post-head"><img class="omm-post-av" src="' + avatarDataUrl(who) + '" alt=""><span class="omm-post-who">' + esc(shortW(who)) + '</span>' + (p.pending ? '<span style="color:#f0c674;font-size:10px">· sending</span>' : '') + '<span class="omm-post-time">' + ago(p.ts) + '</span></div><div class="omm-post-body">' + esc(p.text) + '</div></div>';
     }).join('');
+  }
+  // Render the SHARED timeline (worker) merged with any unsynced local posts.
+  function renderFeed() {
+    var local = loadFeed().filter(function (p) { return p.pending; });
+    paintFeed(local.concat([]));   // instant paint of pending; shared arrives async
+    fetch(API + '/mesh/v1/feed/recent?limit=60', { cache: 'no-store' })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        var shared = (j && j.posts) ? j.posts.map(function (p) { return { id: p.id, who: p.wallet || p.name, text: p.text, ts: p.ts }; }) : [];
+        var seen = {}, merged = [];
+        local.concat(shared).forEach(function (p) { var k = p.id || (p.who + ':' + p.ts); if (!seen[k]) { seen[k] = 1; merged.push(p); } });
+        merged.sort(function (a, b) { return (b.ts || 0) - (a.ts || 0); });
+        paintFeed(merged);
+      })
+      .catch(function () { paintFeed(loadFeed()); });   // offline: show whatever we have locally
   }
 
   function buildPay(shell) {
@@ -231,6 +254,11 @@
       obs.observe(shell, { childList: true });
     } catch (_) {}
     window.addEventListener('ost:money:change', function () { try { renderFeed(); } catch (_) {} });
+    // Live-refresh the shared feed while it is the active tab and the mesh is open.
+    setInterval(function () {
+      var root = document.getElementById('ost-mesh-pavilion');
+      if (root && root.classList.contains('is-open') && shell.getAttribute('data-view') === 'feed' && !document.hidden) { try { renderFeed(); } catch (_) {} }
+    }, 15000);
     return true;
   }
 
