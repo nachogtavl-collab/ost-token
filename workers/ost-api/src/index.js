@@ -3666,6 +3666,32 @@ export default {
       return json({ rpc: env.SOLANA_DEVNET_RPC || null }, 200, { 'cache-control': 'public, max-age=300' });
     }
 
+    // ── GET /quantum/entropy?n=N ─ REAL quantum randomness relayed from the ANU
+    // vacuum-fluctuation QRNG (qrng.anu.edu.au). Server-side so the browser's CORS
+    // wall can't block it. Bytes are genuine quantum entropy (photonic vacuum
+    // noise), used to collapse the quantum-lab wavefunction. If ANU is unreachable
+    // we say so honestly (source:"unavailable") and the client falls back to its
+    // own CSPRNG, clearly labelled — never a fake "quantum" claim.
+    if (path === '/quantum/entropy' && method === 'GET') {
+      const n = Math.max(1, Math.min(256, Number(url.searchParams.get('n')) || 32));
+      try {
+        const ctrl = new AbortController();
+        const to = setTimeout(() => { try { ctrl.abort(); } catch (_) {} }, 5000);
+        const r = await fetch('https://qrng.anu.edu.au/API/jsonI.php?length=' + n + '&type=uint8', {
+          headers: { accept: 'application/json', 'user-agent': 'OST-API/1.0' }, signal: ctrl.signal
+        });
+        clearTimeout(to);
+        const jd = await r.json().catch(() => null);
+        if (jd && jd.success === true && Array.isArray(jd.data) && jd.data.length) {
+          return json({ ok: true, source: 'anu-qrng-vacuum', quantum: true, data: jd.data, ts: Date.now() },
+            200, { 'cache-control': 'no-store' });
+        }
+        return json({ ok: false, source: 'unavailable', quantum: false, error: 'qrng_no_data' }, 200, { 'cache-control': 'no-store' });
+      } catch (e) {
+        return json({ ok: false, source: 'unavailable', quantum: false, error: String(e && e.message || e) }, 200, { 'cache-control': 'no-store' });
+      }
+    }
+
     if (path === '/health' || path === '/') {
       const btcResult = await fetchBtcPrice();
       const round = currentRound();
