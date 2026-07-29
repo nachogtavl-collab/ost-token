@@ -56,8 +56,14 @@ let rpcConfigured = false;
 export function ensureRpcConfigured(env) {
   if (rpcConfigured) return;
   rpcConfigured = true;
-  const override = env && env.SOLANA_DEVNET_RPC;
-  if (override && !RPC_ENDPOINTS.includes(override)) RPC_ENDPOINTS.unshift(override);
+  // Dedicated Helius keys FIRST, in order (primary -> Piperchisel -> Mothforest),
+  // then the weak public fallbacks. Server-side reads/writes fail over across all
+  // three real keys before ever touching the rate-limited public endpoints.
+  const keys = [env && env.SOLANA_DEVNET_RPC, env && env.SOLANA_DEVNET_RPC_2, env && env.SOLANA_DEVNET_RPC_3].filter(Boolean);
+  const merged = [];
+  keys.concat(RPC_ENDPOINTS).forEach(function (u) { if (u && !merged.includes(u)) merged.push(u); });
+  RPC_ENDPOINTS.length = 0;
+  Array.prototype.push.apply(RPC_ENDPOINTS, merged);
 }
 
 let rpcIndex = 0;

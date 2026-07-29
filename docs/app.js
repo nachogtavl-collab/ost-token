@@ -2263,12 +2263,14 @@
         .then(function (r) { return r.json(); })
         .then(function (c) {
           if (c && typeof c.rpc === 'string' && /^https:\/\//.test(c.rpc)) {
-            RPC_LIST = [c.rpc, 'https://api.devnet.solana.com'].filter(function (u, i, a) { return u && a.indexOf(u) === i; });
+            // Chain: primary Helius -> Piperchisel -> Mothforest -> public devnet.
+            var fb = Array.isArray(c.fallbacks) ? c.fallbacks.filter(function (u) { return u && /^https:\/\//.test(u); }) : [];
+            RPC_LIST = [c.rpc].concat(fb).concat(['https://api.devnet.solana.com']).filter(function (u, i, a) { return u && a.indexOf(u) === i; });
             RPC_INDEX = 0;
             window.OST_SOLANA_RPC = c.rpc;
             OST_CONFIG.rpcUrl = c.rpc;
             solanaConnection = null;   // rebuild on the dedicated RPC
-            try { window.dispatchEvent(new CustomEvent('ost:rpc-ready', { detail: { rpc: c.rpc } })); } catch (_) {}
+            try { window.dispatchEvent(new CustomEvent('ost:rpc-ready', { detail: { rpc: c.rpc, fallbacks: fb.length } })); } catch (_) {}
           }
         }).catch(function () {});
     } catch (_) {}

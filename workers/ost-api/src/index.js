@@ -3663,7 +3663,8 @@ export default {
     // the Helius key is never committed to the repo. The client fetches this on
     // boot and points its Solana connection at it (fixes the public-devnet 429s).
     if (path === '/rpc-config' && method === 'GET') {
-      return json({ rpc: env.SOLANA_DEVNET_RPC || null }, 200, { 'cache-control': 'public, max-age=300' });
+      const fallbacks = [env.SOLANA_DEVNET_RPC_2, env.SOLANA_DEVNET_RPC_3].filter(function (u) { return u && /^https:\/\//.test(u); });
+      return json({ rpc: env.SOLANA_DEVNET_RPC || null, fallbacks: fallbacks }, 200, { 'cache-control': 'public, max-age=300' });
     }
 
     // ── GET /quantum/entropy?n=N ─ REAL quantum randomness relayed from the ANU
