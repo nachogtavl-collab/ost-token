@@ -980,7 +980,23 @@ class MeshPavilion {
   }
 
   /* ----- QR generation + scanning ----- */
-  _showInviteQR() {
+  // Ensure the local QR encoder is loaded. The vendored UMD only exports to
+  // AMD/CommonJS (no window global), and the lazy loader wraps it, so window.qrcode
+  // is undefined — we load it as a classic <script> on demand, where its top-level
+  // `var qrcode` becomes the global. Cached after first load.
+  _ensureQR() {
+    if (typeof window.qrcode === 'function') return Promise.resolve(true);
+    if (this._qrLoading) return this._qrLoading;
+    this._qrLoading = new Promise((res) => {
+      const s = document.createElement('script');
+      s.src = new URL('../vendor/qrcode-generator.js', import.meta.url).href;
+      s.onload = () => res(typeof window.qrcode === 'function');
+      s.onerror = () => res(false);
+      document.head.appendChild(s);
+    });
+    return this._qrLoading;
+  }
+  async _showInviteQR() {
     if (!this.publicBundle) { this._setStatus('Keys still loading…', 'warn'); return; }
     const invite = makeInvite({ address: this.address, bundle: this.publicBundle, fingerprint: this.fpr });
     const modal = document.getElementById('mesh-qr-modal');
@@ -988,10 +1004,11 @@ class MeshPavilion {
     const title = document.getElementById('mesh-qr-title');
     if (!modal || !body) return;
     title.textContent = 'Your invite QR';
-    // Generate the QR LOCALLY (vendor/qrcode-generator) so it works on every
-    // device and offline — the external image service was the reason "QR doesn't
-    // work". Fall back to the service only if the local encoder is unavailable.
+    // Generate the QR LOCALLY so it works on every device and offline — the
+    // external image service was the reason "QR doesn't work". Fall back to the
+    // service only if the local encoder truly cannot load.
     let local = null;
+    try { await this._ensureQR(); } catch (_) {}
     try { if (typeof window.qrcode === 'function') { const q = window.qrcode(0, 'L'); q.addData(invite); q.make(); local = q.createDataURL(5, 4); } } catch (_) {}
     body.innerHTML = `
       <img id="mesh-qr-img" alt="OST Mesh invite QR" />
