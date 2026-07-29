@@ -137,7 +137,12 @@
     // balance (from games), not the wallet — the bridge only burns WALLET OSTG.
     try {
       var srcMint = direction === 'deposit' ? OSTC_MINT : OSTG_MINT;
-      var srcBal = await readBal(srcMint);
+      var srcBal;
+      // Prefer the ONE canonical balance (OST_BALANCE -> /balance/truth), the same
+      // number the wallet dashboard and predictions show. A stale/failed local RPC
+      // read was the #1 cause of "not enough OST" when the wallet actually had it.
+      try { if (window.OST_BALANCE && OST_BALANCE.refresh) { await OST_BALANCE.refresh(true); srcBal = direction === 'deposit' ? OST_BALANCE.onchainOstc() : OST_BALANCE.onchainOstg(); } } catch (_) {}
+      if (srcBal == null) srcBal = await readBal(srcMint);   // fall back to a direct read
       if (typeof srcBal === 'number' && srcBal + 1e-9 < amt) {
         if (direction === 'withdraw') {
           throw new Error('Your wallet holds ' + fmt(srcBal) + ' OSTG. If your OSTG is in the play balance, cash it out to your wallet first (Arcade → Cash out), then convert OSTG → OST here.');
@@ -347,8 +352,13 @@
       var sig = await convert(direction, amt);
       setFlow('✓ Converted ' + fmt(amt) + (direction === 'deposit' ? ' OST to OSTG.' : ' OSTG to OST.') + (sig ? ' (' + String(sig).slice(0, 8) + '…)' : ''), 'ok');
       el.amt.value = '';
+      // Refresh the canonical balance now AND after the tx settles on-chain (the
+      // RPC lags confirmation by a couple seconds), so the wallet, predictions and
+      // bridge all show the post-convert numbers — no stale inconsistency.
       try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {}
+      try { if (window.OST_BALANCE && OST_BALANCE.refresh) OST_BALANCE.refresh(true); } catch (_) {}
       await refresh(); refreshPeg();
+      setTimeout(function () { try { if (window.OST_BALANCE && OST_BALANCE.refresh) OST_BALANCE.refresh(true); window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {} try { refresh(); } catch (_) {} }, 3200);
     } catch (e) {
       setFlow(String((e && e.message) || e), 'warn');
     } finally {

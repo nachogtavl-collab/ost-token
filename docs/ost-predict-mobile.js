@@ -141,18 +141,20 @@
   // OSTG; showing the sum means the header reflects actual wallet funds AND
   // moves when a bet debits play. Never the credits pool. Unknown stays unknown
   // (last-known cache in OST_SESSION keeps it from flashing to 0 on a 429).
-  // FULL spendable = wallet OSTG + SESSION OSTG (1-tap cap) + custodial play. The
-  // session term was missing, so arming 1-tap (which moves wallet OSTG into the
-  // session key) made the displayed balance DROP by the funded amount — the
-  // "1-tap doesn't read the full balance" bug. All three are distinct accounts,
-  // so summing them is correct (no double-count).
+  // FULL spendable = wallet OSTG + custodial play + SESSION OSTG (1-tap). Read the
+  // WALLET + PLAY numbers from the ONE canonical source (OST_BALANCE ->
+  // /balance/truth), so the predictions desk agrees with the wallet dashboard, the
+  // bridge, and the server — no more per-surface drift. Session-key OSTG is a
+  // distinct on-chain account the canonical read doesn't cover, so it is added.
+  // Falls back to the module's own reads only when canonical is unknown.
   function playBal() {
-    var w, s, p, known = false;
-    try { if (window.OST_SESSION && OST_SESSION.walletBalance) { w = OST_SESSION.walletBalance(); if (w != null) known = true; } } catch (_) {}
-    try { if (window.OST_SESSION && OST_SESSION.balance) { s = OST_SESSION.balance(); if (s != null) known = true; } } catch (_) {}
-    try { if (window.OST_PLAY && OST_PLAY.balance) { p = OST_PLAY.balance(); if (p != null) known = true; } } catch (_) {}
-    if (known) return (Number(w) || 0) + (Number(s) || 0) + (Number(p) || 0);
-    return undefined;
+    var wallet, play, sess, known = false;
+    try { if (window.OST_BALANCE) { var og = OST_BALANCE.onchainOstg(); if (og != null) { wallet = og; known = true; } var pl = OST_BALANCE.play(); if (pl != null) { play = pl; known = true; } } } catch (_) {}
+    if (wallet == null) { try { if (window.OST_SESSION && OST_SESSION.walletBalance) { var w = OST_SESSION.walletBalance(); if (w != null) { wallet = w; known = true; } } } catch (_) {} }
+    if (play == null) { try { if (window.OST_PLAY && OST_PLAY.balance) { var p = OST_PLAY.balance(); if (p != null) { play = p; known = true; } } } catch (_) {} }
+    try { if (window.OST_SESSION && OST_SESSION.balance) { var sv = OST_SESSION.balance(); if (sv != null) { sess = sv; known = true; } } } catch (_) {}
+    if (!known) return undefined;
+    return (Number(wallet) || 0) + (Number(play) || 0) + (Number(sess) || 0);
   }
   // Optimistic hold: after a bet/sell we show the expected balance and refuse to
   // let a slow reconcile-read bounce it the WRONG way before the server confirms
@@ -168,6 +170,7 @@
     document.querySelectorAll('#ostPredictMobile .opm-balv').forEach(function (e) { e.textContent = (v == null ? '—' : Number(Math.max(0, v)).toLocaleString(undefined, { maximumFractionDigits: 2 })); });
   }
   function refreshBalance() {
+    try { if (window.OST_BALANCE && OST_BALANCE.refresh) OST_BALANCE.refresh(true); } catch (_) {}   // canonical /balance/truth
     try { if (window.OST_SESSION && OST_SESSION.refresh) OST_SESSION.refresh(); } catch (_) {}
     try { if (window.OST_PLAY && OST_PLAY.refresh) OST_PLAY.refresh(); } catch (_) {}
     var b = playBal();

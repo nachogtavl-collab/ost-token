@@ -498,11 +498,19 @@ class MeshPavilion {
     if (nameEl) nameEl.textContent = wallet ? (wallet.slice(0, 4) + '·' + wallet.slice(-4)) : 'Guest';
     if (wEl) wEl.textContent = wallet ? (wallet.slice(0, 8) + '…' + wallet.slice(-6)) : (this.address || 'Connect your wallet to go social');
     const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = (v == null || isNaN(v)) ? '—' : Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 }); };
-    try { set('mesh-hero-ostg', window.OST_SESSION && OST_SESSION.walletBalance ? OST_SESSION.walletBalance() : null); } catch (_) {}
-    try { set('mesh-hero-ostc', window.OST_WALLET && OST_WALLET.getOstBalance && wallet ? undefined : null); } catch (_) {}
-    // OSTC (main OST) + SOL are async reads; fill them best-effort without blocking.
+    // OSTG/OSTC from the ONE canonical source (OST_BALANCE -> /balance/truth) so the
+    // hero agrees with the wallet dashboard, predictions and bridge. Refresh it,
+    // then read; fall back to the session read only if canonical is unknown.
+    try { if (window.OST_BALANCE && OST_BALANCE.refresh) OST_BALANCE.refresh(); } catch (_) {}
+    var og = null, oc = null;
+    try { if (window.OST_BALANCE) { og = OST_BALANCE.onchainOstg(); oc = OST_BALANCE.onchainOstc(); } } catch (_) {}
+    if (og == null) { try { og = window.OST_SESSION && OST_SESSION.walletBalance ? OST_SESSION.walletBalance() : null; } catch (_) {} }
+    set('mesh-hero-ostg', og);
+    set('mesh-hero-ostc', oc);
+    if (oc == null && wallet && window.OST_WALLET && OST_WALLET.getOstBalance) {
+      try { Promise.resolve(OST_WALLET.getOstBalance(wallet)).then(b => set('mesh-hero-ostc', b)).catch(() => {}); } catch (_) {}
+    }
     if (wallet && window.OST_WALLET) {
-      try { if (OST_WALLET.getOstBalance) Promise.resolve(OST_WALLET.getOstBalance(wallet)).then(b => set('mesh-hero-ostc', b)).catch(() => {}); } catch (_) {}
       try {
         const conn = OST_WALLET.getConnection && OST_WALLET.getConnection();
         if (conn && window.solanaWeb3) Promise.resolve(conn.getBalance(new solanaWeb3.PublicKey(wallet))).then(l => set('mesh-hero-sol', (Number(l) || 0) / 1e9)).catch(() => {});
