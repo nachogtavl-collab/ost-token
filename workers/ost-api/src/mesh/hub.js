@@ -124,6 +124,10 @@ export class MeshHub {
         const body = await request.json().catch(() => ({}));
         return this.feedReply(body);
       }
+      if (method === 'POST' && path === '/mesh/v1/feed/donate') {
+        const body = await request.json().catch(() => ({}));
+        return this.feedDonate(body);
+      }
       // Admin moderation: clear the whole feed, or delete one post. Gated by a
       // secret so only the operator can wipe test/spam data — keeps the feed real.
       if (method === 'POST' && path === '/mesh/v1/feed/clear') {
@@ -169,6 +173,10 @@ export class MeshHub {
         id: v.id, wallet: v.wallet, name: v.name, text: v.text, img: v.img || '', ts: v.ts,
         likeCount: v.likes ? Object.keys(v.likes).length : 0,
         likedBy: v.likes ? Object.keys(v.likes) : [],
+        dislikeCount: v.dislikes ? Object.keys(v.dislikes).length : 0,
+        dislikedBy: v.dislikes ? Object.keys(v.dislikes) : [],
+        donated: v.donated || 0,             // public donations total
+        donateCcy: v.donateCcy || 'OST',
         replies: Array.isArray(v.replies) ? v.replies.slice(-20) : []
       });
     }
@@ -182,13 +190,28 @@ export class MeshHub {
   async feedReact(body) {
     const postId = String((body && body.postId) || '');
     const wallet = String((body && body.wallet) || '').slice(0, 64);
+    const kind = (body && body.kind) === 'dislike' ? 'dislike' : 'like';
     if (!postId || !wallet) return fail('bad_react');
     const found = await this._findFeedEntry(postId);
     if (!found) return fail('post_not_found', 404);
-    const v = found.rec; v.likes = v.likes || {};
-    if (v.likes[wallet]) delete v.likes[wallet]; else v.likes[wallet] = 1;
+    const v = found.rec; v.likes = v.likes || {}; v.dislikes = v.dislikes || {};
+    if (kind === 'like') { if (v.likes[wallet]) delete v.likes[wallet]; else { v.likes[wallet] = 1; delete v.dislikes[wallet]; } }
+    else { if (v.dislikes[wallet]) delete v.dislikes[wallet]; else { v.dislikes[wallet] = 1; delete v.likes[wallet]; } }
     await this.state.storage.put(found.key, v);
-    return json({ ok: true, likeCount: Object.keys(v.likes).length, liked: !!v.likes[wallet] });
+    return json({ ok: true, likeCount: Object.keys(v.likes).length, liked: !!v.likes[wallet], dislikeCount: Object.keys(v.dislikes).length, disliked: !!v.dislikes[wallet] });
+  }
+  // Record a PUBLIC donation total on a post (private donations are never recorded
+  // here — they stay only between donor and author as the on-chain transfer).
+  async feedDonate(body) {
+    const postId = String((body && body.postId) || '');
+    const amount = Math.max(0, Number(body && body.amount) || 0);
+    const ccy = String((body && body.ccy) || 'OST').slice(0, 8);
+    if (!postId || !(amount > 0)) return fail('bad_donate');
+    const found = await this._findFeedEntry(postId);
+    if (!found) return fail('post_not_found', 404);
+    const v = found.rec; v.donated = Math.round(((Number(v.donated) || 0) + amount) * 1e6) / 1e6; v.donateCcy = ccy;
+    await this.state.storage.put(found.key, v);
+    return json({ ok: true, donated: v.donated, ccy: ccy });
   }
   async feedReply(body) {
     const postId = String((body && body.postId) || '');

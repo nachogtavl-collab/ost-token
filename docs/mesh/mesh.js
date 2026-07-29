@@ -1021,21 +1021,24 @@ class MeshPavilion {
     const title = document.getElementById('mesh-qr-title');
     if (!modal || !body) return;
     title.textContent = 'Your invite QR';
-    // Generate the QR LOCALLY so it works on every device and offline — the
-    // external image service was the reason "QR doesn't work". Fall back to the
-    // service only if the local encoder truly cannot load.
+    // The QR encodes only the SHORT mesh address, not the full key bundle. A
+    // bundle QR is huge and dense — cameras can't lock onto it. The address is
+    // tiny, so with high error-correction and big cells it scans instantly; the
+    // peer's device resolves the key bundle from the directory on connect (and the
+    // full invite text below still works by copy/paste even if the directory misses).
+    const qrPayload = this.address;
     let local = null;
     try { await this._ensureQR(); } catch (_) {}
-    try { if (typeof window.qrcode === 'function') { const q = window.qrcode(0, 'L'); q.addData(invite); q.make(); local = q.createDataURL(5, 4); } } catch (_) {}
+    try { if (typeof window.qrcode === 'function') { const q = window.qrcode(0, 'M'); q.addData(qrPayload); q.make(); local = q.createDataURL(9, 4); } } catch (_) {}
     body.innerHTML = `
       <img id="mesh-qr-img" alt="OST Mesh invite QR" />
-      <p class="ost-mesh-qr-hint">Have your peer scan this with their phone camera (or use Scan QR). Works offline.</p>
+      <p class="ost-mesh-qr-hint">Point your peer's camera here — it's a compact code that scans instantly. Or share the invite text below.</p>
       <textarea readonly class="ost-mesh-qr-text">${escapeHtml(invite)}</textarea>
     `;
     const img = document.getElementById('mesh-qr-img');
     if (img) {
-      img.src = local || (QR_API + encodeURIComponent(invite));
-      img.onerror = () => { img.onerror = null; img.src = QR_API + encodeURIComponent(invite); };
+      img.src = local || (QR_API.replace('320x320', '300x300') + encodeURIComponent(qrPayload));
+      img.onerror = () => { img.onerror = null; img.src = QR_API.replace('320x320', '300x300') + encodeURIComponent(qrPayload); };
     }
     modal.classList.add('is-open');
     modal.setAttribute('aria-hidden', 'false');

@@ -88,9 +88,12 @@
       '.omm-post-who{font-weight:800;color:#dff8ff}',
       '.omm-post-time{margin-left:auto;color:#64809a;font-size:11px}',
       '.omm-post-body{color:#e6f3ff;font-size:13.5px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}',
-      '.omm-post-actions{display:flex;gap:8px;margin-top:9px}',
-      '.omm-pa{display:flex;align-items:center;gap:5px;background:rgba(2,6,23,.5);border:1px solid rgba(148,163,184,.2);color:#9bcbe6;border-radius:999px;padding:5px 12px;font-size:12px;font-weight:800;cursor:pointer}',
-      '.omm-pa.on{color:#ff5e8a;border-color:rgba(255,94,138,.5);background:rgba(255,94,138,.08)}',
+      '.omm-post-actions{display:flex;gap:7px;margin-top:9px;flex-wrap:wrap}',
+      '.omm-pa{display:flex;align-items:center;gap:5px;background:rgba(2,6,23,.5);border:1px solid rgba(148,163,184,.2);color:#9bcbe6;border-radius:999px;padding:5px 11px;font-size:12px;font-weight:800;cursor:pointer}',
+      '.omm-pa.on{color:#00ffb0;border-color:rgba(0,255,176,.5);background:rgba(0,255,176,.08)}',
+      '.omm-pa.dn{color:#ff7a90;border-color:rgba(255,122,144,.5);background:rgba(255,122,144,.08)}',
+      '.omm-donate{color:#f0c674;border-color:rgba(240,198,116,.45);background:rgba(240,198,116,.08)}',
+      '.omm-donate:hover{background:rgba(240,198,116,.16)}',
       '.omm-replies{margin-top:9px;border-top:1px solid rgba(148,163,184,.12);padding-top:9px;display:flex;flex-direction:column;gap:6px}',
       '.omm-reply{font-size:12.5px;color:#dbe9f5;line-height:1.45}.omm-reply b{color:#8fe6ff}',
       '.omm-reply-compose{display:flex;gap:6px;margin-top:4px}',
@@ -275,19 +278,46 @@
       var who = p.who || p.wallet || 'guest';
       var liked = (p.likedBy || []).indexOf(me) >= 0;
       var lc = p.likeCount || 0, reps = p.replies || [];
+      var disliked = (p.dislikedBy || []).indexOf(me) >= 0, dc = p.dislikeCount || 0, donated = Number(p.donated) || 0, ccy = p.donateCcy || 'OST';
       var head = '<div class="omm-post-head"><img class="omm-post-av" src="' + avatarDataUrl(who) + '" alt=""><span class="omm-post-who">' + esc(shortW(who)) + '</span>' + (p.pending ? '<span style="color:#f0c674;font-size:10px">· sending</span>' : '') + '<span class="omm-post-time">' + ago(p.ts) + '</span></div>';
       var body = (p.text ? '<div class="omm-post-body">' + esc(p.text) + '</div>' : '') + (p.img ? '<img class="omm-post-img" src="' + esc(p.img) + '" alt="">' : '');
       if (!p.id) return '<div class="omm-post">' + head + body + '</div>';
-      var actions = '<div class="omm-post-actions"><button class="omm-pa' + (liked ? ' on' : '') + '" data-like="' + esc(p.id) + '">&#9829; <span>' + lc + '</span></button><button class="omm-pa" data-rt="' + esc(p.id) + '">&#128172; <span>' + reps.length + '</span></button></div>';
+      var actions = '<div class="omm-post-actions">' +
+        '<button class="omm-pa' + (liked ? ' on' : '') + '" data-like="' + esc(p.id) + '">&#128077; <span>' + lc + '</span></button>' +
+        '<button class="omm-pa' + (disliked ? ' dn' : '') + '" data-dislike="' + esc(p.id) + '">&#128078; <span>' + dc + '</span></button>' +
+        '<button class="omm-pa" data-rt="' + esc(p.id) + '">&#128172; <span>' + reps.length + '</span></button>' +
+        '<button class="omm-pa omm-donate" data-donate="' + esc(p.id) + '" data-author="' + esc(who) + '">&#127873; Donate' + (donated > 0 ? ' <span>' + donated + ' ' + esc(ccy) + '</span>' : '') + '</button>' +
+        '</div>';
       var repliesHtml = reps.map(function (r) { return '<div class="omm-reply"><b>' + esc(shortW(r.wallet || r.name)) + '</b> ' + esc(r.text) + '</div>'; }).join('');
       var thread = '<div class="omm-replies"' + (openReplies[p.id] ? '' : ' hidden') + ' id="rep-' + esc(p.id) + '">' + repliesHtml + '<div class="omm-reply-compose"><input placeholder="Reply…" data-ri="' + esc(p.id) + '"><button data-rs="' + esc(p.id) + '">Send</button></div></div>';
       return '<div class="omm-post" data-pid="' + esc(p.id) + '">' + head + body + actions + thread + '</div>';
     }).join('');
   }
-  function reactPost(pid) {
-    var me = wallet(); if (!me) return;
-    fetch(API + '/mesh/v1/feed/react', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ postId: pid, wallet: me }) })
+  function reactPost(pid, kind) {
+    var me = wallet(); if (!me) { toast('Connect your wallet to react.'); return; }
+    fetch(API + '/mesh/v1/feed/react', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ postId: pid, wallet: me, kind: kind || 'like' }) })
       .then(function (r) { return r.json(); }).then(function (j) { if (j && j.ok) renderFeed(); }).catch(function () {});
+  }
+  // Donate the MAIN currency (OST) to a post's author. Public = a "donated X OST"
+  // comment everyone sees + a running total on the post; private = only the
+  // on-chain transfer between donor and author, nothing shown publicly.
+  function donatePost(pid, author) {
+    var me = wallet(); if (!me) { toast('Connect your wallet to donate.'); return; }
+    if (!author || author.length < 32) { toast('This author has no wallet to receive donations.'); return; }
+    if (author === me) { toast('You can’t donate to your own post.'); return; }
+    var amtStr = window.prompt('Donate how much OST to ' + shortW(author) + '?', '1'); if (amtStr == null) return;
+    var amt = parseFloat(amtStr); if (!(amt > 0)) { toast('Enter an amount greater than zero.'); return; }
+    var pub = window.confirm('Show this donation publicly?\n\nOK = public (a comment everyone sees)\nCancel = private (only you and the author)');
+    if (!(window.OST_RESCUE && OST_RESCUE.sendPeerOst)) { toast('OST send rail not ready.'); return; }
+    toast('Sending ' + amt + ' OST…');
+    Promise.resolve(OST_RESCUE.sendPeerOst(author, amt, 'mesh-donate')).then(function () {
+      toast('🎁 Donated ' + amt + ' OST' + (pub ? ' — thanks for supporting!' : ' (private)'));
+      if (pub) {
+        fetch(API + '/mesh/v1/feed/donate', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ postId: pid, amount: amt, ccy: 'OST' }) }).catch(function () {});
+        fetch(API + '/mesh/v1/feed/reply', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ postId: pid, wallet: me, name: shortW(me), text: '🎁 donated ' + amt + ' OST' }) }).then(function () { renderFeed(); }).catch(function () {});
+      }
+      try { if (window.OST_BALANCE && OST_BALANCE.refresh) OST_BALANCE.refresh(true); } catch (_) {}
+    }).catch(function (e) { toast('Donation failed: ' + ((e && e.message) || 'try again')); });
   }
   function sendReply(pid) {
     var inp = document.querySelector('[data-ri="' + pid + '"]'); var t = inp && (inp.value || '').trim(); if (!t) return;
@@ -296,7 +326,9 @@
       .then(function (r) { return r.json(); }).then(function () { if (inp) inp.value = ''; renderFeed(); }).catch(function () {});
   }
   function onFeedClick(e) {
-    var like = e.target.closest('[data-like]'); if (like) { reactPost(like.getAttribute('data-like')); return; }
+    var like = e.target.closest('[data-like]'); if (like) { reactPost(like.getAttribute('data-like'), 'like'); return; }
+    var dislike = e.target.closest('[data-dislike]'); if (dislike) { reactPost(dislike.getAttribute('data-dislike'), 'dislike'); return; }
+    var don = e.target.closest('[data-donate]'); if (don) { donatePost(don.getAttribute('data-donate'), don.getAttribute('data-author')); return; }
     var rt = e.target.closest('[data-rt]'); if (rt) { var id = rt.getAttribute('data-rt'); openReplies[id] = !openReplies[id]; var el = document.getElementById('rep-' + id); if (el) el.hidden = !openReplies[id]; return; }
     var rs = e.target.closest('[data-rs]'); if (rs) { sendReply(rs.getAttribute('data-rs')); return; }
   }
