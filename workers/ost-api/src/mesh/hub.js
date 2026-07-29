@@ -116,6 +116,14 @@ export class MeshHub {
       if (method === 'GET' && path === '/mesh/v1/feed/recent') {
         return this.feedRecent(url.searchParams.get('limit'));
       }
+      if (method === 'POST' && path === '/mesh/v1/feed/react') {
+        const body = await request.json().catch(() => ({}));
+        return this.feedReact(body);
+      }
+      if (method === 'POST' && path === '/mesh/v1/feed/reply') {
+        const body = await request.json().catch(() => ({}));
+        return this.feedReply(body);
+      }
 
       return fail('mesh route not found: ' + method + ' ' + path, 404);
     } catch (error) {
@@ -145,8 +153,45 @@ export class MeshHub {
     const now = Date.now();
     const listed = await this.state.storage.list({ prefix: FEED_PREFIX, limit: n });
     const posts = [];
-    for (const [, v] of listed) { if (v && Number(v.expiresAt || 0) > now) posts.push({ id: v.id, wallet: v.wallet, name: v.name, text: v.text, ts: v.ts }); }
+    for (const [, v] of listed) {
+      if (v && Number(v.expiresAt || 0) > now) posts.push({
+        id: v.id, wallet: v.wallet, name: v.name, text: v.text, ts: v.ts,
+        likeCount: v.likes ? Object.keys(v.likes).length : 0,
+        likedBy: v.likes ? Object.keys(v.likes) : [],
+        replies: Array.isArray(v.replies) ? v.replies.slice(-20) : []
+      });
+    }
     return json({ ok: true, posts });
+  }
+  async _findFeedEntry(postId) {
+    const listed = await this.state.storage.list({ prefix: FEED_PREFIX });
+    for (const [k, v] of listed) { if (v && v.id === postId) return { key: k, rec: v }; }
+    return null;
+  }
+  async feedReact(body) {
+    const postId = String((body && body.postId) || '');
+    const wallet = String((body && body.wallet) || '').slice(0, 64);
+    if (!postId || !wallet) return fail('bad_react');
+    const found = await this._findFeedEntry(postId);
+    if (!found) return fail('post_not_found', 404);
+    const v = found.rec; v.likes = v.likes || {};
+    if (v.likes[wallet]) delete v.likes[wallet]; else v.likes[wallet] = 1;
+    await this.state.storage.put(found.key, v);
+    return json({ ok: true, likeCount: Object.keys(v.likes).length, liked: !!v.likes[wallet] });
+  }
+  async feedReply(body) {
+    const postId = String((body && body.postId) || '');
+    const wallet = String((body && body.wallet) || '').slice(0, 64);
+    const name = String((body && body.name) || '').slice(0, 40);
+    const text = String((body && body.text) || '').slice(0, 300).trim();
+    if (!postId || !text) return fail('bad_reply');
+    const found = await this._findFeedEntry(postId);
+    if (!found) return fail('post_not_found', 404);
+    const v = found.rec; v.replies = Array.isArray(v.replies) ? v.replies : [];
+    v.replies.push({ wallet, name, text, ts: Date.now() });
+    if (v.replies.length > 50) v.replies = v.replies.slice(-50);
+    await this.state.storage.put(found.key, v);
+    return json({ ok: true, replyCount: v.replies.length, replies: v.replies.slice(-20) });
   }
 
   async announce(body) {

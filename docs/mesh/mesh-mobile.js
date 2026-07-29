@@ -53,6 +53,14 @@
       '.omm-post-who{font-weight:800;color:#dff8ff}',
       '.omm-post-time{margin-left:auto;color:#64809a;font-size:11px}',
       '.omm-post-body{color:#e6f3ff;font-size:13.5px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}',
+      '.omm-post-actions{display:flex;gap:8px;margin-top:9px}',
+      '.omm-pa{display:flex;align-items:center;gap:5px;background:rgba(2,6,23,.5);border:1px solid rgba(148,163,184,.2);color:#9bcbe6;border-radius:999px;padding:5px 12px;font-size:12px;font-weight:800;cursor:pointer}',
+      '.omm-pa.on{color:#ff5e8a;border-color:rgba(255,94,138,.5);background:rgba(255,94,138,.08)}',
+      '.omm-replies{margin-top:9px;border-top:1px solid rgba(148,163,184,.12);padding-top:9px;display:flex;flex-direction:column;gap:6px}',
+      '.omm-reply{font-size:12.5px;color:#dbe9f5;line-height:1.45}.omm-reply b{color:#8fe6ff}',
+      '.omm-reply-compose{display:flex;gap:6px;margin-top:4px}',
+      '.omm-reply-compose input{flex:1;background:rgba(2,6,23,.6);border:1px solid rgba(148,163,184,.28);border-radius:10px;color:#eaf6ff;padding:8px 10px;font:inherit;font-size:12.5px}',
+      '.omm-reply-compose button{border:none;border-radius:10px;padding:8px 14px;font-weight:800;background:rgba(94,234,212,.16);color:#7ff0d8;cursor:pointer}',
       '.omm-empty{color:#7fa8c4;font-size:12.5px;text-align:center;padding:20px 8px}',
       '.omm-field{display:flex;flex-direction:column;gap:5px;margin-bottom:11px}',
       '.omm-field label{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#7fd8ff}',
@@ -99,6 +107,9 @@
       '</div>';
     shell.appendChild(sec);
     renderStories();
+    var listEl = sec.querySelector('#omm-feed-list');
+    listEl.addEventListener('click', onFeedClick);
+    listEl.addEventListener('keydown', function (e) { if (e.key === 'Enter') { var ri = e.target.closest('[data-ri]'); if (ri) { e.preventDefault(); sendReply(ri.getAttribute('data-ri')); } } });
     sec.querySelector('#omm-post-btn').addEventListener('click', function () {
       var ta = document.getElementById('omm-post-text'); var t = (ta.value || '').trim(); if (!t) return;
       var w = wallet();
@@ -133,13 +144,39 @@
     var r = Math.abs(h); for (var x = 0; x < 3; x++) for (var y = 0; y < 5; y++) { r = (r * 1103515245 + 12345) & 0x7fffffff; if (r % 2 === 0) { ctx.fillRect(x * 10.4, y * 10.4, 11, 11); ctx.fillRect((4 - x) * 10.4, y * 10.4, 11, 11); } }
     return cv.toDataURL();
   }
+  var openReplies = {};
   function paintFeed(items) {
     var list = document.getElementById('omm-feed-list'); if (!list) return;
     if (!items.length) { list.innerHTML = '<div class="omm-empty">No posts yet. Be the first to post to the mesh.</div>'; return; }
+    var me = wallet();
     list.innerHTML = items.slice(0, 60).map(function (p) {
       var who = p.who || p.wallet || 'guest';
-      return '<div class="omm-post"><div class="omm-post-head"><img class="omm-post-av" src="' + avatarDataUrl(who) + '" alt=""><span class="omm-post-who">' + esc(shortW(who)) + '</span>' + (p.pending ? '<span style="color:#f0c674;font-size:10px">· sending</span>' : '') + '<span class="omm-post-time">' + ago(p.ts) + '</span></div><div class="omm-post-body">' + esc(p.text) + '</div></div>';
+      var liked = (p.likedBy || []).indexOf(me) >= 0;
+      var lc = p.likeCount || 0, reps = p.replies || [];
+      var head = '<div class="omm-post-head"><img class="omm-post-av" src="' + avatarDataUrl(who) + '" alt=""><span class="omm-post-who">' + esc(shortW(who)) + '</span>' + (p.pending ? '<span style="color:#f0c674;font-size:10px">· sending</span>' : '') + '<span class="omm-post-time">' + ago(p.ts) + '</span></div>';
+      var body = '<div class="omm-post-body">' + esc(p.text) + '</div>';
+      if (!p.id) return '<div class="omm-post">' + head + body + '</div>';
+      var actions = '<div class="omm-post-actions"><button class="omm-pa' + (liked ? ' on' : '') + '" data-like="' + esc(p.id) + '">&#9829; <span>' + lc + '</span></button><button class="omm-pa" data-rt="' + esc(p.id) + '">&#128172; <span>' + reps.length + '</span></button></div>';
+      var repliesHtml = reps.map(function (r) { return '<div class="omm-reply"><b>' + esc(shortW(r.wallet || r.name)) + '</b> ' + esc(r.text) + '</div>'; }).join('');
+      var thread = '<div class="omm-replies"' + (openReplies[p.id] ? '' : ' hidden') + ' id="rep-' + esc(p.id) + '">' + repliesHtml + '<div class="omm-reply-compose"><input placeholder="Reply…" data-ri="' + esc(p.id) + '"><button data-rs="' + esc(p.id) + '">Send</button></div></div>';
+      return '<div class="omm-post" data-pid="' + esc(p.id) + '">' + head + body + actions + thread + '</div>';
     }).join('');
+  }
+  function reactPost(pid) {
+    var me = wallet(); if (!me) return;
+    fetch(API + '/mesh/v1/feed/react', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ postId: pid, wallet: me }) })
+      .then(function (r) { return r.json(); }).then(function (j) { if (j && j.ok) renderFeed(); }).catch(function () {});
+  }
+  function sendReply(pid) {
+    var inp = document.querySelector('[data-ri="' + pid + '"]'); var t = inp && (inp.value || '').trim(); if (!t) return;
+    var me = wallet(); openReplies[pid] = true;
+    fetch(API + '/mesh/v1/feed/reply', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ postId: pid, wallet: me, name: shortW(me), text: t }) })
+      .then(function (r) { return r.json(); }).then(function () { if (inp) inp.value = ''; renderFeed(); }).catch(function () {});
+  }
+  function onFeedClick(e) {
+    var like = e.target.closest('[data-like]'); if (like) { reactPost(like.getAttribute('data-like')); return; }
+    var rt = e.target.closest('[data-rt]'); if (rt) { var id = rt.getAttribute('data-rt'); openReplies[id] = !openReplies[id]; var el = document.getElementById('rep-' + id); if (el) el.hidden = !openReplies[id]; return; }
+    var rs = e.target.closest('[data-rs]'); if (rs) { sendReply(rs.getAttribute('data-rs')); return; }
   }
   // Render the SHARED timeline (worker) merged with any unsynced local posts.
   function renderFeed() {
