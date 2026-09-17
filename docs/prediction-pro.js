@@ -782,12 +782,37 @@
   // background tab makes zero worker requests and burns zero KV. (Exchange feeds
   // survive only as a cold-start fallback inside fetchDirectBtcSpot if Pyth is
   // unreachable — never as a competing live source.)
-  setInterval(function () {
-    if (typeof document !== 'undefined' && document.hidden) return;   // hidden tab: no polling
-    if (window.OST_IDLE_GUARD && OST_IDLE_GUARD.isGated()) return;    // tab open but user away >5min: no drain
-    pollBtcMarket();
-  }, BTC_REFRESH_MS);
+  // ADAPTIVE round poll — "users carry the load". Round STATE only changes every
+  // 5 minutes and the live price already streams from Pyth in the browser, so
+  // polling /btc/round every 1.5s (40 req/min per user) was pure worker burn — the
+  // #1 reason the free-plan daily cap was hit and the whole backend went 1027.
+  // Steady state is now 8s; tightened to 4s inside the last minute and 1.5s
+  // inside the last 20s so rollover/settlement still lands instantly. ~80% fewer
+  // requests. End-state in the rebuild: a Durable Object push channel, zero polls.
+  var btcPollTimer = null;
+  function nextBtcPollDelay() {
+    try {
+      var cr = canonicalRound;
+      if (cr && Number.isFinite(Number(cr.closeAt))) {
+        var msLeft = Number(cr.closeAt) - Date.now();
+        if (msLeft <= 20000) return 1500;
+        if (msLeft <= 60000) return 4000;
+        return 8000;
+      }
+    } catch (_) {}
+    return BTC_REFRESH_MS;   // no round known yet: fetch soon to get one
+  }
+  function scheduleBtcPoll() {
+    if (btcPollTimer) clearTimeout(btcPollTimer);
+    btcPollTimer = setTimeout(function () {
+      var hidden = (typeof document !== 'undefined' && document.hidden);        // hidden tab: no polling
+      var gated = !!(window.OST_IDLE_GUARD && OST_IDLE_GUARD.isGated());       // user away >5min: no drain
+      if (!hidden && !gated) pollBtcMarket();
+      scheduleBtcPoll();
+    }, nextBtcPollDelay());
+  }
   pollBtcMarket();
+  scheduleBtcPoll();
   // The moment a human comes back (idle guard fires ost:resume on tap/focus),
   // catch up instantly so the live price is never stale — zero cost while active.
   window.addEventListener('ost:resume', function () { pollBtcMarket(); });
