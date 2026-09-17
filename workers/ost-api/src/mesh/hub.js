@@ -10,6 +10,18 @@ const FEED_MAX = 200;
 const ID_TTL_MS = 60 * 60 * 24 * 7 * 1000;
 const SIGNAL_TTL_MS = 60 * 5 * 1000;
 const MAX_PER_INBOX = 128;
+// These were USED by the msg-mailbox + presence code but never defined — every
+// call to /mesh/v1/msg/send, /msg/inbox and /presence threw ReferenceError, so
+// server-relayed (offline) contact silently never worked. Defining them turns
+// the mailbox on. Messages persist a week so an offline peer still receives them.
+const MSG_PREFIX = 'msg:';
+const MSG_TTL_MS = 60 * 60 * 24 * 7 * 1000;   // 7-day offline delivery window
+const SEEN_PREFIX = 'seen:';
+const SEEN_TTL_MS = 2 * 60 * 1000;            // "online" if seen within 2 min
+const MAX_INBOX = 128;
+// Friend graph: friend:<owner>:<other> -> { state, ts }. DO storage (not KV) so
+// contacts survive KV exhaustion.
+const FRIEND_PREFIX = 'friend:';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -99,6 +111,18 @@ export class MeshHub {
       }
       if (method === 'GET' && path === '/mesh/v1/msg/inbox') {
         return this.msgInbox(url.searchParams.get('to'), url.searchParams.get('drain'));
+      }
+      // ── Friend graph (contact WITHOUT P2P) ──────────────────────────────
+      if (method === 'POST' && path === '/mesh/v1/friend/request') {
+        const body = await request.json().catch(() => ({}));
+        return this.friendRequest(body);
+      }
+      if (method === 'POST' && path === '/mesh/v1/friend/respond') {
+        const body = await request.json().catch(() => ({}));
+        return this.friendRespond(body);
+      }
+      if (method === 'GET' && path === '/mesh/v1/friend/list') {
+        return this.friendList(url.searchParams.get('wallet'));
       }
       if (method === 'POST' && path === '/mesh/v1/presence') {
         const body = await request.json().catch(() => ({}));
@@ -385,12 +409,79 @@ export class MeshHub {
     if (!validAddr(from) || !validAddr(to)) return fail('bad addresses');
     if (!payload || typeof payload !== 'object') return fail('bad payload');
     if (JSON.stringify(payload).length > 16000) return fail('payload too large');
+    // Block enforcement: if the recipient has blocked the sender, drop silently
+    // (report ok so a blocker isn't revealed) — the message is simply not stored.
+    const block = await this.state.storage.get(FRIEND_PREFIX + to + ':' + from).catch(() => null);
+    if (block && block.state === 'blocked') return json({ ok: true, blocked: true, ts: Date.now() });
     const now = Date.now();
     const id = messageId();
     const key = MSG_PREFIX + to + ':' + String(now).padStart(14, '0') + ':' + id;
     await this.state.storage.put(key, { id, from, to, ts: now, payload, expiresAt: now + MSG_TTL_MS });
     await this.state.storage.put(SEEN_PREFIX + from, now);
     return json({ ok: true, id, ts: now, hub: 'durable-object' });
+  }
+
+  // ── Friend graph — contact WITHOUT establishing P2P first ────────────────
+  async friendRequest(body) {
+    const from = body && body.from, to = body && body.to;
+    if (!validAddr(from) || !validAddr(to) || from === to) return fail('bad addresses');
+    const now = Date.now();
+    const rev = await this.state.storage.get(FRIEND_PREFIX + to + ':' + from).catch(() => null);
+    if (rev && rev.state === 'blocked') return json({ ok: true, state: 'sent' });   // don't reveal block
+    const mine = await this.state.storage.get(FRIEND_PREFIX + from + ':' + to).catch(() => null);
+    if (mine && mine.state === 'accepted') return json({ ok: true, state: 'accepted' });
+    // Symmetric pending edges. Also drop a mailbox notice so the recipient sees it
+    // even if they never open the mesh while the requester is online.
+    await this.state.storage.put(FRIEND_PREFIX + to + ':' + from, { state: 'pending-in', ts: now });
+    await this.state.storage.put(FRIEND_PREFIX + from + ':' + to, { state: 'pending-out', ts: now });
+    const nid = messageId();
+    await this.state.storage.put(MSG_PREFIX + to + ':' + String(now).padStart(14, '0') + ':' + nid,
+      { id: nid, from, to, ts: now, payload: { t: 'friend-request', from }, expiresAt: now + MSG_TTL_MS });
+    return json({ ok: true, state: 'sent', ts: now });
+  }
+  async friendRespond(body) {
+    const me = body && body.wallet, other = body && body.other, action = body && body.action;
+    if (!validAddr(me) || !validAddr(other)) return fail('bad addresses');
+    const now = Date.now();
+    if (action === 'accept') {
+      await this.state.storage.put(FRIEND_PREFIX + me + ':' + other, { state: 'accepted', ts: now });
+      await this.state.storage.put(FRIEND_PREFIX + other + ':' + me, { state: 'accepted', ts: now });
+      const nid = messageId();
+      await this.state.storage.put(MSG_PREFIX + other + ':' + String(now).padStart(14, '0') + ':' + nid,
+        { id: nid, from: me, to: other, ts: now, payload: { t: 'friend-accepted', from: me }, expiresAt: now + MSG_TTL_MS });
+      return json({ ok: true, state: 'accepted' });
+    }
+    if (action === 'decline' || action === 'remove') {
+      await this.state.storage.delete(FRIEND_PREFIX + me + ':' + other).catch(() => {});
+      await this.state.storage.delete(FRIEND_PREFIX + other + ':' + me).catch(() => {});
+      return json({ ok: true, state: 'none' });
+    }
+    if (action === 'block') {
+      await this.state.storage.put(FRIEND_PREFIX + me + ':' + other, { state: 'blocked', ts: now });
+      await this.state.storage.delete(FRIEND_PREFIX + other + ':' + me).catch(() => {});   // they lose their edge to me
+      return json({ ok: true, state: 'blocked' });
+    }
+    if (action === 'unblock') {
+      const cur = await this.state.storage.get(FRIEND_PREFIX + me + ':' + other).catch(() => null);
+      if (cur && cur.state === 'blocked') await this.state.storage.delete(FRIEND_PREFIX + me + ':' + other).catch(() => {});
+      return json({ ok: true, state: 'none' });
+    }
+    return fail('bad action');
+  }
+  async friendList(wallet) {
+    if (!validAddr(wallet)) return fail('bad wallet');
+    const base = FRIEND_PREFIX + wallet + ':';
+    const listed = await this.state.storage.list({ prefix: base, limit: 1000 });
+    const friends = [], pendingIn = [], pendingOut = [], blocked = [];
+    for (const [key, rec] of listed) {
+      if (!rec) continue;
+      const other = key.slice(base.length);
+      if (rec.state === 'accepted') friends.push({ addr: other, ts: rec.ts });
+      else if (rec.state === 'pending-in') pendingIn.push({ addr: other, ts: rec.ts });
+      else if (rec.state === 'pending-out') pendingOut.push({ addr: other, ts: rec.ts });
+      else if (rec.state === 'blocked') blocked.push({ addr: other, ts: rec.ts });
+    }
+    return json({ ok: true, friends, pendingIn, pendingOut, blocked, ts: Date.now() });
   }
 
   async msgInbox(to, drain) {

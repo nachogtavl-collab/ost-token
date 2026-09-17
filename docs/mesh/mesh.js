@@ -423,6 +423,9 @@ class MeshPavilion {
     });
     // Keep the hero in sync with the connected wallet.
     window.addEventListener('ost:wallet-changed', () => { try { this._renderWalletHero(); } catch (_) {} });
+    // Repaint when the canonical balance actually lands (async /balance/truth +
+    // on-chain reads) — otherwise the hero froze on the first (often blank) read.
+    window.addEventListener('ost:balance', () => { try { this._renderWalletHero(); } catch (_) {} });
     if (window.OST_WALLET && window.OST_WALLET.onReady) { try { window.OST_WALLET.onReady(() => this._renderWalletHero()); } catch (_) {} }
     document.getElementById('mesh-copy-addr').addEventListener('click', () => this._copyAddress());
     document.getElementById('mesh-copy-invite').addEventListener('click', () => this._copyInvite());
@@ -503,7 +506,16 @@ class MeshPavilion {
     // then read; fall back to the session read only if canonical is unknown.
     try { if (window.OST_BALANCE && OST_BALANCE.refresh) OST_BALANCE.refresh(); } catch (_) {}
     var og = null, oc = null;
-    try { if (window.OST_BALANCE) { og = OST_BALANCE.onchainOstg(); oc = OST_BALANCE.onchainOstc(); } } catch (_) {}
+    // OSTG = wallet OSTG + custodial PLAY OSTG (both are real OSTG). Showing only
+    // the wallet half made the mesh understate the user's actual OSTG — that was
+    // the "inaccurate OSTG in the mesh" bug.
+    try {
+      if (window.OST_BALANCE) {
+        var a = OST_BALANCE.onchainOstg(), p = OST_BALANCE.play();
+        if (a != null || p != null) og = (Number(a) || 0) + (Number(p) || 0);
+        oc = OST_BALANCE.onchainOstc();
+      }
+    } catch (_) {}
     if (og == null) { try { og = window.OST_SESSION && OST_SESSION.walletBalance ? OST_SESSION.walletBalance() : null; } catch (_) {} }
     set('mesh-hero-ostg', og);
     set('mesh-hero-ostc', oc);
@@ -1062,51 +1074,77 @@ class MeshPavilion {
     const video = document.getElementById('mesh-qr-video');
     const fileInput = document.getElementById('mesh-qr-file');
     if (fileInput) fileInput.addEventListener('change', () => this._scanQRFromFile(fileInput.files && fileInput.files[0]));
-    if (!('BarcodeDetector' in window)) {
-      this._setStatus('Live QR scan not supported on this browser. Use Upload QR image.', 'warn');
+    // Live camera scan — OST_QR uses BarcodeDetector where it exists (Android
+    // Chrome) and jsQR everywhere else, so iOS/Safari now scans instead of
+    // showing a black <video>. Upload-image always works regardless.
+    if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) || !window.OST_QR) {
+      this._setStatus('Live camera scan unavailable here. Use Upload QR image.', 'warn');
       return;
     }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
       video.srcObject = stream;
-      const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
-      let stopped = false;
-      this._qrScanStop = () => { stopped = true; stream.getTracks().forEach((t) => t.stop()); };
-      const tick = async () => {
-        if (stopped) return;
-        try {
-          const codes = await detector.detect(video);
-          if (codes && codes[0] && codes[0].rawValue) {
-            this._handleScannedInvite(codes[0].rawValue);
-            return;
-          }
-        } catch (_) {}
-        requestAnimationFrame(tick);
-      };
-      requestAnimationFrame(tick);
+      try { await video.play(); } catch (_) {}   // iOS needs an explicit play()
+      const stopScan = window.OST_QR.scanVideo(
+        video,
+        (value) => { this._handleScannedInvite(value); },
+        () => { this._setStatus('Camera scan failed — use Upload QR image.', 'warn'); }
+      );
+      this._qrScanStop = () => { stopScan(); try { stream.getTracks().forEach((t) => t.stop()); } catch (_) {} };
     } catch (err) {
       this._setStatus('Camera blocked: ' + err.message + '. Use Upload QR image.', 'warn');
     }
   }
   async _scanQRFromFile(file) {
     if (!file) return;
-    if (!('BarcodeDetector' in window)) { this._setStatus('QR decode not supported in this browser.', 'err'); return; }
+    if (!window.OST_QR) { this._setStatus('QR reader still loading — try again in a moment.', 'warn'); return; }
+    this._setStatus('Reading QR…', 'info');
     try {
-      const bmp = await createImageBitmap(file);
-      const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
-      const codes = await detector.detect(bmp);
-      if (!codes || !codes[0]) { this._setStatus('No QR detected in image.', 'warn'); return; }
-      this._handleScannedInvite(codes[0].rawValue);
+      const value = await window.OST_QR.fromFile(file);
+      if (!value) { this._setStatus('No QR found in that image. Try a clearer, closer photo.', 'warn'); return; }
+      this._handleScannedInvite(value);
     } catch (err) {
-      this._setStatus('QR decode failed: ' + err.message, 'err');
+      this._setStatus('QR decode failed: ' + (err && err.message ? err.message : 'unreadable image'), 'err');
     }
   }
   _handleScannedInvite(value) {
     if (!value) return;
+    // Stop the camera the moment we have a result (frees it on iOS).
+    if (this._qrScanStop) { try { this._qrScanStop(); } catch (_) {} this._qrScanStop = null; }
+    // DO NOT auto-close + auto-connect. On iOS a silent connect failure made the
+    // whole tab vanish with nothing to show. Instead, PRESENT the decoded invite
+    // inside the modal so it can always be copied/pasted, with an explicit
+    // Connect. The scan result is never lost.
     if (this.peerInput) this.peerInput.value = value;
-    this._closeQRModal();
-    this._setStatus('QR scanned — connecting…', 'ok');
-    this._connectToPeer();
+    const body = document.getElementById('mesh-qr-body');
+    const title = document.getElementById('mesh-qr-title');
+    if (!body) { this._closeQRModal(); this._setStatus('QR scanned. Paste the invite to connect.', 'ok'); return; }
+    if (title) title.textContent = 'Invite scanned ✓';
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    body.innerHTML =
+      '<div class="ost-mesh-qr-result">' +
+        '<p class="ost-mesh-qr-hint">Scanned successfully. Copy the invite, or connect now.</p>' +
+        '<textarea id="mesh-qr-result-text" readonly rows="3" style="width:100%;box-sizing:border-box;font-size:12px;word-break:break-all;">' + esc(value) + '</textarea>' +
+        '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">' +
+          '<button type="button" id="mesh-qr-copy" class="ost-mesh-qr-upload" style="flex:1;">Copy invite</button>' +
+          '<button type="button" id="mesh-qr-connect" class="ost-mesh-qr-upload" style="flex:1;background:linear-gradient(135deg,#7a57e0,#3f2a8c);color:#fff;">Connect</button>' +
+        '</div>' +
+      '</div>';
+    const copyBtn = document.getElementById('mesh-qr-copy');
+    const connectBtn = document.getElementById('mesh-qr-connect');
+    const ta = document.getElementById('mesh-qr-result-text');
+    if (copyBtn) copyBtn.addEventListener('click', () => {
+      const doCopy = (navigator.clipboard && navigator.clipboard.writeText)
+        ? navigator.clipboard.writeText(value)
+        : (function () { try { ta.select(); document.execCommand('copy'); return Promise.resolve(); } catch (e) { return Promise.reject(e); } })();
+      Promise.resolve(doCopy).then(() => { copyBtn.textContent = 'Copied ✓'; }).catch(() => { if (ta) ta.select(); copyBtn.textContent = 'Select & copy'; });
+    });
+    if (connectBtn) connectBtn.addEventListener('click', () => {
+      this._closeQRModal();
+      this._setStatus('Connecting…', 'ok');
+      this._connectToPeer();
+    });
+    this._setStatus('QR scanned — copy the invite or tap Connect.', 'ok');
   }
   async _shareInvite() {
     if (!this.publicBundle) return;

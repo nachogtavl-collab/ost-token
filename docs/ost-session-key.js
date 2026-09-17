@@ -111,9 +111,23 @@
   async function sendSession(tx) {
     var c = conn(), k = load();
     tx.feePayer = k.publicKey;
-    tx.recentBlockhash = (await c.getLatestBlockhash('confirmed')).blockhash;
+    // Blockhash: prefer the wallet's warm/rotating source (falls back to the
+    // worker when every browser RPC is throttled), then a direct read as a floor.
+    var bh = null;
+    try { if (window.OST_WALLET && OST_WALLET.warmBlockhash) bh = await OST_WALLET.warmBlockhash(); } catch (_) {}
+    if (!bh || !bh.blockhash) { try { if (window.OST_WALLET && OST_WALLET.serverBlockhash) bh = await OST_WALLET.serverBlockhash(); } catch (_) {} }
+    if (!bh || !bh.blockhash) bh = await c.getLatestBlockhash('confirmed');
+    tx.recentBlockhash = bh.blockhash;
     tx.sign(k);
-    var sig = await c.sendRawTransaction(tx.serialize());
+    var serialized = tx.serialize();
+    var sig;
+    try {
+      sig = await c.sendRawTransaction(serialized);
+    } catch (e) {
+      // Every client RPC down → submit through the worker relay so 1-tap still lands.
+      if (window.OST_WALLET && OST_WALLET.sendRawResilient) sig = await OST_WALLET.sendRawResilient(serialized, false);
+      else throw e;
+    }
     try { await c.confirmTransaction(sig, 'confirmed'); } catch (_) {}
     return sig;
   }

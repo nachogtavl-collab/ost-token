@@ -9,6 +9,7 @@ import { handleSettlementRequest } from './settlement.js';
 import { handleAdRequest } from './ad-treasury.js';
 import { handleAnchorRequest } from './ost-anchor.js';
 import { handleBalanceTruth } from './balance-truth.js';
+import { ensureRpcConfigured as poolEnsureRpc, withRpc as poolWithRpc } from './solana-pool.js';
 
 export { MeshHub } from './mesh/hub.js';
 export { RealtimeHub } from './realtime.js';
@@ -3663,8 +3664,45 @@ export default {
     // the Helius key is never committed to the repo. The client fetches this on
     // boot and points its Solana connection at it (fixes the public-devnet 429s).
     if (path === '/rpc-config' && method === 'GET') {
-      const fallbacks = [env.SOLANA_DEVNET_RPC_2, env.SOLANA_DEVNET_RPC_3].filter(function (u) { return u && /^https:\/\//.test(u); });
+      const fallbacks = [env.SOLANA_DEVNET_RPC_2, env.SOLANA_DEVNET_RPC_3, env.SOLANA_DEVNET_RPC_4].filter(function (u) { return u && /^https:\/\//.test(u); });
       return json({ rpc: env.SOLANA_DEVNET_RPC || null, fallbacks: fallbacks }, 200, { 'cache-control': 'public, max-age=300' });
+    }
+
+    // ── SERVER-SIDE RPC PROXY ─ the resilience floor. When a browser's own RPC is
+    // rate-limited into the ground (Helius quota spike at peak, public-devnet
+    // throttle), the client can still get a blockhash and submit a signed tx
+    // THROUGH the worker, which rotates across all 3 dedicated keys via withRpc.
+    // The worker NEVER signs here — /rpc/send only relays a tx the wallet already
+    // fully signed — so this cannot move pool funds; it is a pure RPC relay.
+    if (path === '/rpc/blockhash' && method === 'GET') {
+      poolEnsureRpc(env);
+      try {
+        const bh = await poolWithRpc('proxy-blockhash', function (conn) { return conn.getLatestBlockhash('confirmed'); });
+        return json({ ok: true, blockhash: bh.blockhash, lastValidBlockHeight: bh.lastValidBlockHeight },
+          200, { 'cache-control': 'public, max-age=1' });   // 1s edge cache dampens stampedes without staleness
+      } catch (e) {
+        return json({ ok: false, error: 'blockhash_unavailable', message: String((e && e.message) || e).slice(0, 200) }, 503);
+      }
+    }
+    if (path === '/rpc/send' && method === 'POST') {
+      poolEnsureRpc(env);
+      let body; try { body = await request.json(); } catch (_) { return json({ ok: false, error: 'invalid_json' }, 400); }
+      const b64 = body && (body.tx || body.transaction || body.signedTx);
+      if (!b64 || typeof b64 !== 'string' || b64.length > 6000) return json({ ok: false, error: 'invalid_tx' }, 400);
+      let raw; try { raw = Uint8Array.from(atob(b64), function (c) { return c.charCodeAt(0); }); }
+      catch (_) { return json({ ok: false, error: 'invalid_base64' }, 400); }
+      // A real signed tx is well over 100 bytes (64-byte sig + message). Reject
+      // junk here so a malformed payload can't trigger the withRpc retry storm.
+      if (raw.length < 100) return json({ ok: false, error: 'invalid_tx', message: 'transaction too small to be valid' }, 400);
+      const skipPreflight = body && body.skipPreflight === true;
+      try {
+        const sig = await poolWithRpc('proxy-send', function (conn) {
+          return conn.sendRawTransaction(raw, { skipPreflight: skipPreflight, preflightCommitment: 'confirmed', maxRetries: 3 });
+        });
+        return json({ ok: true, sig: sig });
+      } catch (e) {
+        return json({ ok: false, error: 'send_failed', message: String((e && e.message) || e).slice(0, 300) }, 502);
+      }
     }
 
     // ── GET /quantum/entropy?n=N ─ REAL quantum randomness relayed from the ANU

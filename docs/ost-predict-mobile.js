@@ -160,6 +160,13 @@
   // let a slow reconcile-read bounce it the WRONG way before the server confirms
   // — that bounce is what made buying feel non-optimistic.
   var _balHold = null;   // { v, dir:'down'|'up', until }
+  // Sell price LOCK: 5-min BTC odds move every tick, so a sell ticket that
+  // re-quotes on every tick shifts the exit price under the user's finger — the
+  // "whole panoramic view changed" so the tap never resolves to a stable sale.
+  // We snapshot the quote when the sell sheet opens and hold it; the ticket is
+  // static (tap always lands), and the user can tap "update" to re-lock to the
+  // current price. Cleared whenever the sheet closes or switches to buy.
+  var _sellLock = null;
   function setBalDisplay(v) {
     if (v != null && _balHold && Date.now() < _balHold.until) {
       var nv = Number(v);
@@ -169,14 +176,25 @@
     }
     document.querySelectorAll('#ostPredictMobile .opm-balv').forEach(function (e) { e.textContent = (v == null ? '—' : Number(Math.max(0, v)).toLocaleString(undefined, { maximumFractionDigits: 2 })); });
   }
-  function refreshBalance() {
-    try { if (window.OST_BALANCE && OST_BALANCE.refresh) OST_BALANCE.refresh(true); } catch (_) {}   // canonical /balance/truth
-    try { if (window.OST_SESSION && OST_SESSION.refresh) OST_SESSION.refresh(); } catch (_) {}
-    try { if (window.OST_PLAY && OST_PLAY.refresh) OST_PLAY.refresh(); } catch (_) {}
+  // READ-ONLY repaint of the balance chip from whatever the canonical source
+  // currently holds. Safe to call from an event handler — it never triggers a
+  // refresh, so it can't loop with the ost:balance event.
+  function paintBalance() {
     var b = playBal();
     setBalDisplay(b);
     var f = ''; try { if (window.OST_CCY && OST_CCY.fiat && b != null) f = OST_CCY.fiat(b) || ''; } catch (_) {}
     document.querySelectorAll('#ostPredictMobile .opm-balf').forEach(function (e) { e.textContent = f; });
+  }
+  function refreshBalance() {
+    // These are ASYNC: they kick off a fetch and fire `ost:balance` /
+    // `ost:play:balance` when the fresh number lands. paintBalance() here shows
+    // the current value immediately; the event listeners below repaint again the
+    // moment the refresh completes — THAT is what makes the chip actually move
+    // after a bet/sell instead of showing a stale number forever.
+    try { if (window.OST_BALANCE && OST_BALANCE.refresh) OST_BALANCE.refresh(true); } catch (_) {}   // canonical /balance/truth
+    try { if (window.OST_SESSION && OST_SESSION.refresh) OST_SESSION.refresh(); } catch (_) {}
+    try { if (window.OST_PLAY && OST_PLAY.refresh) OST_PLAY.refresh(); } catch (_) {}
+    paintBalance();
   }
   function balChip() { return '<div class="opm-bal"><span class="k">OSTG</span><span class="v opm-balv">—</span><span class="f opm-balf"></span></div>'; }
 
@@ -477,8 +495,13 @@
     var t = el('opmTicket'); if (!t) return;
     if (mode === 'sell') {
       var cfs = el('opmCfSell');
-      if (!cfs) { t.innerHTML = sellConfirmTicket(); cfs = el('opmCfSell'); if (cfs) cfs.onclick = confirmSell; return; }
-      var q = sellQuote();
+      if (!cfs) { t.innerHTML = sellConfirmTicket(); cfs = el('opmCfSell'); if (cfs) cfs.onclick = confirmSell; wireSellLockRow(); return; }
+      // LOCKED: leave the exit price exactly as snapshotted. Ticks no longer move
+      // the numbers under the user's finger — this is the fix for "it doesn't sell
+      // because the whole panoramic view changed". The user taps "update" to
+      // re-lock. Settle (non-lockable) still shows the server-computed amount live.
+      if (_sellLock && !_sellLock.isSettle) return;
+      var q = _sellLock || sellQuote();
       var px = el('opmSellPx'); if (px) px.textContent = fmtc(q.c) + '¢';
       var fe = el('opmSellFee'); if (fe) fe.textContent = q.fee.toFixed(2);
       var pl = el('opmSellPnl'); if (pl) { pl.textContent = (q.up ? '+' : '−') + Math.abs(q.pnl).toFixed(2) + ' OSTG'; pl.style.color = 'var(--opm-' + (q.up ? 'yes' : 'no') + ')'; }
@@ -752,8 +775,16 @@
 
   /* ---- buy / sell sheet ---- */
   var amt = 25, mode = 'buy';
-  function openSheet(m, s) { mode = m; if (s) side = s; syncYnSel(); paintTicket(); el('opmSheet').classList.add('open'); el('opmScrim').classList.add('open'); }
-  function closeSheet() { var sh = el('opmSheet'), sc = el('opmScrim'); if (sh) sh.classList.remove('open'); if (sc) sc.classList.remove('open'); }
+  function openSheet(m, s) {
+    mode = m; if (s) side = s;
+    // Lock the exit price the instant the sell ticket opens; clear it for buy.
+    _sellLock = (m === 'sell') ? lockSellQuote() : null;
+    syncYnSel(); paintTicket(); el('opmSheet').classList.add('open'); el('opmScrim').classList.add('open');
+  }
+  function closeSheet() { _sellLock = null; var sh = el('opmSheet'), sc = el('opmScrim'); if (sh) sh.classList.remove('open'); if (sc) sc.classList.remove('open'); }
+  // Snapshot the live quote as the locked exit. Re-callable to "update" the lock.
+  function lockSellQuote() { var q = sellQuote(); q.at = Date.now(); return q; }
+  function relockSell() { _sellLock = lockSellQuote(); var t = el('opmTicket'); if (t) { t.innerHTML = sellConfirmTicket(); var cfs = el('opmCfSell'); if (cfs) cfs.onclick = confirmSell; wireSellLockRow(); } }
   function maxBal() { var b = playBal(); return b > 0 ? Math.floor(b) : 25; }
   function syncYnSel() { document.querySelectorAll('#opmYn button').forEach(function (b) { b.classList.toggle('sel', b.getAttribute('data-s') === side); }); }
   // One estimate used by the sheet + its live refresher. When the on-chain arb
@@ -798,10 +829,14 @@
     return { c: c, shares: shares, fee: fee, realNet: String(realNet), pnl: pnl, up: up, isSettle: isSettle };
   }
   function sellConfirmTicket() {
-    var q = sellQuote();
+    // Use the LOCKED snapshot so the ticket is stable while open (see _sellLock).
+    var q = _sellLock || sellQuote();
+    var lockRow = q.isSettle ? '' :
+      '<div class="opm-tl" style="cursor:pointer" id="opmSellLockRow"><span class="k">' + icon('lock') + ' Exit price locked</span><span class="v" style="color:var(--opm-gold);text-decoration:underline">tap to update</span></div>';
     return '<h3>' + icon('coin') + ' ' + (q.isSettle ? 'Settle position' : 'Sell your ' + (myPos && myPos.side === 'yes' ? 'Yes' : 'No') + ' position') + '</h3>' +
-      '<div class="opm-fine" style="text-align:left;color:var(--opm-ink2)">' + (q.isSettle ? 'Claim your settled position — the amount is computed and paid by the server.' : 'Exit now — OST buys your shares back at the live price. You keep the move so far instead of waiting for close.') + '</div>' +
+      '<div class="opm-fine" style="text-align:left;color:var(--opm-ink2)">' + (q.isSettle ? 'Claim your settled position — the amount is computed and paid by the server.' : 'Exit at the locked price below — it stays put while ticks move, so your tap always sells. Tap “update” to grab the newest price.') + '</div>' +
       '<div class="opm-bd">' +
+        lockRow +
         '<div class="opm-tl"><span class="k">Selling</span><span class="v">' + q.shares.toFixed(2) + ' shares</span></div>' +
         '<div class="opm-tl"><span class="k">Sell price</span><span class="v" id="opmSellPx">' + fmtc(q.c) + '¢</span></div>' +
         '<div class="opm-tl"><span class="k">Fee (2% profit)</span><span class="v" id="opmSellFee">' + q.fee.toFixed(2) + '</span></div>' +
@@ -811,6 +846,7 @@
       '<button class="opm-confirm sellc" id="opmCfSell">' + (q.isSettle ? 'Settle for ' : 'Sell for ') + q.realNet + ' OSTG</button>' +
       '<div class="opm-fine">' + icon('lock') + ' Proceeds return to your Play OSTG instantly.</div>';
   }
+  function wireSellLockRow() { var r = el('opmSellLockRow'); if (r) r.onclick = relockSell; }
   // One-tap betting (session key). Only meaningful on the on-chain 5-min rail.
   function sessionActive() { try { return !!(window.OST_SESSION && OST_SESSION.exists() && OST_SESSION.balance() > 0); } catch (_) { return false; } }
   function renderSessionRow() {
@@ -835,7 +871,7 @@
   }
   function paintTicket() {
     var t = el('opmTicket'); if (!t) return;
-    if (mode === 'sell') { t.innerHTML = sellConfirmTicket(); var cfs = el('opmCfSell'); if (cfs) cfs.onclick = confirmSell; return; }
+    if (mode === 'sell') { t.innerHTML = sellConfirmTicket(); var cfs = el('opmCfSell'); if (cfs) cfs.onclick = confirmSell; wireSellLockRow(); return; }
     t.innerHTML = buyTicket();
     renderSessionRow();
     document.querySelectorAll('#opmTicket .opm-tkout button').forEach(function (b) { b.onclick = function () { side = b.getAttribute('data-t'); syncYnSel(); paintTicket(); }; });
@@ -925,7 +961,10 @@
       toast('Too close to round end — it settles automatically now.');
       return;
     }
-    var estGross = posValueNow();
+    // Use the LOCKED net the user actually saw for the optimistic bump, not a
+    // fresh live recompute (which would already have drifted).
+    var lockedNet = _sellLock && parseFloat(String(_sellLock.realNet).replace(/,/g, ''));
+    var estGross = (lockedNet > 0 ? lockedNet : posValueNow());
     var b = playBal(); if (b != null && estGross > 0) { _balHold = { v: b + estGross, dir: 'up', until: Date.now() + 40000 }; setBalDisplay(b + estGross); }
     var ctrl = new AbortController(); var to = setTimeout(function () { try { ctrl.abort(); } catch (_) {} }, 12000);
     fetch(API + '/play/predict/cashout', {
@@ -1072,7 +1111,12 @@
   window.addEventListener('ost:prediction-order-recorded', function () { if (view === 'detail') setTimeout(refreshPosition, 400); if (view === 'positions') setTimeout(renderPositions, 400); });
   window.addEventListener('ost:prediction-resolutions-refreshed', function () { if (view === 'positions') renderPositions(); });
   window.addEventListener('ost:money:change', function () { refreshBalance(); if (view === 'positions') renderPositions(); });
-  window.addEventListener('ost:play:balance', refreshBalance);
+  window.addEventListener('ost:play:balance', paintBalance);
+  // THE missing link: OST_BALANCE fires this when its async /balance/truth read
+  // (and on-chain OSTG) lands. Without it the chip stayed frozen on the pre-bet
+  // number, and a win/loss only "sometimes" showed. Repaint (read-only) here so
+  // the balance reacts every time — and also refresh a visible position card.
+  window.addEventListener('ost:balance', function () { paintBalance(); if (view === 'detail') renderPosition(); if (view === 'positions') renderPositions(); });
   window.addEventListener('ost:session:change', function () { if (sheetOpen() && mode === 'buy') renderSessionRow(); });
 
   // Entry point for the "Trade ticket" launchers: show the predict panel and

@@ -4,12 +4,15 @@
  * OST's answer to iOS 26 Messages polls: stake-backed peer
  * prediction markets that live INSIDE existing mesh group chats.
  *
- * - Any group member can create a market (question + 2..6 options).
- * - Members back options with real OST credits (debited from
- *   `ost.faucet.hub.v2`).
- * - Only the creator can resolve. On resolve, the loser pot is
- *   distributed pro-rata to backers of the winning option (winners
- *   also get their original stake back).
+ * - Any group member can create a market — Yes/No (default) or 2..6 custom options.
+ * - Members back options with Social OSTC: a self-contained OFF-CHAIN scoreboard
+ *   (`ost.mesh.ostc.tally.v1`, seeded per member). Deliberately NOT the on-chain
+ *   wallet OSTC (can't be settled P2P) and NOT the faucet-hub credits (so real
+ *   funds are never drained). Every card/modal says so — it must never read as
+ *   real wallet OSTC.
+ * - Only the creator can resolve/cancel. On resolve, the loser pot is
+ *   distributed pro-rata to backers of the winning option (winners also get
+ *   their original stake back), 2% deflationary sink on profit only.
  * - All state is mirrored peer-to-peer over the existing
  *   `ost:mesh-payload` bus that mesh-social-x.js already uses.
  *
@@ -23,7 +26,14 @@
   var APP = 'mesh-group-markets';
   var MARKETS_PREFIX = 'ost.mesh.groupMarkets.v1.'; // + groupId
   var SEEN_KEY = 'ost.mesh.groupMarkets.seen.v1';
-  var WALLET_KEY = 'ost.faucet.hub.v2';
+  // Social OSTC — a self-contained, OFF-CHAIN group scoreboard. Deliberately its
+  // OWN pool: NOT the on-chain wallet OSTC (that can't be locally settled P2P) and
+  // NOT the faucet-hub credits (so real earned credits are never drained by a
+  // friendly bet). Everyone starts with the same bankroll; wins/losses move only
+  // within this scoreboard. Every card says so — it must never read as wallet OSTC.
+  var TALLY_KEY = 'ost.mesh.ostc.tally.v1';
+  var TALLY_SEED = 100;                     // starting Social OSTC per member
+  var TALLY_EVENT = 'ost:mesh:ostc-tally';
 
   // ---------- Tiny helpers ----------
   function readJson(k, fb) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : fb; } catch (e) { return fb; } }
@@ -67,34 +77,40 @@
     return 'You';
   }
 
-  // ---------- Wallet (faucet hub credits) ----------
-  function loadWallet() { try { return JSON.parse(localStorage.getItem(WALLET_KEY) || '{}'); } catch (e) { return {}; } }
-  function saveWallet(s) { try { localStorage.setItem(WALLET_KEY, JSON.stringify(s)); } catch (e) {} }
-  function getCredits() { return Number(loadWallet().credits || 0); }
+  // ---------- Social OSTC tally (off-chain group scoreboard) ----------
+  function loadTally() {
+    var v = readJson(TALLY_KEY, null);
+    if (!v || typeof v !== 'object' || typeof v.balance !== 'number') {
+      v = { balance: TALLY_SEED, lifetimeWon: 0, lifetimeLost: 0, seededAt: nowMs() };
+      writeJson(TALLY_KEY, v);
+    }
+    return v;
+  }
+  function saveTally(s) { writeJson(TALLY_KEY, s); }
+  function getCredits() { return Number(loadTally().balance || 0); }
+  function emitTally(s, delta, reason) {
+    try { window.dispatchEvent(new CustomEvent(TALLY_EVENT, { detail: { balance: s.balance, delta: delta, source: reason } })); } catch (e) {}
+  }
 
   function debitCredits(amount, reason) {
     amount = Number(amount);
     if (!(amount > 0)) return false;
-    var s = loadWallet();
-    var bal = Number(s.credits || 0);
-    if (bal < amount - 1e-9) return false;
-    s.credits = +(bal - amount).toFixed(6);
-    saveWallet(s);
-    try { window.dispatchEvent(new CustomEvent('ost-faucet-hub-award', { detail: { credits: -amount, source: reason || 'market.debit', total: s.credits } })); } catch (e) {}
-    if (window.OST_FAUCET_HUB && typeof window.OST_FAUCET_HUB.refresh === 'function') { try { window.OST_FAUCET_HUB.refresh(); } catch (e) {} }
+    var s = loadTally();
+    if (Number(s.balance || 0) < amount - 1e-9) return false;
+    s.balance = +(Number(s.balance || 0) - amount).toFixed(6);
+    s.lifetimeLost = +((Number(s.lifetimeLost || 0)) + amount).toFixed(6);
+    saveTally(s);
+    emitTally(s, -amount, reason || 'market.stake');
     return true;
   }
   function creditCredits(amount, reason) {
     amount = Number(amount);
     if (!(amount > 0)) return;
-    if (window.OST_FAUCET_HUB && typeof window.OST_FAUCET_HUB.award === 'function') {
-      try { window.OST_FAUCET_HUB.award(amount, reason || 'market.payout'); return; } catch (e) {}
-    }
-    var s = loadWallet();
-    s.credits = +((Number(s.credits || 0)) + amount).toFixed(6);
-    s.lifetime = +((Number(s.lifetime || 0)) + amount).toFixed(6);
-    saveWallet(s);
-    try { window.dispatchEvent(new CustomEvent('ost-faucet-hub-award', { detail: { credits: amount, source: reason || 'market.payout', total: s.credits } })); } catch (e) {}
+    var s = loadTally();
+    s.balance = +((Number(s.balance || 0)) + amount).toFixed(6);
+    s.lifetimeWon = +((Number(s.lifetimeWon || 0)) + amount).toFixed(6);
+    saveTally(s);
+    emitTally(s, amount, reason || 'market.payout');
   }
 
   // ---------- Markets storage ----------
@@ -199,6 +215,13 @@
       '#msxNewMarketModal .mm-actions .mm-cancel{background:rgba(255,255,255,0.1);color:#fff;}',
       '#msxNewMarketModal .mm-actions .mm-create{background:linear-gradient(135deg,#7a57e0,#3f2a8c);color:#fff;}',
       '#msxNewMarketModal .mm-add{background:rgba(255,255,255,0.08);border:1px dashed rgba(255,255,255,0.25);color:#fff;border-radius:8px;padding:6px;cursor:pointer;font-size:12px;}',
+      '#msxNewMarketModal .mm-mode{display:flex;gap:6px;}',
+      '#msxNewMarketModal .mm-mode button{flex:1;padding:7px;border-radius:8px;border:1px solid rgba(255,255,255,0.16);background:rgba(255,255,255,0.05);color:#cfc6ea;font-weight:600;font-size:12px;cursor:pointer;}',
+      '#msxNewMarketModal .mm-mode button.on{background:linear-gradient(135deg,#7a57e0,#3f2a8c);color:#fff;border-color:transparent;}',
+      '#msxNewMarketModal .mm-note{font-size:10.5px;opacity:0.7;margin-top:10px;line-height:1.35;color:#c9c0e6;}',
+      '#msxNewMarketModal .mm-bal{font-size:11px;opacity:0.85;margin-top:8px;color:#cfc6ea;}',
+      '#msxNewMarketModal .mm-bal b{color:#fff;}',
+      '.msx-market-card .mm-social{font-size:10px;opacity:0.6;margin-top:5px;font-style:italic;}',
       '.msx-market-empty{font-size:11px;opacity:0.55;font-style:italic;text-align:center;margin:6px 0;}'
     ].join('\n');
     var st = document.createElement('style');
@@ -238,7 +261,7 @@
       return '<div class="mm-opt' + (isWin ? ' is-winner' : '') + '">' +
         '<div class="mm-bar" style="width:' + pct + '%"></div>' +
         '<div class="mm-label">' + escapeHtml(o.label) + (isWin ? ' <span class="mm-pill win">Winner</span>' : '') + '</div>' +
-        '<div class="mm-tot">' + fmt(t) + ' OST</div>' +
+        '<div class="mm-tot">' + fmt(t) + ' OSTC</div>' +
         btn +
       '</div>';
     }).join('');
@@ -246,11 +269,11 @@
     var meta = '<div class="mm-meta">' +
       '<span>by ' + escapeHtml(market.creatorNick || shortAddr(market.creator)) + '</span>' +
       statusPill +
-      '<span class="mm-pill">Pot ' + fmt(totals.pot) + ' OST</span>' +
+      '<span class="mm-pill">Pot ' + fmt(totals.pot) + ' OSTC</span>' +
     '</div>';
 
     var foot = '<div class="mm-foot">' +
-      '<span>Stake ' + fmt(market.minStake) + (market.maxStake ? '–' + fmt(market.maxStake) : '+') + ' OST</span>' +
+      '<span>Stake ' + fmt(market.minStake) + (market.maxStake ? '–' + fmt(market.maxStake) : '+') + ' OSTC</span>' +
       (market.expiresAt ? '<span>' + (expired ? 'Expired ' : 'Closes ') + relTime(market.expiresAt) + '</span>' : '') +
       (status === 'open' && isCreator ? '<button type="button" class="mm-back" data-act="cancel" data-market="' + escapeHtml(market.id) + '">Cancel</button>' : '') +
     '</div>';
@@ -259,7 +282,8 @@
     card.className = 'msx-market-card';
     card.dataset.marketId = market.id;
     card.dataset.ts = String(market.createdAt || 0);
-    card.innerHTML = '<div class="mm-q">📊 ' + escapeHtml(market.question) + '</div>' + meta + optsHtml + foot;
+    card.innerHTML = '<div class="mm-q">📊 ' + escapeHtml(market.question) + '</div>' + meta + optsHtml + foot +
+      '<div class="mm-social">Social OSTC · off-chain group scoreboard</div>';
     return card;
   }
 
@@ -286,15 +310,15 @@
     var min = Number(market.minStake) || 0.01;
     var max = Number(market.maxStake) || 0;
     var bal = getCredits();
-    var promptMsg = 'Stake OST on this option.\nMin: ' + fmt(min) + (max ? '   Max: ' + fmt(max) : '') + '\nYour balance: ' + fmt(bal) + ' OST';
+    var promptMsg = 'Stake Social OSTC on this option.\n(off-chain group scoreboard — not your wallet OSTC)\nMin: ' + fmt(min) + (max ? '   Max: ' + fmt(max) : '') + '\nYour Social OSTC: ' + fmt(bal);
     var raw = window.prompt(promptMsg, fmt(min));
     if (raw == null) return;
     var amt = Number(raw);
     if (!isFinite(amt) || amt <= 0) return alert('Invalid amount.');
     if (amt < min) return alert('Below minimum stake (' + fmt(min) + ').');
     if (max && amt > max) return alert('Above maximum stake (' + fmt(max) + ').');
-    if (amt > bal) return alert('Insufficient OST credits.');
-    if (!debitCredits(amt, 'market.stake')) return alert('Could not debit credits.');
+    if (amt > bal) return alert('Not enough Social OSTC (you have ' + fmt(bal) + ').');
+    if (!debitCredits(amt, 'market.stake')) return alert('Could not place stake.');
     var stake = { id: uid('s'), marketId: marketId, optionId: optId, from: selfAddress(), nick: selfNick(), amount: amt, ts: nowMs() };
     applyStake(market, stake);
     upsertMarket(market);
@@ -352,12 +376,9 @@
     (winner.backers || []).forEach(function (b) {
       if (b.addr !== me) return;
       var fairProfit = (b.amount / winnerTot) * loserPot;
-      var rakeKept = fairProfit * RAKE;
+      var rakeKept = fairProfit * RAKE;   // deflationary sink on PROFIT only — play-money, never booked as real house revenue
       var share = b.amount + fairProfit - rakeKept;
       if (share > 0) creditCredits(share, 'market.payout');
-      if (rakeKept > 0.0001) {
-        try { window.dispatchEvent(new CustomEvent('ost:house-fee', { detail: { source: 'mesh', amount: rakeKept, label: 'group market rake' } })); } catch (e) {}
-      }
     });
   }
 
@@ -395,9 +416,13 @@
         '<h3>📊 New group market</h3>',
         '<label>Question (max 140 chars)</label>',
         '<textarea id="mmQ" maxlength="140" placeholder="Will the Lakers win tonight?"></textarea>',
-        '<label>Options (2–6)</label>',
-        '<div class="mm-opts" id="mmOpts"></div>',
-        '<button type="button" class="mm-add" id="mmAdd">+ add option</button>',
+        '<label>Type</label>',
+        '<div class="mm-mode" id="mmMode"><button type="button" data-mode="yesno" class="on">Yes / No</button><button type="button" data-mode="custom">Custom options</button></div>',
+        '<div id="mmCustomWrap" hidden>',
+          '<label>Options (2–6)</label>',
+          '<div class="mm-opts" id="mmOpts"></div>',
+          '<button type="button" class="mm-add" id="mmAdd">+ add option</button>',
+        '</div>',
         '<div style="display:flex;gap:8px;">',
           '<div style="flex:1;"><label>Min stake (OST)</label><input id="mmMin" type="number" min="0.01" step="0.01" value="1"></div>',
           '<div style="flex:1;"><label>Max stake (OST, 0 = none)</label><input id="mmMax" type="number" min="0" step="0.01" value="0"></div>',
@@ -410,6 +435,8 @@
           '<option value="86400000">24 hours</option>',
           '<option value="0">No expiry</option>',
         '</select>',
+        '<div class="mm-bal" id="mmBal"></div>',
+        '<div class="mm-note">💡 Group markets settle in <b>Social OSTC</b> — an off-chain scoreboard shared inside this chat. It is <b>not</b> your on-chain wallet OSTC and never touches your real balance. Only the market creator can close it.</div>',
         '<div class="mm-actions"><button type="button" class="mm-cancel" id="mmCancel">Cancel</button><button type="button" class="mm-create" id="mmCreate">Create market</button></div>',
       '</div>'
     ].join('');
@@ -439,6 +466,19 @@
     }
     rebuildOpts(['', '']);
 
+    // Yes/No vs Custom mode toggle. Yes/No is the default (matches the spec:
+    // one-tap binary markets); Custom reveals the 2–6 option editor.
+    var mmMode = 'yesno';
+    modal._mmMode = function () { return mmMode; };
+    var customWrap = modal.querySelector('#mmCustomWrap');
+    modal.querySelectorAll('#mmMode button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        mmMode = b.getAttribute('data-mode');
+        modal.querySelectorAll('#mmMode button').forEach(function (x) { x.classList.toggle('on', x === b); });
+        if (customWrap) customWrap.hidden = (mmMode !== 'custom');
+      });
+    });
+
     modal.querySelector('#mmAdd').addEventListener('click', function () {
       var current = readOpts();
       if (current.length >= 6) return alert('Up to 6 options.');
@@ -454,9 +494,14 @@
       if (!group) return alert('Open a group chat first.');
       var q = (modal.querySelector('#mmQ').value || '').trim();
       if (!q) return alert('Question required.');
-      var opts = readOpts().map(function (s) { return (s || '').trim(); }).filter(Boolean);
-      if (opts.length < 2) return alert('Need at least 2 options.');
-      if (opts.length > 6) opts = opts.slice(0, 6);
+      var opts;
+      if (modal._mmMode && modal._mmMode() === 'yesno') {
+        opts = ['Yes', 'No'];   // binary market — the default
+      } else {
+        opts = readOpts().map(function (s) { return (s || '').trim(); }).filter(Boolean);
+        if (opts.length < 2) return alert('Need at least 2 options.');
+        if (opts.length > 6) opts = opts.slice(0, 6);
+      }
       var min = clamp(modal.querySelector('#mmMin').value, 0.01, 1e9);
       var maxRaw = Number(modal.querySelector('#mmMax').value) || 0;
       var max = maxRaw > 0 ? Math.max(min, maxRaw) : 0;
@@ -478,9 +523,12 @@
       renderMarketsInLog(chat);
       broadcast(group, { type: 'group.market.create', groupId: group.id, market: market });
       modal.classList.remove('is-open');
-      // Reset for next time.
+      // Reset for next time (back to the Yes/No default).
       modal.querySelector('#mmQ').value = '';
       rebuildOpts(['', '']);
+      mmMode = 'yesno';
+      modal.querySelectorAll('#mmMode button').forEach(function (x) { x.classList.toggle('on', x.getAttribute('data-mode') === 'yesno'); });
+      if (customWrap) customWrap.hidden = true;
     });
     return modal;
   }
@@ -488,7 +536,10 @@
   function openCreateMarket() {
     var chat = document.getElementById('msxChatModal');
     if (!chat || !chat._group) return alert('Open a group chat first.');
-    ensureNewMarketModal().classList.add('is-open');
+    var modal = ensureNewMarketModal();
+    var bal = modal.querySelector('#mmBal');
+    if (bal) bal.innerHTML = 'Your Social OSTC: <b>' + fmt(getCredits()) + '</b>';
+    modal.classList.add('is-open');
   }
 
   // ---------- Hook the chat composer ----------
@@ -672,6 +723,9 @@
       // Convenience: if the group is open, returns its markets.
       return listMarkets(groupId);
     },
-    createPrompt: openCreateMarket
+    createPrompt: openCreateMarket,
+    // Social OSTC scoreboard (off-chain, per this device/member).
+    socialBalance: getCredits,
+    socialTally: function () { return loadTally(); }
   };
 })();

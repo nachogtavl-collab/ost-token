@@ -278,15 +278,45 @@
     }
   }
 
-  function refreshBalance() {
-    // undefined = the on-chain half has not been read yet. Show a dash, never
-    // a 0 - understating a user's money is the bug this whole migration exists
-    // to end.
-    var tot = totalOst();
-    var txt = (tot === undefined) ? '— OST' : (fmtOst(tot) + ' OST');
-    if (walletSub) walletSub.textContent = txt;
-    if (sheetBal) sheetBal.textContent = txt;
+  // ── Rotating, colour-coded balances ──────────────────────────────────────
+  // The chip used to show ONE undifferentiated "OST" number. Now it cycles
+  // through the three real balances, each in its own colour, so a user can tell
+  // OSTC (the main token) from OSTG (the game token) from OSTG they've borrowed.
+  // OSTC blue, OSTG purple, loaned OSTG amber — matching the wallet/bridge.
+  var BAL_FACES = [
+    { key: 'ostc', label: 'OSTC', color: '#4da3ff', get: function () { return window.OST_BALANCE ? OST_BALANCE.onchainOstc() : walletOst(); } },
+    { key: 'ostg', label: 'OSTG', color: '#a97bff', get: function () {
+        if (!window.OST_BALANCE) return undefined;
+        var a = OST_BALANCE.onchainOstg(), p = OST_BALANCE.play();
+        if (a == null && p == null) return undefined;
+        return (Number(a) || 0) + (Number(p) || 0);   // wallet OSTG + custodial play OSTG
+      } },
+    { key: 'loan', label: 'Loaned OSTG', color: '#f5a623', hideIfZero: true, get: function () { return window.OST_BALANCE ? OST_BALANCE.loanLocked() : undefined; } }
+  ];
+  var _balFace = 0;
+  function activeFaces() {
+    return BAL_FACES.filter(function (f) {
+      if (!f.hideIfZero) return true;
+      var v; try { v = f.get(); } catch (_) { v = undefined; }
+      return Number(v) > 0;                      // only show "Loaned" when there IS a loan
+    });
   }
+  function valText(f) {
+    var v; try { v = f.get(); } catch (_) { v = undefined; }
+    return (v === undefined || v === null) ? '—' : fmtOst(Number(v));
+  }
+  function refreshBalance() {
+    var faces = activeFaces();
+    if (!faces.length) { if (walletSub) walletSub.textContent = '— OST'; return; }
+    _balFace = _balFace % faces.length;
+    var f = faces[_balFace];
+    if (walletSub) { walletSub.textContent = f.label + ' ' + valText(f); walletSub.style.color = f.color; }
+    // The tools sheet has room — show ALL faces at once, each colour-coded.
+    if (sheetBal) sheetBal.innerHTML = faces.map(function (x) {
+      return '<span style="color:' + x.color + '">' + x.label + ' ' + valText(x) + '</span>';
+    }).join('&nbsp;&nbsp;·&nbsp;&nbsp;');
+  }
+  function rotateBalanceFace() { _balFace++; refreshBalance(); }
 
   function refreshBadge() {
     if (!moreBadge) return;
@@ -428,6 +458,9 @@
     // Poll a bit faster so an on-chain deposit shows within a few seconds even
     // if its change event was missed (devnet RPC lag).
     setInterval(function () { refreshBalance(); refreshBadge(); }, 5000);
+    // Cycle the chip through OSTC → OSTG → Loaned every 3s (purely local; reads
+    // the cached canonical balances, no network). The tools sheet shows all at once.
+    setInterval(rotateBalanceFace, 3000);
 
     setActive('home');
   }

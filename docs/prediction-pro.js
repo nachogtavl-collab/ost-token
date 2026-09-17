@@ -783,10 +783,14 @@
   // survive only as a cold-start fallback inside fetchDirectBtcSpot if Pyth is
   // unreachable — never as a competing live source.)
   setInterval(function () {
-    if (typeof document !== 'undefined' && document.hidden) return;   // idle: no polling
+    if (typeof document !== 'undefined' && document.hidden) return;   // hidden tab: no polling
+    if (window.OST_IDLE_GUARD && OST_IDLE_GUARD.isGated()) return;    // tab open but user away >5min: no drain
     pollBtcMarket();
   }, BTC_REFRESH_MS);
   pollBtcMarket();
+  // The moment a human comes back (idle guard fires ost:resume on tap/focus),
+  // catch up instantly so the live price is never stale — zero cost while active.
+  window.addEventListener('ost:resume', function () { pollBtcMarket(); });
 
   /* ---- STEADY SPOT HEARTBEAT ------------------------------------------------
    * Live ticks (Pyth SSE / Binance WS) are event-driven, so they arrive in

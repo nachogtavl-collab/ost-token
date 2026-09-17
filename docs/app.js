@@ -2237,20 +2237,50 @@
     var m = String((e && (e.message || e)) || '');
     return /\b401\b|\b403\b|\b429\b|invalid api key|unauthorized|too many requests|forbidden|failed to fetch|networkerror|load failed|structerror|getlatestblockhash|recent blockhash|rate.?limit/i.test(m);
   }
+  // A GENUINE exhaustion/auth error (vs a one-off hiccup) — only these park an
+  // endpoint in cooldown so we stop hammering a rate-limited key.
+  function isRateLimitError(e) {
+    var m = String((e && (e.message || e)) || '');
+    return /\b401\b|\b403\b|\b429\b|too many requests|rate.?limit|unauthorized|forbidden|invalid api key|quota|exceeded/i.test(m);
+  }
+  // Per-endpoint cooldown: a rate-limited RPC is skipped for RPC_COOLDOWN_MS so
+  // healthy endpoints absorb the load and the user never feels the exhaustion.
+  var RPC_COOLDOWN = {};
+  var RPC_COOLDOWN_MS = 20000;
+  function useRpcIndex(i) {
+    if (i === RPC_INDEX) return;
+    RPC_INDEX = i; solanaConnection = null;
+    try { window.OST_SOLANA_RPC = currentRpcUrl(); } catch (_) {}
+  }
+  // Candidate order: healthy first (from the last-good index for spread), then
+  // any cooling ones by soonest recovery as a last resort.
+  function healthyRpcSeq() {
+    var now = Date.now(), n = RPC_LIST.length, order = [];
+    for (var k = 0; k < n; k++) order.push((RPC_INDEX + k) % n);
+    var healthy = order.filter(function (i) { return !(RPC_COOLDOWN[RPC_LIST[i]] > now); });
+    var cooling = order.filter(function (i) { return RPC_COOLDOWN[RPC_LIST[i]] > now; })
+      .sort(function (a, b) { return (RPC_COOLDOWN[RPC_LIST[a]] || 0) - (RPC_COOLDOWN[RPC_LIST[b]] || 0); });
+    return healthy.concat(cooling);
+  }
+  function markRpcCooldown(url, e) { if (url && isRateLimitError(e)) RPC_COOLDOWN[url] = Date.now() + RPC_COOLDOWN_MS; }
   function rotateRpc() {
     if (RPC_LIST.length < 2) return false;
-    RPC_INDEX = (RPC_INDEX + 1) % RPC_LIST.length;
-    solanaConnection = null;
-    try { window.OST_SOLANA_RPC = currentRpcUrl(); } catch (_) {}
+    var now = Date.now();
+    for (var k = 1; k <= RPC_LIST.length; k++) {
+      var j = (RPC_INDEX + k) % RPC_LIST.length;
+      if (!(RPC_COOLDOWN[RPC_LIST[j]] > now)) { useRpcIndex(j); return true; }
+    }
+    useRpcIndex((RPC_INDEX + 1) % RPC_LIST.length);   // all cooling — advance anyway
     return true;
   }
-  // Run an RPC op against the current endpoint; on an endpoint failure, rotate and
-  // retry across the whole list. Exposed on OST_WALLET so any module can use it.
+  // Run an RPC op against the healthiest endpoint; on an endpoint failure, park it
+  // (if rate-limited) and try the next. Sticks to whatever just worked.
   async function rpcCall(fn) {
-    var lastErr = null;
-    for (var i = 0; i < RPC_LIST.length; i++) {
-      try { return await fn(getSolanaConnection()); }
-      catch (e) { lastErr = e; if (isRpcEndpointError(e) && rotateRpc()) continue; throw e; }
+    var seq = healthyRpcSeq(), lastErr = null;
+    for (var a = 0; a < seq.length; a++) {
+      var i = seq[a]; useRpcIndex(i);
+      try { var res = await fn(getSolanaConnection()); delete RPC_COOLDOWN[RPC_LIST[i]]; return res; }
+      catch (e) { lastErr = e; if (!isRpcEndpointError(e)) throw e; markRpcCooldown(RPC_LIST[i], e); }
     }
     throw lastErr || new Error('all RPC endpoints failed');
   }
@@ -2263,7 +2293,9 @@
         .then(function (r) { return r.json(); })
         .then(function (c) {
           if (c && typeof c.rpc === 'string' && /^https:\/\//.test(c.rpc)) {
-            // Chain: primary Helius -> Piperchisel -> Mothforest -> public devnet.
+            // Chain: Helius primary -> Piperchisel -> Mothforest -> QuickNode
+            // (separate provider, independent quota) -> public devnet. Cooldown-
+            // aware rotation skips any endpoint that's rate-limited.
             var fb = Array.isArray(c.fallbacks) ? c.fallbacks.filter(function (u) { return u && /^https:\/\//.test(u); }) : [];
             RPC_LIST = [c.rpc].concat(fb).concat(['https://api.devnet.solana.com']).filter(function (u, i, a) { return u && a.indexOf(u) === i; });
             RPC_INDEX = 0;
@@ -2287,8 +2319,35 @@
   var _bhInflight = null;
   var BLOCKHASH_TTL = 20000;           // refresh well before the ~60s expiry
 
+  // ---- Server RPC relay (resilience floor) --------------------------------
+  // The worker reaches Solana through 3 rotating dedicated keys and has proven
+  // headroom when a browser is throttled. These let the client borrow that path
+  // for the two steps a signed tx cannot skip: a fresh blockhash, and submission.
+  function _apiBase() {
+    return ((typeof window !== 'undefined' && window.OST_API_BASE) || 'https://ost-api.nachogtavl.workers.dev').replace(/\/$/, '');
+  }
+  function serverBlockhash() {
+    return fetch(_apiBase() + '/rpc/blockhash', { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) { return (j && j.ok && j.blockhash) ? { blockhash: j.blockhash, lastValidBlockHeight: j.lastValidBlockHeight } : null; })
+      .catch(function () { return null; });
+  }
+  function serverSendRaw(serialized, skipPreflight) {
+    var bytes = serialized instanceof Uint8Array ? serialized : new Uint8Array(serialized);
+    var b64 = ''; for (var i = 0; i < bytes.length; i++) b64 += String.fromCharCode(bytes[i]); b64 = btoa(b64);
+    return fetch(_apiBase() + '/rpc/send', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ tx: b64, skipPreflight: !!skipPreflight })
+    }).then(function (r) { return r.json().catch(function () { return null; }); })
+      .then(function (j) { if (j && j.ok && j.sig) return j.sig; throw new Error((j && j.message) || 'server relay send failed'); });
+  }
+
   function refreshBlockhash(force) {
-    if (!getSolanaConnection()) return Promise.resolve(null);
+    if (!getSolanaConnection()) {
+      // No client connection at all — still try the worker so tx-building survives.
+      if (force) return serverBlockhash().then(function (sb) { if (sb) { _bhCache = { blockhash: sb.blockhash, lastValidBlockHeight: sb.lastValidBlockHeight, at: Date.now() }; return _bhCache; } return null; });
+      return Promise.resolve(null);
+    }
     if (_bhInflight) return _bhInflight;
     if (!force && _bhCache && Date.now() - _bhCache.at < BLOCKHASH_TTL) {
       return Promise.resolve(_bhCache);
@@ -2300,8 +2359,14 @@
       _bhInflight = null;
       return _bhCache;
     }).catch(function (e) {
-      _bhInflight = null;
-      return null;                     // callers fall back to a live fetch
+      // RESILIENCE FLOOR: every browser RPC is throttled. Get a blockhash from the
+      // worker, which rotates all 3 dedicated keys server-side. This is why a
+      // signed tx can still be built when the client's own RPC is fully dead.
+      return serverBlockhash().then(function (sb) {
+        _bhInflight = null;
+        if (sb) { _bhCache = { blockhash: sb.blockhash, lastValidBlockHeight: sb.lastValidBlockHeight, at: Date.now() }; return _bhCache; }
+        return null;
+      }).catch(function () { _bhInflight = null; return null; });
     });
     return _bhInflight;
   }
@@ -2321,7 +2386,9 @@
   (function keepBlockhashWarm() {
     if (typeof window === 'undefined') return;
     var tick = function () {
-      if (document.visibilityState === 'visible' && getSolanaConnection()) refreshBlockhash(false);
+      if (document.visibilityState !== 'visible') return;
+      if (window.OST_IDLE_GUARD && OST_IDLE_GUARD.isGated()) return;   // tab open but user away: don't prewarm Helius RPC
+      if (getSolanaConnection()) refreshBlockhash(false);
     };
     var idle = window.requestIdleCallback || function (fn) { return setTimeout(fn, 800); };
     idle(tick);
@@ -3799,7 +3866,10 @@
     let latest = null;
     if (!transaction.recentBlockhash) {
       // Use the warm blockhash if we have one — no round-trip on the hot path.
-      latest = cachedBlockhash() || (await refreshBlockhash(true)) || (await conn.getLatestBlockhash('confirmed'));
+      // refreshBlockhash(true) already rotates every browser RPC then the worker,
+      // so the last resort is only reached if literally everything is down.
+      latest = cachedBlockhash() || (await refreshBlockhash(true)) || (await serverBlockhash());
+      if (!latest || !latest.blockhash) throw new Error('Network is congested — could not get a recent blockhash. Try again in a moment.');
       transaction.recentBlockhash = latest.blockhash;
       // Immediately kick off a refresh so the NEXT bet is warm too.
       refreshBlockhash(false);
@@ -3888,10 +3958,30 @@
       if (msg.includes('no record of a prior credit') ||
           msg.includes('simulation failed') ||
           msg.includes('Simulation failed')) {
-        return conn.sendRawTransaction(serialized, { skipPreflight: true });
+        try {
+          return await conn.sendRawTransaction(serialized, { skipPreflight: true });
+        } catch (e2) {
+          if (isRpcEndpointError(e2)) return await _sendRawResilient(serialized, true);
+          throw e2;
+        }
       }
+      // RESILIENCE FLOOR: the endpoint itself is throttled/down (401/403/429/
+      // network). Rotate across the other browser RPCs, and if they're ALL dead,
+      // submit through the worker relay so the signed tx still lands.
+      if (isRpcEndpointError(e)) return await _sendRawResilient(serialized, false);
       throw e;
     }
+  }
+  // Try each remaining browser RPC, then the worker relay. A tx broadcast is
+  // idempotent by signature, so re-sending the same signed bytes to several RPCs
+  // never double-spends — the cluster dedups on the signature.
+  async function _sendRawResilient(serialized, skipPreflight) {
+    for (var i = 0; i < RPC_LIST.length; i++) {
+      if (!rotateRpc()) break;
+      try { return await getSolanaConnection().sendRawTransaction(serialized, { skipPreflight: !!skipPreflight, preflightCommitment: 'confirmed' }); }
+      catch (e) { if (!isRpcEndpointError(e)) throw e; markRpcCooldown(currentRpcUrl(), e); }
+    }
+    return await serverSendRaw(serialized, skipPreflight);   // worker rotates all 4 dedicated keys
   }
 
   // Unpack a SendTransactionError: call getLogs() if available so the error
@@ -4266,9 +4356,13 @@
       throw new Error('Reward vault is still loading. Refresh the page and try again.');
     }
 
-    const poolBalance = typeof window.OST_RESCUE.poolBalance === 'function'
-      ? await window.OST_RESCUE.poolBalance()
-      : amount;
+    // Pre-check is advisory only: the SERVER /wallet/payout is the real solvency
+    // authority (returns insufficient_pool if truly empty). If this read fails
+    // (RPC throttled), do NOT block the claim — let the server decide.
+    let poolBalance = amount;
+    try {
+      if (typeof window.OST_RESCUE.poolBalance === 'function') poolBalance = await window.OST_RESCUE.poolBalance();
+    } catch (_) { poolBalance = amount; }
     if (Number(poolBalance || 0) < amount) {
       throw new Error('Reward vault is being refilled. Try again in a moment.');
     }
@@ -4296,7 +4390,11 @@
         console.warn('[OST] Faucet gate commit pending', committed);
       }
     }
-    return { claimed: true, rewardKind: kind, amount: actualAmount, signature: payout && payout.sig, balance: await getOstBalanceForAddress(claimer) };
+    // The payout already landed on-chain. A failed balance read here must NEVER
+    // turn a successful claim into an error the user sees — degrade to null.
+    let finalBalance = null;
+    try { finalBalance = await getOstBalanceForAddress(claimer); } catch (_) { finalBalance = null; }
+    return { claimed: true, rewardKind: kind, amount: actualAmount, signature: payout && payout.sig, balance: finalBalance };
   }
 
   function openWalletModal() { if (walletModal) walletModal.classList.add('open'); }
@@ -6769,6 +6867,11 @@
     signFast: function (tx) { return signAndSendTransaction(tx, { commitment: 'processed' }); },
     reconcile: reconcileConfirmation,
     warmBlockhash: function () { return refreshBlockhash(false); },
+    // Resilience floor, exposed so any module (1-tap, on-chain bet) can survive a
+    // total browser-RPC outage: a blockhash + a tx-submit that borrow the worker's
+    // rotating server-side RPC when every client endpoint is throttled.
+    serverBlockhash: serverBlockhash,
+    sendRawResilient: function (serialized, skipPreflight) { return _sendRawResilient(serialized, skipPreflight); },
     // Synchronous getter for the currently-warm blockhash (or null). The pool-
     // paid tx builder uses this to skip a live getLatestBlockhash on every buy.
     warmBlockhashValue: function () { return cachedBlockhash(); },
@@ -17931,14 +18034,29 @@
       state.orderHistory = reconcilePredictionVaultLossRecords();
       renderPredictionLedger();
     });
+    // Gate every recurring worker/RPC poll on real presence: a predictions tab
+    // left open on an empty desk makes ZERO requests, but any interaction (or the
+    // tab regaining focus) resumes instantly with a catch-up run — so an active
+    // trader never sees stale data. Hidden tabs are always paused.
+    var whenHere = function (fn) {
+      return function () {
+        if (typeof document !== 'undefined' && document.hidden) return;
+        if (window.OST_IDLE_GUARD && OST_IDLE_GUARD.isGated()) return;   // away >5min: pause worker+RPC polls
+        fn();
+      };
+    };
     loadPredictionMarkets();
-    loadTimer = window.setInterval(loadPredictionMarkets, 10000);
+    loadTimer = window.setInterval(whenHere(loadPredictionMarkets), 10000);
     refreshPredictionOrderResolutions();
     refreshOstgNativeResolutions();
-    resolutionTimer = window.setInterval(refreshPredictionOrderResolutions, 30000);
-    window.setInterval(refreshOstgNativeResolutions, 20000);
+    resolutionTimer = window.setInterval(whenHere(refreshPredictionOrderResolutions), 30000);
+    window.setInterval(whenHere(refreshOstgNativeResolutions), 20000);
     // Re-sync wallet balance every 30 s so displayed OST funds stay accurate.
-    var balancePollTimer = window.setInterval(syncTradeWallet, 30000);
+    var balancePollTimer = window.setInterval(whenHere(syncTradeWallet), 30000);
+    window.addEventListener('ost:resume', function () {
+      loadPredictionMarkets(); refreshPredictionOrderResolutions();
+      refreshOstgNativeResolutions(); syncTradeWallet();
+    });
     // Turbo ticks: while the user is INSIDE a 5-min market, ost-tick-turbo
     // streams sub-second Binance prices — re-render the ticket (throttled) so
     // the live price and share quote move at tick speed. Other markets and

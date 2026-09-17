@@ -370,7 +370,7 @@
           '<div class="omm-pay-status" id="omm-pay-status">Sends real devnet value from your connected wallet.</div>' +
         '</div>' +
         '<div id="omm-pay-recv-pane" hidden><div class="omm-recv"><div class="omm-recv-qr" id="omm-recv-qr"></div><div class="omm-recv-addr" id="omm-recv-addr"></div><button class="omm-send" id="omm-recv-copy" style="background:rgba(94,234,212,.16);color:#7ff0d8">Copy my address</button><div class="omm-pay-status">Have someone scan this to pay you.</div></div></div>' +
-        '<div class="omm-scan-overlay" id="omm-scan-overlay" hidden><video id="omm-scan-video" playsinline></video><div class="omm-scan-frame"></div><button class="omm-scan-close" id="omm-scan-close">Cancel</button></div>' +
+        '<div class="omm-scan-overlay" id="omm-scan-overlay" hidden><video id="omm-scan-video" playsinline muted></video><div class="omm-scan-frame"></div><label class="omm-scan-close" style="bottom:calc(84px + env(safe-area-inset-bottom));background:rgba(0,255,176,.18);color:#00ffb0;border:1px solid rgba(0,255,176,.5)">&#128247; Use a photo<input id="omm-scan-file" type="file" accept="image/*" hidden></label><button class="omm-scan-close" id="omm-scan-close">Cancel</button></div>' +
       '</div>';
     shell.appendChild(sec);
     // Send/Receive tab switch
@@ -385,6 +385,15 @@
     });
     sec.querySelector('#omm-pay-scan').addEventListener('click', startScan);
     sec.querySelector('#omm-scan-close').addEventListener('click', stopScan);
+    var scanFile = sec.querySelector('#omm-scan-file');
+    if (scanFile) scanFile.addEventListener('change', function () {
+      var f = scanFile.files && scanFile.files[0]; scanFile.value = '';
+      if (!f || !window.OST_QR) return;
+      toast('Reading QR…');
+      window.OST_QR.fromFile(f).then(function (v) {
+        if (v) onScan(v); else toast('No QR found in that image. Try a clearer, closer photo.');
+      }).catch(function () { toast('Could not read that image.'); });
+    });
     sec.querySelector('#omm-recv-copy').addEventListener('click', function () { var w = wallet(); if (w && navigator.clipboard) navigator.clipboard.writeText(w).then(function () { toast('Address copied'); }); });
     var tok = 'ostc';
     sec.querySelectorAll('#omm-tok button').forEach(function (b) {
@@ -482,20 +491,30 @@
     if (!w) { qrEl.innerHTML = '<div class="omm-empty">Connect your wallet to show your pay code.</div>'; return; }
     ensureQRLib().then(function () { try { var q = window.qrcode(0, 'M'); q.addData(w); q.make(); qrEl.innerHTML = '<img src="' + q.createDataURL(6, 3) + '" alt="pay code">'; } catch (_) { qrEl.innerHTML = '<div class="omm-empty">' + esc(w) + '</div>'; } });
   }
-  var scanStream = null, scanRAF = 0;
+  var scanStream = null, scanStop = null;
   function startScan() {
     var ov = document.getElementById('omm-scan-overlay'), vid = document.getElementById('omm-scan-video');
-    if (!('BarcodeDetector' in window)) { toast('Scan-to-pay needs a camera browser (Android Chrome). Paste the address for now.'); return; }
-    if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) { toast('Camera unavailable here.'); return; }
+    // The overlay opens either way — even without a live camera the user can still
+    // tap "Use a photo" to decode a saved/screenshotted QR (the iOS-safe path).
     ov.hidden = false;
+    if (!window.OST_QR || !(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) {
+      toast('Live camera unavailable — tap “Use a photo”.');
+      return;
+    }
     navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }).then(function (stream) {
-      scanStream = stream; vid.srcObject = stream; vid.play();
-      var det = new window.BarcodeDetector({ formats: ['qr_code'] });
-      var tick = function () { if (!scanStream) return; det.detect(vid).then(function (codes) { if (codes && codes[0]) { onScan(codes[0].rawValue); return; } scanRAF = requestAnimationFrame(tick); }).catch(function () { scanRAF = requestAnimationFrame(tick); }); };
-      scanRAF = requestAnimationFrame(tick);
-    }).catch(function () { ov.hidden = true; toast('Camera permission denied.'); });
+      scanStream = stream; vid.srcObject = stream;
+      var p = vid.play(); if (p && p.catch) p.catch(function () {});   // iOS requires explicit play()
+      // OST_QR picks BarcodeDetector on Android and jsQR on iOS — one call, both.
+      scanStop = window.OST_QR.scanVideo(vid, function (raw) { onScan(raw); }, function () {
+        toast('Camera scan failed — tap “Use a photo”.');
+      });
+    }).catch(function () { toast('Camera blocked — tap “Use a photo”.'); });
   }
-  function stopScan() { var ov = document.getElementById('omm-scan-overlay'); if (ov) ov.hidden = true; if (scanRAF) cancelAnimationFrame(scanRAF); scanRAF = 0; if (scanStream) { scanStream.getTracks().forEach(function (t) { t.stop(); }); scanStream = null; } }
+  function stopScan() {
+    var ov = document.getElementById('omm-scan-overlay'); if (ov) ov.hidden = true;
+    if (scanStop) { try { scanStop(); } catch (_) {} scanStop = null; }
+    if (scanStream) { scanStream.getTracks().forEach(function (t) { t.stop(); }); scanStream = null; }
+  }
   function onScan(raw) {
     stopScan();
     var m = String(raw || '').trim().match(/[1-9A-HJ-NP-Za-km-z]{32,44}/);   // base58 pubkey, also inside solana: URIs / mesh invites

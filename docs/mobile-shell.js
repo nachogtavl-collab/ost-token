@@ -113,9 +113,15 @@
         return;
       }
       if (event.target.closest('[data-mobile-games]')) {
-        if (window.OST_MESH_ARENA && typeof window.OST_MESH_ARENA.open === 'function') window.OST_MESH_ARENA.open();
-        else if (window.OST_MESH && typeof window.OST_MESH.open === 'function') window.OST_MESH.open();
-        else activateSection('new-here');
+        // The arena lives INSIDE the mesh's Play (games) tab — open the mesh and
+        // switch to that tab rather than launching the arena as a standalone
+        // overlay, so games have one home.
+        if (window.OST_MESH && typeof window.OST_MESH.open === 'function') {
+          window.OST_MESH.open();
+          try { if (window.OST_MESH_MOBILE && OST_MESH_MOBILE.setView) OST_MESH_MOBILE.setView('play'); } catch (_) {}
+        } else if (window.OST_MESH_ARENA && typeof window.OST_MESH_ARENA.open === 'function') {
+          window.OST_MESH_ARENA.open();
+        } else activateSection('new-here');
       }
     });
   }

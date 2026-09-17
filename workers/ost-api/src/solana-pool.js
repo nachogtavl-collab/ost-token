@@ -59,7 +59,13 @@ export function ensureRpcConfigured(env) {
   // Dedicated Helius keys FIRST, in order (primary -> Piperchisel -> Mothforest),
   // then the weak public fallbacks. Server-side reads/writes fail over across all
   // three real keys before ever touching the rate-limited public endpoints.
-  const keys = [env && env.SOLANA_DEVNET_RPC, env && env.SOLANA_DEVNET_RPC_2, env && env.SOLANA_DEVNET_RPC_3].filter(Boolean);
+  // Dedicated keys FIRST, in order: Helius primary -> Piperchisel -> Mothforest,
+  // then QuickNode (a SEPARATE provider with an independent quota — the true
+  // backstop when the whole Helius account is throttled), then weak public.
+  const keys = [
+    env && env.SOLANA_DEVNET_RPC, env && env.SOLANA_DEVNET_RPC_2,
+    env && env.SOLANA_DEVNET_RPC_3, env && env.SOLANA_DEVNET_RPC_4
+  ].filter(Boolean);
   const merged = [];
   keys.concat(RPC_ENDPOINTS).forEach(function (u) { if (u && !merged.includes(u)) merged.push(u); });
   RPC_ENDPOINTS.length = 0;
@@ -68,6 +74,16 @@ export function ensureRpcConfigured(env) {
 
 let rpcIndex = 0;
 const rpcConnections = {};
+// Per-endpoint cooldown: an RPC that returns a rate-limit/quota error is parked
+// for COOLDOWN_MS and SKIPPED during selection — so we never keep hammering an
+// exhausted key. This is what makes rotation seamless: healthy endpoints absorb
+// the traffic while an exhausted one silently recovers.
+const cooldownUntil = {};
+const COOLDOWN_MS = 20000;
+function isRateLimit(e) {
+  const m = String((e && (e.message || e)) || '');
+  return /\b429\b|\b401\b|\b403\b|too many requests|rate.?limit|unauthorized|forbidden|invalid api key|quota|exceeded/i.test(m);
+}
 function makeConn(url) {
   if (!rpcConnections[url]) {
     try { rpcConnections[url] = new Connection(url, 'confirmed'); }
@@ -78,19 +94,33 @@ function makeConn(url) {
 export function getConnection() {
   return makeConn(RPC_ENDPOINTS[rpcIndex % RPC_ENDPOINTS.length]);
 }
-function rotateRpc() {
-  rpcIndex = (rpcIndex + 1) % RPC_ENDPOINTS.length;
-  return getConnection();
-}
 export async function withRpc(label, fn) {
+  const n = RPC_ENDPOINTS.length;
+  // Candidate order: healthy endpoints first (starting at the last-good index so
+  // load spreads), then any in cooldown ordered by soonest recovery as a last
+  // resort. An exhausted endpoint is tried only if every other one is also down.
+  const order = [];
+  for (let k = 0; k < n; k++) order.push((rpcIndex + k) % n);
+  const now = Date.now();
+  const healthy = order.filter(i => !(cooldownUntil[RPC_ENDPOINTS[i]] > now));
+  const cooling = order.filter(i => cooldownUntil[RPC_ENDPOINTS[i]] > now)
+    .sort((a, b) => (cooldownUntil[RPC_ENDPOINTS[a]] || 0) - (cooldownUntil[RPC_ENDPOINTS[b]] || 0));
+  const seq = healthy.concat(cooling);
   let lastErr = null;
-  for (let attempt = 0; attempt < RPC_ENDPOINTS.length * 2; attempt++) {
-    const conn = getConnection();
-    try { return await fn(conn); }
-    catch (e) {
+  for (let attempt = 0; attempt < seq.length; attempt++) {
+    const i = seq[attempt];
+    const url = RPC_ENDPOINTS[i];
+    const conn = makeConn(url);
+    if (!conn) continue;
+    try {
+      const res = await fn(conn);
+      rpcIndex = i;                 // stick to the endpoint that just worked
+      delete cooldownUntil[url];    // proven healthy — clear any cooldown
+      return res;
+    } catch (e) {
       lastErr = e;
-      rotateRpc();
-      await new Promise(r => setTimeout(r, 250 * (attempt + 1)));
+      if (isRateLimit(e)) cooldownUntil[url] = Date.now() + COOLDOWN_MS;
+      if (attempt < seq.length - 1) await new Promise(r => setTimeout(r, 120));
     }
   }
   throw lastErr || new Error(label + ' failed on every RPC');
