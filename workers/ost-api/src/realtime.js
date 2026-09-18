@@ -348,6 +348,9 @@ export class RealtimeHub {
       return this.send(session, { type: 'subscribed', channels: Array.from(session.channels), ts: Date.now() });
     }
     if (msg.type === 'publish' && msg.event) {
+      // Same allowlist as the HTTP path: a WS client could inject wallet/topup/payout
+      // events to any channel — fake payments, toast storms.
+      if (!PUBLIC_PUBLISH_TYPES.has(String(msg.event.type || ''))) return this.send(session, { type: 'error', error: 'unauthorized_event_type' });
       return this.publish(Object.assign({}, msg.event, { clientId: session.id })).then((event) => this.send(session, { type: 'published', id: event.id }));
     }
   }

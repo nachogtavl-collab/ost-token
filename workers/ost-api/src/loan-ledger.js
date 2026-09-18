@@ -232,6 +232,7 @@ export class LoanLedger {
       const w = await this.wallet(address);
       const loan = await this.state.storage.get(LOAN_PREFIX + loanId);
       if (!loan) return json({ ok: false, error: 'loan_not_found' }, 404);
+      if (loan.address !== address) return json({ ok: false, error: 'not_loan_owner' }, 403);
       if (loan.status !== 'open') return json({ ok: false, error: 'loan_not_open', status: loan.status }, 409);
 
       // viaPlay: the PLAY LEDGER already verified and debited real OSTG, so it

@@ -3307,6 +3307,10 @@ export default {
           body: await request.text()
         });
       }
+      // ALLOWLIST. This proxy used to forward ANY op verbatim, so borrow/stake/
+      // settle/void were client-callable: a borrower could void their own loan's
+      // lock and cash out the principal, or fabricate debt on any wallet.
+      if (!['summary', 'health'].includes(op)) return json({ ok: false, error: 'unknown_loan_op' }, 404);
       try {
         const stub = env.LOAN_LEDGER.get(env.LOAN_LEDGER.idFromName('loans-v1'));
         const init = { method: request.method, headers: { 'Content-Type': 'application/json' } };
@@ -3379,10 +3383,11 @@ export default {
         // Entry odds AND the price-to-beat both come from the CANONICAL round
         // (the same server data the hero/desk show the user), so a position is
         // opened, priced, and later settled against ONE consistent line.
-        let oddsYes = 0.5, priceToBeat = null;
+        let oddsYes = 0.5, priceToBeat = null, priced = false, isBtcRound = false;
         try {
           const m = String(b.marketId || '').match(/^ost-btc5m-(\d+)$/);
           if (m) {
+            isBtcRound = true;
             const openAt = Number(m[1]);
             if (!env.__store) env.__store = { get: (k, fb) => kvGet(env, k, fb), put: (k, v, ttl) => kvPut(env, k, v, ttl) };
             const canon = await getCanonicalBtcRound(env, { refresh: false });
@@ -3400,11 +3405,14 @@ export default {
               if (Number.isFinite(livePrice)) {
                 const msLeft = Math.max(0, (openAt + 5 * 60 * 1000) - Date.now());
                 const o = serverComputeBtcOdds(openPrice, livePrice, msLeft, priceToBeat);
-                if (o && Number.isFinite(o.yes)) oddsYes = o.yes;
+                if (o && Number.isFinite(o.yes)) { oddsYes = o.yes; priced = true; }
               }
             }
           }
-        } catch (_) {}
+        } catch (e) { console.warn('[predict/open] pricing failed', String(e && e.message || e).slice(0, 120)); }
+        // REFUSE rather than fabricate: a BTC round with no fresh price used to open
+        // at a silent 50/50 — a made-up price on a money path.
+        if (isBtcRound && !priced) return json({ ok: false, error: 'price_unavailable', note: 'No fresh BTC price to price this position. Try again in a moment.' }, 503);
         return await stub.fetch('https://prediction-ledger/open', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(Object.assign({}, b, { oddsYes, priceToBeat }))
@@ -3415,7 +3423,7 @@ export default {
         // Early exit at the CURRENT server odds (never the client's), computed from
         // the same canonical round the open used, so a sell is priced on the exact
         // line the desk shows. openAt comes from the position id (p_<openAt>_…).
-        let oddsYes = 0.5;
+        let oddsYes = 0.5, priced = false;
         try {
           let openAt = 0;
           const im = String(b.id || '').match(/^p_(\d+)_/);
@@ -3435,10 +3443,11 @@ export default {
             if (Number.isFinite(openPrice) && openPrice > 0 && Number.isFinite(livePrice)) {
               const msLeft = Math.max(0, (openAt + 5 * 60 * 1000) - Date.now());
               const o = serverComputeBtcOdds(openPrice, livePrice, msLeft, Number.isFinite(beat) && beat > 0 ? beat : openPrice);
-              if (o && Number.isFinite(o.yes)) oddsYes = o.yes;
+              if (o && Number.isFinite(o.yes)) { oddsYes = o.yes; priced = true; }
             }
           }
-        } catch (_) {}
+        } catch (e) { console.warn('[predict/cashout] pricing failed', String(e && e.message || e).slice(0, 120)); }
+        if (!priced) return json({ ok: false, error: 'price_unavailable', note: 'No fresh price to value this position right now. Try again in a moment — it still settles automatically at close.' }, 503);
         return await stub.fetch('https://prediction-ledger/sell', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(Object.assign({}, b, { oddsYes }))

@@ -179,10 +179,12 @@ export class PlayLedger {
     const b = await request.json().catch(() => ({}));
     const wallet = cleanText(b.wallet, 64);
     const usd = Number(b.usd);
-    const usdPerOstg = Number(b.usdPerOstg);
+    // SERVER-SIDE RATE. The client used to send usdPerOstg and we minted at it —
+    // a $100 line became any number of OSTG the borrower chose.
+    const usdPerOstg = Pool.ostUsd(this.env);
     if (!isPubkey(wallet)) return json({ error: 'invalid_wallet' }, 400);
     if (!(usd > 0)) return json({ error: 'invalid_amount' }, 400);
-    if (!(usdPerOstg > 0)) return json({ error: 'rate_required' }, 400);
+    if (!(usdPerOstg > 0)) return json({ error: 'rate_unavailable' }, 503);
 
     const wantOstg = Math.round((usd / usdPerOstg) * 1e6) / 1e6;
 
@@ -291,10 +293,26 @@ export class PlayLedger {
         await this.state.storage.put('bal:' + wallet, Math.round(bal * 1e6) / 1e6);
         const total = Number((await this.state.storage.get('total')) || 0) + amount;
         await this.state.storage.put('total', Math.round(total * 1e6) / 1e6);
-      } catch (_) { /* surfaced below as refunded:false so it is never silent */ }
-      return json({ ok: false, error: (lr && lr.error) || 'repay_failed', refunded: true }, 409);
+        return json({ ok: false, error: (lr && lr.error) || 'repay_failed', refunded: true }, 409);
+      } catch (_) {
+        return json({ ok: false, error: (lr && lr.error) || 'repay_failed', refunded: false, note: 'debited but the refund write failed — support must reconcile' }, 500);
+      }
     }
-    return json(Object.assign({ ok: true, balance: debited.balance }, lr));
+    // Debit EXACTLY what the ledger applied: it caps at the outstanding amount,
+    // so anything over must go back — it used to vanish from the play balance.
+    const applied = Number(lr.applied);
+    let balance = debited.balance;
+    if (Number.isFinite(applied) && applied + 1e-9 < amount) {
+      const back = Math.round((amount - applied) * 1e6) / 1e6;
+      try {
+        const bal = Number((await this.state.storage.get('bal:' + wallet)) || 0) + back;
+        balance = Math.round(bal * 1e6) / 1e6;
+        await this.state.storage.put('bal:' + wallet, balance);
+        const total = Number((await this.state.storage.get('total')) || 0) + back;
+        await this.state.storage.put('total', Math.round(total * 1e6) / 1e6);
+      } catch (e) { return json(Object.assign({ ok: true, balance: debited.balance, overpaidNotRefunded: back, note: 'ledger applied less than debited and the refund write failed — support must reconcile' }, lr)); }
+    }
+    return json(Object.assign({ ok: true, balance }, lr));
   }
 
   async handleStake(request) {
@@ -663,6 +681,7 @@ export class PlayLedger {
 
     // Bankroll for the solvency guard, refreshed UNLOCKED (never RPC in the lock).
     const bankroll = await this.poolBankroll();
+    if (bankroll == null) return json({ ok: false, error: 'bankroll_unreadable', note: 'refusing to credit against an unknown pool' }, 503);
 
     // LOCKED: the whole play + ledger update. HMAC is microseconds (fine in the
     // lock); there is NO network I/O here.
@@ -787,6 +806,7 @@ export class PlayLedger {
     // Bankroll for the solvency guard on a WON-ended step (perfect clear), fetched
     // UNLOCKED like the cashout path.
     const bankroll = await this.poolBankroll();
+    if (bankroll == null) return json({ ok: false, error: 'bankroll_unreadable', note: 'refusing to credit against an unknown pool' }, 503);
 
     return await this.state.blockConcurrencyWhile(async () => {
       const session = await this.state.storage.get('sess:' + sessionId);
@@ -837,6 +857,7 @@ export class PlayLedger {
     if (!sessionId) return json({ error: 'missing_session' }, 400);
 
     const bankroll = await this.poolBankroll();   // UNLOCKED
+    if (bankroll == null) return json({ ok: false, error: 'bankroll_unreadable', note: 'refusing to credit against an unknown pool' }, 503);
 
     return await this.state.blockConcurrencyWhile(async () => {
       const session = await this.state.storage.get('sess:' + sessionId);
@@ -956,6 +977,7 @@ export class PlayLedger {
     if (!(tokensIn > 0)) return json({ error: 'invalid_amount' }, 400);
 
     const bankroll = await this.poolBankroll();   // UNLOCKED
+    if (bankroll == null) return json({ ok: false, error: 'bankroll_unreadable', note: 'refusing to credit against an unknown pool' }, 503);
 
     return await this.state.blockConcurrencyWhile(async () => {
       const coin = await this.state.storage.get('meme:' + mint);
@@ -1045,6 +1067,7 @@ export class PlayLedger {
     try { exitPrice = await fetchStockPrice(pos.symbol); }
     catch (_) { return json({ error: 'quote_unavailable', message: 'Could not fetch a live price to close.' }, 502); }
     const bankroll = await this.poolBankroll();
+    if (bankroll == null) return json({ ok: false, error: 'bankroll_unreadable', note: 'refusing to credit against an unknown pool' }, 503);
 
     return await this.state.blockConcurrencyWhile(async () => {
       const fresh = await this.state.storage.get(key);

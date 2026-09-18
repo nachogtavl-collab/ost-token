@@ -483,7 +483,10 @@ export async function fetchSolUsd() {
       if (Number.isFinite(price) && price > 1) return price;
     } catch (_) {}
   }
-  return 150; // last-resort fallback, matches docs/wallet-extras.js
+  // REFUSE, never fabricate: a made-up $150 used to price real pool swaps.
+  const e = new Error('sol_price_unavailable: no price feed answered — swap quotes are paused until one does');
+  e.code = 'sol_price_unavailable';
+  throw e;
 }
 
 export function ostUsd(env) {

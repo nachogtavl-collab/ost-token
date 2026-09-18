@@ -1003,7 +1003,7 @@ class MeshPavilion {
         if (saved && (prevPeer === fromAddr || (this.peerInput && this.peerInput.value === fromAddr))) {
           this._bubble('peer', `<span class="ts">${new Date(inner.ts || Date.now()).toLocaleTimeString()}</span> ${escapeHtml(inner.text)}`);
         } else if (saved) {
-          this._setStatus(`📬 New offline message from ${fromAddr}. Open Chats to view.`, 'ok');
+          this._setStatus(`📬 New offline message from ${escapeHtml(fromAddr)}. Open Chats to view.`, 'ok');
         }
       } else if (inner.kind === 'location-ping' || inner.kind === 'location-live') {
         this._persistEntry('peer', 'location', inner, fromAddr);

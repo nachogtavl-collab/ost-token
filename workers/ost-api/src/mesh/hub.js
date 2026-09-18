@@ -46,7 +46,9 @@ function fail(error, status = 400) {
 }
 
 function validAddr(value) {
-  return typeof value === 'string' && value.startsWith('ost-mesh:') && value.length <= 80;
+  // Addresses are 'ost-mesh:' + hex groups joined by '-' (mesh.js:234). Anything
+  // else is rejected — a prefix-only check let arbitrary text reach innerHTML.
+  return typeof value === 'string' && value.length <= 80 && /^ost-mesh:[0-9a-f]{2,}(?:-[0-9a-f]{1,4})*$/i.test(value);
 }
 
 function messageId() {
@@ -282,7 +284,10 @@ export class MeshHub {
     // is the safe direction.)
     let existing = this.ids.get(address);
     if (!existing) {
-      existing = await this.state.storage.get(ID_PREFIX + address).catch(() => null);
+      existing = await this.state.storage.get(ID_PREFIX + address).catch(() => 'UNREADABLE');
+      // Fail CLOSED: an unreadable directory must not let a new bundle overwrite a
+      // possibly-existing identity (that would defeat trust-on-first-use).
+      if (existing === 'UNREADABLE') return fail('directory_unavailable', 503);
     }
     if (existing && !isExpired(existing, now) && existing.bundle) {
       // Compare by VALUE, not reference. kex/sig are JWK objects — `===` on two
