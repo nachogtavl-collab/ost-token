@@ -14695,6 +14695,7 @@
       return /^(yes|no)$/i.test(String(value || '').trim());
     }
 
+    var _outcomeContractMemo = new WeakMap();
     function getMarketOutcomeContracts(market) {
       if (!market) return [];
       var rawOutcomes = Array.isArray(market.outcomes) ? market.outcomes : [];
@@ -14702,10 +14703,24 @@
         if (Array.isArray(market.raw.outcomes)) {
           rawOutcomes = market.raw.outcomes;
         } else if (typeof market.raw.outcomes === 'string') {
-          rawOutcomes = parseMaybeJson(market.raw.outcomes);
+          // Exact memo: the ranking pass re-parsed this same JSON string for ~2,000
+          // markets on every refresh. Keyed on the string itself, so never stale.
+          var _oc = market.raw.__ocParsed;
+          if (_oc && _oc.src === market.raw.outcomes) rawOutcomes = _oc.val;
+          else {
+            rawOutcomes = parseMaybeJson(market.raw.outcomes);
+            try { Object.defineProperty(market.raw, '__ocParsed', { value: { src: market.raw.outcomes, val: rawOutcomes }, enumerable: false, writable: true, configurable: true }); } catch (_) {}
+          }
         }
       }
-      return rawOutcomes.map(function(outcome, index) {
+      // Memo keyed on the outcomes array + a signature of every price field, so a
+      // price change always rebuilds (never stale). The price lookup calls this
+      // several times per market per ranking pass — it was the top cost on phones.
+      var _sig = '';
+      for (var _i = 0; _i < rawOutcomes.length; _i++) { var _o = rawOutcomes[_i]; if (_o && typeof _o === 'object') _sig += _o.price + '|' + _o.yesPriceNumber + '|' + _o.lastTradePrice + ';'; }
+      var _memo = _outcomeContractMemo.get(rawOutcomes);
+      if (_memo && _memo.sig === _sig) return _memo.val;
+      var _built = rawOutcomes.map(function(outcome, index) {
         if (!outcome || typeof outcome !== 'object') return null;
         var price = safeFraction(
           outcome.price != null
@@ -14723,6 +14738,8 @@
           raw: outcome
         };
       }).filter(Boolean);
+      try { _outcomeContractMemo.set(rawOutcomes, { sig: _sig, val: _built }); } catch (_) {}
+      return _built;
     }
 
     function marketHasExplicitOutcomeContracts(market) {

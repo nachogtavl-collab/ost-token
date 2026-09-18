@@ -3494,13 +3494,17 @@ export default {
             isBtcRound = true;
             const openAt = Number(m[1]);
             if (!env.__store) env.__store = { get: (k, fb) => kvGet(env, k, fb), put: (k, v, ttl) => kvPut(env, k, v, ttl) };
-            const canon = await getCanonicalBtcRound(env, { refresh: false });
-            const live = (memGet('btc:latest') || await kvGet(env, 'btc:latest', null));
+            // The three pricing reads are independent — run them together (was ~3
+            // sequential round-trips on every buy AND sell).
+            const [canon, live, rec] = await Promise.all([
+              getCanonicalBtcRound(env, { refresh: false }),
+              memGet('btc:latest') || kvGet(env, 'btc:latest', null),
+              kvGet(env, 'round:' + openAt, null)
+            ]);
             const livePrice = Number(live && (live.price || live.p || live.value));
             // Only trust canon if it is THIS round; otherwise fall back to KV.
             const canonOpen = canon && Number(canon.openAt) === openAt ? Number(canon.openPrice) : NaN;
             const canonBeat = canon && Number(canon.openAt) === openAt ? Number(canon.priceToBeat) : NaN;
-            const rec = await kvGet(env, 'round:' + openAt, null);
             const openPrice = Number.isFinite(canonOpen) && canonOpen > 0 ? canonOpen : Number(rec && rec.openPrice);
             const beat = Number.isFinite(canonBeat) && canonBeat > 0 ? canonBeat
               : (Number(rec && rec.priceToBeat) > 0 ? Number(rec.priceToBeat) : openPrice);
@@ -3535,12 +3539,16 @@ export default {
           if (!openAt) { const mm = String(b.marketId || '').match(/^ost-btc5m-(\d+)$/); if (mm) openAt = Number(mm[1]); }
           if (openAt > 0) {
             if (!env.__store) env.__store = { get: (k, fb) => kvGet(env, k, fb), put: (k, v, ttl) => kvPut(env, k, v, ttl) };
-            const canon = await getCanonicalBtcRound(env, { refresh: false });
-            const live = (memGet('btc:latest') || await kvGet(env, 'btc:latest', null));
+            // The three pricing reads are independent — run them together (was ~3
+            // sequential round-trips on every buy AND sell).
+            const [canon, live, rec] = await Promise.all([
+              getCanonicalBtcRound(env, { refresh: false }),
+              memGet('btc:latest') || kvGet(env, 'btc:latest', null),
+              kvGet(env, 'round:' + openAt, null)
+            ]);
             const livePrice = Number(live && (live.price || live.p || live.value));
             const canonOpen = canon && Number(canon.openAt) === openAt ? Number(canon.openPrice) : NaN;
             const canonBeat = canon && Number(canon.openAt) === openAt ? Number(canon.priceToBeat) : NaN;
-            const rec = await kvGet(env, 'round:' + openAt, null);
             const openPrice = Number.isFinite(canonOpen) && canonOpen > 0 ? canonOpen : Number(rec && rec.openPrice);
             const beat = Number.isFinite(canonBeat) && canonBeat > 0 ? canonBeat
               : (Number(rec && rec.priceToBeat) > 0 ? Number(rec.priceToBeat) : openPrice);

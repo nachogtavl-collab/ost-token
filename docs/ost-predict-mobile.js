@@ -81,7 +81,11 @@
     function fr(t) { var k = Math.min(1, (t - t0) / dur); elm.textContent = fmt(from + (to - from) * k); if (k < 1) requestAnimationFrame(fr); }
     requestAnimationFrame(fr);
   }
-  var usd = function (v) { return '$' + Math.round(v).toLocaleString(); };
+  // toLocaleString() builds a fresh Intl formatter on EVERY call, and the live desk
+  // calls it 60x/s (price, delta, graph labels) — it was the top main-thread cost on
+  // phones. One cached formatter each.
+  var _nf0 = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }), _nf2 = new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 });
+  var usd = function (v) { return '$' + _nf0.format(Math.round(v)); };
   // Cents display shows the FULL range: one decimal at the extremes (0.1¢ / 99.9¢)
   // where a whole-cent round would hide them, plain integer in the middle.
   var fmtc = function (v) { v = Number(v) || 0; return (v > 0 && v < 1) || v > 99 ? v.toFixed(1) : String(Math.round(v)); };
@@ -368,18 +372,19 @@
     // USD numerical labels (not %): the beat line and the live price, so the graph
     // reads in dollars — the units the bet is actually decided in.
     ctx.fillStyle = 'rgba(160,184,203,.9)'; ctx.font = '10px ui-monospace,monospace'; ctx.textAlign = 'right';
-    ctx.fillText('to beat $' + Math.round(beat).toLocaleString(), w - pad - 2, by - 5);
+    ctx.fillText('to beat ' + usd(beat), w - pad - 2, by - 5);
     ctx.fillStyle = 'rgb(' + col + ')'; ctx.font = 'bold 10px ui-monospace,monospace'; ctx.textAlign = 'left';
-    ctx.fillText('$' + Math.round(lp).toLocaleString(), pad + 2, 12);
+    ctx.fillText(usd(lp), pad + 2, 12);
   }
   function applyDir() {
     var pb = el('opmPx'); if (!pb || !beat) return;
-    var up = price >= beat; pb.classList.toggle('up', up); pb.classList.toggle('down', !up);
+    var up = price >= beat;
+    if (pb.__up !== up) { pb.__up = up; pb.classList.toggle('up', up); pb.classList.toggle('down', !up); }
     // Show the USD gap between live and price-to-beat, not a percentage — a BTC
     // 5-min bet is decided by the numerical difference, so that is what to surface.
     var diff = price - beat;
     var de = el('opmDelta');
-    if (de) de.textContent = (up ? '▲ ' : '▼ ') + '$' + Math.abs(diff).toLocaleString(undefined, { maximumFractionDigits: 2 });
+    if (de) { var dt = (up ? '▲ ' : '▼ ') + '$' + _nf2.format(Math.abs(diff)); if (de.__t !== dt) { de.__t = dt; de.textContent = dt; } }
   }
   function pushHist(p) { if (!(p > 0)) return; hist.push(p); if (hist.length > HIST_MAX) hist.shift(); }
 
@@ -426,7 +431,7 @@
       if (val > 0) {
         dispPrice = val;
         price = dispPrice;
-        var nowEl = el('opmNow'); if (nowEl) nowEl.textContent = usd(price);
+        var nowEl = el('opmNow'); if (nowEl) { var nt = usd(price); if (nowEl.__t !== nt) { nowEl.__t = nt; nowEl.textContent = nt; } }
         applyDir();
         updateLiveOdds();
         if (!lastDraw || ts - lastDraw > 60) { draw(); lastDraw = ts; }   // graph ~15fps, number 60fps
@@ -770,7 +775,8 @@
     var pnlTxt = (up ? '+' : '−') + Math.abs(pnl).toFixed(2) + ' OSTG' + (cost > 0 ? ' (' + (up ? '+' : '−') + Math.abs(pnl / cost * 100).toFixed(0) + '%)' : '');
     var sideCls = myPos.side === 'yes' ? 'y' : 'n', sideLab = myPos.side === 'yes' ? 'Yes' : 'No';
     var action;
-    if (myPos.locked) { action = '<div class="opm-locked">' + icon('lock') + ' Locked · settles automatically at round close</div>'; }
+    if (myPos.selling) { action = '<div class="opm-locked">Selling… confirming with the server</div>'; }
+    else if (myPos.locked) { action = '<div class="opm-locked">' + icon('lock') + ' Locked · settles automatically at round close</div>'; }
     else if (myPos.sellBtn) { var net = (myPos.cashText.match(/([\d,]+\.?\d*)\s*$/) || [])[1] || val.toFixed(2); var isSettle = /settle|claim/i.test(myPos.cashText); action = '<div class="opm-pcbtns"><button class="addmore" id="opmAddMore">Add more</button><button class="sell" id="opmSellBtn">' + (isSettle ? 'Settle' : 'Sell') + ' · ' + esc(net) + ' OSTG</button></div>'; }
     else { action = '<div class="opm-pcbtns"><button class="addmore" id="opmAddMore">Add more</button><button class="sell" id="opmSellBtn">Sell · ' + val.toFixed(2) + ' OSTG</button></div>'; }
     wrap.innerHTML = '<div class="opm-poscard"><div class="pch">Your position <span class="side ' + sideCls + '">' + sideLab + '</span><span class="sp"></span><span class="pnl ' + (up ? 'up' : 'down') + '">' + esc(pnlTxt) + '</span></div>' +
@@ -1013,6 +1019,9 @@
     var lockedNet = _sellLock && parseFloat(String(_sellLock.realNet).replace(/,/g, ''));
     var estGross = (lockedNet > 0 ? lockedNet : posValueNow());
     var b = playBal(); if (b != null && estGross > 0) { _balHold = { v: b + estGross, dir: 'up', until: Date.now() + 40000 }; setBalDisplay(b + estGross); }
+    // INSTANT: the sheet used to sit on "Processing…" for the whole server round-trip.
+    // Close it now and show the position as "Selling…"; a failure restores it + says why.
+    var sellingPos = myPos; sellingPos.selling = true; closeSheet(); renderPosition();
     var ctrl = new AbortController(); var to = setTimeout(function () { try { ctrl.abort(); } catch (_) {} }, 12000);
     fetch(API + '/play/predict/cashout', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1029,6 +1038,7 @@
       })
       .catch(function (e) {
         clearTimeout(to); _balHold = null;   // release the optimistic bump — the sale didn't take
+        sellingPos.selling = false; renderPosition();
         if (cfs) { cfs.disabled = false; cfs.textContent = 'Sell'; }
         var msg = String((e && e.message) || '');
         if (/round_closed/.test(msg)) toast('Round just closed — it settles automatically.');

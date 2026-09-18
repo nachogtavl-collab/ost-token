@@ -484,7 +484,7 @@
       if (isMarketModalOpen()) return;
       watchTradeAction();
       ensureLauncher();
-    }, 250);
+    }, 1500);   // was 250ms: a body-wide observer on a page whose prices tick constantly
   });
   mo.observe(document.body, { childList: true, subtree: true });
 
