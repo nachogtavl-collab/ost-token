@@ -976,7 +976,7 @@
     stage.innerHTML =
       '<div class="ostg-game ostg-mines">' +
         '<div class="ostg-controls">' +
-          '<label>Bet (OST)<input type="number" id="mnBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
+          '<label>Bet (OSTG)<input type="number" id="mnBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
           '<label>Mines<select id="mnMines">' +
             [1,3,5,8,10,15,24].map(function(n){ return '<option value="'+n+'">'+n+'</option>'; }).join('') +
           '</select></label>' +
@@ -1247,7 +1247,7 @@
       '<div class="ostg-game ostg-crash">' +
         '<div class="ostg-crash-history" id="crHistory"></div>' +
         '<div class="ostg-controls">' +
-          '<label>Bet (OST)<input type="number" id="crBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
+          '<label>Bet (OSTG)<input type="number" id="crBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
           '<label>Auto cash-out ×<input type="number" id="crAuto" min="1.01" step="0.01" value="3.00" inputmode="decimal"></label>' +
           '<label class="ostg-crash-queue"><input type="checkbox" id="crQueue"> Auto-bet next round</label>' +
           '<button class="ostg-btn ostg-btn-primary" id="crStart">Launch</button>' +
@@ -1511,7 +1511,7 @@
     stage.innerHTML =
       '<div class="ostg-game ostg-dice">' +
         '<div class="ostg-controls">' +
-          '<label>Bet (OST)<input type="number" id="dcBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
+          '<label>Bet (OSTG)<input type="number" id="dcBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
           '<label>Direction<select id="dcDir"><option value="under">Roll under</option><option value="over">Roll over</option></select></label>' +
           '<label>Target<input type="number" id="dcTarget" min="2" max="98" step="1" value="50"></label>' +
           '<button class="ostg-btn ostg-btn-primary" id="dcRoll">Roll</button>' +
@@ -1612,7 +1612,7 @@
     stage.innerHTML =
       '<div class="ostg-game ostg-plinko">' +
         '<div class="ostg-controls">' +
-          '<label>Bet (OST)<input type="number" id="plBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
+          '<label>Bet (OSTG)<input type="number" id="plBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
           '<label>Risk<select id="plRisk"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select></label>' +
           '<label>Rows<select id="plRows"><option value="8">8</option><option value="12" selected>12</option><option value="16">16</option></select></label>' +
           '<label>Balls<select id="plBalls"><option value="1">1</option><option value="3" selected>3</option><option value="5">5</option><option value="10">10</option></select></label>' +
@@ -1989,7 +1989,7 @@
     stage.innerHTML =
       '<div class="ostg-game ostg-limbo">' +
         '<div class="ostg-controls">' +
-          '<label>Bet (OST)<input type="number" id="lbBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
+          '<label>Bet (OSTG)<input type="number" id="lbBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
           '<label>Target ×<input type="number" id="lbTarget" min="1.01" max="1000000" step="0.01" value="2.00" inputmode="decimal"></label>' +
           '<button class="ostg-btn ostg-btn-primary" id="lbRoll">Roll</button>' +
           '<div class="ostg-meta"><span>Win chance</span> <strong id="lbChance">49.50%</strong></div>' +
@@ -2056,7 +2056,7 @@
     stage.innerHTML =
       '<div class="ostg-game ostg-hilo">' +
         '<div class="ostg-controls">' +
-          '<label>Bet (OST)<input type="number" id="hlBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
+          '<label>Bet (OSTG)<input type="number" id="hlBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
           '<button class="ostg-btn ostg-btn-primary" id="hlStart">Deal</button>' +
           '<button class="ostg-btn ostg-btn-cash" id="hlCash" disabled>Cash out</button>' +
           '<div class="ostg-meta"><span>Multiplier</span> <strong id="hlMult">1.00×</strong></div>' +
@@ -2188,7 +2188,7 @@
     stage.innerHTML =
       '<div class="ostg-game ostg-wheel">' +
         '<div class="ostg-controls">' +
-          '<label>Bet (OST)<input type="number" id="whBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
+          '<label>Bet (OSTG)<input type="number" id="whBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
           '<label>Risk<select id="whRisk"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select></label>' +
           '<button class="ostg-btn ostg-btn-primary" id="whSpin">Spin</button>' +
         '</div>' +
@@ -2287,7 +2287,7 @@
     stage.innerHTML =
       '<div class="ostg-game ostg-coin">' +
         '<div class="ostg-controls">' +
-          '<label>Bet (OST)<input type="number" id="cfBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
+          '<label>Bet (OSTG)<input type="number" id="cfBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
           '<button class="ostg-btn" id="cfHeads">🔆 Heads ×1.98</button>' +
           '<button class="ostg-btn" id="cfTails">🌙 Tails ×1.98</button>' +
         '</div>' +
@@ -2358,7 +2358,7 @@
     stage.innerHTML =
       '<div class="ostg-game ostg-keno">' +
         '<div class="ostg-controls">' +
-          '<label>Bet (OST)<input type="number" id="knBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
+          '<label>Bet (OSTG)<input type="number" id="knBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
           '<label>Quick picks<select id="knCount"><option value="3">3 numbers</option><option value="5" selected>5 numbers</option><option value="8">8 numbers</option><option value="10">10 numbers</option></select></label>' +
           '<button class="ostg-btn" id="knQuick">Quick pick</button>' +
           '<button class="ostg-btn" id="knClear">Clear</button>' +
@@ -2484,7 +2484,7 @@
     stage.innerHTML =
       '<div class="ostg-game ostg-tower">' +
         '<div class="ostg-controls">' +
-          '<label>Bet (OST)<input type="number" id="twBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
+          '<label>Bet (OSTG)<input type="number" id="twBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
           '<label>Difficulty<select id="twMode"><option value="easy">Easy · 2 safe / 3</option><option value="medium" selected>Medium · 2 safe / 4</option><option value="hard">Hard · 1 safe / 4</option></select></label>' +
           '<label>Rows<select id="twRows"><option value="6">6</option><option value="8" selected>8</option><option value="10">10</option></select></label>' +
           '<button class="ostg-btn ostg-btn-primary" id="twStart">Start climb</button>' +
@@ -2682,7 +2682,7 @@
     stage.innerHTML =
       '<div class="ostg-game ostg-roulette">' +
         '<div class="ostg-controls">' +
-          '<label>Bet (OST)<input type="number" id="rtBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
+          '<label>Bet (OSTG)<input type="number" id="rtBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
           '<label>Bet type<select id="rtType"><option value="color">Color</option><option value="parity">Even / Odd</option><option value="range">Low / High</option><option value="dozen">Dozen</option><option value="straight">Straight number</option></select></label>' +
           '<label id="rtValueWrap">Pick<select id="rtValue"></select></label>' +
           '<label id="rtNumberWrap" style="display:none">Number<input type="number" id="rtNumber" min="0" max="36" step="1" value="17"></label>' +
@@ -2845,7 +2845,7 @@
     stage.innerHTML =
       '<div class="ostg-game ostg-slots">' +
         '<div class="ostg-controls">' +
-          '<label>Bet (OST)<input type="number" id="slBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
+          '<label>Bet (OSTG)<input type="number" id="slBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
           '<label>Lines<select id="slLines"><option value="1">1 line</option><option value="3">3 lines</option><option value="5" selected>5 lines</option></select></label>' +
           '<label>Volatility<select id="slMode"><option value="classic">Classic</option><option value="hot" selected>Hot</option><option value="chaos">Chaos</option></select></label>' +
           '<button class="ostg-btn ostg-btn-primary" id="slSpin">Spin reels</button>' +
@@ -2947,7 +2947,7 @@
     stage.innerHTML =
       '<div class="ostg-game ostg-blackjack">' +
         '<div class="ostg-controls">' +
-          '<label>Bet (OST)<input type="number" id="bjBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
+          '<label>Bet (OSTG)<input type="number" id="bjBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
           '<button class="ostg-btn ostg-btn-primary" id="bjDeal">Deal</button>' +
           '<button class="ostg-btn" id="bjHit" disabled>Hit</button>' +
           '<button class="ostg-btn" id="bjStand" disabled>Stand</button>' +
@@ -3046,7 +3046,7 @@
     stage.innerHTML =
       '<div class="ostg-game ostg-baccarat">' +
         '<div class="ostg-controls">' +
-          '<label>Bet (OST)<input type="number" id="baBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
+          '<label>Bet (OSTG)<input type="number" id="baBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
           '<label>Side<select id="baSide"><option value="player">Player · 1.98x</option><option value="banker">Banker · 1.95x</option><option value="tie">Tie · 8.80x</option></select></label>' +
           '<button class="ostg-btn ostg-btn-primary" id="baDeal">Deal</button>' +
         '</div>' +
@@ -3140,7 +3140,7 @@
     stage.innerHTML =
       '<div class="ostg-game ostg-scratch">' +
         '<div class="ostg-controls">' +
-          '<label>Bet (OST)<input type="number" id="scBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
+          '<label>Bet (OSTG)<input type="number" id="scBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
           '<label>Ticket<select id="scMode"><option value="steady">Steady</option><option value="burst" selected>Burst</option><option value="jackpot">Jackpot</option></select></label>' +
           '<button class="ostg-btn ostg-btn-primary" id="scBuy">Buy ticket</button>' +
           '<button class="ostg-btn" id="scReveal" disabled>Scratch all</button>' +
@@ -3240,7 +3240,7 @@
     stage.innerHTML =
       '<div class="ostg-game ostg-penalty">' +
         '<div class="ostg-controls">' +
-          '<label>Bet (OST)<input type="number" id="pnBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
+          '<label>Bet (OSTG)<input type="number" id="pnBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
           '<label>Aim<select id="pnAim"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option><option value="top">Top corner</option></select></label>' +
           '<label>Shot<select id="pnStyle"><option value="placed">Placed · safer</option><option value="power" selected>Power · balanced</option><option value="chip">Chip · risky</option></select></label>' +
           '<button class="ostg-btn ostg-btn-primary" id="pnShoot">Shoot</button>' +
@@ -3418,7 +3418,7 @@
     stage.innerHTML =
       '<div class="ostg-game ostg-world">' +
         '<div class="ostg-controls">' +
-          '<label>Bet (OST)<input type="number" id="qgBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
+          '<label>Bet (OSTG)<input type="number" id="qgBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
           (config.options && config.options.length ? '<label>' + (config.optionLabel || 'Pick') + '<select id="qgPick">' + config.options.map(function(option) { return '<option value="' + option.value + '">' + option.label + '</option>'; }).join('') + '</select></label>' : '') +
           '<button class="ostg-btn ostg-btn-primary" id="qgPlay">' + (config.button || 'Play') + '</button>' +
           '<div class="ostg-meta"><span>Table</span> <strong>' + config.meta + '</strong></div>' +
@@ -3621,7 +3621,7 @@
     stage.innerHTML =
       '<div class="ostg-game ostg-dragontower">' +
         '<div class="ostg-controls">' +
-          '<label>Bet (OST)<input type="number" id="dtBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
+          '<label>Bet (OSTG)<input type="number" id="dtBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
           '<label>Mode<select id="dtMode">' +
             '<option value="easy">Easy · 4 tiles</option>' +
             '<option value="medium" selected>Medium · 3 tiles</option>' +
@@ -3959,7 +3959,7 @@
     stage.innerHTML =
       '<div class="ostg-game ostg-videopoker">' +
         '<div class="ostg-controls">' +
-          '<label>Bet (OST)<input type="number" id="vpBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
+          '<label>Bet (OSTG)<input type="number" id="vpBet" min="0.1" step="0.1" value="1" inputmode="decimal"></label>' +
           '<button class="ostg-btn ostg-btn-primary" id="vpDeal">Deal</button>' +
           '<button class="ostg-btn ostg-btn-cash" id="vpDraw" disabled>Draw</button>' +
           '<div class="ostg-meta"><span>Paytable</span> <strong>Jacks or better</strong></div>' +

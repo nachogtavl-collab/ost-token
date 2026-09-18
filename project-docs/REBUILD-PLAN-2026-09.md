@@ -166,3 +166,12 @@ PayoutGate building→sent→confirmed state machine + payoutId memo; PlayLedger
 - **Client:** new `docs/mesh/mesh-contacts.js` (`window.OST_CONTACTS`): signed requests + a Friends panel in the phone mesh Chats tab (add by address, Accept / Decline / Block, friends -> Chat, sent requests, blocked, unread badge). No polling - loads when Chats opens and after each action; failures are stated with a Retry.
 - **E2E verified:** headless phone (user A) + Node-signed user B: B's request appeared in A's panel, A tapped Accept, B's list shows A.
 - **Still unauthenticated (next):** `/mesh/v1/signal/send|inbox`, `/mesh/v1/presence`, feed posting - same signer can be reused. **Not built yet:** offline mailbox messaging in the chat UI, FB-style profile, unified messaging HUD.
+
+### 2026-09-18 — Phone UI/UX pass: prediction markets + faucet games (screenshot-verified)
+
+- **ROOT CAUSE of "can't trade on mobile":** `section#wallet` has `perspective:1200px` (desktop 3D tilt), which makes it the containing block for every `position:fixed` descendant - so the Buy bar AND the trade ticket were positioned against a multi-thousand-px section, i.e. off-screen. Phones now drop the perspective; Buy bar is pinned above the app bar (only while the market is in view), scrim + ticket are viewport-fixed and sit above the app bar, confirm button full-width.
+- **Opening a market scrolled the user AWAY from it:** `setWalletPanel({scroll:true})` smooth-scrolled to the top of `#wallet` (~1,000px of wallet marketing on phones), overriding the desk's own scroll. It now scrolls to the panel that was opened.
+- **Browse ranking:** feed order put dozens of decided 1c/99c novelty contracts first. Ranked by contestedness x log(volume); <=3c / >=97c sink; OST live rounds lead.
+- **No more mid-word wrapping** (global `overflow-wrap:anywhere` trap): cards ("POLYMARK/ET" -> "POLY", "Closes in 780d" -> "780d"), detail tabs ("Trade/s"), stat tiles; equal-height cards, 3-line title clamp.
+- **Honest graph tail:** the live point used the ROUNDED cent price, so a 0.55% market drew a fake spike to 1%. Uses the raw price now.
+- **Games:** the board started ~1,940px down (hero 444 + mesh promo 253 + 18-card lobby 685 + the same 18 games again as chips 271). Phones: compact hero (balance kept) -> one swipeable sticky game strip -> the game; duplicate lobby hidden; mesh promo moved below the game. All 19 boards said "Bet (OST)" while spending OSTG - now "Bet (OSTG)".

@@ -225,6 +225,20 @@
       '<div class="fq">' + esc(m.title || m.contractLabel || 'Will it be higher?') + '</div>' +
       '<div class="fyn"><span class="fy">Yes ' + yc + '¢</span><span class="fn">No ' + (100 - yc) + '¢</span></div></div>';
   }
+  // "Closes in 780d" / "Closes 02:35 PM" -> "780d" / "02:35 PM": the label already says Closes.
+  function shortClose(m) { return String((m && (m.closeText || m.closeLabel)) || '').replace(/^\s*closes\s*(in\s*)?/i, '').trim(); }
+  var SRC_SHORT = { polymarket: 'Poly', kalshi: 'Kalshi', ost: 'OST' };
+  // BROWSE RANKING. The grid used to be feed order, which put dozens of decided 1c/99c
+  // novelty contracts ("Will LeBron win the presidency") ahead of anything tradable.
+  // Rank by how CONTESTED a market is, weighted by real volume; near-decided ones sink.
+  function rankScore(m) {
+    var yc = yesCents(m), contested = 1 - Math.abs(yc - 50) / 50;          // 1 at 50c, 0 at 0/100c
+    var vol = Math.log10((Number(m.volumeNumber) || 0) + 10);               // ~1..8
+    var s = contested * 3 + vol * 0.45;
+    if (yc <= 3 || yc >= 97) s -= 6;                                        // effectively decided
+    if (isNative5m(m)) s += 4;                                              // OST's own live rounds lead
+    return s;
+  }
   function mCard(m) {
     var yc = yesCents(m), ic = marketIcon(m);
     var src = String(m.source || (isNative5m(m) ? 'ost' : '')).toLowerCase();
@@ -233,7 +247,7 @@
       '<div class="mt"><div class="mi">' + icon(ic) + '</div><div class="mq">' + esc(m.title || m.contractLabel || 'Market') + '</div></div>' +
       '<div class="mbar"><i style="width:' + yc + '%"></i></div>' +
       '<div class="myn"><span class="cy">Yes ' + yc + '¢</span><span class="cn">No ' + (100 - yc) + '¢</span></div>' +
-      '<div class="mf"><span class="msrc" style="color:' + srcColor + '">' + esc(src || 'market') + '</span><span>' + esc(m.closeText || m.closeLabel || '') + '</span></div></div>';
+      '<div class="mf"><span class="msrc" style="color:' + srcColor + '">' + esc(SRC_SHORT[src] || src || 'market') + '</span><span class="mcl">' + esc(shortClose(m)) + '</span></div></div>';
   }
 
   function renderBrowse() {
@@ -249,7 +263,8 @@
     }
     var cnt = el('opmCount'); if (cnt) cnt.textContent = filtered.length + ' live';
     if (!filtered.length) { grid.innerHTML = '<div class="opm-empty" style="grid-column:1/-1">' + (ms.length ? 'No markets match.' : 'Loading live markets…') + '</div>'; return; }
-    grid.innerHTML = filtered.slice(0, 80).map(mCard).join('');
+    var ranked = filtered.map(function (m, i) { return { m: m, s: rankScore(m), i: i }; }).sort(function (a, b) { return (b.s - a.s) || (a.i - b.i); }).map(function (x) { return x.m; });
+    grid.innerHTML = ranked.slice(0, 80).map(mCard).join('');
   }
 
   function wireBrowse() {
@@ -343,7 +358,7 @@
         '<div class="opm-prob"><div class="pv" id="opmProb">' + yc + '%</div><div class="pl">implied Yes</div><div class="pbar"><i id="opmProbBar" style="width:' + yc + '%"></i></div>' +
           '<canvas class="opm-g" id="opmStdG" width="402" height="120" style="height:120px;margin:12px 0 0"></canvas><div id="opmStdNote" style="font-size:10px;color:#8fa6b8;padding:4px 2px 0;font-family:ui-monospace,monospace">' + (m.source === 'kalshi' ? 'checking live Kalshi price…' : '') + '</div></div>' +
         '<div class="opm-statrow"><div class="st"><div class="k">24h volume</div><div class="v">' + esc(Number(m.volumeNumber) > 0 ? compact(m.volumeNumber) : (/\d/.test(String(m.volumeLabel || '')) ? m.volumeLabel : '—')) + '</div></div>' +
-        '<div class="st"><div class="k">Closes</div><div class="v">' + esc(m.closeText || m.closeLabel || '—') + '</div></div>' +
+        '<div class="st"><div class="k">Closes</div><div class="v">' + esc(shortClose(m) || '—') + '</div></div>' +
         '<div class="st"><div class="k">Source</div><div class="v" style="text-transform:capitalize">' + esc(m.source || 'OST') + '</div></div></div>';
     }
     return head + '<div class="opm-scroll">' + body + ynBlock() + poolBlock() + '<div id="opmPosWrap"></div>' + tabsBlock() + '</div>' + buyBarBlock();
@@ -641,7 +656,8 @@
     loadRealHistory(currentMarket);
     var rh = _realHist[currentMarket.id];
     var isReal = !!(rh && rh.pts && rh.pts.length > 1);
-    var arr = isReal ? rh.pts.concat([{ t: Date.now(), y: midYes }]) : local;
+    var rawYes = Number(currentMarket.yesPriceNumber) * 100;
+    var arr = isReal ? rh.pts.concat([{ t: Date.now(), y: (rawYes >= 0 && rawYes <= 100) ? rawYes : midYes }]) : local;
     ctx.clearRect(0, 0, w, h);
     if (arr.length < 2) {
       var yy = pad + (1 - midYes / 100) * (h - 2 * pad);
@@ -1205,7 +1221,10 @@
   /* ===================================================================== */
   /* VIEW SWITCHING + MOUNT                                                 */
   /* ===================================================================== */
-  function showView(v) { view = v; var b = el('opmBrowse'), d = el('opmDetail'), p = el('opmPositions'); if (b) b.classList.toggle('on', v === 'browse'); if (d) d.classList.toggle('on', v === 'detail'); if (p) p.classList.toggle('on', v === 'positions'); }
+  // The pinned Buy bar belongs to the market: show it only while the market is on screen.
+  var _detailIO = null;
+  function watchDetailInView() { try { var d = el('opmDetail'); if (!d || _detailIO || !('IntersectionObserver' in window)) { if (d && !('IntersectionObserver' in window)) d.classList.add('opm-inview'); return; } _detailIO = new IntersectionObserver(function (es) { es.forEach(function (e) { d.classList.toggle('opm-inview', e.isIntersecting); }); }, { threshold: 0.05 }); _detailIO.observe(d); } catch (_) {} }
+  function showView(v) { view = v; watchDetailInView(); try { var ab = document.getElementById('ostAppBar'); document.documentElement.style.setProperty('--opm-appbar-h', ((ab && ab.offsetHeight) || 0) + 'px'); } catch (_) {} var b = el('opmBrowse'), d = el('opmDetail'), p = el('opmPositions'); if (b) b.classList.toggle('on', v === 'browse'); if (d) d.classList.toggle('on', v === 'detail'); if (p) p.classList.toggle('on', v === 'positions'); }
   function showBrowse() { stopFlow(); showView('browse'); currentMarket = null; renderBrowse(); refreshBalance(); }
 
   function mount() {

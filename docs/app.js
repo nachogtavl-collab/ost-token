@@ -7585,8 +7585,14 @@
 
       if (options.scroll) {
         const walletSection = $('#wallet');
-        if (walletSection) {
-          walletSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Scroll to the PANEL that was just opened, not the top of the whole wallet
+        // section. On phones that section starts with ~1,000px of wallet marketing, so
+        // opening a market smooth-scrolled the user AWAY from it (and overrode the
+        // prediction desk's own scroll). Fall back to the section only if the panel has no box.
+        const activePanel = document.getElementById(panelId);
+        const scrollTarget = (activePanel && activePanel.offsetParent !== null) ? activePanel : walletSection;
+        if (scrollTarget) {
+          scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
       }
     }

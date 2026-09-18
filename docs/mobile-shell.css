@@ -1005,3 +1005,46 @@
     transform: none;
   }
 }
+
+/* ---- GAMES ON PHONES (2026-09 UI pass) -----------------------------------
+   The board used to start ~1,940px down: hero 444 + mesh promo 253 + an 18-card
+   lobby 685 + THE SAME 18 games again as a 3-column chip grid 271. Now: compact
+   hero (balance stays) -> ONE swipeable game strip -> the game. The duplicate lobby
+   is hidden on phones and the mesh promo moves below the game. */
+@media (max-width: 820px), (pointer: coarse) and (max-width: 1024px) {
+  body.ost-mobile-shell #ostGames { display: flex !important; flex-direction: column !important; }
+  body.ost-mobile-shell #ostGames > * { order: 5; }
+  body.ost-mobile-shell #ostGames > #ostgCasinoHero { order: 1; }
+  body.ost-mobile-shell #ostGames > #ostgTabs { order: 2; }
+  body.ost-mobile-shell #ostGames > #ostgStage { order: 3; }
+  body.ost-mobile-shell #ostGames > #ost-mesh-arena-fair-entry { order: 4; margin-top: 16px !important; }
+  body.ost-mobile-shell #ostGames > #ostgLobbyStrip { display: none !important; }
+
+  body.ost-mobile-shell #ostGames .ostg-casino-hero { display: flex !important; flex-direction: column !important; gap: 10px !important; min-height: 0 !important; padding: 12px !important; margin-bottom: 10px !important; }
+  body.ost-mobile-shell #ostGames .ostg-hero-scene { display: none !important; }
+  body.ost-mobile-shell #ostGames .ostg-hero-copy { display: flex !important; align-items: center !important; flex-wrap: wrap !important; gap: 6px 10px !important; }
+  body.ost-mobile-shell #ostGames .ostg-hero-copy .ostg-kicker { display: none !important; }
+  body.ost-mobile-shell #ostGames .ostg-hero-copy h3 { font-size: 1.35rem !important; margin: 0 !important; line-height: 1.1 !important; }
+  body.ost-mobile-shell #ostGames .ostg-hero-stats { gap: 6px !important; margin: 0 !important; }
+  body.ost-mobile-shell #ostGames .ostg-hero-stats span { font-size: 11px !important; padding: 4px 8px !important; white-space: nowrap !important; overflow-wrap: normal !important; }
+
+  body.ost-mobile-shell #ostGames .ostg-tabs {
+    display: flex !important; grid-template-columns: none !important; flex-wrap: nowrap !important;
+    overflow-x: auto !important; overflow-y: hidden !important; -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity !important; scrollbar-width: none; gap: 8px !important;
+    padding: 8px 2px !important; margin: 0 0 10px !important; border-bottom: 0 !important;
+    position: sticky; top: 58px; z-index: 15; background: rgba(5, 9, 18, .94); backdrop-filter: blur(10px);
+  }
+  body.ost-mobile-shell #ostGames .ostg-tabs::-webkit-scrollbar { display: none; }
+  body.ost-mobile-shell #ostGames .ostg-tab {
+    flex: 0 0 auto !important; width: auto !important; min-width: max-content !important;
+    white-space: nowrap !important; overflow-wrap: normal !important; scroll-snap-align: center;
+    padding: 10px 14px !important; border-radius: 999px !important; font-size: 13px !important;
+    border: 1px solid rgba(148, 163, 184, .22) !important;
+  }
+}
+@media (max-width: 820px), (pointer: coarse) and (max-width: 1024px) {
+  /* Games: the one-line intro above the lanes costs a fifth of the first screen on a phone. */
+  body.ost-mobile-shell #games > .container > .section-sub { display: none !important; }
+  body.ost-mobile-shell #ostGames .ostg-balance-card { padding: 12px !important; gap: 8px !important; }
+}
