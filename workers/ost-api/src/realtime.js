@@ -214,10 +214,24 @@ export async function publishRealtimeEvent(env, event) {
 }
 
 export class RealtimeHub {
+  // Phase 2.2: tell the market hub someone is listening (throttled to ~60s), so
+  // its tick alarm runs only while sockets are connected.
+  pingDemand() {
+    const now = Date.now();
+    if (now - (this.lastDemandPingAt || 0) < 60000) return;
+    this.lastDemandPingAt = now;
+    try {
+      const hub = this.env && this.env.NATIVE_MARKET_HUB;
+      if (!hub) return;
+      hub.get(hub.idFromName('ost-native-market-hub-v1')).fetch('https://native-market/hub/demand', { method: 'POST' }).catch(() => {});
+    } catch (_) {}
+  }
+
   constructor(state, env) {
     this.state = state;
     this.env = env;
     this.clients = new Map();
+    this.lastDemandPingAt = 0;
     this.recent = null;
   }
 
@@ -284,6 +298,7 @@ export class RealtimeHub {
     if (wallet) channels.add(walletChannel(wallet));
     const session = { id, socket: server, wallet, channels, connectedAt: Date.now(), lastSeen: Date.now() };
     this.clients.set(id, session);
+    this.pingDemand();
 
     server.accept();
     this.send(session, {
@@ -328,6 +343,7 @@ export class RealtimeHub {
     if (!msg || typeof msg !== 'object') return this.send(session, { type: 'error', error: 'invalid_message' });
 
     if (msg.type === 'ping') {
+      this.pingDemand();
       return this.send(session, { type: 'pong', ts: Date.now() });
     }
     if (msg.type === 'hello' || msg.type === 'subscribe') {

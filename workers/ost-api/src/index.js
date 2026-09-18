@@ -1728,6 +1728,19 @@ export class NativeMarketHub {
     return this.state.blockConcurrencyWhile(() => this.handle(request));
   }
 
+  // Phase 2.2 tick alarm: publish a fresh snapshot every 5s while a realtime
+  // client asked for it in the last 90s. O(1) for everyone connected; when
+  // nobody is listening the alarm simply stops rescheduling itself.
+  async alarm() {
+    const now = Date.now();
+    let demandAt = 0;
+    try { demandAt = Number(await this.state.storage.get('tickDemandAt')) || 0; } catch (_) {}
+    if (!demandAt || now - demandAt > 90000) return;
+    try { await this.btcSnapshot({ force: true, refresh: true }); }
+    catch (e) { console.warn('[tick-alarm]', String((e && e.message) || e).slice(0, 120)); }
+    try { await this.state.storage.setAlarm(Date.now() + 5000); } catch (_) {}
+  }
+
   async readMarket(marketId) {
     const cleanMarketId = cleanText(marketId, 128);
     const raw = await this.state.storage.get(nativeMarketStateKey(cleanMarketId));
@@ -2011,6 +2024,15 @@ export class NativeMarketHub {
     const method = request.method;
     if (method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS_HEADERS });
 
+    // Phase 2.2: DEMAND from the realtime hub. While any socket is connected the
+    // hub pings this (throttled ~60s); the alarm keeps ticking + publishing only
+    // while demand is fresh — server-driven ticks, zero client polling.
+    if (path === '/hub/demand' && method === 'POST') {
+      await this.state.storage.put('tickDemandAt', Date.now());
+      const cur = await this.state.storage.getAlarm();
+      if (!cur) await this.state.storage.setAlarm(Date.now() + 500);
+      return json({ ok: true, alarm: cur ? 'running' : 'started' });
+    }
     if ((path === '/btc/round' || path === '/snapshot') && method === 'GET') {
       const refresh = url.searchParams.get('refresh') !== '0';
       return json(await this.btcSnapshot({ refresh }), 200, { 'cache-control': 'no-store' });
