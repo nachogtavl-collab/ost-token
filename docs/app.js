@@ -11931,9 +11931,12 @@
       localStorage.setItem('ost_lp_history2', JSON.stringify(launches));
       return true;
     }
-    async function syncLaunchpadFromRemote() {
+    async function syncLaunchpadFromRemote(force) {
       var base = launchpadApiBase();
       if (!base || syncLaunchpadFromRemote.inFlight) return false;
+      // TTL: the registry changes rarely; callers on 5-6s timers made this 12 req/min per visitor.
+      if (!force && Date.now() - (syncLaunchpadFromRemote.lastAt || 0) < 60000) return false;
+      syncLaunchpadFromRemote.lastAt = Date.now();
       syncLaunchpadFromRemote.inFlight = true;
       try {
         var response = await fetch(base + '/launchpad/coins', { cache: 'no-store', headers: { accept: 'application/json' } });

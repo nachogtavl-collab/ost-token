@@ -1138,7 +1138,7 @@
     // All polling pauses when the tab is hidden (was hammering the network even
     // in the background — a big part of the request storm).
     setInterval(function () { if (view === 'detail' && isBtcLive(currentMarket) && !document.hidden) loadRound(); }, 6000);
-    setInterval(function () { if (view === 'detail' && !document.hidden) { loadTrades(); refreshPosition(); if (!isBtcLive(currentMarket)) paintStandard(); } }, 13000);
+    setInterval(function () { if (view === 'detail' && !document.hidden) { loadTrades(); refreshPosition(); if (!isBtcLive(currentMarket)) paintStandard(); } }, 30000);   // was 13s
     setInterval(function () { if (!document.hidden) refreshBalance(); }, 40000);
     // autonomous autopay: claim resolved on-chain wins to the wallet OSTG.
     // Runs only while visible; it no-ops immediately when there are no open
