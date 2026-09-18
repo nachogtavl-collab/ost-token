@@ -77,12 +77,13 @@
     return true;
   }
 
-  var delay=9000, timer=null;
+  var delay=30000, timer=null;   // was 4-9s; the global feed is decorative — 30s, and only while its widget is visible
   function tick(){
-    if(document.hidden){schedule();return;}
+    var w=document.getElementById('ost-predict-activity');
+    if(document.hidden||(w&&w.offsetParent===null)){schedule();return;}
     fetch(API+'/positions/recent',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
       var arr=(d&&d.recent)||[];
-      if(arr.length){render(arr);delay=9000;}else{delay=Math.min(60000,delay*1.5);}
+      if(arr.length){render(arr);delay=30000;}else{delay=Math.min(60000,delay*1.5);}
       schedule();
     }).catch(function(){delay=Math.min(60000,delay*1.5);schedule();});
   }
@@ -93,7 +94,7 @@
   function boot(){
     if(!mount()){var n=0;var iv=setInterval(function(){if(mount()||++n>20)clearInterval(iv);},600);}
     tick();
-    document.addEventListener('visibilitychange',function(){if(!document.hidden){delay=4000;clearTimeout(timer);timer=setTimeout(tick,300);}});
+    document.addEventListener('visibilitychange',function(){if(!document.hidden){delay=30000;clearTimeout(timer);timer=setTimeout(tick,300);}});
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
   else boot();

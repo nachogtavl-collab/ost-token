@@ -18,7 +18,7 @@
 (function () {
   'use strict';
 
-  var REFRESH_MS = 5000;
+  var REFRESH_MS = 60000;   // was 5s (22 req/min from an idle home screen); refresh only while the section is visible
   var GRADUATION_MCAP = 69000;       // OST mcap to "graduate" (move to a real DEX pool)
   var FRESH_WINDOW_MS = 30 * 60 * 1000;
 
@@ -364,7 +364,7 @@
   function boot() {
     injectStyle();
     refresh();
-    setInterval(refresh, REFRESH_MS);
+    setInterval(function () { var sec = document.getElementById('launchpad'); if (document.hidden || !sec || sec.offsetParent === null) return; refresh(); }, REFRESH_MS);
     hookCreateForm();
     setInterval(hookCreateForm, 3000); // catch buttons added later by tab switching
   }

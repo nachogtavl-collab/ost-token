@@ -116,7 +116,7 @@
   function boot() {
     if (!el('ostMarketVelocity') && !el('ostLivePrice')) return;
     tick();
-    setInterval(tick, 15000);
+    setInterval(tick, 120000);   // decorative 'network alive' counter: 2 min, not 15s
     // repaint promptly after our own telemetry lands
     window.addEventListener('ost:telemetry-accepted', function (e) {
       if (e && e.detail) paintStats(Object.assign({ tx24h: e.detail.tx24h, activeWallets24h: e.detail.activeWallets24h, price: e.detail.price, volume24h: 0, btcMood: e.detail.btcMood }, {}));

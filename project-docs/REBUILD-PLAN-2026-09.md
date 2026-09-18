@@ -113,3 +113,9 @@ PayoutGate building→sent→confirmed state machine + payoutId memo; PlayLedger
 
 - The `request-burn` reader and the adversarial-verification stage were refused by the account usage limit. In their place: cross-reader agreement (every critical claim was made by ≥3 independent readers), my code spot-check of the 10 single-source criticals (all confirmed), and today's live measurement of the round poll (5 requests/45s vs 30).
 - 108 medium/low findings are in the audit JSON and are **unverified**; each is checked before it is fixed, inside the phase it belongs to.
+
+## Progress log
+
+- **2026-09-18 — Phase 0 started; funnel verified working.** Headless iPhone run on prod: first-visit wallet → 100 OSTC claimed in 10s → 10 OSTC→OSTG bridged on-chain (90/10), 0 toasts, 0 errors. Root cause of "faucet doesn't drop": `devnet-rescue.js` pool read returned a fabricated 0 on RPC failure → "vault is being refilled" (pool actually holds 55 SOL / 9.5B OSTC). Fixed at the root (unknown ≠ 0; client pre-check deleted; server is the solvency authority). Cloudflare 1027 now named honestly. Bridge chain reads use the RPC rotation. Toasts deduped at the root (Phase 0 #8, #9). Commits `b7e6197`, and the burn cuts below.
+- **Burn cuts (interim, toward Phase 2 — no new polls):** idle phone on the home page measured **135 → 48 worker requests/min**; mesh signal polling + announce only while the mesh is open; launchpad 5s→60s and only when visible; global activity feed 4s→30s and only when visible; native market state 3s→15s; markets list 10s→60s; live-stats 15s→120s; BTC round poll 1.5s→adaptive 8s (`e92402c`). QuickNode endpoint was found dead (TLS internal error) and removed from rotation — 3 Helius keys remain until a new provider key is added.
+- **Still open from the funnel run:** `/positions/recent` ~9/min from the predict desk (predict-mobile 13s trades poll) and `sw.js` precache listing stale versions — both land in Phase 2 / Phase 6.

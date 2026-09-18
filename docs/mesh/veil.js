@@ -203,6 +203,8 @@ async function startVeil() {
     await warmMeshPresence(pavilion);
     watchTransport(pavilion);
     setInterval(async () => {
+      // Only while the mesh is open — a second 45s announce loop for idle visitors was pure burn.
+      if (!(pavilion && pavilion.root && pavilion.root.classList.contains('is-open'))) return;
       try {
         await warmMeshPresence(pavilion);
         watchTransport(pavilion);

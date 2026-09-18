@@ -403,8 +403,10 @@ class MeshPavilion {
     this.fprEl.textContent = this.fpr;
     this._announceNow({ silent: false });
     if (this.announceTimer) clearInterval(this.announceTimer);
-    this.announceTimer = setInterval(() => this._announceNow({ silent: true }), ANNOUNCE_REFRESH_MS);
-    if (!this.rtc) this._startRTC('callee', { passive: true });
+    // Re-announce and listen for WebRTC offers ONLY while the mesh is open. At page
+    // load this used to start a 1.5s signal-inbox poll for every visitor who never
+    // touched the mesh — 33 worker requests/min from an idle home screen.
+    this.announceTimer = setInterval(() => { if (this.root.classList.contains('is-open')) this._announceNow({ silent: true }); }, ANNOUNCE_REFRESH_MS);
   }
 
   _wire() {
@@ -553,11 +555,17 @@ class MeshPavilion {
     // Always begin polling the offline DM relay so messages from any peer
     // arrive even when no WebRTC channel is open.
     try { this._startRelayPoller(); } catch (_) {}
+    // Listen for incoming offers only while open (see _init).
+    try { if (!this.rtc) this._startRTC('callee', { passive: true }); } catch (_) {}
   }
   close() {
     this.root.classList.remove('is-open');
     this.root.setAttribute('aria-hidden', 'true');
     this._unlockPageScroll();
+    // Stop the passive listener + relay poll when nothing is connected: a closed
+    // mesh must cost zero worker requests.
+    try { if (this.rtc && !this.peerAddr) { this.rtc._stopPolling = true; this.rtc = null; } } catch (_) {}
+    try { this._stopRelayPoller && this._stopRelayPoller(); } catch (_) {}
   }
 
   _lockPageScroll() {

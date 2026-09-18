@@ -62,7 +62,7 @@
   var nativeStateInFlight = {};
   var nativeStateInFlightBase = {};
   var NATIVE_STATE_BASE_TOLERANCE = 0.005;
-  var NATIVE_STATE_REFRESH_MS = 3000;
+  var NATIVE_STATE_REFRESH_MS = 15000;   // was 3s: round STATE changes every 5 min; the live price streams from Pyth
   var ROUND_REFRESH_MS = 4000;
   var roundFetchAt = 0, roundInFlight = null, lastRound = null;
 
