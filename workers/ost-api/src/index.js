@@ -880,6 +880,7 @@ function storeHealth(env) {
 const ACTIVE_MARKETS_MEMORY = new Map();
 const MARKET_DETAIL_MEMORY = new Map();
 
+const ACTIVE_MARKETS_KV_PUT_AT = new Map();
 async function fetchActiveMarkets(env, limit) {
   const cleanLimit = Math.max(1, Math.min(200, Number(limit) || 60));
   const cacheKey = `markets:active:${cleanLimit}`;
@@ -893,7 +894,12 @@ async function fetchActiveMarkets(env, limit) {
         const firstKey = ACTIVE_MARKETS_MEMORY.keys().next().value;
         if (firstKey) ACTIVE_MARKETS_MEMORY.delete(firstKey);
       }
-      await kvPut(env, cacheKey, payload, 60 * 10);
+      // KV is only the cold-start fallback. This used to write on EVERY /markets call -
+      // the free plan allows 1,000 KV writes/DAY, which a handful of open tabs exhausted
+      // (after which every KV write in the app fails). Refresh it at most every 10 min
+      // per isolate; TTL 1h so the fallback outlives the refresh gap.
+      const lastPut = ACTIVE_MARKETS_KV_PUT_AT.get(cacheKey) || 0;
+      if (Date.now() - lastPut > 10 * 60 * 1000) { ACTIVE_MARKETS_KV_PUT_AT.set(cacheKey, Date.now()); await kvPut(env, cacheKey, payload, 60 * 60); }
       return { raw, stale: false, source: 'gamma' };
     }
   } catch (_) {}
@@ -920,7 +926,7 @@ async function fetchMarketDetail(env, id) {
         const firstKey = MARKET_DETAIL_MEMORY.keys().next().value;
         if (firstKey) MARKET_DETAIL_MEMORY.delete(firstKey);
       }
-      await kvPut(env, cacheKey, payload, 60 * 30);
+      { const lp = ACTIVE_MARKETS_KV_PUT_AT.get(cacheKey) || 0; if (Date.now() - lp > 10 * 60 * 1000) { if (ACTIVE_MARKETS_KV_PUT_AT.size > 400) ACTIVE_MARKETS_KV_PUT_AT.clear(); ACTIVE_MARKETS_KV_PUT_AT.set(cacheKey, Date.now()); await kvPut(env, cacheKey, payload, 60 * 60); } }   // same 1,000-writes/day reason as above
       return { raw, stale: false, source: 'gamma' };
     }
   } catch (_) {}
@@ -3140,7 +3146,7 @@ function adminAuthorized(request, env) {
 // ── router ───────────────────────────────────────────────────────────────────
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const path = url.pathname.replace(/\/$/, '') || '/';
     const method = request.method;
@@ -4184,6 +4190,61 @@ export default {
     }
 
     // ── GET /markets ─────────────────────────────────────────────────────────
+    // -- GET /kalshi/market?ticker=  live quote + 7d hourly history for ONE Kalshi market.
+    // Kalshi 403s browsers (Origin-blocked), so this is the only way a client can get a
+    // live Kalshi price - the catalog the site ships is a static deploy-time snapshot.
+    // Called once when a user OPENS a market (never polled). Kalshi 429s Cloudflare's
+    // shared egress IPs on back-to-back calls, so: quote cached 120s, history cached
+    // 30 min under its own key, calls spaced + retried once, and a 429 serves the last
+    // good copy marked stale instead of failing.
+    if (path === '/kalshi/market' && method === 'GET') {
+      const ticker = String(url.searchParams.get('ticker') || '').trim().toUpperCase();
+      if (!/^[A-Z0-9._-]{3,96}$/.test(ticker)) return json({ ok: false, error: 'bad_ticker' }, 400);
+      const KB = 'https://api.elections.kalshi.com/trade-api/v2';
+      const cache = caches.default;
+      const kq = new Request('https://kalshi-cache.internal/q/' + encodeURIComponent(ticker));
+      const kqStale = new Request('https://kalshi-cache.internal/qs/' + encodeURIComponent(ticker));
+      const kh = new Request('https://kalshi-cache.internal/h/' + encodeURIComponent(ticker));
+      const readC = async (k) => { try { const r = await cache.match(k); return r ? await r.json() : null; } catch (_) { return null; } };
+      const writeC = (k, v, ttl) => { try { const pr = cache.put(k, new Response(JSON.stringify(v), { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=' + ttl } })); if (ctx && ctx.waitUntil) ctx.waitUntil(pr); } catch (_) {} };
+      const kget = async (u) => { for (let a = 0; a < 3; a++) { try { const r = await fetch(u, { headers: { accept: 'application/json' } }); if (r.status !== 429) return r; } catch (_) { return null; } await new Promise(z => setTimeout(z, 600 + a * 700)); } return { ok: false, status: 429 }; };
+
+      let quote = await readC(kq), quoteStale = false, upstream = 0;
+      if (!quote) {
+        const r = await kget(KB + '/markets/' + encodeURIComponent(ticker));
+        upstream = r ? r.status : 0;
+        if (r && r.status === 404) return json({ ok: false, error: 'market_not_found' }, 404);
+        let mk = null; if (r && r.ok) { try { mk = (await r.json()).market || null; } catch (_) {} }
+        if (mk) {
+          const pick = (k) => (mk[k] != null && mk[k] !== '' ? Number(mk[k]) : null);
+          quote = { status: mk.status || null, closeTime: mk.close_time || null, eventTicker: mk.event_ticker || null,
+            yesBid: pick('yes_bid_dollars'), yesAsk: pick('yes_ask_dollars'), noBid: pick('no_bid_dollars'), noAsk: pick('no_ask_dollars'),
+            last: pick('last_price_dollars'), volume24h: pick('volume_24h_fp'), quoteTs: Date.now() };
+          writeC(kq, quote, 120); writeC(kqStale, quote, 86400);
+        } else { quote = await readC(kqStale); quoteStale = !!quote; }
+      }
+      if (!quote) return json({ ok: false, error: 'kalshi_unavailable', upstream }, 502, { 'cache-control': 'no-store' });
+
+      let hist = await readC(kh), historyStatus = hist ? 'cache' : 0;
+      if (!hist) {
+        if (upstream) await new Promise(z => setTimeout(z, 450));   // do not fire back-to-back at Kalshi
+        const now = Math.floor(Date.now() / 1000);
+        // History = REAL trade prints. (Kalshi's candlestick endpoint 429s datacenter IPs
+        // every time - measured 2026-09-18 - so it is not attempted.)
+        {
+          const tr = await kget(KB + '/markets/trades?ticker=' + encodeURIComponent(ticker) + '&limit=400&min_ts=' + (now - 7 * 86400));
+          historyStatus = tr ? tr.status : 0;
+          if (tr && tr.ok) {
+            const pts = [];
+            try { for (const t of ((await tr.json()).trades || [])) { const pz = t.yes_price_dollars != null ? Number(t.yes_price_dollars) : Number(t.yes_price) / 100; const tt = Date.parse(t.created_time); if (Number.isFinite(pz) && pz >= 0 && pz <= 1 && tt > 0) pts.push({ t: tt, p: pz }); } } catch (_) {}
+            pts.sort((a, b2) => a.t - b2.t);
+            hist = { pts, histTs: Date.now(), from: 'trades' }; writeC(kh, hist, 1800);
+          }
+        }
+      }
+      return json(Object.assign({ ok: true, ticker }, quote, { quoteStale, history: hist ? hist.pts : [], historyOk: !!hist, historyStatus, ts: Date.now() }), 200, { 'cache-control': 'no-store' });
+    }
+
     if (path === '/markets' && method === 'GET') {
       const limit = Number(url.searchParams.get('limit') || 60);
       const active = await fetchActiveMarkets(env, limit);

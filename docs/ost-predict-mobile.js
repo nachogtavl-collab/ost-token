@@ -341,7 +341,7 @@
       body = '<div class="opm-qhead"><div class="ico">' + icon(marketIcon(m)) + '</div><div><h1>' + esc(m.title || m.contractLabel || 'Market') + '</h1>' +
         '<span class="opm-live"><span class="d"></span> ' + esc(m.closeText || m.closeLabel || 'Live market') + '</span></div></div>' +
         '<div class="opm-prob"><div class="pv" id="opmProb">' + yc + '%</div><div class="pl">implied Yes</div><div class="pbar"><i id="opmProbBar" style="width:' + yc + '%"></i></div>' +
-          '<canvas class="opm-g" id="opmStdG" width="402" height="120" style="height:120px;margin:12px 0 0"></canvas></div>' +
+          '<canvas class="opm-g" id="opmStdG" width="402" height="120" style="height:120px;margin:12px 0 0"></canvas><div id="opmStdNote" style="font-size:10px;color:#8fa6b8;padding:4px 2px 0;font-family:ui-monospace,monospace">' + (m.source === 'kalshi' ? 'checking live Kalshi price…' : '') + '</div></div>' +
         '<div class="opm-statrow"><div class="st"><div class="k">24h volume</div><div class="v">' + esc(Number(m.volumeNumber) > 0 ? compact(m.volumeNumber) : (/\d/.test(String(m.volumeLabel || '')) ? m.volumeLabel : '—')) + '</div></div>' +
         '<div class="st"><div class="k">Closes</div><div class="v">' + esc(m.closeText || m.closeLabel || '—') + '</div></div>' +
         '<div class="st"><div class="k">Source</div><div class="v" style="text-transform:capitalize">' + esc(m.source || 'OST') + '</div></div></div>';
@@ -599,9 +599,28 @@
     if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch (_) { raw = []; } }
     return Array.isArray(raw) ? raw.map(function (x) { return String((x && (x.tokenId || x.token_id || x.id)) || x || ''); }).filter(Boolean) : [];
   }
+  function setStdNote(txt) { var n = el('opmStdNote'); if (n) n.textContent = txt || ''; }
   function loadRealHistory(m) {
     if (!m || !m.id) return; var c = _realHist[m.id];
     if (c && (c.loading || Date.now() - c.at < 120000)) return;
+    // KALSHI: its catalog on this site is a static deploy-time snapshot (Kalshi blocks
+    // browsers), so the card price can be hours old. Opening the market makes ONE cached
+    // worker call for the LIVE quote + real 7-day trade history, and the desk reprices
+    // to it before the user can trade on a stale number.
+    if (m.source === 'kalshi') {
+      _realHist[m.id] = { at: Date.now(), pts: (c && c.pts) || [], loading: true };
+      var kUrl = API + '/kalshi/market?ticker=' + encodeURIComponent(m.id);
+      // Kalshi throttles Cloudflare's shared IPs (~half of calls 429). One delayed retry, then say so.
+      fetch(kUrl).then(function (r) { return r.json(); }).then(function (j) { if (j && j.ok) return j; return new Promise(function (res) { setTimeout(res, 5000); }).then(function () { return fetch(kUrl); }).then(function (r) { return r.json(); }); }).then(function (j) {
+        if (!j || !j.ok) throw new Error((j && j.error) || 'kalshi');
+        var pts = (j.history || []).map(function (x) { return { t: Number(x.t), y: Number(x.p) * 100 }; }).filter(function (x) { return x.t > 0 && x.y >= 0 && x.y <= 100; });
+        _realHist[m.id] = { at: Date.now(), pts: pts, src: 'Kalshi trades · 7d' };
+        var live = (j.yesBid > 0 && j.yesAsk > 0 && j.yesAsk < 1) ? (j.yesBid + j.yesAsk) / 2 : (j.last > 0 ? j.last : (j.yesBid > 0 ? j.yesBid : NaN));
+        if (live > 0 && live < 1) { m.yesPriceNumber = live; m.noPriceNumber = 1 - live; m.__liveQuoteAt = Date.now(); }
+        if (currentMarket && currentMarket.id === m.id && view === 'detail') { if (live > 0 && live < 1) { midYes = Math.max(0.1, Math.min(99.9, Math.round(live * 1000) / 10)); renderOddsLive(); } setStdNote(j.quoteStale ? 'Kalshi is rate-limiting - showing the last good quote' : 'live Kalshi quote'); drawStd(); }
+      }).catch(function () { _realHist[m.id] = { at: Date.now(), pts: [], failed: true }; if (currentMarket && currentMarket.id === m.id && view === 'detail') { setStdNote('Kalshi unreachable - price is from the ' + 'site snapshot and may be old'); drawStd(); } });
+      return;
+    }
     var ids = tokenIdsOf(m);
     if (!ids.length) { _realHist[m.id] = { at: Date.now(), pts: [], none: true }; return; }
     _realHist[m.id] = { at: Date.now(), pts: (c && c.pts) || [], loading: true };

@@ -882,7 +882,14 @@
     var canonLiveTrusted = canon && canonicalRoundHasHotLivePrice(canon);
     var canonLivePrice = canonLiveTrusted ? Number(canon.livePrice) : NaN;
     var canonLiveTs = Number(canon && (canon.livePriceTs || canon.updatedAt)) || 0;
-    var localLiveFresh = Number.isFinite(Number(btcLastTick.price)) && Number(btcLastTick.price) > 1000
+    // SETTLEMENT-FIRST. The server fills and settles on ITS price (pushed every ~5s).
+    // The old rule trusted it only under 2.5s old, so the browser's own feed (tens of
+    // dollars away) always won and the card quoted odds the server would not fill at.
+    // The local feed is the backup: used only when the settlement price is >20s old.
+    var settleLive = canon ? Number(canon.livePrice) : NaN;
+    var settleFresh = Number.isFinite(settleLive) && settleLive > 1000 && canonLiveTs > 0 && Date.now() - canonLiveTs < 20000;
+    if (settleFresh) { canonLiveTrusted = true; canonLivePrice = settleLive; }
+    var localLiveFresh = !settleFresh && Number.isFinite(Number(btcLastTick.price)) && Number(btcLastTick.price) > 1000
       && (!canonLiveTs || btcLastTick.ts >= canonLiveTs - 50 || Date.now() - btcLastTick.ts < 1200);
     var livePrice = localLiveFresh
       ? Number(btcLastTick.price)
