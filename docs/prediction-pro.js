@@ -789,6 +789,17 @@
   // Steady state is now 8s; tightened to 4s inside the last minute and 1.5s
   // inside the last 20s so rollover/settlement still lands instantly. ~80% fewer
   // requests. End-state in the rebuild: a Durable Object push channel, zero polls.
+  // PUSH-FIRST. The worker already pushes the full round snapshot on every tick
+  // over the realtime WebSocket (docs/realtime.js -> 'ost:btc-round'). Feed it
+  // through the SAME path a /btc/round response takes, and only poll when the
+  // push has gone stale (socket down) — one catch-up, not a schedule.
+  var lastPushedRoundAt = 0;
+  window.addEventListener('ost:btc-round', function (e) {
+    var d = e && e.detail;
+    if (!d || !Number.isFinite(Number(d.openAt))) return;
+    canonicalRound = d; roundFetchAt = Date.now(); lastPushedRoundAt = Date.now();
+    try { pollBtcMarket(); } catch (_) {}
+  });
   var btcPollTimer = null;
   function nextBtcPollDelay() {
     try {
@@ -807,7 +818,8 @@
     btcPollTimer = setTimeout(function () {
       var hidden = (typeof document !== 'undefined' && document.hidden);        // hidden tab: no polling
       var gated = !!(window.OST_IDLE_GUARD && OST_IDLE_GUARD.isGated());       // user away >5min: no drain
-      if (!hidden && !gated) pollBtcMarket();
+      var pushFresh = (Date.now() - lastPushedRoundAt) < 20000;   // socket delivering: no request needed
+      if (!hidden && !gated && !pushFresh) pollBtcMarket();
       scheduleBtcPoll();
     }, nextBtcPollDelay());
   }

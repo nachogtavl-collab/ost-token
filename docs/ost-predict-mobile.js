@@ -587,9 +587,16 @@
     if (!(d.livePrice > 0)) d.livePrice = price || d.priceToBeat;
     return d;
   }
+  var lastPushRoundAt = 0;
+  window.addEventListener('ost:btc-round', function (e) {
+    var d = e && e.detail; if (!d || !Number.isFinite(Number(d.openAt))) return;
+    lastPushRoundAt = Date.now();
+    if (view === 'detail' && isBtcLive(currentMarket)) { saveRoundCache(d); applyRound(d); }
+  });
   function applyRound(d) {
     if (!d || view !== 'detail') return;
     var prevId = round && round.marketId; round = d;
+    try { var cfb = el('opmCf'); if (cfb && /round unavailable/i.test(cfb.getAttribute('data-blocked') || '')) { cfb.disabled = false; cfb.removeAttribute('data-blocked'); } } catch (_) {}
     beat = Number(d.priceToBeat) || beat;
     if (Number(d.livePrice) > 0) pushTick(Number(d.livePrice));
     if (!baseMidSet && isFinite(Number(d.yesPriceNumber))) { midYes = Math.max(0.1, Math.min(99.9, Math.round(Number(d.yesPriceNumber) * 1000) / 10)); baseMidSet = true; renderOddsLive(); }
@@ -610,10 +617,12 @@
       if (!d || d.ok === false) throw new Error('bad round');
       saveRoundCache(d); applyRound(d);
     }).catch(function () {
-      // ALWAYS-WORKS FALLBACK: no worker / KV exhausted / RPC 429 -> compute the
-      // round on the client from the clock + BTC price. The market stays live and
-      // tradeable (bets fall through to the credits rail, which is pure client).
-      applyRound(clientRound());
+      // HONEST: no fabricated round. Use the last REAL round only while it is
+      // still open; otherwise say the round is unavailable and block Buy.
+      var c = null; try { c = JSON.parse(localStorage.getItem('ost.btc5m.round.lk') || 'null'); } catch (_) {}
+      if (c && Number(c.closeAt) > Date.now()) { applyRound(c); return; }
+      try { var cf = el('opmCf'); if (cf) { cf.disabled = true; cf.setAttribute('data-blocked', 'round unavailable'); } } catch (_) {}
+      toast('Live round unavailable — reconnecting to the price feed.');
     });
   }
 
@@ -1137,7 +1146,7 @@
     setInterval(function () { if (view !== 'detail') return; if (isBtcLive(currentMarket)) { var cd = el('opmCd'); if (cd && round) { var left = Math.max(0, Math.floor((Number(round.closeAt) - Date.now()) / 1000)); cd.textContent = Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0'); if (left <= 0) loadRound(); } } }, 1000);
     // All polling pauses when the tab is hidden (was hammering the network even
     // in the background — a big part of the request storm).
-    setInterval(function () { if (view === 'detail' && isBtcLive(currentMarket) && !document.hidden) loadRound(); }, 6000);
+    setInterval(function () { if (view === 'detail' && isBtcLive(currentMarket) && !document.hidden && Date.now() - lastPushRoundAt > 20000) loadRound(); }, 6000);   // push-first: poll only when the socket is stale
     setInterval(function () { if (view === 'detail' && !document.hidden) { loadTrades(); refreshPosition(); if (!isBtcLive(currentMarket)) paintStandard(); } }, 30000);   // was 13s
     setInterval(function () { if (!document.hidden) refreshBalance(); }, 40000);
     // autonomous autopay: claim resolved on-chain wins to the wallet OSTG.

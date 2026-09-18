@@ -194,6 +194,13 @@
   }
 
   // live price from the stream prediction-pro already emits
+  var lastPushAt = 0;
+  window.addEventListener('ost:btc-round', function (e) {
+    var r = e && e.detail; if (!r || !(Number(r.priceToBeat) > 0)) return;
+    lastPushAt = Date.now(); round = r;
+    if (!price) price = Number(r.livePrice) || Number(r.openPrice) || 0;
+    try { render(); } catch (_) {}
+  });
   window.addEventListener('ost:btc-spot', function (e) {
     var p = e && e.detail && Number(e.detail.price);
     if (p > 0) { price = p; pushHist(p); render(); }
@@ -208,7 +215,7 @@
   function boot() {
     mount();
     if (!document.getElementById('ophCard')) { var tries = 0; var iv = setInterval(function () { mount(); if (document.getElementById('ophCard') || ++tries > 20) clearInterval(iv); }, 500); }
-    setInterval(loadRound, 20000);   // refresh round + price-to-beat
+    setInterval(function () { if (Date.now() - lastPushAt > 30000) loadRound(); }, 20000);   // push-first: poll only when the socket is stale
     setInterval(render, 1000);       // countdown + graph keepalive
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });

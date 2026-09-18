@@ -184,8 +184,19 @@
 
   function boot() {
     refresh(true);
-    ['ost:wallet-changed', 'ost:play:balance', 'ost:tree-changed'].forEach(function (ev) {
+    ['ost:wallet-changed', 'ost:tree-changed'].forEach(function (ev) {
       window.addEventListener(ev, function () { refresh(true); });
+    });
+    // PUSH-FIRST: a play-balance event carries the SERVER-returned balance, so
+    // update the play place from it instead of refetching /balance/truth on every
+    // bet (that was 2 worker + 2 RPC requests per bet). Refetch only if no number came.
+    window.addEventListener('ost:play:balance', function (e) {
+      var v = e && e.detail && Number(e.detail.balance);
+      if (Number.isFinite(v) && state.truth && state.truth.places) {
+        state.truth.places.play = { value: v, ok: true, source: 'event', at: Date.now() };
+        try { var ll = state.truth.places.loanLocked; var d = state.truth.derived || (state.truth.derived = {}); if (ll && ll.ok && ll.value != null) d.spendablePlay = Math.max(0, v - Number(ll.value || 0)); } catch (_) {}
+        emit();
+      } else refresh(true);
     });
     document.addEventListener('visibilitychange', function () { if (!document.hidden) refresh(); });
   }
