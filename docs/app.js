@@ -4273,7 +4273,14 @@
     if (state.pendingReservation) {
       faucetBtn.disabled = true;
       label.textContent = 'Claim Syncing...';
-      if (faucetStatus) faucetStatus.textContent = 'This wallet already has a faucet claim syncing. It will unlock automatically if the transaction does not finish.';
+      // This state is the NORMAL in-flight moment of every claim (the server pays within
+      // seconds). The old copy read like an error on the happy path. Say what is
+      // happening; only mention the auto-unlock once it has clearly taken too long.
+      var _resAt = Number(state.pendingReservation.createdAt || state.pendingReservation.reservedAt || state.pendingReservation.ts || 0);
+      var _slow = _resAt > 0 && Date.now() - _resAt > 45000;
+      if (faucetStatus) faucetStatus.textContent = _slow
+        ? 'Your claim is taking longer than usual. It will finish or unlock by itself - you do not need to do anything.'
+        : 'Sending your OST now - this takes a few seconds.';
       return;
     }
     if (!state.welcomeClaimed) {
