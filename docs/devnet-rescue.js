@@ -115,21 +115,26 @@
     throw lastErr || new Error(label + ' failed on every RPC');
   }
 
+  // UNKNOWN IS NOT ZERO. These used to `.catch(() => 0)`: an RPC hiccup became a
+  // "real" empty pool and the faucet told users "vault is being refilled" while
+  // the pool held billions. A failed read now returns undefined; the SERVER
+  // (/wallet/payout) is the only solvency authority.
   async function getPoolOstBalance() {
-    if (!window.OST_SWAP_POOL) return 0;
+    if (!window.OST_SWAP_POOL) return undefined;
     return withRpc('pool-ost', async function (conn) {
       var ata = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.ata);
       var bal = await conn.getTokenAccountBalance(ata);
-      return Number(bal && bal.value && bal.value.uiAmount || 0);
-    }).catch(function () { return 0; });
+      var v = bal && bal.value && bal.value.uiAmount;
+      return (v == null) ? undefined : Number(v);
+    }).catch(function () { return undefined; });
   }
   async function getPoolSolBalance() {
-    if (!window.OST_SWAP_POOL) return 0;
+    if (!window.OST_SWAP_POOL) return undefined;
     return withRpc('pool-sol', async function (conn) {
       var pk = new solanaWeb3.PublicKey(window.OST_SWAP_POOL.publicKey);
       var lam = await conn.getBalance(pk);
       return lam / solanaWeb3.LAMPORTS_PER_SOL;
-    }).catch(function () { return 0; });
+    }).catch(function () { return undefined; });
   }
 
   // Client-side copies of the vault knobs are DISPLAY HINTS only now — the
@@ -162,14 +167,27 @@
     // fast; the deposit is idempotent by sig, so the retry/sweep recovers it.
     var ctrl = new AbortController();
     var to = setTimeout(function () { try { ctrl.abort(); } catch (_) {} }, 20000);
+    var rawText = '';
     try {
       res = await fetch(base + path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal: ctrl.signal });
-      resJson = await res.json();
+      rawText = await res.text();
+      try { resJson = JSON.parse(rawText); } catch (_) { resJson = null; }
     } catch (e) {
       var err = new Error((e && e.name === 'AbortError') ? 'The payout service took too long — it will finish in the background; try again in a moment.' : 'Could not reach the OST payout service. Try again shortly.');
       err.code = (e && e.name === 'AbortError') ? 'timeout' : 'network_error';
       throw err;
     } finally { clearTimeout(to); }
+    if (!resJson) {
+      // Not JSON means Cloudflare answered for the worker. 1027 = the account's
+      // daily request budget is spent (free plan). Say exactly that — it used to
+      // surface as "make sure Devnet is reachable", which sent people chasing ghosts.
+      var capped = /error code:\s*1027/i.test(rawText) || res.status === 1027;
+      var e2 = new Error(capped
+        ? 'OST is over its daily request budget — the service returns at 00:00 UTC. Your funds are safe; nothing was taken.'
+        : 'OST service returned an unexpected response (' + res.status + '). Try again shortly.');
+      e2.code = capped ? 'daily_cap' : 'bad_response'; e2.status = res.status;
+      throw e2;
+    }
     if (!res.ok || !resJson.ok) {
       var apiErr = new Error(resJson && (resJson.message || resJson.error) || ('Request failed (' + res.status + ')'));
       apiErr.code = resJson && resJson.error;

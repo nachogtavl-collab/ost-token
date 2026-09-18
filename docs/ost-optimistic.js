@@ -51,8 +51,19 @@
     error: 'linear-gradient(180deg,#7f1d1d,#601414)',
     info: 'linear-gradient(180deg,#1e3a5f,#152943)'
   };
+  var _lastToastAt = {};
   function toast(msg, kind) {
     try {
+      // DEDUPE + RATE LIMIT at the root: the same message within 8s is dropped and
+      // at most 3 toasts are on screen. A stream of identical "LIVE"/balance cards
+      // (every realtime event, every balance tick) made the phone unusable.
+      // Errors still show — once.
+      var key = String(msg == null ? '' : msg).replace(/\s+/g, ' ').trim().slice(0, 140);
+      var now = Date.now();
+      if (now - (_lastToastAt[key] || 0) < 8000) return;
+      _lastToastAt[key] = now;
+      var host = ensureHost();
+      while (host.children.length >= 3) { try { host.removeChild(host.firstElementChild); } catch (_) { break; } }
       var el = document.createElement('div');
       el.textContent = String(msg == null ? '' : msg);
       el.style.cssText = [
@@ -64,7 +75,7 @@
         'opacity:0', 'transform:translateY(8px) scale(.98)',
         'transition:opacity .16s ease, transform .16s cubic-bezier(.2,.8,.3,1)'
       ].join(';');
-      ensureHost().appendChild(el);
+      host.appendChild(el);
       // next frame → animate in (so it reads as instant, not popped)
       requestAnimationFrame(function () { el.style.opacity = '1'; el.style.transform = 'translateY(0) scale(1)'; });
       var life = kind === 'error' ? 4200 : 2000;

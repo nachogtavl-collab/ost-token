@@ -4356,16 +4356,10 @@
       throw new Error('Reward vault is still loading. Refresh the page and try again.');
     }
 
-    // Pre-check is advisory only: the SERVER /wallet/payout is the real solvency
-    // authority (returns insufficient_pool if truly empty). If this read fails
-    // (RPC throttled), do NOT block the claim — let the server decide.
-    let poolBalance = amount;
-    try {
-      if (typeof window.OST_RESCUE.poolBalance === 'function') poolBalance = await window.OST_RESCUE.poolBalance();
-    } catch (_) { poolBalance = amount; }
-    if (Number(poolBalance || 0) < amount) {
-      throw new Error('Reward vault is being refilled. Try again in a moment.');
-    }
+    // NO client-side pool pre-check. The SERVER (/wallet/payout) is the only
+    // solvency authority and answers insufficient_pool if the vault is truly low.
+    // The old pre-check turned a failed RPC read into "vault is being refilled"
+    // while the pool held billions — the #1 reason the faucet "didn't drop".
 
     let payout = null;
     try {
@@ -6817,7 +6811,11 @@
       } catch (e) {
         const errorText = (e && e.message) || String(e || 'OST faucet failed');
         const isTreasuryEmpty = /treasury is empty|refill the treasury|vault.*refill|vault.*empty/i.test(errorText);
-        if (isTreasuryEmpty) {
+        const isDailyCap = (e && e.code === 'daily_cap') || /daily request budget/i.test(errorText);
+        if (isDailyCap) {
+          if (faucetStatus) faucetStatus.textContent = errorText;
+          toast('⚠️', 'OST is over its daily request budget — back at 00:00 UTC.');
+        } else if (isTreasuryEmpty) {
           if (faucetStatus) faucetStatus.textContent = 'The OST reward vault is being refilled. Please try the claim again soon.';
           toast('⚠️', 'OST reward vault is being refilled.');
         } else if (/faucet gate|claim is already syncing|duplicate farming/i.test(errorText)) {

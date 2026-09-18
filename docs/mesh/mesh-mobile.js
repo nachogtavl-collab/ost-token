@@ -30,7 +30,12 @@
 
   /* ---- notifications: toast + tab/trigger badges ---- */
   var badges = { feed: 0, chats: 0 };
+  var _toastAt = {};
   function toast(msg) {
+    // Dedupe + cap: same message within 8s is dropped; max 3 on screen (toast storms made the phone unusable).
+    var key = String(msg == null ? '' : msg).trim().slice(0, 140), now = Date.now();
+    if (now - (_toastAt[key] || 0) < 8000) return; _toastAt[key] = now;
+    var live = document.querySelectorAll('.omm-toast'); for (var i = 0; live.length - i >= 3; i++) { try { live[i].remove(); } catch (_) {} }
     var t = document.createElement('div'); t.className = 'omm-toast'; t.textContent = msg; document.body.appendChild(t);
     requestAnimationFrame(function () { t.classList.add('show'); });
     setTimeout(function () { t.classList.remove('show'); setTimeout(function () { t.remove(); }, 300); }, 3200);

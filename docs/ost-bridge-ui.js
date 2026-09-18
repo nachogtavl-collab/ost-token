@@ -54,6 +54,13 @@
     try { var s = window.OST_WALLET && window.OST_WALLET.session; return (s && s.publicKey) || null; }
     catch (_) { return null; }
   }
+  // Chain reads go through the wallet's cooldown-aware RPC rotation (all keys +
+  // public) instead of one raw connection — a throttled primary key used to make
+  // the bridge's account checks fail and the convert abort.
+  function rpc(fn) {
+    try { if (window.OST_WALLET && typeof OST_WALLET.rpcCall === 'function') return OST_WALLET.rpcCall(fn); } catch (_) {}
+    var c = conn(); return c ? Promise.resolve().then(function () { return fn(c); }) : Promise.reject(new Error('No RPC connection'));
+  }
 
   function ataOf(mint, own) {
     return solanaWeb3.PublicKey.findProgramAddressSync(
@@ -68,7 +75,7 @@
     var c = conn(), o = owner();
     if (!c || !o) return undefined;
     try {
-      var res = await c.getTokenAccountBalance(ataOf(mint, o));
+      var res = await rpc(function (x) { return x.getTokenAccountBalance(ataOf(mint, o)); });
       return res && res.value ? Number(res.value.uiAmount) : 0;
     } catch (e) {
       // "could not find account" = a real zero (no ATA yet). Any other failure
@@ -182,8 +189,8 @@
       // lands first try; without it, it races. Only matters on a first-ever
       // bridge (accounts already exist afterwards).
       for (var i = 0; i < 12; i++) {
-        var haveC = await c.getAccountInfo(ataOf(OSTC_MINT, o)).catch(function () { return null; });
-        var haveG = await c.getAccountInfo(ataOf(OSTG_MINT, o)).catch(function () { return null; });
+        var haveC = await rpc(function (x) { return x.getAccountInfo(ataOf(OSTC_MINT, o)); }).catch(function () { return null; });
+        var haveG = await rpc(function (x) { return x.getAccountInfo(ataOf(OSTG_MINT, o)); }).catch(function () { return null; });
         if (haveC && haveG) break;
         await new Promise(function (r) { setTimeout(r, 1200); });
       }
@@ -196,7 +203,7 @@
     var ixs = [];
     var dMint = direction === 'deposit' ? OSTG_MINT : OSTC_MINT;
     var destAta = ataOf(dMint, o);
-    var destInfo = await c.getAccountInfo(destAta);
+    var destInfo = await rpc(function (x) { return x.getAccountInfo(destAta); });
     if (!destInfo) ixs.push(createAtaIdempotentIx(o, destAta, o, dMint));
     ixs.push(bridgeIx(direction, o, rawAmount));
     var tx = new solanaWeb3.Transaction();
