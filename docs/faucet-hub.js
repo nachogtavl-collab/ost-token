@@ -948,6 +948,11 @@
       return;
     }
     var amount = Number(s.credits || 0);
+    // Legacy credits are being RETIRED (founder-approved hard reset; OSTG is the
+    // one game currency). 7-day notice from 2026-09-18; the server enforces the date.
+    var CREDITS_RETIRE_AT = Date.parse('2026-09-25T00:00:00Z');
+    if (Date.now() >= CREDITS_RETIRE_AT) { pop('Legacy credits were retired on Sep 25, 2026 — play with OSTG now.'); return; }
+    pop('Notice: legacy credits stop being cashable on Sep 25, 2026. Cash out before then.');
     if (amount < MIN_PAYOUT) { pop('Earn at least ' + MIN_PAYOUT + ' OST first'); return; }
     var w = window.OST_WALLET;
     if (!w || !w.session || !w.session.publicKey) {

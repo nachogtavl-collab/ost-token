@@ -2463,8 +2463,7 @@ export class FaucetGate {
       try { body = await request.json(); } catch (_) { return json({ error: 'invalid_json' }, 400); }
       const wallet = normalizeFaucetWallet(body && body.wallet);
       const reservationId = cleanText(body && body.reservationId, 80);
-      const signature = cleanText(body && (body.signature || body.sig), 128);
-      if (!wallet || !reservationId || !signature) return json({ error: 'missing_fields', required: ['wallet', 'reservationId', 'signature'] }, 400);
+      if (!wallet || !reservationId) return json({ error: 'missing_fields', required: ['wallet', 'reservationId'] }, 400);
       const now = Date.now();
       const record = await this.readWallet(wallet);
       if (record.lastReservationId === reservationId) {
@@ -2477,7 +2476,30 @@ export class FaucetGate {
         await this.writeWallet(wallet, record);
         return json({ error: 'reservation_expired', state: publicFaucetState(record, now) }, 409);
       }
-      const amount = Math.min(cleanNumber(body && body.amount, pending.amount) || pending.amount, pending.amount);
+      // SERVER-SIDE PAYOUT. The amount is the RESERVATION's, never the client's,
+      // and the pool pays only through this path (PayoutGate refuses client faucet
+      // payouts). Idempotent by payoutId = the reservation id.
+      const amount = pending.amount;
+      const payoutId = 'faucet-' + reservationId;
+      let signature = '';
+      try {
+        if (!this.env.PAYOUT_GATE || !this.env.INTERNAL_MUTATION_KEY) throw new Error('payout_gate_not_configured');
+        const pg = this.env.PAYOUT_GATE.get(this.env.PAYOUT_GATE.idFromName('global'));
+        const memo = JSON.stringify({ k: 'ost-new-here', kind: pending.kind, amount, wallet, reservation: reservationId, t: now });
+        const pr = await pg.fetch('https://payout-gate/wallet/payout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-ost-internal': this.env.INTERNAL_MUTATION_KEY },
+          body: JSON.stringify({ wallet, amountOst: amount, memo, payoutId })
+        });
+        const pj = await pr.json().catch(() => null);
+        if (!pr.ok || !pj || !pj.ok || !pj.sig) throw new Error((pj && (pj.message || pj.error)) || ('payout_failed_' + pr.status));
+        signature = String(pj.sig);
+      } catch (err) {
+        // No payout, no claim: release the reservation so the user can retry now.
+        delete record.pendingReservation; record.updatedAt = now;
+        await this.writeWallet(wallet, record);
+        return json({ ok: false, error: 'payout_failed', message: String((err && err.message) || err).slice(0, 200), state: publicFaucetState(record, now) }, 502, { 'cache-control': 'no-store' });
+      }
       record.totalClaimed = (cleanNumber(record.totalClaimed, 0) || 0) + amount;
       record.lastSignature = signature;
       record.lastReservationId = reservationId;
@@ -2513,7 +2535,7 @@ export class FaucetGate {
         message: '+' + amount + ' OST ' + (pending.kind === 'welcome' ? 'head start' : 'daily claim'),
         payload: { state, reservationId, signature, kind: pending.kind }
       }).catch(() => {});
-      return json({ ok: true, state }, 200, { 'cache-control': 'no-store' });
+      return json({ ok: true, sig: signature, amount, kind: pending.kind, state }, 200, { 'cache-control': 'no-store' });
     }
 
     if (path === '/faucet/v1/cancel' && method === 'POST') {

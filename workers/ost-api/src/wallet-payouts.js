@@ -53,6 +53,15 @@ function cleanId(value, prefix) {
   return text || (prefix + '-' + Date.now().toString(36) + '-' + stableHash(Math.random()));
 }
 
+// Legacy localStorage credits stop being cashable on this date (founder-approved
+// hard reset, announced with a 7-day notice on 2026-09-18).
+const CREDITS_RETIRE_AT = Date.parse('2026-09-25T00:00:00Z');
+// Interim caps on CLIENT-originated payouts (kinds that still assert their own
+// amount: legacy prediction claims, memecoin sells, fair-game cash-outs) until
+// Phase 1 wallet-signature auth + Phase 4 rail collapse remove them entirely.
+const CLIENT_WALLET_CAP_24H_OST = 2000;
+const CLIENT_GLOBAL_CAP_24H_OST = 100000;
+
 export class PayoutGate {
   constructor(state, env) {
     this.state = state;
@@ -79,6 +88,22 @@ export class PayoutGate {
     rec.count += 1;
     await this.state.storage.put(key, rec);
     return rec.count > limit;
+  }
+
+  // Rolling-24h spend caps for client-asserted payouts. Bounded, not fabricated:
+  // over the cap the answer is a refusal the user can read.
+  async clientCapExceeded(wallet, amt) {
+    const now = Date.now(), DAY = 24 * 60 * 60 * 1000;
+    const roll = async (key, cap, label) => {
+      const rec = (await this.state.storage.get(key)) || { windowStart: now, sum: 0 };
+      if (now - rec.windowStart > DAY) { rec.windowStart = now; rec.sum = 0; }
+      if (rec.sum + amt > cap + 1e-9) return { error: label, message: 'Daily payout cap reached (' + cap + ' OST/24h). Try again later.' };
+      rec.sum = Math.round((rec.sum + amt) * 1e6) / 1e6;
+      await this.state.storage.put(key, rec);
+      return null;
+    };
+    return (await roll('cap24:' + wallet, CLIENT_WALLET_CAP_24H_OST, 'daily_wallet_cap'))
+        || (await roll('cap24:__global__', CLIENT_GLOBAL_CAP_24H_OST, 'daily_global_cap'));
   }
 
   async handle(request) {
@@ -111,6 +136,22 @@ export class PayoutGate {
     if (!isValidPubkey(walletStr)) return json({ error: 'invalid_wallet' }, 400);
     if (!(amt > 0)) return json({ error: 'invalid_amount' }, 400);
     const payoutId = cleanId(body && body.payoutId, 'pay') || cleanId('pay-' + stableHash([walletStr, amt.toFixed(9), memo].join('|')), 'pay');
+
+    // ── ORIGIN GATE ── Server-originated payouts (FaucetGate, ledgers) carry the
+    // internal key and pay the amount THEY computed. Client-originated ones are
+    // the old money printer: faucet/credits kinds are refused outright, the rest
+    // are rate-limited and hard-capped until Phase 1 auth removes them.
+    const internalKey = this.env && this.env.INTERNAL_MUTATION_KEY;
+    const internal = !!internalKey && request.headers.get('x-ost-internal') === internalKey;
+    let memoKind = '';
+    try { const mj = JSON.parse(memo); memoKind = String((mj && mj.k) || ''); } catch (_) {}
+    if (!internal) {
+      if (memoKind === 'ost-new-here') return json({ error: 'server_only_kind', message: 'Faucet payouts are issued by the server — claim through the faucet.' }, 403);
+      if (memoKind === 'faucet-hub-cashout' && Date.now() >= CREDITS_RETIRE_AT) return json({ error: 'credits_retired', message: 'Legacy credits were retired on 2026-09-25 and are no longer cashable. Play with OSTG.' }, 403);
+      if (await this.rateLimited(walletStr, 6, 10 * 60 * 1000)) return json({ error: 'rate_limited', message: 'Too many payouts — wait a few minutes.' }, 429);
+      const capped = await this.clientCapExceeded(walletStr, amt);
+      if (capped) return json(capped, 409);
+    }
 
     // Idempotency pre-check, unlocked — cheap (storage only), and lets a
     // known-confirmed retry short-circuit without touching the network at all.
@@ -200,7 +241,7 @@ export class PayoutGate {
 
       // In-flight record BEFORE broadcasting — a crash/eviction after send
       // but before this write is what turns a retry into a double-pay.
-      await this.state.storage.put('payout:' + payoutId, { status: 'building', wallet: walletStr, ost: amt, memo, createdAt: Date.now() });
+      await this.state.storage.put('payout:' + payoutId, { status: 'building', wallet: walletStr, ost: amt, memo, origin: internal ? 'server' : 'client', createdAt: Date.now() });
 
       let sent;
       try {

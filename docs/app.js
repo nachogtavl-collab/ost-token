@@ -4341,9 +4341,9 @@
         // dedup is degraded until the gate recovers — that is the honest,
         // deliberate trade vs. denying every claim.
         gateDown = true;
-        console.warn('[OST] Faucet gate unavailable — falling back to local cooldown', gate);
-        const blocked = await applyLocalCooldown();
-        if (blocked) return blocked;
+        console.warn('[OST] Faucet gate unavailable', gate);
+        // The server pays the faucet now; without the gate there is no claim. Say so.
+        throw new Error('The faucet is temporarily unavailable (claim service offline). Try again in a minute — nothing was taken.');
       } else {
         throw new Error('Faucet gate refused this claim.');
       }
@@ -4361,29 +4361,19 @@
     // The old pre-check turned a failed RPC read into "vault is being refilled"
     // while the pool held billions — the #1 reason the faucet "didn't drop".
 
-    let payout = null;
-    try {
-      const memo = JSON.stringify({
-        k: 'ost-new-here',
-        kind,
-        amount,
-        wallet: walletAddress,
-        reservation: reservation && reservation.reservationId || '',
-        t: Date.now()
-      });
-      payout = await window.OST_RESCUE.payoutOst(claimer, amount, memo);
-    } catch (error) {
-      if (reservation && reservation.reservationId) cancelRemoteFaucetClaim(walletAddress, reservation.reservationId);
-      throw error;
+    // SERVER-SIDE PAYOUT: the faucet gate pays the reservation's amount itself
+    // (PayoutGate no longer accepts client faucet payouts). No reservation -> no claim.
+    if (!reservation || !reservation.reservationId) {
+      throw new Error('The faucet is temporarily unavailable (claim service offline). Try again in a minute — nothing was taken.');
     }
-    const actualAmount = Number(payout && payout.ost || amount);
-    writeRewardClaim(walletAddress, { kind, amount: actualAmount, signature: payout && payout.sig });
-    if (reservation && reservation.reservationId) {
-      const committed = await commitRemoteFaucetClaim(walletAddress, reservation.reservationId, payout && payout.sig, actualAmount);
-      if (!committed || committed.ok === false) {
-        console.warn('[OST] Faucet gate commit pending', committed);
-      }
+    const committed = await commitRemoteFaucetClaim(walletAddress, reservation.reservationId);
+    if (!committed || committed.ok === false || !committed.sig) {
+      const msg = (committed && (committed.message || committed.error)) || 'Faucet payout failed';
+      throw new Error(/daily request budget|over its daily/i.test(msg) ? msg : ('Faucet payout failed: ' + msg));
     }
+    const actualAmount = Number(committed.amount || amount);
+    const payout = { sig: committed.sig, ost: actualAmount };
+    writeRewardClaim(walletAddress, { kind, amount: actualAmount, signature: committed.sig });
     // The payout already landed on-chain. A failed balance read here must NEVER
     // turn a successful claim into an error the user sees — degrade to null.
     let finalBalance = null;
