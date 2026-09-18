@@ -196,9 +196,10 @@
     // the UI (button state + one optimistic toast). The realtime echoes of that
     // same action — faucet.claim, wallet.event, transaction.alert — produced 3
     // more toasts per action. Only surface things the user did NOT just do
-    // themselves: incoming transfers, top-ups, and errors.
+    // themselves (incoming transfers, top-ups, errors) plus ONE server-confirmed
+    // receipt for a faucet claim (it fires only after the on-chain payout landed).
     var _t = String(event.type || '');
-    if (event.severity !== 'error' && !/^(topup\.|transfer\.received|payment\.received)/.test(_t)) return;
+    if (event.severity !== 'error' && !/^(faucet\.claim|topup\.|transfer\.received|payment\.received)/.test(_t)) return;
     var msg = event.message || event.title || event.type || 'OST update';
     try {
       if (window.OST_OPTIMISTIC && typeof window.OST_OPTIMISTIC.toast === 'function') {
