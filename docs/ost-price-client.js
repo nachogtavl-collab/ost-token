@@ -19,7 +19,7 @@
   if (window.OST.__livePriceLoaded) return;
   window.OST.__livePriceLoaded = true;
 
-  var POLL_MS = 10_000;        // fetch every 10s when active
+  var POLL_MS = 60_000;        // was 10s: 6 req/min per visitor for a slow-moving synthetic price
   var STALE_MS = 60_000;       // treat cached price as stale after 60s
   var subscribers = [];
   var cache = null;            // { price, change24h, btcChange24h, btcMood, ts, fetchedAt }

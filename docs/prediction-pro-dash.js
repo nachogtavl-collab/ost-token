@@ -683,9 +683,9 @@
       refreshBtc().then(function () { paintBtc(root); });
     }, 15000);
     // 30s relay health tick
-    setInterval(function () { refreshRelay().then(function () { paintRelay(root); }); }, 30000);
+    setInterval(function () { if (!isDashboardVisible()) return; refreshRelay().then(function () { paintRelay(root); }); }, 300000);   // was 30s
     // 60s scalar discovery
-    setInterval(function () { discoverScalarMarkets().then(function () { paintScalar(root); }); }, 60000);
+    setInterval(function () { if (!isDashboardVisible()) return; discoverScalarMarkets().then(function () { paintScalar(root); }); }, 300000);   // was 60s
 
     // Refresh whenever the app fires any prediction event
     ['ost:prediction-rounds-settled', 'ost:prediction-order-recorded', 'ost:wallet-changed'].forEach(function (evt) {

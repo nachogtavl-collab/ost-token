@@ -909,7 +909,7 @@
     renderTicket();
     await loadQuotes();
     await loadOrders();
-    setInterval(loadQuotes, 60000);
+    setInterval(function () { var sec = document.getElementById('stock-market') || document.getElementById('stocks') || document.querySelector('[data-section="stocks"]'); if (document.hidden || (sec && sec.offsetParent === null)) return; loadQuotes(); }, 60000);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

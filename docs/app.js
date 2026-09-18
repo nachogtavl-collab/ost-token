@@ -18065,7 +18065,7 @@
       };
     };
     loadPredictionMarkets();
-    loadTimer = window.setInterval(whenHere(loadPredictionMarkets), 60000);   // was 10s; the list changes rarely, and push replaces this in Phase 2
+    loadTimer = window.setInterval(whenHere(loadPredictionMarkets), 300000);   // was 10s; the list changes rarely, and push replaces this in Phase 2
     refreshPredictionOrderResolutions();
     refreshOstgNativeResolutions();
     resolutionTimer = window.setInterval(whenHere(refreshPredictionOrderResolutions), 30000);

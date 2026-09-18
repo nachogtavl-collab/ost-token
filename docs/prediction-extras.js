@@ -1187,7 +1187,15 @@
     refreshRecentActivityFeed().then(tick);
     tick();
     setInterval(tick, 2500);
-    setInterval(function () { refreshRecentActivityFeed().then(tick); }, 7000);
+    // PUSH-FIRST: fills/resolutions arrive over the socket (ost:prediction-update);
+    // the 7s poll (9 req/min per visitor) is now a 60s fallback used only when no
+    // push has arrived recently.
+    var lastPredPush = 0, predPushT = null;
+    window.addEventListener('ost:prediction-update', function (e) {
+      var ev = e && e.detail; if (!ev || !/^prediction\.(fill|resolved)$/.test(String(ev.type))) return;
+      lastPredPush = Date.now(); clearTimeout(predPushT); predPushT = setTimeout(function () { refreshRecentActivityFeed().then(tick); }, 1500);
+    });
+    setInterval(function () { if (document.hidden || Date.now() - lastPredPush < 60000) return; refreshRecentActivityFeed().then(tick); }, 60000);
     window.addEventListener('ost:prediction:order-changed', function () { refreshRecentActivityFeed().then(tick); });
     window.addEventListener('storage', function (ev) {
       if (ev && (ev.key === TRADE_DESK_STORE_KEY || ev.key === STORE_KEY)) refreshRecentActivityFeed().then(tick);

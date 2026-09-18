@@ -690,7 +690,7 @@
   setInterval(function () {
     if (document.hidden) return;
     loadConfig({ force: true }).catch(function () {});
-  }, 30000);
+  }, 600000);   // was 30s
   window.selectTopUp = (usd) => {
     const input = $('fiat-amount');
     if (input) input.value = Number(usd || 10).toFixed(2);

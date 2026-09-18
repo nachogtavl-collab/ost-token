@@ -151,7 +151,7 @@
   var nativeMarketStateInFlight = {};
   var nativeMarketStateInFlightBase = {};
   var NATIVE_STATE_BASE_TOLERANCE = 0.005;
-  var NATIVE_STATE_REFRESH_MS = 15000;   // was 3s: round STATE changes every 5 min; the live price streams from Pyth
+  var NATIVE_STATE_REFRESH_MS = 60000;   // was 3s: round STATE changes every 5 min; the live price streams from Pyth
 
   function canonicalRoundIsFresh() {
     return canonicalRound && (Date.now() - canonicalRoundFetchedAt < 4500);
