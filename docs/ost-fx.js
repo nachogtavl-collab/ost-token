@@ -140,16 +140,22 @@
     }
   }
 
-  var scheduled = false;
+  var scheduled = false, lastRunAt = 0, MIN_GAP_MS = 2500;
   function refresh() {
     if (scheduled) return;
     scheduled = true;
-    (window.requestAnimationFrame || function (f) { setTimeout(f, 16); })(function () {
-      scheduled = false;
+    // THROTTLED: this used to run on the next frame after ANY DOM mutation — and a
+    // live price tick mutates the DOM constantly — so the full-document walk below
+    // ran every frame (measured: ~8s of every 20s on a phone-class CPU). A fiat
+    // hint does not need to be fresher than a couple of seconds.
+    var wait = Math.max(0, MIN_GAP_MS - (Date.now() - lastRunAt));
+    setTimeout(function () { (window.requestAnimationFrame || function (f) { setTimeout(f, 16); })(function () {
+      scheduled = false; lastRunAt = Date.now();
+      if (typeof document !== 'undefined' && document.hidden) return;
       // Don't show a fiat hint when the user's currency IS the OST unit — pointless.
       try { decorateAttrEls(document); } catch (_) {}
       try { decorateTextEls(null); } catch (_) {}
-    });
+    }); }, wait);
   }
 
   // Re-decorate on currency change, price ticks, and DOM growth.

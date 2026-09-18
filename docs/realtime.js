@@ -192,6 +192,13 @@
     // user — a room full of testers/bots turned that into a non-stop stream
     // of "LIVE" cards that made the app unusable.
     if (!own) return;
+    // ONE NOTIFICATION POLICY. The user's own action already produced feedback in
+    // the UI (button state + one optimistic toast). The realtime echoes of that
+    // same action — faucet.claim, wallet.event, transaction.alert — produced 3
+    // more toasts per action. Only surface things the user did NOT just do
+    // themselves: incoming transfers, top-ups, and errors.
+    var _t = String(event.type || '');
+    if (event.severity !== 'error' && !/^(topup\.|transfer\.received|payment\.received)/.test(_t)) return;
     var msg = event.message || event.title || event.type || 'OST update';
     try {
       if (window.OST_OPTIMISTIC && typeof window.OST_OPTIMISTIC.toast === 'function') {

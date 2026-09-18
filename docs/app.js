@@ -5170,13 +5170,20 @@
   };
   function getCurrSym(c) { return currSymbols[c] || c + ' '; }
 
+  var _primaryCcyCache = null, _primaryCcyAt = 0;
+  try { window.addEventListener('ost:currencychange', function () { _primaryCcyCache = null; }); window.addEventListener('storage', function (e) { if (!e || e.key === 'ost_prefs') _primaryCcyCache = null; }); } catch (_) {}
   function getStoredPrimaryCurrency() {
+    // Cached 2s: this was a localStorage read + JSON.parse for EVERY formatted number.
+    var now = Date.now();
+    if (_primaryCcyCache && now - _primaryCcyAt < 2000) return _primaryCcyCache;
+    var v;
     try {
       var prefs = JSON.parse(localStorage.getItem('ost_prefs') || '{}');
-      return String((prefs && prefs.currency) || window.__ostCurrency || 'USD').toUpperCase();
+      v = String((prefs && prefs.currency) || window.__ostCurrency || 'USD').toUpperCase();
     } catch (_) {
-      return String(window.__ostCurrency || 'USD').toUpperCase();
+      v = String(window.__ostCurrency || 'USD').toUpperCase();
     }
+    _primaryCcyCache = v; _primaryCcyAt = now; return v;
   }
 
   function getPrimaryCurrency() {
@@ -17569,7 +17576,12 @@
     function scheduleOstNativePredictionRefresh(nextMarket) {
       if (nextMarket) pendingOstBtcMarket = nextMarket;
       if (nativeRefreshTimer) return;
-      var wait = Math.max(0, NATIVE_MARKET_RENDER_MIN_MS - (Date.now() - nativeRefreshLastAt));
+      // On phones the desktop board is hidden (the mobile desk renders itself from
+      // ticks). Re-ranking ~2,000 markets at tick rate for an invisible board cost
+      // ~25% of the main thread — refresh it at most every 5s while it is hidden.
+      var _board = document.getElementById('predictionMarketBoard');
+      var _minMs = (_board && _board.offsetParent === null) ? Math.max(5000, NATIVE_MARKET_RENDER_MIN_MS) : NATIVE_MARKET_RENDER_MIN_MS;
+      var wait = Math.max(0, _minMs - (Date.now() - nativeRefreshLastAt));
       nativeRefreshTimer = window.setTimeout(function() {
         nativeRefreshTimer = null;
         nativeRefreshLastAt = Date.now();

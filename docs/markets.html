@@ -6133,9 +6133,9 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="rpc-multiplexer.js?v=200"></script>
   <!-- Optimistic UX layer (toast + balance hint + tx simulation). Loads early so
        faucet-hub, ost-onchain-bet, and wallet-extras can use window.OST_OPTIMISTIC. -->
-  <script src="ost-optimistic.js?v=6"></script>
+  <script src="ost-optimistic.js?v=7"></script>
   <script src="ost-celebrate.js?v=1"></script>
-  <script src="ost-fx.js?v=2" defer></script>
+  <script src="ost-fx.js?v=3" defer></script>
   <script src="ost-currency-format.js?v=2" defer></script>
     <!-- OST API endpoint: CORS-safe Polymarket proxy, CLOB history, and shared position feed.
       MUST load BEFORE app.js so the first market fetch uses the live API instead of stale fallbacks. -->
@@ -6147,7 +6147,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
       // Live OST price is ON by default; set window.OST_LIVE_PRICE=false before this block to disable.
       window.OST_LIVE_PRICE = window.OST_LIVE_PRICE !== false;
     </script>
-    <script src="realtime.js?v=2"></script>
+    <script src="realtime.js?v=3"></script>
     <script src="ost-price-client.js?v=203"></script>
     <script src="ost-token-section.js?v=2" defer></script>
     <script src="native-markets.js?v=3"></script>
@@ -6184,7 +6184,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
     <script src="ost-total-balance.js?v=2"></script>
     <script src="ost-ostg-wallet.js?v=2" defer></script>
     <script src="icons.js?v=1"></script>
-    <script src="app.js?v=257"></script>
+    <script src="app.js?v=258"></script>
   <script src="ost-session-key.js?v=11" defer></script>
   <script src="ost-onchain-market.js?v=7" defer></script>
   <script src="ost-onchain-route.js?v=3" defer></script>
@@ -6192,7 +6192,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="nuevo-laredo-gas.js?v=2"></script>
   <script src="shop-quickview.js?v=3"></script>
   <script src="interchange-live.js?v=2"></script>
-  <script src="polish.js?v=2"></script>
+  <script src="polish.js?v=3"></script>
   <script src="swap-pool.js?v=2"></script>
   <script src="wallet-extras.js?v=208"></script>
   <script src="compartments.js?v=7"></script>

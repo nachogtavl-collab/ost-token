@@ -260,7 +260,15 @@
     try { startFuelLivePulse(); } catch (e) {}
 
     // Re-run ripple attachment when new buttons enter the DOM (gas station list, etc.)
-    var mo = new MutationObserver(function () { attachRipples(); decorateLiveBadges(); });
+    // DEBOUNCED. This observer used to re-scan every button on the page on EVERY DOM
+    // mutation — and live prices mutate the DOM many times a second — costing ~60% of
+    // a phone-class main thread (measured). New buttons do not need ripples within
+    // the same frame; once per 1.5s (and never while hidden) is plenty.
+    var _polishT = null;
+    var mo = new MutationObserver(function () {
+      if (_polishT) return;
+      _polishT = setTimeout(function () { _polishT = null; if (document.hidden) return; try { attachRipples(); decorateLiveBadges(); } catch (_) {} }, 1500);
+    });
     mo.observe(document.body, { childList: true, subtree: true });
   }
 

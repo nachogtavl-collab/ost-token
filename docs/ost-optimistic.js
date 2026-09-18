@@ -62,6 +62,9 @@
       var now = Date.now();
       if (now - (_lastToastAt[key] || 0) < 8000) return;
       _lastToastAt[key] = now;
+      // Same amount + token within 10s = the same event described by another module.
+      var am = /([+\-]?\d[\d,]*(?:\.\d+)?)\s*(OSTG|OSTC|OST|SOL)\b/i.exec(key);
+      if (am) { var ak = 'amt:' + am[1].replace(/[+,]/g, '') + am[2].toUpperCase(); if (now - (_lastToastAt[ak] || 0) < 10000) return; _lastToastAt[ak] = now; }
       var host = ensureHost();
       while (host.children.length >= 3) { try { host.removeChild(host.firstElementChild); } catch (_) { break; } }
       var el = document.createElement('div');
