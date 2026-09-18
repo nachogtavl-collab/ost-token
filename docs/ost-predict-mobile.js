@@ -550,15 +550,46 @@
     if (!last || now - last.t > 20000 || Math.abs(last.y - yc) >= 1) { arr.push({ t: now, y: yc }); arr = arr.slice(-120); try { localStorage.setItem(stdKey(id), JSON.stringify(arr)); } catch (_) {} }
     return arr;
   }
+  // REAL HISTORY. The standard-market graph used to be only a localStorage log of
+  // odds THIS device happened to see — a new user got a dashed line, nobody saw the
+  // market's actual history. Fetch the real 7-day price series from Polymarket's
+  // public CLOB straight from the browser (worker relay only as a CORS fallback),
+  // cache 2 min, and append the live mid as the tail.
+  var _realHist = {};
+  function tokenIdsOf(m) {
+    var raw = m && (m.clobTokenIds || m.tokenIds || (m.raw && (m.raw.clobTokenIds || m.raw.clob_token_ids)));
+    if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch (_) { raw = []; } }
+    return Array.isArray(raw) ? raw.map(function (x) { return String((x && (x.tokenId || x.token_id || x.id)) || x || ''); }).filter(Boolean) : [];
+  }
+  function loadRealHistory(m) {
+    if (!m || !m.id) return; var c = _realHist[m.id];
+    if (c && (c.loading || Date.now() - c.at < 120000)) return;
+    var ids = tokenIdsOf(m);
+    if (!ids.length) { _realHist[m.id] = { at: Date.now(), pts: [], none: true }; return; }
+    _realHist[m.id] = { at: Date.now(), pts: (c && c.pts) || [], loading: true };
+    var q = 'market=' + encodeURIComponent(ids[0]) + '&interval=1w&fidelity=60';
+    fetch('https://clob.polymarket.com/prices-history?' + q).then(function (r) { if (!r.ok) throw new Error('clob ' + r.status); return r.json(); })
+      .catch(function () { return fetch(API + '/clob/prices-history?' + q).then(function (r) { return r.ok ? r.json() : null; }); })
+      .then(function (j) {
+        var h = (j && j.history) || [];
+        var pts = h.map(function (x) { return { t: Number(x.t) * 1000, y: Number(x.p) * 100 }; }).filter(function (x) { return x.t > 0 && x.y >= 0 && x.y <= 100; });
+        _realHist[m.id] = { at: Date.now(), pts: pts };
+        if (currentMarket && currentMarket.id === m.id && view === 'detail') drawStd();
+      }).catch(function () { _realHist[m.id] = { at: Date.now(), pts: [], failed: true }; });
+  }
   function drawStd() {
     var cv = el('opmStdG'); if (!cv || !currentMarket) return; var ctx = cv.getContext('2d');
     var w = cv.width, h = cv.height, pad = 4;
-    var arr = stdAppend(currentMarket.id, midYes);
+    var local = stdAppend(currentMarket.id, midYes);
+    loadRealHistory(currentMarket);
+    var rh = _realHist[currentMarket.id];
+    var isReal = !!(rh && rh.pts && rh.pts.length > 1);
+    var arr = isReal ? rh.pts.concat([{ t: Date.now(), y: midYes }]) : local;
     ctx.clearRect(0, 0, w, h);
     if (arr.length < 2) {
       var yy = pad + (1 - midYes / 100) * (h - 2 * pad);
       ctx.setLineDash([4, 4]); ctx.strokeStyle = 'rgba(127,216,255,.5)'; ctx.beginPath(); ctx.moveTo(pad, yy); ctx.lineTo(w - pad, yy); ctx.stroke(); ctx.setLineDash([]);
-      ctx.fillStyle = 'rgba(160,184,203,.75)'; ctx.font = '10px ui-monospace,monospace'; ctx.textAlign = 'left'; ctx.fillText('building probability history…', pad + 4, 14);
+      ctx.fillStyle = 'rgba(160,184,203,.75)'; ctx.font = '10px ui-monospace,monospace'; ctx.textAlign = 'left'; ctx.fillText((rh && rh.loading) ? 'loading price history…' : 'no price history for this market yet', pad + 4, 14);
       ctx.textAlign = 'right'; ctx.fillText(Math.round(midYes) + '% Yes', w - pad - 2, 14); return;
     }
     var ys = arr.map(function (p) { return p.y; });
