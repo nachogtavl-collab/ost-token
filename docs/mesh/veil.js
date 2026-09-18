@@ -165,7 +165,10 @@ async function warmMeshPresence(pavilion) {
     state.lastAnnounce = Date.now();
     state.directory = 'live';
   }
-  if (rtcNeedsPassiveListen(pavilion) && typeof pavilion._startRTC === 'function') {
+  // Only listen for offers while the mesh is OPEN — at boot this started a 1.5s
+  // signal-inbox poll for every visitor who never touched the mesh.
+  var meshOpen = !!(pavilion && pavilion.root && pavilion.root.classList.contains('is-open'));
+  if (meshOpen && rtcNeedsPassiveListen(pavilion) && typeof pavilion._startRTC === 'function') {
     pavilion._startRTC('callee', { passive: true });
   }
   state.active = true;

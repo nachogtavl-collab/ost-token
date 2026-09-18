@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ost-pwa-cache-v407';
+const CACHE_NAME = 'ost-pwa-cache-v408';
 const RUNTIME_CACHE = 'ost-pwa-runtime-v253';
 const CACHE_PREFIX = 'ost-pwa-';
 
@@ -110,7 +110,7 @@ const PRECACHE_PATHS = [
   './ghost/ghost.css?v=3',
   './mesh/mesh.js?v=47',
   './mesh/mesh-mobile.js?v=9',
-  './mesh/veil.js?v=2',
+  './mesh/veil.js?v=3',
   './mesh/mesh-play.js?v=14',
   './mesh/mesh-fair-fx.js?v=1',
   './mesh/mesh-upgrade.js?v=13',
