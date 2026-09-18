@@ -17,7 +17,7 @@ import { verifyWalletAuth, isProtectedPath, issueSession } from './wallet-auth.j
 async function walletAuthGuard(request, env, path, method) {
   if (!isProtectedPath(path, method)) return { request, authTag: '' };
   const internalKey = env && env.INTERNAL_MUTATION_KEY;
-  if (internalKey && request.headers.get('x-ost-internal') === internalKey) return { request, authTag: 'internal' };
+  if (internalKey && request.headers.get('x-ost-internal, x-mesh-addr, x-mesh-ts, x-mesh-nonce, x-mesh-sig') === internalKey) return { request, authTag: 'internal' };
   let bodyText = '';
   try { bodyText = await request.text(); } catch (_) { bodyText = ''; }
   const result = await verifyWalletAuth(request, env, bodyText, path, method);
@@ -79,7 +79,7 @@ export { PlayLedger } from './play-ledger.js';
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'content-type, accept, x-ost-wallet, x-ost-ts, x-ost-nonce, x-ost-sig, x-ost-session, x-ost-internal',
+  'Access-Control-Allow-Headers': 'content-type, accept, x-ost-wallet, x-ost-ts, x-ost-nonce, x-ost-sig, x-ost-session, x-ost-internal, x-mesh-addr, x-mesh-ts, x-mesh-nonce, x-mesh-sig',
   'Access-Control-Expose-Headers': 'x-ost-relay',
   'Access-Control-Max-Age': '86400'
 };
@@ -2566,7 +2566,7 @@ export class FaucetGate {
         const memo = JSON.stringify({ k: 'ost-new-here', kind: pending.kind, amount, wallet, reservation: reservationId, t: now });
         const pr = await pg.fetch('https://payout-gate/wallet/payout', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-ost-internal': this.env.INTERNAL_MUTATION_KEY },
+          headers: { 'Content-Type': 'application/json', 'x-ost-internal, x-mesh-addr, x-mesh-ts, x-mesh-nonce, x-mesh-sig': this.env.INTERNAL_MUTATION_KEY },
           body: JSON.stringify({ wallet, amountOst: amount, memo, payoutId })
         });
         const pj = await pr.json().catch(() => null);
@@ -3416,7 +3416,7 @@ export default {
         const pl = env.PLAY_LEDGER.get(env.PLAY_LEDGER.idFromName('global'));
         return await pl.fetch('https://play-ledger/play/loan-' + (op === 'draw' ? 'draw' : 'repay'), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-ost-internal': env.INTERNAL_MUTATION_KEY },
+          headers: { 'Content-Type': 'application/json', 'x-ost-internal, x-mesh-addr, x-mesh-ts, x-mesh-nonce, x-mesh-sig': env.INTERNAL_MUTATION_KEY },
           body: await request.text()
         });
       }

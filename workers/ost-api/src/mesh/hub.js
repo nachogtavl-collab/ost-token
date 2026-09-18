@@ -26,7 +26,7 @@ const FRIEND_PREFIX = 'friend:';
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, x-ost-wallet, x-ost-ts, x-ost-nonce, x-ost-sig, x-ost-session, x-ost-internal',
+  'Access-Control-Allow-Headers': 'Content-Type, x-ost-wallet, x-ost-ts, x-ost-nonce, x-ost-sig, x-ost-session, x-ost-internal, x-mesh-addr, x-mesh-ts, x-mesh-nonce, x-mesh-sig',
   'Access-Control-Max-Age': '86400'
 };
 
@@ -61,12 +61,58 @@ function isExpired(record, now = Date.now()) {
   return !record || Number(record.expiresAt || 0) <= now;
 }
 
+
+// ── MESH REQUEST AUTH ───────────────────────────────────────────────────────
+// A mesh address is a random label; what PROVES ownership is the ECDSA P-384 signing
+// key registered for it in the directory (trust-on-first-use, see announce()). The
+// friend graph and mailbox used to accept any caller: anyone could accept a friend
+// request AS you, send messages AS you, or drain (delete) your mailbox. Every such
+// request must now be signed by the address's own key:
+//   OST-MESH|v1|<addr>|<METHOD>|<path+query>|<sha256hex(body)>|<ts>|<nonce>
+// headers: x-mesh-addr, x-mesh-ts, x-mesh-nonce, x-mesh-sig (base64, IEEE-P1363).
+const MESH_AUTH_WINDOW_MS = 5 * 60 * 1000;
+function b64ToBytes(b64) { const bin = atob(String(b64 || '')); const out = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i); return out; }
+async function sha256Hex(text) { const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text || '')); return Array.from(new Uint8Array(d)).map(b => b.toString(16).padStart(2, '0')).join(''); }
+export function meshCanonical({ addr, method, pathq, bodyHash, ts, nonce }) { return `OST-MESH|v1|${addr}|${String(method).toUpperCase()}|${pathq}|${bodyHash}|${ts}|${nonce}`; }
+
 export class MeshHub {
   constructor(state, env) {
     this.state = state;
     this.env = env;
     this.ids = new Map();
     this.inboxes = new Map();
+  }
+
+
+  // Returns { ok:true, addr } or { ok:false, error, status }. Never throws.
+  async verifyMeshAuth(request, url, bodyText, actor) {
+    try {
+      const h = (n) => request.headers.get(n) || '';
+      const addr = h('x-mesh-addr'), ts = Number(h('x-mesh-ts')), nonce = h('x-mesh-nonce'), sig = h('x-mesh-sig');
+      if (!addr || !sig || !nonce || !Number.isFinite(ts)) return { ok: false, error: 'mesh_auth_required', status: 401 };
+      if (!validAddr(addr) || addr !== actor) return { ok: false, error: 'mesh_auth_wrong_actor', status: 403 };
+      if (Math.abs(Date.now() - ts) > MESH_AUTH_WINDOW_MS) return { ok: false, error: 'mesh_auth_stale', status: 401 };
+      if (!/^[0-9a-f]{16,64}$/i.test(nonce)) return { ok: false, error: 'mesh_auth_bad_nonce', status: 401 };
+      let rec = this.ids.get(addr);
+      if (!rec) rec = await this.state.storage.get(ID_PREFIX + addr).catch(() => null);
+      const jwk = rec && rec.bundle && rec.bundle.sig;
+      if (!jwk || isExpired(rec)) return { ok: false, error: 'mesh_identity_unknown', status: 401 };   // announce first
+      const key = await crypto.subtle.importKey('jwk', jwk, { name: 'ECDSA', namedCurve: 'P-384' }, false, ['verify']);
+      const msg = meshCanonical({ addr, method: request.method, pathq: url.pathname.replace(/\/$/, '') + url.search, bodyHash: await sha256Hex(bodyText), ts, nonce });
+      const good = await crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-384' }, key, b64ToBytes(sig), new TextEncoder().encode(msg));
+      if (!good) return { ok: false, error: 'mesh_auth_bad_signature', status: 401 };
+      // Replay guard (durable: survives DO eviction). Keys self-expire via sweep below.
+      const nk = 'meshnonce:' + addr + ':' + nonce;
+      if (await this.state.storage.get(nk).catch(() => null)) return { ok: false, error: 'mesh_auth_replay', status: 401 };
+      await this.state.storage.put(nk, Date.now() + 2 * MESH_AUTH_WINDOW_MS);
+      if (Math.random() < 0.02) this.sweepMeshNonces().catch(() => {});
+      return { ok: true, addr };
+    } catch (e) { return { ok: false, error: 'mesh_auth_error', status: 401 }; }
+  }
+  async sweepMeshNonces() {
+    const now = Date.now(), listed = await this.state.storage.list({ prefix: 'meshnonce:', limit: 512 }), del = [];
+    for (const [k, exp] of listed) if (Number(exp) <= now) del.push(k);
+    if (del.length) await this.state.storage.delete(del.slice(0, 128));
   }
 
   async fetch(request) {
@@ -108,22 +154,33 @@ export class MeshHub {
       }
 
       if (method === 'POST' && path === '/mesh/v1/msg/send') {
-        const body = await request.json().catch(() => ({}));
+        const bodyText = await request.text();
+        let body = {}; try { body = JSON.parse(bodyText) || {}; } catch (_) {}
+        const auth = await this.verifyMeshAuth(request, url, bodyText, body && body.from);
+        if (!auth.ok) return fail(auth.error, auth.status);
         return this.msgSend(body);
       }
       if (method === 'GET' && path === '/mesh/v1/msg/inbox') {
+        { const auth = await this.verifyMeshAuth(request, url, '', url.searchParams.get('to')); if (!auth.ok) return fail(auth.error, auth.status); }
         return this.msgInbox(url.searchParams.get('to'), url.searchParams.get('drain'));
       }
       // ── Friend graph (contact WITHOUT P2P) ──────────────────────────────
       if (method === 'POST' && path === '/mesh/v1/friend/request') {
-        const body = await request.json().catch(() => ({}));
+        const bodyText = await request.text();
+        let body = {}; try { body = JSON.parse(bodyText) || {}; } catch (_) {}
+        const auth = await this.verifyMeshAuth(request, url, bodyText, body && body.from);
+        if (!auth.ok) return fail(auth.error, auth.status);
         return this.friendRequest(body);
       }
       if (method === 'POST' && path === '/mesh/v1/friend/respond') {
-        const body = await request.json().catch(() => ({}));
+        const bodyText = await request.text();
+        let body = {}; try { body = JSON.parse(bodyText) || {}; } catch (_) {}
+        const auth = await this.verifyMeshAuth(request, url, bodyText, body && body.wallet);
+        if (!auth.ok) return fail(auth.error, auth.status);
         return this.friendRespond(body);
       }
       if (method === 'GET' && path === '/mesh/v1/friend/list') {
+        { const auth = await this.verifyMeshAuth(request, url, '', url.searchParams.get('wallet')); if (!auth.ok) return fail(auth.error, auth.status); }
         return this.friendList(url.searchParams.get('wallet'));
       }
       if (method === 'POST' && path === '/mesh/v1/presence') {
