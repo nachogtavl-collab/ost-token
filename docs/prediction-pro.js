@@ -419,6 +419,12 @@
   // steady heartbeat (below) can stay silent whenever real ticks are flowing.
   var lastSpotEmitAt = 0;
   function emitBtcSpot(detail) {
+    // ONE FEED. The server pushes the SETTLEMENT price (the one rounds are decided on)
+    // onto this same event via realtime.js. While that is live, this module's own
+    // Pyth/exchange ticks must not be published next to it: every HUD drew a sawtooth
+    // between two prices and could show "winning" against the settlement price. The
+    // local feed is the BACKUP - published only after 20s of server silence.
+    if (Date.now() - (Number(window.__ostSettlementTickAt) || 0) < 20000) return;
     lastSpotEmitAt = Date.now();
     try { window.dispatchEvent(new CustomEvent('ost:btc-spot', { detail: detail || Object.assign({}, btcLastTick) })); } catch (e) {}
   }

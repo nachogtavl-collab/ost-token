@@ -259,6 +259,9 @@
     });
     dispatch('ost:price-tick', detail);
     if (event.token === 'BTC' || (event.marketId && String(event.marketId).indexOf('ost-btc5m-') === 0)) {
+      // Stamp the SETTLEMENT feed so the browser's own backup feed (Pyth/exchanges,
+      // tens of dollars away) stays off 'ost:btc-spot' while this one is live.
+      try { window.__ostSettlementTickAt = Date.now(); } catch (_) {}
       dispatch('ost:btc-spot', detail);
       dispatch('ost:btc-round', data);
     }
