@@ -303,3 +303,8 @@
 #ostPredictMobile .opm-sesson button{border:0;border-radius:8px;padding:6px 12px;font-size:11.5px;font-weight:800;cursor:pointer;background:var(--opm-card3);color:var(--opm-ink2)}
 
 /* the whole thing only takes over on phones; wider screens still center it */
+/* HUD chips must never wrap mid-word: mobile-shell's global `* { overflow-wrap:anywhere;
+ min-width:0 }` was breaking "Tickets" into "Tick/ets" and "OSTG $0.00" into 4 lines. */
+#ostPredictMobile .opm-tickets-btn,#ostPredictMobile .opm-bal,#ostPredictMobile .opm-bal *{white-space:nowrap!important;overflow-wrap:normal!important;word-break:normal!important;min-width:max-content!important}
+#ostPredictMobile .opm-tickets-btn,#ostPredictMobile .opm-bal{flex:0 0 auto!important}
+#ostPredictMobile .opm-htitle{white-space:nowrap!important;overflow-wrap:normal!important;font-size:clamp(20px,6vw,26px)}

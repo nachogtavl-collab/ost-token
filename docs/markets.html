@@ -250,7 +250,7 @@
   <link rel="stylesheet" href="polish.css?v=1">
   <link rel="stylesheet" href="compartments.css?v=3">
   <link rel="stylesheet" href="prediction-extras.css?v=5">
-  <link rel="stylesheet" href="ost-predict-mobile.css?v=6">
+  <link rel="stylesheet" href="ost-predict-mobile.css?v=8">
   <link rel="stylesheet" href="prediction-pro.css?v=1">
   <link rel="stylesheet" href="prediction-modal.css?v=6">
   <link rel="stylesheet" href="prediction-trade-popout.css?v=5">
@@ -269,7 +269,7 @@
   <link rel="stylesheet" href="ost-scroll-fix.css?v=1">
   <link rel="stylesheet" href="prediction-modal-redesign.css?v=1">
   <link rel="stylesheet" href="ost-mobile-fit.css?v=1">
-  <link rel="stylesheet" href="ost-appbar.css?v=2">
+  <link rel="stylesheet" href="ost-appbar.css?v=4">
   <link rel="stylesheet" href="predict-mobile.css?v=2">
   <link rel="stylesheet" href="ost-microfx.css?v=1">
   <link rel="stylesheet" href="ost-instant.css?v=1">
@@ -1869,8 +1869,8 @@
               <span class="wallet-market-live" id="ostMarketUpdated">Syncing devnet…</span>
             </div>
             <div class="wallet-market-main">
-              <div class="wallet-market-stat wallet-market-stat-price">
-                <span>1 OST value</span>
+              <div class="wallet-market-stat wallet-market-stat-price" data-ost-fx-off>
+                <span>OST value</span>
                 <strong id="ostLivePrice">…</strong>
                 <em id="ostLiveChange">Live sync ready</em>
               </div>
@@ -6135,7 +6135,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
        faucet-hub, ost-onchain-bet, and wallet-extras can use window.OST_OPTIMISTIC. -->
   <script src="ost-optimistic.js?v=7"></script>
   <script src="ost-celebrate.js?v=1"></script>
-  <script src="ost-fx.js?v=3" defer></script>
+  <script src="ost-fx.js?v=4" defer></script>
   <script src="ost-currency-format.js?v=2" defer></script>
     <!-- OST API endpoint: CORS-safe Polymarket proxy, CLOB history, and shared position feed.
       MUST load BEFORE app.js so the first market fetch uses the live API instead of stale fallbacks. -->
@@ -6149,7 +6149,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
     </script>
     <script src="realtime.js?v=4"></script>
     <script src="ost-price-client.js?v=203"></script>
-    <script src="ost-token-section.js?v=2" defer></script>
+    <script src="ost-token-section.js?v=3" defer></script>
     <script src="native-markets.js?v=3"></script>
     <script src="ost-pyth.js?v=2"></script>
     <script src="fast-markets.js?v=5"></script>
@@ -6163,10 +6163,10 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
     <script src="ost-games-identity.js?v=1"></script>
     <script src="ost-live-prices.js?v=1"></script>
     <script src="ost-telemetry.js?v=1"></script>
-    <script src="ost-live-stats.js?v=3"></script>
+    <script src="ost-live-stats.js?v=4"></script>
     <script src="ost-treasury-engine.js?v=2"></script>
     <script src="ost-engine-guard.js?v=1"></script>
-    <script src="ost-appbar.js?v=12"></script>
+    <script src="ost-appbar.js?v=13"></script>
     <script src="ost-ghost-brain.js?v=3" defer></script>
     <script src="ost-ghost-connect.js?v=1" defer></script>
   <script src="ost-world.js?v=6" defer></script>
@@ -6184,7 +6184,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
     <script src="ost-total-balance.js?v=2"></script>
     <script src="ost-ostg-wallet.js?v=2" defer></script>
     <script src="icons.js?v=1"></script>
-    <script src="app.js?v=260"></script>
+    <script src="app.js?v=261"></script>
   <script src="ost-session-key.js?v=11" defer></script>
   <script src="ost-onchain-market.js?v=7" defer></script>
   <script src="ost-onchain-route.js?v=3" defer></script>
@@ -6199,7 +6199,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="prediction-extras.js?v=19"></script>
   <script src="ost-positions.js?v=2" defer></script>
   <script src="prediction-pro.js?v=213"></script>
-  <script src="ost-predict-mobile.js?v=32" defer></script>
+  <script src="ost-predict-mobile.js?v=36" defer></script>
   <script src="prediction-scalar.js?v=4"></script>
   <link rel="stylesheet" href="prediction-modal.css?v=6">
   <script src="prediction-modal.js?v=211"></script>

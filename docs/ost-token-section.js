@@ -45,13 +45,9 @@
       tc.classList.add(meta.change24h > 0 ? 'up' : meta.change24h < 0 ? 'down' : 'flat');
     }
 
-    var live = $('ostLivePrice');
-    if (live && live.dataset.ostLive !== '0') {
-      live.dataset.ostLive = '1';
-      live.textContent = priceTxt + ' / OST';
-    }
-    var liveChg = $('ostLiveChange');
-    if (liveChg) liveChg.textContent = 'Live oracle · ' + fmtChange(meta.change24h) + ' 24h';
+    // NOT the wallet "1 OST value" tile: that shows the CONVERSION price (what an OST
+    // is worth to spend), owned by ost-live-stats.js. Writing the chart oracle there
+    // showed a number ~10x the rate every balance in the app is valued at.
 
     var upd = $('ostMarketUpdated');
     if (upd) {

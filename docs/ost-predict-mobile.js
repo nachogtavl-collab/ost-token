@@ -51,7 +51,7 @@
   var cat = 'all', query = '';
   var currentMarket = null;      // selected market object (detail)
   var round = null;              // /btc/round (BTC live detail only)
-  var price = 0, beat = 0, midYes = 50, hrs = 1, hist = [], HIST_MAX = 400;
+  var price = 0, beat = 0, midYes = 50, hrs = 0, hist = [], HIST_MAX = 400;
   var side = 'yes', poolY = 0, poolN = 0, myPos = null;
   var seenTrades = {}, firstTrades = true;
 
@@ -273,7 +273,7 @@
   /* ===================================================================== */
   function openMarket(m) {
     currentMarket = m; view = 'detail';
-    side = 'yes'; myPos = null; seenTrades = {}; firstTrades = true; hist = []; hrs = 1;
+    side = 'yes'; myPos = null; seenTrades = {}; firstTrades = true; hist = []; hrs = 0;
     buf = []; dispPrice = 0; _lastTickAt = 0; baseMidSet = false; onchainActive = false;
     round = null; price = 0; beat = 0; midYes = yesCents(m);
     el('opmDetail').innerHTML = detailTemplate(m);
@@ -333,9 +333,9 @@
       body = '<div class="opm-qhead"><div class="ico">' + icon('btc') + '</div><div><h1>Will BTC be higher in 5 minutes?</h1>' +
         '<span class="opm-live"><span class="d"></span> Live · closes <span class="opm-mono" id="opmCd">—</span></span></div></div>' +
         '<div class="opm-px up" id="opmPx"><div class="opm-pxrow"><div class="opm-pxnow" id="opmNow">—</div><div class="opm-pxdelta" id="opmDelta">—</div></div>' +
-        '<div class="opm-beat"><span class="sw"></span> Price to beat <b id="opmBeat">—</b></div>' +
+        '<div class="opm-beat"><span class="sw"></span> Price to beat <b id="opmBeat">—</b></div><div id="opmFeedNote" style="font-size:10px;color:#f5c468;min-height:0;padding:0 2px"></div>' +
         '<canvas class="opm-g" id="opmG" width="402" height="150"></canvas>' +
-        '<div class="opm-tf" id="opmTf"><button data-h="1" class="on">1H</button><button data-h="3">3H</button><button data-h="6">6H</button><button data-h="12">12H</button></div></div>';
+        '<div class="opm-tf" id="opmTf"><button data-h="0" class="on">LIVE</button><button data-h="1">1H</button><button data-h="6">6H</button><button data-h="12">12H</button></div></div>';
     } else {
       var yc = yesCents(m);
       body = '<div class="opm-qhead"><div class="ico">' + icon(marketIcon(m)) + '</div><div><h1>' + esc(m.title || m.contractLabel || 'Market') + '</h1>' +
@@ -350,17 +350,46 @@
   }
 
   /* ---- BTC live graph ---- */
+  // REAL TIME RANGES. "1H/3H/6H/12H" used to slice the last 33xN live ticks - about
+  // 13 seconds per "hour", so 12H was really ~2.5 minutes. LIVE is now the honest
+  // name for the tick view; the hour ranges plot real 1-minute BTC closes fetched
+  // browser-direct from Binance's public data API (no worker requests), cached 60s.
+  var _kl = {};
+  function loadKlines(h) {
+    var c = _kl[h]; if (c && (c.loading || Date.now() - c.at < 60000)) return;
+    _kl[h] = { at: Date.now(), pts: (c && c.pts) || [], loading: true };
+    fetch('https://data-api.binance.vision/api/v3/klines?symbol=BTCUSDT&interval=1m&limit=' + Math.min(1000, h * 60))
+      .then(function (r) { if (!r.ok) throw new Error('klines ' + r.status); return r.json(); })
+      .then(function (rows) {
+        var pts = (Array.isArray(rows) ? rows : []).map(function (k) { return Number(k[4]); }).filter(function (x) { return x > 0; });
+        _kl[h] = { at: Date.now(), pts: pts, failed: pts.length < 2 };
+        if (view === 'detail' && hrs === h) draw();
+      }).catch(function () { _kl[h] = { at: Date.now(), pts: [], failed: true }; if (view === 'detail' && hrs === h) draw(); });
+  }
   function draw() {
     var cv = el('opmG'); if (!cv) return; var ctx = cv.getContext('2d');
     var w = cv.width, ht = cv.height, pad = 4;
-    var data = hist.slice(-Math.min(hist.length, hrs * 33 || 33)); if (data.length < 2) data = hist.slice();
+    var data, note = '';
+    if (hrs > 0) {
+      loadKlines(hrs); var k = _kl[hrs];
+      if (!k || !k.pts || k.pts.length < 2) {
+        ctx.clearRect(0, 0, w, ht); ctx.fillStyle = 'rgba(160,184,203,.8)'; ctx.font = '11px ui-monospace,monospace'; ctx.textAlign = 'left';
+        ctx.fillText((k && k.failed) ? 'price history unavailable right now - LIVE still works' : 'loading ' + hrs + 'h of BTC price…', pad + 4, ht / 2);
+        return;
+      }
+      data = k.pts.concat([price > 0 ? price : k.pts[k.pts.length - 1]]); note = 'last ' + hrs + 'h · 1-min closes · Binance';
+    } else { data = hist.slice(); var times = (histT.length === hist.length) ? histT.slice() : null; if (times) times[times.length - 1] = Date.now(); }
     // Live edge = the SAME interpolated number shown above the chart, so the dot
     // and the price readout are never out of step (one honest source for all #s).
     if (price > 0 && data.length) { data = data.slice(); data[data.length - 1] = price; }
     var n = data.length; if (!n || !beat) { ctx.clearRect(0, 0, w, ht); return; }
     var lo = Math.min(beat, Math.min.apply(0, data)), hi = Math.max(beat, Math.max.apply(0, data));
+    // Floor the vertical span at 0.02% of price (~$16 on BTC): without it a 50-cent
+    // wiggle filled the whole chart and read as a crash/spike that never happened.
+    var minSpan = beat * 0.0002; if (hi - lo < minSpan) { var midP = (hi + lo) / 2; lo = midP - minSpan / 2; hi = midP + minSpan / 2; }
     var rng = (hi - lo) || 1; lo -= rng * .12; hi += rng * .12; rng = hi - lo;
-    var gx = function (i) { return pad + (n === 1 ? 0 : i / (n - 1) * (w - 2 * pad)); }, gy = function (p) { return pad + (1 - (p - lo) / rng) * (ht - 2 * pad); };
+    var t0 = times && times[0], tSpan = times ? (times[n - 1] - t0) : 0;
+    var gx = function (i) { return pad + (n === 1 ? 0 : ((times && tSpan > 0) ? (times[i] - t0) / tSpan : i / (n - 1)) * (w - 2 * pad)); }, gy = function (p) { return pad + (1 - (p - lo) / rng) * (ht - 2 * pad); };
     var up = price >= beat, col = up ? '52,211,153' : '251,113,133';
     ctx.clearRect(0, 0, w, ht);
     var by = gy(beat); ctx.setLineDash([5, 5]); ctx.beginPath(); ctx.moveTo(pad, by); ctx.lineTo(w - pad, by); ctx.strokeStyle = 'rgba(160,184,203,.55)'; ctx.lineWidth = 1.2; ctx.stroke(); ctx.setLineDash([]);
@@ -375,6 +404,7 @@
     ctx.fillText('to beat ' + usd(beat), w - pad - 2, by - 5);
     ctx.fillStyle = 'rgb(' + col + ')'; ctx.font = 'bold 10px ui-monospace,monospace'; ctx.textAlign = 'left';
     ctx.fillText(usd(lp), pad + 2, 12);
+    if (note) { ctx.fillStyle = 'rgba(160,184,203,.6)'; ctx.font = '9px ui-monospace,monospace'; ctx.textAlign = 'left'; ctx.fillText(note, pad + 2, ht - 6); }
   }
   function applyDir() {
     var pb = el('opmPx'); if (!pb || !beat) return;
@@ -386,7 +416,10 @@
     var de = el('opmDelta');
     if (de) { var dt = (up ? '▲ ' : '▼ ') + '$' + _nf2.format(Math.abs(diff)); if (de.__t !== dt) { de.__t = dt; de.textContent = dt; } }
   }
-  function pushHist(p) { if (!(p > 0)) return; hist.push(p); if (hist.length > HIST_MAX) hist.shift(); }
+  // histT = the time of each hist point, so LIVE plots by TIME. Plotting by tick index
+  // drew a burst of identical ticks as a long flat plateau and a quiet minute as nothing.
+  var histT = [];
+  function pushHist(p, t) { if (!(p > 0)) return; if (hist.length !== histT.length) histT = hist.map(function (_, i) { return Date.now() - (hist.length - i) * 1000; }); hist.push(p); histT.push(Number(t) > 0 ? Number(t) : Date.now()); if (hist.length > HIST_MAX) { hist.shift(); histT.shift(); } }
 
   // real tick in -> buffer (odometer lag playback) + graph history
   function pushTick(p) {
@@ -641,7 +674,7 @@
     var prevId = round && round.marketId; round = d;
     try { var cfb = el('opmCf'); if (cfb && /round unavailable/i.test(cfb.getAttribute('data-blocked') || '')) { cfb.disabled = false; cfb.removeAttribute('data-blocked'); } } catch (_) {}
     beat = Number(d.priceToBeat) || beat;
-    if (Number(d.livePrice) > 0) pushTick(Number(d.livePrice));
+    if (Number(d.livePrice) > 0) acceptTick(Number(d.livePrice), true);
     if (!baseMidSet && isFinite(Number(d.yesPriceNumber))) { midYes = Math.max(0.1, Math.min(99.9, Math.round(Number(d.yesPriceNumber) * 1000) / 10)); baseMidSet = true; renderOddsLive(); }
     var newRound = prevId && prevId !== d.marketId;
     if (newRound) {   // rollover = a NEW market: reset this round's live state
@@ -649,8 +682,15 @@
       myPos = null; renderPosition(); refreshPosition();
     }
     if (!prevId || newRound) loadTrades();   // (re)load round-scoped trades once the round id is known
-    if (Array.isArray(d.ticks) && d.ticks.length && hist.length < 8) {
-      d.ticks.map(function (t) { return Number(t.p != null ? t.p : t.price); }).filter(function (x) { return x > 0; }).forEach(pushHist);
+    // The server sends THIS round's real ticks (timestamped, from round open). They used
+    // to be dropped whenever 8 live ticks had already arrived - i.e. always - so LIVE
+    // only ever showed the seconds since the page opened: a flat line. Merge every
+    // server tick older than what we hold in FRONT of the live ones.
+    if (Array.isArray(d.ticks) && d.ticks.length) {
+      if (hist.length !== histT.length) histT = hist.map(function (_, i) { return Date.now() - (hist.length - i) * 1000; });
+      var firstT = histT.length ? histT[0] : Infinity, addP = [], addT = [];
+      d.ticks.forEach(function (t) { var tp = Number(t.p != null ? t.p : t.price), tt = Number(t.t || t.ts || t.at); if (tt > 0 && tt < 1e12) tt *= 1000; if (tp > 0 && tt > 0 && tt < firstT - 500) { addP.push(tp); addT.push(tt); } });
+      if (addP.length) { hist = addP.concat(hist).slice(-HIST_MAX); histT = addT.concat(histT).slice(-HIST_MAX); }
     }
     tween(el('opmBeat'), beat, usd); applyDir(); draw();
     loadOnchain();
@@ -1162,8 +1202,23 @@
   }
 
   /* live BTC stream (only affects the BTC detail while open) */
-  window.addEventListener('ost:btc-spot', function (e) { if (view !== 'detail' || !isBtcLive(currentMarket)) return; var p = e && e.detail && Number(e.detail.price); if (p > 0) pushTick(p); });
-  window.addEventListener('ost:btc-market-updated', function (e) { if (view !== 'detail' || !isBtcLive(currentMarket)) return; try { var m = e.detail && e.detail.tick; if (m && Number(m.price) > 0) pushTick(Number(m.price)); } catch (_) {} });
+  // ONE FEED PER ROUND. 'ost:btc-spot' carries BOTH the server's settlement feed
+  // (Coinbase - the price the round is actually decided on) and the browser's own
+  // Pyth/exchange feed, which sits tens of dollars away. Mixing them drew a sawtooth
+  // and could show "winning" against a beat line the settlement price was losing to.
+  // The round view follows the SETTLEMENT feed; the browser feed is used only if the
+  // server has been silent for 20s, and the hero says so.
+  var _srvTickAt = 0;
+  function isServerTick(d) { return !!(d && (d.livePriceSource || d.marketId || d.priceToBeat || d.closeAt)); }
+  function setFeedNote(txt) { var n = el('opmFeedNote'); if (n && n.__t !== txt) { n.__t = txt; n.textContent = txt; } }
+  function acceptTick(p, fromServer) {
+    if (!(p > 0)) return;
+    if (fromServer) { _srvTickAt = Date.now(); setFeedNote(''); pushTick(p); return; }
+    if (Date.now() - _srvTickAt < 20000) return;   // settlement feed is live: ignore the other feed
+    setFeedNote('settlement feed quiet - showing backup price'); pushTick(p);
+  }
+  window.addEventListener('ost:btc-spot', function (e) { if (view !== 'detail' || !isBtcLive(currentMarket)) return; var d = e && e.detail; acceptTick(d && Number(d.price), isServerTick(d)); });
+  window.addEventListener('ost:btc-market-updated', function (e) { if (view !== 'detail' || !isBtcLive(currentMarket)) return; try { var m = e.detail && e.detail.tick; if (m) acceptTick(Number(m.price), false); } catch (_) {} });
   window.addEventListener('ost:prediction-markets', function () { if (view === 'browse') renderBrowse(); });
   window.addEventListener('ost:prediction-order-recorded', function () { if (view === 'detail') setTimeout(refreshPosition, 400); if (view === 'positions') setTimeout(renderPositions, 400); });
   window.addEventListener('ost:prediction-resolutions-refreshed', function () { if (view === 'positions') renderPositions(); });

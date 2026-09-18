@@ -39,10 +39,16 @@
   // the trade tickets and the convert rail all price OST at this rate, so the
   // pulse must too, or a user sees "1 OST = $0.0118" in their balance and a
   // different number here. Coherence over a gamified ticker.
+  window.OST_LIVE_STATS_OWNS_PRICE = true;
   function canonicalOstValueText() {
     try {
       if (window.OST_FIAT && typeof window.OST_FIAT.format === 'function') {
-        return window.OST_FIAT.format(1);                 // "$0.01" / "MX$0.24" etc.
+        // A 2-decimal currency format turns $0.0118 into "$0.01" (15% off). When one
+        // OST is worth under 1 unit, show the value of 100 OST instead - exact, and
+        // it is the faucet drop size so it means something to a new user.
+        var one = window.OST_FIAT.format(1), usd1 = Number(window.OST_FIAT.toFiatUsd(1));
+        if (usd1 > 0 && usd1 < 0.1) return window.OST_FIAT.format(100) + ' per 100 OST';
+        return one;
       }
     } catch (_) {}
     var usd = 0.0118;

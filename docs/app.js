@@ -5113,10 +5113,13 @@
       const liveValueEl = $('#ostLivePrice');
       const liveChangeEl = $('#ostLiveChange');
 
-      if (liveValueEl) liveValueEl.textContent = OST_WELCOME_DROP_AMOUNT.toFixed(0) + ' OST';
-      if (liveChangeEl) {
-        liveChangeEl.textContent = getOstPulseStatusText();
-        liveChangeEl.className = 'price-card-change';
+      // The "1 OST value" tile is owned by ost-live-stats.js (the canonical conversion
+      // price). This used to overwrite it with "100 OST" - the faucet drop size under
+      // a label that says price - and fought two other writers, so the tile flipped
+      // between three different numbers. Only fill it if that module is absent.
+      if (!window.OST_LIVE_STATS_OWNS_PRICE) {
+        if (liveValueEl) liveValueEl.textContent = '…';
+        if (liveChangeEl) { liveChangeEl.textContent = getOstPulseStatusText(); liveChangeEl.className = 'price-card-change'; }
       }
 
       if (volumeEl) volumeEl.textContent = ostDevnetMetrics.available ? formatCompactTokenAmount(ostDevnetMetrics.mintSupply) : '0 OST';

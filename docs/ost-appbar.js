@@ -21,6 +21,9 @@
   function scrollToFirst(selectors) {
     for (var i = 0; i < selectors.length; i++) {
       var el = document.querySelector(selectors[i]);
+      // A hidden element (e.g. the desktop market board on phones) has no box:
+      // scrolling to it silently did nothing and left the previous screen up.
+      if (el && el.offsetParent === null && getComputedStyle(el).position !== 'fixed') el = null;
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         return true;
@@ -136,7 +139,7 @@
         try { if (window.OST_COMPARTMENTS && window.OST_COMPARTMENTS.activate) window.OST_COMPARTMENTS.activate('home', false); } catch (_) {}
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } },
-    { key: 'markets', ico: '📈', lbl: 'Markets', go: function () { navTo('wallet', 'predict', ['#predictionMarketBoard', '#live-bet']); } },
+    { key: 'markets', ico: '📈', lbl: 'Markets', go: function () { navTo('wallet', 'predict', ['#ostPredictMobile', '#predictionMarketBoard', '#live-bet', '#wallet-panel-predict']); try { if (window.OST_PREDICT_MOBILE && document.getElementById('ostPredictMobile')) window.OST_PREDICT_MOBILE.showBrowse(); } catch (_) {} } },
     { key: 'games',   ico: '🎮', lbl: 'Games',   go: function () { navTo('games', null, ['#games']); } },
     { key: 'wallet',  ico: '👛', lbl: 'Wallet',  go: function () { navTo('wallet', 'access', ['#wallet']); } },
     { key: 'more',    ico: '⊕',  lbl: 'More',    go: null /* sheet toggle */ }

@@ -124,6 +124,7 @@
       var el = nodes[i];
       if (el.children.length) continue;                    // leaf only
       if (el.getAttribute('data-ost-fx') != null) continue;
+      if (el.closest('[data-ost-fx-off]')) { if (el.classList.contains('ost-fx-host')) { el.classList.remove('ost-fx-host'); el.style.removeProperty('--ost-fiat'); } continue; }   // already a fiat figure
       var tag = el.tagName;
       if (tag === 'OPTION' || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') continue;
       var txt = el.textContent || '';
