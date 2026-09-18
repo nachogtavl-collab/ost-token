@@ -2391,6 +2391,13 @@ export class FaucetGate {
   }
 
   async fetch(request) {
+    // /faucet/v1/commit does a slow on-chain payout: it must NOT hold this global
+    // lock for 3-10s (serializes every claim; risks the 30s lock limit). It locks
+    // only its own short read/decide/write sections and pays in between.
+    try {
+      const u = new URL(request.url);
+      if (request.method === 'POST' && u.pathname.replace(/\/$/, '') === '/faucet/v1/commit') return this.handle(request);
+    } catch (_) {}
     return this.state.blockConcurrencyWhile(() => this.handle(request));
   }
 
@@ -2465,23 +2472,37 @@ export class FaucetGate {
       const reservationId = cleanText(body && body.reservationId, 80);
       if (!wallet || !reservationId) return json({ error: 'missing_fields', required: ['wallet', 'reservationId'] }, 400);
       const now = Date.now();
-      const record = await this.readWallet(wallet);
-      if (record.lastReservationId === reservationId) {
-        return json({ ok: true, state: publicFaucetState(record, now), idempotent: true }, 200, { 'cache-control': 'no-store' });
-      }
-      const pending = record.pendingReservation;
-      if (!pending || pending.id !== reservationId) return json({ error: 'reservation_not_active', state: publicFaucetState(record, now) }, 409);
-      if (pending.expiresAt <= now) {
-        delete record.pendingReservation;
+
+      // ── Step A (locked, fast): validate and mark the reservation as PAYING so a
+      // concurrent commit for the same reservation cannot double-pay.
+      const decided = await this.state.blockConcurrencyWhile(async () => {
+        const record = await this.readWallet(wallet);
+        if (record.lastReservationId === reservationId) {
+          return { response: json({ ok: true, sig: record.lastSignature || '', amount: record.lastAmount || 0, state: publicFaucetState(record, now), idempotent: true }, 200, { 'cache-control': 'no-store' }) };
+        }
+        const pending = record.pendingReservation;
+        if (!pending || pending.id !== reservationId) return { response: json({ error: 'reservation_not_active', state: publicFaucetState(record, now) }, 409) };
+        if (pending.expiresAt <= now) {
+          delete record.pendingReservation;
+          await this.writeWallet(wallet, record);
+          return { response: json({ error: 'reservation_expired', state: publicFaucetState(record, now) }, 409) };
+        }
+        if (pending.paying) return { response: json({ ok: false, error: 'payout_in_progress', message: 'This claim is being paid — it lands in a few seconds.', state: publicFaucetState(record, now) }, 409, { 'cache-control': 'no-store' }) };
+        pending.paying = true; pending.payingAt = now;
+        record.pendingReservation = pending; record.updatedAt = now;
         await this.writeWallet(wallet, record);
-        return json({ error: 'reservation_expired', state: publicFaucetState(record, now) }, 409);
-      }
-      // SERVER-SIDE PAYOUT. The amount is the RESERVATION's, never the client's,
-      // and the pool pays only through this path (PayoutGate refuses client faucet
-      // payouts). Idempotent by payoutId = the reservation id.
+        return { pending };
+      });
+      if (decided.response) return decided.response;
+      const pending = decided.pending;
+
+      // ── Step B (UNLOCKED, slow): the SERVER pays the RESERVATION's amount through
+      // PayoutGate. Idempotent by payoutId = the reservation id, so a retry after a
+      // crash cannot pay twice. Never the client's amount.
       const amount = pending.amount;
       const payoutId = 'faucet-' + reservationId;
       let signature = '';
+      let payErr = null;
       try {
         if (!this.env.PAYOUT_GATE || !this.env.INTERNAL_MUTATION_KEY) throw new Error('payout_gate_not_configured');
         const pg = this.env.PAYOUT_GATE.get(this.env.PAYOUT_GATE.idFromName('global'));
@@ -2494,48 +2515,56 @@ export class FaucetGate {
         const pj = await pr.json().catch(() => null);
         if (!pr.ok || !pj || !pj.ok || !pj.sig) throw new Error((pj && (pj.message || pj.error)) || ('payout_failed_' + pr.status));
         signature = String(pj.sig);
-      } catch (err) {
-        // No payout, no claim: release the reservation so the user can retry now.
-        delete record.pendingReservation; record.updatedAt = now;
+      } catch (err) { payErr = err; }
+
+      // ── Step C (locked, fast): finalize — record the claim, or release the
+      // reservation so the user can retry right away.
+      return await this.state.blockConcurrencyWhile(async () => {
+        const record = await this.readWallet(wallet);
+        const fin = Date.now();
+        if (payErr) {
+          delete record.pendingReservation; record.updatedAt = fin;
+          await this.writeWallet(wallet, record);
+          return json({ ok: false, error: 'payout_failed', message: String((payErr && payErr.message) || payErr).slice(0, 200), state: publicFaucetState(record, fin) }, 502, { 'cache-control': 'no-store' });
+        }
+        record.totalClaimed = (cleanNumber(record.totalClaimed, 0) || 0) + amount;
+        record.lastSignature = signature;
+        record.lastReservationId = reservationId;
+        record.lastAmount = amount;
+        record.updatedAt = fin;
+        if (pending.kind === 'welcome') {
+          record.welcomeClaimedAt = record.welcomeClaimedAt || fin;
+          record.welcomeAmount = record.welcomeAmount || amount;
+          record.lastDailyClaimAt = record.lastDailyClaimAt || fin;
+        } else {
+          record.lastDailyClaimAt = fin;
+          record.dailyClaimCount = (cleanNumber(record.dailyClaimCount, 0) || 0) + 1;
+        }
+        delete record.pendingReservation;
         await this.writeWallet(wallet, record);
-        return json({ ok: false, error: 'payout_failed', message: String((err && err.message) || err).slice(0, 200), state: publicFaucetState(record, now) }, 502, { 'cache-control': 'no-store' });
-      }
-      record.totalClaimed = (cleanNumber(record.totalClaimed, 0) || 0) + amount;
-      record.lastSignature = signature;
-      record.lastReservationId = reservationId;
-      record.updatedAt = now;
-      if (pending.kind === 'welcome') {
-        record.welcomeClaimedAt = record.welcomeClaimedAt || now;
-        record.welcomeAmount = record.welcomeAmount || amount;
-        record.lastDailyClaimAt = record.lastDailyClaimAt || now;
-      } else {
-        record.lastDailyClaimAt = now;
-        record.dailyClaimCount = (cleanNumber(record.dailyClaimCount, 0) || 0) + 1;
-      }
-      delete record.pendingReservation;
-      await this.writeWallet(wallet, record);
-      await recordFaucetWalletEvent(this.env, {
-        id: reservationId,
-        wallet,
-        kind: pending.kind === 'welcome' ? 'faucet-welcome' : 'faucet-daily',
-        amount,
-        sig: signature,
-        label: pending.kind === 'welcome' ? '100 OST head start' : 'Daily 1 OST faucet',
-        ts: now
+        await recordFaucetWalletEvent(this.env, {
+          id: reservationId,
+          wallet,
+          kind: pending.kind === 'welcome' ? 'faucet-welcome' : 'faucet-daily',
+          amount,
+          sig: signature,
+          label: pending.kind === 'welcome' ? '100 OST head start' : 'Daily 1 OST faucet',
+          ts: fin
+        });
+        const state = publicFaucetState(record, fin);
+        publishRealtimeEvent(this.env, {
+          type: 'faucet.claim',
+          public: true,
+          channels: ['all', 'faucet', walletChannelForRealtime(wallet)],
+          wallet,
+          amount,
+          token: 'OST',
+          title: 'Faucet claim confirmed',
+          message: '+' + amount + ' OST ' + (pending.kind === 'welcome' ? 'head start' : 'daily claim'),
+          payload: { state, reservationId, signature, kind: pending.kind }
+        }).catch(() => {});
+        return json({ ok: true, sig: signature, amount, kind: pending.kind, state }, 200, { 'cache-control': 'no-store' });
       });
-      const state = publicFaucetState(record, now);
-      publishRealtimeEvent(this.env, {
-        type: 'faucet.claim',
-        public: true,
-        channels: ['all', 'faucet', walletChannelForRealtime(wallet)],
-        wallet,
-        amount,
-        token: 'OST',
-        title: 'Faucet claim confirmed',
-        message: '+' + amount + ' OST ' + (pending.kind === 'welcome' ? 'head start' : 'daily claim'),
-        payload: { state, reservationId, signature, kind: pending.kind }
-      }).catch(() => {});
-      return json({ ok: true, sig: signature, amount, kind: pending.kind, state }, 200, { 'cache-control': 'no-store' });
     }
 
     if (path === '/faucet/v1/cancel' && method === 'POST') {
