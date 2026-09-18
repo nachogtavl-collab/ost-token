@@ -9,6 +9,29 @@ import { handleSettlementRequest } from './settlement.js';
 import { handleAdRequest } from './ad-treasury.js';
 import { handleAnchorRequest } from './ost-anchor.js';
 import { handleBalanceTruth } from './balance-truth.js';
+import { verifyWalletAuth, isProtectedPath, issueSession } from './wallet-auth.js';
+
+// ── Phase 1: ONE wallet-auth choke point in front of every wallet-scoped mutation.
+// WALLET_AUTH_MODE: 'log' (verify + tag response, never block) until the client
+// ships; 'enforce' (401) after. Server-originated calls (x-ost-internal) bypass.
+async function walletAuthGuard(request, env, path, method) {
+  if (!isProtectedPath(path, method)) return { request, authTag: '' };
+  const internalKey = env && env.INTERNAL_MUTATION_KEY;
+  if (internalKey && request.headers.get('x-ost-internal') === internalKey) return { request, authTag: 'internal' };
+  let bodyText = '';
+  try { bodyText = await request.text(); } catch (_) { bodyText = ''; }
+  const result = await verifyWalletAuth(request, env, bodyText, path, method);
+  const mode = String((env && env.WALLET_AUTH_MODE) || 'log');
+  const fwd = new Request(request.url, { method, headers: request.headers, body: bodyText || undefined });
+  if (!result.ok && mode === 'enforce') {
+    return { response: json({ ok: false, error: 'wallet_auth_required', reason: result.reason, note: 'Sign in with your wallet — this action must be authorized by the wallet it names.' }, 401) };
+  }
+  return { request: fwd, authTag: result.ok ? ('ok:' + result.via) : ('fail:' + result.reason) };
+}
+function withAuthTag(res, tag) {
+  if (!tag) return res;
+  try { const out = new Response(res.body, res); out.headers.set('x-ost-auth', tag); out.headers.set('access-control-expose-headers', 'x-ost-auth'); return out; } catch (_) { return res; }
+}
 import { ensureRpcConfigured as poolEnsureRpc, withRpc as poolWithRpc } from './solana-pool.js';
 
 export { MeshHub } from './mesh/hub.js';
@@ -56,7 +79,7 @@ export { PlayLedger } from './play-ledger.js';
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'content-type, accept, x-ost-wallet',
+  'Access-Control-Allow-Headers': 'content-type, accept, x-ost-wallet, x-ost-ts, x-ost-nonce, x-ost-sig, x-ost-session, x-ost-internal',
   'Access-Control-Expose-Headers': 'x-ost-relay',
   'Access-Control-Max-Age': '86400'
 };
@@ -3257,7 +3280,9 @@ export default {
 
     // Server-side pool payouts (Phase 0 — replaces browser-held pool secret key).
     if (path === '/wallet/payout' || path === '/wallet/ata-rent' || path.startsWith('/wallet/cosign')) {
-      return handleWalletPayoutsRequest(request, env);
+      const g = await walletAuthGuard(request, env, path, method);
+      if (g.response) return g.response;
+      return withAuthTag(await handleWalletPayoutsRequest(g.request, env), g.authTag);
     }
 
     // Server-side provably-fair seed (Phase 0 — replaces browser-generated serverSeed).
@@ -3314,6 +3339,9 @@ export default {
     // cluster must be mainnet - lending devnet tokens against real money
     // would be lending against nothing.
     if (path.startsWith('/loans/')) {
+      const g = await walletAuthGuard(request, env, path, method);
+      if (g.response) return g.response;
+      request = g.request;
       if (!env.LOAN_LEDGER) return json({ ok: false, error: 'loan_ledger_not_configured' }, 503);
       const geo = jurisdictionBlocked(request, env);
       if (geo) return geo;
@@ -3424,6 +3452,9 @@ export default {
     // server's price. Gated by PREDICT_LIVE (off until confirmed). See
     // prediction-ledger.js.
     if (path.startsWith('/play/predict/')) {
+      const g = await walletAuthGuard(request, env, path, method);
+      if (g.response) return g.response;
+      request = g.request;
       if (!env.PREDICTION_LEDGER) return json({ ok: false, error: 'prediction_ledger_not_configured' }, 503);
       const pop = path.slice('/play/predict/'.length);
       const stub = env.PREDICTION_LEDGER.get(env.PREDICTION_LEDGER.idFromName('predictions-v1'));
@@ -3549,8 +3580,10 @@ export default {
     }
 
     if (path.startsWith('/play/') || path === '/health/play') {
+      const g = await walletAuthGuard(request, env, path, method);
+      if (g.response) return g.response;
       const id = env.PLAY_LEDGER.idFromName('global');
-      return env.PLAY_LEDGER.get(id).fetch(request);
+      return withAuthTag(await env.PLAY_LEDGER.get(id).fetch(g.request), g.authTag);
     }
 
     // OST Live Price — devnet synthetic price engine. Additive, isolated.
@@ -3579,6 +3612,9 @@ export default {
       return env.FAUCET_GATE.get(id).fetch(new Request(aliasUrl.toString(), request));
     }
     if (path.startsWith('/faucet/v1/')) {
+      const g = await walletAuthGuard(request, env, path, method);
+      if (g.response) return g.response;
+      request = g.request;
       if (!env.FAUCET_GATE) return json({ error: 'faucet_gate_not_configured' }, 503);
       const id = env.FAUCET_GATE.idFromName('global');
       return env.FAUCET_GATE.get(id).fetch(request);
@@ -3723,6 +3759,12 @@ export default {
     // Dedicated RPC handoff for the client — served from the worker SECRET so
     // the Helius key is never committed to the repo. The client fetches this on
     // boot and points its Solana connection at it (fixes the public-devnet 429s).
+    // Phase 1: extension wallets sign ONE challenge and get a 12h session token.
+    if (path === '/auth/session' && method === 'POST') {
+      let b; try { b = await request.json(); } catch (_) { b = null; }
+      const r = await issueSession(env, b);
+      return json(r, r.ok ? 200 : 401);
+    }
     if (path === '/rpc-config' && method === 'GET') {
       const fallbacks = [env.SOLANA_DEVNET_RPC_2, env.SOLANA_DEVNET_RPC_3, env.SOLANA_DEVNET_RPC_4].filter(function (u) { return u && /^https:\/\//.test(u); });
       return json({ rpc: env.SOLANA_DEVNET_RPC || null, fallbacks: fallbacks }, 200, { 'cache-control': 'public, max-age=300' });

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ost-pwa-cache-v410';
+const CACHE_NAME = 'ost-pwa-cache-v416';
 const RUNTIME_CACHE = 'ost-pwa-runtime-v253';
 const CACHE_PREFIX = 'ost-pwa-';
 
@@ -146,6 +146,8 @@ const PRECACHE_PATHS = [
   './faucet-hub.js?v=19',
   './faucet-hub-ads.js?v=101',
   './ost-idle-guard.js?v=2',
+  './ost-auth.js?v=6',
+  './vendor/nacl-fast.min.js',
   './ost-update.js?v=1',
   './ost-offline-mode.js?v=1',
   './ost-bridge-ui.js?v=3',

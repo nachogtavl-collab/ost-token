@@ -149,6 +149,7 @@ GEOBLOCK_ENABLED = "false"
 #          tokens); the MONEY is test money. This is what paid testers run on.
 #   live = mainnet only - the code refuses "live" on any other cluster.
 LOANS_MODE = "test"
+WALLET_AUTH_MODE = "enforce"   # Phase 1 rollout: log -> enforce once the client signs everywhere
 
 # OSTG-native predictions. The server owns the position and settles from the
 # authoritative round close price (see prediction-ledger.js + /btc/round-result).

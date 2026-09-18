@@ -149,7 +149,7 @@ export async function handleAdRequest(request, env, { path, method, adminAuthori
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type,Authorization'
+        'Access-Control-Allow-Headers': 'Content-Type,Authorization, x-ost-wallet, x-ost-ts, x-ost-nonce, x-ost-sig, x-ost-session, x-ost-internal'
       }
     });
   }

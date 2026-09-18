@@ -72,7 +72,7 @@ async function fetchStockPrice(symbol) {
 const CORS_HEADERS = {
   'access-control-allow-origin': '*',
   'access-control-allow-methods': 'GET, POST, OPTIONS',
-  'access-control-allow-headers': 'content-type',
+  'access-control-allow-headers': 'content-type, accept, x-ost-wallet, x-ost-ts, x-ost-nonce, x-ost-sig, x-ost-session, x-ost-internal',
 };
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: Object.assign({ 'content-type': 'application/json' }, CORS_HEADERS) });
@@ -315,6 +315,25 @@ export class PlayLedger {
     return json(Object.assign({ ok: true, balance }, lr));
   }
 
+  // Phase 1 replay guard: a (wallet, nonce) is accepted once per 10 minutes.
+  async handleAuthNonce(request) {
+    let b; try { b = await request.json(); } catch (_) { return json({ ok: false, error: 'invalid_json' }, 400); }
+    const wallet = cleanText(b.wallet, 64), nonce = cleanText(b.nonce, 64);
+    if (!wallet || !nonce) return json({ ok: false, error: 'bad_nonce' }, 400);
+    const key = 'nonce:' + wallet + ':' + nonce, now = Date.now();
+    if (await this.state.storage.get(key)) return json({ ok: false, error: 'replay' }, 409);
+    await this.state.storage.put(key, now + 10 * 60 * 1000);
+    this._nonceOps = (this._nonceOps || 0) + 1;
+    if (this._nonceOps % 200 === 0) {
+      try {
+        const list = await this.state.storage.list({ prefix: 'nonce:', limit: 1000 }); const del = [];
+        for (const [k, exp] of list) if (Number(exp) < now) del.push(k);
+        if (del.length) await this.state.storage.delete(del);
+      } catch (_) {}
+    }
+    return json({ ok: true });
+  }
+
   async handleStake(request) {
     const b = await request.json().catch(() => ({}));
     const wallet = cleanText(b.wallet, 64);
@@ -430,13 +449,14 @@ export class PlayLedger {
       // The legitimate callers are index.js /loans/* and the settlement
       // resolver, which attach x-ost-internal. No public/client call qualifies.
       if (method === 'POST' && (path === '/play/stake' || path === '/play/settle' ||
-                                 path === '/play/loan-draw' || path === '/play/loan-repay')) {
+                                 path === '/play/loan-draw' || path === '/play/loan-repay' || path === '/play/auth-nonce')) {
         const provided = request.headers.get('x-ost-internal') || '';
         const secret = this.env && this.env.INTERNAL_MUTATION_KEY;
         if (!secret || provided !== secret) {
           return json({ ok: false, error: 'mutation_requires_server_auth',
             note: 'Balance mutations are server-authoritative. This endpoint is not client-callable.' }, 403);
         }
+        if (path === '/play/auth-nonce') return await this.handleAuthNonce(request);
         if (path === '/play/stake') return await this.handleStake(request);
         if (path === '/play/settle') return await this.handleSettle(request);
         if (path === '/play/loan-draw') return await this.handleLoanDraw(request);

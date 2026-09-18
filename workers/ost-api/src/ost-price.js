@@ -28,7 +28,7 @@ import { fetchAnchor } from './ost-anchor.js';
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'content-type, accept, x-ost-wallet'
+  'Access-Control-Allow-Headers': 'content-type, accept, x-ost-wallet, x-ost-ts, x-ost-nonce, x-ost-sig, x-ost-session, x-ost-internal'
 };
 function json(data, status = 200, extra = {}) {
   return new Response(JSON.stringify(data), {

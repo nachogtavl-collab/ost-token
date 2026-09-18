@@ -34,7 +34,7 @@ const SNAPSHOT_CACHE_MS = 250;
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'content-type, accept, x-ost-wallet',
+  'Access-Control-Allow-Headers': 'content-type, accept, x-ost-wallet, x-ost-ts, x-ost-nonce, x-ost-sig, x-ost-session, x-ost-internal',
   'Access-Control-Max-Age': '86400'
 };
 

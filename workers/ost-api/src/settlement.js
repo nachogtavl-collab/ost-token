@@ -165,7 +165,7 @@ export async function handleSettlementRequest(request, env, ctx) {
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type,x-nowpayments-sig'
+        'Access-Control-Allow-Headers': 'Content-Type,x-nowpayments-sig, x-ost-wallet, x-ost-ts, x-ost-nonce, x-ost-sig, x-ost-session, x-ost-internal'
       }
     });
   }
