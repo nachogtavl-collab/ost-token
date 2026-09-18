@@ -12739,7 +12739,10 @@
     /* ── Simulate live market cap fluctuations only when the shared API is offline ── */
     setInterval(function() {
       if (launchpadApiBase()) {
-        syncLaunchpadFromRemote();
+        // Only while the launchpad is actually on screen - this polled the worker every
+        // minute for the whole session even if the user never opened the launchpad.
+        var _lpEl = document.getElementById('launchpad') || document.querySelector('[data-section="launchpad"], .launchpad-section, #launchpadGrid');
+        if (!document.hidden && _lpEl && _lpEl.offsetParent !== null) syncLaunchpadFromRemote();
         return;
       }
       launches.forEach(function(l) {

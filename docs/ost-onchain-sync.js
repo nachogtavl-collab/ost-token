@@ -195,7 +195,9 @@
    * idle DO-polling that took the backend down before.
    */
   function tick() {
-    if (document.hidden) { schedule(); return; }
+    // Hidden tab OR the panel is not on screen (its compartment is closed): nothing to
+    // show, so nothing to fetch. It refreshes the moment it is mounted/visible again.
+    var _h = host(); if (document.hidden || !_h || _h.offsetParent === null) { schedule(); return; }
     refresh().then(function () {
       // Drift is rare and slow-moving, so ease off when all is well; stay
       // tighter if we are under-collateralized so a problem is caught fast.

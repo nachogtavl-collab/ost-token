@@ -113,12 +113,29 @@
   // So we install on top of whatever is current, and re-assert for a while.
   var nativeFetch = window.fetch;
   var T = (window.__ostAuthTrace = window.__ostAuthTrace || []); var _push = T.push.bind(T); T.push = function (x) { if (T.length > 60) T.splice(0, 30); return _push(x); };
+  var _shared = {}, SHARE_RE = /workers\.dev\/(topup\/config|markets(\?|$)|launchpad\/coins|positions\/recent|health(\/peg)?$|ost\/stats|ost\/price|rpc-config|stocks\/quotes)/;
   var wrapped = function (input, init) {
     try {
       var url = typeof input === 'string' ? input : (input && input.url) || '';
       var method = (init && init.method) || (input && input.method) || 'GET';
       var prot = isProtected(url, method); if (/workers\.dev/.test(url)) T.push('call ' + method + ' ' + url.slice(-40) + ' prot=' + prot);
-      if (!prot) return nativeFetch.apply(this, arguments);
+      // Any write to the API invalidates shared reads, so nobody reads pre-write data.
+      if (method !== 'GET' && /workers\.dev/.test(url)) _shared = {};
+      if (!prot) {
+        // SHARED READS. Several modules each fetch the same read-only endpoint at boot
+        // (/topup/config x4, /markets x3, /launchpad/coins x2 - measured). Identical GETs
+        // within 15s share ONE network request; each caller gets its own clone. Not a
+        // stale-data mask: same URL, same moment, and any write clears it (above).
+        if (method === 'GET' && SHARE_RE.test(url) && !(init && init.signal)) {
+          var hit = _shared[url], nowS = Date.now();
+          if (!hit || nowS - hit.at > 15000) {
+            hit = _shared[url] = { at: nowS, p: nativeFetch.apply(this, arguments) };
+            hit.p.catch(function () { if (_shared[url] === hit) delete _shared[url]; });
+          } else T.push('shared ' + url.slice(-32));
+          return hit.p.then(function (r) { return r.clone(); });
+        }
+        return nativeFetch.apply(this, arguments);
+      }
       var self = this, args = arguments;
       var bodyText = (init && typeof init.body === 'string') ? init.body : '';
       return authHeaders(method, url, bodyText).catch(function (e) {

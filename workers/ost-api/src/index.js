@@ -1923,6 +1923,12 @@ export class NativeMarketHub {
       if (shouldPublish) {
         this.lastRealtimeBtcAt = now;
         this.lastRealtimeBtcPrice = Number(payload.livePrice);
+        // The push carries the round's pool/quote STATE too, so clients stop polling
+        // /markets/state every 60s (one storage read here vs one request per user).
+        // Ticks are trimmed for the push - full history comes from GET /btc/round.
+        let pushState = null;
+        try { pushState = await this.quoteMarket(payload.marketId, cleanProbability(payload.yesPriceNumber)); } catch (_) {}
+        const pushPayload = Object.assign({}, payload, { ticks: payload.ticks.slice(-12), marketState: pushState });
         publishRealtimeEvent(this.env, {
           type: 'price.tick',
           public: true,
@@ -1933,7 +1939,7 @@ export class NativeMarketHub {
           title: 'BTC price update',
           message: 'BTC ' + Number(payload.livePrice).toFixed(2) + ' USD',
           silent: true,
-          payload
+          payload: pushPayload
         }).catch(() => {});
       }
     }

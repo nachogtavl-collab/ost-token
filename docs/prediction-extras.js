@@ -1195,7 +1195,9 @@
       var ev = e && e.detail; if (!ev || !/^prediction\.(fill|resolved)$/.test(String(ev.type))) return;
       lastPredPush = Date.now(); clearTimeout(predPushT); predPushT = setTimeout(function () { refreshRecentActivityFeed().then(tick); }, 1500);
     });
-    setInterval(function () { if (document.hidden || Date.now() - lastPredPush < 60000) return; refreshRecentActivityFeed().then(tick); }, 60000);
+    // Fills arrive by PUSH (prediction.fill). This is only the catch-up for a dead socket:
+    // every 3 min, and only while the prediction surface is on screen.
+    setInterval(function () { var _p = document.getElementById('wallet-panel-predict'); if (document.hidden || !_p || _p.offsetParent === null || Date.now() - lastPredPush < 180000) return; refreshRecentActivityFeed().then(tick); }, 180000);
     window.addEventListener('ost:prediction:order-changed', function () { refreshRecentActivityFeed().then(tick); });
     window.addEventListener('storage', function (ev) {
       if (ev && (ev.key === TRADE_DESK_STORE_KEY || ev.key === STORE_KEY)) refreshRecentActivityFeed().then(tick);

@@ -100,6 +100,8 @@
   function tick() {
     var base = apiBase();
     if (!base) return;
+    // Decorative card: only spend worker requests while it is actually on screen.
+    var card = el('ostLivePrice'); if (document.hidden || !card || card.offsetParent === null) { paintPrice(); return; }
     fetch(base + '/ost/stats', { cache: 'no-store' })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(paintStats)

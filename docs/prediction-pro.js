@@ -804,6 +804,9 @@
     var d = e && e.detail;
     if (!d || !Number.isFinite(Number(d.openAt))) return;
     canonicalRound = d; roundFetchAt = Date.now(); lastPushedRoundAt = Date.now();
+    // Pool/quote state rides the same push: remember it and mark it fresh so the 60s
+    // /markets/state poll stays quiet while the socket is delivering.
+    try { if (d.marketState && d.marketId) { rememberNativeMarketState(d.marketId, d.marketState); nativeMarketStateLastFetch[d.marketId] = Date.now(); } } catch (_) {}
     try { pollBtcMarket(); } catch (_) {}
   });
   var btcPollTimer = null;
