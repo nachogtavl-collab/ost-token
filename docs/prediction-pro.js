@@ -1695,6 +1695,11 @@
   // ---------------------------------------------------------------------------
   var subscribers = [];
   function broadcast() {
+    // This ran every 30s in EVERY tab with ZERO subscribers (nothing in the app calls
+    // subscribe) - ~2,880 worker requests/tab/day fetched and thrown away, against a
+    // 100-requests/user/day budget. Only fetch when someone is actually listening and
+    // the tab is visible.
+    if (!subscribers.length || document.hidden) return;
     OST_PREDICTION_API.markets().then(function (m) {
       subscribers.forEach(function (cb) { try { cb(m); } catch (e) {} });
     });
