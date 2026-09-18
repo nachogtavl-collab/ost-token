@@ -159,3 +159,10 @@ PayoutGate building→sent→confirmed state machine + payoutId memo; PlayLedger
 - **Shared reads in `ost-auth.js`:** identical read-only GETs within 15s share one request (each caller gets a clone); any non-GET to the API clears it.
 - **Measured (headless phone, visible tab):** boot 30 requests, steady **0.5 req/min** (135 at the start of the rebuild). Funnel re-verified after the fetch-layer change: claim 100 OSTC in 6s, bridge -> 90/10, `ok:sig`, no page errors.
 - **Noticed, not fixed:** during the automatic first claim the faucet status line reads "This wallet already has a faucet claim syncing…" even though the claim succeeds - confusing copy on the happy path.
+
+### 2026-09-18 — Mesh contact core: authenticated + wired on the phone
+
+- **Security hole closed (found while wiring):** `/mesh/v1/friend/request|respond|list` and `/mesh/v1/msg/send|inbox` had NO authentication - anyone could accept/block as you, message as you, read your friend graph, or drain (delete) your mailbox. They now require a signature from the address's own registered ECDSA P-384 key: `OST-MESH|v1|addr|METHOD|path+query|sha256(body)|ts|nonce` in `x-mesh-addr/-ts/-nonce/-sig`, 5-min window, durable nonce replay guard, actor must equal the signer. Tested with real keys (9 cases): unsigned 401, wrong actor 403, replay 401, owner 200. `x-mesh-*` added to the CORS allow-headers in index.js, mesh/index.js, mesh/hub.js.
+- **Client:** new `docs/mesh/mesh-contacts.js` (`window.OST_CONTACTS`): signed requests + a Friends panel in the phone mesh Chats tab (add by address, Accept / Decline / Block, friends -> Chat, sent requests, blocked, unread badge). No polling - loads when Chats opens and after each action; failures are stated with a Retry.
+- **E2E verified:** headless phone (user A) + Node-signed user B: B's request appeared in A's panel, A tapped Accept, B's list shows A.
+- **Still unauthenticated (next):** `/mesh/v1/signal/send|inbox`, `/mesh/v1/presence`, feed posting - same signer can be reused. **Not built yet:** offline mailbox messaging in the chat UI, FB-style profile, unified messaging HUD.
