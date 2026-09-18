@@ -15334,6 +15334,34 @@
       }).finally(function() { refreshOstgNativeResolutions.inFlight = false; });
     }
 
+    // PUSH-FIRST resolutions: the ledger resolves at closeAt+10s and pushes
+    // prediction.resolved; patch our tickets from it (same fields as the poll).
+    var _lastResolvePushAt = 0;
+    window.addEventListener('ost:prediction-update', function (e) {
+      var ev = e && e.detail; if (!ev || ev.type !== 'prediction.resolved' || !ev.payload) return;
+      _lastResolvePushAt = Date.now();
+      var byId = {}; (ev.payload.positions || []).forEach(function (p) { if (p && p.id) byId[p.id] = p; });
+      var fresh = readPredictionOrderRecords(); var changed = false, credited = false, myBal = null;
+      fresh.forEach(function (oN, i) {
+        if (!oN || oN.fundedBy !== 'ostg-native' || oN.cashedOut) return;
+        var pid = oN.serverPositionId || oN.signature || oN.sig || oN.id; var p = byId[pid]; if (!p) return;
+        oN.status = p.status; oN.settlePrice = ev.payload.settlePrice; oN.winningSide = (Number(ev.payload.settlePrice) > Number(oN.priceToBeat || oN.line || 0)) ? 'yes' : 'no';
+        oN.payout = Number(p.payout) || 0; oN.houseFee = Number(p.fee) || 0;
+        oN.cashedOut = oN.payout > 0; oN.cashoutOst = oN.payout; oN.cashoutKind = 'ostg-native-resolve'; oN.resolvedAt = Date.now();
+        fresh[i] = oN; sharePredictionOrderRecord(oN); changed = true;
+        if (oN.payout > 0) { credited = true; if (p.balance != null) myBal = Number(p.balance); }
+      });
+      if (!changed) return;
+      writePredictionOrderRecords(fresh); state.orderHistory = fresh;
+      if (credited) {
+        try { window.dispatchEvent(new CustomEvent('ost:play:balance', { detail: { balance: myBal } })); } catch (_) {}
+        try { if (myBal == null && window.OST_PLAY && OST_PLAY.refresh) OST_PLAY.refresh(); } catch (_) {}
+        try { window.dispatchEvent(new CustomEvent('ost:money:change')); } catch (_) {}
+      }
+      renderPredictionLedger();
+      try { window.dispatchEvent(new CustomEvent('ost:prediction-resolutions-refreshed')); } catch (_) {}
+    });
+
     function getPredictionOrderAction(order) {
       var market = findMarketForOrder(order);
       var side = order && order.side === 'no' ? 'no' : 'yes';
@@ -18041,7 +18069,7 @@
     refreshPredictionOrderResolutions();
     refreshOstgNativeResolutions();
     resolutionTimer = window.setInterval(whenHere(refreshPredictionOrderResolutions), 30000);
-    window.setInterval(whenHere(refreshOstgNativeResolutions), 20000);
+    window.setInterval(whenHere(function () { if (Date.now() - _lastResolvePushAt > 60000) refreshOstgNativeResolutions(); }), 20000);   // push-first: poll only when no resolution push arrived recently
     // Re-sync wallet balance every 30 s so displayed OST funds stay accurate.
     var balancePollTimer = window.setInterval(whenHere(syncTradeWallet), 30000);
     window.addEventListener('ost:resume', function () {

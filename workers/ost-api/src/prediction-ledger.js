@@ -36,6 +36,12 @@
  * ========================================================================== */
 
 const POS_PREFIX = 'ppos:';
+// Phase 2.3: the ledger resolves rounds ITSELF (alarm at closeAt+10s) and pushes
+// results over the realtime socket, so no client has to be present at close and
+// no client has to poll for resolutions. Function declarations survive the
+// index.js <-> ledger import cycle (they are hoisted at instantiation).
+import { publishRealtimeEvent } from './realtime.js';
+import { getBtcRoundResult } from './index.js';
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), {
@@ -151,6 +157,18 @@ export class PredictionLedger {
       status: 'open', createdAt: Date.now()
     };
     await this.state.storage.put(POS_PREFIX + id, pos);
+    // Resolve this round on the server 10s after close — the earliest alarm wins.
+    try {
+      const at = round.closeAt + 10000;
+      const cur = await this.state.storage.getAlarm();
+      if (!cur || cur > at) await this.state.storage.setAlarm(at);
+    } catch (_) {}
+    // Push the fill so every open desk sees it without polling /positions/recent.
+    publishRealtimeEvent(this.env, {
+      type: 'prediction.fill', public: true, silent: true,
+      channels: ['all', 'prediction', 'market:' + marketId], marketId, wallet,
+      payload: { id, marketId, wallet, walletShort: wallet.slice(0, 4) + '\u2026' + wallet.slice(-4), side, stake, shares, entry, ts: pos.createdAt }
+    }).catch(() => {});
     return json({ ok: true, position: pos, balance: deb.balance });
   }
 
@@ -209,11 +227,13 @@ export class PredictionLedger {
 
       // Credit the SERVER-computed payout back to the SAME bucket (keeps
       // loan-funded winnings locked). settle is internal-keyed in PlayLedger.
+      let newBalance = null;
       if (payout > 0) {
         const cr = await this.play('settle', { wallet: pos.wallet, payout, bucket: pos.bucket, fee });
         if (!cr || cr.ok === false) {
           return json({ ok: false, error: 'payout_failed', detail: cr && cr.error }, 502);
         }
+        newBalance = (cr.balance != null) ? cr.balance : null;
       }
 
       pos.status = status;
@@ -224,7 +244,7 @@ export class PredictionLedger {
       pos.fee = fee;
       pos.resolvedAt = Date.now();
       await this.state.storage.put(POS_PREFIX + id, pos);
-      return json({ ok: true, status, won: status === 'won', refunded: status === 'refunded', payout, fee, winningSide, settlePrice, line });
+      return json({ ok: true, status, won: status === 'won', refunded: status === 'refunded', payout, fee, winningSide, settlePrice, line, balance: newBalance });
     });
   }
 
@@ -274,6 +294,50 @@ export class PredictionLedger {
       await this.state.storage.put(POS_PREFIX + id, pos);
       return json({ ok: true, status: 'sold', payout, fee, sellPrice: cur, shares: pos.shares });
     });
+  }
+
+  /* ---- alarm: server-side resolution + push --------------------------- */
+  async alarm() {
+    const now = Date.now();
+    let listed;
+    try { listed = await this.state.storage.list({ prefix: POS_PREFIX, limit: 2000 }); } catch (_) { return; }
+    const byRound = new Map(); let pendingSoon = null;
+    for (const [, pos] of listed) {
+      if (!pos || pos.status !== 'open') continue;
+      const closeAt = Number(pos.closeAt) || 0;
+      if (closeAt + 10000 > now) { pendingSoon = Math.min(pendingSoon || Infinity, closeAt + 10000); continue; }
+      if (now - closeAt > 6 * 3600 * 1000) continue;   // very old: leave for manual reconciliation
+      const k = Number(pos.openAt); if (!byRound.has(k)) byRound.set(k, []); byRound.get(k).push(pos);
+    }
+    let unresolved = 0;
+    for (const [openAt, positions] of byRound) {
+      let rr = null; try { rr = await getBtcRoundResult(this.env, openAt); } catch (_) {}
+      const settlePrice = rr && Number(rr.closePrice) > 0 ? Number(rr.closePrice) : NaN;
+      if (!(settlePrice > 0)) { unresolved += positions.length; continue; }
+      const resolved = [];
+      for (const pos of positions) {
+        try {
+          const r = await this.resolve({ id: pos.id, settlePrice });
+          const j = await r.json();
+          if (j && j.ok) resolved.push({ id: pos.id, wallet: pos.wallet, side: pos.side, status: j.status, payout: j.payout, fee: j.fee, balance: j.balance });
+          else unresolved++;
+        } catch (_) { unresolved++; }
+      }
+      if (resolved.length) {
+        const marketId = 'ost-btc5m-' + openAt;
+        const wallets = Array.from(new Set(resolved.map(r => r.wallet)));
+        publishRealtimeEvent(this.env, {
+          type: 'prediction.resolved', public: true, silent: true,
+          channels: ['all', 'prediction', 'market:' + marketId].concat(wallets.map(w => 'wallet:' + w)),
+          marketId,
+          payload: { marketId, openAt, settlePrice, closeSource: (rr && rr.closeSource) || '', positions: resolved }
+        }).catch(() => {});
+      }
+    }
+    let next = null;
+    if (unresolved > 0) next = now + 30000;                       // close price not final yet: retry
+    if (pendingSoon && (!next || pendingSoon < next)) next = pendingSoon;
+    if (next) { try { await this.state.storage.setAlarm(next); } catch (_) {} }
   }
 
   async get(id) {

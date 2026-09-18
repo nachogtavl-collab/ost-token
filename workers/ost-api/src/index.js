@@ -1662,7 +1662,7 @@ async function getCanonicalBtcTicks(env, openAt, since, opts = {}) {
 // The authoritative close snapshot for a settled round, from the DO. Returns
 // null unless the round has actually rolled over (i.e. a real close price
 // exists). Callers must treat null as "not settled yet", never guess.
-async function getBtcRoundResult(env, openAt) {
+export async function getBtcRoundResult(env, openAt) {
   const norm = Math.floor(Number(openAt) / FIVE_MIN_MS) * FIVE_MIN_MS;
   if (!(norm > 0)) return null;
   // 1) The authoritative DO snapshot captured at rollover — if it exists AND has a

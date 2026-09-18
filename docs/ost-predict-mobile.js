@@ -587,6 +587,13 @@
     if (!(d.livePrice > 0)) d.livePrice = price || d.priceToBeat;
     return d;
   }
+  var _lastFillPushAt = 0, _fillT = null;
+  window.addEventListener('ost:prediction-update', function (e) {
+    var ev = e && e.detail; if (!ev || !/^prediction\.(fill|resolved)$/.test(String(ev.type))) return;
+    _lastFillPushAt = Date.now();
+    if (view !== 'detail') return;
+    clearTimeout(_fillT); _fillT = setTimeout(function () { loadTrades(); refreshPosition(); }, 1500);
+  });
   var lastPushRoundAt = 0;
   window.addEventListener('ost:btc-round', function (e) {
     var d = e && e.detail; if (!d || !Number.isFinite(Number(d.openAt))) return;
@@ -1147,7 +1154,7 @@
     // All polling pauses when the tab is hidden (was hammering the network even
     // in the background — a big part of the request storm).
     setInterval(function () { if (view === 'detail' && isBtcLive(currentMarket) && !document.hidden && Date.now() - lastPushRoundAt > 20000) loadRound(); }, 6000);   // push-first: poll only when the socket is stale
-    setInterval(function () { if (view === 'detail' && !document.hidden) { loadTrades(); refreshPosition(); if (!isBtcLive(currentMarket)) paintStandard(); } }, 30000);   // was 13s
+    setInterval(function () { if (view === 'detail' && !document.hidden) { if (Date.now() - _lastFillPushAt > 60000) loadTrades(); refreshPosition(); if (!isBtcLive(currentMarket)) paintStandard(); } }, 30000);   // push-first   // was 13s
     setInterval(function () { if (!document.hidden) refreshBalance(); }, 40000);
     // autonomous autopay: claim resolved on-chain wins to the wallet OSTG.
     // Runs only while visible; it no-ops immediately when there are no open

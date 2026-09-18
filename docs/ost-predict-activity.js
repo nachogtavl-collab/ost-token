@@ -78,7 +78,9 @@
   }
 
   var delay=30000, timer=null;   // was 4-9s; the global feed is decorative — 30s, and only while its widget is visible
-  function tick(){
+  var lastPush=0;
+  function tick(force){
+    if(!force&&Date.now()-lastPush<60000){schedule();return;}
     var w=document.getElementById('ost-predict-activity');
     if(document.hidden||(w&&w.offsetParent===null)){schedule();return;}
     fetch(API+'/positions/recent',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
@@ -89,7 +91,8 @@
   }
   function schedule(){clearTimeout(timer);timer=setTimeout(tick,delay);}
 
-  window.OST_PREDICT_ACTIVITY={refresh:tick};
+  window.addEventListener('ost:prediction-update',function(e){var ev=e&&e.detail;if(!ev||!/^prediction\.(fill|resolved)$/.test(String(ev.type)))return;lastPush=Date.now();clearTimeout(timer);timer=setTimeout(function(){tick(true);},1500);});
+  window.OST_PREDICT_ACTIVITY={refresh:function(){tick(true);}};
 
   function boot(){
     if(!mount()){var n=0;var iv=setInterval(function(){if(mount()||++n>20)clearInterval(iv);},600);}
