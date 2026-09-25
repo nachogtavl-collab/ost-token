@@ -13539,10 +13539,19 @@
     // Expose globally for other modules
     window.__ostXP = { award: award, getLevel: function() { return level; }, getXP: function() { return totalXP; } };
 
+    // XP is earned by the person, not by page boot: during load every section is
+    // briefly on screen (before focus mode hides them) and modules fire synthetic
+    // .click()s, which handed first-time visitors "Rank Up - Level 2" unasked.
+    var userActive = false;
+    ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(function(type) {
+      document.addEventListener(type, function(e) { if (e.isTrusted) userActive = true; }, { capture: true, passive: true });
+    });
+
     // Section visit tracking — award XP when scrolling into a section
     var sections = document.querySelectorAll('.section, [id*="section"]');
     if (sections.length) {
       var sectionObs = new IntersectionObserver(function(entries) {
+        if (!userActive) return;
         entries.forEach(function(en) {
           if (en.isIntersecting) {
             var id = en.target.id || en.target.className;
@@ -13558,6 +13567,7 @@
 
     // Award XP for button clicks (except nav links)
     document.addEventListener('click', function(e) {
+      if (!e.isTrusted) return;
       var btn = e.target.closest('.btn, button');
       if (btn && !btn.closest('nav')) {
         award(5, 'Button click');

@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <script>
     (function () {
+      // Boot containment: until compartments.js picks the visible section, the
+      // browser lays out ~6k lines of sections nobody can see yet (profiled at
+      // 5.5s of layout on a mid-range phone). compartments.js removes this class
+      // in boot(); the load listener below is only a failsafe.
+      document.documentElement.classList.add('ost-booting');
+      window.addEventListener('load', function () {
+        setTimeout(function () { document.documentElement.classList.remove('ost-booting'); }, 0);
+      }, { once: true });
       var MOBILE_QUERY = '(max-width: 820px), (pointer: coarse) and (max-width: 1024px)';
       var MOBILE_VIEWPORT = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
       var MOBILE_UA_RE = /Android|iPhone|iPad|iPod|IEMobile|Opera Mini|Mobile|Silk/i;
@@ -131,6 +139,12 @@
     }
     #welcomeOverlay.hidden { display: none !important; }
 
+    /* Off-screen sections skip layout + paint while booting (see ost-booting). */
+    html.ost-booting section.section[id] {
+      content-visibility: auto;
+      contain-intrinsic-size: auto 1200px;
+    }
+
     @media (max-width: 820px), (pointer: coarse) and (max-width: 1024px) {
       .ost-guide-overlay,
       .ost-tour {
@@ -167,17 +181,30 @@
         try { window.scrollTo({ top: window.scrollY, left: 0, behavior: 'instant' }); } catch (e) {}
       }
 
-      document.addEventListener('focusout', function (e) {
-        var t = e.target;
-        if (!t) return;
+      function isEditable(t) {
+        if (!t) return false;
         var tag = (t.tagName || '').toLowerCase();
-        if (tag !== 'input' && tag !== 'textarea' && tag !== 'select' && t.getAttribute && t.getAttribute('contenteditable') !== 'true') return;
+        return tag === 'input' || tag === 'textarea' || tag === 'select' || (t.getAttribute && t.getAttribute('contenteditable') === 'true');
+      }
+
+      // A keyboard can only be up while a field is being edited. Outside that,
+      // the resize handler returns before touching any geometry: reading
+      // innerHeight during load forced a full-page layout (~0.7-0.9s on a
+      // mid-range phone) and then rewrote the viewport meta for nothing.
+      var editing = false, editTimer = 0;
+      document.addEventListener('focusin', function (e) {
+        if (isEditable(e.target)) { editing = true; clearTimeout(editTimer); }
+      }, true);
+      document.addEventListener('focusout', function (e) {
+        if (!isEditable(e.target)) return;
         window.setTimeout(recoverFromKeyboard, 120);
         window.setTimeout(recoverFromKeyboard, 380);
+        editTimer = window.setTimeout(function () { editing = false; }, 700);
       }, true);
 
       if (vp) {
         vp.addEventListener('resize', function () {
+          if (!editing) return;
           if (vp.height >= window.innerHeight - 4) recoverFromKeyboard();
         });
       }
@@ -245,10 +272,10 @@
     };
   })();
   </script>
-  <link rel="stylesheet" href="style.css?v=80">
+  <link rel="stylesheet" href="style.css?v=81">
   <link rel="stylesheet" href="mobile.css?v=7">
   <link rel="stylesheet" href="polish.css?v=1">
-  <link rel="stylesheet" href="compartments.css?v=3">
+  <link rel="stylesheet" href="compartments.css?v=4">
   <link rel="stylesheet" href="prediction-extras.css?v=5">
   <link rel="stylesheet" href="ost-predict-mobile.css?v=12">
   <link rel="stylesheet" href="prediction-pro.css?v=1">
@@ -413,11 +440,30 @@
           <span class="hero-era-badge">Est. 2025 &middot; Panama</span>
         </div>
         <p class="hero-tag" data-i18n="hero.tag">The Next Step After Bitcoin</p>
-        <h1 data-i18n="hero.title">The currency of <span class="gradient-text">Earth &amp; Space.</span></h1>
-        <p class="hero-sub" data-i18n="hero.sub">Private. Instant. Unstoppable. OST is decentralized digital cash and uncensored internet for 8 billion human beings &mdash; and eventually, beyond.</p>
+        <h1 data-i18n="hero.title">We are all <span class="gradient-text">one family.</span></h1>
+        <p class="hero-sub" data-i18n="hero.sub">OST is the digital cash made for every citizen of the world - private, instant, and connected to any currency you already have.</p>
         <div class="hero-free-banner">
           <span class="hero-free-badge" data-i18n="hero.free">&#128176; FREE FOREVER</span>
           <span class="hero-free-text" data-i18n="hero.freetext">Zero transaction fees. No hidden costs. Funded by donations &amp; investors.</span>
+        </div>
+        <!-- Phone command center: static so the first paint already has it (it used to be
+             injected by mobile-shell.js after paint, shoving the hero down: CLS 0.15).
+             Hidden outside the mobile media query by mobile-shell.css; wired by mobile-shell.js. -->
+        <div id="ostMobileHome" class="ost-mobile-home" aria-label="OST mobile command center">
+          <div class="ost-mobile-home__top">
+            <span class="ost-mobile-home__eyebrow">Mobile command center</span>
+            <strong>Open the real OST rails without hunting through the page.</strong>
+            <p>Wallet, converter, Mesh, games, commerce, and onboarding now start from one phone-first launcher.</p>
+          </div>
+          <div class="ost-mobile-home__grid">
+            <button type="button" class="ost-mobile-home__action is-primary" data-mobile-route="wallet" data-mobile-tab="access"><span>Wallet</span><small>Create, connect, receive, and back up.</small></button>
+            <button type="button" class="ost-mobile-home__action" data-mobile-route="wallet" data-mobile-tab="convert"><span>Convert</span><small>SOL to OST, fiat, and transfer rail.</small></button>
+            <button type="button" class="ost-mobile-home__action" data-mobile-route="commerce"><span>Spend</span><small>Shop, gift cards, gas, and checkout.</small></button>
+            <button type="button" class="ost-mobile-home__action" data-mobile-route="new-here"><span>Get OST</span><small>Faucet, top-up, and first balance.</small></button>
+            <button type="button" class="ost-mobile-home__action" data-mobile-mesh><span>Mesh</span><small>Chat, call, map ping, and share.</small></button>
+            <button type="button" class="ost-mobile-home__action" data-mobile-games><span>Fair Games</span><small>Open Arena inside OST Mesh.</small></button>
+          </div>
+          <div class="ost-mobile-home__status"><span>Live devnet app</span><p>Touch targets, popouts, and bottom navigation are managed as one mobile shell.</p></div>
         </div>
         <div class="hero-actions">
             <a href="#commerce" class="btn btn-primary btn-glow btn-pulse" data-i18n="hero.cta1">Explore Commerce</a>
@@ -5902,7 +5948,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
     </div>
   </div>
 
-  <script src="mobile-shell.js?v=13"></script>
+  <script src="mobile-shell.js?v=14"></script>
   <!-- three.js is lazy-loaded on idle by app.js initGlobe (was render-blocking, ~580KB). -->
 
   <!-- ──────────────────────────────────────────────────────────────────
@@ -6185,7 +6231,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
     <script src="ost-total-balance.js?v=3"></script>
     <script src="ost-ostg-wallet.js?v=2" defer></script>
     <script src="icons.js?v=1"></script>
-    <script src="app.js?v=266"></script>
+    <script src="app.js?v=267"></script>
   <script src="ost-session-key.js?v=11" defer></script>
   <script src="ost-onchain-market.js?v=7" defer></script>
   <script src="ost-onchain-route.js?v=3" defer></script>
@@ -6196,10 +6242,10 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="polish.js?v=3"></script>
   <script src="swap-pool.js?v=2"></script>
   <script src="wallet-extras.js?v=208"></script>
-  <script src="compartments.js?v=7"></script>
+  <script src="compartments.js?v=8"></script>
   <script src="prediction-extras.js?v=20"></script>
   <script src="ost-positions.js?v=2" defer></script>
-  <script src="prediction-pro.js?v=218"></script>
+  <script src="prediction-pro.js?v=219"></script>
   <script src="ost-predict-mobile.js?v=43" defer></script>
   <script src="prediction-scalar.js?v=4"></script>
   <link rel="stylesheet" href="prediction-modal.css?v=6">
@@ -6358,7 +6404,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
        Code Academy, quantum demo) and used to run at boot — several with no `defer`,
        blocking HTML parsing. They now load one at a time while the browser is idle,
        and flush immediately on first interaction. Order is preserved. -->
-  <script type="application/json" id="ost-lazy-manifest">[{"src":"ghost/ghost.js?v=8","module":true},{"src":"ghost/ghost-terminal.js?v=1","module":false},{"src":"ost-qr-reader.js?v=1","module":false},{"src":"mesh/mesh.js?v=47","module":true},{"src":"mesh/veil.js?v=3","module":true},{"src":"mesh/mesh-play.js?v=14","module":true},{"src":"mesh/mesh-fair-fx.js?v=1","module":false},{"src":"code-academy.js?v=3","module":false},{"src":"vendor/qrcode-generator.js","module":false},{"src":"mesh/mesh-upgrade.js?v=13","module":false},{"src":"mesh/mesh-link.js?v=2","module":false},{"src":"mesh/mesh-games.js?v=2","module":false},{"src":"mesh/games/tictactoe.js?v=1","module":false},{"src":"mesh/games/chess.js?v=1","module":false},{"src":"mesh/games/pool8.js?v=1","module":false},{"src":"mesh/games/cuppong.js?v=1","module":false},{"src":"mesh/games/minigolf.js?v=1","module":false},{"src":"mesh/mesh-social-x.js?v=3","module":false},{"src":"mesh/mesh-mobile.js?v=9","module":false},{"src":"mesh/mesh-contacts.js?v=2","module":false},{"src":"mesh/mesh-group-markets.js?v=3","module":false},{"src":"mesh/mesh-location-pro.js?v=7","module":false},{"src":"ost-pq-demo.js?v=1","module":false}]</script>
+  <script type="application/json" id="ost-lazy-manifest">[{"src":"ghost/ghost.js?v=8","module":true},{"src":"ghost/ghost-terminal.js?v=1","module":false},{"src":"ost-qr-reader.js?v=1","module":false},{"src":"mesh/mesh.js?v=47","module":true},{"src":"mesh/veil.js?v=3","module":true},{"src":"mesh/mesh-play.js?v=14","module":true},{"src":"mesh/mesh-fair-fx.js?v=1","module":false},{"src":"code-academy.js?v=3","module":false},{"src":"vendor/qrcode-generator.js","module":false},{"src":"mesh/mesh-upgrade.js?v=13","module":false},{"src":"mesh/mesh-link.js?v=2","module":false},{"src":"mesh/mesh-games.js?v=2","module":false},{"src":"mesh/games/tictactoe.js?v=1","module":false},{"src":"mesh/games/chess.js?v=1","module":false},{"src":"mesh/games/pool8.js?v=1","module":false},{"src":"mesh/games/cuppong.js?v=1","module":false},{"src":"mesh/games/minigolf.js?v=1","module":false},{"src":"mesh/mesh-social-x.js?v=4","module":false},{"src":"mesh/mesh-mobile.js?v=9","module":false},{"src":"mesh/mesh-contacts.js?v=2","module":false},{"src":"mesh/mesh-group-markets.js?v=3","module":false},{"src":"mesh/mesh-location-pro.js?v=7","module":false},{"src":"ost-pq-demo.js?v=1","module":false}]</script>
   <script src="ost-idle-guard.js?v=2" defer></script>
   <script src="ost-auth.js?v=7" defer></script>
   <script src="ost-update.js?v=1" defer></script>

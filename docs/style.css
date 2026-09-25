@@ -281,26 +281,27 @@ nav {
 .hero-tag {
   font-size: .9rem; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;
   color: var(--accent); margin-bottom: 16px; opacity: 0;
-  animation: fadeUp .8s .3s forwards;
+  animation: fadeUp .4s 0s forwards;
 }
 .hero h1 {
   font-family: var(--font-serif); font-size: clamp(2.2rem, 4.5vw, 3.6rem);
   font-weight: 700; line-height: 1.12; margin-bottom: 20px;
-  opacity: 0; animation: heroTextReveal 1.2s .5s cubic-bezier(.16,1,.3,1) forwards;
+  /* The headline is the page's main content: it was held back 0.5s and then
+     blurred in over 1.2s, so it painted last (LCP 2-3s). Now a quick rise. */
+  opacity: 0; animation: heroTextReveal .5s .05s cubic-bezier(.16,1,.3,1) forwards;
 }
 @keyframes heroTextReveal {
-  0% { opacity: 0; transform: translateY(40px) skewY(2deg); filter: blur(8px); }
-  60% { filter: blur(0); }
-  100% { opacity: 1; transform: translateY(0) skewY(0); filter: blur(0); }
+  0% { opacity: 0; transform: translateY(16px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 .hero-sub {
   font-size: 1.05rem; color: var(--text-muted); max-width: 520px; margin: 0 0 24px;
   line-height: 1.65;
-  opacity: 0; animation: fadeUp .8s .9s forwards;
+  opacity: 0; animation: fadeUp .4s .12s forwards;
 }
 .hero-actions {
   display: flex; gap: 14px; justify-content: flex-start; flex-wrap: wrap;
-  opacity: 0; animation: heroActionsReveal 1s 1.1s cubic-bezier(.16,1,.3,1) forwards;
+  opacity: 0; animation: heroActionsReveal .45s .18s cubic-bezier(.16,1,.3,1) forwards;
 }
 @keyframes heroActionsReveal {
   0% { opacity: 0; transform: translateY(20px) scale(0.95); }
@@ -309,7 +310,7 @@ nav {
 .hero-stats {
   display: flex; align-items: center; gap: 20px;
   margin-top: 32px; flex-wrap: wrap;
-  opacity: 0; animation: fadeUp .8s 1.1s forwards;
+  opacity: 0; animation: fadeUp .4s .24s forwards;
 }
 .stat { text-align: center; }
 .stat-num { display: block; font-size: 1.4rem; font-weight: 700; color: var(--accent); }
@@ -319,7 +320,7 @@ nav {
 /* Hero Ticker */
 .hero-ticker {
   margin-top: 20px; display: flex; align-items: center; gap: 10px;
-  font-size: .9rem; opacity: 0; animation: fadeUp .8s 1.3s forwards;
+  font-size: .9rem; opacity: 0; animation: fadeUp .4s .28s forwards;
 }
 
 /* Knowledge bar – full width strip under the split */
@@ -335,7 +336,7 @@ nav {
 /* Knowledge Banner */
 .knowledge-banner {
   margin-top: 20px; display: flex; align-items: center; justify-content: center; gap: 20px;
-  opacity: 0; animation: fadeUp .8s 1.6s forwards; flex-wrap: wrap;
+  opacity: 0; animation: fadeUp .4s .3s forwards; flex-wrap: wrap;
 }
 .knowledge-item { text-align: center; }
 .knowledge-num { display: block; font-size: 1.1rem; font-weight: 700; color: var(--warm); }
@@ -345,7 +346,7 @@ nav {
 /* Scroll Hint */
 .scroll-hint {
   position: absolute; bottom: 32px; left: 50%; transform: translateX(-50%); z-index: 5;
-  opacity: 0; animation: fadeUp .8s 1.5s forwards;
+  opacity: 0; animation: fadeUp .4s .4s forwards;
 }
 .scroll-mouse {
   width: 24px; height: 38px; border: 2px solid rgba(255,255,255,.3); border-radius: 12px;

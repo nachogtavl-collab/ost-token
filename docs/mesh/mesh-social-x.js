@@ -250,12 +250,29 @@
       var fab = document.getElementById('ostMeshFab');
       if (fab) fab.style.display = (key === 'stories') ? 'grid' : 'none';
     });
-    // Initial: stories tab active so show FAB when mesh is open.
-    var fab = document.getElementById('ostMeshFab');
-    if (fab) fab.style.display = 'grid';
+    // Initial: stories tab active so show FAB when mesh is open. Only then — an
+    // unconditional inline display:grid beat the CSS gate and left this "+"
+    // floating over the phone home screen until the first click anywhere.
+    // The mesh can build this UI before it marks itself open, so follow the
+    // open state (body class) rather than guessing at build time.
+    syncStoryFab();
+    if (!document.body.__msxFabObs && window.MutationObserver) {
+      document.body.__msxFabObs = new MutationObserver(syncStoryFab);
+      document.body.__msxFabObs.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    }
 
     renderStoriesBar();
     renderGroupsGrid();
+  }
+
+  // "+ New story" shows only while the mesh is open on its Stories tab.
+  function syncStoryFab() {
+    var fab = document.getElementById('ostMeshFab');
+    if (!fab) return;
+    var meshOpen = document.body.classList.contains('ost-mesh-scroll-lock');
+    var stories = document.querySelector('[data-msx-section="stories"].is-active');
+    var want = (meshOpen && stories) ? 'grid' : 'none';
+    if (fab.style.display !== want) fab.style.display = want;
   }
 
   // ---------- Stories ----------
@@ -882,13 +899,7 @@
     }, 5 * 60 * 1000);
 
     // Re-render bars when Mesh opens (so FAB shows once mesh visible).
-    document.addEventListener('click', function () {
-      var fab = document.getElementById('ostMeshFab');
-      if (!fab) return;
-      var meshOpen = document.body.classList.contains('ost-mesh-scroll-lock');
-      var stories = document.querySelector('[data-msx-section="stories"].is-active');
-      fab.style.display = (meshOpen && stories) ? 'grid' : 'none';
-    }, true);
+    document.addEventListener('click', syncStoryFab, true);
 
     window.OST_MESH_STORIES = {
       open: openStoryEditor,

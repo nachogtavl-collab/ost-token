@@ -72,7 +72,15 @@
   }
 
   function mountMobileHome() {
-    if (!isMobileShell() || document.getElementById('ostMobileHome')) return;
+    if (!isMobileShell()) return;
+    // index.html ships the card statically (so first paint has it and nothing
+    // shifts); only wire it. The builder below stays as a fallback for pages
+    // that do not include it.
+    var existing = document.getElementById('ostMobileHome');
+    if (existing) {
+      if (!existing.dataset.wired) { existing.dataset.wired = '1'; wireMobileHome(existing); }
+      return;
+    }
     var heroCopy = document.querySelector('#home .hero-content');
     if (!heroCopy) return;
 
@@ -100,7 +108,11 @@
     var anchor = heroCopy.querySelector('.hero-free-banner') || heroCopy.querySelector('.hero-sub');
     if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(shell, anchor.nextSibling);
     else heroCopy.appendChild(shell);
+    shell.dataset.wired = '1';
+    wireMobileHome(shell);
+  }
 
+  function wireMobileHome(shell) {
     shell.addEventListener('click', function (event) {
       var route = event.target.closest('[data-mobile-route]');
       if (route) {

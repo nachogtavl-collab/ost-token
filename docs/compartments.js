@@ -381,6 +381,8 @@
     wireExistingNav();
     wireKeyboard();
     applyFocusClasses();
+    // Hidden sections are display:none now, so boot containment (index.html) can go.
+    document.documentElement.classList.remove('ost-booting');
 
     // First-time guide
     if (document.readyState === 'complete') showGuide();

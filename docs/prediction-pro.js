@@ -1592,6 +1592,11 @@
   // loaded its market list before this script's `buildOstNativeMarkets` was
   // defined on the window).
   function triggerReload() {
+    // Only when the race actually happened: a forced refresh re-fetches and
+    // re-renders the whole board (190-450ms each on a mid-range phone), and it
+    // ran twice on every load even with the BTC market already on screen.
+    var list = document.getElementById('predictionMarketList');
+    if (list && list.textContent.indexOf('5-min BTC') !== -1) return;
     var refreshBtn = document.getElementById('predictionMarketRefresh');
     if (refreshBtn) { refreshBtn.click(); return; }
     // Best-effort: dispatch a custom event app.js doesn't listen for, but

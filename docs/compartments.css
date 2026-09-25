@@ -130,12 +130,14 @@
 body.ost-focus-mode .ost-section-hidden {
   display: none !important;
 }
+/* No blur: filtering a section thousands of px tall cost hundreds of ms per
+   switch on phones. Opacity + transform stay on the compositor. */
 body.ost-focus-mode .ost-section-active {
-  animation: ostSectionIn 0.42s cubic-bezier(0.22, 0.61, 0.36, 1);
+  animation: ostSectionIn 0.2s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 @keyframes ostSectionIn {
-  from { opacity: 0; transform: translateY(18px); filter: blur(6px); }
-  to   { opacity: 1; transform: translateY(0);    filter: blur(0); }
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* Active section spotlight ring while focus mode is on */
