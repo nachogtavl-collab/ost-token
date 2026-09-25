@@ -62,8 +62,8 @@
     btn.id = 'ostTotalBadge';
     btn.type = 'button';
     btn.className = 'ost-total-badge';
-    btn.title = 'Total OST: wallet balance + bonus credits earned across the site. Click to open your wallet.';
-    btn.innerHTML = '<span>&#9673;</span><span id="ostTotalBadgeAmount">0.00</span><span class="ost-total-sub">OST</span>';
+    btn.title = 'Your on-chain OSTC. Click to open your wallet.';
+    btn.innerHTML = '<span>&#9673;</span><span id="ostTotalBadgeAmount">0.00</span><span class="ost-total-sub">OSTC</span>';
     btn.addEventListener('click', function () {
       if (window.OST_LINK && typeof window.OST_LINK.go === 'function') { window.OST_LINK.go('wallet'); return; }
       location.hash = '#wallet';
@@ -77,8 +77,10 @@
     if (!badge) return;
     var amountEl = document.getElementById('ostTotalBadgeAmount');
     if (!amountEl) return;
-    var total = getWalletOst() + getCredits();
-    amountEl.textContent = total.toFixed(2);
+    // ONE balance: the on-chain OSTC the Wallet shows. Adding legacy bonus credits made a
+    // third number ("25.00 OST") that matched nothing else; credits retired 2026-09-25.
+    var w = getWalletOst();
+    amountEl.textContent = w.toFixed(2);
   }
 
   function boot() {

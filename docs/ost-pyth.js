@@ -58,7 +58,12 @@
   function refresh() {
     var q = Object.keys(IDS).map(function (k) { return 'ids[]=' + IDS[k]; }).join('&');
     return fetch(HERMES + '?' + q, { cache: 'no-store' })
-      .then(function (r) { if (!r.ok) throw new Error('hermes ' + r.status); return r.json(); })
+      .then(function (r) {
+        // Public Hermes now answers 401/403 without an API key (2026-09). An auth refusal
+        // is permanent, not an outage: shut the stream + poll off for this session instead
+        // of retrying forever and filling the console with errors.
+        if (r.status === 401 || r.status === 403) { authDisabled = true; stop(); throw new Error('hermes auth ' + r.status); }
+        if (!r.ok) throw new Error('hermes ' + r.status); return r.json(); })
       .then(function (j) { failStreak = 0; applyParsed(j && j.parsed); })
       .catch(function () {
         failStreak++;
@@ -118,9 +123,14 @@
   function stopPoll() { if (timer) { clearInterval(timer); timer = 0; } }
 
   // Prefer the real-time stream; poll only if SSE is unavailable/blocked.
+  // Public Hermes requires an API key since 2026-09 and its 401 carries no CORS headers,
+  // so the browser only sees an opaque network failure (7 per page load in the audit).
+  // Off unless a key is configured; the OST worker's settlement feed is the price source.
+  var authDisabled = !window.OST_PYTH_KEY;
   function start() {
-    refresh();                 // one immediate snapshot so prices show instantly
-    if (!startStream()) startPoll();
+    if (authDisabled) return;
+    refresh().then(function () { if (!authDisabled && !startStream()) startPoll(); });   // snapshot first
+    // Stream only after the snapshot shows Hermes accepts us (EventSource hides the status).
   }
   function stop() { stopStream(); stopPoll(); }
   document.addEventListener('visibilitychange', function () {

@@ -68,7 +68,7 @@
   function paintStats(stats) {
     if (stats) lastStats = stats;
     // "Faucet claims" tile → live active wallets in the last 24h
-    if (lastStats) setText('ostMarketVelocity', fmt(lastStats.activeWallets24h) + ' active');
+    if (lastStats) setText('ostMarketVelocity', fmt(lastStats.activeWallets24h));
     // Price tile → the CANONICAL OST value (matches the wallet + convert rail),
     // in the user's currency. The synthetic market activity goes in the caption.
     paintPrice();
@@ -90,7 +90,7 @@
       if (window.OST_RESCUE && typeof window.OST_RESCUE.poolBalance === 'function') {
         Promise.resolve(window.OST_RESCUE.poolBalance()).then(function (bal) {
           if (Number.isFinite(Number(bal)) && Number(bal) > 0) {
-            setText('ostMarketLiquidity', fmt(bal) + ' OST');
+            setText('ostMarketLiquidity', fmt(bal) + ' OSTC');
           }
         }).catch(function () {});
       }

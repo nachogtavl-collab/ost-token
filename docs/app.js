@@ -5134,8 +5134,13 @@
       }
 
       if (volumeEl) volumeEl.textContent = ostDevnetMetrics.available ? formatCompactTokenAmount(ostDevnetMetrics.mintSupply) : '0 OST';
-      if (liquidityEl) liquidityEl.textContent = ostDevnetMetrics.available ? formatCompactTokenAmount(ostDevnetMetrics.treasuryBalance) : '0 OST';
-      if (velocityEl) velocityEl.textContent = ostDevnetMetrics.available ? formatCompactCount(ostDevnetMetrics.faucetClaimCount) : '0';
+      // These two tiles are owned by ost-live-stats.js (payout pool + active wallets). This
+      // wrote a LEGACY treasury account (28M) and legacy claim count (3) into the same tiles,
+      // so they flipped to 9.52B / "14 active" seconds later. Only write if that module is absent.
+      if (!window.OST_LIVE_STATS_OWNS_PRICE) {
+        if (liquidityEl) liquidityEl.textContent = ostDevnetMetrics.available ? formatCompactTokenAmount(ostDevnetMetrics.treasuryBalance) : '…';
+        if (velocityEl) velocityEl.textContent = ostDevnetMetrics.available ? formatCompactCount(ostDevnetMetrics.faucetClaimCount) : '…';
+      }
 
       if (updatedEl) {
         if (ostDevnetMetrics.available) {

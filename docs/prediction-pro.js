@@ -81,10 +81,7 @@
   var BTC_LOCAL_TICK_FRESH_MS = 1500;
   var BTC_FEED_TIMEOUT_MS = 3000;
   var BTC_MAX_SERIES = 3600;          // deep, dense sub-second history for the chart
-  var BTC_WS_URLS = [
-    'wss://stream.binance.com:9443/ws/btcusdt@trade',
-    'wss://data-stream.binance.vision/ws/btcusdt@trade'
-  ];
+  var BTC_WS_URLS = [];   // DISABLED: browser->exchange sockets are geo/CORS-blocked for many users and are a 2nd feed beside the settlement price (see ost-btc-one-feed)
   var btcWs = null;
   var btcWsIndex = 0;
   var btcWsReconnectTimer = 0;
@@ -127,10 +124,9 @@
   // CORS proxies used as a final fallback when every direct feed fails. The
   // 5-min BTC equation needs a live price to escape the cold 50/50 default,
   // so we pay one extra hop rather than display a static market.
-  var BTC_CORS_PROXIES = [
-    'https://corsproxy.io/?url=',
-    'https://api.allorigins.win/raw?url='
-  ];
+  // Public CORS proxies REMOVED: they 401/rate-limit, leak every user's requests to a
+  // third party, and are not needed - the OST worker is the price relay.
+  var BTC_CORS_PROXIES = [];
   var btcLastTick = { ts: 0, price: 0, source: '' };
   var btcPrevTick = { ts: 0, price: 0, source: '' };
   var btcSeries = [];
@@ -393,7 +389,12 @@
         return Promise.resolve(Object.assign({}, rememberBtcTick(py.price, 'pyth')));
       }
     } catch (_) {}
-    return tryBtcFeeds(orderedBtcFeeds(), 0)
+    // Browsers cannot reach exchange APIs reliably (CORS / geo blocks - every direct feed
+    // failed in the 2026-09 audit). The OST worker IS the relay: ask it for the round.
+    var base = ostApiBase();
+    return (base ? fetch(base + '/btc/round', { cache: 'no-store' }).then(function (r) { if (!r.ok) throw new Error('round ' + r.status); return r.json(); })
+        .then(function (d) { var p = Number(d && d.livePrice); if (!(p > 1000) || Date.now() - Number(d.livePriceTs || 0) > 20000) throw new Error('no fresh server price'); return { price: p, source: d.livePriceSource || 'ost-canonical' }; })
+      : Promise.reject(new Error('no OST API')))
       .then(function (result) {
         btcPreferredSource = result.source && result.source.replace(/\*$/, '') || btcPreferredSource;
         return Object.assign({}, rememberBtcTick(result.price, result.source));

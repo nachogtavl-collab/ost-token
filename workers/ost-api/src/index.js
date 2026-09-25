@@ -114,45 +114,39 @@ function currentRound() {
 
 // ── BTC price: waterfall of public feeds ─────────────────────────────────────
 
+// ORDER = real exchange TRADE tickers first. Coinbase's v2 "spot" endpoint was found
+// (2026-09-25) returning one frozen price for minutes while the exchange traded ~$30
+// away - and it was our de-facto settlement source (Binance 451s Cloudflare IPs), so
+// rounds showed price == beat, a flat chart and 50/50 odds. It is now last resort.
 const BTC_FEEDS = [
-  {
-    name: 'binance',
-    url: 'https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT',
-    pick: j => j?.price && Number(j.price)
-  },
-  {
-    name: 'binance-vision',
-    url: 'https://data-api.binance.vision/api/v3/ticker/price?symbol=BTCUSDT',
-    pick: j => j?.price && Number(j.price)
-  },
-  {
-    name: 'coinbase',
-    url: 'https://api.coinbase.com/v2/prices/BTC-USD/spot',
-    pick: j => j?.data?.amount && Number(j.data.amount)
-  },
-  {
-    name: 'coingecko',
-    url: 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd',
-    pick: j => j?.bitcoin?.usd && Number(j.bitcoin.usd)
-  }
+  { name: 'coinbase-exchange', url: 'https://api.exchange.coinbase.com/products/BTC-USD/ticker', pick: j => j?.price && Number(j.price) },
+  { name: 'kraken', url: 'https://api.kraken.com/0/public/Ticker?pair=XBTUSD', pick: j => { const r = j && j.result && (j.result.XXBTZUSD || Object.values(j.result)[0]); return r && r.c && Number(r.c[0]); } },
+  { name: 'binance-vision', url: 'https://data-api.binance.vision/api/v3/ticker/price?symbol=BTCUSDT', pick: j => j?.price && Number(j.price) },
+  { name: 'binance', url: 'https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT', pick: j => j?.price && Number(j.price) },
+  { name: 'coinbase', url: 'https://api.coinbase.com/v2/prices/BTC-USD/spot', pick: j => j?.data?.amount && Number(j.data.amount) },
+  { name: 'coingecko', url: 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd', pick: j => j?.bitcoin?.usd && Number(j.bitcoin.usd) }
 ];
+
+// FREEZE DETECTOR. A live BTC ticker never prints the identical price for 45s+. A
+// source that does is serving a cached/stuck value - skip it rather than stamp a
+// stale number with a fresh timestamp (the masking anti-pattern).
+const BTC_FEED_LAST = new Map();   // name -> { price, since }
+const BTC_FREEZE_MS = 45000;
+function feedIsFrozen(name, price) {
+  const now = Date.now(), last = BTC_FEED_LAST.get(name);
+  if (!last || last.price !== price) { BTC_FEED_LAST.set(name, { price, since: now }); return false; }
+  return now - last.since > BTC_FREEZE_MS;
+}
+
+const BTC_FETCH_OPTS = { headers: { accept: 'application/json', 'cache-control': 'no-cache, no-store, max-age=0', pragma: 'no-cache', 'user-agent': 'OST-API/1.0' }, cf: { cacheTtl: 0 } };
 
 async function fetchBtcPrice() {
   for (const feed of BTC_FEEDS) {
     try {
-      const r = await fetch(feed.url, {
-        headers: {
-          accept: 'application/json',
-          'cache-control': 'no-cache, no-store, max-age=0',
-          pragma: 'no-cache',
-          'user-agent': 'OST-API/1.0'
-        },
-        cf: { cacheTtl: 0 }
-      });
+      const r = await fetch(feed.url, BTC_FETCH_OPTS);
       if (!r.ok) continue;
-      const j = await r.json();
-      const price = feed.pick(j);
-      if (Number.isFinite(price) && price > 1000) return { price, source: feed.name };
+      const price = feed.pick(await r.json());
+      if (Number.isFinite(price) && price > 1000 && !feedIsFrozen(feed.name, price)) return { price, source: feed.name };
     } catch (_) { /* try next */ }
   }
   return null;
@@ -160,24 +154,16 @@ async function fetchBtcPrice() {
 
 async function fetchBtcPriceFast(timeoutMs = 520) {
   const attempts = BTC_FEEDS.map(async feed => {
-    const r = await fetchWithDeadline(feed.url, {
-      headers: {
-        accept: 'application/json',
-        'cache-control': 'no-cache, no-store, max-age=0',
-        pragma: 'no-cache',
-        'user-agent': 'OST-API/1.0'
-      },
-      cf: { cacheTtl: 0 }
-    }, timeoutMs);
+    const r = await fetchWithDeadline(feed.url, BTC_FETCH_OPTS, timeoutMs);
     if (!r.ok) throw new Error(feed.name + ' ' + r.status);
-    const j = await r.json();
-    const price = feed.pick(j);
+    const price = feed.pick(await r.json());
     if (!Number.isFinite(price) || price <= 1000) throw new Error(feed.name + ' empty price');
     return { price, source: feed.name };
   });
   const results = await Promise.allSettled(attempts);
+  // Results keep BTC_FEEDS order, so the highest-priority live, non-frozen source wins.
   for (const result of results) {
-    if (result.status === 'fulfilled' && result.value) return result.value;
+    if (result.status === 'fulfilled' && result.value && !feedIsFrozen(result.value.source, result.value.price)) return result.value;
   }
   return null;
 }

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ost-pwa-cache-v449';
+const CACHE_NAME = 'ost-pwa-cache-v453';
 const RUNTIME_CACHE = 'ost-pwa-runtime-v253';
 const CACHE_PREFIX = 'ost-pwa-';
 
@@ -8,7 +8,7 @@ const PRECACHE_PATHS = [
   './markets.html',
   './desktop.html',
   './fast-markets.js?v=5',
-  './ost-pyth.js?v=2',
+  './ost-pyth.js?v=4',
   './ost-tick-turbo.js?v=5',
   './commerce.html',
   './ost-money.js?v=3',
@@ -22,7 +22,7 @@ const PRECACHE_PATHS = [
   './prediction-modal-redesign.css?v=1',
   './ost-live-prices.js?v=1',
   './ost-telemetry.js?v=1',
-  './ost-live-stats.js?v=5',
+  './ost-live-stats.js?v=6',
   './ost-treasury-engine.js?v=2',
   './ost-engine-guard.js?v=1',
   './ost-appbar.js?v=14',
@@ -47,7 +47,7 @@ const PRECACHE_PATHS = [
   './ost-mobile-fit.css?v=1',
   './ost-appbar.css?v=4',
   './predict-mobile.css?v=2',
-  './ost-total-balance.js?v=2',
+  './ost-total-balance.js?v=3',
   './ost-ostg-wallet.js?v=2',
   './manifest.json',
   './favicon.svg',
@@ -78,8 +78,8 @@ const PRECACHE_PATHS = [
   './ost-currency-format.js?v=2',
   './realtime.js?v=5',
   './ost-notifications.js?v=3',
-  './app.js?v=265',
-  './ost-predict-mobile.js?v=41',
+  './app.js?v=266',
+  './ost-predict-mobile.js?v=43',
   './ost-predict-mobile.css?v=12',
   './ost-session-key.js?v=11',
   './ost-onchain-market.js?v=7',
@@ -134,9 +134,9 @@ const PRECACHE_PATHS = [
   './compartments.js?v=7',
   './prediction-extras.js?v=20',
   './ost-positions.js?v=2',
-  './prediction-pro.js?v=217',
+  './prediction-pro.js?v=218',
   './prediction-scalar.js?v=4',
-  './prediction-modal.js?v=211',
+  './prediction-modal.js?v=212',
   './ost-ticket-overlay.js?v=2',
   './prediction-trade-popout.js?v=11',
   './prediction-pro-dash.js?v=16',

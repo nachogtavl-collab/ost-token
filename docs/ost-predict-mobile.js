@@ -189,6 +189,9 @@
     var f = ''; try { if (window.OST_CCY && OST_CCY.fiat && b != null) f = OST_CCY.fiat(b) || ''; } catch (_) {}
     document.querySelectorAll('#ostPredictMobile .opm-balf').forEach(function (e) { e.textContent = f; });
   }
+  // Repaint the fiat hint when the user changes currency (it used to keep whatever currency
+  // was active when the balance last changed - e.g. INR from a moment in onboarding).
+  try { window.addEventListener('ost:currencychange', function () { setTimeout(paintBalance, 0); }); } catch (_) {}
   function refreshBalance() {
     // These are ASYNC: they kick off a fetch and fire `ost:balance` /
     // `ost:play:balance` when the fresh number lands. paintBalance() here shows
@@ -207,7 +210,7 @@
   /* ===================================================================== */
   function browseTemplate() {
     return '' +
-    '<div class="opm-tb"><div><h2 class="opm-htitle">Predictions</h2><div class="opm-hsub">Trade real markets with OSTG</div></div><div class="opm-sp"></div><button class="opm-tickets-btn" id="opmTicketsBtn">' + icon('ticket') + 'Tickets</button>' + balChip() + '</div>' +
+    '<div class="opm-tb"><div><h2 class="opm-htitle">Predictions</h2><div class="opm-hsub">Real-world markets · devnet OSTG (no cash value)</div></div><div class="opm-sp"></div><button class="opm-tickets-btn" id="opmTicketsBtn">' + icon('ticket') + 'Tickets</button>' + balChip() + '</div>' +
     '<div class="opm-scroll">' +
       '<div class="opm-search">' + icon('search') + '<input id="opmQ" type="search" placeholder="Search Bitcoin, Trump, NBA, inflation…" autocomplete="off"></div>' +
       '<div class="opm-chips" id="opmChips">' + CATS.map(function (c) { return '<button class="opm-chip' + (c.k === 'all' ? ' on' : '') + '" data-c="' + c.k + '">' + icon(c.ic) + c.label + '</button>'; }).join('') + '</div>' +
@@ -514,13 +517,24 @@
     renderOddsLive();
   }
   var _posDomAt = 0;
+  // TRADE GATE. With no fresh SETTLEMENT price the round cannot be priced: the desk used
+  // to keep quoting 50c/50c off a frozen number and still let people buy. Now: no settlement
+  // tick in 20s -> buying is disabled and the desk says so (the server refuses too).
+  function btcPriceLive() { return !isBtcLive(currentMarket) || (Date.now() - (_srvTickAt || 0) < 20000); }
+  function paintTradeGate() {
+    var live = btcPriceLive(), by = el('opmBuyY'), bn = el('opmBuyN'), cf = el('opmCf');
+    [by, bn].forEach(function (b) { if (!b) return; b.disabled = !live; b.style.opacity = live ? '' : '.45'; });
+    if (!live) { if (by) by.textContent = 'Price unavailable'; if (bn) bn.textContent = 'Trading paused'; if (cf) { cf.disabled = true; cf.textContent = 'Price unavailable - trading paused'; } setFeedNote('No live BTC price right now - trading is paused until it returns.'); }
+    else if (by && by.textContent === 'Price unavailable') { renderOddsLive(); setFeedNote(''); if (cf && /unavailable/.test(cf.textContent)) { cf.disabled = false; paintTicket(); } }
+  }
+  setInterval(function () { if (view === 'detail' && !document.hidden) paintTradeGate(); }, 2000);
   function renderOddsLive() {
     // CHEAP text updates run every tick (no buttons here to destroy):
     var y = el('opmYnY'), n = el('opmYnN'); if (y) y.textContent = fmtc(midYes) + '¢'; if (n) n.textContent = fmtc(100 - midYes) + '¢';
     var yMul = midYes > 0 ? (100 / midYes) : 0, nMul = (100 - midYes) > 0 ? (100 / (100 - midYes)) : 0;
     var yx = el('opmYnYx'); if (yx) yx.textContent = yMul ? yMul.toFixed(2) + '× payout' : '';
     var nx = el('opmYnNx'); if (nx) nx.textContent = nMul ? nMul.toFixed(2) + '× payout' : '';
-    var by = el('opmBuyY'), bn = el('opmBuyN'); if (by) by.textContent = 'Buy Yes · ' + fmtc(midYes) + '¢'; if (bn) bn.textContent = 'Buy No · ' + fmtc(100 - midYes) + '¢';
+    var by = el('opmBuyY'), bn = el('opmBuyN'); if (btcPriceLive()) { if (by) by.textContent = 'Buy Yes · ' + fmtc(midYes) + '¢'; if (bn) bn.textContent = 'Buy No · ' + fmtc(100 - midYes) + '¢'; }
     // EXPENSIVE DOM rebuilds (position card + open sheet) carry BUTTONS, so they
     // are throttled — rebuilding them at frame rate destroyed the Sell/Buy buttons
     // mid-tap (the "can't click while data flows" bug).
@@ -579,7 +593,7 @@
     var ya = el('opmPoolYA'), na = el('opmPoolNA'), tot = el('opmPoolTot');
     if (poolY + poolN > 0) { if (ya) ya.textContent = 'Yes ' + num0(poolY) + ' OSTG'; if (na) na.textContent = 'No ' + num0(poolN) + ' OSTG'; if (tot) tot.textContent = num0(poolY + poolN) + ' OSTG total'; }
     else { if (ya) ya.textContent = 'Yes ' + yp + '%'; if (na) na.textContent = 'No ' + (100 - yp) + '%'; if (tot) tot.textContent = 'implied odds'; }
-    var by = el('opmBuyY'), bn = el('opmBuyN'); if (by) by.textContent = 'Buy Yes · ' + fmtc(midYes) + '¢'; if (bn) bn.textContent = 'Buy No · ' + fmtc(100 - midYes) + '¢';
+    var by = el('opmBuyY'), bn = el('opmBuyN'); if (btcPriceLive()) { if (by) by.textContent = 'Buy Yes · ' + fmtc(midYes) + '¢'; if (bn) bn.textContent = 'Buy No · ' + fmtc(100 - midYes) + '¢'; }
     var pr = el('opmProb'); if (pr) pr.textContent = fmtc(midYes) + '%'; var prb = el('opmProbBar'); if (prb) prb.style.width = midYes + '%';
   }
   function paintStandard() {
@@ -1010,6 +1024,7 @@
   function confirmBuy() {
     var cf = el('opmCf'); if (!cf || cf.disabled) return; var stake = amt;
     if (!(stake > 0)) { toast('Enter an amount.'); return; }
+    if (!btcPriceLive()) { toast('No live BTC price right now - trading is paused.'); paintTradeGate(); return; }
     var mid = activeMarketId(); if (!mid) { toast('Market not ready — try again.'); return; }
     var bSide = side, c = bSide === 'yes' ? midYes : (100 - midYes), sh = c > 0 ? stake / (c / 100) : 0, entry = c / 100;
     // OPTIMISTIC: reflect the bet the instant they tap — balance down, position in.

@@ -480,10 +480,7 @@
   // ----- Timeout-aware, CORS-resilient fetch ----------------------------------
   // Each attempt gets a hard 4 s abort budget so a stalled CORS proxy can
   // never block the next refresh tick.
-  var CORS_PROXIES = [
-    'https://corsproxy.io/?url=',
-    'https://api.allorigins.win/raw?url='
-  ];
+  var CORS_PROXIES = [];   // public proxies removed (401s, third-party exposure); the OST worker relays
   var FETCH_TIMEOUT_MS = 4000;
   function fetchWithTimeout(url, opts) {
     var ctrl = new AbortController();
@@ -502,9 +499,11 @@
     };
     return attempt(url)
       .catch(function () {
+        if (!CORS_PROXIES[0]) throw new Error('no proxy');
         return attempt(CORS_PROXIES[0] + encodeURIComponent(url));
       })
       .catch(function () {
+        if (!CORS_PROXIES[1]) throw new Error('no proxy');
         return attempt(CORS_PROXIES[1] + encodeURIComponent(url));
       })
       .catch(function (e) {
