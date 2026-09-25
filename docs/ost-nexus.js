@@ -129,17 +129,10 @@
         return;
       case 'market':
         if (!arg) return go('markets');
-        if (isMobile() && window.OST_PREDICT_MOBILE && OST_PREDICT_MOBILE.openMarket) { go('markets'); setTimeout(function () { try { OST_PREDICT_MOBILE.openMarket(arg); } catch (_) {} }, 200); return; }
-        // Desktop: select the market on the board itself (the desk's own path).
-        // OST_MARKET_MODAL opened directly renders squashed on desktop (pre-existing).
-        go('markets');
-        var mid = String(arg.id || arg);
-        waitFor(function () {
-          var list = $('predictionMarketList'); if (!list) return null;
-          return list.querySelector('.prediction-market-card[data-prediction-market-id="' + (window.CSS && CSS.escape ? CSS.escape(mid) : mid) + '"]') ||
-            (/^ost-btc5m/.test(mid) ? list.querySelector('.prediction-market-card[data-prediction-market-id^="ost-btc5m"]') : null);
-        }, function (card) { card.click(); }, 4000);
-        return;
+        // One market page on every device (desktop gets the terminal layout
+        // from ost-markets-desk.js); the legacy modal renders squashed on desktop.
+        if (window.OST_PREDICT_MOBILE && OST_PREDICT_MOBILE.openMarket) { go('markets'); setTimeout(function () { try { OST_PREDICT_MOBILE.openMarket(arg); } catch (_) {} }, 200); return; }
+        return go('markets');
       case 'wallet': return openWalletPanel(arg || 'access');
       case 'convert': return openWalletPanel('convert');
       case 'connect': {
@@ -171,7 +164,7 @@
         return;
       case 'card': if (window.OST_CARD && OST_CARD.openFullCard) OST_CARD.openFullCard(); return;
       case 'flagship':
-        if (isMobile() && window.OST_PREDICT_MOBILE && OST_PREDICT_MOBILE.openFlagship) { go('markets'); setTimeout(function () { try { OST_PREDICT_MOBILE.openFlagship(); } catch (_) {} }, 200); return; }
+        if (window.OST_PREDICT_MOBILE && OST_PREDICT_MOBILE.openFlagship) { go('markets'); setTimeout(function () { try { OST_PREDICT_MOBILE.openFlagship(); } catch (_) {} }, 200); return; }
         var btc = nativeMarkets().filter(function (m) { return /^ost-btc5m/.test(String(m.id || '')); })[0];
         return go('market', btc || null);
       case 'home':

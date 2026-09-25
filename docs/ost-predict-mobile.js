@@ -1295,7 +1295,10 @@
     if (flag) openMarket(flag); else showBrowse();
     try { var host = el('ostPredictMobile'); if (host) host.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {}
   }
-  window.OST_PREDICT_MOBILE = { mount: mount, showBrowse: showBrowse, openMarket: openMarket, openFlagship: openFlagship, openPositions: openPositions };
+  // redraw: repaint the open market's chart now (ost-markets-desk.js resizes the
+  // canvas buffers for the desktop layout, which clears them).
+  function redraw() { try { if (view !== 'detail' || !currentMarket) return; if (isBtcLive(currentMarket)) draw(); else drawStd(); } catch (_) {} }
+  window.OST_PREDICT_MOBILE = { mount: mount, showBrowse: showBrowse, openMarket: openMarket, openFlagship: openFlagship, openPositions: openPositions, redraw: redraw };
 
   function boot() {
     if (!mount()) { var n = 0; var iv = setInterval(function () { if (mount() || ++n > 40) clearInterval(iv); }, 500); }

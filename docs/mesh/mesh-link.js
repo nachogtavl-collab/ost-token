@@ -128,7 +128,10 @@
     'mesh-arena': 'mesh-arena',
     'fair-games': 'fair-games',
     'fairgames':  'fair-games',
-    'games':      'games',
+    // NOT 'games': #games is the Games section's own address. As an alias it opened
+    // the Mesh casual-games overlay over the section (and, when this lazy module
+    // booted while the hash was #games, opened it with no click at all).
+    // The overlay keeps #mesh-games / #casual-games.
     'casual-games':'casual-games',
     'mesh-games': 'mesh-games',
     'chess':      'chess',

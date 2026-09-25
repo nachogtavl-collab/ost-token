@@ -446,6 +446,19 @@
   text-align: right;
 }
 
+
+/* Chart first, then the quote list (it was ~45 cards ABOVE the chart, pushing the
+   chart 5000px down). On wide screens the list scrolls in its own box and the
+   order ticket stays in view. */
+.stock-panel { display: flex; flex-direction: column; }
+.stock-panel-head { order: 0; }
+.stock-chart-card { order: 1; margin-bottom: 16px; }
+.stock-quote-grid { order: 2; }
+@media (min-width: 1181px) {
+  .stock-quote-grid { max-height: 520px; overflow-y: auto; padding-right: 4px; scrollbar-width: thin; }
+  .stock-ticket { position: sticky; top: 84px; }
+}
+
 @media (max-width: 1180px) {
   .stock-grid,
   .stock-lower-grid,

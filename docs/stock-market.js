@@ -354,9 +354,16 @@
       $('smSelectedChange').textContent = fmtMoney(quote.change) + ' / ' + fmtPct(quote.changePct);
       $('smSelectedChange').className = up ? 'stock-change-up' : 'stock-change-down';
     }
-    if ($('smMetricOpen')) $('smMetricOpen').textContent = fmtMoney(quote.open);
-    if ($('smMetricHigh')) $('smMetricHigh').textContent = fmtMoney(quote.high);
-    if ($('smMetricLow')) $('smMetricLow').textContent = fmtMoney(quote.low);
+    // A missing open/high/low arrives as 0: show "--", never "$0.00".
+    var px = function (v) { return Number(v) > 0 ? fmtMoney(v) : '--'; };
+    if ($('smMetricOpen')) $('smMetricOpen').textContent = px(quote.open);
+    if ($('smMetricHigh')) $('smMetricHigh').textContent = px(quote.high);
+    if ($('smMetricLow')) $('smMetricLow').textContent = px(quote.low);
+    // The badge names the feed this quote actually came from (it was hard-coded "Stooq").
+    if ($('smSourceKicker')) {
+      var src = String(quote.source || '').split(/[-_\s]/)[0];
+      $('smSourceKicker').textContent = src ? src.charAt(0).toUpperCase() + src.slice(1).toLowerCase() + ' public data' : 'Public market data';
+    }
     if ($('smMetricVolume')) $('smMetricVolume').textContent = compact(quote.volume);
   }
 

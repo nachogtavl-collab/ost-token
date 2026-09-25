@@ -288,19 +288,20 @@
   <link rel="stylesheet" href="ost-currency-colors.css?v=1">
   <link rel="stylesheet" href="topup.css?v=4">
   <link rel="stylesheet" href="offline-vault.css?v=1">
-  <link rel="stylesheet" href="redesign.css?v=1">
-  <link rel="stylesheet" href="stock-market.css?v=1">
+  <link rel="stylesheet" href="redesign.css?v=2">
+  <link rel="stylesheet" href="stock-market.css?v=2">
   <link rel="stylesheet" href="live-watch.css?v=5">
   <link rel="stylesheet" href="mobile-shell.css?v=20">
   <link rel="stylesheet" href="ost-mobile-scale.css?v=3">
   <link rel="stylesheet" href="ost-scroll-fix.css?v=1">
-  <link rel="stylesheet" href="prediction-modal-redesign.css?v=1">
+  <link rel="stylesheet" href="prediction-modal-redesign.css?v=2">
   <link rel="stylesheet" href="ost-mobile-fit.css?v=1">
   <link rel="stylesheet" href="ost-appbar.css?v=4">
   <link rel="stylesheet" href="predict-mobile.css?v=2">
+  <link rel="stylesheet" href="ost-markets-desk.css?v=3">
   <link rel="stylesheet" href="ost-microfx.css?v=1">
   <link rel="stylesheet" href="ost-instant.css?v=1">
-  <link rel="stylesheet" href="ost-nexus.css?v=1">
+  <link rel="stylesheet" href="ost-nexus.css?v=2">
   <!-- Not deferred on purpose: presses must be acknowledged from the first
        frame. It is ~2KB and only adds document-level listeners. -->
   <script src="ost-instant.js?v=1"></script>
@@ -3012,7 +3013,7 @@
                   <span id="smSelectedChange">--</span>
                 </div>
               </div>
-              <span class="stock-kicker">Stooq public data</span>
+              <span class="stock-kicker" id="smSourceKicker">Public market data</span>
             </div>
             <canvas class="stock-chart" id="smChart" width="860" height="280" aria-label="Stock price chart"></canvas>
             <div class="stock-depth-grid">
@@ -6302,7 +6303,8 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="prediction-extras.js?v=20"></script>
   <script src="ost-positions.js?v=2" defer></script>
   <script src="prediction-pro.js?v=219"></script>
-  <script src="ost-predict-mobile.js?v=43" defer></script>
+  <script src="ost-predict-mobile.js?v=44" defer></script>
+<script src="ost-markets-desk.js?v=4" defer></script>
   <script src="prediction-scalar.js?v=4"></script>
   <link rel="stylesheet" href="prediction-modal.css?v=6">
   <script src="prediction-modal.js?v=212"></script>
@@ -6331,11 +6333,11 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="launchpad-trenches.js?v=7"></script>
   <script src="launchpad-engine.js?v=7" defer></script>
   <script src="swap-resilient.js?v=202" defer></script>
-  <script src="stock-market.js?v=14"></script>
+  <script src="stock-market.js?v=15"></script>
   <script src="redesign.js?v=1" defer></script>
   <script src="mainnet-audit.js?v=1" defer></script>
   <script src="ost-microfx.js?v=2" defer></script>
-<script src="ost-nexus.js?v=1" defer></script>
+<script src="ost-nexus.js?v=2" defer></script>
   <script>
     (function () {
       var deferredPrompt = null;
@@ -6461,7 +6463,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
        Code Academy, quantum demo) and used to run at boot — several with no `defer`,
        blocking HTML parsing. They now load one at a time while the browser is idle,
        and flush immediately on first interaction. Order is preserved. -->
-  <script type="application/json" id="ost-lazy-manifest">[{"src":"ghost/ghost.js?v=8","module":true},{"src":"ghost/ghost-terminal.js?v=1","module":false},{"src":"ost-qr-reader.js?v=1","module":false},{"src":"mesh/mesh.js?v=47","module":true},{"src":"mesh/veil.js?v=3","module":true},{"src":"mesh/mesh-play.js?v=14","module":true},{"src":"mesh/mesh-fair-fx.js?v=1","module":false},{"src":"code-academy.js?v=3","module":false},{"src":"vendor/qrcode-generator.js","module":false},{"src":"mesh/mesh-upgrade.js?v=13","module":false},{"src":"mesh/mesh-link.js?v=2","module":false},{"src":"mesh/mesh-games.js?v=2","module":false},{"src":"mesh/games/tictactoe.js?v=1","module":false},{"src":"mesh/games/chess.js?v=1","module":false},{"src":"mesh/games/pool8.js?v=1","module":false},{"src":"mesh/games/cuppong.js?v=1","module":false},{"src":"mesh/games/minigolf.js?v=1","module":false},{"src":"mesh/mesh-social-x.js?v=4","module":false},{"src":"mesh/mesh-mobile.js?v=9","module":false},{"src":"mesh/mesh-contacts.js?v=2","module":false},{"src":"mesh/mesh-group-markets.js?v=3","module":false},{"src":"mesh/mesh-location-pro.js?v=7","module":false},{"src":"ost-pq-demo.js?v=1","module":false}]</script>
+  <script type="application/json" id="ost-lazy-manifest">[{"src":"ghost/ghost.js?v=8","module":true},{"src":"ghost/ghost-terminal.js?v=1","module":false},{"src":"ost-qr-reader.js?v=1","module":false},{"src":"mesh/mesh.js?v=47","module":true},{"src":"mesh/veil.js?v=3","module":true},{"src":"mesh/mesh-play.js?v=14","module":true},{"src":"mesh/mesh-fair-fx.js?v=1","module":false},{"src":"code-academy.js?v=3","module":false},{"src":"vendor/qrcode-generator.js","module":false},{"src":"mesh/mesh-upgrade.js?v=13","module":false},{"src":"mesh/mesh-link.js?v=3","module":false},{"src":"mesh/mesh-games.js?v=2","module":false},{"src":"mesh/games/tictactoe.js?v=1","module":false},{"src":"mesh/games/chess.js?v=1","module":false},{"src":"mesh/games/pool8.js?v=1","module":false},{"src":"mesh/games/cuppong.js?v=1","module":false},{"src":"mesh/games/minigolf.js?v=1","module":false},{"src":"mesh/mesh-social-x.js?v=4","module":false},{"src":"mesh/mesh-mobile.js?v=9","module":false},{"src":"mesh/mesh-contacts.js?v=2","module":false},{"src":"mesh/mesh-group-markets.js?v=3","module":false},{"src":"mesh/mesh-location-pro.js?v=7","module":false},{"src":"ost-pq-demo.js?v=1","module":false}]</script>
   <script src="ost-idle-guard.js?v=2" defer></script>
   <script src="ost-auth.js?v=7" defer></script>
   <script src="ost-update.js?v=1" defer></script>

@@ -319,11 +319,13 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* ---------- Stock market polish ---------- */
-.stock-market-section .stock-grid,
-#stock-market .stock-grid {
+/* Card grid for the quote LIST. (It targeted .stock-grid — the board|ticket
+   two-panel layout — and crushed the Mirror into five 243px columns.) */
+.stock-market-section .stock-quote-grid,
+#stock-market .stock-quote-grid {
   display: grid;
-  gap: 14px;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
 }
 
 /* ---------- Faucet hub & Get OST polish ---------- */
