@@ -1085,3 +1085,17 @@
   body.ost-mobile-shell .wd-profile .wd-address { font-size: .95rem !important; }
   body.ost-mobile-shell .wd-profile > .btn { flex: 1 1 calc(50% - 6px) !important; white-space: nowrap !important; overflow-wrap: normal !important; }
 }
+
+@media (max-width: 820px), (pointer: coarse) and (max-width: 1024px) {
+  /* Predictions sat inside FIVE nested paddings (section, container, command shell,
+     panel, scroll) - the grid was 277px of a 390px screen and titles lost the close
+     time. While the Predictions panel is open, the outer wrappers go flush. */
+  body.ost-mobile-shell #wallet:has(#wallet-panel-predict.is-active) { padding-left: 0 !important; padding-right: 0 !important; }
+  body.ost-mobile-shell #wallet:has(#wallet-panel-predict.is-active) > .container,
+  body.ost-mobile-shell #wallet:has(#wallet-panel-predict.is-active) .wallet-command-shell,
+  body.ost-mobile-shell #wallet-panel-predict.is-active { padding-left: 0 !important; padding-right: 0 !important; border-left: 0 !important; border-right: 0 !important; border-radius: 0 !important; }
+  /* Unsolicited pop-ups covered the market cards / question on phones. The Ghost panel
+     still opens on request; achievements are not worth covering a trade for. */
+  body.ost-mobile-shell .og-bubble,
+  body.ost-mobile-shell .achievement-toast { display: none !important; }
+}

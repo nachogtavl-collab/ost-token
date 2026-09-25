@@ -245,7 +245,7 @@
     };
   })();
   </script>
-  <link rel="stylesheet" href="style.css?v=79">
+  <link rel="stylesheet" href="style.css?v=80">
   <link rel="stylesheet" href="mobile.css?v=7">
   <link rel="stylesheet" href="polish.css?v=1">
   <link rel="stylesheet" href="compartments.css?v=3">
@@ -264,7 +264,7 @@
   <link rel="stylesheet" href="redesign.css?v=1">
   <link rel="stylesheet" href="stock-market.css?v=1">
   <link rel="stylesheet" href="live-watch.css?v=5">
-  <link rel="stylesheet" href="mobile-shell.css?v=19">
+  <link rel="stylesheet" href="mobile-shell.css?v=20">
   <link rel="stylesheet" href="ost-mobile-scale.css?v=3">
   <link rel="stylesheet" href="ost-scroll-fix.css?v=1">
   <link rel="stylesheet" href="prediction-modal-redesign.css?v=1">
@@ -285,7 +285,7 @@
       <button type="button" class="wel-skip-x" id="welSkip" title="Skip and enter site" aria-label="Skip welcome and enter site">&times;</button>
       <div class="welcome-header">
         <span class="welcome-logo"><span class="logo-icon">&#9673;</span> OST</span>
-        <h1 id="welcomeTitle">Welcome &mdash; Choose Your Preferences</h1>
+        <h2 id="welcomeTitle" class="welcome-title">Welcome &mdash; Choose Your Preferences</h2>
         <p id="welcomeIntro">Select your language and primary currency to get started.</p>
       </div>
 
@@ -296,7 +296,7 @@
           <button type="button" class="wel-lang-btn wel-lang-active" data-lang="en"><span class="wel-flag">&#127482;&#127480;</span> English</button>
           <button type="button" class="wel-lang-btn" data-lang="es"><span class="wel-flag">&#127466;&#127480;</span> Espa&ntilde;ol</button>
           <button type="button" class="wel-lang-btn" data-lang="zh"><span class="wel-flag">&#127464;&#127475;</span> &#20013;&#25991;</button>
-          <button type="button" class="wel-lang-btn" data-lang="ru"><span class="wel-flag">&#127479;&#127482;</span> &#1056;&#1091;&#1089;&#1082;&#1080;&#1081;</button>
+          <button type="button" class="wel-lang-btn" data-lang="ru"><span class="wel-flag">&#127479;&#127482;</span> &#1056;&#1091;&#1089;&#1089;&#1082;&#1080;&#1081;</button>
           <button type="button" class="wel-lang-btn" data-lang="hi"><span class="wel-flag">&#127470;&#127475;</span> &#2361;&#2367;&#2344;&#2381;&#2342;&#2368;</button>
           <button type="button" class="wel-lang-btn" data-lang="ar"><span class="wel-flag">&#127480;&#127462;</span> &#1575;&#1604;&#1593;&#1585;&#1576;&#1610;&#1577;</button>
           <button type="button" class="wel-lang-btn" data-lang="pt"><span class="wel-flag">&#127463;&#127479;</span> Portugu&ecirc;s</button>
@@ -5837,12 +5837,12 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
         <div class="transmit-compose">
           <label class="transmit-field">
             <span class="transmit-field-label" data-i18n="transmit.message.label">Custom message</span>
-            <textarea id="transmitMessage" class="transmit-textarea" rows="4" data-i18n-placeholder="transmit.message.placeholder" placeholder="Describe the signal, dedication, coordinates, or mission note you want to send..." aria-label="transmit.message.placeholder"></textarea>
+            <textarea id="transmitMessage" aria-label="Message to transmit" class="transmit-textarea" rows="4" data-i18n-placeholder="transmit.message.placeholder" placeholder="Describe the signal, dedication, coordinates, or mission note you want to send..." aria-label="transmit.message.placeholder"></textarea>
           </label>
 
           <label class="transmit-field">
             <span class="transmit-field-label" data-i18n="transmit.dna.label">DNA / life-seed sequence</span>
-            <textarea id="transmitDna" class="transmit-textarea transmit-textarea-dna" rows="4" spellcheck="false" data-i18n-placeholder="transmit.dna.placeholder" placeholder="Optional: ACGT sequence, sample tag, or biological archive note" aria-label="transmit.dna.placeholder"></textarea>
+            <textarea id="transmitDna" aria-label="Optional DNA sequence (A, C, G, T)" class="transmit-textarea transmit-textarea-dna" rows="4" spellcheck="false" data-i18n-placeholder="transmit.dna.placeholder" placeholder="Optional: ACGT sequence, sample tag, or biological archive note" aria-label="transmit.dna.placeholder"></textarea>
           </label>
 
           <label class="transmit-dropzone" for="transmitFiles">
@@ -6166,7 +6166,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
     <script src="ost-live-stats.js?v=6"></script>
     <script src="ost-treasury-engine.js?v=2"></script>
     <script src="ost-engine-guard.js?v=1"></script>
-    <script src="ost-appbar.js?v=14"></script>
+    <script src="ost-appbar.js?v=15"></script>
     <script src="ost-ghost-brain.js?v=3" defer></script>
     <script src="ost-ghost-connect.js?v=1" defer></script>
   <script src="ost-world.js?v=6" defer></script>

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ost-pwa-cache-v453';
+const CACHE_NAME = 'ost-pwa-cache-v455';
 const RUNTIME_CACHE = 'ost-pwa-runtime-v253';
 const CACHE_PREFIX = 'ost-pwa-';
 
@@ -25,7 +25,7 @@ const PRECACHE_PATHS = [
   './ost-live-stats.js?v=6',
   './ost-treasury-engine.js?v=2',
   './ost-engine-guard.js?v=1',
-  './ost-appbar.js?v=14',
+  './ost-appbar.js?v=15',
   './ost-ghost-brain.js?v=3',
   './ost-ghost-connect.js?v=1',
   './ost-quantum-lab.js?v=1',
@@ -54,7 +54,7 @@ const PRECACHE_PATHS = [
   './ost-logo.svg',
   './icon-192.png',
   './icon-512.png',
-  './style.css?v=79',
+  './style.css?v=80',
   './mobile.css?v=7',
   './polish.css?v=1',
   './compartments.css?v=3',
@@ -69,7 +69,7 @@ const PRECACHE_PATHS = [
   './topup.css?v=4',
   './offline-vault.css?v=1',
   './stock-market.css?v=1',
-  './mobile-shell.css?v=19',
+  './mobile-shell.css?v=20',
   './ost-mobile-scale.css?v=3',
   './rpc-multiplexer.js?v=200',
   './ost-optimistic.js?v=7',

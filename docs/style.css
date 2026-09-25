@@ -8775,6 +8775,7 @@ select.sim-input { cursor: pointer; }
 .welcome-header { text-align: center; margin-bottom: 28px; }
 .welcome-header .welcome-logo { font-size: 1.4rem; font-weight: 700; color: var(--accent, #6d9fff); }
 .welcome-header h1,
+.welcome-header h2.welcome-title,
 .welcome-header h2 { font-size: 1.3rem; margin: 12px 0 6px; color: #fff; line-height: 1.3; font-weight: 700; }
 .welcome-header p { color: var(--text-muted, #aeb7c8); font-size: .88rem; }
 
@@ -9415,6 +9416,7 @@ select.sim-input { cursor: pointer; }
 
   .welcome-header { margin-bottom: 20px; }
   .welcome-header h1,
+.welcome-header h2.welcome-title,
   .welcome-header h2 { font-size: 1.16rem; }
   .welcome-lang-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

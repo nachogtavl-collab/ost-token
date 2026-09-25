@@ -139,7 +139,7 @@
         try { if (window.OST_COMPARTMENTS && window.OST_COMPARTMENTS.activate) window.OST_COMPARTMENTS.activate('home', false); } catch (_) {}
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } },
-    { key: 'markets', ico: '📈', lbl: 'Markets', go: function () { navTo('wallet', 'predict', ['#ostPredictMobile', '#predictionMarketBoard', '#live-bet', '#wallet-panel-predict']); try { if (window.OST_PREDICT_MOBILE && document.getElementById('ostPredictMobile')) window.OST_PREDICT_MOBILE.showBrowse(); } catch (_) {} } },
+    { key: 'markets', ico: '📈', lbl: 'Markets', go: function () { navTo('wallet', 'predict', ['#ostPredictMobile', '#predictionMarketBoard', '#live-bet', '#wallet-panel-predict']); try { if (window.OST_PREDICT_MOBILE && document.getElementById('ostPredictMobile')) window.OST_PREDICT_MOBILE.showBrowse(); } catch (_) {} setTimeout(function () { try { history.replaceState(null, '', '#markets'); } catch (_) {} }, 450); } },
     { key: 'games',   ico: '🎮', lbl: 'Games',   go: function () { navTo('games', null, ['#games']); } },
     { key: 'wallet',  ico: '👛', lbl: 'Wallet',  go: function () { navTo('wallet', 'access', ['#wallet .wallet-tabs', '#wallet']); } },
     { key: 'more',    ico: '⊕',  lbl: 'More',    go: null /* sheet toggle */ }
@@ -476,4 +476,27 @@
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { setTimeout(build, 1400); });
   else setTimeout(build, 1400);
+})();
+
+/* DEEP LINKS FOR PREDICTIONS. The prediction desk lives inside the Wallet section, so
+   compartments rewrote every visit to "#wallet" and "#live-bet" opened the top of the
+   wallet - a market link could not be shared or reloaded. #markets is the canonical
+   link; #live-bet / #predictions / #wallet-panel-predict are aliases. */
+(function () {
+  'use strict';
+  var ALIASES = { markets: 1, 'live-bet': 1, predictions: 1, 'wallet-panel-predict': 1 };
+  function hashName() { return String(location.hash || '').replace(/^#/, '').split('?')[0].split('/')[0]; }
+  function openPredictions() {
+    if (!ALIASES[hashName()]) return;
+    try { if (window.OST_COMPARTMENTS && OST_COMPARTMENTS.activate) OST_COMPARTMENTS.activate('wallet', false); } catch (_) {}
+    try { if (typeof window.setWalletPanel === 'function') window.setWalletPanel('predict'); } catch (_) {}
+    setTimeout(function () {
+      try { history.replaceState(null, '', '#markets'); } catch (_) {}
+      var el = document.getElementById('ostPredictMobile') || document.getElementById('wallet-panel-predict');
+      if (el && el.offsetParent !== null) el.scrollIntoView({ block: 'start' });
+    }, 120);
+  }
+  window.addEventListener('hashchange', openPredictions);
+  if (document.readyState === 'complete') setTimeout(openPredictions, 60);
+  else window.addEventListener('load', function () { setTimeout(openPredictions, 60); }, { once: true });
 })();
