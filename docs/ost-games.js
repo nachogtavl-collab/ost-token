@@ -1068,8 +1068,14 @@
         html += '<span class="mn-step' + cls + '">' + shortMult(m) + '<small>' + (betAmt * m).toFixed(1) + ' OST</small></span>';
       }
       ladder.innerHTML = html;
+      // Center the next step INSIDE the ladder strip only. scrollIntoView also
+      // scrolled the whole page, so this render (which runs at boot) dragged
+      // desktop visitors from the home hero down to the games section.
       var next = ladder.querySelector('.is-next');
-      if (next && next.scrollIntoView) next.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+      if (next && ladder.scrollWidth > ladder.clientWidth) {
+        var left = next.offsetLeft - ladder.offsetLeft - (ladder.clientWidth - next.offsetWidth) / 2;
+        try { ladder.scrollTo({ left: Math.max(0, left), behavior: 'smooth' }); } catch (_) { ladder.scrollLeft = Math.max(0, left); }
+      }
     }
 
     function updateMeta() {

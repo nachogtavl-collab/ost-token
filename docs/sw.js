@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ost-pwa-cache-v459';
+const CACHE_NAME = 'ost-pwa-cache-v460';
 const RUNTIME_CACHE = 'ost-pwa-runtime-v253';
 const CACHE_PREFIX = 'ost-pwa-';
 
@@ -163,7 +163,7 @@ const PRECACHE_PATHS = [
   './ost-card.js?v=8',
   './launchpad-engine.js?v=7',
   './swap-resilient.js?v=202',
-  './ost-games.js?v=31',
+  './ost-games.js?v=32',
   './code-academy.js?v=3',
   './i18n-runtime.js?v=4',
   './devnet-rescue.js?v=205',
