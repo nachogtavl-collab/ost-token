@@ -148,6 +148,10 @@
   // Tools formerly pinned as floating buttons. `need` selectors decide tile
   // visibility at sheet-open time, so tiles for absent modules disappear.
   var TOOLS = [
+    // Nexus command palette: every area, market and coin, or ask Ghost.
+    { ico: '🔎', lbl: 'Search', need: ['#nxUniverse'], run: function () {
+        if (window.OST_NEXUS && window.OST_NEXUS.palette) window.OST_NEXUS.palette();
+      } },
     { ico: '⚡', lbl: 'Parlay', need: ['#ostParlayDock'], run: function () {
         widgetsLive(true);
         if (window.OST_PARLAY && window.OST_PARLAY.open) window.OST_PARLAY.open();

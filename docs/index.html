@@ -300,6 +300,7 @@
   <link rel="stylesheet" href="predict-mobile.css?v=2">
   <link rel="stylesheet" href="ost-microfx.css?v=1">
   <link rel="stylesheet" href="ost-instant.css?v=1">
+  <link rel="stylesheet" href="ost-nexus.css?v=1">
   <!-- Not deferred on purpose: presses must be acknowledged from the first
        frame. It is ~2KB and only adds document-level listeners. -->
   <script src="ost-instant.js?v=1"></script>
@@ -446,6 +447,37 @@
           <span class="hero-free-badge" data-i18n="hero.free">&#128176; FREE FOREVER</span>
           <span class="hero-free-text" data-i18n="hero.freetext">Zero transaction fees. No hidden costs. Funded by donations &amp; investors.</span>
         </div>
+        <!-- OST Nexus: the living currency. Static skeleton (no layout shift); ost-nexus.js
+             fills it from real sources only - unknown values stay "—". -->
+        <div class="nx-live" id="nxLive">
+          <div class="nx-card nx-coin">
+            <div class="nx-coin__head">
+              <span class="nx-coin__sym">OST</span>
+              <span class="nx-tag" title="OST's price is a model: an FX-anchored index moved by real network activity and BTC mood. OST runs on Solana devnet and has no cash value yet.">model price</span>
+              <span class="nx-live-dot" id="nxOstDot" aria-hidden="true"></span>
+            </div>
+            <div class="nx-coin__row">
+              <span class="nx-coin__px" id="nxOstPx">&mdash;</span>
+              <span class="nx-chg" id="nxOstChg">&mdash;</span>
+            </div>
+            <canvas class="nx-spark" id="nxOstSpark" aria-hidden="true"></canvas>
+            <div class="nx-foot"><span id="nxOstHist">Collecting price history&hellip;</span><span id="nxOstAge"></span></div>
+          </div>
+          <div class="nx-side">
+            <div class="nx-card">
+              <div class="nx-card__title"><svg class="nx-ic" viewBox="0 0 24 24"><path d="M3 7h18v10H3z"/><path d="M16 12h2"/><path d="M3 10h18"/></svg>Your money</div>
+              <div class="nx-kv"><span class="k">OSTC wallet</span><span class="v" id="nxBalOstc">&mdash;</span></div>
+              <div class="nx-kv"><span class="k" title="OSTG is the play and trade token. 1 OSTG = 1 OST.">OSTG play</span><span class="v violet" id="nxBalOstg">&mdash;</span></div>
+              <button type="button" class="nx-connect" id="nxConnect">Connect wallet</button>
+            </div>
+            <div class="nx-card">
+              <div class="nx-card__title"><svg class="nx-ic" viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>Network &middot; 24h</div>
+              <div class="nx-kv"><span class="k">Active wallets</span><span class="v" id="nxStWallets">&mdash;</span></div>
+              <div class="nx-kv"><span class="k">Transactions</span><span class="v" id="nxStTx">&mdash;</span></div>
+              <div class="nx-kv"><span class="k">BTC live</span><span class="v gold" id="nxBtc">&mdash;</span></div>
+            </div>
+          </div>
+        </div>
         <!-- Phone command center: static so the first paint already has it (it used to be
              injected by mobile-shell.js after paint, shoving the hero down: CLS 0.15).
              Hidden outside the mobile media query by mobile-shell.css; wired by mobile-shell.js. -->
@@ -503,6 +535,30 @@
           <div class="satellite sat-2"><div class="sat-body">&#128752;</div><div class="sat-trail"></div></div>
           <div class="satellite sat-3"><div class="sat-body">&#128752;</div><div class="sat-trail"></div></div>
         </div>
+      </div>
+    </div>
+
+    <!-- OST Nexus: the universe. Every area one tap away; live lines filled by ost-nexus.js. -->
+    <div class="nx-universe" id="nxUniverse">
+      <div class="nx-uni-head">
+        <h2>The OST universe</h2>
+        <button type="button" class="nx-kbd-btn" data-nx-palette><svg class="nx-ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><span>Search markets, games, coins&hellip;</span><kbd>Ctrl K</kbd></button>
+      </div>
+      <div class="nx-pulse" id="nxPulse" aria-label="Live network activity">
+        <span class="nx-pulse__label"><span class="nx-live-dot is-live" aria-hidden="true"></span>Pulse</span>
+        <div class="nx-pulse__track"><div class="nx-pulse__list" id="nxPulseList"><span class="nx-pulse__empty">Listening to the network&hellip;</span></div></div>
+      </div>
+      <div class="nx-grid">
+        <button type="button" class="nx-tile" data-nx-go="markets" style="--tile-c:#7fd8ff"><span class="nx-tile__ic"><svg class="nx-ic" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg></span><span class="nx-tile__t">Prediction markets</span><span class="nx-tile__d">Trade outcomes on crypto, politics, sports and more.</span><span class="nx-tile__live" data-nx-live="markets"></span></button>
+        <button type="button" class="nx-tile" data-nx-go="stock-market" style="--tile-c:#60a5fa"><span class="nx-tile__ic"><svg class="nx-ic" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span><span class="nx-tile__t">Market mirror</span><span class="nx-tile__d">Real-world markets mirrored in OST.</span><span class="nx-tile__live" data-nx-live="mirror"></span></button>
+        <button type="button" class="nx-tile" data-nx-go="games" style="--tile-c:#a78bfa"><span class="nx-tile__ic"><svg class="nx-ic" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="11" rx="4"/><path d="M8 11v3M6.5 12.5h3M15 12h.01M17.5 13.5h.01"/></svg></span><span class="nx-tile__t">Fair games</span><span class="nx-tile__d">Provably fair crash, dice, plinko and duels.</span><span class="nx-tile__live" data-nx-live="games"></span></button>
+        <button type="button" class="nx-tile" data-nx-go="launchpad" style="--tile-c:#f5c468"><span class="nx-tile__ic"><svg class="nx-ic" viewBox="0 0 24 24"><path d="M12 2c3 3 4 7 3 11l-3 3-3-3C8 9 9 5 12 2z"/><path d="M9 13l-4 1 2 4M15 13l4 1-2 4M10 20h4"/></svg></span><span class="nx-tile__t">Launchpad</span><span class="nx-tile__d">Launch a coin on a bonding curve in seconds.</span><span class="nx-tile__live" data-nx-live="launchpad"></span></button>
+        <button type="button" class="nx-tile" data-nx-go="mesh" style="--tile-c:#34d399"><span class="nx-tile__ic"><svg class="nx-ic" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="7" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M8.2 7l7.4 0M7.3 8.2l3.6 7.6M16.8 9.2l-3.6 6.6"/></svg></span><span class="nx-tile__t">Mesh</span><span class="nx-tile__d">Chats, stories, groups and calls between wallets.</span><span class="nx-tile__live" data-nx-live="mesh"></span></button>
+        <button type="button" class="nx-tile" data-nx-go="ghost" style="--tile-c:#c4b5fd"><span class="nx-tile__ic"><svg class="nx-ic" viewBox="0 0 24 24"><path d="M5 20V11a7 7 0 0114 0v9l-2.5-2-2.3 2-2.2-2-2.2 2-2.3-2z"/><path d="M9.5 11h.01M14.5 11h.01"/></svg></span><span class="nx-tile__t">Ghost AI</span><span class="nx-tile__d">Your companion. Knows your bets and answers anything.</span><span class="nx-tile__live" data-nx-live="ghost"></span></button>
+        <button type="button" class="nx-tile" data-nx-go="academy" style="--tile-c:#22d3ee"><span class="nx-tile__ic"><svg class="nx-ic" viewBox="0 0 24 24"><path d="M8 9l-4 3 4 3M16 9l4 3-4 3M13.5 6l-3 12"/></svg></span><span class="nx-tile__t">Code Academy</span><span class="nx-tile__d">Learn to code and earn while you learn.</span><span class="nx-tile__live" data-nx-live="academy"></span></button>
+        <button type="button" class="nx-tile" data-nx-go="commerce" style="--tile-c:#fb923c"><span class="nx-tile__ic"><svg class="nx-ic" viewBox="0 0 24 24"><path d="M3 4h2l2.4 11h11L21 7H6.2"/><circle cx="9" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg></span><span class="nx-tile__t">Shop</span><span class="nx-tile__d">Goods, gift cards and fuel, paid in OST.</span><span class="nx-tile__live" data-nx-live="commerce"></span></button>
+        <button type="button" class="nx-tile" data-nx-go="world" style="--tile-c:#38bdf8"><span class="nx-tile__ic"><svg class="nx-ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/></svg></span><span class="nx-tile__t">OST World</span><span class="nx-tile__d">Browse the open, content-addressed web.</span><span class="nx-tile__live" data-nx-live="world"></span></button>
+        <button type="button" class="nx-tile" data-nx-go="new-here" style="--tile-c:#34d399"><span class="nx-tile__ic"><svg class="nx-ic" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 17v3h16v-3"/></svg></span><span class="nx-tile__t">Get OST</span><span class="nx-tile__d">Faucet, top-up and your first balance.</span><span class="nx-tile__live" data-nx-live="faucet"></span></button>
       </div>
     </div>
 
@@ -6212,7 +6268,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
     <script src="ost-live-stats.js?v=6"></script>
     <script src="ost-treasury-engine.js?v=2"></script>
     <script src="ost-engine-guard.js?v=1"></script>
-    <script src="ost-appbar.js?v=15"></script>
+    <script src="ost-appbar.js?v=16"></script>
     <script src="ost-desktop-nav.js?v=2" defer></script>
     <script src="ost-ghost-brain.js?v=3" defer></script>
     <script src="ost-ghost-connect.js?v=1" defer></script>
@@ -6279,6 +6335,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="redesign.js?v=1" defer></script>
   <script src="mainnet-audit.js?v=1" defer></script>
   <script src="ost-microfx.js?v=2" defer></script>
+<script src="ost-nexus.js?v=1" defer></script>
   <script>
     (function () {
       var deferredPrompt = null;
