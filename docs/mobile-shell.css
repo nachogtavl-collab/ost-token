@@ -65,7 +65,7 @@
   body {
     width: 100%;
     min-width: 0 !important;
-    overflow-x: hidden !important;
+    overflow-x: clip !important;
     font-size: 16px;
     line-height: 1.58;
     background:
@@ -172,10 +172,11 @@
   }
 
 
-  /* Mobile density pass for dense OST tools. */
+  /* Mobile density pass for dense OST tools. (overflow-x: clip, not hidden - hidden
+     turns body into the sticky container and nothing ever sticks; see bottom of file) */
   html,
   body {
-    overflow-x: hidden !important;
+    overflow-x: clip !important;
   }
 
   main,
@@ -1047,4 +1048,40 @@
   /* Games: the one-line intro above the lanes costs a fifth of the first screen on a phone. */
   body.ost-mobile-shell #games > .container > .section-sub { display: none !important; }
   body.ost-mobile-shell #ostGames .ostg-balance-card { padding: 12px !important; gap: 8px !important; }
+}
+
+/* ---- WALLET + GAMES ON PHONES (2026-09-23) ------------------------------
+   Wallet tab landed on ~1,000px of marketing (command hero + devnet pulse) and the
+   Access panel opened with the onboarding journey - balances were 2 screens down.
+   Phones: no hero, tabs first, and the dashboard shows the wallet (address +
+   balances) before the journey / intelligence blocks. */
+@media (max-width: 820px), (pointer: coarse) and (max-width: 1024px) {
+  body.ost-mobile-shell #wallet > .container > .section-title,
+  body.ost-mobile-shell #wallet > .container > .section-subtitle,
+  body.ost-mobile-shell #wallet .wallet-command-hero { display: none !important; }
+  body.ost-mobile-shell #wallet .wallet-tabs { position: sticky; top: 58px; z-index: 15; background: rgba(5, 9, 18, .94); backdrop-filter: blur(10px); }
+  body.ost-mobile-shell #walletDashboard { display: flex !important; flex-direction: column !important; }
+  body.ost-mobile-shell #walletDashboard > * { order: 5; }
+  body.ost-mobile-shell #walletDashboard > #wdConnected,
+  body.ost-mobile-shell #walletDashboard > #wdNotConnected { order: 1; }
+  body.ost-mobile-shell #walletDashboard > #wdJourney { order: 2; }
+  body.ost-mobile-shell #walletDashboard > #wdIntelligence { order: 3; }
+  /* The sticky game strip never stuck: #ostGames is overflow:hidden (a sticky
+     element is clipped to its nearest scrolling/clipping ancestor). */
+  body.ost-mobile-shell #ostGames { overflow: visible !important; }
+}
+
+@media (max-width: 820px), (pointer: coarse) and (max-width: 1024px) {
+  /* `overflow-x:hidden` on html/body makes BODY the scroll container that every
+     position:sticky element is measured against, so nothing ever stuck (game strip,
+     wallet tabs). `clip` clips the same way without creating a scroll container. */
+  html, body.ost-mobile-shell { overflow-x: clip !important; overflow-y: visible !important; }
+  /* Wallet profile card: the global `min-width:0 + overflow-wrap:anywhere` shell rule
+     laid the address out one character per line. Address on one line, buttons below. */
+  body.ost-mobile-shell .wd-profile { flex-wrap: wrap !important; gap: 10px 12px !important; padding: 14px !important; }
+  body.ost-mobile-shell .wd-profile .wd-info { flex: 1 1 calc(100% - 64px) !important; min-width: 0 !important; }   /* fills row 1 next to the avatar; buttons wrap to row 2 */
+  body.ost-mobile-shell .wd-profile .wd-address,
+  body.ost-mobile-shell .wd-profile .wd-network { white-space: nowrap !important; overflow-wrap: normal !important; word-break: normal !important; overflow: hidden !important; text-overflow: ellipsis !important; display: block !important; }
+  body.ost-mobile-shell .wd-profile .wd-address { font-size: .95rem !important; }
+  body.ost-mobile-shell .wd-profile > .btn { flex: 1 1 calc(50% - 6px) !important; white-space: nowrap !important; overflow-wrap: normal !important; }
 }

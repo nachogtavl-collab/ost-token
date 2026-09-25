@@ -3329,7 +3329,11 @@
     try {
       var list = readPredictionOrderRecords();
       for (var i = 0; i < list.length; i++) {
-        if (list[i] && list[i].reference === ref) {
+        // Match ANY of an order's identities. Matching only `reference` meant an order
+        // keyed by signature / server position id was never patched - a sold position
+        // came straight back on screen (the patch silently returned false).
+        var o = list[i];
+        if (o && (o.reference === ref || o.signature === ref || o.sig === ref || o.id === ref || o.serverPositionId === ref)) {
           Object.assign(list[i], patch);
           writePredictionOrderRecords(list);
           return true;

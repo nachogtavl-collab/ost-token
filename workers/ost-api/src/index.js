@@ -17,7 +17,7 @@ import { verifyWalletAuth, isProtectedPath, issueSession } from './wallet-auth.j
 async function walletAuthGuard(request, env, path, method) {
   if (!isProtectedPath(path, method)) return { request, authTag: '' };
   const internalKey = env && env.INTERNAL_MUTATION_KEY;
-  if (internalKey && request.headers.get('x-ost-internal, x-mesh-addr, x-mesh-ts, x-mesh-nonce, x-mesh-sig') === internalKey) return { request, authTag: 'internal' };
+  if (internalKey && request.headers.get('x-ost-internal') === internalKey) return { request, authTag: 'internal' };
   let bodyText = '';
   try { bodyText = await request.text(); } catch (_) { bodyText = ''; }
   const result = await verifyWalletAuth(request, env, bodyText, path, method);
@@ -2566,7 +2566,7 @@ export class FaucetGate {
         const memo = JSON.stringify({ k: 'ost-new-here', kind: pending.kind, amount, wallet, reservation: reservationId, t: now });
         const pr = await pg.fetch('https://payout-gate/wallet/payout', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-ost-internal, x-mesh-addr, x-mesh-ts, x-mesh-nonce, x-mesh-sig': this.env.INTERNAL_MUTATION_KEY },
+          headers: { 'Content-Type': 'application/json', 'x-ost-internal': this.env.INTERNAL_MUTATION_KEY },
           body: JSON.stringify({ wallet, amountOst: amount, memo, payoutId })
         });
         const pj = await pr.json().catch(() => null);
@@ -3416,7 +3416,7 @@ export default {
         const pl = env.PLAY_LEDGER.get(env.PLAY_LEDGER.idFromName('global'));
         return await pl.fetch('https://play-ledger/play/loan-' + (op === 'draw' ? 'draw' : 'repay'), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-ost-internal, x-mesh-addr, x-mesh-ts, x-mesh-nonce, x-mesh-sig': env.INTERNAL_MUTATION_KEY },
+          headers: { 'Content-Type': 'application/json', 'x-ost-internal': env.INTERNAL_MUTATION_KEY },
           body: await request.text()
         });
       }
@@ -3509,11 +3509,17 @@ export default {
             // The three pricing reads are independent — run them together (was ~3
             // sequential round-trips on every buy AND sell).
             const [canon, live, rec] = await Promise.all([
-              getCanonicalBtcRound(env, { refresh: false }),
+              getCanonicalBtcRound(env, { refresh: true }),   // a trade must price on a FRESH tick
               memGet('btc:latest') || kvGet(env, 'btc:latest', null),
               kvGet(env, 'round:' + openAt, null)
             ]);
-            const livePrice = Number(live && (live.price || live.p || live.value));
+            // LIVE PRICE = the canonical round's (the same NativeMarketHub data the desk
+            // shows, refreshed every 5s). `btc:latest` lives in another isolate's memory and
+            // a throttled KV copy up to 30 min old - trades were being priced on THAT, so
+            // the fill/cash-out didn't match what the user saw. Nothing <20s old -> refuse.
+            const canonLiveOk = canon && Number(canon.openAt) === openAt && Number(canon.livePrice) > 1000 && Date.now() - Number(canon.livePriceTs || canon.updatedAt || 0) < 20000;
+            const kvLiveOk = live && Number(live.p || live.price) > 1000 && Date.now() - Number(live.t || live.ts || 0) < 20000;
+            const livePrice = canonLiveOk ? Number(canon.livePrice) : (kvLiveOk ? Number(live.p || live.price) : NaN);
             // Only trust canon if it is THIS round; otherwise fall back to KV.
             const canonOpen = canon && Number(canon.openAt) === openAt ? Number(canon.openPrice) : NaN;
             const canonBeat = canon && Number(canon.openAt) === openAt ? Number(canon.priceToBeat) : NaN;
@@ -3554,11 +3560,17 @@ export default {
             // The three pricing reads are independent — run them together (was ~3
             // sequential round-trips on every buy AND sell).
             const [canon, live, rec] = await Promise.all([
-              getCanonicalBtcRound(env, { refresh: false }),
+              getCanonicalBtcRound(env, { refresh: true }),   // a trade must price on a FRESH tick
               memGet('btc:latest') || kvGet(env, 'btc:latest', null),
               kvGet(env, 'round:' + openAt, null)
             ]);
-            const livePrice = Number(live && (live.price || live.p || live.value));
+            // LIVE PRICE = the canonical round's (the same NativeMarketHub data the desk
+            // shows, refreshed every 5s). `btc:latest` lives in another isolate's memory and
+            // a throttled KV copy up to 30 min old - trades were being priced on THAT, so
+            // the fill/cash-out didn't match what the user saw. Nothing <20s old -> refuse.
+            const canonLiveOk = canon && Number(canon.openAt) === openAt && Number(canon.livePrice) > 1000 && Date.now() - Number(canon.livePriceTs || canon.updatedAt || 0) < 20000;
+            const kvLiveOk = live && Number(live.p || live.price) > 1000 && Date.now() - Number(live.t || live.ts || 0) < 20000;
+            const livePrice = canonLiveOk ? Number(canon.livePrice) : (kvLiveOk ? Number(live.p || live.price) : NaN);
             const canonOpen = canon && Number(canon.openAt) === openAt ? Number(canon.openPrice) : NaN;
             const canonBeat = canon && Number(canon.openAt) === openAt ? Number(canon.priceToBeat) : NaN;
             const openPrice = Number.isFinite(canonOpen) && canonOpen > 0 ? canonOpen : Number(rec && rec.openPrice);

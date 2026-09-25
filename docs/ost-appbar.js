@@ -141,7 +141,7 @@
       } },
     { key: 'markets', ico: '📈', lbl: 'Markets', go: function () { navTo('wallet', 'predict', ['#ostPredictMobile', '#predictionMarketBoard', '#live-bet', '#wallet-panel-predict']); try { if (window.OST_PREDICT_MOBILE && document.getElementById('ostPredictMobile')) window.OST_PREDICT_MOBILE.showBrowse(); } catch (_) {} } },
     { key: 'games',   ico: '🎮', lbl: 'Games',   go: function () { navTo('games', null, ['#games']); } },
-    { key: 'wallet',  ico: '👛', lbl: 'Wallet',  go: function () { navTo('wallet', 'access', ['#wallet']); } },
+    { key: 'wallet',  ico: '👛', lbl: 'Wallet',  go: function () { navTo('wallet', 'access', ['#wallet .wallet-tabs', '#wallet']); } },
     { key: 'more',    ico: '⊕',  lbl: 'More',    go: null /* sheet toggle */ }
   ];
 

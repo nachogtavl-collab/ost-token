@@ -869,7 +869,7 @@
   function patchOrder(o, patch) {
     try {
       var ref = o.reference || o.signature || o.sig || o.id;
-      if (window.OST_PREDICTION_API && OST_PREDICTION_API.patchOrderByRef && ref) { OST_PREDICTION_API.patchOrderByRef(ref, patch); return; }
+      if (window.OST_PREDICTION_API && OST_PREDICTION_API.patchOrderByRef && ref && OST_PREDICTION_API.patchOrderByRef(ref, patch) !== false) return;   // false = not found: record it instead of pretending
       if (window.OST_PREDICTION_API && OST_PREDICTION_API.recordOrder) OST_PREDICTION_API.recordOrder(Object.assign({}, o, patch));
     } catch (_) {}
   }
@@ -1107,6 +1107,7 @@
         if (!r || r.ok === false) throw new Error((r && (r.note || r.error)) || 'cashout_failed');
         patchOrder(order, { status: 'sold', cashedOut: true, cashoutOst: Number(r.payout) || 0, cashoutAt: Date.now(), cashoutKind: 'ostg-native-sell' });
         if (_balHold) _balHold.until = Date.now() + 4000;
+        myPos = null; renderPosition();
         toast('Sold — ' + (Number(r.payout) || 0).toFixed(2) + ' OSTG back to your balance.');
         closeSheet();
         setTimeout(function () { refreshBalance(); refreshPosition(); loadTrades(); }, 600);
