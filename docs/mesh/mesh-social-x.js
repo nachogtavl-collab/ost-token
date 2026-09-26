@@ -271,7 +271,10 @@
     if (!fab) return;
     var meshOpen = document.body.classList.contains('ost-mesh-scroll-lock');
     var stories = document.querySelector('[data-msx-section="stories"].is-active');
-    var want = (meshOpen && stories) ? 'grid' : 'none';
+    // mesh-mobile shows one view at a time; stories live on Feed only.
+    var shell = document.querySelector('#ost-mesh-pavilion .ost-mesh-shell');
+    var view = shell && shell.getAttribute('data-view');
+    var want = (meshOpen && stories && (!view || view === 'feed')) ? 'grid' : 'none';
     if (fab.style.display !== want) fab.style.display = want;
   }
 
@@ -899,7 +902,8 @@
     }, 5 * 60 * 1000);
 
     // Re-render bars when Mesh opens (so FAB shows once mesh visible).
-    document.addEventListener('click', syncStoryFab, true);
+    // Capture phase runs BEFORE the click switches tabs/views: re-check after it.
+    document.addEventListener('click', function () { setTimeout(syncStoryFab, 0); }, true);
 
     window.OST_MESH_STORIES = {
       open: openStoryEditor,

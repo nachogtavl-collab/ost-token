@@ -456,6 +456,9 @@
       '.ow-status{padding:7px 14px;font-size:11.5px;color:#94a3b8;border-bottom:1px solid rgba(148,163,184,.1);}',
       '.ow-status.is-warn{color:#fca5a5;}.ow-status.is-load{color:#7dd3fc;}.ow-status.is-ok{color:#6ee7b7;}',
       '.ow-frame{flex:1;border:none;width:100%;background:#fff;}',
+      // Empty stage: dark, with a hint, instead of a blank white wall. Loaded pages
+      // keep the white background most sites assume.
+      '.ow-frame:not([src]),.ow-frame[src="about:blank"]{background:radial-gradient(600px 300px at 50% 40%,rgba(0,212,255,.08),transparent 70%),#07101c url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27460%27 height=%2790%27%3E%3Ctext x=%2750%25%27 y=%2740%27 fill=%27%237fa8c4%27 font-family=%27system-ui,sans-serif%27 font-size=%2716%27 text-anchor=%27middle%27%3EPick a shortcut above or paste a link to open it here%3C/text%3E%3Ctext x=%2750%25%27 y=%2766%27 fill=%27%234b6478%27 font-family=%27system-ui,sans-serif%27 font-size=%2713%27 text-anchor=%27middle%27%3EYouTube, X, video/audio files and IPFS play in place%3C/text%3E%3C/svg%3E") center 38% no-repeat;}',
       '.ow-media-frame{flex:1;border:none;width:100%;background:#000;}',
       '.ow-native{flex:1;display:flex;align-items:center;justify-content:center;background:#000;padding:12px;}',
       '.ow-media{max-width:100%;max-height:100%;width:100%;border-radius:12px;background:#000;}',

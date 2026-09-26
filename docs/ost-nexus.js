@@ -140,8 +140,16 @@
         return;
       }
       case 'mesh':
-        if (window.OST_MESH && OST_MESH.open) return OST_MESH.open();
-        flushLazy(); waitFor(function () { return window.OST_MESH && OST_MESH.open; }, function () { OST_MESH.open(); });
+        // Always flush: mesh.js can be loaded while mesh-mobile.js (the social
+        // app: feed/chats/pay/play/profile) is still queued, which left people on
+        // the raw keys-and-fingerprints pavilion.
+        flushLazy();
+        waitFor(function () { return window.OST_MESH && OST_MESH.open; }, function () {
+          OST_MESH.open();
+          waitFor(function () { return window.OST_MESH_MOBILE && OST_MESH_MOBILE.init; }, function () {
+            try { OST_MESH_MOBILE.init(); if (arg) OST_MESH_MOBILE.setView(arg); } catch (_) {}
+          }, 10000);
+        });
         return;
       case 'ghost':
         waitFor(function () { return window.OST_GHOST_COMPANION && OST_GHOST_COMPANION.open; }, function () {
@@ -683,10 +691,37 @@
   }
 
   /* ======================================================================
+   * Broken product images → a clean brand-initial tile (hotlinked retailer
+   * images get 403/ORB-blocked and left raw alt text inside the cards).
+   * ==================================================================== */
+  var IMG_SEL = '.store-item img, img.item-img, img.creator-img, img.lp-card-img, img.lp-ticker-img';
+  function replaceBroken(img) {
+    if (!img || img.__nxFixed || !img.parentNode) return;
+    img.__nxFixed = true;
+    var label = (img.closest('[data-name]') && img.closest('[data-name]').getAttribute('data-name')) || img.alt || '?';
+    var tile = document.createElement('span');
+    tile.className = (img.className ? img.className + ' ' : '') + 'nx-img-fallback';
+    tile.setAttribute('role', 'img');
+    tile.setAttribute('aria-label', label);
+    tile.textContent = String(label).trim().charAt(0).toUpperCase() || '?';
+    var r = img.getBoundingClientRect();
+    if (r.width) { tile.style.width = r.width + 'px'; tile.style.height = (r.height || r.width) + 'px'; }
+    img.parentNode.replaceChild(tile, img);
+  }
+  function sweepImages() {
+    document.querySelectorAll(IMG_SEL).forEach(function (img) { if (img.complete && !img.naturalWidth && img.getAttribute('src')) replaceBroken(img); });
+  }
+  document.addEventListener('error', function (e) {
+    var t = e.target; if (t && t.tagName === 'IMG' && t.matches && t.matches(IMG_SEL)) replaceBroken(t);
+  }, true);
+
+  /* ======================================================================
    * Boot
    * ==================================================================== */
   function boot() {
     wireTiles();
+    sweepImages();
+    window.addEventListener('load', function () { setTimeout(sweepImages, 500); }, { once: true });
 
     // Price
     try { if (window.OST && OST.onPrice) OST.onPrice(function () { renderPrice(); }); } catch (_) {}

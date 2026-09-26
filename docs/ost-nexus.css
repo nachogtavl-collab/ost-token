@@ -34,6 +34,14 @@ body.ost-mesh-scroll-lock .nx-dock { display: none !important; }
 body[style*="overflow: hidden"] .nx-dock,
 body[style*="overflow: hidden"] .ost-dock { opacity: 0 !important; pointer-events: none !important; }
 
+/* Stand-in for a product/coin image that failed to load (see ost-nexus.js). */
+.nx-img-fallback {
+  display: grid !important; place-items: center; flex: 0 0 auto;
+  border-radius: 12px; font-weight: 900; font-size: 26px; color: #06121f;
+  background: linear-gradient(135deg, #7fd8ff, #a78bfa);
+  min-width: 48px; min-height: 48px; object-fit: unset;
+}
+
 /* ---------------------------------------------------------------- live panel */
 .nx-live {
   display: grid;
@@ -244,7 +252,8 @@ body[style*="overflow: hidden"] .ost-dock { opacity: 0 !important; pointer-event
 
 /* ---------------------------------------------------------------- dock (desktop) */
 .nx-dock {
-  position: fixed; left: 50%; bottom: 16px; z-index: 1000200;
+  /* Below app windows (Academy 10001, World, modals) so it never covers their controls. */
+  position: fixed; left: 50%; bottom: 16px; z-index: 9500;
   transform: translate(-50%, 140%); transition: transform .35s cubic-bezier(.2, .8, .2, 1);
   display: flex; align-items: center; gap: 6px; padding: 6px;
   border-radius: 18px; background: rgba(8, 13, 26, .82); border: 1px solid var(--nx-line-2);
