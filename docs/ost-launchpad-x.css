@@ -1,0 +1,103 @@
+/* ==========================================================================
+ * OST Launchpad X — pump.fun-grade board. Pairs with ost-launchpad-x.js.
+ *   · King-of-the-Hill spotlight replaces the marketing hero
+ *   · segmented Create / Trending / Leaderboard bar (the .lp-tab styles were missing)
+ *   · board opens first; create is one tap away
+ * ========================================================================== */
+#launchpad .lp-hero-shell,
+#launchpad #lpStatsRow { display: none !important; }   /* the spotlight shows these live */
+
+.lpx-spot {
+  display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px;
+  margin: 0 0 18px;
+}
+.lpx-card {
+  position: relative; border-radius: 20px; overflow: hidden;
+  border: 1px solid rgba(0, 255, 136, .16);
+  background: radial-gradient(520px 260px at 0% 0%, rgba(0, 255, 136, .10), transparent 60%),
+              linear-gradient(160deg, #0d1a17, #080d12);
+  padding: 18px;
+}
+.lpx-king { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 18px; align-items: start; }
+.lpx-crown {
+  position: absolute; top: 14px; right: 14px; display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+  color: #fde68a; background: rgba(250, 204, 21, .12); border: 1px solid rgba(250, 204, 21, .32);
+  padding: 4px 10px; border-radius: 999px;
+}
+.lpx-img {
+  width: 132px; height: 132px; border-radius: 18px; object-fit: cover; display: grid; place-items: center;
+  background: linear-gradient(135deg, #00ff88, #00b4ff); color: #04140c; font-size: 52px; font-weight: 900;
+  box-shadow: 0 16px 40px rgba(0, 255, 136, .18); overflow: hidden;
+}
+.lpx-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.lpx-name { font-size: 24px; font-weight: 900; letter-spacing: -.02em; color: #eafff4; line-height: 1.1; margin: 2px 0 2px; padding-right: 150px; }
+.lpx-sym { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-weight: 800; color: #00ff88; font-size: 14px; }
+.lpx-by { font-size: 12px; color: #7f9c90; margin-top: 4px; }
+.lpx-desc { font-size: 13px; color: #a9c2b7; margin: 8px 0 12px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.lpx-kv { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 12px; }
+.lpx-kv div { display: flex; flex-direction: column; }
+.lpx-kv span { font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #6b8a7d; }
+.lpx-kv b { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 17px; color: #eafff4; font-variant-numeric: tabular-nums; }
+.lpx-curve { margin: 2px 0 14px; }
+.lpx-curve-track { height: 12px; border-radius: 999px; background: rgba(255, 255, 255, .06); overflow: hidden; }
+.lpx-curve-fill { height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, #00ff88, #facc15); transition: width 1s cubic-bezier(.2, .8, .2, 1); min-width: 4px; }
+.lpx-curve-lbl { display: flex; justify-content: space-between; font-size: 11.5px; color: #7f9c90; margin-top: 6px; }
+.lpx-curve-lbl b { color: #eafff4; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+.lpx-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.lpx-btn {
+  border: 0; border-radius: 12px; padding: 11px 18px; font: inherit; font-weight: 800; font-size: 14px; cursor: pointer;
+  background: linear-gradient(135deg, #00ff88, #22d3ee); color: #04140c; transition: transform .12s, filter .12s;
+}
+.lpx-btn:hover { filter: brightness(1.08); }
+.lpx-btn:active { transform: scale(.97); }
+.lpx-btn.ghost { background: rgba(255, 255, 255, .05); color: #d8f5e8; border: 1px solid rgba(0, 255, 136, .22); }
+
+.lpx-side { display: flex; flex-direction: column; gap: 12px; }
+.lpx-h { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #6b8a7d; margin-bottom: 8px; }
+.lpx-h .d { width: 7px; height: 7px; border-radius: 50%; background: #00ff88; box-shadow: 0 0 8px #00ff88; }
+.lpx-list { display: flex; flex-direction: column; }
+.lpx-row { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 4px; border-radius: 10px; cursor: pointer; }
+.lpx-row:hover { background: rgba(0, 255, 136, .06); }
+.lpx-row .i { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; font-weight: 900; color: #04140c; background: linear-gradient(135deg, #00ff88, #00b4ff); overflow: hidden; }
+.lpx-row .i img { width: 100%; height: 100%; object-fit: cover; }
+.lpx-row .n { min-width: 0; }
+.lpx-row .n b { display: block; font-size: 13px; color: #eafff4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lpx-row .n small { font-size: 11px; color: #6b8a7d; }
+.lpx-row .m { text-align: right; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12px; color: #d8f5e8; }
+.lpx-row .m small { display: block; font-size: 10.5px; color: #6b8a7d; }
+.lpx-tag { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; padding: 1px 6px; border-radius: 5px; margin-left: 6px; color: #fcd34d; background: rgba(250, 204, 21, .1); vertical-align: 1px; }
+.lpx-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.lpx-stat { border-radius: 12px; background: rgba(255, 255, 255, .03); border: 1px solid rgba(0, 255, 136, .1); padding: 9px 10px; }
+.lpx-stat span { display: block; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #6b8a7d; }
+.lpx-stat b { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 16px; color: #eafff4; }
+.lpx-empty { font-size: 13px; color: #7f9c90; padding: 8px 4px; line-height: 1.5; }
+
+/* ---------------------------------------------------------------- tab bar */
+#launchpad .lp-topbar {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 10px 12px; border-radius: 16px; margin-bottom: 12px;
+  background: rgba(8, 14, 18, .8); border: 1px solid rgba(0, 255, 136, .12);
+}
+#launchpad .lp-topbar-tabs { display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: rgba(255, 255, 255, .04); }
+#launchpad .lp-tab {
+  appearance: none; border: 0; background: none; color: #8aa89b; font: inherit; font-size: 13.5px; font-weight: 800;
+  padding: 8px 16px; border-radius: 9px; cursor: pointer; transition: background .15s, color .15s;
+}
+#launchpad .lp-tab:hover { color: #eafff4; }
+#launchpad .lp-tab.lp-tab-active { background: linear-gradient(135deg, #00ff88, #22d3ee); color: #04140c; }
+#launchpad .lp-topbar-stat { margin-left: auto; }
+
+@media (max-width: 900px) {
+  .lpx-spot { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .lpx-king { grid-template-columns: 1fr; }
+  .lpx-img { width: 96px; height: 96px; font-size: 40px; }
+  .lpx-name { padding-right: 0; font-size: 21px; }
+  .lpx-crown { position: static; margin-bottom: 10px; width: max-content; }
+  #launchpad .lp-topbar-tabs { width: 100%; }
+  #launchpad .lp-tab { flex: 1 1 0; padding: 9px 6px; }
+  #launchpad .lp-topbar-stat { margin-left: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .lpx-curve-fill { transition: none; } }

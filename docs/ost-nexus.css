@@ -29,6 +29,10 @@
 #home #heroTicker,
 html body #ostMobileHome.ost-mobile-home { display: none !important; }
 body.ost-mesh-scroll-lock .nx-dock { display: none !important; }
+/* Any modal that locks page scroll (coin detail, fuel, faucet, map…) sets
+   body{overflow:hidden} inline: the dock and the section rail step aside. */
+body[style*="overflow: hidden"] .nx-dock,
+body[style*="overflow: hidden"] .ost-dock { opacity: 0 !important; pointer-events: none !important; }
 
 /* ---------------------------------------------------------------- live panel */
 .nx-live {

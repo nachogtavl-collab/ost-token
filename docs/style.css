@@ -71,8 +71,12 @@ input, select, textarea { font-family: inherit; font-size: 16px; }
 @keyframes gradient-shift { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
 code { background: var(--surface); padding: 2px 8px; border-radius: 6px; font-size: .9em; color: var(--accent); }
 
-/* --- GLOBAL 3D PERSPECTIVE --- */
-.section { perspective: 1200px; }
+/* --- GLOBAL 3D PERSPECTIVE: removed ---
+   `.section { perspective: 1200px }` made EVERY section the containing block for
+   its position:fixed descendants, so on desktop each in-section modal (coin
+   detail, map, fuel detail, faucet modals, vault scanner, market drawer) was
+   positioned against a section thousands of px tall — off-screen, behind a scrim.
+   3D pieces set their own perspective (tilt cards inline, .gc2-card-3d-wrap). */
 
 /* --- ENHANCED SCROLL REVEAL --- */
 .sr {

@@ -507,7 +507,19 @@
     return banner;
   }
 
+  // Writes only when the text really changes. A MutationObserver on the detail
+  // overlay calls this; unconditionally re-setting textContent/innerHTML is itself
+  // a mutation, so the old version re-triggered itself forever and froze the page
+  // the moment any coin's detail opened.
+  function setText(el, t) { if (el && el.textContent !== t) el.textContent = t; }
+  function setHtml(el, h) { if (el && el.__lpHtml !== h) { el.__lpHtml = h; el.innerHTML = h; } }
+  var bannerBusy = false;
   function refreshDetailBanner() {
+    if (bannerBusy) return;
+    bannerBusy = true;
+    try { paintDetailBanner(); } finally { bannerBusy = false; }
+  }
+  function paintDetailBanner() {
     var banner = ensureDetailBanner();
     if (!banner) return;
     var nameEl = document.getElementById('lpDetailName');
@@ -522,12 +534,12 @@
     var price = priceFor(coin);
     var msg = banner.querySelector('[data-bind="msg"]');
     var val = banner.querySelector('[data-bind="value"]');
-    if (!trader) { msg.textContent = 'Connect a wallet to trade'; val.textContent = ''; return; }
-    if (!pos.tokens) { msg.textContent = 'No $' + coin.symbol + ' yet · price ' + price.toFixed(6) + ' OST'; val.textContent = ''; return; }
+    if (!trader) { setText(msg, 'Connect a wallet to trade'); setText(val, ''); return; }
+    if (!pos.tokens) { setText(msg, 'No $' + coin.symbol + ' yet · price ' + price.toFixed(6) + ' OST'); setText(val, ''); return; }
     var value = pos.tokens * price;
     var pl = value - pos.costOst;
-    msg.innerHTML = 'You hold <strong>' + pos.tokens.toFixed(2) + ' $' + coin.symbol + '</strong> · cost ' + pos.costOst.toFixed(2) + ' OST';
-    val.innerHTML = (value.toFixed(2) + ' OST · ') + '<strong style="color:' + (pl >= 0 ? '#7ce6a8' : '#ff7c8a') + '">' + (pl >= 0 ? '+' : '') + pl.toFixed(2) + ' OST</strong>';
+    setHtml(msg, 'You hold <strong>' + pos.tokens.toFixed(2) + ' $' + coin.symbol + '</strong> · cost ' + pos.costOst.toFixed(2) + ' OST');
+    setHtml(val, (value.toFixed(2) + ' OST · ') + '<strong style="color:' + (pl >= 0 ? '#7ce6a8' : '#ff7c8a') + '">' + (pl >= 0 ? '+' : '') + pl.toFixed(2) + ' OST</strong>');
   }
 
   // ── Boot ───────────────────────────────────────────────────────────────────

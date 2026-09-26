@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ost-pwa-cache-v467';
+const CACHE_NAME = 'ost-pwa-cache-v472';
 const RUNTIME_CACHE = 'ost-pwa-runtime-v253';
 const CACHE_PREFIX = 'ost-pwa-';
 
@@ -29,8 +29,10 @@ const PRECACHE_PATHS = [
   './ost-desktop-nav.js?v=2',
   './ost-markets-desk.css?v=3',
   './ost-markets-desk.js?v=4',
+  './ost-launchpad-x.css?v=2',
+  './ost-launchpad-x.js?v=2',
   './ost-nexus.js?v=2',
-  './ost-nexus.css?v=2',
+  './ost-nexus.css?v=3',
   './ost-ghost-brain.js?v=3',
   './ost-ghost-connect.js?v=1',
   './ost-quantum-lab.js?v=1',
@@ -59,7 +61,7 @@ const PRECACHE_PATHS = [
   './ost-logo.svg',
   './icon-192.png',
   './icon-512.png',
-  './style.css?v=81',
+  './style.css?v=82',
   './mobile.css?v=7',
   './polish.css?v=1',
   './compartments.css?v=4',
@@ -83,7 +85,7 @@ const PRECACHE_PATHS = [
   './ost-currency-format.js?v=2',
   './realtime.js?v=5',
   './ost-notifications.js?v=3',
-  './app.js?v=267',
+  './app.js?v=269',
   './ost-predict-mobile.js?v=44',
   './ost-predict-mobile.css?v=12',
   './ost-session-key.js?v=11',
@@ -163,7 +165,7 @@ const PRECACHE_PATHS = [
   './ost-scroll-fix.css?v=1',
   './apple-tap.js?v=4',
   './ost-card.js?v=8',
-  './launchpad-engine.js?v=7',
+  './launchpad-engine.js?v=8',
   './swap-resilient.js?v=202',
   './ost-games.js?v=32',
   './code-academy.js?v=3',

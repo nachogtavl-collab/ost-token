@@ -5938,28 +5938,15 @@
     else usdValue = amount / (fiatRates[curr] || 1);
     const ostOut = usdValue / ostPrice;
 
-    toast('🔄', `Converting ${ostOut >= 1e6 ? (ostOut/1e6).toFixed(1)+'M' : ostOut.toFixed(0)} OST → ${amount} ${curr}...`);
-    await sleep(1500);
+    // HONESTY: no merchant payment rail is live yet, so nothing is sent here. This
+    // flow used to toast "Broadcast to Solana — Slot #<random>" and "Payment …
+    // confirmed!" with confetti for a payment that never happened. It now says
+    // what it is: a quote preview, then it opens the merchant.
+    toast('🧮', `Quote: ${ostOut >= 1e6 ? (ostOut/1e6).toFixed(1)+'M' : ostOut.toFixed(0)} OST ≈ ${amount} ${curr}`);
+    await sleep(900);
+    toast('ℹ️', `Preview only — no payment was sent. Paying ${domain} in OST is not live yet.`);
 
-    // Step 2: Get real Solana slot
-    let solSlot = Math.floor(300000000 + Math.random() * 5000000);
-    try {
-      const sr = await fetch('https://api.mainnet-beta.solana.com', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getSlot' }),
-      });
-      const sd = await sr.json();
-      if (sd.result) solSlot = sd.result;
-    } catch (_) {}
-
-    toast('📡', `Broadcast to Solana — Slot #${solSlot.toLocaleString()}`);
-    await sleep(1000);
-
-    // Step 3: Redirect to merchant
-    toast('✅', `Payment of ${amount} ${curr} to ${domain} confirmed!`);
-    launchConfetti();
-
-    await sleep(2000);
+    await sleep(1600);
     if (window.openOstPopup) {
       window.openOstPopup(url, domain);
     }
@@ -12298,13 +12285,14 @@
       // Double the items for infinite scroll
       for (var rep = 0; rep < 2; rep++) {
         sorted.forEach(function(l) {
-          var change = ((Math.random() - 0.4) * 15).toFixed(1);
-          var up = parseFloat(change) >= 0;
+          // Real bonding-curve progress. (This used to print a Math.random() "% change"
+          // next to every coin — a made-up price move.)
+          var curvePct = Math.max(0, Math.min(100, Number(l.curve) || (Number(l.mcap) || 0) / 690));   // 69K OST graduation
           items += '<span class="lp-ticker-item" data-mint="' + escHtml(l.mint) + '">' +
             (l.img ? '<img alt="" class="lp-ticker-img" src="' + escHtml(l.img) + '">' : '') +
             '<span class="lp-ticker-name">$' + escHtml(l.symbol) + '</span>' +
             '<span class="lp-ticker-price">' + fmtMcap(l.mcap) + '</span>' +
-            '<span class="' + (up ? 'lp-ticker-change-up' : 'lp-ticker-change-down') + '">' + (up ? '+' : '') + change + '%</span>' +
+            '<span class="lp-ticker-change-up" title="Bonding curve progress to graduation">' + curvePct.toFixed(curvePct < 10 ? 1 : 0) + '% curve</span>' +
             '</span>';
         });
       }
