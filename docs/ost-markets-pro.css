@@ -1,0 +1,134 @@
+/* ==========================================================================
+ * OST Markets Pro — Polymarket-grade browse: live HUD, featured hero with a
+ * real interactive chart, sparklines + images on every card, live odds, sort.
+ * Pairs with ost-markets-pro.js. Scoped to #ostPredictMobile (desktop + phone).
+ * ========================================================================== */
+
+/* Site-wide `button { min-height: 44–48px }` (+ !important padding on phones) is a
+   touch-target rule for big CTAs; it turned the 4px carousel dots into 48px bars. */
+#ostPredictMobile .omp-hero button,
+#ostPredictMobile .omp-ranges button,
+#ostPredictMobile .omp-sort button { min-height: 0 !important; line-height: 1.2; }
+#ostPredictMobile .omp-dots button { min-height: 0 !important; height: 4px !important; padding: 0 !important; border-radius: 3px !important; }
+#ostPredictMobile .omp-ranges button { padding: 6px 12px !important; border-radius: 8px !important; font-size: 11px !important; }
+#ostPredictMobile .omp-nav button { padding: 0 !important; border-radius: 9px !important; font-size: 16px !important; min-height: 30px !important; }
+#ostPredictMobile .omp-sort button { padding: 7px 13px !important; border-radius: 999px !important; font-size: 12px !important; }
+#ostPredictMobile .omp-yn button { padding: 13px 8px !important; border-radius: 12px !important; font-size: 15px !important; }
+
+/* ---------------------------------------------------------------- HUD */
+#ostPredictMobile .omp-hud {
+  display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 2px 0 14px; padding-bottom: 2px;
+}
+#ostPredictMobile .omp-hud::-webkit-scrollbar { display: none; }
+#ostPredictMobile .omp-hud > div {
+  flex: 1 0 auto; min-width: 118px; border-radius: 13px; padding: 9px 12px;
+  background: rgba(10, 20, 32, .72); border: 1px solid var(--opm-line);
+}
+#ostPredictMobile .omp-hud .k { display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--opm-ink3); white-space: nowrap; }
+#ostPredictMobile .omp-hud .v { font-family: var(--opm-mono); font-variant-numeric: tabular-nums; font-weight: 800; font-size: 16px; color: var(--opm-ink); white-space: nowrap; margin-top: 2px; }
+#ostPredictMobile .omp-hud .v.gold { color: var(--opm-gold); }
+#ostPredictMobile .omp-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--opm-ink3); flex: 0 0 auto; position: relative; }
+#ostPredictMobile .omp-dot.live { background: var(--opm-yes); }
+#ostPredictMobile .omp-dot.live::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--opm-yes); animation: ompPing 1.8s ease-out infinite; }
+@keyframes ompPing { from { transform: scale(1); opacity: .6; } to { transform: scale(3); opacity: 0; } }
+
+/* ---------------------------------------------------------------- hero */
+#ostPredictMobile .omp-hero {
+  position: relative; border-radius: 20px; overflow: hidden; margin-bottom: 16px;
+  border: 1px solid var(--opm-line2);
+  background: radial-gradient(700px 300px at 85% 0%, rgba(127, 216, 255, .08), transparent 60%), linear-gradient(160deg, var(--opm-card2), var(--opm-card));
+}
+#ostPredictMobile .omp-slide { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 18px; padding: 18px; }
+#ostPredictMobile .omp-hh { display: flex; gap: 12px; align-items: flex-start; }
+#ostPredictMobile .omp-img {
+  width: 52px; height: 52px; border-radius: 14px; flex: 0 0 auto; overflow: hidden; display: grid; place-items: center;
+  background: var(--opm-card3); border: 1px solid var(--opm-line2); color: var(--opm-cyan); font-weight: 900; font-size: 20px;
+}
+#ostPredictMobile .omp-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+#ostPredictMobile .omp-tag { display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--opm-cyan); }
+#ostPredictMobile .omp-hq { margin: 3px 0 0; font-size: 21px; line-height: 1.22; font-weight: 800; letter-spacing: -.02em; color: var(--opm-ink); cursor: pointer; }
+#ostPredictMobile .omp-hq:hover { text-decoration: underline; text-decoration-color: var(--opm-line3); }
+#ostPredictMobile .omp-hmeta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 6px; font-size: 12px; color: var(--opm-ink3); font-family: var(--opm-mono); }
+#ostPredictMobile .omp-hmeta b { color: var(--opm-ink2); font-weight: 700; }
+#ostPredictMobile .omp-chartbox { position: relative; margin-top: 12px; }
+#ostPredictMobile .omp-chart { display: block; width: 100%; height: 210px; cursor: crosshair; touch-action: pan-y; }
+#ostPredictMobile .omp-tip {
+  position: absolute; top: 0; pointer-events: none; transform: translateX(-50%);
+  font-family: var(--opm-mono); font-size: 11px; font-weight: 700; white-space: nowrap;
+  padding: 4px 8px; border-radius: 8px; background: rgba(5, 11, 19, .92); border: 1px solid var(--opm-line2); color: var(--opm-ink);
+  opacity: 0; transition: opacity .12s;
+}
+#ostPredictMobile .omp-tip.on { opacity: 1; }
+#ostPredictMobile .omp-ranges { display: flex; gap: 4px; margin-top: 8px; }
+#ostPredictMobile .omp-ranges button {
+  border: 1px solid var(--opm-line); background: var(--opm-bg2); color: var(--opm-ink3); font-family: var(--opm-mono);
+  font-size: 11px; font-weight: 700; padding: 5px 11px; border-radius: 8px; cursor: pointer;
+}
+#ostPredictMobile .omp-ranges button.on { background: var(--opm-card3); color: var(--opm-ink); border-color: var(--opm-line2); }
+#ostPredictMobile .omp-ranges .src { margin-left: auto; align-self: center; font-size: 10.5px; color: var(--opm-ink3); font-family: var(--opm-mono); }
+
+#ostPredictMobile .omp-side { display: flex; flex-direction: column; gap: 10px; justify-content: center; }
+#ostPredictMobile .omp-big { font-family: var(--opm-mono); font-variant-numeric: tabular-nums; font-size: 44px; font-weight: 800; line-height: 1; color: var(--opm-ink); letter-spacing: -.03em; }
+#ostPredictMobile .omp-big small { font-size: 14px; color: var(--opm-ink3); font-weight: 700; margin-left: 6px; letter-spacing: 0; }
+#ostPredictMobile .omp-chg { font-family: var(--opm-mono); font-size: 13px; font-weight: 800; }
+#ostPredictMobile .omp-chg.up { color: var(--opm-yes); } #ostPredictMobile .omp-chg.down { color: var(--opm-no); } #ostPredictMobile .omp-chg.flat { color: var(--opm-ink3); }
+#ostPredictMobile .omp-yn { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+#ostPredictMobile .omp-yn button {
+  border: 0; border-radius: 12px; padding: 13px 8px; cursor: pointer; font: inherit; font-weight: 800; font-size: 15px;
+  display: flex; flex-direction: column; align-items: center; gap: 1px; transition: filter .12s, transform .12s;
+}
+#ostPredictMobile .omp-yn button small { font-size: 10.5px; font-weight: 700; opacity: .75; }
+#ostPredictMobile .omp-yn .y { background: var(--opm-yes-dim); color: var(--opm-yes); box-shadow: inset 0 0 0 1px rgba(52, 211, 153, .35); }
+#ostPredictMobile .omp-yn .n { background: var(--opm-no-dim); color: var(--opm-no); box-shadow: inset 0 0 0 1px rgba(251, 113, 133, .35); }
+#ostPredictMobile .omp-yn button:hover { filter: brightness(1.15); }
+#ostPredictMobile .omp-yn button:active { transform: scale(.97); }
+#ostPredictMobile .omp-dots { position: absolute; left: 18px; bottom: 10px; display: flex; gap: 6px; }
+#ostPredictMobile .omp-dots button { width: 22px; height: 4px; border-radius: 3px; border: 0; padding: 0; background: var(--opm-line2); cursor: pointer; }
+#ostPredictMobile .omp-dots button.on { background: var(--opm-cyan); }
+#ostPredictMobile .omp-nav { position: absolute; right: 12px; top: 12px; display: flex; gap: 6px; }
+#ostPredictMobile .omp-nav button { width: 30px; height: 30px; border-radius: 9px; border: 1px solid var(--opm-line2); background: rgba(5, 11, 19, .6); color: var(--opm-ink2); cursor: pointer; font-size: 15px; line-height: 1; }
+#ostPredictMobile .omp-nav button:hover { color: var(--opm-ink); border-color: var(--opm-line3); }
+#ostPredictMobile .omp-hero.fade .omp-slide { animation: ompIn .35s ease-out; }
+@keyframes ompIn { from { opacity: 0; transform: translateX(10px); } }
+
+/* ---------------------------------------------------------------- sort */
+#ostPredictMobile .omp-sort { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 0 10px; }
+#ostPredictMobile .omp-sort::-webkit-scrollbar { display: none; }
+#ostPredictMobile .omp-sort button {
+  flex: 0 0 auto; border: 1px solid var(--opm-line); background: none; color: var(--opm-ink3); font: inherit;
+  font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 999px; cursor: pointer; white-space: nowrap;
+}
+#ostPredictMobile .omp-sort button.on { color: var(--opm-ink); background: var(--opm-card3); border-color: var(--opm-line2); }
+
+/* ---------------------------------------------------------------- cards */
+#ostPredictMobile .opm-mcard .omp-spark { display: block; width: 100%; height: 38px; margin: -2px 0 -2px; }
+#ostPredictMobile .opm-mcard .omp-cm { display: flex; justify-content: space-between; gap: 8px; font-family: var(--opm-mono); font-size: 10.5px; color: var(--opm-ink3); }
+#ostPredictMobile .opm-mcard .omp-cm b { font-weight: 800; }
+#ostPredictMobile .opm-mcard .omp-cm .up { color: var(--opm-yes); } #ostPredictMobile .opm-mcard .omp-cm .down { color: var(--opm-no); }
+#ostPredictMobile .opm-mcard .mi.omp-has-img { padding: 0; overflow: hidden; }
+#ostPredictMobile .opm-mcard .mi.omp-has-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+#ostPredictMobile .opm-mcard .omp-pct { font-family: var(--opm-mono); font-size: 13px; font-weight: 800; color: var(--opm-ink); margin-left: auto; padding-left: 8px; flex: 0 0 auto; }
+#ostPredictMobile .opm-mcard .mt { align-items: flex-start; }
+#ostPredictMobile .flash-up { animation: ompFU 1s; } #ostPredictMobile .flash-down { animation: ompFD 1s; }
+@keyframes ompFU { 30% { background: rgba(52, 211, 153, .28); } }
+@keyframes ompFD { 30% { background: rgba(251, 113, 133, .28); } }
+
+/* ---------------------------------------------------------------- phone */
+@media (max-width: 820px), (pointer: coarse) and (max-width: 1024px) {
+  #ostPredictMobile .omp-slide { grid-template-columns: 1fr; gap: 12px; padding: 14px 14px 26px; }
+  #ostPredictMobile .omp-hq { font-size: 17px; padding-right: 64px; }
+  #ostPredictMobile .omp-chart { height: 150px; }
+  #ostPredictMobile .omp-big { font-size: 34px; }
+  #ostPredictMobile .omp-img { width: 44px; height: 44px; }
+  #ostPredictMobile .omp-hud > div { min-width: 104px; padding: 8px 10px; }
+  #ostPredictMobile .omp-hud .v { font-size: 14px; }
+  /* phone-shell global `* {max-width:100%; overflow-wrap:anywhere}` shatters scrollers */
+  body.ost-mobile-shell #ostPredictMobile .omp-hud > div,
+  body.ost-mobile-shell #ostPredictMobile .omp-sort button { min-width: auto !important; max-width: none !important; overflow-wrap: normal !important; flex: 0 0 auto !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #ostPredictMobile .omp-dot.live::after, #ostPredictMobile .omp-hero.fade .omp-slide, #ostPredictMobile .flash-up, #ostPredictMobile .flash-down { animation: none !important; }
+}
+
+#ostPredictMobile .opm-qhead .ico.omp-has-img { padding: 0; overflow: hidden; }
+#ostPredictMobile .opm-qhead .ico.omp-has-img img { width: 100%; height: 100%; object-fit: cover; display: block; }

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ost-pwa-cache-v475';
+const CACHE_NAME = 'ost-pwa-cache-v482';
 const RUNTIME_CACHE = 'ost-pwa-runtime-v253';
 const CACHE_PREFIX = 'ost-pwa-';
 
@@ -27,11 +27,13 @@ const PRECACHE_PATHS = [
   './ost-engine-guard.js?v=1',
   './ost-appbar.js?v=16',
   './ost-desktop-nav.js?v=2',
-  './ost-markets-desk.css?v=3',
+  './ost-markets-desk.css?v=4',
   './ost-markets-desk.js?v=4',
   './ost-launchpad-x.css?v=2',
   './ost-launchpad-x.js?v=2',
   './ost-mesh-desk.css?v=2',
+  './ost-markets-pro.css?v=3',
+  './ost-markets-pro.js?v=5',
   './ost-nexus.js?v=4',
   './ost-nexus.css?v=4',
   './ost-ghost-brain.js?v=3',
