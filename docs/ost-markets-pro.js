@@ -105,7 +105,9 @@
 
   /* ---------------------------------------------------------------- images (Polymarket gamma) */
   var imgs = {}, imgAsked = {};
+  function imgOf(id) { try { var a = window.OST_MARKET_ART; if (a) { var u = a.imageFor(byId(id)); if (u) return u; } } catch (_) {} return imgs[String(id)] || ''; }
   function loadImages(ids) {
+    if (window.OST_MARKET_ART) { OST_MARKET_ART.resolve(ids); return; }   // one image pipeline for the whole predict surface
     ids = ids.filter(function (id) { return /^\d+$/.test(id) && !imgAsked[id]; }).slice(0, 25);
     if (!ids.length) return;
     ids.forEach(function (id) { imgAsked[id] = 1; });
@@ -114,13 +116,13 @@
       .then(function (arr) {
         (Array.isArray(arr) ? arr : []).forEach(function (x) { if (x && x.id && (x.image || x.icon)) imgs[String(x.id)] = x.image || x.icon; });
         applyImages();
-        if (heroM && imgs[String(heroM.id)]) paintHeroImg();
+        if (heroM && imgOf(heroM.id)) paintHeroImg();
       }).catch(function () {});
   }
-  function imgTag(src) { return '<img alt="" loading="lazy" referrerpolicy="no-referrer" src="' + esc(src) + '" onerror="this.parentNode.classList.remove(\'omp-has-img\');this.remove()">'; }
+  function imgTag(src) { return '<img alt="" loading="lazy" referrerpolicy="no-referrer" src="' + esc(src) + '" onerror="if(this.parentNode){this.parentNode.classList.remove(\'omp-has-img\');this.remove()}">'; }
   function applyImages() {
     document.querySelectorAll('#opmGrid .opm-mcard[data-mid]').forEach(function (card) {
-      var src = imgs[card.getAttribute('data-mid')]; var mi = card.querySelector('.mi');
+      var src = imgOf(card.getAttribute('data-mid')); var mi = card.querySelector('.mi');
       if (src && mi && !mi.classList.contains('omp-has-img')) { mi.classList.add('omp-has-img'); mi.innerHTML = imgTag(src); }
     });
   }
@@ -246,7 +248,7 @@
     loadImages([String(m.id)]);
     pollMids([yesTok(m)]);
   }
-  function paintHeroImg() { var b = $('ompHImg'); if (b && heroM && imgs[String(heroM.id)] && !b.querySelector('img')) b.innerHTML = imgTag(imgs[String(heroM.id)]); }
+  function paintHeroImg() { var b = $('ompHImg'); if (!b || !heroM || b.querySelector('img')) return; var u = imgOf(heroM.id); if (!u && window.OST_MARKET_ART) u = OST_MARKET_ART.coverFor(heroM); if (u) b.innerHTML = imgTag(u); }
   function paintHeroOdds() {
     if (!heroM) return;
     var y = yesPct(heroM); if (y === undefined) return;

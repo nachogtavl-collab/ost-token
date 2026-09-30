@@ -344,3 +344,33 @@
 /* position card fill state (direct order path) */
 #ostPredictMobile .opm-poscard .pch .opm-pend{font-size:9.5px;font-weight:800;padding:2px 8px;border-radius:5px;color:var(--opm-gold);background:rgba(255,192,74,.14);text-transform:none;letter-spacing:0}
 #ostPredictMobile .opm-poscard .pch .opm-pend.ok{color:var(--opm-yes);background:var(--opm-yes-dim)}
+
+/* tape: OST fills + Polymarket venue rows */
+#ostPredictMobile .opm-tapehead{display:flex;gap:14px;font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--opm-ink3);padding:2px 2px 8px}
+#ostPredictMobile .opm-tapehead i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;background:var(--opm-gold)}
+#ostPredictMobile .opm-tapehead i.pm{background:var(--opm-cyan)}
+#ostPredictMobile .opm-trade .who{display:inline-flex;align-items:center;gap:6px;min-width:0}
+#ostPredictMobile .opm-trade .who .av,#ostPredictMobile .opm-holder .addr .av{width:18px;height:18px;border-radius:50%;object-fit:cover;flex:0 0 auto;vertical-align:middle;margin-right:5px}
+#ostPredictMobile .opm-trade .who em,#ostPredictMobile .opm-cmt .n em{font-style:normal;font-size:9px;font-weight:800;letter-spacing:.06em;color:var(--opm-cyan);background:rgba(127,216,255,.12);border-radius:4px;padding:1px 4px}
+#ostPredictMobile .opm-trade.venue{opacity:.92}
+#ostPredictMobile .opm-sec2{font-size:10.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--opm-ink3);padding:12px 2px 6px}
+#ostPredictMobile .opm-cmt.venue .av img{width:100%;height:100%;object-fit:cover;border-radius:inherit}
+#ostPredictMobile .opm-retry{margin-left:8px;padding:5px 12px!important;min-height:0!important;font-size:11px!important}
+
+/* portfolio */
+#ostPredictMobile .opm-pfstatus{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--opm-ink3);font-family:var(--opm-mono);padding:0 2px 10px}
+#ostPredictMobile .opm-pfstatus .d{width:7px;height:7px;border-radius:50%;background:var(--opm-yes);flex:0 0 auto}
+#ostPredictMobile .opm-pfstatus .d.busy{background:var(--opm-gold);animation:opmPulse 1s infinite alternate}
+#ostPredictMobile .opm-pfstatus .sp{flex:1}
+@keyframes opmPulse{from{opacity:.4}to{opacity:1}}
+#ostPredictMobile .opm-claimbar{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:10px 12px;margin:0 0 12px;border-radius:14px;border:1px solid rgba(255,192,74,.35);background:rgba(255,192,74,.09);font-size:13px;font-weight:700}
+#ostPredictMobile .opm-trow{display:flex;align-items:center;gap:10px}
+#ostPredictMobile .opm-trow .opm-tmain{flex:1;min-width:0}
+#ostPredictMobile .opm-tmeta small{font-size:10px;color:var(--opm-ink3)}
+#ostPredictMobile .opm-tmeta em{font-style:normal;font-weight:800;color:var(--opm-ink2)}
+#ostPredictMobile .opm-tval{font-family:var(--opm-mono);font-size:12px;margin-top:3px;color:var(--opm-ink2)}
+#ostPredictMobile .opm-tval b.up{color:var(--opm-yes)}#ostPredictMobile .opm-tval b.down{color:var(--opm-no)}
+#ostPredictMobile .opm-tval i{font-style:normal;color:var(--opm-ink3)}
+#ostPredictMobile .opm-trow.st-claim{border-color:rgba(255,192,74,.35)}
+#ostPredictMobile .opm-ps .v.up{color:var(--opm-yes)}#ostPredictMobile .opm-ps .v.down{color:var(--opm-no)}
+#ostPredictMobile #opmPfSync{min-width:0;padding:0 12px!important;font-size:16px}

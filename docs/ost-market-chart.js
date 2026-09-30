@@ -305,7 +305,7 @@
       '<div class="mkc-ranges" id="mkcRanges">' + Object.keys(RANGES).map(function (k) { return '<button type="button" data-r="' + k + '"' + (k === '1w' ? ' class="on"' : '') + '>' + RANGES[k].label + '</button>'; }).join('') +
         '<span class="src" id="mkcSrc">' + (isKalshi(m) ? 'Kalshi · 7d' : 'Polymarket CLOB · live') + '</span></div>';
     std.parentNode.insertBefore(box, std.nextSibling);
-    S = { gen: gen, m: m, side: tradeSide(), range: '1w', pts: [], geom: null, box: box, canvas: $('mkcChart'), tip: $('mkcTip'), over: $('mkcOver'), mirrored: false, loading: false };
+    S = { gen: gen, m: m, side: tradeSide(), range: '1w', pts: [], geom: null, box: box, canvas: $('mkcChart'), tip: $('mkcTip'), over: $('mkcOver'), mirrored: false, provisional: false, loading: false };
     if (m.isGrouped) renderLadder();
     box.addEventListener('click', function (e) {
       var b = e.target.closest('[data-r]'); if (b) { setRange(b.getAttribute('data-r')); return; }
@@ -334,12 +334,21 @@
   function setSide(side) {
     if (!S) return; side = side === 'no' ? 'no' : 'yes';
     if (S.side === side) return;
-    S.side = side; syncLegend(); paint();
+    // INSTANT FLIP. The other side's series is exactly the mirror of what is on
+    // screen (a binary market's No = 100 − Yes at every instant), so draw that
+    // right away and let the real token history replace it when it lands. The
+    // old code kept the previous side's line under the new legend until the
+    // fetch finished — and forever when it failed.
+    S.side = side;
+    if (S.pts.length > 1) { S.pts = mirror(S.pts); S.provisional = true; S.mirrored = true; }
+    else { S.pts = []; S.provisional = false; }
+    syncLegend(); redraw(); paintChange(); paint();
   }
   function setRange(r) {
     if (!S || !RANGES[r] || S.range === r) return;
-    S.range = r; document.querySelectorAll('#mkcRanges [data-r]').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-r') === r); });
-    paint();
+    S.range = r; S.pts = []; S.provisional = false;
+    document.querySelectorAll('#mkcRanges [data-r]').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-r') === r); });
+    redraw(); paint();
   }
   function overlay(html) { if (S && S.over) { S.over.innerHTML = html || ''; S.over.classList.toggle('on', !!html); } }
   function paint(force) {
@@ -352,16 +361,23 @@
     overlay('');
     series(m, side, range).then(function (r) {
       if (S !== s || s.gen !== g || s.side !== side || s.range !== range) return;
-      s.mirrored = r.mirrored; s.pts = r.pts.slice();
+      if (r.pts.length < 2 && s.provisional && s.pts.length > 1) { s.mirrored = true; markSrc(m, true, 'no history for this token yet'); paintChange(); return; }   // keep the mirror rather than blank
+      s.mirrored = r.mirrored; s.provisional = false; s.pts = r.pts.slice();
       appendLive(s);
-      var src = $('mkcSrc'); if (src) src.textContent = (r.src || '') + (r.mirrored ? ' · No = 100 − Yes' : (isKalshi(m) ? '' : ' · live'));
+      markSrc(m, r.mirrored, '');
       redraw();
       if (s.pts.length < 2) overlay('<span>No price history yet for this range.</span>');
       paintChange();
     }).catch(function () {
       if (S !== s || s.gen !== g || s.side !== side || s.range !== range) return;
+      if (s.provisional && s.pts.length > 1) { markSrc(m, true, 'live history unavailable'); return; }   // the mirror stays: it is a correct No line
       if (s.pts.length < 2) { draw(c, [], { axis: true, side: side, flatAt: flatAt, msg: '' }); overlay('<span>Couldn’t load price history.</span><button type="button" data-mkc-retry>Retry</button>'); }
     });
+  }
+  function markSrc(m, mirrored, note) {
+    var src = $('mkcSrc'); if (!src) return;
+    var base = isKalshi(m) ? 'Kalshi trades' : 'Polymarket CLOB';
+    src.textContent = base + (mirrored ? ' · No = 100 − Yes' : (isKalshi(m) ? '' : ' · live')) + (note ? ' · ' + note : '');
   }
   // The live quote becomes the last point so the line ends at "now".
   function appendLive(s) {
@@ -424,7 +440,7 @@
     picked[String(S.m.id)] = key;
     var o = pickedOutcome(S.m);
     renderLadder(); syncLegend();
-    S.pts = []; paint();
+    S.pts = []; S.provisional = false; redraw(); paint();
     try { window.dispatchEvent(new CustomEvent('ost:predict:outcome', { detail: { marketId: String(S.m.id), key: o.key, label: o.label, legId: o.legId, conditionId: o.conditionId, legPrice: o.price, clobTokenIds: o.ids } })); } catch (_) {}
   }
   function selection(marketId) {

@@ -15986,7 +15986,9 @@
     var cashingRefs = {};
     try {
       window.OST_PREDICTION_API = Object.assign(window.OST_PREDICTION_API || {}, {
-        cashOut: function (ref, opts) { return cashOutPredictionOrder(Object.assign({ ref: ref }, opts || {})); }
+        cashOut: function (ref, opts) { return cashOutPredictionOrder(Object.assign({ ref: ref }, opts || {})); },
+        // Portfolio surfaces pull resolutions on demand (the desk polls every 30s on its own).
+        refreshResolutions: function () { try { return Promise.resolve(refreshPredictionOrderResolutions()); } catch (e) { return Promise.resolve(false); } }
       });
     } catch (_) {}
 
@@ -17393,6 +17395,7 @@
                 bestBid: m.bestBid,
                 bestAsk: m.bestAsk,
                 lastTradePrice: m.lastTradePrice,
+                image: m.image || m.icon || '',   // the venue's artwork (cards / market page / hero)
                 active: true,
                 closed: false
               });

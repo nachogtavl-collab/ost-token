@@ -210,7 +210,7 @@
   /* ===================================================================== */
   function browseTemplate() {
     return '' +
-    '<div class="opm-tb"><div><h2 class="opm-htitle">Predictions</h2><div class="opm-hsub">Real-world markets · devnet OSTG (no cash value)</div></div><div class="opm-sp"></div><button class="opm-tickets-btn" id="opmTicketsBtn">' + icon('ticket') + 'Tickets</button>' + balChip() + '</div>' +
+    '<div class="opm-tb"><div><h2 class="opm-htitle">Predictions</h2><div class="opm-hsub">Real-world markets · devnet OSTG (no cash value)</div></div><div class="opm-sp"></div><button class="opm-tickets-btn" id="opmTicketsBtn">' + icon('ticket') + 'Portfolio</button>' + balChip() + '</div>' +
     '<div class="opm-scroll">' +
       '<div class="opm-search">' + icon('search') + '<input id="opmQ" type="search" placeholder="Search Bitcoin, Trump, NBA, inflation…" autocomplete="off"></div>' +
       '<div class="opm-chips" id="opmChips">' + CATS.map(function (c) { return '<button class="opm-chip' + (c.k === 'all' ? ' on' : '') + '" data-c="' + c.k + '">' + icon(c.ic) + c.label + '</button>'; }).join('') + '</div>' +
@@ -300,7 +300,8 @@
     currentMarket = m; view = 'detail';
     side = 'yes'; myPos = null; seenTrades = {}; firstTrades = true; hist = []; hrs = 0;
     buf = []; dispPrice = 0; _lastTickAt = 0; baseMidSet = false; onchainActive = false;
-    round = null; price = 0; beat = 0; midYes = yesCents(m); legPick = null;
+    round = null; price = 0; beat = 0; midYes = yesCents(m); legPick = null; _ostHolders = []; _venueHolders = null;
+    Object.keys(pane).forEach(function (k) { clearTimeout(pane[k].timer); pane[k].tries = 0; });
     // The market id travels on the container so chart/parlay modules can find the
     // market without matching titles (duplicate titles charted the wrong market).
     try { el('opmDetail').setAttribute('data-mid', String(m.id || '')); } catch (_) {}
@@ -611,9 +612,11 @@
   var legPick = null;
   window.addEventListener('ost:predict:outcome', function (e) {
     var d = e && e.detail; if (!d || !currentMarket || String(d.marketId) !== String(currentMarket.id)) return;
+    var switched = !legPick || String(legPick.legId || '') !== String(d.legId || '');
     legPick = d;
     var p = Number(d.legPrice); if (p > 1) p /= 100;
     if (p > 0 && p < 1) { midYes = Math.max(0.1, Math.min(99.9, Math.round(p * 1000) / 10)); paintOdds(); }
+    if (switched && !d.quiet && view === 'detail') { loadTrades(); refreshPosition(); }   // the tape/holders follow the picked leg
   });
   window.addEventListener('ost:predict:quote', function (e) {
     var d = e && e.detail; if (!d || view !== 'detail' || !currentMarket || String(d.marketId) !== String(currentMarket.id) || isBtcLive(currentMarket)) return;
@@ -813,21 +816,96 @@
   function feedCommentId() { return isBtcLive(currentMarket) ? 'ost-btc5m' : String(currentMarket && currentMarket.id || ''); }
   function activeMarketId() { return isBtcLive(currentMarket) ? (round && round.marketId) : String(currentMarket && currentMarket.id || ''); }
 
+  /* ---- panes: trades · holders · comments ----
+   * These used to fire one fetch each with an EMPTY catch, so a 429 from the worker
+   * (it rate-limits per IP) left "Loading live trades…" on screen forever and a
+   * second open never retried. Now every pane: times out, retries with backoff,
+   * shows an honest error with a Retry button, reloads when its tab is opened,
+   * and — for Polymarket markets — shows the venue's own activity next to OST's:
+   * real trades and top holders from Polymarket's public data API. */
+  function fetchJsonT(url, ms, init) {
+    var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var t = setTimeout(function () { try { ctrl && ctrl.abort(); } catch (_) {} }, ms || 9000);
+    init = Object.assign({ cache: 'no-store' }, init || {}); if (ctrl) init.signal = ctrl.signal;
+    return fetch(url, init).then(function (r) { clearTimeout(t); if (!r.ok) throw new Error('http ' + r.status); return r.json(); }, function (e) { clearTimeout(t); throw e; });
+  }
+  var DATA_API = 'https://data-api.polymarket.com', GAMMA_API = 'https://gamma-api.polymarket.com';
+  function dataApi(path) { return fetchJsonT(DATA_API + path, 8000).catch(function () { return fetchJsonT(API + '/data' + path, 9000); }); }
+  function gammaApi(path) { return fetchJsonT(GAMMA_API + path, 8000).catch(function () { return fetchJsonT(API + '/gamma' + path, 9000); }); }
+  var pane = { trades: { tries: 0, timer: 0 }, holders: { tries: 0, timer: 0 }, comments: { tries: 0, timer: 0 } };
+  function paneRetry(kind, fn) {
+    var st = pane[kind]; clearTimeout(st.timer); st.tries++;
+    st.timer = setTimeout(function () { if (view === 'detail') fn(); }, Math.min(30000, 2500 * st.tries));
+  }
+  function paneError(hostId, msg, fn) {
+    var host = el(hostId); if (!host) return;
+    host.innerHTML = '<div class="opm-empty">' + esc(msg) + ' <button type="button" class="opm-tbtn opm-retry">Retry</button></div>';
+    var b = host.querySelector('.opm-retry'); if (b) b.onclick = function () { host.innerHTML = '<div class="opm-empty">Loading…</div>'; fn(); };
+  }
+  function esc2(v) { return esc(v == null ? '' : v); }
+  // Polymarket identity of the open market (a picked ladder outcome is its own market).
+  function venueCondition(m) {
+    if (!m || m.source !== 'polymarket') return '';
+    if (m.isGrouped) { var lp = (legPick && String(legPick.marketId) === String(m.id)) ? legPick : null; if (!lp) { try { lp = window.OST_MARKET_CHART && OST_MARKET_CHART.selection(m.id); } catch (_) {} } return String((lp && lp.conditionId) || ''); }
+    return String(m.conditionId || (m.raw && (m.raw.conditionId || m.raw.condition_id)) || '');
+  }
+  var _venue = {};   // conditionId -> { at, trades, holders }
+  function venueTrades(m) {
+    var c = venueCondition(m); if (!c) return Promise.resolve([]);
+    var v = _venue[c]; if (v && v.trades && Date.now() - v.at < 30000) return Promise.resolve(v.trades);
+    return dataApi('/trades?market=' + encodeURIComponent(c) + '&limit=40').then(function (arr) {
+      arr = (Array.isArray(arr) ? arr : []).map(function (t) {
+        var oi = Number(t.outcomeIndex), buy = String(t.side || '').toUpperCase() !== 'SELL';
+        return { venue: true, id: 'pm:' + (t.transactionHash || (t.timestamp + ':' + t.proxyWallet)), side: (oi === 1 ? 'no' : 'yes'), outcome: t.outcome || (oi === 1 ? 'No' : 'Yes'), buy: buy, who: t.pseudonym || t.name || (String(t.proxyWallet || '').slice(0, 6) + '…'), avatar: t.profileImageOptimized || t.profileImage || '', size: Number(t.size) || 0, price: Number(t.price) || 0, ts: Number(t.timestamp) * 1000 };
+      });
+      _venue[c] = Object.assign(_venue[c] || {}, { at: Date.now(), trades: arr }); return arr;
+    });
+  }
+  function venueHolders(m) {
+    var c = venueCondition(m); if (!c) return Promise.resolve(null);
+    var v = _venue[c]; if (v && v.holders && Date.now() - v.at < 60000) return Promise.resolve(v.holders);
+    return dataApi('/holders?market=' + encodeURIComponent(c) + '&limit=8').then(function (arr) {
+      var out = { yes: [], no: [] };
+      (Array.isArray(arr) ? arr : []).forEach(function (tok) {
+        (tok.holders || []).forEach(function (h) { var oi = Number(h.outcomeIndex); (oi === 1 ? out.no : out.yes).push({ who: h.pseudonym || h.name || (String(h.proxyWallet || '').slice(0, 6) + '…'), amount: Number(h.amount) || 0, avatar: h.profileImageOptimized || h.profileImage || '' }); });
+      });
+      out.yes.sort(function (a, b) { return b.amount - a.amount; }); out.no.sort(function (a, b) { return b.amount - a.amount; });
+      _venue[c] = Object.assign(_venue[c] || {}, { at: Date.now(), holders: out }); return out;
+    });
+  }
+
+  var _tradesGen = 0;
   function loadTrades() {
     var fid = feedTradeId(); if (!fid) return;
-    return fetch(API + '/positions/recent?marketId=' + encodeURIComponent(fid) + '&limit=60', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
-      var arr = (d && d.recent) || []; renderTrades(arr); aggregateHolders(arr); aggregatePool(arr); paintOdds();
-    }).catch(function () {});
+    var gen = ++_tradesGen, m = currentMarket;
+    var ostP = fetchJsonT(API + '/positions/recent?marketId=' + encodeURIComponent(fid) + '&limit=60', 9000).then(function (d) { return (d && d.recent) || []; });
+    var venP = venueTrades(m).catch(function () { return null; });
+    return Promise.all([ostP.then(function (a) { return { ok: true, a: a }; }, function () { return { ok: false, a: [] }; }), venP]).then(function (res) {
+      if (gen !== _tradesGen || view !== 'detail') return;
+      var ost = res[0].a, venue = res[1];
+      if (!res[0].ok && !(venue && venue.length)) { paneError('opmTrades', 'The live tape is not answering right now.', loadTrades); paneRetry('trades', loadTrades); return; }
+      pane.trades.tries = 0;
+      renderTrades(ost, venue || []); aggregateHolders(ost); aggregatePool(ost); paintOdds();
+      if (!res[0].ok) paneRetry('trades', loadTrades);   // venue rows are up; keep trying for OST fills
+      if (m && m.source === 'polymarket') loadHolders();
+    });
   }
-  function renderTrades(arr) {
+  function renderTrades(arr, venue) {
     var host = el('opmTrades'); if (!host) return;
-    if (!arr.length) { host.innerHTML = '<div class="opm-empty">No trades yet — be the first.</div>'; return; }
-    host.innerHTML = arr.slice(0, 12).map(function (r) {
-      var y = String(r.side || '').toUpperCase() === 'YES'; var k = r.id || (r.wallet + r.ts); var isNew = !seenTrades[k]; seenTrades[k] = 1;
-      var amt = Number(r.stake) > 0 ? compact(r.stake) + ' OSTG' : (Number(r.shares) > 0 ? compact(r.shares) + ' sh' : '');
-      var px = Number(r.price) > 0 ? ' @ ' + Math.round(Number(r.price) * 100) + '¢' : '';
-      return '<div class="opm-trade' + (isNew && !firstTrades ? ' in' : '') + '"><span class="s ' + (y ? 'y' : 'n') + '">' + (y ? 'Yes' : 'No') + '</span>' +
-        '<span class="who">' + esc(r.walletShort || (String(r.wallet || '').slice(0, 4) + '…')) + '</span><span class="amt">' + esc(amt + px) + '</span><span class="t">' + esc(ago(r.ts || r.createdAt)) + '</span></div>';
+    var rows = [];
+    (arr || []).forEach(function (r) { var isSell = String(r.id || '').indexOf('sell:') === 0; rows.push({ venue: false, id: r.id || (r.wallet + r.ts), side: String(r.side || '').toUpperCase() === 'YES' ? 'yes' : 'no', buy: !isSell, who: r.walletShort || (String(r.wallet || '').slice(0, 4) + '…'), size: Number(r.shares) || 0, stake: Number(r.stake) || 0, price: Number(r.price) || 0, ts: Number(r.ts || r.createdAt) || Date.parse(r.ts || r.createdAt) || 0 }); });
+    (venue || []).forEach(function (t) { rows.push(t); });
+    rows.sort(function (a, b) { return (b.ts || 0) - (a.ts || 0); });
+    if (!rows.length) { host.innerHTML = '<div class="opm-empty">No trades yet — be the first.</div>'; firstTrades = false; return; }
+    var ostCount = (arr || []).length, venCount = (venue || []).length;
+    var head = (venCount ? '<div class="opm-tapehead"><span><i class="ost"></i>OST ' + ostCount + '</span><span><i class="pm"></i>Polymarket ' + venCount + '</span></div>' : '');
+    host.innerHTML = head + rows.slice(0, 30).map(function (r) {
+      var y = r.side === 'yes'; var isNew = !seenTrades[r.id]; seenTrades[r.id] = 1;
+      var amt = r.venue ? (compact(r.size) + ' sh') : (r.stake > 0 ? compact(r.stake) + ' OSTG' : (r.size > 0 ? compact(r.size) + ' sh' : ''));
+      var px = r.price > 0 ? ' @ ' + fmtc(r.price * 100) + '¢' : '';
+      var lab = (r.buy === false ? 'Sold ' : '') + (r.venue && r.outcome && !/^(yes|no)$/i.test(r.outcome) ? r.outcome : (y ? 'Yes' : 'No'));
+      return '<div class="opm-trade' + (isNew && !firstTrades ? ' in' : '') + (r.venue ? ' venue' : '') + '"><span class="s ' + (y ? 'y' : 'n') + '">' + esc2(lab) + '</span>' +
+        '<span class="who">' + (r.avatar ? '<img class="av" alt="" loading="lazy" referrerpolicy="no-referrer" src="' + esc2(r.avatar) + '">' : '') + esc2(r.who) + (r.venue ? ' <em>PM</em>' : '') + '</span><span class="amt">' + esc2(amt + px) + '</span><span class="t">' + esc2(ago(r.ts)) + '</span></div>';
     }).join(''); firstTrades = false;
   }
   function aggregatePool(arr) {
@@ -835,21 +913,63 @@
     var y = 0, n = 0; arr.forEach(function (r) { var isSell = String(r.id || '').indexOf('sell:') === 0; var stake = Number(r.stake) || 0; if (isSell || !(stake > 0)) return; if (String(r.side || '').toUpperCase() === 'YES') y += stake; else n += stake; });
     poolY = Math.round(y); poolN = Math.round(n);
   }
+  var _ostHolders = [];
   function aggregateHolders(arr) {
-    var host = el('opmHolders'); if (!host) return; var by = {};
-    arr.forEach(function (r) { var w = r.wallet; if (!w) return; var sh = Number(r.shares) || 0; if (!(sh > 0)) return; var isSell = String(r.id || '').indexOf('sell:') === 0; var y = String(r.side || '').toUpperCase() === 'YES'; by[w] = by[w] || { short: r.walletShort || (String(w).slice(0, 4) + '…' + String(w).slice(-4)), net: 0, side: y ? 'y' : 'n' }; by[w].net += (isSell ? -sh : sh); if (!isSell) by[w].side = y ? 'y' : 'n'; });
-    var list = Object.keys(by).map(function (k) { return by[k]; }).filter(function (h) { return h.net > 0.01; }).sort(function (a, b) { return b.net - a.net; }).slice(0, 8);
-    if (!list.length) { host.innerHTML = '<div class="opm-empty">No holders yet.</div>'; return; }
-    var max = list[0].net || 1;
-    host.innerHTML = list.map(function (h, i) { var pct = Math.max(6, Math.round(h.net / max * 100)); var col = h.side === 'n' ? 'linear-gradient(90deg,#e11d48,#fb7185)' : 'linear-gradient(90deg,#10b981,#34d399)'; var c = h.side === 'n' ? 'var(--opm-no)' : 'var(--opm-yes)'; return '<div class="opm-holder"><span class="rank">' + (i + 1) + '</span><span class="addr">' + esc(h.short) + '</span><span class="bar"><i style="width:' + pct + '%;background:' + col + '"></i></span><span class="sh" style="color:' + c + '">' + num0(h.net) + '</span></div>'; }).join('');
+    var by = {};
+    (arr || []).forEach(function (r) { var w = r.wallet; if (!w) return; var sh = Number(r.shares) || 0; if (!(sh > 0)) return; var isSell = String(r.id || '').indexOf('sell:') === 0; var y = String(r.side || '').toUpperCase() === 'YES'; by[w] = by[w] || { short: r.walletShort || (String(w).slice(0, 4) + '…' + String(w).slice(-4)), net: 0, side: y ? 'y' : 'n' }; by[w].net += (isSell ? -sh : sh); if (!isSell) by[w].side = y ? 'y' : 'n'; });
+    _ostHolders = Object.keys(by).map(function (k) { return by[k]; }).filter(function (h) { return h.net > 0.01; }).sort(function (a, b) { return b.net - a.net; }).slice(0, 8);
+    renderHolders();
+  }
+  var _venueHolders = null, _holdersGen = 0;
+  function loadHolders() {
+    var m = currentMarket; if (!m || m.source !== 'polymarket') { _venueHolders = null; renderHolders(); return; }
+    var gen = ++_holdersGen;
+    venueHolders(m).then(function (h) { if (gen !== _holdersGen || view !== 'detail') return; _venueHolders = h; pane.holders.tries = 0; renderHolders(); })
+      .catch(function () { if (gen !== _holdersGen || view !== 'detail') return; _venueHolders = { error: true }; renderHolders(); paneRetry('holders', loadHolders); });
+  }
+  function holderRows(list, sideCls, unit) {
+    var max = list[0] ? (list[0].net || list[0].amount || 1) : 1;
+    return list.map(function (h, i) { var v = h.net != null ? h.net : h.amount; var pct = Math.max(6, Math.round(v / max * 100)); var col = sideCls === 'n' ? 'linear-gradient(90deg,#e11d48,#fb7185)' : 'linear-gradient(90deg,#10b981,#34d399)'; var c = sideCls === 'n' ? 'var(--opm-no)' : 'var(--opm-yes)';
+      return '<div class="opm-holder"><span class="rank">' + (i + 1) + '</span><span class="addr">' + (h.avatar ? '<img class="av" alt="" loading="lazy" referrerpolicy="no-referrer" src="' + esc2(h.avatar) + '">' : '') + esc2(h.short || h.who) + '</span><span class="bar"><i style="width:' + pct + '%;background:' + col + '"></i></span><span class="sh" style="color:' + c + '">' + num0(v) + (unit ? ' ' + unit : '') + '</span></div>'; }).join('');
+  }
+  function renderHolders() {
+    var host = el('opmHolders'); if (!host) return;
+    var html = '';
+    if (_ostHolders.length) html += '<div class="opm-sec2">OST holders</div>' + holderRows(_ostHolders.filter(function (h) { return h.side === 'y'; }), 'y', 'sh') + holderRows(_ostHolders.filter(function (h) { return h.side === 'n'; }), 'n', 'sh');
+    var vh = _venueHolders;
+    if (vh && !vh.error && (vh.yes.length || vh.no.length)) {
+      html += '<div class="opm-sec2">Polymarket · top Yes holders</div>' + (vh.yes.length ? holderRows(vh.yes.slice(0, 5), 'y', '') : '<div class="opm-empty">—</div>') +
+              '<div class="opm-sec2">Polymarket · top No holders</div>' + (vh.no.length ? holderRows(vh.no.slice(0, 5), 'n', '') : '<div class="opm-empty">—</div>');
+    } else if (vh && vh.error && !html) { paneError('opmHolders', 'Holders are not answering right now.', loadHolders); return; }
+    else if (!html && currentMarket && currentMarket.source === 'polymarket' && !vh) { host.innerHTML = '<div class="opm-empty">Loading holders…</div>'; return; }
+    host.innerHTML = html || '<div class="opm-empty">No holders yet.</div>';
+  }
+  // Comments: OST users (worker) + the venue's thread (Gamma, read-only) for Polymarket markets.
+  var _cmtGen = 0, _venueEvent = {};
+  function venueEventId(m) {
+    if (!m || m.source !== 'polymarket') return Promise.resolve('');
+    var id = String(m.id); if (/^group:\d+$/.test(id)) return Promise.resolve(id.slice(6));
+    if (_venueEvent[id] !== undefined) return Promise.resolve(_venueEvent[id]);
+    if (!/^\d+$/.test(id)) return Promise.resolve('');
+    return gammaApi('/markets/' + id).then(function (g) { var ev = g && Array.isArray(g.events) && g.events[0]; _venueEvent[id] = ev && ev.id ? String(ev.id) : ''; return _venueEvent[id]; }).catch(function () { return ''; });
   }
   function loadComments() {
     var fid = feedCommentId(); if (!fid) return;
-    return fetch(API + '/predict/comments?marketId=' + encodeURIComponent(fid), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
-      var arr = (d && d.comments) || []; var host = el('opmComments'); if (!host) return;
-      if (!arr.length) { host.innerHTML = '<div class="opm-empty">Be the first to comment.</div>'; return; }
-      host.innerHTML = arr.slice().reverse().slice(0, 40).map(function (c) { var initials = String(c.handle || c.walletShort || '?').replace(/[^a-z0-9]/gi, '').slice(0, 2).toUpperCase() || '0X'; return '<div class="opm-cmt"><div class="av">' + esc(initials) + '</div><div class="b"><div class="n">' + esc(c.handle || c.walletShort || 'anon') + '<span>' + ago(c.ts) + '</span></div><p>' + esc(c.text) + '</p></div></div>'; }).join('');
-    }).catch(function () {});
+    var gen = ++_cmtGen, m = currentMarket;
+    var ostP = fetchJsonT(API + '/predict/comments?marketId=' + encodeURIComponent(fid), 9000).then(function (d) { return { ok: true, a: (d && d.comments) || [] }; }, function () { return { ok: false, a: [] }; });
+    var venP = venueEventId(m).then(function (eid) { if (!eid) return []; return gammaApi('/comments?parent_entity_type=Event&parent_entity_id=' + eid + '&limit=25&order=createdAt&ascending=false').then(function (arr) { return Array.isArray(arr) ? arr : []; }); }).catch(function () { return []; });
+    return Promise.all([ostP, venP]).then(function (res) {
+      if (gen !== _cmtGen || view !== 'detail') return;
+      var host = el('opmComments'); if (!host) return;
+      var ost = res[0].a.slice().reverse(), ven = res[1];
+      if (!res[0].ok && !ven.length) { paneError('opmComments', 'Comments are not answering right now.', loadComments); paneRetry('comments', loadComments); return; }
+      pane.comments.tries = 0;
+      var rows = ost.slice(0, 40).map(function (c) { var initials = String(c.handle || c.walletShort || '?').replace(/[^a-z0-9]/gi, '').slice(0, 2).toUpperCase() || '0X'; return '<div class="opm-cmt"><div class="av">' + esc2(initials) + '</div><div class="b"><div class="n">' + esc2(c.handle || c.walletShort || 'anon') + '<span>' + ago(c.ts) + '</span></div><p>' + esc2(c.text) + '</p></div></div>'; });
+      if (ven.length) rows.push('<div class="opm-sec2">Polymarket thread</div>');
+      ven.slice(0, 25).forEach(function (c) { var p = c.profile || {}; var name = p.name || p.pseudonym || (String(p.proxyWallet || c.userAddress || '').slice(0, 6) + '…'); var av = p.profileImageOptimized || p.profileImage || ''; rows.push('<div class="opm-cmt venue"><div class="av">' + (av ? '<img alt="" loading="lazy" referrerpolicy="no-referrer" src="' + esc2(av) + '">' : esc2(String(name).slice(0, 2).toUpperCase())) + '</div><div class="b"><div class="n">' + esc2(name) + ' <em>PM</em><span>' + ago(Date.parse(c.createdAt || '') || 0) + '</span></div><p>' + esc2(c.body || '') + '</p></div></div>'); });
+      host.innerHTML = rows.length ? rows.join('') : '<div class="opm-empty">Be the first to comment.</div>';
+      if (!res[0].ok) paneRetry('comments', loadComments);
+    });
   }
   function postComment() {
     var inp = el('opmCmtIn'); if (!inp) return; var text = String(inp.value || '').trim(); if (!text) return;
@@ -857,7 +977,7 @@
     inp.value = ''; inp.disabled = true;
     fetch(API + '/predict/comments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ wallet: wallet, text: text, marketId: feedCommentId(), handle: meshHandle() }) })
       .then(function (r) { return r.json(); }).then(function (d) { inp.disabled = false; if (d && d.error === 'slow_down') { toast('Slow down a moment.'); return; } loadComments(); })
-      .catch(function () { inp.disabled = false; });
+      .catch(function () { inp.disabled = false; inp.value = text; toast('Could not post — try again.'); });
   }
 
   /* ---- position ---- */
@@ -1232,7 +1352,7 @@
 
   function wireDetail() {
     var back = el('opmBack'); if (back) back.onclick = showBrowse;
-    document.querySelectorAll('#opmSeg button').forEach(function (b) { b.onclick = function () { document.querySelectorAll('#opmSeg button').forEach(function (x) { x.classList.remove('on'); }); b.classList.add('on'); var p = b.getAttribute('data-p'); document.querySelectorAll('#opmDetail .opm-pane').forEach(function (pn) { pn.classList.toggle('on', pn.getAttribute('data-pane') === p); }); if (p === 'comments') loadComments(); }; });
+    document.querySelectorAll('#opmSeg button').forEach(function (b) { b.onclick = function () { document.querySelectorAll('#opmSeg button').forEach(function (x) { x.classList.remove('on'); }); b.classList.add('on'); var p = b.getAttribute('data-p'); document.querySelectorAll('#opmDetail .opm-pane').forEach(function (pn) { pn.classList.toggle('on', pn.getAttribute('data-pane') === p); }); if (p === 'comments') loadComments(); else if (p === 'holders') loadHolders(); else if (p === 'trades' && el('opmTrades') && el('opmTrades').querySelector('.opm-retry')) loadTrades(); }; });
     document.querySelectorAll('#opmYn button').forEach(function (b) { b.onclick = function () { side = b.getAttribute('data-s'); syncYnSel(); }; });
     document.querySelectorAll('#opmBuyY,#opmBuyN,#opmDetail [data-open]').forEach(function (b) { b.onclick = function () { openSheet('buy', b.getAttribute('data-open')); }; });
     var scr = el('opmScrim'); if (scr) scr.onclick = closeSheet;
@@ -1245,8 +1365,14 @@
 
   function toast(msg) { try { if (typeof window.toast === 'function') { window.toast('info', msg); return; } } catch (_) {} console.log('[predict]', msg); }
 
-  /* ================= POSITIONS (trade tickets) ================= */
-  var posFilter = 'all';
+  /* ================= PORTFOLIO (positions + history) =================
+   * Polymarket-style portfolio: every open position marked to the LIVE price,
+   * unrealized + realized P&L, claimable wins first, full history. The list is
+   * the local ledger shown instantly, then reconciled with the wallet's remote
+   * ledger (so a fresh device sees the same positions) and the resolution engine
+   * (so finished markets show won/lost without waiting for the desk's 30s poll).
+   * It re-renders on every ledger/balance/market event and re-marks every 15s. */
+  var posFilter = 'all', _pfStatus = { syncing: false, syncedAt: 0, note: '' }, _pfTimer = 0;
   function orderState(o) {
     if (!o) return 'open';
     if (o.cashedOut) return 'paid';
@@ -1254,95 +1380,203 @@
     if (st === 'won') return 'claim';
     if (st === 'lost') return 'lost';
     if (st === 'sold' || st === 'settled' || st === 'refunded') return 'paid';
+    if (String(o.source || '') === 'ost-parlay') return 'open';
+    var close = Number(o.closeAt || o.closeAtMs || 0);
+    if (o.fundedBy === 'ostg-native' && close > 0 && close <= Date.now()) return 'settle';
     return 'open';
   }
-  function computePortfolio(orders) {
-    var p = { staked: 0, value: 0, pnl: 0, open: 0, claim: 0, lost: 0, paid: 0 };
-    orders.forEach(function (o) {
-      var stake = Number(o.stake) || 0; p.staked += stake; var st = orderState(o);
-      if (st === 'paid') { p.paid++; var got = Number(o.cashoutOst) || 0; p.value += got; p.pnl += got - stake; }
-      else if (st === 'claim') { p.claim++; var v = Number(o.potentialReturn) || Number(o.shares) || stake; p.value += v; p.pnl += v - stake; }
-      else if (st === 'lost') { p.lost++; p.pnl -= stake; }
-      else { p.open++; var val = Number(o.shares) > 0 ? Number(o.shares) * (Number(o.entry || o.price) || 0) : stake; if (!(val > 0)) val = stake; p.value += val; p.pnl += val - stake; }
+  function isBtcRoundId(id) { return /^ost-btc5m-\d+$/.test(String(id || '')); }
+  // Live price for an open ticket's side, as a fraction. Same sources as the desk.
+  function livePriceFor(o) {
+    var side = o.side === 'no' ? 'no' : 'yes', mid = String(o.marketId || '');
+    try { if (window.OST_PRICES && OST_PRICES.mid) { var v = Number(OST_PRICES.mid(mid, side)); if (v > 0 && v < 1) return v; } } catch (_) {}
+    if (isBtcRoundId(mid)) {
+      try { var r = window.OST_PREDICTION_API && OST_PREDICTION_API.fiveMinRound && OST_PREDICTION_API.fiveMinRound(); if (r && String(r.id || r.marketId || '') === mid && isFinite(Number(r.yesPriceNumber))) { var y = Number(r.yesPriceNumber); return side === 'yes' ? y : 1 - y; } } catch (_) {}
+      return NaN;   // a past round: no live price (it settles, it doesn't trade)
+    }
+    var m = marketForOrderId(mid);
+    if (m) {
+      var yv = NaN;
+      if (m.isGrouped && Array.isArray(m.outcomes)) { var oc = m.outcomes.filter(function (x) { return x && String(x.marketId || x.key || '') === mid; })[0]; if (oc) yv = Number(oc.price); }
+      if (!(yv > 0 && yv < 1)) yv = Number(m.yesPriceNumber);
+      if (yv > 1) yv /= 100;
+      if (yv > 0 && yv < 1) return side === 'yes' ? yv : 1 - yv;
+    }
+    return NaN;
+  }
+  function parlaySlipOf(o) { try { var id = String(o.marketId || '').replace(/^ost-parlay:/, ''); return (window.OST_PARLAY && OST_PARLAY.slips() || []).filter(function (x) { return x.id === id; })[0] || null; } catch (_) { return null; } }
+  function markTicket(o) {
+    var st = orderState(o), stake = Number(o.stake) || 0, shares = Number(o.shares) || 0;
+    var entry = Number(o.entry || o.price) || (shares > 0 ? stake / shares : 0);
+    var t = { o: o, st: st, stake: stake, shares: shares, entry: entry, value: stake, pnl: 0, live: false, label: '', net: 0 };
+    if (String(o.source || '') === 'ost-parlay') {
+      var sl = parlaySlipOf(o);
+      if (st === 'open') { t.value = sl ? (Number(OST_PARLAY.valueOf(sl)) || 0) : stake; t.net = sl ? (Number(OST_PARLAY.offerOf(sl)) || 0) : 0; t.live = !!sl; t.pnl = t.value - stake; t.label = 'parlay'; return t; }
+    }
+    if (st === 'paid') { t.value = Number(o.cashoutOst) || 0; t.pnl = t.value - stake; return t; }
+    if (st === 'lost') { t.value = 0; t.pnl = -stake; return t; }
+    if (st === 'claim') { t.value = Number(o.potentialReturn) || shares || stake; t.net = feeNet(t.value, stake); t.pnl = t.net - stake; return t; }
+    if (st === 'settle') { t.value = shares || stake; t.net = t.value; t.pnl = 0; return t; }
+    var lp = livePriceFor(o);
+    if (lp > 0 && shares > 0) { t.value = shares * lp; t.live = true; } else t.value = stake;
+    t.net = feeNet(t.value, stake); t.pnl = t.value - stake;
+    return t;
+  }
+  function feeNet(gross, stake) { try { if (window.OST_HOUSE && OST_HOUSE.quote) return Number(OST_HOUSE.quote(gross, stake).net) || gross; } catch (_) {} return gross - Math.max(0, gross - stake) * 0.02; }
+  function computePortfolio(marked) {
+    var p = { open: 0, openValue: 0, openStake: 0, unrealized: 0, realized: 0, claim: 0, claimValue: 0, won: 0, lost: 0, paid: 0, staked: 0 };
+    marked.forEach(function (t) {
+      p.staked += t.stake;
+      if (t.st === 'open' || t.st === 'settle') { p.open++; p.openValue += t.value; p.openStake += t.stake; p.unrealized += t.pnl; }
+      else if (t.st === 'claim') { p.claim++; p.claimValue += t.net; p.won++; p.unrealized += t.pnl; }
+      else if (t.st === 'paid') { p.paid++; p.realized += t.pnl; if (t.pnl > 0.005) p.won++; }
+      else if (t.st === 'lost') { p.lost++; p.realized += t.pnl; }
     });
     return p;
   }
   function cashBtnFor(sig) { if (!sig) return null; try { return document.querySelector('.prediction-cashout-btn[data-order-sig="' + (window.CSS && CSS.escape ? CSS.escape(sig) : sig) + '"]'); } catch (_) { return null; } }
-  function ticketRow(o) {
-    var st = orderState(o), side = o.side === 'no' ? 'no' : 'yes';
-    var stake = Number(o.stake) || 0, shares = Number(o.shares) || 0, sig = o.signature || o.sig || o.id || '';
-    var btn = cashBtnFor(sig), actionHtml;
-    var isParlay = String(o.source || '') === 'ost-parlay';
+  function signed(v, dp) { v = Number(v) || 0; return (v > 0.005 ? '+' : v < -0.005 ? '−' : '') + Math.abs(v).toFixed(dp == null ? 2 : dp); }
+  function ticketRow(t) {
+    var o = t.o, st = t.st, side = o.side === 'no' ? 'no' : 'yes';
+    var sig = o.signature || o.sig || o.id || '', isParlay = String(o.source || '') === 'ost-parlay';
+    var actionHtml, badge = '';
     if (isParlay && st === 'open') {
-      var slipId = String(o.marketId || '').replace(/^ost-parlay:/, ''), offer = 0, live = 0;
-      try { var sl = (window.OST_PARLAY && OST_PARLAY.slips() || []).filter(function (x) { return x.id === slipId; })[0]; if (sl && sl.status === 'open') { offer = Number(OST_PARLAY.offerOf(sl)) || 0; live = Number(OST_PARLAY.valueOf(sl)) || 0; } } catch (_) {}
-      actionHtml = offer >= 0.05 ? '<button class="opm-tbtn" data-parlay-sell="' + esc(slipId) + '">Sell · ' + offer.toFixed(2) + '</button>' : '<span class="opm-tbadge">⚡ live' + (live > 0 ? ' · ' + live.toFixed(2) : '') + '</span>';
-    } else if ((st === 'open' || st === 'claim') && btn) {
-      var net = (btn.textContent.match(/([\d,]+\.?\d*)\s*$/) || [])[1] || '';
-      var claim = /claim|settle/i.test(btn.textContent);
-      actionHtml = '<button class="opm-tbtn' + (claim ? ' claimw' : '') + '" data-sig="' + esc(sig) + '">' + (claim ? 'Claim' : 'Sell') + (net ? ' · ' + esc(net) : '') + '</button>';
-    } else if (st === 'claim') { actionHtml = '<span class="opm-tbadge" style="color:var(--opm-gold)">Won</span>'; }
-    else if (st === 'paid') { actionHtml = '<span class="opm-tres" style="color:var(--opm-yes)">+' + (Number(o.cashoutOst) || 0).toFixed(2) + '</span>'; }
-    else if (st === 'lost') { actionHtml = '<span class="opm-tres" style="color:var(--opm-no)">−' + stake.toFixed(2) + '</span>'; }
+      var slipId = String(o.marketId || '').replace(/^ost-parlay:/, '');
+      actionHtml = t.net >= 0.05 ? '<button class="opm-tbtn" data-parlay-sell="' + esc(slipId) + '">Sell · ' + t.net.toFixed(2) + '</button>' : '<span class="opm-tbadge">⚡ live</span>';
+    } else if (st === 'claim') {
+      var cb = cashBtnFor(sig); var netTxt = cb ? ((cb.textContent.match(/([\d,]+\.?\d*)\s*$/) || [])[1] || t.net.toFixed(2)) : t.net.toFixed(2);
+      actionHtml = '<button class="opm-tbtn claimw" data-sig="' + esc(sig) + '">Claim · ' + esc(netTxt) + '</button>';
+    } else if (st === 'settle') {
+      actionHtml = '<button class="opm-tbtn" data-sig="' + esc(sig) + '">Settle</button>';
+    } else if (st === 'open') {
+      var native = o.fundedBy === 'ostg-native', closed = Number(o.closeAt || o.closeAtMs || 0) > 0 && Number(o.closeAt || o.closeAtMs) <= Date.now();
+      var cb2 = cashBtnFor(sig);
+      if (native && !cb2) actionHtml = '<span class="opm-tbadge">Locked · settles at close</span>';
+      else if (closed && !cb2) actionHtml = '<span class="opm-tbadge">Awaiting result</span>';
+      else { var n2 = cb2 ? ((cb2.textContent.match(/([\d,]+\.?\d*)\s*$/) || [])[1] || t.net.toFixed(2)) : t.net.toFixed(2); actionHtml = '<button class="opm-tbtn" data-sig="' + esc(sig) + '">Sell · ' + esc(n2) + '</button>'; }
+    } else if (st === 'paid') { actionHtml = '<span class="opm-tres" style="color:' + (t.pnl >= 0 ? 'var(--opm-yes)' : 'var(--opm-no)') + '">' + signed(t.pnl) + '</span>'; badge = (String(o.status || '').toLowerCase() === 'sold' || /sell|cashout/.test(String(o.cashoutKind || ''))) ? 'Sold' : (String(o.status || '').toLowerCase() === 'refunded' ? 'Refunded' : 'Won'); }
+    else if (st === 'lost') { actionHtml = '<span class="opm-tres" style="color:var(--opm-no)">−' + t.stake.toFixed(2) + '</span>'; badge = 'Lost'; }
     else { actionHtml = '<span class="opm-tbadge">Open</span>'; }
-    return '<div class="opm-trow" data-mid="' + esc(o.marketId || '') + '"><div class="opm-tmain"><div class="opm-ttitle">' + esc(o.title || o.marketId || 'Ticket') + '</div>' +
-      '<div class="opm-tmeta"><span class="opm-tside ' + (side === 'yes' ? 'y' : 'n') + '">' + (side === 'yes' ? 'Yes' : 'No') + '</span> ' + stake.toFixed(0) + ' OSTG · ' + (shares > 0 ? shares.toFixed(1) + ' sh · ' : '') + ago(o.ts) + '</div></div>' +
+    var title = o.title || o.marketTitle || o.marketId || 'Ticket';
+    var when = o.cashoutAt || o.resolvedAt || o.ts || o.createdAt;
+    var valTxt = (st === 'open' || st === 'settle') ? ('<b class="' + (t.pnl >= 0 ? 'up' : 'down') + '">' + t.value.toFixed(2) + '</b> <i>' + signed(t.pnl) + (t.stake > 0 ? ' (' + signed(t.pnl / t.stake * 100, 0) + '%)' : '') + (t.live ? '' : ' · at entry') + '</i>')
+      : st === 'claim' ? ('<b class="up">won · ' + t.net.toFixed(2) + '</b>') : '';
+    return '<div class="opm-trow st-' + st + '" data-mid="' + esc(o.marketId || '') + '">' +
+      '<div class="opm-timg"></div>' +
+      '<div class="opm-tmain"><div class="opm-ttitle">' + esc(title) + '</div>' +
+        '<div class="opm-tmeta"><span class="opm-tside ' + (side === 'yes' ? 'y' : 'n') + '">' + esc(o.outcomeLabel && !isParlay ? o.outcomeLabel : (side === 'yes' ? 'Yes' : 'No')) + '</span> ' +
+          t.stake.toFixed(2) + ' <small>OSTG</small>' + (t.entry > 0 && !isParlay ? ' @ ' + fmtc(t.entry * 100) + '¢' : '') + (t.shares > 0 && !isParlay ? ' · ' + t.shares.toFixed(1) + ' sh' : '') + ' · ' + ago(when) + (badge ? ' · <em>' + badge + '</em>' : '') + '</div>' +
+        (valTxt ? '<div class="opm-tval">' + valTxt + '</div>' : '') + '</div>' +
       '<div class="opm-tact">' + actionHtml + '</div></div>';
   }
   function positionsTemplate() {
-    return '<div class="opm-tb"><div class="opm-back" id="opmPosBack">' + icon('back') + '</div><div class="opm-cat">Your<b>Trade tickets</b></div><div class="opm-sp"></div>' + balChip() + '</div>' +
+    return '<div class="opm-tb"><div class="opm-back" id="opmPosBack">' + icon('back') + '</div><div class="opm-cat">Your<b>Portfolio</b></div><div class="opm-sp"></div><button class="opm-tickets-btn" id="opmPfSync" title="Sync with the server">↻</button>' + balChip() + '</div>' +
       '<div class="opm-scroll">' +
         '<div class="opm-psum">' +
-          '<div class="opm-ps"><div class="k">Staked</div><div class="v" id="opmPfStaked">—</div></div>' +
-          '<div class="opm-ps"><div class="k">Value</div><div class="v" id="opmPfValue">—</div></div>' +
-          '<div class="opm-ps"><div class="k">P&amp;L</div><div class="v" id="opmPfPnl">—</div></div>' +
-          '<div class="opm-ps"><div class="k">Open / Won</div><div class="v" id="opmPfCounts">—</div></div>' +
+          '<div class="opm-ps"><div class="k">Positions value</div><div class="v" id="opmPfValue">—</div></div>' +
+          '<div class="opm-ps"><div class="k">Unrealized P&amp;L</div><div class="v" id="opmPfPnl">—</div></div>' +
+          '<div class="opm-ps"><div class="k">Realized P&amp;L</div><div class="v" id="opmPfReal">—</div></div>' +
+          '<div class="opm-ps"><div class="k">Open · Won · Lost</div><div class="v" id="opmPfCounts">—</div></div>' +
         '</div>' +
-        '<div class="opm-chips" id="opmPosChips">' + [['all', 'All'], ['open', 'Open'], ['claim', 'Claim wins'], ['paid', 'Cashed out'], ['lost', 'Lost']].map(function (c) { return '<button class="opm-chip' + (c[0] === 'all' ? ' on' : '') + '" data-f="' + c[0] + '">' + c[1] + '</button>'; }).join('') + '</div>' +
-        '<div id="opmPosList"><div class="opm-empty">Loading…</div></div>' +
+        '<div class="opm-pfstatus" id="opmPfStatus"></div>' +
+        '<div id="opmPfClaim"></div>' +
+        '<div class="opm-chips" id="opmPosChips">' + [['all', 'All'], ['open', 'Open'], ['claim', 'Claimable'], ['paid', 'History'], ['lost', 'Lost']].map(function (c) { return '<button class="opm-chip' + (c[0] === 'all' ? ' on' : '') + '" data-f="' + c[0] + '">' + c[1] + '</button>'; }).join('') + '</div>' +
+        '<div id="opmPosList"><div class="opm-empty">Loading your positions…</div></div>' +
       '</div>';
   }
   function renderPositions() {
     if (!el('opmPositions')) return;
-    var orders = ledgerOrders().slice().sort(function (a, b) { return Number(b.ts || 0) - Number(a.ts || 0); });
-    var pf = computePortfolio(orders);
+    var orders = ledgerOrders().slice().sort(function (a, b) { return Number(b.ts || b.createdAt || 0) - Number(a.ts || a.createdAt || 0); });
+    var marked = orders.map(markTicket);
+    var pf = computePortfolio(marked);
     var set = function (id, txt, cls) { var e = el(id); if (e) { e.textContent = txt; if (cls != null) e.className = 'v ' + cls; } };
-    set('opmPfStaked', num0(pf.staked)); set('opmPfValue', num0(pf.value));
-    set('opmPfPnl', (pf.pnl >= 0 ? '+' : '−') + num0(Math.abs(pf.pnl)), pf.pnl >= 0 ? 'up' : 'down');
-    set('opmPfCounts', pf.open + ' / ' + pf.claim);
+    set('opmPfValue', num2(pf.openValue + pf.claimValue));
+    set('opmPfPnl', signed(pf.unrealized), pf.unrealized >= 0 ? 'up' : 'down');
+    set('opmPfReal', signed(pf.realized), pf.realized >= 0 ? 'up' : 'down');
+    set('opmPfCounts', pf.open + ' · ' + pf.won + ' · ' + pf.lost);
+    var stEl = el('opmPfStatus');
+    if (stEl) {
+      var w = walletAddr();
+      var txt = _pfStatus.syncing ? 'Syncing with the server…' : (_pfStatus.note ? _pfStatus.note : (w ? (_pfStatus.syncedAt ? 'Synced ' + ago(_pfStatus.syncedAt) + ' ago · ' + w.slice(0, 4) + '…' + w.slice(-4) : 'Local tickets · syncing…') : 'Local tickets · connect a wallet to sync across devices'));
+      stEl.innerHTML = '<span class="d' + (_pfStatus.syncing ? ' busy' : '') + '"></span>' + esc(txt) + '<span class="sp"></span>' + (orders.length ? orders.length + ' tickets' : '');
+    }
+    var claimHost = el('opmPfClaim');
+    if (claimHost) { var cl = marked.filter(function (t) { return t.st === 'claim'; }); claimHost.innerHTML = cl.length ? '<div class="opm-claimbar"><span>🎉 ' + cl.length + ' win' + (cl.length > 1 ? 's' : '') + ' to claim · ' + num2(pf.claimValue) + ' OSTG</span><button class="opm-tbtn claimw" id="opmClaimAll">Claim all</button></div>' : '';
+      var ca = el('opmClaimAll'); if (ca) ca.onclick = function () { ca.disabled = true; ca.textContent = 'Claiming…'; claimAll(cl); }; }
     var list = el('opmPosList'); if (!list) return;
-    var rows = orders.filter(function (o) { return posFilter === 'all' || orderState(o) === posFilter; });
-    list.innerHTML = rows.length ? rows.map(ticketRow).join('') : '<div class="opm-empty">' + (orders.length ? 'No tickets in this filter.' : 'No tickets yet — place a bet to get started.') + '</div>';
+    var rows = marked.filter(function (t) { return posFilter === 'all' || t.st === posFilter || (posFilter === 'open' && t.st === 'settle') || (posFilter === 'paid' && t.st === 'lost'); });
+    var order = { claim: 0, settle: 1, open: 2, paid: 3, lost: 3 };
+    if (posFilter === 'all') rows.sort(function (a, b) { return (order[a.st] - order[b.st]) || (Number(b.o.ts || 0) - Number(a.o.ts || 0)); });
+    if (!rows.length) {
+      list.innerHTML = '<div class="opm-empty">' + (orders.length ? 'Nothing in this filter yet.' : (_pfStatus.syncing ? 'Loading your positions…' : 'No positions yet. Open a market and take a side — your tickets, wins and history show up here.')) + '</div>';
+      return;
+    }
+    var html = '', lastGroup = '';
+    rows.forEach(function (t) {
+      var g = (t.st === 'claim' || t.st === 'settle') ? 'Ready to claim' : t.st === 'open' ? 'Open positions' : 'History';
+      if (posFilter === 'all' && g !== lastGroup) { html += '<div class="opm-sec2">' + g + '</div>'; lastGroup = g; }
+      html += ticketRow(t);
+    });
+    list.innerHTML = html;
+    try { if (window.OST_MARKET_ART) OST_MARKET_ART.apply(); } catch (_) {}
     list.querySelectorAll('.opm-tbtn[data-parlay-sell]').forEach(function (b) {
       b.onclick = function (e) { e.stopPropagation(); b.disabled = true; b.textContent = '…'; try { OST_PARLAY.sell(b.getAttribute('data-parlay-sell')); } catch (_) {} setTimeout(function () { refreshBalance(); renderPositions(); }, 300); };
     });
-    list.querySelectorAll('.opm-tbtn:not([data-parlay-sell])').forEach(function (b) {
-      b.onclick = function (e) {
-        e.stopPropagation(); var sig = b.getAttribute('data-sig'); var api = window.OST_PREDICTION_API;
-        b.disabled = true; b.textContent = '…';
-        if (api && typeof api.cashOut === 'function' && sig) {
-          api.cashOut(sig).then(function (r) { if (r && r.ok !== false) toast(((r.kind === 'prediction-settlement') ? 'Claimed ' : 'Sold for ') + (Number(r.payout) || 0).toFixed(2) + ' OSTG.'); })
-            .catch(function (err) { toast('Could not cash out — ' + ((err && err.message) || 'try again') + '.'); })
-            .then(function () { refreshBalance(); renderPositions(); });
-          return;
-        }
-        var real = cashBtnFor(sig); if (!real) { b.disabled = false; toast('Settling — try again shortly.'); return; }
-        try { real.click(); } catch (_) {} setTimeout(function () { refreshBalance(); renderPositions(); }, 1500);
-      };
+    list.querySelectorAll('.opm-tbtn[data-sig]').forEach(function (b) {
+      b.onclick = function (e) { e.stopPropagation(); cashOutTicket(b.getAttribute('data-sig'), b); };
     });
     list.querySelectorAll('.opm-trow').forEach(function (r) {
-      r.onclick = function () { var m = marketForOrderId(r.getAttribute('data-mid')); if (m) openMarket(m); };
+      r.onclick = function () { var m = marketForOrderId(r.getAttribute('data-mid')); if (m) openMarket(m); else toast('That market is no longer in the live list.'); };
+    });
+  }
+  function num2(v) { return (Number(v) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function cashOutTicket(sig, b) {
+    var api = window.OST_PREDICTION_API;
+    if (b) { b.disabled = true; b.textContent = '…'; }
+    if (api && typeof api.cashOut === 'function' && sig) {
+      return api.cashOut(sig).then(function (r) { if (r && r.ok !== false) toast(((r.kind === 'prediction-settlement' || /resolve|claim/.test(String(r.kind || ''))) ? 'Claimed ' : 'Sold for ') + (Number(r.payout) || 0).toFixed(2) + ' OSTG.'); else if (r && r.label) toast(r.label); })
+        .catch(function (err) { toast('Could not cash out — ' + ((err && err.message) || 'try again') + '.'); })
+        .then(function () { refreshBalance(); renderPositions(); });
+    }
+    var real = cashBtnFor(sig); if (!real) { if (b) b.disabled = false; toast('Settling — try again shortly.'); return Promise.resolve(); }
+    try { real.click(); } catch (_) {} setTimeout(function () { refreshBalance(); renderPositions(); }, 1500);
+    return Promise.resolve();
+  }
+  function claimAll(list) {
+    var chain = Promise.resolve();
+    list.forEach(function (t) { var sig = t.o.signature || t.o.sig || t.o.id; if (sig) chain = chain.then(function () { return cashOutTicket(sig, null); }); });
+    chain.then(function () { refreshBalance(); renderPositions(); });
+  }
+  // Reconcile with the server: the wallet's remote ledger + fresh resolutions.
+  function syncPortfolio(force) {
+    var api = window.OST_PREDICTION_API || {};
+    if (_pfStatus.syncing) return;
+    if (!force && _pfStatus.syncedAt && Date.now() - _pfStatus.syncedAt < 20000) { renderPositions(); return; }
+    _pfStatus.syncing = true; _pfStatus.note = ''; renderPositions();
+    var jobs = [];
+    if (walletAddr() && typeof api.syncOrders === 'function') jobs.push(Promise.resolve(api.syncOrders()).catch(function () { return false; }));
+    if (typeof api.refreshResolutions === 'function') jobs.push(Promise.resolve(api.refreshResolutions()).catch(function () { return false; }));
+    try { if (window.OST_PARLAY && OST_PARLAY.settleScan) OST_PARLAY.settleScan(); } catch (_) {}
+    var to = new Promise(function (res) { setTimeout(res, 12000); });
+    Promise.race([Promise.all(jobs), to]).then(function () {
+      _pfStatus.syncing = false; _pfStatus.syncedAt = Date.now();
+      renderPositions(); refreshBalance();
     });
   }
   function wirePositions() {
     var back = el('opmPosBack'); if (back) back.onclick = showBrowse;
+    var sy = el('opmPfSync'); if (sy) sy.onclick = function () { syncPortfolio(true); };
     var chips = el('opmPosChips'); if (chips) chips.onclick = function (e) { var b = e.target.closest('.opm-chip'); if (!b) return; posFilter = b.getAttribute('data-f'); chips.querySelectorAll('.opm-chip').forEach(function (x) { x.classList.toggle('on', x === b); }); renderPositions(); };
   }
   function openPositions() {
     try { if (window.setWalletPanel) window.setWalletPanel('predict', { scroll: true }); } catch (_) {}
-    stopFlow(); mount(); showView('positions'); wirePositions(); renderPositions();
+    stopFlow(); mount(); showView('positions'); wirePositions(); renderPositions(); syncPortfolio(false);
     try { var host = el('ostPredictMobile'); if (host) host.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {}
   }
+  var _pfRender = 0;
+  function schedulePositions() { if (view !== 'positions') return; clearTimeout(_pfRender); _pfRender = setTimeout(renderPositions, 250); }
+  ['ost:prediction-orders-synced', 'ost:prediction-resolutions-refreshed', 'ost:prediction-markets', 'ost:parlay-won', 'ost:btc-round'].forEach(function (n) { window.addEventListener(n, schedulePositions); });
+  setInterval(function () { if (view === 'positions' && !document.hidden) renderPositions(); }, 15000);   // live re-mark
 
   /* ===================================================================== */
   /* VIEW SWITCHING + MOUNT                                                 */

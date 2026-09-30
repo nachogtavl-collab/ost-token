@@ -196,7 +196,7 @@
         '<span class="omd-m"><span class="omd-st ' + cls + '">' + esc(st) + '</span><span>' + ago(num(o.ts) || o.ts) + '</span></span></div>';
     }).join('');
   }
-  ['ost:prediction:order-changed', 'ost:prediction-update', 'ost:balance'].forEach(function (n) {
+  ['ost:prediction:order-changed', 'ost:prediction-order-recorded', 'ost:prediction-orders-synced', 'ost:prediction-resolutions-refreshed', 'ost:prediction-update', 'ost:balance'].forEach(function (n) {
     window.addEventListener(n, function () { if (rail) renderTickets(); });
   });
 
