@@ -41,6 +41,10 @@ Rules:
 - BTC 5-min: server-authoritative via worker NativeMarketHub (`ost-btc5m-<openAt>` ids).
 - ETH/SOL 5-min: `docs/fast-markets.js`, client-side, settle against Binance 5m klines (deterministic for all users). Injected via `buildOstNativeMarkets()` chain — chain, never replace.
 - Global bet feed: worker `GET /positions/recent`.
+- **Market page = `docs/ost-predict-mobile.js`** (all devices; `ost-markets-desk.js` lays it out wide on desktop, `ost-markets-pro.js` adds the hero/sparklines/live odds). The legacy board in `index.html` stays hidden underneath; app.js's ledger + resolution engine still run there.
+- **Charts = `docs/ost-market-chart.js`** (`window.OST_MARKET_CHART`): the one history engine (CLOB per Yes/No token, Kalshi via worker, 1H…ALL, crosshair, ladder outcome picker, live CLOB midpoint repricing → `ost:predict:quote` / `ost:predict:outcome`). Reuse `history()` / `draw()`; do not add another canvas renderer. Class prefix `mkc-` (`omc-` belongs to mesh-contacts).
+- Buying on the market page calls `OST_PREDICTION_API.placeOrder(payload)` directly (see `buildDirectOrder`); a picked ladder outcome routes to the leg market id. Selling calls `OST_PREDICTION_API.cashOut(ref)` (app.js `cashOutPredictionOrder`, the one payout routine for every rail; it dispatches `ost:prediction:order-changed`). Never drive the hidden desk buttons from a new surface.
+- Parlays (`ost-parlay.js`) spend the credits pool only; slips mirror into the ledger as `source:'ost-parlay'` credits rows that the desk must never cash out (guard in `getPredictionOrderAction`). Venue legs settle via `/gamma/markets/:id`; `settleScan` re-reads slips before writing.
 
 ## Conventions
 

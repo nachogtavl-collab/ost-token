@@ -623,10 +623,11 @@
     return el;
   }
 
+  var modalGen = 0;
   function openModal(html) {
     var el = ensureModal();
     var body = el.querySelector('[data-bind="body"]');
-    if (body) body.innerHTML = html;
+    if (body) { body.innerHTML = html; body.__gen = ++modalGen; }
     el.classList.add('is-open');
     el.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
@@ -639,6 +640,8 @@
     var el = document.getElementById(MODAL_ID);
     if (!el) return;
     var bodyEl = el.querySelector('[data-bind="body"]');
+    if (bodyEl) { bodyEl.__selling = false; bodyEl.__gen = ++modalGen; }
+    try { window.__ostChartRedraw = null; window.__ostRequestChartHistory = null; } catch (_) {}
     if (bodyEl && bodyEl.__refreshSell) {
       try { window.removeEventListener('ost:prediction:order-changed', bodyEl.__refreshSell); } catch (_) {}
       bodyEl.__refreshSell = null;
@@ -1185,7 +1188,8 @@
   }
 
   function drawSeries(canvas, points, color, overlay) {
-    if (!canvas || !points || points.length < 2) return;
+    if (!canvas) return;
+    if (!points || points.length < 2) { try { canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height); } catch (_) {} return; }
     var ctx = canvas.getContext('2d');
     var dpr = window.devicePixelRatio || 1;
     var w = canvas.clientWidth || 600;
@@ -2059,8 +2063,12 @@
     if (market.isOstNative) refreshNativeMarketState(market, bodyEl);
 
     bodyEl.querySelector('[data-act="placebet"]').addEventListener('click', function () {
+      var placeBtn = this;
+      if (placeBtn.disabled) return;
       var s = getStake();
       if (!s) { toast('Set a stake first.', 'err'); return; }
+      var placeLabel = placeBtn.textContent; placeBtn.disabled = true; placeBtn.textContent = 'Placing…';
+      var unlock = function () { placeBtn.disabled = false; placeBtn.textContent = placeLabel; };
       toast('Submitting ' + selectedSide + ' ' + s + ' OST…', 'ok');
       if (window.OST_OPTIMISTIC) {
         try { window.OST_OPTIMISTIC.toast(selectedSide.toUpperCase() + ' ' + s + ' OST submitted…', 'pending'); } catch (e) {}
@@ -2075,8 +2083,10 @@
           // Share to global feed so every other OST user sees the tick live.
           shareBetGlobally(market, selectedSide, s, rec, selectedOutcomeKey);
           bodyEl.__syncNativeQuoteUi && bodyEl.__syncNativeQuoteUi();
+          unlock();
         })
         .catch(function (err) {
+          unlock();
           toast('⚠️ ' + (err && err.message ? err.message : 'Bet failed'), 'err');
           if (window.OST_OPTIMISTIC) {
             try { window.OST_OPTIMISTIC.balanceHint({ deltaOst: +Number(s), source: 'prediction-bet', rollback: true, side: selectedSide, marketId: market && market.id }); } catch (e) {}
@@ -2161,6 +2171,7 @@
     var sellListEl = bodyEl.querySelector('[data-bind="sellList"]');
     function refreshSellList() {
       if (!sellListEl) return;
+      if (bodyEl.__selling) return;
       var positions = ordersForMarket(market);
       setText(bodyEl, 'sellStatus', positions.length ? (positions.length + ' open') : 'no positions');
       var plBar = bodyEl.querySelector('[data-bind="livePlBar"]');
@@ -2241,12 +2252,15 @@
           if (!(payout > 0)) { toast('Cannot sell at 0¢', 'err'); return; }
           var orig = btn.textContent;
           btn.disabled = true; btn.textContent = '…';
+          bodyEl.__selling = true;
           sellOrder(order, payout, 'prediction-sell-modal', market, { sellPrice: livePx, sellValue: payout, shares: shares })
             .then(function (r) {
+              bodyEl.__selling = false;
               toast('✅ Sold ' + (Number(r.ost) || payout).toFixed(2) + ' OST' + (r.sig ? ' (' + String(r.sig).slice(0, 8) + '…)' : ''), 'ok');
               refreshSellList();
             })
             .catch(function (e) {
+              bodyEl.__selling = false;
               btn.disabled = false; btn.textContent = orig;
               toast('Sell failed: ' + (e && e.message || 'unknown'), 'err');
             });
@@ -2505,6 +2519,7 @@
 
     // ---- Polymarket live data ----
     if (looksLikePolymarketId(market)) {
+      var myGen = bodyEl.__gen;   // in-flight fetches from a PREVIOUS market must not paint this one
       var tokenIds = [];
       var tokenId = '';
       var gammaMarketId = '';
@@ -2553,17 +2568,22 @@
       }
 
       function renderLiveHistory() {
+        if (bodyEl.__gen !== myGen) return;   // a newer market owns the (reused) body now
         var canvas = bodyEl.querySelector('[data-bind="chart"]');
         if (!canvas) return;
         var side = (typeof bodyEl.__getChartSide === 'function') ? bodyEl.__getChartSide() : 'YES';
         var history = liveHistoryBySide[side] || [];
-        var hasDistinctNoToken = !!(tokenIds[1] && tokenIds[1] !== (tokenIds[0] || tokenId));
-        if (history.length < 2 && side === 'NO' && !hasDistinctNoToken && liveHistoryBySide.YES.length > 1) {
+        // NO with no series yet (its token history is still loading, or the market has no
+        // distinct NO token): draw the mirror of YES (1−p) so the toggle always shows a
+        // curve, never a blank chart under a red label. The real NO series replaces it
+        // the moment it lands.
+        if (history.length < 2 && side === 'NO' && liveHistoryBySide.YES.length > 1) {
           history = liveHistoryBySide.YES.map(function (record) { return { t: record.t, p: 1 - Number(record.p) }; });
         }
         var pts = history.map(function (record) { return Number(record.p); }).filter(Number.isFinite);
         if (pts.length < 2) {
           setText(bodyEl, 'chartStatus', 'waiting for ticks…');
+          drawSeries(canvas, [], side === 'NO' ? '#ff7c8a' : '#6ce6a4');   // never leave the other side's curve on screen
           return;
         }
         canvas.style.width = '100%';
@@ -2618,6 +2638,7 @@
       // every tick when the CLOB mid disagreed with the Gamma consensus).
       var lastApply = { src: '', ts: 0, value: NaN };
       var applyYes = function (yesPx, src) {
+        if (bodyEl.__gen !== myGen) return;
         if (!Number.isFinite(yesPx) || yesPx < 0 || yesPx > 1) return;
         var now = Date.now();
         // CLOB is treated as a confirmer, not the source of truth.
@@ -2900,18 +2921,22 @@
         var mustMirror = sideToLoad === 'NO' && (!noToken || noToken === yesToken);
         setText(bodyEl, 'chartStatus', 'fetching…');
         fetchPolyHistory(historyTokenId, rawId).then(function (h) {
-          if (!h) { setText(bodyEl, 'chartStatus', 'history unavailable'); return; }
+          if (bodyEl.__gen !== myGen) return;
+          if (!h) { setText(bodyEl, 'chartStatus', 'history unavailable'); renderLiveHistory(); return; }
           var seed = (h.history || h.prices || []).map(function (r) {
-            return {
-              t: Number(r.t || r.time || Date.now()),
-              p: mustMirror ? 1 - Number(r.p || r.price) : Number(r.p || r.price)
-            };
+            var t = Number(r.t || r.time || Date.now()); if (t > 0 && t < 1e11) t *= 1000;   // CLOB seconds -> ms, like the live points
+            return { t: t, p: mustMirror ? 1 - Number(r.p || r.price) : Number(r.p || r.price) };
           }).filter(function (r) { return Number.isFinite(r.p) && r.p >= 0 && r.p <= 1; });
           if (seed.length >= 2) {
-            liveHistoryBySide[sideToLoad] = seed.slice(-LIVE_HISTORY_MAX);
+            // Keep the live ticks that arrived after the seed's last sample; replacing the
+            // whole series every 10s made the curve visibly snap back and forth.
+            var lastT = seed[seed.length - 1].t;
+            var tail = (liveHistoryBySide[sideToLoad] || []).filter(function (r) { return Number(r.t) > lastT; });
+            liveHistoryBySide[sideToLoad] = seed.concat(tail).slice(-LIVE_HISTORY_MAX);
             renderLiveHistory();
-          } else {
+          } else if (!(liveHistoryBySide[sideToLoad] || []).length) {
             setText(bodyEl, 'chartStatus', 'no series');
+            renderLiveHistory();
           }
         });
       };

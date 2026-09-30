@@ -42,7 +42,9 @@
   };
 
   // ------------------------------------------------------------- helpers
-  function clampP(p) { return Math.max(0.005, Math.min(0.995, Number(p) || 0.5)); }
+  function clampP(p) { var n = Number(p); if (!Number.isFinite(n)) n = 0.5; if (n > 1) n = n / 100; return Math.max(0.005, Math.min(0.995, n)); }
+  var API = String(window.OST_API_BASE || 'https://ost-api.nachogtavl.workers.dev').replace(/\/+$/, '');
+  function widgetsLive() { try { document.body.classList.add('ost-widgets-live'); } catch (_) {} }
 
   function boundaries(now) {
     var t = now || Date.now();
@@ -79,13 +81,26 @@
     return next();
   }
 
+  function marketLists() {
+    var lists = [];
+    try { var st = window.__predictionState; if (st && Array.isArray(st.markets)) lists.push(st.markets); } catch (_) {}
+    try { if (Array.isArray(window.__ostPredictionMarkets)) lists.push(window.__ostPredictionMarkets); } catch (_) {}
+    try { if (typeof window.buildOstNativeMarkets === 'function') lists.push(window.buildOstNativeMarkets() || []); } catch (_) {}
+    return lists;
+  }
+  // The legacy board list (__predictionState) is only one source now: the market
+  // page renders from __ostPredictionMarkets, and a ladder leg is its own market.
   function marketById(id) {
-    try {
-      var st = window.__predictionState;
-      if (st && Array.isArray(st.markets)) {
-        return st.markets.find(function (m) { return m && m.id === id; }) || null;
+    id = String(id);
+    var lists = marketLists(), i, j, m;
+    for (i = 0; i < lists.length; i++) for (j = 0; j < lists[i].length; j++) { m = lists[i][j]; if (m && String(m.id) === id) return m; }
+    for (i = 0; i < lists.length; i++) for (j = 0; j < lists[i].length; j++) {
+      m = lists[i][j]; if (!m || !m.isGrouped || !Array.isArray(m.outcomes)) continue;
+      for (var k = 0; k < m.outcomes.length; k++) {
+        var o = m.outcomes[k];
+        if (o && String(o.marketId || o.key || '') === id) return { id: id, title: String(m.title || '') + ' · ' + String(o.label || ''), yesPriceNumber: Number(o.price), closeAtMs: Number(m.closeAtMs || 0), source: m.source || 'polymarket', isLeg: true, parentId: String(m.id) };
       }
-    } catch (_) {}
+    }
     return null;
   }
 
@@ -95,7 +110,6 @@
         var rec = window.OST_PREDICTION_API.fiveMinRound() || {};
         if (Number.isFinite(Number(rec.yesPriceNumber))) return clampP(rec.yesPriceNumber);
       }
-      var m = marketById && window.OST_FAST_MARKETS ? null : null;
       if (window.OST_FAST_MARKETS) {
         var live = window.OST_FAST_MARKETS.state(coinKey + '5m');
         if (live) {
@@ -181,7 +195,7 @@
     try { return JSON.parse(localStorage.getItem(ORDERS_KEY) || '[]') || []; } catch (_) { return []; }
   }
   function writeOrders(arr) {
-    try { localStorage.setItem(ORDERS_KEY, JSON.stringify(arr.slice(-500))); } catch (_) {}
+    try { localStorage.setItem(ORDERS_KEY, JSON.stringify(arr.slice(0, 500))); } catch (_) {}
   }
 
   function legShort(l) {
@@ -203,6 +217,8 @@
     var payout = slipPayout(slip);
     var rec = {
       marketId: id,
+      signature: 'parlay-' + slip.id, sig: 'parlay-' + slip.id, id: 'parlay-' + slip.id,
+      wallet: 'credits', fundedBy: 'credits', kind: 'parlay',
       title: slipTitle(slip),
       source: 'ost-parlay',
       side: 'yes',
@@ -215,16 +231,16 @@
       closeAtMs: slip.legs.reduce(function (mx, l) { return Math.max(mx, l.closeAtMs || 0); }, 0),
       ts: slip.placedAt,
       createdAt: slip.placedAt,
-      status: slip.status === 'won' || slip.status === 'cashed' ? 'won' : slip.status === 'lost' ? 'lost' : 'open',
+      status: slip.status === 'won' ? 'won' : slip.status === 'cashed' ? 'sold' : slip.status === 'lost' ? 'lost' : 'open',
       resolved: slip.status !== 'open'
     };
     if (slip.status === 'won') {
-      rec.cashedOut = true; rec.cashoutOst = payout; rec.cashoutKind = 'parlay-credit';
+      rec.cashedOut = true; rec.cashoutOst = Number(slip.paidOut != null ? slip.paidOut : payout) || 0; rec.cashoutKind = 'parlay-credit'; rec.cashoutAt = slip.settledAt || Date.now();
     } else if (slip.status === 'cashed') {
-      rec.cashedOut = true; rec.cashoutOst = slip.cashoutOst || 0; rec.cashoutKind = 'parlay-cashout';
+      rec.cashedOut = true; rec.cashoutOst = slip.cashoutOst || 0; rec.cashoutKind = 'parlay-cashout'; rec.cashoutAt = slip.settledAt || Date.now();
     }
     if (idx >= 0) orders[idx] = Object.assign({}, orders[idx], rec);
-    else orders.push(rec);
+    else orders.unshift(rec);   // app.js keeps newest-first and trims the tail
     writeOrders(orders);
     try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch (_) {}
   }
@@ -254,6 +270,7 @@
     }
     if (leg.closeAtMs && leg.closeAtMs - Date.now() < 60000) { toastMini('Closes too soon for a parlay leg'); return false; }
     draft.push(leg);
+    widgetsLive();
     if (collapsed) setCollapsed(false);
     renderDock();
     syncCardChips();
@@ -273,6 +290,12 @@
 
   function addVenueLeg(marketId, side) {
     var m = marketById(marketId);
+    if (m && m.isGrouped) {
+      // A ladder is an event, not a bet: the leg is the outcome the user picked on the page.
+      var pick = null; try { pick = window.OST_MARKET_CHART && OST_MARKET_CHART.selection(marketId); } catch (_) {}
+      if (pick && pick.legId) { marketId = String(pick.legId); m = marketById(marketId) || { id: marketId, title: String(m.title || '') + ' · ' + pick.label, yesPriceNumber: Number(pick.legPrice), closeAtMs: Number(m.closeAtMs || 0), source: m.source }; }
+      else { toastMini('Pick an outcome first'); return false; }
+    }
     if (!m) { toastMini('Market not loaded yet'); return false; }
     var yes = clampP(m.yesPriceNumber);
     var p = side === 'yes' ? yes : 1 - yes;
@@ -293,8 +316,10 @@
 
   // ------------------------------------------------------------- card chips
   function chipHtmlFor(id) {
-    var inYes = draft.some(function (l) { return l.kind === 'venue' && l.marketId === id && l.side === 'yes'; });
-    var inNo = draft.some(function (l) { return l.kind === 'venue' && l.marketId === id && l.side === 'no'; });
+    var m = marketById(id), legId = id;
+    if (m && m.isGrouped) { try { var pk = window.OST_MARKET_CHART && OST_MARKET_CHART.selection(id); if (pk && pk.legId) legId = String(pk.legId); } catch (_) {} }
+    var inYes = draft.some(function (l) { return l.kind === 'venue' && l.marketId === legId && l.side === 'yes'; });
+    var inNo = draft.some(function (l) { return l.kind === 'venue' && l.marketId === legId && l.side === 'no'; });
     var fm = /^ost-(btc|eth|sol)5m-/.exec(String(id));
     if (fm) {
       inYes = draft.some(function (l) { return l.kind === 'fast' && l.coin === fm[1] && l.side === 'up'; });
@@ -302,7 +327,8 @@
     }
     return '<span class="oplc-label">⚡ Parlay</span>' +
       '<button type="button" class="oplc-btn oplc-yes' + (inYes ? ' is-on' : '') + '" data-parlay-add="yes">YES</button>' +
-      '<button type="button" class="oplc-btn oplc-no' + (inNo ? ' is-on' : '') + '" data-parlay-add="no">NO</button>';
+      '<button type="button" class="oplc-btn oplc-no' + (inNo ? ' is-on' : '') + '" data-parlay-add="no">NO</button>' +
+      '<span class="oplc-hint">' + (draft.length ? draft.length + ' leg' + (draft.length === 1 ? '' : 's') + ' · ×' + draftMult().toFixed(2) : 'combine markets, odds multiply') + '</span>';
   }
 
   function enhanceCard(card) {
@@ -325,6 +351,17 @@
     });
   }
 
+  // The market page (ost-predict-mobile.js) is where people actually trade now; the
+  // legacy board's cards are hidden under it. Give the page its own Parlay row.
+  function enhanceDetail() {
+    var det = document.getElementById('opmDetail'); if (!det) return;
+    var id = det.getAttribute('data-mid'); var yn = document.getElementById('opmYn');
+    if (!id || !yn) return;   // 5-min coin pages get chips too: addVenueLeg routes ost-*5m ids to fast legs
+    var row = det.querySelector('.oplc-row');
+    if (!row) { row = document.createElement('div'); row.className = 'oplc-row oplc-page'; yn.parentNode.insertBefore(row, yn.nextSibling); }
+    row.setAttribute('data-parlay-market', id);
+    row.innerHTML = chipHtmlFor(id);
+  }
   function observeCards() {
     var scan = function () {
       document.querySelectorAll('#predictionMarketList [data-prediction-market-id]').forEach(enhanceCard);
@@ -334,6 +371,9 @@
     var list = document.getElementById('predictionMarketList');
     if (list) mo.observe(list, { childList: true, subtree: false });
     // board re-renders replace the list node's children only, observer holds
+    var det = document.getElementById('opmDetail');
+    if (det) { new MutationObserver(function () { setTimeout(enhanceDetail, 0); }).observe(det, { childList: true }); setTimeout(enhanceDetail, 0); }
+    window.addEventListener('ost:predict:outcome', function () { syncCardChips(); });
 
     document.addEventListener('click', function (e) {
       var btn = e.target.closest('[data-parlay-add]');
@@ -353,6 +393,9 @@
     st.id = 'ostParlayStyle';
     st.textContent =
       '.oplc-row{display:flex;align-items:center;gap:6px;margin-top:9px;padding-top:8px;border-top:1px dashed rgba(255,255,255,0.08);}' +
+      '.oplc-row.oplc-page{margin:-4px 0 12px;padding:8px 10px;border:1px solid rgba(245,196,104,0.22);border-top:1px solid rgba(245,196,104,0.22);border-radius:12px;background:rgba(245,196,104,0.05);}' +
+      '.oplc-row.oplc-page .oplc-btn{min-height:0!important;padding:5px 12px!important;font-size:11px!important;border-radius:8px!important;}' +
+      '.oplc-row.oplc-page .oplc-hint{margin-left:auto;font-size:10px;color:#64748b;}' +
       '.oplc-label{font-size:10px;font-weight:800;color:#f5c468;letter-spacing:.05em;}' +
       '.oplc-btn{border:1px solid rgba(255,255,255,0.14);background:transparent;color:#94a3b8;border-radius:7px;padding:3px 10px;font-size:10px;font-weight:800;cursor:pointer;}' +
       '.oplc-btn.oplc-yes.is-on{background:rgba(52,211,153,0.22);border-color:#34d399;color:#7ce6a8;}' +
@@ -505,13 +548,15 @@
     var mult = draftMult();
     dockEl.querySelector('#oplCount').textContent = String(n);
     dockEl.querySelector('#oplMult').textContent = '×' + (n ? mult.toFixed(2) : '1.00');
-    dockEl.querySelector('#oplPayout').textContent = 'win ' + (n ? (stake * mult).toFixed(2) : '0.00') + ' OST';
+    var grossWin = stake * mult, netWin = grossWin;
+    try { if (window.OST_HOUSE && OST_HOUSE.quote) netWin = Number(OST_HOUSE.quote(grossWin, stake).net) || grossWin; } catch (_) {}
+    dockEl.querySelector('#oplPayout').textContent = 'win ' + (n ? netWin.toFixed(2) : '0.00') + ' OST';
     var place = dockEl.querySelector('#oplPlace');
     var bal = window.OST_MONEY ? window.OST_MONEY.get() : 0;
     if (n < MIN_LEGS) { place.disabled = true; place.textContent = 'Pick at least ' + MIN_LEGS + ' legs'; }
     else if (stake < MIN_STAKE) { place.disabled = true; place.textContent = 'Enter a stake'; }
     else if (bal < stake) { place.disabled = true; place.textContent = 'Need ' + stake + ' OST (have ' + bal.toFixed(2) + ')'; }
-    else { place.disabled = false; place.textContent = '⚡ Place ' + stake + ' OST · win ' + (stake * mult).toFixed(2); }
+    else { place.disabled = false; place.textContent = '⚡ Place ' + stake + ' OST · win ' + netWin.toFixed(2); }
     renderOpenSlips();
   }
 
@@ -554,6 +599,22 @@
   // ------------------------------------------------------------- place / sell / settle
   function placeSlip() {
     if (draft.length < MIN_LEGS || !window.OST_MONEY) return;
+    // A draft built in an earlier 5-min round must not be placed after that round
+    // closed (the outcome would already be known). Re-quote fast legs on the current
+    // round; drop anything that closed. Never place at stale odds.
+    var now = Date.now(), b = boundaries(now), dropped = 0;
+    draft = draft.filter(function (l) {
+      if (l.kind === 'fast') {
+        if (l.openAt !== b.openAt) { var yes = fastYesOdds(l.coin); l.openAt = b.openAt; l.closeAtMs = b.closeAt; l.entryPrice = clampP(l.side === 'up' ? yes : 1 - yes); }
+        if (b.closeAt - now < 60000) { dropped++; return false; }
+        return true;
+      }
+      if (l.closeAtMs && l.closeAtMs - now < 60000) { dropped++; return false; }
+      var m = marketById(l.marketId); if (m && Number.isFinite(Number(m.yesPriceNumber))) { var y = clampP(m.yesPriceNumber); l.entryPrice = l.side === 'yes' ? y : 1 - y; }
+      return true;
+    });
+    if (dropped) { toastMini(dropped + ' leg' + (dropped > 1 ? 's' : '') + ' closed — removed from the slip'); renderDock(); syncCardChips(); return; }
+    if (draft.length < MIN_LEGS) { renderDock(); return; }
     var amount = Math.max(MIN_STAKE, Math.min(MAX_STAKE, Math.floor(stake)));
     if (!window.OST_MONEY.spend(amount, 'parlay')) { renderDock(); return; }
     var slip = {
@@ -591,7 +652,7 @@
     slip.status = 'cashed';
     slip.cashoutOst = Math.round(net * 100) / 100;
     slip.settledAt = Date.now();
-    writeSlips(slips);
+    writeSlips(readSlips().map(function (x) { return x.id === slip.id ? slip : x; }));
     window.OST_MONEY.add(slip.cashoutOst, 'parlay-cashout');
     ledgerUpsert(slip);
     toastMini('Sold combo for ' + slip.cashoutOst.toFixed(2) + ' OST');
@@ -599,6 +660,12 @@
   }
 
   var settling = false;
+  var gammaChecked = {};   // legKey -> last check ts (throttle: a still-open market is re-asked every 10 min)
+  function gammaStatus(marketId) {
+    if (!/^\d+$/.test(String(marketId))) return Promise.resolve(null);   // Kalshi/native legs: no gamma record
+    return fetchJson(API + '/gamma/markets/' + encodeURIComponent(marketId), 6500).then(function (j) { return j || null; }).catch(function (e) { return /http 404/.test(String(e && e.message)) ? { missing: true } : null; });
+  }
+  function pinnedWinner(yes) { if (!Number.isFinite(yes)) return ''; if (yes >= 0.985) return 'yes'; if (yes <= 0.015) return 'no'; return ''; }
   function settleScan() {
     if (settling) return;
     var slips = readSlips();
@@ -610,8 +677,11 @@
         if (leg.status !== 'open') return;
         if (leg.kind === 'fast' && leg.openAt + FIVE_MIN + 8000 <= now) {
           work.push({ slip: slip, leg: leg, type: 'fast' });
-        } else if (leg.kind === 'venue' && leg.closeAtMs && leg.closeAtMs < now) {
-          work.push({ slip: slip, leg: leg, type: 'venue' });
+        } else if (leg.kind === 'venue') {
+          var closed = leg.closeAtMs && leg.closeAtMs < now;
+          var key = slip.id + ':' + leg.marketId;
+          // No close time on record (some feeds omit it): still ask the venue, at most every 10 min.
+          if (closed || (!leg.closeAtMs && now - (gammaChecked[key] || 0) > 600000)) { gammaChecked[key] = now; work.push({ slip: slip, leg: leg, type: 'venue' }); }
         }
       });
     });
@@ -628,23 +698,35 @@
             w.leg.result = k.open + '->' + k.close;
           });
         }
-        // venue: resolve from live feed price pinning
-        var m = marketById(w.leg.marketId);
-        if (m && Number.isFinite(Number(m.yesPriceNumber))) {
-          var y = Number(m.yesPriceNumber);
-          if (y >= 0.985) w.leg.status = w.leg.side === 'yes' ? 'won' : 'lost';
-          else if (y <= 0.015) w.leg.status = w.leg.side === 'no' ? 'won' : 'lost';
-          // else: not pinned yet — wait
-        } else if (w.leg.closeAtMs && now - w.leg.closeAtMs > VOID_AFTER_MS) {
-          // market vanished unresolved — void the leg, collapse multiplier
-          w.leg.status = 'void';
-        }
-        return null;
+        // venue: the venue's own record first (a resolved market leaves the live feed,
+        // which is exactly when the old feed-only check went blind and voided winners).
+        return gammaStatus(w.leg.marketId).then(function (g) {
+          var winner = '';
+          if (g && !g.missing) {
+            var prices = g.outcomePrices; if (typeof prices === 'string') { try { prices = JSON.parse(prices); } catch (_) { prices = null; } }
+            var yes = Array.isArray(prices) ? Number(prices[0]) : NaN;
+            winner = pinnedWinner(yes);
+            var closed = g.closed === true || g.resolved === true || g.archived === true;
+            if (!winner && closed && w.leg.closeAtMs && now - w.leg.closeAtMs > VOID_AFTER_MS) { w.leg.status = 'void'; return; }
+            if (!winner && !closed && !w.leg.closeAtMs) { var end = Date.parse(g.endDate || g.end_date_iso || ''); if (end > 0) w.leg.closeAtMs = end; }
+          }
+          if (!winner) {
+            var m = marketById(w.leg.marketId);
+            if (m && Number.isFinite(Number(m.yesPriceNumber))) winner = pinnedWinner(Number(m.yesPriceNumber));
+          }
+          if (winner) { w.leg.status = w.leg.side === winner ? 'won' : 'lost'; return; }
+          if ((!g || g.missing) && w.leg.closeAtMs && now - w.leg.closeAtMs > VOID_AFTER_MS) w.leg.status = 'void';   // vanished unresolved — collapse the leg
+        });
       });
     });
     chain.then(function () {
-      slips.forEach(function (slip) {
-        if (slip.status !== 'open') return;
+      // Re-read: a slip placed or sold while the venue calls were in flight must not be
+      // overwritten by our stale copy (that lost placed stakes and re-opened sold slips).
+      var fresh = readSlips();
+      var byId = {}; fresh.forEach(function (s) { byId[s.id] = s; });
+      slips.forEach(function (stale) {
+        var slip = byId[stale.id]; if (!slip || slip.status !== 'open') return;
+        stale.legs.forEach(function (l, i) { if (slip.legs[i] && slip.legs[i].status === 'open' && l.status !== 'open') { slip.legs[i].status = l.status; if (l.result) slip.legs[i].result = l.result; } if (slip.legs[i] && !slip.legs[i].closeAtMs && l.closeAtMs) slip.legs[i].closeAtMs = l.closeAtMs; });
         var anyLost = slip.legs.some(function (l) { return l.status === 'lost'; });
         var allDone = slip.legs.every(function (l) { return l.status !== 'open'; });
         if (anyLost) {
@@ -670,7 +752,7 @@
           }
         }
       });
-      writeSlips(slips);
+      writeSlips(fresh);
       renderDock();
     }).finally(function () { settling = false; });
   }
@@ -687,7 +769,7 @@
   }
 
   window.OST_PARLAY = {
-    open: function () { buildDock(); setCollapsed(false); },
+    open: function () { buildDock(); widgetsLive(); setCollapsed(false); renderDock(); },
     addLeg: addVenueLeg,
     addFastLeg: addFastLeg,
     slips: readSlips,

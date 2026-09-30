@@ -23,7 +23,7 @@
   'use strict';
 
   var ORDERS_KEY = 'ost.prediction.orders.v1';
-  var SLIPS_KEY = 'ost.parlay.slips.v1';
+  var SLIPS_KEY = 'ost.parlays.v1';
   var HUB_KEY = 'ost.faucet.hub.v2';
   var REV_KEY = 'ost.treasury.revenue.v1';
   var MAX_SETTLED_KEPT = 800;

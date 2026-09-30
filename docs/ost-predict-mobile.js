@@ -265,6 +265,13 @@
       featWrap.innerHTML = feat.length ? ('<div class="opm-sec">' + icon('bolt') + ' Live 5-min</div><div class="opm-feat">' + feat.map(featCard).join('') + '</div>') : '';
     }
     var cnt = el('opmCount'); if (cnt) cnt.textContent = filtered.length + ' live';
+    if (cat === 'parlay' && !query) {
+      var slips = []; try { slips = (window.OST_PARLAY && OST_PARLAY.slips() || []).slice().reverse(); } catch (_) {}
+      grid.innerHTML = '<div class="opm-empty opm-parlay-cta" style="grid-column:1/-1;text-align:left"><b>⚡ Parlays</b><br>Combine 2–6 markets into one ticket — the odds multiply. Open any market and tap <b>Parlay YES / NO</b> under the price, or add the live 5-min coins from the slip.' +
+        '<div style="margin-top:10px"><button class="opm-tbtn" id="opmOpenParlay">Open the parlay slip' + (slips.length ? ' · ' + slips.filter(function (x) { return x.status === 'open'; }).length + ' live' : '') + '</button></div></div>';
+      var ob = el('opmOpenParlay'); if (ob) ob.onclick = function () { try { if (window.OST_PARLAY && OST_PARLAY.open) OST_PARLAY.open(); } catch (_) {} };
+      return;
+    }
     if (!filtered.length) { grid.innerHTML = '<div class="opm-empty" style="grid-column:1/-1">' + (ms.length ? 'No markets match.' : 'Loading live markets…') + '</div>'; return; }
     var ranked = filtered.map(function (m, i) { return { m: m, s: rankScore(m), i: i }; }).sort(function (a, b) { return (b.s - a.s) || (a.i - b.i); }).map(function (x) { return x.m; });
     grid.innerHTML = ranked.slice(0, 80).map(mCard).join('');
@@ -293,7 +300,10 @@
     currentMarket = m; view = 'detail';
     side = 'yes'; myPos = null; seenTrades = {}; firstTrades = true; hist = []; hrs = 0;
     buf = []; dispPrice = 0; _lastTickAt = 0; baseMidSet = false; onchainActive = false;
-    round = null; price = 0; beat = 0; midYes = yesCents(m);
+    round = null; price = 0; beat = 0; midYes = yesCents(m); legPick = null;
+    // The market id travels on the container so chart/parlay modules can find the
+    // market without matching titles (duplicate titles charted the wrong market).
+    try { el('opmDetail').setAttribute('data-mid', String(m.id || '')); } catch (_) {}
     el('opmDetail').innerHTML = detailTemplate(m);
     showView('detail');
     wireDetail();
@@ -596,11 +606,25 @@
     var by = el('opmBuyY'), bn = el('opmBuyN'); if (btcPriceLive()) { if (by) by.textContent = 'Buy Yes · ' + fmtc(midYes) + '¢'; if (bn) bn.textContent = 'Buy No · ' + fmtc(100 - midYes) + '¢'; }
     var pr = el('opmProb'); if (pr) pr.textContent = fmtc(midYes) + '%'; var prb = el('opmProbBar'); if (prb) prb.style.width = midYes + '%';
   }
+  // Multi-outcome ladders: the chart module publishes the outcome the user picked
+  // (ost:predict:outcome). The quote, the ticket and the order all follow it.
+  var legPick = null;
+  window.addEventListener('ost:predict:outcome', function (e) {
+    var d = e && e.detail; if (!d || !currentMarket || String(d.marketId) !== String(currentMarket.id)) return;
+    legPick = d;
+    var p = Number(d.legPrice); if (p > 1) p /= 100;
+    if (p > 0 && p < 1) { midYes = Math.max(0.1, Math.min(99.9, Math.round(p * 1000) / 10)); paintOdds(); }
+  });
+  window.addEventListener('ost:predict:quote', function (e) {
+    var d = e && e.detail; if (!d || view !== 'detail' || !currentMarket || String(d.marketId) !== String(currentMarket.id) || isBtcLive(currentMarket)) return;
+    paintStandard();
+  });
   function paintStandard() {
     // refresh currentMarket odds from the freshest __ostPredictionMarkets
     var fresh = allMarkets().filter(function (x) { return String(x.id) === String(currentMarket.id); })[0];
     if (fresh) currentMarket = fresh;
     midYes = yesCents(currentMarket);
+    if (legPick) { var lp = Number(legPick.legPrice); if (lp > 1) lp /= 100; if (lp > 0 && lp < 1) midYes = Math.max(0.1, Math.min(99.9, Math.round(lp * 1000) / 10)); }
     paintOdds();
     drawStd();
   }
@@ -843,7 +867,7 @@
       if (!o || o.cashedOut) return false; var st = String(o.status || o.outcome || '').toLowerCase(); if (st === 'won' || st === 'lost' || st === 'settled' || st === 'sold') return false;
       var omid = String(o.marketId || '');
       if (isBtcLive(currentMarket)) return mid ? omid === mid : /^ost-btc5m-\d+$/.test(omid);
-      return omid === String(currentMarket && currentMarket.id || '');
+      return marketOwnsOrder(currentMarket, omid);
     });
     if (!open.length) { myPos = null; renderPosition(); return; }
     var o = open.sort(function (a, b) { return Number(b.ts || 0) - Number(a.ts || 0); })[0];
@@ -856,6 +880,17 @@
     myPos = { order: o, sig: sig, native: isNative, posId: o.serverPositionId || o.id || sig, side: (o.side === 'no' ? 'no' : 'yes'), shares: Number(o.shares) || 0, entry: Number(o.entry) || Number(o.price) || 0, locked: false, sellBtn: btn, cashText: btn ? btn.textContent : '' };
     renderPosition();
   }
+  // A ladder bet lives on the LEG market (its own id); the page is the group.
+  function marketOwnsOrder(m, omid) {
+    if (!m) return false; if (omid === String(m.id || '')) return true;
+    if (m.isGrouped && Array.isArray(m.outcomes)) return m.outcomes.some(function (o) { return o && String(o.marketId || o.key || '') === omid; });
+    return false;
+  }
+  function marketForOrderId(omid) {
+    var ms = allMarkets(); omid = String(omid || '');
+    for (var i = 0; i < ms.length; i++) if (marketOwnsOrder(ms[i], omid)) return ms[i];
+    return null;
+  }
   function posValueNow() { if (!myPos) return 0; var c = myPos.side === 'yes' ? midYes : (100 - midYes); return myPos.shares * (c / 100); }
   function posCost() { return myPos ? myPos.shares * (myPos.entry || 0) : 0; }
   function renderPosition() {
@@ -864,11 +899,12 @@
     var pnlTxt = (up ? '+' : '−') + Math.abs(pnl).toFixed(2) + ' OSTG' + (cost > 0 ? ' (' + (up ? '+' : '−') + Math.abs(pnl / cost * 100).toFixed(0) + '%)' : '');
     var sideCls = myPos.side === 'yes' ? 'y' : 'n', sideLab = myPos.side === 'yes' ? 'Yes' : 'No';
     var action;
+    var pendTag = myPos.pending ? '<span class="opm-pend">confirming…</span>' : (myPos.justFilled && Date.now() - myPos.justFilled < 4000 ? '<span class="opm-pend ok">✓ filled</span>' : '');
     if (myPos.selling) { action = '<div class="opm-locked">Selling… confirming with the server</div>'; }
     else if (myPos.locked) { action = '<div class="opm-locked">' + icon('lock') + ' Locked · settles automatically at round close</div>'; }
     else if (myPos.sellBtn) { var net = (myPos.cashText.match(/([\d,]+\.?\d*)\s*$/) || [])[1] || val.toFixed(2); var isSettle = /settle|claim/i.test(myPos.cashText); action = '<div class="opm-pcbtns"><button class="addmore" id="opmAddMore">Add more</button><button class="sell" id="opmSellBtn">' + (isSettle ? 'Settle' : 'Sell') + ' · ' + esc(net) + ' OSTG</button></div>'; }
     else { action = '<div class="opm-pcbtns"><button class="addmore" id="opmAddMore">Add more</button><button class="sell" id="opmSellBtn">Sell · ' + val.toFixed(2) + ' OSTG</button></div>'; }
-    wrap.innerHTML = '<div class="opm-poscard"><div class="pch">Your position <span class="side ' + sideCls + '">' + sideLab + '</span><span class="sp"></span><span class="pnl ' + (up ? 'up' : 'down') + '">' + esc(pnlTxt) + '</span></div>' +
+    wrap.innerHTML = '<div class="opm-poscard"><div class="pch">Your position <span class="side ' + sideCls + '">' + sideLab + '</span>' + pendTag + '<span class="sp"></span><span class="pnl ' + (up ? 'up' : 'down') + '">' + esc(pnlTxt) + '</span></div>' +
       '<div class="opm-pcgrid"><div class="opm-pcg"><div class="k">Shares</div><div class="v">' + myPos.shares.toFixed(2) + '</div></div><div class="opm-pcg"><div class="k">Avg entry</div><div class="v">' + Math.round((myPos.entry || 0) * 100) + '¢</div></div><div class="opm-pcg"><div class="k">Value now</div><div class="v">' + val.toFixed(2) + '</div></div></div>' + action + '</div>';
     var am = el('opmAddMore'); if (am) am.onclick = function () { openSheet('buy', myPos.side); };
     var sb = el('opmSellBtn'); if (sb && !sb.disabled) sb.onclick = doSell;
@@ -1040,10 +1076,43 @@
     if (myPos && myPos.side === bSide) { var tot = myPos.shares + sh; myPos.entry = (myPos.shares * (myPos.entry || 0) + sh * entry) / (tot || 1); myPos.shares = tot; myPos.pending = true; }
     else { myPos = { order: {}, sig: '', side: bSide, shares: sh, entry: entry, locked: false, sellBtn: null, cashText: '', pending: true }; }
     renderPosition(); closeSheet();
-    ensurePlayFunds(stake)
-      .then(function () { return window.OST_PREDICTION_API.placeBet({ marketId: mid, side: bSide, stake: stake }); })
-      .then(function () { setTimeout(function () { refreshBalance(); refreshPosition(); loadTrades(); }, 800); })
+    // DIRECT ORDER for every non-BTC market. The old path clicked the hidden
+    // legacy board (card → side toggle → stake input → action button) and then
+    // POLLED the ledger every 500ms for up to 45s — that was the "not instant"
+    // feeling. placeOrder records the ticket synchronously (credits) or
+    // optimistically (wallet), so the position is real the moment it returns.
+    var api = window.OST_PREDICTION_API || {};
+    var run = (!isBtcLive(currentMarket) && typeof api.placeOrder === 'function')
+      ? Promise.resolve().then(function () { return api.placeOrder(buildDirectOrder(currentMarket, bSide, stake)); })
+      : ensurePlayFunds(stake).then(function () { return api.placeBet({ marketId: mid, side: bSide, stake: stake }); });
+    run.then(function () {
+        if (myPos) { myPos.pending = false; myPos.justFilled = Date.now(); }
+        refreshPosition(); renderPosition(); refreshBalance();
+        setTimeout(function () { refreshBalance(); refreshPosition(); loadTrades(); }, 900);
+      })
       .catch(function (e) { _balHold = null; toast((e && e.message) ? e.message : 'Could not place the bet — reverted.'); refreshBalance(); refreshPosition(); });
+  }
+  // The order payload app.js's createPredictionMarketOrder expects, built from the
+  // page's own live quote. A picked ladder outcome routes the bet to that REAL leg
+  // market (each Polymarket bucket is its own binary market), so it resolves natively.
+  function buildDirectOrder(m, bSide, stake) {
+    var lp = (legPick && String(legPick.marketId) === String(m.id)) ? legPick : null;
+    if (!lp && m.isGrouped) { try { lp = window.OST_MARKET_CHART && OST_MARKET_CHART.selection(m.id); } catch (_) {} }
+    var yes = Math.max(0.001, Math.min(0.999, midYes / 100));
+    var priceFraction = bSide === 'yes' ? yes : 1 - yes;
+    var shares = stake / priceFraction;
+    var marketId = String(m.id), title = m.title || m.contractLabel || 'Market', cond = m.conditionId || (m.raw && (m.raw.conditionId || m.raw.condition_id)) || '';
+    var gammaId = m.gammaMarketId || '', ids = tokenIdsOf(m);
+    if (lp && lp.legId) { marketId = String(lp.legId); title = title + ' · ' + lp.label; cond = lp.conditionId || cond; gammaId = String(lp.legId); ids = Array.isArray(lp.clobTokenIds) ? lp.clobTokenIds : ids; }
+    var live = false; try { live = !!(window.OST_MARKET_CHART && OST_MARKET_CHART.quoteFresh(m)); } catch (_) {}
+    return {
+      source: m.source, marketId: marketId, conditionId: cond, gammaMarketId: gammaId, title: title, topic: m.topic || '',
+      side: bSide, outcomeKey: lp ? String(lp.key || '') : '', outcomeLabel: lp ? String(lp.label || '') : '',
+      stake: stake, price: priceFraction, yesPrice: yes, noPrice: 1 - yes, shares: shares, potentialReturn: shares,
+      closeAtMs: Number(m.closeAtMs) || 0, clobTokenIds: ids, sourceUrl: m.primaryUrl || '',
+      baseYesPrice: yes, fairYesPrice: yes, fairNoPrice: 1 - yes, tradableYesPrice: yes, tradableNoPrice: 1 - yes,
+      quotedAt: Date.now(), quoteSource: live ? 'clob-live' : 'catalog', reference: 'ost-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7)
+    };
   }
   // DEPOSIT BRIDGE — makes WALLET OSTG directly spendable. If the custodial play
   // balance can't cover the stake, top it up from the wallet (gas-free pool rail,
@@ -1067,11 +1136,33 @@
     // ostg-native positions exit through the server cash-out endpoint (there is no
     // DOM cash-out button for them). This is what unlocks "go out before close".
     if (myPos.native) { return confirmSellNative(cfs); }
+    var api = window.OST_PREDICTION_API, sig = myPos.sig;
+    if (!(api && typeof api.cashOut === 'function' && sig)) { return confirmSellLegacy(cfs); }
+    // INSTANT: the sale used to click the hidden ledger button and wait a fixed
+    // 1.7s before re-reading. Now it calls the cash-out routine directly. The
+    // balance jumps by the locked quote and the sheet closes the instant they tap;
+    // the position shows "Selling…" until the payout lands, and a failure restores
+    // it and says why (the ticket stays exactly as sellable as it was).
+    var lockedNet = _sellLock && parseFloat(String(_sellLock.realNet).replace(/,/g, ''));
+    var est = lockedNet > 0 ? lockedNet : posValueNow();
+    var b = playBal(); if (b != null && est > 0) { _balHold = { v: b + est, dir: 'up', until: Date.now() + 40000 }; setBalDisplay(b + est); }
+    var sellingPos = myPos; sellingPos.selling = true; closeSheet(); renderPosition();
+    api.cashOut(sig).then(function (r) {
+      if (!r || r.ok === false) throw new Error((r && r.label) ? r.label : 'not sellable yet');
+      if (_balHold) _balHold.until = Date.now() + 4000;
+      myPos = null; renderPosition(); refreshPosition();
+      var got = Number(r.payout) || 0;
+      toast((r.kind === 'prediction-settlement' || /settle|claim/i.test(String(r.kind || '')) ? 'Settled — ' : 'Sold — ') + got.toFixed(2) + ' OSTG back to your balance.');
+      setTimeout(function () { refreshBalance(); refreshPosition(); loadTrades(); }, 600);
+    }).catch(function (e) {
+      _balHold = null; sellingPos.selling = false; renderPosition(); refreshPosition();
+      toast('Could not sell — ' + ((e && e.message) || 'try again') + '.');
+      refreshBalance();
+    });
+  }
+  // Fallback when the cash-out API is not loaded: drive the ledger button.
+  function confirmSellLegacy(cfs) {
     var sig = myPos.sig, tries = 0;
-    // ROBUST + optimistic-on-the-go: retry finding the proven cash-out button
-    // (it may not have rendered the instant they tap), then trigger it and
-    // reconcile from the ledger. NEVER optimistically clear the position — a
-    // failed sale must leave it intact, not vanish (that was the "crash").
     (function attempt() {
       var btn = document.querySelector('.prediction-cashout-btn[data-order-sig="' + (window.CSS && CSS.escape ? CSS.escape(sig) : sig) + '"]');
       if (!btn) {
@@ -1087,7 +1178,7 @@
       setTimeout(function () {
         closeSheet();
         var still = ledgerOrders().some(function (o) { return (o.signature || o.sig || o.id) === sig && !o.cashedOut && !/won|lost|sold|settled/i.test(String(o.status || '')); });
-        if (still) { _balHold = null; }   // sale didn't take -> release the optimistic bump
+        if (still) { _balHold = null; }
         refreshBalance(); refreshPosition(); loadTrades();
       }, 1700);
     })();
@@ -1181,7 +1272,12 @@
     var st = orderState(o), side = o.side === 'no' ? 'no' : 'yes';
     var stake = Number(o.stake) || 0, shares = Number(o.shares) || 0, sig = o.signature || o.sig || o.id || '';
     var btn = cashBtnFor(sig), actionHtml;
-    if ((st === 'open' || st === 'claim') && btn) {
+    var isParlay = String(o.source || '') === 'ost-parlay';
+    if (isParlay && st === 'open') {
+      var slipId = String(o.marketId || '').replace(/^ost-parlay:/, ''), offer = 0, live = 0;
+      try { var sl = (window.OST_PARLAY && OST_PARLAY.slips() || []).filter(function (x) { return x.id === slipId; })[0]; if (sl && sl.status === 'open') { offer = Number(OST_PARLAY.offerOf(sl)) || 0; live = Number(OST_PARLAY.valueOf(sl)) || 0; } } catch (_) {}
+      actionHtml = offer >= 0.05 ? '<button class="opm-tbtn" data-parlay-sell="' + esc(slipId) + '">Sell · ' + offer.toFixed(2) + '</button>' : '<span class="opm-tbadge">⚡ live' + (live > 0 ? ' · ' + live.toFixed(2) : '') + '</span>';
+    } else if ((st === 'open' || st === 'claim') && btn) {
       var net = (btn.textContent.match(/([\d,]+\.?\d*)\s*$/) || [])[1] || '';
       var claim = /claim|settle/i.test(btn.textContent);
       actionHtml = '<button class="opm-tbtn' + (claim ? ' claimw' : '') + '" data-sig="' + esc(sig) + '">' + (claim ? 'Claim' : 'Sell') + (net ? ' · ' + esc(net) : '') + '</button>';
@@ -1217,11 +1313,25 @@
     var list = el('opmPosList'); if (!list) return;
     var rows = orders.filter(function (o) { return posFilter === 'all' || orderState(o) === posFilter; });
     list.innerHTML = rows.length ? rows.map(ticketRow).join('') : '<div class="opm-empty">' + (orders.length ? 'No tickets in this filter.' : 'No tickets yet — place a bet to get started.') + '</div>';
-    list.querySelectorAll('.opm-tbtn').forEach(function (b) {
-      b.onclick = function (e) { e.stopPropagation(); var real = cashBtnFor(b.getAttribute('data-sig')); if (!real) { toast('Settling — try again shortly.'); return; } b.disabled = true; b.textContent = '…'; try { real.click(); } catch (_) {} setTimeout(function () { refreshBalance(); renderPositions(); }, 1500); };
+    list.querySelectorAll('.opm-tbtn[data-parlay-sell]').forEach(function (b) {
+      b.onclick = function (e) { e.stopPropagation(); b.disabled = true; b.textContent = '…'; try { OST_PARLAY.sell(b.getAttribute('data-parlay-sell')); } catch (_) {} setTimeout(function () { refreshBalance(); renderPositions(); }, 300); };
+    });
+    list.querySelectorAll('.opm-tbtn:not([data-parlay-sell])').forEach(function (b) {
+      b.onclick = function (e) {
+        e.stopPropagation(); var sig = b.getAttribute('data-sig'); var api = window.OST_PREDICTION_API;
+        b.disabled = true; b.textContent = '…';
+        if (api && typeof api.cashOut === 'function' && sig) {
+          api.cashOut(sig).then(function (r) { if (r && r.ok !== false) toast(((r.kind === 'prediction-settlement') ? 'Claimed ' : 'Sold for ') + (Number(r.payout) || 0).toFixed(2) + ' OSTG.'); })
+            .catch(function (err) { toast('Could not cash out — ' + ((err && err.message) || 'try again') + '.'); })
+            .then(function () { refreshBalance(); renderPositions(); });
+          return;
+        }
+        var real = cashBtnFor(sig); if (!real) { b.disabled = false; toast('Settling — try again shortly.'); return; }
+        try { real.click(); } catch (_) {} setTimeout(function () { refreshBalance(); renderPositions(); }, 1500);
+      };
     });
     list.querySelectorAll('.opm-trow').forEach(function (r) {
-      r.onclick = function () { var mid = r.getAttribute('data-mid'); var m = allMarkets().filter(function (x) { return String(x.id) === mid; })[0]; if (m) openMarket(m); };
+      r.onclick = function () { var m = marketForOrderId(r.getAttribute('data-mid')); if (m) openMarket(m); };
     });
   }
   function wirePositions() {
@@ -1275,6 +1385,8 @@
   window.addEventListener('ost:btc-market-updated', function (e) { if (view !== 'detail' || !isBtcLive(currentMarket)) return; try { var m = e.detail && e.detail.tick; if (m) acceptTick(Number(m.price), false); } catch (_) {} });
   window.addEventListener('ost:prediction-markets', function () { if (view === 'browse') renderBrowse(); });
   window.addEventListener('ost:prediction-order-recorded', function () { if (view === 'detail') setTimeout(refreshPosition, 400); if (view === 'positions') setTimeout(renderPositions, 400); });
+  // Background confirm / fail / sell of a ticket (wallet rail settles after the tap).
+  window.addEventListener('ost:prediction:order-changed', function () { if (view === 'detail') refreshPosition(); if (view === 'positions') renderPositions(); });
   window.addEventListener('ost:prediction-resolutions-refreshed', function () { if (view === 'positions') renderPositions(); });
   window.addEventListener('ost:money:change', function () { refreshBalance(); if (view === 'positions') renderPositions(); });
   window.addEventListener('ost:play:balance', paintBalance);
@@ -1298,7 +1410,7 @@
   // redraw: repaint the open market's chart now (ost-markets-desk.js resizes the
   // canvas buffers for the desktop layout, which clears them).
   function redraw() { try { if (view !== 'detail' || !currentMarket) return; if (isBtcLive(currentMarket)) draw(); else drawStd(); } catch (_) {} }
-  window.OST_PREDICT_MOBILE = { mount: mount, showBrowse: showBrowse, openMarket: openMarket, openFlagship: openFlagship, openPositions: openPositions, redraw: redraw };
+  window.OST_PREDICT_MOBILE = { mount: mount, showBrowse: showBrowse, openMarket: openMarket, openFlagship: openFlagship, openPositions: openPositions, redraw: redraw, current: function () { return view === 'detail' ? currentMarket : null; } };
 
   function boot() {
     if (!mount()) { var n = 0; var iv = setInterval(function () { if (mount() || ++n > 40) clearInterval(iv); }, 500); }

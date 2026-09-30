@@ -41,6 +41,8 @@
   function liq(m) { var v = raw(m, 'liquidityNum'); return v === undefined ? 0 : v; }
   function yesTok(m) {
     var r = m && (m.clobTokenIds || (m.raw && m.raw.clobTokenIds));
+    // Grouped ladders carry no group-level token: use the top outcome's (its price IS m.yesPriceNumber).
+    if (!r && m && m.isGrouped && Array.isArray(m.outcomes) && m.outcomes[0]) r = m.outcomes[0].clobTokenIds;
     if (typeof r === 'string') { try { r = JSON.parse(r); } catch (_) { r = r.split(','); } }
     var t = Array.isArray(r) ? r[0] : r;
     t = String(t || '').replace(/[^0-9]/g, '');
@@ -57,6 +59,12 @@
   var RANGES = { '1d': { interval: '1d', fidelity: 5, label: '1D' }, '1w': { interval: '1w', fidelity: 60, label: '1W' }, '1m': { interval: '1m', fidelity: 360, label: '1M' }, 'max': { interval: 'max', fidelity: 1440, label: 'All' } };
   var hist = {};               // key tok|range -> {at, pts:[{t,y}], p:Promise}
   function history(tok, range) {
+    // Shared engine (ost-market-chart.js): same cache as the market page, and a
+    // failed fetch retries after 20s instead of blanking the chart for 10 minutes.
+    if (window.OST_MARKET_CHART && OST_MARKET_CHART.history) {
+      var k2 = tok + '|' + range;
+      return OST_MARKET_CHART.history(tok, range === 'max' ? 'all' : range).then(function (pts) { hist[k2] = { at: Date.now(), pts: pts }; return pts; }, function () { return (hist[k2] && hist[k2].pts) || []; });
+    }
     var key = tok + '|' + range, c = hist[key];
     if (c && (c.p || Date.now() - c.at < 10 * 60 * 1000)) return c.p || Promise.resolve(c.pts);
     var R = RANGES[range] || RANGES['1w'];
@@ -92,7 +100,6 @@
         });
         paintHud();
         if (heroM && liveMid[yesTok(heroM)] !== undefined) paintHeroOdds();
-        if (dState && liveMid[dState.tok] !== undefined) paintDetail();
       }).catch(function () {});
   }
 
@@ -366,7 +373,7 @@
       (function (card) {
         history(card.__ompTok, '1w').then(function (pts) {
           var cv = card.querySelector('.omp-spark');
-          if (cv) { if (pts.length > 1) drawLine(cv, pts); else cv.remove(); }
+          if (cv) { if (pts.length > 1) { cv.style.display = ''; drawLine(cv, pts); } else cv.style.display = 'none'; }
         }).then(function () { active--; pump(); });
       })(card);
     }
@@ -386,63 +393,15 @@
       var r = c.getBoundingClientRect(); if (r.bottom > -200 && r.top < innerHeight + 400) out.push(c.getAttribute('data-omp-tok'));
     });
     if (heroM) out.unshift(yesTok(heroM));
-    if (dState) out.unshift(dState.tok);
+    var om = openMarket(); if (om && isPoly(om) && !om.isGrouped && yesTok(om)) out.unshift(yesTok(om));
     return out;
   }
 
-  /* ---------------------------------------------------------------- market page chart */
-  // Polymarket markets get the same interactive chart on their page: ranges +
-  // crosshair. Ours replaces the module's 1-week canvas (it redraws that one on
-  // its own 30s timer), and follows the live midpoint.
-  var dState = null;   // {m, tok, range, pts, geom}
-  function mountDetailChart() {
-    var std = $('opmStdG'); if (!std || std.__omp) return;
-    var m = null;
-    try { var t = document.querySelector('#opmDetail .opm-qhead h1'); var title = t && t.textContent.trim(); m = markets().filter(function (x) { return x.title === title; })[0]; } catch (_) {}
-    if (!m || !isPoly(m) || !yesTok(m)) return;
-    std.__omp = true; std.style.display = 'none';
-    var box = document.createElement('div'); box.className = 'omp-chartbox';
-    box.innerHTML = '<canvas class="omp-chart" id="ompDChart"></canvas><div class="omp-tip" id="ompDTip"></div>';
-    std.parentNode.insertBefore(box, std.nextSibling);
-    var rb = document.createElement('div'); rb.className = 'omp-ranges';
-    rb.innerHTML = Object.keys(RANGES).map(function (k) { return '<button data-r="' + k + '"' + (k === '1w' ? ' class="on"' : '') + '>' + RANGES[k].label + '</button>'; }).join('') + '<span class="src">Polymarket CLOB · live</span>';
-    box.parentNode.insertBefore(rb, box.nextSibling);
-    dState = { m: m, tok: yesTok(m), range: '1w', pts: [], geom: null };
-    rb.addEventListener('click', function (e) {
-      var b = e.target.closest('[data-r]'); if (!b) return;
-      rb.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); });
-      dState.range = b.getAttribute('data-r'); paintDetail();
-    });
-    var c = $('ompDChart'), tip = $('ompDTip');
-    c.addEventListener('pointermove', function (e) {
-      if (!dState || !dState.geom || dState.pts.length < 2) return;
-      var g = dState.geom, r = c.getBoundingClientRect(), px = e.clientX - r.left;
-      var t = g.t0 + (px - g.padL) / (g.w - g.padL - g.padR) * (g.t1 - g.t0);
-      var best = 0, bd = Infinity; dState.pts.forEach(function (p, i) { var d = Math.abs(p.t - t); if (d < bd) { bd = d; best = i; } });
-      drawLine(c, dState.pts, { axis: true, cross: best });
-      var p = dState.pts[best], d = new Date(p.t);
-      tip.textContent = d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' · ' + p.y.toFixed(1) + '%';
-      tip.style.left = Math.max(60, Math.min(r.width - 60, g.X(p.t))) + 'px'; tip.classList.add('on');
-    });
-    c.addEventListener('pointerleave', function () { tip.classList.remove('on'); if (dState && dState.pts.length > 1) dState.geom = drawLine(c, dState.pts, { axis: true }); });
-    paintDetail();
-    pollMids([dState.tok]);
-    // the market's own image in the page header
-    var setIco = function () { var ico = document.querySelector('#opmDetail .opm-qhead .ico'), src = imgs[String(m.id)]; if (ico && src && !ico.classList.contains('omp-has-img')) { ico.classList.add('omp-has-img'); ico.innerHTML = imgTag(src); } };
-    if (imgs[String(m.id)]) setIco(); else { loadImages([String(m.id)]); setTimeout(setIco, 1500); }
-  }
-  function paintDetail() {
-    if (!dState) return;
-    var s = dState, range = s.range;
-    history(s.tok, range).then(function (pts) {
-      if (dState !== s || s.range !== range) return;
-      var c = $('ompDChart'); if (!c) return;
-      s.pts = pts.slice(); var live = liveMid[s.tok];
-      if (live !== undefined && s.pts.length) s.pts.push({ t: Date.now(), y: live * 100 });
-      s.geom = drawLine(c, s.pts, { axis: true });
-      if (!s.geom) { var z = sizeCanvas(c); if (z) { z.x.fillStyle = 'rgba(160,184,203,.7)'; z.x.font = '12px system-ui'; z.x.fillText('No price history for this range yet', 10, 24); } }
-    });
-  }
+  /* ---------------------------------------------------------------- market page */
+  // The market page chart (ranges, crosshair, Yes/No, ladders) lives in
+  // ost-market-chart.js. Here we only keep the open market's quote live.
+  function openMarket() { try { return (window.OST_PREDICT_MOBILE && OST_PREDICT_MOBILE.current && OST_PREDICT_MOBILE.current()) || null; } catch (_) { return null; } }
+  function detailOpen() { var d = $('opmDetail'); return !!(d && d.classList.contains('on') && openMarket()); }
 
   function redrawVisible() {
     requestAnimationFrame(function () {
@@ -450,7 +409,7 @@
       if (c && c.clientWidth) { if (heroPts.length > 1) heroGeom = drawLine(c, heroPts, { axis: true }); else paintHeroChart(); }
       document.querySelectorAll('#opmGrid .omp-spark').forEach(function (cv) {
         var card = cv.closest('.opm-mcard'); var h = card && hist[card.__ompTok + '|1w'];
-        if (h && h.pts && h.pts.length > 1 && cv.clientWidth) drawLine(cv, h.pts);
+        if (h && h.pts && h.pts.length > 1) { cv.style.display = ''; if (cv.clientWidth) drawLine(cv, h.pts); }
       });
     });
   }
@@ -477,9 +436,6 @@
     // ost-predict-mobile re-renders the grid on search/category/refresh.
     gridObs = new MutationObserver(function () { if (!sorting) enhanceCards(); });
     gridObs.observe($('opmGrid'), { childList: true });
-    // ...and rewrites the market page on every open.
-    var det = $('opmDetail');
-    if (det) new MutationObserver(function () { dState = null; setTimeout(mountDetailChart, 0); }).observe(det, { childList: true });
     var q = $('opmQ'); if (q) q.addEventListener('input', function () { var h = $('ompHero'); if (h) h.style.display = q.value.trim() ? 'none' : (heroList.length ? '' : 'none'); });
     enhanceCards();
     return true;
@@ -498,9 +454,9 @@
       if (++tries < 80) setTimeout(wait, 300);
     })();
     window.addEventListener('ost:btc-spot', function (e) { var p = num(e.detail && e.detail.price); if (p) { btc = p; paintHud(); } });
-    setInterval(function () { if ((browseVisible || (dState && $('ompDChart'))) && !document.hidden) pollMids(visibleToks()); }, 20000);
+    setInterval(function () { if ((browseVisible || detailOpen()) && !document.hidden) pollMids(visibleToks()); }, 20000);
     setInterval(function () { if (browseVisible && !document.hidden) paintHud(); }, 5000);
-    var rt = 0; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(function () { if (heroPts.length > 1) { var c = $('ompChart'); if (c) heroGeom = drawLine(c, heroPts, { axis: true }); } }, 200); });
+    var rt = 0; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(redrawVisible, 200); });
     // First live pass shortly after data arrives.
     setTimeout(function () { if (ready()) pollMids(visibleToks()); }, 4000);
   }

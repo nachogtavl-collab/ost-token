@@ -341,3 +341,6 @@
 }
 /* The confirm button is THE action of the ticket: full width, thumb-sized. */
 #ostPredictMobile #opmCf,#ostPredictMobile #opmCfSell{display:block!important;width:100%!important;min-height:54px;font-size:16px}
+/* position card fill state (direct order path) */
+#ostPredictMobile .opm-poscard .pch .opm-pend{font-size:9.5px;font-weight:800;padding:2px 8px;border-radius:5px;color:var(--opm-gold);background:rgba(255,192,74,.14);text-transform:none;letter-spacing:0}
+#ostPredictMobile .opm-poscard .pch .opm-pend.ok{color:var(--opm-yes);background:var(--opm-yes-dim)}

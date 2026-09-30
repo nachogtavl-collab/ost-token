@@ -15413,6 +15413,14 @@
     });
 
     function getPredictionOrderAction(order) {
+      // Parlay slips mirror into this ledger for history only. Their stake sits in the
+      // credits pool and the slip settles/sells in ost-parlay.js — a "Sell position"
+      // here would pay real pool OST for a credits-funded combo and leave the slip open.
+      if (order && order.source === 'ost-parlay' && !order.cashedOut && String(order.status || 'open').toLowerCase() === 'open') {
+        return { market: null, side: 'yes', stake: Number(order.stake || 0), entryPrice: Number(order.price || 0), shares: Number(order.shares || 0),
+          livePrice: Number(order.price || 0), liveValue: Number(order.stake || 0), payout: 0,
+          label: 'Parlay · live', detail: 'Live combo — sell or settle from the ⚡ Parlay slip', canCash: false, kind: 'parlay', finalStatus: null };
+      }
       var market = findMarketForOrder(order);
       var side = order && order.side === 'no' ? 'no' : 'yes';
       var stake = Number(order && order.stake || 0);
@@ -15659,16 +15667,42 @@
 
       // Wire cash-out buttons
       positionListEl.querySelectorAll('[data-cashout-idx]').forEach(function(btn) {
-        btn.addEventListener('click', async function(event) {
+        btn.addEventListener('click', function(event) {
           if (event) {
             event.preventDefault();
             event.stopPropagation();
             if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
           }
-          var idx = Number(btn.getAttribute('data-cashout-idx'));
-          var orders = readPredictionOrderRecords();
-          var order = orders[idx];
-          if (!order) return;
+          cashOutPredictionOrder({ ref: btn.getAttribute('data-order-sig') || '', idx: Number(btn.getAttribute('data-cashout-idx')), btn: btn }).catch(function () {});
+        });
+      });
+    }
+
+    // ONE cash-out / claim / settle routine for every ticket kind (ostg-native,
+    // ostg, credits, wallet, on-chain). It used to live inside the ledger button's
+    // click handler, so the only way another surface (the market page, the
+    // positions list) could sell was to find that hidden button and click it —
+    // then wait a fixed 1.7s and hope. Now callable directly, by ticket ref
+    // (the stale row index bug is gone too: optimistic tickets are unshifted, so
+    // an index captured at render time could target the wrong ticket).
+    // Resolves { ok, payout, sig, order } on success; throws on failure, leaving
+    // the ticket exactly as claimable as it was.
+    async function cashOutPredictionOrder(opts) {
+      opts = opts || {};
+      var btn = opts.btn || { disabled: false, textContent: '' };
+      var orders = readPredictionOrderRecords();
+      var ref = String(opts.ref || '');
+      var idx = -1;
+      if (ref) idx = orders.findIndex(function (o) { return o && String(o.signature || o.sig || o.id || '') === ref; });
+      if (idx < 0 && Number.isFinite(Number(opts.idx))) idx = Number(opts.idx);
+      var order = orders[idx];
+      if (!order) throw new Error('Ticket not found');
+      if (order.cashedOut) return { ok: true, already: true, payout: Number(order.cashoutOst || 0), sig: order.cashoutSig || '', order: order };
+      var cashKey = ref || ('idx:' + idx);
+      if (cashingRefs[cashKey]) throw new Error('This ticket is already being paid out.');
+      cashingRefs[cashKey] = true;
+      try {
+        return await (async function () {
 
           // OSTG-NATIVE: the SERVER resolves and pays. The client never asserts
           // an outcome or a payout — it asks /play/predict/resolve, which settles
@@ -15680,7 +15714,7 @@
             var oClose = Number(order.closeAt || order.closeAtMs || 0);
             if (oClose > 0 && oClose > Date.now()) {
               toast('⏳', 'This OSTG position settles automatically at round close.');
-              return;
+              throw new Error('This OSTG position settles automatically at round close.');
             }
             var origN = btn.textContent; btn.disabled = true; btn.textContent = '…';
             var baseN = getOstApiBase() || (window.OST_API_BASE || 'https://ost-api.nachogtavl.workers.dev');
@@ -15694,7 +15728,7 @@
                 : ('Could not settle yet: ' + ((rr && rr.error) || 'unknown'));
               toast('⚠️', msg);
               btn.disabled = false; btn.textContent = origN;
-              return;
+              throw new Error(msg);
             }
             var freshN = readPredictionOrderRecords();
             var oN = freshN[idx] || order;
@@ -15709,7 +15743,8 @@
             if (rr.status === 'won') toast('🎉', 'Won! Paid ' + formatOst(oN.payout) + ' OSTG');
             else if (rr.status === 'refunded') toast('↩️', 'Tie — stake refunded.');
             else toast('📉', 'Round settled — better luck next round.');
-            return;
+            try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch (_) {}
+            return { ok: true, payout: oN.payout, sig: 'ostg-native-' + String(pid), order: oN };
           }
 
           var hasCashOut = !!(window.OST_TRADE && window.OST_TRADE.predictionCashOut);
@@ -15740,7 +15775,8 @@
             sharePredictionOrderRecord(order);
             state.orderHistory = orders;
             renderPredictionLedger();
-            return;
+            try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch (_) {}
+            return { ok: false, reason: 'not-cashable', label: action.label, order: order };
           }
           var payout = Number(action.payout);
           var houseFee = 0;
@@ -15877,6 +15913,9 @@
                 }
               }).catch(function(){});
             }
+            // Every other surface (market page, positions list, desk rail) refreshes on this.
+            try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch(_) {}
+            return { ok: true, payout: Number(r.ost || payout || 0), sig: r.sig || '', kind: action.kind, order: order };
           } catch (err) {
             console.error('[prediction cashout] on-chain payout FAILED — ticket left UNPAID and retryable', err);
             //
@@ -15937,10 +15976,19 @@
               btn.disabled = false; btn.textContent = orig;
               try { alert('Claim failed: ' + ((err && err.message) || 'unknown') + '\nYour OST is safe — please retry.'); } catch(e){}
             }
+            throw err;
           }
-        });
-      });
+        })();
+      } finally {
+        delete cashingRefs[cashKey];
+      }
     }
+    var cashingRefs = {};
+    try {
+      window.OST_PREDICTION_API = Object.assign(window.OST_PREDICTION_API || {}, {
+        cashOut: function (ref, opts) { return cashOutPredictionOrder(Object.assign({ ref: ref }, opts || {})); }
+      });
+    } catch (_) {}
 
     function renderLatestReceipt() {
       if (!receiptEl) return;
@@ -16181,6 +16229,10 @@
     function prepareCanvas(canvas, fallbackHeight) {
       if (!canvas || !canvas.getContext) return null;
       var rect = canvas.getBoundingClientRect();
+      // Hidden (display:none) → rect is 0x0. Drawing then used canvas.width, which is
+      // already DPR-scaled, so every hidden redraw DOUBLED the backing store (32k px
+      // in a few refreshes → blank canvas + tens of MB per step). Skip instead.
+      if (!rect.width || !rect.height) return null;
       var width = Math.max(320, Math.round(rect.width || canvas.width || 860));
       var height = Math.max(220, Math.round(fallbackHeight || rect.height || canvas.height || 280));
       var dpr = Math.min(window.devicePixelRatio || 1, 2);

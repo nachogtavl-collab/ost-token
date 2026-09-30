@@ -1660,14 +1660,25 @@
     };
   }
 
+  // TAP-PATH QUOTE. This used to be three SEQUENTIAL 900ms soft timeouts (up to
+  // 2.7s of dead time between the tap and the order) even though the desk already
+  // holds a push-fed round + spot. Now: if the quote is fresh, no network at all;
+  // otherwise round + spot in PARALLEL and the whole thing capped at ~0.9s. The
+  // server prices the fill from ITS odds anyway, so a stale-by-a-second client
+  // quote never changes what the user pays.
+  var quoteRefreshedAt = 0;
+  function quoteIsFresh() {
+    var now = Date.now();
+    if (now - quoteRefreshedAt < 4000) return true;
+    return !!(canonicalRoundFetchedAt && now - canonicalRoundFetchedAt < 4000 && btcLastTick && btcLastTick.price && now - btcLastTick.ts < 4000);
+  }
   function refreshFiveMinBtcQuote() {
-    return withSoftTimeout(fetchCanonicalRound(), 900, null)
-      .then(function () { return withSoftTimeout(fetchBtcSpot({ force: true }), 900, null); })
-      .then(function () {
-        var market = buildFiveMinBtcMarket();
-        return withSoftTimeout(refreshNativeBtcMarketState(market), 900, null).then(function () { return buildFiveMinBtcMarket(); });
-      })
+    if (quoteIsFresh()) return Promise.resolve(buildFiveMinBtcMarket());
+    var work = Promise.all([withSoftTimeout(fetchCanonicalRound(), 700, null), withSoftTimeout(fetchBtcSpot({ force: true }), 700, null)])
+      .then(function () { return withSoftTimeout(refreshNativeBtcMarketState(buildFiveMinBtcMarket()), 500, null); })
+      .then(function () { quoteRefreshedAt = Date.now(); return buildFiveMinBtcMarket(); })
       .catch(function () { return buildFiveMinBtcMarket(); });
+    return withSoftTimeout(work, 900, null).then(function (m) { return m || buildFiveMinBtcMarket(); });
   }
 
   function placeFiveMinBtcBetDirect(req) {
