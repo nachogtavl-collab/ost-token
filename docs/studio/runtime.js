@@ -24,13 +24,19 @@
   /* ======================================================================
    * constants
    * ==================================================================== */
+  // The bundler is the one piece of third-party code that runs on this (wallet) origin, so both files are
+  // fetched with Subresource Integrity — a changed or mis-served file is refused, never executed.
   const ESBUILD_JS = 'https://cdn.jsdelivr.net/npm/esbuild-wasm@0.24.2/esm/browser.min.js';
+  const ESBUILD_JS_SRI = 'sha384-+UaSOohZWH+IiwjLGInmdtI6NftnhQ415TUrpJklfVI96nHlQZFkcp20p2xhA4YH';
   const ESBUILD_WASM = 'https://cdn.jsdelivr.net/npm/esbuild-wasm@0.24.2/esbuild.wasm';
+  const ESBUILD_WASM_SRI = 'sha384-UzF1OduPYrrYA5nS5XKdlrPBLjrRVRoudQRwv6Ixa17gTNPa2sXJzKpRTBgCEhzR';
   const PYODIDE_BASE = 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/';
   const ESM_SH = 'https://esm.sh/';
   const JSDELIVR_NPM = 'https://cdn.jsdelivr.net/npm/';
   const FAKE = 'https://preview.ost-studio.invalid';           // base URL of preview pages (never resolves)
   const PREVIEW_SANDBOX = 'allow-scripts allow-forms allow-modals allow-popups allow-pointer-lock allow-downloads';
+  const CAPTURE_SANDBOX = 'allow-scripts allow-forms';          // hidden agent-check frames: no dialogs, no popups
+  const PV_ARM_KEY = 'ost.studio.pv.armed';                     // crash sentinel: a preview that froze the tab is not auto-run again
   const INLINE_MAX = 1024 * 1024;                               // static assets inlined into the preview HTML
   const FILES_BUDGET = 4 * 1024 * 1024;                         // project files fetch()-able inside the preview
   const RUN_FILES_BUDGET = 20 * 1024 * 1024;                    // project files visible to fs / Python
@@ -1059,14 +1065,27 @@
    * esbuild (lazy) + the project virtual-FS plugin
    * ==================================================================== */
   let esbP = null, esbReady = false;
+  // fetch() checks the integrity hash; the verified text is imported from a fresh blob: URL, so a failed
+  // attempt never poisons the module map (a retry really retries).
+  async function importEsbuild() {
+    const res = await fetch(ESBUILD_JS, { integrity: ESBUILD_JS_SRI, mode: 'cors', credentials: 'omit' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const url = URL.createObjectURL(new Blob([await res.text()], { type: 'text/javascript' }));
+    try { return await import(url); } finally { URL.revokeObjectURL(url); }
+  }
+  async function esbuildWasm() {
+    const res = await fetch(ESBUILD_WASM, { integrity: ESBUILD_WASM_SRI, mode: 'cors', credentials: 'omit' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return WebAssembly.compile(await res.arrayBuffer());
+  }
   function loadEsbuild() {
     if (esbP) return esbP;
     const t0 = now();
     line('system', 'Loading the bundler (esbuild-wasm, about 3 MB) — first use only, then your browser caches it…', 'build');
     esbP = (async () => {
-      const mod = await import(ESBUILD_JS);
+      const [mod, wasmModule] = await Promise.all([importEsbuild(), esbuildWasm()]);
       const esb = mod && typeof mod.build === 'function' ? mod : mod.default;
-      await esb.initialize({ wasmURL: ESBUILD_WASM, worker: true });
+      await esb.initialize({ wasmModule, worker: true });
       esbReady = true;
       line('system', 'Bundler ready (' + fmtMs(now() - t0) + ').', 'build');
       return esb;
@@ -1208,14 +1227,16 @@
           const p = a.path, c = S.fs.read(p);
           if (c == null) return { errors: [{ text: 'File not found: ' + p }] };
           if (S.fs.isBinary(p)) return loadAsset(p, ctx);
-          let loader = LOADER[U.extOf(p)] || 'text';
+          const ext = U.extOf(p);
+          if (/^(scss|sass|less|styl|stylus)$/.test(ext)) return { errors: [{ text: p + ': .' + ext + ' stylesheets are not supported (there is no Sass/Less compiler in OST Studio) — use plain .css (CSS variables and nesting work in modern browsers).' }] };
+          let loader = /\.module\.css$/i.test(p) ? 'local-css' : (LOADER[ext] || 'text');   // CSS Modules: import s from './x.module.css' → s.className
           if (loader === 'js' && ctx.jsxInJs && /<\/?[A-Za-z>]/.test(c)) loader = 'jsx';
           ctx.bundled.add(p);
-          return { contents: c, loader, resolveDir: '/' + U.dirOf(p) };
+          return { contents: /^(js|jsx|ts|tsx)$/.test(loader) ? metaUrlRefs(c, U.dirOf(p), ctx) : c, loader, resolveDir: '/' + U.dirOf(p) };
         });
         b.onLoad({ filter: /.*/, namespace: 'ost-asset' }, (a) => loadAsset(a.path, ctx));
         b.onLoad({ filter: /.*/, namespace: 'ost-raw' }, (a) => ({ contents: S.fs.read(a.path) || '', loader: 'text' }));
-        b.onLoad({ filter: /.*/, namespace: 'ost-virtual' }, () => ({ contents: ctx.virtual.contents, loader: ctx.virtual.loader || 'js', resolveDir: '/' + (ctx.virtual.dir || '') }));
+        b.onLoad({ filter: /.*/, namespace: 'ost-virtual' }, () => ({ contents: metaUrlRefs(ctx.virtual.contents, ctx.virtual.dir || '', ctx), loader: ctx.virtual.loader || 'js', resolveDir: '/' + (ctx.virtual.dir || '') }));
         b.onLoad({ filter: /.*/, namespace: 'ost-node' }, (a) => ({ contents: NODE_SHIM[a.path] || 'export default {};', loader: 'js', resolveDir: '/' }));
         b.onLoad({ filter: /.*/, namespace: 'ost-req' }, (a) => ({ contents: 'var R = globalThis.__ostReq || {};\nif (!(' + JSON.stringify(a.path) + ' in R)) throw new Error(' + JSON.stringify('require("' + a.path + '") could not be loaded from esm.sh') + ');\nmodule.exports = R[' + JSON.stringify(a.path) + '];', loader: 'js' }));
         b.onLoad({ filter: /.*/, namespace: 'ost-ext-css' }, (a) => ({ contents: '@import url(' + JSON.stringify(a.path) + ');', loader: 'css' }));
@@ -1223,6 +1244,19 @@
         b.onLoad({ filter: /.*/, namespace: 'ost-prelude-ns' }, () => ({ contents: 'import "ost:prelude";\nimport "ost:main";\n', loader: 'js' }));
       }
     };
+  }
+  // new URL('./worker.js', import.meta.url) — the Vite/webpack-5 pattern for workers and assets. esbuild leaves
+  // it alone, but import.meta.url is about:srcdoc in the preview and /<slug>/assets/… after deploy, so point
+  // it at the project file explicitly (the preview bridge serves FAKE URLs; deploy ships the file).
+  function metaUrlRefs(code, dir, ctx) {
+    if (ctx.mode === 'run' || code.indexOf('import.meta.url') < 0) return code;
+    return code.replace(/new\s+URL\(\s*(['"])(\.{1,2}\/[^'"\n]*)\1\s*,\s*import\.meta\.url\s*\)/g, (m, q, spec) => {
+      const [bare, query] = splitQuery(spec);
+      const target = resolveRef(dir, bare);
+      if (!target || !S.fs.exists(target)) return m;
+      if (ctx.mode === 'deploy') { ctx.assets.add(target); return 'new URL(' + JSON.stringify('../' + encodePath(target) + query) + ', import.meta.url)'; }
+      return 'new URL(' + JSON.stringify(FAKE + '/' + encodePath(target) + query) + ')';
+    });
   }
   function loadAsset(p, ctx) {
     const c = S.fs.read(p); if (c == null) return { errors: [{ text: 'File not found: ' + p }] };
@@ -1253,7 +1287,7 @@
       target: o.mode === 'deploy' ? 'es2022' : 'esnext',
       minify: o.mode === 'deploy', sourcemap: o.mode === 'deploy' ? false : 'external', sourcesContent: false,
       jsx: 'automatic', jsxImportSource: ctx.jsxSource, define: defines(o.mode), logLevel: 'silent', charset: 'utf8',
-      legalComments: o.mode === 'deploy' ? 'none' : 'inline', plugins: [vfsPlugin(ctx)]
+      legalComments: o.mode === 'deploy' ? 'none' : 'inline', metafile: true, plugins: [vfsPlugin(ctx)]
     };
     if (ctx.tsconfig) opts.tsconfigRaw = ctx.tsconfig;
     let res;
@@ -1262,6 +1296,9 @@
       if (!e || !Array.isArray(e.errors)) return { ok: false, errors: [{ path: o.entry || '', line: 0, col: 0, text: String(e && e.message || e), severity: 'error', source: 'esbuild' }], warnings: [] };
       return { ok: false, errors: esbMessages(e.errors, 'error'), warnings: esbMessages(e.warnings, 'warning').concat(ctx.warnings) };
     }
+    // what the entry file itself contains (ESM syntax? CommonJS? which imports?) — decides how a classic <script> runs
+    const entryKey = o.virtual ? 'ost-virtual:' + o.virtual.name : 'vfs:' + o.entry;
+    const entryInfo = (res.metafile && res.metafile.inputs && res.metafile.inputs[entryKey]) || null;
     const jsOut = () => (res.outputFiles || []).find((f) => /\.js$/.test(f.path));
     const needBuffer = o.mode === 'run' && jsOut() && /\bBuffer\s*\.\s*(from|alloc|isBuffer|concat|byteLength)\b/.test(jsOut().text);
     if (ctx.requires.size || needBuffer) {
@@ -1278,13 +1315,37 @@
     const js = outs.find((f) => /\.js$/.test(f.path)), css = outs.find((f) => /\.css$/.test(f.path)), map = outs.find((f) => /\.js\.map$/.test(f.path));
     const strip = (t) => String(t || '').replace(/\n?\/[/*]# sourceMappingURL=[^\n]*\s*$/, '\n');
     let mapObj = null; if (map) { try { mapObj = JSON.parse(map.text); } catch (_) {} }
-    return { ok: true, code: js ? strip(js.text) : '', css: css ? strip(css.text) : '', map: mapObj, errors: [], warnings: esbMessages(res.warnings, 'warning').concat(ctx.warnings), inputs: ctx.bundled, assets: ctx.assets };
+    // static imports of external URLs (esm.sh packages, the require() prelude) — only an ES module can load them
+    const externalImports = Object.entries((res.metafile && res.metafile.outputs) || {}).some(([k, out]) => /\.js$/.test(k) && (out.imports || []).some((i) => i.external && (i.kind === 'import-statement' || i.kind === 'require-call')));
+    return { ok: true, code: js ? strip(js.text) : '', css: css ? strip(css.text) : '', map: mapObj, errors: [], warnings: esbMessages(res.warnings, 'warning').concat(ctx.warnings), inputs: ctx.bundled, assets: ctx.assets, entryInfo, externalImports };
   }
   function preludeEntry() {
     return { name: 'ost-prelude-entry', setup(b) { b.onResolve({ filter: /^ost-prelude-entry$/ }, () => ({ path: 'entry', namespace: 'ost-prelude-ns' })); } };
   }
   const RE_NEEDS_BUNDLE = /(^|[\s;})])import\s*[\w{*'"(]|(^|[\s;})])export\s+[\w{*]|\bimport\.meta\b|\brequire\s*\(/m;
   const needsBundler = (path, text) => /^(ts|tsx|jsx|mts|cts)$/.test(U.extOf(path)) || RE_NEEDS_BUNDLE.test(String(text || ''));
+  // A classic <script> whose entry really is a plain script: the regex hit was a comment/string, or it is a
+  // UMD/CommonJS-guarded file. Those run exactly as written — bundling would hide their globals.
+  function isPlainScript(info, text) {
+    if (!info || info.format === 'esm') return false;
+    if (info.format === 'cjs') return /\btypeof\s+(module|exports|define)\b/.test(text);
+    return (info.imports || []).every((i) => i.kind === 'dynamic-import' && i.external && text.indexOf(i.path) >= 0);
+  }
+  // One decision for classic <script src> in BOTH the preview and the deploy build:
+  //   { ok, raw:true }  → ship/inline the file as written
+  //   bundle result     → iife; or { module:true } esm when it needs import statements / import.meta / top-level await
+  async function bundleClassic(p, mode, importMap) {
+    const text = S.fs.read(p) || '';
+    const transpile = /^(ts|tsx|jsx|mts|cts)$/i.test(U.extOf(p));
+    if (!transpile && !RE_NEEDS_BUNDLE.test(text)) return { ok: true, raw: true };
+    const r = await bundle({ entry: p, mode, format: 'iife', importMap });
+    if (r.ok && !transpile && isPlainScript(r.entryInfo, text)) return { ok: true, raw: true };
+    const esm = r.ok ? r.externalImports || r.warnings.some((w) => /import\.meta/.test(w.text)) : r.errors.some((e) => /top-level await/i.test(e.text));
+    if (!esm) return r;
+    const r2 = await bundle({ entry: p, mode, format: 'esm', importMap });
+    if (r2.ok) r2.module = true;
+    return r2;
+  }
 
   /* ======================================================================
    * HTML pages → one srcdoc (preview) / real files (deploy)
@@ -1315,11 +1376,11 @@
       return d ? 'url("' + d + '")' : m;
     });
   }
-  function processCss(p, warnings, inc, depth, seen, ctxForPkg) {
+  function processCss(p, warnings, inc, depth, seen, ctxForPkg, external) {
     inc.add(p);
     const src = S.fs.read(p) || '';
     const dir = U.dirOf(p);
-    const external = [];
+    external = external || [];                      // shared by the whole @import tree; hoisted at depth 0 (@import must come first)
     let css = src.replace(/@import\s+(?:url\(\s*)?(?:"([^"]*)"|'([^']*)'|([^"')\s;]+))\s*\)?\s*([^;]*);/gi, (m, d1, d2, d3, media) => {
       const ref = d1 != null ? d1 : d2 != null ? d2 : d3;
       if (!isLocalRef(ref)) { external.push(m); return ''; }
@@ -1330,7 +1391,7 @@
         return '';
       }
       if (inc.has(t) || depth > 8) return '';
-      const inner = processCss(t, warnings, inc, depth + 1, seen, ctxForPkg);
+      const inner = processCss(t, warnings, inc, depth + 1, seen, ctxForPkg, external);
       media = media.trim();
       return media && !/^(layer|supports)\b/i.test(media) ? '@media ' + media + ' {\n' + inner + '\n}' : inner;
     });
@@ -1353,9 +1414,13 @@
   async function scriptFor(entry, format, mode, shared) {
     const isVirt = typeof entry === 'object';
     const text = isVirt ? entry.contents : S.fs.read(entry);
-    if (!isVirt && !needsBundler(entry, text)) { shared.inputs.add(entry); return { ok: true, code: text, css: '', name: regMap(null, entry), errors: [], warnings: [] }; }
+    const asIs = () => { shared.inputs.add(entry); return { ok: true, code: text, css: '', name: regMap(null, entry), errors: [], warnings: [] }; };
+    if (!isVirt && !needsBundler(entry, text)) return asIs();
     let r;
-    try { r = await bundle({ entry: isVirt ? '' : entry, virtual: isVirt ? entry : null, mode, format, importMap: shared.importMap }); }
+    try {
+      if (!isVirt && format === 'iife') { r = await bundleClassic(entry, mode, shared.importMap); if (r.raw) return asIs(); }
+      else r = await bundle({ entry: isVirt ? '' : entry, virtual: isVirt ? entry : null, mode, format, importMap: shared.importMap });
+    }
     catch (e) { return { ok: false, errors: [{ path: isVirt ? shared.page : entry, line: 0, col: 0, text: 'Bundler unavailable: ' + (e && e.message || e), severity: 'error', source: 'esbuild' }], warnings: [] }; }
     if (!r.ok) return r;
     r.inputs.forEach((p) => shared.inputs.add(p));
@@ -1401,9 +1466,10 @@
       errors.push(...r.errors); warnings.push(...r.warnings);
       if (!r.ok) { s.remove(); continue; }
       ['src', 'integrity', 'crossorigin', 'referrerpolicy', 'fetchpriority'].forEach((x) => s.removeAttribute(x));
+      if (r.module) s.setAttribute('type', 'module');     // a classic script that needs import statements (same as the deploy build)
       s.textContent = safeScript(r.code) + '\n//# sourceURL=' + r.name;
       if (r.css && r.css.trim()) { const st = doc.createElement('style'); st.setAttribute('data-ost-bundle', from); st.textContent = safeStyle(cssUrls(r.css, dir, warnings, from, seen)); doc.head.appendChild(st); }
-      if (!isModule && (s.hasAttribute('defer') || s.hasAttribute('async'))) { s.removeAttribute('defer'); s.removeAttribute('async'); s.remove(); tail.push(s); }
+      if (!isModule && !r.module && (s.hasAttribute('defer') || s.hasAttribute('async'))) { s.removeAttribute('defer'); s.removeAttribute('async'); s.remove(); tail.push(s); }
     }
     tail.forEach((s) => doc.body.appendChild(s));
     for (const l of [...doc.querySelectorAll('link[href]')]) {
