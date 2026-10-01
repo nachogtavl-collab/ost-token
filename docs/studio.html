@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>OST Studio</title>
+  <meta name="description" content="OST Studio — a VS Code–style editor in your browser: build web apps, React, Python and scripts, run them in a sandbox, code with an AI agent, and deploy inside OST.">
+  <meta name="theme-color" content="#0d1117">
+  <link rel="icon" href="icon-192.png">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="studio/studio.css?v=1">
+  <link rel="stylesheet" href="studio/editor.css?v=1">
+  <link rel="stylesheet" href="studio/runtime.css?v=1">
+  <link rel="stylesheet" href="studio/terminal.css?v=1">
+  <link rel="stylesheet" href="studio/agent.css?v=1">
+  <link rel="stylesheet" href="studio/deploy.css?v=1">
+</head>
+<body class="st-body">
+  <div id="stApp">
+    <header id="stTop">
+      <a class="st-logo" href="index.html" title="Back to OST" aria-label="Back to OST">◉ <span>OST</span></a>
+      <button id="stHome" class="st-ib" title="Projects &amp; templates" aria-label="Projects and templates">☰</button>
+      <button id="stProjName" class="st-projname" title="Rename project">No project</button>
+      <div class="st-sp"></div>
+      <div id="stActions"></div>
+      <button class="st-ib" onclick="STUDIO.ui.palette()" title="Command palette (Ctrl/Cmd+Shift+P)" aria-label="Command palette">⌘</button>
+    </header>
+    <nav id="stActivity" aria-label="Activity bar"></nav>
+    <aside id="stSideWrap">
+      <div id="stSide"></div>
+      <div id="stSideResize" class="st-resize v" aria-hidden="true"></div>
+    </aside>
+    <div id="stWork">
+      <main id="stMain">
+        <div id="stEditorHost"></div>
+        <div id="stWelcome" hidden></div>
+        <div id="stPreviewResize" class="st-resize v" aria-hidden="true"></div>
+        <section id="stPreview" aria-label="Preview">
+          <div id="stPreviewBar"></div>
+          <div id="stPreviewHost"></div>
+        </section>
+      </main>
+      <div id="stPanelResize" class="st-resize h" aria-hidden="true"></div>
+      <section id="stPanel" aria-label="Panel">
+        <div id="stPanelTabs"></div>
+        <div id="stPanelBody"></div>
+      </section>
+    </div>
+    <footer id="stStatus"><div class="l"></div><div class="r"></div></footer>
+  </div>
+  <div id="stOverlay"></div>
+  <div id="stToasts" aria-live="polite"></div>
+
+  <script src="studio/core.js?v=1"></script>
+  <script src="studio/editor.js?v=1"></script>
+  <script src="studio/runtime.js?v=1"></script>
+  <script src="studio/terminal.js?v=1"></script>
+  <script src="studio/agent.js?v=1"></script>
+  <script src="studio/deploy.js?v=1"></script>
+</body>
+</html>
