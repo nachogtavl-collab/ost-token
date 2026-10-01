@@ -45,11 +45,14 @@ STUDIO.api(method, path, body?, opts?) -> Promise<json>
    and .status. Auto-announces + retries once on `mesh_identity_unknown`.
 
 STUDIO.projects.list() -> Promise<[{id,name,template,updatedAt,cloud,local}]>
-STUDIO.projects.create({name, template, files?}) -> Promise<meta>     (opens it)
+STUDIO.projects.create({name, template, files?, fromLink?}) -> Promise<meta>     (opens it; fromLink = stays local until edited)
 STUDIO.projects.open(id) -> Promise<meta>
 STUDIO.projects.current() -> meta | null   {id,name,template,createdAt,updatedAt,version,cloud}
 STUDIO.projects.rename(name) / remove(id) / importFiles({path:content}) / exportZip()
 STUDIO.projects.syncState() -> 'local'|'synced'|'syncing'|'offline'|'error'
+   meta.pending = [[path, 'put'|'del']] not yet pushed (survives reloads); a file the server refuses
+   (too_large / bad_path) is quarantined until edited again — state 'error' names it.
+   When the cloud re-assigns a project id, core mutates meta.id and emits 'project:open' with the same meta.
 STUDIO.projects.syncNow() -> Promise
 
 STUDIO.fs  (always the current project; paths are relative, '/'-separated, no leading slash)
@@ -151,6 +154,8 @@ up from MeshHub `/mesh/v1/identity/lookup`) **or** `Authorization: Bearer ostk_�
 | GET `/apps?limit=&cursor=` | – | – | `{apps:[{slug,name,description,owner,profile,url,ts,version,views}], cursor}` |
 | GET `/apps/:slug` | – | – | `{app}` (+ `files:[{path,size,mime}]`) |
 | POST `/apps/:slug/unpublish` | deploy (owner) | – | `{ok}` |
+| POST `/apps/:slug/report` | – (rate-limited per IP) | `{reason:'scam'\|'impersonation'\|'malware'\|'abuse'\|'other', note?}` | `{ok}` |
+| POST `/admin` | worker secret `SOCIAL_ADMIN_KEY` / `MESH_ADMIN_KEY` in body | `{key, action:'reports'}` → `{reports:[…]}`; `{key, action:'unpublish', slug}` → `{ok}` | |
 | GET `/serve/:slug/<path>` | – | – | raw file; directory → `index.html`; extension-less miss → `index.html` (SPA); adds `Content-Security-Policy: sandbox allow-scripts allow-forms allow-popups allow-modals` (the ost-apps worker strips it) |
 | POST `/tokens` | **mesh only** | `{label, scopes:['read','write','deploy']}` | `{token, id, label, scopes, ts}` (secret shown once) |
 | GET `/tokens` | mesh only | – | `{tokens:[{id,label,scopes,ts,lastUsed}]}` |
