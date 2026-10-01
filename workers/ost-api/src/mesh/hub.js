@@ -22,6 +22,16 @@ const MAX_INBOX = 128;
 // Friend graph: friend:<owner>:<other> -> { state, ts }. DO storage (not KV) so
 // contacts survive KV exhaustion.
 const FRIEND_PREFIX = 'friend:';
+// Encrypted blob relay (files / images between contacts). Bytes are sealed by
+// the sender with the pairwise key before upload, so the hub only ever stores
+// ciphertext. Chunked so each stored value stays well under the DO value cap.
+const BLOB_META_PREFIX = 'blobmeta:';
+const BLOB_CHUNK_PREFIX = 'blob:';
+const BLOB_CHUNK_BYTES = 512 * 1024;
+const BLOB_MAX_BYTES = 6 * 1024 * 1024;
+const BLOB_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const BLOB_PER_HOUR = 80;
+const MSG_PAYLOAD_MAX = 64_000;
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -73,6 +83,15 @@ function isExpired(record, now = Date.now()) {
 const MESH_AUTH_WINDOW_MS = 5 * 60 * 1000;
 function b64ToBytes(b64) { const bin = atob(String(b64 || '')); const out = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i); return out; }
 async function sha256Hex(text) { const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text || '')); return Array.from(new Uint8Array(d)).map(b => b.toString(16).padStart(2, '0')).join(''); }
+async function sha256HexBytes(bytes) { const d = await crypto.subtle.digest('SHA-256', bytes); return Array.from(new Uint8Array(d)).map(b => b.toString(16).padStart(2, '0')).join(''); }
+function pad14(ts) { return String(ts).padStart(14, '0'); }
+function cleanProfile(p) {
+  if (!p || typeof p !== 'object') return null;
+  const name = String(p.name || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 32);
+  const emoji = String(p.emoji || '').trim().slice(0, 8);
+  if (!name && !emoji) return null;
+  return { name, emoji };
+}
 export function meshCanonical({ addr, method, pathq, bodyHash, ts, nonce }) { return `OST-MESH|v1|${addr}|${String(method).toUpperCase()}|${pathq}|${bodyHash}|${ts}|${nonce}`; }
 
 export class MeshHub {
@@ -85,9 +104,12 @@ export class MeshHub {
 
 
   // Returns { ok:true, addr } or { ok:false, error, status }. Never throws.
-  async verifyMeshAuth(request, url, bodyText, actor) {
+  async verifyMeshAuth(request, url, bodyText, actor, opts = {}) {
     try {
-      const h = (n) => request.headers.get(n) || '';
+      // Browsers cannot set headers on a WebSocket upgrade, so /ws carries the
+      // same four fields as query params (stripped from the signed path+query).
+      const q = opts.fromQuery ? url.searchParams : null;
+      const h = (n) => (q ? (q.get(n.replace(/^x-mesh-/, 'm')) || '') : (request.headers.get(n) || ''));
       const addr = h('x-mesh-addr'), ts = Number(h('x-mesh-ts')), nonce = h('x-mesh-nonce'), sig = h('x-mesh-sig');
       if (!addr || !sig || !nonce || !Number.isFinite(ts)) return { ok: false, error: 'mesh_auth_required', status: 401 };
       if (!validAddr(addr) || addr !== actor) return { ok: false, error: 'mesh_auth_wrong_actor', status: 403 };
@@ -98,7 +120,10 @@ export class MeshHub {
       const jwk = rec && rec.bundle && rec.bundle.sig;
       if (!jwk || isExpired(rec)) return { ok: false, error: 'mesh_identity_unknown', status: 401 };   // announce first
       const key = await crypto.subtle.importKey('jwk', jwk, { name: 'ECDSA', namedCurve: 'P-384' }, false, ['verify']);
-      const msg = meshCanonical({ addr, method: request.method, pathq: url.pathname.replace(/\/$/, '') + url.search, bodyHash: await sha256Hex(bodyText), ts, nonce });
+      let pathq = url.pathname.replace(/\/$/, '') + url.search;
+      if (q) { const u2 = new URL(url.toString()); ['maddr', 'mts', 'mnonce', 'msig'].forEach((k) => u2.searchParams.delete(k)); pathq = u2.pathname.replace(/\/$/, '') + u2.search; }
+      const bodyHash = opts.bodyHash || await sha256Hex(bodyText);
+      const msg = meshCanonical({ addr, method: request.method, pathq, bodyHash, ts, nonce });
       const good = await crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-384' }, key, b64ToBytes(sig), new TextEncoder().encode(msg));
       if (!good) return { ok: false, error: 'mesh_auth_bad_signature', status: 401 };
       // Replay guard (durable: survives DO eviction). Keys self-expire via sweep below.
@@ -124,7 +149,43 @@ export class MeshHub {
       const method = request.method;
 
       if (path === '/mesh/v1/health') {
-        return json({ ok: true, mesh: 'v1', hub: 'durable-object', ts: new Date().toISOString() });
+        return json({ ok: true, mesh: 'v1', hub: 'durable-object', ws: true, blobs: true, ts: new Date().toISOString() });
+      }
+
+      // ── Realtime socket: pushes mailbox messages + signaling instantly ──────
+      if (path === '/mesh/v1/ws') {
+        if ((request.headers.get('Upgrade') || '').toLowerCase() !== 'websocket') return fail('expected websocket upgrade', 426);
+        const actor = url.searchParams.get('maddr') || '';
+        const auth = await this.verifyMeshAuth(request, url, '', actor, { fromQuery: true });
+        if (!auth.ok) return fail(auth.error, auth.status);
+        const pair = new WebSocketPair();
+        const client = pair[0], server = pair[1];
+        this.state.acceptWebSocket(server, [auth.addr]);
+        try { server.serializeAttachment({ addr: auth.addr, at: Date.now() }); } catch (_) {}
+        await this.state.storage.put(SEEN_PREFIX + auth.addr, Date.now()).catch(() => {});
+        try { server.send(JSON.stringify({ t: 'hello', addr: auth.addr, ts: Date.now() })); } catch (_) {}
+        return new Response(null, { status: 101, webSocket: client });
+      }
+
+      // ── Encrypted blob relay ────────────────────────────────────────────────
+      if (method === 'POST' && path === '/mesh/v1/blob') {
+        const bytes = new Uint8Array(await request.arrayBuffer());
+        if (!bytes.length) return fail('empty_blob');
+        if (bytes.length > BLOB_MAX_BYTES) return fail('blob_too_large', 413);
+        const actor = request.headers.get('x-mesh-addr') || '';
+        const auth = await this.verifyMeshAuth(request, url, '', actor, { bodyHash: await sha256HexBytes(bytes) });
+        if (!auth.ok) return fail(auth.error, auth.status);
+        return this.blobPut(auth.addr, url, bytes);
+      }
+      if (method === 'GET' && path.startsWith('/mesh/v1/blob/')) {
+        return this.blobGet(path.slice('/mesh/v1/blob/'.length));
+      }
+      if (method === 'POST' && path === '/mesh/v1/msg/ack') {
+        const bodyText = await request.text();
+        let body = {}; try { body = JSON.parse(bodyText) || {}; } catch (_) {}
+        const auth = await this.verifyMeshAuth(request, url, bodyText, body && body.to);
+        if (!auth.ok) return fail(auth.error, auth.status);
+        return this.msgAck(auth.addr, body.items);
       }
 
       if (method === 'GET' && path === '/mesh/v1/directory') {
@@ -225,6 +286,98 @@ export class MeshHub {
     }
   }
 
+  /* ---- realtime push ---- */
+  _pushTo(addr, obj) {
+    let n = 0;
+    try {
+      const text = JSON.stringify(obj);
+      for (const ws of this.state.getWebSockets(addr)) { try { ws.send(text); n++; } catch (_) {} }
+    } catch (_) {}
+    return n;
+  }
+  _online(addr) { try { return this.state.getWebSockets(addr).length > 0; } catch (_) { return false; } }
+  _wsAddr(ws) { try { const a = ws.deserializeAttachment(); return a && a.addr; } catch (_) { return null; } }
+  async webSocketMessage(ws, raw) {
+    const addr = this._wsAddr(ws); if (!addr) return;
+    let m = null; try { m = JSON.parse(typeof raw === 'string' ? raw : new TextDecoder().decode(raw)); } catch (_) { return; }
+    if (!m || typeof m !== 'object') return;
+    const now = Date.now();
+    if (m.t === 'ping') {
+      await this.state.storage.put(SEEN_PREFIX + addr, now).catch(() => {});
+      try { ws.send(JSON.stringify({ t: 'pong', ts: now })); } catch (_) {}
+      return;
+    }
+    if (m.t === 'signal' && validAddr(m.to) && m.payload && typeof m.payload === 'object') {
+      if (JSON.stringify(m.payload).length > 32_000) return;
+      const record = { id: messageId(), from: addr, to: m.to, ts: now, payload: m.payload };
+      if (!this._pushTo(m.to, { t: 'signal', item: record })) {
+        // Peer not on a socket right now: park it in the poll inbox too.
+        const inbox = this.inboxes.get(m.to) || []; inbox.push(record); this.inboxes.set(m.to, inbox.slice(-MAX_PER_INBOX));
+      }
+      return;
+    }
+    if (m.t === 'typing' && validAddr(m.to)) { this._pushTo(m.to, { t: 'typing', from: addr, ts: now }); return; }
+    if (m.t === 'ack' && Array.isArray(m.items)) { await this.msgAck(addr, m.items); return; }
+    if (m.t === 'presence' && Array.isArray(m.addrs)) {
+      const out = {};
+      for (const a of m.addrs.filter(validAddr).slice(0, 60)) { const ts = Number(await this.state.storage.get(SEEN_PREFIX + a).catch(() => 0)) || 0; out[a] = { online: this._online(a) || (ts > 0 && now - ts < SEEN_TTL_MS), lastSeen: ts || null }; }
+      try { ws.send(JSON.stringify({ t: 'presence', presence: out, ts: now })); } catch (_) {}
+    }
+  }
+  async webSocketClose(ws) { const addr = this._wsAddr(ws); if (addr) await this.state.storage.put(SEEN_PREFIX + addr, Date.now()).catch(() => {}); try { ws.close(); } catch (_) {} }
+  async webSocketError(ws) { try { ws.close(); } catch (_) {} }
+
+  async msgAck(addr, items) {
+    if (!validAddr(addr) || !Array.isArray(items)) return json({ ok: true, removed: 0 });
+    const del = [];
+    for (const it of items.slice(0, 200)) {
+      if (!it || !it.id || !Number.isFinite(Number(it.ts))) continue;
+      del.push(MSG_PREFIX + addr + ':' + pad14(Number(it.ts)) + ':' + String(it.id).slice(0, 64));
+    }
+    if (del.length) await this.state.storage.delete(del).catch(() => {});
+    return json({ ok: true, removed: del.length });
+  }
+
+  /* ---- encrypted blob relay ---- */
+  async blobPut(from, url, bytes) {
+    const to = url.searchParams.get('to') || '';
+    if (!validAddr(to)) return fail('bad to');
+    const now = Date.now();
+    this._blobRate = this._blobRate || new Map();
+    const win = this._blobRate.get(from) || { at: now, n: 0 };
+    if (now - win.at > 3600_000) { win.at = now; win.n = 0; }
+    if (++win.n > BLOB_PER_HOUR) return fail('blob_rate_limited', 429);
+    this._blobRate.set(from, win);
+    const id = messageId().replace(/-/g, '') + Array.from(crypto.getRandomValues(new Uint8Array(8))).map((b) => b.toString(16).padStart(2, '0')).join('');
+    const n = Math.ceil(bytes.length / BLOB_CHUNK_BYTES);
+    for (let i = 0; i < n; i++) {
+      const part = bytes.slice(i * BLOB_CHUNK_BYTES, (i + 1) * BLOB_CHUNK_BYTES);
+      await this.state.storage.put(BLOB_CHUNK_PREFIX + id + ':' + String(i).padStart(3, '0'), part.buffer.slice(part.byteOffset, part.byteOffset + part.byteLength));
+    }
+    const meta = { id, from, to, size: bytes.length, n, mime: String(url.searchParams.get('mime') || '').slice(0, 80), name: String(url.searchParams.get('name') || '').slice(0, 120), ts: now, expiresAt: now + BLOB_TTL_MS };
+    await this.state.storage.put(BLOB_META_PREFIX + id, meta);
+    if (Math.random() < 0.05) this.sweepBlobs().catch(() => {});
+    return json({ ok: true, id, size: bytes.length, expiresAt: meta.expiresAt });
+  }
+  async blobGet(id) {
+    if (!/^[0-9a-f]{24,80}$/i.test(id)) return fail('bad blob id');
+    const meta = await this.state.storage.get(BLOB_META_PREFIX + id).catch(() => null);
+    if (!meta || Number(meta.expiresAt || 0) <= Date.now()) return fail('blob_not_found', 404);
+    const parts = [];
+    for (let i = 0; i < meta.n; i++) { const c = await this.state.storage.get(BLOB_CHUNK_PREFIX + id + ':' + String(i).padStart(3, '0')); if (!c) return fail('blob_incomplete', 410); parts.push(new Uint8Array(c)); }
+    const out = new Uint8Array(meta.size); let o = 0; for (const p of parts) { out.set(p, o); o += p.length; }
+    return new Response(out, { status: 200, headers: cors({ 'Content-Type': 'application/octet-stream', 'Cache-Control': 'private, max-age=86400', 'X-Blob-Size': String(meta.size) }) });
+  }
+  async sweepBlobs() {
+    const now = Date.now();
+    const listed = await this.state.storage.list({ prefix: BLOB_META_PREFIX, limit: 200 });
+    for (const [k, meta] of listed) {
+      if (!meta || Number(meta.expiresAt || 0) > now) continue;
+      const del = [k]; for (let i = 0; i < (meta.n || 0); i++) del.push(BLOB_CHUNK_PREFIX + meta.id + ':' + String(i).padStart(3, '0'));
+      await this.state.storage.delete(del).catch(() => {});
+    }
+  }
+
   /* ---- shared social feed ---- */
   async feedPost(body) {
     const wallet = String((body && body.wallet) || '').slice(0, 64);
@@ -321,6 +474,7 @@ export class MeshHub {
 
   async announce(body) {
     const { address, bundle, fingerprint } = body || {};
+    const profile = cleanProfile(body && body.profile);
     if (!validAddr(address)) return fail('bad address');
     if (!bundle || bundle.v !== 1) return fail('bad bundle');
     if (!bundle.kex || !bundle.sig) return fail('missing keys');
@@ -363,6 +517,7 @@ export class MeshHub {
       address,
       bundle,
       fingerprint: fingerprint || null,
+      profile: profile || (existing && existing.profile) || null,
       ts: now,
       expiresAt: now + ID_TTL_MS
     };
@@ -409,6 +564,7 @@ export class MeshHub {
         }
         records.push({
           address: record.address,
+          profile: record.profile || null,
           fingerprint: record.fingerprint || null,
           ts: record.ts || 0,
           expiresAt: record.expiresAt || 0
@@ -427,11 +583,12 @@ export class MeshHub {
 
     const ts = Date.now();
     const record = { id: messageId(), from, to, ts, payload };
+    const pushed = this._pushTo(to, { t: 'signal', item: record });
     const inbox = this.inboxes.get(to) || [];
     inbox.push(record);
     this.inboxes.set(to, inbox.slice(-MAX_PER_INBOX));
     this.pruneInbox(to, ts);
-    return json({ ok: true, id: record.id, ts, hub: 'durable-object' });
+    return json({ ok: true, id: record.id, ts, pushed: pushed > 0, hub: 'durable-object' });
   }
 
   inbox({ to, from, since }) {
@@ -470,17 +627,18 @@ export class MeshHub {
     const { from, to, payload } = body || {};
     if (!validAddr(from) || !validAddr(to)) return fail('bad addresses');
     if (!payload || typeof payload !== 'object') return fail('bad payload');
-    if (JSON.stringify(payload).length > 16000) return fail('payload too large');
+    if (JSON.stringify(payload).length > MSG_PAYLOAD_MAX) return fail('payload too large', 413);
     // Block enforcement: if the recipient has blocked the sender, drop silently
     // (report ok so a blocker isn't revealed) — the message is simply not stored.
     const block = await this.state.storage.get(FRIEND_PREFIX + to + ':' + from).catch(() => null);
     if (block && block.state === 'blocked') return json({ ok: true, blocked: true, ts: Date.now() });
     const now = Date.now();
     const id = messageId();
-    const key = MSG_PREFIX + to + ':' + String(now).padStart(14, '0') + ':' + id;
+    const key = MSG_PREFIX + to + ':' + pad14(now) + ':' + id;
     await this.state.storage.put(key, { id, from, to, ts: now, payload, expiresAt: now + MSG_TTL_MS });
     await this.state.storage.put(SEEN_PREFIX + from, now);
-    return json({ ok: true, id, ts: now, hub: 'durable-object' });
+    const pushed = this._pushTo(to, { t: 'msg', item: { id, from, to, ts: now, payload } });
+    return json({ ok: true, id, ts: now, delivered: pushed > 0, online: this._online(to), hub: 'durable-object' });
   }
 
   // ── Friend graph — contact WITHOUT establishing P2P first ────────────────
@@ -497,9 +655,10 @@ export class MeshHub {
     await this.state.storage.put(FRIEND_PREFIX + to + ':' + from, { state: 'pending-in', ts: now });
     await this.state.storage.put(FRIEND_PREFIX + from + ':' + to, { state: 'pending-out', ts: now });
     const nid = messageId();
-    await this.state.storage.put(MSG_PREFIX + to + ':' + String(now).padStart(14, '0') + ':' + nid,
-      { id: nid, from, to, ts: now, payload: { t: 'friend-request', from }, expiresAt: now + MSG_TTL_MS });
-    return json({ ok: true, state: 'sent', ts: now });
+    const notice = { id: nid, from, to, ts: now, payload: { t: 'friend-request', from, profile: cleanProfile(body && body.profile) } };
+    await this.state.storage.put(MSG_PREFIX + to + ':' + pad14(now) + ':' + nid, { ...notice, expiresAt: now + MSG_TTL_MS });
+    this._pushTo(to, { t: 'msg', item: notice });
+    return json({ ok: true, state: 'sent', ts: now, online: this._online(to) });
   }
   async friendRespond(body) {
     const me = body && body.wallet, other = body && body.other, action = body && body.action;
@@ -509,8 +668,9 @@ export class MeshHub {
       await this.state.storage.put(FRIEND_PREFIX + me + ':' + other, { state: 'accepted', ts: now });
       await this.state.storage.put(FRIEND_PREFIX + other + ':' + me, { state: 'accepted', ts: now });
       const nid = messageId();
-      await this.state.storage.put(MSG_PREFIX + other + ':' + String(now).padStart(14, '0') + ':' + nid,
-        { id: nid, from: me, to: other, ts: now, payload: { t: 'friend-accepted', from: me }, expiresAt: now + MSG_TTL_MS });
+      const notice = { id: nid, from: me, to: other, ts: now, payload: { t: 'friend-accepted', from: me, profile: cleanProfile(body && body.profile) } };
+      await this.state.storage.put(MSG_PREFIX + other + ':' + pad14(now) + ':' + nid, { ...notice, expiresAt: now + MSG_TTL_MS });
+      this._pushTo(other, { t: 'msg', item: notice });
       return json({ ok: true, state: 'accepted' });
     }
     if (action === 'decline' || action === 'remove') {
@@ -576,7 +736,7 @@ export class MeshHub {
     const presence = {};
     await Promise.all(addrs.map(async (a) => {
       const ts = Number(await this.state.storage.get(SEEN_PREFIX + a).catch(() => 0)) || 0;
-      presence[a] = { lastSeen: ts || null, online: ts > 0 && (now - ts) < SEEN_TTL_MS };
+      presence[a] = { lastSeen: ts || null, online: this._online(a) || (ts > 0 && (now - ts) < SEEN_TTL_MS) };
     }));
     return json({ ok: true, presence, ts: now });
   }

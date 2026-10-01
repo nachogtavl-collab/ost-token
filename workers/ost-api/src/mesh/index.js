@@ -36,8 +36,37 @@ function cors(extra = {}) {
   };
 }
 
+// ── ICE servers (STUN + Cloudflare TURN) ─────────────────────────────────
+// Peers on different networks (phone on LTE ↔ laptop on Wi-Fi) almost never
+// connect with STUN alone; TURN relays the data channel when NAT traversal
+// fails. Credentials are minted from the account's TURN key (secrets
+// TURN_KEY_ID / TURN_KEY_SECRET) and cached briefly; without the secrets we
+// fall back to public STUN so the mesh still works on the same network.
+const PUBLIC_STUN = [{ urls: ['stun:stun.cloudflare.com:3478', 'stun:stun.l.google.com:19302'] }];
+let iceCache = { at: 0, servers: null };
+async function iceServers(env) {
+  if (iceCache.servers && Date.now() - iceCache.at < 10 * 60 * 1000) return { iceServers: iceCache.servers, turn: true, cached: true };
+  const id = env && env.TURN_KEY_ID, secret = env && env.TURN_KEY_SECRET;
+  if (!id || !secret) return { iceServers: PUBLIC_STUN, turn: false };
+  try {
+    const r = await fetch('https://rtc.live.cloudflare.com/v1/turn/keys/' + encodeURIComponent(id) + '/credentials/generate-ice-servers', {
+      method: 'POST', headers: { Authorization: 'Bearer ' + secret, 'Content-Type': 'application/json' }, body: JSON.stringify({ ttl: 2 * 60 * 60 })
+    });
+    const d = await r.json().catch(() => null);
+    const servers = d && (Array.isArray(d.iceServers) ? d.iceServers : (d.iceServers ? [d.iceServers] : null));
+    if (!r.ok || !servers || !servers.length) return { iceServers: PUBLIC_STUN, turn: false, error: 'turn_mint_failed' };
+    iceCache = { at: Date.now(), servers };
+    return { iceServers: servers, turn: true };
+  } catch (e) { return { iceServers: PUBLIC_STUN, turn: false, error: String(e && e.message || e) }; }
+}
+
 export async function handleMeshRequest(request, env, { path, method }) {
   if (method === 'OPTIONS') return new Response(null, { status: 204, headers: cors() });
+
+  if (method === 'GET' && path === '/mesh/v1/ice') {
+    const ice = await iceServers(env);
+    return ok({ ok: true, ...ice, ttl: 7200, ts: Date.now() });
+  }
 
   const hub = meshHub(env);
   if (hub) {

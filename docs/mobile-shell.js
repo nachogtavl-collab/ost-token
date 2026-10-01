@@ -120,8 +120,9 @@
         return;
       }
       if (event.target.closest('[data-mobile-mesh]')) {
-        if (window.OST_MESH && typeof window.OST_MESH.open === 'function') window.OST_MESH.open();
-        else activateSection('wallet');
+        if (window.OST_MESH_APP && typeof window.OST_MESH_APP.open === 'function') window.OST_MESH_APP.open();
+        else if (window.OST_MESH && typeof window.OST_MESH.open === 'function') window.OST_MESH.open();
+        else { try { if (window.OST_LAZY && OST_LAZY.flush) OST_LAZY.flush(); } catch (_) {} location.hash = '#mesh'; }
         return;
       }
       if (event.target.closest('[data-mobile-games]')) {

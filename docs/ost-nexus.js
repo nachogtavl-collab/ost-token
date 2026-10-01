@@ -140,9 +140,9 @@
         return;
       }
       case 'mesh':
-        // Always flush: mesh.js can be loaded while mesh-mobile.js (the social
-        // app: feed/chats/pay/play/profile) is still queued, which left people on
-        // the raw keys-and-fingerprints pavilion.
+        // The chat app (ost-mesh-app.js) loads eagerly and is the primary surface;
+        // the classic pavilion stays reachable from its Me tab.
+        if (window.OST_MESH_APP && typeof OST_MESH_APP.open === 'function' && arg !== 'play' && arg !== 'classic') { OST_MESH_APP.open(); return; }
         flushLazy();
         waitFor(function () { return window.OST_MESH && OST_MESH.open; }, function () {
           OST_MESH.open();
