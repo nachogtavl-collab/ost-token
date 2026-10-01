@@ -381,7 +381,7 @@
       if (S.editor && typeof S.editor.flush === 'function') { try { await S.editor.flush(); } catch (_) {} }
       if (!S.fs.exists('index.html')) throw failStep({ code: 'no_index_html', title: 'Nothing to deploy yet', detail: 'OST deploys static web apps — add an index.html at the project root. Python and script projects run only inside the Studio sandbox.' });
       let files, warnings = [];
-      const useRuntime = kind !== 'static' && S.runtime && typeof S.runtime.build === 'function';
+      const useRuntime = !!(S.runtime && typeof S.runtime.build === 'function');   // static sites too: root-absolute URLs + inline module imports need the same build as the preview
       if (!useRuntime) files = rawFiles();
       else {
         let r;

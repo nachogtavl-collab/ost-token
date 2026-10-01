@@ -411,7 +411,7 @@
         try { return o.apply(W.history, arguments); } catch (e) {
           if (u == null) throw e;
           try { o.call(W.history, s, t); } catch (e2) {}
-          if (!warned['h:' + k]) { warned['h:' + k] = 1; out('warn', 'history.' + k + '("' + u + '") — URL-path routing cannot change the address of the sandboxed preview (about:srcdoc). Use hash routes (#/page, e.g. HashRouter) while previewing; deployed apps can use either.'); }
+          if (!warned['h:' + k]) { warned['h:' + k] = 1; out('warn', 'history.' + k + '("' + u + '") — URL-path routing cannot change the address of the sandboxed preview (about:srcdoc). Use hash routes (#/page, e.g. HashRouter): they work in the preview and after deploy. Path routing on OST Apps also needs the app’s base path (/<name>/) as the router basename.'); }
         }
       };
     });
@@ -515,6 +515,15 @@
     function track(p) { if (!p || typeof p.then !== 'function') return p; pending++; var d = false; var done = function () { if (!d) { d = true; pending--; check(); } }; p.then(done, done); return p; }
     function wrap(proto, names) { if (!proto) return; names.forEach(function (n) { var f = proto[n]; if (typeof f !== 'function') return; proto[n] = function () { return track(f.apply(this, arguments)); }; }); }
     if (self.fetch) { var _fetch = self.fetch; self.fetch = function () { return track(_fetch.apply(self, arguments)); }; }
+    if (self.XMLHttpRequest) {                         // axios & co. use XHR inside a worker
+      var XS = XMLHttpRequest.prototype.send;
+      XMLHttpRequest.prototype.send = function () {
+        var x = this, d = false;
+        var done = function () { if (!d) { d = true; pending--; x.removeEventListener('loadend', done); check(); } };
+        pending++; x.addEventListener('loadend', done);
+        try { return XS.apply(x, arguments); } catch (e) { done(); throw e; }
+      };
+    }
     wrap(self.Response && Response.prototype, ['json', 'text', 'arrayBuffer', 'blob', 'formData']);
     wrap(self.Blob && Blob.prototype, ['text', 'arrayBuffer']);
     wrap(self.SubtleCrypto && SubtleCrypto.prototype, ['digest', 'encrypt', 'decrypt', 'sign', 'verify', 'generateKey', 'deriveKey', 'deriveBits', 'importKey', 'exportKey', 'wrapKey', 'unwrapKey']);
@@ -544,6 +553,7 @@
     function finish(ok, error, code) {
       if (finished) return;
       ['log', 'error'].forEach(function (l) { if (partial[l]) { out(l, partial[l]); partial[l] = ''; } });
+      if (dropped) { q.push({ level: 'warn', text: '… ' + dropped + ' lines dropped (output limit: ' + RATE + ' lines per second)' }); dropped = 0; }
       flush(); finished = true;
       var fsw = self.__ostFS && self.__ostFS.writes;
       post({ type: 'done', ok: !!ok, error: error || '', exitCode: code == null ? (ok ? 0 : 1) : code, writes: fsw && Object.keys(fsw).length ? fsw : null });
@@ -650,6 +660,8 @@
       out('error', py ? msg : 'Python could not start: ' + msg + '\nCheck your connection — Pyodide loads from cdn.jsdelivr.net.');
       flush();
       post({ type: 'done', id: d.id, ok: false, error: last });
+      // out of memory / stack overflow leave Pyodide permanently broken — ask the runner for a fresh interpreter
+      if (py) { var dead = false; try { py.runPython('None'); } catch (er) { dead = true; } if (dead) post({ type: 'fatal' }); }
     }
     async function prepare(d) {
       var DIR = '/project', files = d.files || {}, bin = d.bin || {};
@@ -730,13 +742,13 @@
   /* ---- runner host: the hidden sandboxed iframe that owns the workers ---- */
   function OST_RUNNER(C) {
     'use strict';
-    var P = window.parent, jobs = Object.create(null), py = null;
+    var P = window.parent, jobs = Object.create(null), py = null, urls = {};
     function post(m) { try { P.postMessage(m, '*'); } catch (e) {} }
-    function blobUrl(src) { return URL.createObjectURL(new Blob([src], { type: 'text/javascript' })); }
+    function blobUrl(k) { return urls[k] || (urls[k] = URL.createObjectURL(new Blob([C[k]], { type: 'text/javascript' }))); }   // one URL per worker kind, reused
     function end(id) { var j = jobs[id]; if (!j) return; delete jobs[id]; if (j.kind === 'js') { try { j.w.terminate(); } catch (e) {} } }
     function runJs(m) {
       var id = m.id, w;
-      try { w = new Worker(blobUrl(C.js), { name: 'ost-run' }); }
+      try { w = new Worker(blobUrl('js'), { name: 'ost-run' }); }
       catch (err) { post({ type: 'done', id: id, ok: false, error: 'Could not start a sandboxed worker: ' + (err && err.message || err) }); return; }
       jobs[id] = { kind: 'js', w: w };
       w.onmessage = function (ev) { var d = ev.data; if (!d || typeof d !== 'object' || !jobs[id]) return; var o = {}; for (var k in d) o[k] = d[k]; o.id = id; post(o); if (o.type === 'done') end(id); };
@@ -751,10 +763,11 @@
     }
     function ensurePy() {
       if (py) return py;
-      var w = new Worker(blobUrl(C.py), { name: 'ost-python' });
+      var w = new Worker(blobUrl('py'), { name: 'ost-python' });
       var me = py = { w: w, ids: Object.create(null) };
       w.onmessage = function (ev) {
         var d = ev.data; if (!d || typeof d !== 'object' || py !== me) return;
+        if (d.type === 'fatal') { killPy('Python crashed (out of memory or too deep recursion) and was restarted — run it again.'); return; }
         var id = String(d.id || ''); if (!me.ids[id]) return;
         var o = {}; for (var k in d) o[k] = d[k]; post(o);
         if (o.type === 'done') { delete me.ids[id]; delete jobs[id]; }
@@ -1316,7 +1329,7 @@
     const strip = (t) => String(t || '').replace(/\n?\/[/*]# sourceMappingURL=[^\n]*\s*$/, '\n');
     let mapObj = null; if (map) { try { mapObj = JSON.parse(map.text); } catch (_) {} }
     // static imports of external URLs (esm.sh packages, the require() prelude) — only an ES module can load them
-    const externalImports = Object.entries((res.metafile && res.metafile.outputs) || {}).some(([k, out]) => /\.js$/.test(k) && (out.imports || []).some((i) => i.external && (i.kind === 'import-statement' || i.kind === 'require-call')));
+    const externalImports = Object.entries((res.metafile && res.metafile.outputs) || {}).some(([k, out]) => /\.js$/.test(k) && (out.imports || []).some((i) => i.external && (i.kind === 'import-statement' || i.kind === 'require-call') && !/^<define:/.test(i.path)));
     return { ok: true, code: js ? strip(js.text) : '', css: css ? strip(css.text) : '', map: mapObj, errors: [], warnings: esbMessages(res.warnings, 'warning').concat(ctx.warnings), inputs: ctx.bundled, assets: ctx.assets, entryInfo, externalImports };
   }
   function preludeEntry() {
@@ -1329,7 +1342,7 @@
   function isPlainScript(info, text) {
     if (!info || info.format === 'esm') return false;
     if (info.format === 'cjs') return /\btypeof\s+(module|exports|define)\b/.test(text);
-    return (info.imports || []).every((i) => i.kind === 'dynamic-import' && i.external && text.indexOf(i.path) >= 0);
+    return (info.imports || []).every((i) => /^<define:/.test(i.path) || (i.kind === 'dynamic-import' && i.external && text.indexOf(i.path) >= 0));   // <define:…> = our import.meta.env define
   }
   // One decision for classic <script src> in BOTH the preview and the deploy build:
   //   { ok, raw:true }  → ship/inline the file as written
@@ -1436,6 +1449,7 @@
     const src = S.fs.read(page);
     if (src == null) return { ok: false, html: '', errors: [{ path: page, line: 0, col: 0, text: page + ' was not found', severity: 'error', source: 'html' }], warnings, ms: 0 };
     const doc = new DOMParser().parseFromString(src, 'text/html');
+    for (const s of doc.querySelectorAll('script[data-ost-base]')) s.remove();   // deploy-only helper (remixed apps)
     const dir = U.dirOf(page);
     const shared = { importMap: readImportMap(doc), inputs: new Set(), page };
     const cssLinked = new Map();
@@ -1518,6 +1532,55 @@
     return true;
   }
   const NOT_SHIPPED = /^(package(-lock)?\.json|npm-shrinkwrap\.json|yarn\.lock|pnpm-lock\.yaml|bun\.lockb?|tsconfig(\.[\w-]+)?\.json|jsconfig\.json|vite\.config\.[cm]?[jt]s|readme(\.[\w]+)?)$/i;
+  // Apps are served under https://<apps host>/<name>/ — a root-absolute "/style.css" would leave the app.
+  // The deploy build rewrites those to relative URLs (the preview resolves them against the project root).
+  const isRootAbs = (u) => /^\s*\/(?![/\\])/.test(String(u == null ? '' : u));
+  const toRootOf = (p) => { const d = String(p).split('/').length - 1; return d ? '../'.repeat(d) : './'; };
+  function rootRel(ref, toRoot) {
+    const [bare, query] = splitQuery(String(ref).trim());
+    let p = resolveRef('', bare), tail;
+    if (!p) tail = bare.replace(/^\/+/, '');                           // "/" = the app root (or a path we leave as written)
+    else {
+      if (/\/$/.test(bare) || (!S.fs.exists(p) && S.fs.exists(p + '/index.html'))) p += '/';
+      else if (!S.fs.exists(p) && S.fs.exists(p + '.html')) p += '.html';  // same page lookup as the preview's links
+      tail = encodePath(p);
+    }
+    return toRoot + tail + query;
+  }
+  // url(/x) and @import "/x" → relative; with pkgCtx, a bare @import "pkg/x.css" → jsDelivr (as the preview does)
+  function deployCssText(css, dir, toRoot, pkgCtx) {
+    let out = String(css).replace(/@import\s+(?:url\(\s*)?(?:"([^"]*)"|'([^']*)'|([^"')\s;]+))\s*\)?/gi, (m, d1, d2, d3) => {
+      const ref = d1 != null ? d1 : d2 != null ? d2 : d3;
+      if (!isLocalRef(ref)) return m;
+      if (isRootAbs(ref)) return '@import url(' + JSON.stringify(rootRel(ref, toRoot)) + ') ';
+      const t = resolveRef(dir, ref);
+      if (pkgCtx && !(t && S.fs.exists(t)) && !/^\.{0,2}\//.test(ref)) return '@import url(' + JSON.stringify(npmFileUrl(ref, pkgCtx)) + ') ';
+      return m;
+    });
+    out = out.replace(/url\(\s*(['"]?)([^'")]+?)\1\s*\)/gi, (m, q, ref) => isLocalRef(ref) && isRootAbs(ref) ? 'url(' + JSON.stringify(rootRel(ref, toRoot)) + ')' : m);
+    return out;
+  }
+  // JS can't be rewritten safely — point out string literals like fetch("/data.json") that name a project file.
+  function warnRootAbs(code, from, warnings, ctx) {
+    const re = /(['"`])\/(?![/\\])([^'"`\s?#*<>]{1,200})(?:[?#][^'"`\s]*)?\1/g;
+    let m;
+    while ((m = re.exec(String(code))) && ctx.absWarned.size < 8) {
+      const p = resolveRef('', m[2]);
+      if (!p || ctx.absWarned.has(p) || !S.fs.exists(p)) continue;
+      ctx.absWarned.add(p);
+      warnings.push({ path: from, line: 0, col: 0, text: '"/' + m[2] + '" is a root-absolute URL — deployed apps live under /<name>/ on the apps host, so it would load from outside your app. Use a relative URL ("./' + p + '").', severity: 'warning', source: 'deploy' });
+    }
+  }
+  // Root page of a deployed app: the host answers unknown extension-less paths (/<name>/users/42) with index.html.
+  // Its relative URLs would then resolve under /users/, so on those deep routes we pin <base href="/<name>/">.
+  const APPS_HOST = (() => { try { return new URL(S.APPS).host; } catch (_) { return ''; } })();
+  function withSpaBase(html) {
+    if (!APPS_HOST) return html;
+    const tag = '<script data-ost-base>(function(){try{var l=location,m=/^\\/[^\\/]+\\//.exec(l.pathname);' +
+      'if(l.host===' + JSON.stringify(APPS_HOST) + '&&m&&l.pathname!==m[0]&&l.pathname!==m[0]+"index.html"&&!document.querySelector("base")){var b=document.createElement("base");b.href=m[0];document.head.appendChild(b);}}catch(e){}})();<\/script>';
+    const at = /<head(?:\s[^>]*)?>/i.exec(html) || /<html(?:\s[^>]*)?>/i.exec(html) || /<!doctype[^>]*>/i.exec(html);
+    return at ? html.slice(0, at.index + at[0].length) + tag + html.slice(at.index + at[0].length) : tag + html;
+  }
   async function buildDeploy() {
     const t0 = now();
     const errors = [], warnings = [], files = {};
@@ -1535,19 +1598,28 @@
     const snap = S.fs.snapshot();
     const all = Object.keys(snap).sort();
     const kind = U.projectKind();
-    if (kind === 'static') { for (const p of all) if (deployable(p)) files[p] = snap[p]; return limits(files, errors) || finish(); }
-    const ctx = { cache: new Map(), referenced: new Set(), bundled: new Set() };
-    for (const page of all.filter((p) => /\.html?$/i.test(p) && deployable(p))) {
+    const ctx = { cache: new Map(), referenced: new Set(), bundled: new Set(), absWarned: new Set() };
+    const pkgCtx = mkCtx('deploy');
+    const pages = all.filter((p) => /\.html?$/i.test(p) && deployable(p));
+    // static sites ship every file as written; pages still get what the preview gives them (inline modules that
+    // import packages are bundled, root-absolute URLs made relative)
+    if (kind === 'static') for (const p of all) if (deployable(p)) files[p] = snap[p];
+    for (const page of pages) {
       try { files[page] = await deployPage(page, ctx, files, errors, warnings); }
       catch (e) { errors.push({ path: page, line: 0, col: 0, text: String(e && e.message || e), severity: 'error', source: 'deploy' }); }
     }
-    for (const p of all) {
-      if (p in files || /\.html?$/i.test(p) || !deployable(p)) continue;
-      if (NOT_SHIPPED.test(U.baseOf(p))) continue;
-      if (ctx.referenced.has(p)) { files[p] = snap[p]; continue; }
-      if (/\.(tsx?|jsx|mts|cts)$/i.test(p)) continue;                                 // browsers can't run these raw
-      if (ctx.bundled.has(p) && !/\.json$/i.test(p)) continue;                         // already inside a bundle
-      files[p] = snap[p];
+    if (kind !== 'static') {
+      for (const p of all) {
+        if (p in files || /\.html?$/i.test(p) || !deployable(p)) continue;
+        if (NOT_SHIPPED.test(U.baseOf(p))) continue;
+        if (ctx.referenced.has(p)) { files[p] = snap[p]; continue; }
+        if (/\.(tsx?|jsx|mts|cts)$/i.test(p)) continue;                                 // browsers can't run these raw
+        if (ctx.bundled.has(p) && !/\.json$/i.test(p)) continue;                         // already inside a bundle
+        files[p] = snap[p];
+      }
+    }
+    for (const p of Object.keys(files)) {
+      if (/\.css$/i.test(p) && p in snap && !S.fs.isBinary(p)) files[p] = deployCssText(files[p], U.dirOf(p), toRootOf(p), pkgCtx);
     }
     limits(files, errors);
     return finish();
@@ -1560,38 +1632,45 @@
     if (total > 25 * 1024 * 1024) errors.push({ path: '', line: 0, col: 0, text: 'Deploys are limited to 25 MB (this build is ' + U.fmtBytes(total) + ').', severity: 'error', source: 'deploy' });
     return null;
   }
-  async function deployBundle(entry, format, importMap, ctx, files, errors, warnings, page) {
+  // classic: a classic <script src> — decided by bundleClassic, exactly like the preview
+  async function deployBundle(entry, format, importMap, ctx, files, errors, warnings, page, classic) {
     const isVirt = typeof entry === 'object';
-    const key = (isVirt ? 'virtual:' + entry.contents : entry) + '|' + format;
+    // inline modules resolve relative imports from their page's folder, and every page may have its own import map
+    const key = (isVirt ? 'virtual:' + (entry.dir || '') + '\n' + entry.contents : entry) + '|' + (classic ? 'classic' : format) + '|' + JSON.stringify(importMap || null);
     if (ctx.cache.has(key)) return ctx.cache.get(key);
+    const keep = () => { ctx.referenced.add(entry); warnRootAbs(S.fs.read(entry) || '', entry, warnings, ctx); const out = { keep: true }; ctx.cache.set(key, out); return out; };
     let r;
-    try { r = await bundle({ entry: isVirt ? '' : entry, virtual: isVirt ? entry : null, mode: 'deploy', format, importMap }); }
+    try { r = classic ? await bundleClassic(entry, 'deploy', importMap) : await bundle({ entry: isVirt ? '' : entry, virtual: isVirt ? entry : null, mode: 'deploy', format, importMap }); }
     catch (e) {
-      // bundler unreachable: a plain script that needs no bundling still ships as-is
-      if (!isVirt && !needsBundler(entry, S.fs.read(entry))) { ctx.referenced.add(entry); ctx.cache.set(key, { keep: true }); warnings.push({ path: entry, line: 0, col: 0, text: 'Bundler unavailable — ' + entry + ' ships unminified.', severity: 'warning', source: 'deploy' }); return { keep: true }; }
+      // bundler unreachable: a plain script that needs no transpiling still ships as-is
+      if (!isVirt && (classic ? !/^(ts|tsx|jsx|mts|cts)$/i.test(U.extOf(entry)) : !needsBundler(entry, S.fs.read(entry)))) { warnings.push({ path: entry, line: 0, col: 0, text: 'Bundler unavailable — ' + entry + ' ships as written, unminified.', severity: 'warning', source: 'deploy' }); return keep(); }
       errors.push({ path: isVirt ? page : entry, line: 0, col: 0, text: 'Bundler unavailable: ' + (e && e.message || e), severity: 'error', source: 'deploy' });
       ctx.cache.set(key, null); return null;
     }
+    if (r.raw) return keep();
     if (!r.ok) { errors.push(...r.errors); warnings.push(...r.warnings); ctx.cache.set(key, null); return null; }
     warnings.push(...r.warnings);
+    warnRootAbs(r.code, isVirt ? page : entry, warnings, ctx);
     r.inputs.forEach((p) => ctx.bundled.add(p));
     r.assets.forEach((p) => ctx.referenced.add(p));
     const js = 'assets/app-' + (await U.sha256Hex(r.code)).slice(0, 10) + '.js';
     files[js] = r.code;
     let css = '';
     if (r.css && r.css.trim()) { css = 'assets/app-' + (await U.sha256Hex(r.css)).slice(0, 10) + '.css'; files[css] = r.css; }
-    const out = { js, css };
+    const out = { js, css, module: !!r.module };
     ctx.cache.set(key, out);
     return out;
   }
+  const DEPLOY_REFS = [['link', 'href'], ['script', 'src'], ['img', 'src'], ['source', 'src'], ['video', 'src'], ['video', 'poster'], ['audio', 'src'], ['track', 'src'], ['embed', 'src'], ['input', 'src'], ['iframe', 'src'], ['object', 'data'], ['a', 'href'], ['area', 'href'], ['form', 'action'], ['base', 'href'], ['image', 'href'], ['image', 'xlink:href'], ['use', 'href'], ['use', 'xlink:href']];
   async function deployPage(page, ctx, files, errors, warnings) {
     const src = S.fs.read(page) || '';
     const doc = new DOMParser().parseFromString(src, 'text/html');
     const dir = U.dirOf(page);
-    const depth = page.split('/').length - 1;
-    const pre = depth ? '../'.repeat(depth) : './';
+    const pre = toRootOf(page);
     const importMap = readImportMap(doc);
+    let changed = false;                                   // untouched pages ship byte-for-byte
     const addCss = (href) => { if (doc.head.querySelector('link[rel="stylesheet"][href="' + href + '"]')) return; const l = doc.createElement('link'); l.setAttribute('rel', 'stylesheet'); l.setAttribute('href', href); doc.head.appendChild(l); };
+    for (const s of doc.querySelectorAll('script[data-ost-base]')) { s.remove(); changed = true; }   // from a remixed deploy; re-added below
     for (const s of [...doc.querySelectorAll('script')]) {
       const type = (s.getAttribute('type') || '').trim().toLowerCase();
       const isModule = type === 'module';
@@ -1602,22 +1681,34 @@
         if (!isLocalRef(ref)) continue;
         const p = resolveRef(dir, ref);
         if (!p || !S.fs.exists(p)) { errors.push({ path: page, line: lineOf(src, ref), col: 1, text: 'Script "' + ref + '" was not found', severity: 'error', source: 'deploy' }); continue; }
-        if (!isModule && !/\.(tsx?|jsx|mts|cts)$/i.test(p)) { ctx.referenced.add(p); continue; }   // classic .js ships as-is
-        const b = await deployBundle(p, isModule ? 'esm' : 'iife', importMap, ctx, files, errors, warnings, page);
-        if (!b || b.keep) continue;
-        s.setAttribute('src', pre + b.js); s.removeAttribute('integrity');
+        const b = await deployBundle(p, isModule ? 'esm' : 'iife', importMap, ctx, files, errors, warnings, page, !isModule);
+        if (!b || b.keep) continue;                        // shipped as written (a root-absolute src is fixed below)
+        s.setAttribute('src', pre + b.js); s.removeAttribute('integrity'); changed = true;
+        if (b.module) s.setAttribute('type', 'module');
         if (b.css) addCss(pre + b.css);
       } else if (isModule && RE_NEEDS_BUNDLE.test(s.textContent || '')) {
         const b = await deployBundle({ contents: s.textContent, dir, name: page + '#inline-module', loader: 'js' }, 'esm', importMap, ctx, files, errors, warnings, page);
         if (!b || b.keep) continue;
-        s.textContent = ''; s.setAttribute('src', pre + b.js);
+        s.textContent = ''; s.setAttribute('src', pre + b.js); changed = true;
         if (b.css) addCss(pre + b.css);
+      } else warnRootAbs(s.textContent || '', page, warnings, ctx);
+    }
+    for (const [tag, at] of DEPLOY_REFS) {
+      for (const e of doc.querySelectorAll(tag)) {
+        const v = e.getAttribute(at); if (!v || !isLocalRef(v)) continue;
+        const p = resolveRef(dir, v); if (p) ctx.referenced.add(p);
+        if (isRootAbs(v)) { e.setAttribute(at, rootRel(v, pre)); changed = true; }
       }
     }
-    for (const e of doc.querySelectorAll('link[href], img[src], source[src], video[src], audio[src], [poster], a[href], iframe[src]')) {
-      for (const at of ['href', 'src', 'poster']) { const v = e.getAttribute(at); if (v && isLocalRef(v)) { const p = resolveRef(dir, v); if (p) ctx.referenced.add(p); } }
+    for (const e of doc.querySelectorAll('img[srcset], source[srcset]')) {
+      const v = e.getAttribute('srcset') || '';
+      const nv = v.split(',').map((part) => { const m = /^(\s*)(\S+)(.*)$/.exec(part); if (!m || !isLocalRef(m[2])) return part; const p = resolveRef(dir, m[2]); if (p) ctx.referenced.add(p); return isRootAbs(m[2]) ? m[1] + rootRel(m[2], pre) + m[3] : part; }).join(',');
+      if (nv !== v) { e.setAttribute('srcset', nv); changed = true; }
     }
-    return serialize(doc);
+    for (const e of doc.querySelectorAll('[style]')) { const v = e.getAttribute('style'), nv = deployCssText(v, dir, pre, null); if (nv !== v) { e.setAttribute('style', nv); changed = true; } }
+    for (const st of doc.querySelectorAll('style')) { const v = st.textContent, nv = deployCssText(v, dir, pre, null); if (nv !== v) { st.textContent = nv; changed = true; } }
+    const html = changed ? serialize(doc) : src;
+    return page === 'index.html' && !doc.querySelector('base[href]') ? withSpaBase(html) : html;
   }
 
   /* ======================================================================
@@ -1697,9 +1788,27 @@
 
   /* ---- jobs ---- */
   function jobSource(job) { return job.kind === 'python' ? 'python' : 'run'; }
+  // Output kept for the run's result (the agent reads it): the first OUT_HEAD chars + a rolling OUT_TAIL-char tail.
+  const OUT_HEAD = 60000, OUT_TAIL = 20000;
+  function outBuf() {
+    const head = [], tail = []; let headLen = 0, tailLen = 0, ti = 0, omitted = 0;
+    return {
+      push(s) {
+        s = String(s);
+        if (!tail.length && headLen + s.length <= OUT_HEAD) { head.push(s); headLen += s.length + 1; return; }
+        tail.push(s); tailLen += s.length + 1;
+        while (tailLen > OUT_TAIL && tail.length - ti > 1) { const x = tail[ti]; tail[ti++] = ''; tailLen -= x.length + 1; omitted += x.length + 1; }
+        if (ti > 512 && ti * 2 > tail.length) { tail.splice(0, ti); ti = 0; }
+      },
+      text() {
+        const t = tail.slice(ti);
+        return head.join('\n') + (omitted ? '\n… (' + omitted + ' characters omitted) …\n' : t.length && head.length ? '\n' : '') + t.join('\n');
+      }
+    };
+  }
   function jobLine(job, level, text, extra) {
     if (!LEVELS.has(level)) level = 'log';
-    if (level !== 'system' && !(extra && extra.image)) { job.out.push((level === 'error' ? '[error] ' : level === 'warn' ? '[warn] ' : '') + text); job.outLen += String(text).length; }
+    if (level !== 'system' && !(extra && extra.image)) job.out.push((level === 'error' ? '[error] ' : level === 'warn' ? '[warn] ' : '') + text);
     if (job.quiet && level !== 'error') return;
     line(level, text, jobSource(job), extra);
   }
@@ -1735,7 +1844,9 @@
     if (job.done) return;
     job.stopReason = reason === 'timeout' ? 'Timed out after ' + fmtMs(job.deadline ? Math.max(0, now() - job.t0) : job.timeoutMs) : 'Stopped';
     if (reason === 'timeout') jobLine(job, 'warn', '⏱ Stopped after ' + fmtMs(now() - job.t0) + ' (time limit ' + fmtMs(job.timeoutMs) + '). Scripts that never finish — servers, setInterval loops, infinite loops — are stopped automatically.');
-    postRunner({ type: 'stop', id: job.id });
+    // A Python job still waiting for the interpreter (loading, or queued behind another program) is just
+    // dequeued — killing the shared worker would throw away the boot and any other job queued in it.
+    postRunner({ type: job.kind === 'python' && !job.execStarted ? 'cancel' : 'stop', id: job.id });
     finishJob(job, false, job.stopReason);
   }
   function finishJob(job, ok, error) {
@@ -1751,8 +1862,7 @@
     if (job.writes && !job.capture) offerWrites(job.writes);
     S.bus.emit('run:end', { kind: job.kind === 'python' ? 'python' : 'js', path: job.path, ok: !!ok, ms });
     paintRunning();
-    let output = job.out.join('\n');
-    if (output.length > 100000) output = output.slice(0, 60000) + '\n… (' + (output.length - 80000) + ' characters omitted) …\n' + output.slice(-20000);
+    const output = job.out.text();
     job.resolve({ ok: !!ok, output, error: ok ? '' : (job.firstError && !/^(Stopped|Timed out)/.test(error || '') ? job.firstError : (error || job.firstError || 'Failed')), ms, files: job.writes || undefined });
   }
   function offerWrites(w) {
@@ -1764,7 +1874,7 @@
   async function startRun(kind, path, o) {
     o = o || {};
     const id = 'r' + U.uid(6);
-    const job = { id, kind, path, ui: !!o.ui, capture: !!o.capture, quiet: false, t0: now(), out: [], outLen: 0, firstError: '', writes: null, done: false, execStarted: false, timeoutMs: o.timeoutMs || UI_TIMEOUT, deadline: o.deadline || 0 };
+    const job = { id, kind, path, ui: !!o.ui, capture: !!o.capture, quiet: false, t0: now(), out: outBuf(), firstError: '', writes: null, done: false, execStarted: false, timeoutMs: o.timeoutMs || UI_TIMEOUT, deadline: o.deadline || 0 };
     job.promise = new Promise((r) => { job.resolve = r; });
     if (o.ui) { if (CUR_UI && !CUR_UI.done) stopJob(CUR_UI, 'restart'); CUR_UI = job; }
     RUNS.set(id, job);
@@ -1881,15 +1991,20 @@
   }
   async function capturePage(page, timeoutMs) {
     const t0 = now();
+    const deadline = t0 + timeoutMs;
     line('system', '▶ Agent check · ' + page, 'preview');
-    const b = await buildPreviewHtml(page, { gen: -2 });
-    const out = [];
+    let bt = 0;
+    const b = await Promise.race([buildPreviewHtml(page, { gen: -2 }), new Promise((r) => { bt = setTimeout(() => r(null), timeoutMs); })]);
+    clearTimeout(bt);
+    if (!b) return { ok: false, output: '', error: 'Build timed out after ' + fmtMs(timeoutMs) + ' (the bundler or a package download did not answer).', ms: Math.round(now() - t0) };
+    const out = outBuf();
     let firstErr = '';
     for (const e of b.errors) { out.push('[error] ' + (e.path ? e.path + ':' + e.line + ' — ' : '') + e.text); if (!firstErr) firstErr = e.text; }
     for (const w of b.warnings) out.push('[warn] ' + (w.path ? w.path + ': ' : '') + w.text);
-    if (!b.html) return { ok: false, output: out.join('\n'), error: firstErr || 'Build failed', ms: Math.round(now() - t0) };
+    if (!b.html) return { ok: false, output: out.text(), error: firstErr || 'Build failed', ms: Math.round(now() - t0) };
+    if (now() >= deadline) return { ok: false, output: out.text(), error: 'Build took longer than ' + fmtMs(timeoutMs) + '.', ms: Math.round(now() - t0) };
     const frame = document.createElement('iframe');
-    frame.setAttribute('sandbox', PREVIEW_SANDBOX);
+    frame.setAttribute('sandbox', CAPTURE_SANDBOX);
     frame.setAttribute('aria-hidden', 'true');
     frame.setAttribute('tabindex', '-1');
     frame.className = 'st-runtime-capture';
@@ -1910,16 +2025,17 @@
       }
     };
     CAPTURES.add(cap);
+    pvArm(cap);                                        // a page that freezes the tab is not auto-previewed after the reload
     frame.srcdoc = b.html;
     document.body.appendChild(frame);
-    const deadline = t0 + timeoutMs;
     const iv = setInterval(() => { const n = now(); if (n >= deadline || (cap.loaded && n - cap.last > 1500 && n - t0 > 2000)) finish(); }, 200);
     await done;
     clearInterval(iv);
     CAPTURES.delete(cap);
+    pvDisarm(cap);
     frame.remove();
     if (!cap.loaded && !firstErr) firstErr = 'The page did not finish loading within ' + fmtMs(timeoutMs) + '.';
-    return { ok: b.ok && !firstErr, output: out.join('\n'), error: firstErr, ms: Math.round(now() - t0) };
+    return { ok: b.ok && !firstErr, output: out.text(), error: firstErr, ms: Math.round(now() - t0) };
   }
 
   /* ======================================================================
@@ -2132,6 +2248,22 @@
    * Preview pane
    * ==================================================================== */
   const PV = { frame: null, gen: 0, page: 'index.html', history: [], stale: true, auto: S.settings.get('preview.auto', true) !== false, vp: VIEWPORTS[S.settings.get('preview.viewport', 'responsive')] !== undefined ? S.settings.get('preview.viewport', 'responsive') : 'responsive', storage: new Map(), stage: null, dev: null, msg: null, overlay: null, stat: null, pageBtn: null, backBtn: null, cssLinked: new Map(), pid: '', building: null, again: false, lastErrors: [], loaded: false };
+  // ---- crash sentinel ----
+  // Sandboxed srcdoc frames share the Studio's main thread on Safari/iOS, Firefox and Android, so an infinite
+  // loop in the preview freezes the whole tab. A key is set while a preview/agent-check page is starting
+  // (until ~3 s after it loaded); if the tab dies in that window, the next visit does not auto-run that preview.
+  const PV_SESSION = U.uid(4), ARMED = new Set();
+  function writeArm() { try { localStorage.setItem(PV_ARM_KEY, JSON.stringify({ pid: projectId(), at: Date.now(), s: PV_SESSION })); } catch (_) {} }
+  function pvArm(holder) { ARMED.add(holder); writeArm(); }
+  function pvDisarm(holder) {
+    if (holder === undefined) ARMED.clear(); else ARMED.delete(holder);
+    if (!ARMED.size) { try { const v = JSON.parse(localStorage.getItem(PV_ARM_KEY) || 'null'); if (v && v.s === PV_SESSION) localStorage.removeItem(PV_ARM_KEY); } catch (_) {} }
+  }
+  function pvFroze(pid) {                              // set by an earlier visit that never got to disarm it
+    try { const v = JSON.parse(localStorage.getItem(PV_ARM_KEY) || 'null'); return !!(v && v.s !== PV_SESSION && v.pid === pid && Date.now() - v.at < 7 * 864e5); } catch (_) { return false; }
+  }
+  function pvForgetFreeze() { try { localStorage.removeItem(PV_ARM_KEY); } catch (_) {} if (ARMED.size) writeArm(); }
+  window.addEventListener('pagehide', () => pvDisarm());
   function buildPreviewUi() {
     const bar = S.ui.previewBar(), host = S.ui.previewEl();
     if (!bar || !host) return;
@@ -2154,13 +2286,13 @@
     PV.overlay = PV.stage.querySelector('.st-runtime-overlay');
     const q = (k) => bar.querySelector('[data-pv="' + k + '"]');
     PV.stat = q('stat'); PV.pageBtn = q('page'); PV.backBtn = q('back');
-    q('refresh').onclick = () => { if (!isPreviewVisible()) S.ui.togglePreview(true); refresh(); };
-    q('back').onclick = () => { const p = PV.history.pop(); if (p) { PV.page = p; PV.stale = true; refresh(); } };
+    q('refresh').onclick = () => { PV.manual = true; if (!isPreviewVisible()) S.ui.togglePreview(true); refresh(true); };
+    q('back').onclick = () => { const p = PV.history.pop(); if (p) { PV.page = p; PV.stale = true; refresh(true); } };
     q('page').onclick = async () => {
       const pages = S.fs.list().map((f) => f.path).filter((p) => /\.html?$/i.test(p));
       if (!pages.length) return;
       const v = await S.ui.select('Preview page', pages.map((p) => ({ value: p, label: '/' + p })));
-      if (v) { PV.history.push(PV.page); PV.page = v; PV.stale = true; refresh(); }
+      if (v) { PV.history.push(PV.page); PV.page = v; PV.stale = true; refresh(true); }
     };
     const auto = q('auto'); auto.checked = PV.auto; auto.onchange = () => { PV.auto = auto.checked; S.settings.set('preview.auto', PV.auto); if (PV.auto && PV.stale) schedule(); };
     const vp = q('vp'); vp.value = PV.vp; vp.onchange = () => { PV.vp = vp.value; S.settings.set('preview.viewport', PV.vp); fitDevice(); };
@@ -2217,6 +2349,7 @@
   function unmountPreview() {
     if (PV.frame) { PV.frame.remove(); PV.frame = null; }
     PV.loaded = false;
+    clearTimeout(PV.armT); pvDisarm('pv');
     paintRepl();
   }
   function mount(html, gen) {
@@ -2229,12 +2362,15 @@
     f.className = 'st-runtime-frame';
     f.srcdoc = html;
     PV.frame = f; PV.frameGen = gen;
+    pvArm('pv');                                       // disarmed ~3 s after the page reports 'ready'
     PV.dev.appendChild(f);
     pvMessage('');
     paintRepl();
   }
-  function refresh() {
-    if (PV.building) { if (PV.stale) PV.again = true; return PV.building; }   // nothing changed since this build began → reuse it
+  // manual = the user (or the agent) asked for this run — it may start a preview that froze the tab last time
+  function refresh(manual) {
+    if (manual) PV.manual = true;
+    if (PV.building) { if (PV.stale || (manual && pvFroze(projectId()))) PV.again = true; return PV.building; }   // nothing changed since this build began → reuse it
     PV.building = (async () => {
       try { do { PV.again = false; await doRefresh(); } while (PV.again); }
       catch (e) { pvStatus('err', '✕ ' + (e.message || e)); line('error', 'Preview failed: ' + (e && e.message || e), 'build'); }
@@ -2258,6 +2394,17 @@
       return;
     }
     PV.page = page; paintPageBtn();
+    const manual = PV.manual; PV.manual = false;
+    if (pvFroze(proj.id)) {
+      if (!manual) {
+        unmountPreview(); showOverlay([]);
+        pvMessage('Preview paused — the last time this project’s preview ran, the tab froze or crashed (an endless loop?), so it was not started again automatically. Fix the code, then press ⟳ to run it.');
+        pvStatus('err', '⏸ Paused', 'Press ⟳ to run the preview');
+        PV.stale = true;
+        return;
+      }
+      pvForgetFreeze();
+    }
     PV.stale = false;                                   // edits from here on mark it stale again → one more build
     const gen = ++PV.gen;
     pvStatus('busy', esbReady || !esbP ? '⟳ Building…' : '⟳ Loading bundler…');
@@ -2324,29 +2471,37 @@
         break;
       }
       case 'eval': if (CON.evals.delete(String(d.id))) line(d.ok ? 'log' : 'error', '← ' + String(d.text == null ? '' : d.text).slice(0, 20000), 'preview'); break;
-      case 'ready': PV.loaded = true; break;
+      case 'ready': PV.loaded = true; clearTimeout(PV.armT); PV.armT = setTimeout(() => { if (PV.frame) pvDisarm('pv'); }, 3000); break;
     }
   }
   async function preview(force, page) {
     if (!S.projects.current()) { S.ui.toast('Open a project first.', 'warn'); return; }
-    if (page && S.fs.exists(page) && page !== PV.page) { PV.history.push(PV.page); PV.page = page; PV.stale = true; force = true; }
-    if (!isPreviewVisible()) {
-      S.ui.togglePreview(true);                         // → 'preview:toggle' starts a fresh build
-      if (PV.building) { await PV.building; return; }
-    }
-    if (force || !PV.frame || PV.stale) await refresh();
-    else if (PV.building) await PV.building;
+    PV.manual = true;                                   // an explicit request (Run, 👁, commands, the agent)
+    try {
+      if (page && S.fs.exists(page) && page !== PV.page) { PV.history.push(PV.page); PV.page = page; PV.stale = true; force = true; }
+      if (!isPreviewVisible()) {
+        S.ui.togglePreview(true);                       // → 'preview:toggle' starts a fresh build
+        if (PV.building) { await PV.building; return; }
+      }
+      if (force || !PV.frame || PV.stale) await refresh(true);
+      else if (PV.building) await PV.building;
+    } finally { PV.manual = false; }
   }
   async function openInNewTab() {
     if (!S.projects.current()) { S.ui.toast('Open a project first.', 'warn'); return; }
     const start = PV.page && S.fs.exists(PV.page) ? PV.page : 'index.html';
     if (!S.fs.exists(start)) { S.ui.toast('Add an index.html to open a preview.', 'warn'); return; }
+    // Open the tab NOW, while the click still counts as a user gesture — after the (possibly first-time,
+    // bundler-loading) build the popup blocker would drop it silently.
+    let w = null;
+    try { w = window.open('', '_blank'); if (w) { w.opener = null; w.document.title = 'Building preview…'; if (w.document.body) w.document.body.textContent = 'Building the preview…'; } } catch (_) {}
     const pages = S.fs.list().map((f) => f.path).filter((p) => /\.html?$/i.test(p)).slice(0, 20);
     if (!pages.includes(start)) pages.unshift(start);
     const built = {};
     let failed = 0;
-    for (const p of pages) { const r = await buildPreviewHtml(p, { gen: -3 }); if (r.html) built[p] = r.html; if (!r.ok && p === start) failed = r.errors.length; }
-    if (!built[start]) { S.ui.toast('Build failed — see Problems.', 'err'); return; }
+    try { for (const p of pages) { const r = await buildPreviewHtml(p, { gen: -3 }); if (r.html) built[p] = r.html; if (!r.ok && p === start) failed = r.errors.length; } }
+    catch (e) { if (w) try { w.close(); } catch (_) {} throw e; }
+    if (!built[start]) { if (w) try { w.close(); } catch (_) {} S.ui.toast('Build failed — see Problems.', 'err'); return; }
     if (failed) S.ui.toast('Opened with ' + failed + ' build error(s) — see Problems.', 'warn');
     const name = (S.projects.current().name || 'app');
     // This wrapper runs on the studio origin (blob:), so it contains ONLY our code: a sandboxed iframe
@@ -2359,7 +2514,10 @@
       'addEventListener("message",function(e){if(e.source!==f.contentWindow)return;var d=e.data;if(!d||d.__ost!=="nav"||typeof d.path!=="string")return;var p=d.path;if(!has(p)&&has(p+"/index.html"))p+="/index.html";if(!has(p)&&has(p+".html"))p+=".html";if(has(p))f.srcdoc=P[p];});' +
       'f.srcdoc=P[' + jsonForScript(start) + '];})();<\/script></body></html>';
     const url = URL.createObjectURL(new Blob([wrapper], { type: 'text/html' }));
-    window.open(url, '_blank', 'noopener');
+    let opened = false;
+    try { if (w && !w.closed) { w.location.replace(url); opened = true; } } catch (_) {}
+    if (!opened) { try { const w2 = window.open(url, '_blank'); if (w2) { w2.opener = null; opened = true; } } catch (_) {} }
+    if (!opened) S.ui.toast('Your browser blocked the new tab — allow pop-ups for this site, then try again.', 'warn');
     setTimeout(() => URL.revokeObjectURL(url), 120000);
   }
 
