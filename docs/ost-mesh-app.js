@@ -75,6 +75,15 @@ if (!window.OST_MESH_APP) {
   function upsertContact(a, patch) { const c = S.contacts[a] || { addr: a, state: 'friend', ts: Date.now(), unread: 0 }; Object.assign(c, patch || {}); S.contacts[a] = c; saveContacts(); return c; }
   function totalUnread() { return Object.values(S.contacts).reduce((n, c) => n + (c.unread || 0), 0); }
 
+  /* ---------- plugin surface (ost-social.js, ost-mesh-call.js) ----------
+   * views:     name -> { tab?: {ico, lbl, order}, render(ctx) }   extra tabs/views
+   * headBtns:  [(peer) -> html]                                    chat header buttons
+   * attach:    [{ ico, lbl, run(peer) }]                           chat "+" menu items
+   * actions:   name -> fn(el, event)                               data-act handlers
+   * ws:        [fn(m)]                                             every socket message
+   * badges:    name -> () => number                                tab badges */
+  const X = { views: {}, headBtns: [], attach: [], actions: {}, ws: [], badges: {} };
+
   /* ---------- identity (shared with legacy mesh.js) ---------- */
   async function loadIdentity() {
     const saved = lsGet(K.id, null);
@@ -135,6 +144,15 @@ if (!window.OST_MESH_APP) {
     if (code === 'blob_rate_limited') return 'Too many files this hour — try again later.';
     return code.replace(/_/g, ' ');
   }
+  // Profiles change only through the signed social route (an unsigned announce
+  // can no longer overwrite them — the public bundle would let anyone do that).
+  async function saveProfile(patch) {
+    if (!S.announced) await announce();
+    const r = await signed('POST', '/mesh/v1/social/profile', { from: S.address, ...patch });
+    if (r && r.profile) { S.profile = Object.assign(S.profile || {}, { name: r.profile.name, emoji: r.profile.emoji, bio: r.profile.bio, avatar: r.profile.avatar, wallet: r.profile.wallet }); lsSet(K.profile, S.profile); }
+    try { window.dispatchEvent(new CustomEvent('ost:mesh-app:profile', { detail: r && r.profile })); } catch (_) {}
+    return r && r.profile;
+  }
   async function announce() {
     if (!S.identity) return false;
     try {
@@ -184,6 +202,7 @@ if (!window.OST_MESH_APP) {
   function wsSend(obj) { try { if (S.ws && S.ws.readyState === 1) { S.ws.send(JSON.stringify(obj)); return true; } } catch (_) {} return false; }
   function onWs(m) {
     if (!m || typeof m !== 'object') return;
+    X.ws.forEach((fn) => { try { fn(m); } catch (_) {} });
     if (m.t === 'msg' && m.item) { handleIncoming(m.item).then((ok) => { if (ok !== false) wsSend({ t: 'ack', items: [{ id: m.item.id, ts: m.item.ts }] }); }); }
     else if (m.t === 'typing' && m.from) { S.typingFrom[m.from] = Date.now(); if (S.view === 'chat' && S.peer === m.from) paintTyping(); }
     else if (m.t === 'presence' && m.presence) { Object.assign(S.presence, m.presence); if (S.view === 'chats') paintChats(); if (S.view === 'chat') paintChatHead(); }
@@ -226,13 +245,17 @@ if (!window.OST_MESH_APP) {
       if (!inner || typeof inner !== 'object') return true;
       const c = contact(from); if (!c) upsertContact(from, { state: 'request', ts: item.ts });
       if (inner.profile && inner.profile.name && (!c || !c.name)) upsertContact(from, { name: inner.profile.name, emoji: inner.profile.emoji || '' });
-      const msg = { id: inner.id || item.id, dir: 'them', ts: inner.ts || item.ts, kind: inner.k === 'file' ? 'file' : 'text' };
-      if (msg.kind === 'text') msg.text = String(inner.text || '').slice(0, 8000);
-      else { msg.name = String(inner.name || 'file').slice(0, 120); msg.mime = String(inner.mime || '').slice(0, 80); msg.size = Number(inner.size) || 0; msg.blob = String(inner.blob || ''); msg.thumb = typeof inner.thumb === 'string' && inner.thumb.length < 12000 && /^data:image\//.test(inner.thumb) ? inner.thumb : ''; }
-      appendMsg(from, msg);
+      const msg = innerToMsg(inner, item);
+      if (!msg) return true;
       const open = S.view === 'chat' && S.peer === from && !document.hidden;
-      upsertContact(from, { last: { text: msg.kind === 'file' ? '📎 ' + msg.name : msg.text, ts: msg.ts }, unread: open ? 0 : ((contact(from) || {}).unread || 0) + 1 });
-      if (open) { paintMsgs(); } else { toast(nameOf(from) + ': ' + (msg.kind === 'file' ? '📎 ' + msg.name : msg.text.slice(0, 60))); if (S.view === 'chats') paintChats(); }
+      // Live location: one bubble per sharing session, updated in place.
+      if (msg.kind === 'loc' && msg.lid) {
+        const list = msgsOf(from); const old = list.find((x) => x.lid === msg.lid);
+        if (old) { Object.assign(old, { lat: msg.lat, lng: msg.lng, acc: msg.acc, upd: msg.ts, ended: msg.ended, until: msg.until }); saveMsgs(from, list); if (open) paintMsgs(); return true; }
+      }
+      appendMsg(from, msg);
+      upsertContact(from, { last: { text: previewOf(msg), ts: msg.ts }, unread: open ? 0 : ((contact(from) || {}).unread || 0) + 1 });
+      if (open) { paintMsgs(); } else { toast(nameOf(from) + ': ' + previewOf(msg).slice(0, 60)); if (S.view === 'chats') paintChats(); }
       paintBadge();
       try { window.dispatchEvent(new CustomEvent('ost:mesh-app:message', { detail: { from, kind: msg.kind } })); } catch (_) {}
       return true;
@@ -240,6 +263,109 @@ if (!window.OST_MESH_APP) {
     return true;
   }
   function appendMsg(a, m) { const list = msgsOf(a); if (m.id && list.some((x) => x.id === m.id)) return; list.push(m); saveMsgs(a, list); }
+  function updateMsg(a, id, patch) { const list = msgsOf(a); const m = list.find((x) => x.id === id); if (m) { Object.assign(m, patch); saveMsgs(a, list); } return m; }
+  const num = (v, lo, hi) => { const n = Number(v); return Number.isFinite(n) && n >= lo && n <= hi ? n : null; };
+  function innerToMsg(inner, item) {
+    const base = { id: String(inner.id || item.id).slice(0, 64), dir: 'them', ts: Number(inner.ts) || item.ts };
+    switch (inner.k) {
+      case 'file': return { ...base, kind: 'file', name: String(inner.name || 'file').slice(0, 120), mime: String(inner.mime || '').slice(0, 80), size: Number(inner.size) || 0, blob: String(inner.blob || ''), thumb: typeof inner.thumb === 'string' && inner.thumb.length < 12000 && /^data:image\//.test(inner.thumb) ? inner.thumb : '' };
+      case 'loc': { const lat = num(inner.lat, -90, 90), lng = num(inner.lng, -180, 180); if (lat == null || lng == null) return null; return { ...base, kind: 'loc', lat, lng, acc: num(inner.acc, 0, 1e6) || 0, lid: inner.lid ? String(inner.lid).slice(0, 40) : '', live: !!inner.live, until: Number(inner.until) || 0, ended: !!inner.ended, upd: base.ts }; }
+      case 'pay': { const amount = num(inner.amount, 0, 1e12); if (!amount || !/^[1-9A-HJ-NP-Za-km-z]{64,100}$/.test(String(inner.sig || ''))) return null; return { ...base, kind: 'pay', ccy: ['OST', 'OSTG', 'SOL'].includes(inner.ccy) ? inner.ccy : 'OST', amount, sig: String(inner.sig), note: String(inner.note || '').slice(0, 140) }; }
+      case 'call': return { ...base, kind: 'call', status: ['missed', 'declined', 'ended', 'busy'].includes(inner.status) ? inner.status : 'ended', video: !!inner.video, dur: num(inner.dur, 0, 86400) || 0 };
+      default: return { ...base, kind: 'text', text: String(inner.text || '').slice(0, 8000) };
+    }
+  }
+  function previewOf(m) {
+    if (m.kind === 'file') return '📎 ' + m.name;
+    if (m.kind === 'loc') return m.live ? '📡 Live location' : '📍 Location';
+    if (m.kind === 'pay') return '💸 ' + m.amount + ' ' + m.ccy;
+    if (m.kind === 'call') return (m.video ? '🎥 ' : '📞 ') + (m.status === 'missed' ? 'Missed call' : m.status === 'declined' ? 'Declined call' : 'Call');
+    return m.text || '';
+  }
+  // Generic sealed send for plugin / rich message kinds.
+  async function sendInner(to, inner, localMsg) {
+    const id = inner.id || uid(), ts = inner.ts || Date.now();
+    if (localMsg) { appendMsg(to, { ...localMsg, id, ts, dir: 'me', status: 'sending' }); upsertContact(to, { last: { text: previewOf(localMsg), ts } }); if (S.view === 'chat' && S.peer === to) paintMsgs(); }
+    try {
+      const key = await keyFor(to);
+      const sealed = await sealPayload(key, { ...inner, id, ts, profile: { name: S.profile.name || '', emoji: S.profile.emoji || '' } });
+      const r = await signed('POST', '/mesh/v1/msg/send', { from: S.address, to, payload: { t: 'dm', sealed } });
+      if (localMsg) setStatus(to, id, r && r.delivered ? 'delivered' : 'sent');
+      return r;
+    } catch (e) { if (localMsg) setStatus(to, id, 'failed'); throw e; }
+  }
+  // Signaling for calls: socket when connected, HTTP relay otherwise.
+  async function signal(to, payload) {
+    if (wsSend({ t: 'signal', to, payload })) return true;
+    try { const r = await fetch(API + '/mesh/v1/signal/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ from: S.address, to, payload }) }); return r.ok; } catch (_) { return false; }
+  }
+
+  /* ---------- location: one-shot + live ---------- */
+  const LIVE = {};   // peer -> { lid, until, watch, last, sentAt, timer }
+  function geo(opts) { return new Promise((res, rej) => { if (!navigator.geolocation) return rej(new Error('This browser has no location access.')); navigator.geolocation.getCurrentPosition(res, (e) => rej(new Error(e && e.code === 1 ? 'Location permission denied — allow it in your browser settings.' : 'Could not get your location.')), Object.assign({ enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }, opts || {})); }); }
+  async function shareLocation(peer) {
+    try {
+      toast('Getting your location…');
+      const p = await geo();
+      const c = p.coords;
+      await sendInner(peer, { k: 'loc', lat: +c.latitude.toFixed(6), lng: +c.longitude.toFixed(6), acc: Math.round(c.accuracy || 0) }, { kind: 'loc', lat: c.latitude, lng: c.longitude, acc: Math.round(c.accuracy || 0) });
+    } catch (e) { toast(e.message || 'Location failed', 'err'); }
+  }
+  function distM(a, b) { const R = 6371000, r = Math.PI / 180, dLat = (b.lat - a.lat) * r, dLng = (b.lng - a.lng) * r; const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLng / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); }
+  async function startLive(peer, minutes) {
+    if (LIVE[peer]) stopLive(peer, true);
+    if (!navigator.geolocation) { toast('This browser has no location access.', 'err'); return; }
+    const lid = 'L' + uid(), until = Date.now() + minutes * 60000;
+    const st = LIVE[peer] = { lid, until, watch: null, last: null, sentAt: 0 };
+    const push = (pos, force) => {
+      const c = pos.coords, cur = { lat: +c.latitude.toFixed(6), lng: +c.longitude.toFixed(6), acc: Math.round(c.accuracy || 0) };
+      const now = Date.now();
+      if (!force && st.last && (now - st.sentAt < 15000 || (distM(st.last, cur) < 20 && now - st.sentAt < 60000))) return;
+      const first = !st.last; st.last = cur; st.sentAt = now;
+      const inner = { k: 'loc', id: first ? lid : uid(), lid, live: true, until, ...cur };
+      if (first) sendInner(peer, inner, { kind: 'loc', lid, live: true, until, ...cur, upd: now }).catch((e) => toast(e.message, 'err'));
+      else { updateMsg(peer, lid, { lat: cur.lat, lng: cur.lng, acc: cur.acc, upd: now }); if (S.view === 'chat' && S.peer === peer) paintMsgs(); sendInner(peer, inner).catch(() => {}); }
+    };
+    st.watch = navigator.geolocation.watchPosition((p) => push(p, false), (e) => { toast(e && e.code === 1 ? 'Location permission denied.' : 'Live location paused — no GPS fix.', 'err'); if (e && e.code === 1) stopLive(peer); }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 30000 });
+    st.timer = setInterval(() => { if (Date.now() >= st.until) stopLive(peer); else if (S.view === 'chat' && S.peer === peer) paintLiveBar(); }, 30000);
+    toast('Sharing live location for ' + (minutes >= 60 ? minutes / 60 + ' h' : minutes + ' min') + ' — keep OST open');
+    if (S.view === 'chat' && S.peer === peer) paintLiveBar();
+  }
+  function stopLive(peer, silent) {
+    const st = LIVE[peer]; if (!st) return;
+    try { navigator.geolocation.clearWatch(st.watch); } catch (_) {}
+    clearInterval(st.timer); delete LIVE[peer];
+    updateMsg(peer, st.lid, { ended: true });
+    if (st.last) sendInner(peer, { k: 'loc', id: uid(), lid: st.lid, live: true, ended: true, until: st.until, ...st.last }).catch(() => {});
+    if (!silent) toast('Stopped sharing live location');
+    if (S.view === 'chat' && S.peer === peer) { paintLiveBar(); paintMsgs(); }
+  }
+  function paintLiveBar() {
+    const el = $('omxLive'); if (!el) return;
+    const st = LIVE[S.peer];
+    if (!st) { el.hidden = true; el.innerHTML = ''; return; }
+    const left = Math.max(0, Math.round((st.until - Date.now()) / 60000));
+    el.hidden = false; el.innerHTML = `<span>📡 Sharing live location · ${left >= 60 ? Math.floor(left / 60) + ' h ' + (left % 60) + ' min' : left + ' min'} left</span><button data-act="live-stop">Stop</button>`;
+  }
+  function lon2x(lng, z) { return (lng + 180) / 360 * Math.pow(2, z); }
+  function lat2y(lat, z) { const r = lat * Math.PI / 180; return (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * Math.pow(2, z); }
+  function mapHtml(lat, lng) {
+    const z = 15, x = lon2x(lng, z), y = lat2y(lat, z), tx = Math.floor(x), ty = Math.floor(y), px = (x - tx) * 256, py = (y - ty) * 256;
+    const W = 260, Hh = 150, left = Math.round(W / 2 - 256 - px), top = Math.round(Hh / 2 - 256 - py);
+    let tiles = '';
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) tiles += `<img alt="" loading="lazy" src="https://tile.openstreetmap.org/${z}/${tx + dx}/${ty + dy}.png" style="left:${(dx + 1) * 256}px;top:${(dy + 1) * 256}px">`;
+    return `<div class="omx-map"><div class="omx-tiles" style="left:${left}px;top:${top}px">${tiles}</div><b class="omx-pin">📍</b><small>© OpenStreetMap</small></div>`;
+  }
+  async function verifyPay(a, m) {
+    if (m.verified || !m.sig || !window.OST_WALLET || !OST_WALLET.rpcCall) return;
+    m.verified = 'checking';
+    try {
+      const r = await OST_WALLET.rpcCall((c) => c.getSignatureStatuses([m.sig], { searchTransactionHistory: true }));
+      const st = r && r.value && r.value[0];
+      updateMsg(a, m.id, { verified: st ? (st.err ? 'failed' : 'confirmed') : 'pending' });
+    } catch (_) { updateMsg(a, m.id, { verified: '' }); }
+    if (S.view === 'chat' && S.peer === a) paintMsgs();
+  }
 
   /* ---------- outgoing ---------- */
   async function sendText(to, text) {
@@ -417,14 +543,22 @@ if (!window.OST_MESH_APP) {
     root.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
   }
   function open(view) {
-    mount(); root.classList.add('open'); document.documentElement.classList.add('omx-lock');
+    mount(); S.opened = true; root.classList.add('open'); document.documentElement.classList.add('omx-lock');
     if (view) S.view = view;
     render(); connectWs(); askPresence();
   }
   function close() { stopScan(); if (root) root.classList.remove('open'); document.documentElement.classList.remove('omx-lock'); S.view = S.view === 'chat' ? 'chats' : S.view; }
   function tabsHtml() {
     const u = totalUnread(), req = Object.values(S.contacts).filter((c) => c.state === 'pending-in' || c.state === 'request').length;
-    return ['chats', 'add', 'me'].map((v) => `<button data-tab="${v}" class="${S.view === v || (v === 'chats' && S.view === 'chat') ? 'on' : ''}"><b>${v === 'chats' ? '💬' : v === 'add' ? '➕' : '🙂'}</b>${v === 'chats' ? 'Chats' : v === 'add' ? 'Add person' : 'Me'}${v === 'chats' && u ? `<span class="omx-badge">${u > 99 ? '99+' : u}</span>` : ''}${v === 'add' && req ? `<span class="omx-badge">${req}</span>` : ''}</button>`).join('');
+    const tabs = [
+      { v: 'chats', ico: '💬', lbl: 'Chats', order: 20, badge: u },
+      { v: 'add', ico: '➕', lbl: 'Add', order: 30, badge: req },
+      { v: 'me', ico: '🙂', lbl: 'Me', order: 40, badge: 0 }
+    ];
+    Object.keys(X.views).forEach((k) => { const t = X.views[k].tab; if (!t) return; const i = tabs.findIndex((x) => x.v === k); const row = { v: k, ico: t.ico, lbl: t.lbl, order: t.order, badge: X.badges[k] ? X.badges[k]() : 0 }; if (i >= 0) tabs[i] = row; else tabs.push(row); });
+    tabs.sort((a, b) => a.order - b.order);
+    const active = (v) => S.view === v || (v === 'chats' && S.view === 'chat') || (X.views[S.view] && X.views[S.view].parent === v);
+    return tabs.map((t) => `<button data-tab="${t.v}" class="${active(t.v) ? 'on' : ''}"><b>${t.ico}</b>${t.lbl}${t.badge ? `<span class="omx-badge">${t.badge > 99 ? '99+' : t.badge}</span>` : ''}</button>`).join('');
   }
   function statusHtml() {
     const cls = S.wsOk ? 'on' : (S.announceErr ? 'off' : '');
@@ -432,17 +566,26 @@ if (!window.OST_MESH_APP) {
     return `<div class="omx-status ${cls}" id="omxStatus"><i></i><span>${esc(txt)}</span></div>`;
   }
   function paintStatus() { const el = $('omxStatus'); if (el) el.outerHTML = statusHtml(); }
-  function paintBadge() { if (tabsEl && S.view !== 'chat') tabsEl.innerHTML = tabsHtml(); try { window.dispatchEvent(new CustomEvent('ost:mesh-app:unread', { detail: { count: totalUnread() } })); } catch (_) {} }
+  function paintBadge() { if (tabsEl && S.view !== 'chat' && !tabsEl.hidden) tabsEl.innerHTML = tabsHtml(); try { window.dispatchEvent(new CustomEvent('ost:mesh-app:unread', { detail: { count: totalUnread() } })); } catch (_) {} }
   function render() {
     if (!root) return;
     if (S.view !== 'add') stopScan();
     if (S.view === 'chat' && S.peer) { renderChat(); return; }
-    headEl.innerHTML = `<h2>OST Mesh<small>${S.view === 'chats' ? 'Private, end-to-end encrypted chat' : S.view === 'add' ? 'Add a real person' : 'Your mesh identity'}</small></h2><button class="omx-ib" data-act="close" aria-label="Close">✕</button>`;
+    root.setAttribute('data-view', S.view);
+    body.style.padding = '';
+    if (X.views[S.view]) {
+      tabsEl.hidden = false; tabsEl.innerHTML = tabsHtml();
+      body.className = 'omx-body omx-v-' + S.view;
+      headEl.innerHTML = `<h2>OST Social</h2><button class="omx-ib" data-act="close" aria-label="Close">✕</button>`;
+      try { X.views[S.view].render({ head: headEl, body, tabs: tabsEl }); } catch (e) { console.warn('[mesh-app] view failed', S.view, e); body.innerHTML = '<div class="omx-empty">This view failed to load. <button class="omx-ghost" data-tab="chats">Open chats</button></div>'; }
+      return;
+    }
+    headEl.innerHTML = `${S.view === 'settings' && X.actions['sx-back'] ? '<button class="omx-ib" data-act="sx-back" aria-label="Back">‹</button>' : ''}<h2>${S.view === 'settings' ? 'Settings' : 'OST Mesh'}<small>${S.view === 'chats' ? 'Private, end-to-end encrypted chat' : S.view === 'add' ? 'Add a real person' : 'Your mesh identity'}</small></h2><button class="omx-ib" data-act="close" aria-label="Close">✕</button>`;
     tabsEl.hidden = false; tabsEl.innerHTML = tabsHtml();
     body.className = 'omx-body';
     if (S.view === 'chats') body.innerHTML = statusHtml() + '<div id="omxChats"></div>', paintChats();
     else if (S.view === 'add') renderAdd();
-    else renderMe();
+    else { if (S.view !== 'settings') S.view = 'me'; renderMe(); }
   }
   function requestsHtml() {
     const reqs = Object.values(S.contacts).filter((c) => c.state === 'pending-in' || c.state === 'request').sort((a, b) => (b.ts || 0) - (a.ts || 0));
@@ -492,23 +635,30 @@ if (!window.OST_MESH_APP) {
   function openChat(a) { S.peer = a; S.view = 'chat'; upsertContact(a, { unread: 0 }); paintBadge(); if (root && root.classList.contains('open')) render(); else open(); keyFor(a).catch(() => {}); }
   function paintChatHead() {
     const a = S.peer, c = contact(a) || { addr: a };
-    headEl.innerHTML = `<button class="omx-ib" data-act="back" aria-label="Back">‹</button><div class="omx-av ${online(a) ? 'on' : ''}" style="${avStyle(a)};width:38px;height:38px;border-radius:12px;font-size:1.1rem">${esc(c.emoji || (c.name || 'm')[0].toUpperCase())}<i></i></div><h2>${esc(c.name || shortA(a))}<small>${online(a) ? 'online' : (S.presence[a] && S.presence[a].lastSeen ? 'last seen ' + ago(S.presence[a].lastSeen) + ' ago' : 'offline — they get your messages later')} · ${c.state === 'friend' ? 'encrypted' : c.state === 'pending-out' ? 'request sent' : 'not accepted yet'}</small></h2><button class="omx-ib" data-act="peer-menu" aria-label="Options">⋯</button>`;
+    headEl.innerHTML = `<button class="omx-ib" data-act="back" aria-label="Back">‹</button><div class="omx-av ${online(a) ? 'on' : ''}" style="${avStyle(a)};width:38px;height:38px;border-radius:12px;font-size:1.1rem">${esc(c.emoji || (c.name || 'm')[0].toUpperCase())}<i></i></div><h2 data-act="peer-profile" style="cursor:pointer">${esc(c.name || shortA(a))}<small>${online(a) ? 'online' : (S.presence[a] && S.presence[a].lastSeen ? 'last seen ' + ago(S.presence[a].lastSeen) + ' ago' : 'offline — they get your messages later')} · ${c.state === 'friend' ? 'encrypted' : c.state === 'pending-out' ? 'request sent' : 'not accepted yet'}</small></h2>${X.headBtns.map((fn) => { try { return fn(a) || ''; } catch (_) { return ''; } }).join('')}<button class="omx-ib" data-act="peer-menu" aria-label="Options">⋯</button>`;
   }
   function renderChat() {
     const a = S.peer; const c = contact(a);
     paintChatHead();
     tabsEl.hidden = true;
     body.className = 'omx-body omx-chat'; body.style.padding = '0';
-    body.innerHTML = `<div class="omx-msgs" id="omxMsgs"></div><div class="omx-typing" id="omxTyping"></div>` +
+    const attach = [
+      { act: 'att-media', ico: '🖼️', lbl: 'Photo / video' },
+      { act: 'att-file', ico: '📄', lbl: 'File' },
+      { act: 'att-loc', ico: '📍', lbl: 'Location' },
+      { act: 'att-live', ico: '📡', lbl: 'Live location' }
+    ].concat(X.attach.map((x, i) => ({ act: 'att-x', i, ico: x.ico, lbl: x.lbl })));
+    body.innerHTML = `<div class="omx-livebar" id="omxLive" hidden></div><div class="omx-msgs" id="omxMsgs"></div><div class="omx-typing" id="omxTyping"></div>` +
       (c && c.state === 'blocked' ? `<div class="omx-card" style="margin:10px">You blocked this contact. <button class="omx-ghost" data-act="unblock">Unblock</button></div>` :
-      `<div class="omx-compose"><label class="omx-ib" title="Send a photo or file"><input type="file" id="omxFile" hidden multiple>📎</label><textarea id="omxText" rows="1" placeholder="Message…" enterkeyhint="send"></textarea><button class="omx-ib omx-send" data-act="send" id="omxSend" aria-label="Send">➤</button></div>`);
+      `<div class="omx-attach" id="omxAttach" hidden>${attach.map((x) => `<button data-act="${x.act}"${x.i != null ? ` data-i="${x.i}"` : ''}><b>${x.ico}</b>${esc(x.lbl)}</button>`).join('')}<div class="omx-livepick" id="omxLivePick" hidden><span>Share live location for</span><button data-act="live-go" data-m="15">15 min</button><button data-act="live-go" data-m="60">1 hour</button><button data-act="live-go" data-m="480">8 hours</button></div></div>` +
+      `<div class="omx-compose"><button class="omx-ib" data-act="attach" aria-label="Attach">＋</button><input type="file" id="omxFile" hidden multiple accept="image/*,video/*"><input type="file" id="omxFileAny" hidden multiple><textarea id="omxText" rows="1" placeholder="Message…" enterkeyhint="send"></textarea><button class="omx-ib omx-send" data-act="send" id="omxSend" aria-label="Send">➤</button></div>`);
     const ta = $('omxText');
     if (ta) {
       ta.addEventListener('input', () => { ta.style.height = 'auto'; ta.style.height = Math.min(120, ta.scrollHeight) + 'px'; throttleTyping(); });
       ta.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey && !(window.matchMedia && window.matchMedia('(pointer: coarse)').matches)) { e.preventDefault(); doSend(); } });
       setTimeout(() => { try { ta.focus({ preventScroll: true }); } catch (_) {} }, 50);
     }
-    paintMsgs(true);
+    paintMsgs(true); paintLiveBar();
   }
   let typingAt = 0; function throttleTyping() { const n = Date.now(); if (n - typingAt > 2500) { typingAt = n; wsSend({ t: 'typing', to: S.peer }); } }
   function paintTyping() { const el = $('omxTyping'); if (!el) return; const t = S.typingFrom[S.peer] || 0; el.textContent = Date.now() - t < 4000 ? nameOf(S.peer) + ' is typing…' : ''; if (Date.now() - t < 4000) setTimeout(paintTyping, 4200); }
@@ -516,7 +666,17 @@ if (!window.OST_MESH_APP) {
     if (m.dir === 'sys') return `<div class="omx-b sys">${esc(m.text)}</div>`;
     const st = m.dir === 'me' ? (m.status === 'failed' ? ' · failed, tap to retry' : m.status === 'delivered' ? ' ✓✓' : m.status === 'sent' ? ' ✓' : m.status === 'sending' ? ' …' : '') : '';
     let inner = '';
-    if (m.kind === 'file') {
+    if (m.kind === 'loc') {
+      const live = m.live && !m.ended && (!m.until || m.until > Date.now());
+      inner = `<a class="omx-locc" href="https://www.openstreetmap.org/?mlat=${m.lat}&mlon=${m.lng}#map=16/${m.lat}/${m.lng}" target="_blank" rel="noopener">${mapHtml(m.lat, m.lng)}</a><div class="omx-loct"><b>${m.live ? (live ? '📡 Live location' : '📡 Live location ended') : '📍 Location'}</b><span>±${m.acc || '?'} m${m.live && m.upd ? ' · updated ' + ago(m.upd) : ''}${live && m.until ? ' · until ' + tTime(m.until) : ''}</span><a href="https://www.google.com/maps/search/?api=1&query=${m.lat},${m.lng}" target="_blank" rel="noopener">Open in Maps ↗</a></div>`;
+    } else if (m.kind === 'pay') {
+      if (!m.verified) setTimeout(() => verifyPay(from, m), 0);
+      const cl = (window.OST_CONFIG && OST_CONFIG.network) || 'devnet';
+      inner = `<div class="omx-payc"><b>💸 ${esc(m.amount)} ${esc(m.ccy)}</b><span>${m.dir === 'me' ? 'You sent' : 'You received'} · devnet${m.note ? ' · ' + esc(m.note) : ''}</span><span>${m.verified === 'confirmed' ? '✅ confirmed on-chain' : m.verified === 'failed' ? '❌ transaction failed' : m.verified === 'pending' ? '⏳ not confirmed yet' : '…checking chain'}</span><a href="https://explorer.solana.com/tx/${esc(m.sig)}${cl === 'mainnet-beta' ? '' : '?cluster=' + esc(cl)}" target="_blank" rel="noopener">View transaction ↗</a></div>`;
+    } else if (m.kind === 'call') {
+      const lbl = m.status === 'missed' ? (m.dir === 'me' ? 'No answer' : 'Missed call') : m.status === 'declined' ? 'Declined' : m.status === 'busy' ? 'Busy' : 'Call';
+      inner = `<div class="omx-callc"><b>${m.video ? '🎥' : '📞'} ${m.video ? 'Video' : 'Voice'} call · ${lbl}${m.dur ? ' · ' + Math.floor(m.dur / 60) + ':' + String(m.dur % 60).padStart(2, '0') : ''}</b>${X.actions['call-back'] ? `<button data-act="call-back" data-video="${m.video ? 1 : 0}">Call back</button>` : ''}</div>`;
+    } else if (m.kind === 'file') {
       const cached = S.blobs[m.blob] || S.blobs['local:' + m.id];
       const isImg = /^image\//.test(m.mime || ''), isVid = /^video\//.test(m.mime || ''), isAud = /^audio\//.test(m.mime || '');
       if (cached && isImg) inner += `<img src="${cached.url}" alt="${esc(m.name)}" loading="lazy">`;
@@ -545,15 +705,25 @@ if (!window.OST_MESH_APP) {
   /* ---------- events ---------- */
   function onChange(e) {
     const t = e.target;
-    if (t && t.id === 'omxFile' && t.files && t.files.length) { Array.from(t.files).slice(0, 6).forEach((f) => sendFile(S.peer, f)); t.value = ''; }
+    if (t && (t.id === 'omxFile' || t.id === 'omxFileAny') && t.files && t.files.length) { Array.from(t.files).slice(0, 6).forEach((f) => sendFile(S.peer, f)); t.value = ''; const am = $('omxAttach'); if (am) am.hidden = true; }
   }
   async function onClick(e) {
     const t = e.target.closest('[data-act],[data-tab]'); if (!t) return;
     if (t.hasAttribute('data-tab')) { S.view = t.getAttribute('data-tab'); render(); return; }
     const act = t.getAttribute('data-act'), a = t.getAttribute('data-a');
+    if (X.actions[act]) { try { await X.actions[act](t, e); } catch (err) { toast((err && err.message) || 'Action failed', 'err'); } return; }
     switch (act) {
+      case 'attach': { const m = $('omxAttach'); if (m) { m.hidden = !m.hidden; const lp = $('omxLivePick'); if (lp) lp.hidden = true; } break; }
+      case 'att-media': { const f = $('omxFile'); if (f) f.click(); break; }
+      case 'att-file': { const f = $('omxFileAny'); if (f) f.click(); break; }
+      case 'att-loc': { const m = $('omxAttach'); if (m) m.hidden = true; shareLocation(S.peer); break; }
+      case 'att-live': { const lp = $('omxLivePick'); if (lp) lp.hidden = !lp.hidden; break; }
+      case 'live-go': { const m = $('omxAttach'); if (m) m.hidden = true; startLive(S.peer, Number(t.getAttribute('data-m')) || 15); break; }
+      case 'live-stop': stopLive(S.peer); break;
+      case 'att-x': { const m = $('omxAttach'); if (m) m.hidden = true; const x = X.attach[Number(t.getAttribute('data-i'))]; if (x) { try { await x.run(S.peer); } catch (err) { toast(err.message || 'Failed', 'err'); } } break; }
+      case 'peer-profile': if (X.views.profile) { const p = S.peer; S.profileOf = p; S.view = 'profile'; render(); } break;
       case 'close': close(); break;
-      case 'back': S.view = 'chats'; S.peer = null; body.style.padding = ''; render(); break;
+      case 'back': S.view = S.backTo || 'chats'; S.backTo = null; S.peer = null; body.style.padding = ''; render(); break;
       case 'chat': openChat(a); break;
       case 'accept': acceptPerson(a); break;
       case 'decline': declinePerson(a, false); break;
@@ -568,8 +738,8 @@ if (!window.OST_MESH_APP) {
       case 'add-go': { const info = parseAddText(($('omxAddInput') || {}).value); if (!info) { toast('Paste an invite link or an ost-mesh: address.', 'err'); return; } t.disabled = true; t.textContent = 'Adding…'; await addPerson(info); break; }
       case 'add-confirm': { const info = S.pendingAdd; S.pendingAdd = null; t.disabled = true; t.textContent = 'Adding…'; await addPerson(info); if (S.view === 'add') render(); break; }
       case 'add-cancel': S.pendingAdd = null; render(); break;
-      case 'emoji': S.profile.emoji = t.getAttribute('data-e'); lsSet(K.profile, S.profile); S.announced = false; renderMe(); announce().catch(() => {}); break;
-      case 'save-profile': { const n = ($('omxName') || {}).value || ''; S.profile.name = n.trim().slice(0, 32); lsSet(K.profile, S.profile); S.announced = false; toast('Saved — friends see “' + (S.profile.name || shortA(S.address)) + '”'); renderMe(); await announce(); if (S.view === 'me') paintStatus(); break; }
+      case 'emoji': S.profile.emoji = t.getAttribute('data-e'); lsSet(K.profile, S.profile); renderMe(); saveProfile({ emoji: S.profile.emoji }).catch(() => {}); break;
+      case 'save-profile': { const n = ($('omxName') || {}).value || ''; S.profile.name = n.trim().slice(0, 32); lsSet(K.profile, S.profile); toast('Saved — friends see “' + (S.profile.name || shortA(S.address)) + '”'); renderMe(); await saveProfile({ name: S.profile.name, emoji: S.profile.emoji || '' }).catch((err) => toast(err.message, 'err')); break; }
       case 'open-legacy': openLegacy(); break;
       case 'reset-id': if (confirm('Reset your mesh identity? You get a new address and keys; friends must add you again. Chats stay on this device.')) { await resetIdentity(); toast('New identity: ' + shortA(S.address)); render(); } break;
       case 'peer-menu': { const c = contact(S.peer); const choice = prompt('Type: block, remove, or cancel', 'cancel'); if (choice === 'block') { await declinePerson(S.peer, true); S.view = 'chats'; render(); } else if (choice === 'remove') { await declinePerson(S.peer, false); try { localStorage.removeItem(K.msgs + S.peer); } catch (_) {} S.view = 'chats'; S.peer = null; render(); } else if (c) { /* no-op */ } break; }
@@ -603,7 +773,7 @@ if (!window.OST_MESH_APP) {
     mount();
     try { await loadIdentity(); } catch (e) { console.warn('[mesh-app] identity failed', e); return; }
     S.ready = true; readyQ.splice(0).forEach((fn) => { try { fn(); } catch (_) {} });
-    announce().then(() => { connectWs(); syncFriends(); syncInbox(); });
+    announce().then(() => { connectWs(); syncFriends(); syncInbox(); if (!lsGet(K.profile + '.synced', false) && (S.profile.name || S.profile.emoji)) saveProfile({ name: S.profile.name || '', emoji: S.profile.emoji || '' }).then(() => lsSet(K.profile + '.synced', true)).catch(() => {}); });
     // Socket keepalive every 25s; when the socket cannot connect (strict proxies,
     // some corporate Wi-Fi) fall back to polling the mailbox every 6s while the
     // sheet is open so chat still feels live.
@@ -616,11 +786,21 @@ if (!window.OST_MESH_APP) {
     handleHash();
     paintBadge();
   }
+  const core = {
+    S, X, API, K, signed, signHeaders, announce, saveProfile, lookup, keyFor, sealPayload, sendInner, signal, wsSend,
+    toast, esc, shortA, ago, tTime, avStyle, nameOf, emojiOf, contact, upsertContact, myName, fmtSize, uid, lsGet, lsSet,
+    appendMsg, updateMsg, msgsOf, paintMsgs, paintChatHead, render, open, close, openChat, addPerson, copyText, loadScript, inviteLink,
+    isOpen: () => !!(root && root.classList.contains('open')),
+    register(name, def) { X.views[name] = def; if (def.tab && def.tab.home && !S.opened) S.view = name; if (root && root.classList.contains('open') && !S.peer) render(); else paintBadge(); },
+    go(view, extra) { Object.assign(S, extra || {}); S.view = view; if (root && root.classList.contains('open')) render(); else open(view); }
+  };
   window.OST_MESH_APP = {
+    core,
     open, close, openChat,
     addFromText: (text) => { const info = parseAddText(text); if (info) { S.pendingAdd = info; open('add'); } return !!info; },
     inviteLink, unread: totalUnread, sync: () => { connectWs(); syncInbox(); askPresence(); },
     state: () => ({ address: S.address, connected: S.wsOk, announced: S.announced, announceErr: S.announceErr, lastErr: S.lastErr || '', contacts: Object.keys(S.contacts).length, view: S.view })
   };
+  try { window.dispatchEvent(new CustomEvent('ost:mesh-app:core', { detail: core })); } catch (_) {}
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true }); else boot();
 }

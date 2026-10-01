@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v487';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v258';
+const CACHE_NAME = 'ost-pwa-cache-v488';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v259';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -25,7 +25,7 @@ const PRECACHE_PATHS = [
   './ost-live-stats.js?v=6',
   './ost-treasury-engine.js?v=2',
   './ost-engine-guard.js?v=2',
-  './ost-appbar.js?v=17',
+  './ost-appbar.js?v=18',
   './ost-desktop-nav.js?v=2',
   './ost-markets-desk.css?v=4',
   './ost-markets-desk.js?v=5',
@@ -110,8 +110,11 @@ const PRECACHE_PATHS = [
   './wallet-extras.js?v=209',
   './ost-wallet-home.js?v=1',
   './ost-wallet-home.css?v=1',
-  './ost-mesh-app.js?v=1',
+  './ost-mesh-app.js?v=3',
   './ost-mesh-app.css?v=1',
+  './ost-mesh-call.js?v=1',
+  './ost-social.js?v=1',
+  './ost-social.css?v=1',
   './ost-price-client.js?v=204',
   './ost-token-section.js?v=3',
   './assets/ost-metadata.json',
@@ -165,7 +168,7 @@ const PRECACHE_PATHS = [
   './faucet-hub.js?v=19',
   './faucet-hub-ads.js?v=101',
   './ost-idle-guard.js?v=2',
-  './ost-auth.js?v=8',
+  './ost-auth.js?v=9',
   './vendor/nacl-fast.min.js',
   './ost-update.js?v=1',
   './ost-offline-mode.js?v=1',
@@ -436,6 +439,10 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(staleWhileRevalidate(request));
     return;
   }
+  // OST Social / mesh media: immutable, already HTTP-cached by the browser
+  // (Cache-Control: immutable) and potentially large — never hoard it in the
+  // runtime cache. Video Range requests must also reach the network untouched.
+  if (request.url.indexOf('/mesh/v1/') !== -1) return;
   // Cross-origin static assets we precache (web3.js from unpkg, Google fonts).
   if (CACHEABLE_DESTINATIONS.has(request.destination)) {
     event.respondWith(cacheFirstResponse(request));

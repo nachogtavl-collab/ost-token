@@ -197,8 +197,9 @@
           document.body.appendChild(box);
         } else box.remove();
       } },
-    { ico: '💬', lbl: 'Mesh', need: ['#ostMeshApp', '#ost-mesh-trigger'], run: function () {
-        if (window.OST_MESH_APP && typeof window.OST_MESH_APP.open === 'function') window.OST_MESH_APP.open();
+    { ico: '💬', lbl: 'Social', need: ['#ostMeshApp', '#ost-mesh-trigger'], run: function () {
+        if (window.OST_SOCIAL && typeof window.OST_SOCIAL.open === 'function') window.OST_SOCIAL.open();
+        else if (window.OST_MESH_APP && typeof window.OST_MESH_APP.open === 'function') window.OST_MESH_APP.open();
         else if (window.OST_MESH && typeof window.OST_MESH.open === 'function') window.OST_MESH.open();
         else clickFirst(['#ost-mesh-trigger']);
       } },

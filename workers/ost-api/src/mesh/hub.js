@@ -3,6 +3,8 @@
   Keeps active WebRTC signaling off KV so daily KV write limits cannot break P2P.
 */
 
+import { installSocial } from './social.js';
+
 const ID_PREFIX = 'id:';
 const FEED_PREFIX = 'feed:';
 const FEED_TTL_MS = 60 * 60 * 24 * 3 * 1000;   // shared feed posts live 3 days
@@ -36,7 +38,8 @@ const MSG_PAYLOAD_MAX = 64_000;
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, x-ost-wallet, x-ost-ts, x-ost-nonce, x-ost-sig, x-ost-session, x-ost-internal, x-mesh-addr, x-mesh-ts, x-mesh-nonce, x-mesh-sig',
+  'Access-Control-Allow-Headers': 'Content-Type, Range, x-ost-wallet, x-ost-ts, x-ost-nonce, x-ost-sig, x-ost-session, x-ost-internal, x-mesh-addr, x-mesh-ts, x-mesh-nonce, x-mesh-sig',
+  'Access-Control-Expose-Headers': 'Content-Range, Accept-Ranges, Content-Length',
   'Access-Control-Max-Age': '86400'
 };
 
@@ -150,6 +153,13 @@ export class MeshHub {
 
       if (path === '/mesh/v1/health') {
         return json({ ok: true, mesh: 'v1', hub: 'durable-object', ws: true, blobs: true, ts: new Date().toISOString() });
+      }
+
+      // ── OST Social (posts, stories, media, follows, tips) — social.js ──────
+      if (path.startsWith('/mesh/v1/social/')) {
+        const sr = await this.routeSocial(request, url, path, method);
+        if (sr) return sr;
+        return fail('social route not found: ' + method + ' ' + path, 404);
       }
 
       // ── Realtime socket: pushes mailbox messages + signaling instantly ──────
@@ -517,7 +527,10 @@ export class MeshHub {
       address,
       bundle,
       fingerprint: fingerprint || null,
-      profile: profile || (existing && existing.profile) || null,
+      // The bundle is public, so an unsigned announce must never change an
+      // existing profile (that would let anyone rename a user or swap the wallet
+      // tips go to). Profiles change only through the signed /social/profile.
+      profile: (existing && existing.profile) || profile || null,
       ts: now,
       expiresAt: now + ID_TTL_MS
     };
@@ -741,3 +754,5 @@ export class MeshHub {
     return json({ ok: true, presence, ts: now });
   }
 }
+
+installSocial(MeshHub, { json, fail, cors, validAddr, ID_PREFIX, sha256HexBytes });

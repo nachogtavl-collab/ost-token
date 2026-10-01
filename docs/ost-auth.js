@@ -158,5 +158,8 @@
   wrapped.__ostAuth = true;
   if (!window.fetch.__ostAuth) { nativeFetch = window.fetch; window.fetch = wrapped; T.push('installed over ' + String(nativeFetch).slice(0, 30)); } else T.push('already installed');
 
-  window.OST_AUTH = { headers: authHeaders, isProtected: isProtected, sessionToken: getSessionToken, forget: function () { try { localStorage.removeItem(SESSION_KEY); } catch (_) {} } };
+  // Sign arbitrary text with the connected wallet (ed25519): local browser wallet
+  // signs silently, extension wallets show their signMessage prompt. Returns base64.
+  async function signText(msg) { var secret = localSecret(); var sig = secret ? await signLocal(String(msg), secret) : await signWithProvider(String(msg)); return b64(sig); }
+  window.OST_AUTH = { headers: authHeaders, isProtected: isProtected, sessionToken: getSessionToken, signText: signText, wallet: walletStr, forget: function () { try { localStorage.removeItem(SESSION_KEY); } catch (_) {} } };
 })();
