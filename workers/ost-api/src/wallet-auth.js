@@ -51,6 +51,7 @@ export function isProtectedPath(path, method) {
   if (/^\/loans\//.test(path)) return true;
   if (/^\/faucet\/v1\/(reserve|commit|cancel)$/.test(path)) return true;
   if (path === '/wallet/payout' || path === '/wallet/ata-rent' || /^\/wallet\/cosign/.test(path)) return true;
+  if (path === '/wallet/events') return true;   // the shared activity log: only the wallet itself may append to it
   return false;
 }
 

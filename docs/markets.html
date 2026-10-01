@@ -277,7 +277,8 @@
   <link rel="stylesheet" href="polish.css?v=1">
   <link rel="stylesheet" href="compartments.css?v=4">
   <link rel="stylesheet" href="prediction-extras.css?v=5">
-  <link rel="stylesheet" href="ost-predict-mobile.css?v=14">
+  <link rel="stylesheet" href="ost-predict-mobile.css?v=15">
+  <link rel="stylesheet" href="ost-wallet-home.css?v=1">
   <link rel="stylesheet" href="prediction-pro.css?v=1">
   <link rel="stylesheet" href="prediction-modal.css?v=6">
   <link rel="stylesheet" href="prediction-trade-popout.css?v=5">
@@ -2267,7 +2268,7 @@
             <aside class="wallet-side-card" id="ostAppleTapPanel">
               <span class="wallet-side-kicker">Apple device rail</span>
               <h3 style="margin:6px 0 8px;font-size:1.15rem;line-height:1.2;color:var(--text-light);">OST Tap Card</h3>
-              <p style="margin:0 0 12px;color:var(--text-muted);font-size:.92rem;line-height:1.55;">Real today: open Apple Pay or card checkout on supported Safari through the live Stripe rail. Real later: turning OST into a native Apple Pay payment card still requires an issuer, network tokenization, and Apple approval.</p>
+              <p style="margin:0 0 12px;color:var(--text-muted);font-size:.92rem;line-height:1.55;">Status: card and Apple Pay checkout run through Stripe in <strong>test mode only</strong> and switch on once test keys are configured &mdash; no real money is charged for devnet OST. Tap-to-pay with an OST card is R&amp;D: it still needs a card issuer, network tokenization and Apple approval.</p>
               <div style="display:grid;gap:12px;">
                 <div style="position:relative;overflow:hidden;padding:16px;border-radius:18px;background:linear-gradient(135deg,#07111f,#0f2742 58%,#124c3a);border:1px solid rgba(110,231,183,0.18);box-shadow:0 18px 40px rgba(2,6,23,0.35);">
                   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
@@ -2277,7 +2278,7 @@
                     </div>
                     <div style="padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.08);font-size:.72rem;color:#d1fae5;">Apple rail</div>
                   </div>
-                  <div id="ostAppleCardSubline" style="margin-top:28px;font-size:.84rem;color:rgba(226,232,240,0.8);">Stripe-hosted Apple Pay / card checkout plus tap payload packaging for Apple-device workflows.</div>
+                  <div id="ostAppleCardSubline" style="margin-top:28px;font-size:.84rem;color:rgba(226,232,240,0.8);">Test-mode checkout plus tap-payload packaging for Apple-device workflows (R&amp;D preview).</div>
                 </div>
 
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;">
@@ -2386,9 +2387,9 @@
             <div class="convert-terminal">
               <div class="ct-glow"></div>
               <div class="ct-header">
-                <div class="ct-status"><span class="ct-status-dot"></span>OST Interchange &mdash; Live</div>
+                <div class="ct-status"><span class="ct-status-dot"></span>OST Interchange &mdash; Devnet test rail</div>
                 <h3 data-i18n="transfer.widgettitle">Convert Now</h3>
-                <p class="ct-sub" data-i18n="wallet.convert.lead">Institutional-grade currency conversion, but redesigned for regular users who need a clean entry rail into confidential OST.</p>
+                <p class="ct-sub" data-i18n="wallet.convert.lead">Convert devnet SOL or USDC into devnet OST through the treasury test rail. Fiat and other chains show quotes only &mdash; those rails are R&amp;D until mainnet.</p>
               </div>
               <div id="convertWalletBackupBar" class="convert-backup-bar" style="margin:0 0 16px;padding:12px 14px;border-radius:12px;background:rgba(245,196,104,0.08);border:1px solid rgba(245,196,104,0.25);font-size:.85rem;color:var(--text-light);display:flex;flex-direction:column;gap:10px;">
                 <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;">
@@ -2414,10 +2415,10 @@
                 <div class="ct-side ct-from">
                   <label class="ct-label" data-i18n="wallet.convert.from">From</label>
                   <select class="ct-select" id="transferFrom" aria-label="Transfer source wallet">
-                    <option value="SOL">&#9788; Solana (mainnet payment - devnet OST delivery)</option>
+                    <option value="SOL">&#9788; Solana (devnet SOL payment &rarr; devnet OST)</option>
                     <option value="BTC">&#8383; Bitcoin (quote only - settle in SOL or USDC)</option>
                     <option value="ETH">&#9830; Ethereum (quote only - settle in SOL or USDC)</option>
-                    <option value="USDC">&#9675; USDC on Solana (mainnet payment)</option>
+                    <option value="USDC">&#9675; USDC on Solana devnet</option>
                     <option value="USDT">&#9675; Tether (USDT)</option>
                     <option value="BNB">&#9830; BNB Chain</option>
                     <option value="USD">$ US Dollar</option>
@@ -2437,9 +2438,9 @@
                   <div class="ct-flow">
                     <div class="ct-flow-line"></div>
                     <div class="ct-flow-steps">
-                      <div class="ct-step" id="pStep1"><span class="ct-step-dot"></span><span data-i18n="wallet.convert.bridge">Bridge</span></div>
-                      <div class="ct-step" id="pStep2"><span class="ct-step-dot"></span><span data-i18n="wallet.convert.swap">Swap</span></div>
-                      <div class="ct-step" id="pStep3"><span class="ct-step-dot"></span><span data-i18n="wallet.convert.encrypt">Encrypt</span></div>
+                      <div class="ct-step" id="pStep1"><span class="ct-step-dot"></span><span>Pay</span></div>
+                      <div class="ct-step" id="pStep2"><span class="ct-step-dot"></span><span>Verify</span></div>
+                      <div class="ct-step" id="pStep3"><span class="ct-step-dot"></span><span>Deliver</span></div>
                     </div>
                   </div>
                   <button class="ct-convert-btn" id="transferBtn">
@@ -2450,8 +2451,8 @@
                   <label class="ct-label" data-i18n="wallet.convert.to">To</label>
                   <div class="ct-ost-output">
                     <div class="ct-ost-icon">&#9673;</div>
-                    <div class="ct-ost-name">Confidential OST</div>
-                    <div class="ct-ost-result" id="transferResult" data-i18n="transfer.result">Private &amp; Instant</div>
+                    <div class="ct-ost-name">Devnet OST</div>
+                    <div class="ct-ost-result" id="transferResult">Verified on-chain</div>
                   </div>
                 </div>
               </div>
@@ -2471,8 +2472,8 @@
                   </div>
                 </div>
               </div>
-              <p class="ct-route-state" id="convertRouteState">Live mode: create a treasury payment order, settle it from the connected wallet, and receive devnet OST back to that same wallet.</p>
-              <p class="ct-note" data-i18n="wallet.convert.note">Currently powered by Jupiter + Wormhole on Solana while the OST native interchange engine is still under construction.</p>
+              <p class="ct-route-state" id="convertRouteState">Test rail: create a treasury payment order on devnet, settle it from the connected wallet, and receive devnet OST back to that same wallet. No real money is accepted for devnet OST.</p>
+              <p class="ct-note">Jupiter and Wormhole links open external mainnet tools for SOL assets; they do not trade OST. Cross-chain bridges for OST are R&amp;D.</p>
             </div>
 
             <div class="wallet-convert-side">
@@ -5909,9 +5910,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
         <button class="wallet-option" data-wallet="phantom"><span class="wallet-fallback">&#128123;</span> Phantom</button>
         <button class="wallet-option" data-wallet="solflare"><span class="wallet-fallback">&#9728;&#65039;</span> Solflare</button>
         <button class="wallet-option" data-wallet="backpack"><span class="wallet-fallback">&#127890;</span> Backpack</button>
-        <button class="wallet-option" data-wallet="ledger"><span class="wallet-fallback">&#128179;</span> Ledger</button>
-        <button class="wallet-option" data-wallet="walletconnect"><span class="wallet-fallback">&#128279;</span> WalletConnect</button>
-        <button class="wallet-option" data-wallet="local"><span class="wallet-fallback">&#128273;</span> Create Local OST Wallet</button>
+        <button class="wallet-option" data-wallet="local"><span class="wallet-fallback">&#128273;</span> OST browser wallet</button>
       </div>
       <button class="wallet-close" id="walletClose">&times;</button>
     </div>
@@ -6287,15 +6286,15 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="ost-balance.js?v=4" defer></script>
   <script src="ost-onchain-sync.js?v=2" defer></script>
   <script src="ost-loan-usd.js?v=1" defer></script>
-  <script src="ost-cards-hub.js?v=9" defer></script>
+  <script src="ost-cards-hub.js?v=10" defer></script>
   <script src="ost-ghost-companion.js?v=5"></script>
     <script src="ost-pro-fast-tiles.js?v=1"></script>
     <script src="ost-wc-rail.js?v=1"></script>
     <script src="ost-total-balance.js?v=3"></script>
     <script src="ost-ostg-wallet.js?v=2" defer></script>
     <script src="icons.js?v=1"></script>
-    <script src="app.js?v=271"></script>
-  <script src="ost-session-key.js?v=11" defer></script>
+    <script src="app.js?v=272"></script>
+  <script src="ost-session-key.js?v=12" defer></script>
   <script src="ost-onchain-market.js?v=7" defer></script>
   <script src="ost-onchain-route.js?v=3" defer></script>
     <!-- Ghost AI Summoning Circle (rebuild) -->
@@ -6304,12 +6303,13 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="interchange-live.js?v=2"></script>
   <script src="polish.js?v=3"></script>
   <script src="swap-pool.js?v=2"></script>
-  <script src="wallet-extras.js?v=208"></script>
+  <script src="wallet-extras.js?v=209"></script>
+  <script src="ost-wallet-home.js?v=1" defer></script>
   <script src="compartments.js?v=8"></script>
   <script src="prediction-extras.js?v=20"></script>
   <script src="ost-positions.js?v=2" defer></script>
   <script src="prediction-pro.js?v=220"></script>
-  <script src="ost-predict-mobile.js?v=46" defer></script>
+  <script src="ost-predict-mobile.js?v=47" defer></script>
 <script src="ost-markets-desk.js?v=5" defer></script>
 <script src="ost-market-chart.js?v=3" defer></script>
 <script src="ost-market-art.js?v=1" defer></script>
@@ -6326,8 +6326,8 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="ost-onchain-bet.js?v=200"></script>
   <script src="ux-extras.js?v=10"></script>
   <script src="faucet-hub.js?v=19"></script>
-  <script src="topup.js?v=13"></script>
-  <script src="apple-tap.js?v=4"></script>
+  <script src="topup.js?v=14"></script>
+  <script src="apple-tap.js?v=5"></script>
   <script src="ost-card.js?v=8" defer></script>
   <script src="live-watch.js?v=200" defer></script>
   <script src="faucet-hub-ads.js?v=101"></script>
@@ -6476,7 +6476,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
        and flush immediately on first interaction. Order is preserved. -->
   <script type="application/json" id="ost-lazy-manifest">[{"src":"ghost/ghost.js?v=8","module":true},{"src":"ghost/ghost-terminal.js?v=1","module":false},{"src":"ost-qr-reader.js?v=1","module":false},{"src":"mesh/mesh.js?v=47","module":true},{"src":"mesh/veil.js?v=3","module":true},{"src":"mesh/mesh-play.js?v=14","module":true},{"src":"mesh/mesh-fair-fx.js?v=1","module":false},{"src":"code-academy.js?v=3","module":false},{"src":"vendor/qrcode-generator.js","module":false},{"src":"mesh/mesh-upgrade.js?v=13","module":false},{"src":"mesh/mesh-link.js?v=3","module":false},{"src":"mesh/mesh-games.js?v=2","module":false},{"src":"mesh/games/tictactoe.js?v=1","module":false},{"src":"mesh/games/chess.js?v=1","module":false},{"src":"mesh/games/pool8.js?v=1","module":false},{"src":"mesh/games/cuppong.js?v=1","module":false},{"src":"mesh/games/minigolf.js?v=1","module":false},{"src":"mesh/mesh-social-x.js?v=5","module":false},{"src":"mesh/mesh-mobile.js?v=9","module":false},{"src":"mesh/mesh-contacts.js?v=2","module":false},{"src":"mesh/mesh-group-markets.js?v=3","module":false},{"src":"mesh/mesh-location-pro.js?v=7","module":false},{"src":"ost-pq-demo.js?v=1","module":false}]</script>
   <script src="ost-idle-guard.js?v=2" defer></script>
-  <script src="ost-auth.js?v=7" defer></script>
+  <script src="ost-auth.js?v=8" defer></script>
   <script src="ost-update.js?v=1" defer></script>
   <script src="ost-offline-mode.js?v=1" defer></script>
   <script src="ost-bridge-ui.js?v=6" defer></script>

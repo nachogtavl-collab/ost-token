@@ -1154,19 +1154,36 @@
       host.innerHTML = '<div class="opm-sesson"><span>⚡ 1-tap ON · ' + (Number(OST_SESSION.balance()) || 0).toFixed(0) + ' OSTG left</span><button id="opmSessEnd">End</button></div>';
       var e = el('opmSessEnd'); if (e) e.onclick = function () { e.disabled = true; e.textContent = '…'; OST_SESSION.end().then(function () { toast('Session ended — funds returned to your wallet.'); renderSessionRow(); }).catch(function (err) { toast((err && err.message) || 'Could not end session'); e.disabled = false; e.textContent = 'End'; }); };
     } else {
-      host.innerHTML = '<button class="opm-sessbtn" id="opmSessOn">⚡ Enable 1-tap betting</button>';
+      // Explicit, amount-first consent: the user picks how much OSTG to park in
+      // the session key (hard-capped by OST_SESSION.limits and by the wallet),
+      // and the confirm button's label carries that amount. Nothing is funded
+      // until that tap — the old row moved the whole wallet balance.
+      var lim = (OST_SESSION.limits) || { min: 1, max: 500, suggested: 25 };
+      var wal = 0; try { wal = Math.floor(Number(OST_SESSION.walletBalance()) || 0); } catch (_) {}
+      var maxF = Math.max(0, Math.min(lim.max, wal));
+      if (!(maxF >= lim.min)) { host.innerHTML = '<div class="opm-sessoff"><span>⚡ 1-tap betting</span><em>' + (wal > 0 ? 'Needs at least ' + lim.min + ' OSTG in your wallet.' : 'Add OSTG to your wallet to enable 1-tap.') + '</em></div>'; return; }
+      var pick = Math.min(sessPick || lim.suggested, maxF);
+      var chips = [10, 25, 50, 100, 250].filter(function (v) { return v <= maxF; });
+      if (chips.indexOf(maxF) < 0 && maxF < 250) chips.push(maxF);
+      host.innerHTML = '<div class="opm-sessoff">' +
+        '<div class="opm-sessh"><span>⚡ 1-tap betting</span><em>Park a small amount in a session key — bets then confirm instantly with no popup. Only this amount can ever be spent; End returns the rest.</em></div>' +
+        '<div class="opm-sesschips">' + chips.map(function (v) { return '<button type="button" data-v="' + v + '"' + (v === pick ? ' class="on"' : '') + '>' + v + '</button>'; }).join('') +
+          '<input type="number" id="opmSessAmt" min="' + lim.min + '" max="' + maxF + '" step="1" value="' + pick + '" aria-label="OSTG to load"></div>' +
+        '<button class="opm-sessbtn" id="opmSessOn">Load ' + pick + ' OSTG into 1-tap · 1 signature</button>' +
+        '<div class="opm-fine">Wallet ' + wal + ' OSTG · max ' + maxF + ' per session</div></div>';
+      host.querySelectorAll('.opm-sesschips button').forEach(function (c) { c.onclick = function () { sessPick = Number(c.getAttribute('data-v')) || lim.suggested; renderSessionRow(); }; });
+      var ai = el('opmSessAmt'); if (ai) ai.oninput = function () { var v = Math.floor(Number(this.value) || 0); sessPick = v; var bb = el('opmSessOn'); if (bb) { var ok = v >= lim.min && v <= maxF; bb.disabled = !ok; bb.textContent = ok ? 'Load ' + v + ' OSTG into 1-tap · 1 signature' : 'Enter ' + lim.min + '–' + maxF + ' OSTG'; } };
       var b = el('opmSessOn'); if (b) b.onclick = function () {
-        // Load the FULL available wallet OSTG (not a fixed 25) so 1-tap covers the
-        // user's whole balance — the "doesn't read the full balance" fix. Bounded
-        // by what the wallet actually holds so it can't over-request and fail.
-        var avail = 0;
-        try { avail = Math.floor(Number(OST_SESSION.walletBalance()) || 0); } catch (_) {}
-        if (!(avail > 0)) { toast('No OSTG in your wallet to load into 1-tap yet.'); return; }
-        b.disabled = true; b.textContent = 'Funding ' + avail + ' OSTG… (one signature)';
-        OST_SESSION.fund(avail).then(function () { toast('1-tap on — your full ' + avail + ' OSTG is loaded for instant bets.'); renderSessionRow(); refreshBalance(); }).catch(function (err) { toast((err && err.message) || 'Could not enable 1-tap'); b.disabled = false; b.textContent = '⚡ Enable 1-tap betting'; });
+        var v = Math.floor(Number((el('opmSessAmt') || {}).value) || pick);
+        if (!(v >= lim.min && v <= maxF)) { toast('Pick between ' + lim.min + ' and ' + maxF + ' OSTG.'); return; }
+        b.disabled = true; b.textContent = 'Funding ' + v + ' OSTG… approve in your wallet';
+        OST_SESSION.fund(v, { consent: true }).then(function () { toast('1-tap on — ' + v + ' OSTG loaded. Bets now confirm instantly.'); renderSessionRow(); refreshBalance(); }).catch(function (err) { toast((err && err.message) || 'Could not enable 1-tap'); renderSessionRow(); });
       };
     }
   }
+  var sessPick = 0;
+  window.addEventListener('ost:session:offer', function () { try { renderSessionRow(); } catch (_) {} });
+  window.addEventListener('ost:session:change', function () { try { if (el('opmSess') && !el('opmSessAmt')) renderSessionRow(); } catch (_) {} });
   function paintTicket() {
     var t = el('opmTicket'); if (!t) return;
     if (mode === 'sell') { t.innerHTML = sellConfirmTicket(); var cfs = el('opmCfSell'); if (cfs) cfs.onclick = confirmSell; wireSellLockRow(); return; }

@@ -8,9 +8,11 @@
  * 5-min bets are signed by the session key silently (no popup per bet), routed
  * on-chain by OST_ONCHAIN. "End session" sweeps the leftover back to the wallet.
  *
- * Opt-in by nature: nothing exists until the user funds a session. The secret
- * lives in localStorage — acceptable ONLY because it is devnet and capped.
- * window.OST_SESSION.{ exists, keypair, pubkey, balance, cap, fund, end, refresh }
+ * Opt-in by nature: nothing exists until the user funds a session, and funding
+ * is always a tap on an amount the user chose (fund(amount, {consent:true}),
+ * capped at MAX_FUND). The secret lives in localStorage — acceptable ONLY
+ * because it is devnet and capped.
+ * window.OST_SESSION.{ exists, keypair, pubkey, balance, cap, status, fund, end, refresh, offer, limits }
  * ========================================================================== */
 (function () {
   'use strict';
@@ -85,16 +87,39 @@
   // The unified spendable = wallet OSTG + whatever is parked in the session key.
   function spendable() { if (cachedWallet == null && cachedBal == null) return undefined; return (cachedWallet || 0) + (cachedBal || 0); }
   function walletBalance() { return cachedWallet; }
+  function status() {
+    var k = load();
+    return { exists: !!k, pubkey: k ? k.publicKey.toBase58() : null, balance: cachedBal, cap: cap(), wallet: cachedWallet, maxFund: MAX_FUND, defaultFund: DEFAULT_FUND, fundedAt: meta && meta.at };
+  }
+
+  // Funding limits. The amount a user parks in the session key is the ONLY OSTG
+  // a leaked localStorage secret could ever spend, so it is bounded hard: the
+  // user picks it, it can never exceed the wallet's OSTG, and never MAX_FUND
+  // per session. There is NO automatic funding — every fund() is a user tap
+  // on an amount they saw.
+  var DEFAULT_FUND = 25, MAX_FUND = 500, MIN_FUND = 1;
 
   // ONE user signature: SOL float + OSTG (the spend cap) -> the session key.
-  async function fund(amountUi) {
+  // opts.consent must be true: callers pass it from the tap handler of a button
+  // whose label states the amount, so nothing can arm a session behind the user.
+  async function fund(amountUi, opts) {
+    opts = opts || {};
     var W = w3(); var u = userPk();
     if (!u) throw new Error('Connect a wallet first.');
-    if (!(amountUi > 0)) throw new Error('Enter an amount.');
+    if (opts.consent !== true) throw new Error('1-tap funding needs your confirmation — pick an amount in the 1-tap panel.');
+    amountUi = Math.floor(Number(amountUi) || 0);
+    if (!(amountUi >= MIN_FUND)) throw new Error('Enter an amount (at least ' + MIN_FUND + ' OSTG).');
+    if (amountUi > MAX_FUND) throw new Error('1-tap sessions are capped at ' + MAX_FUND + ' OSTG. Fund less, or end and refund.');
+    if (cap() + amountUi > MAX_FUND) throw new Error('This session already holds ' + cap() + ' OSTG; the cap is ' + MAX_FUND + '.');
+    var have = await readOstg(u); if (have == null) have = cachedWallet;
+    if (have != null && amountUi > Math.floor(have)) throw new Error('Your wallet has ' + Math.floor(have) + ' OSTG — fund at most that.');
     var k = load() || gen();
     var uAta = ataOf(u), sAta = ataOf(k.publicKey);
     var tx = new W.Transaction();
-    tx.add(W.SystemProgram.transfer({ fromPubkey: u, toPubkey: k.publicKey, lamports: Math.round(FUND_SOL * 1e9) }));
+    // Gas float only when the session key is short of it (re-funding an armed
+    // session must not keep piling SOL onto it).
+    var lam = 0; try { lam = await conn().getBalance(k.publicKey); } catch (_) { lam = 0; }
+    if (lam < FUND_SOL * 1e9 * 0.5) tx.add(W.SystemProgram.transfer({ fromPubkey: u, toPubkey: k.publicKey, lamports: Math.round(FUND_SOL * 1e9) }));
     var need = false; try { need = !(await conn().getAccountInfo(sAta)); } catch (_) { need = true; }
     // Create the SESSION's OSTG ATA: payer = the USER (they sign + pay), owner =
     // the SESSION key. The old arg order (payer=session, owner=user) made the tx
@@ -104,7 +129,9 @@
     tx.add(transferCheckedIx(uAta, sAta, u, amountUi));
     await window.OST_WALLET.sign(tx);                 // the single user signature
     meta.cap = (meta.cap || 0) + amountUi; meta.at = Date.now(); save();
+    try { localStorage.setItem(KEY + '.ended', ''); } catch (_) {}
     await refresh();
+    try { window.dispatchEvent(new CustomEvent('ost:session:funded', { detail: { amount: amountUi, cap: meta.cap } })); } catch (_) {}
     return { ok: true, cap: meta.cap };
   }
 
@@ -132,98 +159,81 @@
     return sig;
   }
 
-  // Sweep the session's OSTG back to the wallet and clear the cap (SOL float
-  // stays on the session key for any pending claims; it is dust).
+  // Sweep the session's OSTG back to the wallet and clear the cap. The SOL gas
+  // float goes back too, minus a small reserve the session key needs to sign
+  // any still-pending claim; a second End after claims returns the rest.
+  var SOL_RESERVE = 0.004, TX_FEE = 0.000005;
   async function end() {
     var W = w3(); var k = load(); if (!k) return { ok: true };
     var u = userPk(); if (!u) throw new Error('Connect a wallet to sweep back.');
     var bal = await refresh();
+    var swept = { ost: 0, sol: 0 };
     if (bal > 0) {
       var tx = new W.Transaction();
       tx.add(transferCheckedIx(ataOf(k.publicKey), ataOf(u), k.publicKey, bal));
       await sendSession(tx);
+      swept.ost = bal;
     }
+    try {
+      var lam = await conn().getBalance(k.publicKey);
+      var give = lam - Math.round((SOL_RESERVE + TX_FEE) * 1e9);
+      if (give > 0) {
+        var tx2 = new W.Transaction();
+        tx2.add(W.SystemProgram.transfer({ fromPubkey: k.publicKey, toPubkey: u, lamports: give }));
+        await sendSession(tx2);
+        swept.sol = give / 1e9;
+      }
+    } catch (_) {}
     meta.cap = 0; save(); await refresh();
-    return { ok: true };
+    try { window.dispatchEvent(new CustomEvent('ost:session:ended', { detail: swept })); } catch (_) {}
+    return { ok: true, swept: swept };
   }
 
-  // ---- AUTO-ARM: the moment a wallet is sensed, arm a session automatically ----
-  // No manual "Enable" tap. On a local browser wallet this is fully silent (it
-  // signs with the stored key); on an external wallet it is the single fund
-  // signature. Modest auto-cap, only if the wallet can cover gas. Once per load
-  // and never if the user explicitly ended a session this session.
-  var AUTO_CAP = 25, MIN_CAP = 5, MIN_SOL = 0.05;
-  var autoArmedOnce = false, userEnded = false;
-  // Balance reads gate auto-arm, so a single RPC 429 must not falsely report 0.
-  // Retry a few times, and prefer the wallet's own OSTG helper when present.
-  async function retry(fn, n) { for (var i = 0; i < n; i++) { try { var v = await fn(); if (v != null && !Number.isNaN(v)) return v; } catch (_) {} await new Promise(function (r) { setTimeout(r, 700); }); } return null; }
-  async function walletOstg() {
-    var u = userPk(); if (!u || !conn()) return 0;
-    var v = await retry(async function () {
-      if (window.OST_WALLET && OST_WALLET.getOstBalance) { var b = await OST_WALLET.getOstBalance(u.toBase58()); if (b != null) return Number(b); }
-      var r = await conn().getTokenAccountBalance(ataOf(u)); return Number(r.value.uiAmount);
-    }, 1);
-    return v || 0;
-  }
-  // Returns SOL in lamports/1e9, or NULL when the read is inconclusive (a bad RPC
-  // response must NOT read as "0 SOL" and silently block arming).
-  async function walletSol() {
-    var u = userPk(); if (!u || !conn()) return null;
-    return await retry(async function () { var b = await conn().getBalance(u); return (typeof b === 'number' ? b : Number(b && b.value)) / 1e9; }, 4);
-  }
+  // ---- NO AUTO-ARM. ----
+  // Earlier builds moved the user's WHOLE wallet balance into the session key the
+  // moment a wallet was sensed (and sized the cap from the OSTC helper, not the
+  // OSTG the session actually spends). A session key is a hot key in
+  // localStorage: funding it is a spend decision the user must make, on an
+  // amount they can see. `offer()` only tells the UI that 1-tap is AVAILABLE
+  // (on-chain rail present, wallet holds OSTG); the UI renders a button whose
+  // label carries the amount, and that tap calls fund(amount, {consent:true}).
   function onchainReady() { try { return !!(w3() && window.OST_ONCHAIN && OST_ONCHAIN.available && OST_ONCHAIN.available()); } catch (_) { return false; } }
-  // Does an on-chain market exist for the CURRENT 5-min round? Auto-arm may only
-  // drain the wallet into the session key when there is genuinely an on-chain rail
-  // to spend it on. If none exists, betting uses the custodial (ostg-native) rail
-  // which tops up Play FROM the wallet — draining it there would starve buys.
   async function onchainMarketExists() {
     try {
-      if (!(w3() && window.OST_ONCHAIN && OST_ONCHAIN.available && OST_ONCHAIN.available() && OST_ONCHAIN.marketFor)) return false;
+      if (!(onchainReady() && OST_ONCHAIN.marketFor)) return false;
       var FIVE = 300000;
       var openAtSec = Math.floor((Math.floor(Date.now() / FIVE) * FIVE) / 1000);
       var m = await OST_ONCHAIN.marketFor(openAtSec);
       return !!(m && m.exists);
     } catch (_) { return false; }
   }
-  async function autoArm() {
-    if (autoArmedOnce || userEnded || !userPk() || !onchainReady()) return;
-    if (exists()) { await refresh(); if (cachedBal > 0) { autoArmedOnce = true; return; } }   // already armed
-    // GATE: only auto-fund when the on-chain rail actually has a market this round.
-    // Without this, silent arming drained the wallet and starved custodial buys.
-    if (!(await onchainMarketExists())) return;
-    var sol = await walletSol();
-    if (sol != null && sol < MIN_SOL) return;                  // only bail when we KNOW gas is short
-    var cap = Math.floor(await walletOstg());                  // load the FULL wallet balance for 1-tap
-    if (!(cap >= MIN_CAP)) return;
-    autoArmedOnce = true;
-    try { await fund(cap); } catch (_) { autoArmedOnce = false; }
+  var offered = false;
+  async function offer() {
+    if (offered || !userPk() || !onchainReady()) return false;
+    if (exists()) { await refresh(); if (cachedBal > 0) return false; }    // already armed
+    if (!(await onchainMarketExists())) return false;
+    var u = userPk(); var w = await readOstg(u); if (w != null) cachedWallet = w;
+    if (!(cachedWallet >= MIN_FUND)) return false;
+    offered = true;
+    var suggest = Math.min(DEFAULT_FUND, MAX_FUND, Math.floor(cachedWallet));
+    try { window.dispatchEvent(new CustomEvent('ost:session:offer', { detail: { wallet: cachedWallet, suggest: suggest, max: Math.min(MAX_FUND, Math.floor(cachedWallet)) } })); } catch (_) {}
+    return true;
   }
+  // Legacy name kept for callers; it never funds anything any more.
+  function autoArm() { return offer(); }
 
-  window.OST_SESSION = { exists: exists, keypair: keypair, pubkey: pubkey, balance: balance, spendable: spendable, walletBalance: walletBalance, cap: cap, fund: fund, end: end, refresh: refresh, autoArm: autoArm };
-  // Sweeping = an explicit "off" for this page load, so we don't re-arm behind
-  // the user's back after they end a session.
-  var _end = end; end = function () { userEnded = true; return _end.apply(null, arguments); };
-  window.OST_SESSION.end = end;
+  window.OST_SESSION = { exists: exists, keypair: keypair, pubkey: pubkey, balance: balance, spendable: spendable, walletBalance: walletBalance, cap: cap, status: status, fund: fund, end: end, refresh: refresh, offer: offer, autoArm: autoArm, limits: { min: MIN_FUND, max: MAX_FUND, suggested: DEFAULT_FUND } };
 
   if (exists()) setTimeout(function () { try { refresh(); } catch (_) {} }, 1500);
-  // DETERMINISTIC 1-TAP DETECTION. OST_WALLET.onReady REPLAYS immediately if a
-  // wallet is already connected, so 1-tap arms the exact instant the wallet core
-  // is ready — killing the old blind-timeout race where autoArm ran before
-  // OST_WALLET.session existed and quietly gave up ("1-tap won't detect wallet").
-  function armSoon() { if (!userEnded && !document.hidden) setTimeout(autoArm, 800); }
+  // Refresh (read-only) when the wallet core is ready / changes, and let the UI
+  // know whether 1-tap can be offered. OST_WALLET.onReady replays immediately
+  // if a wallet is already connected.
+  function onWallet() { if (document.hidden) return; setTimeout(function () { refresh().then(offer).catch(function () {}); }, 800); }
   (function hookReady(n) {
-    if (window.OST_WALLET && typeof window.OST_WALLET.onReady === 'function') { window.OST_WALLET.onReady(armSoon); return; }
+    if (window.OST_WALLET && typeof window.OST_WALLET.onReady === 'function') { window.OST_WALLET.onReady(onWallet); return; }
     if (n > 40) return; setTimeout(function () { hookReady(n + 1); }, 150);   // OST_WALLET may define after us
   })(0);
-  // Legacy + V2 events and provider account-switches also (re)arm; idempotent.
-  window.addEventListener('ost:wallet-changed', armSoon);
-  window.addEventListener('ost:wallet-ready', armSoon);
-  window.addEventListener('ost:wallet-connected', armSoon);
-  // Backstop poll so a transient 429 on the balance read doesn't leave it unarmed.
-  var _armTries = 0;
-  var _armIv = setInterval(function () {
-    if (userEnded || _armTries++ > 3 || document.hidden) { if (_armTries > 3) clearInterval(_armIv); return; }
-    if (exists() && cachedBal > 0) { clearInterval(_armIv); return; }
-    if (userPk()) autoArm();
-  }, 30000);
+  window.addEventListener('ost:wallet-changed', onWallet);
+  window.addEventListener('ost:wallet-ready', onWallet);
+  window.addEventListener('ost:wallet-connected', onWallet);
 })();

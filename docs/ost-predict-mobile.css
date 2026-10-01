@@ -374,3 +374,12 @@
 #ostPredictMobile .opm-trow.st-claim{border-color:rgba(255,192,74,.35)}
 #ostPredictMobile .opm-ps .v.up{color:var(--opm-yes)}#ostPredictMobile .opm-ps .v.down{color:var(--opm-no)}
 #ostPredictMobile #opmPfSync{min-width:0;padding:0 12px!important;font-size:16px}
+/* 1-tap consent row (amount-first; no silent funding) */
+#ostPredictMobile .opm-sessoff{display:flex;flex-direction:column;gap:8px;padding:11px 13px;border-radius:12px;background:rgba(169,123,255,.07);border:1px solid rgba(169,123,255,.28)}
+#ostPredictMobile .opm-sessoff>span,#ostPredictMobile .opm-sessh span{font-size:12.5px;font-weight:800;color:var(--opm-ostg)}
+#ostPredictMobile .opm-sessoff em,#ostPredictMobile .opm-sessh em{display:block;font-style:normal;font-size:11.5px;line-height:1.4;color:var(--opm-ink2);margin-top:2px}
+#ostPredictMobile .opm-sesschips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+#ostPredictMobile .opm-sesschips button{flex:0 0 auto;min-width:44px;border:1px solid var(--opm-line);background:var(--opm-card3);color:var(--opm-ink);border-radius:9px;padding:7px 10px;font-size:12px;font-weight:800;cursor:pointer}
+#ostPredictMobile .opm-sesschips button.on{border-color:var(--opm-ostg);color:var(--opm-ostg);background:rgba(169,123,255,.14)}
+#ostPredictMobile .opm-sesschips input{flex:1 1 72px;min-width:72px;max-width:120px;border:1px solid var(--opm-line);background:var(--opm-card3);color:var(--opm-ink);border-radius:9px;padding:7px 9px;font-size:12.5px;font-weight:700}
+#ostPredictMobile .opm-sessoff .opm-sessbtn{border-style:solid}

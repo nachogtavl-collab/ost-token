@@ -2791,6 +2791,53 @@ async function ledgerOp(env, payload) {
   return data;
 }
 
+// Stripe is only usable with a TEST key unless TOPUP_LIVE="true" is set on the
+// worker: OST is devnet, and CLAUDE.md forbids taking real money for it. A live
+// key pasted in by mistake must not turn the converter into a store.
+function stripeUsable(env) {
+  const k = String((env && env.STRIPE_SECRET_KEY) || '');
+  if (!k) return false;
+  if (/^(sk|rk)_test_/.test(k)) return true;
+  return String(env.TOPUP_LIVE) === 'true';
+}
+function stripeMode(env) { const k = String((env && env.STRIPE_SECRET_KEY) || ''); return !k ? 'off' : (/^(sk|rk)_test_/.test(k) ? 'test' : 'live'); }
+
+// SERVER-SIDE DELIVERY of a paid top-up. The pool pays the intent's OST through
+// the PayoutGate with the internal key, idempotent on the intent id, and the
+// intent flips to 'sent'. The client no longer pays itself (that path was capped
+// at 2000 OST/day — paid orders above ~$24 could never be delivered — and it let
+// any wallet claim OST without an intent ever being paid).
+async function deliverTopupIntent(env, intentId, origin) {
+  const intent = await loadIntent(env, intentId);
+  if (!intent) return { ok: false, error: 'not_found' };
+  if (intent.status === 'sent') return { ok: true, intent, replay: true };
+  if (intent.status !== 'paid') return { ok: false, error: 'intent_not_paid', status: intent.status };
+  if (!env.PAYOUT_GATE || !env.INTERNAL_MUTATION_KEY) return { ok: false, error: 'payout_gate_not_configured', retryable: true };
+  const amount = Number(intent.ostAmount);
+  if (!(amount > 0) || !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(String(intent.wallet || ''))) return { ok: false, error: 'invalid_intent' };
+  const pg = env.PAYOUT_GATE.get(env.PAYOUT_GATE.idFromName('global'));
+  const memo = JSON.stringify({ k: 'ost-topup', intent: intent.id, usd: intent.usd, ref: String(intent.paymentRef || '').slice(0, 64), t: Date.now() });
+  let pj = null, status = 0;
+  try {
+    const pr = await pg.fetch('https://payout-gate/wallet/payout', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-ost-internal': env.INTERNAL_MUTATION_KEY },
+      body: JSON.stringify({ wallet: intent.wallet, amountOst: amount, memo, payoutId: 'topup-' + intent.id })
+    });
+    status = pr.status; pj = await pr.json().catch(() => null);
+  } catch (e) { return { ok: false, error: 'payout_unreachable', retryable: true }; }
+  if (!pj || !pj.ok || !pj.sig) return { ok: false, error: (pj && (pj.error || pj.message)) || ('payout_failed_' + status), retryable: true };
+  const fresh = (await loadIntent(env, intent.id)) || intent;
+  if (fresh.status === 'sent') return { ok: true, intent: fresh, replay: true };
+  fresh.status = 'sent'; fresh.signature = String(pj.sig); fresh.sentAt = Date.now(); fresh.updatedAt = Date.now();
+  fresh.deliveryKind = 'server-pool:' + (origin || 'auto');
+  await saveIntent(env, fresh);
+  await removeQueue(env, fresh.id);
+  try { await ledgerOp(env, { op: 'sent.push', row: { id: fresh.id, ostAmount: fresh.ostAmount, wallet: fresh.wallet, signature: fresh.signature, sentAt: fresh.sentAt, deliveryKind: fresh.deliveryKind } }); } catch (_) {}
+  publishWalletRealtime(env, { id: fresh.id, wallet: fresh.wallet, kind: 'topup-sent', amount: fresh.ostAmount, sig: fresh.signature, label: 'OST top-up delivered', token: 'OST', ts: fresh.sentAt },
+    { type: 'topup.sent', title: 'Top-up delivered', message: '+' + fresh.ostAmount + ' OST delivered' });
+  return { ok: true, intent: fresh };
+}
+
 async function loadIntent(env, id) {
   if (!id) return null;
   const res = await ledgerOp(env, { op: 'get', id });
@@ -3083,6 +3130,7 @@ async function markIntentPaidFromCrypto(env, intent, verification, options = {})
     // the poller and the button idempotent, but we do NOT re-notify.
     return { ok: true, intent, replay: true };
   }
+  try { const d = await deliverTopupIntent(env, intent.id, 'crypto-' + String(verification.rail || 'chain')); if (d && d.ok && d.intent) intent = d.intent; } catch (_) {}
   publishWalletRealtime(env, {
     id: intent.id,
     wallet: intent.wallet,
@@ -4512,6 +4560,13 @@ export default {
       const wallet = cleanText(body?.wallet || '', 64);
       const kind = cleanText(body?.kind || '', 48);
       if (!wallet || !kind) return json({ error: 'missing_fields', required: ['wallet', 'kind'] }, 400);
+      // SECURITY: this log is rendered on every client's wallet page. Only a real
+      // wallet address, a token-like kind, and signature-shaped sigs are accepted
+      // (the route is also wallet-signed now, see isProtectedPath).
+      if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(wallet)) return json({ error: 'invalid_wallet' }, 400);
+      if (!/^[a-z0-9][a-z0-9:_.-]{0,47}$/i.test(kind)) return json({ error: 'invalid_kind' }, 400);
+      const sigIn = cleanText(body.sig || body.signature || '', 128);
+      if (sigIn && !/^[1-9A-HJ-NP-Za-km-z]{43,90}$/.test(sigIn)) return json({ error: 'invalid_signature_format' }, 400);
       if (!env.OST_KV) return json({ ok: true, stored: false, note: 'KV not configured' });
       const eventTs = toMs(body.ts || body.createdAt || body.cashoutAt);
       const id = cleanText(body.id || body.eventId || body.sig || body.signature || `${kind}:${eventTs}:${body.amount || ''}:${body.token || body.game || body.marketId || ''}`, 160);
@@ -4520,7 +4575,7 @@ export default {
         wallet,
         kind,
         amount: cleanNumber(body.amount, 0),
-        sig: cleanText(body.sig || body.signature || '', 128),
+        sig: sigIn,
         source: cleanText(body.source || '', 48),
         label: cleanText(body.label || '', 200),
         token: cleanText(body.token || '', 32),
@@ -4868,7 +4923,9 @@ export default {
           solUsd
         },
         tiers: Object.entries(TOPUP_TIERS).map(([id, t]) => ({ id: Number(id), usd: t.usd, ostAmount: calculateTopupOst(t.usd, rate) })),
-        stripeEnabled: !!env.STRIPE_SECRET_KEY,
+        stripeEnabled: stripeUsable(env),
+        stripeMode: stripeMode(env),
+        liveMoney: stripeMode(env) === 'live' && String(env.TOPUP_LIVE) === 'true',
         receivers: {
           usdcMainnet: env.TREASURY_USDC_MAINNET || usdcReceiver || null,
           solMainnet:  env.TREASURY_SOL_MAINNET  || solReceiver || null,
@@ -4927,7 +4984,7 @@ export default {
 
     // Create a Stripe Checkout session for an existing intent.
     if (path === '/topup/checkout' && method === 'POST') {
-      if (!env.STRIPE_SECRET_KEY) return json({ error: 'stripe_not_configured' }, 503);
+      if (!stripeUsable(env)) return json({ error: 'stripe_not_configured', note: stripeMode(env) === 'live' ? 'A live Stripe key is configured but TOPUP_LIVE is not set — OST is devnet, so live charges stay off.' : 'Stripe test keys are not configured yet.' }, 503);
       let body; try { body = await request.json(); } catch { return json({ error: 'invalid_json' }, 400); }
       const intent = await loadIntent(env, body && body.intentId);
       if (!intent) return json({ error: 'intent_not_found' }, 404);
@@ -4987,6 +5044,8 @@ export default {
             intent.paymentRef = session.payment_intent || session.id;
             await saveIntent(env, intent);
             await pushQueue(env, intent.id);
+            // Pay from the pool now; a failure leaves it 'paid' for the status poller to retry.
+            try { await deliverTopupIntent(env, intent.id, 'stripe-webhook'); } catch (_) {}
             publishWalletRealtime(env, {
               id: intent.id,
               wallet: intent.wallet,
@@ -5007,10 +5066,11 @@ export default {
       return json({ received: true });
     }
 
-    // Public status polling.
+    // Public status polling (a paid order that is not yet delivered gets delivered here).
     const statusMatch = path.match(/^\/topup\/status\/([^/]+)$/);
     if (statusMatch && method === 'GET') {
       const intent = await loadIntent(env, decodeURIComponent(statusMatch[1]));
+      if (intent && intent.status === 'paid') { try { const d = await deliverTopupIntent(env, intent.id, 'status'); if (d && d.ok && d.intent) Object.assign(intent, d.intent); } catch (_) {} }
       if (!intent) return json({ error: 'not_found' }, 404);
       return json({
         id: intent.id,
@@ -5030,52 +5090,17 @@ export default {
 
     // Public: finalize a paid intent after the client-side devnet release.
     if (path === '/topup/claim' && method === 'POST') {
+      // The client used to pay itself and post the signature here. Now this is a
+      // "deliver my paid order" nudge: the SERVER pays from the pool (idempotent).
       if (!env.PURCHASE_LEDGER) return json({ error: 'purchase_ledger_not_configured' }, 503);
       let body; try { body = await request.json(); } catch { return json({ error: 'invalid_json' }, 400); }
       const intent = await loadIntent(env, body && body.id);
       if (!intent) return json({ error: 'not_found' }, 404);
       if (intent.status === 'sent') return json({ ok: true, intent });
       if (intent.status !== 'paid') return json({ error: 'intent_not_paid', status: intent.status }, 409);
-
-      const deliveryWallet = cleanText(body && body.wallet, 64);
-      if (deliveryWallet && intent.wallet && deliveryWallet !== intent.wallet) {
-        return json({ error: 'wallet_mismatch' }, 409);
-      }
-
-      const deliverySignature = cleanText(body && body.signature, 128);
-      if (!deliverySignature) return json({ error: 'missing_delivery_signature' }, 400);
-
-      intent.status = 'sent';
-      intent.signature = deliverySignature;
-      intent.sentAt = Date.now();
-      intent.updatedAt = Date.now();
-      intent.deliveryKind = cleanText(body && body.deliveryKind, 40) || 'client-release';
-      await saveIntent(env, intent);
-      await removeQueue(env, intent.id);
-
-      await ledgerOp(env, { op: 'sent.push', row: {
-        id: intent.id,
-        ostAmount: intent.ostAmount,
-        wallet: intent.wallet,
-        signature: intent.signature,
-        sentAt: intent.sentAt,
-        deliveryKind: intent.deliveryKind
-      } });
-      publishWalletRealtime(env, {
-        id: intent.id,
-        wallet: intent.wallet,
-        kind: 'topup-sent',
-        amount: intent.ostAmount,
-        sig: intent.signature,
-        label: 'OST top-up delivered',
-        token: 'OST',
-        ts: intent.sentAt
-      }, {
-        type: 'topup.sent',
-        title: 'Top-up delivered',
-        message: '+' + intent.ostAmount + ' OST delivered'
-      });
-      return json({ ok: true, intent });
+      const d = await deliverTopupIntent(env, intent.id, 'claim');
+      if (!d.ok) return json({ ok: false, error: d.error, status: intent.status, retryable: !!d.retryable, note: 'Payment is recorded; delivery will retry.' }, d.retryable ? 503 : 409);
+      return json({ ok: true, intent: d.intent });
     }
 
     // Admin: list paid-but-not-sent intents (for the dispatcher).

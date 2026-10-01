@@ -198,8 +198,8 @@
     card.style.cssText = 'margin-top:12px;padding:14px;border-radius:14px;background:rgba(2,6,23,0.55);border:1px solid rgba(148,163,184,0.18);display:grid;gap:10px;';
     card.innerHTML = ''
       + '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">'
-      +   '<strong style="font-size:.92rem;color:#f8fafc;">Universal tap-to-pay</strong>'
-      +   '<span id="ostAppleNfcModeBadge" style="font-size:.7rem;padding:3px 10px;border-radius:999px;background:rgba(110,231,183,.12);color:#86efac;border:1px solid rgba(110,231,183,.25);">Apple-ready</span>'
+      +   '<strong style="font-size:.92rem;color:#f8fafc;">Pay-link tap (R&amp;D)</strong>'
+      +   '<span id="ostAppleNfcModeBadge" style="font-size:.7rem;padding:3px 10px;border-radius:999px;background:rgba(110,231,183,.12);color:#86efac;border:1px solid rgba(110,231,183,.25);">Pay link · QR · NFC tag</span>'
       + '</div>'
       + '<p id="ostAppleNfcExplain" style="margin:0;font-size:.82rem;line-height:1.5;color:rgba(226,232,240,0.78);"></p>'
       + '<div style="display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:center;">'
@@ -339,19 +339,24 @@
       deviceEl.textContent = deviceLabel;
       setTone(deviceEl, platform.isApple ? 'success' : platform.isChromeAndroid ? 'success' : 'warning');
     }
+    const stripeOn = !!(config && config.stripeEnabled);
+    const stripeMode = (config && config.stripeMode) || (stripeOn ? 'test' : 'off');
     if (payEl) {
-      // On Apple devices, Apple Pay reaches through Stripe-hosted checkout or
-      // Onramper even when ApplePaySession is not directly available; treat as
-      // Ready instead of "Unavailable" so the user sees a working button.
-      var label = apple.label;
-      var tone = apple.tone;
-      if (platform.isApple && label === 'Unavailable') { label = 'Ready (via Stripe / Onramper)'; tone = 'success'; }
+      // Honest readiness: Apple Pay only exists here through Stripe-hosted
+      // checkout, so it is "Ready" only when Safari can present Apple Pay AND
+      // the Stripe rail is actually enabled (test keys configured). Everything
+      // else is a device capability, not a working payment.
+      var label, tone;
+      if (stripeOn && apple.ready) { label = 'Ready (Stripe ' + stripeMode + ')'; tone = 'success'; }
+      else if (stripeOn && platform.isApple) { label = 'Via Stripe checkout (' + stripeMode + ')'; tone = 'warning'; }
+      else if (!stripeOn) { label = apple.ready ? 'Device ready · rail off' : 'Rail off (no Stripe keys)'; tone = 'warning'; }
+      else { label = apple.label; tone = apple.tone; }
       payEl.textContent = label;
       setTone(payEl, tone);
     }
     if (stripeEl) {
-      stripeEl.textContent = config && config.stripeEnabled ? 'Live' : 'Onramper fallback';
-      setTone(stripeEl, config && config.stripeEnabled ? 'success' : 'warning');
+      stripeEl.textContent = stripeOn ? (stripeMode === 'live' ? 'Live' : 'Test mode') : 'Off — test keys needed';
+      setTone(stripeEl, stripeOn ? (stripeMode === 'live' ? 'success' : 'warning') : 'warning');
     }
     if (nfcEl) {
       // Replace the legacy "Restricted" with platform-aware status.
@@ -363,9 +368,9 @@
     if (payloadEl) payloadEl.textContent = tapPayload(address, amount);
     if (payBtn) {
       payBtn.disabled = !address;
-      payBtn.textContent = (config && config.stripeEnabled)
-        ? (platform.isApple ? 'Open Apple Pay Checkout' : 'Open Card / Apple Pay Checkout')
-        : (platform.isApple ? 'Open Apple Pay (Onramper)' : 'Open Card Checkout (Onramper)');
+      payBtn.textContent = stripeOn
+        ? (platform.isApple ? 'Open Apple Pay / Card Checkout (' + stripeMode + ')' : 'Open Card Checkout (' + stripeMode + ')')
+        : 'Buy SOL on Onramper (external, mainnet)';
     }
 
     refreshNfcCard(address, amount, platform);
@@ -380,8 +385,8 @@
         : 'Card / Apple Pay checkout live via Stripe. Apple devices will see Apple Pay automatically.', 'success');
     } else {
       setStatus(platform.isApple
-        ? 'Stripe rail not enabled \u2014 falling back to Onramper, which surfaces Apple Pay on iPhone, iPad, and Mac Safari.'
-        : 'Stripe rail not enabled \u2014 Onramper card / Apple Pay checkout is wired up as a fallback.', 'warning');
+        ? 'Stripe rail off (no test keys yet) \u2014 card / Apple Pay checkout for devnet OST is unavailable. The Onramper button is an external mainnet service that sells real SOL to your address; it does not deliver OST.'
+        : 'Stripe rail off (no test keys yet) \u2014 card checkout for devnet OST is unavailable. Onramper is an external mainnet SOL on-ramp, not an OST rail.', 'warning');
     }
   }
 
@@ -404,12 +409,13 @@
         window.location.href = checkout.url;
         return;
       } catch (error) {
-        setStatus('Stripe checkout failed (' + ((error && error.message) || 'unknown') + '). Falling back to Onramper.', 'warning');
+        setStatus('Stripe checkout failed (' + ((error && error.message) || 'unknown') + ').', 'error');
+        return;
       }
     }
     var url = ONRAMPER_APPLE_PAY + '&defaultAmount=' + encodeURIComponent(amount) + '&wallet=' + encodeURIComponent(address);
-    setStatus('Opening Onramper Apple Pay rail...', 'success');
-    if (window.openOstPopup) window.openOstPopup(url, 'OST \u2014 Apple Pay');
+    setStatus('Opening Onramper (external, mainnet): it sells real SOL to your address and does not deliver OST.', 'warning');
+    if (window.openOstPopup) window.openOstPopup(url, 'Onramper \u2014 buy SOL (external)');
     else window.open(url, '_blank', 'noopener');
   }
 

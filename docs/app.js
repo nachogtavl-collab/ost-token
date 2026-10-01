@@ -91,7 +91,7 @@
       'offline.title': 'Offline Cash Anywhere', 'offline.sub': 'The internet isn\'t everywhere yet. But your money should be.',
       'offline.lead': 'Transactions at the speed of light - even when the lights are off.',
       'offline.text': 'Imagine handing someone a banknote. No bank. No internet. Just two people and value changing hands. OST brings that to the digital world.',
-      'offline.nfc': 'NFC Tap-to-Pay', 'offline.nfctext': 'Hold phones near each other. One tap. Payment done. Like Apple Pay - but private, borderless.',
+      'offline.nfc': 'NFC Tap-to-Pay (R&D)', 'offline.nfctext': 'Concept under research: hold phones near each other and settle with one tap. Not launched - today Web NFC can only read and write pay links.',
       'offline.qr': 'QR Code Scan', 'offline.qrtext': 'The signed payment fits in a single QR code. Show it, print it, etch it on metal.',
       'offline.bt': 'Bluetooth Nearby', 'offline.bttext': 'BLE beams the transaction up to 30 feet. Perfect for markets and restaurants.',
       'getost.title': 'Get OST', 'getost.sub': 'Instant entry from any crypto or fiat - no KYC for swaps.',
@@ -391,7 +391,7 @@
       'offline.title': 'Efectivo Sin Internet', 'offline.sub': 'El internet no esta en todas partes. Pero tu dinero deberia estarlo.',
       'offline.lead': 'Transacciones a la velocidad de la luz — incluso cuando se apagan las luces.',
       'offline.text': 'Imagina entregarle un billete a alguien. Sin banco. Sin internet. Solo dos personas y valor cambiando de manos.',
-      'offline.nfc': 'NFC Toca para Pagar', 'offline.nfctext': 'Acerca los telefonos. Un toque. Pago hecho. Como Apple Pay pero privado y sin fronteras.',
+      'offline.nfc': 'NFC Toca para Pagar (I+D)', 'offline.nfctext': 'Concepto en investigacion: acerca los telefonos y liquida con un toque. Aun no lanzado - hoy Web NFC solo lee y escribe enlaces de pago.',
       'offline.qr': 'Escaneo QR', 'offline.qrtext': 'El pago firmado cabe en un solo codigo QR. Muestralo, imprimelo, grabalo en metal.',
       'offline.bt': 'Bluetooth Cercano', 'offline.bttext': 'BLE transmite la transaccion hasta 10 metros. Perfecto para mercados y restaurantes.',
       'getost.title': 'Obtener OST', 'getost.sub': 'Entrada instantanea desde cualquier cripto o fiat — sin KYC para intercambios.',
@@ -6296,7 +6296,7 @@
     } else if (isFiat) {
       setConvertRouteMessage(topupConfig && topupConfig.stripeEnabled
         ? 'Card checkout is live. OST opens a Stripe payment tied to the connected wallet and delivers devnet OST after confirmation.'
-        : 'Card rails now fund the connected wallet first. Then the same wallet settles the live OST order below in SOL or USDC.');
+        : 'Card rails (test mode, once enabled) fund the connected wallet first. Then the same wallet settles the devnet OST order below in SOL or USDC.');
     } else {
       setConvertRouteMessage(connectedWalletSession
         ? 'This currency is quoted live, but settlement happens in SOL or USDC from the connected wallet. OST creates a real payment order instead of pretending the route already settled.'
@@ -8017,7 +8017,7 @@
         return;
       }
       if (action === 'open-prediction') {
-        if (window.setWalletPanel) window.setWalletPanel('portals');
+        if (window.setWalletPanel) window.setWalletPanel('predict');
         const predictionBoard = $('#predictionMarketBoard');
         if (predictionBoard) {
           predictionBoard.scrollIntoView({ behavior: 'smooth', block: 'start' });

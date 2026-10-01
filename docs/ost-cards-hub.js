@@ -163,7 +163,7 @@
               '<div class="och-big" id="ochDebitBal">—</div>' +
               '<div class="och-fiat" id="ochDebitFiat"></div>' +
               '<p class="och-sub">Spends OSTC you already hold. No debt, nothing to repay. ' +
-              'Bridges 1:1 with OSTG once mainnet is live.</p>' +
+              'Devnet balance view &mdash; not a payment card yet; tap-to-pay and a 1:1 OSTG bridge are R&amp;D until mainnet.</p>' +
             '</div>' +
           '</div>' +
 

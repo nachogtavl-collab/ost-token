@@ -1,0 +1,120 @@
+/* OST · Wallet home (prefix owh-) — mounted at the top of #walletDashboard */
+#walletDashboard.owh-on > #wdJourney,
+#walletDashboard.owh-on > #wdIntelligence,
+#walletDashboard.owh-on > #wdNotConnected,
+#walletDashboard.owh-on > #wdConnected { display: none !important; }
+.wallet-access-grid:has(#walletDashboard.owh-on) > .wallet-side-card:not(#ostAppleTapPanel) { display: none !important; }
+.wallet-command-shell:has(#walletDashboard.owh-on) .wallet-command-hero { display: none !important; }
+
+.owh { display: grid; gap: 14px; margin-bottom: 16px; color: var(--text, #e4e7f1); }
+.owh *, .owh *::before, .owh *::after { box-sizing: border-box; }
+.owh .owh-card { background: var(--surface, #111627); border: 1px solid var(--border, rgba(109,159,255,.15)); border-radius: 18px; padding: 18px; }
+.owh h3 { margin: 4px 0 6px; font-size: 1.35rem; line-height: 1.2; }
+.owh h4 { margin: 0; font-size: 1rem; }
+.owh p { margin: 0 0 14px; color: var(--text-muted, #8b92ad); font-size: .92rem; line-height: 1.5; }
+.owh .owh-kicker { font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: var(--accent2, #a78bfa); font-weight: 700; }
+.owh button { font: inherit; cursor: pointer; }
+.owh .owh-primary { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 14px 16px; border: 0; border-radius: 14px; background: linear-gradient(135deg, var(--accent, #6d9fff), var(--accent2, #a78bfa)); color: #fff; font-weight: 800; font-size: 1rem; }
+.owh .owh-primary small { font-weight: 600; font-size: .78rem; opacity: .85; }
+.owh .owh-primary:disabled { opacity: .6; cursor: default; }
+.owh .owh-ghost { width: 100%; padding: 11px 14px; border-radius: 12px; border: 1px solid var(--border, rgba(109,159,255,.15)); background: transparent; color: var(--text, #e4e7f1); font-weight: 700; }
+.owh .owh-danger { width: 100%; padding: 11px 14px; border-radius: 12px; border: 0; background: var(--danger, #ef4444); color: #fff; font-weight: 800; }
+.owh .owh-back { background: none; border: 0; color: var(--text-muted, #8b92ad); padding: 0 0 8px; font-weight: 700; }
+.owh .owh-or { text-align: center; color: var(--text-muted, #8b92ad); font-size: .82rem; margin: 14px 0 10px; }
+.owh .owh-ext { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.owh .owh-ext button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 12px 6px; border-radius: 14px; border: 1px solid var(--border, rgba(109,159,255,.15)); background: var(--surface2, #171d32); color: var(--text, #e4e7f1); min-width: 0; }
+.owh .owh-ext button b { font-size: 1.4rem; }
+.owh .owh-ext button span { font-weight: 800; font-size: .88rem; }
+.owh .owh-ext button em { font-style: normal; font-size: .7rem; color: var(--text-muted, #8b92ad); }
+.owh .owh-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 18px; margin-top: 12px; }
+.owh .owh-links button { background: none; border: 0; color: var(--accent, #6d9fff); font-weight: 700; font-size: .85rem; padding: 4px 0; }
+.owh .owh-note { margin-top: 12px; font-size: .78rem; line-height: 1.45; color: var(--text-muted, #8b92ad); }
+.owh .owh-busy { margin-top: 10px; font-size: .82rem; color: var(--warm, #f5c468); }
+.owh .owh-warn { margin: 10px 0; padding: 10px 12px; border-radius: 12px; background: rgba(245,196,104,.1); border: 1px solid rgba(245,196,104,.35); font-size: .84rem; line-height: 1.45; }
+.owh .owh-warn button { margin-top: 6px; background: none; border: 0; color: var(--warm, #f5c468); font-weight: 800; padding: 0; text-decoration: underline; }
+.owh .owh-file { display: block; margin: 8px 0; }
+.owh .owh-file input { display: none; }
+.owh .owh-file span { display: block; padding: 12px; text-align: center; border: 1px dashed var(--border, rgba(109,159,255,.3)); border-radius: 12px; color: var(--accent, #6d9fff); font-weight: 700; cursor: pointer; }
+.owh textarea { width: 100%; margin: 6px 0 10px; padding: 10px; border-radius: 12px; border: 1px solid var(--border, rgba(109,159,255,.15)); background: rgba(0,0,0,.25); color: var(--text, #e4e7f1); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .78rem; resize: vertical; }
+.owh .owh-secret { min-height: 92px; margin-top: 10px; }
+.owh .owh-check { display: flex; gap: 8px; align-items: flex-start; font-size: .84rem; margin: 0 0 12px; color: var(--text, #e4e7f1); }
+.owh .owh-check.hide { display: none; }
+.owh .owh-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.owh .owh-row2 > :only-child { grid-column: 1 / -1; }
+
+/* identity */
+.owh .owh-idrow { display: flex; align-items: center; gap: 12px; }
+.owh .owh-avatar { width: 48px; height: 48px; border-radius: 16px; flex: 0 0 auto; box-shadow: 0 6px 18px rgba(0,0,0,.35); }
+.owh .owh-who { flex: 1 1 auto; min-width: 0; }
+.owh .owh-addr { font-weight: 900; font-size: 1.05rem; cursor: pointer; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.owh .owh-addr i { font-style: normal; color: var(--text-muted, #8b92ad); font-size: .85rem; }
+.owh .owh-sub { font-size: .78rem; color: var(--text-muted, #8b92ad); }
+.owh .owh-net { display: inline-block; padding: 1px 7px; border-radius: 999px; background: rgba(245,196,104,.14); color: var(--warm, #f5c468); font-weight: 800; font-size: .68rem; letter-spacing: .06em; }
+.owh .owh-idbtns { display: flex; gap: 6px; flex: 0 0 auto; }
+.owh .owh-idbtns button, .owh .owh-idbtns a { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 10px; border: 1px solid var(--border, rgba(109,159,255,.15)); background: var(--surface2, #171d32); color: var(--text, #e4e7f1); text-decoration: none; font-size: .95rem; }
+.owh .owh-menu { display: grid; gap: 4px; margin-top: 10px; padding: 6px; border-radius: 12px; background: var(--surface2, #171d32); border: 1px solid var(--border, rgba(109,159,255,.15)); }
+.owh .owh-menu button { text-align: left; padding: 9px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--text, #e4e7f1); font-weight: 700; }
+.owh .owh-menu button.danger { color: var(--danger, #ef4444); }
+.owh .owh-confirm { margin-top: 10px; padding: 12px; border-radius: 12px; background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.3); font-size: .86rem; line-height: 1.45; }
+.owh .owh-total { margin: 16px 0 10px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.owh .owh-total span { font-size: .72rem; text-transform: uppercase; letter-spacing: .1em; color: var(--text-muted, #8b92ad); }
+.owh .owh-total strong { font-size: 1.9rem; letter-spacing: -.02em; }
+.owh .owh-total em { font-style: normal; font-size: .8rem; color: var(--text-muted, #8b92ad); }
+.owh .owh-bals { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 8px; }
+.owh .owh-bal { padding: 10px 11px; border-radius: 12px; background: var(--surface2, #171d32); border: 1px solid var(--border, rgba(109,159,255,.12)); min-width: 0; }
+.owh .owh-bal span { display: block; font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--text-muted, #8b92ad); }
+.owh .owh-bal strong { display: block; font-size: 1.1rem; margin: 2px 0; }
+.owh .owh-bal em { display: block; font-style: normal; font-size: .7rem; color: var(--text-muted, #8b92ad); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.owh .owh-actions { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 14px; }
+.owh .owh-actions button { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 4px; border-radius: 12px; border: 1px solid var(--border, rgba(109,159,255,.15)); background: var(--surface2, #171d32); color: var(--text, #e4e7f1); font-size: .72rem; font-weight: 800; min-width: 0; }
+.owh .owh-actions button b { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 10px; background: rgba(109,159,255,.14); color: var(--accent, #6d9fff); font-size: 1rem; }
+.owh .owh-actions button:disabled { opacity: .6; }
+
+/* session + activity */
+.owh .owh-sessrow { display: flex; align-items: center; gap: 12px; }
+.owh .owh-sessrow > div { flex: 1 1 auto; min-width: 0; }
+.owh .owh-sessrow b { display: block; font-size: .92rem; color: var(--accent2, #a78bfa); }
+.owh .owh-sessrow em { display: block; font-style: normal; font-size: .78rem; line-height: 1.4; color: var(--text-muted, #8b92ad); margin-top: 2px; }
+.owh .owh-sessrow button { flex: 0 0 auto; padding: 9px 12px; border-radius: 10px; border: 1px solid rgba(167,139,250,.5); background: rgba(167,139,250,.12); color: var(--text, #e4e7f1); font-weight: 800; font-size: .8rem; }
+.owh .owh-acthead { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.owh .owh-acthead h4 { flex: 1 1 auto; }
+.owh .owh-tabs { display: flex; gap: 4px; padding: 3px; border-radius: 999px; background: var(--surface2, #171d32); }
+.owh .owh-tabs button { border: 0; border-radius: 999px; padding: 5px 10px; background: transparent; color: var(--text-muted, #8b92ad); font-size: .74rem; font-weight: 800; }
+.owh .owh-tabs button.on { background: var(--accent, #6d9fff); color: #fff; }
+.owh .owh-refresh { width: 30px; height: 30px; border-radius: 9px; border: 1px solid var(--border, rgba(109,159,255,.15)); background: transparent; color: var(--text, #e4e7f1); }
+.owh .owh-tx { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--border, rgba(109,159,255,.1)); }
+.owh .owh-tx:first-child { border-top: 0; }
+.owh .owh-tx b { width: 30px; height: 30px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 10px; background: var(--surface2, #171d32); color: var(--text-muted, #8b92ad); }
+.owh .owh-tx.in b { color: var(--success, #34d399); }
+.owh .owh-tx.out b { color: var(--danger, #ef4444); }
+.owh .owh-tx.bad { opacity: .6; }
+.owh .owh-txmain { flex: 1 1 auto; min-width: 0; }
+.owh .owh-txmain span { display: block; font-weight: 700; font-size: .86rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: capitalize; }
+.owh .owh-txmain em { display: block; font-style: normal; font-size: .72rem; color: var(--text-muted, #8b92ad); }
+.owh .owh-txmain a { color: var(--accent, #6d9fff); text-decoration: none; }
+.owh .owh-tx strong { flex: 0 0 auto; font-size: .9rem; }
+.owh .owh-tx.in strong { color: var(--success, #34d399); }
+.owh .owh-tx.out strong { color: var(--text, #e4e7f1); }
+.owh .owh-empty { padding: 12px 0; font-size: .84rem; color: var(--text-muted, #8b92ad); }
+.owh .owh-empty button { background: none; border: 0; color: var(--accent, #6d9fff); font-weight: 800; padding: 0 4px; }
+
+/* receive */
+.owh .owh-qrwrap { display: grid; place-items: center; margin: 6px 0 10px; }
+.owh .owh-qrwrap canvas { border-radius: 14px; max-width: 100%; height: auto; }
+.owh .owh-full { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .78rem; word-break: break-all; text-align: center; padding: 10px; border-radius: 10px; background: var(--surface2, #171d32); cursor: pointer; }
+
+/* toasts */
+.owh-toasts { position: fixed; left: 50%; bottom: calc(76px + env(safe-area-inset-bottom)); transform: translateX(-50%); display: grid; gap: 6px; z-index: 9000; pointer-events: none; width: min(92vw, 420px); }
+.owh-toast { padding: 10px 14px; border-radius: 12px; background: rgba(17,22,39,.96); border: 1px solid rgba(109,159,255,.3); color: #e4e7f1; font-size: .84rem; font-weight: 700; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,.45); transition: opacity .3s, transform .3s; }
+.owh-toast.err { border-color: rgba(239,68,68,.5); }
+.owh-toast.out { opacity: 0; transform: translateY(6px); }
+
+@media (max-width: 560px) {
+  .owh .owh-card { padding: 14px; border-radius: 16px; }
+  .owh .owh-actions { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+  .owh .owh-actions button { font-size: .66rem; padding: 8px 2px; }
+  .owh .owh-total strong { font-size: 1.6rem; }
+  .owh .owh-ext button em { display: none; }
+}
+body.ost-mobile-shell .owh .owh-ext button, body.ost-mobile-shell .owh .owh-actions button, body.ost-mobile-shell .owh .owh-bal { min-width: 0; overflow-wrap: normal; }
+.owh [hidden], .owh-receive[hidden] { display: none !important; }

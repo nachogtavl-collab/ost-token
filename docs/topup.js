@@ -268,7 +268,7 @@
             <span>Recipient wallet</span>
             <input type="text" id="converterTransferRecipient" placeholder="Paste recipient Solana address..." spellcheck="false" autocomplete="off">
           </label>
-          <button type="button" class="converter-btn primary wide" id="converterTransferBtn">Prepare Transfer</button>
+          <button type="button" class="converter-btn primary wide" id="converterTransferBtn">Open Send</button>
           <div class="topup-status" id="converterTransferStatus"></div>
         </div>
       </div>
@@ -644,21 +644,30 @@
     }
   }
 
+  // "Transfer" used to only announce an event and report "prepared" with no
+  // transaction behind it. It now hands the real Send sheet (wallet-extras)
+  // the asset, amount and recipient; the user reviews and signs there.
   function prepareTransfer() {
-    const currency = $('converterTransferCurrency')?.value || 'OST';
+    const currency = ($('converterTransferCurrency')?.value || 'OST').toUpperCase();
     const amount = numberFrom($('converterTransferAmount')?.value, 0);
     const recipient = ($('converterTransferRecipient')?.value || '').trim();
-    if (amount <= 0) {
-      setStatus('converterTransferStatus', 'error', 'Enter an amount to send first.');
-      return;
-    }
-    if (!isLikelySolanaAddress(recipient)) {
-      setStatus('converterTransferStatus', 'error', 'Paste a valid Solana recipient address.');
-      return;
-    }
+    if (!(amount > 0)) { setStatus('converterTransferStatus', 'error', 'Enter an amount to send first.'); return; }
+    if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(recipient)) { setStatus('converterTransferStatus', 'error', 'Paste a valid Solana recipient address.'); return; }
+    if (currency !== 'OST' && currency !== 'SOL') { setStatus('converterTransferStatus', 'error', currency + ' transfers are not available on the devnet rail — send OST or SOL.'); return; }
+    if (!window.OST_WALLET || !window.OST_WALLET.session || !window.OST_WALLET.session.publicKey) { setStatus('converterTransferStatus', 'error', 'Connect a wallet first.'); return; }
+    const sendBtn = $('wdSendBtn');
+    if (!sendBtn) { setStatus('converterTransferStatus', 'error', 'Send sheet not loaded — refresh the page.'); return; }
+    window._ostSendAsset = currency;
+    sendBtn.click();
+    setTimeout(() => {
+      const to = $('ostSendTo'); const amt = $('ostSendAmount');
+      if (to) to.value = recipient;
+      if (amt) { amt.value = String(amount); amt.dispatchEvent(new Event('input', { bubbles: true })); }
+    }, 60);
     window.dispatchEvent(new CustomEvent('ost:converter-transfer-prepared', { detail: { currency, amount, recipient } }));
-    setStatus('converterTransferStatus', 'ok', `${currency} transfer prepared for ${shortWallet(recipient)}.`);
+    setStatus('converterTransferStatus', 'ok', `Review and sign the ${currency} transfer to ${shortWallet(recipient)} in the Send sheet.`);
   }
+
 
   window.calculateOST = calculateOST;
   window.calculateConversion = calculateConversion;
@@ -814,10 +823,11 @@
     const cardBtn = $('topupCardBtn');
     if (!cfg.stripeEnabled) {
       cardBtn.disabled = true;
-      setStatus('topupCardStatus', 'warn', 'Card payments open soon. Use the <strong>Crypto</strong> tab for instant top-up today.');
+      setStatus('topupCardStatus', 'warn', 'Card / Apple Pay checkout is off until Stripe <strong>test</strong> keys are configured (test mode only &mdash; no real money is charged for devnet OST). Use the <strong>Crypto</strong> tab with devnet SOL or USDC today.');
       switchPane('crypto');
     } else {
       cardBtn.disabled = false;
+      if (cfg.stripeMode === 'test' || !cfg.liveMoney) setStatus('topupCardStatus', 'warn', 'Stripe <strong>TEST mode</strong>: use test card 4242 4242 4242 4242 &mdash; no real charge, devnet OST only.');
       switchPane(preferredPane || 'card');
     }
     if (preferredPane === 'crypto') switchPane('crypto');

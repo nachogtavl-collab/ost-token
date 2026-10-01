@@ -29,7 +29,7 @@
     if ((u.origin + '') !== new URL(API).origin) return false;
     var p = u.pathname;
     return /^\/play\//.test(p) || /^\/loans\//.test(p) || /^\/faucet\/v1\/(reserve|commit|cancel)$/.test(p) ||
-      p === '/wallet/payout' || p === '/wallet/ata-rent' || /^\/wallet\/cosign/.test(p);
+      p === '/wallet/payout' || p === '/wallet/ata-rent' || /^\/wallet\/cosign/.test(p) || p === '/wallet/events';
   }
   function hex(bytes) { return Array.from(bytes).map(function (b) { return b.toString(16).padStart(2, '0'); }).join(''); }
   function b64(bytes) { var s = ''; for (var i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]); return btoa(s); }

@@ -147,6 +147,8 @@ export class PayoutGate {
     try { const mj = JSON.parse(memo); memoKind = String((mj && mj.k) || ''); } catch (_) {}
     if (!internal) {
       if (memoKind === 'ost-new-here') return json({ error: 'server_only_kind', message: 'Faucet payouts are issued by the server — claim through the faucet.' }, 403);
+      if (memoKind === 'ost-topup' || memoKind === 'ost-topup-local-verified') return json({ error: 'server_only_kind', message: 'Top-up deliveries are paid by the server once the payment is verified.' }, 403);
+      if (memoKind === 'treasury-deposit') return json({ error: 'server_only_kind', message: 'Crypto deposits are credited by the server after the deposit is verified — use Top up → Crypto.' }, 403);
       if (memoKind === 'faucet-hub-cashout' && Date.now() >= CREDITS_RETIRE_AT) return json({ error: 'credits_retired', message: 'Legacy credits were retired on 2026-09-25 and are no longer cashable. Play with OSTG.' }, 403);
       if (await this.rateLimited(walletStr, 6, 10 * 60 * 1000)) return json({ error: 'rate_limited', message: 'Too many payouts — wait a few minutes.' }, 429);
       const capped = await this.clientCapExceeded(walletStr, amt);

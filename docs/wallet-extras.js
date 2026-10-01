@@ -379,17 +379,14 @@
     var quote = quoteAnyToOst(currency, amt);
     if (quote.ost <= 0) throw new Error('Quote too small (' + quote.ost.toFixed(6) + ' OST)');
 
-    // Use OST_RESCUE.payoutOst for non-SOL deposits: pool pays all fees,
-    // user needs zero devnet SOL. The helper requires a full payout.
-    if (!window.OST_RESCUE || !window.OST_RESCUE.payoutOst) {
-      throw new Error('Vault helper not loaded — refresh the page.');
-    }
-    var memo = JSON.stringify({
-      k: 'treasury-deposit', cur: quote.currency, amt: amt,
-      usd: Number(quote.usd.toFixed(2)), ost: Number(quote.ost.toFixed(4)),
-      rate: Number(quote.rate.toFixed(6)), t: Date.now()
-    });
-    var pr = await window.OST_RESCUE.payoutOst(w.session.publicKey, quote.ost, memo);
+    // Non-SOL deposits (BTC/ETH/USDC…) cannot be observed from the browser, so
+    // the browser must never ask the vault to pay for them. The worker credits
+    // a crypto deposit only after it verifies the on-chain payment
+    // (POST /topup/verify-crypto → server-side delivery). Route the user there.
+    try { if (window.OST_TOPUP && typeof window.OST_TOPUP.open === 'function') window.OST_TOPUP.open({ method: 'crypto', currency: quote.currency, amount: amt }); } catch (_) {}
+    throw new Error(quote.currency + ' deposits are verified by the server — use Top up → Crypto. The vault only pays once the deposit is confirmed.');
+    // eslint-disable-next-line no-unreachable
+    var pr = { sig: null, ost: 0 };
     var sig = pr.sig;
     var actualOst = pr.ost;
     quote = Object.assign({}, quote, { ost: actualOst });
@@ -694,6 +691,28 @@
 
   async function getTopupStatus(intentId) {
     return topupRequest('/topup/status/' + encodeURIComponent(intentId));
+  }
+
+  // Server-side delivery: POST /topup/claim asks the worker to pay the paid intent
+  // from the pool (PayoutGate, internal key, idempotent on the intent id), then
+  // polls /topup/status until it reports 'sent'. Replaces the old client-originated
+  // /wallet/payout, which was capped at 2000 OST/day and needed no paid intent.
+  async function serverDeliverTopup(intent) {
+    var last = null;
+    for (var attempt = 0; attempt < 8; attempt++) {
+      try {
+        var r = await topupRequest('/topup/claim', { method: 'POST', body: JSON.stringify({ id: intent.id, wallet: getActiveWalletAddress() }) });
+        var it = r && r.intent;
+        if (it && it.status === 'sent' && it.signature) return { sig: String(it.signature), server: true };
+        last = r;
+      } catch (e) { last = e; }
+      try {
+        var st = await topupRequest('/topup/status/' + encodeURIComponent(intent.id), { method: 'GET' });
+        if (st && st.status === 'sent' && st.signature) return { sig: String(st.signature), server: true };
+      } catch (_) {}
+      await new Promise(function (res) { setTimeout(res, 1500 + attempt * 500); });
+    }
+    throw new Error('Payment is recorded; OST delivery is still processing. It completes automatically — check back in a minute.');
   }
 
   async function claimTopupIntent(intentId, signature) {
@@ -1041,9 +1060,6 @@
       };
     }
     if (intent.status !== 'paid') throw new Error('Top-up is still waiting for payment');
-    if (!window.OST_RESCUE || typeof window.OST_RESCUE.payoutOst !== 'function') {
-      throw new Error('OST payout vault is still loading. Refresh and try again.');
-    }
 
     var payoutMemo = JSON.stringify({
       k: 'ost-topup',
@@ -1053,7 +1069,7 @@
       wallet: activeWallet,
       t: Date.now()
     });
-    var payout = await window.OST_RESCUE.payoutOst(session.publicKey, Number(intent.ostAmount || 0), payoutMemo);
+    var payout = await serverDeliverTopup(intent);   // the SERVER pays from the pool (idempotent) — the client never asserts a purchase payout
     var signature = payout && payout.sig ? String(payout.sig) : '';
     var claimedPayload;
     try {
@@ -1111,9 +1127,6 @@
         localVerified: true
       };
     }
-    if (!window.OST_RESCUE || typeof window.OST_RESCUE.payoutOst !== 'function') {
-      throw new Error('OST payout vault is still loading. Refresh and try again.');
-    }
 
     var payoutMemo = JSON.stringify({
       k: 'ost-topup-local-verified',
@@ -1124,7 +1137,7 @@
       wallet: activeWallet,
       t: Date.now()
     });
-    var payout = await window.OST_RESCUE.payoutOst(session.publicKey, Number(intent.ostAmount || 0), payoutMemo);
+    var payout = await serverDeliverTopup(intent);   // the SERVER pays from the pool (idempotent) — the client never asserts a purchase payout
     var payoutSig = payout && payout.sig ? String(payout.sig) : '';
     var finalIntent = Object.assign({}, intent, {
       status: 'sent',
@@ -2265,10 +2278,12 @@
     function fmtAmt(item) {
       var n = Number(item.amount);
       if (!Number.isFinite(n) || n <= 0) return '—';
-      var isOut = item.kind === 'send' || item.kind === 'prediction-buy' || item.kind === 'game-loss' || item.kind === 'games-deposit' || item.kind === 'launchpad-buy';
+      var kind = String(item.kind || '');
+      var isOut = /^(send|send-sol|prediction-buy|game-loss|games-deposit|launchpad-buy|ost-to-sol|pay|spend|stake|loan-repay|perp-open|stock-buy|parlay-stake|interchange-pay)$/.test(kind) || /^(send|pay|spend|stake)-/.test(kind);
+      var unit = /(^|-)sol$/.test(kind) && !/ost/.test(kind) ? 'SOL' : 'OST';
       var sign = isOut ? '−' : '+';
       var color = isOut ? '#f87171' : '#34d399';
-      return '<span style="color:' + color + ';font-weight:700;">' + sign + n.toFixed(2) + ' OST</span>';
+      return '<span style="color:' + color + ';font-weight:700;">' + sign + n.toFixed(unit === 'SOL' ? 4 : 2) + ' ' + unit + '</span>';
     }
     function render() {
       var snaps = loadSnapshots();
@@ -2342,17 +2357,22 @@
         '</tr>' +
         '</thead><tbody>';
 
+      // SECURITY: every field here can come from the shared server event log, which
+      // other clients write to. Escape everything and only link signatures that
+      // look like signatures (stored XSS on the page that holds wallet keys).
+      var escH = function (v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]; }); };
+      var sigOk = function (sg) { return /^[1-9A-HJ-NP-Za-km-z]{43,90}$/.test(String(sg || '')); };
       items.slice(0, 50).forEach(function(item, idx) {
         var c = COLORS[item.kind] || '#94a3b8';
         var icon = ICONS[item.kind] || '●';
-        var lbl = LABELS[item.kind] || item.kind;
+        var lbl = escH(LABELS[item.kind] || String(item.kind || '').replace(/[-_]/g, ' '));
         var rowBg = idx % 2 === 0 ? 'rgba(255,255,255,0.015)' : 'transparent';
-        var sigLink = item.sig
-          ? '<a href="https://explorer.solana.com/tx/' + item.sig + '?cluster=devnet" target="_blank" rel="noopener" title="View on Solscan" style="color:#6d9fff;font-size:13px;text-decoration:none;">↗</a>'
+        var sigLink = (item.sig && sigOk(item.sig))
+          ? '<a href="https://explorer.solana.com/tx/' + encodeURIComponent(String(item.sig)) + '?cluster=devnet" target="_blank" rel="noopener" title="View on Solana Explorer (devnet)" style="color:#6d9fff;font-size:13px;text-decoration:none;">↗</a>'
           : '—';
         var detail = '';
         if (item.label) {
-          detail = '<div style="color:#64748b;font-size:10px;margin-top:1px;">' + String(item.label) + '</div>';
+          detail = '<div style="color:#64748b;font-size:10px;margin-top:1px;">' + escH(item.label) + '</div>';
         }
         if (item.price && item.potentialReturn) {
           var entryPct = (Number(item.price) * 100).toFixed(1);
@@ -2369,7 +2389,7 @@
           '</td>' +
           '<td style="text-align:right;padding:5px 8px;">' + fmtAmt(item) + '</td>' +
           '<td style="text-align:right;padding:5px 8px;color:#64748b;font-size:10px;">' +
-            (item.sig ? item.sig.substring(0,8) + '…' : '—') + '</td>' +
+            (item.sig ? escH(String(item.sig).substring(0,8)) + '…' : '—') + '</td>' +
           '<td style="text-align:center;padding:5px 8px;">' + sigLink + '</td>' +
           '</tr>';
       });
