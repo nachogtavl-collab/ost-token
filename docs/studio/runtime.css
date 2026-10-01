@@ -1,0 +1,98 @@
+/* OST Studio · runtime — preview pane, Console + Problems panels (prefix st-runtime-) */
+
+/* hidden sandboxes */
+.st-runtime-runner { position: fixed; left: -10000px; top: 0; width: 1px; height: 1px; border: 0; opacity: 0; pointer-events: none; }
+.st-runtime-capture { position: fixed; left: -12000px; top: 0; width: 1024px; height: 768px; border: 0; opacity: 0; pointer-events: none; }
+
+/* shared small controls */
+.st-runtime-sel { height: 26px; padding: 0 6px; border-radius: 6px; border: 1px solid var(--st-line2); background: var(--st-bg); color: var(--st-text); font: 12px system-ui, sans-serif; max-width: 150px; }
+.st-runtime-sel:focus { outline: none; border-color: var(--st-accent); }
+.st-runtime-chk { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--st-muted); white-space: nowrap; cursor: pointer; user-select: none; }
+.st-runtime-chk input { margin: 0; accent-color: var(--st-accent); }
+
+/* ---------------- preview ---------------- */
+.st-runtime-pvbar { display: flex; align-items: center; gap: 4px; height: 34px; padding: 0 6px; min-width: 0; }
+.st-runtime-pvbar .st-ib { width: 28px; height: 26px; }
+.st-runtime-page { flex: 0 1 auto; min-width: 48px; max-width: 34%; height: 26px; padding: 0 8px; border-radius: 6px; border: 1px solid var(--st-line2); background: var(--st-bg); color: var(--st-text); font: 12px var(--st-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; }
+.st-runtime-page:hover { border-color: var(--st-accent); }
+.st-runtime-pvstat { flex: 0 1 auto; min-width: 0; font-size: 12px; color: var(--st-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 4px; }
+.st-runtime-pvstat.is-ok { color: var(--st-ok); }
+.st-runtime-pvstat.is-busy { color: var(--st-muted); }
+.st-runtime-pvstat.is-err { color: var(--st-err); cursor: pointer; text-decoration: underline dotted; }
+
+.st-runtime-stage { position: absolute; inset: 0; overflow: hidden; background: #fff; }
+.st-runtime-dev { position: absolute; inset: 0; background: #fff; }
+.st-runtime-frame { display: block; width: 100%; height: 100%; border: 0; background: #fff; }
+.st-runtime-stage.is-device { background: #1a1f27 radial-gradient(circle at 1px 1px, #262d38 1px, transparent 0) 0 0 / 16px 16px; }
+.st-runtime-stage.is-device .st-runtime-dev { inset: auto; left: 50%; top: 12px; transform-origin: top center; border-radius: 14px; overflow: hidden; box-shadow: 0 0 0 1px #3a4555, 0 18px 50px rgba(0, 0, 0, .55); }
+.st-runtime-pvmsg { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; background: var(--st-bg); color: var(--st-muted); font-size: 13px; line-height: 1.6; z-index: 2; }
+.st-runtime-overlay { position: absolute; left: 10px; right: 10px; bottom: 10px; max-height: 55%; overflow: auto; z-index: 3; background: #2a1215; color: #ffd7d5; border: 1px solid #f8514966; border-left: 4px solid var(--st-err); border-radius: 8px; box-shadow: 0 10px 30px rgba(0, 0, 0, .45); font: 12px/1.5 var(--st-mono); }
+.st-runtime-ovhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 6px 6px 12px; font-family: system-ui, sans-serif; position: sticky; top: 0; background: #2a1215; }
+.st-runtime-ovhead .st-ib { color: #ffd7d5; }
+.st-runtime-overr { display: block; width: 100%; text-align: left; background: none; border: 0; border-top: 1px solid #f8514926; padding: 6px 12px; color: inherit; white-space: pre-wrap; word-break: break-word; font: inherit; }
+.st-runtime-overr:not(:disabled):hover { background: #f851491a; }
+.st-runtime-overloc { display: block; color: #ff9a92; font-weight: 700; }
+
+/* ---------------- console ---------------- */
+.st-runtime-conpanel { overflow: hidden !important; }
+.st-runtime-con { position: absolute; inset: 0; display: flex; flex-direction: column; min-height: 0; }
+.st-runtime-conbar { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; padding: 4px 8px; border-bottom: 1px solid var(--st-line); flex-wrap: wrap; }
+.st-runtime-filter { width: 180px; max-width: 40%; height: 26px; padding: 3px 8px; font-size: 12px; }
+.st-runtime-conbar .st-btn { padding: 3px 10px; font-size: 12px; }
+.st-runtime-stop { background: #3a1a1c; border-color: #f8514966; color: #ffb3ad; }
+.st-runtime-stop:hover { background: #4a1f22; }
+.st-runtime-conlist { flex: 1 1 auto; min-height: 0; overflow: auto; font: 12px/1.5 var(--st-mono); padding: 2px 0 6px; }
+.st-runtime-conempty { position: absolute; left: 0; right: 0; top: 40%; transform: translateY(-50%); pointer-events: none; font-size: 12px; line-height: 1.6; padding: 0 24px; }
+.st-runtime-ln { display: flex; align-items: flex-start; gap: 8px; padding: 1px 10px; border-bottom: 1px solid rgba(255, 255, 255, .035); }
+.st-runtime-ts { flex: 0 0 auto; color: var(--st-dim); }
+.st-runtime-src { flex: 0 0 auto; min-width: 44px; color: var(--st-dim); font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; padding-top: 1px; }
+.st-runtime-src.src-python { color: #7aa7d9; }
+.st-runtime-src.src-preview { color: #8fb98a; }
+.st-runtime-src.src-build { color: #c4a3e6; }
+.st-runtime-msg { flex: 1 1 auto; min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--st-text); }
+.st-runtime-ln.lv-error { background: rgba(248, 81, 73, .09); border-bottom-color: rgba(248, 81, 73, .18); }
+.st-runtime-ln.lv-error .st-runtime-msg { color: #ff9a92; }
+.st-runtime-ln.lv-warn { background: rgba(210, 153, 34, .08); border-bottom-color: rgba(210, 153, 34, .16); }
+.st-runtime-ln.lv-warn .st-runtime-msg { color: #e3b341; }
+.st-runtime-ln.lv-info .st-runtime-msg { color: #79c0ff; }
+.st-runtime-ln.lv-debug .st-runtime-msg { color: var(--st-muted); }
+.st-runtime-ln.lv-system .st-runtime-msg { color: #b9a6e8; font-style: italic; }
+.st-runtime-loc, .st-runtime-act { flex: 0 0 auto; background: none; border: 0; padding: 0 2px; color: var(--st-accent); font: 11px var(--st-mono); text-decoration: underline; cursor: pointer; white-space: nowrap; }
+.st-runtime-act { font-family: system-ui, sans-serif; font-weight: 700; text-decoration: none; border: 1px solid var(--st-accent); border-radius: 5px; padding: 0 8px; }
+.st-runtime-act:disabled { opacity: .5; }
+.st-runtime-cnt { flex: 0 0 auto; min-width: 18px; height: 16px; padding: 0 5px; border-radius: 8px; background: var(--st-bg4); color: var(--st-text); font: 700 10px/16px system-ui, sans-serif; text-align: center; }
+.st-runtime-img { display: block; max-width: min(100%, 720px); max-height: 420px; margin: 4px 0; border-radius: 6px; background: #fff; }
+.st-runtime-repl { flex: 0 0 auto; display: flex; align-items: center; gap: 6px; margin: 0; padding: 3px 8px; border-top: 1px solid var(--st-line); background: var(--st-bg2); }
+.st-runtime-prompt { color: var(--st-accent); font: 700 13px var(--st-mono); }
+.st-runtime-replin { flex: 1 1 auto; min-width: 0; height: 24px; background: transparent; border: 0; outline: 0; color: var(--st-text); font: 12px var(--st-mono); }
+.st-runtime-repl .st-runtime-sel { height: 22px; font-size: 11px; }
+
+/* ---------------- problems ---------------- */
+.st-runtime-problems { font-size: 12px; }
+.st-runtime-probsum { padding: 6px 12px; color: var(--st-muted); border-bottom: 1px solid var(--st-line); }
+.st-runtime-probfile { display: flex; align-items: center; gap: 8px; padding: 6px 12px 2px; font-family: var(--st-mono); }
+.st-runtime-probn { min-width: 18px; height: 16px; padding: 0 5px; border-radius: 8px; background: var(--st-bg4); font: 700 10px/16px system-ui, sans-serif; text-align: center; }
+.st-runtime-prob { display: flex; align-items: flex-start; gap: 8px; width: 100%; text-align: left; background: none; border: 0; padding: 3px 12px 3px 24px; color: var(--st-text); }
+.st-runtime-prob:not(:disabled):hover { background: #04395e; }
+.st-runtime-prob:disabled { opacity: .85; cursor: default; }
+.st-runtime-probico { flex: 0 0 auto; width: 14px; font-weight: 900; }
+.st-runtime-prob.is-err .st-runtime-probico { color: var(--st-err); }
+.st-runtime-prob.is-warn .st-runtime-probico { color: var(--st-warn); }
+.st-runtime-probtxt { flex: 1 1 auto; min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.st-runtime-probloc { flex: 0 0 auto; color: var(--st-dim); font-family: var(--st-mono); font-size: 11px; }
+
+/* ---------------- phones ---------------- */
+@media (max-width: 760px) {
+  .st-runtime-pvbar { gap: 2px; padding: 0 4px; }
+  .st-runtime-pvbar .st-runtime-chk { display: none; }
+  .st-runtime-page { max-width: 30%; }
+  .st-runtime-pvbar [data-pv="vp"] { display: none; }   /* a phone is already the device */
+  .st-runtime-conbar { gap: 6px; padding: 4px 6px; }
+  .st-runtime-filter { width: auto; flex: 1 1 90px; max-width: none; }
+  .st-runtime-conbar .st-runtime-chk { display: none; }   /* keep the toolbar to one row on phones */
+  .st-runtime-src { display: none; }
+  .st-runtime-ln { padding: 2px 8px; }
+  .st-runtime-replin { font-size: 16px; }   /* no iOS zoom-on-focus */
+  .st-runtime-filter { font-size: 16px; }
+  .st-runtime-stage.is-device .st-runtime-dev { top: 8px; }
+}

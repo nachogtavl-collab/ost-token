@@ -1,0 +1,67 @@
+/* OST Studio · terminal panel (xterm.js host, DOM fallback, touch input row). Prefix: st-terminal- */
+.st-panel-body.st-terminal-panel { display: flex; flex-direction: column; overflow: hidden; background: var(--st-bg); }
+.st-panel-body.st-terminal-panel[hidden] { display: none !important; }
+.st-terminal-host { position: relative; flex: 1 1 auto; min-height: 0; min-width: 0; overflow: hidden; cursor: text; }
+.st-terminal-loading { padding: 10px 14px; color: var(--st-muted); font: 12px/1.5 var(--st-mono); }
+
+/* xterm.js 5.5 critical layout (same rules as its xterm.css) so a lost CDN stylesheet can't break the terminal */
+.st-terminal-host .xterm { cursor: text; position: relative; user-select: none; -webkit-user-select: none; }
+.st-terminal-host .xterm .xterm-helpers { position: absolute; top: 0; z-index: 5; }
+.st-terminal-host .xterm .xterm-helper-textarea { padding: 0; border: 0; margin: 0; position: absolute; opacity: 0; left: -9999em; top: 0; width: 0; height: 0; z-index: -5; white-space: nowrap; overflow: hidden; resize: none; }
+.st-terminal-host .xterm .composition-view { background: #000; color: #fff; display: none; position: absolute; white-space: nowrap; z-index: 1; }
+.st-terminal-host .xterm .composition-view.active { display: block; }
+.st-terminal-host .xterm .xterm-viewport { overflow-y: scroll; cursor: default; position: absolute; right: 0; left: 0; top: 0; bottom: 0; }
+.st-terminal-host .xterm .xterm-screen { position: relative; }
+.st-terminal-host .xterm .xterm-screen canvas { position: absolute; left: 0; top: 0; }
+.st-terminal-host .xterm .xterm-scroll-area { visibility: hidden; }
+.st-terminal-host .xterm-char-measure-element { display: inline-block; visibility: hidden; position: absolute; top: 0; left: -9999em; line-height: normal; }
+.st-terminal-host .xterm .xterm-accessibility:not(.debug), .st-terminal-host .xterm .xterm-message { position: absolute; left: 0; top: 0; bottom: 0; right: 0; z-index: 10; color: transparent; pointer-events: none; }
+.st-terminal-host .xterm .live-region { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.st-terminal-host .xterm-dim { opacity: 1 !important; }
+.st-terminal-host .xterm-underline-1 { text-decoration: underline; }
+.st-terminal-host .xterm-strikethrough { text-decoration: line-through; }
+.st-terminal-host .xterm-screen .xterm-decoration-container .xterm-decoration { z-index: 6; position: absolute; }
+
+/* xterm: no padding on the host (the fit addon measures the parent); the gutter lives on .xterm */
+.st-terminal-host .xterm { height: 100%; padding: 4px 0 2px 10px; }
+.st-terminal-host .xterm:focus, .st-terminal-host .xterm-helper-textarea:focus { outline: none; }
+.st-terminal-host .xterm-viewport { scrollbar-width: thin; scrollbar-color: var(--st-line2) transparent; }
+.st-terminal-host .xterm-viewport::-webkit-scrollbar { width: 10px; }
+.st-terminal-host .xterm-viewport::-webkit-scrollbar-thumb { background: var(--st-line2); border-radius: 5px; border: 2px solid var(--st-bg); }
+.st-terminal-host .xterm-viewport::-webkit-scrollbar-track { background: transparent; }
+
+/* DOM fallback (xterm.js could not load) */
+.st-terminal-log { position: absolute; inset: 0; overflow: auto; padding: 6px 10px 10px; font: 12.5px/1.45 var(--st-mono); color: var(--st-text); white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; -webkit-user-select: text; }
+.st-terminal-ln { min-height: 1.45em; }
+.st-terminal-b { font-weight: 700; }
+.st-terminal-d { opacity: .7; }
+.st-terminal-f30 { color: #484f58; } .st-terminal-f31 { color: #ff7b72; } .st-terminal-f32 { color: #3fb950; } .st-terminal-f33 { color: #d29922; }
+.st-terminal-f34 { color: #58a6ff; } .st-terminal-f35 { color: #bc8cff; } .st-terminal-f36 { color: #39c5cf; } .st-terminal-f37 { color: #b1bac4; }
+.st-terminal-f90 { color: #6e7681; } .st-terminal-f91 { color: #ffa198; } .st-terminal-f92 { color: #56d364; } .st-terminal-f93 { color: #e3b341; }
+.st-terminal-f94 { color: #79c0ff; } .st-terminal-f95 { color: #d2a8ff; } .st-terminal-f96 { color: #56d4dd; } .st-terminal-f97 { color: #f0f6fc; }
+.st-terminal-panel.light .st-terminal-f31 { color: #cf222e; } .st-terminal-panel.light .st-terminal-f32, .st-terminal-panel.light .st-terminal-f92 { color: #1a7f37; }
+.st-terminal-panel.light .st-terminal-f33, .st-terminal-panel.light .st-terminal-f93 { color: #9a6700; } .st-terminal-panel.light .st-terminal-f34, .st-terminal-panel.light .st-terminal-f94 { color: #0969da; }
+.st-terminal-panel.light .st-terminal-f90 { color: #57606a; } .st-terminal-panel.light .st-terminal-f97 { color: #1f2328; }
+
+/* input row: always in the fallback, and on touch devices (phone keyboards + xterm are unreliable) */
+.st-terminal-row { flex: 0 0 auto; display: flex; align-items: center; gap: 6px; padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px)); background: var(--st-bg2); border-top: 1px solid var(--st-line); min-width: 0; }
+.st-terminal-row[hidden] { display: none !important; }
+.st-terminal-ps { flex: 0 1 auto; max-width: 32%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 12px/1.2 var(--st-mono); color: var(--st-ok); }
+.st-terminal-in { flex: 1 1 auto; min-width: 0; height: 34px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--st-line2); background: var(--st-bg); color: var(--st-text); font: 16px/1 var(--st-mono); outline: none; }
+.st-terminal-in:focus { border-color: var(--st-accent); }
+.st-terminal-key { flex: 0 0 auto; min-width: 34px; height: 34px; padding: 0 6px; border-radius: 6px; border: 1px solid var(--st-line2); background: var(--st-bg3); color: var(--st-muted); font: 600 13px/1 var(--st-mono); touch-action: manipulation; }
+.st-terminal-key:hover { color: var(--st-text); background: var(--st-bg4); }
+.st-terminal-key[data-k="int"] { color: var(--st-err); }
+.st-terminal-run { flex: 0 0 auto; height: 34px; padding: 0 14px; border-radius: 6px; border: 1px solid var(--st-accent); background: var(--st-accent); color: #fff; font-weight: 700; touch-action: manipulation; }
+.st-terminal-row.busy .st-terminal-run { background: var(--st-bg3); border-color: var(--st-line2); color: var(--st-muted); }
+.st-terminal-row.busy .st-terminal-key[data-k="int"] { background: rgba(248, 81, 73, .15); border-color: var(--st-err); }
+
+@media (max-width: 760px) {
+  .st-terminal-host .xterm { padding-left: 6px; }
+  .st-terminal-ps { max-width: 28%; font-size: 11px; }
+  .st-terminal-key { min-width: 32px; padding: 0 4px; }
+  .st-terminal-run { padding: 0 10px; }
+}
+@media (max-width: 380px) {
+  .st-terminal-ps { display: none; }
+}

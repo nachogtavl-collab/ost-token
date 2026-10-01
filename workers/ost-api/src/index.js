@@ -1,6 +1,7 @@
 // Ghost AI v2 — sovereign rebuild. Mounts at /ghost/v2/*
 import { handleGhostV2Request } from './ghost/index.js';
 import { handleMeshRequest }    from './mesh/index.js';
+import { handleStudioRequest } from './studio/hub.js';
 import { handleOstPriceRequest } from './ost-price.js';
 import { handleRealtimeRequest, publishRealtimeEvent } from './realtime.js';
 import { handleWalletPayoutsRequest } from './wallet-payouts.js';
@@ -35,6 +36,7 @@ function withAuthTag(res, tag) {
 import { ensureRpcConfigured as poolEnsureRpc, withRpc as poolWithRpc } from './solana-pool.js';
 
 export { MeshHub } from './mesh/hub.js';
+export { StudioHub } from './studio/hub.js';
 export { RealtimeHub } from './realtime.js';
 export { PayoutGate } from './wallet-payouts.js';
 export { GameSeedHub } from './games-rng.js';
@@ -3190,6 +3192,12 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname.replace(/\/$/, '') || '/';
     const method = request.method;
+
+    // OST Studio (projects, agent tokens, app deploys + serving, AI proxy) -> StudioHub DO.
+    // Before the global OPTIONS answer: Studio's preflight must allow PUT/PATCH/DELETE + Authorization.
+    if (path === '/studio' || path.startsWith('/studio/')) {
+      return handleStudioRequest(request, env);
+    }
 
     if (method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: CORS_HEADERS });

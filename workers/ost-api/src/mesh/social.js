@@ -56,7 +56,7 @@ async function verifyEd25519(walletStr, message, sigB64) {
 function validWallet(w) { try { return typeof w === 'string' && w.length >= 32 && w.length <= 44 && !!new PublicKey(w); } catch (_) { return false; } }
 function cleanEmbed(e) {
   if (!e || typeof e !== 'object') return null;
-  const kind = ['market', 'bet', 'perp', 'game', 'link', 'wallet', 'stock'].includes(e.kind) ? e.kind : 'link';
+  const kind = ['market', 'bet', 'perp', 'game', 'link', 'wallet', 'stock', 'app'].includes(e.kind) ? e.kind : 'link';
   const href = /^#[\w\-=:.%&+,~]{1,200}$/.test(String(e.href || '')) ? String(e.href) : '';
   const img = /^https:\/\/[^\s"'<>]{4,400}$/.test(String(e.img || '')) ? String(e.img) : '';
   const title = clip(e.title, 140).trim(); if (!title) return null;

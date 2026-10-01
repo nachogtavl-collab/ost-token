@@ -1,0 +1,16 @@
+# OST Apps — static hosting for apps deployed from OST Studio.
+#   https://ost-apps.nachogtavl.workers.dev/<slug>/
+# Files live in the StudioHub Durable Object inside `ost-api`; this worker only
+# routes, adds security headers and injects the storage shim + badge into HTML.
+# Deploy AFTER ost-api (the service binding needs it):  npx wrangler deploy
+name = "ost-apps"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+workers_dev = true
+
+# Service binding: env.API.fetch('https://ost-api/studio/v1/...') reaches the
+# ost-api worker directly (no public hop, no edge rate limits, no 1042 errors
+# from workers.dev -> workers.dev fetches).
+[[services]]
+binding = "API"
+service = "ost-api"
