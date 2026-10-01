@@ -470,7 +470,7 @@ if (!window.OST_MESH_APP) {
         <div class="omx-link">${esc(link)}</div>
         <div class="omx-row2"><button class="omx-primary" data-act="copy-link">Copy link</button>${navigator.share ? '<button class="omx-ghost" data-act="share-link">Share…</button>' : '<button class="omx-ghost" data-act="copy-addr">Copy address</button>'}</div></div>
       <div class="omx-card"><h3>Add someone</h3>
-        <div class="omx-steps"><div><b>1</b>Ask for their invite link or QR (Add person → Your invite on their side).</div><div><b>2</b>Scan it here, or paste the link / <code>ost-mesh:</code> address.</div><div><b>3</b>They accept once; after that you both chat and share files any time, even when one of you is offline.</div></div>
+        <div class="omx-steps"><div><b>1</b>Ask for their invite link or QR (Add person → Your invite on their side).</div><div><b>2</b>Scan it here, or paste the link or ost-mesh address.</div><div><b>3</b>They accept once; after that you both chat and share files any time, even when one of you is offline.</div></div>
         <div id="omxScanWrap" hidden><div class="omx-scan"><video id="omxVideo" playsinline muted></video></div><div class="omx-note" id="omxScanStatus"></div></div>
         <div class="omx-row2"><button class="omx-ghost" data-act="scan" id="omxScanBtn">📷 Scan QR</button><button class="omx-ghost" data-act="paste">📋 Paste from clipboard</button></div>
         <input class="omx-input" id="omxAddInput" style="margin-top:8px" placeholder="Paste invite link or ost-mesh:… address" autocomplete="off" spellcheck="false">
