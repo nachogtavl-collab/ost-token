@@ -756,7 +756,7 @@
       const r = await def.run(ctx);
       return typeof r === 'number' ? r : 0;
     } catch (e) {
-      if (e && e.usage) { ctx.err(name + ': ' + e.message); ctx.note("Try '" + name + " --help'."); return 2; }
+      if (e && e.usage) { ctx.err(name + ': ' + oneLine(e.message)); ctx.note("Try '" + name + " --help'."); return 2; }
       if (e && e.name === 'AbortError') return 130;
       ctx.err(name + ': ' + oneLine(e && e.message || e));
       return 1;
@@ -1451,7 +1451,7 @@
     const peers = [];
     results.forEach((r) => { for (const p of Object.keys(r.peer || {})) if (!all[p] && peers.indexOf(p) < 0 && !/^@types\//.test(p)) peers.push(p); });
     ctx.out('Saved ' + plural(specs.length, 'package') + ' to package.json "' + field + '". ' + ctx.col(A.gray, 'They load from esm.sh when you preview, run or build — no node_modules, nothing is downloaded now.') + '\n');
-    if (peers.length) ctx.warn('Peer dependencies not installed: ' + peers.join(', ') + ' — add them with: npm i ' + peers.join(' '));
+    if (peers.length) ctx.warn('Peer dependencies not installed: ' + peers.map(oneLine).join(', ') + ' — add them with: npm i ' + peers.map(oneLine).join(' '));
     ctx.out(ctx.col(A.gray, "Use it:  import … from '" + specs[0].name + "'") + '\n');
     return 0;
   }
@@ -1924,7 +1924,9 @@
     try {
       term = new window.Terminal({
         cursorBlink: true, convertEol: true, scrollback: 5000, fontFamily: monoFont(), fontSize: S.ui.isMobile() ? 12 : 13, lineHeight: 1.2,
-        theme: themeObj(), macOptionIsMeta: true, allowProposedApi: false, drawBoldTextInBrightColors: false, smoothScrollDuration: 0, altClickMovesCursor: false
+        theme: themeObj(), macOptionIsMeta: true, allowProposedApi: false, drawBoldTextInBrightColors: false, smoothScrollDuration: 0, altClickMovesCursor: false,
+        // OSC 8 links: only http(s), opened without an opener (xterm's default has no scheme allow-list).
+        linkHandler: { allowNonHttpProtocols: false, activate(ev, uri) { if (/^https?:\/\//i.test(String(uri || ''))) { try { window.open(uri, '_blank', 'noopener,noreferrer'); } catch (_) {} } } }
       });
       if (window.FitAddon && typeof window.FitAddon.FitAddon === 'function') { T.fit = new window.FitAddon.FitAddon(); term.loadAddon(T.fit); }
       term.open(T.host);

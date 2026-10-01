@@ -121,15 +121,22 @@
     if (p && /[./]/.test(p) && safe(() => S.fs.exists(p), false)) return `<button type="button" class="st-agent-fileref" data-open="${esc(p)}"${m[2] ? ` data-line="${esc(m[2])}"` : ''} title="Open ${esc(p)}">${esc(c)}</button>`;
     return `<code>${esc(c)}</code>`;
   }
-  function inline(s) {
-    const codes = [];
-    s = String(s).replace(/`([^`\n]+)`/g, (_, c) => { codes.push(c); return '\u0000' + (codes.length - 1) + '\u0000'; });
-    let x = esc(s);
-    x = x.replace(/\[([^\]\n]+)\]\(([^)\s]+)\)/g, (m, t, u) => (safeUrl(u) ? `<a href="${u}" target="_blank" rel="noopener noreferrer">${t}</a>` : t));
-    x = x.replace(/(^|[\s(])(https?:\/\/[^\s<\u0000]+[^\s<\u0000.,;:!?)'"])/g, (m, pre, u) => `${pre}<a href="${u}" target="_blank" rel="noopener noreferrer">${u}</a>`);
+  // Links are tokenized out of the RAW text (like code spans) and rebuilt from escaped parts, so no
+  // regex ever runs over generated HTML (a URL inside an href can't be re-linked into a quote breakout).
+  function fmt(x) {
     x = x.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>').replace(/(^|[^\w])__([^_\n]+)__(?!\w)/g, '$1<strong>$2</strong>');
     x = x.replace(/(^|[^\w*])\*([^*\s][^*\n]*?)\*(?![\w*])/g, '$1<em>$2</em>');
-    x = x.replace(/~~([^~\n]+)~~/g, '<del>$1</del>');
+    return x.replace(/~~([^~\n]+)~~/g, '<del>$1</del>');
+  }
+  function anchor(u, textHtml) { return `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${textHtml}</a>`; }
+  function inline(s) {
+    const codes = [], links = [];
+    s = String(s).replace(/[\u0000\u0001]/g, '');
+    s = s.replace(/`([^`\n]+)`/g, (_, c) => { codes.push(c); return '\u0000' + (codes.length - 1) + '\u0000'; });
+    const keep = (html) => { links.push(html); return '\u0001' + (links.length - 1) + '\u0001'; };
+    s = s.replace(/\[([^\]\n]+)\]\(([^()\s"'<>]+)\)/g, (m, t, u) => (safeUrl(u) ? keep(anchor(u, fmt(esc(t)))) : t));
+    s = s.replace(/(^|[\s(])(https?:\/\/[^\s<>"'\u0000\u0001]+[^\s<>"'\u0000\u0001.,;:!?)])/g, (m, pre, u) => pre + keep(anchor(u, esc(u))));
+    const x = fmt(esc(s)).replace(/\u0001(\d+)\u0001/g, (_, n) => links[Number(n)]);
     return x.replace(/\u0000(\d+)\u0000/g, (_, n) => codeSpan(codes[Number(n)]));
   }
   function codeBlock(code, lang) {
@@ -522,6 +529,8 @@
     } catch (_) {}
     return '{}';
   }
+  // The hub slices any tool_call arguments over 24k chars (invalid JSON) — keep every call under that.
+  const ARG_MAX = 20000;
   function buildMessages() {
     const sys = systemMessages();
     const sysSize = sys.reduce((n, m) => n + m.content.length, 0);
@@ -532,7 +541,7 @@
         const calls = (it.tool_calls || []).filter((tc) => tc && tc.id && tc.function);
         if (!it.content && !calls.length) continue;
         const m = { role: 'assistant', content: it.content || '' };
-        if (calls.length) m.tool_calls = calls.map((tc) => ({ id: tc.id, type: 'function', function: { name: tc.function.name, arguments: String(tc.function.arguments || '{}') } }));
+        if (calls.length) m.tool_calls = calls.map((tc) => ({ id: tc.id, type: 'function', function: { name: tc.function.name, arguments: compactArgs(tc.function.arguments || '{}', ARG_MAX) } }));
         msgs.push(m);
         // Every call gets exactly one tool message, right after the assistant message.
         for (const tc of calls) {

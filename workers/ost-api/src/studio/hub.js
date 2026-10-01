@@ -47,7 +47,7 @@ export const LIMITS = {
   fileBytes: 1.5 * MB,
   appsPerOwner: 20,
   deployFiles: 300,
-  deployBytes: 25 * MB,
+  deployBytes: 12 * MB,       // deploy bodies carry binaries as base64 data URLs (+33%) and must fit bodyBytes
   deployFileBytes: 5 * MB,
   tokensPerOwner: 20,
   changeLog: 600,
@@ -67,11 +67,13 @@ export const LIMITS = {
   planActions: 2000,           // file actions per request after folder expansion
   // Storage quotas (decoded bytes of project files + kept deploy versions).
   ownerBytes: 200 * MB,
+  ipBytesPerDay: 512 * MB,     // bytes one client network may add per day (in memory)
   totalBytes: 3 * 1024 * MB,   // override with env STUDIO_MAX_BYTES
   slugClaimsPerOwner: 40,      // published + held slugs
   slugHoldMs: 30 * 24 * 3600 * 1000,
   reportsMax: 5000,
   reportsPerIpHour: 10,
+  adminPerIpHour: 60,
   aiPerWindow: 40,
   aiWindowMs: 10 * 60 * 1000,
   aiPerDay: 400,
@@ -500,15 +502,14 @@ export class StudioHub {
   _hit(map, k, limit, windowMs) {
     const now = Date.now();
     let e = map.get(k);
-    if (!e || now - e.at > windowMs) {
-      if (map.size >= RATE_KEYS_MAX) {
-        // Full: drop finished windows, then the oldest ones (insertion order = window start) — never all.
-        for (const [key, x] of map) if (now - x.at > x.w) map.delete(key);
-        for (const key of map.keys()) { if (map.size < RATE_KEYS_MAX * 0.75) break; map.delete(key); }
-      }
-      e = { at: now, n: 0, w: windowMs }; map.delete(k); map.set(k, e);
-    }
+    if (!e || now - e.at > windowMs) { this._room(map, now); e = { at: now, n: 0, w: windowMs }; map.delete(k); map.set(k, e); }
     return ++e.n > limit ? Math.max(1, Math.ceil((e.at + windowMs - now) / 1000)) : 0;
+  }
+  _room(map, now) {
+    if (map.size < RATE_KEYS_MAX) return;
+    // Full: drop finished windows, then the oldest ones (insertion order = window start) — never all.
+    for (const [key, x] of map) if (now - x.at > x.w) map.delete(key);
+    for (const key of map.keys()) { if (map.size < RATE_KEYS_MAX * 0.75) break; map.delete(key); }
   }
 
   /**
@@ -777,7 +778,7 @@ export class StudioHub {
     }
     if (method === 'GET' && s0 === 'apps' && seg.length === 1) return this.appsList(url);
     if (method === 'GET' && s0 === 'apps' && seg.length === 2) return this.appGet(seg[1]);
-    if (method === 'GET' || method === 'HEAD') return this.routeAuthed(request, url, seg, EMPTY);
+    if (method === 'GET' || method === 'HEAD') return this.routeAuthed(request, url, seg, { bytes: EMPTY });
 
     // A body comes next. Refuse whatever can be refused without it, then read it bounded
     // (bytes are what was signed).
@@ -785,7 +786,10 @@ export class StudioHub {
       if (!SLUG_RE.test(String(seg[1]))) return fail('app_not_found', 404);
       const wait = this.ipRate('rep', ipBucket(request.headers.get('CF-Connecting-IP')), LIMITS.reportsPerIpHour, 3600_000);
       if (wait) return fail('rate_limited', 429, { retryAfter: wait });
-    } else if (!(s0 === 'admin' && seg.length === 1 && method === 'POST')) {
+    } else if (s0 === 'admin' && seg.length === 1 && method === 'POST') {
+      const wait = this.ipRate('adm', ipBucket(request.headers.get('CF-Connecting-IP')), LIMITS.adminPerIpHour, 3600_000);
+      if (wait) return fail('rate_limited', 429, { retryAfter: wait });
+    } else {
       const scope = scopeFor(method, seg);
       if (!scope) return fail('not_found', 404);
       const pre = await this.preAuth(request, scope);
@@ -799,13 +803,14 @@ export class StudioHub {
       return fail(got.error, got.status);
     }
     try {
-      return await this.routeAuthed(request, url, seg, got.bytes);
+      return await this.routeAuthed(request, url, seg, got);   // got.bytes is dropped once parsed
     } finally {
       this.bodyInflight -= got.held;
     }
   }
 
-  async routeAuthed(request, url, seg, bytes) {
+  /** src = { bytes }: the raw body (what was signed); body() drops it once parsed so only one copy stays alive. */
+  async routeAuthed(request, url, seg, src) {
     const method = request.method;
     const s0 = seg[0] || '';
     const ip = ipBucket(request.headers.get('CF-Connecting-IP'));
@@ -813,11 +818,12 @@ export class StudioHub {
     const body = () => {
       if (parsed !== undefined) return parsed;
       parsed = null;
+      const bytes = src.bytes;
       if (!bytes.length) parsed = {};
       else if (bytes.length <= 256 * 1024 || jsonValueCount(bytes, LIMITS.jsonValues) <= LIMITS.jsonValues) {
         try { const v = JSON.parse(utf8Decode(bytes)); parsed = v && typeof v === 'object' ? v : null; } catch (_) { parsed = null; }
       }
-      bytes = EMPTY;                                 // auth already hashed it; only the parsed copy is needed now
+      src.bytes = EMPTY;                             // auth already hashed it; only the parsed copy is needed now
       return parsed;
     };
     const need = async (scope) => {
@@ -828,7 +834,7 @@ export class StudioHub {
         if (!wait && scope === 'deploy') wait = this.rate('d', owner, LIMITS.deploysPerHour, 3600_000);
         return wait;
       };
-      const a = await this.auth(request, url, bytes, scope, gate);
+      const a = await this.auth(request, url, src.bytes, scope, gate);
       if (!a.ok) return a;
       if (a.kind === 'token') { const wait = gate(a.owner); if (wait) return { ok: false, error: 'rate_limited', status: 429, retryAfter: wait }; }
       a.ip = ip;
@@ -860,7 +866,7 @@ export class StudioHub {
       // The reporter is named only when the request carries a valid mesh signature.
       let by = '';
       if (request.headers.get('x-mesh-addr')) {
-        const v = await this.verifyMesh(request, url, bytes, (o) => this.rate('w', o, LIMITS.writesPerWindow, LIMITS.reqWindowMs));
+        const v = await this.verifyMesh(request, url, src.bytes, (o) => this.rate('w', o, LIMITS.writesPerWindow, LIMITS.reqWindowMs));
         if (v.ok) by = v.addr;
       }
       const b = body() || {};
@@ -917,7 +923,7 @@ export class StudioHub {
         const pm = await loadPm(); if (!pm) return fail('project_not_found', 404);
         if (!sub && method === 'PATCH') return this.projectPatch(a, pm, b);
         if (!sub && method === 'DELETE') return this.projectDelete(pm);
-        if (sub === 'file' && method === 'PUT') return this.filePut(a, pm, qpath, bytes);
+        if (sub === 'file' && method === 'PUT') return this.filePut(a, pm, qpath, src.bytes);
         if (sub === 'file' && method === 'DELETE') return this.fileDelete(a, pm, qpath);
         if (sub === 'sync' && method === 'POST') return this.projectSync(a, pm, b);
         return fail('method_not_allowed', 405);
@@ -1014,7 +1020,7 @@ export class StudioHub {
 
     const plan = await this.plan(pm, ops);
     if (plan.error) return fail(plan.error, plan.status || 400, plan.message ? { message: plan.message } : {});
-    const q = await this.quota(a.owner, plan.bytes - (pm.bytes || 0));
+    const q = await this.quota(a, plan.bytes - (pm.bytes || 0));
     if (q.error) return q.error;
     if (created) await this.st.put({ ['proj:' + pid]: pm, ['oproj:' + a.owner + ':' + pid]: 1 });
     const n = await this.apply(pm, plan, a.by);
@@ -1104,7 +1110,7 @@ export class StudioHub {
     try { content = utf8Decode(bytes); } catch (_) { return fail('bad_encoding', 400, { message: 'Send UTF-8 text; binary files go as a data: URL.' }); }
     const plan = await this.plan(pm, [{ op: 'put', path: qpath, content }]);
     if (plan.error) return fail(plan.error, plan.status || 400, plan.message ? { message: plan.message } : {});
-    const q = await this.quota(a.owner, plan.bytes - (pm.bytes || 0));
+    const q = await this.quota(a, plan.bytes - (pm.bytes || 0));
     if (q.error) return q.error;
     await this.apply(pm, plan, a.by);
     const put = plan.actions[0];
@@ -1139,7 +1145,7 @@ export class StudioHub {
     }
     const plan = await this.plan(pm, ops);
     if (plan.error) return fail(plan.error, plan.status || 400, plan.message ? { message: plan.message } : {});
-    const q = await this.quota(a.owner, plan.bytes - (pm.bytes || 0));
+    const q = await this.quota(a, plan.bytes - (pm.bytes || 0));
     if (q.error) return q.error;
     const applied = await this.apply(pm, plan, a.by);
     return json({ ok: true, version: pm.version, applied });
@@ -1304,9 +1310,19 @@ export class StudioHub {
     for (const m of apps.values()) if (m && m.owner === owner) n += appStoredBytes(m);
     return n;
   }
-  /** May `owner` store `delta` more bytes? → { u } | { error: Response }. */
-  async quota(owner, delta) {
+  /**
+   * May caller `a` ({owner, ip}) store `delta` more bytes? → { u } | { error: Response }.
+   * Besides the per-owner and total caps: a banned owner cannot grow its storage, and one client
+   * network may add at most LIMITS.ipBytesPerDay a day (identities are free, networks are not).
+   */
+  async quota(a, delta) {
     if (!(delta > 0)) return {};
+    const owner = a.owner;
+    if (await this.st.get('banned:' + owner)) return { error: fail('account_suspended', 403, { message: 'Storing files is suspended for this account.' }) };
+    const nk = 'bytes:' + (a.ip || 'anon'), now = Date.now();
+    let nb = this.iprl.get(nk);
+    if (!nb || now - nb.at > 24 * 3600_000) { this._room(this.iprl, now); nb = { at: now, n: 0, w: 24 * 3600_000 }; }
+    if (nb.n + delta > LIMITS.ipBytesPerDay) return { error: fail('rate_limited', 429, { retryAfter: Math.max(1, Math.ceil((nb.at + nb.w - now) / 1000)), message: 'Too much uploaded from your network today — try again tomorrow.' }) };
     let u = await this.usage(owner);
     if (u.mine + delta > LIMITS.ownerBytes) {
       // The counter can drift after an interrupted write — recount before refusing.
@@ -1315,6 +1331,7 @@ export class StudioHub {
       if (u.mine + delta > LIMITS.ownerBytes) return { error: fail('storage_quota', 413, { message: 'Your OST Studio storage is full (' + fmtMB(LIMITS.ownerBytes) + ' across cloud projects and published apps) — delete a project or unpublish an app.' }) };
     }
     if (u.total + delta > this.maxTotal()) return { error: fail('storage_full', 507, { message: 'OST Studio storage is full right now — try again later.' }) };
+    nb.n += delta; this.iprl.set(nk, nb);
     return { u };
   }
 
@@ -1427,7 +1444,6 @@ export class StudioHub {
   async deploy(a, pid, b, loadPm) {
     const slug = String(b.slug || '').trim().toLowerCase();
     if (!SLUG_RE.test(slug)) return fail('bad_slug', 400, { message: 'Use 3–40 lowercase letters, digits and dashes (not at the ends).' });
-    if (isReservedSlug(slug)) return fail('slug_reserved', 400, { message: '“' + slug + '” is reserved — pick another name.' });
     // Best-effort owner profile from the directory — external I/O, so before taking the lock.
     let profile = null;
     try { const k = await this.meshKey(a.owner); if (k && k.profile) profile = { name: clip(k.profile.name, 32), emoji: clip(k.profile.emoji, 8) }; } catch (_) {}
@@ -1447,6 +1463,8 @@ export class StudioHub {
     if (holder && holder !== a.owner) return fail('slug_taken', 409);
     const app = g.get('app:' + slug) || null;
     if (app && app.owner !== a.owner) return fail('slug_taken', 409);
+    // Reserved names: refused unless the caller already holds the name (claimed before it was reserved).
+    if (isReservedSlug(slug) && holder !== a.owner && !(app && app.owner === a.owner)) return fail('slug_reserved', 400, { message: '“' + slug + '” is reserved — pick another name.' });
     if (!app) {
       const mine = await this.listAll('oapp:' + a.owner + ':');
       if (mine.size >= LIMITS.appsPerOwner) return fail('app_limit', 403, { message: 'You can publish ' + LIMITS.appsPerOwner + ' apps — unpublish one first.' });
@@ -1506,7 +1524,7 @@ export class StudioHub {
     const vbytes = {};
     for (const v of kept) vbytes[v] = v === ver ? total : Number((app.vbytes && app.vbytes[v]) != null ? app.vbytes[v] : app.bytes) || 0;
     const delta = Object.values(vbytes).reduce((x, y) => x + y, 0) - appStoredBytes(app);
-    const q = await this.quota(a.owner, delta);
+    const q = await this.quota(a, delta);
     if (q.error) return q.error;
     const u = q.u || (delta ? await this.usage(a.owner) : null);
     const vp = 'df:' + slug + ':' + ver + ':';

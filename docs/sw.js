@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ost-pwa-cache-v489';
+const CACHE_NAME = 'ost-pwa-cache-v490';
 const RUNTIME_CACHE = 'ost-pwa-runtime-v260';
 const CACHE_PREFIX = 'ost-pwa-';
 
@@ -115,22 +115,22 @@ const PRECACHE_PATHS = [
   './ost-mesh-call.js?v=1',
   './ost-social.js?v=2',
   './ost-social.css?v=1',
-  './ost-apps-viewer.js?v=1',
+  './ost-apps-viewer.js?v=2',
   './ost-apps-viewer.css?v=1',
   // OST Studio (studio.html) — same ?v= strings as studio.html uses
   './studio.html',
-  './studio/core.js?v=1',
-  './studio/studio.css?v=1',
-  './studio/editor.js?v=1',
-  './studio/editor.css?v=1',
-  './studio/runtime.js?v=1',
-  './studio/runtime.css?v=1',
-  './studio/terminal.js?v=1',
-  './studio/terminal.css?v=1',
-  './studio/agent.js?v=1',
-  './studio/agent.css?v=1',
-  './studio/deploy.js?v=1',
-  './studio/deploy.css?v=1',
+  './studio/core.js?v=2',
+  './studio/studio.css?v=2',
+  './studio/editor.js?v=2',
+  './studio/editor.css?v=2',
+  './studio/runtime.js?v=2',
+  './studio/runtime.css?v=2',
+  './studio/terminal.js?v=2',
+  './studio/terminal.css?v=2',
+  './studio/agent.js?v=2',
+  './studio/agent.css?v=2',
+  './studio/deploy.js?v=2',
+  './studio/deploy.css?v=2',
   './ost-price-client.js?v=204',
   './ost-token-section.js?v=3',
   './assets/ost-metadata.json',

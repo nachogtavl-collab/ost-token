@@ -30,7 +30,7 @@
   const MB = 1024 * 1024;
   const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])$/;
   const RESERVED = new Set(['api', 'www', 'admin', 'ost', 'studio', 'app', 'apps', 'assets']);
-  const DEPLOY_LIMITS = { files: 300, bytes: 25 * MB, fileBytes: 5 * MB };
+  const DEPLOY_LIMITS = { files: 300, bytes: 12 * MB, fileBytes: 5 * MB };
   const PROJ_LIMITS = Object.assign({ fileBytes: 1.5 * MB, projectBytes: 25 * MB, files: 400 }, S.limits || {});
   const NAME_MAX = 60, DESC_MAX = 200;
   const CLOUD_WAIT_MS = 10000;
@@ -124,7 +124,8 @@
     ta.remove(); return ok;
   }
   async function copyLink(url) { const ok = await copyText(url); S.ui.toast(ok ? 'Link copied: ' + hostOf(url) : 'Couldn’t copy — select the link and copy it yourself.', ok ? 'ok' : 'warn'); return ok; }
-  function openUrl(url) { const w = window.open(url, '_blank', 'noopener'); if (!w) S.ui.toast('Your browser blocked the new tab — allow pop-ups, or use the link.', 'warn'); }
+  // window.open with 'noopener' always returns null (HTML spec), so a blocked pop-up can't be detected here.
+  function openUrl(url) { try { window.open(url, '_blank', 'noopener'); } catch (_) { S.ui.toast('Couldn’t open a new tab — use the link instead.', 'warn'); } }
   const pub = (path) => S.api('GET', V1 + path, null, { auth: false });
   function mkErr(code, message, extra) { const e = new Error(message); e.code = code; if (extra) Object.assign(e, extra); return e; }
 
@@ -137,7 +138,7 @@
       case 'network': return navigator.onLine === false ? 'You’re offline — connect to the internet and try again.' : 'Couldn’t reach the OST server. Check your connection and try again.';
       case 'slug_taken': return '“' + (slug || 'That name') + '” belongs to another creator — pick a different name.';
       case 'slug_reserved': case 'bad_slug': return msg || slugError(slug) || 'That name can’t be used.';
-      case 'too_large': return (msg || 'Too large for OST limits.') + ' (Limits: 300 files, 25 MB per deploy, 5 MB per file.)';
+      case 'too_large': return (msg || 'Too large for OST limits.') + ' (Limits: 300 files, 12 MB per deploy, 5 MB per file.)';
       case 'app_limit': return msg || 'You can publish 20 apps — unpublish one in OST Apps first.';
       case 'rate_limited': case 'http_429': return 'Too many requests right now — try again in ' + fmtWait(d.retryAfter) + '.';
       case 'no_index_html': return msg || 'An app needs an index.html at the project root.';
@@ -321,7 +322,7 @@
 
   async function ensureCloud(p0) {
     const t0 = Date.now(), deadline = t0 + CLOUD_WAIT_MS;
-    let target = p0, kicked = false;
+    const target = p0; let kicked = false;
     const cur = () => S.projects.current();
     const same = () => { const c = cur(); return !!c && (c === target || c.id === target.id); };
     if (cur() && cur().cloud) return cur();
@@ -335,8 +336,10 @@
       if (!kicked && Date.now() - t0 > 2500 && S.projects.syncState() !== 'syncing') {
         kicked = true;
         if (!S.id.announced) { try { await S.id.announce(); } catch (_) {} }
+        // syncNow() re-runs the cloud attach in place (never reopen the project: that would reset the
+        // editor's unsaved buffers and stop a running agent request).
         if (S.id.announced && same() && !cur().cloud) {
-          try { const m = await S.projects.open(c.id); if (m) target = m; } catch (_) {}
+          try { const r = S.projects.syncNow(); if (r && r.catch) r.catch(() => {}); } catch (_) {}
         }
       }
       await sleep(250);
@@ -409,8 +412,8 @@
         const n = contentBytes(fp, files[fp]); total += n;
         if (n > DEPLOY_LIMITS.fileBytes) errs.push({ path: fp, text: fp + ' is ' + U.fmtBytes(n) + ' — deployed files are limited to 5 MB.' });
       }
-      if (total > DEPLOY_LIMITS.bytes) errs.push({ path: '', text: 'Deploys are limited to 25 MB — this one is ' + U.fmtBytes(total) + '.' });
-      if (errs.length) throw failStep({ code: 'too_large', title: 'Over OST Apps limits', detail: 'Limits: 300 files, 25 MB per deploy, 5 MB per file.', errors: errs });
+      if (total > DEPLOY_LIMITS.bytes) errs.push({ path: '', text: 'Deploys are limited to 12 MB — this one is ' + U.fmtBytes(total) + '.' });
+      if (errs.length) throw failStep({ code: 'too_large', title: 'Over OST Apps limits', detail: 'Limits: 300 files, 12 MB per deploy, 5 MB per file.', errors: errs });
       step('check', 'ok', plural(paths.length, 'file') + ' · ' + U.fmtBytes(total));
 
       /* 3 · cloud copy (the server checks ownership against it) */

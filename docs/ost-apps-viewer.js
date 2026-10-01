@@ -23,7 +23,9 @@
   var APPS = 'https://ost-apps.nachogtavl.workers.dev';
   var SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])$/;
   var SANDBOX = 'allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads allow-pointer-lock';
-  var ALLOW = 'clipboard-write; fullscreen; camera; microphone; geolocation';
+  // Never delegate camera/mic/location: grants are keyed to the top-level OST origin, so an untrusted
+  // app would inherit them silently. Apps that need devices use "Open in new tab" (their own origin).
+  var ALLOW = 'clipboard-write; fullscreen';
   var META_TIMEOUT = 8000, SLOW_AFTER = 15000;
 
   var st = { slug: '', open: false, gen: 0, name: '', author: '', authorPlain: '', desc: '', prevFocus: null, ctl: null, slowT: 0 };

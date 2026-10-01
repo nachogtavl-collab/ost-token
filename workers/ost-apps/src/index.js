@@ -601,7 +601,8 @@ async function serveApp(request, env, url, slug, rest) {
   if (status >= 300 && status < 400 && status !== 304) {
     const loc = res.headers.get('location') || '';
     try { res.body && res.body.cancel(); } catch (_) {}
-    const mapped = mapLocation(loc, slug);
+    // Relative Locations (e.g. './guide/' for /docs/guide) resolve against the URL that was actually requested.
+    const mapped = mapLocation(loc, slug, 'https://ost-api' + API_BASE + '/serve/' + encodeURIComponent(slug) + '/' + rest);
     if (!mapped) return wantsDocument(request, rest) ? errorPage(method, 502, slug) : textResponse('Bad upstream redirect', 502, method);
     const h = new Headers({ location: mapped, 'cache-control': res.headers.get('cache-control') || 'no-cache' });
     secure(h);
@@ -630,10 +631,10 @@ async function serveApp(request, env, url, slug, rest) {
   return finishFile(res, request, slug, stripped);
 }
 
-function mapLocation(loc, slug) {
+function mapLocation(loc, slug, base) {
   if (!loc) return '';
   let u;
-  try { u = new URL(loc, 'https://ost-api' + API_BASE + '/serve/' + slug + '/'); } catch (_) { return ''; }
+  try { u = new URL(loc, base || ('https://ost-api' + API_BASE + '/serve/' + slug + '/')); } catch (_) { return ''; }
   const prefix = API_BASE + '/serve/' + slug + '/';
   if (u.pathname === API_BASE + '/serve/' + slug) return '/' + slug + '/' + u.search;
   if (u.pathname.startsWith(prefix)) return '/' + slug + '/' + u.pathname.slice(prefix.length) + u.search;

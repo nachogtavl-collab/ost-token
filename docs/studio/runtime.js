@@ -742,7 +742,7 @@
   /* ---- runner host: the hidden sandboxed iframe that owns the workers ---- */
   function OST_RUNNER(C) {
     'use strict';
-    var P = window.parent, jobs = Object.create(null), py = null, urls = {};
+    var P = window.parent, jobs = Object.create(null), py = null, urls = {}, cancelled = Object.create(null);
     function post(m) { try { P.postMessage(m, '*'); } catch (e) {} }
     function blobUrl(k) { return urls[k] || (urls[k] = URL.createObjectURL(new Blob([C[k]], { type: 'text/javascript' }))); }   // one URL per worker kind, reused
     function end(id) { var j = jobs[id]; if (!j) return; delete jobs[id]; if (j.kind === 'js') { try { j.w.terminate(); } catch (e) {} } }
@@ -769,6 +769,7 @@
         var d = ev.data; if (!d || typeof d !== 'object' || py !== me) return;
         if (d.type === 'fatal') { killPy('Python crashed (out of memory or too deep recursion) and was restarted — run it again.'); return; }
         var id = String(d.id || ''); if (!me.ids[id]) return;
+        if (d.type === 'exec-start' && cancelled[id]) { killPy('stopped'); return; }   // cancelled while it was starting
         var o = {}; for (var k in d) o[k] = d[k]; post(o);
         if (o.type === 'done') { delete me.ids[id]; delete jobs[id]; }
       };
@@ -788,7 +789,7 @@
       if (m.type === 'run-js') runJs(m);
       else if (m.type === 'run-py') runPy(m, 'run');
       else if (m.type === 'repl-py') runPy(m, 'repl');
-      else if (m.type === 'cancel') { if (py && py.ids[id]) py.w.postMessage({ type: 'cancel', id: id }); }
+      else if (m.type === 'cancel') { if (py && py.ids[id]) { cancelled[id] = 1; py.w.postMessage({ type: 'cancel', id: id }); } }
       else if (m.type === 'stop') {
         if (id === '*') { Object.keys(jobs).forEach(function (k) { if (jobs[k] && jobs[k].kind === 'js') { end(k); post({ type: 'done', id: k, ok: false, error: 'stopped' }); } }); killPy('stopped'); return; }
         var j = jobs[id]; if (!j) return;
@@ -2370,7 +2371,7 @@
   // manual = the user (or the agent) asked for this run — it may start a preview that froze the tab last time
   function refresh(manual) {
     if (manual) PV.manual = true;
-    if (PV.building) { if (PV.stale || (manual && pvFroze(projectId()))) PV.again = true; return PV.building; }   // nothing changed since this build began → reuse it
+    if (PV.building) { if (PV.stale || (manual && (pvFroze(projectId()) || (S.projects.current() || {}).fromLink))) PV.again = true; return PV.building; }   // nothing changed since this build began → reuse it
     PV.building = (async () => {
       try { do { PV.again = false; await doRefresh(); } while (PV.again); }
       catch (e) { pvStatus('err', '✕ ' + (e.message || e)); line('error', 'Preview failed: ' + (e && e.message || e), 'build'); }
@@ -2395,6 +2396,14 @@
     }
     PV.page = page; paintPageBtn();
     const manual = PV.manual; PV.manual = false;
+    if (manual) PV.linkOk = proj;                       // the user chose to run this project's code
+    if (proj.fromLink && PV.linkOk !== proj) {          // imported from a #new= link and not run or edited yet
+      unmountPreview(); showOverlay([]);
+      pvMessage('This project was opened from a link, so its code has not run yet. Look through the files first, then press ⟳ (or ▶ Run) to start the preview.');
+      pvStatus('idle', '⏸ Not run yet', 'Press ⟳ to run the preview');
+      PV.stale = true;
+      return;
+    }
     if (pvFroze(proj.id)) {
       if (!manual) {
         unmountPreview(); showOverlay([]);
@@ -2565,8 +2574,14 @@
     else { unmountPreview(); PV.stale = true; }
   });
   S.bus.on('project:open', (e) => {
-    const id = e && e.project && e.project.id;
+    const proj = e && e.project, id = proj && proj.id;
     if (id && id === PV.pid) return;                  // rename re-emits project:open
+    if (proj && proj === PV.meta && PV.pid) {          // same project, id re-assigned by the cloud: re-key, keep the preview
+      const st = PV.storage.get(PV.pid); if (st) { PV.storage.delete(PV.pid); PV.storage.set(id, st); }
+      PV.pid = id; if (ARMED.size) writeArm();
+      return;
+    }
+    PV.meta = proj || null; PV.linkOk = null;
     PV.pid = id || '';
     PV.page = 'index.html'; PV.history = []; PV.cssLinked = new Map(); paintPageBtn();
     PROB.clear(); renderProblems(); applyMarkers();
@@ -2575,11 +2590,12 @@
     const k = U.projectKind();
     const web = k === 'web' || k === 'react' || k === 'static';
     const autoToggle = (on) => { PV.autoToggle = true; try { S.ui.togglePreview(on); } finally { PV.autoToggle = false; } };
-    if (web && !isPreviewVisible() && !S.ui.isMobile() && S.settings.get('preview.visible', true) !== false) { autoToggle(true); return; }   // → toggle handler builds
+    // a project imported from a link never starts its own preview — the user presses Run/Preview first
+    if (web && !(proj && proj.fromLink) && !isPreviewVisible() && !S.ui.isMobile() && S.settings.get('preview.visible', true) !== false) { autoToggle(true); return; }   // → toggle handler builds
     if (!web && isPreviewVisible() && !S.ui.isMobile()) { autoToggle(false); return; }                                                   // nothing to preview
     if (isPreviewVisible()) refresh(); else unmountPreview();
   });
-  S.bus.on('project:close', () => { PV.pid = ''; unmountPreview(); pvMessage('Open a project to preview it.'); pvStatus('idle', ''); showOverlay([]); PROB.clear(); renderProblems(); applyMarkers(); for (const j of [...RUNS.values()]) stopJob(j, 'stopped'); });
+  S.bus.on('project:close', () => { PV.pid = ''; PV.meta = null; PV.linkOk = null; unmountPreview(); pvMessage('Open a project to preview it.'); pvStatus('idle', ''); showOverlay([]); PROB.clear(); renderProblems(); applyMarkers(); for (const j of [...RUNS.values()]) stopJob(j, 'stopped'); });
 
   buildConsole(S.ui.registerPanel({ id: 'console', title: 'Console', order: 20 }));
   PROB_EL = S.ui.registerPanel({ id: 'problems', title: 'Problems', order: 30 });

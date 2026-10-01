@@ -774,8 +774,9 @@
     const content = S.fs.read(p);
     if (content == null) return;
     if (S.fs.isBinary(p)) { if (be && be.has(p)) be.drop(p); if (st.active === p) show(p); return; }
-    // Our own save echoing back from the cloud while newer keystrokes wait to be saved.
-    if (source === 'cloud' && st.pending.has(p) && content === st.lastSaved.get(p)) return;
+    // Keystrokes still waiting in the save delay: either our own save echoing back, or a cloud/agent change
+    // racing the user's unsaved edit. The user's edit wins — flush it so it becomes dirty and pushes.
+    if (source === 'cloud' && st.pending.has(p)) { if (content !== st.lastSaved.get(p)) save(p); return; }
     if (be && be.has(p)) { cancelPending(p); be.external(p, content); }
     if (st.active === p && (st.shown === 'media' || st.shown === 'loading') && !st.svgPreview.has(p)) show(p);
     else if (st.active === p && st.svgPreview.has(p)) showMedia(p);
@@ -1214,9 +1215,20 @@
   const JUNK_DIR = /(^|\/)(node_modules|\.git|\.next|\.cache|__pycache__|\.venv)(\/|$)/;
   const JUNK_FILE = /(^|\/)(\.DS_Store|Thumbs\.db|desktop\.ini)$/i;
   async function readUpload(file, path) {
-    let binary = !U.isTextPath(path);
-    if (!binary) { try { const head = new Uint8Array(await file.slice(0, 8192).arrayBuffer()); if (head.includes(0)) binary = true; } catch (_) {} }
-    if (!binary) { let t = await file.text(); if (t.charCodeAt(0) === 0xfeff) t = t.slice(1); return { content: t, binary: false }; }
+    const binary = !U.isTextPath(path);
+    if (!binary) {
+      // A text-type path is always stored as text (the server decides binary from the path alone), so never
+      // turn it into a data URL. UTF-16 files (Windows exports) are decoded; other NUL-bearing content is refused.
+      let head = null;
+      try { head = new Uint8Array(await file.slice(0, 8192).arrayBuffer()); } catch (_) {}
+      if (head && head.includes(0)) {
+        const enc = head[0] === 0xff && head[1] === 0xfe ? 'utf-16le' : head[0] === 0xfe && head[1] === 0xff ? 'utf-16be' : '';
+        if (!enc) { const e = new Error('binary data in a text-type file — rename it (e.g. .bin) to upload it as binary'); e.userMsg = true; throw e; }
+        let t = new TextDecoder(enc).decode(await file.arrayBuffer()); if (t.charCodeAt(0) === 0xfeff) t = t.slice(1);
+        return { content: t, binary: false };
+      }
+      let t = await file.text(); if (t.charCodeAt(0) === 0xfeff) t = t.slice(1); return { content: t, binary: false };
+    }
     const url = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result || '')); r.onerror = () => rej(r.error || new Error('read failed')); r.readAsDataURL(file); });
     const mime = (file.type && /^[\w.+-]+\/[\w.+-]+$/.test(file.type) ? file.type : '') || U.mimeOf(path);
     const i = url.indexOf(';base64,');
@@ -1266,7 +1278,7 @@
       if (prev == null && count >= L.files) { skipped.push(`${path} (project limit: ${L.files} files)`); continue; }
       if (total - (prev || 0) + file.size > L.projectBytes) { skipped.push(`${path} (project limit: ${U.fmtBytes(L.projectBytes)})`); continue; }
       let r;
-      try { r = await readUpload(file, path); } catch (_) { skipped.push(path + ' (could not be read)'); continue; }
+      try { r = await readUpload(file, path); } catch (e) { skipped.push(path + ' (' + (e && e.userMsg ? e.message : 'could not be read') + ')'); continue; }
       try { await S.fs.write(path, r.content, { source: 'user', binary: r.binary }); } catch (e) { skipped.push(`${path} (${e.message})`); continue; }
       if (prev == null) count++;
       total += file.size - (prev || 0); sizeOf.set(path, file.size);

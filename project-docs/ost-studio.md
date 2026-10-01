@@ -164,7 +164,7 @@ up from MeshHub `/mesh/v1/identity/lookup`) **or** `Authorization: Bearer ostk_�
 | GET `/agents.md` | – | – | markdown: how an external coding agent uses this API |
 
 Limits: 50 projects/owner, 400 files & 25 MB per project, 1.5 MB per project file; 20 apps/owner,
-300 files & 25 MB per deploy, 5 MB per deployed file; slug `^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])$`,
+300 files & 12 MB per deploy (request bodies are capped at 16 MB), 5 MB per deployed file; slug `^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])$`,
 first deployer owns it; reserved slugs (`api`, `www`, `admin`, `ost`, `studio`, `app`, `apps`, `assets`).
 AI: 40 requests / 10 min / owner, Groq `llama-3.3-70b-versatile` (OpenAI-compatible, tools) →
 fallback `llama-3.1-8b-instant` → Workers AI `@cf/meta/llama-3.3-70b-instruct-fp8-fast`.

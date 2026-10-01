@@ -311,10 +311,10 @@
       if (!meta.fromLink) attachCloud().catch(() => {});
       return meta;
     },
-    async open(id) {
+    async open(id, o) {
       let meta = await store.getProject(id).catch(() => null);
       if (meta) {
-        if (meta.fromLink) { delete meta.fromLink; store.putProject(meta).catch(() => {}); }     // opened on purpose: a normal project now
+        if (meta.fromLink && !(o && o.fromLink)) { delete meta.fromLink; store.putProject(meta).catch(() => {}); }     // opened on purpose: a normal project now
         await loadInto(meta, (await store.filesOf(id).catch(() => [])) || []);
         if (meta.cloud) { pull().catch(() => {}); push().catch(() => {}); } else attachCloud().catch(() => {});
         return meta;
@@ -372,7 +372,10 @@
     P.attaching = true;
     setSync('syncing', 'uploading');
     const snapGen = P.gen;                                                // edits after this point are not in the upload
-    const files = {}; for (const [p, f] of P.files) files[p] = f.content;
+    // The first request carries up to ~6 MB; anything beyond goes through the normal push queue
+    // (request bodies are capped server side, and binaries travel as base64).
+    const files = {}, rest = []; let bytes = 0;
+    for (const [p, f] of P.files) { const n = (f.content || '').length; if (bytes && bytes + n > 6000000) { rest.push(p); continue; } files[p] = f.content; bytes += n; }
     try {
       const j = await api('POST', '/studio/v1/projects', { id: pid, name: P.cur.name, template: P.cur.template, files });
       if (!P.cur || P.cur.id !== pid) return;
@@ -385,10 +388,12 @@
       }
       P.cur.cloud = true; P.cur.version = j.version || 0; P.cur.pulled = 0; P.lastPulled = 0;
       for (const [p, d] of [...P.dirty]) if (d.gen <= snapGen) P.dirty.delete(p);
+      for (const p of rest) if (P.files.has(p) && !P.dirty.has(p)) P.dirty.set(p, { op: 'put', gen: ++P.gen });
       P.blocked = new Map(); savePending();
       await store.putProject(P.cur);
       if (moved) bus.emit('project:open', { project: P.cur });          // same meta object, new id: modules re-key their state
       setSync(...settledState());
+      if (rest.length) push().catch(() => {});
       await pull();
     } catch (e) {
       if (REFUSED.has(e.code)) P.attachBlocked = e.message;               // do not re-upload the same refused files every few seconds
@@ -757,7 +762,7 @@
         for (const p of local) {
           const have = (await store.filesOf(p.id).catch(() => [])) || [];
           const same = have.length === paths.length && have.every((f) => files[f.path] === f.content);
-          if (same) { await projects.open(p.id); return true; }
+          if (same) { await projects.open(p.id, { fromLink: true }); return true; }
         }
         // Anyone can make a link like this, so nothing is created, synced or run until the user says so.
         const list = paths.slice(0, 6).join(', ') + (paths.length > 6 ? ', …' : '');
