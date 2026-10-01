@@ -110,7 +110,24 @@ const TOKEN_ID_RE = /^tok_[0-9a-f]{12}$/;
 const SCOPES = ['read', 'write', 'deploy'];
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
+const GROQ_MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];       // used until the live list is known
+// Groq retires models; the hub reads its live model list and takes the best tool-capable ones it offers.
+const GROQ_PREFER = [/gpt-oss-120b/, /kimi-k2/, /llama-4-maverick/, /llama-3\.3-70b/, /qwen3?-32b/, /llama-4-scout/, /gpt-oss-20b/, /llama-3\.1-8b/];
+const GROQ_SKIP = /whisper|tts|guard|playai|orpheus|distil|compound|safeguard|vision/i;
+let groqModels = { at: 0, list: null };
+async function groqModelList(key) {
+  if (groqModels.list && Date.now() - groqModels.at < 6 * 3600_000) return groqModels.list;
+  try {
+    const r = await fetch('https://api.groq.com/openai/v1/models', { headers: { Authorization: 'Bearer ' + key } });
+    const j = await r.json().catch(() => null);
+    const ids = ((j && j.data) || []).filter((m) => m && m.id && m.active !== false && !GROQ_SKIP.test(m.id)).map((m) => m.id);
+    const picked = [];
+    for (const re of GROQ_PREFER) { const id = ids.find((x) => re.test(x) && !picked.includes(x)); if (id) picked.push(id); if (picked.length >= 2) break; }
+    if (picked.length) { groqModels = { at: Date.now(), list: picked }; return picked; }
+  } catch (_) {}
+  groqModels = { at: Date.now() - 5.5 * 3600_000, list: GROQ_MODELS };   // retry discovery in ~30 min
+  return GROQ_MODELS;
+}
 const WORKERS_AI_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
 const SERVER_SYSTEM = [
   'You are the OST Studio coding agent. OST Studio is a VS Code-style IDE inside the OST web app (Solana devnet — test tokens, never real money).',
@@ -1773,7 +1790,8 @@ export class StudioHub {
     const full = [{ role: 'system', content: SERVER_SYSTEM }, ...messages.map((m) => (m.role === 'system' ? { role: 'system', content: CLIENT_CONTEXT + m.content } : m))];
     const errors = [];
     if (this.env.GROQ_API_KEY) {
-      for (const model of GROQ_MODELS) {
+      const models = await groqModelList(this.env.GROQ_API_KEY);
+      for (const model of models) {
         try {
           const ctl = new AbortController(); const timer = setTimeout(() => ctl.abort(), 55_000);
           let r;
@@ -1785,7 +1803,7 @@ export class StudioHub {
             });
           } finally { clearTimeout(timer); }
           const j = await r.json().catch(() => null);
-          if (!r.ok || !j || !Array.isArray(j.choices) || !j.choices[0]) { errors.push(model + ': ' + ((j && j.error && (j.error.code || j.error.message)) || ('http_' + r.status))); continue; }
+          if (!r.ok || !j || !Array.isArray(j.choices) || !j.choices[0]) { const code = (j && j.error && (j.error.code || j.error.message)) || ('http_' + r.status); if (/model_not_found|decommissioned/.test(String(code))) groqModels.at = 0; errors.push(model + ': ' + code); continue; }
           return json({ ok: true, message: normalizeAiMessage(j), model, usage: j.usage || null });
         } catch (e) { errors.push(model + ': ' + String((e && e.message) || e).slice(0, 120)); }
       }
@@ -1794,7 +1812,8 @@ export class StudioHub {
       try {
         const out = await this.env.AI.run(WORKERS_AI_MODEL, { messages: toWorkersAiMessages(full), ...(tools.length ? { tools } : {}), temperature: 0.2, max_tokens: 4096 });
         const message = normalizeAiMessage(out, tools.map((t) => t.function.name));
-        if (message.content || message.tool_calls) return json({ ok: true, message, model: WORKERS_AI_MODEL });
+        if (errors.length) console.warn('studio ai fallback', errors.join(' | ').slice(0, 600));
+        if (message.content || message.tool_calls) return json({ ok: true, message, model: WORKERS_AI_MODEL, fallback: errors.map((e) => String(e).slice(0, 100)) });
         errors.push('workers-ai: empty reply');
       } catch (e) { errors.push('workers-ai: ' + String((e && e.message) || e).slice(0, 120)); }
     } else errors.push('workers-ai: not bound');
