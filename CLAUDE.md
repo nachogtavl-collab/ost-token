@@ -49,6 +49,11 @@ Rules:
 - Portfolio = the positions view in `ost-predict-mobile.js` (`openPositions`): local ledger instantly, then `OST_PREDICTION_API.syncOrders()` (wallet) + `refreshResolutions()`; open tickets are marked to the live price; claim/sell go through `cashOut`.
 - Parlays (`ost-parlay.js`) spend the credits pool only; slips mirror into the ledger as `source:'ost-parlay'` credits rows that the desk must never cash out (guard in `getPredictionOrderAction`). Venue legs settle via `/gamma/markets/:id`; `settleScan` re-reads slips before writing.
 
+## Mirror stock markets + perps
+
+- Spot mirror = `docs/stock-market.js` (1x, long-only UI) on the worker PlayLedger (`/play/stock/*`, Yahoo-priced server side). `loadOrders` merges `OST_PLAY.stockPositions()` so server positions survive devices.
+- **Perps = `workers/ost-api/src/perp-ledger.js`** (mixin installed on `PlayLedger`, same play balance) + `docs/ost-perps.js/.css` (a "Perps" mode toggle inside `#stock-market`). Routes: `GET /play/perp/markets`, `GET /play/perp/positions?wallet=`, `POST /play/perp/open {wallet,symbol,side,margin,leverage}`, `POST /play/perp/close {wallet,id}` (POSTs need the ost-auth signature). Fixed universe `PERP_MARKETS` (crypto 20x 24/7, stocks/indexes 10x in market hours; a stale stock quote = `market_closed`). Math lives in `settleAt()`: isolated margin, MMR 0.5%, 0.05% fee open+close, 2%-of-profit edge, funding = base 0.01%/8h ± OI skew snapshotted at open. The DO alarm (`alarm()` → `perpSweep`) liquidates crossed positions every 60s; max loss is margin, payouts are bankroll-capped. Client math in `ost-perps.js` mirrors the server (`liqPrice`, `markPos`) for previews only — never credits anything. Deploy the worker with `npx wrangler deploy` from `workers/ost-api` (needs `npm install` there first).
+
 ## Conventions
 
 - Vanilla JS IIFEs, no modules/bundler. New features = new self-contained file + `<script>` tag in the html + add to `docs/sw.js` PRECACHE (and bump its cache version).

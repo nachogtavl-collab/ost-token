@@ -27,6 +27,7 @@
 import { PublicKey } from '@solana/web3.js';
 import * as Pool from './solana-pool.js';
 import { GAMES, MULTI, computeBet, layoutFor, randomSeedHex, sha256Hex } from './play-games.js';
+import { installPerps } from './perp-ledger.js';   // perpetual futures on mirrored markets (same balance)
 
 const MAX_BATCH = 50;          // auto-bet: at most N nonces per /play/bet call
 const POOL_CACHE_MS = 20000;   // re-read pool OSTG for solvency at most this often
@@ -472,6 +473,7 @@ export class PlayLedger {
       if (path === '/play/meme/buy' && method === 'POST') return await this.handleMemeBuy(request);
       if (path === '/play/meme/sell' && method === 'POST') return await this.handleMemeSell(request);
 
+      if (path.startsWith('/play/perp/')) { const pr = await this.routePerp(path, method, request, url); if (pr) return pr; }
       if (path === '/play/stock/positions' && method === 'GET') return await this.handleStockPositions(url);
       if (path === '/play/stock/open' && method === 'POST') return await this.handleStockOpen(request);
       if (path === '/play/stock/close' && method === 'POST') return await this.handleStockClose(request);
@@ -1214,3 +1216,6 @@ export class PlayLedger {
     }, solvent ? 200 : 500);
   }
 }
+
+// Perps (leverage, funding, liquidation sweep) share this ledger's balance and lock.
+installPerps(PlayLedger);

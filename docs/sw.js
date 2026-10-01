@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ost-pwa-cache-v484';
-const RUNTIME_CACHE = 'ost-pwa-runtime-v255';
+const CACHE_NAME = 'ost-pwa-cache-v485';
+const RUNTIME_CACHE = 'ost-pwa-runtime-v256';
 const CACHE_PREFIX = 'ost-pwa-';
 
 const PRECACHE_PATHS = [
@@ -34,7 +34,7 @@ const PRECACHE_PATHS = [
   './ost-mesh-desk.css?v=2',
   './ost-markets-pro.css?v=3',
   './ost-markets-pro.js?v=7',
-  './ost-market-chart.js?v=2',
+  './ost-market-chart.js?v=3',
   './ost-market-chart.css?v=1',
   './ost-market-art.js?v=1',
   './ost-market-art.css?v=1',
@@ -179,7 +179,9 @@ const PRECACHE_PATHS = [
   './i18n-runtime.js?v=4',
   './devnet-rescue.js?v=205',
   './launchpad-trenches.js?v=7',
-  './stock-market.js?v=15',
+  './stock-market.js?v=16',
+  './ost-perps.js?v=1',
+  './ost-perps.css?v=1',
   './topup.js?v=13',
   './live-watch.css?v=5',
   './live-watch.js?v=200',

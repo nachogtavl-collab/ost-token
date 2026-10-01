@@ -302,10 +302,21 @@
       return;
     }
     try {
-      var response = await fetch(base + '/stocks/orders/' + encodeURIComponent(wallet), { cache: 'no-store' });
-      var payload = response.ok ? await response.json() : null;
+      // KV order records (opens/closes this client posted) + the SERVER's open
+      // positions (PlayLedger) — the latter is what actually holds the money, so a
+      // position opened on another device, or after localStorage was cleared,
+      // still shows and can still be closed from here.
+      var results = await Promise.all([
+        fetch(base + '/stocks/orders/' + encodeURIComponent(wallet), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }),
+        (window.OST_PLAY && typeof OST_PLAY.stockPositions === 'function') ? Promise.resolve(OST_PLAY.stockPositions()).catch(function () { return []; }) : Promise.resolve([])
+      ]);
+      var payload = results[0];
       var remoteOrders = payload && Array.isArray(payload.orders) ? payload.orders : [];
-      state.orders = mergeOrders(remoteOrders, localOrders, wallet);
+      var serverOpen = (Array.isArray(results[1]) ? results[1] : []).map(function (p) {
+        return { id: p.id, serverPos: true, wallet: wallet, symbol: p.symbol, side: 'buy', price: p.entryPrice, entryPrice: p.entryPrice, shares: p.shares,
+          notionalUsd: Number(p.shares) * Number(p.entryPrice), ostStake: p.stake, status: 'ost-mirror-open', quoteSource: 'server', createdAt: p.openedAt };
+      });
+      state.orders = mergeOrders(remoteOrders.concat(serverOpen), localOrders, wallet);
       saveLocalOrdersForWallet(wallet, state.orders);
       renderOrders();
     } catch (error) {
@@ -372,7 +383,7 @@
     if (!canvas) return;
     var ctx = canvas.getContext('2d');
     var rect = canvas.getBoundingClientRect();
-    var width = Math.max(420, Math.floor(rect.width || 860));
+    var width = Math.max(280, Math.floor(rect.width || 860));
     var height = 280;
     var ratio = window.devicePixelRatio || 1;
     canvas.width = width * ratio;
@@ -628,10 +639,13 @@
       order.exitPrice = nowPrice;
       stockHouseFee = Number(cres.fee) || 0;
       var payoutOst = Number(cres.payout) || 0;
+      var ostDeltaSrv = payoutOst - (Number(order.ostStake) || 0);
+      var pctSrv = entryPrice > 0 ? (((nowPrice - entryPrice) / entryPrice) * 100) : 0;
       pnl = {
-        ostDelta: payoutOst - (Number(order.ostStake) || 0),
+        ostDelta: ostDeltaSrv,
         usdDelta: shares * (nowPrice - entryPrice),
-        pctText: (entryPrice > 0 ? (((nowPrice - entryPrice) / entryPrice) * 100) : 0).toFixed(2) + '%',
+        ostText: (ostDeltaSrv >= 0 ? '+' : '−') + Math.abs(ostDeltaSrv).toFixed(2) + ' OST',
+        pctText: (pctSrv >= 0 ? '+' : '') + pctSrv.toFixed(2) + '%',
         payoutOst: payoutOst,
         exitPrice: nowPrice
       };

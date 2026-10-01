@@ -229,20 +229,28 @@
       }
       return null;
     }
+    var pctScale = opt.scale !== 'price';
+    var fmtV = opt.fmt || (pctScale ? function (v) { return Math.round(v) + '%'; } : function (v) { return String(Math.round(v * 100) / 100); });
     var lo = Infinity, hi = -Infinity; pts.forEach(function (p) { if (p.y < lo) lo = p.y; if (p.y > hi) hi = p.y; });
-    var padV = Math.max(2, (hi - lo) * 0.18); lo = Math.max(0, lo - padV); hi = Math.min(100, hi + padV);
-    if (hi - lo < 5) { var mid = (hi + lo) / 2; lo = Math.max(0, mid - 2.5); hi = Math.min(100, mid + 2.5); }
+    if (pctScale) {
+      var padV = Math.max(2, (hi - lo) * 0.18); lo = Math.max(0, lo - padV); hi = Math.min(100, hi + padV);
+      if (hi - lo < 5) { var mid = (hi + lo) / 2; lo = Math.max(0, mid - 2.5); hi = Math.min(100, mid + 2.5); }
+    } else {
+      var span0 = (hi - lo) || Math.abs(hi) * 0.01 || 1; lo -= span0 * 0.18; hi += span0 * 0.18;
+    }
+    if (opt.axis && opt.padRight) padR = opt.padRight;
     var t0 = pts[0].t, t1 = pts[pts.length - 1].t; if (t1 <= t0) t1 = t0 + 1;
     var X = function (t) { return padL + (t - t0) / (t1 - t0) * (w - padL - padR); };
     var Y = function (v) { return padT + (1 - (v - lo) / (hi - lo)) * (h - padT - padB); };
     var col = COL[side];
+    if (opt.color === 'auto') col = pts[pts.length - 1].y >= pts[0].y ? COL.yes : COL.no;
     if (axis) {
       x.font = mono; x.textAlign = 'left'; x.textBaseline = 'middle';
       var liveY = Y(pts[pts.length - 1].y);
       [0, .5, 1].forEach(function (f) {
         var v = lo + (hi - lo) * f, gy = Y(v);
         x.strokeStyle = 'rgba(127,216,255,.09)'; x.lineWidth = 1; x.beginPath(); x.moveTo(padL, gy); x.lineTo(w - padR, gy); x.stroke();
-        if (Math.abs(gy - liveY) > 12) { x.fillStyle = 'rgba(160,184,203,.7)'; x.fillText(Math.round(v) + '%', w - padR + 6, gy); }
+        if (Math.abs(gy - liveY) > 12) { x.fillStyle = 'rgba(160,184,203,.7)'; x.fillText(fmtV(v), w - padR + 6, gy); }
       });
       x.textBaseline = 'alphabetic'; x.fillStyle = 'rgba(160,184,203,.6)';
       var span = t1 - t0, nT = Math.max(2, Math.min(6, Math.floor((w - padL - padR) / 110)));
@@ -260,7 +268,7 @@
     if (axis) {
       // live value tag on the right axis
       x.fillStyle = 'rgb(' + col + ')'; x.font = 'bold ' + mono; x.textAlign = 'left'; x.textBaseline = 'middle';
-      var tag = lp.y.toFixed(lp.y < 1 || lp.y > 99 ? 1 : 0) + '%'; var tw = x.measureText(tag).width + 8;
+      var tag = pctScale ? (lp.y.toFixed(lp.y < 1 || lp.y > 99 ? 1 : 0) + '%') : fmtV(lp.y); var tw = x.measureText(tag).width + 8;
       x.globalAlpha = .18; x.fillRect(w - padR + 2, ly - 8, tw, 16); x.globalAlpha = 1; x.fillText(tag, w - padR + 6, ly);
       x.beginPath(); x.arc(lx, ly, 6.5, 0, 7); x.fillStyle = 'rgba(' + col + ',.25)'; x.fill();
     }
