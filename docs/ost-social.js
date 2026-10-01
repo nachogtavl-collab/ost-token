@@ -14,7 +14,9 @@
  *   Alerts    likes, comments, follows, tips — pushed live over the hub socket
  *   Site      "Share" on the market page, "share your bet" after a trade,
  *             attach a bet / market / perp / wallet to a post; #social, #post=,
- *             #u= deep links; Social link in the desktop nav and appbar
+ *             #u= deep links; Social link in the desktop nav and appbar;
+ *             OST Studio apps: `app` embeds open in the apps viewer (#app=),
+ *             #share-app=<slug> composes a post with the app attached
  * window.OST_SOCIAL.{ open, compose, share, profile, post, pay }
  * ========================================================================== */
 (function boot() {
@@ -133,8 +135,8 @@
   }
   function embedHtml(e) {
     if (!e) return '';
-    const ico = { market: '📈', bet: '🎯', perp: '⚡', game: '🎮', wallet: '👛', stock: '💹', link: '🔗' }[e.kind] || '🔗';
-    return `<button class="osl-embed" data-act="sx-embed" data-href="${esc(e.href || '')}">${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : `<b>${ico}</b>`}<span><em>${esc(e.kind === 'bet' ? 'Prediction bet' : e.kind === 'perp' ? 'Perp position' : e.kind === 'wallet' ? 'Wallet' : e.kind === 'market' ? 'Market' : 'OST')}</em><strong>${esc(e.title)}</strong>${e.sub ? `<small>${esc(e.sub)}</small>` : ''}</span>${e.price ? `<i>${esc(e.price)}</i>` : ''}</button>`;
+    const ico = { market: '📈', bet: '🎯', perp: '⚡', game: '🎮', wallet: '👛', stock: '💹', app: '🧩', link: '🔗' }[e.kind] || '🔗';
+    return `<button class="osl-embed" data-act="sx-embed" data-href="${esc(e.href || '')}">${e.img ? `<img src="${esc(e.img)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : `<b>${ico}</b>`}<span><em>${esc(e.kind === 'bet' ? 'Prediction bet' : e.kind === 'perp' ? 'Perp position' : e.kind === 'wallet' ? 'Wallet' : e.kind === 'market' ? 'Market' : e.kind === 'app' ? 'OST app' : 'OST')}</em><strong>${esc(e.title)}</strong>${e.sub ? `<small>${esc(e.sub)}</small>` : ''}</span>${e.price ? `<i>${esc(e.price)}</i>` : ''}</button>`;
   }
   function tipsLine(p) {
     const t = p.tips || {}; const parts = Object.keys(t).filter((k) => t[k] > 0).map((k) => fmtAmt(t[k]) + ' ' + k);
@@ -635,18 +637,40 @@
     if ((m = h.match(/^#perp=(.+)$/))) { core.close(); try { if (window.OST_COMPARTMENTS) OST_COMPARTMENTS.activate('stock-market', false); } catch (_) {} if (window.OST_PERPS) OST_PERPS.open(decodeURIComponent(m[1])); else location.hash = '#stock-market'; return; }
     if ((m = h.match(/^#u=(.+)$/))) { openProfile(decodeURIComponent(m[1])); return; }
     if ((m = h.match(/^#post=(.+)$/))) { openPost(decodeURIComponent(m[1])); return; }
+    if ((m = h.match(/^#app=([a-z0-9-]{3,40})$/))) { core.close(); if (window.OST_APPS && typeof window.OST_APPS.open === 'function') window.OST_APPS.open(m[1]); else location.hash = h; return; }
     core.close(); location.hash = h || '#';
   }
   function open(view) { if (!S.ready) { setTimeout(() => open(view), 200); return; } SS.stack = []; core.open(view || 'feed'); }
   function compose(opts) { opts = opts || {}; SS.draft = { text: opts.text || '', media: [], embed: opts.embed || null, busy: '' }; open('feed'); go('compose'); }
-  // Deep links: #social, #post=<id>, #u=<addr>
+  // #share-app=<slug> (OST Studio's deploy panel): compose a post with that app attached.
+  // Name/author come from the Studio apps API, best effort — the slug alone still makes a valid embed.
+  async function shareApp(slug) {
+    let title = slug, sub = 'OST app';
+    try {
+      const ctl = typeof AbortController === 'function' ? new AbortController() : null;
+      const to = setTimeout(() => { if (ctl) ctl.abort(); }, 6000);
+      const r = await fetch(API + '/studio/v1/apps/' + encodeURIComponent(slug), { cache: 'no-store', signal: ctl ? ctl.signal : undefined });
+      clearTimeout(to);
+      const j = await r.json().catch(() => null);
+      const app = r.ok && j && j.app;
+      if (app) {
+        if (app.name) title = String(app.name).slice(0, 140);
+        const who = app.profile && app.profile.name ? String(app.profile.name).slice(0, 32) : '';
+        if (who) sub = 'OST app by ' + who;
+      } else if (j && j.error === 'app_not_found') toast('That app isn’t published (yet) — the post will still link to it.', 'err');
+    } catch (_) {}
+    const w = () => { if (!S.ready) return setTimeout(w, 200); compose({ embed: { kind: 'app', title, sub, href: '#app=' + slug } }); };
+    w();
+  }
+  // Deep links: #social, #post=<id>, #u=<addr>, #share-app=<slug>
   function handleHash() {
     const h = location.hash || '';
     const clear = () => { try { history.replaceState(null, '', location.pathname + location.search); } catch (_) {} };
     if (h === '#social' || h === '#feed') { clear(); open('feed'); return; }
     let m;
     if ((m = h.match(/^#post=(p[0-9a-f]{16,40})$/))) { clear(); const id = m[1]; const w = () => { if (!S.ready) return setTimeout(w, 200); core.open('feed'); openPost(id); }; w(); return; }
-    if ((m = h.match(/^#u=(ost-mesh:[0-9a-f-]{8,40})$/i))) { clear(); const a = decodeURIComponent(m[1]); const w = () => { if (!S.ready) return setTimeout(w, 200); core.open('feed'); openProfile(a); }; w(); }
+    if ((m = h.match(/^#u=(ost-mesh:[0-9a-f-]{8,40})$/i))) { clear(); const a = decodeURIComponent(m[1]); const w = () => { if (!S.ready) return setTimeout(w, 200); core.open('feed'); openProfile(a); }; w(); return; }
+    if ((m = h.match(/^#share-app=([a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9]))$/))) { clear(); shareApp(m[1]); }
   }
   window.addEventListener('hashchange', handleHash);
 

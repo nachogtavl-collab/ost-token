@@ -58,10 +58,8 @@
 
 @media (max-width: 760px) {
   .st-terminal-host .xterm { padding-left: 6px; }
-  .st-terminal-ps { max-width: 28%; font-size: 11px; }
+  .st-terminal-ps { display: none; }
+  .st-terminal-row.ask .st-terminal-ps { display: block; max-width: 40%; font-size: 11px; color: var(--st-warn); white-space: normal; line-height: 1.25; max-height: 34px; overflow: hidden; }
   .st-terminal-key { min-width: 32px; padding: 0 4px; }
   .st-terminal-run { padding: 0 10px; }
-}
-@media (max-width: 380px) {
-  .st-terminal-ps { display: none; }
 }

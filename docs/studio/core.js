@@ -139,7 +139,7 @@
     else if (body != null) { bytes = enc.encode(JSON.stringify(body)); ctype = 'application/json'; }
     const headers = Object.assign({}, opts.headers || {});
     if (ctype) headers['Content-Type'] = ctype;
-    if (opts.auth !== false) { await STUDIO.ready0; Object.assign(headers, await sign(method, path, bytes)); }
+    if (opts.auth !== false) { await STUDIO.ready0; const u = new URL(API + path); Object.assign(headers, await sign(method, u.pathname + u.search, bytes)); }
     let r;
     try { r = await fetch(API + path, { method, headers, body: bytes || undefined, cache: 'no-store', signal: opts.signal }); }
     catch (e) { const err = new Error('Network error — check your connection.'); err.code = 'network'; err.status = 0; throw err; }
@@ -151,7 +151,8 @@
     const err = new Error(explain(code, data)); err.code = code; err.status = r.status; err.data = data; throw err;
   }
   function explain(code, data) {
-    const m = { mesh_identity_unknown: 'Your studio identity is still registering — try again in a moment.', mesh_auth_stale: 'Your device clock is off — fix the time and retry.', rate_limited: 'Too many requests — wait a minute.', not_found: 'Not found.', project_not_found: 'Project not found in the cloud.', slug_taken: 'That app name is taken — pick another.', too_large: 'Too large for OST Studio limits.' };
+    if (data && typeof data === 'object' && data.message && code !== 'mesh_identity_unknown') return String(data.message).slice(0, 300);
+    const m = { identity_key_changed: 'This OST identity is bound to a different key in OST Studio. Use the browser where you created it, or reset your identity.', mesh_identity_unknown: 'Your studio identity is still registering — try again in a moment.', mesh_auth_stale: 'Your device clock is off — fix the time and retry.', rate_limited: 'Too many requests — wait a minute.', not_found: 'Not found.', project_not_found: 'Project not found in the cloud.', slug_taken: 'That app name is taken — pick another.', too_large: 'Too large for OST Studio limits.' };
     return m[code] || (data && data.message) || String(code).replace(/_/g, ' ');
   }
 
@@ -220,8 +221,8 @@
       if (prev && prev.content === content && !!prev.binary === binary) return;
       const rec = { content, binary, size, mtime: Date.now() };
       P.files.set(p, rec);
-      await store.putFile(P.cur.id, p, rec).catch(() => {});
       if (opts.source !== 'cloud') markDirty(p, 'put');
+      await store.putFile(P.cur.id, p, rec).catch(() => {});
       touchProject();
       bus.emit('fs:change', { path: p, kind: 'write', source: opts.source || 'user', created: !prev });
     },
@@ -327,7 +328,12 @@
       const blob = await zip.generateAsync({ type: 'blob' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = (P.cur.name || 'project').replace(/[^\w.-]+/g, '-') + '.zip'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     },
-    syncNow: () => push().then(pull)
+    async syncNow() {
+      if (!P.cur) return;
+      if (!P.cur.cloud) return attachCloud();
+      for (let i = 0; i < 20 && P.pushing; i++) await new Promise((r) => setTimeout(r, 100));
+      await push(); await pull();
+    }
   };
   async function attachCloud() {
     if (!P.cur || P.cur.cloud) return;
@@ -383,6 +389,10 @@
       const j = await api('GET', '/studio/v1/projects/' + pid + '/changes?since=' + (P.lastPulled || 0));
       if (!P.cur || P.cur.id !== pid) return;
       let applied = 0;
+      if (j.full) {                                       // fell behind the server change log: the list is every current file
+        const keep = new Set((j.changes || []).filter((c) => !c.deleted).map((c) => c.path));
+        for (const p of [...P.files.keys()]) if (!keep.has(p) && !P.dirty.has(p)) { await FS.remove(p, { source: 'cloud' }); applied++; }
+      }
       for (const c of (j.changes || [])) {
         if (P.dirty.has(c.path)) continue;                 // a local edit is pending: local wins, it will push
         if (c.deleted) { if (P.files.has(c.path)) { await FS.remove(c.path, { source: 'cloud' }); applied++; } continue; }
@@ -393,6 +403,7 @@
         await FS.write(c.path, content, { source: 'cloud', binary: !!c.binary }); applied++;
       }
       P.lastPulled = j.version || P.lastPulled; P.cur.pulled = P.lastPulled; store.putProject(P.cur).catch(() => {});
+      P.idlePulls = (j.changes && j.changes.length) ? 0 : (P.idlePulls || 0) + 1;
       if (applied) UI.toast(applied + ' change' + (applied > 1 ? 's' : '') + ' synced from the cloud' + (j.changes.some((c) => c.by && /^tok_/.test(c.by)) ? ' (agent)' : ''), 'ok');
       if (P.state === 'offline' || P.state === 'error') setSync(P.dirty.size ? 'syncing' : 'synced');
     } catch (e) {
@@ -401,7 +412,16 @@
     } finally { P.pulling = false; }
   }
   setInterval(() => { if (!document.hidden) push(); }, 1500);
-  setInterval(() => { if (!document.hidden && P.cur && P.cur.cloud && !P.dirty.size) pull(); }, 4000);
+  // Pull every 4 s while changes are flowing (an agent is editing), backing off to
+  // 12 s when idle — each pull is a Durable Object request on a shared quota.
+  let pullTick = 0;
+  setInterval(() => {
+    if (document.hidden || !P.cur) return;
+    if (!P.cur.cloud) { if ((P.state === 'offline' || P.state === 'error') && ++pullTick % 8 === 0) attachCloud().catch(() => {}); return; }
+    pullTick++;
+    const every = (P.idlePulls || 0) >= 3 ? 3 : 1;
+    if (!P.dirty.size && pullTick % every === 0) pull();
+  }, 4000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) pull(); else push(); });
   window.addEventListener('beforeunload', (e) => { if (P.cur && P.cur.cloud && P.dirty.size) { push(); e.preventDefault(); e.returnValue = ''; } });
 
@@ -506,7 +526,9 @@
   function keyName(e) {
     const mod = e.ctrlKey || e.metaKey; if (!mod && !/^F\d+$/.test(e.key)) return '';
     const parts = []; if (mod) parts.push('Mod'); if (e.shiftKey) parts.push('Shift'); if (e.altKey) parts.push('Alt');
-    let k = e.key; if (k.length === 1) k = k.toUpperCase(); if (k === ' ') k = 'Space';
+    let k = e.key;
+    if (e.altKey && e.code) { const m = /^(?:Key([A-Z])|Digit(\d))$/.exec(e.code); if (m) k = m[1] || m[2]; else if (e.code === 'Backquote') k = '`'; }
+    if (k.length === 1) k = k.toUpperCase(); if (k === ' ') k = 'Space';
     if (['Control', 'Meta', 'Shift', 'Alt'].includes(k)) return '';
     parts.push(k); return parts.join('+');
   }
@@ -572,7 +594,7 @@
   function promptDlg(title, value, o) {
     o = o || {};
     return openDialog(`<h3>${esc(title)}</h3><input class="st-input" id="stDlgIn" value="${esc(value || '')}" placeholder="${esc(o.placeholder || '')}" spellcheck="false" autocomplete="off"><div class="st-dlg-btns"><button class="st-btn" data-v="0">Cancel</button><button class="st-btn primary" data-v="1">${esc(o.okText || 'OK')}</button></div>`, (d) => {
-      const i = d.querySelector('#stDlgIn'); setTimeout(() => { i.focus(); i.select(); }, 20);
+      const i = d.querySelector('#stDlgIn'); setTimeout(() => { i.focus(); if (Array.isArray(o.select)) i.setSelectionRange(o.select[0], o.select[1]); else i.select(); }, 20);
       i.addEventListener('keydown', (e) => { if (e.key === 'Enter') closeDialog(i.value.trim() || null); });
       d.querySelector('.st-dlg-btns').onclick = (e) => { const b = e.target.closest('[data-v]'); if (b) closeDialog(b.getAttribute('data-v') === '1' ? (i.value.trim() || null) : null); };
     });
@@ -597,7 +619,7 @@
     });
   }
   async function palette() {
-    const opts = [...COMMANDS.values()].filter((c) => c.title).map((c) => ({ value: c.id, label: c.title, desc: c.key ? c.key.replace('Mod', /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl') : '' }));
+    const opts = [...COMMANDS.values()].filter((c) => c.title).map((c) => ({ value: c.id, label: c.title, desc: (c.key || c.hint) ? (c.key || c.hint).replace('Mod', /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl') : '' }));
     const id = await selectDlg('Command palette', opts); if (id) runCommand(id);
   }
   function togglePreview(force) { const on = force == null ? !document.body.classList.contains('st-preview-on') : !!force; document.body.classList.toggle('st-preview-on', on); bus.emit('preview:toggle', { on }); bus.emit('layout', {}); return on; }
@@ -654,7 +676,36 @@
   async function handleHash() {
     const h = location.hash || '';
     let m;
-    if ((m = h.match(/^#new=([A-Za-z0-9_-]+)/))) { const d = decodeNew(m[1]); history.replaceState(null, '', location.pathname); if (d && d.files && typeof d.files === 'object') { await projects.create({ name: String(d.name || 'lesson').slice(0, 60), template: 'custom', files: d.files }); return true; } }
+    if ((m = h.match(/^#new=([A-Za-z0-9_-]+)/))) {
+      const d = decodeNew(m[1]); history.replaceState(null, '', location.pathname);
+      if (d && d.files && typeof d.files === 'object') {
+        const name = String(d.name || 'lesson').slice(0, 60);
+        // Re-opening the same lesson link opens the existing copy instead of piling up duplicates.
+        const local = ((await store.allProjects().catch(() => [])) || []).filter((p) => p.name === name).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+        for (const p of local) {
+          const files = (await store.filesOf(p.id).catch(() => [])) || [];
+          const same = files.length === Object.keys(d.files).length && files.every((f) => d.files[f.path] === f.content);
+          if (same) { await projects.open(p.id); return true; }
+        }
+        await projects.create({ name, template: 'custom', files: d.files }); return true;
+      }
+    }
+    if ((m = h.match(/^#report=([a-z0-9-]{3,40})/))) {
+      history.replaceState(null, '', location.pathname);
+      const slug = m[1];
+      const reason = await selectDlg('Report the app “' + slug + '”', [
+        { value: 'scam', label: 'Scam or phishing', desc: 'asks for keys, seed phrases or money' },
+        { value: 'impersonation', label: 'Impersonates OST or someone else' },
+        { value: 'malware', label: 'Malware or harmful code' },
+        { value: 'abuse', label: 'Harassment, hate or illegal content' },
+        { value: 'other', label: 'Something else' }
+      ]);
+      if (reason) {
+        try { await api('POST', '/studio/v1/apps/' + slug + '/report', { reason }); toast('Thanks — the report was sent to the OST moderators.', 'ok'); }
+        catch (e) { toast('Could not send the report: ' + e.message, 'err'); }
+      }
+      return false;
+    }
     if ((m = h.match(/^#template=([a-z]+)/))) { history.replaceState(null, '', location.pathname); if (T[m[1]]) { await projects.create({ name: T[m[1]].name.toLowerCase().replace(/[^a-z0-9]+/g, '-'), template: m[1] }); return true; } }
     if ((m = h.match(/^#open=(p[0-9a-f]{16})/))) { history.replaceState(null, '', location.pathname); try { await projects.open(m[1]); return true; } catch (e) { UI.toast(e.message, 'err'); } }
     return false;

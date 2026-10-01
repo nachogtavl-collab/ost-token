@@ -394,6 +394,10 @@
       '.oac-btn{padding:9px 16px;border-radius:8px;border:1px solid rgba(120,180,255,0.35);background:rgba(56,118,252,0.18);color:#bfdbfe;font-weight:600;cursor:pointer;font-size:13px;}' +
       '.oac-btn:disabled{opacity:0.4;cursor:not-allowed;}' +
       '.oac-btn-primary{background:linear-gradient(135deg,#f5c468,#f59e0b);color:#1a1a1a;border-color:transparent;}' +
+      '.oac-studio{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;border:1px solid rgba(120,180,255,0.35);background:rgba(56,118,252,0.16);color:#bfdbfe;font-weight:600;font-size:12.5px;text-decoration:none;white-space:nowrap;flex:0 0 auto;min-width:max-content;overflow-wrap:normal;cursor:pointer;}' +
+      '.oac-studio:hover{background:rgba(56,118,252,0.3);color:#fff;}' +
+      '.oac-intro-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;}' +
+      '.oac-intro-row > div{min-width:0;flex:1 1 240px;}' +
       '.oac-output{margin-top:12px;padding:10px;border-radius:8px;background:#020617;border:1px solid rgba(56,189,248,0.3);font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#86efac;white-space:pre-wrap;}' +
       '@media (max-width:820px){.oac-body{grid-template-columns:1fr;height:auto;max-height:none;}.oac-sidebar{border-right:none;border-bottom:1px solid rgba(255,255,255,0.07);max-height:140px;display:flex;gap:6px;overflow-x:auto;}.oac-lesson-btn{flex:0 0 auto;min-width:160px;}.oac-workspace{grid-template-columns:1fr;}.oac-editor{border-right:none;border-bottom:1px solid rgba(255,255,255,0.07);}}';
     document.head.appendChild(st);
@@ -411,7 +415,8 @@
       '<div class="oac-card">' +
         '<div class="oac-head">' +
           '<div class="oac-title">💻 OST Code Academy <span style="color:#94a3b8;font-weight:400;font-size:13px;">· from zero to builder</span></div>' +
-          '<div style="display:flex;align-items:center;gap:14px;">' +
+          '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">' +
+            '<a class="oac-studio" id="oacStudio" href="studio.html" target="_blank" rel="noopener" title="OST Studio: a VS Code-style editor to build, run and deploy your own apps">💻 Open OST Studio</a>' +
             '<span class="oac-balance">Balance: <strong data-ostg-balance>0.00</strong> OST</span>' +
             '<button class="oac-close" id="oacClose">×</button>' +
           '</div>' +
@@ -485,8 +490,10 @@
     });
 
     document.getElementById('oacIntro').innerHTML =
+      '<div class="oac-intro-row"><div>' +
       '<h4>' + escapeHtml(lesson.title) + ' · earn ' + lesson.reward + ' OST</h4>' +
-      '<p>' + escapeHtml(lesson.intro) + '</p>';
+      '<p>' + escapeHtml(lesson.intro) + '</p>' +
+      '</div><a class="oac-studio" id="oacOpenInStudio" href="' + escapeHtml(studioLink(lesson)) + '" target="_blank" rel="noopener" title="Open this lesson as a project in OST Studio: edit it freely, run it in a sandbox, deploy it">↗ Open in Studio</a></div>';
 
     var ed = document.getElementById('oacEditor');
     ed.innerHTML = lesson.lines.map(function (ln, i) {
@@ -625,6 +632,112 @@
     document.getElementById('oacClaim').disabled = true;
   }
 
+  // ────────────────────────────────────────────────────────────────────────
+  // OST Studio hand-off: studio.html#new=<base64url(JSON {name, files})>
+  // (decoded by studio/core.js → projects.create({template:'custom', files}))
+  // ────────────────────────────────────────────────────────────────────────
+  function lessonLang(lesson) {
+    if (lesson.lang) return lesson.lang;
+    var id = String(lesson.id || '');
+    var code = lesson.lines.map(function (l) { return l.code; }).join('\n');
+    if (/^(zero-)?html/.test(id)) return 'html';
+    if (/^(zero-)?css/.test(id)) return 'css';
+    if (/^sql/.test(id)) return 'sql';
+    if (/^(solana|anchor)/.test(id)) return 'anchor';
+    if (/^rust/.test(id)) return 'rust';
+    if (/^(py|python)/.test(id)) return 'python';
+    if (/document\.|querySelector|addEventListener/.test(code)) return 'dom';
+    return 'js';
+  }
+
+  // Header comments: one line per row, and the text can never close its own comment.
+  function oneLine(s) { return String(s || '').replace(/[\r\n]+/g, ' ').trim(); }
+  function lineComments(prefix, rows) { return rows.map(function (r) { r = oneLine(r); return r ? prefix + ' ' + r : prefix; }).join('\n') + '\n'; }
+  function htmlComment(rows) { return '<!--\n' + rows.map(function (r) { r = oneLine(r).replace(/-{2,}/g, '—'); return r ? '  ' + r : ''; }).join('\n') + '\n-->\n'; }
+  function cssComment(rows) { return '/*\n' + rows.map(function (r) { r = oneLine(r).replace(/\*\//g, '* /'); return r ? ' * ' + r : ' *'; }).join('\n') + '\n */\n'; }
+  function pyString(s) { return String(s).replace(/\\/g, '\\\\').replace(/"""/g, '\\"\\"\\"'); }
+
+  function studioFiles(lesson) {
+    var code = lesson.lines.map(function (l) { return l.code; }).join('\n') + '\n';
+    var head = ['OST Code Academy · ' + lesson.title, lesson.intro, ''];
+    var runJs = 'Press ▶ Run (Ctrl/Cmd+Enter): it runs in a browser sandbox and prints to the Console panel.';
+    var runWeb = 'The Preview pane shows this page live. Change anything and watch it update.';
+    var page = function (title, headExtra, body) {
+      return '<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="utf-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1">\n' +
+        '  <title>' + escapeHtml(title) + '</title>\n' + (headExtra || '') + '</head>\n<body>\n' + body + '</body>\n</html>\n';
+    };
+    var indent = function (s) { return s.split('\n').map(function (l) { return l ? '  ' + l : l; }).join('\n'); };
+    var lang = lessonLang(lesson);
+    var files = {};
+    if (lang === 'html') {
+      var hc = htmlComment(head.concat([runWeb]));
+      if (/<html[\s>]/i.test(code)) {
+        // a full document: keep the doctype first, header right after it
+        var dt = /^<!doctype html>[ \t]*\n/i.exec(code);
+        files['index.html'] = dt ? dt[0] + hc + code.slice(dt[0].length) : hc + code;
+      } else {
+        files['index.html'] = page(lesson.title, '', indent(hc) + indent(code));
+      }
+    } else if (lang === 'css') {
+      var cls = (/^\s*\.([A-Za-z][\w-]*)/.exec(code) || [])[1] || 'box';
+      var demo = cls === 'title'
+        ? '  <h1 class="title">Hello, styled world</h1>\n  <p>Change the color or the font-size in style.css.</p>\n'
+        : '  <div class="' + cls + '" style="height:220px;border:2px dashed #94a3b8;border-radius:12px;">\n    <span>I am centred</span>\n  </div>\n';
+      files['index.html'] = page(lesson.title, '  <link rel="stylesheet" href="style.css">\n', indent(htmlComment(head.concat(['The styles live in style.css.']))) + demo);
+      files['style.css'] = cssComment(head.concat([runWeb])) + '\n' + code;
+    } else if (lang === 'dom') {
+      files['index.html'] = page(lesson.title, '', indent(htmlComment(head.concat(['The code lives in main.js. Click the button in the Preview, then look at the Console panel.']))) +
+        '  <button type="button">Click me</button>\n  <script src="main.js"></script>\n');
+      files['main.js'] = lineComments('//', head.concat([runWeb, 'Click the button in the Preview; the message appears in the Console panel.'])) + '\n' + code;
+    } else if (lang === 'python') {
+      files['main.py'] = lineComments('#', head.concat(['Press ▶ Run (Ctrl/Cmd+Enter): Python runs in your browser (Pyodide) and prints to the Console panel.'])) + '\n' + code;
+    } else if (lang === 'sql') {
+      // Runnable: Python's built-in sqlite3 (Pyodide) with a tiny sample table.
+      files['main.py'] = lineComments('#', head.concat([
+        'Press ▶ Run (Ctrl/Cmd+Enter): Python (Pyodide, in your browser) builds a small',
+        'in-memory SQLite table called users, runs the lesson query and prints the rows.',
+        'Edit QUERY below and run again.'
+      ])) + '\nimport sqlite3\n\n' +
+        'db = sqlite3.connect(":memory:")\n' +
+        'db.execute("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, email TEXT, active INTEGER)")\n' +
+        'db.executemany("INSERT INTO users (name, email, active) VALUES (?, ?, ?)", [\n' +
+        '    ("Grace", "grace@example.com", 1),\n    ("Ada", "ada@example.com", 1),\n    ("Linus", "linus@example.com", 0),\n' +
+        '    ("Margaret", "margaret@example.com", 1),\n    ("Alan", "alan@example.com", 0),\n])\n\n' +
+        'QUERY = """\n' + pyString(code) + '"""\n\n' +
+        'cur = db.execute(QUERY)\n' +
+        'print(" | ".join(col[0] for col in cur.description))\n' +
+        'for row in cur.fetchall():\n    print(" | ".join(str(v) for v in row))\n';
+      files['query.sql'] = lineComments('--', head.concat(['The same query, for reference: main.py is what runs.'])) + '\n' + code;
+    } else if (lang === 'rust' || lang === 'anchor') {
+      var anchor = lang === 'anchor';
+      files[anchor ? 'lib.rs' : 'main.rs'] = lineComments('//', head.concat([
+        'Heads-up: OST Studio runs JavaScript, TypeScript, Python and web pages in a browser sandbox.',
+        anchor ? 'Anchor programs compile with `anchor build` on your own machine; they are not built or deployed from here.'
+               : 'Rust is not compiled here: read and edit it, then run it locally (`cargo run`) or at play.rust-lang.org.'
+      ])) + '\n' + code;
+      files['README.md'] = '# ' + oneLine(lesson.title) + '\n\n' + oneLine(lesson.intro) + '\n\n' +
+        (anchor
+          ? 'This is the lesson code from OST Code Academy, kept as a reference file (`lib.rs`). OST Studio cannot build Solana programs in the browser: install the Solana and Anchor toolchains locally, put this in `programs/<name>/src/lib.rs` of an Anchor workspace and run `anchor build`.\n'
+          : 'This is the lesson code from OST Code Academy (`main.rs`). OST Studio cannot compile Rust in the browser: run it locally with `cargo run`, or paste it into https://play.rust-lang.org.\n');
+    } else {
+      var fn = /async function\s+(\w+)/.exec(code);
+      var tryIt = fn && /fetch\(\s*["']\/api\//.test(code)
+        ? '\n// Try it: "/api/..." is a placeholder, so this request fails in the sandbox.\n' +
+          '// Point fetch at a real JSON URL (e.g. https://jsonplaceholder.typicode.com/users/1) and run again.\n' +
+          fn[1] + '().then((data) => console.log(data)).catch((err) => console.log("Request failed:", err.message));\n'
+        : '';
+      files['main.js'] = lineComments('//', head.concat([runJs])) + '\n' + code + tryIt;
+    }
+    return files;
+  }
+
+  function b64url(str) {
+    return btoa(unescape(encodeURIComponent(str))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function studioLink(lesson) {
+    return 'studio.html#new=' + b64url(JSON.stringify({ name: 'lesson-' + lesson.id, files: studioFiles(lesson) }));
+  }
+
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, function (c) {
       return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
@@ -647,6 +760,7 @@
 
   // Public hook
   window.OST_OPEN_CODE_ACADEMY = openAcademy;
+  window.OST_ACADEMY_STUDIO = { link: studioLink, files: studioFiles };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () { setTimeout(attach, 800); });

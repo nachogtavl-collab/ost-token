@@ -203,6 +203,11 @@
         else if (window.OST_MESH && typeof window.OST_MESH.open === 'function') window.OST_MESH.open();
         else clickFirst(['#ost-mesh-trigger']);
       } },
+    // OST Studio (VS Code-style IDE: code, run in a sandbox, deploy apps inside OST) is
+    // its own page, so there is nothing on this page to gate on - always show it.
+    { ico: '💻', lbl: 'Studio', need: ['body'], run: function () {
+        window.location.href = 'studio.html';
+      } },
     { ico: '🔥', lbl: 'Streaks', need: ['#ostMetaBadge'], run: function () {
         widgetsLive(true);
         clickFirst(['#ostMetaBadge']);

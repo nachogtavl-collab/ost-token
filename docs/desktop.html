@@ -11,9 +11,21 @@
     .taskbar { position: fixed; bottom: 0; left: 0; right: 0; height: 68px; background: rgba(15, 23, 42, 0.97); border-top: 3px solid #ef4444; display: flex; align-items: center; padding: 0 24px; z-index: 1000; }
     .start-btn { background: linear-gradient(135deg, #ef4444, #f59e0b); color: white; padding: 12px 32px; border-radius: 9999px; font-weight: 900; font-size: 16px; cursor: pointer; border: none; box-shadow: 0 0 50px rgba(239, 68, 68, 0.6); }
     .revolutionary-banner { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); background: rgba(239, 68, 68, 0.15); border: 3px solid #ef4444; color: #ef4444; padding: 10px 44px; border-radius: 9999px; font-weight: 900; font-size: 15px; letter-spacing: 3.5px; z-index: 2000; }
+    /* Icons and the welcome window carry inline top/left; without these rules they stacked
+       in normal flow (the first icon sat under the banner, the last ones below the taskbar
+       on phones and could not be tapped). */
+    .desktop-icon { position: absolute; width: 88px; margin-left: -2px; text-align: center; cursor: pointer; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+    .desktop-icon > div:last-child { white-space: nowrap; }
+    .window { position: absolute; height: auto !important; max-width: calc(100vw - 24px); border-radius: 18px; }
+    .window-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
     @media (max-width: 768px) {
-      .desktop-icon { width: 70px !important; }
-      .desktop-icon > div { width: 58px !important; height: 58px !important; font-size: 28px !important; }
+      .desktop-icon { width: 80px !important; margin-left: -5px; }
+      /* icon tile only — this used to hit the label div too (58x58 box, 28px text) */
+      .desktop-icon > div:first-child { width: 58px !important; height: 58px !important; font-size: 28px !important; }
+      .revolutionary-banner { top: 10px; left: 12px; right: 12px; transform: none; padding: 8px 12px; font-size: 10.5px; letter-spacing: 1px; text-align: center; }
+      .window { left: 12px !important; right: 12px; top: auto !important; bottom: 80px; width: auto !important; max-height: calc(100% - 540px); min-height: 0; overflow: auto; }
+      .window .window-content { padding: 16px !important; }
+      .window h2 { font-size: 1.35rem !important; }
     }
   </style>
 </head>
@@ -60,6 +72,11 @@
       <div style="font-size:10px;font-weight:800;">LIVE MARKETS</div>
     </div>
 
+    <div class="desktop-icon" style="top: 340px; left: 125px;" onclick="openApp('ost-apps')" title="Apps people built and deployed with OST Studio (opens in a new tab)">
+      <div style="width:66px;height:66px;background:linear-gradient(135deg,#6d9fff,#34d399);border-radius:18px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:28px;">🧩</div>
+      <div style="font-size:10px;font-weight:800;">OST APPS</div>
+    </div>
+
     <!-- Welcome Window -->
     <div class="window" style="top: 60px; left: 240px; width: 560px; height: 360px; z-index: 10; background: #111827; border: 4px solid #ef4444;" id="welcome-window">
       <div class="window-header" style="background: #1e2937; padding: 14px 20px; font-weight: 900; color: #ef4444; font-size: 14px;">
@@ -87,7 +104,8 @@
   <script src="ost-money.js"></script>
   <script>
     function openApp(app) {
-      if (app === 'coding-studio') window.location.href = 'coding-studio.html';
+      if (app === 'coding-studio') window.location.href = 'studio.html';
+      else if (app === 'ost-apps') window.open('https://ost-apps.nachogtavl.workers.dev/', '_blank', 'noopener');
       else if (app === 'grok') window.location.href = 'grok.html';
       else if (app === 'x-app') window.location.href = 'x-app.html';
       else if (app === 'mesh') window.location.href = 'ost-mesh.html';

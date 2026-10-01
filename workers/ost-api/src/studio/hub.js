@@ -596,6 +596,38 @@ export class StudioHub {
         return this.aiChat(a, b);
       }
 
+      // ── reports (anyone; rate limited per IP) — feeds operator moderation ──
+      if (s0 === 'apps' && seg.length === 3 && seg[2] === 'report' && method === 'POST') {
+        const slug = seg[1];
+        if (!SLUG_RE.test(String(slug))) return fail('app_not_found', 404);
+        const ip = request.headers.get('CF-Connecting-IP') || 'anon';
+        const wait = this.rate('rep', ip, 10, 3600_000);
+        if (wait) return fail('rate_limited', 429, { retryAfter: wait });
+        if (!(await this.st.get('app:' + slug))) return fail('app_not_found', 404);
+        const b = body() || {};
+        const reason = ['scam', 'impersonation', 'malware', 'abuse', 'other'].includes(b.reason) ? b.reason : 'other';
+        const ts = Date.now();
+        const by = /^ost-mesh:[0-9a-f-]{8,40}$/i.test(request.headers.get('x-mesh-addr') || '') ? request.headers.get('x-mesh-addr') : '';
+        await this.st.put('report:' + String(1e15 - ts).padStart(16, '0') + ':' + slug, { slug, reason, note: String(b.note || '').slice(0, 300), ts, by, ipHash: (await sha256Hex(ip)).slice(0, 16) });
+        return json({ ok: true, reported: slug });
+      }
+      // ── operator moderation (worker secret SOCIAL_ADMIN_KEY or MESH_ADMIN_KEY) ──
+      if (s0 === 'admin' && seg.length === 1 && method === 'POST') {
+        const b = body() || {};
+        const keys = [this.env.SOCIAL_ADMIN_KEY, this.env.MESH_ADMIN_KEY].filter(Boolean);
+        if (!keys.length || !keys.includes(b.key)) return fail('unauthorized', 403);
+        if (b.action === 'reports') {
+          const listed = await this.st.list({ prefix: 'report:', limit: Math.min(200, Number(b.limit) || 100) });
+          return json({ ok: true, reports: [...listed.values()] });
+        }
+        if (b.action === 'unpublish') {
+          const m = await this.st.get('app:' + String(b.slug || ''));
+          if (!m) return fail('app_not_found', 404);
+          return this.locked(() => this.appUnpublish({ owner: m.owner }, m.slug || b.slug));
+        }
+        return fail('bad_action');
+      }
+
       // ── apps ──
       if (s0 === 'apps' && seg.length === 3 && seg[2] === 'unpublish' && method === 'POST') {
         const a = await need('deploy'); if (!a.ok) return denied(a);

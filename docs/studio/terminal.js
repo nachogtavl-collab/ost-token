@@ -275,7 +275,9 @@
     if (!T.rowPs) return;
     const q = T.ed.active && T.ed.kind === 'ask';
     T.rowPs.textContent = q ? stripAnsi(T.ed.prompt).trim() : promptPlain().trim();
-    T.rowIn.placeholder = q ? 'Answer, then Run' : T.busy ? 'Running… (queued commands run next)' : 'Type a command — try help';
+    T.row.classList.toggle('ask', !!q);
+    const small = S.ui.isMobile();
+    T.rowIn.placeholder = q ? 'Answer, then Run' : T.busy ? (small ? 'Running…' : 'Running… (commands you send now run next)') : (small ? 'Command (try help)' : 'Type a command — try help');
   }
 
   /* ======================================================================
@@ -835,7 +837,7 @@
         for (const n of names) { const d = CMDS.get(n); if (d) s += '  ' + ctx.col(A.bold, padEnd(n, w)) + d.desc.split('\n')[0].replace(/\.$/, '') + '\n'; }
       }
       s += '\n' + ctx.col(A.gray, 'Shell: quotes, $VARS, globs (*.js), pipes (|), > >> < redirection, ; && ||. `cmd --help` for details.') + '\n';
-      s += ctx.col(A.gray, 'Keys: Tab completes · ↑/↓ history · Ctrl+A/E start/end · Ctrl+U/K/W delete · Ctrl+L clear · Ctrl+C stop.') + '\n';
+      s += ctx.col(A.gray, 'Keys: Tab completes · ↑/↓ history · Ctrl+A/E start/end · Ctrl+U/K delete to start/end · Alt+Backspace (or Ctrl+W) delete word · Ctrl+L clear · Ctrl+C stop.') + '\n';
       ctx.out(s); return 0;
     }
   });
@@ -1097,12 +1099,13 @@
       const rec = o.r || o.R;
       const ix = fsIndex();
       const sources = [];
-      let paths = rest.slice(1), code = 1, errs = false;
+      let paths = rest.slice(1), code = 1, errs = false, sawDir = false;
       if (!paths.length) { if (rec) paths = ['.']; else if (ctx.stdin != null) sources.push({ name: '(standard input)', text: ctx.stdin }); else { ctx.err('grep: no input — give a file, or use -r to search folders (grep -r "' + oneLine(pat) + '" .)'); return 2; } }
       for (const a of paths) {
         const p = ctx.resolve(a);
         if (ix.isDir(p)) {
           if (!rec) { ctx.err('grep: ' + oneLine(a) + ': Is a directory (use -r)'); errs = true; continue; }
+          sawDir = true;
           const base = a.replace(/\/+$/, '') || '/';
           for (const f of filesUnder(ix, p)) {
             if (f.binary || !U.isTextPath(f.path)) continue;
@@ -1112,7 +1115,7 @@
         } else if (ix.isFile(p)) { if (!S.fs.isBinary(p)) sources.push({ name: a, path: p }); }
         else { ctx.err('grep: ' + oneLine(a) + ': No such file or directory'); errs = true; }
       }
-      const showName = o.H || (!o.h && (rec || sources.length > 1));
+      const showName = o.H || (!o.h && (sawDir || sources.length > 1));
       const hl = (line) => {
         if (!ctx.tty || o.v) return ctx.t(line);
         let out = '', last = 0; reG.lastIndex = 0; let m, guard = 0;
@@ -1372,7 +1375,7 @@
       if (!r) { ctx.warn('Deploy cancelled.'); return 1; }
       const app = r.app || r;
       const url = app.url || (app.slug || slug ? S.APPS + '/' + (app.slug || slug) + '/' : '');
-      ctx.out(ctx.col(A.bgreen, '✓ Deployed') + (app.version ? ' v' + app.version : '') + (app.files ? ' · ' + plural(Number(app.files) || 0, 'file') : '') + (app.bytes ? ' · ' + U.fmtBytes(app.bytes) : '') + '\n');
+      ctx.out(ctx.col(A.bgreen, '✓ Deployed') + (app.version ? ' v' + app.version : '') + (app.files ? ' · ' + plural(Array.isArray(app.files) ? app.files.length : Number(app.files) || 0, 'file') : '') + (app.bytes ? ' · ' + U.fmtBytes(app.bytes) : '') + '\n');
       if (url) ctx.out('  ' + ctx.col(A.bcyan + '\x1b[4m', ctx.t(url)) + '\n');
       return 0;
     }
@@ -1545,8 +1548,11 @@
   }
   async function ghJson(path, signal) {
     let r;
-    try { r = await fetch(GH_API + path, { signal, headers: { Accept: 'application/vnd.github+json' }, cache: 'no-store' }); }
-    catch (e) { if (e && e.name === 'AbortError') throw e; throw new Error('could not reach api.github.com — check your connection'); }
+    for (let attempt = 0; ; attempt++) {
+      try { r = await fetch(GH_API + path, { signal, headers: { Accept: 'application/vnd.github+json' }, cache: 'no-store' }); break; }
+      catch (e) { if ((e && e.name === 'AbortError') || attempt >= 2) { if (e && e.name === 'AbortError') throw e; throw new Error('could not reach api.github.com — check your connection'); } }
+      await new Promise((res) => setTimeout(res, 500 * (attempt + 1)));
+    }
     if (r.status === 404) { const e = new Error('not found'); e.status = 404; throw e; }
     if (r.status === 403 || r.status === 429) {
       const rem = r.headers.get('x-ratelimit-remaining'), reset = Number(r.headers.get('x-ratelimit-reset')) * 1000;
@@ -1595,7 +1601,7 @@
     else {
       dest = resolvePath(defName, T.cwd);
       if (!T.cwd && projectIsEmpty(ix) && await ctx.ask('This project is empty — clone ' + owner + '/' + repo + ' into the project root instead of ' + defName + '/? ', true)) dest = '';
-      if (!ctx.job.alive) return 130;
+      if (!ctx.job.alive || ctx.signal.aborted) return 130;
     }
     if (ix.isFile(dest)) { ctx.err("git clone: destination '" + oneLine(destArg || defName) + "' is a file"); return 1; }
     if (dest && ix.isDir(dest) && filesUnder(ix, dest).some((f) => U.baseOf(f.path) !== '.gitkeep')) { progress(''); ctx.err("fatal: destination path '" + oneLine(destArg || defName) + "' already exists and is not an empty directory — try: git clone " + oneLine(rest[0]) + ' another-name'); return 1; }
@@ -1632,7 +1638,12 @@
         const i = next++, f = picks[i];
         if (ctx.signal.aborted) return;
         try {
-          const r = await fetch(rawUrl(owner, repo, branch, f.path), { signal: ctx.signal });
+          let r;
+          for (let attempt = 0; ; attempt++) {
+            try { r = await fetch(rawUrl(owner, repo, branch, f.path), { signal: ctx.signal }); if (r.ok || r.status === 404 || attempt >= 2) break; }
+            catch (e) { if ((e && e.name === 'AbortError') || attempt >= 2) throw e; }
+            await new Promise((res) => setTimeout(res, 400 * (attempt + 1)));
+          }
           if (!r.ok) throw new Error('HTTP ' + r.status);
           if (f.img) { const b = new Uint8Array(await r.arrayBuffer()); got[i] = { content: 'data:' + U.mimeOf(f.rel) + ';base64,' + U.bytesToB64(b), binary: true }; recv += b.length; }
           else { const t = await r.text(); if (t.indexOf('\u0000') >= 0) { skipped.binary++; got[i] = null; } else { got[i] = { content: t, binary: false }; recv += f.size || t.length; } }
@@ -1650,7 +1661,8 @@
       try { await S.fs.write(where + picks[i].rel, g.content, { source: 'terminal', binary: g.binary }); written++; wbytes += picks[i].size; }
       catch (e) { errs.push(oneLine(e.message)); if (/limited to \d+ files/.test(e.message)) break; }
     }
-    bus.emit('fs:bulk', { source: 'terminal' });
+    if (written) bus.emit('fs:bulk', { source: 'terminal' });
+    if (!written) { ctx.err('git clone: no files could be ' + (errs.length ? 'saved' : 'downloaded from raw.githubusercontent.com') + ' — check your connection and try again.'); for (const e of errs.slice(0, 3)) ctx.err('  ' + e); return 1; }
     ctx.out(ctx.col(A.bgreen, '✓ Cloned ') + plural(written, 'file') + ' (' + U.fmtBytes(wbytes) + ') into ' + ctx.t(dest ? dest + '/' : 'the project root') + '\n');
     const sk = [skipped.ignored && skipped.ignored + ' ignored (node_modules, build output, lockfiles…)', skipped.binary && skipped.binary + ' binary', skipped.big && skipped.big + ' too large', skipped.limit && skipped.limit + ' over the ' + CLONE_MAX_FILES + '-file / ' + U.fmtBytes(CLONE_MAX_BYTES) + ' clone limit', failed && failed + ' failed to download'].filter(Boolean);
     if (sk.length) ctx.note('Skipped: ' + sk.join(', ') + '.');
@@ -1659,7 +1671,7 @@
     if (hasPkg) ctx.note('package.json dependencies load from esm.sh when you preview or build — no npm install needed.');
     if (S.fs.exists(where + 'index.html')) ctx.note('Preview it with: preview ' + (where ? where + 'index.html' : ''));
     ctx.note('This is a snapshot of the files — there is no git history here, and changes sync to your OST cloud copy, not to GitHub.');
-    return errs.length && !written ? 1 : 0;
+    return failed || errs.length ? 1 : 0;
   }
   def('git', {
     usage: 'git clone <https://github.com/owner/repo[/tree/branch/folder]> [folder] [-b branch]', desc: 'Copy a public GitHub repository (text files + small images) into the project.', project: true, noPaths: true, subs: ['clone'],
@@ -1688,7 +1700,13 @@
       const r = await S.agent.ask(prompt);
       if (!ctx.job.alive) return 130;
       const text = typeof r === 'string' ? r : r && (r.text || r.content || r.message && (r.message.content || r.message) || r.reply || r.answer);
-      if (text && typeof text === 'string') ctx.out(ctx.t(text) + '\n');
+      if (text && typeof text === 'string') ctx.out(ctx.t(text.replace(/\n+$/, '')) + '\n');
+      const ch = r && Array.isArray(r.changes) ? r.changes : [];
+      if (ch.length) {
+        const col = { A: A.bgreen, D: A.red, M: A.byellow };
+        ctx.out(ctx.col(A.bold, 'Changed ' + plural(ch.length, 'file') + ':') + '\n' + ch.slice(0, 40).map((c) => '  ' + ctx.col(col[c.status] || '', (c.status || '•') + ' ' + ctx.t(c.path || '')) + (c.add || c.del ? ctx.col(A.gray, '  +' + (c.add || 0) + ' −' + (c.del || 0)) : '')).join('\n') + '\n' + (ch.length > 40 ? ctx.col(A.gray, '  … ' + (ch.length - 40) + ' more') + '\n' : ''));
+      }
+      if (r && r.stopped) { ctx.note('Stopped.'); return 130; }
       if (r && r.error) { ctx.err('agent: ' + oneLine(r.error)); return 1; }
       return r && r.ok === false ? 1 : 0;
     }
@@ -1756,8 +1774,8 @@
       '  ' + k('run') + ' ' + k('node') + ' ' + k('python') + '  run code in a sandbox\n' +
       '  ' + k('npm i') + ' <pkg>   ' + k('git clone') + ' <github url>\n' +
       '  ' + k('build') + ' · ' + k('deploy') + ' <name>  publish a static web app\n' +
-      g('Not an OS shell: no processes, servers or SSH. Code runs only') + '\n' +
-      g('in browser sandboxes; OST hosts static sites (HTML/CSS/JS).') + '\n');
+      g('Not an OS shell: code runs in browser sandboxes,') + '\n' +
+      g('and OST hosts static web apps (HTML/CSS/JS).') + '\n');
   }
   function themeObj() {
     const cs = getComputedStyle(document.documentElement);
@@ -1984,7 +2002,9 @@
   S.ui.registerCommand({ id: 'terminal.clear', title: 'Terminal: Clear', run: () => clearScreen() });
   S.ui.registerCommand({ id: 'terminal.inputRow', title: 'Terminal: Toggle the command input row (touch typing)', run: () => { const on = T.row && !T.row.hidden; T.rowPref = on ? 'off' : 'on'; S.settings.set('terminal.inputRow', T.rowPref); paintRow(); } });
 
-  bus.on('panel', (e) => { if (e && e.id) S.settings.set('terminal.lastPanel', e.id); scheduleFit(); if (e && e.id === 'terminal' && T.mode !== 'none' && !S.ui.isMobile()) setTimeout(focusTerm, 0); });
+  bus.on('panel', (e) => { if (e && e.id) S.settings.set('terminal.lastPanel', e.id); scheduleFit(); });
+  // Focus only when the user clicks the Terminal tab (agents' exec() switching tabs must not steal focus from the editor).
+  document.addEventListener('click', (e) => { const b = e.target && e.target.closest && e.target.closest('[data-st-panel="terminal"]'); if (b && !touchDevice()) setTimeout(focusTerm, 0); });
   bus.on('layout', scheduleFit);
   bus.on('theme', (e) => { T.light = !!(e && e.dark === false); if (T.term) T.term.options.theme = themeObj(); if (T.panel) T.panel.classList.toggle('light', T.light); });
   bus.on('project:open', (e) => {

@@ -18,7 +18,8 @@ a { color: var(--st-accent); }
 body.st-dragging, body.st-dragging * { user-select: none !important; cursor: col-resize !important; }
 body.st-dragging iframe { pointer-events: none; }
 
-#stApp { display: grid; height: 100vh; height: 100dvh; grid-template-columns: 48px auto 1fr; grid-template-rows: 40px 1fr 24px; }
+#stApp { display: grid; height: 100vh; height: 100dvh; grid-template-columns: 48px auto minmax(0, 1fr); grid-template-rows: 40px minmax(0, 1fr) 24px; }
+#stSideWrap, #stWork { min-height: 0; }
 #stTop { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; padding: 0 8px; background: var(--st-bg2); border-bottom: 1px solid var(--st-line); min-width: 0; }
 .st-logo { color: var(--st-text); text-decoration: none; font-weight: 900; letter-spacing: .02em; padding: 0 6px; white-space: nowrap; }
 .st-logo span { color: var(--st-accent); }
@@ -130,7 +131,9 @@ code, .st-mono { font-family: var(--st-mono); }
 
 /* phones */
 @media (max-width: 760px) {
-  #stApp { grid-template-columns: 0 0 1fr; grid-template-rows: 44px 1fr 48px 22px; }
+  #stApp { grid-template-columns: 0 0 minmax(0, 1fr); grid-template-rows: 44px minmax(0, 1fr) 48px 22px; }
+  #stStatus .l, #stStatus .r { overflow: hidden; flex-shrink: 1; }
+  #stStatus .r { justify-content: flex-end; }
   #stActivity { grid-row: 3; grid-column: 1 / -1; flex-direction: row; justify-content: space-around; padding: 0; border-right: 0; border-top: 1px solid var(--st-line); overflow-x: auto; }
   .st-act { border-left: 0; border-top: 2px solid transparent; flex: 0 0 auto; }
   .st-act.on { border-top-color: var(--st-accent); }
