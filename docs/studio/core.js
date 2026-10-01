@@ -32,15 +32,15 @@
     const out = [];
     for (const seg of p.split('/')) { if (!seg || seg === '.') continue; if (seg === '..') { out.pop(); continue; } out.push(seg); }
     const r = out.join('/');
-    if (!r || r.length > 240 || /[\u0000-\u001f<>:"|?*]/.test(r)) return '';
+    if (!r || r.length > 240 || /[\u0000-\u001f\u007f<>:"|?*]/.test(r)) return '';
     return r;
   }
   const extOf = (p) => { const b = baseOf(p); const i = b.lastIndexOf('.'); return i > 0 ? b.slice(i + 1).toLowerCase() : ''; };
   const dirOf = (p) => { const i = String(p).lastIndexOf('/'); return i < 0 ? '' : String(p).slice(0, i); };
   const baseOf = (p) => { const s = String(p); const i = s.lastIndexOf('/'); return i < 0 ? s : s.slice(i + 1); };
   const LANG = { js: 'javascript', mjs: 'javascript', cjs: 'javascript', jsx: 'javascript', ts: 'typescript', tsx: 'typescript', mts: 'typescript', json: 'json', html: 'html', htm: 'html', css: 'css', scss: 'scss', less: 'less', md: 'markdown', markdown: 'markdown', py: 'python', svg: 'xml', xml: 'xml', yml: 'yaml', yaml: 'yaml', sh: 'shell', bash: 'shell', toml: 'ini', ini: 'ini', txt: 'plaintext', sql: 'sql', rs: 'rust', go: 'go', java: 'java', c: 'c', h: 'c', cpp: 'cpp', rb: 'ruby', php: 'php', sol: 'sol', graphql: 'graphql', vue: 'html', svelte: 'html' };
-  const MIME = { html: 'text/html', htm: 'text/html', css: 'text/css', js: 'text/javascript', mjs: 'text/javascript', cjs: 'text/javascript', jsx: 'text/javascript', ts: 'text/plain', tsx: 'text/plain', json: 'application/json', map: 'application/json', md: 'text/markdown', txt: 'text/plain', py: 'text/x-python', svg: 'image/svg+xml', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', avif: 'image/avif', ico: 'image/x-icon', woff: 'font/woff', woff2: 'font/woff2', ttf: 'font/ttf', otf: 'font/otf', mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg', mp4: 'video/mp4', webm: 'video/webm', pdf: 'application/pdf', wasm: 'application/wasm', xml: 'application/xml', csv: 'text/csv', yml: 'text/yaml', yaml: 'text/yaml', toml: 'text/plain' };
-  const TEXT_EXT = new Set(['html', 'htm', 'css', 'scss', 'less', 'js', 'mjs', 'cjs', 'jsx', 'ts', 'tsx', 'mts', 'json', 'map', 'md', 'markdown', 'txt', 'py', 'svg', 'xml', 'yml', 'yaml', 'toml', 'ini', 'sh', 'bash', 'csv', 'sql', 'rs', 'go', 'java', 'c', 'h', 'cpp', 'rb', 'php', 'sol', 'graphql', 'vue', 'svelte', 'env', 'gitignore', 'lock', 'cfg', 'conf']);
+  const MIME = { html: 'text/html', htm: 'text/html', css: 'text/css', js: 'text/javascript', mjs: 'text/javascript', cjs: 'text/javascript', jsx: 'text/javascript', ts: 'text/plain', tsx: 'text/plain', json: 'application/json', map: 'application/json', md: 'text/markdown', txt: 'text/plain', py: 'text/x-python', svg: 'image/svg+xml', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', avif: 'image/avif', ico: 'image/x-icon', woff: 'font/woff', woff2: 'font/woff2', ttf: 'font/ttf', otf: 'font/otf', mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg', mp4: 'video/mp4', webm: 'video/webm', pdf: 'application/pdf', wasm: 'application/wasm', webmanifest: 'application/manifest+json', xml: 'application/xml', csv: 'text/csv', yml: 'text/yaml', yaml: 'text/yaml', toml: 'text/plain' };
+  const TEXT_EXT = new Set(['html', 'htm', 'css', 'scss', 'less', 'js', 'mjs', 'cjs', 'jsx', 'ts', 'tsx', 'mts', 'json', 'webmanifest', 'map', 'md', 'markdown', 'txt', 'py', 'svg', 'xml', 'yml', 'yaml', 'toml', 'ini', 'sh', 'bash', 'csv', 'sql', 'rs', 'go', 'java', 'c', 'h', 'cpp', 'rb', 'php', 'sol', 'graphql', 'vue', 'svelte', 'env', 'gitignore', 'lock', 'cfg', 'conf']);
   const langOf = (p) => LANG[extOf(p)] || 'plaintext';
   const mimeOf = (p) => MIME[extOf(p)] || 'application/octet-stream';
   const isTextPath = (p) => { const e = extOf(p); return !e || TEXT_EXT.has(e) || /^(readme|license|makefile|dockerfile|procfile)$/i.test(baseOf(p)); };
@@ -197,10 +197,26 @@
   /* ======================================================================
    * file system of the current project
    * ==================================================================== */
-  const P = { cur: null, files: new Map(), dirty: new Map(), gen: 0, state: 'local', pushing: false, pulling: false, lastPulled: 0, detail: '' };
+  // dirty: path → {op, gen} not yet in the cloud (persisted in the project meta as `pending`)
+  // blocked: path → {gen, message} the server refused (too big, bad name) — skipped until edited again
+  const P = { cur: null, files: new Map(), dirty: new Map(), blocked: new Map(), gen: 0, state: 'local', pushing: false, pulling: false, lastPulled: 0, detail: '', isolate: false, attachBlocked: '' };
   const LIMITS = { fileBytes: 1.5 * 1024 * 1024, projectBytes: 25 * 1024 * 1024, files: 400 };
-  function touchProject() { if (!P.cur) return; P.cur.updatedAt = Date.now(); store.putProject(P.cur).catch(() => {}); }
-  function markDirty(path, op) { if (!P.cur) return; P.dirty.set(path, { op, gen: ++P.gen }); if (P.cur.cloud) setSync('syncing'); }
+  const REFUSED = new Set(['too_large', 'bad_path', 'bad_content']);       // retrying the same bytes cannot succeed
+  function savePending() { if (P.cur) P.cur.pending = [...P.dirty.entries()].map(([p, d]) => [p, d.op]); }
+  function touchProject() { if (!P.cur) return; P.cur.updatedAt = Date.now(); savePending(); store.putProject(P.cur).catch(() => {}); }
+  function markDirty(path, op) {
+    if (!P.cur) return;
+    P.dirty.set(path, { op, gen: ++P.gen }); P.attachBlocked = '';
+    if (P.cur.fromLink) { delete P.cur.fromLink; settings.set('lastProject', P.cur.id); setTimeout(() => attachCloud().catch(() => {}), 0); }   // the user is working on it now
+    if (P.cur.cloud) setSync('syncing');
+  }
+  const isBlocked = (path, d) => { const b = P.blocked.get(path); return !!(b && d && b.gen === d.gen); };
+  function pushable() { let n = 0; for (const [p, d] of P.dirty) if (!isBlocked(p, d)) n++; return n; }
+  function projectBytes() { let n = 0; for (const f of P.files.values()) n += f.size || 0; return n; }
+  function settledState() {
+    if (P.blocked.size) { const [p, b] = P.blocked.entries().next().value; return ['error', 'Not synced: ' + p + ' — ' + b.message + (P.blocked.size > 1 ? ' (+' + (P.blocked.size - 1) + ' more)' : '')]; }
+    return [pushable() ? 'syncing' : 'synced', ''];
+  }
   const FS = {
     list() { return [...P.files.entries()].map(([path, f]) => ({ path, size: f.size, binary: !!f.binary, mtime: f.mtime })).sort((a, b) => a.path.localeCompare(b.path)); },
     read(path) { const f = P.files.get(normPath(path)); return f ? f.content : null; },
@@ -219,6 +235,7 @@
       const prev = P.files.get(p);
       if (!prev && P.files.size >= LIMITS.files) throw new Error('Projects are limited to ' + LIMITS.files + ' files.');
       if (prev && prev.content === content && !!prev.binary === binary) return;
+      if (opts.source !== 'cloud' && size > (prev ? prev.size || 0 : 0) && projectBytes() - (prev ? prev.size || 0 : 0) + size > LIMITS.projectBytes) throw new Error('Projects are limited to ' + fmtBytes(LIMITS.projectBytes) + ' — ' + p + ' would go over. Delete something first.');
       const rec = { content, binary, size, mtime: Date.now() };
       P.files.set(p, rec);
       if (opts.source !== 'cloud') markDirty(p, 'put');
@@ -255,12 +272,14 @@
   function setSync(state, detail) { if (P.state === state && P.detail === (detail || '')) return; P.state = state; P.detail = detail || ''; bus.emit('sync:state', { state, detail: P.detail }); paintSync(); }
   const newId = () => 'p' + uid(8);
   async function loadInto(meta, files) {
-    P.cur = meta; P.files = new Map(); P.dirty = new Map(); P.lastPulled = meta.pulled || 0;
+    P.cur = meta; P.files = new Map(); P.dirty = new Map(); P.blocked = new Map(); P.isolate = false; P.attachBlocked = ''; P.lastPulled = meta.pulled || 0;
     for (const f of files) P.files.set(f.path, { content: f.content, binary: !!f.binary, size: f.size || (f.content || '').length, mtime: f.mtime || Date.now() });
-    settings.set('lastProject', meta.id);
+    // Edits that never reached the cloud (tab closed, offline) are still in IndexedDB — queue them again.
+    for (const [p, op] of Array.isArray(meta.pending) ? meta.pending : []) if (typeof p === 'string' && (op === 'put' || op === 'del')) P.dirty.set(p, { op, gen: ++P.gen });
+    if (!meta.fromLink) settings.set('lastProject', meta.id);
     document.title = meta.name + ' · OST Studio';
     paintProjectName();
-    setSync(meta.cloud ? 'synced' : 'local');
+    setSync(meta.cloud ? (P.dirty.size ? 'syncing' : 'synced') : 'local');
     hideWelcome();
     bus.emit('project:open', { project: meta });
     bus.emit('fs:bulk', { source: 'open' });
@@ -282,18 +301,24 @@
       const name = String(o.name || 'my-project').trim().slice(0, 60) || 'my-project';
       const files = o.files || TEMPLATES.files(o.template || 'web');
       const meta = { id: newId(), name, template: o.template || 'custom', createdAt: Date.now(), updatedAt: Date.now(), version: 0, pulled: 0, cloud: false };
+      if (o.fromLink) meta.fromLink = true;           // imported from a link: stays local until the user works on it
       const recs = [];
       for (const [p0, c] of Object.entries(files)) { const p = normPath(p0); if (!p) continue; const content = String(c); const binary = /^data:[^,]*;base64,/.test(content) && !isTextPath(p); recs.push({ path: p, content, binary, size: content.length, mtime: Date.now() }); }
       await store.putProject(meta);
       for (const r of recs) await store.putFile(meta.id, r.path, r);
       await loadInto(meta, recs);
       bus.emit('fs:bulk', { source: 'template' });
-      attachCloud().catch(() => {});
+      if (!meta.fromLink) attachCloud().catch(() => {});
       return meta;
     },
     async open(id) {
       let meta = await store.getProject(id).catch(() => null);
-      if (meta) { await loadInto(meta, (await store.filesOf(id).catch(() => [])) || []); if (meta.cloud) pull().catch(() => {}); else attachCloud().catch(() => {}); return meta; }
+      if (meta) {
+        if (meta.fromLink) { delete meta.fromLink; store.putProject(meta).catch(() => {}); }     // opened on purpose: a normal project now
+        await loadInto(meta, (await store.filesOf(id).catch(() => [])) || []);
+        if (meta.cloud) { pull().catch(() => {}); push().catch(() => {}); } else attachCloud().catch(() => {});
+        return meta;
+      }
       // Cloud-only project (another device, or created by an agent through the API).
       setSync('syncing', 'downloading');
       const j = await api('GET', '/studio/v1/projects/' + encodeURIComponent(id) + '/export');
@@ -313,7 +338,7 @@
       const meta = await store.getProject(id).catch(() => null);
       await store.delFilesOf(id).catch(() => {}); await store.delProject(id).catch(() => {});
       try { await api('DELETE', '/studio/v1/projects/' + encodeURIComponent(id)); } catch (e) { if (e.code !== 'project_not_found' && e.status !== 404 && meta && meta.cloud) throw e; }
-      if (P.cur && P.cur.id === id) { P.cur = null; P.files = new Map(); P.dirty = new Map(); settings.set('lastProject', ''); bus.emit('project:close', {}); showWelcome(); }
+      if (P.cur && P.cur.id === id) { P.cur = null; P.files = new Map(); P.dirty = new Map(); P.blocked = new Map(); settings.set('lastProject', ''); bus.emit('project:close', {}); showWelcome(); }
     },
     async importFiles(map, opts) {
       opts = opts || {};
@@ -330,6 +355,8 @@
     },
     async syncNow() {
       if (!P.cur) return;
+      if (P.cur.fromLink) { delete P.cur.fromLink; settings.set('lastProject', P.cur.id); }
+      P.attachBlocked = ''; P.blocked = new Map();                       // an explicit sync retries refused files too
       if (!P.cur.cloud) return attachCloud();
       for (let i = 0; i < 20 && P.pushing; i++) await new Promise((r) => setTimeout(r, 100));
       await push(); await pull();
@@ -340,46 +367,70 @@
     await STUDIO.ready0;
     if (!ID.announced) await announce();
     if (!ID.announced) { setSync('offline', 'identity not registered'); return; }
+    if (P.cur.fromLink || P.attaching) return;                            // link imports stay local until the user opts in
     const pid = P.cur.id;
+    P.attaching = true;
     setSync('syncing', 'uploading');
+    const snapGen = P.gen;                                                // edits after this point are not in the upload
     const files = {}; for (const [p, f] of P.files) files[p] = f.content;
     try {
       const j = await api('POST', '/studio/v1/projects', { id: pid, name: P.cur.name, template: P.cur.template, files });
       if (!P.cur || P.cur.id !== pid) return;
+      let moved = false;
       if (j.project && j.project.id && j.project.id !== pid) {          // server re-assigned the id
-        const oldId = pid; P.cur.id = j.project.id;
-        await store.delFilesOf(oldId).catch(() => {}); await store.delProject(oldId).catch(() => {});
+        const oldId = pid; P.cur.id = j.project.id; moved = true;
         for (const [p, f] of P.files) await store.putFile(P.cur.id, p, f).catch(() => {});
+        await store.delFilesOf(oldId).catch(() => {}); await store.delProject(oldId).catch(() => {});
         settings.set('lastProject', P.cur.id);
       }
-      P.cur.cloud = true; P.cur.version = j.version || 0; P.cur.pulled = 0; P.lastPulled = 0; P.dirty = new Map();
+      P.cur.cloud = true; P.cur.version = j.version || 0; P.cur.pulled = 0; P.lastPulled = 0;
+      for (const [p, d] of [...P.dirty]) if (d.gen <= snapGen) P.dirty.delete(p);
+      P.blocked = new Map(); savePending();
       await store.putProject(P.cur);
-      setSync('synced');
+      if (moved) bus.emit('project:open', { project: P.cur });          // same meta object, new id: modules re-key their state
+      setSync(...settledState());
       await pull();
-    } catch (e) { setSync(e.code === 'network' ? 'offline' : 'error', e.message); }
+    } catch (e) {
+      if (REFUSED.has(e.code)) P.attachBlocked = e.message;               // do not re-upload the same refused files every few seconds
+      setSync(e.code === 'network' ? 'offline' : 'error', e.message);
+    } finally { P.attaching = false; }
   }
   async function push() {
-    if (!P.cur || !P.cur.cloud || P.pushing || !P.dirty.size) return;
+    if (!P.cur || !P.cur.cloud || P.pushing || !pushable()) return;
     P.pushing = true;
     const pid = P.cur.id;
-    const put = {}, del = [], taken = new Map(); let bytes = 0;
+    const put = {}, del = [], taken = new Map(); let bytes = 0, again = false;
     for (const [path, d] of P.dirty) {
+      if (isBlocked(path, d)) continue;
+      if (P.isolate && taken.size) break;                                // finding the file the server refuses: one at a time
       if (d.op === 'del') del.push(path);
       else { const f = P.files.get(path); if (!f) { del.push(path); } else { if (bytes && bytes + f.content.length > 1200000) continue; put[path] = f.content; bytes += f.content.length; } }
       taken.set(path, d.gen);
     }
+    for (const p of [...P.blocked.keys()]) if (!P.dirty.has(p) || P.dirty.get(p).gen !== P.blocked.get(p).gen) P.blocked.delete(p);
     setSync('syncing');
     try {
       const j = await api('POST', '/studio/v1/projects/' + pid + '/sync', { put, del });
       if (P.cur && P.cur.id === pid) {
         for (const [path, gen] of taken) { const d = P.dirty.get(path); if (d && d.gen === gen) P.dirty.delete(path); }
-        P.cur.version = j.version; store.putProject(P.cur).catch(() => {});
-        setSync(P.dirty.size ? 'syncing' : 'synced');
+        P.cur.version = j.version; savePending(); store.putProject(P.cur).catch(() => {});
+        if (P.isolate && !pushable()) P.isolate = false;
+        again = pushable() > 0;
+        setSync(...settledState());
       }
     } catch (e) {
       if (e.code === 'project_not_found' && P.cur) { P.cur.cloud = false; attachCloud().catch(() => {}); }
+      else if (REFUSED.has(e.code) && P.cur && P.cur.id === pid) {
+        if (taken.size > 1) { P.isolate = true; again = true; }          // which file? retry them one by one
+        else {
+          const [path, gen] = taken.entries().next().value || [];
+          if (path) { P.blocked.set(path, { gen, message: e.message }); UI.toast(path + ' was not synced: ' + e.message, 'err'); again = pushable() > 0; }
+        }
+        setSync(...settledState());
+      }
       else setSync(e.code === 'network' ? 'offline' : 'error', e.message);
     } finally { P.pushing = false; }
+    if (again) setTimeout(() => push().catch(() => {}), 60);
   }
   async function pull() {
     if (!P.cur || !P.cur.cloud || P.pulling) return;
@@ -405,7 +456,7 @@
       P.lastPulled = j.version || P.lastPulled; P.cur.pulled = P.lastPulled; store.putProject(P.cur).catch(() => {});
       P.idlePulls = (j.changes && j.changes.length) ? 0 : (P.idlePulls || 0) + 1;
       if (applied) UI.toast(applied + ' change' + (applied > 1 ? 's' : '') + ' synced from the cloud' + (j.changes.some((c) => c.by && /^tok_/.test(c.by)) ? ' (agent)' : ''), 'ok');
-      if (P.state === 'offline' || P.state === 'error') setSync(P.dirty.size ? 'syncing' : 'synced');
+      if (P.state === 'offline' || P.state === 'error') setSync(...settledState());
     } catch (e) {
       if (e.code === 'project_not_found' && P.cur) { P.cur.cloud = false; attachCloud().catch(() => {}); }
       else if (e.code === 'network') setSync('offline');
@@ -417,13 +468,13 @@
   let pullTick = 0;
   setInterval(() => {
     if (document.hidden || !P.cur) return;
-    if (!P.cur.cloud) { if ((P.state === 'offline' || P.state === 'error') && ++pullTick % 8 === 0) attachCloud().catch(() => {}); return; }
+    if (!P.cur.cloud) { if ((P.state === 'offline' || P.state === 'error') && !P.attachBlocked && ++pullTick % 8 === 0) attachCloud().catch(() => {}); return; }
     pullTick++;
     const every = (P.idlePulls || 0) >= 3 ? 3 : 1;
-    if (!P.dirty.size && pullTick % every === 0) pull();
+    if (!pushable() && pullTick % every === 0) pull();
   }, 4000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) pull(); else push(); });
-  window.addEventListener('beforeunload', (e) => { if (P.cur && P.cur.cloud && P.dirty.size) { push(); e.preventDefault(); e.returnValue = ''; } });
+  window.addEventListener('beforeunload', (e) => { if (P.cur && P.cur.cloud && pushable()) { push(); e.preventDefault(); e.returnValue = ''; } });
 
   /* ======================================================================
    * templates
@@ -491,9 +542,18 @@
   function el(tag, attrs, html) { const e = document.createElement(tag); if (attrs) for (const k of Object.keys(attrs)) { if (k === 'class') e.className = attrs[k]; else e.setAttribute(k, attrs[k]); } if (html != null) e.innerHTML = html; return e; }
   function shell() {
     const app = $('#stApp');
-    app.addEventListener('click', (e) => { const b = e.target.closest('[data-st-act]'); if (b) setActivity(b.getAttribute('data-st-act') === curAct && !isMobile() ? '' : b.getAttribute('data-st-act'), true); });
+    app.addEventListener('click', (e) => {
+      if (e.target.closest('[data-st-side-close]')) { setActivity('', !isMobile()); return; }
+      const b = e.target.closest('[data-st-act]'); if (!b) return;
+      const id = b.getAttribute('data-st-act');
+      setActivity(id === curAct ? '' : id, !(isMobile() && id === curAct));   // tapping the open drawer's icon closes it (phones too)
+    });
     $('#stPanelTabs').addEventListener('click', (e) => { const b = e.target.closest('[data-st-panel]'); if (b) showPanel(b.getAttribute('data-st-panel')); if (e.target.closest('[data-st-panel-close]')) togglePanel(false); });
-    $('#stProjName').addEventListener('click', async () => { if (!P.cur) { showWelcome(); return; } const n = await UI.prompt('Rename project', P.cur.name); if (n) projects.rename(n); });
+    $('#stProjName').addEventListener('click', async () => {
+      if (!P.cur) { showWelcome(); return; }
+      if (document.body.classList.contains('st-welcome-on')) { hideWelcome(); return; }
+      const n = await UI.prompt('Rename project', P.cur.name); if (n) projects.rename(n);
+    });
     $('#stHome').addEventListener('click', () => showWelcome());
     // resizers
     drag($('#stSideResize'), 'x', (dx, start) => { const w = Math.max(180, Math.min(window.innerWidth * 0.6, start.side + dx)); document.documentElement.style.setProperty('--st-side-w', w + 'px'); settings.set('sideW', w); }, () => ({ side: $('#stSide').getBoundingClientRect().width }));
@@ -509,6 +569,11 @@
       for (const c of COMMANDS.values()) if (c.key && normKey(c.key) === key) { e.preventDefault(); e.stopPropagation(); runCommand(c.id); return; }
       if (e.key === 'Escape') closeDialog(null);
     }, true);
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || e.defaultPrevented || $('#stOverlay').classList.contains('on')) return;
+      if (document.body.classList.contains('st-welcome-on') && P.cur) { hideWelcome(); e.preventDefault(); }
+      else if (isMobile() && curAct) { setActivity(''); e.preventDefault(); }
+    });
     window.addEventListener('resize', () => bus.emit('layout', {}));
     $('#stOverlay').addEventListener('mousedown', (e) => { if (e.target.id === 'stOverlay') closeDialog(null); });
   }
@@ -534,7 +599,7 @@
   }
   function registerActivity(o) {
     const sec = el('section', { class: 'st-side-sec', 'data-sec': o.id, hidden: '' });
-    sec.innerHTML = `<header class="st-side-title">${esc(o.title)}</header>`;
+    sec.innerHTML = `<header class="st-side-title">${esc(o.title)}<button type="button" class="st-side-x" data-st-side-close title="Close" aria-label="Close ${esc(o.title)}">✕</button></header>`;
     const body = el('div', { class: 'st-side-body' }); sec.appendChild(body);
     $('#stSide').appendChild(sec);
     ACT.set(o.id, Object.assign({ order: 50 }, o, { sec, body }));
@@ -568,13 +633,14 @@
     const items = [...PANELS.values()].sort((a, b) => a.order - b.order);
     $('#stPanelTabs').innerHTML = items.map((p) => `<button class="${p.id === curPanel ? 'on' : ''}" data-st-panel="${esc(p.id)}">${esc(p.title)}${p.badge ? `<i class="st-badge">${esc(p.badge)}</i>` : ''}</button>`).join('') + '<span class="st-sp"></span><button class="st-ib" data-st-panel-close title="Hide panel" aria-label="Hide panel">✕</button>';
   }
-  function showPanel(id, quiet) { if (!PANELS.has(id)) return; curPanel = id; for (const p of PANELS.values()) p.body.hidden = p.id !== id; paintPanelTabs(); if (!quiet) togglePanel(true); bus.emit('panel', { id }); }
+  function showPanel(id, quiet) { if (!PANELS.has(id)) return; curPanel = id; for (const p of PANELS.values()) p.body.hidden = p.id !== id; paintPanelTabs(); if (!quiet) { togglePanel(true); closeDrawer(); } bus.emit('panel', { id }); }
+  function closeDrawer() { if (isMobile() && curAct) setActivity(''); }     // phones: the side drawer covers the work area
   function togglePanel(force) { const on = force == null ? document.body.classList.contains('st-panel-hidden') : !!force; document.body.classList.toggle('st-panel-hidden', !on); settings.set('panelOpen', on); bus.emit('layout', {}); }
   function setPanelBadge(id, text) { const p = PANELS.get(id); if (p) { p.badge = text || ''; paintPanelTabs(); } }
   function registerAction(o) {
     ACTIONS.push(Object.assign({ order: 50 }, o)); ACTIONS.sort((a, b) => a.order - b.order);
     $('#stActions').innerHTML = ACTIONS.map((a, i) => `<button class="st-action ${a.primary ? 'primary' : ''}" data-i="${i}" title="${esc(a.title)}">${a.icon || ''}<span>${esc(a.label || a.title)}</span></button>`).join('');
-    $('#stActions').onclick = (e) => { const b = e.target.closest('[data-i]'); if (b) { const a = ACTIONS[Number(b.getAttribute('data-i'))]; if (a) Promise.resolve().then(() => a.run()).catch((err) => UI.toast(err.message || String(err), 'err')); } };
+    $('#stActions').onclick = (e) => { const b = e.target.closest('[data-i]'); if (b) { const a = ACTIONS[Number(b.getAttribute('data-i'))]; if (a) { closeDrawer(); Promise.resolve().then(() => a.run()).catch((err) => UI.toast(err.message || String(err), 'err')); } } };
   }
   function registerCommand(c) { COMMANDS.set(c.id, c); bus.emit('commands', {}); }
   function runCommand(id) { const c = COMMANDS.get(id); if (!c) return; try { const r = c.run(); if (r && r.catch) r.catch((e) => UI.toast(e.message || String(e), 'err')); } catch (e) { UI.toast(e.message || String(e), 'err'); } }
@@ -622,16 +688,18 @@
     const opts = [...COMMANDS.values()].filter((c) => c.title).map((c) => ({ value: c.id, label: c.title, desc: (c.key || c.hint) ? (c.key || c.hint).replace('Mod', /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl') : '' }));
     const id = await selectDlg('Command palette', opts); if (id) runCommand(id);
   }
-  function togglePreview(force) { const on = force == null ? !document.body.classList.contains('st-preview-on') : !!force; document.body.classList.toggle('st-preview-on', on); bus.emit('preview:toggle', { on }); bus.emit('layout', {}); return on; }
+  function togglePreview(force) { const on = force == null ? !document.body.classList.contains('st-preview-on') : !!force; if (on) closeDrawer(); document.body.classList.toggle('st-preview-on', on); bus.emit('preview:toggle', { on }); bus.emit('layout', {}); return on; }
   // ---- welcome (no project open) ----
   async function showWelcome() {
-    const w = $('#stWelcome'); w.hidden = false; document.body.classList.add('st-welcome-on');
+    const w = $('#stWelcome'); w.hidden = false; document.body.classList.add('st-welcome-on'); closeDrawer();
+    const back = P.cur ? `<button class="st-btn st-welcome-back" data-back>← Back to ${esc(P.cur.name)}</button>` : '';
     const tpl = TEMPLATES.list().map((t) => `<button class="st-tpl" data-tpl="${esc(t.id)}"><b>${t.icon}</b><span><strong>${esc(t.name)}</strong><small>${esc(t.desc)}</small></span></button>`).join('');
-    w.innerHTML = `<div class="st-welcome"><h1>OST Studio</h1><p class="st-muted">A real code editor in your browser. Build web apps, React, Python and scripts, run them in a sandbox, let an AI agent help — and deploy to OST with one click.</p>
+    w.innerHTML = `<div class="st-welcome">${back}<h1>OST Studio</h1><p class="st-muted">A real code editor in your browser. Build web apps, React, Python and scripts, run them in a sandbox, let an AI agent help — and deploy to OST with one click.</p>
       <h2>Start something new</h2><div class="st-tpls">${tpl}</div>
       <h2>Your projects</h2><div id="stWelcomeProjects" class="st-projects"><div class="st-muted">Loading…</div></div>
-      <p class="st-note">Projects save in this browser and sync to your OST cloud space (your OST Mesh identity). Code runs only in sandboxes — never with access to your wallet. OST hosts static web apps; there is no server-side code execution.</p></div>`;
+      <p class="st-note">Projects save in this browser and sync to your OST cloud space, which belongs to this browser's OST Mesh identity — another phone or computer has its own identity and will not see these projects. To move a project, export it as a .zip and import it on the other device (Account &amp; Projects panel). Code runs only in sandboxes — never with access to your wallet. OST hosts static web apps; there is no server-side code execution.</p></div>`;
     w.onclick = async (e) => {
+      if (e.target.closest('[data-back]')) { hideWelcome(); return; }
       const t = e.target.closest('[data-tpl]');
       if (t) { const id = t.getAttribute('data-tpl'); const name = await UI.prompt('Project name', TEMPLATES.list().find((x) => x.id === id).name.toLowerCase().replace(/[^a-z0-9]+/g, '-')); if (name) { await projects.create({ name, template: id }); } return; }
       const o = e.target.closest('[data-open]'); if (o) { try { await projects.open(o.getAttribute('data-open')); } catch (err) { UI.toast(err.message, 'err'); } return; }
@@ -678,16 +746,24 @@
     let m;
     if ((m = h.match(/^#new=([A-Za-z0-9_-]+)/))) {
       const d = decodeNew(m[1]); history.replaceState(null, '', location.pathname);
-      if (d && d.files && typeof d.files === 'object') {
-        const name = String(d.name || 'lesson').slice(0, 60);
+      if (d && d.files && typeof d.files === 'object' && !Array.isArray(d.files)) {
+        const name = String(d.name || 'lesson').replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 60) || 'lesson';
+        const files = {}; let bytes = 0;
+        for (const [p0, c] of Object.entries(d.files)) { const p = normPath(p0); if (p && typeof c === 'string') { files[p] = c; bytes += c.length; } }
+        const paths = Object.keys(files);
+        if (!paths.length) return false;
         // Re-opening the same lesson link opens the existing copy instead of piling up duplicates.
         const local = ((await store.allProjects().catch(() => [])) || []).filter((p) => p.name === name).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
         for (const p of local) {
-          const files = (await store.filesOf(p.id).catch(() => [])) || [];
-          const same = files.length === Object.keys(d.files).length && files.every((f) => d.files[f.path] === f.content);
+          const have = (await store.filesOf(p.id).catch(() => [])) || [];
+          const same = have.length === paths.length && have.every((f) => files[f.path] === f.content);
           if (same) { await projects.open(p.id); return true; }
         }
-        await projects.create({ name, template: 'custom', files: d.files }); return true;
+        // Anyone can make a link like this, so nothing is created, synced or run until the user says so.
+        const list = paths.slice(0, 6).join(', ') + (paths.length > 6 ? ', …' : '');
+        const ok = await confirmDlg('Import the project “' + name + '” from a link? ' + paths.length + ' file' + (paths.length === 1 ? '' : 's') + ', ' + fmtBytes(bytes) + ' (' + list + '). Only import code from people you trust — it stays in this browser and does not run until you press Run.', { okText: 'Import' });
+        if (!ok) return false;
+        await projects.create({ name, template: 'custom', files, fromLink: true }); return true;
       }
     }
     if ((m = h.match(/^#report=([a-z0-9-]{3,40})/))) {
@@ -711,6 +787,12 @@
     return false;
   }
   async function boot() {
+    // Studio holds first-party storage (projects, identity): it never runs inside another page's frame.
+    let framed = true; try { framed = window.top !== window.self; } catch (_) {}
+    if (framed) {
+      document.body.innerHTML = '<p style="font:15px system-ui;padding:24px;color:#e4e7f1;background:#0b1020">OST Studio cannot run inside another page. <a style="color:#8ab4ff" href="https://ost-token.pages.dev/studio.html" target="_blank" rel="noopener">Open OST Studio</a></p>';
+      return;
+    }
     shell();
     if (!settings.get('panelOpen', true)) document.body.classList.add('st-panel-hidden');
     registerCommand({ id: 'palette', title: 'Show all commands', key: 'Mod+Shift+P', run: palette });

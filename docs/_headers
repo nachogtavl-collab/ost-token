@@ -10,4 +10,23 @@
   Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
   Cross-Origin-Opener-Policy: same-origin-allow-popups
   Permissions-Policy: browsing-topics=(), interest-cohort=()
-  Content-Security-Policy: frame-ancestors 'self'; object-src 'none'; base-uri 'self'
+  Content-Security-Policy: frame-ancestors 'self'; object-src 'none'; base-uri 'self' https://preview.ost-studio.invalid
+
+# OST Studio keeps projects and the mesh identity in first-party storage, so no page
+# (not even an OST page showing a user-made app) may frame it. A second CSP header is
+# a second policy that is enforced too, so frame-ancestors 'none' wins over 'self'.
+# The preview.ost-studio.invalid base above is Studio's sandboxed preview: srcdoc
+# frames inherit this policy, and the preview sets <base href> to that never-resolving
+# host so relative URLs inside a project can be intercepted.
+/studio
+  X-Frame-Options: DENY
+  Content-Security-Policy: frame-ancestors 'none'
+/studio.html
+  X-Frame-Options: DENY
+  Content-Security-Policy: frame-ancestors 'none'
+/coding-studio
+  X-Frame-Options: DENY
+  Content-Security-Policy: frame-ancestors 'none'
+/coding-studio.html
+  X-Frame-Options: DENY
+  Content-Security-Policy: frame-ancestors 'none'

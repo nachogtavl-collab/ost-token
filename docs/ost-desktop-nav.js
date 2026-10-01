@@ -55,6 +55,12 @@
       var g = document.createElement('a'); g.href = '#games'; g.textContent = 'Games'; g.setAttribute('data-ost-primary', '1');
       var mk = nav.querySelector('a[href="#markets"]'); mk.parentNode.insertBefore(g, mk.nextSibling);
     }
+    // OST Studio (code editor + app hosting) is its own page.
+    if (!nav.querySelector('a[href="studio.html"]')) {
+      var s = document.createElement('a'); s.href = 'studio.html'; s.className = 'ost-nav-studio'; s.textContent = 'Studio';
+      s.title = 'OST Studio: code, run and deploy apps in your browser';
+      var gm = nav.querySelector('a[href="#games"]'); gm.parentNode.insertBefore(s, gm.nextSibling);
+    }
   }
 
   var more = null, menu = null;

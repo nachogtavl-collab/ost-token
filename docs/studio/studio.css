@@ -46,6 +46,7 @@ body.st-side-open #stSideWrap { display: flex; }
 .st-side-sec { display: flex; flex-direction: column; min-height: 0; height: 100%; }
 .st-side-title { padding: 10px 14px 6px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--st-muted); flex: 0 0 auto; }
 .st-side-body { flex: 1 1 auto; overflow: auto; min-height: 0; }
+.st-side-x { display: none; }
 
 #stWork { grid-row: 2; grid-column: 3; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 #stMain { flex: 1 1 auto; display: flex; min-height: 0; position: relative; }
@@ -128,21 +129,31 @@ code, .st-mono { font-family: var(--st-mono); }
 .st-proj strong { display: block; }
 .st-proj small { color: var(--st-muted); }
 .st-proj:hover { border-color: var(--st-line2); }
+.st-welcome-back { margin: 0 0 18px; }
 
 /* phones */
 @media (max-width: 760px) {
-  #stApp { grid-template-columns: 0 0 minmax(0, 1fr); grid-template-rows: 44px minmax(0, 1fr) 48px 22px; }
+  /* --st-st / --st-sb: notch and home-indicator insets (viewport-fit=cover) */
+  :root { --st-st: env(safe-area-inset-top, 0px); --st-sb: env(safe-area-inset-bottom, 0px); }
+  #stApp { grid-template-columns: 0 0 minmax(0, 1fr); grid-template-rows: calc(44px + var(--st-st)) minmax(0, 1fr) 48px calc(22px + var(--st-sb)); }
+  #stTop { padding-top: var(--st-st); padding-left: max(8px, env(safe-area-inset-left, 0px)); padding-right: max(8px, env(safe-area-inset-right, 0px)); }
+  #stStatus { padding-bottom: var(--st-sb); }
+  #stToasts { bottom: calc(80px + var(--st-sb)); }
+  .st-side-title { display: flex; align-items: center; gap: 4px; }
+  .st-side-x { display: inline-flex; align-items: center; justify-content: center; order: 99; margin-left: auto; width: 36px; height: 32px; border: 0; border-radius: 6px; background: none; color: var(--st-muted); font-size: 15px; }
+  .st-side-x:active { background: var(--st-bg3); }
+  .st-dialog .st-input, .st-dialog .st-textarea, .st-dialog .st-select { font-size: 16px; }     /* below 16px iOS zooms the page on focus */
   #stStatus .l, #stStatus .r { overflow: hidden; flex-shrink: 1; }
   #stStatus .r { justify-content: flex-end; }
   #stActivity { grid-row: 3; grid-column: 1 / -1; flex-direction: row; justify-content: space-around; padding: 0; border-right: 0; border-top: 1px solid var(--st-line); overflow-x: auto; }
   .st-act { border-left: 0; border-top: 2px solid transparent; flex: 0 0 auto; }
   .st-act.on { border-top-color: var(--st-accent); }
   #stStatus { grid-row: 4; }
-  #stSideWrap { position: fixed; left: 0; right: 0; top: 44px; bottom: 70px; z-index: 50; }
+  #stSideWrap { position: fixed; left: 0; right: 0; top: calc(44px + var(--st-st)); bottom: calc(70px + var(--st-sb)); z-index: 50; }
   #stSide { width: 100%; }
   #stSideResize { display: none; }
   #stWork { grid-column: 1 / -1; }
-  #stPreview { position: fixed; inset: 44px 0 70px 0; width: auto !important; z-index: 40; }
+  #stPreview { position: fixed; inset: calc(44px + var(--st-st)) 0 calc(70px + var(--st-sb)) 0; width: auto !important; z-index: 40; }
   #stPreviewResize { display: none !important; }
   #stPanel { height: min(var(--st-panel-h), 42vh); }
   .st-action span { display: none; }
