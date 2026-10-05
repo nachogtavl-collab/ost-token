@@ -131,9 +131,12 @@ body.ost-force-desktop { min-width: 1280px; }
   body:not(.ost-force-desktop) .ost-pred-modal__panel {
     width: calc(100% - 16px); padding: 20px 16px; border-radius: 14px;
   }
-  body:not(.ost-force-desktop) input,
-  body:not(.ost-force-desktop) button:not(.ost-pred-btn):not(.ost-mobile-bar button) {
-    min-height: 44px; /* iOS touch target */
+  /* iOS touch target. Separate rules, and the OST Mesh app family sizes its own controls. */
+  body:not(.ost-force-desktop) input:not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *)) {
+    min-height: 44px;
+  }
+  body:not(.ost-force-desktop) button:not(.ost-pred-btn):not(.ost-mobile-bar button):not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *)) {
+    min-height: 44px;
   }
   /* Compartments dock collapses to bottom row on phones */
   body:not(.ost-force-desktop) .ost-compartments-dock {

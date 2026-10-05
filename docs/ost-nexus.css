@@ -288,6 +288,14 @@ body[style*="overflow: hidden"] .ost-dock { opacity: 0 !important; pointer-event
 .nx-dock__search:hover { color: var(--nx-ink); border-color: var(--nx-cyan); }
 .nx-dock__search kbd { white-space: nowrap; font-family: var(--nx-mono); font-size: 10.5px; padding: 1px 5px; border-radius: 5px; border: 1px solid var(--nx-line-2); color: var(--nx-ink-3); }
 
+/* Unread badge on the dock Mesh button and the Universe Mesh tile (ost-nexus.js paintMeshBadge). */
+.nx-badge {
+  position: absolute; top: 2px; right: 2px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box;
+  border-radius: 999px; background: #f43f5e; color: #fff; font: 800 11px/18px system-ui, -apple-system, "Segoe UI", sans-serif;
+  text-align: center; letter-spacing: 0; pointer-events: none; box-shadow: 0 0 0 2px #0a1020;
+}
+.nx-tile > .nx-badge { top: 10px; right: 10px; }
+
 /* With the dock mounted, the scattered desktop launchers collapse into it. */
 html.nx-dock-on #ostCardFloatingBtn,
 html.nx-dock-on #ostTradePopLauncher,
@@ -345,3 +353,6 @@ body.ost-mobile-shell .nx-pulse__list > * *,
   .nx-live { opacity: 1; }
   .nx-tile, .nx-dock, .nx-pal, .nx-pal-scrim { transition: none !important; }
 }
+/* The desktop dock must not sit over the full-screen call UI (#omxCall, z 13000) when a
+   call rings with the OST Mesh app closed (html.omx-incall; ost-mesh-call.js). */
+html.omx-incall .nx-dock { display: none !important; }

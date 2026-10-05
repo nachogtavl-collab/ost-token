@@ -2,7 +2,8 @@
  *
  * The bar held 18 links in ~755px: seven sat behind a horizontal scrollbar, and the
  * two main features (Markets, Games) had no link at all. This module (desktop only):
- *   · adds Markets (#markets deep link) and Games right after Home;
+ *   · adds Markets (#markets deep link) and Games right after Home, and the OST Mesh
+ *     link ("Mesh", class .ost-nav-social so ost-social.js does not add a second one);
  *   · shows as many links as fit, moves the rest into a "More ▾" menu, re-fits on resize;
  *   · tidies desktop floating clutter: hides purely decorative / unsolicited widgets
  *     (Veil status pill, ghost greeting, section pill, streak badge) and moves the
@@ -54,6 +55,19 @@
     if (!nav.querySelector('a[href="#games"]')) {
       var g = document.createElement('a'); g.href = '#games'; g.textContent = 'Games'; g.setAttribute('data-ost-primary', '1');
       var mk = nav.querySelector('a[href="#markets"]'); mk.parentNode.insertBefore(g, mk.nextSibling);
+    }
+    // OST Mesh (feed, chats, calls) — one name on every launcher. ost-social.js skips its
+    // own nav link when .ost-nav-social exists; if it got there first, rename it.
+    var social = nav.querySelector('.ost-nav-social');
+    if (social) { if (social.textContent !== 'Mesh') social.textContent = 'Mesh'; }
+    else {
+      var ms = document.createElement('a'); ms.href = '#mesh'; ms.className = 'ost-nav-social'; ms.textContent = 'Mesh';
+      ms.title = 'OST Mesh: feed, stories, chats and calls';
+      ms.addEventListener('click', function (e) {
+        if (!window.OST_MESH_APP || typeof window.OST_MESH_APP.open !== 'function') return;   // #mesh opens it once loaded
+        e.preventDefault(); window.OST_MESH_APP.open();
+      });
+      var mk2 = nav.querySelector('a[href="#markets"]'); mk2.parentNode.insertBefore(ms, mk2.nextSibling);
     }
     // OST Studio (code editor + app hosting) is its own page.
     if (!nav.querySelector('a[href="studio.html"]')) {

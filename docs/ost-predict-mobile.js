@@ -345,7 +345,7 @@
       '<div class="opm-pane" data-pane="holders"><div id="opmHolders"><div class="opm-empty">Loading holders…</div></div></div>' +
       '<div class="opm-pane" data-pane="comments">' +
         '<div class="opm-meshcta" id="opmMesh"><svg class="opm-ic" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 10h8M8 13h5"/></svg>' +
-          '<div class="t"><b>Discuss in OST Mesh</b><span>Comments are real OST users, from the Mesh social layer</span></div>' + icon('go', 'go') + '</div>' +
+          '<div class="t"><b>Discuss in OST Mesh</b><span>Post this market to your OST Mesh feed</span></div>' + icon('go', 'go') + '</div>' +
         '<div class="opm-cmtbox"><input id="opmCmtIn" maxlength="280" placeholder="Add a comment…"><button id="opmCmtSend">Post</button></div>' +
         '<div id="opmComments"><div class="opm-empty">Be the first to comment.</div></div></div>';
   }
@@ -1367,6 +1367,15 @@
   }
   function doSell() { openSheet('sell'); }
 
+  // "Discuss in OST Mesh" = the composer with this market attached, exactly what the
+  // header's "↗ Share" button (.osl-mshare, ost-social.js) does with its market embed.
+  // Never the legacy pavilion (its feed was local-only).
+  function discussInMesh() {
+    try { if (currentMarket && window.OST_SOCIAL && typeof OST_SOCIAL.marketEmbed === 'function' && typeof OST_SOCIAL.compose === 'function') { OST_SOCIAL.compose({ embed: OST_SOCIAL.marketEmbed(currentMarket) }); return; } } catch (_) {}
+    var share = document.querySelector('#opmDetail .osl-mshare');
+    if (share) { share.click(); return; }
+    try { if (window.OST_MESH_APP && typeof OST_MESH_APP.open === 'function') OST_MESH_APP.open(); } catch (_) {}
+  }
   function wireDetail() {
     var back = el('opmBack'); if (back) back.onclick = showBrowse;
     document.querySelectorAll('#opmSeg button').forEach(function (b) { b.onclick = function () { document.querySelectorAll('#opmSeg button').forEach(function (x) { x.classList.remove('on'); }); b.classList.add('on'); var p = b.getAttribute('data-p'); document.querySelectorAll('#opmDetail .opm-pane').forEach(function (pn) { pn.classList.toggle('on', pn.getAttribute('data-pane') === p); }); if (p === 'comments') loadComments(); else if (p === 'holders') loadHolders(); else if (p === 'trades' && el('opmTrades') && el('opmTrades').querySelector('.opm-retry')) loadTrades(); }; });
@@ -1374,7 +1383,7 @@
     document.querySelectorAll('#opmBuyY,#opmBuyN,#opmDetail [data-open]').forEach(function (b) { b.onclick = function () { openSheet('buy', b.getAttribute('data-open')); }; });
     var scr = el('opmScrim'); if (scr) scr.onclick = closeSheet;
     document.querySelectorAll('#opmTf button').forEach(function (b) { b.onclick = function () { document.querySelectorAll('#opmTf button').forEach(function (z) { z.classList.remove('on'); }); b.classList.add('on'); hrs = +b.getAttribute('data-h'); draw(); }; });
-    var mesh = el('opmMesh'); if (mesh) mesh.onclick = function () { try { if (window.OST_MESH && OST_MESH.open) OST_MESH.open(); } catch (_) {} };
+    var mesh = el('opmMesh'); if (mesh) mesh.onclick = discussInMesh;
     var cs = el('opmCmtSend'); if (cs) cs.onclick = postComment;
     var ci = el('opmCmtIn'); if (ci) ci.addEventListener('keydown', function (e) { if (e.key === 'Enter') postComment(); });
     syncYnSel();

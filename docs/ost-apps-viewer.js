@@ -3,7 +3,7 @@
  * --------------------------------------------------------------------------
  * `#app=<slug>` on index.html / markets.html opens the app in a full-screen
  * in-page window: a title bar (name + author from the Studio apps API, best
- * effort), Open in new tab, Share on OST Social, Close — and the app itself in
+ * effort), Open in new tab, Share on OST Mesh, Close — and the app itself in
  * an iframe pointed at https://ost-apps.nachogtavl.workers.dev/<slug>/.
  *
  * The app lives on a DIFFERENT origin (ost-apps…workers.dev), so
@@ -77,7 +77,7 @@
     els.newTab.title = 'Open in new tab';
     els.newTab.setAttribute('aria-label', 'Open in new tab');
     els.newTab.innerHTML = '<span aria-hidden="true">↗</span><span class="oav-txt">Open in new tab</span>';
-    els.share = btn('', '📣', 'Share', 'Share on OST Social');
+    els.share = btn('', '📣', 'Share', 'Share on OST Mesh');
     els.close = btn('oav-close', '✕', 'Close', 'Close app');
     acts.appendChild(els.newTab); acts.appendChild(els.share); acts.appendChild(els.close);
 
@@ -275,7 +275,7 @@
       setTimeout(function () { try { S.compose({ embed: embed }); } catch (e) { console.warn('[ost-apps] compose failed', e); } }, 60);
       return;
     }
-    // OST Social not loaded on this page — fall back to the system share sheet / clipboard.
+    // OST Mesh (social) not loaded on this page — fall back to the system share sheet / clipboard.
     var url = shareUrl();
     if (navigator.share) { navigator.share({ title: embed.title, text: embed.sub + ' — on OST', url: url }).catch(function () {}); return; }
     var done = function (ok) {

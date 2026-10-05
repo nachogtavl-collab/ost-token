@@ -50,8 +50,8 @@ function buildDOM() {
   const trigger = document.createElement('button');
   trigger.id = 'ost-mesh-trigger';
   trigger.type = 'button';
-  trigger.title = 'OST Mesh — quantum-ready P2P';
-  trigger.setAttribute('aria-label', 'Open OST Mesh');
+  trigger.title = 'Classic mesh — calls, games, location';
+  trigger.setAttribute('aria-label', 'Open classic mesh');
   document.body.appendChild(trigger);
 
   const root = document.createElement('div');
@@ -64,8 +64,8 @@ function buildDOM() {
     <div class="ost-mesh-shell">
       <div class="ost-mesh-head">
         <div>
-          <h2>OST Mesh</h2>
-          <div class="sub">Your social layer · wallet-linked · end-to-end</div>
+          <h2>Classic mesh</h2>
+          <div class="sub">Calls · games · location · end-to-end — your feed and chats live in OST Mesh</div>
         </div>
         <button class="ost-mesh-close" aria-label="Close">×</button>
       </div>
@@ -401,17 +401,32 @@ class MeshPavilion {
     this.fpr = await fingerprint(bundle);
     this.addrEl.textContent = this.address;
     this.fprEl.textContent = this.fpr;
-    this._announceNow({ silent: false });
+    // Fire-and-forget: _announceNow already reports failure in the status line, so a
+    // rejected announce (offline, 429) must not surface as an unhandled rejection.
+    this._announceNow({ silent: false }).catch(() => {});
     if (this.announceTimer) clearInterval(this.announceTimer);
     // Re-announce and listen for WebRTC offers ONLY while the mesh is open. At page
     // load this used to start a 1.5s signal-inbox poll for every visitor who never
     // touched the mesh — 33 worker requests/min from an idle home screen.
-    this.announceTimer = setInterval(() => { if (this.root.classList.contains('is-open')) this._announceNow({ silent: true }); }, ANNOUNCE_REFRESH_MS);
+    this.announceTimer = setInterval(() => { if (this.root.classList.contains('is-open')) this._announceNow({ silent: true }).catch(() => {}); }, ANNOUNCE_REFRESH_MS);
   }
 
   _wire() {
     this.trigger.addEventListener('click', () => this.open());
     this.closeBtn.addEventListener('click', () => this.close());
+    // Two mesh overlays never stack: when the OST Mesh app opens (html.omx-lock), the
+    // pavilion closes and releases its own scroll lock.
+    try {
+      new MutationObserver(() => {
+        if (document.documentElement.classList.contains('omx-lock') && this.root.classList.contains('is-open')) this.close({ keepHistory: true });
+      }).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    } catch (_) {}
+    // Escape closes the pavilion (it used to ignore the keyboard entirely).
+    this.root.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || !this.root.classList.contains('is-open')) return;
+      if (e.target && e.target.closest && e.target.closest('input, textarea, select, [contenteditable="true"]')) return;
+      this.close();
+    });
     // Wallet-linked social hero: quick-actions route to the real features.
     const hero = document.getElementById('mesh-hero');
     if (hero) hero.addEventListener('click', (e) => {
@@ -532,6 +547,19 @@ class MeshPavilion {
     }
   }
   open()  {
+    // ONE overlay at a time: close the OST Mesh app (and drop its html.omx-lock) first.
+    try { if (window.OST_MESH_APP && typeof window.OST_MESH_APP.close === 'function') window.OST_MESH_APP.close(); } catch (_) {}
+    // System Back closes the pavilion (core.back, contract C3). Without an entry of its
+    // own, Back here left the site: the app's close() above already unwound the app's
+    // entry. Pushed on the next tick so that unwind is under way first - core.back then
+    // writes this entry once the unwind has landed, instead of the unwind eating it.
+    setTimeout(() => {
+      try {
+        const bk = window.OST_MESH_APP && window.OST_MESH_APP.core && window.OST_MESH_APP.core.back;
+        if (!bk || typeof bk.push !== 'function' || this._backToken || !this.root.classList.contains('is-open')) return;
+        const tok = this._backToken = bk.push(() => { if (this._backToken !== tok) return; this._backToken = 0; this.close(); }, 'classic');
+      } catch (_) {}
+    }, 0);
     this._lockPageScroll();
     this.root.classList.add('is-open');
     this.root.setAttribute('aria-hidden', 'false');
@@ -558,7 +586,12 @@ class MeshPavilion {
     // Listen for incoming offers only while open (see _init).
     try { if (!this.rtc) this._startRTC('callee', { passive: true }); } catch (_) {}
   }
-  close() {
+  close(opts) {
+    // Drop the Back entry. When the OST Mesh app is what closed us (opts.keepHistory),
+    // the app has already pushed its own entry on top: popping ours would unwind the
+    // app's too, so ours is left as a no-op step instead.
+    const tok = this._backToken; this._backToken = 0;
+    if (tok && !(opts && opts.keepHistory)) { try { window.OST_MESH_APP.core.back.pop(tok); } catch (_) {} }
     this.root.classList.remove('is-open');
     this.root.setAttribute('aria-hidden', 'true');
     this._unlockPageScroll();
@@ -1051,7 +1084,7 @@ class MeshPavilion {
     try { await this._ensureQR(); } catch (_) {}
     try { if (typeof window.qrcode === 'function') { const q = window.qrcode(0, 'M'); q.addData(qrPayload); q.make(); local = q.createDataURL(9, 4); } } catch (_) {}
     body.innerHTML = `
-      <img id="mesh-qr-img" alt="OST Mesh invite QR" />
+      <img id="mesh-qr-img" alt="Classic mesh invite QR" />
       <p class="ost-mesh-qr-hint">Point your peer's camera here — it's a compact code that scans instantly. Or share the invite text below.</p>
       <textarea readonly class="ost-mesh-qr-text">${escapeHtml(invite)}</textarea>
     `;
@@ -1158,7 +1191,7 @@ class MeshPavilion {
     if (!this.publicBundle) return;
     const invite = makeInvite({ address: this.address, bundle: this.publicBundle, fingerprint: this.fpr });
     if (navigator.share) {
-      try { await navigator.share({ title: 'OST Mesh invite', text: invite }); return; }
+      try { await navigator.share({ title: 'Classic mesh invite', text: invite }); return; }
       catch (_) {}
     }
     this._copyInvite();
@@ -1463,11 +1496,11 @@ class MeshPavilion {
       const onClose = () => {
         if (!this.rtc?.isOpen?.()) this._setStatus('Mesh data channel closed while sending.', 'warn');
       };
-      const timer = setTimeout(() => finish(new Error('Mesh peer channel is not open. Keep both phones on OST Mesh, reconnect, then retry.')), timeoutMs);
+      const timer = setTimeout(() => finish(new Error('Mesh peer channel is not open. Keep both phones on classic mesh, reconnect, then retry.')), timeoutMs);
       rtc.addEventListener('open', onOpen, { once: true });
       rtc.addEventListener('close', onClose);
     });
-    if (!this.rtc?.isOpen?.()) throw new Error('Mesh peer channel is not open. Keep both phones on OST Mesh, reconnect, then retry.');
+    if (!this.rtc?.isOpen?.()) throw new Error('Mesh peer channel is not open. Keep both phones on classic mesh, reconnect, then retry.');
     return true;
   }
 
@@ -1724,7 +1757,7 @@ class MeshPavilion {
         <strong>${escapeHtml(title)}</strong>
         <span>${new Date(payload.ts || Date.now()).toLocaleTimeString()}</span>
       </div>
-      <iframe title="OST Mesh shared map" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="${mapEmbedUrl(payload.lat, payload.lon)}"></iframe>
+      <iframe title="Classic mesh shared map" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="${mapEmbedUrl(payload.lat, payload.lon)}"></iframe>
       <div class="ost-mesh-map-meta">
         <span>${payload.lat.toFixed(5)}, ${payload.lon.toFixed(5)}</span>
         <span>±${Math.round(payload.acc || 0)}m</span>

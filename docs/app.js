@@ -9580,6 +9580,8 @@
     document.addEventListener('click', function(e) {
       var a = e.target.closest('a[href]');
       if (!a) return;
+      // OST Mesh app family: its map / invite links open in a new tab (target=_blank), never the framed popup.
+      if (a.closest('#ostMeshApp, #oslSheet, #oslLight, #oslStory, #omxSheet, #omxCall, .omx-toasts')) return;
       var href = a.getAttribute('href');
       if (!href) return;
       if (href.charAt(0) === '#' || href.startsWith('javascript')) return;

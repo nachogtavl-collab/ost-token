@@ -205,9 +205,9 @@
     var sec = document.createElement('div'); sec.className = 'omm-section'; sec.setAttribute('data-mesh-view', 'feed');
     sec.innerHTML =
       '<div class="omm-feedbox">' +
-        '<div class="omm-h">&#8962; Mesh Feed</div>' +
+        '<div class="omm-h">&#8962; Classic feed</div>' +
         '<div id="omm-stories"></div>' +
-        '<div class="omm-compose"><textarea id="omm-post-text" placeholder="Share something with the mesh…" maxlength="500"></textarea>' +
+        '<div class="omm-compose"><textarea id="omm-post-text" placeholder="Post to the classic feed…" maxlength="500"></textarea>' +
           '<div class="omm-compose-side"><label class="omm-attach" title="Add image">&#128247;<input type="file" id="omm-post-img" accept="image/*" hidden></label><button class="omm-post-btn" id="omm-post-btn">Post</button></div></div>' +
         '<div id="omm-post-preview" class="omm-post-preview" hidden></div>' +
         '<div class="omm-feed-list" id="omm-feed-list"></div>' +
@@ -534,7 +534,7 @@
       '<div class="omm-h" style="margin-top:16px">🎮 Peer games</div><div class="omm-games" id="omm-games"><div class="omm-empty">Loading games…</div></div>' +
       '<div class="omm-pay-status">Peer games run directly with a connected contact — moves are exchanged P2P and verified. Fair games settle in OSTC with a provably-fair seed.</div></div>';
     shell.appendChild(sec);
-    sec.querySelector('#omm-fair').addEventListener('click', function () { try { if (window.OST_MESH_ARENA && OST_MESH_ARENA.open) OST_MESH_ARENA.open(); else window.dispatchEvent(new CustomEvent('mesh:open-games')); } catch (_) {} });
+    sec.querySelector('#omm-fair').addEventListener('click', function () { try { if (window.OST_MESH_ARENA && OST_MESH_ARENA.open) openArena(); else window.dispatchEvent(new CustomEvent('mesh:open-games')); } catch (_) {} });
     renderGames();
   }
   function renderGames() {
@@ -545,18 +545,47 @@
     host.querySelectorAll('[data-game]').forEach(function (b) { b.addEventListener('click', function () { try { if (window.OST_MESH_GAMES && OST_MESH_GAMES.open) OST_MESH_GAMES.open(b.getAttribute('data-game')); } catch (_) {} }); });
   }
 
+  // The Fair Games arena (mesh-play.js) mounts inside the Chats-tagged session block,
+  // so on the Play tab — the tab that launches it — it was display:none. The Play
+  // view adopts it (listeners move with the node).
+  function adoptArena(shell) {
+    var a = document.getElementById('ost-mesh-arena');
+    var sec = shell && shell.querySelector('.omm-section[data-mesh-view="play"]');
+    if (a && sec && a.parentNode !== sec) sec.insertBefore(a, sec.firstChild);
+  }
+  // Open the pavilion on the Play tab with the arena showing (games launchers).
+  function openArena(game) {
+    try {
+      if (window.OST_MESH_ARENA && typeof OST_MESH_ARENA.open === 'function') OST_MESH_ARENA.open(game || null);
+      else if (window.OST_MESH && typeof OST_MESH.open === 'function') OST_MESH.open();
+    } catch (_) {}
+    var n = 0;
+    (function show() {
+      var s = document.querySelector('#ost-mesh-pavilion .ost-mesh-shell');
+      var a = document.getElementById('ost-mesh-arena');
+      if (s && s.__setView && (a || n > 20)) {
+        s.__setView('play');
+        if (a && a.scrollIntoView) setTimeout(function () { try { a.scrollIntoView({ block: 'start' }); } catch (_) {} }, 120);
+        return;
+      }
+      if (++n < 60) setTimeout(show, 150);
+    })();
+  }
+
   function buildTabbar(root, shell) {
     var bar = document.createElement('div'); bar.className = 'omm-tabbar';
     bar.innerHTML = TABS.map(function (t) { return '<button class="omm-tab" data-view="' + t.id + '"><span class="i">' + t.icon + '</span>' + t.label + '</button>'; }).join('');
     root.appendChild(bar);
     function setView(v) {
+      // Unknown views ('classic' from old launchers) rendered a blank pavilion: use Feed.
+      if (!TABS.some(function (t) { return t.id === v; })) v = 'feed';
       shell.setAttribute('data-view', v);
       bar.querySelectorAll('.omm-tab').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-view') === v); });
       shell.scrollTop = 0;
       clearBadge(v);
       if (v === 'profile') renderProfile();
       if (v === 'chats') renderChats();
-      if (v === 'play') renderGames();
+      if (v === 'play') { adoptArena(shell); renderGames(); }
       if (v === 'feed') { renderStories(); renderFeed(); }
       if (v === 'pay') { try { var to = document.getElementById('omm-pay-to'); if (to && !to.value && shell.__payTarget) to.value = shell.__payTarget; } catch (_) {} }
     }
@@ -617,5 +646,5 @@
   var tries = 0;
   var iv = setInterval(function () { if (init() || ++tries > 60) clearInterval(iv); }, 400);
   window.addEventListener('mesh:ready', function () { setTimeout(init, 200); });
-  window.OST_MESH_MOBILE = { init: init, setView: function (v) { var s = document.querySelector('#ost-mesh-pavilion .ost-mesh-shell'); if (s && s.__setView) s.__setView(v); }, renderFeed: renderFeed };
+  window.OST_MESH_MOBILE = { init: init, setView: function (v) { var s = document.querySelector('#ost-mesh-pavilion .ost-mesh-shell'); if (s && s.__setView) s.__setView(v); }, renderFeed: renderFeed, openArena: openArena };
 })();

@@ -3349,7 +3349,8 @@ export default {
       return json({ error: 'unknown ghost endpoint', path }, 404);
     }
 
-    // OST Mesh — quantum-ready P2P signaling + identity directory.
+    // OST Mesh — identity directory, chat mailbox, friend graph, call signalling
+    // and OST Social, all in the MeshHub Durable Object (mesh/index.js → mesh/hub.js).
     if (path.startsWith('/mesh/')) {
       return handleMeshRequest(request, env, { path, method });
     }
@@ -3994,10 +3995,27 @@ export default {
           'POST /ghost/v2/memory/save',
           'GET  /ghost/v2/memory/recent',
           'GET  /mesh/v1/health',
+          'GET  /mesh/v1/ice',
           'POST /mesh/v1/identity/announce',
           'GET  /mesh/v1/identity/lookup',
+          'GET  /mesh/v1/directory',
+          'GET  /mesh/v1/ws',
+          'POST /mesh/v1/msg/send',
+          'GET  /mesh/v1/msg/inbox',
+          'POST /mesh/v1/msg/ack',
+          'POST /mesh/v1/blob',
+          'GET  /mesh/v1/blob/:id',
+          'POST /mesh/v1/friend/request',
+          'POST /mesh/v1/friend/respond',
+          'GET  /mesh/v1/friend/list',
+          'GET  /mesh/v1/presence',
+          'POST /mesh/v1/presence',
           'POST /mesh/v1/signal/send',
           'GET  /mesh/v1/signal/inbox',
+          'GET  /mesh/v1/feed/recent',
+          'POST /mesh/v1/feed/post|react|reply|donate',
+          'GET  /mesh/v1/social/feed|post|comments|stories|user|search|people|follows|notifs|media/:id',
+          'POST /mesh/v1/social/media|profile|post|delete|react|comment|comment/delete|story|story/view|story/delete|follow|tip|notifs/seen',
           'GET  /launchpad/coins',
           'POST /launchpad/coins',
           'POST /launchpad/trade',

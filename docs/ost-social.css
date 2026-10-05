@@ -1,98 +1,158 @@
-/* OST Social (prefix osl-) + chat rich cards + call screen (omxc-) */
+/* OST Mesh · social side (prefix osl-). Chat rich cards and the call screen (#omxCall, .omxc-*) are styled by
+   ost-mesh-app.css (scoped, the one owner of those rules).
+   Contract C1: the site's global button/input rules do not reach #ostMeshApp, #oslSheet, #oslLight or
+   #oslStory, so every control here states its own size, padding, font and radius (44px touch targets on
+   phones). In-app selectors carry #ostMeshApp so they also win over the core's `#ostMeshApp button`. */
 #ostMeshApp .omx-shell { width: min(100%, 560px); }
 @media (min-width: 1100px) { #ostMeshApp .omx-shell { width: 600px; } }
 
+/* Base for the three overlay roots (zero specificity: component rules below always win). */
+:where(#oslSheet, #oslLight, #oslStory) { font-family: inherit; -webkit-tap-highlight-color: transparent; }
+:where(#oslSheet, #oslLight, #oslStory) *, :where(#oslSheet, #oslLight, #oslStory) *::before, :where(#oslSheet, #oslLight, #oslStory) *::after { box-sizing: border-box; }
+:where(#oslSheet, #oslLight, #oslStory) button { font-family: inherit; color: inherit; cursor: pointer; border: 0; background: none; margin: 0; }
+:where(#oslSheet, #oslLight, #oslStory) :is(input, textarea) { font-family: inherit; }
+
 /* ---------- avatars ---------- */
-.osl-av { width: 40px; height: 40px; border-radius: 14px; display: inline-grid; place-items: center; flex: 0 0 auto; overflow: hidden; color: #fff; font-weight: 900; font-size: 1.15rem; }
+.osl-av { width: 40px; height: 40px; border-radius: 14px; display: inline-grid; place-items: center; flex: 0 0 auto; overflow: hidden; color: #fff; font-weight: 900; font-size: 1.15rem; line-height: 1; }
 .osl-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .osl-av.sm { width: 30px; height: 30px; border-radius: 10px; font-size: .9rem; }
 .osl-av.xl { width: 76px; height: 76px; border-radius: 24px; font-size: 2.1rem; }
 .osl-ver { display: inline-grid; place-items: center; width: 15px; height: 15px; margin-left: 4px; border-radius: 50%; background: var(--accent, #6d9fff); color: #fff; font-size: .62rem; font-style: normal; vertical-align: 1px; }
 
-/* ---------- stories tray ---------- */
-.osl-stories { display: flex; gap: 10px; overflow-x: auto; padding: 2px 2px 10px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+/* ---------- stories tray: 64px circles, one 11px label line ---------- */
+.osl-stories { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 10px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .osl-stories::-webkit-scrollbar { display: none; }
-.osl-st { flex: 0 0 auto; width: 68px; min-width: 68px; display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: 0; padding: 0; position: relative; color: inherit; }
-.osl-st small { font-size: .68rem; color: var(--text-muted, #8b92ad); max-width: 68px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
-.osl-ring { padding: 2px; border-radius: 22px; background: linear-gradient(135deg, #f5c468, #ef4444, #a78bfa); display: inline-block; }
-.osl-ring.seen { background: rgba(139,146,173,.45); }
-.osl-ring.none { background: transparent; border: 2px dashed rgba(139,146,173,.5); padding: 1px; }
-.osl-ring .osl-av { width: 58px; height: 58px; border-radius: 19px; border: 2px solid var(--bg-alt, #0c0f1a); font-size: 1.5rem; }
-.osl-st > i { position: absolute; right: 4px; top: 42px; width: 20px; height: 20px; border-radius: 50%; background: var(--accent, #6d9fff); color: #fff; font-style: normal; font-weight: 900; display: grid; place-items: center; font-size: .85rem; border: 2px solid var(--bg-alt, #0c0f1a); }
+#ostMeshApp .osl-st { flex: 0 0 72px; width: 72px; min-width: 72px; max-width: none; height: auto; min-height: 0; display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 0; margin: 0; border: 0; border-radius: 0; background: none; color: inherit; font-size: 11px; line-height: 14px; position: relative; overflow-wrap: normal; }
+#ostMeshApp .osl-st small { display: block; width: 72px; max-width: 72px; font-size: 11px; line-height: 14px; font-weight: 600; color: var(--text-muted, #8b92ad); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
+#ostMeshApp .osl-ring { display: block; flex: 0 0 auto; width: 64px; height: 64px; min-width: 64px; max-width: none; padding: 2px; border-radius: 50%; background: linear-gradient(135deg, #f5c468, #ef4444, #a78bfa); }
+#ostMeshApp .osl-ring.seen { background: rgba(139,146,173,.45); }
+#ostMeshApp .osl-ring.none { background: transparent; border: 2px dashed rgba(139,146,173,.55); }
+#ostMeshApp .osl-ring .osl-av { width: 100%; height: 100%; border-radius: 50%; border: 2px solid var(--bg-alt, #0c0f1a); font-size: 1.5rem; }
+#ostMeshApp .osl-st > i { position: absolute; left: calc(50% + 12px); top: 44px; width: 20px; height: 20px; border-radius: 50%; background: #2f62e6; color: #fff; font-style: normal; font-weight: 900; display: grid; place-items: center; font-size: .85rem; line-height: 1; border: 2px solid var(--bg-alt, #0c0f1a); }
+#ostMeshApp .osl-st-err .osl-av { font-size: 1.3rem; color: #fca5a5; background: rgba(239,68,68,.12); }
+#ostMeshApp .osl-st:focus-visible { outline: 2px solid var(--accent, #6d9fff); outline-offset: 2px; border-radius: 10px; }
 
 /* ---------- composer CTA + modes ---------- */
-.osl-cta { width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 16px; border: 1px solid var(--border, rgba(109,159,255,.15)); background: var(--surface, #111627); color: var(--text-muted, #8b92ad); text-align: left; margin-bottom: 10px; }
-.osl-cta span { flex: 1 1 auto; font-size: .92rem; min-width: 0; }
-.osl-cta b { font-size: 1.2rem; }
+#ostMeshApp .osl-cta { width: 100%; min-height: 60px; display: flex; align-items: center; gap: 10px; padding: 10px 12px; margin: 0 0 10px; border-radius: 16px; border: 1px solid var(--border, rgba(109,159,255,.15)); background: var(--surface, #111627); color: var(--text-muted, #8b92ad); text-align: left; font-size: .92rem; font-weight: 600; line-height: 1.3; }
+#ostMeshApp .osl-cta > .osl-av { flex: 0 0 40px; width: 40px; height: 40px; }
+#ostMeshApp .osl-cta > span:not(.osl-av) { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#ostMeshApp .osl-cta > b { flex: 0 0 auto; font-size: 1.2rem; }
 .osl-modes { display: flex; gap: 6px; margin-bottom: 10px; }
-.osl-modes button { flex: 1 1 0; padding: 9px; border-radius: 12px; border: 1px solid var(--border, rgba(109,159,255,.15)); background: transparent; color: var(--text-muted, #8b92ad); font-weight: 800; font-size: .86rem; }
-.osl-modes button.on { background: rgba(109,159,255,.16); color: var(--accent, #6d9fff); border-color: rgba(109,159,255,.4); }
-.osl-newpill { position: sticky; top: 4px; z-index: 2; display: block; margin: 0 auto 10px; padding: 8px 16px; border-radius: 999px; border: 0; background: var(--accent, #6d9fff); color: #fff; font-weight: 800; box-shadow: 0 8px 24px rgba(0,0,0,.35); }
+#ostMeshApp .osl-modes button { flex: 1 1 0; min-width: 0; height: 44px; min-height: 44px; padding: 0 10px; border-radius: 12px; border: 1px solid var(--border, rgba(109,159,255,.15)); background: transparent; color: var(--text-muted, #8b92ad); font-size: .88rem; font-weight: 800; line-height: 1; white-space: nowrap; }
+#ostMeshApp .osl-modes button.on { background: rgba(109,159,255,.16); color: var(--accent, #6d9fff); border-color: rgba(109,159,255,.45); }
+#ostMeshApp .osl-newpill { position: sticky; top: 4px; z-index: 2; display: block; height: 36px; min-height: 36px; margin: 0 auto 10px; padding: 0 16px; border-radius: 999px; border: 0; background: #2f62e6; color: #fff; font-size: .84rem; font-weight: 800; line-height: 1; box-shadow: 0 8px 24px rgba(0,0,0,.35); }
+#ostMeshApp .osl-bell { position: relative; }
+#ostMeshApp .osl-bell .omx-badge { position: absolute; top: -5px; right: -5px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #dc2626; color: #fff; font-size: .66rem; font-weight: 800; line-height: 18px; text-align: center; pointer-events: none; }
 .osl-end { text-align: center; color: var(--text-muted, #8b92ad); font-size: .8rem; padding: 14px 0; }
-.osl-more { margin: 4px 0 12px; }
+#ostMeshApp .osl-more { min-height: 44px; margin: 4px 0 12px; padding: 0 12px; }
 .osl-skel { height: 160px; border-radius: 16px; margin-bottom: 12px; background: linear-gradient(90deg, rgba(255,255,255,.03), rgba(255,255,255,.07), rgba(255,255,255,.03)); background-size: 200% 100%; animation: osl-sh 1.2s linear infinite; }
 @keyframes osl-sh { to { background-position: -200% 0; } }
 
+/* ---------- error states: a failed request says so, with Retry ---------- */
+.osl-err small { display: block; max-width: 36ch; margin: 4px auto 0; font-size: .78rem; color: var(--text-muted, #8b92ad); overflow-wrap: anywhere; }
+:is(#ostMeshApp, #oslSheet) .osl-retry { display: inline-flex; align-items: center; justify-content: center; width: auto; min-width: 128px; min-height: 44px; margin-top: 14px; padding: 0 22px; border-radius: 12px; font-size: .9rem; font-weight: 800; line-height: 1; }
+.osl-inerr { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; padding: 6px 6px 6px 12px; border-radius: 12px; border: 1px solid rgba(239,68,68,.35); background: rgba(239,68,68,.08); color: #fca5a5; font-size: .8rem; line-height: 1.35; }
+.osl-inerr span { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+#ostMeshApp .osl-inerr button { flex: 0 0 auto; height: 40px; min-height: 40px; padding: 0 16px; border-radius: 999px; border: 1px solid rgba(239,68,68,.5); background: transparent; color: #fecaca; font-size: .8rem; font-weight: 800; line-height: 1; white-space: nowrap; }
+
 /* ---------- post card ---------- */
 .osl-post { background: var(--surface, #111627); border: 1px solid var(--border, rgba(109,159,255,.14)); border-radius: 18px; margin-bottom: 12px; overflow: hidden; }
-.osl-post header { display: flex; align-items: center; gap: 8px; padding: 12px 12px 6px; }
-.osl-who { flex: 1 1 auto; display: flex; align-items: center; gap: 10px; background: none; border: 0; padding: 0; color: inherit; text-align: left; min-width: 0; }
+.osl-post header { display: flex; align-items: center; gap: 8px; padding: 10px 6px 4px 12px; }
+#ostMeshApp .osl-who { flex: 1 1 auto; display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 44px; padding: 0; margin: 0; border: 0; border-radius: 10px; background: none; color: inherit; text-align: left; font-size: .9rem; font-weight: 400; line-height: 1.25; }
 .osl-who span { min-width: 0; }
-.osl-who b { display: block; font-size: .94rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.osl-who b { display: block; font-size: .94rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .osl-who small { display: block; font-size: .72rem; color: var(--text-muted, #8b92ad); }
-.osl-dots { background: none; border: 0; color: var(--text-muted, #8b92ad); font-size: 1.2rem; padding: 4px 8px; }
+#ostMeshApp .osl-dots { flex: 0 0 44px; width: 44px; height: 44px; min-height: 44px; padding: 0; border: 0; border-radius: 12px; background: none; color: var(--text-muted, #8b92ad); font-size: 1.2rem; line-height: 1; display: grid; place-items: center; }
 .osl-text { padding: 2px 14px 10px; font-size: .95rem; line-height: 1.5; overflow-wrap: anywhere; }
 .osl-text a { color: var(--accent, #6d9fff); }
-.osl-tag { color: var(--accent2, #a78bfa); font-weight: 700; }
 .osl-media { display: grid; gap: 2px; background: #000; }
-.osl-media img, .osl-media video { width: 100%; display: block; object-fit: cover; background: #05070d; cursor: zoom-in; }
-.osl-media.one video, .osl-media.n1 img { max-height: 560px; object-fit: contain; }
+.osl-media img { width: 100%; display: block; object-fit: cover; background: #05070d; cursor: zoom-in; }
+.osl-media.n1 img { max-height: 560px; object-fit: contain; }
 .osl-media.n1 img:not([style]) { aspect-ratio: 4 / 3; }
-.osl-media.n2 { grid-template-columns: 1fr 1fr; } .osl-media.n2 img { aspect-ratio: 1 / 1; }
-.osl-media.n3 { grid-template-columns: 2fr 1fr; grid-template-rows: 1fr 1fr; } .osl-media.n3 img:first-child { grid-row: span 2; height: 100%; } .osl-media.n3 img { aspect-ratio: auto; min-height: 120px; }
-.osl-media.n4 { grid-template-columns: 1fr 1fr; } .osl-media.n4 img { aspect-ratio: 1 / 1; }
-.osl-media video { cursor: auto; }
-.osl-embed { display: flex; align-items: center; gap: 10px; width: calc(100% - 24px); margin: 10px 12px 0; padding: 10px; border-radius: 14px; border: 1px solid rgba(109,159,255,.28); background: rgba(109,159,255,.07); color: inherit; text-align: left; }
+.osl-media.n2, .osl-media.n4 { grid-template-columns: 1fr 1fr; }
+.osl-media.n2 > *, .osl-media.n4 > * { aspect-ratio: 1 / 1; }
+/* three photos: the grid reserves its 4:3 box before any image loads (a re-render on Back must not collapse
+   it, or the restored scroll position points at other content); every cell is filled, no black gaps */
+.osl-media.n3 { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); aspect-ratio: 4 / 3; overflow: hidden; }
+.osl-media.n3 > * { width: 100%; height: 100%; min-height: 0; object-fit: cover; }
+.osl-media.n3 > :first-child { grid-row: span 2; }
+/* photos open the viewer from the keyboard too (tabindex=0, role=button) */
+#ostMeshApp .osl-media img:focus-visible { outline: 3px solid var(--accent, #6d9fff); outline-offset: -3px; }
+/* video: the box takes the stored aspect ratio (inline style) before a byte loads; 16:9 when unknown.
+   A small video is never stretched past its own width (inline max-width), it sits centred on black. */
+.osl-vid { position: relative; width: 100%; max-height: 560px; margin: 0 auto; aspect-ratio: 16 / 9; background: #000; overflow: hidden; }
+.osl-vid video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; background: #000; }
+#ostMeshApp .osl-play { position: absolute; left: calc(50% - 32px); top: calc(50% - 32px); z-index: 1; width: 64px; height: 64px; min-height: 0; padding: 0 0 0 5px; border: 2px solid rgba(255,255,255,.85); border-radius: 50%; background: rgba(0,0,0,.55); color: #fff; font-size: 1.5rem; line-height: 1; display: grid; place-items: center; box-shadow: 0 6px 24px rgba(0,0,0,.45); }
+#ostMeshApp .osl-vid.playing .osl-play { display: none; }
+/* media that failed to load: a labelled placeholder, never the browser's broken-image glyph */
+.osl-mfail { display: grid; place-content: center; justify-items: center; gap: 6px; width: 100%; min-height: 140px; aspect-ratio: 4 / 3; padding: 12px; background: repeating-linear-gradient(135deg, #0b0f1c 0 12px, #0e1322 12px 24px); color: var(--text-muted, #8b92ad); font-size: .82rem; font-weight: 700; text-align: center; }
+.osl-mfail b { font-size: 1.6rem; line-height: 1; opacity: .85; }
+.osl-media.n1 .osl-mfail { max-height: 560px; }
+.osl-media.one .osl-mfail { margin: 0 auto; }
+.osl-media.n2 .osl-mfail, .osl-media.n4 .osl-mfail { min-height: 0; aspect-ratio: 1 / 1; }
+.osl-media.n3 .osl-mfail { aspect-ratio: auto; min-height: 0; }
+.osl-pick .osl-mfail, .osl-stprev .osl-mfail { height: 100%; min-height: 0; aspect-ratio: auto; font-size: .7rem; }
+#ostMeshApp .osl-embed, #oslSheet .osl-embed { display: flex; align-items: center; gap: 10px; width: calc(100% - 24px); min-height: 64px; margin: 10px 12px 0; padding: 10px; border-radius: 14px; border: 1px solid rgba(109,159,255,.28); background: rgba(109,159,255,.07); color: inherit; text-align: left; font-size: .88rem; font-weight: 400; line-height: 1.3; overflow: hidden; }
 .osl-embed > img { width: 48px; height: 48px; border-radius: 10px; object-fit: cover; flex: 0 0 auto; }
 .osl-embed > b { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: rgba(109,159,255,.16); font-size: 1.3rem; flex: 0 0 auto; }
 .osl-embed > span { flex: 1 1 auto; min-width: 0; }
 .osl-embed em { display: block; font-style: normal; font-size: .66rem; text-transform: uppercase; letter-spacing: .08em; color: var(--accent, #6d9fff); font-weight: 800; }
-.osl-embed strong { display: block; font-size: .88rem; line-height: 1.3; }
+.osl-embed strong { display: block; font-size: .88rem; line-height: 1.3; overflow-wrap: anywhere; }
 .osl-embed small { display: block; font-size: .74rem; color: var(--text-muted, #8b92ad); }
 .osl-embed > i { font-style: normal; font-weight: 900; color: var(--success, #34d399); font-size: .9rem; flex: 0 0 auto; }
 .osl-tips { margin: 10px 14px 0; font-size: .8rem; color: var(--warm, #f5c468); font-weight: 700; }
-.osl-post footer { display: flex; gap: 2px; padding: 8px 8px 10px; border-top: 1px solid var(--border, rgba(109,159,255,.08)); margin-top: 10px; }
-.osl-post footer button { flex: 1 1 0; display: flex; align-items: center; justify-content: center; gap: 5px; padding: 8px 4px; border: 0; border-radius: 10px; background: transparent; color: var(--text-muted, #8b92ad); font-size: .84rem; font-weight: 700; min-width: 0; }
-.osl-post footer button:hover { background: rgba(255,255,255,.04); }
-.osl-post footer button.on { color: var(--accent, #6d9fff); background: rgba(109,159,255,.12); }
-.osl-post footer button.on.dis { color: var(--danger, #ef4444); background: rgba(239,68,68,.1); }
+/* action bar: one row of compact icon + count buttons, 44px tall, never wraps */
+.osl-post footer { display: flex; flex-wrap: nowrap; gap: 2px; padding: 4px 6px 6px; border-top: 1px solid var(--border, rgba(109,159,255,.08)); margin-top: 10px; }
+#ostMeshApp .osl-post footer button { flex: 1 1 0; min-width: 0; max-width: none; height: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 6px; margin: 0; border: 0; border-radius: 10px; background: transparent; color: var(--text-muted, #8b92ad); font-size: .82rem; font-weight: 700; line-height: 1; white-space: nowrap; overflow: hidden; overflow-wrap: normal; }
+#ostMeshApp .osl-post footer button i { flex: 0 0 auto; font-style: normal; font-size: 1rem; line-height: 1; }
+#ostMeshApp .osl-post footer button span { flex: 0 0 auto; white-space: nowrap; overflow-wrap: normal; }
+#ostMeshApp .osl-post footer button:hover { background: rgba(255,255,255,.05); }
+#ostMeshApp .osl-post footer button.on { color: var(--accent, #6d9fff); background: rgba(109,159,255,.12); }
+#ostMeshApp .osl-post footer button.on.dis { color: #f87171; background: rgba(239,68,68,.1); }
 
 /* ---------- single post + comments ---------- */
 .osl-comments { padding: 0 2px 70px; }
 .osl-cm { display: flex; gap: 10px; padding: 10px 0; border-top: 1px solid var(--border, rgba(109,159,255,.08)); }
-.osl-cm > button:first-child { background: none; border: 0; padding: 0; }
+#ostMeshApp .osl-cm > button:first-child { flex: 0 0 auto; width: 30px; height: 30px; min-height: 0; padding: 0; border: 0; border-radius: 10px; background: none; }
 .osl-cm > div { flex: 1 1 auto; min-width: 0; font-size: .86rem; }
 .osl-cm small { color: var(--text-muted, #8b92ad); font-size: .72rem; }
 .osl-cm p { margin: 3px 0 0; line-height: 1.45; overflow-wrap: anywhere; }
-.osl-x { background: none; border: 0; color: var(--text-muted, #8b92ad); align-self: flex-start; }
-.osl-cbox { position: sticky; bottom: 0; display: flex; gap: 8px; padding: 10px 0 2px; background: var(--bg-alt, #0c0f1a); }
-.osl-cbox textarea { flex: 1 1 auto; min-height: 42px; max-height: 120px; resize: none; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--border, rgba(109,159,255,.2)); background: rgba(0,0,0,.25); color: var(--text, #e4e7f1); font: inherit; }
-.osl-cbox .omx-send { width: 42px; height: 42px; border-radius: 13px; background: var(--accent, #6d9fff); color: #fff; border: 0; }
+#ostMeshApp .osl-x { flex: 0 0 auto; align-self: flex-start; width: 40px; height: 40px; min-height: 0; margin: -6px -6px 0 0; padding: 0; border: 0; border-radius: 10px; background: none; color: var(--text-muted, #8b92ad); font-size: .9rem; line-height: 1; }
+.osl-cbox { position: sticky; bottom: 0; display: flex; align-items: flex-end; gap: 8px; padding: 10px 0 2px; background: var(--bg-alt, #0c0f1a); }
+#ostMeshApp .osl-cbox .omx-send { flex: 0 0 44px; width: 44px; height: 44px; min-height: 0; padding: 0; border: 0; border-radius: 13px; background: #2f62e6; color: #fff; font-size: 1rem; line-height: 1; }
+
+/* ---------- text fields: own border, background and focus ring (no site input styles) ---------- */
+:is(#ostMeshApp, #oslSheet) :is(#oslCText, #oslName, #oslBio, #oslQ, #oslStCap, #oslPayAmt, #oslPayNote) { display: block; width: 100%; min-height: 44px; margin: 0; padding: 10px 12px; border: 1px solid rgba(139,146,173,.3); border-radius: 12px; background: rgba(0,0,0,.28); color: var(--text, #e4e7f1); font-family: inherit; font-size: .95rem; line-height: 1.4; box-shadow: none; outline: none; -webkit-appearance: none; appearance: none; }
+:is(#ostMeshApp, #oslSheet) :is(#oslCText, #oslName, #oslBio, #oslQ, #oslStCap, #oslPayAmt, #oslPayNote):focus { border-color: rgba(109,159,255,.8); box-shadow: 0 0 0 3px rgba(109,159,255,.22); background: rgba(0,0,0,.36); outline: none; }
+#oslCText::placeholder, #oslName::placeholder, #oslBio::placeholder, #oslQ::placeholder, #oslStCap::placeholder, #oslPayNote::placeholder, #oslText::placeholder { color: var(--text-muted, #8b92ad); opacity: 1; }
+#ostMeshApp #oslCText { flex: 1 1 auto; max-height: 120px; resize: none; border-radius: 14px; }
+#ostMeshApp #oslBio { min-height: 84px; resize: none; }
+#ostMeshApp #oslName.bad { border-color: rgba(248,113,113,.85); box-shadow: 0 0 0 3px rgba(248,113,113,.18); }
+.osl-ferr { margin: 6px 0 2px; font-size: .78rem; font-weight: 700; color: #f87171; }
+#oslQ::-webkit-search-cancel-button { filter: invert(.7); }
 
 /* ---------- composer ---------- */
-.osl-postbtn { padding: 8px 16px; border-radius: 999px; border: 0; background: var(--accent, #6d9fff); color: #fff; font-weight: 800; flex: 0 0 auto; }
-.osl-postbtn:disabled { opacity: .6; }
-.osl-comp { display: flex; gap: 10px; }
-.osl-comp textarea { flex: 1 1 auto; min-height: 140px; border: 0; background: transparent; color: var(--text, #e4e7f1); font: inherit; font-size: 1.05rem; line-height: 1.45; resize: vertical; outline: none; }
+#ostMeshApp .osl-postbtn { flex: 0 0 auto; height: 38px; min-height: 38px; padding: 0 18px; border-radius: 999px; border: 0; background: #2f62e6; color: #fff; font-size: .9rem; font-weight: 800; line-height: 1; }
+#ostMeshApp .osl-postbtn:disabled { opacity: .45; cursor: default; }
+.osl-comp { display: flex; gap: 10px; padding: 2px 0 8px; border-bottom: 1px solid var(--border, rgba(109,159,255,.15)); }
+.osl-comp:focus-within { border-bottom-color: rgba(109,159,255,.75); }
+#ostMeshApp #oslText { flex: 1 1 auto; min-width: 0; width: 100%; min-height: 140px; margin: 0; padding: 8px 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; outline: none; color: var(--text, #e4e7f1); font-family: inherit; font-size: 1.05rem; line-height: 1.45; resize: none; -webkit-appearance: none; appearance: none; }
+.osl-count { margin: 6px 0 0; text-align: right; font-size: .74rem; font-variant-numeric: tabular-nums; color: var(--text-muted, #8b92ad); }
+.osl-count.near { color: var(--warm, #f5c468); }
+.osl-count.over { color: #f87171; font-weight: 800; }
+/* screen-reader only (the composer's limit announcements) */
+.osl-sr { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
 .osl-picks { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin: 8px 0; }
 .osl-pick { position: relative; border-radius: 12px; overflow: hidden; aspect-ratio: 1 / 1; background: #000; }
 .osl-pick img, .osl-pick video { width: 100%; height: 100%; object-fit: cover; display: block; }
 .osl-pick i { position: absolute; left: 6px; bottom: 6px; font-style: normal; }
-.osl-pick button { position: absolute; right: 4px; top: 4px; width: 26px; height: 26px; border-radius: 50%; border: 0; background: rgba(0,0,0,.65); color: #fff; }
-.osl-attached { position: relative; }
-.osl-attached > button { position: absolute; right: 18px; top: 16px; width: 24px; height: 24px; border-radius: 50%; border: 0; background: rgba(0,0,0,.6); color: #fff; }
+.osl-pickwait { background: linear-gradient(90deg, rgba(255,255,255,.03), rgba(255,255,255,.09), rgba(255,255,255,.03)); background-size: 200% 100%; animation: osl-sh 1.2s linear infinite; }
+#ostMeshApp .osl-pick button { position: absolute; right: 0; top: 0; width: 40px; height: 40px; min-height: 0; padding: 0; border: 0; border-radius: 50%; background: radial-gradient(circle, rgba(0,0,0,.72) 0 13px, transparent 14px); color: #fff; font-size: .8rem; line-height: 1; display: grid; place-items: center; }
+.osl-attached { position: relative; margin: 8px 0 4px; }
+#ostMeshApp .osl-attached > .osl-embed { width: 100%; margin: 0; padding-right: 54px; }
+#ostMeshApp .osl-attached > [data-act="sx-unembed"] { position: absolute; right: 6px; top: calc(50% - 22px); width: 44px; height: 44px; min-height: 0; padding: 0; border: 0; border-radius: 50%; background: radial-gradient(circle, rgba(0,0,0,.65) 0 15px, transparent 16px); color: #fff; font-size: .9rem; line-height: 1; display: grid; place-items: center; }
 .osl-tools { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 4px; }
-.osl-tools > * { flex: 1 1 120px; width: auto; text-align: center; cursor: pointer; }
+#ostMeshApp .osl-tools > * { flex: 1 1 120px; width: auto; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; margin: 0; padding: 0 12px; border-radius: 12px; font-size: .86rem; font-weight: 700; line-height: 1; white-space: nowrap; text-align: center; cursor: pointer; }
 .osl-attopt { cursor: pointer; }
 
 /* ---------- profile ---------- */
@@ -100,128 +160,126 @@
 .osl-phero > div { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .osl-phero b { font-size: 1.25rem; }
 .osl-phero small { font-size: .72rem; color: var(--text-muted, #8b92ad); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; }
+#ostMeshApp .osl-phero label.omx-ghost, #ostMeshApp .osl-phero button.omx-ghost { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 14px; font-size: .86rem; cursor: pointer; }
+#ostMeshApp .osl-phero label.omx-ghost[aria-busy="true"] { opacity: .7; cursor: progress; }
 .osl-online { font-size: .74rem; color: var(--success, #34d399); font-weight: 700; }
 .osl-bio { margin: 0 0 10px; font-size: .92rem; line-height: 1.45; }
 .osl-bio.dim { color: var(--text-muted, #8b92ad); font-style: italic; }
 .osl-counts { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
-.osl-counts button { background: none; border: 0; color: var(--text-muted, #8b92ad); font-size: .8rem; padding: 4px 8px 4px 0; }
+#ostMeshApp .osl-counts button { min-height: 44px; padding: 0 10px 0 0; border: 0; border-radius: 8px; background: none; color: var(--text-muted, #8b92ad); font-size: .82rem; font-weight: 600; line-height: 1.2; white-space: nowrap; }
 .osl-counts b { color: var(--text, #e4e7f1); font-size: 1rem; margin-right: 4px; }
 .osl-fyou { font-size: .7rem; padding: 3px 8px; border-radius: 999px; background: rgba(255,255,255,.07); color: var(--text-muted, #8b92ad); }
 .osl-pbtns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-.osl-pbtns > button { flex: 1 1 auto; width: auto; min-width: 44px; padding: 10px 12px; }
-.osl-pbtns > button:disabled { opacity: .5; }
+#ostMeshApp .osl-pbtns > button { flex: 1 1 auto; width: auto; min-width: 44px; min-height: 44px; padding: 0 14px; border-radius: 12px; font-size: .88rem; line-height: 1.2; white-space: nowrap; }
+#ostMeshApp .osl-pbtns > button:disabled { opacity: .5; cursor: default; }
 .osl-unseen { background: rgba(109,159,255,.07) !important; }
 
-/* ---------- sheet / lightbox ---------- */
-#oslSheet { position: fixed; inset: 0; z-index: 12600; display: none; align-items: flex-end; justify-content: center; background: rgba(0,0,0,.55); }
+/* ---------- sheet (actions, confirms, pickers) ---------- */
+#oslSheet { position: fixed; inset: 0; z-index: 12600; display: none; align-items: flex-end; justify-content: center; background: rgba(0,0,0,.55); color: var(--text, #e4e7f1); }
 #oslSheet.on { display: flex; }
-.osl-sheetbox { width: min(100%, 480px); max-height: 86vh; overflow: auto; padding: 18px 16px calc(18px + env(safe-area-inset-bottom)); border-radius: 22px 22px 0 0; background: var(--bg-alt, #0c0f1a); border: 1px solid var(--border, rgba(109,159,255,.2)); color: var(--text, #e4e7f1); }
+#oslSheet.over { z-index: 12900; }   /* asked from the story viewer / lightbox: above them, still under a call */
+.osl-sheetbox { width: min(100%, 480px); max-height: 86vh; overflow: auto; overscroll-behavior: contain; padding: 18px 16px calc(18px + env(safe-area-inset-bottom)); border-radius: 22px 22px 0 0; background: var(--bg-alt, #0c0f1a); border: 1px solid var(--border, rgba(109,159,255,.2)); color: var(--text, #e4e7f1); font-size: .95rem; line-height: 1.45; }
+.osl-sheetbox:focus { outline: none; }
 @media (min-width: 700px) { #oslSheet { align-items: center; } .osl-sheetbox { border-radius: 22px; } }
-.osl-sheetbox h3 { margin: 0 0 10px; }
+.osl-sheetbox h3 { margin: 0 0 10px; font-size: 1.1rem; font-weight: 800; line-height: 1.3; }
+.osl-sbody { margin: 0 0 16px; font-size: .9rem; line-height: 1.5; color: var(--text-muted, #8b92ad); }
 .osl-sheetbox .omx-list { display: grid; gap: 4px; }
-.osl-sheetbox .omx-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px; border-radius: 12px; border: 0; background: transparent; color: inherit; text-align: left; font: inherit; font-weight: 700; cursor: pointer; }
-.osl-sheetbox .omx-item:hover { background: rgba(255,255,255,.05); }
-.osl-sheetbox .omx-item .omx-main b { display: block; }
-.osl-sheetbox .omx-primary, .osl-sheetbox .omx-ghost { font: inherit; cursor: pointer; }
-.osl-sheetbox .omx-primary { width: 100%; padding: 13px; border: 0; border-radius: 13px; background: linear-gradient(135deg, var(--accent, #6d9fff), var(--accent2, #a78bfa)); color: #fff; font-weight: 800; }
-.osl-sheetbox .omx-primary:disabled { opacity: .6; }
-.osl-sheetbox .omx-ghost { width: 100%; padding: 11px; border-radius: 12px; border: 1px solid var(--border, rgba(109,159,255,.2)); background: transparent; color: inherit; font-weight: 700; }
+#oslSheet .omx-item { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 8px 10px; border-radius: 12px; border: 0; background: transparent; color: inherit; text-align: left; font-size: .95rem; font-weight: 700; line-height: 1.3; cursor: pointer; }
+#oslSheet .omx-item:hover, #oslSheet .omx-item:focus-visible { background: rgba(255,255,255,.06); }
+.osl-sheetbox .omx-item .omx-main { flex: 1 1 auto; min-width: 0; }
+.osl-sheetbox .omx-item .omx-main b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.osl-sheetbox .omx-item .omx-main span { display: block; font-size: .78rem; font-weight: 600; color: var(--text-muted, #8b92ad); }
+#oslSheet .omx-primary { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 46px; padding: 0 16px; border: 0; border-radius: 13px; background: linear-gradient(135deg, #2f62e6, #6d4fd8); color: #fff; font-size: .95rem; font-weight: 800; line-height: 1.2; }
+#oslSheet .omx-primary:disabled { opacity: .6; cursor: default; }
+#oslSheet .omx-primary.osl-danger { background: #dc2626; }
+#oslSheet .omx-ghost { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 46px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--border, rgba(109,159,255,.25)); background: transparent; color: inherit; font-size: .92rem; font-weight: 700; line-height: 1.2; }
+#oslSheet :is(button, input, textarea):focus-visible { outline: 2px solid var(--accent, #6d9fff); outline-offset: 2px; }
 .osl-sheetbox .omx-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .osl-sheetbox .omx-row2 > :only-child { grid-column: 1 / -1; }
-.osl-sheetbox .omx-input { width: 100%; padding: 11px 12px; border-radius: 12px; border: 1px solid var(--border, rgba(109,159,255,.2)); background: rgba(0,0,0,.25); color: inherit; font-size: .95rem; box-sizing: border-box; }
 .osl-sheetbox .omx-note { font-size: .76rem; color: var(--text-muted, #8b92ad); line-height: 1.45; margin: 8px 0; }
-.osl-sheetbox .omx-danger { color: var(--danger, #ef4444) !important; }
+.osl-sheetbox .omx-danger { color: #f87171 !important; }
 .osl-sheetbox .omx-empty, .osl-sheetbox .osl-end { padding: 16px; text-align: center; color: var(--text-muted, #8b92ad); }
 .osl-seg { display: flex; gap: 6px; margin: 8px 0; }
-.osl-seg button, .osl-chips button { flex: 1 1 0; padding: 9px 6px; border-radius: 10px; border: 1px solid var(--border, rgba(109,159,255,.2)); background: transparent; color: inherit; font-weight: 800; cursor: pointer; font: inherit; }
-.osl-seg button.on, .osl-chips button.on { background: rgba(109,159,255,.18); border-color: var(--accent, #6d9fff); color: var(--accent, #6d9fff); }
+#oslSheet .osl-seg button, #oslSheet .osl-chips button { flex: 1 1 0; min-height: 44px; padding: 0 6px; border-radius: 10px; border: 1px solid var(--border, rgba(109,159,255,.25)); background: transparent; color: inherit; font-size: .88rem; font-weight: 800; line-height: 1; }
+#oslSheet .osl-seg button.on, #oslSheet .osl-chips button.on { background: rgba(109,159,255,.18); border-color: var(--accent, #6d9fff); color: var(--accent, #6d9fff); }
 .osl-chips { display: flex; gap: 6px; margin: 0 0 8px; flex-wrap: wrap; }
-.osl-chips button { flex: 1 1 52px; }
+#oslSheet .osl-chips button { flex: 1 1 52px; }
+#oslSheet :is(#oslPayAmt, #oslPayNote, #oslStCap) { margin-top: 2px; }
 .osl-stprev { border-radius: 16px; overflow: hidden; background: #000; max-height: 50vh; display: grid; place-items: center; margin-bottom: 10px; }
 .osl-stprev img, .osl-stprev video { max-width: 100%; max-height: 50vh; display: block; }
-#oslLight { position: fixed; inset: 0; z-index: 12700; display: none; place-items: center; background: rgba(0,0,0,.92); }
-#oslLight.on { display: grid; }
-#oslLight img { max-width: 100vw; max-height: 100vh; object-fit: contain; }
-#oslLight button { position: absolute; width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgba(255,255,255,.12); color: #fff; font-size: 1.4rem; cursor: pointer; }
-#oslLight [data-l="x"] { top: calc(14px + env(safe-area-inset-top)); right: 14px; }
-#oslLight [data-l="p"] { left: 10px; top: 50%; } #oslLight [data-l="n"] { right: 10px; top: 50%; }
-#oslLight span { position: absolute; bottom: 20px; color: #fff; font-size: .8rem; }
 
-/* ---------- story viewer ---------- */
-#oslStory { position: fixed; inset: 0; z-index: 12800; display: none; background: #000; color: #fff; user-select: none; -webkit-user-select: none; }
+/* ---------- lightbox ---------- */
+#oslLight { position: fixed; inset: 0; z-index: 12700; display: none; background: rgba(0,0,0,.94); color: #fff; overscroll-behavior: contain; }
+#oslLight.on { display: block; }
+#oslLight:focus { outline: none; }
+#oslLight .osl-lstage { position: absolute; inset: 0; }
+#oslLight .osl-lstage img { position: absolute; inset: 0; margin: auto; width: auto; height: auto; max-width: 100%; max-height: 100%; object-fit: contain; display: block; user-select: none; -webkit-user-select: none; }
+#oslLight .osl-lstage .osl-mfail { position: absolute; inset: 0; margin: auto; width: min(90vw, 480px); height: auto; border-radius: 12px; }
+#oslLight button { position: absolute; z-index: 2; width: 48px; height: 48px; min-width: 48px; min-height: 0; max-width: none; padding: 0; border: 0; border-radius: 50%; background: rgba(12,15,26,.62); box-shadow: 0 0 0 1px rgba(255,255,255,.22), 0 4px 16px rgba(0,0,0,.35); color: #fff; font-size: 1.5rem; line-height: 1; display: grid; place-items: center; }
+#oslLight button:hover { background: rgba(40,46,66,.8); }
+#oslLight button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+#oslLight [data-l="x"] { top: calc(12px + env(safe-area-inset-top)); right: 12px; }
+#oslLight [data-l="p"], #oslLight [data-l="n"] { top: calc(50% - 24px); font-size: 1.9rem; }
+#oslLight [data-l="p"] { left: 12px; }
+#oslLight [data-l="n"] { right: 12px; }
+#oslLight > span { position: absolute; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); transform: translateX(-50%); padding: 4px 10px; border-radius: 999px; background: rgba(0,0,0,.55); font-size: .8rem; font-weight: 700; line-height: 1.3; }
+
+/* ---------- story viewer: full screen on phones (also in landscape), a centred 9:16 card on desktop ---------- */
+#oslStory { --cw: 100vw; position: fixed; inset: 0; z-index: 12800; display: none; background: #000; color: #fff; user-select: none; -webkit-user-select: none; overscroll-behavior: contain; }
 #oslStory.on { display: block; }
+#oslStory:focus { outline: none; }
+.osl-scard { position: absolute; inset: 0; overflow: hidden; background: #000; }
+/* media always fits: a definite minmax(0,1fr) track (an auto row would grow to the image's natural height) */
+.osl-smedia { position: absolute; inset: 0; display: grid; grid-template-rows: minmax(0, 1fr); grid-template-columns: minmax(0, 1fr); place-items: center; }
+#oslStory .osl-smedia img, #oslStory .osl-smedia video { width: 100%; height: 100%; min-width: 0; min-height: 0; max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+#oslStory .osl-smedia .osl-mfail { width: 100%; height: 100%; aspect-ratio: auto; background: #05070d; }
 .osl-sbars { position: absolute; top: calc(8px + env(safe-area-inset-top)); left: 8px; right: 8px; display: flex; gap: 4px; z-index: 3; }
 .osl-sbars i { flex: 1 1 0; height: 3px; border-radius: 2px; background: rgba(255,255,255,.3); overflow: hidden; }
 .osl-sbars b { display: block; height: 100%; background: #fff; }
-.osl-shead { position: absolute; top: calc(18px + env(safe-area-inset-top)); left: 12px; right: 12px; display: flex; align-items: center; gap: 8px; z-index: 3; text-shadow: 0 1px 4px rgba(0,0,0,.6); }
-.osl-shead small { opacity: .75; font-size: .76rem; flex: 1 1 auto; }
-.osl-shead button { background: none; border: 0; color: #fff; font-size: 1.5rem; cursor: pointer; }
-.osl-smedia { position: absolute; inset: 0; display: grid; place-items: center; }
-.osl-smedia img, .osl-smedia video { max-width: 100%; max-height: 100%; object-fit: contain; }
+.osl-shead { position: absolute; top: calc(16px + env(safe-area-inset-top)); left: 12px; right: 4px; display: flex; align-items: center; gap: 8px; z-index: 3; text-shadow: 0 1px 4px rgba(0,0,0,.6); }
+.osl-shead b { min-width: 0; max-width: 55%; font-size: .9rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.osl-shead small { flex: 1 1 auto; opacity: .8; font-size: .76rem; white-space: nowrap; }
+#oslStory .osl-shead button { flex: 0 0 44px; width: 44px; height: 44px; min-height: 0; padding: 0; border: 0; border-radius: 50%; background: none; color: #fff; font-size: 1.4rem; line-height: 1; display: grid; place-items: center; }
 .osl-snav { position: absolute; inset: 70px 0 80px; display: grid; grid-template-columns: 1fr 2fr; z-index: 2; }
-.osl-snav button { background: transparent; border: 0; }
-.osl-scap { position: absolute; left: 16px; right: 16px; bottom: calc(80px + env(safe-area-inset-bottom)); text-align: center; font-size: 1rem; text-shadow: 0 1px 6px rgba(0,0,0,.8); z-index: 3; }
+#oslStory .osl-snav button { width: 100%; height: 100%; min-height: 0; padding: 0; border: 0; border-radius: 0; background: transparent; }
+.osl-scap { position: absolute; left: 16px; right: 16px; bottom: calc(76px + env(safe-area-inset-bottom)); text-align: center; font-size: 1rem; line-height: 1.4; text-shadow: 0 1px 6px rgba(0,0,0,.8); z-index: 3; overflow-wrap: anywhere; }
 .osl-sfoot { position: absolute; left: 12px; right: 12px; bottom: calc(14px + env(safe-area-inset-bottom)); display: flex; gap: 8px; align-items: center; z-index: 4; }
 .osl-sfoot span { flex: 1 1 auto; font-size: .86rem; }
-.osl-sfoot input { flex: 1 1 auto; min-width: 0; padding: 12px 14px; border-radius: 999px; border: 1px solid rgba(255,255,255,.35); background: rgba(0,0,0,.35); color: #fff; font-size: .95rem; }
-.osl-sfoot button { padding: 10px 14px; border-radius: 999px; border: 0; background: rgba(255,255,255,.18); color: #fff; font-weight: 800; cursor: pointer; }
+#oslStory #oslSReply { flex: 1 1 auto; min-width: 0; height: 44px; min-height: 44px; margin: 0; padding: 0 16px; border: 1px solid rgba(255,255,255,.4); border-radius: 999px; background: rgba(0,0,0,.4); color: #fff; font-family: inherit; font-size: .95rem; box-shadow: none; outline: none; -webkit-appearance: none; appearance: none; user-select: text; -webkit-user-select: text; }
+#oslSReply::placeholder { color: rgba(255,255,255,.72); opacity: 1; }
+#oslStory #oslSReply:focus { border-color: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,.18); }
+#oslStory .osl-sfoot button { flex: 0 0 auto; min-width: 44px; height: 44px; min-height: 0; padding: 0 16px; border: 0; border-radius: 999px; background: rgba(255,255,255,.2); color: #fff; font-size: .9rem; font-weight: 800; line-height: 1; white-space: nowrap; }
+#oslStory .osl-sfoot button:focus-visible, #oslStory .osl-shead button:focus-visible, #oslStory .osl-sarrow:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+#oslStory .osl-sarrow { display: none; }
+/* the card needs height as well as width: a phone in landscape (844×390) would get a 192 px wide card */
+@media (min-width: 700px) and (min-height: 560px) {
+  #oslStory { --cw: min(calc((100vh - 48px) * 9 / 16), calc(100vw - 150px)); background: rgba(5,7,13,.94); }
+  @supports (height: 100dvh) { #oslStory { --cw: min(calc((100dvh - 48px) * 9 / 16), calc(100vw - 150px)); } }
+  #oslStory.on { display: grid; place-items: center; }
+  .osl-scard { position: relative; inset: auto; width: var(--cw); height: auto; aspect-ratio: 9 / 16; border-radius: 16px; box-shadow: 0 24px 80px rgba(0,0,0,.6); }
+  .osl-sbars { top: 10px; }
+  .osl-shead { top: 18px; }
+  .osl-scap { bottom: 76px; }
+  .osl-sfoot { bottom: 14px; }
+  #oslStory .osl-sarrow { display: grid; place-items: center; position: absolute; top: calc(50% - 24px); width: 48px; height: 48px; min-height: 0; padding: 0; border: 0; border-radius: 50%; background: rgba(255,255,255,.14); color: #fff; font-size: 1.8rem; line-height: 1; }
+  #oslStory .osl-sarrow:hover { background: rgba(255,255,255,.26); }
+  #oslStory .osl-sarrow.prev { left: calc(50% - var(--cw) / 2 - 64px); }
+  #oslStory .osl-sarrow.next { left: calc(50% + var(--cw) / 2 + 16px); }
+}
+
+/* ---------- phones: inputs at 16px (no iOS focus zoom), 44px header Post button ---------- */
+@media (max-width: 820px) {
+  :is(#ostMeshApp, #oslSheet, #oslStory) :is(#oslText, #oslCText, #oslName, #oslBio, #oslQ, #oslStCap, #oslPayAmt, #oslPayNote, #oslSReply) { font-size: 16px; }
+  #ostMeshApp .osl-postbtn { height: 44px; min-height: 44px; }
+  #ostMeshApp .osl-inerr button { height: 44px; min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) { .osl-skel, .osl-pickwait { animation: none; } }
 
 /* ---------- market page share button + action toast + nav ---------- */
 .osl-mshare { flex: 0 0 auto; margin-right: 8px; padding: 6px 12px; border-radius: 999px; border: 1px solid rgba(109,159,255,.4); background: rgba(109,159,255,.1); color: #9fc1ff; font-weight: 800; font-size: .78rem; cursor: pointer; white-space: nowrap; }
 .omx-toast.osl-act { display: flex; align-items: center; gap: 10px; justify-content: space-between; pointer-events: auto; }
-.omx-toast.osl-act button { padding: 6px 12px; border-radius: 999px; border: 0; background: var(--accent, #6d9fff); color: #fff; font-weight: 800; cursor: pointer; }
-
-/* ---------- chat rich cards (location, payments, calls) ---------- */
-.omx-livebar { display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: rgba(52,211,153,.12); border-bottom: 1px solid rgba(52,211,153,.3); font-size: .8rem; font-weight: 700; color: var(--success, #34d399); }
-.omx-livebar span { flex: 1 1 auto; }
-.omx-livebar button { padding: 5px 12px; border-radius: 999px; border: 0; background: var(--danger, #ef4444); color: #fff; font-weight: 800; cursor: pointer; }
-.omx-attach { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 6px; padding: 8px 10px; border-top: 1px solid var(--border, rgba(109,159,255,.12)); background: var(--surface, #111627); }
-.omx-attach > button { display: flex; align-items: center; gap: 8px; padding: 10px; border-radius: 12px; border: 1px solid var(--border, rgba(109,159,255,.15)); background: var(--surface2, #171d32); color: inherit; font-weight: 700; font-size: .82rem; text-align: left; cursor: pointer; }
-.omx-attach > button b { font-size: 1.1rem; }
-.omx-livepick { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: .8rem; color: var(--text-muted, #8b92ad); }
-.omx-livepick button { padding: 7px 12px; border-radius: 999px; border: 1px solid rgba(52,211,153,.5); background: rgba(52,211,153,.1); color: var(--success, #34d399); font-weight: 800; cursor: pointer; }
-.omx-map { position: relative; width: 260px; max-width: 100%; height: 150px; overflow: hidden; border-radius: 10px; background: #1b2236; }
-.omx-tiles { position: absolute; width: 768px; height: 768px; }
-.omx-tiles img { position: absolute; width: 256px; height: 256px; max-width: none !important; }
-.omx-pin { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -100%); font-size: 1.6rem; filter: drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
-.omx-map small { position: absolute; right: 4px; bottom: 2px; font-size: .55rem; color: #333; background: rgba(255,255,255,.7); padding: 0 3px; border-radius: 3px; }
-.omx-locc { display: block; }
-.omx-loct { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; font-size: .78rem; }
-.omx-loct span { opacity: .8; }
-.omx-loct a, .omx-payc a { color: inherit; text-decoration: underline; font-weight: 700; }
-.omx-payc { display: flex; flex-direction: column; gap: 3px; min-width: 180px; }
-.omx-payc b { font-size: 1.15rem; }
-.omx-payc span { font-size: .78rem; opacity: .85; }
-.omx-callc { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.omx-callc button { padding: 6px 12px; border-radius: 999px; border: 0; background: rgba(255,255,255,.18); color: inherit; font-weight: 800; cursor: pointer; }
-
-/* ---------- call screen ---------- */
-#omxCall { position: fixed; inset: 0; z-index: 13000; display: none; background: radial-gradient(circle at 50% 30%, #1b2a4a, #05070d 70%); color: #fff; }
-#omxCall.on { display: block; }
-#omxCallRemote { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; display: none; }
-#omxCall.video.live #omxCallRemote { display: block; }
-#omxCallLocal { position: absolute; right: 14px; top: calc(14px + env(safe-area-inset-top)); width: 112px; height: 150px; object-fit: cover; border-radius: 14px; border: 2px solid rgba(255,255,255,.4); background: #111; display: none; transform: scaleX(-1); z-index: 2; }
-#omxCall.video #omxCallLocal { display: block; }
-#omxCallLocal[hidden] { display: none !important; }
-.omxc-top { position: absolute; left: 0; right: 0; top: 18%; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; z-index: 1; text-shadow: 0 1px 6px rgba(0,0,0,.6); }
-#omxCall.video.live .omxc-top { top: calc(18px + env(safe-area-inset-top)); left: 14px; right: auto; align-items: flex-start; text-align: left; }
-#omxCall.video.live .omxc-av { display: none; }
-.omxc-av { width: 110px; height: 110px; border-radius: 36px; display: grid; place-items: center; font-size: 3rem; font-weight: 900; box-shadow: 0 0 0 10px rgba(255,255,255,.06); }
-#omxCall:not(.live) .omxc-av { animation: omxc-pulse 1.6s ease-in-out infinite; }
-@keyframes omxc-pulse { 50% { box-shadow: 0 0 0 22px rgba(255,255,255,.03); } }
-.omxc-top b { font-size: 1.5rem; }
-.omxc-top span { font-size: .95rem; opacity: .85; }
-.omxc-btns { position: absolute; left: 0; right: 0; bottom: calc(40px + env(safe-area-inset-bottom)); display: flex; justify-content: center; gap: 18px; z-index: 2; flex-wrap: wrap; }
-.omxc-btns button { width: 66px; height: 66px; border-radius: 50%; border: 0; background: rgba(255,255,255,.16); color: #fff; font-size: 1.6rem; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
-.omxc-btns button small { font-size: .58rem; margin-top: 2px; font-weight: 700; opacity: .9; }
-.omxc-btns button.off { background: rgba(255,255,255,.85); color: #111; }
-.omxc-btns .omxc-no { background: #ef4444; }
-.omxc-btns .omxc-yes { background: #22c55e; }
+.omx-toast.osl-act button { flex: 0 0 auto; min-height: 36px; padding: 0 14px; border-radius: 999px; border: 0; background: #2f62e6; color: #fff; font-family: inherit; font-size: .84rem; font-weight: 800; line-height: 1; white-space: nowrap; cursor: pointer; }
 
 /* mobile-shell global "min-width:0; overflow-wrap:anywhere; max-width:100%" breaks rails */
-body.ost-mobile-shell .osl-stories > .osl-st { flex: 0 0 auto; min-width: 68px; overflow-wrap: normal; }
+body.ost-mobile-shell .osl-stories > .osl-st { flex: 0 0 auto; min-width: 72px; overflow-wrap: normal; }
 body.ost-mobile-shell .osl-media img, body.ost-mobile-shell .osl-media video { max-width: 100%; }
-body.ost-mobile-shell .omx-tiles img { max-width: none !important; }
-body.ost-mobile-shell .omxc-btns button { flex: 0 0 auto; min-width: 66px; overflow-wrap: normal; }
-html.omx-lock #omxCall ~ .nx-dock { display: none !important; }
-body.ost-mobile-shell .omx-tiles { max-width: none !important; }

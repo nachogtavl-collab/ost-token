@@ -272,15 +272,15 @@
     };
   })();
   </script>
-  <link rel="stylesheet" href="style.css?v=82">
-  <link rel="stylesheet" href="mobile.css?v=7">
+  <link rel="stylesheet" href="style.css?v=83">
+  <link rel="stylesheet" href="mobile.css?v=8">
   <link rel="stylesheet" href="polish.css?v=1">
   <link rel="stylesheet" href="compartments.css?v=4">
-  <link rel="stylesheet" href="prediction-extras.css?v=5">
+  <link rel="stylesheet" href="prediction-extras.css?v=6">
   <link rel="stylesheet" href="ost-predict-mobile.css?v=15">
   <link rel="stylesheet" href="ost-wallet-home.css?v=1">
-  <link rel="stylesheet" href="ost-mesh-app.css?v=1">
-  <link rel="stylesheet" href="ost-social.css?v=1">
+  <link rel="stylesheet" href="ost-mesh-app.css?v=2">
+  <link rel="stylesheet" href="ost-social.css?v=2">
   <link rel="stylesheet" href="ost-apps-viewer.css?v=1">
   <link rel="stylesheet" href="prediction-pro.css?v=1">
   <link rel="stylesheet" href="prediction-modal.css?v=6">
@@ -292,16 +292,16 @@
   <link rel="stylesheet" href="ost-currency-colors.css?v=1">
   <link rel="stylesheet" href="topup.css?v=4">
   <link rel="stylesheet" href="offline-vault.css?v=1">
-  <link rel="stylesheet" href="redesign.css?v=2">
+  <link rel="stylesheet" href="redesign.css?v=3">
   <link rel="stylesheet" href="stock-market.css?v=2">
   <link rel="stylesheet" href="ost-perps.css?v=1">
   <link rel="stylesheet" href="live-watch.css?v=5">
-  <link rel="stylesheet" href="mobile-shell.css?v=20">
-  <link rel="stylesheet" href="ost-mobile-scale.css?v=3">
+  <link rel="stylesheet" href="mobile-shell.css?v=21">
+  <link rel="stylesheet" href="ost-mobile-scale.css?v=4">
   <link rel="stylesheet" href="ost-scroll-fix.css?v=1">
   <link rel="stylesheet" href="prediction-modal-redesign.css?v=2">
   <link rel="stylesheet" href="ost-mobile-fit.css?v=1">
-  <link rel="stylesheet" href="ost-appbar.css?v=4">
+  <link rel="stylesheet" href="ost-appbar.css?v=5">
   <link rel="stylesheet" href="predict-mobile.css?v=2">
   <link rel="stylesheet" href="ost-markets-desk.css?v=4">
   <link rel="stylesheet" href="ost-markets-pro.css?v=3">
@@ -311,7 +311,7 @@
   <link rel="stylesheet" href="ost-mesh-desk.css?v=2">
   <link rel="stylesheet" href="ost-microfx.css?v=1">
   <link rel="stylesheet" href="ost-instant.css?v=1">
-  <link rel="stylesheet" href="ost-nexus.css?v=4">
+  <link rel="stylesheet" href="ost-nexus.css?v=5">
   <!-- Not deferred on purpose: presses must be acknowledged from the first
        frame. It is ~2KB and only adds document-level listeners. -->
   <script src="ost-instant.js?v=1"></script>
@@ -503,8 +503,8 @@
             <button type="button" class="ost-mobile-home__action" data-mobile-route="wallet" data-mobile-tab="convert"><span>Convert</span><small>SOL to OST, fiat, and transfer rail.</small></button>
             <button type="button" class="ost-mobile-home__action" data-mobile-route="commerce"><span>Spend</span><small>Shop, gift cards, gas, and checkout.</small></button>
             <button type="button" class="ost-mobile-home__action" data-mobile-route="new-here"><span>Get OST</span><small>Faucet, top-up, and first balance.</small></button>
-            <button type="button" class="ost-mobile-home__action" data-mobile-mesh><span>Mesh</span><small>Chat, call, map ping, and share.</small></button>
-            <button type="button" class="ost-mobile-home__action" data-mobile-games><span>Fair Games</span><small>Open Arena inside OST Mesh.</small></button>
+            <button type="button" class="ost-mobile-home__action" data-mobile-mesh><span>Mesh</span><small>Feed, stories, chats and calls.</small></button>
+            <button type="button" class="ost-mobile-home__action" data-mobile-games><span>Fair Games</span><small>Peer-to-peer games arena.</small></button>
           </div>
           <div class="ost-mobile-home__status"><span>Live devnet app</span><p>Touch targets, popouts, and bottom navigation are managed as one mobile shell.</p></div>
         </div>
@@ -564,7 +564,7 @@
         <button type="button" class="nx-tile" data-nx-go="stock-market" style="--tile-c:#60a5fa"><span class="nx-tile__ic"><svg class="nx-ic" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span><span class="nx-tile__t">Market mirror</span><span class="nx-tile__d">Real-world markets mirrored in OST.</span><span class="nx-tile__live" data-nx-live="mirror"></span></button>
         <button type="button" class="nx-tile" data-nx-go="games" style="--tile-c:#a78bfa"><span class="nx-tile__ic"><svg class="nx-ic" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="11" rx="4"/><path d="M8 11v3M6.5 12.5h3M15 12h.01M17.5 13.5h.01"/></svg></span><span class="nx-tile__t">Fair games</span><span class="nx-tile__d">Provably fair crash, dice, plinko and duels.</span><span class="nx-tile__live" data-nx-live="games"></span></button>
         <button type="button" class="nx-tile" data-nx-go="launchpad" style="--tile-c:#f5c468"><span class="nx-tile__ic"><svg class="nx-ic" viewBox="0 0 24 24"><path d="M12 2c3 3 4 7 3 11l-3 3-3-3C8 9 9 5 12 2z"/><path d="M9 13l-4 1 2 4M15 13l4 1-2 4M10 20h4"/></svg></span><span class="nx-tile__t">Launchpad</span><span class="nx-tile__d">Launch a coin on a bonding curve in seconds.</span><span class="nx-tile__live" data-nx-live="launchpad"></span></button>
-        <button type="button" class="nx-tile" data-nx-go="mesh" style="--tile-c:#34d399"><span class="nx-tile__ic"><svg class="nx-ic" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="7" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M8.2 7l7.4 0M7.3 8.2l3.6 7.6M16.8 9.2l-3.6 6.6"/></svg></span><span class="nx-tile__t">Mesh</span><span class="nx-tile__d">Chats, stories, groups and calls between wallets.</span><span class="nx-tile__live" data-nx-live="mesh"></span></button>
+        <button type="button" class="nx-tile" data-nx-go="mesh" style="--tile-c:#34d399"><span class="nx-tile__ic"><svg class="nx-ic" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="7" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M8.2 7l7.4 0M7.3 8.2l3.6 7.6M16.8 9.2l-3.6 6.6"/></svg></span><span class="nx-tile__t">Mesh</span><span class="nx-tile__d">Feed, stories, chats and calls.</span><span class="nx-tile__live" data-nx-live="mesh"></span></button>
         <button type="button" class="nx-tile" data-nx-go="ghost" style="--tile-c:#c4b5fd"><span class="nx-tile__ic"><svg class="nx-ic" viewBox="0 0 24 24"><path d="M5 20V11a7 7 0 0114 0v9l-2.5-2-2.3 2-2.2-2-2.2 2-2.3-2z"/><path d="M9.5 11h.01M14.5 11h.01"/></svg></span><span class="nx-tile__t">Ghost AI</span><span class="nx-tile__d">Your companion. Knows your bets and answers anything.</span><span class="nx-tile__live" data-nx-live="ghost"></span></button>
         <button type="button" class="nx-tile" data-nx-go="academy" style="--tile-c:#22d3ee"><span class="nx-tile__ic"><svg class="nx-ic" viewBox="0 0 24 24"><path d="M8 9l-4 3 4 3M16 9l4 3-4 3M13.5 6l-3 12"/></svg></span><span class="nx-tile__t">Code Academy</span><span class="nx-tile__d">Learn to code and earn while you learn.</span><span class="nx-tile__live" data-nx-live="academy"></span></button>
         <button type="button" class="nx-tile" data-nx-go="commerce" style="--tile-c:#fb923c"><span class="nx-tile__ic"><svg class="nx-ic" viewBox="0 0 24 24"><path d="M3 4h2l2.4 11h11L21 7H6.2"/><circle cx="9" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg></span><span class="nx-tile__t">Shop</span><span class="nx-tile__d">Goods, gift cards and fuel, paid in OST.</span><span class="nx-tile__live" data-nx-live="commerce"></span></button>
@@ -6013,7 +6013,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
     </div>
   </div>
 
-  <script src="mobile-shell.js?v=15"></script>
+  <script src="mobile-shell.js?v=16"></script>
   <!-- three.js is lazy-loaded on idle by app.js initGlobe (was render-blocking, ~580KB). -->
 
   <!-- ──────────────────────────────────────────────────────────────────
@@ -6277,14 +6277,14 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
     <script src="ost-live-stats.js?v=6"></script>
     <script src="ost-treasury-engine.js?v=2"></script>
     <script src="ost-engine-guard.js?v=2"></script>
-    <script src="ost-appbar.js?v=19"></script>
-    <script src="ost-desktop-nav.js?v=3" defer></script>
+    <script src="ost-appbar.js?v=20"></script>
+    <script src="ost-desktop-nav.js?v=4" defer></script>
     <script src="ost-ghost-brain.js?v=3" defer></script>
     <script src="ost-ghost-connect.js?v=1" defer></script>
   <script src="ost-world.js?v=7" defer></script>
   <script src="ost-world-bubble.js?v=4" defer></script>
   <script src="ost-shortcuts.js?v=1" defer></script>
-  <script src="ost-games-lanes.js?v=1" defer></script>
+  <script src="ost-games-lanes.js?v=2" defer></script>
   <script src="ost-ostg-source.js?v=5" defer></script>
   <script src="ost-balance.js?v=4" defer></script>
   <script src="ost-onchain-sync.js?v=2" defer></script>
@@ -6296,7 +6296,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
     <script src="ost-total-balance.js?v=3"></script>
     <script src="ost-ostg-wallet.js?v=2" defer></script>
     <script src="icons.js?v=1"></script>
-    <script src="app.js?v=272"></script>
+    <script src="app.js?v=273"></script>
   <script src="ost-session-key.js?v=12" defer></script>
   <script src="ost-onchain-market.js?v=7" defer></script>
   <script src="ost-onchain-route.js?v=3" defer></script>
@@ -6308,15 +6308,15 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="swap-pool.js?v=2"></script>
   <script src="wallet-extras.js?v=209"></script>
   <script src="ost-wallet-home.js?v=1" defer></script>
-  <script type="module" src="ost-mesh-app.js?v=3"></script>
-  <script type="module" src="ost-mesh-call.js?v=1"></script>
-  <script type="module" src="ost-social.js?v=2"></script>
-  <script src="ost-apps-viewer.js?v=2" defer></script>
+  <script type="module" src="ost-mesh-app.js?v=4"></script>
+  <script type="module" src="ost-mesh-call.js?v=2"></script>
+  <script type="module" src="ost-social.js?v=3"></script>
+  <script src="ost-apps-viewer.js?v=3" defer></script>
   <script src="compartments.js?v=8"></script>
   <script src="prediction-extras.js?v=20"></script>
   <script src="ost-positions.js?v=2" defer></script>
   <script src="prediction-pro.js?v=220"></script>
-  <script src="ost-predict-mobile.js?v=47" defer></script>
+  <script src="ost-predict-mobile.js?v=48" defer></script>
 <script src="ost-markets-desk.js?v=5" defer></script>
 <script src="ost-market-chart.js?v=3" defer></script>
 <script src="ost-market-art.js?v=1" defer></script>
@@ -6342,9 +6342,9 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="ost-quantum.js?v=1"></script>
   <script src="ost-quantum-lab.js?v=1" defer></script>
   <script src="ost-games.js?v=32"></script>
-  <script src="i18n-runtime.js?v=4"></script>
+  <script src="i18n-runtime.js?v=5"></script>
   <script src="devnet-rescue.js?v=205"></script>
-  <script src="ost-notifications.js?v=3"></script>
+  <script src="ost-notifications.js?v=4"></script>
   <!-- Mesh Casual Games (non-staked) -->
   <script src="launchpad-trenches.js?v=7"></script>
   <script src="launchpad-engine.js?v=8" defer></script>
@@ -6355,7 +6355,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="redesign.js?v=1" defer></script>
   <script src="mainnet-audit.js?v=1" defer></script>
   <script src="ost-microfx.js?v=2" defer></script>
-<script src="ost-nexus.js?v=5" defer></script>
+<script src="ost-nexus.js?v=6" defer></script>
   <script>
     (function () {
       var deferredPrompt = null;
@@ -6480,8 +6480,11 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <!-- Deferred to idle by ost-lazy.js. These are section-scoped (Mesh, mini-games,
        Code Academy, quantum demo) and used to run at boot — several with no `defer`,
        blocking HTML parsing. They now load one at a time while the browser is idle,
-       and flush immediately on first interaction. Order is preserved. -->
-  <script type="application/json" id="ost-lazy-manifest">[{"src":"ghost/ghost.js?v=8","module":true},{"src":"ghost/ghost-terminal.js?v=1","module":false},{"src":"ost-qr-reader.js?v=1","module":false},{"src":"mesh/mesh.js?v=47","module":true},{"src":"mesh/veil.js?v=3","module":true},{"src":"mesh/mesh-play.js?v=14","module":true},{"src":"mesh/mesh-fair-fx.js?v=1","module":false},{"src":"code-academy.js?v=4","module":false},{"src":"vendor/qrcode-generator.js","module":false},{"src":"mesh/mesh-upgrade.js?v=13","module":false},{"src":"mesh/mesh-link.js?v=3","module":false},{"src":"mesh/mesh-games.js?v=2","module":false},{"src":"mesh/games/tictactoe.js?v=1","module":false},{"src":"mesh/games/chess.js?v=1","module":false},{"src":"mesh/games/pool8.js?v=1","module":false},{"src":"mesh/games/cuppong.js?v=1","module":false},{"src":"mesh/games/minigolf.js?v=1","module":false},{"src":"mesh/mesh-social-x.js?v=5","module":false},{"src":"mesh/mesh-mobile.js?v=9","module":false},{"src":"mesh/mesh-contacts.js?v=2","module":false},{"src":"mesh/mesh-group-markets.js?v=3","module":false},{"src":"mesh/mesh-location-pro.js?v=7","module":false},{"src":"ost-pq-demo.js?v=1","module":false}]</script>
+       and flush immediately on first interaction. Order is preserved.
+       Entries with "group":"mesh" (the legacy mesh pavilion) are NEVER idle-loaded:
+       they load only through OST_LAZY.group('mesh') (Classic mesh, games openers,
+       mesh-link hash aliases). The OST Mesh app itself is ost-mesh-app.js above. -->
+  <script type="application/json" id="ost-lazy-manifest">[{"src":"ghost/ghost.js?v=8","module":true},{"src":"ghost/ghost-terminal.js?v=1","module":false},{"src":"ost-qr-reader.js?v=1","module":false},{"src":"mesh/mesh.js?v=48","module":true,"group":"mesh"},{"src":"mesh/veil.js?v=3","module":true,"group":"mesh"},{"src":"mesh/mesh-play.js?v=14","module":true,"group":"mesh"},{"src":"mesh/mesh-fair-fx.js?v=1","module":false,"group":"mesh"},{"src":"code-academy.js?v=4","module":false},{"src":"vendor/qrcode-generator.js","module":false},{"src":"mesh/mesh-upgrade.js?v=13","module":false,"group":"mesh"},{"src":"mesh/mesh-link.js?v=4","module":false,"group":"mesh"},{"src":"mesh/mesh-games.js?v=3","module":false,"group":"mesh"},{"src":"mesh/games/tictactoe.js?v=1","module":false,"group":"mesh"},{"src":"mesh/games/chess.js?v=1","module":false,"group":"mesh"},{"src":"mesh/games/pool8.js?v=1","module":false,"group":"mesh"},{"src":"mesh/games/cuppong.js?v=1","module":false,"group":"mesh"},{"src":"mesh/games/minigolf.js?v=1","module":false,"group":"mesh"},{"src":"mesh/mesh-social-x.js?v=5","module":false,"group":"mesh"},{"src":"mesh/mesh-mobile.js?v=10","module":false,"group":"mesh"},{"src":"mesh/mesh-contacts.js?v=2","module":false,"group":"mesh"},{"src":"mesh/mesh-group-markets.js?v=3","module":false,"group":"mesh"},{"src":"mesh/mesh-location-pro.js?v=7","module":false,"group":"mesh"},{"src":"ost-pq-demo.js?v=1","module":false}]</script>
   <script src="ost-idle-guard.js?v=2" defer></script>
   <script src="ost-auth.js?v=9" defer></script>
   <script src="ost-update.js?v=1" defer></script>
@@ -6489,6 +6492,6 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="ost-bridge-ui.js?v=6" defer></script>
   <script src="ost-play.js?v=11" defer></script>
   <script src="ost-audit.js?v=2" defer></script>
-  <script src="ost-lazy.js?v=1" defer></script>
+  <script src="ost-lazy.js?v=2" defer></script>
 </body>
 </html>

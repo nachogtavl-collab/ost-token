@@ -97,20 +97,45 @@
     wrap.innerHTML =
       '<b>Peer-to-peer games</b>' +
       'Mesh games run directly between two devices — chess, pool, tic-tac-toe and more — ' +
-      'with no server holding the board. Open Mesh, connect to a peer, then pick a game there.';
+      'with no server holding the board. Open Mesh games, connect to a peer, then pick a game there.';
     var btn = document.createElement('button');
     btn.type = 'button';
-    btn.textContent = 'Open Mesh';
+    btn.textContent = 'Open Mesh games';
     btn.style.cssText = 'margin-top:11px;border:0;border-radius:10px;padding:8px 15px;background:#12405c;color:#dff8ff;cursor:pointer;';
-    btn.addEventListener('click', function () {
-      if (window.OST_MESH && typeof window.OST_MESH.open === 'function') window.OST_MESH.open();
-      else {
-        var t = document.getElementById('ost-mesh-trigger');
-        if (t) t.click();
-      }
-    });
+    btn.addEventListener('click', openMeshArena);
     wrap.appendChild(btn);
     host.appendChild(wrap);
+  }
+
+  // Peer games live in the legacy mesh pavilion, which is no longer idle-loaded:
+  // load its group (OST_LAZY.group('mesh')), then open the arena on the Play tab.
+  // A failed load says so on the button (and in a toast) and the next tap retries -
+  // OST_LAZY.group() resolves false and re-requests only the scripts that failed.
+  function openMeshArena(ev) {
+    var btn = ev && ev.currentTarget;
+    if (btn && btn.getAttribute('aria-busy') === 'true') return;
+    if (btn) { btn.setAttribute('aria-busy', 'true'); btn.textContent = 'Opening Mesh games…'; }
+    function done(ok) {
+      if (btn) { btn.removeAttribute('aria-busy'); btn.textContent = ok ? 'Open Mesh games' : 'Couldn’t load Mesh games — tap to retry'; }
+      if (!ok) failToast('Mesh games did not load. Check your connection and tap to retry.');
+    }
+    var g = null;
+    try { if (window.OST_LAZY && typeof window.OST_LAZY.group === 'function') g = window.OST_LAZY.group('mesh'); } catch (_) {}
+    if (!g) { try { if (window.OST_LAZY && window.OST_LAZY.flush) window.OST_LAZY.flush(); } catch (_) {} g = Promise.resolve(); }
+    g.then(function (loaded) {
+      var n = 0;
+      (function go() {
+        var mm = window.OST_MESH_MOBILE;
+        if (mm && typeof mm.openArena === 'function') { mm.openArena(); done(true); return; }
+        if ((n > 40 || loaded === false) && window.OST_MESH && typeof window.OST_MESH.open === 'function') { window.OST_MESH.open(); done(true); return; }
+        if (loaded === false) { done(false); return; }
+        if (++n < 60) setTimeout(go, 150); else done(false);
+      })();
+    }, function () { done(false); });
+  }
+  function failToast(msg) {
+    try { var c = window.OST_MESH_APP && window.OST_MESH_APP.core; if (c && typeof c.toast === 'function') { c.toast(msg, 'err'); return; } } catch (_) {}
+    try { if (typeof window.toast === 'function') window.toast('⚠', msg); } catch (_) {}
   }
 
   function fillOffline() {

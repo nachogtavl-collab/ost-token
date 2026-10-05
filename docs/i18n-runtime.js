@@ -765,9 +765,40 @@
     return s;
   }
 
+  // Never rewrite user-generated or end-to-end-encrypted text: the OST Mesh app family
+  // (chat bubbles, posts, names, toasts with message previews) is skipped entirely.
+  var NO_I18N_IDS = { ostMeshApp: 1, oslSheet: 1, oslLight: 1, oslStory: 1, omxSheet: 1, omxCall: 1 };
+  var NO_I18N_SEL = '#ostMeshApp, #oslSheet, #oslLight, #oslStory, #omxSheet, #omxCall, .omx-toasts, [data-no-i18n]';
+  function insideNoI18n(n) {
+    var el = n && (n.nodeType === 1 ? n : n.parentElement);
+    try { return !!(el && el.closest && el.closest(NO_I18N_SEL)); } catch (_) { return false; }
+  }
+  // Other translators on the page only honour [data-no-i18n] (ux-extras.js autoTranslate
+  // sweeps all of document.body every 5 s and showed a contact named "Yes" or a message
+  // "Delete" as "Sí" / "Eliminar"). Tag each family root the moment it is attached to
+  // <body> - they are all direct children of it - whatever the current language.
+  function markNoI18n(el) {
+    if (!el || el.nodeType !== 1 || el.hasAttribute('data-no-i18n')) return;
+    if ((el.id && NO_I18N_IDS[el.id]) || (el.classList && el.classList.contains('omx-toasts'))) el.setAttribute('data-no-i18n', '');
+  }
+  var rootsWatched = false;
+  function watchFamilyRoots() {
+    if (rootsWatched || !document.body) return;
+    rootsWatched = true;
+    for (var c = document.body.firstElementChild; c; c = c.nextElementSibling) markNoI18n(c);
+    try {
+      new MutationObserver(function (muts) {
+        for (var i = 0; i < muts.length; i++) { var a = muts[i].addedNodes; for (var j = 0; a && j < a.length; j++) markNoI18n(a[j]); }
+      }).observe(document.body, { childList: true });
+    } catch (_) {}
+  }
   function walk(root) {
     if (!isSpanish()) return;
     if (!root) return;
+    if (insideNoI18n(root)) return;
+    walkIn(root);
+  }
+  function walkIn(root) {
     if (root.nodeType === 3) {
       var nv = translateString(root.nodeValue);
       if (nv !== root.nodeValue) root.nodeValue = nv;
@@ -777,6 +808,7 @@
     // Skip code-bearing elements
     var tag = root.tagName;
     if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'CODE' || tag === 'PRE') return;
+    if ((root.id && NO_I18N_IDS[root.id]) || (root.classList && root.classList.contains('omx-toasts')) || (root.hasAttribute && root.hasAttribute('data-no-i18n'))) return;
     // Translate placeholders / titles / aria-labels on inputs/buttons
     if (root.hasAttribute && root.hasAttribute('placeholder')) {
       var ph = translateString(root.getAttribute('placeholder'));
@@ -792,7 +824,7 @@
     }
     if (tag === 'INPUT' || tag === 'TEXTAREA') return;
     var kids = root.childNodes;
-    for (var i = 0; i < kids.length; i++) walk(kids[i]);
+    for (var i = 0; i < kids.length; i++) walkIn(kids[i]);
   }
 
   var observer = null;
@@ -830,11 +862,14 @@
   window.addEventListener('ost:languagechange', refreshAll);
 
   if (document.readyState === 'loading') {
+    watchFamilyRoots();
     document.addEventListener('DOMContentLoaded', function () {
+      watchFamilyRoots();
       attachObserver();
       refreshAll();
     });
   } else {
+    watchFamilyRoots();
     attachObserver();
     refreshAll();
   }

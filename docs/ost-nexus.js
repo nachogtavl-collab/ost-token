@@ -97,16 +97,37 @@
   /* ======================================================================
    * Navigation — one door into every area
    * ==================================================================== */
-  function waitFor(test, cb, ms) {
+  function waitFor(test, cb, ms, onTimeout) {
     var t0 = Date.now();
     (function poll() {
       var v; try { v = test(); } catch (_) {}
       if (v) { cb(v); return; }
-      if (Date.now() - t0 > (ms || 8000)) return;
+      if (Date.now() - t0 > (ms || 8000)) { if (onTimeout) onTimeout(); return; }
       setTimeout(poll, 150);
     })();
   }
   function flushLazy() { try { if (window.OST_LAZY && OST_LAZY.flush) OST_LAZY.flush(); } catch (_) {} }
+  // The legacy mesh pavilion is a named lazy group (never idle-loaded). Older loaders
+  // without group() fall back to flushing the whole manifest.
+  function meshGroup() {
+    try { if (window.OST_LAZY && typeof OST_LAZY.group === 'function') return OST_LAZY.group('mesh'); } catch (_) {}
+    flushLazy(); return Promise.resolve();
+  }
+  // A failed load says so (OST_LAZY.group resolves false; the next click retries).
+  function pavilionFailed() {
+    try { var c = window.OST_MESH_APP && OST_MESH_APP.core; if (c && typeof c.toast === 'function') c.toast('Classic mesh did not load. Check your connection and try again.', 'err'); } catch (_) {}
+  }
+  function openPavilion(view) {
+    meshGroup().then(function (loaded) {
+      waitFor(function () { return window.OST_MESH && OST_MESH.open; }, function () {
+        OST_MESH.open();
+        if (!view) return;
+        waitFor(function () { return window.OST_MESH_MOBILE && OST_MESH_MOBILE.init; }, function () {
+          try { OST_MESH_MOBILE.init(); OST_MESH_MOBILE.setView(view); } catch (_) {}
+        }, loaded === false ? 600 : 10000);
+      }, loaded === false ? 600 : 8000, pavilionFailed);
+    }, pavilionFailed);
+  }
   function activate(id) {
     try { if (window.OST_COMPARTMENTS && OST_COMPARTMENTS.activate) { OST_COMPARTMENTS.activate(id, true); return true; } } catch (_) {}
     location.hash = '#' + id; return false;
@@ -140,16 +161,13 @@
         return;
       }
       case 'mesh':
-        // The chat app (ost-mesh-app.js) loads eagerly and is the primary surface;
-        // the classic pavilion stays reachable from its Me tab.
-        if (window.OST_MESH_APP && typeof OST_MESH_APP.open === 'function' && arg !== 'play' && arg !== 'classic') { OST_MESH_APP.open(); return; }
-        flushLazy();
-        waitFor(function () { return window.OST_MESH && OST_MESH.open; }, function () {
-          OST_MESH.open();
-          waitFor(function () { return window.OST_MESH_MOBILE && OST_MESH_MOBILE.init; }, function () {
-            try { OST_MESH_MOBILE.init(); if (arg) OST_MESH_MOBILE.setView(arg); } catch (_) {}
-          }, 10000);
-        });
+        // ONE Mesh UI: the OST Mesh app (ost-mesh-app.js, eager). Only 'play' (peer games)
+        // and 'classic' still reach the lazy legacy pavilion; 'classic' has no view of its
+        // own there (it rendered a blank pavilion), so it opens the pavilion's default view.
+        if (arg === 'play') return openPavilion('play');
+        if (arg === 'classic') return openPavilion(null);
+        if (window.OST_MESH_APP && typeof OST_MESH_APP.open === 'function') { OST_MESH_APP.open(); return; }
+        waitFor(function () { return window.OST_MESH_APP && OST_MESH_APP.open; }, function () { OST_MESH_APP.open(); });
         return;
       case 'ghost':
         waitFor(function () { return window.OST_GHOST_COMPANION && OST_GHOST_COMPANION.open; }, function () {
@@ -482,7 +500,7 @@
       { id: 'a:mirror', grp: 'Go to', ico: 'layers', t: 'Market mirror', s: 'Real-world markets mirrored in OST', run: function () { go('stock-market'); }, kw: 'stocks equities mirror' },
       { id: 'a:games', grp: 'Go to', ico: 'game', t: 'Fair games', s: 'Crash, dice, plinko, duels — provably fair', run: function () { go('games'); }, kw: 'casino stake rainbet duel crash dice plinko' },
       { id: 'a:launchpad', grp: 'Go to', ico: 'rocket', t: 'Launchpad', s: 'Launch or trade memecoins on a bonding curve', run: function () { go('launchpad'); }, kw: 'memecoin pump token create' },
-      { id: 'a:mesh', grp: 'Go to', ico: 'mesh', t: 'Mesh', s: 'Chats, stories, groups, calls', run: function () { go('mesh'); }, kw: 'social chat message friends stories' },
+      { id: 'a:mesh', grp: 'Go to', ico: 'mesh', t: 'Mesh', s: 'Feed, stories, chats and calls', run: function () { go('mesh'); }, kw: 'social chat message friends stories feed' },
       { id: 'a:ghost', grp: 'Go to', ico: 'ghost', t: 'Ghost AI', s: 'Your companion', run: function () { go('ghost'); }, kw: 'ai assistant help' },
       { id: 'a:academy', grp: 'Go to', ico: 'code', t: 'Code Academy', s: 'Learn to code, earn OST', run: function () { go('academy'); }, kw: 'learn course programming' },
       { id: 'a:shop', grp: 'Go to', ico: 'cart', t: 'Shop', s: 'Goods, gift cards, fuel', run: function () { go('commerce'); }, kw: 'buy store commerce gift card gas' },
@@ -666,6 +684,7 @@
     });
     document.documentElement.classList.add('nx-dock-on');
     renderDock();
+    paintMeshBadge();
     requestAnimationFrame(function () { requestAnimationFrame(function () { dock.classList.add('in'); }); });
   }
   function renderDock() {
@@ -689,6 +708,36 @@
     if (isMobile()) { if (dock) { dock.remove(); dock = null; document.documentElement.classList.remove('nx-dock-on'); } }
     else mountDock();
   }
+
+  /* ======================================================================
+   * Mesh unread badge (dock Mesh button + Universe Mesh tile). The OST Mesh app
+   * dispatches 'ost:mesh-app:unread' {total} on every change and once after boot;
+   * OST_MESH_APP.unread() is read at load in case that event already fired.
+   * ==================================================================== */
+  var meshUnread = 0;
+  function readMeshUnread(e) {
+    var d = e && e.detail, n;
+    if (d) n = d.total != null ? d.total : d.count;
+    if (n == null) { try { n = window.OST_MESH_APP && typeof OST_MESH_APP.unread === 'function' ? OST_MESH_APP.unread() : 0; } catch (_) { n = 0; } }
+    return Math.max(0, Math.floor(Number(n) || 0));
+  }
+  function badgeOn(host, n) {
+    if (!host) return;
+    var b = host.querySelector(':scope > .nx-badge');
+    if (!n) { if (b) b.remove(); return; }
+    if (!b) { b = document.createElement('span'); b.className = 'nx-badge'; b.setAttribute('aria-hidden', 'true'); host.appendChild(b); }
+    b.textContent = n > 99 ? '99+' : String(n);
+  }
+  function paintMeshBadge() {
+    var n = meshUnread;
+    var label = n ? n + ' unread message' + (n === 1 ? '' : 's') : '';
+    var dk = dock && dock.querySelector('[data-dk="mesh"]');
+    badgeOn(dk, n);
+    if (dk) dk.setAttribute('aria-label', 'Mesh' + (n ? ', ' + label : ''));
+    badgeOn(document.querySelector('#nxUniverse [data-nx-go="mesh"]'), n);
+    setLive('mesh', label);   // the tile's live line also carries the count for screen readers
+  }
+  function onMeshUnread(e) { meshUnread = readMeshUnread(e); paintMeshBadge(); }
 
   /* ======================================================================
    * Broken product images → a clean brand-initial tile (hotlinked retailer
@@ -757,6 +806,10 @@
 
     onHomeVisibility(function (v) { if (v) { fetchStats(); drawSpark(); renderAge(); } });
     statsTimer = setInterval(fetchStats, 120000);
+
+    // Mesh unread badge.
+    window.addEventListener('ost:mesh-app:unread', onMeshUnread);
+    onMeshUnread();
 
     // Dock after the page has settled — never competes with first paint.
     var dockBoot = function () { setTimeout(syncDockForViewport, 400); };

@@ -222,9 +222,9 @@
     var box = document.createElement('div');
     box.className = 'omg-invite';
     box.innerHTML = '<h3>' + (meta.icon || '🎮') + ' ' + meta.label + '</h3>'
-      + '<p>You need a connected Mesh peer to play. Open OST Mesh, connect, then come back.</p>'
+      + '<p>You need a connected Mesh peer to play. Open Classic mesh, connect to a peer, then come back.</p>'
       + '<div class="omg-row">'
-      +   '<button type="button" class="primary" id="omgGotoMesh">Open OST Mesh</button>'
+      +   '<button type="button" class="primary" id="omgGotoMesh">Open Classic mesh</button>'
       +   '<button type="button" id="omgBack">Back</button>'
       + '</div>';
     stage.appendChild(box);

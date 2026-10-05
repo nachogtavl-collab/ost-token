@@ -31,7 +31,17 @@
     }, delay || 220);
   }
 
+  // 'mesh' = the OST Mesh app (ost-mesh-app.js). The legacy pavilion is only the
+  // arena's fallback host below.
   function openMesh() {
+    if (window.OST_MESH_APP && typeof window.OST_MESH_APP.open === 'function') {
+      window.OST_MESH_APP.open();
+      return true;
+    }
+    return openPavilion();
+  }
+
+  function openPavilion() {
     if (window.OST_MESH && typeof window.OST_MESH.open === 'function') {
       window.OST_MESH.open();
       return true;
@@ -40,6 +50,15 @@
   }
 
   function openArena(tab, game) {
+    // mesh-mobile shows the arena on the pavilion's Play tab (it used to mount inside
+    // the Chats view and stay invisible there).
+    var mm = window.OST_MESH_MOBILE;
+    if (mm && typeof mm.openArena === 'function') {
+      mm.openArena(game || null);
+      var a0 = window.OST_MESH_ARENA;
+      if (tab === 'games' && a0 && typeof a0.focus === 'function') a0.focus(game || null);
+      return true;
+    }
     var arena = window.OST_MESH_ARENA;
     if (arena && typeof arena.open === 'function') {
       arena.open(game || null);
@@ -47,7 +66,7 @@
       // Cross-tab focus is otherwise handled by Arena UI itself.
       return true;
     }
-    return openMesh();
+    return openPavilion();
   }
 
   function openGhost() {

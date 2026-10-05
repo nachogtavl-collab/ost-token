@@ -179,13 +179,16 @@ button.btn:not(:disabled):hover,
 .btn:active, button.btn:active { transform: translateY(0); filter: brightness(0.97); }
 
 /* ---------- Inputs polish ---------- */
-input[type=text],
-input[type=number],
-input[type=email],
-input[type=search],
-input[type=password],
-select,
-textarea {
+/* Mesh app family exclusion: `:not(:where(...))` adds ZERO specificity, so the site keeps these
+   rules exactly as before while #ostMeshApp, #oslSheet, #oslLight, #oslStory, #omxCall, #omxSheet
+   and .omx-toasts style themselves. New injected app roots must be added to every list. */
+input[type=text]:not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *)),
+input[type=number]:not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *)),
+input[type=email]:not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *)),
+input[type=search]:not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *)),
+input[type=password]:not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *)),
+select:not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *)),
+textarea:not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *)) {
   background: rgba(4, 14, 24, 0.65) !important;
   border: 1px solid rgba(255, 255, 255, 0.10) !important;
   color: var(--ost-r-text) !important;
@@ -194,7 +197,7 @@ textarea {
   padding: 10px 14px;
   transition: border-color 180ms, box-shadow 180ms, background 180ms;
 }
-input:focus, select:focus, textarea:focus {
+input:focus:not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *)), select:focus:not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *)), textarea:focus:not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *)) {
   outline: none !important;
   border-color: var(--ost-r-accent) !important;
   box-shadow: 0 0 0 3px var(--ost-r-accent-soft) !important;

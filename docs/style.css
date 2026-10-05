@@ -53,7 +53,13 @@ a { color: var(--accent); text-decoration: none; transition: color .2s; }
 a:hover { color: var(--accent2); }
 img { max-width: 100%; display: block; }
 button { cursor: pointer; border: none; font-family: inherit; }
-button:not(.topup-modal-close),
+/* Not inside the mesh app family (#ostMeshApp, #oslSheet, #oslLight, #oslStory, #omxCall,
+   #omxSheet, .omx-toasts): zero-specificity exclusion, add new app roots to the list.
+   Kept in its own rule: an engine without :where() (Safari <14, Chrome <88) drops the
+   whole selector list, and the class selectors below must not go down with it. */
+button:not(.topup-modal-close):not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *)) {
+  min-height: 48px;
+}
 .nav-links a,
 .game-card,
 .topup-card,

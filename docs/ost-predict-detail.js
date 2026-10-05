@@ -149,7 +149,7 @@
         var rows=(d&&d.comments)||[];
         var thread=rows.length
           ? '<div class="opd-cwrap">'+rows.slice().reverse().map(function(c){
-              return '<div class="opd-c"><div class="cm"><span class="h" data-msg="'+esc(c.wallet||'')+'">'+esc(c.handle||c.walletShort||'anon')+'</span><span class="ct">'+ago(c.ts)+' · tap name to message on Mesh</span></div><div class="tx">'+esc(c.text)+'</div></div>';
+              return '<div class="opd-c"><div class="cm"><span class="h" data-msg="'+esc(c.wallet||'')+'">'+esc(c.handle||c.walletShort||'anon')+'</span><span class="ct">'+ago(c.ts)+' · tap name to open OST Mesh</span></div><div class="tx">'+esc(c.text)+'</div></div>';
             }).join('')+'</div>'
           : '<div class="opd-empty">No comments yet. Start the conversation.</div>';
         var w=wallet();
@@ -183,10 +183,11 @@
     else loadComments();
   }
 
-  // Clicking a wallet/handle opens Mesh (the real social layer).
+  // Clicking a wallet/handle opens the OST Mesh app (data-msg is a wallet, not a mesh
+  // address, so there is no chat to jump to).
   document.addEventListener('click',function(e){
     var m=e.target.closest('[data-msg]');
-    if(m){try{if(window.OST_MESH&&window.OST_MESH.open)window.OST_MESH.open();}catch(_){}return;}
+    if(m){try{if(window.OST_MESH_APP&&window.OST_MESH_APP.open)window.OST_MESH_APP.open();}catch(_){}return;}
   });
 
   function marketById(mid){

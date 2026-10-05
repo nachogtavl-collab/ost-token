@@ -1,5 +1,14 @@
 /* workers/ost-api/src/mesh/signal.js
-  Lightweight WebRTC signaling inbox.
+  KV FALLBACK for /mesh/v1/signal/send + /signal/inbox — used only when the
+  MESH_HUB Durable Object is not bound (never in production; see
+  mesh/index.js). The live relay is MeshHub.signal()/inbox() in hub.js.
+
+  NOT signature-gated (W3, deliberately deferred): the legacy pavilion
+  (docs/mesh/mesh.js, mesh-rtc.js) and the call client's poll still post and
+  read these routes unsigned, so requiring OST-MESH headers would break calls
+  there. Until that client is retired the routes are only size-capped (here)
+  and rate-limited per address+IP and per IP (mesh/index.js / hub.js).
+
   Each signal is stored under its own KV key so concurrent ICE/SDP writes
   cannot overwrite each other. Inbox reads drain delivered messages.
 */
@@ -10,7 +19,8 @@ const TTL_SECONDS = 60 * 5;
 const MAX_PER_INBOX = 64;
 
 function validAddr(a) {
-  return typeof a === 'string' && a.startsWith('ost-mesh:') && a.length <= 80;
+  // Same shape the hub accepts: 'ost-mesh:' + hex groups joined by '-'.
+  return typeof a === 'string' && a.length <= 80 && /^ost-mesh:[0-9a-f]{2,}(?:-[0-9a-f]{1,4})*$/i.test(a);
 }
 
 function inboxPrefix(to) {
@@ -31,7 +41,7 @@ export async function signalSend(env, body, ok, err) {
   const { from, to, payload } = body || {};
   if (!validAddr(from) || !validAddr(to)) return err('bad addresses');
   if (!payload || typeof payload !== 'object') return err('bad payload');
-  if (JSON.stringify(payload).length > 32_000) return err('payload too large');
+  if (JSON.stringify(payload).length > 32_000) return err('payload too large', 413);
 
   const ts = Date.now();
   const id = messageId();

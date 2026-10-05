@@ -2,11 +2,12 @@
  * OST · App Bar — the ONE mobile navigation (replaces ost-mobile-dock.js)
  * --------------------------------------------------------------------------
  * Renders a native-style bottom tab bar on phones:
- *   Home · Markets · Games · Wallet · More
+ *   Home · Markets · Games · Mesh · Wallet · More
  * Every floating tool the modules used to pin to the screen corners is now
  * reachable from the More sheet — ost-appbar.css hides their launchers on
  * mobile so nothing overlaps. Wallet tab shows the live credits balance;
- * the More tab shows a badge when parlay slips are open.
+ * the More tab shows a badge when parlay slips are open; the Mesh tab (and the
+ * More-sheet Mesh tile) show OST Mesh unread messages ('ost:mesh-app:unread').
  * Desktop is untouched (bar is display:none above the mobile breakpoints).
  * ========================================================================== */
 (function () {
@@ -130,6 +131,36 @@
     else if (!didActivate) scrollToFirst(['#' + compartmentId]);
   }
 
+  /* ---- OST Mesh: one opener + unread count ------------------------------- */
+  // ONE Mesh UI: the OST Mesh app (ost-mesh-app.js). Never the legacy pavilion.
+  function openMeshApp() {
+    if (window.OST_MESH_APP && typeof window.OST_MESH_APP.open === 'function') { window.OST_MESH_APP.open(); return; }
+    if (window.OST_SOCIAL && typeof window.OST_SOCIAL.open === 'function') { window.OST_SOCIAL.open(); return; }
+    location.hash = '#mesh';   // the app's own deep link, handled once it boots
+  }
+  // The app dispatches 'ost:mesh-app:unread' {total} on every change and once after
+  // boot; listen from the start (the bar itself is built 1.4 s later).
+  var meshUnread = 0, meshBadges = [];
+  function readMeshUnread(e) {
+    var d = e && e.detail, n;
+    if (d) n = d.total != null ? d.total : d.count;
+    if (n == null) { try { n = window.OST_MESH_APP && typeof window.OST_MESH_APP.unread === 'function' ? window.OST_MESH_APP.unread() : 0; } catch (_) { n = 0; } }
+    return Math.max(0, Math.floor(Number(n) || 0));
+  }
+  function paintMeshBadges() {
+    for (var i = 0; i < meshBadges.length; i++) {
+      meshBadges[i].textContent = meshUnread > 99 ? '99+' : String(meshUnread);
+      meshBadges[i].classList.toggle('is-on', meshUnread > 0);
+      // The badge is aria-hidden: carry the count in the button's accessible name
+      // instead (same wording as the desktop dock), and drop it again at zero.
+      var host = meshBadges[i].parentNode, lbl = host && host.querySelector('.oab-lbl, .oas-lbl');
+      if (!host || !host.setAttribute) continue;
+      if (meshUnread > 0) host.setAttribute('aria-label', (lbl ? lbl.textContent : 'Mesh') + ', ' + meshUnread + ' unread message' + (meshUnread === 1 ? '' : 's'));
+      else host.removeAttribute('aria-label');
+    }
+  }
+  window.addEventListener('ost:mesh-app:unread', function (e) { meshUnread = readMeshUnread(e); paintMeshBadges(); });
+
   /* ---- config ------------------------------------------------------------ */
 
   var TABS = [
@@ -141,6 +172,19 @@
       } },
     { key: 'markets', ico: '📈', lbl: 'Markets', go: function () { navTo('wallet', 'predict', ['#ostPredictMobile', '#predictionMarketBoard', '#live-bet', '#wallet-panel-predict']); try { if (window.OST_PREDICT_MOBILE && document.getElementById('ostPredictMobile')) window.OST_PREDICT_MOBILE.showBrowse(); } catch (_) {} setTimeout(function () { try { history.replaceState(null, '', '#markets'); } catch (_) {} }, 450); } },
     { key: 'games',   ico: '🎮', lbl: 'Games',   go: function () { navTo('games', null, ['#games']); } },
+    // The app is a full-screen sheet that hides this bar; when it closes, the tab the
+    // user came from is active again.
+    { key: 'mesh',    ico: '💬', lbl: 'Mesh',    go: function (prev) {
+        openMeshApp();
+        var back = (prev && prev !== 'mesh' && prev !== 'more') ? prev : 'home';
+        var root = document.documentElement;
+        if (!root.classList.contains('omx-lock') || !window.MutationObserver) { setActive(back); return; }
+        var mo = new MutationObserver(function () {
+          if (root.classList.contains('omx-lock')) return;
+          mo.disconnect(); setActive(back);
+        });
+        mo.observe(root, { attributes: true, attributeFilter: ['class'] });
+      } },
     { key: 'wallet',  ico: '👛', lbl: 'Wallet',  go: function () { navTo('wallet', 'access', ['#wallet .wallet-tabs', '#wallet']); } },
     { key: 'more',    ico: '⊕',  lbl: 'More',    go: null /* sheet toggle */ }
   ];
@@ -197,12 +241,7 @@
           document.body.appendChild(box);
         } else box.remove();
       } },
-    { ico: '💬', lbl: 'Social', need: ['#ostMeshApp', '#ost-mesh-trigger'], run: function () {
-        if (window.OST_SOCIAL && typeof window.OST_SOCIAL.open === 'function') window.OST_SOCIAL.open();
-        else if (window.OST_MESH_APP && typeof window.OST_MESH_APP.open === 'function') window.OST_MESH_APP.open();
-        else if (window.OST_MESH && typeof window.OST_MESH.open === 'function') window.OST_MESH.open();
-        else clickFirst(['#ost-mesh-trigger']);
-      } },
+    { ico: '💬', lbl: 'Mesh', mesh: true, need: ['#ostMeshApp'], run: openMeshApp },
     // OST Studio (VS Code-style IDE: code, run in a sandbox, deploy apps inside OST) is
     // its own page, so there is nothing on this page to gate on - always show it.
     { ico: '💻', lbl: 'Studio', need: ['body'], run: function () {
@@ -276,7 +315,7 @@
 
   var bar = null, sheet = null, backdrop = null;
   var walletSub = null, moreBadge = null, sheetBal = null;
-  var sheetOpen = false;
+  var sheetOpen = false, activeKey = 'home';
 
   function setSheet(v) {
     sheetOpen = !!v;
@@ -285,6 +324,7 @@
   }
 
   function setActive(key) {
+    activeKey = key;
     if (!bar) return;
     var tabs = bar.querySelectorAll('.ost-appbar-tab');
     for (var i = 0; i < tabs.length; i++) {
@@ -394,12 +434,20 @@
         moreBadge.className = 'oab-badge';
         b.appendChild(moreBadge);
       }
+      if (t.key === 'mesh') {
+        var mb = document.createElement('span');
+        mb.className = 'oab-badge';
+        mb.setAttribute('aria-hidden', 'true');
+        b.appendChild(mb);
+        meshBadges.push(mb);
+      }
       b.addEventListener('click', function () {
         widgetsLive(false);
         if (t.key === 'more') { setSheet(!sheetOpen); setActive(sheetOpen ? 'more' : 'home'); return; }
         setSheet(false);
+        var prev = activeKey;
         setActive(t.key);
-        t.go();
+        t.go(prev);
       });
       bar.appendChild(b);
     });
@@ -433,6 +481,13 @@
       tile.type = 'button';
       tile.className = 'oas-tool';
       tile.innerHTML = '<span class="oas-ico">' + tool.ico + '</span><span class="oas-lbl">' + tool.lbl + '</span>';
+      if (tool.mesh) {
+        var tb = document.createElement('span');
+        tb.className = 'oab-badge';
+        tb.setAttribute('aria-hidden', 'true');
+        tile.appendChild(tb);
+        meshBadges.push(tb);
+      }
       tile.addEventListener('click', function () {
         setSheet(false);
         setActive('home');
@@ -464,6 +519,7 @@
     // Live numbers.
     refreshBalance();
     refreshBadge();
+    meshUnread = readMeshUnread(); paintMeshBadges();
     window.addEventListener('ost-money-changed', refreshBalance, false);
     window.addEventListener('ost-faucet-hub-award', refreshBalance, false);
     window.addEventListener('ost:wallet-changed', refreshBalance, false);   // on-chain deposits/faucet

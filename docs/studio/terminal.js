@@ -1725,7 +1725,7 @@
   def('whoami', {
     usage: 'whoami', desc: 'Show your OST identity (shared with OST Mesh and Social).', noPaths: true,
     run(ctx) {
-      ctx.out((S.id.name ? ctx.col(A.bold, ctx.t(S.id.name)) : ctx.col(A.gray, '(no display name — set one in OST Social)')) + '\n' +
+      ctx.out((S.id.name ? ctx.col(A.bold, ctx.t(S.id.name)) : ctx.col(A.gray, '(no display name — set one in OST Mesh)')) + '\n' +
         '  address      ' + ctx.t(S.id.address || '(not ready)') + '\n' + '  fingerprint  ' + ctx.t(S.id.fingerprint || '—') + '\n' +
         '  registered   ' + (S.id.announced ? ctx.col(A.bgreen, 'yes') : ctx.col(A.yellow, 'not yet (cloud sync starts once it is)')) + '\n');
       return 0;

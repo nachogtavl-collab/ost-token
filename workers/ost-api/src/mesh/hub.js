@@ -1,29 +1,102 @@
 /* workers/ost-api/src/mesh/hub.js
-  Durable Object-backed OST Mesh directory and signaling hub.
-  Keeps active WebRTC signaling off KV so daily KV write limits cannot break P2P.
+  MeshHub — the single Durable Object ("mesh-v1") behind every /mesh/v1/* route.
+  Everything lives in DO storage (not KV) so daily KV write limits cannot break it.
+
+  Routes (auth in brackets; "signed" = OST-MESH|v1 headers, see verifyMeshAuth):
+    GET  /health                               [open]
+    POST /identity/announce                    [open, trust-on-first-use + permanent key pin]
+    GET  /identity/lookup, GET /directory      [open]
+    GET  /ws                                   [signed, query params]  realtime push
+    POST /msg/send, GET /msg/inbox, POST /msg/ack   [signed]  7-day encrypted mailbox
+    POST /blob, GET /blob/:id                  [signed PUT / capability-id GET]  ciphertext relay
+    POST /friend/request, /friend/respond, GET /friend/list   [signed]
+    GET|POST /presence                         [open]
+    POST /signal/send, GET /signal/inbox       [open, rate-limited]  call signalling fallback
+    POST /feed/post|react|reply|donate, GET /feed/recent      [open, legacy pavilion feed]
+    *    /social/*                             [see social.js]
+
+  Storage keys
+    id:<addr>                 directory record { address, bundle, fingerprint, profile, ts, expiresAt }
+    idpin:<addr>              PERMANENT key pin { fp, ts } — an address can never be re-bound to other keys
+    meshnonce:<addr>:<nonce>  replay guard
+    msg:<to>:<ts14>:<id>      mailbox item from a contact (accepted / asked-by-recipient) or a hub notice
+    msq:<to>:<ts14>:q<id>     mailbox item from anyone else (id starts with "q"); listed after msg:
+    mbox:<to>                 pending counter { n, bytes } over both mailbox tiers
+    fnote:<to>:<from>         { ts, id } of the one stored friend-request notice from <from>
+    dmin:<to>:<from>          ts of the last mail from a non-contact (counts as their contact request)
+    seen:<addr>               last-seen ts, or { ts, left:true } once the last socket closed
+    friend:<owner>:<other>    { state, ts }
+    blobmeta:<id> / blob:<id>:<nnn>   encrypted blob relay
+    feed:<rev16>:<id>         legacy shared feed
 */
 
 import { installSocial } from './social.js';
 
 const ID_PREFIX = 'id:';
+const PIN_PREFIX = 'idpin:';
 const FEED_PREFIX = 'feed:';
 const FEED_TTL_MS = 60 * 60 * 24 * 3 * 1000;   // shared feed posts live 3 days
 const FEED_MAX = 200;
 const ID_TTL_MS = 60 * 60 * 24 * 7 * 1000;
+const ID_REFRESH_MS = 60 * 60 * 1000;          // a same-key re-announce rewrites the record at most hourly
+const ID_CACHE_MAX = 5000;                     // in-memory directory cache entries
 const SIGNAL_TTL_MS = 60 * 5 * 1000;
 const MAX_PER_INBOX = 128;
-// These were USED by the msg-mailbox + presence code but never defined — every
-// call to /mesh/v1/msg/send, /msg/inbox and /presence threw ReferenceError, so
-// server-relayed (offline) contact silently never worked. Defining them turns
-// the mailbox on. Messages persist a week so an offline peer still receives them.
+// Signalling relay (in memory only). Bounded per inbox and in total so an
+// unauthenticated flood cannot grow the Durable Object's heap without limit.
+const SIGNAL_PAYLOAD_MAX = 32_000;
+const SIGNAL_INBOX_BYTES = 512 * 1024;
+const SIGNAL_TOTAL_BYTES = 24 * 1024 * 1024;
+const SIGNAL_MAX_INBOXES = 4000;
+// Durable mailbox: every chat message is stored for the recipient (and pushed
+// over the socket when they are online). Items persist a week so an offline
+// peer still receives them; the recipient deletes them with msg/ack.
 const MSG_PREFIX = 'msg:';
+// Mail from people who are not the recipient's contacts lives in its own key
+// range, listed after the contacts' range, so a flood of it can never push a
+// real contact's message (or a friend notice) out of the inbox page.
+const MSQ_PREFIX = 'msq:';
 const MSG_TTL_MS = 60 * 60 * 24 * 7 * 1000;   // 7-day offline delivery window
 const SEEN_PREFIX = 'seen:';
-const SEEN_TTL_MS = 2 * 60 * 1000;            // "online" if seen within 2 min
-const MAX_INBOX = 128;
+const SEEN_TTL_MS = 2 * 60 * 1000;            // "online" if seen within 2 min (and the socket was not closed since)
+const MAX_INBOX = 128;                        // mailbox items per inbox page
+// Mailbox abuse limits. mbox:<to> counts what is pending for a recipient.
+const MBOX_PREFIX = 'mbox:';
+const MAILBOX_MAX_ITEMS = 2000;
+const MAILBOX_MAX_BYTES = 64 * 1024 * 1024;
+// People who are not accepted friends of the recipient stop earlier, so a flood
+// from strangers can never use up the room a real contact needs.
+const MAILBOX_STRANGER_ITEMS = 1500;
+const MAILBOX_STRANGER_BYTES = 48 * 1024 * 1024;
+const MAILBOX_FULL_RETRY_S = 300;
+const DMIN_PREFIX = 'dmin:';
+const FNOTE_PREFIX = 'fnote:';
+
+// ── Rate limits (fixed windows, in memory: they reset when the DO is evicted) ──
+// Generous on purpose: a normal active person must never see one of these.
+// Over a window the answer is either limited() (429, the client backs off from
+// the whole hub) or refused() (403, only that action) — see the helpers below.
+const MIN = 60 * 1000, HOUR = 60 * MIN;
+const RL = {
+  announceIp: [600, HOUR],      // every announce call, per IP (before any storage read)
+  announce: [12, HOUR],         // directory WRITES per address+IP
+  identityNew: [300, HOUR],     // brand-new addresses per IP
+  // Mailbox sends per sender. Live location alone sends up to 240/hour per peer
+  // while moving (every 15 s), so the hourly budget leaves room for several.
+  msgMin: [60, MIN], msgHour: [2000, HOUR],
+  friendRequest: [30, HOUR], friendRespond: [120, HOUR],
+  blob: [80, HOUR],
+  signalFrom: [240, MIN], signalIp: [600, MIN],     // POST /signal/send per from+IP / per IP
+  signalInbox: [240, MIN], signalInboxIp: [600, MIN],
+  wsSignal: [300, MIN], wsTyping: [120, MIN], wsPresence: [30, MIN], wsPing: [12, MIN],
+  presencePost: [60, MIN],
+  feedPost: [30, HOUR], feedReact: [600, HOUR], feedReply: [120, HOUR], feedDonate: [60, HOUR]   // legacy feed, per IP
+};
+const RL_MAX_KEYS = 20000;
 // Friend graph: friend:<owner>:<other> -> { state, ts }. DO storage (not KV) so
 // contacts survive KV exhaustion.
 const FRIEND_PREFIX = 'friend:';
+const FRIEND_RENOTICE_MS = HOUR;               // a repeated request within this window adds no second notice
 // Encrypted blob relay (files / images between contacts). Bytes are sealed by
 // the sender with the pairwise key before upload, so the hub only ever stores
 // ciphertext. Chunked so each stored value stays well under the DO value cap.
@@ -32,14 +105,13 @@ const BLOB_CHUNK_PREFIX = 'blob:';
 const BLOB_CHUNK_BYTES = 512 * 1024;
 const BLOB_MAX_BYTES = 6 * 1024 * 1024;
 const BLOB_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-const BLOB_PER_HOUR = 80;
 const MSG_PAYLOAD_MAX = 64_000;
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Range, x-ost-wallet, x-ost-ts, x-ost-nonce, x-ost-sig, x-ost-session, x-ost-internal, x-mesh-addr, x-mesh-ts, x-mesh-nonce, x-mesh-sig',
-  'Access-Control-Expose-Headers': 'Content-Range, Accept-Ranges, Content-Length',
+  'Access-Control-Allow-Headers': 'Content-Type, Range, If-None-Match, If-Range, x-ost-wallet, x-ost-ts, x-ost-nonce, x-ost-sig, x-ost-session, x-ost-internal, x-mesh-addr, x-mesh-ts, x-mesh-nonce, x-mesh-sig',
+  'Access-Control-Expose-Headers': 'Content-Range, Accept-Ranges, Content-Length, ETag, Retry-After, X-Blob-Size',
   'Access-Control-Max-Age': '86400'
 };
 
@@ -47,15 +119,39 @@ function cors(extra = {}) {
   return { ...CORS_HEADERS, ...extra };
 }
 
-function json(data, status = 200) {
+function json(data, status = 200, headers = {}) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: cors({ 'Content-Type': 'application/json' })
+    headers: cors({ 'Content-Type': 'application/json', ...headers })
   });
 }
 
 function fail(error, status = 400) {
   return json({ ok: false, error }, status);
+}
+
+// Two kinds of "not now" on /mesh/*, both with { ok:false, error, retryAfter, scope }:
+//  · limited(): HTTP 429 + a Retry-After header. Only for limits that protect
+//    the hub from one client calling too much (announce, identity, signal,
+//    signal-inbox, presence, the per-minute msg burst, the legacy feed). The
+//    app's breaker pauses EVERY hub call for that long — that is the intent.
+//  · refused(): HTTP 403 (or 409 for a state of the target) WITHOUT Retry-After,
+//    and a specific `error`. For per-action quotas and per-recipient conditions
+//    (friend requests, files, posts, the hourly message budget, a full mailbox,
+//    the daily upload quota, a tip being checked): only that action is refused,
+//    the client keeps working and must not retry it in a loop. `retryAfter`
+//    in the body only says when that action has room again.
+function limited(retryAfter, scope = '', error = 'rate_limited') {
+  const s = Math.max(1, Math.ceil(Number(retryAfter) || 1));
+  return json({ ok: false, error, retryAfter: s, scope }, 429, { 'Retry-After': String(s) });
+}
+function refused(retryAfter, scope, error, status = 403) {
+  const s = Math.max(1, Math.ceil(Number(retryAfter) || 1));
+  return json({ ok: false, error, retryAfter: s, scope }, status);
+}
+
+function ipOf(request) {
+  return (request.headers.get('CF-Connecting-IP') || request.headers.get('x-real-ip') || 'noip').slice(0, 64);
 }
 
 function validAddr(value) {
@@ -95,6 +191,32 @@ function cleanProfile(p) {
   if (!name && !emoji) return null;
   return { name, emoji };
 }
+function hasProfile(p) { return !!(p && (p.name || p.emoji || p.bio || p.avatar || p.wallet)); }
+// Fingerprint of the KEY MATERIAL of a public bundle (not of its JSON text, so
+// property order or extra JWK fields cannot change it). '' when the bundle is not
+// two P-384 public JWKs — a private key ("d") is never accepted.
+function ecPub(k) {
+  if (!k || typeof k !== 'object' || k.kty !== 'EC' || k.crv !== 'P-384' || k.d !== undefined) return '';
+  const ok = (v) => typeof v === 'string' && /^[A-Za-z0-9_-]{40,90}$/.test(v);
+  return ok(k.x) && ok(k.y) ? k.x + '.' + k.y : '';
+}
+async function bundleKeyFp(bundle) {
+  const kex = ecPub(bundle && bundle.kex), sig = ecPub(bundle && bundle.sig);
+  if (!kex || !sig) return '';
+  return sha256Hex('OST-MESH-PIN|v1|' + kex + '|' + sig);
+}
+function sameBundleText(a, b) {
+  const j = (o) => { try { return JSON.stringify(o); } catch (_) { return ''; } };
+  return !!(a && b) && j(a.kex) === j(b.kex) && j(a.sig) === j(b.sig);
+}
+function mboxOf(v) { return { n: Math.max(0, Number(v && v.n) || 0), bytes: Math.max(0, Number(v && v.bytes) || 0) }; }
+// seen:<addr> holds a number (last activity) or { ts, left:true } (the last
+// socket closed at ts). Older records are plain numbers.
+function seenOf(v) { return v && typeof v === 'object' ? { ts: Number(v.ts) || 0, left: !!v.left } : { ts: Number(v) || 0, left: false }; }
+function msgSize(rec) { if (rec && Number(rec.sz) > 0) return Number(rec.sz); try { return JSON.stringify((rec && rec.payload) || '').length; } catch (_) { return 0; } }
+// Storage key of a mailbox item. The tier is encoded in the id ("q…" = not a
+// contact), so msg/ack can find an item from the { id, ts } the client echoes.
+function mboxKey(to, ts, id) { id = String(id).slice(0, 64); return (id.charAt(0) === 'q' ? MSQ_PREFIX : MSG_PREFIX) + to + ':' + pad14(ts) + ':' + id; }
 export function meshCanonical({ addr, method, pathq, bodyHash, ts, nonce }) { return `OST-MESH|v1|${addr}|${String(method).toUpperCase()}|${pathq}|${bodyHash}|${ts}|${nonce}`; }
 
 export class MeshHub {
@@ -103,7 +225,34 @@ export class MeshHub {
     this.env = env;
     this.ids = new Map();
     this.inboxes = new Map();
+    this._sigBytes = 0;          // bytes parked in this.inboxes
+    this._rl = new Map();        // limiter windows
   }
+
+  // Fixed-window limiter. specs = [[bucket, key, [max, windowMs]], …]. Returns
+  // { wait: 0 } when every window has room (and counts the hit in each), otherwise
+  // { wait, bucket }: the seconds until the first full window reopens and that
+  // window's bucket (nothing is counted, and no later window is created — list
+  // per-IP windows first). _limits() returns only the wait.
+  _limitHit(specs) {
+    const now = Date.now(), m = this._rl, wins = [];
+    for (const [bucket, key, [max, windowMs]] of specs) {
+      const k = bucket + '|' + key;
+      let w = m.get(k);
+      if (w && now - w.at >= windowMs) w = null;
+      if (w && w.n >= max) return { wait: Math.max(1, Math.ceil((w.at + windowMs - now) / 1000)), bucket };
+      wins.push([k, w, windowMs]);
+    }
+    for (const [k, w, windowMs] of wins) { if (w) w.n++; else m.set(k, { at: now, n: 1, ms: windowMs }); }
+    if (m.size > RL_MAX_KEYS) {
+      for (const [k, w] of m) if (now - w.at >= w.ms) m.delete(k);
+      // Still too many live windows: drop the oldest half rather than grow without bound.
+      if (m.size > RL_MAX_KEYS) { let drop = m.size >> 1; for (const k of m.keys()) { if (drop-- <= 0) break; m.delete(k); } }
+    }
+    return { wait: 0, bucket: '' };
+  }
+  _limits(specs) { return this._limitHit(specs).wait; }
+  _limit(bucket, key, spec) { return this._limits([[bucket, key, spec]]); }
 
 
   // Returns { ok:true, addr } or { ok:false, error, status }. Never throws.
@@ -179,6 +328,7 @@ export class MeshHub {
 
       // ── Encrypted blob relay ────────────────────────────────────────────────
       if (method === 'POST' && path === '/mesh/v1/blob') {
+        if (Number(request.headers.get('Content-Length') || 0) > BLOB_MAX_BYTES) return fail('blob_too_large', 413);
         const bytes = new Uint8Array(await request.arrayBuffer());
         if (!bytes.length) return fail('empty_blob');
         if (bytes.length > BLOB_MAX_BYTES) return fail('blob_too_large', 413);
@@ -188,7 +338,7 @@ export class MeshHub {
         return this.blobPut(auth.addr, url, bytes);
       }
       if (method === 'GET' && path.startsWith('/mesh/v1/blob/')) {
-        return this.blobGet(path.slice('/mesh/v1/blob/'.length));
+        return this.blobGet(path.slice('/mesh/v1/blob/'.length), request);
       }
       if (method === 'POST' && path === '/mesh/v1/msg/ack') {
         const bodyText = await request.text();
@@ -203,17 +353,31 @@ export class MeshHub {
       }
 
       if (method === 'POST' && path === '/mesh/v1/identity/announce') {
-        const body = await request.json().catch(() => ({}));
-        return this.announce(body);
+        const ip = ipOf(request);
+        const wait = this._limit('announce-ip', ip, RL.announceIp);
+        if (wait) return limited(wait, 'announce');
+        const bodyText = await request.text();
+        if (bodyText.length > 8192) return fail('announce_too_large', 413);
+        let body = {}; try { body = JSON.parse(bodyText) || {}; } catch (_) {}
+        return this.announce(body, ip);
       }
 
       if (method === 'GET' && path === '/mesh/v1/identity/lookup') {
         return this.lookup(url.searchParams.get('address'));
       }
 
+      // ── Call signalling relay (HTTP fallback for the socket) ────────────────
+      // NOT signature-gated yet: the legacy pavilion (docs/mesh/mesh.js,
+      // mesh-rtc.js) still posts and polls here unsigned, so requiring OST-MESH
+      // headers would break it. Until that client is retired these two routes
+      // are only rate-limited (per address+IP and per IP) and size-capped; the
+      // payloads themselves are opaque to the hub.
       if (method === 'POST' && path === '/mesh/v1/signal/send') {
-        const body = await request.json().catch(() => ({}));
-        return this.signal(body);
+        const ip = ipOf(request);
+        const bodyText = await request.text();
+        if (bodyText.length > SIGNAL_PAYLOAD_MAX + 2000) return fail('payload too large', 413);
+        let body = {}; try { body = JSON.parse(bodyText) || {}; } catch (_) {}
+        return this.signal(body, ip);
       }
 
       if (method === 'GET' && path === '/mesh/v1/signal/inbox') {
@@ -221,7 +385,7 @@ export class MeshHub {
           to: url.searchParams.get('to'),
           from: url.searchParams.get('from'),
           since: Number(url.searchParams.get('since') || 0)
-        });
+        }, ipOf(request));
       }
 
       if (method === 'POST' && path === '/mesh/v1/msg/send') {
@@ -233,7 +397,7 @@ export class MeshHub {
       }
       if (method === 'GET' && path === '/mesh/v1/msg/inbox') {
         { const auth = await this.verifyMeshAuth(request, url, '', url.searchParams.get('to')); if (!auth.ok) return fail(auth.error, auth.status); }
-        return this.msgInbox(url.searchParams.get('to'), url.searchParams.get('drain'));
+        return this.msgInbox(url.searchParams.get('to'), url.searchParams.get('drain'), url.searchParams.get('order'));
       }
       // ── Friend graph (contact WITHOUT P2P) ──────────────────────────────
       if (method === 'POST' && path === '/mesh/v1/friend/request') {
@@ -241,6 +405,8 @@ export class MeshHub {
         let body = {}; try { body = JSON.parse(bodyText) || {}; } catch (_) {}
         const auth = await this.verifyMeshAuth(request, url, bodyText, body && body.from);
         if (!auth.ok) return fail(auth.error, auth.status);
+        const wait = this._limit('friend-request', auth.addr, RL.friendRequest);
+        if (wait) return refused(wait, 'friend-request', 'friend_requests_too_fast');
         return this.friendRequest(body);
       }
       if (method === 'POST' && path === '/mesh/v1/friend/respond') {
@@ -248,6 +414,8 @@ export class MeshHub {
         let body = {}; try { body = JSON.parse(bodyText) || {}; } catch (_) {}
         const auth = await this.verifyMeshAuth(request, url, bodyText, body && body.wallet);
         if (!auth.ok) return fail(auth.error, auth.status);
+        const wait = this._limit('friend-respond', auth.addr, RL.friendRespond);
+        if (wait) return refused(wait, 'friend-respond', 'friend_responses_too_fast');
         return this.friendRespond(body);
       }
       if (method === 'GET' && path === '/mesh/v1/friend/list') {
@@ -255,14 +423,22 @@ export class MeshHub {
         return this.friendList(url.searchParams.get('wallet'));
       }
       if (method === 'POST' && path === '/mesh/v1/presence') {
+        const wait = this._limit('presence-post', ipOf(request), RL.presencePost);
+        if (wait) return limited(wait, 'presence');
         const body = await request.json().catch(() => ({}));
         return this.presencePing(body && body.addr);
       }
       if (method === 'GET' && path === '/mesh/v1/presence') {
         return this.presenceQuery(url.searchParams.get('addrs'));
       }
-      // Shared social feed — a lightweight relayed timeline so all mesh users see
-      // one social stream (P2P has no global timeline on its own). Off KV, on the DO.
+      // Legacy shared feed of the old mesh pavilion (docs/mesh/mesh-mobile.js).
+      // Unsigned by design of that client; OST Social (/social/*, signed) replaced
+      // it. Writes are rate-limited per IP until the pavilion is retired.
+      if (method === 'POST' && path.startsWith('/mesh/v1/feed/') && path !== '/mesh/v1/feed/clear') {
+        const kind = path.slice('/mesh/v1/feed/'.length);
+        const spec = { post: RL.feedPost, react: RL.feedReact, reply: RL.feedReply, donate: RL.feedDonate }[kind];
+        if (spec) { const wait = this._limit('feed-' + kind, ipOf(request), spec); if (wait) return limited(wait, 'feed-' + kind); }
+      }
       if (method === 'POST' && path === '/mesh/v1/feed/post') {
         const body = await request.json().catch(() => ({}));
         return this.feedPost(body);
@@ -306,46 +482,150 @@ export class MeshHub {
     return n;
   }
   _online(addr) { try { return this.state.getWebSockets(addr).length > 0; } catch (_) { return false; } }
+  // The one definition of "online" used by GET /presence, the socket's presence
+  // frame, msg/send, friend/request and social/user: a live socket, or activity within
+  // SEEN_TTL_MS (clients without a socket that poll) unless the socket has
+  // closed since. `seen` is the stored seen:<addr> value.
+  _presenceOf(addr, seen, now = Date.now()) {
+    const s = seenOf(seen);
+    return { online: this._online(addr) || (!s.left && s.ts > 0 && now - s.ts < SEEN_TTL_MS), lastSeen: s.ts || null };
+  }
   _wsAddr(ws) { try { const a = ws.deserializeAttachment(); return a && a.addr; } catch (_) { return null; } }
   async webSocketMessage(ws, raw) {
     const addr = this._wsAddr(ws); if (!addr) return;
+    if (raw && (raw.length || raw.byteLength || 0) > 96_000) return;   // nothing a client sends is this large
     let m = null; try { m = JSON.parse(typeof raw === 'string' ? raw : new TextDecoder().decode(raw)); } catch (_) { return; }
     if (!m || typeof m !== 'object') return;
     const now = Date.now();
+    // Over a limit the frame is dropped and the sender is told once per frame.
+    const over = (scope, spec) => {
+      const wait = this._limit('ws-' + scope, addr, spec);
+      if (wait) { try { ws.send(JSON.stringify({ t: 'error', error: 'rate_limited', scope, retryAfter: wait })); } catch (_) {} }
+      return wait;
+    };
     if (m.t === 'ping') {
-      await this.state.storage.put(SEEN_PREFIX + addr, now).catch(() => {});
+      // Keepalives come every ~25 s; anything faster still gets its pong but no storage write.
+      if (!this._limit('ws-ping', addr, RL.wsPing)) await this.state.storage.put(SEEN_PREFIX + addr, now).catch(() => {});
       try { ws.send(JSON.stringify({ t: 'pong', ts: now })); } catch (_) {}
       return;
     }
     if (m.t === 'signal' && validAddr(m.to) && m.payload && typeof m.payload === 'object') {
-      if (JSON.stringify(m.payload).length > 32_000) return;
-      const record = { id: messageId(), from: addr, to: m.to, ts: now, payload: m.payload };
-      if (!this._pushTo(m.to, { t: 'signal', item: record })) {
+      const sz = JSON.stringify(m.payload).length;
+      if (sz > SIGNAL_PAYLOAD_MAX) return;
+      if (over('signal', RL.wsSignal)) return;
+      const record = { id: messageId(), from: addr, to: m.to, ts: now, payload: m.payload, sz };
+      if (!this._pushTo(m.to, { t: 'signal', item: { id: record.id, from: addr, to: m.to, ts: now, payload: m.payload } })) {
         // Peer not on a socket right now: park it in the poll inbox too.
-        const inbox = this.inboxes.get(m.to) || []; inbox.push(record); this.inboxes.set(m.to, inbox.slice(-MAX_PER_INBOX));
+        this._parkSignal(record);
       }
       return;
     }
-    if (m.t === 'typing' && validAddr(m.to)) { this._pushTo(m.to, { t: 'typing', from: addr, ts: now }); return; }
+    if (m.t === 'typing' && validAddr(m.to)) { if (!this._limit('ws-typing', addr, RL.wsTyping)) this._pushTo(m.to, { t: 'typing', from: addr, ts: now }); return; }
     if (m.t === 'ack' && Array.isArray(m.items)) { await this.msgAck(addr, m.items); return; }
     if (m.t === 'presence' && Array.isArray(m.addrs)) {
+      if (over('presence', RL.wsPresence)) return;
       const out = {};
-      for (const a of m.addrs.filter(validAddr).slice(0, 60)) { const ts = Number(await this.state.storage.get(SEEN_PREFIX + a).catch(() => 0)) || 0; out[a] = { online: this._online(a) || (ts > 0 && now - ts < SEEN_TTL_MS), lastSeen: ts || null }; }
+      for (const a of m.addrs.filter(validAddr).slice(0, 60)) out[a] = this._presenceOf(a, await this.state.storage.get(SEEN_PREFIX + a).catch(() => 0), now);
       try { ws.send(JSON.stringify({ t: 'presence', presence: out, ts: now })); } catch (_) {}
     }
   }
-  async webSocketClose(ws) { const addr = this._wsAddr(ws); if (addr) await this.state.storage.put(SEEN_PREFIX + addr, Date.now()).catch(() => {}); try { ws.close(); } catch (_) {} }
-  async webSocketError(ws) { try { ws.close(); } catch (_) {} }
+  // The socket is gone: remember when, and that the person left (so presence
+  // does not keep saying "online" for SEEN_TTL_MS after they closed the app).
+  // Another open socket of the same address keeps them online through _online().
+  async _wsGone(ws) {
+    const addr = this._wsAddr(ws);
+    if (addr) await this.state.storage.put(SEEN_PREFIX + addr, { ts: Date.now(), left: true }).catch(() => {});
+    try { ws.close(); } catch (_) {}
+  }
+  async webSocketClose(ws) { await this._wsGone(ws); }
+  async webSocketError(ws) { await this._wsGone(ws); }
 
   async msgAck(addr, items) {
     if (!validAddr(addr) || !Array.isArray(items)) return json({ ok: true, removed: 0 });
     const del = [];
     for (const it of items.slice(0, 200)) {
       if (!it || !it.id || !Number.isFinite(Number(it.ts))) continue;
-      del.push(MSG_PREFIX + addr + ':' + pad14(Number(it.ts)) + ':' + String(it.id).slice(0, 64));
+      del.push(mboxKey(addr, Number(it.ts), it.id));
     }
-    if (del.length) await this.state.storage.delete(del).catch(() => {});
-    return json({ ok: true, removed: del.length });
+    // storage.delete() takes at most 128 keys per call and reports how many existed.
+    let removed = 0;
+    for (let i = 0; i < del.length; i += 128) removed += Number(await this.state.storage.delete(del.slice(i, i + 128)).catch(() => 0)) || 0;
+    if (removed) await this._mboxAdjust(addr, -removed).catch(() => {});
+    return json({ ok: true, removed });
+  }
+
+  /* ---- mailbox accounting (W5) ---- */
+  // mbox:<to> = { n, bytes } of what is pending. Exact while messages are added
+  // here and removed through msgInbox; an ack only knows how many keys it removed,
+  // so bytes shrink proportionally and msgInbox re-counts exactly whenever it
+  // sees the whole mailbox. Mailboxes written before this counter existed start
+  // at 0 and heal the same way.
+  async _mboxAdjust(to, dn, dbytes) {
+    const k = MBOX_PREFIX + to;
+    const cur = mboxOf(await this.state.storage.get(k).catch(() => null));
+    const n = Math.max(0, cur.n + dn);
+    const bytes = !n ? 0 : Math.max(0, dbytes !== undefined ? cur.bytes + dbytes : (cur.n ? Math.round(cur.bytes * n / cur.n) : 0));
+    if (n) await this.state.storage.put(k, { n, bytes }); else await this.state.storage.delete(k);
+  }
+  // Store one mailbox item and count it. `box` is the counter the caller already read.
+  async _mboxPut(item, sz, box, extra) {
+    const now = item.ts;
+    const puts = Object.assign({}, extra || {});
+    puts[mboxKey(item.to, now, item.id)] = { ...item, sz, expiresAt: now + MSG_TTL_MS };
+    puts[MBOX_PREFIX + item.to] = { n: box.n + 1, bytes: box.bytes + sz };
+    await this.state.storage.put(puts);
+  }
+  // A full mailbox may only be full of expired items (the owner never came back):
+  // expired items are always the oldest of their tier, so drop those before
+  // refusing a sender.
+  async _mboxSweep(to, now) {
+    const k = MBOX_PREFIX + to;
+    let whole = true, live = 0, bytes = 0, removed = 0, removedBytes = 0;
+    for (const pre of [MSG_PREFIX, MSQ_PREFIX]) {
+      const listed = await this.state.storage.list({ prefix: pre + to + ':', limit: MAX_INBOX });
+      if (listed.size >= MAX_INBOX) whole = false;
+      const del = []; let delBytes = 0;
+      for (const [key, rec] of listed) {
+        if (!rec || (rec.expiresAt && rec.expiresAt <= now)) { del.push(key); delBytes += msgSize(rec); }
+        else { live++; bytes += msgSize(rec); }
+      }
+      if (del.length) { removed += Number(await this.state.storage.delete(del).catch(() => 0)) || 0; removedBytes += delBytes; }
+    }
+    if (whole) {   // that was the whole mailbox: count it exactly
+      if (live) await this.state.storage.put(k, { n: live, bytes }); else await this.state.storage.delete(k);
+      return { n: live, bytes };
+    }
+    if (removed) await this._mboxAdjust(to, -removed, -removedBytes);
+    return mboxOf(await this.state.storage.get(k).catch(() => null));
+  }
+  // Notices written by the hub itself (friend request / accepted) use the same
+  // mailbox. A 'friend-accepted' notice goes to someone who asked first, so it
+  // is contact mail (`contact`). A 'friend-request' comes from someone the
+  // recipient has not accepted: it is stranger mail — "q" id, stranger tier,
+  // stranger caps — and at most one is stored per (from, to) until the
+  // recipient fetches it, however often the sender removes and re-asks. When
+  // there is no room (or one is already waiting) the notice is only pushed
+  // live; the friend graph still records the request, so friend/list shows it.
+  async _mboxNotice(notice, contact) {
+    try {
+      const st = this.state.storage, sz = JSON.stringify(notice.payload).length;
+      if (!contact) notice.id = 'q' + notice.id;
+      const fk = FNOTE_PREFIX + notice.to + ':' + notice.from;
+      const got = await st.get([MBOX_PREFIX + notice.to, fk]);
+      let box = mboxOf(got.get(MBOX_PREFIX + notice.to));
+      const prev = contact ? null : got.get(fk);
+      let waiting = false;
+      if (prev && prev.id && Number.isFinite(Number(prev.ts))) {
+        const rec = await st.get(mboxKey(notice.to, Number(prev.ts), prev.id)).catch(() => null);
+        waiting = !!(rec && !(rec.expiresAt && rec.expiresAt <= notice.ts));
+      }
+      if (!waiting) {
+        const maxN = contact ? MAILBOX_MAX_ITEMS : MAILBOX_STRANGER_ITEMS, maxB = contact ? MAILBOX_MAX_BYTES : MAILBOX_STRANGER_BYTES;
+        if (box.n + 1 > maxN || box.bytes + sz > maxB) box = await this._mboxSweep(notice.to, notice.ts).catch(() => box);
+        if (box.n + 1 <= maxN && box.bytes + sz <= maxB) await this._mboxPut(notice, sz, box, contact ? null : { [fk]: { ts: notice.ts, id: notice.id } });
+      }
+    } catch (_) {}
+    this._pushTo(notice.to, { t: 'msg', item: notice });
   }
 
   /* ---- encrypted blob relay ---- */
@@ -353,11 +633,8 @@ export class MeshHub {
     const to = url.searchParams.get('to') || '';
     if (!validAddr(to)) return fail('bad to');
     const now = Date.now();
-    this._blobRate = this._blobRate || new Map();
-    const win = this._blobRate.get(from) || { at: now, n: 0 };
-    if (now - win.at > 3600_000) { win.at = now; win.n = 0; }
-    if (++win.n > BLOB_PER_HOUR) return fail('blob_rate_limited', 429);
-    this._blobRate.set(from, win);
+    const wait = this._limit('blob', from, RL.blob);
+    if (wait) return refused(wait, 'blob', 'blob_rate_limited');
     const id = messageId().replace(/-/g, '') + Array.from(crypto.getRandomValues(new Uint8Array(8))).map((b) => b.toString(16).padStart(2, '0')).join('');
     const n = Math.ceil(bytes.length / BLOB_CHUNK_BYTES);
     for (let i = 0; i < n; i++) {
@@ -369,14 +646,38 @@ export class MeshHub {
     if (Math.random() < 0.05) this.sweepBlobs().catch(() => {});
     return json({ ok: true, id, size: bytes.length, expiresAt: meta.expiresAt });
   }
-  async blobGet(id) {
+  async blobGet(id, request) {
     if (!/^[0-9a-f]{24,80}$/i.test(id)) return fail('bad blob id');
     const meta = await this.state.storage.get(BLOB_META_PREFIX + id).catch(() => null);
     if (!meta || Number(meta.expiresAt || 0) <= Date.now()) return fail('blob_not_found', 404);
-    const parts = [];
-    for (let i = 0; i < meta.n; i++) { const c = await this.state.storage.get(BLOB_CHUNK_PREFIX + id + ':' + String(i).padStart(3, '0')); if (!c) return fail('blob_incomplete', 410); parts.push(new Uint8Array(c)); }
-    const out = new Uint8Array(meta.size); let o = 0; for (const p of parts) { out.set(p, o); o += p.length; }
-    return new Response(out, { status: 200, headers: cors({ 'Content-Type': 'application/octet-stream', 'Cache-Control': 'private, max-age=86400', 'X-Blob-Size': String(meta.size) }) });
+    // A blob never changes under its id, so the id is a strong validator.
+    const etag = '"' + String(meta.id || id).toLowerCase() + '"';
+    const base = { 'Content-Type': 'application/octet-stream', 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'private, max-age=86400', 'ETag': etag, 'Accept-Ranges': 'bytes', 'X-Blob-Size': String(meta.size) };
+    const hdr = (n) => (request && request.headers.get(n)) || '';
+    const inm = hdr('If-None-Match');
+    if (inm && inm.split(',').some((t) => t.trim().replace(/^W\//, '') === etag)) return new Response(null, { status: 304, headers: cors(base) });
+    let start = 0, end = meta.size - 1, partial = false;
+    const m = /^bytes=(\d*)-(\d*)$/.exec(hdr('Range').trim());
+    const ifRange = hdr('If-Range');
+    if (m && (m[1] || m[2]) && (!ifRange || ifRange.trim() === etag)) {
+      if (m[1]) { start = Number(m[1]); end = m[2] ? Math.min(Number(m[2]), meta.size - 1) : meta.size - 1; }
+      else { start = Math.max(0, meta.size - Number(m[2])); end = meta.size - 1; }
+      if (start > end || start >= meta.size) return new Response(null, { status: 416, headers: cors({ ...base, 'Content-Range': 'bytes */' + meta.size }) });
+      partial = true;
+    }
+    const c0 = Math.floor(start / BLOB_CHUNK_BYTES), c1 = Math.floor(end / BLOB_CHUNK_BYTES);
+    const out = new Uint8Array(end - start + 1); let o = 0;
+    for (let i = c0; i <= c1; i++) {
+      const c = await this.state.storage.get(BLOB_CHUNK_PREFIX + id + ':' + String(i).padStart(3, '0'));
+      if (!c) return fail('blob_incomplete', 410);
+      const u = new Uint8Array(c);
+      const from = i === c0 ? start - i * BLOB_CHUNK_BYTES : 0;
+      const to = i === c1 ? end - i * BLOB_CHUNK_BYTES + 1 : u.length;
+      out.set(u.subarray(from, to), o); o += to - from;
+    }
+    const headers = cors({ ...base, 'Content-Length': String(out.length) });
+    if (partial) headers['Content-Range'] = 'bytes ' + start + '-' + end + '/' + meta.size;
+    return new Response(out, { status: partial ? 206 : 200, headers });
   }
   async sweepBlobs() {
     const now = Date.now();
@@ -482,51 +783,76 @@ export class MeshHub {
     return json({ ok: true, cleared: del.length });
   }
 
-  async announce(body) {
+  async announce(body, ip = 'noip') {
     const { address, bundle, fingerprint } = body || {};
     const profile = cleanProfile(body && body.profile);
     if (!validAddr(address)) return fail('bad address');
     if (!bundle || bundle.v !== 1) return fail('bad bundle');
     if (!bundle.kex || !bundle.sig) return fail('missing keys');
+    const fp = await bundleKeyFp(bundle);
+    if (!fp) return fail('bad keys');            // must be two P-384 PUBLIC JWKs
 
     const now = Date.now();
 
-    // TRUST ON FIRST USE (red-team HIGH: directory poisoning). The ost-mesh
-    // address is a random label, NOT derived from the keys, so a looker-up
-    // cannot cryptographically verify a bundle belongs to an address. Without
-    // this, announce was last-write-wins: anyone could overwrite a victim's
-    // directory entry with their OWN keys and MITM the "E2E" channel and the
-    // Send-OST-to-contact flow.
-    //
-    // Fix: once an address holds a bundle, a DIFFERENT bundle is refused. The
-    // real owner re-announcing with the SAME keys just refreshes the TTL; an
-    // attacker with different keys is rejected. (Genuine key rotation will need
-    // a signed-by-old-key path — noted for later; blocked here for now, which
-    // is the safe direction.)
-    let existing = this.ids.get(address);
-    if (!existing) {
-      existing = await this.state.storage.get(ID_PREFIX + address).catch(() => 'UNREADABLE');
-      // Fail CLOSED: an unreadable directory must not let a new bundle overwrite a
-      // possibly-existing identity (that would defeat trust-on-first-use).
-      if (existing === 'UNREADABLE') return fail('directory_unavailable', 503);
+    // TRUST ON FIRST USE, PINNED FOREVER. The ost-mesh address is a random
+    // label, NOT derived from the keys, so a looker-up cannot cryptographically
+    // verify that a bundle belongs to an address. The first keys announced for
+    // an address therefore own it permanently:
+    //   · idpin:<addr> stores the fingerprint of those keys and never expires;
+    //   · the SAME keys re-announcing refresh the 7-day directory record;
+    //   · DIFFERENT keys are refused with 409 — also after the directory record
+    //     has expired or been cleaned up. (Before the pin existed, an address
+    //     dormant for 7 days could be re-announced by anyone, who then inherited
+    //     its name, avatar, bio and linked tip wallet.)
+    // Records written before the pin existed are pinned from their stored
+    // bundle the next time they are announced, looked up or listed. Key
+    // rotation would need a signed-by-old-key route; there is none yet, so a
+    // lost key means a new address (the safe direction).
+    let pin = null, existing = this.ids.get(address) || null;
+    try {
+      const got = await this.state.storage.get([PIN_PREFIX + address, ID_PREFIX + address]);
+      pin = got.get(PIN_PREFIX + address) || null;
+      if (!existing) existing = got.get(ID_PREFIX + address) || null;
+    } catch (_) {
+      // Fail CLOSED: an unreadable directory must not let a new bundle bind a
+      // possibly-existing address.
+      return fail('directory_unavailable', 503);
     }
-    if (existing && !isExpired(existing, now) && existing.bundle) {
-      // Compare by VALUE, not reference. kex/sig are JWK objects — `===` on two
-      // deserialized objects is always false, so the same identity re-announcing
-      // was wrongly rejected as identity_locked (409), which knocked the whole
-      // directory "offline" after the very first announce. Compare the canonical
-      // JSON so a genuine re-announce of the SAME keys succeeds.
-      const j = (o) => { try { return JSON.stringify(o); } catch (_) { return ''; } };
-      const same = j(existing.bundle.kex) === j(bundle.kex) && j(existing.bundle.sig) === j(bundle.sig);
-      if (!same) {
-        return fail('identity_locked: this address already has a different key bundle; it cannot be overwritten', 409);
-      }
+    let mismatch = false;
+    if (pin && pin.fp) mismatch = pin.fp !== fp;
+    else if (existing && existing.bundle) {
+      // Not pinned yet: the stored bundle is the binding, expired or not.
+      const efp = await bundleKeyFp(existing.bundle);
+      mismatch = efp ? efp !== fp : !sameBundleText(existing.bundle, bundle);
+    }
+    if (mismatch) {
+      const wait = this._limit('announce', address + '|' + ip, RL.announce);
+      if (wait) return limited(wait, 'announce');
+      // `error` keeps its historic "identity_locked" prefix (clients match on it).
+      return json({ ok: false, error: 'identity_locked: key_mismatch — this address is bound to a different key bundle and cannot be re-bound', code: 'key_mismatch' }, 409);
+    }
+
+    // Same keys (or a brand-new address). An unsigned announce may only refresh
+    // the TTL — and, the first time, set a display name. If nothing would change
+    // and the record was refreshed within the hour, answer without a write.
+    const live = !!(existing && existing.bundle && !isExpired(existing, now));
+    const unchanged = { ok: true, address, ts: existing ? existing.ts : now, hub: 'durable-object', stored: true };
+    if (live && pin && now - Number(existing.ts || 0) < ID_REFRESH_MS && (existing.profile || !profile) && sameBundleText(existing.bundle, bundle)) return json(unchanged);
+    const wait = this._limit('announce', address + '|' + ip, RL.announce);
+    if (wait) {
+      // Already registered with these keys: still a success for the caller.
+      if (live && pin) return json(unchanged);
+      return limited(wait, 'announce');
+    }
+    if (!existing && !pin) {
+      const w2 = this._limit('identity-new', ip, RL.identityNew);
+      if (w2) return limited(w2, 'identity');
     }
 
     const record = {
       address,
       bundle,
-      fingerprint: fingerprint || null,
+      fingerprint: typeof fingerprint === 'string' ? fingerprint.slice(0, 80) : null,
       // The bundle is public, so an unsigned announce must never change an
       // existing profile (that would let anyone rename a user or swap the wallet
       // tips go to). Profiles change only through the signed /social/profile.
@@ -534,16 +860,35 @@ export class MeshHub {
       ts: now,
       expiresAt: now + ID_TTL_MS
     };
+    if (this.ids.size >= ID_CACHE_MAX) this.ids.clear();   // it is only a cache
     this.ids.set(address, record);
 
     let stored = true;
     try {
-      await this.state.storage.put(ID_PREFIX + address, record);
+      const puts = { [ID_PREFIX + address]: record };
+      if (!pin) puts[PIN_PREFIX + address] = { fp, ts: now };
+      await this.state.storage.put(puts);
     } catch {
       stored = false;
     }
 
     return json({ ok: true, address, ts: record.ts, hub: 'durable-object', stored });
+  }
+
+  // An expired directory record: make sure its keys stay pinned, then drop it —
+  // unless it carries a profile, which its owner gets back on the next announce.
+  async _retireId(address, record) {
+    try {
+      if (record && record.bundle) {
+        const pk = PIN_PREFIX + address;
+        if (!(await this.state.storage.get(pk))) {
+          const fp = await bundleKeyFp(record.bundle);
+          if (!fp) return;                       // cannot pin it: the record itself stays as the binding
+          await this.state.storage.put(pk, { fp, ts: Date.now() });
+        }
+      }
+      if (!hasProfile(record && record.profile)) await this.state.storage.delete(ID_PREFIX + address);
+    } catch (_) {}
   }
 
   async lookup(address) {
@@ -553,12 +898,12 @@ export class MeshHub {
 
     if (!record) {
       record = await this.state.storage.get(ID_PREFIX + address).catch(() => null);
-      if (record) this.ids.set(address, record);
+      if (record && !isExpired(record, now)) { if (this.ids.size >= ID_CACHE_MAX) this.ids.clear(); this.ids.set(address, record); }
     }
 
     if (isExpired(record, now)) {
       this.ids.delete(address);
-      this.state.storage.delete(ID_PREFIX + address).catch(() => {});
+      if (record) await this._retireId(address, record);
       return fail('not found', 404);
     }
 
@@ -569,12 +914,13 @@ export class MeshHub {
     const now = Date.now();
     const records = [];
     try {
-      const stored = await this.state.storage.list({ prefix: ID_PREFIX, limit: 100 });
+      const stored = await this.state.storage.list({ prefix: ID_PREFIX, limit: 400 });
       for (const [key, record] of stored) {
         if (isExpired(record, now)) {
-          this.state.storage.delete(key).catch(() => {});
+          this._retireId(key.slice(ID_PREFIX.length), record).catch(() => {});
           continue;
         }
+        if (records.length >= 100) continue;
         records.push({
           address: record.address,
           profile: record.profile || null,
@@ -588,25 +934,62 @@ export class MeshHub {
     return json({ ok: true, identities: records, count: records.length, hub: 'durable-object', ts: new Date().toISOString() });
   }
 
-  signal(body) {
+  // POST /signal/send. Unsigned (see the note in fetch()); limited per sender
+  // address+IP and per IP, payload capped at SIGNAL_PAYLOAD_MAX.
+  signal(body, ip = 'noip') {
     const { from, to, payload } = body || {};
     if (!validAddr(from) || !validAddr(to)) return fail('bad addresses');
     if (!payload || typeof payload !== 'object') return fail('bad payload');
-    if (JSON.stringify(payload).length > 32_000) return fail('payload too large');
+    const sz = JSON.stringify(payload).length;
+    if (sz > SIGNAL_PAYLOAD_MAX) return fail('payload too large', 413);
+    const wait = this._limits([['signal-ip', ip, RL.signalIp], ['signal-from', from + '|' + ip, RL.signalFrom]]);
+    if (wait) return limited(wait, 'signal');
 
     const ts = Date.now();
-    const record = { id: messageId(), from, to, ts, payload };
-    const pushed = this._pushTo(to, { t: 'signal', item: record });
-    const inbox = this.inboxes.get(to) || [];
-    inbox.push(record);
-    this.inboxes.set(to, inbox.slice(-MAX_PER_INBOX));
-    this.pruneInbox(to, ts);
+    const record = { id: messageId(), from, to, ts, payload, sz };
+    const pushed = this._pushTo(to, { t: 'signal', item: { id: record.id, from, to, ts, payload } });
+    // Parked even when pushed: the legacy pavilion only ever polls.
+    this._parkSignal(record);
     return json({ ok: true, id: record.id, ts, pushed: pushed > 0, hub: 'durable-object' });
   }
 
-  inbox({ to, from, since }) {
+  /* ---- in-memory signal inboxes, bounded per inbox and in total ---- */
+  _inboxBytes(list) { let b = 0; for (const r of list || []) b += Number(r && r.sz) || 0; return b; }
+  _setInbox(to, list) {
+    const old = this.inboxes.get(to);
+    if (old) this._sigBytes -= this._inboxBytes(old);
+    if (list && list.length) { this.inboxes.set(to, list); this._sigBytes += this._inboxBytes(list); }
+    else this.inboxes.delete(to);
+    if (this._sigBytes < 0) this._sigBytes = 0;
+  }
+  _pruneSignals(now = Date.now()) {
+    for (const [to, list] of this.inboxes) {
+      const keep = list.filter((r) => r && now - Number(r.ts || 0) <= SIGNAL_TTL_MS);
+      if (keep.length !== list.length) this._setInbox(to, keep);
+    }
+  }
+  // Returns false when the relay is full (the signal is then only pushed live).
+  _parkSignal(record) {
+    const now = record.ts, to = record.to;
+    if (!this.inboxes.has(to) && this.inboxes.size >= SIGNAL_MAX_INBOXES) this._pruneSignals(now);
+    if (!this.inboxes.has(to) && this.inboxes.size >= SIGNAL_MAX_INBOXES) return false;
+    if (this._sigBytes + record.sz > SIGNAL_TOTAL_BYTES) this._pruneSignals(now);
+    if (this._sigBytes + record.sz > SIGNAL_TOTAL_BYTES) return false;
+    const list = (this.inboxes.get(to) || []).filter((r) => r && now - Number(r.ts || 0) <= SIGNAL_TTL_MS);
+    list.push(record);
+    // Over the per-inbox caps the OLDEST signals go first.
+    let bytes = this._inboxBytes(list);
+    while (list.length > 1 && (list.length > MAX_PER_INBOX || bytes > SIGNAL_INBOX_BYTES)) bytes -= Number(list.shift().sz) || 0;
+    this._setInbox(to, list);
+    return true;
+  }
+
+  // GET /signal/inbox. Unsigned like signal(); limited per inbox+IP and per IP.
+  inbox({ to, from, since }, ip = 'noip') {
     if (!validAddr(to)) return fail('bad to');
     if (from && !validAddr(from)) return fail('bad from');
+    const wait = this._limits([['signal-inbox-ip', ip, RL.signalInboxIp], ['signal-inbox', to + '|' + ip, RL.signalInbox]]);
+    if (wait) return limited(wait, 'signal-inbox');
 
     const now = Date.now();
     const minTs = Number(since || 0);
@@ -621,37 +1004,54 @@ export class MeshHub {
       else keep.push(record);
     }
 
-    if (keep.length) this.inboxes.set(to, keep.slice(-MAX_PER_INBOX));
-    else this.inboxes.delete(to);
+    this._setInbox(to, keep.slice(-MAX_PER_INBOX));
 
     messages.sort((a, b) => (a.ts || 0) - (b.ts || 0));
     return json({ messages: messages.slice(-MAX_PER_INBOX), hub: 'durable-object' });
   }
 
-  pruneInbox(to, now = Date.now()) {
-    const inbox = this.inboxes.get(to) || [];
-    const keep = inbox.filter((record) => record && now - Number(record.ts || 0) <= SIGNAL_TTL_MS);
-    if (keep.length) this.inboxes.set(to, keep.slice(-MAX_PER_INBOX));
-    else this.inboxes.delete(to);
-
-  }
-
+  // `from` is the verified signer (the router checked it).
   async msgSend(body) {
     const { from, to, payload } = body || {};
     if (!validAddr(from) || !validAddr(to)) return fail('bad addresses');
     if (!payload || typeof payload !== 'object') return fail('bad payload');
-    if (JSON.stringify(payload).length > MSG_PAYLOAD_MAX) return fail('payload too large', 413);
+    const sz = JSON.stringify(payload).length;
+    if (sz > MSG_PAYLOAD_MAX) return fail('payload too large', 413);
+    // Per-sender rate (W5). The per-minute burst is a flood: the client backs off
+    // from the hub (429). The hourly budget is only about sending: 403, so the
+    // rest of the app keeps working.
+    const hit = this._limitHit([['msg-min', from, RL.msgMin], ['msg-hour', from, RL.msgHour]]);
+    if (hit.wait) return hit.bucket === 'msg-hour' ? refused(hit.wait, 'msg-hour', 'hourly_message_limit') : limited(hit.wait, 'msg');
+    const now = Date.now();
+    let rel = null, box = mboxOf(null), seen = 0;
+    try {
+      const got = await this.state.storage.get([FRIEND_PREFIX + to + ':' + from, MBOX_PREFIX + to, SEEN_PREFIX + to]);
+      rel = got.get(FRIEND_PREFIX + to + ':' + from) || null;
+      box = mboxOf(got.get(MBOX_PREFIX + to));
+      seen = got.get(SEEN_PREFIX + to) || 0;
+    } catch (_) {}
     // Block enforcement: if the recipient has blocked the sender, drop silently
     // (report ok so a blocker isn't revealed) — the message is simply not stored.
-    const block = await this.state.storage.get(FRIEND_PREFIX + to + ':' + from).catch(() => null);
-    if (block && block.state === 'blocked') return json({ ok: true, blocked: true, ts: Date.now() });
-    const now = Date.now();
-    const id = messageId();
-    const key = MSG_PREFIX + to + ':' + pad14(now) + ':' + id;
-    await this.state.storage.put(key, { id, from, to, ts: now, payload, expiresAt: now + MSG_TTL_MS });
-    await this.state.storage.put(SEEN_PREFIX + from, now);
+    if (rel && rel.state === 'blocked') return json({ ok: true, blocked: true, ts: now });
+    // Per-recipient cap (W5). Someone the recipient accepted, or asked to
+    // connect with, may use the whole mailbox; anyone else stops earlier, so the
+    // last MAILBOX_MAX - MAILBOX_STRANGER items are always free for contacts.
+    const known = !!(rel && (rel.state === 'accepted' || rel.state === 'pending-out'));
+    const maxN = known ? MAILBOX_MAX_ITEMS : MAILBOX_STRANGER_ITEMS, maxB = known ? MAILBOX_MAX_BYTES : MAILBOX_STRANGER_BYTES;
+    if (box.n + 1 > maxN || box.bytes + sz > maxB) {
+      box = await this._mboxSweep(to, now).catch(() => box);
+      // A state of the recipient, not the sender's rate: 409 without Retry-After,
+      // so the sender's client neither pauses the hub nor resends it in a loop.
+      if (box.n + 1 > maxN || box.bytes + sz > maxB) return refused(MAILBOX_FULL_RETRY_S, 'mailbox', 'mailbox_full', 409);
+    }
+    const id = (known ? '' : 'q') + messageId();
+    const extra = { [SEEN_PREFIX + from]: now };
+    // Mail from a non-contact is their way of asking to connect: the recipient's
+    // "messaged you → Accept" may accept it for a week (friendRespond).
+    if (!known) extra[DMIN_PREFIX + to + ':' + from] = now;
+    await this._mboxPut({ id, from, to, ts: now, payload }, sz, box, extra);
     const pushed = this._pushTo(to, { t: 'msg', item: { id, from, to, ts: now, payload } });
-    return json({ ok: true, id, ts: now, delivered: pushed > 0, online: this._online(to), hub: 'durable-object' });
+    return json({ ok: true, id, ts: now, delivered: pushed > 0, online: this._presenceOf(to, seen, now).online, hub: 'durable-object' });
   }
 
   // ── Friend graph — contact WITHOUT establishing P2P first ────────────────
@@ -659,41 +1059,62 @@ export class MeshHub {
     const from = body && body.from, to = body && body.to;
     if (!validAddr(from) || !validAddr(to) || from === to) return fail('bad addresses');
     const now = Date.now();
-    const rev = await this.state.storage.get(FRIEND_PREFIX + to + ':' + from).catch(() => null);
+    const got = await this.state.storage.get([FRIEND_PREFIX + to + ':' + from, FRIEND_PREFIX + from + ':' + to, SEEN_PREFIX + to]).catch(() => new Map());
+    const rev = got.get(FRIEND_PREFIX + to + ':' + from) || null, mine = got.get(FRIEND_PREFIX + from + ':' + to) || null;
+    const online = this._presenceOf(to, got.get(SEEN_PREFIX + to), now).online;
     if (rev && rev.state === 'blocked') return json({ ok: true, state: 'sent' });   // don't reveal block
-    const mine = await this.state.storage.get(FRIEND_PREFIX + from + ':' + to).catch(() => null);
     if (mine && mine.state === 'accepted') return json({ ok: true, state: 'accepted' });
+    // They already asked me: asking them back is an acceptance.
+    if (mine && mine.state === 'pending-in') return this._friendAccept(from, to, body && body.profile, now);
+    // Asked again within the hour: nothing new to tell them (no second notice).
+    if (rev && rev.state === 'pending-in' && mine && mine.state === 'pending-out' && now - Number(rev.ts || 0) < FRIEND_RENOTICE_MS) {
+      return json({ ok: true, state: 'sent', ts: Number(rev.ts) || now, online });
+    }
     // Symmetric pending edges. Also drop a mailbox notice so the recipient sees it
     // even if they never open the mesh while the requester is online.
-    await this.state.storage.put(FRIEND_PREFIX + to + ':' + from, { state: 'pending-in', ts: now });
-    await this.state.storage.put(FRIEND_PREFIX + from + ':' + to, { state: 'pending-out', ts: now });
-    const nid = messageId();
-    const notice = { id: nid, from, to, ts: now, payload: { t: 'friend-request', from, profile: cleanProfile(body && body.profile) } };
-    await this.state.storage.put(MSG_PREFIX + to + ':' + pad14(now) + ':' + nid, { ...notice, expiresAt: now + MSG_TTL_MS });
-    this._pushTo(to, { t: 'msg', item: notice });
-    return json({ ok: true, state: 'sent', ts: now, online: this._online(to) });
+    await this.state.storage.put({ [FRIEND_PREFIX + to + ':' + from]: { state: 'pending-in', ts: now }, [FRIEND_PREFIX + from + ':' + to]: { state: 'pending-out', ts: now } });
+    await this._mboxNotice({ id: messageId(), from, to, ts: now, payload: { t: 'friend-request', from, profile: cleanProfile(body && body.profile) } }, false);
+    return json({ ok: true, state: 'sent', ts: now, online });
+  }
+  // Both edges accepted + a notice to the other side. Callers have checked that
+  // `other` asked `me` first (friend:<me>:<other> is pending-in, or `other`
+  // mailed `me` as a non-contact within the week — see friendRespond).
+  async _friendAccept(me, other, profile, now) {
+    await this.state.storage.put({ [FRIEND_PREFIX + me + ':' + other]: { state: 'accepted', ts: now }, [FRIEND_PREFIX + other + ':' + me]: { state: 'accepted', ts: now } });
+    await this.state.storage.delete([DMIN_PREFIX + me + ':' + other, DMIN_PREFIX + other + ':' + me]).catch(() => {});
+    await this._mboxNotice({ id: messageId(), from: me, to: other, ts: now, payload: { t: 'friend-accepted', from: me, profile: cleanProfile(profile) } }, true);
+    return json({ ok: true, state: 'accepted' });
   }
   async friendRespond(body) {
     const me = body && body.wallet, other = body && body.other, action = body && body.action;
-    if (!validAddr(me) || !validAddr(other)) return fail('bad addresses');
+    if (!validAddr(me) || !validAddr(other) || me === other) return fail('bad addresses');
     const now = Date.now();
     if (action === 'accept') {
-      await this.state.storage.put(FRIEND_PREFIX + me + ':' + other, { state: 'accepted', ts: now });
-      await this.state.storage.put(FRIEND_PREFIX + other + ':' + me, { state: 'accepted', ts: now });
-      const nid = messageId();
-      const notice = { id: nid, from: me, to: other, ts: now, payload: { t: 'friend-accepted', from: me, profile: cleanProfile(body && body.profile) } };
-      await this.state.storage.put(MSG_PREFIX + other + ':' + pad14(now) + ':' + nid, { ...notice, expiresAt: now + MSG_TTL_MS });
-      this._pushTo(other, { t: 'msg', item: notice });
-      return json({ ok: true, state: 'accepted' });
+      // W2: only someone who actually asked can be accepted — otherwise anyone
+      // could make themselves your accepted friend. Asking is a pending friend
+      // request from `other`, or mail `other` sent `me` as a non-contact in the
+      // last week (the app's "messaged you → Accept").
+      const kMine = FRIEND_PREFIX + me + ':' + other, kRev = FRIEND_PREFIX + other + ':' + me, kDm = DMIN_PREFIX + me + ':' + other;
+      const got = await this.state.storage.get([kMine, kRev, kDm]).catch(() => new Map());
+      const mine = got.get(kMine) || null, rev = got.get(kRev) || null, dm = Number(got.get(kDm)) || 0;
+      if (mine && mine.state === 'accepted') return json({ ok: true, state: 'accepted' });
+      if (mine && mine.state === 'pending-in') return this._friendAccept(me, other, body && body.profile, now);
+      if (dm && now - dm < MSG_TTL_MS && !(rev && rev.state === 'blocked')) return this._friendAccept(me, other, body && body.profile, now);
+      // Nobody asked (the request was withdrawn, or this is my own outgoing
+      // request): nothing is written. The apps answer this code by sending a
+      // request of their own (ost-social.js) or by saying so (ost-mesh-app.js);
+      // an accept that silently became a request would make them say
+      // "connected" when it is not.
+      return json({ ok: false, error: 'no_pending_request', state: (mine && mine.state) || 'none' }, 409);
     }
     if (action === 'decline' || action === 'remove') {
-      await this.state.storage.delete(FRIEND_PREFIX + me + ':' + other).catch(() => {});
-      await this.state.storage.delete(FRIEND_PREFIX + other + ':' + me).catch(() => {});
+      await this.state.storage.delete([FRIEND_PREFIX + me + ':' + other, FRIEND_PREFIX + other + ':' + me, DMIN_PREFIX + me + ':' + other, DMIN_PREFIX + other + ':' + me]).catch(() => {});
       return json({ ok: true, state: 'none' });
     }
     if (action === 'block') {
       await this.state.storage.put(FRIEND_PREFIX + me + ':' + other, { state: 'blocked', ts: now });
-      await this.state.storage.delete(FRIEND_PREFIX + other + ':' + me).catch(() => {});   // they lose their edge to me
+      // They lose their edge to me, and their mail no longer counts as asking.
+      await this.state.storage.delete([FRIEND_PREFIX + other + ':' + me, DMIN_PREFIX + me + ':' + other, DMIN_PREFIX + other + ':' + me]).catch(() => {});
       return json({ ok: true, state: 'blocked' });
     }
     if (action === 'unblock') {
@@ -719,21 +1140,40 @@ export class MeshHub {
     return json({ ok: true, friends, pendingIn, pendingOut, blocked, ts: Date.now() });
   }
 
-  async msgInbox(to, drain) {
+  // One page (≤ MAX_INBOX) of pending mail, oldest first in the response.
+  // Contacts' mail and hub notices fill the page before anyone else's, so a
+  // flood from strangers cannot hide them. `order=newest` takes the newest
+  // items of each tier instead of the oldest. `more` says whether anything is
+  // left after this page (ack or drain what you got, then ask again).
+  async msgInbox(to, drain, order) {
     if (!validAddr(to)) return fail('bad to');
     const now = Date.now();
-    const listed = await this.state.storage.list({ prefix: MSG_PREFIX + to + ':', limit: MAX_INBOX });
-    const messages = [];
-    const del = [];
-    for (const [key, rec] of listed) {
-      if (!rec || (rec.expiresAt && rec.expiresAt <= now)) { del.push(key); continue; }
-      messages.push({ id: rec.id, from: rec.from, to: rec.to, ts: rec.ts, payload: rec.payload });
-      if (drain !== '0') del.push(key);
+    const reverse = order === 'newest', draining = drain !== '0';
+    const messages = [], del = [];
+    let whole = true, live = 0, liveBytes = 0, gone = 0, goneBytes = 0;
+    for (const pre of [MSG_PREFIX, MSQ_PREFIX]) {
+      const room = MAX_INBOX - messages.length;
+      if (room <= 0) { whole = false; break; }
+      const listed = await this.state.storage.list({ prefix: pre + to + ':', limit: room, reverse });
+      if (listed.size >= room) whole = false;
+      for (const [key, rec] of listed) {
+        const sz = msgSize(rec);
+        if (!rec || (rec.expiresAt && rec.expiresAt <= now)) { del.push(key); gone++; goneBytes += sz; continue; }
+        messages.push({ id: rec.id, from: rec.from, to: rec.to, ts: rec.ts, payload: rec.payload });
+        if (draining) { del.push(key); gone++; goneBytes += sz; } else { live++; liveBytes += sz; }
+      }
     }
-    if (del.length) await this.state.storage.delete(del).catch(() => {});
-    await this.state.storage.put(SEEN_PREFIX + to, now);
+    // storage.delete() takes at most 128 keys per call.
+    for (let i = 0; i < del.length; i += 128) await this.state.storage.delete(del.slice(i, i + 128)).catch(() => {});
+    const puts = { [SEEN_PREFIX + to]: now };
+    if (whole) {
+      // This page was the whole mailbox: what is left is exactly what we kept.
+      if (live) puts[MBOX_PREFIX + to] = { n: live, bytes: liveBytes };
+      else await this.state.storage.delete(MBOX_PREFIX + to).catch(() => {});
+    } else if (gone) await this._mboxAdjust(to, -gone, -goneBytes).catch(() => {});
+    await this.state.storage.put(puts);
     messages.sort((a, b) => a.ts - b.ts);
-    return json({ ok: true, messages, count: messages.length, ts: now });
+    return json({ ok: true, messages, count: messages.length, more: !whole, ts: now });
   }
 
   async presencePing(addr) {
@@ -748,11 +1188,10 @@ export class MeshHub {
     const now = Date.now();
     const presence = {};
     await Promise.all(addrs.map(async (a) => {
-      const ts = Number(await this.state.storage.get(SEEN_PREFIX + a).catch(() => 0)) || 0;
-      presence[a] = { lastSeen: ts || null, online: this._online(a) || (ts > 0 && (now - ts) < SEEN_TTL_MS) };
+      presence[a] = this._presenceOf(a, await this.state.storage.get(SEEN_PREFIX + a).catch(() => 0), now);
     }));
     return json({ ok: true, presence, ts: now });
   }
 }
 
-installSocial(MeshHub, { json, fail, cors, validAddr, ID_PREFIX, sha256HexBytes });
+installSocial(MeshHub, { json, fail, cors, validAddr, ID_PREFIX, sha256HexBytes, limited, refused });

@@ -17,7 +17,7 @@
  *   pidx:<id> -> post key ; apost:<addr>:<rev16>:<id> -> 1
  *   preact:<postId>:<addr> -> 'like'|'dislike'
  *   pcom:<postId>:<ts14>:<cid>         comment
- *   ptip:<sig>                         verified tip (idempotency)
+ *   ptip:<sig>                         verified tip (idempotency); { pending, at } while its chain check runs
  *   story:<ts14>:<id>                  story (24 h)
  *   sview:<storyId>:<addr>             story view
  *   fol:<a>:<b> / folr:<b>:<a>         a follows b
@@ -25,6 +25,13 @@
  *   uname:<lowername>:<addr>           name search index
  *   notif:<addr>:<rev16>:<nid>         notification (newest first)
  *   nseen:<addr>                       last-seen notification ts
+ *
+ * Rate limits are the hub's in-memory fixed windows (hub.js _limits). They are
+ * per-action quotas, so over one a write gets refused(): HTTP 403 WITHOUT a
+ * Retry-After header and { ok:false, error:<specific code>, retryAfter, scope }
+ * (e.g. 'posting_too_fast'). Only that action is refused; a 429 would make the
+ * app pause every hub call, chat included (see hub.js limited/refused). They
+ * are generous; a normal active person never sees one.
  */
 import { PublicKey } from '@solana/web3.js';
 
@@ -36,8 +43,29 @@ const RANGE_CAP = 8 * 1024 * 1024;
 const STORY_TTL = 24 * 3600 * 1000;
 const STORY_MEDIA_TTL = 30 * 3600 * 1000;
 const NOTIF_TTL = 21 * 24 * 3600 * 1000;
-const POSTS_PER_HOUR = 30;
 const TIP_MAX_AGE_S = 3 * 3600;
+const TIP_LOCK_MS = 2 * 60 * 1000;         // a tip reservation older than this (crashed check) may be taken over
+const FOLLOW_MERGE_MAX = 60;               // Following feed merges per-author indexes up to this many follows
+const FOLLOW_SCAN_PAGES = 6;               // …beyond that it scans the global timeline, 100 posts a page
+// Per-address write limits: [max, windowMs] lists, checked together.
+const MIN = 60 * 1000, HOUR = 60 * MIN;
+const WRITE_LIMIT = [1200, HOUR];          // every signed social write (backstop)
+const MEDIA_LIMIT = [60, HOUR];            // media uploads (count; bytes are capped by DAY_QUOTA)
+const ROUTE_LIMITS = {
+  post: [[30, HOUR]],
+  comment: [[60, 10 * MIN], [120, HOUR]],
+  story: [[30, HOUR]],
+  react: [[600, HOUR]],
+  follow: [[300, HOUR]],
+  profile: [[60, HOUR]],
+  tip: [[120, HOUR]]
+};
+// The `error` a client gets over each limit ('posting_too_fast' and
+// 'commenting_too_fast' are the codes these routes always answered with).
+const LIMIT_ERRORS = {
+  post: 'posting_too_fast', story: 'posting_too_fast', comment: 'commenting_too_fast',
+  react: 'reacting_too_fast', follow: 'following_too_fast', profile: 'profile_updates_too_fast', tip: 'tipping_too_fast'
+};
 const MIMES = /^(image\/(jpeg|png|webp|gif)|video\/(mp4|webm|quicktime))$/;
 const MINTS = { OST: '383pTzoZ8Gp83dzk23ZnvLcfX2Sq32TAGN48CMQu2pAJ', OSTG: 'DfgxMbdN49AX2Za9LuvsyixF1jgVh45RbgWYSGonxQos' };
 
@@ -78,11 +106,10 @@ async function devnetRpc(env, method, params) {
 }
 
 export function installSocial(Hub, H) {
-  const { json, fail, cors, validAddr, ID_PREFIX } = H;
+  const { json, fail, cors, validAddr, ID_PREFIX, refused } = H;
   const P = Hub.prototype;
 
   /* ---------- helpers ---------- */
-  P._sAuth = async function (request, url, bodyText, actor, opts) { return this.verifyMeshAuth(request, url, bodyText, actor, opts); };
   P._sBody = async function (request, url, actorField) {
     const bodyText = await request.text();
     let body = {}; try { body = JSON.parse(bodyText) || {}; } catch (_) {}
@@ -130,14 +157,6 @@ export function installSocial(Hub, H) {
     const rec = await this.state.storage.get(key).catch(() => null);
     return rec ? { key, rec } : null;
   };
-  P._rate = function (bucket, addr, max, windowMs) {
-    this._sRate = this._sRate || new Map();
-    const k = bucket + ':' + addr, now = Date.now();
-    const w = this._sRate.get(k) || { at: now, n: 0 };
-    if (now - w.at > windowMs) { w.at = now; w.n = 0; }
-    w.n++; this._sRate.set(k, w);
-    return w.n > max;
-  };
 
   /* ---------- router ---------- */
   P.routeSocial = async function (request, url, path, method) {
@@ -146,10 +165,13 @@ export function installSocial(Hub, H) {
 
     // ---- media ----
     if (method === 'POST' && r === 'media') {
+      if (Number(request.headers.get('Content-Length') || 0) > VID_MAX) return fail('video_too_large', 413);
       const bytes = new Uint8Array(await request.arrayBuffer());
       const actor = request.headers.get('x-mesh-addr') || '';
       const auth = await this.verifyMeshAuth(request, url, '', actor, { bodyHash: await H.sha256HexBytes(bytes) });
       if (!auth.ok) return fail(auth.error, auth.status);
+      const hit = this._limitHit([['s-write', auth.addr, WRITE_LIMIT], ['s-media', auth.addr, MEDIA_LIMIT]]);
+      if (hit.wait) return hit.bucket === 's-write' ? refused(hit.wait, 'social', 'social_hourly_limit') : refused(hit.wait, 'media', 'uploading_too_fast');
       return this.sMediaPut(auth.addr, url, bytes);
     }
     if (method === 'GET' && r.startsWith('media/')) return this.sMediaGet(r.slice(6), request);
@@ -184,6 +206,12 @@ export function installSocial(Hub, H) {
     const { body, auth } = await this._sBody(request, url, actorField);
     if (!auth.ok) return fail(auth.error, auth.status);
     const me = auth.addr;
+    {
+      const specs = [['s-write', me, WRITE_LIMIT]];
+      (ROUTE_LIMITS[r] || []).forEach((spec, i) => specs.push(['s-' + r + i, me, spec]));
+      const hit = this._limitHit(specs);
+      if (hit.wait) return hit.bucket === 's-write' ? refused(hit.wait, 'social', 'social_hourly_limit') : refused(hit.wait, r, LIMIT_ERRORS[r] || 'social_hourly_limit');
+    }
     switch (r) {
       case 'profile': return this.sProfile(me, body);
       case 'post': return this.sPost(me, body);
@@ -211,7 +239,7 @@ export function installSocial(Hub, H) {
     const day = new Date().toISOString().slice(0, 10);
     const qk = 'squota:' + owner + ':' + day;
     const used = Number(await this.state.storage.get(qk).catch(() => 0)) || 0;
-    if (used + bytes.length > DAY_QUOTA) return fail('daily_upload_quota', 429);
+    if (used + bytes.length > DAY_QUOTA) return refused((Date.parse(day + 'T00:00:00Z') + 24 * HOUR - Date.now()) / 1000, 'media-quota', 'daily_upload_quota');
     const id = 'm' + rid();
     const n = Math.ceil(bytes.length / CHUNK);
     for (let i = 0; i < n; i++) {
@@ -229,13 +257,23 @@ export function installSocial(Hub, H) {
     if (!/^m[0-9a-f]{24}$/.test(id)) return fail('bad media id');
     const meta = await this.state.storage.get('smeta:' + id).catch(() => null);
     if (!meta || (meta.expiresAt && meta.expiresAt <= Date.now())) return fail('media_not_found', 404);
+    // Media never change under their id, so the id is a strong validator.
+    const etag = '"' + id + '"';
+    const base = {
+      'Content-Type': meta.mime, 'X-Content-Type-Options': 'nosniff', 'ETag': etag, 'Accept-Ranges': 'bytes',
+      'Cache-Control': meta.expiresAt ? 'public, max-age=3600' : 'public, max-age=31536000, immutable',
+      'Access-Control-Expose-Headers': 'Content-Range, Accept-Ranges, Content-Length, ETag'
+    };
+    const inm = request.headers.get('If-None-Match') || '';
+    if (inm && inm.split(',').some((t) => { t = t.trim(); return t === '*' || t.replace(/^W\//, '') === etag; })) return new Response(null, { status: 304, headers: cors(base) });
     let start = 0, end = meta.size - 1, partial = false;
     const range = request.headers.get('Range') || '';
+    const ifRange = (request.headers.get('If-Range') || '').trim();
     const m = /^bytes=(\d*)-(\d*)$/.exec(range.trim());
-    if (m && (m[1] || m[2])) {
+    if (m && (m[1] || m[2]) && (!ifRange || ifRange === etag)) {
       if (m[1]) { start = Number(m[1]); end = m[2] ? Math.min(Number(m[2]), meta.size - 1) : meta.size - 1; }
       else { const suffix = Number(m[2]); start = Math.max(0, meta.size - suffix); end = meta.size - 1; }
-      if (start > end || start >= meta.size) return new Response(null, { status: 416, headers: cors({ 'Content-Range': 'bytes */' + meta.size }) });
+      if (start > end || start >= meta.size) return new Response(null, { status: 416, headers: cors({ ...base, 'Content-Range': 'bytes */' + meta.size }) });
       if (end - start + 1 > RANGE_CAP) end = start + RANGE_CAP - 1;
       partial = true;
     }
@@ -251,7 +289,7 @@ export function installSocial(Hub, H) {
       const to = i === c1 ? end - i * CHUNK + 1 : u.length;
       out.set(u.subarray(from, to), o); o += to - from;
     }
-    const headers = cors({ 'Content-Type': meta.mime, 'Accept-Ranges': 'bytes', 'Content-Length': String(out.length), 'Cache-Control': meta.expiresAt ? 'public, max-age=3600' : 'public, max-age=31536000, immutable', 'Access-Control-Expose-Headers': 'Content-Range, Accept-Ranges, Content-Length' });
+    const headers = cors({ ...base, 'Content-Length': String(out.length) });
     if (partial) headers['Content-Range'] = 'bytes ' + start + '-' + end + '/' + meta.size;
     return new Response(out, { status: partial ? 206 : 200, headers });
   };
@@ -321,7 +359,8 @@ export function installSocial(Hub, H) {
       const got = await this.state.storage.get(['fol:' + me + ':' + addr, 'fol:' + addr + ':' + me]);
       iFollow = !!got.get('fol:' + me + ':' + addr); followsMe = !!got.get('fol:' + addr + ':' + me);
     }
-    let online = false; try { online = this._online(addr); } catch (_) {}
+    // Same "online" as /presence, msg/send and friend/request (hub.js _presenceOf).
+    let online = false; try { online = this._presenceOf(addr, await this.state.storage.get('seen:' + addr).catch(() => 0)).online; } catch (_) {}
     return json({ ok: true, user: this._slim(addr, p), counts, iFollow, followsMe, online });
   };
   P.sSearch = async function (q) {
@@ -373,7 +412,6 @@ export function installSocial(Hub, H) {
 
   /* ---------- posts ---------- */
   P.sPost = async function (me, body) {
-    if (this._rate('post', me, POSTS_PER_HOUR, 3600_000)) return fail('posting_too_fast', 429);
     const text = clip(body.text, 2000).trim();
     const media = await this._ownMedia(me, body.media, 4);
     const embed = cleanEmbed(body.embed);
@@ -429,16 +467,37 @@ export function installSocial(Hub, H) {
         const fl = await this.state.storage.list({ prefix: 'fol:' + me + ':', limit: 1000 });
         follow = new Set([...fl.keys()].map((k) => k.slice(('fol:' + me + ':').length))); follow.add(me);
       }
-      let after = cursor && cursor.startsWith('post:') ? cursor : null;
-      for (let page = 0; page < 6 && posts.length < limit; page++) {
-        const opts = { prefix: 'post:', limit: follow ? 100 : limit - posts.length };
-        if (after) opts.startAfter = after;
-        const listed = await this.state.storage.list(opts);
-        if (!listed.size) { after = null; break; }
-        for (const [k, v] of listed) { after = k; if (!follow || follow.has(v.author)) { posts.push(v); if (posts.length >= limit) break; } }
-        if (listed.size < opts.limit) { if (posts.length < limit) after = null; break; }
+      const after0 = cursor && cursor.startsWith('post:') ? cursor : null;
+      if (follow && follow.size <= FOLLOW_MERGE_MAX) {
+        // Following, few follows: merge each author's own index (apost:). Exact,
+        // and it never ends early however old the followed posts are.
+        const tail = after0 ? after0.slice('post:'.length) : '';   // '<rev16>:<id>'
+        const lists = await Promise.all([...follow].map((a) => {
+          const prefix = 'apost:' + a + ':';
+          const opts = { prefix, limit: limit + 1 };
+          if (tail) opts.startAfter = prefix + tail;
+          return this.state.storage.list(opts).then((m) => [...m.keys()].map((k) => 'post:' + k.slice(prefix.length))).catch(() => []);
+        }));
+        const keys = lists.flat().sort();               // rev16 first: newest first
+        const take = keys.slice(0, limit);
+        const got = take.length ? await this.state.storage.get(take) : new Map();
+        posts = take.map((k) => got.get(k)).filter(Boolean);
+        next = keys.length > limit ? take[take.length - 1] : null;
+      } else {
+        // For you (every post), or Following with many follows: walk the global
+        // timeline. A Following scan stops after FOLLOW_SCAN_PAGES pages; it then
+        // returns the last key it SCANNED as the cursor so the client can go on
+        // (it used to answer cursor=null there, ending the feed silently).
+        let after = after0, filled = false, exhausted = false;
+        for (let page = 0; page < FOLLOW_SCAN_PAGES && !filled; page++) {
+          const opts = { prefix: 'post:', limit: follow ? 100 : limit - posts.length };
+          if (after) opts.startAfter = after;
+          const listed = await this.state.storage.list(opts);
+          for (const [k, v] of listed) { after = k; if (!follow || (v && follow.has(v.author))) { posts.push(v); if (posts.length >= limit) { filled = true; break; } } }
+          if (listed.size < opts.limit) { exhausted = true; break; }
+        }
+        next = filled || !exhausted ? after : null;
       }
-      next = posts.length >= limit ? after : null;
     }
     return this.sFeedResponse(posts, me, next);
   };
@@ -470,7 +529,6 @@ export function installSocial(Hub, H) {
   P.sComment = async function (me, postId, text) {
     text = clip(text, 500).trim();
     if (!text) return fail('empty_comment');
-    if (this._rate('comment', me, 60, 600_000)) return fail('commenting_too_fast', 429);
     const f = await this._postByKey(postId);
     if (!f) return fail('post_not_found', 404);
     const now = Date.now(), cid = 'c' + rid().slice(0, 12);
@@ -507,7 +565,6 @@ export function installSocial(Hub, H) {
 
   /* ---------- stories ---------- */
   P.sStory = async function (me, body) {
-    if (this._rate('story', me, 30, 3600_000)) return fail('posting_too_fast', 429);
     const media = await this._ownMedia(me, [body.media], 1);
     if (!media.length) return fail('story_needs_media');
     const now = Date.now(), id = 's' + rid().slice(0, 16);
@@ -612,28 +669,65 @@ export function installSocial(Hub, H) {
     if (!ccy) return fail('bad_currency');
     const f = await this._postByKey(body.postId);
     if (!f) return fail('post_not_found', 404);
-    const done = await this.state.storage.get('ptip:' + sig).catch(() => null);
-    if (done) return json({ ok: true, idempotent: true, tip: done, tips: f.rec.tips });
+    // W6 — idempotency by signature, RESERVED before the chain round-trip. The
+    // RPC fetch lets other requests into this Durable Object; checking ptip:<sig>
+    // only before it let two concurrent submissions of one signature both pass
+    // the check and both credit the post. Reads and writes with no fetch in
+    // between run without interleaving (DO input gates), so get-then-put of
+    // the reservation is atomic. The reservation is released on any failure.
+    const tk = 'ptip:' + sig;
+    const done = await this.state.storage.get(tk).catch(() => null);
+    if (done && !done.pending) return json({ ok: true, idempotent: true, tip: done, tips: f.rec.tips });
+    if (done && Date.now() - Number(done.at || 0) < TIP_LOCK_MS) {
+      return refused((Number(done.at || 0) + TIP_LOCK_MS - Date.now()) / 1000, 'tip', 'tip_in_flight', 409);
+    }
+    // Reserve right after the check (nothing awaited in between). `t` marks this
+    // request as the holder: a check that outlives TIP_LOCK_MS can be taken over,
+    // and the slow one must then not credit as well.
+    const lock = { pending: true, at: Date.now(), by: me, t: rid() };
+    await this.state.storage.put(tk, lock);
+    const release = async () => { const c = await this.state.storage.get(tk).catch(() => null); if (c && c.pending && c.t === lock.t) await this.state.storage.delete(tk).catch(() => {}); };
     const author = await this._profileOf(f.rec.author);
     const authorWallet = author && author.wallet;
-    if (!authorWallet) return fail('author_has_no_wallet');
-    let tx;
-    try { tx = await devnetRpc(this.env, 'getTransaction', [sig, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0, commitment: 'confirmed' }]); }
-    catch (e) { return fail('rpc_error: ' + String(e && e.message || e).slice(0, 80), 503); }
-    if (!tx) return fail('tx_not_found', 404);
-    if (tx.meta && tx.meta.err) return fail('tx_failed');
-    if (tx.blockTime && Math.abs(Date.now() / 1000 - tx.blockTime) > TIP_MAX_AGE_S) return fail('tx_too_old');
-    const memo = 'ost-tip:' + f.rec.id;
+    if (!authorWallet) { await release(); return fail('author_has_no_wallet'); }
+    const v = await this._sTipVerify(me, sig, ccy, f.rec.id, authorWallet).catch((e) => ({ error: 'rpc_error: ' + String(e && e.message || e).slice(0, 80), status: 503 }));
+    if (!v.tip) { await release(); return fail(v.error, v.status || 400); }
+    // Taken over while the chain was slow? Then the other request credits (or
+    // has credited) it. Nothing between this read and the put below is awaited.
+    const held = await this.state.storage.get(tk).catch(() => null);
+    if (held && !held.pending) return json({ ok: true, idempotent: true, tip: held, tips: ((await this._postByKey(f.rec.id)) || f).rec.tips });
+    if (held && held.t !== lock.t) return refused(TIP_LOCK_MS / 1000, 'tip', 'tip_in_flight', 409);
+    const tip = v.tip;
+    await this.state.storage.put(tk, tip);
+    // Re-read the post: reactions, comments or other tips may have changed it
+    // while the chain was being asked (f.rec is stale by now).
+    const cur = await this._postByKey(f.rec.id);
+    if (!cur) return json({ ok: true, tip, tips: {}, tipCount: 0 });   // post deleted meanwhile; the tip stays recorded
+    cur.rec.tips = cur.rec.tips || {};
+    cur.rec.tips[ccy] = Math.round(((Number(cur.rec.tips[ccy]) || 0) + tip.amount) * 1e6) / 1e6;
+    cur.rec.tipCount = (cur.rec.tipCount || 0) + 1;
+    await this.state.storage.put(cur.key, cur.rec);
+    await this._notify(cur.rec.author, { kind: 'tip', from: me, postId: cur.rec.id, amount: tip.amount, ccy, sig });
+    return json({ ok: true, tip, tips: cur.rec.tips, tipCount: cur.rec.tipCount });
+  };
+  // Reads the transaction from devnet and checks it is a tip to this post's
+  // author. Returns { tip } or { error, status }; throws only on RPC failure.
+  P._sTipVerify = async function (me, sig, ccy, postId, authorWallet) {
+    const tx = await devnetRpc(this.env, 'getTransaction', [sig, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0, commitment: 'confirmed' }]);
+    if (!tx) return { error: 'tx_not_found', status: 404 };
+    if (tx.meta && tx.meta.err) return { error: 'tx_failed' };
+    if (tx.blockTime && Math.abs(Date.now() / 1000 - tx.blockTime) > TIP_MAX_AGE_S) return { error: 'tx_too_old' };
+    const memo = 'ost-tip:' + postId;
     const logs = (tx.meta && tx.meta.logMessages) || [];
     const ixs = (tx.transaction && tx.transaction.message && tx.transaction.message.instructions) || [];
     const memoOk = logs.some((l) => String(l).includes(memo)) || ixs.some((ix) => ix && (ix.program === 'spl-memo') && String(ix.parsed || '').includes(memo));
-    if (!memoOk) return fail('tip_memo_missing');
-    const keys = (tx.transaction.message.accountKeys || []).map((k) => (typeof k === 'string' ? k : k.pubkey));
+    if (!memoOk) return { error: 'tip_memo_missing' };
+    const keys = ((tx.transaction && tx.transaction.message && tx.transaction.message.accountKeys) || []).map((k) => (typeof k === 'string' ? k : k.pubkey));
     const payer = keys[0] || '';
     let amount = 0;
     if (ccy === 'SOL') {
       const i = keys.indexOf(authorWallet);
-      if (i < 0) return fail('tip_not_to_author');
+      if (i < 0) return { error: 'tip_not_to_author' };
       amount = ((tx.meta.postBalances[i] || 0) - (tx.meta.preBalances[i] || 0)) / 1e9;
     } else {
       const mint = MINTS[ccy];
@@ -641,14 +735,7 @@ export function installSocial(Hub, H) {
       amount = sum(tx.meta.postTokenBalances) - sum(tx.meta.preTokenBalances);
     }
     amount = Math.round(amount * 1e6) / 1e6;
-    if (!(amount > 0)) return fail('tip_not_to_author');
-    const tip = { sig, postId: f.rec.id, from: me, payer, ccy, amount, ts: Date.now() };
-    await this.state.storage.put('ptip:' + sig, tip);
-    f.rec.tips = f.rec.tips || {};
-    f.rec.tips[ccy] = Math.round(((Number(f.rec.tips[ccy]) || 0) + amount) * 1e6) / 1e6;
-    f.rec.tipCount = (f.rec.tipCount || 0) + 1;
-    await this.state.storage.put(f.key, f.rec);
-    await this._notify(f.rec.author, { kind: 'tip', from: me, postId: f.rec.id, amount, ccy, sig });
-    return json({ ok: true, tip, tips: f.rec.tips, tipCount: f.rec.tipCount });
+    if (!(amount > 0)) return { error: 'tip_not_to_author' };
+    return { tip: { sig, postId, from: me, payer, ccy, amount, ts: Date.now() } };
   };
 }

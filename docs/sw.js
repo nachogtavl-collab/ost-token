@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ost-pwa-cache-v490';
+const CACHE_NAME = 'ost-pwa-cache-v491';
 const RUNTIME_CACHE = 'ost-pwa-runtime-v260';
 const CACHE_PREFIX = 'ost-pwa-';
 
@@ -25,8 +25,8 @@ const PRECACHE_PATHS = [
   './ost-live-stats.js?v=6',
   './ost-treasury-engine.js?v=2',
   './ost-engine-guard.js?v=2',
-  './ost-appbar.js?v=19',
-  './ost-desktop-nav.js?v=3',
+  './ost-appbar.js?v=20',
+  './ost-desktop-nav.js?v=4',
   './ost-markets-desk.css?v=4',
   './ost-markets-desk.js?v=5',
   './ost-launchpad-x.css?v=2',
@@ -38,15 +38,15 @@ const PRECACHE_PATHS = [
   './ost-market-chart.css?v=1',
   './ost-market-art.js?v=1',
   './ost-market-art.css?v=1',
-  './ost-nexus.js?v=5',
-  './ost-nexus.css?v=4',
+  './ost-nexus.js?v=6',
+  './ost-nexus.css?v=5',
   './ost-ghost-brain.js?v=3',
   './ost-ghost-connect.js?v=1',
   './ost-quantum-lab.js?v=1',
   './ost-world.js?v=7',
   './ost-world-bubble.js?v=4',
   './ost-shortcuts.js?v=1',
-  './ost-games-lanes.js?v=1',
+  './ost-games-lanes.js?v=2',
   './ost-balance.js?v=4',
   './ost-onchain-sync.js?v=2',
   './ost-loan-usd.js?v=1',
@@ -59,7 +59,7 @@ const PRECACHE_PATHS = [
   './ost-pro-fast-tiles.js?v=1',
   './ost-wc-rail.js?v=1',
   './ost-mobile-fit.css?v=1',
-  './ost-appbar.css?v=4',
+  './ost-appbar.css?v=5',
   './predict-mobile.css?v=2',
   './ost-total-balance.js?v=3',
   './ost-ostg-wallet.js?v=2',
@@ -68,11 +68,11 @@ const PRECACHE_PATHS = [
   './ost-logo.svg',
   './icon-192.png',
   './icon-512.png',
-  './style.css?v=82',
-  './mobile.css?v=7',
+  './style.css?v=83',
+  './mobile.css?v=8',
   './polish.css?v=1',
   './compartments.css?v=4',
-  './prediction-extras.css?v=5',
+  './prediction-extras.css?v=6',
   './prediction-pro.css?v=1',
   './prediction-modal.css?v=6',
   './prediction-trade-popout.css?v=5',
@@ -83,22 +83,22 @@ const PRECACHE_PATHS = [
   './topup.css?v=4',
   './offline-vault.css?v=1',
   './stock-market.css?v=2',
-  './mobile-shell.css?v=20',
-  './ost-mobile-scale.css?v=3',
+  './mobile-shell.css?v=21',
+  './ost-mobile-scale.css?v=4',
   './rpc-multiplexer.js?v=200',
   './ost-optimistic.js?v=7',
   './ost-celebrate.js?v=1',
   './ost-fx.js?v=4',
   './ost-currency-format.js?v=2',
   './realtime.js?v=5',
-  './ost-notifications.js?v=3',
-  './app.js?v=272',
-  './ost-predict-mobile.js?v=47',
+  './ost-notifications.js?v=4',
+  './app.js?v=273',
+  './ost-predict-mobile.js?v=48',
   './ost-predict-mobile.css?v=15',
   './ost-session-key.js?v=12',
   './ost-onchain-market.js?v=7',
   './ost-onchain-route.js?v=3',
-  './ost-lazy.js?v=1',
+  './ost-lazy.js?v=2',
   './ost-instant.js?v=1',
   './ost-instant.css?v=1',
   './icons.js?v=1',
@@ -110,12 +110,12 @@ const PRECACHE_PATHS = [
   './wallet-extras.js?v=209',
   './ost-wallet-home.js?v=1',
   './ost-wallet-home.css?v=1',
-  './ost-mesh-app.js?v=3',
-  './ost-mesh-app.css?v=1',
-  './ost-mesh-call.js?v=1',
-  './ost-social.js?v=2',
-  './ost-social.css?v=1',
-  './ost-apps-viewer.js?v=2',
+  './ost-mesh-app.js?v=4',
+  './ost-mesh-app.css?v=2',
+  './ost-mesh-call.js?v=2',
+  './ost-social.js?v=3',
+  './ost-social.css?v=2',
+  './ost-apps-viewer.js?v=3',
   './ost-apps-viewer.css?v=1',
   // OST Studio (studio.html) — same ?v= strings as studio.html uses
   './studio.html',
@@ -125,11 +125,11 @@ const PRECACHE_PATHS = [
   './studio/editor.css?v=2',
   './studio/runtime.js?v=2',
   './studio/runtime.css?v=2',
-  './studio/terminal.js?v=2',
+  './studio/terminal.js?v=3',
   './studio/terminal.css?v=2',
   './studio/agent.js?v=2',
   './studio/agent.css?v=2',
-  './studio/deploy.js?v=2',
+  './studio/deploy.js?v=3',
   './studio/deploy.css?v=2',
   './ost-price-client.js?v=204',
   './ost-token-section.js?v=3',
@@ -145,29 +145,15 @@ const PRECACHE_PATHS = [
   './ghost/signal.js?v=1',
   './ghost/awareness.js?v=1',
   './ghost/ghost.css?v=3',
-  './mesh/mesh.js?v=47',
-  './mesh/mesh-mobile.js?v=9',
-  './mesh/mesh-contacts.js?v=2',
-  './mesh/veil.js?v=3',
-  './mesh/mesh-play.js?v=14',
-  './mesh/mesh-fair-fx.js?v=1',
-  './mesh/mesh-upgrade.js?v=13',
+  // The legacy mesh pavilion (mesh/mesh.js, veil, mesh-play, mesh-link, mesh-games,
+  // games/*, mesh-mobile, mesh-contacts, …) is NOT precached: it is an on-demand lazy
+  // group (OST_LAZY.group('mesh')) and precaching it re-downloaded ~600 KB on every
+  // install for visitors who never open it. mesh-crypto.js stays (the OST Mesh app
+  // imports it).
   './vendor/qrcode-generator.js',
   './vendor/jsqr.min.js',
   './ost-qr-reader.js?v=1',
-  './mesh/mesh-link.js?v=3',
-  './mesh/mesh-games.js?v=2',
-  './mesh/games/tictactoe.js?v=1',
-  './mesh/games/chess.js?v=1',
-  './mesh/games/pool8.js?v=1',
-  './mesh/games/cuppong.js?v=1',
-  './mesh/games/minigolf.js?v=1',
-  './mesh/mesh-social-x.js?v=5',
-  './mesh/mesh-group-markets.js?v=3',
-  './mesh/mesh-location-pro.js?v=7',
   './mesh/mesh-crypto.js?v=1',
-  './mesh/mesh-rtc.js?v=10',
-  './mesh/mesh.css?v=15',
   './compartments.js?v=8',
   './prediction-extras.js?v=20',
   './ost-positions.js?v=2',
@@ -180,7 +166,7 @@ const PRECACHE_PATHS = [
   './ost-console.js?v=3',
   './ost-onchain-bet.js?v=200',
   './ux-extras.js?v=10',
-  './mobile-shell.js?v=15',
+  './mobile-shell.js?v=16',
   './faucet-hub.js?v=19',
   './faucet-hub-ads.js?v=101',
   './ost-idle-guard.js?v=2',
@@ -199,7 +185,7 @@ const PRECACHE_PATHS = [
   './swap-resilient.js?v=202',
   './ost-games.js?v=32',
   './code-academy.js?v=4',
-  './i18n-runtime.js?v=4',
+  './i18n-runtime.js?v=5',
   './devnet-rescue.js?v=205',
   './launchpad-trenches.js?v=7',
   './stock-market.js?v=16',
@@ -209,7 +195,7 @@ const PRECACHE_PATHS = [
   './live-watch.css?v=5',
   './live-watch.js?v=200',
   './native-markets.js?v=3',
-  './redesign.css?v=2',
+  './redesign.css?v=3',
   './redesign.js?v=1',
   './mainnet-audit.js?v=1',
   './ost-pq-demo.js?v=1',
@@ -502,7 +488,10 @@ function notificationPayload(data = {}) {
       vibrate: data.vibrate || [90, 45, 90],
       data: {
         url: data.url || './?openMesh=1',
-        type: data.type || 'mesh'
+        type: data.type || 'mesh',
+        // Mesh address of the sender, when known: the page opens that chat in the
+        // OST Mesh app (ost-notifications.js). Kept out of the URL on purpose.
+        addr: data.addr || ''
       },
       actions: data.actions || [{ action: 'open', title: 'Open OST Mesh' }]
     }
@@ -605,12 +594,14 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const targetUrl = new URL(event.notification.data && event.notification.data.url || './?openMesh=1', scopeUrl).toString();
+  const nd = event.notification.data || {};
+  const targetUrl = new URL(nd.url || './?openMesh=1', scopeUrl).toString();
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
         if (client.url.startsWith(scopeUrl.origin) && 'focus' in client) {
-          client.postMessage({ type: 'ost-open-mesh', url: targetUrl });
+          // An open tab opens the OST Mesh app itself (chat for nd.addr, else Chats).
+          client.postMessage({ type: 'ost-open-mesh', url: targetUrl, addr: nd.addr || '' });
           return client.focus();
         }
       }

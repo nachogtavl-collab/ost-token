@@ -666,7 +666,7 @@
       + '<button type="button" class="st-btn sm" data-a="qr" aria-expanded="' + (DP.qrOpen ? 'true' : 'false') + '">QR code</button></div>'
       + '<div class="st-deploy-btns">'
       + '<a class="st-btn sm" href="index.html#app=' + esc(live.slug) + '" target="_blank" rel="noopener">Open inside OST</a>'
-      + '<a class="st-btn sm" href="index.html#share-app=' + esc(live.slug) + '" target="_blank" rel="noopener">Share on OST Social</a></div>'
+      + '<a class="st-btn sm" href="index.html#share-app=' + esc(live.slug) + '" target="_blank" rel="noopener">Share on OST Mesh</a></div>'
       + '<div class="st-deploy-qr" data-d="qr"' + (DP.qrOpen ? '' : ' hidden') + '></div>'
       + '<div class="st-deploy-live-foot">' + (REMOTE.error && REMOTE.pid === p.id ? '<span class="st-muted">Couldn’t refresh live stats.</span>' : '<span></span>')
       + '<button type="button" class="st-deploy-linkbtn danger" data-a="unpublish">Unpublish…</button></div>'
@@ -935,12 +935,12 @@
       + '<section class="st-deploy-card" data-c="storage"></section>'
       + '<section class="st-deploy-card"><h4 class="st-deploy-h">OST</h4><div class="st-deploy-links">'
       + '<a href="index.html" target="_blank" rel="noopener">◉ OST home ↗</a>'
-      + '<a href="index.html#social" target="_blank" rel="noopener">💬 OST Social ↗</a>'
+      + '<a href="index.html#social" target="_blank" rel="noopener">💬 OST Mesh ↗</a>'
       + '<a href="index.html#academy" target="_blank" rel="noopener">🎓 Code Academy ↗</a>'
       + '<a href="' + esc(S.APPS + '/') + '" target="_blank" rel="noopener noreferrer">🧩 OST Apps site ↗</a></div></section>'
       + '<section class="st-deploy-notes"><h4 class="st-deploy-h">Where your data lives</h4><ul>'
       + '<li><b>Projects</b> are stored in this browser (IndexedDB) and synced to your OST cloud space, so they open on any tab and coding agents with your token can edit them.</li>'
-      + '<li><b>Your identity</b> is the OST Mesh key pair kept in this browser — the same one OST Mesh and OST Social use. Clearing site data or switching browsers gives you a new identity and an empty cloud space, so export a .zip of anything you care about.</li>'
+      + '<li><b>Your identity</b> is the OST Mesh key pair kept in this browser — the same one OST Mesh uses. Clearing site data or switching browsers gives you a new identity and an empty cloud space, so export a .zip of anything you care about.</li>'
       + '<li><b>Deployed apps are public.</b> Agent tokens (🔑 Agent API) act as you within their scopes — revoke them when you’re done.</li>'
       + '<li><b>Your code runs only in sandboxes</b>, never with access to your OST wallet. There is no server-side execution.</li>'
       + '</ul></section>'
@@ -964,8 +964,8 @@
       + '<div class="st-deploy-idrow"><span class="st-deploy-av lg" aria-hidden="true">' + esc(av) + '</span><div class="st-deploy-idt"><b>' + (name ? esc(name) : '<span class="st-muted">No display name</span>') + '</b><code title="' + esc(addr) + '">' + esc(addr || 'loading…') + '</code></div></div>'
       + '<dl class="st-deploy-dl"><dt>Fingerprint</dt><dd><code>' + esc(S.id.fingerprint || '—') + '</code></dd>'
       + '<dt>Directory</dt><dd>' + (S.id.announced ? '<span class="ok">✓ Registered with OST</span>' : '<span class="warn">⚠ Not registered yet</span> <button type="button" class="st-deploy-linkbtn" data-a="announce">Retry</button>') + '</dd></dl>'
-      + '<div class="st-deploy-btns"><button type="button" class="st-btn sm" data-a="copyaddr"' + (addr ? '' : ' disabled') + '>Copy address</button><a class="st-btn sm" href="index.html#social" target="_blank" rel="noopener">Edit profile in OST Social ↗</a></div>'
-      + '<p class="st-note">Your Studio identity is your OST Mesh identity on this browser. The name and avatar you set in OST Social show as the author of your apps.</p>';
+      + '<div class="st-deploy-btns"><button type="button" class="st-btn sm" data-a="copyaddr"' + (addr ? '' : ' disabled') + '>Copy address</button><a class="st-btn sm" href="index.html#social" target="_blank" rel="noopener">Edit profile in OST Mesh ↗</a></div>'
+      + '<p class="st-note">Your Studio identity is your OST Mesh identity on this browser. The name and avatar you set in OST Mesh show as the author of your apps.</p>';
   }
   function paintSyncCard() {
     if (!AC.sync) return;

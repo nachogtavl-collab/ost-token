@@ -83,15 +83,26 @@
     if (navigator.clearAppBadge) navigator.clearAppBadge().catch(function () {});
   }
 
-  function openMeshFromNotification() {
+  // A notification opens the OST Mesh app (never the legacy pavilion): the chat when
+  // the payload names a known contact's mesh address, else the Chats list.
+  var MESH_ADDR = /^ost-mesh:[0-9a-f-]{8,40}$/i;
+  function dropOpenMeshFlag() {
+    try {
+      var u = new URL(location.href);
+      if (u.searchParams.get('openMesh') === '1') { u.searchParams.delete('openMesh'); history.replaceState(history.state, '', u.pathname + u.search + u.hash); }
+    } catch (_) {}
+  }
+  function openMeshFromNotification(addr) {
     clearBadge();
-    if (window.OST_MESH && window.OST_MESH.open) {
-      window.OST_MESH.open();
-      return;
-    }
-    window.addEventListener('mesh:ready', function () {
-      if (window.OST_MESH && window.OST_MESH.open) window.OST_MESH.open();
-    }, { once: true });
+    dropOpenMeshFlag();
+    var tries = 0;
+    (function go() {
+      var app = window.OST_MESH_APP;
+      if (!app || typeof app.open !== 'function') { if (++tries < 100) setTimeout(go, 150); return; }
+      var known = false;
+      try { known = !!(addr && MESH_ADDR.test(addr) && app.core && typeof app.core.contact === 'function' && app.core.contact(addr)); } catch (_) {}
+      try { if (known && typeof app.openChat === 'function') app.openChat(addr); else app.open('chats'); } catch (_) {}
+    })();
   }
 
   function unlockAudio() {
@@ -162,7 +173,7 @@
         requireInteraction: !!options.requireInteraction,
         silent: !!options.silent,
         vibrate: options.vibrate || [90, 45, 90],
-        data: { url: options.url || appUrl('mesh'), type: options.type || 'mesh' },
+        data: { url: options.url || appUrl('mesh'), type: options.type || 'mesh', addr: options.addr || '' },
         actions: [{ action: 'open', title: 'Open OST Mesh' }]
       });
     });
@@ -181,14 +192,16 @@
     var payload = Object.assign({ type: type, tag: 'ost-mesh-' + type, url: appUrl('mesh') }, options, { type: type });
     return showViaServiceWorker(title || 'OST Mesh', body || '', payload).catch(function () {
       try {
-        new Notification(title || 'OST Mesh', {
+        var n = new Notification(title || 'OST Mesh', {
           body: body || '',
           icon: payload.icon || DEFAULT_ICON,
           badge: payload.badge || DEFAULT_BADGE,
           tag: payload.tag,
           renotify: false,
-          data: { url: payload.url, type: type }
+          data: { url: payload.url, type: type, addr: payload.addr || '' }
         });
+        // No service worker: the page handles the click itself (same target as sw.js).
+        n.onclick = function () { try { window.focus(); n.close(); } catch (_) {} openMeshFromNotification(payload.addr || ''); };
         return true;
       } catch (_) { return false; }
     });
@@ -214,12 +227,21 @@
     navigator.serviceWorker.addEventListener('message', function (event) {
       var data = event.data || {};
       if (data.type !== 'ost-open-mesh') return;
-      openMeshFromNotification();
+      openMeshFromNotification(data.addr || '');
     });
   }
+  // Page opened from a notification (?openMesh=1). This classic script runs before the
+  // app module boots, so drop the flag NOW: every history entry the app pushes then
+  // carries the clean URL and a reload does not reopen the app. When the URL also has a
+  // hash the app family handles itself (#chat=<addr>, #chat, #mesh, #mesh-add=…,
+  // #social, #post=, #u=), that hash picks the view - forcing Chats here used to
+  // override core's openChat and land on the list instead of the conversation.
   if (new URL(location.href).searchParams.get('openMesh') === '1') {
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', openMeshFromNotification, { once: true });
-    else openMeshFromNotification();
+    var appHash = /^#(mesh(-app|-add=|=|$)|chat(=|$)|social|post=|u=)/i.test(location.hash || '');
+    dropOpenMeshFlag();
+    if (appHash) clearBadge();
+    else if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { openMeshFromNotification(''); }, { once: true });
+    else openMeshFromNotification('');
   }
   window.addEventListener('ost:mesh-notify', function (event) {
     var detail = event.detail || {};

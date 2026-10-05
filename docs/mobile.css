@@ -63,7 +63,10 @@
 
 /* ---------------------------------------------------------------- Phone */
 @media (max-width: 640px) {
-  *, *::before, *::after {
+  /* Mesh app family exclusion: `:not(:where(...))` adds ZERO specificity, so the site keeps these
+     rules exactly as before while #ostMeshApp, #oslSheet, #oslLight, #oslStory, #omxCall, #omxSheet
+     and .omx-toasts style themselves. New injected app roots must be added to every list. */
+  *:not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *)), *:not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *))::before, *:not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *))::after {
     animation: none !important;
     transition: none !important;
     scroll-behavior: auto !important;
@@ -149,9 +152,11 @@
   body {
     font-size: 15px;
   }
-  h1, .hero h1 { font-size: 1.9rem !important; line-height: 1.15 !important; }
-  h2 { font-size: 1.35rem !important; }
-  h3 { font-size: 1.15rem !important; }
+  /* App-excluded selectors get their own rule (no :where() = whole list dropped). */
+  h1:not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *)) { font-size: 1.9rem !important; line-height: 1.15 !important; }
+  .hero h1 { font-size: 1.9rem !important; line-height: 1.15 !important; }
+  h2:not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *)) { font-size: 1.35rem !important; }
+  h3:not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *)) { font-size: 1.15rem !important; }
 
   /* Header / nav */
   .navbar,
@@ -365,14 +370,18 @@
   }
 
   /* Tap targets */
-  .btn, button, .store-tab, .fuel2-ft, .fuel2-sort, .nav-links a, .converter-tab, .converter-btn {
+  .btn:not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *)), button:not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *)) {
+    min-height: 48px !important;
+  }
+  .store-tab, .fuel2-ft, .fuel2-sort, .nav-links a, .converter-tab, .converter-btn {
     min-height: 48px !important;
   }
 }
 
 /* ---------------------------------------------------------------- Tiny */
 @media (max-width: 380px) {
-  h1, .hero h1 { font-size: 1.65rem !important; }
+  h1:not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *)) { font-size: 1.65rem !important; }
+  .hero h1 { font-size: 1.65rem !important; }
   .pay-demo-header h3,
   .interchange-desk-head h3 {
     font-size: 1rem !important;

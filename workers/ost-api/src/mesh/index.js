@@ -1,8 +1,15 @@
 /* ============================================================
    workers/ost-api/src/mesh/index.js
    Router for /mesh/v1/*
-     • Identity directory (announce / lookup) — KV
-     • Signaling inbox (send / inbox) — KV with TTL
+     • GET /mesh/v1/ice — STUN + Cloudflare TURN credentials (below).
+     • Every other route goes to the MeshHub Durable Object (hub.js, which
+       installs social.js): identity directory, realtime socket, mailbox, blob
+       relay, friend graph, presence, call signalling, the legacy pavilion
+       feed and OST Social. The route list with auth rules is at the top of
+       hub.js. Production always binds MESH_HUB (wrangler.toml).
+     • Only when that binding is missing (a misconfigured deploy) does a
+       minimal KV fallback answer: identity announce/lookup (identity.js) and
+       call signalling (signal.js), rate-limited in this isolate's memory.
    No message body inspection — payloads are encrypted by the client.
    We only relay envelopes addressed by mesh address.
    ============================================================ */
@@ -31,9 +38,26 @@ function cors(extra = {}) {
   return {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Range, x-ost-wallet, x-ost-ts, x-ost-nonce, x-ost-sig, x-ost-session, x-ost-internal, x-mesh-addr, x-mesh-ts, x-mesh-nonce, x-mesh-sig',
+    'Access-Control-Allow-Headers': 'Content-Type, Range, If-None-Match, If-Range, x-ost-wallet, x-ost-ts, x-ost-nonce, x-ost-sig, x-ost-session, x-ost-internal, x-mesh-addr, x-mesh-ts, x-mesh-nonce, x-mesh-sig',
+    'Access-Control-Expose-Headers': 'Content-Range, Accept-Ranges, Content-Length, ETag, Retry-After, X-Blob-Size',
     ...extra
   };
+}
+
+// Fallback-only limiter (fixed windows in this isolate's memory). Same 429
+// shape as the hub: Retry-After header + { ok:false, error:'rate_limited', retryAfter, scope }.
+const fallbackWindows = new Map();
+function fallbackLimit(scope, key, max, windowMs) {
+  const now = Date.now(), k = scope + '|' + key;
+  let w = fallbackWindows.get(k);
+  if (!w || now - w.at >= windowMs) { w = { at: now, n: 0 }; fallbackWindows.set(k, w); }
+  if (w.n >= max) {
+    const s = Math.max(1, Math.ceil((w.at + windowMs - now) / 1000));
+    return new Response(JSON.stringify({ ok: false, error: 'rate_limited', retryAfter: s, scope }), { status: 429, headers: cors({ 'Content-Type': 'application/json', 'Retry-After': String(s) }) });
+  }
+  w.n++;
+  if (fallbackWindows.size > 10000) fallbackWindows.clear();
+  return null;
 }
 
 // ── ICE servers (STUN + Cloudflare TURN) ─────────────────────────────────
@@ -85,8 +109,18 @@ export async function handleMeshRequest(request, env, { path, method }) {
     return ok({ ok: true, identities: [], count: 0, note: 'directory requires durable-object hub', ts: new Date().toISOString() });
   }
 
+  const ip = (request.headers.get('CF-Connecting-IP') || 'noip').slice(0, 64);
+  const bodyOf = async (max) => {
+    const text = await request.text().catch(() => '');
+    if (text.length > max) return null;
+    try { return JSON.parse(text) || {}; } catch (_) { return {}; }
+  };
+
   if (method === 'POST' && path === '/mesh/v1/identity/announce') {
-    const body = await request.json().catch(() => ({}));
+    const lim = fallbackLimit('announce', ip, 120, 60 * 60 * 1000);
+    if (lim) return lim;
+    const body = await bodyOf(8192);
+    if (!body) return err('announce_too_large', 413);
     return identityAnnounce(env, body, ok, err);
   }
   if (method === 'GET'  && path === '/mesh/v1/identity/lookup') {
@@ -94,12 +128,18 @@ export async function handleMeshRequest(request, env, { path, method }) {
     return identityLookup(env, url.searchParams.get('address'), ok, err);
   }
 
+  // Unsigned for the legacy pavilion's sake (see signal.js); limited + capped.
   if (method === 'POST' && path === '/mesh/v1/signal/send') {
-    const body = await request.json().catch(() => ({}));
+    const body = await bodyOf(34_000);
+    if (!body) return err('payload too large', 413);
+    const lim = fallbackLimit('signal', ip, 600, 60 * 1000) || fallbackLimit('signal-from', String(body.from || '') + '|' + ip, 240, 60 * 1000);
+    if (lim) return lim;
     return signalSend(env, body, ok, err);
   }
   if (method === 'GET'  && path === '/mesh/v1/signal/inbox') {
     const url = new URL(request.url);
+    const lim = fallbackLimit('signal-inbox', ip, 600, 60 * 1000) || fallbackLimit('signal-inbox-to', String(url.searchParams.get('to') || '') + '|' + ip, 240, 60 * 1000);
+    if (lim) return lim;
     return signalInbox(env, {
       to:    url.searchParams.get('to'),
       from:  url.searchParams.get('from'),

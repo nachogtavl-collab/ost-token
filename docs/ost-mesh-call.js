@@ -65,13 +65,26 @@ import { importPeerBundle } from './mesh/mesh-crypto.js?v=1';
         <video id="omxCallLocal" autoplay playsinline muted></video>
         <div class="omxc-btns" id="omxCallBtns"></div>`;
       document.body.appendChild(el);
+      el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'omxCallName'); el.tabIndex = -1;
       el.addEventListener('click', onUiClick);
+      // A call screen swallows Escape (hanging up must be a deliberate tap) and keeps Tab on its own buttons.
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); return; }
+        if (e.key !== 'Tab') return;
+        const f = Array.from(el.querySelectorAll('button')); if (!f.length) { e.preventDefault(); return; }
+        const i = f.indexOf(document.activeElement);
+        if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); } else if (!e.shiftKey && (i < 0 || i === f.length - 1)) { e.preventDefault(); f[0].focus(); }
+      });
     }
     return el;
   }
+  // The call screen exists in the DOM only while a call is up (the core's Escape
+  // handler treats any #omxCall as "a call owns the keyboard").
   function paint() {
-    const el = ui();
-    if (!C) { el.classList.remove('on'); return; }
+    document.documentElement.classList.toggle('omx-incall', !!C);   // toasts move to the top, off the call buttons
+    if (!C) { const old = $('omxCall'); if (old) { old.classList.remove('on'); old.remove(); } return; }
+    const el = ui(), shown = el.classList.contains('on');
+    const ae = document.activeElement, keep = ae && el.contains(ae) ? ae.getAttribute('data-c') : '';
     el.classList.add('on'); el.classList.toggle('video', !!C.video); el.classList.toggle('live', C.phase === 'live');
     const av = $('omxCallAv'); av.setAttribute('style', avStyle(C.peer)); av.textContent = emojiOf(C.peer) || nameOf(C.peer)[0].toUpperCase();
     $('omxCallName').textContent = nameOf(C.peer);
@@ -93,6 +106,8 @@ import { importPeerBundle } from './mesh/mesh-crypto.js?v=1';
       b.push('<button class="omxc-no" data-c="hangup" aria-label="Hang up">✕<small>End</small></button>');
     }
     $('omxCallBtns').innerHTML = b.join('');
+    // Keyboard focus: the screen itself when it appears; the same button across repaints (the timer repaints every second).
+    try { const same = keep && el.querySelector('[data-c="' + keep + '"]'); if (same) same.focus({ preventScroll: true }); else if (!shown || (keep && !same)) el.focus({ preventScroll: true }); } catch (_) {}
   }
   function timer() { if (!C || !C.liveAt) return '0:00'; const s = Math.floor((Date.now() - C.liveAt) / 1000); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
   let tickIv = null;
@@ -219,15 +234,21 @@ import { importPeerBundle } from './mesh/mesh-crypto.js?v=1';
         send(from, await signP({ type: 'answer', callId: p.callId, sdp: C.pc.localDescription.sdp, ts: Date.now() }, from));
         return;
       }
+      // Only people you know can ring you: contacts, and people you asked to connect.
+      // Strangers who wrote first ('request'), unanswered requests and blocked contacts never ring.
       const ct = contact(from);
-      if (!ct || ct.state === 'blocked') return;           // only people you know can ring you
+      if (!ct || (ct.state !== 'friend' && ct.state !== 'pending-out')) return;
       if (Math.abs(Date.now() - Number(p.ts)) > RING_MS) return;
       if (!(await verifyP(p, from))) { console.warn('[mesh-call] unsigned/forged offer ignored'); return; }
       if (C) { send(from, { type: 'busy', callId: p.callId }); return; }
       C = { peer: from, video: !!p.video, caller: false, phase: 'incoming', callId: p.callId, offer: p, iceQ: [], facing: 'user' };
       paint(); ring(true);
       send(from, { type: 'ringing', callId: p.callId });
-      try { if (document.hidden && 'Notification' in window && Notification.permission === 'granted') new Notification((p.video ? 'Video' : 'Voice') + ' call from ' + nameOf(from)); } catch (_) {}
+      try {
+        if (!document.hidden) { /* the call screen itself is the alert */ }
+        else if (window.OST_NOTIFY && typeof window.OST_NOTIFY.mesh === 'function') window.OST_NOTIFY.mesh(p.video ? 'video-call' : 'call', (p.video ? 'Video' : 'Voice') + ' call from ' + nameOf(from), 'Open OST to answer', { tag: 'ost-mesh-call-' + from, addr: from });
+        else if ('Notification' in window && Notification.permission === 'granted') new Notification((p.video ? 'Video' : 'Voice') + ' call from ' + nameOf(from));
+      } catch (_) {}
       C.ringTimer = setTimeout(() => { if (C && C.phase === 'incoming') { logLocal('missed'); teardown(); } }, RING_MS);
       return;
     }
@@ -282,42 +303,55 @@ import { importPeerBundle } from './mesh/mesh-crypto.js?v=1';
     try { $('omxCallRemote').srcObject = null; $('omxCallAudio').srcObject = null; $('omxCallLocal').srcObject = null; } catch (_) {}
     paint();
   }
-  // Local call log line (no network).
+  // Local call log line (no network). `cst` = call outcome (Declined / No answer /
+  // Missed stay visible); `status` is never a delivery state for these.
+  const outcomeText = (status, mine) => status === 'missed' ? (mine ? 'No answer' : 'Missed call') : status === 'declined' ? 'Declined call' : status === 'busy' ? 'Busy' : 'Call';
   function logLocal(status, dur) {
     if (!C) return;
-    const m = { id: 'call-' + C.callId + '-' + status, dir: C.caller ? 'me' : 'them', kind: 'call', status, video: !!C.video, dur: dur || 0, ts: Date.now() };
+    const m = { id: 'call-' + C.callId + '-' + status, dir: C.caller ? 'me' : 'them', kind: 'call', status, cst: status, video: !!C.video, dur: dur || 0, ts: Date.now() };
     core.appendMsg(C.peer, m);
-    core.upsertContact(C.peer, { last: { text: (C.video ? '🎥 ' : '📞 ') + (status === 'missed' ? 'Missed call' : 'Call'), ts: m.ts } });
+    core.upsertContact(C.peer, { last: { text: (C.video ? '🎥 ' : '📞 ') + outcomeText(status, C.caller), ts: m.ts } });
     if (S.view === 'chat' && S.peer === C.peer) core.paintMsgs();
   }
   // Durable record for the other side (offline users see "Missed call").
   function logCall(status, mine) {
     if (!C) return;
     const peer = C.peer, video = C.video, id = 'call-' + C.callId + '-' + status;
-    core.sendInner(peer, { k: 'call', id, status, video }, mine ? { kind: 'call', status, video } : null).catch(() => {});
+    core.sendInner(peer, { k: 'call', id, status, video }, mine ? { kind: 'call', status, cst: status, video } : null).catch(() => {});
   }
 
   /* ---------- transport: socket push + polling fallback ---------- */
   X.ws.push((m) => { if (m.t === 'signal' && m.item) onSignal(m.item); });
-  let pollT = null, pollFast = 0;
+  // Honours HTTP 429 / Retry-After from the relay and the core's shared breaker.
+  let pollT = null, pollFast = 0, pollWaitUntil = 0, pollFails = 0;
   function pollSoon() { pollFast = Date.now() + 60000; schedule(400); }
-  function schedule(ms) { clearTimeout(pollT); pollT = setTimeout(poll, ms); }
+  function schedule(ms) { clearTimeout(pollT); pollT = setTimeout(poll, Math.max(ms, pollWaitUntil - Date.now())); }
   async function poll() {
     const busy = !!C || Date.now() < pollFast;
-    const want = !document.hidden && S.address && Object.keys(S.contacts).length && (!S.wsOk || busy);
+    const gated = (core.hubBusy && core.hubBusy()) || Date.now() < pollWaitUntil;
+    const want = !gated && !document.hidden && S.address && Object.keys(S.contacts).length && (!S.wsOk || busy);
     if (want) {
       try {
         const r = await fetch(API + '/mesh/v1/signal/inbox?to=' + encodeURIComponent(S.address), { cache: 'no-store' });
-        const j = await r.json();
-        for (const it of (j && j.messages) || []) await onSignal(it);
-      } catch (_) {}
+        if (r.status === 429 || r.status >= 500) {
+          let s = Number(r.headers.get('Retry-After')) || 0; pollFails++;
+          pollWaitUntil = Date.now() + Math.min(120, Math.max(s, 2 * Math.pow(2, Math.min(5, pollFails - 1)))) * 1000;
+        } else {
+          pollFails = 0;
+          const j = await r.json();
+          for (const it of (j && j.messages) || []) await onSignal(it);
+        }
+      } catch (_) { pollFails++; pollWaitUntil = Date.now() + Math.min(60, 2 * Math.pow(2, Math.min(4, pollFails - 1))) * 1000; }
     }
     schedule(busy ? 1200 : (S.wsOk ? 15000 : 3500));
   }
   schedule(3000);
 
   /* ---------- hooks into the chat ---------- */
-  X.headBtns.push((peer) => `<button class="omx-ib" data-act="call-voice" aria-label="Voice call" title="Voice call">📞</button><button class="omx-ib" data-act="call-video" aria-label="Video call" title="Video call">🎥</button>`);
+  // Header buttons; under 400 px they are hidden by CSS and offered in the chat ⋯ sheet instead.
+  const narrow = () => !!(window.matchMedia && window.matchMedia('(max-width: 399.98px)').matches);
+  X.headBtns.push((peer) => `<button type="button" class="omx-ib omx-hide-narrow" data-act="call-voice" aria-label="Voice call" title="Voice call">📞</button><button type="button" class="omx-ib omx-hide-narrow" data-act="call-video" aria-label="Video call" title="Video call">🎥</button>`);
+  if (Array.isArray(X.menu)) X.menu.push((peer) => narrow() ? [{ label: '📞 Voice call', run: () => start(peer, false) }, { label: '🎥 Video call', run: () => start(peer, true) }] : []);
   X.actions['call-voice'] = () => start(S.peer, false);
   X.actions['call-video'] = () => start(S.peer, true);
   X.actions['call-back'] = (el) => start(S.peer, el.getAttribute('data-video') === '1');

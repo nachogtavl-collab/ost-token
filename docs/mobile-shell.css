@@ -92,9 +92,26 @@
     pointer-events: none !important;
   }
 
-  body.ost-mobile-shell.ost-focus-mode,
-  body.ost-mobile-shell {
+  /* Not while a full-screen app holds the scroll lock (html.omx-lock = OST Mesh app,
+     .ost-mesh-scroll-lock = legacy pavilion): this !important used to beat the lock,
+     so the page behind the sheet kept scrolling on phones. :where() = no specificity. */
+  :where(html:not(.omx-lock):not(.ost-mesh-scroll-lock)) body.ost-mobile-shell.ost-focus-mode,
+  :where(html:not(.omx-lock):not(.ost-mesh-scroll-lock)) body.ost-mobile-shell {
     overflow-y: auto !important;
+  }
+  html.omx-lock,
+  html.omx-lock body.ost-mobile-shell {
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+  }
+  /* On phones BODY is a scroll container that never scrolls (the rule above, and the
+     fastboot `html.ost-mobile-fastboot body{overflow-x:hidden}` turns overflow-y into auto)
+     while the viewport does the scrolling. With ost-scroll-fix.css's body
+     overscroll-behavior:none, Chromium ended every wheel/touch scroll that started on the
+     page at body instead of chaining it to the viewport: the home page did not scroll.
+     The viewport keeps html's overscroll-behavior:none (no bounce, no wiggle). */
+  :where(html:not(.omx-lock):not(.ost-mesh-scroll-lock)) body.ost-mobile-shell {
+    overscroll-behavior: auto !important;
   }
 
   body.ost-mobile-shell .welcome-overlay:not(.hidden) {
@@ -121,17 +138,20 @@
     display: none !important;
   }
 
-  body.ost-mobile-shell * {
+  /* Mesh app family exclusion: `:not(:where(...))` adds ZERO specificity, so the site keeps these
+     rules exactly as before while #ostMeshApp, #oslSheet, #oslLight, #oslStory, #omxCall, #omxSheet
+     and .omx-toasts style themselves. New injected app roots must be added to every list. */
+  body.ost-mobile-shell *:not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *)) {
     min-width: 0;
     max-width: 100%;
     overflow-wrap: anywhere;
   }
 
-  body.ost-mobile-shell img,
-  body.ost-mobile-shell video,
-  body.ost-mobile-shell canvas,
-  body.ost-mobile-shell svg,
-  body.ost-mobile-shell iframe {
+  body.ost-mobile-shell img:not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *)),
+  body.ost-mobile-shell video:not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *)),
+  body.ost-mobile-shell canvas:not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *)),
+  body.ost-mobile-shell svg:not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *)),
+  body.ost-mobile-shell iframe:not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *)) {
     max-width: 100%;
   }
 
@@ -144,10 +164,10 @@
     pointer-events: none !important;
   }
 
-  input,
-  select,
-  textarea,
-  button {
+  input:not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *)),
+  select:not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *)),
+  textarea:not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *)),
+  button:not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *)) {
     font-size: 16px;
   }
 
@@ -164,7 +184,13 @@
     padding-bottom: 34px;
   }
 
-  h1,
+  /* App-excluded element selectors sit in their own rule: an engine without :where()
+     (Safari <14, Chrome <88) drops a whole selector list, and .hero h1 must survive. */
+  h1:not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *)) {
+    font-size: clamp(2.15rem, 9.4vw, 3rem) !important;
+    line-height: 1.05 !important;
+    letter-spacing: 0 !important;
+  }
   .hero h1 {
     font-size: clamp(2.15rem, 9.4vw, 3rem) !important;
     line-height: 1.05 !important;
@@ -318,20 +344,22 @@
     min-width: 44px !important;
     min-height: 44px !important;
   }
-  h2 {
+  h2:not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *)) {
     font-size: clamp(1.46rem, 6.2vw, 2.05rem) !important;
     line-height: 1.12 !important;
     letter-spacing: 0 !important;
   }
 
-  h3 {
+  h3:not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *)) {
     font-size: clamp(1.08rem, 4.8vw, 1.42rem) !important;
     line-height: 1.18 !important;
     letter-spacing: 0 !important;
   }
 
-  p,
-  li,
+  p:not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *)),
+  li:not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *)) {
+    font-size: 1rem;
+  }
   .text-muted {
     font-size: 1rem;
   }
@@ -1075,7 +1103,8 @@
   /* `overflow-x:hidden` on html/body makes BODY the scroll container that every
      position:sticky element is measured against, so nothing ever stuck (game strip,
      wallet tabs). `clip` clips the same way without creating a scroll container. */
-  html, body.ost-mobile-shell { overflow-x: clip !important; overflow-y: visible !important; }
+  /* Skipped while html.omx-lock / .ost-mesh-scroll-lock holds the page (see the lock rule above). */
+  html:where(:not(.omx-lock):not(.ost-mesh-scroll-lock)), :where(html:not(.omx-lock):not(.ost-mesh-scroll-lock)) body.ost-mobile-shell { overflow-x: clip !important; overflow-y: visible !important; }
   /* Wallet profile card: the global `min-width:0 + overflow-wrap:anywhere` shell rule
      laid the address out one character per line. Address on one line, buttons below. */
   body.ost-mobile-shell .wd-profile { flex-wrap: wrap !important; gap: 10px 12px !important; padding: 14px !important; }

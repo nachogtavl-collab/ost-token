@@ -99,8 +99,8 @@
         '<button type="button" class="ost-mobile-home__action" data-mobile-route="wallet" data-mobile-tab="convert"><span>Convert</span><small>SOL to OST, fiat, and transfer rail.</small></button>',
         '<button type="button" class="ost-mobile-home__action" data-mobile-route="commerce"><span>Spend</span><small>Shop, gift cards, gas, and checkout.</small></button>',
         '<button type="button" class="ost-mobile-home__action" data-mobile-route="new-here"><span>Get OST</span><small>Faucet, top-up, and first balance.</small></button>',
-        '<button type="button" class="ost-mobile-home__action" data-mobile-mesh><span>Mesh</span><small>Chat, call, map ping, and share.</small></button>',
-        '<button type="button" class="ost-mobile-home__action" data-mobile-games><span>Fair Games</span><small>Open Arena inside OST Mesh.</small></button>',
+        '<button type="button" class="ost-mobile-home__action" data-mobile-mesh><span>Mesh</span><small>Feed, stories, chats and calls.</small></button>',
+        '<button type="button" class="ost-mobile-home__action" data-mobile-games><span>Fair Games</span><small>Peer-to-peer games arena.</small></button>',
       '</div>',
       '<div class="ost-mobile-home__status"><span>Live devnet app</span><p>Touch targets, popouts, and bottom navigation are managed as one mobile shell.</p></div>'
     ].join('');
@@ -120,21 +120,31 @@
         return;
       }
       if (event.target.closest('[data-mobile-mesh]')) {
+        // One Mesh UI: the OST Mesh app (ost-mesh-app.js). #mesh is its own deep link.
         if (window.OST_MESH_APP && typeof window.OST_MESH_APP.open === 'function') window.OST_MESH_APP.open();
-        else if (window.OST_MESH && typeof window.OST_MESH.open === 'function') window.OST_MESH.open();
-        else { try { if (window.OST_LAZY && OST_LAZY.flush) OST_LAZY.flush(); } catch (_) {} location.hash = '#mesh'; }
+        else location.hash = '#mesh';
         return;
       }
       if (event.target.closest('[data-mobile-games]')) {
-        // The arena lives INSIDE the mesh's Play (games) tab — open the mesh and
-        // switch to that tab rather than launching the arena as a standalone
-        // overlay, so games have one home.
-        if (window.OST_MESH && typeof window.OST_MESH.open === 'function') {
-          window.OST_MESH.open();
-          try { if (window.OST_MESH_MOBILE && OST_MESH_MOBILE.setView) OST_MESH_MOBILE.setView('play'); } catch (_) {}
-        } else if (window.OST_MESH_ARENA && typeof window.OST_MESH_ARENA.open === 'function') {
-          window.OST_MESH_ARENA.open();
-        } else activateSection('new-here');
+        // The arena lives INSIDE the legacy pavilion's Play tab, which is lazy now:
+        // load the "mesh" group first, then open the arena there.
+        var g = null;
+        try { if (window.OST_LAZY && typeof OST_LAZY.group === 'function') g = OST_LAZY.group('mesh'); } catch (_) {}
+        if (!g) { try { if (window.OST_LAZY && OST_LAZY.flush) OST_LAZY.flush(); } catch (_) {} g = Promise.resolve(); }
+        // A failed load (OST_LAZY.group resolves false; the next tap retries) falls back
+        // to the Games section and says why instead of failing silently.
+        var fail = function () {
+          activateSection('games');
+          try { var c = window.OST_MESH_APP && window.OST_MESH_APP.core; if (c && typeof c.toast === 'function') c.toast('The games arena did not load. Check your connection and try again.', 'err'); } catch (_) {}
+        };
+        g.then(function (loaded) {
+          var n = 0;
+          (function go() {
+            if (window.OST_MESH_MOBILE && typeof OST_MESH_MOBILE.openArena === 'function') { OST_MESH_MOBILE.openArena(); return; }
+            if (loaded === false) { fail(); return; }
+            if (++n < 60) setTimeout(go, 150); else fail();
+          })();
+        }, fail);
       }
     });
   }
